@@ -34,6 +34,10 @@
  *       executor gives up after its bound (the target in `errors`, the row still
  *       there — dd1758 stays pending), and the ghost unpublish applies only
  *       after the holder releases.
+ *   D4. core's files-unlink door (`unlinkPublishedFiles`, the record delete's
+ *       settle and the retry drains) takes the files target's fence SHARED:
+ *       an exclusive holder leaves the file and the row pending on the request
+ *       path, a patient drain waits for it, another unpublisher does not.
  *   D2. the retry DRAINS wait, through their real doors (the runner's
  *       opportunistic retry, the retry_pending_deletions action, the
  *       maintenance widget's retry): the target
@@ -55,8 +59,9 @@
  *       (writer level: diffusion_rdfxml_writers.test.ts).
  *
  * THE LOCK KEY is a cross-door contract, not an implementation detail: the
- * runner, the delete executor, the ghost reconcile and (integrator request) the
- * core delete bridge must all name the same target the same way —
+ * runner, the delete executor, the ghost reconcile and the core files-unlink
+ * door must all name the same target the same way (one producer:
+ * core/diffusion_bridge/target_lock.ts) —
  * `pg_advisory_*lock(17580002, hashtext('sql:<database>' | 'files:<format>/<label>'))`.
  * This gate holds it from ANOTHER session, exactly like a second writer would;
  * the last test pins that the fence module's producers agree with it.
@@ -78,7 +83,13 @@ import {
 	logDiffusionActivity,
 	registerNativeDiffusionSqlDelete,
 	resetNativeDiffusionSqlDeleteForTests,
+	unlinkPublishedFiles,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
+import {
+	DELETE_TARGET_LOCK_BOUND_MS,
+	withPatientDeleteWait,
+	withTargetLock,
+} from '../../src/core/diffusion_bridge/target_lock.ts';
 import { isTempSibling } from '../../src/core/files/temp_path.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { retryPendingDeletionsAction } from '../../src/diffusion/api/actions.ts';
@@ -101,15 +112,11 @@ import {
 	DIFFUSION_JOB_LEDGER_TABLE,
 	DIFFUSION_JOBS_TABLE,
 } from '../../src/diffusion/jobs/schema.ts';
-import { withFencedBatch, withTargetLock } from '../../src/diffusion/jobs/target_fence.ts';
+import { withFencedBatch } from '../../src/diffusion/jobs/target_fence.ts';
 import { bumpOntologyRevision } from '../../src/diffusion/plan/cache.ts';
 import { runJob } from '../../src/diffusion/runner.ts';
 import { closeAllTargetPools, getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
-import {
-	DELETE_TARGET_LOCK_BOUND_MS,
-	executeSqlDeleteTargets,
-	withPatientDeleteWait,
-} from '../../src/diffusion/targets/mariadb/delete_record.ts';
+import { executeSqlDeleteTargets } from '../../src/diffusion/targets/mariadb/delete_record.ts';
 import { unpublishGhosts } from '../../src/diffusion/targets/mariadb/public_tier_reconcile.ts';
 import { markdownWriter } from '../../src/diffusion/writers/markdown.ts';
 import {
@@ -121,6 +128,7 @@ import {
 } from '../helpers/diffusion_job_harness.ts';
 import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
+import { startPowerLossModel } from '../helpers/power_loss_model.ts';
 import { scratchRunEntries } from '../helpers/scratch_run_entries.ts';
 import { databasesOf, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
 import {
@@ -1048,6 +1056,103 @@ describe('DIFF-2 D3 — unpublishers never exclude each other, only exclusive wr
 });
 
 /**
+ * CORE'S FILES-UNLINK DOOR takes the same fence (WC R2, closed 2026-10-01): the
+ * per-record file a deleted record leaves behind is unlinked by
+ * `unlinkPublishedFiles` (core/diffusion_bridge/diffusion_delete.ts — the record
+ * delete's settle and every retry drain), which until the lock moved into the
+ * bridge could not take it. Unfenced, it unlinked inside a run's batch — after
+ * the batch revalidated the record as present and before it wrote the file, so
+ * a deleted record was published again — and inside a close, removing files
+ * from under the archive. Now it is a DELETE-ONLY door: SHARED, given up at once
+ * on the request path, waited for inside a patient drain.
+ */
+describe('DIFF-2 D4 — the core files-unlink door takes the files target fence', () => {
+	function plantRecordFile(sectionId: number): string {
+		mkdirSync(outputDir(), { recursive: true });
+		const path = join(outputDir(), `${ZZDIF_SECTION}_${sectionId}.md`);
+		writeFileSync(path, `# record ${sectionId}\n`);
+		return path;
+	}
+	const unlinkRecord = (sectionId: number) =>
+		unlinkPublishedFiles(ZZDIF_FILE_ELEMENT, ZZDIF_FILE_FORMAT, ZZDIF_SECTION, sectionId);
+
+	test('on the REQUEST path an exclusive holder leaves the file in place and the unpublish pending, at once', async () => {
+		const path = plantRecordFile(940004);
+		const lock = await holdTargetLock(FILE_TARGET_KEY);
+		await lock.acquired;
+		let outcome: Awaited<ReturnType<typeof unlinkRecord>>;
+		let elapsed: number;
+		try {
+			const startedAt = Date.now();
+			outcome = await unlinkRecord(940004);
+			elapsed = Date.now() - startedAt;
+		} finally {
+			await lock.release();
+		}
+		expect(
+			existsSync(path),
+			'the files-unlink door removed a file from a directory an exclusive writer holds',
+		).toBe(true);
+		expect(outcome.kind).toBe('pending');
+		expect(elapsed, 'the request-path unlink waited for a held target').toBeLessThan(2_000);
+		// Positive control: released, the same door unpublishes it — DURABLY: the
+		// dd1758 row flips on this answer, so a power cut must not bring it back.
+		const model = startPowerLossModel(filesRoot);
+		let released: Awaited<ReturnType<typeof unlinkRecord>>;
+		try {
+			released = await unlinkRecord(940004);
+		} finally {
+			model.restore();
+		}
+		expect(released.kind).toBe('unpublished');
+		expect(existsSync(path)).toBe(false);
+		expect(
+			model.absenceSurvives(path),
+			'the unpublish answered while its unlink was not on disk (a power cut resurrects the record)',
+		).toBe(true);
+	}, 60_000);
+
+	test('inside a retry drain (the patient scope) it WAITS for the holder, then unlinks', async () => {
+		const path = plantRecordFile(940005);
+		const lock = await holdTargetLock(FILE_TARGET_KEY);
+		await lock.acquired;
+		let presentWhileHeld = false;
+		const release = Bun.sleep(1_500).then(() => {
+			presentWhileHeld = existsSync(path);
+			return lock.release();
+		});
+		let outcome: Awaited<ReturnType<typeof unlinkRecord>>;
+		try {
+			outcome = await withPatientDeleteWait(() => unlinkRecord(940005));
+		} finally {
+			await release;
+		}
+		expect(presentWhileHeld, 'the drain unlinked while another session held the directory').toBe(
+			true,
+		);
+		expect(outcome.kind).toBe('unpublished');
+		expect(existsSync(path)).toBe(false);
+	}, 60_000);
+
+	test('another unpublisher inside the directory does not hold it off (SHARED)', async () => {
+		const path = plantRecordFile(940006);
+		const unpublisher = await holdTargetLock(FILE_TARGET_KEY, { shared: true });
+		await unpublisher.acquired;
+		let outcome: Awaited<ReturnType<typeof unlinkRecord>>;
+		try {
+			outcome = await unlinkRecord(940006);
+		} finally {
+			await unpublisher.release();
+		}
+		expect(
+			outcome.kind,
+			'an unpublish was left PENDING because another unpublisher held the directory',
+		).toBe('unpublished');
+		expect(existsSync(path)).toBe(false);
+	}, 60_000);
+});
+
+/**
  * The retry DRAINS are what wait — through their real call sites, not a leg
  * that opens the patient scope itself: the runner's opportunistic retry
  * (pending_retry.ts defaultPendingRetry) and the `retry_pending_deletions`
@@ -1221,8 +1326,8 @@ describe('DIFF-2 E — a record deleted while its batch waited is revalidated, n
 });
 
 describe('the lock key is one contract', () => {
-	test('the fence module names targets exactly as this gate (and every other door) does', async () => {
-		const fence = (await import('../../src/diffusion/jobs/target_fence.ts')) as Record<
+	test('the bridge lock module names targets exactly as this gate (and every other door) does', async () => {
+		const fence = (await import('../../src/core/diffusion_bridge/target_lock.ts')) as Record<
 			string,
 			unknown
 		>;
@@ -1241,7 +1346,7 @@ describe('the lock key is one contract', () => {
 
 describe('a fence unit is BOUNDED (a frozen holder cannot keep a target forever)', () => {
 	test('inside a unit the session is killed after 5 min idle and waits at most 5 s for a lock; outside it, neither bound leaks', async () => {
-		const fence = await import('../../src/diffusion/jobs/target_fence.ts');
+		const fence = await import('../../src/core/diffusion_bridge/target_lock.ts');
 		const show = async (): Promise<{ idle: string; lock: string }> => {
 			const [idle] = (await sql.unsafe('SHOW idle_in_transaction_session_timeout')) as {
 				idle_in_transaction_session_timeout: string;
@@ -1267,7 +1372,7 @@ describe('a fence unit is BOUNDED (a frozen holder cannot keep a target forever)
 
 describe('DIFF-2 F — a LIVE unit never loses its fence to the idle bound', () => {
 	test('a unit whose target step outlasts the (shortened) idle bound keeps its lock and commits', async () => {
-		const fence = await import('../../src/diffusion/jobs/target_fence.ts');
+		const fence = await import('../../src/core/diffusion_bridge/target_lock.ts');
 		const key = 'files:zzdif_probe/keepalive';
 		const IDLE_BOUND_MS = 1_000;
 		const outcome = await fence.withTargetLock(

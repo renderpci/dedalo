@@ -47,7 +47,8 @@
  *   source of truth on this side.
  */
 
-import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { existsSync, unlinkSync } from 'node:fs';
+import { mkdirDurably } from '../../core/files/durable.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import {
@@ -258,7 +259,7 @@ class XmlWriterSession implements WriterSession {
 
 	/** File-target "schema" = the run directory exists (no DDL). */
 	async ensureSchema(): Promise<void> {
-		mkdirSync(this.targetDir, { recursive: true });
+		mkdirDurably(this.targetDir);
 		this.schemaEnsured = true;
 	}
 
@@ -288,6 +289,7 @@ class XmlWriterSession implements WriterSession {
 			atomicWriteFile(
 				this.recordPath(section, group.sectionId),
 				renderXmlRecord(section, group.rows),
+				this.log.barrier,
 			);
 			this.log.note('wrote', section.sectionTipo, group.sectionId);
 		}
@@ -311,6 +313,7 @@ class XmlWriterSession implements WriterSession {
 			const filePath = this.recordPath(section, sectionId);
 			if (existsSync(filePath)) {
 				unlinkSync(filePath);
+				this.log.barrier.add(this.targetDir); // durable at checkpoint()
 				deleted++;
 			}
 			this.log.note('removed', section.sectionTipo, sectionId); // never merged/zipped again
@@ -323,7 +326,12 @@ class XmlWriterSession implements WriterSession {
 		return this.log.take();
 	}
 
-	/** Every record file already landed via temp+rename; the state is the counters. */
+	/**
+	 * THE DURABILITY BARRIER (WriterRunLog.checkpoint): every record file of the
+	 * batch was fsynced before its rename (atomicWriteFile); the directory —
+	 * the renames and unlinks — is fsynced here, before the runner commits the
+	 * batch's events to the run ledger. The state is the counters.
+	 */
 	async checkpoint(): Promise<unknown> {
 		return this.log.checkpoint();
 	}
@@ -359,9 +367,10 @@ class XmlWriterSession implements WriterSession {
 		);
 		if (parts > 0) {
 			// The zip pass reports what the merge pass could not see: a record
-			// unpublished between the two (the merged document then names a record
-			// the archive omits — the line says so; the files-unlink door is
-			// unfenced, WC R2).
+			// file removed between the two (the merged document then names a
+			// record the archive omits — the line says so). The engine's
+			// files-unlink door cannot do it (it takes this close's fence, WC R2
+			// closed); a hand outside the engine can.
 			await createZip(
 				withTrailingPath(manifestPaths(run, pathOf, missing), mergedPath),
 				`${this.targetDir}/${XML_ZIP_NAME}`,

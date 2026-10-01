@@ -36,9 +36,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from '../../../config/config.ts';
+import {
+	sqlTargetLockKey,
+	withTargetLock,
+	withTargetLocks,
+} from '../../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
 import { assertTestMediaRoot } from '../../../core/media/test_media_root.ts';
-import { sqlTargetLockKey, withTargetLock, withTargetLocks } from '../../jobs/target_fence.ts';
 import { escapeSqlIdentifier } from '../../plan/identifier.ts';
 import { getTargetPool, isMissingDatabaseError, isMissingTableError } from '../mariadb/db.ts';
 

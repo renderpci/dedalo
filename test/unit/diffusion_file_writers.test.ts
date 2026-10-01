@@ -13,7 +13,13 @@
  *   lockstep with diffusion_delete.ts/PHP get_record_file_path), unlink
  *   idempotency, zip;
  * - shared: abort() leaves no temps, PKZIP structure of created archives,
- *   registry resolution + UnknownDiffusionFormatError.
+ *   registry resolution + UnknownDiffusionFormatError;
+ * - what survives a POWER CUT (test/helpers/power_loss_model.ts): every record
+ *   a checkpoint hands the run ledger (markdown/xml/rdf, written or removed),
+ *   every artifact a close publishes (csv/json snapshots, archives, merged
+ *   documents) and each consolidation primitive's own output is on disk when
+ *   the call returns; a csv/json partial is never unlinked before the snapshot
+ *   replacing it is durable.
  *
  * ALL paths live under a per-process temp root injected via the documented
  * DEDALO_DIFFUSION_FILES_ROOT override (files.ts) — the real media tree is
@@ -43,16 +49,21 @@ import {
 	addZipFiles,
 	atomicWriteFile,
 	createZip,
+	FullExportFile,
 	localCloseContext,
 	recordFileName,
 } from '../../src/diffusion/writers/files.ts';
 import { jsonWriter } from '../../src/diffusion/writers/json.ts';
 import { markdownWriter, renderMarkdownRecord } from '../../src/diffusion/writers/markdown.ts';
+import { rdfRecordFileName, rdfWriter, writeMergedRdf } from '../../src/diffusion/writers/rdf.ts';
 import {
 	getDiffusionWriter,
 	UnknownDiffusionFormatError,
 } from '../../src/diffusion/writers/registry.ts';
+import type { WriterSession } from '../../src/diffusion/writers/types.ts';
+import { writeMergedXml, xmlWriter } from '../../src/diffusion/writers/xml.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
+import { startPowerLossModel } from '../helpers/power_loss_model.ts';
 
 const ROOT = `${tmpdir()}/dedalo_ts_diffusion_file_writers_${process.pid}`;
 let savedRoot: string | undefined;
@@ -453,8 +464,8 @@ describe('markdown writer', () => {
 		expect(summary.errors[0]).toContain('fwt24_2.md');
 	});
 
-	// Every record unpublished while the close runs (the files-unlink door is
-	// unfenced, WC R2): nothing to archive is the no-archive outcome plus one
+	// Every record file gone by the close (removed by a hand outside the engine —
+	// the engine's files-unlink door takes the close's fence): nothing to archive is the no-archive outcome plus one
 	// line per record — never a failed run (the zip's zero-entry refusal is for
 	// callers that just wrote their inputs).
 	test("EVERY manifest record's file GONE: close resolves, no archive, the summary names each", async () => {
@@ -597,7 +608,7 @@ describe('shared file infrastructure', () => {
 
 	/**
 	 * A file that passes createZip's stat and is GONE when pass 1 opens it (the
-	 * files-unlink door removing an unpublished record while a close runs) is
+	 * file removed by a hand outside the engine while a close runs) is
 	 * skipped like any missing file — the archive equals the one built without
 	 * it, byte for byte. A source failing INSIDE its entry (pass 2 — no real
 	 * file can, its handle is open: see the unlink leg) cannot be skipped (a
@@ -1204,3 +1215,271 @@ for (const [format, open, extension] of [
 		});
 	});
 }
+
+/**
+ * WHAT SURVIVES A POWER CUT (audit 2026-09-26 Step 6 review: the run ledger
+ * made the writers' effects RECORDS, so they must be on disk before the record).
+ *
+ * The runner commits a batch's `wrote` / `removed` events, its checkpoint and,
+ * at the end, `clearRunLedger` + `finishJob('completed')` to Postgres — WAL
+ * durable. Whatever the writer told it must therefore be on disk, not in the
+ * page cache, when checkpoint() / close() resolves: otherwise a power cut
+ * leaves a 'completed' run whose files are empty, missing or (an unlink lost)
+ * resurrected, and a resume skips them because the cursor is past them. A kill
+ * -9 cannot show it (the page cache outlives the process); the model can
+ * (test/helpers/power_loss_model.ts: bytes durable once fsynced after the last
+ * write, an entry durable once its directory is fsynced after the change —
+ * what it did not see is never proven).
+ */
+describe('what survives a power cut: checkpoint() and close() are durability barriers', () => {
+	const PER_RECORD: readonly {
+		format: 'markdown' | 'xml' | 'rdf';
+		writer: { open(plan: PublicationPlan, context?: unknown): Promise<WriterSession> };
+		section: SectionPlan;
+		fileOf: (section: SectionPlan, sectionId: number) => string;
+	}[] = [
+		{
+			format: 'markdown',
+			writer: markdownWriter,
+			section: section('objects', 'fwt40', [field('title')]),
+			fileOf: (plan, id) => recordFileName(plan.sectionTipo, id, 'md'),
+		},
+		{
+			format: 'xml',
+			writer: xmlWriter,
+			section: section('objects', 'fwt41', [field('title')]),
+			fileOf: (plan, id) => recordFileName(plan.sectionTipo, id, 'xml'),
+		},
+		{
+			format: 'rdf',
+			writer: rdfWriter,
+			section: section('nmo:NumismaticObject', 'fwt42', [field('dc:title')]),
+			fileOf: (plan, id) => rdfRecordFileName(plan, id),
+		},
+	];
+	const titleRow = (sectionPlan: SectionPlan, id: number): ProjectedRow =>
+		row(id, 'lg-eng', { [sectionPlan.fields[0]?.columnName as string]: `title ${id}` });
+
+	for (const { format, writer, section: sectionPlan, fileOf } of PER_RECORD) {
+		test(`${format}: every record a checkpoint hands the run ledger as written or removed survives a power cut`, async () => {
+			const service = `svc_power_${format}`;
+			const dir = `${ROOT}/${format}/${service}`;
+			const model = startPowerLossModel(ROOT);
+			const unproven: string[] = [];
+			const expectBatchDurable = (events: { op: string; sectionId: number | string }[]): void => {
+				for (const event of events) {
+					const path = `${dir}/${fileOf(sectionPlan, Number(event.sectionId))}`;
+					if (event.op === 'wrote' && !model.survives(path)) unproven.push(model.explain(path));
+					if (event.op === 'removed' && !model.absenceSurvives(path)) {
+						unproven.push(`${path}: its unlink was never made durable (the record resurrects)`);
+					}
+				}
+			};
+			let first: { op: string; sectionId: number | string }[] = [];
+			let second: { op: string; sectionId: number | string }[] = [];
+			let third: { op: string; sectionId: number | string }[] = [];
+			try {
+				const session = await writer.open(plan(format, [sectionPlan], service), {
+					jobId: '00000000-0000-4000-8000-0000000004a1',
+					resume: null,
+				});
+				await session.ensureSchema();
+				await session.writeRows(sectionPlan, [titleRow(sectionPlan, 1), titleRow(sectionPlan, 2)]);
+				first = session.takeArtifacts();
+				await session.checkpoint();
+				expectBatchDurable(first);
+				await session.writeRows(sectionPlan, [titleRow(sectionPlan, 3)]);
+				second = session.takeArtifacts();
+				await session.checkpoint();
+				expectBatchDurable(second);
+				// A batch that only REMOVES (its records unpublished meanwhile).
+				await session.removeRecords(sectionPlan, [1]);
+				third = session.takeArtifacts();
+				await session.checkpoint();
+				expectBatchDurable(third);
+			} finally {
+				model.restore();
+			}
+			// Non-vacuous: three batches, three files written and one removed, all seen.
+			expect(first.map((event) => event.op)).toEqual(['wrote', 'wrote']);
+			expect(second.map((event) => event.op)).toEqual(['wrote']);
+			expect(third.map((event) => event.op)).toEqual(['removed']);
+			expect(existsSync(`${dir}/${fileOf(sectionPlan, 1)}`)).toBe(false);
+			expect(model.seen.unlinks + model.seen.renames).toBeGreaterThanOrEqual(4);
+			expect(existsSync(`${dir}/${fileOf(sectionPlan, 3)}`)).toBe(true);
+			expect(
+				unproven,
+				'checkpoint() resolved while a record the run ledger will commit was not on disk',
+			).toEqual([]);
+		});
+
+		test(`${format}: every file a close publishes survives a power cut`, async () => {
+			const service = `svc_power_close_${format}`;
+			const dir = `${ROOT}/${format}/${service}`;
+			// The model sees the whole session: what it did not see is never proven.
+			const model = startPowerLossModel(ROOT);
+			try {
+				const session = await writer.open(plan(format, [sectionPlan], service));
+				await session.ensureSchema();
+				await session.writeRows(sectionPlan, [titleRow(sectionPlan, 1), titleRow(sectionPlan, 2)]);
+				await session.close();
+			} finally {
+				model.restore();
+			}
+			const published = readdirSync(dir).filter((name) => !name.includes('.tmp-'));
+			// Non-vacuous: the consolidated archive and both records are among them.
+			expect(published.some((name) => name.endsWith('.zip'))).toBe(true);
+			expect(published.length).toBeGreaterThanOrEqual(3);
+			expect(
+				published
+					.map((name) => `${dir}/${name}`)
+					.filter((path) => !model.survives(path))
+					.map((path) => model.explain(path)),
+				'close() resolved — and the runner commits "completed" — with a published file not on disk',
+			).toEqual([]);
+		});
+	}
+
+	for (const [format, writer, extension] of [
+		['csv', csvWriter, 'csv'],
+		['json', jsonWriter, 'ndjson'],
+	] as const) {
+		test(`${format}: a close that FILTERS removed records publishes durable files and never drops the last durable copy`, async () => {
+			const service = `svc_power_close_${format}`;
+			const dir = `${ROOT}/${format}/${service}`;
+			const objects = resumeSection();
+			const extra = section('extras', 'fwt43', [field('title')]);
+			// The model sees the whole session: what it did not see is never proven.
+			const model = startPowerLossModel(ROOT);
+			let partialSurvived = false;
+			const lostCopies: string[] = [];
+			// The partial is the snapshot's only durable copy until the final is.
+			model.beforeUnlink((path) => {
+				const match = /^(.*)\.part-[0-9a-f-]{36}$/.exec(path);
+				if (match !== null && !model.survives(match[1] as string)) {
+					lostCopies.push(`${path} unlinked while ${model.explain(match[1] as string)}`);
+				}
+			});
+			try {
+				const session = await (writer.open as unknown as ResumableOpen)(
+					plan(format, [objects, extra], service),
+					{ jobId: '00000000-0000-4000-8000-0000000004c1', resume: null },
+				);
+				await session.ensureSchema();
+				await session.writeRows(objects, [...BATCH_1, ...BATCH_2]);
+				await session.writeRows(extra, [row(7, 'lg-eng', { title: 'seven' })]);
+				await session.checkpoint?.();
+				// The checkpoint names the partial's bytes: the partial must survive with them.
+				partialSurvived = model.survives(
+					`${dir}/objects.${extension}.part-00000000-0000-4000-8000-0000000004c1`,
+				);
+				await session.close(closeContext({ fwt30: [2] }));
+			} finally {
+				model.restore();
+			}
+			expect(
+				partialSurvived,
+				'checkpoint() named the bytes of a partial whose directory entry a power cut could take back',
+			).toBe(true);
+			const published = readdirSync(dir).filter(
+				(name) => !name.includes('.tmp-') && !name.includes('.part-'),
+			);
+			// Non-vacuous: the filter branch ran (record 2 is gone) and the zip landed.
+			expect(readFileSync(`${dir}/objects.${extension}`, 'utf-8')).not.toContain('two');
+			expect(readFileSync(`${dir}/objects.${extension}`, 'utf-8')).toContain('three');
+			expect(published).toContain(`diffusion_${format}.zip`);
+			expect(
+				lostCopies,
+				'the partial was unlinked before the filtered snapshot was on disk',
+			).toEqual([]);
+			expect(
+				published
+					.map((name) => `${dir}/${name}`)
+					.filter((path) => !model.survives(path))
+					.map((path) => model.explain(path)),
+				'close() resolved — and the runner commits "completed" + clears the ledger — with a published file not on disk',
+			).toEqual([]);
+		});
+	}
+
+	for (const [format, writer, extension] of [
+		['csv', csvWriter, 'csv'],
+		['json', jsonWriter, 'ndjson'],
+	] as const) {
+		// No archive lands after it: the snapshot's own rename must be made durable.
+		test(`${format}: a one-table close with nothing removed publishes a durable snapshot`, async () => {
+			const service = `svc_power_single_${format}`;
+			const dir = `${ROOT}/${format}/${service}`;
+			const objects = resumeSection();
+			const model = startPowerLossModel(ROOT);
+			try {
+				const session = await (writer.open as unknown as ResumableOpen)(
+					plan(format, [objects], service),
+					{ jobId: '00000000-0000-4000-8000-0000000004c2', resume: null },
+				);
+				await session.ensureSchema();
+				await session.writeRows(objects, BATCH_1);
+				await session.checkpoint?.();
+				await session.close(closeContext());
+			} finally {
+				model.restore();
+			}
+			const snapshot = `${dir}/objects.${extension}`;
+			expect(readFileSync(snapshot, 'utf-8')).toContain('two');
+			expect(readdirSync(dir).some((name) => name.endsWith('.zip'))).toBe(false);
+			expect(model.survives(snapshot), model.explain(snapshot)).toBe(true);
+		});
+	}
+
+	// Each consolidation primitive's own contract: what it returns from is on
+	// disk, whatever the caller does after it (a writer's later archive in the
+	// same directory would otherwise hide a missing directory fsync).
+	test('each consolidation primitive publishes durably on its own', async () => {
+		const dir = `${ROOT}/infra/primitives`;
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(`${dir}/a.xml`, '<?xml version="1.0"?>\n<root><a/></root>\n');
+		writeFileSync(`${dir}/b.xml`, '<?xml version="1.0"?>\n<root><b/></root>\n');
+		writeFileSync(`${dir}/a.rdf`, '<?xml version="1.0"?>\n<rdf:RDF>\n<x/>\n</rdf:RDF>\n');
+		writeFileSync(`${dir}/b.rdf`, '<?xml version="1.0"?>\n<rdf:RDF>\n<y/>\n</rdf:RDF>\n');
+		const parts = async function* (...paths: string[]) {
+			yield* paths;
+		};
+		const outputs: Record<string, string> = {};
+		const model = startPowerLossModel(ROOT);
+		try {
+			outputs.zip = `${dir}/out.zip`;
+			await createZip([`${dir}/a.xml`, `${dir}/b.xml`], outputs.zip);
+			expect(model.survives(outputs.zip), model.explain(outputs.zip)).toBe(true);
+			outputs.xml = `${dir}/merged.xml`;
+			await writeMergedXml(parts(`${dir}/a.xml`, `${dir}/b.xml`), outputs.xml);
+			expect(model.survives(outputs.xml), model.explain(outputs.xml)).toBe(true);
+			outputs.rdf = `${dir}/merged.rdf`;
+			await writeMergedRdf(parts(`${dir}/a.rdf`, `${dir}/b.rdf`), outputs.rdf);
+			expect(model.survives(outputs.rdf), model.explain(outputs.rdf)).toBe(true);
+			outputs.single = `${dir}/nested/new/single.json`;
+			atomicWriteFile(outputs.single, '{}\n');
+			expect(model.survives(outputs.single), model.explain(outputs.single)).toBe(true);
+		} finally {
+			model.restore();
+		}
+		// Non-vacuous: every output landed with content.
+		for (const path of Object.values(outputs)) expect(statSync(path).size).toBeGreaterThan(0);
+	});
+
+	test('a filter that fails leaves no temp behind and keeps the partial for the next attempt', async () => {
+		const dir = `${ROOT}/infra/filter_fails`;
+		const finalPath = `${dir}/objects.csv`;
+		const file = new FullExportFile(finalPath, '00000000-0000-4000-8000-0000000004d1');
+		await file.append('section_id,title\n1,one\n');
+		await file.durable();
+		await expect(
+			file.finalize(new Set(['1']), async (_input, output) => {
+				writeFileSync(output, 'section_id,title\n');
+				throw new Error('filter died half way');
+			}),
+		).rejects.toThrow('filter died half way');
+		expect(tempFilesIn(dir), 'a failed filter left its temp in the target directory').toEqual([]);
+		expect(existsSync(file.partialPath)).toBe(true);
+		expect(existsSync(finalPath)).toBe(false);
+	});
+});

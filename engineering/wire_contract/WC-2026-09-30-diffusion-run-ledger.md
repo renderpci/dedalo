@@ -99,3 +99,36 @@ the last complete archive. The docs claimed a byte-identical resume keystone.
 A publication run is the public face of the archive: a resume that silently
 drops the linked records, or an archive that lists a third of the run, is a
 wrong public record with a green job row.
+
+## Addendum 2026-10-01 — what the ledger records is on disk first
+
+The ledger turned each writer effect into a RECORD: a batch's `wrote` /
+`removed` events and its checkpoint commit WAL-durably, and the close's
+`clearRunLedger` + `finishJob('completed')` erase the means to resume. The
+files behind them were only in the page cache (temp + rename, no fsync), so a
+power cut (never a process kill — the page cache outlives the process) could
+leave a "completed" run with empty or missing record files, a resurrected
+unlink, or a truncated snapshot whose only durable copy — the fsynced partial —
+had already been unlinked. Now (`src/core/files/durable.ts`):
+
+- every per-record file (markdown, xml, rdf) is fsynced before its rename, and
+  the batch's directory — renames AND unlinks — is fsynced once in
+  `checkpoint()` (`WriterRunLog.barrier`), before the runner appends the events;
+  a target directory a run creates is made durable in its parent at
+  `ensureSchema()`;
+- a csv/json partial's directory entry is fsynced at its first checkpoint (the
+  checkpoint names its bytes);
+- a close returns only with every artifact durable: the filtered snapshot is
+  fsynced, renamed over the final path and the directory fsynced BEFORE the
+  partial is unlinked (a failed filter leaves no temp); the no-filter rename,
+  the archive (`createZip`) and the merged document (`StreamedMergeOutput`)
+  fsync their bytes and their directory. All on numeric descriptors.
+
+Gate: `test/unit/diffusion_file_writers.test.ts` "what survives a power cut" —
+a page-cache model over the real `node:fs` calls
+(`test/helpers/power_loss_model.ts`: bytes durable once fsynced after the last
+write, an entry once its directory is fsynced after the change; what it did not
+see is never proven), asserting at each `checkpoint()` / close resolution that
+every event the ledger will commit, and every published artifact, survives —
+and that the partial is never unlinked before the snapshot replacing it is.
+Mutation-verified per fsync. Wire shape unchanged; no fixture interaction.

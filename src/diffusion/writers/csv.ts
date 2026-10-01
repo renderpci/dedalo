@@ -33,7 +33,7 @@
  * re-publish to regenerate).
  */
 
-import { mkdirSync } from 'node:fs';
+import { mkdirDurably } from '../../core/files/durable.ts';
 import { neutralizeSpreadsheetFormula } from '../../core/files/spreadsheet_formula.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
@@ -200,7 +200,7 @@ class CsvWriterSession implements WriterSession {
 
 	/** File-target "schema" = the run directory exists. */
 	async ensureSchema(): Promise<void> {
-		mkdirSync(this.targetDir, { recursive: true });
+		mkdirDurably(this.targetDir);
 		this.schemaEnsured = true;
 	}
 

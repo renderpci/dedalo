@@ -93,7 +93,7 @@ const PENDING_RETRY_LOCK_KEY = 17581758;
  */
 async function defaultPendingRetry(): Promise<PendingRetryOutcome> {
 	const { retryPendingDiffusion } = await import('../../core/diffusion_bridge/diffusion_delete.ts');
-	const { withPatientDeleteWait } = await import('../targets/mariadb/delete_record.ts');
+	const { withPatientDeleteWait } = await import('../../core/diffusion_bridge/target_lock.ts');
 	// A drain exists to pay the debt: it waits (one bounded budget) for a busy target.
 	return withPatientDeleteWait(() => retryPendingDiffusion());
 }

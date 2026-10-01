@@ -182,3 +182,30 @@ another session's in-flight temps included.
   something legitimate: a socket/statement timeout on the target pool (fails
   a long schema evolution), or a wall-clock ceiling per unit that stops the
   keepalive and fails the unit loudly (the ceiling's size is the policy).
+
+## Addendum 2026-10-01 — the lock lives in the bridge; R2 closed
+
+- **The lock moved to `src/core/diffusion_bridge/target_lock.ts`** — the key
+  grammar, `withTargetLock` / `withTargetLocks`, the unit bounds and keepalive,
+  and the delete doors' patience (`withPatientDeleteWait`,
+  `DELETE_TARGET_LOCK_BOUND_MS`, `withDeleteDoorLock`). It is a contract
+  between core and the diffusion subsystem, and core never imports
+  `src/diffusion` statically: in `jobs/target_fence.ts` core could not take it.
+  `jobs/target_fence.ts` keeps what is the JOB's: the lease held
+  `FOR KEY SHARE` under the lock (`withFencedBatch`), the pool precondition and
+  `publicationTargetLockKey(plan)`. Same class, same keys, same behaviour.
+- **R2 closed.** Core's files-unlink door (`diffusion_delete.ts`
+  `unlinkPublishedFiles` — the record delete's settle and every retry drain) is
+  a DELETE-ONLY door of `files:<type>/<service>`: SHARED, given up at once on
+  the request path (the dd1758 row stays pending, R3), waited for inside a
+  patient drain. Unfenced, it could unlink between a run's revalidation and its
+  write (the batch then published the deleted record again) and remove files
+  from under a close. A close now sees the engine change nothing in its
+  directory; the missing-file tolerance stays for a hand outside the engine.
+  The unlink is also DURABLE (directory fsynced): the dd1758 row flips to
+  `unpublished` on its answer. Gate: diffusion_target_fence_native D4 (an
+  exclusive holder leaves the file and the row pending at once; a patient drain
+  waits, then unlinks; another unpublisher does not hold it off; the released
+  unlink survives a power cut — `test/helpers/power_loss_model.ts`).
+  Mutation-verified (unfenced, exclusive, never patient, no directory fsync:
+  each red).

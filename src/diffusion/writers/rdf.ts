@@ -58,14 +58,22 @@
  * "no file found (already removed)").
  */
 
-import { existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
-import { type FileHandle, open as openFileHandle, rename, unlink } from 'node:fs/promises';
+import {
+	closeSync,
+	existsSync,
+	fsyncSync,
+	openSync,
+	readdirSync,
+	renameSync,
+	unlinkSync,
+} from 'node:fs';
 import { dirname } from 'node:path';
 import {
 	publishedRecordFileName,
 	sanitizePublishedFileName,
 } from '../../core/diffusion_bridge/published_files.ts';
 import { DedaloError } from '../../core/errors/index.ts';
+import { fsyncDirectory, mkdirDurably, writeAllSync } from '../../core/files/durable.ts';
 import { tempPathFor } from '../../core/files/temp_path.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
@@ -340,42 +348,57 @@ export function renderRdfRecord(
 /**
  * A streamed consolidation's output: parts are read ONE at a time (as utf-8
  * text — a BOM is kept, like the frozen in-memory merge's readFileSync), the
- * result goes through an awaited file handle onto a temp sibling, fsynced,
- * renamed over `outPath`. Memory is bounded by the two largest parts (the
- * held-back first part + the current one). Zero non-empty parts ⇒ nothing is
- * written (the caller does not consolidate).
+ * result goes through a numeric descriptor (synchronous writes,
+ * core/files/durable.ts) onto a temp sibling, fsynced, renamed over `outPath`,
+ * the directory fsynced — the merged document a close reports is on disk
+ * before the runner commits the run 'completed'. Memory is bounded by the two
+ * largest parts (the held-back first part + the current one). Zero non-empty
+ * parts ⇒ nothing is written (the caller does not consolidate).
  */
 export class StreamedMergeOutput {
-	private handle: FileHandle | null = null;
+	private fd: number | null = null;
 	private tempPath: string | null = null;
 
 	constructor(private readonly outPath: string) {}
 
 	async write(text: string): Promise<void> {
 		if (text === '') return;
-		if (this.handle === null) {
-			mkdirSync(dirname(this.outPath), { recursive: true });
+		if (this.fd === null) {
+			mkdirDurably(dirname(this.outPath));
 			this.tempPath = tempPathFor(this.outPath);
-			this.handle = await openFileHandle(this.tempPath, 'w');
+			this.fd = openSync(this.tempPath, 'w');
 		}
-		await this.handle.write(text);
+		writeAllSync(this.fd, Buffer.from(text, 'utf-8'));
 	}
 
-	/** Finalize: fsync + rename (nothing written ⇒ nothing lands). */
+	/** Finalize: fsync + rename + directory fsync (nothing written ⇒ nothing lands). */
 	async commit(): Promise<void> {
-		if (this.handle === null || this.tempPath === null) return;
-		await this.handle.sync();
-		await this.handle.close();
-		this.handle = null;
-		await rename(this.tempPath, this.outPath);
+		if (this.fd === null || this.tempPath === null) return;
+		fsyncSync(this.fd);
+		closeSync(this.fd);
+		this.fd = null;
+		renameSync(this.tempPath, this.outPath);
 		this.tempPath = null;
+		fsyncDirectory(dirname(this.outPath));
 	}
 
 	/** Drop the temp (a failed merge leaves no partial final file). */
 	async discard(): Promise<void> {
-		if (this.handle !== null) await this.handle.close().catch(() => {});
-		this.handle = null;
-		if (this.tempPath !== null) await unlink(this.tempPath).catch(() => {});
+		if (this.fd !== null) {
+			try {
+				closeSync(this.fd);
+			} catch {
+				// already closed — nothing held
+			}
+		}
+		this.fd = null;
+		if (this.tempPath !== null) {
+			try {
+				unlinkSync(this.tempPath);
+			} catch {
+				// never created, or already gone — nothing left behind
+			}
+		}
 		this.tempPath = null;
 	}
 }
@@ -496,7 +519,7 @@ class RdfWriterSession implements WriterSession {
 
 	/** File-target "schema" = the run directory exists (no DDL). */
 	async ensureSchema(): Promise<void> {
-		mkdirSync(this.targetDir, { recursive: true });
+		mkdirDurably(this.targetDir);
 		this.schemaEnsured = true;
 	}
 
@@ -527,6 +550,7 @@ class RdfWriterSession implements WriterSession {
 			atomicWriteFile(
 				this.recordPath(section, group.sectionId),
 				renderRdfRecord(section, group.sectionId, group.rows, namespaces),
+				this.log.barrier,
 			);
 			this.log.note('wrote', section.sectionTipo, group.sectionId);
 		}
@@ -563,6 +587,7 @@ class RdfWriterSession implements WriterSession {
 			}
 			for (const path of toUnlink) {
 				unlinkSync(path);
+				this.log.barrier.add(this.targetDir); // durable at checkpoint()
 				deleted++;
 			}
 			this.log.note('removed', section.sectionTipo, sectionId);
@@ -575,7 +600,12 @@ class RdfWriterSession implements WriterSession {
 		return this.log.take();
 	}
 
-	/** Every record file already landed via temp+rename; the state is the counters. */
+	/**
+	 * THE DURABILITY BARRIER (WriterRunLog.checkpoint): every record file of the
+	 * batch was fsynced before its rename (atomicWriteFile); the directory —
+	 * the renames and unlinks — is fsynced here, before the runner commits the
+	 * batch's events to the run ledger. The state is the counters.
+	 */
 	async checkpoint(): Promise<unknown> {
 		return this.log.checkpoint();
 	}
@@ -611,9 +641,10 @@ class RdfWriterSession implements WriterSession {
 		);
 		if (parts > 0) {
 			// The zip pass reports what the merge pass could not see: a record
-			// unpublished between the two (the merged document then names a record
-			// the archive omits — the line says so; the files-unlink door is
-			// unfenced, WC R2).
+			// file removed between the two (the merged document then names a
+			// record the archive omits — the line says so). The engine's
+			// files-unlink door cannot do it (it takes this close's fence, WC R2
+			// closed); a hand outside the engine can.
 			await createZip(
 				withTrailingPath(manifestPaths(run, pathOf, missing), mergedPath),
 				`${this.targetDir}/${RDF_ZIP_NAME}`,

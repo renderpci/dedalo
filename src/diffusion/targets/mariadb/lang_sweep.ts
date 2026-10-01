@@ -56,8 +56,8 @@
  */
 
 import { config } from '../../../config/config.ts';
+import { sqlTargetLockKey, withTargetLock } from '../../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
-import { sqlTargetLockKey, withTargetLock } from '../../jobs/target_fence.ts';
 import { escapeSqlIdentifier, requireSqlIdentifier } from '../../plan/identifier.ts';
 import { buildVirtualDiffusionTree } from '../../plan/virtual_tree.ts';
 import {

@@ -757,7 +757,7 @@ export async function retryPendingDeletionsPatiently(
 	limit?: number,
 ): Promise<{ total: number; retried: number; remaining: number }> {
 	const { retryPendingDiffusion } = await import('../../core/diffusion_bridge/diffusion_delete.ts');
-	const { withPatientDeleteWait } = await import('../targets/mariadb/delete_record.ts');
+	const { withPatientDeleteWait } = await import('../../core/diffusion_bridge/target_lock.ts');
 	return withPatientDeleteWait(() => retryPendingDiffusion(limit));
 }
 

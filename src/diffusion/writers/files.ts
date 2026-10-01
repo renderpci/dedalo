@@ -19,8 +19,13 @@
  * back to `config.media.rootPath`. Missing both = loud typed error at open(),
  * never a silent write to a guessed path.
  *
- * All finalization is temp+rename on the SAME filesystem (atomicWriteFile);
- * ZIP creation ports the old engine's PKZIP-STORE archive
+ * All finalization is temp+rename on the SAME filesystem (atomicWriteFile),
+ * and DURABLE (src/core/files/durable.ts): bytes fsynced before the rename,
+ * the directory fsynced after it — a per-record batch's directory once, in
+ * checkpoint() (WriterRunLog.barrier), before the runner commits its events to
+ * the run ledger; every artifact of a close before the close returns, i.e.
+ * before the runner commits 'completed' and clears the ledger (gate:
+ * diffusion_file_writers "what survives a power cut"). ZIP creation ports the old engine's PKZIP-STORE archive
  * (diffusion/api/v1/lib/rdf_file_utils.ts:138-248) — flat archive, basename
  * entries, method STORE, zeroed timestamps (deterministic archives).
  *
@@ -48,16 +53,13 @@ import {
 	closeSync,
 	existsSync,
 	fsyncSync,
-	mkdirSync,
 	openSync,
 	readdirSync,
 	readFileSync,
 	renameSync,
 	unlinkSync,
-	writeFileSync,
-	writeSync,
 } from 'node:fs';
-import { open, rename, stat, truncate, unlink } from 'node:fs/promises';
+import { stat, truncate, unlink } from 'node:fs/promises';
 import { basename, dirname } from 'node:path';
 import {
 	diffusionFilesRoot,
@@ -66,6 +68,13 @@ import {
 	publishedTargetDir,
 } from '../../core/diffusion_bridge/published_files.ts';
 import { DedaloError } from '../../core/errors/index.ts';
+import {
+	DirectoryBarrier,
+	fsyncDirectory,
+	fsyncFile,
+	mkdirDurably,
+	writeAllSync,
+} from '../../core/files/durable.ts';
 import { isTempSibling, tempPathFor } from '../../core/files/temp_path.ts';
 import { openZipStream, type ZipStreamWriter } from '../../core/files/zip.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
@@ -134,20 +143,37 @@ export function planColumnNames(section: SectionPlan): string[] {
 }
 
 /**
- * Atomic write: mkdir -p parents, write `<final>.tmp-<random>`, rename over
- * the final path. A failed write never leaves a partial final file; the temp
- * is cleaned on error.
+ * Atomic AND durable write (core/files/durable.ts): mkdir -p parents, write
+ * `<final>.tmp-<random>`, fsync it, rename it over the final path, then make
+ * the directory entry durable — at once, or at `barrier`'s flush (a writer
+ * landing a batch of files fsyncs their directory once, in checkpoint()). A
+ * failed write never leaves a partial final file; the temp is cleaned on error.
+ * The run ledger commits a `wrote` event as the record of this effect, so the
+ * bytes must be on disk before that commit, not in the page cache.
  */
-export function atomicWriteFile(finalPath: string, content: string | Uint8Array): void {
-	mkdirSync(dirname(finalPath), { recursive: true });
+export function atomicWriteFile(
+	finalPath: string,
+	content: string | Uint8Array,
+	barrier?: DirectoryBarrier,
+): void {
+	const dir = dirname(finalPath);
+	mkdirDurably(dir, barrier);
 	const tempPath = tempPathFor(finalPath);
 	try {
-		writeFileSync(tempPath, content);
+		const fd = openSync(tempPath, 'w');
+		try {
+			writeAllSync(fd, typeof content === 'string' ? Buffer.from(content, 'utf-8') : content);
+			fsyncSync(fd);
+		} finally {
+			closeSync(fd);
+		}
 		renameSync(tempPath, finalPath);
 	} catch (error) {
 		if (existsSync(tempPath)) unlinkSync(tempPath);
 		throw error;
 	}
+	if (barrier !== undefined) barrier.add(dir);
+	else fsyncDirectory(dir);
 }
 
 /**
@@ -225,12 +251,13 @@ export async function* manifestPaths(
 
 /**
  * Read one part a manifest pass yielded, as utf-8 text — or `null` when the
- * file is GONE by the read. manifestPaths checked existence when it yielded,
- * but the files-unlink door (a record unpublished while the close runs) is not
- * fenced, so the file can vanish between that check and this read; a vanished
- * part is the same fact as a missing one — the caller reports it through its
- * onMissing line and goes on — never a crash of the whole close. Any other
- * read error is thrown.
+ * file is GONE by the read. manifestPaths checked existence when it yielded;
+ * the engine's own files-unlink door cannot remove it meanwhile (it takes the
+ * target's fence, which the close holds — WC R2, closed 2026-10-01), but a
+ * hand outside the engine (an operator's rm) can, so a vanished part is the
+ * same fact as a missing one — the caller reports it through its onMissing
+ * line and goes on — never a crash of the whole close. Any other read error is
+ * thrown.
  */
 export function readManifestPart(path: string): string | null {
 	try {
@@ -253,18 +280,21 @@ export function readManifestPart(path: string): string | null {
  * gate is ops_runtime_pin.
  *
  * BOUNDED MEMORY (PERF-2/DIFF-4): each file is streamed from disk twice (CRC +
- * size, then bytes) straight into a temp sibling through an awaited file
- * handle, fsynced, then renamed over the final path — never held whole. (A
- * long archive inside the runner's close unit needs nothing of its own to keep
- * the fence alive: the unit's timer keepalive does, jobs/target_fence.ts.)
+ * size, then bytes) straight into a temp sibling through a numeric descriptor,
+ * fsynced, renamed over the final path, the directory fsynced — never held
+ * whole. (A long archive inside the runner's close unit needs nothing of its
+ * own to keep the fence alive: the unit's timer keepalive does,
+ * core/diffusion_bridge/target_lock.ts.)
  *
  * Missing source files are skipped with a warning and reported through
  * `onMissing` (a close's summary line). A file opened for archiving is
- * archived WHOLE even if the files-unlink door removes its path meanwhile
- * (both passes read one open handle — core/files/zip.ts addStoredFile). Zero
+ * archived WHOLE even if its path is removed meanwhile — by a hand outside
+ * the engine; the engine's files-unlink door takes the target's fence the
+ * close holds (both passes read one open handle — core/files/zip.ts
+ * addStoredFile). Zero
  * valid entries: REFUSED by default (`empty: 'refuse'` — a caller that just
  * wrote its inputs has a bug if none is there); `empty: 'none'` (a close over
- * a manifest whose files can all be unpublished mid-close) lands NOTHING and
+ * a manifest whose files can all be gone by then) lands NOTHING and
  * answers `entries: 0`. Always REFUSED, typed (`internal.invariant`), leaving
  * nothing behind: a DUPLICATE entry name (case-insensitive — extractors on
  * case-insensitive filesystems would overwrite one entry with the other; a
@@ -278,8 +308,8 @@ function isMissingPathError(error: unknown): boolean {
 /**
  * Add every regular file of `filePaths` to `writer` as a STORE entry (its
  * basename); returns the number added. A path that is MISSING — at the stat,
- * or gone by the time addStoredFile opens it (a record unpublished by the
- * files-unlink door while the close runs) — is skipped with a warning and
+ * or gone by the time addStoredFile opens it (removed by a hand outside the
+ * engine while the close runs) — is skipped with a warning and
  * reported through `onMissing`: the archive is still whole (nothing is written
  * and no name claimed before that open). Once open, an unlink cannot break the
  * entry (one handle serves both passes). A source that fails AFTER its local
@@ -339,24 +369,23 @@ export async function createZip(
 	zipPath: string,
 	options: CreateZipOptions = {},
 ): Promise<{ entries: number }> {
-	mkdirSync(dirname(zipPath), { recursive: true });
+	mkdirDurably(dirname(zipPath));
 	const tempPath = tempPathFor(zipPath);
-	const handle = await open(tempPath, 'w');
+	// A numeric descriptor (core/files/durable.ts): synchronous writes, fsynced
+	// before the rename, the directory fsynced after it — the archive a close
+	// reports is on disk before the runner commits the run 'completed'.
+	const fd = openSync(tempPath, 'w');
 	let closed = false;
 	const writer = openZipStream({
 		async write(chunk) {
-			let written = 0;
-			while (written < chunk.byteLength) {
-				const { bytesWritten } = await handle.write(chunk, written, chunk.byteLength - written);
-				written += bytesWritten;
-			}
+			writeAllSync(fd, chunk);
 		},
 	});
 	try {
 		const entries = await addZipFiles(writer, filePaths, options.onMissing);
 		if (entries === 0 && options.empty === 'none') {
 			writer.abort();
-			await handle.close();
+			closeSync(fd);
 			closed = true;
 			await unlink(tempPath).catch(() => {});
 			return { entries: 0 };
@@ -367,14 +396,21 @@ export async function createZip(
 			});
 		}
 		await writer.finish();
-		await handle.sync();
-		await handle.close();
+		fsyncSync(fd);
+		closeSync(fd);
 		closed = true;
-		await rename(tempPath, zipPath);
+		renameSync(tempPath, zipPath);
+		fsyncDirectory(dirname(zipPath));
 		return { entries };
 	} catch (error) {
 		writer.abort();
-		if (!closed) await handle.close().catch(() => {});
+		if (!closed) {
+			try {
+				closeSync(fd);
+			} catch {
+				// already closed — nothing held
+			}
+		}
 		await unlink(tempPath).catch(() => {});
 		throw error;
 	}
@@ -462,6 +498,14 @@ export class WriterRunLog {
 	private readonly counters = new Map<string, TableCounters>();
 	readonly errors: WriterErrors;
 	private readonly events: ArtifactEventLog;
+	/**
+	 * The directories whose entries this session changed since its last
+	 * checkpoint (a record file renamed in, one unlinked): the writer passes it
+	 * to atomicWriteFile and adds the directory of every unlink; checkpoint()
+	 * flushes it — the batch's events reach the run ledger only once their
+	 * effects are on disk.
+	 */
+	readonly barrier = new DirectoryBarrier();
 
 	constructor(tableNames: readonly string[], context?: WriterOpenContext) {
 		const resume = context?.resume ?? null;
@@ -497,8 +541,14 @@ export class WriterRunLog {
 		return this.events.take();
 	}
 
-	/** The resumable state: the counters and the error lines (JSON, bounded). */
+	/**
+	 * THE DURABILITY BARRIER, then the resumable state (the counters and the
+	 * error lines, JSON, bounded): every directory entry the batch changed is
+	 * fsynced (each file's bytes already were, by atomicWriteFile) before the
+	 * runner commits the batch's `wrote` / `removed` events as done.
+	 */
 	checkpoint(): { tables: Record<string, TableCounters>; errors: string[] } {
+		this.barrier.flush();
 		return {
 			tables: Object.fromEntries(
 				[...this.counters].map(([tableName, counters]) => [tableName, { ...counters }]),
@@ -582,6 +632,8 @@ export class FullExportFile {
 	private fd: number | null = null;
 	/** The checkpointed length a resumed partial is cut back to — deferred to the first mutating call. */
 	private pendingTruncate: number | null = null;
+	/** The partial was created by this session and its directory entry is not fsynced yet. */
+	private entryPending = false;
 	started = false;
 	written = 0;
 	deleted = 0;
@@ -630,21 +682,28 @@ export class FullExportFile {
 	async append(text: string): Promise<void> {
 		if (this.fd === null) {
 			await this.settleResume();
-			mkdirSync(dirname(this.partialPath), { recursive: true });
+			mkdirDurably(dirname(this.partialPath));
+			const created = !existsSync(this.partialPath);
 			this.fd = openSync(this.partialPath, this.started ? 'a' : 'w');
+			this.entryPending ||= created;
 			this.started = true;
 		}
-		const bytes = Buffer.from(text, 'utf-8');
-		let offset = 0;
-		while (offset < bytes.byteLength) {
-			offset += writeSync(this.fd, bytes, offset, bytes.byteLength - offset);
-		}
+		writeAllSync(this.fd, Buffer.from(text, 'utf-8'));
 	}
 
-	/** Durability barrier: fsync, then the checkpoint (the partial's durable length). */
+	/**
+	 * Durability barrier: fsync (and, once, the directory entry of a partial
+	 * this session created — a checkpoint naming bytes of a file a power cut
+	 * could take back whole would send the resume to a restart), then the
+	 * checkpoint (the partial's durable length).
+	 */
 	async durable(): Promise<FullExportCheckpoint> {
 		await this.settleResume();
 		if (this.fd !== null) fsyncSync(this.fd);
+		if (this.entryPending) {
+			fsyncDirectory(dirname(this.partialPath));
+			this.entryPending = false;
+		}
 		const bytes = this.started ? (await stat(this.partialPath)).size : 0;
 		return { bytes, written: this.written, deleted: this.deleted, started: this.started };
 	}
@@ -666,6 +725,14 @@ export class FullExportFile {
 	 * Finalize: rename the partial over the final path — through `filter`
 	 * first when the run removed records (it writes the kept records to a
 	 * sibling temp and reports how many it dropped).
+	 *
+	 * DURABLE, and never without a durable copy (core/files/durable.ts): the
+	 * runner commits `completed` and CLEARS the run ledger right after the
+	 * close, so nothing could resume or even detect a snapshot a power cut took
+	 * back. The filtered output is fsynced HERE, whatever the filter wrote it
+	 * with; it is renamed over the final path and the directory fsynced BEFORE
+	 * the partial — until then the snapshot's only durable copy — is unlinked.
+	 * A filter that fails leaves no temp (the partial stays for the next attempt).
 	 */
 	async finalize(
 		removed: ReadonlySet<string>,
@@ -678,15 +745,25 @@ export class FullExportFile {
 		await this.settleResume();
 		if (this.fd !== null) fsyncSync(this.fd);
 		this.release();
+		const dir = dirname(this.finalPath);
 		if (removed.size > 0) {
 			const filteredPath = tempPathFor(this.finalPath);
-			const { dropped } = await filter(this.partialPath, filteredPath, removed);
+			let dropped: number;
+			try {
+				({ dropped } = await filter(this.partialPath, filteredPath, removed));
+				fsyncFile(filteredPath);
+			} catch (error) {
+				if (existsSync(filteredPath)) unlinkSync(filteredPath);
+				throw error;
+			}
 			this.deleted += dropped;
 			this.written -= dropped;
-			await unlink(this.partialPath);
-			await rename(filteredPath, this.finalPath);
+			renameSync(filteredPath, this.finalPath);
+			fsyncDirectory(dir);
+			unlinkSync(this.partialPath);
 		} else {
-			await rename(this.partialPath, this.finalPath);
+			renameSync(this.partialPath, this.finalPath);
+			fsyncDirectory(dir);
 		}
 	}
 

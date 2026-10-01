@@ -474,7 +474,9 @@ to the computed sources. Ledger:
   ROW; what two writers can corrupt is the publication TARGET (a MariaDB
   database, a files directory). Every durable effect of a run — the schema
   step, each batch, the close — is ONE unit (`jobs/target_fence.ts`
-  `withFencedBatch`): one Postgres transaction that takes the target's advisory
+  `withFencedBatch`, over the bridge's lock `core/diffusion_bridge/target_lock.ts`
+  — a core↔diffusion contract, so core's own doors can take it): one Postgres
+  transaction that takes the target's advisory
   lock (`pg_try_advisory_xact_lock(17580002, hashtext('sql:<database>' |
   'files:<format>/<label>'))`, a try-lock loop that holds no connection while
   the target is busy and writes the busy message to the job row once), THEN
@@ -490,9 +492,9 @@ to the computed sources. Ledger:
   `retry_pending_deletions` action, the maintenance widget's retry — waits one
   10 s budget in all), the ghost
   unpublish, the lang sweep, the media-index apply. The two DELETE-ONLY doors
-  (record delete, ghost unpublish) take it SHARED: unpublishers never exclude
-  each other, only the exclusive writers (runner unit, lang sweep, media-index
-  apply). The per-target
+  (record delete — the MariaDB executor and core's files unlink alike — and
+  ghost unpublish) take it SHARED: unpublishers never exclude each other, only
+  the exclusive writers (runner unit, lang sweep, media-index apply). The per-target
   exclusion is batch-granular: two runs on one target interleave batch by
   batch, and since consolidated artifacts are built from each run's own ledger,
   that is equivalent to running them one after the other. ONLY a fence unit may
@@ -512,10 +514,7 @@ to the computed sources. Ledger:
   `engineering/wire_contract/WC-2026-09-30-diffusion-target-fence.md`.
   Ledgered residuals: a thawed zombie whose fence session Postgres killed can
   finish at most its one in-flight batch (a MariaDB `GET_LOCK` would close it
-  for sql targets — owner call); the core files-unlink door
-  (`core/diffusion_bridge/`) is not fenced yet (a file it removes under a
-  close is left out and named in the run's summary — or, removed after
-  createZip opened it, archived whole — never a failed run; WC R2); a live unit whose
+  for sql targets — owner call); a live unit whose
   target statement never returns (a lock wait, a half-open connection) holds
   its target — and every door waiting on it — until the runner is killed:
   the bound (a target socket/statement timeout, or a per-unit wall-clock
@@ -544,7 +543,14 @@ to the computed sources. Ledger:
   durable length), and the close consolidates the WHOLE run from the ledger's
   manifest. A pre-ledger checkpoint (no `v: 2`) restarts from zero. A cancelled
   run never consolidates (the ledger is kept: an admin requeue resumes it); a
-  completed run clears it. Gates: `test/unit/diffusion_resume_ledger_native.test.ts`
+  completed run clears it. What the ledger records is ON DISK before it is
+  recorded (`src/core/files/durable.ts`, 2026-10-01): each file fsynced before
+  its rename, a batch's directory fsynced once in the writer's `checkpoint()`,
+  every close artifact (snapshot, archive, merged document) and its directory
+  fsynced before the close returns — and the partial never unlinked before the
+  snapshot replacing it is durable; a power cut cannot leave a "completed" run
+  with empty, missing or resurrected files (gate: diffusion_file_writers
+  "what survives a power cut"). Gates: `test/unit/diffusion_resume_ledger_native.test.ts`
   (a crash among the primaries, a crash inside the frontier drain, a real
   kill -9 → byte-identical trees; exactly one dd1758 row per primary; cancel
   leaves the published archive unchanged), `test/unit/diffusion_frontier_replay.test.ts`

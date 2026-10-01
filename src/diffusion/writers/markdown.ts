@@ -35,7 +35,8 @@
  * a crashed PHP per-record save loop — and it never consolidates.
  */
 
-import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { existsSync, unlinkSync } from 'node:fs';
+import { mkdirDurably } from '../../core/files/durable.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import {
@@ -145,7 +146,7 @@ class MarkdownWriterSession implements WriterSession {
 
 	/** File-target "schema" = the run directory exists. */
 	async ensureSchema(): Promise<void> {
-		mkdirSync(this.targetDir, { recursive: true });
+		mkdirDurably(this.targetDir);
 		this.schemaEnsured = true;
 	}
 
@@ -175,6 +176,7 @@ class MarkdownWriterSession implements WriterSession {
 			atomicWriteFile(
 				this.recordPath(section, group.sectionId),
 				renderMarkdownRecord(this.plan, section, group.sectionId, group.rows),
+				this.log.barrier,
 			);
 			this.log.note('wrote', section.sectionTipo, group.sectionId);
 		}
@@ -198,6 +200,7 @@ class MarkdownWriterSession implements WriterSession {
 			const filePath = this.recordPath(section, sectionId);
 			if (existsSync(filePath)) {
 				unlinkSync(filePath);
+				this.log.barrier.add(this.targetDir); // durable at checkpoint()
 				deleted++;
 			}
 			this.log.note('removed', section.sectionTipo, sectionId); // never zipped again
@@ -210,7 +213,12 @@ class MarkdownWriterSession implements WriterSession {
 		return this.log.take();
 	}
 
-	/** Every record file already landed via temp+rename; the state is the counters. */
+	/**
+	 * THE DURABILITY BARRIER (WriterRunLog.checkpoint): every record file of the
+	 * batch was fsynced before its rename (atomicWriteFile); the directory —
+	 * the renames and unlinks — is fsynced here, before the runner commits the
+	 * batch's events to the run ledger. The state is the counters.
+	 */
 	async checkpoint(): Promise<unknown> {
 		return this.log.checkpoint();
 	}
@@ -228,8 +236,9 @@ class MarkdownWriterSession implements WriterSession {
 			return section === undefined ? null : this.recordPath(section, entry.sectionId);
 		};
 		// ONE pass: a vanished record file is a summary line, never a crash — at
-		// the manifest's existence check or at the zip's open (the files-unlink
-		// door is unfenced, WC R2); none left ⇒ no archive, not a failed run.
+		// the manifest's existence check or at the zip's open (the engine's
+		// files-unlink door takes this close's fence; a hand outside the engine
+		// does not); none left ⇒ no archive, not a failed run.
 		const missing = (path: string): void => {
 			this.log.errors.add(
 				`markdown close: published file missing, left out of the archive: ${path}`,

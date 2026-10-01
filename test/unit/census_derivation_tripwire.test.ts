@@ -745,6 +745,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			"NOT a corpus: `scratchRunEntries` lists the scratch directory a diffusion gate's OWN publication run wrote (a run directory, a files target); the CALLER hands its own scratch root",
 	},
+	'test/helpers/power_loss_model.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `startPowerLossModel` snapshots the entries already under the CALLER's scratch root (a gate's marked files root) when the model starts — what predates the test is durable by assumption; never a repo directory",
+	},
 	'test/helpers/zzarc_media_digests.ts': {
 		roots: [],
 		scope:

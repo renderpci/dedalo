@@ -906,9 +906,9 @@ describe('streamed merge == frozen oracle (PERF-2/DIFF-4)', () => {
 });
 
 /**
- * The merge reads a part AFTER manifestPaths checked it exists, and the
- * files-unlink door (a record unpublished while the close runs) is not fenced:
- * a part can vanish in that window. It is the same fact as a missing part — a
+ * The merge reads a part AFTER manifestPaths checked it exists, and a hand
+ * outside the engine can remove it in that window (the engine's files-unlink
+ * door takes the close's fence — WC R2, closed 2026-10-01). It is the same fact as a missing part — a
  * line through onMissing, the rest merged — never a throw that fails the run.
  */
 describe('a part GONE between the manifest pass and the merge read', () => {
@@ -950,8 +950,9 @@ describe('a part GONE between the manifest pass and the merge read', () => {
 });
 
 /**
- * The close reads the manifest TWICE (merge, then zip) and the files-unlink door
- * is unfenced (WC R2): a record unpublished BETWEEN the two lands in the merged
+ * The close reads the manifest TWICE (merge, then zip) and a hand outside the
+ * engine can remove a record file BETWEEN the two (the engine's files-unlink
+ * door cannot: it takes the close's fence): that record lands in the merged
  * document and is missing from the archive. The two artifacts then disagree —
  * the close must SAY so (a summary line naming the file), never omit it
  * silently, and never fail the run.

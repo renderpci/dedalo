@@ -62,12 +62,16 @@ import {
 	parsePublishedRecordFileName,
 } from '../../../core/diffusion_bridge/published_files.ts';
 import {
+	fileTargetLockKey,
+	sqlTargetLockKey,
+	withTargetLock,
+} from '../../../core/diffusion_bridge/target_lock.ts';
+import {
 	findFirstDescendantTipoByModel,
 	getMatrixTableFromTipo,
 	getNode,
 } from '../../../core/ontology/resolver.ts';
 import type { ReconcileReport } from '../../../core/reconcile/registry.ts';
-import { fileTargetLockKey, sqlTargetLockKey, withTargetLock } from '../../jobs/target_fence.ts';
 import { escapeSqlIdentifier } from '../../plan/identifier.ts';
 import { applyTableState, markerStoreBase } from '../mediastore/media_index.ts';
 import { getTargetPool, isMissingDatabaseError, isMissingTableError } from './db.ts';
