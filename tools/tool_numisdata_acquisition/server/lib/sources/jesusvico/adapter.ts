@@ -1,11 +1,8 @@
-import { fetchPublicPage } from '../../acquisition/http.ts';
-import { assertSafeJesusvicoUrl } from '../../acquisition/url-safety.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
 import {
 	acquireJesusvicoAuction,
 	acquireJesusvicoLot,
-	JESUSVICO_FETCH_OPTIONS,
 	jesusvicoLotIdentifier,
 	parseJesusvicoAuctionNumber,
 } from './acquisition.ts';
@@ -33,8 +30,6 @@ export const jesusvicoAdapter: SourceAdapter = {
 		return hostname !== null && JESUSVICO_HOST_PATTERN.test(hostname);
 	},
 
-	assertSafeUrl: assertSafeJesusvicoUrl,
-
 	parseAuctionIdentifier(rawUrl) {
 		return jesusvicoLotIdentifier(rawUrl) ?? parseJesusvicoAuctionNumber(rawUrl);
 	},
@@ -60,9 +55,4 @@ export const jesusvicoAdapter: SourceAdapter = {
 	// Prefixed so jesusvico's auction numbers can't collide with another source's under
 	// data/sources/auctions/<key>/.
 	storageKey: (auctionIdentifier) => `jesusvico-${auctionIdentifier}`,
-
-	async fetchLotDetail(lotSourceUrl) {
-		const raw = await fetchPublicPage(lotSourceUrl, JESUSVICO_FETCH_OPTIONS);
-		return parseJesusvicoLotDetail(raw.html, lotSourceUrl);
-	},
 };

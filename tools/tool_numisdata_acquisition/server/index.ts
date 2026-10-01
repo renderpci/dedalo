@@ -13,6 +13,7 @@ import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
 import { ok } from '../../../src/core/errors/index.ts';
+import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import {
 	processUploadedFile,
@@ -36,13 +37,12 @@ import {
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { cropCoinPair } from '../../tool_import_files/server/script_files/numisdata/crop_50.ts';
-import type { RawSource } from './lib/acquisition/http.ts';
-import { downloadImageBytes, extensionFromUrl } from './lib/acquisition/image_fetch.ts';
 import { aureoAdapter } from './lib/sources/aureo/adapter.ts';
 import { biddrAdapter } from './lib/sources/biddr/adapter.ts';
 import { jesusvicoAdapter } from './lib/sources/jesusvico/adapter.ts';
 import { numisbidsAdapter } from './lib/sources/numisbids/adapter.ts';
 import { sixbidAdapter } from './lib/sources/sixbid/adapter.ts';
+import type { RawSource } from './lib/sources/types.ts';
 
 const NUMISDATA_OBJECT_TIPO = 'numisdata4';
 // material/mint/ruler/denomination/condition (thesaurus-linked) and sourceUrl
@@ -104,6 +104,41 @@ const IMPORT_KEY_DIR = 'numisdata_acquisition';
 
 const ADAPTERS = [jesusvicoAdapter, biddrAdapter, aureoAdapter, numisbidsAdapter, sixbidAdapter];
 
+// The harvesting door's host policy per source, by adapter id - a bare domain also admits its
+// subdomains (harvestFetch's own rule), which is what covers each source's separate image/CDN
+// host (biddr's media.biddr.com, sixbid's image-cdn.sixbid.com, ...) without listing it separately.
+const HOSTS_BY_ADAPTER_ID: Record<string, readonly string[]> = {
+	jesusvico: ['jesusvico.com'],
+	biddr: ['biddr.com'],
+	aureo: ['aureo.com'],
+	numisbids: ['numisbids.com'],
+	sixbid: ['sixbid.com'],
+};
+
+const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+	'image/jpeg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp',
+	'image/tiff': 'tif',
+};
+
+/**
+ * Extension from the server's own content-type first, falling back to the URL's last path
+ * segment. The URL alone was unreliable: `lastIndexOf('.')` over the WHOLE path matched the wrong
+ * thing on a versioned path (`/v1.2/img/123` -> "2/img/123") or a query-string id
+ * (`/image.php?id=5` -> "php") - review item 10.
+ */
+function extensionFromUrl(url: string, contentType: string): string {
+	const mime = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
+	const byMimeType = EXTENSION_BY_MIME_TYPE[mime];
+	if (byMimeType !== undefined) return byMimeType;
+
+	const lastSegment = new URL(url).pathname.split('/').pop() ?? '';
+	const dot = lastSegment.lastIndexOf('.');
+	const extension = dot > 0 ? lastSegment.slice(dot + 1).toLowerCase() : '';
+	return /^(?:jpe?g|png|webp|tiff?)$/.test(extension) ? extension : 'jpg';
+}
+
 function assertUrlOption(options: Record<string, unknown>): string {
 	const url = options.url;
 	if (typeof url !== 'string' || url.trim() === '') {
@@ -140,9 +175,9 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 	const url = assertUrlOption(context.options);
 	const adapter = findAdapterOrThrow(url);
 
-	const acquisition = await adapter.acquire(url, (currentPage, totalPages) => {
+	const acquisition = await adapter.acquire(url, (currentPage, totalPages, message) => {
 		context.publishProgress?.({
-			msg: `Fetching page ${currentPage} of ${totalPages}`,
+			msg: message ?? `Fetching page ${currentPage} of ${totalPages}`,
 			counter: currentPage,
 			total: totalPages,
 		});
@@ -194,9 +229,16 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	}
 
 	const adapter = findAdapterOrThrow(url);
-	// Host-allowlist guard still applies even though nothing is fetched — this
-	// URL drives relative-link resolution and the Auction dedup search below.
-	adapter.assertSafeUrl(url);
+	// findAdapterOrThrow already confirmed the host belongs to a known source (each adapter's own
+	// matchesUrl). No live fetch happens on this path (the operator supplies the HTML), so there is
+	// nothing here for the harvesting door to guard beyond that - just the same https-only shape
+	// check a real fetch would also enforce.
+	if (new URL(url).protocol !== 'https:') {
+		throw new DedaloError('tool.action_failed', {
+			message: `preview_html: only https:// URLs are supported, got ${url}.`,
+			publicMessage: 'Only https:// URLs are supported.',
+		});
+	}
 
 	const page: RawSource = { html, finalUrl: url, httpStatus: 200, contentType: 'text/html' };
 	const auction = adapter.parseAuction(page, url);
@@ -318,8 +360,9 @@ async function importImagesForLot(
 	}
 
 	// The image host isn't always the page's own host (sixbid's
-	// image-cdn.sixbid.com, biddr's media.biddr.com), so the safety check is
-	// resolved from the image URL itself via the same adapter registry.
+	// image-cdn.sixbid.com, biddr's media.biddr.com), so the host policy is
+	// resolved from the image URL itself via the same adapter registry - a bare
+	// domain entry also admits its subdomains (harvestFetch's own host rule).
 	const imageAdapter = ADAPTERS.find((candidate) => candidate.matchesUrl(sourceUrl));
 	if (!imageAdapter) {
 		throw new DedaloError('tool.action_failed', {
@@ -328,8 +371,20 @@ async function importImagesForLot(
 		});
 	}
 
-	const { bytes, contentType } = await downloadImageBytes(sourceUrl, imageAdapter.assertSafeUrl);
-	const extension = extensionFromUrl(sourceUrl, contentType);
+	const imageResponse = await harvestFetch({
+		url: sourceUrl,
+		hosts: HOSTS_BY_ADAPTER_ID[imageAdapter.id] ?? [],
+		requireHttps: true,
+		expectContentType: ['image/'],
+		maxBytes: 25 * 1024 * 1024,
+	});
+	if (!imageResponse.ok) {
+		throw new DedaloError('tool.action_failed', {
+			message: `Could not download image (HTTP ${imageResponse.status}).`,
+			publicMessage: `Could not download the lot image (HTTP ${imageResponse.status}).`,
+		});
+	}
+	const extension = extensionFromUrl(sourceUrl, imageResponse.contentType);
 	const fileName = `numisdata4_${sectionId}.${extension}`;
 
 	const staged = receiveUpload(
@@ -339,7 +394,7 @@ async function importImagesForLot(
 			chunked: false,
 			chunkIndex: 0,
 			totalChunks: 1,
-			blob: bytes,
+			blob: imageResponse.bytes,
 			uploadId: null,
 			csrfToken: null,
 		},

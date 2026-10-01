@@ -1,4 +1,3 @@
-import { assertSafeAureoUrl } from '../../acquisition/url-safety.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
 import { acquireAureoAuction, parseAureoAuctionId } from './acquisition.ts';
@@ -20,8 +19,6 @@ export const aureoAdapter: SourceAdapter = {
 		const hostname = urlHostname(rawUrl);
 		return hostname !== null && AUREO_HOST_PATTERN.test(hostname);
 	},
-
-	assertSafeUrl: assertSafeAureoUrl,
 
 	parseAuctionIdentifier(rawUrl) {
 		return parseAureoAuctionId(rawUrl);

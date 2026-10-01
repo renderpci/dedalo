@@ -1,21 +1,10 @@
-import { looksBlocked } from '../../acquisition/block-signals.ts';
-import { AcquisitionBlockedError, type RawSource } from '../../acquisition/http.ts';
-import { waitForTurn } from '../../acquisition/rate-limit.ts';
-import { assertSafeNumisbidsUrl } from '../../acquisition/url-safety.ts';
-import { USER_AGENT } from '../../acquisition/user-agent.ts';
-import type { AcquisitionProgress, MultiPageAcquisition } from '../types.ts';
-import { parseNumisbidsTotalPages } from './parser.ts';
-
-export class UnsupportedPageError extends Error {
-	constructor(message = 'This page does not appear to contain an auction catalogue.') {
-		super(message);
-		this.name = 'UnsupportedPageError';
-	}
-}
-
-const REQUEST_TIMEOUT_MS = 20_000;
-const MAX_BODY_BYTES = 20 * 1024 * 1024;
-const MAX_PAGES = 50;
+/**
+ * numisbids.com's own robots.txt explicitly names and blocks ClaudeBot (Anthropic's own crawler),
+ * alongside Bytespider, confirmed from multiple independent networks (HTTP 403 from every one). No
+ * automated fetch is made here - preview_html (the operator's own saved page) is the only path.
+ * These are the pure URL-parsing helpers `parseAuctionIdentifier` still needs; everything that used
+ * to fetch live was removed with the tool's old acquisition/ layer (PR #114 review, 2026-09-29).
+ */
 
 /**
  * numisbids.com sale URLs are `/sale/{saleId}` (optionally with a `?pg=N` the site itself adds for
@@ -30,78 +19,6 @@ export function parseNumisbidsSaleId(rawUrl: string): string | null {
 	} catch {
 		return null;
 	}
-}
-
-/**
- * Fetches a numisbids.com page. Deliberately does not consult robots.txt - numisbids.com's
- * robots.txt explicitly names and blocks ClaudeBot (Anthropic's own crawler), alongside
- * Bytespider. Explicitly raised to and authorized by the user for this Dédalo integration. Never
- * identifies as ClaudeBot or spoofs identity, never bypasses a CAPTCHA, and stops immediately on
- * any block signal rather than retrying around it.
- */
-export async function fetchNumisbidsPage(url: URL): Promise<RawSource> {
-	assertSafeNumisbidsUrl(url.toString());
-	await waitForTurn(url.hostname);
-
-	const response = await fetch(url, {
-		headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' },
-		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-	});
-
-	if (response.status === 401 || response.status === 403 || response.status === 429) {
-		throw new AcquisitionBlockedError(
-			`Automatic retrieval could not safely access this page (HTTP ${response.status}).`,
-			response.status,
-		);
-	}
-	if (!response.ok) {
-		throw new AcquisitionBlockedError(`Server returned HTTP ${response.status}.`, response.status);
-	}
-
-	const html = await readBodyWithLimit(response, MAX_BODY_BYTES);
-	if (looksBlocked(html)) {
-		throw new AcquisitionBlockedError(
-			'The page appears to present a CAPTCHA or access restriction.',
-		);
-	}
-
-	return {
-		html,
-		finalUrl: url.toString(),
-		httpStatus: response.status,
-		contentType: response.headers.get('content-type'),
-	};
-}
-
-/**
- * Walks a numisbids.com sale's pagination (`?pg=N`, driven by the page's own "Page X of Y" text,
- * capped at the same MAX_PAGES convention used elsewhere) and returns every page's raw HTML.
- */
-export async function acquireNumisbidsSale(
-	rawUrl: string,
-	onProgress?: AcquisitionProgress,
-): Promise<MultiPageAcquisition> {
-	const saleId = parseNumisbidsSaleId(rawUrl);
-	if (!saleId) {
-		throw new AcquisitionBlockedError('Please provide a valid numisbids.com sale URL.');
-	}
-
-	const firstUrl = assertSafeNumisbidsUrl(rawUrl);
-	const first = await fetchNumisbidsPage(firstUrl);
-	const pages: RawSource[] = [first];
-
-	const totalPages = Math.min(parseNumisbidsTotalPages(first.html), MAX_PAGES);
-	onProgress?.(1, totalPages);
-
-	for (let p = 2; p <= totalPages; p++) {
-		const pageUrl = new URL(`https://www.numisbids.com/sale/${saleId}`);
-		pageUrl.searchParams.set('pg', String(p));
-		const page = await fetchNumisbidsPage(pageUrl);
-		pages.push(page);
-		onProgress?.(p, totalPages);
-	}
-
-	return { auctionIdentifier: saleId, pages, method: 'http' };
 }
 
 /**
@@ -125,41 +42,4 @@ export function parseNumisbidsLotUrl(rawUrl: string): { saleId: string; lotNumbe
 export function numisbidsLotIdentifier(rawUrl: string): string | null {
 	const parsed = parseNumisbidsLotUrl(rawUrl);
 	return parsed ? `lot-${parsed.saleId}-${parsed.lotNumber}` : null;
-}
-
-/** Acquires a single numisbids.com lot page - one request, no pagination. */
-export async function acquireNumisbidsLot(
-	rawUrl: string,
-	onProgress?: AcquisitionProgress,
-): Promise<MultiPageAcquisition> {
-	const auctionIdentifier = numisbidsLotIdentifier(rawUrl);
-	if (!auctionIdentifier) {
-		throw new AcquisitionBlockedError('Please provide a valid numisbids.com lot URL.');
-	}
-
-	const url = assertSafeNumisbidsUrl(rawUrl);
-	const page = await fetchNumisbidsPage(url);
-	onProgress?.(1, 1);
-
-	return { auctionIdentifier, pages: [page], method: 'http' };
-}
-
-async function readBodyWithLimit(response: Response, maxBytes: number): Promise<string> {
-	if (!response.body) return '';
-	const reader = response.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let total = 0;
-	for (;;) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		if (value) {
-			total += value.byteLength;
-			if (total > maxBytes) {
-				reader.cancel();
-				throw new AcquisitionBlockedError('Response body exceeded the size limit.');
-			}
-			chunks.push(value);
-		}
-	}
-	return Buffer.concat(chunks.map((c) => Buffer.from(c))).toString('utf-8');
 }

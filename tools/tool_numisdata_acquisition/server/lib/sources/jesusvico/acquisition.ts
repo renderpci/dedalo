@@ -1,19 +1,31 @@
-import {
-	AcquisitionBlockedError,
-	type FetchPageOptions,
-	fetchPublicPage,
-	type RawSource,
-} from '../../acquisition/http.ts';
-import { assertSafeJesusvicoUrl } from '../../acquisition/url-safety.ts';
-import type { AcquisitionProgress, MultiPageAcquisition } from '../types.ts';
+import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
+import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 import { parseJesusvicoTotalPages } from './parser.ts';
 
 const MAX_PAGES = 50;
+const JESUSVICO_HOSTS = ['jesusvico.com'];
 
-export const JESUSVICO_FETCH_OPTIONS: FetchPageOptions = {
-	assertSafeUrl: assertSafeJesusvicoUrl,
-	allowRedirectHost: (hostname) => hostname === 'www.jesusvico.com' || hostname === 'jesusvico.com',
-};
+async function fetchJesusvicoPage(
+	url: string,
+	onWait?: (ms: number, origin: string) => void,
+): Promise<RawSource> {
+	const response = await harvestFetch({
+		url,
+		hosts: JESUSVICO_HOSTS,
+		requireHttps: true,
+		headers: { Accept: 'text/html,application/xhtml+xml' },
+		onWait,
+	});
+	if (!response.ok) {
+		throw new Error(`Server returned HTTP ${response.status}.`);
+	}
+	return {
+		html: response.text(),
+		finalUrl: response.url,
+		httpStatus: response.status,
+		contentType: response.contentType,
+	};
+}
 
 /**
  * jesusvico.com auction URLs embed the auction number as "I{n}" in the path (e.g.
@@ -55,7 +67,7 @@ export function jesusvicoLotIdentifier(rawUrl: string): string | null {
 
 /**
  * jesusvico.com is fully permissive in robots.txt and server-renders plain HTML - no SPA/JSON API
- * to reverse-engineer, no exception needed (unlike sixbid). Reuses http.ts's fetchPublicPage.
+ * to reverse-engineer, no exception needed (unlike sixbid). Fetches through the harvesting door.
  */
 export async function acquireJesusvicoAuction(
 	rawUrl: string,
@@ -63,12 +75,14 @@ export async function acquireJesusvicoAuction(
 ): Promise<MultiPageAcquisition> {
 	const auctionIdentifier = parseJesusvicoAuctionNumber(rawUrl);
 	if (!auctionIdentifier) {
-		throw new AcquisitionBlockedError(
-			'Please provide a valid jesusvico.com auction URL (missing auction number).',
-		);
+		throw new Error('Please provide a valid jesusvico.com auction URL (missing auction number).');
 	}
 
-	const first = await fetchPublicPage(rawUrl, JESUSVICO_FETCH_OPTIONS);
+	const onWait = (ms: number, origin: string): void => {
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`);
+	};
+
+	const first = await fetchJesusvicoPage(rawUrl, onWait);
 	const pages: RawSource[] = [first];
 	const totalPages = Math.min(parseJesusvicoTotalPages(first.html), MAX_PAGES);
 	onProgress?.(1, totalPages);
@@ -76,7 +90,7 @@ export async function acquireJesusvicoAuction(
 	for (let p = 2; p <= totalPages; p++) {
 		const pageUrl = new URL(first.finalUrl);
 		pageUrl.searchParams.set('page', String(p));
-		const page = await fetchPublicPage(pageUrl.toString(), JESUSVICO_FETCH_OPTIONS);
+		const page = await fetchJesusvicoPage(pageUrl.toString(), onWait);
 		pages.push(page);
 		onProgress?.(p, totalPages);
 	}
@@ -91,10 +105,12 @@ export async function acquireJesusvicoLot(
 ): Promise<MultiPageAcquisition> {
 	const auctionIdentifier = jesusvicoLotIdentifier(rawUrl);
 	if (!auctionIdentifier) {
-		throw new AcquisitionBlockedError('Please provide a valid jesusvico.com lot URL.');
+		throw new Error('Please provide a valid jesusvico.com lot URL.');
 	}
 
-	const page = await fetchPublicPage(rawUrl, JESUSVICO_FETCH_OPTIONS);
+	const page = await fetchJesusvicoPage(rawUrl, (ms, origin) =>
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`),
+	);
 	onProgress?.(1, 1);
 
 	return { auctionIdentifier, pages: [page], method: 'http' };

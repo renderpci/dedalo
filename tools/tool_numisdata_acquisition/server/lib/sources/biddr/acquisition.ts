@@ -1,23 +1,8 @@
 import { createHash } from 'node:crypto';
-import {
-	AcquisitionBlockedError,
-	type FetchPageOptions,
-	fetchPublicPage,
-	type RawSource,
-	RobotsDisallowedError,
-} from '../../acquisition/http.ts';
-import { assertSafeBiddrUrl, UnsafeUrlError } from '../../acquisition/url-safety.ts';
+import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
 import { getQueryParam } from '../../extraction/parser-utils.ts';
-import type { AcquisitionProgress, MultiPageAcquisition } from '../types.ts';
+import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 import { parseTotalPages } from './auction-parser.ts';
-
-export { AcquisitionBlockedError, RobotsDisallowedError, UnsafeUrlError };
-
-/** Shared fetchPublicPage options for Biddr - reused by adapter.ts's fetchLotDetail too. */
-export const BIDDR_FETCH_OPTIONS: FetchPageOptions = {
-	assertSafeUrl: assertSafeBiddrUrl,
-	allowRedirectHost: (hostname) => hostname === 'biddr.com' || hostname.endsWith('.biddr.com'),
-};
 
 export class UnsupportedPageError extends Error {
 	constructor(message = 'This page does not appear to contain an auction catalogue.') {
@@ -27,6 +12,29 @@ export class UnsupportedPageError extends Error {
 }
 
 const MAX_PAGES = 50;
+const BIDDR_HOSTS = ['biddr.com'];
+
+async function fetchBiddrPage(
+	url: string,
+	onWait?: (ms: number, origin: string) => void,
+): Promise<RawSource> {
+	const response = await harvestFetch({
+		url,
+		hosts: BIDDR_HOSTS,
+		requireHttps: true,
+		headers: { Accept: 'text/html,application/xhtml+xml' },
+		onWait,
+	});
+	if (!response.ok) {
+		throw new Error(`Server returned HTTP ${response.status}.`);
+	}
+	return {
+		html: response.text(),
+		finalUrl: response.url,
+		httpStatus: response.status,
+		contentType: response.contentType,
+	};
+}
 
 /** True when a page's HTML carries the markers we rely on for extraction. */
 function looksLikeAuctionPage(html: string): boolean {
@@ -46,13 +54,16 @@ export async function acquireAuction(
 	rawUrl: string,
 	onProgress?: AcquisitionProgress,
 ): Promise<MultiPageAcquisition> {
-	const url = assertSafeBiddrUrl(rawUrl);
-	const auctionIdentifier = getQueryParam(url.toString(), 'a');
+	const auctionIdentifier = getQueryParam(rawUrl, 'a');
 	if (!auctionIdentifier) {
-		throw new UnsafeUrlError('Please provide a valid Biddr auction URL (missing auction id).');
+		throw new Error('Please provide a valid Biddr auction URL (missing auction id).');
 	}
 
-	const first = await fetchPublicPage(url.toString(), BIDDR_FETCH_OPTIONS);
+	const onWait = (ms: number, origin: string): void => {
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`);
+	};
+
+	const first = await fetchBiddrPage(rawUrl, onWait);
 	if (!looksLikeAuctionPage(first.html)) {
 		throw new UnsupportedPageError();
 	}
@@ -62,9 +73,9 @@ export async function acquireAuction(
 	onProgress?.(1, totalPages);
 
 	for (let p = 2; p <= totalPages; p++) {
-		const pageUrl = new URL(url.toString());
+		const pageUrl = new URL(first.finalUrl);
 		pageUrl.searchParams.set('p', String(p));
-		const page = await fetchPublicPage(pageUrl.toString(), BIDDR_FETCH_OPTIONS);
+		const page = await fetchBiddrPage(pageUrl.toString(), onWait);
 		pages.push(page);
 		onProgress?.(p, totalPages);
 	}
@@ -107,15 +118,14 @@ export async function acquireBiddrSingleLot(
 	rawUrl: string,
 	onProgress?: AcquisitionProgress,
 ): Promise<MultiPageAcquisition> {
-	const url = assertSafeBiddrUrl(rawUrl);
 	const auctionIdentifier = biddrSingleLotIdentifier(rawUrl);
 	if (!auctionIdentifier) {
-		throw new UnsafeUrlError(
-			'Please provide a valid Biddr lot URL (both ?a= and ?l= are required).',
-		);
+		throw new Error('Please provide a valid Biddr lot URL (both ?a= and ?l= are required).');
 	}
 
-	const page = await fetchPublicPage(url.toString(), BIDDR_FETCH_OPTIONS);
+	const page = await fetchBiddrPage(rawUrl, (ms, origin) =>
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`),
+	);
 	onProgress?.(1, 1);
 
 	return { auctionIdentifier, pages: [page], method: 'http' };
@@ -170,13 +180,16 @@ export async function acquireBiddrSearch(
 	rawUrl: string,
 	onProgress?: AcquisitionProgress,
 ): Promise<MultiPageAcquisition> {
-	const url = assertSafeBiddrUrl(rawUrl);
 	const auctionIdentifier = biddrSearchIdentifier(rawUrl);
 	if (!auctionIdentifier) {
-		throw new UnsafeUrlError('Please provide a valid Biddr search URL.');
+		throw new Error('Please provide a valid Biddr search URL.');
 	}
 
-	const first = await fetchPublicPage(url.toString(), BIDDR_FETCH_OPTIONS);
+	const onWait = (ms: number, origin: string): void => {
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`);
+	};
+
+	const first = await fetchBiddrPage(rawUrl, onWait);
 	if (!looksLikeSearchResultsPage(first.html)) {
 		throw new UnsupportedPageError();
 	}
@@ -186,9 +199,9 @@ export async function acquireBiddrSearch(
 	onProgress?.(1, totalPages);
 
 	for (let p = 2; p <= totalPages; p++) {
-		const pageUrl = new URL(url.toString());
+		const pageUrl = new URL(first.finalUrl);
 		pageUrl.searchParams.set('p', String(p));
-		const page = await fetchPublicPage(pageUrl.toString(), BIDDR_FETCH_OPTIONS);
+		const page = await fetchBiddrPage(pageUrl.toString(), onWait);
 		pages.push(page);
 		onProgress?.(p, totalPages);
 	}
