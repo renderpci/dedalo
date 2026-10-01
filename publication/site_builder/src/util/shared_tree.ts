@@ -408,8 +408,22 @@ async function writeThroughHandle(
   // NO `O_TRUNC` HERE. Truncation at open time happens BEFORE any question can be asked of
   // the thing opened, so a hard-linked victim would already be empty by the time its link
   // count was read. The file is opened, interrogated, and only then emptied.
-  const handle = await openNoFollow(target, flags | FS.O_WRONLY | FS.O_CREAT, mode);
+  //
+  // AND `O_NONBLOCK`, the write-side twin of the readers' (`openForRead`): a fifo at the name
+  // (`mkfifo site.json.tmp` from a build, or `.builder/mcp.json` in a `.builder` the agent
+  // renamed away and re-made) parks a blocking write-open until a reader comes — forever, in
+  // an fs worker no turn deadline returns, and repeated, the pool every other site's fs needs.
+  // Non-blocking, a fifo with no reader is ENXIO, and one with a reader is refused below by
+  // `fstat` before anything is truncated or written. On a regular file the flag is inert.
+  let handle: FileHandle;
   try {
+    handle = await openNoFollow(target, flags | FS.O_WRONLY | FS.O_CREAT | FS.O_NONBLOCK, mode);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENXIO') throw new NotRegularFileError(target);
+    throw error;
+  }
+  try {
+    if (!(await handle.stat()).isFile()) throw new NotRegularFileError(target);
     await assertOwnInode(handle, target);
     if ((flags & FS.O_APPEND) === 0) await handle.truncate(0);
     await handle.writeFile(body, 'utf8');
@@ -519,13 +533,12 @@ export async function appendFilePrivate(
  * wrote, not one the agent authored in a `.builder` it recreated.
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-/** Open a file for reading with the whole chain proved, or `null` when it is not there. */
-async function openForRead(
-  root: string,
-  relative: string,
-  requireOwn: boolean,
-  regularOnly = false,
-): Promise<FileHandle | null> {
+/**
+ * Open a REGULAR file for reading with the whole chain proved, or `null` when it is not there.
+ * Every reader, not only the bounded one: a fifo at `site.json` or at a session meta parks a
+ * blocking read-open until a writer comes, exactly as it parks the write side.
+ */
+async function openForRead(root: string, relative: string, requireOwn: boolean): Promise<FileHandle | null> {
   const { target, segments } = segmentsUnder(root, relative);
   try {
     await assertRealChain(root, segments.slice(0, -1));
@@ -535,16 +548,16 @@ async function openForRead(
   }
   let handle: FileHandle;
   try {
-    // O_NONBLOCK for a reader that asks for a REGULAR file: a fifo planted at the name would
-    // otherwise block the open until a writer comes — forever, in a daemon thread.
-    handle = await openNoFollow(target, regularOnly ? FS.O_RDONLY | FS.O_NONBLOCK : FS.O_RDONLY);
+    // O_NONBLOCK: a fifo planted at the name would otherwise block the open until a writer
+    // comes — forever, in a daemon thread. Non-blocking it opens at once, and `fstat` refuses it.
+    handle = await openNoFollow(target, FS.O_RDONLY | FS.O_NONBLOCK);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
   try {
     const stats = await handle.stat();
-    if (regularOnly && !stats.isFile()) throw new NotRegularFileError(target);
+    if (!stats.isFile()) throw new NotRegularFileError(target);
     if (stats.nlink > 1) throw new PlantedHardLinkError(target, stats.nlink);
     if (requireOwn && stats.uid !== process.getuid?.()) {
       throw new ForeignOwnerError(target, stats.uid);
@@ -557,15 +570,15 @@ async function openForRead(
 }
 
 /**
- * A NAME THE DAEMON READS AS A FILE IS NOT ONE. A fifo, a socket or a device at a path inside an
- * agent-writable tree was put there by the agent: a fifo blocks the reader, a device is a read
- * of the host. Refused, never read.
+ * A NAME THE DAEMON READS OR WRITES AS A FILE IS NOT ONE. A fifo, a socket or a device at a path
+ * inside an agent-writable tree was put there by the agent: a fifo parks a blocking open in
+ * either direction, a device is a read or a write of the host. Refused, never read or written.
  */
 export class NotRegularFileError extends Error {
   constructor(readonly path: string) {
     super(
-      `shared_tree: refusing to read '${path}': it is not a regular file (a fifo, socket or ` +
-        `device the agent put there). Nothing was read.`,
+      `shared_tree: refusing '${path}': it is not a regular file (a fifo, socket or ` +
+        `device the agent put there). Nothing was read or written.`,
     );
     this.name = 'NotRegularFileError';
   }
@@ -573,9 +586,9 @@ export class NotRegularFileError extends Error {
 
 /**
  * READ AT MOST `maxBytes` OF A REGULAR FILE inside a tree the agent can write — the same
- * link, hard-link and chain refusals as `readFileShared`, plus: opened `O_NONBLOCK` and
- * refused unless `fstat` says REGULAR (a planted fifo never blocks, a device is never read),
- * and never more than `maxBytes` read off the handle, whatever size the agent gave the file
+ * link, hard-link, chain and regular-file refusals as `readFileShared` (opened `O_NONBLOCK`:
+ * a planted fifo never blocks, a device is never read), plus: never more than `maxBytes`
+ * read off the handle, whatever size the agent gave the file
  * (a sparse multi-GB file costs `maxBytes`, not its size). `size` is the file's real size, so
  * a caller can say it cut. `null` when it is not there.
  */
@@ -584,7 +597,7 @@ export async function readFileSharedBounded(
   relative: string,
   maxBytes: number,
 ): Promise<{ readonly bytes: Buffer; readonly size: number } | null> {
-  const handle = await openForRead(root, relative, false, true);
+  const handle = await openForRead(root, relative, false);
   if (handle === null) return null;
   try {
     const size = (await handle.stat()).size;

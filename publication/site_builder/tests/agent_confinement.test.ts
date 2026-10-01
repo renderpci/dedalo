@@ -2387,3 +2387,139 @@ describe('the real call sites: git runs through the git door, a build through th
     expect(host.standIn.connects).toEqual([]);
   });
 });
+
+/* ──────────────────────────────────────────────────────────────────────────────────
+ * A FIFO WHERE THE DAEMON WRITES — refused at once, never an open parked forever.
+ *
+ * `writeThroughHandle` opened `O_WRONLY|O_CREAT|O_NOFOLLOW` and asked its questions AFTER the
+ * open returned. A fifo at the name parks a blocking write-open until a reader comes — forever,
+ * in a Bun fs worker the turn's deadline never returns — so a build's `mkfifo site.json.tmp`
+ * hung the daemon's next manifest write, and a fifo at `.builder/mcp.json` (in a `.builder` the
+ * agent renamed away and re-made) hung every turn's setup; repeated, the pool starves every
+ * other site's fs. The read direction was closed in round 4 (`readFileSharedBounded`); this is
+ * the write direction: `O_NONBLOCK` (ENXIO with no reader) + regular-file-only, before any
+ * question that could write.
+ * ────────────────────────────────────────────────────────────────────────────────── */
+
+describe('a FIFO where the daemon writes is refused at once, typed — never a parked open', () => {
+  /** Run `attempt`; if it is still parked after 3 s, release it (open the read end) so the suite can exit. */
+  async function refusedPromptly(
+    fifo: string,
+    attempt: () => Promise<unknown>,
+    releaseWith: 'reader' | 'writer' = 'reader',
+  ): Promise<{ outcome: unknown; ms: number }> {
+    const { closeSync, constants, openSync } = await import('node:fs');
+    const started = Date.now();
+    const outcome = await Promise.race([
+      attempt().then(
+        () => 'written',
+        (error: unknown) => error,
+      ),
+      Bun.sleep(3_000).then(() => 'parked'),
+    ]);
+    if (outcome === 'parked') {
+      try {
+        closeSync(openSync(fifo, (releaseWith === 'reader' ? constants.O_RDONLY : constants.O_WRONLY) | constants.O_NONBLOCK));
+      } catch {
+        // already released
+      }
+    }
+    return { outcome, ms: Date.now() - started };
+  }
+
+  function fifoAt(path: string): void {
+    expect(Bun.spawnSync(['mkfifo', path]).exitCode).toBe(0);
+  }
+
+  test('site.json.tmp planted as a fifo: the manifest write is refused, nothing parked', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirShared(dir, 'ws');
+    fifoAt(join(dir, 'ws', 'site.json.tmp'));
+    const { outcome, ms } = await refusedPromptly(join(dir, 'ws', 'site.json.tmp'), () =>
+      writeFileSharedAtomic(dir, join('ws', 'site.json'), '{"name":"x"}'),
+    );
+    expect({ refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ refused: true, prompt: true });
+    expect(existsSync(join(dir, 'ws', 'site.json'))).toBe(false);
+  }, 15_000);
+
+  test('.builder/mcp.json planted as a fifo in an agent-made .builder: the turn setup is refused, nothing parked', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const slug = 'zzfifo-mcp';
+    const ws = join(roots.sitesRoot, slug);
+    rmSync(ws, { recursive: true, force: true });
+    scratch.push(ws);
+    await mkdirShared(roots.sitesRoot, slug);
+    // The agent renamed the daemon's `.builder` away and made its own (same-parent rename).
+    mkdirSync(join(ws, '.builder'));
+    fifoAt(join(ws, '.builder', 'mcp.json'));
+    const opts = {
+      slug,
+      workspace: ws,
+      prompt: 'x',
+      mcp: { name: 'dedalo_publication', url: 'http://127.0.0.1:9/mcp' },
+      env: {},
+      timeoutMs: 1_000,
+    } as unknown as Parameters<typeof writeMcpConfig>[0];
+    const { outcome, ms } = await refusedPromptly(join(ws, '.builder', 'mcp.json'), () => writeMcpConfig(opts));
+    expect({ refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ refused: true, prompt: true });
+  }, 15_000);
+
+  test('the daemon’s private writer and appender refuse a fifo too (session meta, build log)', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirPrivate(dir, 'state');
+    fifoAt(join(dir, 'state', 'meta.json'));
+    fifoAt(join(dir, 'state', 'build.log'));
+    for (const [name, attempt] of [
+      ['meta.json', () => writeFilePrivate(dir, join('state', 'meta.json'), '{}')],
+      ['build.log', () => appendFilePrivate(dir, join('state', 'build.log'), 'line\n')],
+    ] as const) {
+      const { outcome, ms } = await refusedPromptly(join(dir, 'state', name), attempt);
+      expect({ name, refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ name, refused: true, prompt: true });
+    }
+  }, 20_000);
+
+  test('the READ twin: readFileShared / readFilePrivate refuse a fifo at once (site.json, a session meta) — never a parked open', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirShared(dir, 'ws');
+    await mkdirPrivate(dir, 'state');
+    fifoAt(join(dir, 'ws', 'site.json'));
+    fifoAt(join(dir, 'state', 'meta.json'));
+    for (const [name, attempt] of [
+      [join('ws', 'site.json'), () => readFileShared(dir, join('ws', 'site.json'))],
+      [join('state', 'meta.json'), () => readFilePrivate(dir, join('state', 'meta.json'))],
+    ] as const) {
+      const { outcome, ms } = await refusedPromptly(join(dir, name), attempt, 'writer');
+      expect({ name, refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ name, refused: true, prompt: true });
+    }
+  }, 20_000);
+
+  test('a fifo WITH a reader (the agent holds the other end) is refused by fstat — nothing written through it', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const { closeSync, constants, openSync, readSync } = await import('node:fs');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirShared(dir, 'ws');
+    const fifo = join(dir, 'ws', 'site.json.tmp');
+    fifoAt(fifo);
+    const reader = openSync(fifo, constants.O_RDONLY | constants.O_NONBLOCK);
+    try {
+      const { outcome, ms } = await refusedPromptly(fifo, () => writeFileSharedAtomic(dir, join('ws', 'site.json'), '{"secret":"x"}'));
+      const buffer = Buffer.alloc(64);
+      let got = 0;
+      try {
+        got = readSync(reader, buffer, 0, 64, null);
+      } catch {
+        got = 0; // EAGAIN: nothing was written
+      }
+      expect({ refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000, leaked: got }).toEqual({ refused: true, prompt: true, leaked: 0 });
+    } finally {
+      closeSync(reader);
+    }
+  }, 15_000);
+});

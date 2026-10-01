@@ -503,3 +503,120 @@ describe('P10 — the site’s driver is the DAEMON’s record, never the agent-
     }
   }, 30_000);
 });
+
+describe('P11 — the driver record is where no run can reach it, and an absent one is refused, never defaulted', () => {
+  /** Drivers that only record which of them was asked to run. */
+  function recordDrivers(asked: string[]): void {
+    const recorder = (id: 'claude_code' | 'opencode') =>
+      ({
+        ...claudeCodeDriver,
+        id,
+        admit: async () => void asked.push(`admit ${id}`),
+        startTurn: (() => {
+          asked.push(`start ${id}`);
+          return { pid: 1, events: (async function* () {})(), interrupt: async () => {} };
+        }) as never,
+      }) as never;
+    __setTestDriver('claude_code', recorder('claude_code'));
+    __setTestDriver('opencode', recorder('opencode'));
+  }
+
+  async function started(asked: string[]): Promise<string[]> {
+    const start = Date.now();
+    while (!asked.some(line => line.startsWith('start')) && Date.now() - start < 5_000) await new Promise(resolve => setTimeout(resolve, 20));
+    return asked.filter(line => line.startsWith('start'));
+  }
+
+  /** A site whose driver is NOT the instance default — so a fallback to the default is visible. */
+  async function siteOnTheOtherDriver(slug: string) {
+    const { createSite } = await import('../src/sites/workspace');
+    const { provisionSite } = await import('./fixtures/instance');
+    const { config } = await import('../src/config');
+    const other = config.AGENT_DRIVER === 'opencode' ? 'claude_code' : 'opencode';
+    const { domain } = await provisionSite(slug);
+    await createSite({ slug, name: slug, domain, actor: { user_id: 7, username: 'plant-gate' }, driver: other } as never);
+    return { other, fallback: config.AGENT_DRIVER };
+  }
+
+  /** Every place a driver record has ever lived, removed — a site from before the record. */
+  function legacy(slug: string): void {
+    rmSync(join(workspacePath(slug), '.builder', 'driver.json'), { force: true });
+    rmSync(join(roots.sitesRoot, '.driver_records', `${slug}.json`), { force: true });
+  }
+
+  test('a build that RENAMES .builder away (same-parent rename, no sticky bit) does not change the driver', async () => {
+    const { startSession } = await import('../src/sessions/manager');
+    const { resetInstance } = await import('./fixtures/instance');
+    await resetInstance();
+    const slug = 'zzplant-rename';
+    const { other } = await siteOnTheOtherDriver(slug);
+    // THE RUN'S MOVE: `mv .builder .x` in its own workspace (2770, no sticky bit), and a fresh
+    // `.builder` of its own — with the plugin channel the record exists to close.
+    renameSync(join(workspacePath(slug), '.builder'), join(workspacePath(slug), '.x'));
+    mkdirSync(join(workspacePath(slug), '.opencode', 'plugin'), { recursive: true });
+    const asked: string[] = [];
+    recordDrivers(asked);
+    try {
+      await startSession(slug, 'hello');
+      expect(await started(asked)).toEqual([`start ${other}`]);
+    } finally {
+      __setTestDriver('opencode', null);
+      await resetInstance();
+    }
+  }, 30_000);
+
+  test('a site with NO record is refused (503, typed, nothing reserved) — never the instance default — and the boot seeds it from site.json', async () => {
+    const { sweepOnBoot, startSession } = await import('../src/sessions/manager');
+    const { listSessions } = await import('../src/sessions/store');
+    const { ConfinementUnavailableError } = await import('../src/errors');
+    const { resetInstance } = await import('./fixtures/instance');
+    await resetInstance();
+    const slug = 'zzplant-legacy';
+    const { other } = await siteOnTheOtherDriver(slug);
+    legacy(slug);
+    const asked: string[] = [];
+    recordDrivers(asked);
+    try {
+      const refused = await startSession(slug, 'hello').then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect({
+        typed: refused instanceof ConfinementUnavailableError,
+        names: String((refused as Error | null)?.message).includes('driver record'),
+        asked,
+        busy: busyReason(slug),
+        sessions: (await listSessions(slug)).length,
+      }).toEqual({ typed: true, names: true, asked: [], busy: null, sessions: 0 });
+      // The boot (sweepOnBoot) seeds the daemon's record ONCE, from site.json — the authority
+      // such a site had — and from then on site.json decides nothing.
+      await sweepOnBoot();
+      expect(existsSync(join(roots.sitesRoot, '.driver_records', `${slug}.json`))).toBe(true);
+      await startSession(slug, 'hello');
+      expect(await started(asked)).toEqual([`start ${other}`]);
+    } finally {
+      __setTestDriver('opencode', null);
+      await resetInstance();
+    }
+  }, 30_000);
+
+  test('the record is the daemon’s own 0600 inode in a 0700 directory under SITES_ROOT — outside every workspace', async () => {
+    const { statSync } = await import('node:fs');
+    const { resetInstance } = await import('./fixtures/instance');
+    await resetInstance();
+    const slug = 'zzplant-where';
+    await siteOnTheOtherDriver(slug);
+    try {
+      const dir = join(roots.sitesRoot, '.driver_records');
+      const file = join(dir, `${slug}.json`);
+      expect({
+        dir: statSync(dir).mode & 0o7777,
+        file: statSync(file).mode & 0o7777,
+        uid: statSync(file).uid === process.getuid?.(),
+        inWorkspace: existsSync(join(workspacePath(slug), '.builder', 'driver.json')),
+      }).toEqual({ dir: 0o700, file: 0o600, uid: true, inWorkspace: false });
+    } finally {
+      await resetInstance();
+    }
+  }, 30_000);
+});

@@ -26,7 +26,7 @@ import { config } from '../config';
 import { isValidSlug } from '../util/slug';
 import { DOMAIN_PATTERN, type Surface } from '../provision/layout';
 import { ValidationError, ConflictError, LimitExceededError, NotFoundError } from '../errors';
-import { writeSiteDriver } from './driver_record';
+import { removeSiteDriver, writeSiteDriver } from './driver_record';
 import { manifestSchema, readManifest, writeManifest, type SiteManifest } from './manifest';
 import { scaffold, templateExists } from './template';
 import { writeAgentsFile } from '../context/agents_md';
@@ -204,12 +204,14 @@ async function createReservedSite(input: CreateSiteInput, domain: string, policy
       build: {},
       published: null,
     });
+    // THE DRIVER, the daemon's own record, outside the workspace: site.json is the agent's to
+    // rewrite (driver_record.ts). BEFORE site.json — from `writeManifest` on the site exists,
+    // and a site that exists without a record is one whose sessions are refused.
+    await writeSiteDriver(input.slug, manifest.driver);
     await writeManifest(manifest);
     await writeAgentsFile(manifest);
     // The one exception in the tree: the daemon's own per-site state, 0700.
     await mkdirPrivate(config.SITES_ROOT, join(input.slug, '.builder'));
-    // THE DRIVER, the daemon's own record: site.json is the agent's to rewrite (driver_record.ts).
-    await writeSiteDriver(input.slug, manifest.driver);
     await initRepo(input.slug, policy);
     // LAST, over everything: `git init` and `cp` both create entries with modes of their
     // own, and the shared pair has to hold over the whole workspace, not only over what
@@ -221,6 +223,7 @@ async function createReservedSite(input: CreateSiteInput, domain: string, policy
     // Roll back a half-created workspace so a failed create is retryable with the same
     // slug rather than wedged behind a directory that has no valid manifest.
     await rm(dir, { recursive: true, force: true }).catch(() => {});
+    await removeSiteDriver(input.slug).catch(() => {});
     throw error;
   }
 }
@@ -267,6 +270,7 @@ export async function deleteSite(slug: string, purgeProd: boolean): Promise<Dele
   const manifest = await readManifest(slug).catch(() => null);
 
   await rm(workspaceDir(slug), { recursive: true, force: true });
+  await removeSiteDriver(slug);
 
   const surfaces: Surface[] = purgeProd ? ['preprod', 'prod'] : ['preprod'];
   const removed: Surface[] = [];

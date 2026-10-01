@@ -424,3 +424,93 @@ describe('shutdown — a turn ending while the daemon stops: its commit is refus
     });
   }, 30_000);
 });
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * THE OWED RECOVERY COMMIT — never dropped: whenever a turn's or a recovery's commit was not
+ * recorded, the session keeps `recovery_pending` and the next boot asks again.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('an owed recovery commit stays owed until one is recorded', () => {
+  /** A `git` on PATH that refuses every command (a unit PID 1 dropped, a quarantined identity). */
+  function refusingGit(): void {
+    const dir = shortScratch('nogit');
+    writeFileSync(join(dir, 'git'), '#!/bin/sh\necho "refused by the gate" >&2\nexit 1\n');
+    chmodSync(join(dir, 'git'), 0o755);
+    process.env.PATH = `${dir}:${PATH_BEFORE ?? '/usr/bin:/bin'}`;
+  }
+
+  async function runningSession(slug: string): Promise<string> {
+    const sessionId = crypto.randomUUID();
+    await writeMeta({ session_id: sessionId, slug, driver: 'claude_code', started_at: new Date().toISOString(), turns: 1, state: 'running', resume_token: null });
+    writeFileSync(join(workspacePath(slug), 'owed.html'), '<p>work a dead process left</p>\n');
+    return sessionId;
+  }
+
+  const lastSubject = async (slug: string) => {
+    const { spawnSync } = await import('node:child_process');
+    return String(spawnSync('git', ['log', '-1', '--format=%s'], { cwd: workspacePath(slug), encoding: 'utf8' }).stdout).trim();
+  };
+
+  test('sweepOnBoot: a RUNNING session whose recovery commit is refused keeps it owed; the next boot records it', async () => {
+    await makeSite('owed-refused');
+    const sessionId = await runningSession('owed-refused');
+    refusingGit();
+    await sweepOnBoot();
+    const first = (await readMeta('owed-refused', sessionId)) as unknown as Record<string, unknown>;
+    expect({ state: first.state, pending: first.recovery_pending }).toEqual({ state: 'interrupted', pending: true });
+    process.env.PATH = PATH_BEFORE;
+    await sweepOnBoot();
+    const second = (await readMeta('owed-refused', sessionId)) as unknown as Record<string, unknown>;
+    expect({ pending: 'recovery_pending' in second, subject: await lastSubject('owed-refused') }).toEqual({
+      pending: false,
+      subject: `agent: recovered after restart (session ${sessionId})`,
+    });
+  }, 30_000);
+
+  test('sweepOnBoot: a RUNNING session whose site is HELD (commit skipped) keeps it owed', async () => {
+    await makeSite('owed-held');
+    const sessionId = await runningSession('owed-held');
+    const { tryBegin, end } = await import('../src/workspace_activity');
+    expect(tryBegin('owed-held', 'build')).toBe(true);
+    try {
+      await sweepOnBoot();
+    } finally {
+      end('owed-held', 'build');
+    }
+    const meta = (await readMeta('owed-held', sessionId)) as unknown as Record<string, unknown>;
+    expect({ state: meta.state, pending: meta.recovery_pending }).toEqual({ state: 'interrupted', pending: true });
+  }, 30_000);
+
+  test('runTurn: a commit refused for ANY reason (not only daemon_stopping) is owed, and the next boot records the work', async () => {
+    await makeSite('owed-turn');
+    let finish: () => void = () => {};
+    const ended = new Promise<void>(resolveEnded => {
+      finish = resolveEnded;
+    });
+    __setTestDriver('claude_code', {
+      ...recordingDriver([]),
+      startTurn(): AgentProcess {
+        const events = (async function* (): AsyncIterable<AgentEvent> {
+          await ended;
+          yield { type: 'result', ok: true, resumeToken: 'resume-y', durationMs: 1 };
+        })();
+        return { pid: 0, events, async interrupt() {} };
+      },
+    });
+    const { session_id } = await startSession('owed-turn', 'write a page');
+    writeFileSync(join(workspacePath('owed-turn'), 'owed.html'), '<p>work</p>\n');
+    // The turn's git connection is dropped (unit_refused, a quarantined identity) — the daemon is NOT stopping.
+    refusingGit();
+    finish();
+    await waitUntil(() => getSessionState('owed-turn').state !== 'running', 8_000, 'the turn to end');
+    const marked = (await readMeta('owed-turn', session_id)) as unknown as Record<string, unknown>;
+    expect(marked.recovery_pending).toBe(true);
+    process.env.PATH = PATH_BEFORE;
+    await sweepOnBoot();
+    const after = (await readMeta('owed-turn', session_id)) as unknown as Record<string, unknown>;
+    expect({ pending: 'recovery_pending' in after, subject: await lastSubject('owed-turn') }).toEqual({
+      pending: false,
+      subject: `agent: recovered after restart (session ${session_id})`,
+    });
+  }, 30_000);
+});

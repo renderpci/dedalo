@@ -10,7 +10,8 @@
  *      alive (a killed daemon's `BindsTo=` stop that has not finished, a unit that will not
  *      die), and QUARANTINE any identity that is — rebuilt from PID 1's state, never from
  *      memory (`drivers/confinement.ts` reconcileAgentUnits).
- *   3. SWEEP — mark sessions a dead process left 'running' as interrupted and commit their
+ *   3. SWEEP — seed the driver record of a site from before it (sites/driver_record.ts), then
+ *      mark sessions a dead process left 'running' as interrupted and commit their owed
  *      work as a recovery point (sessions/manager.ts sweepOnBoot). AFTER the reconciliation:
  *      the recovery commit runs git as the site's identity, which must be proved idle first.
  *   4. LISTEN — only now may a request start anything.

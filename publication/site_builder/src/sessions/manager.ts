@@ -18,15 +18,15 @@
 import { randomUUID } from 'node:crypto';
 import { config, parseEnvPairs } from '../config';
 import { confinedPath } from '../util/paths';
-import { ConfinementRefusedError, ConflictError, LimitExceededError, NotFoundError, ValidationError } from '../errors';
+import { ConflictError, LimitExceededError, NotFoundError, ValidationError } from '../errors';
 import { assertConfinementAvailable, policyFromConfig, type ConfinementPolicy } from '../drivers/confinement';
 import { MCP_PORT } from '../drivers/network_profile';
 import { getDriver } from '../drivers/registry';
 import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/types';
-import { readSiteDriver } from '../sites/driver_record';
+import { readSiteDriver, seedDriverRecords } from '../sites/driver_record';
 import { readManifest } from '../sites/manifest';
 import { commitAll, changedFiles } from '../sites/git';
-import { assertWithinQuota, siteExists } from '../sites/workspace';
+import { assertWithinQuota, listSlugs, siteExists } from '../sites/workspace';
 import { busyDetail, busyReason, end, endTurn, tryBegin, tryBeginTurn } from '../workspace_activity';
 import type { SessionEventBody, SessionMeta, StoredEvent } from './events';
 import {
@@ -337,9 +337,11 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
     } catch (error) {
       // A failed commit must not fail the turn — but it is never a silence.
       console.error(`[sessions] the commit after turn ${turn} of '${slug}' failed:`, error);
-      // Refused because the daemon is stopping (a connect would cancel its stop): the next
-      // boot's sweep makes this commit as a recovery point.
-      if (error instanceof ConfinementRefusedError && error.code === 'daemon_stopping') meta.recovery_pending = true;
+      // OWED, whatever refused it — not only `daemon_stopping`. During a stop PID 1 stops the
+      // agent instances first and drops a git connection with `unit_refused` before this daemon
+      // has had SIGTERM; a quarantined identity or a nonconformant unit refuses it too. The next
+      // boot's sweep makes this commit as a recovery point (`sweepOnBoot`).
+      meta.recovery_pending = true;
     }
 
     // An interrupted turn reports 'interrupted' regardless of how its stream ended.
@@ -394,13 +396,16 @@ async function persist(slug: string, sessionId: string, body: SessionEventBody):
  * the session→slug index so stop/subscribe work for pre-restart sessions.
  */
 export async function sweepOnBoot(): Promise<void> {
+  // FIRST, every site's DRIVER RECORD (sites/driver_record.ts): a site from before the record
+  // has none, and from now on a driver-less session of such a site is refused, not defaulted.
+  await seedDriverRecords(await listSlugs());
   const all = await allSessionMetaFiles();
   for (const { slug, sessionId } of all) {
     slugBySession.set(sessionId, slug);
     const meta = await readMeta(slug, sessionId);
     if (!meta) continue;
-    // 'running' is a process that died mid-turn; `recovery_pending` a turn whose commit the
-    // shutdown refused (sessions/events.ts). Both leave work only a recovery commit records.
+    // 'running' is a process that died mid-turn; `recovery_pending` a commit that was owed and
+    // not recorded (sessions/events.ts). Both leave work only a recovery commit records.
     const wasRunning = meta.state === 'running';
     if (wasRunning || meta.recovery_pending === true) {
       // THE RECOVERY COMMIT HOLDS THE SITE (LEAD-1b). It runs git — agent-authored text's
@@ -425,8 +430,12 @@ export async function sweepOnBoot(): Promise<void> {
             `is held (${busyReason(slug) ?? 'unknown'}).`,
         );
       }
-      // A refused commit stays owed until one is made (the next boot asks again).
+      // A refused or skipped commit stays OWED until one is made — for a session that was
+      // 'running' too, which had no flag yet: unflagged, it would leave 'running' for
+      // 'interrupted' and no later boot would ask again (the next turn's commit then absorbs
+      // the work under its own name).
       if (recorded) delete meta.recovery_pending;
+      else meta.recovery_pending = true;
       if (wasRunning) meta.state = 'interrupted';
       await writeMeta(meta);
       if (wasRunning) await persist(slug, sessionId, { type: 'turn_end', state: 'interrupted' });

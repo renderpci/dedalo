@@ -46,9 +46,11 @@ export interface SessionMeta {
    */
   identity_epoch?: number;
   /**
-   * The last turn's commit was REFUSED because the daemon was shutting down
-   * (`confinement.daemon_stopping`): its work is still in the tree, and the next boot's sweep
-   * commits it as a recovery point, then clears this. Absent otherwise.
+   * A commit this session OWES was not recorded — its turn's commit was refused (for any
+   * reason: the daemon stopping, a connection PID 1 dropped, a quarantined identity), or a
+   * boot's recovery commit was refused or skipped (the site held). The work is still in the
+   * tree; every boot's sweep asks again, commits it as a recovery point, and only then clears
+   * this. Absent otherwise.
    */
   recovery_pending?: boolean;
 }

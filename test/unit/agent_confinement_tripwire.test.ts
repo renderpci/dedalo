@@ -18,9 +18,12 @@
  * CENSUS: every process-creating call site in the daemon's source is enumerated here, so
  * the next one cannot be added without a decision about what it runs as.
  *
- *   §1 THE CENSUS. Every `Bun.spawn` / `spawnSync` / `child_process` spawn under
- *      `publication/site_builder/src/`, derived from the tree with a floor, each one either
- *      THE confined agent spawn or an enumerated exemption carrying its reason.
+ *   §1 THE CENSUS. Every file under `publication/site_builder/src/` that can start a process —
+ *      derived from its IMPORTS (`child_process`, `cluster`, `bun`, `bun:ffi`) and its
+ *      scope-resolved references (aliases, namespaces, the `Bun` global, `Bun.$`), never from a
+ *      call's spelling — with a floor; each one an enumerated exemption carrying its reason
+ *      and its EXACT reference count. A dynamic import or require of a process module, and the
+ *      escapes no binding names, are refused everywhere.
  *   §2 THE UNIT. The three directives that are about the agent rather than the daemon
  *      (`ProtectProc=invisible`, `RestrictSUIDSGID`, `LockPersonality`), beside the
  *      hardening set that was already there — asserted on a real render.
@@ -107,25 +110,143 @@ const DECLARATION = join(PACKAGE, 'deploy/examples/instance.example.json');
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 /**
- * WHAT COUNTS AS STARTING A PROCESS.
+ * WHAT COUNTS AS STARTING A PROCESS — read off what a file can REACH, never off how a call is
+ * spelled.
  *
- * Deliberately wider than the one spelling this daemon uses today: `Bun.spawn`,
- * `Bun.spawnSync`, node's `spawn`/`spawnSync`/`exec`/`execFile`/`fork`, and `execSync`. A
- * census that matched only `Bun.spawn(` would be answered by the next author importing
- * `node:child_process`, which is a different spelling of the same decision.
+ * The first census matched call SPELLINGS (`Bun.spawn(`, a bare `spawn(`/`execFile(`/…) and
+ * was answered, measured, by every respelling of the same decision: `import { spawn as run }`
+ * + `run(…)`, `import * as cp` + `cp.spawn(…)`, ``Bun.$`…` ``, and
+ * `const { spawn: s } = await import('node:child_process')`. Its exemptions were keyed per FILE
+ * with a liveness floor of ONE call, so a fifth spawn added to a file that already had four was
+ * invisible. A regression that ran `git`/`bun install` in a workspace through such a spelling
+ * would execute agent-authored hooks as the daemon uid, around `util/spawn`'s `CONFINED_ARGV`
+ * door, with this census green. So the census is now built from the module graph:
  *
- * A member call (`X.exec(...)`) is NOT one of them — that is `RegExp.prototype.exec`, which
- * this tree uses eleven times, and an injected `io.exec` seam whose one implementation is
- * `provision/apply.ts` and is enumerated below. `Bun.spawn` is named explicitly for exactly
- * that reason: it is the one member call that IS a process.
+ *   1. THE IMPORT SIDE (`Bun.Transpiler.scanImports`: static, dynamic and `require`). A
+ *      process-capable module (`PROCESS_MODULES`) may be imported only STATICALLY and only by
+ *      an exempt file. A dynamic import or a `require` of one yields bindings no scan resolves,
+ *      so it is refused everywhere, exempt files included.
+ *   2. THE REFERENCE SIDE, scope-aware. The file is transpiled (types and comments gone), its
+ *      process imports are removed, and each binding they made — default, named, aliased,
+ *      namespace — and the `Bun` global are DEFINED to a sentinel. `define` replaces only
+ *      UNBOUND identifier references: never a string, a comment, a property name or a local
+ *      that shadows the binding. Every sentinel left is one process-capable reference.
+ *      `Bun.<member>` counts unless the member is in the closed inert list (`BUN_INERT`); a
+ *      bare `Bun` (an alias, a destructure) always counts.
+ *   3. THE ESCAPES no binding names — `globalThis` (`globalThis.Bun.spawn`), `process.binding`
+ *      / `dlopen`, a computed `import(…)` / `require(…)` — are refused outside the exemptions.
+ *   4. EXACT COUNTS. Each exemption pins its reference count, as `sql_confinement` pins its
+ *      sites: one more reference (or one fewer) is red, and a new one is a decision in review.
  */
-const SPAWN_CALL =
-	/(?:\bBun\.spawnSync\s*\(|\bBun\.spawn\s*\(|(?<![.\w])(?:spawnSync|spawn|execFileSync|execFile|execSync|exec|fork)\s*\()/g;
+const PROCESS_MODULES: ReadonlySet<string> = new Set([
+	'node:child_process',
+	'child_process',
+	'node:cluster',
+	'cluster',
+	// `$` (Bun Shell) and `spawn`/`spawnSync` are exports of the 'bun' module too.
+	'bun',
+	// A foreign call can posix_spawn.
+	'bun:ffi',
+]);
 
-interface SpawnSite {
+/** `Bun.<member>` reads that cannot start a process. Closed: any other member is a reference. */
+const BUN_INERT: ReadonlySet<string> = new Set([
+	'argv',
+	'connect',
+	'CryptoHasher',
+	'file',
+	'nanoseconds',
+	'password',
+	'serve',
+	'sleep',
+	'Transpiler',
+	'version',
+]);
+
+const PROCESS_REF = '__DEDALO_PROCESS_REF__';
+const BUN_GLOBAL = '__DEDALO_BUN_GLOBAL__';
+/** A static import as the transpiler prints it: one line, `import <clause> from "<module>";`. */
+const IMPORT_LINE = /^import\s+(.+?)\s+from\s*["']([^"']+)["'];?[ \t]*$/gm;
+const ESCAPES: readonly RegExp[] = [
+	/\bglobalThis\b/g,
+	/\bprocess\s*\.\s*(?:binding|_linkedBinding|dlopen)\b/g,
+	/\b(?:import|require)\s*\(\s*(?!["'])/g,
+];
+
+/** The local names an import clause binds: `a`, `* as ns`, `{ x, y as z }`, or a mix. */
+function bindingsOf(clause: string): string[] {
+	const names: string[] = [];
+	const namespace = clause.match(/\*\s*as\s+([\w$]+)/);
+	if (namespace?.[1]) names.push(namespace[1]);
+	const braces = clause.match(/\{([^}]*)\}/);
+	for (const part of (braces?.[1] ?? '')
+		.split(',')
+		.map((p) => p.trim())
+		.filter(Boolean)) {
+		names.push((part.split(/\s+as\s+/)[1] ?? part).trim());
+	}
+	const fallback = clause
+		.replace(/\{[^}]*\}/, '')
+		.replace(/\*\s*as\s+[\w$]+/, '')
+		.replace(/,/g, ' ')
+		.trim();
+	if (fallback) names.push(fallback);
+	return names;
+}
+
+interface ProcessReach {
 	readonly file: string;
-	readonly line: number;
-	readonly text: string;
+	/** Static imports of a process-capable module. */
+	readonly staticImports: number;
+	/** Dynamic imports / requires of one — refused everywhere. */
+	readonly unresolvable: readonly string[];
+	/** Process-capable identifier references (bindings + non-inert `Bun`). */
+	readonly refs: number;
+	readonly escapes: readonly string[];
+}
+
+const TS = new Bun.Transpiler({ loader: 'ts' });
+
+/** What one source file can reach that starts a process. */
+function processReach(code: string, file: string): ProcessReach {
+	const imports = TS.scanImports(code).filter((entry) => PROCESS_MODULES.has(entry.path));
+	const bindings: string[] = [];
+	const js = TS.transformSync(code).replace(IMPORT_LINE, (line, clause: string, from: string) => {
+		if (!PROCESS_MODULES.has(from)) return line;
+		bindings.push(...bindingsOf(clause));
+		return '';
+	});
+	const define: Record<string, string> = { Bun: BUN_GLOBAL };
+	for (const name of bindings) define[name] = PROCESS_REF;
+	const out = new Bun.Transpiler({ loader: 'js', define }).transformSync(js);
+	let refs = out.split(PROCESS_REF).length - 1;
+	for (const match of out.matchAll(
+		new RegExp(`${BUN_GLOBAL}(\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g'),
+	)) {
+		if (!(match[2] && BUN_INERT.has(match[2]))) refs++;
+	}
+	return {
+		file,
+		staticImports: imports.filter((entry) => entry.kind === 'import-statement').length,
+		unresolvable: imports
+			.filter((entry) => entry.kind !== 'import-statement')
+			.map((entry) => `${entry.kind} ${entry.path}`),
+		refs,
+		escapes: ESCAPES.flatMap((pattern) => [...out.matchAll(pattern)].map((match) => match[0])),
+	};
+}
+
+/** Every file of a tree that can reach a process, with its file relative to that tree. */
+function processReachers(files: readonly string[], root: string): ProcessReach[] {
+	return files
+		.map((path) => processReach(readFileSync(path, 'utf8'), relative(root, path)))
+		.filter(
+			(reach) =>
+				reach.staticImports > 0 ||
+				reach.unresolvable.length > 0 ||
+				reach.refs > 0 ||
+				reach.escapes.length > 0,
+		);
 }
 
 /**
@@ -141,56 +262,53 @@ function plant(planted: string[], path: string, body: string): string {
 	return path;
 }
 
-/** Every process-creating call site under a tree, with its file relative to that tree. */
-function spawnSites(files: readonly string[], root: string): SpawnSite[] {
-	const sites: SpawnSite[] = [];
-	for (const path of files) {
-		const lines = readFileSync(path, 'utf8').split('\n');
-		lines.forEach((text, index) => {
-			// Comments are prose about spawning, not spawning. The daemon's modules explain
-			// themselves at length, and `Bun.spawn(argv)` appears in three headers.
-			const code = text.replace(/^\s*(\/\/|\*|\/\*).*$/, '');
-			SPAWN_CALL.lastIndex = 0;
-			if (SPAWN_CALL.test(code))
-				sites.push({ file: relative(root, path), line: index + 1, text: text.trim() });
-		});
-	}
-	return sites;
-}
-
 /**
- * THE ENUMERATED EXEMPTIONS — every process this daemon starts that is NOT an agent turn,
- * each with the reason it is not one. Shrink-only: a new entry is a new decision about what
- * runs as whom, and it belongs in a review rather than in a diff nobody reads.
+ * THE ENUMERATED EXEMPTIONS — every file that can start a process and is NOT the agent turn,
+ * each with the reason and its EXACT reference count. Shrink-only: a new entry, or a count
+ * that grew, is a new decision about what runs as whom, and it belongs in a review rather than
+ * in a diff nobody reads.
  */
-const EXEMPT: Readonly<Record<string, string>> = Object.freeze({
-	'provision/apply.ts':
-		'the PROVISIONER, not the daemon: an operator-run root process reading the host (id, ' +
-		'getent, systemctl) and setting ownership (chown). It never executes agent-authored ' +
-		'text, and confining it under the agent uid would be a root tool asking permission to ' +
-		'do the thing it exists to do.',
-	'drivers/confinement.ts':
-		"the confinement's OWN control plane, which starts nothing: `systemctl show/list-units` " +
-		"(is a site's run alive? what did PID 1 load? which release is it?) and `systemctl stop " +
-		"<a live instance>` through the polkit rule's stop grant (the rule grants no start — F2), " +
-		'plus `id` / `getent group`, pinned root-owned binaries asked which uid and groups each ' +
-		'site identity has, so the trust check can ask whether ANY identity can change what the ' +
-		'units execute first. None of them runs anything agent-authored.',
-	'util/spawn.ts':
-		'runBinary / spawnChild — the ONE place a process is created, and the door itself. It ' +
-		'REFUSES a cwd inside SITES_ROOT without the confinement token (`CONFINED_ARGV`), which ' +
-		'only the confinement holds: under systemd_scope nothing is spawned for a run at all (the ' +
-		"daemon connects to the site's socket and PID 1 starts the unit), and spawnChild is the " +
-		'DECLARED-unconfined run of AGENT_CONFINEMENT=none, announced in its own log. What is ' +
-		'left is the driver VERSION PROBE, a pinned binary run with --version outside every ' +
-		'workspace. §6 holds the import side of that rule.',
-	'drivers/egress_shim.ts':
-		"in-unit exec of the spec's argv: the shim IS the ExecStart of the unit root rendered for " +
-		'the site (User= its identity), so its one child_process spawn runs inside the unit PID 1 ' +
-		'already started, in its private network namespace — after it has refused a namespace ' +
-		'that is not in effect (§8) and a spec that sets a key the unit fixes. It widens nothing ' +
-		'the unit did not already grant.',
-});
+const EXEMPT: Readonly<Record<string, { readonly refs: number; readonly reason: string }>> =
+	Object.freeze({
+		'provision/apply.ts': {
+			refs: 11,
+			reason:
+				'the PROVISIONER, not the daemon: an operator-run root process reading the host (id, ' +
+				'getent, systemctl) and setting ownership (chown). It never executes agent-authored ' +
+				'text, and confining it under the agent uid would be a root tool asking permission to ' +
+				'do the thing it exists to do.',
+		},
+		'drivers/confinement.ts': {
+			refs: 4,
+			reason:
+				"the confinement's OWN control plane, which starts nothing: `systemctl show/list-units` " +
+				"(is a site's run alive? what did PID 1 load? which release is it?) and `systemctl stop " +
+				"<a live instance>` through the polkit rule's stop grant (the rule grants no start — F2), " +
+				'plus `id` / `getent group`, pinned root-owned binaries asked which uid and groups each ' +
+				'site identity has, so the trust check can ask whether ANY identity can change what the ' +
+				'units execute first. None of them runs anything agent-authored.',
+		},
+		'util/spawn.ts': {
+			refs: 2,
+			reason:
+				'runBinary / spawnChild — the ONE place a process is created, and the door itself. It ' +
+				'REFUSES a cwd inside SITES_ROOT without the confinement token (`CONFINED_ARGV`), which ' +
+				'only the confinement holds: under systemd_scope nothing is spawned for a run at all (the ' +
+				"daemon connects to the site's socket and PID 1 starts the unit), and spawnChild is the " +
+				'DECLARED-unconfined run of AGENT_CONFINEMENT=none, announced in its own log. What is ' +
+				'left is the driver VERSION PROBE, a pinned binary run with --version outside every ' +
+				'workspace. §6 holds the import side of that rule.',
+		},
+		'drivers/egress_shim.ts': {
+			refs: 1,
+			reason:
+				"in-unit exec of the spec's argv: the shim IS the ExecStart of the unit root rendered for " +
+				'the site (User= its identity), so its one child_process spawn runs inside the unit PID 1 ' +
+				'already started, in its private network namespace — after it has refused a namespace ' +
+				'that is not in effect (§8) and a spec that sets a key the unit fixes. It widens nothing ' +
+				'the unit did not already grant.',
+		},
+	});
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * §1 The census
@@ -198,13 +316,17 @@ const EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 
 describe('every process the site-builder daemon starts is accounted for', () => {
 	const files = siteBuilderDaemonFiles();
-	const sites = spawnSites(files, SOURCE_ROOT);
+	const reachers = processReachers(files, SOURCE_ROOT);
+	const describeReach = (reach: ProcessReach) =>
+		`${reach.file}: ${reach.staticImports} import(s), ${reach.refs} ref(s)` +
+		`${reach.unresolvable.length ? `, ${reach.unresolvable.join(', ')}` : ''}` +
+		`${reach.escapes.length ? `, escapes ${reach.escapes.join(', ')}` : ''}`;
 
 	test('the corpus is the tree, and it is not empty', () => {
 		// The floor is what makes the emptiness assertions below mean anything: a scanner
 		// pointed at a moved directory would otherwise report a clean census of nothing.
 		expect(files.length).toBeGreaterThan(40);
-		expect(sites.length).toBeGreaterThan(8);
+		expect(reachers.reduce((sum, reach) => sum + reach.refs, 0)).toBeGreaterThan(8);
 	});
 
 	test('no driver spawns an agent turn: the supervisor consumes what confineTurn() opened', () => {
@@ -212,10 +334,10 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 		// reads the ConfinedChild `confineTurn()` returned (a unit instance relayed over the
 		// site's socket, or the declared-unconfined child). A `Bun.spawn(plan.argv, …)` in
 		// process.ts is the defect restored, and it is the exact line the audit found.
-		const inDrivers = sites.filter(
-			(site) => site.file.startsWith('drivers/') && !(site.file in EXEMPT),
+		const inDrivers = reachers.filter(
+			(reach) => reach.file.startsWith('drivers/') && !(reach.file in EXEMPT),
 		);
-		expect(inDrivers.map((site) => `${site.file}:${site.line} ${site.text}`)).toEqual([]);
+		expect(inDrivers.map(describeReach)).toEqual([]);
 		const supervisor = readFileSync(join(SOURCE_ROOT, 'drivers/process.ts'), 'utf8')
 			.split('\n')
 			.map((line) => line.replace(/^\s*(\/\/|\*|\/\*).*$/, ''))
@@ -224,42 +346,67 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 		expect(supervisor).not.toContain('plan.argv, {');
 	});
 
-	test('every other call site is an enumerated exemption with a reason', () => {
-		const unexplained = sites
-			.filter((site) => !(site.file in EXEMPT))
-			.map((site) => `${site.file}:${site.line} ${site.text}`);
+	test('every file that can start a process is an enumerated exemption, at its EXACT count, with a reason', () => {
+		const unexplained = reachers.filter((reach) => !(reach.file in EXEMPT)).map(describeReach);
 		expect(unexplained).toEqual([]);
-		// Shrink-only in the other direction too: an exemption whose file stopped spawning is
-		// an exemption that would silently cover the NEXT spawn added to that file.
-		for (const file of Object.keys(EXEMPT)) {
-			expect({ file, live: sites.some((site) => site.file === file) }).toEqual({
+		// No exemption covers what no scan can count: a dynamic import / require of a process
+		// module, or an escape, is refused in an exempt file too.
+		expect(
+			reachers
+				.filter((reach) => reach.unresolvable.length > 0 || reach.escapes.length > 0)
+				.map(describeReach),
+		).toEqual([]);
+		// EXACT, both directions: one more reference in an exempt file is a new spawn nobody
+		// decided on; one fewer is an exemption that would silently cover the next one.
+		const counted = Object.fromEntries(reachers.map((reach) => [reach.file, reach.refs]));
+		for (const [file, { refs, reason }] of Object.entries(EXEMPT)) {
+			expect({ file, refs: counted[file] ?? 0, stated: reason.length > 60 }).toEqual({
 				file,
-				live: true,
+				refs,
+				stated: true,
 			});
-		}
-		for (const [file, reason] of Object.entries(EXEMPT)) {
-			expect({ file, stated: reason.length > 60 }).toEqual({ file, stated: true });
 		}
 	});
 
-	test('the scanner really finds an offender — a planted one is reported', () => {
+	test('the scanner really finds an offender — every respelling of a spawn is reported', () => {
 		// The positive control. Without it every assertion above is satisfied by a scanner that
-		// found nothing, in a directory that moved, with a regex that matches no code.
+		// found nothing, in a directory that moved, with a pattern that matches no code. Each
+		// row is a shape the spelling census passed GREEN (measured).
 		const dir = mkdtempSync(join(tmpdir(), 'agent-confinement-control-'));
 		const planted: string[] = [];
-		plant(planted, join(dir, 'rogue.ts'), 'export function go() {\n  Bun.spawn(["/bin/sh"]);\n}\n');
-		plant(
-			planted,
-			join(dir, 'nested.ts'),
-			"import { execFile } from 'node:child_process';\nexecFile('/bin/sh');\n",
-		);
+		const shapes: Record<string, string> = {
+			'rogue.ts': 'export function go() {\n  Bun.spawn(["/bin/sh"]);\n}\n',
+			'nested.ts': "import { execFile } from 'node:child_process';\nexecFile('/bin/sh');\n",
+			'alias.ts':
+				"import { spawn as run } from 'node:child_process';\nexport const go = () => run('/bin/sh');\n",
+			'namespace.ts':
+				"import * as cp from 'node:child_process';\nexport const go = () => cp.spawn('/bin/sh');\n",
+			'default.ts': "import cp from 'child_process';\nexport const go = () => cp.fork('x');\n",
+			'shell.ts': 'export async function go() {\n  await Bun.$`sh -c id`;\n}\n',
+			'bunshell.ts': "import { $ } from 'bun';\nexport const go = () => $`sh -c id`;\n",
+			'dynamic.ts':
+				"export async function go() {\n  const { spawn: s } = await import('node:child_process');\n  s('/bin/sh');\n}\n",
+			'required.ts': "export const go = () => require('child_process').spawnSync('/bin/sh');\n",
+			'bunalias.ts': 'const B = Bun;\nexport const go = () => B.spawn(["/bin/sh"]);\n',
+			'global.ts': 'export const go = () => globalThis.Bun.spawn(["/bin/sh"]);\n',
+		};
+		for (const [name, body] of Object.entries(shapes)) plant(planted, join(dir, name), body);
+		// …and prose, a string, an inert Bun member and a shadowing local are NOT reports.
 		plant(
 			planted,
 			join(dir, 'prose.ts'),
-			'// Bun.spawn(argv) is what this module replaces.\nexport const x = 1;\n',
+			"// Bun.spawn(argv) is what this module replaces.\nexport const msg = 'spawn( Bun.spawn(';\n" +
+				'export const nap = () => Bun.sleep(1);\nexport const local = (spawn: (x: string) => void) => spawn("x");\n',
 		);
-		const found = spawnSites(planted, dir);
-		expect(found.map((site) => site.file).sort()).toEqual(['nested.ts', 'rogue.ts']);
+		const found = processReachers(planted, dir);
+		expect(found.map((reach) => reach.file).sort()).toEqual(Object.keys(shapes).sort());
+
+		// AND A FIFTH CALL IN AN EXEMPT FILE is a count that moved, not a covered call.
+		const exemptFile = join(SOURCE_ROOT, 'drivers/confinement.ts');
+		const grown = `${readFileSync(exemptFile, 'utf8')}\nexport const rogue = () => spawnSync('/bin/sh', ['-c', 'id']);\n`;
+		expect(processReach(grown, 'drivers/confinement.ts').refs).toBe(
+			(EXEMPT['drivers/confinement.ts']?.refs ?? 0) + 1,
+		);
 	});
 });
 
