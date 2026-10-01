@@ -1024,7 +1024,8 @@ const open_tool_modals = new Set()
 * open or still loading is refused synchronously (`open_tool_modals`), returning
 * false. If `get_instance` returns an already-running instance (status other than
 * 'initialized', e.g. opened through another path), the just-opened modal is dropped
-* and false is returned. A modal closed while loading destroys the late instance.
+* and false is returned. A modal closed while loading destroys the late instance
+* unless a reopen of the same tool+caller is already awaiting it.
 *
 * Tool instance ID scoping: `id_variant` is set to `caller.id_base` so that the
 * same tool model opened from two different caller components gets separate instance
@@ -1239,9 +1240,16 @@ const view_modal = async function(options) {
 							return null
 						}
 
-						// closed by the user while loading: nothing to render
+						// closed by the user while loading: nothing to render.
+						// (!) Destroy the late instance only when no newer open of the
+						// same tool+caller is in progress: get_instance de-dups in-flight
+						// builds, so a reopen during this load awaits the SAME instance,
+						// and destroying it here would hand that open a dead tool (caller
+						// nulled — its on_close_actions then threw on caller.refresh).
 						if (modal_closed) {
-							loaded.instance?.destroy?.(true, true, true)
+							if (!open_tool_modals.has(open_key)) {
+								loaded.instance?.destroy?.(true, true, true)
+							}
 							resolve_view(false)
 							return null
 						}
