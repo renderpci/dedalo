@@ -191,6 +191,11 @@
 			"skipped": 0,
 			"assertions": 34
 		},
+		"test/unit/agent_workflows_parse_tripwire.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 47
+		},
 		"test/unit/ai_model_fetch_native.test.ts": {
 			"tests": 36,
 			"skipped": 0,
