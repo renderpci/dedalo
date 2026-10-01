@@ -27,6 +27,8 @@ export const ONTOLOGY_TLD = 'ontology7';
 export const ONTOLOGY_TRANSLATABLE = 'ontology8';
 /** ontology10 — connected-to (relations) (DEDALO_ONTOLOGY_CONNECTED_TO_TIPO). */
 export const ONTOLOGY_CONNECTED_TO = 'ontology10';
+/** ontology42 — overwrite: a localontology0 record's link to the node it overrides. */
+export const ONTOLOGY_OVERWRITE = 'ontology42';
 /** ontology15 — parent locator (DEDALO_ONTOLOGY_PARENT_TIPO). */
 export const ONTOLOGY_PARENT = 'ontology15';
 /** ontology16 — properties.css. */

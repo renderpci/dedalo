@@ -7,6 +7,38 @@
 import type { CatalogEntry } from '../catalog_types.ts';
 
 export const DIFFUSION_KEYS = {
+	API_WEB_USER_CODE_MULTIPLE: {
+		type: 'publication_api_users',
+		scope: 'operator',
+		default: undefined,
+		heading: 'Publication server API v1 access codes',
+		typeLabel: 'array of objects',
+		typeSuffix: '*optional*',
+		doc: `The publication databases served by the legacy publication server API v1
+(\`publication/server_api/v1\`), each with the access \`code\` that API expects. The
+maintenance dashboard (Publication → Publication server API) shows one "Open Swagger UI"
+button per entry, opening the API's interactive documentation for that database with the
+code, the database name and the current interface language already filled in.
+
+Every entry is an object with \`db_name\` (the publication database) and \`code\` (the same
+value as \`API_WEB_USER_CODE\` in that API's own configuration). The optional \`api_ui\`
+is the address of the documentation page when the API runs on another server; unset, it
+is \`/dedalo/publication/server_api/v1/docu/ui/\` on this site. The v1 API and its
+documentation page are a separate application that Dédalo itself never serves: the default
+address only works when the web server in front of Dédalo routes \`/dedalo/publication/\`
+to that application —
+otherwise the button answers "not found", and \`api_ui\` must point at the server that does
+run v1. Only an \`http(s)://\` or a root-relative address is accepted. An entry without \`db_name\` or \`code\` is dropped and
+reported at boot.
+
+Empty by default: no buttons are shown. The codes are only sent to global administrators,
+the only users who can open the maintenance area. The publication server API v2 is configured in its own \`.env\`,
+not here.
+
+\`\`\`bash
+API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]
+\`\`\``,
+	},
 	DEDALO_DIFFUSION_BATCH_RECORDS: {
 		type: 'number',
 		scope: 'operator',

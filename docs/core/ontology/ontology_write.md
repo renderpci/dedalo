@@ -115,20 +115,20 @@ flowchart LR
 | **node record** | `matrix_ontology` under `<tld>0` | One editable record per node, with definition components: tld (`ontology7`), parent (`ontology15`), model (`ontology6`), order (`ontology41`), translatable (`ontology8`), relations (`ontology10`), term (`ontology5`), properties (`ontology18` + css `ontology16` + rqo `ontology17` + v5 `ontology19`). All named in `src/core/ontology/ontology_tipos.ts`. |
 | **dd_ontology row** | `dd_ontology` table | The compiled, flat runtime node keyed by `tipo`. Read by `resolver.ts`, written by `src/core/db/dd_ontology.ts`. |
 | **tipo** | `<tld><section_id>` | A node's runtime id, built from its TLD + the editable record's `section_id` (`` `${tld}${sectionId}` ``). |
-| **overwrite (local ontology)** | section `localontology0` | A local record that points at a shared node and overrides selected fields. `getOverwriteLocator()` (`parser.ts`) finds it; the parser favours the overwrite locator for most fields. **`is_model` is never overwritten** (always read from the canonical node); `model`/`model_tipo` themselves ARE overwrite-aware. |
+| **overwrite (local ontology)** | section `localontology0` | A local record linked to a shared node through `ontology42` (Overwrite) that overrides selected fields when that node is parsed. `getOverwriteLocator()` (`parser.ts`) finds it. **Canonical-only**: tld, `is_model`, `is_translatable`, order. **Term** merges per language. **Properties** go per top-level key (`css` and `source` included): a key the override states replaces the shared key whole, unstated keys are kept, and `null` in the override's `ontology18` removes a key. Parent, model/model_tipo, relations and propiedades are replaced when the override fills them. An override record is never a node itself. |
 
 !!! note "What `parseSectionRecordToOntologyNode()` resolves"
     For each node it reads (overwrite-favoured where applicable): **TLD**
-    (mandatory — returns `null` if empty), **parent** (term-id of the parent
+    (mandatory, canonical-only — returns `null` if empty), **parent** (term-id of the parent
     locator; `null` for the `dd1`/`dd2` roots), **is_model** (canonical-only),
     **model** + **model_tipo** (overwrite-aware; `model` = strict `lg-spa` term
     of the model node, no lang fallback), **order_number** (canonical-only,
-    integer-cast, empty → `null`), **is_translatable** (default `true` when
-    missing), **is_main** (`tipo === <tld>0`), **relations** (each resolved to
+    integer-cast, empty → `null`), **is_translatable** (canonical-only, default
+    `true` when missing), **is_main** (`tipo === <tld>0`), **relations** (each resolved to
     `{tipo}`), **properties** (merging css and source/`request_config`
     sub-components), legacy **propiedades** (v5, stored as pretty-printed JSON
     text so legacy readers see byte-identical output), and the **term**
-    (`{lg-*: value}`).
+    (`{lg-*: value}`; an override's languages merge over the canonical ones).
 
 ## Instantiation & lifecycle
 
@@ -198,7 +198,7 @@ module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a 
 | function | module | purpose |
 | --- | --- | --- |
 | `getTermIdFromLocator(locator)` | `ontology/parser.ts` | Build a node's term-id (`<tld><section_id>`, e.g. `dd55`) from a locator: fast path from the TLD string, slow fallback reading the TLD component off the pointed record. Returns `null` if unresolvable, or if the result is not a valid tipo. |
-| `getOverwriteLocator(sectionTipo, sectionId)` | `ontology/parser.ts` | Find the local-ontology override (`localontology0`) pointing at this node, or `null`. Returns `null` for model nodes and for local-ontology records themselves. |
+| `getOverwriteLocator(sectionTipo, sectionId)` | `ontology/parser.ts` | Find the local-ontology override (`localontology0`) linked to this node through `ontology42`, or `null` (lowest `section_id` when several). Returns `null` for model nodes (canonical `ontology30`) and for local-ontology records themselves. |
 | `root_terms` projection | `area/tree.ts` | The children that seed a thesaurus tree view (`hierarchy45`, or `hierarchy59` in the model view) — folded into the tree-area boot payload rather than a standalone helper. |
 
 ### TLD ↔ section-tipo mapping

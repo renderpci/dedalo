@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "Sense configurar",
 	"serve_ontology_state_on": "Activat",
 	"serve_ontology_title": "Servir aquesta ontologia a altres instal·lacions",
+	"server_slow_response": "El servidor està trigant més del que és habitual…",
 	"session_expiry_warning": "La vostra sessió caduca en %s min. Continueu treballant per mantenir-la oberta.",
 	"set_img_layer": "Establir capa d'imatge",
 	"set_root_pw_label": "Establir contrasenya de root",

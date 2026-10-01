@@ -272,9 +272,6 @@ const get_content_data_edit = async function(self) {
 *      opens an SSE stream from `dd_utils_api::get_process_status` and updates
 *      the response container on each tick until the background process exits.
 *
-* A static info block explains known Apache/HTTP1.1 SSE buffering issues and
-* suggested workarounds.
-*
 * @returns {HTMLElement} The assembled long_process_container <div>.
 */
 const render_long_process = function() {
@@ -417,23 +414,6 @@ const render_long_process = function() {
 			element_type	: 'div',
 			class_name		: 'long_process_response',
 			parent			: long_process_container
-		})
-
-	// warning
-	// Static informational note about known Apache/HTTP 1.1 SSE buffering issues
-	// (chunk merging) and the h2+SSL workaround. Rendered as an info_text div.
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'info_text',
-			inner_html		: `Note about SEE problems: <br>
-				Apache have issues where small chunks are not sent correctly over HTTP/1.1 <br>
-				Sometimes, the Apache server joins some outputs into one message (merge). <br>
-				On old versions, you can try this Apache vhosts configuration: <br>
-				<b>ProxyPass fcgi://127.0.0.1:9000/dedalo/ enablereuse=on flushpackets=on max=10</b> <br>
-				to prevent this behavior, but the problem doesn't disappear completely. <br>
-				With h2 protocol and SSL the problem disappear, but it is necessary to be compatibles with HTTP/1.1
-			`,
-			parent : long_process_container
 		})
 
 

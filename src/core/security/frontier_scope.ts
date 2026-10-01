@@ -200,7 +200,10 @@ export interface SqlFrontierScope extends FrontierScope {
 	 * from_component_tipo key (conform.ts) are asked of THESE, never of the
 	 * client-declared `path[0].section_tipo`: a declaration is not a row.
 	 * REQUIRED: a scope that cannot say which sections its rows are bound to
-	 * cannot key a root step.
+	 * cannot key a root step. Also where a path's FIRST hop starts
+	 * (search/hop_scope.ts firstHopSources, SEC-02): a hop's reachable sections
+	 * are its component's configured targets resolved from EVERY section the
+	 * previous step can hold; empty → the first step's declared section.
 	 */
 	readonly mainSectionTipos: readonly string[];
 	/**

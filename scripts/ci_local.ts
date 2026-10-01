@@ -678,12 +678,21 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 /**
  * What runs INSIDE the container, written to /ci-in/driver.sh (the compose entrypoint).
  *
- * As root, only: create `runner` at uid/gid 1001 (the GitHub-hosted runner's), give it its
- * home and the bun cache mount. Then everything else as `runner` via `runuser` — which,
- * without `-l`, keeps the compose environment and sets HOME/USER/SHELL, as a runner step
- * sees them.
+ * As root, only: give uid 1001 its home and the bun cache mount. Then everything else as
+ * BARE uid 1001, gid 0 — exactly what `--user 1001` makes on BOTH hosts (GitHub's
+ * `options: --user 1001`, GitLab's `docker: user: "1001"`): NO passwd entry, so no user
+ * name (`id -un` fails, os.userInfo().username is 'unknown'), groups = {0}. A named
+ * `runner` account here once hid a GitLab-only red (2026-10-01: a site_builder gate
+ * passed `-user <name>` to find). `setpriv` sets ids and nothing else, so HOME is set
+ * explicitly (each host sets its own; none is `/`, docker's default for a nameless uid).
  *
- * As runner: clone the host's COMMON git dir (mounted read-only at CONTAINER_GIT) SHARING
+ * PID 1 NEVER REAPS ORPHANS, as on GitHub (`tail -f /dev/null`, steps arrive by `docker
+ * exec`): perl stays PID 1 and waits ONLY on its own child (waitpid(pid), never -1), so a
+ * killed detached server stays a zombie — the condition suite_mariadb's pidAlive guards.
+ * An exec'd bash as PID 1 would reap it and hide that path. The child's exit status (or
+ * 128+signal) is perl's.
+ *
+ * As uid 1001: clone the host's COMMON git dir (mounted read-only at CONTAINER_GIT) SHARING
  * its object store — full history, nothing copied — check out the requested sha on the branch name a push checkout has, and, in
  * working-tree mode, lay the host's changes over it and COMMIT them, so HEAD is the tree
  * under test and HEAD^ is the commit you are standing on (see the header: the crap
@@ -692,12 +701,12 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 const IN_CONTAINER_DRIVER = `#!/usr/bin/env bash
 set -euo pipefail
 if [ "$(id -u)" = 0 ]; then
-	getent group 1001 >/dev/null || groupadd -g 1001 runner
-	id runner >/dev/null 2>&1 || useradd -u 1001 -g 1001 -M -d /home/runner -s /bin/bash runner
 	mkdir -p /home/runner/work/dedalo /home/runner/work/_temp /home/runner/.bun/install/cache
-	chown runner:runner /home/runner /home/runner/work /home/runner/work/dedalo /home/runner/work/_temp \\
+	chown 1001:0 /home/runner /home/runner/work /home/runner/work/dedalo /home/runner/work/_temp \\
 		/home/runner/.bun /home/runner/.bun/install /home/runner/.bun/install/cache
-	exec runuser -u runner -- bash /ci-in/driver.sh
+	exec perl -e 'my $p = fork(); die "fork: $!" unless defined $p; if (!$p) { exec @ARGV or die "exec: $!" } waitpid($p, 0); exit(($? & 127) ? 128 + ($? & 127) : $? >> 8)' \\
+		setpriv --reuid=1001 --regid=0 --clear-groups -- \\
+		env -u USER -u LOGNAME HOME=/home/runner bash /ci-in/driver.sh
 fi
 cd /home/runner/work/dedalo
 echo "== ci:local(docker): image $(cat /etc/dedalo-ci-image 2>/dev/null | cut -c1-12) · $(uname -m) · uid $(id -u) · bun $(bun --version)"

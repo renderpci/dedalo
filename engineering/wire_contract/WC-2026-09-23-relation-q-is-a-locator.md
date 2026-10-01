@@ -42,3 +42,11 @@ answer to an unreadable q.
 No parity gate replays a non-locator relation q; no re-harvest needed. The one
 unit gate that fed a text q to a `component_select` leaf
 (`search_path_acl_native`) relied on the drop and now sends a locator.
+
+## Addendum 2026-10-01 — the autocomplete did emit free text on a relation leaf
+
+"No client emits" was wrong: the autocomplete's filter_free sent the typed word
+to a relation ddo declared without children. The context now spells such a
+column's display paths in `search.ddo_map`
+(WC-2026-10-01-relation-search-display-paths), so no free text reaches a
+relation leaf from the client; this entry's refusal stands for any other caller.

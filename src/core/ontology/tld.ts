@@ -70,13 +70,13 @@ export function mapTldToTargetSectionTipo(tld: string): string {
 }
 
 /**
- * The ontology node section whose records deliberately declare a FOREIGN tld: a
- * localontology record OVERRIDES a canonical node (e.g. `rsc12`), so its
- * `ontology7` names the overridden node's tld, never `localontology`. See the
- * overwrite machinery in `parser.ts` (getOverwriteLocator + the `resolved`
- * accessor). Exempt from ONT-TLD below.
+ * The ontology section whose records are not nodes: a localontology record
+ * OVERRIDES a canonical node (e.g. `rsc12`) it links through ontology42. Its own
+ * `ontology7` is never read — the overridden node's tld is canonical-only. See
+ * the overwrite machinery in `parser.ts` (getOverwriteLocator + the `resolved`
+ * accessor; WC-2026-10-01-ontology-overwrite-scoped). Exempt from ONT-TLD below.
  */
-const LOCAL_ONTOLOGY_SECTION = 'localontology0';
+export const LOCAL_ONTOLOGY_SECTION = 'localontology0';
 
 /**
  * THE ONT-TLD RULE, in one place.

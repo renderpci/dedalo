@@ -207,10 +207,10 @@ Worker (`core/sw.js`) use — there is one request algorithm. Per attempt it:
    arms it after `timeout + delay` ms (the window grows with each retry);
 3. schedules a **mid-attempt health probe** at `timeout / 2` ms via
    `check_health()` (a cache-busted GET to `/health`, at the ORIGIN root — not
-   under the API path). If the server answers the probe, the main abort is
-   **cancelled** so a legitimately slow process can finish naturally, and the
-   `on_wait` hook fires with reason `'busy'` (`data_manager` shows the
-   `awaiting_busy_server` notice);
+   under the API path). If the server answers the probe, the deadline is
+   **extended** (once per attempt: what was left of it plus a grace) so a
+   legitimately slow process can finish, and the `on_wait` hook fires with
+   reason `'busy'` — a debug log only, never UI;
 4. reads the body once, parses it, normalises it; retries only when
    `api_error.retryable` is true or `Retry-After` was sent — a caller abort is
    never retried;
@@ -218,6 +218,36 @@ Worker (`core/sw.js`) use — there is one request algorithm. Per attempt it:
 
 When attempts are exhausted it returns `{json, api_error, response}` and
 `data_manager.request` builds the failure envelope from it.
+
+### The slow-server cue
+
+What the user sees of a wait is a page **state**, not a notification
+(`core/common/js/request_activity.js`, painted by
+`page/js/request_activity_indicator.js`). `data_manager.request` registers each
+logical call (all its retries included) and ends it on every exit; the page
+level is the highest of the pending calls, by **elapsed** time:
+
+| level | after | the user sees |
+|---|---|---|
+| `idle` | — | nothing |
+| `slow` | 1.5 s | a thin moving bar along the top edge, no text |
+| `very_slow` | 8 s | the bar plus one sentence (`server_slow_response`, `role=status`) |
+
+However many requests wait, there is one cue, and it disappears the moment the
+last one settles. A failure still arrives as a toast. Calls nobody waits on
+stay out of it by default: the page's background actions
+(`update_lock_components_state`, `get_lock_status`, `get_activity`) and declared
+long operations — a call whose `timeout` exceeds `LONG_WAIT_TIMEOUT_MS` (60 s:
+backups, rebuilds, updates), which shows its own progress. `busy_notice: true`
+opts a call in, `busy_notice: false` out. A transparent CSRF resend is the same
+wait (its clock does not restart).
+
+The sentence is a `role=status` live region that is always in the
+accessibility tree (empty, visually clipped) so screen readers announce it.
+
+Identical toasts in the page's notification stack merge into one bubble with a
+×N count (`prepend_bubble`, `utils/notifications.js`) — N parallel requests
+failing the same way read as one notice.
 
 ### Concurrency
 
@@ -382,7 +412,8 @@ All in `core/common/js/data_manager.js` unless noted.
 | `data_manager.url` / `data_manager.health_url` | getters | API endpoint (`DEDALO_API_URL` → fallback `../api/v1/json/`) and `/health` (origin root) |
 | `fetch_api(url, init, options)` | `api_transport.js` | the only native `fetch` for regular requests (page, cache Worker, Service Worker); read-once body, normalise, retry on `retryable`/`Retry-After`, timeout + health probe |
 | `check_server_health()` | exported | cache-busted probe of `/health`; distinguishes "busy" from "down" |
-| `render_msg_to_inspector(msg, type, remove_time)` | exported | publishes the `notification` event (busy-server notice) |
+| `render_msg_to_inspector(msg, type, remove_time)` | exported | publishes the `notification` event |
+| `request_activity` | exported | the slow-server tracker (`begin()` → `end`); publishes `request_activity` `{level, pending}` on level changes |
 | `ApiError`, `normalize_api_error`, `normalize_transport_error`, `normalize_stream_error`, `request_failed`, `response_data` | `api_error.js` | the error model and its accessors |
 | `resolve_error_policy`, `register_error_policy` | `error_policy.js` | code → UI action table (exact → `domain.*` → `*`) |
 | `handle_api_error(api_error, ctx)` | `error_dispatch.js` | executes the policy; owns the relogin-then-retry recovery (`{recovered}`) |

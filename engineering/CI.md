@@ -144,7 +144,8 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   `ci/compose.yml`: db/instance against the SAME pgvector digest `db.yml` pins, reached
   by its name `postgres` (`DB_HOST=postgres`) as a hosted container job reaches it;
   hermetic with no database at all;
-  every tier command as the unprivileged `runner` user (uid 1001, the hosted runner's).
+  every tier command as BARE uid 1001, gid 0 — what `--user 1001` makes on GitHub and
+  GitLab: no passwd entry, no user name (a named account once hid a GitLab-only red).
   Nothing is read from `../private`. The tree judged is the working tree made into one
   commit on HEAD, or `--ref` exactly; the host repo is mounted read-only. It runs as a
   push to the host's current branch (`GITHUB_REF`, the checkout's branch name), a

@@ -100,7 +100,8 @@ must be a reused pre-existing key and its codes must agree on category. Label
 `{param}` placeholders ≡ `details_keys`, both ways. Labels ship in
 `src/core/labels/master.json` in the same commit as the code (labels_tripwire).
 Client-side transport codes have their own keys (`error_client_network|timeout|
-aborted|bad_response|http_status|worker|offline|render_failed`, `awaiting_busy_server`).
+aborted|bad_response|http_status|worker|offline|render_failed`; the slow-server
+cue's `server_slow_response` is a state label, not an error).
 `client.render_failed` is the one non-transport client code: a render callback
 threw inside `ui.load_item_with_spinner`, and the engine's own panel
 (`render_error_panel`) takes the place the node would have had — never an

@@ -100,7 +100,7 @@ describe(`SECTION_RECORD`, async () => {
 			sr.datum.context = [child_ctx]
 
 		// pre-register a failing child under the exact key build_instance will request
-			const id_variant = `${sr.tipo}_${sr.section_id}_${sr.caller.section_tipo}_${sr.caller.section_id}`
+			const id_variant = `${sr.tipo}_${sr.section_tipo}_${sr.section_id}_${sr.caller.section_tipo}_${sr.caller.section_id}`
 			const key = key_instances_builder({
 				model			: child_ctx.model,
 				tipo			: child_ctx.tipo,
@@ -165,7 +165,7 @@ describe(`SECTION_RECORD`, async () => {
 			})
 
 		// key build_instance will request for this column child
-			const id_variant = `${sr.tipo}_${sr.section_id}_${sr.caller.section_tipo}_${sr.caller.section_id}`
+			const id_variant = `${sr.tipo}_${sr.section_tipo}_${sr.section_id}_${sr.caller.section_tipo}_${sr.caller.section_id}`
 			const key = key_instances_builder({
 				model			: 'component_input_text',
 				tipo			: 'child_l',
@@ -247,8 +247,9 @@ describe(`SECTION_RECORD`, async () => {
 	})
 
 // id_variant_of — the stable id_variant build_instance derives for its children
+// (the row's section_tipo is part of it: rows of different sections may share a section_id)
 	const id_variant_of = (sr, section_id) =>
-		`${sr.tipo}_${section_id}_${sr.caller.section_tipo}_${sr.caller.section_id}`
+		`${sr.tipo}_${sr.section_tipo}_${section_id}_${sr.caller.section_tipo}_${sr.caller.section_id}`
 
 // child_key_of — the exact registry key build_instance will request for a child
 	const child_key_of = (sr, o) => key_instances_builder({
@@ -1078,7 +1079,8 @@ describe(`SECTION_RECORD (time machine keying)`, async () => {
 			assert.strictEqual(page_df.caller, page_sr, 'the page dataframe still belongs to the page record')
 
 		// key contract: <section_record id_variant>_<base>_<id_key>_<main_component_tipo>
-			const base = `${NOW_MAIN_TIPO}_5_${TM_HOST_TIPO}_1`
+		// (base = <tipo>_<section_tipo>_<section_id>_<caller section_tipo>_<caller section_id>)
+			const base = `${NOW_MAIN_TIPO}_${now_sr.section_tipo}_5_${TM_HOST_TIPO}_1`
 			assert.equal(now_df.id_variant, `tool_time_machine_${base}_3_${NOW_MAIN_TIPO}`, 'the dataframe id_variant keeps the parent id_variant prefix')
 			assert.equal(page_df.id_variant, `${base}_3_${NOW_MAIN_TIPO}`, 'without a parent id_variant the key is unchanged')
 

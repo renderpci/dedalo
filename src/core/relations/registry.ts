@@ -183,6 +183,18 @@ export type RelationSearchFragmentBuilder = (
 	| Promise<import('../search/builders/types.ts').BuilderResult>;
 
 /**
+ * Relation models whose search does NOT read stored forward locators: their
+ * value is computed (the dedicated pipelines {@link getRelationSearchFragmentBuilder}
+ * dispatches to), so a multi-hop path through them unnests nothing — the
+ * request_config search-path expansion (request_config/search_display_paths.ts)
+ * never hops through one.
+ */
+export const COMPUTED_RELATION_SEARCH_MODELS: ReadonlySet<string> = new Set([
+	'component_relation_children',
+	'component_relation_index',
+]);
+
+/**
  * The fragment builder for a relation-column model. Models whose descriptor
  * marks search unported throw with their ledger reason; a model without a
  * registered resolver throws as uncovered scope; children/index dispatch to

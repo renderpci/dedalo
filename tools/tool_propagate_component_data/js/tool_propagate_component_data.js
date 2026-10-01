@@ -443,7 +443,12 @@ tool_propagate_component_data.prototype.on_close_actions = async function(open_a
 	const self = this
 
 	if (open_as==='modal') {
-		self.caller.refresh() // refresh caller so propagated changes become visible
+		// refresh caller so propagated changes become visible
+		// (caller is null on an already destroyed instance)
+		self.caller?.refresh()
+			.catch(err => {
+				console.error('tool_propagate_component_data: caller.refresh failed:', err)
+			})
 		self.destroy(true, true, true)
 	}
 

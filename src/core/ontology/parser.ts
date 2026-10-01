@@ -8,11 +8,16 @@
  * record (ontology5 term, ontology7 tld, …) with these hard-won subtleties, all
  * pinned against live PHP:
  *
- *  - OVERWRITE-AWARENESS: a local override record (localontology0) can supply
- *    replacement data. `resolved(tipo)` = overwrite items ?? canonical items —
- *    BUT only for the overwrite-aware fields. is_model is read CANONICAL-ONLY
- *    (a local override must never change structural model-ness); model/model_tipo
- *    ARE overwrite-aware (code beats the docblock in PHP).
+ *  - OVERWRITE-AWARENESS (WC-2026-10-01-ontology-overwrite-scoped): a
+ *    localontology0 record linked to this node by ONTOLOGY_OVERWRITE (ontology42)
+ *    can supply replacement data. `resolved(tipo)` = overwrite items ?? canonical
+ *    items — BUT only for the overwrite-aware fields. CANONICAL-ONLY (structure
+ *    and stored-data shape, never changed by a local override): tld, is_model,
+ *    is_translatable, order. term: merged PER LANG. properties: per TOP-LEVEL
+ *    KEY (css/source included) — a stated key replaces whole, `null` in the
+ *    override's ontology18 removes it. model/model_tipo, parent, relations,
+ *    propiedades: override replaces when present.
+ *    A localontology0 record is never a node itself — parsing one is refused.
  *  - parent: null iff the parent locator points at the ontology main section
  *    (ontology35) — the dd1/dd2 roots; otherwise the parent's term-id.
  *  - model: dd_ontology(model_tipo).term['lg-spa'] STRICT — no lang fallback.
@@ -37,6 +42,7 @@ import {
 } from '../db/dd_ontology.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { readComponentItems } from '../resolve/component_data.ts';
 import {
 	ONTOLOGY_CONNECTED_TO,
@@ -45,6 +51,7 @@ import {
 	ONTOLOGY_MAIN_SECTION,
 	ONTOLOGY_MODEL,
 	ONTOLOGY_ORDER,
+	ONTOLOGY_OVERWRITE,
 	ONTOLOGY_PARENT,
 	ONTOLOGY_PROPERTIES,
 	ONTOLOGY_PROPIEDADES_V5,
@@ -56,7 +63,7 @@ import {
 	STRUCTURE_LANG,
 } from './ontology_tipos.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
-import { getTldFromTipo } from './tld.ts';
+import { getTldFromTipo, LOCAL_ONTOLOGY_SECTION } from './tld.ts';
 
 /**
  * A stored relation locator (parent, model, connected-to).
@@ -91,48 +98,78 @@ async function getComponentItems(
 
 /**
  * PHP get_overwrite (:3268): find the localontology0 record that OVERRIDES this
- * node, or null. Returns null for: localontology0 itself; a canonical node that
- * is already a model (models are never overridden); no matching override.
+ * node, or null. Returns null for: localontology0 itself; a node whose CANONICAL
+ * record says is_model (models are never overridden); no matching override.
  *
- * The match is PHP's related-search — a localontology0 record whose relation
- * column points at (section_tipo, section_id). Expressed as one parameterized
- * jsonb probe (no matrix helper models a related-search); the target coords are
- * bound, the table is a fixed identifier.
+ * The link is ONE component, ONTOLOGY_OVERWRITE (ontology42). PHP matched a
+ * locator in ANY relation of the local record, so an override's own parent
+ * (ontology15) or relations (ontology10) made it the override of THAT node too —
+ * measured: the parent node took the override's term and became its own parent
+ * (WC-2026-10-01-ontology-overwrite-scoped). Model protection reads the canonical
+ * record's ontology30, not dd_ontology: a model node not yet projected would
+ * otherwise be overridable on its first parse. Several overrides of one node →
+ * the lowest section_id wins (deterministic; PHP's LIMIT 1 had no order).
  */
 export async function getOverwriteLocator(
 	sectionTipo: string,
 	sectionId: number | string,
+	canonicalRecord?: MatrixRecord | null,
 ): Promise<Locator | null> {
-	const LOCAL_SECTION = 'localontology0';
-	if (sectionTipo === LOCAL_SECTION) {
+	if (sectionTipo === LOCAL_ONTOLOGY_SECTION) {
 		return null;
 	}
 	// Model protection: an existing model node is never overwritten.
-	const tld = getTldFromTipo(sectionTipo);
-	if (tld !== null) {
-		const canonicalNode = await readDdOntologyRow(`${tld}${sectionId}`);
-		if (canonicalNode?.is_model === true) {
-			return null;
-		}
+	let record = canonicalRecord;
+	if (record === undefined) {
+		const table = await getMatrixTableFromTipo(sectionTipo);
+		record = table === null ? null : await readMatrixRecord(table, sectionTipo, Number(sectionId));
 	}
-	// Scan localontology0 records for a relation locator pointing at the node.
+	if (isYesLocator(await getComponentItems(record, ONTOLOGY_IS_MODEL))) {
+		return null;
+	}
 	const rows = (await sql.unsafe(
 		`SELECT section_id FROM "matrix_ontology"
 		 WHERE section_tipo = $1
 		   AND EXISTS (
 		       SELECT 1
-		       FROM jsonb_each(COALESCE(relation, '{}'::jsonb)) AS kv(key, val),
-		            jsonb_array_elements(CASE WHEN jsonb_typeof(val) = 'array' THEN val ELSE '[]'::jsonb END) AS loc
+		       FROM jsonb_array_elements(
+		            CASE WHEN jsonb_typeof(relation->$4) = 'array' THEN relation->$4 ELSE '[]'::jsonb END
+		       ) AS loc
 		       WHERE loc->>'section_tipo' = $2 AND loc->>'section_id' = $3
 		   )
+		 ORDER BY section_id ASC
 		 LIMIT 1`,
-		[LOCAL_SECTION, sectionTipo, String(sectionId)],
+		[LOCAL_ONTOLOGY_SECTION, sectionTipo, String(sectionId), ONTOLOGY_OVERWRITE],
 	)) as { section_id: number }[];
 	const row = rows[0];
 	if (row === undefined) {
 		return null;
 	}
-	return { section_tipo: LOCAL_SECTION, section_id: Number(row.section_id) };
+	return { section_tipo: LOCAL_ONTOLOGY_SECTION, section_id: Number(row.section_id) };
+}
+
+/** True for a plain JSON object (not null, not an array). */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** The properties one record STATES; `undefined` = the component is empty. */
+interface PropertySet {
+	/** ontology18's keys (a non-object value states nothing). */
+	keys: Record<string, unknown>;
+	css: unknown;
+	source: unknown;
+}
+
+async function readPropertySet(record: MatrixRecord | null): Promise<PropertySet> {
+	const firstValue = async (tipo: string): Promise<unknown> =>
+		((await getComponentItems(record, tipo))?.[0] as { value?: unknown } | undefined)?.value;
+	const keys = await firstValue(ONTOLOGY_PROPERTIES);
+	return {
+		keys: isPlainObject(keys) ? { ...keys } : {},
+		css: await firstValue(ONTOLOGY_CSS),
+		source: await firstValue(ONTOLOGY_SOURCE),
+	};
 }
 
 /**
@@ -179,6 +216,87 @@ function isYesLocator(items: unknown[] | null): boolean {
 	const first = items?.[0] as Locator | undefined;
 	if (first === undefined) return false;
 	return Number(first.section_id) === SI_NO_YES;
+}
+
+/**
+ * The node's properties: canonical ontology18 keys + .css (ontology16) +
+ * .source (ontology17). Override: the TOP-LEVEL KEY is the unit. Each key the
+ * override states replaces the canonical key WHOLE (no deep merge — css
+ * included); unstated keys are kept; a key stated as `null` in the override's
+ * ontology18 REMOVES it. Removing css/source in ontology18 while filling
+ * ontology16/17 is a contradiction: refused, never resolved by picking a winner.
+ */
+async function resolveProperties(
+	canonicalRecord: MatrixRecord | null,
+	overwriteRecord: MatrixRecord | null,
+	at: { sectionTipo: string; sectionId: number | string; overrideLabel: string },
+): Promise<Record<string, unknown>> {
+	const canonicalSet = await readPropertySet(canonicalRecord);
+	const properties: Record<string, unknown> = { ...canonicalSet.keys };
+	if (canonicalSet.css !== undefined) properties.css = canonicalSet.css;
+	if (canonicalSet.source !== undefined) properties.source = canonicalSet.source;
+	if (overwriteRecord === null) return properties;
+	const stated = statedOverrideKeys(await readPropertySet(overwriteRecord), at);
+	for (const [key, value] of Object.entries(stated)) {
+		if (value === null) delete properties[key];
+		else properties[key] = value;
+	}
+	return properties;
+}
+
+/** The top-level keys an override states (ontology18 + its css/source), `null` = remove. */
+function statedOverrideKeys(
+	overwriteSet: PropertySet,
+	at: { sectionTipo: string; sectionId: number | string; overrideLabel: string },
+): Record<string, unknown> {
+	const stated: Record<string, unknown> = { ...overwriteSet.keys };
+	for (const [key, value] of [
+		['css', overwriteSet.css],
+		['source', overwriteSet.source],
+	] as const) {
+		if (value === undefined) continue;
+		if (stated[key] === null) {
+			throw new DedaloError('ontology.invalid_node', {
+				message: `parseSectionRecordToOntologyNode: override ${at.overrideLabel} of ${at.sectionTipo}/${at.sectionId} both removes '${key}' (null in ${ONTOLOGY_PROPERTIES}) and fills it (${key === 'css' ? ONTOLOGY_CSS : ONTOLOGY_SOURCE})`,
+				coordinates: { section_tipo: at.sectionTipo, section_id: at.sectionId },
+			});
+		}
+		stated[key] = value;
+	}
+	return stated;
+}
+
+/** A record's ontology term, keyed by lang (null = no term component). */
+async function readTerm(record: MatrixRecord | null): Promise<Record<string, string> | null> {
+	const items = await getComponentItems(record, ONTOLOGY_TERM);
+	if (items === null) return null;
+	const term: Record<string, string> = {};
+	for (const item of items) {
+		const literal = item as { lang?: string; value?: unknown };
+		if (typeof literal.lang === 'string') {
+			term[literal.lang] = String(literal.value ?? '');
+		}
+	}
+	return term;
+}
+
+/**
+ * The node's term, MERGED per lang with an override: a lang the override fills
+ * wins, every other lang keeps the canonical value (an override naming only
+ * lg-spa must not erase the node's other translations). Empty values in the
+ * override do not count as filled.
+ */
+async function resolveMergedTerm(
+	canonicalRecord: MatrixRecord | null,
+	overwriteRecord: MatrixRecord | null,
+): Promise<Record<string, string> | null> {
+	const term = await readTerm(canonicalRecord);
+	const overwriteTerm = overwriteRecord === null ? null : await readTerm(overwriteRecord);
+	if (overwriteTerm === null) return term;
+	const filled = Object.fromEntries(
+		Object.entries(overwriteTerm).filter(([, value]) => value !== ''),
+	);
+	return Object.keys(filled).length > 0 ? { ...(term ?? {}), ...filled } : term;
 }
 
 /**
@@ -310,6 +428,17 @@ export async function parseSectionRecordToOntologyNodeWithDefects(
 	sectionTipo: string,
 	sectionId: number | string,
 ): Promise<ParsedOntologyNode> {
+	// An override record is not a node: its tipo would be `<its tld><its own id>`,
+	// a canonical-looking node that does not exist (measured: localontology0/1 →
+	// `localontology1`). Its data reaches dd_ontology only through the node it
+	// overrides. Callers skip the section (ontology_state, setRecordsInDdOntology);
+	// this is the backstop.
+	if (sectionTipo === LOCAL_ONTOLOGY_SECTION) {
+		throw new DedaloError('ontology.invalid_node', {
+			message: `parseSectionRecordToOntologyNode: '${LOCAL_ONTOLOGY_SECTION}/${sectionId}' is an override record, not a node — parse the node it overrides (${ONTOLOGY_OVERWRITE}) instead`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+		});
+	}
 	const defects: OntologyNodeDefect[] = [];
 	// canonical record
 	const canonicalTable = await getMatrixTableFromTipo(sectionTipo);
@@ -319,7 +448,7 @@ export async function parseSectionRecordToOntologyNodeWithDefects(
 			: await readMatrixRecord(canonicalTable, sectionTipo, Number(sectionId));
 
 	// overwrite record (localontology0 override, when present)
-	const overwriteLocator = await getOverwriteLocator(sectionTipo, sectionId);
+	const overwriteLocator = await getOverwriteLocator(sectionTipo, sectionId, canonicalRecord);
 	let overwriteRecord: MatrixRecord | null = null;
 	if (overwriteLocator !== null) {
 		const overwriteTable = await getMatrixTableFromTipo(String(overwriteLocator.section_tipo));
@@ -342,8 +471,10 @@ export async function parseSectionRecordToOntologyNodeWithDefects(
 		return getComponentItems(canonicalRecord, componentTipo);
 	};
 
-	// TLD (mandatory)
-	const tldItems = await resolved(ONTOLOGY_TLD);
+	// TLD (mandatory) — CANONICAL ONLY. The tld IS the node's identity
+	// (`<tld><section_id>`); an override's own ontology7 (`localontology` by the
+	// create-door default) would re-home the node into another namespace.
+	const tldItems = await getComponentItems(canonicalRecord, ONTOLOGY_TLD);
 	if (tldItems === null) {
 		return { node: null, defects }; // PHP: ignore record — TLD is mandatory.
 	}
@@ -371,16 +502,12 @@ export async function parseSectionRecordToOntologyNodeWithDefects(
 		orderNumber = Math.trunc(Number(orderValue));
 	}
 
-	// Translatable — default TRUE when missing (overwrite-aware).
-	const resolveTranslatable = async (record: MatrixRecord | null): Promise<boolean> => {
-		const items = await getComponentItems(record, ONTOLOGY_TRANSLATABLE);
-		if (items === null) return true; // PHP default
-		return isYesLocator(items);
-	};
-	const isTranslatable =
-		overwriteRecord !== null
-			? await resolveTranslatable(overwriteRecord)
-			: await resolveTranslatable(canonicalRecord);
+	// Translatable — default TRUE when missing. CANONICAL ONLY: it fixes how the
+	// component's data is STORED (per lang vs lg-nolan), so a local flip would
+	// orphan existing values. (PHP read the override, whose create-door default
+	// is YES — every override silently made its node translatable.)
+	const translatableItems = await getComponentItems(canonicalRecord, ONTOLOGY_TRANSLATABLE);
+	const isTranslatable = translatableItems === null ? true : isYesLocator(translatableItems);
 
 	// is_main
 	const isMain = tipo === `${tld}0`;
@@ -410,44 +537,15 @@ export async function parseSectionRecordToOntologyNodeWithDefects(
 	}
 
 	// Properties (ontology18) + .css (ontology16) + .source (ontology17), empty→null.
-	const propItems = await resolved(ONTOLOGY_PROPERTIES);
-	const propertiesValue = (propItems?.[0] as { value?: unknown } | undefined)?.value;
-	const properties: Record<string, unknown> =
-		propertiesValue !== undefined &&
-		propertiesValue !== null &&
-		typeof propertiesValue === 'object' &&
-		!Array.isArray(propertiesValue)
-			? { ...(propertiesValue as Record<string, unknown>) }
-			: {};
-	const cssItems = await resolved(ONTOLOGY_CSS);
-	const cssValue = (cssItems?.[0] as { value?: unknown } | undefined)?.value;
-	if (cssItems !== null && cssValue !== undefined) {
-		properties.css = cssValue;
-	}
-	const sourceItems = await resolved(ONTOLOGY_SOURCE);
-	const sourceValue = (sourceItems?.[0] as { value?: unknown } | undefined)?.value;
-	if (sourceItems !== null && sourceValue !== undefined) {
-		properties.source = sourceValue;
-	}
+	const properties = await resolveProperties(canonicalRecord, overwriteRecord, {
+		sectionTipo,
+		sectionId,
+		overrideLabel: `${String(overwriteLocator?.section_tipo)}/${String(overwriteLocator?.section_id)}`,
+	});
 	const propertiesOrNull = projectProperties(properties, defects);
 
-	// Term — all langs (overwrite-aware, only overrides when it HAS a term).
-	const resolveTerm = async (
-		record: MatrixRecord | null,
-	): Promise<Record<string, string> | null> => {
-		const items = await getComponentItems(record, ONTOLOGY_TERM);
-		if (items === null) return null;
-		const term: Record<string, string> = {};
-		for (const item of items) {
-			const literal = item as { lang?: string; value?: unknown };
-			if (typeof literal.lang === 'string') {
-				term[literal.lang] = String(literal.value ?? '');
-			}
-		}
-		return term;
-	};
-	let term = overwriteRecord !== null ? await resolveTerm(overwriteRecord) : null;
-	term = term ?? (await resolveTerm(canonicalRecord));
+	// Term — all langs, merged per lang with an override (resolveMergedTerm).
+	const term = await resolveMergedTerm(canonicalRecord, overwriteRecord);
 
 	const node: DdOntologyNode = {
 		tipo,

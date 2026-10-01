@@ -34,7 +34,7 @@ const entries = (): [string, CatalogEntry][] => Object.entries(CONFIG_CATALOG);
 // ---------------------------------------------------------------------------
 // The SHAPE a declared type resolves to.
 //
-// `ConfigType` has ten members but only five shapes — what an operator writes and what
+// `ConfigType` has eleven members but only five shapes — what an operator writes and what
 // the reader hands back. The mapping is exhaustive by construction (the `satisfies`
 // below): a new ConfigType member cannot be added without deciding its shape here, which
 // is the point. `media_access_mode` is a scalar: the operator writes one bare word.
@@ -49,6 +49,7 @@ const SHAPE_OF = {
 	json_array: 'list',
 	server_list: 'list',
 	tool_roots: 'list',
+	publication_api_users: 'list',
 	string_map: 'map',
 	media_access_mode: 'string',
 } satisfies Record<ConfigType, Shape>;

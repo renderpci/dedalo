@@ -686,6 +686,7 @@
 	"serve_ontology_state_off": "Not configured",
 	"serve_ontology_state_on": "Enabled",
 	"serve_ontology_title": "Serve this ontology to other installations",
+	"server_slow_response": "The server is taking longer than usual…",
 	"session_expiry_warning": "Your session expires in %s min. Keep working to stay signed in.",
 	"set_img_layer": "Set image layer",
 	"set_root_pw_label": "Set root password",
