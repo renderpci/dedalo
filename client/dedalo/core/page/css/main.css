@@ -23859,6 +23859,7 @@ body.inspector_resizing {
   margin: 0;
   background-color: transparent;
   border-color: transparent;
+  color: var(--color_white);
 }
 .component_json .button_save:hover {
   background-color: var(--color_grey_5);
