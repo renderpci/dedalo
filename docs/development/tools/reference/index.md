@@ -27,7 +27,7 @@ Every remotely callable server action is declared as a key of the module's **`ap
 - `show_in_inspector` — button in the section **inspector** panel
 - `show_in_component` — button inline on the matching **component**
 
-Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — 12 of the 37 in-repo tools ship no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
+Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — such a tool ships no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
 
 !!! note "No base class"
     There is no `tool_common` base *class* on the server — the shared machinery (registry, loader, dispatch, security, config, cache) lives in `src/core/tools/` and is invoked BY the framework around a tool's handlers, not inherited by them. On the **client**, `tool_common` is a real JS prototype base (`client/dedalo/core/tools_common/js/tool_common.js`) that every tool wires into via `wire_tool`.
@@ -117,5 +117,5 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_dev_template` | Production-shaped scaffold/reference for creating new tools (all four permission kinds, `backgroundRunnable` demo, `isAvailable`/`onRegister`/`onRemove` hooks) | [reference](tool_dev_template.md) |
 | `tool_qr` | Base/build sample tool (not for production use); UI-only | [reference](tool_qr.md) |
 
-!!! note "Counting the tools"
-    The directory `tools/` contains exactly 38 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). All 38 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 25 of the 38 ship a `server/index.ts` package (including `tool_dev_template` and `tool_identify`, whose module holds a single background-only `cluster` action); 12 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`; and `tool_rag` is grant-only (no code at all).
+!!! note "Finding every tool"
+    Every directory under `tools/` is a real tool, and every one is listed in the tables above — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. This page states no tool count on purpose: tools are added by contributors in parallel, so a number would be wrong for one of them. Whether a tool ships a `server/index.ts` package is visible in its directory: a UI-only tool has no `server/` directory at all, and a grant-only tool (`tool_rag`) has no code at all.

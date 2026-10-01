@@ -197,21 +197,11 @@ describe('TOOLS_SPEC.md — the server-module census', () => {
 	 * produced the audit's own wrong starting premise. A census is a fact about the
 	 * tree, so it is derived here rather than trusted.
 	 */
-	test('the counts and BOTH name lists match the tools tree exactly', () => {
+	test('BOTH name lists match the tools tree exactly', () => {
+		// Names, never counts: a stated count is a number every parallel tool
+		// contribution conflicts on and no author can know (2026-10-01). The
+		// lists carry the same fact, and a missing/extra tool fails BY NAME.
 		const { withServer, withoutServer } = toolCensus();
-		const total = withServer.length + withoutServer.length;
-
-		const headline = SPEC.match(
-			/\*\*(\d+) of the (\d+) tool packages ship a `server\/index\.ts`; (\d+) do not\.\*\*/,
-		);
-		expect(
-			headline,
-			'§Server-module coverage: the headline census sentence was not found',
-		).not.toBeNull();
-		expect(
-			[Number(headline?.[1]), Number(headline?.[2]), Number(headline?.[3])],
-			'§Server-module coverage headline disagrees with the tools tree [with, total, without]:',
-		).toEqual([withServer.length, total, withoutServer.length]);
 
 		const listed = (label: string): string[] => {
 			const block = SPEC.match(new RegExp(`${label}[^:]*:([\\s\\S]*?)\\n\\n`))?.[1];
@@ -229,7 +219,7 @@ describe('TOOLS_SPEC.md — the server-module census', () => {
 	});
 
 	/**
-	 * The doc's load-bearing CLAIM about those 12 — that they are UI-only BY DESIGN
+	 * The doc's load-bearing CLAIM about the tools without one — that they are UI-only BY DESIGN
 	 * and not un-ported gaps. The mechanical half of the audit's proof: a tool whose
 	 * client never posts `tool_request` needs no remote surface, and the split is
 	 * bimodal, which is why "no server module" is informational and not a TODO.

@@ -3,13 +3,18 @@
  * validates (the TS analogue of PHP's v6-corpus guard), and the authoring→v7
  * conversion produces a record that passes validateRegister.
  *
- * Corpus census 37 = the 34 PHP-seeded column-keyed registers + the three
- * TS-only tools (tool_error_report WC-019, tool_sitebuilder, tool_identify),
- * which are AUTHORED in the authoring format and must convert+validate
- * instead. The pin is deliberately a hard number: a new tool that forgets to
- * declare which format it ships in is exactly what this census catches
- * (tool_error_report landed 2026-07-10 and tool_sitebuilder 2026-07-15 without
- * bumping it; both reconciled here).
+ * The corpus census is a SET law, not a count. Every tool directory is
+ * declared in exactly ONE of two lists, and each list names only directories
+ * that exist:
+ *   - SEEDED: the 34 PHP-seeded column-keyed registers. FROZEN since the
+ *     cutover — the PHP seeder is gone, so this list can only shrink (a tool
+ *     retired) and never grows.
+ *   - TS_AUTHORED: tools AUTHORED in the authoring format, which must
+ *     convert+validate. A new tool adds ONE line here.
+ * A tool that declares neither, or the wrong one, fails by NAME; a deleted
+ * tool fails by NAME. The former hard count ("there are 38") caught nothing
+ * the set does not, and made every two tool contributions conflict on a
+ * number neither author could know (PR #114 vs tool_rag, 2026-10-01).
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -38,17 +43,71 @@ describe('detectFormat', () => {
 describe('seeded register.json corpus', () => {
 	const toolDirs = readdirSync(TOOLS_ROOT).filter((name) => /^tool_[a-z0-9_]+$/.test(name));
 
-	/** TS-authored tools (never PHP-seeded): register.json in the authoring
-	 * format, converted at registration (WC-019 precedent). */
-	const TS_AUTHORED = new Set([
-		'tool_error_report',
-		'tool_sitebuilder',
-		'tool_identify',
-		'tool_rag',
+	/** PHP-seeded column-keyed registers. FROZEN: shrink-only, never grows
+	 * (no seeder exists since the cutover). Sorted. */
+	const SEEDED = new Set([
+		'tool_assistant',
+		'tool_cataloging',
+		'tool_dd_label',
+		'tool_dev_template',
+		'tool_diffusion',
+		'tool_export',
+		'tool_hierarchy',
+		'tool_image_rotation',
+		'tool_import_dedalo_csv',
+		'tool_import_files',
+		'tool_import_marc21',
+		'tool_import_rdf',
+		'tool_import_zotero',
+		'tool_indexation',
+		'tool_lang',
+		'tool_lang_multi',
+		'tool_media_versions',
+		'tool_numisdata_epigraphy',
+		'tool_numisdata_order_coins',
+		'tool_ontology',
+		'tool_ontology_parser',
+		'tool_pdf_extractor',
+		'tool_posterframe',
+		'tool_print',
+		'tool_propagate_component_data',
+		'tool_qr',
+		'tool_subtitles',
+		'tool_tc',
+		'tool_time_machine',
+		'tool_tr_print',
+		'tool_transcription',
+		'tool_update_cache',
+		'tool_upload',
+		'tool_user_admin',
 	]);
 
-	test('every tool has a register.json and there are 38 (34 seeded + 4 TS-authored)', () => {
-		expect(toolDirs.length).toBe(38);
+	/** TS-authored tools (never PHP-seeded): register.json in the authoring
+	 * format, converted at registration (WC-019 precedent). A new tool adds its
+	 * name here. Sorted, one per line, so parallel additions merge by union. */
+	const TS_AUTHORED = new Set([
+		'tool_error_report',
+		'tool_identify',
+		'tool_rag',
+		'tool_sitebuilder',
+	]);
+
+	test('every tool directory is declared in exactly one list', () => {
+		const undeclared = toolDirs.filter((name) => !SEEDED.has(name) && !TS_AUTHORED.has(name));
+		const both = toolDirs.filter((name) => SEEDED.has(name) && TS_AUTHORED.has(name));
+		expect(
+			undeclared,
+			'tool directories in NEITHER list — a new tool adds its name to TS_AUTHORED (SEEDED is frozen):',
+		).toEqual([]);
+		expect(both, 'tool directories declared in BOTH lists:').toEqual([]);
+	});
+
+	test('every declared tool has a directory (a deleted tool is named, not miscounted)', () => {
+		const present = new Set(toolDirs);
+		const missing = [...SEEDED, ...TS_AUTHORED].filter((name) => !present.has(name));
+		expect(missing, 'declared tools with no directory under tools/ — remove the line with the tool:').toEqual(
+			[],
+		);
 	});
 
 	for (const name of toolDirs) {

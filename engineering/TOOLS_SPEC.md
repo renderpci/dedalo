@@ -741,24 +741,25 @@ was deleted with the PHP engine.
 
 ## Server-module coverage (2026-07-28)
 
-**25 of the 38 tool packages ship a `server/index.ts`; 13 do not.** Twelve have
-client code only (the thirteenth, `tool_rag`, is grant-only and ships no code — below): registration warns (`no server module: tool_request will refuse
+**Not every tool package ships a `server/index.ts`** — the two lists below name
+which do (no counts: the lists are the census, derived and gated). The ones
+without have client code only (except `tool_rag`, grant-only, which ships no code — below): registration warns (`no server module: tool_request will refuse
 this tool`) and dispatch refuses at gate 5 (`tool has no server module`,
 `unauthorized_method`).
 
-**None of the 13 is a gap, and that registration warning is INFORMATIONAL, not a
+**None of those without one is a gap, and that registration warning is INFORMATIONAL, not a
 TODO** (2026-07-28 audit — the opposite reading is what produced a whole wrong
 starting premise). A tool needs a server module only if it has a remote surface,
-and these do not: **no client in the 12 posts `tool_request` at all**, while all
-24 server-backed tools do — a clean bimodal split, gated by
-`test/unit/tools_spec_sync.test.ts`. The PHP oracle agrees: all 12 twins declared
+and these do not: **no client-only tool posts `tool_request` at all**, while every
+server-backed tool does — a clean bimodal split, gated by
+`test/unit/tools_spec_sync.test.ts`. The PHP oracle agrees: every PHP-era twin declared
 `public const API_ACTIONS = [];` verbatim. They reach the server through the core
 APIs (`dd_core_api`, `dd_ts_api`, `dd_diffusion_api`, `dd_mcp_api`) plus the
 framework action `dd_tools_api::user_tools`; `tool_qr` never leaves the browser.
 So do NOT "finish" one by scaffolding a server module — adding an unreachable
 `apiActions` map is new attack surface, not coverage.
 
-WITH a server module (25): `tool_dev_template`, `tool_error_report`,
+WITH a server module: `tool_dev_template`, `tool_error_report`,
 `tool_export`, `tool_hierarchy`, `tool_identify`, `tool_image_rotation`,
 `tool_import_dedalo_csv`, `tool_import_files`, `tool_import_marc21`,
 `tool_import_rdf`, `tool_import_zotero`, `tool_lang`, `tool_lang_multi`,
@@ -767,7 +768,7 @@ WITH a server module (25): `tool_dev_template`, `tool_error_report`,
 `tool_sitebuilder`, `tool_tc`, `tool_time_machine`, `tool_transcription`,
 `tool_update_cache`, `tool_upload`.
 
-WITHOUT one (13): `tool_assistant`, `tool_cataloging`, `tool_dd_label`,
+WITHOUT one: `tool_assistant`, `tool_cataloging`, `tool_dd_label`,
 `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`,
 `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_rag`, `tool_subtitles`,
 `tool_tr_print`, `tool_user_admin`.
