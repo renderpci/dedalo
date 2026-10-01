@@ -2,63 +2,102 @@
  * Workspace activity — the ONE synchronous authority on "is something running in this
  * workspace right now".
  *
- * Two kinds of work mutate a site's working tree: an agent turn and a build. They must
- * never overlap — with each other or with themselves — or they race on the same files
- * (the agent editing sources while the bundler reads them, two agents interleaving
- * edits). The manager and the builder each kept their own busy set, which left two holes
- * the review confirmed: no cross-exclusion (a build could start during a turn's
- * check-then-act window and vice versa), and each check had `await`s between the check
- * and the mark, so two concurrent starts could both pass.
+ * Everything that mutates a site's working tree or runs agent-authored text in it holds a
+ * RESERVATION for the whole of that work: an agent turn, a build, the repository
+ * initialization of a new site (`createSite` → `initRepo`), the recovery commit of a turn a
+ * dead daemon left behind (`sweepOnBoot`), and a git operation nobody else reserved for
+ * (`sites/git.ts`). They must never overlap — with each other or with themselves — or they
+ * race on the same files. And since LEAD-1b the reservation is ALSO the daemon-side half of
+ * the site's identity lease: a confined run of site k is refused unless its slug is reserved
+ * (`drivers/confinement.ts`), so a site's runs are sequential by construction and PID 1's
+ * own per-site exclusion (door-target `Conflicts=`) only ever fires on a daemon bug.
  *
- * The fix is structural: reservation is a SINGLE SYNCHRONOUS call (`tryBeginTurn` /
- * `tryBeginBuild`) that checks BOTH sets and marks in one uninterruptible step — no
- * `await` can be interleaved inside a synchronous function, so under Bun's
- * single-threaded JS there is no window. Callers reserve FIRST, before any await, and
- * release in their terminal path (`endTurn` / `endBuild`, idempotent).
+ * The rule is structural: reservation is a SINGLE SYNCHRONOUS call (`tryBegin`) that checks
+ * and marks in one uninterruptible step — no `await` can be interleaved inside a synchronous
+ * function, so under Bun's single-threaded JS there is no window. Callers reserve FIRST,
+ * before any await, and release in their terminal path (`end`, idempotent).
  *
- * This module holds no other state and imports nothing, so both sides (sessions/manager,
- * build/builder) can use it without a dependency cycle.
+ * This module holds no other state and imports nothing, so every holder can use it without a
+ * dependency cycle.
  */
 
-const activeTurnSlugs = new Set<string>();
-const activeBuildSlugs = new Set<string>();
+/** What a reservation is for. One per slug at a time. */
+export type ReservationKind = 'turn' | 'build' | 'init' | 'recovery' | 'git';
+
+const held = new Map<string, ReservationKind>();
 
 /** Why a reservation was refused — callers map this to their 409 reason code. */
-export type BusyReason = 'session_running' | 'build_running' | null;
+export type BusyReason =
+  | 'session_running'
+  | 'build_running'
+  | 'site_initializing'
+  | 'site_recovering'
+  | 'git_running'
+  | null;
+
+const REASON: Readonly<Record<ReservationKind, Exclude<BusyReason, null>>> = Object.freeze({
+  turn: 'session_running',
+  build: 'build_running',
+  init: 'site_initializing',
+  recovery: 'site_recovering',
+  git: 'git_running',
+});
+
+/** The sentence a 409 carries for each reason (the reason itself is the machine code). */
+export function busyDetail(reason: Exclude<BusyReason, null>, slug: string): string {
+  switch (reason) {
+    case 'session_running':
+      return `A session is already running for '${slug}'`;
+    case 'build_running':
+      return `A build is running for '${slug}'`;
+    case 'site_initializing':
+      return `The site '${slug}' is still being initialized`;
+    case 'site_recovering':
+      return `The site '${slug}' is being recovered after a restart`;
+    case 'git_running':
+      return `A repository operation is running for '${slug}'`;
+  }
+}
 
 /** What (if anything) currently occupies the workspace. */
 export function busyReason(slug: string): BusyReason {
-  if (activeTurnSlugs.has(slug)) return 'session_running';
-  if (activeBuildSlugs.has(slug)) return 'build_running';
-  return null;
+  const kind = held.get(slug);
+  return kind ? REASON[kind] : null;
 }
 
-/**
- * Reserve the workspace for an agent turn. Check-and-mark in one synchronous step;
- * returns false when a turn OR a build already holds it.
- */
-export function tryBeginTurn(slug: string): boolean {
-  if (activeTurnSlugs.has(slug) || activeBuildSlugs.has(slug)) return false;
-  activeTurnSlugs.add(slug);
+/** Does anything hold this site right now? The confinement asks before every run. */
+export function holdsReservation(slug: string): boolean {
+  return held.has(slug);
+}
+
+/** Reserve the site for `kind`. Check-and-mark in one synchronous step; false when held. */
+export function tryBegin(slug: string, kind: ReservationKind): boolean {
+  if (held.has(slug)) return false;
+  held.set(slug, kind);
   return true;
+}
+
+/** Release a `kind` reservation. Idempotent, and never releases another kind's hold. */
+export function end(slug: string, kind: ReservationKind): void {
+  if (held.get(slug) === kind) held.delete(slug);
+}
+
+/** Reserve the workspace for an agent turn (a turn OR any other hold refuses it). */
+export function tryBeginTurn(slug: string): boolean {
+  return tryBegin(slug, 'turn');
 }
 
 /** Release a turn reservation. Idempotent — safe on every terminal path. */
 export function endTurn(slug: string): void {
-  activeTurnSlugs.delete(slug);
+  end(slug, 'turn');
 }
 
-/**
- * Reserve the workspace for a build. Check-and-mark in one synchronous step;
- * returns false when a build OR an agent turn already holds it.
- */
+/** Reserve the workspace for a build. */
 export function tryBeginBuild(slug: string): boolean {
-  if (activeBuildSlugs.has(slug) || activeTurnSlugs.has(slug)) return false;
-  activeBuildSlugs.add(slug);
-  return true;
+  return tryBegin(slug, 'build');
 }
 
 /** Release a build reservation. Idempotent — safe on every terminal path. */
 export function endBuild(slug: string): void {
-  activeBuildSlugs.delete(slug);
+  end(slug, 'build');
 }

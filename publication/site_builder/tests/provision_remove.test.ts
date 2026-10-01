@@ -124,6 +124,7 @@ function makeHost(options: { published?: boolean } = {}): Host {
     // else, so this gate writes inside its own scratch prefix and never into a real
     // /etc/polkit-1 on the machine running the suite.
     polkit_rules_dir: join(prefix, 'etc/polkit-1/rules.d'),
+    tmpfiles_dir: join(prefix, 'etc/tmpfiles.d'),
   };
 
   const manifest = parseManifest(raw);
@@ -195,7 +196,7 @@ function makeIo(prefix: string, failing?: (argv: readonly string[]) => ExecResul
   const unlinked: string[] = [];
   const on = (path: string): string => (path.startsWith(prefix) ? path : join(prefix, path));
 
-  const base: AdoptIo = {
+  const base: Omit<AdoptIo, 'unlink'> = {
     stat(path: string): PathFacts | null {
       const real = on(path);
       try {

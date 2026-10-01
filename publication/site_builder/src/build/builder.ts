@@ -33,13 +33,13 @@
  *      privilege, which is the next point.
  *   2. A BUILD STEP RUNS AT EXACTLY AN AGENT TURN'S PRIVILEGE, NEVER WIDER — and this is
  *      now a MECHANISM rather than a description. Every step goes through `runConfined`
- *      (drivers/confinement.ts): the same second unix identity a turn runs as
- *      (`AGENT_USER`), inside a transient unit of the same museum-scoped prefix, in the
- *      same private network namespace (its one way out is the egress gate, which tunnels to
+ *      (drivers/confinement.ts): the same unix identity the site's turns run as (one per
+ *      SITE, LEAD-1b), in the site's own root-rendered build unit (its own HOME, never the
+ *      turn's), in the same private network namespace (its one way out is the egress gate, which tunnels to
  *      the package registry's HOSTNAME — BUILD_REGISTRY_HOSTS — and nothing else; loopback,
  *      the LAN, the metadata block and the public web are absent) and with the same per-run
- *      caps. Plus the same CONSTRUCTED environment it always had: `{ PATH, HOME }`
- *      and nothing else — not the daemon's SERVICE_TOKEN, not `$CREDENTIALS_DIRECTORY`,
+ *      caps. Plus the same CONSTRUCTED environment it always had: `{ PATH }` (the unit fixes
+ *      HOME) and nothing else — not the daemon's SERVICE_TOKEN, not `$CREDENTIALS_DIRECTORY`,
  *      not a provider key.
  *
  *      THE ROW THIS CLOSES. While the turn was confined and the build was not, the build
@@ -81,7 +81,7 @@ import {
 import { readManifest, type BuildSpec } from '../sites/manifest';
 import { assertWithinQuota, siteExists, treeSizeMb } from '../sites/workspace';
 import { siteSurface } from '../sites/webspace';
-import { busyReason, endBuild, tryBeginBuild } from '../workspace_activity';
+import { busyDetail, busyReason, endBuild, tryBeginBuild } from '../workspace_activity';
 import { promoteRelease, newReleaseId } from './promote';
 
 export type BuildOutcome = 'running' | 'success' | 'failed';
@@ -104,7 +104,7 @@ function buildsDir(slug: string): string {
 /**
  * THE SAME PATH, STATED AS THE WRITERS NEED IT: a trusted root plus an untrusted remainder.
  *
- * `.builder/` is 0700, but it sits inside a directory the agent may write, so a turn can
+ * `.builder/` is the daemon's (0710, traverse-only to the group), but it sits inside a directory the agent may write, so a turn can
  * unlink it and put a symlink in its place. Every daemon-side write below therefore goes
  * through `util/shared_tree.ts`, which opens each component under `SITES_ROOT` with
  * `O_NOFOLLOW` and refuses a link rather than following it out of the workspace.
@@ -172,7 +172,7 @@ export async function startBuild(
   // same reason the session manager asks it before reserving a workspace: a host that
   // cannot confine must answer the REQUEST with a refusal naming what is missing, never
   // accept the work and then run agent-authored commands as this daemon.
-  assertConfinementAvailable('build', policy);
+  await assertConfinementAvailable('build', policy, undefined, slug);
 
   // Reserve the workspace synchronously — one check-and-mark, cross-exclusive with agent
   // turns (workspace_activity.ts), so a build can never start while an agent edits the
@@ -182,7 +182,9 @@ export async function startBuild(
     throw new ConflictError(
       reason === 'session_running'
         ? 'Cannot build while a session is running'
-        : 'A build is already running',
+        : reason === 'build_running'
+          ? 'A build is already running'
+          : busyDetail(reason, slug),
       reason,
     );
   }
@@ -233,15 +235,16 @@ async function executeBuild(
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const manifest = await readManifest(slug);
   const spec = manifest.build;
-  // HOME is the agent's own root: a build step's package manager writes a cache into it,
-  // and a cache inside the workspace it is building is a build able to poison the next one.
-  const env = { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: config.AGENT_HOME };
+  // NO HOME: the build unit fixes it (LEAD-1b) — the site identity's own build HOME, where a
+  // package manager's cache lives, masked from the site's turns and from every other site.
+  const env = { PATH: process.env.PATH ?? '/usr/bin:/bin' };
 
   const append = (text: string) => appendLog(slug, id, text);
 
   try {
     await append(`# install: ${spec.install}\n`);
     const install = await runStep(
+      slug,
       spec.install,
       workspace,
       env,
@@ -255,6 +258,7 @@ async function executeBuild(
 
     await append(`\n# build: ${spec.build}\n`);
     const build = await runStep(
+      slug,
       spec.build,
       workspace,
       env,
@@ -311,6 +315,7 @@ async function executeBuild(
  * would. Never throws; the caller inspects exitCode/timedOut.
  */
 function runStep(
+  slug: string,
   command: string,
   cwd: string,
   env: Record<string, string>,
@@ -322,6 +327,7 @@ function runStep(
   return runConfined(
     {
       door: 'build',
+      slug,
       argv,
       cwd,
       env,

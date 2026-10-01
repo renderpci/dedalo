@@ -40,7 +40,7 @@ function baseEnv(overrides: Record<string, string> = {}): Record<string, string>
     DEDALO_SITE_INSTANCE: 'gate',
     SERVICE_TOKEN: 'x'.repeat(40),
     SITES_ROOT: './workspaces',
-    AGENT_HOME: './agent_home',
+    AGENT_STATE_ROOT: './agents',
     AUDIT_DIR: './audit',
     WEBSPACE_BASE: './webspaces',
     // The provisioner's site table — required like the roots, because the daemon reads
@@ -338,7 +338,7 @@ describe('the roots resolve against the file that declared them', () => {
     writeEnvFile(baseEnv());
     const { config: resolved } = resolveConfig(sources());
     expect(resolved.SITES_ROOT).toBe(join(GATE_DIR, 'workspaces'));
-    expect(resolved.AGENT_HOME).toBe(join(GATE_DIR, 'agent_home'));
+    expect(resolved.AGENT_STATE_ROOT).toBe(join(GATE_DIR, 'agents'));
     expect(resolved.AUDIT_DIR).toBe(join(GATE_DIR, 'audit'));
     expect(resolved.WEBSPACE_BASE).toBe(join(GATE_DIR, 'webspaces'));
     expect(resolved.SITE_TABLE_FILE).toBe(join(GATE_DIR, 'config', 'sites.json'));
@@ -378,7 +378,10 @@ describe('what a provisioned host actually supplies is enough to boot', () => {
     writeCredential('PUBLICATION_API_KEY', 'api-key-from-the-store');
     writeEnvFile({
       AGENT_DRIVER: 'claude_code',
-      AGENT_HOME: '/var/lib/dedalo_sites/gate/home',
+      AGENT_IDENTITIES: '{"alpha":1}',
+      AGENT_IDENTITY_EPOCH: '1',
+      AGENT_SOCKET_DIR: '/run/dedalo-sites-agents/gate',
+      AGENT_STATE_ROOT: '/var/lib/dedalo_sites/gate/agents',
       AUDIT_DIR: '/srv/dedalo_audit/gate',
       CLAUDE_CODE_BIN: '/usr/local/bin/claude',
       DEDALO_SITE_INSTANCE: 'gate',

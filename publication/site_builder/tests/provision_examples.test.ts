@@ -39,8 +39,8 @@
  * environment variable can never turn this gate green by rewriting the thing it checks. Run
  * it, read the diff `git diff` shows you, and re-run without the variable.
  *
- * TWO TREES, ONE DECLARATION. `rendered/` is `renderAll(derive(parseManifest(…)))` on the
- * committed declaration exactly as it stands. `rendered-apache/` is the same declaration with
+ * TWO TREES, ONE DECLARATION. `rendered/` is `renderAll(derive(parseManifest(…)), EXAMPLE_FACTS)`
+ * on the committed declaration exactly as it stands. `rendered-apache/` is the same declaration with
  * `web.server` flipped to `apache` — the single field an httpd host changes — because
  * deleting `apache/dedalo_sites.conf` with nothing in its place would leave every Apache
  * operator with no example at all, and the Apache renderer's bytes undocumented. There is
@@ -132,7 +132,22 @@ function render(variant: Variant): Rendered {
   }
   const manifest = parseManifest(doc);
   const layout = derive(manifest);
-  return { variant, manifest, layout, artifacts: renderAll(layout, manifest) };
+  return { variant, manifest, layout, artifacts: renderAll(layout, manifest, EXAMPLE_FACTS(layout)) };
+}
+
+/**
+ * THE HOST FACTS THE EXAMPLES ARE RENDERED FOR (LEAD-1b): the identities a FRESH host's first
+ * `provision apply` allocates (one per declared site, in declaration order, from 1), PID 1 =
+ * 255 (Ubuntu 24.04 / Debian 12 — the documented floor host, so the examples show the units
+ * WITHOUT the extra PrivatePIDs= layer), and the first resume epoch. Stated, never read off a
+ * machine: an example is a pure function of the declaration and of these facts.
+ */
+function EXAMPLE_FACTS(layout: InstanceLayout) {
+  return {
+    agentIdentities: new Map(layout.sites.map((site, index) => [site.slug, index + 1] as const)),
+    systemdVersion: 255,
+    identityEpoch: 1,
+  };
 }
 
 const RENDERS: readonly Rendered[] = VARIANTS.map(render);
@@ -318,6 +333,9 @@ describe('the one declaration composes into a complete host set', () => {
     const kinds = new Set(RENDERS.flatMap(r => r.artifacts.map(a => a.kind)));
     expect([...kinds].sort()).toEqual([
       'agent_authorization',
+      // LEAD-1b: the per-(site, door) socket, target and template, rendered for the example's
+      // fresh-host identities at PID 1 = 255 (EXAMPLE_FACTS).
+      'agent_units',
       'apache_vhost',
       'engine_fragment',
       'env',

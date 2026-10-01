@@ -18,14 +18,14 @@
  * "dial receives exactly that address".
  *
  * CONTRACT under test (`src/egress/gate.ts`):
- *   openEgressGate({ dir, plan: { hosts, mcp }, publicationApiUrl, apiKey, sink,
+ *   openEgressGate({ dir (root-provisioned, 0770), group, owner, plan: { hosts, mcp }, publicationApiUrl, apiKey, sink,
  *                    seams?: { lookup(host) → Promise<{address,family}[]>,
  *                              dial(address, port) → Promise<net.Socket> } })
  *     → { close(): Promise<void> | void }      (sync or async; both awaited here)
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { connect, createServer, type Server, type Socket } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
 import { tmpdir } from 'node:os';
@@ -37,6 +37,8 @@ interface GateModule {
   MAX_PROXY_CLIENTS: number;
   openEgressGate(opts: {
     dir: string;
+    group: number;
+    owner: number;
     plan: { hosts: string[]; mcp: boolean };
     publicationApiUrl: string;
     apiKey: string;
@@ -44,6 +46,13 @@ interface GateModule {
     seams?: { lookup?: Lookup; dial?: Dial; beforeServe?: (socket: string) => void | Promise<void> };
   }): Promise<{ close(): Promise<void> | void }> | { close(): Promise<void> | void };
 }
+
+/**
+ * The provisioner every gate directory here belongs to: this process — an unprivileged suite
+ * cannot make a directory root's (LEAD-1b: production's is root's, 0, from a tmpfiles.d line;
+ * `lead1b_c4_lease.test.ts` G12 holds that half and the refusals).
+ */
+const OWN_UID = process.getuid?.() ?? 0;
 
 async function gateModule(): Promise<GateModule> {
   return (await import('../src/egress/gate' as string)) as GateModule;
@@ -54,11 +63,27 @@ afterEach(async () => {
   for (const fn of cleanups.splice(0).reverse()) await fn();
 });
 
-/** A short scratch root: sun_path is 104 bytes on macOS. */
+/**
+ * A short scratch root: sun_path is 104 bytes on macOS. RESOLVED — `/tmp` is a link there, and
+ * the gate refuses a directory any ancestor of which is one.
+ */
 function scratchRoot(): string {
-  const root = mkdtempSync(join(existsSync('/tmp') ? '/tmp' : tmpdir(), 'deg-'));
+  const root = realpathSync(mkdtempSync(join(existsSync('/tmp') ? '/tmp' : tmpdir(), 'deg-')));
   cleanups.push(() => rmSync(root, { recursive: true, force: true }));
   return root;
+}
+
+/**
+ * THE GATE'S DIRECTORY, AS ROOT PROVISIONS IT (tmpfiles.d): `<root>/egress/run1`, 0770, under
+ * a 0755 `egress/` — and the group it really has (BSD inherits the parent's, Linux takes the
+ * runner's), which is the group each gate here is asked for, as the daemon asks for the site's.
+ */
+function provisionedDir(root: string): { dir: string; group: number } {
+  const dir = join(root, 'egress', 'run1');
+  mkdirSync(dir, { recursive: true });
+  chmodSync(join(root, 'egress'), 0o755);
+  chmodSync(dir, 0o770);
+  return { dir, group: statSync(dir).gid };
 }
 
 /**
@@ -140,7 +165,7 @@ async function openGate(opts: {
   const { openEgressGate } = await gateModule();
   const echo = await echoServer();
   const root = scratchRoot();
-  const dir = join(root, 'egress', 'run1');
+  const { dir, group } = provisionedDir(root);
   const lookups: string[] = [];
   const dials: string[] = [];
   const sinkLines: string[] = [];
@@ -159,6 +184,8 @@ async function openGate(opts: {
   };
   const gate = await openEgressGate({
     dir,
+    group,
+    owner: OWN_UID,
     plan: { hosts: opts.hosts, mcp: opts.mcp ?? false },
     publicationApiUrl: opts.publicationApiUrl ?? 'http://127.0.0.1:1/publication/server_api/v2',
     apiKey: opts.apiKey ?? 'daemon-key',
@@ -250,11 +277,13 @@ describe('proxy.sock: hostnames on the plan, public addresses only, dialled exac
     const { openEgressGate } = await gateModule();
     for (const bad of ['1.2.3.4', '127.0.0.1', '2606:4700:4700::1111', '[::1]', '*', 'localhost', 'db.internal']) {
       const root = scratchRoot();
-      const dir = join(root, 'egress', 'run1');
+      const { dir, group } = provisionedDir(root);
       let error: unknown = null;
       try {
         const gate = await openEgressGate({
           dir,
+          group,
+          owner: OWN_UID,
           plan: { hosts: ['api.anthropic.com', bad], mcp: false },
           publicationApiUrl: 'http://127.0.0.1:1',
           apiKey: 'k',
@@ -265,7 +294,7 @@ describe('proxy.sock: hostnames on the plan, public addresses only, dialled exac
         error = caught;
       }
       expect({ bad, refused: String(error).includes('hostnames only') }).toEqual({ bad, refused: true });
-      expect({ bad, left: existsSync(join(root, 'egress')) }).toEqual({ bad, left: false });
+      expect({ bad, left: readdirSync(dir) }).toEqual({ bad, left: [] });
     }
   });
 
@@ -622,11 +651,13 @@ describe('proxy.sock: the edges its header claims', () => {
     const { openEgressGate } = await gateModule();
     for (const stage of ['proxy.sock', 'mcp.sock']) {
       const root = scratchRoot();
-      const dir = join(root, 'egress', 'run1');
+      const { dir, group } = provisionedDir(root);
       let error: unknown = null;
       try {
         const gate = await openEgressGate({
           dir,
+          group,
+          owner: OWN_UID,
           plan: { hosts: ['api.anthropic.com'], mcp: true },
           publicationApiUrl: 'http://127.0.0.1:1/v2',
           apiKey: 'k',
@@ -642,7 +673,8 @@ describe('proxy.sock: the edges its header claims', () => {
         error = caught;
       }
       expect({ stage, threw: String(error) }).toEqual({ stage, threw: `Error: fault before ${stage}` });
-      expect({ stage, left: existsSync(dir) }).toEqual({ stage, left: false });
+      // Root's directory stays (it is not the gate's to remove); nothing the gate made does.
+      expect({ stage, left: readdirSync(dir) }).toEqual({ stage, left: [] });
     }
   });
 });
@@ -791,10 +823,10 @@ describe('mcp.sock: one fixed upstream, the key added on the daemon side', () =>
 });
 
 describe('the per-run directory', () => {
-  test('its modes: 0750 dir, 0660 sockets', async () => {
+  test('its modes: the provisioned 0770 dir untouched, 0660 sockets', async () => {
     const h = await openGate({ hosts: [], mcp: true });
     // eslint-disable-next-line no-bitwise -- the permission word is the assertion
-    expect(statSync(h.dir).mode & 0o777).toBe(0o750);
+    expect(statSync(h.dir).mode & 0o7777).toBe(0o770);
     for (const name of ['proxy.sock', 'mcp.sock']) {
       // eslint-disable-next-line no-bitwise -- the permission word is the assertion
       expect({ name, mode: statSync(join(h.dir, name)).mode & 0o777 }).toEqual({ name, mode: 0o660 });
@@ -809,6 +841,8 @@ describe('the per-run directory', () => {
       try {
         const gate = await openEgressGate({
           dir,
+          group: statSync(root).gid,
+          owner: OWN_UID,
           plan: { hosts: [], mcp: false },
           publicationApiUrl: 'http://127.0.0.1:1',
           apiKey: 'k',
@@ -822,7 +856,7 @@ describe('the per-run directory', () => {
     }
   });
 
-  test('j: close() removes the sockets and the dir, refuses new connections, and is idempotent', async () => {
+  test('j: close() removes the sockets (never root’s dir), refuses new connections, and is idempotent', async () => {
     const h = await openGate({ hosts: [], mcp: true });
     const proxy = join(h.dir, 'proxy.sock');
     expect(existsSync(proxy)).toBe(true);
@@ -830,7 +864,7 @@ describe('the per-run directory', () => {
     await h.gate.close();
     expect(existsSync(proxy)).toBe(false);
     expect(existsSync(join(h.dir, 'mcp.sock'))).toBe(false);
-    expect(existsSync(h.dir)).toBe(false);
+    expect({ dirLeft: existsSync(h.dir), entries: readdirSync(h.dir) }).toEqual({ dirLeft: true, entries: [] });
     const refused = await new Promise<boolean>(resolve => {
       const socket = connect(proxy);
       socket.once('connect', () => {
@@ -853,9 +887,7 @@ describe('the chain composes: a process behind the shim reaches the world only t
       publicationApiUrl: `${api.base}/publication/server_api/v2`,
       apiKey: 'daemon-key',
     });
-    const { main } = (await import('../src/drivers/egress_shim' as string)) as {
-      main(argv: string[], seams: Record<string, unknown>): Promise<number>;
-    };
+    const { runShim } = await import('./support/shim_wire');
     const free = async () => {
       const server = (await import('node:net')).createServer();
       await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -882,14 +914,20 @@ const mcp = await fetch('http://127.0.0.1:${ports.mcp}/mcp', { method: 'POST', h
 await Bun.write(${JSON.stringify(out)}, JSON.stringify({ tunnel, mcpStatus: mcp.status, mcpBody: await mcp.text() }));
 `,
     );
-    const code = await main(['--', process.execPath, script], {
-      interfaces: () => ({ lo: [{ internal: true, address: '127.0.0.1', family: 'IPv4' }] }),
-      socketDir: h.dir,
-      ports,
-      hostNetns: 'net:[4026531840]',
-      ownNetns: () => 'net:[4026532999]',
+    // The shim over a real connection, as PID 1 hands it one (support/shim_wire.ts plays the
+    // daemon's side of the frame protocol).
+    const run = await runShim({
+      argv: [process.execPath, script],
+      door: 'turn',
+      workdir: root,
+      seams: {
+        interfaces: () => ({ lo: [{ internal: true, address: '127.0.0.1', family: 'IPv4' }] }),
+        socketDir: h.dir,
+        ports,
+        ownNetns: () => 'net:[4026532999]',
+      },
     });
-    expect(code).toBe(0);
+    expect(run.code).toBe(0);
     const result = JSON.parse(readFileSync(out, 'utf8')) as { tunnel: string; mcpStatus: number; mcpBody: string };
     expect(result.tunnel).toContain('200 Connection Established');
     // The agent's ClientHello came back through the echo "upstream": the tunnel carried it.

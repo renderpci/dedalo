@@ -17,7 +17,8 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
-    - The site builder can no longer start its agent units through polkit, and refuses confined agent runs until per-site identities land
+    - The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.
+    - The site builder can no longer start its agent units through polkit
     - Outbound fetches now refuse every IPv6 route to an internal address.
 
 ### For users
@@ -306,6 +307,41 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.** *(action needed)*
+
+    Until now, every site of a museum ran its AI turns, builds and `git` commands as one agent user, so one site's run could read or change another site's agent state. The daemon also asked systemd to start those runs itself, which the previous release had to stop allowing (see the entry on the narrowed polkit rule).
+
+    Now each declared site has its own system user, `dedalo-a-<instance>_<n>`, with a private group that only that user and the service user belong to. `provision apply` creates them and never reuses a number. For each site and each kind of run (turn, build, `git`), root installs a socket and a service template. The daemon only connects to that socket, and systemd starts the run as the site's user, which the daemon cannot choose. The polkit rule now lets the service user stop or kill those runs and nothing else. What systemd enforces:
+
+    - A site never has two runs at once, and runs of different sites run as different users.
+    - Each run gets only its own site's workspace and its own HOME. A build cannot read the turn's `~/.claude`, and `git` gets no HOME.
+    - A turn or build reaches the network through its site's egress directory under `/run/dedalo-sites-agents/<instance>/egress/`. Root creates this directory at every boot from a rendered `/etc/tmpfiles.d/` file, and the run sees it read-only.
+    - A run of a site whose units differ from what the daemon expects (for example, a hand-added drop-in) is refused, naming the setting. This includes a drop-in that stops a run without killing its last processes, or one that makes systemd open or mount a file for the run as root.
+    - A run counts as finished only when systemd reports none of its processes left, so the site's next run never starts beside a survivor of the last one.
+    - Stopping or restarting the daemon also stops that museum's run sockets, which then accept no new run. Starting the daemon starts them again.
+
+    Other changes:
+
+    - The daemon starts no new run once it is shutting down. A turn whose final commit was refused that way is committed when the daemon next starts.
+    - The oldest supported systemd is now 248. polkit must be 0.106 or newer, because the stop rule is a JavaScript rules file, and `provision apply` refuses an older one. Supported hosts are Ubuntu 24.04 or newer, Debian 12 or newer, and RHEL 9 or newer. Ubuntu 22.04 is not supported: its polkit 0.105 ignores the rule. On systemd 257 or newer each run also gets its own process namespace.
+    - If the daemon crashes on systemd older than 254, systemd does not stop its runs. The daemon stops them, or keeps their site unavailable, when it starts again.
+    - `provision apply` refuses a site user whose uid, or a private group whose gid, belongs to any other account or group on the host. It also refuses any other account whose primary group is a site's private group, and it refuses when the system id range in `/etc/login.defs` has no room left. The daemon checks the same things before every run.
+    - Creating a site is refused (503) before anything is written when the daemon cannot run that site's `git` yet, for example after `provision apply` added the site but before the daemon restarted.
+    - An agent run that was left running (for example, after the daemon was killed) is stopped before its site runs again. If it will not stop, that site stays unavailable until it does.
+    - The daemon's `.builder/` directory in each workspace is now `0710`, so a turn, which runs as the site's user, can open the MCP configuration it is given there. The site's user still cannot list or change anything in it. An existing `.builder/` is changed at the site's next turn.
+
+    **Action needed:** as root, run `provision apply` for every instance before the updated daemon starts, or in the same maintenance window as the code update. This includes an update installed from within the application.
+
+    - The daemon no longer starts while its environment still sets `AGENT_USER`, `AGENT_HOME` or `SYSTEMD_RUN_BIN`. `provision apply` removes those keys and writes `AGENT_IDENTITIES`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT`, `SYSTEMCTL_BIN` and `AGENT_IDENTITY_EPOCH`.
+    - The first run of `provision apply` stops the daemon, gives each site's files that the old agent user wrote to the site's new user, installs the units, and starts the daemon again.
+    - It also opens to the instance group the files and directories in each existing workspace that are owned by the service user, except `.builder/`. Sites created before 2026-09-05 have these: back then turns and `git` ran as the service user and left `.git` closed to the group, so the site's new user could not commit. The service user keeps owning them.
+    - It locks the old agent user without deleting it.
+    - It moves the old shared agent HOME aside, next to itself, as `<home>.retired-<date>`. Nothing from it is copied to the new users.
+    - Once, after the update, a conversation cannot resume its earlier context: its next turn starts a new agent session.
+    - Adding a site later also needs `provision apply`, which restarts the daemon.
+
+    See [the site builder internals](./development/site_builder_internals.md).
+
 - **Translation, transcription and RDF-import fetches now connect to the address the SSRF guard vetted (DNS rebinding closed); network failures report a typed reason.**
 
     The guard used to check the server's address and then let the connection look the name up again, so a hostile DNS server could answer "public" to the check and "this machine" or "the internal network" to the connection. The connection now goes to the address that was checked, with the real name kept for the certificate and the `Host` header, for the translation and transcription services and for every RDF URI a cataloguer imports. Failures are typed instead of carrying the runtime's own error text: the RDF import reports the fixed sentence "The outbound request could not be completed" for each URI that failed (see [the RDF import tool reference](./development/tools/reference/tool_import_rdf.md)), while translation and transcription report a short message naming the reason, such as `hop connect failed (timeout)` or `redirect refused (HTTP 302)`, never an address. A translation or transcription request (a POST) that may already have reached the server is never re-sent to the server's other address, so a failed transcription request cannot start a second job; an RDF-import fetch (a GET, safe to repeat) may be retried on the next address.
@@ -320,7 +356,7 @@ Merged since the last release; these ship with the next one.
 
 - **Site builder agent turns and builds run in a private network namespace and reach the outside only by hostname, through the daemon's egress gate; the Publication API key no longer reaches the agent, and AGENT_EGRESS_ALLOW is refused.**
 
-    A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its own per-run socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another run's socket directory: only its own is mounted, and each run has its own process namespace, so a concurrent run of the same museum cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
+    A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its site's socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another site's socket directory: only its own site's is mounted, and runs of different sites run as different users, so a concurrent run cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
 
     The hostnames are:
 
@@ -340,17 +376,17 @@ Merged since the last release; these ship with the next one.
     - A run may hold at most 128 connections through the daemon at once. One more is refused, with a line in the log.
     - An opencode turn installs its provider's package from `registry.npmjs.org` on first use. Name that host in `agent.provider_hosts` too.
     - The daemon refuses to start any confined run (503, naming the cause) when:
-      - the host's systemd is older than 257, or its version cannot be read (Debian 13 ships 257);
-      - its socket (`LISTEN_SOCKET`) is not under `/run`;
+      - the host's systemd is older than 248, or its version cannot be read;
+      - its socket (`LISTEN_SOCKET`) or the agent socket directory is not under `/run`;
       - it cannot read its own network namespace;
-      - `AGENT_USER` is not a user on the host;
-      - the site builder or its bun can be changed by the agent user, or cannot be read or run by it (a directory above them that the agent user owns counts as one it can change, whatever its permissions);
+      - the site has no agent user of its own on the host (see the entry on per-site agent users);
+      - the site builder or its bun can be changed by any site's agent user, or cannot be read or run by it (a directory above them that such a user owns counts as one it can change, whatever its permissions);
       - the site builder or its bun lives under `/home`, `/root`, `/run`, `/tmp` or `/var/tmp`.
     - A site builder and bun owned by the engine's own user, as the documented install lays them out, are accepted.
 
     See [the site builder internals](./development/site_builder_internals.md).
 
-- **The site builder can no longer start its agent units through polkit, and refuses confined agent runs until per-site identities land** *(action needed)*
+- **The site builder can no longer start its agent units through polkit** *(action needed)*
 
     The polkit rule the site-builder provisioner installs
     (`/etc/polkit-1/rules.d/49-dedalo-site-<instance>-agent.rules`) allowed the site builder's
@@ -359,16 +395,13 @@ Merged since the last release; these ship with the next one.
     systemd 257 or newer that meant the service user could start a unit with that name as
     root, so the site builder's daemon was effectively root on the host.
 
-    The rule now allows only *stop* and *kill*. Because a confined agent run can no longer be
-    started, the site builder now refuses every confined run (an agent turn, a build step, a
-    `git` command in a site workspace) up front, with a 503 that says why. This lasts until
-    per-site agent identities (root-installed units whose user the daemon cannot choose)
-    replace the current launch. The per-run environment file systemd reads as root is also
-    never written through a symbolic link or into a directory the daemon does not own.
+    The rule now allows only *stop* and *kill*, and only on the runs of the museum's declared
+    sites. The daemon no longer starts any unit. A run is started by systemd from units that root
+    installs for each site, as that site's own user (see the entry on per-site agent users, in
+    this same release). No per-run file is written for systemd to read as root.
 
-    **Action needed:** re-run the site-builder provisioner (`provision apply`) on every host
-    so the narrowed rule is installed. Until the follow-up release, AI site building on a
-    provisioned host will answer "confinement unavailable".
+    **Action needed:** run the site-builder provisioner (`provision apply`) on every host. It
+    installs the narrowed rule together with the per-site units.
 
 - **Outbound fetches now refuse every IPv6 route to an internal address.** *(action needed)*
 
@@ -513,7 +546,7 @@ Merged since the last release; these ship with the next one.
 
 - **A site builder turn whose egress gate fails to close now still ends, instead of leaving the session running forever.**
 
-    When the daemon could not remove a turn's per-run egress directory (for example, the host refused the unlink), the turn's remaining cleanup was skipped: the driver's MCP configuration stayed in the workspace and the session never left the running state. Each cleanup step now runs on its own. The turn ends normally, and the failure is written as an `[egress]` line in the session log. The same holds for a build or git step: its gate failing to close no longer replaces the step's own result, and the `[egress]` line goes to the build log. A run refused after its gate opened (for example, an environment value with a control character) now reports that refusal, not the error from closing the gate.
+    When the daemon could not remove a turn's egress sockets (for example, the host refused the unlink), the turn's remaining cleanup was skipped: the driver's MCP configuration stayed in the workspace and the session never left the running state. Each cleanup step now runs on its own. The turn ends normally, and the failure is written as an `[egress]` line in the session log. The same holds for a build or git step: its gate failing to close no longer replaces the step's own result, and the `[egress]` line goes to the build log. A run refused after its gate opened (for example, an environment value with a control character) now reports that refusal, not the error from closing the gate.
 
 - **A data update now applies completely or not at all, and two updates can no longer run at once.**
 

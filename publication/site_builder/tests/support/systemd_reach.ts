@@ -369,3 +369,29 @@ export function describeDestination(dest: Destination): string {
   const host = dest.ip.includes(':') ? `[${dest.ip}]` : dest.ip;
   return `${dest.scope === 'unit' ? 'unit-lo ' : ''}${host}:${dest.port}`;
 }
+
+/**
+ * Is `hostPath` visible — as ITSELF, at any unit-side path — inside the mount view the unit
+ * properties describe? Mount visibility only (masks, nested lifts, BindPaths); no family, no
+ * DAC and no /proc route. Exported for the uid-aware model (`unit_file_reach.ts`, LEAD-1b G6),
+ * which adds the principal half on top of this one.
+ */
+export function mountVisible(props: readonly string[], hostPath: string): boolean {
+  return hostPathVisible(parseProperties(props), hostPath);
+}
+
+/**
+ * Is `hostPath` visible AND WRITABLE in that mount view? Under `ProtectSystem=strict` the tree
+ * is read-only except a `ReadWritePaths=` entry or a writable `BindPaths=` source; a
+ * `BindReadOnlyPaths=` source is read-only however it is reached. The most specific of the
+ * two decides (a writable bind nested in a read-only one is writable, and the reverse).
+ */
+export function mountWritable(props: readonly string[], hostPath: string): boolean {
+  const map = parseProperties(props);
+  if (!hostPathVisible(map, hostPath)) return false;
+  const sources = (key: string) =>
+    (map.get(key) ?? []).flatMap(value => value.split(/\s+/).filter(Boolean)).map(entry => entry.replace(/^[-+]/, '').split(':')[0] as string);
+  const depth = (paths: readonly string[]) =>
+    Math.max(-1, ...paths.filter(path => under(hostPath, path)).map(path => normalize(path).split('/').filter(Boolean).length));
+  return depth([...sources('BindPaths'), ...sources('ReadWritePaths')]) > depth(sources('BindReadOnlyPaths'));
+}

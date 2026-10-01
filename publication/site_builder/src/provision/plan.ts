@@ -57,6 +57,18 @@
  */
 
 import { basename, dirname, join, relative, resolve } from 'node:path';
+import {
+  agentHomeFor,
+  agentIdentityName,
+  agentStateSiteDir,
+  agentUnitNames,
+  egressDirForSite,
+  identityGecos,
+  legacyTransientUnitGlob,
+  STATEFUL_DOORS,
+} from '../drivers/agent_identity';
+import { DOORS } from '../drivers/network_profile';
+import { floorRefusal, SYSTEMD_FLOOR } from '../drivers/unit_properties';
 import type {
   InstanceLayout,
   InstanceManifest,
@@ -74,9 +86,12 @@ import {
   isStrictlyWithin,
   markerContent,
   readWritePaths,
+  tmpfilesWritablePaths,
 } from './layout';
-import type { Artifact, ArtifactKind, ModeKey } from './render';
+import { type AgentLedger, allocateIdentities, type IdentityAllocation, RETIRED_EXPIRE_DAYS } from './identities';
+import type { Artifact, ArtifactKind, ModeKey, RenderFacts } from './render';
 import { renderAll } from './render';
+import { SHIM_RELATIVE } from './render/agent_units';
 import { SERVICE_TOKEN_KEY } from './render/engine_fragment';
 import { hasDrifted, parseStamp } from './hash';
 
@@ -182,7 +197,70 @@ export interface HostState {
    * business inventing a listing — an absent one yields no orphans and changes no plan.
    */
   readonly vhostDirEntries?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * THE SITE-IDENTITY LEDGER (LEAD-1b) — `getent passwd`/`shadow`/`group` for this instance's
+   * identity namespace, the retired per-museum agent, the service user and the instance group.
+   * Absent means an empty ledger (a fresh host): every declared site gets a new identity. See
+   * `identities.ts` for how it is verified.
+   */
+  readonly agentLedger?: AgentLedger;
+  /**
+   * WHAT THE AGENT UNITS' ExecStart RESOLVES TO — `realpath` of the declared runtime
+   * (`engine.bun_bin`) and of the shim under `engine.checkout_dir`, keyed by the declared path.
+   * The daemon compares the unit's loaded argv with ITS OWN runtime and shim, which the kernel
+   * and Bun report symlink-resolved; a declared path that is not its own realpath would make
+   * every confined run `unit_nonconformant`, so the plan refuses it and names the path to
+   * declare. Absent (or a path missing from it) = not observed: nothing is refused on it.
+   */
+  readonly resolvedPaths?: Readonly<Record<string, string>>;
+  /**
+   * PID 1's release (`systemctl show -p Version --value`), which decides the keys the agent
+   * units carry. `null` = the observer could not read it, and the plan REFUSES; absent = a
+   * hand-built state, rendered for the floor (REQUIRED keys only).
+   */
+  readonly pid1Version?: number | null;
+  /**
+   * The agent sockets `systemctl is-enabled` reports enabled. Absent = none observed as
+   * enabled, so every declared socket is (re-)enabled — a no-op on a host where they are.
+   */
+  readonly enabledSockets?: readonly string[];
+  /**
+   * The agent sockets `systemctl is-active` reports active (LISTENING). An enabled socket that
+   * is not — failed on its trigger limit, stopped by hand, stopped with the daemon — accepts
+   * no run until it is started again. Absent = not observed: nothing is started on its account.
+   */
+  readonly activeSockets?: readonly string[];
+  /**
+   * polkit's release (`pkaction --version`, normalised by `parsePolkitVersion`): the agent rule
+   * is a JavaScript `rules.d` file, which polkit reads from 0.106 on. `null` = unreadable, and the
+   * plan REFUSES; absent = a hand-built state, not refused on it.
+   */
+  readonly polkitVersion?: number | null;
 }
+
+/**
+ * THE OLDEST polkit THAT READS THE RENDERED RULE. `render/agent_authorization.ts` renders a
+ * JavaScript `/etc/polkit-1/rules.d/*.rules` file — the only form that can match the enumerated
+ * instance names — and polkit reads that form from 0.106. 0.105 (Ubuntu 22.04's `policykit-1`)
+ * reads only `.pkla` files and IGNORES the rule silently: runs still start (socket activation
+ * asks polkit nothing), but every stop the daemon sends is denied, so any run that does not exit
+ * by itself quarantines its site until RuntimeMaxSec. Refused by name instead of discovered.
+ */
+export const POLKIT_JS_RULES_FLOOR = 106;
+
+/**
+ * `pkaction --version` → one comparable number: `pkaction version 0.105` → 105, `… 0.120` → 120,
+ * `… 124` → 124 (polkit dropped the `0.` at 121). Null when the text names no version.
+ */
+export function parsePolkitVersion(text: string): number | null {
+  const match = /version\s+(\d+)(?:\.(\d+))?/.exec(text);
+  if (!match) return null;
+  const major = Number(match[1]);
+  if (major === 0) return match[2] === undefined ? null : Number(match[2]);
+  return major;
+}
+
+export type { AgentLedger, LedgerAccount, LedgerGroup } from './identities';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The actions
@@ -192,13 +270,15 @@ export interface HostState {
  * THE ORDER, as a value.
  *
  * §4 of `engineering/SITE_BUILDER_INSTANCES.md` states it as prose — "identities → roots
- * and modes → markers → secrets → rendered files → daemon-reload → vhost validate" — and
- * prose cannot be checked. Every action carries its phase, `plan()` emits them in this
+ * and modes → markers → secrets → rendered files → daemon-reload → vhost validate →
+ * retirement" — and prose cannot be checked. RETIRE IS LAST: a lock or an archive rename that
+ * fails (EXDEV, a mount point) halts only itself, after the daemon is back and the vhosts
+ * reloaded, never with the museum's site builder stopped. Every action carries its phase, `plan()` emits them in this
  * order, and `assertPlanIsCoherent()` refuses a plan whose phases ever decrease. A future
  * step inserted in the wrong place is then a red gate rather than a museum whose unit
  * starts before the directory it is confined to exists.
  */
-export const PHASES = ['identity', 'tree', 'link', 'secret', 'artifact', 'service', 'web'] as const;
+export const PHASES = ['identity', 'tree', 'link', 'secret', 'quiesce', 'artifact', 'service', 'web', 'retire'] as const;
 export type Phase = (typeof PHASES)[number];
 
 const PHASE_ORDER: Readonly<Record<Phase, number>> = Object.freeze(
@@ -235,7 +315,9 @@ export interface UserAction extends ActionBase {
   readonly name: string;
   /** The PRIMARY group. The unit's `Group=` names it, so it must exist and must be theirs. */
   readonly group: string;
-  /** `--home-dir`, pointed at the agent HOME the tree phase creates with MODES.home. */
+  /** A SITE identity's supplementary group: its own private group (created before it). */
+  readonly supplementary?: string;
+  /** `--home-dir`. A site identity's is `/nonexistent`: its HOMEs are per door, bound by its units. */
   readonly home: string;
   readonly shell: string;
   readonly argv: readonly string[];
@@ -358,7 +440,20 @@ export interface SymlinkAction extends ActionBase {
  * ORDER (`web_configtest` before `web_reload`) without parsing a command line.
  */
 export type ExecStep =
+  | 'identity_membership'
+  | 'identity_lock'
+  | 'daemon_stop'
+  | 'legacy_runs_stop'
+  | 'quiesce_proof'
+  | 'normalise_ownership'
+  | 'normalise_modes'
+  | 'agent_sockets_disable'
+  | 'agent_runs_stop'
   | 'daemon_reload'
+  | 'agent_tmpfiles_create'
+  | 'agent_sockets_enable'
+  | 'agent_sockets_start'
+  | 'agent_sockets_restart'
   | 'unit_enable'
   | 'unit_start'
   | 'unit_restart'
@@ -376,6 +471,46 @@ export interface ExecAction extends ActionBase {
   readonly kind: 'exec';
   readonly step: ExecStep;
   readonly argv: readonly string[];
+  /**
+   * A path whose ABSENCE makes a failure of this command a skip rather than a halt — for the
+   * ownership normalisation, which runs over a declared site's workspace that may not have
+   * been created yet (a site is declared before the museum creates it).
+   */
+  readonly absentOk?: string;
+  /**
+   * The exit codes that mean SUCCESS, when 0 is not one of them — the quiesce proof's
+   * `pgrep`, whose 1 ("no process matched") is the fact it exists to establish, and whose 0
+   * (a process of that uid is still alive) must halt the run before anything is re-owned.
+   */
+  readonly succeedsOn?: readonly number[];
+}
+
+/**
+ * A TREE MOVED ASIDE, never deleted (LEAD-1b): the retired shared agent HOME, a removed
+ * site's agent state. Renamed — never copied — so it must stay on ITS OWN FILESYSTEM:
+ *
+ *   - `beside`: to `<from>.retired-<utc>` in its own parent (remove.ts `retiredName`, the one
+ *     archived spelling). The retired shared HOME is archived so: `roots.home` may be declared
+ *     on any volume, and a rename into `retiredDir` (under the state dir) would be EXDEV there;
+ *   - `into`: to `<dir>/<stem>.<utc>` — a removed site's state, whose `<agentStateRoot>` and
+ *     `retiredDir` are siblings under the state dir.
+ *
+ * The instant is apply's, so the plan stays pure. Absent at apply time is a skip.
+ */
+export interface ArchiveAction extends ActionBase {
+  readonly kind: 'archive';
+  readonly from: string;
+  readonly to: { readonly beside: true } | { readonly dir: string; readonly stem: string };
+}
+
+/**
+ * A GENERATED AGENT UNIT FILE OF A SITE THAT IS NO LONGER DECLARED — the one file this plan
+ * may remove, and only after the polkit rule stopped naming its site and its sockets were
+ * disabled (`assertPlanIsCoherent`). Absent at apply time is a skip.
+ */
+export interface UnlinkAction extends ActionBase {
+  readonly kind: 'unlink';
+  readonly path: string;
 }
 
 export type Action =
@@ -384,7 +519,9 @@ export type Action =
   | DirAction
   | FileAction
   | SymlinkAction
-  | ExecAction;
+  | ExecAction
+  | ArchiveAction
+  | UnlinkAction;
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The few constants this module owns, and why each is here rather than in layout.ts
@@ -455,18 +592,200 @@ export function plan(
   host: HostState,
 ): Action[] {
   const actions: Action[] = [];
+  const agents = agentPlan(layout, host);
 
-  actions.push(...identityActions(layout, host));
-  actions.push(...treeActions(layout, host));
+  actions.push(...identityActions(layout, host, agents));
+  actions.push(...treeActions(layout, host, agents));
   actions.push(...linkActions(layout, host));
   actions.push(...secretActions(layout, host));
-  actions.push(...artifactActions(layout, manifest, host));
+  actions.push(...quiesceActions(layout, host, agents));
+  actions.push(...artifactActions(layout, manifest, host, agents));
   actions.push(...htpasswdActions(layout, host));
-  actions.push(...serviceActions(layout, host, actions));
+  actions.push(...serviceActions(layout, host, actions, agents));
   actions.push(...webActions(layout, host, actions));
+  // LAST: a retirement that fails (a lock, an archive rename) halts only itself — the daemon
+  // is already started and the vhosts reloaded, and a re-run retries exactly what is left.
+  actions.push(...retireActions(layout, host, agents));
 
   assertPlanIsCoherent(actions, layout);
   return actions.map(action => Object.freeze(action));
+}
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The site identities (LEAD-1b)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/** Everything the plan decided about the agent identities and their units, once. */
+export interface AgentPlan {
+  readonly allocation: IdentityAllocation;
+  /** What the renderers are told: slug → k, PID 1's release, the resume epoch. */
+  readonly facts: RenderFacts;
+  /**
+   * A MIGRATION is under way: the retired per-museum agent is still active, or its shared
+   * HOME is still on the host. The daemon is stopped for it, workspaces are re-owned, the
+   * legacy account locked and the HOME archived.
+   */
+  readonly migrating: boolean;
+  /**
+   * The sites whose workspaces are normalised while the daemon is stopped: re-owned to their
+   * (new) identity — each with the EARLIER owners whose files become that identity's (the
+   * retired per-museum agent, the slug's retired identities, the ordinal the env last bound it
+   * to) — and the service user's entries opened to the group (`normalise_modes`). Every site,
+   * on the FIRST apply that binds identities (no env binding yet): a workspace from before
+   * per-site identities may hold what an agent wrote AS THE SERVICE USER.
+   */
+  readonly normalise: readonly NormaliseSite[];
+}
+
+export interface NormaliseSite {
+  readonly slug: string;
+  readonly k: number;
+  readonly name: string;
+  readonly from: readonly string[];
+}
+
+/** The resume epoch the env currently states (0 when absent — a pre-LEAD-1b env). */
+function observedEpoch(layout: InstanceLayout, host: HostState): number {
+  const content = host.entries[layout.envFile]?.content ?? '';
+  const match = /^AGENT_IDENTITY_EPOCH="?(\d+)"?$/m.exec(content);
+  return match ? Number(match[1]) : 0;
+}
+
+/**
+ * The slug → ordinal binding the env on the host currently states (`AGENT_IDENTITIES`, a
+ * JSON object rendered as one quoted value), or null when there is none to read (no env, a
+ * pre-LEAD-1b env, a value that does not parse — never guessed).
+ */
+function observedIdentities(layout: InstanceLayout, host: HostState): ReadonlyMap<string, number> | null {
+  const content = host.entries[layout.envFile]?.content ?? '';
+  const match = /^AGENT_IDENTITIES=(.*)$/m.exec(content);
+  if (!match) return null;
+  try {
+    let value: unknown = JSON.parse(match[1] as string);
+    if (typeof value === 'string') value = JSON.parse(value);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const out = new Map<string, number>();
+    for (const [slug, k] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof k === 'number' && Number.isInteger(k)) out.set(slug, k);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ALLOCATE, VERIFY, AND DECIDE THE FACTS — see `identities.ts` for the ledger law. Throws
+ * (refusing this instance's plan) on an untrustworthy ledger or an unreadable / too-old PID 1.
+ */
+export function agentPlan(layout: InstanceLayout, host: HostState): AgentPlan {
+  const allocation = allocateIdentities(layout, host.agentLedger);
+  if (host.pid1Version === null) {
+    throw new Error(
+      `plan(${layout.instance}): PID 1's systemd release could not be read (systemctl show -p Version). ` +
+        `The agent units are rendered for it — a unit file silently ignores a key its systemd does not ` +
+        `know — so nothing was planned.`,
+    );
+  }
+  const version = host.pid1Version ?? SYSTEMD_FLOOR;
+  if (version < SYSTEMD_FLOOR) throw new Error(`plan(${layout.instance}): ${floorRefusal(version)}`);
+  if (host.polkitVersion === null) {
+    throw new Error(
+      `plan(${layout.instance}): polkit's release could not be read (pkaction --version). The daemon's only ` +
+        `authority over its runs — stop and kill — is a JavaScript rules.d rule, which polkit reads from 0.${POLKIT_JS_RULES_FLOOR}; ` +
+        `nothing was planned.`,
+    );
+  }
+  if (host.polkitVersion !== undefined && host.polkitVersion < POLKIT_JS_RULES_FLOOR) {
+    throw new Error(
+      `plan(${layout.instance}): polkit is 0.${host.polkitVersion}, which reads only .pkla files and silently ignores the ` +
+        `rendered rules.d rule (JavaScript rules arrived in 0.${POLKIT_JS_RULES_FLOOR}; Ubuntu 22.04 ships 0.105). Every stop ` +
+        `the daemon sends would be denied and a run that does not exit by itself would quarantine its site until ` +
+        `RuntimeMaxSec. Supported hosts: Ubuntu 24.04+, Debian 12+, RHEL 9+. Nothing was planned.`,
+    );
+  }
+  const legacyHome = host.entries[layout.roots.home];
+  const envIdentities = observedIdentities(layout, host);
+  // A MIGRATION is under way while the legacy agent is active, or while its shared HOME is
+  // here and no env on the host has bound the sites yet. The env is written only after the
+  // quiesce re-owned every workspace (apply halts at the first failure), so once it binds
+  // them and the legacy account is retired, a HOME still present is ONLY an archive still
+  // pending (a failed rename): retried by the retire phase, and it neither stops the daemon
+  // nor moves the resume epoch again.
+  const migrating = allocation.legacyActive || (legacyHome !== undefined && envIdentities === null);
+  // WHICH SITES' IDENTITY CHANGED — decided from the HOST, never from what this run creates:
+  // an apply that died after `useradd` and before the env was written leaves an active
+  // account the next plan would otherwise take as always having been there. A site changed
+  // when the env binds it to another ordinal, or does not bind it at all while the ledger
+  // holds a retired identity for its slug (a re-declared site whose env was never written).
+  const changed = new Set<string>();
+  for (const site of layout.sites) {
+    const k = allocation.identities.get(site.slug) as number;
+    const envK = envIdentities?.get(site.slug);
+    if (envK !== undefined ? envK !== k : (allocation.retiredBySlug.get(site.slug)?.length ?? 0) > 0) changed.add(site.slug);
+  }
+  const current = observedEpoch(layout, host);
+  // A token minted under another identity is dropped by the daemon when the epoch moves
+  // (sessions/manager.ts); the epoch moves exactly when an identity changed under a site.
+  const identityEpoch = Math.max(1, current + (migrating || changed.size > 0 ? 1 : 0));
+  const normalise: NormaliseSite[] = [];
+  // The FIRST binding (the env on the host binds no identity yet) normalises every site too:
+  // from 2026-07-15 to 2026-09-05 a turn and git ran AS THE SERVICE USER under its unit's
+  // UMask=0027, so a workspace of that era holds svc-owned 2750 directories and 0640 files —
+  // `.git` among them, which `applySharedModes` never walks — and a host that never had the
+  // per-museum agent reaches LEAD-1b with no migration to trigger it. Without this the site's
+  // identity cannot create `.git/index.lock` (every turn's commit fails) nor write a file of
+  // its own past.
+  // Only a workspace that EXISTS: a fresh install has none, and nothing to normalise.
+  const firstBinding = envIdentities === null;
+  for (const site of layout.sites) {
+    const workspaceExists = host.entries[join(layout.roots.workspaces, site.slug)] !== undefined;
+    if (!migrating && !changed.has(site.slug) && !(firstBinding && workspaceExists)) continue;
+    const k = allocation.identities.get(site.slug) as number;
+    const name = identityNameOf(layout, k);
+    const envK = envIdentities?.get(site.slug);
+    const from = new Set<string>([
+      ...(allocation.legacyExists ? [layout.identity.agentUser] : []),
+      ...(allocation.retiredBySlug.get(site.slug) ?? []),
+      ...(envK !== undefined && envK !== k && knownIdentity(host, layout, envK) ? [identityNameOf(layout, envK)] : []),
+    ]);
+    from.delete(name);
+    normalise.push(Object.freeze({ slug: site.slug, k, name, from: Object.freeze([...from].sort()) }));
+  }
+  const resolved = host.resolvedPaths ?? {};
+  for (const [label, declared] of [
+    ['engine.bun_bin', layout.daemon.bun],
+    ['engine.checkout_dir (its shim)', join(layout.daemon.workingDirectory, SHIM_RELATIVE)],
+  ] as const) {
+    const real = resolved[declared];
+    if (real !== undefined && real !== declared) {
+      throw new Error(
+        `plan(${layout.instance}): ${label} resolves through a symlink — '${declared}' is '${real}'. Every agent ` +
+          `unit's ExecStart is compared with the daemon's own runtime and shim, which the kernel reports resolved, ` +
+          `so every confined run would be refused as nonconformant. Declare the resolved path. Nothing was planned.`,
+      );
+    }
+  }
+  return Object.freeze({
+    allocation,
+    facts: Object.freeze({ agentIdentities: allocation.identities, systemdVersion: version, identityEpoch }),
+    migrating,
+    normalise: Object.freeze(normalise),
+  });
+}
+
+function identityNameOf(layout: InstanceLayout, k: number): string {
+  return agentIdentityName(layout.instance, k);
+}
+
+/** Does the ledger hold ordinal k's account (so `chown --from=` can name it)? */
+function knownIdentity(host: HostState, layout: InstanceLayout, k: number): boolean {
+  try {
+    const name = identityNameOf(layout, k);
+    return (host.agentLedger?.accounts ?? []).some(account => account.name === name);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -479,11 +798,36 @@ export function plan(
  * byte comparison); the bytes of a CREDENTIAL are never needed and must never be read into
  * a `HostState`.
  */
-export function observedPaths(layout: InstanceLayout, manifest: InstanceManifest): string[] {
+export function observedPaths(
+  layout: InstanceLayout,
+  manifest: InstanceManifest,
+  /**
+   * The ordinals the host's ledger already binds (`identities.ts` ledgerOrdinals), so the
+   * per-site agent paths — state directories, unit files — are looked at too. Absent, only
+   * what the declaration alone names is observed; the plan then (re)asserts the rest.
+   */
+  identities?: ReadonlyMap<string, number>,
+): string[] {
   const paths = new Set<string>();
   for (const entry of treeEntries(layout)) paths.add(entry.path);
+  // The retired shared HOME: its PRESENCE is what tells the plan a migration is due, and its
+  // marker says WHOSE it is (a pre-LEAD-1b provisioner marked it; a foreign one is refused).
+  paths.add(layout.roots.home);
+  paths.add(markerPath(layout.roots.home));
+  // The sites' egress gate directories (root's, systemd-tmpfiles): observed, so a host whose
+  // `/run` lost them — or whose earlier state left one the wrong owner — is repaired.
+  paths.add(layout.agentSocketDir);
+  paths.add(join(layout.agentSocketDir, 'egress'));
+  for (const [, k] of identities ?? new Map<string, number>()) {
+    paths.add(agentStateSiteDir(layout.agentStateRoot, k));
+    for (const door of STATEFUL_DOORS) paths.add(agentHomeFor(layout.agentStateRoot, k, door));
+    paths.add(egressDirForSite(layout.agentSocketDir, k));
+  }
   for (const root of markedRoots(layout)) paths.add(markerPath(root));
   for (const site of layout.sites) {
+    // Each site's WORKSPACE: on the first apply that binds identities, an existing one is
+    // normalised (a workspace from before per-site identities — agentPlan `firstBinding`).
+    paths.add(join(layout.roots.workspaces, site.slug));
     for (const surface of SURFACES) {
       paths.add(site.linkPath(surface));
       // The ENABLING link. Absent from this list, the plan would see no enabled link on any
@@ -499,7 +843,8 @@ export function observedPaths(layout: InstanceLayout, manifest: InstanceManifest
   // absent on every run and rewritten forever. A hand list that is correct today is invisible
   // to every drift comparison; it becomes the defect later, when an artifact is added and
   // this copy is not. So it asks the renderers.
-  for (const artifact of renderAll(layout, manifest)) paths.add(artifact.path);
+  const facts: RenderFacts | undefined = identities ? { agentIdentities: identities, systemdVersion: SYSTEMD_FLOOR } : undefined;
+  for (const artifact of renderAll(layout, manifest, facts)) paths.add(artifact.path);
   paths.add(layout.htpasswd);
   // The audit FILE, which is not a directory and therefore not in `treeEntries()`. Its
   // absence from this list is the defect this function's own gate caught: an observer that
@@ -590,9 +935,10 @@ export function changesTheHost(action: Action): boolean {
  * Phase 1 — identities
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-function identityActions(layout: InstanceLayout, host: HostState): Action[] {
+function identityActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
   const actions: Action[] = [];
   const { user, group } = layout.identity;
+  const shell = host.nologinShell ?? DEFAULT_NOLOGIN_SHELL;
 
   // THE GROUP FIRST, ALWAYS — and separately, never as `useradd --user-group`. The unit
   // states `Group=` explicitly (a museum's daemon must not inherit whatever primary group
@@ -611,52 +957,115 @@ function identityActions(layout: InstanceLayout, host: HostState): Action[] {
     });
   }
 
-  // THE AGENT'S OWN UID — a second identity, created exactly like the first and for the
-  // reason stated in layout.ts's recorded decision: an agent turn must not be the daemon,
-  // because nothing separates a process from itself. Its PRIMARY GROUP is this instance's
-  // own group, which is what lets the daemon and its agent share a workspace (the 2770 rows
-  // of §3) while the daemon's credentials (root:root 0600, `secretsDir`/`secret`) and its
-  // audit trail (0600, `auditFile` — group bits zero PRECISELY because the agent is in this
-  // group) stay out of the agent's reach.
-  for (const [name, purpose] of [
-    [user, `instance '${layout.instance}' runs as its own uid`],
-    [
-      layout.identity.agentUser,
-      `an agent turn on instance '${layout.instance}' must run as a uid that is not the daemon's`,
-    ],
-  ] as const) {
-    if (host.users.includes(name)) continue;
-    const shell = host.nologinShell ?? DEFAULT_NOLOGIN_SHELL;
+  if (!host.users.includes(user)) {
     actions.push({
       kind: 'user',
       phase: 'identity',
-      name,
+      name: user,
       group,
-      home: layout.roots.home,
+      // No HOME: the daemon needs none (its unit sets ProtectHome=, and nothing it runs
+      // reads one), and the per-museum agent HOME it used to share is retired (LEAD-1b).
+      home: '/nonexistent',
       shell,
-      // `--no-create-home` on purpose: the agent HOME is created by the tree phase with
-      // MODES.home (2770 setgid, the museum's own group — the shared pair of
-      // `util/shared_tree.ts`), not by useradd with a umask-derived mode and a copy of
-      // /etc/skel dropped into the directory a coding agent works in.
       argv: [
         'useradd',
         '--system',
         '--gid',
         group,
         '--home-dir',
-        layout.roots.home,
+        '/nonexistent',
         '--no-create-home',
         '--shell',
         shell,
         '--comment',
         `Dedalo site builder instance ${layout.instance}`,
-        name,
+        user,
       ],
-      reason: `${purpose}, and '${name}' does not exist yet`,
+      reason: `instance '${layout.instance}' runs as its own uid, and '${user}' does not exist yet`,
     });
   }
 
+  // ONE IDENTITY PER DECLARED SITE (LEAD-1b, identities.ts): its private group, then the
+  // account (primary group = the instance group, so the shared tree is unchanged;
+  // supplementary = its private group; GECOS = the slug it is bound to — the ledger), then
+  // the service user joins the private group (the egress sockets' group). NEVER the retired
+  // per-museum agent: that account is only ever locked.
+  for (const identity of agents.allocation.created) {
+    // A private group that already exists (an apply that died between groupadd and useradd)
+    // was verified and is ADOPTED: `groupadd` on it exits 9 and would wedge every later apply.
+    if (!identity.groupExists) {
+      actions.push({
+        kind: 'group',
+        phase: 'identity',
+        name: identity.name,
+        argv: ['groupadd', '--system', identity.name],
+        reason: `site '${identity.slug}' (s${identity.k}) needs its private group before its identity`,
+      });
+    }
+    actions.push({
+      kind: 'user',
+      phase: 'identity',
+      name: identity.name,
+      group,
+      supplementary: identity.name,
+      home: '/nonexistent',
+      shell,
+      argv: [
+        'useradd',
+        '--system',
+        '--gid',
+        group,
+        '--groups',
+        identity.name,
+        '--home-dir',
+        '/nonexistent',
+        '--no-create-home',
+        '--shell',
+        shell,
+        '--comment',
+        identityGecos(identity.slug),
+        identity.name,
+      ],
+      reason:
+        `every agent run of site '${identity.slug}' runs as its own uid (s${identity.k}` +
+        `${identity.redeclared ? ', a NEW ordinal: the slug was removed once and ordinals are never reused' : ''})`,
+    });
+    actions.push(membership(layout, identity.name));
+  }
+  // A private group an EXISTING identity lacks (created by hand, or half a run ago).
+  for (const name of agents.allocation.missingPrivateGroups) {
+    actions.push({
+      kind: 'group',
+      phase: 'identity',
+      name,
+      argv: ['groupadd', '--system', name],
+      reason: `the identity '${name}' has no private group — its egress sockets would have no group of their own`,
+    });
+    actions.push({
+      kind: 'exec',
+      phase: 'identity',
+      step: 'identity_membership',
+      argv: ['gpasswd', '-a', name, name],
+      reason: `'${name}' must be a member of its own private group`,
+    });
+    actions.push(membership(layout, name));
+  }
+  for (const name of agents.allocation.missingServiceMembership) actions.push(membership(layout, name));
+
   return actions;
+}
+
+/** `gpasswd -a <service user> <private group>`: the daemon may chgrp that site's gate to it. */
+function membership(layout: InstanceLayout, privateGroup: string): ExecAction {
+  return {
+    kind: 'exec',
+    phase: 'identity',
+    step: 'identity_membership',
+    argv: ['gpasswd', '-a', layout.identity.user, privateGroup],
+    reason:
+      `the daemon group-owns this site's egress sockets with '${privateGroup}' (0750/0660), so it must ` +
+      `be a member — and nothing else but the site's own identity may be`,
+  };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -689,11 +1098,14 @@ function treeEntries(layout: InstanceLayout): TreeEntry[] {
   const entries: TreeEntry[] = [
     { path: layout.configDir, modeKey: 'configDir', what: 'the instance config directory' },
     { path: layout.secretsDir, modeKey: 'secretsDir', what: 'the credential directory' },
-    { path: layout.stateDir, modeKey: 'stateDir', what: 'the parent of the three state roots' },
+    { path: layout.stateDir, modeKey: 'stateDir', what: 'the parent of the state roots' },
     { path: layout.roots.workspaces, modeKey: 'workspaces', what: 'the workspaces root' },
-    { path: layout.roots.home, modeKey: 'home', what: 'the agent HOME' },
     { path: layout.roots.audit, modeKey: 'auditDir', what: 'the audit directory' },
     { path: layout.runtimeDir, modeKey: 'runtimeDir', what: 'the runtime directory' },
+    // LEAD-1b: root's agent state root (each site's HOMEs come per identity, below) and the
+    // archive the retired shared HOME and a removed site's state are moved into.
+    { path: layout.agentStateRoot, modeKey: 'agentStateRoot', what: 'the agent state root' },
+    { path: layout.retiredDir, modeKey: 'retired', what: 'the archive of retired agent state' },
   ];
 
   for (const site of layout.sites) {
@@ -723,7 +1135,11 @@ function treeEntries(layout: InstanceLayout): TreeEntry[] {
   // make writable must be a directory this plan creates. It is asserted here rather than in
   // a test because it must hold for EVERY declaration, including the one a museum writes
   // tomorrow with a root override nobody anticipated.
-  const planned = new Set(entries.map(entry => entry.path));
+  // The one exception is root's: a path systemd-tmpfiles creates from the rendered agent
+  // tmpfiles.d file (applied by `agent_tmpfiles_create` before the daemon starts, and at every
+  // boot before any service) — the plan must NOT mkdir it, because it is root's and not the
+  // daemon's (layout.ts `tmpfilesWritablePaths`).
+  const planned = new Set([...entries.map(entry => entry.path), ...tmpfilesWritablePaths(layout)]);
   for (const writable of readWritePaths(layout)) {
     if (!planned.has(writable)) {
       throw new Error(
@@ -745,7 +1161,8 @@ function releaseStore(site: SiteLayout): string {
 }
 
 /**
- * THE ROOTS THAT CARRY A MARKER (§5). The three state roots and every webspace: exactly
+ * THE ROOTS THAT CARRY A MARKER (§5). The daemon's state roots (workspaces, audit — the
+ * retired shared agent HOME no longer counts: it is archived, never written) and every webspace: exactly
  * the trees where a mistyped path in a declaration would put this instance on top of
  * somebody else's data, and exactly the trees whose destructive operations (a recursive
  * copy over a served tree, the suite's own `rm -rf`) take a root as an ordinary string.
@@ -759,7 +1176,6 @@ function releaseStore(site: SiteLayout): string {
 export function markedRoots(layout: InstanceLayout): string[] {
   return [
     layout.roots.workspaces,
-    layout.roots.home,
     layout.roots.audit,
     ...layout.sites.map(site => site.webspace),
   ];
@@ -769,7 +1185,34 @@ export function markerPath(root: string): string {
   return join(root, INSTANCE_MARKER);
 }
 
-function treeActions(layout: InstanceLayout, host: HostState): Action[] {
+/**
+ * THE AGENT STATE, per declared site k (LEAD-1b): `<stateRoot>/s<k>` (root 0755), and in it
+ * one HOME per stateful door — the site identity's own, 0700. Created right after the
+ * identity exists (identity phase), before any unit that binds them is written.
+ */
+function agentTreeActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
+  const actions: Action[] = [];
+  for (const site of layout.sites) {
+    const k = agents.allocation.identities.get(site.slug) as number;
+    const identity = agentIdentityName(layout.instance, k);
+    const siteDir = agentStateSiteDir(layout.agentStateRoot, k);
+    const dir = dirAction(layout, host, { path: siteDir, modeKey: 'agentStateSite', what: `site '${site.slug}'s agent state (s${k})` });
+    if (dir) actions.push(dir);
+    for (const door of STATEFUL_DOORS) {
+      const home = agentHomeFor(layout.agentStateRoot, k, door);
+      const action = dirAction(
+        layout,
+        host,
+        { path: home, modeKey: 'agentHome', what: `site '${site.slug}'s ${door} HOME` },
+        identity,
+      );
+      if (action) actions.push(action);
+    }
+  }
+  return actions;
+}
+
+function treeActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
   const actions: Action[] = [];
   const content = markerContent(layout.instance);
   const marked = new Set(markedRoots(layout));
@@ -797,6 +1240,7 @@ function treeActions(layout: InstanceLayout, host: HostState): Action[] {
       if (markerAction) actions.push(markerAction);
     }
   }
+  actions.push(...agentTreeActions(layout, host, agents));
 
   // The audit FILE. Created here and chowned to the service user because §3's pairing —
   // root-owned directory, service-user-owned file — is what makes the trail append-only in
@@ -872,8 +1316,8 @@ function markerActionFor(
 }
 
 
-function dirAction(layout: InstanceLayout, host: HostState, entry: TreeEntry): DirAction | null {
-  const expected = resolveMode(layout, entry.modeKey);
+function dirAction(layout: InstanceLayout, host: HostState, entry: TreeEntry, identity?: string): DirAction | null {
+  const expected = resolveMode(layout, entry.modeKey, identity);
   const observed = host.entries[entry.path];
 
   if (observed && observed.type !== 'dir') {
@@ -1079,14 +1523,208 @@ function secretActions(layout: InstanceLayout, host: HostState): Action[] {
  * Phase 5 — the rendered artifacts, and the one generated file no renderer can produce
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * PHASE 5 — QUIESCE (LEAD-1b, spec §5 steps 4–5). Only while MIGRATING (the retired
+ * per-museum agent still active, or its shared HOME still here) or when a site's identity
+ * changed under it (a re-declared slug, or an env that binds another ordinal). In order:
+ *
+ *   1. the daemon is STOPPED (its runs are bound to it and die with it);
+ *   2. while migrating, every PRE-LEAD-1b transient run of this museum is stopped as root —
+ *      `<prefix><uuid>.service`, started by `systemd-run --uid=<agent>`, NOT bound to the
+ *      daemon and able to outlive it; the glob is exact-length, so it reaches no other
+ *      museum's units;
+ *   3. PROOF: no process of any earlier owner is left (`pgrep -U`, success = exit 1). One that
+ *      is HALTS the apply here, before anything is re-owned — a live writer in a workspace
+ *      root is about to walk is exactly the race this phase exists to close;
+ *   4. each earlier owner's files become the site identity's: `chown -R -h -P --from=<owner>`,
+ *      coreutils' fts walk (FTS_PHYSICAL, relative to directory descriptors, symlinks changed
+ *      and never followed), so a component swapped mid-walk cannot redirect it out of the
+ *      workspace. Only the named earlier owners are touched: root's, the service user's
+ *      (`.builder/`) and the site's own files stay as they are;
+ *   5. the SERVICE USER's entries outside `.builder` are opened to the group, never re-owned
+ *      (`normalise_modes`, `svcModesArgv`): what an agent wrote AS the service user before
+ *      per-site identities (2750 directories, 0640 files, `.git` included) becomes what the
+ *      identity's own UMask=0007 would have made it — directories g+rwx, owner-writable files
+ *      g+rw, read-only ones (git objects) left read-only. Not chown: the daemon writes back
+ *      only inodes it owns (`util/shared_tree.ts` ForeignOwnerError), so re-owning `site.json`
+ *      or `AGENTS.md` to the identity would break every later write of them.
+ *
+ * Idempotent: a second pass finds nothing to re-own and no process to refuse on.
+ */
+function quiesceActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
+  if (agents.normalise.length === 0) return [];
+  const actions: Action[] = [];
+  if (host.unitActive) {
+    actions.push({
+      kind: 'exec',
+      phase: 'quiesce',
+      step: 'daemon_stop',
+      argv: ['systemctl', 'stop', layout.unitName],
+      reason:
+        `the workspaces are re-owned to their sites' identities, and a live agent run must not race ` +
+        `it; the daemon is started again after the rule, the units and the env are in place`,
+    });
+  }
+  if (agents.migrating) {
+    actions.push({
+      kind: 'exec',
+      phase: 'quiesce',
+      step: 'legacy_runs_stop',
+      argv: ['systemctl', 'stop', legacyTransientUnitGlob(layout.agentUnitPrefix)],
+      reason:
+        `a pre-LEAD-1b run (a transient unit of the per-museum agent) is not bound to the daemon and may ` +
+        `outlive it; every one of this museum's is stopped before its workspace is re-owned`,
+    });
+  }
+  const owners = [...new Set(agents.normalise.flatMap(site => site.from))].sort();
+  for (const owner of owners) {
+    actions.push({
+      kind: 'exec',
+      phase: 'quiesce',
+      step: 'quiesce_proof',
+      argv: ['pgrep', '-U', owner],
+      succeedsOn: [1],
+      reason:
+        `no process of '${owner}' may still be running while the files it wrote are re-owned; one that is ` +
+        `halts the apply here, before anything is changed`,
+    });
+  }
+  for (const site of agents.normalise) {
+    const root = join(layout.roots.workspaces, site.slug);
+    for (const owner of site.from) {
+      actions.push({
+        kind: 'exec',
+        phase: 'quiesce',
+        step: 'normalise_ownership',
+        argv: ['chown', '-R', '-h', '-P', `--from=${owner}`, site.name, root],
+        absentOk: root,
+        reason:
+          `site '${site.slug}' now runs as '${site.name}' (s${site.k}); what '${owner}' wrote in its workspace ` +
+          `becomes that identity's, so its runs can keep writing it`,
+      });
+    }
+    for (const argv of svcModesArgvs(root, layout.identity.user)) {
+      actions.push({
+        kind: 'exec',
+        phase: 'quiesce',
+        step: 'normalise_modes',
+        argv,
+        absentOk: root,
+        reason:
+          `what an agent wrote in '${site.slug}' as the service user '${layout.identity.user}' before per-site ` +
+          `identities (2750 directories, 0640 files — .git included) is opened to the group, so '${site.name}' can ` +
+          `commit and edit it; the daemon keeps owning it, and .builder is not entered`,
+      });
+    }
+  }
+  return actions;
+}
+
+/**
+ * THE SERVICE USER'S ENTRIES IN ONE WORKSPACE, OPENED TO THE GROUP — the two argvs, exactly.
+ *
+ * find(1), `-P` (never follows a link, the starting point included: a workspace that is a
+ * link is listed as one and matched by nothing). First the workspace ITSELF (depth 0, a
+ * directory of the service user's → g+rwx). Then everything below it (`-mindepth 1`, `-xdev`),
+ * `.builder` pruned (the daemon's own state stays 0710/0700/0600), and only the service user's
+ * DIRECTORIES (g+rwx) and OWNER-WRITABLE FILES (g+rw): what UMask=0007 makes, where the era's
+ * 0027 made 2750/0640 (a read-only git object stays read-only). Below the root, `-execdir` runs
+ * each chmod from the entry's own directory on its own name, so no intermediate component is
+ * resolved by path (the starting point is kept out of `-execdir`: BSD find runs it from the
+ * caller's directory). The final component is resolved by path once: the walk runs in the
+ * quiesce, with the daemon stopped (its runs with it), the pre-LEAD-1b transient runs stopped
+ * and every earlier owner proved to have no process — no writer is left to swap it.
+ */
+export function svcModesArgvs(root: string, serviceUser: string): string[][] {
+  const user = ['-user', serviceUser];
+  return [
+    ['find', '-P', root, '-maxdepth', '0', ...user, '-type', 'd', '-exec', 'chmod', 'g+rwx', '{}', '+'],
+    [
+      'find', '-P', root, '-mindepth', '1', '-xdev',
+      '-path', join(root, '.builder'), '-prune',
+      '-o', ...user, '-type', 'd', '-execdir', 'chmod', 'g+rwx', '{}', '+',
+      '-o', ...user, '-type', 'f', '-perm', '-u=w', '-execdir', 'chmod', 'g+rw', '{}', '+',
+    ],
+  ];
+}
+
+/**
+ * THE ARTIFACTS — in a deliberate order. The POLKIT RULE first: it enumerates the declared
+ * sites, so writing it first NARROWS the grant before anything of a removed site is touched
+ * (spec §5 "removal order"). Then a removed site's agent units go: sockets disabled (and
+ * stopped), any live run stopped, the files unlinked. Then every other artifact.
+ */
 function artifactActions(
   layout: InstanceLayout,
   manifest: InstanceManifest,
   host: HostState,
+  agents: AgentPlan,
 ): Action[] {
   const actions: Action[] = [];
+  const rendered = renderAll(layout, manifest, agents.facts);
+  const rule = rendered.filter(artifact => artifact.kind === 'agent_authorization');
+  const rest = rendered.filter(artifact => artifact.kind !== 'agent_authorization');
+  actions.push(...artifactFileActions(layout, host, rule));
+  actions.push(...removedSiteUnitActions(layout, host, agents));
+  actions.push(...artifactFileActions(layout, host, rest));
+  return actions;
+}
 
-  for (const rendered of renderAll(layout, manifest)) {
+/**
+ * THE LIVE RUNS OF SITE k, AS ROOT'S `systemctl stop` GLOBS — one per door, the literal
+ * `<prefix>s<k>-<door>@` before the `*`. Anchored by construction: an instance name holds no
+ * `@`, so no other museum's unit (whose prefix may EXTEND this one — `ab` and `ab-agent-s2`)
+ * can put `@` where this pattern has it. Never `<prefix>s<k>-*`: that `*` spans into
+ * `ab-agent-s2`'s `…-agent-s1-turn@…` (`fleet.ts` states why the rule's regexes are safe; a
+ * glob is not a regex and needs its own reason).
+ */
+export function agentRunGlobs(prefix: string, k: number): string[] {
+  return DOORS.map(door => `${agentUnitNames(prefix, k, door).instanceStem}*.service`);
+}
+
+/** A removed site's sockets disabled, its runs stopped, its unit files unlinked. */
+function removedSiteUnitActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
+  const actions: Action[] = [];
+  const unitDir = dirname(layout.unitPath);
+  const enabled = host.enabledSockets;
+  for (const removed of agents.allocation.removed) {
+    const sockets = DOORS.map(door => agentUnitNames(layout.agentUnitPrefix, removed.k, door).socket);
+    const disable = enabled === undefined ? sockets : sockets.filter(socket => enabled.includes(socket));
+    if (disable.length > 0) {
+      actions.push({
+        kind: 'exec',
+        phase: 'artifact',
+        step: 'agent_sockets_disable',
+        argv: ['systemctl', 'disable', '--now', ...disable],
+        reason: `site '${removed.slug}' (s${removed.k}) is no longer declared: its doors stop accepting runs`,
+      });
+    }
+    actions.push({
+      kind: 'exec',
+      phase: 'artifact',
+      step: 'agent_runs_stop',
+      argv: ['systemctl', 'stop', ...agentRunGlobs(layout.agentUnitPrefix, removed.k)],
+      reason: `a run of the removed site '${removed.slug}' still alive is stopped before its units go`,
+    });
+    for (const door of DOORS) {
+      const names = agentUnitNames(layout.agentUnitPrefix, removed.k, door);
+      for (const name of [names.socket, names.target, names.template]) {
+        actions.push({
+          kind: 'unlink',
+          phase: 'artifact',
+          path: join(unitDir, name),
+          reason: `the removed site '${removed.slug}''s agent unit — no run of it may be started again`,
+        });
+      }
+    }
+  }
+  return actions;
+}
+
+function artifactFileActions(layout: InstanceLayout, host: HostState, artifacts: readonly Artifact[]): Action[] {
+  const actions: Action[] = [];
+
+  for (const rendered of artifacts) {
     const observed = host.entries[rendered.path];
     const expected = { mode: rendered.mode, owner: rendered.owner, group: rendered.group };
 
@@ -1302,22 +1940,185 @@ function isNewer(source: PathObservation | undefined, target: PathObservation): 
  * Phase 6 — systemd
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-function serviceActions(layout: InstanceLayout, host: HostState, planned: Action[]): Action[] {
+/**
+ * THE LAST PHASE — RETIRE (LEAD-1b, spec §5 steps 9–10, and site removal), planned after the
+ * daemon is started and the web server reloaded, so a failure here halts only itself: the
+ * spec put it before the start, and an archive rename that could not happen (EXDEV — a
+ * `roots.home` declared on another volume) then left the museum's daemon stopped, and every
+ * re-run stopped it again. Identities that no
+ * longer have a declared site are LOCKED (`usermod --lock --expiredate 1`, never `userdel`:
+ * their uid still owns bytes, and a freed uid is inherited by the next account); so is the
+ * retired per-museum agent. The retired shared HOME and a removed site's agent state are
+ * ARCHIVED (renamed into `retiredDir`) — never copied into any new HOME: the shared HOME was
+ * the cross-site plant channel.
+ */
+function retireActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
+  const actions: Action[] = [];
+  for (const removed of agents.allocation.removed) {
+    actions.push(lock(removed.name, `site '${removed.slug}' (s${removed.k}) is no longer declared; its ordinal is never reused`));
+  }
+  if (agents.allocation.legacyActive) {
+    actions.push(
+      lock(
+        layout.identity.agentUser,
+        `the per-museum agent user is retired: every agent run is now its site's own identity`,
+      ),
+    );
+  }
+  const legacyHome = host.entries[layout.roots.home];
+  if (legacyHome) {
+    const claim = host.entries[markerPath(layout.roots.home)]?.content?.trim();
+    if (claim !== undefined && claim !== layout.instance) {
+      throw new Error(
+        `plan(${layout.instance}): the retired agent HOME '${layout.roots.home}' declares instance '${claim}', not ` +
+          `'${layout.instance}'. It would be archived by this plan, and archiving another museum's tree is ` +
+          `never this plan's to do. Nothing was planned.`,
+      );
+    }
+    if (legacyHome.type !== 'dir') {
+      throw new Error(
+        `plan(${layout.instance}): the retired agent HOME '${layout.roots.home}' is a ${legacyHome.type}, not a ` +
+          `directory. It is archived by rename, never removed; move it aside by hand. Nothing was planned.`,
+      );
+    }
+    actions.push({
+      kind: 'archive',
+      phase: 'retire',
+      from: layout.roots.home,
+      // BESIDE ITSELF: `roots.home` may be declared on another volume than the state dir, and
+      // a rename across filesystems is EXDEV.
+      to: { beside: true },
+      reason:
+        `the shared agent HOME is retired — archived beside itself, NOT copied into any site's HOME: it ` +
+        `was the one directory every site's runs could plant in for every other site`,
+    });
+  }
+  for (const removed of agents.allocation.removed) {
+    actions.push({
+      kind: 'archive',
+      phase: 'retire',
+      from: agentStateSiteDir(layout.agentStateRoot, removed.k),
+      to: { dir: layout.retiredDir, stem: `s${removed.k}` },
+      reason: `the removed site '${removed.slug}''s agent state (its turn and build HOMEs), kept aside`,
+    });
+  }
+  return actions;
+}
+
+function lock(name: string, why: string): ExecAction {
+  return {
+    kind: 'exec',
+    phase: 'retire',
+    step: 'identity_lock',
+    // `--expiredate` IS the retirement (the ledger reads the shadow expiry, never the lock).
+    argv: ['usermod', '--lock', '--expiredate', String(RETIRED_EXPIRE_DAYS), name],
+    reason: `${why} — retired (locked, expired), never deleted`,
+  };
+}
+
+function serviceActions(layout: InstanceLayout, host: HostState, planned: Action[], agents: AgentPlan): Action[] {
   const actions: Action[] = [];
   const unitWritten = wroteFile(planned, layout.unitPath);
   const envWritten = wroteFile(planned, layout.envFile);
+  const unitDir = dirname(layout.unitPath);
+  const agentUnitChanged = planned.some(
+    action =>
+      (action.kind === 'unlink' && dirname(action.path) === unitDir) ||
+      (action.kind === 'file' &&
+        action.artifactKind === 'agent_units' &&
+        dirname(action.path) === unitDir &&
+        (action.disposition === 'create' || action.disposition === 'rewrite')),
+  );
+  const stopped = planned.some(action => action.kind === 'exec' && action.step === 'daemon_stop');
+  const membershipChanged = planned.some(action => action.kind === 'exec' && action.step === 'identity_membership');
 
   // ONLY WHEN A UNIT ACTUALLY CHANGED. `daemon-reload` re-reads every unit on the host and
   // is not free; issuing it unconditionally would also make every run of this tool look
   // like it did something, which is the property that teaches an operator to stop reading
   // the output.
-  if (unitWritten) {
+  if (unitWritten || agentUnitChanged) {
     actions.push({
       kind: 'exec',
       phase: 'service',
       step: 'daemon_reload',
       argv: ['systemctl', 'daemon-reload'],
-      reason: `'${layout.unitName}' changed on disk and systemd is still holding the old one`,
+      reason: unitWritten
+        ? `'${layout.unitName}' changed on disk and systemd is still holding the old one`
+        : `the agent units changed on disk and systemd is still holding the old ones`,
+    });
+  }
+
+  // THE EGRESS DIRECTORIES, ROOT'S: applied from the rendered tmpfiles.d file when it changed,
+  // or when the host's `/run` does not hold them as declared (a reboot re-creates them; an
+  // apply must not wait for one). Before any socket listens: a proxy door's unit binds its
+  // directory, and a run the daemon opens refuses one that is not root's.
+  const egressDrift = [...agents.allocation.identities.values()].some(k => {
+    const dir = host.entries[egressDirForSite(layout.agentSocketDir, k)];
+    return !dir || dir.type !== 'dir' || dir.owner !== 'root' || dir.group !== identityNameOf(layout, k) || dir.mode !== 0o770;
+  });
+  const egressBase = host.entries[join(layout.agentSocketDir, 'egress')];
+  const baseDrift = !egressBase || egressBase.type !== 'dir' || egressBase.owner !== 'root' || egressBase.group !== 'root' || egressBase.mode !== 0o755;
+  if (wroteFile(planned, layout.agentTmpfilesPath) || egressDrift || baseDrift) {
+    actions.push({
+      kind: 'exec',
+      phase: 'service',
+      step: 'agent_tmpfiles_create',
+      argv: ['systemd-tmpfiles', '--create', layout.agentTmpfilesPath],
+      reason:
+        `each proxy door's egress directory is the source of a bind PID 1 resolves as root, so it is root's ` +
+        `(root:<site group> 0770), created from '${layout.agentTmpfilesPath}' now and at every boot`,
+    });
+  }
+
+  // THE AGENT SOCKETS: every declared (site, door) listens — enabled and started — before
+  // the daemon is started; one whose file was rewritten is restarted so PID 1 re-binds it.
+  const declaredSockets: string[] = [];
+  for (const [, k] of [...agents.allocation.identities.entries()].sort((a, b) => a[1] - b[1])) {
+    for (const door of DOORS) declaredSockets.push(agentUnitNames(layout.agentUnitPrefix, k, door).socket);
+  }
+  const enabled = host.enabledSockets ?? [];
+  const toEnable = declaredSockets.filter(socket => !enabled.includes(socket));
+  if (toEnable.length > 0) {
+    actions.push({
+      kind: 'exec',
+      phase: 'service',
+      step: 'agent_sockets_enable',
+      argv: ['systemctl', 'enable', '--now', ...toEnable],
+      reason: `each declared site's doors must listen — the daemon starts no run, it connects to these`,
+    });
+  }
+  const rewrittenSockets = planned
+    .filter(
+      (action): action is FileAction =>
+        action.kind === 'file' && action.artifactKind === 'agent_units' && action.disposition === 'rewrite',
+    )
+    .map(action => basename(action.path))
+    .filter(name => name.endsWith('.socket') && enabled.includes(name));
+  if (rewrittenSockets.length > 0) {
+    actions.push({
+      kind: 'exec',
+      phase: 'service',
+      step: 'agent_sockets_restart',
+      argv: ['systemctl', 'restart', ...rewrittenSockets],
+      reason: `a socket's file changed and PID 1 re-binds a listening socket only when it is restarted`,
+    });
+  }
+  // ENABLED IS NOT LISTENING: a socket that hit its trigger limit is FAILED and stays so, and
+  // one stopped by hand stays stopped — `is-enabled` says yes to both, and every run of that
+  // door would be refused until someone noticed. Started here (neither enabled just now, which
+  // `--now` started, nor restarted above).
+  const active = host.activeSockets;
+  const toStart =
+    active === undefined
+      ? []
+      : declaredSockets.filter(socket => enabled.includes(socket) && !active.includes(socket) && !rewrittenSockets.includes(socket));
+  if (toStart.length > 0) {
+    actions.push({
+      kind: 'exec',
+      phase: 'service',
+      step: 'agent_sockets_start',
+      argv: ['systemctl', 'start', ...toStart],
+      reason: `these doors are enabled but not listening (failed on the trigger limit, or stopped): no run reaches them`,
     });
   }
 
@@ -1331,15 +2132,15 @@ function serviceActions(layout: InstanceLayout, host: HostState, planned: Action
     });
   }
 
-  if (!host.unitActive) {
+  if (!host.unitActive || stopped) {
     actions.push({
       kind: 'exec',
       phase: 'service',
       step: 'unit_start',
       argv: ['systemctl', 'start', layout.unitName],
-      reason: `'${layout.unitName}' is not running`,
+      reason: stopped ? `the daemon was stopped for the identity migration above` : `'${layout.unitName}' is not running`,
     });
-  } else if (unitWritten || envWritten) {
+  } else if (unitWritten || envWritten || membershipChanged) {
     // The daemon parses its whole environment ONCE, at import (`src/config.ts`), so a
     // rewritten env reaches a running process only through a restart. Stated as its own
     // action, with its own reason, because restarting a museum's daemon interrupts whatever
@@ -1351,7 +2152,9 @@ function serviceActions(layout: InstanceLayout, host: HostState, planned: Action
       argv: ['systemctl', 'restart', layout.unitName],
       reason: unitWritten
         ? `the unit changed and the running daemon is still the old one`
-        : `the rendered env changed and the daemon reads it once, at start`,
+        : envWritten
+          ? `the rendered env changed and the daemon reads it once, at start`
+          : `the daemon joined a site's private group, and a process's groups are read once, at start`,
     });
   }
 
@@ -1536,6 +2339,10 @@ export function describe(action: Action): string {
       );
     case 'exec':
       return `exec    ${action.argv.join(' ')} — ${action.reason}`;
+    case 'archive':
+      return `archive ${action.from} -> ${'beside' in action.to ? `${action.from}.retired-<utc>` : `${action.to.dir}/${action.to.stem}.<utc>`} — ${action.reason}`;
+    case 'unlink':
+      return `unlink  ${action.path} — ${action.reason}`;
     default: {
       // Exhaustiveness as a compile error: a seventh kind must be described in the same
       // commit that adds it, not fall through to something an operator cannot read.
@@ -1633,6 +2440,60 @@ export function assertPlanIsCoherent(actions: readonly Action[], layout: Instanc
     }
   });
 
+  // 2b. A SITE IDENTITY'S PRIVATE GROUP EXISTS BEFORE IT: `useradd --groups` fails on a
+  //     group that does not exist yet.
+  actions.forEach((action, index) => {
+    if (action.kind !== 'user' || !action.supplementary) return;
+    const created = groupsCreatedBy.get(action.supplementary);
+    if (created !== undefined && created > index) {
+      throw new Error(
+        `${who}: user '${action.name}' is created before its private group '${action.supplementary}'. ` +
+          `Nothing was planned.`,
+      );
+    }
+  });
+
+  // 2c. ONLY GENERATED AGENT UNIT FILES MAY BE UNLINKED, and never before the rule that named
+  //     their site is rewritten in this same plan (the narrowing comes first — spec §5).
+  const unitDir = dirname(layout.unitPath);
+  const agentUnitFile = new RegExp(
+    `^${layout.agentUnitPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s[1-9][0-9]{0,2}-(turn|build|git)(\\.socket|\\.target|@\\.service)$`,
+  );
+  const ruleAt = actions.findIndex(action => action.kind === 'file' && action.artifactKind === 'agent_authorization');
+  actions.forEach((action, index) => {
+    if (action.kind !== 'unlink') return;
+    if (dirname(action.path) !== unitDir || !agentUnitFile.test(basename(action.path))) {
+      throw new Error(
+        `${who}: '${action.path}' would be unlinked, and it is not a generated agent unit of this instance. ` +
+          `A provisioning plan removes nothing else. Nothing was planned.`,
+      );
+    }
+    // No rule action at all means the host already holds the rule this plan renders — which
+    // enumerates only DECLARED sites, so it is already narrowed.
+    if (ruleAt !== -1 && ruleAt > index) {
+      throw new Error(
+        `${who}: the agent unit '${action.path}' would be removed before the polkit rule stopped naming ` +
+          `its site. The rule is narrowed FIRST. Nothing was planned.`,
+      );
+    }
+  });
+  for (const action of actions) {
+    if (action.kind !== 'archive') continue;
+    const home = action.from === layout.roots.home && 'beside' in action.to;
+    const siteState =
+      dirname(action.from) === layout.agentStateRoot &&
+      /^s[1-9][0-9]{0,2}$/.test(basename(action.from)) &&
+      'dir' in action.to &&
+      action.to.dir === layout.retiredDir;
+    if (!home && !siteState) {
+      throw new Error(
+        `${who}: '${action.from}' would be archived to ${JSON.stringify(action.to)}. Only the retired shared agent ` +
+          `HOME (beside itself) and a removed site's agent state (into '${layout.retiredDir}') are archived by a ` +
+          `plan. Nothing was planned.`,
+      );
+    }
+  }
+
   // 3. NOTHING DELETES. Not a user, not a group, not a path. A uid freed by a deletion is a
   //    uid the next instance can be handed, and it inherits every file the first one left
   //    behind; a museum's published site must never disappear because a declaration was
@@ -1715,11 +2576,16 @@ export function assertPlanIsCoherent(actions: readonly Action[], layout: Instanc
 function resolveMode(
   layout: InstanceLayout,
   key: ModeKey,
+  /** The site identity, for the one row a SITE owns (`agentHome`). */
+  identity?: string,
 ): { mode: number; owner: string; group: string; modeKey: ModeKey } {
   const row = MODES[key];
+  if (row.owner === 'identity' && !identity) {
+    throw new Error(`plan(${layout.instance}): the MODES row '${key}' is owned by a site identity, and none was named.`);
+  }
   return {
     mode: row.mode,
-    owner: row.owner === 'root' ? 'root' : layout.identity.user,
+    owner: row.owner === 'root' ? 'root' : row.owner === 'identity' ? (identity as string) : layout.identity.user,
     group: row.group === 'root' ? 'root' : layout.identity[row.group],
     modeKey: key,
   };

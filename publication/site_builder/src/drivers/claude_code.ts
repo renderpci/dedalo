@@ -28,7 +28,7 @@
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../config';
-import { relativeUnderRoot, writeFileAgentReadable } from '../util/shared_tree';
+import { relativeUnderRoot, restateDaemonStateDir, writeFileAgentReadable } from '../util/shared_tree';
 import { runBinary } from '../util/spawn';
 import { spawnAgentProcess } from './process';
 import type {
@@ -84,9 +84,15 @@ export async function writeMcpConfig(opts: SessionStartOptions): Promise<string>
   // in a file of the agent's choosing, outliving the turn (the cleanup unlinks the LINK).
   // `SITES_ROOT` is the trusted prefix; everything below it, the workspace directory
   // included, is walked `O_NOFOLLOW`.
+  //
+  // AND THE TURN CAN OPEN IT. A confined turn is the SITE's identity, not the daemon: it reaches
+  // `mcp.json` through `.builder`'s group `x` (0710, `DAEMON_STATE_DIR_MODE`), restated here for
+  // a `.builder` made before that mode existed (0700 — EACCES on `--mcp-config` for every turn).
+  const workspace = relativeUnderRoot(config.SITES_ROOT, opts.workspace);
+  await restateDaemonStateDir(config.SITES_ROOT, join(workspace, '.builder'));
   return writeFileAgentReadable(
     config.SITES_ROOT,
-    join(relativeUnderRoot(config.SITES_ROOT, opts.workspace), '.builder', 'mcp.json'),
+    join(workspace, '.builder', 'mcp.json'),
     JSON.stringify({ mcpServers: { [opts.mcp.name]: server } }, null, 2),
   );
 }

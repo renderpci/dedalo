@@ -108,6 +108,47 @@ export class ConfinementUnavailableError extends ApiError {
   }
 }
 
+/**
+ * A CONFINED RUN WAS REFUSED FOR A NAMED, SITE-LEVEL REASON (LEAD-1b) — 503, like
+ * `ConfinementUnavailableError`, and for the same reason: nothing is wrong with the request,
+ * and the one wrong answer is running the agent anyway. Each code is its own `reason`
+ * (`confinement.<code>`) so the engine can tell "try again in a moment" from "an operator must
+ * act":
+ *
+ *   - `site_busy` — a second run on a site while one is live (a daemon bug: every run holds the
+ *     site's reservation). Nothing was opened.
+ *   - `identity_missing` — the site has no agent identity (AGENT_IDENTITIES): run
+ *     `provision apply`. There is no fallback uid.
+ *   - `identity_quarantined` — a run of this site's identity is still alive according to PID 1
+ *     and would not stop; nothing more is started on it until PID 1 reports it dead.
+ *   - `unit_refused` — the site's unit never said hello (it failed to start, or PID 1 dropped
+ *     the connection); the refusal carries PID 1's own diagnosis.
+ *   - `unit_nonconformant` — what PID 1 LOADED for the unit is not what this daemon expects,
+ *     named by property (a unit file silently ignores keys its systemd does not know).
+ *   - `daemon_stopping` — the daemon is shutting down; nothing is opened, because a connect
+ *     would start a unit whose start cancels the daemon's own stop. Retry after the restart.
+ */
+export type ConfinementCode =
+  | 'site_busy'
+  | 'identity_missing'
+  | 'identity_quarantined'
+  | 'unit_refused'
+  | 'unit_nonconformant'
+  /** The daemon is shutting down: a connect would start a unit, and that start would cancel the daemon's stop. */
+  | 'daemon_stopping';
+
+export class ConfinementRefusedError extends ApiError {
+  constructor(
+    public readonly code: ConfinementCode,
+    detail: string,
+  ) {
+    super(503, `${PROBLEM_TYPE_BASE}confinement-${code.replace(/_/g, '-')}`, 'Agent Run Refused', detail, {
+      reason: `confinement.${code}`,
+    });
+    this.name = 'ConfinementRefusedError';
+  }
+}
+
 // Our fault, not the caller's. Only echoes the underlying message in development —
 // in production the detail is a fixed string so an agent CLI's stderr or a stack trace
 // never becomes part of a response the engine relays to a browser.

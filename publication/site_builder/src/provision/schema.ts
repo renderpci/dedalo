@@ -390,6 +390,7 @@ const limitsSchema = z
     session_turn_timeout_ms: z.number().int().min(1000).optional(),
     install_timeout_ms: z.number().int().min(1000).optional(),
     build_timeout_ms: z.number().int().min(1000).optional(),
+    git_timeout_ms: z.number().int().min(1000).optional(),
     site_disk_quota_mb: z.number().int().min(1).optional(),
     releases_retained: z.number().int().min(1).optional(),
   })
@@ -454,6 +455,8 @@ const pathsSchema = z.strictObject({
    * otherwise be the one host this provisioner writes outside the tree it was pointed at.
    */
   polkit_rules_dir: absolutePathSchema('paths.polkit_rules_dir').optional(),
+  /** Where systemd-tmpfiles reads its configuration (`/etc/tmpfiles.d`); stated for the same reason. */
+  tmpfiles_dir: absolutePathSchema('paths.tmpfiles_dir').optional(),
 });
 
 /**

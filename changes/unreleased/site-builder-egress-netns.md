@@ -4,7 +4,7 @@ type: security
 audience: admin
 date: 2026-09-30
 ---
-A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its own per-run socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another run's socket directory: only its own is mounted, and each run has its own process namespace, so a concurrent run of the same museum cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
+A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its site's socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another site's socket directory: only its own site's is mounted, and runs of different sites run as different users, so a concurrent run cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
 
 The hostnames are:
 
@@ -24,11 +24,11 @@ What changes for an operator:
 - A run may hold at most 128 connections through the daemon at once. One more is refused, with a line in the log.
 - An opencode turn installs its provider's package from `registry.npmjs.org` on first use. Name that host in `agent.provider_hosts` too.
 - The daemon refuses to start any confined run (503, naming the cause) when:
-  - the host's systemd is older than 257, or its version cannot be read (Debian 13 ships 257);
-  - its socket (`LISTEN_SOCKET`) is not under `/run`;
+  - the host's systemd is older than 248, or its version cannot be read;
+  - its socket (`LISTEN_SOCKET`) or the agent socket directory is not under `/run`;
   - it cannot read its own network namespace;
-  - `AGENT_USER` is not a user on the host;
-  - the site builder or its bun can be changed by the agent user, or cannot be read or run by it (a directory above them that the agent user owns counts as one it can change, whatever its permissions);
+  - the site has no agent user of its own on the host (see the entry on per-site agent users);
+  - the site builder or its bun can be changed by any site's agent user, or cannot be read or run by it (a directory above them that such a user owns counts as one it can change, whatever its permissions);
   - the site builder or its bun lives under `/home`, `/root`, `/run`, `/tmp` or `/var/tmp`.
 - A site builder and bun owned by the engine's own user, as the documented install lays them out, are accepted.
 

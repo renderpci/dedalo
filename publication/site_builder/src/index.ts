@@ -8,47 +8,22 @@
  * a bare 500, request logging, and a shutdown that actually lets in-flight agent turns and
  * SSE streams settle.
  *
- * THE PREFLIGHT IS THE FIRST STATEMENT IN THIS FILE, and that placement is the whole point:
- * `sweepOnBoot()` below WRITES — it commits recovered work and rewrites session metadata at
- * module evaluation. A check that runs after it has already let a daemon pointed at the
- * wrong tree touch that tree. See src/instance/roots.ts.
+ * THE BOOT RUNS THROUGH ONE ORDER (`src/boot.ts`): the preflight first — `sweepOnBoot()`
+ * WRITES (it commits recovered work and rewrites session metadata), and a check that ran
+ * after it would already have let a daemon pointed at the wrong tree touch that tree (see
+ * src/instance/roots.ts) — then the reconciliation of the agent units with PID 1 (LEAD-1b:
+ * a run a killed daemon left alive quarantines its site's identity before anything runs
+ * git as it), then the sweep, then listen.
  */
 
 import { chmodSync, existsSync, unlinkSync } from 'node:fs';
+import { bootSequence, daemonBootSteps, daemonShutdownSteps, shutdownSequence } from './boot';
 import { config } from './config';
+import { policyFromConfig } from './drivers/confinement';
 import { bootPreflight } from './instance/roots';
 import { routeRequest } from './router';
 import { problem } from './util/response';
 import { interruptLiveTurns, sweepOnBoot } from './sessions/manager';
-
-// PROVE WHO WE ARE BEFORE WRITING ANYTHING. Synchronous, and above every await below.
-//
-// The refusal is printed as one line and the process exits 1 — the same shape as an invalid
-// configuration (src/config.ts). An uncaught throw would work too, but what systemd's
-// journal would then hold is a stack trace with the sentence an operator needs buried in the
-// middle of it; these messages are written to be read by the person who has to fix the host.
-try {
-  bootPreflight();
-} catch (error) {
-  console.error(`[preflight] ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
-}
-
-// Reconcile sessions left 'running' by a previous process (a crash or a restart): mark them
-// interrupted and commit any uncommitted work as a recovery point. Runs before the first
-// request so a reconnecting client sees honest state.
-await sweepOnBoot().catch(error => console.error('[boot] session sweep failed:', error));
-
-/**
- * WHERE THIS DAEMON LISTENS.
- *
- * A unix socket by default, because that is what the provisioner renders and what the engine
- * is told to dial: the socket is 0660 <service user>:<engine group>, so the engine reaches it
- * by GROUP-OWNING it and no other uid on the host — another museum's service user included —
- * can connect at all. A TCP listener has no such property, so `tcp` is for a laptop, where
- * there is no systemd to own a runtime directory.
- */
-const listenTarget = await resolveListenTarget();
 
 /** Everything about serving that does not depend on WHERE we listen. */
 const serveBehaviour = {
@@ -85,17 +60,56 @@ const serveBehaviour = {
  * two listeners cannot drift.
  */
 type ServeOptions = Parameters<typeof Bun.serve>[0];
-const server =
-  'unix' in listenTarget
-    ? Bun.serve({ ...serveBehaviour, unix: listenTarget.unix } as unknown as ServeOptions)
-    : Bun.serve({ ...serveBehaviour, port: listenTarget.port, hostname: listenTarget.hostname });
+let server: ReturnType<typeof Bun.serve> | null = null;
 
-if (config.LISTEN_KIND === 'unix') {
-  // 0660 EXPLICITLY, not by umask. The unit's UMask=0027 would produce 0640 and the engine
-  // could read but not write; the socket's mode IS the pairing, so it is stated once, here,
-  // immediately after the bind (src/provision/render/unit.ts says so from the other side).
-  chmodSync(config.LISTEN_SOCKET, 0o660);
+/**
+ * WHERE THIS DAEMON LISTENS — the boot's LAST step.
+ *
+ * A unix socket by default, because that is what the provisioner renders and what the engine
+ * is told to dial: the socket is 0660 <service user>:<engine group>, so the engine reaches it
+ * by GROUP-OWNING it and no other uid on the host — another museum's service user included —
+ * can connect at all. A TCP listener has no such property, so `tcp` is for a laptop, where
+ * there is no systemd to own a runtime directory.
+ */
+async function listen(): Promise<void> {
+  const listenTarget = await resolveListenTarget();
+  server =
+    'unix' in listenTarget
+      ? Bun.serve({ ...serveBehaviour, unix: listenTarget.unix } as unknown as ServeOptions)
+      : Bun.serve({ ...serveBehaviour, port: listenTarget.port, hostname: listenTarget.hostname });
+  if (config.LISTEN_KIND === 'unix') {
+    // 0660 EXPLICITLY, not by umask. The unit's UMask=0027 would produce 0640 and the engine
+    // could read but not write; the socket's mode IS the pairing, so it is stated once, here,
+    // immediately after the bind (src/provision/render/unit.ts says so from the other side).
+    chmodSync(config.LISTEN_SOCKET, 0o660);
+  }
 }
+
+// THE BOOT, THROUGH ITS ONE ORDER (src/boot.ts). Nothing is written before the preflight,
+// nothing runs git as a site identity before PID 1 has been asked what is alive, and nothing
+// is served before both.
+await bootSequence(
+  daemonBootSteps({
+    // PROVE WHO WE ARE BEFORE WRITING ANYTHING. The refusal is printed as one line and the
+    // process exits 1 — the same shape as an invalid configuration (src/config.ts): these
+    // messages are written to be read by the person who has to fix the host.
+    preflight: () => {
+      try {
+        bootPreflight();
+      } catch (error) {
+        console.error(`[preflight] ${error instanceof Error ? error.message : String(error)}`);
+        process.exit(1);
+      }
+    },
+    // What PID 1 says is alive — this process remembers nothing of a previous one.
+    policy: policyFromConfig,
+    // Sessions a dead process left 'running' (or whose last commit a shutdown refused):
+    // interrupted, their work committed as a recovery point, before the first request so a
+    // reconnecting client sees honest state.
+    sweepOnBoot,
+    listen,
+  }),
+);
 
 function logRequest(req: Request, res: Response, durationMs: number): void {
   if (config.LOG_LEVEL === 'error' && res.status < 500) return;
@@ -171,10 +185,12 @@ async function socketAcceptsConnections(path: string): Promise<boolean> {
  * request that was still running, mid-turn, with the session left marked 'running' on disk
  * for the next boot's sweep to discover.
  *
- * So: stop accepting, WAIT for the in-flight requests to finish within a grace shorter than
- * the unit's own stop timeout (systemd must never have to SIGKILL us — that is the case where
- * nothing gets marked at all), then mark whatever is still live as INTERRUPTED so the record
- * is honest, remove the socket, and exit.
+ * So, through `src/boot.ts` shutdownSequence: FIRST refuse every new confined run (a
+ * socket-activated agent unit is `BindsTo=` this daemon, and its start would cancel our own
+ * stop job), then stop accepting and WAIT for the in-flight requests to finish within a grace
+ * shorter than the unit's own stop timeout (systemd must never have to SIGKILL us — that is
+ * the case where nothing gets marked at all), then mark whatever is still live as INTERRUPTED
+ * so the record is honest, remove the socket, and exit.
  */
 const SHUTDOWN_GRACE_MS = 25_000; // < the unit's TimeoutStopSec=30
 const DRAIN_POLL_MS = 100;
@@ -186,36 +202,47 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
   console.log(`[shutdown] ${signal}: draining (up to ${SHUTDOWN_GRACE_MS} ms)…`);
 
-  server.stop(false);
-
-  const deadline = Date.now() + SHUTDOWN_GRACE_MS;
-  while (server.pendingRequests > 0 && Date.now() < deadline) {
-    await Bun.sleep(DRAIN_POLL_MS);
-  }
-  if (server.pendingRequests > 0) {
-    console.warn(
-      `[shutdown] ${server.pendingRequests} request(s) still in flight after the grace ` +
-        `period; they are being cut.`,
-    );
-  }
-
-  // Whatever is still running is not going to finish. Say so in the record rather than
-  // leaving it 'running' for the next boot to guess about.
-  const interrupted = await interruptLiveTurns().catch((error: unknown) => {
-    console.error('[shutdown] could not mark live turns interrupted:', error);
-    return 0;
-  });
-  if (interrupted > 0) console.log(`[shutdown] marked ${interrupted} live turn(s) interrupted`);
-
-  if (config.LISTEN_KIND === 'unix' && config.LISTEN_SOCKET && existsSync(config.LISTEN_SOCKET)) {
-    // systemd removes the RuntimeDirectory on stop, but a `bun run` on a laptop has nobody
-    // to do it — and a leftover socket is what the next start has to reason about.
-    try {
-      unlinkSync(config.LISTEN_SOCKET);
-    } catch (error) {
-      console.error('[shutdown] could not remove the socket:', error);
-    }
-  }
+  await shutdownSequence(
+    daemonShutdownSteps({
+      // FIRST, synchronously: no confined run connects from here on (src/boot.ts says why).
+      policy: policyFromConfig,
+      drain: async () => {
+        const live = server;
+        if (!live) return;
+        live.stop(false);
+        const deadline = Date.now() + SHUTDOWN_GRACE_MS;
+        while (live.pendingRequests > 0 && Date.now() < deadline) {
+          await Bun.sleep(DRAIN_POLL_MS);
+        }
+        if (live.pendingRequests > 0) {
+          console.warn(
+            `[shutdown] ${live.pendingRequests} request(s) still in flight after the grace ` +
+              `period; they are being cut.`,
+          );
+        }
+      },
+      // Whatever is still running is not going to finish. Say so in the record rather than
+      // leaving it 'running' for the next boot to guess about.
+      interrupt: async () => {
+        const interrupted = await interruptLiveTurns().catch((error: unknown) => {
+          console.error('[shutdown] could not mark live turns interrupted:', error);
+          return 0;
+        });
+        if (interrupted > 0) console.log(`[shutdown] marked ${interrupted} live turn(s) interrupted`);
+      },
+      cleanup: () => {
+        if (config.LISTEN_KIND === 'unix' && config.LISTEN_SOCKET && existsSync(config.LISTEN_SOCKET)) {
+          // systemd removes the RuntimeDirectory on stop, but a `bun run` on a laptop has nobody
+          // to do it — and a leftover socket is what the next start has to reason about.
+          try {
+            unlinkSync(config.LISTEN_SOCKET);
+          } catch (error) {
+            console.error('[shutdown] could not remove the socket:', error);
+          }
+        }
+      },
+    }),
+  );
 
   console.log('[shutdown] done');
   process.exit(0);

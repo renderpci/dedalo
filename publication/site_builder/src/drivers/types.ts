@@ -64,6 +64,11 @@ export interface McpUpstream {
 export interface SessionStartOptions {
   /** Absolute site workspace directory = the child's cwd. */
   workspace: string;
+  /**
+   * The site. Under `systemd_scope` its identity is the turn's uid and its reservation must be
+   * held (LEAD-1b); the supervisor passes it to the confinement.
+   */
+  slug?: string;
   /** The turn's driver — decides which provider host its egress plan names. */
   driver?: DriverId;
   prompt: string;

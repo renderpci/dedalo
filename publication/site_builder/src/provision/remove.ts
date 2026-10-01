@@ -47,7 +47,10 @@ import { unlinkSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
 import type { AdoptIo } from './adopt';
+import { legacyTransientUnitGlob, parseAgentIdentityName } from '../drivers/agent_identity';
 import { parseStamp } from './hash';
+import { type AgentLedger, RETIRED_EXPIRE_DAYS } from './identities';
+import { agentRunGlobs } from './plan';
 import {
   AUDIT_FILE_NAME,
   SURFACES,
@@ -93,6 +96,12 @@ export interface RemovalHost {
    * declarations apart.
    */
   readonly claims: Readonly<Record<string, string | null>>;
+  /**
+   * The host's site-identity ledger (LEAD-1b, `identities.ts`): every account of this
+   * instance's identity namespace is LOCKED by a decommission — never deleted. Absent = none
+   * known (the retired per-museum agent and the service user are locked regardless).
+   */
+  readonly agentLedger?: AgentLedger;
 }
 
 /**
@@ -213,8 +222,46 @@ export function removalPlan(
   const disableSteps = disabledVhosts(layout, host);
   steps.push(...disableSteps);
 
+  // THE AGENT RULE GOES FIRST (LEAD-1b): the grant that lets the service user stop this
+  // museum's agent runs is withdrawn before any of those units is touched — then every
+  // socket stops accepting, any run still alive is stopped, and only then are the unit files
+  // (and every other artifact) removed.
   const artifactSteps = removableArtifacts(layout, artifacts, host);
-  steps.push(...artifactSteps);
+  const ruleSteps = artifactSteps.filter(step => (step.kind === 'unlink' || step.kind === 'left') && step.path === layout.agentPolicyPath);
+  steps.push(...ruleSteps);
+  const agentSockets = artifacts
+    .filter(artifact => artifact.kind === 'agent_units' && artifact.path.endsWith('.socket'))
+    .map(artifact => basename(artifact.path));
+  if (agentSockets.length > 0) {
+    steps.push({
+      kind: 'exec',
+      what: "stop every site's agent sockets",
+      argv: ['systemctl', 'disable', '--now', ...agentSockets],
+      onFailure: 'tolerate',
+    });
+  }
+  // Every run of every site this removal knows (the ordinals its agent units name), one glob
+  // per (site, door) with the literal `@` — never `<prefix>s*`, whose `*` reaches into a
+  // museum whose name EXTENDS this one's (`ab` / `ab-agent-s2`) — and every pre-LEAD-1b
+  // transient run, by its exact-length name.
+  const ordinals = [
+    ...new Set(
+      artifacts
+        .filter(artifact => artifact.kind === 'agent_units')
+        .map(artifact => basename(artifact.path))
+        .filter(name => name.startsWith(layout.agentUnitPrefix))
+        .map(name => /^s(\d+)-/.exec(name.slice(layout.agentUnitPrefix.length))?.[1])
+        .filter((k): k is string => k !== undefined)
+        .map(Number),
+    ),
+  ].sort((a, b) => a - b);
+  steps.push({
+    kind: 'exec',
+    what: 'stop any agent run still alive',
+    argv: ['systemctl', 'stop', ...ordinals.flatMap(k => agentRunGlobs(layout.agentUnitPrefix, k)), legacyTransientUnitGlob(layout.agentUnitPrefix)],
+    onFailure: 'tolerate',
+  });
+  steps.push(...artifactSteps.filter(step => !ruleSteps.includes(step)));
   const removedAVhost =
     artifactSteps.some(step => step.kind === 'unlink' && step.what.endsWith('_vhost')) ||
     disableSteps.some(step => step.kind === 'unlink');
@@ -261,7 +308,20 @@ export function removalPlan(
     );
   }
   steps.push(archiveOrNote(host, layout.roots.workspaces, at, 'the workspaces root', layout.instance));
-  steps.push(archiveOrNote(host, layout.roots.home, at, "the agent's HOME", layout.instance));
+  // The retired shared HOME, only where an unmigrated host still has one.
+  if (host.present[layout.roots.home]) {
+    steps.push(archiveOrNote(host, layout.roots.home, at, "the retired shared agent HOME", layout.instance));
+  }
+  // The agent state (root's, unmarked — a root this instance never marks): left, and SAID.
+  if (host.present[layout.agentStateRoot]) {
+    steps.push({
+      kind: 'left',
+      path: layout.agentStateRoot,
+      why:
+        "it holds every site identity's HOME (agent transcripts included); it carries no instance marker, so " +
+        'it is not archived automatically — move it aside by hand once the tenancy is over',
+    });
+  }
   steps.push(archiveOrNote(host, layout.auditFile, at, `the audit trail (${AUDIT_FILE_NAME})`, layout.instance, layout.roots.audit));
 
   /* 4b — THE CREDENTIALS, NAMED. Every one of them is still on this host after this run:
@@ -280,12 +340,17 @@ export function removalPlan(
     });
   }
 
-  /* 5 — the identities, kept. Both of them: the daemon's and the agent's. */
-  for (const account of [layout.identity.user, layout.identity.agentUser]) {
+  /* 5 — the identities, kept: the daemon's, the retired per-museum agent's, and every site
+   *     identity the ledger knows for this instance (LEAD-1b). */
+  const siteIdentities = (host.agentLedger?.accounts ?? [])
+    .map(account => account.name)
+    .filter(name => parseAgentIdentityName(name)?.instance === layout.instance)
+    .sort();
+  for (const account of [layout.identity.user, layout.identity.agentUser, ...siteIdentities]) {
     steps.push({
       kind: 'exec',
       what: `lock the account ${account} — it is NOT deleted, and its uid is never reused`,
-      argv: ['usermod', '--lock', account],
+      argv: account === layout.identity.user ? ['usermod', '--lock', account] : ['usermod', '--lock', '--expiredate', String(RETIRED_EXPIRE_DAYS), account],
       // TOLERANT: an account already locked, or one this host never created, is not a reason
       // to report a decommission as failed after every byte has been archived.
       onFailure: 'tolerate',
@@ -665,6 +730,7 @@ export function observeForRemoval(
     ...layout.sites.map(site => site.webspace),
     layout.roots.workspaces,
     layout.roots.home,
+    layout.agentStateRoot,
     layout.auditFile,
     layout.htpasswd,
     ...enabled,

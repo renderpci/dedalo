@@ -1,6 +1,8 @@
 /**
- * WHAT A CONFINED RUN MAY REACH OVER A SOCKET — the ONE producer of every network property a
- * transient unit receives, and of the egress half of its environment (LEAD-1).
+ * WHAT A CONFINED RUN MAY REACH OVER A SOCKET — the ONE producer of every network property an
+ * agent unit receives, and of the egress half of its environment (LEAD-1). Since LEAD-1b the
+ * units are FILES root renders per (site, door) (`provision/render/agent_units.ts`), and this
+ * leaf's list is written into them verbatim.
  *
  * WHAT WAS WRONG. The unit said `IPAddressAllow=any localhost`, then denied loopback and the
  * private ranges, under a header claiming "longest-prefix wins". systemd's IP filter is
@@ -15,9 +17,9 @@
  *     loopback, the host's own address, the LAN, the metadata service, the DNS stub and every
  *     abstract AF_UNIX socket simply do not exist inside it.
  *   - `TemporaryFileSystem=/run:ro`: path sockets ignore network namespaces, so the host's
- *     `/run` (the engine's socket, Postgres, Debian's MariaDB, docker, this daemon and its
- *     per-turn secret files) is masked outright; `ProtectHome=`/`PrivateTmp=` (confinement.ts)
- *     mask `/home` and `/tmp`. The database sockets a distro puts OUTSIDE those — RHEL's
+ *     `/run` (the engine's socket, Postgres, Debian's MariaDB, docker, this daemon, every
+ *     site's agent sockets and every other run's egress gate) is masked outright;
+ *     `ProtectHome=`/`PrivateTmp=` (the unit's hardening) mask `/home` and `/tmp`. The database sockets a distro puts OUTSIDE those — RHEL's
  *     MariaDB default is `/var/lib/mysql/mysql.sock`, mode 0777, in a traversable directory,
  *     and `ProtectSystem=strict` makes it read-only, which does not stop connect(2) — are
  *     hidden by name (`DATABASE_SOCKET_DIRS`, `InaccessiblePaths=`; `-` = absent is fine).
@@ -29,15 +31,14 @@
  *     shared memory, semaphores and message queues (and the POSIX mqueue fs) are keyed per
  *     IPC namespace, so without it two concurrent runs under different agent uids could
  *     rendezvous on a world-readable SysV segment.
- *   - `PrivatePIDs=yes`: a PID namespace per run. Without it, a CONCURRENT run of the same
- *     museum (the same agent uid) is visible in /proc — `ProtectProc=invisible` hides only
- *     other uids — and `/proc/<pid>/root` of any of its processes is its mount view, egress
- *     socket directory included: a build's install script would reach a live turn's `mcp.sock`
- *     (the Publication API with the daemon's key) and `proxy.sock` (the turn's plan), and read
- *     its environment or signal it besides. The per-run bind below is a run's identity ONLY
- *     because of this namespace. It needs systemd 257; `confinement.ts` refuses an older host
- *     up front (SYSTEMD_SINCE), so the property is never rendered to a systemd that would
- *     reject it at spawn. Inside, the shim is PID 1 (`egress_shim.ts`).
+ *   - `PrivatePIDs=yes` — an EXTRA layer, rendered only where PID 1 is 257 or newer
+ *     (`unit_properties.ts` EXTRA). What keeps two concurrent runs from reaching each other
+ *     through /proc is the UID: every site has its own agent identity (LEAD-1b), so a live run
+ *     of another site is another uid — `ProtectProc=invisible` hides its /proc entry and
+ *     `ptrace_may_access` refuses its `/proc/<pid>/root` and environ — and a site's own runs
+ *     never overlap at all (PID 1 serializes them: MaxConnections=1 per door, Conflicts= across
+ *     doors). On 255 (Ubuntu 24.04, Debian 12) the unit therefore renders without it, which is
+ *     the accepted posture; on 257 it is added on top.
  *   - A door that needs the outside gets exactly ONE thing back: its own per-run directory,
  *     bound at `/run/dedalo-egress`, holding the unix sockets of the daemon's egress gate
  *     (`src/egress/gate.ts`) — a CONNECT proxy that speaks HOSTNAMES on this run's plan only,
@@ -103,10 +104,11 @@ export const MCP_SOCKET = 'mcp.sock';
 export const WORKDIR_ENV = 'DEDALO_UNIT_WORKDIR';
 
 /**
- * The key the confinement states the DAEMON's network namespace identity in (`net:[inode]`,
- * Linux). The shim refuses to run anything while it is still in that namespace.
+ * The key the unit states the run's DOOR in (rendered `Environment=`): the shim refuses a
+ * spec for any other door. (The daemon's network namespace identity, which the shim refuses
+ * to run anything inside, travels in the spec frame — `unit_frames.ts` hostNetns.)
  */
-export const HOST_NETNS_ENV = 'DEDALO_HOST_NETNS';
+export const DOOR_ENV = 'DEDALO_DOOR';
 
 /** The only port the gate tunnels to. */
 export const EGRESS_PORT = 443;
@@ -270,15 +272,21 @@ function assertBindablePath(path: string): void {
  * THE UNIT'S NETWORK PROPERTIES, for one door — `K=V` strings, rendered by confinement.ts as
  * `--property=K=V`. The complete list: no other network property is rendered anywhere.
  */
-export function unitNetworkProperties(door: ConfinementDoor, opts: { egressDir?: string }): string[] {
+export function unitNetworkProperties(
+  door: ConfinementDoor,
+  opts: { egressDir?: string; pidNamespace: boolean },
+): string[] {
   const profile = DOOR_PROFILE[door];
   if (!profile) throw new Error(`network_profile: unknown door '${String(door)}'`);
+  if (typeof opts?.pidNamespace !== 'boolean') {
+    throw new Error(`network_profile: whether PID 1 renders a PID namespace must be STATED (pidNamespace), never defaulted`);
+  }
   const props = [
     'PrivateNetwork=yes',
     'PrivateIPC=yes',
-    // A concurrent run's processes do not exist in here, so neither does /proc/<pid>/root
-    // into its mount view — the only route to its egress sockets once `/run` is masked.
-    'PrivatePIDs=yes',
+    // EXTRA, not required (see the header): the per-site uid is what hides another site's
+    // live run; this adds a namespace on top where PID 1 knows the key.
+    ...(opts.pidNamespace ? ['PrivatePIDs=yes'] : []),
     'TemporaryFileSystem=/run:ro',
     // PrivateDevices= (confinement.ts) binds the HOST's /dev/shm back into its private /dev:
     // a world-writable tmpfs every unit and the host share, where a path socket or a 0666 file
@@ -296,7 +304,9 @@ export function unitNetworkProperties(door: ConfinementDoor, opts: { egressDir?:
     props.push(
       // Inside the namespace, `localhost` is the unit's OWN lo — the shim's forwards.
       'IPAddressAllow=localhost',
-      `BindPaths=${opts.egressDir}:${EGRESS_MOUNT}`,
+      // READ-ONLY: connect(2) to a unix socket needs no writable mount, so the site's own run
+      // cannot plant in the directory its gate serves from. The source is root's (provisioned).
+      `BindReadOnlyPaths=${opts.egressDir}:${EGRESS_MOUNT}`,
       // AF_NETLINK so the shim can enumerate its interfaces (getifaddrs is a netlink query)
       // — inside a private namespace it sees only that namespace's own links.
       'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK',
@@ -350,19 +360,17 @@ export function childEgressEnv(door: ConfinementDoor, driver?: string): Record<s
   return env;
 }
 
-/** A transient unit's name ends in its v4 uuid — the per-run directory is named by it alone. */
-const UNIT_UUID = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.service$/;
-
 /**
- * THE PER-RUN SOCKET DIRECTORY: `<runtime>/egress/<uuid>`.
+ * THE PER-SITE SOCKET DIRECTORY: `<agentSocketDir>/egress/s<k>`.
  *
- * Named by the uuid ONLY, never by the whole unit name: a unix socket path is at most 107
- * bytes on Linux, and `<runtime>/egress/<prefix><uuid>.service/proxy.sock` overflows it on
- * every instance name (the tripwire measures the longest legal one). Never the runtime root
- * (the daemon's own socket) and never `turns/` (the per-run 0600 secret files).
+ * One per SITE identity, not per run: a site's runs never overlap (PID 1 serializes them). It
+ * is ROOT's — provisioned (a tmpfiles.d line), root:<site's PRIVATE group> 0770 under a root
+ * 0755 `egress/` — because it is the source of the unit's bind, which PID 1 resolves as root:
+ * a directory the daemon's uid could rename is one it could re-point. The daemon writes its
+ * sockets into it by group membership (0660, `src/egress/gate.ts`), the DAC layer under the
+ * `/run` mask, and refuses to open a gate on anything else (`provisionedDirProblem`).
  */
-export function egressDirFor(runtimeDir: string, unitName: string): string {
-  const match = UNIT_UUID.exec(unitName);
-  if (!match) throw new Error(`network_profile: '${unitName}' is not a <prefix><uuid>.service unit name`);
-  return join(runtimeDir, 'egress', match[1] as string);
+export function egressDirFor(agentSocketDir: string, k: number): string {
+  if (!Number.isInteger(k) || k < 1 || k > 999) throw new Error(`network_profile: ${String(k)} is not a site ordinal`);
+  return join(agentSocketDir, 'egress', `s${k}`);
 }

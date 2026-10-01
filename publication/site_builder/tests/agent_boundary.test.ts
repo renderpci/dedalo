@@ -5,11 +5,13 @@
  * workspace, and the daemon commits whatever it wrote. Two properties keep that from being
  * a hole, and both were stated in prose and enforced by nothing:
  *
- *   1. THE AGENT'S HOME IS THE AGENT'S OWN ROOT, never the workspaces root. Three call
- *      sites construct a child environment (the session manager, git, the build runner) and
- *      all three say so in a comment. A HOME inside the tree an agent turn writes to is a
- *      site able to rewrite the agent's own configuration — its credentials file, its MCP
- *      servers — for every later turn on every OTHER site of the museum.
+ *   1. THE AGENT'S HOME IS NOT THE CALLER'S TO CHOOSE (LEAD-1b). It used to be one root
+ *      every call site set (`HOME: config.AGENT_HOME`) and this file held that spelling.
+ *      Now the UNIT fixes it — each (site, door) its own directory, the site identity's,
+ *      masked from every other run — no caller passes one, and the shim refuses a spec that
+ *      tries. That is held BEHAVIOURALLY, on the spec frames the three real call sites send,
+ *      by `lead1b_c4_daemon.test.ts` (G13); the spelling gate that stood here was deleted
+ *      with the key.
  *   2. THE PUBLICATION API KEY IS NEVER COMMITTED. The per-turn MCP config carries it as a
  *      request header, in cleartext, inside `.builder/` in the site's git repo — and the
  *      daemon runs `git add -A` after every turn. A museum's key was entering the history
@@ -23,11 +25,8 @@
  * whose scoping it proves) — which the seam tripwire forbids to a file exempted for
  * QUOTING root-key identifiers, as this one is.
  *
- * The first is a SOURCE assertion, and deliberately: the three environments are built by
- * module-private functions inside detached pipelines, so the honest way to hold them is to
- * read what they construct — the same shape as the boot-ordering gate in
- * tests/instance_roots.test.ts. The second is behavioural: it runs a real commit through
- * the real git and reads the index back.
+ * The second is behavioural: it runs a real commit through the real git and reads the index
+ * back.
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
@@ -40,66 +39,9 @@ import { commitAll } from '../src/sites/git';
 import { runConfined } from '../src/drivers/confinement';
 
 const ACTOR = { user_id: 11, username: 'boundary-tester' };
-const SRC = join(import.meta.dir, '..', 'src');
 
 beforeEach(resetInstance);
 afterEach(resetInstance);
-
-/* ────────────────────────────────────────────────────────────────────────────────────
- * 1. HOME
- * ──────────────────────────────────────────────────────────────────────────────────── */
-
-describe("every child environment's HOME is the agent's own root", () => {
-  /**
-   * The three files that construct a child environment. Named individually rather than
-   * discovered, so a call site that MOVES has to be re-registered here: a census that
-   * silently shrinks is the failure mode of every source-reading gate.
-   */
-  const CALL_SITES = [
-    'sessions/manager.ts', // the agent turn itself
-    'sites/git.ts', // git, which reads ~/.gitconfig
-    'build/builder.ts', // install + build steps, whose package managers write caches
-  ] as const;
-
-  /** Source with comments stripped: the prose EXPLAINS the rule and would satisfy a grep. */
-  function code(file: string): string {
-    return readFileSync(join(SRC, file), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/^\s*\/\/.*$/gm, '');
-  }
-
-  test.each([...CALL_SITES])('%s sets HOME from config.AGENT_HOME and from nothing else', file => {
-    // The value is everything up to the separator that ends it — a comma, a newline, or the
-    // closing brace of a one-line object literal (which is how the build runner writes it).
-    const assignments = [...code(file).matchAll(/HOME:\s*([^,\n}]+)/g)].map(m => m[1]!.trim());
-    // At least one — a call site that stopped setting HOME would inherit the daemon's,
-    // which on a provisioned host is the service user's real home directory.
-    expect(assignments.length).toBeGreaterThan(0);
-    for (const value of assignments) {
-      expect({ file, value }).toEqual({ file, value: 'config.AGENT_HOME' });
-    }
-  });
-
-  test('no child environment names the WORKSPACES root as a home', () => {
-    // The specific mistake this gate exists for: `HOME: config.SITES_ROOT` reads plausibly
-    // (it is a root the daemon owns) and hands every agent turn a home inside the tree it
-    // is editing.
-    for (const file of CALL_SITES) {
-      expect({ file, sitesRootAsHome: /HOME:\s*config\.SITES_ROOT/.test(code(file)) }).toEqual({
-        file,
-        sitesRootAsHome: false,
-      });
-    }
-  });
-
-  test('AGENT_HOME is a root of its own, and the preflight holds it', () => {
-    // The gate above is about the three call sites; this is the other half — the root they
-    // name is one the daemon proves at boot (marker + write probe), so "the agent's own
-    // root" is a directory that exists and is ours rather than a string.
-    const roots = code('instance/roots.ts');
-    expect(roots).toContain("label: 'AGENT_HOME'");
-  });
-});
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * 2. The Publication API key
@@ -113,7 +55,7 @@ describe('the daemon never commits its own state into a site it publishes', () =
       door: 'git',
       argv: ['git', ...args],
       cwd: workspacePath(slug),
-      env: { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: workspacePath(slug) },
+      env: { PATH: process.env.PATH ?? '/usr/bin:/bin' },
       timeoutMs: 30_000,
     });
     return result.stdout;

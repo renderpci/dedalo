@@ -24,15 +24,15 @@
  *   §2 THE UNIT. The three directives that are about the agent rather than the daemon
  *      (`ProtectProc=invisible`, `RestrictSUIDSGID`, `LockPersonality`), beside the
  *      hardening set that was already there — asserted on a real render.
- *   §3 THE AUTHORIZATION. The rendered polkit rule: this museum's service user, this
- *      museum's transient-unit prefix, `manage-units`, STOP and KILL — and never START (F2:
- *      polkit sees no run-as uid for a transient start, so a start grant was root), with
- *      the daemon's confined runs refused off that same verb list until LEAD-1b.
- *   §4 THE RECORDED DECISION. One agent uid per MUSEUM, not per site — the acceptance the
- *      row required to be written down rather than left as an absence, asserted here so it
- *      cannot be silently reversed in either direction.
- *   §5 THE PROVISIONED HOST IS CONFINED BY CONSTRUCTION. The rendered env states the mode
- *      and the identity, so the daemon's production refusal never has to fire.
+ *   §3 THE AUTHORIZATION. The rendered polkit rule: this museum's service user, `manage-units`,
+ *      STOP and KILL — never START (F2: polkit sees no run-as uid) — on the socket-activated
+ *      instances of this museum's DECLARED sites' root-rendered units, enumerated (LEAD-1b).
+ *      The daemon starts nothing: PID 1 starts a run when the daemon connects to a socket.
+ *   §4 THE RECORDED DECISION. One agent identity per DECLARED SITE (LEAD-1b) — the choice,
+ *      what it does not draw, and what would change it, written beside the derivation.
+ *   §5 THE PROVISIONED HOST IS CONFINED BY CONSTRUCTION. The rendered env states the mode,
+ *      the site identities and the socket directory, so the daemon's production refusal
+ *      never has to fire; each site's units are rendered by root with `User=` its identity.
  *   §6 THE OTHER DOOR. A build step, an install script and a `git add` are agent-authored
  *      text too, executed on a routine publisher-triggered path. No module that runs a
  *      command inside a site workspace may reach the UNCONFINED runner: `util/spawn.ts` is
@@ -47,18 +47,20 @@
  *      `SERVICE_TOKEN` back through `GET /sites/<slug>/builds/<id>`.
  *   §8 THE EGRESS. Every door (turn / build / git) renders a PRIVATE network namespace, a
  *      masked `/run` and `IPAddressDeny=any`; the only reachable path is the door's own
- *      per-run `/run/dedalo-egress` sockets (none on git) — asked beside a CONCURRENT turn
- *      of the same uid, whose sockets are one `/proc/<pid>/root` away unless the door has
- *      its own PID namespace, and of the host's IPC namespace. Evaluated with a model of systemd
+ *      site's `/run/dedalo-egress` sockets (none on git) — asked at 255 (no PID namespace:
+ *      nothing of the same uid runs beside a site's run, the per-site identity and its
+ *      Conflicts= doors, G6) and at 257 beside a CONCURRENT same-uid run (the extra layer),
+ *      and of the host's IPC namespace. Evaluated with a model of systemd
  *      whose filter is ALLOW-WINS — and whose control row, the pre-fix shape
  *      (`IPAddressAllow=any localhost` + a deny list), must come out UNSAFE, or the model is
  *      the longest-prefix misreading that made LEAD-1 look closed. Egress plans are
  *      hostname-only. HONEST LIMIT: the kernel's behaviour is proved by the VM probe, not here.
  *
- * The BEHAVIOUR of a confined turn — the argv, the caps, the egress, the refusals, the
+ * The BEHAVIOUR of a confined run — the socket, the spec, the gate, the refusals, the
  * per-turn credential — is the package's own gate,
- * `publication/site_builder/tests/agent_confinement.test.ts`. This one is the invariant
- * scan around it.
+ * `publication/site_builder/tests/agent_confinement.test.ts` (and LEAD-1b's lease,
+ * conformance and per-site reach, `publication/site_builder/tests/lead1b_*.test.ts`). This
+ * one is the invariant scan around it.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -66,20 +68,21 @@ import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import {
-	AGENT_USER_PREFIX,
+	agentIdentityName,
+	agentSocketPath,
+} from '../../publication/site_builder/src/drivers/agent_identity.ts';
+import {
 	derive,
 	type InstanceManifest,
 	MAX_INSTANCE_LENGTH,
 	MODES,
 	USER_PREFIX,
 } from '../../publication/site_builder/src/provision/layout.ts';
-import {
-	AGENT_UNIT_VERBS,
-	TRANSIENT_START_AUTHORIZED,
-} from '../../publication/site_builder/src/provision/render/agent_authorization.ts';
+import { AGENT_UNIT_VERBS } from '../../publication/site_builder/src/provision/render/agent_authorization.ts';
 import { renderAll } from '../../publication/site_builder/src/provision/render/index.ts';
 import { parseManifest } from '../../publication/site_builder/src/provision/schema.ts';
 import {
+	DAEMON_STATE_DIR_MODE,
 	PRIVATE_DIR_MODE,
 	SHARED_DIR_MODE,
 	SHARED_FILE_MODE,
@@ -167,23 +170,26 @@ const EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'text, and confining it under the agent uid would be a root tool asking permission to ' +
 		'do the thing it exists to do.',
 	'drivers/confinement.ts':
-		"the confinement's OWN control plane: `systemctl stop <this turn's transient unit>`, " +
-		"issued through the polkit rule's stop grant (the rule grants no start — F2), because killing the client that " +
-		'waits on a unit does not stop the unit — and `id -u/-G <AGENT_USER>`, a pinned ' +
-		'root-owned binary asked which uid and groups the agent has, so the trust check can ask ' +
-		'whether the AGENT can change what its own unit executes first. Neither runs anything ' +
-		'agent-authored.',
+		"the confinement's OWN control plane, which starts nothing: `systemctl show/list-units` " +
+		"(is a site's run alive? what did PID 1 load? which release is it?) and `systemctl stop " +
+		"<a live instance>` through the polkit rule's stop grant (the rule grants no start — F2), " +
+		'plus `id` / `getent group`, pinned root-owned binaries asked which uid and groups each ' +
+		'site identity has, so the trust check can ask whether ANY identity can change what the ' +
+		'units execute first. None of them runs anything agent-authored.',
 	'util/spawn.ts':
-		'runBinary — the ONE place a process is created, and the door itself. It REFUSES a cwd ' +
-		'inside SITES_ROOT without the confinement token (`CONFINED_ARGV`), so a build step, an ' +
-		'install script and a `git add` all reach it through runConfined() under the agent uid; ' +
-		'what is left unconfined here is the driver VERSION PROBE, a pinned root-owned binary ' +
-		'run with --version outside every workspace. §6 holds the import side of that rule.',
+		'runBinary / spawnChild — the ONE place a process is created, and the door itself. It ' +
+		'REFUSES a cwd inside SITES_ROOT without the confinement token (`CONFINED_ARGV`), which ' +
+		'only the confinement holds: under systemd_scope nothing is spawned for a run at all (the ' +
+		"daemon connects to the site's socket and PID 1 starts the unit), and spawnChild is the " +
+		'DECLARED-unconfined run of AGENT_CONFINEMENT=none, announced in its own log. What is ' +
+		'left is the driver VERSION PROBE, a pinned binary run with --version outside every ' +
+		'workspace. §6 holds the import side of that rule.',
 	'drivers/egress_shim.ts':
-		"in-unit exec of the already-confined argv: the shim IS the transient unit's ExecStart, " +
-		'so its one child_process spawn runs inside the unit PID 1 already started under the ' +
-		'agent uid, in its private network namespace — after it has refused a namespace that ' +
-		'is not in effect (§8). It widens nothing the unit did not already grant.',
+		"in-unit exec of the spec's argv: the shim IS the ExecStart of the unit root rendered for " +
+		'the site (User= its identity), so its one child_process spawn runs inside the unit PID 1 ' +
+		'already started, in its private network namespace — after it has refused a namespace ' +
+		'that is not in effect (§8) and a spec that sets a key the unit fixes. It widens nothing ' +
+		'the unit did not already grant.',
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -201,21 +207,25 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 		expect(sites.length).toBeGreaterThan(8);
 	});
 
-	test('exactly one of them spawns an agent turn, and it spawns the CONFINED argv', () => {
+	test('no driver spawns an agent turn: the supervisor consumes what confineTurn() opened', () => {
+		// The whole point of the row, read off the tree: the supervisor spawns NOTHING — it
+		// reads the ConfinedChild `confineTurn()` returned (a unit instance relayed over the
+		// site's socket, or the declared-unconfined child). A `Bun.spawn(plan.argv, …)` in
+		// process.ts is the defect restored, and it is the exact line the audit found.
 		const inDrivers = sites.filter(
 			(site) => site.file.startsWith('drivers/') && !(site.file in EXEMPT),
 		);
-		expect(inDrivers.map((site) => site.file)).toEqual(['drivers/process.ts']);
-		// The whole point of the row, read off the call itself: the supervisor spawns what
-		// `confineTurn()` returned. A `Bun.spawn(plan.argv, …)` here is the defect restored,
-		// and it is the exact line the audit found.
-		expect(inDrivers[0]?.text).toContain('confined.argv');
-		expect(inDrivers[0]?.text).not.toContain('plan.argv');
+		expect(inDrivers.map((site) => `${site.file}:${site.line} ${site.text}`)).toEqual([]);
+		const supervisor = readFileSync(join(SOURCE_ROOT, 'drivers/process.ts'), 'utf8')
+			.split('\n')
+			.map((line) => line.replace(/^\s*(\/\/|\*|\/\*).*$/, ''))
+			.join('\n');
+		expect(supervisor).toContain('confined = await confineTurn(');
+		expect(supervisor).not.toContain('plan.argv, {');
 	});
 
 	test('every other call site is an enumerated exemption with a reason', () => {
 		const unexplained = sites
-			.filter((site) => site.file !== 'drivers/process.ts')
 			.filter((site) => !(site.file in EXEMPT))
 			.map((site) => `${site.file}:${site.line} ${site.text}`);
 		expect(unexplained).toEqual([]);
@@ -262,10 +272,20 @@ function manifestFrom(patch: Record<string, unknown> = {}): InstanceManifest {
 	return parseManifest({ ...doc, ...patch }, { source: 'agent_confinement_tripwire' });
 }
 
+/**
+ * The host as `provision apply` renders it: the ledger's facts are a fresh host's (site k =
+ * its declaration order), PID 1 is 255 — the release LEAD-1b's floor and conformance were
+ * built against.
+ */
 function render(patch: Record<string, unknown> = {}) {
 	const manifest = manifestFrom(patch);
 	const layout = derive(manifest);
-	return { layout, artifacts: renderAll(layout, manifest) };
+	const facts = {
+		agentIdentities: new Map(layout.sites.map((site, index) => [site.slug, index + 1])),
+		systemdVersion: 255,
+		identityEpoch: 1,
+	};
+	return { layout, facts, artifacts: renderAll(layout, manifest, facts) };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -336,20 +356,31 @@ describe('the agent authorization is rendered, scoped and per museum', () => {
 		});
 	});
 
-	test('it grants THIS museum’s service user THIS museum’s agent units, STOP and KILL only', () => {
+	test('it grants THIS museum’s service user its DECLARED sites’ run instances, STOP and KILL only', () => {
 		const body = rule?.body ?? '';
 		expect(body).toContain('org.freedesktop.systemd1.manage-units');
 		expect(body).toContain(`subject.user !== "${layout.identity.user}"`);
-		expect(body).toContain(`unit.indexOf("${layout.agentUnitPrefix}") !== 0`);
-		expect(body).toContain('".service"');
+		// The unit test is ONE anchored regex whose ordinals are ENUMERATED from the ledger's
+		// facts — never a prefix: a prefix match is every unit name the service user can spell,
+		// a template, a socket, an undeclared site's, a transient-style name.
+		// The instance suffix is every spelling PID 1 has given one accepted AF_UNIX connection
+		// (socket.c `instance_from_socket`): `<nr>-<pid>-<uid>` up to 257, and from 258
+		// `<nr>-<cookie>-<pid>_<pidfd id>-<uid>` or `<nr>-<cookie>-<pid>-<uid>` — a grant that
+		// knew only the first would leave a 258 host's daemon unable to stop any run.
+		const ordinals = layout.sites.map((_site, index) => index + 1).join('|');
+		expect(body).toContain(
+			`/^${layout.agentUnitPrefix}s(${ordinals})-(turn|build|git)@[0-9]+-[0-9]+-[0-9]+(?:_[0-9]+-[0-9]+|-[0-9]+)?\\.service$/.test(unit)`,
+		);
+		expect(body).not.toContain('indexOf("dedalo-site-');
 		// The ENTIRE set of verbs answered YES, read off the rendered array — not a substring hunt
 		// a comment could satisfy.
 		const allowed = /var allowed = \[([^\]]*)\];/.exec(body)?.[1];
 		expect(allowed).toBe('"stop", "kill"');
-		// F2. polkit is handed a transient unit's NAME and VERB, never the uid it runs as, so a
-		// "start" grant on `<prefix>*.service` let the service user `systemd-run
-		// --unit=<prefix>x.service --uid=root` on systemd >= 257: root-equivalent. No verb that
-		// creates or starts a unit may appear in the rule at all — code or comment.
+		expect([...AGENT_UNIT_VERBS].sort()).toEqual(['kill', 'stop']);
+		// F2. polkit is handed a unit's NAME and VERB, never the uid it runs as, so a "start"
+		// grant was root-equivalent on systemd >= 257. No verb that creates or starts a unit may
+		// appear in the rule at all — code or comment. (The daemon needs none: PID 1 starts a
+		// run when the daemon connects to the site's socket, which asks polkit nothing.)
 		for (const verb of [
 			'"start"',
 			'"restart"',
@@ -366,23 +397,27 @@ describe('the agent authorization is rendered, scoped and per museum', () => {
 		expect(body).toContain('polkit.Result.YES');
 	});
 
-	test('with no start granted, the daemon refuses confined runs — off the SAME verb list', () => {
-		// The daemon's policy is a fact read off the rule's verbs, so the rule and the refusal
-		// cannot disagree: put "start" back and both this leg and the one above are red.
-		expect([...AGENT_UNIT_VERBS].sort()).toEqual(['kill', 'stop']);
-		expect(TRANSIENT_START_AUTHORIZED).toBe(false);
-		// The wiring, read from CODE (comments stripped). The behaviour — every confined door
-		// answers 503 and spawns nothing — is publication/site_builder/tests/agent_confinement
-		// .test.ts ("F2: …"); this gate cannot import the daemon's config (zod) by design.
+	test('a host with no site identity grants nothing at all', () => {
+		// The rule before the ledger has spoken (a render without facts) answers NOT_HANDLED
+		// to every question — never a wildcard over the prefix.
+		const manifest = manifestFrom();
+		const bare = renderAll(derive(manifest), manifest).find(
+			(artifact) => artifact.kind === 'agent_authorization',
+		);
+		expect(bare?.body).toBeDefined();
+		expect(bare?.body.includes('polkit.Result.YES')).toBe(false);
+	});
+
+	test('the daemon’s control plane cannot start a unit either — start is not a verb it sends', () => {
+		// The wiring, read from CODE (comments stripped): the one `systemctl` door refuses every
+		// verb but show / list-units / stop. The behaviour is the package gate
+		// (tests/agent_confinement.test.ts "a control plane that cannot start").
 		const code = readFileSync(join(SOURCE_ROOT, 'drivers/confinement.ts'), 'utf8')
 			.split('\n')
 			.map((line) => line.replace(/^\s*(\/\/|\*|\/\*).*$/, ''))
 			.join('\n');
-		expect(code).toContain('transientStartAuthorized: TRANSIENT_START_AUTHORIZED');
-		expect(code).toContain(
-			'if (!policy.transientStartAuthorized) problems.push(CONFINED_RUNS_DISABLED)',
-		);
-		expect(code).toContain('LEAD-1b');
+		expect(code).toContain("verb !== 'show' && verb !== 'list-units' && verb !== 'stop'");
+		expect(code).not.toMatch(/systemd-run|--uid=/);
 	});
 
 	test("one museum's grant cannot reach another museum's turns", () => {
@@ -400,48 +435,72 @@ describe('the agent authorization is rendered, scoped and per museum', () => {
  * §4 The recorded decision
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-describe('the agent uid is per MUSEUM, and that choice is written down', () => {
-	test('a turn does not run as the daemon, on any instance', () => {
+describe('the agent identity is per DECLARED SITE, and that choice is written down', () => {
+	test('a run does not run as the daemon, nor as another site, on any instance', () => {
 		for (const instance of ['museum-a', 'museum-b', 'x-y-z']) {
-			const { layout } = render({ instance });
-			expect(layout.identity.agentUser).not.toBe(layout.identity.user);
-			expect(layout.identity.agentUser).toBe(`${AGENT_USER_PREFIX}${instance}`);
-			// The unix ceiling, on the longest name the grammar admits — the arithmetic that
-			// fails at `useradd` on a museum's host if it is wrong, not here.
-			expect(layout.identity.agentUser.length).toBeLessThanOrEqual(32);
+			const { layout, facts, artifacts } = render({ instance });
+			const names = [...facts.agentIdentities.values()].map((k) => agentIdentityName(instance, k));
+			expect(names.length).toBe(layout.sites.length);
+			expect(new Set(names).size).toBe(names.length);
+			expect(names).not.toContain(layout.identity.user);
+			// The legacy per-museum agent is never one of them (it is retired and locked).
+			expect(names).not.toContain(layout.identity.agentUser);
+			// The unix ceiling, on the names the grammar admits.
+			for (const name of names) expect(name.length).toBeLessThanOrEqual(32);
 			expect(layout.agentUnitPrefix.startsWith(`${USER_PREFIX}${instance}`)).toBe(true);
+			// OUTCOME, off the RENDERED units: every template of site k runs as site k's identity.
+			for (const [slug, k] of facts.agentIdentities) {
+				for (const door of ['turn', 'build', 'git']) {
+					const template = artifacts.find((artifact) =>
+						artifact.path.endsWith(`/${layout.agentUnitPrefix}s${k}-${door}@.service`),
+					);
+					expect({ slug, door, user: /^User=(.*)$/m.exec(template?.body ?? '')?.[1] }).toEqual({
+						slug,
+						door,
+						user: agentIdentityName(instance, k),
+					});
+				}
+			}
 		}
 	});
 
-	test('two museums never share one agent uid', () => {
-		expect(render({ instance: 'museum-a' }).layout.identity.agentUser).not.toBe(
-			render({ instance: 'museum-b' }).layout.identity.agentUser,
-		);
+	test('two museums never share one site identity', () => {
+		const a = render({ instance: 'museum-a' });
+		const b = render({ instance: 'museum-b' });
+		const namesOf = (r: typeof a, instance: string) =>
+			[...r.facts.agentIdentities.values()].map((k) => agentIdentityName(instance, k));
+		const shared = namesOf(a, 'museum-a').filter((name) => namesOf(b, 'museum-b').includes(name));
+		expect(shared).toEqual([]);
 	});
 
-	test('two SITES of one museum DO share one — the acceptance, asserted as made', () => {
-		// This is the row's named decision, held in the direction it was decided. A per-site
-		// pool would make this assertion fail, which is exactly right: the pool is the
-		// replacement, and swapping it in must be a deliberate edit here and in the recorded
-		// acceptance below, not a quiet change of shape.
+	test('two SITES of one museum are two identities — the decision, asserted as made', () => {
+		// The row's named decision, held in the direction it was decided (LEAD-1b). Going back to
+		// one uid per museum would make this fail, which is exactly right: that is the shape
+		// whose concurrent runs reached each other's sockets and HOMEs.
 		const doc = JSON.parse(readFileSync(DECLARATION, 'utf8')) as Record<string, unknown>;
 		const sites = doc.sites as Array<Record<string, unknown>>;
 		expect(sites.length).toBeGreaterThan(1);
-		const { layout } = render();
+		const { layout, facts, artifacts } = render();
 		expect(layout.sites.length).toBe(sites.length);
-		expect(new Set(layout.sites.map(() => layout.identity.agentUser)).size).toBe(1);
+		const users = new Set(
+			artifacts
+				.filter((artifact) => /@\.service$/.test(artifact.path))
+				.map((artifact) => /^User=(.*)$/m.exec(artifact.body)?.[1]),
+		);
+		expect(users.size).toBe(facts.agentIdentities.size);
 	});
 
 	test('the acceptance is written beside the derivation, with its expiry condition', () => {
 		const source = readFileSync(join(SOURCE_ROOT, 'provision/layout.ts'), 'utf8');
-		// Not prose-matching for its own sake: the row's requirement was that the boundary this
-		// design does NOT draw is stated where the naming is decided, so a reader of the layout
-		// cannot mistake "sites share a uid" for an oversight. Three things must be in it: the
-		// choice, what it does not protect, and what would end it.
-		expect(source).toContain('THE RECORDED DECISION — ONE AGENT UID PER MUSEUM, NOT ONE PER SITE');
+		// The requirement was that the boundary this design does NOT draw is stated where the
+		// naming is decided. Three things must be in it: the choice, what it does not protect,
+		// and what would change it.
+		expect(source).toContain(
+			'THE RECORDED DECISION — ONE AGENT IDENTITY PER DECLARED SITE (LEAD-1b)',
+		);
+		expect(source).toContain('WHAT IS DRAWN');
 		expect(source).toContain('WHAT IS NOT DRAWN, AND IS ACCEPTED');
 		expect(source).toContain('WHAT WOULD CHANGE IT');
-		expect(source).toContain('limits.max_sites');
 	});
 });
 
@@ -450,41 +509,93 @@ describe('the agent uid is per MUSEUM, and that choice is written down', () => {
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 describe('the rendered env leaves the daemon no unconfined mode to fall into', () => {
-	const { layout, artifacts } = render();
+	const { layout, facts, artifacts } = render();
 
-	test('it states the mode and both halves of the identity', () => {
+	test('it states the mode, the site identities and where their sockets are', () => {
 		const env = artifacts.find((artifact) => artifact.kind === 'env');
 		const body = env?.body ?? '';
 		expect(body).toContain('AGENT_CONFINEMENT="systemd_scope"');
-		expect(body).toContain(`AGENT_USER="${layout.identity.agentUser}"`);
 		expect(body).toContain(`AGENT_UNIT_PREFIX="${layout.agentUnitPrefix}"`);
+		expect(body).toContain(`AGENT_SOCKET_DIR="${layout.agentSocketDir}"`);
+		expect(body).toContain(`AGENT_STATE_ROOT="${layout.agentStateRoot}"`);
+		const identities = /^AGENT_IDENTITIES="(.*)"$/m.exec(body)?.[1] ?? '';
+		expect(JSON.parse(identities.replace(/\\"/g, '"'))).toEqual(
+			Object.fromEntries(facts.agentIdentities),
+		);
+		// The retired keys are gone: no shared agent, no transient runner, no shared HOME.
+		expect(body).not.toMatch(/^AGENT_USER=/m);
+		expect(body).not.toMatch(/^AGENT_HOME=/m);
+		expect(body).not.toMatch(/^SYSTEMD_RUN_BIN=/m);
 		// And it still carries no credential — the property that lets this file be readable by
 		// the service user's group at all.
 		expect(body).not.toMatch(/^SERVICE_TOKEN=/m);
 		expect(body).not.toMatch(/^ANTHROPIC_API_KEY=/m);
 	});
 
-	test('the shared trees are group-writable and setgid, so two uids can work in them', () => {
-		// The ownership half of the second identity. Without the group write bit the agent
-		// cannot write its own workspace and every turn fails; without setgid its files land in
-		// the agent's own group and the daemon's commit reads a tree it half-owns; with the
-		// world bits open, one museum's unpublished drafts are readable by every uid on the
-		// host, which is the boundary this subsystem exists to draw.
-		for (const key of ['workspaces', 'home'] as const) {
-			const row = MODES[key];
-			expect({ key, owner: row.owner, group: row.group }).toEqual({
-				key,
-				owner: 'user',
-				group: 'group',
-			});
-			expect({ key, setgid: (row.mode & 0o2000) !== 0 }).toEqual({ key, setgid: true });
-			expect({ key, groupWrite: (row.mode & 0o020) !== 0 }).toEqual({ key, groupWrite: true });
-			expect({ key, world: row.mode & 0o007 }).toEqual({ key, world: 0 });
+	test('every declared site has its socket, target and template for every door, rendered by root', () => {
+		for (const [, k] of facts.agentIdentities) {
+			for (const door of ['turn', 'build', 'git']) {
+				for (const suffix of ['.socket', '.target', '@.service']) {
+					const name = `${layout.agentUnitPrefix}s${k}-${door}${suffix}`;
+					const unit = artifacts.find((artifact) => artifact.path.endsWith(`/${name}`));
+					expect({ name, owner: unit?.owner, mode: unit?.mode }).toEqual({
+						name,
+						owner: 'root',
+						mode: 0o644,
+					});
+				}
+				const socket = artifacts.find((artifact) =>
+					artifact.path.endsWith(`/${layout.agentUnitPrefix}s${k}-${door}.socket`),
+				);
+				expect(socket?.body).toContain(
+					`ListenStream=${agentSocketPath(layout.agentSocketDir, k, door as 'turn')}`,
+				);
+				expect(socket?.body).toContain('MaxConnections=1');
+				expect(socket?.body).toContain('SocketMode=0600');
+				// Stopped in the daemon's own stop transaction: a socket with a stop pending
+				// accepts nothing, so no connect during the stop can cancel it.
+				expect(socket?.body).toMatch(
+					new RegExp(`^PartOf=${layout.unitName.replace(/[.@]/g, '\\$&')}$`, 'm'),
+				);
+			}
 		}
+		// Each proxy door's egress directory is ROOT's (tmpfiles.d): root:<site group> 0770
+		// under a root 0755 egress/ — never the daemon's runtime directory, never its uid's.
+		const tmpfiles = artifacts.find((artifact) => artifact.path === layout.agentTmpfilesPath);
+		expect({ owner: tmpfiles?.owner, mode: tmpfiles?.mode }).toEqual({
+			owner: 'root',
+			mode: 0o644,
+		});
+		expect(tmpfiles?.body).toContain(`\nd ${layout.agentSocketDir}/egress 0755 root root -\n`);
+		for (const [, k] of facts.agentIdentities) {
+			expect(tmpfiles?.body).toContain(
+				`\nd ${layout.agentSocketDir}/egress/s${k} 0770 root dedalo-a-${layout.instance}_${k} -\n`,
+			);
+		}
+	});
+
+	test('the shared tree is group-writable and setgid, so two uids can work in it', () => {
+		// The ownership half of the second identity. Without the group write bit an identity
+		// cannot write its own workspace and every run fails; without setgid its files land in
+		// its own group and the daemon's commit reads a tree it half-owns; with the world bits
+		// open, one museum's unpublished drafts are readable by every uid on the host.
+		const row = MODES.workspaces;
+		expect({ owner: row.owner, group: row.group }).toEqual({ owner: 'user', group: 'group' });
+		expect((row.mode & 0o2000) !== 0).toBe(true);
+		expect((row.mode & 0o020) !== 0).toBe(true);
+		expect(row.mode & 0o007).toBe(0);
+		// Each door's HOME is its identity's own, closed to every other principal (LEAD-1b): the
+		// cross-site plant channel the one shared HOME was.
+		expect({ owner: MODES.agentHome.owner, mode: MODES.agentHome.mode }).toEqual({
+			owner: 'identity',
+			mode: 0o700,
+		});
+		expect(MODES.agentStateRoot.owner).toBe('root');
+		expect(MODES.agentStateSite.owner).toBe('root');
 		// The root ABOVE them is still root's: the daemon writes inside its roots and cannot
-		// replace one, and neither can its agent.
+		// replace one, and neither can an identity.
 		expect(MODES.stateDir.owner).toBe('root');
-		// The credential store is unreachable to both of them through the filesystem.
+		// The credential store is unreachable to all of them through the filesystem.
 		expect({ owner: MODES.secret.owner, mode: MODES.secret.mode }).toEqual({
 			owner: 'root',
 			mode: 0o600,
@@ -605,14 +716,16 @@ describe('the shared tree is writable to the agent, and the daemon’s own state
 		// (0027) — drwxr-x---, agent in the group and never the owner. Every turn would have
 		// started, been authorized, and failed on its first Write. One constant, both places.
 		expect(MODES.workspaces.mode).toBe(SHARED_DIR_MODE);
-		expect(MODES.home.mode).toBe(SHARED_DIR_MODE);
 		expect(SHARED_DIR_MODE & 0o2000).toBe(0o2000); // setgid: agent files keep the museum's group
 		expect(SHARED_DIR_MODE & 0o070).toBe(0o070); // group rwx: the other uid may write
 		expect(SHARED_DIR_MODE & 0o007).toBe(0); // world: another museum sees nothing
 		expect(SHARED_FILE_MODE & 0o060).toBe(0o060); // group rw: the agent EDITS site.json
 		expect(SHARED_FILE_MODE & 0o007).toBe(0);
-		// And the daemon's own per-site state inside that tree is not shared.
+		// And the daemon's own per-site state inside that tree is not shared: `.builder` itself
+		// is TRAVERSE-ONLY to the group (the site identity opens the one file it is handed —
+		// the turn's MCP config — and lists, creates and renames nothing), everything in it 0700.
 		expect(PRIVATE_DIR_MODE & 0o077).toBe(0);
+		expect(DAEMON_STATE_DIR_MODE).toBe(0o710);
 	});
 
 	test('the audit trail is closed to the group the agent uid is in', () => {
@@ -668,11 +781,11 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'the service user, 0700 with a 0600 file, and named by no path an agent turn can write ' +
 		'in. `ProtectSystem=strict` makes it read-only to a turn on top of that.',
 	'drivers/confinement.ts':
-		"The per-turn environment file, in the DAEMON'S RUNTIME DIRECTORY (`RuntimeDirectory=`, " +
-		'0700, root-created, outside `SITES_ROOT`). It is written there precisely BECAUSE the ' +
-		'workspace is agent-writable — putting the museum keys in the tree is the defect it avoids. ' +
-		'And PID 1 reads it AS ROOT following links, so it is opened O_CREAT|O_EXCL|O_NOFOLLOW into ' +
-		'lstat-proved, daemon-owned, private directories (ENVFILE).',
+		"The DECLARED-unconfined run's HOME (`AGENT_CONFINEMENT=none` only): " +
+		'`<AGENT_STATE_ROOT>/unconfined/<door>`, outside `SITES_ROOT` and every workspace — the ' +
+		'same per-door HOME a unit would be given, so a dev host exercises the same shape. Under ' +
+		'systemd_scope the confinement writes NO file at all (LEAD-1b: the spec travels over the ' +
+		"site's socket; the per-run environment file PID 1 read as root is gone, G8).",
 	'provision/apply.ts':
 		'THE PROVISIONER, which runs as root before an agent uid exists and CREATES the roots ' +
 		'the rest of this census is measured against. Its writes are an interface (`mkdir`, ' +
@@ -703,15 +816,15 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'`Bun.connect` socket, which is not a filesystem call at all.',
 	'instance/roots.ts':
 		'The BOOT PREFLIGHT probes. The audit append is `AUDIT_DIR`, outside `SITES_ROOT`; ' +
-		'the create probe DOES land at the root of `SITES_ROOT`/`AGENT_HOME`, which is 2770, ' +
+		'the create probe DOES land at the root of `SITES_ROOT`, which is 2770, ' +
 		'so it is opened `O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW` — an existing name of any kind, ' +
 		'symlink included, is EEXIST rather than a redirect. It is the synchronous ' +
 		'counterpart of the doors, in the one place that cannot await them.',
 	'egress/gate.ts':
-		'runtime dir, outside SITES_ROOT: the per-run egress socket directory ' +
-		'`<runtime>/egress/<run>/` (mkdir 0750 + chmod 0660 on the two sockets it binds) in ' +
-		"the daemon's RuntimeDirectory, root-created and never a path an agent turn can write; " +
-		'the unit sees it only through its own BindPaths onto /run/dedalo-egress.',
+		"outside SITES_ROOT: the two sockets (0660, chgrp to the SITE's private group) it binds in a " +
+		"site's egress directory `<agent socket dir>/egress/s<k>/` — ROOT-provisioned (tmpfiles.d, " +
+		"root:<site group> 0770, refused otherwise), never created, chgrp'd or removed by the daemon, " +
+		"never a path an agent run can write: the unit sees only its own site's, read-only, on /run/dedalo-egress.",
 });
 
 /**
@@ -721,7 +834,6 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
  */
 const REFUSAL_BY_CONSTRUCTION: Readonly<Record<string, string>> = Object.freeze({
 	'instance/roots.ts': 'O_EXCL',
-	'drivers/confinement.ts': 'FS.O_EXCL | FS.O_NOFOLLOW',
 	'context/agents_md.ts': 'symlink(',
 });
 
@@ -997,6 +1109,11 @@ const RAW_READ_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'provision/fleet.ts':
 		'The fleet index of instance declarations under the provisioner config root, outside ' +
 		'`SITES_ROOT` and root-owned.',
+	'drivers/egress_shim.ts':
+		'NOT the daemon: the shim runs INSIDE the unit root rendered for the site, as the ' +
+		"site's identity. Its one read is `/proc/self/cgroup` — its OWN unit's name, which it " +
+		'says in its hello frame — and nothing it reads is served to anyone or carries a ' +
+		'privilege the unit did not already have.',
 	'sites/site_table.ts':
 		"The provisioner's `sites.json` under the config directory (root:root 0644) — outside " +
 		'`SITES_ROOT`, and the ONE thing that says where a site may be published.',
@@ -1110,7 +1227,10 @@ interface NetworkLeaf {
 	DOOR_PROFILE: Readonly<Record<string, { proxy: boolean; mcp: boolean }>>;
 	PROXY_PORT: number;
 	MCP_PORT: number;
-	unitNetworkProperties(door: string, opts: { egressDir?: string }): string[];
+	unitNetworkProperties(
+		door: string,
+		opts: { egressDir?: string; pidNamespace: boolean },
+	): string[];
 	egressPlanFor(
 		door: string,
 		facts: {
@@ -1128,7 +1248,7 @@ interface NetworkLeaf {
 		},
 	): string[];
 	childEgressEnv(door: string, driver?: string): Record<string, string>;
-	egressDirFor(runtimeDir: string, unitName: string): string;
+	egressDirFor(runtimeDir: string, k: number): string;
 }
 
 async function leaf(): Promise<NetworkLeaf> {
@@ -1137,24 +1257,35 @@ async function leaf(): Promise<NetworkLeaf> {
 
 /** The host a provisioned museum runs on — the runtime dir is the rendered one. */
 const RUNTIME = '/run/dedalo-sites/test';
-const UNIT = 'dedalo-site-test-agent-00000000-0000-0000-0000-000000000000.service';
-/** A CONCURRENT run's uuid — its egress dir is a sibling of this run's. */
-const SIBLING_RUN = '11111111-1111-1111-1111-111111111111';
-const SIBLING_UNIT = `dedalo-site-test-agent-${SIBLING_RUN}.service`;
+/** Where root renders the per-(site, door) sockets (AGENT_SOCKET_DIR). */
+const AGENT_SOCKETS = '/run/dedalo-sites-agents/test';
+/** The site under test, and ANOTHER site of the same museum. */
+const K = 1;
+const SIBLING_K = 2;
 
 /**
- * HOW EVERY ROW BELOW ASKS: with the namespace in effect, and beside a CONCURRENT TURN of the
- * same museum (the same agent uid) rendered by the same leaf. A run never runs alone on a
- * museum with more than one site, and the model knows the route a lone-unit question cannot
- * see: a same-uid unit's mount view — its bound egress directory — through
- * `/proc/<pid>/root`, unless the asking unit has its own PID namespace.
+ * HOW THE ROWS BELOW ASK, at the two releases LEAD-1b renders for:
+ *
+ *   255 — no PID namespace. The run is asked ALONE, and that is the claim, not a shortcut:
+ *         nothing of the same uid runs beside it — every other site is another identity
+ *         (ProtectProc=invisible hides other uids' /proc) and a site's own doors never
+ *         overlap (Conflicts=, co-scheduling proved on the rendered files by G6).
+ *   257 — PrivatePIDs=yes, the EXTRA layer, asked the worst way: beside a concurrent run of
+ *         ANOTHER site under the SAME uid (the pre-LEAD-1b one-uid shape), whose mount view is
+ *         one `/proc/<pid>/root` away unless the asking unit has its own PID namespace.
  */
-function reachOptions(net: NetworkLeaf): { netnsHonoured: true; concurrent: string[][] } {
-	const siblingTurn = net.unitNetworkProperties('turn', {
-		egressDir: net.egressDirFor(RUNTIME, SIBLING_UNIT),
+const ALONE = Object.freeze({ netnsHonoured: true as const });
+function besideSameUid(net: NetworkLeaf): { netnsHonoured: true; concurrent: string[][] } {
+	const sibling = net.unitNetworkProperties('turn', {
+		egressDir: net.egressDirFor(AGENT_SOCKETS, SIBLING_K),
+		pidNamespace: true,
 	});
-	return { netnsHonoured: true, concurrent: [siblingTurn] };
+	return { netnsHonoured: true, concurrent: [sibling] };
 }
+const RELEASES = Object.freeze([
+	{ version: 255, pidNamespace: false, options: (_net: NetworkLeaf) => ALONE },
+	{ version: 257, pidNamespace: true, options: besideSameUid },
+] as const);
 
 /**
  * WHAT NO DOOR MAY REACH. Host loopback (Postgres, the DNS stub, IPv6 loopback), the LAN,
@@ -1177,7 +1308,10 @@ const FORBIDDEN: readonly Destination[] = Object.freeze([
 	{ kind: 'unix', path: '/run/postgresql/.s.PGSQL.5432' },
 	{ kind: 'unix', path: '/run/dedalo/dedalo_ts.sock' },
 	{ kind: 'unix', path: `${RUNTIME}/daemon.sock` },
-	{ kind: 'unix', path: `${RUNTIME}/turns/${UNIT}.env` },
+	// Every site's CONTROL sockets — its own included: a run that could connect to one could
+	// launch a run (of any door, of any site).
+	{ kind: 'unix', path: `${AGENT_SOCKETS}/s${K}-turn.sock` },
+	{ kind: 'unix', path: `${AGENT_SOCKETS}/s${SIBLING_K}-build.sock` },
 	{ kind: 'unix', path: '/var/run/docker.sock' },
 	{ kind: 'unix', path: '/run/mysqld/mysqld.sock' },
 	// RHEL/Fedora MariaDB's DEFAULT socket: outside /run, /tmp and /home, mode 0777 — the
@@ -1185,13 +1319,13 @@ const FORBIDDEN: readonly Destination[] = Object.freeze([
 	// sockets ignore network namespaces).
 	{ kind: 'unix', path: '/var/lib/mysql/mysql.sock' },
 	{ kind: 'unix', path: '/var/lib/postgresql/.s.PGSQL.5432' },
-	// ANOTHER run's per-run egress sockets. A build (no MCP) or a git run (nothing) that could
-	// open a concurrent turn's mcp.sock would speak to the Publication API with the daemon's
-	// key. TWO routes, both asked: a view of the whole egress/ directory (the bind), and the
-	// concurrent turn's own mount view through /proc/<pid>/root (same uid, no PID namespace)
-	// — the per-run bind is a run's identity only because the second is closed too.
-	{ kind: 'unix', path: `${RUNTIME}/egress/${SIBLING_RUN}/proxy.sock` },
-	{ kind: 'unix', path: `${RUNTIME}/egress/${SIBLING_RUN}/mcp.sock` },
+	// ANOTHER site's egress sockets. A run that could open another site's mcp.sock would
+	// speak to the Publication API with the daemon's key, as that site. TWO routes, both
+	// asked: a view of the whole egress/ directory (the bind), and a concurrent run's own
+	// mount view through /proc/<pid>/root (closed by the per-site uid at 255, and by the PID
+	// namespace too at 257).
+	{ kind: 'unix', path: `${AGENT_SOCKETS}/egress/s${SIBLING_K}/proxy.sock` },
+	{ kind: 'unix', path: `${AGENT_SOCKETS}/egress/s${SIBLING_K}/mcp.sock` },
 	// The host's /dev/shm (tmpfs, mode 1777). PrivateDevices= builds a private /dev but binds
 	// the HOST's /dev/shm back into it, and path sockets ignore network namespaces: without a
 	// per-unit mask it is one world-writable directory every door of every museum shares.
@@ -1209,9 +1343,16 @@ const HEAD_SHAPE: readonly string[] = Object.freeze([
 	'IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 169.254.0.0/16 fc00::/7 fe80::/10',
 ]);
 
-function doorProps(net: NetworkLeaf, door: string): { props: string[]; egressDir: string | null } {
-	const egressDir = net.DOOR_PROFILE[door]?.proxy ? net.egressDirFor(RUNTIME, UNIT) : null;
-	const props = net.unitNetworkProperties(door, egressDir ? { egressDir } : {});
+function doorProps(
+	net: NetworkLeaf,
+	door: string,
+	pidNamespace = false,
+): { props: string[]; egressDir: string | null } {
+	const egressDir = net.DOOR_PROFILE[door]?.proxy ? net.egressDirFor(AGENT_SOCKETS, K) : null;
+	const props = net.unitNetworkProperties(
+		door,
+		egressDir ? { egressDir, pidNamespace } : { pidNamespace },
+	);
 	return { props, egressDir };
 }
 
@@ -1246,14 +1387,20 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 		expect(net.PROXY_PORT).not.toBe(net.MCP_PORT);
 	});
 
-	test('every door: nothing forbidden is reachable, with the netns in effect', async () => {
+	test('every door, at 255 and at 257: nothing forbidden is reachable, with the netns in effect', async () => {
 		const net = await leaf();
-		for (const door of net.DOORS) {
-			const { props } = doorProps(net, door);
-			const reached = FORBIDDEN.filter((dest) => reach(props, dest, reachOptions(net))).map(
-				describeDestination,
-			);
-			expect({ door, reached }).toEqual({ door, reached: [] });
+		for (const release of RELEASES) {
+			for (const door of net.DOORS) {
+				const { props } = doorProps(net, door, release.pidNamespace);
+				const reached = FORBIDDEN.filter((dest) => reach(props, dest, release.options(net))).map(
+					describeDestination,
+				);
+				expect({ version: release.version, door, reached }).toEqual({
+					version: release.version,
+					door,
+					reached: [],
+				});
+			}
 		}
 	});
 
@@ -1372,26 +1519,41 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 
 	test('a proxy door refuses to render without its egress dir, and git refuses one', async () => {
 		const net = await leaf();
-		expect(() => net.unitNetworkProperties('turn', {})).toThrow();
-		expect(() => net.unitNetworkProperties('build', {})).toThrow();
-		expect(() => net.unitNetworkProperties('git', { egressDir: `${RUNTIME}/egress/x` })).toThrow();
+		expect(() => net.unitNetworkProperties('turn', { pidNamespace: false })).toThrow();
+		expect(() => net.unitNetworkProperties('build', { pidNamespace: false })).toThrow();
+		expect(() =>
+			net.unitNetworkProperties('git', {
+				egressDir: `${AGENT_SOCKETS}/egress/s1`,
+				pidNamespace: false,
+			}),
+		).toThrow();
+		// Whether PID 1 renders a PID namespace is STATED, never defaulted.
+		expect(() =>
+			net.unitNetworkProperties('git', {} as unknown as { pidNamespace: boolean }),
+		).toThrow();
 	});
 
-	test('the per-run socket path fits sun_path for the longest legal instance', async () => {
-		// A unix socket path is at most 107 bytes on Linux (108 with the NUL). A per-run dir
-		// that overflows it makes EVERY confined turn fail to bind — so it is measured on the
-		// longest instance name the grammar allows, not on the test's own.
+	test('every socket path fits sun_path for the longest legal instance and the highest ordinal', async () => {
+		// A unix socket path is at most 107 bytes on Linux (108 with the NUL). A site's egress
+		// dir or control socket that overflows it makes EVERY run of that site fail — so it is
+		// measured on the longest instance name the grammar allows and the last ordinal.
 		const net = await leaf();
 		const instance = `a${'b'.repeat(MAX_INSTANCE_LENGTH - 1)}`;
 		const layout = derive(manifestFrom({ instance }));
-		const unit = `${layout.agentUnitPrefix}${'f'.repeat(8)}-${'f'.repeat(4)}-${'f'.repeat(4)}-${'f'.repeat(4)}-${'f'.repeat(12)}.service`;
-		const dir = net.egressDirFor(layout.runtimeDir, unit);
-		for (const name of ['proxy.sock', 'mcp.sock']) {
-			const path = join(dir, name);
+		const dir = net.egressDirFor(layout.agentSocketDir, 999);
+		for (const path of [
+			join(dir, 'proxy.sock'),
+			join(dir, 'mcp.sock'),
+			...['turn', 'build', 'git'].map((door) =>
+				agentSocketPath(layout.agentSocketDir, 999, door as 'turn'),
+			),
+		]) {
 			expect({ path, fits: Buffer.byteLength(path) <= 107 }).toEqual({ path, fits: true });
 		}
-		// …and it is never the runtime root nor the per-turn secret directory.
-		expect(dir.startsWith(`${layout.runtimeDir}/egress/`)).toBe(true);
+		// …and it is root's tree (the agent socket dir), never the daemon's runtime directory,
+		// which its own uid could re-point under a bind PID 1 resolves as root.
+		expect(dir).toBe(`${layout.agentSocketDir}/egress/s999`);
+		expect(dir.startsWith(`${layout.runtimeDir}/`)).toBe(false);
 	});
 
 	test('egress plans are hostname-only, and git has none', async () => {
@@ -1519,7 +1681,10 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 		const allowed: Record<string, readonly string[]> = {
 			[LEAF]: [],
 			[CLASSIFIER]: [],
-			[SHIM]: ['./network_profile', './network_profile.ts'],
+			[SHIM]: ['./network_profile', './unit_frames'],
+			// The shim's own leaves — the wire codec and the names — are held to the same rule.
+			[join(PACKAGE, 'src/drivers/unit_frames.ts')]: ['./network_profile'],
+			[join(PACKAGE, 'src/drivers/agent_identity.ts')]: ['./network_profile'],
 		};
 		// The module graph as BUN resolves it (static imports, re-exports, dynamic import() and
 		// require()), not a regex over the text: a string literal in an `export const` is not
@@ -1552,23 +1717,23 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 	// renderer never emitted it, so that row could not fail.)
 
 	test('mutation: any view of the whole egress/ directory reaches a sibling run — the rows above are not blind to it', async () => {
-		// The per-run bind is the identity. A leaf that bound the PARENT (egressDirFor returning
-		// `<runtime>/egress`), or added a second, read-only view of it anywhere in the unit,
+		// The per-site bind is the identity. A leaf that bound the PARENT (egressDirFor returning
+		// `<agent socket dir>/egress`), or added a second, read-only view of it anywhere in the unit,
 		// hands every run every concurrent turn's mcp.sock. Each shape must turn the
 		// "nothing forbidden" row red — or that row certifies the leak.
 		const net = await leaf();
 		const sibling = [
-			`unix:${RUNTIME}/egress/${SIBLING_RUN}/proxy.sock`,
-			`unix:${RUNTIME}/egress/${SIBLING_RUN}/mcp.sock`,
+			`unix:${AGENT_SOCKETS}/egress/s${SIBLING_K}/proxy.sock`,
+			`unix:${AGENT_SOCKETS}/egress/s${SIBLING_K}/mcp.sock`,
 		];
 		for (const door of net.DOORS) {
 			const { props } = doorProps(net, door);
 			for (const extra of [
-				`BindReadOnlyPaths=${RUNTIME}/egress:/run/dedalo-all`,
-				`BindPaths=${RUNTIME}/egress`,
+				`BindReadOnlyPaths=${AGENT_SOCKETS}/egress:/run/dedalo-all`,
+				`BindPaths=${AGENT_SOCKETS}/egress`,
 			]) {
 				const mutated = [...props, extra];
-				const reached = FORBIDDEN.filter((dest) => reach(mutated, dest, reachOptions(net))).map(
+				const reached = FORBIDDEN.filter((dest) => reach(mutated, dest, ALONE)).map(
 					describeDestination,
 				);
 				expect({ door, extra, reached }).toEqual({ door, extra, reached: sibling });
@@ -1576,8 +1741,11 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 		}
 		// …and the parent-dir bind as the proxy doors' ONE bind (the leaf mutation itself).
 		for (const door of ['turn', 'build']) {
-			const parent = net.unitNetworkProperties(door, { egressDir: `${RUNTIME}/egress` });
-			const reached = FORBIDDEN.filter((dest) => reach(parent, dest, reachOptions(net))).map(
+			const parent = net.unitNetworkProperties(door, {
+				egressDir: `${AGENT_SOCKETS}/egress`,
+				pidNamespace: false,
+			});
+			const reached = FORBIDDEN.filter((dest) => reach(parent, dest, ALONE)).map(
 				describeDestination,
 			);
 			expect({ door, reached }).toEqual({ door, reached: sibling });
@@ -1610,28 +1778,27 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 		}
 	});
 
-	test('mutation: without its PID namespace, every door reaches a concurrent turn’s sockets through /proc/<pid>/root', async () => {
-		// The units share no mount of egress/, yet a same-uid concurrent unit is visible in /proc
-		// (ProtectProc=invisible hides only OTHER uids) and /proc/<pid>/root is its mount view.
-		// Dropping PrivatePIDs= must turn "nothing forbidden" red with EXACTLY the sibling's two
-		// sockets — the ones its bind exposes — or that row certifies the leak this namespace closed.
+	test('mutation: a same-uid run beside a door without a PID namespace reaches its sockets through /proc/<pid>/root', async () => {
+		// The route the one-uid-per-museum shape left open: a concurrent unit of the same uid is
+		// visible in /proc (ProtectProc=invisible hides only OTHER uids) and /proc/<pid>/root is
+		// its mount view. At 255 (no PID namespace) the per-site identity is what closes it —
+		// asked with the pre-LEAD-1b neighbour, the render must reach EXACTLY the sibling's two
+		// sockets, or the 255 row above certifies a leak; at 257 PrivatePIDs= closes it again.
 		const net = await leaf();
 		const sibling = [
-			`unix:${RUNTIME}/egress/${SIBLING_RUN}/proxy.sock`,
-			`unix:${RUNTIME}/egress/${SIBLING_RUN}/mcp.sock`,
+			`unix:${AGENT_SOCKETS}/egress/s${SIBLING_K}/proxy.sock`,
+			`unix:${AGENT_SOCKETS}/egress/s${SIBLING_K}/mcp.sock`,
 		];
 		for (const door of net.DOORS) {
-			const { props } = doorProps(net, door);
-			const shared = props.filter((prop) => !/^PrivatePIDs=/.test(prop));
-			expect({ door, dropped: props.length - shared.length }).toEqual({ door, dropped: 1 });
-			const reached = FORBIDDEN.filter((dest) => reach(shared, dest, reachOptions(net))).map(
-				describeDestination,
-			);
-			expect({ door, reached }).toEqual({ door, reached: sibling });
-			// Control: the route IS the concurrent unit — alone, the same unit reaches nothing.
-			const alone = FORBIDDEN.filter((dest) => reach(shared, dest, { netnsHonoured: true })).map(
-				describeDestination,
-			);
+			const at255 = doorProps(net, door, false).props;
+			const at257 = doorProps(net, door, true).props;
+			expect({ door, extra: at257.length - at255.length }).toEqual({ door, extra: 1 });
+			const beside = (props: string[]) =>
+				FORBIDDEN.filter((dest) => reach(props, dest, besideSameUid(net))).map(describeDestination);
+			expect({ door, reached: beside(at255) }).toEqual({ door, reached: sibling });
+			expect({ door, reached: beside(at257) }).toEqual({ door, reached: [] });
+			// Control: the route IS the concurrent same-uid unit — alone, the 255 render reaches nothing.
+			const alone = FORBIDDEN.filter((dest) => reach(at255, dest, ALONE)).map(describeDestination);
 			expect({ door, alone }).toEqual({ door, alone: [] });
 		}
 	});
@@ -1642,7 +1809,7 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 			const { props } = doorProps(net, door);
 			const shared = props.filter((prop) => !/^PrivateIPC=/.test(prop));
 			expect({ door, dropped: props.length - shared.length }).toEqual({ door, dropped: 1 });
-			const reached = FORBIDDEN.filter((dest) => reach(shared, dest, reachOptions(net))).map(
+			const reached = FORBIDDEN.filter((dest) => reach(shared, dest, ALONE)).map(
 				describeDestination,
 			);
 			expect({ door, reached }).toEqual({ door, reached: ['ipc:sysv:0x5a5a0001'] });

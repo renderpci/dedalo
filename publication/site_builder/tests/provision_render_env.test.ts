@@ -188,11 +188,25 @@ describe('the env artifact', () => {
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 describe('the file is layout.envVars and nothing else', () => {
-  test('every derived key is assigned, with exactly its derived value', () => {
+  test('every derived key is assigned, with exactly its derived value — plus the two host facts', () => {
     const layout = derive(baseManifest());
     const parsed = parseRendered(renderEnv());
 
-    expect(parsed).toEqual({ ...layout.envVars });
+    // AGENT_IDENTITIES and AGENT_IDENTITY_EPOCH are the HOST's (its identity ledger, LEAD-1b):
+    // rendered without facts they say "no identity, epoch 0" — a daemon that then refuses
+    // every confined run, which is the fail-closed direction.
+    expect(parsed).toEqual({ ...layout.envVars, AGENT_IDENTITIES: '{}', AGENT_IDENTITY_EPOCH: '0' });
+  });
+
+  test('with the host facts, the identities and the epoch are the plan’s', () => {
+    const manifest = baseManifest();
+    const layout = derive(manifest);
+    const facts = { agentIdentities: new Map([['one', 3]]), systemdVersion: 255, identityEpoch: 2 };
+    const parsed = parseRendered(envRenderer.render(layout, manifest, facts)[0]!.body);
+    expect({ identities: parsed.AGENT_IDENTITIES, epoch: parsed.AGENT_IDENTITY_EPOCH }).toEqual({
+      identities: '{"one":3}',
+      epoch: '2',
+    });
   });
 
   test('nothing but comments, blank lines and assignments', () => {
@@ -206,7 +220,7 @@ describe('the file is layout.envVars and nothing else', () => {
     }
   });
 
-  test('the three state roots are the values the unit will make writable', () => {
+  test('the state roots are the values the unit will make writable — and the agent state is not', () => {
     // The env and the unit's ReadWritePaths= come out of ONE derivation. A root the daemon
     // is told to write and the unit does not confine is not an install failure — it is
     // EROFS the first time a museum publishes, which is the defect this subsystem exists
@@ -219,12 +233,18 @@ describe('the file is layout.envVars and nothing else', () => {
     const parsed = parseRendered(renderEnv(manifest));
 
     expect(parsed.SITES_ROOT).toBe('/mnt/big/work');
-    expect(parsed.AGENT_HOME).toBe('/mnt/big/home');
     expect(parsed.AUDIT_DIR).toBe('/srv/audit/gate');
-    for (const root of [parsed.SITES_ROOT!, parsed.AGENT_HOME!, parsed.AUDIT_DIR!]) {
+    for (const root of [parsed.SITES_ROOT!, parsed.AUDIT_DIR!]) {
       expect(isWritablePath(layout, root)).toBe(true);
       expect(readWritePaths(layout)).toContain(root);
     }
+    // LEAD-1b: the shared agent HOME is retired (never rendered), and the agent state root is
+    // ROOT's — each site identity writes its own HOME there through its own unit's bind, so
+    // the daemon's writable set must NOT contain it.
+    expect(parsed.AGENT_HOME).toBeUndefined();
+    expect(parsed.AGENT_STATE_ROOT).toBe(layout.agentStateRoot);
+    expect(isWritablePath(layout, layout.agentStateRoot)).toBe(false);
+    expect(isWritablePath(layout, '/mnt/big/home')).toBe(false);
   });
 
   test('the per-instance identity, serving mode, API url and pinned driver binary are there', () => {
@@ -351,7 +371,7 @@ describe('injection through a manifest string', () => {
     // The quote did not close the assignment early: the value comes back whole, and the
     // file still holds exactly the keys it should.
     expect(parsed.WEBSPACE_BASE).toBe('/srv/"www"');
-    expect(Object.keys(parsed).sort()).toEqual(Object.keys(derive(manifest).envVars).sort());
+    expect(Object.keys(parsed).sort()).toEqual([...Object.keys(derive(manifest).envVars), 'AGENT_IDENTITIES', 'AGENT_IDENTITY_EPOCH'].sort());
   });
 
   test('a backslash is escaped, and round-trips as its own value', () => {
@@ -445,24 +465,38 @@ describe('the census against src/config.ts', () => {
   const CONFIG_TEXT = readFileSync(join(import.meta.dir, '..', 'src', 'config.ts'), 'utf8');
 
   /** Every key of the zod schema, and whether it carries a default. */
-  function configKeys(): Map<string, { hasDefault: boolean }> {
+  function configKeys(): Map<string, { hasDefault: boolean; retired: boolean }> {
     const start = CONFIG_TEXT.indexOf('z.object({');
     const end = CONFIG_TEXT.indexOf('\n});', start);
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
 
-    const keys = new Map<string, { hasDefault: boolean }>();
+    const keys = new Map<string, { hasDefault: boolean; retired: boolean }>();
     let current: string | null = null;
     for (const line of CONFIG_TEXT.slice(start, end).split('\n')) {
       const declaration = /^ {2}([A-Z][A-Z0-9_]*):/.exec(line);
       if (declaration) current = declaration[1]!;
       if (!current) continue;
-      const entry = keys.get(current) ?? { hasDefault: false };
+      const entry = keys.get(current) ?? { hasDefault: false, retired: false };
       if (line.includes('.default(')) entry.hasDefault = true;
+      // A RETIRED key (config.ts `retired(...)`, LEAD-1b) defaults to '' and refuses any value:
+      // it is not required — it must be ABSENT (asserted below).
+      if (/:\s*retired\(/.test(line)) {
+        entry.hasDefault = true;
+        entry.retired = true;
+      }
       keys.set(current, entry);
     }
     return keys;
   }
+
+  test('no retired key is ever supplied — the file a provisioned daemon boots from carries none', () => {
+    const supplied = new Set(Object.keys(parseRendered(renderEnv())));
+    const retired = [...configKeys()].filter(([, meta]) => meta.retired).map(([key]) => key).sort();
+    // The census reads them off config.ts: LEAD-1b retired these three.
+    expect(retired).toEqual(['AGENT_HOME', 'AGENT_USER', 'SYSTEMD_RUN_BIN']);
+    expect(retired.filter(key => supplied.has(key))).toEqual([]);
+  });
 
   test('the schema is still readable as a key list', () => {
     const keys = configKeys();

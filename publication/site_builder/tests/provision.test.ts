@@ -215,8 +215,10 @@ describe('every field the schema accepts reaches the derived layout', () => {
     expect(layout.auditFile).toBe('/srv/audit/gate/audit.jsonl');
     // And the rendered env states what the unit confines — same values, one derivation.
     expect(layout.envVars.SITES_ROOT).toBe('/srv/work/gate');
-    expect(layout.envVars.AGENT_HOME).toBe('/srv/agent-home/gate');
     expect(layout.envVars.AUDIT_DIR).toBe('/srv/audit/gate');
+    // roots.home is the RETIRED shared agent HOME (LEAD-1b): the one thing it still moves is
+    // what `provision apply` archives. Nothing renders it into the daemon's env any more.
+    expect(layout.envVars.AGENT_HOME).toBeUndefined();
   });
 
   test('paths.state_base moves all three roots together', () => {
@@ -402,7 +404,6 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
     const layout = spread();
     const mustBeWritable = [
       layout.roots.workspaces,
-      layout.roots.home,
       layout.roots.audit,
       layout.runtimeDir,
       ...layout.sites.map(site => site.webspace),
@@ -418,7 +419,6 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
       layout.auditFile,
       layout.socketPath,
       join(layout.roots.workspaces, 'one', '.builder', 'state.json'),
-      join(layout.roots.home, '.claude', 'sessions'),
       ...layout.sites.flatMap(site => [
         ...SURFACES.map(surface => site.releasesDir(surface)),
         ...SURFACES.map(surface => site.linkPath(surface)),
@@ -435,6 +435,11 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
     const layout = spread();
     for (const path of [layout.configDir, layout.secretsDir, layout.envFile, layout.stateDir, layout.unitPath]) {
       expect(isWritablePath(layout, path)).toBe(false);
+    }
+    // LEAD-1b: the agent state root is root's (each site identity writes its own HOME in it,
+    // through its own unit), and the retired shared HOME is written by nobody.
+    for (const path of [layout.agentStateRoot, join(layout.agentStateRoot, 's1', 'turn'), layout.roots.home, layout.retiredDir]) {
+      expect({ path, writable: isWritablePath(layout, path) }).toEqual({ path, writable: false });
     }
   });
 
@@ -469,7 +474,6 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
       const set = readWritePaths(layout);
       const uncovered = [
         layout.roots.workspaces,
-        layout.roots.home,
         layout.roots.audit,
         layout.runtimeDir,
         ...layout.sites.map(site => site.webspace),
@@ -720,9 +724,14 @@ describe('the mode matrix says who, not just how much', () => {
     // are the half that must never move.
     expect(MODES.workspaces).toEqual({ owner: 'user', group: 'group', mode: 0o2770 });
     expect(MODES.workspaces.mode & 0o007).toBe(0);
-    expect(MODES.home).toEqual({ owner: 'user', group: 'group', mode: 0o2770 });
-    expect(MODES.home.mode & 0o007).toBe(0);
     expect(MODES.stateDir).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
+    // LEAD-1b: the shared agent HOME row is gone; the agent state is root's, and each
+    // (site, door) HOME is its identity's alone.
+    expect('home' in MODES).toBe(false);
+    expect(MODES.agentStateRoot).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
+    expect(MODES.agentStateSite).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
+    expect(MODES.agentHome).toEqual({ owner: 'identity', group: 'group', mode: 0o700 });
+    expect(MODES.retired).toEqual({ owner: 'root', group: 'root', mode: 0o700 });
   });
 
   test('the audit trail is append-only by OWNERSHIP, and unreadable to the agent uid', () => {
@@ -749,7 +758,7 @@ describe('the mode matrix says who, not just how much', () => {
     for (const [key, row] of Object.entries(MODES)) {
       expect({ key, frozen: Object.isFrozen(row) }).toEqual({ key, frozen: true });
       expect(typeof row.mode).toBe('number');
-      expect(['root', 'user']).toContain(row.owner);
+      expect(['root', 'user', 'identity']).toContain(row.owner);
       expect(['root', 'group', 'webGroup', 'engineGroup']).toContain(row.group);
     }
   });
@@ -889,7 +898,7 @@ describe('the specification and the code agree', () => {
   });
 
   test('§3’s matrix is MODES, row for row and in both directions', () => {
-    const OWNER: Record<string, string> = { root: 'root', SU: 'user' };
+    const OWNER: Record<string, string> = { root: 'root', SU: 'user', SK: 'identity' };
     const GROUP: Record<string, string> = { root: 'root', SG: 'group', WG: 'webGroup', EG: 'engineGroup' };
 
     const rows = tableRows('## 3. The uid / gid / mode matrix', '`MODES` key');

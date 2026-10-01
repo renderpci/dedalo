@@ -30,8 +30,10 @@ import { manifestSchema, readManifest, writeManifest, type SiteManifest } from '
 import { scaffold, templateExists } from './template';
 import { writeAgentsFile } from '../context/agents_md';
 import { initRepo } from './git';
+import { assertConfinementAvailable, policyFromConfig, type ConfinementPolicy } from '../drivers/confinement';
 import { assertWebspace, declaredSurface, siteSurface, WebspaceError } from './webspace';
 import type { Actor } from '../security/auth';
+import { busyDetail, busyReason, end, tryBegin } from '../workspace_activity';
 
 export interface CreateSiteInput {
   slug: string;
@@ -94,7 +96,7 @@ async function siteOwningDomain(domain: string): Promise<string | null> {
  * failure past the mkdir rolls the whole directory back (see the catch), so a failed create
  * leaves nothing behind and is retryable with the same slug.
  */
-export async function createSite(input: CreateSiteInput): Promise<SiteManifest> {
+export async function createSite(input: CreateSiteInput, policy: ConfinementPolicy = policyFromConfig()): Promise<SiteManifest> {
   if (!isValidSlug(input.slug)) {
     throw new ValidationError(
       'slug must be 2–40 chars, lowercase letters/digits/hyphens, starting with a letter',
@@ -143,6 +145,33 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
   // names, proved to exist, to declare itself ours and to be writable.
   assertWebspace(input.slug, domain);
 
+  // THE SITE IS HELD FROM HERE UNTIL ITS REPOSITORY EXISTS (LEAD-1b). Synchronously, before
+  // the first await: from `writeManifest` on the site EXISTS for every other door, and
+  // `initRepo` runs git — agent-authored text's interpreter — in its workspace. Unreserved,
+  // a turn or a build could start on the half-made site, and under per-site identities a
+  // confined run of this site is refused without a reservation at all. A second create of
+  // the same slug in the same window is refused here too.
+  //
+  // AND ITS FIRST GIT RUN MUST BE POSSIBLE — asked BEFORE the reservation and before anything
+  // is written, exactly as a turn and a build ask it: the host (floor, units, identities) and
+  // then THIS site (an identity? quarantined?). Unasked, a create in the window between
+  // `provision apply` (the site's webspace row is live) and the daemon's restart (its
+  // AGENT_IDENTITIES lacks the slug) scaffolded a whole workspace, failed at `git init`
+  // (identity_missing) and rolled it back: the refusal came, but after the write.
+  await assertConfinementAvailable('git', policy, undefined, input.slug);
+  if (!tryBegin(input.slug, 'init')) {
+    const reason = busyReason(input.slug) ?? 'site_initializing';
+    throw new ConflictError(busyDetail(reason, input.slug), reason);
+  }
+  try {
+    return await createReservedSite(input, domain, policy);
+  } finally {
+    end(input.slug, 'init');
+  }
+}
+
+/** The create itself, run while `createSite` holds the site's `init` reservation. */
+async function createReservedSite(input: CreateSiteInput, domain: string, policy: ConfinementPolicy): Promise<SiteManifest> {
   const existing = await listSlugs();
   if (existing.length >= config.MAX_SITES) {
     throw new LimitExceededError(`Site limit reached (${config.MAX_SITES})`, 'max_sites');
@@ -178,7 +207,7 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
     await writeAgentsFile(manifest);
     // The one exception in the tree: the daemon's own per-site state, 0700.
     await mkdirPrivate(config.SITES_ROOT, join(input.slug, '.builder'));
-    await initRepo(input.slug);
+    await initRepo(input.slug, policy);
     // LAST, over everything: `git init` and `cp` both create entries with modes of their
     // own, and the shared pair has to hold over the whole workspace, not only over what
     // this module wrote itself. (`.builder` is skipped — see shared_tree.ts.)

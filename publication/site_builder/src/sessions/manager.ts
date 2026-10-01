@@ -18,7 +18,7 @@
 import { randomUUID } from 'node:crypto';
 import { config, parseEnvPairs } from '../config';
 import { confinedPath } from '../util/paths';
-import { ConflictError, LimitExceededError, NotFoundError, ValidationError } from '../errors';
+import { ConfinementRefusedError, ConflictError, LimitExceededError, NotFoundError, ValidationError } from '../errors';
 import { assertConfinementAvailable, policyFromConfig, type ConfinementPolicy } from '../drivers/confinement';
 import { MCP_PORT } from '../drivers/network_profile';
 import { getDriver } from '../drivers/registry';
@@ -26,7 +26,7 @@ import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/typ
 import { readManifest } from '../sites/manifest';
 import { commitAll, changedFiles } from '../sites/git';
 import { assertWithinQuota, siteExists } from '../sites/workspace';
-import { busyReason, endTurn, tryBeginTurn } from '../workspace_activity';
+import { busyDetail, busyReason, end, endTurn, tryBegin, tryBeginTurn } from '../workspace_activity';
 import type { SessionEventBody, SessionMeta, StoredEvent } from './events';
 import {
   appendEvent,
@@ -134,19 +134,14 @@ export async function startSession(
   // instance DEFAULT driver's plan: that would refuse a claude_code site on an opencode host
   // for a provider list it does not use.
   const driver = driverOverride ?? (await readManifest(slug)).driver;
-  assertConfinementAvailable('turn', policy, driver);
+  await assertConfinementAvailable('turn', policy, driver, slug);
 
   // Reserve the workspace SYNCHRONOUSLY — check-and-mark with no await in between, and
   // cross-exclusive with builds (workspace_activity.ts). From here every failure path
   // before runTurn takes ownership must endTurn; runTurn's finally owns it afterwards.
   if (!tryBeginTurn(slug)) {
     const reason = busyReason(slug) ?? 'session_running';
-    throw new ConflictError(
-      reason === 'build_running'
-        ? `A build is running for '${slug}'`
-        : `A session is already running for '${slug}'`,
-      reason,
-    );
+    throw new ConflictError(busyDetail(reason, slug), reason);
   }
 
   try {
@@ -166,6 +161,7 @@ export async function startSession(
         turns: 0,
         state: 'running',
         resume_token: null,
+        identity_epoch: policy.identityEpoch ?? config.AGENT_IDENTITY_EPOCH,
       };
       await writeMeta(meta);
 
@@ -203,17 +199,12 @@ export async function sendMessage(
   // between them must not answer it as this daemon.
   const known = await readMeta(slug, sessionId);
   if (!known) throw new NotFoundError(`No session '${sessionId}'`);
-  assertConfinementAvailable('turn', policy, known.driver);
+  await assertConfinementAvailable('turn', policy, known.driver, slug);
 
   // Same synchronous reservation as startSession (cross-exclusive with builds).
   if (!tryBeginTurn(slug)) {
     const reason = busyReason(slug) ?? 'session_running';
-    throw new ConflictError(
-      reason === 'build_running'
-        ? `A build is running for '${slug}'`
-        : `A turn is already running for '${slug}'`,
-      reason,
-    );
+    throw new ConflictError(reason === 'session_running' ? `A turn is already running for '${slug}'` : busyDetail(reason, slug), reason);
   }
 
   try {
@@ -289,6 +280,16 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
   const { slug, session_id: sessionId, driver } = meta;
   const turn = meta.turns + 1;
   let finalState: SessionState = 'idle';
+  // THE RESUME EPOCH (LEAD-1b). A resume token names agent state in a HOME owned by the uid
+  // that minted it; when the site's identity has changed since (the epoch moved — a
+  // migration, a re-declared site), that state is not this identity's to resume, so the
+  // token is DROPPED and the drop is a typed event in the session's own log. Sessions older
+  // than the field count as epoch 0.
+  const epoch = policy.identityEpoch ?? config.AGENT_IDENTITY_EPOCH;
+  const tokenEpoch = typeof meta.identity_epoch === 'number' ? meta.identity_epoch : 0;
+  const staleToken = meta.resume_token !== null && meta.resume_token !== undefined && tokenEpoch !== epoch;
+  if (staleToken) meta.resume_token = null;
+  meta.identity_epoch = epoch;
   let resumeToken: string | undefined = meta.resume_token ?? undefined;
   let sawError = false;
 
@@ -297,12 +298,14 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
     // is marked running — otherwise stopSession could race in and find no proc to kill.
     const opts: SessionStartOptions = {
       ...buildStartOptions(slug, driver, prompt, meta.resume_token ?? undefined, policy.mode),
+      slug,
       confinement: policy,
     };
     const proc = getDriver(driver).startTurn(opts);
     const live = liveByslug.get(slug);
     if (live) live.proc = proc;
 
+    if (staleToken) await persist(slug, sessionId, { type: 'resume_unavailable', reason: 'agent identity migrated' });
     await persist(slug, sessionId, { type: 'turn_start', turn, prompt });
 
     for await (const event of proc.events) {
@@ -323,8 +326,12 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
     // Commit whatever the agent wrote, so the turn is a rollback point.
     try {
       await commitAll(slug, `agent: session ${sessionId} turn ${turn}`, policy);
-    } catch {
-      // a failed commit is logged by git.ts's throw path but must not fail the turn
+    } catch (error) {
+      // A failed commit must not fail the turn — but it is never a silence.
+      console.error(`[sessions] the commit after turn ${turn} of '${slug}' failed:`, error);
+      // Refused because the daemon is stopping (a connect would cancel its stop): the next
+      // boot's sweep makes this commit as a recovery point.
+      if (error instanceof ConfinementRefusedError && error.code === 'daemon_stopping') meta.recovery_pending = true;
     }
 
     // An interrupted turn reports 'interrupted' regardless of how its stream ended.
@@ -384,15 +391,37 @@ export async function sweepOnBoot(): Promise<void> {
     slugBySession.set(sessionId, slug);
     const meta = await readMeta(slug, sessionId);
     if (!meta) continue;
-    if (meta.state === 'running') {
-      try {
-        await commitAll(slug, `agent: recovered after restart (session ${sessionId})`);
-      } catch {
-        // non-fatal
+    // 'running' is a process that died mid-turn; `recovery_pending` a turn whose commit the
+    // shutdown refused (sessions/events.ts). Both leave work only a recovery commit records.
+    const wasRunning = meta.state === 'running';
+    if (wasRunning || meta.recovery_pending === true) {
+      // THE RECOVERY COMMIT HOLDS THE SITE (LEAD-1b). It runs git — agent-authored text's
+      // interpreter — in the workspace, exactly as a turn's own commit does, so it takes the
+      // same kind of reservation: nothing else may start on the site while it runs, and a
+      // confined run of this site is refused without one at all.
+      let recorded = false;
+      if (tryBegin(slug, 'recovery')) {
+        try {
+          await commitAll(slug, `agent: recovered after restart (session ${sessionId})`);
+          recorded = true;
+        } catch (error) {
+          // Not fatal to the boot — but a recovery point that was not made is a fact an
+          // operator must be able to find, never a silence.
+          console.error(`[sessions] the recovery commit for '${slug}' (session ${sessionId}) failed:`, error);
+        } finally {
+          end(slug, 'recovery');
+        }
+      } else {
+        console.error(
+          `[sessions] the recovery commit for '${slug}' (session ${sessionId}) was skipped: the site ` +
+            `is held (${busyReason(slug) ?? 'unknown'}).`,
+        );
       }
-      meta.state = 'interrupted';
+      // A refused commit stays owed until one is made (the next boot asks again).
+      if (recorded) delete meta.recovery_pending;
+      if (wasRunning) meta.state = 'interrupted';
       await writeMeta(meta);
-      await persist(slug, sessionId, { type: 'turn_end', state: 'interrupted' });
+      if (wasRunning) await persist(slug, sessionId, { type: 'turn_end', state: 'interrupted' });
     }
   }
 }
@@ -456,10 +485,10 @@ export function buildStartOptions(
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const baseEnv: Record<string, string> = {
     PATH: process.env.PATH ?? '/usr/bin:/bin',
-    // The agent's OWN home (0700, its own root), never the workspaces root: a HOME inside
-    // the tree an agent turn writes to is a site able to rewrite the agent's configuration
-    // — its credentials file, its MCP servers — for every later turn on every other site.
-    HOME: config.AGENT_HOME,
+    // NO HOME (LEAD-1b). The UNIT fixes it — each (site, door) its own directory, owned by
+    // the site's identity, masked from every other run — and the shim refuses a spec that
+    // tries to set it. A caller-chosen HOME was one HOME shared by every site: the cross-site
+    // plant channel for the agent's configuration, credentials and MCP servers.
   };
   if (driver === 'claude_code' && config.ANTHROPIC_API_KEY) {
     baseEnv.ANTHROPIC_API_KEY = config.ANTHROPIC_API_KEY;

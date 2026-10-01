@@ -1,4 +1,4 @@
-# dedalo-provision: example env c080446ac177bc014ef007603d1a9ae4861c33bccf809ec57f744bafabec34ec
+# dedalo-provision: example env ef2768d5ff3621f79281750f408a1fc3e8ac33471318142ca1d1a76bccb99a93
 # GENERATED FILE — do not edit.
 #
 # The environment of the Dédalo site-builder daemon for instance 'example'.
@@ -29,9 +29,11 @@
 
 AGENT_CONFINEMENT="systemd_scope"
 AGENT_DRIVER="claude_code"
-AGENT_HOME="/var/lib/dedalo_sites/example/home"
+AGENT_IDENTITIES="{\"archive\":2,\"collection\":1}"
+AGENT_IDENTITY_EPOCH="1"
+AGENT_SOCKET_DIR="/run/dedalo-sites-agents/example"
+AGENT_STATE_ROOT="/var/lib/dedalo_sites/example/agents"
 AGENT_UNIT_PREFIX="dedalo-site-example-agent-"
-AGENT_USER="dedalo-agent-example"
 AUDIT_DIR="/srv/dedalo_audit/example"
 CLAUDE_CODE_BIN="/usr/local/bin/claude"
 DEDALO_SITE_INSTANCE="example"

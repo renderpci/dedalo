@@ -13,19 +13,18 @@
  * The environment handed to the turn is exactly SessionStartOptions.env — the driver's
  * allowlist. No inheritance.
  *
- * AND NOTHING HERE SPAWNS A DRIVER'S ARGV DIRECTLY. Every turn goes through
- * `confineTurn()` (./confinement.ts), which decides what the turn runs AS: a transient
- * systemd unit under the agent's own uid, in its own network namespace whose only way out is
- * the per-run egress gate, with its own caps, or —
- * only where the daemon was explicitly configured `AGENT_CONFINEMENT=none` — a plain child
- * of this daemon that ANNOUNCES itself into the session's durable log. There is no third
- * possibility and no silent fallback: a host that cannot confine refuses the turn.
+ * AND NOTHING HERE SPAWNS ANYTHING. Every turn goes through `confineTurn()`
+ * (./confinement.ts), which decides what the turn runs AS and hands back one `ConfinedChild`
+ * to consume: an instance of the unit root rendered for the turn's SITE (its own identity, its
+ * own network namespace whose only way out is the site's egress gate, its own caps), relayed
+ * over the connection the daemon made to the site's socket — or, only where the daemon was
+ * explicitly configured `AGENT_CONFINEMENT=none`, a plain child of this daemon that ANNOUNCES
+ * itself into the session's durable log. There is no third possibility and no silent
+ * fallback: a host that cannot confine refuses the turn.
  */
 
-import { confineTurn, type ConfinedTurn, type ConfinementPolicy } from './confinement';
+import { confineTurn, RunAbortedError, type ConfinedChild, type ConfinementPolicy } from './confinement';
 import type { AgentEvent, AgentProcess, SessionStartOptions } from './types';
-
-const INTERRUPT_GRACE_MS = 5000;
 
 export interface TurnPlan {
   argv: string[];
@@ -121,14 +120,15 @@ export function spawnAgentProcess(
 ): AgentProcess {
   const queue = new EventQueue();
 
-  let child: ReturnType<typeof Bun.spawn> | null = null;
-  let confined: ConfinedTurn | null = null;
+  let confined: ConfinedChild | null = null;
+  let started = false;
   let sawResult = false;
-  let killTimer: ReturnType<typeof setTimeout> | null = null;
-  // An interrupt can land BEFORE Bun.spawn has run (setup — writing the MCP config — is
-  // async). Record the request so the spawn path can honor it immediately; otherwise a
+  // An interrupt can land BEFORE the run has opened (setup — writing the MCP config — is
+  // async). Record the request so the open path can honor it immediately; otherwise a
   // stop in that window would be silently lost and the agent would run to completion.
   let interruptRequested = false;
+  // Reaches INTO confineTurn: an interrupt landing while it opens the gate starts nothing.
+  const abort = new AbortController();
 
   // Kicked off immediately; the returned AgentProcess exposes the live queue.
   const running = (async () => {
@@ -148,15 +148,16 @@ export function spawnAgentProcess(
       return;
     }
 
-    // THE CONFINEMENT DECISION, BEFORE ANY BYTE IS SPAWNED. A refusal here (no runner, no
-    // agent uid, no runtime directory) is a normalized error event and NOT a turn that ran
-    // as this daemon: the whole point of the setting is that it has no degraded mode. The
-    // turn's egress gate opens inside confineTurn() and is closed by `confined.cleanup()` on
-    // every path below — or by confineTurn() itself when it refuses after opening it.
+    // THE CONFINEMENT DECISION, BEFORE THE RUN EXISTS. A refusal here (no identity, a site
+    // still busy, a unit PID 1 loaded differently) is a normalized error event and NOT a turn
+    // that ran as this daemon: the whole point of the setting is that it has no degraded mode.
+    // The run's egress gate opens inside confineTurn() and is closed by `confined.cleanup()`
+    // on every path below — or by confineTurn() itself when it refuses after opening it.
     try {
       confined = await confineTurn(
         {
           door: 'turn',
+          slug: opts.slug,
           argv: plan.argv,
           cwd: opts.workspace,
           env: opts.env,
@@ -165,12 +166,19 @@ export function spawnAgentProcess(
           mcpUpstream: opts.mcpUpstream,
           // A blocked host is a line in the session's own durable log, never a silent hang.
           onEgress: line => queue.push({ type: 'text', text: line }),
+          signal: abort.signal,
         },
         // The seam first (a gate stating its host), then the policy the manager CHECKED this
         // turn against — never a third, fresh read of the config between the two.
         policy ?? opts.confinement,
       );
     } catch (error) {
+      if (error instanceof RunAbortedError) {
+        queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
+        await runCleanup(plan);
+        queue.close();
+        return;
+      }
       queue.push({ type: 'error', message: `confinement refused: ${errText(error)}`, retriable: false });
       await runCleanup(plan);
       queue.close();
@@ -190,43 +198,34 @@ export function spawnAgentProcess(
     }
 
     if (confined.announcement) queue.push({ type: 'text', text: confined.announcement });
-
-    try {
-      child = Bun.spawn(confined.argv, {
-        cwd: opts.workspace,
-        env: confined.env,
-        stdout: 'pipe',
-        stderr: 'pipe',
-        stdin: 'ignore',
-      });
-    } catch (error) {
-      queue.push({ type: 'error', message: `spawn failed: ${errText(error)}`, retriable: false });
-      await teardown(confined, plan, queue);
-      return;
-    }
+    started = true;
+    const run = confined;
 
     const timeout = setTimeout(() => {
       queue.push({ type: 'error', message: 'turn timed out', retriable: true });
-      child?.kill(9);
-      // Killing the client does not kill a transient unit; PID 1 owns it. (Its own
-      // RuntimeMaxSec is the backstop behind this, for the case this process is gone too.)
-      confined?.stop();
+      // Awaited inside: the run is ended through the connection AND PID 1 (RuntimeMaxSec is
+      // the backstop behind both, for the case this process is gone too).
+      void run.stop();
     }, opts.timeoutMs);
 
     const stderrChunks: string[] = [];
     try {
       await Promise.all([
-        readLines(child.stdout as ReadableStream<Uint8Array>, line => {
+        readLines(run.stdout, line => {
           for (const event of plan.parseLine(line)) {
             if (event.type === 'result') sawResult = true;
             queue.push(event);
           }
         }),
-        readAll(child.stderr as ReadableStream<Uint8Array>, chunk => stderrChunks.push(chunk)),
+        readAll(run.stderr, chunk => stderrChunks.push(chunk)),
       ]);
-      const exitCode = await child.exited;
+      const exit = await run.exited;
+      const exitCode = exit.exitCode;
 
-      if (exitCode !== 0 && !sawResult) {
+      if (exit.failure && !sawResult) {
+        // No status of record: never a success, whatever was printed.
+        queue.push({ type: 'error', message: `the turn's unit ended without an exit status (${exit.failure})`, retriable: true });
+      } else if (exitCode !== 0 && !sawResult) {
         queue.push({
           type: 'error',
           message: stderrChunks.join('').trim().slice(-500) || `agent exited ${exitCode}`,
@@ -240,31 +239,25 @@ export function spawnAgentProcess(
       queue.push({ type: 'error', message: errText(error), retriable: true });
     } finally {
       clearTimeout(timeout);
-      if (killTimer) clearTimeout(killTimer);
-      // The per-turn credential residence goes away here, on every path — including the
-      // timeout above and the interrupt below, which are the two paths a `rm` written after
-      // the read loop would never reach.
+      // The run's gate and its site's run slot go here, on every path — including the
+      // timeout above and the interrupt below.
       await teardown(confined, plan, queue);
     }
   })();
 
   return {
     get pid(): number {
-      return child?.pid ?? -1;
+      return confined?.pid ?? -1;
     },
     events: queue,
     async interrupt(): Promise<void> {
       interruptRequested = true;
-      if (child) {
-        child.kill('SIGINT');
-        // Escalate if it does not exit on its own.
-        killTimer = setTimeout(() => child?.kill(9), INTERRUPT_GRACE_MS);
-        // A confined turn is not this child — it is a unit PID 1 owns, and killing the
-        // client that is waiting on it does not stop it. Ask PID 1, through the same grant
-        // that started it.
-        confined?.stop();
-      }
-      // No child yet: the flag above stops the spawn path before it starts. Either way,
+      abort.abort();
+      // A confined turn is a unit PID 1 owns: stop() ends it through its connection and asks
+      // PID 1 too (the rule's stop grant); a declared-unconfined child gets SIGINT, then
+      // SIGKILL after a grace. Awaited either way.
+      if (started && confined) await confined.stop().catch(() => {});
+      // Not started yet: the flag above stops the open path before it starts. Either way,
       // wait for the run to settle so the caller observes a terminated turn.
       await running;
     },
@@ -277,7 +270,7 @@ export function spawnAgentProcess(
  * `queue.close()`: the manager's `for await` never ended and the session sat in 'running'.
  * A gate that did not close is a line in the session's own log, never a silence.
  */
-async function teardown(confined: ConfinedTurn | null, plan: TurnPlan, queue: EventQueue): Promise<void> {
+async function teardown(confined: ConfinedChild | null, plan: TurnPlan, queue: EventQueue): Promise<void> {
   try {
     await confined?.cleanup();
   } catch (error) {
@@ -306,13 +299,10 @@ function errText(error: unknown): string {
 }
 
 /** Reads a byte stream, splitting into lines, invoking onLine per complete line. */
-async function readLines(stream: ReadableStream<Uint8Array>, onLine: (line: string) => void): Promise<void> {
-  const reader = stream.getReader();
+async function readLines(stream: AsyncIterable<Uint8Array>, onLine: (line: string) => void): Promise<void> {
   const decoder = new TextDecoder();
   let buffer = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  for await (const value of stream) {
     buffer += decoder.decode(value, { stream: true });
     let newline: number;
     while ((newline = buffer.indexOf('\n')) !== -1) {
@@ -325,12 +315,9 @@ async function readLines(stream: ReadableStream<Uint8Array>, onLine: (line: stri
 }
 
 /** Reads a byte stream to exhaustion, decoding each chunk (used to capture stderr). */
-async function readAll(stream: ReadableStream<Uint8Array>, onChunk: (chunk: string) => void): Promise<void> {
-  const reader = stream.getReader();
+async function readAll(stream: AsyncIterable<Uint8Array>, onChunk: (chunk: string) => void): Promise<void> {
   const decoder = new TextDecoder();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  for await (const value of stream) {
     if (value) onChunk(decoder.decode(value, { stream: true }));
   }
   const tail = decoder.decode();

@@ -95,7 +95,7 @@ exported `SITES_ROOT` in a shell cannot repoint a daemon, and an unknown key any
 that source is a named refusal rather than a value that quietly does nothing.
 
 Two consequences for a development run. `DEDALO_SITE_INSTANCE` is REQUIRED and its roots
-(`SITES_ROOT`, `AGENT_HOME`, `AUDIT_DIR`, `WEBSPACE_BASE`) must each carry a
+(`SITES_ROOT`, `AUDIT_DIR`, `WEBSPACE_BASE`) must each carry a
 `.dedalo_site_instance` marker naming it — the daemon refuses to boot against a directory
 that has not said whose it is — and `SITE_TABLE_FILE` must name a readable site table
 stamped for the same instance, because every path the daemon publishes into comes out of
@@ -126,31 +126,41 @@ pure function of it:**
 `src/provision/schema.ts` is that file's grammar, `src/provision/layout.ts` derives every
 name, path, owner, group and mode from it, and `src/provision/render/` turns the result
 into the exact bytes of each artifact — the systemd unit, the daemon's environment file,
-one vhost per site per surface, the polkit rule that lets this museum's daemon stop and kill its
-agent units (never start one — F2: polkit cannot bind the run-as uid, so confined runs are
-refused until per-site identities land), and the pairing fragment the paired engine's `.env` receives. Each rendered file carries a hash of its own body on the first line, so a hand
+one vhost per site per surface, per declared site and per door the agent units (a socket, a
+target and a service template whose `User=` is that site's own identity), the polkit rule that
+lets this museum's daemon stop and kill a live run of its declared sites (never start one —
+F2: polkit cannot bind the run-as uid; PID 1 starts a run when the daemon connects to the
+site's socket), and the pairing fragment the paired engine's `.env` receives. Each rendered file carries a hash of its own body on the first line, so a hand
 edit is drift the next run reports by name rather than a change that survives until
 someone re-runs the provisioner and silently loses it.
 
 Read `engineering/SITE_BUILDER_INSTANCES.md` for what an instance IS — the uid/gid/mode
 matrix, the marker law, the credential path, and the isolation boundary between museums.
 
-**A museum has TWO uids.** The daemon's, which holds the shared bearer, the provider keys and
-the audit handle; and the AGENT's (`identity.agentUser`), which every turn runs as, in its own
-transient systemd unit with its own memory/CPU/task/wall-clock caps, in a private network
-namespace whose only way out is the daemon's hostname-only egress gate
-(`src/drivers/confinement.ts`, `src/drivers/network_profile.ts`, `src/egress/gate.ts`). Nothing separates a process from itself, so a turn that ran as
-the daemon could read all three whatever the unit's `Protect*` directives said. Where a host
-cannot do this — a laptop, a container — the daemon REFUSES the session unless
-`AGENT_CONFINEMENT=none` is declared, and then every turn announces itself into its own
-durable log. All sites of one museum share the agent uid; the reasoning, and what would end
-that acceptance, is recorded beside the derivation in `src/provision/layout.ts`.
+**Every site is its own uid (LEAD-1b).** The daemon's uid holds the shared bearer, the
+provider keys and the audit handle; each declared site has its OWN identity,
+`dedalo-a-<instance>_<k>`, which every run of that site is — in an instance of a unit root
+rendered for the site and the door, with its own memory/CPU/task/wall-clock caps, its own
+HOME, and a private network namespace whose only way out is the site's hostname-only egress
+gate (`src/drivers/confinement.ts`, `src/drivers/network_profile.ts`, `src/egress/gate.ts`).
+The daemon starts nothing: it connects, once, to the site's socket, sends the run's argv and
+environment as a frame, relays the output, and frees the site only when PID 1 reports the
+run dead. It opens no run once it is shutting down (a start would cancel its own stop), and
+it refuses any site whose uid or private group another account or group on the host also
+holds. Nothing separates a process from itself, so a run that was the daemon could read
+all three whatever the unit's `Protect*` directives said; a run of one site cannot reach
+another site's live run, gate or HOME either. Where a host cannot do this — a laptop, a
+container — the daemon REFUSES the session unless `AGENT_CONFINEMENT=none` is declared, and
+then every turn announces itself into its own durable log. What is not drawn (a site's run
+can READ, never write, a sibling site's workspace through the shared instance group) and
+what would change it is recorded beside the derivation in `src/provision/layout.ts`.
 
-The same uid runs the SITE BUILD and the daemon's own `git` commands: an install script, a
-build command and a git filter are all agent-authored text inside the workspace, and
-`src/util/spawn.ts` refuses a spawn whose cwd is inside `SITES_ROOT` unless it came through
-the confinement. The shared tree states its modes explicitly (`src/util/shared_tree.ts`) so
-the second uid can actually write it, and the audit trail is `0600` so it cannot read that.
+The same identity runs its SITE BUILD and the daemon's `git` commands on it: an install
+script, a build command and a git filter are all agent-authored text inside the workspace,
+and `src/util/spawn.ts` refuses a spawn whose cwd is inside `SITES_ROOT` unless it came
+through the confinement. The shared tree states its modes explicitly
+(`src/util/shared_tree.ts`) so the site identities can actually write it, and the audit
+trail is `0600` so they cannot read that.
 
 Opening that tree also makes a plant possible, so the same module is the ONE way the daemon
 writes into it: paths here are built by `confinedPath`, which is lexical — it proves a
@@ -252,8 +262,8 @@ thing again, and a run that cannot is a failure whatever else succeeded.**
 served link pointing at a RELEASE, not merely a link existing. Even with `--purge-published`
 every tree with a museum's bytes in it is ARCHIVED, renamed beside itself as
 `<path>.retired-<utc>`; only files the provisioner can prove it wrote (by their body-hash
-stamp) are removed, and the uid is never freed — the account is locked and kept, because
-every archived byte is owned by that number.
+stamp) are removed, and the uid is never freed — the account is retired (locked and
+expired) and kept, because every archived byte is owned by that number.
 
 ## HTTP API (all under `BASE_PATH`, bearer auth except `/health`)
 

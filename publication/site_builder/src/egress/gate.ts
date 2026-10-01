@@ -33,16 +33,28 @@
  * host is a named fact a museum can read, never a silent hang. Lines are deduplicated per run,
  * so a client that retries does not grow the log without bound.
  *
- * THE DIRECTORY. `<runtime>/egress/<uuid>/`, created 0750 by the daemon (its group is the
- * daemon's primary group — the instance group the agent uid shares — so the agent can
- * traverse it once PID 1 has bound it into the unit), sockets 0660. It is REFUSED anywhere
- * but directly under an `egress/` directory: never the runtime root (the daemon's own
- * socket) and never `turns/` (the per-run 0600 secret files). `close()` stops both servers,
- * destroys live connections, unlinks the sockets and removes the directory; it is idempotent.
+ * THE DIRECTORY. `<agent socket dir>/egress/s<k>/` — one per SITE identity (LEAD-1b) — is
+ * PROVISIONED BY ROOT (a tmpfiles.d line `provision apply` renders), never created here:
+ * root:<site's private group> 0770 under a root-owned 0755 `egress/`. It is the SOURCE of a
+ * bind PID 1 resolves AS ROOT when it sets up the site's unit, so nothing the daemon's uid can
+ * rename, replace or re-point may sit on that path — a daemon-owned directory was one a
+ * compromised daemon could swap for a symlink into a tree behind a traversal barrier, and PID 1
+ * would have bound it into the site's unit (the ENVFILE pattern). The gate therefore REFUSES,
+ * before anything is served, a directory that is not exactly that (`provisionedDirProblem`:
+ * a real directory, owned by the provisioner, the site's group, 0770; every ancestor a real
+ * directory no other uid may rename entries in). The daemon writes its sockets into it by
+ * GROUP membership, 0660 and chgrp'd to the site's group, so beneath the unit's `/run` mask and
+ * its distinct uid, DAC also says only this site's identity (and the daemon) may reach them;
+ * the unit binds it READ-ONLY (connect(2) needs no writable mount), so the site's own runs
+ * cannot plant in it either. Stale sockets of an earlier run are unlinked first; any other
+ * entry refuses. It is REFUSED anywhere but directly under an `egress/` directory. `close()`
+ * stops both servers, destroys live connections and unlinks the sockets (never the directory,
+ * which is root's); it is idempotent.
  */
 
 import { lookup as dnsLookup } from 'node:dns/promises';
-import { chmod, mkdir, rm } from 'node:fs/promises';
+import { lstatSync } from 'node:fs';
+import { chmod, chown, readdir, rm } from 'node:fs/promises';
 import { connect, createServer, isIP, type Server, type Socket } from 'node:net';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 import { EGRESS_PORT, hostProblem, MCP_SOCKET, PROXY_SOCKET } from '../drivers/network_profile';
@@ -57,8 +69,21 @@ export type EgressLookup = (host: string) => Promise<readonly { address: string;
 export type EgressDial = (address: string, port: number) => Promise<Socket>;
 
 export interface EgressGateOptions {
-  /** `<runtime>/egress/<uuid>` — created here, removed by close(). */
+  /** `<agent socket dir>/egress/s<k>` — PROVISIONED by root; served in, never created or removed. */
   readonly dir: string;
+  /**
+   * THE SITE'S PRIVATE GROUP (LEAD-1b, REQUIRED). The directory must already BE it (0770), and
+   * every socket is chgrp'd to it (0660) BEFORE anything is served — so beneath the unit's
+   * `/run` mask and its distinct uid, plain DAC also says only this site's identity (and the
+   * daemon, the one other member) may reach this gate. The daemon may chgrp without privilege:
+   * it is a member.
+   */
+  readonly group: number;
+  /**
+   * THE UID THAT PROVISIONED THE DIRECTORY (REQUIRED) — root, 0, in production; a gate run by
+   * a test states its own. The directory and every ancestor must be this uid's or root's.
+   */
+  readonly owner: number;
   readonly plan: EgressGatePlan;
   /** The Publication API base (`…/server_api/v2`); the MCP upstream is `<this>/mcp`. */
   readonly publicationApiUrl: string;
@@ -75,6 +100,13 @@ export interface EgressGateOptions {
     readonly lookup?: EgressLookup;
     readonly dial?: EgressDial;
     readonly beforeServe?: (socket: typeof PROXY_SOCKET | typeof MCP_SOCKET) => void | Promise<void>;
+    /** The chgrp (`chown(path, -1, gid)`). A gate cannot chgrp to a group it is not in. */
+    readonly chown?: (path: string, uid: number, gid: number) => void | Promise<void>;
+    /**
+     * lstat(2) of the directory and its ancestors, for `provisionedDirProblem` — a test host
+     * that cannot make a directory root's (or a group it is not in) states what root made.
+     */
+    readonly lstat?: (path: string) => DirFacts | null;
   };
 }
 
@@ -82,7 +114,8 @@ export interface EgressGate {
   close(): Promise<void>;
 }
 
-const DIR_MODE = 0o750;
+/** The provisioned per-site directory: root:<site group>, the daemon writes in it by group. */
+export const EGRESS_DIR_MODE = 0o770;
 const SOCKET_MODE = 0o660;
 /** A CONNECT head is one line and a Host header: anything larger is not a client of ours. */
 const HEAD_LIMIT_BYTES = 8 * 1024;
@@ -148,14 +181,14 @@ function printable(text: string): string {
 
 /**
  * A per-run directory is `<something>/egress/<name>`, and nothing else. The refusal is the
- * structural half of "never the runtime root, never turns/": a gate cannot be pointed at a
+ * structural half of "never the runtime root": a gate cannot be pointed at a
  * directory that holds the daemon's socket or its secrets.
  */
 function assertPerRunDir(dir: string): void {
   if (!isAbsolute(dir) || basename(dirname(dir)) !== 'egress' || basename(dir) === '' || dir.includes('/../')) {
     throw new Error(
       `egress gate: '${dir}' is not a per-run directory under an egress/ directory — a gate is ` +
-        `never opened on the runtime root, on turns/, or anywhere else.`,
+        `never opened on the runtime root, or anywhere else.`,
     );
   }
 }
@@ -171,9 +204,86 @@ function assertPlanHosts(hosts: readonly string[]): void {
   }
 }
 
+/** What `provisionedDirProblem` reads of a path — lstat(2), never following a link. */
+export interface DirFacts {
+  readonly kind: 'dir' | 'symlink' | 'other';
+  readonly uid: number;
+  readonly gid: number;
+  /** Permission bits, `& 0o7777`. */
+  readonly mode: number;
+}
+
+function systemLstat(path: string): DirFacts | null {
+  try {
+    const facts = lstatSync(path);
+    return {
+      kind: facts.isSymbolicLink() ? 'symlink' : facts.isDirectory() ? 'dir' : 'other',
+      uid: facts.uid,
+      gid: facts.gid,
+      mode: facts.mode & 0o7777,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const octal = (mode: number) => `0${mode.toString(8)}`;
+
+/**
+ * IS `dir` WHAT ROOT PROVISIONED, AND ONLY ROOT CAN RE-POINT? Null when it is; else why not.
+ *
+ * `dir` itself: a real directory (never a link), owned by `owner`, group `group`, exactly
+ * 0770. EVERY ANCESTOR up to `/`: a real directory owned by `owner` or root, and not writable
+ * by group or other unless sticky (`/tmp`) — so no uid but root's may rename, replace or
+ * re-point any component of the path PID 1 will resolve as root. Exported: the daemon asks it
+ * before a run opens anything, and names `provision apply` as the repair.
+ */
+export function provisionedDirProblem(
+  dir: string,
+  expected: { readonly owner: number; readonly group: number },
+  lstat: (path: string) => DirFacts | null = systemLstat,
+): string | null {
+  const own = lstat(dir);
+  if (!own) return `'${dir}' does not exist`;
+  if (own.kind !== 'dir') return `'${dir}' is ${own.kind === 'symlink' ? 'a symlink' : 'not a directory'}`;
+  if (own.uid !== expected.owner) return `'${dir}' is owned by uid ${own.uid}, not the provisioner's (${expected.owner})`;
+  if (own.gid !== expected.group) return `'${dir}' is group ${own.gid}, not the site's private group (${expected.group})`;
+  if (own.mode !== EGRESS_DIR_MODE) return `'${dir}' is mode ${octal(own.mode)}, not ${octal(EGRESS_DIR_MODE)}`;
+  for (let parent = dirname(dir); ; parent = dirname(parent)) {
+    const facts = lstat(parent);
+    if (!facts) return `its ancestor '${parent}' cannot be read`;
+    if (facts.kind !== 'dir') return `its ancestor '${parent}' is ${facts.kind === 'symlink' ? 'a symlink' : 'not a directory'}`;
+    if (facts.uid !== 0 && facts.uid !== expected.owner) return `its ancestor '${parent}' is owned by uid ${facts.uid}, neither root nor the provisioner`;
+    if ((facts.mode & 0o022) !== 0 && (facts.mode & 0o1000) === 0) {
+      return `its ancestor '${parent}' (mode ${octal(facts.mode)}) is writable by others without the sticky bit — another uid could rename what lies below it`;
+    }
+    if (parent === dirname(parent)) return null;
+  }
+}
+
 export async function openEgressGate(opts: EgressGateOptions): Promise<EgressGate> {
   assertPerRunDir(opts.dir);
   assertPlanHosts(opts.plan.hosts);
+  if (typeof opts.group !== 'number' || !Number.isInteger(opts.group) || opts.group < 0) {
+    throw new Error(
+      `egress gate: no site group was given for '${opts.dir}'. A gate belongs to ONE site's private group ` +
+        `(0770/0660) — without it the sockets would carry the daemon's own group, which every site ` +
+        `identity is in. Nothing was opened.`,
+    );
+  }
+  if (typeof opts.owner !== 'number' || !Number.isInteger(opts.owner) || opts.owner < 0) {
+    throw new Error(`egress gate: no provisioner uid was given for '${opts.dir}'. Nothing was opened.`);
+  }
+  const problem = provisionedDirProblem(opts.dir, { owner: opts.owner, group: opts.group }, opts.seams?.lstat);
+  if (problem) {
+    throw new Error(
+      `egress gate: the site's egress directory is not as root provisioned it — ${problem}. It is the source ` +
+        `of a bind PID 1 resolves as root; run provision apply (it renders and applies the tmpfiles.d line). ` +
+        `Nothing was opened.`,
+    );
+  }
+  const chgrp = opts.seams?.chown ?? ((path: string, uid: number, gid: number) => chown(path, uid, gid));
+  const group = opts.group;
   const lookup = opts.seams?.lookup ?? systemLookup;
   const dial = opts.seams?.dial ?? systemDial;
   const plannedHosts = new Set(opts.plan.hosts);
@@ -189,13 +299,20 @@ export async function openEgressGate(opts: EgressGateOptions): Promise<EgressGat
     }
   };
 
-  await mkdir(dirname(opts.dir), { recursive: true, mode: DIR_MODE });
-  // Not recursive: a per-run directory that already exists is not this run's.
-  await mkdir(opts.dir, { mode: DIR_MODE });
-  await chmod(opts.dir, DIR_MODE);
-
   const proxyPath = join(opts.dir, PROXY_SOCKET);
   const mcpPath = join(opts.dir, MCP_SOCKET);
+  // AN EARLIER RUN'S SOCKETS (a daemon killed mid-run) are unlinked; anything else in the
+  // directory is not this gate's to serve beside, and refuses.
+  const stale = await readdir(opts.dir);
+  const foreign = stale.filter(name => name !== PROXY_SOCKET && name !== MCP_SOCKET);
+  if (foreign.length > 0) {
+    throw new Error(
+      `egress gate: '${opts.dir}' holds ${foreign.map(name => `'${printable(name)}'`).join(', ')}, which no gate ` +
+        `serves — refused, nothing was opened.`,
+    );
+  }
+  await rm(proxyPath, { force: true });
+  await rm(mcpPath, { force: true });
   const live = new Set<Socket>();
   const clients = new Set<Socket>();
   let proxy: Server | null = null;
@@ -213,7 +330,6 @@ export async function openEgressGate(opts: EgressGateOptions): Promise<EgressGat
       if (mcp) await mcp.stop(true);
       await rm(proxyPath, { force: true });
       await rm(mcpPath, { force: true });
-      await rm(opts.dir, { recursive: true, force: true });
     })();
     return closing;
   };
@@ -229,11 +345,13 @@ export async function openEgressGate(opts: EgressGateOptions): Promise<EgressGat
         resolve();
       });
     });
+    await chgrp(proxyPath, -1, group);
     await chmod(proxyPath, SOCKET_MODE);
 
     if (opts.plan.mcp) {
       await opts.seams?.beforeServe?.(MCP_SOCKET);
       mcp = serveMcp(mcpPath, opts);
+      await chgrp(mcpPath, -1, group);
       await chmod(mcpPath, SOCKET_MODE);
     }
   } catch (error) {

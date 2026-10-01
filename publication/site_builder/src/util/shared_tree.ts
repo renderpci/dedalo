@@ -76,7 +76,8 @@
  * write with an explicit `fchmod`, which the umask does not touch.
  *
  * WHAT IS *NOT* SHARED. `.builder/` — the daemon's own per-site state (build records, logs)
- * — is created 0700 by `mkdirPrivate`, and its files 0600 by `writeFilePrivate` /
+ * — is created 0710 (traverse-only to the group, `DAEMON_STATE_DIR_MODE`) by `mkdirPrivate`,
+ * everything inside it 0700, and its files 0600 by `writeFilePrivate` /
  * `appendFilePrivate`. It sits inside a directory the agent can write, so this is a
  * statement of intent and not a wall (a turn can still unlink the directory itself and
  * recreate it — which is exactly why every write into it re-verifies its chain with
@@ -116,6 +117,18 @@ export const AGENT_READABLE_FILE_MODE = 0o640;
 
 /** The daemon's own state inside a shared tree: its uid alone. */
 export const PRIVATE_DIR_MODE = 0o700;
+
+/**
+ * `.builder` ITSELF — the daemon's, and TRAVERSE-ONLY to the instance group (0710).
+ *
+ * A confined turn runs as the SITE's identity (LEAD-1b), not as the daemon, and Claude Code
+ * must OPEN the per-turn MCP configuration the daemon writes at `.builder/mcp.json` (0640,
+ * `AGENT_READABLE_FILE_MODE`). Behind a 0700 `.builder` that open is EACCES for every turn:
+ * the 0640 meant nothing. The group's `x` lets the identity reach a name it is GIVEN and
+ * nothing more — it cannot list `.builder` (no `r`), nor create, rename or unlink in it (no
+ * `w`) — and everything else inside stays 0700 / 0600, closed even by name.
+ */
+export const DAEMON_STATE_DIR_MODE = 0o710;
 
 /** The daemon's own FILES inside a shared tree: its uid alone. */
 export const PRIVATE_FILE_MODE = 0o600;
@@ -271,7 +284,7 @@ function segmentsUnder(root: string, relative: string): { target: string; segmen
  * is a real directory and leave its mode alone.
  *
  * The mode belongs to the call that CREATES a directory. Re-stating it on the way past would
- * mean every nested call re-decides the mode of its parents, which is how `.builder` (0700,
+ * mean every nested call re-decides the mode of its parents, which is how `.builder` (then 0700,
  * the daemon's own) was re-opened to 2770 by the first build under it.
  */
 async function mkdirLevel(path: string, mode: number): Promise<void> {
@@ -298,12 +311,12 @@ async function assertRealChain(root: string, segments: readonly string[]): Promi
   }
 }
 
-async function ensureDir(root: string, relative: string, mode: number): Promise<string> {
+async function ensureDir(root: string, relative: string, mode: number | ((segment: string) => number)): Promise<string> {
   const { target, segments } = segmentsUnder(root, relative);
   let path = resolve(root);
   for (const segment of segments) {
     path = join(path, segment);
-    await mkdirLevel(path, mode);
+    await mkdirLevel(path, typeof mode === 'number' ? mode : mode(segment));
   }
   return target;
 }
@@ -335,10 +348,36 @@ export async function mkdirShared(root: string, relative: string): Promise<strin
  *
  * Every level this call creates is 0700 — including an intermediate. A private path whose
  * parent does not exist yet is a private path: creating its parent shared would be this
- * function widening the very thing it is asked to close.
+ * function widening the very thing it is asked to close. The ONE exception is a level named
+ * `.builder` itself, created traverse-only (`DAEMON_STATE_DIR_MODE`, 0710) so the site's
+ * identity can open the one file it is handed there.
  */
 export async function mkdirPrivate(root: string, relative: string): Promise<string> {
-  return ensureDir(root, relative, PRIVATE_DIR_MODE);
+  return ensureDir(root, relative, segment => (PRIVATE_NAMES.includes(segment) ? DAEMON_STATE_DIR_MODE : PRIVATE_DIR_MODE));
+}
+
+/**
+ * RESTATE `.builder`'s own mode (`DAEMON_STATE_DIR_MODE`) — the one directory this module
+ * re-modes after creating it, because every `.builder` made before 0710 is 0700 and a confined
+ * turn cannot open its MCP configuration through it. Through the handle, `O_NOFOLLOW`, and only
+ * when the inode is this daemon's: a `.builder` the agent replaced with its own is not this
+ * daemon's to chmod (EPERM), and every write into it is proved on its own anyway.
+ */
+export async function restateDaemonStateDir(root: string, relative: string): Promise<void> {
+  const { target, segments } = segmentsUnder(root, relative);
+  if (!PRIVATE_NAMES.includes(segments[segments.length - 1] as string)) {
+    throw new Error(`shared_tree: '${relative}' is not the daemon's state directory (${PRIVATE_NAMES.join(', ')}).`);
+  }
+  await assertRealChain(root, segments.slice(0, -1));
+  const handle = await openNoFollow(target, FS.O_RDONLY | FS.O_DIRECTORY);
+  try {
+    const stats = await handle.stat();
+    if (stats.uid === process.getuid?.() && (stats.mode & 0o7777) !== DAEMON_STATE_DIR_MODE) {
+      await handle.chmod(DAEMON_STATE_DIR_MODE);
+    }
+  } finally {
+    await handle.close();
+  }
 }
 
 /**
