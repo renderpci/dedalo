@@ -39,7 +39,12 @@ import {
 	resolvePickerConstraint,
 } from '../relations/picker_constraint.ts';
 import { buildStructureContext } from '../resolve/structure_context.ts';
-import { getPermissions, type Principal, SUPERUSER_ID } from '../security/permissions.ts';
+import {
+	getPermissionGrant,
+	getPermissions,
+	type Principal,
+	SUPERUSER_ID,
+} from '../security/permissions.ts';
 import { currentRequestId } from '../security/request_context.ts';
 import { readAreaHierarchyData } from './tree.ts';
 
@@ -108,9 +113,19 @@ export async function ddoMapViewFor(tipo: string, sectionTipo: string): Promise<
  * RELATION MODE IS GRANTED, NEVER READ FROM THE REQUEST. All three conditions
  * must hold: the caller's RESOLVED view is the picker view (resolved through
  * the ordinary structure-context seam, so a ddo_map-injected view counts too),
- * its model is relation-family, and the principal holds EDIT on it. Any of them
- * missing is not an error — the read proceeds in `default` mode and the picker
- * intent is simply not granted.
+ * its model is relation-family, and the principal holds EDIT on it FROM ITS
+ * PROFILE (or is the superuser). Any of them missing is not an error — the read
+ * proceeds in `default` mode and the picker intent is simply not granted.
+ *
+ * A RULE-BASIS EDIT IS NOT A PICKER GRANT. The grant EXTENDS the caller's edit
+ * level into a capability of another surface (relation mode, the caller's
+ * resolved targets, cap and held count on a thesaurus read). The rule levels
+ * are bounded where they were written — the dd655 editing-preset rule answers 2
+ * for every tipo under dd655 and every principal, its only bound being the
+ * preset assembler's owner predicate — and none of those bounds travels into a
+ * thesaurus read. So the level is asked with its authority
+ * (`getPermissionGrant`, GrantBasis) and a 'rule' basis is refused, the read
+ * floor's law (security/read_floor.ts).
  *
  * Relation-family is asked STRUCTURALLY (`getColumnNameByModel(model) ===
  * 'relation'` — does this model store locators?) rather than against a second
@@ -162,7 +177,8 @@ async function resolvePickerCaller(
 		});
 	}
 
-	const permissions = await getPermissions(principal, caller.section_tipo, caller.tipo);
+	const grant = await getPermissionGrant(principal, caller.section_tipo, caller.tipo);
+	const permissions = grant.level;
 	const constraint = await resolvePickerConstraint(
 		caller.tipo,
 		caller.section_tipo,
@@ -192,7 +208,9 @@ async function resolvePickerCaller(
 		view: injectedView,
 	});
 	const granted =
-		callerContext?.view === PICKER_CALLER_VIEW && permissions >= PICKER_CALLER_MIN_PERMISSIONS;
+		callerContext?.view === PICKER_CALLER_VIEW &&
+		grant.basis !== 'rule' &&
+		grant.level >= PICKER_CALLER_MIN_PERMISSIONS;
 
 	return { mode: granted ? 'relation' : 'default', constraint };
 }

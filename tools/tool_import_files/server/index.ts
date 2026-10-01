@@ -41,7 +41,7 @@ import { join } from 'node:path';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
-import { sql } from '../../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { getMediaFileDate, withDedaloTime } from '../../../src/core/media/file_date.ts';
 import { sanitizeSegment, stagingDir } from '../../../src/core/media/ingest/add_file.ts';
@@ -63,7 +63,10 @@ import { extractSqoSectionTipos } from '../../../src/core/relations/request_conf
 import { readComponentItems } from '../../../src/core/resolve/component_data.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
-import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
+import {
+	bornInCurrentTransaction,
+	createSectionRecord,
+} from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import { getPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import { assertRecordWriteTarget } from '../../../src/core/security/record_scope.ts';
@@ -1127,14 +1130,25 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			// create_record() returns the existing id without duplicating.
 			// An EXISTING row is somebody's record and gets the scope probe in the
 			// wrapper below; a row this call creates is born in this run.
+			//
+			// BORN = THE CREATE'S OWN ANSWER, never a prior existence read
+			// (refuter-surviving, closure Step 3 — the 286fc181f9 race class). A
+			// read-then-create leaves a window: a concurrent create takes the free
+			// id, this conflict-tolerant insert is a no-op, and the record is
+			// SOMEONE ELSE'S — yet an empty read would admit it as born, skipping
+			// the scope probe and asking its components only the create rule. So
+			// the create runs in its own transaction and the row's xmin decides
+			// (bornInCurrentTransaction), asked before anything else writes it.
 			const explicitId = Number(parsedForResolve.section_id);
-			const table = await getMatrixTableFromTipo(sectionTipo);
-			const existingRow =
-				table === null ? null : await readMatrixRecord(table, sectionTipo, explicitId);
-			await createSectionRecord(sectionTipo, ctx.userId, new Date(), explicitId, {
-				conflictTolerant: true,
+			const born = await withTransaction(async () => {
+				await createSectionRecord(sectionTipo, ctx.userId, new Date(), explicitId, {
+					conflictTolerant: true,
+				});
+				// Non-null here: the create above refuses a section with no matrix table.
+				const table = await getMatrixTableFromTipo(sectionTipo);
+				return table !== null && (await bornInCurrentTransaction(table, sectionTipo, explicitId));
 			});
-			if (existingRow === null) bornInThisRun(sectionTipo, explicitId);
+			if (born) bornInThisRun(sectionTipo, explicitId);
 			return explicitId;
 		}
 		if (nameMode === 'named') {
