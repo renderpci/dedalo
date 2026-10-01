@@ -101,14 +101,19 @@ export interface TargetLockOptions {
 
 export type TargetLockOutcome<T> =
 	| { acquired: true; value: T }
-	| { acquired: false; reason: 'busy' | 'stopped' };
+	/** `busyKey`: the target the last try found held (the one that kept the door out). */
+	| { acquired: false; reason: 'busy' | 'stopped'; busyKey: string };
 
 /**
  * The "not this time" of one try: thrown inside the try's transaction, it
  * rolls it back and the loop backs off. Exported for the runner's lease read
  * (jobs/target_fence.ts), whose lock-timeout retries the whole unit the same way.
  */
-export class TargetBusy extends Error {}
+export class TargetBusy extends Error {
+	constructor(readonly key: string) {
+		super(key);
+	}
+}
 
 /** The idle bound, refused when no keepalive period fits in it. */
 function usableIdleBound(idleBoundMs: number): number {
@@ -149,27 +154,30 @@ async function runKeptAlive<T>(work: () => Promise<T>, idleBoundMs: number): Pro
 }
 
 /**
- * ONE try: a transaction that takes the lock and runs `work`. Nested on an
- * ambient transaction (a door inside another unit) the lock is re-entrant, the
- * ambient transaction's settings are never rewritten and its owner keeps the
- * connection alive — no second timer.
+ * ONE try: a transaction that takes EVERY key's lock — all or none — and runs
+ * `work`. A key found held throws TargetBusy before `work` starts, and the
+ * rollback releases the keys this try already took: a try never keeps one
+ * target while another is busy. Nested on an ambient transaction (a door inside
+ * another unit) the try is a savepoint whose rollback releases what it took,
+ * the lock is re-entrant, the ambient transaction's settings are never
+ * rewritten and its owner keeps the connection alive — no second timer.
  */
 async function tryUnit<T>(
-	key: string,
+	keys: readonly string[],
 	work: () => Promise<T>,
 	shared: boolean,
 	idleBoundMs: number,
-): Promise<{ acquired: true; value: T } | { acquired: false }> {
+): Promise<{ acquired: true; value: T } | { acquired: false; busyKey: string }> {
 	const opensTransaction = !isInTransaction();
 	try {
 		const value = await withTransaction(async () => {
 			if (opensTransaction) await boundUnit(idleBoundMs);
-			await takeAdvisoryLock(key, shared);
+			for (const key of keys) await takeAdvisoryLock(key, shared);
 			return opensTransaction ? runKeptAlive(work, idleBoundMs) : work();
 		});
 		return { acquired: true, value };
 	} catch (error) {
-		if (error instanceof TargetBusy) return { acquired: false };
+		if (error instanceof TargetBusy) return { acquired: false, busyKey: error.key };
 		throw error;
 	}
 }
@@ -214,18 +222,41 @@ function busyWaiter(
  * mode gives up with `{acquired: false, reason: 'busy'}`. Re-entrant within one
  * session: a nested call on the ambient transaction re-takes a lock it holds.
  */
-export async function withTargetLock<T>(
+export function withTargetLock<T>(
 	key: string,
 	work: () => Promise<T>,
 	options: TargetLockOptions = {},
 ): Promise<TargetLockOutcome<T>> {
+	return withTargetLocks([key], work, options);
+}
+
+/**
+ * Hold SEVERAL targets at once (a store that spans them — the `.publication/pub`
+ * union is derived from every database's `dbs/` subtree), with the same modes
+ * and outcome as withTargetLock. ALL OR NONE: each try takes every key in
+ * SORTED order inside one transaction and, the moment one is held elsewhere,
+ * rolls back — releasing the ones it took — and waits holding NOTHING. A
+ * multi-target door therefore never keeps a free target locked while another
+ * one is busy (closure review 2026-10-01: the nested 'wait' it replaces held
+ * `sql:<A>` exclusively, with a pinned connection, for as long as `sql:<B>`'s
+ * writer stayed busy — stalling A's runners and sending every unpublish on A
+ * to dd1758 pending), and no two holders can wait on each other in a cycle.
+ * The price is the door's own: it may wait until every target is free at one
+ * instant, which is why a multi-target door passes a bounded mode.
+ */
+export async function withTargetLocks<T>(
+	keys: readonly string[],
+	work: () => Promise<T>,
+	options: TargetLockOptions = {},
+): Promise<TargetLockOutcome<T>> {
+	const ordered = [...new Set(keys)].sort();
 	const idleBoundMs = usableIdleBound(options.idleBoundMs ?? FENCE_IDLE_BOUND_MS);
 	const waitForTarget = busyWaiter(options.mode ?? 'wait', options);
 	for (;;) {
-		const tried = await tryUnit(key, work, options.shared === true, idleBoundMs);
+		const tried = await tryUnit(ordered, work, options.shared === true, idleBoundMs);
 		if (tried.acquired) return tried;
 		const ended = await waitForTarget();
-		if (ended !== null) return { acquired: false, reason: ended };
+		if (ended !== null) return { acquired: false, reason: ended, busyKey: tried.busyKey };
 	}
 }
 
@@ -258,32 +289,6 @@ function startUnitKeepalive(periodMs: number): { stop: () => Promise<void> } {
 			if (inFlight !== null) await inFlight;
 		},
 	};
-}
-
-/**
- * Hold SEVERAL targets at once (a store that spans them — the `.publication/pub`
- * union is derived from every database's `dbs/` subtree): the locks are taken
- * in SORTED key order, nested in one transaction, waiting for each. Every
- * multi-target holder takes the same order and a runner holds one target, so
- * no two holders can wait on each other in a cycle.
- */
-export async function withTargetLocks<T>(
-	keys: readonly string[],
-	work: () => Promise<T>,
-): Promise<T> {
-	const ordered = [...new Set(keys)].sort();
-	const nest = async (index: number): Promise<T> => {
-		const key = ordered[index];
-		if (key === undefined) return work();
-		const held = await withTargetLock(key, () => nest(index + 1), { mode: 'wait' });
-		if (!held.acquired) {
-			throw new DedaloError('internal.invariant', {
-				message: `target fence: a waiting lock on '${key}' gave up`,
-			});
-		}
-		return held.value;
-	};
-	return nest(0);
 }
 
 /**

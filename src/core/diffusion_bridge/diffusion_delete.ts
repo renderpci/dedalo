@@ -235,7 +235,12 @@ export interface NativeMediaIndexOps {
 		auth_markers: number;
 		databases: string[];
 	}>;
-	reconcile(): Promise<{ added: number; removed: number } | null>;
+	/** Healed, DEFERRED (a writer kept a marker database past the bounded wait — nothing applied), or null (store off). */
+	reconcile(): Promise<
+		| { added: number; removed: number; deferred?: undefined }
+		| { deferred: { busy_target: string } }
+		| null
+	>;
 }
 
 let nativeMediaIndexOps: NativeMediaIndexOps | null = null;

@@ -707,7 +707,11 @@ Merged since the last release; these ship with the next one.
       media-file allowlist is covered too: *Rebuild media index* and the startup
       repair wait for a run that is publishing, so the media of a record that was
       just published no longer disappears from the public site until the next
-      repair.
+      repair. They wait for at most two minutes and hold nothing while they wait:
+      a run or a deletion on one publication database is never held up because a
+      run is busy on another. When the wait runs out, *Rebuild media index* names
+      the database it could not repair, and the startup repair is reported as not
+      applied.
     - **Another user's publication.** Pressing *Publish* on an element and section
       another user is already publishing used to show you that user's run as if it
       were yours. You now get a clear "the publication target is busy" message;

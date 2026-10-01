@@ -209,3 +209,39 @@ another session's in-flight temps included.
   unlink survives a power cut — `test/helpers/power_loss_model.ts`).
   Mutation-verified (unfenced, exclusive, never patient, no directory fsync:
   each red).
+
+## Addendum 2026-10-01 (b) — the multi-target fence is all-or-none and bounded
+
+- **Finding (closure review, S2):** `withTargetLocks` nested one `'wait'`
+  try per key, in sorted order, inside the first key's transaction. The
+  media-index reconcile (every `dbs/<db>`) took `sql:<A>`, then waited with no
+  bound for `sql:<B>` while holding A EXCLUSIVELY — the unit keepalive kept the
+  transaction under the idle bound, `lock_timeout` never applies to a
+  `pg_try_*` loop. For as long as B's writer stayed busy, A's runner units
+  stalled, every request-path unpublish on A went to dd1758 pending (R3), a
+  pool connection stayed pinned, and `rebuild_media_index` hung.
+- **Now:** `withTargetLocks(keys, work, options)` has `withTargetLock`'s modes
+  and outcome, and `withTargetLock` is its one-key case. Each try takes EVERY
+  key (sorted) in one transaction; a held key throws `TargetBusy` before
+  `work`, the rollback releases what the try took, and the door backs off
+  holding nothing. No door holds one target while waiting for another. The
+  not-acquired outcome names the key that kept the door out (`busyKey`).
+- **The media-index doors are bounded:** `MEDIA_INDEX_FENCE_BOUND_MS`
+  (120 s) is ONE budget per reconcile, and one per rebuild with its closing
+  reconcile included. A spent reconcile is DEFERRED
+  (`{deferred: {busy_target}}`). Nothing is applied. The registry report
+  is `drift` (a plain diff now), `applied: 0`, `detail.deferred`. A
+  rebuild reports each database it could not take (`<db>: publication target
+  busy …`, markers kept) and a deferred `pub/` derivation (`pub/: …`).
+  `ok:false` then reaches the operator as `media.operation_failed`
+  (partial failure) where it used to hang. R4 narrows accordingly: a hung
+  unit no longer pins the media-index doors past their budget.
+- Gate: `media_index_reconcile_fence_native` "no hold-and-wait across
+  publication targets". With B held from another session for the whole leg,
+  an exclusive unit and a shared (unpublish) door on A both get A within
+  1.5 s while the reconcile waits. The reconcile applies nothing until B is
+  free. A bounded reconcile, the registry run and a bounded rebuild each end
+  and report B. Mutation-verified, 8/8 red: nested hold-and-wait restored;
+  reconcile unbounded; busy target dropped; rebuild unbounded; deferral or
+  per-database finding hidden; deferred counted as applied; closing
+  reconcile given a fresh budget.

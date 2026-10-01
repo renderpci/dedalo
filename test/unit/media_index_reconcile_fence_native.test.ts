@@ -320,3 +320,185 @@ describe('media_index rebuild — a row a runner lands after the SELECT keeps it
 		expect(existsSync(join(base, 'pub', `${TIPO}_${KEPT_ID}`))).toBe(true);
 	}, 30_000);
 });
+
+/**
+ * DIFF-2 (closure review 2026-10-01, S2) — THE MULTI-TARGET FENCE NEVER HOLDS
+ * ONE TARGET WHILE IT WAITS FOR ANOTHER, AND IT GIVES UP.
+ *
+ * THE FINDING. The reconcile apply holds the fence of EVERY marker database.
+ * It took them in sorted order, nested, each in 'wait' mode with no bound: with
+ * `sql:<A>` already held inside its transaction (kept alive by the unit's
+ * keepalive), it sat waiting for `sql:<B>` for as long as B's writer kept it.
+ * For that whole time A was held EXCLUSIVELY by a door that was doing nothing:
+ * every runner unit on A stalled, every request-path unpublish on A went to
+ * dd1758 pending, a pool connection stayed pinned — and the rebuild request
+ * that ends in it hung with no limit.
+ *
+ * THE SITUATION IS BUILT: two marker databases on a scratch store, B's fence
+ * held from ANOTHER session (a runner's long unit) for the whole leg.
+ *
+ * WHAT IS ASSERTED — outcomes:
+ *  - while the reconcile is waiting for B, an exclusive unit AND a shared
+ *    (unpublish-shaped) door on A both get A within a bound far below the
+ *    time B stays held, and the reconcile applies nothing until B is free;
+ *  - a bounded reconcile with B held throughout ENDS, applies nothing and says
+ *    which target held it off (a deferral, not an apply);
+ *  - a bounded rebuild with B held throughout ENDS, resyncs A, leaves B's
+ *    markers untouched and reports B as not resynced.
+ */
+describe('media_index fence — no hold-and-wait across publication targets, and a bounded wait', () => {
+	const DB_A = 'zzmif_hw_a';
+	const DB_B = 'zzmif_hw_b';
+	const TABLE = 'zzmif_hw_t';
+	const TIPO = 'zzmif2';
+	const KEY_A = `${TIPO}_1`;
+	const KEY_B = `${TIPO}_2`;
+	const STRAY = `${TIPO}_9`;
+	/** How long a door on A may wait for A while only B is held (B is held for far longer). */
+	const PROBE_BOUND_MS = 1_500;
+
+	function seedStore(): void {
+		touch(join(base, 'dbs', DB_A, TABLE, KEY_A));
+		touch(join(base, 'dbs', DB_B, TABLE, KEY_B));
+		// The apply's own work: a stray no truth owns, and two missing pub/ markers.
+		touch(join(base, 'pub', STRAY));
+	}
+
+	/** Settles with the value, or 'timeout' after `ms` (the old door never settles). */
+	function within<T>(promise: Promise<T>, ms: number): Promise<T | 'timeout'> {
+		return Promise.race([promise, Bun.sleep(ms).then(() => 'timeout' as const)]);
+	}
+
+	test('while the reconcile waits for B, an exclusive unit and an unpublish on A get A at once; nothing is applied until B is free', async () => {
+		const { withTargetLock } = await import('../../src/core/diffusion_bridge/target_lock.ts');
+		seedStore();
+		const lockB = await takeTargetLock(`sql:${DB_B}`);
+		let settled = false;
+		let pending: Promise<unknown> | null = null;
+		const probes: { shared: boolean; acquired: boolean; elapsed: number }[] = [];
+		let strayWhileHeld = false;
+		try {
+			pending = MEDIA_INDEX_RECONCILE.run({ apply: true }).finally(() => {
+				settled = true;
+			});
+			// The reconcile is inside its wait for B now (it backs off 250 ms → 2 s).
+			await Bun.sleep(800);
+			for (const shared of [false, true]) {
+				const startedAt = performance.now();
+				const outcome = await withTargetLock(`sql:${DB_A}`, async () => 'unit', {
+					mode: { boundMs: PROBE_BOUND_MS },
+					shared,
+				});
+				probes.push({ shared, acquired: outcome.acquired, elapsed: performance.now() - startedAt });
+			}
+			strayWhileHeld = existsSync(join(base, 'pub', STRAY));
+		} finally {
+			await lockB.release();
+		}
+		const settledWhileHeld = settled;
+		await pending;
+
+		expect(settledWhileHeld, 'the reconcile ended while B was held — the leg proves nothing').toBe(
+			false,
+		);
+		for (const probe of probes) {
+			expect(
+				probe.acquired,
+				`a ${probe.shared ? 'shared (unpublish)' : 'exclusive (runner unit)'} door on A could not get A while the reconcile waited for B — the reconcile held A while waiting`,
+			).toBe(true);
+			expect(probe.elapsed).toBeLessThan(PROBE_BOUND_MS);
+		}
+		expect(strayWhileHeld, 'the apply wrote pub/ while B’s writer held its fence').toBe(true);
+		// B free: the reconcile applied, in full.
+		expect(existsSync(join(base, 'pub', STRAY))).toBe(false);
+		expect(existsSync(join(base, 'pub', KEY_A))).toBe(true);
+		expect(existsSync(join(base, 'pub', KEY_B))).toBe(true);
+	}, 30_000);
+
+	test('a bounded reconcile with B held throughout ends, applies nothing and names B', async () => {
+		const { reconcileMediaIndex } = await import(
+			'../../src/diffusion/targets/mediastore/media_index.ts'
+		);
+		seedStore();
+		const lockB = await takeTargetLock(`sql:${DB_B}`);
+		let result: unknown;
+		const startedAt = performance.now();
+		let elapsed = 0;
+		const call = reconcileMediaIndex({ boundMs: 1_000 });
+		try {
+			result = await within(call, 8_000);
+			elapsed = performance.now() - startedAt;
+		} finally {
+			await lockB.release();
+			await call.catch(() => undefined);
+		}
+		expect(result, 'the reconcile never gave up on a held target').not.toBe('timeout');
+		expect(elapsed).toBeLessThan(5_000);
+		expect(result).toEqual({ deferred: { busy_target: `sql:${DB_B}` } });
+		expect(existsSync(join(base, 'pub', STRAY)), 'a deferred reconcile applied').toBe(true);
+		expect(existsSync(join(base, 'pub', KEY_A))).toBe(false);
+	}, 30_000);
+
+	test('the registry run of a deferred apply reports the drift as NOT applied and names the held target', async () => {
+		const { runMediaIndexReconcile } = await import('../../src/diffusion/api/reconcile.ts');
+		seedStore();
+		const lockB = await takeTargetLock(`sql:${DB_B}`);
+		let report: Awaited<ReturnType<typeof runMediaIndexReconcile>> | 'timeout';
+		const call = runMediaIndexReconcile({ apply: true }, { boundMs: 1_000 });
+		try {
+			report = await within(call, 8_000);
+		} finally {
+			await lockB.release();
+			await call.catch(() => undefined);
+		}
+		expect(report, 'the registry run never gave up on a held target').not.toBe('timeout');
+		// The seeded drift: pub/ lacks KEY_A and KEY_B, and holds STRAY.
+		expect(report).toEqual({
+			drift: 3,
+			applied: 0,
+			detail: { enabled: true, deferred: { busy_target: `sql:${DB_B}` } },
+		});
+		expect(existsSync(join(base, 'pub', STRAY))).toBe(true);
+	}, 30_000);
+
+	test('a bounded rebuild with B held throughout ends: A resynced, B untouched and reported', async () => {
+		const { rebuildMediaIndexStore } = await import(
+			'../../src/diffusion/targets/mediastore/media_index.ts'
+		);
+		touch(join(base, 'dbs', DB_A, TABLE, `${TIPO}_7`)); // stale on A: the rebuild's own work
+		touch(join(base, 'dbs', DB_B, TABLE, `${TIPO}_8`)); // stale on B: must survive (not resynced)
+		const lockB = await takeTargetLock(`sql:${DB_B}`);
+		const fetchIds = async (database: string): Promise<number[]> => (database === DB_A ? [1] : [2]);
+		let result: Awaited<ReturnType<typeof rebuildMediaIndexStore>> | 'timeout';
+		const call = rebuildMediaIndexStore(
+			[
+				{ database_name: DB_A, table_name: TABLE, section_tipo: TIPO },
+				{ database_name: DB_B, table_name: TABLE, section_tipo: TIPO },
+			],
+			fetchIds,
+			{ boundMs: 1_000 },
+		);
+		try {
+			result = await within(call, 8_000);
+		} finally {
+			await lockB.release();
+			await call.catch(() => undefined);
+		}
+		expect(result, 'the rebuild never gave up on a held target').not.toBe('timeout');
+		const report = result as Awaited<ReturnType<typeof rebuildMediaIndexStore>>;
+		expect(report.ok).toBe(false);
+		expect(
+			report.errors?.some((line) => line.startsWith(`${DB_B}:`)),
+			'the rebuild did not report the database it could not resync',
+		).toBe(true);
+		// The budget went on B: the closing pub/ derivation is deferred, and says so.
+		expect(
+			report.errors?.some((line) => line.startsWith('pub/:')),
+			'the rebuild hid a deferred pub/ derivation',
+		).toBe(true);
+		expect(existsSync(join(base, 'dbs', DB_A, TABLE, `${TIPO}_1`))).toBe(true);
+		expect(existsSync(join(base, 'dbs', DB_A, TABLE, `${TIPO}_7`))).toBe(false);
+		expect(existsSync(join(base, 'dbs', DB_B, TABLE, `${TIPO}_8`))).toBe(true);
+		expect(existsSync(join(base, 'dbs', DB_B, TABLE, `${TIPO}_2`))).toBe(false);
+	}, 30_000);
+});
