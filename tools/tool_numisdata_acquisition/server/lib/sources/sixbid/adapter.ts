@@ -1,14 +1,6 @@
-import { assertSafeSixbidUrl } from '../../acquisition/url-safety.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
-import {
-	acquireSixbidAuction,
-	acquireSixbidLot,
-	acquireSixbidSearch,
-	parseSixbidUrl,
-	sixbidLotIdentifier,
-	sixbidSearchIdentifier,
-} from './api.ts';
+import { parseSixbidUrl, sixbidLotIdentifier, sixbidSearchIdentifier } from './api.ts';
 import {
 	parseSixbidAuction,
 	parseSixbidLots,
@@ -26,9 +18,10 @@ const SIXBID_HOST_PATTERN = /(^|\.)sixbid\.com$/i;
  * checked before single-lot, which must be checked before the full-auction fallback (see api.ts's
  * parseSixbidLotUrl for why that's unambiguous).
  *
- * Does NOT consult robots.txt - lots.sixbid.com's robots.txt is a blanket "Disallow: /" for every
- * agent. See api.ts's fetchSixbidLotsPage for the full disclosure; explicitly authorized by the
- * user for this Dédalo integration.
+ * Cannot be fetched automatically at all - lots.sixbid.com's robots.txt is a blanket "Disallow: /"
+ * for every agent (confirmed live), so `acquire` always refuses and the operator's saved-HTML path
+ * (preview_html) is the only way in (PR #114 review, 2026-09-29 - the earlier "explicitly
+ * authorized by the user" bypass of that refusal is removed).
  */
 export const sixbidAdapter: SourceAdapter = {
 	id: 'sixbid',
@@ -39,8 +32,6 @@ export const sixbidAdapter: SourceAdapter = {
 		return hostname !== null && SIXBID_HOST_PATTERN.test(hostname);
 	},
 
-	assertSafeUrl: assertSafeSixbidUrl,
-
 	parseAuctionIdentifier(rawUrl) {
 		return (
 			sixbidSearchIdentifier(rawUrl) ??
@@ -50,10 +41,10 @@ export const sixbidAdapter: SourceAdapter = {
 		);
 	},
 
-	acquire: (rawUrl, onProgress) => {
-		if (sixbidSearchIdentifier(rawUrl)) return acquireSixbidSearch(rawUrl, onProgress);
-		if (sixbidLotIdentifier(rawUrl)) return acquireSixbidLot(rawUrl, onProgress);
-		return acquireSixbidAuction(rawUrl, onProgress);
+	acquire() {
+		throw new Error(
+			'sixbid.com cannot be fetched automatically (its robots.txt blocks every automated agent) - use "Upload a saved HTML page" instead.',
+		);
 	},
 
 	parseAuction: (firstPage, sourceUrl) => {

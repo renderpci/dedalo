@@ -1,13 +1,6 @@
-import { assertSafeNumisbidsUrl } from '../../acquisition/url-safety.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
-import {
-	acquireNumisbidsLot,
-	acquireNumisbidsSale,
-	fetchNumisbidsPage,
-	numisbidsLotIdentifier,
-	parseNumisbidsSaleId,
-} from './acquisition.ts';
+import { numisbidsLotIdentifier, parseNumisbidsSaleId } from './acquisition.ts';
 import {
 	parseNumisbidsAuction,
 	parseNumisbidsLotDetail,
@@ -22,9 +15,10 @@ const NUMISBIDS_HOST_PATTERN = /(^|\.)numisbids\.com$/i;
  * (`/sale/{id}/lot/{n}`) are both handled here. The single-lot check must come before the sale-id
  * fallback, since a single-lot URL also matches the plain `/^\/sale\/(\d+)/` regex.
  *
- * Does NOT respect robots.txt - numisbids.com's robots.txt explicitly blocks ClaudeBot by name.
- * See acquisition.ts's fetchNumisbidsPage for the full disclosure; explicitly authorized by the
- * user for this Dédalo integration.
+ * Cannot be fetched automatically at all - numisbids.com's robots.txt explicitly blocks ClaudeBot
+ * by name (confirmed live, HTTP 403 from multiple independent networks), so `acquire` always
+ * refuses and the operator's saved-HTML path (preview_html) is the only way in (PR #114 review,
+ * 2026-09-29 - the earlier "explicitly authorized by the user" bypass of that refusal is removed).
  *
  * NOT ported yet: the `/searchall?searchall=...` cross-auction search URL - add it once the
  * single-sale path is proven against real data, same reasoning as Biddr's search URL.
@@ -38,16 +32,15 @@ export const numisbidsAdapter: SourceAdapter = {
 		return hostname !== null && NUMISBIDS_HOST_PATTERN.test(hostname);
 	},
 
-	assertSafeUrl: assertSafeNumisbidsUrl,
-
 	parseAuctionIdentifier(rawUrl) {
 		return numisbidsLotIdentifier(rawUrl) ?? parseNumisbidsSaleId(rawUrl);
 	},
 
-	acquire: (rawUrl, onProgress) =>
-		numisbidsLotIdentifier(rawUrl)
-			? acquireNumisbidsLot(rawUrl, onProgress)
-			: acquireNumisbidsSale(rawUrl, onProgress),
+	acquire() {
+		throw new Error(
+			'numisbids.com cannot be fetched automatically (its robots.txt blocks every automated agent) - use "Upload a saved HTML page" instead.',
+		);
+	},
 
 	parseAuction: (firstPage, sourceUrl) =>
 		numisbidsLotIdentifier(sourceUrl)
@@ -63,10 +56,4 @@ export const numisbidsAdapter: SourceAdapter = {
 	},
 
 	storageKey: (auctionIdentifier) => `numisbids-${auctionIdentifier}`,
-
-	async fetchLotDetail(lotSourceUrl) {
-		const url = assertSafeNumisbidsUrl(lotSourceUrl);
-		const raw = await fetchNumisbidsPage(url);
-		return parseNumisbidsLotDetail(raw.html, lotSourceUrl);
-	},
 };

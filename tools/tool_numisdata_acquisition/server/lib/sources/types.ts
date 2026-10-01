@@ -1,7 +1,19 @@
-import type { RawSource } from '../acquisition/http.ts';
 import type { ExtractedAuction } from '../domain/auction.ts';
 import type { AcquisitionMethod } from '../domain/image.ts';
 import type { ExtractedLot } from '../domain/lot.ts';
+
+/**
+ * One fetched page, in the shape every parser already expects. Built from a
+ * `HarvestResponse` (src/core/harvest/harvest.ts) at the acquisition layer -
+ * kept as its own type rather than passing HarvestResponse straight through,
+ * so the parsers stay decoupled from the harvesting door's own response shape.
+ */
+export interface RawSource {
+	html: string;
+	finalUrl: string;
+	httpStatus: number;
+	contentType: string | null;
+}
 
 export interface MultiPageAcquisition {
 	auctionIdentifier: string;
@@ -9,8 +21,14 @@ export interface MultiPageAcquisition {
 	method: AcquisitionMethod;
 }
 
-/** Called after each page is fetched, with the page just completed and the total known so far. */
-export type AcquisitionProgress = (currentPage: number, totalPages: number) => void;
+/** Called after each page is fetched, with the page just completed and the total known so far.
+ * `message`, when present, overrides the default "page X of Y" text - used to surface the
+ * harvesting door's own `onWait` pacing/robots notices instead of a page count. */
+export type AcquisitionProgress = (
+	currentPage: number,
+	totalPages: number,
+	message?: string,
+) => void;
 
 /**
  * One implementation per acquisition source (Biddr, sixbid, ...). ingestion-service.ts picks the
@@ -22,11 +40,13 @@ export interface SourceAdapter {
 	/** Matches the DB's `auctions.source_domain` column for this source. */
 	sourceDomain: string;
 	matchesUrl(rawUrl: string): boolean;
-	/** Throws UnsafeUrlError with a specific reason (https-only, wrong host, private IP, ...). */
-	assertSafeUrl(rawUrl: string): URL;
 	/** Extracted synchronously from the URL alone (no network) - used for the dedupe fast path. */
 	parseAuctionIdentifier(rawUrl: string): string | null;
-	/** Fetches every page belonging to the auction at this URL, reporting page-by-page progress. */
+	/**
+	 * Fetches every page belonging to the auction at this URL, reporting page-by-page progress.
+	 * numisbids and sixbid cannot be fetched automatically at all (both sites' robots.txt refuses
+	 * every agent) - their adapters throw here with a clear message pointing at preview_html instead.
+	 */
 	acquire(rawUrl: string, onProgress?: AcquisitionProgress): Promise<MultiPageAcquisition>;
 	parseAuction(firstPage: RawSource, sourceUrl: string): ExtractedAuction;
 	parseLots(page: RawSource, sourceUrl: string): ExtractedLot[];
@@ -36,12 +56,6 @@ export interface SourceAdapter {
 	 * own auction-identifier numbering spaces could otherwise collide on disk.
 	 */
 	storageKey(auctionIdentifier: string): string;
-
-	/**
-	 * Fetches and parses a single lot's own detail page. Omitted for sources whose listing already
-	 * carries everything (detailFetched: true, e.g. sixbid). Returns null if unparseable.
-	 */
-	fetchLotDetail?(lotSourceUrl: string): Promise<ExtractedLot | null>;
 }
 
 export function urlHostname(rawUrl: string): string | null {

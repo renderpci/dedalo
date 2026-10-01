@@ -1,5 +1,3 @@
-import { fetchPublicPage } from '../../acquisition/http.ts';
-import { assertSafeBiddrUrl } from '../../acquisition/url-safety.ts';
 import { getQueryParam } from '../../extraction/parser-utils.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
@@ -7,7 +5,6 @@ import {
 	acquireAuction,
 	acquireBiddrSearch,
 	acquireBiddrSingleLot,
-	BIDDR_FETCH_OPTIONS,
 	biddrSearchIdentifier,
 	biddrSingleLotIdentifier,
 } from './acquisition.ts';
@@ -31,8 +28,6 @@ export const biddrAdapter: SourceAdapter = {
 		const hostname = urlHostname(rawUrl);
 		return hostname !== null && BIDDR_HOST_PATTERN.test(hostname);
 	},
-
-	assertSafeUrl: assertSafeBiddrUrl,
 
 	parseAuctionIdentifier(rawUrl) {
 		return (
@@ -70,10 +65,5 @@ export const biddrAdapter: SourceAdapter = {
 		if (/^\d+$/.test(auctionIdentifier)) return auctionIdentifier;
 		if (auctionIdentifier.startsWith('lot-')) return `biddr-${auctionIdentifier}`;
 		return `biddr-search-${auctionIdentifier}`;
-	},
-
-	async fetchLotDetail(lotSourceUrl) {
-		const raw = await fetchPublicPage(lotSourceUrl, BIDDR_FETCH_OPTIONS);
-		return parseLotDetail(raw.html, lotSourceUrl);
 	},
 };

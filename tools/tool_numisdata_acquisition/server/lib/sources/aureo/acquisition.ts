@@ -1,16 +1,5 @@
-import { looksBlocked } from '../../acquisition/block-signals.ts';
-import {
-	AcquisitionBlockedError,
-	type RawSource,
-	RobotsDisallowedError,
-} from '../../acquisition/http.ts';
-import { waitForTurn } from '../../acquisition/rate-limit.ts';
-import { getCrawlDelayMs, isAllowedByRobots } from '../../acquisition/robots.ts';
-import { assertSafeAureoUrl } from '../../acquisition/url-safety.ts';
-import { USER_AGENT } from '../../acquisition/user-agent.ts';
-import type { AcquisitionProgress, MultiPageAcquisition } from '../types.ts';
-
-export { RobotsDisallowedError };
+import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
+import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 
 export class UnsupportedPageError extends Error {
 	constructor(message = 'This page does not appear to contain an auction catalogue.') {
@@ -19,10 +8,9 @@ export class UnsupportedPageError extends Error {
 	}
 }
 
-const REQUEST_TIMEOUT_MS = 20_000;
-const MAX_BODY_BYTES = 20 * 1024 * 1024;
 const MAX_PAGES = 50;
 const LOTS_PER_PAGE = 96;
+const AUREO_HOSTS = ['aureo.com'];
 
 /**
  * aureo.com auction URLs are `/en/subasta/{id}`. Most ids are a plain 4-digit number ("0466"), but
@@ -40,99 +28,56 @@ export function parseAureoAuctionId(rawUrl: string): string | null {
 	}
 }
 
-/**
- * GET against a public aureo.com page. robots.txt is fully permissive here (`Allow: /`, confirmed
- * live), so this fully respects it and any crawl-delay - not reusing the shared fetchPublicPage
- * directly since aureo also needs a POST path below, sharing this same rate-limit/block logic.
- */
-async function fetchAureoPage(url: URL): Promise<RawSource> {
-	assertSafeAureoUrl(url.toString());
-
-	const allowed = await isAllowedByRobots(url);
-	if (!allowed) {
-		throw new RobotsDisallowedError(`robots.txt disallows fetching ${url.pathname}`);
-	}
-	const crawlDelay = await getCrawlDelayMs(url);
-	await waitForTurn(url.hostname, crawlDelay ?? undefined);
-
-	const response = await fetch(url, {
-		headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' },
-		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+/** GET against a public aureo.com page, through the harvesting door. */
+async function fetchAureoPage(
+	url: string,
+	onWait?: (ms: number, origin: string) => void,
+): Promise<RawSource> {
+	const response = await harvestFetch({
+		url,
+		hosts: AUREO_HOSTS,
+		requireHttps: true,
+		headers: { Accept: 'text/html,application/xhtml+xml' },
+		onWait,
 	});
-
-	if (response.status === 401 || response.status === 403 || response.status === 429) {
-		throw new AcquisitionBlockedError(
-			`Automatic retrieval could not safely access this page (HTTP ${response.status}).`,
-			response.status,
-		);
-	}
 	if (!response.ok) {
-		throw new AcquisitionBlockedError(`Server returned HTTP ${response.status}.`, response.status);
+		throw new Error(`Server returned HTTP ${response.status}.`);
 	}
-
-	const html = await readBodyWithLimit(response, MAX_BODY_BYTES);
-	if (looksBlocked(html)) {
-		throw new AcquisitionBlockedError(
-			'The page appears to present a CAPTCHA or access restriction.',
-		);
-	}
-
 	return {
-		html,
-		finalUrl: url.toString(),
+		html: response.text(),
+		finalUrl: response.url,
 		httpStatus: response.status,
-		contentType: response.headers.get('content-type'),
+		contentType: response.contentType,
 	};
 }
 
 /**
  * aureo.com's lot listing isn't in the auction page's own HTML - the page ships an empty
  * `#auction-content` div and an inline script that POSTs to this endpoint to fill it in (confirmed
- * live by reading the site's own script.js). Same discipline as fetchAureoPage, just via POST.
+ * live by reading the site's own script.js). A `URLSearchParams` body is sent by the door as a
+ * form automatically.
  */
-async function postAureoItems(params: Record<string, string>): Promise<RawSource> {
-	const url = assertSafeAureoUrl('https://www.aureo.com/modules/loaditems.php');
-
-	const allowed = await isAllowedByRobots(url);
-	if (!allowed) {
-		throw new RobotsDisallowedError(`robots.txt disallows fetching ${url.pathname}`);
-	}
-	const crawlDelay = await getCrawlDelayMs(url);
-	await waitForTurn(url.hostname, crawlDelay ?? undefined);
-
-	const response = await fetch(url, {
+async function postAureoItems(
+	params: Record<string, string>,
+	onWait?: (ms: number, origin: string) => void,
+): Promise<RawSource> {
+	const response = await harvestFetch({
+		url: 'https://www.aureo.com/modules/loaditems.php',
+		hosts: AUREO_HOSTS,
+		requireHttps: true,
 		method: 'POST',
-		headers: {
-			'User-Agent': USER_AGENT,
-			'Content-Type': 'application/x-www-form-urlencoded',
-			'X-Requested-With': 'XMLHttpRequest',
-		},
-		body: new URLSearchParams(params).toString(),
-		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+		body: new URLSearchParams(params),
+		headers: { 'X-Requested-With': 'XMLHttpRequest' },
+		onWait,
 	});
-
-	if (response.status === 401 || response.status === 403 || response.status === 429) {
-		throw new AcquisitionBlockedError(
-			`Automatic retrieval could not safely access this page (HTTP ${response.status}).`,
-			response.status,
-		);
-	}
 	if (!response.ok) {
-		throw new AcquisitionBlockedError(`Server returned HTTP ${response.status}.`, response.status);
+		throw new Error(`Server returned HTTP ${response.status}.`);
 	}
-
-	const html = await readBodyWithLimit(response, MAX_BODY_BYTES);
-	if (looksBlocked(html)) {
-		throw new AcquisitionBlockedError(
-			'The page appears to present a CAPTCHA or access restriction.',
-		);
-	}
-
 	return {
-		html,
-		finalUrl: url.toString(),
+		html: response.text(),
+		finalUrl: response.url,
 		httpStatus: response.status,
-		contentType: response.headers.get('content-type'),
+		contentType: response.contentType,
 	};
 }
 
@@ -143,10 +88,11 @@ interface AureoAuctionRange {
 	totalLots: number | null;
 }
 
-async function fetchAureoAuctionRange(auctionId: string): Promise<AureoAuctionRange> {
-	const page = await fetchAureoPage(
-		assertSafeAureoUrl(`https://www.aureo.com/en/subasta/${auctionId}`),
-	);
+async function fetchAureoAuctionRange(
+	auctionId: string,
+	onWait?: (ms: number, origin: string) => void,
+): Promise<AureoAuctionRange> {
+	const page = await fetchAureoPage(`https://www.aureo.com/en/subasta/${auctionId}`, onWait);
 	const viewAllIdx = page.html.indexOf('id="viewall"');
 	if (viewAllIdx === -1) {
 		throw new UnsupportedPageError();
@@ -195,7 +141,11 @@ async function acquireAureoAuctionPages(
 	auctionId: string,
 	onProgress?: AcquisitionProgress,
 ): Promise<RawSource[]> {
-	const range = await fetchAureoAuctionRange(auctionId);
+	const onWait = (ms: number, origin: string): void => {
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`);
+	};
+
+	const range = await fetchAureoAuctionRange(auctionId, onWait);
 	const params = baseAureoParams(auctionId, range.from, range.to);
 
 	const pages: RawSource[] = [];
@@ -203,14 +153,14 @@ async function acquireAureoAuctionPages(
 		? Math.min(Math.ceil(range.totalLots / LOTS_PER_PAGE), MAX_PAGES)
 		: MAX_PAGES;
 
-	const first = await postAureoItems(params);
+	const first = await postAureoItems(params, onWait);
 	pages.push(first);
 	onProgress?.(1, estimatedPages);
 
 	let more = hasMorePages(first.html);
 	let pagina = 1;
 	while (more && pagina < MAX_PAGES) {
-		const page = await postAureoItems({ ...params, pagina: String(pagina) });
+		const page = await postAureoItems({ ...params, pagina: String(pagina) }, onWait);
 		pages.push(page);
 		onProgress?.(pages.length, Math.max(estimatedPages, pages.length));
 		more = hasMorePages(page.html);
@@ -231,28 +181,8 @@ export async function acquireAureoAuction(
 ): Promise<MultiPageAcquisition> {
 	const auctionId = parseAureoAuctionId(rawUrl);
 	if (!auctionId) {
-		throw new AcquisitionBlockedError('Please provide a valid aureo.com auction URL.');
+		throw new Error('Please provide a valid aureo.com auction URL.');
 	}
 	const pages = await acquireAureoAuctionPages(auctionId, onProgress);
 	return { auctionIdentifier: auctionId, pages, method: 'http' };
-}
-
-async function readBodyWithLimit(response: Response, maxBytes: number): Promise<string> {
-	if (!response.body) return '';
-	const reader = response.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let total = 0;
-	for (;;) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		if (value) {
-			total += value.byteLength;
-			if (total > maxBytes) {
-				reader.cancel();
-				throw new AcquisitionBlockedError('Response body exceeded the size limit.');
-			}
-			chunks.push(value);
-		}
-	}
-	return Buffer.concat(chunks.map((c) => Buffer.from(c))).toString('utf-8');
 }
