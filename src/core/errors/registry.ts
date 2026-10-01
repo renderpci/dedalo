@@ -2092,6 +2092,20 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 	},
+	// A request carries more items than the action processes in one call (an
+	// interactive action bounded by its caller's wait: tool_import_rdf dereferences
+	// at most RDF_MAX_URIS IRIs, each paced by the harvesting door). `caller`, not
+	// `limit`: the same request is refused every time — send fewer items.
+	'tool.too_many_items': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_too_many_items',
+		message: 'The request has more items than this action processes at once',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['count', 'limit'],
+	},
 	'tool.target_not_found': {
 		category: 'not_found',
 		status: 404,

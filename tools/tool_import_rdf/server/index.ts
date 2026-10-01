@@ -1,10 +1,14 @@
 /**
- * tool_import_rdf server module (PHP tool_import_rdf::get_rdf_data). Fetches each
- * RDF URI through `fetchGuardedText` (the guard resolves and vets every address,
- * connects PINNED to the vetted one, refuses redirects, bounds the wait and the
- * read) and parses it with the
+ * tool_import_rdf server module (PHP tool_import_rdf::get_rdf_data). Dereferences
+ * each IRI the cataloguer selected through the HARVESTING DOOR (`harvestFetch`,
+ * src/core/harvest/harvest.ts) — every redirect hop re-vetted and pinned, the
+ * site's robots.txt obeyed, the per-site pace kept — and parses the answer with the
  * from-scratch RDF/XML parser (rdf_xml.ts, no 3rd-party lib), returning the
  * extracted subjects/properties.
+ *
+ * Linked-data servers answer an IRI with a 303 See Other (content negotiation) or a
+ * 301 to https; the door follows both. An IRI is asked for RDF/XML first; a server
+ * that only answers the `<iri>.rdf` form gets one retry there (see `fetchRdfXml`).
  *
  * The subject→Dédalo ontology CLASS-MAP (properties.xmlns / class_map_to_dd) is
  * config-driven and ledgered; the fetch + graph parse are real.
@@ -19,12 +23,17 @@
 import {
 	type ApiErrorBody,
 	DedaloError,
+	isDedaloError,
 	ok,
 	toDedaloError,
 	toErrorBody,
 } from '../../../src/core/errors/index.ts';
+import {
+	type HarvestDeps,
+	type HarvestRequest,
+	harvestFetch,
+} from '../../../src/core/harvest/harvest.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
-import { fetchGuardedText, type PinnedHopDeps } from '../../../src/core/security/ssrf_guard.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -69,13 +78,33 @@ async function assertLocatorWrite(
 	});
 }
 
-/** The IRIs to dereference; none is a caller error. */
+/**
+ * The most IRIs one call may dereference. The call is interactive (the cataloguer
+ * waits; the client gives up after 60 s) and the door paces each site — at least
+ * 3 s between two requests, longer when its robots.txt asks (Crawl-delay, clamped
+ * to 60 s) or when other callers are queued on the same site. A 301, a 303 and a
+ * `.rdf` retry are several paced hops for ONE IRI, so even one IRI can outlast the
+ * client on a slow or Crawl-delayed site: the cap bounds the work a call may
+ * queue, it does not guarantee the answer arrives in time. The client sends one
+ * (its picker is a radio group).
+ */
+export const RDF_MAX_URIS = 3;
+
+/** The IRIs to dereference; none, or more than `RDF_MAX_URIS`, is a caller error. */
 function rdfValues(options: Record<string, unknown>): string[] {
 	const values = options.ar_values ?? [];
-	if (Array.isArray(values) && values.length > 0) return values as string[];
-	throw new DedaloError('request.invalid_options', {
-		publicMessage: 'Missing ar_values (RDF URIs)',
-	});
+	if (!Array.isArray(values) || values.length === 0) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Missing ar_values (RDF URIs)',
+		});
+	}
+	if (values.length > RDF_MAX_URIS) {
+		throw new DedaloError('tool.too_many_items', {
+			details: { count: values.length, limit: RDF_MAX_URIS },
+			coordinates: { tool: 'tool_import_rdf' },
+		});
+	}
+	return values as string[];
 }
 
 /** The class-map the caller supplied (`tool_config.config.main`), or none. */
@@ -84,29 +113,127 @@ function rdfMap(options: Record<string, unknown>): RdfMapEntry[] {
 	return Array.isArray(map) ? (map as RdfMapEntry[]) : [];
 }
 
+/** The media types an RDF/XML document is served as. */
+const RDF_XML_TYPES = ['application/rdf+xml', 'application/xml', 'text/xml'];
+/** Content negotiation: RDF/XML first, generic XML after. */
+const RDF_XML_ACCEPT = 'application/rdf+xml, application/xml;q=0.9, text/xml;q=0.8';
 /**
- * Fetch, parse and map ONE IRI. SSRF-01 + DOS-05: `fetchGuardedText` resolves and
- * vets the URL against private/reserved ranges (not a string blocklist), connects
- * PINNED to the vetted address (no second lookup for a rebinding resolver to
- * answer, SURF-2), refuses redirects, and bounds the wait and the body; a network
- * failure is a typed `security.outbound_failed`. A failure is reported as the error
- * system's wire body, never `error.message`: the guard's message names the address
- * a refused host resolved to (an internal-network oracle).
+ * The `.rdf` form names the file itself, and static file servers often label it
+ * as bytes or text; an HTML page is still refused.
+ */
+const RDF_FILE_TYPES = [...RDF_XML_TYPES, 'application/octet-stream', 'text/plain'];
+/** The body ceiling (a large authority graph). */
+const RDF_MAX_BYTES = 20 * 1024 * 1024;
+/**
+ * Total time per hop, body included. Bounds one hop, not the call: a hung hop
+ * fails inside the client's 60 s wait; the pace between hops is not counted.
+ */
+const RDF_HOP_TIMEOUT_MS = 15_000;
+
+/** The door request for one RDF document. */
+function rdfRequest(url: string, accepted: readonly string[]): HarvestRequest {
+	return {
+		url,
+		hosts: 'public',
+		headers: { Accept: RDF_XML_ACCEPT },
+		expectContentType: accepted,
+		maxBytes: RDF_MAX_BYTES,
+		timeoutMs: RDF_HOP_TIMEOUT_MS,
+	};
+}
+
+/** What one request gave: the document's text, or why it was not RDF/XML. */
+type RdfAttempt = { kind: 'document'; text: string } | { kind: 'not_rdf'; error: DedaloError };
+
+/**
+ * Ask for one document. A non-2xx answer or a 2xx of another media type means
+ * "not RDF/XML here" (`not_rdf`); every other failure — a refused address, a
+ * robots.txt that says no, a timeout — is thrown, because asking the same site
+ * again would only meet it again.
+ */
+async function attemptRdf(
+	url: string,
+	accepted: readonly string[],
+	deps: HarvestDeps,
+): Promise<RdfAttempt> {
+	try {
+		const response = await harvestFetch(rdfRequest(url, accepted), deps);
+		if (response.ok) return { kind: 'document', text: response.text() };
+		return { kind: 'not_rdf', error: statusFailure(response.status) };
+	} catch (error) {
+		if (isDedaloError(error) && error.code === 'harvest.unexpected_type') {
+			return { kind: 'not_rdf', error };
+		}
+		throw error;
+	}
+}
+
+/** A non-2xx final answer, typed as the single-call door types it (status log-only). */
+function statusFailure(status: number): DedaloError {
+	return new DedaloError('security.outbound_failed', {
+		message: `HTTP ${status}`,
+		coordinates: { tool: 'tool_import_rdf', status },
+	});
+}
+
+/**
+ * The `<iri>.rdf` file form of an IRI, or null when there is none to try: the
+ * IRI is not a URL, or already names a `.rdf` file. The fragment is dropped (a
+ * `vocab#Term` IRI's document is `vocab`, never `vocab#Term.rdf`).
+ */
+export function rdfFileUrl(iri: string): string | null {
+	const url = URL.parse(iri);
+	// A trailing `/` names the resource without it (`id/` → `id.rdf`); the root has none.
+	const path = url?.pathname.replace(/\/$/, '') ?? '';
+	if (url === null || path === '' || path.endsWith('.rdf')) return null;
+	url.hash = '';
+	url.pathname = `${path}.rdf`;
+	return url.toString();
+}
+
+/**
+ * The RDF/XML document for `iri`: content negotiation on the IRI itself, then —
+ * only when that answer was not RDF/XML — one retry at its `.rdf` file form, the
+ * convention of servers that do not negotiate (the tool's behaviour before the
+ * door followed redirects).
+ */
+async function fetchRdfXml(iri: string, deps: HarvestDeps): Promise<string> {
+	const negotiated = await attemptRdf(iri, RDF_XML_TYPES, deps);
+	if (negotiated.kind === 'document') return negotiated.text;
+	const file = rdfFileUrl(iri);
+	if (file === null) throw negotiated.error;
+	const retried = await attemptRdf(file, RDF_FILE_TYPES, deps);
+	if (retried.kind === 'document') return retried.text;
+	throw tellingFailure(negotiated.error, retried.error);
+}
+
+/**
+ * Which of the two "not RDF/XML" answers the cataloguer is told. A wrong media
+ * type says what the site serves (usually a web page) and wins; between two
+ * error statuses, the IRI's own wins — the `.rdf` form was our guess.
+ */
+function tellingFailure(negotiated: DedaloError, retried: DedaloError): DedaloError {
+	return retried.code === 'harvest.unexpected_type' ? retried : negotiated;
+}
+
+/**
+ * Fetch, parse and map ONE IRI. A failure is reported as the error system's wire
+ * body, never `error.message`: the guard's message names the address a refused
+ * host resolved to (an internal-network oracle). `uri` is the IRI as the
+ * cataloguer selected it, whichever URL finally answered.
  *
- * EXPORTED with the guard's `deps` seam (resolver + socket) for the door-level gate
- * (tool_import_rdf.test.ts): the per-URI body a transport failure publishes is this
- * function's decision, not the guard's. The action handler never passes `deps` —
- * production resolves and connects for real.
+ * EXPORTED with the door's `deps` seam (`hop` fakes a site; `pinned` a resolver +
+ * socket) for tool_import_rdf.test.ts: the per-URI outcome is this function's
+ * decision, not the door's. The action handler never passes `deps` — production
+ * resolves and connects for real.
  */
 export async function loadRdf(
-	raw: string,
+	uri: string,
 	map: RdfMapEntry[],
-	deps: PinnedHopDeps = {},
+	deps: HarvestDeps = {},
 ): Promise<RdfOutcome> {
-	const uri = raw.endsWith('.rdf') ? raw : `${raw}.rdf`;
 	try {
-		const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 }, deps);
-		const { subjects } = parseRdfXml(xml);
+		const { subjects } = parseRdfXml(await fetchRdfXml(uri, deps));
 		// A class-map yields the mapped fields (the dd_object the client form
 		// consumes); without one, the raw subjects.
 		const mapped = map.length > 0 ? applyRdfMap(subjects, map) : subjects;
@@ -116,24 +243,41 @@ export async function loadRdf(
 	}
 }
 
+/** What one call reports: each loaded IRI's subjects, each failed IRI's wire body. */
+export interface RdfBatch {
+	rdf: { uri: string; subjects: unknown[] }[];
+	errors: { uri: string; error: ApiErrorBody }[];
+}
+
+/**
+ * Load every IRI in turn. One bad IRI never fails the batch: its outcome is a
+ * per-URI entry in `errors`. Exported with the same `deps` seam as `loadRdf`.
+ */
+export async function loadRdfBatch(
+	values: readonly string[],
+	map: RdfMapEntry[],
+	deps: HarvestDeps = {},
+): Promise<RdfBatch> {
+	const batch: RdfBatch = { rdf: [], errors: [] };
+	for (const raw of values) {
+		const outcome = await loadRdf(raw, map, deps);
+		if (outcome.kind === 'loaded') batch.rdf.push(outcome.entry);
+		else batch.errors.push(outcome.failure);
+	}
+	return batch;
+}
+
 async function getRdfData(ctx: ToolActionContext): Promise<ToolResponse> {
 	const locator = (ctx.options.locator ?? {}) as { section_tipo?: string };
 	await assertLocatorWrite(ctx, locator.section_tipo);
 	const values = rdfValues(ctx.options);
-	const map = rdfMap(ctx.options);
-	const rdf: { uri: string; subjects: unknown[] }[] = [];
-	const errors: { uri: string; error: ApiErrorBody }[] = [];
-	for (const raw of values) {
-		const outcome = await loadRdf(raw, map);
-		if (outcome.kind === 'loaded') rdf.push(outcome.entry);
-		else errors.push(outcome.failure);
-	}
 	// The subject→dd_object class-map is config-driven (ledgered); the fetch +
 	// parse are done and returned for the client/mapper to consume.
-	// `errors` is the PER-URI refusal list (one bad URI never fails the batch):
-	// payload, not a wire failure — so it rides inside `data`, one `{uri, error}` per
-	// URI, `error` the same body a failed call would carry.
-	return ok({ rdf, errors }, { requestId: toolRequestId(ctx) });
+	// `errors` is the PER-URI refusal list: payload, not a wire failure — so it
+	// rides inside `data`, one `{uri, error}` per URI, `error` the same body a
+	// failed call would carry.
+	const batch = await loadRdfBatch(values, rdfMap(ctx.options));
+	return ok(batch, { requestId: toolRequestId(ctx) });
 }
 
 export const tool: ToolServerModule = {

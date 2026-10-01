@@ -325,23 +325,12 @@ const FOLLOW_VETTED_IMPORTERS: Record<string, string> = {
 };
 
 /**
- * Tools that hold a RAW door instead of `harvestFetch`. SHRINK-ONLY: a row may be
- * deleted or narrowed, never widened, and it fails when its file no longer
- * holds every door it lists. Each says what the tool fetches and why it has not
- * moved — never "it is safe".
+ * Tools hold NO raw door. This was a SHRINK-ONLY list of reasoned rows; its last
+ * row (tool_import_rdf, which refused the 303/301 every linked-data server answers
+ * with) moved to `harvestFetch` on 2026-10-01, and a shrink-only list at zero stays
+ * at zero. A tool harvests through `harvestFetch`; a single API call to a
+ * configured service belongs in engine code (`src/core/tools/translation.ts`).
  */
-const TOOL_RAW_DOOR_IMPORTERS: Record<string, { doors: readonly string[]; reason: string }> = {
-	'tools/tool_import_rdf/server/index.ts': {
-		doors: ['fetchGuardedText'],
-		reason:
-			'Dereferences each RDF URI the cataloguer typed (`<uri>.rdf`), one user-initiated ' +
-			'request per URI — not a crawl — through the PINNED door (vetted address, no second ' +
-			'lookup; SURF-2) with redirects REFUSED, not followed. Move to harvestFetch PENDING: ' +
-			'robots and pacing are owed, and a linked-data server that redirects the document ' +
-			'(a 303 content negotiation) is refused today instead of followed under per-hop ' +
-			'vetting; moving deletes this row.',
-	},
-};
 
 type AstNode = { type: string; [key: string]: unknown };
 
@@ -682,13 +671,12 @@ function doorCensus(
 }
 
 function toolViolations(file: string, doors: Set<string>): string[] {
-	const allowed = new Set(TOOL_RAW_DOOR_IMPORTERS[file]?.doors ?? []);
 	return [...doors]
-		.filter((door) => door !== OPAQUE && !allowed.has(door))
+		.filter((door) => door !== OPAQUE)
 		.map(
 			(door) =>
 				`${file}: a tool holds ${door}. Harvest pages through harvestFetch (${HARVEST_DOOR}); ` +
-				'one API call through fetchGuardedText needs a TOOL_RAW_DOOR_IMPORTERS row with its reason',
+				'one API call to a configured service belongs in engine code, not in a tool',
 		);
 }
 
@@ -732,10 +720,17 @@ describe('who holds which door (import-graph census)', () => {
 		expect(census.get('src/core/tools/transcription_local_asr.ts')?.has('fetchBoundedText')).toBe(
 			true,
 		);
-		expect(census.get('tools/tool_import_rdf/server/index.ts')?.has('fetchGuardedText')).toBe(true);
+		// The harvesting tool holds the door it should, and through it no raw one.
+		const rdf = 'tools/tool_import_rdf/server/index.ts';
+		const withHarvest = doorCensus(
+			new Map(scanned.map((entry) => [entry.file, entry.code])),
+			OUTBOUND_DOOR_SEEDS,
+		);
+		expect([...(withHarvest.get(rdf) ?? [])]).toEqual(['harvestFetch']);
+		expect(census.has(rdf)).toBe(false);
 	});
 
-	test('the pinned hop has one holder, and a tool holds a raw door only by a written reason', () => {
+	test('the pinned hop has one holder, and no tool holds a raw door', () => {
 		const violations = doorViolations(census);
 		expect(
 			violations,
@@ -752,12 +747,6 @@ describe('who holds which door (import-graph census)', () => {
 		for (const file of Object.keys(FOLLOW_VETTED_IMPORTERS)) {
 			if (census.get(file)?.has(FOLLOW_DOOR) !== true)
 				stale.push(`${file}: no longer holds ${FOLLOW_DOOR}`);
-		}
-		for (const [file, row] of Object.entries(TOOL_RAW_DOOR_IMPORTERS)) {
-			const unused = row.doors.filter((door) => census.get(file)?.has(door) !== true);
-			if (unused.length > 0)
-				stale.push(`${file}: no longer holds ${unused.join(', ')} — narrow or delete the row`);
-			expect(row.reason.length, `${file}: an exemption needs a real reason`).toBeGreaterThan(80);
 		}
 		expect(stale, 'a row for a debt already paid hides that it was paid').toEqual([]);
 	});
@@ -803,6 +792,12 @@ describe('who holds which door (import-graph census)', () => {
 				`import { harvestFetch } from '${up}/harvest/harvest.ts';\n` +
 					`import type { fetchPinnedHop as HopType, PinnedHopRequest } from '${up}/security/ssrf_guard.ts';\n` +
 					`import { isPrivateIp, type fetchPinnedHop } from '${up}/security/ssrf_guard.ts';`,
+			],
+			// A tool importing a raw door directly: no row can excuse it any more —
+			// neither an arbitrary tool nor the one the last row used to exempt.
+			[
+				'tools/tool_raw/server/index.ts',
+				`import { fetchGuardedText } from '${up}/security/ssrf_guard.ts';`,
 			],
 			[
 				'tools/tool_import_rdf/server/index.ts',
@@ -870,7 +865,9 @@ describe('who holds which door (import-graph census)', () => {
 				'tools/tool_computed/server/index.ts',
 				'tools/tool_default/server/index.ts',
 				'tools/tool_dynamic/server/index.ts',
+				'tools/tool_import_rdf/server/index.ts',
 				'tools/tool_opaque/server/index.ts',
+				'tools/tool_raw/server/index.ts',
 				'tools/tool_require/server/index.ts',
 			].sort(),
 		);

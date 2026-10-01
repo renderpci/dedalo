@@ -1,21 +1,39 @@
 /**
  * R2 gate: tool_import_rdf. The RDF/XML parser and the class-map are covered by
  * rdf_xml.test.ts / rdf_map.test.ts; this file gates the TOOL — its action
- * surface, the argument validation, and what it reports when the shared SSRF
- * guard (`fetchGuardedText`) refuses a URI (SEC-072). The guard itself is gated in
- * ssrf_guard.test.ts and ssrf_one_guard_tripwire.test.ts.
+ * surface, the argument validation, and how it dereferences an IRI through the
+ * harvesting door (`harvestFetch`): content negotiation, the redirects a
+ * linked-data server answers with, the `.rdf` fallback, robots.txt, and what it
+ * reports per URI when the door or the SSRF guard refuses (SEC-072). The door
+ * itself is gated in harvest_door_native.test.ts, the guard in ssrf_guard.test.ts
+ * and ssrf_one_guard_tripwire.test.ts.
  *
- * Network-free by construction: a refused URI never reaches fetch(), so every
- * assertion here runs credless and offline.
+ * Network-free by construction: a refused URI never reaches fetch(), and every
+ * other case runs against a scripted site through the door's `hop` seam (or the
+ * guard's resolver + socket seam), so every assertion runs credless and offline.
  */
 // Migrated to the generic `test` TLD 2026-08-19: the sectionTipos extractor is pure, so
 // its ontology tipo and locator are opaque — they now name generic `test` nodes.
 
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
+import { DedaloError, toErrorBody } from '../../src/core/errors/index.ts';
+import type { HarvestDeps } from '../../src/core/harvest/harvest.ts';
+import { clearPacingForTests } from '../../src/core/harvest/pacing.ts';
+import { clearRobotsCache } from '../../src/core/harvest/robots.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
-import type { AddressLookup } from '../../src/core/security/ssrf_guard.ts';
+import type {
+	AddressLookup,
+	PinnedHopRequest,
+	PinnedHopResponse,
+} from '../../src/core/security/ssrf_guard.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
-import { loadRdf, type RdfOutcome } from '../../tools/tool_import_rdf/server/index.ts';
+import {
+	loadRdf,
+	loadRdfBatch,
+	RDF_MAX_URIS,
+	type RdfOutcome,
+	rdfFileUrl,
+} from '../../tools/tool_import_rdf/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -96,7 +114,7 @@ describe('tool_import_rdf module', () => {
 		// failure channel — each one the error system's wire body, never the guard's
 		// `Error.message`, which names the address a refused host resolved to.
 		expect(data.errors).toHaveLength(1);
-		expect(data.errors[0]?.uri).toBe('http://169.254.169.254/latest/meta-data.rdf');
+		expect(data.errors[0]?.uri).toBe('http://169.254.169.254/latest/meta-data');
 		expect(data.errors[0]?.error.code).toBe('security.ssrf_blocked');
 		const wire = JSON.stringify(publicPart(data.errors[0]?.error));
 		expect(wire).not.toContain('169.254');
@@ -118,16 +136,23 @@ describe('tool_import_rdf module', () => {
 	});
 });
 
+beforeEach(() => {
+	// The door remembers robots verdicts and per-site turns process-wide.
+	clearRobotsCache();
+	clearPacingForTests();
+});
+
 /**
  * THE DOOR'S OWN WIRE on a transport failure (WC-2026-09-30-guarded-text-pinned-typed-transport):
  * the per-URI `error` is the registry body of `security.outbound_failed` — category
  * `unavailable`, retryable, the registry's fixed sentence — never `internal.unexpected`
  * and never a host, an address or Bun's own text. Built through the guard's seam (a
- * public answer for the name, a socket that fails), so it runs offline; the primitive's
- * typing is gated in guarded_text_pin_native, this is the door publishing it.
+ * public answer for the name, a socket that fails), so it runs offline.
  */
 describe('tool_import_rdf: a transport failure is published as the typed registry body', () => {
 	const PUBLIC: AddressLookup = async () => [{ address: '93.184.216.34', family: 4 }];
+	/** No robots.txt: everything allowed (RFC 9309 §2.3.1.3). */
+	const NO_ROBOTS = (): Response => new Response(null, { status: 404 });
 
 	function failureOf(outcome: RdfOutcome): {
 		code: string;
@@ -141,40 +166,412 @@ describe('tool_import_rdf: a transport failure is published as the typed registr
 	}
 
 	test('a refused connection: security.outbound_failed, unavailable, retryable, no host or runtime text', async () => {
+		const asked: string[] = [];
 		const outcome = await loadRdf('https://vocab.example.test/term/1', [], {
-			lookup: PUBLIC,
-			fetch: async () => {
-				throw Object.assign(
-					new TypeError('Unable to connect. Is the computer able to access the url?'),
-					{
-						code: 'ConnectionRefused',
-					},
-				);
+			pinned: {
+				lookup: PUBLIC,
+				fetch: async (url) => {
+					asked.push(url);
+					if (url.endsWith('/robots.txt')) return NO_ROBOTS();
+					throw Object.assign(
+						new TypeError('Unable to connect. Is the computer able to access the url?'),
+						{ code: 'ConnectionRefused' },
+					);
+				},
 			},
 		});
 		const body = failureOf(outcome);
 		expect(outcome.kind === 'failed' && outcome.failure.uri).toBe(
-			'https://vocab.example.test/term/1.rdf',
+			'https://vocab.example.test/term/1',
 		);
 		expect(body.code).toBe('security.outbound_failed');
 		expect(body.category).toBe('unavailable');
 		expect(body.retryable).toBe(true);
 		expect(body.message).toBe('The outbound request could not be completed');
+		// A transport failure is final: no `.rdf` retry against the same dead host.
+		// (The pinned socket is handed the VETTED address, not the name.)
+		expect(asked).toEqual(['https://93.184.216.34/robots.txt', 'https://93.184.216.34/term/1']);
 		const wire = JSON.stringify(publicPart(body));
 		for (const leak of ['vocab.example.test', '93.184.216.34', 'Unable to connect', 'hop connect'])
 			expect(wire, leak).not.toContain(leak);
 	});
 
-	test('a redirect is the same typed body — refused, never followed', async () => {
-		let calls = 0;
+	test('a redirect inward is FOLLOWED, its target refused by address, and not retried at `.rdf`', async () => {
+		// The address refusal surfaces from the target origin's robots.txt read (the
+		// first thing the door does for a new origin); that the document hop itself
+		// is vetted is the door's own property, gated in harvest_door_native.
+		const asked: string[] = [];
 		const outcome = await loadRdf('https://vocab.example.test/term/2', [], {
-			lookup: PUBLIC,
-			fetch: async () => {
-				calls += 1;
-				return new Response(null, { status: 303, headers: { location: 'http://127.0.0.1/' } });
+			pinned: {
+				lookup: PUBLIC,
+				fetch: async (url) => {
+					asked.push(url);
+					if (url.endsWith('/robots.txt')) return NO_ROBOTS();
+					return new Response(null, { status: 303, headers: { location: 'https://127.0.0.1/' } });
+				},
 			},
 		});
-		expect(failureOf(outcome).code).toBe('security.outbound_failed');
-		expect(calls).toBe(1);
+		expect(failureOf(outcome).code).toBe('security.ssrf_blocked');
+		// Followed (a refused redirect would be outbound_failed), the inward target
+		// never connected to (its robots.txt included), and no `.rdf` retry.
+		expect(asked).toEqual(['https://93.184.216.34/robots.txt', 'https://93.184.216.34/term/2']);
+		expect(JSON.stringify(publicPart(failureOf(outcome)))).not.toContain('127.0.0.1');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The harvesting door, driven through its `hop` seam: a scripted linked-data
+// site, no network, no wall clock.
+// ---------------------------------------------------------------------------
+
+interface Scripted {
+	status: number;
+	/** Thrown by the hop instead of answering (a network failure). */
+	error?: unknown;
+	contentType?: string;
+	location?: string;
+	body?: string;
+}
+
+const REDIRECTS = new Set([301, 302, 303, 307, 308]);
+
+/** One scripted answer, shaped as the pinned primitive would return it. */
+function answer(request: PinnedHopRequest, scripted: Scripted): PinnedHopResponse {
+	const headers = new Headers();
+	if (scripted.contentType !== undefined) headers.set('content-type', scripted.contentType);
+	const location = REDIRECTS.has(scripted.status) ? (scripted.location ?? null) : null;
+	const base = { status: scripted.status, headers, location, truncated: false };
+	if (location !== null || request.acceptBody?.(scripted.status, headers) === false) {
+		return { ...base, bytes: new Uint8Array(0), bodySkipped: true };
+	}
+	return { ...base, bytes: new TextEncoder().encode(scripted.body ?? ''), bodySkipped: false };
+}
+
+interface LinkedDataSite {
+	deps: HarvestDeps;
+	/** Every request the door sent, in order. */
+	sent: PinnedHopRequest[];
+}
+
+/** The URL as it goes on the wire: a fragment is never sent. */
+function wireUrl(request: PinnedHopRequest): string {
+	const url = new URL(request.url);
+	url.hash = '';
+	return url.toString();
+}
+
+/** A site answering by URL (404 for anything unscripted), with a fake clock. */
+function linkedDataSite(routes: Record<string, Scripted>): LinkedDataSite {
+	const sent: PinnedHopRequest[] = [];
+	let now = 1_000_000;
+	const deps: HarvestDeps = {
+		hop: async (request) => {
+			sent.push(request);
+			const scripted = routes[wireUrl(request)] ?? { status: 404 };
+			if (scripted.error !== undefined) throw scripted.error;
+			return answer(request, scripted);
+		},
+		now: () => now,
+		sleep: async (ms) => {
+			now += ms;
+		},
+		setTimer: () => undefined,
+	};
+	return { deps, sent };
+}
+
+/** The non-robots URLs the door asked for, in order. */
+function documentsAsked(site: LinkedDataSite): string[] {
+	return site.sent.map(wireUrl).filter((url) => !url.endsWith('/robots.txt'));
+}
+
+const RDF_DOC = `<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:skos="http://www.w3.org/2004/02/skos/core#">
+  <skos:Concept rdf:about="http://ld.test/id/rome">
+    <skos:prefLabel xml:lang="en">Rome</skos:prefLabel>
+  </skos:Concept>
+</rdf:RDF>`;
+
+const RDF_OK: Scripted = { status: 200, contentType: 'application/rdf+xml', body: RDF_DOC };
+const HTML_OK: Scripted = { status: 200, contentType: 'text/html; charset=utf-8', body: '<html/>' };
+
+/** The subjects of a loaded outcome (fails the test on a failure). */
+function subjectsOf(outcome: RdfOutcome): unknown[] {
+	if (outcome.kind !== 'loaded') {
+		throw new Error(`expected loaded, got ${JSON.stringify(outcome.failure.error)}`);
+	}
+	return outcome.entry.subjects;
+}
+
+/** The code of a failed outcome (fails the test when it loaded). */
+function codeOf(outcome: RdfOutcome): string {
+	if (outcome.kind !== 'failed') throw new Error('expected a failure, it loaded');
+	return outcome.failure.error.code;
+}
+
+/** The parsed subject of RDF_DOC, as the parser names it. */
+function aboutRome(subjects: unknown[]): boolean {
+	return JSON.stringify(subjects).includes('http://ld.test/id/rome');
+}
+
+describe('tool_import_rdf: dereferencing an IRI through the harvesting door', () => {
+	test('content negotiation: the IRI itself answers RDF/XML — asked once, with an RDF Accept', async () => {
+		const site = linkedDataSite({ 'https://ld.test/id/rome': RDF_OK });
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(aboutRome(subjectsOf(outcome))).toBe(true);
+		expect(outcome.kind === 'loaded' && outcome.entry.uri).toBe('https://ld.test/id/rome');
+		expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
+		const accept = site.sent.find((r) => r.url.pathname === '/id/rome')?.headers.get('accept');
+		expect(accept).toBe('application/rdf+xml, application/xml;q=0.9, text/xml;q=0.8');
+	});
+
+	test('a 303 See Other is followed to the document', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': { status: 303, location: 'https://ld.test/data/rome.rdf' },
+			'https://ld.test/data/rome.rdf': RDF_OK,
+		});
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(aboutRome(subjectsOf(outcome))).toBe(true);
+		// The IRI the cataloguer selected names the entry, not the URL that answered.
+		expect(outcome.kind === 'loaded' && outcome.entry.uri).toBe('https://ld.test/id/rome');
+		expect(documentsAsked(site)).toEqual([
+			'https://ld.test/id/rome',
+			'https://ld.test/data/rome.rdf',
+		]);
+	});
+
+	test('a 301 from http to https is followed', async () => {
+		const site = linkedDataSite({
+			'http://ld.test/id/rome': { status: 301, location: 'https://ld.test/id/rome' },
+			'https://ld.test/id/rome': RDF_OK,
+		});
+		const outcome = await loadRdf('http://ld.test/id/rome', [], site.deps);
+		expect(aboutRome(subjectsOf(outcome))).toBe(true);
+		expect(documentsAsked(site)).toEqual(['http://ld.test/id/rome', 'https://ld.test/id/rome']);
+	});
+
+	test('the `.rdf` fallback: an IRI that answers HTML is retried once at `<iri>.rdf`', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': HTML_OK,
+			'https://ld.test/id/rome.rdf': RDF_OK,
+		});
+		expect(aboutRome(subjectsOf(await loadRdf('https://ld.test/id/rome', [], site.deps)))).toBe(
+			true,
+		);
+		expect(documentsAsked(site)).toEqual([
+			'https://ld.test/id/rome',
+			'https://ld.test/id/rome.rdf',
+		]);
+	});
+
+	test('both attempts: the RDF Accept, a bounded hop, the body ceiling', async () => {
+		const site = linkedDataSite({ 'https://ld.test/id/rome': HTML_OK });
+		await loadRdf('https://ld.test/id/rome', [], site.deps);
+		const documents = site.sent.filter((r) => r.url.pathname !== '/robots.txt');
+		expect(documents).toHaveLength(2);
+		for (const request of documents) {
+			expect(request.headers.get('accept')).toBe(
+				'application/rdf+xml, application/xml;q=0.9, text/xml;q=0.8',
+			);
+			// Bounded well inside the client's 60 s wait (the door's default is 120 s).
+			expect(request.timeoutMs).toBe(15_000);
+			expect(request.maxBytes).toBe(20 * 1024 * 1024);
+		}
+	});
+
+	test('the `.rdf` fallback asks the file form of the IRI, fragment dropped, end to end', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/vocab': HTML_OK,
+			'https://ld.test/vocab.rdf': RDF_OK,
+		});
+		subjectsOf(await loadRdf('https://ld.test/vocab#Rome', [], site.deps));
+		expect(documentsAsked(site)).toEqual(['https://ld.test/vocab', 'https://ld.test/vocab.rdf']);
+	});
+
+	test('the reported failure: a wrong media type wins, else the IRI’s own status', async () => {
+		// IRI answers a web page, the guessed `.rdf` is 404: the page is the news.
+		const htmlThen404 = linkedDataSite({ 'https://ld.test/id/rome': HTML_OK });
+		expect(codeOf(await loadRdf('https://ld.test/id/rome', [], htmlThen404.deps))).toBe(
+			'harvest.unexpected_type',
+		);
+		const notFoundThenHtml = linkedDataSite({ 'https://ld.test/id/rome.rdf': HTML_OK });
+		expect(codeOf(await loadRdf('https://ld.test/id/rome', [], notFoundThenHtml.deps))).toBe(
+			'harvest.unexpected_type',
+		);
+		clearRobotsCache();
+		const bothMissing = linkedDataSite({});
+		expect(codeOf(await loadRdf('https://ld.test/id/rome', [], bothMissing.deps))).toBe(
+			'security.outbound_failed',
+		);
+	});
+
+	test('a door refusal is final even when the `.rdf` form would load', async () => {
+		// https → http is refused (`downgrade`); the file form is scripted to load.
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': { status: 303, location: 'http://ld.test/data/rome' },
+			'https://ld.test/id/rome.rdf': RDF_OK,
+		});
+		expect(codeOf(await loadRdf('https://ld.test/id/rome', [], site.deps))).toBe('harvest.refused');
+		expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
+	});
+
+	test('every accepted media type, per attempt', async () => {
+		const negotiated = ['application/rdf+xml', 'application/xml; charset=utf-8', 'text/xml'];
+		for (const contentType of negotiated) {
+			clearRobotsCache();
+			const site = linkedDataSite({ 'https://ld.test/id/rome': { ...RDF_OK, contentType } });
+			subjectsOf(await loadRdf('https://ld.test/id/rome', [], site.deps));
+			expect(documentsAsked(site), contentType).toEqual(['https://ld.test/id/rome']);
+		}
+		for (const contentType of [...negotiated, 'application/octet-stream', 'text/plain']) {
+			clearRobotsCache();
+			const site = linkedDataSite({ 'https://ld.test/id/rome.rdf': { ...RDF_OK, contentType } });
+			subjectsOf(await loadRdf('https://ld.test/id/rome', [], site.deps));
+		}
+		// Bytes or text are the FILE form's allowance only: the IRI itself must negotiate.
+		for (const contentType of ['application/octet-stream', 'text/plain']) {
+			clearRobotsCache();
+			const site = linkedDataSite({
+				'https://ld.test/id/rome': { ...RDF_OK, contentType },
+				'https://ld.test/id/rome.rdf': RDF_OK,
+			});
+			subjectsOf(await loadRdf('https://ld.test/id/rome', [], site.deps));
+			expect(documentsAsked(site), contentType).toEqual([
+				'https://ld.test/id/rome',
+				'https://ld.test/id/rome.rdf',
+			]);
+		}
+	});
+
+	test('the `.rdf` fallback: a non-2xx answer is retried too, and the file may be served as bytes', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome.rdf': { ...RDF_OK, contentType: 'application/octet-stream' },
+		});
+		expect(aboutRome(subjectsOf(await loadRdf('https://ld.test/id/rome', [], site.deps)))).toBe(
+			true,
+		);
+		expect(documentsAsked(site)).toEqual([
+			'https://ld.test/id/rome',
+			'https://ld.test/id/rome.rdf',
+		]);
+	});
+
+	test('no double suffix: an IRI already naming a `.rdf` file is asked once', async () => {
+		const site = linkedDataSite({});
+		const outcome = await loadRdf('https://ld.test/id/rome.rdf', [], site.deps);
+		expect(codeOf(outcome)).toBe('security.outbound_failed');
+		expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome.rdf']);
+	});
+
+	test('the `.rdf` form drops the fragment and keeps the query', () => {
+		expect(rdfFileUrl('https://ld.test/vocab#Rome')).toBe('https://ld.test/vocab.rdf');
+		expect(rdfFileUrl('https://ld.test/id/rome?lang=en')).toBe(
+			'https://ld.test/id/rome.rdf?lang=en',
+		);
+		expect(rdfFileUrl('https://ld.test/id/rome.rdf')).toBeNull();
+		expect(rdfFileUrl('https://ld.test/id/rome/')).toBe('https://ld.test/id/rome.rdf');
+		expect(rdfFileUrl('https://ld.test/')).toBeNull();
+		expect(rdfFileUrl('not a url')).toBeNull();
+	});
+
+	test('an HTML 200 is refused (harvest.unexpected_type), the fallback included', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': HTML_OK,
+			'https://ld.test/id/rome.rdf': HTML_OK,
+		});
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(codeOf(outcome)).toBe('harvest.unexpected_type');
+		// The page body was never read: the door refuses before the body.
+		expect(documentsAsked(site)).toEqual([
+			'https://ld.test/id/rome',
+			'https://ld.test/id/rome.rdf',
+		]);
+	});
+
+	test('robots.txt disallow is reported per URI, and not retried at `.rdf`', async () => {
+		// The rule disallows the IRI only (`$`), so the `.rdf` form WOULD be allowed
+		// and would load: a refusal is final, never a reason to try the other form.
+		const site = linkedDataSite({
+			'https://ld.test/robots.txt': {
+				status: 200,
+				contentType: 'text/plain',
+				body: 'User-agent: *\nDisallow: /id/rome$',
+			},
+			'https://ld.test/id/rome': RDF_OK,
+			'https://ld.test/id/rome.rdf': RDF_OK,
+		});
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(codeOf(outcome)).toBe('harvest.robots_disallowed');
+		expect(outcome.kind === 'failed' && outcome.failure.error.details).toEqual({
+			site: 'https://ld.test',
+		});
+		expect(documentsAsked(site)).toEqual([]);
+	});
+
+	test('a network failure between two good IRIs: the batch goes on, in order', async () => {
+		const site = linkedDataSite({
+			'https://a.test/id/1': RDF_OK,
+			'https://down.test/id/2': {
+				status: 0,
+				error: new DedaloError('security.outbound_failed', { message: 'connect refused' }),
+			},
+			'https://c.test/id/3': RDF_OK,
+		});
+		const batch = await loadRdfBatch(
+			['https://a.test/id/1', 'https://down.test/id/2', 'https://c.test/id/3'],
+			[],
+			site.deps,
+		);
+		expect(batch.rdf.map((entry) => entry.uri)).toEqual([
+			'https://a.test/id/1',
+			'https://c.test/id/3',
+		]);
+		expect(batch.errors.map((entry) => [entry.uri, entry.error.code])).toEqual([
+			['https://down.test/id/2', 'security.outbound_failed'],
+		]);
+	});
+
+	test('one bad URI never fails the batch', async () => {
+		const site = linkedDataSite({ 'https://ld.test/id/rome': RDF_OK });
+		const batch = await loadRdfBatch(['not a url', 'https://ld.test/id/rome'], [], site.deps);
+		expect(batch.rdf.map((entry) => entry.uri)).toEqual(['https://ld.test/id/rome']);
+		expect(batch.errors.map((entry) => [entry.uri, entry.error.code])).toEqual([
+			['not a url', 'harvest.refused'],
+		]);
+	});
+});
+
+describe('tool_import_rdf: the per-call cap', () => {
+	async function call(values: unknown[]) {
+		const loaded = await getLoadedTool('tool_import_rdf');
+		return mustGet(loaded!.module.apiActions.get_rdf_data, 'get_rdf_data').handler({
+			principal: await resolvePrincipal(-1),
+			userId: -1,
+			background: false,
+			options: { ar_values: values },
+		});
+	}
+
+	test(`more than ${RDF_MAX_URIS} IRIs is refused before any fetch, with a public typed error`, async () => {
+		// Addresses the guard refuses without a lookup: whatever the order, nothing
+		// leaves this machine; the call must still throw rather than answer.
+		const values = Array.from({ length: RDF_MAX_URIS + 1 }, (_, i) => `http://127.0.0.${i + 1}/id`);
+		const refusal = await refusalOf(call(values));
+		expect(refusal.code).toBe('tool.too_many_items');
+		expect(refusal.details).toEqual({ count: RDF_MAX_URIS + 1, limit: RDF_MAX_URIS });
+		// Public on the wire: the counts reach the cataloguer's label.
+		const body = toErrorBody(refusal);
+		expect(body.category).toBe('caller');
+		expect(body.label_key).toBe('error_tool_too_many_items');
+		expect(body.details).toEqual({ count: RDF_MAX_URIS + 1, limit: RDF_MAX_URIS });
+	});
+
+	test(`exactly ${RDF_MAX_URIS} IRIs pass the cap`, async () => {
+		// Unparseable text: refused per URI by the door, offline.
+		const res = await call(Array.from({ length: RDF_MAX_URIS }, (_, i) => `not a url ${i}`));
+		const data = res.data as { errors: { error: { code: string } }[] };
+		expect(data.errors.map((entry) => entry.error.code)).toEqual(
+			Array(RDF_MAX_URIS).fill('harvest.refused'),
+		);
 	});
 });

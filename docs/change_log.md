@@ -154,6 +154,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **RDF import now works with linked-data servers that redirect, and respects their robots.txt.**
+
+    Linked-data servers usually answer an IRI by redirecting to the document that describes it (or from `http` to `https`). The RDF import refused every redirect, so on those servers each import failed. It now asks the IRI itself for RDF/XML and follows the redirects, checking every step. Servers that only answer at the IRI with `.rdf` appended still work: the tool tries that form when the first answer is not RDF/XML. The tool now also reads each site's `robots.txt` and spaces its requests to the same site a few seconds apart. A site that does not allow automated access gets a per-IRI message saying so, and nothing is fetched from it. One run fetches at most three IRIs. See [RDF import](./tools/using_import_rdf.md).
+
+    Wire contract: `WC-2026-10-01-rdf-harvest-door`.
+
 - **Small editing forms no longer show tool buttons they turn off.**
 
     Some forms turn off the tool buttons on their fields, but the buttons were still
@@ -1131,7 +1137,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 88 entries"
+??? note "Wire contract — 89 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1217,6 +1223,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-01-change-plan-write-door`
     - `WC-2026-10-01-delete-locator-write-door`
     - `WC-2026-10-01-identify-vision-grant`
+    - `WC-2026-10-01-rdf-harvest-door`
     - `WC-2026-10-01-site-builder-confinement-codes`
     - `WC-2026-10-01-tool-grant-one-decision`
     - `WC-2026-10-01-unit-test-widget-dev-gate`
