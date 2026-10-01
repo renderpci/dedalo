@@ -17,6 +17,14 @@
  *   3. the CSV legacy `{data, dataframe}` envelope: each frame names its own
  *      slot (`from_component_tipo`), and that slot is a component write of its
  *      own (`legacyFrameSlots`) — refused, the WHOLE column is skipped.
+ *   4. the CSV row whose id was FREE when the file's existence set was read but
+ *      is TAKEN by a concurrent ordinary create before the row's insert (the
+ *      conflict-tolerant insert is then a no-op — refuter-surviving S2,
+ *      2026-10-01). The row did not create its record, so it is NOT a create:
+ *      every column is asked as a write to THAT record (scope + the dd128-aware
+ *      pair), and it is reported updated, never created. Reproduced as a REAL
+ *      interleave (the concurrent create holds its insert open until the
+ *      importer is provably waiting on it — pg_blocking_pids, never a sleep).
  *
  * THE IDENTITIES are authz_door_fixture's, asserted through the real resolver
  * first: LEVEL_1 (test3 at 1 — read, never write), READ_COMPONENT (test3 at 2,
@@ -27,19 +35,26 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { deleteMatrixRecord } from '../../src/core/db/matrix_write.ts';
-import { sql } from '../../src/core/db/postgres.ts';
-import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import {
+	bornInCurrentTransaction,
+	createSectionRecord,
+} from '../../src/core/section/record/create_record.ts';
+import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { getPermissions, type Principal } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { planCsvImport } from '../../src/core/tools/import_csv.ts';
 import { executeCsvImport } from '../../src/core/tools/import_csv_execute.ts';
 import { importMappedRecords } from '../../src/core/tools/import_execute.ts';
 import {
+	AUTHZ_FILTER,
 	AUTHZ_PROJECT_P,
+	AUTHZ_PROJECT_Q,
 	AUTHZ_SECTION,
 	AUTHZ_TEXT,
 	type AuthzIdentities,
 	assertAuthzDoorContrast,
+	authzProjectLocator,
 	createDoorRecord,
 	installAuthzDoorFixture,
 	removeAuthzDoorFixture,
@@ -134,6 +149,74 @@ async function importCsvRow(principal: Principal, sectionId: number, cell: strin
 	});
 	for (const id of report.created) importedIds.add(id);
 	return report;
+}
+
+/**
+ * Poll until some backend waits on a lock HELD BY `pid` — identity, not a sleep
+ * (bulk_operation_atomicity_native's idiom): `pg_blocking_pids` names the blocker.
+ */
+async function waitUntilBlockedBy(pid: number, timeoutMs: number): Promise<boolean> {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		const rows = (await sql.unsafe(
+			`SELECT count(*)::int AS n FROM pg_stat_activity
+			 WHERE wait_event_type = 'Lock' AND $1::int = ANY(pg_blocking_pids(pid))`,
+			[String(pid)],
+		)) as { n: number }[];
+		if ((rows[0]?.n ?? 0) > 0) return true;
+		await new Promise((resolve) => setTimeout(resolve, 25));
+	}
+	return false;
+}
+
+/**
+ * THE RACE: another user's ordinary create of `sectionId` (a member of
+ * `projectId`) is written but NOT committed when the CSV import starts — so the
+ * file's existence set misses it — and commits only once the importer's row is
+ * provably waiting on it. The importer's conflict-tolerant insert is then a no-op.
+ */
+async function importCsvRowRacingCreate(
+	principal: Principal,
+	sectionId: number,
+	projectId: number,
+	cell: string,
+) {
+	importedIds.add(sectionId); // swept whatever the importer reports
+	let releaseCreator: () => void = () => {};
+	const creatorHold = new Promise<void>((resolve) => {
+		releaseCreator = resolve;
+	});
+	let creatorWrote: () => void = () => {};
+	const written = new Promise<void>((resolve) => {
+		creatorWrote = resolve;
+	});
+	let creatorPid = 0;
+	const creator = withTransaction(async () => {
+		const pidRows = (await sql.unsafe('SELECT pg_backend_pid() AS pid')) as { pid: number }[];
+		creatorPid = Number(pidRows[0]?.pid ?? 0);
+		await createSectionRecord(AUTHZ_SECTION, -1, new Date(), sectionId);
+		// test3 is excluded from the filter birth default: membership is SAVED.
+		const saved = await saveComponentData({
+			componentTipo: AUTHZ_FILTER,
+			sectionTipo: AUTHZ_SECTION,
+			sectionId,
+			lang: 'lg-nolan',
+			changedData: [
+				{ action: 'set_data', key: null, value: [authzProjectLocator(projectId)] } as never,
+			],
+			userId: -1,
+		});
+		expect(saved.ok).toBe(true);
+		creatorWrote();
+		await creatorHold; // written; NOT committed
+	});
+	await written;
+	expect(creatorPid).toBeGreaterThan(0);
+	const run = importCsvRow(principal, sectionId, cell);
+	const blocked = await waitUntilBlockedBy(creatorPid, 15_000);
+	releaseCreator();
+	await creator;
+	return { blocked, report: await run };
 }
 
 const REFUSED = /not writable by the importer \(perm\.[a-z_]+\)/;
@@ -233,6 +316,67 @@ describe.if(DB_READY)(
 			expect(report.failed).toEqual([]);
 			expect(JSON.stringify((await recordColumns(sectionId))?.text)).toContain(
 				'zzcsv create served',
+			);
+		});
+
+		// --- 4. the CSV row whose id a concurrent create took after the snapshot ---
+
+		test('CSV, row id taken by a concurrent create OUT of her scope: NOT a create — the column refused by the record door, the foreign record untouched', async () => {
+			const sectionId = await freshId();
+			const { blocked, report } = await importCsvRowRacingCreate(
+				ids.control,
+				sectionId,
+				AUTHZ_PROJECT_Q,
+				'zzcsv race foreign',
+			);
+			// anti-vacuity: the importer really raced the create (it waited on it)
+			expect(blocked).toBe(true);
+			expect({ created: report.created, updated: report.updated }).toEqual({
+				created: [],
+				updated: [sectionId],
+			});
+			expect(report.failed).toEqual([
+				expect.objectContaining({
+					component_tipo: AUTHZ_TEXT,
+					msg: expect.stringMatching(REFUSED),
+				}),
+			]);
+			const stored = await recordColumns(sectionId);
+			expect(stored).not.toBeNull(); // the creator's record stands
+			expect(stored?.text ?? null).toBeNull();
+		});
+
+		test('the birth predicate REFUSES outside a transaction (no xid to compare — never a silent false)', async () => {
+			let thrown: unknown = null;
+			try {
+				await bornInCurrentTransaction(TABLE, AUTHZ_SECTION, 1);
+			} catch (error) {
+				thrown = error;
+			}
+			expect((thrown as { code?: string } | null)?.code).toBe('internal.invariant');
+			// the served twin: inside a transaction it answers (a row it did not write)
+			const answered = await withTransaction(() =>
+				bornInCurrentTransaction(TABLE, AUTHZ_SECTION, 1),
+			);
+			expect(answered).toBe(false);
+		});
+
+		test('CSV, row id taken by a concurrent create IN her scope (the served twin): written as an UPDATE, never reported created', async () => {
+			const sectionId = await freshId();
+			const { blocked, report } = await importCsvRowRacingCreate(
+				ids.control,
+				sectionId,
+				AUTHZ_PROJECT_P,
+				'zzcsv race in scope',
+			);
+			expect(blocked).toBe(true);
+			expect({ created: report.created, updated: report.updated }).toEqual({
+				created: [],
+				updated: [sectionId],
+			});
+			expect(report.failed).toEqual([]);
+			expect(JSON.stringify((await recordColumns(sectionId))?.text)).toContain(
+				'zzcsv race in scope',
 			);
 		});
 

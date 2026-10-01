@@ -126,6 +126,8 @@ const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
 		'writes NOTHING itself: it queues a recompute of the record’s covered observer slots on the obligation ledger; the recompute writes the mirror through persistObserverMirrorKeys, a chokepoint primitive below. A mirror slot is derived state, never a credential.',
 	hiIndexDisagrees:
 		'a PURE comparison of a stored `_hi` ancestor index against the save law’s derivation; reads the thesaurus chain, writes nothing.',
+	bornInCurrentTransaction:
+		'a READ-ONLY xmin predicate (2026-10-01): one SELECT comparing a row’s xmin with the ambient transaction’s xid, answering whether the record was written by that transaction (the conflict-tolerant create’s birth law, shared with the CSV importer); refuses outside a transaction and writes nothing.',
 	afterRecordWrite:
 		'writes NOTHING to the matrix: it is the post-write obligation hook (P1-8, 2026-09-03) every primitive ends in — save event, the security reaction, the RAG seam — and the two insert doors call it AFTER their own primitive. A caller of it is already a caller of a primitive; listing it would double-count every door.',
 };

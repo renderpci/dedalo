@@ -31,7 +31,11 @@
     message in the ingest's derivative errors (never written), as other companion failures.
   - MARC21 / Zotero / RDF (`importMappedRecords`, now taking the importing principal) and the
     CSV importer: a refused field / column is reported `IGNORED: not writable by the importer
-    (<code>) — … NOT written`; a refused create fails its row.
+    (<code>) — … NOT written`; a refused create fails its row. A CSV row is a create only
+    if its insert really created the record (`bornInCurrentTransaction`, 2026-10-01): an id
+    free in the file's existence snapshot but taken by a concurrent create is asked as that
+    record (scope + dd128-aware pair) and reported in `updated`, never `created`
+    (gate: `import_create_door_native` §4).
   - `tool_import_files`: the run-time role writes, the media component and the host portal
     through the door's triple (a record born in the run: its pair as a section target).
   - `tool_time_machine` `bulk_revert_process`: every component a unit writes; a refusal is

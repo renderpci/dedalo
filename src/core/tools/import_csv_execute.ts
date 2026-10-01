@@ -50,7 +50,7 @@ import {
 	literalDuplicateIds,
 	literalEqualityFamilyOf,
 } from '../section/record/append_merge.ts';
-import { createSectionRecord } from '../section/record/create_record.ts';
+import { bornInCurrentTransaction, createSectionRecord } from '../section/record/create_record.ts';
 import {
 	metadataPatchFromAuditValue,
 	type RecordMetadataPatch,
@@ -153,7 +153,11 @@ interface RowWriteContext {
 	userId: number;
 	/** The importer, for the write door (req 10). */
 	principal: Principal;
-	/** The row creates its record: a column is asked as a section target, not a record. */
+	/**
+	 * The row CREATED its record: a column is asked as a section target, not a
+	 * record. Seeded from the existence snapshot, then settled by the insert's
+	 * real outcome (bornInCurrentTransaction) before any column is written.
+	 */
 	isNew: boolean;
 	bulkProcessId: number;
 	skipModifiedStamp: boolean;
@@ -1144,15 +1148,22 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 						{ section_tipo: sectionTipo },
 						{ level: 2, door: 'import_csv.create' },
 					);
-					// conflictTolerant: a concurrent writer may have taken the id; then the
-					// insert is a no-op and we simply save the components onto it.
-					// bulkProcessId: a REAL insert writes the run's birth marker (tm_role
-					// 3), so a revert knows this run created the record (decision D2);
-					// the conflict no-op writes none — the record is not the run's.
+					// conflictTolerant: a concurrent writer may have taken the id since the
+					// existence snapshot; the insert is then a no-op. bulkProcessId: a REAL
+					// insert writes the run's birth marker (tm_role 3), so a revert knows
+					// this run created the record (decision D2); the no-op writes none.
 					await createSectionRecord(sectionTipo, userId, new Date(), sectionId, {
 						conflictTolerant: true,
 						bulkProcessId,
 					});
+					// THE ROW IS NEW ONLY IF IT CREATED ITS RECORD (refuter-surviving S2,
+					// 2026-10-01). The snapshot said the id was free; a concurrent create
+					// that took it made the insert a no-op, and the record is SOMEONE
+					// ELSE'S — outside the importer's scope, perhaps a dd128 account. A
+					// section-target grant authorizes a create only; from here every
+					// column is asked as a write to THAT record (scope + the dd128-aware
+					// pair), and the row is reported updated, never created.
+					ctx.isNew = await bornInCurrentTransaction(table, sectionTipo, sectionId);
 				}
 
 				const secondPass = await writeRowPassOne(record, ctx, metadata, publishColumn);
@@ -1177,7 +1188,7 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 				});
 			}
 
-			if (isNew) {
+			if (ctx.isNew) {
 				created.push(sectionId);
 				// DATA-21: the existence set was read ONCE before the loop and never
 				// added to, so a file carrying the same section_id twice reported TWO

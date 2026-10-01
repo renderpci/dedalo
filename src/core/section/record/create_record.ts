@@ -33,7 +33,7 @@ import {
 	insertMatrixRecordWithExplicitId,
 	type MatrixWriteValues,
 } from '../../db/matrix_write.ts';
-import { sql, withTransaction } from '../../db/postgres.ts';
+import { isInTransaction, sql, withTransaction } from '../../db/postgres.ts';
 import { openEpochIfReborn } from '../../db/record_generation.ts';
 import { recordBulkBirth } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
@@ -134,6 +134,31 @@ async function insertedByThisTransaction(
 	options: CreateRecordOptions,
 ): Promise<boolean> {
 	if (options.conflictTolerant !== true) return true;
+	return bornInCurrentTransaction(table, sectionTipo, sectionId);
+}
+
+/**
+ * Was the row at the address WRITTEN by the ambient transaction? The one xmin
+ * law the conflict-tolerant create decides its birth by — exported for a caller
+ * that runs that create inside its OWN transaction and must know whether the
+ * record is the one it created or one a concurrent writer committed first (the
+ * CSV importer: a row whose id was taken after its existence snapshot is NOT a
+ * create, and is authorized as a write to that record). Asked right after the
+ * create, before the caller writes the row: a later write by the same
+ * transaction would also stamp its xmin. Outside a transaction there is no
+ * "this transaction" to compare with — refused loudly, never a silent false.
+ */
+export async function bornInCurrentTransaction(
+	table: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<boolean> {
+	if (!isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message: 'bornInCurrentTransaction: called outside a transaction (no xid to compare)',
+			coordinates: { table, section_tipo: sectionTipo, section_id: sectionId },
+		});
+	}
 	const rows = (await sql.unsafe(
 		`SELECT xmin = pg_current_xact_id_if_assigned()::xid AS mine
 		 FROM "${table}" WHERE section_tipo = $1 AND section_id = $2`,
