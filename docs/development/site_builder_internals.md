@@ -147,6 +147,11 @@ turn is one agent CLI invocation, linked to the next by the driver's native resu
   `.builder/session.lock` pid file), and at most `MAX_CONCURRENT_SESSIONS` turns across all
   sites (a global counting semaphore). A second start on a busy site is a 409; over the cap
   is a 429; a workspace over `SITE_DISK_QUOTA_MB` is refused.
+- **Deleting a site holds it too**: a delete is refused with a 409 that names what is running
+  (`session_running`, `build_running`, …) while a turn, a build or a repository operation
+  holds the site, and removes nothing. While a delete runs, every other request on the site
+  is refused `site_deleting`. A turn or build that was admitted while a delete finished
+  answers 404 and re-creates nothing.
 - **The turn runner** (`runTurn`): spawns the driver **before** the first `await` (so
   `stopSession` can never race in and find no process), persists a `turn_start` marker,
   consumes the driver's normalized events, derives the file-change list from git, commits the

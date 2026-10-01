@@ -152,6 +152,12 @@ export async function startSession(
   }
 
   try {
+    // AND THE SITE IS ASKED FOR AGAIN, UNDER THE HOLD. The check at the top ran before the
+    // admission awaits, and a delete that completed while this request waited there left the
+    // reservation free: the meta write below would then have re-created `<slug>/` — a husk
+    // that is not a site. Once the turn holds the site no delete can run (it holds too), so
+    // this answer stays true for the whole turn.
+    if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
     await enforceQuota(slug);
     acquireGlobalSlot();
 

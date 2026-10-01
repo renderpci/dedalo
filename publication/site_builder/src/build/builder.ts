@@ -190,6 +190,10 @@ export async function startBuild(
   }
 
   try {
+    // The site, asked for again UNDER THE HOLD: a delete that completed while this request
+    // waited in admission left the reservation free, and the records directory below would
+    // have re-created `<slug>/` as a husk. From here the build holds the site; no delete runs.
+    if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
     const id = newReleaseId();
     // 0700: the build records and logs are the DAEMON's, inside a tree the agent writes.
     await mkdirPrivate(config.SITES_ROOT, underSitesRoot(buildsDir(slug)));

@@ -5,9 +5,11 @@
  * Everything that mutates a site's working tree or runs agent-authored text in it holds a
  * RESERVATION for the whole of that work: an agent turn, a build, the repository
  * initialization of a new site (`createSite` → `initRepo`), the recovery commit of a turn a
- * dead daemon left behind (`sweepOnBoot`), and a git operation nobody else reserved for
- * (`sites/git.ts`). They must never overlap — with each other or with themselves — or they
- * race on the same files. And since LEAD-1b the reservation is ALSO the daemon-side half of
+ * dead daemon left behind (`sweepOnBoot`), a git operation nobody else reserved for
+ * (`sites/git.ts`), and the removal of the site itself (`deleteSite`). They must never
+ * overlap — with each other or with themselves — or they race on the same files: a delete
+ * under a running turn left the turn's own session writes re-creating a `<slug>/` that is not
+ * a site, which no create could ever claim again. And since LEAD-1b the reservation is ALSO the daemon-side half of
  * the site's identity lease: a confined run of site k is refused unless its slug is reserved
  * (`drivers/confinement.ts`), so a site's runs are sequential by construction and PID 1's
  * own per-site exclusion (door-target `Conflicts=`) only ever fires on a daemon bug.
@@ -22,7 +24,7 @@
  */
 
 /** What a reservation is for. One per slug at a time. */
-export type ReservationKind = 'turn' | 'build' | 'init' | 'recovery' | 'git';
+export type ReservationKind = 'turn' | 'build' | 'init' | 'recovery' | 'git' | 'delete';
 
 const held = new Map<string, ReservationKind>();
 
@@ -33,6 +35,7 @@ export type BusyReason =
   | 'site_initializing'
   | 'site_recovering'
   | 'git_running'
+  | 'site_deleting'
   | null;
 
 const REASON: Readonly<Record<ReservationKind, Exclude<BusyReason, null>>> = Object.freeze({
@@ -41,6 +44,7 @@ const REASON: Readonly<Record<ReservationKind, Exclude<BusyReason, null>>> = Obj
   init: 'site_initializing',
   recovery: 'site_recovering',
   git: 'git_running',
+  delete: 'site_deleting',
 });
 
 /** The sentence a 409 carries for each reason (the reason itself is the machine code). */
@@ -56,6 +60,8 @@ export function busyDetail(reason: Exclude<BusyReason, null>, slug: string): str
       return `The site '${slug}' is being recovered after a restart`;
     case 'git_running':
       return `A repository operation is running for '${slug}'`;
+    case 'site_deleting':
+      return `The site '${slug}' is being deleted`;
   }
 }
 

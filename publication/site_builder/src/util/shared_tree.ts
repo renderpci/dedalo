@@ -389,11 +389,43 @@ const PRIVATE_CHAIN_OWNED_FROM = 1;
  */
 export type OwnerSeam = (path: string, uid: number) => number;
 
-async function ensureDir(root: string, relative: string, mode: number | ((segment: string) => number)): Promise<string> {
+/**
+ * A LEVEL A CALLER SAID ALREADY EXISTS, AND DOES NOT. Its parent's owner made it (a create);
+ * whoever writes below it may not — a writer that re-created `<slug>/` under the trusted root
+ * after a delete manufactured a directory that is not a site, which no create could claim
+ * again (`sites/workspace.ts`). Nothing was created.
+ */
+export class AbsentDirectoryError extends Error {
+  readonly code = 'ENOENT';
+  constructor(readonly path: string) {
+    super(`shared_tree: '${path}' does not exist, and it is not this call's to create. Nothing was created.`);
+    this.name = 'AbsentDirectoryError';
+  }
+}
+
+async function ensureDir(
+  root: string,
+  relative: string,
+  mode: number | ((segment: string) => number),
+  existingLevels = 0,
+): Promise<string> {
   const { target, segments } = segmentsUnder(root, relative);
   let path = resolve(root);
-  for (const segment of segments) {
+  for (const [depth, segment] of segments.entries()) {
     path = join(path, segment);
+    if (depth < existingLevels) {
+      // PROVED, NEVER MADE: a real directory (`O_NOFOLLOW|O_DIRECTORY`), or the refusal. The
+      // `mkdir(2)` of the next level cannot create this one if it vanishes in between.
+      let handle: FileHandle;
+      try {
+        handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new AbsentDirectoryError(path);
+        throw error;
+      }
+      await handle.close();
+      continue;
+    }
     await mkdirLevel(path, typeof mode === 'number' ? mode : mode(segment));
   }
   return target;
@@ -453,8 +485,24 @@ export async function mkdirSharedFresh(root: string, relative: string): Promise<
  * `.builder` itself, created traverse-only (`DAEMON_STATE_DIR_MODE`, 0710) so the site's
  * identity can open the one file it is handed there.
  */
-export async function mkdirPrivate(root: string, relative: string): Promise<string> {
-  return ensureDir(root, relative, segment => (PRIVATE_NAMES.includes(segment) ? DAEMON_STATE_DIR_MODE : PRIVATE_DIR_MODE));
+export async function mkdirPrivate(
+  root: string,
+  relative: string,
+  options: {
+    /**
+     * How many leading levels of `relative` must ALREADY be real directories: proved, never
+     * created (`AbsentDirectoryError` when one is missing). A writer of per-site state passes 1
+     * — the workspace is the create's to make (`mkdirSharedFresh`), never a writer's.
+     */
+    readonly existingLevels?: number;
+  } = {},
+): Promise<string> {
+  return ensureDir(
+    root,
+    relative,
+    segment => (PRIVATE_NAMES.includes(segment) ? DAEMON_STATE_DIR_MODE : PRIVATE_DIR_MODE),
+    options.existingLevels ?? 0,
+  );
 }
 
 /**

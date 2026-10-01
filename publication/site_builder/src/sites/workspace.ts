@@ -290,6 +290,26 @@ export async function deleteSite(slug: string, purgeProd: boolean): Promise<Dele
   if (!siteExists(slug)) {
     throw new NotFoundError(`No site named '${slug}'`);
   }
+  // THE DELETE HOLDS THE SITE, like every other mutator of its working tree
+  // (workspace_activity.ts) — taken synchronously, before the first await, and held until the
+  // workspace, the driver record and the served surfaces are gone. Unheld, a DELETE that landed
+  // during a turn removed the workspace under it, and the turn's own session writes re-created
+  // `<slug>/.builder/sessions/`: a directory with no site.json and no repository, its commit
+  // owed forever (every boot retried it), and a slug no create could claim again
+  // (`workspace_exists`). Refused while anything runs; the caller stops the turn or waits.
+  if (!tryBegin(slug, 'delete')) {
+    const reason = busyReason(slug) ?? 'site_deleting';
+    throw new ConflictError(busyDetail(reason, slug), reason);
+  }
+  try {
+    return await deleteReservedSite(slug, purgeProd);
+  } finally {
+    end(slug, 'delete');
+  }
+}
+
+/** The delete itself, run while `deleteSite` holds the site's `delete` reservation. */
+async function deleteReservedSite(slug: string, purgeProd: boolean): Promise<DeleteSiteResult> {
   // Read BEFORE the workspace goes: the manifest is what names the site in the table. A
   // manifest too broken to read costs the served cleanup, not the delete.
   const manifest = await readManifest(slug).catch(() => null);

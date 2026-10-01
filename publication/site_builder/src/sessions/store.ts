@@ -26,6 +26,7 @@ import {
   writeFilePrivateAtomic,
 } from '../util/shared_tree';
 import { config } from '../config';
+import { siteExists } from '../sites/workspace';
 import type { SessionEventBody, StoredEvent, SessionMeta } from './events';
 
 const nextSeqBySession = new Map<string, number>();
@@ -93,7 +94,12 @@ function pathForCallerId(build: () => string): string | null {
 async function ensureDir(slug: string): Promise<void> {
   // 0700 at every level it creates: the sessions log is the daemon's, inside the daemon's
   // `.builder/`, in a tree the agent may otherwise write.
-  await mkdirPrivate(config.SITES_ROOT, underSitesRoot(sessionsDir(slug)));
+  //
+  // AND NEVER THE WORKSPACE ITSELF (`existingLevels: 1`): `<slug>/` is proved, not made. A
+  // session write that outlived its site's delete re-created it as a husk — no site.json, no
+  // repository, a recovery owed forever and a slug no create could claim again. A missing
+  // workspace is `AbsentDirectoryError`: the write is refused, and nothing is created.
+  await mkdirPrivate(config.SITES_ROOT, underSitesRoot(sessionsDir(slug)), { existingLevels: 1 });
 }
 
 /** Seeds the seq counter from the file on first use, then serves it from memory. */
@@ -232,6 +238,14 @@ export async function listSessions(slug: string): Promise<SessionSummary[]> {
  * Lists all session ids across all sites (boot sweep needs this, and so does resolving a
  * pre-restart session's site).
  *
+ * SITES, NOT DIRECTORIES. A directory under the root with no site.json is not a site (every
+ * door answers it 404, and a create refuses it `workspace_exists`): the husk a delete under a
+ * running turn used to leave, or a create killed mid-scaffold. Its sessions are not listed —
+ * listed, the boot sweep retried a recovery commit there that could never succeed (there is
+ * no repository), every boot, and a pre-restart session id resolved into it. It is left
+ * untouched for the operator the create's refusal names; should its site.json come back, its
+ * sessions are listed again.
+ *
  * ONE SITE'S INCIDENT STAYS ONE SITE'S. A site's `.builder` is in its workspace, which its own
  * runs write: a build's postinstall or a git hook can rename it away and leave a link or a fifo
  * in its place (a same-parent rename needs no permission on the directory itself). The chain
@@ -244,7 +258,8 @@ export async function allSessionMetaFiles(): Promise<Array<{ slug: string; sessi
   if (!existsSync(config.SITES_ROOT)) return out;
   const slugs = (await readdir(config.SITES_ROOT, { withFileTypes: true }))
     .filter(e => e.isDirectory() && !e.name.startsWith('.'))
-    .map(e => e.name);
+    .map(e => e.name)
+    .filter(slug => siteExists(slug));
   for (const slug of slugs) {
     let names: string[] | null;
     try {
