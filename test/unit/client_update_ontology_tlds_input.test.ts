@@ -264,7 +264,9 @@ describe('update_ontology results are scrolled into view', () => {
 		expect(src).toContain(
 			'ui.reveal(body_response.appendChild(build_failure(server_ontology_api_response.error)))',
 		);
-		expect(src).toContain('ui.reveal(body_response.appendChild(build_failure(api_response.error)))');
+		expect(src).toContain(
+			'ui.reveal(body_response.appendChild(build_failure(api_response.error)))',
+		);
 		expect(src).toContain(
 			'ui.reveal(body_response.appendChild(build_version_change(current_ontology, result.info)))',
 		);

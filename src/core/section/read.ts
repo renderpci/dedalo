@@ -389,7 +389,9 @@ async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadR
 /** The caller sent its own columns (a literal show.ddo_map or a get_ddo_map directive). */
 function hasCallerShow(rqo: Rqo): boolean {
 	const show = rqo.show as { ddo_map?: unknown; get_ddo_map?: unknown } | undefined;
-	return (Array.isArray(show?.ddo_map) && show.ddo_map.length > 0) || show?.get_ddo_map !== undefined;
+	return (
+		(Array.isArray(show?.ddo_map) && show.ddo_map.length > 0) || show?.get_ddo_map !== undefined
+	);
 }
 
 /**

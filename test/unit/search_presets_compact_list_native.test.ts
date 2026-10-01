@@ -77,7 +77,10 @@ describe('search-presets compact list — caller view + section_map label (dd623
 // the columns the data half resolved — else every unrequested section_list
 // column renders as an empty cell (the preset rows wrapped, 2026-09-30).
 describe('caller show narrows the section entry request_config (context = data columns)', () => {
-	const mainShowTipos = (context: { tipo?: string; model?: string; request_config?: unknown }[], st: string) =>
+	const mainShowTipos = (
+		context: { tipo?: string; model?: string; request_config?: unknown }[],
+		st: string,
+	) =>
 		(
 			(context.find((c) => c.tipo === st && c.model === 'section')?.request_config ?? []) as {
 				api_engine?: string;
@@ -90,7 +93,10 @@ describe('caller show narrows the section entry request_config (context = data c
 
 	test('literal show.ddo_map: the section entry lists only the requested column', async () => {
 		const { context } = await readSection(
-			baseRqo({}, { ddo_map: [{ tipo: 'dd624', section_tipo: PRESETS_SECTION, parent: PRESETS_SECTION }] }),
+			baseRqo(
+				{},
+				{ ddo_map: [{ tipo: 'dd624', section_tipo: PRESETS_SECTION, parent: PRESETS_SECTION }] },
+			),
 		);
 		expect(mainShowTipos(context, PRESETS_SECTION)).toEqual(['dd624']);
 	});
@@ -99,7 +105,9 @@ describe('caller show narrows the section entry request_config (context = data c
 		const resolved = (
 			await resolveSectionMapGetDdoMap(PRESETS_SECTION, PRESETS_SECTION, GET_DDO_MAP)
 		).map((d) => String(d.tipo));
-		const { context } = await readSection(baseRqo({ view: PRESETS_VIEW }, { get_ddo_map: GET_DDO_MAP }));
+		const { context } = await readSection(
+			baseRqo({ view: PRESETS_VIEW }, { get_ddo_map: GET_DDO_MAP }),
+		);
 		const tipos = mainShowTipos(context, PRESETS_SECTION);
 		if (resolved.length > 0) expect(tipos).toEqual(resolved);
 		else expect(tipos?.length ?? 0).toBeGreaterThan(0); // no section_map: ontology default, still columns

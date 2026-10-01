@@ -543,9 +543,7 @@ describe('the self password change keeps the acting session and kills every othe
 					sectionTipo: USERS,
 					sectionId: userId,
 					lang: 'lg-nolan',
-					changedData: [
-						{ action: 'set_data', value: [{ id: 1, value: 'My_own_new_Secret_88' }] },
-					],
+					changedData: [{ action: 'set_data', value: [{ id: 1, value: 'My_own_new_Secret_88' }] }],
 					userId,
 				});
 				expect(outcome.ok).toBe(true);
