@@ -131,7 +131,13 @@ byte-unchanged. Nothing else about the picker travels in the request: a client c
 **2. The mode is GRANTED, on three conditions, all server-resolved.** Relation mode requires
 the caller's resolved `context.view === 'tree'` (a `ddo_map`-injected view counts — it is the
 resolved view, not the node property), a model that stores in the relation column, and
-`getPermissions >= 2` (edit) on the caller. Otherwise the read proceeds in `'default'` mode:
+edit (`>= 2`) on the caller granted by the principal's PROFILE or the superuser
+(`getPermissionGrant`, basis `'profile'`/`'superuser'`). A RULE-basis level is refused: the
+dd655 editing-preset rule answers 2 for every tipo under dd655 and every principal, bounded
+only by the preset assembler's owner predicate, and that bound does not travel into a
+thesaurus read (the read floor's law — `src/core/security/read_floor.ts`; gate
+`area_picker_mode_native`, "a RULE-granted EDIT is not a picker grant"). Otherwise the read
+proceeds in `'default'` mode:
 the intent is simply not granted. On a caller-declared read the AREA NODE's own
 `properties.thesaurus_mode` no longer decides anything — it is the install default for
 ordinary browse reads and must not be able to hand a picker request a mode the caller did

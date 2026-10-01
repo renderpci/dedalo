@@ -1,39 +1,38 @@
 /**
- * WHAT AN AGENT TURN RUNS AS — the behavioural half of the confinement boundary.
+ * WHAT AN AGENT RUN RUNS AS — the behavioural half of the confinement boundary.
  *
- * The sibling gates hold the turn's ENVIRONMENT (`agent_env_boundary.test.ts`), its HOME and
- * its API key (`agent_boundary.test.ts`), and its cwd (`git_confinement.test.ts`,
- * `paths.test.ts`). All four describe a child that was, until this file existed, spawned as
- * the DAEMON'S OWN UID: the shared bearer at `$CREDENTIALS_DIRECTORY`, every provider key in
- * `/proc/self/environ` and the append handle on the audit trail were readable to it by
- * construction, because no mode and no `Protect*` directive separates a process from itself.
+ * The sibling gates hold the turn's ENVIRONMENT (`agent_env_boundary.test.ts`), its API key
+ * (`agent_boundary.test.ts`), and its cwd (`git_confinement.test.ts`, `paths.test.ts`). All
+ * describe a child that was, until the confinement existed, spawned as the DAEMON'S OWN UID:
+ * the shared bearer at `$CREDENTIALS_DIRECTORY`, every provider key in `/proc/self/environ`
+ * and the append handle on the audit trail were readable to it by construction.
  *
- * So this file asserts the four things that make a turn a different principal, and it
- * asserts them on the REAL policy rather than on the suite's own: `confineTurn()` takes a
- * `ConfinementPolicy` precisely so the `systemd_scope` path — which no macOS suite can ever
- * RUN — can still be exercised, argv for argv, on this machine.
+ * Since LEAD-1b the daemon STARTS NOTHING. Root renders one socket, target and service
+ * template per (site, door) — `User=` the site's own identity — and the daemon connects,
+ * once, to the site's socket, hands the unit its argv and environment as a frame, and
+ * relays what comes back. So this file asserts, against a stand-in PID 1 that listens on the
+ * real per-(site, door) paths and speaks the frame protocol (`support/lead1b_host.ts`):
  *
- *   1. THE UID AND THE SCOPE. `systemd-run --uid=<agent user>`, in a transient unit whose
- *      name begins with this museum's own prefix (the whole scope of its polkit grant).
- *   2. THE EGRESS. `IPAddressAllow=any` with loopback and every private range denied — the
- *      model provider stays reachable, the engine and the databases do not.
- *   3. THE CAPS. MemoryMax, CPUQuota, TasksMax and a RuntimeMaxSec PID 1 enforces.
- *   4. THE REFUSAL. A host that cannot do any of it starts nothing, and says which part is
- *      missing. Where `none` is DECLARED, every turn announces itself into the session's own
- *      durable log — the one shape of unconfined run this daemon permits, and never a
- *      silent fallback.
+ *   1. THE UNIT. A run of site S goes to S's own socket for its door, with S's reservation
+ *      held; the spec carries the argv, an environment without any key the unit fixes, and
+ *      the daemon's namespace identity. No uid, no unit name, no file PID 1 reads.
+ *   2. THE EGRESS. What a RENDERED unit can reach is ASKED of a model of systemd
+ *      (`support/systemd_reach.ts`, allow-wins), never read off property strings; the gate a
+ *      run is served tunnels to its own plan's hosts and nothing else, lives exactly as long
+ *      as the run, and is gone on every exit path.
+ *   3. THE REFUSAL. A host that cannot do any of it starts nothing, and says which part is
+ *      missing. Where `none` is DECLARED, every run announces itself into its own durable
+ *      log — the one shape of unconfined run this daemon permits, never a silent fallback.
+ *   4. THE CALL SITES. git runs through the git door, a build through the build door, a
+ *      session's turn on its own driver — observed on the frames the stand-in received.
  *
- * Plus the per-turn credential residence: the MCP config a driver writes is 0640 and is
- * DELETED when the turn ends, on every exit path.
- *
- * And, since F2 (2026-09-26 audit): on a REAL host every confined door REFUSES — the polkit
- * rule grants no transient start because it cannot bind the run-as uid — and the per-run
- * environment file PID 1 reads as root is never written through a link (the two blocks at
- * the end). The argv legs above run on a stand-in runner that does start, and keep the
- * shape LEAD-1b's per-site units inherit.
+ * Plus the per-turn credential residence (the MCP config a driver writes is 0640 and is
+ * DELETED when the turn ends, on every exit path), the shared tree two uids work in, and the
+ * planted-link reads. The lease, the death probe, conformance, boot reconciliation and the
+ * per-site reach model are LEAD-1b's own gates (`lead1b_*.test.ts`).
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeEach } from 'bun:test';
 import {
   chmodSync,
   existsSync,
@@ -41,6 +40,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   statSync,
@@ -51,7 +51,9 @@ import { symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { linkSync } from 'node:fs';
-import { roots } from './fixtures/instance';
+import { connect, createServer, type Socket } from 'node:net';
+import { provisionSite, resetInstance, roots, workspacePath } from './fixtures/instance';
+import { config } from '../src/config';
 import { CONFINED_ARGV, runBinary } from '../src/util/spawn';
 import {
   appendFilePrivate,
@@ -59,6 +61,7 @@ import {
   mkdirPrivate,
   mkdirShared,
   PlantedSymlinkError,
+  DAEMON_STATE_DIR_MODE,
   PRIVATE_DIR_MODE,
   PRIVATE_FILE_MODE,
   SHARED_DIR_MODE,
@@ -73,24 +76,32 @@ import {
   writeFileSharedAtomic,
 } from '../src/util/shared_tree';
 import {
-  CONFINED_RUNS_DISABLED,
-  EGRESS_DENY,
   confineTurn,
   runConfined,
   confinementProblems,
-  assertTurnConfinementAvailable,
-  egressAllow,
+  assertConfinementAvailable,
+  SHIM_PATH as CONFINEMENT_SHIM_PATH,
+  UNIT_MASKED_PREFIXES,
+  hostFacts,
+  RUNTIME_PREFIX,
+  readHostNetns,
+  resolveAgentIdentity,
   policyFromConfig,
-  renderEnvironmentFile,
-  writeTurnEnvironmentFile,
+  type ConfinedChild,
   type ConfinementPolicy,
 } from '../src/drivers/confinement';
-import { AGENT_UNIT_VERBS, TRANSIENT_START_AUTHORIZED } from '../src/provision/render/agent_authorization';
+import { FIXED_ENV_KEYS } from '../src/drivers/unit_frames';
+import { MCP_PORT, PROXY_PORT } from '../src/drivers/network_profile';
+import * as sessionManager from '../src/sessions/manager';
+import { type Destination, describeDestination, reach } from './support/systemd_reach';
 import { spawnAgentProcess } from '../src/drivers/process';
 import { ALLOWED_TOOLS, DENIED_TOOLS, writeMcpConfig } from '../src/drivers/claude_code';
 import { DENIED_PERMISSIONS, writeMcpConfig as writeOpencodeConfig } from '../src/drivers/opencode';
 import { piDriver } from '../src/drivers/pi';
-import { excludeDaemonState } from '../src/sites/git';
+import { changedFiles, commitAll, excludeDaemonState } from '../src/sites/git';
+import { createSite } from '../src/sites/workspace';
+import { __setTestDriver } from '../src/drivers/registry';
+import { busyReason, end, tryBegin, type ReservationKind } from '../src/workspace_activity';
 import {
   appendEvent,
   listSessions,
@@ -98,210 +109,384 @@ import {
   replayEvents,
   writeMeta,
 } from '../src/sessions/store';
-import { getBuild, getBuildLog, latestBuild } from '../src/build/builder';
-import { readManifest } from '../src/sites/manifest';
-import { ConfinementUnavailableError } from '../src/errors';
-import type { AgentEvent } from '../src/drivers/types';
+import { getBuild, getBuildLog, latestBuild, startBuild } from '../src/build/builder';
+import { readManifest, writeManifest } from '../src/sites/manifest';
+import { ConfinementRefusedError, ConfinementUnavailableError } from '../src/errors';
+import type { AgentDriver, AgentEvent } from '../src/drivers/types';
+import { GATE_IDS, type GatePolicy, lead1bPolicy, socketPathFor, waitUntil } from './support/lead1b_host';
+import {
+  gateInstance,
+  gateManifestDoc,
+  renderAgentUnits,
+  sweepScratch,
+  unitProperties,
+} from './support/lead1b_contract';
 
 const scratch: string[] = [];
 
-afterEach(() => {
+/** The site every single-site row runs; its identity is ordinal 1. */
+const SLUG = 'site-a';
+/** The daemon's network namespace identity the stand-in states (macOS and CI have no /proc). */
+const TEST_NETNS = 'net:[4026531840]';
+/** Where the unit's ExecStart must point: the in-unit shim that checks the netns first. */
+const SHIM_PATH = join(import.meta.dir, '..', 'src', 'drivers', 'egress_shim.ts');
+
+/** The stand-in PID 1s this file started — closed after each test, whatever it did. */
+const hosts: GatePolicy[] = [];
+/** Reservations a row took — released after each test, whatever it did. */
+const reservations: Array<[string, ReservationKind]> = [];
+
+afterEach(async () => {
+  for (const host of hosts.splice(0)) {
+    host.standIn.release();
+    await host.standIn.close();
+  }
+  for (const [slug, kind] of reservations.splice(0)) end(slug, kind);
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true, force: true });
+  sweepScratch();
 });
 
 /**
- * A REAL `systemd_scope` policy, on this machine.
- *
- * The runner is a scratch file that exists (the refusal it stands in for is "no systemd-run
- * here", and `existsSync` is the whole of that question), and the socket path gives the
- * runtime directory the per-turn environment file is written into. Nothing here is spawned:
- * what is asserted is the argv this daemon would hand PID 1, which is the artifact the
- * confinement actually is.
- *
- * `transientStartAuthorized: true` is the stand-in runner's own truth — it starts whatever it
- * is handed. On a REAL host the fact is read off the rendered polkit rule and is `false`
- * (F2), which the "no transient start" block below asserts; these tests keep the shape the
- * per-site units of LEAD-1b inherit.
+ * A REAL `systemd_scope` policy on this machine, against a stand-in PID 1: the per-(site,
+ * door) sockets are real unix listeners with MaxConnections=1 semantics, `systemctl` is
+ * answered, and the loaded properties conform. Each site's workspace exists.
  */
-function systemdPolicy(overrides: Partial<ConfinementPolicy> = {}): ConfinementPolicy {
-  const dir = mkdtempSync(join(tmpdir(), 'dedalo-confinement-'));
-  scratch.push(dir);
-  const runner = join(dir, 'systemd-run');
-  writeFileSync(runner, '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+async function standIn(
+  entries: Array<[string, number]> = [[SLUG, 1]],
+  options: { overrides?: Record<string, unknown>; hostOverrides?: Record<string, unknown>; version?: number } = {},
+): Promise<GatePolicy> {
+  const host = await lead1bPolicy({ identities: new Map(entries), ...options });
+  hosts.push(host);
+  // Each site's workspace — with its repository, which the TURN unit masks and does not start without.
+  for (const [slug] of entries) mkdirSync(join(workspacePath(slug), '.git'), { recursive: true });
+  return host;
+}
+
+/** The policy with some fields replaced — and its egress seams MERGED, never lost. */
+function withPolicy(host: GatePolicy, overrides: Record<string, unknown>): ConfinementPolicy {
+  const seams = overrides.egressSeams as Record<string, unknown> | undefined;
   return {
-    mode: 'systemd_scope',
-    transientStartAuthorized: true,
-    agentUser: 'dedalo-agent-test',
-    unitPrefix: 'dedalo-site-test-agent-',
-    systemdRunBin: runner,
-    listenSocket: join(dir, 'run', 'daemon.sock'),
-    listenKind: 'unix',
-    agentHome: join(dir, 'home'),
-    publicationApiUrl: 'http://127.0.0.1:8080/publication/server_api/v2',
-    egressAllow: '',
-    memoryMax: '2G',
-    cpuQuota: '200%',
-    tasksMax: 512,
+    ...host.policy,
     ...overrides,
+    ...(seams ? { egressSeams: { ...host.policy.egressSeams, ...seams } } : {}),
+  } as ConfinementPolicy;
+}
+
+/** Hold the site's reservation for `kind`, as every real caller does, until `fn` settles. */
+async function held<T>(slug: string, fn: () => Promise<T>, kind: ReservationKind = 'build'): Promise<T> {
+  expect(tryBegin(slug, kind)).toBe(true);
+  reservations.push([slug, kind]);
+  try {
+    return await fn();
+  } finally {
+    end(slug, kind);
+  }
+}
+
+/** Read a confined child to its end and clean it up. */
+async function drainChild(child: ConfinedChild): Promise<{ stdout: string; stderr: string; exit: Awaited<ConfinedChild['exited']> }> {
+  const read = async (stream: AsyncIterable<Uint8Array>) => {
+    let out = '';
+    const decoder = new TextDecoder();
+    for await (const chunk of stream) out += decoder.decode(chunk, { stream: true });
+    return out + decoder.decode();
   };
+  try {
+    const [stdout, stderr] = await Promise.all([read(child.stdout), read(child.stderr)]);
+    return { stdout, stderr, exit: await child.exited };
+  } finally {
+    await child.cleanup();
+  }
 }
 
-/** `--property=X=…` → the value, for the assertions below. */
-function property(argv: readonly string[], name: string): string | undefined {
-  const hit = argv.find(entry => entry.startsWith(`--property=${name}=`));
-  return hit?.slice(`--property=${name}=`.length);
+/** One run of `door` for `slug` through the REAL confineTurn, drained. */
+function runDoor(host: GatePolicy, door: 'turn' | 'build' | 'git', extra: Record<string, unknown> = {}, policy?: ConfinementPolicy) {
+  const slug = (extra.slug as string | undefined) ?? SLUG;
+  return held(slug, async () =>
+    drainChild(
+      await confineTurn(
+        {
+          door,
+          slug,
+          argv: door === 'git' ? ['git', 'status', '--porcelain'] : ['/opt/claude', '-p', 'build a page'],
+          cwd: workspacePath(slug),
+          env: { PATH: '/usr/bin:/bin' },
+          timeoutMs: 60_000,
+          ...extra,
+        } as Parameters<typeof confineTurn>[0],
+        policy ?? host.policy,
+      ),
+    ),
+  );
 }
 
-describe('a confined turn runs as the AGENT uid, in its own transient unit', () => {
-  test('the argv is systemd-run with --uid and a unit inside this museum’s prefix', async () => {
-    const policy = systemdPolicy();
-    const turn = await confineTurn(
-      { argv: ['/opt/claude', '-p', 'build a page'], cwd: '/srv/ws/site-a', env: {}, timeoutMs: 60_000 },
-      policy,
-    );
-    try {
-      // THE UID. Without it the turn is this daemon, whatever else the argv says — which is
-      // the entire defect this module was written for.
-      expect(turn.argv).toContain(`--uid=${policy.agentUser}`);
-      expect(turn.argv[0]).toBe(policy.systemdRunBin);
+/** The verb of a `systemctl` argv (its first non-option word). */
+const verbOf = (args: readonly string[]) => args.find(arg => !arg.startsWith('-'));
 
-      // THE SCOPE. A unit named outside the prefix is a unit the museum's polkit rule does
-      // not authorize, so a drifted prefix is a daemon that cannot start a turn at all —
-      // which is the safe direction, and the reason both ends read one derived string.
-      const unit = turn.argv.find(entry => entry.startsWith('--unit='))?.slice('--unit='.length);
-      expect(unit?.startsWith(policy.unitPrefix)).toBe(true);
-      expect(unit?.endsWith('.service')).toBe(true);
-      expect(turn.unitName).toBe(unit ?? null);
+/**
+ * What the per-site gate directories hold right now (`s<k>/<entry>`). The directories are
+ * ROOT's (tmpfiles.d) and outlive every run; what a run leaves behind is what is IN them.
+ */
+function egressEntries(host: GatePolicy): string[] {
+  const dir = join(host.agentSocketDir, 'egress');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).flatMap(site => readdirSync(join(dir, site)).map(entry => `${site}/${entry}`));
+}
 
-      // The driver's own command is still there, after the `--` separator and nowhere else.
-      expect(turn.argv.slice(turn.argv.indexOf('--') + 1)).toEqual(['/opt/claude', '-p', 'build a page']);
-      // Two turns are two units: a fixed name would make a second turn collide with the
-      // first and (with --collect) tear it down.
-      const second = await confineTurn(
-        { argv: ['/opt/claude'], cwd: '/srv/ws/site-a', env: {}, timeoutMs: 60_000 },
-        policy,
-      );
-      expect(second.unitName).not.toBe(turn.unitName);
-      await second.cleanup();
-    } finally {
-      await turn.cleanup();
-    }
+/** CONNECT `target` through a unix proxy socket; the status code. */
+function connectThrough(socketPath: string, target: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const socket: Socket = connect(socketPath);
+    let buffer = '';
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`no reply to CONNECT ${target}`));
+    }, 5_000);
+    socket.on('error', error => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    socket.on('data', chunk => {
+      buffer += chunk.toString('latin1');
+      if (!buffer.includes('\r\n')) return;
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(Number(buffer.split(' ')[1]));
+    });
+    socket.write(`CONNECT ${target} HTTP/1.1\r\nHost: ${target}\r\n\r\n`);
+  });
+}
+
+/** The hosts a served gate is asked about while its run is live. */
+const PROBE_HOSTS = Object.freeze(['api.anthropic.com', 'registry.npmjs.org', 'api.provider.example', 'evil.example.com']);
+
+/**
+ * The gate's resolver and dialer, STATED: every name resolves public and every dial is
+ * refused — so a CONNECT answers 502 for a host ON the run's plan (resolved, dial tried) and
+ * 403 for one that is not, and nothing ever leaves this machine.
+ */
+const REFUSING_DIAL = Object.freeze({
+  lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+  dial: async () => {
+    throw new Error('dial refused by the gate row');
+  },
+});
+
+/** host → the served proxy's status, asked through site k's gate while its run is live. */
+async function probeGate(host: GatePolicy, k = 1): Promise<Record<string, string>> {
+  const proxy = join(host.agentSocketDir, 'egress', `s${k}`, 'proxy.sock');
+  const out: Record<string, string> = {};
+  for (const target of PROBE_HOSTS) out[target] = String(await connectThrough(proxy, `${target}:443`));
+  return out;
+}
+
+/** A driver setup thunk for the supervisor rows. */
+const plan = (argv: string[] = ['/opt/claude']) => async () => ({ argv, parseLine: (line: string) => [{ type: 'text' as const, text: line }] });
+
+/** Drain an AgentProcess's events. */
+async function drain(proc: ReturnType<typeof spawnAgentProcess>): Promise<AgentEvent[]> {
+  const events: AgentEvent[] = [];
+  for await (const event of proc.events) events.push(event);
+  return events;
+}
+
+/** A turn's start options for `slug` (default: SLUG) — the supervisor's input. */
+function turnStart(extra: Record<string, unknown> = {}): Parameters<typeof spawnAgentProcess>[0] {
+  const slug = (extra.slug as string | undefined) ?? SLUG;
+  return {
+    slug,
+    workspace: workspacePath(slug),
+    prompt: 'x',
+    mcp: { name: 'dedalo_publication', url: `http://127.0.0.1:${MCP_PORT}/mcp` },
+    env: { PATH: '/usr/bin:/bin' },
+    timeoutMs: 30_000,
+    ...extra,
+  } as Parameters<typeof spawnAgentProcess>[0];
+}
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * THE UNIT — a site's run goes to that site's socket, and carries no identity of its own
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('a confined run is an instance of the SITE’s own unit, reached over its own socket', () => {
+  test('one connect to the site’s turn socket; the spec is argv, env and the namespace — never a uid, a unit or a file', async () => {
+    const host = await standIn();
+    host.standIn.script = () => ({ kind: 'exit', code: 0, stdout: 'hello' });
+    const result = await runDoor(host, 'turn');
+    expect({ exit: result.exit.exitCode, stdout: result.stdout }).toEqual({ exit: 0, stdout: 'hello' });
+    // THE SOCKET decides the uid: root rendered `User=` into the site's template, and nothing
+    // the daemon sends can name another.
+    expect(host.standIn.connects).toEqual([socketPathFor(host.agentSocketDir, 1, 'turn')]);
+    const spec = host.standIn.specs[0]?.spec as Record<string, unknown>;
+    expect(Object.keys(spec).sort()).toEqual(['argv', 'door', 'env', 'hostNetns', 'v']);
+    expect({ door: spec.door, argv: spec.argv, hostNetns: spec.hostNetns }).toEqual({
+      door: 'turn',
+      argv: ['/opt/claude', '-p', 'build a page'],
+      hostNetns: TEST_NETNS,
+    });
+    // The unit fixes HOME and the DEDALO_* keys; the daemon never sends one.
+    const env = spec.env as Record<string, string>;
+    expect(Object.keys(env).filter(key => key === 'HOME' || key.startsWith('DEDALO_'))).toEqual([]);
+    // THE CONTROL PLANE: the daemon asked PID 1 questions and never started anything.
+    const verbs = new Set(host.standIn.systemctlCalls.map(verbOf));
+    expect([...verbs].filter(verb => verb !== 'show' && verb !== 'list-units' && verb !== 'stop')).toEqual([]);
+    // No file was written for PID 1 to read as root (the pre-LEAD-1b per-run env file).
+    expect(existsSync(join(host.runtimeDir, 'turns'))).toBe(false);
   });
 
-  test('the egress policy allows the public internet and DENIES the host and the LAN', async () => {
-    const policy = systemdPolicy();
-    const turn = await confineTurn(
-      { argv: ['/opt/claude'], cwd: '/srv/ws/site-a', env: {}, timeoutMs: 60_000 },
-      policy,
+  test('every door carries the daemon’s namespace identity — the shim refuses a spec without it', async () => {
+    const host = await standIn();
+    for (const door of ['turn', 'build', 'git'] as const) await runDoor(host, door);
+    expect(host.standIn.specs.map(({ door, spec }) => ({ door, hostNetns: spec.hostNetns }))).toEqual([
+      { door: 'turn', hostNetns: TEST_NETNS },
+      { door: 'build', hostNetns: TEST_NETNS },
+      { door: 'git', hostNetns: TEST_NETNS },
+    ]);
+    expect(host.standIn.connects).toEqual(
+      (['turn', 'build', 'git'] as const).map(door => socketPathFor(host.agentSocketDir, 1, door)),
     );
-    try {
-      const deny = (property(turn.argv, 'IPAddressDeny') ?? '').split(' ');
-      // The four that carry the disclosure: loopback (the engine, the databases, the other
-      // museums' sockets), the three RFC1918 blocks (the museum's LAN) and the link-local
-      // block (a cloud host's unauthenticated metadata service).
-      for (const denied of ['localhost', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '169.254.0.0/16']) {
-        expect({ denied, present: deny.includes(denied) }).toEqual({ denied, present: true });
+  });
+
+  test('the egress env wins over the caller’s, and git gets none', async () => {
+    const host = await standIn();
+    await runDoor(host, 'turn', {
+      env: { PATH: '/usr/bin', HTTPS_PROXY: 'http://attacker.example:8080', NO_PROXY: '*' },
+    });
+    const turnEnv = host.standIn.specs[0]?.spec.env as Record<string, string>;
+    expect({
+      HTTPS_PROXY: turnEnv.HTTPS_PROXY,
+      NO_PROXY: turnEnv.NO_PROXY,
+      NODE_USE_ENV_PROXY: turnEnv.NODE_USE_ENV_PROXY,
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: turnEnv.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC,
+    }).toEqual({
+      HTTPS_PROXY: `http://127.0.0.1:${PROXY_PORT}`,
+      NO_PROXY: '127.0.0.1,localhost',
+      NODE_USE_ENV_PROXY: '1',
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+    });
+    expect(JSON.stringify(turnEnv)).not.toContain('attacker.example');
+    // git reaches nothing: no proxy is offered, so none can be wrong.
+    await runDoor(host, 'git', { env: { PATH: '/usr/bin' } });
+    const gitEnv = host.standIn.specs[1]?.spec.env as Record<string, string>;
+    expect(Object.keys(gitEnv).filter(key => /proxy/i.test(key))).toEqual([]);
+  });
+
+  test('a caller handing a key the UNIT fixes is refused — nothing is connected', async () => {
+    // HOME (the cross-site plant channel), the transpiler cache the agent's HOME could seed,
+    // git's configuration and every DEDALO_* key are the unit's, fixed by root.
+    const host = await standIn();
+    const keys = [...FIXED_ENV_KEYS.filter(key => !key.endsWith('*')), 'DEDALO_UNIT_WORKDIR', 'DEDALO_DOOR'];
+    expect(keys).toContain('HOME');
+    for (const key of keys) {
+      let refused: unknown = null;
+      try {
+        await runDoor(host, 'build', { env: { PATH: '/usr/bin', [key]: '/srv/elsewhere' } });
+      } catch (error) {
+        refused = error;
       }
-      expect(deny.sort()).toEqual([...EGRESS_DENY].sort());
-
-      const allow = (property(turn.argv, 'IPAddressAllow') ?? '').split(' ');
-      // `any` is deliberate and is not a hole: the deny list above wins on every prefix it
-      // names (systemd matches longest-prefix), and the model provider the agent exists to
-      // call cannot be enumerated.
-      expect(allow).toContain('any');
-      // …and the ONE local destination that must survive the deny: this museum's Publication
-      // API, derived from its URL rather than typed.
-      expect(allow).toContain('localhost');
-      expect(turn.argv).toContain('--property=RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6');
-    } finally {
-      await turn.cleanup();
+      expect({ key, refused: refused instanceof Error && (refused as Error).message.includes(key) }).toEqual({ key, refused: true });
     }
+    expect(host.standIn.connects).toEqual([]);
+    expect(egressEntries(host)).toEqual([]);
+    // The control: an ordinary key is carried.
+    await runDoor(host, 'build', { env: { PATH: '/usr/bin', LANG: 'C.UTF-8' } });
+    expect(host.standIn.specs[0]?.spec.env.LANG).toBe('C.UTF-8');
   });
 
-  test('a declared extra destination and an IP-literal API both reach the allow list', () => {
-    const tokens = egressAllow(
-      systemdPolicy({ publicationApiUrl: 'http://10.4.0.7:8080/api', egressAllow: '10.9.9.0/24, ' }),
-    );
-    expect(tokens).toContain('10.4.0.7/32');
-    expect(tokens).toContain('10.9.9.0/24');
-    // A DNS name yields no token — stated, because the alternative (resolving it here) would
-    // pin a museum's egress policy to one moment's DNS answer.
-    expect(egressAllow(systemdPolicy({ publicationApiUrl: 'https://api.example.org/v2' }))).toEqual(['any']);
+  test('the Publication API key reaches the GATE, never the unit', async () => {
+    const host = await standIn();
+    await runDoor(host, 'turn', {
+      mcpUpstream: { url: 'http://127.0.0.1:1/publication/server_api/v2', apiKey: 'publication-secret' },
+    });
+    expect(JSON.stringify(host.standIn.specs[0]?.spec)).not.toContain('publication-secret');
+    // …and the gate DID serve the MCP door the key rides on (the positive control).
+    expect(host.gateEvents.some(event => event.startsWith('serve ') && event.endsWith('mcp.sock'))).toBe(true);
   });
 
-  test('the per-turn caps are on the unit, wall clock included', async () => {
-    const policy = systemdPolicy({ memoryMax: '3G', cpuQuota: '150%', tasksMax: 64 });
-    const turn = await confineTurn(
-      { argv: ['/opt/claude'], cwd: '/srv/ws/site-a', env: {}, timeoutMs: 60_000 },
-      policy,
-    );
-    try {
-      expect(property(turn.argv, 'MemoryMax')).toBe('3G');
-      expect(property(turn.argv, 'CPUQuota')).toBe('150%');
-      expect(property(turn.argv, 'TasksMax')).toBe('64');
-      // PID 1's own wall clock, strictly LONGER than the supervisor's timer: the daemon's
-      // timer is the one that can report a timeout as an event, and this is the backstop for
-      // an agent whose client was killed outright.
-      const runtimeMax = Number(property(turn.argv, 'RuntimeMaxSec'));
-      expect(runtimeMax).toBeGreaterThan(60);
-      // The filesystem: strict, with exactly the turn's workspace and the agent's home.
-      expect(turn.argv).toContain('--property=ProtectSystem=strict');
-      expect(property(turn.argv, 'ReadWritePaths')).toBe(`/srv/ws/site-a ${policy.agentHome}`);
-      expect(turn.argv).toContain('--property=NoNewPrivileges=yes');
-    } finally {
-      await turn.cleanup();
-    }
+  test('an opencode turn with no declared provider host is a named refusal — asked of the RUN’s driver', async () => {
+    // Hostname-only egress: a turn whose provider nobody named can reach nothing, and says
+    // so before a session is accepted rather than failing inside the unit.
+    const host = await standIn();
+    const opencodeHost = withPolicy(host, {
+      egressFacts: { driver: 'opencode', providerHosts: [], registryHosts: ['registry.npmjs.org'] },
+    });
+    expect((await confinementProblems(opencodeHost, 'turn', 'opencode')).join(' ')).toContain('AGENT_PROVIDER_HOSTS');
+    // The site's OWN driver decides, not the instance default — in BOTH directions.
+    expect((await confinementProblems(host.policy, 'turn', 'opencode')).join(' ')).toContain('AGENT_PROVIDER_HOSTS');
+    expect((await confinementProblems(opencodeHost, 'turn', 'claude_code'))).toEqual([]);
+    // A driver-less question about a turn is a question about the HOST: no plan is judged.
+    expect((await confinementProblems(opencodeHost, 'turn'))).toEqual([]);
+    // The GUARANTEE is never driver-less: confineTurn resolves the run's driver (here the
+    // instance default) and refuses on its plan — before anything is connected.
+    await expect(runDoor(host, 'turn', {}, opencodeHost)).rejects.toThrow(/AGENT_PROVIDER_HOSTS/);
+    expect(host.standIn.connects).toEqual([]);
+    // The positive control: the same host with a provider named refuses nothing.
+    expect(
+      (await confinementProblems(
+        withPolicy(host, { egressFacts: { driver: 'opencode', providerHosts: ['api.provider.example'], registryHosts: [] } }),
+        'turn',
+        'opencode',
+      )),
+    ).toEqual([]);
   });
 });
 
-describe('no secret rides on the command line, and none outlives the turn', () => {
-  test('the child environment travels in a 0600 file, not in a unit property', async () => {
-    const policy = systemdPolicy();
-    const turn = await confineTurn(
-      {
-        argv: ['/opt/claude'],
-        cwd: '/srv/ws/site-a',
-        env: { PATH: '/usr/bin', HOME: policy.agentHome, ANTHROPIC_API_KEY: 'sk-ant-secret' },
-        timeoutMs: 60_000,
-      },
-      policy,
-    );
-    const envFile = property(turn.argv, 'EnvironmentFile');
-    expect(envFile).toBeDefined();
-    // NOT ON THE COMMAND LINE. A transient unit's properties are readable over D-Bus by any
-    // uid on the host, so a `--setenv=ANTHROPIC_API_KEY=…` would publish a museum's provider
-    // key to every other museum's service user.
-    expect(turn.argv.join(' ')).not.toContain('sk-ant-secret');
-    // …and not in this process's spawn environment either: the child gets nothing here.
-    expect(turn.env).toEqual({});
-
-    const body = readFileSync(envFile as string, 'utf8');
-    expect(body).toContain('ANTHROPIC_API_KEY="sk-ant-secret"');
-    // eslint-disable-next-line no-bitwise -- the permission word is the assertion
-    expect(statSync(envFile as string).mode & 0o777).toBe(0o600);
-
-    // AND IT GOES AWAY. Residence is the half of a credential's exposure that outlives the
-    // work it was for.
-    await turn.cleanup();
-    expect(existsSync(envFile as string)).toBe(false);
+describe("the unit's ExecStart is the shim, and a shim the unit cannot trust is refused", () => {
+  test('the daemon states its REAL runtime, shim and masked prefixes', () => {
+    // The stand-in empties the masks (this host is not the one that runs the unit); this row
+    // is what keeps that seam from being the production value.
+    expect(CONFINEMENT_SHIM_PATH).toBe(SHIM_PATH);
+    expect(policyFromConfig().unitExec).toEqual({
+      runtime: process.execPath,
+      shim: SHIM_PATH,
+      maskedPrefixes: UNIT_MASKED_PREFIXES,
+      // …and the turn's CLI, held to the same trust rule as every identity (round 6).
+      agentClis: config.CLAUDE_CODE_BIN ? { claude_code: config.CLAUDE_CODE_BIN } : {},
+    });
+    expect([...UNIT_MASKED_PREFIXES].sort()).toEqual(['/home', '/root', '/run', '/tmp', '/var/tmp']);
   });
 
-  test('a control character in a value is REFUSED rather than escaped', () => {
-    expect(() => renderEnvironmentFile({ EVIL: 'a\nExecStart=/bin/sh' })).toThrow(
-      ConfinementUnavailableError,
-    );
-    expect(renderEnvironmentFile({ B: 'two words', A: 'q"uote' })).toBe('A="q\\"uote"\nB="two words"\n');
-  });
+  test('a shim under a masked prefix, writable by others, or absent is a named refusal — its imports too', async () => {
+    const host = await standIn();
+    const dir = mkdtempSync(join(existsSync('/tmp') ? '/tmp' : tmpdir(), 'dsb-shim-'));
+    scratch.push(dir);
+    const shim = join(dir, 'egress_shim.ts');
+    const leaves = ['network_profile.ts', 'unit_frames.ts', 'agent_identity.ts', 'unit_properties.ts'];
+    writeFileSync(shim, readFileSync(SHIM_PATH));
+    chmodSync(shim, 0o644);
+    for (const leaf of leaves) {
+      writeFileSync(join(dir, leaf), readFileSync(join(dirname(SHIM_PATH), leaf)));
+      chmodSync(join(dir, leaf), 0o644);
+    }
+    const withExec = async (unitExec: { shim: string; maskedPrefixes: readonly string[] }) =>
+      (await confinementProblems(withPolicy(host, { unitExec: { runtime: process.execPath, ...unitExec } }), 'git')).join(' ');
 
+    // Control: the copy itself is acceptable when nothing is masked.
+    expect(await withExec({ shim, maskedPrefixes: [] })).toBe('');
+    // Under /tmp, which PrivateTmp= hides from the unit: its ExecStart would not exist.
+    expect(await withExec({ shim, maskedPrefixes: UNIT_MASKED_PREFIXES })).toContain('which the unit masks');
+    // Writable by the group: an identity shares the instance group, and could replace it.
+    chmodSync(shim, 0o664);
+    expect(await withExec({ shim, maskedPrefixes: [] })).toContain('group- or world-writable');
+    chmodSync(shim, 0o644);
+    // …and every module it imports is held to the same rule.
+    for (const leaf of leaves) {
+      chmodSync(join(dir, leaf), 0o666);
+      expect({ leaf, refused: (await withExec({ shim, maskedPrefixes: [] })).includes('group- or world-writable') }).toEqual({ leaf, refused: true });
+      chmodSync(join(dir, leaf), 0o644);
+    }
+    // Absent: nothing to execute.
+    expect(await withExec({ shim: join(dir, 'missing.ts'), maskedPrefixes: [] })).toContain('does not exist');
+  });
+});
+
+describe('no secret outlives the turn', () => {
   test('both drivers write their MCP config 0640, key included, and never wider', async () => {
     // The mode is the assertion, not the bytes: this file carries the museum's Publication
-    // API key, and at 0644 it would be readable by every uid on the host — every other
-    // museum's service user and every other museum's AGENT included. 0640 leaves exactly the
-    // daemon and its own agent, which share this instance's group.
-    // UNDER `SITES_ROOT`, because that is where a workspace is and because the writer now
-    // takes the trusted root and walks everything below it O_NOFOLLOW: a driver that wrote
-    // the key by path — which is what both did — had nothing between the key and a planted
-    // link (see the plant legs below).
+    // API key (under a DECLARED `none`), and at 0644 it would be readable by every uid on the
+    // host. 0640 leaves exactly the daemon and the instance group.
+    // UNDER `SITES_ROOT`, because that is where a workspace is and because the writer
+    // takes the trusted root and walks everything below it O_NOFOLLOW (see the plant legs).
     mkdirSync(roots.sitesRoot, { recursive: true });
     const workspace = mkdtempSync(join(roots.sitesRoot, 'dedalo-confinement-mcp-'));
     scratch.push(workspace);
@@ -325,37 +510,74 @@ describe('no secret rides on the command line, and none outlives the turn', () =
     }
   });
 
-  test('a real confined turn leaves NO per-turn environment file behind', async () => {
-    // The supervisor's own half of the residence story, observed rather than described: a
-    // turn is spawned through a stand-in runner (this machine has no systemd), and the
-    // daemon's runtime directory is read before and after. `readdirSync` on the turns
-    // directory is the assertion — a cleanup that only ran on the happy path, or only in the
-    // driver's thunk, leaves the museum's provider keys in a file on disk until reboot.
-    const policy = systemdPolicy();
-    const runner = policy.systemdRunBin;
-    writeFileSync(runner, '#!/bin/sh\necho started\nexit 0\n');
-    chmodSync(runner, 0o755);
-    const turnDir = join(dirname(policy.listenSocket), 'turns');
-
-    const seen: string[] = [];
-    const proc = spawnAgentProcess(
-      {
-        workspace: tmpdir(),
+  /**
+   * THE TURN CAN OPEN WHAT IT IS HANDED — AS THE SITE'S IDENTITY. A confined turn is not the
+   * daemon (LEAD-1b): it is a uid that owns nothing on the path and is a member of the
+   * instance group. Behind a 0700 `.builder` (the daemon's own state) the 0640 `mcp.json` was
+   * EACCES to `--mcp-config` for every turn; the suite never saw it because `none` runs as the
+   * daemon's own uid. So the path is read as THAT principal, bit by bit: every directory from
+   * the workspace down needs the group's `x`, the file the group's `r` — and the identity must
+   * be able to WRITE neither the file nor `.builder` (it would point its own MCP client
+   * anywhere). Both shapes of `.builder`: the one `mkdirPrivate` makes now, and a 0700 one made
+   * before (restated by the writer, through its handle).
+   */
+  test('the site identity (group member, owner of nothing) can open the MCP config the turn is handed, and write neither it nor .builder', async () => {
+    mkdirSync(roots.sitesRoot, { recursive: true });
+    const rows: unknown[] = [];
+    for (const shape of ['created now', 'a 0700 .builder from before'] as const) {
+      const slug = `dedalo-mcp-reach-${shape === 'created now' ? 'new' : 'old'}-${process.pid}`;
+      await mkdirShared(roots.sitesRoot, slug);
+      const workspace = join(roots.sitesRoot, slug);
+      scratch.push(workspace);
+      if (shape === 'created now') {
+        await mkdirPrivate(roots.sitesRoot, join(slug, '.builder'));
+      } else {
+        mkdirSync(join(workspace, '.builder'));
+        chmodSync(join(workspace, '.builder'), 0o700);
+      }
+      const path = await writeMcpConfig({
+        workspace,
         prompt: 'x',
-        mcp: { name: 'x', url: 'http://x/mcp' },
-        env: { ANTHROPIC_API_KEY: 'sk-ant-in-the-file' },
-        timeoutMs: 30_000,
-      },
-      async () => ({ argv: ['/opt/claude'], parseLine: (line: string) => [{ type: 'text' as const, text: line }] }),
-      policy,
-    );
-    for await (const event of proc.events) if (event.type === 'text') seen.push(event.text);
+        // `systemd_scope`'s shape: the unit's loopback, no headers (the gate adds the key).
+        mcp: { name: 'dedalo_publication', url: `http://127.0.0.1:${MCP_PORT}/mcp` },
+        env: {},
+        timeoutMs: 1000,
+      });
+      const chain = [workspace, join(workspace, '.builder')];
+      const facts = (each: string) => statSync(each);
+      const groupOf = facts(workspace).gid;
+      rows.push({
+        shape,
+        // The model's premise: one group along the path (setgid workspace; the daemon's own
+        // primary group below it) — the instance group the identity is in.
+        oneGroup: [...chain, path].every(each => facts(each).gid === groupOf),
+        traverse: chain.every(dir => (facts(dir).mode & 0o010) !== 0),
+        read: (facts(path).mode & 0o040) !== 0,
+        writeFile: (facts(path).mode & 0o020) !== 0,
+        writeBuilder: (facts(join(workspace, '.builder')).mode & 0o020) !== 0,
+        listBuilder: (facts(join(workspace, '.builder')).mode & 0o040) !== 0,
+        world: [...chain, path].some(each => (facts(each).mode & 0o007) !== 0),
+      });
+    }
+    const expected = { oneGroup: true, traverse: true, read: true, writeFile: false, writeBuilder: false, listBuilder: false, world: false };
+    expect(rows).toEqual([
+      { shape: 'created now', ...expected },
+      { shape: 'a 0700 .builder from before', ...expected },
+    ]);
+  });
 
-    // The turn really went through the wrapper — otherwise the rest of this asserts nothing.
-    expect(seen).toContain('started');
+  test('a real confined turn is relayed, says nothing about confinement, and leaves nothing for PID 1 behind', async () => {
+    const host = await standIn();
+    host.standIn.script = () => ({ kind: 'exit', code: 0, stdout: 'started\n' });
+    const events = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), host.policy)), 'turn');
+    const texts = events.filter(event => event.type === 'text').map(event => (event.type === 'text' ? event.text : ''));
+    // The turn really went through the unit — otherwise the rest of this asserts nothing.
+    expect(texts).toContain('started');
     // …and nothing was announced: a CONFINED turn has nothing to confess.
-    expect(seen.some(line => line.includes('[confinement]'))).toBe(false);
-    expect(existsSync(turnDir) ? readdirSync(turnDir) : []).toEqual([]);
+    expect(texts.some(line => line.includes('[confinement]'))).toBe(false);
+    expect(events.some(event => event.type === 'result')).toBe(true);
+    expect(existsSync(join(host.runtimeDir, 'turns'))).toBe(false);
+    expect(egressEntries(host)).toEqual([]);
   });
 
   test("the claude_code driver deletes its MCP config, whatever the turn did", async () => {
@@ -395,39 +617,49 @@ describe('no secret rides on the command line, and none outlives the turn', () =
   });
 });
 
-describe('there is no silent unconfined turn', () => {
-  test('every missing piece is its own named refusal, and nothing is spawned', () => {
+describe('there is no silent unconfined run', () => {
+  test('every missing piece is its own named refusal, and a complete host refuses nothing', async () => {
+    const host = await standIn();
     for (const [label, policy] of [
-      ['no agent uid', systemdPolicy({ agentUser: '' })],
-      ['a prefix that is not this museum’s grammar', systemdPolicy({ unitPrefix: 'anything' })],
-      ['no systemd-run on this host', systemdPolicy({ systemdRunBin: '/nonexistent/systemd-run' })],
-      ['no runtime directory (tcp)', systemdPolicy({ listenKind: 'tcp' })],
+      ['no site identity at all', withPolicy(host, { identities: new Map() })],
+      ['a prefix that is not this museum’s grammar', withPolicy(host, { unitPrefix: 'anything' })],
+      ['no systemctl on this host', withPolicy(host, { systemctlBin: '/nonexistent/systemctl' })],
+      ['no runtime directory (tcp)', withPolicy(host, { listenKind: 'tcp' })],
+      ['PID 1’s release unreadable', withPolicy(host, { host: { ...host.policy.host, pid1Version: () => null } })],
     ] as const) {
-      const problems = confinementProblems(policy);
+      const problems = (await confinementProblems(policy, 'git'));
       expect({ label, problems: problems.length }).toEqual({ label, problems: 1 });
-      expect(() => assertTurnConfinementAvailable(policy)).toThrow(ConfinementUnavailableError);
       // 503, so the ENGINE relays "not right now, and here is what is missing" rather than
       // accepting a session that will never run.
+      let refused: unknown = null;
       try {
-        assertTurnConfinementAvailable(policy);
-        throw new Error('unreachable');
+        await assertConfinementAvailable('git', policy);
       } catch (error) {
-        expect((error as ConfinementUnavailableError).status).toBe(503);
+        refused = error;
       }
+      expect({ label, status: (refused as ConfinementUnavailableError | null)?.status }).toEqual({ label, status: 503 });
     }
-    // The positive control: a complete policy refuses nothing. Without it every assertion
-    // above would pass against a function that always refused.
-    expect(confinementProblems(systemdPolicy())).toEqual([]);
-    expect(() => assertTurnConfinementAvailable(systemdPolicy())).not.toThrow();
+    // The positive control: without it every assertion above would pass against a function
+    // that always refused.
+    for (const door of ['turn', 'build', 'git'] as const) {
+      expect({ door, problems: (await confinementProblems(host.policy, door)) }).toEqual({ door, problems: [] });
+    }
+    await assertConfinementAvailable('turn', host.policy);
   });
 
   test('confineTurn itself refuses too — the check before the reservation is not the guarantee', async () => {
-    await expect(
-      confineTurn(
-        { argv: ['/opt/claude'], cwd: '/srv/ws/a', env: {}, timeoutMs: 1000 },
-        systemdPolicy({ agentUser: '' }),
-      ),
-    ).rejects.toThrow(ConfinementUnavailableError);
+    const host = await standIn();
+    await expect(runDoor(host, 'git', {}, withPolicy(host, { systemctlBin: '/nonexistent/systemctl' }))).rejects.toBeInstanceOf(
+      ConfinementUnavailableError,
+    );
+    // A site the host declares no identity for is 503 identity_missing — never a fallback uid.
+    const missing = await runDoor(host, 'git', {}, withPolicy(host, { identities: new Map([['site-b', 1]]) })).then(
+      () => null,
+      error => error,
+    );
+    expect(missing).toBeInstanceOf(ConfinementRefusedError);
+    expect((missing as ConfinementRefusedError).code).toBe('identity_missing');
+    expect(host.standIn.connects).toEqual([]);
   });
 
   test("a DECLARED 'none' announces itself into the session's own durable log", async () => {
@@ -455,15 +687,25 @@ describe('there is no silent unconfined turn', () => {
     expect(events.some(event => event.type === 'result')).toBe(true);
   });
 
-  test("an unconfined turn keeps the driver's own argv and env — it is a run, not a stub", async () => {
-    const turn = await confineTurn(
-      { argv: ['/usr/bin/true', 'x'], cwd: '/tmp', env: { PATH: '/usr/bin' }, timeoutMs: 1000 },
-      systemdPolicy({ mode: 'none' }),
-    );
-    expect(turn.argv).toEqual(['/usr/bin/true', 'x']);
-    expect(turn.env).toEqual({ PATH: '/usr/bin' });
-    expect(turn.unitName).toBeNull();
-    expect(turn.announcement).toContain('[confinement]');
+  test("an unconfined run is a RUN, not a stub — with the unit's fixed HOME and git configuration", async () => {
+    const host = await standIn();
+    const none = withPolicy(host, { mode: 'none' });
+    const open = (door: 'turn' | 'git') =>
+      confineTurn({ door, argv: ['/usr/bin/env'], cwd: tmpdir(), env: { PATH: '/usr/bin:/bin' }, timeoutMs: 5_000 }, none).then(drainChild);
+    const turn = await open('turn');
+    expect(turn.exit.exitCode).toBe(0);
+    // The same HOME a unit would have (per door, under the agent state root), never the caller's.
+    expect(turn.stdout).toContain(`HOME=${join(host.agentStateRoot, 'unconfined', 'turn')}`);
+    const git = await open('git');
+    expect(git.stdout).toContain('HOME=/nonexistent');
+    expect(git.stdout).toContain('GIT_CONFIG_GLOBAL=/dev/null');
+    expect(git.stdout).toContain('GIT_CONFIG_NOSYSTEM=1');
+    // Nothing reached PID 1: 'none' is the daemon's own child.
+    expect(host.standIn.connects).toEqual([]);
+    const child = await confineTurn({ door: 'git', argv: ['/usr/bin/true'], cwd: tmpdir(), env: {}, timeoutMs: 5_000 }, none);
+    expect(child.announcement).toContain('[confinement]');
+    expect(child.pid).toBeGreaterThan(0);
+    await drainChild(child);
   });
 });
 
@@ -498,153 +740,61 @@ describe('the tools a turn may use are STATED, not inherited', () => {
   });
 });
 
-describe('the per-turn environment file lives where only root and the daemon can read it', () => {
-  test('it is under the daemon runtime directory, never inside the workspace', async () => {
-    const policy = systemdPolicy();
-    const turn = await confineTurn(
-      { argv: ['/opt/claude'], cwd: '/srv/ws/site-a', env: { PATH: '/usr/bin' }, timeoutMs: 1000 },
-      policy,
-    );
-    try {
-      const envFile = property(turn.argv, 'EnvironmentFile') as string;
-      // Inside the workspace it would be a file the AGENT can unlink and replace — and the
-      // replacement is read by PID 1, as root, to build the turn's own environment.
-      expect(envFile.startsWith('/srv/ws/site-a')).toBe(false);
-      expect(dirname(dirname(envFile))).toBe(dirname(policy.listenSocket));
-    } finally {
-      await turn.cleanup();
-    }
-  });
-});
-
 /* ────────────────────────────────────────────────────────────────────────────────────
- * THE OTHER DOOR — a build step and a git command are agent-authored too
+ * THE OTHER DOORS — a build step and a git command are agent-authored too
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-/**
- * A `systemd_scope` policy whose runner RECORDS what it was handed.
- *
- * `runConfined` actually executes the wrapper (that is the difference between it and
- * `confineTurn`, and it is the half the refutation reached through: the argv can be perfect
- * while the thing that runs is something else). The stand-in writes its own argv, and the
- * contents of the EnvironmentFile it was pointed at, into files this gate then reads — so
- * what is asserted is the process that ran, not a plan for one.
- */
-function recordingPolicy(overrides: Partial<ConfinementPolicy> = {}) {
-  const policy = systemdPolicy(overrides);
-  const dir = dirname(policy.systemdRunBin);
-  const argvLog = join(dir, 'argv.log');
-  const envLog = join(dir, 'env.log');
-  writeFileSync(
-    policy.systemdRunBin,
-    '#!/bin/sh\n' +
-      `printf '%s\\n' "$@" > ${argvLog}\n` +
-      'for a in "$@"; do\n' +
-      '  case "$a" in\n' +
-      `    --property=EnvironmentFile=*) cat "\${a#--property=EnvironmentFile=}" > ${envLog} ;;\n` +
-      '  esac\n' +
-      'done\n' +
-      'exit 0\n',
-    { mode: 0o755 },
-  );
-  // A REAL cwd: `runConfined` runs the wrapper, and a spawn into a directory that does not
-  // exist fails before the wrapper is ever reached.
-  const cwd = join(dir, 'workspace');
-  mkdirSync(cwd, { recursive: true });
-  return {
-    policy,
-    cwd,
-    argv: () => readFileSync(argvLog, 'utf8').split('\n').filter(Boolean),
-    envBody: () => readFileSync(envLog, 'utf8'),
-    envFilePath: () =>
-      readFileSync(argvLog, 'utf8')
-        .split('\n')
-        .find(line => line.startsWith('--property=EnvironmentFile='))
-        ?.slice('--property=EnvironmentFile='.length) as string,
-  };
-}
-
-describe('a build step and a git command run as the AGENT, not as the daemon', () => {
-  test('runConfined EXECUTES the wrapper — the uid, the scope and the caps are on what ran', async () => {
+describe('a build step and a git command run as the SITE’s identity, not as the daemon', () => {
+  test('runConfined goes through the build door: its socket, its argv, its exit code — and its gate goes away', async () => {
     // The refutation this closes: the turn was confined and the BUILD was not, so an agent
     // that rewrote `site.json` (or shipped a package.json whose install scripts run) had its
-    // own command executed by the next build AS THE SERVICE USER — the uid that owns the
-    // workspaces, the audit trail and the credential directory. The build was a WIDER
-    // principal than the turn it was supposed to be no wider than.
-    const runner = recordingPolicy();
-    const result = await runConfined(
-      {
-        argv: ['bun', 'install'],
-        cwd: runner.cwd,
-        env: { PATH: '/usr/bin:/bin', HOME: '/srv/home' },
-        timeoutMs: 5_000,
-        label: 'build step',
-      },
-      runner.policy,
+    // own command executed by the next build AS THE SERVICE USER.
+    const host = await standIn();
+    host.standIn.script = () => ({ kind: 'exit', code: 7, stdout: 'installing', stderr: 'boom' });
+    const log: string[] = [];
+    const result = await held(SLUG, () =>
+      runConfined(
+        {
+          door: 'build',
+          slug: SLUG,
+          argv: ['bun', 'install'],
+          cwd: workspacePath(SLUG),
+          env: { PATH: '/usr/bin:/bin' },
+          timeoutMs: 5_000,
+          label: 'build step',
+          onStdout: chunk => log.push(chunk),
+        },
+        host.policy,
+      ),
     );
-    expect(result.exitCode).toBe(0);
-
-    const argv = runner.argv();
-    expect(argv).toContain(`--uid=${runner.policy.agentUser}`);
-    const unit = argv.find(entry => entry.startsWith('--unit='))?.slice('--unit='.length) as string;
-    expect(unit.startsWith(runner.policy.unitPrefix)).toBe(true);
-    expect(argv).toContain(`--working-directory=${runner.cwd}`);
-    // The build's own command survives the wrapper intact, after the `--`.
-    expect(argv.slice(argv.indexOf('--') + 1)).toEqual(['bun', 'install']);
-    // The same egress and the same caps as a turn: a package registry is on the public
-    // internet, and the engine, the databases and the LAN are not reachable from either.
-    expect(argv).toContain(`--property=IPAddressDeny=${EGRESS_DENY.join(' ')}`);
-    expect(argv).toContain(`--property=MemoryMax=${runner.policy.memoryMax}`);
-    expect(argv).toContain('--property=ProtectSystem=strict');
+    expect({ exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr, failure: result.failure }).toEqual({
+      exitCode: 7,
+      stdout: 'installing',
+      stderr: 'boom',
+      failure: undefined,
+    });
+    expect(log.join('')).toContain('installing');
+    expect(host.standIn.connects).toEqual([socketPathFor(host.agentSocketDir, 1, 'build')]);
+    expect(host.standIn.specs.map(({ door, spec }) => ({ door, argv: spec.argv }))).toEqual([{ door: 'build', argv: ['bun', 'install'] }]);
+    // The build door reaches its registry through the gate — served, then closed.
+    expect(host.gateEvents.some(event => event.endsWith('proxy.sock'))).toBe(true);
+    expect(egressEntries(host)).toEqual([]);
   });
 
-  test('what the agent creates stays readable to the daemon — UMask=0007 on the unit', async () => {
-    // The other half of the shared tree: the daemon has to read those bytes back to build,
-    // promote and commit them, and a 0640 file created by the agent under its own umask
-    // would be one the daemon can read and never rewrite. World bits stay closed.
-    const runner = recordingPolicy();
-    await runConfined(
-      { argv: ['bun', 'run', 'build'], cwd: runner.cwd, env: {}, timeoutMs: 5_000 },
-      runner.policy,
-    );
-    expect(runner.argv()).toContain('--property=UMask=0007');
-  });
-
-  test('the step environment travels in the per-run 0600 file, and is gone afterwards', async () => {
-    const runner = recordingPolicy();
-    await runConfined(
-      {
-        argv: ['bun', 'install'],
-        cwd: runner.cwd,
-        env: { PATH: '/usr/bin:/bin', HOME: '/srv/home' },
-        timeoutMs: 5_000,
-      },
-      runner.policy,
-    );
-    // It really was readable to the child, as a file — not on the command line, where
-    // `systemctl show` and every uid on the host would see it.
-    expect(runner.envBody()).toContain('HOME="/srv/home"');
-    expect(runner.argv().join(' ')).not.toContain('/srv/home"');
-    // …and it does not outlive the step: `runConfined` cleans up in a `finally`.
-    expect(existsSync(runner.envFilePath())).toBe(false);
-  });
-
-  test('a step whose own command fails still leaves nothing behind', async () => {
-    const runner = recordingPolicy();
-    writeFileSync(runner.policy.systemdRunBin, '#!/bin/sh\nexit 7\n', { mode: 0o755 });
-    const result = await runConfined(
-      { argv: ['bun', 'run', 'build'], cwd: runner.cwd, env: {}, timeoutMs: 5_000 },
-      runner.policy,
-    );
-    expect(result.exitCode).toBe(7);
-    const turnsDir = join(dirname(runner.policy.listenSocket), 'turns');
-    expect(existsSync(turnsDir) ? readdirSync(turnsDir) : []).toEqual([]);
+  test('a git command is served NO gate: it reaches nothing at all', async () => {
+    const host = await standIn();
+    await runDoor(host, 'git');
+    expect(host.standIn.specs.map(({ door }) => door)).toEqual(['git']);
+    expect(host.gateEvents).toEqual([]);
+    expect(host.chowns).toEqual([]);
   });
 
   test("a DECLARED 'none' announces the unconfined step into the build's own log", async () => {
+    const host = await standIn();
     const chunks: string[] = [];
     const result = await runConfined(
       {
+        door: 'build',
         argv: ['/bin/echo', 'built'],
         cwd: '/tmp',
         env: { PATH: '/usr/bin:/bin' },
@@ -652,7 +802,7 @@ describe('a build step and a git command run as the AGENT, not as the daemon', (
         label: 'build step',
         onStdout: chunk => chunks.push(chunk),
       },
-      systemdPolicy({ mode: 'none' }),
+      withPolicy(host, { mode: 'none' }),
     );
     expect(result.exitCode).toBe(0);
     // The log a museum reads afterwards says which principal ran its build. Silence would
@@ -665,14 +815,20 @@ describe('a build step and a git command run as the AGENT, not as the daemon', (
   });
 
   test('a host that cannot confine refuses the step rather than running it as the daemon', async () => {
-    const runner = recordingPolicy({ agentUser: '' });
-    await expect(
+    const host = await standIn();
+    const refused = await held(SLUG, () =>
       runConfined(
-        { argv: ['bun', 'install'], cwd: runner.cwd, env: {}, timeoutMs: 5_000 },
-        runner.policy,
+        { door: 'build', slug: SLUG, argv: ['bun', 'install'], cwd: workspacePath(SLUG), env: {}, timeoutMs: 5_000 },
+        withPolicy(host, { host: { ...host.policy.host, pid1Version: () => 247 } }),
       ),
-    ).rejects.toBeInstanceOf(ConfinementUnavailableError);
-    expect(existsSync(join(dirname(runner.policy.systemdRunBin), 'argv.log'))).toBe(false);
+    ).then(
+      () => null,
+      error => error,
+    );
+    expect(refused).toBeInstanceOf(ConfinementUnavailableError);
+    expect(String((refused as Error).message)).toContain('PrivateIPC');
+    expect(host.standIn.connects).toEqual([]);
+    expect(egressEntries(host)).toEqual([]);
   });
 });
 
@@ -734,6 +890,7 @@ describe('the confinement is a DOOR: nothing runs in a workspace around it', () 
     expect(through.exitCode).toBe(0);
   });
 });
+
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * THE TREE THE TWO UIDS SHARE
@@ -809,9 +966,12 @@ describe('a workspace is created so the OTHER uid can actually work in it', () =
     await underDaemonUmask(async dir => {
       await mkdirShared(dir, 'ws');
       await mkdirPrivate(dir, join('ws', '.builder'));
-      expect(bits(join(dir, 'ws', '.builder'))).toBe(0o700);
+      // `.builder` itself is traverse-only to the group (DAEMON_STATE_DIR_MODE): the identity
+      // opens the one file it is handed there, and lists, creates and renames nothing.
+      expect(bits(join(dir, 'ws', '.builder'))).toBe(DAEMON_STATE_DIR_MODE);
+      expect(DAEMON_STATE_DIR_MODE).toBe(0o710);
       await mkdirPrivate(dir, join('ws', '.builder', 'builds'));
-      expect(bits(join(dir, 'ws', '.builder'))).toBe(0o700);
+      expect(bits(join(dir, 'ws', '.builder'))).toBe(DAEMON_STATE_DIR_MODE);
       expect(bits(join(dir, 'ws', '.builder', 'builds'))).toBe(0o700);
       // The workspace above it is untouched by a call that did not create it.
       expect(bits(join(dir, 'ws'))).toBe(0o2770);
@@ -1179,6 +1339,34 @@ describe('a workspace is created so the OTHER uid can actually work in it', () =
       });
     });
 
+    /**
+     * THE DIRECTORY CHAIN IS THE DAEMON'S TOO. A build's postinstall or a git hook can
+     * `mv .builder .x` (a same-parent rename in the 2770 workspace) and recreate `.builder` as
+     * its own, then rename a daemon-owned single-linked file it could already write (`site.json`,
+     * 0660) into place as a session meta — `"driver":"opencode"` for a claude_code site, the
+     * PLANT bypass driver_record.ts closed. The file passes the file-level owner check; its
+     * directory does not. (A non-root suite cannot chown a directory to another uid: the seam
+     * states the owner the chain is read as.)
+     */
+    test('a private file in a directory this daemon does not own (a recreated .builder) is refused; the workspace level is not asked', async () => {
+      await underDaemonUmask(async dir => {
+        await mkdirShared(dir, 'ws');
+        await mkdirPrivate(dir, join('ws', '.builder', 'sessions'));
+        await writeFilePrivate(dir, join('ws', '.builder', 'sessions', 's.meta.json'), '{"driver":"opencode"}');
+        const foreignAt = (suffix: string) => (path: string, uid: number) => (path.endsWith(suffix) ? 4_242_424 : uid);
+        for (const level of ['/ws/.builder', '/ws/.builder/sessions']) {
+          await expect(
+            readFilePrivate(dir, join('ws', '.builder', 'sessions', 's.meta.json'), foreignAt(level)),
+          ).rejects.toBeInstanceOf(ForeignOwnerError);
+        }
+        // The workspace itself (depth 0, under a root no run can write) is shared by construction.
+        expect(await readFilePrivate(dir, join('ws', '.builder', 'sessions', 's.meta.json'), foreignAt('/ws'))).toBe('{"driver":"opencode"}');
+        // …and the SHARED door never asks.
+        await writeFileShared(dir, join('ws', 'site.json'), '{"slug":"x"}');
+        expect(await readFileShared(dir, join('ws', 'site.json'))).toBe('{"slug":"x"}');
+      });
+    });
+
     test('the agent-readable writer is 0640 — read by the turn, writable by no one but the daemon', async () => {
       await underDaemonUmask(async dir => {
         await mkdirShared(dir, 'ws');
@@ -1216,13 +1404,13 @@ describe('a workspace is created so the OTHER uid can actually work in it', () =
 
       expect(bits(join(dir, 'src'))).toBe(0o2770);
       expect(bits(join(dir, 'src', 'index.html'))).toBe(0o660);
-      // The one exception: the daemon's own per-site state stays its own.
-      expect(bits(join(dir, '.builder'))).toBe(PRIVATE_DIR_MODE);
+      // The one exception: the daemon's own per-site state stays its own (traverse-only).
+      expect(bits(join(dir, '.builder'))).toBe(DAEMON_STATE_DIR_MODE);
       expect(PRIVATE_DIR_MODE).toBe(0o700);
-      // Nothing else may enter it, so the walk must not have opened what is inside either:
-      // a build record restated to 0660 would be a record the agent rewrites the day the
-      // directory itself is recreated by a turn.
-      expect(bits(join(dir, '.builder')) & 0o077).toBe(0);
+      // Nothing else may list, create or rename in it, so the walk must not have opened what
+      // is inside either: a build record restated to 0660 would be a record the agent
+      // rewrites the day the directory itself is recreated by a turn.
+      expect(bits(join(dir, '.builder')) & 0o067).toBe(0);
       expect(bits(join(dir, '.builder', 'build.json'))).not.toBe(SHARED_FILE_MODE);
     });
   });
@@ -1394,145 +1582,975 @@ describe('a planted link is not READ through either — the daemon does not serv
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
- * F2 — NO TRANSIENT START, SO NO CONFINED RUN (until LEAD-1b)
+ * THE EGRESS — what a RENDERED unit can reach (LEAD-1, on LEAD-1b's root-rendered units)
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 /**
- * The polkit rule granted "start" on `<prefix>*.service` and could not see the uid the unit
- * runs as: on systemd >= 257 the service user could `systemd-run --unit=<prefix>x.service
- * --uid=root`, i.e. the daemon was root-equivalent. The rule now grants stop/kill only, and
- * the daemon's policy reads that SAME list — so every confined door refuses up front, loudly,
- * and spawns nothing. Mutation: put "start" back in AGENT_UNIT_VERBS and every leg is red.
+ * WHAT NO CONFINED RUN MAY REACH, from the host's side: loopback services, the DNS stub,
+ * the LAN, the metadata service, the host's own address, the internet DIRECTLY (egress is
+ * the gate's job, by hostname), the engine's/databases' sockets wherever a distro puts
+ * them, THIS daemon's socket, the host's /dev/shm, docker, SysV IPC and an abstract socket.
+ * (Another SITE's run, sockets and state are G6's, uid-aware — `lead1b_c4_units.test.ts`.)
  */
-describe('F2: the daemon may not start a transient unit, so a confined run is refused', () => {
-  /** The REAL host's fact, on an otherwise complete policy — only F2 stands in the way. */
-  const realHostPolicy = (overrides: Partial<ConfinementPolicy> = {}) =>
-    systemdPolicy({ transientStartAuthorized: policyFromConfig().transientStartAuthorized, ...overrides });
+function hostForbidden(runtimeDir: string): Destination[] {
+  return [
+    { kind: 'inet', ip: '127.0.0.1', port: 5432 },
+    { kind: 'inet', ip: '127.0.0.1', port: 8080 },
+    { kind: 'inet', ip: '127.0.0.53', port: 53 },
+    { kind: 'inet', ip: '::1', port: 5432 },
+    { kind: 'inet', ip: '10.0.0.5', port: 22 },
+    { kind: 'inet', ip: '192.168.1.1', port: 80 },
+    { kind: 'inet', ip: '169.254.169.254', port: 80 },
+    { kind: 'inet', ip: '203.0.113.7', port: 22 },
+    { kind: 'inet', ip: '1.1.1.1', port: 443 },
+    { kind: 'unix', path: '/run/postgresql/.s.PGSQL.5432' },
+    { kind: 'unix', path: '/var/run/postgresql/.s.PGSQL.5432' },
+    { kind: 'unix', path: '/tmp/.s.PGSQL.5432' },
+    { kind: 'unix', path: '/run/dedalo/dedalo_ts.sock' },
+    { kind: 'unix', path: '/run/mysqld/mysqld.sock' },
+    // RHEL/Fedora MariaDB's DEFAULT socket — outside /run, /tmp and /home, mode 0777.
+    { kind: 'unix', path: '/var/lib/mysql/mysql.sock' },
+    { kind: 'unix', path: '/var/run/docker.sock' },
+    { kind: 'unix', path: '/home/dedalo/.dedalo.sock' },
+    { kind: 'unix', path: join(runtimeDir, 'daemon.sock') },
+    // The host's /dev/shm, which PrivateDevices= binds back into the private /dev.
+    { kind: 'unix', path: '/dev/shm/x.sock' },
+    // A SysV key / POSIX queue in the HOST's IPC namespace (every unit without PrivateIPC=).
+    { kind: 'ipc', name: 'sysv:0x5a5a0001' },
+    { kind: 'abstract', name: 'lp' },
+  ];
+}
 
-  test('the rule grants stop and kill, never start — and the daemon reads that as a fact', () => {
-    expect([...AGENT_UNIT_VERBS].sort()).toEqual(['kill', 'stop']);
-    expect(TRANSIENT_START_AUTHORIZED).toBe(false);
-    expect(policyFromConfig().transientStartAuthorized).toBe(false);
-  });
+/** The [Service] properties of site k's rendered `door` template. */
+function templateProps(files: Map<string, { body: string }>, prefix: string, k: number, door: string): string[] {
+  const file = files.get(`${prefix}s${k}-${door}@.service`);
+  if (!file) throw new Error(`no rendered template ${prefix}s${k}-${door}@.service`);
+  return unitProperties(file.body);
+}
 
-  test('the refusal is FIRST, names LEAD-1b, and is a 503 at every pre-reservation check', () => {
-    const problems = confinementProblems(realHostPolicy());
-    // The only missing piece is F2's: the refusal is not a side effect of an incomplete policy.
-    expect(problems).toEqual([CONFINED_RUNS_DISABLED]);
-    expect(CONFINED_RUNS_DISABLED).toContain('LEAD-1b');
-    expect(CONFINED_RUNS_DISABLED).toContain('F2');
-    let caught: unknown;
-    try {
-      assertTurnConfinementAvailable(realHostPolicy());
-    } catch (error) {
-      caught = error;
+describe('THE EGRESS — a rendered unit reaches nothing on the host, the LAN or the internet directly', () => {
+  test('every door of every site, at 255 and 257: the forbidden set is empty; its OWN gate is reachable', async () => {
+    // LEAD-1, asked of what root REALLY renders. systemd's IP filter is allow-wins, so the
+    // pre-fix `IPAddressAllow=any localhost` granted Postgres, the DNS stub, the LAN and the
+    // metadata service whatever the deny list said.
+    const gate = gateInstance('museo', ['collection', 'archive']);
+    const prefix = gate.layout.agentUnitPrefix;
+    for (const version of [255, 257]) {
+      const files = await renderAgentUnits(gate, version);
+      for (const [, k] of gate.identities) {
+        for (const door of ['turn', 'build', 'git'] as const) {
+          const props = templateProps(files, prefix, k, door);
+          const reached = hostForbidden(gate.layout.runtimeDir)
+            .filter(dest => reach(props, dest, { netnsHonoured: true }))
+            .map(describeDestination);
+          expect({ version, k, door, reached }).toEqual({ version, k, door, reached: [] });
+          // THE MODEL IS NOT BLIND: a door that reaches out reaches its OWN site's gate (the
+          // host path the unit binds to /run/dedalo-egress).
+          const ownGate = join(gate.layout.agentSocketDir, 'egress', `s${k}`, 'proxy.sock');
+          const own = reach(props, { kind: 'unix', path: ownGate }, { netnsHonoured: true });
+          expect({ version, k, door, own }).toEqual({ version, k, door, own: door !== 'git' });
+        }
+      }
+      // MUTATION CONTROL, on a real rendered template: the pre-fix allow reaches the host's
+      // services — or "reached: []" above is blindness.
+      const widened = [...templateProps(files, prefix, 1, 'build'), 'IPAddressAllow=any'];
+      expect(reach(widened, { kind: 'inet', ip: '127.0.0.1', port: 5432 }, { netnsHonoured: false })).toBe(true);
+      // …and without its IPC namespace it shares the host's SysV keys.
+      const noIpc = templateProps(files, prefix, 1, 'build').filter(prop => prop !== 'PrivateIPC=yes');
+      expect(reach(noIpc, { kind: 'ipc', name: 'sysv:0x5a5a0001' }, { netnsHonoured: true })).toBe(true);
     }
-    expect(caught).toBeInstanceOf(ConfinementUnavailableError);
-    expect((caught as ConfinementUnavailableError).status).toBe(503);
-    expect((caught as Error).message).toContain('DISABLED');
   });
 
-  test('confineTurn refuses, and writes no per-turn environment file', async () => {
-    const policy = realHostPolicy();
-    await expect(
-      confineTurn({ argv: ['/opt/claude'], cwd: '/srv/ws/a', env: { K: 'v' }, timeoutMs: 1000 }, policy),
-    ).rejects.toThrow(/DISABLED until per-site agent identities/);
-    const turnDir = join(dirname(policy.listenSocket), 'turns');
-    expect(existsSync(turnDir) ? readdirSync(turnDir) : []).toEqual([]);
+  test('a workspace under /home re-exposes THAT directory inside ProtectHome=, and nothing beside it', async () => {
+    // systemd.exec(5): ReadWritePaths= nested inside InaccessiblePaths= (which ProtectHome=yes
+    // is) is re-exposed. An install whose workspaces live under /home/<svc> therefore gives
+    // each unit ITS workspace — and the engine socket beside it, another site's workspace and
+    // another user's home stay masked.
+    const doc = gateManifestDoc('museo', ['collection', 'archive']);
+    const gate = gateInstance('museo', ['collection', 'archive'], { ...doc, roots: { workspaces: '/home/dedalo/sites' } });
+    const files = await renderAgentUnits(gate, 255);
+    const props = templateProps(files, gate.layout.agentUnitPrefix, 1, 'git');
+    const at = (path: string) => reach(props, { kind: 'unix', path }, { netnsHonoured: true });
+    // Positive control: the lift is modelled, so a "blocked" below is not the model's blindness.
+    expect(at('/home/dedalo/sites/collection/x.sock')).toBe(true);
+    expect({
+      sibling: at('/home/dedalo/.dedalo.sock'),
+      otherSite: at('/home/dedalo/sites/archive/x.sock'),
+      otherUser: at('/home/other/x.sock'),
+      root: at('/root/x.sock'),
+    }).toEqual({ sibling: false, otherSite: false, otherUser: false, root: false });
+    // A tmpfs mask is NOT lifted by a nested path (there is nothing under it to re-expose).
+    expect(reach(['ProtectHome=tmpfs', 'ReadWritePaths=/home/dedalo/agent'], { kind: 'unix', path: '/home/dedalo/agent/x' }, { netnsHonoured: true })).toBe(false);
+    expect(reach(['PrivateTmp=yes', 'ReadWritePaths=/tmp/x'], { kind: 'unix', path: '/tmp/x/s' }, { netnsHonoured: true })).toBe(false);
   });
+});
 
-  test('runConfined refuses a build/git step and the runner is never executed', async () => {
-    const runner = recordingPolicy({ transientStartAuthorized: policyFromConfig().transientStartAuthorized });
-    await expect(
-      runConfined({ argv: ['bun', 'install'], cwd: runner.cwd, env: {}, timeoutMs: 5000 }, runner.policy),
-    ).rejects.toThrow(ConfinementUnavailableError);
-    // The recording runner writes argv.log the moment it runs; its absence is "nothing ran".
-    expect(existsSync(join(dirname(runner.policy.systemdRunBin), 'argv.log'))).toBe(false);
-  });
-
-  test('a turn through the supervisor becomes a refusal event, never a spawned turn', async () => {
-    const policy = realHostPolicy();
-    writeFileSync(policy.systemdRunBin, '#!/bin/sh\necho started\nexit 0\n', { mode: 0o755 });
-    const events: Array<{ type: string; text?: string; message?: string }> = [];
-    const proc = spawnAgentProcess(
-      { workspace: tmpdir(), prompt: 'x', mcp: { name: 'x', url: 'http://x/mcp' }, env: {}, timeoutMs: 30_000 },
-      async () => ({ argv: ['/opt/claude'], parseLine: (line: string) => [{ type: 'text' as const, text: line }] }),
-      policy,
-    );
-    for await (const event of proc.events) events.push(event as (typeof events)[number]);
-    expect(events.some(event => event.type === 'text' && event.text === 'started')).toBe(false);
-    expect(
-      events.some(event => event.type === 'error' && (event.message ?? '').includes('confinement refused')),
-    ).toBe(true);
+describe('the MCP credential stays with the daemon under systemd_scope', () => {
+  test('the turn is handed a LOOPBACK MCP url and no key; the key rides only the daemon-side upstream', async () => {
+    const key = config.PUBLICATION_API_KEY;
+    expect(key.length).toBeGreaterThan(0); // the suite's env carries one, or this proves nothing
+    mkdirSync(roots.sitesRoot, { recursive: true });
+    const slug = `confinement-mcp-${process.pid}`;
+    const workspace = join(roots.sitesRoot, slug);
+    mkdirSync(join(workspace, '.builder'), { recursive: true });
+    scratch.push(workspace);
+    for (const driver of ['claude_code', 'opencode'] as const) {
+      const opts = sessionManager.buildStartOptions(slug, driver, 'x', undefined, 'systemd_scope');
+      expect({ driver, url: opts.mcp.url }).toEqual({ driver, url: `http://127.0.0.1:${MCP_PORT}/mcp` });
+      expect({ driver, headers: opts.mcp.headers }).toEqual({ driver, headers: undefined });
+      expect({ driver, upstreamKey: opts.mcpUpstream?.apiKey }).toEqual({ driver, upstreamKey: key });
+      // No caller hands a run its HOME (G13): the unit fixes it.
+      expect({ driver, home: 'HOME' in opts.env }).toEqual({ driver, home: false });
+      const write = driver === 'claude_code' ? writeMcpConfig : writeOpencodeConfig;
+      const path = await write(opts as Parameters<typeof writeMcpConfig>[0]);
+      const body = readFileSync(path, 'utf8');
+      expect({ driver, carriesKey: body.includes(key), carriesHeader: /x-api-key/i.test(body) }).toEqual({
+        driver,
+        carriesKey: false,
+        carriesHeader: false,
+      });
+      expect({ driver, loopback: body.includes(`http://127.0.0.1:${MCP_PORT}/mcp`) }).toEqual({ driver, loopback: true });
+      rmSync(path, { force: true });
+    }
+    // The DECLARED-unconfined mode keeps the direct shape: there is no gate to hold the key.
+    const none = sessionManager.buildStartOptions(slug, 'claude_code', 'x', undefined, 'none');
+    expect(none.mcp.headers?.['X-API-Key']).toBe(key);
   });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
- * ENVFILE — PID 1 reads the per-run file AS ROOT and follows links: never through one
+ * The gate a run is served, on every exit path
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-describe('the per-run environment file is never written through a link or a foreign directory', () => {
-  function runtime(): string {
-    const dir = mkdtempSync(join(tmpdir(), 'dedalo-envfile-'));
-    scratch.push(dir);
-    return dir;
+describe('the egress gate lives exactly as long as the run, on every exit path', () => {
+  const upstream = { url: 'http://127.0.0.1:1/publication/server_api/v2', apiKey: 'publication-secret' };
+
+  /** A turn that HANGS until released, observed while live: the gate's listing and its answers. */
+  async function liveTurn(host: GatePolicy, extra: Record<string, unknown> = {}) {
+    host.standIn.script = () => ({ kind: 'hang' });
+    const policy = withPolicy(host, { egressSeams: REFUSING_DIAL });
+    return held(
+      SLUG,
+      async () => {
+        const proc = spawnAgentProcess(turnStart({ mcpUpstream: upstream, ...extra }), plan(), policy);
+        const events = drain(proc);
+        await waitUntil(() => host.standIn.specs.length === 1, 8_000, 'the turn to reach its unit');
+        const listing = readdirSync(join(host.agentSocketDir, 'egress', 's1')).sort();
+        const probe = await probeGate(host);
+        host.standIn.release();
+        return { events: await events, listing, probe };
+      },
+      'turn',
+    );
   }
 
-  test('the control: a private turns/ directory gets a fresh 0600 file', async () => {
-    const dir = runtime();
-    const path = await writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n');
-    expect(readFileSync(path, 'utf8')).toBe('A="1"\n');
-    // eslint-disable-next-line no-bitwise -- the permission word is the assertion
-    expect(statSync(path).mode & 0o777).toBe(0o600);
-    // eslint-disable-next-line no-bitwise -- the permission word is the assertion
-    expect(statSync(join(dir, 'turns')).mode & 0o077).toBe(0);
+  test('success: the turn SAW its proxy and mcp sockets, served its own plan, and none outlive it', async () => {
+    const host = await standIn();
+    const { events, listing, probe } = await liveTurn(host);
+    expect(events.some(event => event.type === 'result')).toBe(true);
+    // The positive control: the site's door EXISTED while the unit ran…
+    expect(listing).toEqual(['mcp.sock', 'proxy.sock']);
+    // …and served the TURN plan of a claude_code run: its provider, nothing else.
+    expect(probe).toEqual({
+      'api.anthropic.com': '502',
+      'registry.npmjs.org': '403',
+      'api.provider.example': '403',
+      'evil.example.com': '403',
+    });
+    expect(egressEntries(host)).toEqual([]);
   });
 
-  test('turns/ planted as a symlink is refused, and nothing lands at its target', async () => {
-    const dir = runtime();
-    const elsewhere = runtime();
-    symlinkSync(elsewhere, join(dir, 'turns'));
-    await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(/is a symlink/);
-    expect(readdirSync(elsewhere)).toEqual([]);
+  test('a turn with NO mcpUpstream is served no mcp.sock — nothing forwards to /mcp without a key', async () => {
+    const host = await standIn();
+    const { events, listing } = await liveTurn(host, { mcpUpstream: undefined });
+    expect(events.some(event => event.type === 'result')).toBe(true);
+    expect(listing).toEqual(['proxy.sock']);
+    expect(egressEntries(host)).toEqual([]);
   });
 
-  test('the runtime directory itself as a symlink is refused', async () => {
-    const real = runtime();
-    const link = join(runtime(), 'run');
-    symlinkSync(real, link);
-    await expect(writeTurnEnvironmentFile(link, 'u.service.env', 'A="1"\n')).rejects.toThrow(/is a symlink/);
-    expect(readdirSync(real)).toEqual([]);
+  test('setup failure, a unit that refuses, and a socket that will not connect leave no egress dir', async () => {
+    // setup throws
+    const a = await standIn();
+    await held(SLUG, () => drain(spawnAgentProcess(turnStart(), async () => Promise.reject(new Error('driver setup failed')), a.policy)), 'turn');
+    expect({ path: 'setup', left: egressEntries(a), connects: a.standIn.connects.length }).toEqual({ path: 'setup', left: [], connects: 0 });
+    // the unit refuses AFTER the gate opened (no hello)
+    const b = await standIn();
+    b.standIn.script = () => ({ kind: 'refuse' });
+    const refused = await held(SLUG, () => drain(spawnAgentProcess(turnStart({ mcpUpstream: upstream }), plan(), b.policy)), 'turn');
+    expect(refused.some(event => event.type === 'error' && event.message.includes('confinement refused'))).toBe(true);
+    expect(b.gateEvents.some(event => event.startsWith('serve '))).toBe(true);
+    expect({ path: 'refusal', left: egressEntries(b) }).toEqual({ path: 'refusal', left: [] });
+    // the socket refuses the connection
+    const c = await standIn([[SLUG, 1]], {
+      hostOverrides: { connect: () => Promise.reject(new Error('ECONNREFUSED')) },
+    });
+    const failed = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), c.policy)), 'turn');
+    expect(failed.some(event => event.type === 'error' && event.message.includes('refused the connection'))).toBe(true);
+    expect({ path: 'connect', left: egressEntries(c) }).toEqual({ path: 'connect', left: [] });
   });
 
-  test('a turns/ directory open beyond this daemon is refused', async () => {
-    const dir = runtime();
-    mkdirSync(join(dir, 'turns'), { mode: 0o755 });
-    chmodSync(join(dir, 'turns'), 0o755);
-    await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(/open beyond/);
-    expect(readdirSync(join(dir, 'turns'))).toEqual([]);
-  });
-
-  test('an existing name — a planted link included — is refused, never written through', async () => {
-    const dir = runtime();
-    mkdirSync(join(dir, 'turns'), { mode: 0o700 });
-    const victim = join(runtime(), 'victim');
-    writeFileSync(victim, 'ORIGINAL');
-    symlinkSync(victim, join(dir, 'turns', 'u.service.env'));
-    await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(
-      ConfinementUnavailableError,
+  test('an interrupt that lands WHILE the gate opens starts nothing, and leaves no door behind', async () => {
+    // The window: an interrupt read only before confineTurn, whose gate is several awaits,
+    // found no child — and the whole turn then ran. The run is opened with the interrupt's
+    // signal, asked before the connect and again before the spec is sent.
+    let release: () => void = () => {};
+    const latch = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let entered: () => void = () => {};
+    const inGate = new Promise<void>(resolve => {
+      entered = resolve;
+    });
+    const host = await standIn();
+    const policy = withPolicy(host, {
+      egressSeams: {
+        beforeServe: async () => {
+          entered();
+          await latch;
+        },
+      },
+    });
+    const events = await held(
+      SLUG,
+      async () => {
+        const proc = spawnAgentProcess(turnStart({ env: { SECRET: 'turn-secret' } }), plan(), policy);
+        await inGate;
+        const interrupted = proc.interrupt();
+        release();
+        const seen = await drain(proc);
+        await interrupted;
+        return seen;
+      },
+      'turn',
     );
-    expect(readFileSync(victim, 'utf8')).toBe('ORIGINAL');
-    expect(lstatSync(join(dir, 'turns', 'u.service.env')).isSymbolicLink()).toBe(true);
+    expect(events.some(event => event.type === 'error' && event.message.includes('interrupted before start'))).toBe(true);
+    expect(events.some(event => event.type === 'result')).toBe(false);
+    // Nothing was handed to PID 1, and what confineTurn opened is gone.
+    expect({ connects: host.standIn.connects, specs: host.standIn.specs.length }).toEqual({ connects: [], specs: 0 });
+    expect(egressEntries(host)).toEqual([]);
   });
 
-  test('a directory owned by another uid is refused', async () => {
-    const dir = runtime();
-    const realGetuid = process.getuid;
-    process.getuid = () => (realGetuid?.() ?? 0) + 1;
+  test('a gate that FAILS to close still ends the turn: the stream terminates and the driver cleanup runs', async () => {
+    // The failure, made real rather than stubbed: while the unit "runs", the site's egress
+    // directory is made unwritable, so the gate's own `rm` of its sockets is EACCES and close()
+    // rejects. The turn's teardown must not ride on that one step: a throw there skipped the
+    // driver's cleanup and `queue.close()`, and the session sat in 'running' forever.
+    const host = await standIn();
+    const egressParent = join(host.agentSocketDir, 'egress', 's1');
+    host.standIn.script = () => {
+      chmodSync(egressParent, 0o500);
+      return { kind: 'exit', code: 0 };
+    };
+    let driverCleanups = 0;
+    let outcome: { ended: boolean; events: AgentEvent[] };
+    let leftBehind: string[];
     try {
-      await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(/owned by uid/);
+      outcome = await held(
+        SLUG,
+        () =>
+          Promise.race([
+            drain(
+              spawnAgentProcess(
+                turnStart({ mcpUpstream: upstream }),
+                async () => ({
+                  argv: ['/opt/claude'],
+                  parseLine: () => [],
+                  cleanup: async () => {
+                    driverCleanups++;
+                  },
+                }),
+                host.policy,
+              ),
+            ).then(events => ({ ended: true, events })),
+            Bun.sleep(10_000).then(() => ({ ended: false, events: [] as AgentEvent[] })),
+          ]),
+        'turn',
+      );
+      // The control: the close really failed — the run's sockets are still there.
+      leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
     } finally {
-      process.getuid = realGetuid;
+      // Back to root's provisioned mode, so the scratch sweep can remove what the close left.
+      if (existsSync(egressParent)) chmodSync(egressParent, 0o770);
+    }
+    expect({ ended: outcome.ended, driverCleanups, closeFailed: leftBehind.length > 0 }).toEqual({
+      ended: true,
+      driverCleanups: 1,
+      closeFailed: true,
+    });
+    expect(outcome.events.some(event => event.type === 'result')).toBe(true);
+    // The failure is a line in the session's own log, not a silence.
+    expect(outcome.events.some(event => event.type === 'text' && event.text.includes('[egress]'))).toBe(true);
+  });
+
+  test('a refusal after the gate opened is reported AS itself, even when the gate then fails to close', async () => {
+    // confineTurn's own catch: `await gate.close()` rejecting replaced the refusal the operator
+    // must read (here: a unit that never said hello) with the unlink error of the teardown.
+    const host = await standIn();
+    const egressParent = join(host.agentSocketDir, 'egress', 's1');
+    // Unwritable once the gate is up (its sockets made), so the teardown's unlink is EACCES.
+    host.standIn.script = () => {
+      chmodSync(egressParent, 0o500);
+      return { kind: 'refuse' };
+    };
+    const policy = host.policy;
+    let events: AgentEvent[];
+    let leftBehind: string[];
+    try {
+      events = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), policy)), 'turn');
+      leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
+    } finally {
+      if (existsSync(egressParent)) chmodSync(egressParent, 0o770);
+    }
+    const refusal = events.find(event => event.type === 'error');
+    const message = refusal?.type === 'error' ? refusal.message : '';
+    expect({ closeFailed: leftBehind.length > 0, itself: /never said hello/.test(message) }).toEqual({
+      closeFailed: true,
+      itself: true,
+    });
+  });
+
+  test('a build door whose gate FAILS to close still returns its own result, with an [egress] line in its log', async () => {
+    // runConfined's `finally`: `await child.cleanup()` rejecting replaced the run's result (a
+    // finished build) with the unlink error of the teardown.
+    const host = await standIn();
+    const egressParent = join(host.agentSocketDir, 'egress', 's1');
+    host.standIn.script = () => {
+      chmodSync(egressParent, 0o500);
+      return { kind: 'exit', code: 0 };
+    };
+    const log: string[] = [];
+    let outcome: { result: Awaited<ReturnType<typeof runConfined>> | null; error: unknown };
+    let leftBehind: string[];
+    try {
+      outcome = await held(SLUG, () =>
+        runConfined(
+          {
+            door: 'build',
+            slug: SLUG,
+            argv: ['bun', 'run', 'build'],
+            cwd: workspacePath(SLUG),
+            env: {},
+            timeoutMs: 5_000,
+            onStdout: chunk => log.push(chunk),
+          },
+          host.policy,
+        ).then(
+          result => ({ result, error: null }),
+          error => ({ result: null, error }),
+        ),
+      );
+      leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
+    } finally {
+      if (existsSync(egressParent)) chmodSync(egressParent, 0o770);
+    }
+    expect({
+      closeFailed: leftBehind.length > 0,
+      rejected: outcome.error !== null ? String(outcome.error) : null,
+      exitCode: outcome.result?.exitCode,
+    }).toEqual({ closeFailed: true, rejected: null, exitCode: 0 });
+    expect(log.some(line => line.includes("[egress] this run's egress gate did not close cleanly"))).toBe(true);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The trust the unit's first exec rests on, and the host facts it is asked of
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('what the unit executes first is trusted by WHO CAN CHANGE IT, not by who owns it', () => {
+  test('the daemon states its REAL host facts: /run, id(1), /proc/self/ns/net — and a control plane that cannot start', async () => {
+    const policy = policyFromConfig();
+    expect(policy.host.runtimePrefix).toBe(RUNTIME_PREFIX);
+    expect(RUNTIME_PREFIX).toBe('/run');
+    expect(policy.host.resolveAgent).toBe(resolveAgentIdentity);
+    expect(policy.host.readNetns).toBe(readHostNetns);
+    expect(policy.egressSeams).toBeUndefined();
+    // The resolver is real: this process's own user resolves to its own uid.
+    const me = (await resolveAgentIdentity(String(process.env.USER ?? '')));
+    if (process.env.USER && typeof process.getuid === 'function') expect(me?.uid).toBe(process.getuid());
+    expect((await resolveAgentIdentity('no-such-user-dedalo-sb-test'))).toBeNull();
+    // THE CONTROL PLANE: show, list-units and stop — a `start` never reaches the binary.
+    for (const verb of ['start', 'restart', 'enable', 'kill']) {
+      await expect(hostFacts('/usr/bin/false').systemctl([verb, 'x.service'])).rejects.toThrow(/not a verb the daemon may send/);
     }
   });
+
+  /** A policy whose stat(2) lies about `overrides` paths (by suffix) — a chown a test cannot do. */
+  function statPolicy(
+    host: GatePolicy,
+    overrides: Record<string, Partial<{ uid: number; gid: number; mode: number }>>,
+    resolveAgent?: (name: string) => unknown,
+  ): ConfinementPolicy {
+    const base = host.policy.host;
+    return withPolicy(host, {
+      host: {
+        ...base,
+        ...(resolveAgent ? { resolveAgent } : {}),
+        stat: (path: string) => {
+          const real = base.stat(path);
+          const hit = Object.entries(overrides).find(([suffix]) => path === suffix || path.endsWith(suffix));
+          return hit ? { ...real, ...hit[1] } : real;
+        },
+      },
+    });
+  }
+  const shimReal = () => realpathSync(SHIM_PATH);
+  const IDENTITY = GATE_IDS.identityUid(1);
+
+  test('a shim owned by a THIRD uid (the engine’s, which owns the checkout) is accepted', async () => {
+    const host = await standIn();
+    const third = statPolicy(host, { [shimReal()]: { uid: 4242, mode: 0o100644 } });
+    expect((await confinementProblems(third, 'git'))).toEqual([]);
+    expect((await confinementProblems(third, 'turn', 'claude_code'))).toEqual([]);
+  });
+
+  test('a shim owned by a site identity is a named refusal', async () => {
+    const host = await standIn();
+    const owned = statPolicy(host, { [shimReal()]: { uid: IDENTITY } });
+    expect((await confinementProblems(owned, 'git')).join(' ')).toContain(`is owned by the site identity 'dedalo-a-test_1' (uid ${IDENTITY})`);
+  });
+
+  test('a shim an identity cannot READ, or a runtime it cannot EXECUTE, is refused — every run would fail at exec', async () => {
+    const host = await standIn();
+    const unreadable = statPolicy(host, { [shimReal()]: { uid: 4242, gid: 4242, mode: 0o100640 } });
+    expect((await confinementProblems(unreadable, 'git')).join(' ')).toContain('cannot be read by the site identity');
+    // …through its GROUP it can: the instance group every identity has as its primary.
+    const viaGroup = statPolicy(host, { [shimReal()]: { uid: 4242, gid: GATE_IDS.instanceGid, mode: 0o100640 } });
+    expect((await confinementProblems(viaGroup, 'git'))).toEqual([]);
+    const noExec = statPolicy(host, { [realpathSync(process.execPath)]: { uid: 4242, gid: 4242, mode: 0o100750 } });
+    expect((await confinementProblems(noExec, 'git')).join(' ')).toContain('cannot be executed by the site identity');
+  });
+
+  test('a directory above the shim an identity can WRITE or OWNS is refused (it could rename over it); a sticky one it does not own is not', async () => {
+    const host = await standIn();
+    const parent = dirname(shimReal());
+    const refusedBy = async (overrides: Record<string, Partial<{ uid: number; gid: number; mode: number }>>) =>
+      (await confinementProblems(statPolicy(host, overrides), 'git')).join(' ');
+    expect(await refusedBy({ [parent]: { uid: IDENTITY, mode: 0o40755 } })).toContain('which the site identity');
+    expect(await refusedBy({ [parent]: { uid: 4242, mode: 0o40777 } })).toContain('which the site identity');
+    expect(await refusedBy({ [parent]: { uid: 4242, mode: 0o41777 } })).toBe('');
+    // …unless the IDENTITY owns the sticky directory: the owner of a sticky directory may
+    // rename anything inside it, so the exemption is only for a directory it does not own.
+    expect(await refusedBy({ [parent]: { uid: IDENTITY, mode: 0o41777 } })).toContain('which the site identity');
+    // An identity-owned directory whose mode reads 0555 TODAY is still its own: one chmod
+    // from writable. Ownership, not the current bits, decides.
+    expect(await refusedBy({ [parent]: { uid: IDENTITY, mode: 0o40555 } })).toContain('which the site identity');
+    // The same rule one level further up.
+    expect(await refusedBy({ [dirname(parent)]: { uid: IDENTITY, mode: 0o40555 } })).toContain('which the site identity');
+  });
+
+  test('a site identity this host does not have is a named refusal', async () => {
+    const host = await standIn();
+    const problems = (await confinementProblems(statPolicy(host, {}, () => null), 'git'));
+    expect(problems.length).toBe(1);
+    expect(problems[0]).toContain('does not exist on this host');
+  });
+});
+
+describe('a runtime directory outside /run is refused — the mask is what hides every site’s gate sockets', () => {
+  test('a LISTEN_SOCKET under /srv is refused for every door', async () => {
+    // The hand-configured host: /srv is visible (read-only) under ProtectSystem=strict and a
+    // connect() needs no writable mount, so the daemon's socket and EVERY site's
+    // egress/s<k>/mcp.sock would be one path away from a git hook (DAC aside).
+    const host = await standIn();
+    const srv = withPolicy(host, {
+      listenSocket: '/srv/sb/state/daemon.sock',
+      agentSocketDir: '/run/dedalo-sites-agents/test',
+      host: { ...host.policy.host, runtimePrefix: RUNTIME_PREFIX },
+    });
+    for (const door of ['turn', 'build', 'git'] as const) {
+      const problems = (await confinementProblems(srv, door, 'claude_code'));
+      expect({ door, count: problems.length }).toEqual({ door, count: 1 });
+      expect({ door, names: problems[0]?.includes('LISTEN_SOCKET') && problems[0]?.includes('/run') }).toEqual({ door, names: true });
+    }
+  });
+
+  test('an AGENT_SOCKET_DIR under /srv is refused for every door — it holds every site’s egress gates', async () => {
+    const host = await standIn();
+    const srv = withPolicy(host, {
+      listenSocket: '/run/dedalo-sites/test/daemon.sock',
+      agentSocketDir: '/srv/sb/agents',
+      host: { ...host.policy.host, runtimePrefix: RUNTIME_PREFIX },
+    });
+    for (const door of ['turn', 'build', 'git'] as const) {
+      const problems = (await confinementProblems(srv, door, 'claude_code'));
+      expect({ door, count: problems.length, names: problems[0]?.includes('AGENT_SOCKET_DIR') && problems[0]?.includes('/run') }).toEqual({
+        door,
+        count: 1,
+        names: true,
+      });
+    }
+  });
+
+  test('an egress directory systemd cannot bind is refused UP FRONT — nothing opened, nothing connected', async () => {
+    const host = await standIn();
+    const colon = join(dirname(host.agentSocketDir), 'age:nts');
+    mkdirSync(colon, { recursive: true });
+    const policy = withPolicy(host, { agentSocketDir: colon });
+    expect((await confinementProblems(policy, 'turn', 'claude_code')).join(' ')).toContain('BindPaths= grammar');
+    await expect(runDoor(host, 'turn', {}, policy)).rejects.toBeInstanceOf(ConfinementUnavailableError);
+    expect(existsSync(join(colon, 'egress'))).toBe(false);
+    expect(host.standIn.connects).toEqual([]);
+  });
+
+  test('a namespace read that fails INSIDE confineTurn (after the up-front check passed) opens no gate and connects nothing', async () => {
+    // M58: the namespace read moved after the gate opened stayed green, because every
+    // failing-read row was refused by (await confinementProblems()) first. Here the up-front read
+    // succeeds and confineTurn's own fails.
+    const host = await standIn();
+    let reads = 0;
+    const policy = withPolicy(host, {
+      host: {
+        ...host.policy.host,
+        readNetns: () => {
+          reads += 1;
+          if (reads >= 2) throw new Error('EACCES: /proc/self/ns/net');
+          return TEST_NETNS;
+        },
+      },
+    });
+    await expect(runDoor(host, 'turn', { driver: 'claude_code' }, policy)).rejects.toBeInstanceOf(ConfinementUnavailableError);
+    expect(reads).toBe(2);
+    expect(host.gateEvents).toEqual([]);
+    expect(egressEntries(host)).toEqual([]);
+    expect(host.standIn.connects).toEqual([]);
+  });
+
+  test('a daemon that cannot read its own namespace identity is a named refusal', async () => {
+    const host = await standIn();
+    const blind = withPolicy(host, {
+      host: {
+        ...host.policy.host,
+        readNetns: () => {
+          throw new Error('ENOENT: /proc/self/ns/net');
+        },
+      },
+    });
+    const problems = (await confinementProblems(blind, 'git'));
+    expect(problems.length).toBe(1);
+    expect(problems[0]).toContain('/proc/self/ns/net');
+    await expect(runDoor(host, 'git', {}, blind)).rejects.toBeInstanceOf(ConfinementUnavailableError);
+    expect(host.standIn.connects).toEqual([]);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The plan takes effect at the gate the run is given
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the gate a run is given tunnels to ITS plan’s hosts and nothing else', () => {
+  test('turn (claude_code), turn (opencode) and build: planned → 200, everything else → 403', async () => {
+    // CF18: a host appended to what the gate was opened with stayed green, because the rows
+    // only checked the sockets EXISTED. Here the served proxy is asked, at the place the plan
+    // takes effect, with the resolver and dialer stated (never the public internet).
+    const echo = createServer(socket => socket.pipe(socket));
+    await new Promise<void>(resolve => echo.listen(0, '127.0.0.1', resolve));
+    const port = (echo.address() as { port: number }).port;
+    const egressSeams = {
+      lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+      dial: () =>
+        new Promise<Socket>((resolve, reject) => {
+          const socket = connect(port, '127.0.0.1', () => resolve(socket));
+          socket.once('error', reject);
+        }),
+    };
+    const rows = [
+      { door: 'turn', driver: 'claude_code', providers: [], reach: ['api.anthropic.com'] },
+      // NP25: a host that names provider hosts (for its opencode sites) gives a claude_code turn
+      // NOTHING more than its own API host.
+      { door: 'turn', driver: 'claude_code', providers: ['api.provider.example'], reach: ['api.anthropic.com'] },
+      { door: 'turn', driver: 'opencode', providers: ['api.provider.example'], reach: ['api.provider.example'] },
+      { door: 'build', driver: undefined, providers: [], reach: ['registry.npmjs.org'] },
+      { door: 'build', driver: undefined, providers: ['api.provider.example'], reach: ['registry.npmjs.org'] },
+    ] as const;
+    try {
+      for (const row of rows) {
+        const host = await standIn();
+        host.standIn.script = () => ({ kind: 'hang' });
+        const policy = withPolicy(host, {
+          egressSeams,
+          egressFacts: { driver: 'claude_code', providerHosts: [...row.providers], registryHosts: ['registry.npmjs.org'] },
+        });
+        const statuses = await held(SLUG, async () => {
+          const child = await confineTurn(
+            { door: row.door, slug: SLUG, driver: row.driver, argv: ['/opt/x'], cwd: workspacePath(SLUG), env: {}, timeoutMs: 5_000 },
+            policy,
+          );
+          const done = drainChild(child);
+          try {
+            const out: Record<string, number> = {};
+            for (const target of PROBE_HOSTS) {
+              out[target] = await connectThrough(join(host.agentSocketDir, 'egress', 's1', 'proxy.sock'), `${target}:443`);
+            }
+            return out;
+          } finally {
+            host.standIn.release();
+            await done;
+          }
+        });
+        for (const target of PROBE_HOSTS) {
+          const want = (row.reach as readonly string[]).includes(target) ? 200 : 403;
+          expect({ door: row.door, driver: row.driver, target, status: statuses[target] }).toEqual({
+            door: row.door,
+            driver: row.driver,
+            target,
+            status: want,
+          });
+        }
+      }
+    } finally {
+      await new Promise<void>(resolve => echo.close(() => resolve()));
+    }
+  });
+
+  test('the SUPERVISOR hands confineTurn the run’s own driver: an opencode turn on a claude_code host is judged on its own plan', async () => {
+    // PR1: `driver: opts.driver` dropped from process.ts gave an opencode turn the
+    // api.anthropic.com plan and started it; with it, the empty provider list refuses.
+    const host = await standIn();
+    const refused = await held(SLUG, () => drain(spawnAgentProcess(turnStart({ driver: 'opencode' }), plan(['/opt/opencode']), host.policy)), 'turn');
+    const error = refused.find(event => event.type === 'error');
+    expect(error?.type === 'error' && error.message).toContain('AGENT_PROVIDER_HOSTS');
+    expect(host.standIn.connects).toEqual([]);
+    // Control: the same host runs a claude_code turn.
+    const ran = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), host.policy)), 'turn');
+    expect(ran.some(event => event.type === 'result')).toBe(true);
+    expect(host.standIn.specs.map(({ door }) => door)).toEqual(['turn']);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The REAL call sites state the right door
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the real call sites: git runs through the git door, a build through the build door, a session on its own driver', () => {
+  const ACTOR = { user_id: 7, username: 'door-tester' };
+  beforeEach(resetInstance);
+  afterEach(async () => {
+    __setTestDriver('claude_code', null);
+    await resetInstance();
+  });
+  async function makeSite(slug: string): Promise<void> {
+    const { domain } = await provisionSite(slug);
+    await createSite({ slug, name: slug, domain, actor: ACTOR });
+  }
+  /** Every spec was the git door's, ran git, and carried no proxy. */
+  function assertGitDoor(host: GatePolicy, specs: GatePolicy['standIn']['specs']): void {
+    expect(specs.length).toBeGreaterThan(0);
+    for (const { door, spec } of specs) {
+      const command = (spec.argv as string[]).join(' ');
+      expect({ command, door, ran: spec.argv[0] }).toEqual({ command, door: 'git', ran: 'git' });
+      expect({ command, proxy: Object.keys(spec.env).filter(key => /proxy/i.test(key)) }).toEqual({ command, proxy: [] });
+    }
+  }
+
+  test('git.ts: changedFiles, excludeDaemonState and commitAll state the git door on every command', async () => {
+    // GI1: git's door changed to 'build' gave every git command a proxy socket and the
+    // registry plan, and nothing reddened.
+    await makeSite('door-git');
+    const host = await standIn([['door-git', 1]]);
+    await changedFiles('door-git', host.policy);
+    await excludeDaemonState('door-git', host.policy);
+    await commitAll('door-git', 'door check', host.policy);
+    // status; rm --cached; (commitAll:) rm --cached, add -A, diff --cached — at least five.
+    expect(host.standIn.specs.length).toBeGreaterThanOrEqual(5);
+    assertGitDoor(host, host.standIn.specs);
+    // …and no git command was served a gate: git reaches nothing at all.
+    expect(host.gateEvents).toEqual([]);
+    expect(new Set(host.standIn.connects)).toEqual(new Set([socketPathFor(host.agentSocketDir, 1, 'git')]));
+    // git takes the site for itself when no caller holds it, and gives it back.
+    expect(busyReason('door-git')).toBeNull();
+  });
+
+  test('builder.ts: every build step states the build door — its gate holds proxy.sock and serves the registry', async () => {
+    // BD1/BD2: the builder's door changed and nothing reddened.
+    await makeSite('door-build');
+    const manifest = await readManifest('door-build');
+    manifest.build = { install: 'true', build: 'true', output: 'src' };
+    await writeManifest(manifest);
+    const host = await standIn([['door-build', 1]]);
+    host.standIn.script = (_k, door) => (door === 'build' ? { kind: 'hang' } : { kind: 'exit', code: 0 });
+    const policy = withPolicy(host, { egressSeams: REFUSING_DIAL });
+    const { build_id } = await startBuild('door-build', policy);
+    const seen: Array<{ listing: string[]; probe: Record<string, string> }> = [];
+    for (let step = 1; step <= 2; step++) {
+      await waitUntil(() => host.standIn.specs.filter(({ door }) => door === 'build').length === step, 8_000, `build step ${step}`);
+      seen.push({ listing: readdirSync(join(host.agentSocketDir, 'egress', 's1')).sort(), probe: await probeGate(host) });
+      host.standIn.release();
+    }
+    for (let waited = 0; ; waited += 20) {
+      const record = await getBuild('door-build', build_id);
+      if (record && record.outcome !== 'running') break;
+      if (waited > 8_000) throw new Error('build never finished');
+      await Bun.sleep(20);
+    }
+    const steps = host.standIn.specs.filter(({ door }) => door === 'build');
+    expect(steps.length).toBe(2);
+    for (const { spec } of steps) {
+      expect(spec.env.HTTPS_PROXY).toBe(`http://127.0.0.1:${PROXY_PORT}`);
+      expect(JSON.stringify(spec.argv)).toContain('true');
+    }
+    for (const { listing, probe } of seen) {
+      expect(listing).toEqual(['proxy.sock']);
+      // …and the gate it was served tunnels to the BUILD plan (the registry) and nothing else.
+      expect(probe).toEqual({
+        'api.anthropic.com': '403',
+        'registry.npmjs.org': '502',
+        'api.provider.example': '403',
+        'evil.example.com': '403',
+      });
+    }
+  });
+
+  test('startSession / sendMessage: an opencode site with no provider host is a 503 BEFORE any reservation', async () => {
+    // MG4–MG6: the manager's driver-specific checks were never exercised.
+    await makeSite('door-oc');
+    // The site's driver is the DAEMON's record (sites/driver_record.ts), never site.json.
+    const { writeSiteDriver } = await import('../src/sites/driver_record');
+    await writeSiteDriver('door-oc', 'opencode');
+    const host = await standIn([['door-oc', 1]]); // claude_code default, providerHosts []
+    let refused: unknown = null;
+    try {
+      await sessionManager.startSession('door-oc', 'hello', undefined, host.policy);
+    } catch (error) {
+      refused = error;
+    }
+    expect(refused).toBeInstanceOf(ConfinementUnavailableError);
+    expect((refused as ConfinementUnavailableError).status).toBe(503);
+    expect(String((refused as Error).message)).toContain('AGENT_PROVIDER_HOSTS');
+    expect(busyReason('door-oc')).toBeNull();
+    expect(await listSessions('door-oc')).toEqual([]);
+    // A follow-up on an existing opencode session is judged the same way, before reserving.
+    const sessionId = crypto.randomUUID();
+    await writeMeta({
+      session_id: sessionId,
+      slug: 'door-oc',
+      driver: 'opencode',
+      started_at: new Date().toISOString(),
+      turns: 1,
+      state: 'idle',
+      resume_token: null,
+    });
+    await expect(sessionManager.sendMessage(sessionId, 'again', host.policy)).rejects.toThrow(/AGENT_PROVIDER_HOSTS/);
+    expect(busyReason('door-oc')).toBeNull();
+    expect(host.standIn.connects).toEqual([]);
+  });
+
+  test('startSession: a claude_code site on an opencode-DEFAULT host with no provider list is accepted, and its git runs through the git door', async () => {
+    // The S3 this closes: the driver-less courtesy check judged the INSTANCE default's plan, so
+    // every claude_code site on such a host was refused for a provider list it does not use.
+    await makeSite('door-cc');
+    const host = await standIn([['door-cc', 1]]);
+    host.standIn.script = (_k, door) => (door === 'turn' ? { kind: 'hang' } : { kind: 'exit', code: 0 });
+    const policy = withPolicy(host, {
+      egressFacts: { driver: 'opencode', providerHosts: [], registryHosts: ['registry.npmjs.org'] },
+      egressSeams: REFUSING_DIAL,
+    });
+    // The driver hands its options to the REAL supervisor with NO seam of its own — exactly
+    // what claude_code.ts does — so the only policy the turn can run under is the one the
+    // manager put in `opts.confinement`.
+    const handed: Array<ConfinementPolicy | undefined> = [];
+    const fake: AgentDriver = {
+      id: 'claude_code',
+      capabilities: { resume: true, mcpHttp: true, reportsFileChanges: true },
+      async detect() {
+        return { id: 'claude_code', binPath: 'fake', version: '1' };
+      },
+      startTurn(opts) {
+        handed.push(opts.confinement);
+        return spawnAgentProcess(opts, async () => ({ argv: ['/opt/claude'], parseLine: () => [] }));
+      },
+    };
+    __setTestDriver('claude_code', fake);
+    const { session_id } = await sessionManager.startSession('door-cc', 'hello', 'claude_code', policy);
+    expect(session_id).toBeTruthy();
+    await waitUntil(() => host.standIn.specs.some(({ door }) => door === 'turn'), 8_000, 'the turn to reach its unit');
+    const listing = readdirSync(join(host.agentSocketDir, 'egress', 's1')).sort();
+    const probe = await probeGate(host);
+    host.standIn.release();
+    for (let waited = 0; sessionManager.getSessionState('door-cc').state === 'running'; waited += 20) {
+      if (waited > 8_000) throw new Error('turn never finished');
+      await Bun.sleep(20);
+    }
+    expect(handed.length).toBe(1);
+    expect(handed[0] === policy).toBe(true);
+
+    // THE TURN ran as an instance of THIS site's turn unit, served the claude_code plan.
+    const turns = host.standIn.specs.filter(({ door }) => door === 'turn');
+    expect(turns.map(({ spec }) => spec.argv)).toEqual([['/opt/claude']]);
+    expect(listing).toEqual(['mcp.sock', 'proxy.sock']);
+    expect(probe).toEqual({
+      'api.anthropic.com': '502',
+      'registry.npmjs.org': '403',
+      'api.provider.example': '403',
+      'evil.example.com': '403',
+    });
+    // The turn's own git (changedFiles, commitAll) ran under that SAME policy — every command
+    // through the git door — and the specific commands are there, not just "some git ran".
+    const gits = host.standIn.specs.filter(({ door }) => door !== 'turn');
+    assertGitDoor(host, gits);
+    const ran = gits.map(({ spec }) => (spec.argv as string[]).join(' '));
+    for (const command of ['git status --porcelain', 'git add -A', 'git diff --cached --quiet']) {
+      expect({ command, ran: ran.includes(command) }).toEqual({ command, ran: true });
+    }
+  });
+
+  test('startBuild: a registry plan the BUILD door cannot use is a 503 BEFORE the reservation', async () => {
+    // M19: the pre-reservation check asked about the 'turn' door, whose plan does not read
+    // BUILD_REGISTRY_HOSTS — so a bad registry was caught only inside runConfined.
+    await makeSite('door-reg');
+    const manifest = await readManifest('door-reg');
+    manifest.build = { install: 'true', build: 'true', output: 'src' };
+    await writeManifest(manifest);
+    const host = await standIn([['door-reg', 1]]);
+    const policy = withPolicy(host, { egressFacts: { driver: 'claude_code', providerHosts: [], registryHosts: ['10.0.0.5'] } });
+    // Control: the TURN plan of this same policy is sound — the refusal is the build door's.
+    expect((await confinementProblems(policy, 'turn', 'claude_code'))).toEqual([]);
+    let refused: unknown = null;
+    try {
+      await startBuild('door-reg', policy);
+    } catch (error) {
+      refused = error;
+    }
+    expect(refused).toBeInstanceOf(ConfinementUnavailableError);
+    expect((refused as ConfinementUnavailableError).status).toBe(503);
+    expect(String((refused as Error).message)).toContain('BUILD_REGISTRY_HOSTS');
+    expect(busyReason('door-reg')).toBeNull();
+    expect(await latestBuild('door-reg')).toBeNull();
+    expect(host.standIn.connects).toEqual([]);
+  });
+});
+
+/* ──────────────────────────────────────────────────────────────────────────────────
+ * A FIFO WHERE THE DAEMON WRITES — refused at once, never an open parked forever.
+ *
+ * `writeThroughHandle` opened `O_WRONLY|O_CREAT|O_NOFOLLOW` and asked its questions AFTER the
+ * open returned. A fifo at the name parks a blocking write-open until a reader comes — forever,
+ * in a Bun fs worker the turn's deadline never returns — so a build's `mkfifo site.json.tmp`
+ * hung the daemon's next manifest write, and a fifo at `.builder/mcp.json` (in a `.builder` the
+ * agent renamed away and re-made) hung every turn's setup; repeated, the pool starves every
+ * other site's fs. The read direction was closed in round 4 (`readFileSharedBounded`); this is
+ * the write direction: `O_NONBLOCK` (ENXIO with no reader) + regular-file-only, before any
+ * question that could write.
+ * ────────────────────────────────────────────────────────────────────────────────── */
+
+describe('a FIFO where the daemon writes is refused at once, typed — never a parked open', () => {
+  /** Run `attempt`; if it is still parked after 3 s, release it (open the read end) so the suite can exit. */
+  async function refusedPromptly(
+    fifo: string,
+    attempt: () => Promise<unknown>,
+    releaseWith: 'reader' | 'writer' = 'reader',
+  ): Promise<{ outcome: unknown; ms: number }> {
+    const { closeSync, constants, openSync } = await import('node:fs');
+    const started = Date.now();
+    const outcome = await Promise.race([
+      attempt().then(
+        () => 'written',
+        (error: unknown) => error,
+      ),
+      Bun.sleep(3_000).then(() => 'parked'),
+    ]);
+    if (outcome === 'parked') {
+      try {
+        closeSync(openSync(fifo, (releaseWith === 'reader' ? constants.O_RDONLY : constants.O_WRONLY) | constants.O_NONBLOCK));
+      } catch {
+        // already released
+      }
+    }
+    return { outcome, ms: Date.now() - started };
+  }
+
+  function fifoAt(path: string): void {
+    expect(Bun.spawnSync(['mkfifo', path]).exitCode).toBe(0);
+  }
+
+  test('site.json.tmp planted as a fifo: the manifest write is refused, nothing parked', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirShared(dir, 'ws');
+    fifoAt(join(dir, 'ws', 'site.json.tmp'));
+    const { outcome, ms } = await refusedPromptly(join(dir, 'ws', 'site.json.tmp'), () =>
+      writeFileSharedAtomic(dir, join('ws', 'site.json'), '{"name":"x"}'),
+    );
+    expect({ refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ refused: true, prompt: true });
+    expect(existsSync(join(dir, 'ws', 'site.json'))).toBe(false);
+  }, 15_000);
+
+  test('.builder/mcp.json planted as a fifo in an agent-made .builder: the turn setup is refused, nothing parked', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const slug = 'zzfifo-mcp';
+    const ws = join(roots.sitesRoot, slug);
+    rmSync(ws, { recursive: true, force: true });
+    scratch.push(ws);
+    await mkdirShared(roots.sitesRoot, slug);
+    // The agent renamed the daemon's `.builder` away and made its own (same-parent rename).
+    mkdirSync(join(ws, '.builder'));
+    fifoAt(join(ws, '.builder', 'mcp.json'));
+    const opts = {
+      slug,
+      workspace: ws,
+      prompt: 'x',
+      mcp: { name: 'dedalo_publication', url: 'http://127.0.0.1:9/mcp' },
+      env: {},
+      timeoutMs: 1_000,
+    } as unknown as Parameters<typeof writeMcpConfig>[0];
+    const { outcome, ms } = await refusedPromptly(join(ws, '.builder', 'mcp.json'), () => writeMcpConfig(opts));
+    expect({ refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ refused: true, prompt: true });
+  }, 15_000);
+
+  test('the daemon’s private writer and appender refuse a fifo too (session meta, build log)', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirPrivate(dir, 'state');
+    fifoAt(join(dir, 'state', 'meta.json'));
+    fifoAt(join(dir, 'state', 'build.log'));
+    for (const [name, attempt] of [
+      ['meta.json', () => writeFilePrivate(dir, join('state', 'meta.json'), '{}')],
+      ['build.log', () => appendFilePrivate(dir, join('state', 'build.log'), 'line\n')],
+    ] as const) {
+      const { outcome, ms } = await refusedPromptly(join(dir, 'state', name), attempt);
+      expect({ name, refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ name, refused: true, prompt: true });
+    }
+  }, 20_000);
+
+  test('the READ twin: readFileShared / readFilePrivate refuse a fifo at once (site.json, a session meta) — never a parked open', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirShared(dir, 'ws');
+    await mkdirPrivate(dir, 'state');
+    fifoAt(join(dir, 'ws', 'site.json'));
+    fifoAt(join(dir, 'state', 'meta.json'));
+    for (const [name, attempt] of [
+      [join('ws', 'site.json'), () => readFileShared(dir, join('ws', 'site.json'))],
+      [join('state', 'meta.json'), () => readFilePrivate(dir, join('state', 'meta.json'))],
+    ] as const) {
+      const { outcome, ms } = await refusedPromptly(join(dir, name), attempt, 'writer');
+      expect({ name, refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000 }).toEqual({ name, refused: true, prompt: true });
+    }
+  }, 20_000);
+
+  test('a fifo WITH a reader (the agent holds the other end) is refused by fstat — nothing written through it', async () => {
+    const { NotRegularFileError } = await import('../src/util/shared_tree');
+    const { closeSync, constants, openSync, readSync } = await import('node:fs');
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-fifo-'));
+    scratch.push(dir);
+    await mkdirShared(dir, 'ws');
+    const fifo = join(dir, 'ws', 'site.json.tmp');
+    fifoAt(fifo);
+    const reader = openSync(fifo, constants.O_RDONLY | constants.O_NONBLOCK);
+    try {
+      const { outcome, ms } = await refusedPromptly(fifo, () => writeFileSharedAtomic(dir, join('ws', 'site.json'), '{"secret":"x"}'));
+      const buffer = Buffer.alloc(64);
+      let got = 0;
+      try {
+        got = readSync(reader, buffer, 0, 64, null);
+      } catch {
+        got = 0; // EAGAIN: nothing was written
+      }
+      expect({ refused: outcome instanceof NotRegularFileError, prompt: ms < 2_000, leaked: got }).toEqual({ refused: true, prompt: true, leaked: 0 });
+    } finally {
+      closeSync(reader);
+    }
+  }, 15_000);
 });

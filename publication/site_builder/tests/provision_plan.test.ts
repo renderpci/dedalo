@@ -33,6 +33,7 @@
 import { describe, expect, test } from 'bun:test';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { InstanceLayout, InstanceManifest } from '../src/provision/layout';
+import { type FakeAccount, fakeLedger, useraddAccount, usermodAccount } from './support/fake_accounts';
 import { INSTANCE_MARKER, MODES, SURFACES, derive, isStrictlyWithin, markerContent, readWritePaths } from '../src/provision/layout';
 import { parseManifest } from '../src/provision/schema';
 import { artifact, renderAll } from '../src/provision/render';
@@ -47,8 +48,10 @@ import type {
   PathObservation,
   UserAction,
 } from '../src/provision/plan';
+import { ledgerOrdinals } from '../src/provision/identities';
 import {
   PHASES,
+  agentPlan,
   assertPlanIsCoherent,
   changesTheHost,
   describe as describeAction,
@@ -131,21 +134,55 @@ function withEntries(host: HostState, entries: Record<string, PathObservation>):
  * performs what each action says and decides nothing, so a host state built from it is the
  * host the provisioner actually produces rather than the one a fixture author imagined.
  */
-function simulate(host: HostState, actions: readonly Action[]): HostState {
+function simulate(host: HostState, actions: readonly Action[], layout: InstanceLayout): HostState {
   const entries: Record<string, PathObservation> = { ...host.entries };
   const users = [...host.users];
   const groups = [...host.groups];
   let unitEnabled = host.unitEnabled;
   let unitActive = host.unitActive;
   let htpasswdUsers = host.htpasswdUsers;
+  // THE IDENTITY LEDGER (LEAD-1b) — what `getent` would report after the run: uids and gids
+  // handed out in order, `--groups` and `gpasswd -a` memberships, `usermod --lock
+  // --expiredate`: kept as the ACCOUNTS useradd/usermod leave, read back by the real parser.
+  let ledgerAccounts: FakeAccount[] = [...(host.agentLedger?.accounts ?? [])].map(account => ({
+    ...useraddAccount(account.name, account.uid, account.gid, account.gecos),
+    ...(account.retired ? { password: '!!', expire: '1' } : {}),
+  }));
+  const ledgerGroups = [...(host.agentLedger?.groups ?? [])].map(group => ({ ...group, members: [...group.members] }));
+  const enabledSockets = new Set(host.enabledSockets ?? []);
+  let nextId = 20_000 + ledgerAccounts.length + ledgerGroups.length;
+  const groupNamed = (name: string) => {
+    let group = ledgerGroups.find(entry => entry.name === name);
+    if (!group) {
+      group = { name, gid: nextId++, members: [] };
+      ledgerGroups.push(group);
+    }
+    return group;
+  };
+  const flag = (argv: readonly string[], name: string) => {
+    const at = argv.indexOf(name);
+    return at >= 0 ? argv[at + 1] : undefined;
+  };
 
   for (const action of actions) {
     switch (action.kind) {
       case 'group':
         groups.push(action.name);
+        groupNamed(action.name);
         break;
-      case 'user':
+      case 'user': {
         users.push(action.name);
+        ledgerAccounts.push(useraddAccount(action.name, nextId++, groupNamed(action.group).gid, flag(action.argv, '--comment') ?? ''));
+        if (action.supplementary) groupNamed(action.supplementary).members.push(action.name);
+        break;
+      }
+      case 'archive':
+        for (const path of Object.keys(entries)) {
+          if (path === action.from || path.startsWith(`${action.from}/`)) delete entries[path];
+        }
+        break;
+      case 'unlink':
+        delete entries[action.path];
         break;
       case 'dir':
         entries[action.path] = {
@@ -189,6 +226,25 @@ function simulate(host: HostState, actions: readonly Action[]): HostState {
       case 'exec':
         if (action.step === 'unit_enable') unitEnabled = true;
         if (action.step === 'unit_start' || action.step === 'unit_restart') unitActive = true;
+        if (action.step === 'daemon_stop') unitActive = false;
+        if (action.step === 'identity_membership') {
+          const group = groupNamed(action.argv[3] as string);
+          if (!group.members.includes(action.argv[2] as string)) group.members.push(action.argv[2] as string);
+        }
+        if (action.step === 'identity_lock') {
+          const name = action.argv[action.argv.length - 1];
+          ledgerAccounts = ledgerAccounts.map(entry => (entry.name === name ? usermodAccount(entry, action.argv) : entry));
+        }
+        if (action.step === 'agent_sockets_enable') for (const socket of action.argv.slice(3)) enabledSockets.add(socket);
+        if (action.step === 'agent_sockets_disable') for (const socket of action.argv.slice(3)) enabledSockets.delete(socket);
+        // systemd-tmpfiles --create <file>: every `d` line of the file as written, as root does it.
+        if (action.step === 'agent_tmpfiles_create') {
+          for (const line of String(entries[action.argv[2] as string]?.content ?? '').split('\n')) {
+            const [type, path, mode, owner, group] = line.trim().split(/\s+/);
+            if (type !== 'd' || !path || !mode || !owner || !group) continue;
+            entries[path] = { type: 'dir', mode: Number.parseInt(mode, 8), owner, group, empty: true };
+          }
+        }
         break;
     }
   }
@@ -196,7 +252,17 @@ function simulate(host: HostState, actions: readonly Action[]): HostState {
   // The rest of the observation is carried through unchanged — an apply does not stop the
   // observer from having listed the vhost directories, and `vhostDirEntries` in particular
   // must survive, or a fixture would forget the files a dropped site left behind.
-  return markNonEmpty({ ...host, users, groups, entries, unitEnabled, unitActive, htpasswdUsers });
+  return markNonEmpty({
+    ...host,
+    users,
+    groups,
+    entries,
+    unitEnabled,
+    unitActive,
+    htpasswdUsers,
+    agentLedger: fakeLedger(layout, ledgerAccounts, ledgerGroups),
+    enabledSockets: [...enabledSockets],
+  });
 }
 
 /** A directory holding anything is not empty — which is what §5's refusal turns on. */
@@ -239,7 +305,7 @@ function settle(decl: Declaration, start: HostState = bareHost()): { host: HostS
   for (let round = 1; round <= 5; round++) {
     const actions = plan(decl.layout, decl.manifest, host);
     if (actions.length === 0) return { host, rounds: round - 1 };
-    host = placeOperatorFiles(simulate(host, actions), actions);
+    host = placeOperatorFiles(simulate(host, actions, decl.layout), actions);
   }
   throw new Error('the plan never settled in five applies');
 }
@@ -298,37 +364,38 @@ describe('identities', () => {
   });
 
   test('an existing identity is left alone — no usermod, no groupmod, no second useradd', () => {
-    // BOTH identities present: the daemon's and the agent's. A museum runs two uids now
-    // (layout.ts's recorded decision — an agent turn must not be the daemon), so a host that
-    // already has one of them is not a converged host, and this gate says so by naming both.
+    // A converged host: the service user and group, and the site's identity with its private
+    // group (the service user a member) — the ledger `getent` reports. Nothing is re-created,
+    // nothing is modified: the existing accounts are VERIFIED (identities.ts), not rebuilt.
     const decl = declare();
-    const host: HostState = {
-      ...bareHost(),
-      users: [decl.layout.identity.user, decl.layout.identity.agentUser],
-      groups: [decl.layout.identity.group],
-    };
-    const actions = planFor(decl, host);
+    const settled = settle(decl).host;
+    const actions = planFor(decl, settled);
     expect(actions.some(action => action.kind === 'user' || action.kind === 'group')).toBe(false);
+    expect(actions.some(action => action.kind === 'exec' && action.argv[0] === 'usermod')).toBe(false);
   });
 
-  test('the AGENT uid is planned too, with the instance group and its own name', () => {
-    // The half that is easy to lose: a converged host whose daemon user exists would plan
-    // nothing, and every turn would then refuse (or, before the confinement existed, run as
-    // the daemon). So the agent's account is asserted as its own action, on a host that
-    // already carries the service user.
+  test('each declared SITE gets its own identity: private group, account, then the daemon joins (LEAD-1b)', () => {
+    // The retired per-museum agent user is NEVER created — a host that has only the service
+    // user plans one identity per declared site, and nothing named `dedalo-agent-*`.
     const decl = declare();
     const host: HostState = {
       ...bareHost(),
       users: [decl.layout.identity.user],
       groups: [decl.layout.identity.group],
     };
-    const users = planFor(decl, host).filter(action => action.kind === 'user');
-    expect(users.map(action => (action.kind === 'user' ? action.name : ''))).toEqual([
-      decl.layout.identity.agentUser,
-    ]);
-    const [agent] = users;
-    expect(agent?.kind === 'user' && agent.group).toBe(decl.layout.identity.group);
-    expect(decl.layout.identity.agentUser).not.toBe(decl.layout.identity.user);
+    const actions = planFor(decl, host);
+    const users = actions.filter((action): action is UserAction => action.kind === 'user');
+    expect(users.map(action => action.name)).toEqual(['dedalo-a-gate_1']);
+    const [identity] = users;
+    expect(identity?.group).toBe(decl.layout.identity.group);
+    expect(identity?.supplementary).toBe('dedalo-a-gate_1');
+    expect(identity?.argv).toContain('dedalo site one');
+    const order = actions.map(action =>
+      action.kind === 'group' ? `group ${action.name}` : action.kind === 'user' ? `user ${action.name}` : action.kind === 'exec' ? action.argv.join(' ') : '',
+    );
+    expect(order.indexOf('group dedalo-a-gate_1')).toBeLessThan(order.indexOf('user dedalo-a-gate_1'));
+    expect(order.indexOf('user dedalo-a-gate_1')).toBeLessThan(order.indexOf(`gpasswd -a ${decl.layout.identity.user} dedalo-a-gate_1`));
+    expect(actions.some(action => 'argv' in action && action.argv.includes(decl.layout.identity.agentUser))).toBe(false);
   });
 
   test('an ADOPTED identity still gets its group when the host lacks one', () => {
@@ -338,23 +405,23 @@ describe('identities', () => {
     const decl = declare(docWith({ identity: { user: 'legacy-builder', group: 'legacy-builder' } }));
     const host: HostState = {
       ...bareHost(),
-      users: ['legacy-builder', decl.layout.identity.agentUser],
+      users: ['legacy-builder'],
       groups: [],
     };
     const actions = planFor(decl, host);
     const group = actions.find(action => action.kind === 'group');
     expect(group?.kind === 'group' && group.name).toBe('legacy-builder');
-    expect(actions.some(action => action.kind === 'user')).toBe(false);
+    // The only account created is the SITE identity, never the adopted service user again.
+    expect(actions.filter(action => action.kind === 'user').map(action => (action as UserAction).name)).toEqual(['dedalo-a-gate_1']);
   });
 
-  test("the useradd points HOME at the layout's agent home and creates nothing there", () => {
+  test('no useradd creates a HOME: the service user has none, a site identity\'s are per door', () => {
     const decl = declare();
-    const user = planFor(decl, bareHost()).find(action => action.kind === 'user');
-    expect(user?.kind).toBe('user');
-    if (user?.kind !== 'user') return;
-    expect(user.home).toBe(decl.layout.roots.home);
-    expect(user.argv).toContain('--no-create-home');
-    expect(user.argv).toContain('--system');
+    for (const user of planFor(decl, bareHost()).filter((action): action is UserAction => action.kind === 'user')) {
+      expect({ name: user.name, home: user.home }).toEqual({ name: user.name, home: '/nonexistent' });
+      expect(user.argv).toContain('--no-create-home');
+      expect(user.argv).toContain('--system');
+    }
   });
 });
 
@@ -377,14 +444,24 @@ describe('the tree', () => {
         ],
       }),
     );
-    const dirs = new Set(
-      planFor(decl, bareHost())
-        .filter(action => action.kind === 'dir')
-        .map(action => action.path),
+    const actions = planFor(decl, bareHost());
+    const dirs = new Set(actions.filter(action => action.kind === 'dir').map(action => action.path));
+    // The one writable path that is ROOT's, not the daemon's — the sites' egress base — is
+    // created by systemd-tmpfiles from the rendered tmpfiles.d file (applied before the daemon
+    // starts), never by a plan `dir` action: it must be a `d` line of THAT file, as root.
+    const tmpfiles = actions.find(
+      (action): action is Extract<(typeof actions)[number], { kind: 'file' }> =>
+        action.kind === 'file' && action.path === decl.layout.agentTmpfilesPath,
     );
+    const tmpfilesLines = tmpfiles?.content.source === 'literal' ? tmpfiles.content.body.split('\n') : [];
+    const uncreated: string[] = [];
     for (const writable of readWritePaths(decl.layout)) {
-      expect(dirs.has(writable)).toBe(true);
+      if (dirs.has(writable)) continue;
+      if (tmpfilesLines.includes(`d ${writable} 0755 root root -`)) continue;
+      uncreated.push(writable);
     }
+    expect(uncreated).toEqual([]);
+    expect(actions.some(action => action.kind === 'exec' && action.step === 'agent_tmpfiles_create')).toBe(true);
   });
 
   test('every directory row of the matrix is planned with its own owner, group and mode', () => {
@@ -399,9 +476,13 @@ describe('the tree', () => {
       [decl.layout.secretsDir, 'secretsDir'],
       [decl.layout.stateDir, 'stateDir'],
       [decl.layout.roots.workspaces, 'workspaces'],
-      [decl.layout.roots.home, 'home'],
       [decl.layout.roots.audit, 'auditDir'],
       [decl.layout.runtimeDir, 'runtimeDir'],
+      [decl.layout.agentStateRoot, 'agentStateRoot'],
+      [decl.layout.retiredDir, 'retired'],
+      [join(decl.layout.agentStateRoot, 's1'), 'agentStateSite'],
+      [join(decl.layout.agentStateRoot, 's1', 'turn'), 'agentHome'],
+      [join(decl.layout.agentStateRoot, 's1', 'build'), 'agentHome'],
       [decl.layout.sites[0]!.webspace, 'webspace'],
       [decl.layout.sites[0]!.releasesDir('preprod'), 'releases'],
       [decl.layout.sites[0]!.releasesDir('prod'), 'releases'],
@@ -409,12 +490,14 @@ describe('the tree', () => {
 
     for (const [path, modeKey] of expected) {
       const action = byPath.get(path);
-      expect(action?.kind).toBe('dir');
+      expect({ path, kind: action?.kind }).toEqual({ path, kind: 'dir' });
       if (action?.kind !== 'dir') continue;
       expect(action.modeKey).toBe(modeKey);
       expect(action.mode).toBe(MODES[modeKey].mode);
       expect(action.changes).toContain('create');
     }
+    // A (site, door) HOME is its SITE identity's — never the service user's, never root's.
+    expect(byPath.get(join(decl.layout.agentStateRoot, 's1', 'turn'))?.owner).toBe('dedalo-a-gate_1');
   });
 
   test('the release STORE itself is planned, not left to an implicit mkdir -p', () => {
@@ -443,10 +526,10 @@ describe('the tree', () => {
 
   test('a directory that is already right produces NO action, and a drifted mode produces one', () => {
     const decl = declare();
-    const path = decl.layout.roots.home;
+    const path = decl.layout.roots.workspaces;
     const correct: PathObservation = {
       type: 'dir',
-      mode: MODES.home.mode,
+      mode: MODES.workspaces.mode,
       owner: decl.layout.identity.user,
       group: decl.layout.identity.group,
       empty: true,
@@ -473,9 +556,10 @@ describe('the tree', () => {
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 describe('the marker law', () => {
+  // The daemon's roots and every webspace. NOT the retired shared agent HOME (archived by
+  // the plan, never claimed) and not the agent state root (root's, written by no daemon).
   const marked = (layout: InstanceLayout) => [
     layout.roots.workspaces,
-    layout.roots.home,
     layout.roots.audit,
     ...layout.sites.map(site => site.webspace),
   ];
@@ -695,7 +779,12 @@ describe('rendered artifacts', () => {
   test('every artifact renderAll produces is planned, with the access the renderer resolved', () => {
     const decl = declare();
     const actions = planFor(decl, bareHost());
-    for (const rendered of renderAll(decl.layout, decl.manifest)) {
+    // Rendered with the plan's OWN host facts (which ordinal each site's identity holds, PID
+    // 1's release, the resume epoch — LEAD-1b), exactly as `plan()` renders them.
+    const { facts } = agentPlan(decl.layout, bareHost());
+    const rendered = renderAll(decl.layout, decl.manifest, facts);
+    expect(rendered.some(artifact => artifact.kind === 'agent_units')).toBe(true);
+    for (const rendered of renderAll(decl.layout, decl.manifest, facts)) {
       const action = fileAt(actions, rendered.path);
       expect(action?.disposition).toBe('create');
       expect(action?.content).toEqual({ source: 'literal', body: rendered.body });
@@ -719,6 +808,9 @@ describe('rendered artifacts', () => {
     }
     expect(seen.size).toBeGreaterThan(5);
     for (const [modeKey, resolved] of seen) {
+      // A SITE identity's row (its own HOMEs) has no artifact equivalent: `artifact()` refuses
+      // it by design (no host artifact is one site's). Its owner is asserted in 'the tree'.
+      if (MODES[modeKey].owner === 'identity') continue;
       const reference = artifact(decl.layout, { kind: 'unit', path: '/tmp/x', mode: modeKey, body: '' });
       expect({ owner: resolved.owner, group: resolved.group, mode: resolved.mode }).toEqual({
         owner: reference.owner,
@@ -894,12 +986,92 @@ describe('systemd and the web server', () => {
   test('a first run reloads systemd, enables and starts, tests the config and reloads — in that order', () => {
     const decl = declare();
     expect(execSteps(planFor(decl, bareHost()))).toEqual([
+      // LEAD-1b: the daemon joins the site identity's private group (identity phase), and the
+      // site's agent sockets listen before the daemon is started.
+      'identity_membership',
       'daemon_reload',
+      // The egress directories are root's (tmpfiles.d), there before any door listens.
+      'agent_tmpfiles_create',
+      'agent_sockets_enable',
       'unit_enable',
       'unit_start',
       'web_configtest',
       'web_reload',
     ]);
+  });
+
+  /**
+   * A START-LIMITED DAEMON IS STARTABLE (round 5). New code that starts before `provision apply`
+   * (a reboot or crash after an in-app update) exits 1 on the retired env keys, and Restart=always
+   * + StartLimitBurst=5/300 s puts it at start-limit-hit in ~15 s — where a plain `systemctl start`
+   * fails 'Start request repeated too quickly' and apply halts before the web reload and the
+   * retire phase. So an enabled daemon that is not running is `reset-failed` IMMEDIATELY before
+   * its start; a running one, and a first install (its unit was never started), get none.
+   */
+  test('an enabled daemon that is not running is reset-failed immediately before unit_start — and only then', () => {
+    const decl = declare();
+    const { host } = settle(decl);
+    const down = planFor(decl, { ...host, unitActive: false });
+    const steps = execSteps(down);
+    const at = steps.indexOf('unit_start');
+    expect(at).toBeGreaterThan(0);
+    expect(steps[at - 1]).toBe('unit_reset_failed');
+    const reset = down.find(action => action.kind === 'exec' && action.step === 'unit_reset_failed');
+    expect(reset?.kind === 'exec' ? reset.argv : null).toEqual(['systemctl', 'reset-failed', decl.layout.unitName]);
+    expect(execSteps(planFor(decl, host))).not.toContain('unit_reset_failed');
+    expect(execSteps(planFor(decl, bareHost()))).not.toContain('unit_reset_failed');
+  });
+
+  /**
+   * ENABLED IS NOT LISTENING. A socket that hit its trigger limit is FAILED and stays so; one
+   * stopped by hand stays stopped — `is-enabled` says yes to both. The plan starts exactly the
+   * enabled sockets that are not active, and nothing on a host where every one listens (or
+   * where the observer did not look).
+   */
+  test('an agent socket that is enabled but NOT listening is started — exactly that one, and only then', () => {
+    const decl = declare();
+    const { host } = settle(decl);
+    const enabled = [...(host.enabledSockets ?? [])].sort();
+    expect(enabled.length).toBeGreaterThanOrEqual(3);
+    const failed = enabled[1] as string;
+    const starts = (activeSockets: readonly string[] | undefined) =>
+      planFor(decl, { ...host, ...(activeSockets ? { activeSockets } : {}) })
+        .filter(action => action.kind === 'exec' && action.step === 'agent_sockets_start')
+        .map(action => (action.kind === 'exec' ? action.argv.join(' ') : ''));
+    expect({
+      oneFailed: starts(enabled.filter(socket => socket !== failed)),
+      allListening: starts(enabled),
+      notObserved: starts(undefined),
+    }).toEqual({ oneFailed: [`systemctl start ${failed}`], allListening: [], notObserved: [] });
+    // …and it is started BEFORE the daemon would be, like every door.
+    const order = execSteps(planFor(decl, { ...host, unitActive: false, activeSockets: enabled.filter(socket => socket !== failed) }));
+    expect(order.indexOf('agent_sockets_start')).toBeLessThan(order.indexOf('unit_start'));
+  });
+
+  /**
+   * THE EGRESS DIRECTORIES ARE OBSERVED, not assumed: a settled host whose `/run` lost one, or
+   * holds one with another owner, group or mode (a pre-fix daemon-made directory), is repaired
+   * by re-applying the rendered tmpfiles.d file — and a host that holds them as declared plans
+   * nothing. Without the observation, only a CHANGED file would ever re-apply them.
+   */
+  test('an egress directory missing or not root’s is repaired from the tmpfiles.d file; a settled one is left alone', () => {
+    const decl = declare();
+    const { host } = settle(decl);
+    const egress = Object.keys(host.entries).filter(path => /\/egress\/s\d+$/.test(path)).sort();
+    expect(egress.length).toBeGreaterThanOrEqual(1);
+    const dir = egress[0] as string;
+    const tmpfiles = (h: HostState) => planFor(decl, h).filter(action => action.kind === 'exec' && action.step === 'agent_tmpfiles_create').length;
+    const without = { ...host.entries };
+    delete without[dir];
+    const drifted = (change: Partial<PathObservation>) => ({ ...host, entries: { ...host.entries, [dir]: { ...(host.entries[dir] as PathObservation), ...change } } });
+    expect({
+      settled: tmpfiles(host),
+      missing: tmpfiles({ ...host, entries: without }),
+      daemonOwned: tmpfiles(drifted({ owner: decl.layout.identity.user })),
+      wrongGroup: tmpfiles(drifted({ group: decl.layout.identity.group })),
+      wrongMode: tmpfiles(drifted({ mode: 0o750 })),
+      aLink: tmpfiles(drifted({ type: 'symlink' })),
+    }).toEqual({ settled: 0, missing: 1, daemonOwned: 1, wrongGroup: 1, wrongMode: 1, aLink: 1 });
   });
 
   test('daemon-reload happens ONLY when a unit body actually changed', () => {
@@ -1214,7 +1386,9 @@ describe('idempotence', () => {
     // therefore leave the plan empty.
     const decl = declare();
     const { host } = settle(decl);
-    const allowed = new Set(observedPaths(decl.layout, decl.manifest));
+    // With the ordinals the host's ledger binds — exactly what `observeHost` hands it — so the
+    // per-site agent paths (state dirs, unit files) are on the list too.
+    const allowed = new Set(observedPaths(decl.layout, decl.manifest, ledgerOrdinals(decl.layout, host.agentLedger)));
     const narrowed: Record<string, PathObservation> = {};
     for (const [path, observation] of Object.entries(host.entries)) {
       if (allowed.has(path)) narrowed[path] = observation;
@@ -1253,7 +1427,7 @@ describe('laws that hold over every plan', () => {
         decl: plain,
         host: withEntries(settled, {
           [plain.layout.unitPath]: { ...unit, content: `${unit.content}# edited\n` },
-          [plain.layout.roots.home]: { ...settled.entries[plain.layout.roots.home]!, mode: 0o755 },
+          [plain.layout.roots.workspaces]: { ...settled.entries[plain.layout.roots.workspaces]!, mode: 0o755 },
         }),
       },
       { name: 'apache, nothing exists', decl: apache, host: bareHost() },
@@ -1355,7 +1529,6 @@ describe('every root is claimed before anything can be put in it', () => {
 
     const markedRoots = [
       layout.roots.workspaces,
-      layout.roots.home,
       layout.roots.audit,
       ...layout.sites.map(site => site.webspace),
     ];

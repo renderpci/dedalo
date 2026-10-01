@@ -79,3 +79,53 @@ export function applicationDatabaseName(): string | undefined {
 	const name = fileValues.DB_NAME ?? fileValues.DEDALO_DATABASE_CONN;
 	return name === undefined || name === '' ? undefined : name;
 }
+
+/**
+ * The CLUSTER-LEVEL half of `test:db:setup` step 5b (the `dedalo_test_ro`
+ * read-only role) — the one statement set in the build that touches an object
+ * SHARED BY EVERY SUITE DATABASE ON THE CLUSTER, and therefore the one step two
+ * concurrent builds can collide on.
+ *
+ * THE COLLISION (measured 2026-09-30, lane provisioning for the closure plan).
+ * Building `…_test_l2`, `…_l3` and `…_l4` at the same time, one build died at
+ * the very end with `ERROR: tuple concurrently updated`: `ALTER ROLE` rewrites
+ * the role's single `pg_authid` tuple, and Postgres takes no heavyweight lock
+ * that would make a second writer wait — it fails it. Measured bare: 8
+ * concurrent `ALTER ROLE dedalo_test_ro …` × 5 rounds = 31 of 40 failed. The
+ * `IF NOT EXISTS … CREATE ROLE` above it has the same shape (two builds both
+ * see "absent", the second CREATE fails `duplicate_object`).
+ *
+ * THE FIX IS SERIALIZATION, NOT RETRY. The whole step runs in ONE transaction
+ * that first takes a transaction-scoped advisory lock. Every caller connects to
+ * the `postgres` maintenance database, and an advisory lock's key space is
+ * per-database, so all concurrent builds contend on the same key and run the
+ * step one after another; the lock releases at COMMIT/ROLLBACK, so a crashed
+ * build cannot leave it held. Same 8 × 5 with the lock: 0 failed.
+ *
+ * Lives HERE (not inline in the script) so a gate can execute the EXACT text
+ * the build executes — test/unit/test_db_marker_tripwire.test.ts rule 8 runs
+ * it concurrently and requires every run to succeed. Pure string builder: no
+ * import, no connection (this module's header explains why that matters).
+ */
+export const READ_ONLY_ROLE_LOCK_KEY = 7_240_011;
+
+export function readOnlyRoleClusterSql(testDb: string): string {
+	// Interpolated as a quoted identifier: refuse, never escape (same grammar as
+	// scripts/test_db_setup.ts's own name guard).
+	if (!/^[A-Za-z0-9_.-]+$/.test(testDb)) {
+		throw new Error(
+			`readOnlyRoleClusterSql: database name '${testDb}' contains characters outside [A-Za-z0-9_.-]; refusing to interpolate it.`,
+		);
+	}
+	return `BEGIN;
+SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dedalo_test_ro') THEN
+    CREATE ROLE dedalo_test_ro;
+  END IF;
+END $$;
+ALTER ROLE dedalo_test_ro LOGIN PASSWORD 'dedalo_test_ro';
+GRANT CONNECT ON DATABASE "${testDb}" TO dedalo_test_ro;
+COMMIT;
+`;
+}

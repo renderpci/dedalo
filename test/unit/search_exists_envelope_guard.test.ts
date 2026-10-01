@@ -38,12 +38,13 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { buildIriFragment } from '../../src/core/search/builders/builder_iri.ts';
 import { buildJsonFragment } from '../../src/core/search/builders/builder_json.ts';
 import type { BuilderContext } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 
 function jsonCtx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'dd542',
 		column: 'misc',
-		tipo: 'dd551',
+		tipo: asSqlTipo('dd551', 'test context'),
 		sectionTipo: 'dd542',
 		table: 'matrix_activity',
 		lang: 'lg-nolan',
@@ -57,7 +58,7 @@ function iriCtx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'test6813',
 		column: 'iri',
-		tipo: 'test6830',
+		tipo: asSqlTipo('test6830', 'test context'),
 		sectionTipo: 'test6813',
 		table: 'matrix',
 		lang: 'lg-nolan',

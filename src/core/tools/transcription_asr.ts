@@ -482,8 +482,13 @@ export interface TranscriptionPollOptions {
 	 * is resolved FROM THE JOB'S ENGINE — see pollTranscriptionCompletion.
 	 */
 	provider?: TranscriberStatusProvider;
-	/** Injectable save fn (tests stub it — the real one writes through the tx+TM chokepoint). */
-	save?: typeof saveTranscriptionResult;
+	/**
+	 * The save — REQUIRED, with no default: saveTranscriptionResult is an
+	 * UNGATED writer (no pair, dd128 or scope check), so the caller that owns the
+	 * authorization supplies the gated save (tool_transcription's re-runs the
+	 * write door for a live principal immediately before writing).
+	 */
+	save: typeof saveTranscriptionResult;
 	/** PHP recurses forever every 4 s; we BOUND the loop (default ~30 min). */
 	maxAttempts?: number;
 	intervalMs?: number;
@@ -518,7 +523,7 @@ export interface TranscriptionPollOptions {
  */
 export async function pollTranscriptionCompletion(
 	job: TranscriptionPollJob,
-	opts: TranscriptionPollOptions = {},
+	opts: TranscriptionPollOptions,
 ): Promise<{ ok: boolean; msg: string }> {
 	const resolved = resolveTranscriberStatusProvider(job.status.engine);
 	const provider = opts.provider ?? resolved.provider;
@@ -530,7 +535,7 @@ export async function pollTranscriptionCompletion(
 		console.error(`[tool_transcription] ${msg} (pid ${job.status.pid})`);
 		return { ok: false, msg };
 	}
-	const save = opts.save ?? saveTranscriptionResult;
+	const save = opts.save;
 	const maxAttempts = opts.maxAttempts ?? 450;
 	const intervalMs = opts.intervalMs ?? 4000;
 	const sleep =

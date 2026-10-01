@@ -483,25 +483,76 @@ async function timeMachineReadFloor(principal: Principal): Promise<number> {
 }
 
 /**
+ * WHERE a level comes from — the AUTHORITY behind it, not only its size.
+ *
+ *   'superuser' — the -1 account, level 3 everywhere.
+ *   'profile'   — the caller's own dd774 matrix (directly, or through an alias
+ *                 hop to the target's matrix pair): a grant an administrator
+ *                 GAVE this profile on this pair.
+ *   'rule'      — a level every principal (of a class) gets WITHOUT the
+ *                 profile saying so: the dd15 Time Machine floor, the dd1324
+ *                 tools register, the dd655 editing-preset grant, the
+ *                 inverse-relations / 'all' wildcard, the public list-value
+ *                 fallback, the maintenance block, a degenerate empty tipo.
+ *
+ * Most callers need the level only ({@link getPermissions}). A caller that
+ * EXTENDS a grant — the subdatum read floor (security/read_floor.ts) turns a
+ * grant on a source component into read on the components its request_config
+ * names — must refuse a 'rule' basis: each rule is bounded where it was
+ * written (dd655 by the assembler's owner predicate, the public fallback to
+ * list values, the wildcard to the inverse-relations read), and none of those
+ * bounds travels with the extension. Gate: search_path_acl_native ("FORGED
+ * SOURCE").
+ */
+export type GrantBasis = 'superuser' | 'profile' | 'rule';
+
+/** One resolved permission: the 0-3 level and the authority that answered it. */
+export interface PermissionGrant {
+	readonly level: number;
+	readonly basis: GrantBasis;
+}
+
+const RULE_DENIED: PermissionGrant = Object.freeze({ level: 0, basis: 'rule' });
+const RULE_READ: PermissionGrant = Object.freeze({ level: 1, basis: 'rule' });
+const RULE_EDIT: PermissionGrant = Object.freeze({ level: 2, basis: 'rule' });
+const SUPERUSER_GRANT: PermissionGrant = Object.freeze({ level: 3, basis: 'superuser' });
+
+/**
  * get_permissions(parentTipo, tipo) → 0-3 for a principal. Reproduces the PHP
  * decision order exactly (wrapper common::get_permissions + core
- * security::get_security_permissions), first match wins.
+ * security::get_security_permissions), first match wins. The level of
+ * {@link getPermissionGrant} — ONE decision order, two views of its answer.
  */
 export async function getPermissions(
 	principal: Principal,
 	parentTipo: string,
 	tipo: string,
 ): Promise<number> {
+	return (await getPermissionGrant(principal, parentTipo, tipo)).level;
+}
+
+/**
+ * The HEAD of the decision order: every case answered before the alias hop
+ * and the matrix — the superuser and the RULE grants (see {@link GrantBasis}).
+ * Null = fall through to the profile.
+ */
+async function ruleOrderGrant(
+	principal: Principal,
+	parentTipo: string,
+	tipo: string,
+): Promise<PermissionGrant | null> {
 	// Time machine (dd15) has its own floor — see timeMachineReadFloor.
-	if (parentTipo === TIME_MACHINE_SECTION_TIPO) return timeMachineReadFloor(principal);
-	if (parentTipo === '' || tipo === '') return 0;
+	if (parentTipo === TIME_MACHINE_SECTION_TIPO) {
+		return (await timeMachineReadFloor(principal)) >= 1 ? RULE_READ : RULE_DENIED;
+	}
+	if (parentTipo === '' || tipo === '') return RULE_DENIED;
 
 	// Core resolver order.
-	if (principal.userId === SUPERUSER_ID) return 3;
-	if (parentTipo === TOOLS_REGISTER_SECTION) return 1;
+	if (principal.userId === SUPERUSER_ID) return SUPERUSER_GRANT;
+	if (parentTipo === TOOLS_REGISTER_SECTION) return RULE_READ;
 	// The blanket editing-preset grant — bounded to the caller's OWN rows by the
 	// assembler's owner predicate (see TEMP_PRESET_SECTION).
-	if (parentTipo === TEMP_PRESET_SECTION) return 2;
+	if (parentTipo === TEMP_PRESET_SECTION) return RULE_EDIT;
 	// Inverse-relations / 'all' read wildcard (the related "who-calls-me" path).
 	// AUTHZ-05 guard: the wildcard grant requires a CONCRETE parent section tipo,
 	// so getPermissions(_, 'all', 'all') can NEVER inherit a blanket level-1 grant
@@ -513,14 +564,25 @@ export async function getPermissions(
 		(tipo === INVERSE_RELATIONS_COMPONENT || tipo === 'all') &&
 		/^[a-z]+[0-9]+$/.test(parentTipo)
 	) {
-		return 1;
+		return RULE_READ;
 	}
 
 	// Maintenance-area gate: BLOCKS non-admin/non-dev (does not grant; admins
 	// fall through to the matrix).
 	if (tipo === AREA_MAINTENANCE && !principal.isGlobalAdmin && !principal.isDeveloper) {
-		return 0;
+		return RULE_DENIED;
 	}
+	return null;
+}
+
+/** {@link getPermissions} with the authority that answered (see {@link GrantBasis}). */
+export async function getPermissionGrant(
+	principal: Principal,
+	parentTipo: string,
+	tipo: string,
+): Promise<PermissionGrant> {
+	const ruled = await ruleOrderGrant(principal, parentTipo, tipo);
+	if (ruled !== null) return ruled;
 
 	// component_alias (WC-020): ACL grants live on REAL components — an alias
 	// is a view of its target with the target's exact rights (no privilege
@@ -530,22 +592,24 @@ export async function getPermissions(
 		const { resolveAliasTargetTipo } = await import('../ontology/alias.ts');
 		const aliasTarget = await resolveAliasTargetTipo(tipo).catch(() => null);
 		if (aliasTarget !== null) {
-			return getPermissions(principal, parentTipo, aliasTarget);
+			return getPermissionGrant(principal, parentTipo, aliasTarget);
 		}
 	}
 
 	// Matrix lookup.
 	const table = await getPermissionsTable(principal.userId);
-	let level = table.get(`${parentTipo}_${tipo}`) ?? 0;
+	const level = table.get(`${parentTipo}_${tipo}`) ?? 0;
 
 	// List/dd/notes fallback: publicly readable list values.
-	if (level === 0 && (await getModelByTipo(parentTipo)) === 'section') {
-		const matrixTable = await getMatrixTableFromTipo(parentTipo);
-		if (matrixTable !== null && PUBLIC_LIST_TABLES.has(matrixTable)) {
-			level = 1;
-		}
-	}
-	return level;
+	if (level === 0 && (await isPublicListSection(parentTipo))) return RULE_READ;
+	return { level, basis: 'profile' };
+}
+
+/** A SECTION stored in a {@link PUBLIC_LIST_TABLES} table (its list values are public). */
+async function isPublicListSection(parentTipo: string): Promise<boolean> {
+	if ((await getModelByTipo(parentTipo)) !== 'section') return false;
+	const matrixTable = await getMatrixTableFromTipo(parentTipo);
+	return matrixTable !== null && PUBLIC_LIST_TABLES.has(matrixTable);
 }
 
 /**
@@ -642,6 +706,26 @@ export function inheritSubdatumPermission(childLevel: number, callerLevel: numbe
 
 /** The metadata/section-info component tipos (PHP get_metadata_definition_tipos). */
 const METADATA_TIPOS: ReadonlySet<string> = new Set(Object.values(AUDIT_TIPOS));
+
+/**
+ * THE SEARCH SURFACE'S STANDING GRANTS — the (section, component) pairs every
+ * searcher may FILTER on whatever the dd774 matrix says (PHP
+ * component_common::get_component_permissions, search branch): the section-info
+ * metadata components (created/modified date and user, dd196 group — no profile
+ * grants them per section, and the search panel offers them to everyone) and
+ * every component of the thesaurus template section. ONE rule, read by the
+ * search-mode context stamp ({@link resolveComponentContextPermission}) AND by
+ * the search path's root/relation-leaf key (search/conform.ts, SEC-1), so the
+ * panel can never offer a field the filter then refuses.
+ */
+export function searchSurfaceGrants(sectionTipo: string, componentTipo: string): boolean {
+	return sectionTipo === THESAURUS_SECTION || METADATA_TIPOS.has(componentTipo);
+}
+
+/** The metadata component tipos (read-only view — the search key lists the relation ones). */
+export function metadataComponentTipos(): readonly string[] {
+	return [...METADATA_TIPOS];
+}
 
 /**
  * dd128 own-record components PHP forces to READ for a non-global-admin, so a
@@ -811,8 +895,7 @@ export async function resolveComponentContextPermission(
 	mode: string,
 ): Promise<number> {
 	if (mode === 'search') {
-		if (sectionTipo === THESAURUS_SECTION) return 2;
-		if (METADATA_TIPOS.has(tipo)) return 2;
+		if (searchSurfaceGrants(sectionTipo, tipo)) return 2;
 		// PHP (int)$section_id === 0: a no-record id grants 2 — classified now
 		// (WC-2026-08-10-section-id-int-canonical) instead of the NaN sniff. A
 		// SYNTHETIC token ('search_<n>') and an EXTERNAL remote id both keep the

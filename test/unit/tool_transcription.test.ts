@@ -53,6 +53,7 @@ import {
 	type ScheduleRepair,
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
+import { issuePollHandle } from '../../tools/tool_transcription/server/poll_handle.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
@@ -235,11 +236,15 @@ function liveFailureEnvelope(): WireFailure {
 		"const {getLoadedTool}=await import('./src/core/tools/loader.ts');",
 		"const t=await getLoadedTool('tool_transcription');",
 		"const {toErrorEnvelope}=await import('./src/core/errors/index.ts');",
+		// The poll accepts only a handle THIS process issued (poll_handle.ts), bound
+		// to the caller and the record — minted here, in the child that polls.
+		"const {issuePollHandle}=await import('./tools/tool_transcription/server/poll_handle.ts');",
+		"const pid=issuePollHandle({pid:4321,engine:'babel_transcriber',userId:-1,sectionTipo:'test3',componentTipo:'test94',sectionId:1});",
 		'try{',
 		'const r=await t.module.apiActions.check_server_transcriber_status.handler({',
 		'principal:{userId:-1,isGlobalAdmin:true,isDeveloper:true},userId:-1,background:false,',
 		"options:{media_ddo:{component_tipo:'test94',section_tipo:'test3',section_id:1},",
-		"transcriber_engine:'babel_transcriber',pid:4321}});",
+		"transcriber_engine:'babel_transcriber',pid}});",
 		'console.log(JSON.stringify(r));',
 		// The handler REFUSES BY THROWING now (ERRORS_SPEC §4); the wire body the
 		// browser reads is what the chokepoint's converter makes of it, so the
@@ -278,23 +283,39 @@ describe('check_server_transcriber_status handler', () => {
 				background: false,
 			}),
 		);
-		// security.ts answers an unusable record target with the `invalid_request`
-		// token, which LEGACY_TOKEN_MAP resolves to request.invalid.
+		// The write door (closure Step 3) refuses an unusable target at its GRAMMAR
+		// step, before any permission or record read.
 		expect(refusal.code).toBe('request.invalid');
-		expect(refusal.message).toContain('invalid record target');
+		expect(refusal.message).toContain('section_tipo is not a valid tipo');
 	});
 
-	test('reports the missing required parameters (PHP message shape)', async () => {
+	test('no media_ddo at all is a GATE refusal (the gate runs first, unconditionally)', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
 		const refusal = await refusalOf(
 			handler({ principal: stubPrincipal, userId: 7, options: {}, background: false }),
 		);
+		expect(refusal.code).toBe('request.invalid');
+	});
+
+	test('reports the missing required parameters past the gate (PHP message shape)', async () => {
+		// The superuser passes the READ gate on a well-formed media_ddo, so what is
+		// left to refuse is the missing pid. The engine is NOT required: the job
+		// polled — its id AND its engine — is the poll handle's (poll_handle.ts).
+		const loaded = await getLoadedTool('tool_transcription');
+		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
+		const superuser: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+		const refusal = await refusalOf(
+			handler({
+				principal: superuser,
+				userId: -1,
+				options: { media_ddo: { component_tipo: 'test94', section_tipo: 'test3', section_id: 1 } },
+				background: false,
+			}),
+		);
 		expect(refusal.code).toBe('request.invalid_options');
 		// A public-disclosure code, so the sentence still reaches the wire.
-		expect(refusal.publicMessage).toBe(
-			'Missing required parameters: media_ddo, transcriber_engine, pid',
-		);
+		expect(refusal.publicMessage).toBe('Missing required parameters: pid');
 	});
 });
 
@@ -349,7 +370,14 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 				options: {
 					media_ddo: { component_tipo: 'test94', section_tipo: 'test3', section_id: 1 },
 					transcriber_engine: 'babel_transcriber',
-					pid: 4321,
+					pid: issuePollHandle({
+						pid: 4321,
+						engine: 'babel_transcriber',
+						userId: -1,
+						sectionTipo: 'test3',
+						componentTipo: 'test94',
+						sectionId: 1,
+					}),
 				},
 				background: false,
 			}),

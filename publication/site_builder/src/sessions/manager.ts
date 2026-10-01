@@ -19,13 +19,15 @@ import { randomUUID } from 'node:crypto';
 import { config, parseEnvPairs } from '../config';
 import { confinedPath } from '../util/paths';
 import { ConflictError, LimitExceededError, NotFoundError, ValidationError } from '../errors';
-import { assertTurnConfinementAvailable } from '../drivers/confinement';
+import { assertConfinementAvailable, policyFromConfig, type ConfinementPolicy } from '../drivers/confinement';
+import { MCP_PORT } from '../drivers/network_profile';
 import { getDriver } from '../drivers/registry';
 import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/types';
+import { readSiteDriver, seedDriverRecords } from '../sites/driver_record';
 import { readManifest } from '../sites/manifest';
 import { commitAll, changedFiles } from '../sites/git';
-import { assertWithinQuota, siteExists } from '../sites/workspace';
-import { busyReason, endTurn, tryBeginTurn } from '../workspace_activity';
+import { assertWithinQuota, listSlugs, siteExists } from '../sites/workspace';
+import { busyDetail, busyReason, end, endTurn, tryBegin, tryBeginTurn } from '../workspace_activity';
 import type { SessionEventBody, SessionMeta, StoredEvent } from './events';
 import {
   appendEvent,
@@ -110,32 +112,52 @@ export interface StartResult {
   session_id: string;
 }
 
-/** Starts a NEW session for a site and runs its first turn. Returns the session id. */
-export async function startSession(slug: string, prompt: string, driverOverride?: DriverId): Promise<StartResult> {
+/**
+ * Starts a NEW session for a site and runs its first turn. Returns the session id.
+ *
+ * `policy` is the confinement the turn is CHECKED against and RUN under — one value, threaded
+ * to the supervisor and to the turn's git commands (a parameter for the reason `startBuild`'s
+ * is: a refusal whose input cannot be stated is one no gate can put a failing host in front of).
+ */
+export async function startSession(
+  slug: string,
+  prompt: string,
+  driverOverride?: DriverId,
+  policy: ConfinementPolicy = policyFromConfig(),
+): Promise<StartResult> {
   validatePrompt(prompt);
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
-  // BEFORE ANY RESERVATION. A host that cannot run a turn under the agent's own uid refuses
+  // BEFORE ANY RESERVATION, and with the site's OWN driver: its provider host is part of the
+  // egress plan, and a driver whose provider nobody named can reach nothing
+  // (AGENT_PROVIDER_HOSTS). A host that cannot run this turn under the agent's own uid refuses
   // the REQUEST (503, naming what is missing) instead of accepting a session and failing it
-  // asynchronously — and, above all, instead of running the agent as this daemon.
-  assertTurnConfinementAvailable();
+  // asynchronously — and, above all, instead of running the agent as this daemon. Never the
+  // instance DEFAULT driver's plan: that would refuse a claude_code site on an opencode host
+  // for a provider list it does not use. And the site's driver is the DAEMON's record, never
+  // `site.json` (agent-writable: a planted `"driver":"opencode"` was a way around every PLANT
+  // closure of the Claude Code driver — sites/driver_record.ts).
+  const driver = driverOverride ?? (await readSiteDriver(slug));
+  await assertConfinementAvailable('turn', policy, driver, slug);
+  // And the DRIVER's own question (claude_code: does the installed CLI list every flag that
+  // keeps agent-written settings, hooks and MCP servers out of the turn?) — 503, before any
+  // reservation, in either confinement mode.
+  await getDriver(driver).admit?.();
 
   // Reserve the workspace SYNCHRONOUSLY — check-and-mark with no await in between, and
   // cross-exclusive with builds (workspace_activity.ts). From here every failure path
   // before runTurn takes ownership must endTurn; runTurn's finally owns it afterwards.
   if (!tryBeginTurn(slug)) {
     const reason = busyReason(slug) ?? 'session_running';
-    throw new ConflictError(
-      reason === 'build_running'
-        ? `A build is running for '${slug}'`
-        : `A session is already running for '${slug}'`,
-      reason,
-    );
+    throw new ConflictError(busyDetail(reason, slug), reason);
   }
 
   try {
-    const manifest = await readManifest(slug);
-    const driver = driverOverride ?? manifest.driver;
-
+    // AND THE SITE IS ASKED FOR AGAIN, UNDER THE HOLD. The check at the top ran before the
+    // admission awaits, and a delete that completed while this request waited there left the
+    // reservation free: the meta write below would then have re-created `<slug>/` — a husk
+    // that is not a site. Once the turn holds the site no delete can run (it holds too), so
+    // this answer stays true for the whole turn.
+    if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
     await enforceQuota(slug);
     acquireGlobalSlot();
 
@@ -152,6 +174,7 @@ export async function startSession(slug: string, prompt: string, driverOverride?
         turns: 0,
         state: 'running',
         resume_token: null,
+        identity_epoch: policy.identityEpoch ?? config.AGENT_IDENTITY_EPOCH,
       };
       await writeMeta(meta);
 
@@ -160,7 +183,7 @@ export async function startSession(slug: string, prompt: string, driverOverride?
 
       // Fire the turn detached; the caller streams via SSE. Ownership of the workspace
       // reservation and the global slot transfers to runTurn's finally here.
-      void runTurn(meta, prompt).catch(() => {
+      void runTurn(meta, prompt, policy).catch(() => {
         /* runTurn contains its own error handling; this guards against an unexpected throw */
       });
 
@@ -176,23 +199,26 @@ export async function startSession(slug: string, prompt: string, driverOverride?
 }
 
 /** Continues an existing session with a follow-up message (a new turn, resumed). */
-export async function sendMessage(sessionId: string, message: string): Promise<void> {
+export async function sendMessage(
+  sessionId: string,
+  message: string,
+  policy: ConfinementPolicy = policyFromConfig(),
+): Promise<void> {
   validatePrompt(message);
   const slug = slugBySession.get(sessionId) ?? (await resolveSlugFromDisk(sessionId));
   if (!slug) throw new NotFoundError(`No session '${sessionId}'`);
-  // Asked again, for the same reason: a second turn is as much an agent run as the first,
-  // and a host that lost its runner between them must not answer it as this daemon.
-  assertTurnConfinementAvailable();
+  // Asked again, before the reservation and with the SESSION's driver (fixed at its start):
+  // a second turn is as much an agent run as the first, and a host that lost its runner
+  // between them must not answer it as this daemon.
+  const known = await readMeta(slug, sessionId);
+  if (!known) throw new NotFoundError(`No session '${sessionId}'`);
+  await assertConfinementAvailable('turn', policy, known.driver, slug);
+  await getDriver(known.driver).admit?.();
 
   // Same synchronous reservation as startSession (cross-exclusive with builds).
   if (!tryBeginTurn(slug)) {
     const reason = busyReason(slug) ?? 'session_running';
-    throw new ConflictError(
-      reason === 'build_running'
-        ? `A build is running for '${slug}'`
-        : `A turn is already running for '${slug}'`,
-      reason,
-    );
+    throw new ConflictError(reason === 'session_running' ? `A turn is already running for '${slug}'` : busyDetail(reason, slug), reason);
   }
 
   try {
@@ -209,7 +235,7 @@ export async function sendMessage(sessionId: string, message: string): Promise<v
       await writeMeta(meta);
       liveByslug.set(slug, { slug, session_id: sessionId, state: 'running', proc: null, interrupted: false });
 
-      void runTurn(meta, message).catch(() => {});
+      void runTurn(meta, message, policy).catch(() => {});
     } catch (error) {
       releaseGlobalSlot();
       throw error;
@@ -264,21 +290,36 @@ export async function interruptLiveTurns(): Promise<number> {
  * events (persist → fan), then commits the workspace and writes turn_end + updated meta.
  * Always releases the global slot and clears the running state, on every exit path.
  */
-async function runTurn(meta: SessionMeta, prompt: string): Promise<void> {
+async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPolicy): Promise<void> {
   const { slug, session_id: sessionId, driver } = meta;
   const turn = meta.turns + 1;
   let finalState: SessionState = 'idle';
+  // THE RESUME EPOCH (LEAD-1b). A resume token names agent state in a HOME owned by the uid
+  // that minted it; when the site's identity has changed since (the epoch moved — a
+  // migration, a re-declared site), that state is not this identity's to resume, so the
+  // token is DROPPED and the drop is a typed event in the session's own log. Sessions older
+  // than the field count as epoch 0.
+  const epoch = policy.identityEpoch ?? config.AGENT_IDENTITY_EPOCH;
+  const tokenEpoch = typeof meta.identity_epoch === 'number' ? meta.identity_epoch : 0;
+  const staleToken = meta.resume_token !== null && meta.resume_token !== undefined && tokenEpoch !== epoch;
+  if (staleToken) meta.resume_token = null;
+  meta.identity_epoch = epoch;
   let resumeToken: string | undefined = meta.resume_token ?? undefined;
   let sawError = false;
 
   try {
     // Spawn BEFORE the first await so the AgentProcess is registered the instant the site
     // is marked running — otherwise stopSession could race in and find no proc to kill.
-    const opts = buildStartOptions(slug, driver, prompt, meta.resume_token ?? undefined);
+    const opts: SessionStartOptions = {
+      ...buildStartOptions(slug, driver, prompt, meta.resume_token ?? undefined, policy.mode),
+      slug,
+      confinement: policy,
+    };
     const proc = getDriver(driver).startTurn(opts);
     const live = liveByslug.get(slug);
     if (live) live.proc = proc;
 
+    if (staleToken) await persist(slug, sessionId, { type: 'resume_unavailable', reason: 'agent identity migrated' });
     await persist(slug, sessionId, { type: 'turn_start', turn, prompt });
 
     for await (const event of proc.events) {
@@ -290,7 +331,7 @@ async function runTurn(meta: SessionMeta, prompt: string): Promise<void> {
     // File-change backstop: derive the turn's edits from git, so every driver reports a
     // consistent file_change regardless of how well its native stream describes edits.
     try {
-      const files = await changedFiles(slug);
+      const files = await changedFiles(slug, policy);
       if (files.length > 0) await persist(slug, sessionId, { type: 'file_change', files });
     } catch {
       // non-fatal
@@ -298,9 +339,15 @@ async function runTurn(meta: SessionMeta, prompt: string): Promise<void> {
 
     // Commit whatever the agent wrote, so the turn is a rollback point.
     try {
-      await commitAll(slug, `agent: session ${sessionId} turn ${turn}`);
-    } catch {
-      // a failed commit is logged by git.ts's throw path but must not fail the turn
+      await commitAll(slug, `agent: session ${sessionId} turn ${turn}`, policy);
+    } catch (error) {
+      // A failed commit must not fail the turn — but it is never a silence.
+      console.error(`[sessions] the commit after turn ${turn} of '${slug}' failed:`, error);
+      // OWED, whatever refused it — not only `daemon_stopping`. During a stop PID 1 stops the
+      // agent instances first and drops a git connection with `unit_refused` before this daemon
+      // has had SIGTERM; a quarantined identity or a nonconformant unit refuses it too. The next
+      // boot's sweep makes this commit as a recovery point (`sweepOnBoot`).
+      meta.recovery_pending = true;
     }
 
     // An interrupted turn reports 'interrupted' regardless of how its stream ended.
@@ -355,20 +402,63 @@ async function persist(slug: string, sessionId: string, body: SessionEventBody):
  * the session→slug index so stop/subscribe work for pre-restart sessions.
  */
 export async function sweepOnBoot(): Promise<void> {
+  // FIRST, every site's DRIVER RECORD (sites/driver_record.ts): a site from before the record
+  // has none, and from now on a driver-less session of such a site is refused, not defaulted.
+  await seedDriverRecords(await listSlugs());
   const all = await allSessionMetaFiles();
   for (const { slug, sessionId } of all) {
     slugBySession.set(sessionId, slug);
-    const meta = await readMeta(slug, sessionId);
+    let meta: SessionMeta | null;
+    try {
+      meta = await readMeta(slug, sessionId);
+    } catch (error) {
+      // A PLANTED sidecar (a `.builder` a run recreated as its own, a link, a fifo) is refused —
+      // and is ONE site's incident: the sweep of every other site goes on.
+      console.error(`[sessions] boot sweep: the meta of session ${sessionId} of '${slug}' was refused:`, error);
+      continue;
+    }
     if (!meta) continue;
-    if (meta.state === 'running') {
-      try {
-        await commitAll(slug, `agent: recovered after restart (session ${sessionId})`);
-      } catch {
-        // non-fatal
+    // 'running' is a process that died mid-turn; `recovery_pending` a commit that was owed and
+    // not recorded (sessions/events.ts). Both leave work only a recovery commit records.
+    const wasRunning = meta.state === 'running';
+    if (wasRunning || meta.recovery_pending === true) {
+      // THE RECOVERY COMMIT HOLDS THE SITE (LEAD-1b). It runs git — agent-authored text's
+      // interpreter — in the workspace, exactly as a turn's own commit does, so it takes the
+      // same kind of reservation: nothing else may start on the site while it runs, and a
+      // confined run of this site is refused without one at all.
+      let recorded = false;
+      if (tryBegin(slug, 'recovery')) {
+        try {
+          await commitAll(slug, `agent: recovered after restart (session ${sessionId})`);
+          recorded = true;
+        } catch (error) {
+          // Not fatal to the boot — but a recovery point that was not made is a fact an
+          // operator must be able to find, never a silence.
+          console.error(`[sessions] the recovery commit for '${slug}' (session ${sessionId}) failed:`, error);
+        } finally {
+          end(slug, 'recovery');
+        }
+      } else {
+        console.error(
+          `[sessions] the recovery commit for '${slug}' (session ${sessionId}) was skipped: the site ` +
+            `is held (${busyReason(slug) ?? 'unknown'}).`,
+        );
       }
-      meta.state = 'interrupted';
-      await writeMeta(meta);
-      await persist(slug, sessionId, { type: 'turn_end', state: 'interrupted' });
+      // A refused or skipped commit stays OWED until one is made — for a session that was
+      // 'running' too, which had no flag yet: unflagged, it would leave 'running' for
+      // 'interrupted' and no later boot would ask again (the next turn's commit then absorbs
+      // the work under its own name).
+      if (recorded) delete meta.recovery_pending;
+      else meta.recovery_pending = true;
+      if (wasRunning) meta.state = 'interrupted';
+      try {
+        await writeMeta(meta);
+        if (wasRunning) await persist(slug, sessionId, { type: 'turn_end', state: 'interrupted' });
+      } catch (error) {
+        // The same ONE-site incident as a refused read (a `.builder` swapped mid-sweep): said,
+        // and the sweep of every other site goes on.
+        console.error(`[sessions] boot sweep: the meta of session ${sessionId} of '${slug}' could not be written:`, error);
+      }
     }
   }
 }
@@ -408,20 +498,34 @@ function releaseGlobalSlot(): void {
   if (activeTurns > 0) activeTurns--;
 }
 
-/** Builds the driver's tight env allowlist — the agent-secrets boundary. */
-function buildStartOptions(
+/**
+ * Builds the driver's tight env allowlist — the agent-secrets boundary — and its MCP
+ * attachment.
+ *
+ * THE PUBLICATION API KEY NEVER ENTERS A CONFINED TURN. Under `systemd_scope` the agent is
+ * handed a LOOPBACK MCP url with no headers — the egress shim forwards it to the gate's
+ * mcp.sock — and the key travels only in `mcpUpstream`, which the supervisor gives the gate
+ * and nothing writes to a file. Before this, the key sat in `.builder/mcp.json` inside the
+ * workspace for the life of the turn, readable by the agent it was meant to authorize. Under
+ * a DECLARED `none` there is no gate, so the direct shape (URL + X-API-Key header) remains,
+ * as that mode's announced cost.
+ *
+ * `mode` is a parameter so both shapes are assertable on a host that runs only one of them.
+ */
+export function buildStartOptions(
   slug: string,
   driver: DriverId,
   prompt: string,
   resumeToken: string | undefined,
+  mode: 'systemd_scope' | 'none' = config.AGENT_CONFINEMENT,
 ): SessionStartOptions {
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const baseEnv: Record<string, string> = {
     PATH: process.env.PATH ?? '/usr/bin:/bin',
-    // The agent's OWN home (0700, its own root), never the workspaces root: a HOME inside
-    // the tree an agent turn writes to is a site able to rewrite the agent's configuration
-    // — its credentials file, its MCP servers — for every later turn on every other site.
-    HOME: config.AGENT_HOME,
+    // NO HOME (LEAD-1b). The UNIT fixes it — each (site, door) its own directory, owned by
+    // the site's identity, masked from every other run — and the shim refuses a spec that
+    // tries to set it. A caller-chosen HOME was one HOME shared by every site: the cross-site
+    // plant channel for the agent's configuration, credentials and MCP servers.
   };
   if (driver === 'claude_code' && config.ANTHROPIC_API_KEY) {
     baseEnv.ANTHROPIC_API_KEY = config.ANTHROPIC_API_KEY;
@@ -429,21 +533,23 @@ function buildStartOptions(
   if (driver === 'opencode') Object.assign(baseEnv, parseEnvPairs(config.OPENCODE_ENV));
   if (driver === 'pi') Object.assign(baseEnv, parseEnvPairs(config.PI_ENV));
 
+  const apiBase = config.PUBLICATION_API_URL.replace(/\/$/, '');
+  const common = { workspace, driver, prompt, resumeToken, env: baseEnv, timeoutMs: config.SESSION_TURN_TIMEOUT_MS };
+
+  if (mode === 'systemd_scope') {
+    return {
+      ...common,
+      mcp: { name: 'dedalo_publication', url: `http://127.0.0.1:${MCP_PORT}/mcp` },
+      mcpUpstream: { url: apiBase, apiKey: config.PUBLICATION_API_KEY },
+    };
+  }
+
   const headers: Record<string, string> | undefined = config.PUBLICATION_API_KEY
     ? { 'X-API-Key': config.PUBLICATION_API_KEY }
     : undefined;
-
   return {
-    workspace,
-    prompt,
-    resumeToken,
-    mcp: {
-      name: 'dedalo_publication',
-      url: `${config.PUBLICATION_API_URL.replace(/\/$/, '')}/mcp`,
-      headers,
-    },
-    env: baseEnv,
-    timeoutMs: config.SESSION_TURN_TIMEOUT_MS,
+    ...common,
+    mcp: { name: 'dedalo_publication', url: `${apiBase}/mcp`, headers },
   };
 }
 

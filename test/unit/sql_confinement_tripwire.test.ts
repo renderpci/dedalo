@@ -480,6 +480,13 @@ const T2_UNRESOLVED_OWNER_TARGETS: Readonly<Record<string, { targets: number; re
 		reason:
 			'`${DIFFUSION_JOBS_TABLE}` = resolveJobsTable() (dedalo_ts_diffusion_jobs or its seam).',
 	},
+	'src/diffusion/jobs/run_ledger.ts': {
+		// DIFF-1 (audit 2026-09-26): the job-scoped run ledger — one self-fenced
+		// append per committed batch, one fenced clear when the run completes.
+		targets: 2,
+		reason:
+			'`${DIFFUSION_JOB_LEDGER_TABLE}` = schema.ts (dedalo_ts_diffusion_job_ledger, or `<jobs seam>_ledger`).',
+	},
 };
 
 /**
@@ -1270,7 +1277,7 @@ afterAll(async () => {
  *   ├─ zzw30 (2, section_group)              ← ties with zzw20 → tipo order
  *   └─ zzw10 (9, section)         ── zzw12 (component_filter)
  *                                     ↑ nested SECTION: returned, not descended
- *   zzwv0 (section, relations→[zzw0])        ← virtual section, no own subtree
+ *   zzw40 (section, relations→[zzw0])        ← virtual section, no own subtree (a tipo IN tld zzw — SURF-1 grammar)
  */
 async function seedScratchSubtree(): Promise<void> {
 	await upsertDdOntologyNode(scratchNode({ tipo: 'zzw0', model: 'section' }));
@@ -1295,7 +1302,7 @@ async function seedScratchSubtree(): Promise<void> {
 		scratchNode({ tipo: 'zzw12', parent: 'zzw10', model: 'component_filter' }),
 	);
 	await upsertDdOntologyNode(
-		scratchNode({ tipo: 'zzwv0', model: 'section', relations: [{ tipo: 'zzw0' }] }),
+		scratchNode({ tipo: 'zzw40', model: 'section', relations: [{ tipo: 'zzw0' }] }),
 	);
 	clearOntologyCaches();
 }
@@ -1356,10 +1363,10 @@ describe('T3 — canonical accessor semantics (one policy for all walks)', () =>
 		// …but IS from the nested section itself.
 		expect(await findFirstDescendantTipoByModel('zzw10', 'component_filter')).toBe('zzw12');
 		// Virtual section resolves through relations[0].tipo by default…
-		expect(await findFirstDescendantTipoByModel('zzwv0', 'component_input_text')).toBe('zzw21');
+		expect(await findFirstDescendantTipoByModel('zzw40', 'component_input_text')).toBe('zzw21');
 		// …and stays strict own-subtree when the caller opts out.
 		expect(
-			await findFirstDescendantTipoByModel('zzwv0', 'component_input_text', {
+			await findFirstDescendantTipoByModel('zzw40', 'component_input_text', {
 				virtualFallback: false,
 			}),
 		).toBeNull();

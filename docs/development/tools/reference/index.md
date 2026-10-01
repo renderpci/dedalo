@@ -108,6 +108,7 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_user_admin` | User self-administration panel launched from the username menu, providing administrative actions for the logged-in user; UI-only | [reference](tool_user_admin.md) |
 | `tool_assistant` | In-app AI chat assistant — a thin client over a server-side agent for natural-language search/navigation, ontology queries and confirmed (propose→apply) record create/edit; model selectable per conversation (cloud or local/private) | [AI Assistant section](../../../core/ai/assistant/index.md) |
 | `tool_error_report` | Captures and reports application errors from the client for administrators/developers to inspect | [reference](tool_error_report.md) |
+| `tool_rag` | The permission to request generated answers over the collection (`dd_rag_api` `ask`); grant-only — no window, no client, no server module | [reference](tool_rag.md) |
 
 ### Misc / internal
 
@@ -117,4 +118,4 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_qr` | Base/build sample tool (not for production use); UI-only | [reference](tool_qr.md) |
 
 !!! note "Counting the tools"
-    The directory `tools/` contains exactly 37 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). All 37 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 25 of the 37 ship a `server/index.ts` package (including `tool_dev_template` and `tool_identify`, whose module holds a single background-only `cluster` action); the other 12 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`.
+    The directory `tools/` contains exactly 38 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). All 38 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 25 of the 38 ship a `server/index.ts` package (including `tool_dev_template` and `tool_identify`, whose module holds a single background-only `cluster` action); 12 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`; and `tool_rag` is grant-only (no code at all).

@@ -51,7 +51,12 @@
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { dbTimestamp } from '../db/db_timestamp.ts';
-import { type DdOntologyRow, readDdOntologyRow, upsertDdOntologyNode } from '../db/dd_ontology.ts';
+import {
+	type DdOntologyRow,
+	ddOntologyIdentifierViolations,
+	readDdOntologyRow,
+	upsertDdOntologyNode,
+} from '../db/dd_ontology.ts';
 import {
 	MATRIX_JSONB_COLUMNS,
 	type MatrixJsonbColumn,
@@ -178,7 +183,30 @@ async function planOntology(
 			);
 		}
 	}
+	for (const row of [...plan.insert, ...plan.overwrite]) refuseIdentifierViolations(row);
 	return plan;
+}
+
+/**
+ * SURF-1: a node the restore would WRITE must obey the dd_ontology identifier
+ * grammar (db/dd_ontology.ts ddOntologyIdentifierViolations — the same
+ * predicate the upsert door and the CHECK constraints state). Refused at PLAN
+ * time, so a dry run shows it and nothing is written; the upsert door would
+ * refuse it too, but mid-write, after records of earlier sections had landed.
+ */
+function refuseIdentifierViolations(row: DdOntologyRow): void {
+	const violations = ddOntologyIdentifierViolations(row);
+	if (violations.length === 0) return;
+	const shown = (value: unknown) => (JSON.stringify(value) ?? 'undefined').slice(0, 64);
+	refuse(
+		`ontology node ${shown(row.tipo)} breaks the dd_ontology identifier grammar — ${violations
+			.map((v) => `${v.column} ${shown(v.value)} (${v.reason})`)
+			.join('; ')}`,
+		{
+			tipo: shown(row.tipo),
+			violations: violations.map((v) => `${v.column}:${v.reason}`).join(','),
+		},
+	);
 }
 
 // ── plan: locators ──────────────────────────────────────────────────────────
@@ -410,7 +438,15 @@ async function writeRecordRow(line: ArchiveRecordLine, ctx: RowWriteContext): Pr
 	);
 	await afterRecordWrite(
 		{ table: ctx.table, sectionTipo: ctx.sectionTipo, sectionId: line.section_id },
-		{ door: 'restoreArchive', touchedKeys: touchedKeysOf(snapshot), rag: 'index' },
+		{
+			door: 'restoreArchive',
+			touchedKeys: touchedKeysOf(snapshot),
+			rag: 'index',
+			observed: {
+				kind: 'none',
+				reason: 'PENDING: archive restore → persistRecordColumns/persistRecordBirth (owner step)',
+			},
+		},
 	);
 }
 

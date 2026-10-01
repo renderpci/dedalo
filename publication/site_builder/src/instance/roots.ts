@@ -101,14 +101,15 @@ export interface InstanceRoot {
 }
 
 /**
- * THE THREE STATE ROOTS, exactly the set `src/provision/layout.ts` derives, the provisioner
- * marks and the unit's `ReadWritePaths=` confines. One list, read from the same config the
- * rest of the daemon uses, so a root that moves moves here too.
+ * THE DAEMON'S STATE ROOTS, exactly the set `src/provision/layout.ts` derives, the
+ * provisioner marks and the unit's `ReadWritePaths=` confines. One list, read from the same
+ * config the rest of the daemon uses, so a root that moves moves here too. (The agent state
+ * root is ROOT's and the daemon never writes it — each site identity writes its own HOME
+ * through its own unit — so it is not the daemon's to prove here; LEAD-1b retired AGENT_HOME.)
  */
-export function daemonRoots(cfg: Pick<Config, 'SITES_ROOT' | 'AGENT_HOME' | 'AUDIT_DIR'> = config): InstanceRoot[] {
+export function daemonRoots(cfg: Pick<Config, 'SITES_ROOT' | 'AUDIT_DIR'> = config): InstanceRoot[] {
   return [
     { label: 'SITES_ROOT', path: cfg.SITES_ROOT, probe: 'create', ownedByService: true },
-    { label: 'AGENT_HOME', path: cfg.AGENT_HOME, probe: 'create', ownedByService: true },
     {
       label: 'AUDIT_DIR',
       path: cfg.AUDIT_DIR,
@@ -356,7 +357,7 @@ export function assertRootsWritable(instance: string, roots: readonly InstanceRo
 
     const probe = join(root.path, `.dedalo_site_write_probe.${process.pid}`);
     try {
-      // O_EXCL|O_CREAT|O_NOFOLLOW, not `writeFileSync`. `SITES_ROOT` and `AGENT_HOME` are
+      // O_EXCL|O_CREAT|O_NOFOLLOW, not `writeFileSync`. `SITES_ROOT` is
       // 2770 and the AGENT uid is in that group, so this is a path inside a directory the
       // other principal can write: a plain create FOLLOWS a link left at this name and
       // truncates whatever it points at, as the daemon (`util/shared_tree.ts` — the same

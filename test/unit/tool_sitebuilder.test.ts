@@ -13,10 +13,19 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+// The DAEMON's error classes (a dependency-free module): the reasons it really sends.
+import {
+	CONFINEMENT_CODES,
+	type ConfinementCode,
+	ConfinementRefusedError,
+	ConfinementUnavailableError,
+} from '../../publication/site_builder/src/errors.ts';
 import * as realConfigModule from '../../src/config/config.ts';
+import { ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { instanceFingerprint } from '../../src/core/site_builder/pairing.ts';
 import type { ToolActionContext, ToolServerModule } from '../../src/core/tools/module.ts';
+import { CONFINEMENT_REASON_CODES } from '../../tools/tool_sitebuilder/server/wire.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 // SNAPSHOT the real exports by spread BEFORE any mock.module runs (the code_update.test.ts
@@ -149,6 +158,26 @@ beforeAll(async () => {
 			}
 			if (url.pathname === '/force-403') {
 				return Response.json({ title: 'Unauthorized' }, { status: 403 });
+			}
+			// THE DAEMON'S OWN CONFINEMENT REFUSALS, rendered the way its problem() renders
+			// any ApiError (type/title/status/detail + extensions): one slug per reason.
+			const confined = /^\/v1\/sites\/confined-([a-z-]+)\/sessions$/.exec(url.pathname);
+			if (confined) {
+				const code = (confined[1] as string).replace(/-/g, '_');
+				const error =
+					code === 'unavailable'
+						? new ConfinementUnavailableError('daemon prose: no systemd here')
+						: new ConfinementRefusedError(code as ConfinementCode, `daemon prose: refused ${code}`);
+				return Response.json(
+					{
+						type: error.type,
+						title: error.title,
+						status: error.status,
+						detail: error.detail,
+						...error.extensions,
+					},
+					{ status: error.status },
+				);
 			}
 			if (url.pathname === '/v1/sites/rejectme/sessions') {
 				return Response.json({ detail: 'A session is already running' }, { status: 409 });
@@ -392,6 +421,43 @@ describe('tool_sitebuilder proxy', () => {
 		// …and NEVER offered as the vetted public sentence, so another service can
 		// never write this install's browser-facing error text.
 		expect(refusal.publicMessage).toBeUndefined();
+	});
+
+	/**
+	 * THE DAEMON'S CONFINEMENT REFUSALS SAY WHO MUST ACT. Every reason the daemon can send
+	 * (its CONFINEMENT_CODES, plus `confinement_unavailable`) is mapped — the two lists are
+	 * held equal, so a code added daemon-side without a mapping here is red — and each lands
+	 * on a registered 503 code: `site_builder.busy` (retryable: it clears by itself) or
+	 * `site_builder.confinement_unavailable` (not: an operator must act). Before, all of them
+	 * fell through to `site_builder.failed`, "retryable", for a host that will not change.
+	 */
+	test('every daemon confinement reason maps to a registered, typed 503 — and its prose stays OFF the wire', async () => {
+		const reasons = [
+			'confinement_unavailable',
+			...CONFINEMENT_CODES.map((code) => `confinement.${code}`),
+		].sort();
+		expect(Object.keys(CONFINEMENT_REASON_CODES).sort()).toEqual(reasons);
+		const BUSY = new Set(['site_busy', 'identity_quarantined', 'daemon_stopping']);
+		for (const code of ['unavailable', ...CONFINEMENT_CODES]) {
+			const refusal = await refusalOf(
+				tool.apiActions.session_start!.handler(
+					ctx(DEV, { slug: `confined-${code.replace(/_/g, '-')}`, prompt: 'go' }),
+				),
+			);
+			const expected = BUSY.has(code)
+				? 'site_builder.busy'
+				: 'site_builder.confinement_unavailable';
+			expect({ code, mapped: refusal.code }).toEqual({ code, mapped: expected });
+			const row = ERROR_REGISTRY[expected as keyof typeof ERROR_REGISTRY];
+			expect({ code, status: row.status, retryable: row.retryable }).toEqual({
+				code,
+				status: 503,
+				retryable: BUSY.has(code),
+			});
+			// The daemon's sentence is LOG-only.
+			expect(refusal.message).toContain('daemon prose');
+			expect(refusal.publicMessage).toBeUndefined();
+		}
 	});
 
 	test('get_status reports reachable true, and false when the daemon is down', async () => {

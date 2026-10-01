@@ -20,6 +20,7 @@
  */
 
 import { config } from '../../../config/config.ts';
+import { typedMaintenanceLockWait, withUnboundedStatements } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getLabels } from '../../labels/catalog.ts';
 import { currentApplicationLang } from '../../resolve/request_lang.ts';
@@ -317,6 +318,9 @@ export async function dispatchGetWidgetValue(
  *  2. options must be an object (PHP type guard);
  *  3. the widget id must be in the maintenance catalog;
  *  4. the method must be registered (`tool.method_not_allowed` otherwise).
+ *
+ * A handler the widget declares maintenance then runs inside
+ * `withUnboundedStatements` (see below); every other one stays bounded.
  */
 export async function dispatchWidgetRequest(
 	principal: Principal,
@@ -360,7 +364,30 @@ export async function dispatchWidgetRequest(
 		});
 	}
 
-	return handler((options ?? {}) as Record<string, unknown>, principal);
+	// THE UNBOUNDED DOOR (PERF-11), PER ACTION: an action the widget DECLARES
+	// maintenance (`unboundedActions` — a store rebuild, a VACUUM, a move_* bulk
+	// transform) must not die on the request pool's statement ceiling (nor for
+	// merely queueing behind a reader's lock). Its scope is entered HERE, before
+	// the handler opens any transaction, so even its in-transaction statements
+	// run on the maintenance pool. Every other action — and every panel load
+	// (dispatchGetWidgetValue) — stays on the request pool and its ceiling: the
+	// maintenance pool is small, and a cheap read must not queue behind a
+	// REINDEX. Background jobs a handler submits are detached and inherit
+	// nothing: the ones that must be unbounded declare their own scope.
+	// The CEILING is lifted, the LOCK-WAIT bound is not: the maintenance pool is
+	// born with a lock_timeout (postgres.ts MAINTENANCE_LOCK_TIMEOUT), so an
+	// action queued for ACCESS EXCLUSIVE behind a long reader gives up instead of
+	// stalling every reader queued behind it; escaping, it is the typed 503.
+	const run = () => handler((options ?? {}) as Record<string, unknown>, principal);
+	if (!isUnboundedAction(module, method)) return run();
+	return withUnboundedStatements(run).catch((error: unknown) => {
+		throw typedMaintenanceLockWait(error);
+	});
+}
+
+/** Whether `method` is one of the actions `module` declares maintenance (see WidgetModule). */
+export function isUnboundedAction(module: WidgetModule, method: string): boolean {
+	return module.unboundedActions?.includes(method) === true;
 }
 
 // The lock_components AREA-LEVEL action (PHP class_request) — owned by its

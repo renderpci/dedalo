@@ -144,3 +144,31 @@ export async function* selectRecordBatches(
 		if (rows.length < batchSize) return;
 	}
 }
+
+/**
+ * Which of `sectionIds` still EXIST in the matrix — one `section_id = ANY`
+ * read (DIFF-2 revalidation). A batch is resolved BEFORE its fenced unit takes
+ * the target; while it waited, a record may have been deleted from the
+ * archive. The runner re-asks under the lock, and a vanished record is
+ * unpublished instead of written. Non-address ids are never "existing".
+ * Returns canonical-string keys (String(section_id)).
+ */
+export async function existingSectionIds(
+	tableName: string,
+	sectionTipo: string,
+	sectionIds: readonly (number | string)[],
+): Promise<Set<string>> {
+	const addresses: number[] = [];
+	for (const id of sectionIds) {
+		const address = canonicalizeStoredSectionId(id);
+		if (isSectionId(address)) addresses.push(Number(address));
+	}
+	if (addresses.length === 0) return new Set();
+	assertMatrixTable(tableName);
+	const rows = (await sql.unsafe(
+		`SELECT section_id FROM "${tableName}"
+		 WHERE section_tipo = $1 AND section_id = ANY($2::int[])`,
+		[sectionTipo, `{${addresses.join(',')}}`],
+	)) as { section_id: number }[];
+	return new Set(rows.map((row) => String(row.section_id)));
+}

@@ -93,7 +93,9 @@ const PENDING_RETRY_LOCK_KEY = 17581758;
  */
 async function defaultPendingRetry(): Promise<PendingRetryOutcome> {
 	const { retryPendingDiffusion } = await import('../../core/diffusion_bridge/diffusion_delete.ts');
-	return retryPendingDiffusion();
+	const { withPatientDeleteWait } = await import('../../core/diffusion_bridge/target_lock.ts');
+	// A drain exists to pay the debt: it waits (one bounded budget) for a busy target.
+	return withPatientDeleteWait(() => retryPendingDiffusion());
 }
 
 /**
@@ -103,8 +105,13 @@ async function defaultPendingRetry(): Promise<PendingRetryOutcome> {
  * that took it — issued through the pool, the unlock could land on a different
  * connection and leak the lock for the life of the process. Session-level
  * rather than xact-level, because the retry propagates deletes to EXTERNAL
- * targets (MariaDB / files): holding a Postgres transaction open across them
- * is exactly what the write-path rules forbid.
+ * targets (MariaDB / files), and the rule is: ONLY a jobs/target_fence.ts unit
+ * may hold a Postgres transaction across target I/O — it holds no matrix row
+ * locks (an advisory lock + one job row's KEY SHARE + a short tail) and is
+ * bounded by FENCE_IDLE_BOUND_MS. The retry's SQL executor
+ * (targets/mariadb/delete_record.ts) takes each target's fence itself —
+ * inside this drain's patient scope (withPatientDeleteWait: one bounded budget)
+ * — so a target a publication run is writing is left pending, never raced.
  *
  * Not winning the lock is not an error and not a skip worth reporting: another
  * runner is draining the very same rows right now.

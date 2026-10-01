@@ -104,6 +104,13 @@ export const SB_MEDIA_COMPONENT = 'test99';
 /** test3's component_portal — the hop a path search takes out of test3, the portal an import links through (both: 2). */
 export const SB_HOP_COMPONENT = 'test80';
 /**
+ * test3's NON-translatable input_text — the import's role write (both: 2). Granted
+ * so the component door ADMITS the pair and the only refusal left for A on B's
+ * record is the SCOPE (perm.out_of_scope): ungranted, the door refused first
+ * (perm.denied) and the scope probe went unasked.
+ */
+export const SB_INPUT_COMPONENT = 'test162';
+/**
  * A test-TLD section A holds NOTHING on — the real target A must be refused
  * on — and B holds READ ONLY (test65 = 1, test65.test52 = 1): the level a
  * write action (minLevel 2) must refuse and a read action (minLevel 1) admits.
@@ -314,6 +321,7 @@ export async function installScopeBindingFixture(): Promise<void> {
 				grant(2, SB_GRANTED_SECTION, SB_GRANTED_COMPONENT, 2),
 				grant(3, SB_GRANTED_SECTION, SB_MEDIA_COMPONENT, 2),
 				grant(4, SB_GRANTED_SECTION, SB_HOP_COMPONENT, 2),
+				grant(5, SB_GRANTED_SECTION, SB_INPUT_COMPONENT, 2),
 			],
 		},
 	});
@@ -329,6 +337,7 @@ export async function installScopeBindingFixture(): Promise<void> {
 				grant(7, SB_GRANTED_SECTION, SB_HOP_COMPONENT, 2),
 				grant(5, SB_DENIED_SECTION, SB_DENIED_SECTION, 1),
 				grant(6, SB_DENIED_SECTION, SB_GRANTED_COMPONENT, 1),
+				grant(8, SB_GRANTED_SECTION, SB_INPUT_COMPONENT, 2),
 			],
 		},
 	});

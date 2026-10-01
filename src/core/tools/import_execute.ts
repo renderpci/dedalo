@@ -26,6 +26,14 @@
  *      per record. Inside an ambient transaction a failed statement has already
  *      ABORTED it (observers.ts B6), so the swallow could only hide the cause
  *      and hand the record's remaining saves a poisoned transaction.
+ *   4. EVERY WRITE IS ASKED OF THE WRITE DOOR (closure Step 3 req 10), as the
+ *      importing principal: a matched record's field through
+ *      `authorizeRecordAccess` (section floor, the dd128-aware pair — an import
+ *      into dd128 must not set a user-manager's own dd1725 — and the write
+ *      scope); a new record's section and every field's pair through
+ *      `authorizeSectionTarget` before the create. The door the run's doors
+ *      asked (the section, once) never named a record. A refused field is NOT
+ *      written and is reported, like a refused value.
  *   3. THE WRITE LANGUAGE IS THE REQUEST'S. It comes from the request-language
  *      ALS (`currentDataLang()`), never from the static DEDALO_DATA_LANG: the
  *      write is lang-sliced, so the install default REPLACED the operator's
@@ -36,10 +44,13 @@
 
 import { BULK_PROCESS_TIPOS } from '../concepts/section.ts';
 import { withTransaction } from '../db/postgres.ts';
+import { isDedaloError } from '../errors/dedalo_error.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../ontology/resolver.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import { saveComponentData } from '../section/record/save_component.ts';
+import type { Principal } from '../security/permissions.ts';
+import { authorizeRecordAccess, authorizeSectionTarget } from '../security/write_door.ts';
 import { withLiveBulkRun } from './bulk_run_registry.ts';
 import { type ConformFailure, conformImportData, groupItemsByLang } from './import_data.ts';
 
@@ -120,6 +131,89 @@ interface RecordOutcome {
 }
 
 /**
+ * THE WRITE DOOR for one field (closure Step 3 req 10): a MATCHED record's
+ * field through authorizeRecordAccess (grammar, section floor 1, the dd128-aware
+ * pair, the write scope); a NEW record's field through authorizeSectionTarget
+ * (the pair level — nothing references a record born in this transaction).
+ * Answers the refusal sentence (IGNORED, never written) or null. Anything that
+ * is not the door's refusal propagates (the record rolls back, the run reports).
+ */
+async function fieldRefusal(
+	principal: Principal,
+	sectionTipo: string,
+	componentTipo: string,
+	matchedId: number | null,
+): Promise<string | null> {
+	try {
+		if (matchedId === null) {
+			await authorizeSectionTarget(
+				principal,
+				{ section_tipo: sectionTipo, tipo: componentTipo },
+				{ level: 2, door: 'import_execute.field' },
+			);
+		} else {
+			await authorizeRecordAccess(
+				principal,
+				{ section_tipo: sectionTipo, component_tipo: componentTipo, section_id: matchedId },
+				{ mode: 'write', level: 2, sectionFloor: 1, door: 'import_execute.field' },
+			);
+		}
+		return null;
+	} catch (error) {
+		if (
+			isDedaloError(error) &&
+			(error.code.startsWith('perm.') || error.code === 'request.invalid')
+		) {
+			return `IGNORED: not writable by the importer (${error.code}) — the field was NOT written`;
+		}
+		throw error;
+	}
+}
+
+/**
+ * The record a mapped record writes into: its matched id, or a NEW record —
+ * asked of the write door first (the section level, consultation-capped; a
+ * refusal throws and the record's transaction rolls back), then born with the
+ * run's birth marker (tm_role 3) so a revert knows the run made it (D2).
+ */
+async function recordIdFor(
+	record: MappedRecord,
+	sectionTipo: string,
+	principal: Principal,
+	bulkProcessId: number,
+): Promise<number> {
+	if (record.sectionId !== null) return record.sectionId;
+	await authorizeSectionTarget(
+		principal,
+		{ section_tipo: sectionTipo },
+		{ level: 2, door: 'import_execute.create' },
+	);
+	return createSectionRecord(sectionTipo, principal.userId, new Date(), undefined, {
+		bulkProcessId,
+	});
+}
+
+/** True (and the refusal reported) when the write door refuses this field. */
+async function refusedField(
+	principal: Principal,
+	sectionTipo: string,
+	field: MappedField,
+	matchedId: number | null,
+	sectionId: number,
+	failed: ConformFailure[],
+): Promise<boolean> {
+	const refusal = await fieldRefusal(principal, sectionTipo, field.component_tipo, matchedId);
+	if (refusal === null) return false;
+	failed.push({
+		section_id: sectionId,
+		data: field.values,
+		component_tipo: field.component_tipo,
+		msg: refusal,
+	});
+	return true;
+}
+
+/**
  * Write ONE mapped record. Runs inside the caller's per-record transaction, so
  * everything it does — the record create and every component save — commits or
  * rolls back together.
@@ -127,19 +221,19 @@ interface RecordOutcome {
 async function writeMappedRecord(
 	record: MappedRecord,
 	sectionTipo: string,
-	userId: number,
+	principal: Principal,
 	bulkProcessId: number,
 	dataLang: string,
 ): Promise<RecordOutcome> {
 	const failed: ConformFailure[] = [];
 	const wasCreated = record.sectionId === null;
-	// A record the run CREATES carries the run's birth marker (tm_role 3), so a
-	// revert knows the run made it (decision D2).
-	const sectionId =
-		record.sectionId ??
-		(await createSectionRecord(sectionTipo, userId, new Date(), undefined, { bulkProcessId }));
+	const sectionId = await recordIdFor(record, sectionTipo, principal, bulkProcessId);
+	const userId = principal.userId;
 
 	for (const field of record.fields) {
+		if (await refusedField(principal, sectionTipo, field, record.sectionId, sectionId, failed)) {
+			continue;
+		}
 		const model = await getModelByTipo(field.component_tipo);
 		if (model === null) {
 			failed.push({
@@ -246,9 +340,10 @@ async function writeMappedRecord(
 export async function importMappedRecords(
 	records: readonly MappedRecord[],
 	sectionTipo: string,
-	userId: number,
+	principal: Principal,
 	options: { bulkLabel?: string; sourceFile?: string } = {},
 ): Promise<ImportReport> {
+	const userId = principal.userId;
 	let created = 0;
 	let updated = 0;
 	const failed: ConformFailure[] = [];
@@ -281,7 +376,7 @@ export async function importMappedRecords(
 				// ONE TRANSACTION PER RECORD (the CSV door's posture): a failure part-way
 				// through a record leaves NO half-written record behind.
 				const outcome = await withTransaction(() =>
-					writeMappedRecord(record, sectionTipo, userId, bulkProcessId, dataLang),
+					writeMappedRecord(record, sectionTipo, principal, bulkProcessId, dataLang),
 				);
 				if (outcome.wasCreated) {
 					created += 1;

@@ -202,8 +202,9 @@ const NEGATING_RELATION_OPERATORS: ReadonlySet<string> = new Set(['!*', '!=', '!
 /**
  * The autocomplete_hi ancestor wrap — PHP add_relation_search
  * (trait.search_component_relation_common.php:512), consulting BOTH the direct
- * `relation` column and the `relation_search` ancestor index the save path
- * maintains (relations/save.ts maintainRelationSearchIndex) in ONE pass. A
+ * `relation` column and the `relation_search` ancestor index the write
+ * chokepoint derives (relations/save.ts deriveRelationSearch, applied by
+ * section_record/record_write.ts in the same UPDATE as the value) in ONE pass. A
  * search on a BROADER term therefore returns the records filed under its
  * narrower ones ("search Spain matches Madrid"), as v6 did.
  *

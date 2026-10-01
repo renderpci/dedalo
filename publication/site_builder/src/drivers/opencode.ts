@@ -9,25 +9,69 @@
  *
  * Provider credentials come from OPENCODE_ENV (config), forwarded only to this driver's
  * child by the session manager's env builder.
+ *
+ * REFUSED UNDER `systemd_scope` (LEAD-1b_SPEC §0.3, "Still open"). The PLANT closure the
+ * Claude Code driver has — every configuration source named in the argv, the `--help` flag
+ * probe, the prompt after `--` — does not exist here: OpenCode loads the workspace's
+ * `opencode.json` and `.opencode/` plugins and HOME's `~/.config/opencode`, and its prompt is
+ * positional. A turn's write or a build's postinstall could plant a plugin the NEXT turn runs
+ * as the site identity, `bash: deny` notwithstanding. So a confined host refuses the driver,
+ * typed (503 `confinement.agent_cli_unsupported`), at every door: detect() (unavailable),
+ * admit() (before the manager reserves anything) and the turn's setup (before anything is
+ * written). Lift it only with that closure and its gate. Gate: tests/opencode_refusal.test.ts.
  */
 
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../config';
+import { ConfinementRefusedError } from '../errors';
 import { relativeUnderRoot, writeFileAgentReadable } from '../util/shared_tree';
 import { runBinary } from '../util/spawn';
-import { spawnAgentProcess } from './process';
+import { spawnAgentProcess, type TurnPlan } from './process';
 import type { AgentDriver, AgentEvent, DriverInfo, SessionStartOptions, AgentProcess } from './types';
 
 const VERSION_PROBE_TIMEOUT_MS = 10_000;
 
-async function detect(): Promise<DriverInfo | null> {
-  const bin = config.OPENCODE_BIN;
+type ConfinementMode = typeof config.AGENT_CONFINEMENT;
+
+/**
+ * THE REFUSAL (see the header): under `systemd_scope` no opencode turn runs. `none` is the
+ * operator's declared-unconfined mode, where this driver's surface is the declaration's.
+ */
+export function assertOpencodeConfinable(mode: ConfinementMode = config.AGENT_CONFINEMENT): void {
+  if (mode !== 'systemd_scope') return;
+  throw new ConfinementRefusedError(
+    'agent_cli_unsupported',
+    "The opencode driver cannot run under AGENT_CONFINEMENT=systemd_scope: it loads the workspace's " +
+      "opencode.json and .opencode/ plugins and HOME's ~/.config/opencode — files a turn or a build " +
+      'can write — and nothing restricts those sources yet, so a planted plugin would run as the ' +
+      'site identity. Use the claude_code driver on a confined host. Nothing was started.',
+  );
+}
+
+/** The detection seams: the binary, the mode and how it is probed. Production states none. */
+export interface OpencodeDetectSeams {
+  readonly bin?: string;
+  readonly mode?: ConfinementMode;
+  readonly run?: (argv: readonly string[]) => Promise<{ exitCode: number | null; stdout: string }>;
+}
+
+/**
+ * AVAILABLE MEANS RUNNABLE: under `systemd_scope` the driver is unavailable (/health,
+ * /v1/capabilities) without even probing the binary — it would be refused at admission.
+ */
+export async function detectOpencode(seams: OpencodeDetectSeams = {}): Promise<DriverInfo | null> {
+  const bin = seams.bin ?? config.OPENCODE_BIN;
   if (!bin) return null;
-  const result = await runBinary([bin, '--version'], {
-    timeoutMs: VERSION_PROBE_TIMEOUT_MS,
-    env: { PATH: process.env.PATH ?? '/usr/bin:/bin' },
-  });
+  if ((seams.mode ?? config.AGENT_CONFINEMENT) === 'systemd_scope') return null;
+  const run =
+    seams.run ??
+    ((argv: readonly string[]) =>
+      runBinary(argv, {
+        timeoutMs: VERSION_PROBE_TIMEOUT_MS,
+        env: { PATH: process.env.PATH ?? '/usr/bin:/bin' },
+      }));
+  const result = await run([bin, '--version']);
   if (result.exitCode !== 0) return null;
   const match = result.stdout.match(/(\d+)\.(\d+)\.(\d+)/);
   if (!match) return null;
@@ -51,7 +95,8 @@ export async function writeMcpConfig(opts: SessionStartOptions): Promise<string>
   // denied — arbitrary execution and an outbound channel — and editing, which is the whole
   // job, is allowed.
   //
-  // 0640 and deleted when the turn ends: this file carries the Publication API key. And it
+  // 0640 and deleted when the turn ends: under a declared `none` this file carries the
+  // Publication API key (under `systemd_scope` the gate adds it daemon-side). And it
   // goes through the FD-BASED writer (util/shared_tree.ts) for the same reason the Claude
   // Code driver's does — at the workspace ROOT the plant is even cheaper, since the agent
   // is told to leave this exact filename alone and can therefore replace it with a link to
@@ -70,13 +115,29 @@ export const DENIED_PERMISSIONS: Readonly<Record<string, string>> = Object.freez
   edit: 'allow',
 });
 
-function startTurn(opts: SessionStartOptions): AgentProcess {
-  return spawnAgentProcess(opts, async () => {
-    const configPath = await writeMcpConfig(opts);
-    const argv = [config.OPENCODE_BIN, 'run', opts.prompt, '--format', 'json'];
+/** The per-turn seams. Production states none. */
+export interface OpencodeTurnSeams {
+  readonly bin?: string;
+  readonly mode?: ConfinementMode;
+  readonly writeConfig?: (opts: SessionStartOptions) => Promise<string>;
+}
+
+/**
+ * ONE TURN'S SETUP — the refusal FIRST (the guarantee behind admit()'s courtesy): under
+ * `systemd_scope` nothing is written and no argv is returned.
+ */
+export function opencodeTurnSetup(opts: SessionStartOptions, seams: OpencodeTurnSeams = {}): () => Promise<TurnPlan> {
+  return async () => {
+    assertOpencodeConfinable(seams.mode ?? config.AGENT_CONFINEMENT);
+    const configPath = await (seams.writeConfig ?? writeMcpConfig)(opts);
+    const argv = [seams.bin ?? config.OPENCODE_BIN, 'run', opts.prompt, '--format', 'json'];
     if (opts.resumeToken) argv.push('--session', opts.resumeToken);
     return { argv, parseLine: parseJsonLine, cleanup: () => rm(configPath, { force: true }) };
-  });
+  };
+}
+
+function startTurn(opts: SessionStartOptions): AgentProcess {
+  return spawnAgentProcess(opts, opencodeTurnSetup(opts));
 }
 
 /**
@@ -110,6 +171,7 @@ function parseJsonLine(line: string): AgentEvent[] {
 export const opencodeDriver: AgentDriver = {
   id: 'opencode',
   capabilities: { resume: true, mcpHttp: true, reportsFileChanges: false },
-  detect,
+  detect: () => detectOpencode(),
+  admit: async () => assertOpencodeConfinable(),
   startTurn,
 };

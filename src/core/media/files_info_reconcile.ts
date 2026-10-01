@@ -26,23 +26,45 @@
  * - No derivative rebuild (regenerate:false): an unattended sweep must never
  *   re-encode files; that is tool_update_cache / tool_media_versions work.
  * - files_info is a cache, not user data: no time-machine version is written.
- * - Writes go through updateMatrixKeyData (jsonb_set on ONLY the component's
- *   key, encodeForJsonb inside) in a withTransaction per record.
- * - A rescan that finds FEWER existing files than stored (files genuinely gone,
- *   or a partial local media copy) is reported and HELD unless `allowShrink`.
+ * - Writes go through the ONE media-key writer, the LOCKED TRANSFORM
+ *   (tools/files_info_persist.ts transformStoredMediaItems — TOOLS-5): the dry
+ *   run adjudicates on its unlocked snapshot, and each applied change RE-SCANS
+ *   and RE-JUDGES the items read under the row lock — a curator's upload
+ *   committed since the scan is refreshed, never overwritten by the snapshot,
+ *   and a shrink only the locked value shows is held like any other.
+ * - JUDGED PER ITEM, never per component: each stored item is GROW / DIFF /
+ *   SHRINK on its OWN existing-file count, and a component's write carries
+ *   every changed item except a SHRINK one, which keeps its stored index (HELD)
+ *   unless `allowShrink` — files genuinely gone, or a partial local media copy
+ *   (the 2026-07-19 index wipe). A per-component verdict let one growing (or
+ *   foreign) item carry a sibling's shrink through.
+ * - A FOREIGN item — one whose stored files carry the CLONE SIGNATURE, this
+ *   component's and section's identifier with ANOTHER section_id
+ *   (`<component>_<section>_<N≠id>…`, the damage a duplicate whose copy failed
+ *   used to leave, CORE-5) — is always rewritten: it does not describe this
+ *   record's files at all, so holding it as a "shrink" would keep a record
+ *   pointing at files whose delete belongs to someone else. Any OTHER name the
+ *   scan does not produce (a `properties.image_id` rename, a hand-placed file)
+ *   is not foreign: it is judged by its count like every item, so a rescan that
+ *   cannot see it is a held SHRINK, never a wipe.
+ * - A record deleted or locked past the lock timeout mid-run is COUNTED
+ *   (`missing` / `locked`), logged, and the sweep continues; `repaired` counts
+ *   only what was written. The lock wait is the transform's PER-RECORD bound
+ *   (`lockWait: 'per-record'`), whatever pool the sweep runs on.
  */
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { mediaTypeOf } from '../concepts/media.ts';
+import { type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
 import { MATRIX_TABLE_ALLOWLIST } from '../db/matrix.ts';
-import { updateMatrixKeyData } from '../db/matrix_write.ts';
-import { sql, withTransaction } from '../db/postgres.ts';
+import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { getModelByTipo } from '../ontology/resolver.ts';
 import type { ReconcileDefinition } from '../reconcile/registry.ts';
-import { requireMediaRoot } from './path.ts';
-import { refreshMediaItems } from './repair.ts';
+import { resolveMediaPathOptions } from './ontology_path.ts';
+import { type MediaIdentity, requireMediaRoot } from './path.ts';
+import { refreshMediaItems, rescanMediaItems } from './repair.ts';
+import { type StoredMediaItem, transformStoredMediaItems } from './tools/files_info_persist.ts';
 
 export interface FilesInfoSweepOptions {
 	/** false (default) = dry run: adjudicate + report, write nothing. */
@@ -65,9 +87,21 @@ export interface FilesInfoChange {
 	model: string;
 	storedCount: number;
 	freshCount: number;
-	kind: 'GROW' | 'DIFF' | 'SHRINK';
+	kind: FilesInfoChangeKind;
+	/** The items to write: every changed item refreshed, a held SHRINK item kept as stored. */
 	newItems: unknown[];
+	/** Changed items this run would write (0 = the whole change is held). */
+	writtenItems: number;
+	/** SHRINK items whose stored index is kept (always 0 with allowShrink). */
+	heldItems: number;
 }
+
+/**
+ * The component's summary verdict for the report: FOREIGN when any changed item
+ * is foreign, else GROW / DIFF / SHRINK on the changed items' existing-file
+ * counts. What is WRITTEN is decided per item (FilesInfoChange.heldItems).
+ */
+export type FilesInfoChangeKind = 'GROW' | 'DIFF' | 'SHRINK' | 'FOREIGN';
 
 export interface FilesInfoSweepSummary {
 	root: string;
@@ -75,12 +109,20 @@ export interface FilesInfoSweepSummary {
 	scannedItems: number;
 	/** Every stale index found (held ones included). */
 	changes: FilesInfoChange[];
-	/** Changes the run would persist (SHRINK only with allowShrink). */
+	/** Changes the run would persist (at least one item to write). */
 	applicable: number;
-	/** SHRINK changes withheld. */
+	/** Changes with at least one SHRINK item withheld (a change may be both). */
 	held: number;
 	/** Components actually written (0 on a dry run). */
 	repaired: number;
+	/** Applied changes whose RECORD was gone under the lock (nothing written). */
+	missing: number;
+	/** Applied changes whose row stayed locked past the lock timeout (nothing written). */
+	locked: number;
+	/** Applied changes that held MORE shrink items under the lock than in the snapshot. */
+	heldOnApply: number;
+	/** Applied changes the locked items no longer needed (already current). */
+	unchangedOnApply: number;
 	/** Non-media models found in the media column (ignored). */
 	skippedModels: string[];
 }
@@ -105,6 +147,140 @@ export function existingIndex(filesInfo: unknown): string[] {
 
 function existingCount(filesInfo: unknown): number {
 	return existingIndex(filesInfo).length;
+}
+
+/** The last path segment of a stored file_path. */
+function baseName(path: string): string {
+	return path.slice(path.lastIndexOf('/') + 1);
+}
+
+/**
+ * Does this stored item index files of ANOTHER record? A non-external item one of
+ * whose EXISTING entries carries the CLONE SIGNATURE: its file name is this
+ * component's and section's media identifier with a DIFFERENT section_id —
+ * `<componentTipo>_<sectionTipo>_<N>` (then a lang suffix, an extension or a
+ * `_…` tier suffix) with N ≠ this record's id. Nothing else is foreign: a name
+ * the scanner does not build (a `properties.image_id` rename, a hand-placed
+ * file) proves only that a rescan cannot see it, and a rescan that cannot see a
+ * file is a SHRINK, held. External items (and external entries) name URLs, not
+ * files, and never count.
+ */
+export function isForeignItem(item: unknown, identityBase: Omit<MediaIdentity, 'lang'>): boolean {
+	if (item === null || typeof item !== 'object') return false;
+	const stored = item as Record<string, unknown>;
+	if (typeof stored.external_source === 'string' && stored.external_source !== '') return false;
+	if (!Array.isArray(stored.files_info)) return false;
+	return stored.files_info.some((entry) => {
+		const path = existingLocalPath(entry);
+		if (path === null) return false;
+		const owner = cloneSignatureId(baseName(path), identityBase);
+		return owner !== null && owner !== identityBase.sectionId;
+	});
+}
+
+/** A files_info entry's path when it names an EXISTING, non-external file; else null. */
+function existingLocalPath(entry: unknown): string | null {
+	const e = entry as Record<string, unknown> | null;
+	if (e === null || e.file_exist !== true || e.external === true) return null;
+	return typeof e.file_path === 'string' && e.file_path !== '' ? e.file_path : null;
+}
+
+/**
+ * The section_id a file name's media identifier carries for THIS component and
+ * section (`<componentTipo>_<sectionTipo>_<N>` followed by end, `.` or `_`), or
+ * null when the name is not one of this component's identifiers at all.
+ */
+function cloneSignatureId(name: string, identityBase: Omit<MediaIdentity, 'lang'>): number | null {
+	const prefix = `${identityBase.componentTipo}_${identityBase.sectionTipo}_`;
+	if (!name.startsWith(prefix)) return null;
+	const match = /^([1-9][0-9]*)(?:$|[._])/.exec(name.slice(prefix.length));
+	return match === null ? null : Number(match[1]);
+}
+
+/** A stored item that is an object (anything else is carried through untouched). */
+function isObjectItem(raw: unknown): raw is object {
+	return raw !== null && typeof raw === 'object';
+}
+
+/** One component's adjudication: the items to write and what kind of change it is. */
+interface Adjudication {
+	changed: boolean;
+	newItems: unknown[];
+	storedCount: number;
+	freshCount: number;
+	kind: FilesInfoChangeKind;
+	scanned: number;
+	writtenItems: number;
+	heldItems: number;
+}
+
+/**
+ * Adjudicate PER ITEM on the SEMANTIC index; keep the stored object when
+ * nothing really changed so unchanged items are not rewritten. `refreshed` is
+ * the rescan of `stored`, index for index (rescanMediaItems keeps the order).
+ * A FOREIGN item is always rewritten; any other changed item is GROW / DIFF /
+ * SHRINK on its own count, and a SHRINK item keeps its stored index unless
+ * `allowShrink` (see the header).
+ */
+function adjudicate(
+	stored: readonly unknown[],
+	refreshed: readonly unknown[],
+	identityBase: Omit<MediaIdentity, 'lang'>,
+	allowShrink: boolean,
+): Adjudication {
+	let scanned = 0;
+	let writtenItems = 0;
+	let heldItems = 0;
+	let foreign = false;
+	let storedChanged = 0;
+	let freshChanged = 0;
+	const newItems = stored.map((raw, index) => {
+		if (!isObjectItem(raw)) return raw;
+		scanned++;
+		const storedIndex = existingIndex((raw as Record<string, unknown>).files_info);
+		const freshItem = refreshed[index] as Record<string, unknown>;
+		const freshIndex = existingIndex(freshItem.files_info);
+		if (storedIndex.join('\n') === freshIndex.join('\n')) return raw;
+		storedChanged += storedIndex.length;
+		freshChanged += freshIndex.length;
+		if (isForeignItem(raw, identityBase)) {
+			foreign = true;
+		} else if (freshIndex.length < storedIndex.length && !allowShrink) {
+			heldItems++;
+			return raw; // a SHRINK item keeps its stored index (header)
+		}
+		writtenItems++;
+		return freshItem;
+	});
+	const count = (items: readonly unknown[]): number =>
+		items.reduce(
+			(sum: number, it) => sum + existingCount((it as Record<string, unknown> | null)?.files_info),
+			0,
+		);
+	const storedCount = count(stored);
+	const freshCount = storedCount - storedChanged + freshChanged;
+	const kind: FilesInfoChangeKind = foreign
+		? 'FOREIGN'
+		: freshChanged > storedChanged
+			? 'GROW'
+			: freshChanged === storedChanged
+				? 'DIFF'
+				: 'SHRINK';
+	return {
+		changed: writtenItems + heldItems > 0,
+		newItems,
+		storedCount,
+		freshCount,
+		kind,
+		scanned,
+		writtenItems,
+		heldItems,
+	};
+}
+
+/** Whether a change writes anything (its held SHRINK items stay as stored). */
+function applies(change: { writtenItems: number }): boolean {
+	return change.writtenItems > 0;
 }
 
 /**
@@ -132,163 +308,312 @@ export async function sweepFilesInfo(
 ): Promise<FilesInfoSweepSummary> {
 	const log = options.log ?? ((): void => {});
 	const root = guardedMediaRoot();
-	const allowShrink = options.allowShrink === true;
-	const section = options.section ?? null;
-	const id = options.id ?? null;
-	const component = options.component ?? null;
-
-	const changes: FilesInfoChange[] = [];
-	const skippedModels = new Set<string>();
-	let scannedRows = 0;
-	let scannedItems = 0;
+	const scope = sweepScope(options);
+	const scan: SweepScan = {
+		changes: [],
+		skippedModels: new Set(),
+		scannedRows: 0,
+		scannedItems: 0,
+	};
 
 	for (const table of MATRIX_TABLE_ALLOWLIST) {
-		let rows: { section_tipo: string; section_id: number; media_text: string }[];
-		try {
-			const filters = ['media IS NOT NULL', "media::text NOT IN ('{}', 'null')"];
-			const params: (string | number)[] = [];
-			if (section !== null) {
-				params.push(section);
-				filters.push(`section_tipo = $${params.length}`);
-			}
-			if (id !== null) {
-				params.push(id);
-				filters.push(`section_id = $${params.length}`);
-			}
-			rows = (await sql.unsafe(
-				`SELECT section_tipo, section_id, media::text AS media_text
-				 FROM "${table}" WHERE ${filters.join(' AND ')}
-				 ORDER BY section_tipo, section_id`,
-				params,
-			)) as unknown as typeof rows;
-		} catch (error) {
-			// Non-standard table shape (no media column) — name it, keep sweeping.
-			log(`  note: skipping table ${table}: ${(error as Error).message}`);
-			continue;
-		}
-
-		for (const row of rows) {
-			scannedRows++;
-			let media: Record<string, unknown>;
-			try {
-				media = JSON.parse(row.media_text) as Record<string, unknown>;
-			} catch {
-				log(`  note: ${table} ${row.section_tipo}/${row.section_id}: unparseable media column`);
-				continue;
-			}
-			for (const [componentTipo, rawItems] of Object.entries(media)) {
-				if (component !== null && componentTipo !== component) continue;
-				if (!Array.isArray(rawItems) || rawItems.length === 0) continue;
-				const model = await getModelByTipo(componentTipo);
-				if (model === null) continue;
-				if (mediaTypeOf(model) === null) {
-					skippedModels.add(model);
-					continue;
-				}
-				const { refreshedItems } = await refreshMediaItems({
-					componentTipo,
-					sectionTipo: row.section_tipo,
-					sectionId: Number(row.section_id),
-					model,
-					items: rawItems,
-					regenerate: false, // sweep never re-encodes files (header SCOPE)
-					holdShrink: false, // raw scan — the GROW/DIFF/SHRINK adjudication below guards
-				});
-				// Adjudicate per item on the SEMANTIC index; keep the stored object
-				// when nothing really changed so unchanged items are not rewritten.
-				let itemChanged = false;
-				const newItems = rawItems.map((raw, index) => {
-					if (raw === null || typeof raw !== 'object') return raw;
-					scannedItems++;
-					const storedIndex = existingIndex((raw as Record<string, unknown>).files_info);
-					const freshItem = refreshedItems[index] as Record<string, unknown>;
-					const freshIndex = existingIndex(freshItem.files_info);
-					if (storedIndex.join('\n') !== freshIndex.join('\n')) {
-						itemChanged = true;
-						return freshItem;
-					}
-					return raw;
-				});
-				if (!itemChanged) continue;
-				const storedCount = rawItems.reduce(
-					(sum: number, it) =>
-						sum + existingCount((it as Record<string, unknown> | null)?.files_info),
-					0,
-				);
-				const freshCount = newItems.reduce(
-					(sum: number, it) =>
-						sum + existingCount((it as Record<string, unknown> | null)?.files_info),
-					0,
-				);
-				changes.push({
-					table,
-					sectionTipo: row.section_tipo,
-					sectionId: Number(row.section_id),
-					componentTipo,
-					model,
-					storedCount,
-					freshCount,
-					kind: freshCount > storedCount ? 'GROW' : freshCount === storedCount ? 'DIFF' : 'SHRINK',
-					newItems,
-				});
-			}
-		}
+		const rows = await sweepRows(table, scope, log);
+		for (const row of rows) await scanRow(table, row, scope, scan, log);
 	}
 
-	const applicable = changes.filter((c) => c.kind !== 'SHRINK' || allowShrink);
-	const held = changes.filter((c) => c.kind === 'SHRINK' && !allowShrink);
+	const { changes } = scan;
+	const applicable = changes.filter(applies);
+	const held = changes.filter((c) => c.heldItems > 0);
+	for (const change of changes) logChange(change, log);
 
-	for (const change of changes) {
-		const heldNote =
-			change.kind === 'SHRINK' && !allowShrink ? ' — HELD (pass --allow-shrink)' : '';
-		log(
-			`  ${change.kind.padEnd(7)} ${change.table} ${change.sectionTipo}/${change.sectionId} ` +
-				`${change.componentTipo} (${change.model}): ${change.storedCount} -> ${change.freshCount} existing file(s)${heldNote}`,
-		);
-	}
-
-	let repaired = 0;
-	if (options.apply) {
-		for (const change of applicable) {
-			await withTransaction(async () => {
-				await updateMatrixKeyData(
-					change.table,
-					change.sectionTipo,
-					change.sectionId,
-					'media',
-					change.componentTipo,
-					change.newItems,
-				);
-			});
-			repaired++;
-			log(
-				`  APPLIED ${change.table} ${change.sectionTipo}/${change.sectionId} ${change.componentTipo}`,
-			);
-		}
-	}
+	const applied = options.apply
+		? await applyChanges(applicable, scope.allowShrink, log)
+		: { repaired: 0, tally: emptyApplyTally() };
 
 	return {
 		root,
-		scannedRows,
-		scannedItems,
+		scannedRows: scan.scannedRows,
+		scannedItems: scan.scannedItems,
 		changes,
 		applicable: applicable.length,
 		held: held.length,
-		repaired,
-		skippedModels: [...skippedModels],
+		repaired: applied.repaired,
+		...applied.tally,
+		skippedModels: [...scan.skippedModels],
 	};
+}
+
+/** What one sweep narrows to, and whether a SHRINK may be written. */
+interface SweepScope {
+	section: string | null;
+	id: number | null;
+	component: string | null;
+	allowShrink: boolean;
+}
+
+/** The sweep's running census (mutated by the row scan). */
+interface SweepScan {
+	changes: FilesInfoChange[];
+	skippedModels: Set<string>;
+	scannedRows: number;
+	scannedItems: number;
+}
+
+function sweepScope(options: FilesInfoSweepOptions): SweepScope {
+	return {
+		section: options.section ?? null,
+		id: options.id ?? null,
+		component: options.component ?? null,
+		allowShrink: options.allowShrink === true,
+	};
+}
+
+type SweepRow = { section_tipo: string; section_id: number; media_text: string };
+
+/** Per-outcome counts of an applied sweep. */
+type ApplyTally = Pick<
+	FilesInfoSweepSummary,
+	'missing' | 'locked' | 'heldOnApply' | 'unchangedOnApply'
+>;
+
+function emptyApplyTally(): ApplyTally {
+	return { missing: 0, locked: 0, heldOnApply: 0, unchangedOnApply: 0 };
+}
+
+/**
+ * One table's rows carrying media, narrowed to the scope's section/record. A
+ * non-standard table shape (no media column) is named and skipped (`[]`) — the
+ * sweep keeps going.
+ */
+async function sweepRows(
+	table: string,
+	scope: SweepScope,
+	log: (line: string) => void,
+): Promise<SweepRow[]> {
+	try {
+		const filters = ['media IS NOT NULL', "media::text NOT IN ('{}', 'null')"];
+		const params: (string | number)[] = [];
+		if (scope.section !== null) {
+			params.push(scope.section);
+			filters.push(`section_tipo = $${params.length}`);
+		}
+		if (scope.id !== null) {
+			params.push(scope.id);
+			filters.push(`section_id = $${params.length}`);
+		}
+		return (await sql.unsafe(
+			`SELECT section_tipo, section_id, media::text AS media_text
+			 FROM "${table}" WHERE ${filters.join(' AND ')}
+			 ORDER BY section_tipo, section_id`,
+			params,
+		)) as unknown as SweepRow[];
+	} catch (error) {
+		log(`  note: skipping table ${table}: ${(error as Error).message}`);
+		return [];
+	}
+}
+
+/** Scan one row's media column: every in-scope, non-empty component is adjudicated. */
+async function scanRow(
+	table: string,
+	row: SweepRow,
+	scope: SweepScope,
+	scan: SweepScan,
+	log: (line: string) => void,
+): Promise<void> {
+	scan.scannedRows++;
+	const media = parseMediaColumn(table, row, log);
+	if (media === null) return;
+	for (const [componentTipo, rawItems] of Object.entries(media)) {
+		if (!isSweptComponent(scope, componentTipo, rawItems)) continue;
+		await scanComponent(table, row, componentTipo, rawItems, scope.allowShrink, scan);
+	}
+}
+
+/** A component the sweep adjudicates: in the scope's component filter, with stored items. */
+function isSweptComponent(
+	scope: SweepScope,
+	componentTipo: string,
+	rawItems: unknown,
+): rawItems is unknown[] {
+	if (scope.component !== null && componentTipo !== scope.component) return false;
+	return Array.isArray(rawItems) && rawItems.length > 0;
+}
+
+/** A row's media column as an object; null (named in the report) when unparseable. */
+function parseMediaColumn(
+	table: string,
+	row: SweepRow,
+	log: (line: string) => void,
+): Record<string, unknown> | null {
+	try {
+		return JSON.parse(row.media_text) as Record<string, unknown>;
+	} catch {
+		log(`  note: ${table} ${row.section_tipo}/${row.section_id}: unparseable media column`);
+		return null;
+	}
+}
+
+/** Rescan one component's stored items against the disk and record its verdict. */
+async function scanComponent(
+	table: string,
+	row: SweepRow,
+	componentTipo: string,
+	rawItems: unknown[],
+	allowShrink: boolean,
+	scan: SweepScan,
+): Promise<void> {
+	const model = await getModelByTipo(componentTipo);
+	if (model === null) return;
+	if (mediaTypeOf(model) === null) {
+		scan.skippedModels.add(model);
+		return;
+	}
+	const sectionId = Number(row.section_id);
+	const { refreshedItems } = await refreshMediaItems({
+		componentTipo,
+		sectionTipo: row.section_tipo,
+		sectionId,
+		model,
+		items: rawItems,
+		regenerate: false, // sweep never re-encodes files (header SCOPE)
+		holdShrink: false, // raw scan — the GROW/DIFF/SHRINK adjudication below guards
+	});
+	const verdict = adjudicate(
+		rawItems,
+		refreshedItems,
+		{ componentTipo, sectionTipo: row.section_tipo, sectionId },
+		allowShrink,
+	);
+	scan.scannedItems += verdict.scanned;
+	if (!verdict.changed) return;
+	scan.changes.push({
+		table,
+		sectionTipo: row.section_tipo,
+		sectionId,
+		componentTipo,
+		model,
+		storedCount: verdict.storedCount,
+		freshCount: verdict.freshCount,
+		kind: verdict.kind,
+		newItems: verdict.newItems,
+		writtenItems: verdict.writtenItems,
+		heldItems: verdict.heldItems,
+	});
+}
+
+/** The report line of one adjudicated change (its held SHRINK items named). */
+function logChange(change: FilesInfoChange, log: (line: string) => void): void {
+	const heldNote =
+		change.heldItems === 0
+			? ''
+			: change.writtenItems === 0
+				? ' — HELD (pass --allow-shrink)'
+				: ` — ${change.heldItems} SHRINK item(s) HELD (pass --allow-shrink)`;
+	log(
+		`  ${change.kind.padEnd(7)} ${change.table} ${change.sectionTipo}/${change.sectionId} ` +
+			`${change.componentTipo} (${change.model}): ${change.storedCount} -> ${change.freshCount} existing file(s)${heldNote}`,
+	);
+}
+
+/** APPLY every applicable change through the locked transform; count each outcome. */
+async function applyChanges(
+	applicable: readonly FilesInfoChange[],
+	allowShrink: boolean,
+	log: (line: string) => void,
+): Promise<{ repaired: number; tally: ApplyTally }> {
+	let repaired = 0;
+	const tally = emptyApplyTally();
+	for (const change of applicable) {
+		const { outcome, heldItems } = await applyChange(change, allowShrink);
+		const where = `${change.table} ${change.sectionTipo}/${change.sectionId} ${change.componentTipo}`;
+		if (outcome === 'written') {
+			repaired++;
+			log(`  APPLIED ${where}`);
+			if (heldItems > change.heldItems) {
+				tally.heldOnApply++;
+				log(
+					`  HELD    ${where} — under the lock ${heldItems} item(s) are a SHRINK, kept as stored`,
+				);
+			}
+		} else {
+			tallyUnwritten(outcome, where, tally, log);
+		}
+	}
+	return { repaired, tally };
+}
+
+/** Count and report an applied change that wrote nothing. */
+function tallyUnwritten(
+	outcome: 'noop' | 'held' | 'missing' | 'locked',
+	where: string,
+	tally: ApplyTally,
+	log: (line: string) => void,
+): void {
+	if (outcome === 'missing') {
+		tally.missing++;
+		log(`  MISSING ${where} — the record was deleted during the sweep; nothing written`);
+	} else if (outcome === 'locked') {
+		tally.locked++;
+		log(`  LOCKED  ${where} — the row stayed locked past the lock timeout; nothing written`);
+	} else if (outcome === 'held') {
+		tally.heldOnApply++;
+		log(`  HELD    ${where} — under the lock the rescan is a SHRINK (pass --allow-shrink)`);
+	} else {
+		tally.unchangedOnApply++;
+		log(`  CURRENT ${where} — the locked items needed no change`);
+	}
+}
+
+/**
+ * APPLY one adjudicated change through the locked transform: the items are
+ * RE-SCANNED and RE-JUDGED as they stand under the row lock — the snapshot's
+ * verdict decided only that the record is worth visiting.
+ */
+async function applyChange(
+	change: FilesInfoChange,
+	allowShrink: boolean,
+): Promise<{ outcome: 'written' | 'noop' | 'held' | 'missing' | 'locked'; heldItems: number }> {
+	const spec = mediaTypeOf(change.model) as MediaTypeSpec;
+	const identityBase = {
+		componentTipo: change.componentTipo,
+		sectionTipo: change.sectionTipo,
+		sectionId: change.sectionId,
+	};
+	const pathOpts = await resolveMediaPathOptions(
+		change.componentTipo,
+		change.sectionTipo,
+		change.sectionId,
+	);
+	let heldItems = 0;
+	const outcome = await transformStoredMediaItems(
+		identityBase,
+		(locked) => {
+			const rescan = rescanMediaItems(locked, { spec, identityBase, pathOpts, holdShrink: false });
+			const verdict = adjudicate(locked, rescan.items, identityBase, allowShrink);
+			heldItems = verdict.heldItems;
+			if (!verdict.changed) return { skip: 'noop' };
+			if (!applies(verdict)) return { skip: 'held' };
+			return { write: verdict.newItems as StoredMediaItem[] };
+		},
+		{ lockWait: 'per-record' },
+	);
+	return { outcome: outcome.action, heldItems };
 }
 
 /**
  * The registry shape (core/reconcile/registry.ts, S-10): drift = stale indexes
- * (held SHRINKs included — they ARE drift, only not auto-repaired), apply =
- * the GROW/DIFF writes. `scope` = section tipos.
+ * (held SHRINK items included — they ARE drift, only not auto-repaired), apply =
+ * the per-item GROW/DIFF/FOREIGN writes. `scope` = section tipos. `detail` carries every
+ * outcome the sweep counts — an applied change that was NOT written (the record
+ * vanished, its row stayed locked, a SHRINK only the locked value showed, the
+ * locked items already current) is named, never folded into silence.
  */
 export const FILES_INFO_RECONCILE: ReconcileDefinition = {
 	name: 'files_info',
 	stores: ['matrix media column (files_info cache)', 'media tree (quality files)'],
 	description:
-		'Re-scan the disk for every media component and rewrite a stale files_info index — GROW/DIFF are applied, SHRINK (files gone) is reported and held.',
+		'Re-scan the disk for every media component and rewrite a stale files_info index, judged per item — GROW/DIFF items are applied; a FOREIGN item (files carrying another record’s identifier) is always rewritten; a SHRINK item (files gone) is reported and keeps its index. Each apply re-judges the items under the row lock.',
 	scopeLabel: 'section tipo',
 	// Stats every media file the matrix names: an operator sweep, not a boot step.
 	schedule: 'operator',
@@ -311,6 +636,11 @@ export const FILES_INFO_RECONCILE: ReconcileDefinition = {
 				scannedRows: parts.reduce((sum, part) => sum + part.scannedRows, 0),
 				scannedItems: parts.reduce((sum, part) => sum + part.scannedItems, 0),
 				held: parts.reduce((sum, part) => sum + part.held, 0),
+				// Applied-but-not-written outcomes (see FilesInfoSweepSummary).
+				missing: parts.reduce((sum, part) => sum + part.missing, 0),
+				locked: parts.reduce((sum, part) => sum + part.locked, 0),
+				heldOnApply: parts.reduce((sum, part) => sum + part.heldOnApply, 0),
+				unchangedOnApply: parts.reduce((sum, part) => sum + part.unchangedOnApply, 0),
 				skippedModels: [...new Set(parts.flatMap((part) => part.skippedModels))],
 				// newItems are whole media arrays — too big for a gauge/widget report.
 				changes: changes.map(({ newItems: _omitted, ...change }) => change),

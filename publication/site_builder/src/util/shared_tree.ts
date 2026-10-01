@@ -76,7 +76,8 @@
  * write with an explicit `fchmod`, which the umask does not touch.
  *
  * WHAT IS *NOT* SHARED. `.builder/` — the daemon's own per-site state (build records, logs)
- * — is created 0700 by `mkdirPrivate`, and its files 0600 by `writeFilePrivate` /
+ * — is created 0710 (traverse-only to the group, `DAEMON_STATE_DIR_MODE`) by `mkdirPrivate`,
+ * everything inside it 0700, and its files 0600 by `writeFilePrivate` /
  * `appendFilePrivate`. It sits inside a directory the agent can write, so this is a
  * statement of intent and not a wall (a turn can still unlink the directory itself and
  * recreate it — which is exactly why every write into it re-verifies its chain with
@@ -96,7 +97,7 @@
 import { constants as FS } from 'node:fs';
 import { lstat, mkdir, open, readdir, rename } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
-import { isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import { confinedPath } from './paths';
 
 /** Directories both uids work in: setgid, group-writable, world-closed. */
@@ -116,6 +117,18 @@ export const AGENT_READABLE_FILE_MODE = 0o640;
 
 /** The daemon's own state inside a shared tree: its uid alone. */
 export const PRIVATE_DIR_MODE = 0o700;
+
+/**
+ * `.builder` ITSELF — the daemon's, and TRAVERSE-ONLY to the instance group (0710).
+ *
+ * A confined turn runs as the SITE's identity (LEAD-1b), not as the daemon, and Claude Code
+ * must OPEN the per-turn MCP configuration the daemon writes at `.builder/mcp.json` (0640,
+ * `AGENT_READABLE_FILE_MODE`). Behind a 0700 `.builder` that open is EACCES for every turn:
+ * the 0640 meant nothing. The group's `x` lets the identity reach a name it is GIVEN and
+ * nothing more — it cannot list `.builder` (no `r`), nor create, rename or unlink in it (no
+ * `w`) — and everything else inside stays 0700 / 0600, closed even by name.
+ */
+export const DAEMON_STATE_DIR_MODE = 0o710;
 
 /** The daemon's own FILES inside a shared tree: its uid alone. */
 export const PRIVATE_FILE_MODE = 0o600;
@@ -204,7 +217,7 @@ export class ForeignOwnerError extends Error {
     readonly uid: number,
   ) {
     super(
-      `shared_tree: refusing '${path}': the file is owned by uid ${uid}, not by this ` +
+      `shared_tree: refusing '${path}': it is owned by uid ${uid}, not by this ` +
         `daemon. Everything this module writes it creates itself, so a file under another ` +
         `uid was put there by the agent; writing into it would hand it the body and leave ` +
         `the mode its own. Nothing was written or read.`,
@@ -254,6 +267,37 @@ async function chmodHandle(path: string, flags: number, mode: number): Promise<v
   }
 }
 
+/**
+ * THE DURABILITY HALF — a `rename` is ATOMIC against a process death, not DURABLE against a power
+ * cut or a kernel crash. Only what was forced to disk survives one: a file's BYTES once its
+ * handle was synced after the last write, a DIRECTORY ENTRY (a mkdir, a rename) once its
+ * directory was synced after the change. On ext4/XFS with delayed allocation a NEW inode renamed
+ * into place and never synced comes back ZERO-LENGTH — and the driver record
+ * (`sites/driver_record.ts`) is exactly that, and fail-closed: an empty one locked its site out of
+ * every driver-less session, boot after boot. So the atomic doors sync the tmp's bytes before the
+ * rename and the directory after it, and a level `ensureDir` / `mkdirSharedFresh` CREATES is made
+ * durable in its parent. Gate: `tests/durable_state.test.ts` (a page-cache model over these calls).
+ *
+ * The directory is opened through the same `O_NOFOLLOW` door as everything else here (a link in
+ * its place is an incident, said, never followed). A filesystem that cannot fsync a directory
+ * (some network/FUSE ones: EINVAL, ENOTSUP) is SAID, not failed: the bytes are as durable as that
+ * filesystem can make them, and refusing the write would lose them for certain.
+ */
+const DIRECTORY_SYNC_UNSUPPORTED = new Set(['EINVAL', 'ENOTSUP', 'EOPNOTSUPP']);
+
+async function syncDirectory(path: string): Promise<void> {
+  const handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
+  try {
+    await handle.sync();
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === undefined || !DIRECTORY_SYNC_UNSUPPORTED.has(code)) throw error;
+    console.warn(`[shared_tree] the filesystem of '${path}' refuses a directory fsync (${code}): entries in it are not power-cut durable`);
+  } finally {
+    await handle.close();
+  }
+}
+
 /** The components of `relative` under `root`, refused if the spelling escapes. */
 function segmentsUnder(root: string, relative: string): { target: string; segments: string[] } {
   const target = confinedPath(root, relative);
@@ -267,18 +311,29 @@ function segmentsUnder(root: string, relative: string): { target: string; segmen
 }
 
 /**
+ * THE ONE `mkdir(2)` of the module: `true` when this call created `path`, `false` when anything
+ * at all already stood there (never followed, never opened). Every other errno is thrown.
+ */
+async function makeLevel(path: string): Promise<boolean> {
+  try {
+    await mkdir(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    return false;
+  }
+}
+
+/**
  * Create one level and state its mode on the handle — or, if it was already there, prove it
  * is a real directory and leave its mode alone.
  *
  * The mode belongs to the call that CREATES a directory. Re-stating it on the way past would
- * mean every nested call re-decides the mode of its parents, which is how `.builder` (0700,
+ * mean every nested call re-decides the mode of its parents, which is how `.builder` (then 0700,
  * the daemon's own) was re-opened to 2770 by the first build under it.
  */
 async function mkdirLevel(path: string, mode: number): Promise<void> {
-  try {
-    await mkdir(path);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  if (!(await makeLevel(path))) {
     // Existing: the ONE question left is whether it is a directory or a link planted where
     // one was expected. `O_DIRECTORY|O_NOFOLLOW` asks it and answers nothing else.
     const handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
@@ -286,26 +341,105 @@ async function mkdirLevel(path: string, mode: number): Promise<void> {
     return;
   }
   await chmodHandle(path, FS.O_RDONLY | FS.O_DIRECTORY, mode);
+  // CREATED here: its entry lives in the parent, durable only once the parent is synced.
+  await syncDirectory(dirname(path));
 }
 
-/** Walk (without creating) every directory component below `root`, refusing a link. */
-async function assertRealChain(root: string, segments: readonly string[]): Promise<void> {
+/**
+ * Walk (without creating) every directory component below `root`, refusing a link — and, with
+ * `ownedFrom`, refusing a component at or past that depth that is not THIS daemon's inode.
+ */
+async function assertRealChain(
+  root: string,
+  segments: readonly string[],
+  ownedFrom = Number.POSITIVE_INFINITY,
+  ownerOf: OwnerSeam = (_path, uid) => uid,
+): Promise<void> {
   let path = resolve(root);
-  for (const segment of segments) {
+  for (const [depth, segment] of segments.entries()) {
     path = join(path, segment);
     const handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
-    await handle.close();
+    try {
+      if (depth >= ownedFrom) {
+        const uid = ownerOf(path, (await handle.stat()).uid);
+        if (uid !== process.getuid?.()) throw new ForeignOwnerError(path, uid);
+      }
+    } finally {
+      await handle.close();
+    }
   }
 }
 
-async function ensureDir(root: string, relative: string, mode: number): Promise<string> {
+/**
+ * WHERE THE DAEMON'S OWN WORD STARTS IN A CHAIN — the depth from which `readFilePrivate` requires
+ * every directory to be the daemon's inode. Depth 0 (`<slug>`, or `.driver_records`) is a direct
+ * child of the trusted root: no run can rename or create one there (the root is read-only in
+ * every agent unit), and a workspace is shared by construction. Everything BELOW it is in a
+ * directory a run CAN write: a build's postinstall or a git hook can `mv .builder .x` (a
+ * same-parent rename needs no permission on the renamed directory) and recreate `.builder` as
+ * its own — then rename a daemon-owned, single-linked file it could already write (`site.json`,
+ * 0660) into place as `.builder/sessions/<sid>.meta.json`. The file passes the file-level
+ * owner check; the directory above it does not.
+ */
+const PRIVATE_CHAIN_OWNED_FROM = 1;
+
+/**
+ * A GATE'S SEAM for the owner a directory of the chain is read as — a non-root suite cannot make
+ * a directory another uid's. Production never passes one (the owner is the inode's).
+ */
+export type OwnerSeam = (path: string, uid: number) => number;
+
+/**
+ * A LEVEL A CALLER SAID ALREADY EXISTS, AND DOES NOT. Its parent's owner made it (a create);
+ * whoever writes below it may not — a writer that re-created `<slug>/` under the trusted root
+ * after a delete manufactured a directory that is not a site, which no create could claim
+ * again (`sites/workspace.ts`). Nothing was created.
+ */
+export class AbsentDirectoryError extends Error {
+  readonly code = 'ENOENT';
+  constructor(readonly path: string) {
+    super(`shared_tree: '${path}' does not exist, and it is not this call's to create. Nothing was created.`);
+    this.name = 'AbsentDirectoryError';
+  }
+}
+
+async function ensureDir(
+  root: string,
+  relative: string,
+  mode: number | ((segment: string) => number),
+  existingLevels = 0,
+): Promise<string> {
   const { target, segments } = segmentsUnder(root, relative);
   let path = resolve(root);
-  for (const segment of segments) {
+  for (const [depth, segment] of segments.entries()) {
     path = join(path, segment);
-    await mkdirLevel(path, mode);
+    if (depth < existingLevels) {
+      // PROVED, NEVER MADE: a real directory (`O_NOFOLLOW|O_DIRECTORY`), or the refusal. The
+      // `mkdir(2)` of the next level cannot create this one if it vanishes in between.
+      let handle: FileHandle;
+      try {
+        handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new AbsentDirectoryError(path);
+        throw error;
+      }
+      await handle.close();
+      continue;
+    }
+    await mkdirLevel(path, typeof mode === 'number' ? mode : mode(segment));
   }
   return target;
+}
+
+/** A shared path never runs through the daemon's private state (see `mkdirShared`). */
+function refuseSharedThroughPrivate(relative: string, segments: readonly string[]): void {
+  const priv = segments.find((segment) => PRIVATE_NAMES.includes(segment));
+  if (priv) {
+    throw new Error(
+      `shared_tree: '${relative}' passes through '${priv}', which is the daemon's own ` +
+        `state and is never created shared. Use mkdirPrivate.`,
+    );
+  }
 }
 
 /**
@@ -320,14 +454,26 @@ export async function mkdirShared(root: string, relative: string): Promise<strin
   // hand the agent the directory this module exists to keep. The private door states the
   // private mode; there is no spelling that reaches one through the other.
   const { segments } = segmentsUnder(root, relative);
-  const priv = segments.find((segment) => PRIVATE_NAMES.includes(segment));
-  if (priv) {
-    throw new Error(
-      `shared_tree: '${relative}' passes through '${priv}', which is the daemon's own ` +
-        `state and is never created shared. Use mkdirPrivate.`,
-    );
-  }
+  refuseSharedThroughPrivate(relative, segments);
   return ensureDir(root, relative, SHARED_DIR_MODE);
+}
+
+/**
+ * Create a SHARED directory that must NOT exist yet — the claim of a path by the one caller
+ * that will own everything under it. Parents are made as `mkdirShared` makes them; the final
+ * level by a single `mkdir(2)`, which is the atomic check: `true` when this call created it,
+ * `false` when anything at all already stood there (a directory, a file, a link — none is
+ * followed, none is touched). A caller that gets `false` owns nothing at that path and must
+ * neither write into it nor remove it.
+ */
+export async function mkdirSharedFresh(root: string, relative: string): Promise<boolean> {
+  const { target, segments } = segmentsUnder(root, relative);
+  refuseSharedThroughPrivate(relative, segments);
+  if (segments.length > 1) await ensureDir(root, segments.slice(0, -1).join(sep), SHARED_DIR_MODE);
+  if (!(await makeLevel(target))) return false;
+  await chmodHandle(target, FS.O_RDONLY | FS.O_DIRECTORY, SHARED_DIR_MODE);
+  await syncDirectory(dirname(target));
+  return true;
 }
 
 /**
@@ -335,10 +481,52 @@ export async function mkdirShared(root: string, relative: string): Promise<strin
  *
  * Every level this call creates is 0700 — including an intermediate. A private path whose
  * parent does not exist yet is a private path: creating its parent shared would be this
- * function widening the very thing it is asked to close.
+ * function widening the very thing it is asked to close. The ONE exception is a level named
+ * `.builder` itself, created traverse-only (`DAEMON_STATE_DIR_MODE`, 0710) so the site's
+ * identity can open the one file it is handed there.
  */
-export async function mkdirPrivate(root: string, relative: string): Promise<string> {
-  return ensureDir(root, relative, PRIVATE_DIR_MODE);
+export async function mkdirPrivate(
+  root: string,
+  relative: string,
+  options: {
+    /**
+     * How many leading levels of `relative` must ALREADY be real directories: proved, never
+     * created (`AbsentDirectoryError` when one is missing). A writer of per-site state passes 1
+     * — the workspace is the create's to make (`mkdirSharedFresh`), never a writer's.
+     */
+    readonly existingLevels?: number;
+  } = {},
+): Promise<string> {
+  return ensureDir(
+    root,
+    relative,
+    segment => (PRIVATE_NAMES.includes(segment) ? DAEMON_STATE_DIR_MODE : PRIVATE_DIR_MODE),
+    options.existingLevels ?? 0,
+  );
+}
+
+/**
+ * RESTATE `.builder`'s own mode (`DAEMON_STATE_DIR_MODE`) — the one directory this module
+ * re-modes after creating it, because every `.builder` made before 0710 is 0700 and a confined
+ * turn cannot open its MCP configuration through it. Through the handle, `O_NOFOLLOW`, and only
+ * when the inode is this daemon's: a `.builder` the agent replaced with its own is not this
+ * daemon's to chmod (EPERM), and every write into it is proved on its own anyway.
+ */
+export async function restateDaemonStateDir(root: string, relative: string): Promise<void> {
+  const { target, segments } = segmentsUnder(root, relative);
+  if (!PRIVATE_NAMES.includes(segments[segments.length - 1] as string)) {
+    throw new Error(`shared_tree: '${relative}' is not the daemon's state directory (${PRIVATE_NAMES.join(', ')}).`);
+  }
+  await assertRealChain(root, segments.slice(0, -1));
+  const handle = await openNoFollow(target, FS.O_RDONLY | FS.O_DIRECTORY);
+  try {
+    const stats = await handle.stat();
+    if (stats.uid === process.getuid?.() && (stats.mode & 0o7777) !== DAEMON_STATE_DIR_MODE) {
+      await handle.chmod(DAEMON_STATE_DIR_MODE);
+    }
+  } finally {
+    await handle.close();
+  }
 }
 
 /**
@@ -363,18 +551,35 @@ async function writeThroughHandle(
   body: string,
   mode: number,
   flags: number,
+  durable = false,
 ): Promise<string> {
   const { target, segments } = segmentsUnder(root, relative);
   await assertRealChain(root, segments.slice(0, -1));
   // NO `O_TRUNC` HERE. Truncation at open time happens BEFORE any question can be asked of
   // the thing opened, so a hard-linked victim would already be empty by the time its link
   // count was read. The file is opened, interrogated, and only then emptied.
-  const handle = await openNoFollow(target, flags | FS.O_WRONLY | FS.O_CREAT, mode);
+  //
+  // AND `O_NONBLOCK`, the write-side twin of the readers' (`openForRead`): a fifo at the name
+  // (`mkfifo site.json.tmp` from a build, or `.builder/mcp.json` in a `.builder` the agent
+  // renamed away and re-made) parks a blocking write-open until a reader comes — forever, in
+  // an fs worker no turn deadline returns, and repeated, the pool every other site's fs needs.
+  // Non-blocking, a fifo with no reader is ENXIO, and one with a reader is refused below by
+  // `fstat` before anything is truncated or written. On a regular file the flag is inert.
+  let handle: FileHandle;
   try {
+    handle = await openNoFollow(target, flags | FS.O_WRONLY | FS.O_CREAT | FS.O_NONBLOCK, mode);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENXIO') throw new NotRegularFileError(target);
+    throw error;
+  }
+  try {
+    if (!(await handle.stat()).isFile()) throw new NotRegularFileError(target);
     await assertOwnInode(handle, target);
     if ((flags & FS.O_APPEND) === 0) await handle.truncate(0);
     await handle.writeFile(body, 'utf8');
     await handle.chmod(mode);
+    // The bytes AND the mode on disk before anything (a rename) may publish this inode.
+    if (durable) await handle.sync();
   } finally {
     await handle.close();
   }
@@ -403,10 +608,12 @@ export async function writeFileSharedAtomic(
   relative: string,
   body: string,
 ): Promise<void> {
-  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, SHARED_FILE_MODE, 0);
+  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, SHARED_FILE_MODE, 0, true);
   // `rename` does not follow a symlink at the destination — it replaces it — and the
   // directory chain above it was just proved link-free.
-  await rename(tmp, confinedPath(root, relative));
+  const target = confinedPath(root, relative);
+  await rename(tmp, target);
+  await syncDirectory(dirname(target));
 }
 
 /** Write one of the DAEMON's own files (0600) inside a tree the agent can write. */
@@ -435,8 +642,10 @@ export async function writeFilePrivateAtomic(
   relative: string,
   body: string,
 ): Promise<void> {
-  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, PRIVATE_FILE_MODE, 0);
-  await rename(tmp, confinedPath(root, relative));
+  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, PRIVATE_FILE_MODE, 0, true);
+  const target = confinedPath(root, relative);
+  await rename(tmp, target);
+  await syncDirectory(dirname(target));
 }
 
 /**
@@ -480,28 +689,31 @@ export async function appendFilePrivate(
  * wrote, not one the agent authored in a `.builder` it recreated.
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-/** Open a file for reading with the whole chain proved, or `null` when it is not there. */
-async function openForRead(
-  root: string,
-  relative: string,
-  requireOwn: boolean,
-): Promise<FileHandle | null> {
+/**
+ * Open a REGULAR file for reading with the whole chain proved, or `null` when it is not there.
+ * Every reader, not only the bounded one: a fifo at `site.json` or at a session meta parks a
+ * blocking read-open until a writer comes, exactly as it parks the write side.
+ */
+async function openForRead(root: string, relative: string, requireOwn: boolean, ownerOf?: OwnerSeam): Promise<FileHandle | null> {
   const { target, segments } = segmentsUnder(root, relative);
   try {
-    await assertRealChain(root, segments.slice(0, -1));
+    await assertRealChain(root, segments.slice(0, -1), requireOwn ? PRIVATE_CHAIN_OWNED_FROM : Number.POSITIVE_INFINITY, ownerOf);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
   let handle: FileHandle;
   try {
-    handle = await openNoFollow(target, FS.O_RDONLY);
+    // O_NONBLOCK: a fifo planted at the name would otherwise block the open until a writer
+    // comes — forever, in a daemon thread. Non-blocking it opens at once, and `fstat` refuses it.
+    handle = await openNoFollow(target, FS.O_RDONLY | FS.O_NONBLOCK);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
   try {
     const stats = await handle.stat();
+    if (!stats.isFile()) throw new NotRegularFileError(target);
     if (stats.nlink > 1) throw new PlantedHardLinkError(target, stats.nlink);
     if (requireOwn && stats.uid !== process.getuid?.()) {
       throw new ForeignOwnerError(target, stats.uid);
@@ -513,12 +725,58 @@ async function openForRead(
   return handle;
 }
 
+/**
+ * A NAME THE DAEMON READS OR WRITES AS A FILE IS NOT ONE. A fifo, a socket or a device at a path
+ * inside an agent-writable tree was put there by the agent: a fifo parks a blocking open in
+ * either direction, a device is a read or a write of the host. Refused, never read or written.
+ */
+export class NotRegularFileError extends Error {
+  constructor(readonly path: string) {
+    super(
+      `shared_tree: refusing '${path}': it is not a regular file (a fifo, socket or ` +
+        `device the agent put there). Nothing was read or written.`,
+    );
+    this.name = 'NotRegularFileError';
+  }
+}
+
+/**
+ * READ AT MOST `maxBytes` OF A REGULAR FILE inside a tree the agent can write — the same
+ * link, hard-link, chain and regular-file refusals as `readFileShared` (opened `O_NONBLOCK`:
+ * a planted fifo never blocks, a device is never read), plus: never more than `maxBytes`
+ * read off the handle, whatever size the agent gave the file
+ * (a sparse multi-GB file costs `maxBytes`, not its size). `size` is the file's real size, so
+ * a caller can say it cut. `null` when it is not there.
+ */
+export async function readFileSharedBounded(
+  root: string,
+  relative: string,
+  maxBytes: number,
+): Promise<{ readonly bytes: Buffer; readonly size: number } | null> {
+  const handle = await openForRead(root, relative, false);
+  if (handle === null) return null;
+  try {
+    const size = (await handle.stat()).size;
+    const buffer = Buffer.alloc(Math.max(0, Math.min(maxBytes, size)));
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    return { bytes: buffer.subarray(0, filled), size };
+  } finally {
+    await handle.close();
+  }
+}
+
 async function readThroughHandle(
   root: string,
   relative: string,
   requireOwn: boolean,
+  ownerOf?: OwnerSeam,
 ): Promise<string | null> {
-  const handle = await openForRead(root, relative, requireOwn);
+  const handle = await openForRead(root, relative, requireOwn, ownerOf);
   if (handle === null) return null;
   try {
     return await handle.readFile('utf8');
@@ -539,9 +797,12 @@ export async function readFileShared(root: string, relative: string): Promise<st
   return readThroughHandle(root, relative, false);
 }
 
-/** Read one of the DAEMON's OWN files back: link-free, single-named, and its own inode. */
-export async function readFilePrivate(root: string, relative: string): Promise<string | null> {
-  return readThroughHandle(root, relative, true);
+/**
+ * Read one of the DAEMON's OWN files back: link-free, single-named, its own inode — in its own
+ * directories (every component below the root's first level the daemon's: PRIVATE_CHAIN_OWNED_FROM).
+ */
+export async function readFilePrivate(root: string, relative: string, ownerSeam?: OwnerSeam): Promise<string | null> {
+  return readThroughHandle(root, relative, true, ownerSeam);
 }
 
 /**

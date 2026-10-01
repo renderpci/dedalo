@@ -69,6 +69,8 @@ describe('datalist staleness: write + delete of a target-section record (S1-11)'
 		const outcome = await persistRecordColumns(
 			{ table: TEST_TABLE, sectionTipo: TARGET_SECTION, sectionId: NEW_SECTION_ID },
 			{ string: { test1: [{ id: 1, lang: 'lg-eng', value: 'datalist staleness probe' }] } },
+			false,
+			{ actor: -1 },
 		);
 		expect(outcome).toBe('inserted');
 

@@ -114,27 +114,43 @@ Two planes, one codebase:
    boundary; the plan is loaded from cache (or compiled — a bad parser fn or a
    label that fails the SQL-identifier chokepoint dies **here**, loudly). A job
    row is inserted; a partial-unique index guarantees **one active run per
-   element + section** — a re-click *attaches* to the running job instead of
-   double-publishing. The HTTP response is the SSE stream.
+   element + section** — the same user repeating the same request *attaches*
+   to their running job instead of double-publishing; another user, or another
+   selection, on a target with an active run is refused with
+   `diffusion.target_busy` (409, retry when it finishes) and never sees the
+   other run's progress. The HTTP response is the SSE stream.
 3. **Claim + spawn.** The scheduler claims the job and spawns the runner
    process.
 4. **The run.** Schema-ensure once, then the streaming batch loop
-   (default 500 records/batch): select → resolve → transform → project →
-   batched writes (~200-row multi-row upserts, one transaction per batch,
-   PK `(section_id, lang)`) → **committed checkpoint**
-   `{cursor, run_started_at, processed}` → progress update (the user's bar
-   moves) → cancel-flag check → next batch. Unpublishable records become
+   (`DEDALO_DIFFUSION_BATCH_RECORDS`, default 500 records/batch): select →
+   resolve → transform → project → cancel-flag check → **one fenced unit**:
+   the publication target's lock (a second writer of the same database or
+   directory waits — the job shows *Waiting for the publication target*),
+   the job's lease re-checked, batched writes (~200-row multi-row upserts,
+   PK `(section_id, lang)`), then the dd1758 rows, the batch's **run ledger**
+   events and the **checkpoint** `{v: 2, cursor, run_started_at, processed,
+   batch_seq, writer, errors}` and the progress update (the user's bar moves),
+   all committed together → next batch. Unpublishable records become
    `removeRecords` calls (the typed successor of the old `fields:'delete'`
-   sentinel).
+   sentinel); a record deleted from the archive while its batch waited is
+   unpublished instead of written.
 5. **Finish / disconnect / crash.** File formats merge + zip on `close()`; the
    final SSE chunk carries the result (tables summary, or
    `consolidated_files` + `diffusion_data` links for file runs). A closed
    browser changes nothing — the client reconnects later via
    `list_processes` → `get_process_status` by its deterministic process label.
    A dead runner is swept (stale heartbeat) and **re-queued from its
-   checkpoint** (≤3 attempts); deterministic batches + idempotent upserts make
-   the resumed run **byte-identical** to an uninterrupted one — the gate test
-   proves it literally.
+   checkpoint** (≤3 attempts). The resumed runner replays the job's run ledger
+   — the relation frontier still to drain, the records already published, the
+   files the run wrote — so its result, archives included, is
+   **byte-identical** to an uninterrupted run's (gate
+   `test/unit/diffusion_resume_ledger_native.test.ts`: a crash among the
+   primaries, a crash in the frontier drain, a crash inside a batch's tail, a
+   real `kill -9`), and its report keeps the error lines the batches before the
+   crash produced (*Partial success*). A linked record unpublished while the
+   run was down is not republished by the resume: the drain asks the
+   publication gate against the record as it is then. A cancelled run publishes no archive; an
+   admin requeue resumes it.
 6. **Deletes (the reverse path).** `section_record.delete()` calls the
    diffusion hook in-process: MariaDB rows deleted natively (per-target
    isolation, missing table/database = idempotent success), files unlinked,
@@ -177,13 +193,18 @@ Adding a community format = one ontology `type` string + one registered writer
 (`writers/registry.ts`); an unknown type throws a named error.
 
 All file artifacts are written temp-then-rename (atomic), zips are deterministic
-(zeroed timestamps), and **no wall-clock leaks into content** — who/when lives in
-the dd1758 ledger, and determinism is what makes crash-resume byte-equivalent.
+(zeroed timestamps; a duplicate entry name or an empty archive is refused), the
+merged documents and zips are built **streamed** — one file in memory at a time,
+whatever the publication's size — and **no wall-clock leaks into content** —
+who/when lives in the dd1758 ledger, and determinism plus the run ledger is what
+makes crash-resume byte-equivalent.
 
 ## Durability & the job queue
 
-Job state lives in two TS-owned Postgres tables (`dedalo_ts_diffusion_jobs`,
-`dedalo_ts_diffusion_job_events` — the deliberate, documented exception to the
+Job state lives in three TS-owned Postgres tables (`dedalo_ts_diffusion_jobs`,
+`dedalo_ts_diffusion_job_events`, `dedalo_ts_diffusion_job_ledger` — the run
+ledger of each job, cleared when it completes; the deliberate, documented
+exception to the
 "no bespoke tables" convention: a queue is high-churn infrastructure, while
 dd1758 remains the *user-facing* publication ledger).
 
@@ -199,11 +220,25 @@ dd1758 remains the *user-facing* publication ledger).
   the client's deterministic label
   (`process_diffusion_{user}_{element}_{section}`) is the **client-facing**
   `process_id` — authorization is by owner (or admin), never by id knowledge.
-- **Checkpoint:** `{cursor, run_started_at, processed}` committed after every
-  batch. `run_started_at` is captured once and reused on resume, so the
-  `publication_unix_timestamp` system field is stable across crashes.
+- **Checkpoint:** `{v: 2, cursor, run_started_at, processed, batch_seq,
+  writer}` committed with every batch, together with the batch's run-ledger
+  events. `run_started_at` is captured once and reused on resume, so the
+  `publication_unix_timestamp` system field is stable across crashes. A
+  checkpoint from before the run ledger (no `v: 2`) restarts the run.
+- **Target fence:** a publication target (a MariaDB database, a files
+  directory) is written by one unit at a time — runs, record deletes, ghost
+  unpublishes and the lang sweep take the same lock. A runner whose lease was
+  taken while it waited for the target writes nothing; a runner in the middle
+  of a batch is never swept. A long step — an `ALTER` adding a column to a
+  large published table, a lang sweep — keeps its lock for as long as it runs
+  (a timer keepalive on its connection); only a frozen process loses it, after
+  5 minutes. A record delete never waits for a busy target: the unpublish stays
+  pending in dd1758 and a retry drain (the next run's start, the `retry_pending_deletions`
+  action, the maintenance panel's retry) pays it, waiting for the run's batch.
 - **Cancel:** queued jobs finalize immediately; running jobs honor the flag
-  between batches; committed work stays (idempotent re-run completes it).
+  between batches; committed work stays, and **no consolidated archive** is
+  written from a cancelled run (a requeue resumes it and consolidates the whole
+  run).
 - **Progress transport:** SSE streams poll the job row (the old engine's exact
   wire: `data:\n{json}` padded to 16 KB, 2 s heartbeat, `X-Accel-Buffering: no`);
   any server instance can stream any runner's progress.

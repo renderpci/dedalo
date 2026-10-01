@@ -75,10 +75,11 @@ describe('build runner', () => {
     // it walked re-opened `.builder` — 0700, the daemon's — to 2770 on the first build of
     // every site, handing the uid the agent runs as rwx over the build records the API
     // serves back. Measured: the leaf and the records are the daemon's, and so is the
-    // directory above them.
+    // directory above them — traverse-only to the group (0710: the site's identity opens the
+    // one file it is handed there, the turn's MCP config, and lists or writes nothing).
     const builder = workspacePath('buildable', '.builder');
     // eslint-disable-next-line no-bitwise -- the permission word is the assertion
-    expect(statSync(builder).mode & 0o7777).toBe(0o700);
+    expect(statSync(builder).mode & 0o7777).toBe(0o710);
     expect(statSync(join(builder, 'builds')).mode & 0o7777).toBe(0o700);
     expect(statSync(join(builder, 'builds', `${build_id}.json`)).mode & 0o7777).toBe(0o600);
   });
@@ -105,7 +106,7 @@ describe('build runner', () => {
     // stated rather than found.
     await makeSite('unconfinable', 'Unconfinable');
     await useTrivialBuild('unconfinable', 'src', true);
-    const impossible = { ...policyFromConfig(), mode: 'systemd_scope' as const, agentUser: '' };
+    const impossible = { ...policyFromConfig(), mode: 'systemd_scope' as const, identities: {} };
 
     await expect(startBuild('unconfinable', impossible)).rejects.toBeInstanceOf(
       ConfinementUnavailableError,
@@ -137,7 +138,7 @@ describe('build runner', () => {
     await useTrivialBuild('linked', 'out', true);
 
     // A secret standing in for "anything outside the workspace this daemon can read".
-    const outside = join(roots.agentHome, 'outside');
+    const outside = join(roots.agentStateRoot, 'outside');
     await mkdir(outside, { recursive: true });
     await writeFile(join(outside, 'stolen.txt'), 'NOT PART OF THIS SITE', 'utf8');
     await symlink(outside, workspacePath('linked', 'out'));
@@ -162,7 +163,7 @@ describe('build runner', () => {
     await makeSite('via-link', 'Via Link');
     await useTrivialBuild('via-link', 'through/dist', true);
 
-    const outside = join(roots.agentHome, 'elsewhere');
+    const outside = join(roots.agentStateRoot, 'elsewhere');
     await mkdir(join(outside, 'dist'), { recursive: true });
     await writeFile(join(outside, 'dist', 'index.html'), 'OUTSIDE', 'utf8');
     await symlink(outside, workspacePath('via-link', 'through'));

@@ -352,13 +352,18 @@ tipo and relation type:
 ]
 ```
 
-It is maintained at the save chokepoint by `maintainRelationSearchIndex()`
-(`src/core/relations/save.ts`), which walks each stored locator's ancestor
-chain, sets `from_component_tipo` to the component's own tipo and `type` to
-its relation type, and de-duplicates. It runs only when the saved
-component's model is `component_autocomplete_hi` (normalized to
-`component_portal` on read) — every other model writes nothing to
-`relation_search`.
+It is derived by `deriveRelationSearch()` (`src/core/relations/save.ts`),
+which walks each stored locator's ancestor chain, sets `from_component_tipo`
+to the component's own tipo and `type` to its relation type, and
+de-duplicates — and written by the record-write chokepoint
+(`src/core/section_record/record_write.ts`) in the same update as the value,
+so every way of writing a record (a save, a Time Machine restore, an
+undelete, a bulk revert, an observer recompute) keeps it current. On a save it
+runs only when the component's model is `component_autocomplete_hi`
+(normalized to `component_portal` on read) — every other model writes nothing
+to `relation_search`. The three removal doors (a portal locator delete, the
+inverse-reference strip of a record delete, the data wipe) re-derive it for
+every relation key they rewrite.
 
 ### How search uses it
 

@@ -55,7 +55,12 @@ import { ensureHierarchy } from '../../src/core/ontology/hierarchy_state.ts';
 import { getNode } from '../../src/core/ontology/resolver.ts';
 import { getSectionMapValue } from '../../src/core/ontology/section_map.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
-import { type Principal, resolvePrincipal } from '../../src/core/security/permissions.ts';
+import {
+	getPermissionGrant,
+	type Principal,
+	resolvePrincipal,
+	TEMP_PRESET_SECTION,
+} from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
@@ -75,6 +80,13 @@ const PICKER_CALLER = 'zzpc1';
 const PLAIN_CALLER = 'zzpc2';
 /** Declares view:'tree'; the reader identity holds only READ on it. */
 const READONLY_CALLER = 'zzpc3';
+/**
+ * Declares view:'tree' and lives under the dd655 EDITING-PRESET section, where
+ * `getPermissions` answers 2 for every principal BY RULE (TEMP_PRESET_SECTION:
+ * the blanket preset grant, bounded only by the preset assembler's owner
+ * predicate). No profile grants it — the reader's level on it is the rule's.
+ */
+const PRESET_CALLER = 'zzpc4';
 /**
  * A tipo that exists NOWHERE else, planted in the caller's `show.ddo_map`. The
  * ddo_map governs how a LINKED value is displayed back in the caller — it is
@@ -151,8 +163,12 @@ async function buildIdentity(
 	return { userId, profileId, principal: await resolvePrincipal(userId) };
 }
 
-/** One scratch caller component node. */
-async function buildCallerNode(tipo: string, properties: Record<string, unknown>): Promise<void> {
+/** One scratch caller component node (parented under `parent`, the HOST section by default). */
+async function buildCallerNode(
+	tipo: string,
+	properties: Record<string, unknown>,
+	parent: string = HOST,
+): Promise<void> {
 	await sql.unsafe(
 		`INSERT INTO dd_ontology (tipo, parent, model, tld, term, is_model, is_translatable, is_main, properties)
 		 VALUES ($1, $2, 'component_portal', $3, $4::text::jsonb, false, false, false, $5::text::jsonb)`,
@@ -165,7 +181,7 @@ async function buildCallerNode(tipo: string, properties: Record<string, unknown>
 			// not be able to claim each other. An orphan parent made the fixture
 			// declare a pair the engine correctly refuses, i.e. it asserted a shape
 			// production can never have. Purged by tld in afterAll.
-			HOST,
+			parent,
 			CALLER_TLD,
 			JSON.stringify({ 'lg-spa': `scratch picker caller ${tipo}` }),
 			JSON.stringify(properties),
@@ -387,6 +403,11 @@ beforeAll(async () => {
 	});
 	await buildCallerNode(PLAIN_CALLER, { source: targetConfig(TERMS) });
 	await buildCallerNode(READONLY_CALLER, { view: 'tree', source: targetConfig(TERMS) });
+	await buildCallerNode(
+		PRESET_CALLER,
+		{ view: 'tree', source: targetConfig(TERMS) },
+		TEMP_PRESET_SECTION,
+	);
 	await sql.unsafe('INSERT INTO matrix_test (section_id, section_tipo) VALUES ($1, $2)', [
 		HOST_ID,
 		HOST,
@@ -576,6 +597,40 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 		expect(readOnly.status).toBe(200);
 		expect(edit.body.data?.context?.[0]?.thesaurus_mode).toBe('relation');
 		expect(readOnly.body.data?.context?.[0]?.thesaurus_mode).toBe('default');
+	});
+
+	test('a RULE-granted EDIT is not a picker grant: a dd655 member gets relation mode only from a profile (or the superuser)', async () => {
+		// The mode grant EXTENDS the caller's edit level into a picker capability
+		// (relation mode + the caller's resolved targets, cap and held count). The
+		// dd655 editing-preset rule answers 2 for ANY tipo under dd655 and ANY
+		// principal — its bound is the preset assembler's owner predicate, which
+		// does not travel into a thesaurus read. So a level the profile never gave
+		// must not grant the picker (the read floor's law: an extension refuses a
+		// 'rule' basis — security/read_floor.ts).
+		expect(reader).toBeDefined();
+		const principal = reader?.principal as Principal;
+		const presetCaller = {
+			section_tipo: TEMP_PRESET_SECTION,
+			section_id: String(HOST_ID),
+			tipo: PRESET_CALLER,
+		};
+		// Fixture floor: the reader's 2 on this pair is the RULE's, not its profile's
+		// (its profile names no dd655 pair) — so the refusal below is attributable
+		// to the basis and to nothing else.
+		expect(await getPermissionGrant(principal, TEMP_PRESET_SECTION, PRESET_CALLER)).toEqual({
+			level: 2,
+			basis: 'rule',
+		});
+		// Positive control: the caller IS a working picker caller (the superuser,
+		// basis 'superuser', is granted relation mode on the very same address).
+		const asSuperuser = await readTree(superuser, presetCaller);
+		expect(asSuperuser.status).toBe(200);
+		expect(asSuperuser.body.data?.context?.[0]?.thesaurus_mode).toBe('relation');
+
+		const asReader = await readTree(principal, presetCaller);
+		expect(asReader.status).toBe(200);
+		expect(asReader.body.data?.context?.[0]?.thesaurus_mode).toBe('default');
+		expect(asReader.body.data?.context?.[0]?.picker).toBeUndefined();
 	});
 
 	test.each([

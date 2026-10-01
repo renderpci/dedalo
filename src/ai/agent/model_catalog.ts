@@ -249,8 +249,17 @@ export function resolveProvider(
 			endpoint: model.endpoint as string,
 			model: model.model,
 			...(apiKey !== undefined && apiKey !== '' ? { apiKey } : {}),
-			maxTokens: model.max_tokens ?? defaultMaxTokens(),
+			maxTokens: modelTurnMaxTokens(model),
 			...(model.timeout_s !== undefined ? { timeoutMs: model.timeout_s * 1000 } : {}),
 		}),
 	};
+}
+
+/**
+ * The output limit of ONE model turn of this catalog entry — what both providers
+ * send as `max_tokens` (the entry's own `max_tokens`, else DEDALO_AGENT_MAX_TOKENS).
+ * The agent door derives a run's token RESERVATION from it (ai_spend).
+ */
+export function modelTurnMaxTokens(model: CatalogModel): number {
+	return model.max_tokens ?? defaultMaxTokens();
 }

@@ -843,7 +843,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				executeCsvImport({
 					plan,
 					sectionTipo,
-					userId: ctx.userId,
+					principal: ctx.principal,
 					bulkProcessId,
 					errors,
 					notices,

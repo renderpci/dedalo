@@ -32,7 +32,7 @@
 
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { LEGACY_TOKEN_MAP } from '../errors/registry.ts';
-import type { Principal } from '../security/permissions.ts';
+import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 import { runAdmission, scheduleBackground } from './background.ts';
 import {
 	BACKGROUND_JOB_STATUS_ACTION,
@@ -42,14 +42,20 @@ import {
 } from './job_status.ts';
 import { getLoadedTool } from './loader.ts';
 import type { ToolResponse } from './module.ts';
-import { getUserTools } from './registry.ts';
-import { assertActionPermission, resolveAction } from './security.ts';
+import { assertActionPermission, isToolGranted, resolveAction } from './security.ts';
 
 const TOOL_NAME_PATTERN = /^tool_[a-z0-9_]+$/;
 
-/** Gates 3+4: an admin sees every active tool, so for them an unknown name IS an invalid name. */
-function unknownTool(principal: Principal, toolName: string): DedaloError {
-	return new DedaloError(principal.isGlobalAdmin ? 'tool.invalid_name' : 'tool.not_authorized', {
+/**
+ * Gates 3+4: the SUPERUSER holds every active tool, so for it an unknown name IS
+ * an invalid name; anyone else — a global admin included — is refused
+ * authorization (no existence leak). Keyed on the identity, never the admin
+ * flag (the flag stopped widening the tool list on 2026-08-09; this branch kept
+ * it until req 8, answering a non-superuser admin `tool.invalid_name` for a
+ * real tool its profile does not grant).
+ */
+function unknownTool(userId: number, toolName: string): DedaloError {
+	return new DedaloError(userId === SUPERUSER_ID ? 'tool.invalid_name' : 'tool.not_authorized', {
 		coordinates: { tool: toolName },
 	});
 }
@@ -94,11 +100,9 @@ export async function dispatchToolRequest(
 		throw new DedaloError('tool.invalid_name', { coordinates: { tool: toolName } });
 	}
 
-	// Gates 3 + 4: ACTIVE in dd1324 AND authorized for the calling user.
-	const userTools = await getUserTools(userId, principal.isGlobalAdmin);
-	// An admin sees every active tool, so for them an unknown name IS an
-	// invalid name; a non-admin is refused authorization (no existence leak).
-	if (!userTools.some((tool) => tool.name === toolName)) throw unknownTool(principal, toolName);
+	// Gates 3 + 4: ACTIVE in dd1324 AND authorized for the calling user — the one
+	// grant decision (security.ts isToolGranted).
+	if (!(await isToolGranted(userId, toolName))) throw unknownTool(userId, toolName);
 
 	// Framework status action (S2-16/DEC-22a): poll a background job started on
 	// this tool. Served here — after the active+authorized gates, before the

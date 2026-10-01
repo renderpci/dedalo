@@ -15,7 +15,10 @@
  * as they were (a later upload, a republish). A SOFT cascade
  * (delete_target) kept the row and wiped its data: the wiped keys are written
  * back into it (restoreWipedRecord) while the row is still as the wipe left
- * it, and — after COMMIT, as the missing-row undelete does — the files the
+ * it — every key but its COVERED OBSERVER slots, which are derived state:
+ * never put back from the snapshot, never judged a write since, recomputed from
+ * truth after COMMIT (record_write.ts requestCoveredSlotRecompute) — and —
+ * after COMMIT, as the missing-row undelete does — the files the
  * wipe moved into `deleted/` for its media keys are moved back; a key already
  * at the state the revert PRODUCES (snapshot + its units' restores —
  * producedStateOf) is settled; any other key
@@ -53,9 +56,12 @@
  *     marker's image: the defaults the INSERT carried, or the snapshot an
  *     undelete restored) — else someone else wrote to the record after it was
  *     born (a later translation of a run key included), and it is no longer
- *     the run's alone;
- *   - nothing references it (an inverse locator is someone's link; the delete
- *     would strip it from their record);
+ *     the run's alone. A COVERED OBSERVER slot (a set_dato_external mirror) is
+ *     never such a value: it is derived state a birth never stores
+ *     (record_write.ts prepareBirthColumns) and the recompute fills;
+ *   - nothing LINKS to it (an inverse locator is someone's link; the delete
+ *     would strip it from their record) — a locator held in a covered observer
+ *     slot is the mirror of the record's OWN edge, not a link (isReferenced);
  *   - the caller may delete in its section and scope.
  * Otherwise the empty shell stays and is reported `created_record_kept`.
  * Born records can reference each other (a run that imports a record and a
@@ -100,8 +106,7 @@ import {
 	type SlotImages,
 	splitComposed,
 } from '../../../src/core/relations/dataframe_slots.ts';
-import { reindexRelationSearchLikeSave } from '../../../src/core/relations/save.ts';
-import { countInverseReferences } from '../../../src/core/search/search_related.ts';
+import { findInverseReferenceLocators } from '../../../src/core/search/search_related.ts';
 import {
 	CREATED_BY_USER,
 	CREATED_DATE,
@@ -112,8 +117,12 @@ import {
 	deleteSectionRecord,
 	wipedComponentValue,
 } from '../../../src/core/section/record/delete_record.ts';
+import { isCoveredObserverTipo } from '../../../src/core/section/record/observers.ts';
 import { isLangSlicedModel } from '../../../src/core/section/record/save_component.ts';
-import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
+import {
+	persistRestoredKeys,
+	requestCoveredSlotRecompute,
+} from '../../../src/core/section_record/index.ts';
 import { getSectionPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { revokeDeletedAccountAccess } from '../../../src/core/security/revocation.ts';
@@ -121,7 +130,6 @@ import { composedUnitProduces } from './bulk_revert_composed.ts';
 import type { RecordMarker, RevertKey, RevertUnit, RunRow } from './bulk_revert_plan.ts';
 import { recordAddress, runOwnsRecordStamps } from './bulk_revert_plan.ts';
 import { exactUnitProduces, type ProducedKey } from './bulk_revert_undo.ts';
-import { propagateRestoreToObservers } from './restore_common.ts';
 import { restoreAbsentSectionRow, restoreSectionMedia } from './tool_time_machine.ts';
 
 /** Record-level metadata keys every record carries from birth — never "someone else's value". */
@@ -141,9 +149,9 @@ export type RecordOutcome =
 			kind: 'done';
 			/**
 			 * The post-COMMIT half of a landed undelete (the files moved into
-			 * `deleted/`; for a SOFT cascade, the observer cascade of the keys
-			 * put back), when the row half ran inside a unit's transaction;
-			 * absent when there is nothing left to do.
+			 * `deleted/`), when the row half ran inside a unit's transaction;
+			 * absent when there is nothing left to do. (The observer cascade is
+			 * the write chokepoint's — its ledger drains after the same COMMIT.)
 			 */
 			afterCommit?: () => Promise<void>;
 	  }
@@ -271,12 +279,15 @@ async function restoreDeletedRecord(
 			// VERBATIM (no dd197/dd201 stamp): the snapshot carries its own stamps,
 			// and the run's stamp units compare against them — a "now" stamp here
 			// refused every one `changed_since_run` (a revert of a revert inexact).
+			// The ACTOR is still the reverting user: the birth's observer
+			// recomputes (the chokepoint's ledger — CORE-1) run as them.
 			const restored = await restoreAbsentSectionRow(
 				snapshot,
 				marker.row.id,
 				marker.sectionTipo,
 				marker.sectionId,
-				null,
+				false,
+				context.userId,
 			);
 			if (restored === null) return null;
 			if (
@@ -605,6 +616,26 @@ async function wipedKeysOf(
 			if (canonicalJson(value) === canonicalJson(liveValue)) continue;
 			// Already at the state the revert produces: its units find it unchanged.
 			if (state.settled(column, tipo, liveValue)) continue;
+			// A COVERED OBSERVER slot is derived state ("who references me"): never
+			// judged a write since (the recompute writes it whenever a referencer
+			// moves). It IS put back from the snapshot — its item ids are the
+			// pairing keys of the frames the restore puts back beside it (the
+			// covered UNIT, record_write.ts §3e: a recompute into the wiped-empty
+			// slot minted fresh ids and re-paired every frame onto another
+			// referencer) — through the COMPONENT-RESTORE entry, which never
+			// propagates it and recomputes it from truth after COMMIT (a referencer
+			// that left is dropped there, with its frame).
+			if (column === 'relation' && (await isCoveredObserverTipo(tipo))) {
+				if (isEmptyValue(value)) continue; // nothing to bring back: the recompute fills it
+				keys.push({
+					column,
+					tipo,
+					model: (await getModelByTipo(tipo)) ?? '',
+					live: liveValue,
+					value,
+				});
+				continue;
+			}
 			const model = (await getModelByTipo(tipo)) ?? '';
 			if (!isWipedState(liveValue, model, tipo)) return { keys, written: true };
 			if (isEmptyValue(value)) continue; // nothing to bring back
@@ -638,6 +669,21 @@ function wipedKeyState(key: WipedKey, sliced: boolean): unknown {
 }
 
 /**
+ * The stamp posture of a soft-cascade restore's writes: none when the run owns
+ * the record's modified stamps (their own units restore them —
+ * runOwnsRecordStamps), the reverting user's otherwise.
+ */
+function stampsOf(marker: RecordMarker, context: RecordContext): { userId: number } | false {
+	return runOwnsRecordStamps(
+		context.keyAddresses ?? new Set(),
+		marker.sectionTipo,
+		marker.sectionId,
+	)
+		? false
+		: { userId: context.userId };
+}
+
+/**
  * Write one wiped key back (its undo pairs are recordWipedHistory's). What is
  * written is the END state of the sequential steps (wipedKeyState) — the
  * pre-wipe items, with each language region placed as its own save would place
@@ -651,19 +697,18 @@ async function writeWipedKey(
 ): Promise<unknown> {
 	const target = { table, sectionTipo: marker.sectionTipo, sectionId: marker.sectionId };
 	const written = wipedKeyState(key, key.model !== '' && isLangSlicedModel(key.model));
-	const ownsStamps = runOwnsRecordStamps(
-		context.keyAddresses ?? new Set(),
-		marker.sectionTipo,
-		marker.sectionId,
-	);
-	await persistRecordKeys(
+	// The chokepoint owns the key's derived writes (its COMPONENT-RESTORE entry —
+	// this IS a restore): the save law's relation_search (the wipe removed the
+	// key's ancestors) in the same UPDATE, and the observer cascade — the ledger
+	// drains it after the unit's COMMIT; a covered observer slot is never
+	// propagated, it is recomputed from truth (record_write.ts persistRestoredKeys).
+	await persistRestoredKeys(
 		target,
 		[{ column: key.column, key: key.tipo, value: written }],
-		ownsStamps ? false : { userId: context.userId },
+		stampsOf(marker, context),
+		{ actor: context.userId },
 	);
 	const items = Array.isArray(written) ? written : [];
-	// The save's relation_search law (the wipe removed the key's ancestors).
-	await reindexRelationSearchLikeSave(table, marker.sectionTipo, marker.sectionId, key.tipo, items);
 	await absorbComponentItemIds(table, marker.sectionTipo, marker.sectionId, key.tipo, items);
 	return written;
 }
@@ -769,34 +814,9 @@ async function recordWipedHistory(
 }
 
 /**
- * The OBSERVER cascade of the wiped keys put back — the post-write obligation
- * a component save fires and the wipe itself fired (deleteSectionData), so a
- * mirror fed by a restored key recomputes instead of keeping the wipe's value.
- * POST-COMMIT (a cascade hop refuses to run inside a transaction): handed back
- * as the outcome's `afterCommit`, run by the orchestrator once the unit lands.
- */
-function wipedKeysCascade(
-	marker: RecordMarker,
-	restored: readonly { key: WipedKey; written: unknown }[],
-	userId: number,
-): () => Promise<void> {
-	return async () => {
-		for (const { key, written } of restored) {
-			await propagateRestoreToObservers(
-				key.tipo,
-				marker.sectionTipo,
-				marker.sectionId,
-				Array.isArray(key.live) ? key.live : [],
-				written,
-				userId,
-			);
-		}
-	};
-}
-
-/**
- * The post-COMMIT half of a soft-cascade restore, in the delete door's own
- * order: the observer cascade, then the FILES. The wipe (deleteSectionData)
+ * The post-COMMIT half of a soft-cascade restore: the FILES. (The observer
+ * cascade of the keys put back is the write chokepoint's — its ledger drained
+ * it after the unit's COMMIT, CLOSURE_PLAN Step 2.) The wipe (deleteSectionData)
  * moved every emptied media component's files into `deleted/` after its
  * commit; putting the media keys back without them left the record pointing at
  * live paths that hold nothing. The same file door the missing-row undelete
@@ -806,15 +826,12 @@ function wipedKeysCascade(
 function wipedRecordAfterCommit(
 	marker: RecordMarker,
 	restored: readonly { key: WipedKey; written: unknown }[],
-	userId: number,
 ): () => Promise<void> {
-	const cascade = wipedKeysCascade(marker, restored, userId);
 	const media: Record<string, unknown> = {};
 	for (const { key, written } of restored) {
 		if (key.column === 'media') media[key.tipo] = written;
 	}
 	return async () => {
-		await cascade();
 		if (Object.keys(media).length === 0) return;
 		await restoreSectionMedia(marker.sectionTipo, marker.sectionId, { media });
 	};
@@ -872,6 +889,15 @@ async function restoreWipedRecord(
 		}
 		const { keys, written } = await wipedKeysOf(marker, context, snapshot, record.columns);
 		if (written) return { kind: 'kept' } as const;
+		// The record is (or is now put) back at its snapshot: EVERY covered observer
+		// slot the section declares is recomputed from truth after COMMIT (the
+		// census the wipe shares) — the ones the snapshot carried are also written
+		// back with their frames (wipedKeysOf), the rest the wipe left empty.
+		await requestCoveredSlotRecompute(
+			{ table, sectionTipo: marker.sectionTipo, sectionId: marker.sectionId },
+			stampsOf(marker, context),
+			{ actor: context.userId },
+		);
 		if (keys.length === 0) return { kind: 'present' } as const;
 		const mains = await wipedMainsOf(marker, table, keys);
 		const restored: { key: WipedKey; written: unknown }[] = [];
@@ -879,7 +905,7 @@ async function restoreWipedRecord(
 			restored.push({ key, written: await writeWipedKey(marker, table, key, context) });
 		}
 		await recordWipedHistory(marker, table, mains, context);
-		return { kind: 'done', afterCommit: wipedRecordAfterCommit(marker, restored, context.userId) };
+		return { kind: 'done', afterCommit: wipedRecordAfterCommit(marker, restored) };
 	});
 	if (outcome.kind === 'done' && outcome.afterCommit !== undefined && !isInTransaction()) {
 		await outcome.afterCommit();
@@ -911,7 +937,10 @@ function birthImageOf(marker: RecordMarker): Record<string, unknown> {
  * key sits outside the run's language region, survives the revert untouched —
  * and the delete then took it away unreviewed.
  */
-function holdsForeignValue(marker: RecordMarker, columns: Record<string, unknown>): boolean {
+async function holdsForeignValue(
+	marker: RecordMarker,
+	columns: Record<string, unknown>,
+): Promise<boolean> {
 	const birth = birthImageOf(marker);
 	for (const column of MATRIX_JSONB_COLUMNS) {
 		if (METADATA_COLUMNS.has(column)) continue;
@@ -919,18 +948,37 @@ function holdsForeignValue(marker: RecordMarker, columns: Record<string, unknown
 		if (bag === null || bag === undefined || typeof bag !== 'object') continue;
 		for (const [tipo, value] of Object.entries(bag as Record<string, unknown>)) {
 			if (RECORD_METADATA_KEYS.has(tipo) || isEmptyValue(value)) continue;
-			if (canonicalJson(value) !== canonicalJson(keyOf(birth, column, tipo))) return true;
+			if (canonicalJson(value) === canonicalJson(keyOf(birth, column, tipo))) continue;
+			// A COVERED OBSERVER slot is derived state, never anyone's write: a birth
+			// stores none (record_write.ts prepareBirthColumns) and the recompute
+			// fills it from whoever references the record — a referencer is the
+			// `referenced` deferral's business, not a foreign value.
+			if (column === 'relation' && (await isCoveredObserverTipo(tipo))) continue;
+			return true;
 		}
 	}
 	return false;
 }
 
-/** Whether any record references this one. */
+/**
+ * Whether any record LINKS to this one. A locator held in a COVERED OBSERVER
+ * slot is not a link: it is the mirror of THIS record's own edge ("who
+ * references me" on the record it points at), derived state the delete strips
+ * and the recompute re-derives. Counted as a link it deadlocked D2 once the
+ * undelete propagated (CORE-1): an undeleted term and its undeleted referencer
+ * each "referenced" the other — the referencer by its link, the term by its
+ * mirror of that link — and neither could ever be deleted.
+ */
 async function isReferenced(marker: RecordMarker): Promise<boolean> {
-	const { total } = await countInverseReferences([
-		{ section_tipo: marker.sectionTipo, section_id: marker.sectionId },
-	]);
-	return total > 0;
+	const hits = await findInverseReferenceLocators(
+		[{ section_tipo: marker.sectionTipo, section_id: marker.sectionId }],
+		{ limit: false },
+	);
+	for (const hit of hits) {
+		const from = hit.locator_data.from_component_tipo;
+		if (typeof from !== 'string' || !(await isCoveredObserverTipo(from))) return true;
+	}
+	return false;
 }
 
 /**
@@ -956,7 +1004,7 @@ async function deleteIfSafe(
 		{
 			bulkProcessId: context.newBulkId,
 			precondition: async (snapshot) => {
-				if (holdsForeignValue(marker, snapshot)) return 'foreign';
+				if (await holdsForeignValue(marker, snapshot)) return 'foreign';
 				return (await isReferenced(marker)) ? 'referenced' : null;
 			},
 		},

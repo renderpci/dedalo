@@ -326,13 +326,16 @@ export async function framePlanIsNoop(
  * `audit` is false on purpose: the main write that follows carries the record's
  * dd197/dd201 modified stamps for the whole restore, exactly as PHP's main
  * `save()` does after the slot saves. No TM row is written for a slot (PHP
- * `$save_tm = false`) — the main's fresh row carries the frames.
+ * `$save_tm = false`) — the main's fresh row carries the frames. `actor` is the
+ * restoring principal: a slot write is a key write like any other, so an
+ * observer of the slot recomputes (the chokepoint's ledger) as that actor.
  */
 export async function applyDataframeRestore(
 	target: RecordWriteTarget,
 	mainTipo: string,
 	plan: readonly DataframeSlotRestore[],
-	slice: FrameSlice | null = null,
+	slice: FrameSlice | null,
+	actor: number,
 ): Promise<void> {
 	if (plan.length === 0) return;
 	const column = getColumnNameByModel('component_dataframe') as MatrixJsonbColumn;
@@ -343,7 +346,7 @@ export async function applyDataframeRestore(
 		slice,
 	)) {
 		// null REMOVES the key (PHP's emptied slot), never '[]'.
-		await persistRecordKeys(target, [{ column, key: slotTipo, value: next }], false);
+		await persistRecordKeys(target, [{ column, key: slotTipo, value: next }], false, { actor });
 		// The restored frames carry explicit ids; raise the slot's counter so a
 		// later insert cannot mint a duplicate (PHP raises on every set_data).
 		// A duplicate id here would break the id_key pairing itself.

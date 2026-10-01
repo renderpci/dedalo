@@ -58,12 +58,16 @@ DB_PASSWORD="my_password"
 		heading: 'Database connection acquire timeout',
 		typeLabel: 'int',
 		doc: `How long (in milliseconds) a request waits for a free database connection when the
-pool is fully in use, before it gives up with an error. The default \`0\` means *wait
-forever*.
+pool is fully in use, before it gives up. The default \`0\` means *wait forever*.
 
 Setting it — \`30000\` is a sensible production value — turns pool exhaustion from a
-silent, indefinite hang into a loud, diagnosable error. It does not make the server
-slower: it only bounds how long it is willing to be stuck.
+silent, indefinite hang into a loud, diagnosable answer: the request fails with the error
+\`db.pool_exhausted\` (HTTP 503, "try again in a moment"). It does not make the server
+slower: it only bounds how long it is willing to be stuck. Every way of taking a
+connection counts against the pool — a query, a transaction, a connection reserved for
+one caller — so nothing can exhaust the pool behind this bound's back. The maintenance
+pool (\`DB_MAINTENANCE_POOL_MAX\`) has its own connections and applies the same bound to
+them.
 
 \`\`\`bash
 DB_POOL_ACQUIRE_TIMEOUT_MS=30000
@@ -80,14 +84,48 @@ minimum \`1\`.
 
 The limit is **per process**, and a Dédalo installation runs more than one: the server
 itself, plus one process per concurrent publication runner
-(\`DEDALO_DIFFUSION_MAX_RUNNERS\`), plus background workers. All of them together must
+(\`DEDALO_DIFFUSION_MAX_RUNNERS\`), plus background workers. Each process may also open
+up to \`DB_MAINTENANCE_POOL_MAX\` maintenance connections. All of them together must
 stay below the PostgreSQL server's own \`max_connections\` (typically 100). With the
-defaults — a server and two runners — the installation uses at most 30 connections,
+defaults — a server and two runners — the installation uses at most 36 connections,
 which leaves ample room. Raise this only when the database server has the connections
 to spare.
 
+A publication runner needs at least **2**: each batch holds one connection for its whole
+write to the publication target, and the runner's heartbeat needs another beside it. A
+runner started with \`DB_POOL_MAX=1\` refuses to start, naming this key.
+
 \`\`\`bash
 DB_POOL_MAX=10
+\`\`\``,
+	},
+	DB_MAINTENANCE_POOL_MAX: {
+		type: 'number',
+		scope: 'operator',
+		default: 2,
+		heading: 'Maintenance connection pool size',
+		typeLabel: 'int',
+		doc: `The number of PostgreSQL connections this process keeps for MAINTENANCE work — the
+maintenance-area actions that scale with the size of the data (store rebuilds, VACUUM and
+REINDEX, bulk transforms, imports), the data-update engine and the other deliberately
+long operations. The other maintenance-area actions stay on the request pool, so they
+never queue behind a long one. Default \`2\`, minimum \`1\` (a \`0\` is read as \`1\`).
+
+These connections are separate from the request pool (\`DB_POOL_MAX\`) for one reason:
+they carry no statement ceiling (\`DB_STATEMENT_TIMEOUT_MS\` does not apply to them), and
+keeping them apart means the request pool's ceiling is never lifted on a connection a
+request could later be handed. The pool is opened only when maintenance work first
+runs, and its idle connections close after 30 seconds.
+
+Count these connections in the installation's budget TWICE: every process may hold up
+to \`DB_POOL_MAX + 2 × DB_MAINTENANCE_POOL_MAX + 2\` connections (16 with the defaults).
+The index-rebuild lane (REINDEX/VACUUM) is a second set of these connections that keeps
+its own idle ones for 30 seconds, and a stop or an update verdict opens up to 2
+short-lived connections of its own. All processes together (the server, each diffusion
+runner) must stay below the PostgreSQL server's \`max_connections\`.
+
+\`\`\`bash
+DB_MAINTENANCE_POOL_MAX=2
 \`\`\``,
 	},
 	DB_PORT: {
@@ -134,21 +172,28 @@ DB_SSLMODE=disable
 		default: 0,
 		heading: 'Database statement timeout',
 		typeLabel: 'int',
-		doc: `The maximum time (in milliseconds) any single database statement may run before
-PostgreSQL cancels it. The default \`0\` means no limit.
+		doc: `The maximum time (in milliseconds) any single database statement of ordinary request
+traffic may run before PostgreSQL cancels it. The default \`0\` means no limit.
 
 **A production installation should set it** — \`60000\` (one minute) is the recommended
 value: one runaway query must not be able to occupy a connection forever and starve
 every other user. It is also the only bound on a search that cannot stop early: some
 columns are deliberately left unindexed, and a term that matches nothing there reads
 the whole table — on a large activity log that is minutes, and a user closing the
-browser does NOT cancel it.
+browser does NOT cancel it. A statement stopped by this ceiling answers with the error
+\`db.statement_timeout\` (HTTP 503), never a generic server error.
 
-Long-running MAINTENANCE is exempt automatically, so this ceiling does not have to be
-sized around it: the reindex, vacuum and index-prune actions clear the limit for their
-own statements. Choose a value comfortably above your slowest legitimate *request* —
-if searches or exports on very large sections are part of daily work, measure them
-first (see \`DEDALO_SLOW_QUERY_MS\`).
+Long-running MAINTENANCE does not run under this ceiling, so it does not have to be
+sized around it: the maintenance-area actions (reindex, vacuum, search-store rebuilds,
+the bulk transforms) and the data-update engine run on a separate maintenance connection
+pool whose statements are unbounded (\`DB_MAINTENANCE_POOL_MAX\`), and the boot
+migrations lift the ceiling for their own transaction. Not yet exempt, so measure them
+on your installation before setting a value: the search-store builds a boot runs when
+it finds a store missing or damaged, the observer mirror reconcile
+(\`scripts/observer_reconcile.ts\`) and the activity-log retention prune on a very large
+log. Choose a value comfortably above your slowest legitimate *request* — if searches
+or exports on very large sections are part of daily work, measure them first (see
+\`DEDALO_SLOW_QUERY_MS\`).
 
 \`\`\`bash
 DB_STATEMENT_TIMEOUT_MS=60000

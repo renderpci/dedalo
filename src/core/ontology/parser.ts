@@ -29,7 +29,12 @@
  * is not reproduced — it only logs; it never changes the parsed node.
  */
 
-import { type DdOntologyNode, readDdOntologyRow } from '../db/dd_ontology.ts';
+import { isValidTipo } from '../concepts/ontology.ts';
+import {
+	type DdOntologyNode,
+	ddOntologyIdentifierViolations,
+	readDdOntologyRow,
+} from '../db/dd_ontology.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { readComponentItems } from '../resolve/component_data.ts';
@@ -134,9 +139,23 @@ export async function getOverwriteLocator(
  * PHP get_term_id_from_locator (:2207): the locator's canonical term-id
  * (`<tld><section_id>`). Fast path: TLD from the section_tipo string. Slow
  * fallback (rare — section_tipo not in `<tld>0` form): read ontology7 off the
- * pointed record. Null when the TLD cannot be resolved.
+ * pointed record. Null when the TLD cannot be resolved — AND (SURF-1) when the
+ * composed reference is not a tipo (`isValidTipo`): the same "unresolvable
+ * reference → null" rule, extended to a section_id like `'5a'` or `'1 OR'`,
+ * which used to compose into `zzm5a` / `zzgs1 OR` and be projected into
+ * dd_ontology as an identifier.
  */
 export async function getTermIdFromLocator(locator: Locator): Promise<string | null> {
+	const composed = await composeTermIdFromLocator(locator);
+	return composed !== null && isValidTipo(composed) ? composed : null;
+}
+
+/**
+ * The raw `<tld><section_id>` a locator composes to, BEFORE the grammar check —
+ * the parser needs the raw value to REPORT a defective reference (SURF-1);
+ * every other caller wants getTermIdFromLocator's checked answer.
+ */
+async function composeTermIdFromLocator(locator: Locator): Promise<string | null> {
 	const sectionTipo = String(locator.section_tipo ?? '');
 	const sectionId = locator.section_id;
 	if (sectionId === undefined || sectionId === null) return null;
@@ -163,13 +182,135 @@ function isYesLocator(items: unknown[] | null): boolean {
 }
 
 /**
+ * A reference the parser composed from a source record but could NOT project:
+ * it breaks the dd_ontology identifier grammar (db/dd_ontology.ts
+ * ddOntologyIdentifierViolations — a non-tipo, or longer than its column). The
+ * node is still parsed; the defective value is dropped from it (`parent` /
+ * `model_tipo` → null, a `relations` entry skipped, `properties.alias_of`
+ * deleted — the alias reader then refuses the node as `missing`), and the
+ * defect is REPORTED by the caller, never swallowed.
+ */
+export interface OntologyNodeDefect {
+	column: 'parent' | 'model_tipo' | 'relations' | 'alias_of';
+	/** The raw value as the record composed it. */
+	value: unknown;
+}
+
+/** A parsed node plus the references it could not carry (see OntologyNodeDefect). */
+export interface ParsedOntologyNode {
+	node: DdOntologyNode | null;
+	defects: OntologyNodeDefect[];
+}
+
+/**
  * Parse one section record into a DdOntologyNode (or null when the record is not
- * a valid node — PHP returns null when the mandatory TLD is missing).
+ * a valid node — PHP returns null when the mandatory TLD is missing). Every
+ * defect is logged, one warning each; a caller that REPORTS them (the rebuild,
+ * ontology_state.ts) uses parseSectionRecordToOntologyNodeWithDefects instead.
  */
 export async function parseSectionRecordToOntologyNode(
 	sectionTipo: string,
 	sectionId: number | string,
 ): Promise<DdOntologyNode | null> {
+	const { node, defects } = await parseSectionRecordToOntologyNodeWithDefects(
+		sectionTipo,
+		sectionId,
+	);
+	for (const defect of defects) {
+		console.warn(
+			`[ontology_parser] ${sectionTipo}/${sectionId}: ${defect.column} ${(JSON.stringify(defect.value) ?? '').slice(0, 64)} is not a valid identifier — dropped from node ${JSON.stringify(node?.tipo ?? null)} (SURF-1; fix the source record)`,
+		);
+	}
+	return node;
+}
+
+/** The identifier-grammar verdict of one reference value for its dd_ontology column. */
+function referenceIsValid(column: 'parent' | 'model_tipo', value: string): boolean {
+	return ddOntologyIdentifierViolations({ tipo: 'dd1', [column]: value }).length === 0;
+}
+
+/** Overwrite-aware component items of the record being parsed. */
+type ResolvedItems = (componentTipo: string) => Promise<unknown[] | null>;
+
+/** A composed reference, or null + a defect when it breaks its column's grammar. */
+async function projectReference(
+	column: 'parent' | 'model_tipo',
+	locator: Locator,
+	defects: OntologyNodeDefect[],
+): Promise<string | null> {
+	const composed = await composeTermIdFromLocator(locator);
+	if (composed === null || referenceIsValid(column, composed)) return composed;
+	defects.push({ column, value: composed });
+	return null;
+}
+
+/** One related-term entry: null when it composes to nothing, or (a defect) when it breaks the tipo grammar. */
+async function projectRelation(
+	locator: Locator,
+	defects: OntologyNodeDefect[],
+): Promise<{ tipo: string } | null> {
+	const relTermId = await composeTermIdFromLocator(locator);
+	if (relTermId === null || relTermId === '') return null;
+	if (isValidTipo(relTermId)) return { tipo: relTermId };
+	defects.push({ column: 'relations', value: relTermId });
+	return null;
+}
+
+/** The node's parent: null at the ontology main section, or when invalid (a defect). */
+async function projectParent(
+	resolved: ResolvedItems,
+	defects: OntologyNodeDefect[],
+): Promise<string | null> {
+	const parentLocator = (await resolved(ONTOLOGY_PARENT))?.[0] as Locator | undefined;
+	if (parentLocator === undefined || parentLocator.section_tipo === ONTOLOGY_MAIN_SECTION) {
+		return null;
+	}
+	return projectReference('parent', parentLocator, defects);
+}
+
+/** model_tipo + model (= dd_ontology(model_tipo).term['lg-spa'] STRICT, no lang fallback). */
+async function projectModel(
+	resolved: ResolvedItems,
+	defects: OntologyNodeDefect[],
+): Promise<{ modelTipo: string | null; model: string | null }> {
+	const modelLocator = (await resolved(ONTOLOGY_MODEL))?.[0] as Locator | undefined;
+	if (modelLocator === undefined) return { modelTipo: null, model: null };
+	const modelTipo = await projectReference('model_tipo', modelLocator, defects);
+	if (modelTipo === null) return { modelTipo, model: null };
+	const modelRow = await readDdOntologyRow(modelTipo);
+	return { modelTipo, model: modelRow?.term?.[STRUCTURE_LANG] ?? null };
+}
+
+/**
+ * The properties column (empty → null). properties.alias_of is an identifier too
+ * (the alias reader, the search re-key): a defective one is dropped, never projected.
+ */
+function projectProperties(
+	properties: Record<string, unknown>,
+	defects: OntologyNodeDefect[],
+): Record<string, unknown> | null {
+	let projected = properties;
+	if (
+		Object.hasOwn(properties, 'alias_of') &&
+		ddOntologyIdentifierViolations({ tipo: 'dd1', properties }).length > 0
+	) {
+		defects.push({ column: 'alias_of', value: properties.alias_of });
+		const { alias_of: _defective, ...rest } = properties;
+		projected = rest;
+	}
+	return Object.keys(projected).length === 0 ? null : projected;
+}
+
+/**
+ * parseSectionRecordToOntologyNode, returning the defects instead of logging
+ * them (SURF-1 W5). The node never carries a reference that breaks the
+ * identifier grammar — see OntologyNodeDefect.
+ */
+export async function parseSectionRecordToOntologyNodeWithDefects(
+	sectionTipo: string,
+	sectionId: number | string,
+): Promise<ParsedOntologyNode> {
+	const defects: OntologyNodeDefect[] = [];
 	// canonical record
 	const canonicalTable = await getMatrixTableFromTipo(sectionTipo);
 	const canonicalRecord =
@@ -204,41 +345,23 @@ export async function parseSectionRecordToOntologyNode(
 	// TLD (mandatory)
 	const tldItems = await resolved(ONTOLOGY_TLD);
 	if (tldItems === null) {
-		return null; // PHP: ignore record — TLD is mandatory.
+		return { node: null, defects }; // PHP: ignore record — TLD is mandatory.
 	}
 	const tld = String((tldItems[0] as { value?: unknown }).value ?? '');
 	if (tld === '') {
-		return null;
+		return { node: null, defects };
 	}
 	const tipo = `${tld}${sectionId}`;
 
 	// Parent — null iff the parent locator points at the ontology main section.
-	let parent: string | null = null;
-	const parentItems = await resolved(ONTOLOGY_PARENT);
-	const parentLocator = parentItems?.[0] as Locator | undefined;
-	if (parentLocator !== undefined) {
-		parent =
-			parentLocator.section_tipo !== ONTOLOGY_MAIN_SECTION
-				? await getTermIdFromLocator(parentLocator)
-				: null;
-	}
+	const parent = await projectParent(resolved, defects);
 
 	// is_model — CANONICAL ONLY (never overwrite-aware).
 	const isModelItems = await getComponentItems(canonicalRecord, ONTOLOGY_IS_MODEL);
 	const isModel = isYesLocator(isModelItems);
 
 	// Model — overwrite-aware; model = dd_ontology(model_tipo).term['lg-spa'] STRICT.
-	let modelTipo: string | null = null;
-	let model: string | null = null;
-	const modelItems = await resolved(ONTOLOGY_MODEL);
-	const modelLocator = modelItems?.[0] as Locator | undefined;
-	if (modelLocator !== undefined) {
-		modelTipo = await getTermIdFromLocator(modelLocator);
-		if (modelTipo !== null) {
-			const modelRow = await readDdOntologyRow(modelTipo);
-			model = modelRow?.term?.[STRUCTURE_LANG] ?? null; // strict lg-spa, no fallback
-		}
-	}
+	const { modelTipo, model } = await projectModel(resolved, defects);
 
 	// Order — canonical only, (int) cast, empty → null.
 	let orderNumber: number | null = null;
@@ -270,9 +393,8 @@ export async function parseSectionRecordToOntologyNode(
 		if (items === null) return null;
 		const relations: { tipo: string }[] = [];
 		for (const item of items) {
-			const relTermId = await getTermIdFromLocator(item as Locator);
-			if (relTermId === null || relTermId === '') continue;
-			relations.push({ tipo: relTermId });
+			const relation = await projectRelation(item as Locator, defects);
+			if (relation !== null) relations.push(relation);
 		}
 		return relations.length > 0 ? relations : null;
 	};
@@ -307,8 +429,7 @@ export async function parseSectionRecordToOntologyNode(
 	if (sourceItems !== null && sourceValue !== undefined) {
 		properties.source = sourceValue;
 	}
-	const propertiesOrNull: Record<string, unknown> | null =
-		Object.keys(properties).length === 0 ? null : properties;
+	const propertiesOrNull = projectProperties(properties, defects);
 
 	// Term — all langs (overwrite-aware, only overrides when it HAS a term).
 	const resolveTerm = async (
@@ -328,7 +449,7 @@ export async function parseSectionRecordToOntologyNode(
 	let term = overwriteRecord !== null ? await resolveTerm(overwriteRecord) : null;
 	term = term ?? (await resolveTerm(canonicalRecord));
 
-	return {
+	const node: DdOntologyNode = {
 		tipo,
 		parent,
 		term,
@@ -343,6 +464,7 @@ export async function parseSectionRecordToOntologyNode(
 		is_main: isMain,
 		propiedades,
 	};
+	return { node, defects };
 }
 
 /**

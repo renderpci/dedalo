@@ -272,11 +272,15 @@ afterAll(async () => {
 
 describe.if(READY)('restore door — the artifact, the writers, the failure, the restore', () => {
 	test('the situation is real: a verified archive, a truncated prefix --list cannot see, an old target', async () => {
-		expect(verifyBackupArtifact(CLEAN, { deep: true, pgRestoreBin }).reason).toBe('verified_deep');
-		expect(verifyBackupArtifact(TRUNCATED, { deep: false, pgRestoreBin }).reason).toBe(
-			'verified_toc',
-		);
-		expect(verifyBackupArtifact(TRUNCATED, { deep: true, pgRestoreBin }).reason).toBe('truncated');
+		expect((await verifyBackupArtifact(CLEAN, { pgRestoreBin })).reason).toBe('verified_deep');
+		// The cheap pass cannot see the cut (raw `pg_restore --list` exits 0 on it)…
+		const list = Bun.spawnSync([pgRestoreBin as string, '--list', TRUNCATED], {
+			stdout: 'ignore',
+			stderr: 'ignore',
+		});
+		expect(list.exitCode).toBe(0);
+		// …the engine's one verdict, the full read, does.
+		expect((await verifyBackupArtifact(TRUNCATED, { pgRestoreBin })).reason).toBe('truncated');
 		expect(await scalar(TARGET, 'SELECT v FROM restore_door_sentinel')).toBe('old contents');
 		expect(await databasesLike(TARGET)).toEqual([TARGET]);
 		// The rehearsal leg relies on the scratch target NOT being the configured one.

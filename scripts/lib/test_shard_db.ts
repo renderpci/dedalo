@@ -400,6 +400,12 @@ export interface SweepReport {
 	mediaSwept: string[];
 	/** Media directories at a shard name WITHOUT the marker — reported, kept. */
 	mediaRefused: string[];
+	/** Suite MariaDB lanes at a shard name: server stopped, marked root removed. */
+	mariadbSwept: string[];
+	/** Suite MariaDB lane roots at a shard name WITHOUT `.dedalo_test_mariadb` — reported, kept. */
+	mariadbRefused: string[];
+	/** MARKED lane roots whose stop/remove FAILED — kept, with the real error (never "unmarked"). */
+	mariadbFailed: { lane: string; error: string }[];
 }
 
 /** Escape LIKE's metacharacters — a bare `_` is a single-char WILDCARD. */
@@ -421,7 +427,15 @@ function escapeRegex(value: string): string {
  */
 export async function sweepShardClones(template: string): Promise<SweepReport> {
 	assertShardableTemplate(template);
-	const report: SweepReport = { dropped: [], refused: [], mediaSwept: [], mediaRefused: [] };
+	const report: SweepReport = {
+		dropped: [],
+		refused: [],
+		mediaSwept: [],
+		mediaRefused: [],
+		mariadbSwept: [],
+		mariadbRefused: [],
+		mariadbFailed: [],
+	};
 
 	// Enumerate by ESCAPED LIKE, then re-filter by exact grammar in TS: the LIKE
 	// narrows server-side, the regex is the authority.
@@ -513,6 +527,16 @@ export async function sweepShardClones(template: string): Promise<SweepReport> {
 			}
 		}
 	}
+
+	// SUITE MARIADB LANES (PUB-05): a shard child's first MariaDB gate installs and
+	// starts a DETACHED mariadbd under ../private/test_mariadb/<clone>. Same grammar;
+	// the `.dedalo_test_mariadb` marker — not the name — licenses stop + rm. Imported
+	// lazily for the same reason as pg_bin above (its graph reaches src/config).
+	const { sweepSuiteMariadbLanes } = await import('../../test/helpers/suite_mariadb_lanes.ts');
+	const lanes = await sweepSuiteMariadbLanes((lane) => grammar.test(lane));
+	report.mariadbSwept.push(...lanes.swept);
+	report.mariadbRefused.push(...lanes.refused);
+	report.mariadbFailed.push(...lanes.failed);
 
 	return report;
 }

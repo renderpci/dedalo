@@ -100,5 +100,7 @@ export const widget: WidgetModule = {
 	apiActions: {
 		run_reconcile: reconcileStatusRunReconcile,
 	},
+	// A reconcile walks every mirror of its stores: maintenance (PERF-11).
+	unboundedActions: ['run_reconcile'],
 	getValue: reconcileStatusGetValue,
 };

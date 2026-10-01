@@ -343,7 +343,7 @@ not keep a private copy elsewhere.
 
 The write-side operations live in the relation family's own module,
 `src/core/relations/save.ts` (`applyAddNewElement`, `applySortData`,
-`applySortByColumn`, `deletePortalLocator`, `maintainRelationSearchIndex`) — not
+`applySortByColumn`, `deletePortalLocator`, `deriveRelationSearch`) — not
 on the component. The full relation machinery — portals, dataframes, indexation,
 the unified `id_key` pairing contract — is documented under
 [Components](../components/index.md).

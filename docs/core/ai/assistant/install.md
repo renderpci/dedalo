@@ -19,7 +19,11 @@ Add one line to `../private/.env` and restart the server (config is read once at
 DEDALO_AGENT_HTTP_ENABLED=true
 ```
 
-This is the single fail-closed gate for the whole feature. With it unset or `false`, every assistant request (`agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`) is refused exactly like an unregistered action, and the chat panel renders a disabled message. Nothing about the assistant is reachable until this is `true`.
+This is the install-wide fail-closed gate for the whole feature. With it unset or `false`, every assistant request (`agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`) is refused exactly like an unregistered action, and the chat panel renders a disabled message. Nothing about the assistant is reachable until this is `true`.
+
+## Step 1b — grant the tool to the profiles that should use it
+
+With the switch on, a user can use the assistant only when **their profile grants the `tool_assistant` tool** (the profile editor's tool list). Every request from a user whose profile does not grant it is refused with `tool.not_authorized` — global administrators included; only the root account holds every tool. Grant it to each profile whose users should have the assistant.
 
 ## Step 2 — make a model reachable
 
@@ -111,6 +115,9 @@ The master switch is off for the process serving that request. Confirm `DEDALO_A
 
 **The chat panel says the assistant is disabled.**
 Same cause as above, seen from the browser: `agent_models` refused, so the client fell into its disabled state. Fix the switch and reload the page.
+
+**Every assistant request answers `tool.not_authorized` (403).**
+The switch is on, but the user's profile does not grant the `tool_assistant` tool. Grant it in the profile editor (global administrators need it too; only the root account holds every tool), then reload the page.
 
 **The picker is empty / "No assistant models configured".**
 Neither `DEDALO_AGENT_MODELS` nor `ANTHROPIC_API_KEY` is set (or the catalog JSON is malformed — a malformed catalog disables the assistant fail-closed). Validate the JSON and check the server log for a `DEDALO_AGENT_MODELS[...]` parse message. See [Connecting models](connecting_models.md#validation-and-fail-closed-rules).

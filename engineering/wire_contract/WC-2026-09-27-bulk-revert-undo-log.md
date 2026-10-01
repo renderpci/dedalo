@@ -1252,3 +1252,104 @@ Mutation-proved against the 116-test gate:
 
 Honest limit: the `undecided` guard (a legacy unit sharing a key with an exact
 one) is a fail-safe with no gate. Producing it needs forged legacy log rows.
+
+## Addendum 2026-09-30 — one door-lane law: speaking doors vs doorless doors
+
+Audit 2026-09-26 F3. Three doors each carried their own answer to "which lane
+does this history row go in", and two of them disagreed with the save.
+
+**The law** (`mainRowLang` / `slicedRowLang`, `src/core/relations/dataframe_slots.ts`
+— one owner; `mainIdentity` is its only caller). It updates the `mainRowLang`
+sentence of the review addendum above ("a non-translatable main `lg-nolan` (a
+non-translatable iri: its request lang)"):
+
+- An UNSLICED main (every relation) files in `lg-nolan`, whatever its flag
+  (unchanged, 2026-09-29).
+- A SPEAKING door — one that carries a request lang: the save, the duplicate's
+  re-save row, translation — files a sliced main in
+  `effectiveSaveLang(tipo, model, pageLang)` (`resolver.ts`), the lang its own
+  save writes: the page lang for a translatable, a `with_lang_versions`
+  (transliterable) or an iri main; `lg-nolan` for any other. Before, a
+  transliterable main answered `lg-nolan` here while its save wrote the page
+  lang (review 4), so the save row and the history identity named two lanes.
+- A DOORLESS door — `lg-nolan` / '': the wipe, the undelete, the observer, the
+  slot/frame lane — files in `lg-nolan`, except a TRANSLATABLE sliced main,
+  which files in the request's data lang (`currentDataLang`).
+
+**The wipe and its undelete are a doorless PAIR.** `recordWipeHistory`
+(`delete_record.ts`) now asks `mainIdentity(tipo, 'lg-nolan')` — the identity
+the soft-cascade undelete uses (`bulk_revert_records.ts` `wipedMainIdentity`) —
+instead of re-deriving it from the captured data lang. Byte-identical today;
+what it removes is a second derivation that could drift. Rejected: filing the
+wipe in `mainIdentity(tipo, dataLang)` — for a transliterable or iri key that
+files the lang-less orphan in the page lang while the undelete stays in
+`lg-nolan`, breaking the pairing the review addendum states ("under the main's
+own row lang, the lang its wipe row carries"). A lang-less item rides the door
+lane, and for a transliterable the lang-less lane is its base.
+
+**Duplicate, item (b)** of `recordDuplicateHistory`: the save row's lane is
+`effectiveSaveLang(currentDataLang())` — `copiedKeyIdentity` returns
+`mainIdentity(tipo, currentDataLang())` with no local override. A transliterable
+or iri copy now files its save row (and any lang-less items) in the working
+data lang, as its save does; the forced, empty `lg-nolan` row is gone.
+
+**Open (owner decision), named not fixed:** a translatable save from a
+lang-less request is filed in `lg-nolan` by the save door (`effectiveSaveLang`
+keeps the request lang) and in `currentDataLang` by this rule.
+Translation still overrides its identity's lang with the target lang
+(`translation.ts`); for a translatable main that equals the law, for a
+non-translatable one the translation writes a slice the save door never would —
+closed with translation's reroute (CLOSURE_PLAN Step 2).
+
+**Gate:** `test/unit/history_door_lane_agreement_native.test.ts` (zz scratch
+TLD, five components — translatable, plain, transliterable, iri, portal):
+(1) the save row's lang equals `mainIdentity(K, L).lang`; (2) a duplicate's save
+rows sit in the lanes its source's save used; (3) the wipe's lanes for a
+lang-less orphan are undelete lanes, and the data-lang timeline lists both.
+Mutation-proved: `slicedRowLang` back to iri-only → 3 red (K3); its
+non-translatable branch returning the request lang → 3 red (K2); the
+`copiedKeyIdentity` override restored → 2 red (K3, K4); the wipe in
+`mainIdentity(tipo, dataLang)` → 2 red (cell 3). No other expectation moved
+(tm_*, bulk_*, delete_*, duplicate_*, observer_*, translation_pipeline_native
+green on the lane DB). No fixture edit, no re-harvest.
+
+## Addendum 2026-09-30 — D4's media write is a locked transform; restores and undeletes propagate through the chokepoint
+
+CLOSURE_PLAN Step 2 (TOOLS-5, CORE-1).
+
+- **D4 stands, its write changed.** `update_cache`'s media repair still records no
+  BEFORE/AFTER pair (files_info is derived from the disk; a revert could not put the
+  moved/rebuilt files back). It is no longer a raw write of this run's snapshot: the
+  derivatives are rebuilt outside the lock, then the items read UNDER the row lock are
+  re-scanned and written through `files_info_persist.ts transformStoredMediaItems`, so a
+  curator's upload committed during the run survives. See
+  WC-2026-09-30-media-key-locked-transform.
+- **The revert's observer leg moved into the chokepoint.** The key units, the composed
+  units, the cascade undelete (`restoreDeletedRecord`, still VERBATIM — no stamp) and the
+  soft-cascade restore no longer call the observer cascade themselves: every write
+  declares its before/after to the obligation ledger, which drains after the unit's
+  COMMIT (the undelete as a BIRTH: its covered observer slots recomputed, never restored
+  from the snapshot). The mirror recomputes write their own Time Machine rows with
+  `bulk_id` null — derived state, never a pair of this run, so the revert-of-the-revert
+  judges no mirror key. See WC-2026-09-30-record-write-obligation-ledger.
+- **A covered observer slot is DERIVED to every judge of the revert** (review round
+  2026-09-30). Once the undelete propagated, a mirror stopped being inert state the
+  judges could compare:
+  - D2's foreign-value check (`holdsForeignValue`) skips covered observer keys — a born
+    term whose recomputed mirror lists its (also born) referencer is not "written by
+    someone else" (it was refused `created_record_kept`, FINAL);
+  - D2's reference check (`isReferenced`) counts LINKS only: a locator held in a covered
+    observer slot is the mirror of the record's own edge. Counted, a born term and its
+    born referencer each "referenced" the other and neither could be deleted;
+  - the soft-cascade restore (`wipedKeysOf`) never puts a covered slot back and never
+    judges one a write since the wipe (a mirror recomputed by a referencer's save after
+    the wipe made the record `kept`, wiped); every covered slot the section DECLARES is
+    recomputed after the unit's COMMIT (`record_write.ts requestCoveredSlotRecompute`).
+- **VERBATIM stays verbatim.** A missing-row undelete (`restoreDeletedRecord`, no stamp)
+  marks its record on the transaction's cascade guard: every covered-slot recompute of
+  THAT record in the same transaction's drain writes the mirror without dd197/dd201, so
+  the run's stamp units still compare against the snapshot's stamps. A soft-cascade
+  restore whose run owns the record's stamps recomputes the same way. LIMIT, stated: a
+  recompute of that record driven by a LATER transaction (a referencer undeleted in a
+  unit of its own) stamps it like any live record's.
+- Gates: `obligation_ledger_native` cases 10, 10b and 11.

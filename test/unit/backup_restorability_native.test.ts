@@ -47,21 +47,21 @@
  * refusal — verdict, `newestUsableBackup`, `backupFreshness` — and must come
  * back usable, VERIFIED, counted and not stale.
  *
+ * OPS-1 (2026-09-30): there is ONE verdict now, the full read. The cheap
+ * `verified_toc` verdict is gone, and a read that outruns its budget is NOT a
+ * backup (`unverifiable_timeout`, usable:false) — both exercised below.
+ *
  * WHAT THIS GATE DOES NOT PROVE, stated rather than implied:
- * - It does not touch the make_backup WIDGET LIST. `getBackupFiles()` reads
- *   `getBackupDir()` (config, frozen at import) and takes no directory
- *   argument, so no in-process test can point it at scratch — and pointing it
- *   at ../private/backups is forbidden. That surface still lists any `*.backup`
- *   file without asking for a verdict; a dump THIS engine ran is renamed
- *   `*.failed` on failure (covered by ops_backup.test.ts) and so leaves the
- *   list, but a corpse left by a FOREIGN job (deploy/'s systemd timer) is still
- *   listed as a file. Closing that needs a `usable` key in the make_backup
- *   payload, which is a wire-shape change with a WC entry and a client pass.
- * - It does not prove a RESTORE works. Nothing in this tree performs one; the
- *   restore procedure remains unbuilt and ungated (see backup.ts's header).
- * - It does not exercise `unverifiable_timeout` (exempted below, with the
- *   reason), and it says nothing about the freshness THRESHOLD — that is
- *   backupFreshness's own arithmetic, gated in update_status_native.test.ts.
+ * - It does not touch the make_backup WIDGET LIST. `getBackupFiles(dir)` now
+ *   takes a directory, and a dump THIS engine runs is only ever listed once
+ *   promoted (backup_inflight_native.test.ts), but a corpse left by a FOREIGN job
+ *   under a `*.backup` name is still listed as a file. Closing that needs a
+ *   `usable` key in the make_backup payload, which is a wire-shape change with a
+ *   WC entry and a client pass.
+ * - It does not prove a RESTORE works — that is the restore door's own gate
+ *   (restore_door_native.test.ts).
+ * - It says nothing about the freshness THRESHOLD — that is backupFreshness's
+ *   own arithmetic, gated in backup_freshness_deep_native.test.ts.
  * - Without a reachable suite Postgres the real-bytes describe SKIPS (loudly,
  *   `describe.if`) instead of passing empty; the derivation census still runs.
  */
@@ -75,21 +75,22 @@ import {
 	readdirSync,
 	readFileSync,
 	rmSync,
-	statSync,
-	utimesSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { config } from '../../src/config/config.ts';
 import {
 	type BackupVerdictReason,
 	newestUsableBackup,
-	resolvePgDump,
 	resolvePgRestore,
 	verifyBackupArtifact,
 } from '../../src/core/area_maintenance/backup.ts';
 import { backupFreshness } from '../../src/core/update/preconditions.ts';
+import {
+	ageMinutes,
+	buildRealArchive,
+	truncatedCopy as cutArchive,
+} from '../helpers/real_backup_archive.ts';
 
 const scratch = mkdtempSync(join(tmpdir(), 'dedalo_restorability_'));
 afterAll(() => {
@@ -97,72 +98,14 @@ afterAll(() => {
 });
 
 /**
- * The table the archive is cut from. `dd_ontology` is the one table every
- * Dédalo database has by definition (it IS the ontology) and it carries enough
- * rows that a 60% cut lands in the DATA blocks, past the header and TOC — which
- * is the whole point: a cut that landed in the TOC would be caught by the cheap
- * pass and would prove nothing about the deep one.
+ * A REAL custom-format archive of `dd_ontology` out of the SUITE database, built
+ * with the engine's OWN `resolvePgDump()` (test/helpers/real_backup_archive.ts):
+ * on a host carrying several majors, a pg_dump older than the server refuses
+ * outright, and the archive must be readable by the pg_restore
+ * `verifyBackupArtifact` will pick — both resolvers walk the same candidate
+ * order (backup.ts pgBinCandidates).
  */
-const SOURCE_TABLE = 'dd_ontology';
-
-/** Below this, a 60% cut is not guaranteed to land past the TOC. */
-const MIN_ARCHIVE_BYTES = 64 * 1024;
-
-/**
- * A REAL custom-format archive of `SOURCE_TABLE`, or null with the reason.
- * Built with the engine's OWN `resolvePgDump()`: on a host carrying several
- * majors, a pg_dump older than the server refuses outright, and the archive
- * must be readable by the pg_restore `verifyBackupArtifact` will pick — both
- * resolvers walk the same candidate order (backup.ts pgBinCandidates), so
- * asking the engine for the binary is what keeps the pair consistent here.
- */
-function buildRealArchive(): { path: string | null; note: string } {
-	const out = join(scratch, 'source.custom.backup');
-	const result = Bun.spawnSync(
-		[
-			resolvePgDump(),
-			'-h',
-			config.db.host,
-			'-p',
-			String(config.db.port),
-			'-U',
-			config.db.user,
-			'-F',
-			'c',
-			'-b',
-			'-t',
-			SOURCE_TABLE,
-			'-f',
-			out,
-			config.db.database,
-		],
-		{
-			stdout: 'ignore',
-			stderr: 'pipe',
-			env: {
-				...(process.env as Record<string, string>),
-				...(config.db.password !== '' ? { PGPASSWORD: config.db.password } : {}),
-			},
-		},
-	);
-	const stderr = new TextDecoder().decode(result.stderr ?? new Uint8Array()).trim();
-	if (result.exitCode !== 0) return { path: null, note: `pg_dump failed: ${stderr}` };
-	let size = 0;
-	try {
-		size = statSync(out).size;
-	} catch {
-		return { path: null, note: 'pg_dump wrote no file' };
-	}
-	if (size < MIN_ARCHIVE_BYTES) {
-		return {
-			path: null,
-			note: `the ${SOURCE_TABLE} archive is only ${size} bytes — build the suite database (bun run test:db:setup) so a 60% cut lands in the data blocks`,
-		};
-	}
-	return { path: out, note: `${size} bytes` };
-}
-
-const realArchive = buildRealArchive();
+const realArchive = buildRealArchive(scratch);
 const pgRestoreBin = resolvePgRestore();
 /**
  * Gate at COLLECTION time (`describe.if`), never with an early `return` inside a
@@ -179,18 +122,6 @@ if (!REAL_BYTES_READY) {
 	);
 }
 
-/**
- * Push an artifact's mtime into the past. The engine refuses an unverified
- * artifact whose mtime is inside its in-progress window (90 s), because a
- * pg_dump that is still WRITING owns the freshest mtime in the directory. Every
- * state except `in_progress` is therefore aged: they are asking a question
- * about the artifact's CONTENT, not about whether someone is mid-dump.
- */
-function ageMinutes(filePath: string, minutes: number): void {
-	const when = new Date(Date.now() - minutes * 60_000);
-	utimesSync(filePath, when, when);
-}
-
 /** A fresh directory per state, so `newestUsableBackup` answers about one file. */
 function stateDir(name: string): string {
 	const dir = join(scratch, `state_${name}`);
@@ -200,8 +131,43 @@ function stateDir(name: string): string {
 
 /** The first `fraction` of the real archive — a real prefix, never an invention. */
 function truncatedCopy(target: string, fraction: number): void {
-	const bytes = readFileSync(realArchive.path as string);
-	writeFileSync(target, bytes.subarray(0, Math.floor(bytes.length * fraction)));
+	cutArchive(realArchive.path as string, target, fraction);
+}
+
+/** A pg_restore stand-in that never finishes (`exec`, so the kill reaches the pipe holder). */
+function sleepingRestore(): string {
+	const path = join(scratch, 'sleeping_pg_restore.sh');
+	writeFileSync(path, '#!/bin/sh\nexec sleep 5\n');
+	chmodSync(path, 0o755);
+	return path;
+}
+
+/**
+ * The REALISTIC timeout: the real `--list` (0.03 s in production) passes and the
+ * FULL read (~7.4 s/GB) is the stage that runs out. The stand-in above times out
+ * at `--list` and never reaches the full-read branch.
+ */
+function fullReadSleepsRestore(): string {
+	const path = join(scratch, 'full_read_sleeps_pg_restore.sh');
+	writeFileSync(
+		path,
+		`#!/bin/sh\nif [ "$1" = "-f" ]; then exec sleep 10; fi\nexec '${pgRestoreBin ?? 'pg_restore'}' "$@"\n`,
+	);
+	chmodSync(path, 0o755);
+	// Warm the first exec (macOS provenance scan) so the real --list fits its budget.
+	Bun.spawnSync([path, '--version'], { stdout: 'ignore', stderr: 'ignore' });
+	return path;
+}
+
+/** The real `--list` passes; the FULL read's process is SIGKILLed from outside. */
+function killedFullReadRestore(): string {
+	const path = join(scratch, 'killed_full_read_pg_restore.sh');
+	writeFileSync(
+		path,
+		`#!/bin/sh\nif [ "$1" = "-f" ]; then kill -9 $$; fi\nexec '${pgRestoreBin ?? 'pg_restore'}' "$@"\n`,
+	);
+	chmodSync(path, 0o755);
+	return path;
 }
 
 interface ArtifactState {
@@ -215,6 +181,8 @@ interface ArtifactState {
 	verified: boolean;
 	/** Builds the artifact and returns its path (the path may not exist). */
 	build(dir: string): string;
+	/** How the three surfaces are asked (default: the production verification). */
+	verify?: { pgRestoreBin?: string | null; budgetMs?: number };
 }
 
 /**
@@ -313,9 +281,73 @@ const STATES: ArtifactState[] = [
 			// An install whose *.backup files are plain-SQL dumps must keep
 			// behaving exactly as it did before P0-13: counted, never claimed
 			// as proven. Refusing a format we never claimed to verify would be
-			// an outage caused by the guard.
-			const path = join(dir, 'plain-sql-dump.custom.backup');
+			// an outage caused by the guard. (A name OUTSIDE our `.custom.backup`
+			// suffix — that one is our grammar, see 'own_suffix_zero_filled'.)
+			const path = join(dir, 'plain-sql-dump.backup');
 			writeFileSync(path, '--\n-- PostgreSQL database dump\n--\nSET statement_timeout = 0;\n');
+			ageMinutes(path, 10);
+			return path;
+		},
+	},
+	{
+		state: 'own_suffix_zero_filled',
+		reason: 'not_an_archive',
+		usable: false,
+		verified: false,
+		build: (dir) => {
+			// What a crash can leave under OUR name: the size of a dump, none of its
+			// bytes. It used to be `unverifiable_foreign_format` → usable, and the
+			// unwaived code update proceeded with no restorable dump.
+			const path = join(dir, 'zero-filled.custom.backup');
+			writeFileSync(path, Buffer.alloc(64 * 1024));
+			ageMinutes(path, 10);
+			return path;
+		},
+	},
+	{
+		state: 'full_read_outran_budget',
+		reason: 'unverifiable_timeout',
+		usable: false,
+		verified: false,
+		// The --list stage passes; the FULL read outruns a 1.5 s budget.
+		verify: { pgRestoreBin: fullReadSleepsRestore(), budgetMs: 1500 },
+		build: (dir) => {
+			const path = join(dir, 'complete-slow-to-read.custom.backup');
+			copyFileSync(realArchive.path as string, path);
+			ageMinutes(path, 10);
+			return path;
+		},
+	},
+	{
+		state: 'unproven_in_budget',
+		reason: 'unverifiable_timeout',
+		usable: false,
+		verified: false,
+		// OPS-1: a read that could not finish PROVED NOTHING, so it is not a backup —
+		// it used to be `usable: true`, which failed OPEN on every archive too big
+		// to read inside a constant 120 s. A complete archive, judged by a
+		// pg_restore that never finishes inside a 200 ms budget.
+		verify: { pgRestoreBin: sleepingRestore(), budgetMs: 200 },
+		build: (dir) => {
+			const path = join(dir, 'complete-but-unread.custom.backup');
+			copyFileSync(realArchive.path as string, path);
+			ageMinutes(path, 10);
+			return path;
+		},
+	},
+	{
+		state: 'read_killed_from_outside',
+		reason: 'unverifiable_read_failed',
+		usable: false,
+		verified: false,
+		// A COMPLETE archive whose full read is killed by a signal WE did not send
+		// (the OOM killer, an operator). It used to read `truncated` — a cached
+		// disproof of a good backup, retired on the next name collision. A killed
+		// read proves nothing either way (OPS-1 review).
+		verify: { pgRestoreBin: killedFullReadRestore() },
+		build: (dir) => {
+			const path = join(dir, 'complete-read-killed.custom.backup');
+			copyFileSync(realArchive.path as string, path);
 			ageMinutes(path, 10);
 			return path;
 		},
@@ -337,12 +369,12 @@ const STATES: ArtifactState[] = [
 
 describe.if(REAL_BYTES_READY)('restore-point census over artifact states (P0-13)', () => {
 	for (const artifact of STATES) {
-		test(`'${artifact.state}' is judged '${artifact.reason}' by all three surfaces`, () => {
+		test(`'${artifact.state}' is judged '${artifact.reason}' by all three surfaces`, async () => {
 			const dir = stateDir(artifact.state);
 			const path = artifact.build(dir);
 
 			// 1. THE VERDICT — the successor to the deleted `artifactIsUsable`.
-			const verdict = verifyBackupArtifact(path, { deep: true });
+			const verdict = await verifyBackupArtifact(path, artifact.verify ?? {});
 			expect(verdict.reason).toBe(artifact.reason);
 			expect(verdict.usable).toBe(artifact.usable);
 			expect(verdict.verified).toBe(artifact.verified);
@@ -350,7 +382,7 @@ describe.if(REAL_BYTES_READY)('restore-point census over artifact states (P0-13)
 			// 2. THE DIRECTORY SCAN — what the panel's scope and the code-update
 			//    precondition both read. A refused artifact must not merely be
 			//    unproven: it must not be the answer to "have we got a backup".
-			const scan = newestUsableBackup(dir, { deep: true });
+			const scan = await newestUsableBackup(dir, artifact.verify ?? {});
 			if (artifact.usable) {
 				expect(scan.mtimeMs).toBeGreaterThan(0);
 				expect(scan.verdict?.filePath).toBe(path);
@@ -364,7 +396,7 @@ describe.if(REAL_BYTES_READY)('restore-point census over artifact states (P0-13)
 			//    backup_fresh check and checkUpdatePreconditions call it. An
 			//    unusable artifact must leave `hours` null (which is what the
 			//    code update turns into `update.refused`), never a fresh age.
-			const freshness = backupFreshness(dir);
+			const freshness = await backupFreshness(dir, artifact.verify ?? {});
 			if (artifact.usable) {
 				expect(freshness.hours).not.toBeNull();
 				expect(freshness.stale).toBe(false);
@@ -386,30 +418,34 @@ describe.if(REAL_BYTES_READY)('restore-point census over artifact states (P0-13)
 		});
 	}
 
-	test('a TOC pass ACCEPTS the truncated archive — which is why the gate reads deep', () => {
+	test('a TOC pass ACCEPTS the truncated archive — which is why the ONE verdict reads it all', async () => {
 		// The measured fact the whole finding rests on, asserted on real bytes:
-		// `pg_restore --list` walks a header and TOC that the 60% cut left
-		// intact and reports success. If a cheap verdict could satisfy a deep
-		// caller, the code-update refusal would inherit exactly this blindness.
+		// `pg_restore --list` walks a header and TOC that the 60% cut left intact
+		// and exits 0. Until OPS-1 that pass produced a `verified_toc` "usable"
+		// verdict, and the freshness path asked it — so the code-update refusal
+		// inherited exactly this blindness. Asked directly here, raw:
 		const dir = stateDir('toc_vs_deep');
 		const path = join(dir, 'died-at-60-percent.custom.backup');
 		truncatedCopy(path, 0.6);
 		ageMinutes(path, 10);
 
-		const cheap = verifyBackupArtifact(path, { deep: false });
-		expect(cheap.reason).toBe('verified_toc');
-		expect(cheap.usable).toBe(true);
-		expect(cheap.verified).toBe(false); // usable is NOT the same claim as proven
+		const list = Bun.spawnSync([pgRestoreBin as string, '--list', path], {
+			stdout: 'ignore',
+			stderr: 'ignore',
+		});
+		expect(list.exitCode).toBe(0);
 
-		// The cheap verdict is now cached beside the artifact. The deep question
-		// must re-read anyway, and disprove it.
-		const deep = verifyBackupArtifact(path, { deep: true });
-		expect(deep.reason).toBe('truncated');
-		expect(deep.usable).toBe(false);
-		expect(deep.detail ?? '').toContain('end of file'); // pg_restore's own words
+		// …while the engine's one verdict reads the data blocks and disproves it.
+		const verdict = await verifyBackupArtifact(path);
+		expect(verdict.reason).toBe('truncated');
+		expect(verdict.usable).toBe(false);
+		expect(verdict.detail ?? '').toContain('end of file'); // pg_restore's own words
+		// A decisive verdict is cached — and it is the DEEP one.
+		const sidecar = JSON.parse(readFileSync(`${path}.verified`, 'utf-8')) as { reason: string };
+		expect(sidecar.reason).toBe('truncated');
 	});
 
-	test('pg_restore is actually RUN: --list first, then the whole-archive read', () => {
+	test('pg_restore is actually RUN: --list first, then the whole-archive read', async () => {
 		// Without this the census could be satisfied by any predicate that
 		// happened to agree with it — the audit asks for the verification to
 		// HAPPEN. The wrapper records argv and then execs the real binary, so
@@ -427,7 +463,7 @@ describe.if(REAL_BYTES_READY)('restore-point census over artifact states (P0-13)
 		copyFileSync(realArchive.path as string, path);
 		ageMinutes(path, 10);
 
-		const verdict = verifyBackupArtifact(path, { deep: true, pgRestoreBin: wrapper });
+		const verdict = await verifyBackupArtifact(path, { pgRestoreBin: wrapper });
 		expect(verdict.reason).toBe('verified_deep');
 
 		const calls = readFileSync(log, 'utf-8').trim().split('\n');
@@ -436,7 +472,7 @@ describe.if(REAL_BYTES_READY)('restore-point census over artifact states (P0-13)
 		expect(calls[1]).toBe(`-f /dev/null ${path}`);
 	});
 
-	test('DEGRADATION IS NOT REFUSAL: a host with no pg_restore still has a backup', () => {
+	test('DEGRADATION IS NOT REFUSAL: a host with no pg_restore still has a backup', async () => {
 		// A guard that fires on a legitimate path is an outage. On a host that
 		// cannot LOOK at the archive, the real, complete archive keeps counting
 		// exactly as it did before P0-13 — unproven, but counted.
@@ -445,7 +481,7 @@ describe.if(REAL_BYTES_READY)('restore-point census over artifact states (P0-13)
 		copyFileSync(realArchive.path as string, path);
 		ageMinutes(path, 10);
 
-		const verdict = verifyBackupArtifact(path, { deep: true, pgRestoreBin: null });
+		const verdict = await verifyBackupArtifact(path, { pgRestoreBin: null });
 		expect(verdict.reason).toBe('unverifiable_no_pg_restore');
 		expect(verdict.usable).toBe(true);
 		expect(verdict.verified).toBe(false);
@@ -463,23 +499,25 @@ const BACKUP_SOURCE = join(import.meta.dir, '../../src/core/area_maintenance/bac
 const COVERED: Record<string, string> = {
 	missing: "STATES 'absent'",
 	empty: "STATES 'empty'",
-	in_progress: "STATES 'in_progress'",
+	in_progress:
+		"STATES 'in_progress' pins that a partial write reads `truncated`; the reason itself (a file that MOVED during its read) is backup_freshness_deep_native leg I",
 	truncated: "STATES 'truncated' + the TOC-vs-deep case",
-	not_an_archive: "STATES 'header_cut'",
+	not_an_archive: "STATES 'header_cut' + 'own_suffix_zero_filled'",
 	unverifiable_foreign_format: "STATES 'foreign_format'",
+	unverifiable_timeout:
+		"STATES 'unproven_in_budget' (the --list stage) + 'full_read_outran_budget' (the FULL read) (+ backup_freshness_deep_native legs C, K)",
 	verified_deep: "STATES 'clean' (the negative control)",
-	verified_toc: 'the TOC-vs-deep case',
 	unverifiable_no_pg_restore: 'the blind-host degradation case',
+	unverifiable_read_failed:
+		"STATES 'read_killed_from_outside' (+ backup_freshness_deep_native legs P1, P2, P4: an I/O error, a failure that did not repeat, a pg_restore older than the archive)",
 };
 
 /**
  * SHRINK-ONLY, one written reason each. Not a place to park inconvenience: a
- * reason listed here is a reason NOTHING proves.
+ * reason listed here is a reason NOTHING proves. (Empty since OPS-1 made the
+ * budget injectable and `unverifiable_timeout` moved to COVERED.)
  */
-const EXEMPT: Record<string, string> = {
-	unverifiable_timeout:
-		'reaching it needs a pg_restore that outruns VERIFY_TIMEOUT_MS (120 s, a module constant with no injection seam), so exercising it would make this gate stall for two minutes to observe a degradation that is already the safest branch (usable, unproven, and it warns). Close it by making the budget injectable through the options bag.',
-};
+const EXEMPT: Record<string, string> = {};
 
 describe('the census is derived from the engine, not enumerated here', () => {
 	test('every BackupVerdictReason is exercised or exempted with a reason', () => {

@@ -55,6 +55,7 @@ import {
 	REGEX_LITERAL_FN,
 	REGEX_META,
 } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 import { searchBuilderFiles } from '../helpers/engine_source_corpus.ts';
 import { migrationFileNames, migrationsSql } from '../helpers/migrations_corpus.ts';
 
@@ -149,7 +150,7 @@ function context(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'm',
 		column: 'string',
-		tipo: 'test45',
+		tipo: asSqlTipo('test45', 'test context'),
 		sectionTipo: 'test3',
 		table: 'matrix_test',
 		lang: 'lg-eng',

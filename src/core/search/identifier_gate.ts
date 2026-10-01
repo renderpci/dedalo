@@ -8,7 +8,9 @@
  * gate every such identifier passes through BEFORE any SQL string is built.
  *
  * Design rules (why this file is deliberately tiny):
- * - pure functions, no I/O, no state → exhaustively unit- and fuzz-testable;
+ * - pure functions, no I/O, no state → exhaustively unit- and fuzz-testable
+ *   (ONE exception, `resolveSqlDataTipo`: it reads the alias target through a
+ *   dynamic import of ontology/alias.ts, so this leaf never joins an import SCC);
  * - allowlist logic only — no escaping, no "cleaning": invalid input is
  *   REJECTED, never repaired;
  * - the search engine imports ONLY the assert* functions, which throw — a
@@ -110,4 +112,40 @@ export function assertValidDataColumn(candidate: unknown, where: string): string
 		});
 	}
 	return candidate;
+}
+
+// --- SqlTipo: the data tipo a builder may interpolate (SURF-1 R4) ---------------
+
+declare const sqlTipoBrand: unique symbol;
+
+/**
+ * A tipo that has passed the §7.6 gate FOR INTERPOLATION as a data key — the
+ * only type the SQL sinks accept (`BuilderContext.tipo`, conform.ts's join-hop
+ * key, sql_assembler.ts's order key). Minted ONLY by `asSqlTipo`; a raw string
+ * reaching one of those sinks is a type error, so the zero-new-tsc-errors rule
+ * turns a future unchecked sink into a build failure.
+ */
+export type SqlTipo = string & { readonly [sqlTipoBrand]: true };
+
+/** THE one mint of a SqlTipo: the §7.6 tipo-or-column gate, then the brand. */
+export function asSqlTipo(candidate: unknown, where: string): SqlTipo {
+	return assertValidTipoOrColumn(candidate, where) as SqlTipo;
+}
+
+/**
+ * The DATA tipo of `tipo` (component_alias, WC-020: the target's slot) as a
+ * SqlTipo. `tipo` itself has already passed the caller's gate (it may be the
+ * pseudo-tipo `section_id`, which resolves to itself and stays admitted). A
+ * value that came THROUGH an alias is a different identifier the caller never
+ * saw: it must pass `assertValidTipo` — never the bare-column allowance —
+ * refused `request.invalid_tipo` at `<where> alias target`. The alias reader
+ * (ontology/resolver.ts aliasTargetTipoOf) refuses a non-grammar target
+ * already; this is the second, independent lock at the sink.
+ */
+export async function resolveSqlDataTipo(tipo: string, where: string): Promise<SqlTipo> {
+	const { resolveDataTipo } = await import('../ontology/alias.ts');
+	const resolved = await resolveDataTipo(tipo);
+	if (resolved === tipo) return asSqlTipo(tipo, where);
+	const aliasWhere = `${where} alias target`;
+	return asSqlTipo(assertValidTipo(resolved, aliasWhere), aliasWhere);
 }

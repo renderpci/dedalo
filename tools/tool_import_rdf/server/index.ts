@@ -1,7 +1,8 @@
 /**
  * tool_import_rdf server module (PHP tool_import_rdf::get_rdf_data). Fetches each
  * RDF URI through `fetchGuardedText` (the guard resolves and vets every address,
- * refuses redirects, bounds the wait and the read) and parses it with the
+ * connects PINNED to the vetted one, refuses redirects, bounds the wait and the
+ * read) and parses it with the
  * from-scratch RDF/XML parser (rdf_xml.ts, no 3rd-party lib), returning the
  * extracted subjects/properties.
  *
@@ -23,7 +24,7 @@ import {
 	toErrorBody,
 } from '../../../src/core/errors/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
-import { fetchGuardedText } from '../../../src/core/security/ssrf_guard.ts';
+import { fetchGuardedText, type PinnedHopDeps } from '../../../src/core/security/ssrf_guard.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -49,7 +50,7 @@ function rdfSectionTipos(options: Record<string, unknown>): unknown[] {
 }
 
 /** One IRI's outcome: its (mapped) subjects, or the wire body of why it failed. */
-type RdfOutcome =
+export type RdfOutcome =
 	| { kind: 'loaded'; entry: { uri: string; subjects: unknown[] } }
 	| { kind: 'failed'; failure: { uri: string; error: ApiErrorBody } };
 
@@ -85,15 +86,26 @@ function rdfMap(options: Record<string, unknown>): RdfMapEntry[] {
 
 /**
  * Fetch, parse and map ONE IRI. SSRF-01 + DOS-05: `fetchGuardedText` resolves and
- * vets the URL against private/reserved ranges (not a string blocklist), refuses
- * redirects, and bounds the wait and the body. A failure is reported as the error
+ * vets the URL against private/reserved ranges (not a string blocklist), connects
+ * PINNED to the vetted address (no second lookup for a rebinding resolver to
+ * answer, SURF-2), refuses redirects, and bounds the wait and the body; a network
+ * failure is a typed `security.outbound_failed`. A failure is reported as the error
  * system's wire body, never `error.message`: the guard's message names the address
  * a refused host resolved to (an internal-network oracle).
+ *
+ * EXPORTED with the guard's `deps` seam (resolver + socket) for the door-level gate
+ * (tool_import_rdf.test.ts): the per-URI body a transport failure publishes is this
+ * function's decision, not the guard's. The action handler never passes `deps` —
+ * production resolves and connects for real.
  */
-async function loadRdf(raw: string, map: RdfMapEntry[]): Promise<RdfOutcome> {
+export async function loadRdf(
+	raw: string,
+	map: RdfMapEntry[],
+	deps: PinnedHopDeps = {},
+): Promise<RdfOutcome> {
 	const uri = raw.endsWith('.rdf') ? raw : `${raw}.rdf`;
 	try {
-		const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 });
+		const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 }, deps);
 		const { subjects } = parseRdfXml(xml);
 		// A class-map yields the mapped fields (the dd_object the client form
 		// consumes); without one, the raw subjects.

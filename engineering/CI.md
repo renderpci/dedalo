@@ -37,7 +37,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
-| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, then the DB-backed tripwires, the unit tier (advisory — Part 2) and the parity tier) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh` and both update drills). Both source `scripts/ci/hosted_env.sh` |
+| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (advisory — Part 2) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh` and both update drills). Both source `scripts/ci/hosted_env.sh` |
 | `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `report` keeps one `ci-nightly` issue open/updated/closed |
 | `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
@@ -46,7 +46,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners, in the CI image (digest-pinned, uid 1001) | hermetic tier only — the SAME `scripts/ci/hermetic.sh` |
 | *— PRIVATE MIRROR ONLY (inert on the public repo) —* | | | |
 | `.github/workflows-selfhosted/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` + `full` (`bun test test/unit test/parity`) — both twinned hosted |
-| `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` incl. `test/integration/**` MariaDB legs (the only thing that runs nowhere else) + client gate |
+| `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (incl. `test/integration/**`, whose MariaDB legs the hosted `db` tier's blocking MariaDB stage also runs, on the suite's own server — PUB-05) + client gate |
 | `.github/workflows-selfhosted/deploy.yml` | manual dispatch | self-hosted mac | **PARKED** — loud failure until DEPLOY_HOST/DEPLOY_SSH_KEY exist, then `deploy/deploy.sh` |
 
 **Every gate has an EXECUTING hosted home.** `tier_wiring_tripwire` holds the whole
@@ -266,12 +266,25 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   dependency-audit ratchet (only when the push changed its inputs — see Time-based
   checks), and the two isolated publication packages (`site_builder`,
   `server_api/v2`: install + tsc + test). Required config keys get harmless stubs;
-  `DB_PORT` points at a closed port so any accidental DB touch fails loudly.
+  `DB_PORT` points at a closed port so any accidental DB touch fails loudly. No
+  hermetic gate starts a server: `suite_mariadb_target_native` (which drives the lane's
+  own `mariadbd`) is a DB-tier gate (`NOT_HERMETIC` row + `DB_TIER_TRIPWIRES`).
 - **DB** (`db` job, `scripts/ci/db_tier.sh`): builds the suite database from bytes
   vendored in the repo (`scripts/test_db_setup.ts`; the `test` TLD ontology, the
   hierarchy copies; it stamps `dedalo_test_marker`), then the DB-backed tripwires
   (`DB_TIER_TRIPWIRES` = `NOT_HERMETIC` exactly), the unit tier (ADVISORY vs
-  `engineering/unit_baseline.json` — Part 2) and the parity tier. The service image is
+  `engineering/unit_baseline.json` — Part 2), the parity tier, and LAST the MariaDB tier
+  (BLOCKING — `scripts/ci/mariadb_tier.ts`, see *Suite MariaDB target* below). Last
+  because its leg 1b re-runs ~170 Postgres-writing unit and parity files in one extra
+  batch: before parity, that extra pass would move the suite database away from the state
+  the unit and parity baselines were recorded in (one unit pass, then parity). The order
+  is gated, not described: tier_wiring leg K executes every root that runs the stage
+  (commands stubbed) and reds any command recorded after it but the EXIT trap's stop
+  (mutation H1 — the stage moved ahead of the tripwires — left every other gate green). Before the tripwires it
+  starts the suite MariaDB target (`scripts/ci/suite_mariadb.ts start`, stopped by an
+  EXIT trap that tier_wiring leg J EXECUTES: a later `trap … EXIT` replacing it, or one
+  set after the start, is red) and installs `publication/server_api/v2` for the API
+  smoke. The service image is
   `pgvector/pgvector` (the RAG store needs `CREATE EXTENSION vector`), digest-pinned.
   Measured build cost (2026-08-25, warm Mac): ~15 min end to end, ~7.65 GB database,
   gates ~6 s — dominated by the per-row triggers deriving `matrix_relation_index` and
@@ -287,13 +300,135 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   the release commit is cut with `git checkout -B` (a PR checkout is a detached HEAD).
   Drill config comes from `scripts/lib/operator_config.ts` (catalog keys of the process
   env; `update_drill_config_tripwire`).
-- **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers plus the
-  `test/integration/**` MariaDB legs. Everything else it runs is twinned hosted.
+- **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers. Everything it
+  runs is twinned hosted — including the `test/integration/**` MariaDB legs, which ran
+  nowhere else until PUB-05 moved them onto the suite's own MariaDB server and into the
+  DB tier's blocking MariaDB stage.
+
+### Suite MariaDB target (PUB-05, 2026-09-30)
+
+MariaDB is the fourth suite-owned surface, beside the suite Postgres database
+(`dedalo_test_marker`), the media root (`.dedalo_test_media`) and the vector database
+(`dedalo_test_rag_marker`). Before it, a test process reached the INSTALLATION's MariaDB
+(`DEDALO_DIFFUSION_DB_SOCKET` from `../private/.env`): a developer run created and
+dropped tables in a real publication database, and a runner without that socket skipped
+every live leg GREEN.
+
+- **Per lane.** The lane (`testDatabaseName()`) keys a root
+  `../private/test_mariadb/<suite db>/` (marked `.dedalo_test_mariadb`; datadir, pid,
+  logs, `acquisitions.ndjson`) and a socket `/tmp/dedalo_tmdb_<sha256(root)[:12]>/s`
+  (dir 0700 — macOS caps a socket path at 104 bytes). The server runs
+  `--skip-networking`, so the filesystem is the access control.
+- **Armed by a preload.** `test/preload/suite_mariadb.ts` sets `DEDALO_DIFFUSION_DB_*`
+  (the lane socket, the suite user, a blank host/port) in EVERY `bun test` process,
+  unconditionally and without I/O. Nothing exports them in CI.
+- **Acquired, never skipped.** A MariaDB gate calls
+  `requireSuiteMariadb(import.meta.path, databases)` in `beforeAll`
+  (`test/helpers/suite_mariadb.ts`): the names must be `database` nodes of the
+  registered situations (zzd, zzdif) — an installation's database is refused by name;
+  the process must be armed; the server is installed/started/provisioned; each
+  database's marker row, read through the engine's `getTargetPool`, must name this
+  lane. It throws otherwise, and appends an acquisition row when it does not.
+- **Grants = production posture.** The diffusion user has
+  `SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX` per target database, no global
+  privilege, no CREATE DATABASE, and SELECT only on `dedalo_test_mariadb_marker.targets`
+  (so the marker cannot be forged). Every ensure self-checks errno 1044 / 1142. Two
+  control databases (`zzd_unmarked_control`, `zzd_foreign_marker_control`) are granted
+  but refused by the classifier. A third, `zzd_granted_absent`, is granted (no CREATE)
+  and never created: the one name that answers errno 1049, since every ungranted
+  absent name answers 1044 first. The engine's 1049 branch is gated on it.
+- **The stage.** `scripts/ci/mariadb_tier.ts` runs `test/integration/**` (minus the
+  shrink-only `INSTALL_BOUND_EXEMPT`) plus every `test/unit` file that imports the
+  helper at runtime (resolved by Bun's transpiler, not a regex), EACH FILE IN ITS OWN
+  `bun test`, and requires per file: reported, >0 cases, 0 skipped, 0 failed, >0
+  assertions, an acquisition row; and that the rows the SUITE USER changed during THAT
+  file's run (`information_schema.USER_STATISTICS`, `--userstat=1`: inserted, deleted,
+  updated) match its declared `ROW_CONTRACT` row — every counter it declares rises, a
+  declared reader moves none. Per file because a set-wide sum rose whenever the
+  helper's own gate (which writes rows to prove the measure) passed, whatever the
+  product gates wrote. Not global `Com_*`: those count statements dispatched by anyone,
+  including the helper's root provisioning and its refused self-check insert
+  (measured). The measure is CALIBRATED live on every run: a planted file that only
+  acquires must move it by exactly 0, one that inserts, updates and deletes a row by
+  more than 0. A measure that cannot be read is a structured fault in the same report.
+- **The no-contact population.** Every `test/unit` and `test/parity` file (the preload
+  arms both) OUTSIDE the set whose runtime
+  import closure reaches `src/diffusion/targets/mariadb/db.ts` (the module that opens
+  pools) is derived — transitively, through `test/helpers`, `src` and `tools`, static and
+  literal dynamic imports, crossing the reasoned `SEAM_EDGES` of the product modules
+  that import by a computed path (the tool loader, the boot warm-up; an unlisted one is
+  red) — and RUN in one armed batch with the suite server up (173 files: 136 unit + 37
+  parity, measured 2026-09-30; parity replays the frozen fixtures, credless). The suite user's CONTACTS (`TOTAL_CONNECTIONS` + `DENIED_CONNECTIONS`)
+  must not move; a non-zero batch is re-run file by file and each file that opened a
+  pool without acquiring is named with its import chain; a contact no single file
+  reproduces reds the batch itself (fail-closed: an order-dependent or late contact is
+  bisected, never passed). Every population file must RUN ≥1 case — reported, not all
+  skipped (bun's `tests` counts skipped cases), and ≥1 assertion executed (a file whose
+  `beforeAll` threw reports one failed `(unnamed)` case and 0 assertions: it never ran) —
+  unless a reasoned, shrink-only `NO_CONTACT_IDLE` row (the three live-PHP-oracle parity
+  differentials) says why it runs nothing by construction; a row whose file runs, or left
+  the population, is red. Partial skips are printed, not judged; pass/fail is the unit /
+  parity tier's verdict. The contact measure has its own
+  live calibration: a file that imports the pool module and opens nothing moves it by
+  exactly 0; one that opens a pool unacquired (after proving it is armed at a live
+  socket) by more than 0 — which also proves the child is armed. Not closed here: a
+  contact made only in a situation the suite database does not hold, and a test-side
+  computed import.
+- **Bun's TCP fallback.** Measured: the `mariadb` adapter given a socket path that does
+  not exist connects to `localhost:3306` instead. The helper checks the socket exists
+  before any pool opens and its CLI forces `--protocol=socket`, so a gate that acquires
+  through `requireSuiteMariadb` never meets the fallback. Arming does NOT close it for
+  other `getTargetPool` callers while the lane server is down; only the engine seam
+  PUB-05b (`buildTargetOptions` refusing a socket that is not a unix socket;
+  `DEDALO_TEST_DIFFUSION_DB_SOCKET`) does.
+- **Lifecycle.** The server is detached and outlives the `bun test` that started it.
+  `scripts/ci/suite_mariadb.ts stop` ends it; `sweep` also deletes the lane root (only a
+  root carrying `.dedalo_test_mariadb`). Ensure/stop are serialized per lane by a
+  kernel-released `flock` on `<root>/.lock`, so a killed run leaves no stale lock; a
+  stop issued while another process holds it waits (`suite_mariadb_target_native`
+  leg j). A sweep stops the server AND renames the root off its path (same directory,
+  atomic) under that lock, then deletes it marker-last: the lane path is marked until
+  the instant it is absent (leg k), a process queued on the lock is told the lane was
+  swept instead of holding a lock over it — every flock is re-validated against the
+  current `.lock` inode (leg l) — and a killed sweep's `.<lane>.swept-…` leftover is
+  collected by the next one (leg m). Every client call and the installer have a
+  deadline, so a hung one cannot hold the lane lock (leg n); a waiter's lock wait is
+  DERIVED from those deadlines (the holder's worst ensure plus a margin), so it reports
+  the holder's real failure, never "lock held" (leg q). A start that misses its deadline
+  stops the server it spawned (leg o); a server that ANSWERS with a server-side error
+  (1040, 1045…) is alive and is surfaced, never restarted (leg p). The lane root is
+  claimed atomically — built marked under `.<lane>.claim-<pid>-<n>`, then renamed onto
+  its path — and a dead claimer's temp is collected by the next sweep (leg r). Before it
+installs, starts on or sweeps a datadir, the holder FENCES it: every process whose command
+line names that datadir is stopped, not only the pid-file server — an installer orphaned
+by a killed holder, a stray server (leg t) — and a stop returns only once the process is
+gone, SIGKILL included, or throws naming the survivor (leg s).
+  `sweepSuiteMariadbLanes(match)` (`test/helpers/suite_mariadb_lanes.ts`) sweeps every
+  marked lane root a matcher names — the shard runner's teardown for its
+  `<template>__shard<N>` lanes: `sweepShardClones` (`scripts/lib/test_shard_db.ts`) calls
+  it at the entry sweep, the exit sweep and `--sweep`. An unmarked lane root at a shard
+  name is REFUSED and a marked one whose sweep fails is a FAILURE with its real error —
+  each refuses the run and makes `--sweep` exit non-zero, through ONE pure verdict,
+  `sweepBlockers` (`shard_mariadb_sweep_native`, a DB-tier tripwire, which sweeps only a
+  probe template it built, never the lane's own).
+
+Locally (needs `mariadbd`, `mariadb-install-db`, `mariadb`; without them the MariaDB
+gates are RED, not skipped):
+
+```sh
+export DEDALO_TEST_DATABASE=<app db>_test_l3        # the lane key
+bun run scripts/ci/suite_mariadb.ts start           # optional: a gate's beforeAll starts it too
+bun test --timeout=30000 test/integration/diffusion_mariadb.test.ts
+bun run scripts/ci/mariadb_tier.ts                  # the blocking stage, as CI runs it
+bun run scripts/ci/suite_mariadb.ts stop            # the server outlives bun test until stopped
+```
 
 Every tier root keeps the independent-stage accumulator: each STAGE line aborts bare
 under `set -e` or raises `tier_status` (leg H); a `|| true` on a stage is red, with ONE
 shrink-only `ADVISORY_STAGES` row (the unit tier), whose restore criterion `db_tier.sh`
-states.
+states. A root that starts the suite MariaDB must stop it on exit (leg J, executed with
+stubbed commands: to the end, and SIGTERMed at the first start), and a root that runs
+the MariaDB stage runs it LAST (leg K, the same stubbed run).
 
 ### Time-based checks — the nightly (2026-09-26)
 
@@ -410,9 +545,17 @@ Externally provided values win over `test/preload/session_db.ts` defaults and ov
 | `DEDALO_TS_STATE_PATH` | scratch json (runner) | real maintenance-mode state |
 | `DB_NAME` / `DEDALO_DATABASE_CONN` | the SUITE database (runner) | the application's records |
 | `DEDALO_TEST_MEDIA_ROOT` | `../private/test_media/<suite db>` (runner and preload) | the installation's media tree; the key also ARMS the `.dedalo_test_media` refusal |
+| `DEDALO_DIFFUSION_DB_SOCKET` / `_USER` / `_PASSWORD` / `_HOST` / `_PORT` | `bun test` ONLY: the lane's suite MariaDB socket, its suite user, blank host/port — set by `test/preload/suite_mariadb.ts`, which OVERRIDES any externally provided value (the exception to the precedence rule above). NOT yet the client suite's server (see below) | the installation's MariaDB publication databases |
 
-`scripts/client_test_runner.ts` starts its own server with all of these, so
-`bun run test:client` on a desk gets the isolation CI gets. The `dedalo_ts_test_` table
+`scripts/client_test_runner.ts` starts its own server with all of these EXCEPT the
+`DEDALO_DIFFUSION_DB_*` row, so `bun run test:client` on a desk gets the isolation CI
+gets for everything but MariaDB: its server still resolves `DEDALO_DIFFUSION_DB_*` from
+`../private/.env`, i.e. the installation's MariaDB, until `scripts/client_test_server.ts`
+composes `suiteMariadbEnvironment` and starts the lane's server first (arming alone is
+not enough: an absent socket falls back to TCP `localhost:3306`). Held as a tethered
+PENDING row, `CLIENT_SERVER_MARIADB_PENDING` in `suite_mariadb_target_native` leg (u): the
+leg composes the server's environment and goes red the day it is armed while the row still
+stands, so the row and this paragraph leave together. The `dedalo_ts_test_` table
 prefix is schema-enforced (rule 14 extracts the engine's own guard regex).
 
 ## Sibling paths and client libraries

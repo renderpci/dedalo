@@ -30,7 +30,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
@@ -55,9 +55,11 @@ import {
 	SB_GRANTED_SECTION,
 	SB_HIERARCHY_ID,
 	SB_HIERARCHY_SECTION,
+	SB_INPUT_COMPONENT,
 	SB_MEDIA_COMPONENT,
 	SB_PRESET_OF_A,
 	SB_PRESET_OF_B,
+	SB_PROJECT_OF_A,
 	SB_USER_A,
 	SB_USER_B,
 } from '../helpers/scope_binding_fixture.ts';
@@ -67,8 +69,6 @@ const SB_UNGRANTED_COMPONENT = 'test91';
 /** dd624 — the preset's name component (the caller pair on a dd655 request). */
 const PRESET_NAME_COMPONENT = 'dd624';
 
-/** test3's NON-translatable input_text — the role write the in-handler probe lands. */
-const SB_INPUT_COMPONENT = 'test162';
 /** The filename the match_freename probe stores on B's record and then uploads. */
 const MATCH_FILENAME = 'zzsb-match.jpg';
 
@@ -94,6 +94,107 @@ async function runImport(
 async function mediaOfRecordOfB(): Promise<unknown> {
 	const record = await readMatrixRecord('matrix_test', SB_GRANTED_SECTION, recordOfB);
 	return record?.columns.media ?? null;
+}
+
+/** Stamp a test3 record's project (dd675 on test101 — the stored shape; test3 has no birth project). */
+async function stampProject(sectionId: number, projectId: number): Promise<void> {
+	await sql.unsafe(
+		`UPDATE matrix_test SET relation = coalesce(relation, '{}'::jsonb) || $3::text::jsonb
+		 WHERE section_tipo = $1 AND section_id = $2`,
+		[
+			SB_GRANTED_SECTION,
+			sectionId,
+			encodeForJsonb({
+				test101: [
+					{
+						id: 1,
+						type: 'dd675',
+						section_id: projectId,
+						section_tipo: config.features.filterSectionTipo,
+						from_component_tipo: 'test101',
+					},
+				],
+			}),
+		],
+	);
+}
+
+/** A test3 id no row holds now (MAX+1 — swept by the probe that takes it). */
+async function freeTest3Id(): Promise<number> {
+	const rows = (await sql.unsafe(
+		'SELECT COALESCE(MAX(section_id), 0)::int + 1 AS id FROM matrix_test WHERE section_tipo = $1',
+		[SB_GRANTED_SECTION],
+	)) as { id: number }[];
+	const id = rows[0]?.id ?? 1;
+	expect(await readMatrixRecord('matrix_test', SB_GRANTED_SECTION, id)).toBeNull();
+	return id;
+}
+
+/**
+ * Poll until some backend waits on a lock HELD BY `pid` — identity, not a sleep
+ * (import_create_door_native's idiom): `pg_blocking_pids` names the blocker.
+ */
+async function waitUntilBlockedBy(pid: number, timeoutMs: number): Promise<boolean> {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		const rows = (await sql.unsafe(
+			`SELECT count(*)::int AS n FROM pg_stat_activity
+			 WHERE wait_event_type = 'Lock' AND $1::int = ANY(pg_blocking_pids(pid))`,
+			[String(pid)],
+		)) as { n: number }[];
+		if ((rows[0]?.n ?? 0) > 0) return true;
+		await new Promise((resolve) => setTimeout(resolve, 25));
+	}
+	return false;
+}
+
+/** The enumerate request whose filename prefix names `sectionId`. */
+const enumerateRequest = (sectionId: number, keyDir: string) => ({
+	section_tipo: SB_GRANTED_SECTION,
+	tipo: SB_MEDIA_COMPONENT,
+	key_dir: keyDir,
+	tool_config: {
+		import_mode: 'section_resource',
+		import_file_name_mode: 'enumerate',
+		ddo_map: [
+			{ role: 'target_component', tipo: SB_MEDIA_COMPONENT, section_tipo: SB_GRANTED_SECTION },
+		],
+	},
+	files_data: [{ name: `${sectionId}-photo.jpg` }],
+});
+
+/**
+ * THE RACE (refuter-surviving, closure Step 3): B's ordinary create of
+ * `sectionId`, stamped into `projectId`, is written but NOT committed when A's
+ * enumerate import resolves the filename prefix — so A's existence read finds
+ * no row — and commits only once A's conflict-tolerant insert is provably
+ * waiting on it. A's insert is then a no-op: the record is B's.
+ */
+async function enumerateImportRacingCreate(sectionId: number, projectId: number) {
+	let releaseCreator: () => void = () => {};
+	const creatorHold = new Promise<void>((resolve) => {
+		releaseCreator = resolve;
+	});
+	let creatorWrote: () => void = () => {};
+	const written = new Promise<void>((resolve) => {
+		creatorWrote = resolve;
+	});
+	let creatorPid = 0;
+	const creator = withTransaction(async () => {
+		const pidRows = (await sql.unsafe('SELECT pg_backend_pid() AS pid')) as { pid: number }[];
+		creatorPid = Number(pidRows[0]?.pid ?? 0);
+		await createSectionRecord(SB_GRANTED_SECTION, SB_USER_B, new Date(), sectionId);
+		await stampProject(sectionId, projectId);
+		creatorWrote();
+		await creatorHold; // written; NOT committed
+	});
+	await written;
+	expect(creatorPid).toBeGreaterThan(0);
+	const run = runImport(enumerateRequest(sectionId, 'zzsb_enumerate_race'), A);
+	const blocked = await waitUntilBlockedBy(creatorPid, 15_000);
+	releaseCreator();
+	await creator;
+	return { blocked, result: await run };
 }
 
 async function spec(tool: string, action: string) {
@@ -374,6 +475,66 @@ describe.if(DB_READY)(
 			expect(asB.errors[0]).not.toContain('outside the caller');
 			expect(await mediaOfRecordOfB()).toBeNull();
 		});
+
+		test('the RECORD half IN-HANDLER (enumerate RACE): a prefix id a concurrent create takes OUT of scope is NOT born in this run — refused by the scope probe', async () => {
+			// Existence read → null, then the conflict-tolerant create: between the
+			// two a concurrent writer took the id, the insert was a no-op, and the
+			// record is B's. "Born in this run" must be the create's OWN answer (the
+			// row's xmin — bornInCurrentTransaction), never the stale existence read:
+			// otherwise the scope probe is skipped and the component door asks only
+			// the section-target (create) rule, for a record A cannot reach.
+			const sectionId = await freeTest3Id();
+			try {
+				const { blocked, result } = await enumerateImportRacingCreate(
+					sectionId,
+					config.features.defaultProject,
+				);
+				expect(blocked).toBe(true); // anti-vacuity: A really waited on B's create
+				expect(await isRecordInScope(SB_GRANTED_SECTION, sectionId, A)).toBe(false);
+				expect(result.imported).toBe(0);
+				expect(result.errors).toHaveLength(1);
+				expect(result.errors[0]).toContain(
+					`${SB_GRANTED_SECTION}/${sectionId} is outside the caller's scope`,
+				);
+				// B's record stands, and B's (no import ran into it)
+				const stored = await readMatrixRecord('matrix_test', SB_GRANTED_SECTION, sectionId);
+				expect(stored).not.toBeNull();
+				expect(stored?.columns.media ?? null).toBeNull();
+			} finally {
+				await deleteSectionRecord(SB_GRANTED_SECTION, sectionId, -1).catch(() => undefined);
+			}
+		}, 30000);
+
+		test('the RECORD half IN-HANDLER (enumerate RACE, served twins): a raced id IN scope passes the probe; a free id A really creates is born in this run', async () => {
+			// In-scope twin: the same interleave, B's record stamped into A's project
+			// — the probe runs and PASSES; the run fails later, at the staging lookup.
+			const racedId = await freeTest3Id();
+			try {
+				const { blocked, result } = await enumerateImportRacingCreate(racedId, SB_PROJECT_OF_A);
+				expect(blocked).toBe(true);
+				expect(await isRecordInScope(SB_GRANTED_SECTION, racedId, A)).toBe(true);
+				expect(result.errors).toHaveLength(1);
+				expect(result.errors[0]).toContain('Staged upload not found');
+				expect(result.errors[0]).not.toContain('outside the caller');
+			} finally {
+				await deleteSectionRecord(SB_GRANTED_SECTION, racedId, -1).catch(() => undefined);
+			}
+			// Born twin: no race — A's insert creates the row, so it is admitted
+			// without the probe (the create rule), although test3 stamps no birth
+			// project and the new row is outside A's projects scope.
+			const bornId = await freeTest3Id();
+			try {
+				const result = await runImport(enumerateRequest(bornId, 'zzsb_enumerate_born'), A);
+				const stored = await readMatrixRecord('matrix_test', SB_GRANTED_SECTION, bornId);
+				expect(stored).not.toBeNull(); // A's create landed
+				expect(await isRecordInScope(SB_GRANTED_SECTION, bornId, A)).toBe(false);
+				expect(result.errors).toHaveLength(1);
+				expect(result.errors[0]).toContain('Staged upload not found');
+				expect(result.errors[0]).not.toContain('outside the caller');
+			} finally {
+				await deleteSectionRecord(SB_GRANTED_SECTION, bornId, -1).catch(() => undefined);
+			}
+		}, 30000);
 
 		test('the RECORD half IN-HANDLER (match_freename): a matcher hit outside the scope is refused; the matcher itself still finds it', async () => {
 			// The free-name matcher searches ACROSS projects (PHP skip_projects_filter

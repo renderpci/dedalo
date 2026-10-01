@@ -193,6 +193,26 @@ export interface FrontierStep {
  */
 export interface SqlFrontierScope extends FrontierScope {
 	recordPredicate(step: { sectionTipo: string; table: string; alias: string }): Promise<string>;
+	/**
+	 * THE ROOT STEP'S SECTIONS (closure Step 3, SEC-1): the sections a MAIN row
+	 * may land in — the SQO's `section_tipo` list, which the main WHERE binds
+	 * every row to. The root key and the single-step relation leaf's
+	 * from_component_tipo key (conform.ts) are asked of THESE, never of the
+	 * client-declared `path[0].section_tipo`: a declaration is not a row.
+	 * REQUIRED: a scope that cannot say which sections its rows are bound to
+	 * cannot key a root step.
+	 */
+	readonly mainSectionTipos: readonly string[];
+	/**
+	 * THE SUBDATUM READ FLOOR — `${section}_${component}` pairs the caller may
+	 * FILTER on although the profile holds 0 on them: the components a
+	 * Gate-A-verified source component's request_config `ddo_map` names (a
+	 * portal / autocomplete searching its target section — PHP get_subdatum's
+	 * floor, `inheritSubdatumPermission`). Computed SERVER-SIDE by the
+	 * assembler's caller from the verified source; never read from the client,
+	 * never from ALS.
+	 */
+	readonly readFloor?: ReadonlySet<string>;
 }
 
 /**

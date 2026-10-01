@@ -958,6 +958,7 @@ describe('the seam is reached from the record-write chokepoint', () => {
 				},
 			],
 			false,
+			{ actor: -1 },
 		);
 
 		expect(liveCredentials(session)).toEqual({ session: false, marker: false });
@@ -976,6 +977,7 @@ describe('the seam is reached from the record-write chokepoint', () => {
 			{ table: USERS_TABLE, sectionTipo: USERS, sectionId: userId },
 			[{ column: 'relation', key: 'dd1725', value: [] }],
 			false,
+			{ actor: -1 },
 		);
 
 		expect(liveCredentials(session)).toEqual({ session: true, marker: true });

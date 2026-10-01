@@ -24,6 +24,10 @@
  *   - the shared `zzot` observer situation (test/helpers/observer_term_seed.ts).
  *   - the suite media root's `.publication/pub` marker store, and its
  *     `.publication/dbs` ground truth (the public_tier pair, scoped to zzrc1).
+ *   - `zzrg` TLD (its OWN — `zzri` belongs to relation_index_store, and the
+ *     sweep below is TLD-wide): one dd_ontology row whose parent is not a tipo, planted the
+ *     way a legacy install carries it (the parent CHECK re-added NOT VALID);
+ *     the ontology_identifiers pair (SURF-1). Swept, the CHECK re-VALIDATEd.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -36,9 +40,14 @@ import {
 } from '../../src/ai/rag/vector_store.ts';
 import { config } from '../../src/config/config.ts';
 import { widget as reconcileStatusWidget } from '../../src/core/area_maintenance/widgets/reconcile_status.ts';
-import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
+import {
+	ddOntologyConstraintStates,
+	deleteTldNodes,
+	upsertDdOntologyNode,
+	validateDdOntologyIdentifierConstraints,
+} from '../../src/core/db/dd_ontology.ts';
 import { insertMatrixRecordWithCounter } from '../../src/core/db/matrix_write.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { buildMediaLocation } from '../../src/core/media/path.ts';
 import { resolveMediaToolContext } from '../../src/core/media/tool_support.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
@@ -55,6 +64,7 @@ import {
 } from '../../src/core/reconcile/registry.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import {
 	dropObserverTerm,
 	ensureObserverTerm,
@@ -79,6 +89,10 @@ const MATRIX_TEST_RELATION = 'test24';
 
 const ONTO_TLD = 'zzro';
 const ONTO_SECTION = `${ONTO_TLD}0`;
+
+/** A grammar violator: a valid tipo whose PARENT is not a tipo (SURF-1 legacy shape). */
+const GRAMMAR_VIOLATOR = { tipo: 'zzrg1', tld: 'zzrg', parent: "zzrg0'" };
+const PARENT_GRAMMAR = 'dd_ontology_parent_grammar';
 
 const HIER_TLD = 'zzrh';
 const HIER_SECTION = 'hierarchy1';
@@ -433,6 +447,49 @@ const PLANTERS: Record<string, Planter> = {
 		async unplant() {
 			await sql.unsafe('DELETE FROM dd_ontology WHERE tipo = $1', [`${ONTO_TLD}9`]);
 			await clearOntologyDerivedCaches();
+		},
+	},
+	ontology_identifiers: {
+		async plant() {
+			// The shape a legacy install carries after migration 0013: a row that
+			// breaks the parent rule, under a NOT VALID parent CHECK. One
+			// transaction (drop → insert → re-add NOT VALID), so the table is never
+			// without the CHECK; the definition is the live one, re-added verbatim.
+			await assertTestDatabase('reconcile_registry_native ontology_identifiers');
+			await withTransaction(async () => {
+				const [row] = (await sql.unsafe(
+					`SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+					  WHERE conrelid = 'dd_ontology'::regclass AND conname = $1`,
+					[PARENT_GRAMMAR],
+				)) as { def: string }[];
+				if (row === undefined) throw new Error(`${PARENT_GRAMMAR} is absent`);
+				const definition = row.def.replace(/\s+NOT VALID$/, '');
+				await sql.unsafe(`ALTER TABLE dd_ontology DROP CONSTRAINT "${PARENT_GRAMMAR}"`);
+				await sql.unsafe(
+					`INSERT INTO dd_ontology (tipo, parent, term, model, order_number, tld, is_model, is_translatable, is_main)
+					 VALUES ($1, $2, $3::text::jsonb, 'component_input_text', 1, $4, false, true, false)`,
+					[
+						GRAMMAR_VIOLATOR.tipo,
+						GRAMMAR_VIOLATOR.parent,
+						JSON.stringify({ 'lg-eng': 'zzrg violator' }),
+						GRAMMAR_VIOLATOR.tld,
+					],
+				);
+				await sql.unsafe(
+					`ALTER TABLE dd_ontology ADD CONSTRAINT "${PARENT_GRAMMAR}" ${definition} NOT VALID`,
+				);
+			});
+			expect((await ddOntologyConstraintStates())[PARENT_GRAMMAR]).toBe('not_valid');
+			await clearOntologyDerivedCaches();
+			return 1;
+		},
+		async unplant() {
+			await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1', [GRAMMAR_VIOLATOR.tld]);
+			await clearOntologyDerivedCaches();
+			// Leave the table as the clean suite database has it: every CHECK VALID.
+			const outcome = await validateDdOntologyIdentifierConstraints();
+			expect(outcome.blocked).toEqual([]);
+			expect(outcome.states[PARENT_GRAMMAR]).toBe('valid');
 		},
 	},
 	public_tier: {

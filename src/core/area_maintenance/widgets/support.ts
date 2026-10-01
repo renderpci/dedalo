@@ -61,10 +61,22 @@ export interface WidgetSpec {
  * ownership gate) or `engineDenied()` (closed-by-design), or add a named
  * ENGINE_NATIVE exemption with a reason in update_ownership_tripwire.test.ts.
  * The tripwire fails any unclassified action.
+ *
+ * `unboundedActions` (PERF-11) names the apiActions that are MAINTENANCE —
+ * work that scales with the size of the data (a store rebuild, a VACUUM, a
+ * bulk transform, an import) and must not die on the request pool's statement
+ * ceiling. Only those run inside `withUnboundedStatements`, on the small
+ * maintenance pool; every other action (a read, a setting, a budgeted scan
+ * like dataframe_control) stays on the request pool and its ceiling, so it
+ * never queues behind a long one. Gate:
+ * test/unit/maintenance_door_unbounded_native.test.ts (every name is a
+ * registered action; declared ones run past the ceiling; an undeclared one is
+ * neither lifted nor starved by a saturated maintenance pool).
  */
 export interface WidgetModule {
 	spec: WidgetSpec;
 	apiActions?: Record<string, WidgetHandler>;
+	unboundedActions?: readonly string[];
 	getValue?: WidgetHandler;
 	eagerValue?: () => Promise<Record<string, unknown> | null>;
 }

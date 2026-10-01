@@ -144,6 +144,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/batch_scope_tripwire.test.ts
 	test/unit/agent_alias_tripwire.test.ts
 	test/unit/agent_skills_tripwire.test.ts
+	test/unit/agent_workflows_parse_tripwire.test.ts
 	test/unit/css_source_tripwire.test.ts
 	test/unit/engineering_currency_tripwire.test.ts
 	test/unit/comment_doc_path_tripwire.test.ts
@@ -160,6 +161,9 @@ HERMETIC_TRIPWIRES=(
 	test/unit/client_store_principal_key_tripwire.test.ts
 	test/unit/component_teardown_tripwire.test.ts
 	test/unit/outbound_fetch_tripwire.test.ts
+	# SURF-2 (2026-09-30): the pinned single-call door, hermetic by seams (injected
+	# lookup/socket, loopback peers). Verified DB-less (DB_PORT=59999): 26 pass / 0 fail.
+	test/unit/guarded_text_pin_native.test.ts
 	test/unit/strip_comments_tripwire.test.ts
 	test/unit/private_state_mode_tripwire.test.ts
 	test/unit/wire_disclosure_tripwire.test.ts
@@ -365,6 +369,15 @@ HERMETIC_TRIPWIRES=(
 	test/unit/baselines_bank_native.test.ts
 	test/unit/ci_local_native.test.ts
 	test/unit/pre_push_gate_native.test.ts
+	# --- 2026-09-30 (LEAD-1 review r2): the daemon/engine address-classifier differential.
+	#     DB-free: pure classifier calls over both sides' exported tables; measured with
+	#     DB_PORT=1 (6/6 pass before the S3 table export, 7/7 after).
+	test/unit/site_builder_public_address_differential.test.ts
+	# --- 2026-10-01 (PERF-2/DIFF-4): the artifact peak-RSS gate. DB-free: a spawned child
+	#     zips/merges files it writes under a MARKED scratch media root (~1.2 GiB temp disk,
+	#     ~4 s); verified with the hermetic env (DB_HOST=127.0.0.1 DB_PORT=59999,
+	#     DB_NAME=ci_hermetic_no_db: 3 pass / 0 fail).
+	test/unit/diffusion_artifact_rss_native.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

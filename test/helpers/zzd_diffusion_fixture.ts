@@ -50,6 +50,7 @@ import {
 	residueOf,
 	situation,
 } from '../../src/core/test_data/situations/situation.ts';
+import { databasesOf } from './suite_mariadb_env.ts';
 
 /** The section whose targets are the two scratch sql elements. */
 export const SQL_SECTION = 'test3';
@@ -63,7 +64,22 @@ export const TERMINAL_KEYS = ['csv:zzd12', '|zzd_nodb_table', 'rdf:zzd7'] as con
 // predicates in both test files key on it).
 
 export const SQL_KEY_ONE = 'zzd_probe_db|zzd_probe_table';
+/** The sql element that publishes SQL_KEY_ONE (its database and table nodes are its children). */
+export const SQL_ELEMENT_ONE = 'zzd1';
 export const SQL_KEY_TWO = 'zzd_probe_db_two|zzd_probe_table_two';
+
+/**
+ * The get_diffusion_info panels the situation guarantees, per section: SQL_SECTION is
+ * published by the two sql tables (each under its sql element, into the database its
+ * `database` node names); FILE_SECTION only by file-type nodes (rdf table, xml class).
+ * Owned here so a consumer asserts the exact payload without spelling this TLD's tipos.
+ */
+export const SQL_PANELS = [
+	{ tipo: 'zzd3', element: SQL_ELEMENT_ONE, database: 'zzd_probe_db' },
+	{ tipo: 'zzd6', element: 'zzd4', database: 'zzd_probe_db_two' },
+] as const;
+/** The FILE_SECTION panel tipos (rdf table zzd11, xml owl:Class zzd10), sorted. */
+export const FILE_PANELS = ['zzd10', 'zzd11'] as const;
 
 /**
  * The domain node is PART OF THE SITUATION (zzd0, under dd1190, named after
@@ -86,8 +102,7 @@ function requireDomainName(): string {
 	return domainName;
 }
 
-function buildZzdSituation() {
-	const domainName = requireDomainName();
+function buildZzdSituation(domainName: string = requireDomainName()) {
 	const sql = (type: string) => ({ diffusion: { type } });
 	return situation({
 		name: 'zzd diffusion fixture',
@@ -95,7 +110,7 @@ function buildZzdSituation() {
 		nodes: [
 			{ tipo: 'zzd0', parent: 'dd1190', model: 'diffusion_domain', term: { 'lg-spa': domainName } },
 			{
-				tipo: 'zzd1',
+				tipo: SQL_ELEMENT_ONE,
 				parent: 'zzd0',
 				model: 'diffusion_element',
 				term: { 'lg-spa': 'zzd sql element' },
@@ -197,6 +212,17 @@ function buildZzdSituation() {
 			},
 		],
 	});
+}
+
+/**
+ * The MariaDB target databases this situation declares (its `database` nodes:
+ * `zzd_probe_db`, `zzd_probe_db_two`) — what the suite MariaDB server hosts for it
+ * (test/helpers/suite_mariadb.ts). The domain node's name plays no part in them, so
+ * the listing does not require DEDALO_DIFFUSION_DOMAIN: the provisioner reads it on a
+ * runner where the delete gates' domain is not the question.
+ */
+export function zzdTargetDatabases(): string[] {
+	return databasesOf(buildZzdSituation('zzd target listing'));
 }
 
 /** Remove every `zzd` ontology row and drop the derived caches. */

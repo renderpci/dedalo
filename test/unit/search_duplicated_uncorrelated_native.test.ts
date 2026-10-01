@@ -26,6 +26,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { buildJsonFragment } from '../../src/core/search/builders/builder_json.ts';
 import { buildStringFragment } from '../../src/core/search/builders/builder_string.ts';
 import type { BuilderContext, Fragment } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 
 const TABLE = 'matrix_test';
 const SECTION = 'test3';
@@ -61,7 +62,7 @@ function context(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'm',
 		column: 'string',
-		tipo: COMPONENT,
+		tipo: asSqlTipo(COMPONENT, 'test context'),
 		sectionTipo: SECTION,
 		table: TABLE,
 		lang: LANG,

@@ -42,6 +42,7 @@
 import { describe, expect, test } from 'bun:test';
 import { buildRelationFragment } from '../../src/core/search/builders/builder_relation.ts';
 import type { BuilderContext } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 
 const WHO_LOCATOR = [{ section_id: '115', section_tipo: 'dd128' }];
 
@@ -49,7 +50,7 @@ function whoCtx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'dd542',
 		column: 'relation',
-		tipo: 'dd543',
+		tipo: asSqlTipo('dd543', 'test context'),
 		sectionTipo: 'dd542',
 		table: 'matrix_activity',
 		lang: 'lg-nolan',
@@ -108,7 +109,7 @@ describe('the rewrite is scoped — everything else keeps containment', () => {
 			buildRelationFragment(
 				[{ section_id: '5', section_tipo: 'dd42' }],
 				'',
-				whoCtx({ tipo: 'dd545' }),
+				whoCtx({ tipo: asSqlTipo('dd545', 'test context') }),
 			),
 		);
 		expect(sentence).toContain('@>');
@@ -126,7 +127,7 @@ describe('the rewrite is scoped — everything else keeps containment', () => {
 			buildRelationFragment(
 				WHO_LOCATOR,
 				'',
-				whoCtx({ table: 'matrix_time_machine', tipo: 'dd578' }),
+				whoCtx({ table: 'matrix_time_machine', tipo: asSqlTipo('dd578', 'test context') }),
 			),
 		);
 		expect(sentence).toContain('user_id');

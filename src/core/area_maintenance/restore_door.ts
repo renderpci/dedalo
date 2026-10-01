@@ -13,7 +13,8 @@
  *
  * WHAT THE DOOR DOES, in order — each phase is a hard gate for the next:
  *
- *  1. VERIFY the artifact with a FULL READ (`verifyBackupArtifact`, deep):
+ *  1. VERIFY the artifact with a FULL READ (`verifyBackupArtifact` — since OPS-1
+ *     the only question it asks; a read that outruns its budget is refused too):
  *     `--list` exits 0 on an archive cut in half because the TOC sits at the
  *     front; only `pg_restore -f /dev/null` disproves truncation (P0-13,
  *     measured). Anything short of `verified_deep` is `recovery.artifact_unusable`
@@ -352,10 +353,10 @@ async function dropSidecar(ctx: DoorContext): Promise<{ ok: boolean; stderr: str
 }
 
 /** Phase 1: a full read of the artifact, before any statement reaches Postgres. */
-function verifyPhase(
+async function verifyPhase(
 	artifact: string,
 	pgRestoreBin: string | null,
-): BackupVerdict & { bin: string } {
+): Promise<BackupVerdict & { bin: string }> {
 	if (pgRestoreBin === null) {
 		throw new DedaloError('recovery.artifact_unusable', {
 			message:
@@ -363,7 +364,7 @@ function verifyPhase(
 			coordinates: { phase: 'verify', reason: 'unverifiable_no_pg_restore' },
 		});
 	}
-	const verdict = verifyBackupArtifact(artifact, { deep: true, pgRestoreBin });
+	const verdict = await verifyBackupArtifact(artifact, { pgRestoreBin });
 	if (!verdict.verified || verdict.reason !== 'verified_deep') {
 		throw new DedaloError('recovery.artifact_unusable', {
 			message: `restore door: '${artifact}' is ${verdict.reason}${verdict.detail ? ` (${verdict.detail})` : ''}; nothing was written`,
@@ -577,7 +578,7 @@ export async function runRestoreDoor(options: RestoreDoorOptions): Promise<Resto
 	const door = resolveDoor(options);
 
 	// ── 1. VERIFY: a full read, before any statement reaches Postgres ────────
-	const { bin: pgRestoreBin, ...verdict } = verifyPhase(options.artifact, door.pgRestoreBin);
+	const { bin: pgRestoreBin, ...verdict } = await verifyPhase(options.artifact, door.pgRestoreBin);
 
 	// ── 2. QUIESCE: zero foreign backends, or refuse ─────────────────────────
 	const targetExists = await quiescePhase(door);

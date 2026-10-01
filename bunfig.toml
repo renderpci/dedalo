@@ -51,13 +51,23 @@ root = "test"
 #    builds the matrix pool, via src/core/components/registry.ts -> ontology/resolver.ts;
 #    5 (canonical_test3) has no static imports at all. Last is simply the free position
 #    that satisfies the one real constraint.
+# 7. suite_mariadb — arms the diffusion MariaDB keys at THIS LANE's suite server (PUB-05):
+#    socket/user of `test/helpers/suite_mariadb_env.ts`, blank host+port, set unconditionally,
+#    so no test process can reach the installation's MariaDB. Placed right after
+#    test_database (its lane name is testDatabaseName(), pinned there); no I/O, no src/ graph.
+# 8. engine_state  — the boot twin: materializes the ENGINE-OWNED ontology (ddengine,
+#    src/core/ontology/engine_ontology.ts — production does it at boot) and sweeps the AI
+#    spend ledger, so a suite database is never walked into a fixture user's budget. Last:
+#    it imports the write path (config freeze, the matrix pool), so it needs 1-3 done.
 # The DB-touching preloads warn (never throw) when there is no Postgres — the hermetic tier
 # runs on a bare runner, and a throw here would take down all ~2000 tests.
 preload = [
 	"./test/preload/test_media.ts",
 	"./test/preload/test_database.ts",
+	"./test/preload/suite_mariadb.ts",
 	"./test/preload/session_db.ts",
 	"./test/preload/component_registry.ts",
 	"./test/preload/canonical_test3.ts",
 	"./test/preload/rag_db.ts",
+	"./test/preload/engine_state.ts",
 ]

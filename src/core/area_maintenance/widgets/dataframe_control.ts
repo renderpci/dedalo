@@ -3,7 +3,9 @@
  * (PHP widgets/dataframe_control wrapping dataframe_v7_migration::integrity_check).
  */
 
-import { sql } from '../../db/postgres.ts';
+import { config } from '../../../config/config.ts';
+import { sql, sqlStateOf, withTransaction } from '../../db/postgres.ts';
+import { isDedaloError } from '../../errors/index.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
 import type { Principal } from '../../security/permissions.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
@@ -44,6 +46,20 @@ const DATAFRAME_BATCH_SIZE = 500;
  */
 const DATAFRAME_TABLE_BUDGET_MS = 45_000;
 const DATAFRAME_TOTAL_BUDGET_MS = 180_000;
+
+/**
+ * The two budgets, as the scan reads them. A SEAM (a gate shrinks them to
+ * measure the cut in milliseconds); production always takes the defaults.
+ */
+export interface DataframeScanBudgets {
+	tableMs: number;
+	totalMs: number;
+}
+
+const DEFAULT_BUDGETS: DataframeScanBudgets = {
+	tableMs: DATAFRAME_TABLE_BUDGET_MS,
+	totalMs: DATAFRAME_TOTAL_BUDGET_MS,
+};
 
 /**
  * Tables the discovery pass will NOT walk, each with the reason the report
@@ -152,9 +168,67 @@ export async function dataframeControlRunFix(
 	return scan(true, null);
 }
 
+/** One batch's outcome: its rows, or why the table stops here. */
+type BatchOutcome =
+	| { rows: Record<string, unknown>[] }
+	| { status: 'budget_exhausted' | 'error'; reason: string };
+
+/**
+ * Read ONE batch, bounded by what is LEFT of the budgets (PERF-11 review): the
+ * SELECT runs in its own transaction under `SET LOCAL statement_timeout` = the
+ * smaller of the remaining budget and the request pool's own ceiling (never
+ * raised above it). The budgets used to be checked only BETWEEN batches, so one
+ * batch that walks a whole table (few rows match `LIKE '%id_key%'`) ran as long
+ * as the table is large — the budget bounded nothing, and on an install without
+ * a pool ceiling nothing else did either. A batch cut by the BUDGET truncates
+ * the table (`budget_exhausted`); one cut by the pool ceiling, or failing any
+ * other way, is an `error` — neither aborts the scan.
+ */
+async function readBatch(
+	query: string,
+	lastId: number,
+	remainingMs: number,
+	budgets: DataframeScanBudgets,
+): Promise<BatchOutcome> {
+	const poolCeilingMs = config.ops.dbStatementTimeoutMs;
+	const budgetBinds = poolCeilingMs <= 0 || remainingMs <= poolCeilingMs;
+	const boundMs = Math.max(1, Math.floor(budgetBinds ? remainingMs : poolCeilingMs));
+	try {
+		const rows = await withTransaction(async () => {
+			await sql.unsafe(`SET LOCAL statement_timeout = ${boundMs}`, []);
+			return (await sql.unsafe(query, [lastId])) as Record<string, unknown>[];
+		});
+		return { rows };
+	} catch (error) {
+		const unexamined = `rows with id > ${lastId} were NOT examined`;
+		if (budgetBinds && isDedaloError(error) && error.code === 'db.statement_timeout') {
+			return {
+				status: 'budget_exhausted',
+				reason:
+					`batch at id > ${lastId} ran past the ${boundMs}ms left of the budgets ` +
+					`(per-table ${budgets.tableMs}ms, total ${budgets.totalMs}ms): ${unexamined}`,
+			};
+		}
+		// SEC-18: the raw driver text goes to the server log; the report (an
+		// ok:true payload) carries the failure's CODE and a deliberate sentence.
+		console.error(`[dataframe_control] batch at id > ${lastId} failed:`, error);
+		return {
+			status: 'error',
+			reason: `batch at id > ${lastId} failed (${failureCode(error)}; see the server log): ${unexamined}`,
+		};
+	}
+}
+
+/** The failure's registered code or SQLSTATE — never its message. */
+function failureCode(error: unknown): string {
+	if (isDedaloError(error)) return error.code;
+	return sqlStateOf(error) ?? 'unexpected';
+}
+
 export async function dataframeControlScan(
 	fix: boolean,
 	scopedTables: string[] | null,
+	budgets: DataframeScanBudgets = DEFAULT_BUDGETS,
 ): Promise<WidgetResponse> {
 	const report = {
 		scanned: 0,
@@ -241,36 +315,35 @@ export async function dataframeControlScan(
 			// recorded below is exactly the last id we actually examined.
 			const tableElapsed = Date.now() - tableStart;
 			const totalElapsed = Date.now() - scanStart;
-			if (tableElapsed > DATAFRAME_TABLE_BUDGET_MS || totalElapsed > DATAFRAME_TOTAL_BUDGET_MS) {
+			if (tableElapsed > budgets.tableMs || totalElapsed > budgets.totalMs) {
 				status = 'budget_exhausted';
 				reason =
 					`stopped after ${batches} batches / ${tableElapsed}ms ` +
-					`(per-table budget ${DATAFRAME_TABLE_BUDGET_MS}ms, total ${DATAFRAME_TOTAL_BUDGET_MS}ms): ` +
+					`(per-table budget ${budgets.tableMs}ms, total ${budgets.totalMs}ms): ` +
 					`rows with id > ${lastId} were NOT examined`;
 				report.errors.push(`${table} | ${reason}`);
 				break;
 			}
 
-			let rows: Record<string, unknown>[];
-			try {
-				rows = (await sql.unsafe(
-					`SELECT id, section_tipo, section_id, ${selectColumns}
-					 FROM "${table}"
-					 WHERE id > $1 AND (relation::text LIKE '%id_key%')
-					 ORDER BY id ASC LIMIT ${DATAFRAME_BATCH_SIZE}`,
-					[lastId],
-				)) as Record<string, unknown>[];
-			} catch (error) {
-				// A cancelled batch (statement_timeout on a large table) must
-				// NOT abort the whole scan: every later table would silently go
-				// unexamined and the caller would get no report at all.
-				status = 'error';
-				reason =
-					`batch at id > ${lastId} failed: ${(error as Error).message}: ` +
-					`rows with id > ${lastId} were NOT examined`;
+			// A cut or failed batch must NOT abort the whole scan: every later
+			// table would silently go unexamined and the caller would get no
+			// report at all (see readBatch).
+			const batch = await readBatch(
+				`SELECT id, section_tipo, section_id, ${selectColumns}
+				 FROM "${table}"
+				 WHERE id > $1 AND (relation::text LIKE '%id_key%')
+				 ORDER BY id ASC LIMIT ${DATAFRAME_BATCH_SIZE}`,
+				lastId,
+				Math.min(budgets.tableMs - tableElapsed, budgets.totalMs - totalElapsed),
+				budgets,
+			);
+			if (!('rows' in batch)) {
+				status = batch.status;
+				reason = batch.reason;
 				report.errors.push(`${table} | ${reason}`);
 				break;
 			}
+			const rows = batch.rows;
 			batches++;
 			if (rows.length === 0) break;
 

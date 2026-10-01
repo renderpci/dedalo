@@ -31,11 +31,6 @@ import {
 	persistRecordKeys,
 	registerRagRecordHook,
 } from '../../src/core/section_record/index.ts';
-import {
-	REPO_ROOT,
-	WRITE_PATH_CORPUS_FLOOR,
-	writePathSourceFiles,
-} from '../helpers/write_path_corpus.ts';
 
 /** Reserved coordinates in matrix_test — collide with nothing real. */
 const TEST_TABLE = 'matrix_test';
@@ -72,6 +67,7 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 			target,
 			[{ column: 'string', key: 'test1', value: [{ id: 1, value: 'edited', lang: 'lg-eng' }] }],
 			{ userId: 7, now },
+			{ actor: -1 },
 		);
 
 		const row = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
@@ -106,6 +102,7 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 			target,
 			[{ column: 'number', key: 'test2', value: [{ id: 1, value: 42 }] }],
 			false,
+			{ actor: -1 },
 		);
 		const row = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		expect((row?.columns.number as Record<string, unknown>).test2).toEqual([{ id: 1, value: 42 }]);
@@ -124,6 +121,7 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 			target,
 			[{ column: 'string', key: 'test1', value: [{ id: 1, value: 'x', lang: 'lg-eng' }] }],
 			{ userId: 0 },
+			{ actor: -1 },
 		);
 		const row = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		expect(row?.columns.relation).toBeNull();
@@ -137,8 +135,11 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 			target,
 			[{ column: 'string', key: 'test2', value: [{ id: 1, value: 'second', lang: 'lg-eng' }] }],
 			false,
+			{ actor: -1 },
 		);
-		await persistRecordKeys(target, [{ column: 'string', key: 'test2', value: null }], false);
+		await persistRecordKeys(target, [{ column: 'string', key: 'test2', value: null }], false, {
+			actor: -1,
+		});
 		let row = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		const stringColumn = row?.columns.string as Record<string, unknown>;
 		expect(stringColumn.test2).toBeUndefined();
@@ -146,14 +147,18 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 
 		// Remove the LAST key → the column keeps '{}' (the PHP update_by_key
 		// contract, confirmed against the live oracle by delete_data_differential).
-		await persistRecordKeys(target, [{ column: 'string', key: 'test1', value: null }], false);
+		await persistRecordKeys(target, [{ column: 'string', key: 'test1', value: null }], false, {
+			actor: -1,
+		});
 		row = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		expect(row?.columns.string).toEqual({});
 		expect(row?.rawText.string).toBe('{}');
 
 		// Removing a key from a NULL column leaves it NULL (the PHP save_key_data
 		// "columns_to_delete" guard — '{}' is never materialized by a removal).
-		await persistRecordKeys(target, [{ column: 'number', key: 'test9', value: null }], false);
+		await persistRecordKeys(target, [{ column: 'number', key: 'test9', value: null }], false, {
+			actor: -1,
+		});
 		row = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		expect(row?.columns.number).toBeNull();
 		expect(row?.rawText.number).toBeNull();
@@ -169,6 +174,7 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 				{ column: 'number', key: 'test4', value: [{ id: 1, value: 9 }] },
 			],
 			false,
+			{ actor: -1 },
 		);
 		const row = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		const stringColumn = row?.columns.string as Record<string, unknown>;
@@ -178,7 +184,9 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 	});
 
 	test('empty savePath is refused', async () => {
-		await expect(persistRecordKeys(target, [], false)).rejects.toThrow('empty savePath');
+		await expect(persistRecordKeys(target, [], false, { actor: -1 })).rejects.toThrow(
+			'empty savePath',
+		);
 	});
 });
 
@@ -195,6 +203,7 @@ describe('S2-02 fail-loud: save racing a delete (real DB, scratch row)', () => {
 				target,
 				[{ column: 'string', key: 'test1', value: [{ id: 1, value: 'lost?', lang: 'lg-eng' }] }],
 				{ userId: 7 },
+				{ actor: -1 },
 			),
 		).rejects.toThrow('deleted concurrently');
 		// Nothing was silently resurrected.
@@ -238,6 +247,7 @@ describe('persistRecordColumns — whole-column writes (real DB)', () => {
 				date: null,
 			},
 			{ userId: 3, now },
+			{ actor: -1 },
 		);
 		expect(result).toBe('updated');
 
@@ -265,66 +275,17 @@ describe('persistRecordColumns — whole-column writes (real DB)', () => {
 			target,
 			{ string: { test1: [{ id: 1, value: 'still ok', lang: 'lg-eng' }] } },
 			false,
+			{ actor: -1 },
 		);
 		expect(result).toBe('updated');
 		registerRagRecordHook(null);
 	});
 });
 
-describe('write-chokepoint grep gate', () => {
-	/**
-	 * Direct updateMatrixKeyData callers OUTSIDE the chokepoint. Every entry is a
-	 * DELIBERATE exception with a PHP-faithful reason; a new caller must either
-	 * use persistRecordKeys (section_record/record_write.ts) or join this list
-	 * with a reason:
-	 *  - ontology/hierarchy provisioning + ts tree engine: PHP writes these via
-	 *    unstamped save()/its own verified engine (tree rebuild has its own gates);
-	 *  - relations engine: separately parity-verified strangler-fig subsystem;
-	 *  - files_info_persist: documented no-TM/no-stamp technical-metadata write.
-	 */
-	const ALLOWED_DIRECT_CALLERS = [
-		'src/core/db/matrix_write.ts', // the definition + single-key wrapper
-		'src/core/section_record/record_write.ts', // the chokepoint itself
-		'src/core/ts_object/ts_api.ts',
-		'src/core/ontology/hierarchy_provision.ts',
-		'src/core/relations/parent.ts',
-		'src/core/relations/save.ts',
-		'src/core/relations/dataframe.ts', // fixDataframeOrphanEntries: maintenance fix-mode, no-TM/no-stamp per-key strip (S2-06)
-		'src/core/ontology/ontology_write.ts',
-		'src/core/media/tools/files_info_persist.ts',
-		// portalize_data executor (UPDATE_PROCESS Phase 5, WC-025): a deliberate
-		// matrix-COLUMN-level transform — copies component data to a new record,
-		// nulls the source keys, relocates TM with save_tm suppressed by design
-		// (no new snapshots). EXECUTE-gated behind the update-engine
-		// standalone-ownership COEX gate; never a request-path write.
-		'src/core/update/transform/portalize.ts',
-		// scripts/ entered the census 2026-09-02 (P2-20/S-3, shared write-path
-		// corpus). A one-shot operator repair of the geolocation studio default:
-		// deliberately a per-key write inside withTransaction with its own
-		// recordTimeMachine row per repaired component (the transition is what
-		// the TM row records), never a request-path save.
-		'scripts/repair_geolocation_studio_default.ts',
-	];
-
-	test('no new direct updateMatrixKeyData callers appear outside the allowlist', async () => {
-		// THE shared write-path corpus (src/ + tools/ + scripts/,
-		// test/helpers/write_path_corpus.ts, 2026-09-02 P2-20/S-3): a repair
-		// script that calls the matrix writer directly is a direct caller like any
-		// other, and until the roots were shared this scan stopped at tools/.
-		const files = writePathSourceFiles();
-		expect(files.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
-		const offenders: string[] = [];
-		for (const file of files) {
-			const content = await Bun.file(`${REPO_ROOT}/${file}`).text();
-			// Match usage (call or import), not mentions in comments — a plain
-			// substring check is enough to force a conscious decision either way.
-			if (/\bupdateMatrixKeysData?\(/.test(content) && !ALLOWED_DIRECT_CALLERS.includes(file)) {
-				offenders.push(file);
-			}
-		}
-		expect(offenders).toEqual([]);
-	});
-});
+// (The 'write-chokepoint grep gate' that stood here retired with CLOSURE_PLAN
+// Step 2: its regex — `updateMatrixKeysData?\(` — never matched a single-key
+// `updateMatrixKeyData(` caller, so it held nothing; the census it stood in for is
+// write_obligations_tripwire leg A, DERIVED from the import-resolved writer closure.)
 
 describe('virtual_record — substitution API (pure)', () => {
 	test('routes items into the model-mapped column, keyed by tipo', () => {

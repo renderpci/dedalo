@@ -88,6 +88,7 @@ const TRIPWIRES = [
 	'test/unit/batch_scope_tripwire.test.ts',
 	'test/unit/agent_alias_tripwire.test.ts',
 	'test/unit/agent_skills_tripwire.test.ts',
+	'test/unit/agent_workflows_parse_tripwire.test.ts',
 	'test/unit/css_source_tripwire.test.ts',
 	'test/unit/engineering_currency_tripwire.test.ts',
 	'test/unit/comment_doc_path_tripwire.test.ts',
@@ -103,6 +104,7 @@ const TRIPWIRES = [
 	'test/unit/client_store_principal_key_tripwire.test.ts',
 	'test/unit/component_teardown_tripwire.test.ts',
 	'test/unit/outbound_fetch_tripwire.test.ts',
+	'test/unit/guarded_text_pin_native.test.ts',
 	'test/unit/strip_comments_tripwire.test.ts',
 	'test/unit/private_state_mode_tripwire.test.ts',
 	'test/unit/wire_disclosure_tripwire.test.ts',
@@ -115,6 +117,7 @@ const TRIPWIRES = [
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',
+	'test/unit/tool_lossless_writeback_tethers_native.test.ts',
 	'test/unit/consultation_only_sections_tripwire.test.ts',
 	'test/unit/tm_mode_retired_tripwire.test.ts',
 	'test/unit/log_section_policy_tripwire.test.ts',
@@ -243,6 +246,8 @@ const TRIPWIRES = [
 	'test/unit/reconcile_registry_native.test.ts',
 	'test/unit/restore_door_native.test.ts',
 	'test/unit/unpublish_debt_native.test.ts',
+	'test/unit/suite_mariadb_target_native.test.ts',
+	'test/unit/shard_mariadb_sweep_native.test.ts',
 	'test/unit/diffusion_frontier_scope_native.test.ts',
 	'test/unit/diffusion_seed_compiles_native.test.ts',
 	'test/unit/diffusion_seed_vocabulary_tripwire.test.ts',
@@ -293,6 +298,44 @@ const TRIPWIRES = [
 	'test/unit/pre_push_gate_native.test.ts',
 	'test/unit/update_channel_native.test.ts',
 	'test/unit/audit_trigger_closure_native.test.ts',
+	'test/unit/update_engine_atomic_native.test.ts',
+	'test/unit/update_descriptor_tripwire.test.ts',
+	'test/unit/statement_ceiling_scope_native.test.ts',
+	'test/unit/maintenance_door_unbounded_native.test.ts',
+	'test/unit/optimize_concurrent_leftover_native.test.ts',
+	'test/unit/db_asset_rebuild_atomic_native.test.ts',
+	'test/unit/site_builder_public_address_differential.test.ts',
+	'test/unit/alias_target_grammar_native.test.ts',
+	'test/unit/search_alias_sink_native.test.ts',
+	'test/unit/dd_ontology_identifier_grammar_native.test.ts',
+	'test/unit/dd_ontology_grammar_migration_native.test.ts',
+	'test/unit/ontology_state_identifier_grammar_native.test.ts',
+	// DIFF-1/DIFF-2/DIFF-3/PERF-2 (audit 2026-09-26, 2026-10-01).
+	'test/unit/diffusion_target_fence_native.test.ts',
+	'test/unit/diffusion_resume_ledger_native.test.ts',
+	'test/unit/diffusion_frontier_replay.test.ts',
+	'test/unit/diffusion_attach_scope_native.test.ts',
+	'test/unit/diffusion_artifact_rss_native.test.ts',
+	'test/unit/media_index_reconcile_fence_native.test.ts',
+	// WRITE-DOOR / SEC-1 / SEC-2-media / SEC-3 / TOOLS-3 / TOOLS-4 grant half (closure Step 3, 2026-10-01).
+	'test/unit/write_door_native.test.ts',
+	'test/unit/authz_door_matrix_native.test.ts',
+	'test/unit/agent_access_native.test.ts',
+	'test/unit/tool_transcription_gate_native.test.ts',
+	'test/unit/identify_vision_grant_native.test.ts',
+	'test/unit/mcp_record_door_native.test.ts',
+	// CORE-1 / CORE-2 residual / TOOLS-5 / CORE-5 — the obligation ledger + locked media-key transform (closure Step 2, 2026-10-01).
+	'test/unit/obligation_ledger_native.test.ts',
+	'test/unit/media_files_info_lost_update_native.test.ts',
+	'test/unit/duplicate_record_media_verdict_native.test.ts',
+	// SEC-2-delete_locator — the portal unlink through the write door (closure Step 3, 2026-10-01).
+	'test/unit/portal_locator_door_native.test.ts',
+	// TOOLS-4 budget half — the AI spend ledger (closure Step 3, 2026-10-01).
+	'test/unit/ai_spend_budget_native.test.ts',
+	// Closure Step 3 req 7 — the change-plan validator asks the write door (2026-10-01).
+	'test/unit/change_plan_write_door_native.test.ts',
+	// Closure Step 3 req 10 residual — the importers' create door + legacy frame slots (2026-10-01).
+	'test/unit/import_create_door_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

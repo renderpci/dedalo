@@ -22,6 +22,10 @@
  * an ontology may already carry `target_filename` on an svg component and PHP
  * would silently have ignored it.
  *
+ * AUTHORIZED PER COMPANION (closure Step 3 req 10): each sibling is asked of the
+ * write door as the uploader before it is written (companionGrant) — the ingest
+ * door authorized only the media component.
+ *
  * NON-FATAL BY CONSTRUCTION. Every function here returns messages instead of
  * throwing: it runs AFTER `addFile` has irreversibly moved the staged upload, and
  * the ordering law of the ingest (see IngestResult.derivativeErrors) is that
@@ -29,9 +33,12 @@
  * record knows about. The messages are surfaced by the calling tool.
  */
 
+import { isDedaloError } from '../../errors/dedalo_error.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { secondsToTc } from '../../resolve/tr_marks.ts';
 import { saveComponentData } from '../../section/record/save_component.ts';
+import { resolvePrincipal } from '../../security/permissions.ts';
+import { authorizeRecordAccess, type RecordGrant } from '../../security/write_door.ts';
 import { probeFormat } from '../engine/ffmpeg.ts';
 
 /** The sibling components an upload writes to, or null where none is declared. */
@@ -179,16 +186,50 @@ async function saveCompanionValue(
 		return [`${role} '${targetTipo}': no such ontology node — nothing was written`];
 	}
 	try {
+		const grant = await companionGrant(input, targetTipo, role);
+		if (typeof grant === 'string') return [grant];
 		const result = await saveComponentData({
-			componentTipo: targetTipo,
-			sectionTipo: input.sectionTipo,
-			sectionId: input.sectionId,
+			componentTipo: grant.componentTipo,
+			sectionTipo: grant.sectionTipo,
+			sectionId: grant.sectionId,
 			lang: 'lg-nolan',
 			changedData: [{ action: 'set_data', id: null, value: [{ value, lang: 'lg-nolan' }] }],
-			userId: input.userId,
+			userId: grant.userId,
 		});
 		return result.ok ? [] : [`${role} '${targetTipo}' save failed: ${result.message}`];
 	} catch (error) {
 		return [`${role} '${targetTipo}' save failed: ${(error as Error).message}`];
+	}
+}
+
+/**
+ * THE WRITE DOOR for a companion (closure Step 3 req 10). The ingest door
+ * authorized the MEDIA component; a companion is ANOTHER component of the same
+ * record — the ontology names it, the uploader writes it — so it is asked of the
+ * door as the uploader: grammar, section floor 1, the dd128-aware pair (a media
+ * component whose `target_filename` pointed at a dd128 field could otherwise
+ * write a user-manager's own dd1725), the write scope. A refusal is a MESSAGE
+ * (non-fatal, past the move — the module's posture), never a write.
+ */
+async function companionGrant(
+	input: CompanionWriteInput,
+	targetTipo: string,
+	role: string,
+): Promise<RecordGrant | string> {
+	const principal = await resolvePrincipal(input.userId);
+	try {
+		return await authorizeRecordAccess(
+			principal,
+			{ section_tipo: input.sectionTipo, component_tipo: targetTipo, section_id: input.sectionId },
+			{ mode: 'write', level: 2, sectionFloor: 1, door: `media_ingest.${role}` },
+		);
+	} catch (error) {
+		if (
+			isDedaloError(error) &&
+			(error.code.startsWith('perm.') || error.code === 'request.invalid')
+		) {
+			return `${role} '${targetTipo}': not writable by the uploader (${error.code}) — nothing was written`;
+		}
+		throw error;
 	}
 }

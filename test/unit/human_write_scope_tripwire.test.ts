@@ -107,21 +107,16 @@ describe('TOOLS-02 — export applies the read ACL before it reads records', () 
 	});
 });
 
-describe('TOOLS-05 — section/tipo-gated tool actions scope a targeted record', () => {
-	const src = read('src/core/tools/security.ts');
-	test('scopeIfRecordTargeted is applied on the section AND tipo kinds', () => {
-		expect(src.includes('async function scopeIfRecordTargeted')).toBe(true);
-		// Both the section and tipo cases end by delegating to it.
-		const calls =
-			src.split('return scopeIfRecordTargeted(sectionTipo, options, principal)').length - 1;
-		expect(calls).toBeGreaterThanOrEqual(2);
-		expect(src.includes('isRecordInScope(sectionTipo, sectionId, principal)')).toBe(true);
-	});
-});
-
-describe('TOOLS-06 — transcription gates READ on the media source', () => {
-	const src = read('tools/tool_transcription/server/index.ts');
-	test('automatic_transcription gates the media_ddo source, not only the write target', () => {
-		expect(src.includes('gateRecord(mediaDdo, ctx, 1)')).toBe(true);
-	});
-});
+// TOOLS-05 / TOOLS-06 used to be pinned here by SPELLING (`scopeIfRecordTargeted`,
+// `gateRecord(mediaDdo, ctx, 1)`). Since closure Step 3 both decisions are the write
+// door's (src/core/security/write_door.ts) and are DRIVEN, not spelled:
+//   TOOLS-05 — the section / tipo kinds scope a named record, and refuse a garbage or
+//              non-positive one: test/unit/write_door_native.test.ts legs e / f / b;
+//   TOOLS-06 — automatic_transcription reads its media SOURCE through the write door's
+//              READ mode: test/unit/tool_transcription_gate_native.test.ts, the two
+//              legs whose identity PASSES the transcript's write gate and fails ONLY on
+//              the source — "transcript writable (2), the AV at 0 → perm.denied ON
+//              test94" (textOnly) and "ONLY the media record out of scope →
+//              perm.out_of_scope ON that record". (Its NO_COMPONENT / OUT_OF_SCOPE
+//              record-door legs are refused by the write gate first and say nothing
+//              about the source.) Mutation TR6 (the media gate bypassed) reds both.

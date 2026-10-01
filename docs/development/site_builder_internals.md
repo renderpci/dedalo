@@ -68,15 +68,31 @@ three-key ambient allowlist (`DEDALO_SITE_INSTANCE`, `NODE_ENV`, `LOG_LEVEL`), t
 freezes the result and `process.exit(1)`s on any invalid value or unknown key. It does NOT
 read the rest of `process.env`, and nothing downstream reads it at all: every consumer
 imports `config`. `DEDALO_SITE_INSTANCE`, `SERVICE_TOKEN` (≥32 chars, delivered as a
-credential), `PUBLICATION_API_URL` and the four roots (`SITES_ROOT`, `AGENT_HOME`,
-`AUDIT_DIR`, `WEBSPACE_BASE`) are required. LLM provider keys live only here.
+credential), `PUBLICATION_API_URL` and the three roots (`SITES_ROOT`, `AUDIT_DIR`,
+`WEBSPACE_BASE`) are required. LLM provider keys live only here.
 
 On a provisioned host that environment file is **generated** from the museum's declaration
 and delivered by the generated systemd unit; the daemon never reads a hand-written one. See
 *The provisioner* below.
 
-`src/index.ts` is the `Bun.serve` boundary. Before it listens it runs
-`sweepOnBoot()` (session recovery, below). Shutdown drains in-flight work on SIGTERM.
+`src/index.ts` is the `Bun.serve` boundary. It boots through ONE sequence
+(`src/boot.ts`): the roots preflight, then the instance claim (the listen target is not
+already served and, under `systemd_scope`, PID 1 names this process as the daemon unit's main
+process; otherwise the boot exits before anything is stopped or swept), then
+`reconcileAgentUnits()` — every site's live agent
+runs read back from PID 1, a leftover quarantining its site until PID 1 reports it dead, and
+a still-running pre-per-site-identity transient run of the museum quarantining every site —
+then `sweepOnBoot()` (session recovery, below), and only then does it listen. The steps
+themselves are built by `daemonBootSteps()` in the same module, so a gate runs the real
+reconciliation against a stand-in PID 1. Shutdown (`shutdownSequence()`) first refuses every
+new confined run, then drains in-flight work, then marks live turns interrupted. Each agent
+unit is `BindsTo=` the daemon, so a connect while the daemon is being stopped would start a
+unit and cancel the daemon's own stop. PID 1 stops the live runs BEFORE the daemon receives
+SIGTERM, so the daemon's own refusal cannot cover that window alone: every agent socket is
+`PartOf=` the daemon unit, which gives it a stop job in the daemon's stop transaction, and a
+socket with a stop pending accepts no connection. The daemon unit `Wants=` the sockets back on
+start. A turn whose commit was refused during shutdown is marked `recovery_pending`, and the
+next boot's sweep commits it as a recovery point.
 
 ### HTTP surface and auth
 
@@ -131,6 +147,11 @@ turn is one agent CLI invocation, linked to the next by the driver's native resu
   `.builder/session.lock` pid file), and at most `MAX_CONCURRENT_SESSIONS` turns across all
   sites (a global counting semaphore). A second start on a busy site is a 409; over the cap
   is a 429; a workspace over `SITE_DISK_QUOTA_MB` is refused.
+- **Deleting a site holds it too**: a delete is refused with a 409 that names what is running
+  (`session_running`, `build_running`, …) while a turn, a build or a repository operation
+  holds the site, and removes nothing. While a delete runs, every other request on the site
+  is refused `site_deleting`. A turn or build that was admitted while a delete finished
+  answers 404 and re-creates nothing.
 - **The turn runner** (`runTurn`): spawns the driver **before** the first `await` (so
   `stopSession` can never race in and find no process), persists a `turn_start` marker,
   consumes the driver's normalized events, derives the file-change list from git, commits the
@@ -157,46 +178,118 @@ binary present and its version tested), `capabilities`, and `startTurn()` return
 to this interface, so adding an agent is a file under `drivers/` plus one registry line.
 
 - `src/drivers/process.ts` is the shared supervision: `spawnAgentProcess` takes a driver's
-  argv and its per-line parser, line-buffers stdout, pushes parsed events onto an async
-  `EventQueue`, synthesizes a terminal result/error, and implements `interrupt()` (SIGINT
-  then SIGKILL). The child's environment is exactly `SessionStartOptions.env` — a tight
-  allowlist the manager builds. **Spreading `process.env` would hand a coding agent the
-  daemon's token and provider keys**; the allowlist is the secrets boundary.
-- `src/drivers/confinement.ts` decides what the turn RUNS AS, and every spawn goes through
-  it — a turn, a build step and a git command alike (`runConfined`). Under `AGENT_CONFINEMENT=systemd_scope` (what a provisioned host renders) one turn is
-  one transient systemd service started with `systemd-run --uid=<AGENT_USER>`: a second unix
-  identity, so the daemon's `$CREDENTIALS_DIRECTORY`, its provider keys and its audit handle
-  are not merely undocumented to the agent but unreadable. The same call carries the per-turn
-  caps (`MemoryMax`, `CPUQuota`, `TasksMax`, and a `RuntimeMaxSec` PID 1 enforces even if the
-  daemon dies), the filesystem confinement (`ProtectSystem=strict` plus the workspace and the
-  agent home) and the egress policy (`IPAddressAllow=any` with loopback and every private
-  range denied, the Publication API allowed back). The child's environment travels in a
-  per-turn `0600` `EnvironmentFile` — never a unit property, which any uid can read with
-  `systemctl show` — and is deleted when the turn ends. A host that cannot do this REFUSES
-  the session (503, naming what is missing); `AGENT_CONFINEMENT=none` is the declared
-  laptop/container mode, is refused under `NODE_ENV=production`, and makes every turn
-  announce itself into its own durable session log (a build step announces into the build
-  log). The tree the two uids share states its modes explicitly (`src/util/shared_tree.ts`:
-  directories 2770 setgid, files 0660, the daemon's own `.builder/` 0700) because the
-  daemon's `UMask=0027` would otherwise hand the agent a site it can read and never write —
-  and that same module is the only way the daemon writes into the tree, creating each
-  directory level and opening each file `O_NOFOLLOW` with the mode set on the descriptor, so
-  a symlink the turn planted where the daemon writes is a refusal rather than a redirect —
-  every writer, not only the workspace-building ones: the git exclusion rewritten on every
-  commit, both drivers' MCP configs and the session store go through it too, and the gate's
-  census is total over `src/` and asks about the DESTINATION rather than the directory a
-  module happens to live in. A HARD link is refused as well (the link count is read off the
-  handle before anything is truncated), and a directory that already exists is proved, never
-  re-moded, so a build's `.builder/builds` cannot widen the daemon's own `.builder/`. The
-  READS are the same door and the same census: `getBuild`, `getBuildLog`, `latestBuild`,
-  `readManifest`, `replayEvents`, `readMeta` and `listSessions` go through
-  `readFileShared`/`readFilePrivate`/`readdirShared`, because a `readFile` on a lexical path
-  follows a planted link too — measured, a link at `.builder/builds/<id>.log` was served
-  through `GET /sites/<slug>/builds/<id>` with the daemon's `SERVICE_TOKEN` in it. An absent
-  file answers `null`, a planted one throws, and the daemon's own state also refuses an inode
-  it does not own (an agent-authored build record is not the daemon's word about a build).
-  The build record and the session meta are written tmp+rename through that same door, so a
-  poller never reads a half-written one.
+  argv and its per-line parser, hands them to the confinement, line-buffers the run's
+  stdout, pushes parsed events onto an async `EventQueue`, synthesizes a terminal
+  result/error, and implements `interrupt()` (an interrupt that lands while the run is being
+  opened starts nothing). It spawns NOTHING itself. The run's environment is exactly
+  `SessionStartOptions.env` — a tight allowlist the manager builds, with no `HOME` (the unit
+  fixes it). **Spreading `process.env` would hand a coding agent the daemon's token and
+  provider keys**; the allowlist is the secrets boundary.
+- `src/drivers/confinement.ts` decides what a run RUNS AS — a turn, a build step and a git
+  command alike (`confineTurn` / `runConfined`) — and under
+  `AGENT_CONFINEMENT=systemd_scope` (what a provisioned host renders) **the daemon starts
+  nothing** (LEAD-1b). Every declared site has its OWN unix identity, `dedalo-a-<instance>_<k>`
+  (primary group the instance's, plus a private group holding exactly that identity and the
+  service user), and root renders, per site and per door (turn / build / git), a socket, a
+  target and a service template (`src/provision/render/agent_units.ts`): `User=` the site's
+  identity, the hardening set, the caps (`MemoryMax`, `CPUQuota`, `TasksMax`, and a
+  `RuntimeMaxSec` PID 1 enforces even if the daemon dies), `ReadWritePaths=` the site's own
+  workspace, a masked agent state root with only that door's own HOME bound back, and the
+  network design. The socket is `Accept=yes`, `MaxConnections=1`, `0600` to the service user;
+  the three doors of a site are mutually exclusive (`Conflicts=` on their targets), so a site
+  never has two runs at once. A run is: the site's reservation held; PID 1 asked that the site
+  is idle (a live leftover is stopped, and one that will not die QUARANTINES the site until
+  PID 1 reports it dead); what PID 1 LOADED checked against what the daemon expects
+  (`systemctl show` — a unit file silently ignores a key its systemd does not know, so a
+  mismatch refuses naming the property); the site's egress gate opened; ONE `connect()` to
+  the site's socket — never retried — whereupon PID 1 starts an instance as the site's
+  identity; a hello frame from the shim, the run's spec (argv, env, the daemon's namespace
+  identity) as ONE frame over the connection, and its output relayed back as frames ending in
+  an exit record (`src/drivers/unit_frames.ts`; a connection that ends without one is a
+  FAILURE, never exit 0). The site is freed only once PID 1 reports the instance dead. No
+  file is written for PID 1 to read, and no unit property carries a secret. The polkit rule
+  grants the service user `stop` and `kill` on this museum's DECLARED sites' run instances,
+  enumerated — never `start` (polkit is shown no run-as uid, so a start grant was root, F2).
+  The network design is `src/drivers/network_profile.ts`, the one producer of every network
+  property a unit gets: every run is in a private network namespace with `/run` masked, so
+  host loopback, the LAN, the metadata service, the DNS stub, abstract unix sockets, every
+  site's control sockets and every service socket under `/run` do not exist inside it; the
+  database directories a distro keeps a socket in outside `/run` (RHEL's MariaDB default is
+  `/var/lib/mysql/mysql.sock`) are made inaccessible by name, and each unit gets its own
+  `/dev/shm` and IPC namespace, so two runs share no world-writable directory and no SysV IPC
+  key. A turn or a build gets exactly one way out — its SITE's socket directory
+  (`/run/dedalo-sites-agents/<instance>/egress/s<k>`, root's — created from a rendered
+  tmpfiles.d file, root:<the site's private group> `0770` — with sockets `0660`), bound
+  read-only at `/run/dedalo-egress` and served by the daemon's egress gate (`src/egress/gate.ts`),
+  which refuses a directory that is not exactly that: a
+  CONNECT proxy that tunnels only to the HOSTNAMES on the run's plan, port 443, after refusing
+  any name that resolves to a non-public address, plus (turns only) the Publication API's MCP
+  endpoint with the API key added on the daemon's side, so the key never enters the unit. A
+  git command gets no way out at all. No run can reach another site's gate: only its own is
+  bound in, and another site's run is another uid — not visible in `/proc`
+  (`ProtectProc=invisible`), and unable to open the other site's sockets by DAC alone; on
+  systemd 257 and newer each run also gets its own PID namespace (`PrivatePIDs=`), an extra
+  layer the floor does not require. The gate holds at most 128 connections per run at once
+  (the daemon's file descriptors, which the unit's own limits do not bound); one more is a 503
+  with a line in the run's log. The gate dials each vetted address of the ONE lookup in turn
+  until one connects, so a dead first address does not fail the run. It opens only on a plan
+  of hostnames, and once a tunnel is up it forwards nothing until the client's first flight
+  is a TLS ClientHello whose SNI is the CONNECT host (Encrypted Client Hello refused): a plan
+  host on a shared CDN would otherwise be a way to any site behind that CDN. The Host inside
+  the encrypted session is beyond it: a stated residual of the instance specification, as is
+  HTTP/2 reuse of a connection for another name the same certificate covers. The unit's
+  ExecStart is `src/drivers/egress_shim.ts`, which refuses to run anything (exit 78) unless it
+  can PROVE the namespace is in effect — its namespace identity differs from the daemon's
+  (carried in the spec; a missing identity is a refusal, not a skipped check) and it sees no
+  interface but its own `lo` — refuses a spec that sets any key the unit fixes (`HOME`,
+  `DEDALO_*`, the transpiler cache, git's configuration), and then runs the argv in the
+  workspace and forwards the unit's loopback to the gate's sockets. The host is refused up
+  front (503, naming what is missing) when any of this cannot hold: PID 1 is older than the
+  floor, 248 (`PrivateIPC=`), or its release cannot be read; a declared site has no identity,
+  or an identity is not what `provision apply` created (its uid shared or root's, its primary
+  group not the instance's, its private group holding anyone else — as a listed member or as
+  another account's PRIMARY group, which no group line lists — or the daemon not yet in
+  it); the daemon's runtime directory (`dirname(LISTEN_SOCKET)`) does not resolve under
+  `/run`, the one mask that hides its socket and every site's `egress/` from a unit; the
+  daemon cannot read its own namespace identity; or the shim, one of the modules it imports,
+  or the runtime is owned or writable by ANY site identity (the file or a directory above
+  it; a directory an identity owns counts as writable whatever its mode says, sticky or not),
+  unreadable or unexecutable by one, or under a prefix the unit masks. Root, the daemon and a
+  third uid — the engine's, which owns the checkout and its bun — are all acceptable owners.
+  The same questions are asked before a turn, a build or a site CREATE reserves anything (a
+  create's first `git` is a confined run too, so a site the daemon has no identity for yet is
+  refused before its workspace is written), and again when the run opens; every NSS lookup
+  among them is asynchronous, so a slow directory service delays that run and never the event
+  loop the other sites' streams share. A session's resume token is stamped with the identity epoch (`AGENT_IDENTITY_EPOCH`); one
+  minted under another identity — or with no epoch at all, a session from before per-site
+  identities — is dropped, with a `resume_unavailable` event in the session log, rather than
+  replayed. `provision apply` moves the epoch exactly when a site's identity changed, which it
+  reads off the host (the env's binding against the ledger), so an apply that died half-way
+  still moves it on the next run. `AGENT_CONFINEMENT=none` is the declared laptop/container mode,
+  is refused under `NODE_ENV=production`, and makes every turn announce itself into its own
+  durable session log (a build step announces into the build log). The tree the uids share
+  states its modes explicitly (`src/util/shared_tree.ts`: directories 2770 setgid, files
+  0660, the daemon's own `.builder/` 0710 — traverse-only, so the site's identity can open the
+  per-turn `.builder/mcp.json` it is handed and list or write nothing — with everything inside
+  it 0700/0600) because the daemon's `UMask=0027` would otherwise
+  hand a site's identity a workspace it can read and never write — and that same module is
+  the only way the daemon writes into the tree, creating each directory level and opening
+  each file `O_NOFOLLOW` with the mode set on the descriptor, so a symlink a run planted where
+  the daemon writes is a refusal rather than a redirect — every writer, not only the
+  workspace-building ones: the git exclusion rewritten on every commit, both drivers' MCP
+  configs and the session store go through it too, and the gate's census is total over
+  `src/` and asks about the DESTINATION rather than the directory a module happens to live
+  in. A HARD link is refused as well (the link count is read off the handle before anything
+  is truncated), and a directory that already exists is proved, never re-moded, so a build's
+  `.builder/builds` cannot widen the daemon's own `.builder/`. The READS are the same door and
+  the same census: `getBuild`, `getBuildLog`, `latestBuild`, `readManifest`, `replayEvents`,
+  `readMeta` and `listSessions` go through `readFileShared`/`readFilePrivate`/`readdirShared`,
+  because a `readFile` on a lexical path follows a planted link too — measured, a link at
+  `.builder/builds/<id>.log` was served through `GET /sites/<slug>/builds/<id>` with the
+  daemon's `SERVICE_TOKEN` in it. An absent file answers `null`, a planted one throws, and the
+  daemon's own state also refuses an inode it does not own (an agent-authored build record is
+  not the daemon's word about a build). The build record and the session meta are written
+  tmp+rename through that same door, so a poller never reads a half-written one.
 - `claude_code.ts` runs `claude -p … --output-format stream-json --mcp-config …` and parses
   the stream-json frames; `opencode.ts` runs `opencode run … --format json`; `pi.ts` is a
   `detect()`-able stub that refuses a turn rather than inheriting a default. Each writes its
@@ -406,7 +499,7 @@ the daemon *reads*, not as something anyone writes:
 
 - Identity and transport: `DEDALO_SITE_INSTANCE`, `LISTEN_KIND`, `LISTEN_SOCKET`,
   `DEPLOYMENT_MODE`, `BASE_PATH`, and `PORT`/`HOST` for the standalone development case.
-- Roots: `SITES_ROOT`, `AGENT_HOME`, `AUDIT_DIR`, `WEBSPACE_BASE`, `SITE_TABLE_FILE`.
+- Roots: `SITES_ROOT`, `AUDIT_DIR`, `WEBSPACE_BASE`, `SITE_TABLE_FILE`.
 - Data source: `PUBLICATION_API_URL`, `PUBLICATION_API_KEY_FILE`.
 - URL facts: `PREPROD_HOST_PREFIX`, `PROD_URL_SCHEME` — a site's address is otherwise built
   from its own domain.
@@ -414,10 +507,25 @@ the daemon *reads*, not as something anyone writes:
   (absolute paths — a bare name resolved through the shared search path is a
   cross-instance substitution vector).
 - Agent confinement: `AGENT_CONFINEMENT` (`systemd_scope` on every provisioned host,
-  `none` only where it is declared and never under `NODE_ENV=production`), `AGENT_USER` and
-  `AGENT_UNIT_PREFIX` (both derived per instance and rendered), plus the host-shaped
-  `SYSTEMD_RUN_BIN`, `AGENT_EGRESS_ALLOW` and the per-turn caps `AGENT_TURN_MEMORY_MAX` /
-  `AGENT_TURN_CPU_QUOTA` / `AGENT_TURN_TASKS_MAX`.
+  `none` only where it is declared and never under `NODE_ENV=production`),
+  `AGENT_IDENTITIES` (declared slug → its identity's ordinal, from the host's ledger),
+  `AGENT_UNIT_PREFIX`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT` and `AGENT_IDENTITY_EPOCH`
+  (all derived per instance and rendered), plus the host-shaped `SYSTEMCTL_BIN` (rendered only
+  from the declaration's `agent.systemctl_bin`, where `systemctl` is not `/usr/bin/systemctl`;
+  never set by hand, because the plan reverts a hand edit to the rendered env), the per-run
+  caps `AGENT_TURN_MEMORY_MAX` / `AGENT_TURN_CPU_QUOTA` / `AGENT_TURN_TASKS_MAX` (the same
+  numbers root renders into every agent unit) and `GIT_TIMEOUT_MS`. The pre-LEAD-1b keys
+  `AGENT_USER`, `AGENT_HOME` and `SYSTEMD_RUN_BIN` are RETIRED: an env that still carries one
+  stops the daemon at parse, naming `AGENT_IDENTITIES`.
+- Agent egress, by hostname only: `AGENT_PROVIDER_HOSTS` (an opencode/pi turn's model
+  provider; Claude Code's `api.anthropic.com` is derived, and an opencode/pi turn with none
+  is refused) and `BUILD_REGISTRY_HOSTS` (default `registry.npmjs.org`), rendered from the
+  declaration's `agent.provider_hosts` / `agent.registry_hosts` when stated. Never an IP
+  literal, `localhost` or a wildcard. An opencode turn's own off-plan traffic (auto-update,
+  the models.dev catalogue, LSP downloads, share uploads) is switched off in its env; the
+  provider SDK it installs on first use comes from `registry.npmjs.org`, which such a museum
+  names in `agent.provider_hosts` too. The retired `AGENT_EGRESS_ALLOW` (systemd IP tokens)
+  is refused at boot when it is non-empty.
 - Limits: `MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
   `INSTALL_TIMEOUT_MS`, `BUILD_TIMEOUT_MS`, `SITE_DISK_QUOTA_MB`, `RELEASES_RETAINED`. A
   limit absent from the rendered file means "the daemon's own default", never a frozen copy
@@ -450,24 +558,34 @@ not run npm lifecycle scripts except `trustedDependencies` — the cheapest real
 against a malicious dependency. Path confinement + slug grammar + no-shell argv spawns bound
 what a workspace can reach on disk.
 
-**An agent turn is a different principal from the daemon.** It runs as `AGENT_USER`, a second
-per-instance uid whose primary group is the instance's own, in a transient systemd unit the
-museum's rendered polkit rule authorizes by unit-name prefix and by nothing else
-(`src/provision/render/agent_authorization.ts`). The workspaces root and the agent home are
-`2770` so both uids can work in them and no other uid on the host can look; the credential
-store, the audit handle and `$CREDENTIALS_DIRECTORY` stay the daemon's alone. Egress IS
-policed per turn — the public internet stays reachable (the model provider cannot be
-enumerated) while loopback, every RFC1918 range and the link-local metadata block are denied,
-with the Publication API allowed back explicitly. THE ACCEPTED LIMIT: all sites of ONE museum
-share that uid, so an agent turn on one site of an instance can read another site of the SAME
-instance; the sites of an instance are one tenant, and the replacement if that ever stops
-being true is a pre-provisioned pool of per-site agent uids (recorded beside the derivation in
-`src/provision/layout.ts`). A SITE BUILD AND A `git add` ARE THE SAME PRINCIPAL: `site.json`, `package.json` and `.git`
-all live inside the workspace a turn writes, so an install script, a build command and a git
-filter are agent-authored text on a routine publisher-triggered path. Both go through
-`runConfined()` — the same uid, the same unit prefix, the same egress and caps — and
-`src/util/spawn.ts` REFUSES any spawn whose working directory is inside `SITES_ROOT` without
-the confinement's token, so a new call site cannot quietly reopen the door.
+**An agent run is a different principal from the daemon — and from every other site.** It
+runs as its SITE's identity, `dedalo-a-<instance>_<k>` (one per declared site, allocated from
+the host's `/etc/passwd` ledger: an ordinal is never reused, a removed site's identity is
+LOCKED, never deleted), in an instance of a unit root rendered for that site and door. The
+daemon starts nothing: it connects to the site's socket and PID 1 starts the run. The
+museum's polkit rule grants the service user only `stop` and `kill` on its declared sites'
+run instances (`src/provision/render/agent_authorization.ts`). The workspaces root is `2770`
+so the service user and the identities can work in it and no other uid on the host can look;
+each door's HOME is its identity's own (`0700`, under a root-owned state root every unit
+masks); the credential store, the audit handle and `$CREDENTIALS_DIRECTORY` stay the
+daemon's alone. Egress IS policed per run, and not by an address list: systemd's IP filter
+is allow-wins, so the `IPAddressAllow=any` this design once relied on granted loopback and
+the LAN whatever the deny list said. Each run lives in a private network namespace with
+`/run` masked, and reaches the outside only through its site's egress gate — hostnames on
+its plan, port 443, public addresses only. Loopback and LAN model providers are therefore
+not reachable, and a CLI that ignores the standard proxy environment variables has no
+network at all (fail-closed). WHAT IS NOT DRAWN, AND IS ACCEPTED (recorded beside the
+derivation in `src/provision/layout.ts`): every identity's PRIMARY group is the instance's,
+and the workspaces are group-shared with the service user, so one site's run can READ
+another site's workspace of the SAME museum through the group bits — never write it
+(`ReadWritePaths=` is its own workspace), never reach its gate, its HOME or its live run. A
+SITE BUILD AND A `git add` ARE THE SAME PRINCIPAL AS A TURN: `site.json`, `package.json` and
+`.git` all live inside the workspace a turn writes, so an install script, a build command
+and a git filter are agent-authored text on a routine publisher-triggered path. All three go
+through `runConfined()` — the site's identity, its own unit per door, the same caps and
+network design (a build reaches only its package registry; a git command reaches nothing) —
+and `src/util/spawn.ts` REFUSES any spawn whose working directory is inside `SITES_ROOT`
+without the confinement's token, so a new call site cannot quietly reopen the door.
 
 ## Testing
 

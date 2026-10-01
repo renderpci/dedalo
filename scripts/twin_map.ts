@@ -62,6 +62,14 @@ const NOT_A_TWIN: ReadonlyMap<string, string> = new Map([
 		'test/unit/tier_assignment_tripwire.test.ts',
 		"names test/parity as a DIRECTORY a CI tier claims — it censuses which tier executes each test file, so it necessarily spells every tier root including the parity one. It asserts nothing about any parity gate's contract and replaces none of them",
 	],
+	[
+		'test/unit/suite_mariadb_target_native.test.ts',
+		"names test/parity/*_differential.test.ts files as MEMBERS of the MariaDB tier's no-contact population (parity files whose runtime import closure reaches the pool module, asserted to be derived into it) and SYNTHETIC test/parity paths in planted import graphs — census data about which files the armed batch must run, not a twin of any parity gate",
+	],
+	[
+		'test/unit/tier_wiring_tripwire.test.ts',
+		'names test/parity/*_differential.test.ts files as ROWS of its shrink-only VACUOUS_DELIVERY_EXEMPT (claimed files whose frozen floor is all-skipped, each excused by a written reason — no twin admits one) — census data about which delivered files run nothing, not a twin of any parity gate',
+	],
 ]);
 
 export type TwinMap = {

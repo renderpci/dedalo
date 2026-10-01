@@ -517,10 +517,14 @@ describe.if(DB_READY)(
 			);
 			expect(Array.isArray(data)).toBe(true); // swallowed: the save would have succeeded
 			expect(getCounters().observers_propagation_failed).toBe(1);
-			expect(getCounters().observers_propagation_failed_in_tx ?? 0).toBe(0);
 		});
 
-		test('inside an ambient transaction the same failure RETHROWS and ticks the _in_tx sibling', async () => {
+		// B6 (CLOSURE_PLAN Step 2): the in-transaction RETHROW lane is gone with
+		// the obligation ledger — every write's propagation drains AFTER the
+		// commit (obligation_ledger_native 5a/5b/5c), so propagation inside a
+		// transaction is a caller bug and is REFUSED before anything runs: no
+		// recompute attempted, nothing counted as a propagation failure.
+		test('inside an ambient transaction propagation is REFUSED before it runs (nothing counted)', async () => {
 			const id = await createSectionRecord(SECTION, ROOT);
 			resetCountersForTests();
 			await expect(
@@ -544,8 +548,7 @@ describe.if(DB_READY)(
 						ROOT,
 					),
 				),
-			).rejects.toThrow();
-			expect(getCounters().observers_propagation_failed_in_tx).toBe(1);
+			).rejects.toThrow(/refusing to run inside a transaction/);
 			expect(getCounters().observers_propagation_failed ?? 0).toBe(0);
 		});
 	},

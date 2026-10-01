@@ -110,6 +110,26 @@ Exit codes, so a monitoring job can branch on them:
 The worked example below adds a fourth museum, `museum-d`, to a host that already runs
 three. Nothing about it is special to being the fourth: the same six steps add the first.
 
+!!! warning "What the host must have first"
+    Each site's agent runs as its own Linux user, in a systemd unit that PID 1 starts for it.
+    The host therefore needs:
+
+    - **systemd 248 or newer.** Ubuntu 24.04 ships 255. Debian 12 and RHEL 9 ship 252.
+      On 257 or newer each run also gets its own process namespace. Below 254, a crash of
+      the daemon does not stop the runs bound to it, so the restarted daemon stops them
+      before it accepts work.
+    - **polkit 0.106 or newer.** The grant that lets the daemon stop its own runs is a
+      JavaScript rules file. polkit 0.105 (Ubuntu 22.04) ignores it, so `provision apply`
+      refuses that host. Server and minimal installs often have no polkit at all, and then
+      `provision apply` refuses because it cannot read polkit's version. Install it first:
+      `apt install polkitd` on Debian and Ubuntu, `dnf install polkit` on RHEL.
+    - **A Claude Code binary the daemon can execute**, at an absolute path outside `/home`,
+      `/root`, `/tmp` and `/run`. The daemon's own unit hides those directories, so the
+      native installer's `~/.local/bin/claude` is unreachable. Install it under `/usr/local`
+      or `/opt`. Its `--help` must list `--setting-sources`, `--settings` and
+      `--strict-mcp-config`. If it does not, every turn is refused with
+      `confinement.agent_cli_unsupported` until Claude Code is upgraded.
+
 ### 1. Write the declaration
 
 `/etc/dedalo_sites/instances/museum-d/instance.json`, owned `root:root`, mode `0644`:

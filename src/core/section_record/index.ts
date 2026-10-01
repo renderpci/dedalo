@@ -10,10 +10,13 @@
  *   uniform record interface → the MatrixRecord struct (db/matrix.ts),
  *                              threaded explicitly through the call tree
  *   write chokepoint         → record_write.ts persistRecordKeys /
- *                              persistRecordColumns (audit merge, PHP
- *                              key-removal semantics) ending in the ONE
+ *                              persistRecordColumns / persistRecordBirth and
+ *                              their named siblings (audit merge, PHP
+ *                              key-removal semantics, the derived
+ *                              relation_search index) ending in the ONE
  *                              post-write hook afterRecordWrite (save event,
- *                              security reaction, RAG seam)
+ *                              security reaction, RAG seam, the observer
+ *                              obligation ledger — obligation_ledger.ts)
  *   substitution API         → virtual_record.ts makeVirtualRecord /
  *                              cloneRecord / injectComponentData
  *   post-write fan-out       → save_event.ts (cache invalidation + RAG seam)
@@ -21,15 +24,31 @@
  */
 
 export {
+	type KeyChange,
+	type ObservedDeclaration,
+	removedLocators,
+	type WriteReceipt,
+} from './obligation_ledger.ts';
+export {
 	type AuditStamp,
 	afterRecordWrite,
 	buildModifiedAuditWrites,
+	dropCoveredObserverUnits,
+	hiIndexDisagrees,
+	persistAppendedKeyItems,
 	persistModifiedStamp,
+	persistObserverMirrorKeys,
+	persistRecordBirth,
 	persistRecordColumns,
 	persistRecordKeys,
+	persistRelationRemovalKeys,
+	persistRestoredKeys,
+	prepareBirthColumns,
 	type RecordWriteObligations,
 	type RecordWriteTarget,
+	requestCoveredSlotRecompute,
 	type SavePathItem,
+	type WriteDerivation,
 } from './record_write.ts';
 export {
 	fireRagRecordEvent,

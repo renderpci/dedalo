@@ -17,10 +17,24 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
-    - The site builder can no longer start its agent units through polkit, and refuses confined agent runs until per-site identities land
+    - Every AI request now counts against a daily budget per user, and generated answers need their own permission.
+    - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
+    - The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.
+    - A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.
+    - The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.
+    - Only profiles granted the assistant tool can use the assistant.
+    - The site builder can no longer start its agent units through polkit
     - Outbound fetches now refuse every IPv6 route to an internal address.
 
 ### For users
+
+#### Security
+
+- **Searching or sorting by a field the user may not see no longer reveals its values.**
+
+    A search on a field of the section itself (not of a linked record) did not check the user's permission on that field, so repeated searches like "starts with A", "starts with B" could reveal a hidden field's value, and sorting by it revealed its order. A filter or a sort on a field the user's profile hides now matches nothing and sorts nothing, and the request carries the usual "some content was not shown" notice. Fields shown to the user through a portal or an autocomplete they are allowed to use remain searchable there — and only there: the server checks that the portal really belongs to the section the request names and that the user's own profile grants it, so a request cannot borrow that allowance by naming some other portal, and the record information fields every user may search (created and modified date and user) stay searchable for everyone. Which section's permissions apply is decided by the records being searched, never by what the request says about them. A sort over several sections at once is applied only when the field is visible to the user in every one of them.
+
+    Wire contract: `WC-2026-09-30-search-root-step-acl`.
 
 #### Changed
 
@@ -96,6 +110,18 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-27-csv-import-append-mode`.
 
 #### Fixed
+
+- **A duplicated record never points at the original record's image or document files.**
+
+    Duplicating a record copies its image, audio, video and document files to the new record. If a copy failed, the new record could keep pointing at the ORIGINAL record's files, with no message anywhere — and deleting either record later moved files the other still showed. The duplicate is now saved with no file list of its own, the files are copied (into the record's named folder when the media field stores its files by a folder name taken from another field), and the new record's file list is then built from the files it really has. A copy that did not complete is reported to the administrator (the `duplicate_media_incomplete` counter and a `media.operation_failed` line in the server log); the duplicate itself is still created.
+
+    Wire contract: `WC-2026-09-30-media-key-locked-transform`.
+
+- **Restoring or undeleting a record now updates every list and search that shows who references it.**
+
+    Some fields are filled in automatically from other records — for example a thesaurus term that lists every object indexed with it, or a broader-term search that finds an object indexed with a narrower term. Restoring a record from the Time Machine, undeleting it (from the Time Machine or by reverting a bulk operation) and recalculating such an automatic list did not always bring these up to date: an undeleted object could stay missing from the term that indexes it, an undeleted term could come back listing objects that no longer point at it, and a broader-term search could miss an object until someone saved it again. Every way of writing a record now brings them up to date, right after the change is saved. During a CSV import, the automatic lists are updated after each row is committed; a failure there is reported to the administrator (the `observers_propagation_failed` counter and the server log) and repaired by the observer reconcile, and it no longer undoes the imported row. A duplicated record no longer matches a broader-term search for terms only its original is listed under. Reverting a bulk revert that brought back a term together with the objects indexed with it now deletes them again, instead of keeping them as records someone else changed. Restoring an automatic list from its Time Machine history (or reverting a bulk operation that changed one) no longer brings back objects that have stopped pointing at the record since: the restored list is recalculated right after the restore, and the objects still listed keep their extra data. When such a list is itself shown in another record's automatic list, an object that stops pointing at a record now also leaves that second list. Extra data attached to the entries of such an automatic list (for example a rating on each object a term lists) now stays with the right object when the record is undeleted, restored or duplicated: it used to be reattached to a different object after an undelete, kept for objects no longer listed after a restore, and copied onto the duplicate. For a virtual section that has a field of its own, deleting a record's data now also empties its automatic lists, and restoring it recalculates them.
+
+    Wire contract: `WC-2026-09-30-record-write-obligation-ledger`.
 
 - **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
 
@@ -306,7 +332,175 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
-- **The site builder can no longer start its agent units through polkit, and refuses confined agent runs until per-site identities land** *(action needed)*
+- **Every AI request now counts against a daily budget per user, and generated answers need their own permission.** *(action needed)*
+
+    Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily budget before the model is called: assistant runs and model tokens, semantic-search queries, and vision calls of the identification tool. When a budget is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included. The four budgets are `DEDALO_AI_USER_DAILY_RUNS` (50), `DEDALO_AI_USER_DAILY_TOKENS` (1000000), `DEDALO_AI_USER_DAILY_EMBED_QUERIES` (2000) and `DEDALO_AI_USER_DAILY_VISION` (50) — see [the configuration reference](./config/config.md). The day's usage of every user is listed in the new **AI usage** section under Administration.
+
+    **Action needed:** generated answers over the collection now require the **Generated answers** tool permission (`tool_rag`). Run *Register tools* after the update to add it, then grant it in the profile editor to the profiles that should use generated answers. Semantic search does not need it.
+
+    Wire contract: `WC-2026-10-01-ai-spend-budget`.
+
+- **The assistant no longer proposes changes its own apply step would refuse.**
+
+    In write mode the assistant proposes a change plan that a person confirms before it runs. The check made before the plan was shown was weaker than the one made when it runs: some plans that named a record outside the user's projects, a field the user may not edit, or a read-only section were shown as valid and then failed when applied. Plans are now checked by the same permission rules that apply when they run, so what the person confirms is what the user is allowed to do.
+
+    Wire contract: `WC-2026-10-01-change-plan-write-door`.
+
+- **Removing a linked record from a portal now checks the portal field and the record's projects.**
+
+    Removing a linked record from a portal (the unlink button, and the "delete index" of the indexation tool) used to check only the section's permission. A profile that could edit the section but only read the portal field could still unlink from it, a record outside the user's projects could be changed, and a user manager could unlink their own profile, active or administrator flag. Removing a link now requires write access to that portal field and to the record itself (its projects), checked before anything is read or locked; a user manager can no longer unlink their own profile, active or administrator flag; and a record id of 0 or below is refused for every user, administrators included.
+
+    Wire contract: `WC-2026-10-01-delete-locator-write-door`.
+
+- **Asking a vision model for proposals, or identifying a photograph with an external encoder, now requires the identification tool permission.**
+
+    Proposals from a vision model and image identification through an external service call a paid model and may send the object's photograph off the server. Any user who could read the section could start them. They now require the user's profile to include the identification tool; without it the request is refused before any model is called. Matching by record, proposals voted by similar records and a locally run image encoder cost nothing and are unchanged. Grant the identification tool to the profiles that should use the vision source.
+
+    Wire contract: `WC-2026-10-01-identify-vision-grant`.
+
+- **The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.** *(action needed)*
+
+    Claude Code reads hooks, MCP servers, skills and settings from the project it works in and from its home directory. In a site builder workspace both are written by the agent itself (and by the site's build scripts), so a file planted in one turn ran as a shell command in the next, although the agent is denied a shell. Each Claude Code turn now loads its settings only from the site builder (no user, project or local source; only the site builder's own MCP server), and the site brief (AGENTS.md) is handed to the agent by the site builder instead of being read from the workspace. **Action needed:** the installed Claude Code must list `--setting-sources`, `--settings` and `--strict-mcp-config` in `claude --help` (verified on 2.1.286). The site builder checks this at start and before every turn; an older Claude Code is reported in the start log and every turn is refused until it is upgraded. In the site builder tool these refusals now read "cannot run its agent safely on this server" (an administrator must act) or "busy with this site" (try again in a moment) instead of a generic error.
+
+    Wire contract: `WC-2026-10-01-site-builder-confinement-codes`.
+
+- **The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.** *(action needed)*
+
+    Five gaps around the site builder's confined agent are closed.
+
+    - **The agent program is chosen by the site builder.** A site's agent program (Claude Code, OpenCode, …) was read from the site's own `site.json`, which the agent can edit. An agent could switch its next session to another program and plant a plugin that program loads. That bypassed every restriction placed on Claude Code. The choice made when the site is created is now kept in the site builder's private state, outside every site's folder, where no agent run can rename or remove it. A site created before this update gets its record when the site builder starts, from the program its `site.json` named at that moment. From then on `site.json` decides nothing. A site with no record is refused ("no driver record") and never falls back to the instance's default program (`agent.driver`): restart the site builder, or start the session naming its program.
+    - **One site's agent can no longer watch another's.** Each agent run already hid other sites' processes. It could still read the system's process-accounting files (`/sys/fs/cgroup`), which show another site's runs, when they started and how much they used. Every agent unit now hides that directory. **Action needed:** run `provision apply` after updating. Until the units are re-rendered, the site builder finds them different from what it expects and refuses every agent run.
+    - **A planted brief no longer stalls the site.** The site brief (`AGENTS.md`) is in a folder the agent writes. Replacing it with a pipe, a huge file or a file containing a NUL byte could hang every later turn or make every turn fail. The brief is now read without blocking, only up to its size limit, and refused with a clear message when it is not an ordinary text file. The same holds for every file the site builder reads or writes in a site's folder: a pipe planted at `site.json` or at the agent's connection settings is refused at once instead of stalling it. A turn's setup now also counts against the turn's time limit, and stopping a session reaches it.
+    - **An unusable Claude Code is reported, not hidden.** A Claude Code binary the site builder cannot run (missing, not executable, or under `/home`, which the site builder's service cannot see) was a generic, retryable error. It is now refused with "cannot run its agent safely on this server", naming the binary. A Claude Code check that fails once on a busy server, for example by timing out, is asked again at the next turn. It no longer refuses every turn until the site builder restarts.
+    - **Unsaved agent work is no longer lost to a failed save.** After each turn the site builder saves the agent's work as a restore point. When that save failed for any reason other than the site builder shutting down, or when the restart's own recovery save failed or had to wait, the work was left unsaved and never retried. The next turn then saved it under its own name. Any save that did not happen is now retried at every start of the site builder until it succeeds.
+
+- **A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.** *(action needed)*
+
+    Eight gaps around the site builder's confined agent are closed.
+
+    - **A turn no longer runs commands planted in the site's git settings.** Claude Code runs `git` itself when a turn starts. It switches off git's hooks for that, but not its content filters. A build script, a git hook or the agent itself could add a filter to the site's `.git/config`, and the next turn then ran that filter's command as the site's user, with the AI provider's key and the museum connection. Setting git's own environment variables does not help: Claude Code removes them. Each turn now runs with the site's `.git` folder hidden, so no `git` the turn starts finds a repository. **Action needed:** run `provision apply` after updating. Until the units are re-rendered, the site builder finds them different from what it expects and refuses every turn. A site whose folder has no `.git` is now refused a turn, with a message that names the missing folder.
+    - **The site builder reads systemd's answers correctly on Ubuntu 24.04 and Debian 12.** systemd prints some settings, such as `TemporaryFileSystem=`, as one line per entry. The site builder kept only the last line, so on those systems it would have refused every agent run as "not what this daemon expects". It now reads every line.
+    - **"systemd cannot say" never frees a site.** When systemd does not answer a question about a run (a timeout, a D-Bus or polkit error, an answer with a value missing), the site stays held until systemd answers. It is never treated as finished or idle.
+    - **A refused stop is named.** When systemd refuses to stop a run, for example because the polkit rule is missing or polkitd is not running, the refusal and the site's "unavailable" message now quote systemd's answer and point at the polkit rule.
+    - **A host that cannot confine runs says so at start.** The site builder now checks the host when it starts: the systemd version, each site's user and groups, and the files a run starts from. If something is wrong, it writes the reason to its log at start, instead of failing the first request. It still starts, and refuses each run until the host is fixed.
+    - **Session records and site folders are checked before a run.** A session's saved settings are used only if they name that same session and site, and only from folders the site builder created itself. A site folder that has been replaced by a link is refused before any run starts.
+    - **A broken turn setup is reported at start, not at the first turn.** The git settings file root renders for every turn, and the systemd units each site's runs use, are now checked when the site builder starts and before a session is accepted. A missing or altered settings file, or an extra drop-in on a unit, is written to the log at start and refused before any work is reserved. A site whose `.git` is a link or not a folder is refused a turn, with a message naming it.
+    - **One site's damaged session folder no longer stops the others.** When one site's session folder was replaced by a link, the start-up sweep stopped for every site: interrupted sessions were not marked and their work was not committed. The sweep now skips that site, logs why, and goes on with the others.
+
+- **The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.** *(action needed)*
+
+    Until now, every site of a museum ran its AI turns, builds and `git` commands as one agent user, so one site's run could read or change another site's agent state. The daemon also asked systemd to start those runs itself, which the previous release had to stop allowing (see the entry on the narrowed polkit rule).
+
+    Now each declared site has its own system user, `dedalo-a-<instance>_<n>`, with a private group that only that user and the service user belong to. `provision apply` creates them and never reuses a number. For each site and each kind of run (turn, build, `git`), root installs a socket and a service template. The daemon only connects to that socket, and systemd starts the run as the site's user, which the daemon cannot choose. The polkit rule now lets the service user stop or kill those runs and nothing else. What systemd enforces:
+
+    - A site never has two runs at once, and runs of different sites run as different users.
+    - Each run gets only its own site's workspace and its own HOME. A build cannot read the turn's `~/.claude`, and `git` gets no HOME.
+    - A turn or build reaches the network through its site's egress directory under `/run/dedalo-sites-agents/<instance>/egress/`. Root creates this directory at every boot from a rendered `/etc/tmpfiles.d/` file, and the run sees it read-only.
+    - A run of a site whose units differ from what the daemon expects (for example, a hand-added drop-in) is refused, naming the setting. This includes a drop-in that stops a run without killing its last processes, or one that makes systemd open or mount a file for the run as root.
+    - A run counts as finished only when systemd reports none of its processes left, so the site's next run never starts beside a survivor of the last one.
+    - Stopping or restarting the daemon also stops that museum's run sockets, which then accept no new run. Starting the daemon starts them again.
+
+    Other changes:
+
+    - The daemon starts no new run once it is shutting down. A turn whose final commit was refused that way is committed when the daemon next starts.
+    - The oldest supported systemd is now 248. polkit must be 0.106 or newer, because the stop rule is a JavaScript rules file, and `provision apply` refuses an older one. Supported hosts are Ubuntu 24.04 or newer, Debian 12 or newer, and RHEL 9 or newer. Ubuntu 22.04 is not supported: its polkit 0.105 ignores the rule. Server and minimal installs often have no polkit at all; install it first (`apt install polkitd` on Debian and Ubuntu, `dnf install polkit` on RHEL). On systemd 257 or newer each run also gets its own process namespace.
+    - A site's user may belong only to the instance group and its own private group. `provision apply` refuses a site user that any other group lists as a member, and the daemon refuses every run of a site user that has any other group, because a run gets every group of its user.
+    - The `opencode` agent is refused on a host where runs are confined (`AGENT_CONFINEMENT=systemd_scope`, every provisioned host): it loads configuration and plugins from files a run can write, so a planted plugin would run as the site's user. Use `claude_code` there.
+    - When the daemon is not running, `provision apply` clears its failed state before starting it. A daemon that the updated code stopped in a restart loop can then be started.
+    - If the daemon crashes on systemd older than 254, systemd does not stop its runs. The daemon stops them, or keeps their site unavailable, when it starts again.
+    - `provision apply` refuses a site user whose uid, or a private group whose gid, belongs to any other account or group on the host. It also refuses any other account whose primary group is a site's private group, and it refuses when the system id range in `/etc/login.defs` has no room left. The daemon checks the same things before every run.
+    - Creating a site is refused (503) before anything is written when the daemon cannot run that site's `git` yet, for example after `provision apply` added the site but before the daemon restarted.
+    - An agent run that was left running (for example, after the daemon was killed) is stopped before its site runs again. If it will not stop, that site stays unavailable until it does.
+    - A turn's own `git` never treats the workspace itself as a repository. Root installs `<state dir>/agents/turn.gitconfig` (`safe.bareRepository = explicit`, nothing else), and every turn sees it as `/etc/gitconfig`, read-only. A turn is refused, naming the file, when that file is missing or says anything else, and when the workspace root contains a `HEAD` entry. Remove a stray `HEAD` from the workspace root to run the site again.
+    - The daemon checks that it may stop its sites' runs at start and before each run, by asking systemd to stop a run that does not exist. Without the polkit rule, or without a running polkitd, every run is refused with a message that names the rule, instead of failing at the first interruption.
+    - A run is refused when its site's user cannot reach the runtime, the shim or the Claude Code binary (`CLAUDE_CODE_BIN`), for example because a directory on the path is closed to it. The message names the directory.
+    - The daemon's `.builder/` directory in each workspace is now `0710`, so a turn, which runs as the site's user, can open the MCP configuration it is given there. The site's user still cannot list or change anything in it. An existing `.builder/` is changed at the site's next turn.
+
+    **Action needed:** as root, run `provision apply` for every instance before the updated daemon starts, or in the same maintenance window as the code update. This includes an update installed from within the application.
+
+    - The daemon no longer starts while its environment still sets `AGENT_USER`, `AGENT_HOME` or `SYSTEMD_RUN_BIN`. `provision apply` removes those keys and writes `AGENT_IDENTITIES`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT` and `AGENT_IDENTITY_EPOCH`. It writes `SYSTEMCTL_BIN` only when the declaration names `agent.systemctl_bin`. Otherwise the daemon uses `/usr/bin/systemctl`, so declare it only on a host where `systemctl` is somewhere else. Do not add the key to the rendered environment file by hand: the next `provision apply` removes it.
+    - The first run of `provision apply` stops the daemon, gives each site's files that the old agent user wrote to the site's new user, installs the units, and starts the daemon again.
+    - It also opens to the instance group the files and directories in each existing workspace that are owned by the service user, except `.builder/`. Sites created before 2026-09-05 have these: back then turns and `git` ran as the service user and left `.git` closed to the group, so the site's new user could not commit. The service user keeps owning them.
+    - It locks the old agent user without deleting it.
+    - It moves the old shared agent HOME aside, next to itself, as `<home>.retired-<date>`, owned by root and closed to everyone else (`0700`). Nothing from it is copied to the new users.
+    - Once, after the update, a conversation cannot resume its earlier context: its next turn starts a new agent session.
+    - Adding a site later also needs `provision apply`, which restarts the daemon.
+
+    See [the site builder internals](./development/site_builder_internals.md).
+
+- **The thesaurus term picker grants link mode only from a profile, never from a blanket rule.**
+
+    The term picker opens a thesaurus in link mode only for a user who may edit the field that asked for it. That edit right was read without asking where it came from, so a field under the editing-preset section — which every user may edit through a built-in rule, bounded only to their own presets — counted as a link-mode grant for every user. Link mode now requires edit permission granted by the user's profile (or the root account); otherwise the thesaurus opens in ordinary browse mode.
+
+- **Translation, imports, cache rebuilds, uploads and bulk reverts now check permissions on every record and field they write.**
+
+    Several tools checked a user's permission on a section and field but not on the specific record they then wrote, so the rule that keeps a user from changing parts of their own account (for example their own profile) did not apply there. Automatic translation, the poster-frame tool, the cache rebuild, file and CSV/MARC21/Zotero imports, the fields an upload fills in automatically, and the bulk revert of a process now check each record and field exactly as the edit form does. A field or row the user may not change is reported and left untouched; CSV imports now need permission on every imported column, including the creation and modification metadata columns.
+
+    Wire contract: `WC-2026-10-01-write-door-delegations`.
+
+- **The assistant can no longer search or count records of a section the user may not read.**
+
+    The assistant's search, count and find-or-create tools applied the user's projects but not the section permission, so a user whose profile did not grant a section could still list and count its records through the assistant. They now refuse such a section, exactly as the record list does.
+
+    Wire contract: `WC-2026-09-30-mcp-search-section-grant`.
+
+- **Only profiles granted the assistant tool can use the assistant.** *(action needed)*
+
+    With the assistant enabled on the server (`DEDALO_AGENT_HTTP_ENABLED`), any logged-in user could run it, even if their profile did not include the assistant tool. The assistant now requires the profile to grant `tool_assistant`, for global administrators too; only the root account holds every tool. **Action needed:** in the profile editor, grant the assistant tool to the profiles whose users should keep using it.
+
+    Wire contract: `WC-2026-09-30-agent-tool-grant`.
+
+- **Translation, transcription and RDF-import fetches now connect to the address the SSRF guard vetted (DNS rebinding closed); network failures report a typed reason.**
+
+    The guard used to check the server's address and then let the connection look the name up again, so a hostile DNS server could answer "public" to the check and "this machine" or "the internal network" to the connection. The connection now goes to the address that was checked, with the real name kept for the certificate and the `Host` header, for the translation and transcription services and for every RDF URI a cataloguer imports. Failures are typed instead of carrying the runtime's own error text: the RDF import reports the fixed sentence "The outbound request could not be completed" for each URI that failed (see [the RDF import tool reference](./development/tools/reference/tool_import_rdf.md)), while translation and transcription report a short message naming the reason, such as `hop connect failed (timeout)` or `redirect refused (HTTP 302)`, never an address. A translation or transcription request (a POST) that may already have reached the server is never re-sent to the server's other address, so a failed transcription request cannot start a second job; an RDF-import fetch (a GET, safe to repeat) may be retried on the next address.
+
+    Wire contract: `WC-2026-09-30-guarded-text-pinned-typed-transport`.
+
+- **Posterframes, audio streams and clip downloads now respect the component's own permission and the user's projects.**
+
+    The audiovisual and 3D media actions (create or delete a posterframe, attach a 3D snapshot, read an audiovisual file's streams, cut and download a clip) used to check only the section's permission. A profile that was explicitly denied the audiovisual component could still use them, and any record id could be reached even outside the user's projects. They now check the section, the component itself and the record's project, in that order, before they look at the file. A user who can see a record's video in the player can still download its clips as before.
+
+    Wire contract: `WC-2026-09-30-media-pair-scope`.
+
+- **Ontology identifiers are checked on every read and write, and the database now refuses malformed ones.**
+
+    An ontology node's identifiers (its tipo, its parent, its model, its TLD, and the target of a component alias) are used by the search engine to build its queries. Until now a malformed value stored in the ontology table (for example an alias pointing at a tipo that contains quotes or spaces) could reach a search query unchecked. Now every identifier must be letters followed by digits (a TLD: two or more lowercase letters), no longer than its database column: an alias with a malformed target is refused as an invalid ontology node, the search engine checks the alias target again before using it, the ontology write doors refuse a malformed node, an archive restore refuses one before writing anything, and the ontology recovery file leaves such rows out and names them. The update adds six checks to the `dd_ontology` table that refuse any malformed identifier from then on. An installation that already holds malformed rows still updates normally: the checks start in a "not yet validated" state, and the reconcile `ontology_identifiers` (maintenance area, reconcile status, or `bun run scripts/reconcile.ts`) lists those rows and what it would do with each. Applying it rebuilds each row from its ontology source where one exists, deletes the rows that cannot be rebuilt (every deleted row is listed in full in the report and in the server log, even if the final validation fails), and then validates the checks. Until it is applied, reordering a malformed node is refused with a message that names the check and the reconcile to run. When an ontology source record holds a malformed reference (a parent, model or related-term pointer), the rebuild now drops that reference from the node and names the record in its message, instead of storing the malformed value or failing the whole TLD.
+
+    Wire contract: `WC-2026-09-30-ontology-identifier-grammar`.
+
+- **Site builder agent turns and builds run in a private network namespace and reach the outside only by hostname, through the daemon's egress gate; the Publication API key no longer reaches the agent, and AGENT_EGRESS_ALLOW is refused.**
+
+    A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its site's socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another site's socket directory: only its own site's is mounted, and runs of different sites run as different users, so a concurrent run cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
+
+    The hostnames are:
+
+    - Claude Code turns: `api.anthropic.com`.
+    - opencode/pi turns: the hosts named in `AGENT_PROVIDER_HOSTS`. With none named, such a turn is refused, naming the key.
+    - Builds: the hosts in `BUILD_REGISTRY_HOSTS` (default `registry.npmjs.org`).
+
+    On a provisioned host these come from the declaration's `agent.provider_hosts` / `agent.registry_hosts`. The Publication API key now stays with the daemon, which adds it on its side of the agent's MCP connection; it is no longer written into the site workspace.
+
+    What changes for an operator:
+
+    - A non-empty `AGENT_EGRESS_ALLOW` stops the daemon at boot, with a message naming its replacements.
+    - A model served on loopback or the museum's LAN can no longer be used by a turn.
+    - Builds can no longer reach anything on loopback or the LAN.
+    - A command-line tool that ignores the standard proxy environment variables has no network.
+    - A tool that tunnels anything but TLS naming the host it asked for (plain HTTP over port 443, Encrypted Client Hello, a handshake naming two hosts) is disconnected, with a line in the log.
+    - A run may hold at most 128 connections through the daemon at once. One more is refused, with a line in the log.
+    - An opencode turn installs its provider's package from `registry.npmjs.org` on first use. Name that host in `agent.provider_hosts` too.
+    - The daemon refuses to start any confined run (503, naming the cause) when:
+      - the host's systemd is older than 248, or its version cannot be read;
+      - its socket (`LISTEN_SOCKET`) or the agent socket directory is not under `/run`;
+      - it cannot read its own network namespace;
+      - the site has no agent user of its own on the host (see the entry on per-site agent users);
+      - the site builder or its bun can be changed by any site's agent user, or cannot be read or run by it (a directory above them that such a user owns counts as one it can change, whatever its permissions);
+      - the site builder or its bun lives under `/home`, `/root`, `/run`, `/tmp` or `/var/tmp`.
+    - A site builder and bun owned by the engine's own user, as the documented install lays them out, are accepted.
+
+    See [the site builder internals](./development/site_builder_internals.md).
+
+- **The site builder can no longer start its agent units through polkit** *(action needed)*
 
     The polkit rule the site-builder provisioner installs
     (`/etc/polkit-1/rules.d/49-dedalo-site-<instance>-agent.rules`) allowed the site builder's
@@ -315,16 +509,25 @@ Merged since the last release; these ship with the next one.
     systemd 257 or newer that meant the service user could start a unit with that name as
     root, so the site builder's daemon was effectively root on the host.
 
-    The rule now allows only *stop* and *kill*. Because a confined agent run can no longer be
-    started, the site builder now refuses every confined run (an agent turn, a build step, a
-    `git` command in a site workspace) up front, with a 503 that says why. This lasts until
-    per-site agent identities (root-installed units whose user the daemon cannot choose)
-    replace the current launch. The per-run environment file systemd reads as root is also
-    never written through a symbolic link or into a directory the daemon does not own.
+    The rule now allows only *stop* and *kill*, and only on the runs of the museum's declared
+    sites. The daemon no longer starts any unit. A run is started by systemd from units that root
+    installs for each site, as that site's own user (see the entry on per-site agent users, in
+    this same release). No per-run file is written for systemd to read as root.
 
-    **Action needed:** re-run the site-builder provisioner (`provision apply`) on every host
-    so the narrowed rule is installed. Until the follow-up release, AI site building on a
-    provisioned host will answer "confinement unavailable".
+    **Action needed:** run the site-builder provisioner (`provision apply`) on every host. It
+    installs the narrowed rule together with the per-site units.
+
+- **Transcription actions check the audiovisual component and the user's projects before they touch a recording.**
+
+    Building the audio file for transcription, sending a recording to the transcription server, checking its status and building subtitles checked only the section's permission, and two of them skipped the check when a field was missing from the request. They now check the section, the audiovisual component (or the transcription field they write) and the record's project first, before anything is read, sent or written; every transcription path asks the same thing of the recording — permission to consult it — and write access only to the transcription field it fills, so a transcriber gets the same answer whichever engine they choose, and a user with no access to the recording gets none of them. A transcription that finishes after the user lost access to the record, or after their account was deactivated or deleted, is no longer saved. Checking a server transcription's progress now reaches only the checking user's own job on that recording, and answers its progress alone: it no longer accepts a guessed job number, and it never returns the finished text, which the server saves into the record itself.
+
+    Wire contract: `WC-2026-09-30-transcription-record-tipo`.
+
+- **Every write through a tool, the assistant or the record doors now asks the same four questions, in the same order.**
+
+    A write names a section, often a component and a record. Every door that performs one — the record save, duplicate and delete, the tools, the tag delete of a transcription, the assistant's write tools — now answers through one shared rule: is the record id a real id, does the profile grant the section, does it grant that component of that record (with the rule that a user cannot raise their own profile, developer flag or username), and is the record inside the user's projects. Before, some tools asked only part of it: a global administrator with write access to user passwords could reach the root account's record through a tool, a record id like `1.5` or `abc` was accepted, and a user could change their own profile assignment through a tool that the record editor refused. These requests are now refused. A section that is read-only by design (Activity, the Time Machine) is also refused to every tool, importer and record door that would create, overwrite or delete its records, for administrators too. A CSV import row that names a record id still free when the file was read, but taken by another user's new record while the import ran, no longer writes into that record as if it were the import's own: the row is now checked as a change to that existing record (its projects, and the rule on a user's own account) and reported as updated, not created. The same holds for a file import whose file name names a record id: if the id was still free when the import started but another user's new record took it during the import, the file is now checked as a write to that existing record (its projects) instead of being treated as the import's own new record, and is refused when that record is outside the user's projects. When the assistant is asked to find a record or create it, it now checks every field it would fill before creating anything, and a refused fill no longer leaves an empty record behind. The one exception kept is the record editor's save, and the deletion of a tag in a text field, which is an edit of that same field: as before, they ask the field's grant only, so a user can still edit a linked record's fields through a portal they may edit; your review of that exception is invited in the wire-contract entry.
+
+    Wire contract: `WC-2026-09-30-write-door`.
 
 - **Outbound fetches now refuse every IPv6 route to an internal address.** *(action needed)*
 
@@ -371,6 +574,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Hitting a database limit now shows a clear "try again" error, and maintenance runs on its own database connections.**
+
+    When a database statement runs past `DB_STATEMENT_TIMEOUT_MS`, or a request waits past `DB_POOL_ACQUIRE_TIMEOUT_MS` for a free database connection, the user now sees a "took longer than the server allows" or "the server is busy, try again" message instead of a generic server error. Maintenance no longer runs under the statement limit: the long maintenance-area actions (rebuilds, VACUUM and REINDEX, bulk transforms, imports) and data updates use a separate set of database connections without it, sized by the new `DB_MAINTENANCE_POOL_MAX` (default 2 per process). Count it TWICE in your connection budget, plus 2: each engine process may hold `DB_POOL_MAX + 2 × DB_MAINTENANCE_POOL_MAX + 2` connections (16 with the defaults), because the index-rebuild lane keeps its own idle connections and a stop or an update verdict opens up to 2 short-lived ones of their own (see [the database settings](./config/config_db.md)). The other maintenance-area actions keep the limit and never wait behind a long one, and the dataframe integrity scan now stops a batch that runs past its time budget instead of running on. When the server stops, it cancels only its own running maintenance statements: another installation sharing the same PostgreSQL server is never touched. The defaults of the three limits are unchanged (`0`, off); `60000`, `30000` and `5000` are the recommended production values, and the database settings page lists the long operations to measure on a large installation before you set the statement limit. A concurrent index rebuild, plain VACUUM or ANALYZE that is still running when the server stops is left to finish on the database instead of being cancelled, because a cancelled concurrent rebuild leaves a broken index behind (the blocking forms — the `REINDEX TABLE` and `VACUUM FULL` of "Re-create db assets" — wait at most 5 seconds for their table like any other maintenance step, are retried a few times, and are cancelled at shutdown, which undoes them cleanly; before, such a statement queued behind a long backup kept every later reader of the table waiting for the whole backup); and "Optimize tables" now first removes any such broken index an earlier interrupted rebuild left on the tables it optimizes. A long maintenance action still gives up after 5 seconds of waiting for a table another operation is using, so it never holds up the users reading that table: the step it was on is undone, steps it had already finished are kept, and the action reports "try again in a moment" (or, for the search-store rebuild, an error line for that store). The bulk transforms (move TLD, move locator, move to portal, move to table, move language) now apply each definition file all-or-nothing: a file that waits too long is retried a few times and, if it still cannot finish, is left completely unapplied and named in the report. Before, a file could stop part-way with some tables already changed, leaving a section's records split between the old and the new tipo. Rebuilding the database constraints, triggers or indexes is now all-or-nothing for each table: if the new constraint, trigger or index cannot be created (including after that 5-second wait), the old one is kept instead of being left removed, and the action lists the failure by constraint, trigger or index, table and database error code (the full database message is in the server log). An index is now built next to the old one, which keeps serving searches until the new one takes its place, so the table stays readable during the rebuild.
+
+    Wire contract: `WC-2026-09-30-db-typed-503`.
+
 - **Building and serving code releases now has its own maintenance panel, Serve Code.**
 
     The **Update code** panel used to hold two jobs: installing a new release on this installation, and — on a code server — building releases from git and serving them to others. The second job is now its own panel, **Serve Code**, shown only on a code server (`IS_A_CODE_SERVER=true`) or the development installation. **Update code** keeps installing, restoring and deleting restore points.
@@ -387,6 +596,166 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Published files survive a power cut, and deleting a record no longer races a running publication into the same directory.**
+
+    Two gaps in file publications (Markdown, XML, RDF, CSV, JSON) are closed:
+
+    - **A power cut no longer leaves a "completed" run with broken files.** A run
+      recorded each batch, and finally its *completed* state, in the database
+      while the files it had written could still be only in the operating
+      system's memory. A power cut (or a kernel crash) could then leave empty or
+      missing record files, a deleted record's file back in place, or a truncated
+      CSV/JSON export — behind a job that said *completed* and could no longer be
+      resumed. Every file, archive and merged document is now forced to disk, and
+      its directory with it, before the run records it.
+    - **Deleting a record waits its turn on file targets too.** When a record is
+      deleted, its published file is removed under the same per-target hold the
+      publication runs use. It could otherwise be removed just before a running
+      batch wrote it again (the deleted record reappeared on the public site), or
+      while a run was building its archive. If a run is writing that directory at
+      the moment of the deletion, the removal stays pending and the retry queue
+      completes it, as it already did for publication databases.
+
+    Wire contract: `WC-2026-09-30-diffusion-run-ledger`, `WC-2026-09-30-diffusion-target-fence`.
+
+- **Resetting a hierarchy to its seed can no longer delete it without restoring it.**
+
+    "Reset to seed" (Add hierarchy) and the installer's hierarchy step now apply each hierarchy all-or-nothing. The reset used to delete the hierarchy's terms first and load the seed in a separate step: if the seed then failed to load, the hierarchy was left empty — every edit and addition gone and the seed not restored. A models file that failed to load, or a failed update of the record counter, was ignored and the hierarchy reported as imported. Now the delete, the terms, the models and the counter are one database transaction: if any part fails, nothing changes and the hierarchy is reported as failed with the reason.
+
+- **Creating a site twice at the same moment can no longer overwrite or delete the first site.**
+
+    When two requests created a site with the same name at nearly the same time, the second one could pass its checks while the first was still being set up. It then wrote its own settings over the finished site, and if anything later failed, it deleted the whole site folder, including the first site's work. The site folder is now claimed by exactly one request: the second request is refused with "a site with this name already exists", and the first site is left untouched.
+
+    A site folder that exists but has no `site.json` (left by a create that was interrupted, or by a site whose settings file was removed) is no longer reused. Creating a site with that name is refused with the reason `workspace_exists`, and nothing in the folder is changed. An administrator must inspect the folder and remove it before the name can be used.
+
+- **Deleting a site while an agent session or a build is running is refused, and no longer blocks the site name.**
+
+    A site could be deleted while an agent session was still working on it. The session kept writing its own history, which re-created an empty folder with the site's name. Creating a site with that name was then refused with the reason `workspace_exists` until an administrator removed the folder by hand. Every restart of the site builder also retried a recovery that could never succeed for that folder.
+
+    Now a delete is refused while a session, a build or a repository operation is running on the site. The response names what is running (for example `session_running`), and nothing is removed. Stop the session or wait for the build, then delete again. Sessions and builds can no longer re-create a deleted site's folder. At startup, the site builder ignores folders left by the old behaviour, so it no longer retries their recovery. Remove those folders by hand to free the name.
+
+- **Site builder state survives a power cut, and a damaged driver record is reported at startup.**
+
+    The site builder's own state (each site's driver record, session and build
+    records, `site.json`) was written atomically but not forced to disk. After a
+    power cut or kernel crash, a newly written driver record could come back
+    empty. The site then refused every session that did not name its driver, on
+    every restart, and nothing explained why until a session was attempted. These
+    files, and the directories they are created in, are now forced to disk before
+    the write is reported done. A driver record that is present but unreadable is
+    now named in the startup log with the steps to fix it. It is left as found
+    and never rebuilt from `site.json`, which the agent can edit.
+
+- **A second Site Builder started by hand no longer stops the running service's agent runs.**
+
+    When the Site Builder daemon was started a second time for an instance that was already running (for example, by hand as the service user while debugging), the second process stopped the running service's agent turns and marked its sessions interrupted. Only after that did it notice the instance was already served and exit.
+
+    The daemon now checks first. If the instance's socket or port already answers, or (with systemd confinement) systemd says another process is the service's main process, the second start exits with one line saying why. It stops nothing and writes nothing. Start the service with `systemctl`, not by hand.
+
+- **Administrators' toolbars now show only the tools their profile grants.**
+
+    Global administrators (other than root) saw every installed tool in their toolbars, even tools their profile does not grant — and clicking one was then refused. The toolbar and every tool door now follow the same rule: a tool is available when the user's profile grants it (or it is always active); only the root account holds every tool. An administrator who asks for a tool their profile does not grant now gets "not authorized" rather than "unknown tool".
+
+    Wire contract: `WC-2026-10-01-tool-grant-one-decision`.
+
+- **Rebuilding a user's activity statistics can no longer lose them half-way.**
+
+    "Rebuild user stats" (Database info) used to delete a user's daily statistics first and then recompute and save them day by day, each step on its own. A failure part-way — a database error, a server restart — left that user's statistics deleted or half rebuilt. Now the activity log is read first and the old statistics are replaced in one transaction: if the rebuild fails, the user's previous statistics are kept and the error names the user (and the users already rebuilt before it). A day whose statistics record could not be created is no longer skipped silently. The rebuild still recomputes only from the activity log that exists, so statistics older than the log are still lost when it succeeds.
+
+- **A database backup counts only once it has been read back completely.**
+
+    The code updater requires a recent database backup, and the update panel shows whether there is one. Both used a quick check that reads only the start of a dump, so a dump that had stopped part way through still counted as a backup, and a code update could go ahead with no usable way back. Now a backup counts only after PostgreSQL has read it back from beginning to end; a dump that is cut short is named in the refusal ("did not verify (truncated)"), and the next older complete backup is used if there is one. The read happens once per backup file and never makes the server unresponsive: while it is running the panel shows the backup as "verifying" instead of guessing. A read that does not finish in time proves nothing, so that backup does not count either; on slow backup storage raise the new setting [`DEDALO_BACKUP_VERIFY_SECONDS_PER_GB`](./config/config.md) (default 60 seconds per gigabyte), which the refusal names. A file named like a Dédalo backup (`.custom.backup`) that does not even start like a PostgreSQL dump — for example one left full of zeros by a crash — no longer counts as a backup either. Only a problem in the file itself marks a backup as broken: if the read is interrupted, the backup disk reports an error, or the server's PostgreSQL tools are older than the dump, the backup does not count for now but is read again next time instead of being written off — and a backup that an earlier version wrote off for one of those reasons is read again once. This holds whatever language the server's system runs in: PostgreSQL's messages were misread when they came out translated (for example on a server set to Spanish), which could write off a good backup. Stopping a code update while its backup is being checked, or before it replaces the code, now really stops it: nothing is installed and the server is not restarted. The backup line of the update panel is checked only for the superuser, the only account that can run an update. If the backup cannot be checked at all (for example the server's PostgreSQL tools cannot be started), a data update now warns that the backup could not be checked instead of refusing to run.
+
+    Wire contract: `WC-2026-09-30-backup-freshness-deep-async`.
+
+- **A database backup that is still being written no longer appears as a backup.**
+
+    Before, a dump started from the maintenance area was written straight under its final backup name, so for the whole time it ran the backup list showed an unfinished file, and pressing the button twice in the same second could throw away the dump that was already running. Now a dump is written under a temporary `.part` name and receives its backup name only after it has finished successfully and — where the server can check it — has been read back completely (a finished dump that could not be checked — no time, a disk error, the check interrupted — is named but reported as "not verified", never thrown away); the list shows only finished backups, and a second press while one is running is simply skipped. A dump that fails is kept as `.failed` for you to inspect (a later failure under the same name becomes `.failed.1`, and so on — nothing is overwritten), and never looks like a backup. While the finished dump is being read back, the progress panel keeps showing it as running (it used to report a successful backup as interrupted), and you can stop a running backup from the panel. A `.part` file left behind by a server that restarted mid-dump is never deleted: after 24 hours the next backup reads it back and, if it is complete, gives it its backup name; if the file itself is broken it is kept as `.orphaned` for you to inspect, and if it simply could not be read this time it is left where it is and read again next time (the nightly backup job follows the same rule). The progress of a backup now belongs to the user who started it. An empty `.part` is left alone, because it may belong to a dump that is still waiting to start.
+
+    Wire contract: `WC-2026-09-30-backup-part-promotion`.
+
+- **A publication run that crashes, is cancelled or meets another run now publishes exactly what it should — and large archives no longer exhaust memory.**
+
+    Four defects of the publication (diffusion) runs are closed:
+
+    - **Resume after a crash.** A run that was interrupted and resumed used to lose
+      the records its primary records link to, and rebuilt the downloadable archive
+      (`diffusion_md.zip`, the merged RDF/XML document and its zip) from only the
+      part it did after the restart. Each run now keeps a ledger of what it has
+      queued and published, committed with every batch: a resumed run publishes
+      byte for byte what an uninterrupted run would, and its report still says
+      *Partial success* for problems met before the crash. A run left by a version
+      before this one restarts from the beginning. A **cancelled** run no longer
+      rewrites the published archive from its partial work. A linked record that
+      was unpublished while a run was stopped is not published again when the run
+      is resumed: the run checks each linked record's publication state when it
+      reaches it.
+    - **One writer per target.** Two runs, a record deletion and the maintenance
+      repairs could write the same publication database or directory at the same
+      moment, and a run whose job had been taken over could keep writing. Each
+      target is now written by one batch at a time — a waiting run shows
+      *Waiting for the publication target (busy)…* — and a record deleted while its
+      batch waited is removed from the public site instead of published. A long
+      step (adding a column to a large published table, a language sweep) keeps
+      its hold on the target for as long as it runs, and a batch that takes longer
+      than about 20 seconds no longer makes a healthy run look stopped (it used to
+      be restarted, and could end *failed* after its retries). Deleting records while a run
+      holds their target no longer waits: the unpublish is queued and retried.
+      Deletions never hold each other up: two users deleting records published
+      in the same database both have them removed from the public site at once.
+      `DB_POOL_MAX` must be at least 2 for a publication run to start. The
+      media-file allowlist is covered too: *Rebuild media index* and the startup
+      repair wait for a run that is publishing, so the media of a record that was
+      just published no longer disappears from the public site until the next
+      repair. They wait for at most two minutes and hold nothing while they wait:
+      a run or a deletion on one publication database is never held up because a
+      run is busy on another. When the wait runs out, *Rebuild media index* names
+      the database it could not repair, and the startup repair is reported as not
+      applied.
+    - **Another user's publication.** Pressing *Publish* on an element and section
+      another user is already publishing used to show you that user's run as if it
+      were yours. You now get a clear "the publication target is busy" message;
+      pressing *Publish* again on your own running request still reconnects to it.
+    - **Archives in bounded memory.** Zip archives and merged documents are now
+      built from disk one file at a time, with unchanged bytes, instead of loading
+      the whole publication into memory at the last step. Two files with the same
+      name in one archive are refused instead of one silently replacing the other.
+      A file removed while its archive or merged document is being built (a
+      record unpublished at that moment) is left out and named in the run's
+      report, instead of the whole run failing — including when every file of a
+      Markdown run is gone, which now just produces no archive. A file removed
+      after the archive started reading it is archived whole.
+
+    Wire contract: `WC-2026-09-30-diffusion-run-ledger`, `WC-2026-09-30-diffusion-target-fence`, `WC-2026-09-30-diffusion-attach-scope`, `WC-2026-09-30-diffusion-zip-streamed`.
+
+- **Duplicating a record now files the history of a transliterable or IRI field in the language it was saved in.**
+
+    When a record was duplicated, a field that keeps per-language versions beside a base value (a transliterable field) or an IRI field got its history row in the language-neutral lane, next to an empty extra row, while a normal save of the same field files it in the working language. The Time Machine of the copy therefore listed the change under the wrong language. The copy's history now lands in the working language, exactly where a save puts it, and the empty extra row is gone. The rule that decides which language a history row belongs to is now one rule shared by every door that writes history.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **Regenerating the media cache no longer undoes an upload made while it runs.**
+
+    The "Update cache" tool (media components) and the media files repair (`scripts/media_repair_files_info.ts`, and the `files_info` entry of the reconcile tools) rebuild files and then record which files a record has. They used to record that from what they had read at the start, so a file a curator uploaded to the same record while they ran — and its original file name — was silently undone. They now record it from the record as it stands at that moment, so the curator's upload is kept. "Update cache" also reports records deleted while it ran (and rows that stayed locked) instead of counting them as regenerated. The repair now also fixes a record whose media list names another record's files (what a failed duplicate could leave), and reports records it could not write instead of counting them as repaired. It judges each media item on its own: an item whose files are not on this server keeps its record of them (unless you allow shrinking), even when another item of the same field is repaired, and a file named some other way (for example by an image id) is never mistaken for another record's. Both tools now give up on a record another user is holding after a few seconds, report it, and go on with the next one, instead of waiting indefinitely.
+
+    Wire contract: `WC-2026-09-30-media-key-locked-transform`.
+
+- **A move_* data transform can be stopped, and only one runs at a time.**
+
+    Running a move transform for real (Move TLD, Move locator, Move to portal, Move to table, Move lang with `dry_run: false`) used to happen inside the web request. Nothing could stop it except restarting the server. It kept every record it had changed locked until the end of each definition file. If it was sent again it waited behind itself and then reported a failure while the first run carried on unseen. Now the transform runs as a background process that answers at once, reports its progress in the maintenance panel and has no time limit. Stopping it cancels the definition file it is working on and undoes that file completely; the files after it are reported as not run. A second transform started while one is running is refused ("Another move_* transform is running") instead of waiting. The maintenance panel can now actually run a transform: until now the five move widgets only ever sent a dry run, so no button reached the real run. The submit button now runs a preview (dry run); when the preview ends without errors an Execute button appears, which asks for confirmation and runs exactly the files that were previewed (change the selection and it asks you to preview again). The preview also runs in the background, with the same progress panel and Stop button. A run that fails — a definition file undone, a file refused because another transform is running, an unknown outcome — now ends as an error in the panel, with the reason; before, the panel said "Process completed" and the failure was visible only in the raw report. If a definition file fails at the moment its changes are being saved (a lost database connection, a server shutdown), the report now says what the database actually did with it: applied, undone, or, when that cannot be read back, an unknown outcome that stops the run and asks you to check the data before running that file again. Before, every failed file was reported as undone, and running a Move locator file again after it had in fact been applied moved its locators twice.
+
+    Wire contract: `WC-2026-09-30-move-transform-execute-job`.
+
+- **A site builder turn whose egress gate fails to close now still ends, instead of leaving the session running forever.**
+
+    When the daemon could not remove a turn's egress sockets (for example, the host refused the unlink), the turn's remaining cleanup was skipped: the driver's MCP configuration stayed in the workspace and the session never left the running state. Each cleanup step now runs on its own. The turn ends normally, and the failure is written as an `[egress]` line in the session log. The same holds for a build or git step: its gate failing to close no longer replaces the step's own result, and the `[egress]` line goes to the build log. A run refused after its gate opened (for example, an environment value with a control character) now reports that refusal, not the error from closing the gate.
+
+- **A data update now applies completely or not at all, and two updates can no longer run at once.**
+
+    Before, each step of a data update was saved as soon as it ran: a failing step, a stopped update or a server restart left the earlier steps applied while the installation still reported the old data version, and running the update again applied them twice. Now the whole update — every step and the new version number — is saved in one piece. If anything goes wrong, or the update is stopped, nothing of it is kept and the report ends with "Rolled back: no statement of this run persisted"; after a restart, simply run the update again. A second update started while one is running, or an update that was already applied from another window, is refused. Stopping the update job now also stops the statement it was running, even while the server is busy. A statement stopped by a server shutdown is reported as an interruption, not as an error in the update's SQL, and the update log marks every run that was saved with a `COMMITTED` line. The installed data version shown in the panel is the final word: if the update log cannot be written (a full disk, say), the update still completes and reports its real outcome. Every required step must stay checked: the update refuses a selection that leaves one out, because the new version number would otherwise claim work that was never done. If the connection to the database is lost at the very end, the report says whether the update was saved after all — as the database itself records it, not as the version number happens to read — or asks you to reload the panel when that cannot be read; it never claims a rollback it cannot confirm. Long updates are no longer cut short by the database statement limit or by the background-job time limit, and a step waiting for a busy table waits only briefly and retries, so ordinary work on that table is not held up behind it. An update step can no longer end the update's own database transaction half-way (a `COMMIT` inside a step is refused before it reaches the database); should that ever happen anyway, the report says the update was partially applied and was not recorded as done, instead of claiming nothing was kept.
+
+    Wire contract: `WC-2026-09-30-update-engine-atomic`.
+
 - **Error reports now include logged client errors**
 
     The "Report a problem" tool now attaches errors the client caught and logged (`console.error`), not only uncaught ones, so a report of real breakage no longer says "0 errors". Only a short message and stack are kept; repeats are counted, not duplicated.
@@ -396,6 +765,8 @@ Merged since the last release; these ship with the next one.
     When an ontology or code update server had no `DEDALO_HOST` set (or set it to `localhost`), it still answered other installations, but every download link in its answer pointed at `http://localhost`. The installation being updated rightly refused them, with an "origin mismatch" error that seemed to blame its own setup.
 
     The server now refuses those requests itself, and its message names the setting to fix: set `DEDALO_HOST` (and `DEDALO_PROTOCOL`) on the update server. Requests from the same machine are still served, so local development setups keep working.
+
+    Wire contract: `WC-2026-09-30-update-manifest-local-origin-refusal`.
 
 - **Time machine restore no longer fails on installs whose outbound host allowlist is empty.**
 
@@ -450,6 +821,57 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-29-rdf-per-uri-error-wire-body`.
 
+#### Changed
+
+- **The test suite now runs its diffusion gates against its own MariaDB server, never an installation's.**
+
+    Before, the gates that publish to MariaDB used whatever server the machine's
+    configuration named. On a developer machine they created and dropped tables in
+    a real publication database. On a machine without that server they skipped
+    silently and reported green.
+
+    Now `bun test` starts a MariaDB server of its own for each test lane, under
+    `../private/test_mariadb/<suite database>`. It listens on a private unix socket
+    and never on the network. The gates check a marker on that server before they
+    write, and they fail loudly rather than skip when it is missing. The gates
+    never write to an installation's databases. CI runs each of these gates on its
+    own and checks that the rows that gate is declared to write really changed on
+    the suite's server during its run. It also runs every other unit and parity test
+    that can reach the MariaDB connection code, directly or through other modules,
+    with the suite's server up. It fails if any of them connects to the server without
+    first passing the suite's check, or if any of them never really ran. These runs
+    come last in CI's database tier, after the parity tests, so they cannot change
+    the data the earlier stages measure. A check fails if they are ever moved
+    earlier. The tier stops the server when it exits. One gap remains until the engine
+    itself is fixed: while a lane's server is not running, a test that opens a
+    MariaDB connection without going through the suite's own check can still make a
+    login attempt against the machine's default MariaDB server. It cannot write
+    there, since the attempt uses the suite's own user.
+
+    Removing a lane's server is safe against a run that is still using it. The
+    lane's directory is either fully there, with its marker, or gone, both when it
+    is created and when it is removed. A test waiting to use a removed lane is told
+    so instead of carrying on. A removal that was killed halfway is finished by the
+    next one. A MariaDB command that hangs is killed after a deadline, so it cannot
+    block the lane for everyone else, and a test waiting for the lane waits long
+    enough to report the real problem instead of "lane busy". A server that does
+    not start in time is stopped, not left running. A server that answers with an
+    error is reported and never restarted. Stopping or sweeping a lane also stops
+    any stray MariaDB server or installer still running on that lane's data
+    directory, for example one left behind by a killed run, and waits until it has
+    really exited; if a process survives, the command fails and names it. The shard
+    runner (`bun run test:shard`, and its `bun run test:shard:sweep`) removes the
+    servers of its shard lanes too, and reports a lane it could not remove with the
+    real error, refusing to run or exiting with an error for it, instead of
+    claiming the lane was not the suite's.
+
+    What this means for you: running the full suite on a development machine now
+    needs the MariaDB server binaries (`mariadbd`, `mariadb-install-db` and
+    `mariadb`; on macOS, `brew install mariadb`). Without them the MariaDB gates
+    fail and name what is missing. Stop a lane's server with
+    `bun run scripts/ci/suite_mariadb.ts stop`. To remove it together with its data,
+    use `bun run scripts/ci/suite_mariadb.ts sweep`.
+
 #### Added
 
 - **Tool authors can read other sites through `harvestFetch`, a harvesting door that obeys robots.txt and paces its requests.**
@@ -494,7 +916,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 54 entries"
+??? note "Wire contract — 81 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -550,6 +972,33 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
     - `WC-2026-09-29-select-family-mode-datalist`
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
+    - `WC-2026-09-30-agent-tool-grant`
+    - `WC-2026-09-30-backup-freshness-deep-async`
+    - `WC-2026-09-30-backup-part-promotion`
+    - `WC-2026-09-30-db-typed-503`
+    - `WC-2026-09-30-diffusion-attach-scope`
+    - `WC-2026-09-30-diffusion-run-ledger`
+    - `WC-2026-09-30-diffusion-target-fence`
+    - `WC-2026-09-30-diffusion-zip-streamed`
+    - `WC-2026-09-30-guarded-text-pinned-typed-transport`
+    - `WC-2026-09-30-mcp-search-section-grant`
+    - `WC-2026-09-30-media-key-locked-transform`
+    - `WC-2026-09-30-media-pair-scope`
+    - `WC-2026-09-30-move-transform-execute-job`
+    - `WC-2026-09-30-ontology-identifier-grammar`
+    - `WC-2026-09-30-record-write-obligation-ledger`
+    - `WC-2026-09-30-search-root-step-acl`
+    - `WC-2026-09-30-transcription-record-tipo`
+    - `WC-2026-09-30-update-engine-atomic`
+    - `WC-2026-09-30-update-manifest-local-origin-refusal`
+    - `WC-2026-09-30-write-door`
+    - `WC-2026-10-01-ai-spend-budget`
+    - `WC-2026-10-01-change-plan-write-door`
+    - `WC-2026-10-01-delete-locator-write-door`
+    - `WC-2026-10-01-identify-vision-grant`
+    - `WC-2026-10-01-site-builder-confinement-codes`
+    - `WC-2026-10-01-tool-grant-one-decision`
+    - `WC-2026-10-01-write-door-delegations`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

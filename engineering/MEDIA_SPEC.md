@@ -460,14 +460,37 @@ any other tier gets `regenerateMissingDerivatives` (`media/repair.ts`, the v6
 `component_av` has no branch there, so a non-original av upload submits a
 transcode only when an ORIGINAL is on this box AND the default tier is absent.
 
-**`files_info` has ONE writer: `media/tools/files_info_persist.ts`.** Every
-write-back — the tool mutations, the AV job completion, the `sync_files` repair,
-the upload persist — goes through it, and each is a read-modify-write of the
-whole `media -> <tipo>` key held under a `FOR UPDATE` row lock
-(`readMatrixKeyForUpdate`, `db/matrix_write.ts`) inside one transaction. Callers
-must NOT hand in a snapshot: theirs is stale by the time the write lands, and the
-write replaces the key whole, so a stale snapshot silently reverts whatever
-another session committed on it. Two entry points, deliberately named apart:
+**`files_info` has ONE writer: `media/tools/files_info_persist.ts`
+`transformStoredMediaItems`** (CLOSURE_PLAN Step 2, TOOLS-5 + CORE-5,
+`WC-2026-09-30-media-key-locked-transform`). Every write-back — the tool
+mutations, the AV job completion, the `sync_files` repair, the upload persist,
+`tool_update_cache`'s media branch, the `files_info` reconcile sweep and the
+duplicate's refresh of its clone — goes through it: it reads the whole
+`media -> <tipo>` key under a `FOR UPDATE` row lock (`readMatrixKeyForUpdate`,
+`db/matrix_write.ts`) and writes what a SYNCHRONOUS transform returns FROM THOSE
+ITEMS, in one short transaction it owns (refused inside a caller's — its lock
+would be held to the caller's COMMIT). File work (derivative rebuilds) happens
+OUTSIDE the lock, before. Callers must NOT hand in a snapshot: theirs is stale by
+the time the write lands, and the write replaces the key whole, so a stale
+snapshot silently reverts whatever another session committed on it. Outcomes per
+record — `written`, `noop`, `held` (a shrink the transform refuses), `missing`
+(the record is gone), `locked` (SQLSTATE 55P03) — never an escape that aborts a
+run. Every caller declares its lock wait: `lockWait: 'per-record'` (update_cache,
+the sweep — many records on the request pool) sets `SET LOCAL lock_timeout` to
+the maintenance bound, or half the statement ceiling when that is shorter
+(`perRecordLockWaitMs`), so the wait ends as the handled 55P03, never as a
+statement timeout; `'request'` (uploads, write-backs, the duplicate) waits under
+the caller's own bounds. The sweep judges PER ITEM — GROW / DIFF / SHRINK on the
+item's own existing-file count, a SHRINK item kept as stored unless
+`allowShrink`, re-judged under the lock — plus the **`FOREIGN`** kind: an item
+whose entries carry the CLONE SIGNATURE (`<component>_<section>_<N>` with N ≠
+this record's id, what a failed duplicate could leave) is always rewritten; any
+other name the scan does not build (an `image_id` rename) is a held SHRINK. The
+duplicate inserts its clone with `files_info: []`, copies through the
+record-scoped walk and re-scans at the clone's identity; an incomplete copy is a
+verdict (`duplicate_media_incomplete`, `media.operation_failed`,
+`duplicateSectionRecordWithVerdict`), never a swallowed catch.
+Two entry points for the rescan transform, deliberately named apart:
 - `reconcileStoredFilesInfo` — refreshes existing items, NEVER mints. The
   passive-scan rule: a background or incidental scan must not resurrect media
   someone removed.

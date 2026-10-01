@@ -6,6 +6,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {update_process_status} from '../../../../common/js/common.js'
+	import {init_move_transform_form} from '../../../js/move_transform.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
@@ -261,40 +262,16 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init
-		// self.caller is the area_maintenance instance; init_form delegates to
-		// render_area_maintenance::build_form which injects a <form> element with
-		// a submit button into body_info (content_data).
-		// on_submit overrides the default API trigger so we can validate the
-		// selection and funnel the response into update_process_status.
-		// Optional chaining guards against an undefined caller, matching the
-		// sibling render_move_locator.js.
-		self.caller?.init_form({
+		// PREVIEW (dry run) first, then EXECUTE exactly the previewed selection —
+		// the one run flow of the five move_* widgets (move_transform.js). Both runs
+		// are server jobs answering {pid, pfile}; their streams render in body_response.
+		init_move_transform_form(self, {
+			model			: 'move_to_portal',
 			submit_label	: 'Move data to new section and portal it',
-			// confirm_text	: confirm_text,
-			body_info		: content_data,
+			files_selected	: files_selected,
+			content_data	: content_data,
 			body_response	: body_response,
-			on_submit	: (e, values) => {
-
-				if (!files_selected.length) {
-					alert("Error: no files are selected");
-					return
-				}
-
-				// move_to_portal
-				// Fire the background API call (defined in move_to_portal.js).
-				// The server returns { pid, pfile } of the spawned background
-				// process; pass those to update_process_status to begin SSE
-				// polling and render live progress in body_response.
-				self.exec_move_to_portal(files_selected)
-				.then(function(response){
-					update_process_status(
-						local_db_id,
-						response.pid,
-						response.pfile,
-						body_response
-					)
-				})
-			}
+			local_db_id		: local_db_id
 		})
 
 		// check process status always

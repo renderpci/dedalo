@@ -2965,7 +2965,9 @@ export const set_environment = function (api_response_environment) {
 * @param {string} pfile - Path to the process status file on the server
 * @param {HTMLElement} container - DOM element to render status updates into
 * @param {number} [update_rate=1000] - Polling interval in milliseconds
-* @param {Function} [callback] - Called once when the stream finishes (no arguments)
+* @param {Function} [callback] - Called once when the stream finishes, with the LAST
+*   frame read (null when none arrived) — a caller that acts on the outcome (the
+*   move_* preview → execute gate) reads it instead of re-polling.
 * @returns {void}
 */
 export const update_process_status = function (id, pid, pfile, container, update_rate=1000, callback) {
@@ -3017,8 +3019,12 @@ export const update_process_status = function (id, pid, pfile, container, update
 			display_json	: true
 		})
 
+		// last frame read, handed to the optional callback on done
+		let last_response = null
+
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
+			last_response = sse_response
 			// fire update_info_node on every reader read chunk
 			render_stream_response.update_info_node(sse_response)
 		}
@@ -3031,7 +3037,7 @@ export const update_process_status = function (id, pid, pfile, container, update
 
 			// optional callback on done
 			if (callback && typeof callback === 'function') {
-				callback()
+				callback(last_response)
 			}
 		}
 

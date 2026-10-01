@@ -56,6 +56,8 @@ const SECTION = 'test3';
 const TEXT = 'test52'; // test3's own component_input_text
 const TABLE = 'matrix_test';
 const USER = 987673;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 /** Scratch ids owned by THIS gate (reserved ≥ 900000 band). */
 const IMPORT_ID = 941721;
 const CREATED_MARKER_ID = 941722;
@@ -272,7 +274,7 @@ describe('the shared import executor attributes every TM row it writes', () => {
 		const report = await importMappedRecords(
 			[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['attributed'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 			{ bulkLabel: 'bulk_process_id_tripwire update run' },
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -291,7 +293,7 @@ describe('the shared import executor attributes every TM row it writes', () => {
 		const report = await importMappedRecords(
 			[{ sectionId: null, fields: [{ component_tipo: TEXT, values: ['created row'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 			{ bulkLabel: 'bulk_process_id_tripwire create run' },
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -334,7 +336,7 @@ describe('the shared import executor attributes every TM row it writes', () => {
 				{ sectionId: CREATED_MARKER_ID, fields: [{ component_tipo: TEXT, values: ['survivor'] }] },
 			],
 			SECTION,
-			USER,
+			IMPORTER,
 		);
 		rememberBulkProcess(report.bulkProcessId);
 		expect(report.failed.map((entry) => entry.msg).join('\n')).toContain('IGNORED');
@@ -366,7 +368,7 @@ describe('a run whose dd800 mint FAILS writes nothing', () => {
 		const attempt = importMappedRecords(
 			[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['must not land'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 		);
 		await expect(attempt).rejects.toThrow('dd800 mint unavailable (gate)');
 		mock.module('../../src/core/section/record/create_record.ts', () => REAL_CREATE_RECORD);
@@ -447,7 +449,7 @@ describe('a mid-record failure leaves NO half-written record', () => {
 						},
 					],
 					SECTION,
-					USER,
+					IMPORTER,
 				),
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -484,7 +486,7 @@ describe('a run with NOTHING to write files no bulk process', () => {
 			return rows[0]?.n ?? 0;
 		};
 		const before = await countRows();
-		const report = await importMappedRecords([], SECTION, USER, { bulkLabel: 'empty run' });
+		const report = await importMappedRecords([], SECTION, IMPORTER, { bulkLabel: 'empty run' });
 		rememberBulkProcess(report.bulkProcessId);
 		expect(report.bulkProcessId).toBeNull();
 		expect(report).toMatchObject({ created: 0, updated: 0, failed: [], createdIds: [] });
@@ -521,7 +523,7 @@ describe('a dd800 whose label save FAILS leaves no orphan', () => {
 		const attempt = importMappedRecords(
 			[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['must not land'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 		);
 		await expect(attempt).rejects.toThrow('dd800 label save unavailable (gate)');
 		mock.module('../../src/core/section/record/save_component.ts', () => REAL_SAVE_COMPONENT);

@@ -234,3 +234,7 @@ The same change fixes `deletePortalLocator` to `getSectionPermissions(...) >= 2`
 `isGlobalAdmin` flag. That is a RESTORATION of PHP behaviour, not a divergence,
 and needs no entry of its own — it is noted here only because it lands in the
 same file and the same gate.
+
+**Superseded 2026-10-01** by WC-2026-10-01-delete-locator-write-door: the section-only gate
+is replaced by the write door (section floor 2 + the pair + the record scope) — a deliberate
+divergence from PHP.

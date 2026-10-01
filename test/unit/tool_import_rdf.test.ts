@@ -3,8 +3,7 @@
  * rdf_xml.test.ts / rdf_map.test.ts; this file gates the TOOL — its action
  * surface, the argument validation, and what it reports when the shared SSRF
  * guard (`fetchGuardedText`) refuses a URI (SEC-072). The guard itself is gated in
- * ssrf_guard.test.ts; the private literal-host blocklist this tool once carried
- * (`isSafeRemoteUrl`, a second parser with no production caller) is deleted.
+ * ssrf_guard.test.ts and ssrf_one_guard_tripwire.test.ts.
  *
  * Network-free by construction: a refused URI never reaches fetch(), so every
  * assertion here runs credless and offline.
@@ -14,7 +13,9 @@
 
 import { describe, expect, test } from 'bun:test';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
+import type { AddressLookup } from '../../src/core/security/ssrf_guard.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import { loadRdf, type RdfOutcome } from '../../tools/tool_import_rdf/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -114,5 +115,66 @@ describe('tool_import_rdf module', () => {
 		expect(data.errors[0]?.error.code).toBe('security.ssrf_blocked');
 		const wire = JSON.stringify(publicPart(data.errors[0]?.error));
 		for (const address of ['127.0.0.1', '::1']) expect(wire).not.toContain(address);
+	});
+});
+
+/**
+ * THE DOOR'S OWN WIRE on a transport failure (WC-2026-09-30-guarded-text-pinned-typed-transport):
+ * the per-URI `error` is the registry body of `security.outbound_failed` — category
+ * `unavailable`, retryable, the registry's fixed sentence — never `internal.unexpected`
+ * and never a host, an address or Bun's own text. Built through the guard's seam (a
+ * public answer for the name, a socket that fails), so it runs offline; the primitive's
+ * typing is gated in guarded_text_pin_native, this is the door publishing it.
+ */
+describe('tool_import_rdf: a transport failure is published as the typed registry body', () => {
+	const PUBLIC: AddressLookup = async () => [{ address: '93.184.216.34', family: 4 }];
+
+	function failureOf(outcome: RdfOutcome): {
+		code: string;
+		category: string;
+		retryable: boolean;
+		message: string;
+	} {
+		expect(outcome.kind).toBe('failed');
+		if (outcome.kind !== 'failed') throw new Error('loaded');
+		return outcome.failure.error as unknown as ReturnType<typeof failureOf>;
+	}
+
+	test('a refused connection: security.outbound_failed, unavailable, retryable, no host or runtime text', async () => {
+		const outcome = await loadRdf('https://vocab.example.test/term/1', [], {
+			lookup: PUBLIC,
+			fetch: async () => {
+				throw Object.assign(
+					new TypeError('Unable to connect. Is the computer able to access the url?'),
+					{
+						code: 'ConnectionRefused',
+					},
+				);
+			},
+		});
+		const body = failureOf(outcome);
+		expect(outcome.kind === 'failed' && outcome.failure.uri).toBe(
+			'https://vocab.example.test/term/1.rdf',
+		);
+		expect(body.code).toBe('security.outbound_failed');
+		expect(body.category).toBe('unavailable');
+		expect(body.retryable).toBe(true);
+		expect(body.message).toBe('The outbound request could not be completed');
+		const wire = JSON.stringify(publicPart(body));
+		for (const leak of ['vocab.example.test', '93.184.216.34', 'Unable to connect', 'hop connect'])
+			expect(wire, leak).not.toContain(leak);
+	});
+
+	test('a redirect is the same typed body — refused, never followed', async () => {
+		let calls = 0;
+		const outcome = await loadRdf('https://vocab.example.test/term/2', [], {
+			lookup: PUBLIC,
+			fetch: async () => {
+				calls += 1;
+				return new Response(null, { status: 303, headers: { location: 'http://127.0.0.1/' } });
+			},
+		});
+		expect(failureOf(outcome).code).toBe('security.outbound_failed');
+		expect(calls).toBe(1);
 	});
 });

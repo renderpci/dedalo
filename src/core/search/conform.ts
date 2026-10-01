@@ -24,6 +24,7 @@ import { readString } from '../../config/readers.ts';
 import { getSearchBuilderFamily } from '../components/registry.ts';
 import type { SqoFilterLeaf, SqoFilterNode } from '../concepts/sqo.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { createOntologyCache } from '../ontology/cache_factory.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
@@ -32,9 +33,11 @@ import {
 } from '../ontology/resolver.ts';
 import {
 	frontierComponentAllowed,
+	frontierSectionIsGloballyVisible,
 	noteFrontierRefusal,
 	type SqlFrontierScope,
 } from '../security/frontier_scope.ts';
+import { metadataComponentTipos, searchSurfaceGrants } from '../security/permissions.ts';
 import { buildDateFragment } from './builders/builder_date.ts';
 import { buildIriFragment } from './builders/builder_iri.ts';
 import { buildJsonFragment } from './builders/builder_json.ts';
@@ -42,8 +45,14 @@ import { buildNumberFragment } from './builders/builder_number.ts';
 import { buildSectionIdFragment } from './builders/builder_section_id.ts';
 import { buildStringFragment } from './builders/builder_string.ts';
 import type { BuilderContext, BuilderResult } from './builders/types.ts';
-import { fragment as fragmentResult } from './builders/types.ts';
-import { assertValidLang, assertValidTipo, assertValidTipoOrColumn } from './identifier_gate.ts';
+import { compound, fragment as fragmentResult } from './builders/types.ts';
+import {
+	assertValidLang,
+	assertValidTipo,
+	assertValidTipoOrColumn,
+	resolveSqlDataTipo,
+	type SqlTipo,
+} from './identifier_gate.ts';
 import { requireRelationIndex, searchStoreCovers } from './search_store.ts';
 
 /** Default data language of the installation (PHP DEDALO_DATA_LANG). */
@@ -233,9 +242,9 @@ export async function buildJoinChain(
 		// multi-hop fixed_filter paths) — and what it used to do instead was
 		// unnest a key no relation column has and match nothing, silently.
 		assertValidTipo(hopComponent, 'join path');
-		// component_alias (WC-020): stored locators live under the TARGET's key.
-		const { resolveDataTipo } = await import('../ontology/alias.ts');
-		const hopDataTipo = await resolveDataTipo(hopComponent);
+		// component_alias (WC-020): stored locators live under the TARGET's key —
+		// a value the ontology swaps in, so it passes the gate again (SURF-1).
+		const hopDataTipo: SqlTipo = await resolveSqlDataTipo(hopComponent, 'join path');
 		const stepTable = await getMatrixTableFromTipo(stepSection);
 		if (stepTable === null) {
 			throw new DedaloError('search.invalid_sqo', {
@@ -442,8 +451,492 @@ function parseLegacyFunctionLeaf(leaf: {
 	return columns.map(([column, cast], index) => [column, cast, keyParts[index] as string]);
 }
 
-/** Conform one leaf: gates → ontology → builder. */
+/**
+ * THE ROOT STEP'S VERDICT (closure Step 3, SEC-1; WC-2026-09-30-search-root-step-acl).
+ *
+ * `buildJoinChain` keys every HOP (index >= 1), never `path[0]` — the MAIN
+ * section's own component. So a non-admin holding 0 on `test3.test162` still
+ * filtered, and sorted, her OWN records by test162's hidden values: contains,
+ * `==`, begins-with and `$not` are the SEC-02 prefix oracle again, one hop
+ * shorter. The root step is now keyed by the SAME component key as a hop
+ * (`frontierComponentAllowed` — identity path tipos and globally visible tables
+ * exempt), OR the search surface's standing grants (`searchSurfaceGrants`: the
+ * section-info metadata components, the thesaurus template), OR the subdatum
+ * read floor.
+ *
+ * BOUND TO THE ROW'S OWN SECTION, NEVER TO A DECLARATION: the verdict is asked
+ * of each MAIN section — the SQO's own `section_tipo` list, which the assembler
+ * passes as `scope.mainSectionTipos` and which the main WHERE binds every row
+ * to. The client-declared `path[0].section_tipo` is NEVER an authorization
+ * input: declaring the globally visible projects section (or a granted sibling
+ * virtual) over test3 rows used to key the hidden component on the wrong
+ * section and hand the predicate back. All granted → the predicate is
+ * unchanged; none → the leaf is `1=0` (the refusal law: identical hit and miss,
+ * constant under AND / OR / NOT); some → the predicate holds ONLY on rows of a
+ * granted section. Because the key is a property of the row, never of the
+ * probe, its answer cannot be flipped by negation.
+ *
+ * The mains are a REQUIRED member of the search scope (frontier_scope.ts): a
+ * scope that cannot name the sections its rows are bound to does not compile.
+ */
+type RootVerdict = { kind: 'all' } | { kind: 'none' } | { kind: 'some'; sections: string[] };
+
+type PathStep = { section_tipo?: string; component_tipo?: string };
+
+const ROOT_ALL: RootVerdict = { kind: 'all' };
+
+/**
+ * The row-bound sections the SEC-1 keys are asked of — undefined = no key
+ * (internal search: no principal). A principal-bearing scope WITHOUT its mains
+ * is an engine invariant breach, refused LOUDLY: the type makes the member
+ * required, and this refuses the scope a cast or a JS caller builds without
+ * it — conforming it unkeyed would silently re-open the root-step oracle.
+ */
+function keyedMains(scope: SqlFrontierScope | undefined): readonly string[] | undefined {
+	if (scope?.principal === undefined) return undefined;
+	const mains = (scope as { mainSectionTipos?: unknown }).mainSectionTipos;
+	if (!Array.isArray(mains)) {
+		throw new DedaloError('internal.invariant', {
+			message: `${scope.door}: a principal-bearing search scope names no main sections — the SEC-1 root key cannot be asked of its rows`,
+			coordinates: { door: scope.door, surface: scope.surface },
+		});
+	}
+	return mains as readonly string[];
+}
+
+async function rootStepKey(
+	scope: SqlFrontierScope,
+	mains: readonly string[],
+	path: readonly PathStep[],
+	table: string,
+): Promise<RootVerdict> {
+	const root: PathStep = path[0] ?? {};
+	const componentTipo = root.component_tipo;
+	if (componentTipo === undefined) return ROOT_ALL; // no component read at the root
+	const granted = await grantedSections(scope, mains, componentTipo, table);
+	return rootVerdict(scope, root.section_tipo, componentTipo, mains, granted);
+}
+
+/**
+ * THE ONE COMPONENT READING of the SEC-1 keys, per (section, component): the
+ * subdatum read floor, the search surface's standing grants, or the frontier's
+ * component key (identity tipos + globally visible tables exempt).
+ */
+async function componentReadable(
+	scope: SqlFrontierScope,
+	sectionTipo: string,
+	componentTipo: string,
+	table: string,
+): Promise<boolean> {
+	if (scope.readFloor?.has(`${sectionTipo}_${componentTipo}`) === true) return true;
+	if (searchSurfaceGrants(sectionTipo, componentTipo)) return true;
+	return frontierComponentAllowed(scope, { sectionTipo, componentTipo, table });
+}
+
+/** The sections among `sections` on which the component is readable. */
+async function grantedSections(
+	scope: SqlFrontierScope,
+	sections: readonly string[],
+	componentTipo: string,
+	table: string,
+): Promise<string[]> {
+	const granted: string[] = [];
+	for (const sectionTipo of sections) {
+		if (await componentReadable(scope, sectionTipo, componentTipo, table))
+			granted.push(sectionTipo);
+	}
+	return granted;
+}
+
+/** All / none / some — and LOUD when not all (the operator log line + the ONE notice). */
+function rootVerdict(
+	scope: SqlFrontierScope,
+	declared: string | undefined,
+	componentTipo: string,
+	mains: readonly string[],
+	granted: string[],
+): RootVerdict {
+	if (mains.length > 0 && granted.length === mains.length) return ROOT_ALL;
+	noteFrontierRefusal(scope, {
+		surface: scope.surface,
+		door: scope.door,
+		sectionTipo: declared ?? '',
+		componentTipo,
+		key: 'component',
+	});
+	return granted.length === 0 ? { kind: 'none' } : { kind: 'some', sections: granted };
+}
+
+/**
+ * The ROOT key for an ORDER path (SEC-1): true only when EVERY main section
+ * grants the root component (or the read floor covers it). An order entry
+ * cannot be applied to "some" rows — the relative order of the granted rows
+ * against the refused ones would itself compare hidden values — so anything
+ * short of all is a refusal: the assembler drops the entry (the rows and the
+ * count are unchanged; the ORDER BY falls back to the section_id default).
+ * Loud through `noteFrontierRefusal`, like every refusal of this scope.
+ */
+export async function rootOrderStepAllowed(
+	scope: SqlFrontierScope,
+	path: readonly { section_tipo?: string; component_tipo?: string }[],
+	table: string,
+): Promise<boolean> {
+	const mains = keyedMains(scope);
+	if (mains === undefined) return true;
+	return (await rootStepKey(scope, mains, path, table)).kind === 'all';
+}
+
+/** A SQL fragment restricting the ROW to the granted sections (validated tipos, bound). */
+function rowSectionIn(alias: string, sections: readonly string[]): BuilderResult {
+	const tokens: Record<string, unknown> = {};
+	const names = sections.map((sectionTipo, index) => {
+		const name = `_Qroot${index + 1}_`;
+		tokens[name] = assertValidTipo(sectionTipo, 'filter root section');
+		return name;
+	});
+	return fragmentResult(`${alias}.section_tipo IN (${names.join(', ')})`, tokens);
+}
+
+/**
+ * Every RELATION-column component a row of the section may carry a locator
+ * under (virtual sections through their real section, plus the section-info
+ * metadata relations — created/modified by — which live outside every
+ * section's subtree), cached per section: what "any component" means for a
+ * relation leaf with no `from_component_tipo`.
+ */
+const relationComponentsCache = createOntologyCache<string, readonly string[]>();
+
+async function relationComponentsOf(sectionTipo: string): Promise<readonly string[]> {
+	const cached = relationComponentsCache.get(sectionTipo);
+	if (cached !== undefined) return cached;
+	const { getSectionRealTipo } = await import('../ontology/resolver.ts');
+	const realTipo = await getSectionRealTipo(sectionTipo);
+	const roots = realTipo === sectionTipo ? [sectionTipo] : [realTipo, sectionTipo];
+	const tipos = new Set<string>();
+	for (const root of roots) {
+		for (const tipo of await relationComponentTiposUnder(root)) tipos.add(tipo);
+	}
+	for (const tipo of await metadataRelationTipos()) tipos.add(tipo);
+	const list = Object.freeze([...tipos]);
+	relationComponentsCache.set(sectionTipo, list);
+	return list;
+}
+
+/** The relation-column component tipos of one section subtree (its own nodes). */
+async function relationComponentTiposUnder(root: string): Promise<string[]> {
+	const { getOrderedSubtree } = await import('../ontology/resolver.ts');
+	return (await getOrderedSubtree(root))
+		.filter((node) => isRelationComponentModel(node.model))
+		.map((node) => node.tipo);
+}
+
+/** The metadata components stored in the relation column (created / modified by). */
+async function metadataRelationTipos(): Promise<string[]> {
+	const relationTipos: string[] = [];
+	for (const tipo of metadataComponentTipos()) {
+		if (isRelationComponentModel(await getModelByTipo(tipo))) relationTipos.push(tipo);
+	}
+	return relationTipos;
+}
+
+function isRelationComponentModel(model: unknown): boolean {
+	return (
+		typeof model === 'string' &&
+		model.startsWith('component_') &&
+		getColumnNameByModel(model) === 'relation'
+	);
+}
+
+/** The per-locator emission state of one relation leaf (bound tokens + a counter). */
+interface RelationLeafSink {
+	readonly tokenValues: Record<string, unknown>;
+	readonly nextToken: () => string;
+}
+
+/**
+ * THE RELATION LEAF'S from_component_tipo, keyed (SEC-1). A relation leaf reads
+ * `matrix_relation_index`, whose `from_component_tipo` column IS a component of
+ * the OWNING ROW — so the key is asked of the section that row is bound to,
+ * never of the client's `path[…].section_tipo` declaration:
+ *
+ *  - SINGLE-STEP path: the leaf alias IS the main row, bound to the SQO's own
+ *    sections (`keyedSections` = the mains). Several mains that disagree are
+ *    told apart ON THE ROW: `(r.section_tipo = <S> AND <S's condition>)` per
+ *    section, OR-ed.
+ *  - MULTI-HOP path: the leaf alias is the last join's row, and the key is asked
+ *    of the last step's section — the SAME declaration the hop's own component
+ *    key and record predicate read (buildJoinChain). That the hop join binds
+ *    the step's TABLE and not its section is the hop class's property (PHP
+ *    build_sql_join parity: the target_section_tipo binding is commented out
+ *    there), ledgered in the WC entry as the open half — a relation leaf alone
+ *    cannot close it while a string leaf on the same alias stays open.
+ *
+ * Per section: an EXPLICIT hidden from_component_tipo refuses; an ABSENT one
+ * keeps its meaning ("any component") minus the hidden ones —
+ * `r.from_component_tipo IN (granted)` when, and only when, some relation
+ * component is hidden. Returns the extra SQL condition per locator
+ * ('' = unrestricted, null = refused).
+ */
+async function relationLeafComponentKey(
+	scope: SqlFrontierScope,
+	keyedSections: readonly string[],
+	table: string,
+	locator: RelationLeafLocator,
+	sink: RelationLeafSink,
+): Promise<string | null> {
+	const perSection: [string, string | null][] = [];
+	for (const sectionTipo of keyedSections) {
+		perSection.push([
+			sectionTipo,
+			await sectionFromComponentCondition(scope, sectionTipo, table, locator, sink),
+		]);
+	}
+	return combineSectionConditions(perSection, sink);
+}
+
+/** One section's condition on the locator's from_component_tipo ('' / null / an IN list). */
+async function sectionFromComponentCondition(
+	scope: SqlFrontierScope,
+	sectionTipo: string,
+	table: string,
+	locator: RelationLeafLocator,
+	sink: RelationLeafSink,
+): Promise<string | null> {
+	const explicit = locator.find(([column]) => column === 'from_component_tipo');
+	if (explicit !== undefined) return explicitFromKey(scope, sectionTipo, table, explicit[2]);
+	if (frontierSectionIsGloballyVisible(sectionTipo, table)) return '';
+	const all = await relationComponentsOf(sectionTipo);
+	const granted = await grantedComponents(scope, sectionTipo, all, table);
+	if (granted.length === all.length) return ''; // nothing hidden: "any" is unchanged
+	noteFrontierRefusal(scope, {
+		surface: scope.surface,
+		door: scope.door,
+		sectionTipo,
+		key: 'component',
+	});
+	return granted.length === 0 ? null : componentInList(granted, sink);
+}
+
+/**
+ * The per-section conditions → ONE locator condition. A single keyed section
+ * needs no row binding (the row is already bound to it); several are told apart
+ * on `r.section_tipo` — the owning row's own section — unless all agree on
+ * "unrestricted".
+ */
+function combineSectionConditions(
+	perSection: readonly [string, string | null][],
+	sink: RelationLeafSink,
+): string | null {
+	const served = perSection.filter(([, condition]) => condition !== null) as [string, string][];
+	if (served.length === 0) return null;
+	if (perSection.length === 1) return (served[0] as [string, string])[1];
+	if (served.length === perSection.length && served.every(([, condition]) => condition === '')) {
+		return '';
+	}
+	const branches = served.map(([sectionTipo, condition]) => {
+		const name = sink.nextToken();
+		sink.tokenValues[name] = sectionTipo;
+		const bound = `r.section_tipo = ${name}::text`;
+		return condition === '' ? `(${bound})` : `(${bound} AND ${condition})`;
+	});
+	return `(${branches.join(' OR ')})`;
+}
+
+/** An EXPLICIT from_component_tipo: '' when readable, null (loudly) when hidden. */
+async function explicitFromKey(
+	scope: SqlFrontierScope,
+	sectionTipo: string,
+	table: string,
+	componentTipo: string,
+): Promise<string | null> {
+	if (await componentReadable(scope, sectionTipo, componentTipo, table)) return '';
+	noteFrontierRefusal(scope, {
+		surface: scope.surface,
+		door: scope.door,
+		sectionTipo,
+		componentTipo,
+		key: 'component',
+	});
+	return null;
+}
+
+/** The components among `components` readable on the section. */
+async function grantedComponents(
+	scope: SqlFrontierScope,
+	sectionTipo: string,
+	components: readonly string[],
+	table: string,
+): Promise<string[]> {
+	const granted: string[] = [];
+	for (const componentTipo of components) {
+		if (await componentReadable(scope, sectionTipo, componentTipo, table)) {
+			granted.push(componentTipo);
+		}
+	}
+	return granted;
+}
+
+/** `r.from_component_tipo IN (…)` over bound tokens. */
+function componentInList(components: readonly string[], sink: RelationLeafSink): string {
+	const names = components.map((componentTipo) => {
+		const name = sink.nextToken();
+		sink.tokenValues[name] = componentTipo;
+		return `${name}::text`;
+	});
+	return `r.from_component_tipo IN (${names.join(', ')})`;
+}
+
+/**
+ * The sections a relation leaf's from_component_tipo key is asked of (see
+ * {@link relationLeafComponentKey}): the mains for a single-step path, the last
+ * step's section for a multi-hop one; undefined = no key (internal search).
+ */
+function relationKeySections(
+	scope: SqlFrontierScope | undefined,
+	path: readonly PathStep[],
+): readonly string[] | undefined {
+	const mains = keyedMains(scope);
+	if (mains === undefined) return undefined;
+	if (path.length === 1) return mains;
+	return [path[path.length - 1]?.section_tipo ?? ''];
+}
+
+/**
+ * The relation leaf's per-locator conditions over `matrix_relation_index`, each
+ * a bound tuple of the locator's fields — plus, when the key applies, the SEC-1
+ * component key of its `from_component_tipo` (a refused locator is `(1=0)`: it
+ * contributes nothing to the OR).
+ */
+async function relationLeafConditions(
+	locators: readonly RelationLeafLocator[],
+	tokenValues: Record<string, unknown>,
+	scope: SqlFrontierScope | undefined,
+	keyedSections: readonly string[] | undefined,
+	table: string,
+): Promise<string[]> {
+	let tokenIndex = 0;
+	const sink: RelationLeafSink = {
+		tokenValues,
+		nextToken: () => {
+			tokenIndex += 1;
+			return `_Qf${tokenIndex}_`;
+		},
+	};
+	const conditions: string[] = [];
+	for (const locator of locators) {
+		const componentKey =
+			scope === undefined || keyedSections === undefined
+				? ''
+				: await relationLeafComponentKey(scope, keyedSections, table, locator, sink);
+		conditions.push(locatorCondition(locator, componentKey, sink));
+	}
+	return conditions;
+}
+
+/** One locator's bound tuple (+ its component key), or `(1=0)` when refused. */
+function locatorCondition(
+	locator: RelationLeafLocator,
+	componentKey: string | null,
+	sink: RelationLeafSink,
+): string {
+	if (componentKey === null) return '(1=0)';
+	const parts: string[] = [];
+	for (const [column, cast, value] of locator) {
+		const name = sink.nextToken();
+		parts.push(`r.${column} = ${name}::${cast}`);
+		sink.tokenValues[name] = value;
+	}
+	if (componentKey !== '') parts.push(componentKey);
+	return `(${parts.join(' AND ')})`;
+}
+
+/**
+ * Conform one leaf: gates → the ROOT key → ontology → builder. The root key
+ * (SEC-1, {@link rootStepKey}) runs right after the §7.6 identifier gate,
+ * whenever a principal is in scope, and before any ontology read of the leaf.
+ */
 async function conformLeaf(
+	leaf: SqoFilterLeaf,
+	alias: string,
+	table: string,
+	scope?: SqlFrontierScope,
+): Promise<ConformedFilter> {
+	const path = leaf.path ?? [];
+	if (path.length === 0) return { kind: 'leaf', fragment: false };
+	assertPathIdentifiers(path); // §7.6 first — every identifier the key and the builder see
+	const keyed = keyedScope(scope);
+	if (keyed === null) return conformLeafBody(leaf, alias, table, scope);
+	return conformKeyedLeaf(leaf, path, alias, table, keyed);
+}
+
+/** The scope with its row-bound mains, or null when no SEC-1 key applies. */
+function keyedScope(
+	scope: SqlFrontierScope | undefined,
+): { scope: SqlFrontierScope; mains: readonly string[] } | null {
+	const mains = keyedMains(scope);
+	return scope === undefined || mains === undefined ? null : { scope, mains };
+}
+
+/** A leaf under the ROOT key: refused (`1=0`), row-keyed (some), or unchanged (all). */
+async function conformKeyedLeaf(
+	leaf: SqoFilterLeaf,
+	path: readonly PathStep[],
+	alias: string,
+	table: string,
+	{ scope, mains }: { scope: SqlFrontierScope; mains: readonly string[] },
+): Promise<ConformedFilter> {
+	const verdict = await rootStepKey(scope, mains, path, table);
+	if (verdict.kind === 'none') return refusedRootLeaf(path, alias, scope);
+	const conformed = await conformLeafBody(leaf, alias, table, scope);
+	return verdict.kind === 'some' ? rowKeyedLeaf(conformed, alias, verdict.sections) : conformed;
+}
+
+/** The §7.6 chokepoint over one leaf path: every identifier that will be interpolated. */
+function assertPathIdentifiers(path: readonly PathStep[]): void {
+	for (const step of path) {
+		if (step.section_tipo !== undefined) assertValidTipo(step.section_tipo, 'filter path');
+		if (step.component_tipo !== undefined) {
+			assertValidTipoOrColumn(step.component_tipo, 'filter path');
+		}
+	}
+}
+
+/**
+ * A leaf whose ROOT component no main section grants: `1=0`. The join chain is
+ * still emitted for a multi-hop path (aliases dedup with other clauses'
+ * identical paths; an ORDER on the same path must still resolve) — it simply
+ * carries no predicate that can tell one hidden value from another.
+ */
+async function refusedRootLeaf(
+	path: readonly PathStep[],
+	alias: string,
+	scope: SqlFrontierScope,
+): Promise<ConformedFilter> {
+	if (path.length < 2) return { kind: 'leaf', fragment: fragmentResult('1=0') };
+	const { joins } = await buildJoinChain(path as PathStep[], alias, scope);
+	return { kind: 'leaf', fragment: fragmentResult('1=0'), joins };
+}
+
+/**
+ * SOME mains granted: the predicate holds only on rows of a granted section.
+ * The reversed deep-path plan is dropped — it re-aliases the main row, and the
+ * row-section key belongs to the forward shape.
+ */
+function rowKeyedLeaf(
+	conformed: ConformedFilter,
+	alias: string,
+	sections: readonly string[],
+): ConformedFilter {
+	if (conformed.kind !== 'leaf' || conformed.fragment === false) return conformed;
+	const keyed = compound('$and', [rowSectionIn(alias, sections), conformed.fragment]);
+	const joins = conformed.joins ?? [];
+	return joins.length > 0
+		? { kind: 'leaf', fragment: keyed, joins }
+		: { kind: 'leaf', fragment: keyed };
+}
+
+/** The leaf body: multi-hop chain → relation / function leaves → model builders. */
+async function conformLeafBody(
 	leaf: SqoFilterLeaf,
 	alias: string,
 	table: string,
@@ -453,13 +946,6 @@ async function conformLeaf(
 	const lastStep = path[path.length - 1];
 	if (lastStep === undefined) {
 		return { kind: 'leaf', fragment: false };
-	}
-
-	// §7.6 chokepoint — every identifier that will be interpolated.
-	for (const step of path) {
-		if (step.section_tipo !== undefined) assertValidTipo(step.section_tipo, 'filter path');
-		if (step.component_tipo !== undefined)
-			assertValidTipoOrColumn(step.component_tipo, 'filter path');
 	}
 	if (leaf.lang !== undefined) assertValidLang(leaf.lang, 'filter leaf');
 
@@ -557,19 +1043,14 @@ async function conformLeaf(
 			locators = [legacy];
 		}
 		await requireRelationIndex([leafTable]);
-		const conditions: string[] = [];
 		const tokenValues: Record<string, unknown> = {};
-		let tokenIndex = 0;
-		for (const locator of locators) {
-			const parts: string[] = [];
-			for (const [column, cast, value] of locator) {
-				tokenIndex += 1;
-				const name = `_Qf${tokenIndex}_`;
-				parts.push(`r.${column} = ${name}::${cast}`);
-				tokenValues[name] = value;
-			}
-			conditions.push(`(${parts.join(' AND ')})`);
-		}
+		const conditions = await relationLeafConditions(
+			locators,
+			tokenValues,
+			scope,
+			relationKeySections(scope, path),
+			leafTable,
+		);
 		const result = fragmentResult(
 			`(${leafAlias}.section_tipo, ${leafAlias}.section_id) IN ` +
 				`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.join(' OR ')})`,
@@ -613,8 +1094,6 @@ async function conformLeaf(
 	// data is all lg-nolan, where the nolan scope is observably identical.
 	const lang = leaf.lang ?? (translatable ? 'all' : 'lg-nolan');
 
-	// component_alias (WC-020): the SQL fragment keys the TARGET's data slot.
-	const { resolveDataTipo } = await import('../ontology/alias.ts');
 	// date_mode (PHP get_date_search_context: `$properties->date_mode ?? 'date'`)
 	// selects the per-mode date SQL handler. Read ONLY for date leaves — every
 	// other family ignores it, and the effective-properties read is one more
@@ -632,7 +1111,9 @@ async function conformLeaf(
 	const context: BuilderContext = {
 		alias: leafAlias,
 		column,
-		tipo: await resolveDataTipo(componentTipo),
+		// component_alias (WC-020): the SQL fragment keys the TARGET's data slot —
+		// re-gated as an identifier of its own (SURF-1; `section_id` stays admitted).
+		tipo: await resolveSqlDataTipo(componentTipo, 'filter'),
 		sectionTipo: lastStep.section_tipo ?? '',
 		table: leafTable,
 		lang,
@@ -670,8 +1151,9 @@ async function conformLeaf(
 		// there. This is the last place holding the tipo — PHP resolves the same
 		// question the same way, via ontology_node::get_legacy_model_by_tipo.
 		//
-		// The test must match the WRITER exactly (save_component.ts reads the
-		// node's OWN stored model before calling maintainRelationSearchIndex):
+		// The test must match the WRITER exactly (relations/save.ts
+		// relationSearchLaw reads the node's OWN stored model for the save law the
+		// write chokepoint applies, section_record/record_write.ts):
 		// wrapping a leaf whose index is never maintained would widen nothing and
 		// would cost a second GIN probe per row. TM tables carry no such index
 		// (their relation datum is the scalar user_id column) and are excluded.

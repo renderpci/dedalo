@@ -123,7 +123,7 @@ describe('the child environment is CONSTRUCTED, never inherited', () => {
           workspace: '/tmp',
           prompt: 'irrelevant',
           mcp: { name: 'x', url: 'http://x/mcp' },
-          env: { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: '/tmp', DRIVER_ONLY: 'yes' },
+          env: { PATH: process.env.PATH ?? '/usr/bin:/bin', DRIVER_ONLY: 'yes' },
           timeoutMs: 30_000,
         },
         async () => ({
@@ -134,6 +134,8 @@ describe('the child environment is CONSTRUCTED, never inherited', () => {
       for await (const event of process_.events) {
         if (event.type === 'text') seen.push(event.text);
       }
+      // HOME is not the caller's: the run's fixed environment supplies it (LEAD-1b — under the
+      // suite's declared `none`, the unconfined runs' own HOME under AGENT_STATE_ROOT).
       expect(keysOf(seen.join('\n'))).toEqual(['DRIVER_ONLY', 'HOME', 'PATH']);
     } finally {
       clearCanaries();
@@ -205,13 +207,14 @@ describe('the child environment is CONSTRUCTED, never inherited', () => {
     });
 
     /**
-     * What each driver may carry. PATH and HOME always; a provider key ONLY for the driver
+     * What each driver may carry. PATH always — and NOT HOME, which the unit fixes (LEAD-1b); a
+     * provider key ONLY for the driver
      * whose credential it is. Derived from the config the suite is running under rather
      * than hardcoded, so this reads as the rule and not as a snapshot: with no provider
      * key configured the expectation is the two base keys, which is the suite's own case.
      */
     function expectedKeysFor(driver: DriverId): string[] {
-      const keys = ['HOME', 'PATH'];
+      const keys = ['PATH'];
       if (driver === 'claude_code' && config.ANTHROPIC_API_KEY) keys.push('ANTHROPIC_API_KEY');
       if (driver === 'opencode') keys.push(...Object.keys(parseEnvPairsForTest(config.OPENCODE_ENV)));
       if (driver === 'pi') keys.push(...Object.keys(parseEnvPairsForTest(config.PI_ENV)));

@@ -56,6 +56,7 @@
  */
 
 import { config } from '../../../config/config.ts';
+import { sqlTargetLockKey, withTargetLock } from '../../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
 import { escapeSqlIdentifier, requireSqlIdentifier } from '../../plan/identifier.ts';
 import { buildVirtualDiffusionTree } from '../../plan/virtual_tree.ts';
@@ -193,6 +194,16 @@ export interface LangSweepDependencies {
 	listDeclaredTables: () => Promise<Set<string>>;
 	/** The publication language policy the published rows are judged against. */
 	policyLangs: () => string[];
+	/**
+	 * Run one database's sweep under its publication-target fence. Default: the
+	 * fence a publication run's batch holds (jobs/target_fence.ts, 'wait').
+	 */
+	fenceDatabase?: (database: string, work: () => Promise<void>) => Promise<void>;
+}
+
+/** The default database fence: the publication-target lock, waiting (DIFF-2). */
+async function fenceDatabase(database: string, work: () => Promise<void>): Promise<void> {
+	await withTargetLock(sqlTargetLockKey(database), work, { mode: 'wait' });
 }
 
 /**
@@ -610,67 +621,83 @@ export async function sweepPhantomLangs(
 		}
 	}
 
+	// Each database under its publication-target fence (DIFF-2): a sweep never
+	// deletes rows while a publication run is writing the same database.
+	const fence = dependencies.fenceDatabase ?? fenceDatabase;
 	for (const database of scope) {
-		let discovery: PublishedTableDiscovery;
-		try {
-			discovery = await discoverPublishedTables(database, OPERATOR_AUDIT_BUDGET, dependencies);
-		} catch (error) {
-			result.errors.push(`${database}: ${errorText(error)}`);
-			continue;
-		}
-		const pool = dependencies.getPool(database);
-		for (const table of discovery.tables) {
-			// Narrowing 4: what this table ACTUALLY holds, judged against the
-			// policy one more time. A lang the table does not carry, or that the
-			// policy (re-)acquired, never reaches a DELETE.
-			const before = await auditTable(
-				database,
-				table,
-				policySet,
-				OPERATOR_AUDIT_BUDGET,
-				dependencies,
-			);
-			if (before.error !== undefined) {
-				result.errors.push(`${database}.${table}: ${before.error}`);
-				continue;
-			}
-			const deletable = before.phantom
-				.map((entry) => entry.lang)
-				.filter((lang) => requested.includes(lang));
-			for (const lang of deletable) {
-				let removed = 0;
-				try {
-					// Chunked so one sweep never becomes a single multi-million-row
-					// transaction on the operator's live publication server.
-					//
-					// `BINARY lang = ?` — the byte-exact half is LOAD-BEARING, not belt and
-					// braces. Classification above is an exact JS string compare, but a bare
-					// `lang = ?` compares under the TABLE's collation, which on a stock
-					// MariaDB is case-insensitive and PAD SPACE. So a published `lg-spa `
-					// (trailing space) or `LG-SPA` is phantom to us while its DELETE would
-					// ALSO match the real `lg-spa` rows — the sweep would destroy the
-					// translations it exists to protect. Comparing on the same terms as the
-					// classification closes that gap. The plain `lang = ?` stays alongside it
-					// so the index seek is preserved; BINARY alone would force a scan.
-					for (let iteration = 0; iteration < SWEEP_MAX_ITERATIONS; iteration++) {
-						const outcome = (await pool.unsafe(
-							`DELETE FROM ${escapeSqlIdentifier(table)} WHERE lang = ? AND BINARY lang = ? LIMIT ${SWEEP_DELETE_CHUNK}`,
-							[lang, lang],
-						)) as MariadbExecResult;
-						const affected = outcome?.affectedRows ?? 0;
-						removed += affected;
-						if (affected < SWEEP_DELETE_CHUNK) break;
-					}
-				} catch (error) {
-					if (isMissingTableError(error) || isMissingDatabaseError(error)) continue;
-					result.errors.push(`${database}.${table} [${lang}]: ${errorText(error)}`);
-					continue;
-				}
-				if (removed === 0) continue;
-				result.swept.push({ database, table, lang, rows: removed });
-				result.total_rows += removed;
-			}
-		}
+		await fence(database, () =>
+			sweepDatabase(database, requested, policySet, result, dependencies),
+		);
 	}
 	return result;
+}
+
+/** One database's phantom-lang sweep (inside its fence). */
+async function sweepDatabase(
+	database: string,
+	requested: readonly string[],
+	policySet: Set<string>,
+	result: LangSweepResult,
+	dependencies: LangSweepDependencies,
+): Promise<void> {
+	let discovery: PublishedTableDiscovery;
+	try {
+		discovery = await discoverPublishedTables(database, OPERATOR_AUDIT_BUDGET, dependencies);
+	} catch (error) {
+		result.errors.push(`${database}: ${errorText(error)}`);
+		return;
+	}
+	const pool = dependencies.getPool(database);
+	for (const table of discovery.tables) {
+		// Narrowing 4: what this table ACTUALLY holds, judged against the
+		// policy one more time. A lang the table does not carry, or that the
+		// policy (re-)acquired, never reaches a DELETE.
+		const before = await auditTable(
+			database,
+			table,
+			policySet,
+			OPERATOR_AUDIT_BUDGET,
+			dependencies,
+		);
+		if (before.error !== undefined) {
+			result.errors.push(`${database}.${table}: ${before.error}`);
+			continue;
+		}
+		const deletable = before.phantom
+			.map((entry) => entry.lang)
+			.filter((lang) => requested.includes(lang));
+		for (const lang of deletable) {
+			let removed = 0;
+			try {
+				// Chunked so one sweep never becomes a single multi-million-row
+				// transaction on the operator's live publication server.
+				//
+				// `BINARY lang = ?` — the byte-exact half is LOAD-BEARING, not belt and
+				// braces. Classification above is an exact JS string compare, but a bare
+				// `lang = ?` compares under the TABLE's collation, which on a stock
+				// MariaDB is case-insensitive and PAD SPACE. So a published `lg-spa `
+				// (trailing space) or `LG-SPA` is phantom to us while its DELETE would
+				// ALSO match the real `lg-spa` rows — the sweep would destroy the
+				// translations it exists to protect. Comparing on the same terms as the
+				// classification closes that gap. The plain `lang = ?` stays alongside it
+				// so the index seek is preserved; BINARY alone would force a scan.
+				for (let iteration = 0; iteration < SWEEP_MAX_ITERATIONS; iteration++) {
+					const outcome = (await pool.unsafe(
+						`DELETE FROM ${escapeSqlIdentifier(table)} WHERE lang = ? AND BINARY lang = ? LIMIT ${SWEEP_DELETE_CHUNK}`,
+						[lang, lang],
+					)) as MariadbExecResult;
+					const affected = outcome?.affectedRows ?? 0;
+					removed += affected;
+					if (affected < SWEEP_DELETE_CHUNK) break;
+				}
+			} catch (error) {
+				if (isMissingTableError(error) || isMissingDatabaseError(error)) continue;
+				result.errors.push(`${database}.${table} [${lang}]: ${errorText(error)}`);
+				continue;
+			}
+			if (removed === 0) continue;
+			result.swept.push({ database, table, lang, rows: removed });
+			result.total_rows += removed;
+		}
+	}
 }

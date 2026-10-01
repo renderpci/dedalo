@@ -57,8 +57,37 @@ echo "== db_tier: bun $(bun --version) (pin: $(cat .bun-version))"
 # ci_workflow_tripwire.test.ts forbids any command here that needs the file.
 bash scripts/ci/env_guard.sh --no-private-env
 
+# The accumulator is declared BEFORE the first independent stage (the suite MariaDB
+# start below); see THE STAGES ARE INDEPENDENT further down for why each stage records
+# its own verdict instead of ending the script.
+tier_status=0
+
 echo "== db_tier: build the suite database (from repo-vendored bytes)"
 bun run test:db:setup
+
+# ── THE SUITE MARIADB TARGET (PUB-05) ────────────────────────────────────────
+#
+# MariaDB is the fourth suite-owned surface, beside the suite Postgres database, the
+# media root and the vector database: test/preload/suite_mariadb.ts arms every
+# `bun test` process at THIS lane's own server (a unix socket, --skip-networking,
+# per-database grants, a marker schema the diffusion user can only read), and the
+# MariaDB gates acquire it through requireSuiteMariadb() — they never skip. Started
+# HERE, as a legible stage, so the one-off install cost and its failure are not paid
+# inside a test hook. The image ships mariadbd (ci/Dockerfile). No env is exported:
+# the preload composes the keys per lane.
+#
+# The EXIT trap stops the server whatever happens after this line. ANY later EXIT
+# trap in this script must CHAIN this stop, not replace it.
+trap 'bun run scripts/ci/suite_mariadb.ts stop >/dev/null 2>&1 || :' EXIT
+echo "== db_tier: start the suite MariaDB target"
+mdb_rc=0
+bun run scripts/ci/suite_mariadb.ts start || mdb_rc=$?
+[ "$mdb_rc" -eq 0 ] || { echo "== db_tier: RED — the suite MariaDB target did not start (exit $mdb_rc)"; tier_status=1; }
+# The Publication API v2 smoke (test/integration) spawns that app from its own tree,
+# which has its own lockfile: install it where the gate will run it.
+pubapi_rc=0
+bun install --frozen-lockfile --cwd publication/server_api/v2 || pubapi_rc=$?
+[ "$pubapi_rc" -eq 0 ] || { echo "== db_tier: RED — publication/server_api/v2 dependencies (exit $pubapi_rc)"; tier_status=1; }
 
 # ---------------------------------------------------------------------------
 # The gates. These are exactly the tripwires that CANNOT run on the hermetic
@@ -113,10 +142,13 @@ DB_TIER_TRIPWIRES=(
 	test/unit/tools_cache_invalidation.test.ts
 	test/unit/write_lang_provenance_native.test.ts
 	test/unit/write_obligations_native.test.ts
+	test/unit/tool_lossless_writeback_tethers_native.test.ts
 	test/unit/value_law_agreement_native.test.ts
 	test/unit/reconcile_registry_native.test.ts
 	test/unit/restore_door_native.test.ts
 	test/unit/unpublish_debt_native.test.ts
+	test/unit/suite_mariadb_target_native.test.ts
+	test/unit/shard_mariadb_sweep_native.test.ts
 	test/unit/diffusion_frontier_scope_native.test.ts
 	test/unit/diffusion_seed_compiles_native.test.ts
 	test/unit/raw_roundtrip_native.test.ts
@@ -125,6 +157,35 @@ DB_TIER_TRIPWIRES=(
 	test/unit/slow_query_scope_native.test.ts
 	test/unit/zzscale_corpus_native.test.ts
 	test/unit/dataframe_contract_tripwire.test.ts
+	test/unit/update_engine_atomic_native.test.ts
+	test/unit/update_descriptor_tripwire.test.ts
+	test/unit/statement_ceiling_scope_native.test.ts
+	test/unit/maintenance_door_unbounded_native.test.ts
+	test/unit/optimize_concurrent_leftover_native.test.ts
+	test/unit/db_asset_rebuild_atomic_native.test.ts
+	test/unit/alias_target_grammar_native.test.ts
+	test/unit/search_alias_sink_native.test.ts
+	test/unit/dd_ontology_identifier_grammar_native.test.ts
+	test/unit/dd_ontology_grammar_migration_native.test.ts
+	test/unit/ontology_state_identifier_grammar_native.test.ts
+	test/unit/diffusion_target_fence_native.test.ts
+	test/unit/diffusion_resume_ledger_native.test.ts
+	test/unit/diffusion_frontier_replay.test.ts
+	test/unit/diffusion_attach_scope_native.test.ts
+	test/unit/media_index_reconcile_fence_native.test.ts
+	test/unit/write_door_native.test.ts
+	test/unit/authz_door_matrix_native.test.ts
+	test/unit/agent_access_native.test.ts
+	test/unit/tool_transcription_gate_native.test.ts
+	test/unit/identify_vision_grant_native.test.ts
+	test/unit/mcp_record_door_native.test.ts
+	test/unit/obligation_ledger_native.test.ts
+	test/unit/media_files_info_lost_update_native.test.ts
+	test/unit/duplicate_record_media_verdict_native.test.ts
+	test/unit/portal_locator_door_native.test.ts
+	test/unit/ai_spend_budget_native.test.ts
+	test/unit/change_plan_write_door_native.test.ts
+	test/unit/import_create_door_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────
@@ -136,8 +197,7 @@ DB_TIER_TRIPWIRES=(
 # Batch 0; this script had the same shape and, once the suite and parity stages landed
 # below the tripwires, the same consequence: a single red gate would have hidden the
 # entire 725-file unit tier. `tier_execution_tripwire` holds the accumulator in place
-# in both scripts.
-tier_status=0
+# in both scripts. (tier_status itself is declared above, before the MariaDB start.)
 
 echo "== db_tier: DB-backed tripwires (${#DB_TIER_TRIPWIRES[@]})"
 # --timeout=30000 is a LITERAL COPY of TEST_TIMEOUT_MS in scripts/lib/test_flags.ts, which is
@@ -217,6 +277,32 @@ echo "== db_tier: parity tier vs its frozen red baseline"
 parity_rc=0
 bun run scripts/parity_baseline.ts --check || parity_rc=$?
 [ "$parity_rc" -eq 0 ] || { echo "== db_tier: RED in the parity tier (exit $parity_rc)"; tier_status=1; }
+
+# ── THE MARIADB TIER (PUB-05) — BLOCKING ─────────────────────────────────────
+#
+# Every MariaDB-bound gate (test/integration minus its shrink-only INSTALL_BOUND_EXEMPT
+# rows, plus every test/unit file that acquires the suite target) must, on the suite
+# server: report, run >0 cases, SKIP NONE, fail none, execute >0 assertions, leave an
+# acquisition row; and the rows the SUITE USER inserted and deleted on that server
+# (USER_STATISTICS — not global Com_* counters, which the harness's own provisioning
+# raises) must rise, a measure the stage first calibrates live (an acquire-only planted
+# run must move it by 0, a one-row write by >0). `skipped === 0` per file is what
+# closes the partial skip the unit baseline cannot see.
+#
+# LAST, AFTER THE PARITY TIER — ON PURPOSE (review 2026-09-30). The stage re-runs its 8
+# set files one by one and, for leg 1b, ~170 test/unit + test/parity files in one extra
+# armed batch — many of which write to the suite Postgres. Before the unit and parity
+# tiers that was an extra partial pass of the suite on the database whose state their
+# baselines were recorded in: exactly one unit pass, then parity. Repeated passes grow
+# matrix_users and redden parity gates (measured), so the parity verdict could move with
+# no code change. Here nothing measured on the suite Postgres runs after it. GATED, not
+# described: tier_wiring leg K runs this script with its commands stubbed and reds any
+# command recorded after this stage other than the EXIT trap's stop. Keep it the last
+# stage. The server it needs is the one started above; the EXIT trap still stops it.
+echo "== db_tier: MariaDB tier — every MariaDB gate ran on the suite server, and the gates' own rows landed there"
+mtier_rc=0
+bun run scripts/ci/mariadb_tier.ts || mtier_rc=$?
+[ "$mtier_rc" -eq 0 ] || { echo "== db_tier: RED in the MariaDB tier (exit $mtier_rc)"; tier_status=1; }
 
 [ "$tier_status" -eq 0 ] || { echo "== db_tier: RED"; exit 1; }
 echo "== db_tier: OK"

@@ -77,6 +77,7 @@ import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/
 import { mustGet } from '../helpers/assert.ts';
 import { insertLegacyBulkRow } from '../helpers/legacy_bulk_run.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
+import { superuserTranslationGrant } from '../helpers/translation_grant.ts';
 
 const TLD = 'zztso';
 const SECTION = `${TLD}1`;
@@ -850,17 +851,13 @@ async function freshRecord(kind: Kind): Promise<number> {
 
 /** tool_lang's door (translateAndWrite) with a scripted provider: `<lang>:` + the source text. */
 async function transliterate(kind: Kind, id: number, targetLang: string): Promise<void> {
-	const outcome = await translateAndWrite({
+	const outcome = await translateAndWrite(await superuserTranslationGrant(SECTION, kind.main, id), {
 		model: 'component_input_text',
-		componentTipo: kind.main,
-		sectionTipo: SECTION,
-		sectionId: id,
 		sourceLang: NOLAN,
 		targetLang,
 		provider: async (req) => ({ ok: true, text: `${req.targetLang}:${req.text}`, msg: 'ok' }),
 		uri: 'test://transliterate',
 		key: '',
-		userId: USER_ID,
 	});
 	expect(outcome.ok).toBe(true);
 }

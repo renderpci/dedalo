@@ -378,6 +378,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			droppedRecords: 3,
 			droppedLocators: 1673,
 			degradedSeedRecords: 0,
+			reindexed: 0,
 		};
 		expect(exceedsShrinkBudget(base, { maxDroppedLocators: 2000, maxDroppedRecords: 40 })).toEqual(
 			[],
@@ -518,6 +519,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			droppedRecords: limits.maxDroppedRecords,
 			droppedLocators: limits.maxDroppedLocators,
 			degradedSeedRecords: 0,
+			reindexed: 0,
 		};
 		// THE CEILING MUST BE A CEILING (P2-18 / GATE-21).
 		//

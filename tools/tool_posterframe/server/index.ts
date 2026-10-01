@@ -3,9 +3,10 @@
  *
  * create_identifying_image: extract a frame from an AV record at a timecode and
  *   store it as the identifying image of a NEW record created through a portal on
- *   the host record. Two permission targets (PHP asserts both): READ on the AV
- *   source, WRITE on the portal — the AV read is the declarative record/1 gate,
- *   the portal write is asserted imperatively in the handler.
+ *   the host record. Three permission targets: READ on the AV source (the
+ *   declarative record_tipo/1 gate), WRITE on the host portal of the host record
+ *   (THE WRITE DOOR, in the handler — the grant addresses the portal save) and
+ *   WRITE on the new record's image component (its section target).
  * get_ar_identifying_image: for a section record, return the identifying-image
  *   descriptors of every record that inversely references it.
  *
@@ -30,8 +31,10 @@ import { getMainRelatedSectionTipo } from '../../../src/core/relations/request_c
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { findInverseReferences } from '../../../src/core/search/search_related.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
-import { getPermissions } from '../../../src/core/security/permissions.ts';
-import { isRecordInScope } from '../../../src/core/security/record_scope.ts';
+import {
+	authorizeRecordAccess,
+	authorizeSectionTarget,
+} from '../../../src/core/security/write_door.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -79,7 +82,6 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 	const portalComponentTipo = String(itemValue.component_portal ?? '');
 	const imageComponentTipo = String(itemValue.component_image ?? '');
 	const hostSectionTipo = String(itemValue.section_tipo ?? '');
-	const hostSectionId = Number(itemValue.section_id);
 	if (portalComponentTipo === '' || imageComponentTipo === '' || hostSectionTipo === '') {
 		throw new DedaloError('request.invalid_options', {
 			publicMessage:
@@ -87,30 +89,26 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 		});
 	}
 
-	// Portal WRITE gate (PHP assert_tipo_permission(portal, level 2)).
-	const portalLevel = await getPermissions(ctx.principal, hostSectionTipo, portalComponentTipo);
-	if (portalLevel < 2) {
-		throw new DedaloError('perm.denied', {
-			coordinates: { tool: 'tool_posterframe', tipo: portalComponentTipo },
-		});
-	}
-	// Per-record gate on the portal HOST record (PHP SEC-024 §9.4:
-	// assert_record_in_user_scope(item_value->section_tipo, item_value->section_id)).
-	// The declarative record/1 gate covered the AV SOURCE record only, and the
-	// host locator is caller-supplied — without this a user could create a portal
-	// element on a record outside their projects scope.
-	if (
-		!ctx.principal.isGlobalAdmin &&
-		Number.isInteger(hostSectionId) &&
-		hostSectionId > 0 &&
-		!(await isRecordInScope(hostSectionTipo, hostSectionId, ctx.principal))
-	) {
-		throw new DedaloError('perm.out_of_scope', {
-			coordinates: { section_tipo: hostSectionTipo, section_id: hostSectionId },
-		});
-	}
+	// THE HOST IS A WRITE TARGET (closure Step 3 req 10 — the tool_posterframe
+	// host scope; WC-2026-09-30-write-door). PHP asserted the portal pair at 2
+	// (assert_tipo_permission) and the host record in the user's scope (SEC-024
+	// §9.4). The port read the RAW pair level and asked the scope only for a
+	// non-admin with a positive integer id — so a missing or non-positive host id
+	// skipped the scope (a global admin's -1 reached root's record), the dd128
+	// own-record downgrade never applied to the portal pair, and the section
+	// floor was never asked. The write door asks all of it, in its one order, and
+	// the portal write below is addressed by the GRANT, never by the payload.
+	const host = await authorizeRecordAccess(
+		ctx.principal,
+		{
+			section_tipo: itemValue.section_tipo,
+			component_tipo: itemValue.component_portal,
+			section_id: itemValue.section_id,
+		},
+		{ mode: 'write', level: 2, sectionFloor: 1, door: 'tool_posterframe.create_identifying_image' },
+	);
 
-	// AV source context (declarative record/1 gate already ran on options.section_tipo/section_id).
+	// AV source context (declarative record_tipo/1 gate already ran on options.section_tipo/section_id).
 	const avContext = await resolveMediaToolContext(ctx.options);
 	if (avContext.spec.model !== 'component_av') {
 		throw new DedaloError('tool.unsupported_target', {
@@ -121,24 +119,32 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 
 	// Resolve the portal's target section, then create + persist a new record
 	// through the portal (PHP add_new_element + Save).
-	const portalTargetSectionTipo = await getMainRelatedSectionTipo(portalComponentTipo);
+	const portalTargetSectionTipo = await getMainRelatedSectionTipo(host.componentTipo);
 	if (portalTargetSectionTipo === null) {
 		throw new DedaloError('tool.unsupported_target', {
 			publicMessage: 'The portal has no target section',
-			coordinates: { tipo: portalComponentTipo },
+			coordinates: { tipo: host.componentTipo },
 		});
 	}
+	// The NEW record's image is written too: the (target section, image) pair at
+	// write — a create names no record, so the level (consultation-capped) is its
+	// whole authorization; the record itself is born under the portal's save.
+	const imageTarget = await authorizeSectionTarget(
+		ctx.principal,
+		{ section_tipo: portalTargetSectionTipo, tipo: imageComponentTipo },
+		{ level: 2, door: 'tool_posterframe.create_identifying_image.image' },
+	);
 	const saveResult = (await saveComponentData({
-		componentTipo: portalComponentTipo,
-		sectionTipo: hostSectionTipo,
-		sectionId: hostSectionId,
+		componentTipo: host.componentTipo,
+		sectionTipo: host.sectionTipo,
+		sectionId: host.sectionId,
 		lang: 'lg-nolan',
 		changedData: [{ action: 'add_new_element', id: null, value: portalTargetSectionTipo }],
-		userId: ctx.userId,
+		userId: host.userId,
 	})) as { ok: boolean; message: string; created_section_id?: number };
 	if (!saveResult.ok || saveResult.created_section_id == null) {
 		throw new DedaloError('record.save_failed', {
-			coordinates: { tipo: portalComponentTipo, section_tipo: hostSectionTipo },
+			coordinates: { tipo: host.componentTipo, section_tipo: host.sectionTipo },
 			message: `unable to create portal record element: ${saveResult.message}`,
 		});
 	}
@@ -147,9 +153,9 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 	// Build the IMAGE target context on the new record.
 	const imageSpec = mediaTypeOf('component_image');
 	if (imageSpec === null) throw posterframeFailed('component_image media spec unavailable');
-	const translatable = await getTranslatableByTipo(imageComponentTipo);
+	const translatable = await getTranslatableByTipo(imageTarget.componentTipo);
 	const imageIdentity: MediaIdentity = {
-		componentTipo: imageComponentTipo,
+		componentTipo: imageTarget.componentTipo,
 		sectionTipo: portalTargetSectionTipo,
 		sectionId: newSectionId,
 		// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): this is the
@@ -157,7 +163,10 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 		// filed the frame against a language the operator was not looking at.
 		lang: translatable ? currentDataLang() : null,
 	};
-	const imagePathOpts = await resolveMediaPathOptions(imageComponentTipo, portalTargetSectionTipo);
+	const imagePathOpts = await resolveMediaPathOptions(
+		imageTarget.componentTipo,
+		portalTargetSectionTipo,
+	);
 
 	const outcome = await createIdentifyingImageCore(
 		{ spec: avContext.spec, identity: avContext.identity, pathOpts: avContext.pathOpts },

@@ -36,6 +36,12 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from '../../../config/config.ts';
+import {
+	sqlTargetLockKey,
+	withTargetLock,
+	withTargetLocks,
+} from '../../../core/diffusion_bridge/target_lock.ts';
+import { DedaloError } from '../../../core/errors/index.ts';
 import { assertTestMediaRoot } from '../../../core/media/test_media_root.ts';
 import { escapeSqlIdentifier } from '../../plan/identifier.ts';
 import { getTargetPool, isMissingDatabaseError, isMissingTableError } from '../mariadb/db.ts';
@@ -292,22 +298,116 @@ export async function diffMediaIndex(): Promise<{ toAdd: string[]; toRemove: str
 	return { toAdd, toRemove };
 }
 
+/** Most rounds the fenced apply re-runs because a database appeared during it. */
+const MEDIA_INDEX_FENCE_ROUNDS = 5;
+
+/**
+ * How long ONE reconcile — or ONE rebuild, its closing reconcile included —
+ * waits IN TOTAL for publication targets other writers hold. The multi-target
+ * fence holds nothing while it waits (withTargetLocks is all-or-none), so the
+ * bound costs nobody but the door: it ends a wait that needs every marker
+ * database free at one instant, and the rebuild request that runs it. Spent ⇒
+ * the reconcile is DEFERRED (nothing applied, the busy target named), the
+ * rebuild reports what it could not resync.
+ */
+export const MEDIA_INDEX_FENCE_BOUND_MS = 120_000;
+
+/** What is left of a fence budget, as a bounded lock mode (0 ⇒ one try). */
+function remainingFence(deadline: number): { boundMs: number } {
+	return { boundMs: Math.max(0, deadline - Date.now()) };
+}
+
+/**
+ * A reconcile's outcome: healed (what the apply touched), or DEFERRED — the
+ * budget ran out with `busy_target` held by a writer, and nothing was applied.
+ */
+export type MediaIndexReconcileOutcome =
+	| { added: number; removed: number; deferred?: undefined }
+	| { deferred: { busy_target: string } };
+
+export interface MediaIndexFenceOptions {
+	/** Total fence-wait budget (ms); default MEDIA_INDEX_FENCE_BOUND_MS. */
+	boundMs?: number;
+}
+
+/** The databases with a `dbs/<db>` subtree now (the marker writers to hold off). */
+async function listMarkerDatabases(base: string): Promise<string[]> {
+	try {
+		return await fs.readdir(path.join(base, 'dbs'));
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error;
+		return [];
+	}
+}
+
 /**
  * reconcileMediaIndex (oracle reconcile): rebuilds pub/ from the dbs/ ground
  * truth (pure filesystem diff, diffMediaIndex above, then applied). Run at
  * server boot to heal drift from crashes between SQL commit and marker apply.
- * Cheap: two directory walks, no SQL.
+ * Cheap: two directory walks, no SQL on the target.
+ *
+ * THE ONE APPLY DOOR, FENCED (DIFF-2, WC-2026-09-30-diffusion-target-fence).
+ * A batch writing `dbs/<db>/…/K` then `pub/K` holds `sql:<db>`; the diff reads
+ * dbs/ first and pub/ second, so a marker pair landing between the two reads
+ * would be classed stray and unlinked (a just-published record's media 404s).
+ * So the diff runs under the fence of every database with a `dbs/` subtree —
+ * and since that set cannot be known before the locks are held, the apply
+ * CHECKS BEFORE IT WRITES: after the diff it re-lists dbs/, and a database it
+ * did not hold (a FIRST publication, whose writer was never held off) voids
+ * the round — nothing is touched or unlinked — and the next round holds that
+ * database too. A writer that creates its subtree only after the re-list wrote
+ * nothing the diff read (its pub/ marker follows its dbs/ one), so the round
+ * that ends with no new database is exact and is the only one applied.
+ * Bounded (a store that keeps growing names more databases than any install
+ * has): the typed internal.invariant. This is the ONLY exported apply: the
+ * boot registry definition, the media_control widget (through the
+ * core/diffusion_bridge seam) and the rebuild all come through it.
+ *
+ * THE WAIT HOLDS NOTHING AND ENDS: the databases are taken all or none
+ * (withTargetLocks), so a busy one never keeps a free one locked — a runner or
+ * an unpublish on A is never held off because B's writer is busy — and the
+ * whole reconcile shares ONE budget (`boundMs`). Spent ⇒ DEFERRED, nothing
+ * applied, the target that held it off named.
  */
-export async function reconcileMediaIndex(): Promise<{ added: number; removed: number } | null> {
+export async function reconcileMediaIndex(
+	options: MediaIndexFenceOptions = {},
+): Promise<MediaIndexReconcileOutcome | null> {
 	const base = markerStoreBase();
-	const diff = await diffMediaIndex();
-	if (base === null || diff === null) {
-		return null;
+	if (base === null) return null;
+	const deadline = Date.now() + (options.boundMs ?? MEDIA_INDEX_FENCE_BOUND_MS);
+	const held = new Set(await listMarkerDatabases(base));
+	for (let round = 1; ; round++) {
+		type Round =
+			| { grown: string[]; healed?: undefined }
+			| { grown?: undefined; healed: { added: number; removed: number } }
+			| null;
+		const fenced = await withTargetLocks(
+			[...held].map(sqlTargetLockKey),
+			async (): Promise<Round> => {
+				const diff = await diffMediaIndex();
+				if (diff === null) return null;
+				const grown = (await listMarkerDatabases(base)).filter((database) => !held.has(database));
+				// A database nobody held: the diff may have read half of its writer's
+				// pair — apply NOTHING of it.
+				if (grown.length > 0) return { grown };
+				const pubDir = path.join(base, 'pub');
+				for (const key of diff.toAdd) await touch(path.join(pubDir, key));
+				for (const key of diff.toRemove) await unlinkQuiet(path.join(pubDir, key));
+				return { healed: { added: diff.toAdd.length, removed: diff.toRemove.length } };
+			},
+			{ mode: remainingFence(deadline) },
+		);
+		if (!fenced.acquired) return { deferred: { busy_target: fenced.busyKey } };
+		const outcome = fenced.value;
+		if (outcome === null) return null;
+		if (outcome.healed !== undefined) return outcome.healed;
+		if (round >= MEDIA_INDEX_FENCE_ROUNDS) {
+			throw new DedaloError('internal.invariant', {
+				message: `media_index reconcile: new publication databases kept appearing under the fence (${outcome.grown.join(', ')}) after ${round} rounds`,
+			});
+		}
+		for (const database of outcome.grown) held.add(database);
 	}
-	const pubDir = path.join(base, 'pub');
-	for (const key of diff.toAdd) await touch(path.join(pubDir, key));
-	for (const key of diff.toRemove) await unlinkQuiet(path.join(pubDir, key));
-	return { added: diff.toAdd.length, removed: diff.toRemove.length };
 }
 
 /**
@@ -424,13 +524,100 @@ export interface MediaIndexRebuildReport {
 	errors?: string[];
 }
 
+type FetchPublishedIds = (databaseName: string, tableName: string) => Promise<(string | number)[]>;
+
+/**
+ * Diff-sync ONE target table's `dbs/<db>/<table>` markers against the ids its
+ * MariaDB table publishes. The number of published markers, or null when the
+ * target failed (its finding pushed to `errors`, its markers kept —
+ * fail-closed for changes, not deletions). Runs under the database's fence.
+ */
+async function syncTargetMarkers(
+	base: string,
+	target: RebuildTarget,
+	fetchIds: FetchPublishedIds,
+	errors: string[],
+): Promise<number | null> {
+	const tableDir = path.join(base, 'dbs', target.database_name, target.table_name);
+	// desired state from the publication database
+	let desired = new Set<string>();
+	try {
+		for (const sectionId of await fetchIds(target.database_name, target.table_name)) {
+			const key = makeMarkerKey(target.section_tipo, sectionId);
+			if (key !== null) desired.add(key);
+		}
+	} catch (error) {
+		if (!isMissingTableError(error) && !isMissingDatabaseError(error)) {
+			const errMsg = error instanceof Error ? error.message : String(error);
+			errors.push(`${target.database_name}.${target.table_name}: ${errMsg}`);
+			return null;
+		}
+		// table/database missing: nothing published there
+		desired = new Set();
+	}
+
+	// current state on disk
+	let current: string[] = [];
+	try {
+		current = await fs.readdir(tableDir);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+			errors.push(`${target.database_name}.${target.table_name}: ${(error as Error).message}`);
+			return null;
+		}
+	}
+
+	// diff-sync
+	const currentSet = new Set(current);
+	for (const key of desired) {
+		if (!currentSet.has(key)) await touch(path.join(tableDir, key));
+	}
+	for (const key of current) {
+		if (!desired.has(key)) await unlinkQuiet(path.join(tableDir, key));
+	}
+	return desired.size;
+}
+
+/**
+ * Run `work` holding database `database`'s publication-target fence, waiting at
+ * most what is left of the rebuild's budget. Not acquired ⇒ a writer kept the
+ * database the whole time: its finding goes to `errors` (that database is not
+ * resynced, its markers kept) and the answer is null.
+ */
+async function underDatabaseFence<T>(
+	database: string,
+	deadline: number,
+	errors: string[],
+	work: () => Promise<T>,
+): Promise<T | null> {
+	const held = await withTargetLock(sqlTargetLockKey(database), work, {
+		mode: remainingFence(deadline),
+	});
+	if (held.acquired) return held.value;
+	errors.push(
+		`${database}: publication target busy (a writer held it past the rebuild's wait) — not resynced, its markers kept; re-run the rebuild`,
+	);
+	return null;
+}
+
+/**
+ * THE REBUILD IS FENCED PER DATABASE (DIFF-2): a runner batch holding
+ * `sql:<db>` inserts row K and writes marker K in one unit, so the rebuild's
+ * SELECT → readdir → diff-sync of that database must not interleave with it —
+ * a row landing after the SELECT would have its just-written marker unlinked as
+ * "not published" (and the pub/ pass would then unlink `pub/K`). Each
+ * database's targets sync under its own fence, one database at a time (a
+ * runner holds one target, so no lock cycle); the stale-table sweep of a
+ * database takes that database's fence too; the closing pub/ derivation is the
+ * fenced reconcileMediaIndex. ONE budget (`boundMs`) for every wait of the
+ * rebuild: a database a writer keeps past it is reported, not resynced, and the
+ * request ends.
+ */
 export async function rebuildMediaIndexStore(
 	targets: RebuildTarget[],
 	/** Test seam: replaces the MariaDB SELECT (temp-dir tests, no target DB). */
-	fetchIds: (
-		databaseName: string,
-		tableName: string,
-	) => Promise<(string | number)[]> = fetchPublishedSectionIds,
+	fetchIds: FetchPublishedIds = fetchPublishedSectionIds,
+	options: MediaIndexFenceOptions = {},
 ): Promise<MediaIndexRebuildReport> {
 	const base = markerStoreBase();
 	if (base === null) {
@@ -441,83 +628,55 @@ export async function rebuildMediaIndexStore(
 		};
 	}
 
+	const deadline = Date.now() + (options.boundMs ?? MEDIA_INDEX_FENCE_BOUND_MS);
 	const errors: string[] = [];
 	const validDirs = new Set<string>(); // "db/table" covered by the ontology
-	let markers = 0;
-
+	const byDatabase = new Map<string, RebuildTarget[]>();
 	for (const target of targets) {
-		const tableDir = path.join(base, 'dbs', target.database_name, target.table_name);
 		validDirs.add(`${target.database_name}/${target.table_name}`);
+		const group = byDatabase.get(target.database_name) ?? [];
+		group.push(target);
+		byDatabase.set(target.database_name, group);
+	}
 
-		// desired state from the publication database
-		let desired = new Set<string>();
-		try {
-			for (const sectionId of await fetchIds(target.database_name, target.table_name)) {
-				const key = makeMarkerKey(target.section_tipo, sectionId);
-				if (key !== null) desired.add(key);
-			}
-		} catch (error) {
-			if (isMissingTableError(error) || isMissingDatabaseError(error)) {
-				// table/database missing: nothing published there
-				desired = new Set();
-			} else {
-				const errMsg = error instanceof Error ? error.message : String(error);
-				errors.push(`${target.database_name}.${target.table_name}: ${errMsg}`);
-				continue; // keep existing markers for this target (fail-closed for changes, not deletions)
-			}
-		}
-
-		// current state on disk
-		let current: string[] = [];
-		try {
-			current = await fs.readdir(tableDir);
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
-				errors.push(`${target.database_name}.${target.table_name}: ${(error as Error).message}`);
-				continue;
-			}
-		}
-
-		// diff-sync
-		const currentSet = new Set(current);
-		for (const key of desired) {
-			if (!currentSet.has(key)) {
-				await touch(path.join(tableDir, key));
-			}
-		}
-		for (const key of current) {
-			if (!desired.has(key)) {
-				await unlinkQuiet(path.join(tableDir, key));
-			}
-		}
-		markers += desired.size;
+	let markers = 0;
+	for (const [database, group] of byDatabase) {
+		markers +=
+			(await underDatabaseFence(database, deadline, errors, async () => {
+				let synced = 0;
+				for (const target of group)
+					synced += (await syncTargetMarkers(base, target, fetchIds, errors)) ?? 0;
+				return synced;
+			})) ?? 0;
 	}
 
 	// remove per-table dirs no longer covered by the ontology (stale DBs/tables
 	// would otherwise keep union markers alive forever)
 	const dbsDir = path.join(base, 'dbs');
-	let dbEntries: string[] = [];
-	try {
-		dbEntries = await fs.readdir(dbsDir);
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error;
-	}
-	for (const dbName of dbEntries) {
-		let tableEntries: string[] = [];
-		try {
-			tableEntries = await fs.readdir(path.join(dbsDir, dbName));
-		} catch {
-			continue;
-		}
-		for (const tableName of tableEntries) {
-			if (!validDirs.has(`${dbName}/${tableName}`)) {
-				await fs.rm(path.join(dbsDir, dbName, tableName), { recursive: true, force: true });
+	for (const dbName of await listMarkerDatabases(base)) {
+		await underDatabaseFence(dbName, deadline, errors, async () => {
+			let tableEntries: string[] = [];
+			try {
+				tableEntries = await fs.readdir(path.join(dbsDir, dbName));
+			} catch {
+				return;
 			}
-		}
+			for (const tableName of tableEntries) {
+				if (!validDirs.has(`${dbName}/${tableName}`)) {
+					await fs.rm(path.join(dbsDir, dbName, tableName), { recursive: true, force: true });
+				}
+			}
+		});
 	}
 
-	// derive pub/ from the new ground truth
-	await reconcileMediaIndex();
+	// derive pub/ from the new ground truth (the fenced apply), on what is left
+	// of the budget
+	const derived = await reconcileMediaIndex(remainingFence(deadline));
+	if (derived?.deferred !== undefined) {
+		errors.push(
+			`pub/: derivation deferred (${derived.deferred.busy_target} held by a writer past the rebuild's wait) — re-run the rebuild`,
+		);
+	}
 
 	return {
 		ok: errors.length === 0,

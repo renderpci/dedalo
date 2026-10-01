@@ -34,6 +34,31 @@ export interface DaemonProblem {
 }
 
 /**
+ * THE DAEMON'S CONFINEMENT REFUSALS (503) → a registered code that says WHO must act.
+ *
+ * Every one used to fall through to the status-derived default, `site_builder.failed`
+ * (retryable): a host that cannot confine the agent, a site with no identity, a CLI that
+ * cannot be told to ignore agent-written configuration all read "an error, try again" —
+ * and retrying changes nothing until an operator acts. So each machine `reason` the daemon
+ * sends (`confinement_unavailable`, `confinement.<code>` — publication/site_builder/src/
+ * errors.ts CONFINEMENT_CODES) is mapped here, and the gate holds the two lists equal:
+ *
+ *  - `site_builder.busy` (retryable) — it clears by itself: a run still alive or being
+ *    proved dead, the daemon restarting.
+ *  - `site_builder.confinement_unavailable` (not retryable) — an operator must act.
+ */
+export const CONFINEMENT_REASON_CODES: Readonly<Record<string, ErrorCode>> = Object.freeze({
+	confinement_unavailable: 'site_builder.confinement_unavailable',
+	'confinement.identity_missing': 'site_builder.confinement_unavailable',
+	'confinement.unit_refused': 'site_builder.confinement_unavailable',
+	'confinement.unit_nonconformant': 'site_builder.confinement_unavailable',
+	'confinement.agent_cli_unsupported': 'site_builder.confinement_unavailable',
+	'confinement.site_busy': 'site_builder.busy',
+	'confinement.identity_quarantined': 'site_builder.busy',
+	'confinement.daemon_stopping': 'site_builder.busy',
+});
+
+/**
  * The daemon's problem `type` URI (last path segment) or `reason` → the registered code.
  * An unknown/absent one falls back to the caller's status-derived default.
  */
@@ -55,6 +80,7 @@ const DAEMON_REASON_CODES: Readonly<Record<string, ErrorCode>> = {
 	domain_taken: 'site_builder.rejected',
 	failed: 'site_builder.failed',
 	internal: 'site_builder.failed',
+	...CONFINEMENT_REASON_CODES,
 };
 
 /** The last path segment of a problem `type` URI (`https://…/problems/quota` → `quota`). */

@@ -82,6 +82,8 @@ import {
 import { apply, type PathFacts, type ExecResult } from '../src/provision/apply';
 import { observedPaths, plan, type EntryType, type HostState, type PathObservation } from '../src/provision/plan';
 import { renderAll } from '../src/provision/render';
+import { ledgerOrdinals } from '../src/provision/identities';
+import { type FakeAccount, fakeLedger, useraddAccount, usermodAccount } from './support/fake_accounts';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The distinctive credential values — chosen so a leak cannot hide in a report
@@ -310,7 +312,17 @@ function plantSurfaces(install: Install, site: { slug: string; domain: string },
 interface RecordingIo extends AdoptIo {
   readonly access: Map<string, { owner: string; group: string; mode: number }>;
   readonly execLog: string[][];
-  readonly host: { users: Set<string>; groups: Set<string>; unitEnabled: boolean; unitActive: boolean };
+  readonly host: {
+    users: Set<string>;
+    groups: Set<string>;
+    unitEnabled: boolean;
+    unitActive: boolean;
+    /** The identity ledger `getent` would report (LEAD-1b): what the stubbed commands did. */
+    accounts: Map<string, FakeAccount>;
+    ledgerGroups: Map<string, { name: string; gid: number; members: string[] }>;
+    enabledSockets: Set<string>;
+    nextId: number;
+  };
 }
 
 function entryType(path: string): EntryType {
@@ -326,7 +338,16 @@ function onHost(install: Install, path: string): string {
 function makeIo(install: Install): RecordingIo {
   const access = new Map<string, { owner: string; group: string; mode: number }>();
   const execLog: string[][] = [];
-  const host = { users: new Set<string>(), groups: new Set<string>(), unitEnabled: false, unitActive: false };
+  const host = {
+    users: new Set<string>(),
+    groups: new Set<string>(),
+    unitEnabled: false,
+    unitActive: false,
+    accounts: new Map<string, FakeAccount>(),
+    ledgerGroups: new Map<string, { name: string; gid: number; members: string[] }>(),
+    enabledSockets: new Set<string>(),
+    nextId: 40_000,
+  };
   const on = (path: string): string => onHost(install, path);
 
   return {
@@ -401,12 +422,50 @@ function makeIo(install: Install): RecordingIo {
       const recorded = access.get(path);
       access.set(path, { owner: recorded?.owner ?? 'root', group: recorded?.group ?? 'root', mode });
     },
+    unlink(path: string): void {
+      rmSync(on(path), { force: true });
+    },
     exec(argv: readonly string[]): ExecResult {
       execLog.push([...argv]);
       const line = argv.join(' ');
-      if (argv[0] === 'groupadd') host.groups.add(argv[argv.length - 1] as string);
-      if (argv[0] === 'useradd') host.users.add(argv[argv.length - 1] as string);
-      if (line.startsWith('systemctl enable')) host.unitEnabled = true;
+      const name = argv[argv.length - 1] as string;
+      const flag = (key: string) => (argv.indexOf(key) >= 0 ? argv[argv.indexOf(key) + 1] : undefined);
+      const group = (groupName: string) => {
+        let entry = host.ledgerGroups.get(groupName);
+        if (!entry) {
+          entry = { name: groupName, gid: host.nextId++, members: [] };
+          host.ledgerGroups.set(groupName, entry);
+        }
+        return entry;
+      };
+      if (argv[0] === 'groupadd') {
+        host.groups.add(name);
+        group(name);
+      }
+      if (argv[0] === 'useradd') {
+        host.users.add(name);
+        host.accounts.set(name, useraddAccount(name, host.nextId++, group(flag('--gid') ?? name).gid, flag('--comment') ?? ''));
+        const supplementary = flag('--groups');
+        if (supplementary) group(supplementary).members.push(name);
+      }
+      if (argv[0] === 'gpasswd' && argv[1] === '-a' && !group(argv[3]!).members.includes(argv[2]!)) group(argv[3]!).members.push(argv[2]!);
+      if (argv[0] === 'usermod') {
+        const account = host.accounts.get(name);
+        if (account) host.accounts.set(name, usermodAccount(account, argv));
+      }
+      if (argv[0] === 'pgrep') return { code: 1, stdout: '', stderr: '' };
+      // `systemd-tmpfiles --create <file>`: every `d` line of the file as written, made root's.
+      if (argv[0] === 'systemd-tmpfiles' && argv[1] === '--create') {
+        for (const entry of readFileSync(on(argv[2] as string), 'utf8').split('\n')) {
+          const [type, path, mode, owner, group] = entry.trim().split(/\s+/);
+          if (type !== 'd' || !path || !mode || !owner || !group) continue;
+          mkdirSync(on(path), { recursive: true });
+          access.set(path, { owner, group, mode: Number.parseInt(mode, 8) });
+        }
+      }
+      if (line.startsWith('systemctl enable --now ')) for (const socket of argv.slice(3)) host.enabledSockets.add(socket);
+      else if (line.startsWith('systemctl enable')) host.unitEnabled = true;
+      if (line.startsWith('systemctl stop dedalo-site-builder@')) host.unitActive = false;
       if (line.startsWith('systemctl start') || line.startsWith('systemctl restart')) host.unitActive = true;
       return { code: 0, stdout: '', stderr: '' };
     },
@@ -457,15 +516,17 @@ function adoptDryRun(install: Install, io: RecordingIo = makeIo(install)): Adopt
 /** The `HostState` the real observer would produce, read off the synthetic host. */
 function observe(adopted: Adopted): HostState {
   const { install, io, layout, manifest } = adopted;
+  const agentLedger = fakeLedger(layout, io.host.accounts.values(), io.host.ledgerGroups.values());
+  const identities = ledgerOrdinals(layout, agentLedger);
   const contentful = new Set<string>([
-    ...renderAll(layout, manifest).map(artifact => artifact.path),
-    ...[layout.roots.workspaces, layout.roots.home, layout.roots.audit, ...layout.sites.map(site => site.webspace)].map(
+    ...renderAll(layout, manifest, { agentIdentities: identities, systemdVersion: 255 }).map(artifact => artifact.path),
+    ...[layout.roots.workspaces, layout.roots.audit, ...layout.sites.map(site => site.webspace)].map(
       root => join(root, INSTANCE_MARKER),
     ),
   ]);
 
   const entries: Record<string, PathObservation> = {};
-  for (const path of observedPaths(layout, manifest)) {
+  for (const path of observedPaths(layout, manifest, identities)) {
     const facts = io.stat(path);
     if (!facts) continue;
     const real = onHost(install, path);
@@ -489,6 +550,9 @@ function observe(adopted: Adopted): HostState {
     unitActive: io.host.unitActive,
     nologinShell: '/usr/sbin/nologin',
     webServerUnit: 'nginx',
+    agentLedger,
+    pid1Version: 255,
+    enabledSockets: [...io.host.enabledSockets],
   };
 }
 
@@ -722,7 +786,9 @@ describe('a full adoption moves nothing a museum is serving', () => {
   test('every root is stamped with this instance’s marker', () => {
     const install = makeInstall();
     const { layout, io } = adoptFully(install);
-    for (const root of [layout.roots.workspaces, layout.roots.home, layout.roots.audit, ...layout.sites.map(site => site.webspace)]) {
+    // The daemon's roots and every webspace. The retired shared agent HOME is ARCHIVED by the
+    // provisioning adoption hands over to (LEAD-1b), never claimed.
+    for (const root of [layout.roots.workspaces, layout.roots.audit, ...layout.sites.map(site => site.webspace)]) {
       expect(io.readFile(join(root, INSTANCE_MARKER))).toContain('example');
     }
   });

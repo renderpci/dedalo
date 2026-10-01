@@ -70,6 +70,8 @@ const DATE_SLOT = 'zzbuc7'; // component_dataframe of DATE_MAIN
 const XLIT = 'zzbuc8'; // component_input_text, NOT translatable, with_lang_versions (rsc85-like)
 const TABLE = 'matrix_test';
 const USER_ID = -1;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 /** The CSV door's per-user import dir (media root, marked by the suite). */
 const CSV_USER = 987_681;
 
@@ -930,7 +932,7 @@ describe('import_execute (MARC21 / Zotero / RDF executor)', () => {
 		const report = await importMappedRecords(
 			[{ sectionId: id, fields: [{ component_tipo: T3_TEXT, values: ['imported'] }] }],
 			T3,
-			USER_ID,
+			IMPORTER,
 			{ bulkLabel: 'bulk_undo_capture update' },
 		);
 		const bulk = mustGet(report.bulkProcessId, 'run id');
@@ -951,7 +953,7 @@ describe('import_execute (MARC21 / Zotero / RDF executor)', () => {
 		const report = await importMappedRecords(
 			[{ sectionId: null, fields: [{ component_tipo: T3_TEXT, values: ['born'] }] }],
 			T3,
-			USER_ID,
+			IMPORTER,
 			{ bulkLabel: 'bulk_undo_capture create' },
 		);
 		const bulk = mustGet(report.bulkProcessId, 'run id');

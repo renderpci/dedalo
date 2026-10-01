@@ -10,17 +10,32 @@
  *    ill-typed permission target in the request options is a denial, never a
  *    pass. Mirrors PHP assert_action_permission + the section/tipo/record/
  *    developer assert_* helpers.
+ *
+ * THE RECORD-ADDRESSED KINDS DELEGATE (closure Step 3; WC-2026-09-30-write-door):
+ * `record`, `record_tipo`, `tipo`, `section` and every `targets` entry are the
+ * write door (security/write_door.ts) — grammar, the section floor, the
+ * dd128-aware pair, the scope with the non-positive-id refusal ahead of the
+ * admin bypass. This module only maps the door's typed refusals onto the tool
+ * envelope's legacy (msg, token) pair (`toCheck`), so the wire is unchanged.
  */
 
+import { DedaloError, isDedaloError } from '../errors/dedalo_error.ts';
 import { assertValidTipo } from '../search/identifier_gate.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
-import { isRecordInScope } from '../security/record_scope.ts';
+import {
+	authorizeRecordAccess,
+	authorizeSectionRecord,
+	authorizeSectionTarget,
+	parseRecordId,
+	type RecordAccessOptions,
+} from '../security/write_door.ts';
 import type {
 	GatedToolActionSpec,
 	ToolActionSpec,
 	ToolServerModule,
 	WriteTarget,
 } from './module.ts';
+import { getUserTools } from './registry.ts';
 
 /** Look up an action spec by method name (PHP resolve_action). Null when absent. */
 export function resolveAction(module: ToolServerModule, method: string): ToolActionSpec | null {
@@ -74,13 +89,19 @@ export async function assertActionPermission(
 				? { ok: true }
 				: fail('developer privileges required', ['unauthorized']);
 
-		case 'section': {
-			const sectionTipo = validTipo(options.section_tipo);
-			if (sectionTipo === null) return fail('invalid section target', ['invalid_request']);
-			const level = await getPermissions(principal, sectionTipo, sectionTipo);
-			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
-			return scopeIfRecordTargeted(sectionTipo, options, principal);
-		}
+		case 'section':
+			// THE WRITE DOOR (closure Step 3): the section level, consultation-capped
+			// (a section the engine renders read-only is not writable through a tool
+			// either — WC-2026-09-30-write-door); a NAMED id must be an integer in
+			// the caller's scope — 0 and negatives refused for every caller, admins
+			// included. An ABSENT id is a create: the level is its authorization.
+			return toCheck('section', () =>
+				authorizeSectionTarget(
+					principal,
+					{ section_tipo: options.section_tipo, section_id: options.section_id },
+					{ level: minLevel, door: 'tool_request.section' },
+				),
+			);
 
 		case 'section_list':
 			return assertSectionList(spec, options, principal, minLevel);
@@ -89,44 +110,45 @@ export async function assertActionPermission(
 			return assertWriteTargets(spec, options, principal, minLevel);
 
 		case 'tipo': {
-			const sectionTipo = validTipo(options.section_tipo);
-			const tipo = validTipo(options.tipo);
-			if (sectionTipo === null || tipo === null) {
-				return fail('invalid permission target', ['invalid_request']);
+			// The (section, tipo) pair — dd128-aware when a record is named — then
+			// the scope of a NAMED record. An absent tipo is not a target.
+			if (options.tipo === undefined || options.tipo === null || options.tipo === '') {
+				return fail(REFUSAL_INVALID.tipo, ['invalid_request']);
 			}
-			const level = await getPermissions(principal, sectionTipo, tipo);
-			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
-			return scopeIfRecordTargeted(sectionTipo, options, principal);
+			return toCheck('tipo', () =>
+				authorizeSectionTarget(
+					principal,
+					{
+						section_tipo: options.section_tipo,
+						tipo: options.tipo,
+						section_id: options.section_id,
+					},
+					{ level: minLevel, door: 'tool_request.tipo' },
+				),
+			);
 		}
 
-		case 'record': {
-			const sectionTipo = validTipo(options.section_tipo);
-			const sectionId = Number(options.section_id);
-			if (sectionTipo === null || !Number.isFinite(sectionId)) {
-				return fail('invalid record target', ['invalid_request']);
-			}
-			const level = await getPermissions(principal, sectionTipo, sectionTipo);
-			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
-			// Per-record scope: the record must be visible under the caller's
-			// projects filter (PHP assert_record_in_user_scope). Global admins skip.
-			if (!principal.isGlobalAdmin && !(await isRecordInScope(sectionTipo, sectionId, principal))) {
-				return fail('record is out of the user scope', ['unauthorized']);
-			}
-			return { ok: true };
-		}
+		case 'record':
+			// A record target: the section level (consultation-capped) and the record
+			// scope. The id is REQUIRED — by the door itself (authorizeSectionRecord
+			// refuses an absent id as request.invalid): a record kind with no record
+			// is not a target, and cannot degrade into a create.
+			return toCheck('record', () =>
+				authorizeSectionRecord(
+					principal,
+					{ section_tipo: options.section_tipo, section_id: options.section_id },
+					{ level: minLevel, door: 'tool_request.record' },
+				),
+			);
 
 		case 'record_tipo': {
-			// BOTH halves of PHP's SEC-024 door on a COMPONENT OF A RECORD:
-			//   assert_tipo_permission($section_tipo, $component_tipo, $level)
-			//   assert_record_in_user_scope($section_tipo, (int)$section_id)
-			// 'tipo' expresses only the first, 'record' only the second (and its
-			// level check is section-vs-section, so it never consults the component
-			// at all). Every media-family action needs both: without the pair half a
-			// user explicitly denied write on ONE media component can still delete
-			// its files, rotate, remux or bulk-rewrite it through the section grant.
-			// The component key is `tipo` with `component_tipo` as its alias —
-			// exactly what resolveMediaToolContext and the tc/pdf handlers read.
-			const sectionTipo = validTipo(options.section_tipo);
+			// BOTH halves of PHP's SEC-024 door on a COMPONENT OF A RECORD, now the
+			// write door's full order: grammar → section floor 1 → the pair
+			// (dd128-aware) → the record scope (non-positive id refused BEFORE the
+			// admin bypass). The component key is `tipo` with `component_tipo` as
+			// its alias — exactly what resolveMediaToolContext and the tc/pdf
+			// handlers read.
+			//
 			// AMBIGUITY IS A DENIAL. The two keys are aliases, but handlers do not all
 			// read them in the same order (tool_tc read `component_tipo ?? tipo` while
 			// this gate reads `tipo ?? component_tipo`). A payload carrying BOTH keys
@@ -143,17 +165,22 @@ export async function assertActionPermission(
 			) {
 				return fail('conflicting component target', ['invalid_request']);
 			}
-			const componentTipo = validTipo(tipoKey ?? componentTipoKey);
-			const sectionId = Number(options.section_id);
-			if (sectionTipo === null || componentTipo === null || !Number.isFinite(sectionId)) {
-				return fail('invalid permission target', ['invalid_request']);
+			const componentTipo = tipoKey ?? componentTipoKey;
+			if (componentTipo === undefined || componentTipo === null || componentTipo === '') {
+				return fail(REFUSAL_INVALID.record_tipo, ['invalid_request']);
 			}
-			const level = await getPermissions(principal, sectionTipo, componentTipo);
-			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
-			if (!principal.isGlobalAdmin && !(await isRecordInScope(sectionTipo, sectionId, principal))) {
-				return fail('record is out of the user scope', ['unauthorized']);
-			}
-			return { ok: true };
+			if (minLevel > 2) return fail('unsupported permission level', ['invalid_request']);
+			return toCheck('record_tipo', () =>
+				authorizeRecordAccess(
+					principal,
+					{
+						section_tipo: options.section_tipo,
+						component_tipo: componentTipo,
+						section_id: options.section_id,
+					},
+					recordAccessOptions(minLevel, 'tool_request.record_tipo'),
+				),
+			);
 		}
 
 		default:
@@ -197,7 +224,8 @@ async function assertSectionList(
  *
  *  - the level is asserted on the PAIR when a `tipo` is named (a section grant
  *    is not authority over a component the profile denies), on the section
- *    when not;
+ *    when not — consultation-capped, like every section-level write target
+ *    (an importer must not create or overwrite Activity / Time Machine rows);
  *  - a `section_id`, when named, must be a POSITIVE integer and inside the
  *    caller's scope (isRecordInScope — the projects filter and every assembler
  *    rule, the dd655 owner predicate included); global admins are unscoped,
@@ -223,22 +251,61 @@ async function assertWriteTargets(
 	return { ok: true };
 }
 
-/** One entry of a 'targets' list: the pair (or section) level, then the record scope. */
+/**
+ * One entry of a 'targets' list, through the write door: a named component OF
+ * a named record is the full record door (section floor 1, the dd128-aware
+ * pair, the scope); anything else is a section target (the pair or section
+ * level, then the scope of a named record).
+ */
 async function assertOneWriteTarget(
 	target: WriteTarget,
 	principal: Principal,
 	minLevel: number,
 ): Promise<PermissionCheck> {
 	const pair = writeTargetPair(target);
-	if (pair === null) return fail('invalid permission target', ['invalid_request']);
-	const level = await getPermissions(principal, pair.sectionTipo, pair.tipo);
-	if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
-	if (target.section_id === undefined) return { ok: true };
-	const sectionId = Number(target.section_id);
-	if (!Number.isInteger(sectionId) || sectionId < 1) {
-		return fail('invalid record target', ['invalid_request']);
-	}
-	return assertRecordScope(pair.sectionTipo, sectionId, principal);
+	if (pair === null) return fail(REFUSAL_INVALID.targets, ['invalid_request']);
+	const shape = writeTargetShape(target, pair, minLevel);
+	if (shape === 'invalid') return fail(REFUSAL_INVALID.record, ['invalid_request']);
+	const raw = { section_tipo: pair.sectionTipo, section_id: target.section_id };
+	return toCheck('targets', () =>
+		shape === 'record'
+			? authorizeRecordAccess(
+					principal,
+					{ ...raw, component_tipo: pair.tipo },
+					recordAccessOptions(minLevel, 'tool_request.targets'),
+				)
+			: authorizeSectionTarget(
+					principal,
+					{ ...raw, tipo: pair.tipo },
+					{ level: minLevel, door: 'tool_request.targets' },
+				),
+	);
+}
+
+/**
+ * Which door a 'targets' entry goes through. `undefined` is the only "no record"
+ * spelling an extractor may emit; any other value must BE a record id (null,
+ * 1.5, 'abc' are malformed entries). A named component OF a named record is the
+ * full record door; anything else a section target.
+ */
+function writeTargetShape(
+	target: WriteTarget,
+	pair: { sectionTipo: string; tipo: string },
+	minLevel: number,
+): 'invalid' | 'record' | 'section' {
+	if (target.section_id === undefined) return 'section';
+	if (parseRecordId(target.section_id).kind !== 'id') return 'invalid';
+	return pair.tipo !== pair.sectionTipo && minLevel <= 2 ? 'record' : 'section';
+}
+
+/** The write door's options for a record-addressed tool kind at `minLevel` (1 read, 2 write). */
+function recordAccessOptions(minLevel: number, door: string): RecordAccessOptions {
+	return {
+		mode: minLevel >= 2 ? 'write' : 'read',
+		level: minLevel >= 2 ? 2 : 1,
+		door,
+		sectionFloor: 1,
+	};
 }
 
 /**
@@ -275,39 +342,73 @@ function extractorTargets<T>(
 }
 
 /**
- * TOOLS-05 (2026-07-28 audit): a section/tipo-level grant is NOT authority to
- * touch a specific record outside the caller's projects filter. When a
- * section/tipo-gated action ALSO names a concrete existing record (a positive
- * section_id in the payload — tm restore, import_files overwrite, marc21/zotero),
- * the record must be in scope, exactly as the `record` kind requires. A create
- * (no section_id, or a non-positive one) has no prior record to scope-check and
- * passes — the section-level write grant is its whole authorization.
+ * The grammar sentence per kind — unchanged on the wire since before the write
+ * door (FAILURE_LITERAL_BASELINE pins these literals).
  */
-async function scopeIfRecordTargeted(
-	sectionTipo: string,
-	options: Record<string, unknown>,
-	principal: Principal,
+const REFUSAL_INVALID = {
+	section: 'invalid section target',
+	tipo: 'invalid permission target',
+	record: 'invalid record target',
+	record_tipo: 'invalid permission target',
+	targets: 'invalid permission target',
+} as const;
+
+/**
+ * THE ADAPTER from the write door's typed refusals to the tool envelope's
+ * (msg, errors) pair. The write door THROWS a DedaloError; the tool gate
+ * answers a PermissionCheck the dispatch relays — the wire is unchanged:
+ *
+ *   perm.denied        → 'insufficient permissions on target' / unauthorized
+ *   perm.out_of_scope  → 'record is out of the user scope'    / unauthorized
+ *   request.invalid    → the kind's own grammar sentence       / invalid_request
+ *
+ * Any other error is NOT a refusal of this gate and propagates (a DB failure
+ * must surface as the failure it is, never as a quiet denial or a pass).
+ */
+async function toCheck(
+	kind: keyof typeof REFUSAL_INVALID,
+	authorize: () => Promise<unknown>,
 ): Promise<PermissionCheck> {
-	const sectionId = Number(options.section_id);
-	if (!Number.isInteger(sectionId) || sectionId < 1) return { ok: true };
-	return assertRecordScope(sectionTipo, sectionId, principal);
+	try {
+		await authorize();
+		return { ok: true };
+	} catch (error) {
+		if (!isDedaloError(error)) throw error;
+		switch (error.code) {
+			case 'perm.denied':
+				return fail('insufficient permissions on target', ['unauthorized']);
+			case 'perm.out_of_scope':
+				return fail('record is out of the user scope', ['unauthorized']);
+			case 'request.invalid':
+				return fail(REFUSAL_INVALID[kind], ['invalid_request']);
+			default:
+				throw error;
+		}
+	}
 }
 
 /**
- * The record-scope half every record-addressed kind shares: the record must be
- * visible under the caller's projects filter (PHP assert_record_in_user_scope,
- * isRecordInScope — the assembler's rules, the dd655 owner predicate included);
- * global admins are unscoped.
+ * THE TOOL GRANT DECISION — the ONE home of "does this user's profile authorize
+ * `toolName`" (closure Step 3 req 8): the tool must be ACTIVE in the registry
+ * (dd1324) and in the user's authorized list (PHP tool_common::get_user_tools:
+ * the profile's dd1067 grants plus the always_active tools; the superuser -1
+ * gets every active tool). Global admins are NOT exempt — the tool ACL has no
+ * admin flag anywhere (registry.getUserTools). Every door that asks a grant —
+ * the tool dispatcher's gates 3+4, the agent door, the vision spend, the
+ * generative RAG answer, tool_export's download route — asks it HERE.
  */
-async function assertRecordScope(
-	sectionTipo: string,
-	sectionId: number,
-	principal: Principal,
-): Promise<PermissionCheck> {
-	if (!principal.isGlobalAdmin && !(await isRecordInScope(sectionTipo, sectionId, principal))) {
-		return fail('record is out of the user scope', ['unauthorized']);
-	}
-	return { ok: true };
+export async function isToolGranted(userId: number, toolName: string): Promise<boolean> {
+	const tools = await getUserTools(userId);
+	return tools.some((tool) => tool.name === toolName);
+}
+
+/** {@link isToolGranted}, THROWING `tool.not_authorized` when it is not. */
+export async function assertToolGranted(principal: Principal, toolName: string): Promise<void> {
+	if (await isToolGranted(principal.userId, toolName)) return;
+	throw new DedaloError('tool.not_authorized', {
+		message: `the profile of user ${principal.userId} does not authorize ${toolName}`,
+		coordinates: { tool: toolName, user_id: principal.userId },
+	});
 }
 
 /** Validate a value as a tipo, returning null (not throwing) on failure. */

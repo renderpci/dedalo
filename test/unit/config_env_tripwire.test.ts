@@ -45,7 +45,8 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
 const PROCESS_ENV_ALLOWLIST: Record<string, { maxLines: number; reason: string }> = {
 	'src/core/area_maintenance/backup.ts': {
 		maxLines: 1,
-		reason: 'subprocess passthrough: pg_dump child gets the whole env',
+		reason:
+			'subprocess passthrough (inheritedEnvironment): pg_dump gets the whole env; pg_restore the same with the message locale pinned to C and no PGPASSWORD',
 	},
 	'src/core/media/engine/spawn.ts': {
 		maxLines: 1,

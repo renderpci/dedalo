@@ -1,29 +1,31 @@
 /**
- * The maintenance opt-out from the pool-wide statement_timeout (WC-055).
+ * The maintenance opt-out from the pool-wide statement_timeout (WC-055, PERF-11).
  *
  * `DB_STATEMENT_TIMEOUT_MS` is the only ceiling on a search that cannot abort
  * early — the dd551 Data search (`f_unaccent(...) ~* ...` over `misc`) is
  * deliberately unindexed, so a term matching nothing reads all 32.9M rows
  * (~175 s measured on mdcat), and a client disconnecting does not cancel it.
- * The setting nevertheless shipped DISABLED, because it is a per-connection GUC
- * on the shared pool and would equally abort REINDEX / VACUUM / DROP INDEX
+ * It shipped DISABLED for years, because it is a per-connection GUC on the
+ * shared pool and would equally abort REINDEX / VACUUM / DROP INDEX
  * CONCURRENTLY — maintenance that is SUPPOSED to run for minutes.
  *
- * `runWithoutStatementTimeout` resolves that conflict, and this gate proves the
- * two halves of it against a live server rather than by inspection:
- *   1. a pooled statement IS bounded when the GUC is set;
- *   2. the helper's statement is NOT, under the same GUC;
- *   3. the reserved connection does not LEAK the cleared GUC back into the pool
- *      — the failure mode that makes `SET` (rather than `SET LOCAL`) dangerous
- *      here, and which would silently un-bound every later request handed that
- *      same connection.
- *
- * The suite cannot rely on the install's own DB_STATEMENT_TIMEOUT_MS (0 in the
- * test env), so it sets the GUC on the connection it is testing.
+ * `runWithoutStatementTimeout` resolves that conflict. Since PERF-11 it runs
+ * its statement on the MAINTENANCE pool (withUnboundedStatements), whose
+ * connections are BORN with `statement_timeout = 0` — no GUC is ever SET or
+ * RESET, so the WC-055 leak class is gone by construction rather than by a
+ * remembered RESET. This gate proves, against a live server:
+ *   1. a statement IS bounded when the GUC is set;
+ *   2. the helper's statement is NOT;
+ *   3. the helper MUTATES NO GUC: its 0 is the startup setting (source
+ *      `client`, never `session`), and a session-scoped `set_config(…, false)`
+ *      through it is refused before it is sent — so nothing can ride a pooled
+ *      connection into later traffic. (The full pool/scope matrix, under a
+ *      real configured ceiling, is statement_ceiling_scope_native.)
  */
 
 import { describe, expect, test } from 'bun:test';
 import { getPoolStats, runWithoutStatementTimeout, sql } from '../../src/core/db/postgres.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 /** Longer than the ceiling below, short enough to keep the suite quick. */
 const SLEEP_S = 1.5;
@@ -57,9 +59,7 @@ describe('statement_timeout exemption for maintenance (WC-055)', () => {
 		);
 	}, 30000);
 
-	test('runWithoutStatementTimeout clears the ceiling for its own statement', async () => {
-		// Its reserved connection may be a pool connection that already carries a
-		// ceiling from earlier work; the helper must clear it either way.
+	test('runWithoutStatementTimeout runs with no ceiling', async () => {
 		const rows = (await runWithoutStatementTimeout(
 			"SELECT current_setting('statement_timeout') AS timeout",
 		)) as { timeout: string }[];
@@ -75,35 +75,43 @@ describe('statement_timeout exemption for maintenance (WC-055)', () => {
 		expect(elapsedMs).toBeGreaterThan(SLEEP_S * 1000 * 0.9);
 	}, 30000);
 
-	test('the cleared GUC does not leak back into pooled traffic', async () => {
-		// De-vacuated (2026-08-23): the old form compared the pooled GUC against
-		// config.ops.dbStatementTimeoutMs, which is 0 in the test env — a leaked
-		// 0 equalled the configured 0 and the assertion could never fail. Drive a
-		// SENTINEL instead: the "maintenance statement" itself sets a
-		// recognizable nonzero ceiling on the helper's reserved connection, so a
-		// connection released without RESET is distinguishable from every honest
-		// pooled connection.
-		const SENTINEL_MS = 12345;
-		await runWithoutStatementTimeout(
-			`SELECT set_config('statement_timeout', '${SENTINEL_MS}', false)`,
-		);
-		// Concurrent probes to spread across the pool's connections (sequential
-		// queries tend to reuse one), sized to make missing the leaked
-		// connection unlikely.
-		const { max } = getPoolStats();
-		const probes = (await Promise.all(
-			Array.from(
-				{ length: Math.max(4, max * 2) },
-				() =>
-					sql.unsafe(`SELECT current_setting('statement_timeout') AS timeout`, []) as Promise<
-						{ timeout: string }[]
-					>,
-			),
-		)) as { timeout: string }[][];
-		const leaked = probes.map((rows) => rows[0]?.timeout).filter((t) => t?.includes('12345'));
+	test('the helper mutates no GUC: its 0 is the startup setting, and a session set_config is refused', async () => {
+		const [setting] = (await runWithoutStatementTimeout(
+			"SELECT setting, source FROM pg_settings WHERE name = 'statement_timeout'",
+		)) as { setting: string; source: string }[];
+		expect(setting?.setting).toBe('0');
 		expect(
-			leaked,
-			`a pooled connection still carries the helper's reserved-span statement_timeout (${leaked[0]}) — runWithoutStatementTimeout released without RESET`,
-		).toEqual([]);
+			setting?.source,
+			'the helper cleared the ceiling with a session SET (it must run on a connection born unbounded)',
+		).toBe('client');
+
+		// De-vacuated (2026-08-23), re-aimed (PERF-11): a session-scoped
+		// set_config through the helper would plant a SENTINEL ceiling on a
+		// pooled (maintenance) connection that outlives the call. It is refused
+		// before it is sent, and no pooled connection carries the sentinel.
+		const SENTINEL_MS = 12345;
+		const refusal = await refusalOf(
+			runWithoutStatementTimeout(`SELECT set_config('statement_timeout', '${SENTINEL_MS}', false)`),
+		);
+		expect(refusal.code).toBe('internal.invariant');
+		// Concurrent probes to spread across the pool's connections (sequential
+		// queries tend to reuse one), sized to make missing a leaked connection
+		// unlikely — on BOTH pools.
+		const { max, maintenance } = getPoolStats();
+		const probe = (text: string) => sql.unsafe(text, []) as Promise<{ timeout: string }[]>;
+		const pooled = await Promise.all(
+			Array.from({ length: Math.max(4, max * 2) }, () =>
+				probe(`SELECT current_setting('statement_timeout') AS timeout`),
+			),
+		);
+		const maintenanceProbes = await Promise.all(
+			Array.from({ length: Math.max(2, maintenance.max * 2) }, () =>
+				runWithoutStatementTimeout(`SELECT current_setting('statement_timeout') AS timeout`),
+			),
+		);
+		const leaked = [...pooled, ...(maintenanceProbes as { timeout: string }[][])]
+			.map((rows) => rows[0]?.timeout)
+			.filter((timeout) => timeout?.includes('12345'));
+		expect(leaked, 'a pooled connection carries the refused session sentinel').toEqual([]);
 	}, 30000);
 });

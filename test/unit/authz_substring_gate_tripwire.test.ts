@@ -100,7 +100,7 @@ interface Exemption {
 const EXEMPTIONS: Record<string, Exemption> = {
 	'test/unit/human_write_scope_tripwire.test.ts': {
 		reason:
-			'Pins WHERE four tool write doors decide (TOOLS-01/02/05/06); each decision is driven behaviourally by the named twin.',
+			'Pins WHERE two tool write doors decide (TOOLS-01/02); each decision is driven behaviourally by the named twin. The TOOLS-05/06 pins are GONE (closure Step 3): both decisions moved into the write door and are driven by write_door_native / tool_transcription_gate_native.',
 		pins: {
 			principalCanAccessRecord: [
 				{
@@ -129,30 +129,6 @@ const EXEMPTIONS: Record<string, Exemption> = {
 					case: 'the imperative tipo-pair gate refuses a non-admin and writes NOTHING',
 					covers:
 						'TOOLS-01 — the per-row getPermissions(principal, row.section_tipo, componentTipo)',
-				},
-			],
-			isRecordInScope: [
-				{
-					file: 'test/unit/tools_record_tipo_permission.test.ts',
-					case: 'a granted component on an OUT-OF-SCOPE record is refused',
-					covers:
-						'TOOLS-05 — assertActionPermission consults isRecordInScope (scopeIfRecordTargeted) on the section and tipo kinds; the stubbed scope answer decides the refusal',
-				},
-			],
-			scopeIfRecordTargeted: [
-				{
-					file: 'test/unit/tools_record_tipo_permission.test.ts',
-					case: 'a granted component on an OUT-OF-SCOPE record is refused',
-					covers:
-						"TOOLS-05 — the `split('return scopeIfRecordTargeted(…)').length - 1 >= 2` pin (both kinds delegate); the twin drives assertActionPermission (its only direct caller) on the section AND the tipo kind and the out-of-scope refusal fires on both",
-				},
-			],
-			gateRecord: [
-				{
-					file: 'test/unit/tool_transcription.test.ts',
-					case: 'denies fail-closed on an invalid media_ddo record target (READ gate)',
-					covers:
-						'TOOLS-06 — gateRecord(mediaDdo, ctx, 1) fails closed on the media source. HONEST LIMIT: the twin proves the source gate refuses an INVALID target; a level-0 denial on a VALID source needs a write-on-target/zero-on-source principal the ACL fixture does not mint.',
 				},
 			],
 		},
@@ -214,36 +190,6 @@ const EXEMPTIONS: Record<string, Exemption> = {
 			],
 		},
 	},
-	'test/unit/dd128_write_census_tripwire.test.ts': {
-		reason:
-			'Pins the MCP write helper SIGNATURE (assertWritePermission takes a sectionId) and the three record-lifecycle doors going through assertRecordWriteTarget; both decisions are driven by the named twins.',
-		pins: {
-			assertWritePermission: [
-				{
-					file: 'test/unit/mcp_fields_write.test.ts',
-					case: 'every field-level write tool refuses a user the human API denies',
-					covers:
-						'set_field / portal_link / portal_unlink / find_or_create all refuse a non-admin with no grant through assertWritePermission',
-				},
-			],
-			assertRecordWriteTarget: [
-				{
-					file: 'test/unit/root_user_hidden_tripwire.test.ts',
-					case: 'id 0 and any other non-positive address are refused too, not just -1',
-					covers:
-						"assertRecordWriteTarget refuses a non-positive id ahead of the admin bypass (the SEC-05 shape), called directly with the real superuser — the `new RegExp(`assertRecordWriteTarget\\(…'save'`).test(doorSource)` receiver pins",
-				},
-			],
-			isRecordInScope: [
-				{
-					file: 'test/unit/root_user_hidden_tripwire.test.ts',
-					case: 'id 0 and any other non-positive address are refused too, not just -1',
-					covers:
-						'the NEGATIVE `/if\\s*\\(!principal\\.isGlobalAdmin\\)…isRecordInScope\\(/.exec(doorSource)` pin (no door inlines the scope inside the admin guard); the twin calls isRecordInScope directly and proves the refusal is reached for the superuser, i.e. is NOT inside the guard',
-				},
-			],
-		},
-	},
 	'test/unit/indexation_grid_tc_native.test.ts': {
 		reason:
 			'Pins that the indexation grid DELEGATES to scopeInverseReferenceHits (AUTHZ-05, no private copy of the rule); the same file drives the grid scoping with a level-0 caller and a global admin.',
@@ -266,8 +212,8 @@ const EXEMPTIONS: Record<string, Exemption> = {
  * shapes made visible — human_write_scope's scopeIfRecordTargeted and dd128's
  * isRecordInScope — counted the day the census learned to see them.)
  */
-const EXEMPTION_FILE_CEILING = 5;
-const EXEMPTION_PIN_CEILING = 16;
+const EXEMPTION_FILE_CEILING = 4;
+const EXEMPTION_PIN_CEILING = 10;
 
 // --- planted material (never borrowed from the tree) --------------------------
 
@@ -372,7 +318,7 @@ const SPLIT_EXEC = {
 import { readFileSync } from 'node:fs';
 const src = readFileSync('x.ts', 'utf8');
 test('counts and rewrites', () => {
-	expect(src.split('return scopeIfRecordTargeted(sectionTipo, options, principal)').length - 1).toBe(2);
+	expect(src.split('return authorizeSectionTarget(principal, raw, options)').length - 1).toBe(2);
 	expect([...src.matchAll(/principalCanAccessRecord\\(/g)].length).toBe(3);
 	expect(src.replace('if (principal.isGlobalAdmin)', 'X')).not.toBe(src);
 	expect(src.replace(/x/g, 'gateRecord(mediaDdo, ctx, 1)')).toBeDefined();
@@ -399,7 +345,7 @@ test('object and helper needles', () => {
 	expect(src.includes(PINS.gateB)).toBe(true);
 	expect(PINS.guard.test(src)).toBe(true);
 	expect(has(src, 'isRecordInScope(sectionTipo, sectionId, principal)')).toBe(true);
-	expect(count(src, /assertWritePermission\\(/g)).toBe(4);
+	expect(count(src, /authorizeRecordAccess\\(/g)).toBe(4);
 	expect(hasAll(src, 'x', 'ddoIsAuthorized(principal, sectionTipo, tipo)')).toBe(true);
 });
 `,
@@ -612,7 +558,7 @@ describe('an authorization decision may not be gated by a source substring', () 
 	test('split / matchAll / replace (either argument) are haystack assertions', () => {
 		const report = classifyAuthzFile(SPLIT_EXEC, symbols);
 		expect(shapes(report)).toEqual([
-			'split:scopeIfRecordTargeted',
+			'split:authorizeSectionTarget',
 			'matchAll:principalCanAccessRecord',
 			'replace:.isGlobalAdmin',
 			'replace:gateRecord',
@@ -626,7 +572,7 @@ describe('an authorization decision may not be gated by a source substring', () 
 			'includes:getPermissions@PINS',
 			'includes:.isGlobalAdmin@PINS',
 			'has:isRecordInScope',
-			'count:assertWritePermission',
+			'count:authorizeRecordAccess',
 			'hasAll:ddoIsAuthorized',
 		]);
 		expect(report.uncovered.length).toBe(5);

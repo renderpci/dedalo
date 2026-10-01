@@ -32,14 +32,7 @@ import {
 	isLangSlicedModel,
 	saveComponentData,
 } from '../../section/record/save_component.ts';
-import {
-	getPermissions,
-	getRecordComponentPermission,
-	getSectionPermissions,
-	isSelfServiceAccountWrite,
-	type Principal,
-} from '../../security/permissions.ts';
-import type { Session } from '../../security/session_store.ts';
+import { getPermissions, type Principal } from '../../security/permissions.ts';
 import { getTermByLocator, getTermTipos } from '../../ts_object/term_resolver.ts';
 import {
 	type ActionHandler,
@@ -236,54 +229,31 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// the permission resolver, scope gate, write engine, audit row and echo all
 		// share (the era of each site running its own Number()/String() is over).
 		const sectionId = wireId.id;
-		// dd128 OWN-record rules run BEFORE the matrix level and both raise and
-		// lower it (PHP component_common::save reaches the same resolver through
-		// get_component_permissions()). The DOWNGRADE half is the security half:
-		// without it a user holding a dd128 write grant can set their own profile
-		// assignment or developer flag through this very endpoint, and any global
-		// admin can raise their own global-admin flag. The UPGRADE half is what
-		// makes tool_user_admin work at all — dd128 is not project-assigned, so
-		// most profiles grant 0 on it and a user could not edit their own password.
-		// P1-2: through getRecordComponentPermission, the ONE resolver that already
-		// carries the rule, so this door and every other record-addressed door read
-		// the same number (it used to be a helper three doors remembered to call).
-		const level = await getRecordComponentPermission(
+		// THE WRITE DOOR (closure Step 3; WC-2026-09-30-write-door) — the ONE
+		// order every record-addressed write shares: the (section, component) pair
+		// through getRecordComponentPermission (the dd128 OWN-record rules run
+		// BEFORE the matrix level and both raise and lower it — the DOWNGRADE is the
+		// security half: without it a dd128 write grant sets its own profile or
+		// developer flag; the UPGRADE is what makes tool_user_admin work, since most
+		// profiles grant 0 on dd128), then the per-record write-target gate (PHP
+		// assert_record_in_user_scope; the non-positive-id refusal AHEAD of the
+		// admin bypass — SEC-05 — with the one self-service exception for an
+		// account's own name/email/password/image, isSelfServiceAccountWrite).
+		//
+		// sectionFloor 0 — A NAMED EXCEPTION (write_door SECTION_FLOOR_ZERO_DOORS:
+		// this door and its twin, dd_component_text_area_api.delete_tag; any other
+		// door asking floor 0 is refused as internal.invariant): this door does not
+		// ask the SECTION grant. PHP component_common::save asks the component
+		// permission only, and inline editing of a subdatum portal TARGET (a
+		// component of a section the profile holds 0 on, reached through a portal
+		// the profile may edit) depends on it. Converging it to 1 is an owner-review
+		// item of WC-2026-09-30-write-door, not a silent change here.
+		const { authorizeRecordAccess } = await import('../../security/write_door.ts');
+		await authorizeRecordAccess(
 			principal,
-			source.section_tipo,
-			source.tipo,
-			sectionId,
+			{ section_tipo: source.section_tipo, component_tipo: source.tipo, section_id: sectionId },
+			{ mode: 'write', level: 2, sectionFloor: 0, door: 'save' },
 		);
-		if (level < 2) {
-			throw new DedaloError('perm.denied', {
-				coordinates: { section_tipo: source.section_tipo, tipo: source.tipo, required: 2 },
-			});
-		}
-		// Per-record write-target gate (PHP assert_record_in_user_scope): a level-2
-		// user may only edit records inside their projects filter — the level gate
-		// alone would let them write a record they can never see (cross-project
-		// IDOR) — AND no caller, global admin included, may address a non-positive
-		// section_id (SEC-05: this door used to inline the admin bypass ABOVE that
-		// refusal, so root's password was rewritable). Same rule as duplicate/delete.
-		{
-			const { assertRecordWriteTarget } = await import('../../security/record_scope.ts');
-			// The ONE exception to the non-positive-id refusal: an account editing its
-			// OWN name / email / password / image on its OWN record. Root is dd128/-1,
-			// so without this the SEC-05 refusal also locked root out of changing its
-			// own password — and root is excluded from the emailed recovery flow by the
-			// same id > 0 rule. Narrow by construction: the predicate requires
-			// sectionId === principal.userId AND one of the four SELF_EDITABLE
-			// components (permissions.isSelfServiceAccountWrite), so it grants a global
-			// admin nothing on root's record. The LEVEL gate above is unchanged and
-			// still forces dd244 to 1 for everyone, root included.
-			await assertRecordWriteTarget(source.section_tipo, sectionId, principal, 'save', {
-				selfServiceAccountWrite: isSelfServiceAccountWrite(
-					principal,
-					source.section_tipo,
-					source.tipo,
-					sectionId,
-				),
-			});
-		}
 		if (!Array.isArray(dataPayload.changed_data)) {
 			throw new DedaloError('request.invalid_data', {
 				message: 'save: data.changed_data must be an array',
@@ -668,17 +638,19 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			});
 		}
 		await refuseAreaWrite(sectionTipo, source.model);
-		// getSectionPermissions caps consultation-only sections at read (1), so a
-		// create is refused here (PHP section::create_record:452 refusal); the
-		// createSectionRecord engine backstops the same rule for other doors.
-		const level = await getSectionPermissions(principal, sectionTipo);
-		if (level < 2) {
-			throw new DedaloError('perm.denied', {
-				coordinates: { section_tipo: sectionTipo, required: 2, operation: 'create' },
-			});
-		}
+		// THE WRITE DOOR (closure Step 3): a create names no record, so the
+		// consultation-capped SECTION level is its whole authorization — the one
+		// rule the duplicate / delete doors and the MCP create share (PHP
+		// section::create_record:452 refusal on Activity/TM); the
+		// createSectionRecord engine backstops it for other doors.
+		const { authorizeSectionTarget } = await import('../../security/write_door.ts');
+		const grant = await authorizeSectionTarget(
+			principal,
+			{ section_tipo: sectionTipo },
+			{ level: 2, door: 'create' },
+		);
 		const { createSectionRecord } = await import('../../section/record/create_record.ts');
-		const sectionId = await createSectionRecord(sectionTipo, principal.userId);
+		const sectionId = await createSectionRecord(grant.sectionTipo, principal.userId);
 
 		// The 'NEW' activity row is appended by createSectionRecord itself (P1-8 /
 		// DATA-19, 2026-09-03): it used to live at this door "because the engine has
@@ -716,14 +688,6 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			});
 		}
 		await refuseAreaWrite(sectionTipo, source.model);
-		// Consultation-only sections cap at read (1) → duplicate refused here; the
-		// duplicateSectionRecord engine backstops the same rule for other doors.
-		const level = await getSectionPermissions(principal, sectionTipo);
-		if (level < 2) {
-			throw new DedaloError('perm.denied', {
-				coordinates: { section_tipo: sectionTipo, required: 2, operation: 'duplicate' },
-			});
-		}
 		// Coerce at the door (counted, deprecable string form) instead of the blind
 		// Number() that minted NaN for junk (WC-2026-08-10-section-id-int-canonical).
 		// A non-address refuses loudly here; the sniff era let NaN ride into the
@@ -740,16 +704,23 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				},
 			});
 		}
+		// THE WRITE DOOR (closure Step 3): the SECTION level, consultation-capped
+		// (Activity/TM cap at read → duplicate refused; the duplicateSectionRecord
+		// engine backstops the same rule for other doors), then the per-record
+		// write-target gate: the source must be visible under the caller's
+		// projects filter (PHP assert_record_in_user_scope), and no caller — global
+		// admin included — may duplicate a non-positive section_id. SEC-05's second
+		// consequence lived here: duplicating dd128/-1 copies the whole `string`
+		// column, minting a positive-id user record carrying ROOT's Argon2 hash and
+		// root's username, and duplicate bypasses saveComponentData so dd132's
+		// `unique` check never runs.
 		{
-			// Per-record write-target gate: the source must be visible under the
-			// caller's projects filter (PHP assert_record_in_user_scope), and no
-			// caller — global admin included — may duplicate a non-positive
-			// section_id. SEC-05's second consequence lived here: duplicating
-			// dd128/-1 copies the whole `string` column, minting a positive-id user
-			// record carrying ROOT's Argon2 hash and root's username, and duplicate
-			// bypasses saveComponentData so dd132's `unique` check never runs.
-			const { assertRecordWriteTarget } = await import('../../security/record_scope.ts');
-			await assertRecordWriteTarget(sectionTipo, sourceSectionId, principal, 'duplicate');
+			const { authorizeSectionRecord } = await import('../../security/write_door.ts');
+			await authorizeSectionRecord(
+				principal,
+				{ section_tipo: sectionTipo, section_id: sourceSectionId },
+				{ level: 2, door: 'duplicate' },
+			);
 		}
 		const { duplicateSectionRecord } = await import('../../section/record/duplicate_record.ts');
 		const newSectionId = await duplicateSectionRecord(
@@ -805,14 +776,12 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				message: 'delete: source.section_id or rqo.sqo is required',
 			});
 		}
-		// Consultation-only sections cap at read (1) → delete refused here; the
-		// delete engines backstop the same rule for other doors.
-		const level = await getSectionPermissions(principal, sectionTipo);
-		if (level < 2) {
-			throw new DedaloError('perm.denied', {
-				coordinates: { section_tipo: sectionTipo, required: 2, operation: 'delete' },
-			});
-		}
+		// The level + scope gates run per branch below, through the write door:
+		// a named record is a record target (authorizeSectionRecord — the id is
+		// required by the door), an SQO multi-delete a section target.
+		const { authorizeSectionRecord, authorizeSectionTarget } = await import(
+			'../../security/write_door.ts'
+		);
 		const { deleteSectionRecord, deleteSectionData } = await import(
 			'../../section/record/delete_record.ts'
 		);
@@ -837,18 +806,28 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					},
 				});
 			}
-			// Per-record write-target gate (PHP assert_record_in_user_scope): a
-			// level-2 user may only delete records inside their projects filter —
-			// the level gate alone would let them delete a record they can never
-			// see (cross-project IDOR) — and no caller, admins included, may
-			// address a non-positive section_id (SEC-05; the delete ENGINES
-			// already refused it, this door did not).
-			{
-				const { assertRecordWriteTarget } = await import('../../security/record_scope.ts');
-				await assertRecordWriteTarget(sectionTipo, targetId, principal, 'delete');
-			}
+			// THE WRITE DOOR (closure Step 3): the SECTION level, consultation-capped
+			// (Activity/TM cap at read → delete refused; the delete engines backstop
+			// the same rule for other doors), then the per-record write-target gate
+			// (PHP assert_record_in_user_scope): a level-2 user may only delete
+			// records inside their projects filter — the level gate alone would let
+			// them delete a record they can never see (cross-project IDOR) — and no
+			// caller, admins included, may address a non-positive section_id (SEC-05;
+			// the delete ENGINES already refused it, this door did not).
+			await authorizeSectionRecord(
+				principal,
+				{ section_tipo: sectionTipo, section_id: targetId },
+				{ level: 2, door: 'delete' },
+			);
 			targets = [targetId];
 		} else {
+			// A section target (no record named): the consultation-capped section
+			// level first, then the multi-delete's own admin rule.
+			await authorizeSectionTarget(
+				principal,
+				{ section_tipo: sectionTipo },
+				{ level: 2, door: 'delete' },
+			);
 			if (!principal.isGlobalAdmin) {
 				throw new DedaloError('perm.denied', {
 					message: 'delete: sqo-based multi-delete requires global admin',
@@ -1092,7 +1071,11 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const { pickReadSource } = await import('../../section/read_source.ts');
 		const sqo = sanitizeClientSqo(structuredClone(rqo.sqo) as Record<string, unknown>);
 		const readSource = await pickReadSource((rqo.sqo as { mode?: string }).mode);
-		const total = await readSource.count(sqo, principal);
+		// The same subdatum read floor the rows read applies (SEC-1): a count
+		// that refused what the page served would paginate a different set.
+		const { subdatumReadFloor } = await import('../../security/read_floor.ts');
+		const readFloor = await subdatumReadFloor(principal, rqo.source);
+		const total = await readSource.count(sqo, principal, readFloor);
 		return { status: 200, body: ok({ total }, { requestId: context.requestId }) };
 	},
 	start: async (rqo, context) => {
@@ -1159,11 +1142,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// context entry, type='tool'). The tool must be authorized for the caller.
 		const toolParam = pick(searchObj.tool);
 		if (toolParam !== null && /^tool_[a-z0-9_]+$/.test(toolParam)) {
-			const { getUserTools, buildToolElementContext } = await import('../../tools/registry.ts');
-			const authorizedTools = await getUserTools(context.session.userId, principal.isGlobalAdmin);
-			if (!authorizedTools.some((tool) => tool.name === toolParam)) {
-				throw new DedaloError('tool.not_authorized', { coordinates: { tool: toolParam } });
-			}
+			const { buildToolElementContext } = await import('../../tools/registry.ts');
+			// The one grant decision (tools/security.ts — closure Step 3 req 8).
+			const { assertToolGranted } = await import('../../tools/security.ts');
+			await assertToolGranted(principal, toolParam);
 			const toolElementContext = await buildToolElementContext(toolParam);
 			const toolStartContext: unknown[] = [];
 			if ((rqo.options as { menu?: boolean } | undefined)?.menu === true) {
@@ -1413,20 +1395,14 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			typeof source.model === 'string' &&
 			/^tool_[a-z0-9_]+$/.test(source.model)
 		) {
-			const { getUserTools, buildToolElementContext } = await import('../../tools/registry.ts');
+			const { buildToolElementContext } = await import('../../tools/registry.ts');
 			const toolName = source.model;
-			// LEDGER — coverage plan §4.4 D8 (a.k.a. L6), KNOWN-OPEN AND UNGATED:
-			// `context.session` is dereferenced through a cast with NO null check, so a
-			// session-less call reaching this branch THROWS (a 500 envelope) instead of
-			// returning the 40x every other arm of this handler returns. `requirePrincipal`
-			// above does not guarantee a session object — it guarantees a principal.
-			const authorized = await getUserTools(
-				(context.session as Session).userId,
-				principal.isGlobalAdmin,
-			);
-			if (!authorized.some((tool) => tool.name === toolName)) {
-				throw new DedaloError('tool.not_authorized', { coordinates: { tool: toolName } });
-			}
+			// The one grant decision (tools/security.ts — closure Step 3 req 8), asked
+			// of the PRINCIPAL `requirePrincipal` guarantees — never of a session
+			// object it does not (the coverage plan's D8/L6 null dereference: a
+			// session-less call used to THROW a 500 here instead of the 403).
+			const { assertToolGranted } = await import('../../tools/security.ts');
+			await assertToolGranted(principal, toolName);
 			const toolContext = await buildToolElementContext(toolName);
 			return {
 				status: 200,

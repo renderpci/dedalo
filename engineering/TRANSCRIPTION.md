@@ -88,6 +88,13 @@ Notes that are not optional:
   engines rather than reimplemented.
 - The **audio is deleted** by the completion poll when the job ends, whichever
   way it ends.
+- **The sidecar's job id never reaches the browser.** `automatic_transcription`
+  hands the client a server-issued POLL HANDLE (`tools/tool_transcription/server/poll_handle.ts`)
+  sealing the job id, the engine, the submitting user and the media record it was
+  authorized on; `check_server_transcriber_status` accepts only that handle, and only
+  from the same user on the same record — a sequential id like `job-42` is not a
+  credential to someone else's transcript (WC-2026-09-30-transcription-record-tipo).
+  A server restart retires every handle along with the poll that could save its job.
 
 ### The private-address exemption
 

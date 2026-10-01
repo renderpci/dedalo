@@ -51,3 +51,9 @@
   (gated non-stub + the TLS ban). The full owned-mode pipeline against a real
   master is an operator drill on a scratch instance (ledgered in
   rewrite/LEDGER.md — no automated surface mutates a live ontology).
+
+## Addendum 2026-09-30 — local-origin refusal
+
+See also `WC-2026-09-30-update-manifest-local-origin-refusal`: `get_ontology_update_info`
+now refuses an authorized REMOTE caller with `update_server.refused` when this
+master's public origin is local (`DEDALO_HOST` unset or loopback).

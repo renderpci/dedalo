@@ -57,6 +57,14 @@ The live-oracle era is over. The baselines of record are FROZEN:
 - `bun run dev` — server (unix socket / port per `../private/.env`). 
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds — but see the verification story above: corpus-bound   parity gates are red on the suite DB by construction until replaced). 
 - `bun run test:db:setup` — build the SUITE database (stamps `dedalo_test_marker`) AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
+- **Suite MariaDB (PUB-05)** — the diffusion gates run against the suite's OWN MariaDB per lane
+  (`../private/test_mariadb/<suite db>`, marked `.dedalo_test_mariadb`, `--skip-networking` unix
+  socket), armed in every `bun test` by `test/preload/suite_mariadb.ts`; never an installation's.
+  Needs `mariadbd`, `mariadb-install-db` and `mariadb` locally (macOS: `brew install mariadb`):
+  without them the MariaDB gates go RED, not skip. The server is detached and outlives `bun test`:
+  `bun run scripts/ci/suite_mariadb.ts stop` ends it; `… sweep` also deletes the lane root (marked
+  roots only). CI: `db_tier.sh` starts it (EXIT trap stops it) and runs `scripts/ci/mariadb_tier.ts`
+  LAST. Canon: `engineering/CI.md` → *Suite MariaDB target*.
 - `bun run test:client` — the browser client suite (Mocha in headless Chrome).   It STARTS ITS OWN SERVER on the dedicated SUITE database and stops it again:   no dev server to start first, no port to pass, no client test can reach the   application's data (`scripts/client_test_server.ts`; build the database once   with `bun run test:db:setup`). 
   - `bun run test:client:server` — the SAME suite server kept alive for BROWSING
     the page by hand (`scripts/client_test_serve.ts`): same repoint, same login

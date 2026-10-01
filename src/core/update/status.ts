@@ -13,7 +13,7 @@
  * THE LAW OF THIS MODULE: it never re-implements a refusal. Every readiness
  * line asks the SAME function the pipeline refuses on — `isSupervised`,
  * `detectDeploymentChannel`, `runtimePathsInsideTree`, `backupRootIsInsideTree`,
- * `backupFreshness`, `planCodeBuild`, `buildCodeUpdateInfo`. A second copy
+ * `backupFreshnessWithin`, `planCodeBuild`, `buildCodeUpdateInfo`. A second copy
  * of a rule would drift, and a readiness panel that disagrees with the pipeline
  * is worse than no panel: it would earn trust it cannot keep. Where a check is
  * NOT decidable before the download (the release's own root whitelist and its
@@ -65,7 +65,7 @@ import {
 } from './code_update.ts';
 import { availableBytesAt } from './disk_space.ts';
 import { INSTALLED_CHANNEL, INSTALLED_DIGEST, type InstallChannel } from './install_stamp.ts';
-import { backupFreshness } from './preconditions.ts';
+import { type BackupVerifyOptions, backupFreshnessWithin, PANEL_WAIT_MS } from './preconditions.ts';
 import { type DeleteBlockReason, deletabilityOf, RESTORE_POINT_PREFIX } from './restore_points.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
 
@@ -114,6 +114,15 @@ function check(
 function probe(id: string, run: () => StatusCheck): StatusCheck {
 	try {
 		return run();
+	} catch (error) {
+		return check(id, 'unknown', error instanceof Error ? error.message : String(error));
+	}
+}
+
+/** `probe` for an asynchronous check: a rejection becomes `unknown` too. */
+async function probeAsync(id: string, run: () => Promise<StatusCheck>): Promise<StatusCheck> {
+	try {
+		return await run();
 	} catch (error) {
 		return check(id, 'unknown', error instanceof Error ? error.message : String(error));
 	}
@@ -234,8 +243,8 @@ function operatorChecks(principal: Principal): StatusCheck[] {
 
 /**
  * The recent-backup gate. Since 2026-08-23 this REFUSES a code update
- * (`backupRequire`) — but it is the ONE gate the request can waive, and since
- * 2026-08-25 the panel offers that waiver (the update_code modal's
+ * (`requireFreshBackup`) — but it is the ONE gate the request can waive, and
+ * since 2026-08-25 the panel offers that waiver (the update_code modal's
  * `waive_backup` checkbox). So the state is `warn`, the vocabulary's own word
  * for "allowed, but the operator should know (a waivable condition)": a stale
  * backup no longer forces `ready:false`, which would have headlined "Update
@@ -243,22 +252,45 @@ function operatorChecks(principal: Principal): StatusCheck[] {
  * this module's header forbids. The age fact rides in `detail` unchanged, and
  * an UNWAIVED request still refuses exactly as before.
  *
- * P0-13 (2026-08-30): the age it reports is now the age of the newest artifact
- * a `pg_restore` read has NOT DISPROVED — freshness is not usability, and a
- * pg_dump killed at 60% used to make this line read `ok`. Two consequences the
- * operator must be able to see: `none` can now mean "dumps exist but none of
- * them verified", and a dump being WRITTEN right now no longer counts. WHICH
- * artifact was counted (or refused, and why) rides in `scope` — otherwise the
- * panel would say `none` over a directory visibly full of .backup files and
- * give the operator nothing to act on. The verdict itself is still the
- * pipeline's own, computed exactly once.
+ * P0-13 (2026-08-30) / OPS-1 (2026-09-30): the age it reports is that of the
+ * newest artifact a FULL `pg_restore` read PROVED — freshness is not usability,
+ * and a pg_dump killed at 60% used to make this line read `ok`. `none` can mean
+ * "dumps exist but none of them verified"; WHICH artifact was counted (or
+ * refused, and why) rides in `scope`.
+ *
+ * THE PANEL NEVER WAITS FOR A READ (OPS-1): it races the pipeline's own shared
+ * scan against a bounded wait (`backupFreshnessWithin`). When the wait loses the
+ * line is `warn` / `verifying` with the artifact being read in `scope` — never
+ * `ok`, because nothing has been established yet — and the scan carries on, so
+ * the next refresh answers from its settled verdict. The verdict itself is still
+ * the pipeline's own, computed exactly once.
  */
-function backupFreshnessCheck(): StatusCheck {
-	return probe('backup_fresh', () => {
-		// The pipeline's OWN predicate, not a second copy of it — the panel
-		// rounded and the refusal did not, which made them disagree for the
-		// half hour after every freshness deadline (see backupFreshness).
-		const { hours, stale, verdict, rejected } = backupFreshness();
+function backupFreshnessCheck(
+	principal: Principal,
+	seams: ConsumerStatusSeams,
+): Promise<StatusCheck> {
+	// ONLY THE SUPERUSER'S PANEL ASKS (OPS-1 review). Every ask may start full
+	// archive reads, and the panel is open to any global admin — who cannot run an
+	// update (`superuser: blocked` above) and so has no use for the verdict. Their
+	// line is `unknown` / `superuser_required`, and nothing is read on their behalf.
+	if (principal.userId !== SUPERUSER_ID) {
+		return Promise.resolve(check('backup_fresh', 'unknown', 'superuser_required'));
+	}
+	return probeAsync('backup_fresh', async () => {
+		const answer = await backupFreshnessWithin(
+			seams.waitMs ?? PANEL_WAIT_MS,
+			seams.backupDir,
+			seams.backupVerify,
+		);
+		if ('pending' in answer) {
+			return check(
+				'backup_fresh',
+				'warn',
+				'verifying',
+				answer.candidate === null ? undefined : `${basename(answer.candidate)} (verifying)`,
+			);
+		}
+		const { hours, stale, verdict, rejected } = answer;
 		const scope = backupScope(verdict, rejected);
 		if (hours === null) return check('backup_fresh', 'warn', 'none', scope);
 		return check('backup_fresh', stale ? 'warn' : 'ok', String(Math.round(hours)), scope);
@@ -464,8 +496,21 @@ function readLiveBunPin(): string | null {
 	}
 }
 
+/** Test seams of `consumerStatus` — production passes none (the configured backup dir). */
+export interface ConsumerStatusSeams {
+	/** The DATABASE backup dir the `backup_fresh` line judges. */
+	backupDir?: string;
+	/** How its artifacts are verified (a recording pg_restore, a budget). */
+	backupVerify?: BackupVerifyOptions;
+	/** The bounded wait before `backup_fresh` answers `verifying` (default PANEL_WAIT_MS). */
+	waitMs?: number;
+}
+
 /** The consumer half of the panel: readiness + provenance + rollback state. */
-export function consumerStatus(principal: Principal): ConsumerStatus {
+export async function consumerStatus(
+	principal: Principal,
+	seams: ConsumerStatusSeams = {},
+): Promise<ConsumerStatus> {
 	const backupRoot = probeBackupRoot();
 	const livePin = readLiveBunPin();
 	const rootEntries = rootEntriesCheck();
@@ -473,7 +518,7 @@ export function consumerStatus(principal: Principal): ConsumerStatus {
 		supervisorCheck(),
 		channelCheck(),
 		...operatorChecks(principal),
-		backupFreshnessCheck(),
+		await backupFreshnessCheck(principal, seams),
 		backupLocationCheck(backupRoot),
 		runtimeDataCheck(),
 		toolchainCheck(),

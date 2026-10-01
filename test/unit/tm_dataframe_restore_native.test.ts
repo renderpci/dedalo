@@ -54,7 +54,6 @@ import {
 	DataframeRestoreError,
 	planDataframeRestore,
 } from '../../tools/tool_time_machine/server/dataframe_restore.ts';
-import { removedLocators } from '../../tools/tool_time_machine/server/restore_common.ts';
 import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
 import {
 	dropObserverTerm,
@@ -671,20 +670,16 @@ describe('bulk_revert_process of a PHP-era run restores a FRAMELESS pre-batch st
 });
 
 /**
- * TRIPWIRE for a stated-but-unenforced invariant (audit follow-up).
- *
- * `restore_common.ts removedLocators` re-expresses, byte-for-byte, the
- * `removedItems` closure inside `saveComponentData` (save_component.ts) — the
- * observer cascade's removed-target set. Its header asserts "the two MUST
- * agree" and, until now, NOTHING bound them: a change to the save door's rule
- * would silently diverge the TM write doors' observer propagation. The closure
- * is private to the save body and that file is owned elsewhere, so this gates
- * the invariant BEHAVIOURALLY instead of by extraction: run a real save that
- * drops a locator, and require the save's own `removedItems` to equal what
- * `removedLocators` computes from the same before/after. Retire this test only
- * together with the extraction it is standing in for.
+ * THE REMOVED-SET RULE, at the save door. It used to exist twice (the save
+ * body's `removedItems` closure and the TM doors' `restore_common.ts` copy) and
+ * this test bound the two. The extraction it stood in for has landed
+ * (CLOSURE_PLAN Step 2): ONE rule, `section_record/obligation_ledger.ts
+ * removedLocators`, which the ledger applies to every write's before-image and
+ * the save door reports through. What stays is the rule's OUTCOME on a mixed
+ * main column: the dropped locator is removed, the dropped dd490 frame is not
+ * (a pairing record, not an edge).
  */
-describe('removedLocators agrees with saveComponentData.removedItems', () => {
+describe('the removed-set rule at the save door (dd490 frames are not edges)', () => {
 	let recordId = 0;
 
 	beforeAll(async () => {
@@ -719,10 +714,8 @@ describe('removedLocators agrees with saveComponentData.removedItems', () => {
 		expect(saved.ok).toBe(true);
 		const doorRemoved = Array.isArray(saved.removedItems) ? saved.removedItems : [];
 		// Exactly one removal: the dropped locator. The dropped dd490 frame is a
-		// pairing record, not an edge, so it is NOT a removed observer target —
-		// and the TM door's copy of the rule must agree exactly.
+		// pairing record, not an edge, so it is NOT a removed observer target.
 		expect(doorRemoved).toEqual([MAIN_A[1]]);
-		expect(removedLocators(before, after)).toEqual(doorRemoved);
 	});
 });
 

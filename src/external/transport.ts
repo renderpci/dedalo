@@ -24,9 +24,10 @@
  *      redirects: SSRF plus MITM. The frozen PHP shared/core_functions.php
  *      DID hold an allowlist; assertPublicUrl does not.)
  *   4. assertPublicUrl → resolve + vet every address, then PIN the socket to a
- *      vetted one (`pinToVettedAddress`, self-checked). This closes, for this
- *      subsystem, the DNS-rebinding window core/security/ssrf_guard.ts's header
- *      describes for the unpinned `fetchGuardedText`.
+ *      vetted one (`pinToVettedAddress`, self-checked) — the same pin every
+ *      public-destination door uses (`fetchPinnedHop`, and the pinned
+ *      `fetchGuardedText` built on it), so the name is never resolved a second
+ *      time at connect (the DNS-rebinding window).
  *   5. attach the credential — ONLY NOW. Attaching it before 3/4 would let an
  *      ontology edit point the request at an attacker's host and exfiltrate it.
  *   6. fetch: redirect:'error' (a redirect re-chooses the target), an

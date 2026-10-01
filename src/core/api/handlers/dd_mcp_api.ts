@@ -59,9 +59,14 @@
  * + CSRF gates apply normally (none of these actions is login- or
  * CSRF-exempt).
  *
+ * ACCESS (closure Step 3, SEC-3): every action is behind `gateAgentActions` —
+ * the switch below AND the caller's `tool_assistant` grant (their profile's
+ * tool ACL; global admins included, only the superuser -1 holds every tool).
+ *
  * Config (all fail-closed; see docs/config/config.md#ai — the section anchor is a NAME,
  * never a number: the old "§12" pointed at a numbering the file never had):
- *   DEDALO_AGENT_HTTP_ENABLED=true   enables this API class's actions at all;
+ *   DEDALO_AGENT_HTTP_ENABLED=true   enables this API class's actions at all
+ *                                    (and a granted profile is still required);
  *   DEDALO_AGENT_ALLOW_WRITE=true    exposes write tools + change plans;
  *   DEDALO_AGENT_WRITE_SECTIONS=a,b  narrows writable sections;
  *   DEDALO_AGENT_MODELS=[...]        the model catalog (unset ⇒ implicit
@@ -89,6 +94,7 @@ import type {
 import {
 	type CatalogModel,
 	ModelCatalogError,
+	modelTurnMaxTokens,
 	publicModelList,
 	resolveProvider,
 } from '../../../ai/agent/model_catalog.ts';
@@ -113,7 +119,10 @@ import {
 	toErrorBody,
 	toStreamFrame,
 } from '../../errors/index.ts';
+import { type AiSpendReservation, reserveAiSpend } from '../../security/ai_spend.ts';
+import type { Principal } from '../../security/permissions.ts';
 import type { Session } from '../../security/session_store.ts';
+import { assertToolGranted } from '../../tools/security.ts';
 import type { ActionHandler, ApiRequestContext } from '../handler_context.ts';
 import { requirePrincipal } from '../handler_context.ts';
 
@@ -154,15 +163,53 @@ function requestGates(context: ApiRequestContext): RegistryGates {
 	return { allowWrite, writableSections };
 }
 
+/** The tool whose grant opens the agent door. */
+const AGENT_TOOL = 'tool_assistant';
+
 /**
- * Fail-closed master switch for the whole class: with DEDALO_AGENT_HTTP_ENABLED
- * off every action answers exactly like an unregistered one (Gate 1's
- * `request.unknown_action` + `details.action`), so a probe cannot learn the
- * assistant exists.
+ * THE AGENT DOOR (closure Step 3, SEC-3; WC-2026-09-30-agent-tool-grant) — ONE
+ * check, in a fixed order, in front of EVERY action of this class:
+ *
+ *   1. the install switch — with DEDALO_AGENT_HTTP_ENABLED off every action
+ *      answers exactly like an unregistered one (Gate 1's
+ *      `request.unknown_action` + `details.action`), so a probe cannot learn the
+ *      assistant exists — and nothing below leaks it either;
+ *   2. an authenticated principal;
+ *   3. the caller's PROFILE authorizes `tool_assistant` (`assertToolGranted` →
+ *      `tool.not_authorized`). The assistant is a tool like any other: the
+ *      toolbar already hid it from an ungranted profile, but the switch alone
+ *      let every logged-in user run the agent loop (model spend, record reads
+ *      through the MCP registry, change plans) and the raw MCP bridge. Global
+ *      admins are NOT exempt — the tool ACL has no admin flag anywhere; only the
+ *      superuser (-1) holds every tool.
+ *
+ * Out of scope by design: the stdio MCP server (ai/mcp/server.ts) runs as the
+ * operator's configured service principal, not a web session.
  */
-function requireAgentHttp(action: string): void {
-	if (readEnv('DEDALO_AGENT_HTTP_ENABLED') === 'true') return;
-	throw new DedaloError('request.unknown_action', { details: { action } });
+async function requireAgentAccess(action: string, context: ApiRequestContext): Promise<void> {
+	if (readEnv('DEDALO_AGENT_HTTP_ENABLED') !== 'true') {
+		throw new DedaloError('request.unknown_action', { details: { action } });
+	}
+	const principal = requirePrincipal(context);
+	await assertToolGranted(principal, AGENT_TOOL);
+}
+
+/**
+ * Wrap EVERY handler of the class in the agent door BY CONSTRUCTION: an action
+ * added to the raw map below is gated without anyone remembering to call a
+ * check (the switch used to be a per-handler call). The refusal is thrown
+ * before the handler runs — so before `agent_chat_stream` opens its SSE
+ * stream, and the client gets a JSON failure envelope.
+ */
+function gateAgentActions(raw: Record<string, ActionHandler>): Record<string, ActionHandler> {
+	const gated: Record<string, ActionHandler> = {};
+	for (const [action, handler] of Object.entries(raw)) {
+		gated[action] = async (rqo, context) => {
+			await requireAgentAccess(typeof rqo.action === 'string' ? rqo.action : action, context);
+			return handler(rqo, context);
+		};
+	}
+	return gated;
 }
 
 // ---------------------------------------------------------------------------
@@ -404,6 +451,27 @@ function transcriptSummary(run: AgentRunResult): Record<string, unknown>[] {
 	});
 }
 
+/**
+ * THE AGENT RUN IS METERED (closure Step 3, TOOLS-4; WC-2026-10-01-ai-spend-budget):
+ * one run + the run's token reservation (the most output it can produce,
+ * `agentRunTokenReservation`) are RESERVED against the caller's daily ledger
+ * BEFORE the provider is touched — before `agent_chat_stream` opens its SSE
+ * stream, so a refusal (`ai.budget_exhausted`, 429) is a JSON envelope. The
+ * caller settles with the run's reported usage in `finally`.
+ */
+async function reserveAgentRun(
+	principal: Principal,
+	door: string,
+	model: CatalogModel,
+	agentRunTokenReservation: (maxTokensPerTurn: number) => number,
+): Promise<AiSpendReservation> {
+	return reserveAiSpend(principal, {
+		door,
+		runs: 1,
+		tokens: agentRunTokenReservation(modelTurnMaxTokens(model)),
+	});
+}
+
 /** Build a JSON-RPC 2.0 success body. */
 function rpcResult(id: unknown, result: unknown): Record<string, unknown> {
 	return { jsonrpc: '2.0', id: id ?? null, result };
@@ -425,10 +493,10 @@ function rpcCodeFor(error: DedaloError): number {
 	return error.spec.category === 'caller' ? -32602 : -32603;
 }
 
-export const mcpApiActions: Record<string, ActionHandler> = {
+/** The class's actions — each one behind the agent door (gateAgentActions). */
+export const mcpApiActions: Record<string, ActionHandler> = gateAgentActions({
 	/** The mcp_client.js JSON-RPC bridge (contract documented in the header). */
 	mcp_proxy: async (rqo, context) => {
-		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const session = context.session as Session;
 		const envelope = (rqo.options ?? {}) as {
@@ -521,8 +589,7 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 	},
 
 	/** The client-safe model catalog + write availability for THIS principal. */
-	agent_models: async (rqo, context) => {
-		requireAgentHttp(rqo.action);
+	agent_models: async (_rqo, context) => {
 		requirePrincipal(context);
 		const gates = requestGates(context);
 		// A broken catalog THROWS ModelCatalogError (public `ai.*` code): the
@@ -538,7 +605,6 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 
 	/** Run the agent loop as the logged-in user (vision-capable, never writes). */
 	agent_chat: async (rqo, context) => {
-		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const parsed = parseAgentChatOptions((rqo.options ?? {}) as Record<string, unknown>);
 		if (!parsed.ok) {
@@ -546,17 +612,31 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		}
 		const gates = requestGates(context);
 
-		const { runAgent } = await import('../../../ai/agent/loop.ts');
+		const { runAgent, agentRunTokenReservation, reportedRunTokens } = await import(
+			'../../../ai/agent/loop.ts'
+		);
 		// Catalog/config problems throw a public `ai.*` code — dispatch converts.
 		const setup = buildAgentRun(parsed.value, gates);
-		const run = await runAgent(
+		const reservation = await reserveAgentRun(
 			principal,
-			parsed.value.images !== undefined
-				? { text: parsed.value.question, images: parsed.value.images }
-				: parsed.value.question,
-			setup.provider,
-			setup.runOptions,
+			'dd_mcp_api.agent_chat',
+			setup.model,
+			agentRunTokenReservation,
 		);
+		let run: AgentRunResult | undefined;
+		try {
+			run = await runAgent(
+				principal,
+				parsed.value.images !== undefined
+					? { text: parsed.value.question, images: parsed.value.images }
+					: parsed.value.question,
+				setup.provider,
+				setup.runOptions,
+			);
+		} finally {
+			// A failed run reports nothing: the reservation stays charged.
+			await reservation.settle({ tokens: reportedRunTokens(run?.usage) ?? undefined });
+		}
 		return {
 			status: 200,
 			body: ok(
@@ -580,7 +660,6 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 	 * failure envelopes; the client branches on the response content-type).
 	 */
 	agent_chat_stream: async (rqo, context) => {
-		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const parsed = parseAgentChatOptions((rqo.options ?? {}) as Record<string, unknown>);
 		if (!parsed.ok) {
@@ -590,9 +669,18 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		}
 		const gates = requestGates(context);
 
-		const { runAgent } = await import('../../../ai/agent/loop.ts');
+		const { runAgent, agentRunTokenReservation, reportedRunTokens } = await import(
+			'../../../ai/agent/loop.ts'
+		);
 		const setup = buildAgentRun(parsed.value, gates);
 		const { model, provider, mode, runOptions } = setup;
+		// Reserved HERE, before the stream exists: a refusal is a JSON envelope.
+		const reservation = await reserveAgentRun(
+			principal,
+			'dd_mcp_api.agent_chat_stream',
+			model,
+			agentRunTokenReservation,
+		);
 		const requestId = context.requestId;
 		const parsedValue = parsed.value;
 
@@ -659,8 +747,9 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 				};
 
 				void (async () => {
+					let run: AgentRunResult | undefined;
 					try {
-						const run = await runAgent(
+						run = await runAgent(
 							principal,
 							parsedValue.images !== undefined
 								? { text: parsedValue.question, images: parsedValue.images }
@@ -681,6 +770,9 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 					} catch (error) {
 						send('error', agentErrorFrame(agentRunError(error, requestId)));
 					} finally {
+						// The loop runs to completion even after a client cancel, so the
+						// settlement always sees the whole run's reported usage.
+						await reservation.settle({ tokens: reportedRunTokens(run?.usage) ?? undefined });
 						clearInterval(heartbeat);
 						closed = true;
 						try {
@@ -708,7 +800,6 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 
 	/** Execute a HUMAN-CONFIRMED change plan (hash recheck + full re-validation). */
 	agent_apply: async (rqo, context) => {
-		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const options = (rqo.options ?? {}) as { plan?: unknown; plan_hash?: unknown };
 		if (typeof options.plan_hash !== 'string' || options.plan === undefined) {
@@ -725,4 +816,4 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		const report = await applyChangePlan(principal, options.plan, options.plan_hash, gates);
 		return { status: 200, body: ok(structuredOk(report), { requestId: context.requestId }) };
 	},
-};
+});

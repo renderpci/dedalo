@@ -498,6 +498,8 @@ async function exportHierarchyGetValue(): Promise<WidgetResponse> {
 }
 
 export const widget: WidgetModule = {
+	// An export walks every term of every chosen hierarchy: maintenance (PERF-11).
+	unboundedActions: ['export_hierarchy'],
 	getValue: exportHierarchyGetValue,
 	spec: {
 		id: 'export_hierarchy',

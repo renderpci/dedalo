@@ -4,7 +4,7 @@
  * TLD 'zzt' and are purged in afterAll — no real ontology data is touched.
  *
  * Pins: whole-row-replace upsert (a cleared field nulls its column on re-upsert),
- * partial update + INSERT fallback (sync_order path), op-allowlisted search,
+ * partial update (absent tipo → false, no INSERT fallback — SURF-1), op-allowlisted search,
  * check_active_tld = "TLD has dd_ontology rows", and syncOrderToDdOntology's
  * parent-match / unchanged guards.
  */
@@ -12,6 +12,7 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import {
 	type DdOntologyNode,
+	deleteDdOntologyNode,
 	deleteTldNodes,
 	getActiveTlds,
 	getPopulatedTlds,
@@ -42,8 +43,14 @@ function node(overrides: Partial<DdOntologyNode> & { tipo: string }): DdOntology
 	};
 }
 
+/** Every tipo this file writes — swept BY TIPO too: the regression the absent-tipo
+ * leg guards (the INSERT fallback) plants a tld-LESS row that a tld sweep misses,
+ * and that residue would redden the next run of a fixed tree. */
+const SCRATCH_TIPOS = ['zzt0', 'zzt1', 'zzt5', 'zzt6', 'zzt7', 'zzt9', 'zzt99'];
+
 afterAll(async () => {
 	await deleteTldNodes(TLD);
+	for (const tipo of SCRATCH_TIPOS) await deleteDdOntologyNode(tipo);
 });
 
 describe('dd_ontology upsert', () => {
@@ -87,12 +94,14 @@ describe('dd_ontology upsert', () => {
 	});
 });
 
-describe('dd_ontology partial update (PHP update() with INSERT fallback)', () => {
-	test('SET only the given column, INSERT fallback when tipo absent', async () => {
-		// tipo absent → INSERT fallback
+describe('dd_ontology partial update (no INSERT fallback — SURF-1)', () => {
+	test('SET only the given column; an ABSENT tipo answers false and inserts nothing', async () => {
+		// tipo absent → false, no row. The PHP-inherited INSERT fallback planted a
+		// partial row (no tld, no model) for any tipo it was handed; its one caller,
+		// syncOrderToDdOntology, already skips absent rows (SURF-1 W2).
 		const inserted = await updateDdOntologyColumns('zzt9', { order_number: 3 });
-		expect(inserted).toBe(true);
-		expect((await readDdOntologyRow('zzt9'))?.order_number).toBe(3);
+		expect(inserted).toBe(false);
+		expect(await readDdOntologyRow('zzt9')).toBeNull();
 		// existing row → partial SET (other columns untouched)
 		await upsertDdOntologyNode(node({ tipo: 'zzt9', model: 'section', order_number: 3 }));
 		await updateDdOntologyColumns('zzt9', { order_number: 99 });
@@ -144,7 +153,7 @@ describe('syncOrderToDdOntology (parent-match + unchanged guards)', () => {
 		await upsertDdOntologyNode(node({ tipo: 'zzt0', is_main: true }));
 		await upsertDdOntologyNode(node({ tipo: 'zzt5', parent: 'zzt0', order_number: 1 }));
 		await upsertDdOntologyNode(node({ tipo: 'zzt6', parent: 'zzt0', order_number: 2 }));
-		await upsertDdOntologyNode(node({ tipo: 'zzt7', parent: 'zztOTHER', order_number: 9 }));
+		await upsertDdOntologyNode(node({ tipo: 'zzt7', parent: 'zzt99', order_number: 9 }));
 
 		const changed = [
 			{ value: 5, locator: { section_tipo: 'zzt0', section_id: 5 } }, // zzt5 → 5 (changed)

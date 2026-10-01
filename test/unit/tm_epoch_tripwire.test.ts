@@ -9,13 +9,18 @@
  * snapshots as the living record's own, and a restore built on it writes the
  * dead record's values in with `ok:true`.
  *
- * WHY A GATE AND NOT A CONVENTION. The narrowing is applied by hand at six
- * separate statements across five modules, because `tmEpochPredicate()` is a
- * SQL fragment spliced into other people's queries. Nothing about adding a
- * seventh TM reader makes its author think of this file. The already-exported
- * `readTimeMachineHistory` is the standing proof: it selects a record's
- * component history with no epoch predicate at all, and is harmless ONLY
- * because it currently has no production caller.
+ * WHY A GATE AND NOT A CONVENTION. The narrowing is spliced by hand, because
+ * `tmEpochPredicate()` is a SQL fragment spliced into other people's queries —
+ * `NARROWED_READERS` / `EXEMPT_TM_READERS` below hold the count (no number goes
+ * in prose). Nothing about adding a new TM reader makes its author think of
+ * this file. `readTimeMachineHistory` is `withTmHistory`-narrowed, and that is
+ * pinned by an OUTCOME in test/unit/record_generation_native.test.ts
+ * ("readTimeMachineHistory serves only the living generation"), because
+ * `time_machine.ts` is exempt from this census.
+ *
+ * The census measures CODE: comments are stripped by the shared scanner
+ * (test/helpers/strip_comments.ts), so prose naming the table or a helper is
+ * neither a statement nor a narrowing.
  *
  * THE TWO DIRECTIONS BOTH MATTER. A leaking reader shows a dead record's
  * history; a leaking WRITE-GATE probe (delete_record, observers) sees the dead
@@ -32,6 +37,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const CENSUS_ROOTS = ['src', 'tools'] as const;
@@ -135,15 +141,20 @@ interface TmReader {
 	narrowSites: number;
 }
 
+/** One file's census: its TM statements and the narrowings it declares. */
+function measure(file: string, source: string): TmReader {
+	const src = stripComments(source);
+	return {
+		file,
+		reads: (src.match(TM_SELECT) ?? []).length,
+		narrowSites: (src.match(TM_NARROWING) ?? []).length,
+	};
+}
+
 function tmReaders(): TmReader[] {
-	const found: TmReader[] = [];
-	for (const file of censusFiles()) {
-		const src = readFileSync(join(REPO_ROOT, file), 'utf8');
-		const reads = (src.match(TM_SELECT) ?? []).length;
-		if (reads === 0) continue;
-		found.push({ file, reads, narrowSites: (src.match(TM_NARROWING) ?? []).length });
-	}
-	return found;
+	return censusFiles()
+		.map((file) => measure(file, readFileSync(join(REPO_ROOT, file), 'utf8')))
+		.filter((reader) => reader.reads > 0);
 }
 
 /**
@@ -186,6 +197,28 @@ describe('time-machine epoch tripwire', () => {
 		]) {
 			expect(files.has(door)).toBe(true);
 		}
+	});
+
+	test('the classifier is honest: prose is not a narrowing (nor a statement)', () => {
+		// A comment that NAMES the helper next to a bare reader must not count as
+		// the reader's narrowing — else a header explaining the law hides a leak.
+		const commented = measure(
+			'x.ts',
+			'// narrowed with withTmEpoch( … ) elsewhere\nawait sql`SELECT data FROM matrix_time_machine WHERE id = 1`;',
+		);
+		expect([commented.reads, commented.narrowSites]).toEqual([1, 0]);
+		const blockProse = measure(
+			'x.ts',
+			'/* see tmEpochPredicate( ) */ await sql`SELECT data FROM matrix_time_machine`;',
+		);
+		expect([blockProse.reads, blockProse.narrowSites]).toEqual([1, 0]);
+		const prose = measure('x.ts', '// reads FROM matrix_time_machine in prose\nconst a = 1;');
+		expect(prose.reads).toBe(0);
+		const narrowed = measure(
+			'x.ts',
+			'await sql.unsafe(`SELECT 1 FROM matrix_time_machine WHERE ${withTmEpoch("id = 1")}`);',
+		);
+		expect([narrowed.reads, narrowed.narrowSites]).toEqual([1, 1]);
 	});
 
 	test('every TM reader is epoch-narrowed, or exempt with a reason', () => {

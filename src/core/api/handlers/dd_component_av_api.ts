@@ -28,8 +28,9 @@ import {
 } from './media_action_context.ts';
 
 /**
- * dd_component_av_api::create_posterframe / delete_posterframe. Both need section
- * WRITE (PHP level 2); a refusal is a throw (resolveMediaActionContext).
+ * dd_component_av_api::create_posterframe / delete_posterframe. Both need WRITE
+ * (level 2) on the section, on the AV component itself and the record in scope
+ * (the write door, closure Step 3); a refusal is a throw (resolveMediaActionContext).
  */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
@@ -44,7 +45,13 @@ async function posterframeAction(
 	context: ApiRequestContext,
 	op: 'create' | 'delete',
 ): Promise<ApiResult> {
-	const resolved = await resolveMediaActionContext(rqo, context, 2, 'component_av');
+	const resolved = await resolveMediaActionContext(
+		rqo,
+		context,
+		2,
+		'component_av',
+		`dd_component_av_api:${op}_posterframe`,
+	);
 
 	const options = (rqo.options ?? {}) as { current_time?: unknown };
 	const { createAvPosterframe, deletePosterframe } = await import(
@@ -102,7 +109,13 @@ async function posterframeAction(
  * when no file exists at that quality); the client reads `response_data(api_response).streams`.
  */
 async function mediaStreamsAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
-	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');
+	const resolved = await resolveMediaActionContext(
+		rqo,
+		context,
+		1,
+		'component_av',
+		'dd_component_av_api:get_media_streams',
+	);
 
 	const options = (rqo.options ?? {}) as { quality?: unknown };
 	const quality = typeof options.quality === 'string' ? options.quality : null;
@@ -176,7 +189,13 @@ function readFragmentRequest(rqo: Rqo, defaultQuality: string): FragmentRequest 
 }
 
 async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
-	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');
+	const resolved = await resolveMediaActionContext(
+		rqo,
+		context,
+		1,
+		'component_av',
+		'dd_component_av_api:download_fragment',
+	);
 
 	const { spec, identity, pathOpts } = resolved.ctx;
 	const request = readFragmentRequest(rqo, spec.defaultQuality);

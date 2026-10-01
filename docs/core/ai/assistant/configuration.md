@@ -15,7 +15,7 @@ Every assistant setting lives in `../private/.env` and is read once at boot. All
 
 | Key | Default | Effect |
 |---|---|---|
-| `DEDALO_AGENT_HTTP_ENABLED` | `false` | Enables the assistant's server actions (`agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`). With it off, every one refuses like an unknown action and the chat panel shows a disabled message. **The one switch that turns the feature on.** |
+| `DEDALO_AGENT_HTTP_ENABLED` | `false` | Enables the assistant's server actions (`agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`). With it off, every one refuses like an unknown action and the chat panel shows a disabled message. **The one switch that turns the feature on** — and each user's profile must also grant the `tool_assistant` tool, or every request answers `tool.not_authorized` (global administrators included). |
 
 ### Models
 
@@ -45,6 +45,17 @@ Every assistant setting lives in `../private/.env` and is read once at boot. All
 | Key | Default | Effect |
 |---|---|---|
 | `DEDALO_AGENT_SYSTEM_PROMPT_APPEND` | *(unset)* | Deployment-specific text appended to the built-in system prompt (after the invariants; it can extend, never reorder them). Use it to add institution context — *"This is the archive of the Museum of X; prefer Catalan labels; the main collection is oral history."* Boot-stable, so it stays inside the cached prompt prefix. |
+
+### Daily budget
+
+Every conversation turn is one **run** against the user's daily AI budget, checked before the model is called. A run reserves the most output it can produce (the model's per-turn output limit times the twelve turns a run may take) and is then charged the tokens the model reports; a model that reports no usage keeps the whole reservation charged. A user whose budget is used up gets `ai.budget_exhausted` (429) with the time it resets (midnight UTC) — as a normal error, never an opened stream. Nobody is exempt, administrators and root included. The searches the assistant makes inside a conversation belong to that run.
+
+| Key | Default | Effect |
+|---|---|---|
+| `DEDALO_AI_USER_DAILY_RUNS` | `50` | Conversation turns (and generated answers) one user may run per UTC day. |
+| `DEDALO_AI_USER_DAILY_TOKENS` | `1000000` | Model tokens one user may spend per UTC day. |
+
+The day's usage of every user is listed in the **AI usage** section under Administration. The other two budgets — query embeddings and vision calls — and their rules are in [the RAG API](../rag.md#the-api-dd_rag_api).
 
 ---
 

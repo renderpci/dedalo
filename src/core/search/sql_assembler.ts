@@ -63,6 +63,7 @@ import {
 	assertValidLang,
 	assertValidTipo,
 	assertValidTipoOrColumn,
+	resolveSqlDataTipo,
 } from './identifier_gate.ts';
 import { ParamsCollector, resolveBuilderResult } from './params.ts';
 
@@ -181,6 +182,8 @@ async function buildOrderClauses(
 	selectExtra: string[],
 	joinSink: Map<string, string>,
 	scope?: SqlFrontierScope,
+	/** The MAIN matrix table — what the root step's component key is judged on. */
+	mainTable?: string,
 ): Promise<string[]> {
 	const orderClauses: string[] = [];
 	// PHP build_sql_query_order iterates sqo->order and tolerates a SINGLE order
@@ -260,6 +263,27 @@ async function buildOrderClauses(
 			continue;
 		}
 
+		// THE ROOT STEP (closure Step 3, SEC-1): `path[0]` names the MAIN
+		// section's own component — the sort key of a single-step order, the hop
+		// component of a multi-hop one. buildJoinChain keys every hop from index
+		// 1 on and never this one, so a non-admin sorted her own records by a
+		// component she holds 0 on (the relative order IS a comparison oracle).
+		// Refused → the entry is DROPPED, exactly as a refused hop below: the rows
+		// and the count are unchanged, the ORDER BY falls back to the section_id
+		// default. Loud through noteFrontierRefusal (conform.ts rootStepKey).
+		if (scope?.principal !== undefined && mainTable !== undefined) {
+			const { rootOrderStepAllowed } = await import('./conform.ts');
+			if (
+				!(await rootOrderStepAllowed(
+					scope,
+					path as { section_tipo?: string; component_tipo?: string }[],
+					mainTable,
+				))
+			) {
+				continue;
+			}
+		}
+
 		// Multi-hop ORDER path: sort by a RELATED section's component — build
 		// the same join chain the filter leaves use and extract the sort key
 		// from the LAST join alias (PHP trait.order case d).
@@ -328,8 +352,8 @@ async function buildOrderClauses(
 		const lang = langRaw ?? (translatable ? DEFAULT_DATA_LANG : 'lg-nolan');
 		// component_alias (WC-020): the sort value lives under the TARGET's key
 		// (the emitted order path carries the alias tipo; execution hops here).
-		const { resolveDataTipo } = await import('../ontology/alias.ts');
-		const orderDataTipo = await resolveDataTipo(componentTipo);
+		// Re-gated as an identifier of its own (SURF-1): it names the sort alias too.
+		const orderDataTipo = await resolveSqlDataTipo(componentTipo, 'order');
 		const sortAlias = `${orderDataTipo}_order`;
 
 		// Per-family order-select (PHP $model::build_order_select).
@@ -481,6 +505,16 @@ export interface SearchOptions {
 	 * principal only when it intends user-scoped results.
 	 */
 	principal?: Principal;
+	/**
+	 * THE SUBDATUM READ FLOOR (closure Step 3, SEC-1) — `${section}_${component}`
+	 * pairs this search may FILTER and SORT on although the principal's profile
+	 * holds 0 on them: the components a Gate-A-verified source component's
+	 * request_config `ddo_map` names (a portal / autocomplete searching its
+	 * target section — PHP get_subdatum's floor). Computed SERVER-SIDE by the
+	 * caller from the verified source (section/read_source.ts / read_facade.ts);
+	 * NEVER from the client payload, never from ALS. Absent = no floor.
+	 */
+	readFloor?: ReadonlySet<string>;
 	/**
 	 * Selection-identity projection: SELECT only section_id + section_tipo
 	 * (plus any sort aliases), skipping the ten wide jsonb data columns. For
@@ -1083,11 +1117,16 @@ function buildPathScope(
 	principal: Principal | undefined,
 	skipProjectsFilter: boolean,
 	params: ParamsCollector,
+	/** The SQO's own sections — the ROOT key binds each main row to its own (SEC-1). */
+	mainSectionTipos: readonly string[],
+	readFloor: ReadonlySet<string> | undefined,
 ): SqlFrontierScope {
 	return {
 		...(principal === undefined ? {} : { principal }),
 		surface: 'search',
 		door: 'search.path',
+		mainSectionTipos,
+		...(readFloor === undefined ? {} : { readFloor }),
 		recordPredicate: async ({ sectionTipo: hopSection, table: hopTable, alias: hopAlias }) => {
 			const parts: string[] = [];
 			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable, hopSection)) {
@@ -1352,7 +1391,13 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	// would blank the thesaurus for every non-admin — see
 	// PROJECTS_FILTER_EXEMPT_TABLES). The dd478 allow-list applies to admins too.
 	const principal = options.principal;
-	const pathScope = buildPathScope(principal, sqo.skip_projects_filter === true, params);
+	const pathScope = buildPathScope(
+		principal,
+		sqo.skip_projects_filter === true,
+		params,
+		sectionTipos,
+		options.readFloor,
+	);
 
 	// --- WHERE: user filter tree -------------------------------------------
 	const whereParts: string[] = [];
@@ -1442,7 +1487,14 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 
 	// --- ORDER ---------------------------------------------------------------
 	const selectExtra: string[] = [];
-	let orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments, pathScope);
+	let orderClauses = await buildOrderClauses(
+		sqo,
+		alias,
+		selectExtra,
+		joinFragments,
+		pathScope,
+		matrixTable,
+	);
 
 	// Flatten the explicit-order shape when DISTINCT ON is provably a no-op:
 	// single-section + no join fragments + the table's UNIQUE (section_id,

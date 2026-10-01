@@ -38,6 +38,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { buildDateFragment } from '../../src/core/search/builders/builder_date.ts';
 import type { BuilderContext } from '../../src/core/search/builders/types.ts';
 import { conformFilter } from '../../src/core/search/conform.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 import { ParamsCollector } from '../../src/core/search/params.ts';
 import { renderConformedFilter } from '../../src/core/search/sql_assembler.ts';
 import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
@@ -177,7 +178,7 @@ function ctx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'm',
 		column: 'date',
-		tipo: 'zz1',
+		tipo: asSqlTipo('zz1', 'test context'),
 		sectionTipo: 'zz0',
 		table: 'matrix',
 		lang: 'lg-nolan',

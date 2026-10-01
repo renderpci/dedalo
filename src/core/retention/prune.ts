@@ -146,8 +146,8 @@ export function registerRetentionCatalog(): void {
 		name: 'diffusion_jobs',
 		store: 'the diffusion jobs table',
 		description:
-			'Queued/running/terminal publication jobs. The diffusion scheduler already purges terminal rows on its own cadence.',
-		writers: ['src/diffusion/jobs/queue.ts'],
+			"Queued/running/terminal publication jobs, and each job's run ledger (DIFF-1: frontier + artifact rows, cleared when the run completes, ON DELETE CASCADE with the job row). The diffusion scheduler already purges terminal rows on its own cadence.",
+		writers: ['src/diffusion/jobs/queue.ts', 'src/diffusion/jobs/run_ledger.ts'],
 		policy: {
 			kind: 'window',
 			configKey: '(constant: diffusion/jobs/scheduler.ts TERMINAL_PURGE_AFTER_HOURS)',

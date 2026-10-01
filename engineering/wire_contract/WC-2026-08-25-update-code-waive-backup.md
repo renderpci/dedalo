@@ -139,3 +139,16 @@ the client file list, which this change does not grow.
   footer, not `.role_body`.
 - `bun run test:update` — the real-scenario drill, whose `updateRequestBody()`
   is now literally the body the client puts on the wire.
+
+## Addendum 2026-09-30 — the verdict behind `backup_fresh` is the full read (OPS-1)
+
+`backupFreshness` now asks the full `pg_restore` read (WC-2026-09-30-backup-freshness-deep-async),
+so the `scope` of this check can read `<file> (truncated)` or
+`<file> (unverifiable_timeout)` where the same file used to read `ok` (a
+60%-cut dump, or one too large to read inside the old constant budget), and the
+check may answer `detail: 'verifying'` (state `warn`) while the panel's bounded
+wait loses to the shared scan. `backup_waiver_check` treats every non-`ok` state
+as a pending waiver, so both render as the waiver row with no client change.
+The request side is unchanged: `waive_backup: true` skips the refusal
+(`requireFreshBackup`), and the audit line now also names a backup that did not
+verify, or one still unverified when the bounded look ran out.
