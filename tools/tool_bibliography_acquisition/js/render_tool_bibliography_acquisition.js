@@ -510,6 +510,17 @@ const get_content_data = function(self) {
 					})
 					const results = Array.isArray(data.results) ? data.results : []
 					results.forEach(function(result) {
+						// section_id is null only when the whole publication failed before
+						// anything was created (its own transaction rolled back) - review item C1.
+						if (result.section_id===null) {
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error_message',
+								text_content	: 'Publication ' + (result.publication_identifier || '?') + ' NOT imported: ' + result.error,
+								parent			: summary
+							})
+							return
+						}
 						if (result.skipped) {
 							ui.create_dom_element({
 								element_type	: 'div',

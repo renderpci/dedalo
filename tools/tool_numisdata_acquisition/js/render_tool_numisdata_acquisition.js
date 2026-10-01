@@ -740,6 +740,17 @@ const get_content_data = function(self) {
 					})
 					const results = Array.isArray(data.results) ? data.results : []
 					results.forEach(function(result) {
+						// section_id is null only when the whole lot failed before anything
+						// was created (its own transaction rolled back) - review item C1.
+						if (result.section_id===null) {
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error_message',
+								text_content	: 'Lot ' + (result.lot_identifier || '?') + ' NOT imported: ' + result.error,
+								parent			: summary
+							})
+							return
+						}
 						const auction_bit = result.auction_section_id
 							? ' — auction numisdata224 #' + result.auction_section_id +
 								(result.auction_created ? ' (created)' : ' (reused)')

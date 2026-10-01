@@ -10,7 +10,7 @@
 import { join } from 'node:path';
 import { NO_LANG } from '../../../src/config/data_langs.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
-import { sql } from '../../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
 import { ok } from '../../../src/core/errors/index.ts';
 import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
@@ -526,21 +526,26 @@ async function resolveCompanySelectionByName(
 
 /** Resolves a CompanySelection to a real rsc106 section_id, creating one
  * (Name only — the one field every real Entity record carries) when the
- * selection says to. */
+ * selection says to. The create path is its own transaction (joins an
+ * ambient one, e.g. findOrCreateAuction's, when already inside one) - a
+ * failed name write used to leave an unnamed orphan Entity behind (review
+ * item C1, same shape as the Auction/Person/Series cases it names). */
 async function resolveCompanyEntityId(
 	context: ToolActionContext,
 	selection: CompanySelection,
 ): Promise<number> {
 	if ('sectionId' in selection) return selection.sectionId;
-	const sectionId = await createSectionRecord(ENTITY_SECTION_TIPO, context.userId);
-	await writeField(
-		sectionId,
-		ENTITY_SECTION_TIPO,
-		ENTITY_NAME_TIPO,
-		selection.name,
-		context.userId,
-	);
-	return sectionId;
+	return withTransaction(async () => {
+		const sectionId = await createSectionRecord(ENTITY_SECTION_TIPO, context.userId);
+		await writeField(
+			sectionId,
+			ENTITY_SECTION_TIPO,
+			ENTITY_NAME_TIPO,
+			selection.name,
+			context.userId,
+		);
+		return sectionId;
+	});
 }
 
 /** Links numisdata224's Company field to a real rsc106 Entity — same relation
@@ -642,35 +647,39 @@ async function checkExistingAuctionStatus(
 
 /** Finds an existing numisdata224 Auction record, or creates one when none
  * matches — resolving (and, per `selection`, possibly creating) the Company
- * Entity first, since the dedup check itself needs a real entity id. */
+ * Entity first, since the dedup check itself needs a real entity id. One
+ * transaction for the whole thing (Entity included): a failure partway used
+ * to leave an unnamed orphan Auction (or Entity) behind — review item C1. */
 async function findOrCreateAuction(
 	context: ToolActionContext,
 	companySelection: CompanySelection,
 	auctionNumber: string,
 	title: string | null,
 ): Promise<{ sectionId: number; created: boolean }> {
-	const entityId = await resolveCompanyEntityId(context, companySelection);
+	return withTransaction(async () => {
+		const entityId = await resolveCompanyEntityId(context, companySelection);
 
-	const found = await findExistingAuction(entityId, auctionNumber, context);
-	if (found !== null) return { sectionId: found, created: false };
+		const found = await findExistingAuction(entityId, auctionNumber, context);
+		if (found !== null) return { sectionId: found, created: false };
 
-	const sectionId = await createSectionRecord(AUCTION_SECTION_TIPO, context.userId);
-	await linkCompany(context, sectionId, entityId);
-	await writeField(
-		sectionId,
-		AUCTION_SECTION_TIPO,
-		AUCTION_NUMBER_TITLE_TIPO,
-		formatAuctionNumberTitle(auctionNumber, title),
-		context.userId,
-	);
-	await writeField(
-		sectionId,
-		AUCTION_SECTION_TIPO,
-		AUCTION_CODE_TIPO,
-		auctionNumber,
-		context.userId,
-	);
-	return { sectionId, created: true };
+		const sectionId = await createSectionRecord(AUCTION_SECTION_TIPO, context.userId);
+		await linkCompany(context, sectionId, entityId);
+		await writeField(
+			sectionId,
+			AUCTION_SECTION_TIPO,
+			AUCTION_NUMBER_TITLE_TIPO,
+			formatAuctionNumberTitle(auctionNumber, title),
+			context.userId,
+		);
+		await writeField(
+			sectionId,
+			AUCTION_SECTION_TIPO,
+			AUCTION_CODE_TIPO,
+			auctionNumber,
+			context.userId,
+		);
+		return { sectionId, created: true };
+	});
 }
 
 /** Links numisdata4's Auction field to an EXISTING numisdata224 record — a
@@ -820,7 +829,11 @@ async function linkType(
 interface CommitOneLotResult {
 	lot_identifier: unknown;
 	section_tipo: string;
-	section_id: number;
+	// null only when the item failed entirely (the transactional record+fields
+	// write rolled back before creating anything) - `error` names why. A
+	// partial record is never left behind: review item C1.
+	section_id: number | null;
+	error: string | null;
 	fields_written: string[];
 	auction_section_id: number | null;
 	auction_created: boolean | null;
@@ -902,76 +915,92 @@ async function commitOneLot(
 	catalogueIndex: CatalogueIndex,
 ): Promise<CommitOneLotResult> {
 	const l = lot;
-	const sectionId = await createSectionRecord(NUMISDATA_OBJECT_TIPO, context.userId);
-
-	const fieldsWritten: string[] = [];
-	const weight = parseLeadingNumber(l.weight);
-	if (weight !== null) {
-		await writeField(sectionId, NUMISDATA_OBJECT_TIPO, WEIGHT_TIPO, weight, context.userId);
-		fieldsWritten.push(WEIGHT_TIPO);
-	}
-	const diameter = parseLeadingNumber(l.diameter);
-	if (diameter !== null) {
-		await writeField(sectionId, NUMISDATA_OBJECT_TIPO, DIAMETER_TIPO, diameter, context.userId);
-		fieldsWritten.push(DIAMETER_TIPO);
-	}
-	if (typeof l.lotNumber === 'string' && l.lotNumber.trim() !== '') {
-		await writeField(
-			sectionId,
-			NUMISDATA_OBJECT_TIPO,
-			INVENTORY_NUMBER_TIPO,
-			l.lotNumber,
-			context.userId,
-		);
-		fieldsWritten.push(INVENTORY_NUMBER_TIPO);
-	}
-	if (typeof l.datePeriod === 'string' && l.datePeriod.trim() !== '') {
-		await writeField(
-			sectionId,
-			NUMISDATA_OBJECT_TIPO,
-			DATE_TEXT_TIPO,
-			l.datePeriod,
-			context.userId,
-		);
-		fieldsWritten.push(DATE_TEXT_TIPO);
-	}
+	// Hoisted out of the transaction below - extractCatalogueCitation (Type
+	// matching, outside the transaction) needs it too.
 	const description = typeof l.description === 'string' ? l.description : null;
-	const { obverse: obverseDesign, reverse: reverseDesign } = splitJesusvicoDesign(description);
-	if (obverseDesign !== null) {
-		await writeField(
-			sectionId,
-			NUMISDATA_OBJECT_TIPO,
-			OBVERSE_DESIGN_TIPO,
-			obverseDesign,
-			context.userId,
-		);
-		fieldsWritten.push(OBVERSE_DESIGN_TIPO);
-	}
-	if (reverseDesign !== null) {
-		await writeField(
-			sectionId,
-			NUMISDATA_OBJECT_TIPO,
-			REVERSE_DESIGN_TIPO,
-			reverseDesign,
-			context.userId,
-		);
-		fieldsWritten.push(REVERSE_DESIGN_TIPO);
-	}
-	if (
-		obverseDesign === null &&
-		reverseDesign === null &&
-		description !== null &&
-		description.trim() !== ''
-	) {
-		await writeField(
-			sectionId,
-			NUMISDATA_OBJECT_TIPO,
-			PUBLIC_REMARK_TIPO,
-			description,
-			context.userId,
-		);
-		fieldsWritten.push(PUBLIC_REMARK_TIPO);
-	}
+	// One transaction for the record + its own core fields: a writeField throw
+	// used to escape uncaught, leaving a half-written record behind with no way
+	// to report it (review item C1). Auction/Type/image stay OUTSIDE it,
+	// unchanged — they are already individually best-effort against a record
+	// that, past this point, is real and complete.
+	const { sectionId, fieldsWritten } = await withTransaction(async () => {
+		const newSectionId = await createSectionRecord(NUMISDATA_OBJECT_TIPO, context.userId);
+
+		const written: string[] = [];
+		const weight = parseLeadingNumber(l.weight);
+		if (weight !== null) {
+			await writeField(newSectionId, NUMISDATA_OBJECT_TIPO, WEIGHT_TIPO, weight, context.userId);
+			written.push(WEIGHT_TIPO);
+		}
+		const diameter = parseLeadingNumber(l.diameter);
+		if (diameter !== null) {
+			await writeField(
+				newSectionId,
+				NUMISDATA_OBJECT_TIPO,
+				DIAMETER_TIPO,
+				diameter,
+				context.userId,
+			);
+			written.push(DIAMETER_TIPO);
+		}
+		if (typeof l.lotNumber === 'string' && l.lotNumber.trim() !== '') {
+			await writeField(
+				newSectionId,
+				NUMISDATA_OBJECT_TIPO,
+				INVENTORY_NUMBER_TIPO,
+				l.lotNumber,
+				context.userId,
+			);
+			written.push(INVENTORY_NUMBER_TIPO);
+		}
+		if (typeof l.datePeriod === 'string' && l.datePeriod.trim() !== '') {
+			await writeField(
+				newSectionId,
+				NUMISDATA_OBJECT_TIPO,
+				DATE_TEXT_TIPO,
+				l.datePeriod,
+				context.userId,
+			);
+			written.push(DATE_TEXT_TIPO);
+		}
+		const { obverse: obverseDesign, reverse: reverseDesign } = splitJesusvicoDesign(description);
+		if (obverseDesign !== null) {
+			await writeField(
+				newSectionId,
+				NUMISDATA_OBJECT_TIPO,
+				OBVERSE_DESIGN_TIPO,
+				obverseDesign,
+				context.userId,
+			);
+			written.push(OBVERSE_DESIGN_TIPO);
+		}
+		if (reverseDesign !== null) {
+			await writeField(
+				newSectionId,
+				NUMISDATA_OBJECT_TIPO,
+				REVERSE_DESIGN_TIPO,
+				reverseDesign,
+				context.userId,
+			);
+			written.push(REVERSE_DESIGN_TIPO);
+		}
+		if (
+			obverseDesign === null &&
+			reverseDesign === null &&
+			description !== null &&
+			description.trim() !== ''
+		) {
+			await writeField(
+				newSectionId,
+				NUMISDATA_OBJECT_TIPO,
+				PUBLIC_REMARK_TIPO,
+				description,
+				context.userId,
+			);
+			written.push(PUBLIC_REMARK_TIPO);
+		}
+		return { sectionId: newSectionId, fieldsWritten: written };
+	});
 
 	let effectiveAuctionHouse = auctionHouse;
 	let effectiveAuctionNumber = auctionNumber;
@@ -1045,6 +1074,7 @@ async function commitOneLot(
 		lot_identifier: l.lotIdentifier,
 		section_tipo: NUMISDATA_OBJECT_TIPO,
 		section_id: sectionId,
+		error: null,
 		fields_written: fieldsWritten,
 		auction_section_id: auctionSectionId,
 		auction_created: auctionCreated,
@@ -1132,19 +1162,41 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 			counter,
 			total: lots.length,
 		});
-		results.push(
-			await commitOneLot(
-				context,
-				l,
-				auctionHouse,
-				auctionNumber,
-				auctionTitle,
-				auctionSourceDomain,
-				companySelection,
-				auctionCache,
-				catalogueIndex,
-			),
-		);
+		// Never narrow scope silently: a commitOneLot throw (e.g. its own
+		// transaction rolling back) must not abort the rest of the batch, or
+		// every lot already committed goes unreported and gets duplicated on
+		// retry (review item C1).
+		try {
+			results.push(
+				await commitOneLot(
+					context,
+					l,
+					auctionHouse,
+					auctionNumber,
+					auctionTitle,
+					auctionSourceDomain,
+					companySelection,
+					auctionCache,
+					catalogueIndex,
+				),
+			);
+		} catch (error) {
+			results.push({
+				lot_identifier: l.lotIdentifier,
+				section_tipo: NUMISDATA_OBJECT_TIPO,
+				section_id: null,
+				error: (error as Error).message,
+				fields_written: [],
+				auction_section_id: null,
+				auction_created: null,
+				auction_error: null,
+				type_section_id: null,
+				type_citation: null,
+				type_error: null,
+				images_created: null,
+				images_error: null,
+			});
+		}
 	}
 
 	return ok({ results }, { requestId: toolRequestId(context) });
@@ -1167,18 +1219,39 @@ export const tool: ToolServerModule = {
 		},
 		// Write: resolves Auction/Type, creates one record per kept lot, imports images.
 		// 'targets' (not 'section'): the handler always writes numisdata4/
-		// numisdata224/rsc170 regardless of what options.section_tipo says, so the
-		// gate must name those fixed targets rather than trust the client's value.
+		// numisdata224/rsc170/rsc106 regardless of what options.section_tipo says,
+		// so the gate must name those fixed targets rather than trust the client's
+		// value. Each (section, component) PAIR is named too, not just the bare
+		// section - a section grant is not authority over a component the profile
+		// denies (review item B1), so e.g. a profile allowed to edit numisdata4 but
+		// denied numisdata147 (the Auction relation) or rsc29 (the image) must not
+		// be able to have this tool write them anyway.
 		commit_lots: {
 			permission: 'targets',
 			minLevel: 2,
 			targets: () => [
 				{ section_tipo: NUMISDATA_OBJECT_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: WEIGHT_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: DIAMETER_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: INVENTORY_NUMBER_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: DATE_TEXT_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: OBVERSE_DESIGN_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: REVERSE_DESIGN_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: PUBLIC_REMARK_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: AUCTION_RELATION_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: TYPE_RELATION_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: OBVERSE_PORTAL_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: REVERSE_PORTAL_TIPO },
 				{ section_tipo: AUCTION_SECTION_TIPO },
-				{ section_tipo: IMAGE_SECTION_TIPO },
+				{ section_tipo: AUCTION_SECTION_TIPO, tipo: AUCTION_COMPANY_TIPO },
+				{ section_tipo: AUCTION_SECTION_TIPO, tipo: AUCTION_NUMBER_TITLE_TIPO },
+				{ section_tipo: AUCTION_SECTION_TIPO, tipo: AUCTION_CODE_TIPO },
 				// Company may now resolve to a NEW rsc106 Entity (review item 9's
 				// fix), not just an existing one linked read-only.
 				{ section_tipo: ENTITY_SECTION_TIPO },
+				{ section_tipo: ENTITY_SECTION_TIPO, tipo: ENTITY_NAME_TIPO },
+				{ section_tipo: IMAGE_SECTION_TIPO },
+				{ section_tipo: IMAGE_SECTION_TIPO, tipo: IMAGE_COMPONENT_TIPO },
 			],
 			handler: commitLots,
 		},

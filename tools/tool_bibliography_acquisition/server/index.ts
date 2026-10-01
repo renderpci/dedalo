@@ -6,7 +6,7 @@
  */
 
 import { NO_LANG } from '../../../src/config/data_langs.ts';
-import { sql } from '../../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
 import { ok } from '../../../src/core/errors/index.ts';
 import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
@@ -316,7 +316,9 @@ async function findExistingSeries(name: string): Promise<number | null> {
 	return existing[0]?.section_id ?? null;
 }
 
-/** Finds an existing rsc212 Series record, or creates one when none matches. */
+/** Finds an existing rsc212 Series record, or creates one when none matches. The create path is
+ * its own transaction - a failed name write used to leave an unnamed orphan Series behind (review
+ * item C1). */
 async function findOrCreateSeries(
 	context: ToolActionContext,
 	name: string,
@@ -324,9 +326,11 @@ async function findOrCreateSeries(
 	const found = await findExistingSeries(name);
 	if (found !== null) return { sectionId: found, created: false };
 
-	const sectionId = await createSectionRecord(SERIES_SECTION_TIPO, context.userId);
-	await writeField(sectionId, SERIES_SECTION_TIPO, SERIES_NAME_TIPO, name, context.userId);
-	return { sectionId, created: true };
+	return withTransaction(async () => {
+		const sectionId = await createSectionRecord(SERIES_SECTION_TIPO, context.userId);
+		await writeField(sectionId, SERIES_SECTION_TIPO, SERIES_NAME_TIPO, name, context.userId);
+		return { sectionId, created: true };
+	});
 }
 
 /** Links the Publication's Series field to an EXISTING rsc212 record. */
@@ -423,7 +427,9 @@ async function findExistingPerson(
 	return existing[0]?.section_id ?? null;
 }
 
-/** Finds an existing rsc197 Person record, or creates one when none matches. */
+/** Finds an existing rsc197 Person record, or creates one when none matches. The create path is
+ * its own transaction - a failed name write used to leave an unnamed orphan Person behind (review
+ * item C1). */
 async function findOrCreatePerson(
 	context: ToolActionContext,
 	surname: string,
@@ -432,18 +438,20 @@ async function findOrCreatePerson(
 	const found = await findExistingPerson(surname, givenName);
 	if (found !== null) return { sectionId: found, created: false };
 
-	const sectionId = await createSectionRecord(PEOPLE_SECTION_TIPO, context.userId);
-	await writeField(sectionId, PEOPLE_SECTION_TIPO, PERSON_SURNAME_TIPO, surname, context.userId);
-	if (givenName !== null) {
-		await writeField(
-			sectionId,
-			PEOPLE_SECTION_TIPO,
-			PERSON_GIVEN_NAME_TIPO,
-			givenName,
-			context.userId,
-		);
-	}
-	return { sectionId, created: true };
+	return withTransaction(async () => {
+		const sectionId = await createSectionRecord(PEOPLE_SECTION_TIPO, context.userId);
+		await writeField(sectionId, PEOPLE_SECTION_TIPO, PERSON_SURNAME_TIPO, surname, context.userId);
+		if (givenName !== null) {
+			await writeField(
+				sectionId,
+				PEOPLE_SECTION_TIPO,
+				PERSON_GIVEN_NAME_TIPO,
+				givenName,
+				context.userId,
+			);
+		}
+		return { sectionId, created: true };
+	});
 }
 
 /** Links the Publication's Authorship field to every resolved rsc197 record in one bulk replace -
@@ -643,7 +651,11 @@ function shortPublicationCode(identifier: string): string {
 interface CommitOnePublicationResult {
 	publication_identifier: unknown;
 	section_tipo: string;
-	section_id: number;
+	// null only when the item failed entirely (the transactional record+fields
+	// write rolled back before creating anything) - `error` names why. A
+	// partial record is never left behind: review item C1.
+	section_id: number | null;
+	error: string | null;
 	/** True when an rsc205 record with this Code already existed - nothing else in this result was
 	 * attempted, section_id names the pre-existing record. */
 	skipped: boolean;
@@ -683,6 +695,7 @@ async function commitOnePublication(
 				publication_identifier: p.publicationIdentifier,
 				section_tipo: PUBLICATION_TIPO,
 				section_id: existingSectionId,
+				error: null,
 				skipped: true,
 				fields_written: [],
 				series_section_id: null,
@@ -696,100 +709,120 @@ async function commitOnePublication(
 		}
 	}
 
-	const sectionId = await createSectionRecord(PUBLICATION_TIPO, context.userId);
-	const fieldsWritten: string[] = [];
-
-	if (identifier !== null) {
-		await writeField(sectionId, PUBLICATION_TIPO, CODE_TIPO, identifier, context.userId);
-		fieldsWritten.push(CODE_TIPO);
-	}
-	if (typeof p.title === 'string' && p.title.trim() !== '') {
-		await writeField(sectionId, PUBLICATION_TIPO, TITLE_TIPO, p.title, context.userId);
-		fieldsWritten.push(TITLE_TIPO);
-	}
-	if (typeof p.pages === 'string' && p.pages.trim() !== '') {
-		await writeField(sectionId, PUBLICATION_TIPO, PAGES_TIPO, p.pages, context.userId);
-		fieldsWritten.push(PAGES_TIPO);
-	}
-	if (typeof p.abstract === 'string' && p.abstract.trim() !== '') {
-		await writeField(sectionId, PUBLICATION_TIPO, ABSTRACT_TIPO, p.abstract, context.userId);
-		fieldsWritten.push(ABSTRACT_TIPO);
-	}
-	if (typeof p.publisher === 'string' && p.publisher.trim() !== '') {
-		await writeField(sectionId, PUBLICATION_TIPO, PUBLISHER_TIPO, p.publisher, context.userId);
-		fieldsWritten.push(PUBLISHER_TIPO);
-	}
-	if (typeof p.seriesNumber === 'string' && p.seriesNumber.trim() !== '') {
-		await writeField(
-			sectionId,
-			PUBLICATION_TIPO,
-			SERIES_NUMBER_TIPO,
-			p.seriesNumber,
-			context.userId,
-		);
-		fieldsWritten.push(SERIES_NUMBER_TIPO);
-	}
+	// Hoisted out of the transaction below - the document-import/author-resolution
+	// steps (outside it) need them too.
 	const publicationTitle = typeof p.title === 'string' ? p.title : null;
-	if (typeof p.landingPageUrl === 'string' && p.landingPageUrl.trim() !== '') {
-		await writeIriField(
-			sectionId,
-			PUBLICATION_TIPO,
-			URL_TIPO,
-			p.landingPageUrl,
-			publicationTitle,
-			context.userId,
-		);
-		fieldsWritten.push(URL_TIPO);
-	}
 	const authors = Array.isArray(p.authors)
 		? p.authors.filter((a): a is string => typeof a === 'string')
 		: [];
-	if (authors.length > 0) {
-		await writeField(
-			sectionId,
-			PUBLICATION_TIPO,
-			PERSONAL_NAME_TIPO,
-			authors.join('; '),
-			context.userId,
-		);
-		fieldsWritten.push(PERSONAL_NAME_TIPO);
-	}
-	const parsedDate = typeof p.publicationDate === 'string' ? parseDcDate(p.publicationDate) : null;
-	if (parsedDate !== null) {
-		await writeDateField(
-			sectionId,
-			PUBLICATION_TIPO,
-			PUBLICATION_DATE_TIPO,
-			parsedDate,
-			context.userId,
-		);
-		fieldsWritten.push(PUBLICATION_DATE_TIPO);
-	}
-	const types = Array.isArray(p.types)
-		? p.types.filter((t): t is string => typeof t === 'string')
-		: [];
-	if (types.includes('info:eu-repo/semantics/article')) {
-		await linkFixedTerm(
-			context,
-			sectionId,
-			TYPOLOGY_RELATION_TIPO,
-			TYPOLOGY_SECTION_TIPO,
-			ARTICLE_TYPOLOGY_SECTION_ID,
-		);
-		fieldsWritten.push(TYPOLOGY_RELATION_TIPO);
-	}
-	if (typeof p.issn === 'string' && p.issn.trim() !== '') {
-		await writeField(sectionId, PUBLICATION_TIPO, STANDARD_NUMBER_TIPO, p.issn, context.userId);
-		fieldsWritten.push(STANDARD_NUMBER_TIPO);
-		await linkFixedTerm(
-			context,
-			sectionId,
-			STANDARD_NUMBER_TYPE_RELATION_TIPO,
-			STANDARD_NUMBER_TYPE_SECTION_TIPO,
-			ISSN_TYPE_SECTION_ID,
-		);
-		fieldsWritten.push(STANDARD_NUMBER_TYPE_RELATION_TIPO);
-	}
+
+	// One transaction for the record + its own fields and relations: a
+	// writeField throw used to escape uncaught, and since the Code (the dedup
+	// key) was written FIRST, the orphan it left behind made every later
+	// re-import see "already imported" and skip a record with no title
+	// forever (review item C1). Series/author/document stay OUTSIDE it,
+	// unchanged — they are already individually best-effort against a record
+	// that, past this point, is real and complete.
+	const { sectionId, fieldsWritten } = await withTransaction(async () => {
+		const newSectionId = await createSectionRecord(PUBLICATION_TIPO, context.userId);
+		const written: string[] = [];
+
+		if (identifier !== null) {
+			await writeField(newSectionId, PUBLICATION_TIPO, CODE_TIPO, identifier, context.userId);
+			written.push(CODE_TIPO);
+		}
+		if (typeof p.title === 'string' && p.title.trim() !== '') {
+			await writeField(newSectionId, PUBLICATION_TIPO, TITLE_TIPO, p.title, context.userId);
+			written.push(TITLE_TIPO);
+		}
+		if (typeof p.pages === 'string' && p.pages.trim() !== '') {
+			await writeField(newSectionId, PUBLICATION_TIPO, PAGES_TIPO, p.pages, context.userId);
+			written.push(PAGES_TIPO);
+		}
+		if (typeof p.abstract === 'string' && p.abstract.trim() !== '') {
+			await writeField(newSectionId, PUBLICATION_TIPO, ABSTRACT_TIPO, p.abstract, context.userId);
+			written.push(ABSTRACT_TIPO);
+		}
+		if (typeof p.publisher === 'string' && p.publisher.trim() !== '') {
+			await writeField(newSectionId, PUBLICATION_TIPO, PUBLISHER_TIPO, p.publisher, context.userId);
+			written.push(PUBLISHER_TIPO);
+		}
+		if (typeof p.seriesNumber === 'string' && p.seriesNumber.trim() !== '') {
+			await writeField(
+				newSectionId,
+				PUBLICATION_TIPO,
+				SERIES_NUMBER_TIPO,
+				p.seriesNumber,
+				context.userId,
+			);
+			written.push(SERIES_NUMBER_TIPO);
+		}
+		if (typeof p.landingPageUrl === 'string' && p.landingPageUrl.trim() !== '') {
+			await writeIriField(
+				newSectionId,
+				PUBLICATION_TIPO,
+				URL_TIPO,
+				p.landingPageUrl,
+				publicationTitle,
+				context.userId,
+			);
+			written.push(URL_TIPO);
+		}
+		if (authors.length > 0) {
+			await writeField(
+				newSectionId,
+				PUBLICATION_TIPO,
+				PERSONAL_NAME_TIPO,
+				authors.join('; '),
+				context.userId,
+			);
+			written.push(PERSONAL_NAME_TIPO);
+		}
+		const parsedDate =
+			typeof p.publicationDate === 'string' ? parseDcDate(p.publicationDate) : null;
+		if (parsedDate !== null) {
+			await writeDateField(
+				newSectionId,
+				PUBLICATION_TIPO,
+				PUBLICATION_DATE_TIPO,
+				parsedDate,
+				context.userId,
+			);
+			written.push(PUBLICATION_DATE_TIPO);
+		}
+		const types = Array.isArray(p.types)
+			? p.types.filter((t): t is string => typeof t === 'string')
+			: [];
+		if (types.includes('info:eu-repo/semantics/article')) {
+			await linkFixedTerm(
+				context,
+				newSectionId,
+				TYPOLOGY_RELATION_TIPO,
+				TYPOLOGY_SECTION_TIPO,
+				ARTICLE_TYPOLOGY_SECTION_ID,
+			);
+			written.push(TYPOLOGY_RELATION_TIPO);
+		}
+		if (typeof p.issn === 'string' && p.issn.trim() !== '') {
+			await writeField(
+				newSectionId,
+				PUBLICATION_TIPO,
+				STANDARD_NUMBER_TIPO,
+				p.issn,
+				context.userId,
+			);
+			written.push(STANDARD_NUMBER_TIPO);
+			await linkFixedTerm(
+				context,
+				newSectionId,
+				STANDARD_NUMBER_TYPE_RELATION_TIPO,
+				STANDARD_NUMBER_TYPE_SECTION_TIPO,
+				ISSN_TYPE_SECTION_ID,
+			);
+			written.push(STANDARD_NUMBER_TYPE_RELATION_TIPO);
+		}
+		return { sectionId: newSectionId, fieldsWritten: written };
+	});
 
 	let seriesSectionId: number | null = null;
 	let seriesCreated: boolean | null = null;
@@ -852,6 +885,7 @@ async function commitOnePublication(
 		publication_identifier: p.publicationIdentifier,
 		section_tipo: PUBLICATION_TIPO,
 		section_id: sectionId,
+		error: null,
 		skipped: false,
 		fields_written: fieldsWritten,
 		series_section_id: seriesSectionId,
@@ -892,7 +926,29 @@ async function commitPublications(context: ToolActionContext): Promise<ToolRespo
 			counter,
 			total: publications.length,
 		});
-		results.push(await commitOnePublication(context, p, seriesCache, personCache));
+		// Never narrow scope silently: a commitOnePublication throw (e.g. its own
+		// transaction rolling back) must not abort the rest of the batch, or
+		// every publication already committed goes unreported and gets
+		// duplicated on retry (review item C1).
+		try {
+			results.push(await commitOnePublication(context, p, seriesCache, personCache));
+		} catch (error) {
+			results.push({
+				publication_identifier: p.publicationIdentifier,
+				section_tipo: PUBLICATION_TIPO,
+				section_id: null,
+				error: (error as Error).message,
+				skipped: false,
+				fields_written: [],
+				series_section_id: null,
+				series_created: null,
+				series_error: null,
+				author_section_ids: [],
+				author_errors: [],
+				document_imported: false,
+				document_error: null,
+			});
+		}
 	}
 
 	return ok({ results }, { requestId: toolRequestId(context) });
@@ -913,14 +969,38 @@ export const tool: ToolServerModule = {
 		},
 		// 'targets' (not 'section'): the handler always writes rsc205/rsc197/
 		// rsc212 regardless of what options.section_tipo says, so the gate must
-		// name those fixed targets rather than trust the client's value.
+		// name those fixed targets rather than trust the client's value. Each
+		// (section, component) PAIR is named too, not just the bare section - a
+		// section grant is not authority over a component the profile denies
+		// (review item B1), so e.g. a profile allowed to edit rsc205 but denied
+		// rsc209 (the PDF) or rsc139 (Authorship) must not be able to have this
+		// tool write them anyway.
 		commit_publications: {
 			permission: 'targets',
 			minLevel: 2,
 			targets: () => [
 				{ section_tipo: PUBLICATION_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: CODE_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: TITLE_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: PAGES_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: ABSTRACT_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: PUBLISHER_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: SERIES_NUMBER_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: URL_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: PERSONAL_NAME_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: PUBLICATION_DATE_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: TYPOLOGY_RELATION_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: STANDARD_NUMBER_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: STANDARD_NUMBER_TYPE_RELATION_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: SERIES_RELATION_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: AUTHORSHIP_RELATION_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: PDF_URI_TIPO },
+				{ section_tipo: PUBLICATION_TIPO, tipo: DOCUMENT_TIPO },
 				{ section_tipo: PEOPLE_SECTION_TIPO },
+				{ section_tipo: PEOPLE_SECTION_TIPO, tipo: PERSON_SURNAME_TIPO },
+				{ section_tipo: PEOPLE_SECTION_TIPO, tipo: PERSON_GIVEN_NAME_TIPO },
 				{ section_tipo: SERIES_SECTION_TIPO },
+				{ section_tipo: SERIES_SECTION_TIPO, tipo: SERIES_NAME_TIPO },
 			],
 			handler: commitPublications,
 		},
