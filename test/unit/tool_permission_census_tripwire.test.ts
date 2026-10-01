@@ -213,15 +213,15 @@ const CENSUS: Record<string, CensusEntry> = {
 	'tool_transcription:repair_model': { entry: 'repairModelAction', gate: 'isGlobalAdmin' },
 	'tool_transcription:create_transcribable_audio_file': {
 		entry: 'createTranscribableAudioFile',
-		gate: 'gateRecordWrite',
+		gate: 'gateRecord',
 	},
 	'tool_transcription:delete_transcribable_audio_file': {
 		entry: 'deleteTranscribableAudioFile',
-		gate: 'gateRecordWrite',
+		gate: 'gateRecord',
 	},
 	'tool_transcription:automatic_transcription': {
 		entry: 'automaticTranscription',
-		gate: 'gateRecordWrite',
+		gate: 'gateRecord',
 	},
 	'tool_transcription:check_server_transcriber_status': {
 		entry: 'checkServerTranscriberStatus',
@@ -229,12 +229,12 @@ const CENSUS: Record<string, CensusEntry> = {
 	},
 	'tool_transcription:build_subtitles_file': {
 		entry: 'buildSubtitlesFile',
-		gate: 'assertActionPermission',
+		gate: 'gateRecord',
 	},
 	'tool_transcription:BACKGROUND_POLL_ACTION': {
 		entry: 'backgroundTranscriberPoll',
-		gate: null,
-		why: 'background-only: absent from apiActions, so unroutable from the wire; the enqueuing wire action gated first',
+		gate: 'authorizeRecordAccess',
+		why: 'background-only: absent from apiActions, so unroutable from the wire; the enqueuing wire action gated first, and the SAVE re-runs the write door (closure Step 3, TOOLS-3 revocation)',
 	},
 	'tool_transcription:input.action': {
 		entry: null,
@@ -288,6 +288,8 @@ const AUTHORIZATION_TOKENS: readonly string[] = [
 	'assertPublisher',
 	'gateRecord',
 	'gateRecordWrite',
+	'authorizeRecordAccess',
+	'authorizeSectionTarget',
 	'isGlobalAdmin',
 	'isDeveloper',
 	'assertTranslationPermissions',

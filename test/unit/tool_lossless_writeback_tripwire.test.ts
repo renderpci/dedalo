@@ -1228,12 +1228,16 @@ const CENSUS: Record<string, CensusRow> = {
 	// --- REFUSES (server) ------------------------------------------------
 	'tools/tool_transcription/server/index.ts :: backgroundTranscriberPoll': {
 		doors: {
-			pollTranscriptionCompletion: {
+			// The poll's SAVE SEAM (closure Step 3, TOOLS-3) is its ONLY write door:
+			// pollTranscriptionCompletion has no default save (the save is REQUIRED of
+			// its caller), so the handler hands it a save that re-runs the write door
+			// for the principal resolved NOW, then calls saveTranscriptionResult itself.
+			saveTranscriptionResult: {
 				verdict: 'refuses',
 				evidence: 'src/core/tools/transcription_asr.ts#saveTranscriptionResult',
 				must_contain: 'hasExistingTranscription(',
 				reason:
-					'the server twin of save_transcription: a finished ASR job writes the transcript only when the target language slice is EMPTY — saveTranscriptionResult refuses ("delete the existing data to re-transcribe") when hasExistingTranscription finds any item there, so a curator’s transcript is never replaced. Honest limit: the emptiness check reads outside a lock.',
+					'the server twin of save_transcription, through the poll’s re-gated save seam: a finished ASR job writes the transcript only when the target language slice is EMPTY — saveTranscriptionResult refuses ("delete the existing data to re-transcribe") when hasExistingTranscription finds any item there, so a curator’s transcript is never replaced; the seam can add an authorization refusal in front of it but never a write past it. Honest limit: the emptiness check reads outside a lock. Behaviour-tethered by the transcription tether, which drives the poll with that same writer as its save.',
 			},
 		},
 	},
@@ -1382,7 +1386,7 @@ const SERVER_PENDING_TETHERS: Record<
 const SERVER_REFUSES_TETHERS: Record<string, string> = {
 	'tools/tool_time_machine/server/bulk_revert_records.ts :: deleteIfSafe × deleteSectionRecord':
 		WRITEBACK_TETHERS.deleteIfSafe,
-	'tools/tool_transcription/server/index.ts :: backgroundTranscriberPoll × pollTranscriptionCompletion':
+	'tools/tool_transcription/server/index.ts :: backgroundTranscriberPoll × saveTranscriptionResult':
 		WRITEBACK_TETHERS.transcription,
 };
 

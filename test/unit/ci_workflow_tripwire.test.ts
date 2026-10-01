@@ -673,6 +673,30 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/media_index_reconcile_fence_native.test.ts',
 		'It models a runner batch holding the publication-target advisory lock from a second Postgres session while the media-index reconcile and rebuild doors run, so the exclusion it proves exists only on a live suite Postgres.',
 	],
+	[
+		'test/unit/write_door_native.test.ts',
+		'It drives the real declarative tool gate and the write-door primitives as principals minted in matrix_users/matrix_profiles/dd153 projects by authz_door_fixture, against records it builds through the engine, so every leg is a statement about stored grants and rows and cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/authz_door_matrix_native.test.ts',
+		'Each cell runs a real door (dispatch handler, tool gate, MCP tool, agent door) as a fixture principal resolved from matrix_users/matrix_profiles against engine-built records and asserts the stored effect, so the matrix cannot be evaluated without a live suite Postgres.',
+	],
+	[
+		'test/unit/agent_access_native.test.ts',
+		'It logs fixture users into real sessions and drives every dd_mcp_api action through dispatchRqo; the tool grant it tests is a dd1067 locator on a profile row in the suite database, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/tool_transcription_gate_native.test.ts',
+		"It runs tool_transcription's handlers as fixture principals against engine-built test3 records and measures the stored transcript after a mid-poll revocation saved through the engine's own save door, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/identify_vision_grant_native.test.ts',
+		"The grant it tests is resolved by getUserTools from the fixture profiles' dd1067 locators in the suite database, and the handlers it drives read engine-built records, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/mcp_record_door_native.test.ts',
+		"It asserts the section table's row count and its row-id sequence around the MCP delete/duplicate/find_or_create doors, run as fixture principals, so the measure itself is the suite database's stored state.",
+	],
 ]);
 
 /**

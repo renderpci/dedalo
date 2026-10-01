@@ -30,7 +30,10 @@ import {
 	situation,
 } from '../../src/core/test_data/situations/situation.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
-import { pollTranscriptionCompletion } from '../../src/core/tools/transcription_asr.ts';
+import {
+	pollTranscriptionCompletion,
+	saveTranscriptionResult,
+} from '../../src/core/tools/transcription_asr.ts';
 import { babelProvider, translateAndWrite } from '../../src/core/tools/translation.ts';
 import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import { WRITEBACK_TETHER_TITLES, WRITEBACK_TETHERS } from '../helpers/tool_writeback_tethers.ts';
@@ -279,6 +282,9 @@ describe('tool_lossless_writeback — the server cells, EXECUTED (behaviour, not
 						return { status: 3, transcription_data: { segments } };
 					},
 					maxAttempts: 1,
+					// The engine's guarded save itself (the save is REQUIRED of the caller —
+					// integrator request 12): the tether is the save's own lossless write.
+					save: saveTranscriptionResult,
 				},
 			);
 

@@ -451,6 +451,23 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			(await import('../helpers/read_door_identity_fixture.ts')).removeReadDoorIdentityFixture(),
 	},
 	{
+		name: 'installAuthzDoorFixture',
+		run: async () => (await import('../helpers/authz_door_fixture.ts')).installAuthzDoorFixture(),
+	},
+	{
+		name: 'removeAuthzDoorFixture',
+		run: async () => (await import('../helpers/authz_door_fixture.ts')).removeAuthzDoorFixture(),
+	},
+	{
+		name: 'createDoorRecord',
+		run: async () =>
+			(await import('../helpers/authz_door_fixture.ts')).createDoorRecord('test3', 944021),
+	},
+	{
+		name: 'dropDoorRecords',
+		run: async () => (await import('../helpers/authz_door_fixture.ts')).dropDoorRecords(),
+	},
+	{
 		name: 'installHierarchyPruningFixture',
 		run: async () =>
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).installHierarchyPruningFixture(),

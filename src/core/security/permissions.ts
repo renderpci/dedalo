@@ -644,6 +644,26 @@ export function inheritSubdatumPermission(childLevel: number, callerLevel: numbe
 const METADATA_TIPOS: ReadonlySet<string> = new Set(Object.values(AUDIT_TIPOS));
 
 /**
+ * THE SEARCH SURFACE'S STANDING GRANTS — the (section, component) pairs every
+ * searcher may FILTER on whatever the dd774 matrix says (PHP
+ * component_common::get_component_permissions, search branch): the section-info
+ * metadata components (created/modified date and user, dd196 group — no profile
+ * grants them per section, and the search panel offers them to everyone) and
+ * every component of the thesaurus template section. ONE rule, read by the
+ * search-mode context stamp ({@link resolveComponentContextPermission}) AND by
+ * the search path's root/relation-leaf key (search/conform.ts, SEC-1), so the
+ * panel can never offer a field the filter then refuses.
+ */
+export function searchSurfaceGrants(sectionTipo: string, componentTipo: string): boolean {
+	return sectionTipo === THESAURUS_SECTION || METADATA_TIPOS.has(componentTipo);
+}
+
+/** The metadata component tipos (read-only view — the search key lists the relation ones). */
+export function metadataComponentTipos(): readonly string[] {
+	return [...METADATA_TIPOS];
+}
+
+/**
  * dd128 own-record components PHP forces to READ for a non-global-admin, so a
  * user cannot hand themselves a profile, the developer flag, a new username or
  * a different section_id through the ordinary save API (DEDALO_USER_PROFILE_TIPO,
@@ -811,8 +831,7 @@ export async function resolveComponentContextPermission(
 	mode: string,
 ): Promise<number> {
 	if (mode === 'search') {
-		if (sectionTipo === THESAURUS_SECTION) return 2;
-		if (METADATA_TIPOS.has(tipo)) return 2;
+		if (searchSurfaceGrants(sectionTipo, tipo)) return 2;
 		// PHP (int)$section_id === 0: a no-record id grants 2 — classified now
 		// (WC-2026-08-10-section-id-int-canonical) instead of the NaN sniff. A
 		// SYNTHETIC token ('search_<n>') and an EXTERNAL remote id both keep the

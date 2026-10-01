@@ -105,10 +105,11 @@ const TEST_DIR = join(import.meta.dir, '..');
  * name.
  */
 const PARTIAL_MOCK_BASELINE: readonly string[] = [
-	// Both capture the REAL module up front and re-mock it back (a restore by
+	// Captures the REAL module up front and re-mocks it back (a restore by
 	// another name), but the stub is narrower than record_scope.ts while active.
+	// (tools_record_tipo_permission left the list 2026-09-30: rewritten without
+	// mocks, on real identities.)
 	'unit/record_scope_gates.test.ts',
-	'unit/tools_record_tipo_permission.test.ts',
 	// A VIRTUAL module id ('/virtual/…'): there is no file on disk to spread.
 	'unit/transcription_status_panel.test.ts',
 	// (The css.js truncations in client_render_queue_deadlock and

@@ -1,79 +1,86 @@
 /**
- * CRAP item 2.22 — resolveMediaActionContext (api/handlers/media_action_context.ts)
- * + the threeDMoveFileAction shell (api/handlers/dd_component_3d_api.ts).
+ * resolveMediaActionContext (api/handlers/media_action_context.ts) — the media
+ * door of dd_component_av_api / dd_component_3d_api (closure Step 3, SEC-2-media)
+ * + the threeDMoveFileAction shell.
  *
- * Branch inventory of resolveMediaActionContext, in execution order:
+ * WHAT WAS WRONG (measured at 45b8c45162): the door asked ONE question,
+ * `getPermissions(principal, section, section) >= minLevel`. It never asked the
+ * (section, COMPONENT) pair — a profile explicitly denied the AV component but
+ * holding the section cut fragments, probed streams and deleted posterframes —
+ * and it never asked the RECORD SCOPE — a profile whose projects do not include
+ * the record did all of that on any record id it could guess. The model gate
+ * answered before either, so an unauthorized caller could probe the ontology.
+ *
+ * THE DOOR NOW (write_door.authorizeRecordAccess): grammar → the section floor
+ * (= minLevel) → the pair (dd128-aware) → the record scope → the model. The
+ * returned identity is built from the GRANT, never from the rqo.
+ *
+ * Branch inventory, in execution order:
  *  1. coordinate validation (tipo / section_tipo / positive integer section_id)
  *     — runs BEFORE requirePrincipal, so it is credless AND DB-less;
- *  2. the section permission gate: getPermissions(principal, sectionTipo, sectionTipo)
- *     — BOTH args are the SECTION tipo, never the component tipo. The scratch
- *     user granted only on (test3, test26) is the case that pins this;
- *  3. model gate (getModelByTipo(tipo) === expectedModel);
+ *  2. the authorization door — every action of both classes, DERIVED from the
+ *     READ_DOOR_POSTURE rows of `dd_component_{av,3d}_api` (an empty derivation
+ *     throws), probed with the identities of `authz_door_fixture`:
+ *       SECTION_ONLY   (section 2, component 0)  → perm.denied
+ *       OUT_OF_SCOPE   (full grants, project Q)  → perm.out_of_scope
+ *       COMPONENT_ONLY (section 0, component 2)  → perm.denied
+ *       LEVEL_1        → perm.denied on the write actions, served on the reads
+ *       READ_COMPONENT (section 2, component 1) → perm.denied ON the component
+ *                        on the write actions (the section floor PASSES it, so
+ *                        only the level-2 PAIR can refuse), served on the reads
+ *       READ_SECTION   (section 1, component 2) → perm.denied ON the SECTION
+ *                        half on the write actions (the pair PASSES it, so only
+ *                        the section floor at 2 — HEAD's level — can refuse),
+ *                        served on the reads
+ *       CONTROL        → served; the returned identity equals the grant
+ *  3. the model gate — AFTER the pair and the scope (no ontology oracle);
  *  4. the frozen media spec + the language-NEUTRAL identity (lang:null) + pathOpts.
  *
- * Scratch surfaces (namespace: scratch users + test3 ids 933000-933999):
- *  matrix_users / matrix_profiles rows 933001-933003 (dd128 / dd234).
- * No 3D happy path: there is no media-root seam through resolveMediaPathOptions,
- * so a real move would write into the developer's LIVE media tree. The
- * filesystem effect is gated by tool_posterframe.test.ts. The "missing staged
- * source" case only stats a non-existent path and returns false before any mkdir.
+ * The record is ENGINE-BUILT (createSectionRecord, in project P) — no phantom
+ * id, no raw seeding. No 3D happy path writes media: the "missing staged
+ * source" case only stats a non-existent path.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
+import type { ActionHandler, ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { component3dApiActions } from '../../src/core/api/handlers/dd_component_3d_api.ts';
+import { componentAvApiActions } from '../../src/core/api/handlers/dd_component_av_api.ts';
 import {
 	avActionFail,
 	resolveMediaActionContext,
 } from '../../src/core/api/handlers/media_action_context.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
-import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
-import {
-	clearPermissionsCache,
-	clearPrincipalCache,
-	clearUserProjectsCache,
-	getPermissions,
-	type Principal,
-	resolvePrincipal,
-} from '../../src/core/security/permissions.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
+import { READ_DOOR_POSTURE } from '../../src/core/security/read_door.ts';
 import type { Session } from '../../src/core/security/session_store.ts';
 import { mustGet } from '../helpers/assert.ts';
+import {
+	AUTHZ_3D,
+	AUTHZ_AV,
+	AUTHZ_PROJECT_P,
+	AUTHZ_SECTION,
+	type AuthzIdentities,
+	assertAuthzDoorContrast,
+	createDoorRecord,
+	installAuthzDoorFixture,
+	removeAuthzDoorFixture,
+	resolveAuthzIdentities,
+} from '../helpers/authz_door_fixture.ts';
+import { DB_READY } from '../helpers/db_ready.ts';
 
-// --- fixture coordinates ---------------------------------------------------
-
-/** A NORMAL section: model 'section', matrix table 'matrix_test' — NOT one of
- * PUBLIC_LIST_TABLES, so a zero grant really resolves to 0 (a matrix_list /
- * matrix_dd / matrix_notes parent would be handed level 1 by the fallback and
- * make the whole permission half of this file vacuous). */
-const SECTION = 'test3';
-const COMPONENT_3D = 'test26'; // model component_3d
+const SECTION = AUTHZ_SECTION;
+const COMPONENT_3D = AUTHZ_3D; // model component_3d
 const COMPONENT_IMAGE = 'test99'; // model component_image
-const SECTION_ID = 933100;
-
-const USERS_SECTION = 'dd128';
-const PROFILES_SECTION = 'dd234';
-const PROFILE_SELECT = 'dd1725';
-const SECURITY_ACCESS = 'dd774';
-
-/** user id === profile id, all inside the assigned scratch band. */
-const USER_COMPONENT_ONLY = 933001; // granted (test3, test26)=2 — NOT (test3, test3)
-const USER_LEVEL_1 = 933002; // granted (test3, test3)=1
-const USER_LEVEL_2 = 933003; // granted (test3, test3)=2
-const SCRATCH_IDS = [USER_COMPONENT_ONLY, USER_LEVEL_1, USER_LEVEL_2];
 
 /**
  * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): every refusal branch THROWS a
- * registered code — the handler builds no failure body at all, and the dispatch
- * chokepoint converts. The codes are the contract now, not the prose:
- *   coordinates  → `request.invalid_source` (400)
- *   permission   → `perm.denied` (403)  [minLevel rides `coordinates.required`]
- *   model gate   → `request.invalid_model` (400)
- *   media op     → `media.action_failed` (500, avActionFail)
+ * registered code; the dispatch chokepoint converts.
  */
 const COORD_CODE = 'request.invalid_source';
 const PERM_CODE = 'perm.denied';
+const SCOPE_CODE = 'perm.out_of_scope';
 const MODEL_CODE = 'request.invalid_model';
 
 /** The DedaloError a call threw, or a loud failure if it did not throw one. */
@@ -91,22 +98,20 @@ async function refusalOf(promise: Promise<unknown>): Promise<DedaloError> {
 
 // --- harness ---------------------------------------------------------------
 
-/** A context WITHOUT a principal — every coordinate-validation case must answer
- * before requirePrincipal is reached (which would throw). */
 const contextWithoutPrincipal = (): ApiRequestContext => ({
-	requestId: 'crap-2-22',
+	requestId: 'media-door',
 	clientIp: '127.0.0.1',
 	session: null,
 	csrfCandidate: null,
 });
 
 const contextFor = (principal: Principal): ApiRequestContext => ({
-	requestId: 'crap-2-22',
+	requestId: 'media-door',
 	clientIp: '127.0.0.1',
 	session: {
 		userId: principal.userId,
-		username: `scratch_${principal.userId}`,
-		isGlobalAdmin: false,
+		username: `zzauthz_${principal.userId}`,
+		isGlobalAdmin: principal.isGlobalAdmin,
 		csrfToken: 'x',
 		applicationLang: null,
 		dataLang: null,
@@ -115,81 +120,67 @@ const contextFor = (principal: Principal): ApiRequestContext => ({
 	principal,
 });
 
-const rqoOf = (source: unknown, options?: unknown): Rqo =>
-	({ action: 'move_file_to_dir', source, options }) as unknown as Rqo;
+const rqoOf = (source: unknown, options?: unknown, action = 'media_action'): Rqo =>
+	({ action, source, options }) as unknown as Rqo;
 
-/** Delete both scratch surfaces (records AND the Time Machine tail), fail-loud
- * residue check by the caller. Ids are numeric constants from this file. */
-async function purgeScratch(): Promise<void> {
-	const ids = SCRATCH_IDS.join(',');
-	await sql.unsafe(`DELETE FROM matrix_users WHERE section_tipo = $1 AND section_id IN (${ids})`, [
-		USERS_SECTION,
-	]);
-	await sql.unsafe(
-		`DELETE FROM matrix_profiles WHERE section_tipo = $1 AND section_id IN (${ids})`,
-		[PROFILES_SECTION],
-	);
-	await sql.unsafe(
-		`DELETE FROM matrix_time_machine WHERE section_tipo IN ($1, $2) AND section_id IN (${ids})`,
-		[USERS_SECTION, PROFILES_SECTION],
+/** Options valid enough that a handler past the gate would ACT (never reached by a refusal). */
+const MOVE_OPTIONS = {
+	target_dir: 'posterframe',
+	file_data: { name: 'snapshot.jpg', key_dir: 'no_such_key_dir', tmp_name: 'no_such_tmp.jpg' },
+};
+
+// --- the door census, DERIVED from the posture ledger -----------------------
+
+interface MediaDoor {
+	key: string;
+	action: string;
+	model: 'component_av' | 'component_3d';
+	tipo: string;
+	minLevel: 1 | 2;
+	handler: ActionHandler;
+}
+
+const CLASSES = [
+	{
+		api: 'dd_component_av_api',
+		model: 'component_av',
+		tipo: AUTHZ_AV,
+		actions: componentAvApiActions,
+	},
+	{
+		api: 'dd_component_3d_api',
+		model: 'component_3d',
+		tipo: AUTHZ_3D,
+		actions: component3dApiActions,
+	},
+] as const;
+
+const MEDIA_DOORS: MediaDoor[] = [...READ_DOOR_POSTURE.entries()].flatMap(([key, posture]) => {
+	const [api, action] = key.split(':') as [string, string];
+	const owner = CLASSES.find((entry) => entry.api === api);
+	if (owner === undefined) return [];
+	const handler = owner.actions[action];
+	if (handler === undefined) throw new Error(`posture row ${key} names no handler`);
+	return [
+		{
+			key,
+			action,
+			model: owner.model,
+			tipo: owner.tipo,
+			// A mutating row is a WRITE door; every other posture is a read.
+			minLevel: posture.posture === 'mutating' ? 2 : 1,
+			handler,
+		},
+	];
+});
+if (MEDIA_DOORS.length === 0) {
+	throw new Error(
+		'media door census derived ZERO rows from READ_DOOR_POSTURE — the derivation is broken',
 	);
 }
 
-async function seedScratchUser(id: number, grants: unknown[]): Promise<void> {
-	await sql.unsafe(
-		`INSERT INTO "${'matrix_profiles'}" (section_id, section_tipo, misc)
-		 VALUES ($1, $2, $3::text::jsonb)`,
-		[id, PROFILES_SECTION, JSON.stringify({ [SECURITY_ACCESS]: grants })],
-	);
-	await sql.unsafe(
-		`INSERT INTO "${'matrix_users'}" (section_id, section_tipo, relation)
-		 VALUES ($1, $2, $3::text::jsonb)`,
-		[
-			id,
-			USERS_SECTION,
-			JSON.stringify({
-				[PROFILE_SELECT]: [{ section_tipo: PROFILES_SECTION, section_id: String(id) }],
-			}),
-		],
-	);
-}
-
-beforeAll(async () => {
-	// Clear residue from an aborted previous run rather than colliding.
-	await purgeScratch();
-
-	await seedScratchUser(USER_COMPONENT_ONLY, [
-		// A grant on the (section, COMPONENT) pair, deliberately WITHOUT the
-		// (section, section) pair the gate actually reads.
-		{ id: 1, tipo: COMPONENT_3D, section_tipo: SECTION, value: 2 },
-	]);
-	await seedScratchUser(USER_LEVEL_1, [{ id: 1, tipo: SECTION, section_tipo: SECTION, value: 1 }]);
-	await seedScratchUser(USER_LEVEL_2, [{ id: 1, tipo: SECTION, section_tipo: SECTION, value: 2 }]);
-
-	clearPermissionsCache();
-	clearPrincipalCache();
-	clearUserProjectsCache();
-});
-
-afterAll(async () => {
-	await purgeScratch();
-	// Fail loud on residue — both ends.
-	const ids = SCRATCH_IDS.join(',');
-	const residue = (await sql.unsafe(
-		`SELECT
-			(SELECT count(*) FROM matrix_users WHERE section_tipo = $1 AND section_id IN (${ids})) AS users,
-			(SELECT count(*) FROM matrix_profiles WHERE section_tipo = $2 AND section_id IN (${ids})) AS profiles,
-			(SELECT count(*) FROM matrix_time_machine WHERE section_tipo IN ($1, $2) AND section_id IN (${ids})) AS tm`,
-		[USERS_SECTION, PROFILES_SECTION],
-	)) as { users: string; profiles: string; tm: string }[];
-	const row = mustGet(residue[0], 'the scratch residue probe row');
-	if (Number(row.users) + Number(row.profiles) + Number(row.tm) !== 0) {
-		throw new Error(`scratch residue left behind: ${JSON.stringify(row)}`);
-	}
-	clearPermissionsCache();
-	clearPrincipalCache();
-	clearUserProjectsCache();
-});
+let ids: AuthzIdentities;
+let recordId: number;
 
 // --- 1. coordinate validation (credless, DB-less) --------------------------
 
@@ -218,8 +209,6 @@ describe('resolveMediaActionContext — coordinate validation (no principal, no 
 	}
 
 	test("a numeric-string section_id IS accepted (Number('7') === 7)", async () => {
-		// Pins the coercion: the guard is Number()+Number.isInteger, not typeof.
-		// It gets past the coordinate branch and dies at requirePrincipal instead.
 		await expect(
 			resolveMediaActionContext(
 				rqoOf({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: '7' }),
@@ -241,261 +230,285 @@ describe('resolveMediaActionContext — coordinate validation (no principal, no 
 		expect(thrown).toBeInstanceOf(DedaloError);
 		expect((thrown as DedaloError).code).toBe('media.action_failed');
 		expect((thrown as DedaloError).spec.status).toBe(500);
-		// The reason is the LOG message, never a wire field (disclosure operator).
 		expect((thrown as DedaloError).message).toContain('boom');
 		expect((thrown as DedaloError).publicMessage).toBeUndefined();
 	});
 });
 
-// --- 2. the section permission gate ---------------------------------------
+describe.if(DB_READY)('the media door — derived census × identities', () => {
+	beforeAll(async () => {
+		await installAuthzDoorFixture();
+		recordId = await createDoorRecord(SECTION, AUTHZ_PROJECT_P);
+		ids = await resolveAuthzIdentities();
+	});
+	afterAll(removeAuthzDoorFixture);
 
-describe('resolveMediaActionContext — section permission gate', () => {
-	const source = { tipo: COMPONENT_3D, section_tipo: SECTION, section_id: SECTION_ID };
-
-	test('THE ITEM: a grant on (section, COMPONENT) is NOT a grant on (section, section)', async () => {
-		const principal = await resolvePrincipal(USER_COMPONENT_ONLY);
-		expect(principal.isGlobalAdmin).toBe(false);
-		// The grant the scratch profile actually carries is real and level 2 …
-		expect(await getPermissions(principal, SECTION, COMPONENT_3D)).toBe(2);
-		// … and the gate still refuses, because arg 2 is the SECTION tipo.
-		expect(await getPermissions(principal, SECTION, SECTION)).toBe(0);
-
-		const refusal = await refusalOf(
-			resolveMediaActionContext(rqoOf(source), contextFor(principal), 2, 'component_3d'),
+	test('the census is the two classes, every action (read + write)', () => {
+		expect(MEDIA_DOORS.map((door) => door.key).sort()).toEqual(
+			[
+				...Object.keys(componentAvApiActions).map((a) => `dd_component_av_api:${a}`),
+				...Object.keys(component3dApiActions).map((a) => `dd_component_3d_api:${a}`),
+			].sort(),
 		);
-		expect(refusal.code).toBe(PERM_CODE);
-		expect(refusal.spec.status).toBe(403);
-		// The required level rides the LOG-ONLY coordinates (never the wire).
-		expect(refusal.coordinates).toMatchObject({ required: 2 });
+		expect(MEDIA_DOORS.some((door) => door.minLevel === 1)).toBe(true);
+		expect(MEDIA_DOORS.some((door) => door.minLevel === 2)).toBe(true);
 	});
 
-	test('level 0 at minLevel 1 → the same code, with required 1 in the coordinates', async () => {
-		const principal = await resolvePrincipal(USER_COMPONENT_ONLY);
-		const refusal = await refusalOf(
-			resolveMediaActionContext(rqoOf(source), contextFor(principal), 1, 'component_3d'),
-		);
-		expect(refusal.code).toBe(PERM_CODE);
-		expect(refusal.coordinates).toMatchObject({ required: 1 });
+	test('the contrast is live (guards every pair below)', async () => {
+		await assertAuthzDoorContrast(ids);
 	});
 
-	test('level 1 principal: refused at minLevel 2, admitted at minLevel 1', async () => {
-		const principal = await resolvePrincipal(USER_LEVEL_1);
-		expect(await getPermissions(principal, SECTION, SECTION)).toBe(1);
-
-		const refused = await refusalOf(
-			resolveMediaActionContext(rqoOf(source), contextFor(principal), 2, 'component_3d'),
-		);
-		expect(refused.code).toBe(PERM_CODE);
-
-		const admitted = await resolveMediaActionContext(
-			rqoOf(source),
-			contextFor(principal),
-			1,
-			'component_3d',
-		);
-		expect('ctx' in admitted).toBe(true);
+	const sourceOf = (door: MediaDoor, sectionId: number = recordId) => ({
+		tipo: door.tipo,
+		section_tipo: SECTION,
+		section_id: sectionId,
 	});
-
-	test('level 2 principal passes minLevel 2', async () => {
-		const principal = await resolvePrincipal(USER_LEVEL_2);
-		expect(await getPermissions(principal, SECTION, SECTION)).toBe(2);
-		const result = await resolveMediaActionContext(
-			rqoOf(source),
-			contextFor(principal),
-			2,
-			'component_3d',
-		);
-		expect('ctx' in result).toBe(true);
-	});
-
-	test('the gate runs BEFORE the model gate (ordering)', async () => {
-		// A tipo that is not a component at all: a level-0 caller still gets the
-		// permission refusal, never the model message — no ontology probing for
-		// an unauthorized caller.
-		const principal = await resolvePrincipal(USER_COMPONENT_ONLY);
-		const refusal = await refusalOf(
-			resolveMediaActionContext(
-				rqoOf({ tipo: 'zzznotatipo1', section_tipo: SECTION, section_id: SECTION_ID }),
-				contextFor(principal),
-				2,
-				'component_3d',
+	const call = (door: MediaDoor, principal: Principal, sectionId?: number) =>
+		door.handler(
+			rqoOf(
+				sourceOf(door, sectionId),
+				door.action === 'move_file_to_dir' ? MOVE_OPTIONS : {},
+				door.action,
 			),
-		);
-		// The PERMISSION code, never the model one — no ontology probing for an
-		// unauthorized caller.
-		expect(refusal.code).toBe(PERM_CODE);
-	});
-});
-
-// --- 3. model gate + 4. the resolved context ------------------------------
-
-describe('resolveMediaActionContext — model gate and resolved context', () => {
-	test('a component_image tipo under expectedModel component_3d is refused', async () => {
-		const principal = await resolvePrincipal(USER_LEVEL_1);
-		const refusal = await refusalOf(
-			resolveMediaActionContext(
-				rqoOf({ tipo: COMPONENT_IMAGE, section_tipo: SECTION, section_id: SECTION_ID }),
-				contextFor(principal),
-				1,
-				'component_3d',
-			),
-		);
-		expect(refusal.code).toBe(MODEL_CODE);
-		expect(refusal.coordinates).toMatchObject({ tipo: COMPONENT_IMAGE, expected: 'component_3d' });
-	});
-
-	test('a component_3d tipo under expectedModel component_av is refused', async () => {
-		const principal = await resolvePrincipal(USER_LEVEL_1);
-		const refusal = await refusalOf(
-			resolveMediaActionContext(
-				rqoOf({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: SECTION_ID }),
-				contextFor(principal),
-				1,
-				'component_av',
-			),
-		);
-		expect(refusal.code).toBe(MODEL_CODE);
-		expect(refusal.coordinates).toMatchObject({ expected: 'component_av' });
-	});
-
-	test('an unknown tipo (no model) is refused by the model gate', async () => {
-		const principal = await resolvePrincipal(USER_LEVEL_1);
-		const refusal = await refusalOf(
-			resolveMediaActionContext(
-				rqoOf({ tipo: 'zzznotatipo1', section_tipo: SECTION, section_id: SECTION_ID }),
-				contextFor(principal),
-				1,
-				'component_3d',
-			),
-		);
-		expect(refusal.code).toBe(MODEL_CODE);
-		expect(refusal.coordinates).toMatchObject({ model: 'null' });
-	});
-
-	test('the resolved ctx is language-NEUTRAL and carries the frozen spec', async () => {
-		const principal = await resolvePrincipal(USER_LEVEL_2);
-		const result = await resolveMediaActionContext(
-			rqoOf({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: SECTION_ID }),
 			contextFor(principal),
-			2,
-			'component_3d',
 		);
-		if (!('ctx' in result)) throw new Error(`expected a ctx, got ${JSON.stringify(result)}`);
-		const { ctx } = result;
-		// DEDALO_DATA_NOLAN — media files are language-neutral; the identifier the
-		// section read serves has no lang segment.
-		expect(ctx.identity).toEqual({
-			componentTipo: COMPONENT_3D,
-			sectionTipo: SECTION,
-			sectionId: SECTION_ID,
-			lang: null,
-		});
-		// IDENTITY, not deep-equality: the spec table is frozen and cached.
-		expect(ctx.spec).toBe(mustGet(mediaTypeOf('component_3d'), 'the component_3d media spec'));
-		// Ontology-derived: test26 declares properties.max_items_folder; test3
-		// declares no initial_media_path entry for it.
-		expect(ctx.pathOpts).toEqual({ initialMediaPath: '', maxItemsFolder: 1000 });
-	});
 
-	test('section_id is coerced to a number on the identity', async () => {
-		const principal = await resolvePrincipal(USER_LEVEL_2);
-		const result = await resolveMediaActionContext(
-			rqoOf({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: String(SECTION_ID) }),
-			contextFor(principal),
-			2,
-			'component_3d',
-		);
-		if (!('ctx' in result)) throw new Error(`expected a ctx, got ${JSON.stringify(result)}`);
-		expect(result.ctx.identity.sectionId).toBe(SECTION_ID);
-	});
-});
+	for (const door of MEDIA_DOORS) {
+		describe(door.key, () => {
+			test('SECTION_ONLY (section granted, the component at 0) → perm.denied', async () => {
+				expect((await refusalOf(call(door, ids.sectionOnly))).code).toBe(PERM_CODE);
+			});
 
-// --- 5. the threeDMoveFileAction shell ------------------------------------
+			test('OUT_OF_SCOPE (every grant, another project) → perm.out_of_scope', async () => {
+				expect((await refusalOf(call(door, ids.outOfScope))).code).toBe(SCOPE_CODE);
+			});
 
-describe('threeDMoveFileAction (dd_component_3d_api move_file_to_dir)', () => {
-	const source = { tipo: COMPONENT_3D, section_tipo: SECTION, section_id: SECTION_ID };
-	const validOptions = {
-		target_dir: 'posterframe',
-		file_data: {
-			name: 'snapshot.jpg',
-			// Deliberately nonexistent — only the PRESENCE of these fields is under
-			// test (the required-fields gate), never their content. Kept low-entropy
-			// and self-describing: a random-looking value next to a `key` field name
-			// reads as a credential to the secret scanner (gitleaks generic-api-key).
-			key_dir: 'no_such_key_dir',
-			tmp_name: 'no_such_tmp.jpg',
-		},
-	};
-	const move = mustGet(
-		component3dApiActions.move_file_to_dir,
-		'component3dApiActions.move_file_to_dir',
-	);
+			test('COMPONENT_ONLY (the component granted, the section at 0) → perm.denied', async () => {
+				expect((await refusalOf(call(door, ids.componentOnly))).code).toBe(PERM_CODE);
+			});
 
-	test('the level-2 gate is relayed verbatim (paired with the level-2 control)', async () => {
-		// Level 1 on the SAME coordinates and the SAME (fully valid) options →
-		// the permission envelope, proving the relay is bound to the gate.
-		const weak = await refusalOf(
-			move(rqoOf(source, validOptions), contextFor(await resolvePrincipal(USER_LEVEL_1))),
-		);
-		expect(weak.code).toBe(PERM_CODE);
+			if (door.minLevel === 2) {
+				test('LEVEL_1 on a WRITE door → perm.denied', async () => {
+					expect((await refusalOf(call(door, ids.level1))).code).toBe(PERM_CODE);
+				});
+				// LEVEL_1 holds the SECTION at 1, so the section floor answers first and
+				// the pair is never asked. READ_COMPONENT holds the section at 2: only the
+				// write-level PAIR on the media component can refuse it — the one leg
+				// that goes red if a write action is authorized in read mode.
+				test('READ_COMPONENT (section 2, the component READ-only) on a WRITE door → perm.denied ON the component', async () => {
+					const refusal = await refusalOf(call(door, ids.readComponent));
+					expect({
+						code: refusal.code,
+						tipo: refusal.coordinates?.tipo,
+						required: refusal.coordinates?.required,
+						half: /the component grant/.test(refusal.message),
+					}).toEqual({ code: PERM_CODE, tipo: door.tipo, required: 2, half: true });
+				});
+				// The mirror: READ_SECTION holds the component at WRITE, so the pair
+				// passes and ONLY the section floor (2 on a write door) can refuse it —
+				// the leg that goes red if the media writes' floor drops to 1.
+				test('READ_SECTION (section 1, the component WRITABLE) on a WRITE door → perm.denied ON the section half', async () => {
+					const refusal = await refusalOf(call(door, ids.readSection));
+					expect({
+						code: refusal.code,
+						required: refusal.coordinates?.required,
+						half: /the section grant/.test(refusal.message),
+					}).toEqual({ code: PERM_CODE, required: 2, half: true });
+				});
+			} else {
+				test('READ_SECTION (section 1, the component WRITABLE) on a READ door passes the gate', async () => {
+					const result = await resolveMediaActionContext(
+						rqoOf(sourceOf(door)),
+						contextFor(ids.readSection),
+						1,
+						door.model,
+						door.key,
+					);
+					expect(result.grant).toMatchObject({ componentTipo: door.tipo, sectionId: recordId });
+				});
+				test('READ_COMPONENT (section 2, the component READ-only) on a READ door passes the gate', async () => {
+					const result = await resolveMediaActionContext(
+						rqoOf(sourceOf(door)),
+						contextFor(ids.readComponent),
+						1,
+						door.model,
+						door.key,
+					);
+					expect(result.grant).toMatchObject({ componentTipo: door.tipo, sectionId: recordId });
+				});
+				test('LEVEL_1 on a READ door passes the gate', async () => {
+					const result = await resolveMediaActionContext(
+						rqoOf(sourceOf(door)),
+						contextFor(ids.level1),
+						1,
+						door.model,
+						door.key,
+					);
+					expect(result.ctx.identity.sectionId).toBe(recordId);
+				});
+			}
 
-		// CONTROL: level 2, identical coordinates and options → past the gate.
-		// The staged source does not exist, so it stops at the rename, which is
-		// a DIFFERENT code. Without this pair the case above would pass for
-		// a handler that refused everything.
-		const strong = await refusalOf(
-			move(rqoOf(source, validOptions), contextFor(await resolvePrincipal(USER_LEVEL_2))),
-		);
-		expect(strong.code).toBe('resource.not_found');
-		expect(strong.spec.status).toBe(404);
-	});
+			test('a global admin with a non-positive id → request.invalid_source', async () => {
+				for (const sectionId of [-1, 0]) {
+					expect((await refusalOf(call(door, ids.dd128Admin, sectionId))).code).toBe(COORD_CODE);
+				}
+			});
 
-	test('the coordinate refusal is relayed before any authentication', async () => {
-		const refusal = await refusalOf(move(rqoOf({}, validOptions), contextWithoutPrincipal()));
-		expect(refusal.code).toBe(COORD_CODE);
-	});
-
-	const badOptions: [string, unknown][] = [
-		['options absent', undefined],
-		['empty options', {}],
-		['target_dir only', { target_dir: 'posterframe' }],
-		['file_data.name only', { target_dir: 'posterframe', file_data: { name: 'a.jpg' } }],
-		[
-			'file_data without tmp_name',
-			{ target_dir: 'posterframe', file_data: { name: 'a.jpg', key_dir: 'k' } },
-		],
-		['empty target_dir', { ...validOptions, target_dir: '' }],
-		[
-			'empty file name',
-			{ target_dir: 'posterframe', file_data: { name: '', key_dir: 'k', tmp_name: 't' } },
-		],
-	];
-
-	for (const [name, options] of badOptions) {
-		test(`file_data validation: ${name}`, async () => {
-			const refusal = await refusalOf(
-				move(rqoOf(source, options), contextFor(await resolvePrincipal(USER_LEVEL_2))),
-			);
-			expect(refusal.code).toBe('request.invalid_options');
-			// `request.invalid_options` is a PUBLIC-disclosure code: the vetted
-			// sentence names the required fields (never the caller's values).
-			expect(refusal.publicMessage).toBe(
-				'options.target_dir and options.file_data.{name,key_dir,tmp_name} are required',
-			);
+			test('CONTROL passes the gate; the returned identity IS the grant', async () => {
+				const result = (await resolveMediaActionContext(
+					rqoOf(sourceOf(door)),
+					contextFor(ids.control),
+					door.minLevel,
+					door.model,
+					door.key,
+				)) as Awaited<ReturnType<typeof resolveMediaActionContext>> & {
+					grant?: Record<string, unknown>;
+				};
+				expect(result.grant).toMatchObject({
+					sectionTipo: SECTION,
+					componentTipo: door.tipo,
+					sectionId: recordId,
+					level: door.minLevel,
+				});
+				expect(result.ctx.identity).toEqual({
+					componentTipo: result.grant?.componentTipo,
+					sectionTipo: result.grant?.sectionTipo,
+					sectionId: result.grant?.sectionId,
+					lang: null,
+				});
+			});
 		});
 	}
 
-	test('a missing staged source is a 404 REFUSAL, not a falsy success', async () => {
-		// Nothing was bound, so the queue row must not be cleared as if it had
-		// been: the refusal is `resource.not_found`, and the staged coordinates
-		// ride the LOG-ONLY coordinates.
-		const refusal = await refusalOf(
-			move(rqoOf(source, validOptions), contextFor(await resolvePrincipal(USER_LEVEL_2))),
+	test('ORDER: the pair and the scope answer BEFORE the model (no ontology oracle)', async () => {
+		// A tipo that is not a component at all: an unauthorized caller gets the
+		// permission code, never the model code.
+		const probe = rqoOf({ tipo: 'zzznotatipo1', section_tipo: SECTION, section_id: recordId });
+		for (const principal of [ids.sectionOnly, ids.componentOnly]) {
+			const refusal = await refusalOf(
+				resolveMediaActionContext(probe, contextFor(principal), 2, 'component_3d', 'order-probe'),
+			);
+			expect(refusal.code).toBe(PERM_CODE);
+		}
+	});
+
+	// --- 3. model gate + 4. the resolved context ----------------------------
+
+	describe('model gate and resolved context (CONTROL, in scope)', () => {
+		test('a component_image tipo under expectedModel component_3d is refused', async () => {
+			const refusal = await refusalOf(
+				resolveMediaActionContext(
+					rqoOf({ tipo: COMPONENT_IMAGE, section_tipo: SECTION, section_id: recordId }),
+					contextFor(ids.control),
+					1,
+					'component_3d',
+				),
+			);
+			expect(refusal.code).toBe(MODEL_CODE);
+			expect(refusal.coordinates).toMatchObject({
+				tipo: COMPONENT_IMAGE,
+				expected: 'component_3d',
+			});
+		});
+
+		test('a component_3d tipo under expectedModel component_av is refused', async () => {
+			const refusal = await refusalOf(
+				resolveMediaActionContext(
+					rqoOf({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: recordId }),
+					contextFor(ids.control),
+					1,
+					'component_av',
+				),
+			);
+			expect(refusal.code).toBe(MODEL_CODE);
+			expect(refusal.coordinates).toMatchObject({ expected: 'component_av' });
+		});
+
+		test('the resolved ctx is language-NEUTRAL and carries the frozen spec', async () => {
+			const result = await resolveMediaActionContext(
+				rqoOf({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: recordId }),
+				contextFor(ids.control),
+				2,
+				'component_3d',
+			);
+			const { ctx } = result;
+			expect(ctx.identity).toEqual({
+				componentTipo: COMPONENT_3D,
+				sectionTipo: SECTION,
+				sectionId: recordId,
+				lang: null,
+			});
+			expect(ctx.spec).toBe(mustGet(mediaTypeOf('component_3d'), 'the component_3d media spec'));
+			expect(ctx.pathOpts).toEqual({ initialMediaPath: '', maxItemsFolder: 1000 });
+		});
+
+		test('section_id is coerced to a number on the identity', async () => {
+			const result = await resolveMediaActionContext(
+				rqoOf({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: String(recordId) }),
+				contextFor(ids.control),
+				2,
+				'component_3d',
+			);
+			expect(result.ctx.identity.sectionId).toBe(recordId);
+		});
+	});
+
+	// --- 5. the threeDMoveFileAction shell ----------------------------------
+
+	describe('threeDMoveFileAction (dd_component_3d_api move_file_to_dir)', () => {
+		const move = mustGet(
+			component3dApiActions.move_file_to_dir,
+			'component3dApiActions.move_file_to_dir',
 		);
-		expect(refusal.code).toBe('resource.not_found');
-		expect(refusal.coordinates).toMatchObject({
-			key_dir: 'no_such_key_dir',
-			tmp_name: 'no_such_tmp.jpg',
+		const source = () => ({ tipo: COMPONENT_3D, section_tipo: SECTION, section_id: recordId });
+
+		test('the level-2 gate is relayed verbatim (paired with the level-2 control)', async () => {
+			const weak = await refusalOf(move(rqoOf(source(), MOVE_OPTIONS), contextFor(ids.level1)));
+			expect(weak.code).toBe(PERM_CODE);
+			// CONTROL: past the gate; the staged source does not exist → 404.
+			const strong = await refusalOf(move(rqoOf(source(), MOVE_OPTIONS), contextFor(ids.control)));
+			expect(strong.code).toBe('resource.not_found');
+			expect(strong.spec.status).toBe(404);
+		});
+
+		test('the coordinate refusal is relayed before any authentication', async () => {
+			const refusal = await refusalOf(move(rqoOf({}, MOVE_OPTIONS), contextWithoutPrincipal()));
+			expect(refusal.code).toBe(COORD_CODE);
+		});
+
+		const badOptions: [string, unknown][] = [
+			['options absent', undefined],
+			['empty options', {}],
+			['target_dir only', { target_dir: 'posterframe' }],
+			['file_data.name only', { target_dir: 'posterframe', file_data: { name: 'a.jpg' } }],
+			[
+				'file_data without tmp_name',
+				{ target_dir: 'posterframe', file_data: { name: 'a.jpg', key_dir: 'k' } },
+			],
+			['empty target_dir', { ...MOVE_OPTIONS, target_dir: '' }],
+			[
+				'empty file name',
+				{ target_dir: 'posterframe', file_data: { name: '', key_dir: 'k', tmp_name: 't' } },
+			],
+		];
+
+		for (const [name, options] of badOptions) {
+			test(`file_data validation: ${name}`, async () => {
+				const refusal = await refusalOf(move(rqoOf(source(), options), contextFor(ids.control)));
+				expect(refusal.code).toBe('request.invalid_options');
+				expect(refusal.publicMessage).toBe(
+					'options.target_dir and options.file_data.{name,key_dir,tmp_name} are required',
+				);
+			});
+		}
+
+		test('a missing staged source is a 404 REFUSAL, not a falsy success', async () => {
+			const refusal = await refusalOf(move(rqoOf(source(), MOVE_OPTIONS), contextFor(ids.control)));
+			expect(refusal.code).toBe('resource.not_found');
+			expect(refusal.coordinates).toMatchObject({
+				key_dir: 'no_such_key_dir',
+				tmp_name: 'no_such_tmp.jpg',
+			});
 		});
 	});
 });

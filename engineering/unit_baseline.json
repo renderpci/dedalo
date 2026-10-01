@@ -116,6 +116,11 @@
 			"skipped": 0,
 			"assertions": 18
 		},
+		"test/unit/agent_access_native.test.ts": {
+			"tests": 24,
+			"skipped": 0,
+			"assertions": 50
+		},
 		"test/unit/agent_alias_tripwire.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -280,6 +285,11 @@
 			"tests": 9,
 			"skipped": 0,
 			"assertions": 31
+		},
+		"test/unit/authz_door_matrix_native.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 198
 		},
 		"test/unit/authz_substring_gate_tripwire.test.ts": {
 			"tests": 17,
@@ -1891,6 +1901,11 @@
 			"skipped": 0,
 			"assertions": 143
 		},
+		"test/unit/identify_vision_grant_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 7
+		},
 		"test/unit/import_conform.test.ts": {
 			"tests": 45,
 			"skipped": 0,
@@ -2270,6 +2285,11 @@
 			"tests": 2,
 			"skipped": 0,
 			"assertions": 2
+		},
+		"test/unit/mcp_record_door_native.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 9
 		},
 		"test/unit/mcp_registry.test.ts": {
 			"tests": 9,
@@ -4441,6 +4461,11 @@
 			"skipped": 0,
 			"assertions": 290
 		},
+		"test/unit/tool_transcription_gate_native.test.ts": {
+			"tests": 33,
+			"skipped": 0,
+			"assertions": 50
+		},
 		"test/unit/tool_update_cache.test.ts": {
 			"tests": 11,
 			"skipped": 0,
@@ -4845,6 +4870,11 @@
 			"tests": 9,
 			"skipped": 0,
 			"assertions": 19
+		},
+		"test/unit/write_door_native.test.ts": {
+			"tests": 25,
+			"skipped": 0,
+			"assertions": 131
 		},
 		"test/unit/write_lang_provenance_native.test.ts": {
 			"tests": 37,

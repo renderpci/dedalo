@@ -18,10 +18,19 @@ Merged since the last release; these ship with the next one.
 !!! warning "Action needed when you update"
 
     - The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.
+    - Only profiles granted the assistant tool can use the assistant.
     - The site builder can no longer start its agent units through polkit
     - Outbound fetches now refuse every IPv6 route to an internal address.
 
 ### For users
+
+#### Security
+
+- **Searching or sorting by a field the user may not see no longer reveals its values.**
+
+    A search on a field of the section itself (not of a linked record) did not check the user's permission on that field, so repeated searches like "starts with A", "starts with B" could reveal a hidden field's value, and sorting by it revealed its order. A filter or a sort on a field the user's profile hides now matches nothing and sorts nothing, and the request carries the usual "some content was not shown" notice. Fields shown to the user through a portal or an autocomplete they are allowed to use remain searchable there, and the record information fields every user may search (created and modified date and user) stay searchable for everyone. Which section's permissions apply is decided by the records being searched, never by what the request says about them. A sort over several sections at once is applied only when the field is visible to the user in every one of them.
+
+    Wire contract: `WC-2026-09-30-search-root-step-acl`.
 
 #### Changed
 
@@ -307,6 +316,12 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Asking a vision model for proposals, or identifying a photograph with an external encoder, now requires the identification tool permission.**
+
+    Proposals from a vision model and image identification through an external service call a paid model and may send the object's photograph off the server. Any user who could read the section could start them. They now require the user's profile to include the identification tool; without it the request is refused before any model is called. Matching by record, proposals voted by similar records and a locally run image encoder cost nothing and are unchanged. Grant the identification tool to the profiles that should use the vision source.
+
+    Wire contract: `WC-2026-10-01-identify-vision-grant`.
+
 - **The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.** *(action needed)*
 
     Until now, every site of a museum ran its AI turns, builds and `git` commands as one agent user, so one site's run could read or change another site's agent state. The daemon also asked systemd to start those runs itself, which the previous release had to stop allowing (see the entry on the narrowed polkit rule).
@@ -342,11 +357,29 @@ Merged since the last release; these ship with the next one.
 
     See [the site builder internals](./development/site_builder_internals.md).
 
+- **The assistant can no longer search or count records of a section the user may not read.**
+
+    The assistant's search, count and find-or-create tools applied the user's projects but not the section permission, so a user whose profile did not grant a section could still list and count its records through the assistant. They now refuse such a section, exactly as the record list does.
+
+    Wire contract: `WC-2026-09-30-mcp-search-section-grant`.
+
+- **Only profiles granted the assistant tool can use the assistant.** *(action needed)*
+
+    With the assistant enabled on the server (`DEDALO_AGENT_HTTP_ENABLED`), any logged-in user could run it, even if their profile did not include the assistant tool. The assistant now requires the profile to grant `tool_assistant`, for global administrators too; only the root account holds every tool. **Action needed:** in the profile editor, grant the assistant tool to the profiles whose users should keep using it.
+
+    Wire contract: `WC-2026-09-30-agent-tool-grant`.
+
 - **Translation, transcription and RDF-import fetches now connect to the address the SSRF guard vetted (DNS rebinding closed); network failures report a typed reason.**
 
     The guard used to check the server's address and then let the connection look the name up again, so a hostile DNS server could answer "public" to the check and "this machine" or "the internal network" to the connection. The connection now goes to the address that was checked, with the real name kept for the certificate and the `Host` header, for the translation and transcription services and for every RDF URI a cataloguer imports. Failures are typed instead of carrying the runtime's own error text: the RDF import reports the fixed sentence "The outbound request could not be completed" for each URI that failed (see [the RDF import tool reference](./development/tools/reference/tool_import_rdf.md)), while translation and transcription report a short message naming the reason, such as `hop connect failed (timeout)` or `redirect refused (HTTP 302)`, never an address. A translation or transcription request (a POST) that may already have reached the server is never re-sent to the server's other address, so a failed transcription request cannot start a second job; an RDF-import fetch (a GET, safe to repeat) may be retried on the next address.
 
     Wire contract: `WC-2026-09-30-guarded-text-pinned-typed-transport`.
+
+- **Posterframes, audio streams and clip downloads now respect the component's own permission and the user's projects.**
+
+    The audiovisual and 3D media actions (create or delete a posterframe, attach a 3D snapshot, read an audiovisual file's streams, cut and download a clip) used to check only the section's permission. A profile that was explicitly denied the audiovisual component could still use them, and any record id could be reached even outside the user's projects. They now check the section, the component itself and the record's project, in that order, before they look at the file. A user who can see a record's video in the player can still download its clips as before.
+
+    Wire contract: `WC-2026-09-30-media-pair-scope`.
 
 - **Ontology identifiers are checked on every read and write, and the database now refuses malformed ones.**
 
@@ -402,6 +435,18 @@ Merged since the last release; these ship with the next one.
 
     **Action needed:** run the site-builder provisioner (`provision apply`) on every host. It
     installs the narrowed rule together with the per-site units.
+
+- **Transcription actions check the audiovisual component and the user's projects before they touch a recording.**
+
+    Building the audio file for transcription, sending a recording to the transcription server, checking its status and building subtitles checked only the section's permission, and two of them skipped the check when a field was missing from the request. They now check the section, the audiovisual component (or the transcription field they write) and the record's project first, before anything is read, sent or written; every transcription path asks the same thing of the recording — permission to consult it — and write access only to the transcription field it fills, so a transcriber gets the same answer whichever engine they choose, and a user with no access to the recording gets none of them. A transcription that finishes after the user lost access to the record, or after their account was deactivated or deleted, is no longer saved. Checking a server transcription's progress now reaches only the checking user's own job on that recording, and answers its progress alone: it no longer accepts a guessed job number, and it never returns the finished text, which the server saves into the record itself.
+
+    Wire contract: `WC-2026-09-30-transcription-record-tipo`.
+
+- **Every write through a tool, the assistant or the record doors now asks the same four questions, in the same order.**
+
+    A write names a section, often a component and a record. Every door that performs one — the record save, duplicate and delete, the tools, the tag delete of a transcription, the assistant's write tools — now answers through one shared rule: is the record id a real id, does the profile grant the section, does it grant that component of that record (with the rule that a user cannot raise their own profile, developer flag or username), and is the record inside the user's projects. Before, some tools asked only part of it: a global administrator with write access to user passwords could reach the root account's record through a tool, a record id like `1.5` or `abc` was accepted, and a user could change their own profile assignment through a tool that the record editor refused. These requests are now refused. A section that is read-only by design (Activity, the Time Machine) is also refused to every tool, importer and record door that would create, overwrite or delete its records, for administrators too. When the assistant is asked to find a record or create it, it now checks every field it would fill before creating anything, and a refused fill no longer leaves an empty record behind. The one exception kept is the record editor's save, and the deletion of a tag in a text field, which is an edit of that same field: as before, they ask the field's grant only, so a user can still edit a linked record's fields through a portal they may edit; your review of that exception is invited in the wire-contract entry.
+
+    Wire contract: `WC-2026-09-30-write-door`.
 
 - **Outbound fetches now refuse every IPv6 route to an internal address.** *(action needed)*
 
@@ -714,7 +759,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 66 entries"
+??? note "Wire contract — 73 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -770,6 +815,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
     - `WC-2026-09-29-select-family-mode-datalist`
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
+    - `WC-2026-09-30-agent-tool-grant`
     - `WC-2026-09-30-backup-freshness-deep-async`
     - `WC-2026-09-30-backup-part-promotion`
     - `WC-2026-09-30-db-typed-503`
@@ -778,10 +824,16 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-diffusion-target-fence`
     - `WC-2026-09-30-diffusion-zip-streamed`
     - `WC-2026-09-30-guarded-text-pinned-typed-transport`
+    - `WC-2026-09-30-mcp-search-section-grant`
+    - `WC-2026-09-30-media-pair-scope`
     - `WC-2026-09-30-move-transform-execute-job`
     - `WC-2026-09-30-ontology-identifier-grammar`
+    - `WC-2026-09-30-search-root-step-acl`
+    - `WC-2026-09-30-transcription-record-tipo`
     - `WC-2026-09-30-update-engine-atomic`
     - `WC-2026-09-30-update-manifest-local-origin-refusal`
+    - `WC-2026-09-30-write-door`
+    - `WC-2026-10-01-identify-vision-grant`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

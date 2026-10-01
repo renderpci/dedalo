@@ -162,6 +162,7 @@ function fakeDeps(overrides: Partial<IdentifyByImageDeps> = {}): IdentifyByImage
 		labelComponent: async () => 'test52',
 		readValues: async () => ({ kind: 'text', values: ['A bronze coin'] }),
 		loadProfile: async () => null,
+		requireToolGrant: async () => {},
 		...overrides,
 	};
 }

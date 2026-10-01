@@ -114,9 +114,9 @@ describe('MCP write tools (Phase 8 gate)', () => {
 	});
 
 	test('a user the human API denies is denied on every write tool', async () => {
-		await expect(createRecord(NO_ACCESS_USER, { section_tipo: SECTION_TIPO })).rejects.toThrow(
-			/Insufficient permissions/,
-		);
+		await expect(
+			createRecord(NO_ACCESS_USER, { section_tipo: SECTION_TIPO }),
+		).rejects.toMatchObject({ code: 'perm.denied' });
 		await expect(
 			saveComponentValue(NO_ACCESS_USER, {
 				section_tipo: SECTION_TIPO,
@@ -125,10 +125,10 @@ describe('MCP write tools (Phase 8 gate)', () => {
 				action: 'update',
 				value: { id: 1, lang: 'lg-spa', value: 'nope' },
 			}),
-		).rejects.toThrow(/Insufficient permissions/);
+		).rejects.toMatchObject({ code: 'perm.denied' });
 		await expect(
 			deleteRecord(NO_ACCESS_USER, { section_tipo: SECTION_TIPO, section_id: 1 }),
-		).rejects.toThrow(/Insufficient permissions/);
+		).rejects.toMatchObject({ code: 'perm.denied' });
 	});
 
 	test('write tools reject injection-shaped identifiers at the chokepoint', async () => {

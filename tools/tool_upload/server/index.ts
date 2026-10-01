@@ -107,7 +107,14 @@ async function processUploaded(ctx: ToolActionContext): Promise<ToolResponse> {
 export const tool: ToolServerModule = {
 	name: 'tool_upload',
 	apiActions: {
-		process_uploaded_file: { permission: 'record', minLevel: 2, handler: processUploaded },
+		// record_tipo (closure Step 3 review r7; WC-2026-09-30-media-pair-scope): the
+		// handler writes ONE component — the master file and the files_info of
+		// options.tipo / component_tipo — so the gate asks the (section, COMPONENT)
+		// pair at write level, not only the section: a profile explicitly denied the
+		// media component can no longer replace its file through the section grant.
+		// The kind refuses a payload whose tipo and component_tipo disagree, so the
+		// component resolveMediaToolContext acts on IS the authorized one.
+		process_uploaded_file: { permission: 'record_tipo', minLevel: 2, handler: processUploaded },
 		// DEC-22a: poll the transcode job started by process_uploaded_file (the
 		// job_id in its response) — serves the client-shaped status frame().
 		get_job_status: MEDIA_JOB_STATUS_ACTION,

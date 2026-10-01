@@ -65,6 +65,16 @@ const LEDGERED_NAMES: Record<string, { names: Readonly<Record<string, number>>; 
 			reason:
 				'The AI model catalog keys the ASR model list by the owning tool name (`const TOOL`) — a registry key, not a branch. Clears when the tool contributes its models through its ToolServerModule.',
 		},
+		'src/core/api/handlers/dd_mcp_api.ts': {
+			names: { tool_assistant: 1 },
+			reason:
+				'The agent HTTP door (closure Step 3, SEC-3) asks the caller’s profile for THE tool this API class serves: dd_mcp_api IS tool_assistant’s server half (the tool has no ToolServerModule of its own), so its grant is named where its door is. A real name-keyed coupling, ADDED 2026-09-30 with owner-visible reason (WC-2026-09-30-agent-tool-grant). Clears when tool_assistant gets a ToolServerModule whose actions are these and the dispatch asks the grant by construction.',
+		},
+		'src/core/api/handlers/dd_identify_api.ts': {
+			names: { tool_identify: 1 },
+			reason:
+				'The vision spend (closure Step 3, TOOLS-4 grant half) asks the caller’s profile for THE tool this API class serves: dd_identify_api IS tool_identify’s server half (the tool has no ToolServerModule of its own), so its grant is named where its door is (`VISION_SPEND_TOOL`). A real name-keyed coupling, ADDED 2026-10-01 with owner-visible reason (WC-2026-10-01-identify-vision-grant). Clears when tool_identify gets a ToolServerModule whose actions are these and the dispatch asks the grant by construction.',
+		},
 		'src/core/db/matrix_index_policy.ts': {
 			names: { tool_time_machine: 1 },
 			reason:

@@ -22,49 +22,49 @@ import type { Principal } from '../../../core/security/permissions.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
 /**
- * Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw.
- *
- * `sectionId` is REQUIRED (P1-2, SEC-03) so the dd128 own-record LEVEL rule is part of
- * the answer rather than a helper this door never called. `null` where the gate
- * addresses no record (a section-level create).
+ * THE WRITE DOOR (closure Step 3; WC-2026-09-30-write-door) — the ONE
+ * authorization every record-addressed write shares with the human API
+ * dispatch: grammar (an INTEGER id — 1.5 is refused, never floored), the
+ * SECTION floor 1 (new on this door: a profile holding 0 on the section is
+ * refused, as the human read refuses it), the (section, component) pair with
+ * the dd128 own-record rule, then the per-record projects scope with the
+ * non-positive-id refusal ahead of the admin bypass (foundation audit AI-01:
+ * the level gate alone would let the service principal mutate a record it can
+ * never see). The effect is addressed by the returned grant.
  */
-async function assertWritePermission(
+async function authorizeWrite(
 	principal: Principal,
-	sectionTipo: string,
-	tipo: string,
-	sectionId: number | null,
-): Promise<void> {
-	const { getRecordComponentPermission } = await import('../../../core/security/permissions.ts');
-	const level = await getRecordComponentPermission(principal, sectionTipo, tipo, sectionId);
-	if (level < 2) {
-		throw new DedaloError('perm.denied', {
-			message: `Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
-			coordinates: { section_tipo: sectionTipo, tipo, level },
-		});
-	}
+	raw: { section_tipo: string; component_tipo: string; section_id: unknown },
+	door: string,
+) {
+	const { authorizeRecordAccess } = await import('../../../core/security/write_door.ts');
+	return authorizeRecordAccess(principal, raw, {
+		mode: 'write',
+		level: 2,
+		sectionFloor: 1,
+		door,
+	});
+}
+
+/** A create: no record named, so the consultation-capped SECTION level is its whole authorization. */
+async function authorizeSectionCreate(principal: Principal, sectionTipo: string, door: string) {
+	const { authorizeSectionTarget } = await import('../../../core/security/write_door.ts');
+	return authorizeSectionTarget(principal, { section_tipo: sectionTipo }, { level: 2, door });
 }
 
 /**
- * Per-record projects (tenant) scope gate — the write twin of the human
- * dispatch save/delete handlers (foundation audit AI-01). MCP write mode refuses
- * global-admin principals by design, so the service principal is exactly the
- * project-scoped population the filter must bound; the level gate alone would let
- * it mutate a record it can never see (cross-project IDOR). Shares the same
- * `principalCanAccessRecord` helper as the human API so the two write doors
- * cannot drift.
+ * A whole-record effect (delete): the consultation-capped section level + the
+ * scope of the record, whose id the DOOR requires — an absent one is
+ * `request.invalid`, never read as a create (the zod `inputShape` is not the
+ * authorization; a caller that skips it must not reach a null target).
  */
-async function assertRecordInScope(
+async function authorizeSectionRecordWrite(
 	principal: Principal,
-	sectionTipo: string,
-	sectionId: number,
-): Promise<void> {
-	const { principalCanAccessRecord } = await import('../../../core/security/record_scope.ts');
-	if (!(await principalCanAccessRecord(sectionTipo, sectionId, principal))) {
-		throw new DedaloError('perm.out_of_scope', {
-			message: `Record is out of the user scope (${sectionTipo}/${sectionId})`,
-			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
-		});
-	}
+	raw: { section_tipo: string; section_id: unknown },
+	door: string,
+) {
+	const { authorizeSectionRecord } = await import('../../../core/security/write_door.ts');
+	return authorizeSectionRecord(principal, raw, { level: 2, door });
 }
 
 /**
@@ -121,8 +121,11 @@ export async function saveComponentValue(
 	// engine now refuses that shape; this refusal is the same law stated where the
 	// agent can act on it, BEFORE any permission probe or write is attempted.
 	assertRemoveNamesItem(input.action, input.item_id, sectionTipo, componentTipo);
-	await assertWritePermission(principal, sectionTipo, componentTipo, Math.floor(input.section_id));
-	await assertRecordInScope(principal, sectionTipo, Math.floor(input.section_id));
+	const grant = await authorizeWrite(
+		principal,
+		{ section_tipo: sectionTipo, component_tipo: componentTipo, section_id: input.section_id },
+		'mcp.save_component',
+	);
 
 	// THE WRITE LANGUAGE (audit DATA-24). This door defaulted every omitted lang
 	// to 'lg-nolan', which saveComponentData stamps verbatim: a TRANSLATABLE
@@ -137,9 +140,9 @@ export async function saveComponentValue(
 
 	const { saveComponentData } = await import('../../../core/section/record/save_component.ts');
 	const outcome = await saveComponentData({
-		componentTipo,
-		sectionTipo,
-		sectionId: Math.floor(input.section_id),
+		componentTipo: grant.componentTipo,
+		sectionTipo: grant.sectionTipo,
+		sectionId: grant.sectionId,
 		lang,
 		changedData: [{ action: input.action, id: input.item_id ?? null, value: input.value }],
 		userId: principal.userId,
@@ -154,10 +157,11 @@ export async function createRecord(
 	input: { section_tipo: string },
 ): Promise<{ section_id: number }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.create.section_tipo');
-	// null: a create addresses no record yet, so the own-record rule cannot apply.
-	await assertWritePermission(principal, sectionTipo, sectionTipo, null);
+	// No record named: the (consultation-capped) section level is the whole
+	// authorization of a create.
+	const grant = await authorizeSectionCreate(principal, sectionTipo, 'mcp.create');
 	const { createSectionRecord } = await import('../../../core/section/record/create_record.ts');
-	const sectionId = await createSectionRecord(sectionTipo, principal.userId);
+	const sectionId = await createSectionRecord(grant.sectionTipo, principal.userId);
 	return { section_id: sectionId };
 }
 
@@ -170,11 +174,13 @@ export async function deleteRecord(
 	input: { section_tipo: string; section_id: number },
 ): Promise<{ deleted: number[] }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.delete.section_tipo');
-	const sectionId = Math.floor(input.section_id);
-	await assertWritePermission(principal, sectionTipo, sectionTipo, sectionId);
-	await assertRecordInScope(principal, sectionTipo, sectionId);
+	const grant = await authorizeSectionRecordWrite(
+		principal,
+		{ section_tipo: sectionTipo, section_id: input.section_id },
+		'mcp.delete',
+	);
 	const { deleteSectionRecord } = await import('../../../core/section/record/delete_record.ts');
-	const outcome = await deleteSectionRecord(sectionTipo, sectionId, principal.userId);
+	const outcome = await deleteSectionRecord(grant.sectionTipo, grant.sectionId, principal.userId);
 	// THE REVOCATION SEAM (P1-4, SEC-08): deleting a user record ends that account's
 	// sessions, media markers and pending recovery codes. A no-op for any other section.
 	if (outcome.deleted.length > 0) {

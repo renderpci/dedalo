@@ -15,7 +15,7 @@ Every assistant setting lives in `../private/.env` and is read once at boot. All
 
 | Key | Default | Effect |
 |---|---|---|
-| `DEDALO_AGENT_HTTP_ENABLED` | `false` | Enables the assistant's server actions (`agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`). With it off, every one refuses like an unknown action and the chat panel shows a disabled message. **The one switch that turns the feature on.** |
+| `DEDALO_AGENT_HTTP_ENABLED` | `false` | Enables the assistant's server actions (`agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`). With it off, every one refuses like an unknown action and the chat panel shows a disabled message. **The one switch that turns the feature on** — and each user's profile must also grant the `tool_assistant` tool, or every request answers `tool.not_authorized` (global administrators included). |
 
 ### Models
 

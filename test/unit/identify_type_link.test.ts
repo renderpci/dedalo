@@ -247,6 +247,9 @@ describe('the Type-link rule has ONE definition — identify_by_image applies it
 
 	function imageDeps(readComponents: string[]): IdentifyByImageDeps {
 		return {
+			requireToolGrant: async () => {
+				throw new Error('a LOCAL encoder spends nothing: the vision grant must never be asked');
+			},
 			ragEnabled: () => true,
 			mediaEnabled: () => true,
 			config: () => ({

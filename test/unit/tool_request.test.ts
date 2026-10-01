@@ -213,7 +213,13 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 			const denied = await refusalOf(
 				dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions()),
 			);
-			expect(denied.code).toBe('perm.out_of_scope');
+			// Since closure Step 3 the DECLARATIVE gate asks the scope itself (the write
+			// door's `tipo` kind: a named record is scoped for every caller, and the
+			// out-of-scope refusal runs before the handler's own check) — it answers
+			// with the tool envelope's legacy scope sentence under the `unauthorized`
+			// token, which the tool dispatch relays as perm.denied.
+			expect(denied.code).toBe('perm.denied');
+			expect(denied.publicMessage).toBe('record is out of the user scope');
 			expect(await liveValue()).toEqual(before);
 		} finally {
 			mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE);

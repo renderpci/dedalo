@@ -316,6 +316,13 @@ const TRIPWIRES = [
 	'test/unit/diffusion_attach_scope_native.test.ts',
 	'test/unit/diffusion_artifact_rss_native.test.ts',
 	'test/unit/media_index_reconcile_fence_native.test.ts',
+	// WRITE-DOOR / SEC-1 / SEC-2-media / SEC-3 / TOOLS-3 / TOOLS-4 grant half (closure Step 3, 2026-10-01).
+	'test/unit/write_door_native.test.ts',
+	'test/unit/authz_door_matrix_native.test.ts',
+	'test/unit/agent_access_native.test.ts',
+	'test/unit/tool_transcription_gate_native.test.ts',
+	'test/unit/identify_vision_grant_native.test.ts',
+	'test/unit/mcp_record_door_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

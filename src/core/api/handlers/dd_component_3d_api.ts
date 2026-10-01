@@ -35,7 +35,13 @@ import { persistMediaFilesInfo, resolveMediaActionContext } from './media_action
  * which is where a shell-injection or wrong-flag regression actually hides.
  */
 async function threeDMoveFileAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
-	const resolved = await resolveMediaActionContext(rqo, context, 2, 'component_3d');
+	const resolved = await resolveMediaActionContext(
+		rqo,
+		context,
+		2,
+		'component_3d',
+		'dd_component_3d_api:move_file_to_dir',
+	);
 
 	const options = (rqo.options ?? {}) as {
 		target_dir?: unknown;
@@ -87,7 +93,13 @@ async function threeDDeletePosterframeAction(
 	rqo: Rqo,
 	context: ApiRequestContext,
 ): Promise<ApiResult> {
-	const resolved = await resolveMediaActionContext(rqo, context, 2, 'component_3d');
+	const resolved = await resolveMediaActionContext(
+		rqo,
+		context,
+		2,
+		'component_3d',
+		'dd_component_3d_api:delete_posterframe',
+	);
 
 	// Deleting the posterframe RETIRES THE THUMB WITH IT — the thumb is a picture of
 	// the posterframe, and nothing here can re-render a mesh, so the record goes

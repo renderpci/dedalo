@@ -462,17 +462,19 @@ export const READ_DOOR_POSTURE: ReadonlyMap<string, ReadDoorPosture> = new Map<
 	[
 		'dd_component_av_api:get_media_streams',
 		{
-			posture: 'open',
+			posture: 'component',
+			gate: READ_DOOR_GATE,
 			reason:
-				'ffprobe stream metadata of an AV component’s file behind getPermissions(section, SECTION) >= 1 (media_action_context.ts): the AV component’s own grant is not consulted. Open.',
+				'ffprobe stream metadata of an AV component’s file — through the write door’s read mode (media_action_context.ts → write_door.authorizeRecordAccess): the section floor, the AV component’s own grant (authorizeComponentRead) and the record scope (closure Step 3, SEC-2-media).',
 		},
 	],
 	[
 		'dd_component_av_api:download_fragment',
 		{
-			posture: 'open',
+			posture: 'component',
+			gate: READ_DOOR_GATE,
 			reason:
-				'cuts and serves a fragment of an AV component’s file behind the SECTION grant only (media_action_context.ts). Open.',
+				'cuts and serves a fragment of an AV component’s file — through the write door’s read mode (media_action_context.ts → write_door.authorizeRecordAccess): the section floor, the AV component’s own grant and the record scope (closure Step 3, SEC-2-media).',
 		},
 	],
 	[
@@ -675,15 +677,30 @@ export const READ_DOOR_POSTURE: ReadonlyMap<string, ReadDoorPosture> = new Map<
 	[
 		'mcp:dedalo_search_section',
 		{
-			posture: 'record_identity',
-			reason: 'principal-scoped SQO hits (locators + the section_map label through the assembler).',
+			posture: 'component',
+			gate: READ_DOOR_GATE,
+			reason:
+				'principal-scoped SQO hits (locators + the section_map label through the assembler), behind the SECTION read grant asked at the tool door (authorizeComponentRead before the SQO is built — closure Step 3, SEC-1).',
 		},
 	],
 	[
 		'mcp:dedalo_search_records',
-		{ posture: 'record_identity', reason: 'principal-scoped SQO hits.' },
+		{
+			posture: 'component',
+			gate: READ_DOOR_GATE,
+			reason:
+				'principal-scoped SQO hits, behind the SECTION read grant asked at the tool door (search.ts buildGatedSqo → authorizeComponentRead — closure Step 3, SEC-1).',
+		},
 	],
-	['mcp:dedalo_count_records', { posture: 'record_identity', reason: 'a count.' }],
+	[
+		'mcp:dedalo_count_records',
+		{
+			posture: 'component',
+			gate: READ_DOOR_GATE,
+			reason:
+				'a count, behind the SECTION read grant asked at the tool door (search.ts buildGatedSqo → authorizeComponentRead — closure Step 3, SEC-1).',
+		},
+	],
 	[
 		'mcp:dedalo_read_record',
 		{

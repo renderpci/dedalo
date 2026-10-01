@@ -207,6 +207,7 @@ function spyDeps(overrides: Partial<IdentifyProposalsDeps> = {}): Spy {
 		componentModel: async () => 'component_input_text',
 		readValues: async () => null,
 		scopeRecords: async (records) => records,
+		requireToolGrant: async () => {},
 		...overrides,
 	};
 	return { deps, voteCalls, visionCalls };

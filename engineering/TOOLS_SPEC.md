@@ -333,11 +333,36 @@ COMBINATION. The one that matters:
 
 | the action targets | kind | asserts |
 |---|---|---|
-| a section | `section` | level on `options.section_tipo` |
-| a component (no record) | `tipo` | level on the (section, component) PAIR |
-| a record | `record` | SECTION level + the record's project scope |
-| **a COMPONENT OF A RECORD** | **`record_tipo`** | **the PAIR + the record's project scope** |
-| whatever `options.sqo` / a nested client map / a pinned constant names | `targets` | level on EVERY derived (section, tipo?, id?) — pair and scope halves per entry |
+| a section | `section` | the consultation-capped SECTION level on `options.section_tipo` |
+| a component (no record) | `tipo` | level on the (section, component) PAIR; a NAMED record (a positive `section_id`) is scoped too |
+| a record | `record` | the consultation-capped SECTION level + the record's project scope; the id REQUIRED |
+| **a COMPONENT OF A RECORD** | **`record_tipo`** | **section floor 1 + the dd128-aware PAIR + the record's project scope** |
+| whatever `options.sqo` / a nested client map / a pinned constant names | `targets` | EVERY derived (section, tipo?, id?) — pair and scope halves per entry, the section cap on a section-level entry |
+
+**Every kind is THE WRITE DOOR** (closure Step 3, 2026-09-30;
+`src/core/security/write_door.ts`, `engineering/wire_contract/WC-2026-09-30-write-door.md`):
+`security.ts` maps each kind onto `authorizeRecordAccess` / `authorizeSectionTarget` /
+`authorizeSectionRecord`, whose order is fixed — id grammar → section floor → the
+(section, component) pair through `getRecordComponentPermission` (the dd128 own-record
+rule: a `(dd128, dd1725)` user-manager cannot edit their OWN profile through any tool;
+the self-service name/email/password/image exception holds at a tool door too) → the
+record scope, the non-positive id refused AHEAD of the admin bypass (no tool action
+reaches root's dd128/-1). Rules every kind shares:
+
+- **The id is a positive integer or it is refused.** `1.5`, `'abc'`, `0` and negative
+  ids are `invalid record target`; `tipo` / `section` read an ABSENT id as "no record
+  named", never a malformed one. No shipped client sends `section_id: 0` on a `section`
+  / `tipo` action.
+- **The consultation cap applies to every section-level target** — `section`, `record`,
+  a `targets` entry, and `tipo` when it names the section itself: a consultation-only
+  section (Activity, Time Machine) caps at read, the superuser included.
+- **`assertToolGranted(principal, tool)`** is the one tool-ACL check for doors outside
+  the declarative gate (the agent door's `tool_assistant`, identify's `tool_identify`
+  vision spend).
+- **tool_transcription gates in-handler** (`permission: null`): the write door on BOTH
+  ddos, read (1) on the AV source on every path and write (2) on the transcript; its
+  background save re-runs the door for a LIVE principal, and its status poll takes a
+  server-issued poll handle (WC-2026-09-30-transcription-record-tipo).
 
 `record` resolves `getPermissions(principal, sectionTipo, sectionTipo)` — a
 *section*-level right. It never consults the component tipo. So an action that
@@ -347,12 +372,17 @@ component half, and one declaring `tipo` silently drops the record half. Until
 section write who was explicitly denied level 2 on one media component could
 still delete its files, rotate it, remux it or bulk-rewrite its transcription**
 — **eleven** actions across five tools (`tool_media_versions` ×7, `tool_image_rotation`,
-`tool_tc`, `tool_pdf_extractor`, `tool_posterframe.create_identifying_image`).
+`tool_tc`, `tool_pdf_extractor`, `tool_posterframe.create_identifying_image`). A twelfth
+joined on 2026-09-30: `tool_upload.process_uploaded_file` writes ONE component's master
+file and files_info, so it declares `record_tipo` too
+(WC-2026-09-30-media-pair-scope).
 PHP asserted both at every one of those doors
 (`assert_tipo_permission` + `assert_record_in_user_scope`).
 
-**Two actions deliberately stay `record`.** `tool_upload.process_uploaded_file` —
-its PHP twin asserts no tipo. `tool_posterframe.get_ar_identifying_image` — its
+**One action deliberately stays `record`.** (`tool_upload.process_uploaded_file`
+stayed too until 2026-09-30 because its PHP twin asserts no tipo — but the write it
+performs is a component's, and the hole was the AV/3D one.)
+`tool_posterframe.get_ar_identifying_image` — its
 handler and client send only `section_tipo`/`section_id`, and PHP gates it
 `assert_section_permission(1)` + `assert_record_in_user_scope`
 (`class.tool_posterframe.php:382-384`). It was briefly flipped to `record_tipo` on
@@ -371,7 +401,7 @@ it makes the gate order-independent.
 Gated by `test/unit/tools_record_tipo_permission.test.ts`, which pins both halves
 independently (section-write-but-component-denied is refused; granted-component-
 on-an-out-of-scope-record is refused), pins the both-keys-conflict denial, asserts
-those eleven actions still declare it, and REACHABILITY-checks that the payload each
+those twelve actions still declare it, and REACHABILITY-checks that the payload each
 caller actually sends clears its own gate. The exemplar demonstrates it as
 `component_write_demo`.
 

@@ -207,7 +207,7 @@ describe('write gate chain (denied user is denied everywhere)', () => {
 				field: TEXT_FIELD,
 				value: 'nope',
 			}),
-		).rejects.toThrow(/Insufficient permissions/);
+		).rejects.toMatchObject({ code: 'perm.denied' });
 		await expect(
 			portalLink(NO_ACCESS, {
 				section_tipo: HOST_SECTION,
@@ -215,7 +215,7 @@ describe('write gate chain (denied user is denied everywhere)', () => {
 				field: PORTAL_FIELD,
 				target: { section_tipo: SCRATCH_SECTION, section_id: 1 },
 			}),
-		).rejects.toThrow(/Insufficient permissions/);
+		).rejects.toMatchObject({ code: 'perm.denied' });
 		await expect(
 			portalUnlink(NO_ACCESS, {
 				section_tipo: HOST_SECTION,
@@ -223,14 +223,14 @@ describe('write gate chain (denied user is denied everywhere)', () => {
 				field: PORTAL_FIELD,
 				target: { section_tipo: SCRATCH_SECTION, section_id: 1 },
 			}),
-		).rejects.toThrow(/Insufficient permissions/);
+		).rejects.toMatchObject({ code: 'perm.denied' });
 		// find_or_create with no match hit reaches the create gate and dies there.
 		await expect(
 			findOrCreate(NO_ACCESS, {
 				section_tipo: SCRATCH_SECTION,
 				match: [{ field: TEXT_FIELD, value: `never-${process.pid}`, lang: 'lg-spa' }],
 			}),
-		).rejects.toThrow(/Insufficient permissions/);
+		).rejects.toMatchObject({ code: 'perm.denied' });
 	});
 
 	test('injection-shaped identifiers die at the chokepoint', async () => {
