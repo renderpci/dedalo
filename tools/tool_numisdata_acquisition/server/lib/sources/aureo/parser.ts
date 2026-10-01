@@ -6,7 +6,6 @@ import {
 	cleanMultilineText,
 	cleanText,
 	extractDenomination,
-	extractDiameter,
 	extractMaterial,
 	extractRulerAndDate,
 	parseEuropeanDateText,
@@ -25,12 +24,27 @@ function absoluteUrl(href: string | undefined | null, base: string): string | nu
 
 /**
  * aureo.com's descriptions use "7,14 g." (comma decimal, no "weight:" label) - same bare-pattern
- * gap jesusvico has, but with a comma instead of a period, so kept as its own extractor.
+ * gap jesusvico has, so kept as its own extractor, but matches both a comma and a period decimal
+ * (`[.,]`, not just `,`): a period-decimal weight like "7.14 g." otherwise had its `\d+` run stop
+ * at the dot, so the regex re-matched starting from "14" and silently read the weight as 14, not
+ * 7.14. The lookahead (not a literal trailing `\s`) is the same review item 11 already fixed for
+ * jesusvico: a weight at the very end of a trimmed string has nothing after the dot to match.
  */
 function extractAureoWeight(text: string | null): string | null {
 	if (!text) return null;
-	const match = text.match(/(\d+(?:,\d+)?)\s*g\.?\s/i);
+	const match = text.match(/(\d+(?:[.,]\d+)?)\s*g\.?(?=\s|$|[,;)])/i);
 	return match ? `${match[1]!.replace(',', '.')}g` : null;
+}
+
+/**
+ * aureo.com's diameter is present on only a minority of lots (confirmed live: 47 of 2193 in one
+ * real auction), written "Ø27 mm" - the Ø symbol, not a "diameter:" label the shared
+ * extractDiameter requires, so it was always null for every lot (review item D2).
+ */
+function extractAureoDiameter(text: string | null): string | null {
+	if (!text) return null;
+	const match = text.match(/Ø\s*(\d+(?:[.,]\d+)?)\s*mm\b/i);
+	return match ? `${match[1]!.replace(',', '.')}mm` : null;
 }
 
 /**
@@ -122,7 +136,7 @@ function parseAureoLotCard(card: cheerio.Cheerio<AnyNode>, pageUrl: string): Ext
 		realizedPrice: priceInfo.realizedPrice,
 		currency: priceInfo.currency,
 		weight: extractAureoWeight(description),
-		diameter: extractDiameter(description),
+		diameter: extractAureoDiameter(description),
 		material: extractMaterial(description),
 		mint: null,
 		ruler,

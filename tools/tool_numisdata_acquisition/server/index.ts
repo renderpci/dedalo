@@ -27,6 +27,7 @@ import {
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
 import { getMatrixTableFromTipo } from '../../../src/core/ontology/resolver.ts';
+import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
@@ -120,13 +121,17 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
 	'image/png': 'png',
 	'image/webp': 'webp',
 	'image/tiff': 'tif',
+	'image/gif': 'gif',
+	'image/avif': 'avif',
 };
 
 /**
  * Extension from the server's own content-type first, falling back to the URL's last path
  * segment. The URL alone was unreliable: `lastIndexOf('.')` over the WHOLE path matched the wrong
  * thing on a versioned path (`/v1.2/img/123` -> "2/img/123") or a query-string id
- * (`/image.php?id=5` -> "php") - review item 10.
+ * (`/image.php?id=5` -> "php") - review item 10. GIF/AVIF are mapped too, not folded into the
+ * `jpg` fallback: a mismatched extension fails the engine's own magic-byte check and the lot's
+ * image import is rejected outright - review item D5.
  */
 function extensionFromUrl(url: string, contentType: string): string {
 	const mime = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
@@ -136,7 +141,7 @@ function extensionFromUrl(url: string, contentType: string): string {
 	const lastSegment = new URL(url).pathname.split('/').pop() ?? '';
 	const dot = lastSegment.lastIndexOf('.');
 	const extension = dot > 0 ? lastSegment.slice(dot + 1).toLowerCase() : '';
-	return /^(?:jpe?g|png|webp|tiff?)$/.test(extension) ? extension : 'jpg';
+	return /^(?:jpe?g|png|webp|tiff?|gif|avif)$/.test(extension) ? extension : 'jpg';
 }
 
 function assertUrlOption(options: Record<string, unknown>): string {
@@ -319,12 +324,18 @@ async function writeField(
 	componentTipo: string,
 	value: string | number,
 	userId: number,
+	// Defaults to NO_LANG for the (majority) non-translatable call sites; a
+	// translatable component (numisdata150/231/763/1029/1372 - review item C5)
+	// must instead pass currentDataLang(), or the write lands in a slot the
+	// edit form never shows, and the operator's first real edit creates a
+	// SECOND value instead of replacing it.
+	lang: string = NO_LANG,
 ): Promise<void> {
 	const save = await saveComponentData({
 		componentTipo,
 		sectionTipo,
 		sectionId,
-		lang: NO_LANG,
+		lang,
 		userId,
 		changedData: [{ action: 'set_data', value: [{ id: 1, value }] }],
 	});
@@ -524,18 +535,33 @@ async function resolveCompanySelectionByName(
 	return existing !== null ? { sectionId: existing } : { create: true, name };
 }
 
+/** A transaction-scoped advisory lock on an arbitrary dedup key - same primitive as
+ * acquireNodeLock (src/core/db/postgres.ts) for an existing node, just keyed on a find-or-create
+ * dedup key instead of a section_id, since the record doesn't exist yet when the race happens.
+ * Serializes two concurrent commits that would otherwise both miss the lookup and both create
+ * (review item C4). Must be called inside withTransaction - the lock releases at commit/rollback. */
+async function acquireDedupLock(key: string): Promise<void> {
+	await sql.unsafe('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
+}
+
 /** Resolves a CompanySelection to a real rsc106 section_id, creating one
  * (Name only — the one field every real Entity record carries) when the
  * selection says to. The create path is its own transaction (joins an
  * ambient one, e.g. findOrCreateAuction's, when already inside one) - a
  * failed name write used to leave an unnamed orphan Entity behind (review
- * item C1, same shape as the Auction/Person/Series cases it names). */
+ * item C1, same shape as the Auction/Person/Series cases it names). Locked
+ * and RE-CHECKED under the lock before creating: the picker's own search ran
+ * outside any lock, so two concurrent "create new Entity 'X'" commits could
+ * otherwise both miss each other and both create it (review item C4). */
 async function resolveCompanyEntityId(
 	context: ToolActionContext,
 	selection: CompanySelection,
 ): Promise<number> {
 	if ('sectionId' in selection) return selection.sectionId;
 	return withTransaction(async () => {
+		await acquireDedupLock(`rsc106:name:${selection.name.trim().toLowerCase()}`);
+		const existing = await findEntityByExactName(selection.name, context);
+		if (existing !== null) return existing;
 		const sectionId = await createSectionRecord(ENTITY_SECTION_TIPO, context.userId);
 		await writeField(
 			sectionId,
@@ -649,7 +675,10 @@ async function checkExistingAuctionStatus(
  * matches — resolving (and, per `selection`, possibly creating) the Company
  * Entity first, since the dedup check itself needs a real entity id. One
  * transaction for the whole thing (Entity included): a failure partway used
- * to leave an unnamed orphan Auction (or Entity) behind — review item C1. */
+ * to leave an unnamed orphan Auction (or Entity) behind — review item C1.
+ * Locked on (entity, number) before the existence check: two concurrent
+ * commit_lots jobs for the same sale used to both miss the lookup and both
+ * create the Auction — review item C4. */
 async function findOrCreateAuction(
 	context: ToolActionContext,
 	companySelection: CompanySelection,
@@ -658,6 +687,7 @@ async function findOrCreateAuction(
 ): Promise<{ sectionId: number; created: boolean }> {
 	return withTransaction(async () => {
 		const entityId = await resolveCompanyEntityId(context, companySelection);
+		await acquireDedupLock(`numisdata224:${entityId}:${auctionNumber}`);
 
 		const found = await findExistingAuction(entityId, auctionNumber, context);
 		if (found !== null) return { sectionId: found, created: false };
@@ -677,6 +707,7 @@ async function findOrCreateAuction(
 			AUCTION_CODE_TIPO,
 			auctionNumber,
 			context.userId,
+			currentDataLang(),
 		);
 		return { sectionId, created: true };
 	});
@@ -960,6 +991,7 @@ async function commitOneLot(
 				DATE_TEXT_TIPO,
 				l.datePeriod,
 				context.userId,
+				currentDataLang(),
 			);
 			written.push(DATE_TEXT_TIPO);
 		}
@@ -971,6 +1003,7 @@ async function commitOneLot(
 				OBVERSE_DESIGN_TIPO,
 				obverseDesign,
 				context.userId,
+				currentDataLang(),
 			);
 			written.push(OBVERSE_DESIGN_TIPO);
 		}
@@ -981,6 +1014,7 @@ async function commitOneLot(
 				REVERSE_DESIGN_TIPO,
 				reverseDesign,
 				context.userId,
+				currentDataLang(),
 			);
 			written.push(REVERSE_DESIGN_TIPO);
 		}
@@ -996,6 +1030,7 @@ async function commitOneLot(
 				PUBLIC_REMARK_TIPO,
 				description,
 				context.userId,
+				currentDataLang(),
 			);
 			written.push(PUBLIC_REMARK_TIPO);
 		}
@@ -1005,8 +1040,18 @@ async function commitOneLot(
 	let effectiveAuctionHouse = auctionHouse;
 	let effectiveAuctionNumber = auctionNumber;
 	let effectiveAuctionTitle = auctionTitle;
+	// Gated on domain alone, this fired for an ORDINARY sixbid listing too: its
+	// normal (non-search) lots also populate `category`, just with the coin's
+	// own category name ("Roman Provincial, Asia Minor") - which also contains
+	// a comma, so splitSearchAuctionCategory "succeeded" on it, silently
+	// creating a bogus Entity/Auction and discarding the operator's actual
+	// picked company (review item C3). `auctionHouse` is the batch's own
+	// ExtractedAuction, unmodified from preview_url - both search parsers
+	// (parseSearchAuction, parseSixbidSearchAuction) stamp it with this exact
+	// sentinel, a real signal "this batch IS a search", not a domain guess.
 	const isSearchCategorySource =
-		auctionSourceDomain === 'biddr.com' || auctionSourceDomain === 'sixbid.com';
+		(auctionSourceDomain === 'biddr.com' || auctionSourceDomain === 'sixbid.com') &&
+		auctionHouse === 'Multiple auction houses';
 	if (isSearchCategorySource && typeof l.category === 'string' && l.category !== '') {
 		const split = splitSearchAuctionCategory(l.category);
 		if (split !== null) {
