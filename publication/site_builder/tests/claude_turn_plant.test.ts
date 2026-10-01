@@ -346,3 +346,160 @@ describe('P6 — confined: the spec frame PID 1’s unit receives carries the re
     expect(argv.slice(-2)).toEqual(['--', 'build the page']);
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * Closure round 5 — the probe's answer is a fact about the BINARY, the brief is a bounded
+ * regular file, a turn's setup cannot outlive the turn, and the driver is the daemon's.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('P7 — the probe: a binary it cannot run is a TYPED refusal; only a definitive answer is cached', () => {
+  test('a missing CLAUDE_CODE_BIN and a non-executable one: 503 agent_cli_unsupported naming the binary — never a thrown spawn error', async () => {
+    const dir = scratchDir('fake-claude-absent-');
+    const missing = join(dir, 'claude');
+    const notExecutable = join(dir, 'claude-noexec');
+    writeFileSync(notExecutable, '#!/bin/sh\necho 2.1.286\n', { mode: 0o644 });
+    for (const bin of [missing, notExecutable]) {
+      const refusal = await assertClaudeCliConfinable(bin).catch(error => error);
+      expect(refusal).toBeInstanceOf(ConfinementRefusedError);
+      expect({ status: refusal.status, reason: refusal.extensions?.reason, named: String(refusal.message).includes(bin) }).toEqual({
+        status: 503,
+        reason: 'confinement.agent_cli_unsupported',
+        named: true,
+      });
+    }
+  });
+
+  test('a TRANSIENT failure (killed by the probe timeout, a spawn hiccup) is not remembered: the next ask probes again', async () => {
+    const good = (argv: readonly string[]) =>
+      Promise.resolve({ exitCode: 0, stdout: argv[1] === '--version' ? '2.1.286 (Claude Code)' : MODERN_HELP });
+    const killed = () => Promise.resolve({ exitCode: 137, stdout: '' });
+    const hiccup = () => Promise.reject(new Error('EAGAIN: posix_spawn'));
+    let modern = '';
+    for (const transient of [killed, hiccup]) {
+      // A fresh inode per row: the good answer below IS cached, for its own binary.
+      modern = bins().modern;
+      const first = await assertClaudeCliConfinable(modern, transient).catch(error => error);
+      expect(first).toBeInstanceOf(ConfinementRefusedError);
+      await expect(assertClaudeCliConfinable(modern, good)).resolves.toBeUndefined();
+    }
+    // …while a DEFINITIVE answer about this inode is cached: asked again, the binary is not run.
+    let runs = 0;
+    const counted = (argv: readonly string[]) => {
+      runs++;
+      return good(argv);
+    };
+    await assertClaudeCliConfinable(modern, counted);
+    expect(runs).toBe(0);
+  });
+});
+
+describe('P8 — the brief is a bounded regular file, read without blocking', () => {
+  test('AGENTS.md planted as a FIFO: the turn is refused at once, nothing written — never a setup that blocks forever', async () => {
+    const { modern } = bins();
+    const { ws, home } = await plantedWorkspace('zzplant-p8a');
+    rmSync(join(ws, 'AGENTS.md'));
+    expect(Bun.spawnSync(['mkfifo', join(ws, 'AGENTS.md')]).exitCode).toBe(0);
+    const started = Date.now();
+    const events = await runTurn('zzplant-p8a', modern, home);
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(loadReport(texts(events))).toBeNull();
+    expect(errors(events).join(' ')).toContain('not a regular file');
+    expect(existsSync(join(ws, '.builder', 'mcp.json'))).toBe(false);
+  }, 15_000);
+
+  test('a NUL byte in AGENTS.md: refused, named, before anything is written (an argv cannot carry it)', async () => {
+    const { modern } = bins();
+    const { ws, home } = await plantedWorkspace('zzplant-p8b');
+    writeFileSync(join(ws, 'AGENTS.md'), '# rules\u0000and more');
+    const events = await runTurn('zzplant-p8b', modern, home);
+    expect(loadReport(texts(events))).toBeNull();
+    expect(errors(events).join(' ')).toContain('NUL');
+    expect(existsSync(join(ws, '.builder', 'mcp.json'))).toBe(false);
+  });
+
+  test('a multi-GB sparse AGENTS.md is read only up to the cut, and the cut says the real size', async () => {
+    const { truncateSync } = await import('node:fs');
+    const { readBrief, MAX_BRIEF_BYTES: cap } = await import('../src/drivers/claude_code');
+    const { ws } = await plantedWorkspace('zzplant-p8c');
+    writeFileSync(join(ws, 'AGENTS.md'), 'A'.repeat(cap + 64));
+    const size = 3 * 1024 * 1024 * 1024;
+    truncateSync(join(ws, 'AGENTS.md'), size);
+    const started = Date.now();
+    const brief = await readBrief(ws);
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(brief?.startsWith('A'.repeat(cap))).toBe(true);
+    expect(brief).toContain(`(AGENTS.md, ${size} bytes) was cut at ${cap} bytes`);
+  }, 15_000);
+});
+
+describe('P9 — a turn’s SETUP is inside the turn’s deadline, and an interrupt reaches it', () => {
+  const hanging = () => new Promise<never>(() => {});
+  test('a setup that never returns ends the turn at timeoutMs: one retriable error, the stream closed', async () => {
+    const opts = { ...startOptions('zzplant-p9', '/unused'), timeoutMs: 300 };
+    const started = Date.now();
+    const events = await drain(spawnAgentProcess(opts, hanging, policyFromConfig()).events);
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(events.map(event => event.type)).toEqual(['error']);
+    expect(errors(events).join(' ')).toContain('timed out');
+  }, 15_000);
+
+  test('interrupt() during a setup that never returns settles — the stop is not held hostage', async () => {
+    const opts = { ...startOptions('zzplant-p9', '/unused'), timeoutMs: 60_000 };
+    const turn = spawnAgentProcess(opts, hanging, policyFromConfig());
+    const drained = drain(turn.events);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const stopped = await Promise.race([turn.interrupt().then(() => 'stopped'), new Promise(resolve => setTimeout(() => resolve('hung'), 3_000))]);
+    expect(stopped).toBe('stopped');
+    expect(errors(await drained).join(' ')).toContain('interrupted');
+  }, 15_000);
+
+  test('a setup that resolves AFTER the turn gave up has its cleanup run (no per-turn file left resident)', async () => {
+    let cleaned = false;
+    let resolveLate: (plan: never) => void = () => {};
+    const late = () => new Promise<never>(resolve => (resolveLate = resolve));
+    const opts = { ...startOptions('zzplant-p9', '/unused'), timeoutMs: 100 };
+    await drain(spawnAgentProcess(opts, late, policyFromConfig()).events);
+    resolveLate({ argv: ['/bin/true'], parseLine: () => [], cleanup: async () => void (cleaned = true) } as never);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(cleaned).toBe(true);
+  }, 15_000);
+});
+
+describe('P10 — the site’s driver is the DAEMON’s record, never the agent-writable site.json', () => {
+  test('a turn that rewrites site.json’s driver does not choose the next session’s driver', async () => {
+    const { startSession } = await import('../src/sessions/manager');
+    const { createSite } = await import('../src/sites/workspace');
+    const { provisionSite, resetInstance } = await import('./fixtures/instance');
+    await resetInstance();
+    const slug = 'zzplant-drv';
+    const { domain } = await provisionSite(slug);
+    await createSite({ slug, name: slug, domain, actor: { user_id: 7, username: 'plant-gate' }, driver: 'claude_code' } as never);
+    // THE AGENT'S WRITE: site.json is 0660 in its own workspace; it names another driver.
+    const manifestFile = join(workspacePath(slug), 'site.json');
+    const planted = JSON.parse(await Bun.file(manifestFile).text());
+    writeFileSync(manifestFile, JSON.stringify({ ...planted, driver: 'opencode' }));
+    const asked: string[] = [];
+    const recorder = (id: 'claude_code' | 'opencode') =>
+      ({
+        ...claudeCodeDriver,
+        id,
+        admit: async () => void asked.push(`admit ${id}`),
+        startTurn: (() => {
+          asked.push(`start ${id}`);
+          return { pid: 1, events: (async function* () {})(), interrupt: async () => {} };
+        }) as never,
+      }) as never;
+    __setTestDriver('claude_code', recorder('claude_code'));
+    __setTestDriver('opencode', recorder('opencode'));
+    try {
+      await startSession(slug, 'hello');
+      const start = Date.now();
+      while (!asked.some(line => line.startsWith('start')) && Date.now() - start < 5_000) await new Promise(resolve => setTimeout(resolve, 20));
+      expect(asked.filter(line => line.includes('opencode'))).toEqual([]);
+      expect(asked).toContain('start claude_code');
+    } finally {
+      __setTestDriver('opencode', null);
+      await resetInstance();
+    }
+  }, 30_000);
+});

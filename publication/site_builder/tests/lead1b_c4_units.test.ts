@@ -5,7 +5,7 @@
  * is red on the pre-LEAD-1b HEAD, and says why.
  *
  * G4 — the floor is decided by what a unit REQUIRES (248, PrivateIPC), not by the EXTRA layer
- *   (PrivatePIDs, 257), so Ubuntu 24.04 / Debian 12 (255) are supported hosts.
+ *   (PrivatePIDs, 257), so Ubuntu 24.04 (255) and Debian 12 / RHEL 9 (252) are supported hosts.
  * G6 — every concurrent pair across two sites at 255 (no PID namespace), read off the RENDERED
  *   files through a uid-aware model (`support/unit_file_reach.ts`): nothing of the other run
  *   is reachable, and a site's own doors never run together.
@@ -325,6 +325,48 @@ describe('G6 — at 255 (no PID namespace), no run reaches another site’s run,
       }
     }
     expect(leaks).toEqual([]);
+  });
+
+  /**
+   * CGROUPFS IS OUTSIDE THE /proc INVARIANT. `ProtectProc=invisible` hides another uid's
+   * /proc/<pid>; it says nothing of /sys/fs/cgroup, which `ProtectSystem=strict` leaves READABLE
+   * — and there every site's run is a directory named with the daemon's pid and uid, whose
+   * world-readable `cgroup.procs`, `pids.current`, `memory.current`, `cpu.stat` and `io.stat`
+   * give another site's run pids, timing and resource volume. Every run, against every other
+   * site's door slice: nothing readable (and the control: with the mask removed, it IS).
+   */
+  test('no run reads another site’s run through cgroupfs (cgroup.procs, cpu.stat, memory.current) — and without the mask it could', async () => {
+    const { model, gate } = await situation();
+    const prefix = gate.layout.agentUnitPrefix;
+    const slice = (k: number, door: string) => `/sys/fs/cgroup/system.slice/system-${`${prefix}s${k}-${door}`.replace(/-/g, '\\x2d')}.slice`;
+    for (const [, k] of gate.identities) {
+      for (const door of DOORS) {
+        const instance = `${slice(k, door)}/${prefix}s${k}-${door}@1-4242-4100000000.service`;
+        for (const file of ['cgroup.procs', 'cpu.stat', 'memory.current']) (model.nodes as Map<string, FsNode>).set(join(instance, file), { uid: 0, gid: 0, mode: 0o644 });
+      }
+    }
+    const asked = (units: typeof model.units, from: typeof model) => {
+      const leaks: string[] = [];
+      for (const u of units) {
+        for (const [, k] of gate.identities) {
+          if (k === u.k) continue;
+          for (const door of DOORS) {
+            const path = `${slice(k, door)}/${prefix}s${k}-${door}@1-4242-4100000000.service/cgroup.procs`;
+            if (routes(from, u, { kind: 'read', path }).length > 0) leaks.push(`${u.id} → ${path}`);
+          }
+        }
+      }
+      return leaks;
+    };
+    expect(asked(model.units, model)).toEqual([]);
+    const unmasked = {
+      ...model,
+      units: model.units.map(unit => ({
+        ...unit,
+        props: unit.props.map(prop => (prop.startsWith('TemporaryFileSystem=') ? prop.replace(/\s*\/sys\/fs\/cgroup:ro/, '').replace(/^TemporaryFileSystem=\/sys\/fs\/cgroup:ro$/, 'TemporaryFileSystem=') : prop)),
+      })),
+    };
+    expect(asked(unmasked.units, unmasked).length).toBeGreaterThan(0);
   });
 
   test('defence in depth — by DAC alone (mounts ignored), one site’s identity opens nothing of another’s', async () => {

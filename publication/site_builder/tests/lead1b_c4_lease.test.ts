@@ -286,6 +286,48 @@ describe('G10 — one run per site, one connect per run, freed only on proven de
     expect(leaseSnapshot(clean.policy as never)).toEqual({ runs: [], quarantined: [] });
   }, 30_000);
 
+  /**
+   * THE SOCKET HALF OF BOTH PROOFS. Death is the instance gone AND the door socket counting no
+   * connection; idle is no live instance AND no socket counting one. The count is the backstop
+   * for an instance the unit list does not show (a spelling the regex does not know, a race at
+   * the stop) — so each half is a row of its own, with the instance list saying "dead/empty"
+   * and only the socket saying otherwise.
+   */
+  test('(m) DEATH needs the socket too: the instance gone, its door socket still counting a connection — the slot stays held (quarantined); freed when the count drops', async () => {
+    const { leaseSnapshot } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]]);
+    host.standIn.script = (k, door) => {
+      host.standIn.connectionsOverride.set(`${k}:${door}`, 1);
+      return { kind: 'exit', code: 0 };
+    };
+    expect((await reserved('alpha', () => run(host, 'alpha', 'git'))).exitCode).toBe(0);
+    expect(host.standIn.allLive()).toEqual([]);
+    expect(leaseSnapshot(host.policy as never)).toMatchObject({ runs: ['alpha'], quarantined: [{ k: 1, heldSlug: 'alpha' }] });
+    host.standIn.script = () => ({ kind: 'exit', code: 0 });
+    host.standIn.connectionsOverride.clear();
+    let freed: RunResult | null = null;
+    const start = Date.now();
+    while (freed === null && Date.now() - start < 20_000) {
+      try {
+        freed = await reserved('alpha', () => run(host, 'alpha', 'git'));
+      } catch {
+        await sleep(100);
+      }
+    }
+    expect(freed?.exitCode).toBe(0);
+  }, 60_000);
+
+  test('(n) IDLE needs the sockets too: no unit listed, but a door socket counting a connection — refused, quarantined naming the socket, nothing connected', async () => {
+    const host = await hostWith([['alpha', 1]]);
+    host.standIn.connectionsOverride.set('1:build', 1);
+    const refused = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
+    expect({
+      code: hasConfinementCode(refused, 'identity_quarantined'),
+      named: String((refused as Error).message).includes('busy sockets: build'),
+      connects: host.standIn.connects.length,
+    }).toEqual({ code: true, named: true, connects: 0 });
+  }, 30_000);
+
   for (const [what, spelling] of [
     ['systemd >= 258 (`<nr>-<cookie>-<pid>_<pidfd id>-<uid>`)', (nr: number, uid: number) => `${nr}-17-${4000 + nr}_5678-${uid}`],
     ['systemd >= 258 without a pidfd id (`<nr>-<cookie>-<pid>-<uid>`)', (nr: number, uid: number) => `${nr}-17-${4000 + nr}-${uid}`],
@@ -619,21 +661,49 @@ describe('G9 — conformance: what PID 1 loaded is what this daemon expects, str
     }).toEqual({ service: true, socket: true, target: true });
   });
 
-  for (const part of ['service', 'socket', 'target'] as const) {
-    test(`REFUSED, naming it: each ${part} property weakened on its own`, async () => {
-      const conformance = await contractExport<Conformance>('drivers/confinement.ts', 'conformance');
-      const host = await hostWith([['alpha', 1]], { version: 255 });
-      const conforming = conformingShow(host, workspacePath('alpha'), 1, 'turn', 255);
-      const survived: string[] = [];
-      for (const key of keysOf(conforming[part])) {
-        plantShow(host, 1, 'turn', { ...conforming, [part]: weaken(conforming[part], key) });
-        const refused = await caught(() => conformance(1, 'turn', host.policy));
-        const named = String((refused as Error)?.message ?? '').includes(ALIASES[key] ?? key);
-        if (!hasConfinementCode(refused, 'unit_nonconformant') || !named) survived.push(key);
-      }
-      expect(survived).toEqual([]);
-    });
+  // EVERY DOOR: a comparison that holds only on the proxy doors (`proxy && …`) is a git unit
+  // accepted with the egress dir bound in, loopback allowed or AF_INET added — so each door's own
+  // conforming fixture is weakened key by key, and the floor is per door.
+  for (const door of ['turn', 'build', 'git'] as const) {
+    for (const part of ['service', 'socket', 'target'] as const) {
+      test(`REFUSED, naming it: each ${part} property of the ${door} unit weakened on its own`, async () => {
+        const conformance = await contractExport<Conformance>('drivers/confinement.ts', 'conformance');
+        const host = await hostWith([['alpha', 1]], { version: 255 });
+        const conforming = conformingShow(host, workspacePath('alpha'), 1, door, 255);
+        const survived: string[] = [];
+        const keys = keysOf(conforming[part]);
+        expect(keys.length).toBeGreaterThanOrEqual(part === 'service' ? 40 : part === 'socket' ? 10 : 3);
+        for (const key of keys) {
+          // The one named exemption: the git target orders after NOTHING, and a target's After=
+          // is compared includes-all (PID 1 adds implicit orderings) — an extra ordering widens
+          // nothing, so there is no value to weaken. Its members are rows on the other doors.
+          if (door === 'git' && part === 'target' && key === 'After') continue;
+          plantShow(host, 1, door, { ...conforming, [part]: weaken(conforming[part], key) });
+          const refused = await caught(() => conformance(1, door, host.policy));
+          const named = String((refused as Error)?.message ?? '').includes(ALIASES[key] ?? key);
+          if (!hasConfinementCode(refused, 'unit_nonconformant') || !named) survived.push(key);
+        }
+        expect(survived).toEqual([]);
+      });
+    }
   }
+
+  test('REFUSED, naming it: the git unit WIDENED to a proxy door’s reach, one key at a time (egress bind, loopback, AF_INET, a HOME bind)', async () => {
+    const conformance = await contractExport<Conformance>('drivers/confinement.ts', 'conformance');
+    const host = await hostWith([['alpha', 1]], { version: 255 });
+    const git = conformingShow(host, workspacePath('alpha'), 1, 'git', 255);
+    const turn = conformingShow(host, workspacePath('alpha'), 1, 'turn', 255);
+    const survived: string[] = [];
+    const keys = ['BindReadOnlyPaths', 'IPAddressAllow', 'RestrictAddressFamilies', 'BindPaths'];
+    for (const key of keys) {
+      const widened = (turn.service.match(new RegExp(`^${key}=.*$`, 'm')) as RegExpMatchArray)[0];
+      expect(widened.length).toBeGreaterThan(key.length + 1);
+      plantShow(host, 1, 'git', { ...git, service: git.service.replace(new RegExp(`^${key}=.*$`, 'm'), widened) });
+      const refused = await caught(() => conformance(1, 'git', host.policy));
+      if (!hasConfinementCode(refused, 'unit_nonconformant') || !String((refused as Error)?.message ?? '').includes(key)) survived.push(key);
+    }
+    expect({ rows: keys.length, survived }).toEqual({ rows: 4, survived: [] });
+  });
 
   test('REFUSED, naming it: each property that must be UNSET (exec hooks, groups, capabilities, namespaces, credentials), set on its own', async () => {
     const confinement = await import('../src/drivers/confinement');

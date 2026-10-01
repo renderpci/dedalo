@@ -138,7 +138,7 @@ function render(variant: Variant): Rendered {
 /**
  * THE HOST FACTS THE EXAMPLES ARE RENDERED FOR (LEAD-1b): the identities a FRESH host's first
  * `provision apply` allocates (one per declared site, in declaration order, from 1), PID 1 =
- * 255 (Ubuntu 24.04 / Debian 12 — the documented floor host, so the examples show the units
+ * 255 (Ubuntu 24.04 — the probed host, so the examples show the units
  * WITHOUT the extra PrivatePIDs= layer), and the first resume epoch. Stated, never read off a
  * machine: an example is a pure function of the declaration and of these facts.
  */

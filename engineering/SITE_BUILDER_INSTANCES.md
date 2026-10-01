@@ -404,11 +404,13 @@ mount), so a site's own run cannot plant beside its gate's sockets either. Three
 one site's run out of another's: the other run is another
 UID (`ProtectProc=invisible` hides its `/proc` entry; `ptrace_may_access` refuses its root
 and its environment), `/run` is masked in every unit, and plain DAC on the private group.
-`PrivatePIDs=` is an EXTRA layer on top where PID 1 is 257 or newer. A git command gets no
+`ProtectProc=` does not reach cgroupfs, where every run is a directory with world-readable
+`cgroup.procs`, `cpu.stat` and `memory.current`, so every unit also masks `/sys/fs/cgroup`
+(`TemporaryFileSystem=/sys/fs/cgroup:ro`, `CGROUPFS_MASK`). `PrivatePIDs=` is an EXTRA layer on top where PID 1 is 257 or newer. A git command gets no
 egress at all. The gate holds at most 128 client connections per run at once
 (`MAX_PROXY_CLIENTS`): each is the DAEMON's fd, which the unit's own caps do not bound.
 
-**The host's systemd must be 248 or newer** (Ubuntu 24.04 and Debian 12 ship 255), **and its
+**The host's systemd must be 248 or newer** (Ubuntu 24.04 ships 255; Debian 12 and RHEL 9 ship 252), **and its
 polkit 0.106 or newer**: the stop/kill grant is a JavaScript `rules.d` rule, which polkit
 0.105 (Ubuntu 22.04) silently ignores, so `provision apply` refuses it by name
 (`POLKIT_JS_RULES_FLOOR`, `src/provision/plan.ts`). Supported hosts: Ubuntu 24.04+, Debian 12+,
@@ -1203,7 +1205,11 @@ the documentation that names it.
 **5. A build step's command comes from a file an agent turn can rewrite.** `site.json`
 lives at `<SITES_ROOT>/<slug>/site.json` — inside the workspace the driver is spawned with
 as its cwd and that `git add -A` then commits — so a turn may rewrite its `build` block and
-`readManifest` re-reads it at build time. `src/build/builder.ts` used to claim the opposite
+`readManifest` re-reads it at build time. (The site's AGENT DRIVER is NOT read from it: that
+is the daemon's private `.builder/driver.json`, `src/sites/driver_record.ts` — a planted
+`"driver":"opencode"` plus a project plugin was a way around every PLANT closure of the Claude
+Code driver; an absent record falls back to `AGENT_DRIVER`, never to `site.json`.)
+`src/build/builder.ts` used to claim the opposite
 ("an agent cannot edit site.json") and justify its whitespace argv split on that premise;
 the premise was measured false and the header now states what actually holds instead: there
 is no shell (`Bun.spawn` receives an argv ARRAY, so nothing is parsed by `sh`), and a build
@@ -1301,7 +1307,8 @@ creation into `provision apply`.
 **8. Below systemd 254, a daemon CRASH does not stop its runs through `BindsTo=`.** The daemon
 unit is `Restart=always`. Before 254 (no `RestartMode=`, no failed-before-auto-restart state) a
 crash or an OOM kill moves it from active to activating, never through inactive or failed, so
-PID 1 never stops the agent instances bound to it — on 248–253, which includes RHEL 9 (252).
+PID 1 never stops the agent instances bound to it — on 248–253, which includes Debian 12 and RHEL 9
+(both 252): on those hosts this layer is ABSENT, not merely weaker.
 What cleans up there: the shim kills its child's process group on EOF of the daemon's
 connection, and the restarted daemon's boot reconcile (`reconcileAgentUnits` → `proveIdle`)
 runs BEFORE it listens and stops or quarantines any leftover instance. A child that SIGSTOPs its
@@ -1326,6 +1333,10 @@ renderer and the comparator cannot drift apart on a key both spell alike (M33: a
 rendered on the git door is red) — and the same capture is what would let the widening check
 become an ALLOWLIST (every key PID 1 reports set is rendered or a known default); today
 `UNIT_UNSET_WIDENING` is a denylist, and a widening key a future systemd adds is not on it.
+The live leg is 255-ONLY: Debian 12 and RHEL 9 (252) are supported on the strength of the
+floor, and no 252 host has run the probe — its `systemctl show` spellings, its instance-name
+grammar and its `TasksCurrent` for a pruned cgroup are the 255 model's, unmeasured on 252. A
+252 run of the probe, committed as a second capture beside the 255 one, is what closes that half.
 
 ## 11. What a gate may assert about this document
 

@@ -23,6 +23,7 @@ import { assertConfinementAvailable, policyFromConfig, type ConfinementPolicy } 
 import { MCP_PORT } from '../drivers/network_profile';
 import { getDriver } from '../drivers/registry';
 import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/types';
+import { readSiteDriver } from '../sites/driver_record';
 import { readManifest } from '../sites/manifest';
 import { commitAll, changedFiles } from '../sites/git';
 import { assertWithinQuota, siteExists } from '../sites/workspace';
@@ -132,8 +133,10 @@ export async function startSession(
   // the REQUEST (503, naming what is missing) instead of accepting a session and failing it
   // asynchronously — and, above all, instead of running the agent as this daemon. Never the
   // instance DEFAULT driver's plan: that would refuse a claude_code site on an opencode host
-  // for a provider list it does not use.
-  const driver = driverOverride ?? (await readManifest(slug)).driver;
+  // for a provider list it does not use. And the site's driver is the DAEMON's record, never
+  // `site.json` (agent-writable: a planted `"driver":"opencode"` was a way around every PLANT
+  // closure of the Claude Code driver — sites/driver_record.ts).
+  const driver = driverOverride ?? (await readSiteDriver(slug));
   await assertConfinementAvailable('turn', policy, driver, slug);
   // And the DRIVER's own question (claude_code: does the installed CLI list every flag that
   // keeps agent-written settings, hooks and MCP servers out of the turn?) — 503, before any

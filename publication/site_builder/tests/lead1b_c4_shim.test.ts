@@ -178,6 +178,21 @@ describe('G7 — the shim relays, and cannot be lied to', () => {
     });
   }
 
+  test('an argv the kernel cannot carry (a NUL byte): the shim ANSWERS — a non-zero X, main() returns — never a rejection with no exit frame', async () => {
+    const workdir = shortScratch('wd');
+    const run = await startShim(workdir);
+    await waitForFrames(run, 1);
+    run.daemon.write(frame('S', specFor([process.execPath, '-e', 'process.exit(0)', 'brief\u0000tail'])));
+    const settled = await Promise.race([
+      run.exit.then(code => ({ code }), (error: unknown) => ({ rejected: String(error) })),
+      new Promise(resolve => setTimeout(() => resolve({ hung: true }), 4_000)),
+    ]);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const exits = run.frames.filter(each => each.type === 'X').map(each => json(each).code);
+    expect({ settled, exits }).toEqual({ settled: { code: 127 }, exits: [127] });
+    run.daemon.destroy();
+  });
+
   test('the daemon going away (EOF) ends the child: the shim returns, and the child is dead', async () => {
     const workdir = shortScratch('wd');
     const run = await startShim(workdir);
@@ -292,4 +307,94 @@ describe('G7 — the X frame survives the shim’s own exit, over a REAL socket 
       });
     }, 30_000);
   }
+});
+
+describe('G7 — the child never holds the connection: a forged X written to fd 0/1 and the shim killed reaches the daemon as NO exit status', () => {
+  /**
+   * The rows above only show a child that writes STDOUT. PID 1 hands the shim the connection as
+   * fd 0 AND fd 1; a shim that passed its fd 0 (`stdio[0] = 'inherit'`) gives the agent's child a
+   * bidirectional socket to the daemon — it writes a raw X {code: 0} there, SIGKILLs the shim (the
+   * same uid) and the daemon records a success it never had. So: the shim's REAL entry over a
+   * REAL socket, a child that writes the forged frame to fd 0 and fd 1 and then kills its parent.
+   * The daemon must see NO X at all (exitCode null, `unit_ended_without_exit_frame`), the bytes on
+   * fd 1 only ever inside O, and the child's write to fd 0 must have failed.
+   */
+  test('forged X on fd 0 and fd 1, then SIGKILL to the shim: no X arrives; fd 0 is not writable by the child', async () => {
+    const { spawn } = await import('node:child_process');
+    const workdir = shortScratch('wd');
+    const dir = shortScratch('entry');
+    const entry = join(dir, 'shim_entry.ts');
+    const report = join(workdir, 'fd0.json');
+    const shimPath = join(import.meta.dir, '..', 'src', 'drivers', 'egress_shim.ts');
+    await Bun.write(
+      entry,
+      [
+        `import { entry } from ${JSON.stringify(shimPath)};`,
+        `await entry([], {`,
+        `  unit: () => ${JSON.stringify(UNIT)},`,
+        `  interfaces: () => ({ lo: [{ internal: true }] }),`,
+        `  ownNetns: () => 'net:[4026532999]',`,
+        `});`,
+      ].join('\n'),
+    );
+    const forged = frame('X', { code: 0, signal: null }).toString('base64');
+    const child = [
+      `const fs = require('fs');`,
+      `const bytes = Buffer.from(${JSON.stringify(forged)}, 'base64');`,
+      `let fd0 = 'written';`,
+      `try { fs.writeSync(0, bytes); } catch (e) { fd0 = e.code || String(e); }`,
+      `fs.writeFileSync(${JSON.stringify(report)}, JSON.stringify({ fd0 }));`,
+      `try { fs.writeSync(1, bytes); } catch {}`,
+      `setTimeout(() => { process.kill(process.ppid, 'SIGKILL'); process.exit(0); }, 400);`,
+    ].join(' ');
+    const path = join(dir, 'c.sock');
+    const reader = new WireReader();
+    const frames: WireFrame[] = [];
+    let daemonEnd: Socket | null = null;
+    const closed = new Promise<void>(resolveClosed => {
+      const server = createServer(socket => {
+        server.close();
+        daemonEnd = socket;
+        socket.on('error', () => {});
+        socket.on('data', chunk => {
+          frames.push(...reader.push(chunk as Buffer));
+          if (frames.length === 1 && frames[0]?.type === 'H') socket.write(frame('S', specFor([process.execPath, '-e', child])));
+        });
+        socket.once('close', () => resolveClosed());
+      });
+      server.listen(path);
+    });
+    await new Promise(resolveListen => setTimeout(resolveListen, 20));
+    const unitEnd = netConnect(path);
+    unitEnd.pause();
+    await new Promise(resolveConnect => unitEnd.once('connect', resolveConnect));
+    const fd = (unitEnd as unknown as { _handle?: { fd?: number } })._handle?.fd;
+    expect(typeof fd).toBe('number');
+    const shim = spawn(process.execPath, [entry], {
+      cwd: '/',
+      env: {
+        DEDALO_DOOR: 'git',
+        DEDALO_UNIT_WORKDIR: workdir,
+        BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0',
+        HOME: '/nonexistent',
+        GIT_CONFIG_GLOBAL: '/dev/null',
+        GIT_CONFIG_NOSYSTEM: '1',
+        PATH: '/usr/bin:/bin',
+      },
+      stdio: [fd as number, fd as number, 'ignore'],
+    });
+    const signal = await new Promise<string | null>(resolveExit => shim.once('close', (_code, sig) => resolveExit(sig)));
+    unitEnd.destroy();
+    await Promise.race([closed, new Promise(resolveLate => setTimeout(resolveLate, 3_000))]);
+    (daemonEnd as Socket | null)?.destroy();
+    const exits = frames.filter(each => each.type === 'X');
+    const relayed = Buffer.concat(frames.filter(each => each.type === 'O').map(each => each.payload)).toString('base64');
+    const fd0 = existsSync(report) ? (JSON.parse(await Bun.file(report).text()) as { fd0: string }).fd0 : 'no report';
+    expect({ shimKilled: signal, exits: exits.length, forgedOnlyInsideO: relayed.includes(forged), fd0Written: fd0 === 'written' }).toEqual({
+      shimKilled: 'SIGKILL',
+      exits: 0,
+      forgedOnlyInsideO: true,
+      fd0Written: false,
+    });
+  }, 30_000);
 });

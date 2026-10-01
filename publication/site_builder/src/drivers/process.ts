@@ -131,10 +131,28 @@ export function spawnAgentProcess(
   const abort = new AbortController();
 
   // Kicked off immediately; the returned AgentProcess exposes the live queue.
+  // ONE DEADLINE FOR THE WHOLE TURN, armed before its setup: the setup reads agent-authored
+  // files (the brief) and probes the CLI, and a setup that never returned held the turn's
+  // reservation and a global slot forever, with `interrupt()` and shutdown waiting on it.
+  const deadline = Date.now() + opts.timeoutMs;
+
   const running = (async () => {
     let plan: TurnPlan;
+    const pending = (async () => setup())();
     try {
-      plan = await setup();
+      const outcome = await boundedSetup(pending, opts.timeoutMs, abort.signal);
+      if (outcome.kind !== 'plan') {
+        // Given up on: whatever the setup still writes is undone when (if) it settles.
+        void pending.then(late => runCleanup(late), () => {});
+        queue.push(
+          outcome.kind === 'timeout'
+            ? { type: 'error', message: `turn timed out during its setup (${opts.timeoutMs} ms)`, retriable: true }
+            : { type: 'error', message: 'interrupted before start', retriable: true },
+        );
+        queue.close();
+        return;
+      }
+      plan = outcome.plan;
     } catch (error) {
       queue.push({ type: 'error', message: `setup failed: ${errText(error)}`, retriable: false });
       queue.close();
@@ -206,7 +224,7 @@ export function spawnAgentProcess(
       // Awaited inside: the run is ended through the connection AND PID 1 (RuntimeMaxSec is
       // the backstop behind both, for the case this process is gone too).
       void run.stop();
-    }, opts.timeoutMs);
+    }, Math.max(0, deadline - Date.now()));
 
     const stderrChunks: string[] = [];
     try {
@@ -262,6 +280,35 @@ export function spawnAgentProcess(
       await running;
     },
   };
+}
+
+/** A setup raced against the turn's deadline and its interrupt; the setup itself is never awaited past either. */
+function boundedSetup(
+  pending: Promise<TurnPlan>,
+  timeoutMs: number,
+  signal: AbortSignal,
+): Promise<{ readonly kind: 'plan'; readonly plan: TurnPlan } | { readonly kind: 'timeout' | 'interrupted' }> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      resolve({ kind: 'interrupted' });
+      return;
+    }
+    const timer = setTimeout(() => settle(() => resolve({ kind: 'timeout' })), timeoutMs);
+    const onAbort = () => settle(() => resolve({ kind: 'interrupted' }));
+    let done = false;
+    const settle = (fn: () => void) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+      fn();
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    pending.then(
+      plan => settle(() => resolve({ kind: 'plan', plan })),
+      error => settle(() => reject(error)),
+    );
+  });
 }
 
 /**

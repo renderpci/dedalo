@@ -281,7 +281,7 @@ describe('G3 — root renders one socket, target and template per (site, door)',
             const tmpfs = words(unitValues(body, 'TemporaryFileSystem', 'Service'));
             expect({ door, tmpfs: [...tmpfs].sort() }).toEqual({
               door,
-              tmpfs: [`${stateRoot}:ro`, '/run:ro', '/dev/shm:mode=1777,nosuid,nodev'].sort(),
+              tmpfs: [`${stateRoot}:ro`, '/run:ro', '/dev/shm:mode=1777,nosuid,nodev', '/sys/fs/cgroup:ro'].sort(),
             });
             const binds = words(unitValues(body, 'BindPaths', 'Service'));
             // THE EGRESS GATE: root's directory under the agent socket dir (never the daemon's

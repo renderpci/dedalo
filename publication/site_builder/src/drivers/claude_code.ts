@@ -50,17 +50,19 @@
  * A CLI THAT CANNOT SAY IT DOES NOT RUN. Each of those flags exists only from some release on,
  * and a binary that does not know one either errors or — in a release that tolerates unknown
  * options — ignores it and runs with every planted source. So the binary is probed (at boot,
- * at admission, and again in every turn's setup; the answer is cached per binary INODE, so an
- * upgrade is re-probed) and a turn whose argv names a flag the binary's `--help` does not list
- * is refused, typed (`confinement.agent_cli_unsupported`, 503) — never run without it.
+ * at admission, and again in every turn's setup; a DEFINITIVE answer is cached per binary
+ * INODE, so an upgrade is re-probed, and a transient one — a timeout, a spawn failure — is
+ * asked again) and a turn whose argv names a flag the binary's `--help` does not list, or whose
+ * binary the daemon cannot execute at all, is refused, typed (`confinement.agent_cli_unsupported`,
+ * 503) — never run without it.
  */
 
 import { realpathSync, statSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { config } from '../config';
-import { ConfinementRefusedError } from '../errors';
-import { readFileShared, relativeUnderRoot, restateDaemonStateDir, writeFileAgentReadable } from '../util/shared_tree';
+import { ConfinementRefusedError, ValidationError } from '../errors';
+import { readFileSharedBounded, relativeUnderRoot, restateDaemonStateDir, writeFileAgentReadable } from '../util/shared_tree';
 import { runBinary, type SpawnResult } from '../util/spawn';
 import { spawnAgentProcess, type TurnPlan } from './process';
 import { claudeTurnArgv, listedFlags, MAX_BRIEF_BYTES, requiredCliFlags } from './claude_argv';
@@ -106,24 +108,56 @@ export interface ClaudeCliProbe {
   readonly version: string | null;
   /** Empty = this binary may run a turn. */
   readonly problems: readonly string[];
+  /**
+   * True when the answer is a FACT ABOUT THE BINARY — a parsed version and a `--help` that ran
+   * to exit 0 (or a major this driver does not parse). Only such an answer is cached; a spawn
+   * that failed, a probe killed by its timeout, a non-zero exit are facts about THIS MOMENT
+   * (a loaded host at boot, a hiccup) and are asked again at the next admission.
+   */
+  readonly definitive: boolean;
 }
+
+/** One probe run; a binary the daemon cannot spawn is an answer (null + why), never a throw. */
+async function runOnce(run: ProbeRunner, argv: readonly string[]): Promise<Pick<SpawnResult, 'exitCode' | 'stdout'> | { readonly spawnError: string }> {
+  try {
+    return await run(argv);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException)?.code;
+    return { spawnError: code ? `${code}: ${(error as Error).message}` : String((error as Error)?.message ?? error) };
+  }
+}
+
+const unspawnable = (bin: string, why: string) =>
+  `CLAUDE_CODE_BIN ('${bin}') cannot be executed by this daemon (${why}). It must exist, be executable by the ` +
+  `daemon's user, and lie outside /home, /root, /tmp and /run — the daemon's own unit masks those ` +
+  `(the native installer's ~/.local/bin is under /home: install it under /usr/local or /opt).`;
 
 /** Probe `bin` — never cached here; `probeClaudeCli` is the cached door. */
 export async function probeClaudeCliUncached(bin: string, run: ProbeRunner = runProbe): Promise<ClaudeCliProbe> {
-  if (!bin) return { version: null, problems: ['CLAUDE_CODE_BIN is not configured, so there is no Claude Code binary to run.'] };
-  if (!isAbsolute(bin)) return { version: null, problems: [`CLAUDE_CODE_BIN ('${bin}') is not an absolute path.`] };
-  const versionRun = await run([bin, '--version']);
+  if (!bin) return { version: null, problems: ['CLAUDE_CODE_BIN is not configured, so there is no Claude Code binary to run.'], definitive: true };
+  if (!isAbsolute(bin)) return { version: null, problems: [`CLAUDE_CODE_BIN ('${bin}') is not an absolute path.`], definitive: true };
+  const versionRun = await runOnce(run, [bin, '--version']);
+  if ('spawnError' in versionRun) return { version: null, problems: [unspawnable(bin, versionRun.spawnError)], definitive: false };
   const match = versionRun.exitCode === 0 ? versionRun.stdout.match(/(\d+)\.(\d+)\.(\d+)/) : null;
-  if (!match) return { version: null, problems: [`'${bin} --version' did not answer a version (exit ${String(versionRun.exitCode)}).`] };
+  if (!match) {
+    return { version: null, problems: [`'${bin} --version' did not answer a version (exit ${String(versionRun.exitCode)}).`], definitive: false };
+  }
   const version = match[0];
   if (!SUPPORTED_MAJORS.has(Number(match[1]))) {
-    return { version, problems: [`Claude Code ${version} is outside the majors this driver parses (${[...SUPPORTED_MAJORS].join(', ')}).`] };
+    return {
+      version,
+      problems: [`Claude Code ${version} is outside the majors this driver parses (${[...SUPPORTED_MAJORS].join(', ')}).`],
+      definitive: true,
+    };
   }
-  const helpRun = await run([bin, '--help']);
-  if (helpRun.exitCode !== 0) return { version, problems: [`'${bin} --help' failed (exit ${String(helpRun.exitCode)}), so its flags cannot be proved.`] };
+  const helpRun = await runOnce(run, [bin, '--help']);
+  if ('spawnError' in helpRun) return { version, problems: [unspawnable(bin, helpRun.spawnError)], definitive: false };
+  if (helpRun.exitCode !== 0) {
+    return { version, problems: [`'${bin} --help' failed (exit ${String(helpRun.exitCode)}), so its flags cannot be proved.`], definitive: false };
+  }
   const listed = listedFlags(helpRun.stdout);
   const missing = requiredCliFlags().filter(flag => !listed.has(flag));
-  if (missing.length === 0) return { version, problems: [] };
+  if (missing.length === 0) return { version, problems: [], definitive: true };
   return {
     version,
     problems: [
@@ -131,6 +165,7 @@ export async function probeClaudeCliUncached(bin: string, run: ProbeRunner = run
         `them would load hooks, MCP servers and settings the agent can write into its own workspace ` +
         `or HOME (shell despite the Bash deny), so no Claude Code turn is run. Upgrade Claude Code.`,
     ],
+    definitive: true,
   };
 }
 
@@ -145,21 +180,23 @@ function binaryKey(bin: string): string | null {
   }
 }
 
-/** The last probe per binary key (module state: a host fact, re-asked whenever the inode changes). */
+/** The last DEFINITIVE probe per binary key (module state: a host fact, re-asked whenever the inode changes). */
 const probeCache = new Map<string, ClaudeCliProbe>();
 
 /**
  * THE CACHED PROBE. Asked at boot, at every admission and in every turn's setup; it runs the
  * binary again only when the binary is not the inode last probed — so an upgrade (or a
- * downgrade) between two turns is probed before the next one runs. A binary that cannot be
- * stat'ed is probed (and refused) every time, never cached.
+ * downgrade) between two turns is probed before the next one runs. Only a DEFINITIVE answer is
+ * kept (`ClaudeCliProbe.definitive`): a binary that cannot be stat'ed or spawned, a probe killed
+ * by its timeout, a non-zero exit — each is probed (and refused) again at the next ask, never
+ * cached, so one slow cold start on a loaded host is not a refusal until the daemon restarts.
  */
 export async function probeClaudeCli(bin: string = config.CLAUDE_CODE_BIN, run: ProbeRunner = runProbe): Promise<ClaudeCliProbe> {
   const key = bin && isAbsolute(bin) ? binaryKey(bin) : null;
   const cached = key === null ? undefined : probeCache.get(key);
   if (cached) return cached;
   const probe = await probeClaudeCliUncached(bin, run);
-  if (key !== null) {
+  if (key !== null && probe.definitive) {
     // One entry per path: an upgraded binary replaces its predecessor's answer.
     const real = key.slice(0, key.indexOf('\0'));
     for (const stale of [...probeCache.keys()].filter(other => other.startsWith(`${real}\0`))) probeCache.delete(stale);
@@ -243,16 +280,30 @@ export async function writeMcpConfig(opts: SessionStartOptions): Promise<string>
  * hard-link-refusing reader (the workspace is agent-writable; a planted link to a daemon file
  * would otherwise be read into the prompt — it is THROWN, never folded into "no brief").
  * Absent = no brief. Over `MAX_BRIEF_BYTES` = cut, and the cut is said.
+ *
+ * AND THE FILE IS THE AGENT'S, SO ITS SHAPE IS TOO. A build's `postinstall` can replace it
+ * with a FIFO (an open that blocks a daemon thread, and this turn's setup, forever), a sparse
+ * multi-GB file (read whole into the daemon before any cut), or a body with a NUL (an argv
+ * cannot carry one: the unit's spawn throws and every later turn fails with no exit frame, so
+ * no turn could ever repair it). So: opened non-blocking and refused unless REGULAR, never
+ * more than `MAX_BRIEF_BYTES + 1` bytes read, and a NUL refused here — typed, named, before
+ * anything is written or connected.
  */
 export async function readBrief(workspace: string): Promise<string | undefined> {
   const relative = relativeUnderRoot(config.SITES_ROOT, workspace);
-  const body = await readFileShared(config.SITES_ROOT, join(relative, 'AGENTS.md'));
-  if (body === null || body.length === 0) return undefined;
-  const bytes = Buffer.from(body, 'utf8');
-  if (bytes.length <= MAX_BRIEF_BYTES) return body;
-  console.warn(`[claude_code] ${join(relative, 'AGENTS.md')} is ${bytes.length} bytes; the brief is cut at ${MAX_BRIEF_BYTES}.`);
-  const cut = bytes.subarray(0, MAX_BRIEF_BYTES).toString('utf8').replace(/\uFFFD+$/, '');
-  return `${cut}\n\n[The site brief (AGENTS.md, ${bytes.length} bytes) was cut at ${MAX_BRIEF_BYTES} bytes.]`;
+  const file = join(relative, 'AGENTS.md');
+  const read = await readFileSharedBounded(config.SITES_ROOT, file, MAX_BRIEF_BYTES + 1);
+  if (read === null || read.size === 0) return undefined;
+  if (read.bytes.includes(0)) {
+    throw new ValidationError(
+      `${file} contains a NUL byte, which no argv can carry; the brief is refused and nothing was started. ` +
+        `Remove the NUL from AGENTS.md (a person can edit it; the agent's next turn cannot run until it is fixed).`,
+    );
+  }
+  if (read.size <= MAX_BRIEF_BYTES) return read.bytes.toString('utf8');
+  console.warn(`[claude_code] ${file} is ${read.size} bytes; the brief is cut at ${MAX_BRIEF_BYTES}.`);
+  const cut = read.bytes.subarray(0, MAX_BRIEF_BYTES).toString('utf8').replace(/\uFFFD+$/, '');
+  return `${cut}\n\n[The site brief (AGENTS.md, ${read.size} bytes) was cut at ${MAX_BRIEF_BYTES} bytes.]`;
 }
 
 /** The per-turn seams: the binary and how it is probed. Production states neither. */

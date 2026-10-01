@@ -12,8 +12,8 @@
  * any host; `SYSTEMD_FLOOR = max(REQUIRED) = 248` (PrivateIPC). `EXTRA = {PrivatePIDs: 257}`
  * is rendered only when PID 1 is 257 or newer: concurrent runs are kept apart by per-site
  * uids that PID 1 serializes per site (MaxConnections=1 and door-target Conflicts=), which do
- * not depend on a PID namespace — so its absence on 255 (Ubuntu 24.04, Debian 12) is the
- * accepted posture, not a refusal. A package gate holds the key set EQUAL to what the
+ * not depend on a PID namespace — so its absence below 257 (Ubuntu 24.04 = 255; Debian 12 and
+ * RHEL 9 = 252) is the accepted posture, not a refusal. A package gate holds the key set EQUAL to what the
  * renderer writes at 255 (REQUIRED) and at 257 (REQUIRED ∪ EXTRA), so a key cannot be added
  * without stating its release, and a stale entry cannot hold the floor up.
  *

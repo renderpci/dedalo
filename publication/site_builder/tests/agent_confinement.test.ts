@@ -2272,8 +2272,9 @@ describe('the real call sites: git runs through the git door, a build through th
   test('startSession / sendMessage: an opencode site with no provider host is a 503 BEFORE any reservation', async () => {
     // MG4–MG6: the manager's driver-specific checks were never exercised.
     await makeSite('door-oc');
-    const manifest = await readManifest('door-oc');
-    await writeManifest({ ...manifest, driver: 'opencode' });
+    // The site's driver is the DAEMON's record (sites/driver_record.ts), never site.json.
+    const { writeSiteDriver } = await import('../src/sites/driver_record');
+    await writeSiteDriver('door-oc', 'opencode');
     const host = await standIn([['door-oc', 1]]); // claude_code default, providerHosts []
     let refused: unknown = null;
     try {

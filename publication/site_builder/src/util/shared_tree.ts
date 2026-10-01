@@ -524,6 +524,7 @@ async function openForRead(
   root: string,
   relative: string,
   requireOwn: boolean,
+  regularOnly = false,
 ): Promise<FileHandle | null> {
   const { target, segments } = segmentsUnder(root, relative);
   try {
@@ -534,13 +535,16 @@ async function openForRead(
   }
   let handle: FileHandle;
   try {
-    handle = await openNoFollow(target, FS.O_RDONLY);
+    // O_NONBLOCK for a reader that asks for a REGULAR file: a fifo planted at the name would
+    // otherwise block the open until a writer comes — forever, in a daemon thread.
+    handle = await openNoFollow(target, regularOnly ? FS.O_RDONLY | FS.O_NONBLOCK : FS.O_RDONLY);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
   try {
     const stats = await handle.stat();
+    if (regularOnly && !stats.isFile()) throw new NotRegularFileError(target);
     if (stats.nlink > 1) throw new PlantedHardLinkError(target, stats.nlink);
     if (requireOwn && stats.uid !== process.getuid?.()) {
       throw new ForeignOwnerError(target, stats.uid);
@@ -550,6 +554,51 @@ async function openForRead(
     throw error;
   }
   return handle;
+}
+
+/**
+ * A NAME THE DAEMON READS AS A FILE IS NOT ONE. A fifo, a socket or a device at a path inside an
+ * agent-writable tree was put there by the agent: a fifo blocks the reader, a device is a read
+ * of the host. Refused, never read.
+ */
+export class NotRegularFileError extends Error {
+  constructor(readonly path: string) {
+    super(
+      `shared_tree: refusing to read '${path}': it is not a regular file (a fifo, socket or ` +
+        `device the agent put there). Nothing was read.`,
+    );
+    this.name = 'NotRegularFileError';
+  }
+}
+
+/**
+ * READ AT MOST `maxBytes` OF A REGULAR FILE inside a tree the agent can write — the same
+ * link, hard-link and chain refusals as `readFileShared`, plus: opened `O_NONBLOCK` and
+ * refused unless `fstat` says REGULAR (a planted fifo never blocks, a device is never read),
+ * and never more than `maxBytes` read off the handle, whatever size the agent gave the file
+ * (a sparse multi-GB file costs `maxBytes`, not its size). `size` is the file's real size, so
+ * a caller can say it cut. `null` when it is not there.
+ */
+export async function readFileSharedBounded(
+  root: string,
+  relative: string,
+  maxBytes: number,
+): Promise<{ readonly bytes: Buffer; readonly size: number } | null> {
+  const handle = await openForRead(root, relative, false, true);
+  if (handle === null) return null;
+  try {
+    const size = (await handle.stat()).size;
+    const buffer = Buffer.alloc(Math.max(0, Math.min(maxBytes, size)));
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    return { bytes: buffer.subarray(0, filled), size };
+  } finally {
+    await handle.close();
+  }
 }
 
 async function readThroughHandle(

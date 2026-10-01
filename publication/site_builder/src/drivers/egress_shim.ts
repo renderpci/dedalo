@@ -331,12 +331,24 @@ export async function main(_argv: readonly string[], seams: ShimSeams = {}): Pro
   return new Promise<number>(resolve => {
     let finished = false;
     let killTimer: ReturnType<typeof setTimeout> | null = null;
-    const child = spawn(spec.argv[0] as string, spec.argv.slice(1), {
-      cwd: workdir,
-      env: childEnv,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      detached: true,
-    });
+    // A spawn that THROWS (an argv or environment with a NUL byte — the kernel cannot carry one)
+    // is an exit status like any other: X {127}, never a rejected main() that leaves the daemon
+    // with no exit frame (and every later turn of the site failing the same way).
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn(spec.argv[0] as string, spec.argv.slice(1), {
+        cwd: workdir,
+        env: childEnv,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
+      });
+    } catch (error) {
+      stopForwards();
+      stderr(`[confinement] shim: cannot run '${spec.argv[0]}' (${(error as Error).message})\n`);
+      send(encodeJsonFrame('X', { code: 127, signal: null }));
+      void endFlushed(io).then(() => resolve(127));
+      return;
+    }
     const killGroup = (signal: NodeJS.Signals) => {
       try {
         if (child.pid !== undefined) process.kill(-child.pid, signal);

@@ -37,8 +37,8 @@
  *     of another site is another uid — `ProtectProc=invisible` hides its /proc entry and
  *     `ptrace_may_access` refuses its `/proc/<pid>/root` and environ — and a site's own runs
  *     never overlap at all (PID 1 serializes them: MaxConnections=1 per door, Conflicts= across
- *     doors). On 255 (Ubuntu 24.04, Debian 12) the unit therefore renders without it, which is
- *     the accepted posture; on 257 it is added on top.
+ *     doors). Below 257 (Ubuntu 24.04 = 255; Debian 12 and RHEL 9 = 252) the unit therefore
+ *     renders without it, which is the accepted posture; on 257 it is added on top.
  *   - A door that needs the outside gets exactly ONE thing back: its own per-run directory,
  *     bound at `/run/dedalo-egress`, holding the unix sockets of the daemon's egress gate
  *     (`src/egress/gate.ts`) — a CONNECT proxy that speaks HOSTNAMES on this run's plan only,
@@ -92,6 +92,16 @@ export const MCP_PORT = 3129;
 
 /** Where a door's per-run socket directory appears INSIDE the unit. */
 export const EGRESS_MOUNT = '/run/dedalo-egress';
+
+/**
+ * The cgroupfs mask every agent unit carries (`TemporaryFileSystem=`), and conformance expects.
+ * `ProtectProc=invisible` hides another uid's /proc/<pid>; it does not touch /sys/fs/cgroup, which
+ * `ProtectSystem=strict` leaves readable — and there another site's run is a directory whose
+ * world-readable `cgroup.procs` / `cpu.stat` / `memory.current` give its pids, timing and volume.
+ * One spelling on every release (no `ProtectControlGroups=private`, which only 257 knows): an
+ * empty read-only tmpfs; a runtime that asks its cgroup for limits finds none and falls back.
+ */
+export const CGROUPFS_MASK = '/sys/fs/cgroup:ro';
 
 /** The socket names the gate serves and the shim forwards to. */
 export const PROXY_SOCKET = 'proxy.sock';

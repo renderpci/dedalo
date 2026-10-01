@@ -182,6 +182,13 @@ export class StandInHost {
   spelling: (nr: number, uid: number) => string = (nr, uid) => `${nr}-${4000 + nr}-${uid}`;
   /** PRE-LEAD-1b transient runs (`<prefix><uuid>.service`) still alive — not stoppable by the daemon. */
   readonly legacyLive = new Set<string>();
+  /**
+   * A socket's NConnections stated INDEPENDENTLY of the instance list (`'<k>:<door>'` → count).
+   * Without it the stand-in derives NConnections from its live instances, so a busy socket and
+   * a listed instance can never disagree — and the daemon's socket-count half of the death and
+   * idle proofs (the backstop for an instance its list does not see) is never exercised.
+   */
+  readonly connectionsOverride = new Map<string, number>();
 
   private readonly servers: Server[] = [];
   private nr = 0;
@@ -462,7 +469,10 @@ export class StandInHost {
     const base: Record<string, string> = fixture ? parseShow(fixture) : {};
     const socket = /s(\d+)-(turn|build|git)\.socket$/.exec(unit);
     if (socket && unit.startsWith(this.options.prefix)) {
-      return { ...base, NConnections: String(this.live(Number(socket[1]), socket[2] as Door).length), ActiveState: 'active', LoadState: 'loaded' };
+      const k = Number(socket[1]);
+      const door = socket[2] as Door;
+      const count = this.connectionsOverride.get(`${k}:${door}`) ?? this.live(k, door).length;
+      return { ...base, NConnections: String(count), ActiveState: 'active', LoadState: 'loaded' };
     }
     const instance = this.instances.get(unit);
     if (instance) {
@@ -824,7 +834,7 @@ export function conformingShow(
     `PrivateIPC=yes`,
     ...(version >= 257 ? ['PrivatePIDs=yes'] : []),
     `ReadWritePaths=${workspace}`,
-    `TemporaryFileSystem=/run:ro /dev/shm:mode=1777,nosuid,nodev ${host.agentStateRoot}:ro`,
+    `TemporaryFileSystem=/run:ro /dev/shm:mode=1777,nosuid,nodev ${host.agentStateRoot}:ro /sys/fs/cgroup:ro`,
     `InaccessiblePaths=-/var/lib/mysql -/var/lib/mariadb -/var/lib/pgsql -/var/lib/postgresql`,
     `BindPaths=${binds}`,
     `BindReadOnlyPaths=${readOnlyBinds}`,

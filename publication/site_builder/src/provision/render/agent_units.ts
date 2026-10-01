@@ -71,7 +71,7 @@ import {
   egressDirForSite,
   unitFixedEnvironment,
 } from '../../drivers/agent_identity';
-import { DOOR_PROFILE, DOORS, type ConfinementDoor, unitNetworkProperties } from '../../drivers/network_profile';
+import { CGROUPFS_MASK, DOOR_PROFILE, DOORS, type ConfinementDoor, unitNetworkProperties } from '../../drivers/network_profile';
 import { extraRendered, floorRefusal, renderedKeys, SYSTEMD_FLOOR } from '../../drivers/unit_properties';
 import type { InstanceLayout, InstanceManifest } from '../layout';
 import { CPU_QUOTA_PATTERN, SYSTEMD_SIZE_PATTERN, UNIX_NAME_PATTERN } from '../layout';
@@ -294,6 +294,9 @@ export const agentUnitsRenderer: Renderer = {
           `ReadWritePaths=${workspace}`,
           `# The whole agent state root is masked; only this door's own HOME comes back.`,
           `TemporaryFileSystem=${stateRoot}:ro`,
+          `# cgroupfs too: ProtectProc= hides another uid's /proc/<pid>, not /sys/fs/cgroup, where every`,
+          `# site's run is a directory whose cgroup.procs, cpu.stat and memory.current are world-readable.`,
+          `TemporaryFileSystem=${CGROUPFS_MASK}`,
           ...(door === 'git' ? [] : [`BindPaths=${unitPath('the door HOME', agentHomeFor(stateRoot, k, door))}`]),
           ...network.map(networkLine),
           `MemoryMax=${memoryMax}`,

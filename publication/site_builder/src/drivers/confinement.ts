@@ -80,6 +80,7 @@ import {
 } from './agent_identity';
 import {
   bindablePathProblem,
+  CGROUPFS_MASK,
   childEgressEnv,
   DATABASE_SOCKET_DIRS,
   DOOR_PROFILE,
@@ -1572,7 +1573,7 @@ export async function conformance(k: number, door: ConfinementDoor, policy: Conf
     refuse('ReadWritePaths', `loaded '${svc.ReadWritePaths ?? ''}', expected exactly '${workspace}'`);
   }
   const tmpfs = words(svc.TemporaryFileSystem);
-  if (!sameSet(tmpfs, ['/run:ro', '/dev/shm:mode=1777,nosuid,nodev', `${policy.agentStateRoot}:ro`])) {
+  if (!sameSet(tmpfs, ['/run:ro', '/dev/shm:mode=1777,nosuid,nodev', `${policy.agentStateRoot}:ro`, CGROUPFS_MASK])) {
     refuse('TemporaryFileSystem', `loaded '${svc.TemporaryFileSystem ?? ''}'`);
   }
   if (!sameSet(words(svc.InaccessiblePaths), DATABASE_SOCKET_DIRS.map(dir => `-${dir}`))) {
