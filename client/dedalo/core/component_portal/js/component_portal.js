@@ -836,6 +836,13 @@ component_portal.prototype.build = async function(autoload=false) {
 					}else{
 						self.context = context
 					}
+				}else{
+					// fixed_filter. It is resolved server side from live record data (e.g. observed component value),
+					// so on refresh take the fresh request_config, preserving the rest of the context
+					const context = datum.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+					if (context?.request_config?.some(el => el.sqo?.fixed_filter)) {
+						self.context.request_config = context.request_config
+					}
 				}
 
 			// set Data
