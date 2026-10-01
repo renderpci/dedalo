@@ -20,7 +20,8 @@
  *   A       — `createZip` over 192 MiB + 8 × 16 MiB stays under 48 MiB of peak
  *             growth, and the archive is VALID: full central directory, every
  *             entry's CRC recomputed from the bytes;
- *   B       — an rdf session's close() over 2000 records of 64 KiB (merge + zip)
+ *   B       — an rdf session's close() over 2000 records of 64 KiB (merge + zip),
+ *             run in a fresh process after the writes (maxRSS never resets),
  *             stays under the same ceiling, and its archive is valid too.
  */
 
@@ -139,7 +140,10 @@ describe('PERF-2 — consolidated artifacts in bounded memory (spawned-child max
 	}, 300_000);
 
 	test(`B: an rdf session's close() over ${RDF_RECORDS} × ${RDF_PART_BYTES / 1024} KiB records (merge + zip) stays under the same ceiling`, async () => {
-		const report = await measure(['rdf', String(RDF_RECORDS), String(RDF_PART_BYTES)]);
+		// The writes in their own process: maxRSS cannot be reset, so a close measured
+		// in the writing process inherits the write phase's peak (see the child's header).
+		await measure(['rdf-write', String(RDF_RECORDS), String(RDF_PART_BYTES)]);
+		const report = await measure(['rdf-close', String(RDF_RECORDS)]);
 		expect(
 			report.deltaKiB,
 			`the rdf consolidation raised the runner's peak RSS by ${Math.round(report.deltaKiB / 1024)} MiB`,

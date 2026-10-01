@@ -826,6 +826,10 @@ function drillScript(script: string, killOn?: string): DrillRun {
 					TMPDIR: dir,
 					DRILL_LOG: log,
 					DRILL_PIN: join(ROOT, '.bun-version'),
+					// The drill measures the tier AS THE RUNNER RUNS IT. The pre-push hook's
+					// `ci:local --skip-advisory` exports this into the suite; inherited, it skips
+					// db_tier's unit stage and K reads a shape the runner never runs.
+					DEDALO_CI_SKIP_ADVISORY: '0',
 					...(killOn === undefined ? {} : { DRILL_KILL_ON: killOn }),
 				},
 				stdout: 'ignore',
