@@ -11318,7 +11318,7 @@ body:has(.assistant_container.standalone.show) {
   overflow: hidden;
 }
 .wrapper_service_autocomplete > .options_hidden ul.filter_node {
-  background-color: var(--color_grey_10);
+  background-color: var(--color_grey_11);
   border-bottom: 1px solid var(--color_white);
   display: table;
   padding: 0.5em;
