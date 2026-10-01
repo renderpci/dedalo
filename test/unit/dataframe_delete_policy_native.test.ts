@@ -581,6 +581,10 @@ async function installReaderIdentity(): Promise<void> {
 			dd774: [
 				{ id: 1, tipo: HOST, section_tipo: HOST, value: 2 },
 				{ id: 2, tipo: FRAME_SECTION, section_tipo: FRAME_SECTION, value: 1 },
+				// the (HOST, MAIN) pair at 2: the portal-unlink write door
+				// (deletePortalLocator) admits this caller, so its frame-target
+				// refusal below is the cascade's grant, not the door's.
+				{ id: 3, tipo: MAIN, section_tipo: HOST, value: 2 },
 			],
 		},
 	});
@@ -639,7 +643,61 @@ describe('the WRITE GRANT on the frame target section is asked, not inherited fr
 		await removeThrough('direct', hostId);
 		expect(await targetState(frameA)).toEqual({ row: true, note: false });
 	}, 30000);
+
+	test('the PORTAL UNLINK door (deletePortalLocator) asks it as the CALLER: perm.denied on the frame section, unlink rolled back', async () => {
+		// SEC-2 (closure 2026-09-26 Step 3): the cascade under the write door's
+		// grant must run the frame-target grant as `grant.userId`. An effect that
+		// audited as any other actor (the superuser above all) would wipe a
+		// target this curator can only read — this leg is that hunk's only pin.
+		await ensureSlot(SOFT);
+		await installReaderIdentity();
+		const { hostId, portalTargetId, frameA, frameB } = await seed();
+		const principal = await resolvePrincipal(READER_USER_ID);
+		expect(principal.isGlobalAdmin).toBe(false);
+		expect(await getSectionPermissions(principal, FRAME_SECTION)).toBe(1);
+		const mainBefore = await mainItems(hostId);
+		expect(mainBefore.map((item) => item.id)).toEqual([1, 2]);
+
+		let refused: unknown = null;
+		try {
+			await deletePortalLocator(
+				principal,
+				{ tipo: MAIN, section_tipo: HOST, section_id: hostId },
+				{
+					locator: {
+						id: 1,
+						section_id: portalTargetId,
+						section_tipo: PORTAL_TARGET,
+						from_component_tipo: MAIN,
+						type: 'dd151',
+					},
+					ar_properties: ['id', 'section_id', 'section_tipo', 'from_component_tipo', 'type'],
+				},
+			);
+		} catch (error) {
+			refused = error;
+		}
+		expect(isDedaloError(refused)).toBe(true);
+		expect((refused as { code: string }).code).toBe('perm.denied');
+		// the refusal is the FRAME section's grant — the door itself admitted the caller
+		expect(
+			(refused as { coordinates?: Record<string, unknown> }).coordinates?.target_section_tipo,
+		).toBe(FRAME_SECTION);
+		// rolled back whole: the main's items, the slot, both targets
+		expect(await mainItems(hostId)).toEqual(mainBefore);
+		expect((await slotEntries(hostId)).map((entry) => entry.id_key)).toEqual([1, 2]);
+		expect(await targetState(frameA)).toEqual({ row: true, note: true });
+		expect(await targetState(frameB)).toEqual({ row: true, note: true });
+	}, 30000);
 });
+
+async function mainItems(hostId: number): Promise<{ id: number }[]> {
+	const rows = (await sql.unsafe(
+		`SELECT relation->$1 AS v FROM "${HOST_TABLE}" WHERE section_tipo = $2 AND section_id = $3`,
+		[MAIN, HOST, hostId],
+	)) as { v: { id: number }[] | null }[];
+	return rows[0]?.v ?? [];
+}
 
 describe('a target wipe that fails AFTER commit is logged, and the loop continues', () => {
 	test('host delete under delete_target with frame A refused: host gone, A whole, B emptied', async () => {

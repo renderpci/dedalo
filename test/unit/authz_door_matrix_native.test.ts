@@ -89,6 +89,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { ActionHandler, ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { component3dApiActions } from '../../src/core/api/handlers/dd_component_3d_api.ts';
 import { componentAvApiActions } from '../../src/core/api/handlers/dd_component_av_api.ts';
+import { componentPortalApiActions } from '../../src/core/api/handlers/dd_component_portal_api.ts';
 import { componentTextAreaApiActions } from '../../src/core/api/handlers/dd_component_text_area_api.ts';
 import { mcpApiActions } from '../../src/core/api/handlers/dd_mcp_api.ts';
 import { resolveMediaActionContext } from '../../src/core/api/handlers/media_action_context.ts';
@@ -110,6 +111,7 @@ import { assertActionPermission } from '../../src/core/tools/security.ts';
 import {
 	AUTHZ_3D,
 	AUTHZ_AV,
+	AUTHZ_FILTER,
 	AUTHZ_PROJECT_P,
 	AUTHZ_SECTION,
 	AUTHZ_TEXT,
@@ -762,8 +764,6 @@ const RECORD_KIND_COMPONENT_CEILING = 0;
  * ungated door by adding a line here needs a second, visible edit.
  */
 const NOT_YET_PROBED: Readonly<Record<string, string>> = {
-	'dd_component_portal_api:delete_locator':
-		'SEC-2 deletePortalLocator — a SEPARATE run after Step 2 owns relations/save.ts',
 	'dd_diffusion_api:diffuse':
 		'diffusion subsystem door (Step 6) — not a record/component write door of this step',
 	'dd_diffusion_api:cancel_process': 'diffusion subsystem door (Step 6)',
@@ -857,9 +857,10 @@ const NOT_YET_PROBED: Readonly<Record<string, string>> = {
  * raise it silently). Raised 31 → 65 VISIBLY in review r9, when the census became
  * total over the tool registry (every apiActions entry, not only the
  * record-addressed kinds): 28 in-handler `permission: null` doors and 6
- * `section_list` doors that were simply never counted.
+ * `section_list` doors that were simply never counted. 65 → 64: SEC-2
+ * `dd_component_portal_api:delete_locator` probed (the write door).
  */
-const NOT_YET_PROBED_CEILING = 65;
+const NOT_YET_PROBED_CEILING = 64;
 
 interface Census {
 	probes: Map<string, Probe>;
@@ -1342,6 +1343,39 @@ async function deriveCensus(): Promise<Census> {
 				options: { tag_id: '5', type: 'index' },
 			} as unknown as Rqo;
 			return outcomeOf(() => deleteTag(rqo, handlerContext(principalOf(identity))));
+		},
+	});
+
+	// SEC-2: the portal unlink goes through THE WRITE DOOR (write, level 2,
+	// section floor 2): the pair (dd128-aware) and the record scope, ahead of any
+	// read, lock or write. Driven through the HANDLER, which has no gate of its
+	// own — every refusal below is the engine's. The locator matches nothing
+	// (dd153/0, a tag never stored), so a REGRESSED engine still changes no
+	// record: neither the shared one nor the manager's own dd1725. The section
+	// floor is NOT claimed here — READ_SECTION holds test101 at 1 too, so both
+	// halves refuse that cell with the same code; the floor is measured by
+	// portal_locator_door_native leg g.
+	const deleteLocator = componentPortalApiActions.delete_locator;
+	if (deleteLocator === undefined)
+		throw new Error('dd_component_portal_api:delete_locator is not registered');
+	probes.set('dd_component_portal_api:delete_locator', {
+		expect: { ...FULL, DD1725: 'refused', READ_SECTION: 'refused', READ_COMPONENT: 'refused' },
+		refusalTipo: { NO_COMPONENT: AUTHZ_FILTER, READ_COMPONENT: AUTHZ_FILTER },
+		run: (identity) => {
+			const target = recordTarget(identity, AUTHZ_FILTER);
+			const rqo = {
+				action: 'delete_locator',
+				source: {
+					tipo: target.tipo,
+					section_tipo: target.section_tipo,
+					section_id: target.section_id,
+				},
+				options: {
+					locator: { section_tipo: 'dd153', section_id: 0, tag_id: 'zzauthz-never-stored' },
+					ar_properties: ['section_tipo', 'section_id', 'tag_id'],
+				},
+			} as unknown as Rqo;
+			return outcomeOf(() => deleteLocator(rqo, handlerContext(principalOf(identity))));
 		},
 	});
 

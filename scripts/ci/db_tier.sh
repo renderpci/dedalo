@@ -182,6 +182,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/obligation_ledger_native.test.ts
 	test/unit/media_files_info_lost_update_native.test.ts
 	test/unit/duplicate_record_media_verdict_native.test.ts
+	test/unit/portal_locator_door_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

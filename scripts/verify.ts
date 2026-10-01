@@ -327,6 +327,8 @@ const TRIPWIRES = [
 	'test/unit/obligation_ledger_native.test.ts',
 	'test/unit/media_files_info_lost_update_native.test.ts',
 	'test/unit/duplicate_record_media_verdict_native.test.ts',
+	// SEC-2-delete_locator — the portal unlink through the write door (closure Step 3, 2026-10-01).
+	'test/unit/portal_locator_door_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

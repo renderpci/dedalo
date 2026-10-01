@@ -329,6 +329,12 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Removing a linked record from a portal now checks the portal field and the record's projects.**
+
+    Removing a linked record from a portal (the unlink button, and the "delete index" of the indexation tool) used to check only the section's permission. A profile that could edit the section but only read the portal field could still unlink from it, a record outside the user's projects could be changed, and a user manager could unlink their own profile, active or administrator flag. Removing a link now requires write access to that portal field and to the record itself (its projects), checked before anything is read or locked; a user manager can no longer unlink their own profile, active or administrator flag; and a record id of 0 or below is refused for every user, administrators included.
+
+    Wire contract: `WC-2026-10-01-delete-locator-write-door`.
+
 - **Asking a vision model for proposals, or identifying a photograph with an external encoder, now requires the identification tool permission.**
 
     Proposals from a vision model and image identification through an external service call a paid model and may send the object's photograph off the server. Any user who could read the section could start them. They now require the user's profile to include the identification tool; without it the request is refused before any model is called. Matching by record, proposals voted by similar records and a locally run image encoder cost nothing and are unchanged. Grant the identification tool to the profiles that should use the vision source.
@@ -784,7 +790,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 76 entries"
+??? note "Wire contract — 77 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -860,6 +866,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-update-engine-atomic`
     - `WC-2026-09-30-update-manifest-local-origin-refusal`
     - `WC-2026-09-30-write-door`
+    - `WC-2026-10-01-delete-locator-write-door`
     - `WC-2026-10-01-identify-vision-grant`
     - `WC-2026-10-01-site-builder-confinement-codes`
 

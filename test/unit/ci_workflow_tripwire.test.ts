@@ -709,6 +709,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/duplicate_record_media_verdict_native.test.ts',
 		"It duplicates zzdm records it creates on the suite database (with the section's own counter, so the clone's id is known in advance) and reads back the clone's stored and Time Machine file_path values beside the files copied under the lane's marked media root, so every case needs the suite Postgres.",
 	],
+	[
+		'test/unit/portal_locator_door_native.test.ts',
+		'It mints scratch projects, profiles and users through the counter on the suite database, creates the host records it unlinks from, and measures every refusal on the stored portal and slot bytes and the Time Machine row count, so it cannot run without a live suite Postgres.',
+	],
 ]);
 
 /**

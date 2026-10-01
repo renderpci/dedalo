@@ -42,6 +42,12 @@ export const DD128_PROBED: Readonly<Record<string, readonly string[]>> = {
 	'src/core/components/component_text_area/tag_delete.ts': [
 		'dd_component_text_area_api:delete_tag',
 	],
+	// The portal-unlink wire door and its engine (SEC-2-delete_locator):
+	// deletePortalLocator is now the write door itself (pair 2, section floor 2,
+	// scope). mcp:dedalo_portal_unlink is NOT listed for save.ts — the MCP door
+	// refuses DD1725 before the engine runs, so its leg proves nothing of it.
+	'src/core/api/handlers/dd_component_portal_api.ts': ['dd_component_portal_api:delete_locator'],
+	'src/core/relations/save.ts': ['dd_component_portal_api:delete_locator'],
 	// (transcription_asr.ts is NOT here: its exported saveTranscriptionResult is
 	// an UNGATED writer any importer may call, and no matrix door drives the
 	// poll's save with the DD1725 manager — PENDING until one does.)

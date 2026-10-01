@@ -870,7 +870,11 @@ describe('level-0 propagation — refused inside a transaction, swallowed outsid
 describe('W11: deletePortalLocator lock', () => {
 	test('static pin: the RMW runs under withTransaction with a FOR UPDATE read, the write through the removal-law chokepoint', () => {
 		const source = readFileSync(join(REPO_ROOT, 'src/core/relations/save.ts'), 'utf-8');
-		const body = source.slice(source.indexOf('export async function deletePortalLocator'));
+		// The EFFECT (SEC-2): deletePortalLocator is the write door; the locked RMW
+		// is its private, grant-typed effect.
+		const anchor = source.indexOf('async function removePortalLocatorUnderGrant');
+		expect(anchor).toBeGreaterThan(-1);
+		const body = source.slice(anchor);
 		expect(body).toContain('await withTransaction(');
 		expect(body).toContain('FOR UPDATE');
 		// the lock precedes the read; the write is the chokepoint's removal-law

@@ -33,7 +33,9 @@
  *               `principalCanAccessRecord`. In BOTH the non-positive-id
  *               refusal runs BEFORE the global-admin bypass.
  *   5. GRANT    a frozen, branded {@link RecordGrant} — the effect is built
- *               from the grant, never from the request it was authorized from.
+ *               from the grant, never from the request it was authorized from;
+ *               it NAMES THE ACTOR it authorized (`userId`), so an effect typed
+ *               on the grant audits as that actor and holds no principal.
  *
  * {@link authorizeSectionTarget} — a SECTION target that MAY name a record
  * (the tool kinds `tipo` / `section` / `targets`, and a create): the level on
@@ -87,6 +89,8 @@ export type RecordGrant = Readonly<{
 	mode: 'read' | 'write';
 	level: 1 | 2;
 	door: string;
+	/** The principal the grant was minted for — the effect's audit actor. */
+	userId: number;
 }>;
 
 /**
@@ -311,7 +315,16 @@ export async function authorizeRecordAccess(
 	await assertSectionFloor(principal, target, options.sectionFloor, selfService, door); // 2.
 	await assertPair(principal, target, options); // 3.
 	await assertScope(principal, target, mode, selfService, door); // 4.
-	return Object.freeze({ ...target, mode, level, door }) as RecordGrant; // 5.
+	// 5. Every grant field is TYPE-CHECKED before the brand is cast on: the cast
+	// alone would accept a grant missing a field (e.g. its actor).
+	const fields: Omit<RecordGrant, typeof grantBrand> = {
+		...target,
+		mode,
+		level,
+		door,
+		userId: principal.userId,
+	};
+	return Object.freeze(fields) as RecordGrant;
 }
 
 /** Options for a section target. */

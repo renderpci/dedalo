@@ -483,5 +483,28 @@ describe.if(DB_READY)('write door — every tool permission kind, real resolver,
 			});
 			expect(Object.isFrozen(grant)).toBe(true);
 		});
+
+		// The grant NAMES THE ACTOR it authorized: an effect typed on the grant
+		// (relations/save.ts removePortalLocatorUnderGrant) audits as
+		// `grant.userId`, never from a principal or request it no longer holds.
+		test('authorizeRecordAccess: the grant carries the authorized principal userId (write and read)', async () => {
+			const { authorizeRecordAccess } = await import('../../src/core/security/write_door.ts');
+			const target = { section_tipo: AUTHZ_SECTION, component_tipo: AUTHZ_AV, section_id: recordP };
+			expect(ids.control.userId).not.toBe(ROOT_ID);
+			const writeGrant = await authorizeRecordAccess(ids.control, target, {
+				mode: 'write',
+				level: 2,
+				door: 'write_door_native',
+				sectionFloor: 2,
+			});
+			const readGrant = await authorizeRecordAccess(ids.control, target, {
+				mode: 'read',
+				level: 1,
+				door: 'write_door_native',
+				sectionFloor: 1,
+			});
+			expect((writeGrant as unknown as { userId?: unknown }).userId).toBe(ids.control.userId);
+			expect((readGrant as unknown as { userId?: unknown }).userId).toBe(ids.control.userId);
+		});
 	});
 });

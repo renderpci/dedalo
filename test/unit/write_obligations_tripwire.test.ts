@@ -142,7 +142,7 @@ const U = {
 	writeComposedUnit: 'tools/tool_time_machine/server/bulk_revert_undo.ts#writeComposedUnit',
 	archiveWriteRecordRow: 'src/core/archive/restore.ts#writeRecordRow',
 	deriveRelationSearch: `${RELATIONS_SAVE}#deriveRelationSearch`,
-	deletePortalLocator: `${RELATIONS_SAVE}#deletePortalLocator`,
+	removePortalLocatorUnderGrant: `${RELATIONS_SAVE}#removePortalLocatorUnderGrant`,
 	removeAllInverseReferences: `${DELETE_RECORD}#removeAllInverseReferences`,
 	deleteSectionData: `${DELETE_RECORD}#deleteSectionData`,
 	writeItems: `${FILES_INFO_PERSIST}#writeItems`,
@@ -562,7 +562,7 @@ const EXCLUSIVE: readonly { target: string; allowed: readonly string[]; why: str
 	},
 	{
 		target: U.persistRelationRemovalKeys,
-		allowed: [U.deletePortalLocator, U.removeAllInverseReferences, U.deleteSectionData],
+		allowed: [U.removePortalLocatorUnderGrant, U.removeAllInverseReferences, U.deleteSectionData],
 		why: 'the REMOVAL law (every relation model re-indexed) is the three removal doors’ — any other writer gets the save law.',
 	},
 	{

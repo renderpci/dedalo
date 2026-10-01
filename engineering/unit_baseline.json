@@ -2946,6 +2946,11 @@
 			"skipped": 0,
 			"assertions": 51
 		},
+		"test/unit/portal_locator_door_native.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 33
+		},
 		"test/unit/portal_order_by_columns_native.test.ts": {
 			"tests": 11,
 			"skipped": 0,

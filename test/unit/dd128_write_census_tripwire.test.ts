@@ -190,6 +190,16 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'MCP save_component (authorizeRecordAccess), create_record (authorizeSectionTarget) and delete_record (authorizeSectionRecord — the id required by the door), consultation-capped — same write door as the human doors.',
 	},
+	'src/core/relations/save.ts': {
+		verdict: 'delegates',
+		reason:
+			'deletePortalLocator mints a RecordGrant through authorizeRecordAccess (write, level 2, floor 2: dd128-aware pair + scope) before any read, lock or write; the effect is a private function typed on the grant and audited as grant.userId; applyAddNewElement’s createSectionRecord is a birth under the save door. Matrix dd_component_portal_api:delete_locator DD1725 leg.',
+	},
+	'src/core/api/handlers/dd_component_portal_api.ts': {
+		verdict: 'delegates',
+		reason:
+			'no gate of its own; its only effect is deletePortalLocator, the write door; the matrix drives the handler gate-free, so the DD1725 leg measures the engine.',
+	},
 	'tools/tool_propagate_component_data/server/index.ts': {
 		verdict: 'consults',
 		reason:
@@ -302,16 +312,6 @@ const CENSUS: Record<string, CensusRow> = {
 	},
 
 	// --- PENDING (real SEC-03 residuals) ----------------------------------
-	'src/core/relations/save.ts': {
-		verdict: 'PENDING',
-		reason:
-			'SEC-03 residual + a NEW observation (2026-08-28): deletePortalLocator gates SECTION-level only — getSectionPermissions(sectionTipo) >= 2 — with NO component level check and NO per-record scope check, so a level-2 grant on (dd128, dd128) removes dd131/dd244/dd1725 locators from ANY user record, the caller’s own included.',
-	},
-	'src/core/api/handlers/dd_component_portal_api.ts': {
-		verdict: 'PENDING',
-		reason:
-			'the wire door onto the deletePortalLocator hole above: it coerces the id and delegates, adding no level, component or record gate of its own.',
-	},
 	'src/core/components/component_text_area/tag_delete.ts': {
 		verdict: 'delegates',
 		reason:
@@ -410,7 +410,7 @@ const EXTRA_ROWS: Record<string, CensusRow> = {
 };
 
 /** PINNED. Shrink-only: this may go DOWN, never up. */
-const PENDING_COUNT = 15;
+const PENDING_COUNT = 13;
 
 /**
  * THE DELEGATING ENGINES — a `delegates` row on a file with no principal of its
@@ -769,13 +769,10 @@ const REACH_EXEMPT: Record<string, string> = {
  * names the finding; the list is SHRINK-ONLY and a door that starts reaching FAILS this
  * gate, so a fix cannot land silently.
  */
-const REACH_PENDING: Record<string, string> = {
-	'src/ai/mcp/tools/fields_write.ts':
-		'MCP portal_unlink reaches deletePortalLocator, which DOES fire the seam in relations/save.ts — but only when its own section/level gate lets the call through, and that gate is the SEC-03 hole this file’s CENSUS row also names. Listed so the pair is visible in one place.',
-};
+const REACH_PENDING: Record<string, string> = {};
 
 /** PINNED. Shrink-only. */
-const REACH_PENDING_COUNT = 1;
+const REACH_PENDING_COUNT = 0;
 
 describe('every record-write door REACHES the revocation seam', () => {
 	const callerOwned = Object.entries(PRIMITIVE_REACH)

@@ -49,6 +49,7 @@ import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import type { Principal } from '../security/permissions.ts';
+import type { RecordGrant } from '../security/write_door.ts';
 import {
 	applyDataframeDeletePolicy,
 	type DataframeTarget,
@@ -1363,9 +1364,23 @@ export interface PortalLocatorRemoval {
  * component's relation type; a MISMATCHED type aborts (PHP
  * remove_locator_from_data guard). Each removed locator cascades its paired
  * dataframe slot entries (remove_dataframe_data_by_id, S1-05). ANSWERS with a
- * `PortalLocatorRemoval` payload (never a wire envelope) and REFUSES by
- * THROWING — a missing address is `request.invalid_options`, a caller below
- * level 2 is `perm.denied` (ERRORS_SPEC §4).
+ * `PortalLocatorRemoval` payload (never a wire envelope).
+ *
+ * THIS IS THE DOOR (SEC-2, closure 2026-09-26 Step 3): the target goes
+ * through THE WRITE DOOR (`authorizeRecordAccess`: write, level 2, section
+ * floor 2 — the dd128-aware PAIR and the record SCOPE) BEFORE any read, lock
+ * or write; the effect ({@link removePortalLocatorUnderGrant}) is private and
+ * takes the grant, so it cannot be reached with an unauthorized request. The
+ * order: address → grammar → section floor 2 → pair 2 → scope → locator →
+ * the locked transaction. REFUSES by THROWING (ERRORS_SPEC §4):
+ *   - `request.invalid_options` — a missing address; once authorized, a
+ *     missing / non-object locator;
+ *   - `request.invalid`         — a tipo or section_id that is not a target
+ *     (identifier grammar, an integer id);
+ *   - `perm.denied`             — the section below 2 (consultation-capped) or
+ *     the (section, portal) pair below 2 (dd128 own-record aware);
+ *   - `perm.out_of_scope`       — the record is outside the caller's projects,
+ *     or its id is not a record address (non-positive), admins included.
  */
 export async function deletePortalLocator(
 	// `isDeveloper` is optional so an existing caller that only knows the
@@ -1375,47 +1390,68 @@ export async function deletePortalLocator(
 	principal: Omit<Principal, 'isDeveloper'> & Partial<Pick<Principal, 'isDeveloper'>>,
 	// KEPT UNION: `source` is the RQO body of dd_component_portal_api
 	// .delete_locator, an uncoerced wire door — legacy clients still post the
-	// string form. Consumed numerically (Number()) for the row address only.
+	// string form. The write door parses it (an integer id, gated tipos).
 	source: { tipo?: string; section_tipo?: string; section_id?: string | number },
 	options: { locator?: Record<string, unknown>; ar_properties?: string[] },
 ): Promise<PortalLocatorRemoval> {
-	const msg: string[] = [];
 	const tipo = source.tipo ?? '';
 	const sectionTipo = source.section_tipo ?? '';
 	const sectionId = source.section_id;
-	const locator = options.locator;
-	if (
-		tipo === '' ||
-		sectionTipo === '' ||
-		sectionId === undefined ||
-		sectionId === null ||
-		locator === undefined ||
-		locator === null ||
-		typeof locator !== 'object'
-	) {
+	// 1. The address — the door needs one to authorize.
+	if (tipo === '' || sectionTipo === '' || sectionId === undefined || sectionId === null) {
 		throw new DedaloError('request.invalid_options', {
-			publicMessage: 'Missing required source/options (section_tipo, tipo, section_id, locator)',
+			publicMessage: 'Missing required source (section_tipo, tipo, section_id)',
 			coordinates: { section_tipo: sectionTipo, tipo },
 		});
 	}
-	// SEC: write permission — PHP dd_component_portal_api::delete_locator runs
-	// `security::assert_section_permission($section_tipo, 2)`, i.e. the LEVEL-2
-	// matrix gate, not an admin flag. Gating on isGlobalAdmin (the old v0
-	// stand-in) half-completed the tool_indexation "delete index" for every
-	// ordinary cataloguer: the client had already stripped the transcription
-	// tags in every language before calling this, so the refusal left the
-	// rsc860 locator behind as an orphan (audit §5.4). getSectionPermissions is
-	// the section-level twin of PHP common::get_permissions(tipo, tipo) — it
-	// additionally caps consultation-only sections at read, which is exactly
-	// right for a removal.
-	const { getSectionPermissions } = await import('../security/permissions.ts');
+	// 2-4. THE WRITE DOOR: grammar, the section floor (2, consultation-capped:
+	// PHP security::assert_section_permission($section_tipo, 2)), the PAIR at 2
+	// (dd128 own-record aware — a user-manager cannot unlink their own
+	// profile/active/admin) and the record SCOPE (the caller's projects; a
+	// non-positive id refused for every caller, admins included). Nothing is
+	// read, locked or written before it answers.
+	const { authorizeRecordAccess } = await import('../security/write_door.ts');
 	const actor: Principal = { isDeveloper: false, ...principal };
-	if ((await getSectionPermissions(actor, sectionTipo)) < 2) {
-		throw new DedaloError('perm.denied', {
-			coordinates: { section_tipo: sectionTipo, tipo, required_level: 2 },
+	const grant = await authorizeRecordAccess(
+		actor,
+		{ section_tipo: sectionTipo, component_tipo: tipo, section_id: sectionId },
+		{ mode: 'write', level: 2, sectionFloor: 2, door: 'relations.delete_portal_locator' },
+	);
+	// 5. The locator — validated only once the caller is authorized (an
+	// unauthorized caller learns nothing about the payload's shape; the
+	// delete_tag precedent).
+	const locator = options.locator;
+	if (locator === undefined || locator === null || typeof locator !== 'object') {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'options.locator is mandatory',
+			coordinates: { section_tipo: grant.sectionTipo, tipo: grant.componentTipo },
 		});
 	}
+	// Empty/omitted ar_properties passes through as [] — PHP's API layer never
+	// substitutes the method's 4-field default here, so compare_locators runs
+	// its full property-UNION strict compare (substituting the default
+	// over-deletes: a second locator to the same target with a different
+	// tag_id would be destroyed).
+	const properties = Array.isArray(options.ar_properties) ? options.ar_properties : [];
+	return removePortalLocatorUnderGrant(grant, locator, properties);
+}
 
+/**
+ * THE EFFECT of {@link deletePortalLocator}, reachable ONLY through it: module
+ * private, and typed on the write door's {@link RecordGrant} — every address
+ * (section, component, record) and the audit actor come from the grant. The
+ * whole read-modify-write runs in ONE transaction under the row lock.
+ */
+async function removePortalLocatorUnderGrant(
+	grant: RecordGrant,
+	locator: Record<string, unknown>,
+	properties: readonly string[],
+): Promise<PortalLocatorRemoval> {
+	// Every address below is the GRANT's — the door's validated, authorized
+	// target — never the request it was authorized from (no `source` or
+	// principal is in scope here).
+	const { componentTipo: tipo, sectionTipo, sectionId } = grant;
+	const msg: string[] = [];
 	const { getMatrixTableFromTipo, getModelByTipo, getColumnNameByModel } = await import(
 		'../ontology/resolver.ts'
 	);
@@ -1424,13 +1460,6 @@ export async function deletePortalLocator(
 	const model = (await getModelByTipo(tipo)) ?? '';
 	const column = getColumnNameByModel(model) ?? 'relation';
 	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-
-	// Empty/omitted ar_properties passes through as [] — PHP's API layer never
-	// substitutes the method's 4-field default here, so compare_locators runs
-	// its full property-UNION strict compare (substituting the default
-	// over-deletes: a second locator to the same target with a different
-	// tag_id would be destroyed).
-	const properties = Array.isArray(options.ar_properties) ? options.ar_properties : [];
 
 	// W11 (2026-08-02, observer-cascade prerequisite): the read → JS filter →
 	// whole-key replace below was an UNLOCKED read-modify-write on the pooled
@@ -1456,7 +1485,7 @@ export async function deletePortalLocator(
 		// byte-identical empty-data response.
 		const lockedRows = (await sql.unsafe(
 			`SELECT id FROM "${table}" WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
-			[sectionTipo, Number(sectionId)],
+			[sectionTipo, sectionId],
 		)) as { id: number }[];
 		if (lockedRows.length === 0) {
 			return {
@@ -1466,7 +1495,7 @@ export async function deletePortalLocator(
 				removedLocators: [] as Record<string, unknown>[],
 			};
 		}
-		const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+		const record = await readMatrixRecord(table, sectionTipo, sectionId);
 		const items =
 			((
 				record?.columns[column as keyof typeof record.columns] as Record<string, unknown[]> | null
@@ -1521,10 +1550,7 @@ export async function deletePortalLocator(
 		if (removedLocators.length > 0) {
 			// The main's slots BEFORE the cascade strips them — the history's
 			// BEFORE side (two lanes: a stripped frame is an lg-nolan change).
-			const slotsBefore = await readMainSlots(
-				{ table, sectionTipo, sectionId: Number(sectionId) },
-				tipo,
-			);
+			const slotsBefore = await readMainSlots({ table, sectionTipo, sectionId: sectionId }, tipo);
 			// Dataframe cascade (PHP remove_locator_from_data :1362): each removed
 			// locator strips the frame entries paired with its item id (unified
 			// id_key pairing). Pre-migration locators without an id have no id_key
@@ -1535,10 +1561,10 @@ export async function deletePortalLocator(
 				await removeDataframeDataById(
 					table,
 					sectionTipo,
-					Number(sectionId),
+					sectionId,
 					tipo,
 					Math.trunc(Number(itemId)),
-					principal.userId,
+					grant.userId,
 				);
 			}
 			// THE SURVIVORS GO THROUGH THE WRITE CHOKEPOINT — its REMOVAL-LAW entry
@@ -1558,10 +1584,10 @@ export async function deletePortalLocator(
 			// this door's row lock and drains `{saved: kept, removed}` after COMMIT
 			// (PHP delete_locator → Save() → propagate_to_observers).
 			await persistRelationRemovalKeys(
-				{ table, sectionTipo, sectionId: Number(sectionId) },
+				{ table, sectionTipo, sectionId: sectionId },
 				[{ column: column as MatrixJsonbColumn, key: tipo, value: kept }],
-				{ userId: principal.userId },
-				{ actor: principal.userId },
+				{ userId: grant.userId },
+				{ actor: grant.userId },
 			);
 			// The history, two lanes (dataframe_slots.ts recordMainHistory): the
 			// portal's kept locators in its value lane, and — when the cascade
@@ -1569,10 +1595,10 @@ export async function deletePortalLocator(
 			// stand now. A slot tipo records the lg-nolan row of the main(s) the
 			// removed frames belonged to, never its own.
 			await recordKeyChangeRows(
-				{ table, sectionTipo, sectionId: Number(sectionId) },
+				{ table, sectionTipo, sectionId: sectionId },
 				tipo,
 				{ before: items, after: kept, requestLang: 'lg-nolan', slotsBefore },
-				{ userId: principal.userId, timestamp: dbTimestamp() },
+				{ userId: grant.userId, timestamp: dbTimestamp() },
 			);
 		}
 		return {
