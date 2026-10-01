@@ -731,6 +731,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'the project skills — every `.agents/skills/*/SKILL.md` (the real path, never the `.claude` alias), and the git index a skill may point at (`git ls-files` at the repo root: a clone is what a skill is read on)',
 	},
+	'test/helpers/agent_workflows_corpus.ts': {
+		roots: [['.agents/workflows']],
+		scope:
+			'the multi-agent workflow scripts — every `.agents/workflows/*.js` (the real path, never the `.claude` alias), the corpus agent_workflows_parse_tripwire compiles',
+	},
 	'test/helpers/docs_corpus.ts': {
 		roots: [['docs'], ['docs']],
 		scope: 'the manual — every docs/**/*.md page, the one lister a docs-censusing gate imports',

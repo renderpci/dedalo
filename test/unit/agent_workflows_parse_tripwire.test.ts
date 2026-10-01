@@ -32,7 +32,10 @@
  *     syntax error — a stray backtick, a TypeScript annotation, an `import`, a
  *     second `export` — is red with the engine's message.
  *  E. NOT VACUOUS — the corpus is the directory listing, never a hand list, and
- *     it is non-empty and contains `review-diff.js`.
+ *     it is non-empty and contains `review-diff.js`. The listing is the shared
+ *     lister `test/helpers/agent_workflows_corpus.ts`, which owns the
+ *     `.agents/workflows` root (registered in census_derivation_tripwire's
+ *     SHARED_LISTERS) — this gate chooses no walk root of its own.
  *
  * HONEST LIMITS. Compiling is not running: a ReferenceError, a misspelled hook,
  * or a harness-forbidden call (`Date.now()`, `Math.random()`, argless
@@ -46,12 +49,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
-
-const ROOT = resolve(import.meta.dir, '../..');
-/** The REAL path (`.claude/` is the alias symlink — AGENTS.md: tooling names the real path). */
-const WORKFLOWS_DIR = join(ROOT, '.agents/workflows');
+import { basename } from 'node:path';
+import { workflowFiles } from '../helpers/agent_workflows_corpus.ts';
 
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (
 	body: string,
@@ -276,14 +275,6 @@ function workflowFaults(src: string, file: string): string[] {
 	return faults;
 }
 
-// ── The corpus ──────────────────────────────────────────────────────────────
-
-function workflowFiles(): string[] {
-	return readdirSync(WORKFLOWS_DIR)
-		.filter((f) => f.endsWith('.js'))
-		.sort();
-}
-
 // ── Positive controls ───────────────────────────────────────────────────────
 
 const GOOD = `// leading comment is fine
@@ -398,13 +389,12 @@ describe('agent workflows parse tripwire — .agents/workflows/*.js', () => {
 
 	test('rule E: the corpus is read from disk and is not empty', () => {
 		expect(files.length).toBeGreaterThan(0);
-		expect(files).toContain('review-diff.js');
+		expect(files.map((w) => w.file)).toContain('review-diff.js');
 	});
 
-	for (const file of files) {
+	for (const { file, source } of files) {
 		test(`${file} parses as a workflow script`, () => {
-			const src = readFileSync(join(WORKFLOWS_DIR, file), 'utf8');
-			expect(workflowFaults(src, file)).toEqual([]);
+			expect(workflowFaults(source, file)).toEqual([]);
 		});
 	}
 });
