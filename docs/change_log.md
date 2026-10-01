@@ -180,6 +180,14 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-01-relation-search-display-paths`.
 
+- **Result lists spanning several sections show every row again**
+
+    In a result list whose records come from several sections — the ontology
+    "Sobrescritura" picker searching across all ontology sections, for example —
+    records of different sections that share the same number (Andorra 1, Portugal 1,
+    Costa Rica 1…) rendered as empty rows ("`, , ,`"), with only the last of them
+    showing its values. Every row now shows its own values.
+
 - **Small editing forms no longer show tool buttons they turn off.**
 
     Some forms turn off the tool buttons on their fields, but the buttons were still
