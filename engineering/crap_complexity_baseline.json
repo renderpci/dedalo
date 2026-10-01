@@ -301,7 +301,7 @@
 		"src/core/section_record/virtual_record.ts": 7,
 		"src/core/security/auth.ts": 9,
 		"src/core/security/password_reset.ts": 11,
-		"src/core/security/permissions.ts": 19,
+		"src/core/security/permissions.ts": 14,
 		"src/core/security/record_scope.ts": 11,
 		"src/core/security/section_permissions.ts": 18,
 		"src/core/security/session_store.ts": 9,

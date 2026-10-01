@@ -50,10 +50,18 @@
 - **The read floor (`subdatumReadFloor`):** the `${section}_${component}` pairs a
   component source's request_config names — every show / search / choose / hide ddo at
   every section it resolves to, every `fixed_filter` path step, every `filter_by_list`
-  field — for a source the principal holds >= 1 on (re-verified here: a source it does not
-  hold mints nothing). Read off the ontology (cached per source as an ontology fact), never
-  off the client payload or ALS. PHP get_subdatum's floor: an autocomplete on a target
-  component the profile holds 0 on is served.
+  field — for a source the server VERIFIES, never one the client merely names (amended
+  2026-10-01, refuter-surviving S1): `source.tipo` must be a component OF
+  `source.section_tipo` in the ontology (`tipoBelongsToSection`, virtual-aware), and the
+  principal must hold the read door's PAIR on it (the section read grant AND the
+  component's) with a PROFILE basis on both halves (`getPermissionGrant`): a RULE grant
+  — dd655 = 2 and dd1324 = 1 for any tipo, the dd15 TM floor, the inverse-relations
+  wildcard, the public list-value fallback — mints nothing, because the rule's own bound
+  (dd655's owner predicate, …) does not travel into an unbounded search of the target
+  section. A refused source is the ordinary KEYED search, not an error. Read off the
+  ontology (cached per source as an ontology fact), never off the client payload or ALS.
+  PHP get_subdatum's floor: an autocomplete on a target component the profile holds 0 on
+  is served.
 - **Open, ledgered:** the multi-hop JOIN binds the step's TABLE, not its section (PHP
   `build_sql_join` parity — the `target_section_tipo` binding is commented out there), so
   a hop's component key and record predicate are asked of the DECLARED step section. That
@@ -69,7 +77,10 @@
   dd200 for a non-admin and a global admin; the ORDER leg; the loud notice; the read-floor
   leg; the end-to-end AUTOCOMPLETE legs through `readSectionRows` — served through the
   portal source, keyed without it, keyed for a field the portal does not name, keyed for a
-  source the caller does not hold; the autocomplete COUNT equal to the rows the read serves;
+  source the caller does not hold; the FORGED-SOURCE legs (a test3 portal named under dd655,
+  a dd655 member, a dd1324 member, a test65 component paired with test3 through a stray
+  matrix pair, a test65 member without the section grant: read AND count keyed) beside the
+  virtual-section source (zzvmain1 → test3) still served; the autocomplete COUNT equal to the rows the read serves;
   served through a source naming the field only in its `fixed_filter` / only in its
   `filter_by_list`; an absent-`from_component_tipo` created-by (dd200) leaf served as the
   superuser answers; the MULTI-MAIN legs over `[test3, test65]` — test65 grants what test3

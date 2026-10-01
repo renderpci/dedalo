@@ -721,6 +721,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/change_plan_write_door_native.test.ts',
 		"It installs the authz door fixture's scratch projects, profiles and users on the suite database, creates the record its plans address, and validates every plan through the write door's real permission and scope resolution, so it cannot run without a live suite Postgres.",
 	],
+	[
+		'test/unit/import_create_door_native.test.ts',
+		"It installs the authz door fixture's scratch projects, profiles and users on the suite database, runs the mapped and CSV importers as those users so they create (or are refused) real test3 records, and measures every refusal on the stored rows and the section's row count, so it cannot run without a live suite Postgres.",
+	],
 ]);
 
 /**

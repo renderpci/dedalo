@@ -185,6 +185,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/portal_locator_door_native.test.ts
 	test/unit/ai_spend_budget_native.test.ts
 	test/unit/change_plan_write_door_native.test.ts
+	test/unit/import_create_door_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

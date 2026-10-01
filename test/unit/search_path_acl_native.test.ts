@@ -122,6 +122,12 @@ const FLOOR_SOURCE_PORTAL = 'test80';
 const FLOOR_FIXED_FILTER_SOURCE = 'zzfloor1';
 /** A zz portal → test3 whose request_config names test162 ONLY in its filter_by_list. */
 const FLOOR_FILTER_BY_LIST_SOURCE = 'zzfloor2';
+/** The same filter_by_list source, but a child of test65 — NOT a component of test3. */
+const FLOOR_FOREIGN_SOURCE = 'zzfloor3';
+/** The same filter_by_list source, a member of dd655 (every principal holds 2 there by rule). */
+const FLOOR_PRESET_SOURCE = 'zzfloor4';
+/** The same filter_by_list source, a member of dd1324 (every principal holds 1 there by rule). */
+const FLOOR_TOOLS_SOURCE = 'zzfloor5';
 /** The one project the scoped user holds. */
 const MY_PROJECT_ID = 931021;
 /** A project she does NOT hold — the hidden record's project. */
@@ -343,6 +349,16 @@ async function install(): Promise<void> {
 				// The zzfloor sources (fixed_filter / filter_by_list on test162).
 				grant(4, SECTION, FLOOR_FIXED_FILTER_SOURCE, 1),
 				grant(5, SECTION, FLOOR_FILTER_BY_LIST_SOURCE, 1),
+				// A STRAY matrix pair: zzfloor3 is not a component of test3. The matrix is
+				// data — a floor must not trust it to describe the ontology.
+				grant(6, SECTION, FLOOR_FOREIGN_SOURCE, 1),
+				// The VIRTUAL control: zzvmain1 borrows test3's children, so zzfloor2
+				// legitimately belongs to it (membership resolves the virtual side).
+				grant(7, VIRTUAL_MAIN, VIRTUAL_MAIN, 1),
+				grant(8, VIRTUAL_MAIN, FLOOR_FILTER_BY_LIST_SOURCE, 1),
+				// zzfloor3 on its OWN section test65 — but NOT test65 itself: the read
+				// door's pair wants the section grant too.
+				grant(9, SPOOF_GRANTED_SECTION, FLOOR_FOREIGN_SOURCE, 1),
 			],
 		},
 	});
@@ -1013,6 +1029,28 @@ const FLOOR_SOURCES_SITUATION = situation({
 				filter_by_list: [{ section_tipo: SECTION, component_tipo: 'test162' }],
 			}),
 		},
+		// THE FORGED-SOURCE twins (refuter-surviving S1 on the floor): the same
+		// test162-naming request_config, on a component that does NOT belong to
+		// the section a forger pairs it with (zzfloor3 lives under test65; her
+		// matrix holds the stray pair test3_zzfloor3), and on members of the two
+		// sections every principal holds by RULE, not by profile (dd655 the
+		// editing presets, dd1324 the tools register).
+		...(
+			[
+				[FLOOR_FOREIGN_SOURCE, SPOOF_GRANTED_SECTION],
+				[FLOOR_PRESET_SOURCE, 'dd655'],
+				[FLOOR_TOOLS_SOURCE, 'dd1324'],
+			] as const
+		).map(([tipo, parent]) => ({
+			tipo,
+			parent,
+			model: 'component_portal',
+			term: { 'lg-eng': `zzfloor forged source under ${parent}` },
+			relations: [{ tipo: SECTION }],
+			properties: floorSourceProperties({
+				filter_by_list: [{ section_tipo: SECTION, component_tipo: 'test162' }],
+			}),
+		})),
 	],
 });
 
@@ -1429,6 +1467,73 @@ describe.if(DB_READY)('SEC-1 — the ROOT step of a search path is keyed too', (
 			});
 		});
 	}
+
+	// THE FLOOR IS MINTED ONLY FROM A SOURCE THE ONTOLOGY AND THE PROFILE BOTH
+	// VOUCH FOR (refuter-surviving S1, 2026-10-01). Both coordinates of
+	// rqo.source are the client's: before the fix, a component named against a
+	// section it does not belong to, or against a section every principal holds
+	// by RULE (dd655 = 2, dd1324 = 1, whatever the profile says), minted the
+	// floor of ITS request_config — test162, which she holds 0 on, became
+	// searchable and `count` a prefix oracle again. Each forged source must leave
+	// the search KEYED: HIT and MISS identical, through the read AND the count.
+	const countOf = async (rqo: Record<string, unknown>): Promise<number> => {
+		const { coreApiActions } = await import('../../src/core/api/handlers/dd_core_api.ts');
+		const count = coreApiActions.count;
+		if (count === undefined) throw new Error('dd_core_api.count is not registered');
+		const result = await count(
+			{ ...rqo, action: 'count' } as never,
+			{ requestId: 'zzfloor-forged', principal: FLOOR_USER } as never,
+		);
+		return Number((result.body as { data?: { total?: unknown } }).data?.total);
+	};
+	for (const [label, sectionTipo, tipo] of [
+		['the audit repro: a test3 portal named under dd655', 'dd655', FLOOR_FIXED_FILTER_SOURCE],
+		['a dd655 MEMBER (the blanket preset grant)', 'dd655', FLOOR_PRESET_SOURCE],
+		['a dd1324 MEMBER (the blanket tools-register grant)', 'dd1324', FLOOR_TOOLS_SOURCE],
+		[
+			'a component of test65 paired with test3 (a stray matrix pair)',
+			SECTION,
+			FLOOR_FOREIGN_SOURCE,
+		],
+		[
+			'a member of test65, component granted but NOT the section',
+			SPOOF_GRANTED_SECTION,
+			FLOOR_FOREIGN_SOURCE,
+		],
+	] as const) {
+		test(`FORGED SOURCE (${label}): mints no floor — read and count stay KEYED`, async () => {
+			// Non-degeneracy: the RAW level the old floor asked is >= 1 for each, so
+			// a floor that trusted it would serve test162 (the CONTROL below).
+			expect(await getPermissions(FLOOR_USER, sectionTipo, tipo)).toBeGreaterThanOrEqual(1);
+			expect(await getPermissions(FLOOR_USER, SECTION, ROOT_HIDDEN_LEAF)).toBe(0);
+			const source = { ...portalSource, section_tipo: sectionTipo, tipo };
+			const hitRqo = autocomplete('zzroot alpha*', ROOT_HIDDEN_LEAF, source);
+			const missRqo = autocomplete('zzroot alphx*', ROOT_HIDDEN_LEAF, source);
+			expect(await readIds(hitRqo, FLOOR_USER)).toEqual(await readIds(missRqo, FLOOR_USER));
+			expect(await countOf(hitRqo)).toBe(await countOf(missRqo));
+		});
+	}
+	test('FORGED SOURCE control: the same request_config through a VERIFIED source is served (read and count differ)', async () => {
+		const source = { ...portalSource, tipo: FLOOR_FILTER_BY_LIST_SOURCE };
+		const hitRqo = autocomplete('zzroot alpha*', ROOT_HIDDEN_LEAF, source);
+		const missRqo = autocomplete('zzroot alphx*', ROOT_HIDDEN_LEAF, source);
+		expect((await readIds(hitRqo, FLOOR_USER)).includes(alphaId)).toBe(true);
+		expect(await countOf(hitRqo)).toBeGreaterThan(await countOf(missRqo));
+	});
+	test("NOT OVER-EAGER: a VIRTUAL section source (zzvmain1 → test3) borrows test3's components and mints the floor", async () => {
+		expect(await getPermissions(FLOOR_USER, VIRTUAL_MAIN, FLOOR_FILTER_BY_LIST_SOURCE)).toBe(1);
+		const source = {
+			...portalSource,
+			section_tipo: VIRTUAL_MAIN,
+			tipo: FLOOR_FILTER_BY_LIST_SOURCE,
+		};
+		const hit = await readIds(autocomplete('zzroot alpha*', ROOT_HIDDEN_LEAF, source), FLOOR_USER);
+		const miss = await readIds(autocomplete('zzroot alphx*', ROOT_HIDDEN_LEAF, source), FLOOR_USER);
+		expect({ hitFinds: hit.includes(alphaId), missFinds: miss.includes(alphaId) }).toEqual({
+			hitFinds: true,
+			missFinds: false,
+		});
+	});
 
 	// "ANY COMPONENT" INCLUDES THE METADATA RELATIONS. An absent-from_component
 	// relation leaf on a dd128 locator (created by, dd200, lives OUTSIDE test3's

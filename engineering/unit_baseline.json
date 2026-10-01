@@ -1931,6 +1931,11 @@
 			"skipped": 0,
 			"assertions": 53
 		},
+		"test/unit/import_create_door_native.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 28
+		},
 		"test/unit/import_csv.test.ts": {
 			"tests": 12,
 			"skipped": 0,

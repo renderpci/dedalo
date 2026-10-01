@@ -334,6 +334,8 @@ const TRIPWIRES = [
 	'test/unit/ai_spend_budget_native.test.ts',
 	// Closure Step 3 req 7 — the change-plan validator asks the write door (2026-10-01).
 	'test/unit/change_plan_write_door_native.test.ts',
+	// Closure Step 3 req 10 residual — the importers' create door + legacy frame slots (2026-10-01).
+	'test/unit/import_create_door_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

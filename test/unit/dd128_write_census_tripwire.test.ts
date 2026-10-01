@@ -335,12 +335,12 @@ const CENSUS: Record<string, CensusRow> = {
 	'src/core/tools/import_execute.ts': {
 		verdict: 'delegates',
 		reason:
-			'importMappedRecords takes the importing PRINCIPAL and asks the write door per field: a matched record through authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), a new record and its fields through authorizeSectionTarget before the create; a refused field is reported IGNORED and never written (req 10). Matrix engine:import_execute.importMappedRecords DD1725 leg.',
+			'importMappedRecords takes the importing PRINCIPAL and asks the write door per field: a matched record through authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), a new record and its fields through authorizeSectionTarget before the create; a refused field is reported IGNORED and never written (req 10). Matrix engine:import_execute.importMappedRecords DD1725 leg (matched record); the create door: import_create_door_native (LEVEL_1 refused, zero rows; CONTROL created).',
 	},
 	'src/core/tools/import_csv_execute.ts': {
 		verdict: 'delegates',
 		reason:
-			'executeCsvImport takes the importing PRINCIPAL: a row that creates its record asks authorizeSectionTarget (section) first; every column — and every slot a legacy frame envelope names — of an existing record asks authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), of a new one authorizeSectionTarget (the pair); a refused column is reported IGNORED, never written, its metadata never applied (req 10). Matrix engine:import_csv_execute.executeCsvImport DD1725 leg.',
+			'executeCsvImport takes the importing PRINCIPAL: a row that creates its record asks authorizeSectionTarget (section) first; every column — and every slot a legacy frame envelope names — of an existing record asks authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), of a new one authorizeSectionTarget (the pair); a refused column is reported IGNORED, never written, its metadata never applied (req 10). Matrix engine:import_csv_execute.executeCsvImport DD1725 leg (existing record); the create door, the column pair of a created row and the legacy frame slots: import_create_door_native.',
 	},
 	'src/core/tools/transcription_asr.ts': {
 		verdict: 'PENDING',

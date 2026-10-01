@@ -942,6 +942,25 @@ export async function getAncestorSectionTipo(tipo: string): Promise<string | nul
 	return section;
 }
 
+/**
+ * Is `tipo` a node of SECTION `sectionTipo` — the honesty check on a client's
+ * (section_tipo, tipo) pair, two independent strings the ontology must tie
+ * together. Answered by the ontology's own ancestry walk
+ * ({@link getAncestorSectionTipo}), virtual-aware: a virtual section borrows
+ * its real section's children (a caller on `rsc170` legitimately names a
+ * component defined under `rsc2`), and a virtual section is never on a parent
+ * chain, so the DECLARED side is the one resolved ({@link getSectionRealTipo}).
+ * A tipo whose chain reaches no section belongs to none. Consumers: the area
+ * caller declaration (area/read.ts) and the subdatum read floor
+ * (security/read_floor.ts).
+ */
+export async function tipoBelongsToSection(tipo: string, sectionTipo: string): Promise<boolean> {
+	const ownSection = await getAncestorSectionTipo(tipo);
+	if (ownSection === null) return false;
+	if (ownSection === sectionTipo) return true;
+	return (await getSectionRealTipo(sectionTipo)) === ownSection;
+}
+
 /** One entry of the section census (listSectionNodes). */
 export interface SectionNodeEntry {
 	tipo: string;

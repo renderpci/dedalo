@@ -17,13 +17,31 @@
  *   - every path step its `fixed_filter` names (the pre-applied SQO clauses);
  *   - every `filter_by_list` field (the autocomplete's pre-filter checkboxes).
  *
- * VERIFIED, NEVER TRUSTED. The source arrives in the client's `rqo.source`; it
- * yields a floor ONLY when this module itself finds the caller holding >= 1 on
- * (source.section_tipo, source.tipo) — the read handler's Gate A predicate,
- * re-asked here so a caller that skipped Gate A cannot mint a floor. The pairs
- * are read off the ONTOLOGY (the source's own request_config), never off the
- * client payload and never off ALS. A section source (tipo === section_tipo, a
- * plain list) has no subdatum and no floor.
+ * VERIFIED, NEVER TRUSTED. The source arrives in the client's `rqo.source` —
+ * TWO independent client strings — and `count` has no Gate A at all, so this
+ * module re-asks everything itself. A floor is minted ONLY when all three hold:
+ *
+ *   1. MEMBERSHIP — `tipo` is a component OF `section_tipo` in the ontology
+ *      (`tipoBelongsToSection`, virtual-aware). Without it a caller pairs a
+ *      section she can read with ANY component tipo whose request_config names
+ *      the field she wants, and the matrix — data, not ontology — may even
+ *      hold that stray pair.
+ *   2. THE READ DOOR'S PAIR — the section read grant AND the component's own
+ *      (`authorizeComponentRead`'s predicate, security/read_door.ts), not the
+ *      component level alone.
+ *   3. A PROFILE BASIS on both halves (`getPermissionGrant`, GrantBasis) —
+ *      never a RULE grant. getPermissions answers dd655 = 2 and dd1324 = 1 for
+ *      ANY tipo and any principal; those rules are bounded where they were
+ *      written (dd655 by the assembler's owner predicate), and the floor
+ *      would carry the grant past that bound into an UNBOUNDED search of the
+ *      target section — the SEC-02 prefix oracle again (refuter-surviving S1,
+ *      2026-10-01). The superuser basis passes (level 3 everywhere already).
+ *
+ * The pairs are read off the ONTOLOGY (the source's own request_config), never
+ * off the client payload and never off ALS. A section source (tipo ===
+ * section_tipo, a plain list) has no subdatum and no floor. A refused source is
+ * not a refusal of the search — it is the ordinary keyed search — so nothing is
+ * noted. Gate: test/unit/search_path_acl_native.test.ts ("FORGED SOURCE").
  *
  * CACHED per (section, component) as an ontology fact: the pair set depends on
  * the node definitions only (the principal is consulted for the grant, never
@@ -32,8 +50,8 @@
  */
 
 import { createOntologyCache } from '../ontology/cache_factory.ts';
-import { getModelByTipo } from '../ontology/resolver.ts';
-import { getPermissions, type Principal } from './permissions.ts';
+import { getModelByTipo, tipoBelongsToSection } from '../ontology/resolver.ts';
+import { getPermissionGrant, type Principal } from './permissions.ts';
 
 /** The client-declared read source, as far as the floor cares. */
 export interface ReadFloorSource {
@@ -54,9 +72,28 @@ export async function subdatumReadFloor(
 	const coordinates = componentSource(source);
 	if (coordinates === null) return undefined;
 	if (!(await isComponentTipo(coordinates.tipo))) return undefined;
-	const level = await getPermissions(principal, coordinates.sectionTipo, coordinates.tipo);
-	if (level < 1) return undefined;
+	if (!(await tipoBelongsToSection(coordinates.tipo, coordinates.sectionTipo))) return undefined;
+	if (!(await profileReadPair(principal, coordinates.sectionTipo, coordinates.tipo))) {
+		return undefined;
+	}
 	return floorPairsOf(coordinates.sectionTipo, coordinates.tipo);
+}
+
+/**
+ * The read door's pair (section read grant, then the component's own), each
+ * answered by the caller's PROFILE (or the superuser), never by a rule — see
+ * the module header, step 3.
+ */
+async function profileReadPair(
+	principal: Principal,
+	sectionTipo: string,
+	tipo: string,
+): Promise<boolean> {
+	for (const pairTipo of [sectionTipo, tipo]) {
+		const grant = await getPermissionGrant(principal, sectionTipo, pairTipo);
+		if (grant.level < 1 || grant.basis === 'rule') return false;
+	}
+	return true;
 }
 
 /** (section, component) of a component source, or null for anything else. */
