@@ -4526,6 +4526,11 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/unit_test_dev_gate_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 18
+		},
 		"test/unit/unpublish_debt_native.test.ts": {
 			"tests": 5,
 			"skipped": 1,
