@@ -375,11 +375,13 @@ describe('tool_import_rdf: dereferencing an IRI through the harvesting door', ()
 			);
 			// Bounded well inside the client's 60 s wait (the door's default is 120 s).
 			expect(request.timeoutMs).toBe(15_000);
+			// The door's 30 s idle default, clamped to the total.
+			expect(request.idleTimeoutMs).toBe(15_000);
 			expect(request.maxBytes).toBe(20 * 1024 * 1024);
 		}
 	});
 
-	test('the `.rdf` fallback asks the file form of the IRI, fragment dropped, end to end', async () => {
+	test('a fragment IRI: the fallback asks the document’s file form (the drop itself: rdfFileUrl test)', async () => {
 		const site = linkedDataSite({
 			'https://ld.test/vocab': HTML_OK,
 			'https://ld.test/vocab.rdf': RDF_OK,
@@ -470,7 +472,16 @@ describe('tool_import_rdf: dereferencing an IRI through the harvesting door', ()
 		);
 		expect(rdfFileUrl('https://ld.test/id/rome.rdf')).toBeNull();
 		expect(rdfFileUrl('https://ld.test/id/rome/')).toBe('https://ld.test/id/rome.rdf');
+		expect(rdfFileUrl('https://ld.test/id/rome//')).toBe('https://ld.test/id/rome.rdf');
 		expect(rdfFileUrl('https://ld.test/')).toBeNull();
+		expect(rdfFileUrl('https://ld.test//')).toBeNull();
+		expect(rdfFileUrl('https://ld.test')).toBeNull();
+		// Any case already names the file.
+		expect(rdfFileUrl('https://ld.test/id/ROME.RDF')).toBeNull();
+		// No file form outside the web: the IRI itself is refused by the door.
+		expect(rdfFileUrl('urn:isbn:1')).toBeNull();
+		expect(rdfFileUrl('mailto:a@ld.test')).toBeNull();
+		expect(rdfFileUrl('file:///etc/passwd')).toBeNull();
 		expect(rdfFileUrl('not a url')).toBeNull();
 	});
 
@@ -541,6 +552,126 @@ describe('tool_import_rdf: dereferencing an IRI through the harvesting door', ()
 	});
 });
 
+/** Run `body` with the operator's debug ladder on (status coordinates on the wire). */
+async function withDebugErrors<T>(body: () => Promise<T>): Promise<T> {
+	const previous = process.env.DEDALO_DEBUG_API_ERRORS;
+	process.env.DEDALO_DEBUG_API_ERRORS = 'true';
+	try {
+		return await body();
+	} finally {
+		if (previous === undefined) Reflect.deleteProperty(process.env, 'DEDALO_DEBUG_API_ERRORS');
+		else process.env.DEDALO_DEBUG_API_ERRORS = previous;
+	}
+}
+
+/** The log-only HTTP status a failed outcome carries (debug ladder on). */
+function statusOf(outcome: RdfOutcome): unknown {
+	if (outcome.kind !== 'failed') throw new Error('expected a failure, it loaded');
+	const debug = (outcome.failure.error as { debug?: { coordinates?: { status?: unknown } } }).debug;
+	return debug?.coordinates?.status;
+}
+
+describe('tool_import_rdf: which failures end the attempt, and which one is told', () => {
+	test('between two error statuses the IRI’s own is told (410 over the guess’s 404)', async () => {
+		const site = linkedDataSite({ 'https://ld.test/id/rome': { status: 410 } });
+		const outcome = await withDebugErrors(() => loadRdf('https://ld.test/id/rome', [], site.deps));
+		expect(codeOf(outcome)).toBe('security.outbound_failed');
+		expect(statusOf(outcome)).toBe(410);
+		expect(documentsAsked(site)).toEqual([
+			'https://ld.test/id/rome',
+			'https://ld.test/id/rome.rdf',
+		]);
+	});
+
+	test('two wrong media types: the IRI’s own is told, not the guess’s', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': { status: 200, contentType: 'text/turtle', body: '@prefix' },
+			'https://ld.test/id/rome.rdf': HTML_OK,
+		});
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(codeOf(outcome)).toBe('harvest.unexpected_type');
+		expect(outcome.kind === 'failed' && outcome.failure.error.details?.content_type).toBe(
+			'text/turtle',
+		);
+	});
+
+	test('a refusal of the GUESSED address never replaces the IRI’s own answer', async () => {
+		// robots.txt disallows only the `.rdf` form; the IRI answered a web page.
+		const site = linkedDataSite({
+			'https://ld.test/robots.txt': {
+				status: 200,
+				contentType: 'text/plain',
+				body: 'User-agent: *\nDisallow: /id/rome.rdf',
+			},
+			'https://ld.test/id/rome': HTML_OK,
+		});
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(codeOf(outcome)).toBe('harvest.unexpected_type');
+		expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
+	});
+
+	for (const status of [408, 429, 500, 503]) {
+		test(`a ${status} says the SITE is unwell or busy: told, never retried at \`.rdf\``, async () => {
+			const site = linkedDataSite({
+				'https://ld.test/id/rome': { status },
+				'https://ld.test/id/rome.rdf': RDF_OK,
+			});
+			const outcome = await withDebugErrors(() =>
+				loadRdf('https://ld.test/id/rome', [], site.deps),
+			);
+			expect(codeOf(outcome)).toBe('security.outbound_failed');
+			expect(statusOf(outcome)).toBe(status);
+			expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
+		});
+	}
+
+	test('a body over the ceiling is harvest.too_large, and not retried', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': {
+				status: 0,
+				error: new DedaloError('security.outbound_failed', {
+					coordinates: { reason: 'body_cap', max_bytes: 20 * 1024 * 1024 },
+				}),
+			},
+			'https://ld.test/id/rome.rdf': RDF_OK,
+		});
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(codeOf(outcome)).toBe('harvest.too_large');
+		expect(outcome.kind === 'failed' && outcome.failure.error.details?.max_bytes).toBe(
+			20 * 1024 * 1024,
+		);
+		expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
+	});
+
+	test('an unreadable robots.txt is harvest.robots_unavailable: nothing is fetched', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/robots.txt': { status: 500 },
+			'https://ld.test/id/rome': RDF_OK,
+			'https://ld.test/id/rome.rdf': RDF_OK,
+		});
+		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+		expect(codeOf(outcome)).toBe('harvest.robots_unavailable');
+		expect(documentsAsked(site)).toEqual([]);
+	});
+
+	test('any public host is reachable (hosts: public, not an allowlist)', async () => {
+		const site = linkedDataSite({ 'https://viaf.org/viaf/1': RDF_OK });
+		subjectsOf(await loadRdf('https://viaf.org/viaf/1', [], site.deps));
+	});
+
+	test('a class-map is applied to the parsed subjects', async () => {
+		const site = linkedDataSite({ 'https://ld.test/id/rome': RDF_OK });
+		const outcome = await loadRdf(
+			'https://ld.test/id/rome',
+			[{ predicate: 'skos:prefLabel', component_tipo: 'test52' }],
+			site.deps,
+		);
+		expect(subjectsOf(outcome)).toEqual([
+			{ sectionId: null, fields: [{ component_tipo: 'test52', values: ['Rome'] }] },
+		]);
+	});
+});
+
 describe('tool_import_rdf: the per-call cap', () => {
 	async function call(values: unknown[]) {
 		const loaded = await getLoadedTool('tool_import_rdf');
@@ -552,9 +683,10 @@ describe('tool_import_rdf: the per-call cap', () => {
 		});
 	}
 
-	test(`more than ${RDF_MAX_URIS} IRIs is refused before any fetch, with a public typed error`, async () => {
-		// Addresses the guard refuses without a lookup: whatever the order, nothing
-		// leaves this machine; the call must still throw rather than answer.
+	test(`more than ${RDF_MAX_URIS} IRIs is refused with a public typed error`, async () => {
+		// Addresses the guard refuses without a lookup, so nothing leaves this machine
+		// whatever the order. That the cap runs BEFORE the fetch is the handler's
+		// order (rdfValues, then loadRdfBatch); this test does not observe it.
 		const values = Array.from({ length: RDF_MAX_URIS + 1 }, (_, i) => `http://127.0.0.${i + 1}/id`);
 		const refusal = await refusalOf(call(values));
 		expect(refusal.code).toBe('tool.too_many_items');
@@ -564,6 +696,18 @@ describe('tool_import_rdf: the per-call cap', () => {
 		expect(body.category).toBe('caller');
 		expect(body.label_key).toBe('error_tool_too_many_items');
 		expect(body.details).toEqual({ count: RDF_MAX_URIS + 1, limit: RDF_MAX_URIS });
+	});
+
+	test('ar_values must be a list of strings', async () => {
+		for (const ar_values of [
+			'https://ld.test/id/rome',
+			'x',
+			[42],
+			['https://ld.test/id/1', null],
+		]) {
+			const refusal = await refusalOf(call(ar_values as unknown[]));
+			expect(refusal.code, JSON.stringify(ar_values)).toBe('request.invalid_options');
+		}
 	});
 
 	test(`exactly ${RDF_MAX_URIS} IRIs pass the cap`, async () => {

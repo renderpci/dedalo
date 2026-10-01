@@ -250,52 +250,7 @@ const get_content_data_edit = async function(self) {
 							render_error_inline(view_rdf_data_wrapper, response.error)
 							return
 						}
-						const rdf_payload	= response_data(response) || {}
-						const ar_rdf		= Array.isArray(rdf_payload.rdf) ? rdf_payload.rdf : []
-						if (ar_rdf.length<1) {
-							view_rdf_data_wrapper.innerHTML = 'Empty results';
-							return
-						}
-
-					// Render the parsed graph of each imported URI. The server returns the
-					// PARSED subjects (mapped through the tool's class-map when it has
-					// one), never an HTML dump — so the readout is the data itself, one
-					// block per URI instead of the previous single overwrite.
-						view_rdf_data_wrapper.innerHTML = ''
-						for (let i = 0; i < ar_rdf.length; i++) {
-
-							const entry = ar_rdf[i]
-							ui.create_dom_element({
-								element_type	: 'h4',
-								text_content	: entry.uri || '',
-								parent			: view_rdf_data_wrapper
-							})
-							ui.create_dom_element({
-								element_type	: 'pre',
-								class_name		: 'rdf_subjects',
-								text_content	: JSON.stringify(entry.subjects, null, 2),
-								parent			: view_rdf_data_wrapper
-							})
-						}
-
-					// per-URI refusals: payload facts (one bad URI never fails the batch),
-					// each `{uri, error}` — `error` the same wire body a failed call carries,
-					// so it is rendered as one: `error_text` (the user's-language label
-					// filled from `details`, else the public `message`), never log text.
-						const uri_failures	= rdf_payload.errors
-						const ar_uri_errors	= Array.isArray(uri_failures) ? uri_failures : []
-						if (ar_uri_errors.length>0) {
-							const lines = ar_uri_errors.map(function(item) {
-								const message = (item && item.error) ? error_text(item.error) : ''
-								return ((item && item.uri) || '') + ': ' + message
-							})
-							ui.create_dom_element({
-								element_type	: 'pre',
-								class_name		: 'error',
-								text_content	: lines.join('\n'),
-								parent			: view_rdf_data_wrapper
-							})
-						}
+						render_rdf_payload(view_rdf_data_wrapper, response_data(response) || {})
 
 					// update list
 						// self.load_section(section_tipo)
@@ -336,6 +291,68 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_RDF_PAYLOAD
+* Render a successful get_rdf_data payload into `wrapper` (replacing its content).
+*
+* The payload is `{rdf:[{uri,subjects}], errors:[{uri,error}]}`
+* (tools/tool_import_rdf/server/index.ts loadRdfBatch). Each loaded URI gets its
+* PARSED subjects (mapped through the tool's class-map when it has one), one block
+* per URI. Each failed URI gets one line: `error_text` (the user's-language label
+* filled from `details`, else the public `message`), never log text — `error` is
+* the same wire body a failed call carries.
+*
+* The per-URI failures are rendered even when NO URI loaded: the form sends one
+* IRI, so when it fails `rdf` is empty, and the failure (a robots.txt refusal, a
+* web page where RDF was expected) is the only thing worth showing.
+* 'Empty results' is shown only when the payload holds neither.
+*
+* @param {HTMLElement} wrapper - the result pane (emptied first).
+* @param {Object} rdf_payload - the response's `data`.
+* @returns {void}
+*/
+export const render_rdf_payload = function(wrapper, rdf_payload) {
+
+	const ar_rdf		= Array.isArray(rdf_payload.rdf) ? rdf_payload.rdf : []
+	const ar_uri_errors	= Array.isArray(rdf_payload.errors) ? rdf_payload.errors : []
+
+	wrapper.innerHTML = ''
+	if (ar_rdf.length<1 && ar_uri_errors.length<1) {
+		wrapper.textContent = 'Empty results'
+		return
+	}
+
+	for (let i = 0; i < ar_rdf.length; i++) {
+		const entry = ar_rdf[i]
+		ui.create_dom_element({
+			element_type	: 'h4',
+			text_content	: entry.uri || '',
+			parent			: wrapper
+		})
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'rdf_subjects',
+			text_content	: JSON.stringify(entry.subjects, null, 2),
+			parent			: wrapper
+		})
+	}
+
+	if (ar_uri_errors.length>0) {
+		const lines = ar_uri_errors.map(function(item) {
+			const message = (item && item.error) ? error_text(item.error) : ''
+			return ((item && item.uri) || '') + ': ' + message
+		})
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'error',
+			text_content	: lines.join('\n'),
+			parent			: wrapper
+		})
+	}
+}//end render_rdf_payload
 
 
 

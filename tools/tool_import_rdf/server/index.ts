@@ -90,21 +90,32 @@ async function assertLocatorWrite(
  */
 export const RDF_MAX_URIS = 3;
 
-/** The IRIs to dereference; none, or more than `RDF_MAX_URIS`, is a caller error. */
-function rdfValues(options: Record<string, unknown>): string[] {
+/** `ar_values` as a non-empty list of strings, or a caller error. */
+function rdfValueList(options: Record<string, unknown>): string[] {
 	const values = options.ar_values ?? [];
 	if (!Array.isArray(values) || values.length === 0) {
 		throw new DedaloError('request.invalid_options', {
 			publicMessage: 'Missing ar_values (RDF URIs)',
 		});
 	}
+	if (!values.every((value) => typeof value === 'string')) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'ar_values must be a list of RDF URIs (strings)',
+		});
+	}
+	return values;
+}
+
+/** The IRIs to dereference; none, a non-string, or more than `RDF_MAX_URIS` is a caller error. */
+function rdfValues(options: Record<string, unknown>): string[] {
+	const values = rdfValueList(options);
 	if (values.length > RDF_MAX_URIS) {
 		throw new DedaloError('tool.too_many_items', {
 			details: { count: values.length, limit: RDF_MAX_URIS },
 			coordinates: { tool: 'tool_import_rdf' },
 		});
 	}
-	return values as string[];
+	return values;
 }
 
 /** The class-map the caller supplied (`tool_config.config.main`), or none. */
@@ -146,10 +157,12 @@ function rdfRequest(url: string, accepted: readonly string[]): HarvestRequest {
 type RdfAttempt = { kind: 'document'; text: string } | { kind: 'not_rdf'; error: DedaloError };
 
 /**
- * Ask for one document. A non-2xx answer or a 2xx of another media type means
- * "not RDF/XML here" (`not_rdf`); every other failure — a refused address, a
- * robots.txt that says no, a timeout — is thrown, because asking the same site
- * again would only meet it again.
+ * Ask for one document. A 4xx answer (the document is not at this address) or a
+ * 2xx of another media type means "not RDF/XML here" (`not_rdf`). Every other
+ * failure is thrown, because asking the same site again would only meet it again:
+ * a refused address, a robots.txt that says no, a timeout — and a 5xx, a 408 or a
+ * 429, which say the SITE is unwell or busy (asking again would also wait out its
+ * `Retry-After`).
  */
 async function attemptRdf(
 	url: string,
@@ -159,13 +172,21 @@ async function attemptRdf(
 	try {
 		const response = await harvestFetch(rdfRequest(url, accepted), deps);
 		if (response.ok) return { kind: 'document', text: response.text() };
-		return { kind: 'not_rdf', error: statusFailure(response.status) };
+		if (meansNotHere(response.status)) {
+			return { kind: 'not_rdf', error: statusFailure(response.status) };
+		}
+		throw statusFailure(response.status);
 	} catch (error) {
 		if (isDedaloError(error) && error.code === 'harvest.unexpected_type') {
 			return { kind: 'not_rdf', error };
 		}
 		throw error;
 	}
+}
+
+/** A 4xx that says "not at this address" — not a timeout (408) nor a rate limit (429). */
+function meansNotHere(status: number): boolean {
+	return status >= 400 && status < 500 && status !== 408 && status !== 429;
 }
 
 /** A non-2xx final answer, typed as the single-call door types it (status log-only). */
@@ -178,18 +199,22 @@ function statusFailure(status: number): DedaloError {
 
 /**
  * The `<iri>.rdf` file form of an IRI, or null when there is none to try: the
- * IRI is not a URL, or already names a `.rdf` file. The fragment is dropped (a
- * `vocab#Term` IRI's document is `vocab`, never `vocab#Term.rdf`).
+ * IRI is not an http(s) URL, has no path, or already names a `.rdf` file (any
+ * case). The fragment is dropped (a `vocab#Term` IRI's document is `vocab`, never
+ * `vocab#Term.rdf`), and so are trailing slashes (`id/` → `id.rdf`).
  */
 export function rdfFileUrl(iri: string): string | null {
 	const url = URL.parse(iri);
-	// A trailing `/` names the resource without it (`id/` → `id.rdf`); the root has none.
-	const path = url?.pathname.replace(/\/$/, '') ?? '';
-	if (url === null || path === '' || path.endsWith('.rdf')) return null;
+	if (url === null || !WEB_PROTOCOLS.has(url.protocol)) return null;
+	const path = url.pathname.replace(/\/+$/, '');
+	if (path === '' || path.toLowerCase().endsWith('.rdf')) return null;
 	url.hash = '';
 	url.pathname = `${path}.rdf`;
 	return url.toString();
 }
+
+/** The schemes an `.rdf` file form exists for. */
+const WEB_PROTOCOLS: ReadonlySet<string> = new Set(['http:', 'https:']);
 
 /**
  * The RDF/XML document for `iri`: content negotiation on the IRI itself, then —
@@ -202,18 +227,23 @@ async function fetchRdfXml(iri: string, deps: HarvestDeps): Promise<string> {
 	if (negotiated.kind === 'document') return negotiated.text;
 	const file = rdfFileUrl(iri);
 	if (file === null) throw negotiated.error;
-	const retried = await attemptRdf(file, RDF_FILE_TYPES, deps);
+	const retried = await attemptRdf(file, RDF_FILE_TYPES, deps).catch(
+		(error: unknown): RdfAttempt => ({ kind: 'not_rdf', error: toDedaloError(error) }),
+	);
 	if (retried.kind === 'document') return retried.text;
 	throw tellingFailure(negotiated.error, retried.error);
 }
 
 /**
- * Which of the two "not RDF/XML" answers the cataloguer is told. A wrong media
- * type says what the site serves (usually a web page) and wins; between two
- * error statuses, the IRI's own wins — the `.rdf` form was our guess.
+ * Which failure the cataloguer is told when both forms failed. The IRI is what
+ * they picked; the `.rdf` form was our guess. So the IRI's own answer wins —
+ * also over any refusal of the guessed address (its own robots.txt rule, say) —
+ * with ONE exception: when the IRI only answered an error status and the guess
+ * answered a file of the wrong type, that type says more about the site.
  */
 function tellingFailure(negotiated: DedaloError, retried: DedaloError): DedaloError {
-	return retried.code === 'harvest.unexpected_type' ? retried : negotiated;
+	const statusOnly = negotiated.code === 'security.outbound_failed';
+	return statusOnly && retried.code === 'harvest.unexpected_type' ? retried : negotiated;
 }
 
 /**

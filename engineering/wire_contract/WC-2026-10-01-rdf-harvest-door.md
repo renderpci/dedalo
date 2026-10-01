@@ -14,17 +14,22 @@
 - **Shape after:**
   - The IRI itself is asked first (`Accept: application/rdf+xml, application/xml;q=0.9,
     text/xml;q=0.8`; only RDF/XML or XML accepted); redirects are followed hop by hop
-    under the door's rules. A non-2xx or non-XML answer is retried ONCE at `<iri>.rdf`
-    (fragment and trailing `/` dropped; never when the IRI already ends in `.rdf`), where
-    `application/octet-stream` and `text/plain` are accepted too.
+    under the door's rules. A 4xx other than 408/429, or a 2xx that is not XML, is
+    retried ONCE at `<iri>.rdf` (http(s) only; fragment and trailing slashes dropped;
+    never when the IRI already ends in `.rdf`, any case), where
+    `application/octet-stream` and `text/plain` are accepted too. A 5xx, 408 or 429
+    is final.
   - `uri` (both lists) is the IRI as sent, not the URL that answered.
   - New per-URI `error.code`s: `harvest.robots_disallowed`,
     `harvest.robots_unavailable`, `harvest.unexpected_type`, `harvest.refused`,
     `harvest.too_large`; `security.ssrf_blocked` may now come from a redirect hop.
     `security.outbound_failed` remains for an HTTP error status on both forms, a
-    timeout, a network failure. When both forms fail, the reported error is
-    `harvest.unexpected_type` if either answered a wrong media type, else the
-    IRI's own (`tellingFailure`).
+    timeout, a network failure. When both forms fail, the IRI's own failure is
+    reported (also over a refusal of the guessed address), except a status-only
+    IRI failure beside a wrong-type `.rdf` answer, which reports the latter
+    (`tellingFailure`).
+  - `ar_values` that is not an array of strings fails the CALL: 400
+    `request.invalid_options` (a non-string item used to be fetched as text).
   - More than 3 `ar_values` fails the CALL: 400 `tool.too_many_items`
     (public, `details: {count, limit}`), before any fetch.
 - **Reason:** the single-call door's redirect refusal made the tool fail on the

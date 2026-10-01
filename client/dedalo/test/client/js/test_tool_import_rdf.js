@@ -16,9 +16,11 @@
  *   - construction seeds the documented instance properties,
  *   - the prototype is wired with the common + tool-specific lifecycle methods.
  *
- * This is the locked client template (layer 1: module-load + construct + wiring).
+ * This is the locked client template (layer 1: module-load + construct + wiring),
+ * plus the result pane (`render_rdf_payload`), driven with payload literals.
  */
 
+import {render_rdf_payload} from '../../../tools/tool_import_rdf/js/render_tool_import_rdf.js'
 import {tool_import_rdf} from '../../../tools/tool_import_rdf/js/tool_import_rdf.js'
 
 
@@ -59,6 +61,48 @@ describe('TOOL_IMPORT_RDF CLIENT TEST', function() {
 		assert.equal(typeof tool_import_rdf.prototype.init, 'function', 'expected init defined')
 		assert.equal(typeof tool_import_rdf.prototype.build, 'function', 'expected build defined')
 		assert.equal(typeof tool_import_rdf.prototype.get_rdf_data, 'function', 'expected get_rdf_data defined')
+	})
+
+	// The result pane, driven with the payload shapes get_rdf_data answers
+	// (tools/tool_import_rdf/server/index.ts loadRdfBatch).
+	const robots_refusal = {
+		uri		: 'https://ld.test/id/rome',
+		error	: {
+			code		: 'harvest.robots_disallowed',
+			category	: 'permission',
+			message		: "The site's robots.txt does not allow automated access to this address",
+			label_key	: 'error_harvest_robots_disallowed',
+			retryable	: false,
+			details		: {site : 'https://ld.test'}
+		}
+	}
+
+	it('a failed IRI is shown even when no IRI loaded (the form sends one)', function() {
+		const wrapper = document.createElement('div')
+		render_rdf_payload(wrapper, {rdf : [], errors : [robots_refusal]})
+		const error_node = wrapper.querySelector('pre.error')
+		assert.ok(error_node, 'expected the per-URI error line')
+		assert.ok(error_node.textContent.startsWith('https://ld.test/id/rome: '), 'expected the IRI as the line prefix')
+		assert.ok(error_node.textContent.length > 'https://ld.test/id/rome: '.length, 'expected a message after the prefix')
+		assert.notOk(wrapper.textContent.includes('Empty results'), 'a failure is not an empty result')
+	})
+
+	it('loaded subjects and failures render together', function() {
+		const wrapper = document.createElement('div')
+		render_rdf_payload(wrapper, {
+			rdf		: [{uri : 'https://ld.test/id/athens', subjects : [{about : 'https://ld.test/id/athens'}]}],
+			errors	: [robots_refusal]
+		})
+		assert.equal(wrapper.querySelector('h4').textContent, 'https://ld.test/id/athens')
+		assert.ok(wrapper.querySelector('pre.rdf_subjects').textContent.includes('athens'))
+		assert.ok(wrapper.querySelector('pre.error'), 'expected the failure line too')
+	})
+
+	it('nothing loaded and nothing failed is an empty result', function() {
+		const wrapper = document.createElement('div')
+		wrapper.textContent = 'previous'
+		render_rdf_payload(wrapper, {})
+		assert.equal(wrapper.textContent, 'Empty results')
 	})
 
 })
