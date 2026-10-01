@@ -111,8 +111,10 @@ describe('component_dataframe — the rating chip reads its own row', () => {
  * the datum reversed (solved first), get_rating took the first match and the
  * chip threw `rating_data.datalist.find` on undefined, killing the refresh.
  */
-const DATALIST_A = [{ section_id: 3, hide: [{ literal: '#ff0000' }] }];
-const DATALIST_B = [{ section_id: 3, hide: [{ literal: '#00ff00' }] }];
+// identity fixtures: get_rating's choice is asserted by datalist identity, so the
+// literal is only a marker (the paint test below builds its own, from the palette)
+const DATALIST_A = [{ section_id: 3, hide: [{ literal: 'option_a' }] }];
+const DATALIST_B = [{ section_id: 3, hide: [{ literal: 'option_b' }] }];
 
 // the same frame child emitted in `mode`, optionally with a datalist
 const moded_item = (mode, datalist) => {
@@ -190,7 +192,8 @@ describe('component_dataframe — a rating without datalist paints the default c
 		probe.style.backgroundColor = color;
 		return probe.style.backgroundColor;
 	};
-	const default_color = () => normalized(ui.css_var('--color_blue_3', '#006ed2'));
+	// read from the page palette, never spelled here (colour_literal_ratchet_tripwire)
+	const default_color = () => normalized(ui.css_var('--color_blue_3'));
 
 	const views = {
 		view_default_list_dataframe: view_default_list_dataframe,
@@ -204,7 +207,11 @@ describe('component_dataframe — a rating without datalist paints the default c
 		};
 
 		it(`${name}: control — a datalist option paints its literal`, async () => {
-			assert.strictEqual(await chip_color(moded_item('edit', DATALIST_A)), 'rgb(255, 0, 0)');
+			// a palette colour that is NOT the default, so the control discriminates
+			const literal = ui.css_var('--color_orange_dedalo');
+			assert.notStrictEqual(normalized(literal), default_color());
+			const datalist = [{ section_id: 3, hide: [{ literal }] }];
+			assert.strictEqual(await chip_color(moded_item('edit', datalist)), normalized(literal));
 		});
 
 		it(`${name}: a set rating WITHOUT datalist does not throw and paints the default`, async () => {

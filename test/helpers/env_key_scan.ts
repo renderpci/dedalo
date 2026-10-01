@@ -98,7 +98,16 @@ export interface EnvKeyCallSite {
 export function envKeyCallSites(): readonly EnvKeyCallSite[] {
 	const sites: EnvKeyCallSite[] = [];
 	for (const file of new Glob('src/**/*.ts').scanSync(REPO_ROOT)) {
-		const source = readFileSync(join(REPO_ROOT, file), 'utf8');
+		// A file listed but gone before the read is not in the tree: the gates run
+		// concurrently, and lint_scope_tripwire plants (then removes) a probe .ts in
+		// src/ subdirectories — that race reddened this scan with ENOENT.
+		let source: string;
+		try {
+			source = readFileSync(join(REPO_ROOT, file), 'utf8');
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+			throw error;
+		}
 		// Line starts, so an offset becomes a line number without re-splitting per match.
 		const lineStarts: number[] = [0];
 		for (let i = 0; i < source.length; i++) if (source[i] === '\n') lineStarts.push(i + 1);
