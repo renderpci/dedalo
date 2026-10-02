@@ -43,7 +43,7 @@
  */
 
 import { config } from '../../../src/config/config.ts';
-import { isMonovalueModel } from '../../../src/core/components/registry.ts';
+import { isDerivedModel, isMonovalueModel } from '../../../src/core/components/registry.ts';
 import { regionOf } from '../../../src/core/concepts/lang_region.ts';
 import { BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
@@ -236,6 +236,17 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 			coordinates: { tipo: componentTipo },
 			message: `unknown component tipo: ${componentTipo}`,
 		});
+	}
+	// A DERIVED component (registry isDerivedModel) owns no stored value: the
+	// region read below would be the leftover bytes under its tipo, never the
+	// computed list, and for component_relation_children the set_data of
+	// `region ± value` re-parents every real child missing from it. Refused
+	// before the search and the dd800 mint — nothing is written (the CSV
+	// import's twin rule, WC-2026-10-02-relation-children-write-through).
+	if (isDerivedModel(model)) {
+		throw invalidRequest(
+			`'${model}' is derived (computed, nothing stored) — it cannot be propagated`,
+		);
 	}
 	// The value law is the `monovalue` descriptor facet (registry isMonovalueModel)
 	// — this tool used to carry its own copy of the PHP list (DATA-14).

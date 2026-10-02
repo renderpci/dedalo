@@ -12,10 +12,11 @@
  * below goes red with the saveComponentData branch removed.
  *
  * ALSO PINNED: the per-child authorization (every child asked BEFORE any is
- * written — a refused child leaves the others untouched), the bulk id on each
- * child's Time Machine rows (and the bulk revert restoring them), the derived
- * facet's two consumers (update_cache skips the field, the CSV import refuses
- * the column — at the door AND at the executor's backstop).
+ * written — joining AND leaving: an unlink re-parents the child too — and a
+ * refused child leaves the others untouched), the bulk id on each child's Time
+ * Machine rows (and the bulk revert restoring them), the derived facet's
+ * consumers (update_cache skips the field, propagate refuses it, the CSV import
+ * refuses the column — at the door AND at the executor's backstop).
  *
  * ANTI-VACUITY: every case proves the child IS read as a child before a write
  * that removes it (a clear of an empty list is free), and every "nothing
@@ -154,6 +155,14 @@ function save(
 		principal: actor,
 		bulkProcessId: options.bulkProcessId,
 	});
+}
+
+/** The highest dd800 run id (proves a refusal minted no run record). */
+async function maxDd800(): Promise<number> {
+	const rows = (await sql.unsafe(
+		`SELECT COALESCE(MAX(section_id), 0)::int AS id FROM "${bulkTable}" WHERE section_tipo = 'dd800'`,
+	)) as { id: number }[];
+	return Number(rows[0]?.id ?? 0);
 }
 
 function childLocator(id: number, section_tipo = SECTION): Record<string, unknown> {
@@ -456,6 +465,58 @@ describe('every child is authorized before any is written', () => {
 	});
 });
 
+describe('a LEAVING child is authorized too — unlinking re-parents it', () => {
+	test('clearing the field with an out-of-scope child refuses; every child keeps its link', async () => {
+		const parent = await createDoorRecord(SECTION, AUTHZ_PROJECT_P);
+		const inScope = await createDoorRecord(SECTION, AUTHZ_PROJECT_P);
+		const outOfScope = await createDoorRecord(SECTION, AUTHZ_PROJECT_Q);
+		await seedParentLinks(inScope, [link(parent, 'dd47', 1)]);
+		await seedParentLinks(outOfScope, [link(parent, 'dd47', 1)]);
+		// Anti-vacuity: both ARE read as children before the clear.
+		expect(await childIds(parent)).toEqual(sorted([inScope, outOfScope]));
+
+		expect(
+			await codeOf(
+				save(parent, [{ action: 'clear', id: null, value: null }], { actor: ids.treeEditor }),
+			),
+		).toBe('perm.out_of_scope');
+		expect(await linksOf(inScope)).toEqual([link(parent, 'dd47', 1)]);
+		expect(await linksOf(outOfScope)).toEqual([link(parent, 'dd47', 1)]);
+		expect(await childIds(parent)).toEqual(sorted([inScope, outOfScope]));
+	});
+
+	test('removing an out-of-scope child by locator refuses; it keeps its link', async () => {
+		const parent = await createDoorRecord(SECTION, AUTHZ_PROJECT_P);
+		const outOfScope = await createDoorRecord(SECTION, AUTHZ_PROJECT_Q);
+		await seedParentLinks(outOfScope, [link(parent, 'dd47', 1)]);
+		expect(await childIds(parent)).toEqual([outOfScope]);
+
+		expect(
+			await codeOf(
+				save(parent, [{ action: 'remove', id: null, value: childLocator(outOfScope) }], {
+					actor: ids.treeEditor,
+				}),
+			),
+		).toBe('perm.out_of_scope');
+		expect(await linksOf(outOfScope)).toEqual([link(parent, 'dd47', 1)]);
+	});
+
+	test('removing an in-scope child by locator writes (positive control for the two refusals)', async () => {
+		const parent = await createDoorRecord(SECTION, AUTHZ_PROJECT_P);
+		const inScope = await createDoorRecord(SECTION, AUTHZ_PROJECT_P);
+		await seedParentLinks(inScope, [link(parent, 'dd47', 1)]);
+		expect(await childIds(parent)).toEqual([inScope]);
+
+		const outcome = await save(
+			parent,
+			[{ action: 'remove', id: null, value: childLocator(inScope) }],
+			{ actor: ids.treeEditor },
+		);
+		expect(outcome.ok).toBe(true);
+		expect(await linksOf(inScope)).toEqual([]);
+	});
+});
+
 describe('history: each child carries the caller’s bulk id, and the bulk revert restores it', () => {
 	test('one TM row per child key under the run id; reverting the run relinks the removed child', async () => {
 		const parent = await newRecord();
@@ -531,6 +592,50 @@ describe('the derived facet: no door replays a children field’s own bytes', ()
 		expect(await childIds(parent)).toEqual([child]);
 		expect(await linksOf(stranger)).toEqual([]);
 		expect((await columnOf(parent, 'relation'))[CHILDREN_TIPO]).toEqual(leftover);
+	}, 60_000);
+
+	test('tool_propagate_component_data refuses a children field — leftover bytes never re-parent anything', async () => {
+		const parent = await newRecord();
+		const child = await newRecord();
+		const stranger = await newRecord();
+		await seedParentLinks(child, [link(parent, 'dd47', 1)]);
+		// Leftovers under the children tipo: the region propagate would decide over.
+		await seedKey(parent, CHILDREN_TIPO, []);
+		expect(await childIds(parent)).toEqual([child]);
+		const dd800Before = await maxDd800();
+
+		const loaded = await getLoadedTool('tool_propagate_component_data');
+		const handler = mustGet(
+			loaded?.module.apiActions.propagate_component_data,
+			'propagate_component_data',
+		).handler;
+		for (const action of ['add', 'replace', 'delete']) {
+			const code = await codeOf(
+				handler({
+					principal,
+					userId: SUPERUSER_ID,
+					background: false,
+					options: {
+						section_tipo: SECTION,
+						component_tipo: CHILDREN_TIPO,
+						action,
+						lang: 'lg-nolan',
+						total: 1,
+						propagate_data_value: [childLocator(stranger)],
+						sqo: {
+							section_tipo: [SECTION],
+							filter_by_locators: [{ section_tipo: SECTION, section_id: String(parent) }],
+						},
+					},
+				}),
+			);
+			expect(code, action).toBe('request.invalid_options');
+		}
+		expect(await childIds(parent)).toEqual([child]);
+		expect(await linksOf(child)).toEqual([link(parent, 'dd47', 1)]);
+		expect(await linksOf(stranger)).toEqual([]);
+		// Refused before the run record is minted.
+		expect(await maxDd800()).toBe(dd800Before);
 	}, 60_000);
 
 	test('the CSV import refuses a children column (replace mode too) — the file, before any dd800 or write', async () => {

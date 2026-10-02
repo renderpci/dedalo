@@ -59,7 +59,10 @@ in replace mode was accepted.
    ARE read): `update_cache` skips such a component server-side and reports it
    (`derived_skipped`); the CSV import refuses a column on it in ANY mode, at the
    validate/import door (the whole file, before the dd800 record) and at the executor
-   (`request.invalid_data`).
+   (`request.invalid_data`); `tool_propagate_component_data` refuses it in every action
+   (`request.invalid_options`, before the search and the dd800 record) — its region is the
+   stored key, i.e. the leftover bytes, and a `set_data` of `region ± value` would unlink
+   every real child missing from it.
 7. Client: `component_relation_children` is a `component_portal` SUBCLASS (no longer the
    same constructor): `get_unlink_changed_data` sends the remove by locator,
    `reorderable = false` (no drag handle / drag source), `sort_data` sends nothing. The

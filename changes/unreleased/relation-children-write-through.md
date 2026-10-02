@@ -16,8 +16,9 @@ was part of a batch run. A link that would make a record its own ancestor is ref
 with an error, and the children cannot be reordered by dragging in this field (each
 child keeps its own order, as in the tree).
 
-Two batch tools no longer touch a Children field: **Update cache** skips it (it holds
-nothing to regenerate) and a CSV import refuses a column mapped to it — import the
-Parent column on the child records instead. Administrators can remove the leftover
+Three batch tools no longer touch a Children field: **Update cache** skips it (it holds
+nothing to regenerate), **Propagate component data** refuses it, and a CSV import
+refuses a column mapped to it — import or propagate the Parent field on the child
+records instead. Administrators can remove the leftover
 bytes the old behaviour stored with `bun scripts/relation_children_orphan_sweep.ts`
 (a dry run that lists them; add `--apply` to remove them).

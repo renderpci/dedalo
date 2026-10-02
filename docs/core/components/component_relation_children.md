@@ -230,9 +230,9 @@ Accepted actions: `set_data` (the whole list, or `null`), `clear`, `insert`,
 own value. A link that would make a record its own ancestor is refused
 (`tree.cycle`); a link to a missing record or to the record itself is ignored.
 
-Because nothing is stored, **Update cache** skips the component, and a CSV import
-refuses a column mapped to it (import the Parent column on the child records
-instead). Bytes an older version stored under its tipo are never read; an
+Because nothing is stored, **Update cache** skips the component, **Propagate component
+data** refuses it, and a CSV import refuses a column mapped to it (import or propagate
+the Parent field on the child records instead). Bytes an older version stored under its tipo are never read; an
 administrator can list and remove them with
 `bun scripts/relation_children_orphan_sweep.ts` (`--apply` to remove).
 
