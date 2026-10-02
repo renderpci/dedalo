@@ -9,7 +9,12 @@ import { NO_LANG } from '../../../src/config/data_langs.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
-import { ok } from '../../../src/core/errors/index.ts';
+import {
+	type ApiErrorBody,
+	ok,
+	toDedaloError,
+	toErrorBody,
+} from '../../../src/core/errors/index.ts';
 import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
 import {
 	processUploadedFile,
@@ -577,7 +582,11 @@ async function importDocumentForPublication(
 	context: ToolActionContext,
 	publication: Record<string, unknown>,
 	sectionId: number,
-): Promise<{ pdfUrl: string | null; documentImported: boolean; documentError: string | null }> {
+): Promise<{
+	pdfUrl: string | null;
+	documentImported: boolean;
+	documentError: ApiErrorBody | null;
+}> {
 	const existingPdfUrl = publication.pdfUrl;
 	const pdfUrl =
 		typeof existingPdfUrl === 'string' && existingPdfUrl !== ''
@@ -592,7 +601,9 @@ async function importDocumentForPublication(
 		return {
 			pdfUrl,
 			documentImported: false,
-			documentError: `No source adapter recognizes this PDF's host: ${pdfUrl}`,
+			documentError: toErrorBody(
+				new DedaloError('external.not_registered', { coordinates: { pdfUrl } }),
+			),
 		};
 	}
 
@@ -607,7 +618,11 @@ async function importDocumentForPublication(
 		return {
 			pdfUrl,
 			documentImported: false,
-			documentError: `Server returned HTTP ${pdfResponse.status} for the PDF.`,
+			documentError: toErrorBody(
+				new DedaloError('external.http_status', {
+					coordinates: { source: 'pdf', url: pdfUrl, status: pdfResponse.status },
+				}),
+			),
 		};
 	}
 	const bytes = pdfResponse.bytes;
@@ -627,7 +642,13 @@ async function importDocumentForPublication(
 		context.userId,
 	);
 	if (staged.tmpName === undefined) {
-		return { pdfUrl, documentImported: false, documentError: 'PDF upload did not stage a file.' };
+		return {
+			pdfUrl,
+			documentImported: false,
+			documentError: toErrorBody(
+				new DedaloError('tool.action_failed', { message: 'PDF upload did not stage a file.' }),
+			),
+		};
 	}
 
 	const spec = requireMediaSpec('component_pdf');
@@ -717,7 +738,9 @@ function shortPublicationCode(identifier: string, landingPageUrl: string | null)
 	}
 }
 
-/** One publication's outcome from commitPublications. */
+/** One publication's outcome from commitPublications. Every `*_error` is the error system's wire
+ * body (toErrorBody(toDedaloError(...))), never a raw `(error as Error).message` - review item E2:
+ * that raw text can carry tipos, ids and SQL driver text to the client. */
 interface CommitOnePublicationResult {
 	publication_identifier: unknown;
 	section_tipo: string;
@@ -725,18 +748,18 @@ interface CommitOnePublicationResult {
 	// write rolled back before creating anything) - `error` names why. A
 	// partial record is never left behind: review item C1.
 	section_id: number | null;
-	error: string | null;
+	error: ApiErrorBody | null;
 	/** True when an rsc205 record with this Code already existed - nothing else in this result was
 	 * attempted, section_id names the pre-existing record. */
 	skipped: boolean;
 	fields_written: string[];
 	series_section_id: number | null;
 	series_created: boolean | null;
-	series_error: string | null;
+	series_error: ApiErrorBody | null;
 	author_section_ids: number[];
-	author_errors: string[];
+	author_errors: ApiErrorBody[];
 	document_imported: boolean;
-	document_error: string | null;
+	document_error: ApiErrorBody | null;
 }
 
 /**
@@ -936,7 +959,7 @@ async function commitOnePublication(
 
 	let seriesSectionId: number | null = null;
 	let seriesCreated: boolean | null = null;
-	let seriesError: string | null = null;
+	let seriesError: ApiErrorBody | null = null;
 	if (typeof p.seriesName === 'string' && p.seriesName.trim() !== '') {
 		try {
 			const resolved = await resolveSeriesCached(context, seriesCache, p.seriesName.trim());
@@ -945,12 +968,12 @@ async function commitOnePublication(
 			await linkSeries(context, sectionId, seriesSectionId);
 			fieldsWritten.push(SERIES_RELATION_TIPO);
 		} catch (error) {
-			seriesError = (error as Error).message;
+			seriesError = toErrorBody(toDedaloError(error));
 		}
 	}
 
 	const authorSectionIds: number[] = [];
-	const authorErrors: string[] = [];
+	const authorErrors: ApiErrorBody[] = [];
 	for (const author of authors) {
 		try {
 			const { surname, givenName } = splitAuthorName(author);
@@ -958,7 +981,7 @@ async function commitOnePublication(
 			const resolved = await resolvePersonCached(context, personCache, surname, givenName);
 			authorSectionIds.push(resolved.sectionId);
 		} catch (error) {
-			authorErrors.push((error as Error).message);
+			authorErrors.push(toErrorBody(toDedaloError(error)));
 		}
 	}
 	if (authorSectionIds.length > 0) {
@@ -966,12 +989,12 @@ async function commitOnePublication(
 			await linkAuthors(context, sectionId, authorSectionIds);
 			fieldsWritten.push(AUTHORSHIP_RELATION_TIPO);
 		} catch (error) {
-			authorErrors.push((error as Error).message);
+			authorErrors.push(toErrorBody(toDedaloError(error)));
 		}
 	}
 
 	let documentImported = false;
-	let documentError: string | null = null;
+	let documentError: ApiErrorBody | null = null;
 	try {
 		const outcome = await importDocumentForPublication(context, p, sectionId);
 		documentImported = outcome.documentImported;
@@ -988,7 +1011,7 @@ async function commitOnePublication(
 			fieldsWritten.push(PDF_URI_TIPO);
 		}
 	} catch (error) {
-		documentError = (error as Error).message;
+		documentError = toErrorBody(toDedaloError(error));
 	}
 
 	return {
@@ -1047,7 +1070,7 @@ async function commitPublications(context: ToolActionContext): Promise<ToolRespo
 				publication_identifier: p.publicationIdentifier,
 				section_tipo: PUBLICATION_TIPO,
 				section_id: null,
-				error: (error as Error).message,
+				error: toErrorBody(toDedaloError(error)),
 				skipped: false,
 				fields_written: [],
 				series_section_id: null,

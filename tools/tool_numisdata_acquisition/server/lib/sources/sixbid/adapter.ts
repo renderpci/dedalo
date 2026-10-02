@@ -1,3 +1,4 @@
+import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
 import { parseSixbidUrl, sixbidLotIdentifier, sixbidSearchIdentifier } from './api.ts';
@@ -42,9 +43,10 @@ export const sixbidAdapter: SourceAdapter = {
 	},
 
 	acquire() {
-		throw new Error(
-			'sixbid.com cannot be fetched automatically (its robots.txt blocks every automated agent) - use "Upload a saved HTML page" instead.',
-		);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage:
+				'sixbid.com cannot be fetched automatically (its robots.txt blocks every automated agent) - use "Upload a saved HTML page" instead.',
+		});
 	},
 
 	parseAuction: (firstPage, sourceUrl) => {

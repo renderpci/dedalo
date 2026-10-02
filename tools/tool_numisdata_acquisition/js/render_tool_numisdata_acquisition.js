@@ -319,7 +319,7 @@ const get_content_data = function(self) {
 					while (container.firstChild) {
 						container.removeChild(container.firstChild)
 					}
-					container.appendChild(render_error(response, 'The request failed.'))
+					container.appendChild(render_error(response, self.get_tool_label('request_failed') || 'The request failed.'))
 					if (on_settle) on_settle()
 					return
 				}
@@ -360,7 +360,7 @@ const get_content_data = function(self) {
 								return
 							}
 
-							info_node.msg_node.textContent = 'Done.'
+							info_node.msg_node.textContent = self.get_tool_label('job_done') || 'Done.'
 							on_success(response_data(sse_response.data))
 							return
 						}
@@ -375,7 +375,7 @@ const get_content_data = function(self) {
 						}
 						info_node.msg_node.textContent = (typeof frame_msg==='string' && frame_msg)
 							? frame_msg + (sse_response.data.total ? ' (' + sse_response.data.counter + ' of ' + sse_response.data.total + ')' : '')
-							: 'Working…'
+							: (self.get_tool_label('job_working') || 'Working…')
 					})
 				}
 
@@ -415,11 +415,11 @@ const get_content_data = function(self) {
 			})
 
 				const auction_line_text = auction
-					? 'Auction: ' + (auction.auctionHouse || '?') + ' #' + (auction.auctionNumber || '?') +
+					? (self.get_tool_label('auction_prefix') || 'Auction: ') + (auction.auctionHouse || '?') + ' #' + (auction.auctionNumber || '?') +
 						(auction_status && auction_status.exists
-							? ' (existing record numisdata224 #' + auction_status.section_id + ', will link to it)'
-							: ' (new — will be created)')
-					: 'No auction info found for this URL.'
+							? (self.get_tool_label('auction_existing') || ' (existing record #{id}, will link to it)').replace('{id}', auction_status.section_id)
+							: (self.get_tool_label('auction_new') || ' (new — will be created)'))
+					: (self.get_tool_label('auction_none') || 'No auction info found for this URL.')
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'auction_status',
@@ -445,7 +445,7 @@ const get_content_data = function(self) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'company_resolution_label',
-						text_content	: self.get_tool_label('company_label') || 'Company (links numisdata224 to an rsc106 Entity):',
+						text_content	: self.get_tool_label('company_label') || 'Company (links the auction to an Entity):',
 						parent			: company_container
 					})
 					const company_name_input = ui.create_dom_element({
@@ -512,7 +512,7 @@ const get_content_data = function(self) {
 						candidates.forEach(function(candidate) {
 							add_company_option(
 								radio_name,
-								candidate.name + ' (rsc106 #' + candidate.section_id + ')',
+								candidate.name + ' (Entity #' + candidate.section_id + ')',
 								exact_match!==undefined && candidate.section_id===exact_match.section_id,
 								function() { current_company_selection = { section_id: candidate.section_id } }
 							)
@@ -634,7 +634,7 @@ const get_content_data = function(self) {
 				if (lots.length === 0) {
 					ui.create_dom_element({
 						element_type	: 'div',
-						text_content	: 'No lots found at this URL.',
+						text_content	: self.get_tool_label('no_lots_found') || 'No lots found at this URL.',
 						parent			: lot_list
 					})
 				}
@@ -742,34 +742,37 @@ const get_content_data = function(self) {
 					results.forEach(function(result) {
 						// section_id is null only when the whole lot failed before anything
 						// was created (its own transaction rolled back) - review item C1.
+						// Each *_error is the error system's wire body ({code, message, ...} — see
+						// server/index.ts's toErrorBody(toDedaloError(...)), review item E2), never a
+						// bare string, so every read below is `.message`.
 						if (result.section_id===null) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error_message',
-								text_content	: 'Lot ' + (result.lot_identifier || '?') + ' NOT imported: ' + result.error,
+								text_content	: 'Lot ' + (result.lot_identifier || '?') + ' NOT imported: ' + result.error.message,
 								parent			: summary
 							})
 							return
 						}
 						const auction_bit = result.auction_section_id
-							? ' — auction numisdata224 #' + result.auction_section_id +
+							? ' — auction #' + result.auction_section_id +
 								(result.auction_created ? ' (created)' : ' (reused)')
 							: result.auction_error
-								? ' — auction NOT linked: ' + result.auction_error
+								? ' — auction NOT linked: ' + result.auction_error.message
 								: ''
 						const type_bit = result.type_section_id
-							? ' — type numisdata3 #' + result.type_section_id + ' (' + result.type_citation + ')'
+							? ' — type #' + result.type_section_id + ' (' + result.type_citation + ')'
 							: result.type_citation
 								? ' — type "' + result.type_citation + '" not found in catalog'
 								: result.type_error
-									? ' — type NOT linked: ' + result.type_error
+									? ' — type NOT linked: ' + result.type_error.message
 									: ''
-						const line = 'numisdata4 #' + result.section_id +
+						const line = 'Lot #' + result.section_id +
 							' (fields: ' + result.fields_written.join(', ') + ')' + auction_bit + type_bit +
 							(result.images_created
 								? ' — images: ' + result.images_created.join(', ')
 								: result.images_error
-									? ' — images NOT imported: ' + result.images_error
+									? ' — images NOT imported: ' + result.images_error.message
 									: '')
 						ui.create_dom_element({
 							element_type	: 'div',
@@ -791,7 +794,7 @@ const get_content_data = function(self) {
 							commit_result_container.removeChild(commit_result_container.firstChild)
 						}
 						commit_result_container.appendChild(
-							document.createTextNode('Every lot is excluded — nothing to import.')
+							document.createTextNode(self.get_tool_label('nothing_kept') || 'Every lot is excluded — nothing to import.')
 						)
 						return
 					}
@@ -824,8 +827,8 @@ const get_content_data = function(self) {
 				}
 				result_container.appendChild(document.createTextNode(
 					selected_html
-						? "Could not detect this page's URL from the saved file — paste it above manually."
-						: 'Paste a URL first.'
+						? (self.get_tool_label('url_not_detected') || "Could not detect this page's URL from the saved file — paste it above manually.")
+						: (self.get_tool_label('url_missing') || 'Paste a URL first.')
 				))
 				return
 			}

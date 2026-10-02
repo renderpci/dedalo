@@ -1,11 +1,13 @@
+import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
 import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 
-export class UnsupportedPageError extends Error {
-	constructor(message = 'This page does not appear to contain an auction catalogue.') {
-		super(message);
-		this.name = 'UnsupportedPageError';
-	}
+/** Thrown when a page fetched fine (2xx) but its HTML has none of the markers this adapter relies
+ * on for extraction - a URL that resolves to something other than an auction/search catalogue. */
+function unsupportedPageError(): DedaloError {
+	return new DedaloError('tool.unsupported_target', {
+		publicMessage: 'This page does not appear to contain an auction catalogue.',
+	});
 }
 
 const MAX_PAGES = 50;
@@ -41,7 +43,9 @@ async function fetchAureoPage(
 		onWait,
 	});
 	if (!response.ok) {
-		throw new Error(`Server returned HTTP ${response.status}.`);
+		throw new DedaloError('external.http_status', {
+			coordinates: { source: 'aureo', url, status: response.status },
+		});
 	}
 	return {
 		html: response.text(),
@@ -71,7 +75,9 @@ async function postAureoItems(
 		onWait,
 	});
 	if (!response.ok) {
-		throw new Error(`Server returned HTTP ${response.status}.`);
+		throw new DedaloError('external.http_status', {
+			coordinates: { source: 'aureo', url: 'loaditems.php', status: response.status },
+		});
 	}
 	return {
 		html: response.text(),
@@ -95,14 +101,14 @@ async function fetchAureoAuctionRange(
 	const page = await fetchAureoPage(`https://www.aureo.com/en/subasta/${auctionId}`, onWait);
 	const viewAllIdx = page.html.indexOf('id="viewall"');
 	if (viewAllIdx === -1) {
-		throw new UnsupportedPageError();
+		throw unsupportedPageError();
 	}
 	const tagEnd = page.html.indexOf('>', viewAllIdx);
 	const tag = page.html.slice(viewAllIdx, tagEnd === -1 ? undefined : tagEnd);
 	const fromMatch = tag.match(/data-from="(\d+)"/);
 	const toMatch = tag.match(/data-to="(\d+)"/);
 	if (!fromMatch || !toMatch) {
-		throw new UnsupportedPageError();
+		throw unsupportedPageError();
 	}
 	const badgeMatch = page.html.slice(viewAllIdx, viewAllIdx + 400).match(/badge-light">(\d+)</);
 	return {
@@ -181,7 +187,9 @@ export async function acquireAureoAuction(
 ): Promise<MultiPageAcquisition> {
 	const auctionId = parseAureoAuctionId(rawUrl);
 	if (!auctionId) {
-		throw new Error('Please provide a valid aureo.com auction URL.');
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid aureo.com auction URL.',
+		});
 	}
 	const pages = await acquireAureoAuctionPages(auctionId, onProgress);
 	return { auctionIdentifier: auctionId, pages, method: 'http' };

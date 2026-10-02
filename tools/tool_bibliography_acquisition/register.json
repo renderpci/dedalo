@@ -12,5 +12,31 @@
 	"active": true,
 	"properties": {
 		"open_as": "modal"
-	}
+	},
+	"labels": [
+		{ "lang": "lg-eng", "name": "url_placeholder", "value": "Paste a journal's OAI-PMH URL (or a normal OJS article/journal URL)" },
+		{ "lang": "lg-eng", "name": "preview", "value": "Preview" },
+		{ "lang": "lg-eng", "name": "html_file_label", "value": "Or upload a saved OAI-PMH response (for sources that block automated fetching) — URL above still required:" },
+		{ "lang": "lg-eng", "name": "request_failed", "value": "The request failed." },
+		{ "lang": "lg-eng", "name": "job_done", "value": "Done." },
+		{ "lang": "lg-eng", "name": "job_working", "value": "Working…" },
+		{ "lang": "lg-eng", "name": "partial_error", "value": "The journal stopped responding partway through ({reason}) — showing the {count} publications fetched before that happened." },
+		{ "lang": "lg-eng", "name": "series_prefix", "value": "Series: " },
+		{ "lang": "lg-eng", "name": "series_existing", "value": " (existing record #{id}, will link to it)" },
+		{ "lang": "lg-eng", "name": "series_new", "value": " (new — will be created)" },
+		{ "lang": "lg-eng", "name": "series_none", "value": "No series info found for this URL." },
+		{ "lang": "lg-eng", "name": "select_all", "value": "Select all" },
+		{ "lang": "lg-eng", "name": "deselect_all", "value": "Deselect all" },
+		{ "lang": "lg-eng", "name": "keyword_placeholder", "value": "Keyword…" },
+		{ "lang": "lg-eng", "name": "include_matching", "value": "Include matching" },
+		{ "lang": "lg-eng", "name": "exclude_matching", "value": "Exclude matching" },
+		{ "lang": "lg-eng", "name": "year_from", "value": "Year from" },
+		{ "lang": "lg-eng", "name": "year_to", "value": "to (included)" },
+		{ "lang": "lg-eng", "name": "include_range", "value": "Include range" },
+		{ "lang": "lg-eng", "name": "exclude_range", "value": "Exclude range" },
+		{ "lang": "lg-eng", "name": "no_publications_found", "value": "No publications found at this URL." },
+		{ "lang": "lg-eng", "name": "confirm_import", "value": "Confirm import" },
+		{ "lang": "lg-eng", "name": "nothing_kept", "value": "Every publication is excluded — nothing to import." },
+		{ "lang": "lg-eng", "name": "url_missing", "value": "Paste a URL first." }
+	]
 }

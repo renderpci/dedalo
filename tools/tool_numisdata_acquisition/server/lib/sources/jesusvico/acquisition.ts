@@ -1,3 +1,4 @@
+import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
 import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 import { parseJesusvicoTotalPages } from './parser.ts';
@@ -17,7 +18,9 @@ async function fetchJesusvicoPage(
 		onWait,
 	});
 	if (!response.ok) {
-		throw new Error(`Server returned HTTP ${response.status}.`);
+		throw new DedaloError('external.http_status', {
+			coordinates: { source: 'jesusvico', url, status: response.status },
+		});
 	}
 	return {
 		html: response.text(),
@@ -75,7 +78,9 @@ export async function acquireJesusvicoAuction(
 ): Promise<MultiPageAcquisition> {
 	const auctionIdentifier = parseJesusvicoAuctionNumber(rawUrl);
 	if (!auctionIdentifier) {
-		throw new Error('Please provide a valid jesusvico.com auction URL (missing auction number).');
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid jesusvico.com auction URL (missing auction number).',
+		});
 	}
 
 	const onWait = (ms: number, origin: string): void => {
@@ -105,7 +110,9 @@ export async function acquireJesusvicoLot(
 ): Promise<MultiPageAcquisition> {
 	const auctionIdentifier = jesusvicoLotIdentifier(rawUrl);
 	if (!auctionIdentifier) {
-		throw new Error('Please provide a valid jesusvico.com lot URL.');
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid jesusvico.com lot URL.',
+		});
 	}
 
 	const page = await fetchJesusvicoPage(rawUrl, (ms, origin) =>

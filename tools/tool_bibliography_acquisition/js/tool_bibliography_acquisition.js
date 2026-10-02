@@ -43,11 +43,7 @@ export const tool_bibliography_acquisition = function () {
 
 
 
-// wire_tool does NOT wire tool_request (a gap in the tool_dev_template
-// scaffold itself, confirmed against tool_numisdata_acquisition), so every
-// server-backed tool needs this explicitly.
 wire_tool(tool_bibliography_acquisition, render_tool_bibliography_acquisition)
-tool_bibliography_acquisition.prototype.tool_request = tool_common.prototype.tool_request
 
 
 
