@@ -62,17 +62,18 @@
  * registry + ontology tool_config, and the canonical test3 records
  * (self-healed via ensureCanonicalTest3).
  *
- * KNOWN RED (media_icons, measured 2026-08-23): the golden's term grid rows
- * carry ONE more column — label 'Término', model component_portal, no tipo
- * emitted — contributed on the capture install by a resolved hierarchy-target
- * section whose section_map thesaurus.term IS a component_portal. NO section
- * in the committed test ontology has a portal term (verified across every
- * section_map node and inline map; the 'ts' TLD the suite's hierarchy row 1
- * names is absent entirely), so the column is unreproducible until the
- * 2026-08-20 ontology migration clones such a section. Corpus/ontology gap —
- * do not weaken the golden compare.
+ * The PORTAL-TERM column (was KNOWN RED 2026-08-23, BUILT 2026-10-02): the
+ * golden's term grid rows carry a column with label 'Término', model
+ * component_portal, no tipo emitted — contributed on the capture install by an
+ * ACTIVE hierarchy-target section whose section_map thesaurus.term IS a
+ * component_portal, resolved between the immovable and the web targets. No
+ * section in the committed test ontology has a portal term, so the gate BUILDS
+ * one: the scratch TLD `zziwterm` (section + section_map + portal term node,
+ * PORTAL_TERM_* below, dropped in afterAll) and its ACTIVE registry row
+ * IW.portalTermRegistry, whose section_id sits between the immovable and web
+ * rows so the column lands where the golden puts it.
  *
- * Scratch ids: 900311..900314 per section — clear of the indexation gates'
+ * Scratch ids: 900311..900315 per section — clear of the indexation gates'
  * 90001/90002/90000002 and of the sibling test3 gates (has_dataframe 900311,
  * iri 900312), which is why the two media hosts below are NOT test3.
  * Direct INSERTs (no counter bump) so goldens pin ids byte-stable. Swept in
@@ -102,6 +103,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
+import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -192,9 +194,49 @@ const IW = {
 	emptyTest3: 900313, // matrix_test test3 with NO components (placeholder path)
 	periodRegistry: 900311, // hierarchy1 registry root for the PERIOD chain
 	immovableRegistry: 900312, // ACTIVE hierarchy: target testimmovable1 (grid col)
-	webRegistry: 900313, // ACTIVE hierarchy: target testweb1 (grid col)
-	mintRegistry: 900314, // ACTIVE hierarchy: target testmint1 (grid col)
+	portalTermRegistry: 900313, // ACTIVE hierarchy: target PORTAL_TERM_SECTION (portal col)
+	webRegistry: 900314, // ACTIVE hierarchy: target testweb1 (grid col)
+	mintRegistry: 900315, // ACTIVE hierarchy: target testmint1 (grid col)
 };
+
+/**
+ * The BUILT portal-term hierarchy target (see the header): a scratch-TLD
+ * section whose section_map thesaurus.term names a component_portal. The term
+ * is lg-spa only, so termByTipo serves 'Término' — the golden's label — under
+ * any application lang (first-available fallback).
+ */
+const PORTAL_TERM_TLD = 'zziwterm';
+const PORTAL_TERM_SECTION = `${PORTAL_TERM_TLD}1`;
+const PORTAL_TERM_MAP = `${PORTAL_TERM_TLD}2`;
+const PORTAL_TERM_COMPONENT = `${PORTAL_TERM_TLD}3`;
+
+/** Build the portal-term target section (whole-row upserts; idempotent). */
+async function buildPortalTermSection(): Promise<void> {
+	await deleteTldNodes(PORTAL_TERM_TLD); // pre-clean a crashed prior run
+	await upsertDdOntologyNode({
+		tipo: PORTAL_TERM_SECTION,
+		model: 'section',
+		tld: PORTAL_TERM_TLD,
+		term: { 'lg-eng': 'Portal-term hierarchy target' },
+		// matrix_test, never the installation's `matrix` (no row is written to it)
+		relations: [{ tipo: 'test24' }],
+	});
+	await upsertDdOntologyNode({
+		tipo: PORTAL_TERM_MAP,
+		model: 'section_map',
+		parent: PORTAL_TERM_SECTION,
+		tld: PORTAL_TERM_TLD,
+		properties: { thesaurus: { term: PORTAL_TERM_COMPONENT } },
+	});
+	await upsertDdOntologyNode({
+		tipo: PORTAL_TERM_COMPONENT,
+		model: 'component_portal',
+		parent: PORTAL_TERM_SECTION,
+		tld: PORTAL_TERM_TLD,
+		is_translatable: false,
+		term: { 'lg-spa': 'Término' },
+	});
+}
 
 /**
  * The PERIOD term chain — seeded since 2026-08-23, no longer a live-data
@@ -268,6 +310,7 @@ const SCRATCH_ROWS: { sectionTipo: string; sectionId: number }[] = [
 	{ sectionTipo: PERIOD, sectionId: PERIOD_TERM_MEDIEVAL },
 	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.periodRegistry },
 	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.immovableRegistry },
+	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.portalTermRegistry },
 	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.webRegistry },
 	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.mintRegistry },
 ];
@@ -419,16 +462,19 @@ async function seedScratch(): Promise<void> {
 			hierarchy45: [locatorOf(PERIOD, PERIOD_TERM_MATCHED, 'hierarchy45')],
 		},
 	});
-	// The three ACTIVE hierarchy rows behind the media_icons descriptor grid's
+	// The four ACTIVE hierarchy rows behind the media_icons descriptor grid's
 	// dynamic columns: rsc860's sqo resolves {source:'hierarchy_types'} through
 	// the ACTIVE registry (resolveHierarchySectionsFromTypes — hierarchy4
 	// dd64/1 + hierarchy9 typology match), and each resolved target section
 	// contributes its section_map thesaurus.term as a column. The capture
 	// install had these active; the suite database ships only the language
-	// hierarchies, which collapsed the golden's 4 columns to 1. Seeded AFTER
-	// the language rows by section_id, so the column order matches the golden.
+	// hierarchies, which collapsed the golden's 5 columns to 1. Seeded AFTER
+	// the language rows by section_id, so the column order matches the golden
+	// (term, immovable, PORTAL term, web, mint).
+	await buildPortalTermSection();
 	for (const [registryId, target] of [
 		[IW.immovableRegistry, 'testimmovable1'],
+		[IW.portalTermRegistry, PORTAL_TERM_SECTION],
 		[IW.webRegistry, 'testweb1'],
 		[IW.mintRegistry, 'testmint1'],
 	] as const) {
@@ -700,6 +746,7 @@ afterAll(async () => {
 	// the DELETE targeted the wrong matrix table (matrix_users lesson) — clean
 	// everything we can, then fail loudly rather than silently leak/mask.
 	const counts = await sweepScratch();
+	await deleteTldNodes(PORTAL_TERM_TLD); // fires the hub
 	// The seeded ACTIVE hierarchy rows are gone — drop the derived caches again
 	// so later files never resolve hierarchy_types against the seeded world.
 	const { clearOntologyDerivedCaches } = await import(
