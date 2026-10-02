@@ -247,9 +247,9 @@ export const REGISTRY: readonly RatchetEntry[] = [
 		check: ['scripts/unit_baseline.ts', '--check', '--json'],
 		bank: ['scripts/unit_baseline.ts'],
 		regressionPath:
-			'bun run scripts/unit_baseline.ts --allow-regression (and say WHY in the commit message)',
+			'bun run ci:local --docker --record-unit-baseline --allow-regression --reason "<why, per file>" (and say WHY in the commit message)',
 		reason:
-			"runs test/unit + test/integration (~5 min) on the suite DB; record it in the CI image, never on macOS. A NEW file's floor alone (the hermetic suite_assertion_floor_tripwire reddens on an unrecorded file) has its own narrow door that measures only that file and refuses a red: bun run scripts/unit_baseline.ts --record-new",
+			"runs test/unit + test/integration (~5 min) on the suite DB; recorded in the CI image only — the writer refuses elsewhere (UNIT_TIER.recordOnlyInCiImage), so on a desk this row's bank fails by design: bun run ci:local --docker --record-unit-baseline. A NEW file's floor alone (the hermetic suite_assertion_floor_tripwire reddens on an unrecorded file) has its own narrow door that measures only that file and refuses a red: bun run scripts/unit_baseline.ts --record-new",
 		skipReverify: true,
 	},
 	{

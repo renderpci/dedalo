@@ -70,6 +70,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Glob } from 'bun';
+import { ciImageFingerprint } from '../../scripts/lib/ci_image.ts';
 import {
 	type FileCounts,
 	type ParityRun,
@@ -79,6 +80,8 @@ import {
 import {
 	type BaselineCliIo,
 	buildBaseline,
+	CI_IMAGE_MARKER,
+	ciImageMarkerMatches,
 	computeDrift,
 	driftCount,
 	emptyDrift,
@@ -652,6 +655,145 @@ describe('suite assertion floor — the GENERATOR ITSELF, over a planted floor d
 		expect(allowed.stdout.toString()).toContain('wrote');
 		expect(allowed.exitCode).toBe(0);
 		expect(frozenAssertions(tier)).toBe(4);
+		rmSync(dir, { recursive: true, force: true });
+	});
+});
+
+describe('the unit writer records IN THE CI IMAGE only — a desk recording freezes the desk', () => {
+	// The unit tier's floors and red set are facts about the platform (media toolchain,
+	// uid, files a clone lacks), so UNIT_TIER.recordOnlyInCiImage makes its full writer
+	// refuse anywhere the image's own fingerprint marker does not match this checkout.
+	const FILE = 'test/zz_planted_tier/planted.test.ts';
+	const dir = mkdtempSync(join(tmpdir(), 'suite_assertion_floor_image_'));
+	const spec = (recordOnlyInCiImage: boolean): TierSpec => ({
+		id: 'planted',
+		paths: ['test/zz_planted_tier'],
+		baselinePath: join(dir, `image_${recordOnlyInCiImage}.json`),
+		fixCommand: 'bun run planted',
+		fileFloor: 1,
+		testFloor: 1,
+		whyRed: 'planted',
+		exactCounts: false,
+		recordOnlyInCiImage,
+	});
+	const run = (assertions: number): ParityRun => ({
+		files: [FILE],
+		totals: { tests: 1, pass: 1, fail: 0, skip: 0 },
+		cases: [{ file: FILE, name: 'a', status: 'pass' }],
+		perFile: { [FILE]: { tests: 1, skipped: 0, assertions } },
+	});
+	class Exit extends Error {
+		constructor(public readonly code: number) {
+			super(`exit ${code}`);
+		}
+	}
+	const drive = (tier: TierSpec, argv: string[], inCiImage: boolean, measured = run(5)) => {
+		const said: string[] = [];
+		const written: string[] = [];
+		let measures = 0;
+		const io: BaselineCliIo = {
+			argv,
+			measure: () => {
+				measures++;
+				return measured;
+			},
+			writeFile: (path, text) => {
+				written.push(path);
+				writeFileSync(path, text);
+			},
+			format: () => {},
+			exit: (code) => {
+				throw new Exit(code);
+			},
+			log: (line) => said.push(line),
+			error: (line) => said.push(line),
+			inCiImage: () => inCiImage,
+		};
+		let exitCode: number | null = null;
+		try {
+			runBaselineCli(tier, io);
+		} catch (err) {
+			if (!(err instanceof Exit)) throw err;
+			exitCode = err.code;
+		}
+		return { exitCode, written, measures, said: said.join('\n') };
+	};
+
+	test('UNIT_TIER carries the flag; the parity tier does not', () => {
+		expect(UNIT_TIER.recordOnlyInCiImage).toBe(true);
+		expect(PARITY_TIER.recordOnlyInCiImage).toBeUndefined();
+	});
+
+	test('off the image: the writer refuses BEFORE measuring and writes nothing; the image writes', () => {
+		const tier = spec(true);
+		const off = drive(tier, [], false);
+		expect(off.exitCode).toBe(1);
+		expect(off.measures).toBe(0);
+		expect(off.written).toEqual([]);
+		expect(off.said).toContain('not the CI image');
+		expect(off.said).toContain('ci:local --docker --record-unit-baseline');
+		// --allow-regression is no way round it.
+		expect(drive(tier, ['--allow-regression'], false).written).toEqual([]);
+		// In the image the same call writes.
+		const on = drive(tier, [], true);
+		expect(on.written).toEqual([tier.baselinePath]);
+		// A tier without the flag ignores the probe.
+		expect(drive(spec(false), [], false).written).toEqual([spec(false).baselinePath]);
+	});
+
+	test('the READ doors stay open off the image: --check, --check --json, --report', () => {
+		const tier = spec(true);
+		drive(tier, [], true); // a baseline to check against
+		for (const argv of [['--check'], ['--check', '--json'], ['--report']]) {
+			const r = drive(tier, argv, false);
+			expect(r.measures, argv.join(' ')).toBe(1);
+			expect(r.written, argv.join(' ')).toEqual([]);
+			expect(r.exitCode, argv.join(' ')).toBe(0);
+		}
+	});
+
+	test('--allow-regression PRINTS what it accepted (the commit message must give each a reason)', () => {
+		const tier = spec(true);
+		drive(tier, [], true, run(5));
+		const r = drive(tier, ['--allow-regression'], true, run(4));
+		expect(r.written).toEqual([tier.baselinePath]);
+		expect(r.said).toContain('ACCEPTED under --allow-regression (1)');
+		expect(r.said).toContain('ASSERTIONS FELL 5 → 4');
+		// Nothing accepted, nothing printed.
+		expect(drive(tier, ['--allow-regression'], true, run(4)).said).not.toContain('ACCEPTED');
+	});
+
+	test('the marker probe: absent, foreign and matching', () => {
+		const marker = join(dir, 'dedalo-ci-image');
+		expect(CI_IMAGE_MARKER).toBe('/etc/dedalo-ci-image');
+		expect(ciImageMarkerMatches(marker, REPO_ROOT)).toBe(false);
+		writeFileSync(marker, `${'0'.repeat(64)}\n`);
+		expect(ciImageMarkerMatches(marker, REPO_ROOT)).toBe(false);
+		writeFileSync(marker, `${ciImageFingerprint(REPO_ROOT)}\n`);
+		expect(ciImageMarkerMatches(marker, REPO_ROOT)).toBe(true);
+	});
+
+	test("as a REAL PROCESS through the default io: the verdict is the real marker's", () => {
+		const tier = { ...spec(true), baselinePath: join(dir, 'process.json') };
+		const probe = join(dir, 'probe.ts');
+		writeFileSync(
+			probe,
+			[
+				`import { realBaselineCliIo, runBaselineCli } from ${JSON.stringify(join(REPO_ROOT, 'scripts/lib/red_baseline.ts'))};`,
+				`const measured = ${JSON.stringify(run(5))};`,
+				`runBaselineCli(${JSON.stringify(tier)}, { ...realBaselineCliIo(), measure: () => measured, format: () => {} });`,
+				'',
+			].join('\n'),
+		);
+		const proc = Bun.spawnSync(['bun', probe], { cwd: REPO_ROOT, stdout: 'pipe', stderr: 'pipe' });
+		if (ciImageMarkerMatches()) {
+			expect(proc.exitCode).toBe(0);
+			expect(existsSync(tier.baselinePath)).toBe(true);
+		} else {
+			expect(proc.stderr.toString()).toContain('not the CI image');
+			expect(proc.exitCode).toBe(1);
+			expect(existsSync(tier.baselinePath)).toBe(false);
+		}
 		rmSync(dir, { recursive: true, force: true });
 	});
 });

@@ -265,9 +265,27 @@ bun test --timeout=30000 "${DB_TIER_TRIPWIRES[@]}" || tw_rc=$?
 # (ci_workflow_tripwire scans the workflows — a repo-text gate, not a runtime check). The day
 # the line below is restored this stage stops being advisory — and the skip must go with
 # it (ci_local_native pins this stage's exact code).
+#
+# RECORD MODE. `DEDALO_CI_UNIT_RECORD_OUT=<dir>` (set only by `ci:local --docker
+# --record-unit-baseline`, which mounts <dir> writable at /ci-out) makes this stage the
+# baseline WRITER instead of the check: the record is taken HERE, after the same suite
+# build, MariaDB start, dependency install and DB-tripwire stage the check runs after —
+# one preparation, no copy of it to drift. `DEDALO_CI_UNIT_RECORD_ALLOW=1` adds
+# --allow-regression (ci:local demands a --reason with it). The writer itself refuses
+# outside the CI image (UNIT_TIER.recordOnlyInCiImage). A refused write is RED; only a
+# written baseline is copied out. No workflow names either key (ci_workflow_tripwire).
 echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]"
 unit_rc=0
-if [ "${DEDALO_CI_SKIP_ADVISORY:-0}" = 1 ]; then
+if [ -n "${DEDALO_CI_UNIT_RECORD_OUT:-}" ]; then
+	echo "== db_tier: RECORDING engineering/unit_baseline.json (ci:local --record-unit-baseline)"
+	record_rc=0
+	record_allow=''
+	[ "${DEDALO_CI_UNIT_RECORD_ALLOW:-0}" != 1 ] || record_allow=--allow-regression
+	# shellcheck disable=SC2086 # empty → no argument, on purpose
+	bun run scripts/unit_baseline.ts $record_allow || record_rc=$?
+	[ "$record_rc" -eq 0 ] || { echo "== db_tier: RED in the unit-baseline recording (exit $record_rc) — nothing copied out"; tier_status=1; }
+	[ "$record_rc" -ne 0 ] || cp engineering/unit_baseline.json "$DEDALO_CI_UNIT_RECORD_OUT/unit_baseline.json"
+elif [ "${DEDALO_CI_SKIP_ADVISORY:-0}" = 1 ]; then
 	echo "== db_tier: SKIPPED — advisory stage, DEDALO_CI_SKIP_ADVISORY=1 (desk gate); the runner runs it"
 else
 	bun run scripts/unit_baseline.ts --check || unit_rc=$?

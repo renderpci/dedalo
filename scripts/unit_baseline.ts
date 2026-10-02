@@ -2,7 +2,9 @@
  * UNIT RED BASELINE — generator and drift checker for the unit tier
  * (test/unit + test/integration).
  *
- *   bun run scripts/unit_baseline.ts            # rewrite the JSON baseline (default)
+ *   bun run scripts/unit_baseline.ts            # rewrite the JSON baseline (default) —
+ *                                  # IN THE CI IMAGE ONLY (recordOnlyInCiImage): the door is
+ *                                  # `bun run ci:local --docker --record-unit-baseline`
  *   bun run scripts/unit_baseline.ts --check    # print drift, exit 1 if any
  *   bun run scripts/unit_baseline.ts --report   # failing tests per file
  *   bun run scripts/unit_baseline.ts --record-new [file…]  # ONLY a new file's per_file
@@ -131,6 +133,12 @@ export const UNIT_TIER: TierSpec = {
 	// the docblock above for why exact size equality here would train the very reflex the
 	// ratchet exists to prevent. Debt frozen exactly, size held by the floors above.
 	exactCounts: false,
+	// The floors and the red set are facts about the platform the tier runs on (the
+	// runner's image: its media toolchain, a bare uid, a clone without the desk's audits/
+	// or ../private): a desk recording freezes the desk, and the runner reports the
+	// difference as drift. The writer refuses outside the image (red_baseline.ts
+	// ciImageMarkerMatches); ci:local --docker --record-unit-baseline is the door.
+	recordOnlyInCiImage: true,
 	whyRed:
 		"Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent: the 3 unit reds the CENSUS measured on 2026-08-30 (731 files / 8999 cases / 8982 pass / 14 skip — the census's own numbers, which a hand-run `bun test` does not reproduce because scripts/lib/parity_census.ts childEnv() strips the nine PER_RUN_SEAMS keys and pins ORACLE_MODE=fixtures) fall in two classes. (1) 2 deterministic golden mismatches (ontology_parser dd1, info_widget_native component_info) — a stale expectation or a real parser/widget defect, either way fixable. (2) 1 ORDER-DEPENDENT gate: search_store_ensure_native PASSES IN ISOLATION and fails only in full-suite order. That class is why this tier is ADVISORY and not blocking (see scripts/ci/db_tier.sh): a test that flaps red and green on its own flaps the ratchet with it, in both directions, so the fix is always determinism and never an entry. It is frozen here under --allow-regression only because leaving it out would have blocked locking in the shrink below; it is debt, not a decision. THE SHRINK, 2026-08-30: 7 reds -> 3. Three left because P1-14 and P1-16 landed — rag_api, rag_ask and rag_pipeline no longer inherit the machine's embedding provider and no longer write to the INSTALLATION's vector database, and retrieval.ts no longer launders `undefined` through an `as number[]` cast. Two more left when the leaked `setTimeout` in client_request_coalescing_tripwire was leashed: ops_health_db_down and activity_aggregate_native were never broken themselves, they were arbitrary victims of an uncaught exception bun attributes to whichever test is running. EVERY entry here is expected to be FIXED. The list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
 };

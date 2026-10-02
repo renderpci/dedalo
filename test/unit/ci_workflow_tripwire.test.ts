@@ -2680,4 +2680,19 @@ describe('CI workflow tripwire', () => {
 			hosts.filter(({ src }) => src.includes('DEDALO_CI_SKIP_ADVISORY')).map(({ rel }) => rel),
 		).toEqual([]);
 	});
+
+	test('no CI definition names DEDALO_CI_UNIT_RECORD_* — a runner checks the unit baseline, never writes it', () => {
+		// db_tier.sh's unit stage turns into the baseline WRITER under these keys (`ci:local
+		// --docker --record-unit-baseline` only; ci_local_native executes that branch). A
+		// workflow setting one would rewrite the baseline it is meant to check, green.
+		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
+		expect(hosts.length).toBeGreaterThan(2);
+		expect(
+			hosts.filter(({ src }) => /DEDALO_CI_UNIT_RECORD/.test(src)).map(({ rel }) => rel),
+		).toEqual([]);
+		// The key the rule scans for is the one the tier reads (a rename blinds it).
+		expect(read('scripts/ci/db_tier.sh')).toContain('${DEDALO_CI_UNIT_RECORD_OUT:-}');
+		// Control: the scan sees a planted workflow line.
+		expect(/DEDALO_CI_UNIT_RECORD/.test('env:\n  DEDALO_CI_UNIT_RECORD_OUT: /tmp\n')).toBe(true);
+	});
 });

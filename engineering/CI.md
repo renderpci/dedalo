@@ -23,10 +23,11 @@ not the commit, run nightly instead of on the push (`nightly.yml`).
 >
 > **PART 2 PENDING** (not landed — do not describe it as done):
 > 1. **Blocking unit tier.** The unit tier stays ADVISORY in `db_tier.sh` (its one
->    reasoned `ADVISORY_STAGES` row in `tier_wiring_tripwire` leg H) until
->    `engineering/unit_baseline.json` is re-recorded IN the image. The jobs already run
->    in it; the baseline was recorded outside it, so blocking now would block on the
->    recording environment, not on the code.
+>    reasoned `ADVISORY_STAGES` row in `tier_wiring_tripwire` leg H) until the same red
+>    set holds on three consecutive clean runs. The in-image RECORDING half landed
+>    2026-10-02 (`ci:local --docker --record-unit-baseline`, below; the writer refuses
+>    anywhere else); the blocking flip and the removal of the desk skip are the step
+>    still to come.
 
 ## Pipeline map
 
@@ -129,6 +130,8 @@ re-recorded. The same verdict now happens on the desk.
               [--skip-advisory] # skip the db tier's ADVISORY unit stage (desk only; no
                                 # workflow sets it — ci_local_native)
               [--summary <file.json>]
+    bun run ci:local --docker --record-unit-baseline [--ref <rev>]
+        [--allow-regression --reason "<why, per file>"]   # RECORD the unit baseline
 
 It runs `scripts/ci/hermetic.sh`, `db_tier.sh` and `instance_tier.sh` UNCHANGED with an
 EMPTY private dir — the runner's condition; every `DEDALO_*` key the tiers need they
@@ -170,6 +173,37 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   `{mode, tiers:[{tier, verdict, exit_code, duration_s, stages}]}`. Exit: 0 green,
   1 red, 2 could not run (no docker/image/Postgres, bad arguments).
 
+### Recording the unit baseline — in the image, never on a desk (2026-10-02)
+
+`engineering/unit_baseline.json` freezes per-file floors (cases, skips, executed
+`expect`s) and the red set — facts about the PLATFORM the tier runs on: the image's
+media toolchain, a bare uid, a clone that has no `audits/` and no `../private`. A desk
+recording froze the desk, and the runner reported the difference as drift. So:
+
+- **The writer refuses off the image.** `UNIT_TIER.recordOnlyInCiImage`: the flagless
+  `scripts/unit_baseline.ts` exits 1 BEFORE measuring unless `/etc/dedalo-ci-image`
+  (the fingerprint `ci/Dockerfile` writes) equals this checkout's
+  `sha256(ci/Dockerfile ++ .bun-version)` (`red_baseline.ts ciImageMarkerMatches`).
+  `--check`, `--report` and `--record-new` stay open. `baselines:bank --with-db`'s unit
+  row therefore fails on a desk by design. Gate: `suite_assertion_floor_tripwire`.
+- **The door is `ci:local --docker --record-unit-baseline`** — the db tier alone, in the
+  image, with `db_tier.sh`'s unit stage in RECORD MODE (`DEDALO_CI_UNIT_RECORD_OUT`,
+  `DEDALO_CI_UNIT_RECORD_ALLOW`): the same suite build, MariaDB start, installs and
+  DB-tripwire stage the check runs after — one preparation, no copy of it to drift. The
+  written JSON leaves the container through the ONE writable mount, `/ci-out` (a scratch
+  dir, deleted after; the source mounts stay read-only), and is copied into the checkout
+  only when the writer did not refuse. Host mode refuses the flag; so do `--hermetic`,
+  `--instance`, `--skip-advisory`, `--fail-fast`, `--keep`. The later parity and MariaDB
+  stages still run (their verdict is the run's exit; the copy does not depend on it).
+- **A refused write is a list to examine, not to wave through.** The writer prints every
+  regression; a real lost assertion is a defect to fix. Only an environment-explained
+  difference is accepted: `--allow-regression --reason "<cause, per file>"` (≥ 20
+  characters; `--reason` alone is refused). The writer prints what it ACCEPTED, and the
+  recorded baseline is committed ON ITS OWN with those reasons in the message.
+- **No workflow names either key** (`ci_workflow_tripwire`); both are always set
+  explicitly by `ci:local` (`ci_local_native` §7 also EXECUTES the pinned stage block
+  with `bun`/`cp` stubbed) and pinned off in `tier_wiring`'s drills.
+
 ### Fixing a red — reproduce narrow, gate once (2026-10-02)
 
 A full gate is ~15 minutes; it CONFIRMS a fix, it does not find one. On 2026-10-01 ten full
@@ -193,6 +227,8 @@ runs (~2.5 h) peeled one red per run. The rule since:
   file reds on the raw tree (2026-10-01: site_builder confinement, 99 reds).
 - *The advisory unit stage.* The desk skips it (`--skip-advisory`); it cannot fail the db
   tier on a host either, so skipping it hides no red — read its drift on the host log.
+  Improvement drift there is re-RECORDED in the image (`--record-unit-baseline`, above),
+  never banked on the desk.
 
 ### `bun run baselines:bank` — improvements banked mechanically
 

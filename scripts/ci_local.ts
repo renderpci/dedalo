@@ -83,6 +83,21 @@
  *   Any mode: [--summary <file.json>]
  *             [--skip-advisory]   # desk only: skip the db tier's ADVISORY unit stage (~5 min);
  *                                 # it cannot change the verdict, and the runner still runs it
+ *   bun run ci:local --docker --record-unit-baseline [--allow-regression --reason "<why>"]
+ *                                 # RECORD engineering/unit_baseline.json in the CI image
+ *
+ * RECORDING THE UNIT BASELINE (`--record-unit-baseline`, --docker only). The unit tier's
+ * per-file floors and red set are a fact about the IMAGE (its toolchain, its uid, the
+ * files a clone has and a desk has besides), so the baseline the runner checks against
+ * is recorded where the runner runs: the db tier alone, in the image, with db_tier.sh's
+ * unit stage switched to the WRITER (`DEDALO_CI_UNIT_RECORD_OUT`, its record mode — the
+ * same suite build, MariaDB start, installs and DB-tripwire stage the check runs after,
+ * not a second copy of them). The written JSON leaves the container through the one
+ * WRITABLE mount, /ci-out, and is copied into this checkout; the source mounts stay
+ * read-only. `--allow-regression` requires `--reason` (the commit message carries it; the
+ * writer prints every regression it accepted). Host mode refuses the flag, and the
+ * writer itself refuses outside the image (UNIT_TIER.recordOnlyInCiImage) — a Mac
+ * recording is impossible from either door.
  *
  * The db and instance tiers each DROP AND REBUILD their own suite database. In host mode
  * that is `dedalo_ci_test` on your Postgres (distinct from the one `bun run
@@ -171,10 +186,12 @@ const BOOLEAN_FLAGS = new Set([
 	'--build',
 	'--fail-fast',
 	'--skip-advisory',
+	'--record-unit-baseline',
+	'--allow-regression',
 	'--help',
 	'-h',
 ]);
-const VALUE_FLAGS = new Set(['--summary', '--ref', '--base', '--audit-base']);
+const VALUE_FLAGS = new Set(['--summary', '--ref', '--base', '--audit-base', '--reason']);
 
 interface Args {
 	flags: Set<string>;
@@ -261,6 +278,52 @@ export function gitScrubbedEnv(
  */
 export function advisoryEnv(args: Pick<Args, 'flags'>): { DEDALO_CI_SKIP_ADVISORY: '0' | '1' } {
 	return { DEDALO_CI_SKIP_ADVISORY: args.flags.has('--skip-advisory') ? '1' : '0' };
+}
+
+/** Where the container sees the run's one WRITABLE mount (the recorded baseline's way out). */
+export const CONTAINER_OUT = '/ci-out';
+
+/**
+ * `--record-unit-baseline` → db_tier.sh's record mode. ALWAYS both keys, set explicitly
+ * (`''` / `'0'` when not recording), so a value exported in the caller's shell never turns
+ * a check into a write. `out` is the directory the TIER sees: /ci-out in the container.
+ */
+export function recordEnv(
+	args: Pick<Args, 'flags'>,
+	out: string,
+): { DEDALO_CI_UNIT_RECORD_OUT: string; DEDALO_CI_UNIT_RECORD_ALLOW: '0' | '1' } {
+	const recording = args.flags.has('--record-unit-baseline');
+	return {
+		DEDALO_CI_UNIT_RECORD_OUT: recording ? out : '',
+		DEDALO_CI_UNIT_RECORD_ALLOW: recording && args.flags.has('--allow-regression') ? '1' : '0',
+	};
+}
+
+/**
+ * The flag combinations a recording refuses, as the message, or null. A recording is the
+ * db tier alone, in the image, run in full: host mode would record the desk (the very
+ * thing the image exists to avoid), another tier adds nothing, `--skip-advisory` would
+ * skip the stage that records, `--fail-fast` has one tier to stop. `--allow-regression`
+ * without a `--reason` is a ratchet loosened with no why, and the reverse is a reason for
+ * nothing.
+ */
+export function recordArgsFault(args: Args): string | null {
+	const recording = args.flags.has('--record-unit-baseline');
+	if (!recording) {
+		if (args.flags.has('--allow-regression') || args.values.has('--reason'))
+			return '--allow-regression / --reason belong to --record-unit-baseline';
+		return null;
+	}
+	if (!args.flags.has('--docker'))
+		return '--record-unit-baseline needs --docker: the unit baseline is recorded in the CI image, never on this machine';
+	for (const flag of ['--hermetic', '--instance', '--skip-advisory', '--fail-fast', '--keep'])
+		if (args.flags.has(flag)) return `--record-unit-baseline runs the db tier alone; drop ${flag}`;
+	const reason = args.values.get('--reason');
+	if (args.flags.has('--allow-regression') && (reason === undefined || reason.trim().length < 20))
+		return '--allow-regression needs --reason "<why, per file>" (≥ 20 characters) — the commit message must carry it';
+	if (!args.flags.has('--allow-regression') && reason !== undefined)
+		return '--reason without --allow-regression: there is no accepted regression to explain';
+	return null;
 }
 
 /** Could-not-run: exit 2, distinct from a red tier (1). */
@@ -486,8 +549,11 @@ function fixHint(stage: Stage): string {
 		return 'cd publication/<site_builder|server_api/v2> && bun install --frozen-lockfile && bunx tsc --noEmit && bun test (all pass + exit 1 = coverageThreshold)';
 	if (name.includes('suite database'))
 		return 'bun run test:db:setup (the suite build itself failed — every later stage never ran)';
+	if (name.startsWith('recording engineering/unit_baseline.json'))
+		return 'the writer REFUSED (see REGRESSIONS above): fix each, or re-record with --allow-regression --reason naming the cause per file';
 	if (name.includes('unit tier'))
-		return `bun run scripts/unit_baseline.ts --check — ${driftHint ?? `drift: ${bank} --with-db`}`;
+		// Recorded in the CI image only (UNIT_TIER.recordOnlyInCiImage) — never a desk bank.
+		return `bun run scripts/unit_baseline.ts --check — ${grew && driftHint !== undefined ? driftHint : 'drift: re-record in the image: bun run ci:local --docker --record-unit-baseline'}`;
 	if (name.includes('parity'))
 		return `bun run scripts/parity_baseline.ts --check — ${driftHint ?? `drift: ${bank} --with-db`}; an intended wire change needs an engineering/wire_contract/ entry the same day`;
 	if (name.includes('client suite'))
@@ -650,6 +716,8 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 		),
 		DEDALO_PRIVATE_DIR: privateDir,
 		...advisoryEnv(args),
+		// Never records on the host (recordArgsFault refuses the flag): both keys pinned off.
+		...recordEnv({ flags: new Set() }, ''),
 		...(binPath === undefined ? {} : { DEDALO_PG_BIN_PATH: binPath }),
 	};
 
@@ -985,6 +1053,10 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 	const inputs = mkdtempSync(join(tmpdir(), 'dedalo-ci-docker-'));
 	chmodSync(inputs, 0o755);
 	writeFileSync(join(inputs, 'driver.sh'), IN_CONTAINER_DRIVER, { mode: 0o644 });
+	// The ONE writable mount (/ci-out): empty, world-writable (the container writes as
+	// uid 1001, not as you), removed after the run. Only a recording writes to it.
+	const outputs = mkdtempSync(join(tmpdir(), 'dedalo-ci-out-'));
+	chmodSync(outputs, 0o777);
 	let overlay = false;
 	if (ref === undefined) {
 		const lists = workingTreeLists();
@@ -1021,6 +1093,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 			]),
 		),
 		DEDALO_CI_IN: inputs,
+		DEDALO_CI_OUT: outputs,
 		DEDALO_CI_SHA: sha,
 		DEDALO_CI_BRANCH: base === undefined ? branch : `ci-local-pr`,
 		DEDALO_CI_GITHUB_REF: base === undefined ? `refs/heads/${branch}` : 'refs/pull/0/merge',
@@ -1029,6 +1102,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 		DEDALO_CI_AUDIT_BASE: auditBase,
 		DEDALO_CI_OVERLAY: overlay ? '1' : '0',
 		...advisoryEnv(args),
+		...recordEnv(args, CONTAINER_OUT),
 		// compose.yml REQUIRES this (`:?`) for every command it parses, `down` included —
 		// without it the teardown fails to interpolate and leaks the project's network.
 		DEDALO_CI_TIER_SCRIPT: 'none',
@@ -1062,6 +1136,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 			teardown(activeProject);
 		}
 		rmSync(inputs, { recursive: true, force: true });
+		rmSync(outputs, { recursive: true, force: true });
 		process.exit(130);
 	};
 	process.on('SIGINT', onSignal);
@@ -1096,12 +1171,42 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 				activeProject = undefined;
 			}
 		}
+		if (args.flags.has('--record-unit-baseline')) copyRecordedBaseline(outputs, args);
 	} finally {
 		process.off('SIGINT', onSignal);
 		process.off('SIGTERM', onSignal);
 		rmSync(inputs, { recursive: true, force: true });
+		rmSync(outputs, { recursive: true, force: true });
 	}
 	return results;
+}
+
+/** The baseline the recording writes, repo-relative (scripts/unit_baseline.ts BASELINE_PATH). */
+const UNIT_BASELINE = 'engineering/unit_baseline.json';
+
+/**
+ * Copy the recorded baseline out of /ci-out into the checkout — only what db_tier.sh's
+ * record mode put there, i.e. only a write the writer did NOT refuse. Parsed first: a
+ * truncated copy never replaces the committed file.
+ */
+function copyRecordedBaseline(outputs: string, args: Args): void {
+	const recorded = join(outputs, 'unit_baseline.json');
+	if (!existsSync(recorded)) {
+		console.log(
+			`\n== ci:local: NOT RECORDED — the writer refused or the stage never ran (see the RED stage above); ${UNIT_BASELINE} is unchanged`,
+		);
+		return;
+	}
+	const text = readFileSync(recorded, 'utf8');
+	JSON.parse(text);
+	writeFileSync(join(REPO_ROOT, UNIT_BASELINE), text);
+	const reason = args.values.get('--reason');
+	console.log(
+		`\n== ci:local: RECORDED ${UNIT_BASELINE} (in the CI image). Commit it on its own` +
+			(reason === undefined
+				? '.'
+				: `, with the accepted regressions' reason in the message:\n   ${reason}`),
+	);
 }
 
 // ── summary ──────────────────────────────────────────────────────────────────
@@ -1141,7 +1246,8 @@ async function main(): Promise<void> {
 	if (args.flags.has('--help') || args.flags.has('-h')) {
 		console.log(
 			'bun run ci:local [--hermetic] [--db] [--instance] [--keep] [--fail-fast] [--summary <file>]\n' +
-				'bun run ci:local --docker [--hermetic] [--db] [--instance] [--ref <rev>] [--audit-base <sha>] [--build] [--base <branch>] [--fail-fast] [--summary <file>]\n\n' +
+				'bun run ci:local --docker [--hermetic] [--db] [--instance] [--ref <rev>] [--audit-base <sha>] [--build] [--base <branch>] [--fail-fast] [--summary <file>]\n' +
+				'bun run ci:local --docker --record-unit-baseline [--ref <rev>] [--allow-regression --reason "<why>"]\n\n' +
 				'Runs the CI tiers with the environment a RUNNER has: no ../private/.env, every\n' +
 				'DEDALO_* key composed by the tier itself. Host mode takes only the Postgres\n' +
 				'connection from your machine; on macOS run --instance under a short TMPDIR\n' +
@@ -1153,6 +1259,8 @@ async function main(): Promise<void> {
 		);
 		process.exit(0);
 	}
+	const recordFault = recordArgsFault(args);
+	if (recordFault !== null) fail(recordFault);
 	if (!args.flags.has('--docker')) {
 		for (const flag of ['--ref', '--base', '--audit-base'])
 			if (args.values.has(flag))
@@ -1160,7 +1268,9 @@ async function main(): Promise<void> {
 		if (args.flags.has('--build')) fail('--build needs --docker');
 	}
 
-	const selected = TIERS.filter((tier) => args.flags.has(tier.flag));
+	const selected = args.flags.has('--record-unit-baseline')
+		? TIERS.filter((tier) => tier.id === 'db')
+		: TIERS.filter((tier) => args.flags.has(tier.flag));
 	const tiers = selected.length > 0 ? selected : TIERS;
 
 	const results = args.flags.has('--docker')

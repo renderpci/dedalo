@@ -23,6 +23,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { Glob } from 'bun';
+import { ciImageFingerprint } from './ci_image.ts';
 import { type FileCounts, type ParityRun, REPO_ROOT, runTier } from './parity_census.ts';
 import { emitRatchetCheck, type RatchetCheck, wantsCheckJson } from './ratchet_check.ts';
 
@@ -63,6 +64,32 @@ export interface TierSpec {
 	 * two, so the protection the comment promised did not exist on either tier.)
 	 */
 	exactCounts: boolean;
+	/**
+	 * The full writer (no flag) refuses to run anywhere but the CI IMAGE the tier is checked
+	 * in — see {@link ciImageMarkerMatches}. For a tier whose per-file floors and red set are
+	 * facts about the platform (the unit tier: media toolchain, uid, files a clone lacks),
+	 * a desk recording freezes the DESK and the runner then reports the difference as drift.
+	 * The CI-image door is `bun run ci:local --docker --record-unit-baseline`. `--check`,
+	 * `--report` and `--record-new` (one new file's floor, which refuses a red) stay open.
+	 */
+	recordOnlyInCiImage?: boolean;
+}
+
+/** Where the CI image states its own fingerprint (ci/Dockerfile writes it at build time). */
+export const CI_IMAGE_MARKER = '/etc/dedalo-ci-image';
+
+/**
+ * Is this process running in the CI image built from THIS checkout's definition? The
+ * marker the image carries must equal `sha256(ci/Dockerfile ++ .bun-version)` of the tree
+ * being measured: no marker (a Mac, a bare Linux desk) or an image of another definition
+ * (a stale local build) is not the runner's platform. Parameterized for the gate.
+ */
+export function ciImageMarkerMatches(
+	markerPath: string = CI_IMAGE_MARKER,
+	repoRoot: string = REPO_ROOT,
+): boolean {
+	if (!existsSync(markerPath)) return false;
+	return readFileSync(markerPath, 'utf8').trim() === ciImageFingerprint(repoRoot);
 }
 
 export interface RedBaseline {
@@ -557,6 +584,8 @@ export interface BaselineCliIo {
 	exit: (code: number) => never;
 	log: (line: string) => void;
 	error: (line: string) => void;
+	/** Running in the CI image? Default {@link ciImageMarkerMatches}; consulted only by a `recordOnlyInCiImage` tier's writer. */
+	inCiImage?: () => boolean;
 }
 
 export function realBaselineCliIo(): BaselineCliIo {
@@ -572,6 +601,7 @@ export function realBaselineCliIo(): BaselineCliIo {
 		exit: (code) => process.exit(code),
 		log: (line) => console.log(line),
 		error: (line) => console.error(line),
+		inCiImage: () => ciImageMarkerMatches(),
 	};
 }
 
@@ -728,6 +758,15 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 		}
 	}
 
+	const writing = !args.has('--report') && !args.has('--check') && !wantsCheckJson(io.argv);
+	if (writing && spec.recordOnlyInCiImage === true && !(io.inCiImage ?? ciImageMarkerMatches)()) {
+		// Before the ~5-minute measure: the answer does not depend on it.
+		io.error(
+			`${spec.id}_baseline: REFUSING to write — this is not the CI image (no ${CI_IMAGE_MARKER} matching this checkout's ci/Dockerfile + .bun-version). The ${spec.id} tier's floors and red set are facts about the platform; a recording here freezes this machine, not the runner. Record it in the image: bun run ci:local --docker --record-unit-baseline`,
+		);
+		io.exit(1);
+	}
+
 	const run = io.measure(spec.paths);
 
 	if (args.has('--report')) {
@@ -767,15 +806,19 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 		existing = null;
 	}
 	if (existing !== null) {
-		const refusal = writeRefusal(
-			spec,
-			computeDrift(spec, run, existing),
-			args.has('--allow-regression'),
-		);
+		const drift = computeDrift(spec, run, existing);
+		const refusal = writeRefusal(spec, drift, args.has('--allow-regression'));
 		if (refusal !== null) {
 			io.error(refusal);
 			io.exit(1);
 		}
+		// What --allow-regression ACCEPTED, printed: the commit message must name a reason
+		// per entry, and nobody can give one for a regression the log never showed.
+		const accepted = classifyTierDrift(spec, drift).regressions;
+		if (accepted.length > 0)
+			io.log(
+				`${spec.id}_baseline: ACCEPTED under --allow-regression (${accepted.length}) — each needs its reason in the commit message:\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors, firstFailures: drift.firstFailures })}`,
+			);
 	}
 	const baseline = buildBaseline(spec, run);
 	const target = baselineFile(spec);
