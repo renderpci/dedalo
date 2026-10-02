@@ -77,6 +77,25 @@ function walkDirFiles(root: string, extensions: readonly string[], relBase = '')
 	return files;
 }
 
+/** Core path fragments dropped case-INSENSITIVELY (PHP stripos). */
+const CORE_EXCLUDED_ANY_CASE: readonly string[] = [
+	'/acc/',
+	'/old/',
+	'/lib/', // libraries
+];
+
+/** Core path fragments dropped case-SENSITIVELY (PHP strpos). */
+const CORE_EXCLUDED_EXACT_CASE: readonly string[] = [
+	'/themes/', // themes directory
+	'/ontology/', // old ontology files (no modules)
+	'/test/',
+	'/plug-ins/',
+	'/fonts/',
+	'worker_cache.js',
+	'/service_worker.js', // the service worker itself
+	'/sw.js', // the retired-URL tombstone (core/sw.js)
+];
+
 /**
  * Core JS filter (PHP get_dedalo_files, core branch) — exact port, including
  * which checks are case-insensitive (PHP stripos) vs case-sensitive (strpos).
@@ -84,17 +103,8 @@ function walkDirFiles(root: string, extensions: readonly string[], relBase = '')
 function coreFileUrl(rel: string): string | null {
 	const lower = rel.toLowerCase();
 	if (
-		lower.includes('/acc/') ||
-		rel.includes('/themes/') || // ignore themes directory
-		rel.includes('/ontology/') || // ignore old ontology files (no modules)
-		lower.includes('/old/') ||
-		lower.includes('/lib/') || // ignore libraries
-		rel.includes('/test/') || // ignore test
-		rel.includes('/plug-ins/') ||
-		rel.includes('/fonts/') || // ignore fonts
-		rel.includes('worker_cache.js') ||
-		rel.includes('/service_worker.js') || // ignore service worker
-		rel.includes('/sw.js') // ignore the retired-URL tombstone (core/sw.js)
+		CORE_EXCLUDED_ANY_CASE.some((needle) => lower.includes(needle)) ||
+		CORE_EXCLUDED_EXACT_CASE.some((needle) => rel.includes(needle))
 	) {
 		return null;
 	}

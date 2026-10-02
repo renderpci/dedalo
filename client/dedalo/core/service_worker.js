@@ -24,8 +24,8 @@
 // imports (module Service Worker — registered with {type:'module'} by login.js
 // run_service_worker; the shared transport is what data_manager.js and
 // worker_cache.js use too, so there is no third copy of the request algorithm)
-	import {fetch_api} from './common/js/api_transport.js'
 	import {response_data} from './common/js/api_error.js'
+	import {fetch_api} from './common/js/api_transport.js'
 
 
 

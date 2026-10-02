@@ -5,8 +5,8 @@
 	"root": "src/core",
 	"summary": {
 		"files": 595,
-		"functions": 7158,
-		"functionsOverCap": 683,
+		"functions": 7183,
+		"functionsOverCap": 681,
 		"filesOverCap": 263
 	},
 	"ledger": [
@@ -99,12 +99,17 @@
 			"functionsOverCap": 683,
 			"filesOverCap": 263,
 			"reason": "Merge of the two master lines (local 681/264, remote 688/268 at f53ef34a3d): the merged tree measures 683/263 — below the remote and +2 functions over the local, those being the remote's own over-cap functions brought in by the merge; conform.ts conformLeafBody brought back under its 32 cap (date_mode lookup extracted)"
+		},
+		{
+			"generated": "2026-10-02",
+			"functionsOverCap": 681,
+			"filesOverCap": 263
 		}
 	],
 	"files": {
 		"src/core/ai/model_store.ts": 10,
 		"src/core/api/access_log.ts": 7,
-		"src/core/api/dedalo_files.ts": 12,
+		"src/core/api/dedalo_files.ts": 9,
 		"src/core/api/dispatch.ts": 19,
 		"src/core/api/handlers/dd_component_3d_api.ts": 13,
 		"src/core/api/handlers/dd_component_av_api.ts": 7,
@@ -273,7 +278,7 @@
 		"src/core/relations/request_config/implicit.ts": 27,
 		"src/core/relations/request_config/presets.ts": 18,
 		"src/core/relations/save.ts": 24,
-		"src/core/relations/select_lang.ts": 10,
+		"src/core/relations/select_lang.ts": 9,
 		"src/core/resolve/component_data.ts": 11,
 		"src/core/resolve/dd_info.ts": 12,
 		"src/core/resolve/environment.ts": 20,
