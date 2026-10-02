@@ -366,6 +366,14 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 		{ lang: 'nolan', reason: 'add_new_element on a portal — a locator write, no language.' },
 	],
 	[
+		'src/core/relations/children_write.ts',
+		{
+			lang: 'nolan',
+			reason:
+				"A children save writes each child's parent link and its order value — locators and a sort number, never translated: DATA_NOLAN whatever lang the request carried.",
+		},
+	],
+	[
 		'tools/tool_tc/server/index.ts',
 		{ lang: 'caller', reason: 'Time-code writes carry the lang of the component being edited.' },
 	],
