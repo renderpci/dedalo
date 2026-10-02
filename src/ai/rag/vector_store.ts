@@ -42,6 +42,8 @@ import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
+import { suitePoolRefusal } from '../../config/suite_database.ts';
+import { DedaloError } from '../../core/errors/index.ts';
 import { assertTestRagDatabase, testRagDatabaseName } from './test_rag_db.ts';
 import type { Candidate, EmbeddingRow, RecordLocator } from './types.ts';
 
@@ -59,6 +61,15 @@ function buildRagSqlOptions(): ConstructorParameters<typeof SQL>[0] {
 	const database = (testRagDatabaseName() ??
 		readEnv('DEDALO_RAG_DB_NAME') ??
 		readString('RAG_DB_NAME')) as string;
+	// A TEST process opens no vector database the suite preload did not arm
+	// (src/config/suite_database.ts): unarmed, this is the installation's index.
+	const suiteRefusal = suitePoolRefusal('vector database', database);
+	if (suiteRefusal !== null) {
+		throw new DedaloError('internal.invariant', {
+			message: suiteRefusal,
+			coordinates: { database },
+		});
+	}
 	const socket = readString('DEDALO_RAG_DB_SOCKET_CONN');
 	const host = (readEnv('DEDALO_RAG_DB_HOSTNAME_CONN') ?? config.db.host) as string;
 	const portRaw = Number(readString('DEDALO_RAG_DB_PORT_CONN'));

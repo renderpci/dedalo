@@ -306,6 +306,34 @@ parity test harness would use against a legacy reference installation (the compa
 the reference-engine API endpoint key above). The running engine never reads it; leave
 it unset.`,
 	},
+	DEDALO_TEST_DATABASE: {
+		type: 'string',
+		scope: 'test_seam',
+		default: undefined,
+		heading: 'Test suite database (test seam)',
+		typeLabel: 'string',
+		consumer:
+			'src/config/suite_database.ts (from the PROCESS env only, by design: the pin the suite preload sets) + test/preload/test_database.ts',
+		doc: `Test seam, not a setting. The name of the database the test suite runs against; unset, the suite derives \`<DB_NAME>_test\`. The suite's preload (\`test/preload/test_database.ts\`) pins it before it repoints \`DB_NAME\`, and that pin is what ARMS the connection pool inside a test process: a \`bun test\` process opens a database only when this names exactly that database (or \`DEDALO_TEST_DB_DISABLE=true\`). A \`bun test\` started outside the repository root never reads the preload, so its pool refuses to open the application database instead of writing test data into it. The running engine never reads it outside a test process; leave it unset.
+
+\`\`\`bash
+DEDALO_TEST_DATABASE="dedalo7_test"
+\`\`\``,
+	},
+	DEDALO_TEST_DB_DISABLE: {
+		type: 'string',
+		scope: 'test_seam',
+		default: undefined,
+		heading: 'Run the test suite against the configured database (test seam)',
+		typeLabel: 'string',
+		consumer:
+			'src/config/suite_database.ts + test/preload/test_database.ts (both from the PROCESS env only, by design: an explicit typed-out choice, never a .env line)',
+		doc: `Test seam, not a setting. \`true\` makes the test suite run against the CONFIGURED database instead of its own \`_test\` database — an explicit, typed-out choice to let the tests read and write your data, never a default. It also stands the test-process connection guard down (see the test suite database key above). The running engine never reads it outside a test process; leave it unset.
+
+\`\`\`bash
+DEDALO_TEST_DB_DISABLE="true"
+\`\`\``,
+	},
 	PHP_API_USERNAME: {
 		type: 'string',
 		scope: 'test_seam',

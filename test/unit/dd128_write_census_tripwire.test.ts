@@ -968,6 +968,7 @@ import {
 	type Principal,
 	resolvePrincipal,
 } from '../../src/core/security/permissions.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { tool as propagateTool } from '../../tools/tool_propagate_component_data/server/index.ts';
 
 const CENSUS_TAG = `dd128census_${process.pid}_${Math.random().toString(36).slice(2, 8)}`;
@@ -991,6 +992,10 @@ function profileLocator(profileId: number) {
 }
 
 beforeAll(async () => {
+	// This gate writes users, profiles, a project and TM rows through the raw matrix
+	// doors: ask the suite database's marker first (the 2026-10-02 dd128census_*
+	// rows in an application database were this file, run with no preload).
+	await assertTestDatabase('dd128_write_census_tripwire');
 	// The grant the audit describes: level 2 on the users SECTION and on the PROFILE
 	// component of it. Nothing else — no global-admin flag, no developer flag.
 	managerProfileId = await insertMatrixRecordWithCounter('matrix_profiles', 'dd234', {

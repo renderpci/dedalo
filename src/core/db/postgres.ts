@@ -35,6 +35,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
+import { suiteDatabaseRefusal } from '../../config/suite_database.ts';
 import { recordPoolWait } from '../api/counters.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { DEDICATED_CONNECTIONS_MAX } from './connection_budget.ts';
@@ -166,6 +167,16 @@ function buildSqlOptions(
 	lockTimeout?: string,
 ): ConstructorParameters<typeof SQL>[0] {
 	const { database, host, port, user, password, sslMode } = config.db;
+	// A TEST process opens only the database the suite preload armed: a `bun test`
+	// run outside the repo root never reads bunfig.toml, so DB_NAME would still
+	// name the APPLICATION database (src/config/suite_database.ts).
+	const suiteRefusal = suiteDatabaseRefusal(database);
+	if (suiteRefusal !== null) {
+		throw new DedaloError('internal.invariant', {
+			message: suiteRefusal,
+			coordinates: { database },
+		});
+	}
 	// Startup parameters (sent in the startup packet — they outrank ALTER ROLE /
 	// ALTER DATABASE defaults). Omitted entirely when there are none.
 	const startupParameters = definedParameters({

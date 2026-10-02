@@ -83,6 +83,18 @@
  *     (readOnlyRoleClusterSql) is run concurrently here and every run must
  *     succeed; a positive control runs the same text MINUS its advisory lock
  *     and must produce the collision, so the harness provably contends.
+ *  9. A TEST PROCESS THE PRELOAD NEVER REACHED OPENS NOTHING (2026-10-02). The
+ *     preload is wired through bunfig.toml, which Bun reads from the CURRENT
+ *     DIRECTORY: a `bun test` started outside the repo root (a scratch worktree,
+ *     an agent's scratchpad) ran with no preload, so DB_NAME still named the
+ *     APPLICATION database and every writing test wrote there (`dd128census_*`
+ *     rows were found in one; 234 of the 302 writing unit files carry no guard of
+ *     their own). The pool now refuses to build in a test process unless the
+ *     preload armed that exact database (src/config/suite_database.ts). Proved by
+ *     the decision table AND for real: a child `bun test` in a temp directory with
+ *     no bunfig.toml, the preload-set seams stripped from its environment, must
+ *     be REFUSED before any connection — and, as the positive control, the same
+ *     child with DEDALO_TEST_DATABASE armed at the suite database must connect.
  *
  * HONEST LIMITS. The inventory is a REGEX classifier over stripped sources: it
  * sees DML text and the named write doors, not a write reached through an
@@ -99,7 +111,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
 import {
@@ -108,6 +121,11 @@ import {
 	resolveSuiteDatabase,
 } from '../../scripts/client_test_server.ts';
 import { config } from '../../src/config/config.ts';
+import {
+	currentSuiteDatabaseEnv,
+	suiteDatabaseRefusal,
+	suitePoolRefusal,
+} from '../../src/config/suite_database.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
 import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
@@ -1550,4 +1568,173 @@ describe("rule 6b — the client server's stateful surfaces are the suite databa
 			expect(a[key], `${key} must be per-run`).not.toBe(b[key]);
 		}
 	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 9 — a test process the preload never reached opens no database.
+// ---------------------------------------------------------------------------
+
+describe('rule 9 — a bun test run without the preload opens no database', () => {
+	const ARMED = {
+		nodeEnv: 'test',
+		armedDatabase: 'suite_db',
+		disabled: undefined,
+		applicationDatabase: 'app_db',
+	};
+
+	test('matrix database: refused when unarmed, or when it is the .env application database', () => {
+		expect(suiteDatabaseRefusal('suite_db', ARMED)).toBeNull();
+		// A child a test deliberately points elsewhere (a shard, a scratch install DB).
+		expect(suiteDatabaseRefusal('scratch_db', ARMED)).toBeNull();
+		// Rule 2: the application database is refused whatever the pin says.
+		expect(suiteDatabaseRefusal('app_db', ARMED)).toContain('APPLICATION database');
+		expect(suiteDatabaseRefusal('app_db', { ...ARMED, armedDatabase: 'app_db' })).toContain(
+			'APPLICATION database',
+		);
+		// Rule 1: no pin at all — the preload never ran (foreign cwd, bare spawn).
+		expect(suiteDatabaseRefusal('suite_db', { ...ARMED, armedDatabase: undefined })).toContain(
+			'DEDALO_TEST_DATABASE is unset',
+		);
+		// No .env (CI composes its env): rule 1 still holds.
+		expect(
+			suiteDatabaseRefusal('x', {
+				...ARMED,
+				armedDatabase: undefined,
+				applicationDatabase: undefined,
+			}),
+		).not.toBeNull();
+	});
+
+	test('side pools (vector, MariaDB): refused only when unarmed', () => {
+		expect(suitePoolRefusal('vector database', 'rag', ARMED)).toBeNull();
+		expect(
+			suitePoolRefusal('vector database', 'rag', { ...ARMED, armedDatabase: undefined }),
+		).toContain("REFUSING to open vector database 'rag'");
+	});
+
+	test('the opt-out is the literal "true", and nothing refuses outside a test process', () => {
+		const unarmed = { ...ARMED, armedDatabase: undefined };
+		expect(suiteDatabaseRefusal('app_db', { ...unarmed, disabled: 'true' })).toBeNull();
+		expect(suiteDatabaseRefusal('app_db', { ...unarmed, disabled: 'yes' })).not.toBeNull();
+		expect(suitePoolRefusal('vector database', 'rag', { ...unarmed, disabled: 'true' })).toBeNull();
+		for (const nodeEnv of [undefined, 'production', 'development']) {
+			expect(suiteDatabaseRefusal('app_db', { ...unarmed, nodeEnv }), String(nodeEnv)).toBeNull();
+			expect(suitePoolRefusal('mariadb', 't', { ...unarmed, nodeEnv }), String(nodeEnv)).toBeNull();
+		}
+	});
+
+	test('this process passes for the right reason (anti-vacuity)', () => {
+		const env = currentSuiteDatabaseEnv();
+		expect(env.nodeEnv).toBe('test');
+		expect(env.armedDatabase).toBe(config.db.database);
+		expect(env.applicationDatabase).toBe(applicationDatabaseName());
+		expect(config.db.database).not.toBe(env.applicationDatabase);
+	});
+
+	/** Run `bun test` on a one-test file from a directory with NO bunfig.toml. */
+	const MATRIX_PROBE = `const { sql } = await import(${JSON.stringify(join(REPO_ROOT, 'src/core/db/postgres.ts'))});
+	const rows = await sql\`SELECT current_database() AS db\`;
+	console.log('CONNECTED TO ' + rows[0].db);`;
+
+	/**
+	 * The database an UNARMED child really falls back to: the installation's, as
+	 * ../private/.env names it — or, on a tier with no private file (the hosted CI
+	 * db tier composes its env), a synthetic stand-in, so the child's config still
+	 * loads and the GUARD is what answers (deleting DB_NAME there died in config.ts
+	 * first: "Missing required config key 'DB_NAME'").
+	 */
+	const FALLBACK_DB = applicationDatabaseName() ?? 'dedalo_probe_application_db';
+
+	function runOutsideRepo(
+		armed: string | null,
+		dbName: string = FALLBACK_DB,
+		probe: string = MATRIX_PROBE,
+		extraEnv: Record<string, string> = {},
+	): { exit: number; out: string } {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo-nopreload-'));
+		try {
+			writeFileSync(
+				join(dir, 'probe.test.ts'),
+				`import { test } from 'bun:test';\ntest('probe', async () => {\n${probe}\n});\n`,
+			);
+			// The preload-set seams are STRIPPED: an inherited value would fake the answer.
+			const env: Record<string, string | undefined> = { ...process.env };
+			for (const key of [
+				'DEDALO_TEST_DATABASE',
+				'DB_NAME',
+				'DEDALO_DATABASE_CONN',
+				'DEDALO_TEST_DB_DISABLE',
+			]) {
+				delete env[key];
+			}
+			if (armed !== null) env.DEDALO_TEST_DATABASE = armed;
+			env.DB_NAME = dbName;
+			Object.assign(env, extraEnv);
+			const child = Bun.spawnSync(['bun', 'test', './probe.test.ts'], {
+				cwd: dir,
+				env,
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			return {
+				exit: child.exitCode ?? -1,
+				out: `${child.stdout.toString()}${child.stderr.toString()}`,
+			};
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	}
+
+	test('outside the repo root the pool refuses before connecting', () => {
+		const run = runOutsideRepo(null);
+		expect(run.out).toContain('DEDALO_TEST_DATABASE is unset');
+		expect(run.out).not.toContain('CONNECTED TO');
+		expect(run.exit).not.toBe(0);
+	}, 60_000);
+
+	test('a pinned child aimed at the APPLICATION database is refused too', () => {
+		// The application database is what ../private/.env names. Where there is no
+		// such file (hosted CI), give the child one: a throwaway private dir whose
+		// .env names a synthetic application database (every other key the child
+		// needs comes from the process env there).
+		const appDb = applicationDatabaseName();
+		const privateDir = appDb === undefined ? mkdtempSync(join(tmpdir(), 'dedalo-private-')) : null;
+		try {
+			const target = appDb ?? 'dedalo_probe_application_db';
+			if (privateDir !== null) writeFileSync(join(privateDir, '.env'), `DB_NAME=${target}\n`);
+			const run = runOutsideRepo(
+				config.db.database,
+				target,
+				MATRIX_PROBE,
+				privateDir === null ? {} : { DEDALO_PRIVATE_DIR: privateDir },
+			);
+			expect(run.out).toContain('APPLICATION database named in ../private/.env');
+			expect(run.out).not.toContain('CONNECTED TO');
+		} finally {
+			if (privateDir !== null) rmSync(privateDir, { recursive: true, force: true });
+		}
+	}, 60_000);
+
+	test('the side pools refuse unarmed too: the vector store (built at import) and a MariaDB target', () => {
+		const rag = runOutsideRepo(
+			null,
+			FALLBACK_DB,
+			`await import(${JSON.stringify(join(REPO_ROOT, 'src/ai/rag/vector_store.ts'))}); console.log('CONNECTED TO rag');`,
+		);
+		expect(rag.out).toContain("REFUSING to open vector database '");
+		expect(rag.out).not.toContain('CONNECTED TO');
+		const maria = runOutsideRepo(
+			null,
+			FALLBACK_DB,
+			`const { getTargetPool } = await import(${JSON.stringify(join(REPO_ROOT, 'src/diffusion/targets/mariadb/db.ts'))}); getTargetPool('zz_probe_target'); console.log('CONNECTED TO maria');`,
+		);
+		expect(maria.out).toContain("REFUSING to open diffusion MariaDB database 'zz_probe_target'");
+		expect(maria.out).not.toContain('CONNECTED TO');
+	}, 60_000);
+
+	test('positive control: the same child, armed at the suite database, connects to it', () => {
+		const run = runOutsideRepo(config.db.database, config.db.database);
+		expect(run.out).toContain(`CONNECTED TO ${config.db.database}`);
+		expect(run.exit).toBe(0);
+	}, 60_000);
 });

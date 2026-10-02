@@ -727,6 +727,12 @@ export const NEW_IN_V7: readonly string[] = [
 	// (src/core/media/test_media_root.ts). NEW_IN_V7 by construction — v6 had no
 	// dedicated test tier and no such guard.
 	'DEDALO_TEST_MEDIA_ROOT',
+	// The test-database seams: the suite database's name (which the preload pins
+	// and which ARMS the test-process pool guard, src/config/suite_database.ts)
+	// and the explicit run-against-my-own-database opt-out. NEW_IN_V7 by
+	// construction — v6 had no dedicated test database and no such guard.
+	'DEDALO_TEST_DATABASE',
+	'DEDALO_TEST_DB_DISABLE',
 	'MEDIA_DEV_ROUTE_ENABLED',
 	// The wall-clock budget of the per-BOOT media-tree pass. NEW_IN_V7 by
 	// construction: v6 re-ran the equivalent walk on every REQUEST and had no

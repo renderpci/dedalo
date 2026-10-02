@@ -32,6 +32,7 @@
 import { SQL } from 'bun';
 import { readEnv } from '../../../config/env.ts';
 import { readString } from '../../../config/readers.ts';
+import { suitePoolRefusal } from '../../../config/suite_database.ts';
 import { DedaloError, type ErrorCode } from '../../../core/errors/index.ts';
 
 /** Rows/mutation results from `.unsafe()` carry MySQL metadata on the array. */
@@ -101,6 +102,15 @@ const poolCache = new Map<string, SQL>();
 
 /** Connection options resolved from env at pool-creation time (lazy, testable). */
 function buildTargetOptions(database: string): ConstructorParameters<typeof SQL>[0] {
+	// A TEST process opens no MariaDB target the suite preload did not arm
+	// (src/config/suite_database.ts): unarmed, this is the installation's server.
+	const suiteRefusal = suitePoolRefusal('diffusion MariaDB database', database);
+	if (suiteRefusal !== null) {
+		throw new DedaloError('internal.invariant', {
+			message: suiteRefusal,
+			coordinates: { database },
+		});
+	}
 	const socket = readEnv('DEDALO_DIFFUSION_DB_SOCKET');
 	const host = readEnv('DEDALO_DIFFUSION_DB_HOST');
 	const commonOptions = {
