@@ -46,8 +46,8 @@
  *  6. A TEST'S OWN SPAWN carries the shipped policy too. A fixture built with a
  *     bare `magick` runs under the HOST's policy.xml (Debian's in the CI image,
  *     which deliberately does not install ours system-wide — ci/Dockerfile), so
- *     one test measured two ImageMagicks. Census over test/, src/core/test_data/
- *     and scripts/: every spawn whose argv resolves ImageMagick (directly or
+ *     one test measured two ImageMagicks. Census over test/ and src/ (the
+ *     registered listers): every spawn whose argv resolves ImageMagick (directly or
  *     through a bound name) names MAGICK_CONFIGURE_PATH, `magickPolicyEnv()` or
  *     `magickTestEnv()` (test/helpers/magick_test_env.ts).
  *
@@ -68,7 +68,13 @@ import { readFileSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 import { magickResourceLimitArgs } from '../../src/core/media/engine/binaries.ts';
-import { apiHandlerFiles, MEDIA_DIR, mediaSourceFiles } from '../helpers/engine_source_corpus.ts';
+import {
+	apiHandlerFiles,
+	engineSourceFilesRelative,
+	MEDIA_DIR,
+	mediaSourceFiles,
+} from '../helpers/engine_source_corpus.ts';
+import { testTreeSourceFiles } from '../helpers/test_tree_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -432,16 +438,22 @@ function testSpawnSites(files: readonly { path: string; code: string }[]): TestS
 	return sites;
 }
 
-/** The test-side trees: every test file and helper, the situations, the scripts. */
+/**
+ * The trees scanned: every source under test/ (the registered test-tree lister)
+ * and every engine source under src/ (the registered engine lister — it holds
+ * src/core/test_data/, where situation builders live) EXCEPT src/core/media/:
+ * the engine's runners are policed by the census above and by
+ * media_writer_discipline_tripwire, and there the `build*Argv` builders also
+ * name ffmpeg/gs/pdf argv, so this file-blind classifier would misread them.
+ * scripts/ resolves no ImageMagick binary today and has no registered lister; a
+ * script that starts to would be outside this census — stated, not hidden.
+ */
 function testSideFiles(): { path: string; code: string }[] {
-	const out: { path: string; code: string }[] = [];
-	for (const root of ['test', 'src/core/test_data', 'scripts']) {
-		for (const rel of new Bun.Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, root) })) {
-			const path = `${root}/${rel}`;
-			out.push({ path, code: readFileSync(join(REPO_ROOT, path), 'utf8') });
-		}
-	}
-	return out;
+	const engine = engineSourceFilesRelative().filter((path) => !path.startsWith('src/core/media/'));
+	return [...testTreeSourceFiles(), ...engine].map((path) => ({
+		path,
+		code: readFileSync(join(REPO_ROOT, path), 'utf8'),
+	}));
 }
 
 describe("magick policy: a TEST's own ImageMagick spawn carries the shipped policy", () => {
@@ -454,7 +466,7 @@ describe("magick policy: a TEST's own ImageMagick spawn carries the shipped poli
 	const sites = testSpawnSites(testSideFiles());
 	const magick = sites.filter((s) => s.imagemagick);
 
-	test('the census is populated (derived from test/, src/core/test_data/, scripts/)', () => {
+	test('the census is populated (derived from test/ and src/)', () => {
 		expect(sites.length).toBeGreaterThan(50);
 		// Measured 2026-10-02: 38 ImageMagick spawns across 16 files.
 		expect(magick.length).toBeGreaterThanOrEqual(30);

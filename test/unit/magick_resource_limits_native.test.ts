@@ -28,7 +28,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
 import { config } from '../../src/config/config.ts';
@@ -189,12 +189,33 @@ describe.if(HAVE_MAGICK)('the shipped policy is a ceiling a process cannot raise
 			'the shipped policy did not cap a raised -limit — the resource block is the only bound that reaches an ImageMagick this engine did not spawn',
 		).toBe(false);
 
-		// CONTROL: the identical command with no policy SUCCEEDS. This is what makes
-		// the assertion above a statement about the policy rather than about a
-		// malformed file.
+		// CONTROL: the identical command under a PERMISSIVE policy SUCCEEDS. This is
+		// what makes the assertion above a statement about the shipped policy rather
+		// than about a malformed file.
+		//
+		// Permissive, not ABSENT: ImageMagick reads every policy.xml on its search
+		// path and the FIRST one to set a resource wins — so "no policy" (a
+		// nonexistent MAGICK_CONFIGURE_PATH) means "the HOST's policy", which on the
+		// CI image is Debian's (width 32KP: the control was refused there, measured
+		// 2026-10-02) and on a Mac is Homebrew's. A scratch policy that sets the
+		// ceilings above the declared size shadows any host policy exactly as the
+		// shipped one does, so the only variable between the two runs is the file.
+		const permissive = join(ROOT, 'permissive-policy');
+		mkdirSync(permissive, { recursive: true });
+		writeFileSync(
+			join(permissive, 'policy.xml'),
+			[
+				'<policymap>',
+				'  <policy domain="resource" name="width" value="1000000"/>',
+				'  <policy domain="resource" name="height" value="1000000"/>',
+				'  <policy domain="resource" name="area" value="1000000000000"/>',
+				'</policymap>',
+				'',
+			].join('\n'),
+		);
 		const withoutPolicy = await runBinary(argv, {
 			nice: false,
-			env: { MAGICK_CONFIGURE_PATH: '/nonexistent-magick-config' },
+			env: { MAGICK_CONFIGURE_PATH: `${permissive}/` },
 		});
 		expect(
 			withoutPolicy.ok,

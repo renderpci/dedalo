@@ -12,6 +12,12 @@
  *   5. every label it reads exists in the master catalog (the fallbacks would
  *      otherwise hide a rename forever in every non-English UI).
  *
+ * Read WHITESPACE-FREE (`flat`/`flatPull`): the browser formatter reflowed the
+ * file (7164ae7bfd) and the tab-aligned spellings these legs pinned stopped
+ * matching — two legs went red and the `not.toContain` one went VACUOUS (it
+ * could no longer match the shape it refuses). A layout pass may not move a
+ * gate in either direction.
+ *
  * Honest limit: reads the source (no DOM) — the rendering was verified in the
  * browser when it landed. DB-less, network-less → hermetic tier.
  */
@@ -24,27 +30,32 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
 const WIDGETS = join(REPO_ROOT, 'client/dedalo/core/area_maintenance/widgets');
 const src = readFileSync(join(WIDGETS, 'serve_ontology/js/render_serve_ontology.js'), 'utf8');
 const pull = readFileSync(join(WIDGETS, 'update_ontology/js/render_update_ontology.js'), 'utf8');
+/** The source with every whitespace run removed — layout-independent. */
+const flat = src.replace(/\s+/g, '');
+const flatPull = pull.replace(/\s+/g, '');
 
 describe('serve_ontology client render', () => {
 	test('is the panel content, not a collapsed note', () => {
 		expect(src).toContain('serve_ontology_content');
-		expect(src).not.toContain("element_type	: 'details'");
+		// The positive half proves the flat reading sees element_type spellings at all.
+		expect(flat).toContain("element_type:'div'");
+		expect(flat).not.toContain("element_type:'details'");
 	});
 
 	test('the Enabled badge requires all three serving keys', () => {
-		expect(src).toContain(
-			'const ready		= serving.enabled===true && serving.has_server_code===true && serving.cors_enabled===true',
+		expect(flat).toContain(
+			'constready=serving.enabled===true&&serving.has_server_code===true&&serving.cors_enabled===true',
 		);
 	});
 
 	test('the endpoint url is a text node, never markup', () => {
-		expect(src).toContain('text_content:String(serving.url)');
-		expect(/inner_html\s*:\s*[^,]*serving\.url/.test(src)).toBe(false);
+		expect(flat).toContain('text_content:String(serving.url)');
+		expect(/inner_html:[^,]*serving\.url/.test(flat)).toBe(false);
 	});
 
 	test('update_ontology no longer renders the serving readout', () => {
-		expect(pull).not.toContain('build_serving_info');
-		expect(pull).not.toContain('value.serving');
+		expect(flatPull).not.toContain('build_serving_info');
+		expect(flatPull).not.toContain('value.serving');
 	});
 
 	test('every get_label key it reads is defined in the master catalog', () => {
