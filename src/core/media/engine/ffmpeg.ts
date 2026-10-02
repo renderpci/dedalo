@@ -123,14 +123,18 @@ function assertProducedFile(path: string, what: string): void {
 	}
 }
 
-/** Split a PHP filter fragment ('-vf yadif') into argv tokens; '' → []. */
-function fragmentTokens(fragment: string): string[] {
-	return fragment.trim() === '' ? [] : fragment.trim().split(/\s+/);
+/**
+ * The profile's video filter chain as argv: ONE `-vf a,b` (or nothing).
+ * Never one `-vf` per filter — ffmpeg keeps only the last `-vf` of an output
+ * stream, which is how PHP's recipe silently dropped `yadif` (deinterlace).
+ */
+export function videoFilterArgv(profile: FfmpegProfile): string[] {
+	return profile.videoFilters.length === 0 ? [] : ['-vf', profile.videoFilters.join(',')];
 }
 
 /**
  * Two-pass libx264 video encode — PASS 1 argv (PHP :766).
- * `<ffmpeg> -i <src> -an -pass 1 -vcodec .. -vb .. -s .. -g .. <yadif> <gamma> -f .. -loglevel error -passlogfile <log> -y /dev/null`
+ * `<ffmpeg> -i <src> -an -pass 1 -vcodec .. -vb .. -s .. -g .. -vf yadif,<gamma> -f .. -loglevel error -passlogfile <log> -y /dev/null`
  */
 export function buildTranscodePass1Argv(
 	profile: FfmpegProfile,
@@ -154,8 +158,7 @@ export function buildTranscodePass1Argv(
 		profile.scale ?? '',
 		'-g',
 		String(profile.gop ?? 0),
-		...fragmentTokens(profile.deinterlace),
-		...fragmentTokens(profile.gammaFilter),
+		...videoFilterArgv(profile),
 		'-f',
 		profile.force,
 		'-loglevel',
@@ -194,8 +197,7 @@ export function buildTranscodePass2Argv(
 		profile.scale ?? '',
 		'-g',
 		String(profile.gop ?? 0),
-		...fragmentTokens(profile.deinterlace),
-		...fragmentTokens(profile.gammaFilter),
+		...videoFilterArgv(profile),
 		'-f',
 		profile.force,
 		'-passlogfile',

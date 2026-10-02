@@ -137,10 +137,16 @@ resolution for them.
 // src/core/media/engine/ffmpeg_profiles.ts — the 404_pal_16x9 profile
 videoProfile('404_pal_16x9', '1024k', '720x404', 25, 44100, '64k', 1, '404')
 // → { name: '404_pal_16x9', videoBitrate: '1024k', scale: '720x404', gop: 25,
-//     videoCodec: 'libx264', deinterlace: '-vf yadif', gammaFilter: '-vf lutyuv=…',
+//     videoCodec: 'libx264', videoFilters: ['yadif=deint=interlaced', 'lutyuv=…'],
 //     force: 'mp4', audioRate: 44100, audioBitrate: '64k', audioChannels: 1,
 //     audioCodec: 'libvo_aacenc', targetPath: '404' }
 ```
+
+Both passes receive the profile's `videoFilters` as ONE chained option,
+`-vf yadif=deint=interlaced,lutyuv=…` — ffmpeg applies only the last `-vf` it is
+given, so two separate options would silently drop the first filter. `yadif` with
+`deint=interlaced` deinterlaces only frames flagged as interlaced: a progressive
+source passes through it unchanged. The `1080i` tiers carry no deinterlace filter.
 
 !!! note "Data, not code — and the table is wider than the ladder"
     `PROFILE_LIST` is an inert TypeScript array: nothing in it executes at read

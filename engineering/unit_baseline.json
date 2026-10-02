@@ -2403,6 +2403,11 @@
 			"skipped": 0,
 			"assertions": 12
 		},
+		"test/unit/media_deinterlace_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 10
+		},
 		"test/unit/media_encode_integrity_native.test.ts": {
 			"tests": 24,
 			"skipped": 0,

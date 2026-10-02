@@ -14,7 +14,15 @@
  * fidelity but never selected by the standard ladder.
  *
  * The `gammma` lutyuv string uses the shared coefficients (y=0.97,u=1.01,v=0.98)
- * — the PHP `$gammma` triple-m typo lives only in PHP; here it is `gammaFilter`.
+ * — the PHP `$gammma` triple-m typo lives only in PHP.
+ *
+ * DIVERGENCE from PHP (deliberate, 2026-10-02): PHP passed `$progresivo`
+ * ('-vf yadif') and `$gammma` ('-vf lutyuv=…') as TWO `-vf` options. ffmpeg
+ * keeps only the LAST `-vf` per output stream ("Multiple -filter/-af/-vf options
+ * specified … only the last option … will be used"), so yadif was silently
+ * dropped and interlaced sources were never deinterlaced. A profile now carries
+ * its filters as ONE ordered chain (`videoFilters`, deinterlace first) and the
+ * argv builders emit exactly one `-vf <a>,<b>` (`engine/ffmpeg.ts:videoFilterArgv`).
  */
 
 /** One encode profile (the variables PHP's settings file injects). */
@@ -29,10 +37,13 @@ export interface FfmpegProfile {
 	readonly gop: number | null;
 	/** Video codec (-vcodec). Null for audio-only tiers. */
 	readonly videoCodec: string | null;
-	/** Deinterlace fragment ('-vf yadif') or '' when omitted (1080i). */
-	readonly deinterlace: string;
-	/** lutyuv gamma filter fragment, or '' when the tier defines no gamma. */
-	readonly gammaFilter: string;
+	/**
+	 * The video filter chain, in application order: `yadif` (deinterlace —
+	 * absent on the 1080i tiers) then the lutyuv gamma. Bare filter specs, never
+	 * '-vf' fragments: the argv builder joins them into ONE `-vf` (ffmpeg honours
+	 * only the last `-vf` given). Empty for the audio tiers and the legacy 288.
+	 */
+	readonly videoFilters: readonly string[];
 	/** Container format (-f). */
 	readonly force: string;
 	/** Audio sample rate (-ar). Null → the audio branch hardcodes it. */
@@ -48,12 +59,12 @@ export interface FfmpegProfile {
 }
 
 /**
- * The shared lutyuv gamma filter (coefficients uniform across every video
- * profile). ARGV form — no shell quotes (the value has no spaces, so it is a
- * single token after '-vf'). PHP's shell form wraps it in double quotes.
+ * The shared lutyuv gamma filter spec (coefficients uniform across every video
+ * profile). A bare filter spec — no '-vf', no shell quotes.
  */
-const GAMMA_FILTER = '-vf lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)';
-const YADIF = '-vf yadif';
+const GAMMA_FILTER = 'lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)';
+/** The deinterlace filter spec (PHP `$progresivo`, minus its '-vf'). */
+const YADIF = 'yadif=deint=interlaced';
 
 /** Build a standard video profile (the shared gamma + libx264 defaults). */
 function videoProfile(
@@ -65,7 +76,7 @@ function videoProfile(
 	audioBitrate: string,
 	audioChannels: number,
 	targetPath: string,
-	deinterlace: string = YADIF,
+	deinterlace = true,
 ): FfmpegProfile {
 	return {
 		name,
@@ -73,8 +84,7 @@ function videoProfile(
 		scale,
 		gop,
 		videoCodec: 'libx264',
-		deinterlace,
-		gammaFilter: GAMMA_FILTER,
+		videoFilters: deinterlace ? [YADIF, GAMMA_FILTER] : [GAMMA_FILTER],
 		force: 'mp4',
 		audioRate,
 		audioBitrate,
@@ -91,10 +101,10 @@ const PROFILE_LIST: FfmpegProfile[] = [
 	videoProfile('1080_pal_16x9', '6656k', '1920x1080', 25, 44100, '160k', 2, '1080'),
 	videoProfile('1080_pal', '6656k', '1920x1080', 25, 44100, '160k', 2, '1080'),
 	// 1080i (interlaced — no deinterlace fragment) / 1080p — extra tiers, not in the ladder
-	videoProfile('1080i_ntsc_16x9', '10496k', '1920x1080', 30, 44100, '256k', 2, '1080_full', ''),
-	videoProfile('1080i_ntsc', '10496k', '1920x1080', 30, 44100, '256k', 2, '1080_full', ''),
-	videoProfile('1080i_pal_16x9', '10496k', '1920x1080', 25, 44100, '256k', 2, '1080_full', ''),
-	videoProfile('1080i_pal', '10496k', '1920x1080', 25, 44100, '256k', 2, '1080_full', ''),
+	videoProfile('1080i_ntsc_16x9', '10496k', '1920x1080', 30, 44100, '256k', 2, '1080_full', false),
+	videoProfile('1080i_ntsc', '10496k', '1920x1080', 30, 44100, '256k', 2, '1080_full', false),
+	videoProfile('1080i_pal_16x9', '10496k', '1920x1080', 25, 44100, '256k', 2, '1080_full', false),
+	videoProfile('1080i_pal', '10496k', '1920x1080', 25, 44100, '256k', 2, '1080_full', false),
 	videoProfile('1080p_ntsc_16x9', '10496k', '1920x1080', 30, 44100, '256k', 2, '1080_full'),
 	videoProfile('1080p_ntsc', '10496k', '1920x1080', 30, 44100, '256k', 2, '1080_full'),
 	videoProfile('1080p_pal_16x9', '10496k', '1920x1080', 25, 44100, '256k', 2, '1080_full'),
@@ -113,8 +123,7 @@ const PROFILE_LIST: FfmpegProfile[] = [
 		scale: '360x202',
 		gop: 25,
 		videoCodec: 'libx264',
-		deinterlace: '',
-		gammaFilter: '',
+		videoFilters: [],
 		force: 'mp4',
 		audioRate: 22050,
 		audioBitrate: '32k',
@@ -149,8 +158,7 @@ const PROFILE_LIST: FfmpegProfile[] = [
 		scale: null,
 		gop: null,
 		videoCodec: null,
-		deinterlace: '',
-		gammaFilter: '',
+		videoFilters: [],
 		force: 'mp4',
 		audioRate: null,
 		audioBitrate: null,
@@ -164,8 +172,7 @@ const PROFILE_LIST: FfmpegProfile[] = [
 		scale: null,
 		gop: null,
 		videoCodec: null,
-		deinterlace: '',
-		gammaFilter: '',
+		videoFilters: [],
 		force: 'wav',
 		audioRate: null,
 		audioBitrate: null,

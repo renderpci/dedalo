@@ -61,12 +61,18 @@ describe('ffmpeg profiles (37 settings files → typed data)', () => {
 		expect(p.audioChannels).toBe(1);
 		expect(p.force).toBe('mp4');
 		expect(p.targetPath).toBe('404');
-		expect(p.deinterlace).toBe('-vf yadif');
-		expect(p.gammaFilter).toContain('lutyuv=u=gammaval(1.01)');
+		// One ordered chain of bare specs: deinterlace FIRST, then gamma.
+		expect(p.videoFilters).toEqual([
+			'yadif=deint=interlaced',
+			'lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)',
+		]);
 	});
 
-	test('1080i has NO deinterlace fragment; audio tiers are video-null', () => {
-		expect(getFfmpegProfile('1080i_pal')!.deinterlace).toBe('');
+	test('1080i has NO deinterlace filter; audio tiers are video-null', () => {
+		expect(getFfmpegProfile('1080i_pal')!.videoFilters).toEqual([
+			'lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)',
+		]);
+		expect(getFfmpegProfile('audio')!.videoFilters).toEqual([]);
 		const audio = getFfmpegProfile('audio')!;
 		expect(audio.videoCodec).toBeNull();
 		expect(audio.force).toBe('mp4');
@@ -96,12 +102,50 @@ describe('ffmpeg argv recipes (PHP class.Ffmpeg.php)', () => {
 		expect(s).toContain('-vb 1024k');
 		expect(s).toContain('-s 720x404');
 		expect(s).toContain('-g 25');
-		expect(s).toContain('-vf yadif');
+		expect(s).toContain(
+			'-vf yadif=deint=interlaced,lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97) -f mp4',
+		);
 		expect(s).toContain('-passlogfile /log');
 		expect(argv[argv.length - 1]).toBe('/dev/null');
 		// no shell tokens ever
 		expect(argv).not.toContain('sh');
 		expect(argv.some((t) => t.includes('"'))).toBe(false);
+	});
+
+	// ffmpeg honours only the LAST -vf of an output stream ("Multiple -filter/-af/-vf
+	// options specified … only the last option … will be used"): PHP's recipe passed
+	// '-vf yadif' and '-vf lutyuv=…' separately, so yadif was silently dropped and no
+	// interlaced source was ever deinterlaced. Every video profile, both passes: ONE
+	// -vf carrying the profile's whole chain, in order. Real-encode twin (the warning
+	// and the deinterlace measured on output): media_deinterlace_native.test.ts.
+	test('every video profile: exactly ONE -vf per pass, carrying the whole chain', () => {
+		let videoProfiles = 0;
+		for (const name of ffmpegProfileNames()) {
+			const profile = getFfmpegProfile(name)!;
+			if (profile.videoCodec === null) continue;
+			videoProfiles++;
+			for (const argv of [
+				buildTranscodePass1Argv(profile, '/src.mov', '/log'),
+				buildTranscodePass2Argv(profile, '/src.mov', '/log', '/tmp.mp4', 'aac'),
+			]) {
+				const flags = argv.filter(
+					(t) => t === '-vf' || t.startsWith('-filter') || t === '-vfilter',
+				);
+				if (profile.videoFilters.length === 0) {
+					expect(flags).toEqual([]);
+					continue;
+				}
+				expect(flags).toEqual(['-vf']);
+				const chain = argv[argv.indexOf('-vf') + 1]!;
+				expect(chain).toBe(profile.videoFilters.join(','));
+			}
+			// The ladder's deinterlacing tiers carry BOTH filters, yadif first.
+			if (!name.startsWith('1080i') && name !== '288_pal') {
+				expect(profile.videoFilters[0]).toBe('yadif=deint=interlaced');
+				expect(profile.videoFilters[1]).toStartWith('lutyuv=');
+			}
+		}
+		expect(videoProfiles).toBe(35);
 	});
 
 	test('two-pass pass2 adds the audio track + temp target', () => {
