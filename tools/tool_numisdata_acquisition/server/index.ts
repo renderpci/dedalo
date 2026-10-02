@@ -12,7 +12,12 @@ import { NO_LANG } from '../../../src/config/data_langs.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
-import { ok } from '../../../src/core/errors/index.ts';
+import {
+	type ApiErrorBody,
+	ok,
+	toDedaloError,
+	toErrorBody,
+} from '../../../src/core/errors/index.ts';
 import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import {
@@ -899,7 +904,9 @@ async function linkType(
 	}
 }
 
-/** One lot's outcome from commitLots. */
+/** One lot's outcome from commitLots. Every `*_error` is the error system's wire body
+ * (toErrorBody(toDedaloError(...))), never a raw `(error as Error).message` - review item E2:
+ * that raw text can carry tipos, ids and SQL driver text to the client. */
 interface CommitOneLotResult {
 	lot_identifier: unknown;
 	section_tipo: string;
@@ -907,18 +914,18 @@ interface CommitOneLotResult {
 	// write rolled back before creating anything) - `error` names why. A
 	// partial record is never left behind: review item C1.
 	section_id: number | null;
-	error: string | null;
+	error: ApiErrorBody | null;
 	fields_written: string[];
 	auction_section_id: number | null;
 	auction_created: boolean | null;
-	auction_error: string | null;
+	auction_error: ApiErrorBody | null;
 	// null section_id covers both "no citation found" and "citation found but
 	// no Type matched it" — type_citation distinguishes the two.
 	type_section_id: number | null;
 	type_citation: string | null;
-	type_error: string | null;
+	type_error: ApiErrorBody | null;
 	images_created: string[] | null;
-	images_error: string | null;
+	images_error: ApiErrorBody | null;
 }
 
 /** One resolved Auction, cached within a commitLots batch. */
@@ -1106,7 +1113,7 @@ async function commitOneLot(
 
 	let auctionSectionId: number | null = null;
 	let auctionCreated: boolean | null = null;
-	let auctionError: string | null = null;
+	let auctionError: ApiErrorBody | null = null;
 	if (effectiveAuctionHouse !== '' && effectiveAuctionNumber !== '') {
 		try {
 			// No picker ever ran for a per-lot override (it's only known after
@@ -1129,13 +1136,13 @@ async function commitOneLot(
 			await linkAuction(context, sectionId, auctionSectionId);
 			fieldsWritten.push(AUCTION_RELATION_TIPO);
 		} catch (error) {
-			auctionError = (error as Error).message;
+			auctionError = toErrorBody(toDedaloError(error));
 		}
 	}
 
 	let typeSectionId: number | null = null;
 	let typeCitation: string | null = null;
-	let typeError: string | null = null;
+	let typeError: ApiErrorBody | null = null;
 	try {
 		const citation = extractCatalogueCitation(description, catalogueIndex);
 		if (citation !== null) {
@@ -1147,15 +1154,15 @@ async function commitOneLot(
 			}
 		}
 	} catch (error) {
-		typeError = (error as Error).message;
+		typeError = toErrorBody(toDedaloError(error));
 	}
 
 	let imagesCreated: string[] | null = null;
-	let imagesError: string | null = null;
+	let imagesError: ApiErrorBody | null = null;
 	try {
 		imagesCreated = await importImagesForLot(context, l, sectionId);
 	} catch (error) {
-		imagesError = (error as Error).message;
+		imagesError = toErrorBody(toDedaloError(error));
 	}
 
 	return {
@@ -1287,7 +1294,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 				lot_identifier: l.lotIdentifier,
 				section_tipo: NUMISDATA_OBJECT_TIPO,
 				section_id: null,
-				error: (error as Error).message,
+				error: toErrorBody(toDedaloError(error)),
 				fields_written: [],
 				auction_section_id: null,
 				auction_created: null,

@@ -199,7 +199,7 @@ const get_content_data = function(self) {
 					while (container.firstChild) {
 						container.removeChild(container.firstChild)
 					}
-					container.appendChild(render_error(response, 'The request failed.'))
+					container.appendChild(render_error(response, self.get_tool_label('request_failed') || 'The request failed.'))
 					if (on_settle) on_settle()
 					return
 				}
@@ -236,11 +236,11 @@ const get_content_data = function(self) {
 							// response_data unwraps it the same as an ordinary response.
 							if (request_failed(sse_response.data)) {
 								info_node.msg_node.textContent = ''
-								container.appendChild(render_error(sse_response.data, 'The request failed.'))
+								container.appendChild(render_error(sse_response.data, self.get_tool_label('request_failed') || 'The request failed.'))
 								return
 							}
 
-							info_node.msg_node.textContent = 'Done.'
+							info_node.msg_node.textContent = self.get_tool_label('job_done') || 'Done.'
 							on_success(response_data(sse_response.data))
 							return
 						}
@@ -255,7 +255,7 @@ const get_content_data = function(self) {
 						}
 						info_node.msg_node.textContent = (typeof frame_msg==='string' && frame_msg)
 							? frame_msg + (sse_response.data.total ? ' (' + sse_response.data.counter + ' of ' + sse_response.data.total + ')' : '')
-							: 'Working…'
+							: (self.get_tool_label('job_working') || 'Working…')
 					})
 				}
 
@@ -298,17 +298,17 @@ const get_content_data = function(self) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'error_message',
-						text_content	: 'The journal stopped responding partway through (' + partial_error + ') — showing the ' + publications.length + ' publications fetched before that happened.',
+						text_content	: (self.get_tool_label('partial_error') || 'The journal stopped responding partway through ({reason}) — showing the {count} publications fetched before that happened.').replace('{reason}', partial_error).replace('{count}', publications.length),
 						parent			: review_container
 					})
 				}
 
 				const series_line_text = series && series.name
-					? 'Series: ' + series.name +
+					? (self.get_tool_label('series_prefix') || 'Series: ') + series.name +
 						(series_status && series_status.exists
-							? ' (existing record rsc212 #' + series_status.section_id + ', will link to it)'
-							: ' (new — will be created)')
-					: 'No series info found for this URL.'
+							? (self.get_tool_label('series_existing') || ' (existing record #{id}, will link to it)').replace('{id}', series_status.section_id)
+							: (self.get_tool_label('series_new') || ' (new — will be created)'))
+					: (self.get_tool_label('series_none') || 'No series info found for this URL.')
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'auction_status',
@@ -404,7 +404,7 @@ const get_content_data = function(self) {
 				if (publications.length === 0) {
 					ui.create_dom_element({
 						element_type	: 'div',
-						text_content	: 'No publications found at this URL.',
+						text_content	: self.get_tool_label('no_publications_found') || 'No publications found at this URL.',
 						parent			: lot_list
 					})
 				}
@@ -512,11 +512,14 @@ const get_content_data = function(self) {
 					results.forEach(function(result) {
 						// section_id is null only when the whole publication failed before
 						// anything was created (its own transaction rolled back) - review item C1.
+						// Each *_error is the error system's wire body ({code, message, ...} — see
+						// server/index.ts's toErrorBody(toDedaloError(...)), review item E2), never a
+						// bare string, so every read below is `.message`.
 						if (result.section_id===null) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error_message',
-								text_content	: 'Publication ' + (result.publication_identifier || '?') + ' NOT imported: ' + result.error,
+								text_content	: 'Publication ' + (result.publication_identifier || '?') + ' NOT imported: ' + result.error.message,
 								parent			: summary
 							})
 							return
@@ -524,28 +527,28 @@ const get_content_data = function(self) {
 						if (result.skipped) {
 							ui.create_dom_element({
 								element_type	: 'div',
-								text_content	: 'rsc205 #' + result.section_id + ' — already imported, skipped',
+								text_content	: 'Publication #' + result.section_id + ' — already imported, skipped',
 								parent			: summary
 							})
 							return
 						}
 						const series_bit = result.series_section_id
-							? ' — series rsc212 #' + result.series_section_id +
+							? ' — series #' + result.series_section_id +
 								(result.series_created ? ' (created)' : ' (reused)')
 							: result.series_error
-								? ' — series NOT linked: ' + result.series_error
+								? ' — series NOT linked: ' + result.series_error.message
 								: ''
 						const authors_bit = result.author_section_ids && result.author_section_ids.length
-							? ' — authors rsc197 #' + result.author_section_ids.join(', #')
+							? ' — authors #' + result.author_section_ids.join(', #')
 							: result.author_errors && result.author_errors.length
-								? ' — authors NOT linked: ' + result.author_errors.join('; ')
+								? ' — authors NOT linked: ' + result.author_errors.map((e) => e.message).join('; ')
 								: ''
 						const document_bit = result.document_imported
 							? ' — PDF imported'
 							: result.document_error
-								? ' — PDF NOT imported: ' + result.document_error
+								? ' — PDF NOT imported: ' + result.document_error.message
 								: ''
-						const line = 'rsc205 #' + result.section_id +
+						const line = 'Publication #' + result.section_id +
 							' (fields: ' + result.fields_written.join(', ') + ')' +
 							series_bit + authors_bit + document_bit
 						ui.create_dom_element({
@@ -568,7 +571,7 @@ const get_content_data = function(self) {
 							commit_result_container.removeChild(commit_result_container.firstChild)
 						}
 						commit_result_container.appendChild(
-							document.createTextNode('Every publication is excluded — nothing to import.')
+							document.createTextNode(self.get_tool_label('nothing_kept') || 'Every publication is excluded — nothing to import.')
 						)
 						return
 					}
@@ -599,7 +602,7 @@ const get_content_data = function(self) {
 				while (result_container.firstChild) {
 					result_container.removeChild(result_container.firstChild)
 				}
-				result_container.appendChild(document.createTextNode('Paste a URL first.'))
+				result_container.appendChild(document.createTextNode(self.get_tool_label('url_missing') || 'Paste a URL first.'))
 				return
 			}
 
@@ -614,7 +617,7 @@ const get_content_data = function(self) {
 						result_container.removeChild(result_container.firstChild)
 					}
 					if (request_failed(response)) {
-						result_container.appendChild(render_error(response, 'The request failed.'))
+						result_container.appendChild(render_error(response, self.get_tool_label('request_failed') || 'The request failed.'))
 						return
 					}
 					const data = response_data(response)

@@ -1,3 +1,4 @@
+import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
 import { numisbidsLotIdentifier, parseNumisbidsSaleId } from './acquisition.ts';
@@ -37,9 +38,10 @@ export const numisbidsAdapter: SourceAdapter = {
 	},
 
 	acquire() {
-		throw new Error(
-			'numisbids.com cannot be fetched automatically (its robots.txt blocks every automated agent) - use "Upload a saved HTML page" instead.',
-		);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage:
+				'numisbids.com cannot be fetched automatically (its robots.txt blocks every automated agent) - use "Upload a saved HTML page" instead.',
+		});
 	},
 
 	parseAuction: (firstPage, sourceUrl) =>

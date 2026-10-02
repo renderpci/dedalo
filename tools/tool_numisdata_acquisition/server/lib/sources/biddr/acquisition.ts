@@ -1,14 +1,16 @@
 import { createHash } from 'node:crypto';
+import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
 import { getQueryParam } from '../../extraction/parser-utils.ts';
 import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 import { parseTotalPages } from './auction-parser.ts';
 
-export class UnsupportedPageError extends Error {
-	constructor(message = 'This page does not appear to contain an auction catalogue.') {
-		super(message);
-		this.name = 'UnsupportedPageError';
-	}
+/** Thrown when a page fetched fine (2xx) but its HTML has none of the markers this adapter relies
+ * on for extraction - a URL that resolves to something other than an auction/search catalogue. */
+function unsupportedPageError(): DedaloError {
+	return new DedaloError('tool.unsupported_target', {
+		publicMessage: 'This page does not appear to contain an auction catalogue.',
+	});
 }
 
 const MAX_PAGES = 50;
@@ -26,7 +28,9 @@ async function fetchBiddrPage(
 		onWait,
 	});
 	if (!response.ok) {
-		throw new Error(`Server returned HTTP ${response.status}.`);
+		throw new DedaloError('external.http_status', {
+			coordinates: { source: 'biddr', url, status: response.status },
+		});
 	}
 	return {
 		html: response.text(),
@@ -56,7 +60,9 @@ export async function acquireAuction(
 ): Promise<MultiPageAcquisition> {
 	const auctionIdentifier = getQueryParam(rawUrl, 'a');
 	if (!auctionIdentifier) {
-		throw new Error('Please provide a valid Biddr auction URL (missing auction id).');
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid Biddr auction URL (missing auction id).',
+		});
 	}
 
 	const onWait = (ms: number, origin: string): void => {
@@ -65,7 +71,7 @@ export async function acquireAuction(
 
 	const first = await fetchBiddrPage(rawUrl, onWait);
 	if (!looksLikeAuctionPage(first.html)) {
-		throw new UnsupportedPageError();
+		throw unsupportedPageError();
 	}
 
 	const pages: RawSource[] = [first];
@@ -120,7 +126,9 @@ export async function acquireBiddrSingleLot(
 ): Promise<MultiPageAcquisition> {
 	const auctionIdentifier = biddrSingleLotIdentifier(rawUrl);
 	if (!auctionIdentifier) {
-		throw new Error('Please provide a valid Biddr lot URL (both ?a= and ?l= are required).');
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid Biddr lot URL (both ?a= and ?l= are required).',
+		});
 	}
 
 	const page = await fetchBiddrPage(rawUrl, (ms, origin) =>
@@ -182,7 +190,9 @@ export async function acquireBiddrSearch(
 ): Promise<MultiPageAcquisition> {
 	const auctionIdentifier = biddrSearchIdentifier(rawUrl);
 	if (!auctionIdentifier) {
-		throw new Error('Please provide a valid Biddr search URL.');
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid Biddr search URL.',
+		});
 	}
 
 	const onWait = (ms: number, origin: string): void => {
@@ -191,7 +201,7 @@ export async function acquireBiddrSearch(
 
 	const first = await fetchBiddrPage(rawUrl, onWait);
 	if (!looksLikeSearchResultsPage(first.html)) {
-		throw new UnsupportedPageError();
+		throw unsupportedPageError();
 	}
 
 	const pages: RawSource[] = [first];

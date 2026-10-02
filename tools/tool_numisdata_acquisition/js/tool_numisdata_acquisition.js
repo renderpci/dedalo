@@ -46,11 +46,7 @@ export const tool_numisdata_acquisition = function () {
 
 
 
-// wire_tool does NOT wire tool_request (confirmed against tool_export.js — a
-// gap in the tool_dev_template scaffold itself), so every server-backed tool
-// needs this explicitly.
 wire_tool(tool_numisdata_acquisition, render_tool_numisdata_acquisition)
-tool_numisdata_acquisition.prototype.tool_request = tool_common.prototype.tool_request
 
 
 

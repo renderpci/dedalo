@@ -1,3 +1,5 @@
+import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
+import { toDedaloError, toErrorBody } from '../../../../../../src/core/errors/index.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
 import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 import { extractArticleIds, extractDownloadUrl, extractGalleyViewUrl } from './parser.ts';
@@ -24,7 +26,9 @@ async function fetchOaiPage(
 		onWait,
 	});
 	if (!response.ok) {
-		throw new Error(`Server returned HTTP ${response.status} for ${url}.`);
+		throw new DedaloError('external.http_status', {
+			coordinates: { source: 'ojs_oai', url, status: response.status },
+		});
 	}
 	return {
 		html: response.text(),
@@ -73,7 +77,9 @@ async function repositoryId(baseUrl: string): Promise<string> {
 	const identify = await fetchOaiPage(`${baseUrl}?verb=Identify`);
 	const match = identify.html.match(/<repositoryIdentifier>([^<]+)<\/repositoryIdentifier>/);
 	if (!match) {
-		throw new Error("Could not read this journal's OAI repository identifier from Identify.");
+		throw new DedaloError('external.protocol', {
+			coordinates: { source: 'ojs_oai', baseUrl },
+		});
 	}
 	return match[1]?.trim() ?? '';
 }
@@ -98,7 +104,9 @@ export async function acquireArticleSet(
 ): Promise<MultiPageAcquisition> {
 	const baseUrl = deriveOaiBaseUrl(rawUrl);
 	if (!baseUrl) {
-		throw new Error("Could not determine this journal's OAI-PMH endpoint from the given URL.");
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: "Could not determine this journal's OAI-PMH endpoint from the given URL.",
+		});
 	}
 
 	const onWait = (ms: number, origin: string): void => {
@@ -113,16 +121,22 @@ export async function acquireArticleSet(
 		const listing = await fetchOaiPage(rawUrl, onWait);
 		articleIds = extractArticleIds(listing.html);
 		if (articleIds.length === 0) {
-			throw new Error(
-				'No article links found at this URL - paste a journal homepage, an issue page, or a single article URL.',
-			);
+			throw new DedaloError('resource.not_found', {
+				publicMessage:
+					'No article links found at this URL - paste a journal homepage, an issue page, or a single article URL.',
+			});
 		}
 	}
 
 	const repoId = await repositoryId(baseUrl);
 
 	const pages: RawSource[] = [];
-	let failures = 0;
+	// One article's metadata failing to resolve doesn't sink the whole bounded batch - same
+	// reasoning as the coin tool's per-lot best-effort steps. But the reason is kept (never a
+	// silent count): each failure is classified through toDedaloError/toErrorBody, same as a
+	// per-item result elsewhere, so the operator can tell a transient refusal from a real
+	// idDoesNotExist for a SPECIFIC article instead of just seeing "3 failed".
+	const failureDetails: string[] = [];
 	for (let i = 0; i < articleIds.length; i++) {
 		const identifier = `oai:${repoId}:article/${articleIds[i]}`;
 		const requestUrl = `${baseUrl}?verb=GetRecord&identifier=${encodeURIComponent(identifier)}&metadataPrefix=${METADATA_PREFIX}`;
@@ -131,36 +145,47 @@ export async function acquireArticleSet(
 				onProgress?.(i + 1, articleIds.length, `Waiting ${Math.round(ms / 1000)}s for ${origin}`),
 			);
 			const oaiError = extractOaiErrorMessage(raw.html);
-			if (oaiError) throw new Error(oaiError);
+			if (oaiError) {
+				// `resource.not_found` (public disclosure), not `external.protocol`: this failure is
+				// reported per-article into `partialError` (an ok:true result field a cataloguer
+				// reads), so the REAL OAI-PMH reason must reach it - an operator-disclosure code would
+				// have the converter replace it with a generic sentence before it got that far.
+				throw new DedaloError('resource.not_found', {
+					publicMessage: oaiError,
+					coordinates: { source: 'ojs_oai', identifier },
+				});
+			}
 			pages.push(raw);
-		} catch {
-			// One article's metadata failing to resolve doesn't sink the whole bounded batch -
-			// same reasoning as the coin tool's per-lot best-effort steps.
-			failures += 1;
+		} catch (error) {
+			const body = toErrorBody(toDedaloError(error));
+			failureDetails.push(`${articleIds[i]}: ${body.message}`);
 		}
 		onProgress?.(i + 1, articleIds.length);
 	}
 
 	if (pages.length === 0) {
-		throw new Error(
-			`Could not resolve metadata for any of the ${articleIds.length} article(s) found.`,
-		);
+		throw new DedaloError('resource.not_found', {
+			publicMessage: `Could not resolve metadata for any of the ${articleIds.length} article(s) found.`,
+			coordinates: { source: 'ojs_oai', baseUrl },
+		});
 	}
 
 	return {
 		seriesIdentifier: baseUrl,
 		pages,
 		partialError:
-			failures > 0
-				? `${failures} of ${articleIds.length} article(s) could not be resolved and were skipped.`
+			failureDetails.length > 0
+				? `${failureDetails.length} of ${articleIds.length} article(s) could not be resolved: ${failureDetails.join('; ')}`
 				: undefined,
 	};
 }
 
 /**
  * Resolves the real downloadable PDF URL for one publication - a two-hop scrape (landing page ->
- * galley view page -> real file), since OAI-PMH data alone never carries it. Returns null rather
- * than throwing when the landing page is unreachable (e.g. blocked) or has no PDF galley link.
+ * galley view page -> real file), since OAI-PMH data alone never carries it. Returns null when a
+ * fetched page simply has no PDF galley link; a page that cannot be FETCHED at all (blocked,
+ * unreachable) throws instead - the caller (index.ts's resolvePublicationPdfUrl) is the one that
+ * turns that into a best-effort null.
  */
 export async function resolvePdfUrl(landingPageUrl: string): Promise<string | null> {
 	const landing = await fetchOaiPage(landingPageUrl);
