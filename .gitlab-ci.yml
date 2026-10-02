@@ -40,7 +40,7 @@ include:
 
 hermetic:
   image:
-    name: ghcr.io/renderpci/dedalo-ci@sha256:eb6e47c95a8600d858f9a440db65c94352a134a979cb641abb697087c333e9b1
+    name: ghcr.io/renderpci/dedalo-ci@sha256:8d4c26055241a86e88f8fff877b2f6943472717fe2dad3e7895d650fd8b5e63d
     docker:
       user: "1001"
   # uid 1001 has no passwd entry in the image, so HOME would be `/` (unwritable): bun's

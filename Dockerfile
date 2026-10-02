@@ -23,7 +23,11 @@ FROM oven/bun:1.4.2-debian AS runtime
 # The media toolchain is not optional either: without it, uploads produce no
 # derivatives and no thumbnails.
 #   ffmpeg  → transcoding, posterframes, probing (also ships qt-faststart)
-#   imagemagick (v6: convert/identify — the engine falls back automatically)
+#   imagemagick (7 on trixie: `magick`; a v6 convert/identify host is handled
+#             by the engine's fallback)
+#   libheif-plugin-aomenc → AVIF WRITE for ImageMagick: trixie's libheif ships
+#             decoders only, so without it the `.avif` alternative versions
+#             (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS) are refused on upload
 #   poppler-utils → pdftotext / pdftohtml / pdfinfo, AND the page box the PDF
 #             rasterizer refuses on (engine/pdf.ts readPdfPageSize)
 #   ghostscript → the PDF page rasterizer, spawned BY THE ENGINE (not as an
@@ -52,7 +56,7 @@ RUN apt-get update \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
       postgresql-client-18 \
-      ffmpeg imagemagick librsvg2-bin poppler-utils ocrmypdf ghostscript \
+      ffmpeg imagemagick libheif-plugin-aomenc librsvg2-bin poppler-utils ocrmypdf ghostscript \
       git unzip gzip file rsync \
  && rm -rf /var/lib/apt/lists/*
 
