@@ -10,6 +10,12 @@
  *      checkout's sha256(ci/Dockerfile ++ .bun-version) — the image installs
  *      exactly .bun-version (rule 1b). The pin is load-bearing: Bun.sql
  *      jsonb-inference drift is a data-corruption class.
+ *  1c. THE CI IMAGE CARRIES WHAT SHIPS (2026-10-02) — every package the product
+ *      `Dockerfile` apt-installs is apt-installed by `ci/Dockerfile` too, MEASURED
+ *      from both files (never a typed list), minus CI_IMAGE_MISSING_PACKAGES: a
+ *      shrink-only list, each entry with its reason. The AVIF encoder
+ *      (libheif-plugin-aomenc) was in neither, then in the product image only for a
+ *      day — a media gate on the hosts measured a toolchain that does not ship.
  *   2. Oracle honesty — every self-hosted workflow that runs test/parity or
  *      scripts/verify.ts sets ORACLE_REQUIRED: "1", so an absent PHP oracle is
  *      a RED canary, never a silent green (the AGENTS.md "oracle trap").
@@ -132,6 +138,39 @@ import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
+
+/**
+ * Every package a Dockerfile's `apt-get install` lines name (rule 1c). Comment lines
+ * are dropped first (both Dockerfiles DISCUSS apt-get in their headers), `\`-newline
+ * continuations are joined, and a command's arguments end at `&&`, `;` or the end of
+ * the joined line; flags are not packages. Pure, so the positive control below can
+ * prove it reads both spellings the two files use.
+ */
+function aptInstalledPackages(dockerfile: string): Set<string> {
+	const joined = dockerfile
+		.split('\n')
+		.filter((line) => !/^\s*#/.test(line))
+		.join('\n')
+		.replace(/\\\n/g, ' ');
+	const packages = new Set<string>();
+	for (const m of joined.matchAll(/\bapt-get\s+install\b([^\n;&]*)/g)) {
+		for (const token of (m[1] ?? '').split(/\s+/)) {
+			if (token.length > 0 && !token.startsWith('-')) packages.add(token);
+		}
+	}
+	return packages;
+}
+
+/**
+ * Product-image packages the CI image does NOT carry yet — SHRINK-ONLY, each with
+ * its reason. An image change moves the fingerprint, so adding one is the publish
+ * flow (side branch → ci-image.yml → `bun run ci:image:pin`, Dockerfile + pin in ONE
+ * commit; engineering/CI.md "The pin"), never a hermetic-red edit of ci/Dockerfile.
+ */
+const CI_IMAGE_MISSING_PACKAGES: Record<string, string> = {
+	ocrmypdf:
+		'the OCR door (src/core/media/engine/pdf.ts, config.media.binaries.ocrmypdf) — no gate exercises a real ocrmypdf today, so its absence reds nothing; it is DEBT: until the image carries it the OCR path runs on no host. Next image publish adds it and deletes this row',
+};
 
 const yaml = (f: string) => f.endsWith('.yml') || f.endsWith('.yaml');
 
@@ -1507,6 +1546,58 @@ describe('CI workflow tripwire', () => {
 	// 2026-09-26): a Dockerfile/.bun-version change was red in hermetic, so the pre-push
 	// gate refused the push that ci-image.yml needs in order to publish it. The lock's
 	// freshness is nightly's `ci:image:pin --check` (tier_wiring leg D credits it).
+	// Rule 1c (2026-10-02) — the CI image carries every package the product image does.
+	test('the CI image apt-installs every package the product image does (measured, minus reasoned debt)', () => {
+		const product = aptInstalledPackages(read('Dockerfile'));
+		const ci = aptInstalledPackages(read('ci/Dockerfile'));
+		// Floors: a parser that read nothing would make the superset vacuous.
+		expect(product.size, 'read no package from the product Dockerfile').toBeGreaterThan(10);
+		expect(ci.size, 'read no package from ci/Dockerfile').toBeGreaterThan(10);
+		for (const anchor of ['imagemagick', 'libheif-plugin-aomenc', 'ffmpeg', 'ghostscript']) {
+			expect(product.has(anchor), `product Dockerfile: ${anchor} not read`).toBe(true);
+		}
+		const missing = [...product].filter((p) => !ci.has(p) && !(p in CI_IMAGE_MISSING_PACKAGES));
+		expect(
+			missing,
+			'the product image installs these and the CI image does not — a gate on the hosts measures a toolchain that does not ship. Add them to ci/Dockerfile through the publish flow (engineering/CI.md "The pin"):',
+		).toEqual([]);
+		// Shrink-only, and never stale: an excused package must really be missing, and
+		// must really be one the product image installs.
+		for (const [pkg, reason] of Object.entries(CI_IMAGE_MISSING_PACKAGES)) {
+			expect(
+				product.has(pkg),
+				`${pkg}: excused but the product image no longer installs it — delete the row`,
+			).toBe(true);
+			expect(
+				ci.has(pkg),
+				`${pkg}: excused but ci/Dockerfile installs it now — delete the row`,
+			).toBe(false);
+			expect(reason.length, `${pkg}: an exemption carries a reason`).toBeGreaterThan(40);
+		}
+	});
+
+	test('POSITIVE CONTROL: the apt reader sees both Dockerfile spellings and ignores comments', () => {
+		const planted = [
+			'# apt-get install -y commented-out',
+			'RUN apt-get update \\',
+			' && apt-get install -y --no-install-recommends \\',
+			'      ffmpeg imagemagick \\',
+			'      git \\',
+			' && rm -rf /var/lib/apt/lists/*',
+			'RUN set -eux; \\',
+			'    apt-get install -y --no-install-recommends \\',
+			'      poppler-utils ghostscript; \\',
+			'    rm -rf /var/lib/apt/lists/*',
+		].join('\n');
+		expect([...aptInstalledPackages(planted)].sort()).toEqual([
+			'ffmpeg',
+			'ghostscript',
+			'git',
+			'imagemagick',
+			'poppler-utils',
+		]);
+	});
+
 	test('every tier on every host runs the ONE locked CI image, as uid 1001, built from THIS definition', () => {
 		const lock = readCiImageLock(repoRoot);
 		expect(lock.image, 'ci/image.json names another repository').toBe(CI_IMAGE_NAME);
