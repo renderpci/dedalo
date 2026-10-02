@@ -471,6 +471,12 @@ version plus a signature of the client bytes on disk, so editing any manifested 
 moves the key and the browser re-fetches. The service worker names its cache
 `dedalo_files_<dedalo_version>` and owns every key with that prefix.
 
+The worker is `core/service_worker.js`, registered by the login as a module. The
+older URL `core/sw.js` is not the worker: it is a permanent replacement for the v6
+worker that browsers still hold there. It handles no request, deletes the v6
+`dedalo_files` cache (the unversioned key), unregisters itself and reloads the
+windows that ran v6 code. Neither file is in the manifest.
+
 A cache pass follows a fixed **commit order** — fetch every file, write the manifest
 record *inside* the cache, purge the superseded caches, then swap the worker's
 in-memory state. The manifest record is the *commit marker*: it means "this cache is

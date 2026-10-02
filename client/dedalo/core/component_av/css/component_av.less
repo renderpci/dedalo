@@ -75,23 +75,42 @@
 		}
 	}
 
+	// standalone viewer window: the media IS the page. One fixed stage fills the
+	// viewport and the <video> box is pinned to it, so poster and playback share
+	// the same box (object-fit letterboxes both) instead of the element resizing
+	// from the poster's intrinsic size to the stream's on play.
 	&.view_viewer {
 		background-color: @color_black;
-		position: absolute;
+		position: fixed;
+		inset: 0;
 		width: 100%;
-		height: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		height: 100dvh;
+		overflow: hidden;
 
-		>.content_data {
-			height: unset;
+		.content_data {
 			width: 100%;
-			text-align: center;
+			height: 100%;
+			min-height: 0;
+			margin: 0;
+			padding: 0;
+		}
 
-			video {
-				width: 100%;
-				max-height: 82vh;
+		video.posterframe {
+			display: block;
+			width: 100%;
+			height: 100%;
+			max-width: none;
+			max-height: none;
+			outline: none;
+			background-color: @color_black;
+
+			&:focus {
+				outline: none;
+				box-shadow: none;
+			}
+			&:focus-visible {
+				outline: 2px solid @color_orange_dedalo;
+				outline-offset: -2px;
 			}
 		}
 

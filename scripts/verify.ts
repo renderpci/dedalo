@@ -195,6 +195,7 @@ const TRIPWIRES = [
 	'test/unit/error_throw_ratchet.test.ts',
 	'test/unit/error_taxonomy_tripwire.test.ts',
 	'test/unit/client_error_contract_tripwire.test.ts',
+	'test/unit/sw_tombstone_tripwire.test.ts',
 	'test/unit/migration_shared_row_tripwire.test.ts',
 	'test/unit/generic_tld_tripwire.test.ts',
 	'test/unit/parity_baseline_tripwire.test.ts',

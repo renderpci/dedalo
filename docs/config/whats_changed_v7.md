@@ -138,6 +138,22 @@ DEDALO_APPLICATION_LANGS={"lg-eng":"English","lg-spa":"Castellano"}
 Simple lists also accept a comma list (`dd,rsc,oh`), which is easier to read. Maps
 and lists-of-objects (`ONTOLOGY_SERVERS`, `MENU_SKIP_TIPOS`) must be JSON.
 
+`API_WEB_USER_CODE_MULTIPLE` (the publication server API v1 databases and codes
+behind the maintenance panel's "Open Swagger UI" buttons) keeps its name and is
+written as a JSON list of objects:
+
+```bash
+# v6
+define('API_WEB_USER_CODE_MULTIPLE', [['db_name'=>'web_my_entity','code'=>'my_api_code','api_ui'=>null]]);
+
+# v7
+API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code","api_ui":null}]
+```
+
+The empty entry a stock v6 `config.php` ships (`db_name` and `code` blank) is not
+migrated; when it is the only entry, the key is not written at all and the panel
+shows no buttons until you add one.
+
 ---
 
 ## Settings that are gone

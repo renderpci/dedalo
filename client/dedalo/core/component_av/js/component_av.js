@@ -498,8 +498,9 @@ export const open_av_player = async function(options) {
 		open_window({
 			url		: url,
 			target	: 'viewer',
+			// 16:9 starting box; the viewer refits it to the real media ratio
 			width	: 1024,
-			height	: 860
+			height	: 576
 		})
 
 

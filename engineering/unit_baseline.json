@@ -842,14 +842,14 @@
 			"assertions": 97
 		},
 		"test/unit/config_migration.test.ts": {
-			"tests": 24,
+			"tests": 25,
 			"skipped": 0,
-			"assertions": 83
+			"assertions": 88
 		},
 		"test/unit/config_publication_api_users.test.ts": {
-			"tests": 6,
+			"tests": 8,
 			"skipped": 0,
-			"assertions": 18
+			"assertions": 27
 		},
 		"test/unit/conform_locator_existence_native.test.ts": {
 			"tests": 5,

@@ -6,6 +6,8 @@
 
 import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import { join } from 'node:path';
+import { encodeEnvValue, V6_MIGRATION } from '../../src/config/migration_map.ts';
+import { extractDefines } from '../../src/config/php_defines.ts';
 import { readPublicationApiUsers } from '../../src/config/readers.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
@@ -85,6 +87,46 @@ describe('readPublicationApiUsers', () => {
 	test('empty = no users', () => {
 		expect(read('').users).toEqual([]);
 		expect(read('  ').users).toEqual([]);
+	});
+});
+
+// v6 define() → migration rule → .env line → reader: what the migrator writes is
+// what the panel reads, with nothing reported as dropped at boot.
+describe('v6 migration round-trip', () => {
+	const migrate = (php: string): string | null => {
+		const record = extractDefines([{ path: 'config.php', content: `<?php\n${php}` }]).records.get(
+			KEY,
+		);
+		expect(record?.kind).toBe('literal');
+		const rule = V6_MIGRATION[KEY];
+		return encodeEnvValue(rule?.transform ? rule.transform(record?.value) : record?.value);
+	};
+
+	test('real v6 entries reach the reader intact, the placeholder is left out', () => {
+		const line = migrate(`define('${KEY}', [
+			['db_name' => 'web_a', 'code' => 'c1', 'api_ui' => null],
+			['db_name' => '', 'code' => '', 'api_ui' => null],
+			['db_name' => 'web_b', 'code' => 'c2', 'api_ui' => 'https://example.org/docu/ui/'],
+		]);`);
+		expect(line).not.toBeNull();
+		const { users, logged } = read(line as string);
+		expect(users).toEqual([
+			{ db_name: 'web_a', code: 'c1', api_ui: null },
+			{ db_name: 'web_b', code: 'c2', api_ui: 'https://example.org/docu/ui/' },
+		]);
+		expect(logged).toBe(0);
+	});
+
+	test('the stock v6 placeholder alone writes no key (a verbatim copy would warn every boot)', () => {
+		const stock = `define('${KEY}', [['db_name' => '', 'code' => '', 'api_ui' => null]]);`;
+		expect(migrate(stock)).toBeNull();
+		// the counterfactual: copied verbatim, the reader drops it loudly
+		const verbatim = encodeEnvValue(
+			extractDefines([{ path: 'config.php', content: `<?php\n${stock}` }]).records.get(KEY)?.value,
+		);
+		const { users, logged } = read(verbatim as string);
+		expect(users).toEqual([]);
+		expect(logged).toBe(1);
 	});
 });
 

@@ -264,6 +264,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/shard_partition_tripwire.test.ts
 	test/unit/tool_permission_census_tripwire.test.ts
 	test/unit/client_error_contract_tripwire.test.ts
+	test/unit/sw_tombstone_tripwire.test.ts
 	test/unit/date_flat_value_single_source_tripwire.test.ts
 	test/unit/error_throw_ratchet.test.ts
 	test/unit/log_section_policy_tripwire.test.ts

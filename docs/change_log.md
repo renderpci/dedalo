@@ -49,6 +49,10 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The audio/video viewer window now fits the media: no size jump on play, no black bars.**
+
+    Opening a video from a list used to show the poster at one size and then shrink the player to the stream's size when playback started, pinned to the left with black space around it. The viewer now fills its window: poster and playback share the same box, the popup resizes itself to the media's aspect ratio, and the download button no longer covers the player controls.
+
 - **A slow server shows one quiet progress bar instead of a pile of warning bubbles.**
 
     Before, every request that took more than about 2.5 seconds raised its own
@@ -219,6 +223,21 @@ Merged since the last release; these ship with the next one.
     same as in list view.
 
     Wire contract: `WC-2026-10-02-select-lang-missing-entry`.
+
+- **The subtitles tool opens again instead of failing with an error.**
+
+    Opening the subtitles tool from an audiovisual transcription showed an error instead of the tool. It now opens, with its play/pause, auto-rewind and tag-insert key settings working.
+
+- **Browsers that ran Dédalo v6 no longer load stale v6 scripts after the upgrade to v7.**
+
+    A browser that had used Dédalo v6 kept v6's file-caching service worker after the
+    installation moved to v7. That worker went on answering the browser's requests for
+    Dédalo's scripts with the old v6 copies, so the v7 interface loaded a mix of v6 and
+    v7 code and misbehaved — and the browser could not replace the worker on its own.
+
+    Now the first visit to v7 removes the v6 worker and its cache, and reloads the page
+    once with the v7 code. Nobody has to clear the browser cache by hand, and saved
+    preferences stay where they are.
 
 - **Autocomplete searches work again in pickers with a related-record field, and the field inputs search as you type**
 
@@ -963,7 +982,7 @@ Merged since the last release; these ship with the next one.
 
 - **The Publication server API maintenance panel shows its "Open Swagger UI" buttons again.**
 
-    The panel (Maintenance → Publication → Publication server API) never showed the buttons that open the interactive documentation of the publication server API v1, because `API_WEB_USER_CODE_MULTIPLE` was not read. It is a configuration key again: list each publication database and its API code, e.g. `API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]`, optionally with `api_ui` when the API runs on another server — see [the configuration reference](./config/config.md). A v6 configuration migrated with the config migrator now carries the value across.
+    The panel (Maintenance → Publication → Publication server API) never showed the buttons that open the interactive documentation of the publication server API v1, because `API_WEB_USER_CODE_MULTIPLE` was not read. It is a configuration key again: list each publication database and its API code, e.g. `API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]`, optionally with `api_ui` when the API runs on another server — see [the configuration reference](./config/config.md). A v6 configuration migrated with the config migrator now carries the value across; the empty placeholder entry of a stock v6 configuration is left out, so a migrated install does not report a dropped entry on every start.
 
 - **Creating a site twice at the same moment can no longer overwrite or delete the first site.**
 

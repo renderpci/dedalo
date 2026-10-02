@@ -605,6 +605,29 @@ SESSION_COOKIE_SECURE=false
     cookie inherits the same attribute, so you would also be shipping a working
     media authorisation value in cleartext.
 
+### The interface misbehaves after the upgrade from v6
+
+Buttons do nothing, panels render half-empty or the console shows script
+errors — in browsers that used the v6 install, while a fresh browser (or a
+private window) works.
+
+**Cause.** v6 installed a service worker at `core/sw.js` that answered every
+Dédalo script from its own `dedalo_files` cache. Until it is replaced, a v7
+page loads a mix of v7 and cached v6 scripts.
+
+**Fix.** Nothing to do on the server: v7 serves a replacement at that same URL
+that deletes the v6 cache, unregisters the old worker and reloads the page. The
+browser picks it up on the first visit, so the symptom lasts one page load. If it
+persists, reload once more. As a last resort, in the browser's developer tools
+(*Application → Service workers*) unregister the worker for the Dédalo site and
+reload.
+
+!!! warning
+    Never delete `core/sw.js` from the served tree, nor rewrite it as the real
+    worker (that lives at `core/service_worker.js`). That file is what evicts the v6
+    worker from browsers that have not visited since the upgrade — remove it and
+    those browsers keep the v6 scripts indefinitely.
+
 ### Users are logged out more often than they expect
 
 **Cause.** Two clocks, and either one ends a session — see

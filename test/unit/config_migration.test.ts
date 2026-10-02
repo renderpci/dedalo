@@ -234,6 +234,22 @@ describe('the mapping applied to a REAL v6 config (the vendored fixture)', () =>
 		expect(rule?.transform?.('/opt/homebrew/bin/magick')).toBe('/opt/homebrew/bin/magick');
 	});
 
+	test('API_WEB_USER_CODE_MULTIPLE: real entries migrate, the stock placeholder does not', () => {
+		const rule = V6_MIGRATION.API_WEB_USER_CODE_MULTIPLE;
+		expect(rule?.cls).toBe('SAME');
+		expect(rule?.target).toBe('API_WEB_USER_CODE_MULTIPLE');
+
+		// the vendored stock config carries ONE empty placeholder → key skipped, so a
+		// migrated install does not log "1 of 1 entries were DROPPED" on every boot
+		const record = extracted.records.get('API_WEB_USER_CODE_MULTIPLE');
+		expect(record?.kind).toBe('literal');
+		expect(encodeEnvValue(rule?.transform?.(record?.value))).toBeNull();
+
+		const real = { db_name: 'web_my_entity', code: 'abc', api_ui: null };
+		const out = encodeEnvValue(rule?.transform?.([real, { db_name: '', code: '', api_ui: null }]));
+		expect(JSON.parse(out as string)).toEqual([real]);
+	});
+
 	test('the MariaDB connection moves to the DEDALO_DIFFUSION_DB_* family', () => {
 		expect(V6_MIGRATION.MYSQL_DEDALO_HOSTNAME_CONN?.target).toBe('DEDALO_DIFFUSION_DB_HOST');
 		expect(V6_MIGRATION.MYSQL_DEDALO_PASSWORD_CONN?.target).toBe('DEDALO_DIFFUSION_DB_PASSWORD');

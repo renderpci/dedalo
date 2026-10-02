@@ -432,7 +432,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 			'THE stamper itself — it owns fetch_api and is where the key is minted. Not a bypass, the door.',
 	},
 	{
-		file: 'client/dedalo/core/sw.js',
+		file: 'client/dedalo/core/service_worker.js',
 		basis: 'idempotent-actions',
 		actions: ['dd_utils_api:get_dedalo_files'],
 		reason:
@@ -442,7 +442,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		file: 'client/dedalo/core/page/js/worker_cache.js',
 		basis: 'idempotent-actions',
 		actions: ['dd_utils_api:get_dedalo_files'],
-		reason: 'The cache Worker, same single read action and the same reasoning as sw.js.',
+		reason: 'The cache Worker, same single read action and the same reasoning as service_worker.js.',
 	},
 	{
 		file: 'client/dedalo/core/page/js/page.js',

@@ -200,7 +200,7 @@ notice is never lost just because the caller forgot to look for one:
 `fetch_api` (`core/common/js/api_transport.js`) is the **only** place that
 calls native `fetch()` for regular (non-streaming) requests, and it is the same
 function the cache Worker (`page/js/worker_cache.js`) and the module Service
-Worker (`core/sw.js`) use — there is one request algorithm. Per attempt it:
+Worker (`core/service_worker.js`) use — there is one request algorithm. Per attempt it:
 
 1. computes `delay = base_delay * 2^(attempt-1)` (exponential backoff);
 2. creates a fresh `AbortController` (chained to the caller's `signal`) and
