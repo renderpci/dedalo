@@ -41,6 +41,7 @@ import {
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 /**
@@ -195,6 +196,7 @@ async function ingestImage(sectionId: number, source: string): Promise<void> {
 	const tmpName = `rag_${sectionId}.jpg`;
 	await runBinary([resolveMagick(), '-size', '1400x1000', source, `${dir}/${tmpName}`], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 	const result = await processUploadedFile({
 		spec: IMAGE_SPEC,

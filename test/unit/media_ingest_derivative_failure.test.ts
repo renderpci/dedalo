@@ -44,6 +44,7 @@ import { deleteSectionRecord } from '../../src/core/section/record/delete_record
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_derivative_failure_${process.pid}`;
@@ -156,6 +157,7 @@ describe('processUploadedFile: the original is indexed even when the derivatives
 		const { resolveMagick } = await import('../../src/core/media/engine/imagemagick.ts');
 		await runBinary([resolveMagick(), '-size', '300x200', 'xc:green', `${dir}/ok.jpg`], {
 			nice: false,
+			env: magickTestEnv(),
 		});
 		const result = await processUploadedFile({
 			spec: image,
@@ -222,6 +224,7 @@ describe('an UNWRITABLE configured twin is reported, never silently skipped', ()
 		const { resolveMagick } = await import('../../src/core/media/engine/imagemagick.ts');
 		await runBinary([resolveMagick(), '-size', '300x200', 'xc:green', `${dir}/twin.jpg`], {
 			nice: false,
+			env: magickTestEnv(),
 		});
 
 		const child = Bun.spawnSync(['bun', '-e', PROBE], {

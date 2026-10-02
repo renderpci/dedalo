@@ -30,6 +30,7 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -565,6 +566,7 @@ describe('tool_update_cache: the twin pass is MISSING-ONLY', () => {
 		mkdirSync(absolute.slice(0, absolute.lastIndexOf('/')), { recursive: true });
 		const result = await runBinary([resolveMagick(), '-size', '400x300', `xc:${color}`, absolute], {
 			nice: false,
+			env: magickTestEnv(),
 		});
 		if (result.exitCode !== 0) throw new Error(`fixture failed: ${result.stderr}`);
 		return absolute;

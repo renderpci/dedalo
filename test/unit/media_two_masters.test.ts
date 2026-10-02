@@ -50,6 +50,7 @@ import {
 import { svgOverlayLocation } from '../../src/core/media/svg_overlay.ts';
 import { applyRotationCore } from '../../src/core/media/tools/rotation.ts';
 import { buildVersionCore, deleteAndResyncCore } from '../../src/core/media/tools/versions.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_two_masters_${process.pid}`;
@@ -98,6 +99,7 @@ async function makeImage(absolute: string, color: string, size = '900x600'): Pro
 	mkdirSync(absolute.slice(0, absolute.lastIndexOf('/')), { recursive: true });
 	const result = await runBinary([resolveMagick(), '-size', size, `xc:${color}`, absolute], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 	if (result.exitCode !== 0) {
 		throw new Error(`fixture build failed for ${absolute}: ${result.stderr}`);
@@ -110,6 +112,7 @@ async function centrePixel(path: string): Promise<[number, number, number]> {
 		'%[fx:int(255*p{w/2,h/2}.r)],%[fx:int(255*p{w/2,h/2}.g)],%[fx:int(255*p{w/2,h/2}.b)]';
 	const result = await runBinary([resolveMagick(), path, '-format', format, 'info:'], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 	const parts = result.stdout.trim().split(',').map(Number);
 	if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
@@ -122,6 +125,7 @@ async function centrePixel(path: string): Promise<[number, number, number]> {
 async function dimensions(path: string): Promise<string> {
 	const result = await runBinary([resolveMagick(), path, '-format', '%wx%h', 'info:'], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 	return result.stdout.trim();
 }

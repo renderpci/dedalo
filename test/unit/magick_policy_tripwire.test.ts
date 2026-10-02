@@ -43,6 +43,14 @@
  *     ENUMERATED with a reason. And no identify call site takes a SECOND one:
  *     a permit held while waiting for a permit deadlocks at concurrency 1.
  *
+ *  6. A TEST'S OWN SPAWN carries the shipped policy too. A fixture built with a
+ *     bare `magick` runs under the HOST's policy.xml (Debian's in the CI image,
+ *     which deliberately does not install ours system-wide — ci/Dockerfile), so
+ *     one test measured two ImageMagicks. Census over test/, src/core/test_data/
+ *     and scripts/: every spawn whose argv resolves ImageMagick (directly or
+ *     through a bound name) names MAGICK_CONFIGURE_PATH, `magickPolicyEnv()` or
+ *     `magickTestEnv()` (test/helpers/magick_test_env.ts).
+ *
  * WHAT THIS GATE CANNOT SEE, stated rather than hidden: this is SHAPE, not effect.
  * That an oversized image is refused rather than converted is
  * `magick_resource_limits_native.test.ts`; that the pool really bounds, that a
@@ -320,6 +328,168 @@ describe('magick policy: every ImageMagick spawn carries the -limit argv', () =>
 		expect((planted[0] as SpawnSite).imagemagick).toBe(true);
 		expect(/magickResourceLimitArgs\s*\(/.test((planted[0] as SpawnSite).call)).toBe(false);
 		expect(NON_IMAGEMAGICK_SPAWNS['engine/planted.ts:runPlanted']).toBeUndefined();
+	});
+});
+
+// --- the TESTS' own ImageMagick spawns -----------------------------------------
+
+/**
+ * Blank out string literals ('…' and "…", single line), KEEPING byte offsets. The
+ * planted controls in this very file are code held in strings; a spawn inside a
+ * string is a fixture of a census, not a spawn. Template literals are kept: their
+ * `${…}` holes are code.
+ */
+function stripStrings(code: string): string {
+	return code.replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, (m) => ' '.repeat(m.length));
+}
+
+/** A balanced expression from the bracket at `openIndex` — (), [] and {} all nest. */
+function balancedExpression(code: string, openIndex: number): string {
+	let depth = 0;
+	for (let i = openIndex; i < code.length; i++) {
+		const ch = code[i] as string;
+		if ('([{'.includes(ch)) depth++;
+		else if (')]}'.includes(ch)) {
+			depth--;
+			if (depth === 0) return code.slice(openIndex, i + 1);
+		}
+	}
+	return code.slice(openIndex);
+}
+
+/** Where an ImageMagick argv comes from: the resolvers, or an engine recipe builder. */
+const MAGICK_ARGV_SOURCE = /\bresolveMagick\s*\(|\bresolveIdentify\s*\(|\bbuild\w*Argv\s*\(/;
+/** What makes a spawn POLICED: the policy key itself, or a door that sets it. */
+const POLICED_ENV = /\bMAGICK_CONFIGURE_PATH\b|\bmagickPolicyEnv\s*\(|\bmagickTestEnv\s*\(/;
+/** Every way a test starts a child process. */
+const TEST_SPAWN =
+	/\b(?:runBinary|Bun\.spawnSync|Bun\.spawn|spawnSync|execFileSync|execFile|spawn)\s*\(/g;
+
+/**
+ * Names a file binds (`const|let NAME … = <rhs>`) whose right-hand side mentions
+ * `source` — or a name already bound that way (three passes: an alias of an
+ * alias). This is what lets `const MAGICK = resolveMagick()` …
+ * `Bun.spawn([MAGICK, …])` and `const argv = cond ? [resolveMagick(), …] : …` …
+ * `runBinary(argv, …)` be classified by what they spawn, not by how it is spelled.
+ */
+function boundNames(code: string, source: RegExp): string[] {
+	const names = new Set<string>();
+	const mentions = (text: string): boolean =>
+		source.test(text) || [...names].some((n) => new RegExp(`\\b${n}\\b`).test(text));
+	for (let pass = 0; pass < 3; pass++) {
+		for (const m of code.matchAll(/\b(?:const|let|var)\s+(\w+)\b[^=;\n]*=(?!=)\s*/g)) {
+			const start = (m.index as number) + m[0].length;
+			let depth = 0;
+			let end = start;
+			for (; end < code.length; end++) {
+				const ch = code[end] as string;
+				if ('([{'.includes(ch)) depth++;
+				else if (')]}'.includes(ch)) {
+					if (depth === 0) break;
+					depth--;
+				} else if (depth === 0 && ch === ';') break;
+			}
+			if (mentions(code.slice(start, end))) names.add(m[1] as string);
+		}
+	}
+	return [...names];
+}
+
+interface TestSpawnSite {
+	/** `<repo-relative file>:<line>`. */
+	readonly key: string;
+	readonly call: string;
+	readonly imagemagick: boolean;
+	readonly policed: boolean;
+}
+
+/**
+ * Every child-process start in a test-side file, classified: does it spawn
+ * ImageMagick, and does it carry the shipped policy? The engine half of this
+ * rule is media_writer_discipline_tripwire (runMagickTo / runIdentify pass
+ * magickPolicyEnv); this is the half the engine census cannot see.
+ */
+function testSpawnSites(files: readonly { path: string; code: string }[]): TestSpawnSite[] {
+	const sites: TestSpawnSite[] = [];
+	for (const { path, code: raw } of files) {
+		const code = stripStrings(stripComments(raw));
+		const magickNames = boundNames(code, MAGICK_ARGV_SOURCE);
+		const policyNames = boundNames(code, POLICED_ENV);
+		const named = (names: string[], text: string): boolean =>
+			names.some((n) => new RegExp(`\\b${n}\\b`).test(text));
+		for (const match of code.matchAll(TEST_SPAWN)) {
+			const at = match.index as number;
+			if (/function\s+$/.test(code.slice(Math.max(0, at - 30), at))) continue;
+			const call = balancedExpression(code, at + match[0].length - 1);
+			sites.push({
+				key: `${path}:${code.slice(0, at).split('\n').length}`,
+				call,
+				imagemagick: MAGICK_ARGV_SOURCE.test(call) || named(magickNames, call),
+				policed: POLICED_ENV.test(call) || named(policyNames, call),
+			});
+		}
+	}
+	return sites;
+}
+
+/** The test-side trees: every test file and helper, the situations, the scripts. */
+function testSideFiles(): { path: string; code: string }[] {
+	const out: { path: string; code: string }[] = [];
+	for (const root of ['test', 'src/core/test_data', 'scripts']) {
+		for (const rel of new Bun.Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, root) })) {
+			const path = `${root}/${rel}`;
+			out.push({ path, code: readFileSync(join(REPO_ROOT, path), 'utf8') });
+		}
+	}
+	return out;
+}
+
+describe("magick policy: a TEST's own ImageMagick spawn carries the shipped policy", () => {
+	// A fixture built with a bare `magick` runs under the HOST's policy.xml (Debian's
+	// in the CI image, Homebrew's on a Mac): one test, two ImageMagicks, and a red that
+	// is a fact about a package. The CI image does not install the shipped policy
+	// system-wide BY DESIGN (ci/Dockerfile) — the engine's spawns carry it — so a test
+	// spawn carries it too (test/helpers/magick_test_env.ts). A deliberate unpoliced
+	// CONTROL still names the key (pointing it elsewhere), and so still passes.
+	const sites = testSpawnSites(testSideFiles());
+	const magick = sites.filter((s) => s.imagemagick);
+
+	test('the census is populated (derived from test/, src/core/test_data/, scripts/)', () => {
+		expect(sites.length).toBeGreaterThan(50);
+		// Measured 2026-10-02: 38 ImageMagick spawns across 16 files.
+		expect(magick.length).toBeGreaterThanOrEqual(30);
+	});
+
+	test('every ImageMagick spawn under test/ carries MAGICK_CONFIGURE_PATH', () => {
+		const bare = magick.filter((s) => !s.policed).map((s) => s.key);
+		expect(
+			bare,
+			`these test spawns run ImageMagick under the HOST's policy, not the shipped one — pass env: magickTestEnv() (test/helpers/magick_test_env.ts): ${bare.join(', ')}`,
+		).toEqual([]);
+	});
+
+	test('POSITIVE CONTROL: bare spawns are flagged, directly and through an alias', () => {
+		const planted = testSpawnSites([
+			{
+				path: 'test/unit/planted.test.ts',
+				code: [
+					'const MAGICK = resolveMagick();',
+					'const argv = ok ? [MAGICK, x] : [ffmpeg, y];',
+					"await runBinary([resolveMagick(), '-size', '1x1', 'xc:red', out], { nice: false });",
+					'await Bun.spawn([MAGICK, out]).exited;',
+					'await runBinary(argv, { nice: false });',
+					'await runBinary(argv, { nice: false, env: magickTestEnv() });',
+					"await runBinary([ffmpeg, '-i', x], { nice: false });",
+				].join('\n'),
+			},
+		]);
+		expect(planted.map((s) => [s.imagemagick, s.policed])).toEqual([
+			[true, false],
+			[true, false],
+			[true, false],
+			[true, true],
+			[false, false],
+		]);
 	});
 });
 

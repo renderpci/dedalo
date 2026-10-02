@@ -48,6 +48,7 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolResponse } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 /** The canonical test3 playground (matrix_test) — the suite's only write surface. */
@@ -452,6 +453,7 @@ describe('repair: a twin this host cannot write is REPORTED, and costs nothing e
 				mkdirSync(dirname(absolute), { recursive: true });
 				const built = await runBinary([resolveMagick(), '-size', '400x300', 'xc:red', absolute], {
 					nice: false,
+					env: magickTestEnv(),
 				});
 				expect(built.exitCode).toBe(0);
 			}

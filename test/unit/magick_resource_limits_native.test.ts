@@ -40,6 +40,7 @@ import {
 import { buildThumb } from '../../src/core/media/engine/imagemagick.ts';
 import { probeImageSource } from '../../src/core/media/engine/probe.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const HAVE_MAGICK = existsSync(resolveMagick());
@@ -113,6 +114,7 @@ describe.if(HAVE_MAGICK)('the engine refuses an image that declares more than th
 		const source = join(ROOT, 'ordinary.png');
 		const made = await runBinary([resolveMagick(), '-size', '64x64', 'xc:teal', source], {
 			nice: false,
+			env: magickTestEnv(),
 		});
 		expect(made.ok, `could not build the control image: ${made.stderr}`).toBe(true);
 

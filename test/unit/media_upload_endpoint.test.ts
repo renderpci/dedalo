@@ -20,6 +20,7 @@ import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { handleRequest } from '../../src/server.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 
 /** Create a session and return { token, csrf }. */
 function newSession(userId: number): { token: string; csrf: string } {
@@ -54,7 +55,10 @@ const HAVE_MAGICK = existsSync(resolveMagick());
 
 async function jpegBlob(): Promise<Blob> {
 	const tmp = `${process.env.TMPDIR ?? '/tmp'}/dedalo_upload_ep_${process.pid}.jpg`;
-	await runBinary([resolveMagick(), '-size', '120x120', 'xc:teal', tmp], { nice: false });
+	await runBinary([resolveMagick(), '-size', '120x120', 'xc:teal', tmp], {
+		nice: false,
+		env: magickTestEnv(),
+	});
 	const bytes = new Uint8Array(await Bun.file(tmp).arrayBuffer());
 	return new Blob([bytes as BlobPart], { type: 'image/jpeg' });
 }

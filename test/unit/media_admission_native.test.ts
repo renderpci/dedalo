@@ -61,6 +61,7 @@ import {
 import { magickPolicyEnv, resolveMagick } from '../../src/core/media/engine/binaries.ts';
 import { createPosterframe } from '../../src/core/media/engine/ffmpeg.ts';
 import { probeImageSource } from '../../src/core/media/engine/probe.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = scratchMediaRoot('dedalo_admission_');
@@ -272,7 +273,9 @@ describe.if(HAVE_MAGICK)('converter admission: the pixel-cache spill is redirect
 		// refusal can only mean the cache was attempted THERE — i.e. the variable, and
 		// not the operating system's default, decides the filesystem. Measured on this
 		// host: `unable to open pixel cache … Permission denied @ error/cache.c`.
-		await Bun.spawn([MAGICK, '-size', '1200x1200', 'xc:red', source]).exited;
+		await Bun.spawn([MAGICK, '-size', '1200x1200', 'xc:red', source], {
+			env: { ...(process.env as Record<string, string>), ...magickTestEnv() },
+		}).exited;
 		expect(existsSync(source), 'the situation was not built — no source image').toBe(true);
 		mkdirSync(unwritable, { recursive: true });
 		chmodSync(unwritable, 0o500);

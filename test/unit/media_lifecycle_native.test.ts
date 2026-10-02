@@ -72,6 +72,7 @@ import { deleteSectionRecord } from '../../src/core/section/record/delete_record
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
@@ -121,7 +122,10 @@ async function synthesizeRaster(): Promise<string> {
 		pathOpts,
 	).absolutePath;
 	mkdirSync(dirname(raster), { recursive: true });
-	await runBinary([resolveMagick(), '-size', '100x50', 'xc:green', raster], { nice: false });
+	await runBinary([resolveMagick(), '-size', '100x50', 'xc:green', raster], {
+		nice: false,
+		env: magickTestEnv(),
+	});
 	if (!existsSync(raster)) throw new Error(`magick wrote no raster at ${raster}`);
 	return raster;
 }
