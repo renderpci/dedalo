@@ -45,9 +45,12 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { childEnv, type ParityRun, parseJunit } from '../../scripts/lib/parity_census.ts';
-import { TEST_TIMEOUT_FLAG } from '../../scripts/lib/test_flags.ts';
+import { TEST_TIMEOUT_FLAG, TEST_TIMEOUT_MS } from '../../scripts/lib/test_flags.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
+
+/** The whole isolated child's budget: ten per-test timeouts. */
+const CHILD_TIMEOUT_MS = 10 * TEST_TIMEOUT_MS;
 
 /** The env key naming the ONE file a child process runs as an isolated gate. */
 export const ISOLATED_GATE_KEY = 'DEDALO_ISOLATED_GATE';
@@ -96,7 +99,9 @@ function runIsolated(file: string): { run: ParityRun | null; exitCode: number; s
 				`--reporter-outfile=${outfile}`,
 				`./${target}`,
 			],
-			{ cwd: REPO_ROOT, env, stdout: 'pipe', stderr: 'pipe' },
+			// A bound on the whole child: a wedged gate must red its tier, never hang
+			// it (the per-test timeout does not cover a hang at import or in a hook).
+			{ cwd: REPO_ROOT, env, stdout: 'pipe', stderr: 'pipe', timeout: CHILD_TIMEOUT_MS },
 		);
 		let run: ParityRun | null = null;
 		try {
