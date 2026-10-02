@@ -21,6 +21,7 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { config } from '../../../src/config/config.ts';
+import { envSnapshot } from '../../../src/config/env.ts';
 import { getImportAppendPolicy } from '../../../src/core/components/registry.ts';
 import type { ImportAppendPolicy } from '../../../src/core/components/types.ts';
 import { AUDIT_TIPOS, BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
@@ -79,12 +80,30 @@ function mediaRootMissing(): DedaloError {
 }
 
 /**
+ * A fresh CSV worker that sees THIS process's environment. A Bun Worker started
+ * without `env` gets the LAUNCH environment, not process.env as it stands now —
+ * under `bun test` that is the environment before the suite preload pinned the
+ * suite database, and the parser's import graph builds the matrix pool, which a
+ * test process refuses to aim at the installation's database
+ * (src/config/suite_database.ts). The server's own env (envSnapshot: process env
+ * over ../private/.env) is the right one anyway.
+ */
+function newCsvWorker(): Worker {
+	const env = Object.fromEntries(
+		Object.entries(envSnapshot()).filter(
+			(entry): entry is [string, string] => entry[1] !== undefined,
+		),
+	);
+	return new Worker(new URL('./csv_worker.ts', import.meta.url).href, { env } as WorkerOptions);
+}
+
+/**
  * Parse CSV text OFF the serving event loop (audit S3-42): a fresh worker per
  * call (startup is milliseconds against multi-second parses; no idle thread
  * lingers) running the identical pure parser — see csv_worker.ts.
  */
 function parseCsvOffLoop(text: string, delimiter?: string): Promise<CsvParseResult> {
-	const worker = new Worker(new URL('./csv_worker.ts', import.meta.url).href);
+	const worker = newCsvWorker();
 	return new Promise<CsvParseResult>((resolvePromise, rejectPromise) => {
 		worker.onmessage = (event: MessageEvent) => {
 			const data = event.data as { result?: CsvParseResult; error?: string };
@@ -104,7 +123,7 @@ function parseCsvOffLoop(text: string, delimiter?: string): Promise<CsvParseResu
  * the bounded summary — the full row set never crosses the thread boundary.
  */
 function analyzeCsvOffLoop(text: string, delimiter?: string): Promise<CsvAnalysis | null> {
-	const worker = new Worker(new URL('./csv_worker.ts', import.meta.url).href);
+	const worker = newCsvWorker();
 	return new Promise<CsvAnalysis | null>((resolvePromise, rejectPromise) => {
 		worker.onmessage = (event: MessageEvent) => {
 			const data = event.data as { analysis?: CsvAnalysis | null; error?: string };
