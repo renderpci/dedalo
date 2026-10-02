@@ -187,6 +187,27 @@ Merged since the last release; these ship with the next one.
 
     About twenty error messages showed their placeholders literally, for example *The link into '{section_tipo}' was refused ({constraint})* or *Your daily AI budget is used up ({budget_kind}: {limit})*. They now show the actual values: the section, the limit, the file size, the action that was still running. The affected messages include link refusals, the AI budget, export limits and quotas, duplicate-request notices, image and file size limits, and unknown API actions.
 
+- **Adding or removing a term's children from its Children field now saves.**
+
+    A Children field lists the records that name this one as their parent. Linking a
+    record there, removing one, or emptying the field looked accepted but changed nothing:
+    the field showed the old children again and no record was re-parented. Each change now
+    updates the Parent field of the child records themselves, as the thesaurus tree does —
+    a new child gets this record as its parent (and its place at the end of the siblings),
+    a removed child loses it. Each child's change is checked against your permissions on
+    that child, recorded in its history, and undone by **Revert the bulk process** when it
+    was part of a batch run. A link that would make a record its own ancestor is refused
+    with an error, and the children cannot be reordered by dragging in this field (each
+    child keeps its own order, as in the tree).
+
+    Two batch tools no longer touch a Children field: **Update cache** skips it (it holds
+    nothing to regenerate) and a CSV import refuses a column mapped to it — import the
+    Parent column on the child records instead. Administrators can remove the leftover
+    bytes the old behaviour stored with `bun scripts/relation_children_orphan_sweep.ts`
+    (a dry run that lists them; add `--apply` to remove them).
+
+    Wire contract: `WC-2026-10-02-relation-children-write-through`.
+
 - **Autocomplete searches work again in pickers with a related-record field, and the field inputs search as you type**
 
     In an autocomplete whose search fields include a related-record field (for
@@ -1235,7 +1256,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 93 entries"
+??? note "Wire contract — 94 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1330,6 +1351,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-01-tool-grant-one-decision`
     - `WC-2026-10-01-unit-test-widget-dev-gate`
     - `WC-2026-10-01-write-door-delegations`
+    - `WC-2026-10-02-relation-children-write-through`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

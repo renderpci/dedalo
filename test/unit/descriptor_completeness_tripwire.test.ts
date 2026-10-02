@@ -40,6 +40,7 @@ import {
 	getRenderClass,
 	getSearchBuilderFamily,
 	importAppendOfDescriptor,
+	isDerivedModel,
 	isMonovalueModel,
 	relationDataModels,
 	renderClassOfDescriptor,
@@ -263,6 +264,35 @@ function appendKind(
 }
 
 /** A descriptor is CANONICAL when it is not an alias-only/alias-carrying stub. */
+/**
+ * Computed-value models that do NOT carry the `derived` facet, each with the
+ * reason it was audited out. The facet means "the stored key is never the
+ * value" (types.ts) — consumers SKIP or REFUSE the key — so a model whose
+ * stored bytes ARE read must stay out of it. SHRINK-ONLY.
+ */
+const NOT_DERIVED_BY_FACET: Readonly<Record<string, string>> = {
+	component_info:
+		'its widget values are STORED mirrors (the observer cascade / reconcile write them) that list and search read — the stored key is its value',
+};
+
+/** The derived-value models, read from the descriptor FACTS (+ the extra hand list). */
+function computedDerivedModels(descriptors: readonly ComponentModel[]): Set<string> {
+	const derived = new Set(DERIVED_VALUE_MODELS);
+	for (const descriptor of descriptors) {
+		if (!isCanonical(descriptor)) continue;
+		if (descriptor.emitHook !== undefined && DERIVED_EMIT_HOOKS.has(descriptor.emitHook)) {
+			derived.add(descriptor.model);
+		}
+		if (
+			descriptor.resolveData !== undefined &&
+			COMPUTED_INVERSE_RESOLVERS.has(descriptor.resolveData)
+		) {
+			derived.add(descriptor.model);
+		}
+	}
+	return derived;
+}
+
 function isCanonical(descriptor: { alias?: string }): boolean {
 	return descriptor.alias === undefined;
 }
@@ -709,19 +739,7 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 	test('derived-value and no-import-conform models refuse append', () => {
 		// The derived set is READ FROM THE DESCRIPTORS (the facts that make a
 		// model derived), the hand list only adds to it.
-		const derived = new Set(DERIVED_VALUE_MODELS);
-		for (const descriptor of descriptors) {
-			if (!isCanonical(descriptor)) continue;
-			if (descriptor.emitHook !== undefined && DERIVED_EMIT_HOOKS.has(descriptor.emitHook)) {
-				derived.add(descriptor.model);
-			}
-			if (
-				descriptor.resolveData !== undefined &&
-				COMPUTED_INVERSE_RESOLVERS.has(descriptor.resolveData)
-			) {
-				derived.add(descriptor.model);
-			}
-		}
+		const derived = computedDerivedModels(descriptors);
 		// Vacuity guard: the derivation must actually find the computed models.
 		for (const model of [
 			'component_external',
@@ -747,6 +765,32 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 				`${model}: a model with no stored/importable value must refuse append`,
 			).toBe('refuse');
 		}
+	});
+
+	test('the `derived` facet marks exactly the computed-value models (minus the audited-out), canonical only', () => {
+		// The facet's consumers (update_cache skip, the CSV column refusal) treat
+		// the model's own stored key as NOT its value — so the facet set is held
+		// to the models the descriptor FACTS call computed, never a hand list.
+		const computed = computedDerivedModels(descriptors);
+		const facet = descriptors
+			.filter((d) => isCanonical(d) && d.derived === true)
+			.map((d) => d.model)
+			.sort();
+		expect(facet).toEqual([...computed].filter((m) => !(m in NOT_DERIVED_BY_FACET)).sort());
+		// anti-vacuity + no dead audit entries
+		expect(facet).toContain('component_relation_children');
+		for (const model of Object.keys(NOT_DERIVED_BY_FACET)) {
+			expect(computed.has(model), `NOT_DERIVED_BY_FACET: '${model}' is not computed any more`).toBe(
+				true,
+			);
+		}
+		// alias stubs inherit through the canonical hop and never declare it
+		for (const descriptor of descriptors) {
+			if (!isCanonical(descriptor)) expect(descriptor.derived, descriptor.model).toBeUndefined();
+		}
+		expect(isDerivedModel('component_relation_children')).toBe(true);
+		expect(isDerivedModel('component_info')).toBe(false);
+		expect(isDerivedModel('component_portal')).toBe(false);
 	});
 
 	test('a canonical descriptor without the facet makes the accessor THROW, never default', () => {

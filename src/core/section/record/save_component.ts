@@ -1038,6 +1038,23 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	if (tldRefusal !== null) {
 		return { ok: false, message: tldRefusal, data: [] };
 	}
+	// component_relation_children OWNS NO DATA (descriptor `derived`, RELATIONS_SPEC
+	// §6.3): a save on it is a set of saves of each CHILD's component_relation_parent
+	// (relations/children_write.ts — its own transaction, node lock, per-child
+	// authorization; WC-2026-10-02-relation-children-write-through). It used to fall
+	// through to the generic engine below, which stored the locators under the
+	// children tipo — bytes no read consults — and answered ok while no child
+	// changed. BEFORE the remove sentinel: a child is removed BY LOCATOR (computed
+	// children carry no item id). The append backstop still runs first — the
+	// model's policy refuses an append import.
+	// Dynamic import: CYCLE-BREAKING at this chokepoint (CONVENTIONS §2 rationale 1)
+	// — the write-through's nested child saves call back into saveComponentData.
+	if ((await getModelByTipo(effectiveRequest.componentTipo)) === 'component_relation_children') {
+		await assertAppendImportRequest(effectiveRequest);
+		const { saveRelationChildren } = await import('../../relations/children_write.ts');
+		return saveRelationChildren(effectiveRequest);
+	}
+
 	// THE REMOVE SENTINEL (see unnamedRemoveRefusal above). Same pre-transaction
 	// reasoning: the answer is a property of the incoming changes alone.
 	// A THROW, not `ok:false`: the dispatch save handler wraps an ok:false in
@@ -1894,29 +1911,8 @@ async function applySaveComponentData(
 					(value as { id?: unknown }).id = resolved;
 				}
 			}
-			// component_relation_children is a READ-ONLY projection of the target
-			// records' component_relation_parent (PHP class.component_relation_children
-			// get_data :113). A link whose target record does not exist cannot create
-			// the backing parent relation, so PHP's save fails and the client's
-			// link_record sees an unchanged pagination.total → returns false. Reject
-			// the insert here to honor that contract (the full children→parent write
-			// redirect stays uncovered; this only gates the non-existent-target case).
-			if (model === 'component_relation_children') {
-				const targetSectionTipo = (value as { section_tipo?: unknown }).section_tipo;
-				const targetSectionId = (value as { section_id?: unknown }).section_id;
-				if (typeof targetSectionTipo === 'string') {
-					const targetTable = await getMatrixTableFromTipo(targetSectionTipo);
-					if (targetTable !== null) {
-						const { readMatrixRecord } = await import('../../db/matrix.ts');
-						const targetRecord = await readMatrixRecord(
-							targetTable,
-							targetSectionTipo,
-							Number(targetSectionId),
-						);
-						if (targetRecord === null) continue; // non-existent target — drop the link
-					}
-				}
-			}
+			// (component_relation_children never reaches this engine: saveComponentData
+			// hands it to the write-through, relations/children_write.ts.)
 			if ((value as { id?: unknown }).id === undefined || (value as { id?: unknown }).id === null) {
 				(value as { id: number }).id = await allocateComponentItemId(
 					table,

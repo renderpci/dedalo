@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 592,
-		"functions": 7001,
+		"files": 595,
+		"functions": 7158,
 		"functionsOverCap": 683,
 		"filesOverCap": 263
 	},
@@ -316,7 +316,7 @@
 		"src/core/section/record/observers.ts": 37,
 		"src/core/section/record/record_defaults.ts": 23,
 		"src/core/section/record/record_metadata.ts": 10,
-		"src/core/section/record/save_component.ts": 89,
+		"src/core/section/record/save_component.ts": 85,
 		"src/core/section/record/temporal.ts": 21,
 		"src/core/section/record/temporal_store.ts": 11,
 		"src/core/section/record_loader.ts": 12,

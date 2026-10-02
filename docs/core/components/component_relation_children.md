@@ -43,21 +43,22 @@
     not held locally. The default relation type is
     `DEDALO_RELATION_TYPE_CHILDREN_TIPO = 'dd48'`.
 
-!!! warning "Read-only / calculated component"
+!!! warning "Calculated component — a save writes through to the children"
     Unlike most related components, `component_relation_children` **does not store any
-    data of its own**. It never writes (a save on it is a no-op), and its list of
-    children is *calculated* at read time by searching every section that
-    points at the current record through a [component_relation_parent](component_relation_parent.md)
-    (`type = dd47`). It is the **inverse view** of `component_relation_parent`:
-    the parent records own the link, the children component only reflects them.
+    data of its own** (its descriptor is `derived`). Its list of children is
+    *calculated* at read time by searching every section that points at the current
+    record through a [component_relation_parent](component_relation_parent.md). It is
+    the **inverse view** of `component_relation_parent`: the child records own the
+    link. A save on it is therefore a save on each affected **child's** parent field —
+    see [Saving](#saving).
 
-!!! info "Client is an alias of `component_portal`"
-    The client class is a direct alias —
-    `export const component_relation_children = component_portal` (see
-    `client/dedalo/core/component_relation_children/js/component_relation_children.js`). All client
-    behaviour, views and modes are inherited verbatim from
-    [component_portal](component_portal.md); there is no bespoke JS render or view
-    file for this component beyond the alias.
+!!! info "Client is a subclass of `component_portal`"
+    The client class (`client/dedalo/core/component_relation_children/js/component_relation_children.js`)
+    inherits every view, mode and lifecycle step from
+    [component_portal](component_portal.md) and differs in two places only: an unlink
+    removes the child **by locator** (`{action:'remove', id:null, value:{section_tipo,
+    section_id}}` — the calculated entries carry no item id), and there is no drag
+    reorder (`reorderable = false`; each child keeps its own order value).
 
 !!! info "TS server implementation"
     The descriptor `src/core/components/component_relation_children/descriptor.ts` registers `resolveData: 'relation_children'` (`src/core/relations/models/relation_children.ts`). It computes the inverse locators via `getChildren()` (`src/core/relations/children.ts`, the inverse dd47 "who declares me as parent?" query, sibling-ordered through `resolveParentLinkIdKey`), grafts them into a synthetic copy of the record under this component's own tipo, and delegates to the shared portal engine (`src/core/relations/models/portal.ts`) for pagination/child-ddo expansion/re-stamping. Unlike a generic relation, an EMPTY children component still emits its own item (`entries: []`, `pagination.total: 0`) in every non-search mode. Search mode reads the stored matrix value like a normal relation (the generic portal path); the search-execution side has its own dedicated inverse-parent SQL builder (`src/core/search/builders/builder_relation_children.ts`) — see [Notes](#notes) for its two documented gaps. See the *dedalo-relations-ts* and *dedalo-tree-ts* skills.
@@ -206,10 +207,34 @@ child is rendered in the list:
 component(s) whose value renders as the visible label of each branch, and
 `value_with_parents` prepends the ancestor term(s) to that label.
 
-This component never writes: a save against it is a no-op. When the user
-adds or removes a child through the UI, the change is routed to the related
-`component_relation_parent` of the child record (see *Notes*), which is the single
-writer to the database.
+## Saving
+
+The component's own column is never written. A save on it
+(`src/core/relations/children_write.ts`, wire contract
+`WC-2026-10-02-relation-children-write-through`) compares the requested list with
+the calculated children and, in **one transaction**, saves each affected child's
+[component_relation_parent](component_relation_parent.md) through the normal save:
+
+- a child that **joins** gets a `dd47` link to this record and, when the section's
+  `section_map` declares `thesaurus.order`, its initial sibling order;
+- a child that **leaves** loses every parent link that points at this record,
+  whatever its type;
+- every child is checked against the user's permission on its parent field and its
+  record scope **before** anything is written — one refused child refuses the save;
+- each child's change gets its own history row, carrying the batch run id when the
+  save is part of one, so **Revert the bulk process** restores it.
+
+Accepted actions: `set_data` (the whole list, or `null`), `clear`, `insert`,
+`remove` (by locator, in `value`) and `add_new_element`. `sort_data`,
+`sort_by_column` and `update` are refused: the order of the children is each child's
+own value. A link that would make a record its own ancestor is refused
+(`tree.cycle`); a link to a missing record or to the record itself is ignored.
+
+Because nothing is stored, **Update cache** skips the component, and a CSV import
+refuses a column mapped to it (import the Parent column on the child records
+instead). Bytes an older version stored under its tipo are never read; an
+administrator can list and remove them with
+`bun scripts/relation_children_orphan_sweep.ts` (`--apply` to remove).
 
 ## Properties & options
 

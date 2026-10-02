@@ -82,9 +82,9 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 			'record duplication reads the SOURCE row and then re-reads the freshly INSERTED target to confirm it exists; both reads are inside the write transaction and must see what the transaction wrote',
 	},
 	{
-		file: 'src/core/section/record/save_component.ts',
+		file: 'src/core/relations/children_write.ts',
 		reason:
-			'the component save re-reads a relation TARGET row it may have just modified in the same transaction (the observer/mirror hop) — the point of the read is the post-write state',
+			'the component_relation_children write-through runs inside its own write transaction and re-reads each child row AFTER the nested saves it just made on it (the new link id its order value pairs with, the links left to remove) — the point of the read is the post-write state',
 	},
 	{
 		file: 'src/core/section/record/record_metadata.ts',

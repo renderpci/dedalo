@@ -401,4 +401,23 @@ export interface ComponentModel {
 	 * single-choice model, a guessed refusal would hide a capability).
 	 */
 	readonly importAppend?: ImportAppendPolicy;
+	/**
+	 * DERIVED: the component OWNS NO STORED VALUE — what a read serves is
+	 * computed (an inverse question: who declares me as parent / who points at
+	 * me; a remote service), never read back from its own matrix key. Whatever
+	 * bytes sit under its tipo (an old no-op save's leftovers) are therefore NOT
+	 * its value, and no door may treat them as one. Consumers (registry.ts
+	 * isDerivedModel):
+	 *   - tool_update_cache SKIPS it server-side (a "regenerate" re-saves the
+	 *     stored bytes — for component_relation_children, whose save writes
+	 *     THROUGH to the children, that would re-parent a thesaurus from stale
+	 *     leftovers);
+	 *   - the CSV import REFUSES a column mapped to it in any mode (its
+	 *     `importAppend` refusal names what to import instead).
+	 * A derived model must refuse append. Declared `true` only; omitted = the
+	 * component stores what it serves. component_info is audited OUT: its
+	 * widget values are stored mirrors the read and search consult. Pinned by
+	 * descriptor_completeness_tripwire (the set of record, the append law).
+	 */
+	readonly derived?: true;
 }

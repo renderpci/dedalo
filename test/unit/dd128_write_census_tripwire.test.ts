@@ -197,6 +197,16 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'deletePortalLocator mints a RecordGrant through authorizeRecordAccess (write, level 2, floor 2: dd128-aware pair + scope) before any read, lock or write; the effect is a private function typed on the grant and audited as grant.userId; applyAddNewElement’s createSectionRecord is a birth under the save door. Matrix dd_component_portal_api:delete_locator DD1725 leg.',
 	},
+	'src/core/relations/children_write.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'the component_relation_children write-through (WC-2026-10-02): its writes are HARD-BOUND to the child section’s component_relation_parent (and that section’s section_map order number) — the users section declares no parent component (relation_children_write_through_native asserts getParentTipo(dd128) is null), so no dd128 component is reachable. Every child is still asked of authorizeRecordAccess (write, level 2, door `save`, the dd128-aware pair + scope) before any write.',
+	},
+	'src/core/relations/children_orphan_sweep.ts': {
+		verdict: 'system',
+		reason:
+			'the operator CLI sweep (scripts/relation_children_orphan_sweep.ts, dry-run default) removing leftover bytes under component_relation_children tipos through persistRecordKeys as userId -1; its keys are derived children tipos (never a dd128 component), and no request or principal exists.',
+	},
 	'src/core/api/handlers/dd_component_portal_api.ts': {
 		verdict: 'delegates',
 		reason:

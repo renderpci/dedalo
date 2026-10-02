@@ -392,6 +392,16 @@ component_common.prototype.build = async function(autoload=false) {
 */
 const is_unresolved_id = (id) => id===null || typeof id==='undefined' || id===''
 
+// A remove on a model whose entries carry NO item id (`removes_by_locator`:
+// component_relation_children, whose entries are COMPUTED by the server) names
+// its target by the RECORD LOCATOR in `value` instead. That is a named remove,
+// not DATA-06's wildcard — the server removes exactly that child
+// (src/core/relations/children_write.ts). Every other model keeps the id law.
+const names_record_locator = (self, el) => self?.removes_by_locator===true
+	&& el?.value!==null && typeof el?.value==='object'
+	&& typeof el.value.section_tipo==='string' && el.value.section_tipo!==''
+	&& !is_unresolved_id(el.value.section_id)
+
 const do_build = async (self, autoload) => {
 
 	// self.datum. On building, if datum is not created, creation is needed
@@ -732,7 +742,7 @@ component_common.prototype.save = async function(new_changed_data) {
 		// the user could do nothing with it instead of where they made the gesture.
 		// `0` and `'0'` are REAL, deletable ids and must never be caught here.
 		const unresolved_remove = changed_data.find(el =>
-			el && el.action==='remove' && is_unresolved_id(el.id)
+			el && el.action==='remove' && is_unresolved_id(el.id) && !names_record_locator(self, el)
 		)
 		if (unresolved_remove) {
 
@@ -1413,6 +1423,17 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 	// reach the wire.
 	// `changed_id` is 0-safe: it is null only for the three no-id spellings
 	// normalised above (null, undefined, ''), so id 0 is a target like any other.
+	// remove BY LOCATOR (`removes_by_locator` models only — see names_record_locator):
+	// the computed entries carry no id, so the locator in `value` is the target.
+	// (The flag is read FIRST: an instance without it never evaluates the helper.)
+		if (action==='remove' && changed_id===null && self.removes_by_locator===true && names_record_locator(self, changed_data_item)) {
+			self.data.entries = (self.data.entries || []).filter(entry => !(
+				entry?.section_tipo===changed_value.section_tipo
+				&& String(entry?.section_id)===String(changed_value.section_id)
+			))
+			return true
+		}
+
 		if (action==='remove' && changed_id===null) {
 
 			// the transient search filter: the same wipe as action:'clear' above, on
@@ -1613,7 +1634,7 @@ component_common.prototype.change_value = async function(options) {
 			const changed_data_length = changed_data.length
 			for (let i = 0; i < changed_data_length; i++) {
 				const candidate = changed_data[i]
-				if (candidate && candidate.action==='remove' && is_unresolved_id(candidate.id)) {
+				if (candidate && candidate.action==='remove' && is_unresolved_id(candidate.id) && !names_record_locator(self, candidate)) {
 					// Same refusal the applier would raise, raised BEFORE anything moved.
 					self.update_data_value(candidate)
 					return false

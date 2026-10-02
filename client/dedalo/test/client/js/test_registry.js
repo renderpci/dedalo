@@ -119,7 +119,7 @@ export const lifecycle_suites_green = [
 	'test_component_security_access',
 	'test_component_select_lang',
 	'test_component_svg',
-	'test_component_relation_children',  // green after children-insert target-existence validation (save_component.ts)
+	'test_component_relation_children',  // write-through to each child's parent link (relations/children_write.ts)
 	'test_component_portal',            // green after save auto-creates the missing host record (PHP set_dato upsert parity)
 	'test_component_filter_records',    // green after get_datalist port (authorized sections datalist, dispatch.ts)
 	'test_component_date',              // green after the period tipo fix: the suite named test218, which exists in NO ontology; the test3 period-date component is test173 (test3 → test115 → test34). It was never a provisioning gap.

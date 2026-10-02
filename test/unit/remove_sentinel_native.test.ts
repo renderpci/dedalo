@@ -661,7 +661,7 @@ const DOORS: Record<string, { proof: string; reason: string }> = {
 	'src/core/section/record/save_component.ts': {
 		proof: 'tests A, B, C, D — behavioural, through the real save door',
 		reason:
-			'THE CHOKEPOINT. saveComponentData refuses an id-less remove before withTransaction opens (the answer depends only on the incoming changes, so there is nothing to roll back). A THROW, not ok:false, because dd_core_api wraps ok:false in record.save_failed (internal/500, operator disclosure) and the reason would never reach the curator whose delete button did nothing.',
+			'THE CHOKEPOINT. saveComponentData refuses an id-less remove before withTransaction opens (the answer depends only on the incoming changes, so there is nothing to roll back). A THROW, not ok:false, because dd_core_api wraps ok:false in record.save_failed (internal/500, operator disclosure) and the reason would never reach the curator whose delete button did nothing. ONE model is routed AHEAD of it: component_relation_children owns no items (its entries are computed, they carry no id), so its save goes to the write-through (relations/children_write.ts), which accepts a remove only BY LOCATOR and refuses one naming no record (request.invalid_data, never a wipe — relation_children_write_through_native).',
 	},
 	'src/ai/mcp/tools/records_write.ts': {
 		proof: 'tests E, E2 — behavioural, with a principal holding no grants',
@@ -792,6 +792,7 @@ type Verdict =
 	| 'clear-pending'
 	| 'unresolved-id'
 	| 'search-local'
+	| 'locator-named'
 	| 'suite-fixture';
 
 interface CensusRow {
@@ -830,6 +831,14 @@ interface CensusRow {
  *                  breaks a daily gesture is how a data-loss fix gets reverted
  *                  wholesale.)
  *                  Migrating them to `clear` is tidiness, not a fix. SHRINK-ONLY.
+ *   locator-named  a model whose entries carry NO item id (`removes_by_locator`:
+ *                  component_relation_children, computed entries) names the
+ *                  record to remove by the LOCATOR in `value`, with `id:null`.
+ *                  Not the wildcard: the client doors accept it only with a full
+ *                  locator on such a model (component_common
+ *                  names_record_locator), and the server write-through refuses a
+ *                  remove naming no record (request.invalid_data —
+ *                  relation_children_write_through_native).
  *   suite-fixture  a client-suite fixture, derived by path (see below).
  */
 const CENSUS: Record<string, CensusRow> = {
@@ -917,6 +926,14 @@ const CENSUS: Record<string, CensusRow> = {
 		reason: 'unlink one locator with an entry_id resolved from the loaded (paginated) page.',
 	},
 
+	// --- locator-named (no item ids exist; the locator IS the name) --------
+	'client/dedalo/core/component_relation_children/js/component_relation_children.js': {
+		sites: 1,
+		verdict: 'locator-named',
+		reason:
+			'get_unlink_changed_data: `{action:"remove", id:null, value:{section_tipo, section_id}}` — the computed children carry no item id, so the child record is named by its locator (user decision 2026-09-27); the server removes exactly that child (WC-2026-10-02-relation-children-write-through).',
+	},
+
 	// --- search-local (never reaches the wire; carved out by mode) ---------
 	'client/dedalo/core/component_email/js/render_search_component_email.js': {
 		sites: 1,
@@ -947,10 +964,11 @@ const CENSUS: Record<string, CensusRow> = {
  * still visible — it moved 11 -> 13 on 2026-08-30 when
  * test_component_common_changed_data.js was rewritten to FENCE the id-less
  * remove (a refusal case, a key case and the search carve-out) instead of
- * asserting the wipe it used to bless.
+ * asserting the wipe it used to bless; 13 -> 14 on 2026-10-02 when
+ * test_component_relation_children.js pinned the by-locator unlink shape.
  */
 const FIXTURE_TREE = 'client/dedalo/test/';
-const FIXTURE_SITES = 13;
+const FIXTURE_SITES = 14;
 
 /** Walk the three trees; the same file set the scan below reports on. */
 function scanFiles(trees: readonly string[]): string[] {

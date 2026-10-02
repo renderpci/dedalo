@@ -2333,6 +2333,26 @@ component_portal.prototype.get_total = async function() {
 
 
 /**
+* GET_UNLINK_CHANGED_DATA
+* The `changed_data` an unlink sends: one `remove` per locator, BY ITEM ID (the
+* portal's stored locators carry their per-record counter id). A model whose
+* entries are computed and carry no id overrides this
+* (component_relation_children removes by locator).
+* @param {Object[]} ar_locators - The locators to remove.
+* @returns {Object[]} Frozen changed_data items.
+*/
+component_portal.prototype.get_unlink_changed_data = function(ar_locators) {
+
+	return ar_locators.map(el => Object.freeze({
+		action	: 'remove',
+		id		: el.id,
+		value	: null
+	}))
+}//end get_unlink_changed_data
+
+
+
+/**
 * UNLINK_RECORD
 * Removes a locator from the portal by its `id` (the per-item counter id), persists
 * the change via the API, and refreshes the portal.
@@ -2378,12 +2398,9 @@ component_portal.prototype.unlink_record = async function(locator) {
 			return false
 		}
 
-	// changed_data
-		const changed_data = ar_locators.map(el => Object.freeze({
-			action	: 'remove',
-			id		: el.id,
-			value	: null
-		}))
+	// changed_data. Built by the overridable hook below: a model whose entries
+	// carry no item id (component_relation_children) removes by locator instead.
+		const changed_data = self.get_unlink_changed_data(ar_locators)
 
 	// change_value (implies saves too)
 	// The remove confirmation dialog is controlled by the button that called this function

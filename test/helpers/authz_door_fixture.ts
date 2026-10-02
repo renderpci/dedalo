@@ -55,6 +55,10 @@
  *                                                   component WRITABLE — the pair passes a write, so only the
  *                                                   section floor at 2 can refuse it: the media WRITE doors' floor)
  *
+ *   944025/944035 TREE_EDITOR      No      P        test3=2, test201=2 (children), test71=2 (parent),
+ *                                                   test22=2 (sibling order), test101=1 — writes a hierarchy;
+ *                                                   with OUT_OF_SCOPE's twin absent, scope is its only refusal
+ *
  *   (User ids skip 944021/944022 — the projects — so a profile id, N + 10,
  *   never lands on another record of the band.)
  *
@@ -112,6 +116,11 @@ export const AUTHZ_TEXT_ONLY_USER_ID = 944009;
 export const AUTHZ_TRANSCRIBER_USER_ID = 944010;
 export const AUTHZ_READ_COMPONENT_USER_ID = 944023;
 export const AUTHZ_READ_SECTION_USER_ID = 944024;
+export const AUTHZ_TREE_EDITOR_USER_ID = 944025;
+/** test3's component_relation_children / its paired component_relation_parent / the order number. */
+export const AUTHZ_CHILDREN = 'test201';
+export const AUTHZ_PARENT = 'test71';
+export const AUTHZ_ORDER = 'test22';
 
 /** The profile of user N is N + 10 (944001 → 944011). */
 const profileOf = (userId: number): number => userId + 10;
@@ -340,6 +349,21 @@ const IDENTITIES: readonly IdentitySpec[] = [
 		grants: [
 			[AUTHZ_SECTION, AUTHZ_SECTION, 1],
 			...AUTHZ_MEDIA_COMPONENTS.map((tipo): [string, string, number] => [AUTHZ_SECTION, tipo, 2]),
+			[AUTHZ_SECTION, AUTHZ_FILTER, 1],
+		],
+	},
+	{
+		// Writes a hierarchy: the children field, the parent link it writes
+		// through, and the sibling order paired to that link.
+		userId: AUTHZ_TREE_EDITOR_USER_ID,
+		name: 'zzauthz_tree_editor',
+		admin: false,
+		project: AUTHZ_PROJECT_P,
+		grants: [
+			[AUTHZ_SECTION, AUTHZ_SECTION, 2],
+			[AUTHZ_SECTION, AUTHZ_CHILDREN, 2],
+			[AUTHZ_SECTION, AUTHZ_PARENT, 2],
+			[AUTHZ_SECTION, AUTHZ_ORDER, 2],
 			[AUTHZ_SECTION, AUTHZ_FILTER, 1],
 		],
 	},
@@ -578,6 +602,7 @@ export interface AuthzIdentities {
 	transcriber: Principal;
 	readComponent: Principal;
 	readSection: Principal;
+	treeEditor: Principal;
 }
 
 export async function resolveAuthzIdentities(): Promise<AuthzIdentities> {
@@ -594,6 +619,7 @@ export async function resolveAuthzIdentities(): Promise<AuthzIdentities> {
 		transcriber: await resolvePrincipal(AUTHZ_TRANSCRIBER_USER_ID),
 		readComponent: await resolvePrincipal(AUTHZ_READ_COMPONENT_USER_ID),
 		readSection: await resolvePrincipal(AUTHZ_READ_SECTION_USER_ID),
+		treeEditor: await resolvePrincipal(AUTHZ_TREE_EDITOR_USER_ID),
 	};
 }
 
@@ -647,6 +673,12 @@ export async function assertAuthzDoorContrast(ids: AuthzIdentities): Promise<voi
 	await expectLevel('sectionOnly', ids.sectionOnly, USERS_SECTION, 'dd522', 0);
 	if (!ids.dd128Admin.isGlobalAdmin) problems.push('dd128Admin is not a global admin');
 	await expectLevel('dd128Admin', ids.dd128Admin, USERS_SECTION, 'dd133', 2);
+	if (ids.treeEditor.isGlobalAdmin) problems.push('treeEditor is a global admin');
+	for (const tipo of [AUTHZ_CHILDREN, AUTHZ_PARENT, AUTHZ_ORDER]) {
+		await expectLevel('treeEditor', ids.treeEditor, AUTHZ_SECTION, tipo, 2);
+	}
+	// The contrast the children write-through's permission leg needs.
+	await expectLevel('sectionOnly', ids.sectionOnly, AUTHZ_SECTION, AUTHZ_PARENT, 0);
 	if (problems.length > 0) {
 		throw new Error(`authz_door_fixture: the contrast is degraded — ${problems.join('; ')}`);
 	}

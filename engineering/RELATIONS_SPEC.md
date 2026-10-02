@@ -241,6 +241,15 @@ Contract (never pair by array index):
 ### 6.3 Children/parent — nested sections, hierarchy
 Some sections are nested; the hierarchy chain is stored only upward. `component_relation_parent` stores the parent locators. `component_relation_children` **has no data of its own**: its save pipeline is a no-op (doc `class.component_relation_children.php:80-83`); writes go to each child's component_relation_parent; reads compute "who declares me as parent" — `get_data` `:113` → `get_children` `:132`, paginated `:167`. **Sibling order** is itself an `id_key` dataframe: an order `component_number` (named by `section_map->thesaurus->order`) attached to the child's parent-link locator — `sort_children` `:1033`, order component resolution `:1077`. The thesaurus tree (`core/ts_object/`) is a consumer of exactly this machinery.
 
+> **TS addendum 2026-10-02 (`WC-2026-10-02-relation-children-write-through`).** The TS
+> save is NOT a no-op: `relations/children_write.ts` (entered from `saveComponentData`)
+> diff-syncs the requested list against the computed children and writes each affected
+> child's component_relation_parent (+ its order value) through the normal
+> `saveComponentData`, in one transaction under the host's node lock, every child
+> authorized first; removal is by locator and drops every link targeting the host,
+> whatever its type. The descriptor is `derived` (update_cache skips it, the CSV import
+> refuses it). Gate: `test/unit/relation_children_write_through_native.test.ts`.
+
 ### 6.4 Indexation — inverse relations, "who calls me?"
 `component_relation_index` stores nothing meaningful forward; it **calculates** its data by resolving inverse locators (backlinks) — every locator anywhere whose target is this record. Engine: `core/search/class.search_related.php:79`, which dispatches to four PostgreSQL flat-GIN stored functions (`data_relations_flat_st_si`, `_fct_st_si`, `_ty_st_si`, `_ty_st`; doc `:19-42`, DDL in `core/db/db_pg_definitions.php`); public entry `get_referenced_locators(filter_locators, limit, offset, count, target_section)` `:489` (SQO `mode='related'` + breakdown: one row per inverse locator, enriched with `from_section_tipo`/`from_section_id`). Model side: `class.component_relation_index.php` — `get_data` `:160` (cached `:797`), `get_data_paginated` `:205`, `count_data`/`count_data_group_by` `:298`/`:351`, `remove_locator` `:681`; default relation type dd96. Tag indexation (locators carrying `tag_id`/`tag_component_tipo` pointing into transcription text) rides the same inverse machinery and needs a real resolution path in TS.
 

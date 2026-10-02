@@ -295,6 +295,15 @@ export function importAppendOfDescriptor(
 	return canonical.importAppend;
 }
 
+/**
+ * Whether the model is DERIVED (`derived` facet, alias-following — see
+ * types.ts): it owns no stored value, so its own matrix key is never its value.
+ * An unknown model is not derived (it is refused elsewhere, loudly).
+ */
+export function isDerivedModel(model: string): boolean {
+	return resolveCanonical(model)?.derived === true;
+}
+
 /** PHP $components_using_value_property membership (CSV import). */
 export function usesImportValueProperty(model: string): boolean {
 	return resolveCanonical(model)?.importValueProperty === true;

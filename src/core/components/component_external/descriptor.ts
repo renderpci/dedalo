@@ -53,6 +53,7 @@ export const component_external: ComponentModel = {
 	model: 'component_external',
 	column: 'relation', // INERT — column-map parity only (see the header)
 	render: 'text',
+	derived: true, // owns no stored value (types.ts `derived`)
 	importAppend: {
 		refuse: 'derived: the value lives in a remote service, there is no local data to append to',
 	},

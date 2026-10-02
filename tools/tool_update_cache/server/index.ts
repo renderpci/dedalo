@@ -25,6 +25,7 @@
  *   re-running the save path's derivation.
  */
 
+import { isDerivedModel } from '../../../src/core/components/registry.ts';
 import { isMediaModel, mediaTypeOf } from '../../../src/core/concepts/media.ts';
 import { DedaloError, isDedaloError, ok } from '../../../src/core/errors/index.ts';
 import type { StoredMediaItem } from '../../../src/core/media/tools/files_info_persist.ts';
@@ -133,6 +134,44 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			'sqo is required (the scope to act on — no whole-section default; WC-043)',
 		);
 	}
+	// DERIVED components are skipped HERE, server-side, whatever the client's
+	// `ar_components_exclude` offered (registry.ts isDerivedModel): they own no
+	// stored value, so a "regenerate" re-save would replay leftover bytes under
+	// their tipo as if they were the value — for component_relation_children,
+	// whose save writes THROUGH to each child's parent link, that re-parents a
+	// thesaurus from stale leftovers. Nothing is stored, nothing to regenerate.
+	const derivedSkipped: string[] = [];
+	const regenerable: typeof selection = [];
+	for (const sel of selection) {
+		const tipo = String(sel.tipo ?? '');
+		const model = tipo !== '' ? await getModelByTipo(tipo) : null;
+		if (model !== null && isDerivedModel(model)) derivedSkipped.push(tipo);
+		else regenerable.push(sel);
+	}
+	const derivedNote =
+		derivedSkipped.length > 0
+			? ` ${derivedSkipped.length} derived component(s) skipped (${derivedSkipped.join(', ')}): computed, nothing stored to regenerate.`
+			: '';
+	if (regenerable.length === 0) {
+		return ok(
+			{
+				summary: `OK. Nothing to regenerate.${derivedNote}`,
+				errors: [],
+				regenerated: 0,
+				refused: 0,
+				derived_skipped: derivedSkipped,
+				records: 0,
+				processed: 0,
+				stopped: false,
+				bulk_process_id: null,
+				media_errors: 0,
+				media_held: 0,
+				vanished: 0,
+				locked: 0,
+			},
+			{ requestId: toolRequestId(ctx) },
+		);
+	}
 	const sqo = sanitizeClientSqo(structuredClone(sqoRaw));
 	(sqo as { limit?: unknown; offset?: unknown }).limit = null;
 	(sqo as { limit?: unknown; offset?: unknown }).offset = 0;
@@ -151,7 +190,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const { getTermByTipo } = await import('../../../src/core/ontology/resolver.ts');
 	const labelLang = typeof ctx.options.lang === 'string' ? ctx.options.lang : 'lg-eng';
 	const componentNames = await Promise.all(
-		selection.map(async (sel) => {
+		regenerable.map(async (sel) => {
 			const tipo = String(sel.tipo ?? '');
 			return `${(await getTermByTipo(tipo, labelLang)) ?? tipo}[${tipo}]`;
 		}),
@@ -219,13 +258,13 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					counter,
 					total: rows.length,
 					current: { section_id: row.section_id },
-					n_components: selection.length,
+					n_components: regenerable.length,
 				});
 			}
 			const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
 			const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
 			if (record === null) continue;
-			for (const sel of selection) {
+			for (const sel of regenerable) {
 				const tipo = String(sel.tipo ?? '');
 				const model = tipo !== '' ? await getModelByTipo(tipo) : null;
 				if (model === null) continue;
@@ -399,14 +438,14 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		refusedTargets.length > 0
 			? ` ${refusedTargets.length} target(s) the caller may not write were skipped (nothing written to them).`
 			: '';
-	const msg = `${summaryMsg}${refusedNote}${rebuildFailures > 0 ? ` ${rebuildFailures} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}${vanished > 0 ? ` ${vanished} record(s) deleted during the run (nothing written).` : ''}${lockedOut > 0 ? ` ${lockedOut} record(s) stayed locked (nothing written).` : ''}`;
+	const msg = `${summaryMsg}${refusedNote}${derivedNote}${rebuildFailures > 0 ? ` ${rebuildFailures} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}${vanished > 0 ? ` ${vanished} record(s) deleted during the run (nothing written).` : ''}${lockedOut > 0 ? ` ${lockedOut} record(s) stayed locked (nothing written).` : ''}`;
 	// Final frame: the client renders the summary from the last pfile data.
 	publish({
 		msg,
 		is_running: false,
 		counter: processed,
 		total: rows.length,
-		n_components: selection.length,
+		n_components: regenerable.length,
 	});
 	// A media derivative that could not be rebuilt does NOT fail the run (the
 	// cache really was regenerated): it is payload, beside the summary the client
@@ -417,6 +456,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			errors: [...mediaErrors, ...refusedTargets],
 			regenerated,
 			refused: refusedTargets.length,
+			derived_skipped: derivedSkipped,
 			records: rows.length,
 			processed,
 			stopped,

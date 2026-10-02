@@ -22,7 +22,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:f
 import { resolve, sep } from 'node:path';
 import { config } from '../../../src/config/config.ts';
 import { envSnapshot } from '../../../src/config/env.ts';
-import { getImportAppendPolicy } from '../../../src/core/components/registry.ts';
+import { getImportAppendPolicy, isDerivedModel } from '../../../src/core/components/registry.ts';
 import type { ImportAppendPolicy } from '../../../src/core/components/types.ts';
 import { AUDIT_TIPOS, BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
 import { withTransaction } from '../../../src/core/db/postgres.ts';
@@ -224,6 +224,17 @@ function appendRefusal(tipo: string, model: string, dataTipo: string = tipo): st
 		return (error as Error).message;
 	}
 	return typeof policy === 'object' ? policy.refuse : null;
+}
+
+/**
+ * Why a column on a DERIVED model is refused (any mode): the model's own
+ * `importAppend` refusal, which names what to import instead.
+ */
+function derivedRefusal(model: string): string {
+	const policy = getImportAppendPolicy(model);
+	return typeof policy === 'object'
+		? policy.refuse
+		: `'${model}' is derived (computed, nothing stored) — it cannot be imported`;
 }
 
 /**
@@ -466,7 +477,8 @@ function batchSectionTipos(options: Record<string, unknown>): unknown[] {
  * import_mode (per column): parsed strictly on every entry (an unknown value
  * THROWS — the whole file is refused, before the caller creates its dd800
  * bulk-process record). An APPEND column is checked against the SERVER-resolved
- * model (appendRefusal); a refused append lands in `refusals`, and both callers
+ * model (appendRefusal); a column on a DERIVED model (isDerivedModel) is
+ * refused in ANY mode; a refused column lands in `refusals`, and both callers
  * refuse the file on a non-empty list — import_files before any write,
  * validate_import in its report.
  */
@@ -537,8 +549,16 @@ async function resolveMappedColumns(
 		// refusal must see through an alias, and the executor keys every
 		// stored-data read, id allocation and frame pairing by it.
 		const dataTipo = await resolveDataTipo(mapTo);
-		const refused = mode === 'append' ? appendRefusal(mapTo, model, dataTipo) : null;
-		if (refused !== null) {
+		// A DERIVED component (registry isDerivedModel) owns no stored value: a
+		// column on it is refused in EVERY mode — a replace would write leftover
+		// bytes no read serves (or, for component_relation_children, re-parent
+		// records from a cell). Its append policy's reason says what to import
+		// instead (user decision 2026-09-27: refuse, import the child's parent).
+		const derived = isDerivedModel(model) ? derivedRefusal(model) : null;
+		const refused = derived ?? (mode === 'append' ? appendRefusal(mapTo, model, dataTipo) : null);
+		if (derived !== null) {
+			refusals.push(`Column ${i} ('${headerCell}' → ${mapTo}, ${model}): refused — ${derived}`);
+		} else if (refused !== null) {
 			refusals.push(
 				`Column ${i} ('${headerCell}' → ${mapTo}, ${model}): append refused — ${refused}`,
 			);

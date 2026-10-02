@@ -27,7 +27,7 @@
  * are skipped and reported per cell ("N already present, not added").
  */
 
-import { getImportAppendPolicy } from '../components/registry.ts';
+import { getImportAppendPolicy, isDerivedModel } from '../components/registry.ts';
 import { AUDIT_TIPOS } from '../concepts/section.ts';
 import { DATAFRAME_RELATION_TYPE } from '../concepts/subdatum.ts';
 import { type MatrixJsonbColumn, readExistingSectionIds } from '../db/matrix.ts';
@@ -1055,6 +1055,19 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 	const failed: ImportRowIssue[] = [];
 	const warnings: ImportRowIssue[] = [];
 	const errors: string[] = [...request.errors];
+
+	// BACKSTOP for the column resolver (tool_import_dedalo_csv refuses first): a
+	// DERIVED component owns no stored value, so no imported column may write it
+	// — for component_relation_children a replace would re-parent records.
+	const derivedColumn = plan
+		.flatMap((record) => record.columns)
+		.find((column) => isDerivedModel(column.model));
+	if (derivedColumn !== undefined) {
+		throw new DedaloError('request.invalid_data', {
+			message: `CSV import refused: column '${derivedColumn.tipo}' (${derivedColumn.model}) is derived — computed, nothing stored to import`,
+			coordinates: { section_tipo: sectionTipo, tipo: derivedColumn.tipo },
+		});
+	}
 
 	// ONE existence query for the whole file (see the header).
 	const table = await getMatrixTableFromTipo(sectionTipo);
