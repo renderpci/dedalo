@@ -55,21 +55,42 @@
  * install is configured with. The TS default omits the entity-specific denies,
  * so exact PHP parity requires AREAS_DENY to be set to the mib list in the
  * environment (a pre-existing menu-config gap, NOT a datalist-algorithm gap).
+ *
+ * CACHING (2026-10-02; PHP served a per-user/lang cache file, cleared by
+ * delete_cache_files on ontology changes). The cold build read ~3 sequential
+ * queries per node over a ~13k-node tree (6–7 s on a real install). Now:
+ * - the build reads the ontology in ONE query (loadOntologySnapshot) and walks
+ *   it with the resolver's own model / virtual→real laws (runtimeModelOfStored,
+ *   sectionRealTipoFromRelations) — no per-node getNode, and no dependence on
+ *   the resolver's node-cache cap (10000, below a 13k walk);
+ * - LEVEL 1 caches the unfiltered structure per (application lang, deny list);
+ * - LEVEL 2 caches the finished, FROZEN datalist per (lang, deny, the viewer's
+ *   granted-area set) — cleared on every dd_ontology write (cache factory) and
+ *   on every users/profiles record write (save-event listener).
+ * Gate: test/unit/security_access_datalist_cache_native.test.ts (bounded cold
+ * query count, warm == cold, isolation per user and per lang, invalidation).
  */
 
+import { createHash } from 'node:crypto';
 import { config } from '../../config/config.ts';
 import {
 	AREA_CHILD_EXCLUDE_MODELS,
 	AREA_CHILD_INCLUDE_MODELS,
 	MENU_ROOT_MODEL_ORDER,
 } from '../concepts/area.ts';
-import { sql } from '../db/postgres.ts';
+import { isInTransaction, sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
-import { labelByTipo } from '../ontology/labels.ts';
-import { getModelByTipo, getSectionRealTipo } from '../ontology/resolver.ts';
-import { getGrantedTipos, type Principal } from '../security/permissions.ts';
+import { resolveLabel } from '../ontology/labels.ts';
+import {
+	getModelByTipo,
+	runtimeModelOfStored,
+	sectionRealTipoFromRelations,
+} from '../ontology/resolver.ts';
+import { registerSectionDataListener } from '../section_record/save_event.ts';
+import { getGrantedTipos, PROFILES_SECTION, type Principal } from '../security/permissions.ts';
 import { currentPrincipal } from '../security/request_context.ts';
+import { currentApplicationLang } from './request_lang.ts';
 import { getEffectiveAreasDeny } from './server_state.ts';
 
 /** One flat datalist item (PHP datalist_item shape — order of keys is not significant). */
@@ -101,62 +122,123 @@ interface AreaObj {
 	label: string | null;
 }
 
+/**
+ * The per-node ontology reads the walks below consume. TWO sources, ONE walk:
+ * the datalist build reads a one-query snapshot (loadOntologySnapshot), the
+ * permission-grant expansion reads the per-node cached accessors
+ * (LIVE_READER). Same laws either way — the model and virtual→real laws come
+ * from ontology/resolver.ts (runtimeModelOfStored / sectionRealTipoFromRelations).
+ */
+interface OntologyReader {
+	childrenOf(tipo: string): Promise<string[]>;
+	modelOf(tipo: string): Promise<string | null>;
+}
+
+/** The snapshot reader: everything the datalist build needs, from one query. */
+interface SnapshotReader extends OntologyReader {
+	relationTipos(tipo: string): string[];
+	properties(tipo: string): Record<string, unknown> | null;
+	labelOf(tipo: string): string | null;
+	parentOf(tipo: string): string | null;
+	realSectionTipo(tipo: string): Promise<string>;
+}
+
 // -----------------------------------------------------------------------------
-// low-level ontology helpers (per-process caches, like the PHP static caches)
+// low-level ontology helpers
 // -----------------------------------------------------------------------------
 
 /**
  * ontology_node::get_ar_children_of_this — direct children tipos ordered by
  * order_number ASC (PHP dd_ontology_db_manager::search order=true, which emits
- * exactly `ORDER BY order_number ASC`, Postgres default NULLS LAST).
+ * exactly `ORDER BY order_number ASC`, Postgres default NULLS LAST). Per-node,
+ * cached — the grant expansion's source (a section at a time, not the tree).
  */
 const childrenOfCache = createOntologyCache<string, string[]>();
 async function getChildrenOfThis(tipo: string): Promise<string[]> {
 	const cached = childrenOfCache.get(tipo);
 	if (cached !== undefined) return cached;
 	const rows = (await sql`
-		SELECT tipo FROM dd_ontology WHERE parent = ${tipo} ORDER BY order_number ASC
+		SELECT tipo FROM dd_ontology WHERE parent = ${tipo} ORDER BY order_number ASC, id ASC
 	`) as { tipo: string }[];
 	const result = rows.map((row) => row.tipo);
-	childrenOfCache.set(tipo, result);
+	if (!isInTransaction()) childrenOfCache.set(tipo, result);
 	return result;
 }
 
-/** A node's raw `relations` list (ontology_node::get_relations). */
-const relationsCache = createOntologyCache<string, { tipo?: unknown }[]>();
-async function getRelations(tipo: string): Promise<{ tipo?: unknown }[]> {
-	const cached = relationsCache.get(tipo);
-	if (cached !== undefined) return cached;
+/** The per-node reader (grant expansion): cached children + the resolver's model law. */
+const LIVE_READER: OntologyReader = {
+	childrenOf: getChildrenOfThis,
+	modelOf: getModelByTipo,
+};
+
+/** One dd_ontology row as the snapshot holds it. */
+interface SnapshotRow {
+	parent: string | null;
+	model: string | null;
+	relations: unknown;
+	properties: unknown;
+	term: unknown;
+}
+
+/**
+ * ONE query for the whole ontology the ACL tree walks (the cold-build cost was
+ * ~3 sequential queries per node over a ~13k-node tree). Rows come ordered by
+ * order_number ASC (NULLS LAST, the per-parent query's order), so grouping
+ * them by parent in scan order yields each node's children in the order
+ * getChildrenOfThis returns. Labels resolve in `lang` through THE label law
+ * (resolveLabel — what labelByTipo applies to the same `term` column).
+ */
+async function loadOntologySnapshot(lang: string): Promise<SnapshotReader> {
 	const rows = (await sql`
-		SELECT relations FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1
-	`) as { relations: { tipo?: unknown }[] | null }[];
-	const result = Array.isArray(rows[0]?.relations)
-		? (rows[0]?.relations as { tipo?: unknown }[])
-		: [];
-	relationsCache.set(tipo, result);
-	return result;
-}
-
-/** ontology_node::get_relation_nodes(tipo, simple=true) — the clean list of relation tipos. */
-async function getRelationNodesSimple(tipo: string): Promise<string[]> {
-	const relations = await getRelations(tipo);
-	const out: string[] = [];
-	for (const relation of relations) {
-		if (typeof relation?.tipo === 'string' && relation.tipo) out.push(relation.tipo);
+		SELECT tipo, parent, model, relations, properties, term
+		FROM dd_ontology
+		ORDER BY order_number ASC, id ASC
+	`) as (SnapshotRow & { tipo: string })[];
+	const byTipo = new Map<string, SnapshotRow>();
+	const children = new Map<string, string[]>();
+	for (const row of rows) {
+		if (!byTipo.has(row.tipo)) byTipo.set(row.tipo, row);
+		if (row.parent === null) continue;
+		const list = children.get(row.parent);
+		if (list === undefined) children.set(row.parent, [row.tipo]);
+		else list.push(row.tipo);
 	}
-	return out;
-}
-
-/** A node's raw `properties` JSON (ontology_node::get_properties). */
-const propertiesCache = createOntologyCache<string, Record<string, unknown> | null>();
-async function getProperties(tipo: string): Promise<Record<string, unknown> | null> {
-	if (propertiesCache.has(tipo)) return propertiesCache.get(tipo) ?? null;
-	const rows = (await sql`
-		SELECT properties FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1
-	`) as { properties: Record<string, unknown> | null }[];
-	const result = (rows[0]?.properties as Record<string, unknown> | null) ?? null;
-	propertiesCache.set(tipo, result);
-	return result;
+	// Per-build memos (local to this build — never module state).
+	const models = new Map<string, Promise<string | null>>();
+	const realTipos = new Map<string, Promise<string>>();
+	const modelOf = (tipo: string): Promise<string | null> => {
+		let model = models.get(tipo);
+		if (model === undefined) {
+			model = runtimeModelOfStored(tipo, byTipo.get(tipo)?.model ?? null);
+			models.set(tipo, model);
+		}
+		return model;
+	};
+	return {
+		childrenOf: async (tipo) => children.get(tipo) ?? [],
+		modelOf,
+		relationTipos: (tipo) => {
+			const relations = byTipo.get(tipo)?.relations;
+			if (!Array.isArray(relations)) return [];
+			const out: string[] = [];
+			for (const relation of relations as { tipo?: unknown }[]) {
+				if (typeof relation?.tipo === 'string' && relation.tipo) out.push(relation.tipo);
+			}
+			return out;
+		},
+		properties: (tipo) =>
+			(byTipo.get(tipo)?.properties as Record<string, unknown> | null | undefined) ?? null,
+		labelOf: (tipo) => resolveLabel(byTipo.get(tipo)?.term ?? null, lang),
+		parentOf: (tipo) => byTipo.get(tipo)?.parent ?? null,
+		realSectionTipo: (tipo) => {
+			let real = realTipos.get(tipo);
+			if (real === undefined) {
+				real = sectionRealTipoFromRelations(tipo, byTipo.get(tipo)?.relations, modelOf);
+				realTipos.set(tipo, real);
+			}
+			return real;
+		},
+	};
 }
 
 /**
@@ -167,22 +249,17 @@ async function getProperties(tipo: string): Promise<Record<string, unknown> | nu
  */
 export { getSectionRealTipo } from '../ontology/resolver.ts';
 
-/** Drop the three ontology-derived walk caches of this module. */
-export function clearSecurityAccessCaches(): void {
-	childrenOfCache.clear();
-	relationsCache.clear();
-	propertiesCache.clear();
-}
-registerOntologyCacheClearer(clearSecurityAccessCaches);
-
 /**
  * ontology_node::get_ar_tipo_by_model_and_relation(tipo, 'exclude_elements',
  * 'children', true) — direct children whose resolved model === 'exclude_elements'.
  */
-async function getExcludeElementsChildren(sectionTipo: string): Promise<string[]> {
+async function getExcludeElementsChildren(
+	reader: OntologyReader,
+	sectionTipo: string,
+): Promise<string[]> {
 	const out: string[] = [];
-	for (const childTipo of await getChildrenOfThis(sectionTipo)) {
-		if ((await getModelByTipo(childTipo)) === 'exclude_elements') out.push(childTipo);
+	for (const childTipo of await reader.childrenOf(sectionTipo)) {
+		if ((await reader.modelOf(childTipo)) === 'exclude_elements') out.push(childTipo);
 	}
 	return out;
 }
@@ -198,18 +275,19 @@ const RECURSIVE_DEFAULT_EXCLUDE_MODELS: ReadonlySet<string> = new Set([
 	'component_semantic_node',
 ]);
 async function getArRecursiveChildren(
+	reader: OntologyReader,
 	tipo: string,
 	excludeModels: ReadonlySet<string>,
 	collector: string[],
 	isRecursion = false,
 ): Promise<string[]> {
 	if (isRecursion) collector.push(tipo);
-	for (const childTipo of await getChildrenOfThis(tipo)) {
+	for (const childTipo of await reader.childrenOf(tipo)) {
 		if (excludeModels.size > 0) {
-			const model = await getModelByTipo(childTipo);
+			const model = await reader.modelOf(childTipo);
 			if (model !== null && excludeModels.has(model)) continue;
 		}
-		await getArRecursiveChildren(childTipo, excludeModels, collector, true);
+		await getArRecursiveChildren(reader, childTipo, excludeModels, collector, true);
 	}
 	return collector;
 }
@@ -240,6 +318,7 @@ const SECTION_CHILD_MODEL_REQUIRED: readonly string[] = [
  * uses GRANT_CHILD_MODEL_REQUIRED (PHP passes ar_model_name_required per call).
  */
 async function filterChildrenByModels(
+	reader: OntologyReader,
 	children: readonly string[],
 	required: readonly string[] = SECTION_CHILD_MODEL_REQUIRED,
 ): Promise<string[]> {
@@ -247,7 +326,7 @@ async function filterChildrenByModels(
 	const seen = new Set<string>();
 	for (const childTipo of children) {
 		if (seen.has(childTipo)) continue;
-		const model = (await getModelByTipo(childTipo)) ?? '';
+		const model = (await reader.modelOf(childTipo)) ?? '';
 		if (required.some((requiredModel) => model.includes(requiredModel))) {
 			result.push(childTipo);
 			seen.add(childTipo);
@@ -285,11 +364,12 @@ const GRANT_CHILD_MODEL_REQUIRED: readonly string[] = [
  */
 export async function getGrantChildrenTipos(realSectionTipo: string): Promise<string[]> {
 	const recursiveChildren = await getArRecursiveChildren(
+		LIVE_READER,
 		realSectionTipo,
 		RECURSIVE_DEFAULT_EXCLUDE_MODELS,
 		[],
 	);
-	return filterChildrenByModels(recursiveChildren, GRANT_CHILD_MODEL_REQUIRED);
+	return filterChildrenByModels(LIVE_READER, recursiveChildren, GRANT_CHILD_MODEL_REQUIRED);
 }
 
 /**
@@ -300,21 +380,24 @@ export async function getGrantChildrenTipos(realSectionTipo: string): Promise<st
  * virtual tipo to its real section and subtracts the virtual's exclude_elements,
  * expanding grouper excludes recursively); then filter by the required models.
  */
-async function getSectionChildrenResolveVirtual(sectionTipo: string): Promise<string[]> {
-	const realTipo = await getSectionRealTipo(sectionTipo);
+async function getSectionChildrenResolveVirtual(
+	reader: SnapshotReader,
+	sectionTipo: string,
+): Promise<string[]> {
+	const realTipo = await reader.realSectionTipo(sectionTipo);
 
 	// exclude_elements are read from the ORIGINAL (possibly virtual) tipo.
 	const excludeSet = new Set<string>();
-	const excludeElementsChildren = await getExcludeElementsChildren(sectionTipo);
+	const excludeElementsChildren = await getExcludeElementsChildren(reader, sectionTipo);
 	const excludeElementsTipo = excludeElementsChildren[0];
 	if (excludeElementsTipo !== undefined) {
-		const excludedTipos = await getRelationNodesSimple(excludeElementsTipo);
-		for (const excludedTipo of excludedTipos) {
+		for (const excludedTipo of reader.relationTipos(excludeElementsTipo)) {
 			excludeSet.add(excludedTipo);
-			const model = await getModelByTipo(excludedTipo);
+			const model = await reader.modelOf(excludedTipo);
 			if (model === 'section_group' || model === 'section_tab' || model === 'tab') {
 				const grouperChildren: string[] = [];
 				await getArRecursiveChildren(
+					reader,
 					excludedTipo,
 					RECURSIVE_DEFAULT_EXCLUDE_MODELS,
 					grouperChildren,
@@ -324,9 +407,9 @@ async function getSectionChildrenResolveVirtual(sectionTipo: string): Promise<st
 		}
 	}
 
-	const directChildren = await getChildrenOfThis(realTipo);
+	const directChildren = await reader.childrenOf(realTipo);
 	const kept = directChildren.filter((childTipo) => !excludeSet.has(childTipo));
-	return filterChildrenByModels(kept);
+	return filterChildrenByModels(reader, kept);
 }
 
 /**
@@ -335,9 +418,11 @@ async function getSectionChildrenResolveVirtual(sectionTipo: string): Promise<st
  * the virtual node's OWN direct children (virtual-specific buttons), filtered by
  * the required models, with no exclude subtraction.
  */
-async function getSectionChildrenNoVirtual(sectionTipo: string): Promise<string[]> {
-	const directChildren = await getChildrenOfThis(sectionTipo);
-	return filterChildrenByModels(directChildren);
+async function getSectionChildrenNoVirtual(
+	reader: SnapshotReader,
+	sectionTipo: string,
+): Promise<string[]> {
+	return filterChildrenByModels(reader, await reader.childrenOf(sectionTipo));
 }
 
 // -----------------------------------------------------------------------------
@@ -367,28 +452,29 @@ const AR_EXCLUDE_COMPONENTS: ReadonlySet<string> = new Set<string>(
  * parent for virtual sections).
  */
 async function getChildrenRecursiveSecurityAccess(
+	reader: SnapshotReader,
 	tipo: string,
 	excludeTipos: ReadonlySet<string> | null,
 ): Promise<ChildItem[]> {
 	const elements: ChildItem[] = [];
 
-	const sourceModel = await getModelByTipo(tipo);
+	const sourceModel = await reader.modelOf(tipo);
 	let childTipos: string[];
 	if (sourceModel === 'section') {
-		childTipos = await getSectionChildrenResolveVirtual(tipo);
-		const realTipo = await getSectionRealTipo(tipo);
+		childTipos = await getSectionChildrenResolveVirtual(reader, tipo);
+		const realTipo = await reader.realSectionTipo(tipo);
 		if (tipo !== realTipo) {
 			// Virtual section: also fetch the virtual node's own children (buttons).
-			childTipos = [...childTipos, ...(await getSectionChildrenNoVirtual(tipo))];
+			childTipos = [...childTipos, ...(await getSectionChildrenNoVirtual(reader, tipo))];
 		}
 	} else {
 		// Areas / section_groups / …
-		childTipos = await getChildrenOfThis(tipo);
+		childTipos = await reader.childrenOf(tipo);
 	}
 
 	for (const elementTipo of childTipos) {
 		if (excludeTipos?.has(elementTipo)) continue;
-		const model = await getModelByTipo(elementTipo);
+		const model = await reader.modelOf(elementTipo);
 		if (model !== null && AR_EXCLUDE_MODEL.has(model)) continue;
 		if (AR_EXCLUDE_COMPONENTS.has(elementTipo)) continue;
 
@@ -396,11 +482,11 @@ async function getChildrenRecursiveSecurityAccess(
 			tipo: elementTipo,
 			section_tipo: tipo,
 			model,
-			label: await labelByTipo(elementTipo),
+			label: reader.labelOf(elementTipo),
 			parent: tipo,
 		});
 
-		const sub = await getChildrenRecursiveSecurityAccess(elementTipo, excludeTipos);
+		const sub = await getChildrenRecursiveSecurityAccess(reader, elementTipo, excludeTipos);
 		for (const item of sub) elements.push(item);
 	}
 
@@ -416,20 +502,27 @@ async function getChildrenRecursiveSecurityAccess(
  * WITH their own rolling ar_parent chain (the caller prepends the area-level
  * chain). Handles the explicit `source.request_config.ddo_map` path.
  */
-async function getElementDatalist(sectionTipo: string): Promise<SecurityAccessDatalistItem[]> {
+async function getElementDatalist(
+	reader: SnapshotReader,
+	sectionTipo: string,
+): Promise<SecurityAccessDatalistItem[]> {
 	// exclude_elements defined in the ontology → tipos removed from the walk.
 	let excludeTipos: ReadonlySet<string> | null = null;
-	const excludeElementsChildren = await getExcludeElementsChildren(sectionTipo);
+	const excludeElementsChildren = await getExcludeElementsChildren(reader, sectionTipo);
 	const excludeElementsTipo = excludeElementsChildren[0];
 	if (excludeElementsTipo !== undefined) {
-		excludeTipos = new Set(await getRelationNodesSimple(excludeElementsTipo));
+		excludeTipos = new Set(reader.relationTipos(excludeElementsTipo));
 	}
 
-	const childrenRecursive = await getChildrenRecursiveSecurityAccess(sectionTipo, excludeTipos);
+	const childrenRecursive = await getChildrenRecursiveSecurityAccess(
+		reader,
+		sectionTipo,
+		excludeTipos,
+	);
 
 	// explicit request_config.ddo_map path.
 	let childrenList: ChildItem[];
-	const properties = await getProperties(sectionTipo);
+	const properties = reader.properties(sectionTipo);
 	const source = properties?.source as { request_config?: unknown } | undefined;
 	if (source !== undefined && source !== null && Array.isArray(source.request_config)) {
 		const explicitChildren: { tipo?: unknown; parent?: unknown; parent_grouper?: unknown }[] = [];
@@ -457,8 +550,8 @@ async function getElementDatalist(sectionTipo: string): Promise<SecurityAccessDa
 			childrenList.push({
 				tipo: ddo.tipo,
 				section_tipo: sectionTipo,
-				model: await getModelByTipo(ddo.tipo),
-				label: await labelByTipo(ddo.tipo),
+				model: await reader.modelOf(ddo.tipo),
+				label: reader.labelOf(ddo.tipo),
 				parent: parentGrouper,
 			});
 		}
@@ -502,32 +595,30 @@ async function getElementDatalist(sectionTipo: string): Promise<SecurityAccessDa
  * area::get_areas() — the ordered area/section list. Root area models in the
  * fixed menu order, each root's descendants via the include/exclude model walk,
  * with the config_areas deny applied (both to roots and descendants).
+ *
+ * The root lookup stays one query per root MODEL (ontology_utils::
+ * get_ar_tipo_by_model, `LIMIT 1` first match) — a fixed handful, and the
+ * database's own first-match choice is the oracle's; the descendant walk reads
+ * the snapshot.
  */
-async function getAreas(): Promise<AreaObj[]> {
-	const denySet = new Set(getEffectiveAreasDeny(config.menu.areasDeny));
-
-	// Resolve each root area MODEL to its tipo (ontology_utils::get_ar_tipo_by_model
-	// → search on the raw `model` column, first match).
+async function getAreas(reader: SnapshotReader, denySet: ReadonlySet<string>): Promise<AreaObj[]> {
 	const areas: AreaObj[] = [];
 
 	const toAreaObj = async (tipo: string, parent: string | null): Promise<AreaObj> => ({
 		tipo,
-		model: await getModelByTipo(tipo),
+		model: await reader.modelOf(tipo),
 		parent: parent ?? '',
-		label: await labelByTipo(tipo),
+		label: reader.labelOf(tipo),
 	});
 
 	// get_ar_children_areas_recursive: pre-order DFS, keeping nodes whose resolved
 	// model is in include AND not in exclude; recursion descends only into kept nodes.
 	const walkChildren = async (parentTipo: string): Promise<void> => {
-		for (const childTipo of await getChildrenOfThis(parentTipo)) {
-			const model = (await getModelByTipo(childTipo)) ?? '';
+		for (const childTipo of await reader.childrenOf(parentTipo)) {
+			const model = (await reader.modelOf(childTipo)) ?? '';
 			if (!AREA_CHILD_INCLUDE_MODELS.has(model) || AREA_CHILD_EXCLUDE_MODELS.has(model)) continue;
 			if (!denySet.has(childTipo)) {
-				const parentRow = (await sql`
-					SELECT parent FROM dd_ontology WHERE tipo = ${childTipo} LIMIT 1
-				`) as { parent: string | null }[];
-				areas.push(await toAreaObj(childTipo, parentRow[0]?.parent ?? parentTipo));
+				areas.push(await toAreaObj(childTipo, reader.parentOf(childTipo) ?? parentTipo));
 			}
 			await walkChildren(childTipo);
 		}
@@ -549,28 +640,107 @@ async function getAreas(): Promise<AreaObj[]> {
 }
 
 // -----------------------------------------------------------------------------
-// get_datalist (global-admin / unfiltered)
+// the caches
 // -----------------------------------------------------------------------------
 
 /**
- * Build the ontology ACL datalist, exactly reproducing PHP
- * component_security_access::get_datalist($user_id): the unfiltered tree for a
- * global admin, and for anyone else only the areas whose tipo appears in their
- * own dd774 data (see the module header). `viewer` defaults to the current
- * request's principal; undefined on both means no filter.
+ * The full (unfiltered) structure for one (application lang, effective deny):
+ * the ordered area list plus each section area's element datalist (with its
+ * section-local ar_parent chain). Every viewer's datalist is assembled from it.
  */
-export async function getSecurityAccessDatalist(
-	viewer?: Principal,
-): Promise<SecurityAccessDatalistItem[]> {
-	let areas = await getAreas();
+interface AreaTree {
+	areas: readonly AreaObj[];
+	elements: ReadonlyMap<string, readonly SecurityAccessDatalistItem[]>;
+}
 
-	// PHP get_datalist:203-236 — the non-global-admin narrowing.
-	const principal = viewer ?? currentPrincipal();
-	if (principal !== undefined && !principal.isGlobalAdmin) {
-		const granted = await getGrantedTipos(principal.userId);
-		areas = areas.filter((area) => granted.has(area.tipo));
+/**
+ * LEVEL 1 — (lang, deny) → AreaTree. Pure ontology (+ the deny list, which is
+ * IN the key because the runtime server-state override can change it without
+ * an ontology write): hub-cleared on every dd_ontology write. Holds the
+ * in-flight PROMISE, so concurrent cold reads share one build, and a clear
+ * during a build evicts it (the late result is never stored).
+ */
+const areaTreeCache = createOntologyCache<string, Promise<AreaTree>>();
+
+/**
+ * LEVEL 2 — (lang, deny, viewer scope) → the finished, frozen datalist. The
+ * scope is '*' for the unfiltered tree, else a sha256 of the viewer's granted
+ * tipo set (getGrantedTipos — the exact input the filter reads), so two users
+ * with the same grants share one entry and a grant change moves the viewer to
+ * another key. Cleared on dd_ontology writes (the
+ * factory) AND on every users/profiles record write (the listener below):
+ * redundant for correctness, it keeps stale per-grant entries from piling up.
+ * Bounded (oldest dropped first).
+ */
+const datalistCache = createOntologyCache<string, Promise<readonly SecurityAccessDatalistItem[]>>();
+const MAX_DATALIST_ENTRIES = 32;
+
+/** The users section — a write there can re-assign a profile (mirrors permissions.ts). */
+const USERS_SECTION_TIPO = 'dd128';
+registerSectionDataListener((sectionTipo) => {
+	if (sectionTipo === USERS_SECTION_TIPO || sectionTipo === PROFILES_SECTION) {
+		datalistCache.clear();
 	}
+});
 
+/** Drop every ontology-derived cache of this module (hub-registered). */
+export function clearSecurityAccessCaches(): void {
+	childrenOfCache.clear();
+	areaTreeCache.clear();
+	datalistCache.clear();
+}
+registerOntologyCacheClearer(clearSecurityAccessCaches);
+
+/**
+ * Memoize a promise in a factory cache: stored synchronously (concurrent
+ * callers share the build), dropped again if it rejects, and NEVER stored
+ * inside a transaction (S1-14 — the build may read uncommitted ontology rows).
+ */
+function memoPromise<V>(
+	cache: Map<string, Promise<V>>,
+	key: string,
+	build: () => Promise<V>,
+	maxEntries = Number.POSITIVE_INFINITY,
+): Promise<V> {
+	if (isInTransaction()) return build();
+	const cached = cache.get(key);
+	if (cached !== undefined) return cached;
+	if (cache.size >= maxEntries) {
+		const oldest = cache.keys().next().value;
+		if (oldest !== undefined) cache.delete(oldest);
+	}
+	const promise = build();
+	cache.set(key, promise);
+	promise.catch(() => {
+		if (cache.get(key) === promise) cache.delete(key);
+	});
+	return promise;
+}
+
+/** Freeze a datalist item and its chain — a cached value is shared by every viewer. */
+function freezeItem(item: SecurityAccessDatalistItem): SecurityAccessDatalistItem {
+	Object.freeze(item.ar_parent);
+	return Object.freeze(item);
+}
+
+async function buildAreaTree(lang: string, denySet: ReadonlySet<string>): Promise<AreaTree> {
+	const reader = await loadOntologySnapshot(lang);
+	const areas = await getAreas(reader, denySet);
+	const elements = new Map<string, readonly SecurityAccessDatalistItem[]>();
+	for (const area of areas) {
+		if (area.model !== 'section' || elements.has(area.tipo)) continue;
+		const list = await getElementDatalist(reader, area.tipo);
+		for (const item of list) freezeItem(item);
+		elements.set(area.tipo, Object.freeze(list));
+	}
+	return { areas: Object.freeze(areas.map((area) => Object.freeze(area))), elements };
+}
+
+/** get_datalist's area loop over an already-filtered area list. */
+function assembleDatalist(
+	tree: AreaTree,
+	areas: readonly AreaObj[],
+): readonly SecurityAccessDatalistItem[] {
 	const datalist: SecurityAccessDatalistItem[] = [];
 	const arCheck = new Set<string>();
 	const arParent: string[] = [];
@@ -588,24 +758,76 @@ export async function getSecurityAccessDatalist(
 		if (position === -1) arParent.push(area.parent);
 		else arParent.splice(position + 1);
 
-		datalist.push({
-			tipo: area.tipo,
-			section_tipo: sectionTipo,
-			model: area.model,
-			label: area.label,
-			parent: area.parent,
-			ar_parent: [...arParent],
-		});
+		datalist.push(
+			freezeItem({
+				tipo: area.tipo,
+				section_tipo: sectionTipo,
+				model: area.model,
+				label: area.label,
+				parent: area.parent,
+				ar_parent: [...arParent],
+			}),
+		);
 
 		// section case: add its recursive elements, prefixing the area-level chain.
 		if (area.model === 'section') {
-			const children = await getElementDatalist(area.tipo);
-			for (const child of children) {
-				child.ar_parent = [...arParent, ...child.ar_parent];
-				datalist.push(child);
+			for (const child of tree.elements.get(area.tipo) ?? []) {
+				datalist.push(freezeItem({ ...child, ar_parent: [...arParent, ...child.ar_parent] }));
 			}
 		}
 	}
 
-	return datalist;
+	return Object.freeze(datalist);
+}
+
+// -----------------------------------------------------------------------------
+// get_datalist
+// -----------------------------------------------------------------------------
+
+/**
+ * Build the ontology ACL datalist, exactly reproducing PHP
+ * component_security_access::get_datalist($user_id): the unfiltered tree for a
+ * global admin, and for anyone else only the areas whose tipo appears in their
+ * own dd774 data (see the module header). `viewer` defaults to the current
+ * request's principal; undefined on both means no filter. `lang` (the label
+ * language) defaults to the request's application lang and is a cache-key
+ * dimension, passed explicitly below.
+ *
+ * The result is CACHED and FROZEN (shared by every viewer with the same
+ * grants): treat it as read-only.
+ */
+export async function getSecurityAccessDatalist(
+	viewer?: Principal,
+	lang: string = currentApplicationLang(),
+): Promise<readonly SecurityAccessDatalistItem[]> {
+	const deny = getEffectiveAreasDeny(config.menu.areasDeny);
+	const treeKey = `${lang}\u0000${[...deny].sort().join(',')}`;
+
+	// PHP get_datalist:203-236 — the non-global-admin narrowing. The grants are
+	// read BEFORE the cache lookup so the key is complete up front: the level-1
+	// tree is awaited INSIDE the level-2 build, so a hub clear landing during
+	// the build evicts that build's promise instead of letting a datalist
+	// assembled from a pre-clear tree be stored into the fresh cache.
+	const principal = viewer ?? currentPrincipal();
+	let granted: ReadonlySet<string> | null = null;
+	let scope = '*';
+	if (principal !== undefined && !principal.isGlobalAdmin) {
+		granted = await getGrantedTipos(principal.userId);
+		scope = createHash('sha256')
+			.update([...granted].sort().join('\u0000'))
+			.digest('hex');
+	}
+	return memoPromise(
+		datalistCache,
+		`${treeKey}\u0000${scope}`,
+		async () => {
+			const tree = await memoPromise(areaTreeCache, treeKey, () =>
+				buildAreaTree(lang, new Set(deny)),
+			);
+			const areas =
+				granted === null ? tree.areas : tree.areas.filter((area) => granted.has(area.tipo));
+			return assembleDatalist(tree, areas);
+		},
+		MAX_DATALIST_ENTRIES,
+	);
 }

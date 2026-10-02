@@ -255,7 +255,23 @@ const STRUCTURAL_MODEL_REPLACEMENT_MAP: Readonly<Record<string, string>> = {
 export async function getModelByTipo(tipo: string): Promise<string | null> {
 	const forced = FORCED_MODELS[tipo];
 	if (forced !== undefined) return forced;
-	const storedModel = (await getNode(tipo))?.model ?? null;
+	return runtimeModelOfStored(tipo, (await getNode(tipo))?.model ?? null);
+}
+
+/**
+ * THE runtime-model law over an ALREADY-READ stored `model` column — the body
+ * of getModelByTipo, exported so a bulk reader that fetched the rows itself
+ * (the security-access datalist's one-query ontology snapshot) applies the SAME
+ * law without a getNode per node. Forced overrides win; null stays null; a
+ * component_alias hops to its target (resolver-read, aliases only); then the
+ * component-registry alias and the structural replacement map.
+ */
+export async function runtimeModelOfStored(
+	tipo: string,
+	storedModel: string | null,
+): Promise<string | null> {
+	const forced = FORCED_MODELS[tipo];
+	if (forced !== undefined) return forced;
 	if (storedModel === null) return null;
 	// component_alias hop (WC-020, ontology/alias.ts owns the contract): the
 	// alias behaves as its TARGET everywhere the runtime model is consumed —
@@ -731,20 +747,34 @@ const sectionRealTipoCache = createOntologyCache<string, string>();
 export async function getSectionRealTipo(sectionTipo: string): Promise<string> {
 	const cached = sectionRealTipoCache.get(sectionTipo);
 	if (cached !== undefined) return cached;
-	let real = sectionTipo;
-	const relations = (await getNode(sectionTipo))?.relations;
-	if (Array.isArray(relations)) {
-		for (const relation of relations) {
-			const relatedTipo = (relation as { tipo?: unknown } | null)?.tipo;
-			if (typeof relatedTipo !== 'string' || relatedTipo === '') continue;
-			if ((await getModelByTipo(relatedTipo)) === 'section') {
-				real = relatedTipo;
-				break;
-			}
-		}
-	}
+	const real = await sectionRealTipoFromRelations(
+		sectionTipo,
+		(await getNode(sectionTipo))?.relations,
+		getModelByTipo,
+	);
 	cacheWrite(sectionRealTipoCache, sectionTipo, real);
 	return real;
+}
+
+/**
+ * THE virtual→real walk over an ALREADY-READ `relations` value: the first
+ * related tipo whose runtime model is `section`, else the tipo itself. The
+ * body of getSectionRealTipo, exported (like runtimeModelOfStored) for a bulk
+ * reader that holds the rows and a model accessor of its own — one law, two
+ * row sources, never a second copy of the walk.
+ */
+export async function sectionRealTipoFromRelations(
+	sectionTipo: string,
+	relations: unknown,
+	modelOf: (tipo: string) => Promise<string | null>,
+): Promise<string> {
+	if (!Array.isArray(relations)) return sectionTipo;
+	for (const relation of relations) {
+		const relatedTipo = (relation as { tipo?: unknown } | null)?.tipo;
+		if (typeof relatedTipo !== 'string' || relatedTipo === '') continue;
+		if ((await modelOf(relatedTipo)) === 'section') return relatedTipo;
+	}
+	return sectionTipo;
 }
 
 /**
