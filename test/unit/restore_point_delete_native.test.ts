@@ -18,7 +18,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DedaloError } from '../../src/core/errors/index.ts';
@@ -32,7 +32,16 @@ let treeRoot = '';
 const ROOT: Principal = { userId: SUPERUSER_ID } as Principal;
 const PLAIN: Principal = { userId: 42 } as Principal;
 
-/** newest→oldest by mtime: the fs stamps in order, so plant in order. */
+/**
+ * Plant order IS mtime order — stamped explicitly, never left to the clock. A
+ * point's stamp is its directory mtime, and "the fs stamps in order" was true
+ * only on the Mac: Linux stamps from a COARSE clock (a jiffy, ms-scale), so five
+ * points planted in one loop tie, the newest-first sort keeps readdir order,
+ * and retention pruned the wrong ones in the CI image (measured 2026-10-02:
+ * `dedalo_7.0.0_a` survived). Each plant is one second newer than the last.
+ */
+let plantSeq = 0;
+const PLANT_EPOCH_S = 1_700_000_000;
 function plant(name: string, options: { bootable?: boolean } = {}): string {
 	const dir = join(root, name);
 	mkdirSync(dir, { recursive: true });
@@ -47,6 +56,8 @@ function plant(name: string, options: { bootable?: boolean } = {}): string {
 			'export const DEDALO_VERSION_TRIPLE = Object.freeze([7, 0, 0]);',
 		);
 	}
+	plantSeq++;
+	utimesSync(dir, PLANT_EPOCH_S + plantSeq, PLANT_EPOCH_S + plantSeq);
 	return dir;
 }
 
