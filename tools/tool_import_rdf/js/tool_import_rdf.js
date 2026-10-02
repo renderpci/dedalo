@@ -15,11 +15,12 @@
 * This tool lets a user supply one or more IRI identifiers (retrieved from a
 * `component_iri` instance) that resolve to resources in an external RDF graph
 * (e.g. Nomisma, Dublin Core). It sends those IRIs together with the active
-* section locator to the server-side `tool_import_rdf::get_rdf_data` action,
-* which parses the graph via EasyRdf, maps each RDF property to the
+* section locator to the server-side `get_rdf_data` action, which reads the
+* graph (tools/tool_import_rdf/server/index.ts), maps each RDF property to the
 * corresponding Dédalo component according to the External Ontology configuration
 * (stored under dd1270 in the ontology), and writes the imported values into the
-* target section.
+* target record and the records it links to (filling empty fields, never
+* overwriting). The answer reports what was written, created and skipped.
 *
 * Exported constructor: {@link tool_import_rdf}
 * Main API method:      {@link tool_import_rdf.prototype.get_rdf_data}
@@ -216,6 +217,9 @@ tool_import_rdf.prototype.get_rdf_data = async function(ontology_tipo, ar_values
 			source	: source,
 			options	: {
 				ontology_tipo	: ontology_tipo,
+				// the server's fallback for a missing ontology_tipo: it reads the same
+				// ar_tools_name.tool_import_rdf.external_ontology of this component
+				main_component_tipo	: self.main_element ? self.main_element.tipo : null,
 				ar_values		: ar_values,
 				// locator provides the server with the target section so it can write
 				// imported values into the correct record.

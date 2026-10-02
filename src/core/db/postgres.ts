@@ -1751,6 +1751,53 @@ export function isInTransaction(): boolean {
 }
 
 /**
+ * Run `work` under a SAVEPOINT of the ambient transaction: on success the
+ * savepoint is RELEASED (the work stays part of the transaction, its fate the
+ * outer COMMIT/ROLLBACK's); on a throw everything `work` wrote is undone with
+ * `ROLLBACK TO SAVEPOINT` — the rows, the `SET LOCAL` ceiling and the
+ * commit-only actions it queued (the recorder pairs the statements, see
+ * recordSavepointStatement) — and the error is RETHROWN: the caller decides
+ * whether the transaction goes on. When the rollback itself fails (the
+ * connection is gone) the ORIGINAL error is rethrown; the transaction is then
+ * beyond repair and its owner's rollback is authoritative.
+ *
+ * The name is the handle's savepoint depth, so a nested call never shadows its
+ * parent and sibling calls reuse one name (each released before the next).
+ *
+ * REFUSED outside a transaction (there is nothing to roll back to). STATED
+ * LIMIT: a row INSERTED under a savepoint carries the SUBtransaction's xid as
+ * xmin, so an xmin birth test (`bornInCurrentTransaction`, create_record.ts)
+ * answers "not mine" for it — never decide a birth by xmin under this. The
+ * create door does not: `createSectionRecord` (and so a save's
+ * create-on-first-save) takes its birth from the insert statement itself, exact
+ * under a savepoint (gate: rdf_import_execute_native, the MISSING caller).
+ */
+export async function withSavepoint<T>(work: () => Promise<T>): Promise<T> {
+	const handle = activeTransaction();
+	if (handle === undefined) {
+		throw new DedaloError('internal.invariant', {
+			message: 'withSavepoint: called outside a transaction (no savepoint to roll back to)',
+		});
+	}
+	const name = `dedalo_savepoint_${handle.savepoints.length}`;
+	await sql.unsafe(`SAVEPOINT ${name}`, []);
+	try {
+		const result = await work();
+		await sql.unsafe(`RELEASE SAVEPOINT ${name}`, []);
+		return result;
+	} catch (error) {
+		await undoToSavepoint(name).catch(() => undefined);
+		throw error;
+	}
+}
+
+/** Undo to `name` and drop it (the work's own error is the one the caller sees). */
+async function undoToSavepoint(name: string): Promise<void> {
+	await sql.unsafe(`ROLLBACK TO SAVEPOINT ${name}`, []);
+	await sql.unsafe(`RELEASE SAVEPOINT ${name}`, []);
+}
+
+/**
  * Acquire the transaction-scoped advisory lock for one node, byte-identical to
  * PHP matrix_db_manager::acquire_node_lock:
  *   SELECT pg_advisory_xact_lock(hashtext('<section_tipo>_<section_id>'))

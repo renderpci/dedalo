@@ -859,6 +859,33 @@ const CENSUS: Record<string, CensusRow> = {
 			},
 		},
 	},
+	'tools/tool_import_rdf/server/rdf_import_execute.ts :: saveItems': {
+		doors: {
+			saveComponentData: {
+				verdict: 'operator-value',
+				reason:
+					'writes the values of the remote RDF resource the operator imports, mapped through the external ontology. NEVER a replace of a stored value: a literal only into an EMPTY language slice, IRIs and locators as an appendImport merge (stored items kept byte-for-byte, duplicates skipped), a single-choice model only when it holds nothing. Gate: rdf_import_execute_native.',
+			},
+		},
+	},
+	'tools/tool_import_rdf/server/rdf_import_execute.ts :: bornRecord': {
+		doors: {
+			createSectionRecord: {
+				verdict: 'new-record',
+				reason:
+					'the birth of a linked term no visible record carries (found first through findSectionIdByCode on its identifier) or of an intermediate record no linked record leads to through its ddo_map path; the run then writes only onto the record it has just created, with the run’s birth marker.',
+			},
+		},
+	},
+	'tools/tool_import_rdf/server/rdf_import_execute.ts :: bulkId': {
+		doors: {
+			'src/core/tools/import_execute.ts#createBulkProcessRecord': {
+				verdict: 'new-record',
+				reason:
+					'the run’s own dd800 bulk-process record, minted LAZILY by the run’s first write or create (inside that op’s savepoint, before its row is touched; a rolled-back mint is forgotten) — the revert handle every TM row of the run carries. A run that changes nothing mints none.',
+			},
+		},
+	},
 	'tools/tool_upload/server/index.ts :: processUploaded': {
 		doors: {
 			processUploadedFile: {

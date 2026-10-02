@@ -359,6 +359,11 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'every component this run writes into a record bound at RUN TIME asks the write door for the whole triple (req 10): the ddo_map role writes (setComponentsData → authorizeRecordAccess, whose grant addresses the save), the media component and the host portal (assertWritableComponent → authorizeRecordAccess; a record born in the run → authorizeSectionTarget). Matrix tool:tool_import_files:import_files:roles DD1725 leg.',
 	},
+	'tools/tool_import_rdf/server/rdf_import_execute.ts': {
+		verdict: 'delegates',
+		reason:
+			'executeRdfImport takes the importing PRINCIPAL and asks the write door per component: the caller record and every term bound at RUN TIME by the code lookup through authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope); a create through authorizeSectionTarget (the section, then the match component pair) before createSectionRecord, the new record\u2019s components at the pair; a refused write is reported skipped and never written. Gate: rdf_import_execute_native (LEVEL_1 refused, zero rows; CONTROL written).',
+	},
 	'tools/tool_import_dedalo_csv/server/index.ts': {
 		verdict: 'not-dd128',
 		reason:

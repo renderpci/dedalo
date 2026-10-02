@@ -29,6 +29,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { join } from 'node:path';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
@@ -509,6 +510,38 @@ describe('appendImport — the engine backstop refuses a refusing model', () => 
 		);
 		expect(await stored(selectHostId, 'relation', SELECT)).toEqual(before);
 	}, 30000);
+});
+
+/**
+ * THE SERVER-SIDE CALLERS, CENSUSED (2026-10-01). `appendImport` is not a wire
+ * field (the case below), so who may set it is decided in-repo — and that set is
+ * pinned here by a scan, not by a sentence: a new door that starts appending
+ * reddens this list and must be added on purpose.
+ *   - the CSV import executor (core/tools/import_csv_execute.ts) — the mode's
+ *     origin (plan §4);
+ *   - tool_import_rdf's ontology-driven executor
+ *     (tools/tool_import_rdf/server/rdf_import_execute.ts) — the v6 "never
+ *     overwrite" law: IRIs and locators appended deduplicated, a literal written
+ *     only into an empty slice (gate: rdf_import_execute_native).
+ */
+const APPEND_IMPORT_CALLERS = [
+	'src/core/tools/import_csv_execute.ts',
+	'tools/tool_import_rdf/server/rdf_import_execute.ts',
+];
+
+describe('appendImport — the server-side callers', () => {
+	test('only the censused executors set appendImport', async () => {
+		const setter = /\bappendImport\s*:/;
+		const found: string[] = [];
+		const repoRoot = join(import.meta.dir, '..', '..');
+		for (const root of ['src', 'tools', 'scripts']) {
+			for await (const file of new Bun.Glob(`${root}/**/*.ts`).scan({ cwd: repoRoot })) {
+				if (file.endsWith('.test.ts') || file.endsWith('.d.ts')) continue;
+				if (setter.test(await Bun.file(join(repoRoot, file)).text())) found.push(file);
+			}
+		}
+		expect(found.sort()).toEqual([...APPEND_IMPORT_CALLERS].sort());
+	});
 });
 
 describe('appendImport — NOT A WIRE FIELD', () => {

@@ -234,10 +234,12 @@ const EXEMPT: Record<string, string> = {
 		"write; the user-targeted rows land in files[].section_tipo, each gated by the 'section_list' " +
 		'extractor before any file is imported (SEC-024 §9.2, tool_import_dedalo_csv.test).',
 	'tool_import_rdf.get_rdf_data':
-		'A READ (R2): the handler fetches and parses RDF and, when a class-map is configured in ' +
-		'tool_config, SHAPES the returned subjects with it — nothing is written; the section it reads ' +
-		"for is gated by the 'section_list' extractor over options.locator.section_tipo (the payload " +
-		'shape the client actually posts, which a section gate could not see).',
+		'PER-WRITE IN-HANDLER RE-AUTHORIZATION (R2): `ddo_map` is the EXTERNAL ONTOLOGY node property ' +
+		'(owl:ObjectProperty properties.ddo_map, read from dd_ontology by rdf_import_plan.ts), never a ' +
+		"client map; the caller record is gated by the 'section_list' extractor over " +
+		'options.locator.section_tipo, and every write the import makes (the caller, a found term, an ' +
+		'intermediate, a created record) is asked again of the write door as the importer ' +
+		'(authorizeRecordAccess / authorizeSectionTarget, rdf_import_execute_native + authz_door_matrix_native).',
 	'tool_time_machine.bulk_revert_process':
 		'PER-ROW IN-HANDLER RE-AUTHORIZATION (R2/R3b): the rows a bulk revert touches come from the TM ' +
 		'table by bulk_process_id, not from a client map — `ddo_map` is reached through the dataframe ' +

@@ -88,9 +88,12 @@ export interface ImportReport {
 /**
  * The dd800 record that owns this import run — the twin of the CSV door's own
  * `createBulkProcessRecord`. Created BEFORE any data row is touched: a failure
- * here fails the RUN rather than importing unattributably.
+ * here fails the RUN rather than importing unattributably. Exported for the one
+ * other mapped door that writes through its own executor, tool_import_rdf's
+ * ontology-driven import (tools/tool_import_rdf/server/rdf_import_execute.ts):
+ * one mint, one label shape, never a second copy.
  */
-async function createBulkProcessRecord(
+export async function createBulkProcessRecord(
 	sectionTipo: string,
 	userId: number,
 	options: { bulkLabel?: string; sourceFile?: string },

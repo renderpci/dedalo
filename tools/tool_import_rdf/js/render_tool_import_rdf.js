@@ -11,8 +11,8 @@
 * Provides the `edit` render view for tool_import_rdf: a UI panel that lets
 * the user select an IRI value stored in a component_iri field, choose the
 * target import language, and trigger the server-side RDF-to-Dédalo mapping
-* (via `self.get_rdf_data`). The parsed RDF subjects the server returns are
-* shown in a dedicated result area below the form.
+* (via `self.get_rdf_data`), which WRITES into the record. The import report the
+* server returns (written / created / skipped per IRI) is shown below the form.
 *
 * Exports: render_tool_import_rdf (constructor, prototype.edit assigned by
 * tool_import_rdf.js to its own prototype chain).
@@ -97,14 +97,14 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 *   1. components_container — holds the IRI radio-list and the language selector.
 *   2. buttons_container (child of components_container) — the OK/validate button.
 *   3. view_rdf_data_wrapper — empty div appended below the form; receives the
-*      EasyRdf HTML dump returned by the server after a successful import.
+*      import report (written / created / skipped per IRI) after an import.
 *
 * The OK button click handler:
 *   - Collects all checked radio values (IRI strings).
 *   - Shows a spinner and adds 'loading' CSS class while the request is in flight.
 *   - Calls self.get_rdf_data(ontology_tipo, ar_values) (defined on tool_import_rdf).
-*   - On success, writes response.result[i].ar_rdf_html into view_rdf_data_wrapper
-*     and calls section.refresh() to update the parent section.
+*   - On success, renders the import report (render_rdf_payload) into
+*     view_rdf_data_wrapper and calls section.refresh() to show the written data.
 *
 * (!) view_rdf_data_wrapper is declared after the button's click listener but
 * accessed inside it.  This works because the closure captures the binding at
@@ -226,8 +226,8 @@ const get_content_data_edit = async function(self) {
 			// Read the external_ontology tipo from the main_element's context properties.
 			// This tipo identifies the Dédalo ontology node that defines the RDF namespace
 			// mappings and class/property correspondence for the import.
-			// Falls back to null when the property is absent (ontology_tipo=null tells
-			// the server to skip external-ontology resolution).
+			// Falls back to null when the property is absent: the server then reads the
+			// main component's own configuration, and refuses when there is none.
 				const ontology_tipo = self.main_element.context?.properties?.ar_tools_name?.tool_import_rdf?.external_ontology || null
 
 				self.get_rdf_data(ontology_tipo, ar_values)
@@ -240,10 +240,9 @@ const get_content_data_edit = async function(self) {
 						spinner.remove()
 						components_container.classList.remove('loading')
 
-					// check results. Envelope v2: the payload is `{rdf:[{uri,subjects}],
-					// errors:[per-URI refusals]}` (tools/tool_import_rdf/server/index.ts
-					// getRdfData) — a failed CALL has no payload at all and carries the
-					// coded error instead.
+					// check results. Envelope v2: the payload is `{report, errors, rdf,
+					// bulk_process_id}` (tools/tool_import_rdf/server/rdf_import_run.ts) —
+					// a failed CALL has no payload at all and carries the coded error instead.
 						if (request_failed(response)) {
 							view_rdf_data_wrapper.innerHTML = ''
 							render_error_inline(view_rdf_data_wrapper, response.error)
@@ -297,17 +296,24 @@ const get_content_data_edit = async function(self) {
 * RENDER_RDF_PAYLOAD
 * Render a successful get_rdf_data payload into `wrapper` (replacing its content).
 *
-* The payload is `{rdf:[{uri,subjects}], errors:[{uri,error}]}`
-* (tools/tool_import_rdf/server/index.ts loadRdfBatch). Each loaded URI gets its
-* PARSED subjects (mapped through the tool's class-map when it has one), one block
-* per URI. Each failed URI gets one line: `error_text` (the user's-language label
-* filled from `details`, else the public `message`), never log text — `error` is
-* the same wire body a failed call carries.
+* The payload is `{report:[{uri, written, created, skipped}], errors:[{uri,error}],
+* rdf:[{uri,subjects}], bulk_process_id}` (tools/tool_import_rdf/server/rdf_import_run.ts
+* RdfImportResult). One block per IRI:
+*   - what the import CREATED (linked records found nowhere, so made),
+*   - what it WROTE (component name in the user's language, its language, a
+*     short rendering of the value),
+*   - what it SKIPPED and why (never overwritten, not writable, not fetched —
+*     run again…). An op the engine REFUSED (it carries a registry `code`: a
+*     link the ontology maps off target, a write the door refused) is a skipped
+*     line too, marked `refused` — never an IRI failure: the rest of that IRI
+*     was written,
+*   - the parsed RDF subjects, collapsed (the pre-import dump, for checking).
+* Each failed URI gets one line: `error_text` (the user's-language label filled
+* from `details`, else the public `message`), never log text.
 *
-* The per-URI failures are rendered even when NO URI loaded: the form sends one
-* IRI, so when it fails `rdf` is empty, and the failure (a robots.txt refusal, a
-* web page where RDF was expected) is the only thing worth showing.
-* 'Empty results' is shown only when the payload holds neither.
+* Every value here is remote or record data: it is written as TEXT, never markup.
+* The per-URI failures are rendered even when NO URI loaded (the form sends one
+* IRI). 'Empty results' is shown only when the payload holds nothing at all.
 *
 * @param {HTMLElement} wrapper - the result pane (emptied first).
 * @param {Object} rdf_payload - the response's `data`.
@@ -315,28 +321,33 @@ const get_content_data_edit = async function(self) {
 */
 export const render_rdf_payload = function(wrapper, rdf_payload) {
 
+	const ar_report		= Array.isArray(rdf_payload.report) ? rdf_payload.report : []
 	const ar_rdf		= Array.isArray(rdf_payload.rdf) ? rdf_payload.rdf : []
 	const ar_uri_errors	= Array.isArray(rdf_payload.errors) ? rdf_payload.errors : []
 
 	wrapper.innerHTML = ''
-	if (ar_rdf.length<1 && ar_uri_errors.length<1) {
+	if (ar_report.length<1 && ar_rdf.length<1 && ar_uri_errors.length<1) {
 		wrapper.textContent = 'Empty results'
 		return
 	}
 
-	for (let i = 0; i < ar_rdf.length; i++) {
-		const entry = ar_rdf[i]
-		ui.create_dom_element({
-			element_type	: 'h4',
-			text_content	: entry.uri || '',
-			parent			: wrapper
-		})
-		ui.create_dom_element({
-			element_type	: 'pre',
-			class_name		: 'rdf_subjects',
-			text_content	: JSON.stringify(entry.subjects, null, 2),
-			parent			: wrapper
-		})
+	// one block per IRI, in the order the server answered (report first, then
+	// any IRI that only loaded)
+	const uris = []
+	const add_uri = function(item) {
+		const uri = (item && item.uri) || ''
+		if (!uris.includes(uri)) {
+			uris.push(uri)
+		}
+	}
+	ar_report.forEach(add_uri)
+	ar_rdf.forEach(add_uri)
+
+	for (let i = 0; i < uris.length; i++) {
+		const uri		= uris[i]
+		const report	= ar_report.find(el => el && el.uri===uri) || null
+		const loaded	= ar_rdf.find(el => el && el.uri===uri) || null
+		render_uri_block(wrapper, uri, report, loaded)
 	}
 
 	if (ar_uri_errors.length>0) {
@@ -351,7 +362,161 @@ export const render_rdf_payload = function(wrapper, rdf_payload) {
 			parent			: wrapper
 		})
 	}
+
+	if (rdf_payload.bulk_process_id) {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'rdf_bulk_process',
+			text_content	: label_of('bulk_process', 'Bulk process') + ': ' + rdf_payload.bulk_process_id,
+			parent			: wrapper
+		})
+	}
 }//end render_rdf_payload
+
+
+
+/**
+* RENDER_URI_BLOCK
+* One IRI's block: its heading, its report lists (when it reached the import) and
+* its collapsed subject dump (when it loaded).
+* @param {HTMLElement} wrapper
+* @param {string} uri
+* @param {Object|null} report - {written, created, skipped}
+* @param {Object|null} loaded - {subjects}
+* @returns {HTMLElement} the block
+*/
+const render_uri_block = function(wrapper, uri, report, loaded) {
+
+	const block = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'rdf_report',
+		parent			: wrapper
+	})
+	ui.create_dom_element({
+		element_type	: 'h4',
+		text_content	: uri,
+		parent			: block
+	})
+
+	if (report) {
+		render_report_list(block, 'created', label_of('created', 'Created'), report.created, created_line)
+		render_report_list(block, 'written', label_of('written', 'Written'), report.written, written_line)
+		render_report_list(block, 'skipped', label_of('skipped', 'Skipped'), report.skipped, skipped_line, skipped_class)
+		const nothing = ['created','written','skipped'].every(key => !Array.isArray(report[key]) || report[key].length<1)
+		if (nothing) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'rdf_nothing',
+				text_content	: label_of('no_changes', 'No changes'),
+				parent			: block
+			})
+		}
+	}
+
+	if (loaded) {
+		const details = ui.create_dom_element({
+			element_type	: 'details',
+			class_name		: 'rdf_dump',
+			parent			: block
+		})
+		ui.create_dom_element({
+			element_type	: 'summary',
+			text_content	: 'RDF',
+			parent			: details
+		})
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'rdf_subjects',
+			text_content	: JSON.stringify(loaded.subjects, null, 2),
+			parent			: details
+		})
+	}
+
+	return block
+}//end render_uri_block
+
+
+
+/**
+* RENDER_REPORT_LIST
+* A titled list of report entries (nothing when the list is empty).
+* @param {HTMLElement} parent
+* @param {string} class_name - created|written|skipped
+* @param {string} title
+* @param {Array|undefined} items
+* @param {function} line - item => text
+* @param {function} [item_class] - item => class name of its line ('' for none)
+* @returns {void}
+*/
+const render_report_list = function(parent, class_name, title, items, line, item_class) {
+
+	if (!Array.isArray(items) || items.length<1) {
+		return
+	}
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'rdf_list_title ' + class_name,
+		text_content	: title + ' (' + items.length + ')',
+		parent			: parent
+	})
+	const list = ui.create_dom_element({
+		element_type	: 'ul',
+		class_name		: 'rdf_list ' + class_name,
+		parent			: parent
+	})
+	for (let i = 0; i < items.length; i++) {
+		const item = items[i] || {}
+		ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: item_class ? item_class(item) : '',
+			text_content	: line(item),
+			parent			: list
+		})
+	}
+}//end render_report_list
+
+
+
+/**
+* CREATED_LINE / WRITTEN_LINE / SKIPPED_LINE
+* The text of one report entry. The component (section) name when the server
+* resolved it, else its tipo.
+*/
+const created_line = function(item) {
+	const name = item.section_label || item.section_tipo || ''
+	return name + ' ' + (item.section_id ?? '') + (item.label ? ' — ' + item.label : '')
+}
+
+const written_line = function(item) {
+	const name = item.component_label || item.component_tipo || ''
+	const lang = (item.lang && item.lang!=='lg-nolan') ? ' [' + item.lang + ']' : ''
+	return name + lang + ': ' + (item.value_summary || '') + ' (' + (item.section_tipo || '') + ' ' + (item.section_id ?? '') + ')'
+}
+
+const skipped_line = function(item) {
+	const name = item.component_label || item.component_tipo || ''
+	return (name ? name + ': ' : '') + (item.reason || '') + (item.iri ? ' — ' + item.iri : '')
+}
+
+// A skipped op the engine REFUSED carries the refusal's registry code.
+const skipped_class = function(item) {
+	return item.code ? 'refused' : ''
+}
+
+
+
+/**
+* LABEL_OF
+* A program label in the user's language, else the English fallback.
+* @param {string} key
+* @param {string} fallback
+* @returns {string}
+*/
+const label_of = function(key, fallback) {
+	const labels = (typeof get_label!=='undefined' && get_label) ? get_label : {}
+	return (typeof labels[key]==='string' && labels[key].length) ? labels[key] : fallback
+}//end label_of
 
 
 

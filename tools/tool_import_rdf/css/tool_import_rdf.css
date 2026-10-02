@@ -60,4 +60,42 @@
   left: calc(50% - 1.5rem);
   top: 0.5rem;
 }
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report {
+  margin-bottom: 1.5rem;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report h4 {
+  overflow-wrap: anywhere;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_list_title {
+  margin-top: 0.75rem;
+  font-weight: bold;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_list_title.created {
+  color: var(--tool_import_rdf);
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_list_title.skipped {
+  opacity: 0.8;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_list {
+  margin: 0.25rem 0 0 1.25rem;
+  padding: 0;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_list li {
+  overflow-wrap: anywhere;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_list li.refused {
+  color: var(--color_warning);
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_dump {
+  margin-top: 0.75rem;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_dump summary {
+  cursor: pointer;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_report .rdf_dump .rdf_subjects {
+  overflow-x: auto;
+}
+.wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .rdf_bulk_process {
+  opacity: 0.7;
+}
 /*# sourceMappingURL=tool_import_rdf.css.map */

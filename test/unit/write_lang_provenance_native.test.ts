@@ -354,6 +354,14 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 		},
 	],
 	[
+		'tools/tool_import_rdf/server/rdf_import_execute.ts',
+		{
+			lang: 'request+items+nolan',
+			reason:
+				'Writes the lang each PLAN op carries (rdf_import_plan.ts): a literal tagged xml:lang lands in the installed data lang it maps to (items); an untagged literal takes currentDataLang() resolved once per run (request); a non-translatable component, an IRI or a locator is lg-nolan.',
+		},
+	],
+	[
 		'tools/tool_posterframe/server/index.ts',
 		{ lang: 'nolan', reason: 'add_new_element on a portal — a locator write, no language.' },
 	],

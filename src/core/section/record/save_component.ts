@@ -207,7 +207,8 @@ export interface SaveRequest {
 	 * NOT A WIRE FIELD: no rqo, no MCP schema and no tool option carries it —
 	 * every door builds its SaveRequest field by field (dd_core_api save never
 	 * spreads the wire payload), so no remote caller can reach it. Only the
-	 * CSV import executor sets it. Gate: test/unit/save_append_import_native.test.ts.
+	 * CSV import executor and tool_import_rdf's executor set it — the census is
+	 * a scan in test/unit/save_append_import_native.test.ts (the gate).
 	 */
 	appendImport?: true | AppendImportOptions;
 }
@@ -1143,12 +1144,12 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 // AMBIENT TRANSACTION (the import doors' per-record wrap): `withTransaction`
 // joins, the throw is caught here, and the refused part's writes stay in the
 // CALLER's transaction — its owner decides (the CSV door throws on ok:false and
-// rolls the row back). Deliberately NOT a SAVEPOINT: a row inserted inside a
-// subtransaction carries the SUBtransaction's xid as xmin, so
-// create_record.ts insertedByThisTransaction (xmin = the top-level xid) would
-// answer "not mine" for every create-on-save under a savepoint — no NEW
-// activity row and, worse, no bulk-run BIRTH marker (the run's revert could
-// no longer tell it created the record). Measured, 2026-09-29.
+// rolls the row back). Deliberately NOT a SAVEPOINT here: whether the refused
+// part stays is the caller's decision, and a caller that wants it undone opens
+// its own (tool_import_rdf: one per op). Either way a create-on-save keeps its
+// NEW activity row and bulk-run BIRTH marker — create_record.ts decides the
+// birth by the insert statement, never by xmin, which under
+// a savepoint is the SUBtransaction's id (measured 2026-09-29; fixed 2026-10-01).
 // ---------------------------------------------------------------------------
 
 /** The refusal in flight — thrown inside the transaction, caught right here. */

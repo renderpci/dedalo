@@ -116,7 +116,7 @@ export async function resolvePickerConstraint(
 
 	const selectionLimit = await resolveSelectionLimit(callerTipo);
 	const held = await countHeldLocators(callerTipo, callerSectionTipo, sectionId, pairing);
-	const targets = await resolveTargets(callerTipo, callerSectionTipo);
+	const targets = await resolveCallerTargets(callerTipo, callerSectionTipo);
 
 	return {
 		selection_limit: selectionLimit,
@@ -282,8 +282,17 @@ export function inCapScope(items: readonly unknown[], pairing: DataframePairing 
  * Deduping is safe HERE and only here: this is a membership set, not the
  * `target_sections` wire list (which mirrors PHP's cross-config concatenation
  * verbatim and must keep its repeats).
+ *
+ * EXPORTED for the one write path that must ask BEFORE it writes:
+ * tool_import_rdf checks every link its plan would make against exactly this
+ * set (and {@link isTargetAllowed}), so an ontology mapping a section the
+ * component does not target is skipped with the reason instead of reaching the
+ * insert door's off_target refusal. One resolution, never a second copy.
  */
-async function resolveTargets(callerTipo: string, callerSectionTipo: string): Promise<string[]> {
+export async function resolveCallerTargets(
+	callerTipo: string,
+	callerSectionTipo: string,
+): Promise<string[]> {
 	const declared = await getElementTargetSectionTipos(
 		callerTipo,
 		callerSectionTipo,

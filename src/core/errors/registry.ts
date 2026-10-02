@@ -2106,6 +2106,58 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 		details_keys: ['count', 'limit'],
 	},
+	// An RDF/XML document past the graph reader's bounds (src/core/tools/rdf_graph.ts:
+	// element nesting deeper than maxDepth, or more than maxTriples statements). A
+	// remote linked-data answer is untrusted input: the bound stops a hostile or
+	// runaway document before it costs the server, and the same document is
+	// refused every time — `caller`, not retryable. The bound that tripped rides
+	// `coordinates.bound` (log-only); `limit` is its value.
+	'tool.rdf_graph_too_large': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_rdf_graph_too_large',
+		message: 'The RDF document is too large or too deeply nested to read',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['limit'],
+	},
+	// An RDF resource tool_import_rdf dereferenced whose rdf:type no owl:Class of
+	// the external ontology maps INTO the caller record's section (or maps at all):
+	// there is nothing the record can hold, so nothing of that IRI is written. A
+	// per-URI payload error (data.errors), never the call's failure. `type` is the
+	// subject's first type as the document names it (prefixed through the
+	// ontology's xmlns), '-' when it has none: remote data the cataloguer chose,
+	// public. Same document, same answer — caller, not retryable.
+	'tool.rdf_class_unmapped': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_rdf_class_unmapped',
+		message: 'The external ontology maps no class of this section to the RDF resource type',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['type'],
+	},
+	// A record tool_import_rdf would BIRTH (a linked term, an intermediate) whose
+	// identifier — what finds it again on the next run — the record cannot hold:
+	// the write is refused (a component grant, remote text carrying tag syntax, an
+	// undeclared language). Born without it, the record could never be found
+	// again and every run would add another, so the op is refused instead and its
+	// savepoint takes the record and its link back. A per-op skip of the import
+	// report, never the call's failure. `reason` is the skip sentence of the
+	// refused write (engine text naming no record). Same data, same answer —
+	// caller, not retryable.
+	'tool.rdf_identifier_unwritable': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_rdf_identifier_unwritable',
+		message: 'Not created: the record could not hold the identifier that finds it again',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['reason'],
+	},
 	// A remote source a tool reads interactively did not answer in time, dropped
 	// the connection, answered 5xx/408/429, or could not deliver its robots.txt
 	// (tool_import_rdf, RDF_IRI_DEADLINE_MS). For the cataloguer the source is out

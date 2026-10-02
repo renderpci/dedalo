@@ -1,7 +1,7 @@
 /**
- * CODE → RECORD ADDRESS, for the mapped-import doors (MARC21 today; the Zotero
- * door is the second caller the day its parser is re-ported — see the
- * per-door notes below).
+ * CODE → RECORD ADDRESS, for the mapped-import doors (MARC21; tool_import_rdf's
+ * linked terms, matched by their IRI in a component_iri; the Zotero door is the
+ * next caller the day its parser is re-ported — see the per-door notes below).
  *
  * WHY THIS MODULE EXISTS (audit DATA-08, closed 2026-08-30). An import file
  * carries a FOREIGN identifier: a library control number, a Zotero key, an
@@ -83,14 +83,98 @@ const CANDIDATE_CAP = 50;
  * A literal component stores `{lang, value}`; a value-less model stores something
  * else entirely, and a numeric code is compared by its text. NO lang filter: an
  * identifier is an identifier in every language slice, and the search leaf that
- * produced the candidate matched across langs too.
+ * produced the candidate matched across langs too. Exported for the one other
+ * identity comparison an importer makes by hand — tool_import_rdf's intermediate
+ * path walk (the leaf of a ddo_map path holding the resource's identifier) — so
+ * the two can never disagree on what "the same identifier" means. `html`: the
+ * component stores markup, and its value is compared on its text
+ * ({@link paragraphAsText}).
  */
-function itemAsText(item: unknown): string | null {
-	const value =
-		item !== null && typeof item === 'object' ? (item as { value?: unknown }).value : item;
-	if (typeof value === 'string') return value.trim();
+export function itemAsText(item: unknown, html = false): string | null {
+	const value = item !== null && typeof item === 'object' ? identifierOf(item) : item;
+	if (typeof value === 'string') return (html ? paragraphAsText(value) : value).trim();
 	if (typeof value === 'number') return String(value);
 	return null;
+}
+
+/**
+ * Plain text as the ONE paragraph an HTML component (render 'html' —
+ * component_text_area) stores it: `&`, `<`, `>`, `"` escaped, wrapped in `<p>`.
+ * The importers that write remote text into such a component build the item with
+ * this, and the code lookup narrows with it, so the two cannot drift.
+ */
+export function textAsParagraph(text: string): string {
+	const escaped = text
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;');
+	return `<p>${escaped}</p>`;
+}
+
+/**
+ * The text of a stored HTML identifier: ONE wrapping paragraph removed and the
+ * escaping {@link textAsParagraph} applies undone (plus the apostrophe forms an
+ * editor writes). Anything else is kept as it is: an identifier holding more
+ * markup than one paragraph is compared on that markup, and matches nothing.
+ */
+export function paragraphAsText(markup: string): string {
+	const inner = /^\s*<p>([\s\S]*)<\/p>\s*$/i.exec(markup)?.[1] ?? markup;
+	return inner
+		.replaceAll('&lt;', '<')
+		.replaceAll('&gt;', '>')
+		.replaceAll('&quot;', '"')
+		.replaceAll('&#39;', "'")
+		.replaceAll('&apos;', "'")
+		.replaceAll('&amp;', '&');
+}
+
+/**
+ * The identifier an OBJECT item carries: its `value` (the literal families), else
+ * its `iri` (component_iri stores `{id, iri, lang, title?}` and has no `value` —
+ * without this branch an IRI could never be matched, and an importer keyed on
+ * one, tool_import_rdf, would create a duplicate on every run).
+ */
+function identifierOf(item: object): unknown {
+	const { value, iri } = item as { value?: unknown; iri?: unknown };
+	return value ?? iri;
+}
+
+/** How the identifier is searched for, and read back, in one component's family. */
+interface CodeQuery {
+	/** The search operator that NARROWS to the identifier. */
+	operator: string;
+	/** The term searched for. */
+	q: string;
+	/** The component stores markup: a stored value is compared on its text. */
+	html: boolean;
+}
+
+/**
+ * The search that NARROWS to the identifier in this component's family.
+ *
+ * '=' is the string family's equality (builder_string 'equal'), but the iri
+ * family has no single-char '=' — `classifyIri` reads '=<q>' as CONTAINS and
+ * strips every '=' out of q first, so an IRI with a query string ('?a=b') could
+ * never be found. '==' is the iri family's EXACT leaf (`f_unaccent(iri) =
+ * f_unaccent(q)`).
+ *
+ * An HTML component (component_text_area) stores the identifier as the
+ * paragraph `textAsParagraph` makes of it, so it is searched AS that paragraph
+ * — the plain text equals no stored value, the lookup answered "none", and every
+ * import created the same record again — with '==' (the string family's exact
+ * leaf keeps an apostrophe in q; '=' strips it). Either way the byte comparison
+ * below still decides, on the stored value's text.
+ */
+async function codeQueryFor(componentTipo: string, wanted: string): Promise<CodeQuery> {
+	const { getModelByTipo } = await import('../ontology/resolver.ts');
+	const { getComponentModel } = await import('../components/registry.ts');
+	const model = await getModelByTipo(componentTipo);
+	if (model === 'component_iri') return { operator: '==', q: wanted, html: false };
+	if (model !== null && getComponentModel(model)?.render === 'html') {
+		return { operator: '==', q: textAsParagraph(wanted), html: true };
+	}
+	return { operator: '=', q: wanted, html: false };
 }
 
 /**
@@ -120,6 +204,7 @@ async function storedValues(
 	sectionTipo: string,
 	sectionId: number,
 	componentTipo: string,
+	html: boolean,
 ): Promise<string[]> {
 	// A VIRTUAL section whose declared matrix_table is not a readable record store
 	// (dd15 -> matrix_time_machine, flat columns) has no record to read;
@@ -130,7 +215,7 @@ async function storedValues(
 	const items = await readItems(sectionTipo, sectionId, componentTipo);
 	const values: string[] = [];
 	for (const item of items) {
-		const text = itemAsText(item);
+		const text = itemAsText(item, html);
 		if (text !== null) values.push(text);
 	}
 	return values;
@@ -141,21 +226,36 @@ async function storedValues(
  *
  * Each candidate's stored value is read back and compared as bytes, because the
  * search matched `f_unaccent(value)` with quotes stripped — a fold that makes
- * 'Núñez-1' and 'Nunez-1' one candidate set. Only an exact (trimmed) equal is an
- * address; resolving to a look-alike's record is the defect this module closes.
+ * 'Núñez-1' and 'Nunez-1' one candidate set. Only an exact (trimmed) equal of
+ * one of `wanted` is an address; resolving to a look-alike's record is the
+ * defect this module closes.
  */
 async function byteExactMatches(
-	rows: { section_id: number }[],
+	candidates: readonly number[],
 	target: ImportCodeTarget,
-	wanted: string,
+	wanted: ReadonlySet<string>,
+	html: boolean,
 ): Promise<number[]> {
 	const matches: number[] = [];
-	for (const row of rows) {
-		const sectionId = Number(row.section_id);
-		const values = await storedValues(target.sectionTipo, sectionId, target.componentTipo);
-		if (values.includes(wanted)) matches.push(sectionId);
+	for (const sectionId of candidates) {
+		const values = await storedValues(target.sectionTipo, sectionId, target.componentTipo, html);
+		if (values.some((value) => wanted.has(value))) matches.push(sectionId);
 	}
 	return matches;
+}
+
+/** How a lookup is scoped beyond the principal's section grant. */
+export interface CodeLookupOptions {
+	/**
+	 * Answer the identifier's EXISTENCE across every project, not only the
+	 * principal's (the server-only `skip_projects_filter`). For a caller that
+	 * LINKS to the record it finds and never writes into it unchecked:
+	 * tool_import_rdf's linked terms (v6 `get_resource_match` searched them so —
+	 * an authority record another project holds is linked, never duplicated;
+	 * any write into it still passes the record-scope door). An updating import
+	 * (MARC) keeps the default: it writes INTO the record it resolves.
+	 */
+	readonly skipProjectsFilter?: boolean;
 }
 
 /**
@@ -175,45 +275,109 @@ export async function findSectionIdByCode(
 	target: ImportCodeTarget,
 	code: string,
 	principal: Principal,
+	options: CodeLookupOptions = {},
 ): Promise<number | null> {
 	const wanted = code.trim();
 	if (wanted === '') return null;
+	const query = await codeQueryFor(target.componentTipo, wanted);
+	const candidates = await candidateIds(
+		target,
+		{ $and: [codeLeaf(target, query)] },
+		{ principal, options, subject: `The identifier '${wanted}'` },
+	);
+	const matches = await byteExactMatches(candidates, target, new Set([wanted]), query.html);
+	if (matches.length === 0) return null;
+	if (matches.length > 1) {
+		const sentence =
+			`The identifier '${wanted}' is held by more than one record of section ${target.sectionTipo} ` +
+			`(${matches.join(', ')}), so it names none of them. Nothing was imported — resolve the duplicate ` +
+			`codes in ${target.componentTipo} first.`;
+		throw lookupConflict(target, sentence);
+	}
+	return matches[0] as number;
+}
 
+/**
+ * EVERY record whose code component holds EXACTLY one of `codes` (trimmed,
+ * blanks dropped), in ONE search — an `$or` of the same narrowing leaf
+ * {@link findSectionIdByCode} uses, decided by the same byte-exact second read.
+ * Distinct ids, in the search's order; none is `[]`. Whether several are an
+ * answer is the caller's question (tool_import_rdf: a term's equivalents name ONE
+ * record, or a conflict). A full candidate window throws `resource.conflict`, as
+ * there: TRUNCATION IS NOT AN ANSWER. The caller bounds how many codes one call
+ * carries (each is a leaf of one statement).
+ */
+export async function findSectionIdsByCodes(
+	target: ImportCodeTarget,
+	codes: readonly string[],
+	principal: Principal,
+	options: CodeLookupOptions = {},
+): Promise<number[]> {
+	const wanted = [...new Set(codes.map((code) => code.trim()).filter((code) => code !== ''))];
+	if (wanted.length === 0) return [];
+	const queries = await Promise.all(wanted.map((code) => codeQueryFor(target.componentTipo, code)));
+	const candidates = await candidateIds(
+		target,
+		{ $or: queries.map((query) => codeLeaf(target, query)) },
+		{ principal, options, subject: `The ${wanted.length} identifiers ('${wanted[0]}'…)` },
+	);
+	const html = queries.some((query) => query.html);
+	return byteExactMatches(candidates, target, new Set(wanted), html);
+}
+
+/**
+ * The search leaf that narrows to one identifier. q_operator '=' is the engine's
+ * EXACT-match operator (the single-char twin of '=='; '==' for an IRI or HTML
+ * component, see codeQueryFor); the value travels as `q`, never glued into the
+ * operator string, so an identifier that happens to start with an operator
+ * character ('*x', '-x') is still read as data.
+ */
+function codeLeaf(target: ImportCodeTarget, query: CodeQuery): Record<string, unknown> {
+	return {
+		q: query.q,
+		q_operator: query.operator,
+		path: [{ section_tipo: target.sectionTipo, component_tipo: target.componentTipo }],
+	};
+}
+
+/** Who searches, how widely, and how a refusal names what was searched. */
+interface CandidateScope {
+	readonly principal: Principal;
+	readonly options: CodeLookupOptions;
+	/** The refusal's subject ("The identifier 'x'"). */
+	readonly subject: string;
+}
+
+/**
+ * The NARROWING search: the ids of the records `filter` matches, through the
+ * engine's own assembler, as the caller's principal. A full window is REFUSED.
+ */
+async function candidateIds(
+	target: ImportCodeTarget,
+	filter: Record<string, unknown>,
+	scope: CandidateScope,
+): Promise<number[]> {
 	const { sanitizeClientSqo } = await import('../concepts/sqo.ts');
 	const { buildSearchSql } = await import('../search/sql_assembler.ts');
 	const { sql } = await import('../db/postgres.ts');
-
 	const sqo = sanitizeClientSqo({
 		section_tipo: [target.sectionTipo],
-		filter: {
-			$and: [
-				{
-					// q_operator '=' is the engine's EXACT-match operator (the
-					// single-char twin of '=='); the value travels as `q`, never glued
-					// into the operator string, so an identifier that happens to start
-					// with an operator character ('*x', '-x') is still read as data.
-					q: wanted,
-					q_operator: '=',
-					path: [{ section_tipo: target.sectionTipo, component_tipo: target.componentTipo }],
-				},
-			],
-		},
+		filter,
 		limit: CANDIDATE_CAP,
 	});
 	// THE CAP THE SEARCH WILL ACTUALLY HONOUR. `sanitizeClientSqo` clamps `limit`
 	// to DEDALO_SEARCH_CLIENT_MAX_LIMIT, a per-install key — so on an install
 	// that lowered it, the window is SMALLER than CANDIDATE_CAP and comparing the
 	// row count against the constant would never detect truncation: the exact
-	// record could be evicted, this function answers null, and the importer
+	// record could be evicted, the lookup answers null, and the importer
 	// creates a duplicate. Read the number the sanitizer left.
 	const effectiveCap = Number(sqo.limit ?? CANDIDATE_CAP);
-	const built = await buildSearchSql(sqo, { principal, idsOnly: true });
+	// Server-only (sanitizeClientSqo strips it from a client SQO): set after it.
+	sqo.skip_projects_filter = scope.options.skipProjectsFilter === true;
+	const built = await buildSearchSql(sqo, { principal: scope.principal, idsOnly: true });
 	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
 		section_id: number;
 	}[];
-
-	const matches = await byteExactMatches(rows, target, wanted);
-
 	// TRUNCATION IS NOT AN ANSWER. A full window means the search may have had
 	// more to give, so neither "none" nor "exactly one" is provable: the missing
 	// candidates could hold the byte-exact identifier (answering null would make
@@ -222,35 +386,24 @@ export async function findSectionIdByCode(
 	// Both are the defects this module exists to close, so it refuses instead.
 	if (rows.length >= effectiveCap) {
 		const sentence =
-			`The identifier '${wanted}' matched the search cap of ${effectiveCap} candidate records ` +
+			`${scope.subject} matched the search cap of ${effectiveCap} candidate records ` +
 			`in section ${target.sectionTipo}, so the result cannot be trusted either way — the ` +
 			`record that truly holds it may lie outside that window. Nothing was imported. This ` +
 			`almost always means ${target.componentTipo} is not an identifier component on this ` +
 			`section (it holds a shared word rather than a unique code); check the import map.`;
-		throw new DedaloError('resource.conflict', {
-			message: sentence,
-			publicMessage: sentence,
-			coordinates: {
-				section_tipo: target.sectionTipo,
-				component_tipo: target.componentTipo,
-			},
-		});
+		throw lookupConflict(target, sentence);
 	}
+	return rows.map((row) => Number(row.section_id));
+}
 
-	if (matches.length === 0) return null;
-	if (matches.length > 1) {
-		const sentence =
-			`The identifier '${wanted}' is held by more than one record of section ${target.sectionTipo} ` +
-			`(${matches.join(', ')}), so it names none of them. Nothing was imported — resolve the duplicate ` +
-			`codes in ${target.componentTipo} first.`;
-		throw new DedaloError('resource.conflict', {
-			message: sentence,
-			publicMessage: sentence,
-			coordinates: {
-				section_tipo: target.sectionTipo,
-				component_tipo: target.componentTipo,
-			},
-		});
-	}
-	return matches[0] as number;
+/** The lookup's refusal: `resource.conflict`, its sentence public. */
+function lookupConflict(target: ImportCodeTarget, sentence: string): DedaloError {
+	return new DedaloError('resource.conflict', {
+		message: sentence,
+		publicMessage: sentence,
+		coordinates: {
+			section_tipo: target.sectionTipo,
+			component_tipo: target.componentTipo,
+		},
+	});
 }

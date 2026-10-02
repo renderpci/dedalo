@@ -118,6 +118,7 @@ import type {
 } from '../../src/core/tools/module.ts';
 import { assertActionPermission } from '../../src/core/tools/security.ts';
 import { setComponentsData } from '../../tools/tool_import_files/server/index.ts';
+import { executeRdfImport } from '../../tools/tool_import_rdf/server/rdf_import_execute.ts';
 import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import {
 	AUTHZ_3D,
@@ -895,6 +896,72 @@ function importExecuteProbe(): Probe {
 }
 
 /**
+ * tool_import_rdf's ONTOLOGY-DRIVEN EXECUTOR (tools/tool_import_rdf/server/
+ * rdf_import_execute.ts): the caller record's component is asked of the write
+ * door as the importer — one `write` op on the identity's target record. A
+ * refused write is reported skipped (`not writable by the importer (<code>)`) and
+ * never written; the run's dd800 record is swept.
+ */
+function rdfImportProbe(): Probe {
+	return {
+		expect: { DD1725: 'refused', NO_COMPONENT: 'refused', CONTROL: 'served' },
+		refusalTipo: { NO_COMPONENT: AUTHZ_TEXT },
+		run: (identity) =>
+			outcomeOf(async () => {
+				const principal = principalOf(identity);
+				const target = recordTarget(identity, AUTHZ_TEXT);
+				const field = identity === 'CONTROL' ? AUTHZ_TEXT_2 : target.tipo;
+				const report = await executeRdfImport({
+					caller: { section_tipo: target.section_tipo, section_id: target.section_id },
+					plans: [
+						{
+							subject: 'http://zz.test/authz/rdf',
+							class_tipo: null,
+							section_tipo: target.section_tipo,
+							ops: [
+								{
+									op: 'set',
+									ontology_tipo: 'zzauthzrdf1',
+									rdf_predicate: 'zz:probe',
+									target: { kind: 'caller' },
+									section_tipo: target.section_tipo,
+									component_tipo: field,
+									model: null,
+									lang: 'lg-nolan',
+									value: [{ value: 'zzauthz rdf' }],
+								},
+							],
+						},
+					],
+					principal,
+					bulkLabel: 'authz matrix rdf import probe',
+				});
+				if (report.bulk_process_id !== null) {
+					disposable.push({ sectionTipo: 'dd800', sectionId: report.bulk_process_id });
+				}
+				for (const skipped of report.skipped) {
+					const refused = /not writable by the importer \(([a-z_.]+)\)/.exec(skipped.reason);
+					if (refused !== null) {
+						throw new DedaloError(refused[1] as 'perm.denied', {
+							message: skipped.reason,
+							coordinates: { tipo: skipped.component_tipo },
+						});
+					}
+				}
+				// SERVED = the door admitted the write: it was written, or it reached the
+				// never-overwrite check that runs only AFTER the door (the record's field
+				// may already hold a value from an earlier probe). Anything else (an
+				// unknown component, a rolled-back IRI) is not a served answer.
+				const pastTheDoor = report.skipped.every((entry) => entry.reason.startsWith('not empty'));
+				if (report.written.length + report.skipped.length === 0 || !pastTheDoor) {
+					throw new Error(`rdf import probe did not reach the write: ${JSON.stringify(report)}`);
+				}
+				return report;
+			}),
+	};
+}
+
+/**
  * THE CSV IMPORTER (closure Step 3 req 10, core/tools/import_csv_execute.ts):
  * every column of an EXISTING row's record is asked of the write door as the
  * importer — the file door's `section_list` gate named the section once. A
@@ -1402,6 +1469,9 @@ async function deriveCensus(): Promise<Census> {
 	probes.set('engine:import_execute.importMappedRecords', importExecuteProbe());
 	// The CSV importer's engine (req 10) — tool_import_dedalo_csv writes through it.
 	probes.set('engine:import_csv_execute.executeCsvImport', csvImportProbe());
+	// tool_import_rdf's ontology-driven executor — the caller record and every
+	// term bound at run time through the write door as the importer.
+	probes.set('tool:tool_import_rdf:rdf_import_execute', rdfImportProbe());
 	// tool_import_files' run-time role writes (req 10).
 	probes.set('tool:tool_import_files:import_files:roles', importFilesRoleProbe());
 	// The bulk revert's per-component writer door (req 10).

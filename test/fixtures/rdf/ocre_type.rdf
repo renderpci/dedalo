@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OCRE-shaped RDF/XML for a coin type (the shape http://numismatics.org/ocre/id/ric.1(2).aug.1A
+  answers with), hand-recorded as a repo-owned fixture for the tool_import_rdf graph reader,
+  plan builder and executor gates. Parse it with baseIri = the type IRI: the obverse is a
+  NESTED node element with a relative rdf:about="#obverse"; the reverse is a separate
+  top-level node referenced by rdf:resource="#reverse".
+-->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:void="http://rdfs.org/ns/void#">
+	<nmo:TypeSeriesItem rdf:about="http://numismatics.org/ocre/id/ric.1(2).aug.1A">
+		<skos:prefLabel xml:lang="en">RIC I (second edition) Augustus 1A</skos:prefLabel>
+		<skos:prefLabel xml:lang="de">RIC I (zweite Auflage) Augustus 1A</skos:prefLabel>
+		<skos:prefLabel xml:lang="es">RIC I (segunda edición) Augusto 1A</skos:prefLabel>
+		<skos:definition xml:lang="en">RIC I (second edition) Augustus 1A</skos:definition>
+		<dcterms:source rdf:resource="http://nomisma.org/id/ric"/>
+		<void:inDataset rdf:resource="http://numismatics.org/ocre/"/>
+		<nmo:representsObjectType rdf:resource="http://nomisma.org/id/coin"/>
+		<nmo:hasManufacture rdf:resource="http://nomisma.org/id/struck"/>
+		<nmo:hasDenomination rdf:resource="http://nomisma.org/id/quinarius"/>
+		<nmo:hasMaterial rdf:resource="http://nomisma.org/id/ar"/>
+		<nmo:hasAuthority rdf:resource="http://nomisma.org/id/augustus"/>
+		<nmo:hasIssuer rdf:resource="http://nomisma.org/id/p_carisius"/>
+		<nmo:hasMint rdf:resource="http://nomisma.org/id/emerita"/>
+		<nmo:hasRegion rdf:resource="http://nomisma.org/id/hispania"/>
+		<nmo:hasStartDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">-0025</nmo:hasStartDate>
+		<nmo:hasEndDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">-0023</nmo:hasEndDate>
+		<nmo:hasObverse>
+			<nmo:ObverseType rdf:about="#obverse">
+				<nmo:hasLegend>AVGVST</nmo:hasLegend>
+				<dcterms:description xml:lang="en">Bare head of Augustus, right</dcterms:description>
+				<dcterms:description xml:lang="es">Cabeza desnuda de Augusto a derecha</dcterms:description>
+				<nmo:hasPortrait rdf:resource="http://nomisma.org/id/augustus"/>
+			</nmo:ObverseType>
+		</nmo:hasObverse>
+		<nmo:hasReverse rdf:resource="#reverse"/>
+	</nmo:TypeSeriesItem>
+	<nmo:ReverseType rdf:about="#reverse">
+		<nmo:hasLegend>P CARISI LEG</nmo:hasLegend>
+		<dcterms:description xml:lang="en">Victory standing right, crowning trophy</dcterms:description>
+	</nmo:ReverseType>
+</rdf:RDF>

@@ -18,17 +18,27 @@ export interface XmlNode {
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 
+/** The highest Unicode code point; `String.fromCodePoint` throws a RangeError above it. */
+const MAX_CODE_POINT = 0x10ffff;
+
+/**
+ * A numeric character reference's text, or the reference itself (kept verbatim)
+ * when its number is not a Unicode code point — `&#x110000;` in a remote document
+ * must not crash the parse with a RangeError.
+ */
+function numericReference(match: string, body: string): string {
+	const code =
+		body[1] === 'x' || body[1] === 'X'
+			? Number.parseInt(body.slice(2), 16)
+			: Number.parseInt(body.slice(1), 10);
+	return Number.isFinite(code) && code <= MAX_CODE_POINT ? String.fromCodePoint(code) : match;
+}
+
+/** Decode the XML predefined entities and numeric character references. */
 function decodeEntities(text: string): string {
-	return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, body: string) => {
-		if (body[0] === '#') {
-			const code =
-				body[1] === 'x' || body[1] === 'X'
-					? Number.parseInt(body.slice(2), 16)
-					: Number.parseInt(body.slice(1), 10);
-			return Number.isFinite(code) ? String.fromCodePoint(code) : match;
-		}
-		return ENTITIES[body] ?? match;
-	});
+	return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, body: string) =>
+		body[0] === '#' ? numericReference(match, body) : (ENTITIES[body] ?? match),
+	);
 }
 
 function parseTag(content: string): { tag: string; attrs: Record<string, string> } {

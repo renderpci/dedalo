@@ -29,6 +29,7 @@ import { config } from '../../../config/config.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import {
+	insertMatrixRecordIfAbsent,
 	insertMatrixRecordWithCounter,
 	insertMatrixRecordWithExplicitId,
 	type MatrixWriteValues,
@@ -120,33 +121,17 @@ export interface CreateRecordOptions {
 }
 
 /**
- * Did THIS transaction insert the row at the address? Always, for an insert
- * that throws on conflict (it inserted or it threw). For the conflict-tolerant
- * insert, the row's `xmin` is compared with the current transaction id: equal
- * only when this transaction wrote it — a row a concurrent create committed
- * first, or one that already stood there, carries another transaction's id.
- * Must run inside the insert's transaction (the caller wraps both).
- */
-async function insertedByThisTransaction(
-	table: string,
-	sectionTipo: string,
-	sectionId: number,
-	options: CreateRecordOptions,
-): Promise<boolean> {
-	if (options.conflictTolerant !== true) return true;
-	return bornInCurrentTransaction(table, sectionTipo, sectionId);
-}
-
-/**
- * Was the row at the address WRITTEN by the ambient transaction? The one xmin
- * law the conflict-tolerant create decides its birth by — exported for a caller
- * that runs that create inside its OWN transaction and must know whether the
+ * Was the row at the address WRITTEN by the ambient transaction? An xmin test,
+ * for a caller that runs the conflict-tolerant create inside its OWN transaction and must know whether the
  * record is the one it created or one a concurrent writer committed first (the
  * CSV importer: a row whose id was taken after its existence snapshot is NOT a
  * create, and is authorized as a write to that record). Asked right after the
  * create, before the caller writes the row: a later write by the same
  * transaction would also stamp its xmin. Outside a transaction there is no
  * "this transaction" to compare with — refused loudly, never a silent false.
+ * LIMIT: under a SAVEPOINT the row's xmin is the subtransaction's id, and this
+ * answers false for a row the caller did insert — createSectionRecord itself
+ * therefore decides its birth by the insert statement, never by this.
  */
 export async function bornInCurrentTransaction(
 	table: string,
@@ -337,12 +322,12 @@ export async function createSectionRecord(
 		},
 		date: { ...defaults.date, [CREATED_DATE]: [auditDateItem(now)] },
 	};
-	// THE INSERT, and whether it BORE the row. The tolerated-conflict insert
-	// answers the requested id either way (matrix_write opens no epoch and hands
-	// the id back), so the race loser — the one caller that did NOT create
-	// anything — is told apart AFTER the insert, inside its transaction, by the
-	// row's own xmin (insertedByThisTransaction): exact, with no window between a
-	// pre-check and the insert. Two consumers need that answer to be exact: the
+	// THE INSERT, and whether it BORE the row. The race loser of a tolerated
+	// conflict — the one caller that did NOT create anything — is told apart BY
+	// THE INSERT STATEMENT ITSELF (ON CONFLICT DO NOTHING … RETURNING answers a
+	// row only when it inserted one): exact, with no window
+	// between a pre-check and the insert, and exact under a savepoint, where a
+	// row's xmin is a subtransaction's. Two consumers need that answer to be exact: the
 	// 'NEW' activity row below, and a bulk run's BIRTH marker (a surplus one
 	// would let the run's revert delete a record it never created). The marker
 	// joins the insert's transaction, after any epoch the insert opened.
@@ -354,13 +339,25 @@ export async function createSectionRecord(
 	const { prepareBirthColumns } = await import('../../section_record/record_write.ts');
 	const pinned = await prepareBirthColumns(jsonbColumns as MatrixWriteValues);
 	const { newSectionId, inserted } = await withTransaction(async () => {
-		const id =
-			sectionId === undefined
-				? await insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)
-				: await insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns, {
-						onConflict: options.conflictTolerant === true ? 'ignore' : 'throw',
-					});
-		const born = await insertedByThisTransaction(table, sectionTipo, id, options);
+		// The birth is the STATEMENT's answer: a counter allocation and an
+		// explicit-id insert that throws on conflict inserted or threw; the
+		// conflict-tolerant one is ON CONFLICT DO NOTHING … RETURNING
+		// (insertMatrixRecordIfAbsent), which returns a row only when IT inserted
+		// one. Never the row's xmin: under a SAVEPOINT that is the SUBtransaction's
+		// id, and a row this call did insert would read "not mine" — no birth
+		// marker, no NEW activity row, no epoch (tool_import_rdf runs every op under
+		// a savepoint — 2026-10-01 review; gate: rdf_import_execute_native).
+		let id = sectionId ?? 0;
+		let born = true;
+		if (sectionId === undefined) {
+			id = await insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns);
+		} else if (options.conflictTolerant === true) {
+			born = await insertMatrixRecordIfAbsent(table, sectionTipo, sectionId, jsonbColumns);
+		} else {
+			await insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns, {
+				onConflict: 'throw',
+			});
+		}
 		await recordBirthMarker(born, options.bulkProcessId, {
 			sectionTipo,
 			sectionId: id,

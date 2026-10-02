@@ -13,9 +13,9 @@
  * Covered here (1 fails without the fix; 2 fails with a savepoint fence):
  *  1. refused change on a missing record → ok:false, no row, counter
  *     unchanged, no TM row, no activity row;
- *  2. inside a CALLER's transaction the save joins without a savepoint (a
- *     subtransaction xmin would blind insertedByThisTransaction), so a
- *     create-on-save there still logs its NEW activity row;
+ *  2. inside a CALLER's transaction the save joins without a savepoint (the
+ *     caller owns the refusal's fate), and a create-on-save there still logs
+ *     its NEW activity row;
  *  3. the legitimate create-on-save path still creates exactly one record.
  */
 
@@ -159,11 +159,10 @@ describe('a refused save on a missing record leaves no trace', () => {
 	}, 30000);
 
 	test("caller's transaction: the save joins it WITHOUT a savepoint — create-on-save stays attributable", async () => {
-		// A SAVEPOINT fence here would give the born row a SUBtransaction xmin, and
-		// create_record.ts insertedByThisTransaction would answer "not mine": no NEW
-		// activity row, no bulk-run birth marker. The refused save's writes stay in
-		// the caller's transaction — the caller owns that choice (the CSV door
-		// throws on ok:false and rolls its row back).
+		// The refused save's writes stay in the caller's transaction — the caller
+		// owns that choice (the CSV door throws on ok:false and rolls its row back).
+		// The create's birth is decided by its insert statement (create_record.ts
+		// createSectionRecord), so the NEW activity row is logged either way.
 		const outcomes = await withTransaction(async () => {
 			const refused = await refusedRemove(AMBIENT_REFUSED_ID);
 			const kept = await legitimateUpdate(AMBIENT_OK_ID, 'kept-after-refusal');

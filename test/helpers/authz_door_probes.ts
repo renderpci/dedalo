@@ -71,6 +71,9 @@ export const DD128_PROBED: Readonly<Record<string, readonly string[]>> = {
 	// The CSV importer — every existing row's column through the write door as
 	// the importer (req 10).
 	'src/core/tools/import_csv_execute.ts': ['engine:import_csv_execute.executeCsvImport'],
+	// tool_import_rdf's ontology-driven executor — the caller record's and every
+	// run-time-bound term's components through the write door as the importer.
+	'tools/tool_import_rdf/server/rdf_import_execute.ts': ['tool:tool_import_rdf:rdf_import_execute'],
 	// tool_import_files — the run-time role writes (and the media / host-portal
 	// components) through the write door's triple (req 10).
 	'tools/tool_import_files/server/index.ts': ['tool:tool_import_files:import_files:roles'],

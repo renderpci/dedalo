@@ -58,6 +58,40 @@ export async function withLiveBulkRun<T>(bulkId: number, work: () => Promise<T>)
 	}
 }
 
+/**
+ * The LAZY form of {@link withLiveBulkRun}, for a door that mints its dd800
+ * only when it first writes (tool_import_rdf: a re-run that changes nothing
+ * must leave no bulk record behind). The undo log's precondition runs FIRST,
+ * outside any transaction, exactly as above; `work` then receives `enter`,
+ * which it calls with the id right after the mint (inside its transaction —
+ * the registration is in-process, so it holds before the row commits), and
+ * `leave`, for a mint its transaction then rolled back. Every id entered is
+ * released in the `finally`, whatever `work` does. An id already live (a
+ * nesting door's) is left to its owner.
+ */
+export async function withLazyLiveBulkRun<T>(
+	work: (registration: {
+		enter: (bulkId: number) => void;
+		leave: (bulkId: number) => void;
+	}) => Promise<T>,
+): Promise<T> {
+	await ensureTmHistoryReady();
+	const entered = new Set<number>();
+	const enter = (bulkId: number): void => {
+		if (liveBulkRuns.has(bulkId)) return;
+		liveBulkRuns.add(bulkId);
+		entered.add(bulkId);
+	};
+	const leave = (bulkId: number): void => {
+		if (entered.delete(bulkId)) liveBulkRuns.delete(bulkId);
+	};
+	try {
+		return await work({ enter, leave });
+	} finally {
+		for (const bulkId of entered) liveBulkRuns.delete(bulkId);
+	}
+}
+
 /** Whether the bulk run `bulkId` is executing in this process right now. */
 export function isBulkRunLive(bulkId: number): boolean {
 	return liveBulkRuns.has(bulkId);

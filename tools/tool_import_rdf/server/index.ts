@@ -1,25 +1,30 @@
 /**
- * tool_import_rdf server module (PHP tool_import_rdf::get_rdf_data). Dereferences
+ * tool_import_rdf server module (v6 tool_import_rdf::get_rdf_data). Dereferences
  * each IRI the cataloguer selected through the HARVESTING DOOR (`harvestFetch`,
  * src/core/harvest/harvest.ts) — every redirect hop re-vetted and pinned, the
- * site's robots.txt obeyed, the per-site pace kept — and parses the answer with the
- * from-scratch RDF/XML parser (rdf_xml.ts, no 3rd-party lib), returning the
- * extracted subjects/properties.
+ * site's robots.txt obeyed, the per-site pace kept — reads the RDF/XML graph
+ * (core/tools/rdf_graph.ts, no 3rd-party lib), maps it through the EXTERNAL
+ * ONTOLOGY (`ontology_tipo`, a node of model `external_ontology`: its xmlns, its
+ * owl:Class / owl:ObjectProperty children) and WRITES the result into the caller
+ * record and the records it links to (rdf_import_run.ts → rdf_import_plan.ts →
+ * rdf_import_execute.ts): fill empty fields, append IRIs and links, never
+ * overwrite; linked terms matched first and fetched only when new; one dd800
+ * bulk process per call, so the import is revertable.
  *
  * Linked-data servers answer an IRI with a 303 See Other (content negotiation) or a
  * 301 to https; the door follows both. An IRI is asked for RDF/XML first; a server
  * that only answers the `<iri>.rdf` form gets one retry there (see `fetchRdfXml`).
  *
- * The subject→Dédalo ontology CLASS-MAP (properties.xmlns / class_map_to_dd) is
- * config-driven and ledgered; the fetch + graph parse are real.
- *
- * GATE: WRITE (level 2) on the LOCATOR's section — the target the resolved
- * values are destined for — matching PHP's assert_section_permission(…, 2).
- * The target rides inside `options.locator`, so the gate is declared as
- * 'section_list' (see rdfSectionTipos): a plain 'section' spec reads
- * `options.section_tipo`, which this tool's client never sends.
+ * GATE: WRITE (level 2) on the LOCATOR's section — the record the values are
+ * written into — matching v6's assert_section_permission(…, 2). The target rides
+ * inside `options.locator`, so the gate is declared as 'section_list' (see
+ * rdfSectionTipos): a plain 'section' spec reads `options.section_tipo`, which
+ * this tool's client never sends. Every single write is then asked again of the
+ * write door by the executor, as the importing principal (record scope, the
+ * component pair, creates in linked sections).
  */
 
+import { config } from '../../../src/config/config.ts';
 import {
 	type ApiErrorBody,
 	DedaloError,
@@ -35,7 +40,8 @@ import {
 } from '../../../src/core/harvest/harvest.ts';
 import { siteOf } from '../../../src/core/harvest/refusals.ts';
 import { currentJobSignal, runWithJobSignal } from '../../../src/core/media/job_scope.ts';
-import { getPermissions } from '../../../src/core/security/permissions.ts';
+import { getModelByTipo, getPropertiesByTipo } from '../../../src/core/ontology/resolver.ts';
+import { getPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -43,6 +49,13 @@ import {
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../../src/core/tools/rdf_xml.ts';
+import { findTermRecord, type RdfCallerLocator } from './rdf_import_execute.ts';
+import {
+	engineRdfOntologyReader,
+	engineRdfPlanLangs,
+	loadRdfImportOntology,
+} from './rdf_import_plan.ts';
+import { type RdfImportResult, runRdfImport } from './rdf_import_run.ts';
 
 /**
  * The action's permission target (the 'section_list' gate reads this).
@@ -69,11 +82,7 @@ export type RdfOutcome =
  * Defense in depth behind the declarative gate — same level, so a direct call can
  * never reach the fetch loop on a weaker check than the wire.
  */
-async function assertLocatorWrite(
-	ctx: ToolActionContext,
-	sectionTipo: string | undefined,
-): Promise<void> {
-	if (!sectionTipo) return;
+async function assertLocatorWrite(ctx: ToolActionContext, sectionTipo: string): Promise<void> {
 	if ((await getPermissions(ctx.principal, sectionTipo, sectionTipo)) >= 2) return;
 	throw new DedaloError('perm.denied', {
 		coordinates: { tool: 'tool_import_rdf', section_tipo: sectionTipo },
@@ -118,12 +127,6 @@ function rdfValues(options: Record<string, unknown>): string[] {
 		});
 	}
 	return values;
-}
-
-/** The class-map the caller supplied (`tool_config.config.main`), or none. */
-function rdfMap(options: Record<string, unknown>): RdfMapEntry[] {
-	const map = (options.tool_config as { config?: { main?: unknown } } | undefined)?.config?.main;
-	return Array.isArray(map) ? (map as RdfMapEntry[]) : [];
 }
 
 /** The media types an RDF/XML document is served as. */
@@ -281,14 +284,33 @@ export async function loadRdf(
 	deadlineMs: number = RDF_IRI_DEADLINE_MS,
 ): Promise<RdfOutcome> {
 	try {
-		const xml = await withDeadline(deadlineMs, () => fetchRdfXml(uri, deps));
+		const xml = await fetchRdfDocument(uri, deps, deadlineMs);
 		const { subjects } = parseRdfXml(xml);
 		// A class-map yields the mapped fields (the dd_object the client form
 		// consumes); without one, the raw subjects.
 		const mapped = map.length > 0 ? applyRdfMap(subjects, map) : subjects;
 		return { kind: 'loaded', entry: { uri, subjects: mapped } };
 	} catch (error) {
-		return { kind: 'failed', failure: { uri, error: toErrorBody(reported(uri, error)) } };
+		return { kind: 'failed', failure: { uri, error: toErrorBody(toDedaloError(error)) } };
+	}
+}
+
+/**
+ * The RDF/XML text of ONE IRI within `deadlineMs` (everything included), or the
+ * error the cataloguer is told (`reported`: a site that is not answering is
+ * `tool.source_unavailable`). The ONE fetch of the tool: the IRI's own document
+ * and every linked term the import dereferences go through it. Exported with the
+ * door's `deps` seam (tests fake a site).
+ */
+export async function fetchRdfDocument(
+	uri: string,
+	deps: HarvestDeps = {},
+	deadlineMs: number = RDF_IRI_DEADLINE_MS,
+): Promise<string> {
+	try {
+		return await withDeadline(deadlineMs, () => fetchRdfXml(uri, deps));
+	} catch (error) {
+		throw reported(uri, error);
 	}
 }
 
@@ -355,17 +377,95 @@ export async function loadRdfBatch(
 	return batch;
 }
 
+/** What one import call is: the IRIs, the mapping, the record, the importer. */
+export interface RdfImportCall {
+	uris: readonly string[];
+	/** A node of model `external_ontology` (checked by the action). */
+	ontologyTipo: string;
+	caller: RdfCallerLocator;
+	principal: Principal;
+}
+
+/**
+ * Import every IRI into the caller record: the ontology read once, then
+ * rdf_import_run.ts (fetch → plan → linked terms → execute). Exported with the
+ * door's `deps` seam, like `loadRdf`; the action never passes it.
+ */
+export async function importRdfBatch(
+	call: RdfImportCall,
+	deps: HarvestDeps = {},
+	deadlineMs: number = RDF_IRI_DEADLINE_MS,
+): Promise<RdfImportResult> {
+	const ontology = await loadRdfImportOntology(
+		call.ontologyTipo,
+		engineRdfOntologyReader(config.lang.structureLang),
+	);
+	return runRdfImport({
+		...call,
+		ontology,
+		langs: await engineRdfPlanLangs(),
+		deadlineMs,
+		readDocument: (iri, ms) => fetchRdfDocument(iri, deps, ms),
+		lookup: findTermRecord,
+	});
+}
+
+/** The record the import writes into: `options.locator`, a section tipo and a positive id. */
+function rdfCaller(options: Record<string, unknown>): RdfCallerLocator {
+	const locator = (options.locator ?? {}) as { section_tipo?: unknown; section_id?: unknown };
+	const sectionTipo = asTipo(locator.section_tipo);
+	const sectionId = Number(locator.section_id);
+	if (sectionTipo === null || !Number.isSafeInteger(sectionId) || sectionId < 1) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Missing or invalid locator (the record to import into)',
+		});
+	}
+	return { section_tipo: sectionTipo, section_id: sectionId };
+}
+
+/**
+ * The external ontology to map through: `options.ontology_tipo`, else the one the
+ * main component names (`ar_tools_name.tool_import_rdf.external_ontology` of
+ * `options.main_component_tipo`, where the client reads it). Refused unless it is
+ * a node of model `external_ontology` — any other tipo would be read as a mapping.
+ */
+async function rdfOntologyTipo(options: Record<string, unknown>): Promise<string> {
+	const tipo = asTipo(options.ontology_tipo) ?? (await mainElementOntology(options));
+	if (tipo !== null && (await getModelByTipo(tipo)) === 'external_ontology') return tipo;
+	throw new DedaloError('request.invalid_options', {
+		publicMessage: 'No external ontology to map the RDF with (ontology_tipo)',
+		coordinates: { tool: 'tool_import_rdf', ontology_tipo: tipo ?? '' },
+	});
+}
+
+function asTipo(value: unknown): string | null {
+	return typeof value === 'string' && value !== '' ? value : null;
+}
+
+async function mainElementOntology(options: Record<string, unknown>): Promise<string | null> {
+	const component = asTipo(options.main_component_tipo);
+	if (component === null) return null;
+	const properties = (await getPropertiesByTipo(component)) as {
+		ar_tools_name?: { tool_import_rdf?: { external_ontology?: unknown } };
+	} | null;
+	return asTipo(properties?.ar_tools_name?.tool_import_rdf?.external_ontology);
+}
+
 async function getRdfData(ctx: ToolActionContext): Promise<ToolResponse> {
-	const locator = (ctx.options.locator ?? {}) as { section_tipo?: string };
-	await assertLocatorWrite(ctx, locator.section_tipo);
 	const values = rdfValues(ctx.options);
-	// The subject→dd_object class-map is config-driven (ledgered); the fetch +
-	// parse are done and returned for the client/mapper to consume.
+	const caller = rdfCaller(ctx.options);
+	await assertLocatorWrite(ctx, caller.section_tipo);
+	const ontologyTipo = await rdfOntologyTipo(ctx.options);
 	// `errors` is the PER-URI refusal list: payload, not a wire failure — so it
 	// rides inside `data`, one `{uri, error}` per URI, `error` the same body a
-	// failed call would carry.
-	const batch = await loadRdfBatch(values, rdfMap(ctx.options));
-	return ok(batch, { requestId: toolRequestId(ctx) });
+	// failed call would carry. `report` is what each IRI wrote, created, skipped.
+	const result = await importRdfBatch({
+		uris: values,
+		ontologyTipo,
+		caller,
+		principal: ctx.principal,
+	});
+	return ok(result, { requestId: toolRequestId(ctx) });
 }
 
 export const tool: ToolServerModule = {
