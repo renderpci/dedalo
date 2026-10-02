@@ -376,6 +376,9 @@ HERMETIC_TRIPWIRES=(
 	#     ~4 s); verified with the hermetic env (DB_HOST=127.0.0.1 DB_PORT=59999,
 	#     DB_NAME=ci_hermetic_no_db: 3 pass / 0 fail).
 	test/unit/diffusion_artifact_rss_native.test.ts
+	# --- 2026-10-02 (plan item 5): the client-lib versions doc byte-identity gate. DB-free:
+	#     reads package.json + the doc, imports the client-lib registry, renders in memory.
+	test/unit/client_lib_versions_doc_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

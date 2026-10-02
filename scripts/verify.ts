@@ -334,6 +334,8 @@ const TRIPWIRES = [
 	'test/unit/change_plan_write_door_native.test.ts',
 	// Closure Step 3 req 10 residual — the importers' create door + legacy frame slots (2026-10-01).
 	'test/unit/import_create_door_native.test.ts',
+	// Plan item 5 — the npm rows of the client-lib versions doc are generated (2026-10-02).
+	'test/unit/client_lib_versions_doc_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

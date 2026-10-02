@@ -25,6 +25,8 @@
 		"changelog": "bun run scripts/changelog.ts",
 		"config:gen": "bun run scripts/gen_config_docs.ts",
 		"config:check": "bun run scripts/gen_config_docs.ts --check",
+		"libs:gen": "bun run scripts/gen_client_lib_docs.ts",
+		"libs:check": "bun run scripts/gen_client_lib_docs.ts --check",
 		"context:gen": "bun run deploy/build_context.ts",
 		"context:check": "bun run deploy/build_context.ts --check",
 		"dedalo:install": "bun run scripts/install.ts",

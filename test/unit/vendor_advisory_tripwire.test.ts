@@ -918,9 +918,9 @@ describe('vendor advisory tripwire — positive controls', () => {
 describe('vendor advisory tripwire — the human-facing table says what the manifest says', () => {
 	// CLI-26's review found docs/development/vendored_library_versions.md still listing
 	// pdfjs 5.7.284 the day the tree became 6.2.108. Fixing that sentence is worth one
-	// day; gating it is worth every bump after. Only the FOUR VENDORED rows are covered
-	// — the doc's 16 npm rows are package.json's business, and eight of them were
-	// separately stale when re-measured on 2026-08-28, which the page now says out loud.
+	// day; gating it is worth every bump after. Only the VENDORED rows are covered here
+	// — the doc's npm rows are GENERATED from package.json + the client-lib registry and
+	// byte-gated by client_lib_versions_doc_tripwire (2026-10-02).
 	const DOC = 'docs/development/vendored_library_versions.md';
 
 	test('every vendored row in the doc table carries the manifest version', () => {
