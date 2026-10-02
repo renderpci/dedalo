@@ -2,7 +2,7 @@
  * R2 gate: tool_import_files. The basename matcher + named-processor allowlist
  * are unit-tested; the module loads with its 4 actions; file_processor fails
  * CLOSED for unregistered names (SEC-053 collapse). `crop_50` is the first
- * ported processor (`tools/tool_import_files/server/script_files/numisdata/crop_50.ts`,
+ * ported processor (`src/core/media/tools/crop_coin_pair.ts`,
  * registered at module load) — its region-detection/pairing pure logic is
  * covered separately in `test/unit/region_split.test.ts` (no ImageMagick spawn).
  *
@@ -341,7 +341,7 @@ describe('tool_import_files module', () => {
 	});
 
 	test('crop_50 is registered and itself fails closed on insufficient options', async () => {
-		// crop_50 is the first ported file_processor (script_files/numisdata/crop_50.ts) — it
+		// crop_50 is the first ported file_processor (src/core/media/tools/crop_coin_pair.ts) — it
 		// is now REGISTERED, so this exercises its own guard clause rather than
 		// the allowlist refusal: no file_path/file_name/user_id/key_dir means it
 		// cannot even attempt the ImageMagick pipeline, and says so.

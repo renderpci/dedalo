@@ -1,0 +1,70 @@
+/**
+* TOOL_DEV_TEMPLATE
+*
+* Loaded on tool init
+*/
+
+// imports
+@import (once) '../../../client/dedalo/core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_numisdata_acquisition: #f78a1c;
+}
+:root[data-theme="dark"] {
+	--tool_numisdata_acquisition: #ffa040;
+}
+@tool_color : var(--tool_numisdata_acquisition);
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_numisdata_acquisition {
+
+	.spinner {
+		background-color: @tool_color;
+	}
+
+	>.content_data {
+
+		>.info_container {
+			padding: 2rem;
+			padding-left: 0px;
+			line-height: 1.5rem;
+			font-size: 1.1rem;
+		}
+
+		>.footer_buttons_container {
+			padding-top: 2rem;
+		}
+
+		>.value_container {
+			margin: 1rem;
+			min-height: 7rem;
+		}
+
+		.company_resolution {
+			margin: 0.5rem 0 1rem 0;
+			padding: 0.5rem;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+
+			.company_resolution_label {
+				font-weight: bold;
+				margin-bottom: 0.25rem;
+			}
+
+			.company_option {
+				display: flex;
+				align-items: center;
+				gap: 0.4rem;
+			}
+		}
+
+	}//end content_data
+}//end wrapper_tool
+
+// .tool_header.tool_numisdata_acquisition is NOT painted here - the GENERATED
+// tool_colors.less (scripts/tool_colors.ts) already derives --tool_edge/
+// --tool_fill for it (and its dark-mode twin) from the --tool_numisdata_acquisition
+// hue above; tool_common.less's header rule consumes --tool_edge. A local
+// override here would just be a second, driftable copy of the same color.

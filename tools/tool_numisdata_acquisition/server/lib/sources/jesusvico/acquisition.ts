@@ -1,0 +1,124 @@
+import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
+import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
+import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
+import { parseJesusvicoTotalPages } from './parser.ts';
+
+const MAX_PAGES = 50;
+const JESUSVICO_HOSTS = ['jesusvico.com'];
+
+async function fetchJesusvicoPage(
+	url: string,
+	onWait?: (ms: number, origin: string) => void,
+): Promise<RawSource> {
+	const response = await harvestFetch({
+		url,
+		hosts: JESUSVICO_HOSTS,
+		requireHttps: true,
+		headers: { Accept: 'text/html,application/xhtml+xml' },
+		onWait,
+	});
+	if (!response.ok) {
+		throw new DedaloError('external.http_status', {
+			coordinates: { source: 'jesusvico', url, status: response.status },
+		});
+	}
+	return {
+		html: response.text(),
+		finalUrl: response.url,
+		httpStatus: response.status,
+		contentType: response.contentType,
+	};
+}
+
+/**
+ * jesusvico.com auction URLs embed the auction number as "I{n}" in the path (e.g.
+ * ".../subasta-180-coleccion-segarra-vol-iii_I180-001" -> "180"). The same prefix also appears on
+ * every lot's own detail-page URL, but shared across all lots on that auction, not per-lot.
+ */
+export function parseJesusvicoAuctionNumber(rawUrl: string): string | null {
+	try {
+		const url = new URL(rawUrl);
+		const match = url.pathname.match(/I(\d+)/i);
+		return match ? match[1]! : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * jesusvico.com lot detail URLs are "/{locale}/lot(e)?/I{auction}-X-X/{lotNumber}-Y-slug" - both
+ * the English ("lot") and Spanish ("lote") segments are matched. The lot number is the leading
+ * digits of the final path segment.
+ */
+export function parseJesusvicoLotNumber(rawUrl: string): string | null {
+	try {
+		const url = new URL(rawUrl);
+		const match = url.pathname.match(/\/lote?\/[^/]+\/(\d+)/);
+		return match ? match[1]! : null;
+	} catch {
+		return null;
+	}
+}
+
+/** A stable identifier for a single-lot retrieval, distinct from the full auction's own number. */
+export function jesusvicoLotIdentifier(rawUrl: string): string | null {
+	const auctionNumber = parseJesusvicoAuctionNumber(rawUrl);
+	const lotNumber = parseJesusvicoLotNumber(rawUrl);
+	if (!auctionNumber || !lotNumber) return null;
+	return `lot-${auctionNumber}-${lotNumber}`;
+}
+
+/**
+ * jesusvico.com is fully permissive in robots.txt and server-renders plain HTML - no SPA/JSON API
+ * to reverse-engineer, no exception needed (unlike sixbid). Fetches through the harvesting door.
+ */
+export async function acquireJesusvicoAuction(
+	rawUrl: string,
+	onProgress?: AcquisitionProgress,
+): Promise<MultiPageAcquisition> {
+	const auctionIdentifier = parseJesusvicoAuctionNumber(rawUrl);
+	if (!auctionIdentifier) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid jesusvico.com auction URL (missing auction number).',
+		});
+	}
+
+	const onWait = (ms: number, origin: string): void => {
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`);
+	};
+
+	const first = await fetchJesusvicoPage(rawUrl, onWait);
+	const pages: RawSource[] = [first];
+	const totalPages = Math.min(parseJesusvicoTotalPages(first.html), MAX_PAGES);
+	onProgress?.(1, totalPages);
+
+	for (let p = 2; p <= totalPages; p++) {
+		const pageUrl = new URL(first.finalUrl);
+		pageUrl.searchParams.set('page', String(p));
+		const page = await fetchJesusvicoPage(pageUrl.toString(), onWait);
+		pages.push(page);
+		onProgress?.(p, totalPages);
+	}
+
+	return { auctionIdentifier, pages, method: 'http' };
+}
+
+/** Acquires a single jesusvico.com lot page - one request, no pagination. */
+export async function acquireJesusvicoLot(
+	rawUrl: string,
+	onProgress?: AcquisitionProgress,
+): Promise<MultiPageAcquisition> {
+	const auctionIdentifier = jesusvicoLotIdentifier(rawUrl);
+	if (!auctionIdentifier) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Please provide a valid jesusvico.com lot URL.',
+		});
+	}
+
+	const page = await fetchJesusvicoPage(rawUrl, (ms, origin) =>
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`),
+	);
+	onProgress?.(1, 1);
+
+	return { auctionIdentifier, pages: [page], method: 'http' };
+}
