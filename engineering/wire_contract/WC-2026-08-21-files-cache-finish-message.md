@@ -80,3 +80,13 @@ would publish is worse than the one it would delete, and — because the new key
 the one the server's `dedalo_version` agrees with — nothing would ever rebuild it.
 Such a pass reports `error: 'Cache pass refused: too few files stored'` with
 `total_files` still describing the manifest it tried.
+
+## Addendum 2026-10-02 — the service-worker producer moved to `core/service_worker.js`
+
+The seam is unchanged; its service-worker producer now lives at
+`client/dedalo/core/service_worker.js` (registered by `login.js` as a module). The
+old URL `client/dedalo/core/sw.js` is a permanent tombstone that posts no message
+at all: it evicts the classic v6 worker still registered there (deletes the v6
+`dedalo_files` cache, unregisters, reloads windows that ran v6 code). Every
+mention of `core/sw.js` above means `core/service_worker.js` from this date.
+Gate: `test/unit/sw_tombstone_tripwire.test.ts`.

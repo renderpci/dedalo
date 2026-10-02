@@ -174,7 +174,7 @@ describe('install restart supervisor contract', () => {
 
 	// THE /health ROUTE (2026-08-24): the engine serves its liveness check at the
 	// ORIGIN ROOT (src/server.ts) and the BROWSER client probes it over HTTP
-	// (data_manager.js getHealthUrl, the system_info + update_code widgets, sw.js).
+	// (data_manager.js getHealthUrl, the system_info + update_code widgets, service_worker.js).
 	// A proxy config that does not route it does not fail loudly: the engine stays
 	// healthy while the widget reports it down and the post-update restart poll
 	// can never confirm the new version — observed as Apache AH01630 denying

@@ -1,5 +1,5 @@
 /**
- * SW CACHE-KEY gate (core/api/dedalo_files.ts + client sw.js).
+ * SW CACHE-KEY gate (core/api/dedalo_files.ts + client service_worker.js).
  *
  * The service worker serves JS cache-first, naming its cache after the manifest's
  * `dedalo_version`. PHP sent DEDALO_VERSION there — a string that only moves on a
@@ -90,7 +90,7 @@ function finishPayloads(source: string): string[][] {
 }
 
 const A_MANIFESTED_CLIENT_FILE = 'tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js';
-const SW = 'client/dedalo/core/sw.js';
+const SW = 'client/dedalo/core/service_worker.js';
 
 describe('the SW cache key tracks the served client code', () => {
 	test('IN DEV MODE, editing a manifested client file MOVES the key (the file list does not)', () => {
@@ -132,7 +132,7 @@ describe('the SW cache key tracks the served client code', () => {
 	});
 });
 
-describe('sw.js consumes the key (a server-only change would be inert)', () => {
+describe('service_worker.js consumes the key (a server-only change would be inert)', () => {
 	const sw = readFileSync(SW, 'utf-8');
 
 	test('the cache is NAMED after the manifest version, never a fixed string', () => {
@@ -375,7 +375,7 @@ describe('the files-cache finish contract', () => {
 		expect(finishPayloads(worker).length).toBe(2);
 	});
 
-	test('sw.js posts finish exactly once, outside any success branch', () => {
+	test('service_worker.js posts finish exactly once, outside any success branch', () => {
 		const payloads = finishPayloads(sw);
 		expect(payloads.length).toBe(1);
 		// the outcome rides ON the message instead of deciding whether to send it

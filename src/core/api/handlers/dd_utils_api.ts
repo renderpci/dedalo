@@ -219,7 +219,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// (not in NO_LOGIN_ACTIONS, matching PHP); CSRF-exempt like PHP (the
 		// SW calls without the page's token). `data` is the manifest;
 		// `dedalo_version` (the SW cache key) rides as an extension key —
-		// sw.js / worker_cache.js read `response_data()` + `dedalo_version`.
+		// service_worker.js / worker_cache.js read `response_data()` + `dedalo_version`.
 		const { buildDedaloFilesResponse } = await import('../dedalo_files.ts');
 		const manifest = buildDedaloFilesResponse();
 		return {

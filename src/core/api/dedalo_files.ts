@@ -2,7 +2,7 @@
  * get_dedalo_files — the service-worker pre-cache manifest (PHP
  * dd_utils_api::get_dedalo_files, class.dd_utils_api.php:1897).
  *
- * The client SW (sw.js / worker_cache.js) calls this on install and whenever a
+ * The client SW (service_worker.js / worker_cache.js) calls this on install and whenever a
  * new dedalo_version is detected, then pre-caches every returned URL. PHP walks
  * the real filesystem rather than keeping a static list so newly added files
  * are included automatically; this port keeps that behavior, but walks the
@@ -93,7 +93,8 @@ function coreFileUrl(rel: string): string | null {
 		rel.includes('/plug-ins/') ||
 		rel.includes('/fonts/') || // ignore fonts
 		rel.includes('worker_cache.js') ||
-		rel.includes('/sw.js') // ignore service worker
+		rel.includes('/service_worker.js') || // ignore service worker
+		rel.includes('/sw.js') // ignore the retired-URL tombstone (core/sw.js)
 	) {
 		return null;
 	}
@@ -194,7 +195,7 @@ function walkDedaloFilesManifest(): DedaloFilesManifest {
 
 	return Object.freeze({
 		result: Object.freeze(files),
-		// dedalo_version: THE SERVICE-WORKER CACHE KEY (sw.js names its cache after
+		// dedalo_version: THE SERVICE-WORKER CACHE KEY (service_worker.js names its cache after
 		// it and purges every other one). PHP sent DEDALO_VERSION, which only moves
 		// on a release — so a client file edited between releases stayed cached
 		// FOREVER: the browser kept running the old JS against the new server, and
