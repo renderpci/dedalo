@@ -287,17 +287,32 @@ function temporalEchoMainEntry(
  */
 async function attachTemporalEchoDatalist(
 	echo: ApiResult,
-	args: { model: string; componentTipo: string; sectionTipo: string; lang: string },
+	args: {
+		model: string;
+		componentTipo: string;
+		sectionTipo: string;
+		lang: string;
+		/** The picked locators the echo hands back (the value; never the record). */
+		picked: readonly unknown[];
+	},
 ): Promise<void> {
-	const { model, componentTipo, sectionTipo, lang } = args;
+	const { model, componentTipo, sectionTipo, lang, picked } = args;
 	const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
 	if (!SELECT_FAMILY_MODELS.has(model)) return;
-	const { getDatalist } = await import('../../relations/datalist.ts');
+	const { getEditDatalist } = await import('../../relations/datalist.ts');
 	const { getNode } = await import('../../ontology/resolver.ts');
 	const node = await getNode(componentTipo);
 	const main = temporalEchoMainEntry(echo, componentTipo, sectionTipo);
 	if (main !== undefined) {
-		main.datalist = await getDatalist(componentTipo, node?.properties ?? null, sectionTipo, lang);
+		// The edit door, completed against the PICKED value (the raw locators
+		// the echo answers with): select_lang's "<name> *" entry matches the read's.
+		main.datalist = await getEditDatalist(
+			componentTipo,
+			node?.properties ?? null,
+			sectionTipo,
+			lang,
+			picked,
+		);
 	}
 }
 
@@ -463,7 +478,7 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			picked,
 			mode: source.mode ?? 'edit',
 		});
-		await attachTemporalEchoDatalist(echo, { model, componentTipo, sectionTipo, lang });
+		await attachTemporalEchoDatalist(echo, { model, componentTipo, sectionTipo, lang, picked });
 		stampTemporalEchoCreatedSectionId(echo, createdSectionId);
 		return echo;
 	}

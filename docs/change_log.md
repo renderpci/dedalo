@@ -209,6 +209,17 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-02-relation-children-write-through`.
 
+- **A language field whose stored language is no longer a project language shows it again.**
+
+    When a record stores a language that was later removed from the project languages
+    (for example an "Original language" saved before the list changed), the edit form's
+    language picker showed no selection, as if the field were empty. The picker now lists
+    that language as an extra option marked with an asterisk ("French *") and keeps it
+    selected, also right after a save. The name is shown in the interface language, the
+    same as in list view.
+
+    Wire contract: `WC-2026-10-02-select-lang-missing-entry`.
+
 - **Autocomplete searches work again in pickers with a related-record field, and the field inputs search as you type**
 
     In an autocomplete whose search fields include a related-record field (for
@@ -1272,7 +1283,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 94 entries"
+??? note "Wire contract — 95 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1368,6 +1379,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-01-unit-test-widget-dev-gate`
     - `WC-2026-10-01-write-door-delegations`
     - `WC-2026-10-02-relation-children-write-through`
+    - `WC-2026-10-02-select-lang-missing-entry`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

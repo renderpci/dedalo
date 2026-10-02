@@ -39,10 +39,15 @@ import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts'
 import { registerPairingChangeListener } from '../ontology/model_section.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
 import { resolveComponentValue } from '../resolve/component_data.ts';
+import { currentApplicationLang } from '../resolve/request_lang.ts';
 import { registerSectionDataListener } from '../section_record/save_event.ts';
 import { buildRequestConfigForElement } from './request_config/build.ts';
 import { extractSqoSectionTipos, type RequestConfigContext } from './request_config/explicit.ts';
-import { getSelectLangDatalist, type SelectLangDatalistItem } from './select_lang.ts';
+import {
+	appendMissingLang,
+	getSelectLangDatalist,
+	type SelectLangDatalistItem,
+} from './select_lang.ts';
 
 /**
  * One resolved HIDE-ddo value of an option (PHP `$hide_item`, :2949-2953).
@@ -107,17 +112,37 @@ export type ComponentDatalistItem = DatalistItem | SelectLangDatalistItem;
  * enumeration for a model whose options are something else. Each source owns
  * its own caching (select_lang: the resolved project langs, cleared by an lg1
  * write).
+ *
+ * `editGuard` (optional) is the EDIT-only completion of the options against the
+ * component's stored value, applied by {@link getEditDatalist} and nowhere else
+ * (select_lang: the "<name> *" entry of a stored non-project lang). It never
+ * reaches getDatalist's shared list — filters, the state widget and identify
+ * consume the options themselves, not a record's value.
  */
+interface DatalistSourceImplementation {
+	options: (lang: string) => Promise<ComponentDatalistItem[]>;
+	editGuard?: (
+		datalist: readonly ComponentDatalistItem[],
+		storedLocators: readonly unknown[],
+	) => Promise<ComponentDatalistItem[]>;
+}
+
 export const DATALIST_SOURCE_IMPLEMENTATIONS: Readonly<
-	Record<DatalistSourceId, (lang: string) => Promise<ComponentDatalistItem[]>>
+	Record<DatalistSourceId, DatalistSourceImplementation>
 > = {
-	project_langs: (lang) => getSelectLangDatalist(lang),
+	project_langs: {
+		options: (lang) => getSelectLangDatalist(lang),
+		// The missing lang's name is in the APPLICATION lang (PHP
+		// get_lang_name_by_locator default), read per request (ALS).
+		editGuard: (datalist, storedLocators) =>
+			appendMissingLang(datalist, storedLocators, currentApplicationLang()),
+	},
 };
 
 /** The component's model-declared option source, or null for the generic one. */
 async function modelDatalistSource(
 	componentTipo: string,
-): Promise<((lang: string) => Promise<ComponentDatalistItem[]>) | null> {
+): Promise<DatalistSourceImplementation | null> {
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) return null;
 	const sourceId = getComponentModel(model)?.datalistSource;
@@ -353,7 +378,7 @@ export async function probeDatalistSize(
 	if (limit <= 0) return 0;
 	// A model-sourced list is small by construction and cheap to build: count it.
 	const modelSource = await modelDatalistSource(componentTipo);
-	if (modelSource !== null) return Math.min((await modelSource(lang)).length, limit);
+	if (modelSource !== null) return Math.min((await modelSource.options(lang)).length, limit);
 	// A list already built is already paid for — count it rather than re-probe.
 	// SAME key shape as getDatalist (owner section included) — the doc-block on
 	// resolveDatalistSources is the contract: probe and build must never
@@ -423,8 +448,32 @@ export async function getDatalist(
 	// component_select_lang that is the project languages — the node's sqo
 	// names lg1, whose generic enumeration is every language record there is.
 	const modelSource = await modelDatalistSource(componentTipo);
-	if (modelSource !== null) return modelSource(lang);
+	if (modelSource !== null) return modelSource.options(lang);
 	return getTargetSectionDatalist(componentTipo, componentProperties, ownerSectionTipo, lang);
+}
+
+/**
+ * The datalist an EDIT door attaches next to a component's value: the options
+ * ({@link getDatalist}) completed against the stored value by the model
+ * source's `editGuard` — for component_select_lang the "<name> *" entry of a
+ * stored lang that is not a project lang (PHP component_select_lang_json edit
+ * branch). The ONE door for the three edit surfaces — the edit read
+ * (select_family emitter), the save echo (dd_core_api) and the temporal echo
+ * (section/record/temporal.ts) — so they cannot disagree.
+ * `storedLocators` is the value the door is about to hand the client (read:
+ * the stored data; echoes: the saved / echoed entries).
+ */
+export async function getEditDatalist(
+	componentTipo: string,
+	componentProperties: unknown,
+	ownerSectionTipo: string,
+	lang: string,
+	storedLocators: readonly unknown[],
+): Promise<ComponentDatalistItem[]> {
+	const datalist = await getDatalist(componentTipo, componentProperties, ownerSectionTipo, lang);
+	const modelSource = await modelDatalistSource(componentTipo);
+	if (modelSource?.editGuard === undefined) return datalist;
+	return modelSource.editGuard(datalist, storedLocators);
 }
 
 /**

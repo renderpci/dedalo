@@ -372,13 +372,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			);
 			const savedModel = await getModelByTipo(source.tipo);
 			if (savedModel !== null && SELECT_FAMILY_MODELS.has(savedModel)) {
-				const { getDatalist } = await import('../../relations/datalist.ts');
+				// The edit door: the read's options completed against the SAVED
+				// value (select_lang's "<name> *" entry), so echo == read.
+				const { getEditDatalist } = await import('../../relations/datalist.ts');
 				const savedNode = await getNode(source.tipo);
-				(savedDataItem as { datalist?: unknown }).datalist = await getDatalist(
+				(savedDataItem as { datalist?: unknown }).datalist = await getEditDatalist(
 					source.tipo,
 					savedNode?.properties ?? null,
 					source.section_tipo,
 					source.lang ?? 'lg-nolan',
+					savedItems,
 				);
 			}
 			// Relation-column components (portal / relation_*): the client reuses the

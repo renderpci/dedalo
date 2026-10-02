@@ -29,7 +29,7 @@
 import { getNode } from '../../ontology/resolver.ts';
 import type { DataItem } from '../../resolve/component_data.ts';
 import { buildDataItem } from '../../resolve/component_data.ts';
-import { getDatalist, getRelationListValue } from '../datalist.ts';
+import { getEditDatalist, getRelationListValue } from '../datalist.ts';
 import type { RelationEmitContext, RelationModelResolver } from '../registry.ts';
 
 /** Relation models whose LIST value is label strings (relation_common get_list_value). */
@@ -43,7 +43,7 @@ export const SELECT_FAMILY_MODELS: ReadonlySet<string> = new Set([
 ]);
 
 type StoredLocator = { section_tipo?: unknown; section_id?: unknown };
-type NodeProperties = Parameters<typeof getDatalist>[1];
+type NodeProperties = Parameters<typeof getEditDatalist>[1];
 
 /** The component's stored locators (keyed by the DATA tipo — WC-020 aliases). */
 function readStoredLocators(context: RelationEmitContext): StoredLocator[] {
@@ -96,21 +96,23 @@ async function buildListItem(
  * Every other mode: the stored locators as entries + the option datalist.
  * Empty → [] (NOT null) so the client's data.entries is always an array
  * (life-cycle suites assert Array.isArray(entries), e.g.
- * test_component_check_box:222). getDatalist is the ONE door: it applies the
- * model's own option source (select_lang → project langs, descriptor
- * `datalistSource`) itself, so the save/temporal echoes that call it cannot
- * diverge from this read.
+ * test_component_check_box:222). getEditDatalist is the ONE edit door: it
+ * applies the model's own option source (select_lang → project langs,
+ * descriptor `datalistSource`) and its edit guard against the stored value
+ * (select_lang → the "<name> *" entry of a non-project lang), so the
+ * save/temporal echoes that call it cannot diverge from this read.
  */
 async function buildOptionsItem(
 	context: RelationEmitContext,
 	storedLocators: StoredLocator[],
 	properties: NodeProperties,
 ): Promise<DataItem> {
-	const datalist = await getDatalist(
+	const datalist = await getEditDatalist(
 		context.ddo.tipo,
 		properties,
 		context.row.section_tipo,
 		context.ddoLang,
+		storedLocators,
 	);
 	const item = buildDataItem(
 		context.ddo.tipo,
