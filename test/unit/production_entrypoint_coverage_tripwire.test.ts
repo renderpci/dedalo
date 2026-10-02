@@ -271,6 +271,10 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	// release's note snapshot — repository files only, like `docs:*`; it never
 	// touches an installation.
 	'changelog',
+	// `libs:gen` / `libs:check` (2026-10-02) render the client-lib version table of
+	// docs/development/vendored_library_versions.md from package.json + the
+	// client_libs registry — repository files only, like `changelog`.
+	'libs',
 	'probe',
 	'publication',
 	'sitebuilder',

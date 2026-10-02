@@ -442,7 +442,8 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		file: 'client/dedalo/core/page/js/worker_cache.js',
 		basis: 'idempotent-actions',
 		actions: ['dd_utils_api:get_dedalo_files'],
-		reason: 'The cache Worker, same single read action and the same reasoning as service_worker.js.',
+		reason:
+			'The cache Worker, same single read action and the same reasoning as service_worker.js.',
 	},
 	{
 		file: 'client/dedalo/core/page/js/page.js',
