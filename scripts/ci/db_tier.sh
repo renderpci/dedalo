@@ -35,6 +35,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
+# shellcheck source=scripts/ci/test_order.sh
+source scripts/ci/test_order.sh
 
 # ---------------------------------------------------------------------------
 # The environment — ONE copy, shared with the instance tier. Every DEDALO_* key the
@@ -207,7 +209,10 @@ echo "== db_tier: DB-backed tripwires (${#DB_TIER_TRIPWIRES[@]})"
 # because Bun 1.4.0 SILENTLY IGNORES `[test] timeout`. These gates are DB-backed, so they are
 # the ones a 5000 ms cap truncates first.
 tw_rc=0
-bun test --timeout=30000 "${DB_TIER_TRIPWIRES[@]}" || tw_rc=$?
+# Sorted `./` paths, never the bare array: a bare name is a bun FILTER run in readdir
+# order (per host). scripts/ci/test_order.sh; gate: tier_file_order_tripwire.
+order_test_paths "${DB_TIER_TRIPWIRES[@]}" || tw_rc=$?
+bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
 [ "$tw_rc" -eq 0 ] || { echo "== db_tier: RED in DB-backed tripwires (exit $tw_rc)"; tier_status=1; }
 
 # ── THE UNIT TIER — the 685 files that used to execute NOWHERE ───────────────

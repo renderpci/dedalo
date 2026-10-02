@@ -22,10 +22,11 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import { Glob } from 'bun';
 import { ciImageFingerprint } from './ci_image.ts';
-import { type FileCounts, type ParityRun, REPO_ROOT, runTier } from './parity_census.ts';
+import { type FileCounts, type ParityRun, REPO_ROOT } from './parity_census.ts';
 import { emitRatchetCheck, type RatchetCheck, wantsCheckJson } from './ratchet_check.ts';
+import { tierFiles } from './test_order.ts';
+import { runTier } from './tier_run.ts';
 
 /** Everything that differs between one ratcheted tier and another. */
 export interface TierSpec {
@@ -183,7 +184,7 @@ export interface TierDrift {
 }
 
 export function generatedBy(spec: TierSpec): string {
-	const command = `bun test ${spec.paths.join(' ')} --timeout=30000`;
+	const command = `bun test --timeout=30000 $(bun scripts/lib/test_order.ts ${spec.paths.join(' ')})`;
 	return `${spec.fixCommand} (runs \`${command}\` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)`;
 }
 
@@ -415,15 +416,9 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
  * from what the tier actually runs.
  */
 function onDiskTestFiles(spec: TierSpec): string[] {
-	const found: string[] = [];
-	for (const path of spec.paths) {
-		const root = join(REPO_ROOT, path);
-		if (!existsSync(root)) continue;
-		for (const match of new Glob('**/*.test.ts').scanSync({ cwd: root })) {
-			found.push(`${path}/${match}`);
-		}
-	}
-	return found.sort();
+	// The census's OWN expansion (scripts/lib/test_order.ts) — one walk, so the
+	// files run and the files expected to report cannot disagree.
+	return tierFiles(spec.paths, REPO_ROOT, { inventory: true });
 }
 
 export function formatDrift(d: TierDrift): string {

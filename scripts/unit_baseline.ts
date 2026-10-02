@@ -69,7 +69,7 @@
  * need the suite database (`bun run test:db:setup`). Expect ~5 minutes.
  */
 
-import { type ParityRun, runTier } from './lib/parity_census.ts';
+import type { ParityRun } from './lib/parity_census.ts';
 import {
 	buildBaseline as buildBaselineFor,
 	computeDrift as computeDriftFor,
@@ -79,6 +79,7 @@ import {
 	type TierDrift,
 	type TierSpec,
 } from './lib/red_baseline.ts';
+import { runTier } from './lib/tier_run.ts';
 
 export { formatDrift } from './lib/red_baseline.ts';
 

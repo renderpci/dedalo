@@ -39,6 +39,7 @@ import { neighbourTests } from './lib/neighbour_tests.ts';
 // `[test] timeout`, so the number has to ride the command line — see
 // scripts/lib/test_flags.ts for the measurement that proves it.
 import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
+import { bunTestFileArgs } from './lib/test_order.ts';
 
 $.throws(false); // we inspect exit codes ourselves; a red stage is data, not a crash
 
@@ -218,6 +219,7 @@ const TRIPWIRES = [
 	'test/unit/account_revocation_native.test.ts',
 	'test/unit/dd128_write_census_tripwire.test.ts',
 	'test/unit/tier_execution_tripwire.test.ts',
+	'test/unit/tier_file_order_tripwire.test.ts',
 	'test/unit/tier_assignment_tripwire.test.ts',
 	'test/unit/site_builder_pairing_tripwire.test.ts',
 	'test/unit/site_builder_single_source_tripwire.test.ts',
@@ -464,7 +466,8 @@ async function runTestFiles(name: string, files: string[], forgiven?: Set<string
 		results.push({ name, ok: true, detail: 'no files' });
 		return;
 	}
-	const r = await $`bun test ${TEST_TIMEOUT_FLAG} ${files}`.quiet();
+	// Sorted `./` paths (scripts/lib/test_order.ts): a bare name is a bun FILTER run in readdir order.
+	const r = await $`bun test ${TEST_TIMEOUT_FLAG} ${bunTestFileArgs(files)}`.quiet();
 	const output = r.stdout.toString() + r.stderr.toString();
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: \x1b is the ANSI escape being stripped
 	const clean = output.replace(/\x1b\[[0-9;]*m/g, '');

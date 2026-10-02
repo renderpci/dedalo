@@ -59,6 +59,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
+# shellcheck source=scripts/ci/test_order.sh
+source scripts/ci/test_order.sh
 
 # Puppeteer is a devDep used only by the client gate (self-hosted); never
 # download Chrome on a hermetic runner.
@@ -183,6 +185,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/deploy_env_contract_tripwire.test.ts
 	test/unit/catalog_behaviour_tripwire.test.ts
 	test/unit/tier_execution_tripwire.test.ts
+	test/unit/tier_file_order_tripwire.test.ts
 	test/unit/tier_assignment_tripwire.test.ts
 	test/unit/docs_current_engine_tripwire.test.ts
 	test/unit/docs_versioning_tripwire.test.ts
@@ -421,7 +424,10 @@ echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 # because Bun 1.4.0 SILENTLY IGNORES `[test] timeout` (measured: 5001.50 ms kill on an 8 s
 # test), which is how the repo ran its whole history under a 5000 ms cap nobody chose.
 tw_rc=0
-bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
+# Sorted `./` paths, never the bare array: a bare name is a bun FILTER run in readdir
+# order (per host). scripts/ci/test_order.sh; gate: tier_file_order_tripwire.
+order_test_paths "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
+bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
 [ "$tw_rc" -eq 0 ] || { echo "== hermetic: RED in static tripwires (exit $tw_rc)"; tier_status=1; }
 
 # THE DEBT LEDGER, APPEND-ONLY AGAINST HISTORY (P2-18 / GATE-22). The crap

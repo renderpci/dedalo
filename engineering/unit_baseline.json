@@ -4193,6 +4193,11 @@
 			"skipped": 0,
 			"assertions": 300
 		},
+		"test/unit/tier_file_order_tripwire.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 35
+		},
 		"test/unit/tier_wiring_tripwire.test.ts": {
 			"tests": 15,
 			"skipped": 0,

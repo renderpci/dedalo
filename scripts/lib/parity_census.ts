@@ -1,7 +1,7 @@
 /**
  * PARITY TIER CENSUS — the ONE measure of which parity tests fail today.
  *
- * It RUNS the tier (`bun test test/parity`, ~7 s, credless: ORACLE_MODE
+ * It RUNS the tier (scripts/lib/tier_run.ts: `bun test` on test/parity's sorted file list, ~7 s, credless: ORACLE_MODE
  * defaults to `fixtures`) under bun's JUnit reporter and parses the report
  * into a per-file, per-TEST-NAME result set. Nothing else in the repo may
  * measure this: the generator (scripts/parity_baseline.ts) and the gate
@@ -17,8 +17,6 @@
  * store and, for some gates, the suite database. It never writes the baseline.
  */
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { testDatabaseName } from '../../test/helpers/test_database.ts';
 import { TEST_TIMEOUT_FLAG } from './test_flags.ts';
@@ -38,8 +36,12 @@ export const TIER_PATH = 'test/parity';
  * would disagree about which parity tests are red — a slow gate would be red in
  * the ratchet and green on the desk, which makes the ratchet a liar. Same
  * constant, one import: scripts/lib/test_flags.ts.
+ *
+ * SO IS THE ORDER. The files run as one codepoint-sorted `./` list (see
+ * `tierArgv`), never as `bun test test/parity` (readdir order, per host), so the
+ * quoted command expands the same list the census ran.
  */
-export const TIER_COMMAND = `bun test ${TIER_PATH} ${TEST_TIMEOUT_FLAG}`;
+export const TIER_COMMAND = `bun test ${TEST_TIMEOUT_FLAG} $(bun scripts/lib/test_order.ts ${TIER_PATH})`;
 
 /** Status of one test case, as JUnit reports it. */
 export type CaseStatus = 'pass' | 'fail' | 'skip';
@@ -354,64 +356,4 @@ export function childEnv(): Record<string, string | undefined> {
 	// forking forever.
 	env.DEDALO_TIER_CENSUS_RUNNING = '1';
 	return env;
-}
-
-export function runParityTier(): ParityRun {
-	return runTier([TIER_PATH]);
-}
-
-/**
- * Run ANY tier under the JUnit reporter and parse it. Generalized from
- * `runParityTier` when the unit tier needed the same measure (P0-1, 2026-08-29) —
- * one runner, so the seam-stripping (`childEnv`) and the timeout can never differ
- * between two tiers that are both meant to be ratcheted the same way.
- */
-export function runTier(paths: string[]): ParityRun {
-	// RECURSION GUARD. A tier whose `paths` include `test/unit` measures the very
-	// directory every gate lives in, so a gate that CALLS this — the natural
-	// `unit_baseline_tripwire` twin of `parity_baseline_tripwire` — would spawn a child
-	// `bun test test/unit`, which runs that gate again, which spawns another: unbounded,
-	// at roughly five minutes per level. The parity tier is safe only by accident of
-	// layout (its paths are `test/parity` while its gate lives in `test/unit`), so the
-	// guard belongs here rather than in either instance.
-	//
-	// Found by adversarial review 2026-08-29, before such a gate was written.
-	if (process.env.DEDALO_TIER_CENSUS_RUNNING === '1') {
-		throw new Error(
-			`tier_census: refusing to run \`bun test ${paths.join(' ')}\` from inside a tier census that is already running. A tier whose paths contain the directory its own gate lives in would recurse without bound; if you are writing that gate, it must read the frozen baseline rather than re-measure the tier.`,
-		);
-	}
-	const dir = mkdtempSync(join(tmpdir(), 'dedalo-tier-census-'));
-	const outfile = join(dir, 'tier.junit.xml');
-	try {
-		const proc = Bun.spawnSync(
-			[
-				'bun',
-				'test',
-				...paths,
-				TEST_TIMEOUT_FLAG,
-				'--reporter=junit',
-				`--reporter-outfile=${outfile}`,
-			],
-			{ cwd: REPO_ROOT, stdout: 'pipe', stderr: 'pipe', env: childEnv() },
-		);
-		let xml: string;
-		try {
-			xml = readFileSync(outfile, 'utf8');
-		} catch {
-			throw new Error(
-				`tier_census: \`bun test ${paths.join(' ')} ${TEST_TIMEOUT_FLAG}\` wrote no JUnit report (exit ${proc.exitCode}). The tier did not run; the census refuses to report an empty result set.\n--- stderr tail ---\n${proc.stderr.toString().split('\n').slice(-25).join('\n')}`,
-			);
-		}
-		const run = parseJunit(xml);
-		run.stderrTail = proc.stderr.toString().split('\n').slice(-40).join('\n');
-		if (run.totals.tests === 0) {
-			throw new Error(
-				`tier_census: \`bun test ${paths.join(' ')} ${TEST_TIMEOUT_FLAG}\` reported ZERO test cases (exit ${proc.exitCode}) — the tier is not being measured. Fix the runner, never the floor.`,
-			);
-		}
-		return run;
-	} finally {
-		rmSync(dir, { recursive: true, force: true });
-	}
 }
