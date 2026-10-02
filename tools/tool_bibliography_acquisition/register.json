@@ -21,6 +21,7 @@
 		{ "lang": "lg-eng", "name": "job_done", "value": "Done." },
 		{ "lang": "lg-eng", "name": "job_working", "value": "Working…" },
 		{ "lang": "lg-eng", "name": "partial_error", "value": "The journal stopped responding partway through ({reason}) — showing the {count} publications fetched before that happened." },
+		{ "lang": "lg-eng", "name": "publications_truncated", "value": "Only the first {count} articles are shown ({more} more were found and left out)." },
 		{ "lang": "lg-eng", "name": "series_prefix", "value": "Series: " },
 		{ "lang": "lg-eng", "name": "series_existing", "value": " (existing record #{id}, will link to it)" },
 		{ "lang": "lg-eng", "name": "series_new", "value": " (new — will be created)" },

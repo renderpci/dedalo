@@ -6,6 +6,11 @@ import { extractArticleIds, extractDownloadUrl, extractGalleyViewUrl } from './p
 
 const METADATA_PREFIX = 'oai_dc';
 const ARTICLE_URL_PATTERN = /\/article\/view\/(\d+)(?:\/\d+)?(?:[/?#].*)?$/i;
+// A listing page's article links are UNBOUNDED input (review item G): one GetRecord fetch per
+// article, each paced at least 3s apart by the harvesting door, so a pathological listing (every
+// article a journal ever published, rather than one issue) would otherwise turn one preview into
+// an hours-long job. Real issues run to a few dozen articles; this leaves wide headroom.
+const MAX_ARTICLES = 200;
 
 /**
  * One GET through the harvesting door - OAI-PMH is spoken by many independent
@@ -114,18 +119,21 @@ export async function acquireArticleSet(
 	};
 
 	let articleIds: string[];
+	let truncatedCount = 0;
 	const singleId = singleArticleId(rawUrl);
 	if (singleId !== null) {
 		articleIds = [singleId];
 	} else {
 		const listing = await fetchOaiPage(rawUrl, onWait);
-		articleIds = extractArticleIds(listing.html);
-		if (articleIds.length === 0) {
+		const found = extractArticleIds(listing.html);
+		if (found.length === 0) {
 			throw new DedaloError('resource.not_found', {
 				publicMessage:
 					'No article links found at this URL - paste a journal homepage, an issue page, or a single article URL.',
 			});
 		}
+		articleIds = found.slice(0, MAX_ARTICLES);
+		truncatedCount = found.length - articleIds.length;
 	}
 
 	const repoId = await repositoryId(baseUrl);
@@ -173,6 +181,7 @@ export async function acquireArticleSet(
 	return {
 		seriesIdentifier: baseUrl,
 		pages,
+		truncatedBy: truncatedCount > 0 ? truncatedCount : undefined,
 		partialError:
 			failureDetails.length > 0
 				? `${failureDetails.length} of ${articleIds.length} article(s) could not be resolved: ${failureDetails.join('; ')}`

@@ -357,7 +357,7 @@ const get_content_data = function(self) {
 							// response_data unwraps it the same as an ordinary response.
 							if (request_failed(sse_response.data)) {
 								info_node.msg_node.textContent = ''
-								container.appendChild(render_error(sse_response.data, 'The request failed.'))
+								container.appendChild(render_error(sse_response.data, self.get_tool_label('request_failed') || 'The request failed.'))
 								return
 							}
 
@@ -408,12 +408,22 @@ const get_content_data = function(self) {
 
 	// Builds the auction status line, lot checklist, and Confirm button from
 	// one successful preview response.
-		const build_review = function(auction, auction_status, lots) {
+		const build_review = function(auction, auction_status, lots, truncated_by) {
 
 			const review_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'review_container'
 			})
+
+				if (truncated_by) {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error_message',
+						text_content	: (self.get_tool_label('lots_truncated') || 'Only the first {count} lots are shown ({more} more were found and left out).')
+							.replace('{count}', lots.length).replace('{more}', truncated_by),
+						parent			: review_container
+					})
+				}
 
 				const auction_line_text = auction
 					? (self.get_tool_label('auction_prefix') || 'Auction: ') + (auction.auctionHouse || '?') + ' #' + (auction.auctionNumber || '?') +
@@ -755,6 +765,14 @@ const get_content_data = function(self) {
 							})
 							return
 						}
+						if (result.skipped) {
+							ui.create_dom_element({
+								element_type	: 'div',
+								text_content	: 'Lot #' + result.section_id + ' — already imported, skipped',
+								parent			: summary
+							})
+							return
+						}
 						const auction_bit = result.auction_section_id
 							? ' — auction #' + result.auction_section_id +
 								(result.auction_created ? ' (created)' : ' (reused)')
@@ -845,12 +863,12 @@ const get_content_data = function(self) {
 						result_container.removeChild(result_container.firstChild)
 					}
 					if (request_failed(response)) {
-						result_container.appendChild(render_error(response, 'The request failed.'))
+						result_container.appendChild(render_error(response, self.get_tool_label('request_failed') || 'The request failed.'))
 						return
 					}
 					const data = response_data(response)
 					const lots = Array.isArray(data.lots) ? data.lots : []
-					result_container.appendChild(build_review(data.auction || null, data.auction_status || null, lots))
+					result_container.appendChild(build_review(data.auction || null, data.auction_status || null, lots, data.lots_truncated_by || 0))
 				}).catch(function(error) {
 					preview_button.classList.remove('loading')
 					console.error('[tool_numisdata_acquisition] preview_html failed:', error)
@@ -864,7 +882,7 @@ const get_content_data = function(self) {
 				stream_id			: 'tool_numisdata_acquisition_preview',
 				on_success			: (data) => {
 					const lots = Array.isArray(data.lots) ? data.lots : []
-					result_container.appendChild(build_review(data.auction || null, data.auction_status || null, lots))
+					result_container.appendChild(build_review(data.auction || null, data.auction_status || null, lots, data.lots_truncated_by || 0))
 				},
 				on_settle			: () => {
 					preview_button.classList.remove('loading')

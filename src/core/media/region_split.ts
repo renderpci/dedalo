@@ -7,9 +7,8 @@
  * whose subject is two similarly-sized objects on a clean background fits
  * (e.g. a scanned document's front/back, two objects photographed together).
  * The first consumer is PHP tool_import_files' crop_50 (the numisdata "split
- * obverse/reverse" script) — see
- * `tools/tool_import_files/server/script_files/numisdata/crop_50.ts` for that
- * orchestrator — but nothing here assumes the subject is a coin.
+ * obverse/reverse" script) — see `src/core/media/tools/crop_coin_pair.ts` for
+ * that orchestrator — but nothing here assumes the subject is a coin.
  */
 
 import { DedaloError } from '../errors/dedalo_error.ts';

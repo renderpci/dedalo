@@ -37,6 +37,7 @@
 		{ "lang": "lg-eng", "name": "include_range", "value": "Include range" },
 		{ "lang": "lg-eng", "name": "exclude_range", "value": "Exclude range" },
 		{ "lang": "lg-eng", "name": "no_lots_found", "value": "No lots found at this URL." },
+		{ "lang": "lg-eng", "name": "lots_truncated", "value": "Only the first {count} lots are shown ({more} more were found and left out)." },
 		{ "lang": "lg-eng", "name": "confirm_import", "value": "Confirm import" },
 		{ "lang": "lg-eng", "name": "nothing_kept", "value": "Every lot is excluded — nothing to import." },
 		{ "lang": "lg-eng", "name": "url_not_detected", "value": "Could not detect this page's URL from the saved file — paste it above manually." },

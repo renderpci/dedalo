@@ -91,6 +91,12 @@ const IMPORT_KEY_DIR = 'bibliography_acquisition';
 
 const ADAPTERS = [ojsOaiAdapter];
 
+// Mirrors ojs_oai/acquisition.ts's MAX_ARTICLES (review item G): preview already caps what it
+// fetches, so a normal client never sends more than this; this is defense in depth against a
+// malformed/adversarial commit_publications payload, same reasoning as commit_lots's own cap in
+// tool_numisdata_acquisition.
+const MAX_PUBLICATIONS = 200;
+
 function assertUrlOption(options: Record<string, unknown>): string {
 	const url = options.url;
 	if (typeof url !== 'string' || url.trim() === '') {
@@ -153,6 +159,7 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 				section_id: existingSeriesSectionId,
 			},
 			partial_error: acquisition.partialError ?? null,
+			publications_truncated_by: acquisition.truncatedBy ?? 0,
 		},
 		{ requestId: toolRequestId(context) },
 	);
@@ -1043,6 +1050,12 @@ async function commitPublications(context: ToolActionContext): Promise<ToolRespo
 			message:
 				'commit_publications requires a non-empty "publications" array (from preview_url, minus any excluded).',
 			publicMessage: 'No publications to import — run Preview first, then keep at least one.',
+		});
+	}
+	if (publications.length > MAX_PUBLICATIONS) {
+		throw new DedaloError('tool.action_failed', {
+			message: `commit_publications received ${publications.length} publications, over the ${MAX_PUBLICATIONS} cap.`,
+			publicMessage: `Too many publications in one batch (${publications.length} > ${MAX_PUBLICATIONS}). Split the import into smaller batches.`,
 		});
 	}
 
