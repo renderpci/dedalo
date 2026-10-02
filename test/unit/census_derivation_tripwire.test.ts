@@ -1043,6 +1043,10 @@ interface ExpectSite {
 	statementPrefix: string;
 }
 
+/** The isolated-gate guard statement (test/helpers/isolated_gate.ts), as it ends the code before its `else {`. */
+const ISOLATED_GATE_GUARD =
+	/if\s*\(\s*!\s*isIsolatedGateChild\(\s*import\.meta\.path\s*\)\s*\)\s*mirrorIsolatedGate\(\s*import\.meta\.path\s*\)\s*;\s*$/;
+
 /**
  * ONE forward pass over the code: every `expect(` outside a literal, with the
  * stack of brackets open around it and, for each, the statement text that
@@ -1065,7 +1069,20 @@ function expectSites(code: string): ExpectSite[] {
 		const ch = code[i] as string;
 		if (ch === '(' || ch === '[' || ch === '{') {
 			const depth = stack.length;
-			stack.push({ ch, header: code.slice(boundary[depth] ?? 0, i) });
+			let header = code.slice(boundary[depth] ?? 0, i);
+			// THE ISOLATED GATE'S BODY IS THE FILE (test/helpers/isolated_gate.ts): the
+			// top-level `else {` after the guard is what the gate's own child process
+			// runs, every time — the tier process mirrors that run. Read it as the
+			// top-level body it is, not as a branch.
+			if (
+				ch === '{' &&
+				depth === 0 &&
+				/^\s*else\s*$/.test(header) &&
+				ISOLATED_GATE_GUARD.test(code.slice(0, boundary[depth] ?? 0))
+			) {
+				header = '';
+			}
+			stack.push({ ch, header });
 			boundary[depth + 1] = i + 1;
 		} else if (ch === ')' || ch === ']' || ch === '}') {
 			stack.pop();
@@ -3784,6 +3801,20 @@ test('y', () => { expect(globalAcc.length).toBeGreaterThan(0); });
 				"expect(files).toBeDefined(); expect(other.length, 'a (msg').toBeGreaterThan(2);",
 			).map((site) => site.argument),
 		).toEqual(["other.length, 'a (msg'"]);
+		// The isolated gate's `else {` body is the file's top level (its child runs it);
+		// any OTHER else-branch is still a branch.
+		const unconditional = (code: string): boolean[] =>
+			floorSites(code).map((site) => site.unconditional);
+		expect(
+			unconditional(
+				"if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path);\nelse {\n\ttest('t', () => { expect(n).toBeGreaterThan(0); });\n}",
+			),
+		).toEqual([true]);
+		expect(
+			unconditional(
+				"if (ready) setup();\nelse {\n\ttest('t', () => { expect(n).toBeGreaterThan(0); });\n}",
+			),
+		).toEqual([false]);
 		expect(numericConstantValue('SOME_FLOOR', ['const SOME_FLOOR = 700;'])).toBe(700);
 		expect(numericConstantValue('SOME_FLOOR', ['const SOME_FLOOR = other;'])).toBeUndefined();
 		// A floor REJECTS AN EMPTY WALK: `>= 0` (literal or through a zero constant) admits one.

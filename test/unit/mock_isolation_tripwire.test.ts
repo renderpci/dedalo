@@ -595,6 +595,55 @@ function namespaceRestoresIn(src: string): string[] {
 	);
 }
 
+/**
+ * RULE 4 — A GATE THAT SUBSTITUTES A CLIENT MODULE RUNS IN ITS OWN PROCESS
+ * (2026-10-02, test/helpers/isolated_gate.ts).
+ *
+ * The client modules under test bind their leaves ONCE per process, and both
+ * substitution mechanisms are process-global (a module mock is never reverted,
+ * a plugin is never unregistered — and Bun's on-disk transpiler cache even
+ * carried a plugin's redirects into LATER processes). Eighteen client gates
+ * re-masked ui.js / events.js in turn and each measured the stubs of whichever
+ * ran before it: ~30 reds in the CI image's readdir order, none in the Mac's.
+ * So a test file that substitutes a module of the client tree (`client/`,
+ * `tools/`) — a `mock.module` of such a path, or any in-process `Bun.plugin` —
+ * must be an isolated gate: it calls BOTH `isIsolatedGateChild(import.meta.path)`
+ * and `mirrorIsolatedGate(import.meta.path)`. A plugin written inside a template
+ * literal (a driver a test spawns as its OWN process) is not in-process and is
+ * not counted.
+ */
+const REPO_DIR = join(TEST_DIR, '..');
+const CLIENT_TREES = [`${join(REPO_DIR, 'client')}/`, `${join(REPO_DIR, 'tools')}/`];
+
+/** What makes `source` (comment-stripped) a client-substituting file, or null. */
+function clientSubstitution(source: string, fileDir: string): string | null {
+	const inProcess = source.replace(/`(?:[^`\\]|\\.)*`/gs, '``');
+	if (/\b(?:Bun\.)?plugin\(\s*\{/.test(inProcess)) return 'Bun.plugin';
+	for (const call of mockCalls(source, fileDir)) {
+		if (CLIENT_TREES.some((tree) => call.id.startsWith(tree))) {
+			return `mock.module(${call.id.slice(REPO_DIR.length + 1)})`;
+		}
+	}
+	return null;
+}
+
+function isIsolatedGate(source: string): boolean {
+	return (
+		/\bisIsolatedGateChild\(\s*import\.meta\.path\s*\)/.test(source) &&
+		/\bmirrorIsolatedGate\(\s*import\.meta\.path\s*\)/.test(source)
+	);
+}
+
+/** Every test file that substitutes a client module, with what it substitutes. */
+function clientSubstitutingFiles(): { file: string; how: string; isolated: boolean }[] {
+	return testFiles().flatMap((file) => {
+		const path = join(TEST_DIR, file);
+		const source = stripComments(readFileSync(path, 'utf8'));
+		const how = clientSubstitution(source, dirname(path));
+		return how === null ? [] : [{ file, how, isolated: isIsolatedGate(source) }];
+	});
+}
+
 describe('mock isolation — one process, so a mock is everyone’s', () => {
 	test('a restore factory returns a SNAPSHOT, never a live module namespace', () => {
 		const offenders = testFiles()
@@ -768,5 +817,36 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 		// File identity is tier-prefixed since the 2026-08-25 widening — a bare
 		// /^client_/ would match nothing and make this count vacuous.
 		expect([...files].filter((f) => !/^unit\/client_/.test(f)).length).toBeGreaterThan(2);
+	});
+
+	test('RULE 4: a gate that substitutes a client module is an ISOLATED gate (its own process)', () => {
+		const found = clientSubstitutingFiles();
+		// Floor: measured 2026-10-02, 19 files substitute a client module.
+		expect(found.length).toBeGreaterThanOrEqual(15);
+		const shared = found.filter((f) => !f.isolated).map((f) => `${f.file} (${f.how})`);
+		expect(
+			shared,
+			'these files replace a client module INSIDE the shared tier process, so every later client gate measures their stubs (file order decides the verdict). Make them isolated gates — test/helpers/isolated_gate.ts:\n  ' +
+				shared.join('\n  '),
+		).toEqual([]);
+	});
+
+	test('POSITIVE CONTROL: rule 4 sees a client mock, an in-process plugin, and not a spawned driver', () => {
+		const dir = join(TEST_DIR, 'unit');
+		expect(
+			clientSubstitution(
+				"const UI = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js', 'ui.js');\nmock.module(UI, () => ({ ui: {} }));",
+				dir,
+			),
+		).toBe('mock.module(client/dedalo/core/common/js/ui.js)');
+		expect(clientSubstitution('plugin({ name: "x", setup() {} });', dir)).toBe('Bun.plugin');
+		expect(clientSubstitution('const driver = `Bun.plugin({ name: "x" })`;', dir)).toBeNull();
+		expect(clientSubstitution("mock.module('../../src/core/x.ts', () => ({}));", dir)).toBeNull();
+		expect(
+			isIsolatedGate(
+				'if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path);',
+			),
+		).toBe(true);
+		expect(isIsolatedGate('mirrorIsolatedGate(import.meta.path);')).toBe(false);
 	});
 });

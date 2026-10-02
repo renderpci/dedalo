@@ -60,6 +60,13 @@ export interface ParityCase {
 	 * hosted db run, not one failure line in the log).
 	 */
 	failure?: string;
+	/**
+	 * The `expect` calls this case executed (bun's per-testcase `assertions`
+	 * attribute), when the report carried it. Read by the isolated-gate mirror
+	 * (test/helpers/isolated_gate.ts), which carries a child's count into the
+	 * parent so the per-file assertion floor still sees it.
+	 */
+	assertions?: number;
 }
 
 /**
@@ -212,6 +219,8 @@ export function parseJunit(xml: string): ParityRun {
 				name: path.join(' > '),
 				status: 'pass',
 			};
+			const asserted = attr(raw, 'assertions');
+			if (asserted !== undefined && /^\d+$/.test(asserted)) parsed.assertions = Number(asserted);
 			if (isSelf) cases.push(parsed);
 			else open = parsed;
 			continue;

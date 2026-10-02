@@ -39,199 +39,211 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { isIsolatedGateChild, mirrorIsolatedGate } from '../helpers/isolated_gate.ts';
 
-const CLIENT_CORE = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core');
-const UI_PATH = join(CLIENT_CORE, 'common', 'js', 'ui.js');
-const EVENTS_PATH = join(CLIENT_CORE, 'common', 'js', 'events.js');
-const VIEW_PATH = join(CLIENT_CORE, 'section_record', 'js', 'view_default_list_section_record.js');
-const INSPECTOR_PATH = join(CLIENT_CORE, 'inspector', 'js', 'render_inspector.js');
+// ISOLATED GATE (test/helpers/isolated_gate.ts): this file substitutes client
+// modules, which are process-global — in the tier's process it only MIRRORS a
+// child run of itself; its body below registers in that child alone.
+if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path);
+else {
+	const CLIENT_CORE = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core');
+	const UI_PATH = join(CLIENT_CORE, 'common', 'js', 'ui.js');
+	const EVENTS_PATH = join(CLIENT_CORE, 'common', 'js', 'events.js');
+	const VIEW_PATH = join(
+		CLIENT_CORE,
+		'section_record',
+		'js',
+		'view_default_list_section_record.js',
+	);
+	const INSPECTOR_PATH = join(CLIENT_CORE, 'inspector', 'js', 'render_inspector.js');
 
-// ────────────────────────────────────────────────────────────────────────────
-// Minimal DOM: exactly the surface this view touches
-// ────────────────────────────────────────────────────────────────────────────
+	// ────────────────────────────────────────────────────────────────────────────
+	// Minimal DOM: exactly the surface this view touches
+	// ────────────────────────────────────────────────────────────────────────────
 
-class FakeNode {
-	tag: string;
-	classes: string[] = [];
-	children: FakeNode[] = [];
-	id = '';
-	constructor(tag: string) {
-		this.tag = tag;
-	}
-	classList = {
-		add: (...names: string[]) => {
-			for (const name of names) if (name && !this.classes.includes(name)) this.classes.push(name);
-		},
-		remove: (...names: string[]) => {
-			this.classes = this.classes.filter((c) => !names.includes(c));
-		},
-		contains: (name: string) => this.classes.includes(name),
-	};
-	appendChild(child: FakeNode): FakeNode {
-		// a fragment splices its children in, as the real DOM does
-		if (child instanceof FakeFragment) {
-			this.children.push(...child.children);
-			child.children = [];
+	class FakeNode {
+		tag: string;
+		classes: string[] = [];
+		children: FakeNode[] = [];
+		id = '';
+		constructor(tag: string) {
+			this.tag = tag;
+		}
+		classList = {
+			add: (...names: string[]) => {
+				for (const name of names) if (name && !this.classes.includes(name)) this.classes.push(name);
+			},
+			remove: (...names: string[]) => {
+				this.classes = this.classes.filter((c) => !names.includes(c));
+			},
+			contains: (name: string) => this.classes.includes(name),
+		};
+		appendChild(child: FakeNode): FakeNode {
+			// a fragment splices its children in, as the real DOM does
+			if (child instanceof FakeFragment) {
+				this.children.push(...child.children);
+				child.children = [];
+				return child;
+			}
+			this.children.push(child);
 			return child;
 		}
-		this.children.push(child);
-		return child;
+		addEventListener() {}
 	}
-	addEventListener() {}
-}
 
-class FakeFragment extends FakeNode {
-	constructor() {
-		super('#fragment');
+	class FakeFragment extends FakeNode {
+		constructor() {
+			super('#fragment');
+		}
 	}
-}
 
-/** Mirrors the real factory's option subset used by this module. */
-const fake_create_dom_element = (options: Record<string, unknown>) => {
-	const node = new FakeNode(String(options.element_type ?? 'div'));
-	if (options.class_name) node.classList.add(...String(options.class_name).split(' '));
-	if (options.id) node.id = String(options.id);
-	const parent = options.parent as FakeNode | undefined;
-	if (parent) parent.appendChild(node);
-	return node;
-};
-
-const globals = globalThis as unknown as Record<string, unknown>;
-const saved: Record<string, unknown> = {};
-
-type ViewModule = {
-	view_default_list_section_record: {
-		render: (self: unknown, options: unknown) => Promise<unknown>;
+	/** Mirrors the real factory's option subset used by this module. */
+	const fake_create_dom_element = (options: Record<string, unknown>) => {
+		const node = new FakeNode(String(options.element_type ?? 'div'));
+		if (options.class_name) node.classList.add(...String(options.class_name).split(' '));
+		if (options.id) node.id = String(options.id);
+		const parent = options.parent as FakeNode | undefined;
+		if (parent) parent.appendChild(node);
+		return node;
 	};
-};
 
-let view_module: ViewModule;
+	const globals = globalThis as unknown as Record<string, unknown>;
+	const saved: Record<string, unknown> = {};
 
-/**
- * A section_record double. `destroy_on_columns` reproduces the race exactly:
- * the concurrent reload lands while `get_ar_columns_instances_list()` is awaited,
- * so `caller` is already null when the column loop resumes.
- */
-const make_section_record = (options: { destroy_on_columns: boolean }) => {
-	const self = {
-		id: 'sr_test',
-		model: 'section_record',
-		tipo: 'dd15',
-		mode: 'list',
-		context: { view: 'line' },
-		caller: { model: 'section', permissions: 3 } as { model: string } | null,
-		// a zero-instance column: the exact path through render_empty_column_node
-		columns_map: [{ id: 'dd1574', label: 'Value' }],
-		get_ar_columns_instances_list: async () => {
-			await Promise.resolve();
-			if (options.destroy_on_columns) {
-				// what common.js do_delete_self does to every owned instance
-				self.caller = null;
-			}
-			return [];
-		},
+	type ViewModule = {
+		view_default_list_section_record: {
+			render: (self: unknown, options: unknown) => Promise<unknown>;
+		};
 	};
-	return self;
-};
 
-beforeAll(async () => {
-	for (const key of ['document', 'SHOW_DEBUG', 'window', 'DocumentFragment'])
-		saved[key] = globals[key];
+	let view_module: ViewModule;
 
-	const fake_document = new FakeNode('#document');
-	(fake_document as unknown as Record<string, unknown>).createElement = (tag: string) =>
-		new FakeNode(tag);
-	globals.document = fake_document;
-	globals.SHOW_DEBUG = false;
-	globals.window = globalThis;
-	globals.DocumentFragment = FakeFragment;
+	/**
+	 * A section_record double. `destroy_on_columns` reproduces the race exactly:
+	 * the concurrent reload lands while `get_ar_columns_instances_list()` is awaited,
+	 * so `caller` is already null when the column loop resumes.
+	 */
+	const make_section_record = (options: { destroy_on_columns: boolean }) => {
+		const self = {
+			id: 'sr_test',
+			model: 'section_record',
+			tipo: 'dd15',
+			mode: 'list',
+			context: { view: 'line' },
+			caller: { model: 'section', permissions: 3 } as { model: string } | null,
+			// a zero-instance column: the exact path through render_empty_column_node
+			columns_map: [{ id: 'dd1574', label: 'Value' }],
+			get_ar_columns_instances_list: async () => {
+				await Promise.resolve();
+				if (options.destroy_on_columns) {
+					// what common.js do_delete_self does to every owned instance
+					self.caller = null;
+				}
+				return [];
+			},
+		};
+		return self;
+	};
 
-	// (!) The real ui.js imports core/tools_common/js/tool_common.js, a SERVING
-	// seam with no relative path on disk — mocking it is the only way to import
-	// the module under test. Same reason as client_upload_queue_render.test.ts.
-	mock.module(UI_PATH, () => ({
-		ui: {
-			create_dom_element: fake_create_dom_element,
-			make_column_responsive: () => true,
-		},
-	}));
-	// OVERRIDE, NEVER REPLACE. `mock.module` is process-global and bun test
-	// shares one process, so a mock that returns only the exports THIS file
-	// happens to use silently truncates the module for every other file that
-	// imports it — they then fail at import with "Export named 'x' not found",
-	// nowhere near the cause. Measured 2026-08-21: this mock hid
-	// `dd_request_idle_callback` from client_upload_queue_render. Spreading the
-	// real module keeps the surface whole and still stubs what this file needs.
-	const real_events = (await import(EVENTS_PATH)) as Record<string, unknown>;
-	mock.module(EVENTS_PATH, () => ({
-		...real_events,
-		when_in_dom: () => true,
-	}));
+	beforeAll(async () => {
+		for (const key of ['document', 'SHOW_DEBUG', 'window', 'DocumentFragment'])
+			saved[key] = globals[key];
 
-	view_module = (await import(VIEW_PATH)) as ViewModule;
-});
+		const fake_document = new FakeNode('#document');
+		(fake_document as unknown as Record<string, unknown>).createElement = (tag: string) =>
+			new FakeNode(tag);
+		globals.document = fake_document;
+		globals.SHOW_DEBUG = false;
+		globals.window = globalThis;
+		globals.DocumentFragment = FakeFragment;
 
-afterAll(() => {
-	for (const key of Object.keys(saved)) {
-		if (saved[key] === undefined) delete globals[key];
-		else globals[key] = saved[key];
-	}
-	mock.restore();
-});
+		// (!) The real ui.js imports core/tools_common/js/tool_common.js, a SERVING
+		// seam with no relative path on disk — mocking it is the only way to import
+		// the module under test. Same reason as client_upload_queue_render.test.ts.
+		mock.module(UI_PATH, () => ({
+			ui: {
+				create_dom_element: fake_create_dom_element,
+				make_column_responsive: () => true,
+			},
+		}));
+		// OVERRIDE, NEVER REPLACE. `mock.module` is process-global and bun test
+		// shares one process, so a mock that returns only the exports THIS file
+		// happens to use silently truncates the module for every other file that
+		// imports it — they then fail at import with "Export named 'x' not found",
+		// nowhere near the cause. Measured 2026-08-21: this mock hid
+		// `dd_request_idle_callback` from client_upload_queue_render. Spreading the
+		// real module keeps the surface whole and still stubs what this file needs.
+		const real_events = (await import(EVENTS_PATH)) as Record<string, unknown>;
+		mock.module(EVENTS_PATH, () => ({
+			...real_events,
+			when_in_dom: () => true,
+		}));
 
-describe('section_record row render — destroy mid-render', () => {
-	test('the healthy row still renders its columns', async () => {
-		const self = make_section_record({ destroy_on_columns: false });
-
-		const node = (await view_module.view_default_list_section_record.render(self, {
-			add_hilite_row: true,
-		})) as FakeNode;
-
-		expect(node).toBeInstanceOf(FakeNode);
-		expect(node.id).toBe('sr_test');
-		// the empty placeholder column keeps the grid aligned
-		expect(node.children.length).toBe(1);
-		expect(node.children[0]?.classes).toContain('empty');
+		view_module = (await import(VIEW_PATH)) as ViewModule;
 	});
 
-	test('a row destroyed across the await resolves instead of throwing', async () => {
-		const self = make_section_record({ destroy_on_columns: true });
-
-		// Before the fix this rejected with
-		// "Cannot read properties of null (reading 'model')" out of
-		// render_empty_column_node, leaving the inspector panel on `loading`.
-		const node = (await view_module.view_default_list_section_record.render(self, {
-			add_hilite_row: true,
-		})) as FakeNode;
-
-		expect(node).toBeInstanceOf(FakeNode);
-		expect(self.caller).toBeNull();
-		// the node is orphaned — the WINNING render owns the DOM, so this one
-		// deliberately carries no columns
-		expect(node.children.length).toBe(0);
-	});
-});
-
-describe('load_time_machine_list serializes its two triggers', () => {
-	const source = readFileSync(INSPECTOR_PATH, 'utf8');
-
-	test('the exported entry point chains through self.tm_list_loading', () => {
-		const entry = source.slice(source.indexOf('export const load_time_machine_list'));
-		const body = entry.slice(0, entry.indexOf('}//end load_time_machine_list'));
-
-		expect(body).toContain('self.tm_list_loading');
-		// the previous load is awaited BEFORE the run that destroys self.tm_list
-		expect(body).toContain('load_time_machine_list_run(self)');
-		// a failed load must not poison the chain for every later trigger
-		expect(body).toMatch(/\.catch\(/);
-		// the destroy lives in the serialized run, never in the entry point
-		expect(body).not.toContain('self.tm_list.destroy');
+	afterAll(() => {
+		for (const key of Object.keys(saved)) {
+			if (saved[key] === undefined) delete globals[key];
+			else globals[key] = saved[key];
+		}
+		mock.restore();
 	});
 
-	test('the destroy that nullifies section_record callers is inside the serialized run', () => {
-		const run = source.slice(source.indexOf('const load_time_machine_list_run'));
-		const body = run.slice(0, run.indexOf('}//end load_time_machine_list_run'));
+	describe('section_record row render — destroy mid-render', () => {
+		test('the healthy row still renders its columns', async () => {
+			const self = make_section_record({ destroy_on_columns: false });
 
-		expect(body).toContain('self.tm_list.destroy');
+			const node = (await view_module.view_default_list_section_record.render(self, {
+				add_hilite_row: true,
+			})) as FakeNode;
+
+			expect(node).toBeInstanceOf(FakeNode);
+			expect(node.id).toBe('sr_test');
+			// the empty placeholder column keeps the grid aligned
+			expect(node.children.length).toBe(1);
+			expect(node.children[0]?.classes).toContain('empty');
+		});
+
+		test('a row destroyed across the await resolves instead of throwing', async () => {
+			const self = make_section_record({ destroy_on_columns: true });
+
+			// Before the fix this rejected with
+			// "Cannot read properties of null (reading 'model')" out of
+			// render_empty_column_node, leaving the inspector panel on `loading`.
+			const node = (await view_module.view_default_list_section_record.render(self, {
+				add_hilite_row: true,
+			})) as FakeNode;
+
+			expect(node).toBeInstanceOf(FakeNode);
+			expect(self.caller).toBeNull();
+			// the node is orphaned — the WINNING render owns the DOM, so this one
+			// deliberately carries no columns
+			expect(node.children.length).toBe(0);
+		});
 	});
-});
+
+	describe('load_time_machine_list serializes its two triggers', () => {
+		const source = readFileSync(INSPECTOR_PATH, 'utf8');
+
+		test('the exported entry point chains through self.tm_list_loading', () => {
+			const entry = source.slice(source.indexOf('export const load_time_machine_list'));
+			const body = entry.slice(0, entry.indexOf('}//end load_time_machine_list'));
+
+			expect(body).toContain('self.tm_list_loading');
+			// the previous load is awaited BEFORE the run that destroys self.tm_list
+			expect(body).toContain('load_time_machine_list_run(self)');
+			// a failed load must not poison the chain for every later trigger
+			expect(body).toMatch(/\.catch\(/);
+			// the destroy lives in the serialized run, never in the entry point
+			expect(body).not.toContain('self.tm_list.destroy');
+		});
+
+		test('the destroy that nullifies section_record callers is inside the serialized run', () => {
+			const run = source.slice(source.indexOf('const load_time_machine_list_run'));
+			const body = run.slice(0, run.indexOf('}//end load_time_machine_list_run'));
+
+			expect(body).toContain('self.tm_list.destroy');
+		});
+	});
+}
