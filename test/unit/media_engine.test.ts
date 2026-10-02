@@ -118,6 +118,9 @@ describe('ffmpeg argv recipes (PHP class.Ffmpeg.php)', () => {
 		expect(s).toContain('-ar 44100');
 		expect(s).toContain('-ab 64k');
 		expect(s).toContain('-ac 1');
+		// A failing pass 2 must report its ERROR line, not a stderr tail of banner
+		// and per-frame stats (logging only: output bytes are unchanged).
+		expect(s).toContain('-loglevel error -y /tmp.mp4');
 		expect(argv[argv.length - 1]).toBe('/tmp.mp4');
 	});
 

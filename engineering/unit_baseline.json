@@ -2513,6 +2513,11 @@
 			"skipped": 0,
 			"assertions": 83
 		},
+		"test/unit/media_probe_cache_per_binary_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 17
+		},
 		"test/unit/media_processing.test.ts": {
 			"tests": 24,
 			"skipped": 0,
