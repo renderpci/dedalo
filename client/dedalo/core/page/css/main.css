@@ -7066,6 +7066,9 @@ body:has(.assistant_container.standalone.show) {
     --floating_dock_right: calc(var(--inspector_width, 19rem) + 1.5rem);
   }
 }
+body:has(.component_av.view_viewer) {
+  --floating_dock_bottom: 4.75rem;
+}
 /**
 * error_report_tab
 *
@@ -21739,21 +21742,35 @@ body.inspector_resizing {
 }
 .component_av.view_viewer {
   background-color: var(--color_black);
-  position: absolute;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+.component_av.view_viewer .content_data {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
 }
-.component_av.view_viewer > .content_data {
-  height: unset;
+.component_av.view_viewer video.posterframe {
+  display: block;
   width: 100%;
-  text-align: center;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  outline: none;
+  background-color: var(--color_black);
 }
-.component_av.view_viewer > .content_data video {
-  width: 100%;
-  max-height: 82vh;
+.component_av.view_viewer video.posterframe:focus {
+  outline: none;
+  box-shadow: none;
+}
+.component_av.view_viewer video.posterframe:focus-visible {
+  outline: 2px solid var(--color_orange_dedalo);
+  outline-offset: -2px;
 }
 .component_av_mini {
   display: inline-block;

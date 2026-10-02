@@ -123,3 +123,10 @@ body:has(.assistant_container.standalone.show) {
 		--floating_dock_right: calc(var(--inspector_width, 19rem) + 1.5rem);
 	}
 }
+
+// AV viewer popup: the native media control bar spans the full bottom edge
+// (the video is a full-bleed stage, component_av.less .view_viewer), so the
+// dock rises above it instead of covering the menu/fullscreen buttons.
+body:has(.component_av.view_viewer) {
+	--floating_dock_bottom: 4.75rem;
+}

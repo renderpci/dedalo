@@ -192,11 +192,16 @@ const get_content_data = function(self) {
 		image.draggable = false
 		image.loading = 'lazy'
 		// tells handler_open_viewer window dimensions
-		// AV uses 860 px height (taller than the default 720) to better fit
-		// widescreen video aspect ratios in the popup viewer.
+		// The viewer is a full-bleed stage, so the popup takes the thumbnail's
+		// ratio (read at click time, once loaded); 16:9 until then. The viewer
+		// refits it to the real stream ratio on loadedmetadata.
 		image.open_window_features = {
 			width	: 1024,
-			height	: 860
+			get height() {
+				return image.naturalWidth && image.naturalHeight
+					? Math.round(1024 * image.naturalHeight / image.naturalWidth)
+					: 576
+			}
 		}
 
 		// load event
