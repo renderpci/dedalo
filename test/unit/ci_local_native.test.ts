@@ -46,8 +46,12 @@
  *      only with a `--reason`; both record keys ALWAYS set explicitly (a shell export never
  *      turns a check into a write); and EXECUTED — db_tier.sh's own pinned stage block runs
  *      in bash with `bun`/`cp` stubbed: record mode runs the WRITER (never --check), passes
- *      --allow-regression only on ALLOW=1, copies out only a write that was not refused and
- *      raises the tier on a refusal; with the keys off it runs the check.
+ *      --allow-regression only on ALLOW=1, `--record-new <files>` only on NEW=<files>, copies
+ *      out only a write that was not refused and raises the tier on a refusal; with the keys
+ *      off it runs the check. The recording reaches the checkout only from a GREEN db tier
+ *      (recordCopyFault), and `--ref` must be this checkout's HEAD on a clean tree
+ *      (recordRefFault). `--new <files>` takes only unit-tier test paths, never beside
+ *      --allow-regression.
  *
  * HERMETIC: a scratch git repo under the OS temp dir, and repo files read. No DB, no
  * docker, no network, no repo file written. Every git spawned here gets NO GIT_* variable.
@@ -77,7 +81,11 @@ import {
 	gitScrubbedEnv,
 	parseStages,
 	recordArgsFault,
+	recordCopyFault,
 	recordEnv,
+	recordNewFiles,
+	recordRefFault,
+	type Stage,
 	TIERS,
 	type TierResult,
 	workingTreeLists,
@@ -639,9 +647,10 @@ describe('--skip-advisory — the desk skips ONLY a stage that cannot fail its t
 			'if [ -n "${DEDALO_CI_UNIT_RECORD_OUT:-}" ]; then',
 			'\techo "== db_tier: RECORDING engineering/unit_baseline.json (ci:local --record-unit-baseline)"',
 			'\trecord_rc=0',
-			"\trecord_allow=''",
-			'\t[ "${DEDALO_CI_UNIT_RECORD_ALLOW:-0}" != 1 ] || record_allow=--allow-regression',
-			'\tbun run scripts/unit_baseline.ts $record_allow || record_rc=$?',
+			"\trecord_args=''",
+			'\t[ "${DEDALO_CI_UNIT_RECORD_ALLOW:-0}" != 1 ] || record_args=--allow-regression',
+			'\t[ -z "${DEDALO_CI_UNIT_RECORD_NEW:-}" ] || record_args="--record-new ${DEDALO_CI_UNIT_RECORD_NEW}"',
+			'\tbun run scripts/unit_baseline.ts $record_args || record_rc=$?',
 			'\t[ "$record_rc" -eq 0 ] || { echo "== db_tier: RED in the unit-baseline recording (exit $record_rc) — nothing copied out"; tier_status=1; }',
 			'\t[ "$record_rc" -ne 0 ] || cp engineering/unit_baseline.json "$DEDALO_CI_UNIT_RECORD_OUT/unit_baseline.json"',
 			`elif [ "\${${KEY}:-0}" = 1 ]; then`,
@@ -702,27 +711,118 @@ describe('--record-unit-baseline — the unit baseline is recorded IN THE IMAGE,
 		);
 	});
 
+	test('--new <files>: unit-tier test paths only, never beside --allow-regression, never alone', () => {
+		const rec = ['--docker', '--record-unit-baseline'];
+		const NEW = 'test/unit/zz_new_native.test.ts';
+		expect(recordArgsFault(args(rec, { '--new': NEW }))).toBeNull();
+		expect(
+			recordArgsFault(args(rec, { '--new': `${NEW}, test/integration/a/b_flow.test.ts` })),
+		).toBeNull();
+		expect(recordArgsFault(args(['--docker'], { '--new': NEW }))).toMatch(
+			/belong to --record-unit-baseline/,
+		);
+		expect(
+			recordArgsFault(args([...rec, '--allow-regression'], { '--new': NEW, '--reason': REASON })),
+		).toMatch(/nothing to accept/);
+		expect(recordArgsFault(args(rec, { '--new': ' , ' }))).toMatch(/needs <file>/);
+		// Shapes db_tier.sh's word split could not carry exactly, or that are not unit files.
+		for (const bad of [
+			'test/client/x.test.ts',
+			'test/unit/a b.test.ts',
+			'test/unit/*.test.ts',
+			'test/unit/../../x.test.ts',
+			'test/unit/x.ts',
+			'/abs/test/unit/x.test.ts',
+			'test/unit/$(x).test.ts',
+		])
+			expect(recordArgsFault(args(rec, { '--new': bad })), bad).toContain(bad);
+		expect(recordNewFiles(undefined)).toEqual([]);
+		expect(recordNewFiles(`${NEW},,test/unit/b.test.ts `)).toEqual([NEW, 'test/unit/b.test.ts']);
+	});
+
+	test('--ref must be THIS checkout: HEAD on a clean tree — the measure is written here', () => {
+		const head = 'a'.repeat(40);
+		expect(recordRefFault(undefined, head, head, true)).toBeNull();
+		expect(recordRefFault('HEAD', head, head, false)).toBeNull();
+		expect(recordRefFault('v7.0.1', 'b'.repeat(40), head, false)).toMatch(
+			/not this checkout's HEAD/,
+		);
+		expect(recordRefFault('HEAD', head, head, true)).toMatch(/working tree has changes/);
+	});
+
+	test('the recording reaches the checkout only from a GREEN db tier — any red stage refuses, loudly', () => {
+		const stage = (name: string, verdict: Stage['verdict']): Stage => ({
+			name,
+			verdict,
+			fix_hint: null,
+			failures: [],
+			notes: [],
+			drift: [],
+			lines: [],
+		});
+		const tier = (exit: number, stages: Stage[]): TierResult => ({
+			tier: 'db',
+			verdict: exit === 0 ? 'green' : 'red',
+			exit_code: exit,
+			duration_s: 1,
+			stages,
+		});
+		const recording = stage('recording engineering/unit_baseline.json', 'green');
+		expect(recordCopyFault(tier(0, [recording, stage('parity tier', 'green')]))).toBeNull();
+		// The writer wrote, but a LATER stage went red: the platform was not healthy.
+		const red = recordCopyFault(tier(1, [recording, stage('parity tier vs baseline', 'red')]));
+		expect(red).toContain('RED');
+		expect(red).toContain('parity tier vs baseline');
+		// An EARLIER red too (a DB tripwire), and a red exit no stage claimed.
+		expect(recordCopyFault(tier(1, [stage('DB tripwires', 'red'), recording]))).toContain(
+			'DB tripwires',
+		);
+		expect(recordCopyFault(tier(1, [recording]))).toContain('exit 1');
+		expect(recordCopyFault(undefined)).toContain('never ran');
+	});
+
 	test('both record keys are ALWAYS set — off is explicit, so a shell export never turns a check into a write', () => {
+		const NEW_OFF = { DEDALO_CI_UNIT_RECORD_NEW: '' };
 		expect(recordEnv(args([]), CONTAINER_OUT)).toEqual({
 			DEDALO_CI_UNIT_RECORD_OUT: '',
 			DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+			...NEW_OFF,
 		});
 		expect(recordEnv(args(['--allow-regression']), CONTAINER_OUT)).toEqual({
 			DEDALO_CI_UNIT_RECORD_OUT: '',
 			DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+			...NEW_OFF,
 		});
 		expect(recordEnv(args(['--record-unit-baseline']), CONTAINER_OUT)).toEqual({
 			DEDALO_CI_UNIT_RECORD_OUT: '/ci-out',
 			DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+			...NEW_OFF,
 		});
 		expect(
 			recordEnv(args(['--record-unit-baseline', '--allow-regression']), CONTAINER_OUT),
-		).toEqual({ DEDALO_CI_UNIT_RECORD_OUT: '/ci-out', DEDALO_CI_UNIT_RECORD_ALLOW: '1' });
+		).toEqual({
+			DEDALO_CI_UNIT_RECORD_OUT: '/ci-out',
+			DEDALO_CI_UNIT_RECORD_ALLOW: '1',
+			...NEW_OFF,
+		});
+		// --new reaches the tier only on a recording, space-joined for db_tier.sh's split.
+		const files = 'test/unit/a.test.ts,test/unit/b.test.ts';
+		expect(recordEnv(args(['--record-unit-baseline'], { '--new': files }), CONTAINER_OUT)).toEqual({
+			DEDALO_CI_UNIT_RECORD_OUT: '/ci-out',
+			DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+			DEDALO_CI_UNIT_RECORD_NEW: 'test/unit/a.test.ts test/unit/b.test.ts',
+		});
+		expect(recordEnv(args([], { '--new': files }), CONTAINER_OUT)).toEqual({
+			DEDALO_CI_UNIT_RECORD_OUT: '',
+			DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+			...NEW_OFF,
+		});
 		// The compose file passes both through, and gives /ci-out its writable mount while
 		// every source mount stays read-only.
 		const compose = readFileSync(join(REPO_ROOT, 'ci/compose.yml'), 'utf8');
 		expect(compose).toContain('DEDALO_CI_UNIT_RECORD_OUT: ${DEDALO_CI_UNIT_RECORD_OUT:-}');
 		expect(compose).toContain('DEDALO_CI_UNIT_RECORD_ALLOW: ${DEDALO_CI_UNIT_RECORD_ALLOW:-0}');
+		expect(compose).toContain('DEDALO_CI_UNIT_RECORD_NEW: ${DEDALO_CI_UNIT_RECORD_NEW:-}');
 		expect(compose).toContain(`\${DEDALO_CI_OUT:?set by scripts/ci_local.ts}:${CONTAINER_OUT}\n`);
 		const mounts = compose.split('\n').filter((line) => /^\s+- \$\{DEDALO_CI_[A-Z]+:\?/.test(line));
 		expect(mounts.filter((line) => !line.endsWith(':ro'))).toEqual([
@@ -759,7 +859,11 @@ describe('--record-unit-baseline — the unit baseline is recorded IN THE IMAGE,
 				expect(proc.exitCode).toBe(0);
 				return readFileSync(log, 'utf8').trim().split('\n');
 			};
-			const off = { DEDALO_CI_UNIT_RECORD_OUT: '', DEDALO_CI_UNIT_RECORD_ALLOW: '0' };
+			const off = {
+				DEDALO_CI_UNIT_RECORD_OUT: '',
+				DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+				DEDALO_CI_UNIT_RECORD_NEW: '',
+			};
 			expect(drive({ ...off, DEDALO_CI_SKIP_ADVISORY: '0' })).toEqual([
 				'bun run scripts/unit_baseline.ts --check',
 				'tier_status=0',
@@ -769,7 +873,11 @@ describe('--record-unit-baseline — the unit baseline is recorded IN THE IMAGE,
 				'bun run scripts/unit_baseline.ts --check',
 				'tier_status=0',
 			]);
-			const rec = { DEDALO_CI_UNIT_RECORD_OUT: '/ci-out', DEDALO_CI_UNIT_RECORD_ALLOW: '0' };
+			const rec = {
+				DEDALO_CI_UNIT_RECORD_OUT: '/ci-out',
+				DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+				DEDALO_CI_UNIT_RECORD_NEW: '',
+			};
 			expect(drive(rec)).toEqual([
 				'bun run scripts/unit_baseline.ts',
 				'cp engineering/unit_baseline.json /ci-out/unit_baseline.json',
@@ -777,6 +885,18 @@ describe('--record-unit-baseline — the unit baseline is recorded IN THE IMAGE,
 			]);
 			expect(drive({ ...rec, DEDALO_CI_UNIT_RECORD_ALLOW: '1' })).toEqual([
 				'bun run scripts/unit_baseline.ts --allow-regression',
+				'cp engineering/unit_baseline.json /ci-out/unit_baseline.json',
+				'tier_status=0',
+			]);
+			// NEW alone records nothing; with OUT it runs --record-new, one argument per file.
+			expect(drive({ ...off, DEDALO_CI_UNIT_RECORD_NEW: 'test/unit/a.test.ts' })).toEqual([
+				'bun run scripts/unit_baseline.ts --check',
+				'tier_status=0',
+			]);
+			expect(
+				drive({ ...rec, DEDALO_CI_UNIT_RECORD_NEW: 'test/unit/a.test.ts test/unit/b.test.ts' }),
+			).toEqual([
+				'bun run scripts/unit_baseline.ts --record-new test/unit/a.test.ts test/unit/b.test.ts',
 				'cp engineering/unit_baseline.json /ci-out/unit_baseline.json',
 				'tier_status=0',
 			]);

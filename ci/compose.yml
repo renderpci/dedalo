@@ -86,6 +86,7 @@ x-github-env: &github-env
   # Record mode of db_tier.sh's unit stage — ci:local --record-unit-baseline only.
   DEDALO_CI_UNIT_RECORD_OUT: ${DEDALO_CI_UNIT_RECORD_OUT:-}
   DEDALO_CI_UNIT_RECORD_ALLOW: ${DEDALO_CI_UNIT_RECORD_ALLOW:-0}
+  DEDALO_CI_UNIT_RECORD_NEW: ${DEDALO_CI_UNIT_RECORD_NEW:-}
 
 x-runner: &runner
   image: ${DEDALO_CI_IMAGE_REF:-dedalo-ci:local}

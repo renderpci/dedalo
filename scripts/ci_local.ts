@@ -85,6 +85,8 @@
  *                                 # it cannot change the verdict, and the runner still runs it
  *   bun run ci:local --docker --record-unit-baseline [--allow-regression --reason "<why>"]
  *                                 # RECORD engineering/unit_baseline.json in the CI image
+ *   bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]
+ *                                 # record ONLY new files' floors (unit_baseline --record-new)
  *
  * RECORDING THE UNIT BASELINE (`--record-unit-baseline`, --docker only). The unit tier's
  * per-file floors and red set are a fact about the IMAGE (its toolchain, its uid, the
@@ -97,7 +99,11 @@
  * read-only. `--allow-regression` requires `--reason` (the commit message carries it; the
  * writer prints every regression it accepted). Host mode refuses the flag, and the
  * writer itself refuses outside the image (UNIT_TIER.recordOnlyInCiImage) — a Mac
- * recording is impossible from either door.
+ * recording is impossible from either door. `--new <files>` swaps the full writer for
+ * `--record-new` (a new test file's floor, nothing else; refuses a red). The written file
+ * is copied into the checkout only when the WHOLE db tier is green (recordCopyFault), and
+ * `--ref` must name this checkout's HEAD on a clean tree (recordRefFault) — the recording
+ * is written into this tree, so it must have measured this tree.
  *
  * The db and instance tiers each DROP AND REBUILD their own suite database. In host mode
  * that is `dedalo_ci_test` on your Postgres (distinct from the one `bun run
@@ -191,7 +197,7 @@ const BOOLEAN_FLAGS = new Set([
 	'--help',
 	'-h',
 ]);
-const VALUE_FLAGS = new Set(['--summary', '--ref', '--base', '--audit-base', '--reason']);
+const VALUE_FLAGS = new Set(['--summary', '--ref', '--base', '--audit-base', '--reason', '--new']);
 
 interface Args {
 	flags: Set<string>;
@@ -289,15 +295,39 @@ export const CONTAINER_OUT = '/ci-out';
  * a check into a write. `out` is the directory the TIER sees: /ci-out in the container.
  */
 export function recordEnv(
-	args: Pick<Args, 'flags'>,
+	args: Pick<Args, 'flags'> & { values?: ReadonlyMap<string, string> },
 	out: string,
-): { DEDALO_CI_UNIT_RECORD_OUT: string; DEDALO_CI_UNIT_RECORD_ALLOW: '0' | '1' } {
+): {
+	DEDALO_CI_UNIT_RECORD_OUT: string;
+	DEDALO_CI_UNIT_RECORD_ALLOW: '0' | '1';
+	DEDALO_CI_UNIT_RECORD_NEW: string;
+} {
 	const recording = args.flags.has('--record-unit-baseline');
+	const fresh = recording ? recordNewFiles(args.values?.get('--new')) : [];
 	return {
 		DEDALO_CI_UNIT_RECORD_OUT: recording ? out : '',
 		DEDALO_CI_UNIT_RECORD_ALLOW: recording && args.flags.has('--allow-regression') ? '1' : '0',
+		// Space-joined for db_tier.sh's word split — recordArgsFault admits only paths with
+		// no space or glob character, so the split is exact.
+		DEDALO_CI_UNIT_RECORD_NEW: fresh.join(' '),
 	};
 }
+
+/** `--new a,b` → the files a `--record-new` recording names (empty when not given). */
+export function recordNewFiles(value: string | undefined): string[] {
+	if (value === undefined) return [];
+	return value
+		.split(',')
+		.map((file) => file.trim())
+		.filter((file) => file !== '');
+}
+
+/**
+ * A `--new` path the recording may pass through db_tier.sh's word split: a unit-tier test
+ * file (test/unit or test/integration), repo-relative, no `..`, no space, no glob or
+ * shell character. Anything else is refused before docker starts.
+ */
+const RECORD_NEW_PATH = /^test\/(?:unit|integration)\/[A-Za-z0-9_-][A-Za-z0-9_./-]*\.test\.ts$/;
 
 /**
  * The flag combinations a recording refuses, as the message, or null. A recording is the
@@ -310,8 +340,12 @@ export function recordEnv(
 export function recordArgsFault(args: Args): string | null {
 	const recording = args.flags.has('--record-unit-baseline');
 	if (!recording) {
-		if (args.flags.has('--allow-regression') || args.values.has('--reason'))
-			return '--allow-regression / --reason belong to --record-unit-baseline';
+		if (
+			args.flags.has('--allow-regression') ||
+			args.values.has('--reason') ||
+			args.values.has('--new')
+		)
+			return '--allow-regression / --reason / --new belong to --record-unit-baseline';
 		return null;
 	}
 	if (!args.flags.has('--docker'))
@@ -323,6 +357,38 @@ export function recordArgsFault(args: Args): string | null {
 		return '--allow-regression needs --reason "<why, per file>" (≥ 20 characters) — the commit message must carry it';
 	if (!args.flags.has('--allow-regression') && reason !== undefined)
 		return '--reason without --allow-regression: there is no accepted regression to explain';
+	if (args.values.has('--new')) {
+		// --record-new only ADDS a new file's floor and refuses a red: there is no
+		// regression for --allow-regression to accept.
+		if (args.flags.has('--allow-regression'))
+			return '--new records new files only and refuses a red — --allow-regression has nothing to accept there';
+		const files = recordNewFiles(args.values.get('--new'));
+		if (files.length === 0) return '--new needs <file>[,<file>…] (test/unit or test/integration)';
+		const bad = files.filter((file) => !RECORD_NEW_PATH.test(file) || file.includes('..'));
+		if (bad.length > 0)
+			return `--new takes unit-tier test files (test/unit|test/integration/…/*.test.ts, no spaces): ${bad.join(', ')}`;
+	}
+	return null;
+}
+
+/**
+ * `--record-unit-baseline --ref <rev>`: the recording measures <rev> and writes the result
+ * into THIS checkout, so <rev> must be what the checkout IS — HEAD, with a clean working
+ * tree (a dirty tree is not HEAD's tree; drop `--ref` to record the working tree, which is
+ * what the plain recording measures). Anything else would commit one tree's floors beside
+ * another tree's tests. Pure: the caller resolves the shas and the dirt.
+ */
+export function recordRefFault(
+	ref: string | undefined,
+	refSha: string,
+	headSha: string,
+	dirty: boolean,
+): string | null {
+	if (ref === undefined) return null;
+	if (refSha !== headSha)
+		return `--record-unit-baseline --ref ${ref} (${refSha.slice(0, 12)}) is not this checkout's HEAD (${headSha.slice(0, 12)}): its measurement would be written into a different tree — check out ${ref} first, or drop --ref`;
+	if (dirty)
+		return `--record-unit-baseline --ref ${ref}: the working tree has changes, so the checkout is not ${ref}'s tree — commit or drop them, or drop --ref to record the working tree`;
 	return null;
 }
 
@@ -336,7 +402,7 @@ function fail(message: string): never {
 
 type StageVerdict = 'green' | 'red' | 'skipped' | 'advisory';
 
-interface Stage {
+export interface Stage {
 	name: string;
 	verdict: StageVerdict;
 	fix_hint: string | null;
@@ -1038,6 +1104,16 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 	// What to run: an exact commit (--ref), or HEAD + the working tree as one commit.
 	const ref = args.values.get('--ref');
 	const sha = git(['rev-parse', '--verify', `${ref ?? 'HEAD'}^{commit}`]).trim();
+	if (args.flags.has('--record-unit-baseline') && ref !== undefined) {
+		const lists = workingTreeLists();
+		const refFault = recordRefFault(
+			ref,
+			sha,
+			git(['rev-parse', '--verify', 'HEAD^{commit}']).trim(),
+			lists.copy.length + lists.remove.length > 0,
+		);
+		if (refFault !== null) fail(refFault);
+	}
 	const branchName = git(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
 	const branch = branchName === 'HEAD' || branchName === '' ? 'master' : branchName;
 	const base = args.values.get('--base');
@@ -1171,7 +1247,12 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 				activeProject = undefined;
 			}
 		}
-		if (args.flags.has('--record-unit-baseline')) copyRecordedBaseline(outputs, args);
+		if (args.flags.has('--record-unit-baseline'))
+			copyRecordedBaseline(
+				outputs,
+				args,
+				results.find((result) => result.tier === 'db'),
+			);
 	} finally {
 		process.off('SIGINT', onSignal);
 		process.off('SIGTERM', onSignal);
@@ -1185,15 +1266,39 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 const UNIT_BASELINE = 'engineering/unit_baseline.json';
 
 /**
- * Copy the recorded baseline out of /ci-out into the checkout — only what db_tier.sh's
- * record mode put there, i.e. only a write the writer did NOT refuse. Parsed first: a
- * truncated copy never replaces the committed file.
+ * May a recording that LEFT the container (the writer did not refuse) be copied into the
+ * checkout? Only when the db tier it ran in is GREEN. The writer's own verdict is not
+ * enough: a red suite build, DB-tripwire, parity or MariaDB stage means the platform the
+ * floors were measured on was not the runner's healthy one (a half-built suite DB, a dead
+ * MariaDB skipping the gates that need it) — a baseline frozen there is a broken run's
+ * numbers, and committing it would make the runner check against them. Refused LOUDLY,
+ * naming the red stages; the checkout's file is left as it was. Pure, for the gate.
  */
-function copyRecordedBaseline(outputs: string, args: Args): void {
+export function recordCopyFault(result: TierResult | undefined): string | null {
+	if (result === undefined) return 'the db tier never ran — nothing was recorded';
+	if (result.verdict === 'green' && result.exit_code === 0) return null;
+	const red = result.stages.filter((stage) => stage.verdict === 'red').map((stage) => stage.name);
+	return `the db tier is RED (exit ${result.exit_code}${red.length > 0 ? `; red: ${red.join(' | ')}` : ''}) — a baseline recorded on a red tier is a broken run's measure, not the runner's. Fix the red and record again`;
+}
+
+/**
+ * Copy the recorded baseline out of /ci-out into the checkout — only what db_tier.sh's
+ * record mode put there (a write the writer did NOT refuse), and only when the whole db
+ * tier is green ({@link recordCopyFault}). Parsed first: a truncated copy never replaces
+ * the committed file.
+ */
+function copyRecordedBaseline(outputs: string, args: Args, db: TierResult | undefined): void {
 	const recorded = join(outputs, 'unit_baseline.json');
 	if (!existsSync(recorded)) {
 		console.log(
 			`\n== ci:local: NOT RECORDED — the writer refused or the stage never ran (see the RED stage above); ${UNIT_BASELINE} is unchanged`,
+		);
+		return;
+	}
+	const fault = recordCopyFault(db);
+	if (fault !== null) {
+		console.error(
+			`\n== ci:local: NOT RECORDED — REFUSING to copy the written baseline into the checkout: ${fault}. ${UNIT_BASELINE} is unchanged.`,
 		);
 		return;
 	}
@@ -1247,7 +1352,7 @@ async function main(): Promise<void> {
 		console.log(
 			'bun run ci:local [--hermetic] [--db] [--instance] [--keep] [--fail-fast] [--summary <file>]\n' +
 				'bun run ci:local --docker [--hermetic] [--db] [--instance] [--ref <rev>] [--audit-base <sha>] [--build] [--base <branch>] [--fail-fast] [--summary <file>]\n' +
-				'bun run ci:local --docker --record-unit-baseline [--ref <rev>] [--allow-regression --reason "<why>"]\n\n' +
+				'bun run ci:local --docker --record-unit-baseline [--ref HEAD] [--allow-regression --reason "<why>" | --new <file>[,<file>…]]\n\n' +
 				'Runs the CI tiers with the environment a RUNNER has: no ../private/.env, every\n' +
 				'DEDALO_* key composed by the tier itself. Host mode takes only the Postgres\n' +
 				'connection from your machine; on macOS run --instance under a short TMPDIR\n' +

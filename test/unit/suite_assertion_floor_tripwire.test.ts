@@ -220,7 +220,8 @@ describe('suite assertion floor — census: every test file has a per-file recor
 				unrecorded,
 				'Test files with NO per-file assertion record. A file without a floor can lose ' +
 					'every assertion it has and stay green. Regenerate the tier it belongs to — ' +
-					`\`${UNIT_TIER.fixCommand}\` / \`${PARITY_TIER.fixCommand}\` — and commit the JSON ` +
+					`\`${UNIT_TIER.fixCommand}\` / \`${PARITY_TIER.fixCommand}\` (a NEW unit file alone: ` +
+					'`bun run ci:local --docker --record-unit-baseline --new <file>` — in the CI image) — and commit the JSON ' +
 					`with the file.\n  ${unrecorded.join('\n  ')}`,
 			).toEqual([]);
 			expect(
@@ -739,6 +740,45 @@ describe('the unit writer records IN THE CI IMAGE only — a desk recording free
 		expect(on.written).toEqual([tier.baselinePath]);
 		// A tier without the flag ignores the probe.
 		expect(drive(spec(false), [], false).written).toEqual([spec(false).baselinePath]);
+	});
+
+	test('--record-new is a WRITE too: off the image it refuses before measuring; in it, it records', () => {
+		// 2026-10-02 review: --record-new returned ABOVE the guard, so a desk could still
+		// freeze a new file's floor — a desk number, like any other floor written there.
+		const tier = { ...spec(true), baselinePath: join(dir, 'record_new.json') };
+		drive(tier, [], true); // the frozen baseline (records FILE)
+		const NEW = 'test/zz_planted_tier/planted_new.test.ts';
+		const measured: ParityRun = {
+			files: [NEW],
+			totals: { tests: 1, pass: 1, fail: 0, skip: 0 },
+			cases: [{ file: NEW, name: 'b', status: 'pass' }],
+			perFile: { [NEW]: { tests: 1, skipped: 0, assertions: 3 } },
+		};
+		const off = drive(tier, ['--record-new', NEW], false, measured);
+		expect(off.exitCode).toBe(1);
+		expect(off.measures).toBe(0);
+		expect(off.written).toEqual([]);
+		expect(off.said).toContain('not the CI image');
+		expect(off.said).toContain('ci:local --docker --record-unit-baseline --new');
+		// A read flag beside it is no way round the guard (--record-new is dispatched first).
+		for (const read of [['--check'], ['--report'], ['--check', '--json']]) {
+			const sneak = drive(tier, ['--record-new', NEW, ...read], false, measured);
+			expect(sneak.written, read.join(' ')).toEqual([]);
+			expect(sneak.exitCode, read.join(' ')).toBe(1);
+		}
+		const recordedOf = () =>
+			(JSON.parse(readFileSync(tier.baselinePath, 'utf8')) as { per_file: Record<string, unknown> })
+				.per_file[NEW];
+		expect(recordedOf()).toBeUndefined();
+		// In the image the same call records exactly that file.
+		const on = drive(tier, ['--record-new', NEW], true, measured);
+		expect(on.exitCode).toBe(0);
+		expect(on.written).toEqual([tier.baselinePath]);
+		expect(recordedOf()).toEqual({ tests: 1, skipped: 0, assertions: 3 });
+		// A tier without the flag keeps the desk door (parity refuses --record-new on its own).
+		const free = { ...spec(false), baselinePath: join(dir, 'record_new_free.json') };
+		drive(free, [], false);
+		expect(drive(free, ['--record-new', NEW], false, measured).exitCode).toBe(0);
 	});
 
 	test('the READ doors stay open off the image: --check, --check --json, --report', () => {

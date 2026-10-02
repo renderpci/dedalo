@@ -9,7 +9,9 @@
  *   bun run scripts/unit_baseline.ts --report   # failing tests per file
  *   bun run scripts/unit_baseline.ts --record-new [file…]  # ONLY a new file's per_file
  *                                  # floor, measured; refuses a red (scripts/lib/red_baseline.ts
- *                                  # recordNewDecision) — no file: every unrecorded one
+ *                                  # recordNewDecision) — no file: every unrecorded one.
+ *                                  # A WRITE too, so IN THE CI IMAGE ONLY: the door is
+ *                                  # `bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]`
  *
  * ── WHAT THIS IS ─────────────────────────────────────────────────────────────
  * The unit tier is the engine's real gate tier: 727 files, 8800 cases, and by
@@ -137,11 +139,12 @@ export const UNIT_TIER: TierSpec = {
 	// The floors and the red set are facts about the platform the tier runs on (the
 	// runner's image: its media toolchain, a bare uid, a clone without the desk's audits/
 	// or ../private): a desk recording freezes the desk, and the runner reports the
-	// difference as drift. The writer refuses outside the image (red_baseline.ts
-	// ciImageMarkerMatches); ci:local --docker --record-unit-baseline is the door.
+	// difference as drift. Both writers (the full one and --record-new) refuse outside the
+	// image (red_baseline.ts ciImageMarkerMatches); ci:local --docker --record-unit-baseline
+	// [--new <files>] is the door.
 	recordOnlyInCiImage: true,
 	whyRed:
-		"Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline`; the writer refuses anywhere else): 2 reds, both deterministic golden mismatches — ontology_parser dd1 and info_widget_native component_info media_icons — a stale expectation or a real parser/widget defect, either way fixable. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes). The stage is still ADVISORY in scripts/ci/db_tier.sh until the same red set holds on three consecutive clean runs. Per-file floors are the image's: a desk measures more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config), never the reverse. EVERY entry is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
+		"Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline`; the writer refuses anywhere else): 2 reds, both deterministic golden mismatches — ontology_parser dd1 and info_widget_native component_info media_icons — a stale expectation or a real parser/widget defect, either way fixable. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes). The stage is still ADVISORY in scripts/ci/db_tier.sh until the same red set holds on three consecutive clean runs. Per-file floors are the image's, and a desk differs from them in BOTH directions: it asserts more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config) and less where the image has what the desk lacks (librsvg: media_svg_thumb skips 7 on a Mac, 0 in the image) — so a desk number is never a floor, either way. EVERY entry is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
 };
 
 /** Tier-named aliases of the shared types, mirroring what parity_baseline.ts exports, so a gate can import either tier alike. */

@@ -70,8 +70,10 @@ export interface TierSpec {
 	 * in — see {@link ciImageMarkerMatches}. For a tier whose per-file floors and red set are
 	 * facts about the platform (the unit tier: media toolchain, uid, files a clone lacks),
 	 * a desk recording freezes the DESK and the runner then reports the difference as drift.
-	 * The CI-image door is `bun run ci:local --docker --record-unit-baseline`. `--check`,
-	 * `--report` and `--record-new` (one new file's floor, which refuses a red) stay open.
+	 * The CI-image door is `bun run ci:local --docker --record-unit-baseline`. `--record-new`
+	 * WRITES too (a new file's floor is a platform fact like any other floor), so it refuses
+	 * off the image the same way; its image door is `… --record-unit-baseline --new <files>`.
+	 * Only the READ doors, `--check` and `--report`, stay open on a desk.
 	 */
 	recordOnlyInCiImage?: boolean;
 }
@@ -626,7 +628,10 @@ export function baselineFile(spec: TierSpec): string {
  *     this floor exists to catch);
  *   - it REFUSES on an `exactCounts` tier (parity): its size is asserted exactly, so a new
  *     file there changes `measured` and only the full census may say so;
- *   - every other byte of the artifact — reds, counts, other records — is untouched.
+ *   - every other byte of the artifact — reds, counts, other records — is untouched;
+ *   - on a `recordOnlyInCiImage` tier (unit) it runs IN THE CI IMAGE only, like the full
+ *     writer: a floor measured on a desk is the desk's (`runBaselineCli`'s guard). The
+ *     door there is `bun run ci:local --docker --record-unit-baseline --new <files>`.
  *
  * No file named: every on-disk tier file without a record. Pure, so the gate proves the
  * refusals on planted runs (test/unit/baselines_bank_native.test.ts).
@@ -728,7 +733,25 @@ export function unrecordedFiles(spec: TierSpec, existing: RedBaseline): string[]
 export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineCliIo()): void {
 	const args = new Set(io.argv);
 
-	if (args.has('--record-new')) {
+	// EVERY writing door — the full writer AND --record-new — answers to the platform
+	// guard, before any measure (the answer does not depend on it). --record-new used to
+	// return above this check, so a desk could still freeze a new file's floor.
+	// --record-new wins over a read flag beside it (it is dispatched first below), so it
+	// is `writing` whatever else the argv says.
+	const recordingNew = args.has('--record-new');
+	const writing =
+		recordingNew || (!args.has('--report') && !args.has('--check') && !wantsCheckJson(io.argv));
+	if (writing && spec.recordOnlyInCiImage === true && !(io.inCiImage ?? ciImageMarkerMatches)()) {
+		const door = recordingNew
+			? 'bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]'
+			: 'bun run ci:local --docker --record-unit-baseline';
+		io.error(
+			`${spec.id}_baseline: REFUSING to write — this is not the CI image (no ${CI_IMAGE_MARKER} matching this checkout's ci/Dockerfile + .bun-version). The ${spec.id} tier's floors and red set are facts about the platform; a recording here freezes this machine, not the runner. Record it in the image: ${door}`,
+		);
+		io.exit(1);
+	}
+
+	if (recordingNew) {
 		// Before the full measure: this door runs ONLY the files it records.
 		const existing = loadBaseline(spec);
 		const named = io.argv.filter((arg) => !arg.startsWith('--'));
@@ -751,15 +774,6 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 			);
 			io.exit(0);
 		}
-	}
-
-	const writing = !args.has('--report') && !args.has('--check') && !wantsCheckJson(io.argv);
-	if (writing && spec.recordOnlyInCiImage === true && !(io.inCiImage ?? ciImageMarkerMatches)()) {
-		// Before the ~5-minute measure: the answer does not depend on it.
-		io.error(
-			`${spec.id}_baseline: REFUSING to write — this is not the CI image (no ${CI_IMAGE_MARKER} matching this checkout's ci/Dockerfile + .bun-version). The ${spec.id} tier's floors and red set are facts about the platform; a recording here freezes this machine, not the runner. Record it in the image: bun run ci:local --docker --record-unit-baseline`,
-		);
-		io.exit(1);
 	}
 
 	const run = io.measure(spec.paths);

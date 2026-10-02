@@ -367,7 +367,7 @@ function vacuousFloors(input: VacuityInput): VacuityVerdict {
 		if (floor === undefined) {
 			faults.set(
 				file,
-				`${file}: no per_file floor — nothing proves it runs (record it: the tier's --record-new)`,
+				`${file}: no per_file floor — nothing proves it runs (record it: the tier's --record-new — for the unit tier IN THE IMAGE, bun run ci:local --docker --record-unit-baseline --new <file>)`,
 			);
 			continue;
 		}
@@ -834,6 +834,7 @@ function drillScript(script: string, killOn?: string): DrillRun {
 					// stage into the WRITER, a shape no runner runs.
 					DEDALO_CI_UNIT_RECORD_OUT: '',
 					DEDALO_CI_UNIT_RECORD_ALLOW: '0',
+					DEDALO_CI_UNIT_RECORD_NEW: '',
 					...(killOn === undefined ? {} : { DRILL_KILL_ON: killOn }),
 				},
 				stdout: 'ignore',

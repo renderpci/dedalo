@@ -130,8 +130,10 @@ re-recorded. The same verdict now happens on the desk.
               [--skip-advisory] # skip the db tier's ADVISORY unit stage (desk only; no
                                 # workflow sets it — ci_local_native)
               [--summary <file.json>]
-    bun run ci:local --docker --record-unit-baseline [--ref <rev>]
+    bun run ci:local --docker --record-unit-baseline [--ref HEAD]
         [--allow-regression --reason "<why, per file>"]   # RECORD the unit baseline
+    bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]
+                                    # record ONLY new test files' floors (--record-new)
 
 It runs `scripts/ci/hermetic.sh`, `db_tier.sh` and `instance_tier.sh` UNCHANGED with an
 EMPTY private dir — the runner's condition; every `DEDALO_*` key the tiers need they
@@ -178,29 +180,46 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
 `engineering/unit_baseline.json` freezes per-file floors (cases, skips, executed
 `expect`s) and the red set — facts about the PLATFORM the tier runs on: the image's
 media toolchain, a bare uid, a clone that has no `audits/` and no `../private`. A desk
-recording froze the desk, and the runner reported the difference as drift. So:
+recording froze the desk, and the runner reported the difference as drift. The difference
+runs in BOTH directions — a desk asserts more where it has what a runner lacks (`audits/`,
+a GeoIP database, its own configured addons and masters) and less where the image has
+what the desk lacks (librsvg: `media_svg_thumb` skips 7 on a Mac, 0 in the image) — so no
+desk number is a floor, in either direction. So:
 
 - **The writer refuses off the image.** `UNIT_TIER.recordOnlyInCiImage`: the flagless
   `scripts/unit_baseline.ts` exits 1 BEFORE measuring unless `/etc/dedalo-ci-image`
   (the fingerprint `ci/Dockerfile` writes) equals this checkout's
   `sha256(ci/Dockerfile ++ .bun-version)` (`red_baseline.ts ciImageMarkerMatches`).
-  `--check`, `--report` and `--record-new` stay open. `baselines:bank --with-db`'s unit
-  row therefore fails on a desk by design. Gate: `suite_assertion_floor_tripwire`.
+  `--record-new` is a write too (a new file's floor is a platform fact like any other)
+  and refuses the same way, before measuring; only the READ doors, `--check` and
+  `--report`, stay open. `baselines:bank --with-db`'s unit row therefore fails on a desk
+  by design. Gate: `suite_assertion_floor_tripwire`.
 - **The door is `ci:local --docker --record-unit-baseline`** — the db tier alone, in the
   image, with `db_tier.sh`'s unit stage in RECORD MODE (`DEDALO_CI_UNIT_RECORD_OUT`,
   `DEDALO_CI_UNIT_RECORD_ALLOW`): the same suite build, MariaDB start, installs and
   DB-tripwire stage the check runs after — one preparation, no copy of it to drift. The
   written JSON leaves the container through the ONE writable mount, `/ci-out` (a scratch
   dir, deleted after; the source mounts stay read-only), and is copied into the checkout
-  only when the writer did not refuse. Host mode refuses the flag; so do `--hermetic`,
-  `--instance`, `--skip-advisory`, `--fail-fast`, `--keep`. The later parity and MariaDB
-  stages still run (their verdict is the run's exit; the copy does not depend on it).
+  only when the writer did not refuse AND the whole db tier ended GREEN
+  (`ci_local.ts recordCopyFault`): a red suite build, DB-tripwire, parity or MariaDB
+  stage means the floors were measured on a broken run, so the copy is refused loudly,
+  naming the red stages, and the checkout's file stays as it was. Host mode refuses the
+  flag; so do `--hermetic`, `--instance`, `--skip-advisory`, `--fail-fast`, `--keep`.
+  `--ref` must name this checkout's HEAD on a clean working tree (`recordRefFault`): the
+  measure is written into THIS tree, so it must be this tree's.
+- **A new test file's floor goes through the same door**: `--new <file>[,<file>…]`
+  (`DEDALO_CI_UNIT_RECORD_NEW`) runs `unit_baseline.ts --record-new <files>` in the stage
+  instead of the full writer — it only ADDS records for files that have none and refuses
+  a red, a crash or a vacuous file. Unit-tier paths only (`test/unit|test/integration/…
+  .test.ts`, no spaces or shell characters — the list crosses `db_tier.sh`'s word split);
+  never beside `--allow-regression`. The working tree (untracked files included) is what
+  the container runs, so a new file needs no commit first.
 - **A refused write is a list to examine, not to wave through.** The writer prints every
   regression; a real lost assertion is a defect to fix. Only an environment-explained
   difference is accepted: `--allow-regression --reason "<cause, per file>"` (≥ 20
   characters; `--reason` alone is refused). The writer prints what it ACCEPTED, and the
   recorded baseline is committed ON ITS OWN with those reasons in the message.
-- **No workflow names either key** (`ci_workflow_tripwire`); both are always set
+- **No workflow names any record key** (`ci_workflow_tripwire`); all three are always set
   explicitly by `ci:local` (`ci_local_native` §7 also EXECUTES the pinned stage block
   with `bun`/`cp` stubbed) and pinned off in `tier_wiring`'s drills.
 

@@ -276,18 +276,22 @@ bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
 # baseline WRITER instead of the check: the record is taken HERE, after the same suite
 # build, MariaDB start, dependency install and DB-tripwire stage the check runs after —
 # one preparation, no copy of it to drift. `DEDALO_CI_UNIT_RECORD_ALLOW=1` adds
-# --allow-regression (ci:local demands a --reason with it). The writer itself refuses
-# outside the CI image (UNIT_TIER.recordOnlyInCiImage). A refused write is RED; only a
-# written baseline is copied out. No workflow names either key (ci_workflow_tripwire).
+# --allow-regression (ci:local demands a --reason with it). `DEDALO_CI_UNIT_RECORD_NEW=<files>`
+# (space-separated, shape-checked by ci:local) runs `--record-new <files>` instead: only
+# those new files' floors. Both writers refuse outside the CI image
+# (UNIT_TIER.recordOnlyInCiImage). A refused write is RED; only a written baseline is
+# copied out, and ci:local copies it into the checkout only if this whole tier ends green.
+# No workflow names any of these keys (ci_workflow_tripwire).
 echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]"
 unit_rc=0
 if [ -n "${DEDALO_CI_UNIT_RECORD_OUT:-}" ]; then
 	echo "== db_tier: RECORDING engineering/unit_baseline.json (ci:local --record-unit-baseline)"
 	record_rc=0
-	record_allow=''
-	[ "${DEDALO_CI_UNIT_RECORD_ALLOW:-0}" != 1 ] || record_allow=--allow-regression
-	# shellcheck disable=SC2086 # empty → no argument, on purpose
-	bun run scripts/unit_baseline.ts $record_allow || record_rc=$?
+	record_args=''
+	[ "${DEDALO_CI_UNIT_RECORD_ALLOW:-0}" != 1 ] || record_args=--allow-regression
+	[ -z "${DEDALO_CI_UNIT_RECORD_NEW:-}" ] || record_args="--record-new ${DEDALO_CI_UNIT_RECORD_NEW}"
+	# shellcheck disable=SC2086 # empty → no argument; a file list → one argument per file
+	bun run scripts/unit_baseline.ts $record_args || record_rc=$?
 	[ "$record_rc" -eq 0 ] || { echo "== db_tier: RED in the unit-baseline recording (exit $record_rc) — nothing copied out"; tier_status=1; }
 	[ "$record_rc" -ne 0 ] || cp engineering/unit_baseline.json "$DEDALO_CI_UNIT_RECORD_OUT/unit_baseline.json"
 elif [ "${DEDALO_CI_SKIP_ADVISORY:-0}" = 1 ]; then
