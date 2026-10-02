@@ -50,6 +50,16 @@ export interface ParityCase {
 	/** Full name path: describe chain + test name, ' > '-joined (bun's own display form). */
 	name: string;
 	status: CaseStatus;
+	/**
+	 * WHAT THE FAILURE SAID — the body bun writes inside `<failure>`/`<error>`
+	 * (message + stack), entity-decoded. Present only on a failing case whose
+	 * report carried it. Kept so a drift report can print the first failing
+	 * assertion per file: a red that names only its test has thrown away the
+	 * one line that tells a host failure from a desk failure, and the JUnit file
+	 * is deleted when the census returns (measured 2026-10-02: 123 NEW reds on a
+	 * hosted db run, not one failure line in the log).
+	 */
+	failure?: string;
 }
 
 /**
@@ -100,18 +110,30 @@ export interface ParityRun {
 
 const TAG = /<(\/?)(testsuites|testsuite|testcase|failure|skipped|error)\b([^>]*)>/g;
 
-function attr(raw: string, key: string): string | undefined {
-	// JUnit attribute values are XML-escaped; only the entities bun emits matter.
-	const m = new RegExp(`\\b${key}="([^"]*)"`).exec(raw);
-	const value = m?.[1];
-	if (value === undefined) return undefined;
+/** Decode the XML entities bun emits (named + numeric — `&#10;` is every newline of a failure). */
+function decodeXml(value: string): string {
 	return value
 		.replaceAll('&lt;', '<')
 		.replaceAll('&gt;', '>')
 		.replaceAll('&quot;', '"')
 		.replaceAll('&apos;', "'")
+		.replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) =>
+			String.fromCodePoint(Number.parseInt(hex, 16)),
+		)
+		.replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
 		.replaceAll('&amp;', '&');
 }
+
+function attr(raw: string, key: string): string | undefined {
+	// JUnit attribute values are XML-escaped; only the entities bun emits matter.
+	const m = new RegExp(`\\b${key}="([^"]*)"`).exec(raw);
+	const value = m?.[1];
+	if (value === undefined) return undefined;
+	return decodeXml(value);
+}
+
+/** How much of one failure body a case keeps — enough for the assertion + the first frames. */
+export const FAILURE_TEXT_MAX = 1500;
 
 /** The three file-level counts, or null when any of them is absent / not a number. */
 function fileCounts(raw: string): FileCounts | null {
@@ -127,6 +149,10 @@ function fileCounts(raw: string): FileCounts | null {
 	return { tests, skipped, assertions };
 }
 
+function clip(text: string): string {
+	return text.length > FAILURE_TEXT_MAX ? `${text.slice(0, FAILURE_TEXT_MAX)}…` : text;
+}
+
 /**
  * Parse a bun JUnit report into cases. Exported so the gate can prove the
  * measure SEES a failure (anti-vacuity), without running the tier twice.
@@ -138,6 +164,9 @@ export function parseJunit(xml: string): ParityRun {
 	const suites: string[] = [];
 	let currentFile = '';
 	let open: ParityCase | null = null;
+	// Where the body of an open <failure>/<error> starts, plus its `message`
+	// attribute as the fallback when the body is empty (self-closing).
+	let failureBodyStart = -1;
 	const perFile: Record<string, FileCounts> = {};
 
 	TAG.lastIndex = 0;
@@ -188,10 +217,24 @@ export function parseJunit(xml: string): ParityRun {
 			continue;
 		}
 
-		if (open !== null && !isClose) {
-			if (tag === 'failure' || tag === 'error') open.status = 'fail';
-			else if (tag === 'skipped') open.status = 'skip';
+		if (open !== null && (tag === 'failure' || tag === 'error')) {
+			if (!isClose) {
+				open.status = 'fail';
+				// The FIRST failure of a case is the one kept (bun writes one).
+				if (open.failure === undefined) {
+					const message = attr(raw, 'message');
+					if (message !== undefined && message.length > 0) open.failure = clip(message);
+					failureBodyStart = isSelf ? -1 : TAG.lastIndex;
+				}
+			} else if (failureBodyStart >= 0) {
+				const body = decodeXml(xml.slice(failureBodyStart, m.index)).trim();
+				if (body.length > 0) open.failure = clip(body);
+				failureBodyStart = -1;
+			}
+			continue;
 		}
+
+		if (open !== null && !isClose && tag === 'skipped') open.status = 'skip';
 	}
 
 	const files = [...new Set(cases.map((c) => c.file))].sort();

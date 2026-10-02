@@ -143,6 +143,16 @@ export interface TierDrift {
 	 * already is.
 	 */
 	floorsSilent: { file: string; line: string }[];
+	/**
+	 * WHY, not only WHAT: for every file with a NEW red, the first such case and
+	 * the failure text bun reported for it (assertion + first stack frames, from
+	 * the JUnit body — {@link ParityCase.failure}). Explanation, never a verdict:
+	 * not counted by {@link driftCount}, not classified by the bank, and printed
+	 * by {@link formatDrift} only beside a non-empty REGRESSIONS block. Without it
+	 * a hosted run's log named 123 reds and not one reason (2026-10-02), so every
+	 * diagnosis cost a CI cycle per guess. Optional: a hand-built drift has none.
+	 */
+	firstFailures?: string[];
 }
 
 export function generatedBy(spec: TierSpec): string {
@@ -251,11 +261,22 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
 	// Status of every case actually observed, keyed file + name.
 	const observed = new Map(run.cases.map((c) => [`${c.file} ${c.name}`, c.status]));
 
+	const explained = new Set<string>();
+	const firstFailures: string[] = [];
 	for (const c of run.cases) {
 		if (c.status !== 'fail') continue;
 		const frozen = baseline.files[c.file] ?? [];
-		if (!frozen.includes(c.name)) drift.regressions.push(`${c.file}: NEW red — ${c.name}`);
+		if (frozen.includes(c.name)) continue;
+		drift.regressions.push(`${c.file}: NEW red — ${c.name}`);
+		if (explained.has(c.file)) continue;
+		explained.add(c.file);
+		const text = (c.failure ?? '(the report carried no failure text)')
+			.split('\n')
+			.map((line) => `      ${line}`)
+			.join('\n');
+		firstFailures.push(`${c.file} — ${c.name}\n${text}`);
 	}
+	if (firstFailures.length > 0) drift.firstFailures = firstFailures;
 
 	for (const [file, names] of Object.entries(baseline.files)) {
 		for (const name of names) {
@@ -381,6 +402,11 @@ function onDiskTestFiles(spec: TierSpec): string[] {
 export function formatDrift(d: TierDrift): string {
 	const lines: string[] = [];
 	if (d.regressions.length) lines.push('REGRESSIONS:', ...d.regressions.map((l) => `  ${l}`));
+	if (d.regressions.length && d.firstFailures?.length)
+		lines.push(
+			'FIRST FAILURE PER FILE (new reds — what bun reported):',
+			...d.firstFailures.map((l) => `  ${l}`),
+		);
 	if (d.stale.length) lines.push('STALE:', ...d.stale.map((l) => `  ${l}`));
 	if (d.summary.length) lines.push('SUMMARY:', ...d.summary.map((l) => `  ${l}`));
 	if (d.vacuity.length) lines.push('VACUITY:', ...d.vacuity.map((l) => `  ${l}`));
@@ -448,7 +474,7 @@ export function writeRefusal(
 	if (allowRegression) return null;
 	const refused = classifyTierDrift(spec, drift, onDisk).regressions;
 	if (refused.length === 0) return null;
-	return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds, LOWERED a per-file floor, or lost a file that is still on disk (it crashed). A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors })}${refused
+	return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds, LOWERED a per-file floor, or lost a file that is still on disk (it crashed). A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors, firstFailures: drift.firstFailures })}${refused
 		.filter((line) => line.includes('on disk but reported NOTHING'))
 		.map((line) => `\n  ${line}`)
 		.join(

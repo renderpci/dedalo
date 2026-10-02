@@ -71,7 +71,9 @@ import {
 	buildBaseline,
 	classifyTierDrift,
 	computeDrift,
+	driftCount,
 	emptyDrift,
+	formatDrift,
 	recordNewDecision,
 	runBaselineCli,
 	type TierDrift,
@@ -493,6 +495,44 @@ describe('the red tiers: the classification IS the writer’s refusal', () => {
 		// and the writer agrees: it would refuse this run
 		const drift = computeDrift(tier, grown, buildBaseline(tier, FROZEN));
 		expect(writeRefusal(tier, drift, false)).not.toBeNull();
+	});
+
+	test('the drift report says WHY: the first failure text per file with a NEW red, beside the regressions only', () => {
+		// 2026-10-02: a hosted run named 123 NEW reds and not one reason. The report now
+		// carries the first new red's failure body per file — and only as explanation:
+		// it is no verdict (driftCount / the bank never see it).
+		const tier = spec('why');
+		const baseline = buildBaseline(tier, FROZEN);
+		const grown = run(
+			[
+				...FROZEN.cases,
+				{
+					file: NEW,
+					name: 'first',
+					status: 'fail',
+					failure: 'expect(received).toBe(expected)\nExpected: 1',
+				},
+				{ file: NEW, name: 'second', status: 'fail', failure: 'second reason' },
+			],
+			{ ...FROZEN.perFile, [NEW]: { tests: 2, skipped: 0, assertions: 2 } },
+		);
+		const drift = computeDrift(tier, grown, baseline);
+		expect(drift.firstFailures).toEqual([
+			`${NEW} — first\n      expect(received).toBe(expected)\n      Expected: 1`,
+		]);
+		const text = formatDrift(drift);
+		expect(text).toContain('FIRST FAILURE PER FILE');
+		expect(text).toContain('      Expected: 1');
+		expect(text).not.toContain('second reason');
+		// the writer's refusal carries it too — that is the message the operator reads
+		expect(writeRefusal(tier, drift, false)).toContain('Expected: 1');
+		// explanation, never a verdict: the regressions alone are counted and classified
+		expect(driftCount(drift)).toBe(driftCount({ ...drift, firstFailures: undefined }));
+		expect(classifyTierDrift(tier, drift)).toEqual(
+			classifyTierDrift(tier, { ...drift, firstFailures: undefined }),
+		);
+		// a frozen red is not new: no failure text is printed for it
+		expect(computeDrift(tier, FROZEN, baseline).firstFailures).toBeUndefined();
 	});
 
 	test('a recorded file that reported NOTHING: gone = improvement, still on disk = crashed = REGRESSION', () => {
