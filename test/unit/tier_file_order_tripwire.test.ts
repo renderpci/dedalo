@@ -36,7 +36,7 @@ import {
 	tierFileArgs,
 	tierFiles,
 } from '../../scripts/lib/test_order.ts';
-import { tierArgv } from '../../scripts/lib/tier_run.ts';
+import { isPlantedFile, tierArgv } from '../../scripts/lib/tier_run.ts';
 import { TIER_PATHS as UNIT_TIER_PATHS } from '../../scripts/unit_baseline.ts';
 import { testTreeSourceFiles } from '../helpers/test_tree_corpus.ts';
 
@@ -167,5 +167,35 @@ describe('tier file order', () => {
 		const missing = run([a, 'test/unit/zz_absent_order.test.ts']);
 		expect(missing.rc).not.toBe('0');
 		expect(missing.paths).toEqual([`./${a}`]);
+	});
+});
+
+describe('a PLANTED control file (outside the repository) runs verbatim — and only that', () => {
+	// mariadb_tier.ts plants its calibration gates in the suite's marked MariaDB root,
+	// outside the tree. The strict repo-relative rule refused them (the MariaDB stage's
+	// four calibration controls went red, 2026-10-02); tierArgv passes such a file as-is.
+	test('an existing absolute *.test.ts OUTSIDE the repo is planted; inside, missing or relative is not', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo-planted-'));
+		try {
+			const outside = join(dir, 'tier_calibration.test.ts');
+			writeFileSync(outside, "import { test } from 'bun:test';\ntest('x', () => {});\n");
+			expect(isPlantedFile(outside)).toBe(true);
+			expect(isPlantedFile(join(dir, 'missing.test.ts'))).toBe(false);
+			expect(isPlantedFile(join(REPO_ROOT, 'test/unit/tier_file_order_tripwire.test.ts'))).toBe(
+				false,
+			);
+			expect(isPlantedFile('test/unit/tier_file_order_tripwire.test.ts')).toBe(false);
+			const argv = tierArgv([outside], join(dir, 'out.xml'));
+			expect(argv.at(-1)).toBe(outside);
+			expect(argv.filter((arg) => arg.endsWith('.test.ts'))).toEqual([outside]);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('an absolute path INSIDE the repo still meets the strict rule (refused)', () => {
+		expect(() =>
+			tierArgv([join(REPO_ROOT, 'test/unit/tier_file_order_tripwire.test.ts')], '/dev/null'),
+		).toThrow(/absolute/);
 	});
 });

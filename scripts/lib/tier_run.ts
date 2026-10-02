@@ -9,9 +9,9 @@
  * run a tier, and must not reach a tree walk they do not floor.
  */
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 import { childEnv, type ParityRun, parseJunit, REPO_ROOT, TIER_PATH } from './parity_census.ts';
 import { TEST_TIMEOUT_FLAG } from './test_flags.ts';
 import { tierFileArgs } from './test_order.ts';
@@ -29,14 +29,30 @@ export function runParityTier(): ParityRun {
  * tier_file_order_tripwire).
  */
 export function tierArgv(paths: readonly string[], outfile: string): string[] {
+	// A PLANTED file — an existing absolute test file OUTSIDE the repository — is a
+	// harness's own control (mariadb_tier.ts plants its calibration gates in the suite's
+	// marked MariaDB root, never in the tree). It is passed verbatim, after the tier's
+	// sorted list: an absolute path is bun's PATH mode, and a single planted file has
+	// no order to fix. Anything else keeps test_order's strict repo-relative rule.
+	const planted = paths.filter((path) => isPlantedFile(path));
+	const tier = paths.filter((path) => !isPlantedFile(path));
 	return [
 		'bun',
 		'test',
 		TEST_TIMEOUT_FLAG,
 		'--reporter=junit',
 		`--reporter-outfile=${outfile}`,
-		...tierFileArgs(paths, REPO_ROOT),
+		...(tier.length > 0 ? tierFileArgs(tier, REPO_ROOT) : []),
+		...planted,
 	];
+}
+
+/** An existing absolute `*.test.ts` file outside the repository (see tierArgv). */
+export function isPlantedFile(path: string): boolean {
+	if (!isAbsolute(path) || !path.endsWith('.test.ts')) return false;
+	const rel = relative(REPO_ROOT, path);
+	if (rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))) return false;
+	return existsSync(path) && statSync(path).isFile();
 }
 
 /**
