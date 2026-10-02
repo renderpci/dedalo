@@ -177,6 +177,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The subtitles tool opens again instead of failing with an error.**
+
+    Opening the subtitles tool from an audiovisual transcription showed an error instead of the tool. It now opens, with its play/pause, auto-rewind and tag-insert key settings working.
+
 - **Browsers that ran Dédalo v6 no longer load stale v6 scripts after the upgrade to v7.**
 
     A browser that had used Dédalo v6 kept v6's file-caching service worker after the
