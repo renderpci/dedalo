@@ -434,9 +434,7 @@ describe('pre-push gate: tier selection and the gated tree', () => {
 		expect(r.code, r.err).toBe(0);
 		expect(ciCalls()).toEqual([
 			expect.stringMatching(
-				new RegExp(
-					`^ci --docker --fail-fast --hermetic --ref ${sha} --audit-base ${before} --summary \\S+$`,
-				),
+				new RegExp(`^ci --docker --hermetic --ref ${sha} --audit-base ${before} --summary \\S+$`),
 			),
 		]);
 		expect(remoteTip(repo, 'origin', 'v7')).toBe(sha);
@@ -464,9 +462,7 @@ describe('pre-push gate: tier selection and the gated tree', () => {
 		const r = run(['git', 'push', 'origin', 'v7'], repo);
 		expect(r.code, r.err).toBe(0);
 		expect(r.err).toContain('the range touches floors/gone.json');
-		expect(ciCalls()[0]).toMatch(
-			/^ci --docker --fail-fast --skip-advisory --hermetic --db --instance --ref /,
-		);
+		expect(ciCalls()[0]).toMatch(/^ci --docker --skip-advisory --hermetic --db --instance --ref /);
 	});
 
 	test('a RENAME out of src/ into a hermetic-only dir runs the full gate (the old path counts)', () => {
@@ -528,9 +524,7 @@ describe('pre-push gate: tier selection and the gated tree', () => {
 		// and the audit is FORCED (all-zero base), as GitHub runs it for a new branch.
 		expect(ciCalls()).toEqual([
 			expect.stringMatching(
-				new RegExp(
-					`^ci --docker --fail-fast --hermetic --ref ${sha} --audit-base 0{40} --summary `,
-				),
+				new RegExp(`^ci --docker --hermetic --ref ${sha} --audit-base 0{40} --summary `),
 			),
 		]);
 	});

@@ -869,6 +869,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box.**
+
+    The Docker image's ImageMagick could read AVIF but not write it: the Debian package it is built on ships the AVIF decoder only. An installation that lists `avif` in `DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS` therefore had those alternative versions refused on every upload. The image now includes the AVIF encoder (`libheif-plugin-aomenc`). Docker installations get it with the next image build; on a host install, add the same package to have AVIF versions written.
+
 - **Published files survive a power cut, and deleting a record no longer races a running publication into the same directory.**
 
     Two gaps in file publications (Markdown, XML, RDF, CSV, JSON) are closed:
