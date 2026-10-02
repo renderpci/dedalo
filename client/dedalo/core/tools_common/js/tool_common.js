@@ -54,7 +54,6 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {LZString as lzstring} from '/dedalo/lib/lz-string/lz-string.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {response_data} from '../../../core/common/js/api_error.js'
 	import {
@@ -196,6 +195,10 @@ tool_common.prototype.init = async function(options) {
 							//	 caller_ddo : object {...},
 							//	 tool_config : object {...}
 							// }
+							// Lazy (CONVENTIONS.md §2, rationale 3 — rarely hit): only a tool
+							// opened in its own window carries raw_data; keeps lz-string off
+							// the boot graph (page_load_budget_native).
+							const { LZString: lzstring } = await import('/dedalo/lib/lz-string/lz-string.js')
 							const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
 							if (!url_data_string) {
 								throw new Error('Decompression returned empty result')
@@ -1480,6 +1483,8 @@ const view_window = async function(options) {
 		// raw_data will be compressed and de-compressed from target window
 		// The full payload is JSON-stringified then LZString-compressed to stay
 		// within URL-length limits.  The new window decompresses it in init().
+		// Lazy (CONVENTIONS.md §2, rationale 3): see the decompress site in init().
+		const { LZString: lzstring } = await import('/dedalo/lib/lz-string/lz-string.js')
 		const raw_data = lzstring.compressToEncodedURIComponent(
 			JSON.stringify({
 				caller_ddo		: caller_ddo,

@@ -28,7 +28,6 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {instantiate_page_element} from './page.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {render_update_data_maintenance} from '../../area_maintenance/js/render_update_data_maintenance.js'
 	import {render_job_tray} from './job_tray.js'
 	import {render_build_failure} from '../../common/js/render_api_error.js'
 
@@ -173,6 +172,10 @@ const get_content_data = async function(self) {
 		const data_version		= Array.isArray(page_globals?.data_version) ? page_globals.data_version.join('.') : (page_globals?.data_version || '');
 
 		if( dedalo_version && data_version && dedalo_version!==data_version ){
+			// Lazy (engineering/CONVENTIONS.md §2, rationale 3 — rarely hit): only a
+			// data/code version mismatch renders this widget, so it stays off the
+			// boot graph (test/unit/page_load_budget_native.test.ts).
+			const { render_update_data_maintenance } = await import('../../area_maintenance/js/render_update_data_maintenance.js')
 			const update_data_node = await render_update_data_maintenance()
 			content_data.appendChild(update_data_node)
 			return content_data
