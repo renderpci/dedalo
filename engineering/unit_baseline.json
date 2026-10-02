@@ -1,22 +1,15 @@
 {
-	"generated_by": "bun run scripts/unit_baseline.ts (runs `bun test test/unit test/integration --timeout=30000` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)",
-	"rule": "SHRINK-ONLY red baseline for the test/unit + test/integration tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the known reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` freezes the DEBT (failing_files/failing_tests) exactly; the SIZE counts are advisory here because this tier grows on most commits, and reddening on every added test would train the regenerate-to-green reflex the ratchet exists to prevent. The size is held by the anti-vacuity FLOORS instead, so a tier that silently stopped running is still red. `per_file` is the PER-FILE FLOOR: for every file of the tier, the cases it ran, the cases it skipped and the `expect` calls that EXECUTED (bun's own file-level JUnit attributes). Skips may only shrink; cases and assertions may only rise — a drop, or a skip that appears, is a regression the generator refuses without --allow-regression, because a test that returns before its first assertion is a PASS with assertions=0 and this count is the only thing that notices. An unrecorded file, or a recorded file that no longer reports, is stale: re-freeze. DO NOT hand-edit. Regenerate with: bun run scripts/unit_baseline.ts Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline`; the writer refuses anywhere else): 2 reds, both deterministic golden mismatches — ontology_parser dd1 and info_widget_native component_info media_icons — a stale expectation or a real parser/widget defect, either way fixable. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes). The stage is still ADVISORY in scripts/ci/db_tier.sh until the same red set holds on three consecutive clean runs. Per-file floors are the image's: a desk measures more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config), never the reverse. EVERY entry is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
+	"generated_by": "bun run scripts/unit_baseline.ts (runs `bun test --timeout=30000 $(bun scripts/lib/test_order.ts test/unit test/integration)` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)",
+	"rule": "SHRINK-ONLY red baseline for the test/unit + test/integration tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the known reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` freezes the DEBT (failing_files/failing_tests) exactly; the SIZE counts are advisory here because this tier grows on most commits, and reddening on every added test would train the regenerate-to-green reflex the ratchet exists to prevent. The size is held by the anti-vacuity FLOORS instead, so a tier that silently stopped running is still red. `per_file` is the PER-FILE FLOOR: for every file of the tier, the cases it ran, the cases it skipped and the `expect` calls that EXECUTED (bun's own file-level JUnit attributes). Skips may only shrink; cases and assertions may only rise — a drop, or a skip that appears, is a regression the generator refuses without --allow-regression, because a test that returns before its first assertion is a PASS with assertions=0 and this count is the only thing that notices. An unrecorded file, or a recorded file that no longer reports, is stale: re-freeze. DO NOT hand-edit. Regenerate with: bun run scripts/unit_baseline.ts Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline`; the writer refuses anywhere else): 2 reds, both deterministic golden mismatches — ontology_parser dd1 and info_widget_native component_info media_icons — a stale expectation or a real parser/widget defect, either way fixable. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes). The stage is still ADVISORY in scripts/ci/db_tier.sh until the same red set holds on three consecutive clean runs. Per-file floors are the image's, and a desk differs from them in BOTH directions: it asserts more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config) and less where the image has what the desk lacks (librsvg: media_svg_thumb skips 7 on a Mac, 0 in the image) — so a desk number is never a floor, either way. EVERY entry is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
 	"measured": {
-		"tier_files": 1007,
-		"tier_tests": 14052,
-		"tier_pass": 14018,
+		"tier_files": 1010,
+		"tier_tests": 14081,
+		"tier_pass": 14049,
 		"tier_skip": 32,
-		"failing_files": 2,
-		"failing_tests": 2
+		"failing_files": 0,
+		"failing_tests": 0
 	},
-	"files": {
-		"test/unit/info_widget_native.test.ts": [
-			"component_info widget read-time compute (TS-native, oracle-captured goldens) > media_icons + descriptors: icon rows, tool_context, term grid"
-		],
-		"test/unit/ontology_parser.test.ts": [
-			"parseSectionRecordToOntologyNode reproduces the stored dd_ontology row > dd1"
-		]
-	},
+	"files": {},
 	"per_file": {
 		"test/integration/diffusion_mariadb.test.ts": {
 			"tests": 12,
@@ -44,9 +37,9 @@
 			"assertions": 214
 		},
 		"test/unit/acl_identity_fixture_native.test.ts": {
-			"tests": 12,
+			"tests": 13,
 			"skipped": 0,
-			"assertions": 42
+			"assertions": 44
 		},
 		"test/unit/action_scope_binding_native.test.ts": {
 			"tests": 13,
@@ -156,7 +149,7 @@
 		"test/unit/agent_loop.test.ts": {
 			"tests": 9,
 			"skipped": 0,
-			"assertions": 29
+			"assertions": 32
 		},
 		"test/unit/agent_model_catalog.test.ts": {
 			"tests": 18,
@@ -411,7 +404,7 @@
 		"test/unit/census_derivation_tripwire.test.ts": {
 			"tests": 45,
 			"skipped": 0,
-			"assertions": 590
+			"assertions": 589
 		},
 		"test/unit/change_lang.test.ts": {
 			"tests": 15,
@@ -449,14 +442,14 @@
 			"assertions": 25
 		},
 		"test/unit/ci_local_native.test.ts": {
-			"tests": 36,
+			"tests": 39,
 			"skipped": 0,
-			"assertions": 120
+			"assertions": 151
 		},
 		"test/unit/ci_workflow_tripwire.test.ts": {
 			"tests": 41,
 			"skipped": 0,
-			"assertions": 1008
+			"assertions": 1010
 		},
 		"test/unit/client_a11y_budget_tripwire.test.ts": {
 			"tests": 13,
@@ -2011,7 +2004,7 @@
 		"test/unit/info_widget_native.test.ts": {
 			"tests": 16,
 			"skipped": 0,
-			"assertions": 167
+			"assertions": 168
 		},
 		"test/unit/info_widget_ports.test.ts": {
 			"tests": 4,
@@ -2414,9 +2407,9 @@
 			"assertions": 74
 		},
 		"test/unit/media_engine.test.ts": {
-			"tests": 47,
+			"tests": 48,
 			"skipped": 0,
-			"assertions": 225
+			"assertions": 425
 		},
 		"test/unit/media_export_base.test.ts": {
 			"tests": 5,
@@ -2776,7 +2769,7 @@
 		"test/unit/ontology_parser.test.ts": {
 			"tests": 10,
 			"skipped": 0,
-			"assertions": 98
+			"assertions": 99
 		},
 		"test/unit/ontology_property_census_tripwire.test.ts": {
 			"tests": 12,
@@ -4024,9 +4017,9 @@
 			"assertions": 71
 		},
 		"test/unit/suite_assertion_floor_tripwire.test.ts": {
-			"tests": 28,
+			"tests": 29,
 			"skipped": 2,
-			"assertions": 106
+			"assertions": 122
 		},
 		"test/unit/suite_mariadb_target_native.test.ts": {
 			"tests": 34,
@@ -4181,7 +4174,7 @@
 		"test/unit/tier1_media_argv_native.test.ts": {
 			"tests": 7,
 			"skipped": 0,
-			"assertions": 52
+			"assertions": 54
 		},
 		"test/unit/tier1_parsers_native.test.ts": {
 			"tests": 13,
@@ -4199,14 +4192,14 @@
 			"assertions": 22
 		},
 		"test/unit/tier_execution_tripwire.test.ts": {
-			"tests": 11,
+			"tests": 13,
 			"skipped": 0,
-			"assertions": 300
+			"assertions": 309
 		},
 		"test/unit/tier_file_order_tripwire.test.ts": {
-			"tests": 9,
+			"tests": 11,
 			"skipped": 0,
-			"assertions": 35
+			"assertions": 42
 		},
 		"test/unit/tier_wiring_tripwire.test.ts": {
 			"tests": 15,
@@ -4536,7 +4529,7 @@
 		"test/unit/tool_ontology_parser.test.ts": {
 			"tests": 11,
 			"skipped": 0,
-			"assertions": 129
+			"assertions": 128
 		},
 		"test/unit/tool_ontology_scope.test.ts": {
 			"tests": 9,
@@ -4974,9 +4967,9 @@
 			"assertions": 163
 		},
 		"test/unit/verify_selector_selftest.test.ts": {
-			"tests": 6,
+			"tests": 7,
 			"skipped": 0,
-			"assertions": 37
+			"assertions": 42
 		},
 		"test/unit/virtual_section_list_columns.test.ts": {
 			"tests": 4,
