@@ -210,7 +210,16 @@ const LABEL_SECTION = 'dd1706';
 const ROLES = ['author', 'editor', 'translator', 'reviewer'] as const;
 type Role = (typeof ROLES)[number];
 const roleTargets = new Map<Role, number>();
-const roleOf = new Map<number, Role>();
+/**
+ * Role by the LOCATOR a frame/portal item points at — section_tipo AND
+ * section_id: the ids are per-section counters, so another section's record
+ * (dd560's dd1706 labels) may hold the same id as a role target.
+ */
+const roleByLocator = new Map<string, Role>();
+const locatorKey = (sectionTipo: unknown, sectionId: unknown): string =>
+	`${String(sectionTipo)}_${Number(sectionId)}`;
+const roleOf = (item: Item): Role | undefined =>
+	roleByLocator.get(locatorKey(item.section_tipo, item.section_id));
 const targetOf = (role: Role): number => mustGet(roleTargets.get(role), role);
 
 // ---------------------------------------------------------------- lifecycle
@@ -227,7 +236,7 @@ beforeAll(async () => {
 	for (const role of ROLES) {
 		const id = await createSectionRecord(SECTION, USER_ID);
 		roleTargets.set(role, id);
-		roleOf.set(id, role);
+		roleByLocator.set(locatorKey(SECTION, id), role);
 	}
 }, 60_000);
 
@@ -507,9 +516,7 @@ async function preview(
 
 /** Frames as `id_key→role`, sorted — the comparable frame state. */
 function framesRoles(frames: readonly Item[]): string[] {
-	return frames
-		.map((frame) => `${frame.id_key}→${roleOf.get(Number(frame.section_id)) ?? frame.section_id}`)
-		.sort();
+	return frames.map((frame) => `${frame.id_key}→${roleOf(frame) ?? frame.section_id}`).sort();
 }
 
 /** The frames of a row image (dd490 entries of this main). */
@@ -1192,9 +1199,7 @@ describe('(6) a BULK run over a translatable main with frames: pairs per lane, e
 				save(id, TPMAIN, lang, [{ action: 'set_data', value }], { bulk }),
 			);
 		const portalState = async (id: number) => ({
-			value: asList(await stored(id, 'relation', TPMAIN)).map((item) =>
-				roleOf.get(Number(item.section_id)),
-			),
+			value: asList(await stored(id, 'relation', TPMAIN)).map((item) => roleOf(item)),
 			frames: framesRoles(await liveFrames(TP, id)),
 		});
 		const id = await rec();
@@ -1779,7 +1784,7 @@ describe('(10) bulk revert, preview and list completeness', () => {
 			const shown = items
 				.filter((item) => item.tipo === TPMAIN)
 				.flatMap((item) => item.entries ?? [])
-				.map((entry) => roleOf.get(Number(entry.section_id)));
+				.map((entry) => roleOf(entry));
 			expect(shown).toEqual(['author']);
 		});
 	}, 60_000);
@@ -1942,7 +1947,7 @@ describe('(11) the BACKFILL (duplicate, Delete data) writes the frame lane FIRST
 			const entriesOf = (tipo: string) =>
 				read.filter((item) => item.tipo === tipo).flatMap((item) => item.entries ?? []);
 			return {
-				values: entriesOf(TPMAIN).map((entry) => roleOf.get(Number(entry.section_id))),
+				values: entriesOf(TPMAIN).map((entry) => roleOf(entry)),
 				frames: framesRoles(entriesOf(TPSLOT)),
 			};
 		});

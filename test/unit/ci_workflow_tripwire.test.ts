@@ -446,7 +446,7 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/shard_mariadb_sweep_native.test.ts',
-		"sweepShardClones enumerates shard clones and their vector twins through psql on the suite Postgres cluster and the vector server before it sweeps the planted suite MariaDB lane roots, so without a live cluster the sweep throws at its first enumeration; its only other executors are the ADVISORY unit stage and the MariaDB tier's no-contact batch, which never judges a failed case",
+		"sweepShardClones enumerates shard clones and their vector twins through psql on the suite Postgres cluster and the vector server before it sweeps the planted suite MariaDB lane roots, so without a live cluster the sweep throws at its first enumeration; its only other executors are the unit stage (one of ~1000 files in one pass) and the MariaDB tier's no-contact batch, which never judges a failed case",
 	],
 	[
 		'test/unit/diffusion_frontier_scope_native.test.ts',
@@ -2671,13 +2671,30 @@ describe('CI workflow tripwire', () => {
 		}
 	});
 
-	test('no CI definition names DEDALO_CI_SKIP_ADVISORY — the runner always runs the advisory stage', () => {
-		// `ci:local --skip-advisory` (the pre-push hook's) skips db_tier.sh's ADVISORY unit
-		// stage on the DESK only; ci_local_native pins that stage and its one reader.
+	test('no CI definition names DEDALO_CI_SKIP_ADVISORY — the retired desk skip stays retired', () => {
+		// The key skipped db_tier.sh's unit stage while that stage could not fail its tier.
+		// Since 2026-10-02 it is BLOCKING and nothing reads the key (ci_local_native §6 holds
+		// the tier scripts, compose and the CLI); a host setting it again would be a stale
+		// skip waiting for a reader to come back.
 		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
 		expect(hosts.length).toBeGreaterThan(2);
 		expect(
 			hosts.filter(({ src }) => src.includes('DEDALO_CI_SKIP_ADVISORY')).map(({ rel }) => rel),
 		).toEqual([]);
+	});
+
+	test('no CI definition names DEDALO_CI_UNIT_RECORD_* — a runner checks the unit baseline, never writes it', () => {
+		// db_tier.sh's unit stage turns into the baseline WRITER under these keys (`ci:local
+		// --docker --record-unit-baseline` only; ci_local_native executes that branch). A
+		// workflow setting one would rewrite the baseline it is meant to check, green.
+		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
+		expect(hosts.length).toBeGreaterThan(2);
+		expect(
+			hosts.filter(({ src }) => /DEDALO_CI_UNIT_RECORD/.test(src)).map(({ rel }) => rel),
+		).toEqual([]);
+		// The key the rule scans for is the one the tier reads (a rename blinds it).
+		expect(read('scripts/ci/db_tier.sh')).toContain('${DEDALO_CI_UNIT_RECORD_OUT:-}');
+		// Control: the scan sees a planted workflow line.
+		expect(/DEDALO_CI_UNIT_RECORD/.test('env:\n  DEDALO_CI_UNIT_RECORD_OUT: /tmp\n')).toBe(true);
 	});
 });

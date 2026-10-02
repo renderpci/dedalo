@@ -35,6 +35,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
+# shellcheck source=scripts/ci/test_order.sh
+source scripts/ci/test_order.sh
 
 # ---------------------------------------------------------------------------
 # The environment — ONE copy, shared with the instance tier. Every DEDALO_* key the
@@ -207,7 +209,10 @@ echo "== db_tier: DB-backed tripwires (${#DB_TIER_TRIPWIRES[@]})"
 # because Bun 1.4.0 SILENTLY IGNORES `[test] timeout`. These gates are DB-backed, so they are
 # the ones a 5000 ms cap truncates first.
 tw_rc=0
-bun test --timeout=30000 "${DB_TIER_TRIPWIRES[@]}" || tw_rc=$?
+# Sorted `./` paths, never the bare array: a bare name is a bun FILTER run in readdir
+# order (per host). scripts/ci/test_order.sh; gate: tier_file_order_tripwire.
+order_test_paths "${DB_TIER_TRIPWIRES[@]}" || tw_rc=$?
+bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
 [ "$tw_rc" -eq 0 ] || { echo "== db_tier: RED in DB-backed tripwires (exit $tw_rc)"; tier_status=1; }
 
 # ── THE UNIT TIER — the 685 files that used to execute NOWHERE ───────────────
@@ -220,60 +225,57 @@ bun test --timeout=30000 "${DB_TIER_TRIPWIRES[@]}" || tw_rc=$?
 # aspirational without this stage.
 #
 # It runs against a FROZEN, SHRINK-ONLY red baseline (engineering/unit_baseline.json)
-# rather than demanding a green tier, because the tier is not green: 8 reds measured
-# 2026-08-29. Freezing is not normalizing — the list is keyed per TEST NAME, an
-# unlisted failure is a REGRESSION that reddens this tier, and a LISTED test that starts
-# PASSING is red too, so the list cannot outlive the bugs it names. Why each red is
-# there, and that all 8 are expected to be fixed, is written into the baseline's own
+# rather than demanding a green tier, because the tier was not green (8 reds measured
+# 2026-08-29; 0 frozen since the 2026-10-02 in-image recording). Freezing is not
+# normalizing — the list is keyed per TEST NAME, an unlisted failure is a REGRESSION that
+# reddens this tier, and a LISTED test that starts PASSING is red too, so the list cannot
+# outlive the bugs it names. Why any red is there is written into the baseline's own
 # `rule` field.
 #
 # The overlap with the arrays above is deliberate and cheap: the tripwire stage proves
 # those gates run under their own named tier with the right environment, this stage
 # proves nothing has been left with no home at all.
-# ADVISORY, NOT BLOCKING — and that is a MEASURED limitation, not caution.
 #
-# The tier's red set is LOAD- AND ORDER-DEPENDENT today, so gating on it would gate on
-# how busy the runner was. Measured 2026-08-29, all on the same commit:
+# BLOCKING (2026-10-02). A NEW red — an unlisted failure, a listed test that now passes, a
+# per-file floor that fell — fails the db tier like any other stage. It was ADVISORY from
+# 2026-08-29 because the red SET was load- and order-dependent (7 / 1 / 14 reds on one
+# commit, depending on the machine and the fixture: timing-sensitive gates and files that
+# failed only in company — one a leaked `setTimeout` whose uncaught exception bun pinned on
+# whichever test was running). The flip waited for the criterion it was given: the
+# baseline re-recorded IN THE CI IMAGE on the sorted tier order (0 frozen reds), and the
+# zero drift on three executed GitHub db runs of 674c1f4f76 (run ids and the one leg not
+# exercised: engineering/CI.md, "Tiers" → DB). Gated: tier_wiring leg H (the raise below is
+# required, no advisory row exists) and leg L (this script, executed with its commands
+# stubbed and `unit_baseline.ts --check` exiting 1, exits non-zero). There is no desk skip:
+# the pre-push gate runs this stage, because the runner can now fail on it.
 #
-#   quiet machine, aged fixture      7 reds
-#   quiet machine, 6 flagged files   1 red     (89 pass; the same files that failed below)
-#   loaded machine, clean fixture   14 NEW reds across 12 files, run time 5 min -> 30 min
-#
-# The gates that move are the timing-sensitive ones (media_encode_integrity's inactivity
-# caps, ops_diffusion_queue, the install_* suites) plus files that pass alone and fail in
-# company. Three such gates were diagnosed and FIXED in this batch and the root cause of
-# one was not what it looked like at all: a `setTimeout` leaked by
-# client_request_coalescing_tripwire fired after its `afterAll` removed the `window`
-# global it closes over, and bun attributes an uncaught exception to whichever test is
-# running — so the victim was arbitrary, which is exactly why the failing SET moved
-# between runs rather than one gate being reliably red. There are more of that class.
-#
-# A gate that flaps red and green on its own is worse than no gate: it teaches the team
-# to regenerate the baseline without reading it, which is the precise reflex every
-# ratchet in this repo exists to prevent. So the stage RUNS on every push — 687 files
-# went from executing nowhere to executing here, and a NEW red is printed where somebody
-# will see it — but it does not fail the tier.
-#
-# WHAT MUST BE TRUE BEFORE THE `tier_status=1` LINE BELOW IS UNCOMMENTED: the same red
-# set on three consecutive clean-fixture runs, at least one of them on a loaded runner.
-# That is a determinism campaign against the timing-sensitive gates, ledgered as such —
-# not something to switch on because the numbers happened to line up once.
-#
-# DESK SKIP. `DEDALO_CI_SKIP_ADVISORY=1` (set only by `ci:local --skip-advisory`, which the
-# pre-push hook passes) skips this stage: it cannot change the tier's verdict, so the
-# desk gate spends ~5 min for a print the runner makes anyway. No workflow file names it
-# (ci_workflow_tripwire scans the workflows — a repo-text gate, not a runtime check). The day
-# the line below is restored this stage stops being advisory — and the skip must go with
-# it (ci_local_native pins this stage's exact code).
-echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]"
+# RECORD MODE. `DEDALO_CI_UNIT_RECORD_OUT=<dir>` (set only by `ci:local --docker
+# --record-unit-baseline`, which mounts <dir> writable at /ci-out) makes this stage the
+# baseline WRITER instead of the check: the record is taken HERE, after the same suite
+# build, MariaDB start, dependency install and DB-tripwire stage the check runs after —
+# one preparation, no copy of it to drift. `DEDALO_CI_UNIT_RECORD_ALLOW=1` adds
+# --allow-regression (ci:local demands a --reason with it). `DEDALO_CI_UNIT_RECORD_NEW=<files>`
+# (space-separated, shape-checked by ci:local) runs `--record-new <files>` instead: only
+# those new files' floors. Both writers refuse outside the CI image
+# (UNIT_TIER.recordOnlyInCiImage). A refused write is RED; only a written baseline is
+# copied out, and ci:local copies it into the checkout only if this whole tier ends green.
+# No workflow names any of these keys (ci_workflow_tripwire).
+echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline"
 unit_rc=0
-if [ "${DEDALO_CI_SKIP_ADVISORY:-0}" = 1 ]; then
-	echo "== db_tier: SKIPPED — advisory stage, DEDALO_CI_SKIP_ADVISORY=1 (desk gate); the runner runs it"
+if [ -n "${DEDALO_CI_UNIT_RECORD_OUT:-}" ]; then
+	echo "== db_tier: RECORDING engineering/unit_baseline.json (ci:local --record-unit-baseline)"
+	record_rc=0
+	record_args=''
+	[ "${DEDALO_CI_UNIT_RECORD_ALLOW:-0}" != 1 ] || record_args=--allow-regression
+	[ -z "${DEDALO_CI_UNIT_RECORD_NEW:-}" ] || record_args="--record-new ${DEDALO_CI_UNIT_RECORD_NEW}"
+	# shellcheck disable=SC2086 # empty → no argument; a file list → one argument per file
+	bun run scripts/unit_baseline.ts $record_args || record_rc=$?
+	[ "$record_rc" -eq 0 ] || { echo "== db_tier: RED in the unit-baseline recording (exit $record_rc) — nothing copied out"; tier_status=1; }
+	[ "$record_rc" -ne 0 ] || cp engineering/unit_baseline.json "$DEDALO_CI_UNIT_RECORD_OUT/unit_baseline.json"
 else
 	bun run scripts/unit_baseline.ts --check || unit_rc=$?
 fi
-[ "$unit_rc" -eq 0 ] || echo "== db_tier: unit-tier drift (exit $unit_rc) — ADVISORY, not failing the tier; see the block above"
-# [ "$unit_rc" -eq 0 ] || tier_status=1   # <- the line to restore, per the criterion above
+[ "$unit_rc" -eq 0 ] || { echo "== db_tier: RED in the unit tier (exit $unit_rc)"; tier_status=1; }
 
 # ── THE PARITY TIER ──────────────────────────────────────────────────────────
 #

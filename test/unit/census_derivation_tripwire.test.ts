@@ -319,8 +319,6 @@ const FLOORLESS_WALK_BASELINE: Readonly<Record<string, string>> = {
 		'DEBT: the recursive `readdirSync` walk is never floored.',
 	'test/unit/operator_commands_tripwire.test.ts':
 		'NOT-A-CENSUS: `readdirSync` lists the scratch backup trees the gate builds under test/.tmp-* (retention generations), not a corpus.',
-	'test/unit/parity_baseline_tripwire.test.ts':
-		'DEBT: the on-disk parity glob (`scripts/lib/red_baseline.ts`) is never floored; the floors are on the tier RUN.',
 	'test/unit/proxy_trust_tripwire.test.ts': 'DEBT: the src/ proxy-trust glob is never floored.',
 	'test/unit/remove_sentinel_native.test.ts':
 		'DEBT: `scanFiles()` over src/ is never floored (floors are on call sites and reasons).',
@@ -692,19 +690,17 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'hierarchy TLD carriers in tests and the repo-owned situations (SCAN_ROOTS), and the shipped hierarchy archives the allowlist is derived from',
 	},
-	'scripts/lib/red_baseline.ts': {
-		roots: [['test/integration', 'test/parity', 'test/unit']],
+
+	'scripts/lib/test_order.ts': {
+		roots: [['test/parity']],
 		scope:
-			'a parameterized tier lister — the CALLER supplies a TierSpec naming the paths its baseline covers; the union of the tiers fed to it is written here',
+			"a parameterized tier lister — the CALLER names the tier's paths and this expands them into the sorted file list bun runs (one walk for runTier, the shard runner, verify and the drift report). Known subset: only the parity tier's `test/parity` reaches it from an indexed gate (parity_baseline_tripwire → runParityTier); the unit tier's `test/unit` + `test/integration`, the shard runner's `test` and the MariaDB set are fed by scripts no indexed gate reaches — tier_file_order_tripwire holds those lists complete against an independent walk",
 	},
 	'scripts/lib/parity_census.ts': {
 		roots: [['test/parity']],
 		scope: 'the parity TierSpec: the one path the parity baseline covers',
 	},
-	'scripts/unit_baseline.ts': {
-		roots: [['test/integration', 'test/unit']],
-		scope: 'the unit TierSpec: the two paths the unit baseline covers',
-	},
+
 	'scripts/lib/twin_census.ts': {
 		roots: [['test/parity'], ['test/unit']],
 		scope: 'the retired-differential twin map: parity gates and their native twins',
@@ -713,10 +709,7 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['test'], ['test/helpers']],
 		scope: 'every test file and helper — the corpus-scope and shard census',
 	},
-	'scripts/test_shard.ts': {
-		roots: [['test']],
-		scope: 'the shard runner: the test files a shard selects, by pattern under test/',
-	},
+
 	'scripts/lib/test_shard_db.ts': {
 		roots: [],
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',

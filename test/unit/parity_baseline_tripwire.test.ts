@@ -70,13 +70,9 @@
 
 import { describe, expect, test } from 'bun:test';
 import { basename } from 'node:path';
-import {
-	childEnv,
-	parseJunit,
-	runParityTier,
-	TIER_COMMAND,
-} from '../../scripts/lib/parity_census.ts';
+import { childEnv, parseJunit, TIER_COMMAND } from '../../scripts/lib/parity_census.ts';
 import { emptyDrift } from '../../scripts/lib/red_baseline.ts';
+import { runParityTier } from '../../scripts/lib/tier_run.ts';
 import {
 	BASELINE_PATH,
 	computeDrift,

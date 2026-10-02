@@ -202,8 +202,8 @@ const NON_IMAGEMAGICK_SPAWNS: Record<string, string> = {
 		'ffmpeg — the AV producer runner; see tools/fragment.ts for why the idle-timeout policy and the AV job lane are its bound',
 	'engine/ffmpeg.ts:probeFormat': 'ffprobe — a container/stream header read, it decodes no frame',
 	'engine/ffmpeg.ts:probeStreams': 'ffprobe — a container/stream header read, it decodes no frame',
-	'engine/ffmpeg.ts:getAudioCodec':
-		'ffmpeg -buildconf — the encoder-capability probe of the binary itself; it opens no file at all',
+	'engine/ffmpeg.ts:probeAudioCodec':
+		'ffmpeg -encoders — the encoder-capability probe of the binary itself; it opens no file at all',
 };
 
 // --- half 1: the shipped policy ---------------------------------------------
@@ -695,8 +695,8 @@ const NO_PERMIT_SPAWNS: Record<string, string> = {
 		'pdfinfo -f N -l N — the page-box header read the rasterizer refuses on; it must stay cheap and ungated or the refusal itself would queue behind the renders it exists to prevent',
 	'engine/ffmpeg.ts:probeFormat': 'ffprobe — a container/stream header read, it decodes no frame',
 	'engine/ffmpeg.ts:probeStreams': 'ffprobe — a container/stream header read, it decodes no frame',
-	'engine/ffmpeg.ts:getAudioCodec':
-		'ffmpeg -buildconf — the encoder-capability probe of the binary itself; it opens no file at all',
+	'engine/ffmpeg.ts:probeAudioCodec':
+		'ffmpeg -encoders — the encoder-capability probe of the binary itself; it opens no file at all',
 };
 
 /** The doors that MUST hold a permit — named so the exemption list can never grow to cover them. */

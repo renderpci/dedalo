@@ -44,9 +44,9 @@
 #      in HERMETIC_ONLY_PATHS below — or always, with DEDALO_PREPUSH=full. CI
 #      itself runs them on every push; skipping them here is a desk-time trade,
 #      and it is only taken where it is PROVABLY not a hole (see the list).
-#      With them goes `--skip-advisory`: the db tier's ADVISORY unit stage (~5 min)
-#      cannot change the verdict, so the desk does not wait for it; the runner still
-#      runs and prints it.
+#      The db tier runs WHOLE, its unit stage included (~5 min): that stage is
+#      blocking on the runner (2026-10-02), so a desk that skipped it would pass
+#      what the runner refuses.
 #
 # THE GATED TREE IS THE PUSHED COMMIT. ci:local gets `--ref <HEAD sha>`: the
 # container checks out exactly that commit, no working-tree overlay; and the
@@ -524,9 +524,8 @@ cleanup_bank
 # ── 2 + 3. the CI tiers, in the CI image ────────────────────────────────────
 # No --fail-fast: a red hermetic still runs db + instance, so the refusal lists EVERY
 # red tier — the next fix is made against all of them, not one per run (see step 2).
-# --skip-advisory: only a stage that CANNOT fail its tier honours it (see step 3).
 if [ "$level" = full ]; then
-	set -- --docker --skip-advisory --hermetic --db --instance
+	set -- --docker --hermetic --db --instance
 else
 	set -- --docker --hermetic
 fi
@@ -540,10 +539,9 @@ if [ "$ci_code" -ne 0 ]; then
 		bun -e '
 			const s = await Bun.file(process.argv[1]).json();
 			for (const t of s.tiers ?? []) for (const st of t.stages ?? [])
-				// ci_local StageVerdict: green | red | skipped | advisory. Only
-				// red failed; advisory is shown (it carries a hint), never as ✗.
-				if (st.verdict === "red" || st.verdict === "advisory")
-					console.error(`    ${st.verdict === "red" ? "✗" : "! (advisory)"} ${t.tier} › ${st.name}${st.fix_hint ? ` — ${st.fix_hint}` : ""}`);
+				// ci_local StageVerdict: green | red | skipped. Only red failed.
+				if (st.verdict === "red")
+					console.error(`    ✗ ${t.tier} › ${st.name}${st.fix_hint ? ` — ${st.fix_hint}` : ""}`);
 		' "$summary_file" || true
 	fi
 	say 'Bypass (CI will still run): git push --no-verify'

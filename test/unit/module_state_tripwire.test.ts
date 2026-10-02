@@ -233,7 +233,6 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// downloaded file, never from ontology/records/session/lang/principal. Same
 	// lifecycle as the static-asset gzip cache; not a cache-factory resource.
 	'core/geoip/reader.ts:reader',
-	'core/media/engine/ffmpeg.ts:cachedAudioCodec',
 	// Diffusion job service (DIFFUSION_SPEC §4.2) — all request-INDEPENDENT
 	// process state: a table-bootstrap memo plus the scheduler's process-wide
 	// timers/latch. No request identity (user/session/lang) ever lands here;
@@ -475,11 +474,20 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// "Can this ImageMagick, under OUR hardened policy, write a .<ext> file"
 	// (engine/imagemagick.ts:canWriteImageFormat). A fact about the HOST — the
 	// installed delegates plus the shipped policy.xml — probed once per process
-	// with a real 1x1 encode. Key is a file extension, value a boolean promise:
-	// request identity cannot land in it. Lifecycle: process restart, and that is
-	// correct — neither the binary's delegates nor the shipped policy can change
-	// under a running server (the engine/ffmpeg.ts:cachedAudioCodec precedent).
+	// with a real 1x1 encode. Key is the resolved magick binary path plus a file
+	// extension, value a boolean promise: request identity cannot land in it.
+	// Lifecycle: process restart for a `true` (false is dropped) — neither the
+	// binary's delegates nor the shipped policy can change under a running server,
+	// and the binary in the key means a second magick is probed, not answered for
+	// (the engine/ffmpeg.ts:audioCodecByBinary precedent).
 	'core/media/engine/imagemagick.ts:writableFormatCache',
+	// AAC-encoder pick per ffmpeg BINARY PATH (engine/ffmpeg.ts:getAudioCodec).
+	// A fact about one executable: key a path, value an encoder name — request
+	// identity cannot land in it. Keyed by the binary (not a process scalar) so a
+	// second ffmpeg resolved in-process is re-probed: the scalar it replaced let a
+	// fake binary's libfdk-aac answer break every later real encode. Inconclusive
+	// probes are dropped, so lifecycle = process restart for conclusive answers only.
+	'core/media/engine/ffmpeg.ts:audioCodecByBinary',
 	// Tool filesystem-root resolution: cleared by resetPathsCache via
 	// invalidateAllToolCaches on TS-side tool writes; COEX restart rule for
 	// PHP-side writes (tools/cache.ts header).

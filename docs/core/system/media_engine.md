@@ -137,10 +137,16 @@ resolution for them.
 // src/core/media/engine/ffmpeg_profiles.ts — the 404_pal_16x9 profile
 videoProfile('404_pal_16x9', '1024k', '720x404', 25, 44100, '64k', 1, '404')
 // → { name: '404_pal_16x9', videoBitrate: '1024k', scale: '720x404', gop: 25,
-//     videoCodec: 'libx264', deinterlace: '-vf yadif', gammaFilter: '-vf lutyuv=…',
+//     videoCodec: 'libx264', videoFilters: ['yadif=deint=interlaced', 'lutyuv=…'],
 //     force: 'mp4', audioRate: 44100, audioBitrate: '64k', audioChannels: 1,
 //     audioCodec: 'libvo_aacenc', targetPath: '404' }
 ```
+
+Both passes receive the profile's `videoFilters` as ONE chained option,
+`-vf yadif=deint=interlaced,lutyuv=…` — ffmpeg applies only the last `-vf` it is
+given, so two separate options would silently drop the first filter. `yadif` with
+`deint=interlaced` deinterlaces only frames flagged as interlaced: a progressive
+source passes through it unchanged. The `1080i` tiers carry no deinterlace filter.
 
 !!! note "Data, not code — and the table is wider than the ladder"
     `PROFILE_LIST` is an inert TypeScript array: nothing in it executes at read
@@ -151,10 +157,14 @@ videoProfile('404_pal_16x9', '1024k', '720x404', 25, 44100, '64k', 1, '404')
 
 ### Audio-codec autodetection (`ffmpeg.ts`)
 
-`getAudioCodec()` runs `ffmpeg -buildconf` once and caches the result on a
-module-level variable: it prefers `libfdk_aac`, falls back to `libvo_aacenc`, and
-finally to the native `aac` encoder. The cached value is a property of the host's
-`ffmpeg` build, so it is request-invariant and safe to hold at module level.
+`getAudioCodec()` asks the configured binary for its encoder list
+(`ffmpeg -hide_banner -encoders`, the same table `-acodec` is resolved against)
+and prefers `libfdk_aac`, then `libvo_aacenc`, then the native `aac` encoder. The
+answer is cached per binary PATH: it is a fact about one executable, so a
+different `ffmpeg` resolved later in the same process is probed again rather than
+handed the first binary's answer. A probe that cannot run falls back to `aac` and
+is not cached, so the next encode asks again. The value carries no request
+identity, so it is safe to hold at module level.
 
 ### Colour space and profiles (`imagemagick.ts`)
 
@@ -194,13 +204,16 @@ media type ends up calling.
 
 There is no per-request lifecycle in the engine — every `build*Argv()` is a pure
 function, and every `run*` or probe function is a plain `async` call. The engine
-holds exactly **one** piece of mutable state:
+holds two capability memos, both keyed by the binary they probed:
 
-- `ffmpeg.ts`'s module-level `cachedAudioCodec` — the detected AAC encoder,
-  computed once per process.
+- `ffmpeg.ts`'s `audioCodecByBinary` — the detected AAC encoder, per `ffmpeg`
+  path.
+- `imagemagick.ts`'s `writableFormatCache` — whether a target extension can be
+  written under the hardened policy, per `magick` path and extension.
 
-That is safe to cache because it is an immutable fact about the host's `ffmpeg`
-build, not about any request. `settingName()` / `standardFromFps()` recompute on
+Both are safe to cache because each answer is a fact about one executable, not
+about any request; the binary is in the key so that a second binary resolved in
+the same process is probed instead of inheriting the first one's answer. `settingName()` / `standardFromFps()` recompute on
 every call, and the stream probes (`probeStreams` / `probeFormat`) are not cached
 at all.
 

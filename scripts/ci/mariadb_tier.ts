@@ -120,7 +120,8 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { isAbsolute, join, posix, relative } from 'node:path';
-import { type ParityRun, REPO_ROOT, runTier } from '../lib/parity_census.ts';
+import { type ParityRun, REPO_ROOT } from '../lib/parity_census.ts';
+import { runTier } from '../lib/tier_run.ts';
 
 /** Anti-vacuity floor on the SET. Fix the derivation, never the floor. */
 export const MARIADB_TIER_FILE_FLOOR = 5;

@@ -25,7 +25,7 @@
  *      verdict CI will not reproduce nor be measured into a banked floor; a bank commit
  *      that would overwrite a local untracked file is refused, not forced.
  *   4. VERDICTS — red blocks and the remote is unchanged; the refusal lists red stages
- *      as ✗, advisory as `!`, and never a skipped/green stage; bank exit 3 commits
+ *      as ✗, and never a skipped/green stage; bank exit 3 commits
  *      exactly the written files as "chore(baselines): bank improvements" ON EVERY
  *      PUSHED BRANCH (HEAD's by fast-forward, the others — a detached HEAD's branch
  *      included — by compare-and-swap; one checked out in another worktree is refused,
@@ -462,7 +462,7 @@ describe('pre-push gate: tier selection and the gated tree', () => {
 		const r = run(['git', 'push', 'origin', 'v7'], repo);
 		expect(r.code, r.err).toBe(0);
 		expect(r.err).toContain('the range touches floors/gone.json');
-		expect(ciCalls()[0]).toMatch(/^ci --docker --skip-advisory --hermetic --db --instance --ref /);
+		expect(ciCalls()[0]).toMatch(/^ci --docker --hermetic --db --instance --ref /);
 	});
 
 	test('a RENAME out of src/ into a hermetic-only dir runs the full gate (the old path counts)', () => {
@@ -533,7 +533,7 @@ describe('pre-push gate: tier selection and the gated tree', () => {
 // ─────────────────────────────────────────────── 4. verdicts
 
 describe('pre-push gate: verdicts', () => {
-	test('red blocks; the refusal lists red as ✗ and advisory as !, never skipped/green', () => {
+	test('red blocks; the refusal lists red as ✗, never skipped/green', () => {
 		const repo = freshRepo();
 		const before = remoteTip(repo, 'origin', 'v7');
 		write(repo, 'presentation/notes.md', 'red\n');
@@ -549,7 +549,6 @@ describe('pre-push gate: verdicts', () => {
 						stages: [
 							{ name: 'typecheck', verdict: 'green', fix_hint: null },
 							{ name: 'audit', verdict: 'skipped', fix_hint: null },
-							{ name: 'unit', verdict: 'advisory', fix_hint: 'bank it' },
 							{ name: 'tripwires', verdict: 'red', fix_hint: 'fix the tripwire' },
 						],
 					},
@@ -562,7 +561,8 @@ describe('pre-push gate: verdicts', () => {
 		});
 		expect(r.code).not.toBe(0);
 		expect(r.err).toContain('✗ hermetic › tripwires — fix the tripwire');
-		expect(r.err).toContain('! (advisory) hermetic › unit — bank it');
+		// Exactly the one red stage is listed (StageVerdict is green | red | skipped).
+		expect(r.err.match(/✗ hermetic › /g)).toHaveLength(1);
 		expect(r.err).not.toContain('hermetic › audit');
 		expect(r.err).not.toContain('hermetic › typecheck');
 		expect(remoteTip(repo, 'origin', 'v7')).toBe(before);

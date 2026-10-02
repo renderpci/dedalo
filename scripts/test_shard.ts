@@ -68,13 +68,13 @@
 
 import { existsSync, readFileSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import { connectionsPerProcess } from '../src/core/db/connection_budget.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
 import { bandOf, classifyTestFile, type TestFootprint } from '../test/helpers/test_footprint.ts';
 import { childEnv } from './lib/parity_census.ts';
 import { buildTestComponentCensus } from './lib/test_components.ts';
 import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
+import { bunTestFileArgs, tierFiles } from './lib/test_order.ts';
 import {
 	assertShardableTemplate,
 	cloneShardMedia,
@@ -129,23 +129,13 @@ const RECLAIMABLE_HINT =
 
 /**
  * The same discovery `bun test` performs under bunfig `root = "test"`: every
- * file under test/ whose basename matches bun's four test shapes. Today that
- * is exactly the `*.test.ts` set; the other shapes are matched so a file bun
- * would RUN can never be a file this runner cannot SEE.
+ * file under test/ whose basename matches bun's four test shapes (one walk,
+ * scripts/lib/test_order.ts). Today that is exactly the `*.test.ts` set; the
+ * other shapes are matched so a file bun would RUN can never be a file this
+ * runner cannot SEE.
  */
 export function discoverTestFiles(): string[] {
-	const out = new Set<string>();
-	for (const pattern of [
-		'**/*.test.{js,jsx,ts,tsx,mjs,cjs}',
-		'**/*_test.{js,jsx,ts,tsx,mjs,cjs}',
-		'**/*.spec.{js,jsx,ts,tsx,mjs,cjs}',
-		'**/*_spec.{js,jsx,ts,tsx,mjs,cjs}',
-	]) {
-		for (const file of new Glob(pattern).scanSync({ cwd: join(REPO_ROOT, 'test') })) {
-			out.add(`test/${file}`);
-		}
-	}
-	return [...out].sort();
+	return tierFiles(['test'], REPO_ROOT);
 }
 
 // ── costs ────────────────────────────────────────────────────────────────────
@@ -524,8 +514,9 @@ export function printManifest(
 			`\n== bin ${bin.index} — ${bin.files.length} files, cost ${Math.round(bin.cost)} ==`,
 		);
 		console.log(`   ${surface}`);
-		console.log(`   re-run alone: bun test ${TEST_TIMEOUT_FLAG} <files below>`);
-		for (const file of bin.files) console.log(`   ${file}`);
+		// `./`-prefixed and sorted: the exact argv the bin ran (a bare name is a bun FILTER).
+		console.log(`   re-run alone: bun test ${TEST_TIMEOUT_FLAG} <files below, in this order>`);
+		for (const file of bunTestFileArgs(bin.files, REPO_ROOT)) console.log(`   ${file}`);
 	}
 }
 
@@ -571,12 +562,21 @@ async function runBins(
 					junitDir === null
 						? []
 						: ['--reporter=junit', `--reporter-outfile=${join(junitDir, `bin${bin.index}.xml`)}`];
-				const proc = Bun.spawn(['bun', 'test', TEST_TIMEOUT_FLAG, ...reporterArgs, ...bin.files], {
-					cwd: REPO_ROOT,
-					env,
-					stdout: 'pipe',
-					stderr: 'pipe',
-				});
+				const proc = Bun.spawn(
+					[
+						'bun',
+						'test',
+						TEST_TIMEOUT_FLAG,
+						...reporterArgs,
+						...bunTestFileArgs(bin.files, REPO_ROOT),
+					],
+					{
+						cwd: REPO_ROOT,
+						env,
+						stdout: 'pipe',
+						stderr: 'pipe',
+					},
+				);
 				running.push(proc);
 				const prefix = `[bin ${bin.index}]`;
 				await Promise.all([

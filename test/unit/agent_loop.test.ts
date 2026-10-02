@@ -134,18 +134,18 @@ describe('agent loop (Phase 8 gate — offline scripted provider)', () => {
 			results: { content: string; is_error: boolean }[];
 		};
 		const result = resultsEntry.results[0] as { content: string; is_error: boolean };
-		// Either the tool denies loudly (is_error) or returns ZERO hits — never data.
-		if (result.is_error) {
-			expect(result.content.length).toBeGreaterThan(0);
-		} else {
-			const envelope = JSON.parse(result.content) as {
-				ok: boolean;
-				data: { total: number; hits: unknown[] };
-			};
-			expect(envelope.ok).toBe(true);
-			expect(envelope.data.total).toBe(0);
-			expect(envelope.data.hits).toEqual([]);
-		}
+		// The tool denies LOUDLY with the typed refusal — `perm.denied`, nothing else. A
+		// bare "is_error with some content" also passed an `internal.unexpected` (a crash
+		// is not a denial), and an ok envelope with zero hits would hide the ACL verdict.
+		expect(result.is_error).toBe(true);
+		const envelope = JSON.parse(result.content) as {
+			ok: boolean;
+			data?: unknown;
+			error: { code: string; message: string };
+		};
+		expect(envelope.ok).toBe(false);
+		expect(envelope.data).toBeUndefined();
+		expect(envelope.error.code).toBe('perm.denied');
 		expect(run.stop).toBe('end_turn');
 	});
 

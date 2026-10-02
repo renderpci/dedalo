@@ -179,10 +179,10 @@ done
 case " $* " in
   # getAudioCodec's capability probe. It must NOT fall through to the writer
   # below: the last argv token is the FLAG, so the fake would create a file
-  # literally named '-buildconf' in the repo root — and runBinary's
+  # literally named '-encoders' in the repo root — and runBinary's
   # argument-as-flag guard then refuses every later spawn whose argv holds it.
-  *" -buildconf"*)
-    echo "configuration: --enable-libfdk-aac"
+  *" -encoders"*)
+    echo " A..... libfdk_aac           Fraunhofer FDK AAC (codec aac)"
     exit 0
     ;;
   *" -movflags "*)
@@ -485,7 +485,7 @@ describe('ffmpeg runners fail hard', () => {
 		rmSync(argvLog, { force: true });
 		writeScript(
 			'ffmpeg',
-			`case " $* " in *" -buildconf"*) echo "configuration: --enable-libfdk-aac"; exit 0 ;; esac
+			`case " $* " in *" -encoders"*) echo " A..... libfdk_aac  Fraunhofer FDK AAC"; exit 0 ;; esac
 printf '%s\\n' "$*" >> "${argvLog}"
 out=""
 for a in "$@"; do out="$a"; done

@@ -65,7 +65,7 @@
  *   afterAll(removeAclIdentityFixture);
  *
  * Install is idempotent (it sweeps a crashed previous run's rows first) and
- * drops the three per-user security caches, so a principal resolved BEFORE the
+ * drops the per-user security caches (principal, projects, permissions, tool grants), so a principal resolved BEFORE the
  * mint (by another file in the same bun process) can never be served stale.
  */
 
@@ -78,6 +78,7 @@ import {
 	clearUserProjectsCache,
 } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { invalidateAllToolCaches } from '../../src/core/tools/cache.ts';
 
 // --- the reserved ids (band 930000-930999) ---------------------------------
 
@@ -267,6 +268,12 @@ export function clearAclIdentityCaches(): void {
 	clearPrincipalCache();
 	clearUserProjectsCache();
 	clearPermissionsCache();
+	// The per-user TOOL grants (registry.ts profileToolGrantsCache) derive from the
+	// same user + profile rows this fixture mints with raw SQL — no save event, so
+	// nothing else evicts them. Without this, a file that granted a tool to these
+	// ids left the grant cached for the next file (get_element_context served 200
+	// instead of 403 behind export_artifact_download, 2026-10-02 sorted order).
+	invalidateAllToolCaches();
 }
 
 /**

@@ -47,6 +47,11 @@
 # ledger's HEAD^ and the update drills' `git clone` both work). ci_local passes the list
 # of working-tree changes in /ci-in; see IN_CONTAINER_DRIVER for how it becomes a commit.
 #
+# THE ONE WRITABLE MOUNT is /ci-out, an empty scratch dir ci_local creates per run and
+# deletes after. Only `ci:local --docker --record-unit-baseline` writes to it (db_tier.sh's
+# record mode copies the recorded engineering/unit_baseline.json there, and ci_local
+# copies it into the checkout). The source mounts above stay read-only.
+#
 # THE ONE PERSISTENT THING is the bun download cache (`dedalo-ci-bun-cache`, external,
 # so `down -v` keeps it). Every install is `--frozen-lockfile`, which verifies each
 # package against the lockfile's integrity hash, so a warm cache changes how long an
@@ -77,7 +82,10 @@ x-github-env: &github-env
   DEDALO_CI_BRANCH: ${DEDALO_CI_BRANCH:-master}
   DEDALO_CI_SHA: ${DEDALO_CI_SHA:?set by scripts/ci_local.ts}
   DEDALO_CI_OVERLAY: ${DEDALO_CI_OVERLAY:-0}
-  DEDALO_CI_SKIP_ADVISORY: ${DEDALO_CI_SKIP_ADVISORY:-0}
+  # Record mode of db_tier.sh's unit stage — ci:local --record-unit-baseline only.
+  DEDALO_CI_UNIT_RECORD_OUT: ${DEDALO_CI_UNIT_RECORD_OUT:-}
+  DEDALO_CI_UNIT_RECORD_ALLOW: ${DEDALO_CI_UNIT_RECORD_ALLOW:-0}
+  DEDALO_CI_UNIT_RECORD_NEW: ${DEDALO_CI_UNIT_RECORD_NEW:-}
 
 x-runner: &runner
   image: ${DEDALO_CI_IMAGE_REF:-dedalo-ci:local}
@@ -87,6 +95,7 @@ x-runner: &runner
     - ${DEDALO_CI_SRC:?set by scripts/ci_local.ts}:/src:ro
     - ${DEDALO_CI_GIT:?set by scripts/ci_local.ts}:/src-git:ro
     - ${DEDALO_CI_IN:?set by scripts/ci_local.ts}:/ci-in:ro
+    - ${DEDALO_CI_OUT:?set by scripts/ci_local.ts}:/ci-out
     - bun-cache:/home/runner/.bun/install/cache
   # Chromium's renderer uses /dev/shm; Docker's 64 MB default crashes tabs under load.
   shm_size: 1g

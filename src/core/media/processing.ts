@@ -974,7 +974,7 @@ export async function buildAlternateVersions(
 	for (const extension of extensions) {
 		// The tier's own file is not a twin of itself.
 		if (extension === spec.defaultExtension) continue;
-		// Probed ONCE per extension (and once per process — canWriteImageFormat
+		// Probed ONCE per extension (and once per magick binary — canWriteImageFormat
 		// memoizes), not once per tier: a box without the delegate must report one
 		// operator-readable line, not one per quality.
 		let capabilityFailure: string | null = null;
