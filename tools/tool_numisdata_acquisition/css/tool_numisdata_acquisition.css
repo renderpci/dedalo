@@ -6,6 +6,9 @@
 :root {
   --tool_numisdata_acquisition: #f78a1c;
 }
+:root[data-theme="dark"] {
+  --tool_numisdata_acquisition: #ffa040;
+}
 .wrapper_tool.tool_numisdata_acquisition .spinner {
   background-color: var(--tool_numisdata_acquisition);
 }
@@ -36,8 +39,5 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-}
-.tool_header.tool_numisdata_acquisition {
-  background-color: var(--tool_numisdata_acquisition);
 }
 /*# sourceMappingURL=tool_numisdata_acquisition.css.map */

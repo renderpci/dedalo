@@ -245,6 +245,16 @@ export const NOT_YET_PHONE: Record<
 		},
 	},
 	// phase 2 — modal-hosted tools become sheets
+	tool_bibliography_acquisition: {
+		phase: 2,
+		reason:
+			'NEW TOOL (this PR, open_as: modal) — not yet run against a phone viewport. No probe is listed because no test-TLD section is currently wired to offer this tool (register.json is show_in_component only, against the real rsc205/rsc3 tipos); writing one without a suite DB to verify it against would risk a false claim.',
+	},
+	tool_numisdata_acquisition: {
+		phase: 2,
+		reason:
+			'NEW TOOL (this PR, open_as: modal) — not yet run against a phone viewport. No probe is listed because no test-TLD section is currently wired to offer this tool (register.json is show_in_component only, against the real numisdata4 tipo); writing one without a suite DB to verify it against would risk a false claim.',
+	},
 	// phase 3 — CSS relayout
 	tool_import_rdf: {
 		phase: 3,

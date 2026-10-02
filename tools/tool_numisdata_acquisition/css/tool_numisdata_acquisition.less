@@ -11,6 +11,9 @@
 :root {
 	--tool_numisdata_acquisition: #f78a1c;
 }
+:root[data-theme="dark"] {
+	--tool_numisdata_acquisition: #ffa040;
+}
 @tool_color : var(--tool_numisdata_acquisition);
 
 // tool wrapper
@@ -60,7 +63,8 @@
 	}//end content_data
 }//end wrapper_tool
 
-// modal and new window header tool modification
-.tool_header.tool_numisdata_acquisition {
-	background-color: @tool_color;
-}
+// .tool_header.tool_numisdata_acquisition is NOT painted here - the GENERATED
+// tool_colors.less (scripts/tool_colors.ts) already derives --tool_edge/
+// --tool_fill for it (and its dark-mode twin) from the --tool_numisdata_acquisition
+// hue above; tool_common.less's header rule consumes --tool_edge. A local
+// override here would just be a second, driftable copy of the same color.

@@ -6,6 +6,9 @@
 :root {
   --tool_bibliography_acquisition: #f78a1c;
 }
+:root[data-theme="dark"] {
+  --tool_bibliography_acquisition: #ffa040;
+}
 .wrapper_tool.tool_bibliography_acquisition .spinner {
   background-color: var(--tool_bibliography_acquisition);
 }
@@ -21,8 +24,5 @@
 .wrapper_tool.tool_bibliography_acquisition > .content_data > .value_container {
   margin: 1rem;
   min-height: 7rem;
-}
-.tool_header.tool_bibliography_acquisition {
-  background-color: var(--tool_bibliography_acquisition);
 }
 /*# sourceMappingURL=tool_bibliography_acquisition.css.map */

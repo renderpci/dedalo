@@ -9,6 +9,7 @@
 	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
+	import {escape_html} from '../../../core/common/js/utils/render_escape.js'
 
 
 
@@ -234,7 +235,7 @@ const get_content_data = function(self) {
 		const preview_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary',
-			inner_html		: self.get_tool_label('preview') || 'Preview',
+			inner_html		: escape_html(self.get_tool_label('preview') || 'Preview'),
 			parent			: url_row
 		})
 
@@ -457,7 +458,7 @@ const get_content_data = function(self) {
 					company_name_input.value = auction.auctionHouse
 					const company_search_button = ui.create_dom_element({
 						element_type	: 'button',
-						inner_html		: self.get_tool_label('company_search') || 'Search',
+						inner_html		: escape_html(self.get_tool_label('company_search') || 'Search'),
 						parent			: company_container
 					})
 					const company_results = ui.create_dom_element({
@@ -561,12 +562,12 @@ const get_content_data = function(self) {
 				})
 				const select_all_button = ui.create_dom_element({
 					element_type	: 'button',
-					inner_html		: self.get_tool_label('select_all') || 'Select all',
+					inner_html		: escape_html(self.get_tool_label('select_all') || 'Select all'),
 					parent			: bulk_group
 				})
 				const deselect_all_button = ui.create_dom_element({
 					element_type	: 'button',
-					inner_html		: self.get_tool_label('deselect_all') || 'Deselect all',
+					inner_html		: escape_html(self.get_tool_label('deselect_all') || 'Deselect all'),
 					parent			: bulk_group
 				})
 
@@ -583,12 +584,12 @@ const get_content_data = function(self) {
 				})
 				const include_keyword_button = ui.create_dom_element({
 					element_type	: 'button',
-					inner_html		: self.get_tool_label('include_matching') || 'Include matching',
+					inner_html		: escape_html(self.get_tool_label('include_matching') || 'Include matching'),
 					parent			: keyword_group
 				})
 				const exclude_keyword_button = ui.create_dom_element({
 					element_type	: 'button',
-					inner_html		: self.get_tool_label('exclude_matching') || 'Exclude matching',
+					inner_html		: escape_html(self.get_tool_label('exclude_matching') || 'Exclude matching'),
 					parent			: keyword_group
 				})
 
@@ -611,12 +612,12 @@ const get_content_data = function(self) {
 				})
 				const include_range_button = ui.create_dom_element({
 					element_type	: 'button',
-					inner_html		: self.get_tool_label('include_range') || 'Include range',
+					inner_html		: escape_html(self.get_tool_label('include_range') || 'Include range'),
 					parent			: range_group
 				})
 				const exclude_range_button = ui.create_dom_element({
 					element_type	: 'button',
-					inner_html		: self.get_tool_label('exclude_range') || 'Exclude range',
+					inner_html		: escape_html(self.get_tool_label('exclude_range') || 'Exclude range'),
 					parent			: range_group
 				})
 
@@ -719,7 +720,7 @@ const get_content_data = function(self) {
 				const confirm_button = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'primary',
-					inner_html		: self.get_tool_label('confirm_import') || 'Confirm import',
+					inner_html		: escape_html(self.get_tool_label('confirm_import') || 'Confirm import'),
 					parent			: review_container
 				})
 
