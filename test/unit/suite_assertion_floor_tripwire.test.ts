@@ -36,7 +36,7 @@
  *   - the parity tier's live per-file legs run in parity_baseline_tripwire and
  *     in `bun run scripts/parity_baseline.ts --check` (db tier, blocking);
  *   - the unit tier's live per-file legs run in
- *     `bun run scripts/unit_baseline.ts --check` (db tier, advisory today).
+ *     `bun run scripts/unit_baseline.ts --check` (db tier, blocking).
  * THIS gate is the HERMETIC half, and the ONE OWNER of the rule's proof: the
  * census that every test file on disk has a record in exactly one tier (TOTAL,
  * derived from the tree, floored), the record's own sanity, the parser's proof
