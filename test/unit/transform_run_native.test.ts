@@ -46,7 +46,12 @@ let loadCalls: string[] = [];
 let widgetsSeen: string[] = [];
 
 const DEFINITIONS_PATH = '../../src/core/update/transform/definitions.ts';
-const REAL_DEFINITIONS = await import(DEFINITIONS_PATH);
+// A SNAPSHOT (spread), never the namespace itself: Bun's mock.module rewrites the
+// live namespace object IN PLACE, so a bare `await import()` captured here would
+// hold the MOCK after the line below — and the afterAll "restore" re-installed the
+// mock for every later file (transform_engine, matrix_counter_monotonic and
+// record_generation went red after this file, in any order that ran it first).
+const REAL_DEFINITIONS = { ...(await import(DEFINITIONS_PATH)) };
 
 mock.module(DEFINITIONS_PATH, () => ({
 	...REAL_DEFINITIONS,
@@ -69,7 +74,7 @@ mock.module(DEFINITIONS_PATH, () => ({
 type DoorExecutor = (items: unknown, recorder: TransformRecorder) => Promise<void>;
 let doorExecutor: DoorExecutor = async () => {};
 const TIPOS_PATH = '../../src/core/update/transform/tipos.ts';
-const REAL_TIPOS = await import(TIPOS_PATH);
+const REAL_TIPOS = { ...(await import(TIPOS_PATH)) }; // snapshot — see REAL_DEFINITIONS
 mock.module(TIPOS_PATH, () => ({
 	...REAL_TIPOS,
 	executeChangesInTipos: (items: unknown, recorder: TransformRecorder) =>

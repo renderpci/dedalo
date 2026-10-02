@@ -575,11 +575,21 @@ function restoresEveryMockFromSnapshot(source: string, fileDir: string): boolean
  * which is the whole argument for a rule instead of a repair.
  */
 function namespaceRestores(file: string): string[] {
-	const src = stripComments(readFileSync(join(TEST_DIR, file), 'utf8'));
+	return namespaceRestoresIn(stripComments(readFileSync(join(TEST_DIR, file), 'utf8')));
+}
+
+/** The pure reader behind {@link namespaceRestores}, so a control can feed it text. */
+function namespaceRestoresIn(src: string): string[] {
 	if (!src.includes('mock.module(')) return [];
-	const namespaces = [...src.matchAll(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s+from/g)].map(
-		(match) => match[1] as string,
-	);
+	// Both ways to bind the LIVE namespace: the static `import * as NS` and the
+	// dynamic `const NS = await import(…)` (no spread). The second shape hid in
+	// transform_run_native until 2026-10-02: its afterAll "restore" re-installed
+	// the definitions/tipos mocks, and transform_engine, matrix_counter_monotonic
+	// and record_generation went red in every order that ran it first.
+	const namespaces = [
+		...src.matchAll(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s+from/g),
+		...src.matchAll(/(?:const|let)\s+([A-Za-z0-9_$]+)\s*=\s*await\s+import\s*\(/g),
+	].map((match) => match[1] as string);
 	return namespaces.filter((name) =>
 		new RegExp(`mock\\.module\\([^;]*?\\)\\s*=>\\s*${name}\\s*\\)`, 's').test(src),
 	);
@@ -597,6 +607,18 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 				'spread copy at import time — `const REAL_EXPORTS = { ...NS }` — and restore from ' +
 				`that.\n  ${offenders.join('\n  ')}`,
 		).toEqual([]);
+	});
+
+	test('POSITIVE CONTROL: the namespace reader sees BOTH live-namespace bindings', () => {
+		const planted = [
+			"import * as A from '../../src/a.ts';",
+			"const B = await import('../../src/b.ts');",
+			"const C = { ...(await import('../../src/c.ts')) };",
+			"mock.module('../../src/a.ts', () => A);",
+			"mock.module('../../src/b.ts', () => B);",
+			"mock.module('../../src/c.ts', () => C);",
+		].join('\n');
+		expect(namespaceRestoresIn(planted)).toEqual(['A', 'B']);
 	});
 
 	test('NO NEW partial module mock (shrink-only)', () => {
