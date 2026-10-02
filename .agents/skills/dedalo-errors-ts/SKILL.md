@@ -69,7 +69,7 @@ outside `debug`.
 Everywhere else the per-file count is shrink-only.
 
 **5. Labels ride the code.** Every `label_key` must exist in `src/core/labels/master.json`,
-and the label's `{param}` placeholders must equal the code's `details_keys`, both ways. The
+and the label's `${param}` placeholders must equal the code's `details_keys`, both ways. Always with the `$`: the client fills `${param}` only, so a bare `{param}` reaches the user verbatim (gated). The
 code and its label land in ONE commit (`labels_tripwire` + `error_registry_native`). Deeper:
 the **`dedalo-labels-ts`** skill.
 
@@ -85,7 +85,7 @@ named tool failures), never converter-made — do not reintroduce them as an err
    `error_<code with . → _>`; reuse a pre-existing key ONLY when it already says the same
    thing — `perm.denied` reuses `no_access_page`), registry English `message` (never
    interpolates caller data), `severity`, `disclosure`, `retryable`, `details_keys` iff the
-   label has `{params}`, `hint` for a model-facing code, `reason` ONLY when no engine path
+   label has `${params}`, `hint` for a model-facing code, `reason` ONLY when no engine path
    throws it.
 2. Add the label to `src/core/labels/master.json`, **sorted**, same commit.
 3. If it replaces an old wire token, add the token to `LEGACY_TOKEN_MAP`.

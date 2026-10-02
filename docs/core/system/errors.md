@@ -54,7 +54,7 @@ explicitly, none is derived at runtime.
 | `severity` | `info` / `warn` log through `console.info` / `console.warn`; `error` / `fatal` through `console.error`. An expected refusal (an expired session) is `info` — traffic, not a fault. |
 | `disclosure` | `public` means a vetted `publicMessage` from the throw site may replace `message` on the wire; `operator` means it never can. |
 | `retryable` | whether a later attempt could plausibly succeed. The client's retry policy and the `Retry-After` header for `limit` / `unavailable` read it. |
-| `details_keys` | the ONLY `details` keys the converter lets onto the wire, scalars only. The label's `{param}` placeholders equal this list, both ways. |
+| `details_keys` | the ONLY `details` keys the converter lets onto the wire, scalars only. The label's `${param}` placeholders equal this list, both ways — written with the `$`: the client fills `${param}` only, so a bare `{param}` would reach the user verbatim (`error_registry_native`). |
 | `hint` | the model-facing next move, used by the assistant bridge's structured errors. |
 | `reason` | a named exemption: why the code exists although no engine path throws it (a client-minted or reserved code). |
 
