@@ -5881,7 +5881,8 @@ address only works when the web server in front of Dédalo routes `/dedalo/publi
 to that application —
 otherwise the button answers "not found", and `api_ui` must point at the server that does
 run v1. Only an `http(s)://` or a root-relative address is accepted. An entry without `db_name` or `code` is dropped and
-reported at boot.
+reported at boot. The v6 configuration migrator carries the v6 value across, leaving
+out the empty entry a stock v6 configuration ships.
 
 Empty by default: no buttons are shown. The codes are only sent to global administrators,
 the only users who can open the maintenance area. The publication server API v2 is configured in its own `.env`,

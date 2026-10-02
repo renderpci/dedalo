@@ -188,6 +188,23 @@ const asBinary =
 const asDir = (value: unknown): unknown => String(value ?? '').replace(/\/+$/, '');
 
 /**
+ * A stock v6 config.php ships API_WEB_USER_CODE_MULTIPLE as ONE placeholder entry
+ * (`db_name`/`code` = '', `api_ui` = null). Copied verbatim, v7's reader
+ * (`readPublicationApiUsers`) drops it and logs "1 of 1 entries were DROPPED" on
+ * every boot. So placeholder entries (no non-empty string `db_name`) are not
+ * migrated, and when none remain the key is SKIPPED (null) — unset = no v1 users,
+ * the same thing the reader would conclude. Real entries pass through unchanged.
+ */
+const asPublicationApiUsers = (value: unknown): unknown => {
+	if (!Array.isArray(value)) return value;
+	const real = value.filter((entry) => {
+		const dbName = (entry as { db_name?: unknown } | null)?.db_name;
+		return typeof dbName === 'string' && dbName.trim() !== '';
+	});
+	return real.length === 0 ? null : real;
+};
+
+/**
  * NOT a rename of SERVER_PROXY → TRUSTED_PROXY_HOPS. They point in opposite
  * directions: v6's SERVER_PROXY was an OUTBOUND egress proxy (host:port) handed to
  * curl when Dédalo FETCHES from an ontology/code master; v7's TRUSTED_PROXY_HOPS is
@@ -542,6 +559,12 @@ function build(): Readonly<Record<string, MigrationRule>> {
 	const map: Record<string, MigrationRule> = {};
 
 	for (const name of SAME_KEYS) map[name] = { cls: 'SAME', target: name };
+	// Same name, same shape — only the stock placeholder entry is filtered out.
+	map.API_WEB_USER_CODE_MULTIPLE = {
+		cls: 'SAME',
+		target: 'API_WEB_USER_CODE_MULTIPLE',
+		transform: asPublicationApiUsers,
+	};
 
 	// ALIAS — derived from env.ts (TS-native key → PHP spelling). We invert it and
 	// emit the TS-native name: both work, but the native one is canonical.
