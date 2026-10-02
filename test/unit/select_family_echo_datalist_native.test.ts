@@ -28,7 +28,7 @@
  * list value is that same label (WC-2026-10-02-select-lang-missing-entry).
  *
  * Situation: scratch test3 records and a scratch lg1 language record (code
- * 'zzq', no project lang by construction) created here through the engine's
+ * 'qtx', ISO 639-3 local-use range — no project lang by construction) created here through the engine's
  * save door, never canonical ids; removed with their TM and activity rows in
  * afterAll.
  */
@@ -76,7 +76,9 @@ let recordId = 0;
 const LANGS_SECTION = 'lg1';
 const LANG_NAME_TIPO = 'hierarchy25';
 const LANG_CODE_TIPO = 'hierarchy41';
-const MISSING_CODE = 'zzq';
+// ISO 639-3 reserves qaa–qtz for local use: never a real (or project) language.
+// Not a `zz…` code, which the scratch-TLD census reads as a TLD carrier.
+const MISSING_CODE = 'qtx';
 let missingLangId = 0;
 let missingRecordId = 0;
 /** An lg1 record with NO name and NO code (a half-built language). */

@@ -123,7 +123,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		base: 'node_modules/split.js',
 		source: 'npm',
 		probe: 'dist/split.es.js',
-		note: 'Used by `tool_indexation`.',
+		note: 'Used by the indexation tool.',
 	},
 	iro: { base: 'node_modules/@jaames/iro', source: 'npm', probe: 'dist/iro.min.js' },
 	'codex-tooltip': {
@@ -160,7 +160,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		base: 'node_modules/easyqrcodejs',
 		source: 'npm',
 		probe: 'dist/easy.qrcode.min.js',
-		note: '`tool_qr`. Was a copy committed under `tools/tool_qr/lib/` with no digest.',
+		note: 'The QR tool. Was a copy committed under its own `lib/` directory with no digest.',
 	},
 	svgedit: {
 		// Was a vendored ~7.2.x-era build (2.0 MB) with no upstream package. 7.4.2 is a

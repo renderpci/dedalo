@@ -84,12 +84,12 @@ they were prose (eight found 2026-08-28, five more 2026-10-02).
 | geoman | `@geoman-io/leaflet-geoman-free` | 2.20.2 | dependency | Was bundled *inside* leaflet's `dist/`; now its own dep. |
 | turf | `@turf/turf` | 7.4.0 | dependency | Was bundled *inside* leaflet's `dist/`; now its own dep. |
 | flatpickr | `flatpickr` | 4.6.13 | dependency |  |
-| split | `split.js` | 1.6.5 | dependency | Used by `tool_indexation`. |
+| split | `split.js` | 1.6.5 | dependency | Used by the indexation tool. |
 | iro | `@jaames/iro` | 5.5.2 | dependency |  |
 | codex-tooltip | `codex-tooltip` | 1.0.6 | dependency |  |
 | highlightjs | `@highlightjs/cdn-assets` | 11.12.0 | dependency | Not `highlight.js` — see below. |
 | onnxruntime | `onnxruntime-web` | 1.29.0 | dependency | Transformers.js's WASM runtime; the only `onnxruntime-web` the lockfile holds. |
-| qrcode | `easyqrcodejs` | 4.6.2 | dependency | `tool_qr`. Was a copy committed under `tools/tool_qr/lib/` with no digest. |
+| qrcode | `easyqrcodejs` | 4.6.2 | dependency | The QR tool. Was a copy committed under its own `lib/` directory with no digest. |
 | svgedit | `@svgedit/svgcanvas` | 7.4.2 | dependency | Replaced a vendored ~7.2.x build. See below. |
 | mocha | `mocha` | 12.0.2 | **devDependency** | Client test harness. |
 | chai | `chai` | 6.2.2 | **devDependency** | Client test harness. |
