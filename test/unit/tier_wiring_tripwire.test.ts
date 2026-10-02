@@ -65,9 +65,9 @@
  *      script carries its exit status to the verdict: bare under `set -e`, or
  *      `|| x_rc=$?` + `[ "$x_rc" -eq 0 ] || … tier_status=1`, or a `|| {` block that
  *      raises, or under `set +e` a `V=$?` capture that reaches `exit "$V"`. `|| true`,
- *      `; true`, `|| echo`, a pipe, an `_rc` nobody checks: red. The unit tier's
- *      advisory stage is the ONE reasoned, shrink-only ADVISORY_STAGES row, red the
- *      day its raise line is restored. Measured: `bun run test:update || true` in
+ *      `; true`, `|| echo`, a pipe, an `_rc` nobody checks: red. No exemption exists:
+ *      the ADVISORY_STAGES row that excused the unit tier was deleted with its raise
+ *      restored (2026-10-02). Measured: `bun run test:update || true` in
  *      instance_tier.sh left legs A–F green (leg D credits the invocation, leg E only
  *      asks that tier_status is raised SOMEWHERE).
  *   I. Every `scripts/ci/*.ts` — the directory holds programs; a library belongs in
@@ -94,6 +94,13 @@
  *      recorded on — the parity verdict could move with no code change. Measured (H1,
  *      round 4): the stage block moved before the DB-backed tripwires left tier_wiring,
  *      tier_execution, tier_assignment, ci_workflow and test_timeout all green.
+ *   L. Every red-baseline CHECK a tier root runs (`bun run scripts/<unit|parity>_baseline.ts
+ *      --check`) FAILS that root: in the same executed, stubbed run as legs J/K, the check
+ *      made to exit 1 turns the root's exit non-zero — and every other recorded command
+ *      still runs (the independent-stage accumulator, not an abort). Leg H reads the raise
+ *      line; this leg measures the OUTCOME, so a raise spelled into a variable nobody
+ *      reads, or an `exit 0` after it, is red too. Mutation (2026-10-02): commenting out
+ *      db_tier.sh's unit raise reds this leg.
  *
  * WHAT IS NOT GATED, and said so rather than pretended: GitHub branch protection is
  * owner-only and unobservable from the repo. The required checks (`ci / hermetic`,
@@ -796,15 +803,17 @@ if [ -n "\${DRILL_KILL_ON:-}" ] && [ "$*" = "$DRILL_KILL_ON" ] && [ ! -e "$DRILL
 	: > "$DRILL_LOG.killed"
 	kill -TERM "$DRILL_TARGET_PID"
 fi
+[ -n "\${DRILL_FAIL_ON:-}" ] && [ "$*" = "$DRILL_FAIL_ON" ] && exit 1
 exit 0
 `;
 
 /**
  * Run one script with every STUBBED_COMMANDS name recording instead of acting. `killOn`
  * (the space-joined argv of one invocation) SIGTERMs the script's own shell at that
- * invocation, once. The script runs from the repo root, as CI runs it.
+ * invocation, once; `failOn` (likewise) makes every such invocation exit 1 (leg L). The
+ * script runs from the repo root, as CI runs it.
  */
-function drillScript(script: string, killOn?: string): DrillRun {
+function drillScript(script: string, killOn?: string, failOn?: string): DrillRun {
 	const dir = mkdtempSync(join(tmpdir(), 'tier_wiring_trap_'));
 	try {
 		const bin = join(dir, 'bin');
@@ -826,16 +835,14 @@ function drillScript(script: string, killOn?: string): DrillRun {
 					TMPDIR: dir,
 					DRILL_LOG: log,
 					DRILL_PIN: join(ROOT, '.bun-version'),
-					// The drill measures the tier AS THE RUNNER RUNS IT. The pre-push hook's
-					// `ci:local --skip-advisory` exports this into the suite; inherited, it skips
-					// db_tier's unit stage and K reads a shape the runner never runs.
-					DEDALO_CI_SKIP_ADVISORY: '0',
-					// Likewise ci:local's record mode: an exported key would turn the unit
-					// stage into the WRITER, a shape no runner runs.
+					// The drill measures the tier AS THE RUNNER RUNS IT: an exported record-mode
+					// key (ci:local --record-unit-baseline) would turn the unit stage into the
+					// WRITER, a shape no runner runs.
 					DEDALO_CI_UNIT_RECORD_OUT: '',
 					DEDALO_CI_UNIT_RECORD_ALLOW: '0',
 					DEDALO_CI_UNIT_RECORD_NEW: '',
 					...(killOn === undefined ? {} : { DRILL_KILL_ON: killOn }),
+					...(failOn === undefined ? {} : { DRILL_FAIL_ON: failOn }),
 				},
 				stdout: 'ignore',
 				stderr: 'ignore',
@@ -1005,6 +1012,51 @@ function stageOrderFaults(
 				`${rel}: \`${inv.command} ${inv.argv.join(' ')}\` runs AFTER the MariaDB stage — its re-runs write to the suite Postgres, so every unit / parity measurement must come first; move the stage to the end`,
 		);
 	return { runs: true, faults };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Leg L — a red-baseline check that fails, fails its tier root (executed, stubbed).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BASELINE_CHECK_MODULES = ['scripts/unit_baseline.ts', 'scripts/parity_baseline.ts'] as const;
+
+const isBaselineCheck = (inv: DrillInvocation): boolean =>
+	inv.command === 'bun' &&
+	inv.argv[0] === 'run' &&
+	(BASELINE_CHECK_MODULES as readonly string[]).includes(inv.argv[1] as string) &&
+	inv.argv.includes('--check');
+
+/**
+ * Drill `script` once as is, then once per baseline check it runs, with that check exiting
+ * 1. `checks`: the space-joined argv of each check found. A fault: the root exits 0 with
+ * the check red, or the failed run skipped a command the clean run made (an abort where
+ * the accumulator was owed — every later stage silently unmeasured).
+ */
+function baselineCheckFaults(rel: string, script: string): { checks: string[]; faults: string[] } {
+	const clean = drillScript(script);
+	const faults: string[] = [];
+	if (clean.code !== 0)
+		return {
+			checks: [],
+			faults: [`${rel}: the clean stubbed run exited ${clean.code} — leg L cannot measure it`],
+		};
+	const shape = (run: DrillRun) =>
+		run.invocations.map((inv) => `${inv.command} ${inv.argv.join(' ')}`);
+	const checks = [
+		...new Set(clean.invocations.filter(isBaselineCheck).map((inv) => inv.argv.join(' '))),
+	];
+	for (const check of checks) {
+		const red = drillScript(script, undefined, check);
+		if (red.code === 0)
+			faults.push(
+				`${rel}: \`bun ${check}\` exited 1 and the root still exited 0 — that check cannot fail its tier (raise the accumulator from its _rc)`,
+			);
+		else if (JSON.stringify(shape(red)) !== JSON.stringify(shape(clean)))
+			faults.push(
+				`${rel}: \`bun ${check}\` exited 1 and the root stopped running later stages — a red check must raise the accumulator, not abort the tier`,
+			);
+	}
+	return { checks, faults };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1621,6 +1673,80 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		expect(running).toContain('scripts/ci/db_tier.sh');
 	}, 60_000);
 
+	// Leg L
+	test('L. a red-baseline check that exits 1 fails its tier root, and every later stage still runs (executed, stubbed)', () => {
+		const trap = "trap 'bun run scripts/ci/suite_mariadb.ts stop >/dev/null 2>&1 || :' EXIT\n";
+		const check = 'bun run scripts/unit_baseline.ts --check';
+		const later =
+			'bun run scripts/parity_baseline.ts --check || parity_rc=$?\n[ "$parity_rc" -eq 0 ] || tier_status=1\n';
+		const verdict = '[ "$tier_status" -eq 0 ] || exit 1\n';
+		const dir = mkdtempSync(join(tmpdir(), 'tier_wiring_red_plant_'));
+		try {
+			const plant = (name: string, body: string) => {
+				const path = join(dir, `${name}.sh`);
+				writeFileSync(
+					path,
+					`set -euo pipefail\ntier_status=0\nparity_rc=0\nunit_rc=0\n${trap}${body}`,
+				);
+				return baselineCheckFaults(`plant/${name}.sh`, path);
+			};
+			// Blocking: green, both checks found.
+			const blocking = plant(
+				'blocking',
+				`${check} || unit_rc=$?\n[ "$unit_rc" -eq 0 ] || tier_status=1\n${later}${verdict}`,
+			);
+			expect(blocking).toEqual({
+				checks: ['run scripts/unit_baseline.ts --check', 'run scripts/parity_baseline.ts --check'],
+				faults: [],
+			});
+			// The retired ADVISORY shape — captured, printed, never raised: red.
+			expect(
+				plant(
+					'advisory',
+					`${check} || unit_rc=$?\n[ "$unit_rc" -eq 0 ] || echo "drift — ADVISORY"\n${later}${verdict}`,
+				).faults,
+			).toEqual([
+				expect.stringMatching(
+					/^plant\/advisory\.sh: `bun run scripts\/unit_baseline\.ts --check` exited 1 and the root still exited 0/,
+				),
+			]);
+			// Raised into the accumulator, then thrown away by a later `exit 0`: red (leg H
+			// reads the raise line and is satisfied; only the outcome catches this).
+			expect(
+				plant(
+					'laundered',
+					`${check} || unit_rc=$?\n[ "$unit_rc" -eq 0 ] || tier_status=1\n${later}exit 0\n`,
+				).faults,
+			).toHaveLength(2);
+			// Bare under set -e: the tier fails, but the parity check never runs — an abort.
+			expect(plant('abort', `${check}\n${later}${verdict}`).faults).toEqual([
+				expect.stringMatching(/^plant\/abort\.sh: .*stopped running later stages/),
+			]);
+			// A root with no check is not judged.
+			expect(plant('none', verdict)).toEqual({ checks: [], faults: [] });
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+
+		// THE REAL ROOTS.
+		const checked = new Map<string, string[]>();
+		const faults: string[] = [];
+		for (const rel of [...REAL.roots].sort()) {
+			const verdict = baselineCheckFaults(rel, join(ROOT, rel));
+			faults.push(...verdict.faults);
+			if (verdict.checks.length > 0) checked.set(rel, verdict.checks);
+		}
+		expect(
+			faults,
+			`Tier roots whose red-baseline check cannot fail them:\n  ${faults.join('\n  ')}`,
+		).toEqual([]);
+		// The floor: the DB tier runs BOTH checks (the unit one blocking since 2026-10-02).
+		expect(checked.get('scripts/ci/db_tier.sh')).toEqual([
+			'run scripts/unit_baseline.ts --check',
+			'run scripts/parity_baseline.ts --check',
+		]);
+	}, 120_000);
+
 	// Leg E
 	test('E. every tier root keeps the independent-stage accumulator, and every suite-building job has its own service', () => {
 		expect(REAL.roots.size).toBeGreaterThanOrEqual(3);
@@ -1921,15 +2047,18 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 				'bash scripts/ci/client_gate.sh || client_rc=$?\n[ "$client_rc" -eq 0 ] || tier_status=1\n',
 			),
 		).toEqual([]);
-		// The ADVISORY row is credited only while the raise is absent.
-		const advisory = 'bun run scripts/unit_baseline.ts --check || unit_rc=$?\n';
-		expect([...stageVerdictFaults('scripts/ci/db_tier.sh', base + advisory + verdict)]).toEqual([]);
+		// No exemption: db_tier.sh's unit check without its raise (the old ADVISORY shape)
+		// is red like any other swallowed stage; with the raise, green.
+		const unitCheck = 'bun run scripts/unit_baseline.ts --check || unit_rc=$?\n';
+		expect([
+			...stageVerdictFaults('scripts/ci/db_tier.sh', base + unitCheck + verdict),
+		]).toHaveLength(1);
 		expect([
 			...stageVerdictFaults(
 				'scripts/ci/db_tier.sh',
-				`${base}${advisory}[ "$unit_rc" -eq 0 ] || tier_status=1\n${verdict}`,
+				`${base}${unitCheck}[ "$unit_rc" -eq 0 ] || tier_status=1\n${verdict}`,
 			),
-		]).toHaveLength(1);
+		]).toEqual([]);
 
 		const faults: string[] = [];
 		let stages = 0;
@@ -1949,15 +2078,6 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 			'Stages whose exit status never reaches the tier verdict. A stage aborts the script (bare, under set -e) or raises the accumulator; anything else is a gate that runs and cannot fail (GATE-15):\n  ' +
 				faults.join('\n  '),
 		).toEqual([]);
-		for (const [key, reason] of ADVISORY_STAGES) {
-			const [rel, line] = key.split(': ') as [string, string];
-			expect(
-				codeLines(CORPUS.scripts.get(rel) ?? ''),
-				`ADVISORY_STAGES names \`${key}\`, which no longer exists — delete the row`,
-			).toContain(line);
-			expect(REAL.reached.has(rel)).toBe(true);
-			expect(reason.length).toBeGreaterThan(80);
-		}
 	});
 });
 
@@ -2320,18 +2440,6 @@ function gitlabFaults(text: string, roots: ReadonlySet<string>): string[] {
 // Leg H — every stage a reached script runs reaches the verdict.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * SHRINK-ONLY. A stage whose red is REPORTED but does not fail its tier, with the
- * measured reason why blocking would be worse than advisory. Key: `<script>: <stage
- * line>`. The row is red once the script raises the accumulator for that stage.
- */
-const ADVISORY_STAGES: ReadonlyMap<string, string> = new Map([
-	[
-		'scripts/ci/db_tier.sh: bun run scripts/unit_baseline.ts --check || unit_rc=$?',
-		'The 725-file unit tier vs its frozen red baseline: its red SET is load- and order-dependent (measured 2026-08-29: 7 / 1 / 14 reds on the same commit depending on the machine and the fixture), so gating on it would gate on how busy the runner was, and a flapping gate teaches the team to regenerate the baseline unread. The stage RUNS on every push and prints every new red; db_tier.sh states the criterion under which the raise line is restored (the same red set on three consecutive clean-fixture runs, one on a loaded runner).',
-	],
-]);
-
 /** A line that starts a STAGE: a bun / bunx / scripts/ci invocation, after optional KEY=value prefixes. */
 const STAGE_LINE = /^(?:[A-Z0-9_]+=\S*\s+)*(?:bun|bunx|bash scripts\/ci\/)\b/;
 
@@ -2372,14 +2480,6 @@ function stageVerdictFaults(rel: string, text: string): string[] & { stagesSeen:
 		if (!STAGE_LINE.test(line)) continue;
 		faults.stagesSeen++;
 		const key = `${rel}: ${line}`;
-		if (ADVISORY_STAGES.has(key)) {
-			const captured = line.match(/\|\| ([a-z_]+_rc)=\$\?$/)?.[1];
-			if (captured !== undefined && rcChecked(captured))
-				faults.push(
-					`${key} — listed ADVISORY but the script raises the accumulator for it; delete the row`,
-				);
-			continue;
-		}
 		const tolerated = /(\|\||&&|;|\|)/.test(line);
 		if (!tolerated) {
 			if (errexit) continue;

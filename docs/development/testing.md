@@ -339,8 +339,8 @@ tripwire is assigned to exactly one of those tiers (`ci_workflow_tripwire` rule 
 workflow: every stage it reports has a hosted twin. The CI-environment gate on the desk is
 `bun run ci:local --docker` — the same tier scripts in CI's own image — and the
 `scripts/hooks/pre-push` hook runs it (after banking ratchet improvements) before every
-push — with `--skip-advisory`, so the db tier's ADVISORY unit stage, which cannot fail the
-tier, is left to the hosted job; see `engineering/CI.md`, "The local gate".
+push — every stage of the tiers it selects, the db tier's unit stage included, because
+that stage is blocking on the runner too; see `engineering/CI.md`, "The local gate".
 
 The script stubs **every** required-no-default key in `src/config/config.ts`. That list is
 pinned by a rule of `ci_workflow_tripwire`, for a reason worth internalising: the first

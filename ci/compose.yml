@@ -82,7 +82,6 @@ x-github-env: &github-env
   DEDALO_CI_BRANCH: ${DEDALO_CI_BRANCH:-master}
   DEDALO_CI_SHA: ${DEDALO_CI_SHA:?set by scripts/ci_local.ts}
   DEDALO_CI_OVERLAY: ${DEDALO_CI_OVERLAY:-0}
-  DEDALO_CI_SKIP_ADVISORY: ${DEDALO_CI_SKIP_ADVISORY:-0}
   # Record mode of db_tier.sh's unit stage — ci:local --record-unit-baseline only.
   DEDALO_CI_UNIT_RECORD_OUT: ${DEDALO_CI_UNIT_RECORD_OUT:-}
   DEDALO_CI_UNIT_RECORD_ALLOW: ${DEDALO_CI_UNIT_RECORD_ALLOW:-0}

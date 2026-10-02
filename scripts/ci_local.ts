@@ -81,8 +81,6 @@
  *       [--audit-base <sha>]      # the push's `before`: what the remote had (the pre-push
  *                                 # hook passes its remote sha; default: host upstream)
  *   Any mode: [--summary <file.json>]
- *             [--skip-advisory]   # desk only: skip the db tier's ADVISORY unit stage (~5 min);
- *                                 # it cannot change the verdict, and the runner still runs it
  *   bun run ci:local --docker --record-unit-baseline [--allow-regression --reason "<why>"]
  *                                 # RECORD engineering/unit_baseline.json in the CI image
  *   bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]
@@ -191,13 +189,26 @@ const BOOLEAN_FLAGS = new Set([
 	'--docker',
 	'--build',
 	'--fail-fast',
-	'--skip-advisory',
 	'--record-unit-baseline',
 	'--allow-regression',
 	'--help',
 	'-h',
 ]);
 const VALUE_FLAGS = new Set(['--summary', '--ref', '--base', '--audit-base', '--reason', '--new']);
+
+/**
+ * Flags that EXISTED and were removed, refused with why — never as a generic unknown flag,
+ * so an old habit (a shell alias, a stale hook copy) learns what changed instead of
+ * guessing. `--skip-advisory` skipped db_tier.sh's unit stage on the desk while that stage
+ * could not fail its tier; since 2026-10-02 it can, so a desk that skipped it would pass
+ * what the runner refuses (ci_local_native §6).
+ */
+export const RETIRED_FLAGS: ReadonlyMap<string, string> = new Map([
+	[
+		'--skip-advisory',
+		'--skip-advisory is retired (2026-10-02): the unit stage is blocking, so the desk runs it too',
+	],
+]);
 
 interface Args {
 	flags: Set<string>;
@@ -224,6 +235,8 @@ function parseArgs(argv: string[]): Args {
 			values.set(name, value as string);
 		} else if (BOOLEAN_FLAGS.has(arg)) {
 			flags.add(arg);
+		} else if (RETIRED_FLAGS.has(name)) {
+			fail(RETIRED_FLAGS.get(name) as string);
 		} else {
 			fail(`unknown argument '${arg}' (bun run ci:local --help)`);
 		}
@@ -275,17 +288,6 @@ export function gitScrubbedEnv(
 	);
 }
 
-/**
- * `--skip-advisory` → `DEDALO_CI_SKIP_ADVISORY` for the tier scripts. ALWAYS set, to '1' or
- * '0', so a value exported in the caller's shell never reaches a tier unasked. Only an
- * ADVISORY stage honours it (db_tier.sh's unit stage — it cannot fail the tier), so the
- * verdict is the same with or without it; what the desk loses is the early print of a new
- * unit red, which the runner still prints. No workflow may set it (ci_local_native).
- */
-export function advisoryEnv(args: Pick<Args, 'flags'>): { DEDALO_CI_SKIP_ADVISORY: '0' | '1' } {
-	return { DEDALO_CI_SKIP_ADVISORY: args.flags.has('--skip-advisory') ? '1' : '0' };
-}
-
 /** Where the container sees the run's one WRITABLE mount (the recorded baseline's way out). */
 export const CONTAINER_OUT = '/ci-out';
 
@@ -332,8 +334,8 @@ const RECORD_NEW_PATH = /^test\/(?:unit|integration)\/[A-Za-z0-9_-][A-Za-z0-9_./
 /**
  * The flag combinations a recording refuses, as the message, or null. A recording is the
  * db tier alone, in the image, run in full: host mode would record the desk (the very
- * thing the image exists to avoid), another tier adds nothing, `--skip-advisory` would
- * skip the stage that records, `--fail-fast` has one tier to stop. `--allow-regression`
+ * thing the image exists to avoid), another tier adds nothing, `--fail-fast` has one tier
+ * to stop. `--allow-regression`
  * without a `--reason` is a ratchet loosened with no why, and the reverse is a reason for
  * nothing.
  */
@@ -350,7 +352,7 @@ export function recordArgsFault(args: Args): string | null {
 	}
 	if (!args.flags.has('--docker'))
 		return '--record-unit-baseline needs --docker: the unit baseline is recorded in the CI image, never on this machine';
-	for (const flag of ['--hermetic', '--instance', '--skip-advisory', '--fail-fast', '--keep'])
+	for (const flag of ['--hermetic', '--instance', '--fail-fast', '--keep'])
 		if (args.flags.has(flag)) return `--record-unit-baseline runs the db tier alone; drop ${flag}`;
 	const reason = args.values.get('--reason');
 	if (args.flags.has('--allow-regression') && (reason === undefined || reason.trim().length < 20))
@@ -400,7 +402,7 @@ function fail(message: string): never {
 
 // ── stage parsing ────────────────────────────────────────────────────────────
 
-type StageVerdict = 'green' | 'red' | 'skipped' | 'advisory';
+type StageVerdict = 'green' | 'red' | 'skipped';
 
 export interface Stage {
 	name: string;
@@ -448,7 +450,6 @@ const TEST_FILE_HEADER = /^(?:::group::|##\[group\])?(\S+\.test\.[cm]?[jt]sx?):$
  * The tier scripts' OWN stage protocol, read back:
  *   `== <prefix>: <label>`                  a stage begins
  *   `== <prefix>: RED in <what> (exit N)`   the running stage is red
- *   `== <prefix>: … — ADVISORY …`           the running stage drifted but does not fail the tier
  *   `== <prefix>: RED` / `GREEN` / `OK`     the tier's own final verdict (not a stage)
  *   `== <other>: SKIPPED — <why>`           a child (audit.ts) skipped the running stage
  *   `== workflow_step: <command>`           (ci:local's own) a workflow `run:` step, as a stage
@@ -527,21 +528,14 @@ export function parseStages(
 				stage.notes.push(text);
 			}
 		} else if (text.startsWith('SKIPPED')) {
-			// the tier skipped its OWN open stage (db_tier.sh's --skip-advisory); a red or
-			// advisory verdict already recorded is never downgraded
+			// the tier skipped its OWN open stage; a red verdict already recorded is never
+			// downgraded
 			if (stage !== undefined && stage.verdict === 'green') {
 				stage.verdict = 'skipped';
 				stage.notes.push(text);
 			}
 		} else if (/^(RED|GREEN|OK)\b/.test(text)) {
 			// the tier's final verdict line
-		} else if (/ADVISORY/.test(text) && !/\[ADVISORY\]\s*$/.test(text)) {
-			// `… drift (exit N) — ADVISORY, not failing the tier`; a HEADER that merely
-			// labels its stage `[ADVISORY]` opens a stage like any other (below).
-			if (stage !== undefined && stage.verdict === 'green') {
-				stage.verdict = 'advisory';
-				stage.notes.push(text);
-			}
 		} else if (/^(bun \d|installing )/.test(text)) {
 			// a version banner / a toolchain note, not a stage
 			stage?.lines.push(line);
@@ -565,7 +559,7 @@ export function parseStages(
 		const { lines, ...rest } = stage;
 		return {
 			...rest,
-			fix_hint: stage.verdict === 'red' || stage.verdict === 'advisory' ? fixHint(stage) : null,
+			fix_hint: stage.verdict === 'red' ? fixHint(stage) : null,
 		};
 	});
 }
@@ -781,7 +775,6 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 				.map((key) => [key, process.env[key]]),
 		),
 		DEDALO_PRIVATE_DIR: privateDir,
-		...advisoryEnv(args),
 		// Never records on the host (recordArgsFault refuses the flag): both keys pinned off.
 		...recordEnv({ flags: new Set() }, ''),
 		...(binPath === undefined ? {} : { DEDALO_PG_BIN_PATH: binPath }),
@@ -1177,7 +1170,6 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 		DEDALO_CI_BASE_REF: base ?? '',
 		DEDALO_CI_AUDIT_BASE: auditBase,
 		DEDALO_CI_OVERLAY: overlay ? '1' : '0',
-		...advisoryEnv(args),
 		...recordEnv(args, CONTAINER_OUT),
 		// compose.yml REQUIRES this (`:?`) for every command it parses, `down` included —
 		// without it the teardown fails to interpolate and leaks the project's network.
@@ -1316,7 +1308,7 @@ function copyRecordedBaseline(outputs: string, args: Args, db: TierResult | unde
 
 // ── summary ──────────────────────────────────────────────────────────────────
 
-const GLYPH: Record<StageVerdict, string> = { green: '✓', red: '✗', skipped: '–', advisory: '!' };
+const GLYPH: Record<StageVerdict, string> = { green: '✓', red: '✗', skipped: '–' };
 
 function printSummary(results: TierResult[]): void {
 	console.log('\n── CI:LOCAL SUMMARY ──');
@@ -1332,7 +1324,7 @@ function printSummary(results: TierResult[]): void {
 			console.log(
 				`      ${GLYPH[stage.verdict]} ${stage.name}${stage.verdict === 'green' ? '' : `  [${stage.verdict}]`}`,
 			);
-			if (stage.verdict === 'red' || stage.verdict === 'advisory') {
+			if (stage.verdict === 'red') {
 				for (const note of stage.notes) console.log(`          ${note}`);
 				// A ratchet stage's (fail) lines include every red its baseline already
 				// lists; what it said MOVED is the drift, so that is what is shown for it.

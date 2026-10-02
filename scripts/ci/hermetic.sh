@@ -366,7 +366,8 @@ HERMETIC_TRIPWIRES=(
 	#     git repos and planted ratchets under the OS temp dir, a fake `docker` on PATH,
 	#     stub scripts, and the hermetic ratchets' own read-only `--check --json` runs.
 	#     Empirically verified DB-less (DB_HOST=127.0.0.1 DB_PORT=59999: 131 pass / 0 fail).
-	#     Their only blocking home: the unit tier that also runs them is advisory.
+	#     Here they block on the first push leg; the unit tier runs them again (blocking
+	#     since 2026-10-02) on the db tier.
 	test/unit/baseline_registry_tripwire.test.ts
 	test/unit/baselines_bank_native.test.ts
 	test/unit/ci_local_native.test.ts

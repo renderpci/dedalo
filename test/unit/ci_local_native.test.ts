@@ -13,7 +13,7 @@
  *      tested a tree that was not the one on disk.
  *   2. THE STAGE PARSER (`parseStages`). The summary is read back from the tier scripts'
  *      own `== <prefix>: …` protocol. Fixture outputs pin every verdict path (red,
- *      advisory, SKIPPED from a child, died-under-set-e, the final verdict line that is
+ *      SKIPPED from a child, died-under-set-e, the final verdict line that is
  *      NOT a stage, a workflow step, ANSI, bun's recap dedup, drift blocks → fix_hint);
  *      and the REAL tier scripts are read to prove they still speak that protocol under
  *      the prefix `TIERS` expects — a renamed prefix or marker would otherwise empty the
@@ -35,11 +35,12 @@
  *      in the overlay: `.gitignore`'s `node_modules/` matches only a directory, so git lists
  *      the link as untracked, and the container died at `bun install` on a dangling link.
  *
- *   6. `--skip-advisory` (the pre-push hook's) skips ONLY a stage that cannot fail its tier:
- *      the env is always set explicitly, an own-prefix SKIPPED line parses as `skipped`, the
- *      one reader is db_tier.sh's ADVISORY stage while that stage is still advisory (pinned
- *      line-for-line). That no workflow names the key is ci_workflow_tripwire's (it owns
- *      the workflow roots).
+ *   6. THE UNIT STAGE IS BLOCKING, AND THE DESK SKIP IS RETIRED (2026-10-02). db_tier.sh's
+ *      unit stage is pinned line-for-line, its raise included; `--skip-advisory` (what the
+ *      pre-push hook used to pass) is REFUSED by the CLI, exit 2, naming why — never a
+ *      generic unknown flag, never silently ignored; no tier script, compose file or the
+ *      CLI names the retired key; an own-prefix SKIPPED line still never launders a red.
+ *      That the stage's red fails the WHOLE tier script is tier_wiring leg L (executed).
  *
  *   7. `--record-unit-baseline` (the unit baseline recorded IN THE IMAGE): refused outside
  *      --docker and beside any flag that would change what is recorded; `--allow-regression`
@@ -71,7 +72,6 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-	advisoryEnv,
 	CONTAINER_GIT,
 	CONTAINER_OUT,
 	CONTAINER_SRC,
@@ -458,25 +458,22 @@ describe('parseStages — fixture outputs of the tier protocol', () => {
 		expect(stages[0]?.fix_hint).toBeNull();
 	});
 
-	test('ADVISORY drift, a child SKIPPED, a banner line and an [ADVISORY] header', () => {
+	test('unit-tier drift is RED, a child SKIPPED, a banner line', () => {
 		const output = [
 			'== db_tier: bun 1.3.0 (pin: 1.3.0)',
-			'== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]',
+			'== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline',
 			'STALE:',
 			'  test/unit/x.test.ts › now passes',
 			'SUMMARY:',
 			'  fail 10 → 9',
-			'== db_tier: unit-tier drift (exit 1) — ADVISORY, not failing the tier; see the block above',
+			'== db_tier: RED in the unit tier (exit 1)',
 			'== db_tier: dependency audit',
 			'== audit: SKIPPED — no audit input changed since origin/master',
-			'== db_tier: OK',
+			'== db_tier: RED',
 		].join('\n');
-		const stages = parseStages('db_tier', output, 0);
+		const stages = parseStages('db_tier', output, 1);
 		expect(stages.map((stage) => [stage.name, stage.verdict])).toEqual([
-			[
-				'unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]',
-				'advisory',
-			],
+			['unit tier (test/unit + test/integration) vs its frozen red baseline', 'red'],
 			['dependency audit', 'skipped'],
 		]);
 		expect(stages[0]?.drift).toEqual([
@@ -586,62 +583,91 @@ describe('the REAL tier scripts still speak the protocol parseStages reads', () 
 			expect(texts.some((text) => /^(GREEN|OK)\b/.test(text))).toBe(true);
 			// a stage header is a marker that is none of the protocol's verdict words
 			expect(
-				texts.filter((text) => !/^(RED|GREEN|OK|SKIPPED)\b/.test(text) && !/ADVISORY/.test(text))
-					.length,
+				texts.filter((text) => !/^(RED|GREEN|OK|SKIPPED)\b/.test(text)).length,
 			).toBeGreaterThan(1);
 		});
 
 		test(`${tier.script}: a synthesized run of its own headers parses into those stages`, () => {
 			const headers = markers
 				.map(([, text]) => text)
-				.filter(
-					(text) =>
-						text !== '' &&
-						!/^(RED|GREEN|OK|SKIPPED|bun \d|installing )/.test(text) &&
-						!/ADVISORY(?!\]\s*$)/.test(text),
-				);
+				.filter((text) => text !== '' && !/^(RED|GREEN|OK|SKIPPED|bun \d|installing )/.test(text));
 			const output = headers.map((text) => `== ${tier.prefix}: ${text}`).join('\n');
 			expect(parseStages(tier.prefix, output, 0).map((stage) => stage.name)).toEqual(headers);
 		});
 	}
 });
 
-describe('--skip-advisory — the desk skips ONLY a stage that cannot fail its tier', () => {
+describe('the unit stage is BLOCKING — and the desk skip is retired', () => {
 	const KEY = 'DEDALO_CI_SKIP_ADVISORY';
 	const dbTier = readFileSync(join(REPO_ROOT, 'scripts/ci/db_tier.sh'), 'utf8');
 
-	test('the env is ALWAYS set explicitly — an exported value never reaches a tier unasked', () => {
-		expect(advisoryEnv({ flags: new Set(['--skip-advisory']) })).toEqual({ [KEY]: '1' });
-		expect(advisoryEnv({ flags: new Set() })).toEqual({ [KEY]: '0' });
+	test('`--skip-advisory` is REFUSED by the CLI (exit 2, naming why), in either spelling', () => {
+		for (const flag of ['--skip-advisory', '--skip-advisory=1']) {
+			const proc = Bun.spawnSync([process.execPath, 'scripts/ci_local.ts', '--docker', flag], {
+				cwd: REPO_ROOT,
+				env: noGitEnv(),
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			expect(proc.exitCode, flag).toBe(2);
+			expect(proc.stderr.toString()).toContain('--skip-advisory is retired');
+			expect(proc.stderr.toString()).toContain('the unit stage is blocking');
+		}
+		// Control: a plain unknown flag gets the generic refusal, not the retired one.
+		const other = Bun.spawnSync([process.execPath, 'scripts/ci_local.ts', '--skip-adv'], {
+			cwd: REPO_ROOT,
+			env: noGitEnv(),
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(other.exitCode).toBe(2);
+		expect(other.stderr.toString()).toContain("unknown argument '--skip-adv'");
+	});
+
+	test('no tier script, compose file, hook or the CLI names the retired key', () => {
+		for (const rel of [
+			'scripts/ci/db_tier.sh',
+			'scripts/ci/hermetic.sh',
+			'scripts/ci/instance_tier.sh',
+			'scripts/ci/hosted_env.sh',
+			'scripts/ci/client_gate.sh',
+			'ci/compose.yml',
+			'scripts/ci_local.ts',
+			'scripts/hooks/pre-push',
+		]) {
+			expect(readFileSync(join(REPO_ROOT, rel), 'utf8'), rel).not.toContain(KEY);
+		}
+		expect(readFileSync(join(REPO_ROOT, 'scripts/hooks/pre-push'), 'utf8')).not.toContain(
+			'--skip-advisory',
+		);
 	});
 
 	test('an own-prefix SKIPPED line marks the open stage skipped, never a red one', () => {
 		const output = [
-			'== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]',
-			'== db_tier: SKIPPED — advisory stage, DEDALO_CI_SKIP_ADVISORY=1 (desk gate); the runner runs it',
+			'== db_tier: some stage',
+			'== db_tier: SKIPPED — nothing to do',
 			'== db_tier: parity tier vs its frozen red baseline',
 			'== db_tier: RED in the parity tier (exit 1)',
 			'== db_tier: SKIPPED — must not launder a red',
 			'== db_tier: RED',
 		].join('\n');
 		expect(parseStages('db_tier', output, 1).map((stage) => [stage.name, stage.verdict])).toEqual([
-			['unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]', 'skipped'],
+			['some stage', 'skipped'],
 			['parity tier vs its frozen red baseline', 'red'],
 		]);
 	});
 
-	test('the one reader is the db tier ADVISORY stage, and that stage still cannot fail the tier', () => {
+	test("the stage's EXACT code: one check, one write branch, and the raise", () => {
 		const code = (text: string) =>
 			text.split('\n').filter((line) => line.trim() !== '' && !/^\s*#/.test(line));
 		const start = dbTier.indexOf('echo "== db_tier: unit tier');
 		const end = dbTier.indexOf('echo "== db_tier: parity tier');
 		expect(start).toBeGreaterThan(-1);
 		expect(end).toBeGreaterThan(start);
-		// The stage's EXACT code: any edit to it — a blocking restore spelled any way
-		// (`tier_status=$unit_rc`, `|| exit 1`, …), a second read — must come through here
-		// and say whether the skip still holds. Restoring blocking means the skip must go.
+		// Any edit to the stage — a raise dropped or spelled to swallow (`|| echo`, `|| true`),
+		// a skip branch brought back, a second read — must come through here.
 		expect(code(dbTier.slice(start, end))).toEqual([
-			'echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]"',
+			'echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline"',
 			'unit_rc=0',
 			// Record mode (ci:local --docker --record-unit-baseline) — §7 executes this branch.
 			'if [ -n "${DEDALO_CI_UNIT_RECORD_OUT:-}" ]; then',
@@ -653,22 +679,11 @@ describe('--skip-advisory — the desk skips ONLY a stage that cannot fail its t
 			'\tbun run scripts/unit_baseline.ts $record_args || record_rc=$?',
 			'\t[ "$record_rc" -eq 0 ] || { echo "== db_tier: RED in the unit-baseline recording (exit $record_rc) — nothing copied out"; tier_status=1; }',
 			'\t[ "$record_rc" -ne 0 ] || cp engineering/unit_baseline.json "$DEDALO_CI_UNIT_RECORD_OUT/unit_baseline.json"',
-			`elif [ "\${${KEY}:-0}" = 1 ]; then`,
-			`\techo "== db_tier: SKIPPED — advisory stage, ${KEY}=1 (desk gate); the runner runs it"`,
 			'else',
 			'\tbun run scripts/unit_baseline.ts --check || unit_rc=$?',
 			'fi',
-			'[ "$unit_rc" -eq 0 ] || echo "== db_tier: unit-tier drift (exit $unit_rc) — ADVISORY, not failing the tier; see the block above"',
+			'[ "$unit_rc" -eq 0 ] || { echo "== db_tier: RED in the unit tier (exit $unit_rc)"; tier_status=1; }',
 		]);
-		// Every mention of the key in db_tier.sh CODE — braced or not, any reader shape —
-		// is inside that pinned stage: the one read and the one SKIPPED echo.
-		const outside = code(dbTier.slice(0, start) + dbTier.slice(end));
-		expect(outside.filter((line) => line.includes(KEY))).toEqual([]);
-		// Nothing after the stage reads unit_rc: it cannot reach the tier's verdict.
-		expect(code(dbTier.slice(end)).filter((line) => line.includes('unit_rc'))).toEqual([]);
-		for (const other of ['hermetic.sh', 'instance_tier.sh', 'hosted_env.sh', 'client_gate.sh']) {
-			expect(readFileSync(join(REPO_ROOT, 'scripts/ci', other), 'utf8')).not.toContain(KEY);
-		}
 	});
 });
 
@@ -685,7 +700,7 @@ describe('--record-unit-baseline — the unit baseline is recorded IN THE IMAGE,
 		expect(recordArgsFault(args(['--docker', '--record-unit-baseline']))).toBeNull();
 		expect(recordArgsFault(args([]))).toBeNull();
 		expect(recordArgsFault(args(['--record-unit-baseline']))).toMatch(/needs --docker/);
-		for (const flag of ['--hermetic', '--instance', '--skip-advisory', '--fail-fast', '--keep'])
+		for (const flag of ['--hermetic', '--instance', '--fail-fast', '--keep'])
 			expect(recordArgsFault(args(['--docker', '--record-unit-baseline', flag]))).toContain(flag);
 		// --db is what a recording runs anyway: harmless, not refused.
 		expect(recordArgsFault(args(['--docker', '--record-unit-baseline', '--db']))).toBeNull();
@@ -864,9 +879,11 @@ describe('--record-unit-baseline — the unit baseline is recorded IN THE IMAGE,
 				DEDALO_CI_UNIT_RECORD_ALLOW: '0',
 				DEDALO_CI_UNIT_RECORD_NEW: '',
 			};
-			expect(drive({ ...off, DEDALO_CI_SKIP_ADVISORY: '0' })).toEqual([
+			expect(drive(off)).toEqual(['bun run scripts/unit_baseline.ts --check', 'tier_status=0']);
+			// BLOCKING: a check that exits 1 raises the tier (the whole script: tier_wiring leg L).
+			expect(drive({ ...off, BUN_RC: '1' })).toEqual([
 				'bun run scripts/unit_baseline.ts --check',
-				'tier_status=0',
+				'tier_status=1',
 			]);
 			// ALLOW alone records nothing.
 			expect(drive({ ...off, DEDALO_CI_UNIT_RECORD_ALLOW: '1' })).toEqual([
@@ -905,10 +922,6 @@ describe('--record-unit-baseline — the unit baseline is recorded IN THE IMAGE,
 				'bun run scripts/unit_baseline.ts',
 				'tier_status=1',
 			]);
-			// Recording outranks the desk skip (the CLI refuses the pair anyway).
-			expect(drive({ ...rec, DEDALO_CI_SKIP_ADVISORY: '1' })[0]).toBe(
-				'bun run scripts/unit_baseline.ts',
-			);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
