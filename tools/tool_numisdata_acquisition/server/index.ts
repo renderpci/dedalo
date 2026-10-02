@@ -3,7 +3,7 @@
  * lets the operator review every lot before committing: preview_url returns
  * the parsed auction + lots (nothing written yet); commit_lots creates one
  * numisdata4 record per kept lot, resolves/links its Auction and Type, and
- * imports the lot's image via tool_import_files' crop_50 processor.
+ * imports the lot's image via the shared cropCoinPair splitter (src/core/media/tools/).
  *
  */
 
@@ -27,6 +27,7 @@ import {
 import { receiveUpload } from '../../../src/core/media/ingest/upload.ts';
 import { buildMediaIdentifier } from '../../../src/core/media/path.ts';
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
+import { cropCoinPair } from '../../../src/core/media/tools/crop_coin_pair.ts';
 import {
 	nameKeysForQuality,
 	persistUploadedMedia,
@@ -43,7 +44,6 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { cropCoinPair } from '../../tool_import_files/server/script_files/numisdata/crop_50.ts';
 import { aureoAdapter } from './lib/sources/aureo/adapter.ts';
 import { biddrAdapter } from './lib/sources/biddr/adapter.ts';
 import { jesusvicoAdapter } from './lib/sources/jesusvico/adapter.ts';
@@ -110,6 +110,14 @@ const IMAGE_COMPONENT_TIPO = 'rsc29'; // component_image on rsc170
 const IMPORT_KEY_DIR = 'numisdata_acquisition';
 
 const ADAPTERS = [jesusvicoAdapter, biddrAdapter, aureoAdapter, numisbidsAdapter, sixbidAdapter];
+
+// `lots` is otherwise UNBOUNDED input (review item G): each committed lot costs about 8 saves plus
+// an image fetch at >=3s, so a pathological listing could turn one commit into an hours-long job
+// (or, from a malformed/adversarial commit_lots payload, an effectively unbounded one). The largest
+// real auction fetched live this session (aureo, subasta/0470) ran 2,193 lots; this leaves headroom
+// above that while still bounding the worst case. Applied to both what preview shows and what
+// commit accepts, so the two never disagree about what "the batch" is.
+const MAX_LOTS = 3000;
 
 // The harvesting door's host policy per source, by adapter id - a bare domain also admits its
 // subdomains (harvestFetch's own rule), which is what covers each source's separate image/CDN
@@ -201,7 +209,8 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 	}
 
 	const auction = adapter.parseAuction(firstPage, url);
-	const lots = acquisition.pages.flatMap((page) => adapter.parseLots(page, url));
+	const foundLots = acquisition.pages.flatMap((page) => adapter.parseLots(page, url));
+	const lots = foundLots.slice(0, MAX_LOTS);
 
 	const auctionHouse = auction.auctionHouse?.trim() ?? '';
 	const auctionNumber = auction.auctionNumber?.trim() ?? '';
@@ -212,6 +221,7 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 			auction,
 			lots,
 			auction_status: auctionStatus,
+			lots_truncated_by: foundLots.length - lots.length,
 		},
 		{ requestId: toolRequestId(context) },
 	);
@@ -253,7 +263,8 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 
 	const page: RawSource = { html, finalUrl: url, httpStatus: 200, contentType: 'text/html' };
 	const auction = adapter.parseAuction(page, url);
-	const lots = adapter.parseLots(page, url);
+	const foundLots = adapter.parseLots(page, url);
+	const lots = foundLots.slice(0, MAX_LOTS);
 
 	const auctionHouse = auction.auctionHouse?.trim() ?? '';
 	const auctionNumber = auction.auctionNumber?.trim() ?? '';
@@ -264,6 +275,7 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 			auction,
 			lots,
 			auction_status: auctionStatus,
+			lots_truncated_by: foundLots.length - lots.length,
 		},
 		{ requestId: toolRequestId(context) },
 	);
@@ -660,6 +672,52 @@ async function findExistingAuction(
 	return rows[0]?.section_id ?? null;
 }
 
+/**
+ * Exact match on (Auction, Inventory number) — the dedup key a re-committed batch is checked
+ * against (review item G: "re-committing the same lots duplicates them"). Not the lot's own
+ * source URL: no field for that exists on numisdata4 yet (deferred - "component_iri, value shape
+ * unverified" - writing to an unconfirmed field shape risked a silent write failure worse than the
+ * duplicate this is meant to prevent). The Auction relation + the Inventory number
+ * (INVENTORY_NUMBER_TIPO, already written on every lot from `l.lotNumber`) together are already a
+ * real, confirmed-working stand-in for "this exact lot": two DIFFERENT lots sharing the same number
+ * under the SAME auction never happens in a real catalogue. Same `format:'relation'` SQO pattern as
+ * findExistingAuction/findExistingType — never a hand-written SQL WHERE.
+ */
+async function findExistingLot(
+	auctionSectionId: number,
+	lotNumber: string,
+	context: ToolActionContext,
+): Promise<number | null> {
+	const sqo = sanitizeClientSqo({
+		section_tipo: [NUMISDATA_OBJECT_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: [
+						{
+							section_tipo: AUCTION_SECTION_TIPO,
+							section_id: auctionSectionId,
+							from_component_tipo: AUCTION_RELATION_TIPO,
+						},
+					],
+					path: [{ section_tipo: NUMISDATA_OBJECT_TIPO, component_tipo: AUCTION_RELATION_TIPO }],
+					format: 'relation',
+				},
+				{
+					q: `==${lotNumber}`,
+					path: [{ section_tipo: NUMISDATA_OBJECT_TIPO, component_tipo: INVENTORY_NUMBER_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
+}
+
 /** previewUrl/previewHtml's informational "does this auction already exist"
  * check — an exact-name Entity lookup (the same match the client's own
  * picker would land on for an unambiguous name) feeding the same SQO dedup
@@ -915,6 +973,10 @@ interface CommitOneLotResult {
 	// partial record is never left behind: review item C1.
 	section_id: number | null;
 	error: ApiErrorBody | null;
+	/** True when a numisdata4 record with this (Auction, Inventory number) already existed -
+	 * nothing else in this result was attempted, section_id names the pre-existing record. Closes
+	 * review item G: re-committing the same batch no longer duplicates every lot in it. */
+	skipped: boolean;
 	fields_written: string[];
 	auction_section_id: number | null;
 	auction_created: boolean | null;
@@ -999,12 +1061,78 @@ async function commitOneLot(
 	// Hoisted out of the transaction below - extractCatalogueCitation (Type
 	// matching, outside the transaction) needs it too.
 	const description = typeof l.description === 'string' ? l.description : null;
-	// One transaction for the record + its own core fields: a writeField throw
-	// used to escape uncaught, leaving a half-written record behind with no way
-	// to report it (review item C1). Auction/Type/image stay OUTSIDE it,
-	// unchanged — they are already individually best-effort against a record
-	// that, past this point, is real and complete.
-	const { sectionId, fieldsWritten } = await withTransaction(async () => {
+	// Hoisted for the dedup check below, which needs it BEFORE the transaction - the write path
+	// further down still reads `l.lotNumber` directly (untrimmed), unchanged.
+	const lotNumber = typeof l.lotNumber === 'string' ? l.lotNumber.trim() : '';
+
+	let effectiveAuctionHouse = auctionHouse;
+	let effectiveAuctionNumber = auctionNumber;
+	let effectiveAuctionTitle = auctionTitle;
+	// Gated on domain alone, this fired for an ORDINARY sixbid listing too: its
+	// normal (non-search) lots also populate `category`, just with the coin's
+	// own category name ("Roman Provincial, Asia Minor") - which also contains
+	// a comma, so splitSearchAuctionCategory "succeeded" on it, silently
+	// creating a bogus Entity/Auction and discarding the operator's actual
+	// picked company (review item C3). `auctionHouse` is the batch's own
+	// ExtractedAuction, unmodified from preview_url - both search parsers
+	// (parseSearchAuction, parseSixbidSearchAuction) stamp it with this exact
+	// sentinel, a real signal "this batch IS a search", not a domain guess.
+	const isSearchCategorySource =
+		(auctionSourceDomain === 'biddr.com' || auctionSourceDomain === 'sixbid.com') &&
+		auctionHouse === 'Multiple auction houses';
+	if (isSearchCategorySource && typeof l.category === 'string' && l.category !== '') {
+		const split = splitSearchAuctionCategory(l.category);
+		if (split !== null) {
+			effectiveAuctionHouse = split.house;
+			effectiveAuctionNumber = split.label;
+			effectiveAuctionTitle = split.label;
+		}
+	}
+
+	// Resolved BEFORE the lot record (review item G: "re-committing the same lots duplicates
+	// them") - a re-commit needs the Auction's section_id to check whether THIS lot already
+	// exists under it, below, before writing anything new.
+	let auctionSectionId: number | null = null;
+	let auctionCreated: boolean | null = null;
+	let auctionError: ApiErrorBody | null = null;
+	if (effectiveAuctionHouse !== '' && effectiveAuctionNumber !== '') {
+		try {
+			// No picker ever ran for a per-lot override (it's only known after
+			// parsing THIS lot) — auto-resolve it the same safe way the picker's
+			// own fallback does, rather than leaving it as free text again.
+			const companySelection =
+				effectiveAuctionHouse === auctionHouse
+					? batchCompanySelection
+					: await resolveCompanySelectionByName(effectiveAuctionHouse, context);
+			const resolved = await resolveAuctionCached(
+				context,
+				auctionCache,
+				effectiveAuctionHouse,
+				effectiveAuctionNumber,
+				effectiveAuctionTitle,
+				companySelection,
+			);
+			auctionSectionId = resolved.sectionId;
+			auctionCreated = resolved.created;
+		} catch (error) {
+			auctionError = toErrorBody(toDedaloError(error));
+		}
+	}
+
+	// One transaction for the dedup check + the record + its own core fields: a writeField throw
+	// used to escape uncaught, leaving a half-written record behind with no way to report it
+	// (review item C1). Type/image stay OUTSIDE it, unchanged — they are already individually
+	// best-effort against a record that, past this point, is real and complete. Locked and
+	// RE-CHECKED under the lock (review item G/C4): findExistingLot below ran with no lock, so two
+	// concurrent commits of the SAME lot would otherwise both miss it and both create one.
+	const { sectionId, fieldsWritten, skipped } = await withTransaction(async () => {
+		if (auctionSectionId !== null && lotNumber !== '') {
+			await acquireDedupLock(`numisdata4:lot:${auctionSectionId}:${lotNumber}`);
+			const existingLotSectionId = await findExistingLot(auctionSectionId, lotNumber, context);
+			if (existingLotSectionId !== null) {
+				return { sectionId: existingLotSectionId, fieldsWritten: [], skipped: true as const };
+			}
+		}
 		const newSectionId = await createSectionRecord(NUMISDATA_OBJECT_TIPO, context.userId);
 
 		const written: string[] = [];
@@ -1084,55 +1212,32 @@ async function commitOneLot(
 			);
 			written.push(PUBLIC_REMARK_TIPO);
 		}
-		return { sectionId: newSectionId, fieldsWritten: written };
+		return { sectionId: newSectionId, fieldsWritten: written, skipped: false as const };
 	});
 
-	let effectiveAuctionHouse = auctionHouse;
-	let effectiveAuctionNumber = auctionNumber;
-	let effectiveAuctionTitle = auctionTitle;
-	// Gated on domain alone, this fired for an ORDINARY sixbid listing too: its
-	// normal (non-search) lots also populate `category`, just with the coin's
-	// own category name ("Roman Provincial, Asia Minor") - which also contains
-	// a comma, so splitSearchAuctionCategory "succeeded" on it, silently
-	// creating a bogus Entity/Auction and discarding the operator's actual
-	// picked company (review item C3). `auctionHouse` is the batch's own
-	// ExtractedAuction, unmodified from preview_url - both search parsers
-	// (parseSearchAuction, parseSixbidSearchAuction) stamp it with this exact
-	// sentinel, a real signal "this batch IS a search", not a domain guess.
-	const isSearchCategorySource =
-		(auctionSourceDomain === 'biddr.com' || auctionSourceDomain === 'sixbid.com') &&
-		auctionHouse === 'Multiple auction houses';
-	if (isSearchCategorySource && typeof l.category === 'string' && l.category !== '') {
-		const split = splitSearchAuctionCategory(l.category);
-		if (split !== null) {
-			effectiveAuctionHouse = split.house;
-			effectiveAuctionNumber = split.label;
-			effectiveAuctionTitle = split.label;
-		}
+	if (skipped) {
+		return {
+			lot_identifier: l.lotIdentifier,
+			section_tipo: NUMISDATA_OBJECT_TIPO,
+			section_id: sectionId,
+			error: null,
+			skipped: true,
+			fields_written: [],
+			auction_section_id: auctionSectionId,
+			auction_created: auctionCreated,
+			auction_error: auctionError,
+			type_section_id: null,
+			type_citation: null,
+			type_error: null,
+			images_created: null,
+			images_error: null,
+		};
 	}
 
-	let auctionSectionId: number | null = null;
-	let auctionCreated: boolean | null = null;
-	let auctionError: ApiErrorBody | null = null;
-	if (effectiveAuctionHouse !== '' && effectiveAuctionNumber !== '') {
+	// The Auction was already resolved (or failed to resolve) above, before the dedup check - link
+	// it now that the record is real, without resolving it a second time.
+	if (auctionSectionId !== null && auctionError === null) {
 		try {
-			// No picker ever ran for a per-lot override (it's only known after
-			// parsing THIS lot) — auto-resolve it the same safe way the picker's
-			// own fallback does, rather than leaving it as free text again.
-			const companySelection =
-				effectiveAuctionHouse === auctionHouse
-					? batchCompanySelection
-					: await resolveCompanySelectionByName(effectiveAuctionHouse, context);
-			const resolved = await resolveAuctionCached(
-				context,
-				auctionCache,
-				effectiveAuctionHouse,
-				effectiveAuctionNumber,
-				effectiveAuctionTitle,
-				companySelection,
-			);
-			auctionSectionId = resolved.sectionId;
-			auctionCreated = resolved.created;
 			await linkAuction(context, sectionId, auctionSectionId);
 			fieldsWritten.push(AUCTION_RELATION_TIPO);
 		} catch (error) {
@@ -1170,6 +1275,7 @@ async function commitOneLot(
 		section_tipo: NUMISDATA_OBJECT_TIPO,
 		section_id: sectionId,
 		error: null,
+		skipped: false,
 		fields_written: fieldsWritten,
 		auction_section_id: auctionSectionId,
 		auction_created: auctionCreated,
@@ -1196,6 +1302,16 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 			message:
 				'commit_lots requires a non-empty "lots" array (from preview_url, minus any excluded).',
 			publicMessage: 'No lots to import — run Preview first, then keep at least one lot.',
+		});
+	}
+	// Defense in depth against a malformed/adversarial payload (preview_url/preview_html already
+	// cap at MAX_LOTS, so a normal client never sends more than that): refuse rather than silently
+	// truncate, since this is a WRITE action — truncating would commit a batch the operator never
+	// reviewed as "the whole thing".
+	if (lots.length > MAX_LOTS) {
+		throw new DedaloError('tool.action_failed', {
+			message: `commit_lots received ${lots.length} lots, over the ${MAX_LOTS} cap.`,
+			publicMessage: `Too many lots in one batch (${lots.length} > ${MAX_LOTS}). Split the import into smaller batches.`,
 		});
 	}
 	const auction = context.options.auction;
@@ -1295,6 +1411,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 				section_tipo: NUMISDATA_OBJECT_TIPO,
 				section_id: null,
 				error: toErrorBody(toDedaloError(error)),
+				skipped: false,
 				fields_written: [],
 				auction_section_id: null,
 				auction_created: null,

@@ -1,29 +1,29 @@
 /**
- * crop_50 — split a white-background coin photo into obverse/reverse (PHP
+ * cropCoinPair — split a white-background coin photo into obverse/reverse (PHP
  * tool_import_files crop_50, the numisdata script). Detects exactly two
  * coin-sized foreground blobs via ImageMagick connected-components, crops
  * each, pads the shorter to the taller's height with white, and stages both
  * as new files in the SAME staging directory as the source.
  *
- * PATH MIRRORS THE PHP LAYOUT ON PURPOSE: PHP's `file_processor` loaded this
- * script from `dirname(__FILE__) . $file_processor_obj->script_file`, where
- * `script_file` was `/script_files/numisdata/crop_50.php` — a path relative
- * to the tool's own directory. This file sits at the exact same
- * `script_files/<tld>/<function_name>.ts` position under
- * `tools/tool_import_files/`, just one level deeper than that (`server/` is
- * NOT renameable — `src/core/tools/loader.ts` hardcodes `server/index.ts` as
- * the tool-discovery entry point for every tool in this codebase, so it has
- * to stay the outer directory).
+ * SHARED LOGIC LIVES HERE, not under either tool's own directory (review item
+ * G, PR #114): tool_import_files registers it as a named FileProcessor
+ * ('crop_50', SEC-053 allowlist), and tool_numisdata_acquisition calls it
+ * directly as a plain function for its own per-lot image split. Neither tool
+ * owns it, so a tool reaching into the OTHER tool's `server/` internals (the
+ * previous location, tools/tool_import_files/server/script_files/numisdata/
+ * crop_50.ts) was the wrong shape - this is `src/`, like every other
+ * cross-tool media primitive it already depends on (imagemagick.ts,
+ * region_split.ts).
  *
  * THIS FUNCTION CREATES NO RECORDS. It only produces files and reports them
- * via `outputs` (`FileProcessorOutput[]`, see `import_files_match.ts`) — the
- * `import_files` per-file loop (`../../index.ts`, `importIntoPortal`) adds
- * each output as a child through its OWN portal on the CALLING record — no
- * new top-level record. That mirrors the PHP original's actual behaviour
+ * via `outputs` (`FileProcessorOutput[]`, see `import_files_match.ts`) -
+ * tool_import_files' own `import_files` per-file loop (`importIntoPortal`)
+ * adds each output as a child through its OWN portal on the CALLING record -
+ * no new top-level record. That mirrors the PHP original's actual behaviour
  * exactly (`component_portal->add_new_element` using the caller's own
  * `section_id` for each `custom_arguments` destination, PHP :139-148) while
- * keeping the portal/record-creation machinery in ONE place (`../../index.ts`)
- * instead of duplicated here.
+ * keeping the portal/record-creation machinery in ONE place
+ * (tool_import_files/server/index.ts) instead of duplicated here.
  *
  * DESTINATION MAPPING — `custom_arguments`, read from the ontology exactly
  * like PHP did: `tool_config.file_processor` (`file_processor_properties` on
@@ -47,20 +47,14 @@
 
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
+import type { FileProcessor, FileProcessorOutput } from '../../tools/import_files_match.ts';
 import {
 	buildBilevelMask,
 	cropAndPadImage,
 	runConnectedComponents,
-} from '../../../../../src/core/media/engine/imagemagick.ts';
-import { sanitizeSegment, stagingDir } from '../../../../../src/core/media/ingest/add_file.ts';
-import {
-	assertPlausibleObjectPair,
-	parseConnectedComponentsReport,
-} from '../../../../../src/core/media/region_split.ts';
-import type {
-	FileProcessor,
-	FileProcessorOutput,
-} from '../../../../../src/core/tools/import_files_match.ts';
+} from '../engine/imagemagick.ts';
+import { sanitizeSegment, stagingDir } from '../ingest/add_file.ts';
+import { assertPlausibleObjectPair, parseConnectedComponentsReport } from '../region_split.ts';
 
 /** ImageMagick connected-components noise floor (pixels) — same default the PHP original used. */
 const DEFAULT_AREA_THRESHOLD = 30000;
@@ -160,7 +154,7 @@ export const cropCoinPair: FileProcessor = async (input) => {
 		// failure or an fs error carries staging paths and argv in it. The reason
 		// goes to the log (with the file it was working on); the operator gets a
 		// deliberate sentence that names the two things they can actually act on.
-		console.error(`[crop_50] '${fileName}' failed:`, (error as Error).message ?? error);
+		console.error(`[crop_coin_pair] '${fileName}' failed:`, (error as Error).message ?? error);
 		return {
 			ok: false,
 			message:

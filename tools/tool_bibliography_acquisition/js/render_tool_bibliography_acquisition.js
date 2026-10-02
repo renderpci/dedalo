@@ -288,12 +288,22 @@ const get_content_data = function(self) {
 
 	// Builds the series status line, publication checklist, and Confirm button
 	// from one successful preview response.
-		const build_review = function(series, series_status, publications, partial_error) {
+		const build_review = function(series, series_status, publications, partial_error, truncated_by) {
 
 			const review_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'review_container'
 			})
+
+				if (truncated_by) {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error_message',
+						text_content	: (self.get_tool_label('publications_truncated') || 'Only the first {count} articles are shown ({more} more were found and left out).')
+							.replace('{count}', publications.length).replace('{more}', truncated_by),
+						parent			: review_container
+					})
+				}
 
 				if (partial_error) {
 					ui.create_dom_element({
@@ -623,7 +633,7 @@ const get_content_data = function(self) {
 					}
 					const data = response_data(response)
 					const publications = Array.isArray(data.publications) ? data.publications : []
-					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null))
+					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null, data.publications_truncated_by || 0))
 				}).catch(function(error) {
 					preview_button.classList.remove('loading')
 					console.error('[tool_bibliography_acquisition] preview_html failed:', error)
@@ -637,7 +647,7 @@ const get_content_data = function(self) {
 				stream_id			: 'tool_bibliography_acquisition_preview',
 				on_success			: (data) => {
 					const publications = Array.isArray(data.publications) ? data.publications : []
-					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null))
+					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null, data.publications_truncated_by || 0))
 				},
 				on_settle			: () => {
 					preview_button.classList.remove('loading')

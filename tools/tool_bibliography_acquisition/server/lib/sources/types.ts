@@ -21,6 +21,9 @@ export interface MultiPageAcquisition {
 	 * hosts near the tail of their record set) - pages gathered before the failure are still
 	 * returned rather than discarded. */
 	partialError?: string;
+	/** How many article links beyond MAX_ARTICLES were found and NOT fetched (review item G) -
+	 * distinct from partialError: this is a deliberate cap, not a failure. */
+	truncatedBy?: number;
 }
 
 /** Called after each page is fetched, with the page just completed and the total known so far.
