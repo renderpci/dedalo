@@ -544,6 +544,7 @@
 	"unable_to_open_window": "El navegador ha bloqueado la nueva ventana. Permita las ventanas emergentes para este sitio e inténtelo de nuevo.",
 	"unsaved_changes": "¡Sin salvar!",
 	"update": "Actualizar",
+	"update_code_all_checks": "Todas las comprobaciones",
 	"update_code_backup_root": "Raíz de copias",
 	"update_code_blocked": "Actualización bloqueada",
 	"update_code_build_previous": "antes %s",

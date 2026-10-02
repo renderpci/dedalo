@@ -543,6 +543,7 @@
 	"unable_to_open_window": "Браузер заблокировал новое окно. Разрешите всплывающие окна для этого сайта и повторите попытку.",
 	"unsaved_changes": "Несохранённые изменения!",
 	"update": "Обновить",
+	"update_code_all_checks": "Все проверки",
 	"update_code_backup_root": "Корень резервных копий",
 	"update_code_blocked": "Обновление заблокировано",
 	"update_code_build_previous": "было %s",

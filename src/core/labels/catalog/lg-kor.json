@@ -543,6 +543,7 @@
 	"unable_to_open_window": "브라우저가 새 창을 차단했습니다. 이 사이트의 팝업을 허용한 후 다시 시도하십시오.",
 	"unsaved_changes": "저장되지 않은 변경 사항이 있습니다!",
 	"update": "업데이트",
+	"update_code_all_checks": "모든 점검",
 	"update_code_backup_root": "백업 루트",
 	"update_code_blocked": "업데이트가 차단됨",
 	"update_code_build_previous": "이전 %s",

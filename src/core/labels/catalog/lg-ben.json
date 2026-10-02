@@ -543,6 +543,7 @@
 	"unable_to_open_window": "ব্রাউজার নতুন উইন্ডো আটকে দিয়েছে। এই সাইটের জন্য পপ-আপ অনুমোদন করে আবার চেষ্টা করুন।",
 	"unsaved_changes": "অসংরক্ষিত পরিবর্তন!",
 	"update": "আপডেট",
+	"update_code_all_checks": "সব পরীক্ষা",
 	"update_code_backup_root": "ব্যাকআপের মূল ডিরেক্টরি",
 	"update_code_blocked": "হালনাগাদ অবরুদ্ধ",
 	"update_code_build_previous": "ছিল %s",

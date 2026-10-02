@@ -543,6 +543,7 @@
 	"unable_to_open_window": "Der Browser hat das neue Fenster blockiert. Erlauben Sie Pop-ups für diese Website und versuchen Sie es erneut.",
 	"unsaved_changes": "Nicht gespeicherte Änderungen!",
 	"update": "Aktualisieren",
+	"update_code_all_checks": "Alle Prüfungen",
 	"update_code_backup_root": "Sicherungs-Wurzelverzeichnis",
 	"update_code_blocked": "Aktualisierung blockiert",
 	"update_code_build_previous": "vorher %s",

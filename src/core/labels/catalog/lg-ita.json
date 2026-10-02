@@ -543,6 +543,7 @@
 	"unable_to_open_window": "Il browser ha bloccato la nuova finestra. Consentire i pop-up per questo sito e riprovare.",
 	"unsaved_changes": "Modifiche non salvate!",
 	"update": "Aggiornare",
+	"update_code_all_checks": "Tutti i controlli",
 	"update_code_backup_root": "Radice delle copie",
 	"update_code_blocked": "Aggiornamento bloccato",
 	"update_code_build_previous": "prima %s",

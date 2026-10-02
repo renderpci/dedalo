@@ -543,6 +543,7 @@
 	"unable_to_open_window": "O navegador bloqueou a nova janela. Permita as janelas pop-up para este site e tente novamente.",
 	"unsaved_changes": "Sem salvar!",
 	"update": "Atualizar",
+	"update_code_all_checks": "Todas as verificações",
 	"update_code_backup_root": "Raiz das cópias",
 	"update_code_blocked": "Atualização bloqueada",
 	"update_code_build_previous": "antes %s",

@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global it, describe, assert, page_globals */
+/*global it, describe, before, after, assert, page_globals */
 /*eslint no-undef: "error"*/
 
 /**
@@ -542,6 +542,121 @@ describe('UPDATE_CODE WIDGET', function() {
 			assert.isNull(backup_waiver_check({}), 'no checks, no waiver')
 		})
 	})
+
+	describe('folded status (the action in view, the reference facts one click away)', function() {
+
+		// the folds remember the operator's choice under the REAL keys: save
+		// and restore whatever this origin held, never leave a test value behind
+		const FOLD_KEYS = ['installation', 'checks', 'last_update', 'restore_points']
+			.map(key => 'dedalo.update_code.fold.' + key)
+		const saved = {}
+		const read_key = (key) => { try { return localStorage.getItem(key) } catch (_error) { return null } }
+		before(function() {
+			FOLD_KEYS.forEach(key => {
+				saved[key] = read_key(key)
+				try { localStorage.removeItem(key) } catch (_error) { /* private mode */ }
+			})
+		})
+		after(function() {
+			FOLD_KEYS.forEach(key => {
+				try {
+					saved[key]===null ? localStorage.removeItem(key) : localStorage.setItem(key, saved[key])
+				} catch (_error) { /* private mode */ }
+			})
+		})
+
+		const consumer = (last_status) => ({
+			ready	: true,
+			engine	: { engine_version : '7.0.0' },
+			tree	: {},
+			checks	: [
+				{ id : 'superuser', state : 'ok' },
+				{ id : 'disk_space', state : 'unknown', detail : '1024' },
+				{ id : 'staging_clean', state : 'warn' },
+				{ id : 'backup_fresh', state : 'warn', detail : '73' }
+			],
+			last_update		: { previousVersion : '7.0.0', version : '7.0.1', stamp : 'x', status : last_status },
+			restore_points	: []
+		})
+		const render = (c) => {
+			const wrapper = ui.create_dom_element({ element_type : 'div', parent : container })
+			render_consumer_status(wrapper, c)
+			return wrapper
+		}
+
+		it('only what needs attention stays unfolded; the complete list is folded with counts', function() {
+
+			const wrapper = render(consumer('confirmed'))
+			try {
+				const attention = [...wrapper.querySelectorAll('.attention_checks .check_row')]
+				assert.deepEqual(
+					attention.map(row => row.className.match(/state_(\w+)/)[1]),
+					['warn', 'warn'],
+					'the two warnings, never the ok or the unknown row'
+				)
+				const all = wrapper.querySelector('details.fold_checks')
+				assert.ok(all, 'the complete list is a fold')
+				assert.isFalse(all.open, 'folded by default')
+				assert.strictEqual(all.querySelectorAll('.check_row').length, 4, 'and it is complete')
+				assert.include(all.querySelector('summary').textContent, '2', 'its summary counts the states')
+				// every other block folds too, on its one-line hint
+				assert.isFalse(wrapper.querySelector('details.fold_installation').open)
+				assert.include(wrapper.querySelector('details.fold_installation summary').textContent, '7.0.0')
+				assert.isFalse(wrapper.querySelector('details.fold_last_update').open, 'a confirmed update folds')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		// `toggle` is QUEUED: wait for it (the widget's own listener, registered
+		// first, has run by then) before reading what was stored
+		const toggled = (details) => new Promise(resolve => {
+			details.addEventListener('toggle', resolve, { once : true })
+		})
+
+		it('a fold opened by the operator is opened again on the next render', async function() {
+
+			const first = render(consumer('confirmed'))
+			try {
+				const details = first.querySelector('details.fold_installation')
+				const done = toggled(details)
+				details.querySelector('summary').click()
+				await done
+				assert.strictEqual(read_key('dedalo.update_code.fold.installation'), '1', 'the click is remembered')
+			} finally {
+				first.remove()
+			}
+			const second = render(consumer('confirmed'))
+			try {
+				const details = second.querySelector('details.fold_installation')
+				assert.isTrue(details.open, 'reopened from memory')
+				// the render's own queued toggle is skipped, not stored
+				await toggled(details)
+				assert.strictEqual(read_key('dedalo.update_code.fold.installation'), '1')
+				const done = toggled(details)
+				details.querySelector('summary').click()
+				await done
+				assert.strictEqual(read_key('dedalo.update_code.fold.installation'), '0', 'and closing is remembered too')
+			} finally {
+				second.remove()
+			}
+		})
+
+		it('an unconfirmed last update is shown open, without overwriting the preference', async function() {
+
+			const wrapper = render(consumer('pending'))
+			try {
+				const details = wrapper.querySelector('details.fold_last_update')
+				assert.isTrue(details.open, 'pending needs no click to be seen')
+				await toggled(details)
+				assert.isNull(read_key('dedalo.update_code.fold.last_update'), 'forced open is not a stored choice')
+			} finally {
+				wrapper.remove()
+			}
+		})
+	})
+
+
 
 	describe('phase reducer (served module)', function() {
 

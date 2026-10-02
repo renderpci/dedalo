@@ -543,6 +543,7 @@
 	"unable_to_open_window": "Nabigatzaileak leiho berria blokeatu du. Baimendu laster-leihoak gune honetarako eta saiatu berriro.",
 	"unsaved_changes": "Gorde gabe!",
 	"update": "Eguneratu",
+	"update_code_all_checks": "Egiaztapen guztiak",
 	"update_code_backup_root": "Babeskopien erroa",
 	"update_code_blocked": "Eguneratzea blokeatuta",
 	"update_code_build_previous": "lehen %s",

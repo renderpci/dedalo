@@ -543,6 +543,7 @@
 	"unable_to_open_window": "浏览器拦截了新窗口。请允许本站的弹出窗口后重试。",
 	"unsaved_changes": "有未保存的更改！",
 	"update": "更新",
+	"update_code_all_checks": "所有检查",
 	"update_code_backup_root": "备份根目录",
 	"update_code_blocked": "更新已阻止",
 	"update_code_build_previous": "原为 %s",

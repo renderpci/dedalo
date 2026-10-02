@@ -543,6 +543,7 @@
 	"unable_to_open_window": "حجب المتصفح النافذة الجديدة. اسمح بالنوافذ المنبثقة لهذا الموقع وحاول مجددًا.",
 	"unsaved_changes": "تغييرات غير محفوظة!",
 	"update": "تحديث",
+	"update_code_all_checks": "جميع الفحوصات",
 	"update_code_backup_root": "جذر النسخ الاحتياطية",
 	"update_code_blocked": "التحديث محظور",
 	"update_code_build_previous": "كان %s",

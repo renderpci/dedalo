@@ -395,10 +395,15 @@ const get_content_data_edit = async function(self) {
 		})
 		dev_channel_label.prepend(dev_channel_icon)
 		dev_channel_label.prepend(dev_channel_input)
+		// the caution is SHOWN once the switch is armed (CSS :has(:checked)) —
+		// it is what the operator has to read before checking WITH it on — and
+		// rides the label's tooltip before that, so the unarmed panel stays quiet
+		const dev_channel_note = get_label.update_code_dev_channel_note || "Also offers developer builds made from the 'master' branch: the latest integrated code, not yet released. A developer build may carry the same version number as the installed one, and is then installed over it. Use them to test development work, never on a production installation."
+		dev_channel_label.title = dev_channel_note
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note dev_channel_note',
-			text_content	: get_label.update_code_dev_channel_note || "Also offers developer builds made from the 'master' branch: the latest integrated code, not yet released. A developer build may carry the same version number as the installed one, and is then installed over it. Use them to test development work, never on a production installation.",
+			text_content	: dev_channel_note,
 			parent			: dev_channel_row
 		})
 

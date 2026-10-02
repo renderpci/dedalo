@@ -543,6 +543,7 @@
 	"unable_to_open_window": "ブラウザーが新しいウィンドウをブロックしました。このサイトのポップアップを許可して再試行してください。",
 	"unsaved_changes": "保存されていない変更があります！",
 	"update": "更新",
+	"update_code_all_checks": "すべてのチェック",
 	"update_code_backup_root": "バックアップのルート",
 	"update_code_blocked": "更新がブロックされています",
 	"update_code_build_previous": "以前は %s",

@@ -100,6 +100,133 @@ export const section = function(parent, title) {
 
 
 
+/**
+* FOLD_STORAGE_PREFIX
+* One localStorage key per fold (`dedalo.update_code.fold.<key>` → '1'|'0'):
+* the operator's own reading preference, origin-scoped like the server picker's
+* `dedalo.update_code.server`. Private-mode browsers throw on access, so both
+* sides are guarded and degrade to "no memory" (folded).
+*/
+const FOLD_STORAGE_PREFIX = 'dedalo.update_code.fold.'
+
+const read_fold = function(key) {
+	try {
+		const stored = window.localStorage.getItem(FOLD_STORAGE_PREFIX + key)
+		return stored==='1' ? true : (stored==='0' ? false : null)
+	} catch (_error) {
+		return null
+	}
+}
+const store_fold = function(key, open) {
+	try {
+		window.localStorage.setItem(FOLD_STORAGE_PREFIX + key, open ? '1' : '0')
+	} catch (_error) {
+		// no memory available — the fold still works for this visit
+	}
+}//end store_fold
+
+
+
+/**
+* FOLD_SECTION
+* A titled block that FOLDS: a native <details> whose <summary> carries the
+* eyebrow plus a one-line hint (the facts an operator needs without opening it),
+* and whose body is the usual .dd_readout. The panel exposes the action and the
+* verdict; the reference facts live one click away.
+*
+* Open state is the operator's, remembered per key. `force_open` opens it for
+* THIS render only (a state that needs attention — e.g. a last update still
+* pending) without overwriting the remembered preference: only a click stores.
+* Stored from `toggle`, skipping the one the initial programmatic open queues.
+*
+* @param {HTMLElement} parent
+* @param {string} key - storage key suffix
+* @param {string} title
+* @param {Object} [options]
+* @param {string|null} [options.hint] - text after the eyebrow (TEXT, never HTML)
+* @param {boolean} [options.force_open]
+* @returns {{block:HTMLElement, summary:HTMLElement, body:HTMLElement}}
+*/
+export const fold_section = function(parent, key, title, options) {
+
+	const opts = options || {}
+
+	const block = ui.create_dom_element({
+		element_type	: 'details',
+		class_name		: `status_block status_fold fold_${key}`,
+		parent			: parent
+	})
+	if (opts.force_open===true || read_fold(key)===true) {
+		block.open = true
+	}
+
+	const summary = ui.create_dom_element({
+		element_type	: 'summary',
+		class_name		: 'status_fold_summary',
+		parent			: block
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_eyebrow',
+		text_content	: title,
+		parent			: summary
+	})
+	if (opts.hint) {
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'fold_hint',
+			text_content	: opts.hint,
+			parent			: summary
+		})
+	}
+	// `toggle` covers pointer AND keyboard (the summary is the native control)
+	// but also fires, queued, for the programmatic open above: that first event
+	// is the render's, not the operator's, so it is skipped — a forced open
+	// never overwrites the remembered preference.
+	let skip_render_toggle = block.open
+	block.addEventListener('toggle', () => {
+		if (skip_render_toggle) {
+			skip_render_toggle = false
+			return
+		}
+		store_fold(key, block.open)
+	})
+
+	const body = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_readout',
+		parent			: block
+	})
+
+	return { block, summary, body }
+}//end fold_section
+
+
+
+/**
+* CHECK_COUNTS
+* Per-state count chips for a folded check list: "9 ok · 1 warning · 2 unknown",
+* in the same pill vocabulary as each row, so the closed fold still says whether
+* opening it is worth the click.
+* @param {HTMLElement} parent
+* @param {Array} checks
+*/
+const check_counts = function(parent, checks) {
+
+	const counts = {}
+	checks.forEach(check => { counts[check.state] = (counts[check.state] || 0) + 1 })
+	;['blocked', 'warn', 'unknown', 'ok'].forEach(state => {
+		if (!counts[state]) {
+			return
+		}
+		const chip = state_chip(state)
+		chip.textContent = `${counts[state]} ${chip.textContent}`
+		parent.appendChild(chip)
+	})
+}//end check_counts
+
+
+
 /** The two build channels, in the order the readout lists them. */
 export const CHANNELS = ['master', 'dev']
 
@@ -405,26 +532,57 @@ export const verdict = function(parent, ready, ok_label, bad_label, waived_label
 */
 const render_readiness = function(parent, consumer) {
 
-	const readiness = section(parent, get_label.update_code_readiness || 'Update readiness')
-	readiness.parentNode.classList.add('readiness_block')
+	const block = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'status_block readiness_block',
+		parent			: parent
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_eyebrow',
+		text_content	: get_label.update_code_readiness || 'Update readiness',
+		parent			: block
+	})
 
 	// a PENDING WAIVER is what stands between `ready:true` and the DEFAULT
 	// request actually succeeding — name it, never headline a plain "ready".
 	// The SAME predicate the modal draws its checkbox from, so the two can
 	// never disagree about whether a waiver is on the table.
-	const waivable = backup_waiver_check(consumer)!==null
+	const waiver_check = backup_waiver_check(consumer)
 	verdict(
-		readiness.parentNode,
+		block,
 		consumer.ready===true,
 		get_label.update_code_ready || 'Ready to update',
 		get_label.update_code_blocked || 'Update blocked',
-		waivable
+		waiver_check!==null
 			? (get_label.update_code_ready_with_waiver || 'Ready to update, but only with a waiver')
 			: undefined
 	)
-	;(consumer.checks || []).forEach(check => { check_row(readiness, check) })
 
-	return readiness.parentNode
+	// WHAT NEEDS ATTENTION stays in view: every check the pipeline would refuse
+	// or warn on, plus the waiver check whatever its state (an `unknown` backup
+	// also puts a waiver on the table). The headline names the condition; these
+	// rows name the cause, with their notes. `unknown` alone is information,
+	// not an alarm — it stays in the folded list below.
+	const checks = consumer.checks || []
+	const attention = checks.filter(check =>
+		check.state==='blocked' || check.state==='warn' || check===waiver_check
+	)
+	if (attention.length) {
+		const attention_readout = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_readout attention_checks',
+			parent			: block
+		})
+		attention.forEach(check => { check_row(attention_readout, check) })
+	}
+
+	// …and the COMPLETE list, folded, with per-state counts on its summary
+	const all = fold_section(block, 'checks', get_label.update_code_all_checks || 'All checks')
+	check_counts(all.summary, checks)
+	checks.forEach(check => { check_row(all.body, check) })
+
+	return block
 }//end render_readiness
 
 
@@ -517,8 +675,6 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 
 	// what is running
 		const engine = consumer.engine || {}
-		const installation = section(wrapper, get_label.update_code_installation || 'This installation')
-		fact_row(installation, get_label.update_code_current_version || 'Current version', engine.engine_version, true)
 		// THREE postures, not two: 'dev' now covers a working checkout AND an
 		// installed developer build (a branch archive, same version as the
 		// release it replaced). Naming the second one a "checkout" would send an
@@ -528,6 +684,15 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 			: engine.install_channel==='dev'
 				? (get_label.update_code_posture_dev_build || "Developer build (unreleased code from 'master')")
 				: (get_label.update_code_posture_dev || 'Development checkout')
+		// folded: version + posture ARE the summary; the provenance facts
+		// (commit, archive digest, paths) are one click away
+		const installation = fold_section(
+			wrapper,
+			'installation',
+			get_label.update_code_installation || 'This installation',
+			{ hint : [engine.engine_version, posture_text].filter(Boolean).join(' · ') }
+		).body
+		fact_row(installation, get_label.update_code_current_version || 'Current version', engine.engine_version, true)
 		fact_row(
 			installation,
 			get_label.update_code_posture || 'Build posture',
@@ -553,7 +718,18 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 				confirmed		: get_label.update_code_sentinel_confirmed || 'confirmed',
 				rolled_back		: get_label.update_code_sentinel_rolled_back || 'rolled back'
 			}
-			const last = section(wrapper, get_label.update_code_last_update || 'Last code update')
+			// folded on its one-line story ("7.0.0 → 7.0.1 · confirmed"), but
+			// OPEN while it is not confirmed: a pending or rolled-back update is
+			// the state an operator has to see without asking for it
+			const last = fold_section(
+				wrapper,
+				'last_update',
+				get_label.update_code_last_update || 'Last code update',
+				{
+					hint		: `${sentinel.previousVersion || '—'} → ${sentinel.version || '—'} · ${status_words[sentinel.status] || String(sentinel.status)}`,
+					force_open	: sentinel.status!=='confirmed'
+				}
+			).body
 			fact_row(last, get_label.update_code_sentinel_from || 'Updated from', sentinel.previousVersion, true)
 			fact_row(last, get_label.update_code_sentinel_to || 'Updated to', sentinel.version, true)
 			fact_row(last, get_label.update_code_sentinel_when || 'When', sentinel.stamp)
@@ -572,7 +748,17 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 
 	// restore points
 		const points = consumer.restore_points || []
-		const restore = section(wrapper, get_label.update_code_restore_points || 'Restore points')
+		// folded on the count + the newest point (the server lists newest first)
+		const restore = fold_section(
+			wrapper,
+			'restore_points',
+			get_label.update_code_restore_points || 'Restore points',
+			{
+				hint : points.length
+					? `${points.length} · ${format_stamp(points[0].stamp)}${points[0].version ? ' · ' + points[0].version : ''}`
+					: (get_label.update_code_none || 'None')
+			}
+		).body
 		if (!points.length) {
 			fact_row(restore, get_label.update_code_none || 'None', get_label.update_code_note_no_restore_points || '')
 		}

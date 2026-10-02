@@ -543,6 +543,7 @@
 	"unable_to_open_window": "براؤزر نے نئی ونڈو روک دی۔ اس سائٹ کے لیے پاپ اپ کی اجازت دیں اور دوبارہ کوشش کریں۔",
 	"unsaved_changes": "غیر محفوظ تبدیلیاں!",
 	"update": "اپ ڈیٹ",
+	"update_code_all_checks": "تمام جانچیں",
 	"update_code_backup_root": "بیک اپ کی جڑ",
 	"update_code_blocked": "اپ ڈیٹ مسدود ہے",
 	"update_code_build_previous": "پہلے %s",

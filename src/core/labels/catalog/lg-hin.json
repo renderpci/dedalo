@@ -543,6 +543,7 @@
 	"unable_to_open_window": "ब्राउज़र ने नई विंडो रोक दी। इस साइट के लिए पॉप-अप की अनुमति दें और पुनः प्रयास करें।",
 	"unsaved_changes": "असहेजे गए परिवर्तन!",
 	"update": "अपडेट करें",
+	"update_code_all_checks": "सभी जाँचें",
 	"update_code_backup_root": "बैकअप मूल निर्देशिका",
 	"update_code_blocked": "अद्यतन अवरुद्ध",
 	"update_code_build_previous": "पहले %s",

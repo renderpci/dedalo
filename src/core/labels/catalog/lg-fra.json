@@ -543,6 +543,7 @@
 	"unable_to_open_window": "Le navigateur a bloqué la nouvelle fenêtre. Autorisez les fenêtres contextuelles pour ce site et réessayez.",
 	"unsaved_changes": "Modifications non sauvegardées !",
 	"update": "Actualiser ",
+	"update_code_all_checks": "Toutes les vérifications",
 	"update_code_backup_root": "Racine des sauvegardes",
 	"update_code_blocked": "Mise à jour bloquée",
 	"update_code_build_previous": "avant %s",

@@ -543,6 +543,7 @@
 	"unable_to_open_window": "ब्राउजरले नयाँ विन्डो रोक्यो। यस साइटका लागि पप-अप अनुमति दिनुहोस् र फेरि प्रयास गर्नुहोस्।",
 	"unsaved_changes": "बचत नगरिएका परिवर्तनहरू!",
 	"update": "अपडेट गर्नुहोस्",
+	"update_code_all_checks": "सबै जाँचहरू",
 	"update_code_backup_root": "ब्याकअपको मूल निर्देशिका",
 	"update_code_blocked": "अद्यावधिक रोकिएको",
 	"update_code_build_previous": "पहिले %s",

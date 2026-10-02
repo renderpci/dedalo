@@ -543,6 +543,7 @@
 	"unable_to_open_window": "El navegador ha blocat la finestra nova. Permeteu les finestres emergents per a aquest lloc i torneu-ho a provar.",
 	"unsaved_changes": "Canvis no desats!",
 	"update": "Actualitzar",
+	"update_code_all_checks": "Totes les comprovacions",
 	"update_code_backup_root": "Arrel de còpies",
 	"update_code_blocked": "Actualització bloquejada",
 	"update_code_build_previous": "abans %s",
