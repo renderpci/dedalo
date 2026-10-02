@@ -24,8 +24,7 @@ not the commit, run nightly instead of on the push (`nightly.yml`).
 > **The unit tier is BLOCKING (2026-10-02).** Advisory since 2026-08-29 (its red set was
 > load- and order-dependent: 7 / 1 / 14 reds on one commit), it flipped once its criterion
 > held: the baseline RECORDED IN THE IMAGE on the sorted tier order
-> (`ci:local --docker --record-unit-baseline`, below; 0 frozen reds) and the same red set
-> on three consecutive clean runs. The desk skip (`--skip-advisory`) went in the same
+> (`ci:local --docker --record-unit-baseline`, below; 0 frozen reds) and zero drift on three EXECUTED GitHub db runs of 674c1f4f76 (37039097260, the v7 push; 37042365421 and 37042378243, dispatched — the master push run was skipped by the dedupe, so it is not counted). The old criterion's "one of them on a loaded runner" leg was NOT separately exercised; a timing-sensitive red that only load exposes would still surface as drift and fail the tier. The desk skip (`--skip-advisory`) went in the same
 > commit — a desk that skipped a stage the runner can fail on predicts nothing; the CLI
 > now refuses the flag (`ci_local_native` §6). A red unit check fails `db_tier.sh`:
 > `tier_wiring_tripwire` legs H (the raise line) and L (executed, stubbed: the check

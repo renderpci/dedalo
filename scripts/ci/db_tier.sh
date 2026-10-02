@@ -243,7 +243,8 @@ bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
 # failed only in company — one a leaked `setTimeout` whose uncaught exception bun pinned on
 # whichever test was running). The flip waited for the criterion it was given: the
 # baseline re-recorded IN THE CI IMAGE on the sorted tier order (0 frozen reds), and the
-# same red set on three consecutive clean runs (engineering/CI.md, "Tiers" → DB). Gated: tier_wiring leg H (the raise below is
+# zero drift on three executed GitHub db runs of 674c1f4f76 (run ids and the one leg not
+# exercised: engineering/CI.md, "Tiers" → DB). Gated: tier_wiring leg H (the raise below is
 # required, no advisory row exists) and leg L (this script, executed with its commands
 # stubbed and `unit_baseline.ts --check` exiting 1, exits non-zero). There is no desk skip:
 # the pre-push gate runs this stage, because the runner can now fail on it.
