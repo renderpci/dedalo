@@ -67,6 +67,21 @@ describe('verify.ts neighbour selector — it selects, and a zero selection is a
 		expect(selected).toContain(self);
 	});
 
+	test('a DELETED changed test file is not selected — the runner refuses a missing path', async () => {
+		// `git diff --name-only <base>` lists deletions and a rename's old path.
+		// Selecting one made bunTestFileArgs throw and killed verify.ts with no
+		// stage summary. COMPOSED AT RUNTIME so the name is not a file on disk.
+		const gone = ['test', 'unit', `${'deleted'}_gate_xyzzy.test.ts`].join('/');
+		expect(existsSync(gone)).toBe(false);
+		const self = 'test/unit/verify_selector_selftest.test.ts';
+		const selected = await neighbourTests([gone, self]);
+		expect(selected).not.toContain(gone);
+		expect(selected).toContain(self);
+		// And the selection is runnable: the strict file expansion
+		// (scripts/lib/test_order.ts) throws on any absent path.
+		for (const f of selected) expect(existsSync(f)).toBe(true);
+	});
+
 	test('a change set with no src and no test files selects nothing — the honest empty', async () => {
 		// The ONLY legitimate empty: nothing was changed that any test can
 		// import. Asserted so the gate distinguishes "correctly empty" from
