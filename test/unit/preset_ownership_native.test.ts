@@ -34,12 +34,16 @@ import {
 } from '../../src/core/security/permissions.ts';
 import { isRecordInScope, principalCanAccessRecord } from '../../src/core/security/record_scope.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 import {
 	installScopeBindingFixture,
 	removeScopeBindingFixture,
 	SB_GRANTED_SECTION,
-	SB_HOP_COMPONENT,
 	SB_PRESET_OF_A,
 	SB_PRESET_OF_B,
 	SB_PRESET_SPLIT,
@@ -51,10 +55,42 @@ import {
 /** dd624 — the preset's name (component_input_text): the value the save writes. */
 const PRESET_NAME_COMPONENT = 'dd624';
 
+/**
+ * The hop INTO dd655: a scratch test3 portal CONFIGURED to target dd655 (and
+ * display its name). No shipped field links to presets, and since
+ * WC-2026-10-01-search-hop-configured-targets a search hop only reaches its
+ * component's configured targets — a test80 locator into dd655 (test80 targets
+ * test3) matches nothing for anyone, so it could no longer prove the owner rule.
+ */
+const PRESET_HOP = 'zzpo1';
+const PRESET_HOP_SITUATION = situation({
+	name: 'preset ownership hop',
+	tld: 'zzpo',
+	nodes: [
+		{
+			tipo: PRESET_HOP,
+			parent: SB_GRANTED_SECTION,
+			model: 'component_portal',
+			properties: {
+				source: {
+					request_config: [
+						{
+							sqo: { section_tipo: [{ source: 'section', value: [TEMP_PRESET_SECTION] }] },
+							show: {
+								ddo_map: [{ tipo: PRESET_NAME_COMPONENT, parent: 'self', section_tipo: 'self' }],
+							},
+						},
+					],
+				},
+			},
+		},
+	],
+});
+
 let A: Principal;
 let B: Principal;
 /**
- * A test3 record of A's whose portal (test80) points at BOTH presets — the
+ * A test3 record of A's whose portal (PRESET_HOP) points at BOTH presets — the
  * main record of the frontier-hop probe. Inside A's scope (A's project is
  * stamped on it; test3 is the birth-defaults sentinel, so the probe stamps it).
  */
@@ -66,12 +102,12 @@ const presetLocator = (id: number, sectionId: number) => ({
 	type: 'dd151',
 	section_id: sectionId,
 	section_tipo: TEMP_PRESET_SECTION,
-	from_component_tipo: SB_HOP_COMPONENT,
+	from_component_tipo: PRESET_HOP,
 });
 
 /**
  * The main-record ids a PATH search answers with for `principal`: test3 records
- * whose test80 portal reaches a dd655 row whose dd624 name matches `q`. The hop
+ * whose PRESET_HOP portal reaches a dd655 row whose dd624 name matches `q`. The hop
  * INTO dd655 is where the frontier predicate must apply the owner rule.
  */
 async function hostsReachingPresetNamed(principal: Principal, q: string): Promise<number[]> {
@@ -84,7 +120,7 @@ async function hostsReachingPresetNamed(principal: Principal, q: string): Promis
 				{
 					q,
 					path: [
-						{ section_tipo: SB_GRANTED_SECTION, component_tipo: SB_HOP_COMPONENT },
+						{ section_tipo: SB_GRANTED_SECTION, component_tipo: PRESET_HOP },
 						{ section_tipo: TEMP_PRESET_SECTION, component_tipo: PRESET_NAME_COMPONENT },
 					],
 				},
@@ -149,7 +185,10 @@ async function savePresetName(principal: Principal, sectionId: number, value: st
 
 describe.if(DB_READY)('preset_ownership — a dd655 row belongs to its owner', () => {
 	beforeAll(async () => {
-		await installScopeBindingFixture();
+		// A reads the hop component itself: the SEC-1 root-step key (conform.ts
+		// rootStepKey) refuses a path rooted on a component the profile holds 0 on.
+		await installScopeBindingFixture([[SB_GRANTED_SECTION, PRESET_HOP]]);
+		await ensureSituation(PRESET_HOP_SITUATION);
 		A = await resolvePrincipal(SB_USER_A);
 		B = await resolvePrincipal(SB_USER_B);
 		hopHostOfA = await createSectionRecord(SB_GRANTED_SECTION, SB_USER_A);
@@ -169,13 +208,14 @@ describe.if(DB_READY)('preset_ownership — a dd655 row belongs to its owner', (
 							from_component_tipo: 'test101',
 						},
 					],
-					[SB_HOP_COMPONENT]: [presetLocator(1, SB_PRESET_OF_A), presetLocator(2, SB_PRESET_OF_B)],
+					[PRESET_HOP]: [presetLocator(1, SB_PRESET_OF_A), presetLocator(2, SB_PRESET_OF_B)],
 				}),
 			],
 		);
 	});
 	afterAll(async () => {
 		if (hopHostOfA > 0) await deleteSectionRecord(SB_GRANTED_SECTION, hopHostOfA, -1);
+		await dropSituation(PRESET_HOP_SITUATION);
 		await removeScopeBindingFixture();
 	});
 

@@ -49,6 +49,29 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **A slow server shows one quiet progress bar instead of a pile of warning bubbles.**
+
+    Before, every request that took more than about 2.5 seconds raised its own
+    yellow "Awaiting for busy server" bubble. A page that loads several things at
+    once stacked several identical bubbles, and they stayed on screen after the
+    answer had already arrived. Now a slow answer shows a thin moving bar along the
+    top of the window after 1.5 seconds, adds one short sentence ("The server is
+    taking longer than usual…") only after 8 seconds, and disappears as soon as the
+    last answer arrives. Background calls never trigger it, and neither do long
+    operations that show their own progress (backups, rebuilds, updates). Identical notices in the
+    notification corner now merge into one, with a ×N count. See
+    [the slow-server cue](./core/client/data_manager.md#the-slow-server-cue).
+
+- **A tool that opens in a dialog appears at once, even on a slow connection.**
+
+    Before, clicking a tool button on a component or section (for example
+    "Propagate component data") showed nothing until the tool's program files and
+    styles had downloaded. On a slow network the page looked frozen for several
+    seconds, and a second click could open the tool twice. Now the dialog opens on
+    the click with the tool's name, icon and a loading spinner, and the tool fills
+    in when it is ready. Clicking again while it loads does not open a second copy,
+    and closing the dialog before it finishes loading cancels the tool cleanly.
+
 - **The password field shows its requirements and says clearly whether a password was saved.**
 
     Before, the password field of a user record was an opaque box: a rejected password
@@ -163,6 +186,30 @@ Merged since the last release; these ship with the next one.
 - **Error messages now show their details instead of placeholders like `{section_tipo}`.**
 
     About twenty error messages showed their placeholders literally, for example *The link into '{section_tipo}' was refused ({constraint})* or *Your daily AI budget is used up ({budget_kind}: {limit})*. They now show the actual values: the section, the limit, the file size, the action that was still running. The affected messages include link refusals, the AI budget, export limits and quotas, duplicate-request notices, image and file size limits, and unknown API actions.
+
+- **Autocomplete searches work again in pickers with a related-record field, and the field inputs search as you type**
+
+    In an autocomplete whose search fields include a related-record field (for
+    example the ontology "Sobrescritura" picker, with its "Modelo" field), typing in
+    the main search box answered "No se ha podido completar la búsqueda". Such a
+    field is now searched through the values it shows, each with its own input
+    under the search box ("Modelo › Término", "Modelo › Código"): "section" there
+    finds the terms whose model is *section*. A related-record field that shows
+    nothing searchable (only an image, for example) no longer gets a search input.
+
+    The per-field inputs under the search box (Término, Código, tld…) also search
+    on their own a moment after you stop typing; before, the search waited until you
+    moved to another input.
+
+    Wire contract: `WC-2026-10-01-relation-search-display-paths`.
+
+- **Result lists spanning several sections show every row again**
+
+    In a result list whose records come from several sections — the ontology
+    "Sobrescritura" picker searching across all ontology sections, for example —
+    records of different sections that share the same number (Andorra 1, Portugal 1,
+    Costa Rica 1…) rendered as empty rows ("`, , ,`"), with only the last of them
+    showing its values. Every row now shows its own values.
 
 - **RDF import now works with linked-data servers that redirect, and respects their robots.txt.**
 
@@ -528,6 +575,24 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-01-identify-vision-grant`.
 
+- **Searches through a related field only reach the sections that field links to, and that the user may read**
+
+    A search that follows a related-record field (a portal or autocomplete column)
+    checked the user's permission on the section named in the search, then read
+    whichever section each stored link pointed to. Between sections that share a
+    table and a field — a section and its virtual twin — a user with access to one
+    could match values stored in the other.
+
+    A search now follows a related field only into the sections that field is
+    configured to link to, and only into those the user may read, each under its own
+    record restrictions. Links that point outside the field's configured sections —
+    left over from an earlier configuration or an import — no longer match in
+    searches, for administrators too; they already showed nothing on screen. The
+    data is untouched: adding the section back to the field's configuration makes
+    them searchable again.
+
+    Wire contract: `WC-2026-10-01-search-hop-configured-targets`.
+
 - **The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.** *(action needed)*
 
     Claude Code reads hooks, MCP servers, skills and settings from the project it works in and from its home directory. In a site builder workspace both are written by the agent itself (and by the site's build scripts), so a file planted in one turn ran as a shell command in the next, although the agent is denied a shell. Each Claude Code turn now loads its settings only from the site builder (no user, project or local source; only the site builder's own MCP server), and the site brief (AGENTS.md) is handed to the agent by the site builder instead of being read from the workspace. **Action needed:** the installed Claude Code must list `--setting-sources`, `--settings` and `--strict-mcp-config` in `claude --help` (verified on 2.1.286). The site builder checks this at start and before every turn; an older Claude Code is reported in the start log and every turn is refused until it is upgraded. In the site builder tool these refusals now read "cannot run its agent safely on this server" (an administrator must act) or "busy with this site" (try again in a moment) instead of a generic error.
@@ -803,6 +868,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box.**
+
+    The Docker image's ImageMagick could read AVIF but not write it: the Debian package it is built on ships the AVIF decoder only. An installation that lists `avif` in `DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS` therefore had those alternative versions refused on every upload. The image now includes the AVIF encoder (`libheif-plugin-aomenc`). Docker installations get it with the next image build; on a host install, add the same package to have AVIF versions written.
+
 - **Published files survive a power cut, and deleting a record no longer races a running publication into the same directory.**
 
     Two gaps in file publications (Markdown, XML, RDF, CSV, JSON) are closed:
@@ -828,6 +897,25 @@ Merged since the last release; these ship with the next one.
 - **Resetting a hierarchy to its seed can no longer delete it without restoring it.**
 
     "Reset to seed" (Add hierarchy) and the installer's hierarchy step now apply each hierarchy all-or-nothing. The reset used to delete the hierarchy's terms first and load the seed in a separate step: if the seed then failed to load, the hierarchy was left empty — every edit and addition gone and the seed not restored. A models file that failed to load, or a failed update of the record counter, was ignored and the hierarchy reported as imported. Now the delete, the terms, the models and the counter are one database transaction: if any part fails, nothing changes and the hierarchy is reported as failed with the reason.
+
+- **Local ontology overrides now apply to the node they point at, and change only what they state.**
+
+    A record in the local ontology (`localontology0`) overrides a shared node through
+    its **Overwrite** field. Before, any link in the record counted as an override (so
+    its parent was overridden too), and re-parsing the node could move it to the
+    `localontology` namespace, erase its other translations, drop its layout CSS and
+    make it translatable. Now only the Overwrite field links an override; the node's
+    TLD, translatable flag, order and model flag stay as shared; the term merges per
+    language, and each property the override fills (CSS included) replaces the shared
+    one whole while the others are kept — set a property to `null` to remove it. Local
+    records are no longer parsed as nodes of their own. See
+    [Overriding shared ontology nodes](./core/ontology/local_ontology_overrides.md).
+
+    Wire contract: `WC-2026-10-01-ontology-overwrite-scoped`.
+
+- **The Publication server API maintenance panel shows its "Open Swagger UI" buttons again.**
+
+    The panel (Maintenance → Publication → Publication server API) never showed the buttons that open the interactive documentation of the publication server API v1, because `API_WEB_USER_CODE_MULTIPLE` was not read. It is a configuration key again: list each publication database and its API code, e.g. `API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]`, optionally with `api_ui` when the API runs on another server — see [the configuration reference](./config/config.md). A v6 configuration migrated with the config migrator now carries the value across.
 
 - **Creating a site twice at the same moment can no longer overwrite or delete the first site.**
 
@@ -1147,7 +1235,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 90 entries"
+??? note "Wire contract — 93 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1233,8 +1321,11 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-01-change-plan-write-door`
     - `WC-2026-10-01-delete-locator-write-door`
     - `WC-2026-10-01-identify-vision-grant`
+    - `WC-2026-10-01-ontology-overwrite-scoped`
     - `WC-2026-10-01-rdf-harvest-door`
     - `WC-2026-10-01-rdf-ontology-import`
+    - `WC-2026-10-01-relation-search-display-paths`
+    - `WC-2026-10-01-search-hop-configured-targets`
     - `WC-2026-10-01-site-builder-confinement-codes`
     - `WC-2026-10-01-tool-grant-one-decision`
     - `WC-2026-10-01-unit-test-widget-dev-gate`

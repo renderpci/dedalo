@@ -122,7 +122,7 @@ jobs:
     # runner user that owns the mounted workspace — never root, which defeats the
     # uid/permission gates. ci_workflow_tripwire holds this digest equal to the lock.
     container:
-      image: ghcr.io/renderpci/dedalo-ci@sha256:eb6e47c95a8600d858f9a440db65c94352a134a979cb641abb697087c333e9b1
+      image: ghcr.io/renderpci/dedalo-ci@sha256:8d4c26055241a86e88f8fff877b2f6943472717fe2dad3e7895d650fd8b5e63d
       options: --user 1001 --shm-size 1g
     # In a container job a service is reached by its NAME, not localhost (the tier
     # scripts default DB_HOST to 127.0.0.1 — hosted_env.sh — and honour this).
@@ -185,7 +185,7 @@ jobs:
     # runner user that owns the mounted workspace — never root, which defeats the
     # uid/permission gates. ci_workflow_tripwire holds this digest equal to the lock.
     container:
-      image: ghcr.io/renderpci/dedalo-ci@sha256:eb6e47c95a8600d858f9a440db65c94352a134a979cb641abb697087c333e9b1
+      image: ghcr.io/renderpci/dedalo-ci@sha256:8d4c26055241a86e88f8fff877b2f6943472717fe2dad3e7895d650fd8b5e63d
       options: --user 1001 --shm-size 1g
     # In a container job a service is reached by its NAME, not localhost (the tier
     # scripts default DB_HOST to 127.0.0.1 — hosted_env.sh — and honour this).

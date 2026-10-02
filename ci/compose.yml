@@ -30,11 +30,13 @@
 #                network namespace (127.0.0.1), which a hosted container job never
 #                sees: the local run then never exercised the path CI takes.
 #
-# THE RUNNER'S USER. The container starts as root only long enough to create `runner`
-# (uid 1001, the GitHub-hosted runner's uid) and then drops to it for every tier command
-# (scripts/ci_local.ts, IN_CONTAINER_DRIVER). Root would silently pass the gates that
-# chmod a file away and assert the refusal, and would refuse to start mariadbd — a
-# difference in WHAT IS MEASURED, not in speed.
+# THE RUNNER'S USER. The container starts as root only long enough to give uid 1001 its
+# home, then drops to BARE uid 1001, gid 0 for every tier command — what `--user 1001`
+# makes on GitHub and GitLab alike: no passwd entry, no user name (scripts/ci_local.ts,
+# IN_CONTAINER_DRIVER). Root would silently pass the gates that chmod a file away and
+# assert the refusal, and would refuse to start mariadbd; a NAMED user would pass a gate
+# that resolves a user name the hosts do not have — a difference in WHAT IS MEASURED,
+# not in speed.
 #
 # THE CHECKOUT. The host checkout is mounted READ-ONLY at /src and the repository's
 # COMMON git dir at /src-git (a separate mount: from a linked worktree /src/.git is a

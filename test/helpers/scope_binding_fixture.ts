@@ -305,8 +305,15 @@ function clearCaches(): void {
 	invalidateAllToolCaches();
 }
 
-/** Mint the fixture. Idempotent: a crashed previous run's rows are swept first. */
-export async function installScopeBindingFixture(): Promise<void> {
+/**
+ * Mint the fixture. Idempotent: a crashed previous run's rows are swept first.
+ * `extraGrantsOfA`: further [section, component] read-write grants on A's
+ * profile — a gate's own scratch component (e.g. preset_ownership's hop, which
+ * the SEC-1 root-step key refuses to a profile holding 0 on it).
+ */
+export async function installScopeBindingFixture(
+	extraGrantsOfA: readonly (readonly [string, string])[] = [],
+): Promise<void> {
 	await assertTestDatabase('installScopeBindingFixture');
 	assertScratchIds();
 	const tools = await grantedToolLocators();
@@ -322,6 +329,7 @@ export async function installScopeBindingFixture(): Promise<void> {
 				grant(3, SB_GRANTED_SECTION, SB_MEDIA_COMPONENT, 2),
 				grant(4, SB_GRANTED_SECTION, SB_HOP_COMPONENT, 2),
 				grant(5, SB_GRANTED_SECTION, SB_INPUT_COMPONENT, 2),
+				...extraGrantsOfA.map(([section, tipo], index) => grant(100 + index, section, tipo, 2)),
 			],
 		},
 	});

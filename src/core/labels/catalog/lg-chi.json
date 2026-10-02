@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "未配置",
 	"serve_ontology_state_on": "已启用",
 	"serve_ontology_title": "向其他安装提供此本体",
+	"server_slow_response": "服务器响应时间比平时长…",
 	"session_expiry_warning": "您的会话将在 %s 分钟后过期。继续操作以保持登录。",
 	"set_img_layer": "设置图像图层",
 	"set_root_pw_label": "设置根密码",

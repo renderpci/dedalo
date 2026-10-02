@@ -241,12 +241,10 @@ compile time: the general blob (`ontology18`) plus the dedicated `css`
 8. **Regenerate** so the edit goes live (see
    [How changes apply live](#how-changes-apply-live)).
 
-!!! note "`is_model` is never overwritable locally; `model` is"
-    A local-ontology override (`localontology0`) may override a shared node's
-    term, properties, translatable, relations **and model**. Only **`is_model`**
-    is always read from the canonical node, never from the override, because
-    structural model-ness must never change from a local override.
-    `model`/`model_tipo` themselves ARE overwrite-aware.
+!!! note "Overriding a shared node locally"
+    To change a shared node for your installation only (a label, its CSS, one
+    property), do not edit it: write a local override in the `localontology`
+    TLD. See [Overriding shared ontology nodes](local_ontology_overrides.md).
 
 ## The `properties` descriptor grammar
 

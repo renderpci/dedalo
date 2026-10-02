@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "Не настроено",
 	"serve_ontology_state_on": "Включено",
 	"serve_ontology_title": "Предоставлять эту онтологию другим установкам",
+	"server_slow_response": "Сервер отвечает дольше обычного…",
 	"session_expiry_warning": "Ваш сеанс истекает через %s мин. Продолжайте работать, чтобы остаться в системе.",
 	"set_img_layer": "Установить слой изображения",
 	"set_root_pw_label": "Установить root-пароль",

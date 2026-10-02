@@ -76,8 +76,17 @@ import {
 	setRecordsInDdOntology,
 } from './ontology_write.ts';
 import { getOrderedSubtree } from './resolver.ts';
+import { LOCAL_ONTOLOGY_SECTION } from './tld.ts';
 
 const DEDALO_ROOT_TIPO = 'dd1';
+
+/**
+ * Whether a staged file's records project into dd_ontology nodes. Not
+ * matrix_dd, and not override records (parser.ts): nothing to derive.
+ */
+function derivesNodes(file: StagedFile): boolean {
+	return file.tld !== 'matrix_dd' && file.sectionTipo !== LOCAL_ONTOLOGY_SECTION;
+}
 const OPTIMIZE_TABLES = ['dd_ontology', 'matrix_ontology', 'matrix_ontology_main', 'matrix_dd'];
 
 /**
@@ -443,7 +452,7 @@ export async function updateOntology(
 
 		// dd_ontology flat-index rebuild per imported TLD (skip matrix_dd)
 		for (const file of staged) {
-			if (file.tld === 'matrix_dd') continue;
+			if (!derivesNodes(file)) continue;
 			// wholeSection: this IS the deliberate full-TLD re-derive after an
 			// ontology-file import — not a request-driven batch (WC-043).
 			const rebuilt = await setRecordsInDdOntology({

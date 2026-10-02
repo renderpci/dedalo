@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "ترتیب نہیں دیا گیا",
 	"serve_ontology_state_on": "فعال",
 	"serve_ontology_title": "یہ آنٹولوجی دوسری تنصیبات کو فراہم کریں",
+	"server_slow_response": "سرور معمول سے زیادہ وقت لے رہا ہے…",
 	"session_expiry_warning": "آپ کا سیشن %s منٹ میں ختم ہو جائے گا۔ لاگ اِن رہنے کے لیے کام جاری رکھیں۔",
 	"set_img_layer": "تصویر کی پرت سیٹ کریں",
 	"set_root_pw_label": "روٹ پاس ورڈ سیٹ کریں",

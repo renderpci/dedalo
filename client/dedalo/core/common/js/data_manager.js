@@ -64,6 +64,7 @@
 		response_data
 	} from './api_error.js'
 	import {render_error_toast} from './render_api_error.js'
+	import {create_request_activity} from './request_activity.js'
 
 
 
@@ -188,8 +189,9 @@ const client_failure = (api_error) => ({
 *     `normalize_api_error` → retry ONLY when `api_error.retryable` or the
 *     server sent `Retry-After` (no status list, no 401/403 carve-outs — an
 *     auth/permission answer is an envelope like any other and is dispatched
-*     on its CODE). The mid-attempt health probe reports a busy server through
-*     the `awaiting_busy_server` notice.
+*     on its CODE). The mid-attempt health probe only extends the deadline;
+*     what the user sees of a wait is the `request_activity` state (elapsed
+*     time, one page-level cue — see request_activity.js).
 *  7. Refresh `page_globals.csrf_token` from every envelope (success or
 *     failure) and publish `session_activity` (WC-051).
 *  8. `auth.csrf_failed` → resend exactly once
@@ -220,6 +222,12 @@ const client_failure = (api_error) => ({
 *   `notices[]`: 'page' publishes `'api_notices'` (the page subscriber toasts them
 *   through the policy table); 'caller' publishes NOTHING, because the caller
 *   renders the notice in its own wrapper and a second toast would duplicate it.
+* @param {boolean|null} [options.busy_notice=null] - Whether this call feeds the
+*   slow-server cue. null = yes, unless its action is in BACKGROUND_ACTIONS or its
+*   timeout exceeds LONG_WAIT_TIMEOUT_MS (a declared long operation); true =
+*   always; false = never (the caller shows its own progress, or nobody waits).
+* @param {Function} [options._end_wait] - Internal; the CSRF resend's inherited
+*   slow-server entry. Callers never set it.
 * @param {boolean} [options._csrf_retried] - Internal flag; prevents recursive CSRF retry
 * @param {string} [options.idempotency_key] - Internal; the key minted for THIS
 *   logical call and carried through the transparent CSRF resend so the resend
@@ -298,6 +306,46 @@ data_manager.request = async function(options) {
 * @type {Map<string, Promise<Object>>}
 */
 const in_flight_requests = new Map()
+
+
+
+/**
+* BACKGROUND_ACTIONS
+* API actions nobody is waiting on: heartbeat-like calls fired by the page
+* itself. They never feed the slow-server cue (a caller may still opt any call
+* in or out with `busy_notice`).
+* @type {Set<string>}
+*/
+const BACKGROUND_ACTIONS = new Set([
+	'update_lock_components_state',	// component lock heartbeat
+	'get_lock_status',				// page.js release poll (every 3 s)
+	'get_activity'					// job_tray read / diffusion refresh tick
+])
+
+
+
+/**
+* LONG_WAIT_TIMEOUT_MS
+* A call whose caller granted it more than this per attempt is a DECLARED long
+* operation (backups, DB rebuilds, ontology/code updates: 10 min to 6 h) and
+* shows its own progress. By default it stays out of the slow-server cue — the
+* "taking longer than usual" sentence would be false for the whole run. Its
+* caller may still opt in with `busy_notice:true`.
+* @type {number}
+*/
+export const LONG_WAIT_TIMEOUT_MS = 60000
+
+
+
+/**
+* REQUEST_ACTIVITY
+* The page's ONE slow-server tracker. Publishes `'request_activity'`
+* {level:'idle'|'slow'|'very_slow', pending} on level CHANGES only; page.js
+* renders it (request_activity_indicator.js).
+*/
+export const request_activity = create_request_activity({
+	on_change : (state) => event_manager.publish('request_activity', state)
+})
 
 
 
@@ -400,13 +448,14 @@ const execute_request = async function(options) {
 		retries		: 5, // default request retries int
 		base_delay	: 500, // default base delay in ms
 		timeout		: 5000, // default timeout in ms
-		notices		: 'page' // 'page' = publish 'api_notices' (default); 'caller' = the caller renders them itself
+		notices		: 'page', // 'page' = publish 'api_notices' (default); 'caller' = the caller renders them itself
+		busy_notice	: null // null = default (on, except BACKGROUND_ACTIONS and timeouts > LONG_WAIT_TIMEOUT_MS); true = always; false = never
 	};
 
 	const merged_options = { ...default_options, ...options };
 
 	// vars from options applying defaults
-	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, signal, retries, base_delay, timeout, notices } = merged_options;
+	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, signal, retries, base_delay, timeout, notices, busy_notice } = merged_options;
 
 	// CLI-01 / P0-10 — THE IDEMPOTENCY STAMP (WC-2026-08-28-idempotency-key).
 	// A request this layer may RESEND must be one the server can recognise as the
@@ -533,39 +582,59 @@ const execute_request = async function(options) {
 
 	const request_start_time = performance.now();
 
+	// slow-server cue: one page-level STATE (request_activity.js), counted per
+	// logical call across all its retries — the transparent CSRF resend below
+	// INHERITS this entry (`_end_wait`) instead of restarting the clock — and
+	// ended on EVERY exit (`end_wait` is idempotent). Background calls and
+	// declared long operations stay out of it.
+	const end_wait = options._end_wait || (
+		(busy_notice===null
+			? (!BACKGROUND_ACTIONS.has(body?.action) && !(timeout > LONG_WAIT_TIMEOUT_MS))
+			: busy_notice===true)
+			? request_activity.begin()
+			: null
+	)
+
 	// exec fetch through the shared transport
-	const {json, api_error} = await fetch_api(
-		url,
-		{
-			method		: method,
-			mode		: mode,
-			cache		: cache,
-			credentials	: credentials,
-			headers		: headers,
-			redirect	: redirect,
-			referrer	: referrer,
-			body		: request_body,
-			signal		: signal || undefined
-		},
-		{
-			timeout_ms	: timeout,
-			retries		: effective_retries,
-			base_delay	: base_delay,
-			health_url	: self.health_url,
-			on_wait		: (attempt, delay, reason) => {
-				// The loop itself is silent; the page tells the user why it waits.
-				if (reason==='busy') {
-					const msg = (typeof get_label!=='undefined' && get_label.awaiting_busy_server) || 'Awaiting for busy server..'
+	let transport_result
+	try {
+		transport_result = await fetch_api(
+			url,
+			{
+				method		: method,
+				mode		: mode,
+				cache		: cache,
+				credentials	: credentials,
+				headers		: headers,
+				redirect	: redirect,
+				referrer	: referrer,
+				body		: request_body,
+				signal		: signal || undefined
+			},
+			{
+				timeout_ms	: timeout,
+				retries		: effective_retries,
+				base_delay	: base_delay,
+				health_url	: self.health_url,
+				on_wait		: (attempt, delay, reason) => {
+					// The loop itself is silent, and so is this hook: what the user sees
+					// of a wait is request_activity's elapsed-time cue, not the probe.
 					if(SHOW_DEBUG) {
-						console.log(msg, {attempt});
+						console.log(reason==='busy'
+							? `Busy server: deadline extended by ${delay}ms (attempt ${attempt})`
+							: `Retrying in ${delay}ms (attempt ${attempt})...`);
 					}
-					render_msg_to_inspector(msg, 'warning', delay);
-				} else if(SHOW_DEBUG) {
-					console.log(`Retrying in ${delay}ms (attempt ${attempt})...`);
 				}
 			}
-		}
-	)
+		)
+	} finally {
+		// the wait ends with the transport — unless the CSRF resend below takes it
+		// over (it then ends when the resend settles)
+		const resend_inherits = transport_result?.api_error?.code === 'auth.csrf_failed'
+			&& !options._csrf_retried
+		if (end_wait && !resend_inherits) end_wait()
+	}
+	const {json, api_error} = transport_result
 
 	// SEC-008: refresh the cached CSRF token from every response so the
 	// next call carries the latest one (the server may rotate it on auth
@@ -598,11 +667,18 @@ const execute_request = async function(options) {
 		// SAME key: the CSRF refusal happened at the dispatch gate, so the handler
 		// never ran and the ledger holds nothing — but if the original attempt DID
 		// land on another connection, the resend must be recognised as its twin.
-		return self.request({
-			...options,
-			_csrf_retried	: true,
-			idempotency_key	: idempotency_key || options.idempotency_key
-		});
+		// The resend is the same logical call: it carries this call's wait entry,
+		// and the entry ends when the resend settles, whatever path it takes.
+		try {
+			return await self.request({
+				...options,
+				_csrf_retried	: true,
+				_end_wait		: end_wait,
+				idempotency_key	: idempotency_key || options.idempotency_key
+			});
+		} finally {
+			if (end_wait) end_wait()
+		}
 	}
 
 	if(SHOW_DEBUG) {
@@ -681,7 +757,8 @@ const execute_request = async function(options) {
 * RENDER_MSG_TO_INSPECTOR
 * Publishes a user-visible notification via the `event_manager` 'notification' channel.
 * The inspector UI subscribes to this event and renders a temporary banner.
-* Used by the data layer for the busy-server notice; ApiErrors go through
+* Generic page notice helper (the slow-server cue is request_activity, not
+* a notification); ApiErrors go through
 * `render_api_error.render_error_toast` instead.
 * @param {string} msg - Human-readable notification text
 * @param {string} type - Severity level: `'error'`, `'warning'`, or `'info'`

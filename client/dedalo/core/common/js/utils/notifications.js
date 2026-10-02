@@ -12,6 +12,8 @@
 * element colour-coded by outcome type ('save', 'success', 'warning', 'error').
 * Callers append the returned node to the document; the module handles
 * auto-dismissal via a CSS fade-out animation and click-to-dismiss.
+* `prepend_bubble` places one in a floating container, merging duplicates
+* into a single bubble with a ×N count.
 *
 * The helper `append_text_with_breaks` (module-private) is the only safe way
 * to inject user-visible messages into the DOM — it prevents XSS by never
@@ -222,6 +224,50 @@ export function render_node_info(options) {
 
 	return node_info
 }//end render_node_info
+
+
+
+/**
+* PREPEND_BUBBLE
+* Puts a rendered bubble at the top of a FLOATING container, merging duplicates:
+* a bubble whose class + text equal one already showing REPLACES it (fresh
+* timer, at the top) and carries a ×N count, so N identical notices — N parallel
+* requests that failed the same way, the same save repeated — read as one.
+* The key is taken before insertion, so the 'fade-out' class added later never
+* splits it. Not for history feeds (the inspector's activity log keeps every
+* entry on purpose).
+* @param {HTMLElement} container
+* @param {HTMLElement} node_info - from render_node_info
+* @returns {HTMLElement} node_info
+*/
+export function prepend_bubble(container, node_info) {
+
+	const key = `${node_info.className}|${node_info.textContent}`
+
+	let count = 1
+	for (const child of container.children) {
+		if (child.dataset?.bubble_key===key) {
+			count = (Number(child.dataset.bubble_count) || 1) + 1
+			child.remove()
+			break
+		}
+	}
+
+	node_info.dataset.bubble_key	= key
+	node_info.dataset.bubble_count	= String(count)
+	if (count > 1) {
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'bubble_count',
+			text_content	: `×${count}`,
+			parent			: node_info
+		})
+	}
+
+	container.prepend(node_info)
+
+	return node_info
+}//end prepend_bubble
 
 
 

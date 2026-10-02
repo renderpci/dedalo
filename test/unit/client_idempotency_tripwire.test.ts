@@ -647,7 +647,8 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 
 /**
  * `data_manager.js` is a browser module whose leaf imports need a DOM. It is
- * copied VERBATIM (with the real api_transport.js and api_error.js beside it)
+ * copied VERBATIM (with the real api_transport.js, api_error.js and the
+ * import-free request_activity.js beside it)
  * into a scratch tree that reproduces the directory DEPTH its relative
  * specifiers assume, and the four leaves it does not need are written there as
  * minimal stubs. So the bytes under test are the shipped bytes.
@@ -665,7 +666,12 @@ beforeAll(async () => {
 	scratchRoot = mkdtempSync(join(tmpdir(), 'dd-idem-'));
 	const jsDir = join(scratchRoot, 'client', 'dedalo', 'core', 'common', 'js');
 	mkdirSync(join(jsDir, 'utils'), { recursive: true });
-	for (const name of ['data_manager.js', 'api_transport.js', 'api_error.js']) {
+	for (const name of [
+		'data_manager.js',
+		'api_transport.js',
+		'api_error.js',
+		'request_activity.js',
+	]) {
 		cpSync(join(REPO_ROOT, REAL_CLIENT, name), join(jsDir, name));
 	}
 	writeFileSync(

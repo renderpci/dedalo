@@ -36,8 +36,10 @@
 #      2026-09-26: scripts/client_test_runner.ts reads client_gate_inventory.json,
 #      and the unit tier runs every tripwire that reads the others), so treating
 #      them as hermetic-only would be exactly the hole the allow-list forbids.
-#   2. `bun run ci:local --docker --fail-fast --hermetic` — blocks on red; with
-#      --fail-fast a red tier ends the run (the later tiers are reported not_run).
+#   2. `bun run ci:local --docker --hermetic` — blocks on red. EVERY tier runs to its
+#      verdict, red ones included: one gate reports every red at once (2026-10-02 — with
+#      --fail-fast a red hermetic hid db/instance, and each run peeled ONE layer: ten
+#      15-minute runs on 2026-10-01 to see what one would have shown).
 #   3. `--db --instance` too, UNLESS every file the pushed range touches is
 #      in HERMETIC_ONLY_PATHS below — or always, with DEDALO_PREPUSH=full. CI
 #      itself runs them on every push; skipping them here is a desk-time trade,
@@ -520,13 +522,13 @@ esac
 cleanup_bank
 
 # ── 2 + 3. the CI tiers, in the CI image ────────────────────────────────────
-# --fail-fast: the verdict is RED once one tier is red, so a red hermetic does
-# not wait ~11 more minutes for db + instance before the push is refused.
+# No --fail-fast: a red hermetic still runs db + instance, so the refusal lists EVERY
+# red tier — the next fix is made against all of them, not one per run (see step 2).
 # --skip-advisory: only a stage that CANNOT fail its tier honours it (see step 3).
 if [ "$level" = full ]; then
-	set -- --docker --fail-fast --skip-advisory --hermetic --db --instance
+	set -- --docker --skip-advisory --hermetic --db --instance
 else
-	set -- --docker --fail-fast --hermetic
+	set -- --docker --hermetic
 fi
 bun run ci:local "$@" --ref "$head_sha" --audit-base "$audit_base" --summary "$summary_file" </dev/null
 ci_code=$?

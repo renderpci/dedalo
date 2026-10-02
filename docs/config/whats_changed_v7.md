@@ -176,7 +176,7 @@ The front-end CDN/library URLs (`USE_CDN`, `JQUERY_*`, `BOOTSTRAP_*`, `D3_URL_JS
 `LEAFLET_JS_URL`, …) — v7 serves its own client. PHP binaries and DB management
 (`PHP_BIN_PATH`, `DEDALO_DB_TYPE`, `DEDALO_DB_MANAGEMENT`). Plus
 `ENCRYPTION_MODE`, `MAGICK_CONFIG`, `DEDALO_AV_FFMPEG_SETTINGS`,
-`DEDALO_PROFILE_DEFAULT`, `API_WEB_USER_CODE_MULTIPLE` and the glTF converters.
+`DEDALO_PROFILE_DEFAULT` and the glTF converters.
 
 **Superseded by a native subsystem**
 

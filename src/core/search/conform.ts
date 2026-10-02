@@ -51,6 +51,7 @@ import {
 	fragment as fragmentResult,
 	splitSearchTerms,
 } from './builders/types.ts';
+import { firstHopSources, hopScopeClause } from './hop_scope.ts';
 import {
 	assertValidLang,
 	assertValidTipo,
@@ -285,6 +286,9 @@ export async function buildJoinChain(
 	let lastTable = '';
 	let authorized = true;
 	const aliasChain: string[] = [];
+	// The sections the previous hop may have reached (hop_scope.ts); undefined
+	// before the first hop, which starts from the search's own sections.
+	let admitted: string[] | undefined;
 	for (let index = 1; index < path.length; index++) {
 		const step = path[index] as { section_tipo?: string; component_tipo?: string };
 		const hopComponent = (path[index - 1] as { component_tipo?: string }).component_tipo;
@@ -352,11 +356,19 @@ export async function buildJoinChain(
 					key: 'component',
 				});
 			}
-			const predicate = await scope.recordPredicate({
-				sectionTipo: stepSection,
-				table: stepTable,
+			// The RECORD key, per joined SECTION (hop_scope.ts): the hop component's
+			// configured targets the caller may read, each under its own record
+			// predicate — never "whatever section a locator names".
+			const hopScope = await hopScopeClause(scope, {
+				hopComponent,
+				sourceSections: admitted ?? firstHopSources(scope, path),
+				stepSection,
+				stepComponent: step.component_tipo,
+				stepTable,
 				alias: joinAlias,
 			});
+			admitted = hopScope.admitted;
+			const predicate = hopScope.clause;
 			if (predicate !== '') {
 				onParts.push(`(${predicate})`);
 				acl = predicate;

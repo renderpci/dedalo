@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "未設定",
 	"serve_ontology_state_on": "有効",
 	"serve_ontology_title": "このオントロジーを他のインストールに提供する",
+	"server_slow_response": "サーバーの応答にいつもより時間がかかっています…",
 	"session_expiry_warning": "セッションはあと %s 分で期限切れになります。ログインを維持するには操作を続けてください。",
 	"set_img_layer": "画像レイヤーを設定",
 	"set_root_pw_label": "ルートパスワードを設定",

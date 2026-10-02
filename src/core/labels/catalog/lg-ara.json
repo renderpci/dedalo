@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "غير مُهيَّأ",
 	"serve_ontology_state_on": "مُفعَّل",
 	"serve_ontology_title": "تقديم هذه الأنطولوجيا إلى تثبيتات أخرى",
+	"server_slow_response": "يستغرق الخادم وقتًا أطول من المعتاد…",
 	"session_expiry_warning": "تنتهي جلستك خلال %s دقيقة. تابع العمل للبقاء مسجّل الدخول.",
 	"set_img_layer": "تعيين طبقة الصورة",
 	"set_root_pw_label": "تعيين كلمة مرور الجذر",

@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "Konfiguratu gabe",
 	"serve_ontology_state_on": "Gaituta",
 	"serve_ontology_title": "Ontologia hau beste instalazio batzuei zerbitzatu",
+	"server_slow_response": "Zerbitzaria ohi baino gehiago ari da tardatzen…",
 	"session_expiry_warning": "Zure saioa %s minutu barru iraungiko da. Jarraitu lanean saioan jarraitzeko.",
 	"set_img_layer": "Ezarri irudiaren geruza",
 	"set_root_pw_label": "Ezarri root pasahitza",

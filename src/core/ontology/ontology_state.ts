@@ -110,7 +110,7 @@ import {
 } from './ontology_write.ts';
 import { type OntologyNodeDefect, parseSectionRecordToOntologyNodeWithDefects } from './parser.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
-import { mapTldToTargetSectionTipo, safeTld } from './tld.ts';
+import { LOCAL_ONTOLOGY_SECTION, mapTldToTargetSectionTipo, safeTld } from './tld.ts';
 
 /**
  * One node's place in the diff. `foreign` is not a dd_ontology state at all — it is a SOURCE
@@ -237,6 +237,11 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	const tldless: TldlessRecord[] = [];
 	const invalidReferences: InvalidReferenceRecord[] = [];
 	if (table === null) return { own, foreign, tldless, invalidReferences };
+	// localontology0 records are OVERRIDES of other tlds' nodes, never nodes of
+	// their own (parser.ts refuses them): the `localontology` tld projects to its
+	// main node only, and anything else stored under it is `orphaned` drift that
+	// rebuild removes (e.g. a `localontology1` left by the pre-2026-10-01 parse).
+	if (sectionTipo === LOCAL_ONTOLOGY_SECTION) return { own, foreign, tldless, invalidReferences };
 
 	// BEFORE blaming any record: can `ontology7` itself be resolved?
 	//

@@ -16,7 +16,11 @@
 #   postgresql-client-18 (PGDG) — pg_dump/pg_restore/psql refuse a NEWER server
 #             than the client, and the service is pgvector:pg18. Resolved through
 #             DEDALO_PG_BIN_PATH=/usr/lib/postgresql/18/bin (scripts/ci/hosted_env.sh).
-#   ffmpeg (ships ffprobe + qt-faststart), imagemagick (7: `magick`), poppler-utils
+#   ffmpeg (ships ffprobe + qt-faststart), imagemagick (7: `magick`) +
+#             libheif-plugin-aomenc (AVIF WRITE: trixie's libheif ships decoders
+#             only, so without it `.avif` twins — DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS
+#             — are refused and the media_tools / alternate-versions gates go red),
+#             poppler-utils
 #             (pdfinfo/pdftotext/pdftohtml/pdftoppm), ghostscript (the engine-owned
 #             PDF rasterizer — explicit, --no-install-recommends drops it),
 #             librsvg2-bin (rsvg-convert, the only SVG rasterizer), file — the media
@@ -93,7 +97,7 @@ RUN set -eux; \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      ffmpeg imagemagick poppler-utils ghostscript librsvg2-bin; \
+      ffmpeg imagemagick libheif-plugin-aomenc poppler-utils ghostscript librsvg2-bin; \
     rm -rf /var/lib/apt/lists/*
 
 # --- MariaDB (diffusion target) -------------------------------------------------

@@ -338,8 +338,12 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 		// id_variant — Propagate a custom instance id to children
 		// Stable string (no Math.random()) to allow get_instance to reuse/move already-rendered nodes
-		// Format: <section_record.tipo>_<section_id>_<caller.section_tipo>_<caller.section_id>
-			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
+		// Format: <section_record.tipo>_<section_record.section_tipo>_<section_id>_<caller.section_tipo>_<caller.section_id>
+		// The row's section_tipo is load-bearing: rows of DIFFERENT sections may share a section_id
+		// (a multi-section autocomplete list), and their children's descendants (a portal cell's
+		// target record, the same for every row) would otherwise share one key → one instance,
+		// rendered in the last row only.
+			const section_record_id_variant = `${self.tipo}_${self.section_tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
 			instance_options.id_variant = self.id_variant
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
@@ -806,6 +810,14 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 							// new_context — clone to prevent mutations from polluting the shared datum.context
 								const new_context = clone(current_context)
 								new_context.properties = new_context.properties || {}
+								// section_tipo — the coordinates computed above (the row's locator, or
+								// the ddo's own for a dataframe). A multi-section ddo matched its
+								// context by tipo+mode only, so the context may name ANOTHER section
+								// (the first one the server emitted). build_instance keys the child on
+								// context.section_tipo: without this, rows of different sections sharing
+								// a section_id resolved to ONE shared instance, whose node ends up in the
+								// last row only (every other row rendered empty).
+								new_context.section_tipo = section_tipo
 								// Propagate nested columns_map from the column descriptor (sub-grid layouts)
 								new_context.columns_map = (current_column.columns_map)
 									? current_column.columns_map

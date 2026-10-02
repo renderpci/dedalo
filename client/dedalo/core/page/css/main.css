@@ -1188,6 +1188,11 @@ pre {
 .bubbles_notification_container .bubble:active {
   opacity: 0.5;
 }
+.bubbles_notification_container .bubble > .bubble_count {
+  margin-left: 0.4rem;
+  font-weight: bold;
+  opacity: 0.85;
+}
 .mark {
   font-style: italic;
 }
@@ -7349,6 +7354,88 @@ body:has(.assistant_container.standalone.show) {
   visibility: hidden;
 }
 /**
+* request_activity
+*
+* The ONE slow-server cue (core/page/js/request_activity_indicator.js): a state,
+* not a bubble. idle = invisible; slow = a thin indeterminate bar along the top
+* edge; very_slow = the bar plus one centred sentence. It eats no clicks.
+*
+* (!) Never display:none on the node or its text. The text is a role=status live
+* region: it must already be in the accessibility tree, EMPTY, when the sentence
+* is written into it, or screen readers skip the announcement. So idle hides only
+* the bar, and the text is visually clipped (sr-only) until very_slow.
+*
+* Included from main.less file
+*/
+#request_activity {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2001;
+  pointer-events: none;
+}
+#request_activity.idle > .request_activity_bar {
+  visibility: hidden;
+}
+#request_activity.idle > .request_activity_bar::after {
+  animation: none;
+}
+#request_activity > .request_activity_bar {
+  height: 3px;
+  overflow: hidden;
+  position: relative;
+}
+#request_activity > .request_activity_bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background-color: var(--color_orange_dedalo);
+  animation: request_activity_slide 1.4s ease-in-out infinite;
+}
+#request_activity > .request_activity_text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+#request_activity.very_slow > .request_activity_text {
+  position: static;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  margin: 0.4rem auto 0;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  color: var(--fg_default);
+  background-color: var(--bg_elevated);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+}
+@keyframes request_activity_slide {
+  from {
+    left: -30%;
+  }
+  to {
+    left: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #request_activity > .request_activity_bar::after {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+/**
 * installer
 *
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
@@ -11231,7 +11318,7 @@ body:has(.assistant_container.standalone.show) {
   overflow: hidden;
 }
 .wrapper_service_autocomplete > .options_hidden ul.filter_node {
-  background-color: var(--color_grey_10);
+  background-color: var(--color_grey_11);
   border-bottom: 1px solid var(--color_white);
   display: table;
   padding: 0.5em;
@@ -23772,6 +23859,7 @@ body.inspector_resizing {
   margin: 0;
   background-color: transparent;
   border-color: transparent;
+  color: var(--color_white);
 }
 .component_json .button_save:hover {
   background-color: var(--color_grey_5);

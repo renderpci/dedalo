@@ -144,7 +144,8 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   `ci/compose.yml`: db/instance against the SAME pgvector digest `db.yml` pins, reached
   by its name `postgres` (`DB_HOST=postgres`) as a hosted container job reaches it;
   hermetic with no database at all;
-  every tier command as the unprivileged `runner` user (uid 1001, the hosted runner's).
+  every tier command as BARE uid 1001, gid 0 — what `--user 1001` makes on GitHub and
+  GitLab: no passwd entry, no user name (a named account once hid a GitLab-only red).
   Nothing is read from `../private`. The tree judged is the working tree made into one
   commit on HEAD, or `--ref` exactly; the host repo is mounted read-only. It runs as a
   push to the host's current branch (`GITHUB_REF`, the checkout's branch name), a
@@ -168,6 +169,30 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   silently absent (`ci_local_native`). `--summary` writes
   `{mode, tiers:[{tier, verdict, exit_code, duration_s, stages}]}`. Exit: 0 green,
   1 red, 2 could not run (no docker/image/Postgres, bad arguments).
+
+### Fixing a red — reproduce narrow, gate once (2026-10-02)
+
+A full gate is ~15 minutes; it CONFIRMS a fix, it does not find one. On 2026-10-01 ten full
+runs (~2.5 h) peeled one red per run. The rule since:
+
+1. **Read every red first.** The pre-push gate runs every tier to its verdict (no
+   `--fail-fast`), so one refusal lists them all; the hosts' logs likewise.
+2. **Reproduce the ONE failing file or package in the pinned image**, as the host runs it
+   (bare uid 1001, the host's checkout shape) — a minute, not fifteen:
+   `docker run --rm -v "$PWD/.git":/srcgit:ro <ci/image.json image@digest> bash -c '…clone, setpriv --reuid=1001 --regid=0, bun test <file>'`.
+   Fix against that until it is green there.
+3. **Then one full gate** (the push), never one per attempt.
+
+**Where the desk still differs from a host — reproduce THERE when the red is about it:**
+- *Architecture.* The Mac runs the image's arm64 half, the hosts amd64. For a media /
+  native-binary red, or an image change: `DOCKER_DEFAULT_PLATFORM=linux/amd64 bun run
+  ci:local --docker …` (emulated, slower; the pinned digest is a multi-arch index).
+- *The GitLab checkout.* The docker executor clones as root under `umask 0000` (every file
+  0666, every dir 0777); `.gitlab-ci.yml` works on a copy made under `umask 022`, the
+  shape GitHub's checkout and ci:local's clone have. A gate that judges who can write a
+  file reds on the raw tree (2026-10-01: site_builder confinement, 99 reds).
+- *The advisory unit stage.* The desk skips it (`--skip-advisory`); it cannot fail the db
+  tier on a host either, so skipping it hides no red — read its drift on the host log.
 
 ### `bun run baselines:bank` — improvements banked mechanically
 
@@ -207,10 +232,10 @@ against local bare remotes with stubbed bank/ci:local). For the pushed refs it:
    a commit to a push in progress; re-run it). Exit 1 blocks, reported as ERROR (a
    check that could not run — usually the environment) when the bank printed one,
    else as REGRESSED with the `--allow-regression --reason` path;
-2. runs `ci:local --docker --fail-fast --hermetic --ref <sha> --audit-base <base>
+2. runs `ci:local --docker --hermetic --ref <sha> --audit-base <base>
    --summary <file>` — blocks on red, listing each red stage `✗` (advisory `!`) with
-   its fix hint; with `--fail-fast` a red tier ends the run and the later tiers are
-   `not_run`, so a red hermetic does not wait for db + instance;
+   its fix hint; every tier runs to its verdict (no `--fail-fast`, 2026-10-02), so ONE
+   refused push names every red tier instead of one per 15-minute run;
 3. adds `--db --instance` unless every file the pushed range touches (renames count
    both paths; a merge is diffed against its first parent; >500 new commits or a URL
    remote count as everything) is in its `HERMETIC_ONLY_PATHS` allow-list (anything
@@ -254,7 +279,7 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
           improvement-only → commit "chore(baselines): bank improvements" → exit 3
           → push.ts re-aligns + re-gates (bounded)
           regression → exit 1 (nothing written; the reasoned path is named)
-      → ci:local --docker --fail-fast (hermetic; + db/instance unless provably hermetic-only)
+      → ci:local --docker (hermetic; + db/instance unless provably hermetic-only)
       → git push --no-verify to every remote
       → GitHub: ci/db on master (runs) + on v7 (queues, then dedupe → skipped)
 

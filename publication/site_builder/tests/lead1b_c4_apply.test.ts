@@ -243,11 +243,11 @@ function makeIo(s: Omit<Synthetic, 'io'>): ProvisionIo {
       }
       // `find … -user <svc> … -execdir chmod …` (normalise_modes): RUN FOR REAL over the fake
       // host's tree, where every entry the gate created is the service user's — so the gate
-      // reads the modes the real command leaves, not the argv it was handed.
+      // reads the modes the real command leaves, not the argv it was handed. The NUMERIC uid,
+      // never the name: a uid with no passwd entry (GitLab runs the CI image as bare 1001)
+      // has username 'unknown', and `find -user unknown` dies.
       if (argv[0] === 'find') {
-        // The NUMERIC uid, never the name: a CI container runs as a uid with no passwd entry
-        // (GitHub: --user 1001), where the name reads 'unknown' and `find -user` refuses it.
-        const real = argv.map((arg, index) => (index > 0 && argv[index - 1] === '-user' && arg === SVC ? String(process.getuid?.() ?? userInfo().uid) : arg));
+        const real = argv.map((arg, index) => (index > 0 && argv[index - 1] === '-user' && arg === SVC ? String(userInfo().uid) : arg));
         const ran = spawnSync(real[0] as string, real.slice(1), { encoding: 'utf8' });
         return { code: ran.status ?? 1, stdout: ran.stdout ?? '', stderr: ran.stderr ?? '' };
       }

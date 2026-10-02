@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "কনফিগার করা নেই",
 	"serve_ontology_state_on": "সক্রিয়",
 	"serve_ontology_title": "এই অন্টোলজি অন্য স্থাপনাগুলিকে সরবরাহ করুন",
+	"server_slow_response": "সার্ভার স্বাভাবিকের চেয়ে বেশি সময় নিচ্ছে…",
 	"session_expiry_warning": "আপনার সেশন %s মিনিটে শেষ হবে। লগ ইন থাকতে কাজ চালিয়ে যান।",
 	"set_img_layer": "চিত্র স্তর সেট করুন",
 	"set_root_pw_label": "রুট পাসওয়ার্ড সেট করুন",
