@@ -194,7 +194,7 @@ type StoredLangLocator = { section_tipo?: unknown; section_id?: unknown };
 /** PHP get_missing_lang containment: same section_tipo, loosely-equal section_id. */
 function isLangOption(
 	locator: StoredLangLocator,
-	option: { value: { section_tipo: string; section_id: number | string } },
+	option: { value: { section_tipo: string; section_id: number } },
 ): boolean {
 	return (
 		String(locator.section_tipo) === option.value.section_tipo &&
@@ -260,7 +260,7 @@ async function missingLangItem(
  * (WC-2026-10-02-select-lang-missing-entry).
  */
 export async function appendMissingLang<
-	T extends { value: { section_tipo: string; section_id: number | string } },
+	T extends { value: { section_tipo: string; section_id: number } },
 >(
 	datalist: readonly T[],
 	storedLocators: readonly unknown[],
