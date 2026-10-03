@@ -8,21 +8,27 @@
  * Builds a scratch media tree under the OS temp dir, renders the include with the
  * ENGINE's builders (never hand-written rules), boots each server on 127.0.0.1, runs
  * the matrix, stops it, deletes the tree. Exit 1 on any red row.
+ *
+ * The harness is HOSTILE on purpose: the mount sits UNDER the server document root at
+ * the same URL, and nginx declares an operator static-asset regex location BEFORE the
+ * include. A gate that loses location precedence would then serve masters and
+ * unpublished files from `root`; every 404 row below proves it does not.
  * Needs: httpd + apxs (Apache 2.4), nginx with ngx_http_mp4_module.
  */
 
 import { existsSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { parseArgs } from 'node:util';
 import { buildNginxMap, MEDIA_AUTH_COOKIE } from '../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
 	buildPublicationHostNginxConf,
 	publicationHostMediaUrl,
 } from '../src/core/media/publication_host_rules.ts';
-import { SVG_QUARANTINE_CSP } from '../src/core/media/svg_safety.ts';
+import { SVG_ENVELOPE_CSP, SVG_QUARANTINE_CSP } from '../src/core/media/svg_safety.ts';
 
-const QUALITIES = ['image/thumb', 'av/404', 'av/subtitles', 'svg/web'];
+const QUALITIES = ['image/thumb', 'image/svg', 'av/404', 'av/subtitles', 'svg/web'];
 const WORK_COOKIE = 'a'.repeat(128);
 const PUBLISHED = 'image/thumb/0/test94_test3_1.jpg';
 
@@ -33,6 +39,9 @@ const FILES: Record<string, string> = {
 	'image/original/0/test94_test3_1.jpg': 'MASTER',
 	'image/thumb/0/my_custom_name.jpg': 'NON-GRAMMAR',
 	'image/thumb/0/test94_test3_1.php': "<?php echo 'EXECUTED';",
+	'image/thumb/0/test94_test3_1.html': '<script>ACTIVE</script>',
+	'image/svg/0/test94_test3_1.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>',
+	'svg/web/test94_test3_1.xml': '<x/>',
 	'av/404/test94_test3_1.mp4': 'M'.repeat(1000),
 	'av/subtitles/test94_test3_1_lg-spa.vtt': 'WEBVTT',
 	'svg/web/test94_test3_1.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>',
@@ -91,6 +100,18 @@ const ROWS: Row[] = [
 			body.includes('<?php') || body.includes('EXECUTED') ? 'php leaked' : null,
 	},
 	{
+		name: 'published uploaded .html → 404 (MEDIA-03 active document)',
+		path: 'image/thumb/0/test94_test3_1.html',
+		expect: [404],
+		check: (_r, body) => (body.includes('ACTIVE') ? 'html served' : null),
+	},
+	{
+		name: 'work .htaccess on the shared tree → 404',
+		path: '.htaccess',
+		expect: [404],
+		check: (_r, body) => (body.includes('RewriteEngine') ? '.htaccess served' : null),
+	},
+	{
 		name: 'Range → 206 + Content-Range',
 		path: 'av/404/test94_test3_1.mp4',
 		headers: { Range: 'bytes=0-99' },
@@ -107,6 +128,26 @@ const ROWS: Row[] = [
 			r.headers.get('content-security-policy') === SVG_QUARANTINE_CSP
 				? null
 				: 'svg not quarantined',
+	},
+	{
+		name: 'server-generated envelope → 200, inline, envelope CSP',
+		path: 'image/svg/0/test94_test3_1.svg',
+		expect: [200],
+		check: (r) =>
+			!(r.headers.get('content-disposition') ?? '').includes('attachment') &&
+			r.headers.get('content-security-policy') === SVG_ENVELOPE_CSP
+				? null
+				: `envelope headers wrong (disposition ${r.headers.get('content-disposition')}, csp ${r.headers.get('content-security-policy')})`,
+	},
+	{
+		name: '.xml → attachment + sandbox CSP',
+		path: 'svg/web/test94_test3_1.xml',
+		expect: [200],
+		check: (r) =>
+			(r.headers.get('content-disposition') ?? '').includes('attachment') &&
+			r.headers.get('content-security-policy') === SVG_QUARANTINE_CSP
+				? null
+				: 'xml not quarantined',
 	},
 	{
 		name: 'unpublish: rm pub marker → 404 on the very next request',
@@ -192,7 +233,10 @@ function apacheMainConf(dir: string, port: number, include: string, withRewrite:
 		'AddType video/mp4 .mp4',
 		'AddType text/vtt .vtt',
 		'AddType image/svg+xml .svg',
-		`DocumentRoot "${dir}/docroot"`,
+		'AddType application/xml .xml',
+		'AddType text/html .html',
+		// The mount sits UNDER the document root (hostile harness, see header).
+		`DocumentRoot "${dir}/www"`,
 		// PERMISSIVE on purpose: a real host may run AllowOverride All. The include's OWN
 		// AllowOverride None must be what ignores the work .htaccess — None here would
 		// mask its removal (Apache 2.4 defaults to None anyway).
@@ -217,9 +261,14 @@ function nginxMainConf(dir: string, port: number, include: string, map: string):
 		...['client_body', 'proxy', 'fastcgi', 'uwsgi', 'scgi'].map(
 			(t) => `\t${t}_temp_path ${tmp}/${t};`,
 		),
-		'\ttypes { image/jpeg jpg; video/mp4 mp4; text/vtt vtt; image/svg+xml svg; }',
+		'\ttypes { image/jpeg jpg; video/mp4 mp4; text/vtt vtt; image/svg+xml svg; application/xml xml; text/html html; }',
 		`\tinclude ${map};`,
-		`\tserver { listen 127.0.0.1:${port}; server_name 127.0.0.1; root ${dir}/docroot; include ${include}; }`,
+		// HOSTILE (see header): root is the mount's parent, and an operator static-asset
+		// regex location comes BEFORE the include. Precedence must not hand it the request.
+		`\tserver { listen 127.0.0.1:${port}; server_name 127.0.0.1; root ${dir}/www;`,
+		'\t\tlocation ~* \\.(jpg|jpeg|png|mp4|vtt|svg|xml|html|php)$ { expires 30d; }',
+		'\t\tlocation ~ /\\. { expires 30d; }',
+		`\t\tinclude ${include}; }`,
 		'}',
 		'',
 	].join('\n');
@@ -227,8 +276,8 @@ function nginxMainConf(dir: string, port: number, include: string, map: string):
 
 async function drill(server: 'apache' | 'nginx'): Promise<number> {
 	const dir = mkdtempSync(join(tmpdir(), `dd_pubhost_${server}_`));
-	const root = join(dir, 'media_ro');
-	mkdirSync(join(dir, 'docroot'), { recursive: true });
+	// Under the document root, at the media URL: the mapping a same-URL mount invites.
+	const root = join(dir, 'www', publicationHostMediaUrl());
 	mkdirSync(join(dir, 'nginx_tmp'), { recursive: true });
 	buildTree(root);
 	const port = freePort();
@@ -284,8 +333,14 @@ async function drill(server: 'apache' | 'nginx'): Promise<number> {
 }
 
 if (import.meta.main) {
-	const onlyIndex = process.argv.indexOf('--only');
-	const only = onlyIndex >= 0 ? process.argv[onlyIndex + 1] : undefined;
+	// strict: an unknown flag or a value-less `--only` is refused, never silently ignored.
+	let only: string | undefined;
+	try {
+		only = parseArgs({ options: { only: { type: 'string' } }, strict: true }).values.only;
+	} catch (error) {
+		console.error(error instanceof Error ? error.message : String(error));
+		process.exit(1);
+	}
 	if (only !== undefined && only !== 'apache' && only !== 'nginx') {
 		console.error(`--only must be 'apache' or 'nginx' (got ${JSON.stringify(only)})`);
 		process.exit(1);
