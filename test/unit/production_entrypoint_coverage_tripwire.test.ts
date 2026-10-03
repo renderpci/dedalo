@@ -286,7 +286,10 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	'baselines',
 	'push',
 ]);
-const PRODUCTION_SCRIPT_PREFIXES = new Set(['start', 'dedalo']);
+// `media:*` (2026-10-03, `media:publication-host-rules`) is OPERATOR-run: it renders the
+// web-server gate of a publication host serving an installation's media. Covered by
+// test/unit/media_publication_host_rules_cli.test.ts (imports the CLI's runner).
+const PRODUCTION_SCRIPT_PREFIXES = new Set(['start', 'dedalo', 'media']);
 
 function scriptPrefix(key: string): string {
 	return key.split(':')[0] as string;
