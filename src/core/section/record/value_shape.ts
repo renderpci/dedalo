@@ -42,7 +42,24 @@
  * ran on an object — a bare scalar slipped past it raw.
  *
  * Pure: the answer depends only on the column and the incoming changes.
+ *
+ * THE RE-SAVE DOORS (canonicalStoredItems, below). A door that reads STORED
+ * items and sends them back through set_data (tool_update_cache regenerate,
+ * tool_propagate_component_data) holds whatever the PHP era stored — measured
+ * 2026-10-03 on a PHP-era corpus: 26 component_number items with a STRING
+ * `value` (`{"id":1,"value":"0"}`), which PHP's set_data cast on save
+ * (`is_numeric`). Those doors normalize the stored items into the canonical
+ * shape before re-sending them — the same PHP cast — so a no-op re-save stays
+ * a no-op instead of turning into a refusal. What no cast can read is left as
+ * it is and the door refuses it: loud, per record, never silently rewritten.
  */
+
+/**
+ * PHP `is_numeric`'s grammar: decimal, optional sign/fraction/exponent — no hex,
+ * no blanks. The ONE copy: the import conform (tools/import_conform.ts) and the
+ * re-save normalizer below cast with it.
+ */
+export const PHP_NUMERIC = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
 
 /** The part of a changed_data item this law reads (save_component.ts ChangedDataItem). */
 interface ShapedChange {
@@ -153,4 +170,41 @@ export function valueShapeRefusal(
 		if (why !== null) return `changed_data[${index}] (${String(change.action)}): ${why}`;
 	}
 	return null;
+}
+
+/** A stored number `value`, cast the way PHP's set_data did; unreadable → unchanged. */
+function canonicalNumberValue(value: unknown): unknown {
+	if (typeof value !== 'string') return value;
+	const text = value.trim();
+	if (text === '') return null;
+	return PHP_NUMERIC.test(text) ? Number(text) : value;
+}
+
+/** A stored text `value`: a finite JSON number is its numeral (lossless). */
+function canonicalTextValue(value: unknown): unknown {
+	return typeof value === 'number' && Number.isFinite(value) ? String(value) : value;
+}
+
+const CANONICAL_VALUE: Readonly<Record<string, (value: unknown) => unknown>> = {
+	number: canonicalNumberValue,
+	string: canonicalTextValue,
+};
+
+/**
+ * STORED items in the shape the save door accepts, for a door that re-sends
+ * what it read (see the RE-SAVE DOORS paragraph above). Only the PHP-era
+ * scalar drift of a literal `value` is normalized — a numeric string in the
+ * number column (PHP `is_numeric` cast; '' → null), a JSON number in a text
+ * column (its numeral). Everything else is returned untouched (same item
+ * reference), including what no cast can read: the save door then refuses it,
+ * naming the component. Pure; never mutates `items`.
+ */
+export function canonicalStoredItems(column: string | null, items: readonly unknown[]): unknown[] {
+	const cast = column === null ? undefined : CANONICAL_VALUE[column];
+	if (cast === undefined) return [...items];
+	return items.map((item) => {
+		if (!isPlainObject(item) || !('value' in item)) return item;
+		const value = cast(item.value);
+		return Object.is(value, item.value) ? item : { ...item, value };
+	});
 }

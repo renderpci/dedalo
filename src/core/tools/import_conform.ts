@@ -32,6 +32,7 @@ import type { ImportConformId } from '../components/types.ts';
 import { hasCoordinate, isCoordinateInRange, toCoordinate } from '../concepts/geo_coordinate.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import { isErrorInDomain } from '../errors/dedalo_error.ts';
+import { PHP_NUMERIC } from '../section/record/value_shape.ts';
 import type { ConformFailure, ConformResult } from './import_data.ts';
 
 /** Context a facet needs beyond the cell itself (resolved by the caller). */
@@ -314,9 +315,6 @@ function stringToNumber(raw: string, decimal: string | undefined, type: string):
 	const parsed = type === 'int' ? Number.parseInt(text, 10) : Number.parseFloat(text);
 	return Number.isFinite(parsed) ? parsed : null;
 }
-
-/** PHP `is_numeric`'s grammar: decimal, optional sign/fraction/exponent — no hex, no blanks. */
-const PHP_NUMERIC = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
 
 /** Marks a number value no cast can read. */
 const UNREADABLE = Symbol('unreadable number');

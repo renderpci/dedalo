@@ -5,7 +5,9 @@
   `test/unit/value_shape_native.test.ts`). Code: `src/core/section/record/value_shape.ts`
   (`valueShapeRefusal`), called by `saveComponentData` (`save_component.ts`) before the
   transaction opens; the import door's normalization in `src/core/tools/import_conform.ts`
-  (`conformNumber` / `numberItems`, `textItem`).
+  (`conformNumber` / `numberItems`, `textItem`); the re-save doors' normalization of stored
+  PHP-era items, `canonicalStoredItems` (`value_shape.ts`), called by `tool_update_cache` and
+  `tool_propagate_component_data`.
 
 ## Shape before
 
@@ -48,6 +50,23 @@ legitimately holds a looser shape normalizes it there: the CSV/JSON importer cas
 number cell's numeric strings (PHP `is_numeric` grammar; a non-numeric one is refused for
 the cell, never stored or silently dropped) and writes a JSON number in a text cell as its
 string.
+
+**Stored PHP-era data — the re-save doors.** Two server doors read STORED items and send
+them back through `set_data`: `tool_update_cache` regenerate and
+`tool_propagate_component_data` (the untouched region re-sent with `final`). Stored data is
+PHP-era as well as TS-era, and the PHP era kept number values as strings that its
+`set_data` cast on save — measured 2026-10-03 on a PHP-era corpus (read-only): 26
+component_number items with a string `value` (e.g. `{"id":1,"value":"0"}`), no other
+literal-field drift in the string/number/date/iri columns. Without a cast those doors were
+refused on every such record, where they used to be a no-op re-save. Both now pass the
+stored items through `canonicalStoredItems(column, items)` (`value_shape.ts`) first: a
+number column's numeric string is cast with the same PHP `is_numeric` grammar
+(`PHP_NUMERIC`, the one copy the importer also uses; `''` → null), a text column's JSON
+number becomes its numeral. A value no cast reads is left as stored and the door refuses
+it for that record, loud. The read path (`readComponentItems`) is unchanged — the wire
+still serves what is stored; the cast happens at the re-save door. Gate:
+`value_shape_native.test.ts` F (pure) and G (both doors, end to end, over a seeded
+PHP-era string number).
 
 ## Census (what sends a value-carrying change)
 

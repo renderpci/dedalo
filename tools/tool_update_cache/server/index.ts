@@ -108,10 +108,11 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const { sql, withTransaction } = await import('../../../src/core/db/postgres.ts');
 	const { readMatrixRecord } = await import('../../../src/core/db/matrix.ts');
 	const { readComponentItems } = await import('../../../src/core/resolve/component_data.ts');
-	const { getMatrixTableFromTipo, getTranslatableByTipo } = await import(
+	const { getColumnNameByModel, getMatrixTableFromTipo, getTranslatableByTipo } = await import(
 		'../../../src/core/ontology/resolver.ts'
 	);
 	const { saveComponentData } = await import('../../../src/core/section/record/save_component.ts');
+	const { canonicalStoredItems } = await import('../../../src/core/section/record/value_shape.ts');
 	const { groupItemsByLang } = await import('../../../src/core/tools/import_data.ts');
 	const { regenerateMediaDerivatives, rescanMediaItems } = await import(
 		'../../../src/core/media/repair.ts'
@@ -382,7 +383,14 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					regenerated += 1;
 					continue;
 				}
-				const items = readComponentItems(record, tipo, model) ?? [];
+				// The STORED items in the shape the save door accepts (value_shape.ts
+				// canonicalStoredItems): a PHP-era numeric-string number is cast as
+				// PHP's set_data did, so re-saving what the record holds is never
+				// refused as malformed (WC-2026-10-03-save-refuses-malformed-value-shape).
+				const items = canonicalStoredItems(
+					getColumnNameByModel(model),
+					readComponentItems(record, tipo, model) ?? [],
+				);
 				// NOTHING STORED, NOTHING TO REGENERATE. An absent (or empty) key has
 				// no value a derivation could refresh — and re-saving it would store
 				// `[]` over ABSENCE, which the undo log (canonicalJson keeps the two

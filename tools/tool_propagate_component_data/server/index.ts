@@ -66,6 +66,7 @@ import {
 	isLangSlicedModel,
 	saveComponentData,
 } from '../../../src/core/section/record/save_component.ts';
+import { canonicalStoredItems } from '../../../src/core/section/record/value_shape.ts';
 import {
 	getPermissions,
 	getRecordComponentPermission,
@@ -172,8 +173,14 @@ async function propagateOneRecord(
 		// `[]` for a non-array value: 'add' then REPLACED a PHP-era single-object
 		// value and 'delete'/'replace' decided over nothing.
 		const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
-		const stored =
-			record === null ? [] : (readComponentItems(record, target.dataTipo, target.model) ?? []);
+		// …and in the shape the save door accepts (value_shape.ts
+		// canonicalStoredItems): a PHP-era numeric-string number is cast as PHP's
+		// set_data did, so the untouched items re-sent with `final` are never
+		// refused as malformed, and 'delete'/'add' compare like with like.
+		const stored = canonicalStoredItems(
+			target.column,
+			record === null ? [] : (readComponentItems(record, target.dataTipo, target.model) ?? []),
+		);
 		const region = (regionOf(stored, target.regionLang, target.sliced) ?? []) as unknown[];
 		const { final, changed } = applyPropagation(
 			region,

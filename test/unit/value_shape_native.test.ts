@@ -29,6 +29,12 @@
  *      tripping the refusal: a JSON number cell's numeric strings are cast, a
  *      non-numeric one is refused for the cell; a text cell's JSON number
  *      becomes its string.
+ *   F  the RE-SAVE normalizer, pure (canonicalStoredItems): PHP-era scalar
+ *      drift cast into the canonical item, everything else untouched.
+ *   G  the re-save doors, end to end, over a PHP-era stored number held as a
+ *      STRING (measured: 26 such items on a PHP-era corpus): tool_update_cache
+ *      regenerate and tool_propagate_component_data 'add' re-send the stored
+ *      items and SUCCEED (cast), instead of being refused as malformed.
  *
  * Generic `test` TLD, situation-built (AGENTS.md hard rules): section `zzvsh1`
  * on matrix_test (via test24). Cleaned before and after.
@@ -40,13 +46,19 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { type DedaloError, isDedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
-import { valueShapeRefusal } from '../../src/core/section/record/value_shape.ts';
+import {
+	canonicalStoredItems,
+	valueShapeRefusal,
+} from '../../src/core/section/record/value_shape.ts';
+import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import {
 	dropSituation,
 	ensureSituation,
 	situation,
 } from '../../src/core/test_data/situations/situation.ts';
 import { conformImportData } from '../../src/core/tools/import_data.ts';
+import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import { mustGet } from '../helpers/assert.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const TABLE = 'matrix_test';
@@ -61,6 +73,10 @@ const RECORD_ID = 900830;
 /** Never created: a refused save must not materialize it. */
 const ABSENT_ID = 900831;
 const ANCHOR_ID = 900832;
+/** The PHP-era record the re-save doors (G) run over. */
+const LEGACY_ID = 900833;
+/** dd800 bulk-process records the G runs mint — swept in afterAll. */
+const bulkIds: number[] = [];
 
 const SITUATION = situation({
 	tld: 'zzvsh',
@@ -208,6 +224,10 @@ describe('the save door refuses a value shape its model does not store', () => {
 	afterAll(async () => {
 		await cleanScratchRecord(SECTION_TIPO, RECORD_ID, TABLE);
 		await cleanScratchRecord(SECTION_TIPO, ABSENT_ID, TABLE);
+		await cleanScratchRecord(SECTION_TIPO, LEGACY_ID, TABLE);
+		for (const bulkId of bulkIds) {
+			await sql`DELETE FROM matrix_notes WHERE section_tipo = 'dd800' AND section_id = ${bulkId}`;
+		}
 		expect(await dropSituation(SITUATION)).toBe(0);
 	});
 
@@ -405,4 +425,126 @@ describe('the save door refuses a value shape its model does not store', () => {
 		const email = await conform('component_email', '[5]');
 		expect(email.result).toEqual([{ value: '5' }]);
 	});
+	test('F. the re-save normalizer: PHP-era scalar drift cast, everything else untouched', () => {
+		const numbers = canonicalStoredItems('number', [
+			{ id: 1, value: '0' },
+			{ id: 2, value: ' -12.5 ' },
+			{ id: 3, value: '1e3' },
+			{ id: 4, value: '' },
+			{ id: 5, value: 7 },
+			{ id: 6, value: 'abc' }, // no cast reads it: left for the door to refuse
+			{ id: 7, value: '0x10' }, // not PHP is_numeric
+			{ id: 8 },
+		]);
+		expect(numbers).toEqual([
+			{ id: 1, value: 0 },
+			{ id: 2, value: -12.5 },
+			{ id: 3, value: 1000 },
+			{ id: 4, value: null },
+			{ id: 5, value: 7 },
+			{ id: 6, value: 'abc' },
+			{ id: 7, value: '0x10' },
+			{ id: 8 },
+		]);
+		// What it casts the door accepts; what it cannot cast the door still refuses.
+		expect(
+			valueShapeRefusal('number', [{ action: 'set_data', value: numbers.slice(0, 5) }]),
+		).toBeNull();
+		expect(valueShapeRefusal('number', [{ action: 'set_data', value: numbers }])).not.toBeNull();
+		expect(canonicalStoredItems('string', [{ value: 5 }, { value: 'x' }, { value: 2.5 }])).toEqual([
+			{ value: '5' },
+			{ value: 'x' },
+			{ value: '2.5' },
+		]);
+		// Never mutates its input; untouched items keep their identity.
+		const kept = { id: 1, value: 3 };
+		const input = [kept, { id: 2, value: '4' }];
+		const out = canonicalStoredItems('number', input);
+		expect(input[1]).toEqual({ id: 2, value: '4' });
+		expect(out[0]).toBe(kept);
+		// Other columns, and no column, are returned as they are.
+		const dateItem = { id: 1, start: { year: '1999' } };
+		expect(canonicalStoredItems('date', [dateItem])[0]).toBe(dateItem);
+		expect(canonicalStoredItems(null, ['x'])).toEqual(['x']);
+	});
+
+	test('G. the re-save doors re-send a PHP-era STRING number and succeed (cast), never refused', async () => {
+		const legacy = [
+			{ id: 1, value: '0' },
+			{ id: 2, value: '12.5' },
+		];
+		const reseedLegacy = async () => {
+			await cleanScratchRecord(SECTION_TIPO, LEGACY_ID, TABLE);
+			await createScratchRecord(
+				SECTION_TIPO,
+				LEGACY_ID,
+				{ number: { [NUMBER]: legacy }, meta: { [NUMBER]: [{ count: 2 }] } },
+				{ table: TABLE },
+			);
+			// FLOOR: the record really holds the PHP-era shape the door refuses raw.
+			const raw = await storedNumbers();
+			expect(raw).toEqual(legacy);
+			expect(valueShapeRefusal('number', [{ action: 'set_data', value: raw }])).not.toBeNull();
+		};
+		const storedNumbers = async () =>
+			(
+				(await readMatrixRecord(TABLE, SECTION_TIPO, LEGACY_ID))?.columns.number as Record<
+					string,
+					unknown[]
+				> | null
+			)?.[NUMBER];
+		const sqo = {
+			section_tipo: [SECTION_TIPO],
+			filter_by_locators: [{ section_tipo: SECTION_TIPO, section_id: String(LEGACY_ID) }],
+		};
+		const principal = await resolvePrincipal(-1);
+
+		// tool_update_cache regenerate: readComponentItems → set_data of the stored items.
+		await reseedLegacy();
+		const cache = await getLoadedTool('tool_update_cache');
+		const regenerate = await mustGet(cache?.module.apiActions.update_cache, 'update_cache').handler(
+			{
+				principal,
+				userId: -1,
+				background: true,
+				publishProgress: () => {},
+				options: { section_tipo: SECTION_TIPO, components_selection: [{ tipo: NUMBER }], sqo },
+			},
+		);
+		expect(regenerate.ok, JSON.stringify(regenerate)).toBe(true);
+		const run = regenerate.data as { regenerated: number; bulk_process_id?: unknown };
+		if (typeof run.bulk_process_id === 'number') bulkIds.push(run.bulk_process_id);
+		expect(run.regenerated).toBe(1);
+		expect(await storedNumbers()).toEqual([
+			{ id: 1, value: 0 },
+			{ id: 2, value: 12.5 },
+		]);
+
+		// tool_propagate_component_data 'add': the stored region re-sent with the new item.
+		await reseedLegacy();
+		const propagate = await getLoadedTool('tool_propagate_component_data');
+		const added = await mustGet(
+			propagate?.module.apiActions.propagate_component_data,
+			'propagate_component_data',
+		).handler({
+			principal,
+			userId: -1,
+			background: false,
+			options: {
+				section_tipo: SECTION_TIPO,
+				component_tipo: NUMBER,
+				action: 'add',
+				lang: 'lg-nolan',
+				total: 1,
+				propagate_data_value: [{ value: 7 }],
+				sqo,
+			},
+		} as never);
+		expect(added.ok, JSON.stringify(added)).toBe(true);
+		const bulkId = (added.data as { bulk_process_id?: unknown }).bulk_process_id;
+		if (typeof bulkId === 'number') bulkIds.push(bulkId);
+		expect(
+			((await storedNumbers()) ?? []).map((item) => (item as { value: unknown }).value),
+		).toEqual([0, 12.5, 7]);
+	}, 60000);
 });
