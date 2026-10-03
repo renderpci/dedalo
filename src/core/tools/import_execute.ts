@@ -40,11 +40,15 @@
  *      actual working language and an empty cell CLEARED it. The ALS survives
  *      into the background job the import runs in (mediaJobs.submit exits only
  *      the transaction stores), so a backgrounded run keeps the session's lang.
+ *   5. A DERIVED FIELD REFUSES THE RUN, before the dd800 mint and any write
+ *      (assertNoDerivedField — the CSV door's posture).
  */
 
+import { getImportAppendPolicy, isDerivedModel } from '../components/registry.ts';
 import { BULK_PROCESS_TIPOS } from '../concepts/section.ts';
 import { withTransaction } from '../db/postgres.ts';
-import { isDedaloError } from '../errors/dedalo_error.ts';
+import { DedaloError, isDedaloError } from '../errors/dedalo_error.ts';
+import { resolveDataTipo } from '../ontology/alias.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../ontology/resolver.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
@@ -331,6 +335,39 @@ async function writeMappedRecord(
 }
 
 /**
+ * 5. A DERIVED COMPONENT IS NEVER AN IMPORT TARGET (descriptor `derived`,
+ * registry isDerivedModel — the twin of tool_import_dedalo_csv's column
+ * refusal and import_csv_execute's backstop). A derived model owns no stored
+ * value: a set_data on it would write bytes no read serves (component_inverse,
+ * component_relation_index, component_external) or, for
+ * component_relation_children, RE-PARENT records through the write-through from
+ * a mapped cell. The whole run is refused — typed (`request.invalid_data`),
+ * naming the field, its model and what to import instead — before the dd800
+ * mint and before any record is touched. Checked on the field tipo AND its
+ * data tipo (a component_alias onto a derived target is the same write).
+ */
+async function assertNoDerivedField(
+	records: readonly MappedRecord[],
+	sectionTipo: string,
+): Promise<void> {
+	const tipos = new Set(records.flatMap((record) => record.fields.map((f) => f.component_tipo)));
+	for (const tipo of tipos) {
+		const dataTipo = await resolveDataTipo(tipo);
+		for (const candidate of new Set([tipo, dataTipo])) {
+			const model = await getModelByTipo(candidate);
+			if (model === null || !isDerivedModel(model)) continue;
+			const policy = getImportAppendPolicy(model);
+			const instead = typeof policy === 'object' ? ` — ${policy.refuse}` : '';
+			throw new DedaloError('request.invalid_data', {
+				message: `mapped import refused: field '${tipo}' (${model}) is derived — computed, nothing stored to import${instead}`,
+				publicMessage: `Import refused: field '${tipo}' (${model}) is derived — computed, nothing stored to import${instead}`,
+				coordinates: { section_tipo: sectionTipo, tipo },
+			});
+		}
+	}
+}
+
+/**
  * Execute an import of mapped records into `sectionTipo`. Creates a record per
  * mapped record when sectionId is null. Each field's flat values are conformed
  * (wrapping into {value} items for value-property models) and merged into a single
@@ -361,6 +398,10 @@ export async function importMappedRecords(
 	if (records.length === 0) {
 		return { created, updated, failed, createdIds, bulkProcessId: null };
 	}
+
+	// DERIVED FIELDS ARE REFUSED, THE RUN BEFORE ANY WRITE (the CSV door's
+	// posture). Ahead of the dd800 mint, so a refused run files no event.
+	await assertNoDerivedField(records, sectionTipo);
 
 	// REFUSE rather than proceed: a throw here reaches the caller before a single
 	// data row is touched, which is the whole point of creating it first.

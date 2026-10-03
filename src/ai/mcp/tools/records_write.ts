@@ -16,6 +16,8 @@
 
 import { z } from 'zod';
 import { DedaloError } from '../../../core/errors/dedalo_error.ts';
+import { resolveDataTipo } from '../../../core/ontology/alias.ts';
+import { getModelByTipo } from '../../../core/ontology/resolver.ts';
 import { currentDataLang } from '../../../core/resolve/request_lang.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
@@ -81,19 +83,36 @@ async function authorizeSectionRecordWrite(
  * omission mapped straight onto `id: null`, and an agent asked to "remove the English
  * title" deleted every other language and was told ok.
  */
-function assertRemoveNamesItem(
+async function assertRemoveNamesItem(
 	action: string,
 	itemId: number | string | null | undefined,
 	sectionTipo: string,
 	componentTipo: string,
-): void {
+): Promise<void> {
 	if (action !== 'remove') return;
 	if (itemId !== undefined && itemId !== null) return;
+	// THE ONE MODEL WHOSE REMOVE NAMES A RECORD, NOT AN ITEM (user decision
+	// 2026-09-27, plan item 2): component_relation_children owns no items — its
+	// entries are computed per read and carry no id — so a child is removed BY
+	// LOCATOR (`value`). The engine routes that model to the write-through
+	// (relations/children_write.ts) AHEAD of its own remove sentinel; the
+	// write-through authorizes every child, records each child's TM row and
+	// refuses a remove whose value names no record (request.invalid_data, never a
+	// wipe). Same test as the engine (the DATA tipo, after the alias hop), so the
+	// door can never let past what the engine would not route there. Every OTHER
+	// model is still refused here, before the permission probe.
+	if (await isChildrenField(componentTipo)) return;
 	throw new DedaloError('record.remove_without_id', {
 		publicMessage:
 			"remove needs item_id: the id of the ONE item to remove (read the component first to get it). To empty the component in every language, send action 'clear' instead.",
 		coordinates: { section_tipo: sectionTipo, tipo: componentTipo },
 	});
+}
+
+/** Whether the tipo's DATA tipo (alias-resolved, as the engine resolves it) is a children field. */
+async function isChildrenField(componentTipo: string): Promise<boolean> {
+	const dataTipo = await resolveDataTipo(componentTipo);
+	return (await getModelByTipo(dataTipo)) === 'component_relation_children';
 }
 
 export async function saveComponentValue(
@@ -104,9 +123,9 @@ export async function saveComponentValue(
 		section_id: number;
 		lang?: string;
 		action: 'update' | 'insert' | 'remove' | 'clear';
-		/** The item value ({id, value, lang} literal or a locator); omit for remove/clear. */
+		/** The item value ({id, value, lang} literal or a locator); omit for remove/clear — except a children remove, whose value IS the child locator. */
 		value?: unknown;
-		/** Target item id — REQUIRED for remove (see the refusal below). */
+		/** Target item id — REQUIRED for remove, except on a children field (removed BY LOCATOR in `value`). */
 		item_id?: number | null;
 	},
 ): Promise<{ ok: boolean; message?: string; data: unknown }> {
@@ -120,7 +139,7 @@ export async function saveComponentValue(
 	// title" therefore deleted every other language and answered ok:true. The
 	// engine now refuses that shape; this refusal is the same law stated where the
 	// agent can act on it, BEFORE any permission probe or write is attempted.
-	assertRemoveNamesItem(input.action, input.item_id, sectionTipo, componentTipo);
+	await assertRemoveNamesItem(input.action, input.item_id, sectionTipo, componentTipo);
 	const grant = await authorizeWrite(
 		principal,
 		{ section_tipo: sectionTipo, component_tipo: componentTipo, section_id: input.section_id },
@@ -230,7 +249,9 @@ export const RECORDS_WRITE_SPECS: ToolSpec[] = [
 			action: z
 				.enum(['update', 'insert', 'remove', 'clear'])
 				.describe(
-					"The item operation. 'remove' deletes the ONE item named by item_id; " +
+					"The item operation. 'remove' deletes the ONE item named by item_id " +
+						'(on a children field — component_relation_children — the ONE child named by the ' +
+						'locator in value: children carry no item ids); ' +
 						"'clear' empties the component in EVERY language — it is the only way to do that, " +
 						'and it is never implied by an omitted item_id.',
 				),
@@ -238,12 +259,17 @@ export const RECORDS_WRITE_SPECS: ToolSpec[] = [
 				.unknown()
 				.optional()
 				.describe(
-					'The item value ({id, value, lang} literal or a locator); omit for remove and clear.',
+					'The item value ({id, value, lang} literal or a locator); omit for remove and clear — ' +
+						'except a remove on a children field, whose value is the child record locator ' +
+						'({section_tipo, section_id}).',
 				),
 			item_id: z
 				.number()
 				.optional()
-				.describe('Target item id. REQUIRED for remove; ignored by clear.'),
+				.describe(
+					'Target item id. REQUIRED for remove (except on a children field, removed by the ' +
+						'locator in value); ignored by clear.',
+				),
 		},
 		handler: saveComponentValue,
 	}),

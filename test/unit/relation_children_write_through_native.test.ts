@@ -32,6 +32,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { saveComponentValue } from '../../src/ai/mcp/tools/records_write.ts';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { isDedaloError } from '../../src/core/errors/dedalo_error.ts';
@@ -51,6 +52,7 @@ import {
 } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { executeCsvImport } from '../../src/core/tools/import_csv_execute.ts';
+import { importMappedRecords } from '../../src/core/tools/import_execute.ts';
 import type { ImportFileReport } from '../../src/core/tools/import_wire.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
@@ -74,6 +76,7 @@ const CHILDREN_TIPO = 'test201'; // component_relation_children
 const PARENT_TIPO = 'test71'; // component_relation_parent (paired)
 const ORDER_TIPO = 'test22'; // section_map thesaurus.order (component_number)
 const CSV_USER = 987673; // this gate's own CSV import dir
+const LITERAL_TIPO = 'test52'; // component_input_text (the non-children control)
 
 const created: number[] = [];
 const runs: number[] = [];
@@ -721,6 +724,139 @@ describe('the derived facet: no door replays a children field’s own bytes', ()
 		);
 		expect(code).toBe('request.invalid_data');
 		expect(CHILDREN_TIPO in (await columnOf(parent, 'relation'))).toBe(false);
+	});
+});
+
+describe('the derived facet at the mapped (MARC21/Zotero/RDF) importer', () => {
+	test('a mapped children field refuses the RUN — typed, named, before any dd800 or write', async () => {
+		const parent = await newRecord();
+		const child = await newRecord();
+		const dd800Before = await maxDd800();
+		let refusal: unknown = null;
+		try {
+			const report = await importMappedRecords(
+				[
+					{
+						sectionId: parent,
+						fields: [
+							{ component_tipo: CHILDREN_TIPO, values: [JSON.stringify([childLocator(child)])] },
+						],
+					},
+				],
+				SECTION,
+				principal,
+			);
+			// A run that wrote: record its dd800 for the sweep, then fail below.
+			if (report.bulkProcessId !== null) runs.push(report.bulkProcessId);
+		} catch (error) {
+			refusal = error;
+		}
+		expect(isDedaloError(refusal) ? refusal.code : refusal).toBe('request.invalid_data');
+		expect(String((refusal as Error).message)).toContain(
+			`'${CHILDREN_TIPO}' (component_relation_children) is derived`,
+		);
+		// Nothing minted, nothing linked, nothing stored under the children tipo.
+		expect(await maxDd800()).toBe(dd800Before);
+		expect(await childIds(parent)).toEqual([]);
+		expect(await linksOf(child)).toEqual([]);
+		expect(CHILDREN_TIPO in (await columnOf(parent, 'relation'))).toBe(false);
+	}, 60_000);
+});
+
+describe('the MCP save door removes a child BY LOCATOR (plan item 2)', () => {
+	/** The child's TM rows for its parent key. */
+	async function tmRows(childId: number): Promise<number> {
+		const rows = (await sql.unsafe(
+			`SELECT count(*)::int AS n FROM matrix_time_machine
+			  WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3`,
+			[SECTION, childId, PARENT_TIPO],
+		)) as { n: number }[];
+		return Number(rows[0]?.n ?? 0);
+	}
+
+	test('dedalo_save_component remove {value: locator} unlinks exactly that child, with its TM row', async () => {
+		const parent = await newRecord();
+		const a = await newRecord();
+		const b = await newRecord();
+		await seedParentLinks(a, [link(parent, 'dd47', 1)]);
+		await seedParentLinks(b, [link(parent, 'dd47', 1)]);
+		expect(await childIds(parent)).toEqual(sorted([a, b]));
+		const tmBeforeA = await tmRows(a);
+		const tmBeforeB = await tmRows(b);
+
+		const outcome = await saveComponentValue(principal, {
+			section_tipo: SECTION,
+			tipo: CHILDREN_TIPO,
+			section_id: parent,
+			action: 'remove',
+			value: childLocator(a),
+		});
+
+		expect(outcome.ok).toBe(true);
+		expect(await childIds(parent)).toEqual([b]);
+		expect(await linksOf(a)).toEqual([]);
+		expect(await linksOf(b)).toEqual([link(parent, 'dd47', 1)]);
+		expect(await tmRows(a)).toBe(tmBeforeA + 1);
+		expect(await tmRows(b)).toBe(tmBeforeB);
+		expect(CHILDREN_TIPO in (await columnOf(parent, 'relation'))).toBe(false);
+	}, 60_000);
+
+	test('a children remove whose value names no record is refused by the write-through (never a wipe)', async () => {
+		const parent = await newRecord();
+		const a = await newRecord();
+		await seedParentLinks(a, [link(parent, 'dd47', 1)]);
+		const code = await codeOf(
+			saveComponentValue(principal, {
+				section_tipo: SECTION,
+				tipo: CHILDREN_TIPO,
+				section_id: parent,
+				action: 'remove',
+			}),
+		);
+		expect(code).toBe('request.invalid_data');
+		expect(await childIds(parent)).toEqual([a]);
+	});
+
+	test('the SAME id-less shape on any other model is still refused AT THE DOOR (record.remove_without_id)', async () => {
+		const parent = await newRecord();
+		expect(await getModelByTipo(LITERAL_TIPO)).toBe('component_input_text');
+		// A principal with NO grants: the door's refusal precedes the permission
+		// probe, so a door that let the shape past answers perm.* here instead —
+		// the engine's own sentinel cannot mask a door regression.
+		const nobody = { userId: -999, isGlobalAdmin: false, isDeveloper: false } as never;
+		const code = await codeOf(
+			saveComponentValue(nobody, {
+				section_tipo: SECTION,
+				tipo: LITERAL_TIPO,
+				section_id: parent,
+				action: 'remove',
+				value: childLocator(parent),
+			}),
+		);
+		expect(code).toBe('record.remove_without_id');
+		// …and on the paired parent field, a relation model whose items DO carry ids.
+		const viaParent = await codeOf(
+			saveComponentValue(nobody, {
+				section_tipo: SECTION,
+				tipo: PARENT_TIPO,
+				section_id: parent,
+				action: 'remove',
+				value: link(parent, 'dd47'),
+			}),
+		);
+		expect(viaParent).toBe('record.remove_without_id');
+		// Control: the children field lets the same principal PAST the door, to
+		// the permission probe (the door is not what refuses it).
+		const viaChildren = await codeOf(
+			saveComponentValue(nobody, {
+				section_tipo: SECTION,
+				tipo: CHILDREN_TIPO,
+				section_id: parent,
+				action: 'remove',
+				value: childLocator(parent),
+			}),
+		);
+		expect(viaChildren).toMatch(/^perm\./);
 	});
 });
 

@@ -187,6 +187,14 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The MARC21 and Zotero imports refuse a computed field, and an AI agent can remove one child of a thesaurus term.**
+
+    A field whose value is computed and never stored (a term's children, an inverse or index list, an external record) can no longer be the target of a MARC21 or Zotero import map. Before, an import mapped onto a term's children could quietly move records under another parent in the thesaurus. Now the whole import is refused before anything is written, and the message names the field and tells you what to import instead (for children: the parent, on the child records). The CSV import already worked this way.
+
+    An AI agent using the save tool can now remove one child from a term by naming the child record. Each removal is checked against the agent user's permissions and recorded in the Time Machine. On every other field, a remove still has to name the item id.
+
+    Wire contract: `WC-2026-10-02-relation-children-write-through`, `WC-2026-08-30-remove-requires-item-id`.
+
 - **Error messages now show their details instead of placeholders like `{section_tipo}`.**
 
     About twenty error messages showed their placeholders literally, for example *The link into '{section_tipo}' was refused ({constraint})* or *Your daily AI budget is used up ({budget_kind}: {limit})*. They now show the actual values: the section, the limit, the file size, the action that was still running. The affected messages include link refusals, the AI budget, export limits and quotas, duplicate-request notices, image and file size limits, and unknown API actions.

@@ -86,3 +86,26 @@ computed-value models minus the audited-out), client half
 `test_component_relation_children` CHANGE DATA (builds its own parent and child records).
 Leftover bytes from the old no-op save: `bun scripts/relation_children_orphan_sweep.ts`
 (dry-run default, `--apply` removes them through the write chokepoint).
+
+## Addendum 2026-10-03 — the derived facet at the mapped importer; the MCP door removes by locator
+
+1. **Mapped importer** (`src/core/tools/import_execute.ts` `importMappedRecords`, the
+   MARC21 / Zotero executor): a mapped field whose tipo — or its alias DATA tipo — is a
+   `derived` model refuses the WHOLE run, `request.invalid_data` naming the field, its
+   model and the model's `importAppend` refusal (what to import instead), before the dd800
+   record and before any record is touched. Before: the field reached `saveComponentData`
+   as a `set_data`, which for `component_relation_children` re-parented records through
+   the write-through from a mapped cell.
+2. **MCP `dedalo_save_component`** (`src/ai/mcp/tools/records_write.ts`): an id-less
+   `remove` on a field whose data tipo's model is `component_relation_children` passes
+   through as `{action:'remove', id:null, value:<locator>}` to the write-through (rule 2:
+   removal BY LOCATOR; every child authorized, each child's TM row recorded; a remove
+   naming no record refuses, `request.invalid_data`). Every OTHER model keeps the door's
+   `record.remove_without_id` refusal ahead of the permission probe
+   (WC-2026-08-30-remove-requires-item-id, addendum of the same date).
+
+Gates: `relation_children_write_through_native` (the importer leg: refused, no dd800, no
+link; the MCP legs: the locator remove unlinks exactly that child with one TM row, a
+value-less one refuses, the same shape on `component_input_text` / `component_relation_parent`
+refuses AT THE DOOR for a no-grant principal while the children field reaches the
+permission probe) — each leg red under its mutant. No parity fixture changes.
