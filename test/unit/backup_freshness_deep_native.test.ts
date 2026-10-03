@@ -934,8 +934,9 @@ function placeFutureFormat(dir: string, name: string): string {
 
 /**
  * The first installed locale under which THIS host's pg_restore really translates
- * its words — measured on real bytes, never assumed (the CI image is C.UTF-8 only,
- * and a glibc without the locale generated answers in English).
+ * its words — measured on real bytes, never assumed (a glibc without the locale
+ * generated, or a slim image without pg's message catalogs, answers in English; the
+ * CI image generates es_ES/de_DE/fr_FR and keeps the catalogs — ci/Dockerfile).
  */
 function translatingLocale(): string | null {
 	if (!REAL_BYTES_READY) return null;

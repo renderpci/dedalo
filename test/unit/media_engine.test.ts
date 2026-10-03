@@ -14,6 +14,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { config } from '../../src/config/config.ts';
 import {
 	buildConformHeaderArgv,
 	buildPosterframeArgv,
@@ -44,6 +45,7 @@ import {
 import { sniffAndValidate, sniffBytes } from '../../src/core/media/engine/mime.ts';
 import { buildExtractArgv, buildOcrArgv } from '../../src/core/media/engine/pdf.ts';
 import { verifyFileContent } from '../../src/core/media/engine/verify_content.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 
 describe('ffmpeg profiles (37 settings files → typed data)', () => {
 	test('all 37 profiles present', () => {
@@ -637,6 +639,58 @@ describe('pdf argv recipes (PHP component_pdf)', () => {
 		const s = buildOcrArgv('/s.pdf', '/s.pdf', 'spa').join(' ');
 		expect(s).toContain('--pdfa-image-compression lossless -l spa --force-ocr');
 	});
+
+	// THE OCR DOOR ON A REAL BINARY. The argv leg above pins the recipe's spelling; this
+	// one proves the recipe still RUNS on the ocrmypdf a host ships (flags drift between
+	// majors) and really adds text. Fixture: an IMAGE-ONLY PDF (ghostscript's pdfimage24
+	// rasterizes a PostScript page — built-in font, no ImageMagick PDF policy), so the
+	// control finds no text before and any text after is the OCR's. In place, as the door
+	// runs (source === target). Skips where the binaries are absent; the CI image ships
+	// all three (ci/Dockerfile), so there it runs.
+	const ocrBinaries = [
+		config.media.binaries.ocrmypdf,
+		config.media.binaries.ghostscript,
+		config.media.binaries.pdftotext,
+	];
+	test.if(ocrBinaries.every((bin) => existsSync(bin)))(
+		'ocr (real binary): the recipe runs and puts the page words into an image-only PDF',
+		() => {
+			const dir = mkdtempSync(join(tmpdir(), 'dedalo-ocr-'));
+			// ocrmypdf resolves tesseract/gs through PATH, so the host env stays; the
+			// shipped ImageMagick policy rides on top (magick_policy_tripwire).
+			const spawnEnv = { ...(process.env as Record<string, string>), ...magickTestEnv() };
+			try {
+				const ps = join(dir, 'page.ps');
+				writeFileSync(
+					ps,
+					'%!PS\n/Helvetica findfont 48 scalefont setfont\n72 600 moveto (HERITAGE LEDGER) show\nshowpage\n',
+				);
+				const pdf = join(dir, 'scan.pdf');
+				const raster = Bun.spawnSync(
+					[config.media.binaries.ghostscript, '-q', '-sDEVICE=pdfimage24', '-r200', '-o', pdf, ps],
+					{ stderr: 'pipe' },
+				);
+				expect(raster.exitCode, raster.stderr.toString()).toBe(0);
+				const textOf = (): string => {
+					const out = join(dir, 'out.txt');
+					const run = Bun.spawnSync(buildExtractArgv(pdf, out, { method: 'text' }), {
+						stderr: 'pipe',
+						env: spawnEnv,
+					});
+					expect(run.exitCode, run.stderr.toString()).toBe(0);
+					return readFileSync(out, 'utf-8');
+				};
+				// Control: the fixture really is image-only.
+				expect(textOf()).not.toContain('HERITAGE');
+				const ocr = Bun.spawnSync(buildOcrArgv(pdf, pdf, 'eng'), { stderr: 'pipe', env: spawnEnv });
+				expect(ocr.exitCode, ocr.stderr.toString()).toBe(0);
+				expect(textOf()).toContain('HERITAGE LEDGER');
+			} finally {
+				rmSync(dir, { recursive: true, force: true });
+			}
+		},
+		120_000,
+	);
 });
 
 describe('mime sniffer (magic bytes, no library)', () => {
