@@ -575,7 +575,7 @@ function getNginxMapConfigHash(): string {
  * operator loses the ability to download a curator's raw SVG until they enable
  * mod_headers; they never lose the guarantee.
  */
-function htaccessHardeningBlock(): string {
+export function htaccessHardeningBlock(): string {
 	const quarantine = SVG_QUARANTINE_EXTENSIONS.join('|');
 	const activeDocs = MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|');
 	const envelope = imageEnvelopePcre();
@@ -646,6 +646,26 @@ function htaccessHardeningBlock(): string {
 }
 
 /**
+ * Rule B as Apache lines: the publication-marker RewriteCond and the RewriteRule it
+ * belongs to. Shared by the work profile (buildHtaccess) and the publication-host
+ * profile (publication_host_rules.ts), so the pattern the two gates stat can never drift.
+ *
+ * (!) $1_$2, NOT %1_%2 — the captures of the RewriteRule that FOLLOWS the condition.
+ * The two lines must stay adjacent.
+ */
+export function ruleBApacheLines(root: string, qualities: readonly string[]): string[] {
+	const alternation = qualities.map(escapeRegexLiteral).join('|');
+	return [
+		'',
+		'# 2. Rule B: public quality folders, gated by the publication marker the',
+		'#    diffusion engine maintains. The file name identifies the record:',
+		'#    ...{component_tipo}_{section_tipo}_{section_id}[_lg-xxx].ext',
+		`RewriteCond "${root}/.publication/pub/$1_$2" -f`,
+		`RewriteRule ^(?:${alternation})/(?:.+/)?${MEDIA_FILENAME_GRAMMAR} - [L]`,
+	];
+}
+
+/**
  * The Apache gate: the full text of <media>/.htaccess. PURE.
  *
  * Stage order is the whole design:
@@ -699,16 +719,7 @@ export function buildHtaccess(
 	);
 
 	if (mode === 'publication' && qualities.length > 0) {
-		const alternation = qualities.map(escapeRegexLiteral).join('|');
-		lines.push(
-			'',
-			'# 2. Rule B: public quality folders, gated by the publication marker the',
-			'#    diffusion engine maintains. The file name identifies the record:',
-			'#    ...{component_tipo}_{section_tipo}_{section_id}[_lg-xxx].ext',
-			// (!) $1_$2, NOT %1_%2 — see the docblock.
-			`RewriteCond "${root}/.publication/pub/$1_$2" -f`,
-			`RewriteRule ^(?:${alternation})/(?:.+/)?${MEDIA_FILENAME_GRAMMAR} - [L]`,
-		);
+		lines.push(...ruleBApacheLines(root, qualities));
 	}
 
 	if (addons.length > 0) {
@@ -859,7 +870,7 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
  * built on $1/$2 would silently stat `pub/_` for every request and deny everything.
  * Derived from the ONE grammar constant so the two can never drift.
  */
-function nginxNamedGrammar(): string {
+export function nginxNamedGrammar(): string {
 	return MEDIA_FILENAME_GRAMMAR.replace('([a-z0-9]+)', '(?<dd_s>[a-z0-9]+)').replace(
 		'([0-9]+)',
 		'(?<dd_i>[0-9]+)',
@@ -921,7 +932,7 @@ export function buildNginxMap(): string {
  * declares any add_header of its own, so there is no server-level shortcut here; each
  * location must carry the full set or it silently serves bare.
  */
-function nginxSvgHeaderLines(): string[] {
+export function nginxSvgHeaderLines(): string[] {
 	return [
 		`\tadd_header X-Content-Type-Options "${MEDIA_NOSNIFF}" always;`,
 		'\tadd_header Content-Disposition $dedalo_svg_disposition always;',
@@ -931,7 +942,7 @@ function nginxSvgHeaderLines(): string[] {
 
 /** Escape a literal for embedding in an Apache/nginx regex (quality folders carry '.'
  * and '/', e.g. 'image/1.5MB' — an unescaped '.' would match any character). */
-function escapeRegexLiteral(value: string): string {
+export function escapeRegexLiteral(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
