@@ -99,13 +99,21 @@ from the same templates:
   `AllowOverride None`), so the work host's `.htaccess` on the shared tree is never read.
   `RewriteEngine` is NOT wrapped in `<IfModule>`: a host without mod_rewrite refuses to
   start rather than serving ungated.
-- **nginx:** a server{} include with the Rule B location `alias`ing into the root and a
-  catch-all 404; the existing http{} map file is reused unchanged (the SVG header maps).
+- **nginx:** a server{} include holding ONE outer `location ^~ /dedalo/<mediaDir>/` with
+  the hardening (`nginxHardeningLocations`, shared with the work conf) and the Rule B
+  location (`alias`ing into the root) NESTED inside, and `return 404` as its default. The
+  `^~` is load-bearing: a plain-prefix catch-all loses to any server-level regex location
+  (an operator's `location ~* \.(jpg|mp4)$`), which then serves masters and unpublished
+  files from `root`. The existing http{} map file is reused unchanged (the SVG header maps).
+- **Mount placement:** the mount must NOT sit under any server/vhost document root (second
+  layer behind the `^~`; on Apache the `<Directory>` gate is filesystem-scoped anyway).
 - **Inputs:** `root` (absolute, `^/[A-Za-z0-9._/-]+$`, no `..`) and the public qualities
   (through `filterPublicQualities` — never a master tier). An empty quality list is
   refused: a host that may serve nothing is a misconfiguration, not a mode.
-- **Hash:** its own `# config-hash:` over `{TEMPLATE_VERSION, profile, root, qualities,
-  mediaDir}` — what the agent reports and the panel compares.
+- **Hash:** its own `# config-hash:` over `{TEMPLATE_VERSION, profile, server, root,
+  qualities, mediaDir}` (`getPublicationHostConfigHash` — call it, never re-derive it) —
+  what the agent reports and the panel compares. `server` is in it: the Apache and nginx
+  includes of the same inputs carry different hashes.
 
 **Exports.** Export to the publication host, read-only with `root_squash`, ONLY the public
 quality folders and `.publication/pub/`, mounted under one root with the same relative

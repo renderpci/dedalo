@@ -148,7 +148,11 @@ work system's login cookie.
 4. **Install on the publication server.** For Apache, `Include` the file inside the
    website's virtual host, before any other `/dedalo` alias, then run
    `apachectl configtest && apachectl graceful`. For nginx, include the map in `http{}` and
-   the rules in `server{}`, then run `nginx -t && nginx -s reload`.
+   the rules in `server{}`, then run `nginx -t && nginx -s reload`. Do not mount the media
+   under the website's document root: keep it in a folder of its own (for example
+   `/srv/dedalo_media_ro`). The nginx rules take every `/dedalo/media/` request for
+   themselves, so your own caching rules for images or video do not apply to these
+   files.
 5. **Check:** a published image answers 200; an unpublished one answers 404, even when you
    are logged in to the work system.
 

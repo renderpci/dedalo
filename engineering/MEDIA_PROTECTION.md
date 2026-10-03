@@ -337,12 +337,16 @@ rendered from the same templates by `src/core/media/publication_host_rules.ts`:
 - hardening + rule 0 + **Rule B against the host's mount root** + 404 default deny; **no Rule A**;
 - Apache: a vhost include (`Alias` + `<Directory>` with `AllowOverride None`, so the work
   `.htaccess` on the shared tree is never read), gate NOT in `<IfModule>` (no mod_rewrite = no boot);
-- nginx: a server{} include aliasing Rule B into the root, plain-prefix 404 catch-all; the
-  http{} map is `buildNginxMap()` unchanged.
+- nginx: a server{} include = ONE outer `location ^~ <url>/` (no server-level regex location
+  can take a media request) with the shared hardening (`nginxHardeningLocations`) and Rule B
+  (aliasing into the root) nested, `return 404` default; the http{} map is `buildNginxMap()`
+  unchanged. The mount must not sit under a document root.
 
 Render: `bun run media:publication-host-rules --root <mount> [--server apache|nginx|nginx-map]`.
 Lockstep: `media_protection_tripwire.test.ts` (same filename verdicts, host-root markers, no
 Rule A). Engine proof: `bun run test:media:pubhost` (the §9 matrix for this profile on live
-Apache and nginx, plus: a work cookie is refused, a permissive work `.htaccess` is ignored,
-and Apache without mod_rewrite refuses the config). Exports, NFS/SMB attribute caching and
+Apache and nginx, in a HOSTILE harness — mount under the document root, an operator
+static-asset regex location before the nginx include — plus: a work cookie is refused, a
+permissive work `.htaccess` is ignored, and Apache without mod_rewrite refuses the config).
+Hostile-cookie rows are N/A: this profile reads no cookie. Exports, NFS/SMB attribute caching and
 the mount layout: `engineering/PUBLICATION_HOST_SPEC.md` §5.1.
