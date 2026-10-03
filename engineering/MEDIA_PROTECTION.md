@@ -299,7 +299,7 @@ rule files (never hand-written ones) over a scratch media tree, then:
 | any of the above | valid | **200** (rule A) |
 | `.publication/auth/<value>`, `.publication/pub/<key>`, `.htaccess` | any | **404** |
 | any protected file | `../../../etc/passwd`, short, non-hex, 128-hex non-marker | **404**, never 500 |
-| uploaded `.php` under the media root | valid | **denied — never executed** (also in mode `off`) |
+| uploaded `.php` (or any SEC-088 script extension, any case) under the media root | valid | **404 — never executed, source never served** (also in mode `off`) |
 | AV file, `Range: bytes=0-99` | none | **206** + `Content-Range` |
 | any media file | any | `X-Content-Type-Options: nosniff` (MEDIA-03) |
 | raw uploaded `.svg` (`svg/…`) | valid | **200** + `Content-Disposition: attachment` + `Content-Security-Policy: default-src 'none'; sandbox` |
@@ -334,6 +334,16 @@ nginx 1.31.6: the publication-host profile by `bun run test:media:pubhost` (`.tm
 `.TMP` rows), the work profile (modes `publication` and `off`, with and without a valid
 cookie) by a one-off run against the generated `.htaccess`/nginx conf; pinned by the
 tripwire's F2 lockstep block (all four generated texts).
+
+**2026-10-03 (F3):** the same 403 trap, still live for SEC-088: Apache denied an uploaded
+`.php` (every `MEDIA_SCRIPT_DENY_PATTERN` extension) with an unconditional `FilesMatch`
+`Require all denied`, and since authz runs before the per-dir rewrite it answered **403**,
+confirming the upload exists. Now `SetHandler none` (never executed) + a `(?i)`
+`RewriteRule … [R=404,L]`, the `FilesMatch` deny kept ONLY inside `<IfModule !mod_rewrite.c>`
+as the no-mod_rewrite fallback. Proven live on Apache + nginx by `bun run test:media:pubhost`
+(`.php`, `.PHP` rows: exactly 404, source never served; the pre-fix template reds both Apache
+rows with 403); the work `.htaccess` emits the identical shared block; pinned by the
+tripwire's F3 block (every Apache text, any case, deny-only-as-fallback).
 
 Historic note: the **nginx block used to be pattern-verified only**
 (the tripwire compiles its regexes and pins the `^~`/named-capture traps) — it has not yet

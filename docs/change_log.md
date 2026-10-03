@@ -614,6 +614,16 @@ Merged since the last release; these ship with the next one.
     media rule files from the maintenance panel so the web server picks up the
     corrected list.
 
+- **Uploaded script files under the media folder answer "not found" on Apache**
+
+    A server script file (`.py`, `.sh`, `.cgi`, …) placed under the media folder was
+    already never executed nor served, but Apache refused it with "forbidden",
+    which confirms to anyone probing that the file exists. Apache now answers
+    "not found", like nginx already did, in every protection mode and on a
+    separate publication host; without `mod_rewrite` it still refuses the file.
+    The `.htaccess` regenerates on its own after the update; re-render a
+    publication host's rule files with `scripts/media_publication_host_rules.ts`.
+
 - **Working files under the media folder are never served, on Apache or nginx**
 
     Soft-deleted, temporary, import and CSV working files kept next to the media

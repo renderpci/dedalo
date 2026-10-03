@@ -82,6 +82,8 @@ export const MEDIA_SCRIPT_DENY_PATTERN = 'phps?|phtml|phar|pht|cgi|pl|py|rb|sh|l
 // 4 (F2): the working-file deny reached nginx (both profiles — it was Apache-only, so a
 // published record's .tmp/.csv was served by nginx) and became a case-insensitive 404
 // rewrite on Apache (was a case-SENSITIVE 403 FilesMatch: `.TMP` on APFS/SMB was served).
+// (F3, same unreleased series, no second bump): the Apache script deny is a 404 rewrite
+// too (was an unconditional 403 FilesMatch); the FilesMatch is now the no-mod_rewrite fallback.
 export const TEMPLATE_VERSION = 4;
 
 /** The effective access mode. 'off' is a GENERATOR-only value — never returned here. */
@@ -603,9 +605,21 @@ export function htaccessHardeningBlock(): string {
 		'<FilesMatch "(?i)\\.(phps?|phtml|phar|pht)$">',
 		'\tSetHandler none',
 		'</FilesMatch>',
-		`<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`,
-		'\tRequire all denied',
-		'</FilesMatch>',
+		// F3: the script population is DENIED as 404, never 403 (§2) — a rewrite, for the
+		// same measured reason as the active-document deny below (authz answers before the
+		// per-dir rewrite, so a `Require all denied` here 403s and confirms the upload).
+		// `SetHandler none` above stays: denial and non-execution are separate guarantees.
+		'# Script uploads are denied as 404 (a 403 would confirm the file exists).',
+		'<IfModule mod_rewrite.c>',
+		'RewriteEngine On',
+		`RewriteRule (?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ - [R=404,L]`,
+		'</IfModule>',
+		'# FAIL CLOSED without mod_rewrite: refused (403) rather than served.',
+		'<IfModule !mod_rewrite.c>',
+		`\t<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`,
+		'\t\tRequire all denied',
+		'\t</FilesMatch>',
+		'</IfModule>',
 		// MEDIA-03: active-document extensions no media model accepts are never served.
 		//
 		// A REWRITE, not `Require all denied`, and the difference was measured rather

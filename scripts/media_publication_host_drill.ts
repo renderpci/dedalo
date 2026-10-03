@@ -96,9 +96,18 @@ const ROWS: Row[] = [
 	{ name: 'marker store pub/ → 404', path: '.publication/pub/test3_1', expect: [404] },
 	{ name: 'marker store auth/ → 404', path: `.publication/auth/${WORK_COOKIE}`, expect: [404] },
 	{
-		name: 'uploaded .php → denied, never executed, source never served',
+		// F3: 404, never 403 (a 403 confirms the upload exists — MEDIA_PROTECTION §2).
+		name: 'uploaded .php → 404, never executed, source never served',
 		path: 'image/thumb/0/test94_test3_1.php',
-		expect: [403, 404],
+		expect: [404],
+		check: (_r, body) =>
+			body.includes('<?php') || body.includes('EXECUTED') ? 'php leaked' : null,
+	},
+	{
+		// On a case-insensitive mount (APFS/SMB) `.PHP` opens the `.php` file; elsewhere 404s.
+		name: 'uploaded script, upper-case suffix .PHP → 404, source never served',
+		path: 'image/thumb/0/test94_test3_1.PHP',
+		expect: [404],
 		check: (_r, body) =>
 			body.includes('<?php') || body.includes('EXECUTED') ? 'php leaked' : null,
 	},

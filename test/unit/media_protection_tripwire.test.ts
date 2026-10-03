@@ -572,9 +572,9 @@ describe('media protection: the PUBLICATION-HOST profile stays in lockstep (PUBL
 		const work = nginxHardeningLocations(`/dedalo/${config.mediaDir}`);
 		expect(NGINX).toContain(work.join('\n'));
 		expect(HOST_NGINX).toContain(work.map((l) => (l === '' ? '' : `\t${l}`)).join('\n'));
-		// and the shared script list is the Apache FilesMatch's too
-		expect(HTACCESS).toContain(`<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`);
-		expect(HOST_APACHE).toContain(`<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`);
+		// and the shared script list is the Apache 404 rewrite's too (F3)
+		expect(HTACCESS).toContain(`RewriteRule (?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ - [R=404,L]`);
+		expect(HOST_APACHE).toContain(`RewriteRule (?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ - [R=404,L]`);
 	});
 
 	test('it carries NO Rule A: a work-session cookie is never honoured publicly', () => {
@@ -664,4 +664,67 @@ describe('media protection: working files are denied by Apache AND nginx, both p
 			expect(text).toContain(`(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$`);
 		}
 	});
+});
+
+/**
+ * F3: Apache denied the script population (MEDIA_SCRIPT_DENY_PATTERN) with an unconditional
+ * `<FilesMatch> Require all denied`. In .htaccess / <Directory> context authz runs BEFORE the
+ * per-dir rewrite, so an uploaded `.php` answered 403 — confirming it exists (§2: 404, never
+ * 403). Now: `SetHandler none` (never executed) + a `(?i)` `RewriteRule … [R=404,L]`, with the
+ * authz deny ONLY inside `<IfModule !mod_rewrite.c>` (a host without mod_rewrite never serves
+ * the source either).
+ */
+describe('media protection: uploaded scripts are a 404 on Apache, never a 403 (F3)', () => {
+	const SCRIPT_EXTS = MEDIA_SCRIPT_DENY_PATTERN.replace('phps?', 'php|phps').split('|');
+	const APACHE_TEXTS = [
+		['work .htaccess (publication)', HTACCESS],
+		['work .htaccess (off)', buildHtaccess('off', [], [])],
+		['host Apache', HOST_APACHE],
+	] as const;
+
+	/** Every `<FilesMatch "(?i)…">` whose body denies, with whether it sits in !mod_rewrite. */
+	function authzDenies(text: string): { re: RegExp; fallback: boolean }[] {
+		const lines = text.split('\n').map((l) => l.trim());
+		const out: { re: RegExp; fallback: boolean }[] = [];
+		let inNoRewrite = false;
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i] ?? '';
+			if (line === '<IfModule !mod_rewrite.c>') inNoRewrite = true;
+			else if (line === '</IfModule>') inNoRewrite = false;
+			const m = /^<FilesMatch "\(\?i\)(.+)">$/.exec(line);
+			if (m?.[1] !== undefined && lines[i + 1] === 'Require all denied') {
+				out.push({ re: new RegExp(m[1], 'i'), fallback: inNoRewrite });
+			}
+		}
+		return out;
+	}
+
+	for (const [name, text] of APACHE_TEXTS) {
+		test(`${name}: every script extension (any case) is a 404 rewrite, the authz deny only a fallback`, () => {
+			const rewrites = text
+				.split('\n')
+				.map((l) => /^RewriteRule (\(\?i\))?(.+) - \[R=404,L\]$/.exec(l))
+				.flatMap((m) => (m?.[2] === undefined ? [] : [new RegExp(m[2], m[1] ? 'i' : '')]));
+			const denies = authzDenies(text);
+			for (const ext of SCRIPT_EXTS.flatMap((e) => [e, e.toUpperCase()])) {
+				const file = `image/thumb/0/test94_test3_1.${ext}`;
+				expect(
+					rewrites.some((re) => re.test(file)),
+					`${name}: no 404 rewrite for ${file}`,
+				).toBe(true);
+				// a 403 that wins over the rewrite: an authz deny OUTSIDE the !mod_rewrite fallback
+				const eager = denies.filter((d) => !d.fallback && d.re.test(file));
+				expect(eager.length, `${name}: ${file} is authz-denied (403) with mod_rewrite loaded`).toBe(
+					0,
+				);
+				// and the no-mod_rewrite host still never serves the source
+				expect(
+					denies.some((d) => d.fallback && d.re.test(file)),
+					`${name}: no fallback for ${file}`,
+				).toBe(true);
+			}
+			// never executed: SetHandler none stays on the PHP family
+			expect(text).toContain('<FilesMatch "(?i)\\.(phps?|phtml|phar|pht)$">\n\tSetHandler none');
+		});
+	}
 });
