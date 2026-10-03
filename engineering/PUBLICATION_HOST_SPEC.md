@@ -18,6 +18,38 @@ The single-host install (work + publication on one machine) is unchanged and sta
 first-class. A publication host is an ADDITION the panel learns about, never a mode the
 single host must take.
 
+### 1.1 Single machine, two hostnames (small institutions)
+
+The same architecture on one server: two vhosts, one media tree, no network channel.
+
+```
+dedalo.museum.org (work)   → engine; media mode `private` (Rule A only, engine .htaccess)
+www.museum.org   (public)  → website + API v1 + API v2; media = the §5.1 profile
+                             rendered with --root <the real media path>
+```
+
+- **Why a separate hostname even here:** origin isolation. With the back-office under the
+  website's origin, any XSS or compromised website plugin acts with a logged-in curator's
+  session against `/dedalo/core/api/` (same origin → CORS does not apply). Separate
+  hostnames also keep work cookies off the public site and let the back-office be
+  firewalled alone. Moving to two machines later only moves the `www` vhost.
+- **Media path into the public vhost:** the generated include's `Alias` points straight at
+  the real media root. No symlink (it needs `FollowSymLinks` and isolates nothing) and no
+  mount (same filesystem, same Apache). OPTIONAL hardening: read-only BIND mounts of only
+  the public quality folders + `.publication/pub` into a separate root, rendered with that
+  root, so a rule mistake cannot expose what is not mounted (cost: one fstab line per
+  public quality; root-only ops, not panel-drivable).
+- **Isolation by users, not network:** engine (`dedalo`, owns `../private` 0700, media RW,
+  Postgres via unix socket + peer auth); web server reads media read-only (group);
+  PHP-FPM pool user with `open_basedir` excluding media and `../private`; API v2 its own
+  user; APIs use a read-only MariaDB user; systemd `ProtectSystem=strict`,
+  `ReadWritePaths=` minimal, `NoNewPrivileges=yes` on the Bun services.
+- **Control:** the SAME agent (§2, §6) listening on a local unix socket (the
+  `publication/site_builder` precedent). One code path for one or two machines: the
+  registry (phase 3) treats "local" as an ordinary publication host whose address is a
+  socket.
+- Backups must leave the machine (one disk carries work and public data).
+
 ## 2. The control channel (trust law)
 
 The panel controls the publication host through a **publication agent**: a small Bun
@@ -28,7 +60,8 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    connection to the work host. The firewall states it; the agent holds no work-host
    credential and no work-host address.
 2. **The channel is private.** A private network (WireGuard) or mTLS on a non-public port,
-   firewalled to the work host's address. Never routed through the public vhost.
+   firewalled to the work host's address. Never routed through the public vhost. On a
+   single machine (§1.1): a unix socket, mode 0660, group = the engine's.
 3. **Pairing is proved, not assumed.** Shared bearer + the domain-separated pairing
    fingerprint recipe of `src/core/site_builder/pairing.ts` (a mis-pasted env file must
    name the mismatch, never silently drive another institution's host).
