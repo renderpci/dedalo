@@ -601,6 +601,19 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Master media folders are protected whatever their letter case**
+
+    The list of media folders that may be served publicly now refuses an archival
+    master or retouched work copy written in any letter case. Before, an entry such
+    as `image/ORIGINAL` or `image/Original` in the public qualities setting was not
+    recognised as a master; on storage that ignores case (macOS disks, Windows/SMB
+    network shares) that folder is the same as `image/original`, so the full-size
+    master files could be served to anonymous visitors. The same applies to a
+    renamed master tier configured by your installation. If you set public
+    qualities by hand, the refused entry is now logged at startup; regenerate the
+    media rule files from the maintenance panel so the web server picks up the
+    corrected list.
+
 - **Every AI request now counts against a daily budget per user, and generated answers need their own permission.** *(action needed)*
 
     Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily budget before the model is called: assistant runs and model tokens, semantic-search queries, and vision calls of the identification tool. When a budget is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included. The four budgets are `DEDALO_AI_USER_DAILY_RUNS` (50), `DEDALO_AI_USER_DAILY_TOKENS` (1000000), `DEDALO_AI_USER_DAILY_EMBED_QUERIES` (2000) and `DEDALO_AI_USER_DAILY_VISION` (50) — see [the configuration reference](./config/config.md). The day's usage of every user is listed in the new **AI usage** section under Administration.

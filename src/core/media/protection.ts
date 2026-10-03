@@ -451,9 +451,20 @@ export function masterQualities(): ReadonlySet<string> {
 	]);
 }
 
-/** Whether a BARE quality tier name is an archival master. */
+/**
+ * masterQualities() LOWERCASED — the set every master check compares against.
+ * Case-insensitive on purpose: on APFS/SMB/NTFS `image/ORIGINAL/` IS
+ * `image/original/`, so a case-sensitive compare let a configured
+ * `image/ORIGINAL` through the filter and serve the masters anonymously.
+ * Callers lowercase the probed segment too (both sides, never one).
+ */
+function masterQualitiesFolded(): ReadonlySet<string> {
+	return new Set([...masterQualities()].map((quality) => quality.toLowerCase()));
+}
+
+/** Whether a BARE quality tier name is an archival master (any letter case). */
 export function isMasterQuality(quality: string): boolean {
-	return masterQualities().has(quality.replace(/^\/+|\/+$/g, ''));
+	return masterQualitiesFolded().has(quality.replace(/^\/+|\/+$/g, '').toLowerCase());
 }
 
 /**
@@ -462,7 +473,7 @@ export function isMasterQuality(quality: string): boolean {
  * directly testable) rather than reachable only through the frozen config catalog.
  */
 export function filterPublicQualities(configured: readonly string[]): string[] {
-	const forbidden = masterQualities();
+	const forbidden = masterQualitiesFolded();
 
 	const qualities: string[] = [];
 	for (const raw of configured) {
@@ -472,7 +483,7 @@ export function filterPublicQualities(configured: readonly string[]): string[] {
 			continue;
 		}
 		const segments = quality.split('/');
-		if (segments.some((segment) => forbidden.has(segment))) {
+		if (segments.some((segment) => forbidden.has(segment.toLowerCase()))) {
 			console.error(
 				`[media_protection] refused MASTER quality folder in the public list: ${quality}`,
 			);
