@@ -20,7 +20,9 @@
  *      the file resolve against the file's own directory.
  *   2. THE AMBIENT ALLOWLIST — NODE_ENV, LOG_LEVEL, filling only what the file did not
  *      state. Every other ambient variable is ignored (an instance name or a token in the
- *      process environment is not a source).
+ *      process environment is not a source). Test mode is NEVER ambient: NODE_ENV=test
+ *      relaxes the credential law, so only the env file may state it — an ambient `test`
+ *      over a file silent on NODE_ENV is a refusal, not a fill.
  *   3. THE CREDENTIALS — `$CREDENTIALS_DIRECTORY/SERVICE_TOKEN` (systemd LoadCredential=)
  *      WINS over the file. Any other file in that directory is refused by name. Outside
  *      NODE_ENV=test the env file may not carry SERVICE_TOKEN at all: the file is 0640 with
@@ -298,7 +300,9 @@ export function readCredentials(dir: string): Record<string, string> {
 
 function describeIssue(issue: z.core.$ZodIssue, values: Record<string, string>): string {
   const key = issue.path.map(String).join('.') || '(config)';
-  if (issue.code === 'invalid_type' && values[key] === undefined) return `${key} is required`;
+  // Absence is "required" whatever zod's code (an enum reports a missing value as invalid_value);
+  // a cross-field (custom) issue keeps its own message, which names the condition.
+  if (issue.code !== 'custom' && issue.path.length > 0 && values[key] === undefined) return `${key} is required`;
   return issue.message.startsWith(key) ? issue.message : `${key}: ${issue.message}`;
 }
 
@@ -326,6 +330,12 @@ export function resolveConfig(sources: ConfigSources): AgentConfig {
     const value = sources.ambient[key];
     if (value === undefined || value === '') continue;
     if (values[key] !== undefined && values[key] !== '') continue;
+    if (key === 'NODE_ENV' && value !== 'production') {
+      refuse(
+        `NODE_ENV=test may come only from the env file '${envFilePath}' (test mode relaxes the ` +
+          `credential law); the ambient environment may fill only NODE_ENV=production.`,
+      );
+    }
     values[key] = value;
     origin[key] = 'ambient';
   }

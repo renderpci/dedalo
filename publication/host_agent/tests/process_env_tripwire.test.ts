@@ -1,7 +1,9 @@
 /**
  * ONLY src/config.ts READS THE PROCESS ENVIRONMENT (Global Constraints). Every other module
  * receives configuration through `config`, so the schema stays the complete census of what
- * the agent can be tuned with, and a child process never inherits a value nobody declared.
+ * the agent can be tuned with. This gate is about READS only: what a child process inherits
+ * (Bun.spawn without an explicit `env` passes the whole environment on) is the exec.ts gate's
+ * law (Task 3), not this one's.
  * Comments count: a module that talks about process.env is one edit away from reading it.
  */
 
@@ -23,6 +25,17 @@ const READS_ENV = [
   /=\s*(?:globalThis\s*\.\s*)?process\s*(?:[;,)\n]|$)/m,
   /\bglobalThis\s*(?:\.\s*process\b|\[)/,
   /[(,]\s*process\s*[,)]/,
+  // Second review of 0b62da6b97: optional chaining, Bun's env by index/destructuring/alias,
+  // a dynamic import of the process module.
+  /\bprocess\s*\?\.\s*(?:env\b|\[)/,
+  /\bBun\s*\?\.\s*env\b/,
+  /\bBun\s*(?:\?\.\s*)?\[/,
+  /\{[^}]*\benv\b[^}]*\}\s*=\s*(?:globalThis\s*\??\.\s*)?Bun\b/,
+  /=\s*(?:globalThis\s*\??\.\s*)?Bun\s*(?:[;,)\n]|$)/m,
+  /[(,]\s*Bun\s*[,)]/,
+  /\bglobalThis\s*\?\.\s*(?:process|Bun)\b/,
+  /\bglobalThis\s*(?:\.\s*Bun\s*\.\s*env\b)/,
+  /\bimport\(\s*['"](?:node:)?process['"]\s*\)/,
 ];
 
 /** Every way of reaching the environment the gate claims to catch — each must match. */
@@ -41,6 +54,20 @@ const BYPASSES = [
   "const e = globalThis['process'];",
   "const e = Reflect.get(process, 'env');",
   'const e = Object.entries(process);',
+  'const t = process?.env.SERVICE_TOKEN;',
+  "const t = process?.['env'];",
+  'const t = Bun?.env.SERVICE_TOKEN;',
+  "const t = Bun['env'].X;",
+  "const t = Bun?.['env'];",
+  'const { env } = Bun;',
+  'const { env: e } = globalThis.Bun;',
+  'const b = Bun;',
+  'const b = Bun\nconst e = b.env',
+  'const e = Object.entries(Bun);',
+  'const p = globalThis?.process;',
+  'const e = globalThis.Bun.env;',
+  "const p = await import('node:process');",
+  "const p = await import('process');",
 ];
 /** What other modules legitimately do with `process` — none may match. */
 const INNOCENT = [
@@ -49,6 +76,10 @@ const INNOCENT = [
   'process.exitCode = 2;',
   '// the child process exits before the parent process does',
   'const processed = 3;',
+  "const child = Bun.spawn(['x'], { env: childEnv });",
+  'const f = Bun.file(path);',
+  "const h = new Bun.CryptoHasher('sha256');",
+  "const m = await import('./config');",
 ];
 
 function sourceFiles(dir: string): string[] {

@@ -267,6 +267,22 @@ describe('the grammar', () => {
     expect(refusal()).toContain('STATE_ROOT is required');
   });
 
+  test.each(['LISTEN_KIND', 'WEB_SERVER', 'MEDIA_MODE'])('a missing enum key %s is "required", not an invalid option', key => {
+    const values = unixEnv();
+    delete values[key];
+    if (key === 'MEDIA_MODE') delete values.MEDIA_ROOT;
+    writeEnvFile(values);
+    const message = refusal();
+    expect(message).toContain(`${key} is required`);
+    expect(message).not.toContain('plain TCP');
+    expect(message).not.toContain('Invalid option');
+  });
+
+  test('a wrong enum value keeps its own message', () => {
+    writeEnvFile(unixEnv({ LISTEN_KIND: 'tcp' }));
+    expect(refusal()).toContain('LISTEN_KIND must be unix or tls (plain TCP does not exist)');
+  });
+
   test('a short SERVICE_TOKEN is refused without quoting it', () => {
     writeEnvFile(unixEnv({ SERVICE_TOKEN: 'short-secret-value' }));
     const message = refusal();
@@ -355,10 +371,29 @@ describe('the ambient allowlist', () => {
   test('fills only what the file is silent on', () => {
     const values = unixEnv({ LOG_LEVEL: 'warn' });
     delete values.NODE_ENV;
+    delete values.SERVICE_TOKEN;
     writeEnvFile(values);
-    const resolved = resolveConfig(sources({ ambient: { NODE_ENV: 'test', LOG_LEVEL: 'debug' } }));
-    expect(resolved.NODE_ENV).toBe('test');
+    const resolved = resolveConfig(
+      sources({ ambient: { NODE_ENV: 'production', LOG_LEVEL: 'debug' }, credentialsDir: writeCredential('SERVICE_TOKEN', TOKEN) }),
+    );
+    expect(resolved.NODE_ENV).toBe('production');
     expect(resolved.LOG_LEVEL).toBe('warn');
+  });
+
+  test('test mode is never ambient: NODE_ENV=test over a file silent on it is REFUSED', () => {
+    const values = unixEnv();
+    delete values.NODE_ENV;
+    delete values.SERVICE_TOKEN;
+    writeEnvFile(values);
+    const message = refusal(
+      sources({ ambient: { NODE_ENV: 'test' }, credentialsDir: writeCredential('SERVICE_TOKEN', TOKEN) }),
+    );
+    expect(message).toContain('NODE_ENV=test may come only from the env file');
+  });
+
+  test('…while a file that states NODE_ENV wins over the ambient one', () => {
+    writeEnvFile(unixEnv());
+    expect(resolveConfig(sources({ ambient: { NODE_ENV: 'production' } })).NODE_ENV).toBe('test');
   });
 
   test('every other ambient variable is ignored — even SERVICE_TOKEN and INSTANCE', () => {
