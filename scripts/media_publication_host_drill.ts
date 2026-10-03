@@ -193,8 +193,11 @@ function apacheMainConf(dir: string, port: number, include: string, withRewrite:
 		'AddType text/vtt .vtt',
 		'AddType image/svg+xml .svg',
 		`DocumentRoot "${dir}/docroot"`,
+		// PERMISSIVE on purpose: a real host may run AllowOverride All. The include's OWN
+		// AllowOverride None must be what ignores the work .htaccess — None here would
+		// mask its removal (Apache 2.4 defaults to None anyway).
 		'<Directory />',
-		'\tAllowOverride None',
+		'\tAllowOverride All',
 		'\tRequire all denied',
 		'</Directory>',
 		`Include "${include}"`,
@@ -235,7 +238,13 @@ async function drill(server: 'apache' | 'nginx'): Promise<number> {
 	let proc: ReturnType<typeof Bun.spawn> | null = null;
 	try {
 		if (server === 'apache') {
-			writeFileSync(include, buildPublicationHostApacheConf({ root, qualities: QUALITIES }));
+			const conf = buildPublicationHostApacheConf({ root, qualities: QUALITIES });
+			const ownsOverride = conf.includes('AllowOverride None');
+			if (!ownsOverride) red++;
+			console.log(
+				`${ownsOverride ? 'ok  ' : 'RED '} [apache] include declares its own AllowOverride None`,
+			);
+			writeFileSync(include, conf);
 			// Review Focus #5: without mod_rewrite the include must NOT pass the syntax check.
 			writeFileSync(main, apacheMainConf(dir, port, include, false));
 			const norewrite = sh(['httpd', '-t', '-f', main]);
@@ -277,8 +286,16 @@ async function drill(server: 'apache' | 'nginx'): Promise<number> {
 if (import.meta.main) {
 	const onlyIndex = process.argv.indexOf('--only');
 	const only = onlyIndex >= 0 ? process.argv[onlyIndex + 1] : undefined;
+	if (only !== undefined && only !== 'apache' && only !== 'nginx') {
+		console.error(`--only must be 'apache' or 'nginx' (got ${JSON.stringify(only)})`);
+		process.exit(1);
+	}
 	const servers = (['apache', 'nginx'] as const).filter((s) => only === undefined || s === only);
 	let red = 0;
+	if (servers.length === 0) {
+		console.error('no server selected — refusing a vacuous green');
+		process.exit(1);
+	}
 	for (const server of servers) red += await drill(server);
 	console.log(red === 0 ? '\nALL GREEN' : `\n${red} RED row(s)`);
 	process.exit(red === 0 ? 0 : 1);
