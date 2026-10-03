@@ -124,6 +124,37 @@ marker belonging to that user. Both go through `src/core/security/session_media.
     Making the value per-session is what makes revocation possible without collateral.
     Gate: `test/unit/media_session_revocation_native.test.ts`.
 
+## A separate publication server with shared media storage
+
+When the public website runs on another machine that reads the same media storage
+(work server read-write, publication server **read-only**), the publication server needs
+its own media rules: it must serve only published files, and it must never accept the
+work system's login cookie.
+
+1. **Export only what is public**, read-only (`ro,root_squash`): the public quality
+   folders and `.publication/pub/`. Never the originals, `.publication/auth/` or
+   `.publication/dbs/`. Mount them on the publication server under one directory, keeping
+   the same layout (for example `/srv/dedalo_media_ro/image/thumb/…`).
+2. **Mount `.publication/pub` without attribute caching** (`lookupcache=none,noac` on
+   NFS, `actimeo=0` on SMB), or an unpublished file stays visible for up to a minute.
+3. **Render the rules on the work server:**
+
+   ```bash
+   bun run media:publication-host-rules --root /srv/dedalo_media_ro --out dedalo_media_publication.conf
+   # nginx: --server nginx, plus --server nginx-map for the http{} include
+   ```
+
+   Any refused quality folder (an original or a bare type folder) is named on screen.
+4. **Install on the publication server.** For Apache, `Include` the file inside the
+   website's virtual host, before any other `/dedalo` alias, then run
+   `apachectl configtest && apachectl graceful`. For nginx, include the map in `http{}` and
+   the rules in `server{}`, then run `nginx -t && nginx -s reload`.
+5. **Check:** a published image answers 200; an unpublished one answers 404, even when you
+   are logged in to the work system.
+
+Media keeps the same URL (`/dedalo/media/…`) on both servers, so published records and the
+Publication APIs need no change. Re-render and reinstall when the public quality folders change.
+
 ## Related
 
 * [Media protection (configuration)](../../config/media_protection.md) — the operator's page:

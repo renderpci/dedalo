@@ -16,7 +16,7 @@ Native TS since 2026-07-12 (closes audit `MEDIA-01` / `SECURITY_DECISIONS.md` DE
 option B). Before that, Rule A and the rule generation were PHP-owned; the PHP engine is
 retired, so nothing minted the cookie and nothing generated the rules.
 
-Engine: `src/core/media/protection.ts`. Marker writer: `src/diffusion/targets/mediastore/media_index.ts`.
+Engine: `src/core/media/protection.ts`. Publication-host profile: `src/core/media/publication_host_rules.ts` (`engineering/PUBLICATION_HOST_SPEC.md` §5.1). Marker writer: `src/diffusion/targets/mediastore/media_index.ts`.
 Gates: `test/unit/media_protection*.test.ts` (one of them a registered tripwire).
 
 ## 1. Why the web server enforces, and not Bun
@@ -326,3 +326,23 @@ this class of defect at all.
 Historic note: the **nginx block used to be pattern-verified only**
 (the tripwire compiles its regexes and pins the `^~`/named-capture traps) — it has not yet
 been run against a live nginx. Do that before the first nginx deployment.
+
+## 10. The publication-host profile (separate publication machine, shared storage)
+
+When a SEPARATE publication machine reads this media tree through a read-only mount, the
+rule files above are wrong there twice: they embed the WORK host's root, and they honour
+Rule A, whose `auth/` markers are work-session credentials. That host gets its own profile,
+rendered from the same templates by `src/core/media/publication_host_rules.ts`:
+
+- hardening + rule 0 + **Rule B against the host's mount root** + 404 default deny; **no Rule A**;
+- Apache: a vhost include (`Alias` + `<Directory>` with `AllowOverride None`, so the work
+  `.htaccess` on the shared tree is never read), gate NOT in `<IfModule>` (no mod_rewrite = no boot);
+- nginx: a server{} include aliasing Rule B into the root, plain-prefix 404 catch-all; the
+  http{} map is `buildNginxMap()` unchanged.
+
+Render: `bun run media:publication-host-rules --root <mount> [--server apache|nginx|nginx-map]`.
+Lockstep: `media_protection_tripwire.test.ts` (same filename verdicts, host-root markers, no
+Rule A). Engine proof: `bun run test:media:pubhost` (the §9 matrix for this profile on live
+Apache and nginx, plus: a work cookie is refused, a permissive work `.htaccess` is ignored,
+and Apache without mod_rewrite refuses the config). Exports, NFS/SMB attribute caching and
+the mount layout: `engineering/PUBLICATION_HOST_SPEC.md` §5.1.

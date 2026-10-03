@@ -922,6 +922,12 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-28-maintenance-serve-ontology-widget`.
 
+#### Added
+
+- **A separate publication server can now serve published media from shared storage, with its own access rules.**
+
+    Institutions whose public website runs on its own server, reading the same media storage as the work system (read-only), can now generate media rules for that server: `bun run media:publication-host-rules --root <mount>` (Apache, or nginx with `--server nginx`). The publication server then serves only the files of published records, in the public quality folders, and never accepts the work system's login cookie. Originals are never served. See *A separate publication server with shared media storage* in the media protection manual page.
+
 #### Fixed
 
 - **The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box.**
