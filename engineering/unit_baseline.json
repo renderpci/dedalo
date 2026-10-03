@@ -4961,6 +4961,11 @@
 			"skipped": 0,
 			"assertions": 147
 		},
+		"test/unit/value_shape_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 197
+		},
 		"test/unit/vendor_advisory_tripwire.test.ts": {
 			"tests": 44,
 			"skipped": 0,
