@@ -2541,6 +2541,11 @@
 			"skipped": 0,
 			"assertions": 169
 		},
+		"test/unit/media_publication_host_rules.test.ts": {
+			"tests": 19,
+			"skipped": 0,
+			"assertions": 29
+		},
 		"test/unit/media_regenerate_thumb.test.ts": {
 			"tests": 3,
 			"skipped": 0,
