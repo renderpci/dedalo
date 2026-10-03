@@ -12,6 +12,7 @@ import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import {
 	htaccessHardeningBlock,
 	MEDIA_SCRIPT_DENY_PATTERN,
+	MEDIA_WORKING_FILE_EXTENSIONS,
 	nginxHardeningLocations,
 } from '../../src/core/media/protection.ts';
 import {
@@ -136,6 +137,15 @@ describe('buildPublicationHostApacheConf', () => {
 		expect(text).toContain('X-Content-Type-Options');
 	});
 
+	test('working files are a case-insensitive 404 rewrite BEFORE Rule B (F2)', () => {
+		const line = `RewriteRule (?i)\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$ - [R=404,L]`;
+		const lines = text.split('\n');
+		expect(lines).toContain(line);
+		expect(lines.indexOf(line)).toBeLessThan(
+			lines.findIndex((l) => l.startsWith('RewriteRule ^(?:')),
+		);
+	});
+
 	test('carries NO Rule A: work-session cookies are never honoured publicly', () => {
 		expect(text).not.toContain('dedalo_media_auth');
 		expect(text).not.toContain('.publication/auth/');
@@ -201,6 +211,13 @@ describe('buildPublicationHostNginxConf', () => {
 		);
 		// the active-document deny precedes Rule B (regex locations match in order)
 		expect(text.indexOf('(html|')).toBeLessThan(text.indexOf('(?<dd_path>'));
+	});
+
+	test('working files (F2) are a case-insensitive 404, whole location pinned, before Rule B', () => {
+		const esc = MEDIA_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		const deny = `\tlocation ~* ^${esc}/.+\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$ {\n\t\tdeny all;\n\t\treturn 404;\n\t}`;
+		expect(text).toContain(deny);
+		expect(text.indexOf(deny)).toBeLessThan(text.indexOf('(?<dd_path>'));
 	});
 
 	test('the byte-serving location carries the MEDIA-03 headers and mp4 clipping', () => {

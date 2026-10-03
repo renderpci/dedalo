@@ -38,6 +38,7 @@ import {
 	getPublicQualities,
 	MEDIA_AUTH_COOKIE,
 	MEDIA_SCRIPT_DENY_PATTERN,
+	MEDIA_WORKING_FILE_EXTENSIONS,
 	nginxHardeningLocations,
 } from '../../src/core/media/protection.ts';
 import {
@@ -581,6 +582,86 @@ describe('media protection: the PUBLICATION-HOST profile stays in lockstep (PUBL
 			expect(text).not.toContain(MEDIA_AUTH_COOKIE);
 			expect(text).not.toContain('.publication/auth/');
 			expect(text).not.toContain('$dedalo_auth_key');
+		}
+	});
+});
+
+/**
+ * F2: the working-file deny (MEDIA_WORKING_FILE_EXTENSIONS) used to be Apache-only, and a
+ * case-SENSITIVE 403 there: a published record's grammar-valid `…_test3_1.tmp` passed Rule
+ * B and nginx served it, and `.TMP` on an APFS/SMB mount was served by Apache too.
+ * Behavioral: the deny rules are pulled back OUT of all four generated texts, compiled, and
+ * must refuse every suffix of the constant (any case) as 404, BEFORE Rule B can serve it.
+ */
+describe('media protection: working files are denied by Apache AND nginx, both profiles (F2)', () => {
+	const PROBE_DIR = 'image/1.5MB/0/rsc29_rsc170_1';
+	const probes = MEDIA_WORKING_FILE_EXTENSIONS.flatMap((ext) => [ext, ext.toUpperCase()]).map(
+		(ext) => `${PROBE_DIR}.${ext}`,
+	);
+
+	/** Apache `RewriteRule <pcre> - [R=404,L]` lines, as [line index, regex]. */
+	function apacheDenies(text: string): [number, RegExp][] {
+		return text.split('\n').flatMap((line, i): [number, RegExp][] => {
+			const m = /^RewriteRule (\(\?i\))?(.+) - \[R=404,L\]$/.exec(line);
+			return m?.[2] === undefined ? [] : [[i, new RegExp(m[2], m[1] ? 'i' : '')]];
+		});
+	}
+
+	/** nginx regex locations whose body is `deny all; return 404;`, as [line index, regex]. */
+	function nginxDenies(text: string): [number, RegExp][] {
+		const lines = text.split('\n').map((l) => l.trimStart());
+		return lines.flatMap((line, i): [number, RegExp][] => {
+			const m = /^location (~\*?) (\S+) \{$/.exec(line);
+			if (m?.[2] === undefined) return [];
+			if (lines[i + 1] !== 'deny all;' || lines[i + 2] !== 'return 404;') return [];
+			return [[i, new RegExp(m[2], m[1] === '~*' ? 'i' : '')]];
+		});
+	}
+
+	const ruleBIndex = (text: string, prefix: string): number =>
+		text.split('\n').findIndex((l) => l.trimStart().startsWith(prefix));
+
+	const SURFACES: { name: string; text: string; server: 'apache' | 'nginx'; url: string }[] = [
+		{ name: 'work Apache (.htaccess)', text: HTACCESS, server: 'apache', url: '' },
+		{ name: 'host Apache (vhost include)', text: HOST_APACHE, server: 'apache', url: '' },
+		{ name: 'work nginx', text: NGINX, server: 'nginx', url: `/dedalo/${config.mediaDir}/` },
+		{ name: 'host nginx', text: HOST_NGINX, server: 'nginx', url: '/dedalo/media/' },
+	];
+
+	for (const surface of SURFACES) {
+		test(`${surface.name}: every working suffix (any case) is a 404 that precedes Rule B`, () => {
+			const denies =
+				surface.server === 'apache' ? apacheDenies(surface.text) : nginxDenies(surface.text);
+			const ruleB =
+				surface.server === 'apache'
+					? ruleBIndex(surface.text, 'RewriteRule ^(?:')
+					: ruleBIndex(surface.text, 'location ~ "^/dedalo/');
+			expect(ruleB).toBeGreaterThan(-1);
+			for (const probe of probes) {
+				const path = `${surface.url}${probe}`;
+				const hit = denies.find(([, re]) => re.test(path));
+				expect(hit, `${surface.name} does not deny ${path}`).toBeDefined();
+				expect(hit?.[0] ?? Infinity, `${surface.name}: deny of ${path} after Rule B`).toBeLessThan(
+					ruleB,
+				);
+			}
+			// and it is the WORKING-file deny, not a catch-all: a plain published .jpg reaches
+			// Rule B (the default deny AFTER Rule B is a different rule and does not count).
+			const jpg = `${surface.url}${PROBE_DIR}.jpg`;
+			expect(denies.some(([i, re]) => i < ruleB && re.test(jpg))).toBe(false);
+		});
+	}
+
+	test('the Apache .htaccess fails CLOSED without mod_rewrite (FilesMatch fallback)', () => {
+		const working = MEDIA_WORKING_FILE_EXTENSIONS.join('|');
+		const fallback = `<IfModule !mod_rewrite.c>\n\t<FilesMatch "(?i)\\.(${working})$">\n\t\tRequire all denied`;
+		expect(HTACCESS).toContain(fallback);
+		expect(HOST_APACHE).toContain(fallback);
+	});
+
+	test('mode off keeps the deny on both servers (it is hardening, not the access gate)', () => {
+		for (const text of [buildHtaccess('off', [], []), buildNginxConf('off', [])]) {
+			expect(text).toContain(`(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$`);
 		}
 	});
 });

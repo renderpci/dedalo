@@ -306,6 +306,7 @@ rule files (never hand-written ones) over a scratch media tree, then:
 | server-generated envelope (`<image>/…/svg/…/*.svg`) | valid | **200**, NO disposition, CSP with `script-src 'none'` — and the `<object>` edit view still renders |
 | `.xml` under the media root | valid | **200** + `attachment` + sandbox CSP |
 | uploaded `.html` / `.swf` under the media root | valid | **404 — denied outright** (also in mode `off`) |
+| working file (`.deleted`/`.temp`/`.tmp`/`.import`/`.csv`, any case) of a **published** record | any | **404 — denied outright**, before rule B (also in mode `off`) |
 | published file, then `rm` its `pub/` marker | none | **404 on the very next request**; `touch` it back → 200 |
 
 **Status (2026-08-24): the whole matrix, including the five MEDIA-03 header rows, was run
@@ -322,6 +323,17 @@ the file exists. In a `.htaccess` mod_rewrite runs in the FIXUP phase, i.e. AFTE
 authorization, so an authz denial answers first — the opposite of what the code assumed. It
 is now a `RewriteRule … [R=404,L]`, and both engines answer 404. Pattern gates cannot see
 this class of defect at all.
+
+**2026-10-03 (F2):** the working-file row was missing, and it was red: nginx (both profiles)
+had no working-file deny at all, so a published record's grammar-valid `…_test3_1.tmp`/`.csv`
+passed rule B and was served; Apache denied it with a case-sensitive `FilesMatch` → **403**,
+and `.TMP` on a case-insensitive mount (APFS/SMB) was served (**200**). Both now 404 it from
+the shared hardening (`MEDIA_WORKING_FILE_EXTENSIONS`; Apache a `(?i)` `RewriteRule … [R=404,L]`
+with a `FilesMatch` deny as the no-mod_rewrite fallback). Proven live on Apache 2.4.68 +
+nginx 1.31.6: the publication-host profile by `bun run test:media:pubhost` (`.tmp`, `.csv`,
+`.TMP` rows), the work profile (modes `publication` and `off`, with and without a valid
+cookie) by a one-off run against the generated `.htaccess`/nginx conf; pinned by the
+tripwire's F2 lockstep block (all four generated texts).
 
 Historic note: the **nginx block used to be pattern-verified only**
 (the tripwire compiles its regexes and pins the `^~`/named-capture traps) — it has not yet

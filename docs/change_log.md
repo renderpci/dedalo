@@ -614,6 +614,20 @@ Merged since the last release; these ship with the next one.
     media rule files from the maintenance panel so the web server picks up the
     corrected list.
 
+- **Working files under the media folder are never served, on Apache or nginx**
+
+    Soft-deleted, temporary, import and CSV working files kept next to the media
+    (`.deleted`, `.temp`, `.tmp`, `.import`, `.csv`) are now refused with "not
+    found" by both web servers, in every protection mode and on a separate
+    publication host. Before, the generated nginx rules did not refuse them at all:
+    a working file of a published record whose name followed the media naming
+    pattern was served to anonymous visitors. Apache already refused them, but
+    answered "forbidden" (confirming the file exists) and only in lower case, so on
+    storage that ignores case (macOS disks, Windows/SMB shares) `.TMP` was served.
+    The media rule files regenerate on their own after the update; on nginx, reload
+    it afterwards (`nginx -t && nginx -s reload`), and re-render a publication
+    host's rule files with `scripts/media_publication_host_rules.ts`.
+
 - **Every AI request now counts against a daily budget per user, and generated answers need their own permission.** *(action needed)*
 
     Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily budget before the model is called: assistant runs and model tokens, semantic-search queries, and vision calls of the identification tool. When a budget is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included. The four budgets are `DEDALO_AI_USER_DAILY_RUNS` (50), `DEDALO_AI_USER_DAILY_TOKENS` (1000000), `DEDALO_AI_USER_DAILY_EMBED_QUERIES` (2000) and `DEDALO_AI_USER_DAILY_VISION` (50) — see [the configuration reference](./config/config.md). The day's usage of every user is listed in the new **AI usage** section under Administration.

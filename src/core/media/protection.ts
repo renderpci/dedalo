@@ -79,7 +79,10 @@ export const MEDIA_AUTH_COOKIE = 'dedalo_media_auth';
  * for the Apache FilesMatch (htaccessHardeningBlock) and nginx (nginxHardeningLocations). */
 export const MEDIA_SCRIPT_DENY_PATTERN = 'phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp';
 
-export const TEMPLATE_VERSION = 3;
+// 4 (F2): the working-file deny reached nginx (both profiles — it was Apache-only, so a
+// published record's .tmp/.csv was served by nginx) and became a case-insensitive 404
+// rewrite on Apache (was a case-SENSITIVE 403 FilesMatch: `.TMP` on APFS/SMB was served).
+export const TEMPLATE_VERSION = 4;
 
 /** The effective access mode. 'off' is a GENERATOR-only value — never returned here. */
 export type MediaAccessMode = 'private' | 'publication' | false;
@@ -122,11 +125,11 @@ export const MEDIA_FILENAME_GRAMMAR =
 
 /**
  * WORKING-FILE suffixes under the media root — soft-deleted, temp, import and CSV
- * files the Apache hardening block denies to EVERYONE, logged in or not
- * (`<FilesMatch "\\.(deleted|temp|tmp|import|csv)$">`). ONE definition: the
- * generated rule interpolates it, and any engine door that hands out a media file
- * without the web server in the byte path (tool_export's media ZIP) refuses the
- * same names.
+ * files the hardening denies to EVERYONE, logged in or not, as a case-insensitive 404
+ * (htaccessHardeningBlock AND nginxHardeningLocations, so both profiles of both
+ * servers). ONE definition: the generated rules interpolate it, and any engine door
+ * that hands out a media file without the web server in the byte path (tool_export's
+ * media ZIP) refuses the same names.
  */
 export const MEDIA_WORKING_FILE_EXTENSIONS = ['deleted', 'temp', 'tmp', 'import', 'csv'] as const;
 
@@ -593,6 +596,7 @@ function getNginxMapConfigHash(): string {
 export function htaccessHardeningBlock(): string {
 	const quarantine = SVG_QUARANTINE_EXTENSIONS.join('|');
 	const activeDocs = MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|');
+	const working = MEDIA_WORKING_FILE_EXTENSIONS.join('|');
 	const envelope = imageEnvelopePcre();
 	return [
 		'# SEC-088: block script execution inside the media root.',
@@ -645,9 +649,17 @@ export function htaccessHardeningBlock(): string {
 		'\t</If>',
 		'</IfModule>',
 		'# Protect working files from prying eyes.',
-		`<FilesMatch "\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$">`,
-		'\tRequire all denied',
-		'</FilesMatch>',
+		'# 404 (never 403) and case-insensitive: on an APFS/SMB mount `.TMP` opens `.tmp`.',
+		'<IfModule mod_rewrite.c>',
+		'RewriteEngine On',
+		`RewriteRule (?i)\\.(${working})$ - [R=404,L]`,
+		'</IfModule>',
+		'# FAIL CLOSED without mod_rewrite: refused (403) rather than served.',
+		'<IfModule !mod_rewrite.c>',
+		`\t<FilesMatch "(?i)\\.(${working})$">`,
+		'\t\tRequire all denied',
+		'\t</FilesMatch>',
+		'</IfModule>',
 		'# The marker store is NEVER served, in any mode: auth/ filenames are live media',
 		'# credentials and pub/ filenames enumerate every published record.',
 		'<IfModule mod_rewrite.c>',
@@ -858,7 +870,7 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 
 /**
  * The always-on nginx hardening locations: rule 0 (marker store), SEC-088 (scripts),
- * MEDIA-03 (active documents). ONE builder for BOTH profiles — the work conf
+ * MEDIA-03 (active documents), working files. ONE builder for BOTH profiles — the work conf
  * (buildNginxConf) and the publication-host include (publication_host_rules.ts) — so an
  * extension added here reaches both; the tripwire pins both outputs to this function.
  * Regex locations match in order, so these must precede every byte-serving location.
@@ -884,6 +896,14 @@ export function nginxHardeningLocations(url: string): string[] {
 		// is red rather than a quiet asymmetry between two installs of the same version.
 		'# MEDIA-03: active-document extensions no media model accepts are never served.',
 		`location ~* ^${escaped}/.+\\.(${MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|')})$ {`,
+		'\tdeny all;',
+		'\treturn 404;',
+		'}',
+		'',
+		// Apache twin: the working-file rewrite in htaccessHardeningBlock(). Without it a
+		// published record's grammar-valid `.tmp`/`.csv` passed Rule B and was served.
+		'# Working files (soft-deleted, temp, import, CSV) are never served, to anyone.',
+		`location ~* ^${escaped}/.+\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$ {`,
 		'\tdeny all;',
 		'\treturn 404;',
 		'}',

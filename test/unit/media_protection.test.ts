@@ -44,6 +44,7 @@ import {
 	layAuthMarker,
 	MARKER_REAP_GRACE_MS,
 	MEDIA_AUTH_COOKIE,
+	MEDIA_WORKING_FILE_EXTENSIONS,
 	mediaTreeUnreachableReason,
 	mintAuthCookieValue,
 	overrideMediaProtectionPathsForTests,
@@ -302,6 +303,17 @@ describe('the generated nginx rules', () => {
 	test('the SEC-088 script block is emitted in EVERY mode, including off', () => {
 		for (const mode of ['off', 'private', 'publication'] as const) {
 			expect(buildNginxConf(mode, ['image/thumb'])).toContain('phps?|phtml|phar');
+		}
+	});
+
+	test('working files (F2) are denied as 404 in EVERY mode, before rule B', () => {
+		const deny = `location ~* ^/dedalo/media/.+\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$ {\n\tdeny all;\n\treturn 404;\n}`;
+		for (const mode of ['off', 'private', 'publication'] as const) {
+			const text = buildNginxConf(mode, ['image/thumb']);
+			expect(text).toContain(deny);
+			if (mode === 'publication') {
+				expect(text.indexOf(deny)).toBeLessThan(text.indexOf('location ~ "^'));
+			}
 		}
 	});
 });

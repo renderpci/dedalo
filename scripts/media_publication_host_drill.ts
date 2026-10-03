@@ -40,6 +40,9 @@ const FILES: Record<string, string> = {
 	'image/thumb/0/my_custom_name.jpg': 'NON-GRAMMAR',
 	'image/thumb/0/test94_test3_1.php': "<?php echo 'EXECUTED';",
 	'image/thumb/0/test94_test3_1.html': '<script>ACTIVE</script>',
+	// Working files of a PUBLISHED record: grammar-valid names, so Rule B alone would serve them.
+	'image/thumb/0/test94_test3_1.tmp': 'WORKING-TMP',
+	'image/thumb/0/test94_test3_1.csv': 'WORKING-CSV',
 	'image/svg/0/test94_test3_1.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>',
 	'svg/web/test94_test3_1.xml': '<x/>',
 	'av/404/test94_test3_1.mp4': 'M'.repeat(1000),
@@ -104,6 +107,25 @@ const ROWS: Row[] = [
 		path: 'image/thumb/0/test94_test3_1.html',
 		expect: [404],
 		check: (_r, body) => (body.includes('ACTIVE') ? 'html served' : null),
+	},
+	{
+		name: 'published-record working file .tmp → 404',
+		path: 'image/thumb/0/test94_test3_1.tmp',
+		expect: [404],
+		check: (_r, body) => (body.includes('WORKING') ? 'working file served' : null),
+	},
+	{
+		name: 'published-record working file .csv → 404',
+		path: 'image/thumb/0/test94_test3_1.csv',
+		expect: [404],
+		check: (_r, body) => (body.includes('WORKING') ? 'working file served' : null),
+	},
+	{
+		// On a case-insensitive mount (APFS/SMB) `.TMP` opens the `.tmp` file; elsewhere 404s.
+		name: 'working file, upper-case suffix .TMP → 404',
+		path: 'image/thumb/0/test94_test3_1.TMP',
+		expect: [404],
+		check: (_r, body) => (body.includes('WORKING') ? 'working file served' : null),
 	},
 	{
 		name: 'work .htaccess on the shared tree → 404',
