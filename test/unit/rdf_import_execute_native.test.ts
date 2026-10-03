@@ -29,6 +29,9 @@
  *    is gone) while the next IRI commits;
  *  - only WEB IRIs (http/https) are written or matched: a `javascript:` IRI from
  *    a remote document is never stored, and no record is born for one;
+ *  - a NUMBER is stored as the number the plan cast (a Nomisma weight); the
+ *    string the plan never sends any more is refused by the save door's
+ *    value-shape law, as a per-op skip — the contrast the cast exists for;
  *  - an HTML match component (text_area) is FOUND AGAIN on a rerun; a geo tag
  *    text (which the append merge refuses) is written into an empty slice;
  *  - an intermediate is created only through ITS section's create door, and a
@@ -107,6 +110,7 @@ const PORTAL = 'test80'; // component_portal → test3
 const SELECT = 'test91'; // component_select → dd64 (single choice: refuses append)
 const TEXT_AREA = 'test17'; // component_text_area (html), translatable
 const FILTER = 'test101'; // component_filter → dd153 (the control writes it)
+const NUMBER = 'test211'; // component_number (the `number` column)
 const ROOT: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 /** Scratch TLD of the capped portal node (orphan parent: no section walk reaches it). */
 const CAP_TLD = 'zzrdfcap';
@@ -1568,6 +1572,28 @@ describe.if(DB_READY)(
 			expect(report.skipped.map((entry) => entry.component_tipo)).toEqual([IRI, PORTAL, IRI]);
 			expect(await items(id, 'relation', PORTAL)).toEqual([]);
 			expect(await sectionRowCount()).toBe(rowsBefore);
+		});
+
+		test('a NUMBER the plan cast is stored as a number; the string it no longer sends is refused per op', async () => {
+			const id = await newRecord();
+			const report = await run(id, [
+				plan(iriOf('weight'), [
+					set(CALLER, NUMBER, 'lg-nolan', [{ lang: 'lg-nolan', value: 7.85 }]),
+				]),
+			]);
+			expect(report.iris[0]?.error).toBeNull();
+			expect(report.written.map((entry) => entry.component_tipo)).toEqual([NUMBER]);
+			expect((await items(id, 'number', NUMBER)).map((item) => item.value)).toEqual([7.85]);
+			// the pre-cast shape (rdf_import_plan itemFor before number_unparsed): refused, nothing stored
+			const other = await newRecord();
+			const refused = await run(other, [
+				plan(iriOf('weight_text'), [
+					set(CALLER, NUMBER, 'lg-nolan', [{ lang: 'lg-nolan', value: '7.85' }]),
+				]),
+			]);
+			expect(refused.written).toEqual([]);
+			expect(refused.skipped.map((entry) => entry.code)).toEqual(['request.invalid_data']);
+			expect(await items(other, 'number', NUMBER)).toEqual([]);
 		});
 
 		test('an HTML match component (text_area) is FOUND AGAIN: a rerun creates no second record', async () => {

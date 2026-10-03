@@ -7,7 +7,8 @@
   transaction opens; the import door's normalization in `src/core/tools/import_conform.ts`
   (`conformNumber` / `numberItems`, `textItem`); the re-save doors' normalization of stored
   PHP-era items, `canonicalStoredItems` (`value_shape.ts`), called by `tool_update_cache` and
-  `tool_propagate_component_data`.
+  `tool_propagate_component_data`; the RDF importer's cast of a literal into a number
+  component (`itemFor`, `tools/tool_import_rdf/server/rdf_import_plan.ts`).
 
 ## Shape before
 
@@ -68,6 +69,20 @@ still serves what is stored; the cast happens at the re-save door. Gate:
 `value_shape_native.test.ts` F (pure) and G (both doors, end to end, over a seeded
 PHP-era string number).
 
+**The RDF importer** (`tool_import_rdf`, dated 2026-10-03, review finding). Its plan built
+every literal item as `{lang, value: <text>}` except for component_iri, so a literal mapped
+to a component_number — the Nomisma mapping's `nmo:hasWeight`, `nmo:hasDiameter`,
+`nmo:hasAxis` (owl:ObjectProperty nodes, no `process`) — reached the door as a string, was
+refused, and every weight/diameter/axis op rolled back to its savepoint as a
+`request.invalid_data` skip (Dédalo 6's set_data cast it). The plan now reads the target's
+column (`RdfTipoInfo.number`, from the engine's `getColumnNameByModel`, the door's own
+lookup) and casts the text with `PHP_NUMERIC` (surrounding blanks ignored, non-finite
+refused) into `{lang, value: <number>}` — for a set, a split of the subject IRI and a
+number match component alike. Text that spells no number is a plan skip `number_unparsed`,
+reported, never sent. Gates: `rdf_import_plan.test.ts` (*numbers*, *a number match
+component*, the engine reader's number flag) and `rdf_import_execute_native.test.ts` (a
+cast number stored as a number; the uncast string refused per op).
+
 ## Census (what sends a value-carrying change)
 
 Measured 2026-10-03 (a static census, then `bun run test:client` with the server log
@@ -80,7 +95,9 @@ when a date input was emptied (stored as a `null` item until now). It now builds
 item id, nothing for a never-stored slot — the same builder its remove button uses. Two
 client-suite cases (date, geolocation) that mimicked the null update were moved to the
 remove they meant; after the change the client run logs no refusal. Every server caller of
-`saveComponentData` (importers, tools, MCP, maintenance) builds object items. The MCP
+`saveComponentData` (importers, tools, MCP, maintenance) builds object items — but that
+census checked item-ness only, not field types: ONE server door sent a string into the
+number column, fixed at its door (see *The RDF importer* below). The MCP
 `dedalo_save_component` documents `value` as `{id, value, lang}` or a locator; an agent's
 bare scalar is now refused with the same code. The temporal door
 (`section/record/temporal.ts`) is not covered: it persists nothing, and its relation

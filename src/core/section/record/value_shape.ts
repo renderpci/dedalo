@@ -56,7 +56,8 @@
 
 /**
  * PHP `is_numeric`'s grammar: decimal, optional sign/fraction/exponent — no hex,
- * no blanks. The ONE copy: the import conform (tools/import_conform.ts) and the
+ * no blanks. The ONE copy: the import conform (tools/import_conform.ts), the
+ * RDF import plan (tools/tool_import_rdf/server/rdf_import_plan.ts) and the
  * re-save normalizer below cast with it.
  */
 export const PHP_NUMERIC = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
