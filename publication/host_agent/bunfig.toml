@@ -1,0 +1,12 @@
+[install]
+peer = false
+
+[test]
+# ENFORCED from the first commit (the site_builder reporting-only exemption is NOT
+# inherited): Bun applies the threshold PER FILE, so every module this package adds
+# arrives with tests that clear it, or the package suite is red.
+coverage = true
+coverageThreshold = { lines = 0.8, functions = 0.8 }
+
+[run]
+bun = true

@@ -1,0 +1,16 @@
+# Machine-local config and secrets — never versioned. The agent never reads a package-dir
+# .env (a host names its env file with DEDALO_HOST_AGENT_ENV_FILE); ignored anyway so an
+# operator's scratch file can never be committed.
+.env
+
+# Bun / node
+node_modules/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Test scratch roots (created, marked and reset by tests/fixtures/instance.ts)
+.test-tmp/
+
+# bun test coverage output
+coverage/
