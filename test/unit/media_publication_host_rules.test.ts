@@ -9,13 +9,18 @@
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
-import { htaccessHardeningBlock } from '../../src/core/media/protection.ts';
+import {
+	htaccessHardeningBlock,
+	MEDIA_SCRIPT_DENY_PATTERN,
+	nginxHardeningLocations,
+} from '../../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
 	buildPublicationHostNginxConf,
 	getPublicationHostConfigHash,
 	normalizePublicationHostInput,
 } from '../../src/core/media/publication_host_rules.ts';
+import { MEDIA_ACTIVE_DOCUMENT_EXTENSIONS } from '../../src/core/media/svg_safety.ts';
 
 const ROOT = '/srv/dedalo_media_ro';
 const QUALITIES = ['image/thumb', 'av/404'];
@@ -145,26 +150,57 @@ describe('buildPublicationHostNginxConf', () => {
 		expect(text).toContain(`# config-hash: ${getPublicationHostConfigHash('nginx', normalized)}`);
 	});
 
-	test('the marker store is denied with ^~ so no regex can reach it', () => {
-		expect(text).toContain(`location ^~ ${MEDIA_URL}/.publication/ { return 404; }`);
+	test('the marker store is denied with a nested ^~ so no regex can reach it', () => {
+		expect(text).toContain(`\tlocation ^~ ${MEDIA_URL}/.publication/ { deny all; return 404; }`);
 	});
 
 	test('Rule B is a DOUBLE-QUOTED regex location that stats the HOST root and aliases into it', () => {
-		const line = text.split('\n').find((l) => l.startsWith('location ~ "^/dedalo/'));
+		const line = text.split('\n').find((l) => l.startsWith('\tlocation ~ "^/dedalo/'));
 		expect(line).toBeDefined();
 		expect(line).toEndWith('" {');
-		expect(text).toContain(`\tif (!-f ${ROOT}/.publication/pub/\${dd_s}_\${dd_i}) { return 404; }`);
-		expect(text).toContain(`\talias ${ROOT}/$dd_path;`);
+		expect(text).toContain(
+			`\t\tif (!-f ${ROOT}/.publication/pub/\${dd_s}_\${dd_i}) { return 404; }`,
+		);
+		expect(text).toContain(`\t\talias ${ROOT}/$dd_path;`);
 	});
 
-	test('everything else under the media URL is a PLAIN-prefix 404 (a ^~ would shadow Rule B)', () => {
-		expect(text).toContain(`location ${MEDIA_URL}/ { return 404; }`);
-		expect(text).not.toContain(`location ^~ ${MEDIA_URL}/ `);
+	test('ONE outer ^~ prefix holds every location, default return 404: no server regex can win', () => {
+		// A plain-prefix catch-all lost to ANY server-level regex location (an operator's
+		// `location ~* \.(jpg|mp4)$`), which then served masters/unpublished files from root.
+		const lines = text.split('\n');
+		const opener = `location ^~ ${MEDIA_URL}/ {`;
+		const top = lines.filter((l) => l.startsWith('location'));
+		expect(top).toEqual([opener]);
+		const body = lines.slice(lines.indexOf(opener) + 1);
+		const close = body.indexOf('}');
+		expect(close).toBeGreaterThan(-1);
+		expect(body.slice(close + 1).every((l) => l === '')).toBe(true);
+		expect(body.slice(0, close).every((l) => l === '' || l.startsWith('\t'))).toBe(true);
+		expect(
+			body
+				.slice(0, close)
+				.filter((l) => l !== '')
+				.at(-1),
+		).toBe('\treturn 404;');
 	});
 
-	test('script and active-document extensions are denied as 404', () => {
-		expect(text).toContain('phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp');
-		expect(text).toContain('# MEDIA-03: active-document extensions');
+	test('the hardening is protection.ts nginxHardeningLocations, nested verbatim (never a copy)', () => {
+		const nested = nginxHardeningLocations(MEDIA_URL)
+			.map((l) => (l === '' ? '' : `\t${l}`))
+			.join('\n');
+		expect(text).toContain(nested);
+	});
+
+	test('script and active-document extensions are denied as 404, whole location pinned', () => {
+		const esc = MEDIA_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		expect(text).toContain(
+			`\tlocation ~* ^${esc}/.+\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ {\n\t\tdeny all;\n\t\treturn 404;\n\t}`,
+		);
+		expect(text).toContain(
+			`\tlocation ~* ^${esc}/.+\\.(${MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|')})$ {\n\t\tdeny all;\n\t\treturn 404;\n\t}`,
+		);
+		// the active-document deny precedes Rule B (regex locations match in order)
+		expect(text.indexOf('(html|')).toBeLessThan(text.indexOf('(?<dd_path>'));
 	});
 
 	test('the byte-serving location carries the MEDIA-03 headers and mp4 clipping', () => {

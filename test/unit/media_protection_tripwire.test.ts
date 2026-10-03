@@ -37,6 +37,8 @@ import {
 	filterPublicQualities,
 	getPublicQualities,
 	MEDIA_AUTH_COOKIE,
+	MEDIA_SCRIPT_DENY_PATTERN,
+	nginxHardeningLocations,
 } from '../../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
@@ -90,7 +92,11 @@ function apachePattern(text: string = HTACCESS): RegExp {
  * asserted below, not merely tolerated.
  */
 function nginxPattern(text: string = NGINX): RegExp {
-	const line = text.split('\n').find((l) => l.startsWith('location ~ "^/dedalo/'));
+	// trimStart: the publication-host include NESTS Rule B inside its outer ^~ prefix.
+	const line = text
+		.split('\n')
+		.map((l) => l.trimStart())
+		.find((l) => l.startsWith('location ~ "^/dedalo/'));
 	if (line === undefined) {
 		throw new Error(
 			'rule B not found in the generated nginx conf — it must be `location ~ "<regex>" {`, ' +
@@ -559,6 +565,15 @@ describe('media protection: the PUBLICATION-HOST profile stays in lockstep (PUBL
 	test('it stats markers under the HOST root, never the work root', () => {
 		expect(HOST_APACHE).toContain(`RewriteCond "${HOST_ROOT}/.publication/pub/$1_$2" -f`);
 		expect(HOST_NGINX).toContain(`if (!-f ${HOST_ROOT}/.publication/pub/\${dd_s}_\${dd_i})`);
+	});
+
+	test('host and work nginx share ONE hardening builder (SEC-088 / MEDIA-03 / rule 0)', () => {
+		const work = nginxHardeningLocations(`/dedalo/${config.mediaDir}`);
+		expect(NGINX).toContain(work.join('\n'));
+		expect(HOST_NGINX).toContain(work.map((l) => (l === '' ? '' : `\t${l}`)).join('\n'));
+		// and the shared script list is the Apache FilesMatch's too
+		expect(HTACCESS).toContain(`<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`);
+		expect(HOST_APACHE).toContain(`<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`);
 	});
 
 	test('it carries NO Rule A: a work-session cookie is never honoured publicly', () => {

@@ -75,6 +75,10 @@ export const MEDIA_AUTH_COOKIE = 'dedalo_media_auth';
  * whose inputs are otherwise unchanged. Forget it and installs keep the old rules
  * forever.
  */
+/** SEC-088: script extensions never served or executed under the media root. ONE list
+ * for the Apache FilesMatch (htaccessHardeningBlock) and nginx (nginxHardeningLocations). */
+export const MEDIA_SCRIPT_DENY_PATTERN = 'phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp';
+
 export const TEMPLATE_VERSION = 3;
 
 /** The effective access mode. 'off' is a GENERATOR-only value — never returned here. */
@@ -584,7 +588,7 @@ export function htaccessHardeningBlock(): string {
 		'<FilesMatch "(?i)\\.(phps?|phtml|phar|pht)$">',
 		'\tSetHandler none',
 		'</FilesMatch>',
-		'<FilesMatch "(?i)\\.(phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$">',
+		`<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`,
 		'\tRequire all denied',
 		'</FilesMatch>',
 		// MEDIA-03: active-document extensions no media model accepts are never served.
@@ -784,28 +788,7 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 		'#  - Behind a CDN, PURGE the record media paths on unpublish (especially .vtt',
 		'#    subtitles): the origin denies immediately, downstream caches do not.',
 		'',
-		'# 0. The marker store itself is never served. `^~` beats every regex below.',
-		`location ^~ ${url}/.publication/ { deny all; return 404; }`,
-		'',
-		// SEC-088. Emitted in EVERY mode, including 'off' — this is NOT part of the access
-		// gate. The media root is full of user-uploaded files; a server with PHP-FPM wired
-		// would otherwise happily execute an uploaded .php. Regex locations match in order,
-		// so this must precede rule B.
-		'# SEC-088: never serve or execute scripts under the media root (uploaded files!).',
-		`location ~* ^${escapeRegexLiteral(url)}/.+\\.(phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ {`,
-		'\tdeny all;',
-		'\treturn 404;',
-		'}',
-		'',
-		// The Apache twin of this lives in htaccessHardeningBlock(); the three-surface
-		// lockstep gate compares them, so a deny added to one and forgotten in the other
-		// is red rather than a quiet asymmetry between two installs of the same version.
-		'# MEDIA-03: active-document extensions no media model accepts are never served.',
-		`location ~* ^${escapeRegexLiteral(url)}/.+\\.(${MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|')})$ {`,
-		'\tdeny all;',
-		'\treturn 404;',
-		'}',
-		'',
+		...nginxHardeningLocations(url),
 	];
 
 	if (mode === 'off') {
@@ -860,6 +843,41 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 	);
 
 	return lines.join('\n');
+}
+
+/**
+ * The always-on nginx hardening locations: rule 0 (marker store), SEC-088 (scripts),
+ * MEDIA-03 (active documents). ONE builder for BOTH profiles — the work conf
+ * (buildNginxConf) and the publication-host include (publication_host_rules.ts) — so an
+ * extension added here reaches both; the tripwire pins both outputs to this function.
+ * Regex locations match in order, so these must precede every byte-serving location.
+ */
+export function nginxHardeningLocations(url: string): string[] {
+	const escaped = escapeRegexLiteral(url);
+	return [
+		'# 0. The marker store itself is never served. `^~` beats every regex below.',
+		`location ^~ ${url}/.publication/ { deny all; return 404; }`,
+		'',
+		// SEC-088. Emitted in EVERY mode, including 'off' — this is NOT part of the access
+		// gate. The media root is full of user-uploaded files; a server with PHP-FPM wired
+		// would otherwise happily execute an uploaded .php. Regex locations match in order,
+		// so this must precede rule B.
+		'# SEC-088: never serve or execute scripts under the media root (uploaded files!).',
+		`location ~* ^${escaped}/.+\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ {`,
+		'\tdeny all;',
+		'\treturn 404;',
+		'}',
+		'',
+		// The Apache twin of this lives in htaccessHardeningBlock(); the three-surface
+		// lockstep gate compares them, so a deny added to one and forgotten in the other
+		// is red rather than a quiet asymmetry between two installs of the same version.
+		'# MEDIA-03: active-document extensions no media model accepts are never served.',
+		`location ~* ^${escaped}/.+\\.(${MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|')})$ {`,
+		'\tdeny all;',
+		'\treturn 404;',
+		'}',
+		'',
+	];
 }
 
 /**
