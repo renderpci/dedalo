@@ -315,21 +315,63 @@ function stringToNumber(raw: string, decimal: string | undefined, type: string):
 	return Number.isFinite(parsed) ? parsed : null;
 }
 
+/** PHP `is_numeric`'s grammar: decimal, optional sign/fraction/exponent — no hex, no blanks. */
+const PHP_NUMERIC = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
+/** Marks a number value no cast can read. */
+const UNREADABLE = Symbol('unreadable number');
+
+/** One number item's `value`, cast: a numeric string → its number, '' → null. */
+function castNumberValue(current: unknown): unknown {
+	if (typeof current === 'string') return castNumericString(current.trim());
+	if (current === null || current === undefined) return current;
+	return Number.isFinite(current) ? current : UNREADABLE;
+}
+
+/** PHP `is_numeric` → the number; '' → null (an empty value, as PHP kept it). */
+function castNumericString(text: string): unknown {
+	if (text === '') return null;
+	return PHP_NUMERIC.test(text) ? Number(text) : UNREADABLE;
+}
+
+/**
+ * A JSON cell's number items, in the shape the save door stores (value_shape.ts:
+ * `value` is a finite number). PHP's component_number::set_data cast a numeric
+ * string (`is_numeric` → set_format_form_type) and dropped a non-numeric one;
+ * the save door now REFUSES any string, so the cast lives HERE, at the door that
+ * legitimately holds strings — a PHP-era export, a hand-written cell. A value no
+ * cast can read is refused for the cell (null when it refuses nothing).
+ */
+function numberItems(items: unknown[]): { items: unknown[]; bad: unknown } {
+	const out: unknown[] = [];
+	for (const raw of items) {
+		const item = isObject(raw) ? { ...raw } : { value: raw };
+		const cast = castNumberValue(item.value);
+		if (cast === UNREADABLE) return { items: [], bad: item.value };
+		if (cast !== undefined) item.value = cast;
+		out.push(item);
+	}
+	return { items: out, bad: null };
+}
+
 const conformNumber: ImportConformFn = async (value, json, ctx) => {
-	const wrapScalars = (items: unknown[]): unknown[] =>
-		items.map((item) => (isObject(item) ? item : { value: item }));
+	const conformed = (items: unknown[]): ConformResult => {
+		const { items: out, bad } = numberItems(items);
+		if (bad !== null) return fail(ctx, `IGNORED: malformed data ${asText(bad)}`, value);
+		return ok(out);
+	};
 
 	if (json.isJson) {
 		const decoded = json.decoded;
-		if (Array.isArray(decoded)) return ok(wrapScalars(decoded));
+		if (Array.isArray(decoded)) return conformed(decoded);
 		if (isLangKeyed(decoded)) {
 			// PHP takes the FIRST lang group only (:571) — number is not translatable,
 			// so a lang-keyed export carries one group in practice.
 			const group = decoded[firstKey(decoded)];
-			return ok(wrapScalars(Array.isArray(group) ? group : [group]));
+			return conformed(Array.isArray(group) ? group : [group]);
 		}
 		if (isObject(decoded)) {
-			if ('value' in decoded) return ok([decoded]);
+			if ('value' in decoded) return conformed([decoded]);
 			return fail(ctx, `IGNORED: object without value property ${asText(value)}`, value);
 		}
 		return ok(null);
@@ -351,9 +393,23 @@ const conformNumber: ImportConformFn = async (value, json, ctx) => {
 // component_email (PHP core/component_email :278-376)
 // ---------------------------------------------------------------------------
 
+/**
+ * A JSON cell's text item with a NUMBER value carries it as its string — the
+ * shape the save door stores for the string family (value_shape.ts: `value` is a
+ * string). A numeral in a text cell is text; the cast is lossless and lives at
+ * this door, which legitimately holds JSON numbers, not at the save door, which
+ * refuses them.
+ */
+function textItem(item: Record<string, unknown>): Record<string, unknown> {
+	const current = item.value;
+	return typeof current === 'number' && Number.isFinite(current)
+		? { ...item, value: String(current) }
+		: item;
+}
+
 const conformEmail: ImportConformFn = async (value, json, ctx) => {
 	const normalize = (items: unknown[]): unknown[] =>
-		items.map((item) => (isObject(item) && 'value' in item ? item : { value: item }));
+		items.map((item) => textItem(isObject(item) && 'value' in item ? item : { value: item }));
 
 	if (json.isJson) {
 		const decoded = json.decoded;
@@ -634,9 +690,9 @@ const conformGeolocation: ImportConformFn = async (value, json, ctx) => {
  */
 function normalizeInputTextItems(items: unknown[]): unknown[] {
 	return items.map((item) => {
-		if (!isObject(item)) return { value: item };
+		if (!isObject(item)) return textItem({ value: item });
 		if (!('value' in item) && !('section_id' in item)) return { value: item };
-		return item;
+		return textItem(item);
 	});
 }
 

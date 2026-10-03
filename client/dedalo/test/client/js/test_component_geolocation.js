@@ -464,19 +464,26 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 		const entries = instance.data.entries || []
 		assert.isOk(entries[key], 'setup: the previous case must have left one entry at key 0')
 
+		// A remove NAMES the stored item. (This case used to send `update` with a
+		// null value, which the save door now refuses — a null is not an item,
+		// WC-2026-10-03-save-refuses-malformed-value-shape — while the client
+		// model applied it locally, so the case stayed green with nothing saved.)
+		assert.isOk(entries[key].id, 'setup: the stored entry must carry its item id')
 		const changed_data_item = Object.freeze({
-			action	: 'update',
-			id		: entries[key]?.id || null,
+			action	: 'remove',
+			id		: entries[key].id,
 			value	: null
 		})
 
-		await instance.change_value({
+		const response = await instance.change_value({
 			changed_data	: [changed_data_item],
-			refresh			: false
+			refresh			: false,
+			remove_dialog	: false
 		})
+		assert.isTrue(response?.ok, 'the server expected to accept the remove (envelope ok)')
 
-		// the case used to assert NOTHING. A null value clears the slot, so the
-		// stored coordinate must be gone — not merely "the call returned".
+		// the case used to assert NOTHING: the stored coordinate must be gone —
+		// not merely "the call returned".
 		assert.isNotOk(
 			(instance.data.entries || []).some(el => el && el.lat!==undefined),
 			'no stored coordinate expected after the remove'

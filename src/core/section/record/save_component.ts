@@ -95,6 +95,7 @@ import {
 import type { Principal } from '../../security/permissions.ts';
 import type { AppendMergeResult, RelationAppendValidator } from './append_merge.ts';
 import { beginSaveHistory, finishSaveHistory } from './bulk_capture.ts';
+import { valueShapeRefusal } from './value_shape.ts';
 
 /** One change from the client (PHP changed_data item). */
 export interface ChangedDataItem {
@@ -1049,7 +1050,8 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	// model's policy refuses an append import.
 	// Dynamic import: CYCLE-BREAKING at this chokepoint (CONVENTIONS §2 rationale 1)
 	// — the write-through's nested child saves call back into saveComponentData.
-	if ((await getModelByTipo(effectiveRequest.componentTipo)) === 'component_relation_children') {
+	const dataModel = await getModelByTipo(effectiveRequest.componentTipo);
+	if (dataModel === 'component_relation_children') {
 		await assertAppendImportRequest(effectiveRequest);
 		const { saveRelationChildren } = await import('../../relations/children_write.ts');
 		return saveRelationChildren(effectiveRequest);
@@ -1070,6 +1072,28 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 				section_tipo: effectiveRequest.sectionTipo,
 				section_id: effectiveRequest.sectionId,
 				tipo: effectiveRequest.componentTipo,
+			},
+		});
+	}
+
+	// THE VALUE-SHAPE LAW (value_shape.ts;
+	// WC-2026-10-03-save-refuses-malformed-value-shape): a value the model's
+	// column does not store — a bare scalar, a null item, a non-array set_data,
+	// a string number — is refused here, not stored. Same pre-transaction reasoning: the answer is a property of the
+	// model and the incoming changes alone. BEFORE the value gates
+	// (applyWriteValueGates), which assume the item shape.
+	const shapeRefusal = valueShapeRefusal(
+		dataModel === null ? null : getColumnNameByModel(dataModel),
+		effectiveRequest.changedData,
+	);
+	if (shapeRefusal !== null) {
+		throw new DedaloError('request.invalid_data', {
+			message: `saveComponentData: malformed value for ${dataModel ?? 'unknown model'} '${effectiveRequest.componentTipo}' — ${shapeRefusal}`,
+			coordinates: {
+				tipo: effectiveRequest.componentTipo,
+				model: dataModel ?? 'unknown',
+				section_tipo: effectiveRequest.sectionTipo,
+				section_id: effectiveRequest.sectionId,
 			},
 		});
 	}

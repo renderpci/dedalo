@@ -384,8 +384,15 @@ A change object carries:
   refused (`record.remove_without_id`) and writes nothing, because a missing id
   is an unresolved target, not a request to delete everything. To empty the
   component in every language, send `clear` — the action that says so.
-- **`value`** — the payload: a single value item, an array for `set_data`, or
-  `null`.
+- **`value`** — the payload: a single value item for `insert`/`update`, an
+  array of value items (or `null`, the explicit empty) for `set_data`, `null`
+  for `remove`/`clear`. The item must have the shape the component stores — an
+  object, never a bare scalar or `null`; a text item's `value` is a string, a
+  number item's `value` a number, a date item's `start`/`end` objects, an IRI
+  item's `iri`/`title` strings. Any other shape is refused
+  (`request.invalid_data`, the component named) and nothing is written: the
+  write engine used to store a bare string, which the next save in another
+  language silently dropped.
 
 ```json
 // insert a new value (id minted server-side on save)

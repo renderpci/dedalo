@@ -902,7 +902,8 @@ const CENSUS: Record<string, CensusRow> = {
 	'client/dedalo/core/component_date/js/render_edit_component_date.js': {
 		sites: 1,
 		verdict: 'unresolved-id',
-		reason: '_do_remove(id, …) fed from `value[key]?.id || null`.',
+		reason:
+			'build_date_changed_data_item(data_value, id) — the ONE remove builder (the remove button and an emptied input both call it); it returns null for an id-less slot, which this lexical scan cannot see.',
 	},
 	'client/dedalo/core/component_password/js/component_password.js': {
 		sites: 1,
