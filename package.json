@@ -53,6 +53,7 @@
 		"probe:update": "bun run scripts/update_probe.ts",
 		"publication:install": "cd publication/server_api/v2 && bun install",
 		"start:publication": "cd publication/server_api/v2 && bun run start",
+		"media:publication-host-rules": "bun run scripts/media_publication_host_rules.ts",
 		"test:publication": "cd publication/server_api/v2 && bunx tsc --noEmit && bun test",
 		"sitebuilder:install": "cd publication/site_builder && bun install",
 		"start:sitebuilder": "cd publication/site_builder && bun run start",
