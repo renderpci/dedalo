@@ -620,6 +620,8 @@ function fixHint(stage: Stage): string {
 		return 'bun run test:client (reseed on; the suite starts its own server)';
 	if (name.includes('release channel')) return 'TMPDIR=/tmp/dd bun run test:update';
 	if (name.includes('developer channel')) return 'TMPDIR=/tmp/dd bun run test:update:dev';
+	if (name.includes('publication-host'))
+		return 'bun run test:media:pubhost [--only apache|nginx] (needs Apache 2.4 + apxs, nginx with the mp4 module)';
 	if (name.includes('tripwire')) {
 		const run = `bun test --timeout=30000 <the failing file>${firstFailure}`;
 		return ratchet

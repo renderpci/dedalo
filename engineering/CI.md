@@ -39,7 +39,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
-| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (blocking since 2026-10-02) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract and both update drills). Both source `scripts/ci/hosted_env.sh` |
+| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (blocking since 2026-10-02) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract, both update drills and the publication-host media drill on live Apache + nginx). Both source `scripts/ci/hosted_env.sh` |
 | `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `report` keeps one `ci-nightly` issue open/updated/closed |
 | `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
@@ -385,6 +385,18 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   the release commit is cut with `git checkout -B` (a PR checkout is a detached HEAD).
   Drill config comes from `scripts/lib/operator_config.ts` (catalog keys of the process
   env; `update_drill_config_tripwire`).
+  LAST, `bun run test:media:pubhost` (`scripts/media_publication_host_drill.ts`, no
+  database): the publication-host include rendered by the engine's builders, driven
+  through the MEDIA_PROTECTION §9 curl matrix on a REAL Apache and a REAL nginx bound to
+  127.0.0.1 as the job's uid — rewrite phase order, alias + captures and location
+  precedence are engine properties the `media_protection_tripwire` regex lockstep cannot
+  see. **Runner requirement**: Apache 2.4 + `apxs` (the drill resolves the binary through
+  `apxs -q SBINDIR`/`TARGET` — `apache2` on Debian, `httpd` on Homebrew/RHEL — and the
+  modules through `LIBEXECDIR`; needs mod_rewrite, mod_alias, mod_headers, mod_mime,
+  mod_authz_core, an MPM) and nginx built `--with-http_mp4_module`. The CI image ships
+  `apache2 apache2-dev nginx` (Debian's nginx carries the mp4 module). A missing binary
+  is RED, never a skip — the suite MariaDB's policy (the drill exits 1 naming it). Locally
+  (macOS): `brew install httpd nginx`.
 - **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers. Everything it
   runs is twinned hosted — including the `test/integration/**` MariaDB legs, which ran
   nowhere else until PUB-05 moved them onto the suite's own MariaDB server and into the
@@ -536,7 +548,8 @@ nightly home that can fail and report is red. The ratchet itself (DEC-12) is unc
 
 One definition for the desk and both hosts: bun at `.bun-version`,
 postgresql-client-18, the media tools (ffmpeg, ImageMagick 7, poppler, ghostscript,
-rsvg), MariaDB, chromium, git/zip/jq; the fingerprint (sha256 of `ci/Dockerfile` ++ `.bun-version`) in
+rsvg), MariaDB, Apache (`apache2` + `apache2-dev` for `apxs`) and nginx (the
+publication-host drill), chromium, git/zip/jq; the fingerprint (sha256 of `ci/Dockerfile` ++ `.bun-version`) in
 `/etc/dedalo-ci-image` and the `org.dedalo.ci.fingerprint` label. `ci-image.yml`
 publishes on a push that moved the definition, weekly with the layer cache OFF (the
 updater for the distro half — a cached rebuild would republish old packages forever) and

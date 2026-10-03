@@ -28,6 +28,8 @@
 #             Same distro and packages as the product image (../Dockerfile), so a
 #             media gate measures what ships.
 #   mariadb-server + mariadb-client — the diffusion tier's MariaDB target.
+#   apache2 + apache2-dev (apxs) + nginx (mp4 module) — the publication-host media
+#             drill (`bun run test:media:pubhost`, instance tier) boots both live.
 #   chromium — the browser the client suite (scripts/client_test_runner.ts) drives.
 #             NOT google-chrome: Google publishes no linux/arm64 build, and this
 #             image is multi-arch so an Apple-Silicon Mac runs it natively. One
@@ -108,6 +110,17 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends mariadb-server mariadb-client; \
     rm -rf /var/lib/apt/lists/*
 
+# --- web servers (publication-host media drill) ---------------------------------
+# scripts/media_publication_host_drill.ts boots a REAL Apache and nginx (instance tier).
+# apache2-dev ships apxs, through which the drill resolves the binary (`apache2` here,
+# `httpd` elsewhere) and the module dir; Debian's nginx is built --with-http_mp4_module.
+# Neither is started as a service: the drill writes its own configs and runs both as
+# the job's uid on 127.0.0.1.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends apache2 apache2-dev nginx; \
+    rm -rf /var/lib/apt/lists/*
+
 # --- browser (client suite) -----------------------------------------------------
 # Fonts explicitly: --no-install-recommends drops them, and a font-less Chromium
 # lays text out with nothing — a layout-sensitive suite would measure a different page.
@@ -165,12 +178,14 @@ RUN set -eu; \
       echo "$(pdftoppm -v 2>&1 | head -n1)"; \
       echo "gs $(gs --version)"; \
       echo "$(mariadb --version)"; \
+      echo "$(apache2 -v | head -n1)"; \
+      echo "$(nginx -v 2>&1)"; \
       echo "$(git --version)"; \
     } > /etc/dedalo-ci-versions; \
     cat /etc/dedalo-ci-versions
 LABEL org.dedalo.ci.fingerprint="${DEDALO_CI_FINGERPRINT}" \
       org.opencontainers.image.source="https://github.com/renderpci/dedalo" \
-      org.opencontainers.image.description="Dédalo v7 CI toolchain: bun (.bun-version), pg18 client, media tools, MariaDB, Chromium"
+      org.opencontainers.image.description="Dédalo v7 CI toolchain: bun (.bun-version), pg18 client, media tools, MariaDB, Apache, nginx, Chromium"
 ENV DEDALO_CI_IMAGE=1
 
 CMD ["bash"]

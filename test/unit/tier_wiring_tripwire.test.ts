@@ -670,10 +670,6 @@ const LOCAL_ONLY_SCRIPTS: ReadonlyMap<string, string> = new Map([
 		'Keeps the client suite server alive for BROWSING a page by hand (scripts/client_test_serve.ts); the suite that asserts is test:client, which the instance tier runs.',
 	],
 	[
-		'test:media:pubhost',
-		'Boots a live Apache (httpd + apxs) and nginx, which ci/Dockerfile does not ship; the rule patterns it drives are gated hermetically by media_protection_tripwire (publication_host lockstep). Leaves this map when the instance tier gets both servers.',
-	],
-	[
 		'ci:local',
 		'IS the local reproduction of the CI tiers (scripts/ci_local.ts): it runs the tier scripts this gate holds; running it from CI would run CI inside CI.',
 	],

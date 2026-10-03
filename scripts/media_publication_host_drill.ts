@@ -13,7 +13,10 @@
  * the same URL, and nginx declares an operator static-asset regex location BEFORE the
  * include. A gate that loses location precedence would then serve masters and
  * unpublished files from `root`; every 404 row below proves it does not.
- * Needs: httpd + apxs (Apache 2.4), nginx with ngx_http_mp4_module.
+ * Needs: Apache 2.4 + apxs (the binary is RESOLVED through `apxs -q SBINDIR/TARGET`:
+ * `httpd` on Homebrew/RHEL, `apache2` on Debian), nginx with ngx_http_mp4_module. A
+ * missing one is RED, never a skip — the instance CI tier runs this drill
+ * (scripts/ci/instance_tier.sh; runner requirement: engineering/CI.md).
  */
 
 import { existsSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -199,6 +202,25 @@ function sh(cmd: string[]): { code: number; out: string } {
 	return { code: r.exitCode, out: `${r.stdout.toString()}${r.stderr.toString()}` };
 }
 
+/**
+ * The Apache binary, as apxs names it: `<SBINDIR>/<TARGET>`. Debian ships `apache2`,
+ * Homebrew/RHEL `httpd` — a hard-coded name is a red on one of them for no reason.
+ */
+function apacheBinary(): string {
+	const sbin = sh(['apxs', '-q', 'SBINDIR']).out.trim();
+	const target = sh(['apxs', '-q', 'TARGET']).out.trim();
+	const bin = join(sbin, target);
+	if (sbin === '' || target === '' || !existsSync(bin))
+		throw new Error(`apxs names no Apache binary (SBINDIR='${sbin}', TARGET='${target}')`);
+	return bin;
+}
+
+/** The binaries a server's drill needs that PATH lacks (asked, not spawned: no ENOENT stack). */
+function missingBinaries(server: 'apache' | 'nginx'): string[] {
+	const need = server === 'apache' ? ['apxs'] : ['nginx'];
+	return need.filter((bin) => Bun.which(bin) === null);
+}
+
 function freePort(): number {
 	const server = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response('') });
 	const port = server.port as number;
@@ -327,7 +349,8 @@ async function drill(server: 'apache' | 'nginx'): Promise<number> {
 			writeFileSync(include, conf);
 			// Review Focus #5: without mod_rewrite the include must NOT pass the syntax check.
 			writeFileSync(main, apacheMainConf(dir, port, include, false));
-			const norewrite = sh(['httpd', '-t', '-f', main]);
+			const httpd = apacheBinary();
+			const norewrite = sh([httpd, '-t', '-f', main]);
 			// Refused FOR THAT REASON: any other configtest failure (a missing module .so,
 			// a bad path) would otherwise pass this row while proving nothing.
 			const bootRefused =
@@ -337,9 +360,9 @@ async function drill(server: 'apache' | 'nginx'): Promise<number> {
 				`${bootRefused ? 'ok  ' : 'RED '} [apache] no mod_rewrite → configtest refuses${bootRefused ? '' : ` (exit ${norewrite.code}: ${norewrite.out.trim()})`}`,
 			);
 			writeFileSync(main, apacheMainConf(dir, port, include, true));
-			const t = sh(['httpd', '-t', '-f', main]);
-			if (t.code !== 0) throw new Error(`httpd -t failed:\n${t.out}`);
-			proc = Bun.spawn(['httpd', '-DFOREGROUND', '-f', main], { stdout: 'ignore', stderr: 'pipe' });
+			const t = sh([httpd, '-t', '-f', main]);
+			if (t.code !== 0) throw new Error(`${httpd} -t failed:\n${t.out}`);
+			proc = Bun.spawn([httpd, '-DFOREGROUND', '-f', main], { stdout: 'ignore', stderr: 'pipe' });
 		} else {
 			const map = join(dir, 'map.nginx.conf');
 			writeFileSync(map, buildNginxMap());
@@ -380,6 +403,15 @@ if (import.meta.main) {
 	let red = 0;
 	if (servers.length === 0) {
 		console.error('no server selected — refusing a vacuous green');
+		process.exit(1);
+	}
+	// Binaries missing = RED, never a skip (the suite MariaDB's policy): a drill that
+	// skipped on a bare runner would report green while proving nothing.
+	const missing = servers.flatMap((s) => missingBinaries(s).map((bin) => `${s}: ${bin}`));
+	if (missing.length > 0) {
+		console.error(
+			`RED — missing on PATH: ${missing.join(', ')}. Needs Apache 2.4 + apxs and nginx with ngx_http_mp4_module (engineering/CI.md).`,
+		);
 		process.exit(1);
 	}
 	for (const server of servers) red += await drill(server);

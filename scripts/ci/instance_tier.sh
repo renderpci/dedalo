@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # INSTANCE CI TIER — the gates that BOOT A REAL SERVER over the wire, on a HOSTED
-# runner: the browser client suite and the two code-update drills.
+# runner: the browser client suite, the two code-update drills and the
+# publication-host media drill (live Apache + nginx).
 #
 # WHY THIS EXISTS. Three commands the repo relies on ran on NO executing CI:
 # scripts/ci/client_gate.sh (the 133-suite browser gate), `bun run test:update`
@@ -118,6 +119,20 @@ echo "== instance_tier: code updater drill, developer channel (bun run test:upda
 update_dev_rc=0
 bun run test:update:dev || update_dev_rc=$?
 [ "$update_dev_rc" -eq 0 ] || { echo "== instance_tier: RED in the dev-channel update drill (exit $update_dev_rc)"; tier_status=1; }
+
+# ── STAGE 4 — THE PUBLICATION-HOST MEDIA RULES ON LIVE SERVERS ───────────────
+#
+# scripts/media_publication_host_drill.ts renders the publication-host include with the
+# ENGINE's builders and drives the curl matrix (engineering/PUBLICATION_HOST_SPEC.md §5.1)
+# against a REAL Apache and a REAL nginx on 127.0.0.1: rewrite phase order, alias +
+# captures and location precedence are properties of the engines, which
+# media_protection_tripwire's regex lockstep cannot see. Needs no database. The image
+# ships apache2 + apache2-dev (apxs) + nginx (with the mp4 module); a missing binary is
+# RED, never a skip — the suite MariaDB's policy.
+echo "== instance_tier: publication-host media drill (bun run test:media:pubhost)"
+pubhost_rc=0
+bun run test:media:pubhost || pubhost_rc=$?
+[ "$pubhost_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host media drill (exit $pubhost_rc)"; tier_status=1; }
 
 [ "$tier_status" -eq 0 ] || { echo "== instance_tier: RED"; exit 1; }
 echo "== instance_tier: OK"

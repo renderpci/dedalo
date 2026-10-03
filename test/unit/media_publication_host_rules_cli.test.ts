@@ -67,3 +67,32 @@ describe('media:publication-host-rules', () => {
 		}
 	});
 });
+
+// F4: the live drill runs on the instance CI tier, so a runner without the servers must
+// go RED naming what is missing — never a skip, never a bare ENOENT stack.
+describe('test:media:pubhost — binaries missing = RED', () => {
+	const DRILL = `${import.meta.dir}/../../scripts/media_publication_host_drill.ts`;
+
+	test('PATH without apxs/nginx → exit 1, each missing binary named, no green', () => {
+		const r = Bun.spawnSync([process.execPath, DRILL], {
+			env: { ...process.env, PATH: '/nonexistent' },
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		const out = `${r.stdout.toString()}${r.stderr.toString()}`;
+		expect(r.exitCode).toBe(1);
+		expect(out).toContain('missing on PATH: apache: apxs, nginx: nginx');
+		expect(out).not.toContain('ALL GREEN');
+	});
+
+	test('--only narrows the requirement to that server', () => {
+		const r = Bun.spawnSync([process.execPath, DRILL, '--only', 'nginx'], {
+			env: { ...process.env, PATH: '/nonexistent' },
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(r.exitCode).toBe(1);
+		expect(r.stderr.toString()).toContain('missing on PATH: nginx: nginx.');
+		expect(r.stderr.toString()).not.toContain('apache: apxs');
+	});
+});
