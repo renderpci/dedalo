@@ -12,6 +12,7 @@ import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { htaccessHardeningBlock } from '../../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
+	buildPublicationHostNginxConf,
 	getPublicationHostConfigHash,
 	normalizePublicationHostInput,
 } from '../../src/core/media/publication_host_rules.ts';
@@ -132,6 +133,47 @@ describe('buildPublicationHostApacheConf', () => {
 
 	test('carries NO Rule A: work-session cookies are never honoured publicly', () => {
 		expect(text).not.toContain('dedalo_media_auth');
+		expect(text).not.toContain('.publication/auth/');
+	});
+});
+
+describe('buildPublicationHostNginxConf', () => {
+	const text = buildPublicationHostNginxConf({ root: ROOT, qualities: QUALITIES });
+	const normalized = normalizePublicationHostInput({ root: ROOT, qualities: QUALITIES });
+
+	test('embeds its own config hash (distinct from the Apache one)', () => {
+		expect(text).toContain(`# config-hash: ${getPublicationHostConfigHash('nginx', normalized)}`);
+	});
+
+	test('the marker store is denied with ^~ so no regex can reach it', () => {
+		expect(text).toContain(`location ^~ ${MEDIA_URL}/.publication/ { return 404; }`);
+	});
+
+	test('Rule B is a DOUBLE-QUOTED regex location that stats the HOST root and aliases into it', () => {
+		const line = text.split('\n').find((l) => l.startsWith('location ~ "^/dedalo/'));
+		expect(line).toBeDefined();
+		expect(line).toEndWith('" {');
+		expect(text).toContain(`\tif (!-f ${ROOT}/.publication/pub/\${dd_s}_\${dd_i}) { return 404; }`);
+		expect(text).toContain(`\talias ${ROOT}/$dd_path;`);
+	});
+
+	test('everything else under the media URL is a PLAIN-prefix 404 (a ^~ would shadow Rule B)', () => {
+		expect(text).toContain(`location ${MEDIA_URL}/ { return 404; }`);
+		expect(text).not.toContain(`location ^~ ${MEDIA_URL}/ `);
+	});
+
+	test('script and active-document extensions are denied as 404', () => {
+		expect(text).toContain('phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp');
+		expect(text).toContain('# MEDIA-03: active-document extensions');
+	});
+
+	test('the byte-serving location carries the MEDIA-03 headers and mp4 clipping', () => {
+		expect(text).toContain('add_header Content-Security-Policy $dedalo_svg_csp always;');
+		expect(text).toContain('\tmp4;');
+	});
+
+	test('carries NO Rule A', () => {
+		expect(text).not.toContain('$dedalo_auth_key');
 		expect(text).not.toContain('.publication/auth/');
 	});
 });
