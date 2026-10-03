@@ -16,6 +16,7 @@ import {
   ENV_FILE_VAR,
   KNOWN_KEYS,
   defaultEnvFilePath,
+  isUnspecifiedHost,
   resolveConfig,
   type ConfigSources,
 } from '../src/config';
@@ -171,13 +172,35 @@ describe('the transport fails closed', () => {
     },
   );
 
-  test.each(['0.0.0.0', '::', '[::]', '0:0:0:0:0:0:0:0', '*'])(
+  test.each([
+    '0.0.0.0', '::', '[::]', '0:0:0:0:0:0:0:0', '*',
+    // Resolver numeric forms / non-literals Bun binds on EVERY interface (review of 3240fc9c10).
+    '0', '0.0', '0x0', '00.0.0.0', 'localhost', 'agent.example.org', '010.8.0.2', '[10.8.0.2]',
+    // IPv6 forms embedding IPv4 0.0.0.0 — also every interface.
+    '::0.0.0.0', '0::0.0.0.0', '::ffff:0.0.0.0', '::ffff:0:0', '[::ffff:0.0.0.0]',
+    // Any embedded-IPv4 form is refused outright: write the IPv4 address itself.
+    '::ffff:10.8.0.2', '::10.8.0.2',
+  ])(
     'TLS_HOST=%s (every interface, the public one included) is refused',
     host => {
       writeEnvFile(tlsEnv({ TLS_HOST: host }));
       expect(refusal()).toContain('TLS_HOST must name one interface');
     },
   );
+
+  test.each(['10.8.0.2', '127.0.0.1', 'fd00::2', '[fd00::2]', '::1', 'fe80::1%en0'])(
+    'TLS_HOST=%s (one interface, canonical literal) resolves',
+    host => {
+      writeEnvFile(tlsEnv({ TLS_HOST: host }));
+      expect(resolveConfig(sources()).TLS_HOST).toBe(host);
+    },
+  );
+
+  test('isUnspecifiedHost agrees with the TLS_HOST law', () => {
+    expect(isUnspecifiedHost('::ffff:0:0')).toBe(true);
+    expect(isUnspecifiedHost('0')).toBe(true);
+    expect(isUnspecifiedHost('10.8.0.2')).toBe(false);
+  });
 
   test('plain TCP does not exist', () => {
     writeEnvFile(unixEnv({ LISTEN_KIND: 'tcp' }));

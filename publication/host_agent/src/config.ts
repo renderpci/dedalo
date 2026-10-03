@@ -28,8 +28,9 @@
  *
  * Then: an unknown key is refused by name, the grammar is strict zod, and the cross-field
  * laws hold — a `tls` listener has its host, port, cert, key AND client CA (mTLS fails
- * closed at config, not at a handshake) and binds ONE interface, never a wildcard
- * (0.0.0.0, ::, *: spec §2.2, the channel is private); a `unix` listener has its socket and
+ * closed at config, not at a handshake) and binds ONE interface named by a canonical IP
+ * literal, never a hostname or a wildcard in any spelling (tlsHostProblem; spec §2.2, the
+ * channel is private); a `unix` listener has its socket and
  * no TLS key; plain TCP does not exist; MEDIA_ROOT is required unless MEDIA_MODE=none and
  * absent when it is; the media root and the state root never contain each other.
  *
@@ -116,14 +117,58 @@ function isLoopbackHttpUrl(value: string): boolean {
   return url.protocol === 'http:' && LOOPBACK_HOSTNAMES.has(url.hostname);
 }
 
-/** A bind address meaning "every interface": `*`, 0.0.0.0, `::` in any spelling, bracketed or not. */
-export function isUnspecifiedHost(host: string): boolean {
+/** Expand an IPv6 literal (isIP === 6) into its 8 hextets; an embedded dotted quad becomes 2 hextets. */
+function ipv6Hextets(address: string): number[] {
+  let text = address.toLowerCase();
+  const zone = text.indexOf('%');
+  if (zone !== -1) text = text.slice(0, zone);
+  const tail = text.match(/(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (tail) {
+    const [a, b, c, d] = tail.slice(1).map(Number) as [number, number, number, number];
+    text = `${text.slice(0, tail.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, rest] = text.split('::') as [string, string | undefined];
+  const parse = (part: string) => (part === '' ? [] : part.split(':').map(h => Number.parseInt(h, 16)));
+  const left = parse(head);
+  if (rest === undefined) return left;
+  const right = parse(rest);
+  return [...left, ...new Array(8 - left.length - right.length).fill(0), ...right];
+}
+
+/**
+ * Why TLS_HOST is NOT a bindable private address. Anything that is not an IP literal in
+ * canonical form is refused: a hostname resolves wherever DNS (or the resolver's legacy
+ * numeric forms — `0`, `0.0`, `0x0`, `00.0.0.0`) says, and Bun binds those on EVERY
+ * interface. Among literals: `*`, the unspecified address in any family/spelling, and every
+ * IPv6 form embedding an IPv4 address (::ffff:a.b.c.d mapped, ::a.b.c.d compatible — write
+ * the IPv4 address itself; ::ffff:0.0.0.0 and ::0.0.0.0 bind every interface). null = valid.
+ */
+export function tlsHostProblem(host: string): string | null {
   const bare = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
-  if (bare === '*') return true;
   const family = isIP(bare);
-  if (family === 4) return bare.split('.').every(octet => Number(octet) === 0);
-  if (family === 6) return /^[0:]+$/.test(bare);
-  return false;
+  if (family === 0) return 'not an IP literal';
+  if (family === 4) {
+    if (bare !== host) return 'not an IP literal';
+    const octets = bare.split('.');
+    if (octets.every(octet => Number(octet) === 0)) return 'the unspecified address';
+    if (octets.some(octet => String(Number(octet)) !== octet)) return 'not a canonical dotted quad';
+    return null;
+  }
+  const hextets = ipv6Hextets(bare);
+  if (hextets.length !== 8 || hextets.some(h => !Number.isInteger(h) || h < 0 || h > 0xffff)) {
+    return 'not an IP literal';
+  }
+  if (hextets.every(h => h === 0)) return 'the unspecified address';
+  const top80Zero = hextets.slice(0, 5).every(h => h === 0);
+  if (top80Zero && hextets[5] === 0xffff) return 'an IPv4-mapped IPv6 address';
+  const isLoopback = top80Zero && hextets[5] === 0 && hextets[6] === 0 && hextets[7] === 1;
+  if (top80Zero && hextets[5] === 0 && !isLoopback) return 'an IPv4-compatible IPv6 address';
+  return null;
+}
+
+/** A bind address meaning "every interface" — or one that may: anything tlsHostProblem refuses. */
+export function isUnspecifiedHost(host: string): boolean {
+  return tlsHostProblem(host) !== null;
 }
 
 function within(parent: string, child: string): boolean {
@@ -146,8 +191,9 @@ function envObject(baseDir: string) {
     TLS_HOST: z
       .string()
       .refine(
-        host => !isUnspecifiedHost(host),
-        'TLS_HOST must name one interface (a private address), never a wildcard such as 0.0.0.0 or ::',
+        host => tlsHostProblem(host) === null,
+        'TLS_HOST must name one interface as a canonical IP literal (a private address), never a hostname, ' +
+          'a wildcard such as 0.0.0.0 or ::, or an IPv6 form embedding an IPv4 address',
       )
       .optional(),
     TLS_PORT: z.coerce.number().int().min(1).max(65535).optional(),
