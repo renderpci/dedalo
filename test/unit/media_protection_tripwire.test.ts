@@ -39,6 +39,10 @@ import {
 	MEDIA_AUTH_COOKIE,
 } from '../../src/core/media/protection.ts';
 import {
+	buildPublicationHostApacheConf,
+	buildPublicationHostNginxConf,
+} from '../../src/core/media/publication_host_rules.ts';
+import {
 	MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
 	SVG_ENVELOPE_CSP,
 	SVG_QUARANTINE_CSP,
@@ -62,9 +66,14 @@ const QUALITIES = [
 const HTACCESS = buildHtaccess('publication', QUALITIES, []);
 const NGINX = buildNginxConf('publication', QUALITIES);
 
+/** A publication host mounting the published media read-only somewhere ELSE. */
+const HOST_ROOT = '/srv/dedalo_media_ro';
+const HOST_APACHE = buildPublicationHostApacheConf({ root: HOST_ROOT, qualities: QUALITIES });
+const HOST_NGINX = buildPublicationHostNginxConf({ root: HOST_ROOT, qualities: QUALITIES });
+
 /** Pull the rule-B pattern back out of the generated Apache text. */
-function apachePattern(): RegExp {
-	const line = HTACCESS.split('\n').find((l) => l.startsWith('RewriteRule ^(?:'));
+function apachePattern(text: string = HTACCESS): RegExp {
+	const line = text.split('\n').find((l) => l.startsWith('RewriteRule ^(?:'));
 	if (line === undefined) throw new Error('rule B not found in the generated .htaccess');
 	const match = /^RewriteRule \^(.+?) - \[L\]$/.exec(line);
 	if (match?.[1] === undefined) throw new Error(`could not extract the Apache pattern: ${line}`);
@@ -80,8 +89,8 @@ function apachePattern(): RegExp {
  * shipped as a real bug (publication mode was unusable on nginx), so the quotes are
  * asserted below, not merely tolerated.
  */
-function nginxPattern(): RegExp {
-	const line = NGINX.split('\n').find((l) => l.startsWith('location ~ "^/dedalo/'));
+function nginxPattern(text: string = NGINX): RegExp {
+	const line = text.split('\n').find((l) => l.startsWith('location ~ "^/dedalo/'));
 	if (line === undefined) {
 		throw new Error(
 			'rule B not found in the generated nginx conf — it must be `location ~ "<regex>" {`, ' +
@@ -524,5 +533,39 @@ describe('media protection: the MEDIA-03 response headers stay in lockstep', () 
 		expect(source).toContain('const AUTH_MARKER_DIR_MODE = 0o750;');
 		const inlineModes = source.match(/mkdirSync\([^)]*mode:\s*0o\d+/g) ?? [];
 		expect(inlineModes).toEqual([]); // every creator goes through the constant
+	});
+});
+
+describe('media protection: the PUBLICATION-HOST profile stays in lockstep (PUBLICATION_HOST_SPEC §5.1)', () => {
+	test('it classifies every filename exactly like the work profile', () => {
+		const apache = apachePattern(HOST_APACHE);
+		const nginx = nginxPattern(HOST_NGINX);
+		for (const testCase of CASES) {
+			const a = apache.exec(testCase.path);
+			const apacheKey = a === null ? null : `${a[1] ?? ''}_${a[2] ?? ''}`;
+			const n = nginx.exec(`/dedalo/media/${testCase.path}`);
+			const nginxKey = n === null ? null : `${n.groups?.dd_s ?? ''}_${n.groups?.dd_i ?? ''}`;
+			expect(apacheKey, `host Apache disagrees on ${testCase.path} (${testCase.why})`).toBe(
+				testCase.key,
+			);
+			expect(nginxKey, `host nginx disagrees on ${testCase.path} (${testCase.why})`).toBe(
+				testCase.key,
+			);
+			// nginx aliases the WHOLE matched media path, never a fragment of it.
+			if (n !== null) expect(n.groups?.dd_path).toBe(testCase.path);
+		}
+	});
+
+	test('it stats markers under the HOST root, never the work root', () => {
+		expect(HOST_APACHE).toContain(`RewriteCond "${HOST_ROOT}/.publication/pub/$1_$2" -f`);
+		expect(HOST_NGINX).toContain(`if (!-f ${HOST_ROOT}/.publication/pub/\${dd_s}_\${dd_i})`);
+	});
+
+	test('it carries NO Rule A: a work-session cookie is never honoured publicly', () => {
+		for (const text of [HOST_APACHE, HOST_NGINX]) {
+			expect(text).not.toContain(MEDIA_AUTH_COOKIE);
+			expect(text).not.toContain('.publication/auth/');
+			expect(text).not.toContain('$dedalo_auth_key');
+		}
 	});
 });
