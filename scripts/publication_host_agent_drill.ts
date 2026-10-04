@@ -59,30 +59,17 @@
  * node_modules, network for the bundle's `bun install`, and the CI image's exec seam. A
  * missing one is RED, never a skip. Wired: scripts/ci/instance_tier.sh
  * (`bun run test:pubhost:agent`); locally: `bun run ci:local --docker --instance`.
+ *
+ * THE SCENE (the agent, its stand-ins, the web server, the bundles, the row book) lives in
+ * scripts/lib/publication_host_agent_scene.ts, shared with the engine drill
+ * (scripts/publication_host_engine_drill.ts): one scene, never two.
  */
 
-import { randomBytes } from 'node:crypto';
-import {
-	copyFileSync,
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	openSync,
-	readdirSync,
-	readFileSync,
-	realpathSync,
-	rmSync,
-	writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import {
-	SUDO,
-	SYSTEMCTL,
-	V2_SCRATCH_TEMPLATE_SUFFIX,
-	WEB_CONFIGTEST_BINARY,
-} from '../publication/host_agent/src/exec.ts';
+import { SUDO, SYSTEMCTL } from '../publication/host_agent/src/exec.ts';
 import { buildNginxMap } from '../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
@@ -102,322 +89,53 @@ import {
 } from '../test/helpers/suite_mariadb.ts';
 import { SUITE_MARIADB_PASSWORD, SUITE_MARIADB_USER } from '../test/helpers/suite_mariadb_env.ts';
 import { zzdTargetDatabases } from '../test/helpers/zzd_diffusion_fixture.ts';
+import { execSeamProblem, issueTlsMaterial } from './lib/publication_host_agent_drill_kit.ts';
 import {
-	AGENT_ACTOR_HEADER,
-	type BundleSourceEntry,
-	collectTree,
-	EXEC_SEAM_DIR,
-	execSeamProblem,
-	issueTlsMaterial,
-	releaseIdFor,
-	renderEnvFile,
-	renderStandIns,
-	sha256Hex,
-	type TlsMaterial,
-	writeStandIns,
-	writeUstarGz,
-} from './lib/publication_host_agent_drill_kit.ts';
-import {
-	apacheBinary,
-	apacheMainConf,
-	freePort,
-	nginxMainConf,
-	sh,
-	waitUp,
-} from './lib/web_server_harness.ts';
+	ACTOR,
+	AGENT_DIR,
+	agentFetch,
+	agentStatus,
+	BASE,
+	type Bundle,
+	buildBundles,
+	callsSince,
+	configtestCall,
+	createRowBook,
+	disarmSeam,
+	eventually,
+	INSTANCE,
+	inClosedSet,
+	logLines,
+	MAX_BUNDLE_BYTES,
+	MAX_BUNDLE_ENTRIES,
+	missingBinaries,
+	PUBLISHED,
+	postRelease,
+	problems,
+	QUALITIES,
+	refused,
+	releaseDir,
+	reloadCall,
+	restartCall,
+	type Scene,
+	type Server,
+	type Shared,
+	scratchCalls,
+	setupScene,
+	spawnAgent,
+	tail,
+	teardown,
+	UNPUBLISHED,
+	v2Health,
+	WIRE,
+	waitAgent,
+	writeAgentEnv,
+} from './lib/publication_host_agent_scene.ts';
 
-type Server = 'apache' | 'nginx';
+export { missingBinaries };
 
-const REPO = join(import.meta.dir, '..');
-const AGENT_DIR = join(REPO, 'publication', 'host_agent');
-const INSTANCE = 'pubdrill';
-const ACTOR = 'drill';
-const WEB_UNIT: Record<Server, string> = { apache: 'apache2', nginx: 'nginx' };
-const V2_UNIT = 'dedalo-publication-api-v2';
-const V2_BASE_PATH = '/publication/server_api/v2';
-const QUALITIES = ['image/thumb'];
-const PUBLISHED = 'image/thumb/0/test94_test3_1.jpg';
-const UNPUBLISHED = 'image/thumb/0/test94_test3_2.jpg';
-const MEDIA_FILES: Record<string, string> = {
-	[PUBLISHED]: 'JPEG-published',
-	[UNPUBLISHED]: 'JPEG-unpublished',
-	'.publication/pub/test3_1': '',
-};
-/** The agent's defaults (AgentConfig): the bundle must fit what a host runs with. */
-const MAX_BUNDLE_BYTES = 268_435_456;
-const MAX_BUNDLE_ENTRIES = 200_000;
-
-/**
- * THE WIRE THIS DRILL SPEAKS — the agent's routes (router.ts BASE_PATH
- * /publication/host_agent), the config selectors, and the request shapes of rules.apply
- * (Task 5) and release.install/rollback (Task 7), each spelled as the code that READS it
- * spells it, in ONE place:
- *   - env file selected by DEDALO_HOST_AGENT_ENV_FILE; instance key INSTANCE
- *     (config.ts ENV_FILE_VAR / KNOWN_KEYS);
- *   - every mutation carries the actor in auth.ts's ACTOR_HEADER (requireActor; the kit's
- *     AGENT_ACTOR_HEADER, pinned to it — auth.ts itself loads the agent's config);
- *     rules.apply's body is {server, text, hash}; release ids and shas ride
- *     X-Release-Id / X-Bundle-Sha256; rollback has NO body.
- */
-const BASE = '/publication/host_agent';
-const WIRE = {
-	envFileVar: 'DEDALO_HOST_AGENT_ENV_FILE',
-	instanceKey: 'INSTANCE',
-	health: `${BASE}/health`,
-	status: `${BASE}/v1/status`,
-	rulesApply: `${BASE}/v1/rules/apply`,
-	install: `${BASE}/v1/releases/v2`,
-	rollback: `${BASE}/v1/releases/v2/rollback`,
-	releaseIdHeader: 'X-Release-Id',
-	sha256Header: 'X-Bundle-Sha256',
-	actorHeader: AGENT_ACTOR_HEADER,
-} as const;
-
-interface Bundle {
-	readonly id: string;
-	readonly sha256: string;
-	readonly bytes: Uint8Array<ArrayBuffer>;
-	readonly entries: number;
-	readonly unpacked: number;
-}
-
-interface Shared {
-	readonly root: string;
-	readonly tls: TlsMaterial;
-	readonly bundles: { r1: Bundle; r2: Bundle; bad: Bundle };
-	readonly mariadbSocket: string;
-	readonly database: string;
-}
-
-interface Scene {
-	readonly server: Server;
-	readonly dir: string;
-	readonly state: string;
-	readonly media: string;
-	readonly shims: string;
-	readonly log: string;
-	readonly include: string;
-	readonly credentials: string;
-	readonly v2Pid: string;
-	readonly token: string;
-	readonly agentPort: number;
-	readonly webPort: number;
-	readonly v2Port: number;
-	readonly shared: Shared;
-	web: ReturnType<typeof Bun.spawn> | null;
-	agent: ReturnType<typeof Bun.spawn> | null;
-}
-
-/** GET /v1/status, structurally (the agent's AgentStatus): only what the rows read. */
-interface StatusBody {
-	instance_fingerprint?: unknown;
-	apis?: { v2?: { current?: string | null; previous?: string | null } };
-	rules?: { server?: string; hash?: string | null };
-	media?: { present?: boolean; pub_markers?: number | null };
-}
-
-// ── rows ─────────────────────────────────────────────────────────────────────
-
-let red = 0;
-
-async function row(
-	label: string,
-	check: () => Promise<string | null> | string | null,
-): Promise<void> {
-	let problem: string | null;
-	try {
-		problem = await check();
-	} catch (error) {
-		problem = `threw: ${error instanceof Error ? error.message : String(error)}`;
-	}
-	if (problem !== null) red++;
-	console.log(`${problem === null ? 'ok  ' : 'RED '} ${label}${problem ? ` (${problem})` : ''}`);
-}
-
-const problems = (list: (string | null | false)[]): string | null => {
-	const found = list.filter((p): p is string => typeof p === 'string');
-	return found.length === 0 ? null : found.join('; ');
-};
-
-/** A refused TLS handshake: the fetch must THROW, never answer. */
-async function refused(request: Promise<Response>): Promise<string | null> {
-	try {
-		const res = await request;
-		return `answered ${res.status}`;
-	} catch {
-		return null;
-	}
-}
-
-async function eventually(
-	probe: () => Promise<number>,
-	want: number,
-	ms = 5000,
-): Promise<string | null> {
-	const deadline = Date.now() + ms;
-	let last = -1;
-	while (Date.now() < deadline) {
-		try {
-			last = await probe();
-			if (last === want) return null;
-		} catch {
-			last = -1;
-		}
-		await Bun.sleep(100);
-	}
-	return `status ${last}, expected ${want} within ${ms} ms`;
-}
-
-// ── the stand-in log ─────────────────────────────────────────────────────────
-
-function logLines(scene: Scene): string[] {
-	return existsSync(scene.log) ? readFileSync(scene.log, 'utf8').split('\n').filter(Boolean) : [];
-}
-
-/** A wanted line is exact text, or a RegExp for a line carrying a run-time value (the scratch port). */
-function callsSince(scene: Scene, since: number, want: (string | RegExp)[]): string | null {
-	const got = logLines(scene).slice(since);
-	const same =
-		got.length === want.length &&
-		want.every((w, i) => (typeof w === 'string' ? got[i] === w : w.test(got[i] as string)));
-	if (same) return null;
-	const hint =
-		got.length === 0 && want.length > 0
-			? ` — no stand-in was called: does src/exec.ts still spawn ${SUDO} / ${SYSTEMCTL}, and is the seam armed?`
-			: '';
-	return `stand-in calls ${JSON.stringify(got)}, expected ${JSON.stringify(want.map(String))}${hint}`;
-}
-
-const configtestCall = (server: Server) => `${SUDO} -n ${WEB_CONFIGTEST_BINARY[server]} -t`;
-const reloadCall = (server: Server) => `${SYSTEMCTL} reload ${WEB_UNIT[server]}`;
-const restartCall = `${SYSTEMCTL} restart ${V2_UNIT}`;
-const reEscape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-/** `systemctl start|stop <V2_UNIT>-scratch@<port>.service` — the polkit rule's 4-5 digit port. */
-const scratchCall = (verb: 'start' | 'stop') =>
-	new RegExp(
-		`^${reEscape(`${SYSTEMCTL} ${verb} ${V2_UNIT}${V2_SCRATCH_TEMPLATE_SUFFIX}`)}[1-9][0-9]{3,4}\\.service$`,
-	);
-/** A scratch boot of releases/<id>: the template unit started from it, then stopped. */
-const scratchCalls = (dir: string): (string | RegExp)[] => [
-	scratchCall('start'),
-	`scratch started in ${dir}`,
-	scratchCall('stop'),
-];
-
-// ── the agent ────────────────────────────────────────────────────────────────
-
-function tlsOptions(m: TlsMaterial, client: 'good' | 'rogue' | 'none', serverCa: 'good' | 'rogue') {
-	const read = (path: string) => readFileSync(path, 'utf8');
-	const pair = client === 'good' ? m.client : client === 'rogue' ? m.rogueClient : null;
-	return {
-		ca: read(serverCa === 'good' ? m.ca.cert : m.rogueCa.cert),
-		...(pair === null ? {} : { cert: read(pair.cert), key: read(pair.key) }),
-	};
-}
-
-interface AgentRequest extends BunFetchRequestInit {
-	client?: 'good' | 'rogue' | 'none';
-	serverCa?: 'good' | 'rogue';
-	/** null: no Authorization header at all. Default: the scene's token. */
-	bearer?: string | null;
-}
-
-function agentFetch(scene: Scene, path: string, init: AgentRequest = {}): Promise<Response> {
-	const { client = 'good', serverCa = 'good', bearer = scene.token, headers, ...rest } = init;
-	return fetch(`https://127.0.0.1:${scene.agentPort}${path}`, {
-		...rest,
-		headers: {
-			...(bearer === null ? {} : { Authorization: `Bearer ${bearer}` }),
-			...(headers as Record<string, string> | undefined),
-		},
-		tls: tlsOptions(scene.shared.tls, client, serverCa),
-	});
-}
-
-async function agentStatus(scene: Scene): Promise<StatusBody> {
-	const res = await agentFetch(scene, WIRE.status);
-	if (res.status !== 200) throw new Error(`GET /v1/status answered ${res.status}`);
-	return (await res.json()) as StatusBody;
-}
-
-function writeAgentEnv(scene: Scene, name: string, overrides: Record<string, string> = {}): string {
-	const { tls } = scene.shared;
-	const path = join(scene.dir, name);
-	writeFileSync(
-		path,
-		renderEnvFile({
-			[WIRE.instanceKey]: INSTANCE,
-			// Stated here, never ambient (the header: why not production).
-			NODE_ENV: 'test',
-			LISTEN_KIND: 'tls',
-			TLS_HOST: '127.0.0.1',
-			TLS_PORT: scene.agentPort,
-			TLS_CERT_FILE: tls.server.cert,
-			TLS_KEY_FILE: tls.server.key,
-			TLS_CLIENT_CA_FILE: tls.ca.cert,
-			STATE_ROOT: scene.state,
-			WEB_SERVER: scene.server,
-			WEB_UNIT: WEB_UNIT[scene.server],
-			MEDIA_MODE: 'shared',
-			MEDIA_ROOT: scene.media,
-			PHP_BIN: join(scene.shims, 'php'),
-			V2_UNIT,
-			V2_HEALTH_URL: `http://127.0.0.1:${scene.v2Port}${V2_BASE_PATH}/health`,
-			RELEASES_RETAINED: 3,
-			MAX_BUNDLE_BYTES,
-			MAX_BUNDLE_ENTRIES,
-			...overrides,
-		}),
-		{ mode: 0o640 },
-	);
-	return path;
-}
-
-/**
- * The agent, as systemd would start it: the env file NAMED, the token from
- * $CREDENTIALS_DIRECTORY, and an environment of nothing else but PATH and HOME — no ambient
- * key can reach its config (and exec.ts hands its children its own fixed PATH anyway).
- */
-function spawnAgent(scene: Scene, envFile: string, logName: string): ReturnType<typeof Bun.spawn> {
-	const fd = openSync(join(scene.dir, logName), 'a');
-	return Bun.spawn([process.execPath, 'run', join(AGENT_DIR, 'src', 'index.ts')], {
-		cwd: AGENT_DIR,
-		env: {
-			PATH: process.env.PATH ?? '/usr/bin:/bin',
-			HOME: process.env.HOME ?? scene.dir,
-			[WIRE.envFileVar]: envFile,
-			CREDENTIALS_DIRECTORY: scene.credentials,
-		},
-		stdout: fd,
-		stderr: fd,
-	});
-}
-
-function tail(path: string, lines = 30): string {
-	return existsSync(path)
-		? readFileSync(path, 'utf8').split('\n').slice(-lines).join('\n')
-		: '(no log)';
-}
-
-async function waitAgent(scene: Scene): Promise<void> {
-	const deadline = Date.now() + 20_000;
-	while (Date.now() < deadline) {
-		if (scene.agent?.exitCode !== null && scene.agent?.exitCode !== undefined)
-			throw new Error(
-				`the agent exited ${scene.agent.exitCode} at boot:\n${tail(join(scene.dir, 'agent.log'))}`,
-			);
-		try {
-			const res = await agentFetch(scene, WIRE.health, { bearer: null });
-			if (res.status === 200) return;
-		} catch {
-			// not listening yet
-		}
-		await Bun.sleep(150);
-	}
-	throw new Error(
-		`the agent never answered /health in 20 s:\n${tail(join(scene.dir, 'agent.log'))}`,
-	);
-}
+const book = createRowBook();
+const { row } = book;
 
 /** Boot an agent that must REFUSE: its exit code (null = still running after 15 s) and log. */
 async function bootRefusal(
@@ -432,215 +150,6 @@ async function bootRefusal(
 		await proc.exited;
 	}
 	return { code, log: tail(join(scene.dir, logName)) };
-}
-
-// ── the scene ────────────────────────────────────────────────────────────────
-
-function plantFiles(root: string, files: Record<string, string>): void {
-	for (const [rel, content] of Object.entries(files)) {
-		mkdirSync(dirname(join(root, rel)), { recursive: true });
-		writeFileSync(join(root, rel), content);
-	}
-}
-
-/**
- * The state root the provisioner would lay out (Task 8): the instance marker naming this
- * instance, and the per-API `shared/` that holds state outside every release (§3).
- */
-function plantStateRoot(state: string): void {
-	for (const sub of ['rules', 'audit', 'publication_api/v1/shared', 'publication_api/v2/shared'])
-		mkdirSync(join(state, sub), { recursive: true, mode: 0o750 });
-	writeFileSync(join(state, '.dedalo_host_agent_instance'), `${INSTANCE}\n`);
-}
-
-/** Remove the drill's stand-ins from the seam: the dispatchers fail closed again. */
-function disarmSeam(): void {
-	for (const name of ['sudo', 'systemctl']) rmSync(join(EXEC_SEAM_DIR, name), { force: true });
-}
-
-async function setupScene(server: Server, shared: Shared): Promise<Scene> {
-	const dir = join(shared.root, server);
-	const scene: Scene = {
-		server,
-		dir,
-		state: join(dir, 'state'),
-		media: join(dir, 'media'),
-		shims: join(dir, 'bin'),
-		log: join(dir, 'stand_in_calls.log'),
-		include: join(dir, 'state', 'rules', `dedalo_media_publication.${server}.conf`),
-		credentials: join(dir, 'credentials'),
-		v2Pid: join(dir, 'v2.pid'),
-		token: randomBytes(24).toString('hex'),
-		agentPort: freePort(),
-		webPort: freePort(),
-		v2Port: freePort(),
-		shared,
-		web: null,
-		agent: null,
-	};
-	for (const sub of ['www', 'nginx_tmp']) mkdirSync(join(dir, sub), { recursive: true });
-	plantFiles(scene.media, MEDIA_FILES);
-	plantStateRoot(scene.state);
-	const v2Env = join(scene.state, 'publication_api', 'v2', 'shared', 'v2.env');
-	writeFileSync(
-		v2Env,
-		renderEnvFile({
-			NODE_ENV: 'production',
-			DEPLOYMENT_MODE: 'standalone',
-			TRUST_PROXY: 'false',
-			HOST: '127.0.0.1',
-			PORT: scene.v2Port,
-			BASE_PATH: V2_BASE_PATH,
-			DB_SOCKET: shared.mariadbSocket,
-			DB_HOST: '',
-			DB_USER: SUITE_MARIADB_USER,
-			DB_PASSWORD: SUITE_MARIADB_PASSWORD,
-			DB_NAMES: shared.database,
-			API_KEYS: '',
-			MCP_ENABLED: 'false',
-			LOG_LEVEL: 'warn',
-		}),
-	);
-	mkdirSync(scene.credentials, { mode: 0o700 });
-	writeFileSync(join(scene.credentials, 'SERVICE_TOKEN'), scene.token, { mode: 0o600 });
-
-	const webBinary = server === 'apache' ? apacheBinary() : (Bun.which('nginx') as string);
-	const main = join(dir, `main.${server}.conf`);
-	const errorLog = join(dir, 'nginx_error.log');
-	const { sudo, systemctl, php } = renderStandIns({
-		server,
-		webBinary,
-		webMain: main,
-		webDir: dir,
-		webErrorLog: errorLog,
-		webUnit: WEB_UNIT[server],
-		v2Unit: V2_UNIT,
-		v2Current: join(scene.state, 'publication_api', 'v2', 'current'),
-		v2Scratch: join(scene.state, 'publication_api', 'v2', 'scratch'),
-		v2EnvFile: v2Env,
-		v2PidFile: scene.v2Pid,
-		v2Output: join(dir, 'v2.log'),
-		bun: process.execPath,
-		log: scene.log,
-	});
-	// sudo + systemctl AT the agent's absolute binaries (the image's dispatchers run these);
-	// php is configuration (PHP_BIN), so a plain scratch file.
-	writeStandIns(EXEC_SEAM_DIR, { sudo, systemctl });
-	writeStandIns(scene.shims, { php });
-
-	if (server === 'apache') {
-		writeFileSync(
-			main,
-			apacheMainConf(dir, scene.webPort, scene.include, true, { optionalInclude: true }),
-		);
-		const t = sh([webBinary, '-t', '-f', main]);
-		if (t.code !== 0) throw new Error(`${webBinary} -t failed before any include:\n${t.out}`);
-		scene.web = Bun.spawn([webBinary, '-DFOREGROUND', '-f', main], {
-			stdout: 'ignore',
-			stderr: 'pipe',
-		});
-	} else {
-		const map = join(dir, 'map.nginx.conf');
-		writeFileSync(map, buildNginxMap());
-		writeFileSync(
-			main,
-			nginxMainConf(dir, scene.webPort, scene.include, map, { optionalInclude: true }),
-		);
-		const t = sh([webBinary, '-e', errorLog, '-t', '-p', dir, '-c', main]);
-		if (t.code !== 0) throw new Error(`nginx -t failed before any include:\n${t.out}`);
-		scene.web = Bun.spawn([webBinary, '-e', errorLog, '-p', dir, '-c', main], {
-			stdout: 'ignore',
-			stderr: 'pipe',
-		});
-	}
-	await waitUp(`http://127.0.0.1:${scene.webPort}`);
-	return scene;
-}
-
-async function teardown(scene: Scene): Promise<void> {
-	scene.agent?.kill('SIGTERM');
-	await scene.agent?.exited;
-	const pids = readdirSync(dirname(scene.v2Pid))
-		.filter(
-			(name) =>
-				name === basename(scene.v2Pid) || name.startsWith(`${basename(scene.v2Pid)}.scratch-`),
-		)
-		.map((name) => join(dirname(scene.v2Pid), name));
-	for (const file of pids) {
-		try {
-			process.kill(Number(readFileSync(file, 'utf8').trim()), 'SIGTERM');
-		} catch {
-			// already gone
-		}
-	}
-	scene.web?.kill('SIGTERM');
-	await scene.web?.exited;
-}
-
-// ── the bundles ──────────────────────────────────────────────────────────────
-
-/**
- * v2's tracked sources (src/ + the package files) copied into scratch, its PRODUCTION tree
- * installed there with the pinned bun and the HOISTED linker (D6: the bundle carries
- * node_modules; the isolated linker's symlinks cannot travel in it), and three bundles:
- * r1 and r2 (the same tree, told apart by a DRILL_RELEASE file, so two digests) and `bad`
- * — the SAME full tree (node_modules included, so it passes the agent's node_modules check
- * and really reaches the scratch boot) with an entrypoint that throws at import: its
- * scratch health can never pass, which is Review Focus 3's first leg.
- */
-function buildBundles(root: string): Shared['bundles'] {
-	const src = join(root, 'v2_src');
-	const prefix = 'publication/server_api/v2/';
-	const listed = Bun.spawnSync(['git', 'ls-files', '-z', '--', prefix], {
-		cwd: REPO,
-		stdout: 'pipe',
-		stderr: 'pipe',
-	});
-	if (listed.exitCode !== 0) throw new Error(`git ls-files failed: ${listed.stderr.toString()}`);
-	const keep = /^(src\/|package\.json$|bun\.lock$|bunfig\.toml$|tsconfig\.json$)/;
-	for (const file of listed.stdout.toString().split('\0').filter(Boolean)) {
-		const rel = file.slice(prefix.length);
-		if (!keep.test(rel)) continue;
-		mkdirSync(dirname(join(src, rel)), { recursive: true });
-		copyFileSync(join(REPO, file), join(src, rel));
-	}
-	const install = Bun.spawnSync(
-		[process.execPath, 'install', '--frozen-lockfile', '--production', '--linker', 'hoisted'],
-		{ cwd: src, stdout: 'pipe', stderr: 'pipe' },
-	);
-	if (install.exitCode !== 0)
-		throw new Error(
-			`bun install of the v2 bundle tree failed (network?):\n${install.stderr.toString()}`,
-		);
-	const tree = collectTree(src);
-	const version = (
-		JSON.parse(readFileSync(join(src, 'package.json'), 'utf8')) as { version: string }
-	).version;
-	const text = (value: string) => new TextEncoder().encode(value);
-	const marker = (name: string): BundleSourceEntry => ({
-		path: 'DRILL_RELEASE',
-		type: 'file',
-		mode: 0o644,
-		data: text(`${name}\n`),
-	});
-	const make = (entries: BundleSourceEntry[]): Bundle => {
-		const bytes = writeUstarGz(entries);
-		return {
-			id: releaseIdFor(version, bytes),
-			sha256: sha256Hex(bytes),
-			bytes,
-			entries: entries.length,
-			unpacked: entries.reduce((sum, e) => sum + (e.data?.length ?? 0), 0),
-		};
-	};
-	const broken = text("throw new Error('drill: a deliberately broken release');\n");
-	return {
-		r1: make([...tree, marker('r1')]),
-		r2: make([...tree, marker('r2')]),
-		bad: make(
-			[...tree, marker('bad')].map((e) => (e.path === 'src/index.ts' ? { ...e, data: broken } : e)),
-		),
-	};
 }
 
 // ── the rows ─────────────────────────────────────────────────────────────────
@@ -843,15 +352,6 @@ async function rulesRows(scene: Scene): Promise<void> {
 	);
 }
 
-const v2Health = async (scene: Scene) => {
-	const res = await fetch(`http://127.0.0.1:${scene.v2Port}${V2_BASE_PATH}/health`);
-	return { status: res.status, body: (await res.json()) as { databases?: Record<string, string> } };
-};
-
-/** releases/<id> as `pwd -P` prints it; the parent is resolved, so a release a failed install removed still names. */
-const releaseDir = (scene: Scene, id: string) =>
-	join(realpathSync(join(scene.state, 'publication_api', 'v2', 'releases')), id);
-
 const v2PidNow = (scene: Scene) =>
 	existsSync(scene.v2Pid) ? readFileSync(scene.v2Pid, 'utf8').trim() : null;
 
@@ -874,17 +374,7 @@ async function servingCheck(
 
 async function releaseRows(scene: Scene): Promise<void> {
 	const { r1, r2, bad } = scene.shared.bundles;
-	const install = (bundle: Bundle) =>
-		agentFetch(scene, WIRE.install, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/gzip',
-				[WIRE.releaseIdHeader]: bundle.id,
-				[WIRE.sha256Header]: bundle.sha256,
-				[WIRE.actorHeader]: ACTOR,
-			},
-			body: bundle.bytes,
-		});
+	const install = (bundle: Bundle) => postRelease(scene, bundle);
 	const installed = async (
 		bundle: Bundle,
 		want: { from: string | null; reused: boolean; previous: string | null },
@@ -968,26 +458,14 @@ async function execRow(scene: Scene): Promise<void> {
 	await row(
 		`[${scene.server}][exec] every stand-in call was in the closed set; php never called`,
 		() => {
-			const allowed = new Set([
-				configtestCall(scene.server),
-				reloadCall(scene.server),
-				restartCall,
-			]);
-			const stray = logLines(scene).filter(
-				(line) =>
-					!allowed.has(line) &&
-					!line.startsWith('v2 started in ') &&
-					!line.startsWith('scratch started in ') &&
-					!scratchCall('start').test(line) &&
-					!scratchCall('stop').test(line),
-			);
+			const stray = logLines(scene).filter((line) => !inClosedSet(scene, line));
 			return stray.length === 0 ? null : `outside the closed set: ${stray.join(' | ')}`;
 		},
 	);
 }
 
 async function pass(server: Server, shared: Shared, first: boolean): Promise<void> {
-	const scene = await setupScene(server, shared);
+	const scene = await setupScene(server, shared, { listen: 'tls', nginxMap: buildNginxMap() });
 	try {
 		if (first) await refusalRows(scene);
 		scene.agent = spawnAgent(scene, writeAgentEnv(scene, 'agent.env'), 'agent.log');
@@ -999,17 +477,6 @@ async function pass(server: Server, shared: Shared, first: boolean): Promise<voi
 	} finally {
 		await teardown(scene);
 	}
-}
-
-/** The binaries PATH lacks (asked, not spawned: no ENOENT stack). MariaDB names its own. */
-export function missingBinaries(servers: readonly Server[]): string[] {
-	const common = ['openssl', 'git', 'bash'].filter((bin) => Bun.which(bin) === null);
-	const web = servers.flatMap((s) =>
-		(s === 'apache' ? ['apxs'] : ['nginx'])
-			.filter((bin) => Bun.which(bin) === null)
-			.map((bin) => `${s}: ${bin}`),
-	);
-	return [...common, ...web];
 }
 
 if (import.meta.main) {
@@ -1054,28 +521,24 @@ if (import.meta.main) {
 			tls: issueTlsMaterial(join(root, 'tls')),
 			bundles: buildBundles(root),
 			mariadbSocket: mariadb.socket,
+			mariadbUser: SUITE_MARIADB_USER,
+			mariadbPassword: SUITE_MARIADB_PASSWORD,
 			database: zzdTargetDatabases()[0] as string,
 		};
 		for (const [i, server] of servers.entries()) {
 			try {
 				await pass(server, shared, i === 0);
 			} catch (error) {
-				red++;
-				console.log(
-					`RED  [${server}] the pass could not run: ${error instanceof Error ? error.message : String(error)}`,
-				);
+				book.fail(`[${server}] the pass could not run`, error);
 			}
 		}
 	} catch (error) {
-		red++;
-		console.log(
-			`RED  the drill could not set up: ${error instanceof Error ? error.message : String(error)}`,
-		);
+		book.fail('the drill could not set up', error);
 	} finally {
 		disarmSeam();
 		rmSync(root, { recursive: true, force: true });
 		if (!mariadbWasRunning) await stopSuiteMariadb();
 	}
-	console.log(red === 0 ? '\nALL GREEN' : `\n${red} RED row(s)`);
-	process.exit(red === 0 ? 0 : 1);
+	console.log(book.red === 0 ? '\nALL GREEN' : `\n${book.red} RED row(s)`);
+	process.exit(book.red === 0 ? 0 : 1);
 }
