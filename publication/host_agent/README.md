@@ -58,9 +58,17 @@ provisioner:
 Every child process goes through `src/exec.ts`, a closed set of named commands
 (`webConfigtest`, `webReload`, `v2Restart`, `phpLint`, `v2ScratchBoot`). A package test
 fails if any other `src/` module spawns. `process.env` is read only in `src/config.ts`,
-and that is gated too. Open: the scratch template unit is rendered and granted, but
-`v2ScratchBoot` still boots a release under test itself, as the agent user, from a
-committed `releases/<id>` directory only (spec §2.5).
+and that is gated too.
+
+Neither grant opens a path to root:
+
+- `rules.apply` checks the media include against a closed directive allowlist
+  (`src/rules/directives.ts`) before root parses it at configtest. It refuses module loads,
+  includes, log or piped directives, and any path outside `MEDIA_ROOT`.
+- `v2ScratchBoot` never runs pushed release code as the agent user, which owns `rules/`
+  and holds the sudo grant, the TLS key and the bearer. It repoints `v2/scratch` at the
+  committed `releases/<id>` and starts `<V2_UNIT>-scratch@<port>`, so the release under
+  test runs as the v2 user in v2's sandbox (spec §2.5).
 
 ## On the host
 

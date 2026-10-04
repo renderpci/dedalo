@@ -81,12 +81,21 @@ grants it exactly two things:
 | a sudo rule | the web server's configuration test (`apachectl -t` or `nginx -t`), nothing else | the test must read TLS keys only root can read |
 | a polkit rule | reloading the web server's unit, restarting the Publication API v2 unit, starting and stopping a scratch copy of the v2 unit on a high local port | applying rules, testing and switching v2 releases need them |
 
+Neither grant lets the work system reach root through the agent:
+
+- The media rules the agent installs are checked against a closed list of web server
+  directives before the configuration test reads them. They cannot load a module, include
+  another file, start a piped log or name a path outside the media directory.
+- A new API v2 release is tested in that scratch copy of the v2 unit, as the v2 user. It
+  never runs as the agent's user, which holds the grants, the TLS key and the token.
+
 !!! warning "The work system is trusted completely"
     Installing an API release runs code the work system sent. If the work system is
     compromised, the publication host is too. The reverse is not true: a compromised
     publication host gives no access to the work system. The agent checks the **shape** of
     what it receives (a checksum, a strict archive format, files that stay inside their
-    directory), not whether the work system *meant* it. Protect the work system
+    directory, the closed list of media-rule directives), not whether the work system
+    *meant* it. Protect the work system
     accordingly, and keep the publication host's port closed to everything else.
 
 ## Install

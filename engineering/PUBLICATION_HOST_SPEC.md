@@ -103,15 +103,30 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    configtest must read root-only TLS keys), and a **polkit** rule allowing `reload` of the
    observed web unit, `restart` of the v2 unit, and `start`/`stop` of the v2 scratch
    template unit `<v2 unit>-scratch@<port>` (port 1024–65535; the `publication/site_builder`
-   precedent). There is no shell and no free argv. OPEN: the rendered scratch template
-   unit runs a release under test as the v2 user, but `exec.ts` `v2ScratchBoot` still
-   spawns it itself, as the agent user, confined to a committed `releases/<id>` directory.
+   precedent). There is no shell and no free argv. The media include the agent installs
+   is checked against a closed directive allowlist
+   (`publication/host_agent/src/rules/directives.ts`) before root parses it: no module
+   load, no include, no log or piped directive, no path outside MEDIA_ROOT. What remains
+   runs at request time as the web-server user, the trust §2.6 already gives the paired
+   engine.
+   **Pushed release code never runs as the agent user.** The agent uid owns `rules/`
+   (which root parses at configtest), holds the sudo configtest grant, the TLS server key
+   and the bearer. Release code running as that uid could reach root, for example by
+   writing a `LoadModule` into the include and running the configtest itself. So
+   `exec.ts` `v2ScratchBoot` repoints `v2/scratch` at the committed `releases/<id>` and
+   `systemctl start`s `<v2 unit>-scratch@<port>`: the release under test runs as the v2
+   user in v2's sandbox, with `v2.env` read by systemd. No named command runs `BUN_BIN`
+   (pinned in `publication/host_agent/tests/exec.test.ts`).
 6. **Trust model (stated, not hoped).** A compromised work host means a compromised
    publication host, because `release.install` runs code the work host pushed. The reverse
    does not hold: the publication host has no work-host credential and no work-host
    address (1.). The agent therefore validates SHAPE (the sha256 stamp, the bundle grammar
-   of §3, path confinement) and never the INTENT of the paired engine. Checks that
-   second-guess the only writer would protect nothing. There is no downgrade refusal.
+   of §3, path confinement) and the PRIVILEGE BOUNDARY (the media include's directive
+   allowlist of item 5, and release code that never runs as the agent user), and never the
+   INTENT of the paired engine. A check on which release the only writer chose would protect
+   nothing, so there is no downgrade refusal. A check that keeps the engine's trust from
+   becoming ROOT is not one of those: the engine is trusted with what the web-server and
+   v2 users can do, never with root.
    Every `current` swap is recorded `from → to` in the agent's append-only audit log.
 
 Rejected alternatives, for the record: manual operation (drift, no panel visibility,
