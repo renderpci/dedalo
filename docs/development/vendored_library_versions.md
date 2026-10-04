@@ -77,7 +77,7 @@ they were prose (eight found 2026-08-28, five more 2026-10-02).
 
 | id | Package | Version | Installed as | Notes |
 |---|---|---|---|---|
-| three | `three` | 0.186.0 | dependency | `examples/jsm/` reached via the client import map. |
+| three | `three` | 0.186.1 | dependency | `examples/jsm/` reached via the client import map. |
 | d3 | `d3` | 7.9.0 | dependency | The version does not appear in the URL. |
 | jsoneditor | `vanilla-jsoneditor` | 3.13.0 | dependency |  |
 | leaflet | `leaflet` | 1.9.4 | dependency |  |
