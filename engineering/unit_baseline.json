@@ -3141,6 +3141,11 @@
 			"skipped": 0,
 			"assertions": 333
 		},
+		"test/unit/publication_hosts_client_labels.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 2
+		},
 		"test/unit/query_tap_tripwire.test.ts": {
 			"tests": 8,
 			"skipped": 0,
