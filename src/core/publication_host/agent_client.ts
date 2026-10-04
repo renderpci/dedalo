@@ -109,7 +109,8 @@ export interface RulesApplyInput {
 	hash: string;
 }
 
-const RELEASE_ID = /^\d+(\.\d+){1,3}_[0-9a-f]{7}$/;
+/** A release id `<version>_<digest7>` (spec §3); host_status shapes agent-reported ids by it. */
+export const AGENT_RELEASE_ID = /^\d+(\.\d+){1,3}_[0-9a-f]{7}$/;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 /**
  * The agent's actor rule (1-200, no control characters) narrowed to what an HTTP header
@@ -190,7 +191,7 @@ function assertInstallRequest(
 ): void {
 	assertApi(name, 'release.install', api);
 	assertActor(name, 'release.install', actor);
-	if (!RELEASE_ID.test(releaseId)) {
+	if (!AGENT_RELEASE_ID.test(releaseId)) {
 		throw refuse(name, 'release.install', 'the release id must be <version>_<digest7>');
 	}
 	if (!SHA256_HEX.test(sha256))

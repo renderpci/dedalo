@@ -454,4 +454,31 @@ describe('buildHostPanelRow', () => {
 		expect(serialized).not.toContain(FINGERPRINT);
 		expect(Object.keys(row.apis.v1).sort()).toEqual(['current', 'previous']);
 	});
+
+	test('agent free strings cross only in their shape: malformed in the check, null in the row', () => {
+		const hostile = `<img src=x onerror=alert(1)>${'A'.repeat(100_000)}`;
+		const status = agentStatus({
+			apis: { v1: { current: hostile, previous: hostile } },
+			rules: { hash: hostile },
+		});
+		status.agent_version = hostile;
+		const input = healthy({ status: { ok: true, status } });
+		const row = buildHostPanelRow(input);
+		const checks = byId(row.checks);
+		expect(checks.agent_version).toEqual({ state: 'warn', detail: 'malformed' });
+		expect(checks.api_v1).toEqual({ state: 'warn', detail: 'malformed' });
+		expect(checks.rules_hash).toEqual({ state: 'blocked', detail: 'malformed' });
+		expect(row.apis.v1).toEqual({ current: null, previous: null });
+		expect(row.rules.reported).toBeNull();
+		expect(JSON.stringify(row)).not.toContain('onerror');
+	});
+
+	test('a well-shaped prerelease agent version is still a fact', () => {
+		const status = agentStatus();
+		status.agent_version = '0.2.0-rc.1';
+		expect(checkOf(healthy({ status: { ok: true, status } }), 'agent_version')).toEqual({
+			state: 'ok',
+			detail: '0.2.0-rc.1',
+		});
+	});
 });

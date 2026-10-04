@@ -18,7 +18,10 @@
  * (!) SECRETS NEVER ENTER. The input carries presence booleans and a refusal REASON
  * (secretPresenceOutcome), not tokens or PEM; a
  * failed `hostStatus` contributes its error CODE only (statusOutcomeFromError), and the
- * agent's prose (`media.problems`) is never copied into a check or a row.
+ * agent's prose (`media.problems`) is never copied into a check or a row. The agent's
+ * free strings that DO surface (agent_version, API release ids, the rules hash) cross only
+ * when they match their shape; otherwise the check reads `malformed` and the row null.
+ * Even so the client renders every `detail` as text, never HTML.
  *
  * (!) AN UNPROVED AGENT SAYS NOTHING. When the pairing fails (`pairing_mismatch`,
  * `auth`) or the status body's fingerprint is not the registry's, the pairing check is
@@ -29,11 +32,12 @@
 import { DedaloError } from '../errors/dedalo_error.ts';
 import type { ErrorCode } from '../errors/registry.ts';
 import type { StatusCheck } from '../update/status.ts';
-import type { AgentStatus, MediaProbe } from './agent_client.ts';
+import { AGENT_RELEASE_ID, type AgentStatus, type MediaProbe } from './agent_client.ts';
 import { publicationHostFingerprintMatches } from './pairing.ts';
 import type { PublicationHostRecord, RegistryError } from './registry.ts';
 import type { ExpectedRulesOutcome } from './rules.ts';
 import type { SecretPresenceOutcome } from './secrets.ts';
+import { AGENT_ANSWER_CODES } from './wire.ts';
 
 /** ONE state vocabulary with update_code's readiness lines. */
 export type CheckState = StatusCheck['state'];
@@ -99,7 +103,8 @@ export interface HostPanelRow {
  *    is known;
  *  - unreachable / timeout: no answer, pairing never reached;
  *  - pairing_mismatch / auth: the agent answered and the proof FAILED;
- *  - rejected / failed / busy: the bearer request was answered after the proof.
+ *  - rejected / failed / busy: the bearer request was answered after the proof (the
+ *    first two from wire.ts AGENT_ANSWER_CODES: only wire.ts spells them).
  */
 export const REACHABLE_ON_FAILURE: ReadonlyMap<string, CheckState> = new Map<string, CheckState>([
 	['publication_host.unconfigured', 'unknown'],
@@ -108,8 +113,7 @@ export const REACHABLE_ON_FAILURE: ReadonlyMap<string, CheckState> = new Map<str
 	['publication_host.timeout', 'blocked'],
 	['publication_host.pairing_mismatch', 'ok'],
 	['publication_host.auth', 'ok'],
-	['publication_host.rejected', 'ok'],
-	['publication_host.failed', 'ok'],
+	...AGENT_ANSWER_CODES.map((code) => [code, 'ok'] as const),
 	['publication_host.busy', 'ok'],
 ]);
 
@@ -120,8 +124,7 @@ export const PAIRING_ON_FAILURE: ReadonlyMap<string, CheckState> = new Map<strin
 	['publication_host.timeout', 'unknown'],
 	['publication_host.pairing_mismatch', 'blocked'],
 	['publication_host.auth', 'blocked'],
-	['publication_host.rejected', 'ok'],
-	['publication_host.failed', 'ok'],
+	...AGENT_ANSWER_CODES.map((code) => [code, 'ok'] as const),
 	['publication_host.busy', 'ok'],
 ]);
 
@@ -135,6 +138,18 @@ const WANT_READ_ONLY: ReadonlyMap<MediaMode, boolean> = new Map<MediaMode, boole
 ]);
 
 const UNAVAILABLE = 'status_unavailable';
+
+/** An agent-supplied string that is not the expected shape: the check names this, and the
+ * value itself never reaches a check or the row (agent text is not a fact until shaped). */
+const MALFORMED = 'malformed';
+/** Bounded semver-like: digits, dots, an optional short pre-release/build tail. */
+const AGENT_VERSION = /^\d{1,6}(\.\d{1,6}){1,3}([-+][0-9A-Za-z.-]{1,32})?$/;
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+/** A release id only when it is one (`<version>_<digest7>`); null otherwise. */
+function releaseId(value: string | null): string | null {
+	return value !== null && AGENT_RELEASE_ID.test(value) ? value : null;
+}
 
 function check(id: HostCheckId, state: CheckState, detail?: string): HostCheck {
 	return detail === undefined ? { id, state } : { id, state, detail };
@@ -203,7 +218,9 @@ function pairingCheck(record: PublicationHostRecord, outcome: StatusOutcome): Ho
 function agentVersionCheck(status: AgentStatus | null): HostCheck {
 	return status === null
 		? unavailable('agent_version')
-		: check('agent_version', 'ok', status.agent_version);
+		: AGENT_VERSION.test(status.agent_version)
+			? check('agent_version', 'ok', status.agent_version)
+			: check('agent_version', 'warn', MALFORMED);
 }
 
 /** `copy` is a warning until the engine's copy target exists (spec §8 phase 5, which
@@ -242,6 +259,7 @@ function compareRuleHashes(
 	expected: Extract<ExpectedRulesOutcome, { ok: true }>,
 ): HostCheck {
 	if (reported === null) return check('rules_hash', 'blocked', 'none');
+	if (!SHA256_HEX.test(reported)) return check('rules_hash', 'blocked', MALFORMED);
 	if (reported !== expected.hash) return check('rules_hash', 'blocked', 'drift');
 	return expected.dropped.length > 0
 		? check('rules_hash', 'warn', `dropped:${expected.dropped.join(',')}`)
@@ -268,6 +286,7 @@ function apiCheck(api: 'v1' | 'v2', status: AgentStatus | null, engineVersion: s
 	if (status === null) return unavailable(id);
 	const { current } = status.apis[api];
 	if (current === null) return check(id, 'warn', 'none');
+	if (releaseId(current) === null) return check(id, 'warn', MALFORMED);
 	return current.split('_')[0] === engineVersion
 		? check(id, 'ok', current)
 		: check(id, 'warn', `${current} != ${engineVersion}`);
@@ -297,8 +316,8 @@ function addressLabel(address: PublicationHostRecord['address']): string {
 
 function apiVersions(status: AgentStatus | null): HostPanelRow['apis'] {
 	const pick = (api: 'v1' | 'v2') => ({
-		current: status?.apis[api].current ?? null,
-		previous: status?.apis[api].previous ?? null,
+		current: releaseId(status?.apis[api].current ?? null),
+		previous: releaseId(status?.apis[api].previous ?? null),
 	});
 	return { v1: pick('v1'), v2: pick('v2') };
 }
@@ -308,6 +327,11 @@ function expectedHash(
 	expected: ExpectedRulesOutcome | null,
 ): string | null {
 	return status !== null && expected?.ok === true ? expected.hash : null;
+}
+
+function reportedHash(status: AgentStatus | null): string | null {
+	const hash = status?.rules.hash ?? null;
+	return hash !== null && SHA256_HEX.test(hash) ? hash : null;
 }
 
 /** THE row builder: the widget serves this row as-is (see header). */
@@ -321,7 +345,7 @@ export function buildHostPanelRow(input: HostStatusInput): HostPanelRow {
 		checks,
 		rules: {
 			expected: expectedHash(trusted, input.expected),
-			reported: trusted?.rules.hash ?? null,
+			reported: reportedHash(trusted),
 		},
 		apis: apiVersions(trusted),
 		token_present: input.secrets.token_present,

@@ -56,10 +56,12 @@ const WIRE = 'src/core/publication_host/wire.ts';
 
 /**
  * The ONLY files besides wire.ts that may name AGENT_ANSWER_CODES — classifiers, never
- * minters. Exact in both directions. Task 6 adds host_status.ts (its failure-code maps) in
- * the commit that first imports the constant.
+ * minters. Exact in both directions: host_status.ts builds its failure-code maps from it.
  */
-const AGENT_ANSWER_CODE_READERS: Record<string, string> = {};
+const AGENT_ANSWER_CODE_READERS: Record<string, string> = {
+	'src/core/publication_host/host_status.ts':
+		'classifies agent-answer codes into reachable/pairing check states; mints nothing',
+};
 
 function readLabels(path: string): Record<string, string> {
 	return JSON.parse(readFileSync(join(REPO_ROOT, path), 'utf8')) as Record<string, string>;
