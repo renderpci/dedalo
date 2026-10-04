@@ -72,7 +72,10 @@
     PHP oracle. No re-harvest needed and none is possible.
   - `test/parity/dedalo_files_differential.test.ts` — the widget's CLIENT tree
     (`/dedalo/core/area_maintenance/widgets/publication_hosts/`) joins `isTsOnlyEntry`
-    in the commit that adds that tree.
+    in the commit that adds that tree. The area's new cross-widget event LEAF
+    (`/dedalo/core/area_maintenance/js/maintenance_events.js`, `OPEN_WIDGET_EVENT`:
+    media_control's one line opening this panel) lives outside that prefix and joins
+    `POST_HARVEST_CLIENT_ADDITIONS` in the same commit.
   - TS ground truth: `test/unit/publication_host_widget_native.test.ts`.
 - **Fixture interaction (DEC-14b):** NO re-harvest; the frozen PHP fixtures never
   contained this id.

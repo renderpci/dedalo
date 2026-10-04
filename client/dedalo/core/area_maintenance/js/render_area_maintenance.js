@@ -63,6 +63,7 @@
 	import {widget_common} from '../../widgets/widget_common/js/widget_common.js'
 	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
+	import {OPEN_WIDGET_EVENT} from './maintenance_events.js'
 
 
 
@@ -318,7 +319,9 @@ const get_content_data = async function(self) {
 	// the two views
 		const list_wrap = await build_list_view(self, widgets)
 		content_data.appendChild(list_wrap)
-		const map_ctl = build_map_view(self, widgets, { sel_key, saved_sel })
+		// show_map: an OPEN_WIDGET_EVENT from the list view switches to the map first
+		// (set_view is declared below; the callback only runs on a later user click)
+		const map_ctl = build_map_view(self, widgets, { sel_key, saved_sel, show_map: () => set_view('map', true) })
 		// hand the map's teardown to the instance, which is what actually gets destroyed
 		self.map_ctl = map_ctl
 		content_data.appendChild(map_ctl.node)
@@ -639,7 +642,7 @@ const build_list_view = async function(self, widgets) {
 		{ id:'pg',		title:'PostgreSQL',		x:12, y:66,
 			tools:['database_info','counters_status','sequences_status','reconcile_status','dataframe_control','move_to_table','build_database_version','make_backup'] },
 		{ id:'bak',		title:'Backups',		x:31, y:66, tools:['make_backup','build_database_version'] },
-		{ id:'pub',		title:'Publication',	x:50, y:66, tools:['diffusion_server_control','publication_api','site_builder_status'] },
+		{ id:'pub',		title:'Publication',	x:50, y:66, tools:['diffusion_server_control','publication_api','site_builder_status','publication_hosts'] },
 		{ id:'media',	title:'Media store',	x:69, y:66, tools:['media_control','ai_models'] },
 		{ id:'onto',	title:'Ontology',		x:88, y:66,
 			tools:['update_ontology','serve_ontology','move_tld','move_locator','move_to_portal','move_lang','export_hierarchy','add_hierarchy'] }
@@ -686,6 +689,7 @@ const build_list_view = async function(self, widgets) {
 		diffusion_server_control:	'Native publication engine: status, job queue and scheduler.',
 		publication_api:			'Diffusion API endpoint status and network probe.',
 		site_builder_status:		'Agent-built public websites: daemon status and a launcher for the site builder.',
+		publication_hosts:			'Separate publication machines: pairing, media rules and API releases. Hosts are paired on the command line.',
 		media_control:				'Sets the media access-protection mode and rebuilds the gate rules.',
 		ai_models:					'Local AI model store: which speech models are installed and usable.',
 		update_ontology:			'Overwrites the live ontology with a snapshot from a master server. Irreversible.',
@@ -701,8 +705,9 @@ const build_list_view = async function(self, widgets) {
 	// tool id → label key, resolved at RENDER time (get_label is populated at boot,
 	// after this module is imported, so a module-level read would serve undefined).
 	const MAP_TOOL_DESC_LABEL = {
-		update_code		: 'update_code_lead',
-		update_ontology : 'update_ontology_lead'
+		update_code			: 'update_code_lead',
+		update_ontology		: 'update_ontology_lead',
+		publication_hosts	: 'publication_hosts_lead'
 	}
 
 
@@ -1360,6 +1365,18 @@ const build_map_view = function(self, widgets, opts={}) {
 		// the map. Guarding is not removing.
 		document.addEventListener('keydown', on_keydown)
 
+	// OPEN_WIDGET_EVENT (maintenance_events.js): another widget asks to show this
+	// one (media_control's publication-hosts line). Guarded like on_keydown, so a
+	// stale map never acts; removed in destroy().
+		const on_open_widget = (e) => {
+			if (!document.body.contains(root)) { return }
+			const id = e.detail && e.detail.id
+			if (!id || !by_id[id]) { return }
+			if (opts && typeof opts.show_map==='function') { opts.show_map() }
+			open_tool(id)
+		}
+		document.addEventListener(OPEN_WIDGET_EVENT, on_open_widget)
+
 	// on_show — called when the map view becomes visible; draw edges (which need
 	// layout) and kick off the idle health probes the first time.
 		const on_show = () => {
@@ -1385,9 +1402,10 @@ const build_map_view = function(self, widgets, opts={}) {
 			}
 			window.removeEventListener('resize', draw_edges)
 			document.removeEventListener('keydown', on_keydown)
+			document.removeEventListener(OPEN_WIDGET_EVENT, on_open_widget)
 		}
 
-	return { node: root, on_show, open_palette, destroy }
+	return { node: root, on_show, open_palette, open_tool, destroy }
 }//end build_map_view
 
 

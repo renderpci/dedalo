@@ -19253,6 +19253,251 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   overflow: auto;
 }
 /**
+* publication_hosts
+*
+* Included from area_maintenance.less file.
+* The readout (section / fact_row / check_row) is update_code's
+* .dd_update_status() mixin, and severity is the widget_kit's (.dd_badge pills,
+* .dd_note states). Only the host card, action bar and edit form live here.
+*/
+.wrapper_widget.publication_hosts .update_status {
+  margin-bottom: 1rem;
+}
+.wrapper_widget.publication_hosts .update_status .status_block {
+  margin-bottom: 0.75rem;
+}
+.wrapper_widget.publication_hosts .update_status .status_block .dd_eyebrow {
+  margin-bottom: 0.33rem;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold {
+  margin-bottom: 0.4rem;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold > .status_fold_summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold > .status_fold_summary::-webkit-details-marker {
+  display: none;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold > .status_fold_summary:before {
+  content: '\25B8';
+  color: var(--fg_muted);
+  font-size: 0.8rem;
+  transition: transform 0.12s ease;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold > .status_fold_summary > .dd_eyebrow {
+  margin-bottom: 0;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold > .status_fold_summary > .fold_hint {
+  font-size: 0.9em;
+  color: var(--fg_muted);
+  overflow-wrap: anywhere;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold > .status_fold_summary > .dd_badge {
+  white-space: nowrap;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold > .status_fold_summary:hover > .dd_eyebrow {
+  color: var(--fg_default);
+}
+.wrapper_widget.publication_hosts .update_status .status_fold[open] > .status_fold_summary {
+  margin-bottom: 0.33rem;
+}
+.wrapper_widget.publication_hosts .update_status .status_fold[open] > .status_fold_summary:before {
+  transform: rotate(90deg);
+}
+.wrapper_widget.publication_hosts .update_status .status_fold:not([open]) > .dd_readout {
+  display: none;
+}
+.wrapper_widget.publication_hosts .update_status .readiness_block > .status_verdict {
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.wrapper_widget.publication_hosts .update_status .readiness_block > .attention_checks {
+  margin-bottom: 0.5rem;
+}
+.wrapper_widget.publication_hosts .update_status .readiness_block > .status_fold {
+  margin-bottom: 0;
+}
+.wrapper_widget.publication_hosts .update_status .status_verdict {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  margin-bottom: 2rem;
+}
+.wrapper_widget.publication_hosts .update_status .status_verdict.state_ok {
+  color: var(--color_success);
+}
+.wrapper_widget.publication_hosts .update_status .status_verdict.state_danger {
+  color: var(--color_danger);
+}
+.wrapper_widget.publication_hosts .update_status .status_verdict.state_warning {
+  color: var(--color_warning);
+}
+.wrapper_widget.publication_hosts .update_status .check_row .dd_v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.wrapper_widget.publication_hosts .update_status .check_row .check_detail {
+  overflow-wrap: anywhere;
+  opacity: 0.85;
+}
+.wrapper_widget.publication_hosts .update_status .check_row .check_scope {
+  font-size: 0.9em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+.wrapper_widget.publication_hosts .update_status .check_row .check_note {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+.wrapper_widget.publication_hosts .update_status .dd_v > .dd_badge {
+  margin-left: 0.4rem;
+  margin-right: 0.33rem;
+  white-space: nowrap;
+}
+.wrapper_widget.publication_hosts .update_status .restore_row .dd_v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.wrapper_widget.publication_hosts .update_status .restore_row .restore_version {
+  opacity: 0.85;
+}
+.wrapper_widget.publication_hosts .update_status .restore_row .restore_reason {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+.wrapper_widget.publication_hosts .update_status .restore_row .restore_reason_detail {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+.wrapper_widget.publication_hosts .update_status .restore_row > .dd_v > button.button_delete_point {
+  margin-left: 0.4rem;
+  padding: 0.15rem 0.7rem;
+  color: var(--color_danger);
+}
+.wrapper_widget.publication_hosts .update_status .restore_row > .dd_v > button.button_delete_point[disabled] {
+  color: var(--fg_muted);
+}
+.wrapper_widget.publication_hosts .update_status .restore_row > .dd_v > button.button_restore {
+  margin-left: auto;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.9em;
+}
+.wrapper_widget.publication_hosts .update_status .restore_row > .dd_v > button.button_restore[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wrapper_widget.publication_hosts .update_status .dd_v > .check_note {
+  font-size: 0.9em;
+  opacity: 0.75;
+  margin-top: 0.2rem;
+}
+.wrapper_widget.publication_hosts .publication_hosts_content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.wrapper_widget.publication_hosts .registry_invalid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.wrapper_widget.publication_hosts .publication_host {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0;
+}
+.wrapper_widget.publication_hosts .publication_host .dd_readout {
+  grid-template-columns: minmax(min-content, 14rem) 1fr;
+}
+.wrapper_widget.publication_hosts .host_actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.publication_hosts .host_rollback_select {
+  height: 2.2rem;
+  margin: 0;
+  padding: 0.25rem 1.8rem 0.25rem 0.6rem;
+  color: var(--fg_default);
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+}
+.wrapper_widget.publication_hosts .host_rollback_select:focus-visible {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 0;
+}
+.wrapper_widget.publication_hosts .host_edit {
+  margin-top: 0.6rem;
+}
+.wrapper_widget.publication_hosts .host_edit > summary {
+  cursor: pointer;
+  color: var(--fg_muted);
+}
+.wrapper_widget.publication_hosts .host_edit > summary:hover {
+  color: var(--fg_default);
+}
+.wrapper_widget.publication_hosts .host_edit_fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  max-width: 40rem;
+}
+.wrapper_widget.publication_hosts .host_edit_fields > button {
+  justify-self: start;
+}
+.wrapper_widget.publication_hosts .host_field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.wrapper_widget.publication_hosts .host_field > .host_field_label {
+  font-size: 0.9em;
+  color: var(--fg_muted);
+}
+.wrapper_widget.publication_hosts .host_field > input {
+  width: 100%;
+  min-width: 0;
+}
+.wrapper_widget.publication_hosts .body_response {
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+}
+.wrapper_widget.publication_hosts .body_response:empty {
+  display: none;
+}
+/**
 * sequences_status
 *
 * Included from area_maintenance.less file.

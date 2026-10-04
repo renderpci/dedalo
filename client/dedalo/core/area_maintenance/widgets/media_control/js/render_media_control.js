@@ -10,6 +10,7 @@
 	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
+	import {OPEN_WIDGET_EVENT} from '../../../js/maintenance_events.js'
 
 
 
@@ -135,8 +136,9 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'content_data media_control_content'
 		})
 
-	// status block
-		build_status_block(value, content_data)
+	// status block (+ the read-only line pointing at the publication_hosts widget)
+		const status_block = build_status_block(value, content_data)
+		build_publication_hosts_link(status_block)
 
 	// mode selector (root user only)
 		build_mode_selector(self, value, content_data)
@@ -327,6 +329,51 @@ const build_status_block = function(value, parent) {
 
 	return status_block
 }//end build_status_block
+
+
+
+/**
+* BUILD_PUBLICATION_HOSTS_LINK
+* ONE read-only line at the foot of the status readout. Separate publication
+* machines (their media rules, mounts and probes) are managed in the
+* publication_hosts widget, not here (PUBLICATION_HOST_SPEC §8 phase 3). The
+* button asks the dashboard to open that widget through OPEN_WIDGET_EVENT
+* (maintenance_events.js) and changes nothing.
+* @param {HTMLElement} status_block - the .dd_readout built by build_status_block
+* @returns {HTMLElement} the row
+*/
+const build_publication_hosts_link = function(status_block) {
+
+	const row = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_row publication_hosts_link',
+		parent			: status_block
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_k',
+		text_content	: get_label.media_control_publication_hosts || 'Publication hosts',
+		parent			: row
+	})
+	const value_node = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_v',
+		parent			: row
+	})
+	const button_open = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'light button_open_publication_hosts',
+		text_content	: get_label.publication_hosts_open || 'Open the publication hosts panel',
+		parent			: value_node
+	})
+	button_open.addEventListener('click', (e) => {
+		e.stopPropagation()
+		document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail : { id : 'publication_hosts' } }))
+	})
+
+
+	return row
+}//end build_publication_hosts_link
 
 
 

@@ -380,14 +380,18 @@ export const fact_row = function(parent, k, v, mono) {
 /**
 * CHECK_ROW
 * One readiness line: label (by check id), state chip, and the server's fact.
-* A `note` label — `update_code_note_<id>` — is rendered underneath, but ONLY
+* A `note` label — `<prefix>_note_<id>` — is rendered underneath, but ONLY
 * when the check is not ok: an operator reading a green panel does not need the
 * explanation of a failure that did not happen.
+* The label PREFIX defaults to `update_code` (update_code and serve_code share
+* the `update_code_check_*` keys); another panel speaking the same StatusCheck
+* vocabulary passes its own (publication_hosts → `publication_hosts_check_*`).
 * @param {HTMLElement} parent
 * @param {{id:string, state:string, detail:string|undefined}} check
+* @param {string} [label_prefix='update_code']
 * @returns {HTMLElement}
 */
-export const check_row = function(parent, check) {
+export const check_row = function(parent, check, label_prefix='update_code') {
 
 	const row = ui.create_dom_element({
 		element_type	: 'div',
@@ -399,7 +403,7 @@ export const check_row = function(parent, check) {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'dd_k',
-		text_content	: get_label['update_code_check_' + check.id] || check.id,
+		text_content	: get_label[label_prefix + '_check_' + check.id] || check.id,
 		parent			: row
 	})
 
@@ -438,7 +442,7 @@ export const check_row = function(parent, check) {
 	}
 
 	// the why, only where it helps
-	const note = get_label['update_code_note_' + check.id]
+	const note = get_label[label_prefix + '_note_' + check.id]
 	if (note && check.state!=='ok') {
 		ui.create_dom_element({
 			element_type	: 'div',

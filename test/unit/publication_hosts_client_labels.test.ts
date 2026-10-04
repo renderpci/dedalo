@@ -40,19 +40,50 @@ describe('publication_hosts client labels', () => {
 	const master = readJson(join(LABELS_DIR, 'master.json'));
 
 	test('every dynamically resolved key is defined in the master', () => {
+		// corpus floor: 11 check ids + the lead, so an emptied list cannot pass vacuously
+		expect(DYNAMIC_KEYS).toHaveLength(12);
 		expect(DYNAMIC_KEYS.filter((key) => master[key] === undefined)).toEqual([]);
 	});
 
 	test('every dynamically resolved key is translated in every non-master catalog', () => {
 		const gaps: string[] = [];
+		const scanned: string[] = [];
 		for (const name of readdirSync(join(LABELS_DIR, 'catalog')).sort()) {
 			const lang = name.replace('.json', '');
 			if (lang === MASTER_SOURCE_LANG) continue;
 			const catalog = readJson(join(LABELS_DIR, 'catalog', name));
+			scanned.push(lang);
 			for (const key of DYNAMIC_KEYS) {
 				if (catalog[key] === undefined) gaps.push(`${lang}:${key}`);
 			}
 		}
+		// corpus floor: the 17 non-master catalogs exist and were read
+		expect(scanned.length).toBeGreaterThanOrEqual(17);
 		expect(gaps).toEqual([]);
+	});
+
+	test('the widget resolves check labels through the publication_hosts prefix (anti-vacuity)', () => {
+		const area = resolve(import.meta.dir, '../../client/dedalo/core/area_maintenance');
+		const render = readFileSync(
+			join(area, 'widgets/publication_hosts/js/render_publication_hosts.js'),
+			'utf8',
+		);
+		expect(render).toContain("check_row(facts, check, 'publication_hosts')");
+		const shared = readFileSync(
+			join(area, 'widgets/update_code/js/render_update_status.js'),
+			'utf8',
+		);
+		expect(shared).toContain("get_label[label_prefix + '_check_' + check.id]");
+	});
+
+	test('the System Map resolves the lead through MAP_TOOL_DESC_LABEL', () => {
+		const map = readFileSync(
+			resolve(
+				import.meta.dir,
+				'../../client/dedalo/core/area_maintenance/js/render_area_maintenance.js',
+			),
+			'utf8',
+		);
+		expect(map).toMatch(/publication_hosts\s*:\s*'publication_hosts_lead'/);
 	});
 });
