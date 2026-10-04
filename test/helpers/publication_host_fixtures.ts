@@ -118,9 +118,15 @@ function pkcs8(dir: string, file: string): string {
 
 /**
  * Mint a CA + server + client set. `cn` lets two calls produce two unrelated PKIs
- * (a rogue-CA case). Takes ~100 ms; mint once per test file.
+ * (a rogue-CA case). `serverSan` is the server leaf's subjectAltName: the default names
+ * 127.0.0.1 and localhost; a channel gate that must prove the certificate is checked
+ * against the REGISTRY host passes 'IP:127.0.0.1' and dials 'localhost'. Takes ~100 ms;
+ * mint once per test file.
  */
-export function mintTestPki(cn = 'dedalo-test-publication-host'): TestPki {
+export function mintTestPki(
+	cn = 'dedalo-test-publication-host',
+	serverSan = 'IP:127.0.0.1,DNS:localhost',
+): TestPki {
 	const dir = mkdtempSync(join(tmpdir(), 'dedalo_pubhost_pki_'));
 	try {
 		openssl(dir, [
@@ -144,7 +150,7 @@ export function mintTestPki(cn = 'dedalo-test-publication-host'): TestPki {
 			dir,
 			'server',
 			`${cn}-agent`,
-			'basicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\nsubjectAltName=IP:127.0.0.1,DNS:localhost\n',
+			`basicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\nsubjectAltName=${serverSan}\n`,
 		);
 		issue(
 			dir,

@@ -52,8 +52,12 @@ export const TOKEN_FILE = 'token';
 export const BUNDLE_FILE = 'engine_bundle.pem';
 const DIR_MODE = 0o700;
 const FILE_MODE = 0o600;
-/** One bearer: printable ASCII, no space (it rides an Authorization header), ≥ 32 chars. */
-const TOKEN_SHAPE = /^[\x21-\x7e]{32,1024}$/;
+/**
+ * One bearer: printable ASCII, no space (it rides an Authorization header), 32–1024 chars.
+ * THE one bearer grammar: transport.ts imports it, so a token this store accepts is never
+ * refused by the door (the agent's own SERVICE_TOKEN bound is ≥ 32, no maximum).
+ */
+export const TOKEN_SHAPE = /^[\x21-\x7e]{32,1024}$/;
 const PEM_BLOCK =
 	/-----BEGIN ([A-Z0-9 ]+)-----\r?\n[A-Za-z0-9+/=\r\n]+?-----END \1-----(?:\r?\n|$)/g;
 const BUNDLE_LAYOUT = 'CERTIFICATE|PRIVATE KEY|CERTIFICATE';

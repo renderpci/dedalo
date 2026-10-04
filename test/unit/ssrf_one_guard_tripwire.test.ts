@@ -85,6 +85,14 @@ const GUARD = 'src/core/security/ssrf_guard.ts';
 const HARVEST_DOOR = 'src/core/harvest/harvest.ts';
 
 /**
+ * The paired private agent channel — the FOURTH door (engineering/OUTBOUND_SPEC.md §2.1).
+ * The publication agent is private BY DESIGN, so the guard would refuse it; the door is
+ * named and censused here as a door (`PRIVATE_CHANNEL_DOORS`, the import-graph rows
+ * below), never parked in the `EXEMPT` burn-down.
+ */
+const AGENT_CHANNEL = 'src/core/publication_host/transport.ts';
+
+/**
  * An outbound CALL — `await fetch(`, `= fetch(`, `return fetch(`, `(fetch(`.
  * Deliberately not a bare `fetch(`: `Bun.serve({ fetch(request) {…} })` is a
  * handler DEFINITION — the INBOUND direction — and flagging it makes the gate
@@ -163,6 +171,20 @@ const EXEMPT: Record<string, string> = {
 		'byte-capped — NOT YET on the guarded transport (CARRY-14).',
 };
 
+/**
+ * Doors that dial a legitimately PRIVATE destination with a policy of their own. Not
+ * burn-down: each is a permanent door of `engineering/OUTBOUND_SPEC.md` §2, with its own
+ * gate. A row whose file stops dialling is stale (red), and a door is never ALSO exempt.
+ */
+const PRIVATE_CHANNEL_DOORS: Record<string, string> = {
+	[AGENT_CHANNEL]:
+		'THE paired private agent channel: dials ONLY the registry entry of a paired publication ' +
+		'agent — https to the registered host:port with mTLS (client certificate from the engine ' +
+		'bundle, the CA pinned, rejectUnauthorized on) or the registered unix socket — on the ' +
+		'agent’s closed route table, redirects refused, total deadline + idle bound, shared capped ' +
+		'reader. Policed by publication_host_door_tripwire and publication_host_transport_native.',
+};
+
 /** `code`: comments stripped, literals kept. `blanked`: literal bodies blanked too. */
 function sourceFiles(): { file: string; code: string; blanked: string }[] {
 	const files: { file: string; code: string; blanked: string }[] = [];
@@ -197,7 +219,9 @@ describe('outbound SSRF: one guard', () => {
 	});
 
 	test('no NEW module opens an outbound socket of its own', () => {
-		const offenders = raw.filter((file) => EXEMPT[file] === undefined);
+		const offenders = raw.filter(
+			(file) => EXEMPT[file] === undefined && PRIVATE_CHANNEL_DOORS[file] === undefined,
+		);
 		expect(
 			offenders,
 			'A new outbound door skips the resolve-and-vet, the redirect policy, the timeout ' +
@@ -220,6 +244,14 @@ describe('outbound SSRF: one guard', () => {
 		).toEqual([]);
 		for (const [file, reason] of Object.entries(EXEMPT)) {
 			expect(reason.length, `${file}: an exemption needs a real reason`).toBeGreaterThan(80);
+		}
+	});
+
+	test('a private channel door is a DOOR, not a burn-down row, and still dials', () => {
+		for (const [file, reason] of Object.entries(PRIVATE_CHANNEL_DOORS)) {
+			expect(EXEMPT[file], `${file} is a door — never also a burn-down exemption`).toBeUndefined();
+			expect(raw, `${file} no longer opens its socket — delete its row`).toContain(file);
+			expect(reason.length, `${file}: a door row needs a real reason`).toBeGreaterThan(80);
 		}
 	});
 
@@ -284,10 +316,26 @@ const FOLLOW = 'src/core/harvest/follow.ts';
  */
 const FOLLOW_DOOR = 'followVetted';
 
+/**
+ * The agent channel's two doors. `agentRequest` reads the host's TLS material itself and is
+ * what production dials through; `dialAgent` takes the material from its caller and exists
+ * for the door's own native gate — no production module may hold it.
+ */
+const AGENT_CHANNEL_DOORS = ['agentRequest', 'dialAgent'] as const;
+
+/**
+ * The ONLY production holders of `agentRequest`. Exact in both directions, like
+ * `PINNED_HOP_IMPORTERS`: the holder owes the pairing proof BEFORE it passes a bearer
+ * (engineering/PUBLICATION_HOST_SPEC.md §2 rule 3), which the door cannot do for it.
+ * Empty until the publication-host client lands; it is that client's row to add.
+ */
+const AGENT_CHANNEL_IMPORTERS: Record<string, string> = {};
+
 /** Every door-carrying module the census starts from, with the doors it hands out. */
 const DOOR_SEEDS: Record<string, readonly string[]> = {
 	[GUARD]: RAW_DOORS,
 	[FOLLOW]: [FOLLOW_DOOR],
+	[AGENT_CHANNEL]: AGENT_CHANNEL_DOORS,
 };
 
 /**
@@ -680,6 +728,23 @@ function toolViolations(file: string, doors: Set<string>): string[] {
 		);
 }
 
+function agentChannelViolations(file: string, doors: Set<string>): string[] {
+	const found: string[] = [];
+	if (doors.has('dialAgent')) {
+		found.push(
+			`${file}: holds dialAgent — the door's own seam takes TLS material from its caller; ` +
+				`production dials through agentRequest (${AGENT_CHANNEL})`,
+		);
+	}
+	if (doors.has('agentRequest') && AGENT_CHANNEL_IMPORTERS[file] === undefined) {
+		found.push(
+			`${file}: holds agentRequest — only the publication-host client may dial an agent: it ` +
+				'proves the pairing before any bearer is sent (engineering/PUBLICATION_HOST_SPEC.md §2)',
+		);
+	}
+	return found;
+}
+
 /** Every rule the census enforces, as messages; empty when the tree is clean. */
 function doorViolations(census: Map<string, Set<string>>): string[] {
 	const found: string[] = [];
@@ -701,6 +766,7 @@ function doorViolations(census: Map<string, Set<string>>): string[] {
 					`its caller's beforeHop. Harvest through harvestFetch (${HARVEST_DOOR}).`,
 			);
 		}
+		found.push(...agentChannelViolations(file, doors));
 		if (file.startsWith('tools/')) found.push(...toolViolations(file, doors));
 	}
 	return found.sort();
@@ -748,7 +814,54 @@ describe('who holds which door (import-graph census)', () => {
 			if (census.get(file)?.has(FOLLOW_DOOR) !== true)
 				stale.push(`${file}: no longer holds ${FOLLOW_DOOR}`);
 		}
+		for (const file of Object.keys(AGENT_CHANNEL_IMPORTERS)) {
+			if (census.get(file)?.has('agentRequest') !== true)
+				stale.push(`${file}: no longer holds agentRequest`);
+		}
 		expect(stale, 'a row for a debt already paid hides that it was paid').toEqual([]);
+	});
+
+	test('the agent channel is censused like the other doors (synthetic tree)', () => {
+		// Every holder shape must be seen — direct, through a barrel, renamed, by namespace,
+		// from a tool — and the seam refused everywhere. The client's row (when it exists)
+		// is the only legal holder of agentRequest.
+		const client = 'src/core/publication_host/agent_client.ts';
+		const synthetic = new Map<string, string>([
+			[
+				AGENT_CHANNEL,
+				'export async function agentRequest() {}\nexport async function dialAgent() {}',
+			],
+			[client, "import { agentRequest } from './transport.ts';\nexport const x = agentRequest;"],
+			['src/core/publication_host/barrel.ts', "export * from './transport.ts';"],
+			[
+				'src/core/area_maintenance/widgets/publication_hosts.ts',
+				"import { agentRequest as dial } from '../../publication_host/barrel.ts';\nvoid dial;",
+			],
+			[
+				'src/core/publication_host/seam_user.ts',
+				"import { dialAgent } from './transport.ts';\nvoid dialAgent;",
+			],
+			[
+				'tools/tool_pub/server/index.ts',
+				"import * as t from '../../../src/core/publication_host/transport.ts';\nvoid t;",
+			],
+		]);
+		const census = doorCensus(synthetic);
+		expect([
+			...(census.get('src/core/area_maintenance/widgets/publication_hosts.ts') ?? []),
+		]).toEqual(['agentRequest']);
+		expect([...(census.get('tools/tool_pub/server/index.ts') ?? [])].sort()).toEqual([
+			...AGENT_CHANNEL_DOORS,
+		]);
+		const violations = doorViolations(census);
+		const flagged = (file: string, door: string) =>
+			violations.some((v) => v.startsWith(`${file}: holds ${door}`));
+		expect(flagged('src/core/area_maintenance/widgets/publication_hosts.ts', 'agentRequest')).toBe(
+			true,
+		);
+		expect(flagged('src/core/publication_host/seam_user.ts', 'dialAgent')).toBe(true);
+		expect(flagged('tools/tool_pub/server/index.ts', 'dialAgent')).toBe(true);
+		expect(flagged(client, 'agentRequest')).toBe(AGENT_CHANNEL_IMPORTERS[client] === undefined);
 	});
 
 	test('the census sees through every binding form (synthetic tree)', () => {

@@ -128,6 +128,10 @@ const BOUNDED_BY: Record<string, { sites: number; how: string }> = {
 		sites: 1,
 		how: 'fetchExternalJson: byte cap, breaker and concurrency slot, with its own gate',
 	},
+	'src/core/publication_host/transport.ts': {
+		sites: 1,
+		how: 'dialAgent: the shared readBytesCapped (default 1 MiB, ceiling 16 MiB) under ONE AbortSignal.timeout deadline that also bounds the body, an idle bound, redirect manual and any 3xx refused unread',
+	},
 };
 
 /**
@@ -203,6 +207,10 @@ const ADDRESS_POLICY: Record<string, string> = {
 		'defines fetchBoundedText (no policy, no pin); fetchGuardedText vets, pins and caps through fetchPinnedHop and never calls it',
 	'src/core/tools/transcription_local_asr.ts':
 		'isSafeLocalAsrUrl: http(s) only, private hosts ONLY behind DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS',
+	// Not a fetchBoundedText caller: a private-destination DOOR with its own call, held to
+	// the same rule — its one URL is its policy's output (asserted below).
+	'src/core/publication_host/transport.ts':
+		'agentTarget: the EXACT registry entry of a paired agent — https host:port with mTLS from the engine bundle, or the unix socket — never caller text',
 };
 
 /**
@@ -771,6 +779,29 @@ describe('no outbound fetch is unbounded', () => {
 			notApplied,
 			'a caller reaches the unguarded transport more often than it checks the address',
 		).toEqual([]);
+	});
+
+	test('the private agent channel dials only what its own address policy produced', () => {
+		const door = 'src/core/publication_host/transport.ts';
+		expect(
+			ADDRESS_POLICY[door],
+			'the agent channel lost its declared address policy',
+		).toBeDefined();
+		const sites = fetchSites().filter((site) => site.file === door);
+		expect(sites.length, 'the agent channel makes exactly one call').toBe(1);
+		expect(
+			callArgument(sites[0]?.call ?? '', 0).trim(),
+			'the URL dialled is not the policy’s output',
+		).toBe('target.url');
+		const source = code(door);
+		expect(source, 'agentTarget is gone').toMatch(/function agentTarget\s*\(/);
+		expect(source, 'the target is not built by agentTarget').toMatch(
+			/const\s+target\s*=\s*agentTarget\s*\(/,
+		);
+		expect(
+			importedCalls(door, 'src/core/security/ssrf_guard.ts'),
+			'the agent channel reads its body with a loop of its own',
+		).toContain('readBytesCapped');
 	});
 
 	test('the on-premise transcriber uses the primitive, not a third copy', () => {
