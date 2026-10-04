@@ -2121,6 +2121,30 @@ describe('CI workflow tripwire', () => {
 			backgroundedIn(hermeticRaw).sort(),
 			'hermetic.sh must background exactly the derived daemon packages (every locked package with its own bunfig.toml) — a missing one runs nowhere, an extra one is not a package',
 		).toEqual([...DAEMON_PACKAGES].sort());
+		// Each job's log is a mktemp'd variable, never a predictable path: a literal
+		// `/tmp/x.$$` redirect follows a pre-planted symlink and can be pre-created
+		// world-readable (the agent suite prints test bearer/pairing material).
+		const unsafeLogsIn = (text: string): string[] =>
+			[...text.matchAll(/^daemon_gate \S+ > (\S+) 2>&1 &$/gm)]
+				.map((m) => m[1] as string)
+				.filter((target) => {
+					const v = /^"\$(\w+)"$/.exec(target)?.[1];
+					if (v === undefined) return true;
+					return !new RegExp(
+						`^${v}="\\$\\(mktemp "\\$\\{TMPDIR:-/tmp\\}/[\\w.]+\\.XXXXXX"\\)"$`,
+						'm',
+					).test(text);
+				});
+		expect(
+			unsafeLogsIn(
+				'daemon_gate a > /tmp/z.$$ 2>&1 &\nx_log="$(mktemp "${TMPDIR:-/tmp}/d.XXXXXX")"\ndaemon_gate b > "$x_log" 2>&1 &\ndaemon_gate c > "$y_log" 2>&1 &\n',
+			),
+			'matcher control: a literal path and an unassigned var are unsafe, a mktemp var is not',
+		).toEqual(['/tmp/z.$$', '"$y_log"']);
+		expect(
+			unsafeLogsIn(hermeticRaw),
+			'hermetic.sh daemon job logs must be mktemp-created variables (symlink/pre-create safe), like daemon_gate() own log',
+		).toEqual([]);
 		const waits = hermeticRaw.match(/wait "\$\w+" \|\| \w+=\$\?/g) ?? [];
 		expect(
 			waits.length,

@@ -31,7 +31,7 @@
 #   apache2 + apache2-dev (apxs) + nginx (mp4 module) — the publication-host media
 #             drill (`bun run test:media:pubhost`, instance tier) boots both live.
 #   sudo — for its parser only (cvtsudoers): publication/host_agent's sudoers gate
-#             validates the rendered rule with the real grammar.
+#             validates the rendered rule with the real grammar. setuid bit stripped.
 #   chromium — the browser the client suite (scripts/client_test_runner.ts) drives.
 #             NOT google-chrome: Google publishes no linux/arm64 build, and this
 #             image is multi-arch so an Apple-Silicon Mac runs it natively. One
@@ -130,10 +130,15 @@ RUN set -eux; \
 # publication/host_agent/tests/provision_render_grants.test.ts parses the rendered sudoers
 # rule with `cvtsudoers` (hermetic daemon gate) — sudo's own grammar, and unlike `visudo`
 # it does not refuse the job's BARE uid 1001 (no passwd entry). sudo itself is never
-# configured nor invoked in this image, and uid 1001 gains nothing from it.
+# configured nor invoked in this image. Its SETUID BIT IS STRIPPED (dpkg-statoverride, so
+# a package upgrade keeps it stripped): the parser needs none, and a setuid-root binary is
+# local-escalation surface for uid 1001 (cf. CVE-2025-32463) — without the bit, uid 1001
+# truly gains nothing. The `test ! -u` below fails the build if the override ever lapses.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends sudo; \
+    dpkg-statoverride --update --add root root 0755 /usr/bin/sudo; \
+    test ! -u /usr/bin/sudo; \
     rm -rf /var/lib/apt/lists/*
 
 # --- browser (client suite) -----------------------------------------------------

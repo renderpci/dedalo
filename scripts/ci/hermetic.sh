@@ -634,11 +634,19 @@ daemon_gate() {
 echo "== hermetic: daemon packages, concurrently (site_builder + publication API v2 + publication-host agent)"
 daemon_status=0
 
-daemon_gate publication/site_builder > /tmp/dedalo_daemon_sb.$$ 2>&1 &
+# Per-job logs come from mktemp (fresh, 0600, O_EXCL), the same pattern daemon_gate() uses:
+# a predictable `/tmp/name.$$` redirect follows a pre-planted symlink (truncates whatever
+# file it points at) and can be pre-created world-readable (the agent suite prints test
+# bearer/pairing material). ci_workflow_tripwire rule 15 holds the mktemp shape.
+sb_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_sb.XXXXXX")"
+pa_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_pa.XXXXXX")"
+ha_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_ha.XXXXXX")"
+
+daemon_gate publication/site_builder > "$sb_log" 2>&1 &
 sb_pid=$!
-daemon_gate publication/server_api/v2 > /tmp/dedalo_daemon_pa.$$ 2>&1 &
+daemon_gate publication/server_api/v2 > "$pa_log" 2>&1 &
 pa_pid=$!
-daemon_gate publication/host_agent > /tmp/dedalo_daemon_ha.$$ 2>&1 &
+daemon_gate publication/host_agent > "$ha_log" 2>&1 &
 ha_pid=$!
 
 # `wait <pid>` returns the job's exit status; `|| rc=$?` keeps `set -e` from
@@ -648,11 +656,11 @@ pa_rc=0; wait "$pa_pid" || pa_rc=$?
 ha_rc=0; wait "$ha_pid" || ha_rc=$?
 
 echo "---- publication/site_builder ----"
-cat /tmp/dedalo_daemon_sb.$$ ; rm -f /tmp/dedalo_daemon_sb.$$
+cat "$sb_log" ; rm -f "$sb_log"
 echo "---- publication/server_api/v2 ----"
-cat /tmp/dedalo_daemon_pa.$$ ; rm -f /tmp/dedalo_daemon_pa.$$
+cat "$pa_log" ; rm -f "$pa_log"
 echo "---- publication/host_agent ----"
-cat /tmp/dedalo_daemon_ha.$$ ; rm -f /tmp/dedalo_daemon_ha.$$
+cat "$ha_log" ; rm -f "$ha_log"
 
 [ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
 [ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }

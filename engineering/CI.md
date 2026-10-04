@@ -359,7 +359,7 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   rendered rule with `cvtsudoers` from the `sudo` package when present — it parses
   without a passwd entry, so it works as the job's bare uid 1001 — else `visudo -cf -`,
   which is what macOS ships). The CI image ships both (`ci/Dockerfile`; sudo is never
-  configured nor invoked there). Missing = RED, never a skip. Required config keys get harmless stubs;
+  configured nor invoked there, and its setuid bit is stripped via `dpkg-statoverride`). Missing = RED, never a skip. Required config keys get harmless stubs;
   `DB_PORT` points at a closed port so any accidental DB touch fails loudly. No
   hermetic gate starts a server: `suite_mariadb_target_native` (which drives the lane's
   own `mariadbd`) is a DB-tier gate (`NOT_HERMETIC` row + `DB_TIER_TRIPWIRES`).
