@@ -17,7 +17,15 @@
  * holds the mirror equal to the CLI's own EXIT.
  */
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
 	agentUrl,
@@ -72,7 +80,20 @@ export const PAIR_CLI = {
 	script: 'scripts/publication_host_pair.ts',
 	fragment: '--fragment',
 	exit: { ok: 0, usage: 2, refused: 3, failed: 4 },
+	/** The live-proof staging dir prefix (the CLI's STAGING_PREFIX, held equal in the kit gate). */
+	stagingPrefix: 'pairing_',
 } as const;
+
+/**
+ * Staging dirs the CLI left under `<private>/publication_hosts/` (it removes its own in
+ * `finally`): a refused run that leaves one leaves the token it refused on disk.
+ */
+export function stagingLeftovers(privateDir: string): string[] {
+	const root = join(privateDir, REGISTRY.secretsDir);
+	return existsSync(root)
+		? readdirSync(root).filter((entry) => entry.startsWith(PAIR_CLI.stagingPrefix))
+		: [];
+}
 
 export type PairCommand = 'add' | 'replace' | 'remove';
 
@@ -80,6 +101,34 @@ export function pairArgv(command: PairCommand, name: string, fragment?: string):
 	if (command === 'remove') return [command, name];
 	if (fragment === undefined) throw new Error(`pair ${command} needs ${PAIR_CLI.fragment}`);
 	return [command, name, PAIR_CLI.fragment, fragment];
+}
+
+// ── the agent's request log (RF1 observed on the agent side) ────────────────
+
+/** The agent's per-request line at LOG_LEVEL info (publication/host_agent/src/index.ts). */
+const AGENT_REQUEST_LINE = /^([A-Z]+) (\S+) (\d{3}) [\d.]+ms$/;
+
+/**
+ * RF1, observed where it happens: the agent lines of a refused mutation hold the anonymous
+ * pairing probe(s) — `GET <health> 200` — and NOTHING else. Any other request (a 401 on a
+ * bearer route above all) means the bearer left before the proof; an engine code alone cannot
+ * say so (a 401 is re-probed and reported pairing_mismatch too). No probe at all = the
+ * observation is vacuous (logging off, wrong offset) — also a problem. Non-request lines are
+ * ignored.
+ */
+export function bearerSentProblem(lines: readonly string[], healthPath: string): string | null {
+	const requests = lines.flatMap((line) => {
+		const m = AGENT_REQUEST_LINE.exec(line.trim());
+		return m === null ? [] : [{ method: m[1], path: m[2], status: m[3], line: line.trim() }];
+	});
+	const other = requests.filter(
+		(r) => !(r.method === 'GET' && r.path === healthPath && r.status === '200'),
+	);
+	if (other.length > 0)
+		return `the agent saw more than the anonymous probe — the bearer left before the proof: ${other.map((r) => r.line).join(' | ')}`;
+	if (requests.length === 0)
+		return `no request line in the agent log (is LOG_LEVEL info?): the probe-only claim is unobserved`;
+	return null;
 }
 
 // ── the widget (Task 7) ──────────────────────────────────────────────────────

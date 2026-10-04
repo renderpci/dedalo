@@ -277,16 +277,24 @@ export const scratchCalls = (dir: string): (string | RegExp)[] => [
 	scratchCall('stop'),
 ];
 
-/** Every line the closed exec set may log (the [exec] rows): the fixed calls + the run-time ones. */
-export function inClosedSet(scene: Scene, line: string): boolean {
+/**
+ * Every line the closed exec set may log (the [exec] rows): the fixed calls + the run-time ones.
+ * `releases: false` — a pass that installs no release — closes the set further: no scratch
+ * boot, no v2 start/restart may appear.
+ */
+export function inClosedSet(
+	scene: Pick<Scene, 'server'>,
+	line: string,
+	{ releases = true }: { releases?: boolean } = {},
+): boolean {
+	if (line === configtestCall(scene.server) || line === reloadCall(scene.server)) return true;
 	return (
-		line === configtestCall(scene.server) ||
-		line === reloadCall(scene.server) ||
-		line === restartCall ||
-		line.startsWith('v2 started in ') ||
-		line.startsWith('scratch started in ') ||
-		scratchCall('start').test(line) ||
-		scratchCall('stop').test(line)
+		releases &&
+		(line === restartCall ||
+			line.startsWith('v2 started in ') ||
+			line.startsWith('scratch started in ') ||
+			scratchCall('start').test(line) ||
+			scratchCall('stop').test(line))
 	);
 }
 

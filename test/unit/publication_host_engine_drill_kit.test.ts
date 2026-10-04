@@ -18,18 +18,33 @@
  *     is the "empty list" Review Focus 2 forbids);
  *   - the secret scan finds a token, a key line and any PEM block and NAMES them, never
  *     echoing the value;
+ *   - RF1 read on the AGENT side: a refused mutation's agent request lines are the anonymous
+ *     /health probe only — a bearer route (a 401 the engine re-probes into pairing_mismatch)
+ *     is named, and no request line at all is "unobserved", never green;
+ *   - a refused pair run's leftover `pairing_` staging dir is found (prefix = the CLI's);
+ *   - the closed exec set refuses release-only lines on a pass that planted no release;
  *   - the shared row book counts RED;
  *   - the drill itself is RED, naming what is missing, on a runner without the binaries.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SYSTEMCTL, V2_SCRATCH_TEMPLATE_SUFFIX } from '../../publication/host_agent/src/exec.ts';
 import { ENGINE_KEYS } from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
-import { createRowBook } from '../../scripts/lib/publication_host_agent_scene.ts';
+import {
+	configtestCall,
+	createRowBook,
+	inClosedSet,
+	reloadCall,
+	restartCall,
+	V2_UNIT,
+	WIRE,
+} from '../../scripts/lib/publication_host_agent_scene.ts';
 import {
 	assertSecretFree,
+	bearerSentProblem,
 	bundleKeySecrets,
 	checkState,
 	engineBundlePem,
@@ -45,6 +60,7 @@ import {
 	registryFile,
 	renderEngineFragment,
 	secretLeaks,
+	stagingLeftovers,
 	writeEngineBundlePem,
 } from '../../scripts/lib/publication_host_engine_drill_kit.ts';
 import { parseEnvFile } from '../../src/config/env.ts';
@@ -172,6 +188,17 @@ describe('engine drill kit — where the engine keeps hosts, how the CLI and the
 		expect(PAIR_CLI.exit).toEqual({ ...EXIT });
 	});
 
+	test("PAIR_CLI.stagingPrefix is the CLI's STAGING_PREFIX; stagingLeftovers lists only those dirs", async () => {
+		const { STAGING_PREFIX } = await import('../../scripts/publication_host_pair.ts');
+		expect(PAIR_CLI.stagingPrefix).toBe(STAGING_PREFIX);
+		const priv = join(scratch, 'staging_private');
+		expect(stagingLeftovers(priv)).toEqual([]); // no secrets dir yet
+		mkdirSync(join(priv, 'publication_hosts', 'drill_apache'), { recursive: true });
+		expect(stagingLeftovers(priv)).toEqual([]);
+		mkdirSync(join(priv, 'publication_hosts', `${STAGING_PREFIX}0a1b2c3d`));
+		expect(stagingLeftovers(priv)).toEqual([`${STAGING_PREFIX}0a1b2c3d`]);
+	});
+
 	test("readPanel: registry.state 'ok' carries a hosts array; a payload without registry.state is refused, naming the field", () => {
 		const panel = readPanel({
 			[PANEL.registry]: { state: PANEL.registryOk, reason: null },
@@ -249,6 +276,49 @@ describe('engine drill kit — the secret scan', () => {
 		expect(() => assertSecretFree('get_value', '-----BEGIN PRIVATE KEY-----', [])).toThrow(
 			'a PEM block',
 		);
+	});
+});
+
+describe('engine drill kit — RF1 read on the agent side', () => {
+	const probe = `GET ${WIRE.health} 200 1.3ms`;
+	test('only anonymous /health probes → no problem; non-request lines ignored', () => {
+		expect(bearerSentProblem([probe, 'some boot line', probe], WIRE.health)).toBeNull();
+	});
+	test('a bearer route after the probe (the 401 the engine re-probes into pairing_mismatch) → named', () => {
+		const problem = bearerSentProblem(
+			[probe, `POST ${WIRE.rulesApply} 401 0.8ms`, probe],
+			WIRE.health,
+		);
+		expect(problem).toContain('the bearer left before the proof');
+		expect(problem).toContain(`POST ${WIRE.rulesApply} 401`);
+		expect(bearerSentProblem([`GET ${WIRE.status} 200 2.0ms`], WIRE.health)).toContain(WIRE.status);
+		expect(bearerSentProblem([`GET ${WIRE.health} 503 2.0ms`], WIRE.health)).not.toBeNull();
+	});
+	test('no request line at all → the claim is unobserved, never green', () => {
+		expect(bearerSentProblem([], WIRE.health)).toContain('unobserved');
+		expect(bearerSentProblem(['listening'], WIRE.health)).toContain('unobserved');
+	});
+});
+
+describe('the closed exec set', () => {
+	const scene = { server: 'nginx' } as const;
+	test('configtest + reload are always in; release-only lines are refused when no release was planted', () => {
+		for (const line of [configtestCall('nginx'), reloadCall('nginx')]) {
+			expect(inClosedSet(scene, line)).toBe(true);
+			expect(inClosedSet(scene, line, { releases: false })).toBe(true);
+		}
+		const releaseLines = [
+			restartCall,
+			'v2 started in /x/releases/1',
+			'scratch started in /x',
+			`${SYSTEMCTL} start ${V2_UNIT}${V2_SCRATCH_TEMPLATE_SUFFIX}18080.service`,
+			`${SYSTEMCTL} stop ${V2_UNIT}${V2_SCRATCH_TEMPLATE_SUFFIX}18080.service`,
+		];
+		for (const line of releaseLines) {
+			expect(inClosedSet(scene, line)).toBe(true);
+			expect(inClosedSet(scene, line, { releases: false })).toBe(false);
+		}
+		expect(inClosedSet(scene, configtestCall('apache'))).toBe(false);
 	});
 });
 

@@ -17,9 +17,11 @@
  *             over the unix socket): published 200 / unpublished 404 THROUGH the server, the
  *             exact configtest → reload stand-in sequence, reported hash = expected hash.
  *   refusals  a global admin who is not root: every action perm.denied, nothing changes
- *             (Review Focus 3); a re-provisioned agent: pairing_mismatch — never `auth`,
- *             which would mean the bearer left before the proof — nothing applied, until the
- *             CLI re-pairs (Review Focus 1); a frozen agent → timeout|unreachable in bounded
+ *             (Review Focus 3); a re-provisioned agent: pairing_mismatch, and the AGENT'S
+ *             request log (LOG_LEVEL info) shows only the anonymous `GET /health` probe — no
+ *             bearer route, no 401 — nothing applied, until the CLI re-pairs (Review Focus 1;
+ *             the engine code alone cannot prove the order: a 401 is re-probed and reported
+ *             pairing_mismatch too, so the bearer's absence is read on the agent side); a frozen agent → timeout|unreachable in bounded
  *             time, a dead one → unreachable, the registry byte-identical (Review Focus 4);
  *             a truncated or hand-edited registry → registry.state registry_invalid with
  *             hosts null, never an empty list, never rewritten, apply refused (Review Focus 2).
@@ -44,7 +46,8 @@
  * rollback attempt, before any release, rests on its error code); that the client never
  * dials is the Task 7 widget gate. RF5 scans CENTRALLY: every engine answer (get_value and
  * every action, any status) and every pair-CLI output (any exit code) — the foreign token
- * included — plus the registry file; the fragment is rendered with the agent renderer's
+ * included — plus the registry file and, last, the live engine's own log (every error path
+ * above ran for real); a refused pair run must also leave no `pairing_` staging dir; the fragment is rendered with the agent renderer's
  * ENGINE_KEYS plus pasted values — the byte-exact provisioner render → CLI contract is
  * Task 5's hermetic gate over the committed example renders.
  *
@@ -125,6 +128,7 @@ import {
 	teardown,
 	UNPUBLISHED,
 	v2Health,
+	WIRE,
 	waitAgent,
 	writeAgentEnv,
 } from './lib/publication_host_agent_scene.ts';
@@ -132,6 +136,7 @@ import {
 	ACTIONS,
 	assertSecretFree,
 	BUNDLE_PLACEHOLDER,
+	bearerSentProblem,
 	bundleKeySecrets,
 	checkState,
 	hostRow,
@@ -148,6 +153,7 @@ import {
 	renderEngineFragment,
 	type Secret,
 	secretLeaks,
+	stagingLeftovers,
 	TOKEN_PLACEHOLDER,
 	writeEngineBundle,
 } from './lib/publication_host_engine_drill_kit.ts';
@@ -313,6 +319,12 @@ const registryBytes = (ctx: Ctx): string | null => {
 	return existsSync(file) ? readFileSync(file, 'utf8') : null;
 };
 
+/** The agent's own stdout/stderr (spawnAgent's 'agent.log'), not the stand-in log. */
+const agentLogLines = (scene: Scene): string[] => {
+	const path = join(scene.dir, 'agent.log');
+	return existsSync(path) ? readFileSync(path, 'utf8').split('\n').filter(Boolean) : [];
+};
+
 const includeBytes = (scene: Scene): string | null =>
 	existsSync(scene.include) ? readFileSync(scene.include, 'utf8') : null;
 
@@ -453,6 +465,9 @@ async function pairRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 		problems([
 			registryBytes(ctx) !== before && 'the registry changed',
 			existsSync(files.dir) && `the secret dir ${files.dir} was created`,
+			// The CLI stages the secrets for its live proof and removes them in `finally`: a
+			// leftover would keep the refused token on disk.
+			...stagingLeftovers(ctx.privateDir).map((dir) => `staging dir ${dir} left behind`),
 		]);
 
 	await ctx.book.row(`${s} a placeholder left in the fragment → refused, nothing written`, () => {
@@ -811,16 +826,19 @@ async function repairRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 		},
 	);
 	await ctx.book.row(
-		`${s} apply_rules (expected rules diverged first) → publication_host.pairing_mismatch; nothing applied, registry unchanged`,
+		`${s} apply_rules (expected rules diverged first) → publication_host.pairing_mismatch; the agent saw only the anonymous /health probe (no bearer route, no 401); nothing applied, registry unchanged`,
 		() =>
 			withDivergedRules(ctx, scene, name, async () => {
 				const since = logLines(scene).length;
+				const agentSince = agentLogLines(scene).length;
 				const registry = registryBytes(ctx);
 				const include = includeBytes(scene);
 				const code = codeOf(await act(ctx, ctx.root, ACTIONS.applyRules, { name }));
 				return problems([
-					code !== 'publication_host.pairing_mismatch' &&
-						`code ${code}${code === 'publication_host.auth' ? ' — the bearer was SENT before the pairing was proved' : ''}`,
+					// `auth` would mean the proof MATCHED and the bearer was refused — a broken
+					// scene, not the RF1 order: that is read below, on the agent side.
+					code !== 'publication_host.pairing_mismatch' && `code ${code}`,
+					bearerSentProblem(agentLogLines(scene).slice(agentSince), WIRE.health),
 					callsSince(scene, since, []),
 					registryBytes(ctx) !== registry && 'the registry changed',
 					includeBytes(scene) !== include && 'the live include changed',
@@ -963,11 +981,11 @@ async function downRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 	);
 }
 
-async function execRow(ctx: Ctx, scene: Scene): Promise<void> {
+async function execRow(ctx: Ctx, scene: Scene, releases: boolean): Promise<void> {
 	await ctx.book.row(
-		`[${scene.server}][exec] every stand-in call was in the closed set; php never called`,
+		`[${scene.server}][exec] every stand-in call was in the closed set${releases ? '' : ' (no release planted: no scratch boot, no v2 start)'}; php never called`,
 		() => {
-			const stray = logLines(scene).filter((line) => !inClosedSet(scene, line));
+			const stray = logLines(scene).filter((line) => !inClosedSet(scene, line, { releases }));
 			return stray.length === 0 ? null : `outside the closed set: ${stray.join(' | ')}`;
 		},
 	);
@@ -1030,7 +1048,9 @@ async function pass(
 	const scene = await setupScene(server, shared, { listen: LISTEN_OF[server], nginxMap });
 	ctx.secrets.push({ label: `the ${server} agent token`, value: scene.token });
 	try {
-		scene.agent = spawnAgent(scene, writeAgentEnv(scene, 'agent.env'), 'agent.log');
+		// LOG_LEVEL info STATED (not the agent's default): [repair] reads the per-request lines.
+		const env = writeAgentEnv(scene, 'agent.env', { LOG_LEVEL: 'info' });
+		scene.agent = spawnAgent(scene, env, 'agent.log');
 		await waitAgent(scene);
 		await pairRows(ctx, scene, name);
 		await panelRows(ctx, scene, name);
@@ -1043,7 +1063,7 @@ async function pass(
 		await repairRows(ctx, scene, name);
 		await registryRows(ctx, scene, name);
 		await downRows(ctx, scene, name);
-		await execRow(ctx, scene);
+		await execRow(ctx, scene, first);
 	} finally {
 		await teardown(scene);
 	}
@@ -1174,6 +1194,13 @@ async function run(
 		}
 	}
 	await removalRows(ctx, names);
+	await ctx.book.row(
+		"[rf5] the live engine's own log (every error path above ran for real) holds no secret",
+		() => {
+			assertSecretFree('the engine log', readFileSync(engineLog, 'utf8'), ctx.secrets);
+			return null;
+		},
+	);
 }
 
 async function main(servers: readonly Server[]): Promise<number> {
