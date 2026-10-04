@@ -241,7 +241,7 @@ export const TLS_VALIDITY = Object.freeze({
 });
 
 /**
- * The two things issuance does to the host. cli.ts builds it over Task 8's ProvisionIo
+ * The two things issuance does to the host. cli.ts builds it over the provisioner's ProvisionIo
  * (writeAtomic: temp → chown → chmod → rename, names resolved to ids from the observed host)
  * and a root-only reader; `check` passes a writer that records nothing.
  */

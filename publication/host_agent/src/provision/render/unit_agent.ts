@@ -19,9 +19,9 @@
  * dies EACCES on a provisioned host and on no test host.
  *
  * CONFIGURATION. src/config.ts parses the env file itself; this unit only NAMES it
- * (Environment=DEDALO_HOST_AGENT_ENV_FILE=…, Task 1's ENV_FILE_VAR) and never loads it with
+ * (Environment=DEDALO_HOST_AGENT_ENV_FILE=…, src/config.ts ENV_FILE_VAR) and never loads it with
  * EnvironmentFile= — one parser, one grammar. The bearer is LoadCredential=SERVICE_TOKEN
- * (Task 1's CREDENTIAL_KEYS), never in any rendered file.
+ * (src/config.ts CREDENTIAL_KEYS), never in any rendered file.
  *
  * nginx -t (unlike apachectl -t) OPENS its log files and creates its temp dirs, and the sudo
  * child runs in THIS unit's mount namespace — ProtectSystem=strict would make them read-only
@@ -56,7 +56,7 @@ export const NNP_IMPLYING_DIRECTIVES = Object.freeze([
 /** Paths `nginx -t` writes as root (logs, temp dirs). Apache's `-t` writes nothing. */
 export const NGINX_CONFIGTEST_WRITE_PATHS = Object.freeze(['-/var/log/nginx', '-/var/lib/nginx']);
 
-/** The ambient variable naming the env file src/config.ts parses (Task 1's ENV_FILE_VAR). */
+/** The ambient variable naming the env file src/config.ts parses (ENV_FILE_VAR). */
 export const AGENT_ENV_FILE_VAR = 'DEDALO_HOST_AGENT_ENV_FILE';
 
 /**

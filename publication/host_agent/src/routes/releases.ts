@@ -2,7 +2,7 @@
  * POST /v1/releases/{v1|v2} and POST /v1/releases/{v1|v2}/rollback.
  *
  * Install takes the bundle as the raw request body (application/gzip) and its metadata as
- * headers: X-Release-Id, X-Bundle-Sha256, and Task 3's X-Dedalo-Actor (requireActor — the one
+ * headers: X-Release-Id, X-Bundle-Sha256, and the X-Dedalo-Actor (requireActor — the one
  * actor convention on every mutation). Rollback takes the actor header and no body. No route
  * takes a path; the api is fixed per row in router.ts ROUTES, so an unknown api is the
  * router's 404. Validation of the id and sha lives in installRelease (one rule for every caller).

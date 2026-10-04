@@ -9,7 +9,7 @@
  *   - Nothing else in src/ reads the process environment (tests/process_env_tripwire.test.ts).
  *
  * THE KEYS ARE THE AgentConfig FIELD NAMES — one spelling from the env file to the object.
- * The provisioner (Tasks 8/9) and the live drill (Task 11) render exactly these.
+ * The provisioner (src/provision/) and the live drill render exactly these.
  *
  * THE SOURCE IS BUILT EXPLICITLY, in one order, everywhere:
  *
@@ -31,8 +31,12 @@
  *      over a file silent on NODE_ENV is a refusal, not a fill.
  *   3. THE CREDENTIALS — `$CREDENTIALS_DIRECTORY/SERVICE_TOKEN` (systemd LoadCredential=)
  *      WINS over the file. Any other file in that directory is refused by name. Outside
- *      NODE_ENV=test the env file may not carry SERVICE_TOKEN at all: the file is 0640 with
- *      the agent's group (the engine's, on a unix-socket host), the credential is root 0600.
+ *      NODE_ENV=test the env file may not carry SERVICE_TOKEN at all: the provisioner renders it
+ *      root:root 0644 (layout.ts MODES `envFile`), world-readable and secret-free by
+ *      construction (render/env.ts refuses a credential-looking key); the credential is
+ *      root 0600, read by systemd. NO BUN PATH: the agent runs no Bun child (pushed v2 code
+ *      boots as the v2 unit's scratch instance, spec §2.5), so there is no BUN_BIN key —
+ *      the declaration's `bun_bin` feeds the provisioner's unit renderers only.
  *
  * Then: an unknown key is refused by name, the grammar is strict zod, and the cross-field
  * laws hold — a `tls` listener has its host, port, cert, key AND client CA (mTLS fails
@@ -59,7 +63,7 @@ export const TEST_SCRATCH_DIR = '.test-tmp';
 /** What declares a checkout the suite's: `<package>/.test-tmp/<INSTANCE_MARKER>` (tests/preload.ts plants it). */
 export const TEST_SCRATCH_MARKER = join(TEST_SCRATCH_DIR, INSTANCE_MARKER);
 
-/** The ambient variable naming the env file (an absolute path). The agent unit sets it (Task 9). */
+/** The ambient variable naming the env file (an absolute path). The agent unit sets it (render/unit_agent.ts). */
 export const ENV_FILE_VAR = 'DEDALO_HOST_AGENT_ENV_FILE';
 /** systemd's credential directory variable. */
 export const CREDENTIALS_DIR_VAR = 'CREDENTIALS_DIRECTORY';
@@ -96,7 +100,6 @@ export interface AgentConfig {
   MEDIA_MODE: 'shared' | 'copy' | 'none';
   MEDIA_ROOT?: string;
   PHP_BIN: string;
-  BUN_BIN: string;
   V2_UNIT: string;
   V2_HEALTH_URL: string;
   RELEASES_RETAINED: number;
@@ -221,7 +224,6 @@ function envObject(baseDir: string) {
     MEDIA_MODE: z.enum(['shared', 'copy', 'none']),
     MEDIA_ROOT: path.optional(),
     PHP_BIN: bin('PHP_BIN'),
-    BUN_BIN: bin('BUN_BIN'),
     V2_UNIT: unit('V2_UNIT'),
     V2_HEALTH_URL: z
       .string()

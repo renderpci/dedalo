@@ -14,7 +14,7 @@
  * token and instance before its first call.
  *
  * The recipe is spelled through PAIRING_FINGERPRINT_PREFIX, never as a literal: the pairing
- * tripwire (Task 2, Rule 5) allows the prefix literal in exactly two recipe files.
+ * tripwire (test/unit/publication_host_pairing_tripwire.test.ts, Rule 5) allows the prefix literal in exactly two recipe files.
  */
 
 import { instanceFingerprint, PAIRING_FINGERPRINT_PREFIX } from '../../security/pairing';

@@ -2,12 +2,12 @@
  * THE ONLY SPAWNER. Every child process the agent starts is one of the five named
  * commands below; no exported function takes a free argv. tests/exec.test.ts fails when
  * any other file under src/ spawns. A SECOND closed set, provisionExec() at the end, is the
- * root-run provisioner's (Task 8): same law, its own fixed root PATH, never reached by a route.
+ * root-run provisioner's (src/provision/): same law, its own fixed root PATH, never reached by a route.
  *
  * - ABSOLUTE BINARIES, NEVER A PATH LOOKUP: sudo, systemctl and the configtest binary are
- *   the constants below; PHP_BIN and BUN_BIN are absolute by config law. The sudoers rule
- *   (Task 9) names exactly `SUDO -n WEB_CONFIGTEST_BINARY[server] -t` — the one spelling.
- *   A drill that wants stand-ins puts them AT these paths (Task 11: inside the CI-image
+ *   the constants below; PHP_BIN is absolute by config law. The sudoers rule
+ *   (src/provision/render/) names exactly `SUDO -n WEB_CONFIGTEST_BINARY[server] -t` — the one spelling.
+ *   A drill that wants stand-ins puts them AT these paths (the live drill: inside the CI-image
  *   container or a private mount namespace), never earlier on PATH: PATH is not consulted.
  * - A FIXED child environment: nothing of the agent's own environment (its token
  *   included) reaches a child.
@@ -17,12 +17,12 @@
  *   render/unit_v2.ts): the release runs as the v2 user in v2's sandbox, with v2.env read
  *   by systemd. Never a child of this process — the agent uid owns rules/ (root parses it
  *   at configtest), holds the sudo configtest grant, the TLS key and the bearer; a release
- *   running as it could reach root (spec §2.5). tests/exec.test.ts pins that no named
- *   command ever runs BUN_BIN.
+ *   running as it could reach root (spec §2.5). The agent config carries no Bun path at all
+ *   (tests/exec.test.ts pins it).
  * - Every path argument is confined by realpath to the agent's own state root; the v2
  *   scratch boot accepts ONLY a directory directly under publication_api/v2/releases/ —
- *   the committed, not-yet-recorded, not-yet-promoted release Task 7 health-checks before
- *   the swap. Never staging/: it is agent-only (Task 8 MODES), so the v2 user the scratch
+ *   the committed, not-yet-recorded, not-yet-promoted release src/releases/install.ts health-checks before
+ *   the swap. Never staging/: it is agent-only (layout.ts MODES), so the v2 user the scratch
  *   unit runs as could not read it.
  * - Short commands are killed after COMMAND_TIMEOUT_MS; their output is capped.
  * - IMPORTING THIS MODULE DOES NOT RESOLVE THE AGENT'S CONFIGURATION: `createExec` takes
@@ -226,7 +226,7 @@ export function exec(): Exec {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────
-// THE PROVISIONER'S CLOSED COMMAND SET (Task 8). Used only by the root-run CLI
+// THE PROVISIONER'S CLOSED COMMAND SET (src/provision/). Used only by the root-run CLI
 // (src/provision/apply.ts); no route reaches it. Same law as the agent's set above: named
 // commands, every argument validated before anything spawns, no free argv. It never reads
 // the agent's config (tests/provision_exec.test.ts imports this module with an empty env).
@@ -247,7 +247,7 @@ export interface ProvisionExec {
   webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult; // [WEB_CONFIGTEST_BINARY[server],'-t']
   visudoCheck(file: string): ExecResult; //              ['visudo','-cf',file]
   visudoCheckPolicy(): ExecResult; //                    ['visudo','-c'] — the whole policy, includes and all
-  /** Task 3's audit contract: the trail is append-only by the kernel (FS_APPEND_FL). */
+  /** The audit contract (src/instance/roots.ts): the trail is append-only by the kernel (FS_APPEND_FL). */
   appendOnly(file: string): ExecResult; //               ['chattr','+a',file]
 }
 

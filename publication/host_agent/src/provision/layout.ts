@@ -42,7 +42,7 @@ export const UNIT_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9@._-]{0,63}$/;
 /** Absolute, conservative character set: every path lands unquoted in a unit or sudoers line. */
 export const ABSOLUTE_PATH_PATTERN = /^\/[A-Za-z0-9._/-]*$/;
 /** A canonical, non-zero IPv4 dotted quad (no DNS name, no leading zeros) — it becomes the server
- *  certificate's SAN and the agent's TLS_HOST, which refuses anything else (Task 1 deviation 1). */
+ *  certificate's SAN and the agent's TLS_HOST, which refuses anything else (spec §2.2). */
 export const LISTEN_HOST_PATTERN =
   /^(?!0\.0\.0\.0$)(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
 export const ENV_KEY_PATTERN = /^[A-Z][A-Z0-9_]{0,63}$/;
@@ -67,7 +67,7 @@ export type ProvisionApi = 'v1' | 'v2';
 /**
  * THE configtest binary per server — the one definition. The agent runs
  * `sudo -n <this> -t` (src/exec.ts re-exports it), the plan requires it root-owned with a
- * root-owned, non-writable ancestry, and the sudoers rule (Task 9) grants exactly it. It is
+ * root-owned, non-writable ancestry, and the sudoers rule (render/) grants exactly it. It is
  * DERIVED, never declared: a declared path could only disagree with the argv sudo sees.
  */
 export const WEB_CONFIGTEST_BINARY = Object.freeze({
@@ -176,7 +176,7 @@ export const MODES = Object.freeze({
   v2Shared: row('root', 'v2Group', 0o750),
   rules: row(STATE_TREE_OWNERSHIP.rules, 'root', 0o755),
   audit: row(STATE_TREE_OWNERSHIP.audit, 'root', 0o755),
-  // Task 3's audit contract: agent-owned 0600, then append-only (chattr +a — plan.ts/apply.ts).
+  // The audit contract (instance/roots.ts): agent-owned 0600, then append-only (chattr +a — plan.ts/apply.ts).
   auditFile: row(STATE_TREE_OWNERSHIP.auditFile, 'root', 0o600),
   mediaCopy: row('agent', 'root', 0o755),
 });
@@ -239,9 +239,9 @@ export interface AgentLayout {
     readonly v2User: string;
     readonly v2Group: string;
     /**
-     * The agent unit's SupplementaryGroups= (Task 9 renders exactly this): the agent reads
-     * v1/shared (root:webGroup 0750) and v2/shared (root:v2Group 0750) — Task 7 checks and
-     * links the v1 config there, Task 3's scratch boot reads v2.env.
+     * The agent unit's SupplementaryGroups= (render/unit_agent.ts renders exactly this): the agent reads
+     * v1/shared (root:webGroup 0750) and v2/shared (root:v2Group 0750) — releases/install.ts checks and
+     * links the v1 config there, exec.ts's scratch boot reads v2.env.
      */
     readonly agentSupplementaryGroups: readonly string[];
   };
@@ -283,7 +283,7 @@ export interface AgentLayout {
   };
   /** Every directory the plan ensures, sorted so a parent precedes its children. */
   readonly directories: readonly DirSpec[];
-  /** The agent's env file (Task 1's env-file keys only), rendered by render/env.ts. */
+  /** The agent's env file (src/config.ts's env-file keys only), rendered by render/env.ts. */
   readonly envVars: Readonly<Record<string, string>>;
 }
 
@@ -557,8 +557,8 @@ export function derive(decl: HostDeclaration): AgentLayout {
   if (mediaMode === 'copy' && mediaRoot !== null) directories.push({ path: mediaRoot, modeKey: 'mediaCopy' });
   directories.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 
-  // Task 1's env-file keys (src/config.ts KNOWN_KEYS): the instance key is
-  // INSTANCE (= config.INSTANCE); any other spelling is refused as unknown (Task 1 KNOWN_KEYS).
+  // The env-file keys (src/config.ts KNOWN_KEYS): the instance key is
+  // INSTANCE (= config.INSTANCE); any other spelling is refused as unknown (KNOWN_KEYS).
   const envVars: Record<string, string> = {
     INSTANCE: instance,
     NODE_ENV: 'production',
@@ -568,7 +568,6 @@ export function derive(decl: HostDeclaration): AgentLayout {
     WEB_UNIT: webUnit,
     MEDIA_MODE: mediaMode,
     PHP_BIN: phpBin,
-    BUN_BIN: bunBin,
     V2_UNIT: v2Unit,
     V2_HEALTH_URL: v2HealthUrl,
     RELEASES_RETAINED: String(releasesRetained),

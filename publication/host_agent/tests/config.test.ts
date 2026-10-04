@@ -8,7 +8,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   ConfigError,
@@ -20,6 +20,7 @@ import {
   resolveConfig,
   type ConfigSources,
 } from '../src/config';
+import { MODES } from '../src/provision/layout';
 import { scratchPath } from './fixtures/instance';
 
 const GATE_DIR = scratchPath('config_gate');
@@ -29,7 +30,7 @@ const TOKEN = 'x'.repeat(40);
 
 /** The AgentConfig field names (the plan's fixed interface + LOG_LEVEL) = the env-file keys. */
 const AGENT_CONFIG_FIELDS = [
-  'BUN_BIN', 'INSTANCE', 'LISTEN_KIND', 'LOG_LEVEL', 'MAX_BUNDLE_BYTES', 'MAX_BUNDLE_ENTRIES',
+  'INSTANCE', 'LISTEN_KIND', 'LOG_LEVEL', 'MAX_BUNDLE_BYTES', 'MAX_BUNDLE_ENTRIES',
   'MEDIA_MODE', 'MEDIA_ROOT', 'NODE_ENV', 'PHP_BIN', 'RELEASES_RETAINED', 'SERVICE_TOKEN',
   'SOCKET_PATH', 'STATE_ROOT', 'TLS_CERT_FILE', 'TLS_CLIENT_CA_FILE', 'TLS_HOST', 'TLS_KEY_FILE',
   'TLS_PORT', 'V2_HEALTH_URL', 'V2_UNIT', 'WEB_SERVER', 'WEB_UNIT',
@@ -51,7 +52,6 @@ function unixEnv(overrides: Record<string, string> = {}): Record<string, string>
     MEDIA_MODE: 'shared',
     MEDIA_ROOT: './media',
     PHP_BIN: '/usr/bin/php',
-    BUN_BIN: '/usr/local/bin/bun',
     V2_UNIT: 'dedalo-publication-v2-gate',
     V2_HEALTH_URL: 'http://127.0.0.1:3100/dedalo/publication/server_api/v2/health',
     ...overrides,
@@ -483,5 +483,14 @@ describe('defaultEnvFilePath', () => {
     for (const ambient of [{}, { NODE_ENV: 'production' }]) {
       expect(() => defaultEnvFilePath(ambient)).toThrow(ENV_FILE_VAR);
     }
+  });
+});
+
+describe('the header states what the provisioner renders', () => {
+  test('env-file owner and mode in the src/config.ts header = layout.ts MODES.envFile', () => {
+    const header = readFileSync(join(import.meta.dir, '..', 'src', 'config.ts'), 'utf8').split('*/')[0]!.replace(/\s+\*\s+/g, ' ');
+    const { owner, group, mode } = MODES.envFile;
+    expect(header).toContain(`renders it ${owner}:${group} 0${mode.toString(8)}`);
+    expect(header).not.toMatch(/the file is 0640/);
   });
 });

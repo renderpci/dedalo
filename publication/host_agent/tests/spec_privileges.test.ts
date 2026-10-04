@@ -7,7 +7,7 @@
  *   - the media include's directive allowlist (src/rules/directives.ts) — what keeps the
  *     root-parsed include (sudo configtest, polkit reload) from being a root door;
  *   - pushed release code never runs as the agent user (src/exec.ts v2ScratchBoot starts the
- *     `<V2_UNIT>-scratch@<port>` unit; tests/exec.test.ts pins no named command runs BUN_BIN).
+ *     `<V2_UNIT>-scratch@<port>` unit; tests/exec.test.ts pins no named command runs Bun).
  *
  * Reads repo files outside the package: a dev-time gate only.
  */
@@ -45,10 +45,10 @@ describe('spec §2 states the privilege boundary the code enforces', () => {
     expect(item).toContain('Pushed release code never runs as the agent user.');
     expect(item).toContain('`<v2 unit>-scratch@<port>`');
     expect(item).not.toContain('OPEN');
-    // the code the sentence describes: a unit start, never a spawn of BUN_BIN
+    // the code the sentence describes: a unit start, never a spawn of Bun (the config has no BUN_BIN)
     const exec = readFileSync(join(PACKAGE, 'src', 'exec.ts'), 'utf8');
     expect(exec).toContain("spawner.run([SYSTEMCTL, 'start', unit]");
-    expect(exec).not.toMatch(/BUN_BIN,\s*'run'/);
+    expect(exec).not.toMatch(/BUN_BIN/);
   });
 
   test('item 6 lists the allowlist among what the agent validates (directives.ts cites it)', () => {

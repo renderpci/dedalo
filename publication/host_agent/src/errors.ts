@@ -27,7 +27,7 @@ export const REASON_CODES = Object.freeze([
   'health_failed',
   'v2_env_missing',
   'busy',
-  // rules.apply (Task 5). Status per event: every one is a 422 RefusedError except
+  // rules.apply (src/rules/apply.ts). Status per event: every one is a 422 RefusedError except
   // reload_failed (503 HostActionFailedError). configtest_failed is listed above.
   'server_mismatch',
   'hash_invalid',
@@ -35,7 +35,7 @@ export const REASON_CODES = Object.freeze([
   'rules_nul_byte',
   'stamp_missing',
   'directive_refused',
-  // release.install / release.rollback (Task 7): every one a 422 ReleaseRefusedError
+  // release.install / release.rollback (src/releases/install.ts): every one a 422 ReleaseRefusedError
   // (RELEASE_REFUSAL_REASONS below; bundle_refused, health_failed and no_previous_release
   // are listed above).
   'sha_mismatch',
@@ -135,7 +135,7 @@ export class RefusedError extends ApiError {
  * 5xx; `reason` and `extensions` survive the scrub, so extensions carry MACHINE fields only
  * (codes, hashes, booleans), never a child process's output. A configtest that refuses
  * SUBMITTED text is not this class: the bytes are wrong, not the host, so it is a
- * RefusedError(…, 'configtest_failed') 422 (rules.apply, Task 5).
+ * RefusedError(…, 'configtest_failed') 422 (rules.apply, src/rules/apply.ts).
  */
 export class HostActionFailedError extends ApiError {
   constructor(detail: string, reason: ReasonCode, extensions: Record<string, unknown> = {}) {
@@ -153,7 +153,7 @@ export class ServiceError extends ApiError {
 }
 
 /**
- * WHY A release.install / release.rollback IS REFUSED (Task 7) — a typed SUBSET of the one
+ * WHY A release.install / release.rollback IS REFUSED (src/releases/install.ts) — a typed SUBSET of the one
  * closed REASON_CODES list (never a second list). The phase-3 engine client branches on
  * these strings; the prose `detail` is for the operator.
  */

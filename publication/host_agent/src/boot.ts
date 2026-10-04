@@ -136,7 +136,7 @@ export function readTlsMaterial(cfg: Pick<AgentConfig, 'TLS_CERT_FILE' | 'TLS_KE
   if ((keyMode & 0o007) !== 0) {
     throw new BootRefused(
       'readTlsMaterial',
-      `TLS_KEY_FILE ('${cfg.TLS_KEY_FILE}') is world-accessible (mode ${(keyMode & 0o777).toString(8)}); expected 0600 or 0640.`,
+      `TLS_KEY_FILE ('${cfg.TLS_KEY_FILE}') is world-accessible (mode ${(keyMode & 0o777).toString(8)}); expected no world bits (provisioned: 0400).`,
     );
   }
   return { cert, key, ca };

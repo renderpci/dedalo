@@ -23,8 +23,8 @@
  * start/stop of `<v2.unit>-scratch@<4-5 digits>.service`), never as its own child — pushed release
  * code must not run with the agent's credential, TLS key, sudo or polkit grants. Same user and
  * sandbox as v2; runs `<v2>/scratch` (the agent's symlink); no LoadCredential=, no [Install]
- * (never enabled), Restart=no. Port and loopback via env(1) for the same reason as above (the
- * plan's `Environment=PORT=%i` would lose to v2.env — deviation recorded in the plan).
+ * (never enabled), Restart=no. Port and loopback via env(1) for the same reason as above (an
+ * `Environment=PORT=%i` would lose to v2.env: EnvironmentFile= overrides Environment=).
  */
 
 import { join } from 'node:path';

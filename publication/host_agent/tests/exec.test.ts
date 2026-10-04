@@ -31,11 +31,66 @@ const SPAWNERS: Record<string, string> = {
 };
 
 const SPAWN_PATTERNS: readonly RegExp[] = [
-  /\bBun\s*\.\s*spawn(Sync)?\b/,
+  /\bBun\s*(\?\.|\.)\s*(spawn(Sync)?\b|\$)/,
   /\bspawnSync\b/,
+  /\bspawn_sync\b/,
   /child_process/,
-  /\bBun\s*\.\s*\$/,
-  /import\s*\{[^}]*\$[^}]*\}\s*from\s*['"]bun['"]/,
+  // Every way to reach the 'bun' module's spawning exports without spelling `Bun.spawn`.
+  /import\s+(type\s+)?\{[^}]*\b(spawn|spawnSync)\b[^}]*\}\s*from\s*['"`]bun['"`]/,
+  /import\s*\{[^}]*\$[^}]*\}\s*from\s*['"`]bun['"`]/,
+  /import\s*\*\s*as\s*[\w$]+\s*from\s*['"`]bun['"`]/,
+  /import\s+[\w$]+\s*(,\s*\{[^}]*\})?\s*from\s*['"`]bun['"`]/,
+  /\bimport\s*\(\s*['"`]bun['"`]\s*\)/,
+  /\brequire\s*\(\s*['"`]bun['"`]\s*\)/,
+  // Aliasing the global: computed access, `= Bun`, passing it, destructuring it off the global.
+  /\bBun\s*(\?\.)?\s*\[/,
+  /[=(,]\s*(globalThis\s*(\?\.|\.)\s*)?Bun\s*[;,)\]}\n]/,
+  /[=(,]\s*(globalThis\s*(\?\.|\.)\s*)?Bun\s*$/m,
+  /\[\s*['"`]Bun['"`]\s*\]/,
+  /\{[^}]*\bBun\b[^}]*\}\s*=/,
+];
+
+/** Ways to start a process outside exec.ts — every one must trip the gate. */
+const SPAWN_BYPASSES = [
+  "Bun.spawn(['/bin/sh', '-c', 'id']);",
+  "Bun.spawnSync(['id']);",
+  "Bun?.spawn(['id']);",
+  'await Bun.$`id`;',
+  "import { spawn } from 'bun';\nspawn(['/bin/sh', '-c', 'id']);",
+  "import { spawn as s } from 'bun';",
+  "import { spawnSync } from 'bun';",
+  "import { $ } from 'bun';",
+  "import { file, spawn } from \"bun\";",
+  "import * as B from 'bun';\nB.spawn(['id']);",
+  "import B from 'bun';",
+  "const B = await import('bun');",
+  "const B = require('bun');",
+  "import { spawn } from 'node:child_process';",
+  "const cp = require('child_process');",
+  "const s = Bun['spawn'];",
+  "const s = Bun?.['spawn'];",
+  'const b = Bun;',
+  'const b = Bun\nb.spawn([])',
+  'const { spawn } = Bun;',
+  'const b = globalThis.Bun;',
+  "const b = globalThis['Bun'];",
+  'const { Bun: b } = globalThis;',
+  'const { Bun } = globalThis;',
+  'run(Bun);',
+  "const e = Reflect.get(Bun, 'spawn');",
+  'const e = Object.entries(Bun);',
+];
+
+/** What other modules legitimately do — none may match. */
+const SPAWN_INNOCENT = [
+  'const f = Bun.file(path);',
+  "const h = new Bun.CryptoHasher('sha256');",
+  'const server = Bun.serve(options);',
+  "import type { ServeOptions } from 'bun';",
+  "import { describe } from 'bun:test';",
+  '// (Bun types unix and host:port shapes apart)',
+  '// a spawn that throws is a failed step',
+  "const m = await import('./exec');",
 ];
 
 function sourceFiles(dir: string): string[] {
@@ -53,6 +108,14 @@ describe('the spawner tripwire', () => {
       .filter(file => !(file in SPAWNERS))
       .filter(file => SPAWN_PATTERNS.some(p => p.test(readFileSync(join(SRC, file), 'utf8'))));
     expect(offenders).toEqual([]);
+  });
+
+  test.each(SPAWN_BYPASSES)('the gate catches %p', snippet => {
+    expect(SPAWN_PATTERNS.some(p => p.test(snippet))).toBe(true);
+  });
+
+  test.each(SPAWN_INNOCENT)('the gate lets %p through', snippet => {
+    expect(SPAWN_PATTERNS.some(p => p.test(snippet))).toBe(false);
   });
 
   test('the gate is not vacuous: it sees the spawn in exec.ts', () => {
@@ -161,7 +224,7 @@ describe('the named commands', () => {
     const root = await stateTree('ex_v2');
     const v2 = join(root, 'publication_api', 'v2');
     const committed = join(v2, 'releases', COMMITTED);
-    const x = createExec({ ...config, STATE_ROOT: root, BUN_BIN: '/opt/bun/bin/bun' }, spawner);
+    const x = createExec({ ...config, STATE_ROOT: root }, spawner);
 
     await expect(x.v2ScratchBoot(committed, 3200)).rejects.toBeInstanceOf(ConflictError); // no v2.env yet
     writeFileSync(join(v2, 'shared', 'v2.env'), 'DB_NAME="web_test"\nPORT="9"\n');
@@ -187,7 +250,7 @@ describe('the named commands', () => {
     const v2 = join(root, 'publication_api', 'v2');
     const committed = join(v2, 'releases', COMMITTED);
     writeFileSync(join(v2, 'shared', 'v2.env'), 'DB_NAME="web_test"\n');
-    const cfg = { ...config, STATE_ROOT: root, V2_UNIT: 'dedalo-v2-test', BUN_BIN: '/opt/bun/bin/bun' };
+    const cfg = { ...config, STATE_ROOT: root, V2_UNIT: 'dedalo-v2-test' };
     const x = createExec(cfg, spawner);
 
     const scratch = await x.v2ScratchBoot(committed, 3200);
@@ -206,10 +269,12 @@ describe('the named commands', () => {
     await x.v2ScratchBoot(join(v2, 'releases', '7.0.4_ccccccc'), 3201);
     expect(readlinkSync(join(v2, SCRATCH_LINK))).toBe(realpathSync(join(v2, 'releases', '7.0.4_ccccccc')));
     expect(readdirSync(v2).sort()).toEqual(['releases', 'scratch', 'shared', 'staging']);
-    // THE INVARIANT (spec §2.5): no named command ever runs BUN_BIN — pushed code runs only
+    // THE INVARIANT (spec §2.5): no named command ever runs Bun — pushed code runs only
     // under the v2 user's unit, never as a child holding the agent's grants, key and bearer.
+    // The agent config has no Bun path to run (no BUN_BIN key), and no argv names one.
+    expect(Object.keys(config)).not.toContain('BUN_BIN');
     for (const c of calls) {
-      expect(c.argv).not.toContain(cfg.BUN_BIN);
+      expect(c.argv.some(arg => /(^|\/)bun$/.test(arg) || arg === process.execPath)).toBe(false);
       expect(c.options.cwd).toBeUndefined();
     }
     // the name is the one the polkit rule's regex grants (render/polkit.ts)

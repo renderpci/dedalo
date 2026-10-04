@@ -31,7 +31,7 @@ const listenSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('unix') }),
   z.strictObject({
     kind: z.literal('tls'),
-    host: z.string().regex(LISTEN_HOST_PATTERN, 'must be a canonical non-zero IPv4 address (Task 1 deviation 1)'),
+    host: z.string().regex(LISTEN_HOST_PATTERN, 'must be a canonical non-zero IPv4 address (spec §2.2: the channel binds one private interface, never a hostname or wildcard)'),
     port,
   }),
 ]);

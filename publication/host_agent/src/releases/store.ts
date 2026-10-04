@@ -10,7 +10,7 @@
  *     staging/<tmp>/     where a bundle is extracted before it is a release
  *     current -> releases/<id>   RELATIVE symlink; the web server / unit read through it
  *
- * THE INSTALL FLOW (Task 7, serialized per API): createStaging → extractBundle(…,
+ * THE INSTALL FLOW (install.ts, serialized per API): createStaging → extractBundle(…,
  * reservedBundlePaths(api)) → sha check → per-API prep → commitStaging into releases/<id>
  * → (v2) scratch boot from releases/<id> → the sha record written LAST → promote →
  * pruneReleases. A releases/<id> without its record is an interrupted install (install.ts
@@ -52,7 +52,7 @@ export interface ApiLayout {
 
 /**
  * The per-release record of the bundle's sha256. The AGENT writes it into `releases/<id>`
- * as the LAST step before promote, after every check passed (Task 7): a release with its
+ * as the LAST step before promote, after every check passed (install.ts): a release with its
  * record passed them all. Reserved in every bundle, so no bundle can forge it.
  */
 export const BUNDLE_SHA_FILE = '.bundle_sha256';
@@ -257,7 +257,7 @@ async function stampNewest(api: ApiName, id: string): Promise<void> {
 /**
  * A fresh, empty staging dir for one extraction. Sweeps crash leftovers first: every
  * `staging/*` and every `.current.*.tmp` link beside `current`. Callers serialize installs
- * per API (Task 7), so a sweep never removes a live extraction.
+ * per API (install.ts), so a sweep never removes a live extraction.
  */
 export async function createStaging(api: ApiName): Promise<string> {
   const l = await ensureLayout(api);
@@ -281,7 +281,7 @@ export async function commitStaging(api: ApiName, stagedDir: string, releaseId: 
   if (releaseDirState(api, releaseId) === 'dir') throw new ReleaseStoreError('release_exists', releaseId);
   // mkdtemp made the root 0700: a release must be traversable by the web server (v1) and the
   // v2 user, so it is moded RELEASE_DIR_MODE on a handle opened O_NOFOLLOW before the rename.
-  // Until here the staged root keeps mkdtemp's 0700 (and staging/ is 0700, Task 8 MODES), so
+  // Until here the staged root keeps mkdtemp's 0700 (and staging/ is 0700, layout.ts MODES), so
   // the tree is hidden while it is extracted.
   const h = await open(staged, FS.O_RDONLY | FS.O_NOFOLLOW);
   try {

@@ -72,7 +72,6 @@ describe('envRenderer', () => {
           MEDIA_MODE: layout.media.mode,
           MEDIA_ROOT: layout.media.root ?? undefined,
           PHP_BIN: layout.phpBin,
-          BUN_BIN: layout.bunBin,
           V2_UNIT: layout.v2.unit,
           V2_HEALTH_URL: layout.v2.healthUrl,
           RELEASES_RETAINED: 3,

@@ -544,7 +544,7 @@ function firstLine(text: string): string {
   return text.trim().split('\n')[0] ?? '';
 }
 
-/** A store refusal (Task 6) becomes an operator sentence, never an unscrubbed-or-scrubbed 500. */
+/** A store refusal (store.ts) becomes an operator sentence, never an unscrubbed-or-scrubbed 500. */
 function fromStore(error: unknown): unknown {
   return error instanceof ReleaseStoreError
     ? new ReleaseRefusedError('store_refused', error.message, { store_reason: error.reason })

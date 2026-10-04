@@ -361,7 +361,6 @@ function writeAgentEnv(scene: Scene, name: string, overrides: Record<string, str
 			MEDIA_MODE: 'shared',
 			MEDIA_ROOT: scene.media,
 			PHP_BIN: join(scene.shims, 'php'),
-			BUN_BIN: process.execPath,
 			V2_UNIT,
 			V2_HEALTH_URL: `http://127.0.0.1:${scene.v2Port}${V2_BASE_PATH}/health`,
 			RELEASES_RETAINED: 3,

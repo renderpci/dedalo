@@ -62,7 +62,8 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
 2. **The channel is private and mutually authenticated (decided in phase 2).** Over a
    network: **mTLS** on a non-public port, firewalled to the work host's address, never
    routed through the public vhost. The provisioner runs a private CA on the publication
-   host and issues a server certificate (SAN = the declared listen address) plus ONE
+   host and issues a server certificate (SAN = the declared listen address: a canonical
+   private IPv4 literal, never a hostname or wildcard — `LISTEN_HOST_PATTERN`) plus ONE
    engine client certificate and key. The agent pins exactly that client CA (`Bun.serve`
    `requestCert` + `rejectUnauthorized`, constants in `src/boot.ts`, never configuration).
    A TLS listener whose certificate, key or client CA is missing, unreadable or not PEM

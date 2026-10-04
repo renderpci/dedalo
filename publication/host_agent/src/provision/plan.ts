@@ -19,7 +19,7 @@
  * tree, outside the trees themselves. Facts are lstat facts (observeHost); ancestors at or
  * above `host.trustRoot` ('/' in production) are not judged.
  *
- * THE AUDIT TRAIL IS APPEND-ONLY BY THE KERNEL (Task 3's contract, instance/roots.ts): the
+ * THE AUDIT TRAIL IS APPEND-ONLY BY THE KERNEL (the audit contract, instance/roots.ts): the
  * file is created empty, agent-owned 0600, then given FS_APPEND_FL (`chattr +a`, an
  * `append-only` action). Once it carries the attribute its owner and mode cannot change in
  * place, so metadata drift on it is REFUSED (fix by hand), never planned.
@@ -224,7 +224,7 @@ export interface UnitAction {
   readonly op: 'enable' | 'start' | 'restart';
   readonly unit: string;
 }
-/** `chattr +a` on the audit trail (Task 3's contract). */
+/** `chattr +a` on the audit trail (the audit contract, instance/roots.ts). */
 export interface AppendOnlyAction {
   readonly op: 'append-only';
   readonly path: string;

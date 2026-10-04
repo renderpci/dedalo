@@ -12,6 +12,7 @@ import {
   startServer,
 } from '../src/boot';
 import { config } from '../src/config';
+import { MODES } from '../src/provision/layout';
 import { BASE_PATH, routeRequest } from '../src/router';
 import { freshScratch } from './fixtures/instance';
 
@@ -138,6 +139,13 @@ describe('listen configuration refusals', () => {
     const openKey = join(dir, 'open.key');
     writeFileSync(openKey, pem('PRIVATE KEY'), { mode: 0o644 });
     expect(() => serveOptions({ ...base, TLS_KEY_FILE: openKey }, handler)).toThrow('world-accessible');
+    // the refusal names the mode the provisioner actually writes (MODES.tlsServerKey), which it accepts
+    expect(() => serveOptions({ ...base, TLS_KEY_FILE: openKey }, handler)).toThrow(
+      `expected no world bits (provisioned: 0${MODES.tlsServerKey.mode.toString(8)})`,
+    );
+    const provisionedKey = join(dir, 'provisioned.key');
+    writeFileSync(provisionedKey, pem('PRIVATE KEY'), { mode: MODES.tlsServerKey.mode });
+    expect(() => serveOptions({ ...base, TLS_KEY_FILE: provisionedKey }, handler)).not.toThrow();
 
     const options = serveOptions(base, handler) as unknown as { tls: Record<string, unknown>; hostname: string };
     expect(options.hostname).toBe('127.0.0.1');

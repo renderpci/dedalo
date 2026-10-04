@@ -3,7 +3,7 @@
  * EnvironmentFile=: the agent's own src/config.ts parses it (render/unit_agent.ts only NAMES it
  * through DEDALO_HOST_AGENT_ENV_FILE), so one parser and one grammar read it.
  *
- * Exactly `layout.envVars` (Task 1's env-file keys: INSTANCE for the instance,
+ * Exactly `layout.envVars` (src/config.ts's env-file keys: INSTANCE for the instance,
  * never a credential: SERVICE_TOKEN arrives via systemd LoadCredential), one `KEY="value"`
  * per line, sorted. The quoting is the subset systemd and src/env_file.ts parseEnvFile read
  * identically; a value with a control character, `$` or a backtick is refused, not escaped.

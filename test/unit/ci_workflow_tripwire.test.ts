@@ -1306,6 +1306,20 @@ describe('CI workflow tripwire', () => {
 			// A floor of zero enforces nothing while looking like a gate.
 			expect(lines, `${pkg} lines threshold is not a floor`).toBeGreaterThanOrEqual(0.8);
 			expect(functions, `${pkg} functions threshold is not a floor`).toBeGreaterThanOrEqual(0.8);
+			// An ignore pattern is an exemption from that floor: none may reach src/.
+			const ignoreDecl = bunfig.match(
+				/^\s*coveragePathIgnorePatterns\s*=\s*(\[[\s\S]*?\]|"[^"]*"|'[^']*')/m,
+			);
+			const ignored = ignoreDecl
+				? [...ignoreDecl[1]!.matchAll(/["']([^"']*)["']/g)].map((m) => m[1]!)
+				: [];
+			for (const pattern of ignored) {
+				const glob = new Bun.Glob(pattern);
+				const hitsSrc =
+					pattern.includes('src') ||
+					['src/index.ts', 'src/a/b.ts', `${pkg}/src/index.ts`].some((p) => glob.match(p));
+				expect(hitsSrc, `${pkg} coveragePathIgnorePatterns '${pattern}' exempts src/`).toBe(false);
+			}
 		}
 		expect(enforcing, 'server_api/v2 must keep enforcing 0.8').toContain(
 			'publication/server_api/v2',

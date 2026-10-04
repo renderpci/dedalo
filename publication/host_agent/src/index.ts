@@ -13,7 +13,7 @@ import { bootPreflight } from './instance/roots';
 import { routeRequest } from './router';
 import { problem } from './util/response';
 
-const SHUTDOWN_GRACE_MS = 25_000; // < the unit's TimeoutStopSec=30 (Task 9)
+const SHUTDOWN_GRACE_MS = 25_000; // < the unit's TimeoutStopSec=30 (render/unit_agent.ts)
 
 let server: AgentServer | null = null;
 
