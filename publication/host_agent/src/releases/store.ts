@@ -11,8 +11,10 @@
  *     current -> releases/<id>   RELATIVE symlink; the web server / unit read through it
  *
  * THE INSTALL FLOW (Task 7, serialized per API): createStaging → extractBundle(…,
- * reservedBundlePaths(api, sharedHasHeaders)) → sha check → per-API prep + the sha record
- * written into the staged dir → commitStaging → promote → pruneReleases.
+ * reservedBundlePaths(api)) → sha check → per-API prep → commitStaging into releases/<id>
+ * → (v2) scratch boot from releases/<id> → the sha record written LAST → promote →
+ * pruneReleases. A releases/<id> without its record is an interrupted install (install.ts
+ * sweeps it under its per-API lock).
  *
  * ATOMICITY. `current` only ever moves by creating a temp symlink beside it and
  * `rename(2)`-ing it over: a reader sees the old target or the new one, never no link.
@@ -32,7 +34,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { constants as FS, lstatSync, readdirSync, readlinkSync } from 'node:fs';
+import { constants as FS, existsSync, lstatSync, readdirSync, readlinkSync } from 'node:fs';
 import { lstat, mkdir, mkdtemp, open, readdir, rename, rm, symlink, utimes } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { config } from '../config';
@@ -49,9 +51,9 @@ export interface ApiLayout {
 }
 
 /**
- * The per-release record of the bundle's sha256. The AGENT writes it into the staged dir
- * after every check passed (Task 7), so every `releases/<id>` holds one; reserved in every
- * bundle, so no bundle can forge it.
+ * The per-release record of the bundle's sha256. The AGENT writes it into `releases/<id>`
+ * as the LAST step before promote, after every check passed (Task 7): a release with its
+ * record passed them all. Reserved in every bundle, so no bundle can forge it.
  */
 export const BUNDLE_SHA_FILE = '.bundle_sha256';
 
@@ -60,8 +62,10 @@ export const V1_CONFIG_DIR = 'config_api';
 export const V1_SHARED_CONFIG = 'server_config_api.php';
 export const V1_SHARED_HEADERS = 'server_config_headers.php';
 
+/** v2's environment, outside every release: the unit's EnvironmentFile= and the scratch boot read it. */
+export const V2_SHARED_ENV = 'v2.env';
 /** Bun auto-loads these from the release cwd; v2's env comes from `shared/v2.env` only. */
-export const V2_RESERVED_ENV_FILES: readonly string[] = Object.freeze([
+export const V2_ENV_FILES: readonly string[] = Object.freeze([
   '.env',
   '.env.local',
   '.env.production',
@@ -69,23 +73,21 @@ export const V2_RESERVED_ENV_FILES: readonly string[] = Object.freeze([
 ]);
 
 /**
- * THE D8 RULE, ONE SPELLING — the paths a bundle may NOT carry (passed to `extractBundle`).
+ * THE D8 RULE, ONE SPELLING — the paths a bundle may NOT carry (passed to `extractBundle`),
+ * read from what `shared/` holds NOW (no caller passes its own answer):
  *   - every API: BUNDLE_SHA_FILE;
  *   - v1: `config_api/server_config_api.php` ALWAYS (it lives in shared/ and is linked in),
  *     and `config_api/server_config_headers.php` ONLY when shared/ has a headers file: v1's
  *     json/index.php includes the headers file unconditionally, so without a shared copy the
  *     release's tracked default must serve;
- *   - v2: the env files Bun auto-loads (V2_RESERVED_ENV_FILES).
- * `sharedHasHeaders` is the caller's lstat of `shared/server_config_headers.php`; for v2 it
- * must be false (v2 has no headers file — passing true is a programming error).
+ *   - v2: the env files Bun auto-loads (V2_ENV_FILES).
+ * install.ts derives its v1 links from this same list: a reserved `config_api/` file is
+ * exactly a file shared/ provides.
  */
-export function reservedBundlePaths(api: ApiName, sharedHasHeaders: boolean): readonly string[] {
-  if (api === 'v2') {
-    if (sharedHasHeaders) throw new Error('reservedBundlePaths: v2 has no headers file; pass sharedHasHeaders = false');
-    return Object.freeze([BUNDLE_SHA_FILE, ...V2_RESERVED_ENV_FILES]);
-  }
+export function reservedBundlePaths(api: ApiName): readonly string[] {
+  if (api === 'v2') return Object.freeze([BUNDLE_SHA_FILE, ...V2_ENV_FILES]);
   const paths = [BUNDLE_SHA_FILE, `${V1_CONFIG_DIR}/${V1_SHARED_CONFIG}`];
-  if (sharedHasHeaders) paths.push(`${V1_CONFIG_DIR}/${V1_SHARED_HEADERS}`);
+  if (existsSync(join(apiLayout('v1').shared, V1_SHARED_HEADERS))) paths.push(`${V1_CONFIG_DIR}/${V1_SHARED_HEADERS}`);
   return Object.freeze(paths);
 }
 

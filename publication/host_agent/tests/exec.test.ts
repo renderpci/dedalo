@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { chmodSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
 import { config } from '../src/config';
 import { ConflictError, ValidationError } from '../src/errors';
@@ -93,15 +93,15 @@ function recordingSpawner(): { spawner: Spawner; calls: Recorded[] } {
   };
 }
 
-const STAGED = '7.0.3_a1b2c3d';
-const PROMOTED = '7.0.2_0000000';
+const STAGED = 'stage-a1b2c3';
+const COMMITTED = '7.0.3_a1b2c3d';
 
-/** A state root with a staged v2 release and a promoted one, under a fresh scratch corner. */
+/** A state root with a staged v2 extraction and a committed release, under a fresh scratch corner. */
 async function stateTree(name: string): Promise<string> {
   const root = await freshScratch(name);
   for (const dir of [
     `publication_api/v2/staging/${STAGED}`,
-    `publication_api/v2/releases/${PROMOTED}`,
+    `publication_api/v2/releases/${COMMITTED}`,
     'publication_api/v2/shared',
     'publication_api/v1',
     'rules',
@@ -156,31 +156,35 @@ describe('the named commands', () => {
     expect(calls).toEqual([]);
   });
 
-  test('v2ScratchBoot: only a directory directly under v2/staging, port range, env = shared/v2.env + HOST/PORT', async () => {
+  test('v2ScratchBoot: only a directory directly under v2/releases, port range, env = shared/v2.env + HOST/PORT', async () => {
     const { spawner, calls } = recordingSpawner();
     const root = await stateTree('ex_v2');
     const v2 = join(root, 'publication_api', 'v2');
-    const staged = join(v2, 'staging', STAGED);
+    const committed = join(v2, 'releases', COMMITTED);
     const x = createExec({ ...config, STATE_ROOT: root, BUN_BIN: '/opt/bun/bin/bun' }, spawner);
 
-    expect(() => x.v2ScratchBoot(staged, 3200)).toThrow(ConflictError); // no v2.env yet
+    expect(() => x.v2ScratchBoot(committed, 3200)).toThrow(ConflictError); // no v2.env yet
     writeFileSync(join(v2, 'shared', 'v2.env'), 'DB_NAME="web_test"\nPORT="9"\n');
-    expect(() => x.v2ScratchBoot(staged, 80)).toThrow(ValidationError);
-    // a PROMOTED release is never scratch-booted: only staging is
-    expect(() => x.v2ScratchBoot(join(v2, 'releases', PROMOTED), 3200)).toThrow(ValidationError);
-    expect(() => x.v2ScratchBoot(join(v2, 'staging'), 3200)).toThrow(ValidationError);
+    expect(() => x.v2ScratchBoot(committed, 80)).toThrow(ValidationError);
+    // staging/ is agent-only (Task 8 MODES): a STAGED tree is never scratch-booted, only a
+    // committed releases/<id> (Task 7 boots it before the sha record and the promote)
+    expect(() => x.v2ScratchBoot(join(v2, 'staging', STAGED), 3200)).toThrow(ValidationError);
+    expect(() => x.v2ScratchBoot(join(v2, 'releases'), 3200)).toThrow(ValidationError);
     expect(() => x.v2ScratchBoot(join(root, 'rules'), 3200)).toThrow(ValidationError);
     expect(() => x.v2ScratchBoot('/tmp', 3200)).toThrow(ValidationError);
-    writeFileSync(join(v2, 'staging', 'loose_file'), '');
-    expect(() => x.v2ScratchBoot(join(v2, 'staging', 'loose_file'), 3200)).toThrow(ValidationError);
+    writeFileSync(join(v2, 'releases', 'loose_file'), '');
+    expect(() => x.v2ScratchBoot(join(v2, 'releases', 'loose_file'), 3200)).toThrow(ValidationError);
+    // a link under releases/ resolves elsewhere: refused by realpath
+    symlinkSync(join(v2, 'staging', STAGED), join(v2, 'releases', '7.0.4_bbbbbbb'));
+    expect(() => x.v2ScratchBoot(join(v2, 'releases', '7.0.4_bbbbbbb'), 3200)).toThrow(ValidationError);
     expect(calls).toEqual([]);
 
-    x.v2ScratchBoot(staged, 3200);
+    x.v2ScratchBoot(committed, 3200);
     expect(calls).toEqual([
       {
         kind: 'start',
         argv: ['/opt/bun/bin/bun', 'run', 'src/index.ts'],
-        options: { cwd: realpathSync(staged), env: { PATH: CHILD_PATH, DB_NAME: 'web_test', HOST: '127.0.0.1', PORT: '3200' } },
+        options: { cwd: realpathSync(committed), env: { PATH: CHILD_PATH, DB_NAME: 'web_test', HOST: '127.0.0.1', PORT: '3200' } },
       },
     ]);
   });
@@ -201,9 +205,9 @@ describe('the real spawner', () => {
     expect(missing.code).toBe(127);
   });
 
-  test('v2ScratchBoot starts the staged release with only its own env, and stop() ends it', async () => {
+  test('v2ScratchBoot starts the committed release with only its own env, and stop() ends it', async () => {
     const root = await stateTree('ex_boot');
-    const staged = join(root, 'publication_api', 'v2', 'staging', STAGED);
+    const staged = join(root, 'publication_api', 'v2', 'releases', COMMITTED);
     mkdirSync(join(staged, 'src'), { recursive: true });
     writeFileSync(
       join(staged, 'src', 'index.ts'),

@@ -35,6 +35,18 @@ export const REASON_CODES = Object.freeze([
   'rules_nul_byte',
   'stamp_missing',
   'directive_refused',
+  // release.install / release.rollback (Task 7): every one a 422 ReleaseRefusedError
+  // (RELEASE_REFUSAL_REASONS below; bundle_refused, health_failed and no_previous_release
+  // are listed above).
+  'sha_mismatch',
+  'release_unverified',
+  'shared_config_missing',
+  'php_lint_failed',
+  'node_modules_missing',
+  'scratch_health_failed',
+  'rollback_unhealthy',
+  'no_current_release',
+  'store_refused',
 ] as const);
 
 export type ReasonCode = (typeof REASON_CODES)[number];
@@ -133,5 +145,53 @@ export class ServiceError extends ApiError {
   constructor(detail: string) {
     super(500, `${PROBLEM_TYPE_BASE}internal-error`, 'Internal Server Error', detail);
     this.name = 'ServiceError';
+  }
+}
+
+/**
+ * WHY A release.install / release.rollback IS REFUSED (Task 7) — a typed SUBSET of the one
+ * closed REASON_CODES list (never a second list). The phase-3 engine client branches on
+ * these strings; the prose `detail` is for the operator.
+ */
+export const RELEASE_REFUSAL_REASONS = Object.freeze([
+  /** The ustar reader refused the stream; `bundle_reason` carries its BundleRefusalReason. */
+  'bundle_refused',
+  /** The bytes received do not hash to X-Bundle-Sha256, or an existing id recorded another sha. */
+  'sha_mismatch',
+  /** The current release, or the rollback target, carries no .bundle_sha256 record. */
+  'release_unverified',
+  /** shared/server_config_api.php or a headers file (v1), or shared/v2.env (v2), is missing. */
+  'shared_config_missing',
+  /** `php -l` rejected a file of a v1 bundle. */
+  'php_lint_failed',
+  /** A v2 bundle without node_modules/: the host never runs `bun install`. */
+  'node_modules_missing',
+  /** The v2 release did not answer its health URL when booted on a scratch loopback port. */
+  'scratch_health_failed',
+  /** Post-restart health failed; `current` is back on `rolled_back_to` (null: none existed). */
+  'health_failed',
+  /** …and the restored release failed its health check too: an operator must act. */
+  'rollback_unhealthy',
+  'no_previous_release',
+  'no_current_release',
+  /** The release store refused (a corrupt `current`, a non-directory release path); `store_reason` names it. */
+  'store_refused',
+] as const satisfies readonly ReasonCode[]);
+
+export type ReleaseRefusalReason = (typeof RELEASE_REFUSAL_REASONS)[number];
+
+/**
+ * 422, never 5xx, even for `rollback_unhealthy`: a 5xx detail is scrubbed in production, and
+ * every refusal here is a sentence the operator has to read (which file to create, which unit
+ * to look at).
+ */
+export class ReleaseRefusedError extends ApiError {
+  constructor(
+    public readonly reason: ReleaseRefusalReason,
+    detail: string,
+    extensions: Record<string, unknown> = {},
+  ) {
+    super(422, `${PROBLEM_TYPE_BASE}release-refused`, 'Release Refused', detail, { reason, ...extensions });
+    this.name = 'ReleaseRefusedError';
   }
 }

@@ -33,7 +33,7 @@ beforeEach(resetInstance);
 /** The install flow Task 7 runs: createStaging → extractBundle → commitStaging. */
 async function install(id: string): Promise<void> {
   const staged = await createStaging('v2');
-  await extractBundle(streamOf(bundle([{ path: 'id.txt', data: id }])), staged, bundleLimits(), reservedBundlePaths('v2', false));
+  await extractBundle(streamOf(bundle([{ path: 'id.txt', data: id }])), staged, bundleLimits(), reservedBundlePaths('v2'));
   await commitStaging('v2', staged, id);
 }
 
@@ -63,22 +63,24 @@ describe('layout + ids', () => {
     }
   });
 
-  test('reserved bundle paths (D8): v1 config always, its headers only when shared/ has them; v2 env files; the sha record everywhere', () => {
+  test('reserved bundle paths (D8): v1 config always, its headers only when shared/ has them; v2 env files; the sha record everywhere', async () => {
     expect(BUNDLE_SHA_FILE).toBe('.bundle_sha256');
-    expect(reservedBundlePaths('v1', false)).toEqual([BUNDLE_SHA_FILE, 'config_api/server_config_api.php']);
-    expect(reservedBundlePaths('v1', true)).toEqual([
+    expect(reservedBundlePaths('v1')).toEqual([BUNDLE_SHA_FILE, 'config_api/server_config_api.php']);
+    // The rule reads shared/ itself: no caller can pass a stale or wrong answer.
+    await mkdir(apiLayout('v1').shared, { recursive: true });
+    await writeFile(join(apiLayout('v1').shared, 'server_config_headers.php'), '<?php // shared headers');
+    expect(reservedBundlePaths('v1')).toEqual([
       BUNDLE_SHA_FILE,
       'config_api/server_config_api.php',
       'config_api/server_config_headers.php',
     ]);
-    expect(reservedBundlePaths('v2', false)).toEqual([
+    expect(reservedBundlePaths('v2')).toEqual([
       BUNDLE_SHA_FILE,
       '.env',
       '.env.local',
       '.env.production',
       '.env.production.local',
     ]);
-    expect(() => reservedBundlePaths('v2', true)).toThrow(/v2 has no headers file/);
   });
 });
 
@@ -196,7 +198,7 @@ describe('staging + crash safety', () => {
         streamOf(bundle([{ path, data: 'SECRET=1' }])),
         staged,
         bundleLimits(),
-        reservedBundlePaths('v2', false),
+        reservedBundlePaths('v2'),
       ).catch((e) => e);
       expect((err as { reason?: string }).reason).toBe('reserved_path');
       expect(await readdir(apiLayout('v2').staging)).toEqual([]);
@@ -211,13 +213,16 @@ describe('staging + crash safety', () => {
       ['config_api/server_config_headers.php', true, true],
       ['config_api/server_config_headers.php', false, false], // the release's tracked default serves
     ];
+    const sharedHeaders = join(apiLayout('v1').shared, 'server_config_headers.php');
     for (const [path, sharedHasHeaders, refused] of cases) {
       const staged = await createStaging('v1');
+      if (sharedHasHeaders) await writeFile(sharedHeaders, '<?php // shared headers');
+      else await rm(sharedHeaders, { force: true });
       const outcome = await extractBundle(
         streamOf(bundle([{ path: 'index.php', data: '<?php' }, { path, data: '<?php $x=1;' }])),
         staged,
         bundleLimits(),
-        reservedBundlePaths('v1', sharedHasHeaders),
+        reservedBundlePaths('v1'),
       ).then(
         () => 'extracted',
         (e) => (e as { reason?: string }).reason,

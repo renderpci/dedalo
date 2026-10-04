@@ -11,8 +11,10 @@
  * - A FIXED child environment: nothing of the agent's own environment (its token
  *   included) reaches a child. The v2 scratch boot gets shared/v2.env + HOST/PORT only.
  * - Every path argument is confined by realpath to the agent's own state root; the v2
- *   scratch boot accepts ONLY a directory directly under publication_api/v2/staging/ —
- *   the staged, not-yet-promoted release Task 7 health-checks before the swap.
+ *   scratch boot accepts ONLY a directory directly under publication_api/v2/releases/ —
+ *   the committed, not-yet-recorded, not-yet-promoted release Task 7 health-checks before
+ *   the swap. Never staging/: it is agent-only (Task 8 MODES), so the v2 user a scratch
+ *   unit runs as could not read it.
  * - Short commands are killed after COMMAND_TIMEOUT_MS; their output is capped.
  * - IMPORTING THIS MODULE DOES NOT RESOLVE THE AGENT'S CONFIGURATION: `createExec` takes
  *   it as an argument, and only `realExec()`/`setExecForTests()` load src/config.ts, lazily.
@@ -141,12 +143,12 @@ export function createExec(cfg: AgentConfig, spawner: Spawner = bunSpawner): Exe
         throw new ValidationError(`v2ScratchBoot refuses port ${port}: expected an integer in 1024-65535.`);
       }
       const v2Root = join(cfg.STATE_ROOT, PUBLICATION_API_DIR, 'v2');
-      const staging = realOrRefuse(join(v2Root, 'staging'), 'v2 staging directory');
-      const real = realOrRefuse(releaseDir, 'v2 staged release directory');
-      if (dirname(real) !== staging || !statSync(real).isDirectory()) {
+      const releases = realOrRefuse(join(v2Root, 'releases'), 'v2 releases directory');
+      const real = realOrRefuse(releaseDir, 'v2 release directory');
+      if (dirname(real) !== releases || !statSync(real).isDirectory()) {
         throw new ValidationError(
-          `v2ScratchBoot refuses '${releaseDir}': it is not a directory directly under ${staging}. ` +
-            `Only a staged, not-yet-promoted release is booted on a scratch port.`,
+          `v2ScratchBoot refuses '${releaseDir}': it is not a directory directly under ${releases}. ` +
+            `Only a committed release (releases/<id>) is booted on a scratch port.`,
         );
       }
       const envFile = join(v2Root, 'shared', 'v2.env');
