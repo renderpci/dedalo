@@ -151,9 +151,9 @@ export function registryInvalidCheck(reason: RegistryError['reason']): HostCheck
 
 /** A failed `hostStatus` as a code. Only the code crosses: an error MESSAGE may carry
  * agent prose, and agent prose is log-only. */
-export function statusOutcomeFromError(error: unknown): StatusOutcome {
-	return error instanceof DedaloError
-		? { ok: false, code: error.code }
+export function statusOutcomeFromError(thrown: unknown): StatusOutcome {
+	return thrown instanceof DedaloError
+		? { ok: false, code: thrown.code }
 		: { ok: false, code: 'internal.unexpected' };
 }
 
