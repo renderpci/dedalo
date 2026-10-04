@@ -2,8 +2,9 @@
 #
 # INSTANCE CI TIER — the gates that BOOT A REAL SERVER over the wire, on a HOSTED
 # runner: the browser client suite, the two code-update drills, the
-# publication-host media drill (live Apache + nginx) and the publication-host
-# agent drill (the real agent over mTLS, live Apache + nginx, real v2 releases).
+# publication-host media drill (live Apache + nginx), the publication-host
+# agent drill (the real agent over mTLS, live Apache + nginx, real v2 releases)
+# and the publication-host engine drill (engine ↔ real agent: pair CLI, panel, httpd).
 #
 # WHY THIS EXISTS. Three commands the repo relies on ran on NO executing CI:
 # scripts/ci/client_gate.sh (the 133-suite browser gate), `bun run test:update`
@@ -161,6 +162,23 @@ echo "== instance_tier: publication-host agent drill (bun run test:pubhost:agent
 agent_rc=0
 bun run test:pubhost:agent || agent_rc=$?
 [ "$agent_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host agent drill (exit $agent_rc)"; tier_status=1; }
+
+# ── STAGE 6 — THE ENGINE SIDE AGAINST THE REAL AGENT ─────────────────────────
+#
+# scripts/publication_host_engine_drill.ts boots a REAL engine server on the suite
+# database (its own scratch private dir, the operator config as environment) and
+# the REAL agent of stage 5's scene (mTLS for Apache, the unix socket for nginx;
+# the same exec seam), pairs them with the pairing CLI
+# (scripts/publication_host_pair.ts, run as the private dir's owner), and drives the
+# publication_hosts widget over the wire: apply_rules into live Apache/nginx
+# (published 200 / unpublished 404), probe, rollback_api of real v2 releases, and
+# the refusals (non-root admin, re-provisioned agent, frozen/dead agent, corrupt
+# registry). It reuses stage 5's suite MariaDB (stage 5's EXIT trap stops it) and
+# agent dependencies. A missing binary or seam is RED, never a skip.
+echo "== instance_tier: publication-host engine drill (bun run test:pubhost:engine)"
+engine_rc=0
+bun run test:pubhost:engine || engine_rc=$?
+[ "$engine_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host engine drill (exit $engine_rc)"; tier_status=1; }
 
 [ "$tier_status" -eq 0 ] || { echo "== instance_tier: RED"; exit 1; }
 echo "== instance_tier: OK"

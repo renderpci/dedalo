@@ -956,6 +956,29 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 		kind: 'not_media',
 		reason: 'writes the migrated ../private/.env; owner-only by design',
 	},
+	'scripts/lib/publication_host_agent_drill_kit.ts': {
+		modes: ['0o700', '0o700'],
+		kind: 'not_media',
+		reason:
+			"publication-host drill kit: the stand-ins' dir and the drill CA's dir (private keys) in the drill's scratch dir, NOT under the media root",
+	},
+	'scripts/lib/publication_host_agent_scene.ts': {
+		modes: ['0o700', '0o750'],
+		kind: 'not_media',
+		reason:
+			"publication-host drill scene: the agent's credentials dir (0700) and its state root (0750, the provisioner's layout) in the drill's scratch dir, NOT under the media root",
+	},
+	'scripts/lib/publication_host_engine_drill_kit.ts': {
+		modes: ['0o700'],
+		kind: 'not_media',
+		reason: "engine drill: the engine bundle's dir (holds a client key) in the drill's scratch dir",
+	},
+	'scripts/publication_host_engine_drill.ts': {
+		modes: ['0o700', '0o700'],
+		kind: 'not_media',
+		reason:
+			"engine drill: the engine's scratch private dir and the pairing-fragment dir (carries tokens), NOT under the media root",
+	},
 	'src/core/media/jobs.ts': {
 		modes: ['0o750'],
 		kind: 'not_media',

@@ -620,6 +620,8 @@ function fixHint(stage: Stage): string {
 		return 'bun run test:client (reseed on; the suite starts its own server)';
 	if (name.includes('release channel')) return 'TMPDIR=/tmp/dd bun run test:update';
 	if (name.includes('developer channel')) return 'TMPDIR=/tmp/dd bun run test:update:dev';
+	if (name.includes('publication-host engine'))
+		return "bun run test:pubhost:engine [--only apache|nginx] — inside the CI image only (the agent drill's exec seam: bun run ci:local --docker --instance); needs the suite database (bun run test:db:setup) plus everything test:pubhost:agent needs";
 	if (name.includes('publication-host agent'))
 		return 'bun install --frozen-lockfile --cwd publication/host_agent && bun run test:pubhost:agent [--only apache|nginx] — inside the CI image only (its exec seam: bun run ci:local --docker --instance); needs openssl, Apache 2.4 + apxs, nginx, MariaDB; network for the v2 bundle install';
 	if (name.includes('publication-host'))
