@@ -119,6 +119,37 @@ describe('apply halts on the first failure', () => {
   });
 });
 
+describe('a failed rename leaves no temp behind', () => {
+  test('the minted credential: rename fails → the temp holding the token is removed, nothing installed', () => {
+    const host = new FakeHost(l);
+    const temp = `${l.serviceTokenPath}${TEMP_SUFFIX}`;
+    host.rename = (_from: string, to: string) => {
+      host.calls.push(`rename ${to}`);
+      throw new Error('EXDEV: simulated rename failure');
+    };
+    const write: WriteAction = {
+      op: 'write',
+      path: l.serviceTokenPath,
+      label: 'credential',
+      content: { source: 'random', bytes: 32 },
+      disposition: 'create',
+      owner: 'root',
+      group: 'root',
+      uid: 0,
+      gid: 0,
+      mode: 0o600,
+      validate: null,
+    };
+    host.seedDir(l.credentialsDir);
+    const report = apply([write], host);
+    expect(report.ok).toBe(false);
+    expect(report.failure?.detail).toContain('EXDEV');
+    expect(host.entries.has(temp)).toBe(false);
+    expect(host.entries.has(l.serviceTokenPath)).toBe(false);
+    expect(host.calls.at(-1)).toBe(`removeTemp ${temp}`);
+  });
+});
+
 describe('the append-only seal', () => {
   test('a failed chattr +a fails the run (the agent would refuse to boot on that trail)', () => {
     const host = new FakeHost(l);

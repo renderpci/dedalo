@@ -173,7 +173,15 @@ function run(action: Action, io: ProvisionIo, written: string[]): void {
         throw error;
       }
       if (action.validate === 'sudoers') installValidatedSudoers(action, temp, io);
-      else io.rename(temp, action.path);
+      else {
+        // A failed rename must not leave the temp behind: it may hold a freshly minted credential.
+        try {
+          io.rename(temp, action.path);
+        } catch (error) {
+          io.removeTemp(temp);
+          throw error;
+        }
+      }
       written.push(action.path);
       return;
     }
