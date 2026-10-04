@@ -3086,6 +3086,11 @@
 			"skipped": 0,
 			"assertions": 52
 		},
+		"test/unit/publication_host_host_status_native.test.ts": {
+			"tests": 41,
+			"skipped": 0,
+			"assertions": 90
+		},
 		"test/unit/publication_host_operator_doc.test.ts": {
 			"tests": 6,
 			"skipped": 0,
@@ -3110,6 +3115,11 @@
 			"tests": 18,
 			"skipped": 0,
 			"assertions": 22
+		},
+		"test/unit/publication_host_rules_native.test.ts": {
+			"tests": 16,
+			"skipped": 0,
+			"assertions": 24
 		},
 		"test/unit/publication_host_secrets_native.test.ts": {
 			"tests": 35,
