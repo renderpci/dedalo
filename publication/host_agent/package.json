@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
+    "provision": "bun run src/provision/cli.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"
   },
