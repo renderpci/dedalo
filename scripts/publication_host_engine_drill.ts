@@ -37,8 +37,14 @@
  * shared scene, scripts/lib/publication_host_agent_scene.ts). The releases rollback_api
  * undoes are planted through the agent's own wire (engine install is
  * phase 4). HONEST LIMITS: "no agent call was made" for a refused action is proved by its
- * EFFECT here (no stand-in call, registry and include unchanged) — that the client never
- * dials is the Task 7 widget gate; the fragment is rendered with the agent renderer's
+ * EFFECT here (no stand-in call, registry and include unchanged), made observable first: the
+ * [authz] and [repair] pairing_mismatch rows move the expected rules off the live include
+ * (withDivergedRules), so a leaked apply_rules WOULD configtest, reload and rewrite; a leaked
+ * rollback_api is observable only in [release] (a previous release exists — the [authz] row's
+ * rollback attempt, before any release, rests on its error code); that the client never
+ * dials is the Task 7 widget gate. RF5 scans CENTRALLY: every engine answer (get_value and
+ * every action, any status) and every pair-CLI output (any exit code) — the foreign token
+ * included — plus the registry file; the fragment is rendered with the agent renderer's
  * ENGINE_KEYS plus pasted values — the byte-exact provisioner render → CLI contract is
  * Task 5's hermetic gate over the committed example renders.
  *
@@ -124,6 +130,7 @@ import {
 } from './lib/publication_host_agent_scene.ts';
 import {
 	ACTIONS,
+	assertSecretFree,
 	BUNDLE_PLACEHOLDER,
 	bundleKeySecrets,
 	checkState,
@@ -232,29 +239,48 @@ async function login(origin: string, username: string, password: string): Promis
 const codeOf = (a: Answer): string =>
 	a.env.ok === true ? 'ok' : (a.env.error?.code ?? `no error code: ${a.text.slice(0, 200)}`);
 
+/**
+ * RF5, CENTRAL: every engine answer is scanned here, whatever its status — the error states
+ * (pairing_mismatch, a blocked reachable, registry_invalid, a refusal) are where a leak
+ * would hide. A leak THROWS: the row goes RED with the labels, never the value.
+ */
+async function scanned(ctx: Ctx, where: string, answer: Promise<Answer>): Promise<Answer> {
+	const a = await answer;
+	assertSecretFree(where, a.text, ctx.secrets);
+	return a;
+}
+
 const getValue = (ctx: Ctx, auth: Auth) =>
-	api(
-		ctx.origin,
-		{
-			dd_api: 'dd_area_maintenance_api',
-			action: 'get_widget_value',
-			prevent_lock: true,
-			source: { model: PANEL.widget },
-		},
-		auth,
+	scanned(
+		ctx,
+		'the get_value answer',
+		api(
+			ctx.origin,
+			{
+				dd_api: 'dd_area_maintenance_api',
+				action: 'get_widget_value',
+				prevent_lock: true,
+				source: { model: PANEL.widget },
+			},
+			auth,
+		),
 	);
 
 const act = (ctx: Ctx, auth: Auth, action: string, options: Record<string, unknown>) =>
-	api(
-		ctx.origin,
-		{
-			dd_api: 'dd_area_maintenance_api',
-			action: 'widget_request',
-			prevent_lock: true,
-			source: { type: 'widget', model: PANEL.widget, action },
-			options,
-		},
-		auth,
+	scanned(
+		ctx,
+		`the ${action} answer`,
+		api(
+			ctx.origin,
+			{
+				dd_api: 'dd_area_maintenance_api',
+				action: 'widget_request',
+				prevent_lock: true,
+				source: { type: 'widget', model: PANEL.widget, action },
+				options,
+			},
+			auth,
+		),
 	);
 
 async function panelOf(ctx: Ctx, auth: Auth = ctx.root): Promise<{ panel: Panel; text: string }> {
@@ -291,11 +317,65 @@ const includeBytes = (scene: Scene): string | null =>
 	existsSync(scene.include) ? readFileSync(scene.include, 'utf8') : null;
 
 /** E9, computed by the drill independently: the engine builders over the agent's own root. */
-function expectedHash(ctx: Ctx, scene: Scene): string {
+function expectedHash(ctx: Ctx, scene: Scene, qualities: readonly string[] = QUALITIES): string {
 	return ctx.rules.getPublicationHostConfigHash(
 		scene.server,
-		ctx.rules.normalizePublicationHostInput({ root: scene.media, qualities: QUALITIES }),
+		ctx.rules.normalizePublicationHostInput({ root: scene.media, qualities }),
 	);
+}
+
+/** A second public quality: the expected rules then differ from the live include. */
+const DIVERGED_QUALITIES: readonly string[] = [...QUALITIES, 'image/1.5MB'];
+
+/**
+ * Makes a LEAKED apply_rules observable. With the expected rules equal to the live include,
+ * the agent answers an apply with its no-op (no configtest, no reload, same bytes — see the
+ * [repair] replace row), so "no stand-in call, include unchanged" could not fail. Here root
+ * first moves the host's qualities (set_host_fields: registry only, no agent call), the drill
+ * checks the REGISTRY record carries them and that ITS OWN hash over them (the engine builders,
+ * E9 — the panel's rules.expected is null while the pairing is unproved) is not the live
+ * stamp, runs `check`, and restores the qualities — a restore failure is RED too.
+ */
+async function withDivergedRules(
+	ctx: Ctx,
+	scene: Scene,
+	name: string,
+	check: () => Promise<string | null>,
+): Promise<string | null> {
+	const setQualities = (qualities: readonly string[]) =>
+		act(ctx, ctx.root, ACTIONS.setHostFields, { name, qualities: [...qualities] });
+	const stored = (): string => {
+		const hosts =
+			(
+				JSON.parse(registryBytes(ctx) ?? '{}') as {
+					hosts?: { name?: unknown; qualities?: unknown }[];
+				}
+			).hosts ?? [];
+		return JSON.stringify(hosts.find((h) => h.name === name)?.qualities ?? null);
+	};
+	const moved = await setQualities(DIVERGED_QUALITIES);
+	if (moved.env.ok !== true) return `diverging the expected rules: ${codeOf(moved)}`;
+	let problem: string | null;
+	try {
+		problem =
+			stored() !== JSON.stringify(DIVERGED_QUALITIES)
+				? `the registry qualities ${stored()} after the divergence`
+				: (includeBytes(scene) ?? '').includes(
+							`# config-hash: ${expectedHash(ctx, scene, DIVERGED_QUALITIES)}`,
+						)
+					? 'the diverged rules equal the live include: a leaked apply would be invisible'
+					: await check();
+	} catch (error) {
+		problem = `threw: ${error instanceof Error ? error.message : String(error)}`;
+	}
+	const restored = await setQualities(QUALITIES);
+	return problems([
+		problem,
+		restored.env.ok !== true && `restoring the qualities: ${codeOf(restored)}`,
+		restored.env.ok === true &&
+			stored() !== JSON.stringify(QUALITIES) &&
+			`after the restore the registry qualities ${stored()}`,
+	]);
 }
 
 const mediaStatus = async (ctx: Ctx, scene: Scene, rel: string): Promise<number> =>
@@ -309,6 +389,7 @@ interface CliRun {
 	readonly out: string;
 }
 
+/** RF5, CENTRAL: every run's output is scanned, whatever the exit code, before any row prints it. */
 function pairCli(ctx: Ctx, argv: string[]): CliRun {
 	const r = Bun.spawnSync([process.execPath, 'run', PAIR_CLI.script, ...argv], {
 		cwd: REPO,
@@ -316,7 +397,9 @@ function pairCli(ctx: Ctx, argv: string[]): CliRun {
 		stdout: 'pipe',
 		stderr: 'pipe',
 	});
-	return { code: r.exitCode, out: `${r.stdout.toString()}${r.stderr.toString()}`.trim() };
+	const out = `${r.stdout.toString()}${r.stderr.toString()}`.trim();
+	assertSecretFree(`the pair CLI (${argv[0]}, exit ${r.exitCode})`, out, ctx.secrets);
+	return { code: r.exitCode, out };
 }
 
 /**
@@ -425,6 +508,8 @@ async function pairRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 		() => {
 			const before = registryBytes(ctx);
 			const other = randomBytes(24).toString('hex');
+			// Scanned for like any secret: a refusal that echoes the token it rejected is a leak.
+			ctx.secrets.push({ label: 'the foreign (refused) token', value: other });
 			const r = pairCli(
 				ctx,
 				pairArgv(
@@ -463,7 +548,6 @@ async function pairRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 				record?.fingerprint !== good && 'record.fingerprint is not the agent fingerprint',
 				addressProblem(record, scene),
 				leaksIn(ctx, text),
-				leaksIn(ctx, r.out),
 				modeOf(files.dir) !== 0o700 && `secret dir mode ${modeOf(files.dir).toString(8)}`,
 				modeOf(files.token) !== 0o600 && `token mode ${modeOf(files.token).toString(8)}`,
 				existsSync(files.token) &&
@@ -484,7 +568,7 @@ async function panelRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 	await ctx.book.row(
 		`[${scene.server}][panel] get_value (root): paired, reachable, secret-free; rules expected, none reported yet`,
 		async () => {
-			const { panel, text } = await panelOf(ctx);
+			const { panel } = await panelOf(ctx);
 			const host = hostRow(panel, name);
 			if (host === null) return `no row ${name} (registry.state ${panel.registryState})`;
 			return problems([
@@ -499,7 +583,6 @@ async function panelRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 					`rules.expected ${host.rules.expected}`,
 				host.rules.reported !== null && `rules.reported ${host.rules.reported}`,
 				checkState(host, 'rules_hash') === 'ok' && 'rules_hash ok with nothing applied',
-				leaksIn(ctx, text),
 			]);
 		},
 	);
@@ -591,37 +674,35 @@ async function authzRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 		async () => {
 			const a = await getValue(ctx, ctx.admin);
 			if (a.env.ok !== true) return `get_value: ${codeOf(a)}`;
-			return problems([
-				hostRow(readPanel(a.env.data), name) === null && `no row ${name}`,
-				leaksIn(ctx, a.text),
-			]);
+			return hostRow(readPanel(a.env.data), name) === null ? `no row ${name}` : null;
 		},
 	);
 	await ctx.book.row(
-		`${s} every action as that admin → perm.denied; no stand-in call, registry and live include unchanged`,
-		async () => {
-			const since = logLines(scene).length;
-			const registry = registryBytes(ctx);
-			const include = includeBytes(scene);
-			const tries: readonly (readonly [string, Record<string, unknown>])[] = [
-				[ACTIONS.applyRules, { name }],
-				[ACTIONS.probe, { name }],
-				[ACTIONS.rollbackApi, { name, api: 'v2' }],
-				[ACTIONS.setHostFields, { name, public_url: 'https://elsewhere.drill.test' }],
-				[ACTIONS.removeHost, { name }],
-			];
-			const wrong: string[] = [];
-			for (const [action, options] of tries) {
-				const code = codeOf(await act(ctx, ctx.admin, action, options));
-				if (code !== 'perm.denied') wrong.push(`${action} → ${code}`);
-			}
-			return problems([
-				wrong.length > 0 && wrong.join('; '),
-				callsSince(scene, since, []),
-				registryBytes(ctx) !== registry && 'the registry changed',
-				includeBytes(scene) !== include && 'the live include changed',
-			]);
-		},
+		`${s} every action as that admin (expected rules diverged first) → perm.denied; no stand-in call, registry and live include unchanged`,
+		() =>
+			withDivergedRules(ctx, scene, name, async () => {
+				const since = logLines(scene).length;
+				const registry = registryBytes(ctx);
+				const include = includeBytes(scene);
+				const tries: readonly (readonly [string, Record<string, unknown>])[] = [
+					[ACTIONS.applyRules, { name }],
+					[ACTIONS.probe, { name }],
+					[ACTIONS.rollbackApi, { name, api: 'v2' }],
+					[ACTIONS.setHostFields, { name, public_url: 'https://elsewhere.drill.test' }],
+					[ACTIONS.removeHost, { name }],
+				];
+				const wrong: string[] = [];
+				for (const [action, options] of tries) {
+					const code = codeOf(await act(ctx, ctx.admin, action, options));
+					if (code !== 'perm.denied') wrong.push(`${action} → ${code}`);
+				}
+				return problems([
+					wrong.length > 0 && wrong.join('; '),
+					callsSince(scene, since, []),
+					registryBytes(ctx) !== registry && 'the registry changed',
+					includeBytes(scene) !== include && 'the live include changed',
+				]);
+			}),
 	);
 }
 
@@ -647,6 +728,21 @@ async function releaseRows(ctx: Ctx, scene: Scene, name: string): Promise<void> 
 			host.apis.v2.previous !== r1.id && `apis.v2.previous ${host.apis.v2.previous}`,
 		]);
 	});
+	// The [authz] row's rollback_api runs before any release exists, where a leaked call would
+	// change nothing either: here, with a previous release to roll back to, it would restart.
+	await ctx.book.row(
+		`${s} rollback_api v2 as the non-root admin → perm.denied; no restart, ${r2.id} still current`,
+		async () => {
+			const since = logLines(scene).length;
+			const code = codeOf(await act(ctx, ctx.admin, ACTIONS.rollbackApi, { name, api: 'v2' }));
+			const host = await rowOf(ctx, name);
+			return problems([
+				code !== 'perm.denied' && `code ${code}`,
+				callsSince(scene, since, []),
+				host.apis.v2.current !== r2.id && `apis.v2.current ${host.apis.v2.current}`,
+			]);
+		},
+	);
 	await ctx.book.row(
 		`${s} rollback_api v2 (root) → ${r1.id} serving again: restarted on it, v2 healthy over MariaDB, the panel follows`,
 		async () => {
@@ -715,20 +811,21 @@ async function repairRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 		},
 	);
 	await ctx.book.row(
-		`${s} apply_rules → publication_host.pairing_mismatch; nothing applied, registry unchanged`,
-		async () => {
-			const since = logLines(scene).length;
-			const registry = registryBytes(ctx);
-			const include = includeBytes(scene);
-			const code = codeOf(await act(ctx, ctx.root, ACTIONS.applyRules, { name }));
-			return problems([
-				code !== 'publication_host.pairing_mismatch' &&
-					`code ${code}${code === 'publication_host.auth' ? ' — the bearer was SENT before the pairing was proved' : ''}`,
-				callsSince(scene, since, []),
-				registryBytes(ctx) !== registry && 'the registry changed',
-				includeBytes(scene) !== include && 'the live include changed',
-			]);
-		},
+		`${s} apply_rules (expected rules diverged first) → publication_host.pairing_mismatch; nothing applied, registry unchanged`,
+		() =>
+			withDivergedRules(ctx, scene, name, async () => {
+				const since = logLines(scene).length;
+				const registry = registryBytes(ctx);
+				const include = includeBytes(scene);
+				const code = codeOf(await act(ctx, ctx.root, ACTIONS.applyRules, { name }));
+				return problems([
+					code !== 'publication_host.pairing_mismatch' &&
+						`code ${code}${code === 'publication_host.auth' ? ' — the bearer was SENT before the pairing was proved' : ''}`,
+					callsSince(scene, since, []),
+					registryBytes(ctx) !== registry && 'the registry changed',
+					includeBytes(scene) !== include && 'the live include changed',
+				]);
+			}),
 	);
 	await ctx.book.row(
 		`${s} the CLI re-pairs (replace) from the new fragment → apply_rules works again (the include is unchanged: the agent's no-op, no configtest, no reload)`,
@@ -754,7 +851,6 @@ async function repairRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 			const host = await rowOf(ctx, name);
 			const token = hostSecretFiles(ctx.privateDir, name).token;
 			return problems([
-				leaksIn(ctx, r.out),
 				a.env.ok !== true && `apply_rules: ${codeOf(a)}`,
 				(a.env.data as { hash?: unknown } | undefined)?.hash !== want &&
 					`answer ${a.text.slice(0, 200)}`,

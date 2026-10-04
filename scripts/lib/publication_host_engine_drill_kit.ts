@@ -304,3 +304,13 @@ export function secretLeaks(text: string, secrets: readonly Secret[]): string[] 
 	if (PEM_MARKER.test(text)) found.add('a PEM block');
 	return [...found];
 }
+
+/**
+ * The CENTRAL scan (RF5): every get_value / action answer and every pair-CLI output passes
+ * through it, whatever its status or exit code — error states included. Throws (the row goes
+ * RED) naming WHERE and the LABELS only: the message never carries the secret it found.
+ */
+export function assertSecretFree(where: string, text: string, secrets: readonly Secret[]): void {
+	const found = secretLeaks(text, secrets);
+	if (found.length > 0) throw new Error(`secret material in ${where}: ${found.join(', ')}`);
+}

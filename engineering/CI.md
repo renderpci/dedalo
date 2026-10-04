@@ -442,8 +442,11 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   the refusals (a non-root global admin: `perm.denied` on every action; a re-provisioned
   agent: `pairing_mismatch` until the CLI re-pairs; a frozen or dead agent: typed
   `timeout|unreachable` with the registry untouched; a corrupt registry:
-  `registry_invalid` with `hosts: null`, never an empty list). Every payload and CLI
-  output is scanned for the tokens, the client key and any PEM block. It reuses the agent
+  `registry_invalid` with `hosts: null`, never an empty list). Every engine answer
+  (get_value and every action, error states included) and every pair-CLI output (any exit
+  code), plus the registry file, is scanned centrally for the tokens (the refused foreign
+  one too), the client key and any PEM block. A refused action's "nothing applied" is
+  made observable first (expected rules moved off the live include). It reuses the agent
   drill's suite MariaDB, agent dependencies and exec seam. **Runner requirement**: the
   agent drill's plus the suite database (the tier builds it first). Missing = RED. Runs
   ONLY in the CI image, like the agent drill: `bun run ci:local --docker --instance`.

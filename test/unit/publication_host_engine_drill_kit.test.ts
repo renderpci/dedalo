@@ -29,6 +29,7 @@ import { join } from 'node:path';
 import { ENGINE_KEYS } from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
 import { createRowBook } from '../../scripts/lib/publication_host_agent_scene.ts';
 import {
+	assertSecretFree,
 	bundleKeySecrets,
 	checkState,
 	engineBundlePem,
@@ -232,6 +233,22 @@ describe('engine drill kit — the secret scan', () => {
 			secretLeaks(JSON.stringify({ token_present: true, bundle_present: true }), secrets),
 		).toEqual([]);
 		expect(secretLeaks(CERT.split('\n')[1] as string, secrets)).toEqual([]);
+	});
+
+	test('assertSecretFree: throws naming where + labels, never the value; clean text passes', () => {
+		const secrets = [{ label: 'the foreign token', value: TOKEN }];
+		expect(() => assertSecretFree('the pair CLI (add, exit 3)', 'ok', secrets)).not.toThrow();
+		let message = '';
+		try {
+			assertSecretFree('the pair CLI (add, exit 3)', `refused: ${TOKEN}`, secrets);
+		} catch (error) {
+			message = (error as Error).message;
+		}
+		expect(message).toBe('secret material in the pair CLI (add, exit 3): the foreign token');
+		expect(message).not.toContain(TOKEN);
+		expect(() => assertSecretFree('get_value', '-----BEGIN PRIVATE KEY-----', [])).toThrow(
+			'a PEM block',
+		);
 	});
 });
 
