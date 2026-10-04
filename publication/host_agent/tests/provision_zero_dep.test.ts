@@ -16,6 +16,8 @@ const ZERO_DEP = [
   'plan.ts',
   // Task 9: render/engine_fragment.ts computes the pairing fact with the agent's import-free recipe.
   '../security/pairing.ts',
+  // Task 9: the mTLS issuer (node:crypto + ./layout) — a root drill may import it without node_modules.
+  'tls.ts',
   ...readdirSync(join(PROVISION, 'render'))
     .filter(name => name.endsWith('.ts'))
     .map(name => `render/${name}`),
