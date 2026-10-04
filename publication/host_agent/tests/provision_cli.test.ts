@@ -260,6 +260,7 @@ describe('apply converges in one run', () => {
       h.host.entries.delete(l.tls!.caKey);
       expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
       expect(restarts(h)).toBe(1);
+      expect(h.out.some(line => line.includes('STAYS VALID'))).toBe(false); // a CA rotation does revoke
       expect(h.host.calls.lastIndexOf(`rename ${l.tls!.serverKey}`)).toBeLessThan(h.host.calls.indexOf(`restart ${AGENT}`));
     });
 
@@ -268,6 +269,8 @@ describe('apply converges in one run', () => {
       h.host.entries.delete(l.engineBundlePath);
       expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
       expect(restarts(h)).toBe(0);
+      // …so the reissue revokes nothing, and the operator is told how to revoke.
+      expect(h.out.some(line => line.includes('OLD client certificate STAYS VALID') && line.includes(l.tls!.caKey))).toBe(true);
     });
 
     test('an inactive agent is left to its start, not restarted', () => {

@@ -334,6 +334,13 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
           `tls: THE ENGINE BUNDLE CHANGED — carry ${layout.engineBundlePath} to the work host (0600, the engine's ` +
             `user) and point the engine at it; the engine presents the old client certificate until then`,
         );
+        if (!tls.issued.includes('ca')) {
+          out(
+            `tls: the OLD client certificate STAYS VALID until its notAfter — the agent trusts the CA, not one ` +
+              `leaf. To revoke a leaked bundle, rotate the CA: remove ${layout.tls?.caCert} and ${layout.tls?.caKey}, ` +
+              `then apply again (new CA, new leaves, agent restarted)`,
+          );
+        }
       }
     }
 

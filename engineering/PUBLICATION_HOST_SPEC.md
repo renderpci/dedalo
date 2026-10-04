@@ -62,6 +62,10 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
 2. **The channel is private.** A private network (WireGuard) or mTLS on a non-public port,
    firewalled to the work host's address. Never routed through the public vhost. On a
    single machine (§1.1): a unix socket, mode 0660, group = the engine's.
+   Under mTLS the agent pins its OWN instance CA as the only client CA, so it trusts any
+   client certificate that CA signed: reissuing the engine bundle revokes nothing. Revoking a
+   leaked bundle = rotating the CA (remove `tls/ca.pem` + `tls/ca.key`, `provision apply`):
+   new CA and leaves, and the running agent is restarted (it loads TLS once, at boot).
 3. **Pairing is proved, not assumed.** Shared bearer + the domain-separated pairing
    fingerprint recipe of `src/core/site_builder/pairing.ts` (a mis-pasted env file must
    name the mismatch, never silently drive another institution's host).
