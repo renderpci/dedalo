@@ -1,0 +1,804 @@
+/**
+ * publication_hosts WIDGET — panel + root-only actions (phase-3 plan E8–E10).
+ *
+ * OPERATOR-VISIBLE FAILURES THIS GATES:
+ *  - a profile admin rewrites a public host's media gate or rolls back its API
+ *    (every action is root-only; the check runs before any module load or agent call);
+ *  - a profile admin reads the infrastructure topology from the panel (agent addresses,
+ *    the private-dir path, probe paths): a non-root row carries none of them;
+ *  - a corrupt registry reads as "no publication hosts" while one is serving
+ *    (`registry_invalid`, `hosts: null` — never `[]`);
+ *  - a re-provisioned agent (pairing mismatch), or a status body naming another
+ *    fingerprint, renders its facts under this engine's heading (the REAL Task 6
+ *    buildHostPanelRow is used, so its trust check is exercised, never bypassed);
+ *  - one host whose secret file has a widened mode blanks the whole panel;
+ *  - the token, the client key or the bundle PEM leaks into the panel payload,
+ *    even through an error the agent client raised;
+ *  - an agent that dies mid-action leaves a half-written registry or a fake OK;
+ *  - a removed host keeps its in-process pairing proof.
+ *
+ * Hermetic: I/O deps are recording fakes (createPublicationHostsWidget); the pure Task 6
+ * functions are the real ones. No network, no private dir, no mock.module.
+ */
+
+import { describe, expect, test } from 'bun:test';
+import {
+	addressLabel,
+	createPublicationHostsWidget,
+	normalizePublicUrl,
+	type PublicationHostsDeps,
+	registryState,
+	widget,
+} from '../../src/core/area_maintenance/widgets/publication_hosts.ts';
+import { ownershipMark } from '../../src/core/area_maintenance/widgets/support.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
+import type { AgentStatus, MediaProbe } from '../../src/core/publication_host/agent_client.ts';
+import {
+	HOST_CHECK_IDS,
+	type HostStatusInput,
+	buildHostPanelRow as realBuildHostPanelRow,
+	statusOutcomeFromError,
+} from '../../src/core/publication_host/host_status.ts';
+import {
+	type PublicationHostRecord,
+	RegistryError,
+	type RegistryFile,
+} from '../../src/core/publication_host/registry.ts';
+import type { ExpectedRulesOutcome } from '../../src/core/publication_host/rules.ts';
+import type { SecretPresenceOutcome } from '../../src/core/publication_host/secrets.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
+
+const ROOT: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+const ADMIN: Principal = { userId: 7, isGlobalAdmin: true, isDeveloper: false };
+
+/** Fixture secrets: none of these may ever appear in a payload. */
+const TOKEN = 'SECRET-TOKEN-7f3a9c1e5b2d4f6a8c0e2b4d6f8a0c2e4b6d';
+const KEY_PEM = '-----BEGIN PRIVATE KEY-----\nMIIEvQSECRETKEYBYTESZZ\n-----END PRIVATE KEY-----';
+const REGISTRY_PATH = '/scratch/private/publication_hosts.json';
+
+const ACTIONS = ['apply_rules', 'probe', 'rollback_api', 'set_host_fields', 'remove_host'] as const;
+
+/** The served row keys, pinned: root gets the edit-form fields, a non-root admin no topology. */
+const ROOT_ROW_KEYS = [
+	'address_label',
+	'apis',
+	'bundle_present',
+	'checks',
+	'name',
+	'pairing_proved',
+	'probe',
+	'public_url',
+	'qualities',
+	'rules',
+	'token_present',
+];
+const ADMIN_ROW_KEYS = [
+	'apis',
+	'bundle_present',
+	'checks',
+	'name',
+	'pairing_proved',
+	'public_url',
+	'rules',
+	'token_present',
+];
+
+function record(name: string, over: Partial<PublicationHostRecord> = {}): PublicationHostRecord {
+	return {
+		name,
+		instance: 'test',
+		fingerprint: 'a'.repeat(64),
+		address: { kind: 'tls', host: '10.20.0.5', port: 8443 },
+		public_url: 'https://www.museum.test',
+		qualities: null,
+		probe: { published: null, unpublished: null },
+		paired_at: '2026-10-03T00:00:00.000Z',
+		...over,
+	};
+}
+
+function mediaProbe(over: Partial<MediaProbe> = {}): MediaProbe {
+	return {
+		mode: 'shared',
+		root: '/srv/pub_media',
+		present: true,
+		read_only: true,
+		pub_readable: true,
+		pub_markers: 3,
+		problems: [],
+		...over,
+	};
+}
+
+function agentStatus(over: Partial<AgentStatus> = {}): AgentStatus {
+	return {
+		agent_version: '0.1.0',
+		bun_version: '1.4.2',
+		platform: 'linux',
+		instance_fingerprint: 'a'.repeat(64),
+		apis: {
+			v1: { current: '7.0.0_a1b2c3d', previous: '7.0.0_9f8e7d6' },
+			v2: { current: null, previous: null },
+		},
+		rules: { server: 'apache', hash: 'b'.repeat(64) },
+		media: mediaProbe(),
+		disk: { state_root_free_bytes: 1_000_000 },
+		...over,
+	};
+}
+
+const EXPECTED = {
+	server: 'apache' as const,
+	text: '# rules\n',
+	hash: 'c'.repeat(64),
+	dropped: [],
+};
+/** secretPresenceOutcome for a fully provisioned host. */
+const PRESENT: SecretPresenceOutcome = { token_present: true, bundle_present: true, refused: null };
+
+const EXPECTED_OUTCOME: ExpectedRulesOutcome = { ok: true, hash: 'c'.repeat(64), dropped: [] };
+
+interface Harness {
+	deps: PublicationHostsDeps;
+	calls: string[];
+	loads: () => number;
+	registry: () => RegistryFile;
+	rowInputs: HostStatusInput[];
+	module: ReturnType<typeof createPublicationHostsWidget>;
+}
+
+function harness(
+	hosts: PublicationHostRecord[],
+	over: Partial<PublicationHostsDeps> = {},
+): Harness {
+	let file: RegistryFile = { version: 1, hosts };
+	let loads = 0;
+	const calls: string[] = [];
+	const rowInputs: HostStatusInput[] = [];
+	const deps: PublicationHostsDeps = {
+		registryPath: () => REGISTRY_PATH,
+		loadRegistry: () => {
+			calls.push('loadRegistry');
+			return structuredClone(file);
+		},
+		updateRegistry: (fn) => {
+			calls.push('updateRegistry');
+			file = fn(structuredClone(file));
+			return file;
+		},
+		secretPresenceOutcome: () => ({ ...PRESENT }),
+		removeHostSecrets: (name) => {
+			calls.push(`removeHostSecrets:${name}`);
+		},
+		forgetPairing: (name) => {
+			calls.push(`forgetPairing:${name}`);
+		},
+		hostStatus: async (name) => {
+			calls.push(`hostStatus:${name}`);
+			return agentStatus();
+		},
+		hostMediaProbe: async (name) => {
+			calls.push(`hostMediaProbe:${name}`);
+			return mediaProbe({ problems: ['pub/ is not readable'] });
+		},
+		hostApplyRules: async (name, req, actor) => {
+			calls.push(`hostApplyRules:${name}:${req.server}:${req.hash}:${actor}`);
+			return { hash: req.hash, reloaded: true };
+		},
+		hostRollbackRelease: async (name, api, actor) => {
+			calls.push(`hostRollbackRelease:${name}:${api}:${actor}`);
+			return { from: '7.0.0_a1b2c3d', to: '7.0.0_9f8e7d6' };
+		},
+		expectedRulesForHost: () => {
+			calls.push('expectedRulesForHost');
+			return EXPECTED;
+		},
+		expectedRulesOutcome: () => {
+			calls.push('expectedRulesOutcome');
+			return EXPECTED_OUTCOME;
+		},
+		statusOutcomeFromError,
+		buildHostPanelRow: (input) => {
+			rowInputs.push(input);
+			return realBuildHostPanelRow(input);
+		},
+		engineQualities: () => ['image/1.5MB', 'image/thumb'],
+		filterPublicQualities: (configured) =>
+			configured.map((q) => q.replace(/^\/+|\/+$/g, '')).filter((q) => !q.endsWith('/original')),
+		engineVersion: () => '7.0.0',
+		...over,
+	};
+	const module = createPublicationHostsWidget(async () => {
+		loads += 1;
+		return deps;
+	});
+	return { deps, calls, loads: () => loads, registry: () => file, rowInputs, module };
+}
+
+async function run(
+	h: Harness,
+	action: (typeof ACTIONS)[number],
+	options: Record<string, unknown>,
+	principal: Principal = ROOT,
+) {
+	const handler = h.module.apiActions?.[action];
+	if (handler === undefined) throw new DedaloError('internal.unexpected', { message: action });
+	return handler(options, principal);
+}
+
+async function panel(h: Harness, principal: Principal = ROOT): Promise<Record<string, unknown>> {
+	return (await h.module.getValue?.({}, principal))?.data as Record<string, unknown>;
+}
+
+function rows(data: Record<string, unknown>): Record<string, unknown>[] {
+	return data.hosts as Record<string, unknown>[];
+}
+
+function checkOf(row: Record<string, unknown>, id: string): unknown {
+	return (row.checks as { id: string }[]).find((check) => check.id === id);
+}
+
+/** The thrown DedaloError's code (a non-DedaloError rejection fails the test). */
+async function codeOf(promise: Promise<unknown>): Promise<string> {
+	try {
+		await promise;
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return (error as DedaloError).code;
+	}
+	throw new DedaloError('internal.unexpected', { message: 'expected a rejection' });
+}
+
+const NO_APIS = { v1: { current: null, previous: null }, v2: { current: null, previous: null } };
+
+describe('registration', () => {
+	test('in the total surface and the served catalog, right after site_builder_status', async () => {
+		const { ALL_WIDGET_MODULES, WIDGET_MODULES } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		expect(ALL_WIDGET_MODULES.find((m) => m.spec.id === 'publication_hosts')).toBe(widget);
+		const ids = WIDGET_MODULES.map((m) => m.spec.id);
+		expect(ids[ids.indexOf('site_builder_status') + 1]).toBe('publication_hosts');
+	});
+
+	test('spec, lazy get_value, exactly the five actions, none unbounded, none ownership-marked', () => {
+		expect(widget.spec).toEqual({
+			id: 'publication_hosts',
+			category: 'publication',
+			label: { kind: 'label', key: 'publication_hosts' },
+		});
+		expect(typeof widget.getValue).toBe('function');
+		expect(widget.eagerValue).toBeUndefined();
+		expect(widget.unboundedActions).toBeUndefined();
+		expect(Object.keys(widget.apiActions ?? {})).toEqual([...ACTIONS]);
+		for (const action of ACTIONS) {
+			// ENGINE_NATIVE in update_ownership_tripwire, never gated()
+			expect(ownershipMark(widget.apiActions?.[action] as never), action).toBeUndefined();
+		}
+	});
+
+	test('a global admin who is not root is refused through the REAL dispatch, every action', async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		for (const action of ACTIONS) {
+			const code = await codeOf(
+				dispatchWidgetRequest(ADMIN, { model: 'publication_hosts', action }, { name: 'pub_a' }),
+			);
+			expect(code, action).toBe('perm.denied');
+		}
+	});
+});
+
+describe('get_value (panel)', () => {
+	test('root, a paired host: the Task 6 row + the edit-form fields; inputs built as Task 6 defines', async () => {
+		const h = harness([record('pub_a')]);
+		const data = await panel(h);
+		expect(data.registry).toEqual({ state: 'ok', reason: null });
+		expect(data.registry_path).toBe(REGISTRY_PATH);
+		expect(data.engine_qualities).toEqual(['image/1.5MB', 'image/thumb']);
+		expect(data.is_root).toBe(true);
+		const [row] = rows(data);
+		expect(Object.keys(row ?? {}).sort()).toEqual(ROOT_ROW_KEYS);
+		expect(row).toMatchObject({
+			name: 'pub_a',
+			address_label: '10.20.0.5:8443',
+			public_url: 'https://www.museum.test',
+			rules: { expected: 'c'.repeat(64), reported: 'b'.repeat(64) },
+			apis: {
+				v1: { current: '7.0.0_a1b2c3d', previous: '7.0.0_9f8e7d6' },
+				v2: { current: null, previous: null },
+			},
+			token_present: true,
+			bundle_present: true,
+			pairing_proved: true,
+			qualities: null,
+			probe: { published: null, unpublished: null },
+		});
+		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([
+			...HOST_CHECK_IDS,
+		]);
+		expect(h.rowInputs).toHaveLength(1);
+		expect(h.rowInputs[0]?.status).toEqual({ ok: true, status: agentStatus() });
+		expect(h.rowInputs[0]?.expected).toEqual(EXPECTED_OUTCOME);
+		expect(h.rowInputs[0]?.engineVersion).toBe('7.0.0');
+		// the Task 1 outcome reaches Task 6 UNCHANGED (refused included)
+		expect(h.rowInputs[0]?.secrets).toEqual(PRESENT);
+	});
+
+	test('a pairing mismatch: the code reaches Task 6, no expectation computed, no agent fact', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => {
+				throw new DedaloError('publication_host.pairing_mismatch');
+			},
+		});
+		const [row] = rows(await panel(h));
+		expect(h.rowInputs[0]?.status).toEqual({
+			ok: false,
+			code: 'publication_host.pairing_mismatch',
+		});
+		expect(h.rowInputs[0]?.expected).toBeNull();
+		expect(h.calls).not.toContain('expectedRulesOutcome');
+		expect(row?.pairing_proved).toBe(false);
+		expect(row?.rules).toEqual({ expected: null, reported: null });
+		expect(row?.apis).toEqual(NO_APIS);
+	});
+
+	test('a status body naming another fingerprint is NOT rendered as this host (Task 6 trust check)', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => agentStatus({ instance_fingerprint: 'f'.repeat(64) }),
+		});
+		const [row] = rows(await panel(h));
+		expect(row?.pairing_proved).toBe(false);
+		expect(checkOf(row ?? {}, 'pairing')).toEqual({
+			id: 'pairing',
+			state: 'blocked',
+			detail: 'status_fingerprint',
+		});
+		expect(row?.rules).toEqual({ expected: null, reported: null });
+		expect(row?.apis).toEqual(NO_APIS);
+	});
+
+	test('a copy-mode host: the refusal outcome reaches Task 6, no expected hash, rules not applicable', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () =>
+				agentStatus({ media: mediaProbe({ mode: 'copy', root: null, read_only: false }) }),
+			expectedRulesOutcome: () => ({ ok: false, reason: 'mode' }),
+		});
+		const [row] = rows(await panel(h));
+		expect(h.rowInputs[0]?.expected).toEqual({ ok: false, reason: 'mode' });
+		expect((row?.rules as { expected: unknown }).expected).toBeNull();
+		expect(checkOf(row ?? {}, 'rules_hash')).toEqual({
+			id: 'rules_hash',
+			state: 'ok',
+			detail: 'not_applicable',
+		});
+	});
+
+	test('a non-root global admin: readable, but no address, no private path, no edit fields', async () => {
+		const h = harness([record('pub_a', { qualities: ['image/thumb'] })]);
+		const data = await panel(h, ADMIN);
+		expect(data.is_root).toBe(false);
+		expect(data.registry_path).toBeNull();
+		const [row] = rows(data);
+		expect(Object.keys(row ?? {}).sort()).toEqual(ADMIN_ROW_KEYS);
+		expect(row?.pairing_proved).toBe(true);
+		const serialized = JSON.stringify(data);
+		expect(serialized).not.toContain('10.20.0.5');
+		expect(serialized).not.toContain(REGISTRY_PATH);
+	});
+
+	test('a refused secret blocks ONE host (reason shown, not dialled); the others still render', async () => {
+		const refused: SecretPresenceOutcome = {
+			token_present: false,
+			bundle_present: false,
+			refused: 'bad_mode',
+		};
+		const h = harness([record('pub_a'), record('pub_b')], {
+			secretPresenceOutcome: (name) => (name === 'pub_a' ? { ...refused } : { ...PRESENT }),
+		});
+		const [a, b] = rows(await panel(h));
+		expect(h.calls).not.toContain('hostStatus:pub_a');
+		expect(h.calls).toContain('hostStatus:pub_b');
+		expect(h.rowInputs[0]?.status).toEqual({ ok: false, code: 'publication_host.unconfigured' });
+		// passed to Task 6 as-is: the widget never hand-patches a check
+		expect(h.rowInputs[0]?.secrets).toEqual(refused);
+		expect(a?.token_present).toBe(false);
+		expect(a?.bundle_present).toBe(false);
+		expect(a?.pairing_proved).toBe(false);
+		expect(checkOf(a ?? {}, 'secrets')).toEqual({
+			id: 'secrets',
+			state: 'blocked',
+			detail: 'bad_mode',
+		});
+		expect(b?.pairing_proved).toBe(true);
+	});
+
+	test('a refusal is never hidden by present flags: still not dialled, still blocked', async () => {
+		const h = harness([record('pub_a')], {
+			secretPresenceOutcome: () => ({ token_present: true, bundle_present: true, refused: 'bad_bundle' }),
+		});
+		const [a] = rows(await panel(h));
+		expect(h.calls).not.toContain('hostStatus:pub_a');
+		expect(checkOf(a ?? {}, 'secrets')).toEqual({
+			id: 'secrets',
+			state: 'blocked',
+			detail: 'bad_bundle',
+		});
+	});
+
+	test('the required secrets decide the dial: a TLS host needs the bundle, a unix host does not', async () => {
+		const tokenOnly: SecretPresenceOutcome = {
+			token_present: true,
+			bundle_present: false,
+			refused: null,
+		};
+		const unix = record('pub_u', {
+			address: { kind: 'unix', socket: '/run/dedalo-pubhost/agent.sock' },
+		});
+		const h = harness([record('pub_t'), unix], { secretPresenceOutcome: () => ({ ...tokenOnly }) });
+		const [t, u] = rows(await panel(h));
+		expect(h.calls).not.toContain('hostStatus:pub_t');
+		expect(h.calls).toContain('hostStatus:pub_u');
+		expect(checkOf(t ?? {}, 'secrets')).toEqual({
+			id: 'secrets',
+			state: 'blocked',
+			detail: 'engine_bundle',
+		});
+		expect(u?.address_label).toBe('unix:/run/dedalo-pubhost/agent.sock');
+		expect(checkOf(u ?? {}, 'secrets')).toEqual({ id: 'secrets', state: 'ok' });
+		expect(u?.pairing_proved).toBe(true);
+	});
+
+	test('a unix-socket host is labelled as one', () => {
+		expect(addressLabel({ kind: 'unix', socket: '/run/dedalo-pubhost/agent.sock' })).toBe(
+			'unix:/run/dedalo-pubhost/agent.sock',
+		);
+		expect(addressLabel({ kind: 'tls', host: 'pub.museum.test', port: 9443 })).toBe(
+			'pub.museum.test:9443',
+		);
+	});
+
+	test('a corrupt registry is LOUD: registry_invalid, hosts null (never []), no agent dialled', async () => {
+		const h = harness([record('pub_a')], {
+			loadRegistry: () => {
+				throw new RegistryError('invalid_json', 'Unexpected token } in JSON');
+			},
+		});
+		const data = await panel(h);
+		expect(data.registry).toEqual({ state: 'registry_invalid', reason: 'invalid_json' });
+		expect(data.hosts).toBeNull();
+		expect(h.calls.some((c) => c.startsWith('hostStatus'))).toBe(false);
+	});
+
+	test('registry states: locked is its own state; every other reason is invalid', () => {
+		expect(registryState('locked')).toBe('registry_locked');
+		for (const reason of [
+			'unreadable',
+			'invalid_json',
+			'invalid_shape',
+			'duplicate_name',
+		] as const) {
+			expect(registryState(reason), reason).toBe('registry_invalid');
+		}
+	});
+
+	test('an unexpected (untyped) registry failure is not swallowed', async () => {
+		const h = harness([], {
+			loadRegistry: () => {
+				throw new TypeError('engine bug');
+			},
+		});
+		await expect(h.module.getValue?.({}, ROOT) as Promise<unknown>).rejects.toThrow('engine bug');
+	});
+
+	test('NO SECRET in the payload, even when the failures carry them', async () => {
+		const h = harness([record('pub_a'), record('pub_b')], {
+			hostStatus: async (name) => {
+				if (name === 'pub_a') {
+					throw new DedaloError('publication_host.auth', {
+						message: `bearer ${TOKEN} refused`,
+						details: { token: TOKEN },
+						cause: new Error(KEY_PEM),
+					});
+				}
+				return agentStatus();
+			},
+			expectedRulesOutcome: () => {
+				throw new Error(`render failed near ${KEY_PEM} ${TOKEN}`);
+			},
+		});
+		const serialized = JSON.stringify(await h.module.getValue?.({}, ROOT));
+		expect(serialized).not.toContain(TOKEN);
+		expect(serialized).not.toContain('PRIVATE KEY');
+		expect(serialized).not.toContain('SECRETKEYBYTES');
+		expect(h.rowInputs.map((input) => input.status.ok)).toEqual([false, true]);
+		expect(h.rowInputs[0]?.status).toEqual({ ok: false, code: 'publication_host.auth' });
+		expect(h.rowInputs[1]?.expected).toBeNull();
+	});
+});
+
+describe('root-only actions', () => {
+	test('a non-root global admin is refused BEFORE any module load or agent call', async () => {
+		for (const action of ACTIONS) {
+			const h = harness([record('pub_a')]);
+			const code = await codeOf(run(h, action, { name: 'pub_a', api: 'v2' }, ADMIN));
+			expect(code, action).toBe('perm.denied');
+			expect(h.loads(), action).toBe(0);
+			expect(h.calls, action).toEqual([]);
+		}
+	});
+
+	test('an invalid host name is refused before any module load', async () => {
+		for (const action of ACTIONS) {
+			const h = harness([record('pub_a')]);
+			const code = await codeOf(run(h, action, { name: '../etc' }));
+			expect(code, action).toBe('maintenance.action_refused');
+			expect(h.loads(), action).toBe(0);
+		}
+	});
+
+	test('an unknown host is refused with no agent call', async () => {
+		for (const action of ['apply_rules', 'probe', 'rollback_api', 'remove_host'] as const) {
+			const h = harness([record('pub_a')]);
+			const code = await codeOf(run(h, action, { name: 'pub_z', api: 'v1' }));
+			expect(code, action).toBe('maintenance.action_refused');
+			expect(h.calls, action).toEqual(['loadRegistry']);
+		}
+	});
+
+	test('a corrupt registry fails the action typed (wire.ts registryError), with no agent call', async () => {
+		const h = harness([], {
+			loadRegistry: () => {
+				throw new RegistryError('invalid_shape', 'hosts[0].address missing');
+			},
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe(
+			'publication_host.registry_invalid',
+		);
+		expect(h.calls).toEqual([]);
+	});
+
+	test('a held registry lock is busy, and a write refused by it changes nothing', async () => {
+		const h = harness([record('pub_a')], {
+			updateRegistry: () => {
+				throw new RegistryError('locked', 'held by another writer');
+			},
+		});
+		expect(await codeOf(run(h, 'set_host_fields', { name: 'pub_a', public_url: null }))).toBe(
+			'publication_host.busy',
+		);
+		expect(h.registry().hosts).toEqual([record('pub_a')]);
+	});
+
+	test('an untyped registry failure in an action is not converted', async () => {
+		const h = harness([], {
+			loadRegistry: () => {
+				throw new TypeError('engine bug');
+			},
+		});
+		await expect(run(h, 'probe', { name: 'pub_a' })).rejects.toThrow(TypeError);
+	});
+});
+
+describe('apply_rules', () => {
+	test('status → expected rules → rules.apply with the root actor; the dropped list is reported', async () => {
+		const h = harness([record('pub_a')], {
+			expectedRulesForHost: () => ({ ...EXPECTED, dropped: ['image/original'] }),
+		});
+		const response = await run(h, 'apply_rules', { name: 'pub_a' });
+		expect(h.calls).toEqual([
+			'loadRegistry',
+			'hostStatus:pub_a',
+			`hostApplyRules:pub_a:apache:${'c'.repeat(64)}:dedalo_user:-1`,
+		]);
+		expect(response.data).toEqual({
+			host: 'pub_a',
+			server: 'apache',
+			hash: 'c'.repeat(64),
+			dropped: ['image/original'],
+		});
+		expect(response.msg).toBe(
+			`OK. Media rules applied on 'pub_a' (apache, ${'c'.repeat(12)}). Not public, left out: image/original.`,
+		);
+	});
+
+	test('pairing mismatch: the typed code, nothing applied', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => {
+				throw new DedaloError('publication_host.pairing_mismatch');
+			},
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe(
+			'publication_host.pairing_mismatch',
+		);
+		expect(h.calls.some((c) => c.startsWith('hostApplyRules'))).toBe(false);
+	});
+
+	test('a copy-mode host is refused before anything is sent', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => agentStatus({ media: mediaProbe({ mode: 'copy', root: null }) }),
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe(
+			'maintenance.action_refused',
+		);
+		expect(h.calls.some((c) => c.startsWith('hostApplyRules'))).toBe(false);
+	});
+
+	test('unrenderable rules are refused before anything is sent', async () => {
+		const h = harness([record('pub_a')], {
+			expectedRulesForHost: () => {
+				throw new DedaloError('request.invalid_options', { message: 'nothing public left' });
+			},
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe(
+			'maintenance.action_refused',
+		);
+		expect(h.calls.some((c) => c.startsWith('hostApplyRules'))).toBe(false);
+	});
+
+	test('agent down mid-action: the typed timeout surfaces, no registry write', async () => {
+		const h = harness([record('pub_a')], {
+			hostApplyRules: async () => {
+				throw new DedaloError('publication_host.timeout');
+			},
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe('publication_host.timeout');
+		expect(h.calls).not.toContain('updateRegistry');
+	});
+
+	test('a reported hash other than the one sent is a failure, never an OK', async () => {
+		const h = harness([record('pub_a')], {
+			hostApplyRules: async () => ({ hash: 'd'.repeat(64), reloaded: true }),
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe(
+			'maintenance.action_failed',
+		);
+	});
+});
+
+describe('probe and rollback_api', () => {
+	test('probe returns the agent probe under data.probe and counts its problems', async () => {
+		const h = harness([record('pub_a')]);
+		const response = await run(h, 'probe', { name: 'pub_a' });
+		expect(response.data).toEqual({
+			host: 'pub_a',
+			probe: mediaProbe({ problems: ['pub/ is not readable'] }),
+		});
+		expect(response.msg).toBe("Media probe on 'pub_a' found 1 problem(s).");
+	});
+
+	test('rollback_api: api validated before any load; the swap is reported', async () => {
+		const bad = harness([record('pub_a')]);
+		expect(await codeOf(run(bad, 'rollback_api', { name: 'pub_a', api: 'v3' }))).toBe(
+			'maintenance.action_refused',
+		);
+		expect(bad.loads()).toBe(0);
+
+		const h = harness([record('pub_a')]);
+		const response = await run(h, 'rollback_api', { name: 'pub_a', api: 'v1' });
+		expect(h.calls).toContain('hostRollbackRelease:pub_a:v1:dedalo_user:-1');
+		expect(response.data).toEqual({
+			host: 'pub_a',
+			api: 'v1',
+			from: '7.0.0_a1b2c3d',
+			to: '7.0.0_9f8e7d6',
+		});
+	});
+
+	test('rollback_api: an unreachable agent surfaces typed', async () => {
+		const h = harness([record('pub_a')], {
+			hostRollbackRelease: async () => {
+				throw new DedaloError('publication_host.unreachable');
+			},
+		});
+		expect(await codeOf(run(h, 'rollback_api', { name: 'pub_a', api: 'v2' }))).toBe(
+			'publication_host.unreachable',
+		);
+	});
+});
+
+describe('set_host_fields', () => {
+	test('writes the validated fields under the lock; public_url stored as the origin', async () => {
+		const h = harness([record('pub_a'), record('pub_b')]);
+		const response = await run(h, 'set_host_fields', {
+			name: 'pub_a',
+			public_url: 'https://www.museum.test:8443/',
+			qualities: ['/image/1.5MB/', 'image/thumb'],
+			probe: { published: 'image/1.5MB/0/rsc29_rsc170_1.jpg', unpublished: null },
+		});
+		expect(response.data).toEqual({ host: 'pub_a', fields: ['public_url', 'qualities', 'probe'] });
+		const [a, b] = h.registry().hosts;
+		expect(a?.public_url).toBe('https://www.museum.test:8443');
+		expect(a?.qualities).toEqual(['image/1.5MB', 'image/thumb']);
+		expect(a?.probe).toEqual({ published: 'image/1.5MB/0/rsc29_rsc170_1.jpg', unpublished: null });
+		expect(b).toEqual(record('pub_b'));
+	});
+
+	test('null resets a field (qualities null = follow the engine)', async () => {
+		const h = harness([record('pub_a', { qualities: ['image/thumb'] })]);
+		await run(h, 'set_host_fields', { name: 'pub_a', qualities: null });
+		expect(h.registry().hosts[0]?.qualities).toBeNull();
+	});
+
+	test('public_url: only an https origin', () => {
+		expect(normalizePublicUrl('https://www.museum.test')).toBe('https://www.museum.test');
+		expect(normalizePublicUrl(null)).toBeNull();
+		for (const bad of [
+			'http://www.museum.test',
+			'https://www.museum.test/site',
+			'https://user:pw@www.museum.test',
+			'https://www.museum.test/?q=1',
+			'https://www.museum.test/#x',
+			'not a url',
+			42,
+		]) {
+			expect(() => normalizePublicUrl(bad), String(bad)).toThrow(DedaloError);
+		}
+	});
+
+	test('refusals write nothing', async () => {
+		const refusals: Record<string, unknown>[] = [
+			{ name: 'pub_a' },
+			{ name: 'pub_a', qualities: [] },
+			{ name: 'pub_a', qualities: ['image/original'] },
+			{ name: 'pub_a', qualities: ['image/thumb', '/image/thumb'] },
+			{ name: 'pub_a', qualities: [1] },
+			{ name: 'pub_a', probe: { published: '../private/.env' } },
+			{ name: 'pub_a', probe: { published: '/etc/passwd' } },
+			{ name: 'pub_a', probe: 'image/thumb/x.jpg' },
+			{ name: 'pub_z', public_url: null },
+		];
+		for (const options of refusals) {
+			const h = harness([record('pub_a')]);
+			const code = await codeOf(run(h, 'set_host_fields', options));
+			expect(code, JSON.stringify(options)).toBe('maintenance.action_refused');
+			expect(h.registry().hosts, JSON.stringify(options)).toEqual([record('pub_a')]);
+		}
+	});
+
+	test('the master-tier refusal names the refused quality', async () => {
+		const h = harness([record('pub_a')]);
+		try {
+			await run(h, 'set_host_fields', {
+				name: 'pub_a',
+				qualities: ['image/thumb', 'image/original'],
+			});
+		} catch (error) {
+			expect((error as DedaloError).publicMessage).toBe(
+				'Error. Not a public quality: image/original.',
+			);
+			return;
+		}
+		throw new DedaloError('internal.unexpected', { message: 'expected a refusal' });
+	});
+});
+
+describe('remove_host', () => {
+	test('secrets first, then the registry entry, then the in-process pairing proof', async () => {
+		const h = harness([record('pub_a'), record('pub_b')]);
+		const response = await run(h, 'remove_host', { name: 'pub_a' });
+		expect(h.calls).toEqual([
+			'loadRegistry',
+			'removeHostSecrets:pub_a',
+			'updateRegistry',
+			'forgetPairing:pub_a',
+		]);
+		expect(h.registry().hosts.map((host) => host.name)).toEqual(['pub_b']);
+		expect(response.data).toEqual({ host: 'pub_a', removed: true });
+	});
+
+	test('a secret-removal failure keeps the host registered (visible, removable again)', async () => {
+		const h = harness([record('pub_a')], {
+			removeHostSecrets: () => {
+				throw new Error('EACCES');
+			},
+		});
+		expect(await codeOf(run(h, 'remove_host', { name: 'pub_a' }))).toBe(
+			'maintenance.action_failed',
+		);
+		expect(h.calls).not.toContain('updateRegistry');
+		expect(h.calls).not.toContain('forgetPairing:pub_a');
+		expect(h.registry().hosts).toEqual([record('pub_a')]);
+	});
+});

@@ -657,6 +657,14 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'runtime_info.clear_cache_files': 'clears in-process caches and cache files; no statement',
 	'runtime_info.clear_session_files': 'clears the session store; no data-sized statement',
 	'serve_code.build_version_from_git_master': 'packages the code tree from git; no statement',
+	'publication_hosts.apply_rules':
+		'reads the registry file, then two bounded round trips to a paired agent (status, rules.apply); no statement',
+	'publication_hosts.probe': 'one bounded round trip to a paired agent (media.probe); no statement',
+	'publication_hosts.rollback_api':
+		'one bounded round trip to a paired agent (release.rollback); no statement',
+	'publication_hosts.set_host_fields': 'one locked rewrite of the registry file; no statement',
+	'publication_hosts.remove_host':
+		'deletes one secret dir and rewrites the registry file; no statement',
 	'error_reports.get_reports': 'one LIMITed page + one count of the error-report table',
 };
 

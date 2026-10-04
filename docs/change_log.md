@@ -971,6 +971,19 @@ Merged since the last release; these ship with the next one.
 
     Institutions whose public website runs on its own server, reading the same media storage as the work system (read-only), can now generate media rules for that server: `bun run media:publication-host-rules --root <mount>` (Apache, or nginx with `--server nginx`). The publication server then serves only the files of published records, in the public quality folders, and never accepts the work system's login cookie. Originals are never served. See *A separate publication server with shared media storage* in the media protection manual page.
 
+- **The maintenance area has a Publication hosts panel for the separate machines that serve your public website.**
+
+    The new **Publication hosts** panel, in the Publication group, shows every publication machine this installation is paired with. For each one it shows:
+
+    - whether the pairing is proved;
+    - its media mode;
+    - the media rule hash it runs, next to the one this installation expects;
+    - the Publication API releases it serves.
+
+    The root user can apply the media rules, check the media mount, roll an API back to its previous release, edit the host's public address, public qualities and probe files, and remove the host. Other administrators can read the panel's checks but cannot act on it, and do not see the hosts' network addresses. Hosts are added only on the command line, with `scripts/publication_host_pair.ts`, never from the panel.
+
+    Wire contract: `WC-2026-10-03-publication-hosts-widget`.
+
 #### Fixed
 
 - **The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box.**
@@ -1383,7 +1396,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 95 entries"
+??? note "Wire contract — 96 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1480,6 +1493,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-01-write-door-delegations`
     - `WC-2026-10-02-relation-children-write-through`
     - `WC-2026-10-02-select-lang-missing-entry`
+    - `WC-2026-10-03-publication-hosts-widget`
 
 ## 7.0.0-beta.4 — 2026-08-24
 
