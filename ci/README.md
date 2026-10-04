@@ -13,7 +13,7 @@ each package, the base choice and the layer order live in the header of
 | Registry | `ghcr.io/renderpci/dedalo-ci` (published by `.github/workflows/ci-image.yml`) |
 | Arches | `linux/amd64`, `linux/arm64` (native builds; Apple Silicon runs it without emulation) |
 | Base | `debian:trixie-slim` by digest — the product image's distro |
-| Contents | bun = `.bun-version`, `postgresql-client-18`, ffmpeg (+ffprobe, qt-faststart), ImageMagick 7, poppler-utils, ghostscript, librsvg2-bin, MariaDB server+client, Apache (apache2 + apxs) + nginx (publication-host drill), Chromium, git, rsync, unzip/zip, openssl + `cvtsudoers` from `sudo` (publication-host agent gates) |
+| Contents | bun = `.bun-version`, `postgresql-client-18`, ffmpeg (+ffprobe, qt-faststart), ImageMagick 7, poppler-utils, ghostscript, librsvg2-bin, MariaDB server+client, Apache (apache2 + apxs) + nginx (publication-host drill), Chromium, git, rsync, unzip/zip, openssl + `cvtsudoers` from `sudo` (publication-host agent gates); the EXEC SEAM: `/usr/bin/sudo` and `/usr/bin/systemctl` are dispatchers into `/opt/dedalo-ci/exec-seam/` (real binaries diverted to `*.distrib`) — the agent drill's stand-ins |
 
 ## The contract consumers code against
 

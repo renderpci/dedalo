@@ -31,7 +31,9 @@
 #   apache2 + apache2-dev (apxs) + nginx (mp4 module) — the publication-host media
 #             drill (`bun run test:media:pubhost`, instance tier) boots both live.
 #   sudo — for its parser only (cvtsudoers): publication/host_agent's sudoers gate
-#             validates the rendered rule with the real grammar. setuid bit stripped.
+#             validates the rendered rule with the real grammar. setuid bit stripped,
+#             and the binary diverted: /usr/bin/sudo and /usr/bin/systemctl are the
+#             EXEC SEAM's dispatchers (section below), never the real programs.
 #   chromium — the browser the client suite (scripts/client_test_runner.ts) drives.
 #             NOT google-chrome: Google publishes no linux/arm64 build, and this
 #             image is multi-arch so an Apple-Silicon Mac runs it natively. One
@@ -177,6 +179,38 @@ RUN set -eux; \
     ln -s /usr/local/bin/bun /usr/local/bin/bunx; \
     rm -rf "$asset" "$asset.zip" SHASUMS256.txt /tmp/.bun-version; \
     test "$(bun --version)" = "$version"
+
+# --- exec seam (the publication-host agent's live drill) -------------------------
+# The agent's src/exec.ts spawns ABSOLUTE binaries (/usr/bin/sudo, /usr/bin/systemctl —
+# its SUDO / SYSTEMCTL; never a PATH lookup), so the instance tier's drill
+# (scripts/publication_host_agent_drill.ts) can only observe and steer the agent's
+# privileged commands by putting stand-ins AT those paths, with exec.ts unmodified. This
+# disposable image is where that is allowed: each path becomes a DISPATCHER that runs
+# <seam dir>/<name> when the drill has written one and otherwise fails (exit 1, saying
+# so). The real sudo is diverted to /usr/bin/sudo.distrib (setuid still stripped, and
+# re-checked here), and so is systemd's systemctl, which a dependency pulls in (nothing
+# here runs systemd). The seam dir is root:root 0770: the job's bare uid 1001 runs with gid
+# 0 on every host, so it may arm the seam, and nothing it can arm is privileged.
+# Pinned to exec.ts's constants by test/unit/publication_host_agent_drill_kit.test.ts.
+RUN set -eux; \
+    for bin in /usr/bin/sudo /usr/bin/systemctl; do \
+      dpkg-divert --local --rename --divert "$bin.distrib" --add "$bin"; \
+    done; \
+    dpkg-statoverride --update --add root root 0755 /usr/bin/sudo.distrib; \
+    test ! -u /usr/bin/sudo.distrib; \
+    install -d -o root -g root -m 0770 /opt/dedalo-ci/exec-seam; \
+    for bin in /usr/bin/sudo /usr/bin/systemctl; do \
+      name="${bin##*/}"; \
+      printf '%s\n' '#!/bin/sh' \
+        "# DEDALO CI EXEC SEAM DISPATCHER for $bin (ci/Dockerfile, exec seam)." \
+        "seam=/opt/dedalo-ci/exec-seam/$name" \
+        'if [ -x "$seam" ]; then exec "$seam" "$@"; fi' \
+        "echo \"$name: not available in the CI image (the publication-host agent drill's exec seam is not armed)\" >&2" \
+        'exit 1' > "$bin"; \
+      chmod 0755 "$bin"; \
+    done; \
+    ! /usr/bin/sudo -n true 2>/dev/null; \
+    ! /usr/bin/systemctl --version 2>/dev/null
 
 # --- fingerprint + version record (LAST — see header) ---------------------------
 ARG DEDALO_CI_FINGERPRINT
