@@ -9,6 +9,7 @@ import {
   PreflightRefused,
   RULES_DIR,
   STATE_SUBDIRS,
+  STATE_TREE_OWNERSHIP,
   bootPreflight,
   markerContent,
   probeAppendOnly,
@@ -144,5 +145,35 @@ describe('the audit trail is append-only by the filesystem (enforce mode)', () =
     expect(probeAppendOnly(file)).toBe('writable');
     expect(refusal(() => bootPreflight(cfg(root), enforce))).toContain('without O_APPEND');
     expect(readFileSync(file, 'utf8')).toBe('kept\n');
+  });
+});
+
+describe('the ownership rule (STATE_TREE_OWNERSHIP), shared with the provisioner', () => {
+  test('is the one statement of who owns what in the state tree', () => {
+    expect(STATE_TREE_OWNERSHIP).toEqual({
+      stateRoot: 'root',
+      publicationApi: 'root',
+      rules: 'agent',
+      audit: 'root',
+      auditFile: 'agent',
+    });
+    expect(Object.isFrozen(STATE_TREE_OWNERSHIP)).toBe(true);
+  });
+
+  test('root-owned entries are accepted when owned by root; agent-owned rules/ must be the agent', async () => {
+    // rootUid := the test uid stands in for root; uid := another uid plays the agent.
+    const root = await validRoot('pf_rootown');
+    const message = refusal(() =>
+      bootPreflight(cfg(root), { uid: (UID as number) + 1, rootUid: UID as number }),
+    );
+    // STATE_ROOT and publication_api passed as root-owned; the first refusal is rules/.
+    expect(message).toContain(`STATE_ROOT/${RULES_DIR}`);
+    expect(message).toContain('wrong user');
+  });
+
+  test('publication_api takes no write probe (root-owned on a provisioned host)', async () => {
+    const root = await validRoot('pf_apiro');
+    chmodSync(join(root, PUBLICATION_API_DIR), 0o555);
+    expect(() => bootPreflight(cfg(root))).not.toThrow();
   });
 });

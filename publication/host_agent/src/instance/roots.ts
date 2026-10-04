@@ -13,7 +13,9 @@
  * written."). Changes: one STATE_ROOT with three fixed children instead of configured
  * roots; a symlink is refused wherever a directory is expected; group/world-writable modes
  * are refused; the audit trail's append-only property is CHECKED, not assumed; no site
- * table, legacy-env or binary checks.
+ * table, legacy-env or binary checks. WHO OWNS WHAT is stated once, in STATE_TREE_OWNERSHIP,
+ * which the provisioner's MODES matrix (src/provision/layout.ts) is built from: one rule,
+ * two readers.
  *
  * THE AUDIT TRAIL IS APPEND-ONLY BY THE FILESYSTEM, and that is two facts, both checked:
  *   - audit/ is ROOT-owned (root:root 0755): unlink, rename and create are permissions on
@@ -50,6 +52,26 @@ export const [PUBLICATION_API_DIR, RULES_DIR, AUDIT_DIR] = STATE_SUBDIRS;
 /** The audit trail's file inside AUDIT_DIR (agent-owned, append-only file; root-owned directory). */
 export const AUDIT_FILE_NAME = 'audit.jsonl';
 
+export type StateTreeOwner = 'root' | 'agent';
+
+/**
+ * WHO OWNS EACH PART OF THE STATE TREE on a provisioned host. Root owns the directories root
+ * must write into or the agent must not be able to rename (the tree's spine and the audit
+ * directory); the agent owns only the leaves it writes itself. That keeps every path the
+ * root-run provisioner touches at most ONE agent-writable level below a root-owned,
+ * non-writable directory (src/provision/apply.ts relies on it), and makes the audit trail
+ * append-only by directory permissions (the agent can append to its file, not unlink or
+ * rename it). The unprivileged suite owns its whole tree: a 'root' entry is accepted when
+ * owned by root OR by the running uid; an 'agent' entry must be the running uid's.
+ */
+export const STATE_TREE_OWNERSHIP = Object.freeze({
+  stateRoot: 'root',
+  publicationApi: 'root',
+  rules: 'agent',
+  audit: 'root',
+  auditFile: 'agent',
+} as const satisfies Record<string, StateTreeOwner>);
+
 const NOTHING_WRITTEN = 'Nothing was written.';
 
 export class PreflightRefused extends Error {
@@ -66,8 +88,9 @@ export interface PreflightOptions {
   /** The running uid (default: process.getuid()). Injectable so a gate reaches every refusal. */
   readonly uid?: number | null;
   /**
-   * The uid that must own audit/ (default 0). Injectable ONLY so an unprivileged gate can
-   * reach the audit FILE checks; production never passes it.
+   * The uid treated as root (default 0): the owner STATE_TREE_OWNERSHIP's 'root' entries
+   * accept, and the one enforce mode demands for audit/. Injectable ONLY so an unprivileged
+   * gate reaches those branches; production never passes it.
    */
   readonly rootUid?: number;
   /** Default: 'suite' under NODE_ENV=test, 'enforce' otherwise. 'suite' is refused outside test. */
@@ -78,10 +101,12 @@ export interface PreflightOptions {
  * THE PREFLIGHT, in order:
  *   1. not root; an audit protection this NODE_ENV allows;
  *   2. STATE_ROOT absolute, a real directory (not a symlink), marked for THIS instance;
- *   3. STATE_ROOT, publication_api/ and rules/ owned by the running uid; STATE_ROOT and all
- *      three children neither group- nor world-writable;
- *   4. publication_api/ and rules/ take a create+unlink probe (EROFS under
- *      ProtectSystem=strict surfaces here, not at the first install);
+ *   3. STATE_ROOT and all three children real directories, neither group- nor
+ *      world-writable, owned per STATE_TREE_OWNERSHIP ('root' = root or the running uid,
+ *      'agent' = the running uid);
+ *   4. rules/ takes a create+unlink probe (EROFS under ProtectSystem=strict surfaces here,
+ *      not at the first rules.apply); publication_api/ is root-owned on a provisioned host,
+ *      so it takes none (the agent writes only in its per-API children);
  *   5. audit/: 'enforce' — root-owned directory, an existing agent-owned regular file that
  *      is append-only, then an O_APPEND probe (no create); 'suite' — mode only, then an
  *      O_APPEND|O_CREAT probe.
@@ -91,6 +116,7 @@ export function bootPreflight(
   options: PreflightOptions = {},
 ): void {
   const uid = options.uid !== undefined ? options.uid : typeof process.getuid === 'function' ? process.getuid() : null;
+  const rootUid = options.rootUid ?? 0;
   const root = cfg.STATE_ROOT;
   const protection: AuditProtection = options.auditProtection ?? (cfg.NODE_ENV === 'test' ? 'suite' : 'enforce');
 
@@ -133,20 +159,23 @@ export function bootPreflight(
     );
   }
 
-  assertOwnerAndMode('STATE_ROOT', root, uid, true);
+  assertOwnerAndMode('STATE_ROOT', root, uid, rootUid, STATE_TREE_OWNERSHIP.stateRoot);
 
-  for (const name of [PUBLICATION_API_DIR, RULES_DIR]) {
-    const dir = join(root, name);
-    assertRealDirectory(`STATE_ROOT/${name}`, dir);
-    assertOwnerAndMode(`STATE_ROOT/${name}`, dir, uid, true);
-    probeCreate(`STATE_ROOT/${name}`, dir);
-  }
+  const api = join(root, PUBLICATION_API_DIR);
+  assertRealDirectory(`STATE_ROOT/${PUBLICATION_API_DIR}`, api);
+  assertOwnerAndMode(`STATE_ROOT/${PUBLICATION_API_DIR}`, api, uid, rootUid, STATE_TREE_OWNERSHIP.publicationApi);
+
+  const rules = join(root, RULES_DIR);
+  assertRealDirectory(`STATE_ROOT/${RULES_DIR}`, rules);
+  assertOwnerAndMode(`STATE_ROOT/${RULES_DIR}`, rules, uid, rootUid, STATE_TREE_OWNERSHIP.rules);
+  probeCreate(`STATE_ROOT/${RULES_DIR}`, rules);
 
   const auditDir = join(root, AUDIT_DIR);
   assertRealDirectory(`STATE_ROOT/${AUDIT_DIR}`, auditDir);
-  assertOwnerAndMode(`STATE_ROOT/${AUDIT_DIR}`, auditDir, uid, false);
+  assertOwnerAndMode(`STATE_ROOT/${AUDIT_DIR}`, auditDir, uid, rootUid, STATE_TREE_OWNERSHIP.audit);
   if (protection === 'enforce') {
-    assertAuditEnforced(auditDir, uid, options.rootUid ?? 0);
+    // Stricter than the shared rule: in enforce mode audit/ must be ROOT's, never the agent's.
+    assertAuditEnforced(auditDir, uid, rootUid);
   } else {
     probeAppend(join(auditDir, AUDIT_FILE_NAME), true);
   }
@@ -256,7 +285,13 @@ function assertRealDirectory(label: string, path: string): void {
   }
 }
 
-function assertOwnerAndMode(label: string, path: string, uid: number | null, ownedByAgent: boolean): void {
+function assertOwnerAndMode(
+  label: string,
+  path: string,
+  uid: number | null,
+  rootUid: number,
+  owner: StateTreeOwner,
+): void {
   const st = lstatSync(path);
   if ((st.mode & 0o022) !== 0) {
     throw new PreflightRefused(
@@ -265,10 +300,13 @@ function assertOwnerAndMode(label: string, path: string, uid: number | null, own
         `Another principal could plant files the agent then serves or executes.`,
     );
   }
-  if (ownedByAgent && uid !== null && st.uid !== uid) {
+  if (uid === null) return;
+  const allowed = owner === 'agent' ? [uid] : [rootUid, uid];
+  if (!allowed.includes(st.uid)) {
     throw new PreflightRefused(
       'assertOwnerAndMode',
-      `${label} ('${path}') is owned by uid ${st.uid} and this process is uid ${uid}. The ` +
+      `${label} ('${path}') is owned by uid ${st.uid}; it must be owned by ` +
+        `${owner === 'agent' ? `this process (uid ${uid})` : `root or this process (uid ${uid})`}. The ` +
         `agent is running as the wrong user or is pointed at another instance's tree.`,
     );
   }
