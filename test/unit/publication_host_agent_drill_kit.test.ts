@@ -210,16 +210,22 @@ describe('drill kit — the exec stand-ins', () => {
 		expect(sys('start', unit, 'extra')).toBe(64);
 
 		expect(sys('start', unit)).toBe(0);
-		let body: { env: string; probe: string | null; cwd: string } | null = null;
-		for (let i = 0; i < 100 && body === null; i++) {
+		type Body = { env: string; probe: string | null; cwd: string };
+		// A holder, not a `let`: TS narrows a `let … | null = null` to `null` past the loop.
+		const got: { body: Body | null } = { body: null };
+		for (let i = 0; i < 100 && got.body === null; i++) {
 			try {
-				body = (await (await fetch(`http://127.0.0.1:${port}/`)).json()) as typeof body;
+				got.body = (await (await fetch(`http://127.0.0.1:${port}/`)).json()) as Body;
 			} catch {
 				await Bun.sleep(50);
 			}
 		}
 		expect(sys('stop', unit)).toBe(0);
-		expect(body).toEqual({ env: 'production', probe: 'from-shared', cwd: realpathSync(release) });
+		expect(got.body).toEqual({
+			env: 'production',
+			probe: 'from-shared',
+			cwd: realpathSync(release),
+		});
 		await expect(fetch(`http://127.0.0.1:${port}/`)).rejects.toThrow();
 		const lines = readFileSync(slog, 'utf8').split('\n').filter(Boolean);
 		expect(lines.slice(-3)).toEqual([

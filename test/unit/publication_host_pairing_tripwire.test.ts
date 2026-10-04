@@ -59,11 +59,11 @@ import {
 	PAIRING_FINGERPRINT_PREFIX as SITE_ENGINE_PREFIX,
 	instanceFingerprint as siteEngineFingerprint,
 } from '../../src/core/site_builder/pairing.ts';
+// The tracked-file listing (git index, no root chosen): the corpus is classified per file.
+import { trackedRepoFiles } from '../helpers/css_reference_corpus.ts';
 // The registered shipped-text lister owns the corpus roots (census_derivation_tripwire
 // refuses a gate that chooses its own walk roots in-file).
 import { shippedTextFiles } from '../helpers/shipped_text_corpus.ts';
-// The tracked-file listing (git index, no root chosen): the corpus is classified per file.
-import { trackedRepoFiles } from '../helpers/css_reference_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8');
@@ -111,7 +111,8 @@ const TEST_FILE = /\.(test|spec)\.(ts|js|mjs)$/;
 function shippedCodeFiles(): string[] {
 	const tracked = new Set(trackedRepoFiles());
 	return shippedTextFiles().filter(
-		(file) => CODE_FILE.test(file) && !file.endsWith('.d.ts') && !TEST_FILE.test(file) && tracked.has(file),
+		(file) =>
+			CODE_FILE.test(file) && !file.endsWith('.d.ts') && !TEST_FILE.test(file) && tracked.has(file),
 	);
 }
 
