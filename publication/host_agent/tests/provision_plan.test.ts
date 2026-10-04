@@ -78,7 +78,14 @@ describe('renderer registry', () => {
 
   test('renderAll: sorted, one path one artifact', () => {
     const l = layout();
-    expect(renderAll(l).map(a => a.path)).toEqual([l.envFile]);
+    expect(renderAll(l).map(a => a.path)).toEqual([
+      l.envFile,
+      l.engineFragmentPath,
+      l.polkitPath,
+      l.sudoersPath,
+      l.v2UnitPath,
+      l.agentUnitPath,
+    ]);
     const twin: Renderer = { kind: 'env', render: x => [artifact(x, { kind: 'env', path: x.envFile, mode: 'envFile', body: 'x\n' })] };
     expect(() => renderAll(l, PENDING_FACTS, [...RENDERERS, twin])).toThrow(/written twice/);
   });
@@ -100,14 +107,20 @@ describe('plan on a fresh host', () => {
     expect(mkdirs.find(a => a.path === l.state.apis.v1.shared)).toMatchObject({ group: 'www-data', gid: 33, mode: 0o750 });
   });
 
-  test('writes the marker, mints the token, creates the audit log, creates the env file — in that order', () => {
+  test('writes the marker, mints the token, creates the audit log, then every artifact — in that order', () => {
     const writes = actions.filter(a => a.op === 'write');
     expect(writes.map(a => [a.path, a.label, a.disposition])).toEqual([
       [l.state.marker, 'marker', 'create'],
       [l.serviceTokenPath, 'credential', 'create'],
       [l.state.auditFile, 'audit_log', 'create'],
       [l.envFile, 'env', 'create'],
+      [l.engineFragmentPath, 'engine_fragment', 'create'],
+      [l.polkitPath, 'polkit', 'create'],
+      [l.sudoersPath, 'sudoers', 'create'],
+      [l.v2UnitPath, 'unit_v2', 'create'],
+      [l.agentUnitPath, 'unit_agent', 'create'],
     ]);
+    expect(writes.find(a => a.path === l.sudoersPath)).toMatchObject({ validate: 'sudoers', mode: 0o440 });
     expect(writes[0]).toMatchObject({ content: { source: 'literal', body: markerContent('test') } });
     expect(writes[1]).toMatchObject({ content: { source: 'random', bytes: 32 }, mode: 0o600 });
     expect(writes[2]).toMatchObject({ content: { source: 'literal', body: '' }, owner: 'dedalo-pubhost', uid: 990, mode: 0o600 });
@@ -116,11 +129,19 @@ describe('plan on a fresh host', () => {
   test('the audit log is made append-only, as the LAST filesystem action (chown/chmod would then fail)', () => {
     const seals = actions.filter(a => a.op === 'append-only');
     expect(seals).toEqual([{ op: 'append-only', path: l.state.auditFile }]);
-    expect(actions.at(-1)).toEqual({ op: 'append-only', path: l.state.auditFile });
+    expect(actions.filter(a => ['mkdir', 'write', 'chown', 'chmod', 'append-only'].includes(a.op)).at(-1)).toEqual({
+      op: 'append-only',
+      path: l.state.auditFile,
+    });
   });
 
-  test('no unit action: no service artifact is rendered, and the agent is not running', () => {
-    expect(actions.filter(a => !['mkdir', 'write', 'append-only'].includes(a.op))).toEqual([]);
+  test('the tail: daemon-reload, enable both units, start only the agent (v2 has no release yet)', () => {
+    expect(actions.filter(a => !['mkdir', 'write', 'append-only'].includes(a.op))).toEqual([
+      { op: 'daemon-reload' },
+      { op: 'enable', unit: 'dedalo-publication-api-v2' },
+      { op: 'enable', unit: 'dedalo-publication-host-test' },
+      { op: 'start', unit: 'dedalo-publication-host-test' },
+    ]);
   });
 
   test('describe never prints the token', () => {

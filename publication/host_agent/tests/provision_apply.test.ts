@@ -19,12 +19,24 @@ describe('apply on a fresh host', () => {
     expect(report.ok).toBe(true);
     expect(report.failure).toBeNull();
     expect(report.outcomes.every(o => o.status === 'done')).toBe(true);
-    expect(report.written).toEqual([l.state.marker, l.serviceTokenPath, l.state.auditFile, l.envFile]);
+    expect(report.written).toEqual([
+      l.state.marker,
+      l.serviceTokenPath,
+      l.state.auditFile,
+      l.envFile,
+      l.engineFragmentPath,
+      l.polkitPath,
+      l.sudoersPath,
+      l.v2UnitPath,
+      l.agentUnitPath,
+    ]);
     expect(host.body(l.serviceTokenPath)).toBe(FAKE_TOKEN);
     expect(host.entries.get(l.serviceTokenPath)).toMatchObject({ uid: 0, gid: 0, mode: 0o600 });
     expect(host.entries.get(l.state.auditFile)).toMatchObject({ type: 'file', uid: 990, gid: 0, mode: 0o600, body: '' });
     expect([...host.appendOnlyPaths]).toEqual([l.state.auditFile]);
-    expect(host.calls.at(-1)).toBe(`appendOnly ${l.state.auditFile}`);
+    expect(host.calls.filter(call => /^(mkdir|writeTemp|chown|chmod|rename|appendOnly) /.test(call)).at(-1)).toBe(
+      `appendOnly ${l.state.auditFile}`,
+    );
     expect(host.entries.get(l.state.root)).toMatchObject({ type: 'dir', uid: 0, mode: 0o755 });
     expect(host.entries.get(l.state.apis.v1.releases)).toMatchObject({ type: 'dir', uid: 990, mode: 0o755 });
     expect([...host.entries.keys()].some(path => path.endsWith(TEMP_SUFFIX))).toBe(false);

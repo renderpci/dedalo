@@ -14,6 +14,8 @@ const ZERO_DEP = [
   'layout.ts',
   'hash.ts',
   'plan.ts',
+  // Task 9: render/engine_fragment.ts computes the pairing fact with the agent's import-free recipe.
+  '../security/pairing.ts',
   ...readdirSync(join(PROVISION, 'render'))
     .filter(name => name.endsWith('.ts'))
     .map(name => `render/${name}`),
@@ -22,7 +24,7 @@ const ZERO_DEP = [
 const ALLOWED_OUTSIDE = ['instance/roots.ts'];
 const IMPORT = /^\s*(?:import|export)\b([^'"]*?)from\s+['"]([^'"]+)['"]/gm;
 
-test('layout, hash, plan and render/* import only node: builtins, each other and instance/roots', () => {
+test('layout, hash, plan, render/* and security/pairing import only node: builtins, each other and instance/roots', () => {
   const offenders: string[] = [];
   for (const file of ZERO_DEP) {
     const source = readFileSync(join(PROVISION, file), 'utf8');
@@ -31,7 +33,7 @@ test('layout, hash, plan and render/* import only node: builtins, each other and
       if (specifier.startsWith('node:')) continue;
       if (specifier.startsWith('.')) {
         const target = `${relative(SRC, resolve(dirname(join(PROVISION, file)), specifier))}.ts`;
-        if (ZERO_DEP.map(f => `provision/${f}`).includes(target) || ALLOWED_OUTSIDE.includes(target)) continue;
+        if (ZERO_DEP.map(f => relative(SRC, join(PROVISION, f))).includes(target) || ALLOWED_OUTSIDE.includes(target)) continue;
       }
       offenders.push(`${file} → ${specifier}`);
     }
@@ -39,6 +41,7 @@ test('layout, hash, plan and render/* import only node: builtins, each other and
   expect(offenders).toEqual([]);
   expect(ZERO_DEP).toContain('render/types.ts');
   expect(ZERO_DEP).toContain('render/env.ts');
+  expect(ZERO_DEP).toContain('render/engine_fragment.ts');
 });
 
 test('instance/roots.ts imports only node: builtins and type-only modules', () => {

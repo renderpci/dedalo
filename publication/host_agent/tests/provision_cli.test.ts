@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import type { ProvisionDeps } from '../src/provision/cli';
 import { EXIT, hostDeps, parseArgs, run, secretShapedAssignment } from '../src/provision/cli';
 import { derive } from '../src/provision/layout';
+import { ENGINE_KEYS, TOKEN_PLACEHOLDER } from '../src/provision/render/engine_fragment';
 import { unixDeclaration } from './fixtures/provision_declaration';
 import { FakeHost } from './support/provision_fake_host';
 
@@ -121,7 +122,7 @@ describe('render / check / apply', () => {
   test('apply → OK (0); then check → OK (0) and a second apply writes nothing', () => {
     const h = harness();
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
-    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (4 file(s) written)");
+    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (9 file(s) written)");
     const after = h.host.mutations;
     expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
@@ -144,6 +145,13 @@ describe('render / check / apply', () => {
 });
 
 describe('the secret guard', () => {
+  test('render prints the engine fragment, token placeholder included: the guard knows it is not a value', () => {
+    const h = harness();
+    expect(exec(h, ['render', 'test'])).toBe(EXIT.OK);
+    expect(h.out).toContain(`${ENGINE_KEYS.token}="${TOKEN_PLACEHOLDER}"`);
+    expect(secretShapedAssignment(`${ENGINE_KEYS.token}="${TOKEN_PLACEHOLDER}"`)).toBeNull();
+  });
+
   test('secretShapedAssignment', () => {
     expect(secretShapedAssignment('SERVICE_TOKEN="0123456789abcdef0123456789abcdef"')).toBe('SERVICE_TOKEN');
     expect(secretShapedAssignment('would: x API_KEY=abcdefghijk')).toBe('API_KEY');

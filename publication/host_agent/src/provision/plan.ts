@@ -36,7 +36,12 @@ import { dirname, join } from 'node:path';
 import { hasDrifted, parseStamp } from './hash';
 import type { AgentLayout, WebServer } from './layout';
 import { MODES, SERVICE_TOKEN_BYTES, groupName, markerContent, ownerName } from './layout';
+import { engineFragmentRenderer } from './render/engine_fragment';
 import { envRenderer } from './render/env';
+import { polkitRenderer } from './render/polkit';
+import { sudoersRenderer } from './render/sudoers';
+import { agentUnitRenderer } from './render/unit_agent';
+import { v2UnitRenderer } from './render/unit_v2';
 import type {
   Artifact,
   ArtifactEffect,
@@ -50,8 +55,15 @@ import { ARTIFACT_KINDS, PENDING_FACTS } from './render/types';
 
 /* ── the renderer registry ────────────────────────────────────────────────────────── */
 
-/** One renderer per ARTIFACT_KINDS entry. Task 9 appends its renderers here. */
-export const RENDERERS: readonly Renderer[] = Object.freeze([envRenderer]);
+/** One renderer per ARTIFACT_KINDS entry. */
+export const RENDERERS: readonly Renderer[] = Object.freeze([
+  envRenderer,
+  agentUnitRenderer,
+  v2UnitRenderer,
+  sudoersRenderer,
+  polkitRenderer,
+  engineFragmentRenderer,
+]);
 
 /** THE CENSUS, both ways: no kind twice, no kind without a renderer. Throws. */
 export function assertRendererCensus(renderers: readonly Renderer[]): void {

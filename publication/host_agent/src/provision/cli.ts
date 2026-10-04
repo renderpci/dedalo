@@ -7,7 +7,7 @@
  *
  * The declaration defaults to /etc/dedalo_publication_host/<instance>.json. Exit codes and
  * the secret guard are copied from publication/site_builder/src/provision/cli.ts (EXIT,
- * secretShapedAssignment, guarded sinks); the fleet, adopt and remove verbs are not.
+ * secretShapedAssignment incl. its placeholder exemption, guarded sinks); the fleet, adopt and remove verbs are not.
  * Reads no environment variable (the process environment is src/config.ts's alone). The host doors are
  * used with their production trust root ('/').
  */
@@ -19,6 +19,7 @@ import type { AgentLayout } from './layout';
 import { DEFAULT_PATHS, INSTANCE_PATTERN } from './layout';
 import type { HostState } from './plan';
 import { PlanRefused, describe, plan, renderAll } from './plan';
+import { TOKEN_PLACEHOLDER } from './render/engine_fragment';
 import { DeclarationError, parseDeclaration } from './schema';
 
 export const EXIT = Object.freeze({
@@ -45,7 +46,8 @@ const MIN_SECRET_LENGTH = 8;
 
 /**
  * The KEY of a credential-shaped assignment anywhere in `line`, or null. Allowed: a path
- * value (`TLS_KEY_FILE="/etc/…"`), a value with whitespace, a value shorter than 8.
+ * value (`TLS_KEY_FILE="/etc/…"`), a value with whitespace, a value shorter than 8, and the
+ * engine fragment's TOKEN_PLACEHOLDER (an impossible value, greppable on purpose).
  */
 export function secretShapedAssignment(line: string): string | null {
   const assignments = /([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:"([^"\r\n]*)"|(\S+))/g;
@@ -55,6 +57,7 @@ export function secretShapedAssignment(line: string): string | null {
     const value = (match[2] ?? match[3] ?? '').trim();
     if (value.length < MIN_SECRET_LENGTH) continue;
     if (/\s/.test(value)) continue;
+    if (value === TOKEN_PLACEHOLDER) continue; // the fragment's impossible sentinel, greppable on purpose
     if (value.startsWith('/')) continue;
     return key;
   }
