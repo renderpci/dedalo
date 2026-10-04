@@ -21,6 +21,9 @@ export const ACTOR_HEADER = 'x-dedalo-actor';
 /** 1–200 characters, no control characters (it is written into the audit line verbatim). */
 const ACTOR_PATTERN = /^[^\u0000-\u001f\u007f]{1,200}$/;
 
+/** `Bearer`, exactly one space, then a non-empty token without whitespace — nothing else. */
+const BEARER_FORM = /^Bearer (\S+)$/;
+
 const encoder = new TextEncoder();
 const tokenBytes = encoder.encode(config.SERVICE_TOKEN);
 
@@ -31,11 +34,13 @@ const tokenBytes = encoder.encode(config.SERVICE_TOKEN);
  */
 export function requireBearer(req: Request): void {
   const header = req.headers.get('authorization') ?? '';
-  const [scheme, presented = ''] = header.split(' ', 2);
-
-  if (scheme !== 'Bearer' || presented.length === 0) {
+  // ONLY the exact form `Bearer <token>`: one space, then a token with no whitespace. A
+  // split with a limit would silently drop anything after a second space.
+  const match = BEARER_FORM.exec(header);
+  if (match === null) {
     throw new UnauthorizedError('Missing bearer token');
   }
+  const presented = match[1] as string;
 
   const presentedBytes = encoder.encode(presented);
   // Length is not a secret worth hiding for a >= 32-char random token.

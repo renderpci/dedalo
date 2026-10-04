@@ -16,6 +16,13 @@ describe('requireBearer', () => {
     ['wrong token, same length', { authorization: `Bearer ${'x'.repeat(config.SERVICE_TOKEN.length)}` }],
     ['token prefix', { authorization: `Bearer ${config.SERVICE_TOKEN.slice(0, -1)}` }],
     ['token plus a byte', { authorization: `Bearer ${config.SERVICE_TOKEN}x` }],
+    // Only the exact `Bearer <token>` form: a split with a limit dropped everything after
+    // the second space, so the right token followed by junk used to pass.
+    ['token then a space and junk', { authorization: `Bearer ${config.SERVICE_TOKEN} junk` }],
+    // (A trailing space is not a case: Fetch Headers strip a value's surrounding whitespace.)
+    ['two spaces before the token', { authorization: `Bearer  ${config.SERVICE_TOKEN}` }],
+    ['a tab separator', { authorization: `Bearer\t${config.SERVICE_TOKEN}` }],
+    ['lower-case scheme', { authorization: `bearer ${config.SERVICE_TOKEN}` }],
   ])('refuses %s with 401', (_name, headers) => {
     expect(() => requireBearer(req(headers as Record<string, string>))).toThrow(UnauthorizedError);
   });
