@@ -1443,9 +1443,9 @@ else {
 		},
 		{
 			id: 'host-agent-package',
-			matches: (target) => target.startsWith('publication/host_agent/src/'),
+			matches: (target) => target === 'publication/host_agent/src/exec.ts',
 			reason:
-				'the publication agent — a SEPARATE deployable (its own package; it imports nothing from the engine and holds no matrix credential), imported only by its live drill for shared constants (exec argv, seam names): it cannot reach the matrix, so no tool write-back lies behind it.',
+				'the publication agent exec module — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential), imported only by the agent live drill for its argv/seam constants: it cannot reach the matrix, so no tool write-back lies behind it. Exactly this one file.',
 		},
 		{
 			id: 'client-js-leaf',
@@ -3641,8 +3641,12 @@ else {
 				'json-data',
 				'tool-client-js',
 				'tools-js-leaf',
+				'host-agent-package',
 				'client-js-leaf',
 			]);
+			// the agent class admits exactly the one module the drill reads constants from
+			expect(admittedBy('publication/host_agent/src/exec.ts')).toEqual(['host-agent-package']);
+			expect(admittedBy('publication/host_agent/src/config.ts')).toEqual([]);
 		});
 	});
 }
