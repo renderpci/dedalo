@@ -19,7 +19,8 @@
  *   3. when step 1 minted the token the fingerprint moved: re-plan with the new facts and write
  *      only the filesystem actions that moved (the engine fragment);
  *   4. step 1's SERVICE tail (daemon-reload → enable → start → restart), whose effects are the
- *      writes of step 1.
+ *      writes of step 1, plus a restart of a RUNNING agent when step 2 reissued the CA or the
+ *      server certificate (tlsRestart: the agent loads TLS once, at boot).
  * A second `apply` is then a no-op and `check` is clean. `check` reports the same, writing
  * nothing: TLS issues in memory to learn what it WOULD write. Reads no environment variable
  * (the process environment is src/config.ts's alone). The host doors are used with their
@@ -192,6 +193,27 @@ function isFilesystemAction(action: Action): boolean {
 }
 
 /**
+ * A reissued CA or server certificate reaches the running agent only through a restart: boot.ts
+ * reads TLS_* once (readTlsMaterial), no hot reload. Without it the agent keeps serving the old
+ * server certificate and trusting the old client CA — a rotated CA would leave a leaked engine
+ * bundle valid, and a renewed leaf would still expire. `tail` is the plan's service tail: a unit it
+ * already starts or restarts is not restarted twice; an inactive unit is left to its start. A
+ * client-only reissue needs no restart (the agent trusts the CA, not the leaf).
+ */
+export function tlsRestart(
+  layout: AgentLayout,
+  host: HostState,
+  issued: readonly string[],
+  tail: readonly Action[],
+): Action[] {
+  if (!issued.some(piece => piece === 'ca' || piece === 'server')) return [];
+  const unit = layout.agentUnitName;
+  if (host.units.get(unit)?.active !== true) return [];
+  if (tail.some(a => (a.op === 'start' || a.op === 'restart') && a.unit === unit)) return [];
+  return [{ op: 'restart', unit }];
+}
+
+/**
  * TLS issuance's io: reads through the root-only reader, writes atomically through the plan's
  * own ProvisionIo with ids from the observed host. `io === null` (check): certificates are
  * issued in memory to learn WHAT would change, and nothing is written.
@@ -267,9 +289,11 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
 
     if (args.verb === 'check') {
       const tls = ensureTls(layout, tlsIo(deps, null, host), deps.now());
+      const restart = tlsRestart(layout, host, tls.issued, actions.filter(a => !isFilesystemAction(a)));
       const would = [
         ...actions.map(action => `would: ${describe(action)}`),
         ...tls.issued.map(piece => `would: issue the ${piece} certificate (tls)`),
+        ...restart.map(action => `would: ${describe(action)} (the reissued tls material)`),
       ];
       if (would.length === 0) {
         out(`provision: instance '${layout.instance}' matches its declaration`);
@@ -319,8 +343,12 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       if (!runActions(plan(layout, deps.observeHost(layout), after).filter(isFilesystemAction))) return failed();
     }
 
-    // 4. The service tail of the first plan.
-    if (!runActions(actions.filter(action => !isFilesystemAction(action)))) return failed();
+    // 4. The service tail of the first plan, plus the agent restart reissued TLS obliges (after
+    //    daemon-reload/enable/start: a restart is the tail's last op).
+    const tail = actions.filter(action => !isFilesystemAction(action));
+    const restart = tlsRestart(layout, host, tls.issued, tail);
+    if (restart.length > 0) out(`tls: the running agent loaded the old material — restarting ${layout.agentUnitName}`);
+    if (!runActions([...tail, ...restart])) return failed();
 
     if (actions.length === 0 && tls.issued.length === 0 && written === 0) {
       out(`provision: instance '${layout.instance}' already matches its declaration — nothing written`);

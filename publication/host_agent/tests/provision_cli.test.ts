@@ -9,6 +9,7 @@ import { EXIT, hostDeps, parseArgs, run, secretShapedAssignment } from '../src/p
 import type { HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
 import { ENGINE_KEYS, TOKEN_PLACEHOLDER } from '../src/provision/render/engine_fragment';
+import { TLS_VALIDITY } from '../src/provision/tls';
 import { instanceFingerprint } from '../src/security/pairing';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
 import { FAKE_TOKEN, FakeHost } from './support/provision_fake_host';
@@ -24,8 +25,9 @@ interface Harness {
 }
 
 function harness(
-  options: { root?: boolean; text?: string | null; declaration?: HostDeclaration } = {},
+  options: { root?: boolean; text?: string | null; declaration?: HostDeclaration; clock?: { now: Date } } = {},
 ): Harness {
+  const clock = options.clock ?? { now: new Date('2026-10-03T12:00:00Z') };
   const declaration = options.declaration ?? unixDeclaration();
   const host = new FakeHost(derive(declaration));
   const reads: string[] = [];
@@ -44,7 +46,7 @@ function harness(
       observeHost: () => host.state(),
       io: () => host,
       readRootFile: path => host.body(path) ?? null,
-      now: () => new Date('2026-10-03T12:00:00Z'),
+      now: () => clock.now,
     },
   };
 }
@@ -225,5 +227,56 @@ describe('apply converges in one run', () => {
     const before = h.host.mutations;
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
     expect(h.host.mutations).toBe(before);
+  });
+
+  describe('reissued tls restarts the RUNNING agent (boot.ts loads TLS once)', () => {
+    const AGENT = 'dedalo-publication-host-test';
+    const DAY = 86_400_000;
+    const restarts = (h: Harness) => h.host.calls.filter(call => call === `restart ${AGENT}`).length;
+
+    function converged(): { h: Harness; clock: { now: Date }; l: ReturnType<typeof derive> } {
+      const clock = { now: new Date('2026-10-03T12:00:00Z') };
+      const h = harness({ declaration: tlsDeclaration(), clock });
+      expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+      expect(h.host.units.get(AGENT)?.active).toBe(true);
+      expect(restarts(h)).toBe(0); // a first run STARTS the unit after issuance: no restart
+      return { h, clock, l: derive(tlsDeclaration()) };
+    }
+
+    test('a leaf renewal inside its window: check names the restart, apply restarts exactly once, then clean', () => {
+      const { h, clock } = converged();
+      clock.now = new Date(clock.now.getTime() + (TLS_VALIDITY.leafDays - TLS_VALIDITY.leafRenewDays + 1) * DAY);
+      h.out.length = 0;
+      expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+      expect(h.out).toContain(`would: systemctl restart ${AGENT} (the reissued tls material)`);
+      expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+      expect(restarts(h)).toBe(1);
+      expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
+    });
+
+    test('a CA rotation (operator deleted tls/ca.*) restarts the agent; the restart comes after the writes', () => {
+      const { h, l } = converged();
+      h.host.entries.delete(l.tls!.caCert);
+      h.host.entries.delete(l.tls!.caKey);
+      expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+      expect(restarts(h)).toBe(1);
+      expect(h.host.calls.lastIndexOf(`rename ${l.tls!.serverKey}`)).toBeLessThan(h.host.calls.indexOf(`restart ${AGENT}`));
+    });
+
+    test('a client-only reissue does not restart (the agent trusts the CA, not the leaf)', () => {
+      const { h, l } = converged();
+      h.host.entries.delete(l.engineBundlePath);
+      expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+      expect(restarts(h)).toBe(0);
+    });
+
+    test('an inactive agent is left to its start, not restarted', () => {
+      const { h, l } = converged();
+      h.host.units.set(AGENT, { enabled: true, active: false });
+      h.host.entries.delete(l.tls!.serverCert);
+      expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+      expect(restarts(h)).toBe(0);
+      expect(h.host.calls.filter(call => call === `start ${AGENT}`).length).toBe(2);
+    });
   });
 });
