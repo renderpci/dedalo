@@ -9,15 +9,14 @@
  * REQUIRED (a path outside it is unknown, never re-tried as a bare path); each route names
  * its §6 command; there is NO `register()` — the table is one frozen literal.
  *
- * HOW A COMMAND GETS ITS HANDLER: Tasks 4, 5 and 7 replace the `notYetBuilt('<command>')`
- * argument of their existing row(s) below with the real `RouteHandler` (shape
- * `(req, url)`), and import it. They never add, remove or reorder a row: the ROWS are what
- * tests/router.test.ts pins. Until replaced, a command answers a 500 naming itself.
+ * EVERY ROW HAS ITS REAL HANDLER (shape `(req, url)`); the ROWS are what
+ * tests/router.test.ts pins — a change adds, removes or reorders none of them silently.
  */
 
-import { MethodNotAllowedError, NotFoundError, ServiceError } from './errors';
+import { MethodNotAllowedError, NotFoundError } from './errors';
 import { handleHealth } from './routes/health';
 import { handleMediaProbe } from './routes/media_probe';
+import { releaseInstallRoute, releaseRollbackRoute } from './routes/releases';
 import { handleRulesApply } from './routes/rules_apply';
 import { handleStatus } from './routes/status';
 import { requireBearer } from './security/auth';
@@ -39,12 +38,6 @@ export interface Route {
   readonly handler: RouteHandler;
 }
 
-function notYetBuilt(command: AgentCommand): RouteHandler {
-  return () => {
-    throw new ServiceError(`The '${command}' command is not built in this agent version.`);
-  };
-}
-
 function route(
   method: Route['method'],
   path: string,
@@ -60,10 +53,10 @@ export const ROUTES: readonly Route[] = Object.freeze([
   route('GET', '/v1/status', 'status', handleStatus),
   route('GET', '/v1/media/probe', 'media.probe', handleMediaProbe),
   route('POST', '/v1/rules/apply', 'rules.apply', handleRulesApply),
-  route('POST', '/v1/releases/v1', 'release.install', notYetBuilt('release.install')),
-  route('POST', '/v1/releases/v2', 'release.install', notYetBuilt('release.install')),
-  route('POST', '/v1/releases/v1/rollback', 'release.rollback', notYetBuilt('release.rollback')),
-  route('POST', '/v1/releases/v2/rollback', 'release.rollback', notYetBuilt('release.rollback')),
+  route('POST', '/v1/releases/v1', 'release.install', releaseInstallRoute('v1')),
+  route('POST', '/v1/releases/v2', 'release.install', releaseInstallRoute('v2')),
+  route('POST', '/v1/releases/v1/rollback', 'release.rollback', releaseRollbackRoute('v1')),
+  route('POST', '/v1/releases/v2/rollback', 'release.rollback', releaseRollbackRoute('v2')),
 ]);
 
 /** The path below BASE_PATH, or null when the request is not under it at all. */

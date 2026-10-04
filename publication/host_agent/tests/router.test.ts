@@ -89,13 +89,6 @@ describe('the gate runs before the matcher', () => {
     expect(wrong.status).toBe(405);
     expect(wrong.headers.get('allow')).toBe('GET');
   });
-
-  // Task 7 deletes this test together with router.ts notYetBuilt.
-  test('an unbuilt command answers a 500 naming it', async () => {
-    const res = await call('POST', `${BASE_PATH}/v1/releases/v2/rollback`, AUTH);
-    expect(res.status).toBe(500);
-    expect(((await res.json()) as { detail: string }).detail).toContain("'release.rollback'");
-  });
 });
 
 describe('GET /health', () => {

@@ -20,7 +20,7 @@
  *         (audited as release.auto_rollback)
  *   → prune → audit (release.install, outcome ok).
  *
- * A failure before the swap leaves the old release serving. v2 reads only process.env: its
+ * A failure before the swap leaves the old release serving. v2 reads only its process environment: its
  * unit has EnvironmentFile=shared/v2.env, the scratch boot gets the same file through
  * exec().v2ScratchBoot, and the bundle may not carry an env file. Every child process goes
  * through exec.ts.
