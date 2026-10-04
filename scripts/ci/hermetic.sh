@@ -393,6 +393,9 @@ HERMETIC_TRIPWIRES=(
 	#     engine's publication-host renderers. DB-free: it imports the agent's import-free
 	#     directives.ts and the pure renderers (config.mediaDir only); no DB, no network.
 	test/unit/publication_host_rules_allowlist_tripwire.test.ts
+	# --- 2026-10-03 (publication host phase 3): the agent-channel door gate. DB-free: reads
+	#     src/ + tools/ sources and three docs/gates, Babel AST only, imports no src/ module.
+	test/unit/publication_host_door_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

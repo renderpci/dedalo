@@ -445,9 +445,9 @@ answer became a confidently wrong value. A non-matching answer is `not_found`
 ## 5. Transport — the one door and its order
 
 Every byte the subsystem sends leaves through `transport.ts::fetchExternalJson`
-— the external subsystem's door, one of the engine's three outbound doors
+— the external subsystem's door, one of the engine's four outbound doors
 (`engineering/OUTBOUND_SPEC.md` says which request takes which, and names the
-guard all three share: this door reads its body with the guard's
+guard the three that reach other institutions share: this door reads its body with the guard's
 `readBytesCapped` and pins with its `pinToVettedAddress`, never a copy).
 `external_outbound_tripwire` fails the build on any other `fetch(` /
 `new Request(` / `node:http(s)` / `Bun.connect` under `src/external/**`. THE

@@ -343,6 +343,8 @@ const TRIPWIRES = [
 	'test/unit/publication_host_pairing_tripwire.test.ts',
 	// Publication host phase 2 — rules.apply's directive allowlist held to the engine renderers (2026-10-03).
 	'test/unit/publication_host_rules_allowlist_tripwire.test.ts',
+	// Publication host phase 3 — the paired private agent channel has one door (2026-10-03).
+	'test/unit/publication_host_door_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

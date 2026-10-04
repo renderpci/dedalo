@@ -139,7 +139,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `engineering/RELATIONS_SPEC.md`, `engineering/SECTION_SPEC.md` | Family specs — **read the dated §1 addenda first**: the rebuilds they instruct already landed. | 
 | `engineering/DIFFUSION_SPEC.md` | Native diffusion subsystem (`src/diffusion/`, Bun-owns-MariaDB tiering). | 
 | `engineering/EXTERNAL_SPEC.md` | External record services (`src/external/`, a PEER of core) — the four ontology pieces, the one outbound door and its order, egress classes, the write invariant. | 
-| `engineering/OUTBOUND_SPEC.md` | Every request that leaves the institution — the THREE outbound doors (single API call / external record service / tool harvesting via `src/core/harvest/`), the one SSRF guard under them, the harvest hop order, who may use which door. | 
+| `engineering/OUTBOUND_SPEC.md` | Every request the engine sends to another server — the FOUR outbound doors (single API call / external record service / tool harvesting via `src/core/harvest/` / the paired private publication-agent channel `src/core/publication_host/transport.ts`), the one SSRF guard under the first three, the harvest hop order, who may use which door. | 
 | `engineering/PUBLICATION_HOST_SPEC.md` | A separate publication machine controlled from the work system — the agent channel (work → publication only), API deployment, media modes `copy`/`shared`, the `publication_host` rule profile, phases. | 
 | `engineering/IDENTIFY_SPEC.md` | Object identification (`src/core/identify/` + the RAG image index) — a criterion IS an SQO path; read §4 for what each match mode actually does today. | 
 | `engineering/CONVENTIONS.md` | Error-handling/logging convention + the dynamic-import rules. | 
