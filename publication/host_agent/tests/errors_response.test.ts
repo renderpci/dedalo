@@ -56,6 +56,27 @@ describe('problem envelope', () => {
     expect(body.reason).toBe('reload_failed');
   });
 
+  test('extension keys never override type/title/status/detail (the 5xx scrub cannot be bypassed)', async () => {
+    const hostile = {
+      type: 'https://evil.example/x',
+      title: 'Spoofed',
+      status: 200,
+      detail: 'stderr: /srv/secret/path',
+      bundle_reason: 'kept',
+    };
+    const res = renderProblem(new HostActionFailedError('stderr: /etc/x', 'reload_failed', hostile), 'production');
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.type).toBe(`${PROBLEM_TYPE_BASE}host-action-failed`);
+    expect(body.title).toBe('Host Action Failed');
+    expect(body.status).toBe(503);
+    expect(body.detail).toBe(SCRUBBED_DETAIL);
+    expect(body.reason).toBe('reload_failed');
+    expect(body.bundle_reason).toBe('kept');
+    const refused = (await renderProblem(new RefusedError('real', 'bundle_refused', hostile), 'production').json()) as Record<string, unknown>;
+    expect(refused).toMatchObject({ type: `${PROBLEM_TYPE_BASE}refused`, title: 'Refused', status: 422, detail: 'real' });
+  });
+
   test('a 4xx detail is never scrubbed', async () => {
     const body = (await renderProblem(new ValidationError('bad'), 'production').json()) as Record<string, unknown>;
     expect(body.detail).toBe('bad');

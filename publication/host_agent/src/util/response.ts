@@ -34,12 +34,14 @@ export function renderProblem(error: unknown, nodeEnv: 'production' | 'test'): R
   const apiError = toApiError(error);
   const scrub = apiError.status >= 500 && nodeEnv !== 'test';
 
+  // Extensions FIRST: the four RFC 9457 members are written last so no extension key can
+  // override them (an extension `detail` would otherwise bypass the 5xx scrub).
   const body: Record<string, unknown> = {
+    ...apiError.extensions,
     type: apiError.type,
     title: apiError.title,
     status: apiError.status,
     detail: scrub ? SCRUBBED_DETAIL : apiError.detail,
-    ...apiError.extensions,
   };
 
   const headers: Record<string, string> = {
