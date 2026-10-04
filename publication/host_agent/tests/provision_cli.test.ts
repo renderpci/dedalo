@@ -6,10 +6,12 @@ import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ProvisionDeps } from '../src/provision/cli';
 import { EXIT, hostDeps, parseArgs, run, secretShapedAssignment } from '../src/provision/cli';
+import type { HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
 import { ENGINE_KEYS, TOKEN_PLACEHOLDER } from '../src/provision/render/engine_fragment';
-import { unixDeclaration } from './fixtures/provision_declaration';
-import { FakeHost } from './support/provision_fake_host';
+import { instanceFingerprint } from '../src/security/pairing';
+import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
+import { FAKE_TOKEN, FakeHost } from './support/provision_fake_host';
 
 const DEFAULT_SOURCE = '/etc/dedalo_publication_host/test.json';
 
@@ -21,10 +23,13 @@ interface Harness {
   readonly reads: string[];
 }
 
-function harness(options: { root?: boolean; text?: string | null } = {}): Harness {
-  const host = new FakeHost(derive(unixDeclaration()));
+function harness(
+  options: { root?: boolean; text?: string | null; declaration?: HostDeclaration } = {},
+): Harness {
+  const declaration = options.declaration ?? unixDeclaration();
+  const host = new FakeHost(derive(declaration));
   const reads: string[] = [];
-  const text = options.text === undefined ? JSON.stringify(unixDeclaration()) : options.text;
+  const text = options.text === undefined ? JSON.stringify(declaration) : options.text;
   return {
     host,
     out: [],
@@ -38,6 +43,8 @@ function harness(options: { root?: boolean; text?: string | null } = {}): Harnes
       isRoot: () => options.root ?? true,
       observeHost: () => host.state(),
       io: () => host,
+      readRootFile: path => host.body(path) ?? null,
+      now: () => new Date('2026-10-03T12:00:00Z'),
     },
   };
 }
@@ -122,7 +129,7 @@ describe('render / check / apply', () => {
   test('apply → OK (0); then check → OK (0) and a second apply writes nothing', () => {
     const h = harness();
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
-    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (9 file(s) written)");
+    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (10 file(s) written)");
     const after = h.host.mutations;
     expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
@@ -183,5 +190,40 @@ describe('hostDeps (the real world, read-only parts)', () => {
 
   test('with no sinks given, a usage error goes to the console and still exits USAGE', () => {
     expect(run(['render'])).toBe(EXIT.USAGE);
+  });
+});
+
+describe('apply converges in one run', () => {
+  test('the token minted by this apply reaches the engine fragment in the same run; check is then clean', () => {
+    const h = harness();
+    expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+    const l = derive(unixDeclaration());
+    expect(h.host.body(l.engineFragmentPath)).toContain(
+      `${ENGINE_KEYS.fingerprint}="${instanceFingerprint('test', FAKE_TOKEN)}"`,
+    );
+    expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
+  });
+
+  test('tls: check names what it would issue; apply issues before any unit starts; a second apply writes nothing', () => {
+    const h = harness({ declaration: tlsDeclaration() });
+    const l = derive(tlsDeclaration());
+    expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(h.out).toContain('would: issue the ca certificate (tls)');
+    expect(h.host.mutations).toBe(0);
+
+    expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+    expect(h.out.some(line => line.startsWith('tls: issued [ca, server, client]'))).toBe(true);
+    for (const path of [l.tls!.caCert, l.tls!.serverCert, l.tls!.serverKey, l.engineBundlePath]) {
+      expect(h.host.body(path)).toContain('-----BEGIN');
+    }
+    expect(h.host.entries.get(l.tls!.serverKey)).toMatchObject({ uid: 990, gid: 0, mode: 0o400 });
+    const caWritten = h.host.calls.indexOf(`rename ${l.tls!.caKey}`);
+    expect(caWritten).toBeGreaterThan(-1);
+    expect(caWritten).toBeLessThan(h.host.calls.indexOf('start dedalo-publication-host-test'));
+
+    expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
+    const before = h.host.mutations;
+    expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+    expect(h.host.mutations).toBe(before);
   });
 });
