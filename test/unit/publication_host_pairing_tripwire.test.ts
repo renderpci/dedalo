@@ -29,7 +29,8 @@
  *      check is not an enumeration oracle for either half.
  *   5. NO THIRD SPELLING. The prefix literal lives in exactly the two recipe files across
  *      every shipped first-party code file (the registered test/helpers/shipped_text_corpus.ts
- *      roots: src/, scripts/, tools/, publication/, client/, deploy/; test trees excluded);
+ *      roots: src/, scripts/, tools/, publication/, client/, deploy/; tracked files only, test
+ *      files excluded by NAME — `*.test.*` / `*.spec.*` — never by a directory name);
  *      every other consumer imports one of them.
  *
  * HERMETIC: no database, no ../private, no network. Source reads + in-process calls only.
@@ -61,6 +62,8 @@ import {
 // The registered shipped-text lister owns the corpus roots (census_derivation_tripwire
 // refuses a gate that chooses its own walk roots in-file).
 import { shippedTextFiles } from '../helpers/shipped_text_corpus.ts';
+// The tracked-file listing (git index, no root chosen): the corpus is classified per file.
+import { trackedRepoFiles } from '../helpers/css_reference_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8');
@@ -93,23 +96,22 @@ function strip(source: string): string {
 	return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
-// `tests` / `test`: a gate PINS the literal on purpose (this file, the package's own
-// tests/pairing.test.ts); a test tree is never a consumer that could fork the recipe.
-// `dist` / `build`: generated output, not a source that could fork it.
-const SKIP_SEGMENTS = new Set(['tests', 'test', 'dist', 'build']);
 const CODE_FILE = /\.(ts|js|mjs)$/;
+// A test file PINS the literal on purpose (this gate, the package's tests/pairing.test.ts);
+// it is classified by its NAME, never by a directory name — shipped source lives in dirs
+// called build/ (site_builder/src/build) and test/ (the test_info widget).
+const TEST_FILE = /\.(test|spec)\.(ts|js|mjs)$/;
 
 /**
- * Every shipped first-party CODE file (repo-relative, codepoint order) outside test trees —
- * the registered lister's roots (client, tools, src, scripts, publication, deploy) are a
- * superset of the src/ scripts/ tools/ publication/ the recipe could be forked into.
+ * Every shipped first-party CODE file (repo-relative, codepoint order) that is TRACKED and
+ * not a test file — the registered lister's roots (client, tools, src, scripts, publication,
+ * deploy) are a superset of the src/ scripts/ tools/ publication/ the recipe could be forked
+ * into. Untracked files (build/dist output, local scratch) are generated, never a source.
  */
 function shippedCodeFiles(): string[] {
+	const tracked = new Set(trackedRepoFiles());
 	return shippedTextFiles().filter(
-		(file) =>
-			CODE_FILE.test(file) &&
-			!file.endsWith('.d.ts') &&
-			!file.split('/').some((segment) => SKIP_SEGMENTS.has(segment)),
+		(file) => CODE_FILE.test(file) && !file.endsWith('.d.ts') && !TEST_FILE.test(file) && tracked.has(file),
 	);
 }
 
@@ -265,6 +267,22 @@ describe('a wrong instance and a wrong token are indistinguishable', () => {
 // ---------------------------------------------------------------------------
 // Rule 5 — no third spelling
 // ---------------------------------------------------------------------------
+
+describe('the corpus is classified per tracked file, never by directory name', () => {
+	test('shipped sources under dirs named build/dist/test(s) are scanned; test files and untracked output are not', () => {
+		const files = shippedCodeFiles();
+		// Shipped source that merely lives in a directory with one of those names.
+		expect(files).toContain('publication/site_builder/src/build/builder.ts');
+		expect(files).toContain('src/core/components/component_info/widgets/test/test_info.ts');
+		expect(files).toContain('client/dedalo/core/widgets/test/test_info/js/test_info.js');
+		// A test file pins the literal on purpose; it is classified by its NAME.
+		expect(files).not.toContain('publication/host_agent/tests/pairing.test.ts');
+		expect(files.some((file) => /\.(test|spec)\.(ts|js|mjs)$/.test(file))).toBe(false);
+		// Only tracked files: generated or local output is never a source that could fork it.
+		const tracked = new Set(trackedRepoFiles());
+		expect(files.every((file) => tracked.has(file))).toBe(true);
+	});
+});
 
 describe('the recipe is spelled exactly twice', () => {
 	test('the prefix literal lives only in the two recipe files', () => {

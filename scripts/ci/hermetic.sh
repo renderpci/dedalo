@@ -386,7 +386,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/client_lib_versions_doc_tripwire.test.ts
 	# --- 2026-10-03 (publication host phase 2): the engine/agent pairing twin. DB-free: it
 	#     imports four pairing recipes (node builtins + type-only imports at most), reads shipped
-	#     code via test/helpers/shipped_text_corpus.ts; no DB, no network, no ../private.
+	#     code via test/helpers/shipped_text_corpus.ts narrowed to `git ls-files` (tracked only);
+	#     no DB, no network, no ../private.
 	test/unit/publication_host_pairing_tripwire.test.ts
 	# --- 2026-10-03 (publication host phase 2): rules.apply's directive allowlist vs the
 	#     engine's publication-host renderers. DB-free: it imports the agent's import-free
