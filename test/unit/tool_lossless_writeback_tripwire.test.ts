@@ -1442,6 +1442,12 @@ else {
 				'a tools/**/*.js module OUTSIDE the client leg (e.g. transcribers/lib/paragraphs.js, which src/core/tools/transcription_asr.ts runs SERVER-side) admitted only as a mechanically checked LEAF: no import, no require(, no Bun./process./fetch( — it can reach no module, no database and no network, so it can write nothing.',
 		},
 		{
+			id: 'host-agent-package',
+			matches: (target) => target.startsWith('publication/host_agent/src/'),
+			reason:
+				'the publication agent — a SEPARATE deployable (its own package; it imports nothing from the engine and holds no matrix credential), imported only by its live drill for shared constants (exec argv, seam names): it cannot reach the matrix, so no tool write-back lies behind it.',
+		},
+		{
 			id: 'client-js-leaf',
 			matches: (target) => /^client\/dedalo\/.+\.js$/.test(target) && isImportFreeLeaf(target),
 			reason:
