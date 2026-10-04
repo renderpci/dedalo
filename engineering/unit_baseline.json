@@ -3071,6 +3071,11 @@
 			"skipped": 0,
 			"assertions": 41
 		},
+		"test/unit/publication_host_agent_client_native.test.ts": {
+			"tests": 32,
+			"skipped": 0,
+			"assertions": 390
+		},
 		"test/unit/publication_host_agent_drill_kit.test.ts": {
 			"tests": 10,
 			"skipped": 0,
