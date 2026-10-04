@@ -19,7 +19,11 @@
  *      `rejectUnauthorized: true`, and the certificate checked against the REGISTRY host.
  *      The explicit `true` is load-bearing: measured on Bun 1.4.2, it is what keeps a rogue
  *      agent refused while NODE_TLS_REJECT_UNAUTHORIZED=0 is in the environment. A
- *      unix-socket host is dialled at its socket. No caller text reaches the URL. A TCP host
+ *      unix-socket host is dialled at its socket only when the filesystem vouches for it:
+ *      the path is a socket (not a symlink) and its directory is not writable by group or
+ *      others (unless sticky and root-owned) — otherwise `unreachable` (reason socket_perms)
+ *      and no connection (the fingerprint is public; on a socket this check is what keeps
+ *      an impostor's listener out). No caller text reaches the URL. A TCP host
  *      with no engine bundle — or one the secrets store refuses — is
  *      `publication_host.unconfigured`, and no socket opens.
  *   3. ONE REQUEST. `redirect: 'manual'`, and any 3xx is REFUSED with its body cancelled
@@ -44,6 +48,8 @@
  * NO_PROXY. The residual canary in publication_host_transport_native pins the behaviour.
  */
 
+import { lstatSync, type Stats, statSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { DedaloError, isDedaloError } from '../errors/index.ts';
 import { readBytesCapped } from '../security/ssrf_guard.ts';
 import type { PublicationHostRecord } from './registry.ts';
@@ -170,10 +176,43 @@ function urlHost(host: string): string {
 	return host.includes(':') ? `[${host}]` : host;
 }
 
+function statOrNull(path: string, follow: boolean): Stats | null {
+	try {
+		return follow ? statSync(path) : lstatSync(path);
+	} catch {
+		return null;
+	}
+}
+
+/** Group/other write bits, unless the directory is sticky and root-owned (/tmp's shape). */
+function writableByOthers(dir: Stats): boolean {
+	const stickyRoot = (dir.mode & 0o1000) !== 0 && dir.uid === 0;
+	return (dir.mode & 0o022) !== 0 && !stickyRoot;
+}
+
+/**
+ * The filesystem vouches for a unix socket before anything is sent to it: it exists, it IS
+ * a socket (lstat: a symlink is refused), and nobody but its directory's owner could have
+ * placed it there. The provisioned agent socket (RuntimeDirectoryMode=0750) passes.
+ */
+function assertSocketSafe(host: PublicationHostRecord, socket: string): void {
+	const node = statOrNull(socket, false);
+	if (node === null)
+		throw failure('publication_host.unreachable', host, { reason: 'transport', stage: 'connect' });
+	const parent = statOrNull(dirname(socket), true);
+	if (!node.isSocket() || parent === null || writableByOthers(parent)) {
+		throw failure('publication_host.unreachable', host, {
+			reason: 'socket_perms',
+			stage: 'connect',
+		});
+	}
+}
+
 /** THE ADDRESS POLICY: the registry entry, exactly — mTLS over TCP, or the unix socket. */
 function agentTarget(host: PublicationHostRecord, tls: HostTls | null, path: string): AgentTarget {
 	const address = host.address;
 	if (address.kind === 'unix') {
+		assertSocketSafe(host, address.socket);
 		return { url: `http://localhost${AGENT_BASE_PATH}${path}`, init: { unix: address.socket } };
 	}
 	if (tls === null)

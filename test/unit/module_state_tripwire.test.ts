@@ -364,6 +364,13 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// Orphan adoptions in flight, keyed on the resolved backup directory, deleted
 	// when the pass settles — concurrent dumps share one pass. No request identity.
 	'core/area_maintenance/backup.ts:adoptionInFlight',
+	// Publication-host READ proofs (phase 3, E6): host NAME → the registry fingerprint +
+	// address its unauthenticated /health proved. A fact about a fixed registry entry —
+	// no user, session or language. Success only; deleted on any transport failure, a
+	// 401, a status body naming another fingerprint, a failed proof and forgetPairing.
+	// A re-pair in ANOTHER process (pair CLI) changes the key, so the next read re-proves;
+	// mutations never consult it (they prove live on every call).
+	'core/publication_host/agent_client.ts:provenPairings',
 	// Bootstrap memo for matrix_time_machine.tm_role (ensureTmRoleColumn — the
 	// self-heal when migration 0010 did not land at boot): the TABLES verified
 	// to carry the column. No request identity; set only on success, cleared by

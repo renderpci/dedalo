@@ -327,9 +327,11 @@ const AGENT_CHANNEL_DOORS = ['agentRequest', 'dialAgent'] as const;
  * The ONLY production holders of `agentRequest`. Exact in both directions, like
  * `PINNED_HOP_IMPORTERS`: the holder owes the pairing proof BEFORE it passes a bearer
  * (engineering/PUBLICATION_HOST_SPEC.md §2 rule 3), which the door cannot do for it.
- * Empty until the publication-host client lands; it is that client's row to add.
  */
-const AGENT_CHANNEL_IMPORTERS: Record<string, string> = {};
+const AGENT_CHANNEL_IMPORTERS: Record<string, string> = {
+	'src/core/publication_host/agent_client.ts':
+		'THE publication-host client: proves the pairing (local token ⇒ registry fingerprint, then the live /health fingerprint) before any bearer; mutations re-prove live on every call; reads only under a proof keyed on fingerprint + address (publication_host_agent_client_native).',
+};
 
 /** Every door-carrying module the census starts from, with the doors it hands out. */
 const DOOR_SEEDS: Record<string, readonly string[]> = {
