@@ -14,10 +14,16 @@
  * THE SOURCE IS BUILT EXPLICITLY, in one order, everywhere:
  *
  *   1. THE NAMED ENV FILE — `$DEDALO_HOST_AGENT_ENV_FILE` (absolute; the agent unit sets it).
- *      Unset: `.env.test` in the package dir under NODE_ENV=test, and a REFUSAL otherwise —
- *      a production agent never falls back to a file inside its own code checkout, which
- *      whoever owns the checkout controls. A missing file is a refusal. Relative paths in
- *      the file resolve against the file's own directory.
+ *      Unset: `.env.test` in the package dir under NODE_ENV=test — ONLY in a checkout whose
+ *      `.test-tmp/` declares itself the suite's (TEST_SCRATCH_MARKER: a real directory owned
+ *      by this uid holding a real instance marker, planted by tests/preload.ts before any
+ *      test module loads) — and a REFUSAL otherwise. A production agent never falls back to
+ *      a file inside its own code checkout, which whoever owns the checkout controls; and a
+ *      DEPLOYED checkout never boots in test mode from the committed `.env.test` (public
+ *      dummy token, unscrubbed 5xx detail), whatever NODE_ENV a hand start passes: the
+ *      provisioner refuses an agent_dir holding `.test-tmp/` (src/provision/plan.ts), and a
+ *      provisioned agent_dir is root-owned, so the agent cannot plant one. A missing file is
+ *      a refusal. Relative paths in the file resolve against the file's own directory.
  *   2. THE AMBIENT ALLOWLIST — NODE_ENV, LOG_LEVEL, filling only what the file did not
  *      state. Every other ambient variable is ignored (an instance name or a token in the
  *      process environment is not a source). Test mode is NEVER ambient: NODE_ENV=test
@@ -39,13 +45,19 @@
  * Every refusal is ONE line and never quotes a value.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
 import { parseEnvFile } from './env_file';
+import { INSTANCE_MARKER } from './instance/roots';
 
 const PACKAGE_DIR = resolve(import.meta.dir, '..');
+
+/** The suite's scratch tree inside a package checkout (tests/fixtures/instance.ts SCRATCH_DIR_NAME). */
+export const TEST_SCRATCH_DIR = '.test-tmp';
+/** What declares a checkout the suite's: `<package>/.test-tmp/<INSTANCE_MARKER>` (tests/preload.ts plants it). */
+export const TEST_SCRATCH_MARKER = join(TEST_SCRATCH_DIR, INSTANCE_MARKER);
 
 /** The ambient variable naming the env file (an absolute path). The agent unit sets it (Task 9). */
 export const ENV_FILE_VAR = 'DEDALO_HOST_AGENT_ENV_FILE';
@@ -261,17 +273,56 @@ function toAgentConfig(v: EnvValues): AgentConfig {
 }
 
 /**
- * The env file this process reads: `$DEDALO_HOST_AGENT_ENV_FILE` (absolute), else — under
- * NODE_ENV=test only — the package's `.env.test`. Anything else REFUSES: no package-dir
- * `.env` fallback exists.
+ * Why `packageDir` is NOT a checkout the suite declared, or null when it is: `.test-tmp/` a
+ * real directory owned by this uid, holding a real (not linked) marker naming an instance.
  */
-export function defaultEnvFilePath(ambient: Readonly<Record<string, string | undefined>>): string {
+export function testScratchProblem(packageDir: string): string | null {
+  const dir = join(packageDir, TEST_SCRATCH_DIR);
+  const marker = join(packageDir, TEST_SCRATCH_MARKER);
+  const uid = typeof process.getuid === 'function' ? process.getuid() : null;
+  try {
+    const st = lstatSync(dir);
+    if (st.isSymbolicLink() || !st.isDirectory()) return `'${TEST_SCRATCH_DIR}' is not a real directory`;
+    if (uid !== null && st.uid !== uid) return `'${TEST_SCRATCH_DIR}' is not owned by this process`;
+  } catch {
+    return `there is no '${TEST_SCRATCH_DIR}' scratch tree`;
+  }
+  try {
+    const st = lstatSync(marker);
+    if (st.isSymbolicLink() || !st.isFile()) return `'${TEST_SCRATCH_MARKER}' is not a regular file`;
+    if (!/^[a-z][a-z0-9_]{1,31}\n$/.test(readFileSync(marker, 'utf8'))) return `'${TEST_SCRATCH_MARKER}' names no instance`;
+  } catch {
+    return `'${TEST_SCRATCH_MARKER}' is missing`;
+  }
+  return null;
+}
+
+/**
+ * The env file this process reads: `$DEDALO_HOST_AGENT_ENV_FILE` (absolute), else — under
+ * NODE_ENV=test, in a checkout the suite declared (testScratchProblem) — the package's
+ * `.env.test`. Anything else REFUSES: no package-dir `.env` fallback exists. `packageDir`
+ * is injectable for the gate only.
+ */
+export function defaultEnvFilePath(
+  ambient: Readonly<Record<string, string | undefined>>,
+  packageDir: string = PACKAGE_DIR,
+): string {
   const named = ambient[ENV_FILE_VAR]?.trim();
   if (named) {
     if (!isAbsolute(named)) refuse(`${ENV_FILE_VAR} must be an absolute path.`);
     return named;
   }
-  if (ambient.NODE_ENV === 'test') return join(PACKAGE_DIR, '.env.test');
+  if (ambient.NODE_ENV === 'test') {
+    const problem = testScratchProblem(packageDir);
+    if (problem !== null) {
+      refuse(
+        `NODE_ENV=test without ${ENV_FILE_VAR}: the committed .env.test is read only in a checkout the ` +
+          `suite declared, and here ${problem} (bun test plants it via tests/preload.ts). A deployed ` +
+          `agent never runs in test mode; name its env file with ${ENV_FILE_VAR}.`,
+      );
+    }
+    return join(packageDir, '.env.test');
+  }
   refuse(
     `${ENV_FILE_VAR} is not set. Outside NODE_ENV=test the agent reads only the env file its unit ` +
       `names (the provisioner renders it); it never falls back to a file in its own directory.`,

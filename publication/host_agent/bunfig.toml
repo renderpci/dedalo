@@ -6,6 +6,9 @@ peer = false
 # inherited): Bun applies the threshold PER FILE, so every module this package adds
 # arrives with tests that clear it, or the package suite is red.
 coverage = true
+# Declares this checkout the suite's (.test-tmp/ marker) before any module resolves the
+# config: src/config.ts reads the committed .env.test only in a declared checkout.
+preload = ["./tests/preload.ts"]
 coverageThreshold = { lines = 0.8, functions = 0.8 }
 
 [run]
