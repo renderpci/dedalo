@@ -32,8 +32,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { lstatSync, readdirSync, readlinkSync } from 'node:fs';
-import { lstat, mkdir, mkdtemp, readdir, rename, rm, symlink, utimes } from 'node:fs/promises';
+import { constants as FS, lstatSync, readdirSync, readlinkSync } from 'node:fs';
+import { lstat, mkdir, mkdtemp, open, readdir, rename, rm, symlink, utimes } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { config } from '../config';
 import { type ApiName, type BundleLimits, DEFAULT_MAX_PATH_LENGTH } from './ustar';
@@ -237,6 +237,9 @@ export function previousRelease(api: ApiName): string | null {
   return listReleases(api).find((id) => id !== cur) ?? null;
 }
 
+/** Mode of a committed `releases/<id>` root (its entries are normalized by extractBundle). */
+const RELEASE_DIR_MODE = 0o755;
+
 /** Stamps `releases/<id>` newer than every other release (monotonic, even within one ms). */
 async function stampNewest(api: ApiName, id: string): Promise<void> {
   const { releases } = apiLayout(api);
@@ -274,6 +277,17 @@ export async function commitStaging(api: ApiName, stagedDir: string, releaseId: 
   const st = await lstat(staged);
   if (st.isSymbolicLink() || !st.isDirectory()) throw new ReleaseStoreError('not_a_directory', staged);
   if (releaseDirState(api, releaseId) === 'dir') throw new ReleaseStoreError('release_exists', releaseId);
+  // mkdtemp made the root 0700: a release must be traversable by the web server (v1) and the
+  // v2 user, so it is moded RELEASE_DIR_MODE on a handle opened O_NOFOLLOW before the rename.
+  // Until here the staged root keeps mkdtemp's 0700 (and staging/ is 0700, Task 8 MODES), so
+  // the tree is hidden while it is extracted.
+  const h = await open(staged, FS.O_RDONLY | FS.O_NOFOLLOW);
+  try {
+    if (!(await h.stat()).isDirectory()) throw new ReleaseStoreError('not_a_directory', staged);
+    await h.chmod(RELEASE_DIR_MODE);
+  } finally {
+    await h.close();
+  }
   await rename(staged, join(l.releases, releaseId));
   await stampNewest(api, releaseId);
 }

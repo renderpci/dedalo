@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, lstatSync, readlinkSync } from 'node:fs';
-import { mkdir, readdir, readFile, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../src/config';
 import {
@@ -148,6 +148,14 @@ describe('promote', () => {
 });
 
 describe('staging + crash safety', () => {
+  test('a committed release root is 0755; the staged root stays 0700 until commit', async () => {
+    const staged = await createStaging('v2');
+    expect(lstatSync(staged).mode & 0o777).toBe(0o700);
+    await rm(staged, { recursive: true });
+    await install(A);
+    expect(lstatSync(join(apiLayout('v2').releases, A)).mode & 0o777).toBe(0o755);
+  });
+
   test('commitStaging refuses an existing release, a non-dir release path, an unconfined dir', async () => {
     await install(A);
     const staged = await createStaging('v2');
