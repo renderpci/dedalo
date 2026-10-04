@@ -108,3 +108,18 @@ export async function resetInstance(): Promise<void> {
   await markRoot(roots.stateRoot);
   for (const sub of STATE_SUBDIRS) await mkdir(statePath(sub), { recursive: true });
 }
+
+/**
+ * A FRESH, EMPTY DIRECTORY for one gate's own corner (Task 3): a preflight variant, a CA,
+ * a socket. Inside the scratch tree only (`scratchPath`), with the scratch tree declared
+ * first so a later `resetInstance()` still recognises it. Names stay short: macOS caps a
+ * unix socket path at 104 bytes.
+ */
+export async function freshScratch(...segments: string[]): Promise<string> {
+  assertDestroyable(SCRATCH_ROOT);
+  await markRoot(SCRATCH_ROOT);
+  const dir = scratchPath(...segments);
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+  return dir;
+}
