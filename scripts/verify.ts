@@ -341,6 +341,8 @@ const TRIPWIRES = [
 	'test/unit/client_lib_versions_doc_tripwire.test.ts',
 	// Publication host phase 2 — the engine/agent pairing twin + domain separation (2026-10-03).
 	'test/unit/publication_host_pairing_tripwire.test.ts',
+	// Publication host phase 2 — rules.apply's directive allowlist held to the engine renderers (2026-10-03).
+	'test/unit/publication_host_rules_allowlist_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
