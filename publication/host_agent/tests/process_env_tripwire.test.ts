@@ -5,6 +5,9 @@
  * (Bun.spawn without an explicit `env` passes the whole environment on) is the exec.ts gate's
  * law (Task 3), not this one's.
  * Comments count: a module that talks about process.env is one edit away from reading it.
+ * Outside src/config.ts the global object (`globalThis`, and `global` / `self` used as it),
+ * reflective reads (`Reflect.get*` / `Reflect.ownKeys`) and string-compiled code
+ * (`eval`, `Function`) are banned outright: each reaches `process` without naming it.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -36,6 +39,19 @@ const READS_ENV = [
   /\bglobalThis\s*\?\.\s*(?:process|Bun)\b/,
   /\bglobalThis\s*(?:\.\s*Bun\s*\.\s*env\b)/,
   /\bimport\(\s*['"](?:node:)?process['"]\s*\)/,
+  // Task 13 (phase-2 review): the global object in ANY form — `{ process } = globalThis`
+  // needs no `.process` — so the bare identifier is banned outside src/config.ts; its
+  // aliases `global` / `self` in every access, destructuring, aliasing or passing form;
+  // reflective reads (Reflect.get / getOwnPropertyDescriptor / ownKeys, Reflect itself
+  // aliased or destructured); and code compiled from a string (eval, Function).
+  /\bglobalThis\b/,
+  /\b(?:global|self)\s*(?:\??\.|\[)/,
+  /\}\s*=\s*(?:global|self|Reflect)\b/,
+  /(?<![=!<>])=\s*(?:global|self|Reflect)\s*(?:[;,)\n]|$)/m,
+  /[(,]\s*(?:global|self)\s*[,)]/,
+  /\bReflect\s*(?:\??\.\s*|\[\s*['"`])(?:get|ownKeys)/,
+  /\beval\s*\(/,
+  /\bFunction\s*\(/,
 ];
 
 /** Every way of reaching the environment the gate claims to catch — each must match. */
@@ -68,6 +84,29 @@ const BYPASSES = [
   'const e = globalThis.Bun.env;',
   "const p = await import('node:process');",
   "const p = await import('process');",
+  // Task 13 hardening: destructuring the global object, global aliases, reflective reads,
+  // and code built from a string (each reaches `process` without ever spelling `.process`).
+  'const { process: p } = globalThis;',
+  'const { Bun: b } = globalThis;',
+  'const g = globalThis;\nconst e = g.process.env;',
+  "const e = Reflect.get(globalThis, 'process');",
+  "const e = Reflect.get(p, 'env');",
+  'const keys = Reflect.ownKeys(p);',
+  "const d = Reflect.getOwnPropertyDescriptor(p, 'env');",
+  "const e = Reflect?.get(p, 'env');",
+  'const { get } = Reflect;',
+  'const r = Reflect;',
+  'const e = global.process.env;',
+  'const { process: p } = global;',
+  "const e = global['process'];",
+  'const g = global;',
+  'const e = self.process.env;',
+  'const { process: p } = self;',
+  "const e = self['Bun'];",
+  'const e = Object.entries(self);',
+  "const e = new Function('return process')();",
+  "const e = Function('return this')().process;",
+  "const e = eval('process');",
 ];
 /** What other modules legitimately do with `process` — none may match. */
 const INNOCENT = [
@@ -80,6 +119,12 @@ const INNOCENT = [
   'const f = Bun.file(path);',
   "const h = new Bun.CryptoHasher('sha256');",
   "const m = await import('./config');",
+  // src/provision/apply.ts names a local `self`; prose may say "global" or "self-signed".
+  "const self = typeof process.geteuid === 'function' ? process.geteuid() : -1;",
+  'if (stats.uid !== self) {',
+  '// a global constraint, a self-signed CA',
+  'const evaluated = evaluate(x);',
+  'const fn = makeFunction(x);',
 ];
 
 function sourceFiles(dir: string): string[] {
