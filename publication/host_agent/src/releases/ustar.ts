@@ -89,6 +89,11 @@ const DIR_MODE = 0o755;
 const WRITE_FLAGS = FS.O_WRONLY | FS.O_CREAT | FS.O_EXCL | FS.O_NOFOLLOW;
 const UTF8 = new TextDecoder('utf-8', { fatal: true });
 
+/** The spelling a folding filesystem resolves a name to (reserved-path comparison only). */
+function foldPath(p: string): string {
+  return p.normalize('NFC').toLowerCase();
+}
+
 /** The two reader methods used — structural, so web and node:stream/web readers both fit. */
 interface ChunkSource {
   read(): Promise<{ done: true; value?: Uint8Array } | { done: false; value: Uint8Array }>;
@@ -202,25 +207,26 @@ function decodeName(bytes: Uint8Array): string {
 }
 
 function parsePax(data: Uint8Array): string {
-  let text: string;
-  try {
-    text = UTF8.decode(data);
-  } catch {
-    throw new BundleRefused('pax_key');
-  }
-  const enc = new TextEncoder();
+  // Works on BYTES (record lengths count bytes); each record is decoded once, fatal, under a
+  // catch — a length that splits a UTF-8 character is a malformed record, never a TypeError.
   let path: string | null = null;
-  let rest = text;
-  while (rest.length > 0) {
-    const m = /^([1-9][0-9]*) /.exec(rest);
-    if (!m) throw new BundleRefused('pax_key');
-    const len = Number(m[1]);
+  let off = 0;
+  while (off < data.length) {
+    let i = off;
+    while (i < data.length && data[i]! >= 0x30 && data[i]! <= 0x39) i++;
+    if (i === off || data[off] === 0x30 || i >= data.length || data[i] !== 0x20 || i - off > 6) {
+      throw new BundleRefused('pax_key');
+    }
+    const len = Number(String.fromCharCode(...data.subarray(off, i)));
     // `len` counts BYTES of the whole record, its own digits and the newline included.
-    const restBytes = enc.encode(rest);
-    if (len > restBytes.length) throw new BundleRefused('pax_key');
-    const record = UTF8.decode(restBytes.subarray(0, len));
-    if (!record.endsWith('\n')) throw new BundleRefused('pax_key');
-    const body = record.slice(m[0].length, -1);
+    if (off + len > data.length || len < i - off + 3) throw new BundleRefused('pax_key');
+    if (data[off + len - 1] !== 0x0a) throw new BundleRefused('pax_key');
+    let body: string;
+    try {
+      body = UTF8.decode(data.subarray(i + 1, off + len - 1));
+    } catch {
+      throw new BundleRefused('pax_key');
+    }
     const eq = body.indexOf('=');
     if (eq <= 0) throw new BundleRefused('pax_key');
     const key = body.slice(0, eq);
@@ -229,7 +235,7 @@ function parsePax(data: Uint8Array): string {
       throw new BundleRefused('pax_key', key);
     }
     path = value;
-    rest = UTF8.decode(restBytes.subarray(len));
+    off += len;
   }
   if (path === null) throw new BundleRefused('pax_key');
   return path;
@@ -328,6 +334,7 @@ export async function extractBundle(
   reserved: readonly string[],
 ): Promise<{ entries: number; bytes: number; sha256: string }> {
   await assertEmptyRealDir(destDir);
+  const reservedFolded = reserved.map(foldPath);
 
   const hash = createHash('sha256');
   // A gzip bomb is bounded by the DECOMPRESSED byte count: content cap + per-entry header
@@ -392,8 +399,11 @@ export async function extractBundle(
       }
       const path = checkPath(raw, isDir, limits);
 
-      for (const r of reserved) {
-        if (path === r || path.startsWith(`${r}/`)) throw new BundleRefused('reserved_path', path);
+      // Compared FOLDED (NFC + lowercase): on a case/normalization-folding filesystem a second
+      // spelling (`.ENV`, `CONFIG_API/…`) lands on the reserved name — refused on every fs.
+      const folded = foldPath(path);
+      for (const r of reservedFolded) {
+        if (folded === r || folded.startsWith(`${r}/`)) throw new BundleRefused('reserved_path', path);
       }
       const existing = known.get(path);
       if (existing === 'file' || existing === 'dir' || (existing === 'implicit' && isFile)) {

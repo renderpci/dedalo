@@ -111,6 +111,8 @@ describe('extractBundle — refusals (each before the offending entry is written
     ['PAX linkpath', () => bundle([paxEntry(paxRecord('linkpath', '/etc')), ok]), 'pax_key'],
     ['PAX path twice', () => bundle([paxEntry(paxRecord('path', 'a') + paxRecord('path', 'b')), ok]), 'pax_key'],
     ['PAX record malformed', () => bundle([paxEntry('99 path=x\n'), ok]), 'pax_key'],
+    ['PAX length splits a UTF-8 char', () => bundle([paxEntry('8 path=\u00e9\n'), ok]), 'pax_key'],
+    ['PAX invalid UTF-8', () => bundle([{ ...paxEntry(''), data: new Uint8Array([...new TextEncoder().encode('11 path=a'), 0xff, 0x0a]) }, ok]), 'pax_key'],
     ['PAX then end of archive', () => bundle([ok, paxEntry(paxRecord('path', 'z'))]), 'pax_key'],
     ['PAX then PAX', () => bundle([paxEntry(paxRecord('path', 'a')), paxEntry(paxRecord('path', 'b')), ok]), 'pax_key'],
     ['absolute path', () => bundle([ok, { path: '/etc/cron.d/x', data: 'x' }]), 'absolute_path'],
@@ -146,6 +148,9 @@ describe('extractBundle — refusals (each before the offending entry is written
     ],
     ['reserved path', () => bundle([ok, { path: 'config_api/server_config_api.php', data: '<?php' }]), 'reserved_path'],
     ['under a reserved path', () => bundle([{ path: 'config_api/server_config_api.php/x', data: 'x' }]), 'reserved_path'],
+    // Folded on every fs (not gated on caseInsensitive()): a second spelling is refused.
+    ['reserved path, other case', () => bundle([ok, { path: 'CONFIG_API/server_config_api.php', data: '<?php' }]), 'reserved_path'],
+    ['under a reserved path, other case', () => bundle([{ path: 'Config_Api/Server_Config_Api.php/x', data: 'x' }]), 'reserved_path'],
   ];
 
   for (const [name, build, reason, limits] of cases) {
@@ -189,8 +194,12 @@ describe('extractBundle — destDir preconditions (caller errors, not bundle ref
 describe('ustar.ts stays zero-dependency (the root repo imports it)', () => {
   test('every import is a node: builtin', () => {
     const src = readFileSync(join(import.meta.dir, '../src/releases/ustar.ts'), 'utf8');
-    const specs = [...src.matchAll(/^\s*import[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+    // The transpiler's own scan: static imports, re-exports (`export … from`), import(), require().
+    const specs = new Bun.Transpiler({ loader: 'ts' }).scanImports(src).map((i) => i.path);
     expect(specs.length).toBeGreaterThan(0);
+    // The scan sees every bypass form a line-regex missed.
+    const probe = "export { z } from 'zod'; await import('a'); require('b'); import c from 'd';";
+    expect(new Bun.Transpiler({ loader: 'ts' }).scanImports(probe).map((i) => i.path).sort()).toEqual(['a', 'b', 'd', 'zod']);
     for (const s of specs) expect(s).toMatch(/^node:/);
   });
 });
