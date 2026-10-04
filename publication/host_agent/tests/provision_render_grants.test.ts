@@ -28,10 +28,21 @@ describe('sudoers', () => {
     }
   });
 
-  test('visudo -cf accepts the rendered file, and rejects a broken one (the check is real)', () => {
-    const visudo = Bun.which('visudo') ?? '/usr/sbin/visudo';
+  /**
+   * sudo's OWN parser, two doors: `cvtsudoers` (sudo package, Linux) parses without asking who
+   * runs it; `visudo -cf -` refuses a uid with no passwd entry ("you do not exist in the passwd
+   * database") — and the CI job runs as BARE uid 1001 (ci/compose.yml). macOS ships visudo only.
+   * Neither present = the spawn throws = RED, never a skip.
+   */
+  const sudoersParser = (): string[] => {
+    const cvt = Bun.which('cvtsudoers');
+    return cvt ? [cvt, '-c', '/dev/null', '-f', 'sudoers', '-'] : [Bun.which('visudo') ?? '/usr/sbin/visudo', '-cf', '-'];
+  };
+
+  test("sudo's parser accepts the rendered file, and rejects a broken one (the check is real)", () => {
+    const argv = sudoersParser();
     const check = (body: string) =>
-      Bun.spawnSync([visudo, '-cf', '-'], { stdin: new TextEncoder().encode(body), stdout: 'pipe', stderr: 'pipe' }).exitCode;
+      Bun.spawnSync(argv, { stdin: new TextEncoder().encode(body), stdout: 'pipe', stderr: 'pipe' }).exitCode;
     for (const layout of [UNIX, TLS]) expect(check(sudoers(layout).body)).toBe(0);
     expect(check('dedalo-pubhost ALL=(root) NOPASSWD /usr/sbin/nginx -t\n')).not.toBe(0);
   });

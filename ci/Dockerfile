@@ -30,8 +30,8 @@
 #   mariadb-server + mariadb-client — the diffusion tier's MariaDB target.
 #   apache2 + apache2-dev (apxs) + nginx (mp4 module) — the publication-host media
 #             drill (`bun run test:media:pubhost`, instance tier) boots both live.
-#   sudo — for visudo only: publication/host_agent's sudoers gate validates the rendered
-#             rule with the real parser.
+#   sudo — for its parser only (cvtsudoers): publication/host_agent's sudoers gate
+#             validates the rendered rule with the real grammar.
 #   chromium — the browser the client suite (scripts/client_test_runner.ts) drives.
 #             NOT google-chrome: Google publishes no linux/arm64 build, and this
 #             image is multi-arch so an Apple-Silicon Mac runs it natively. One
@@ -123,10 +123,11 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends apache2 apache2-dev nginx; \
     rm -rf /var/lib/apt/lists/*
 
-# --- sudo (visudo: the publication-host agent's sudoers gate) -------------------
-# publication/host_agent/tests/provision_render_grants.test.ts runs `visudo -cf -` on the
-# rendered sudoers rule (hermetic daemon gate). Only visudo is used: sudo is never
-# configured nor invoked in this image, and the job's uid 1001 gains nothing from it.
+# --- sudo (sudo's parser: the publication-host agent's sudoers gate) -------------
+# publication/host_agent/tests/provision_render_grants.test.ts parses the rendered sudoers
+# rule with `cvtsudoers` (hermetic daemon gate) — sudo's own grammar, and unlike `visudo`
+# it does not refuse the job's BARE uid 1001 (no passwd entry). sudo itself is never
+# configured nor invoked in this image, and uid 1001 gains nothing from it.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends sudo; \
