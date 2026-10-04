@@ -32,8 +32,12 @@ import { bootPreflight } from '../src/instance/roots';
 import { apply, hostIo, observeHost } from '../src/provision/apply';
 import { parseStamp } from '../src/provision/hash';
 import type { AgentLayout } from '../src/provision/layout';
-import { INSTANCE_MARKER, derive } from '../src/provision/layout';
-import { plan } from '../src/provision/plan';
+import { INSTANCE_MARKER, WEB_CONFIGTEST_BINARY, derive } from '../src/provision/layout';
+import type { Action } from '../src/provision/plan';
+import { RENDERERS, plan as planWith } from '../src/provision/plan';
+import type { Renderer } from '../src/provision/render/types';
+import { PENDING_FACTS } from '../src/provision/render/types';
+import { sudoersRenderer } from '../src/provision/render/sudoers';
 import { unixDeclaration } from './fixtures/provision_declaration';
 
 const uid = process.getuid?.() ?? 0;
@@ -82,7 +86,22 @@ function chmodTree(dir: string): void {
   }
 }
 
-const observe = () => observeHost(layout, stubExec, { trustRoot: SCRATCH, appendOnlyProbe });
+/**
+ * The configtest binary is pointed into the scratch tree (below), but the real sudoers renderer
+ * grants ONLY the canonical path: this gate substitutes it with one rendering the canonical
+ * layout's grant, so the production guard is not loosened for a test.
+ */
+const SCRATCH_RENDERERS: readonly Renderer[] = RENDERERS.map(renderer =>
+  renderer.kind !== 'sudoers'
+    ? renderer
+    : {
+        kind: 'sudoers',
+        render: (l, facts) =>
+          sudoersRenderer.render({ ...l, web: { ...l.web, configtestBin: WEB_CONFIGTEST_BINARY[l.web.server] } }, facts),
+      },
+);
+const plan = (l: AgentLayout, host: ReturnType<typeof observeHost>): Action[] => planWith(l, host, PENDING_FACTS, SCRATCH_RENDERERS);
+const observe = () => observeHost(layout, stubExec, { trustRoot: SCRATCH, appendOnlyProbe, renderers: SCRATCH_RENDERERS });
 const io = () => hostIo(stubExec, { trustRoot: SCRATCH });
 
 beforeAll(() => {
@@ -118,6 +137,8 @@ beforeAll(() => {
   // The configtest binary is derived (/usr/sbin/...), the one host fact a scratch tree cannot
   // own; it alone is pointed into the scratch tree.
   layout = { ...derived, web: { ...derived.web, configtestBin: join(SCRATCH, 'bin/apachectl') } };
+  // …which the real sudoers renderer refuses: the scratch gate's renderers stand in (above).
+  expect(() => sudoersRenderer.render(layout, PENDING_FACTS)).toThrow(/is not '\/usr\/sbin\/apachectl'/);
 });
 
 afterAll(() => {

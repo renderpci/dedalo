@@ -45,7 +45,9 @@ import { provisionExec } from '../exec';
 import { probeAppendOnly } from '../instance/roots';
 import type { AgentLayout } from './layout';
 import type { Action, EntryType, HostState, PathFacts, UnitFacts, WriteAction } from './plan';
-import { agentScratchPath, ancestorsBelow, describe, renderAll, trustProblem } from './plan';
+import { agentScratchPath, ancestorsBelow, describe, RENDERERS, renderAll, trustProblem } from './plan';
+import type { Renderer } from './render/types';
+import { PENDING_FACTS } from './render/types';
 
 /** Suffix of the temp file a write goes through. `removeTemp` refuses anything else. */
 export const TEMP_SUFFIX = '.dedalo-provision.tmp';
@@ -240,6 +242,12 @@ export interface HostDoorOptions {
    * unprivileged real-fs gate (which cannot set FS_APPEND_FL) injects one paired with its stub.
    */
   readonly appendOnlyProbe?: (path: string) => string;
+  /**
+   * The renderers whose artifact PATHS observeHost watches. Default: plan.ts RENDERERS. The
+   * scratch-root gate passes the same set plan() gets (its sudoers renderer substituted: the
+   * real one refuses any configtest binary but the canonical path, which a scratch tree cannot own).
+   */
+  readonly renderers?: readonly Renderer[];
 }
 
 function errno(error: unknown): string {
@@ -387,7 +395,7 @@ export function observeHost(
   const trustRoot = options.trustRoot ?? '/';
   const paths = new Map<string, PathFacts>();
   const contents = new Map<string, string | null>();
-  const artifactPaths = renderAll(layout).map(art => art.path);
+  const artifactPaths = renderAll(layout, PENDING_FACTS, options.renderers ?? RENDERERS).map(art => art.path);
   const watched = [
     ...layout.directories.map(dir => dir.path),
     layout.state.marker,

@@ -47,6 +47,13 @@ describe('sudoers', () => {
     expect(check('dedalo-pubhost ALL=(root) NOPASSWD /usr/sbin/nginx -t\n')).not.toBe(0);
   });
 
+  test('the configtest binary must be EXACTLY the canonical path — a same-named binary elsewhere is refused', () => {
+    for (const bin of ['/opt/evil/apachectl', '/usr/local/sbin/apachectl', '/usr/sbin/nginx', '/usr/sbin/apachectl ']) {
+      const moved: AgentLayout = { ...UNIX, web: { ...UNIX.web, configtestBin: bin } };
+      expect(() => sudoersRenderer.render(moved, FIXTURE_FACTS)).toThrow(/is not '\/usr\/sbin\/apachectl'/);
+    }
+  });
+
   test('a file name #includedir would skip is refused', () => {
     const dotted: AgentLayout = { ...UNIX, sudoersPath: '/etc/sudoers.d/dedalo.pubhost' };
     expect(() => sudoersRenderer.render(dotted, FIXTURE_FACTS)).toThrow(/#includedir skips/);

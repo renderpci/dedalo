@@ -28,12 +28,13 @@ export const sudoersRenderer: Renderer = {
   kind: 'sudoers',
   render(layout: AgentLayout, _facts: RenderFacts): Artifact[] {
     const bin = layout.web.configtestBin;
-    // By basename: derive() pins the full path; a scratch-root gate repoints only the directory.
-    const expected = basename(WEB_CONFIGTEST_BINARY[layout.web.server]);
-    if (basename(bin) !== expected) {
+    // The EXACT path: a root NOPASSWD grant must name what src/exec.ts runs, never a look-alike
+    // elsewhere (a scratch-root gate substitutes this renderer, it does not loosen it).
+    const expected = WEB_CONFIGTEST_BINARY[layout.web.server];
+    if (bin !== expected) {
       throw new Error(
-        `render(sudoers): web.configtestBin '${bin}' is not a '${expected}' binary, which is what the agent ` +
-          `runs for web.server '${layout.web.server}'. Nothing was rendered.`,
+        `render(sudoers): web.configtestBin '${bin}' is not '${expected}', the binary the agent runs for ` +
+          `web.server '${layout.web.server}'. Nothing was rendered.`,
       );
     }
     const name = basename(layout.sudoersPath);
