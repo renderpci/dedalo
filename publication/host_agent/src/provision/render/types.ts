@@ -13,7 +13,15 @@ import type { AgentLayout, ModeKey } from '../layout';
 import { MODES, groupName, ownerName } from '../layout';
 
 /** Every kind a renderer produces, one renderer per kind (census both ways in plan.ts RENDERERS). */
-export const ARTIFACT_KINDS = ['env', 'unit_agent', 'unit_v2', 'sudoers', 'polkit', 'engine_fragment'] as const;
+export const ARTIFACT_KINDS = [
+  'env',
+  'unit_agent',
+  'unit_v2',
+  'v2_scratch_unit',
+  'sudoers',
+  'polkit',
+  'engine_fragment',
+] as const;
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
 /** What a WRITE of the artifact obliges the plan to do afterwards. Closed. */

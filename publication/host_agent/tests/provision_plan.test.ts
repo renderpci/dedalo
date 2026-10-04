@@ -83,6 +83,7 @@ describe('renderer registry', () => {
       l.engineFragmentPath,
       l.polkitPath,
       l.sudoersPath,
+      l.v2ScratchUnitPath,
       l.v2UnitPath,
       l.agentUnitPath,
     ]);
@@ -117,6 +118,7 @@ describe('plan on a fresh host', () => {
       [l.engineFragmentPath, 'engine_fragment', 'create'],
       [l.polkitPath, 'polkit', 'create'],
       [l.sudoersPath, 'sudoers', 'create'],
+      [l.v2ScratchUnitPath, 'v2_scratch_unit', 'create'],
       [l.v2UnitPath, 'unit_v2', 'create'],
       [l.agentUnitPath, 'unit_agent', 'create'],
     ]);

@@ -131,7 +131,7 @@ describe('render / check / apply', () => {
   test('apply → OK (0); then check → OK (0) and a second apply writes nothing', () => {
     const h = harness();
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
-    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (10 file(s) written)");
+    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (11 file(s) written)");
     const after = h.host.mutations;
     expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);

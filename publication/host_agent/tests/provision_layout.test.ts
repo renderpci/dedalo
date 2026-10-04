@@ -83,6 +83,7 @@ describe('derive — unix instance', () => {
     expect(layout.agentUnitName).toBe('dedalo-publication-host-test');
     expect(layout.agentUnitPath).toBe('/etc/systemd/system/dedalo-publication-host-test.service');
     expect(layout.v2UnitPath).toBe('/etc/systemd/system/dedalo-publication-api-v2.service');
+    expect(layout.v2ScratchUnitPath).toBe('/etc/systemd/system/dedalo-publication-api-v2-scratch@.service');
     expect(layout.sudoersPath).toBe('/etc/sudoers.d/dedalo_publication_host_test');
     expect(layout.polkitPath).toBe('/etc/polkit-1/rules.d/60-dedalo-publication-host-test.rules');
     expect(layout.agentEntry).toBe('/opt/dedalo/publication/host_agent/src/index.ts');
@@ -112,6 +113,7 @@ describe('derive — unix instance', () => {
       shared: '/srv/dedalo_publication/publication_api/v2/shared',
       staging: '/srv/dedalo_publication/publication_api/v2/staging',
       current: '/srv/dedalo_publication/publication_api/v2/current',
+      scratch: '/srv/dedalo_publication/publication_api/v2/scratch',
     });
     expect(layout.state.rules).toBe('/srv/dedalo_publication/rules');
     expect(layout.state.audit).toBe('/srv/dedalo_publication/audit');
@@ -218,6 +220,7 @@ describe('derive — refusals name the field', () => {
     const decl = unixDeclaration();
     expect(refusedField({ ...decl, v2: { ...decl.v2, unit: 'x.service' } })).toBe('v2.unit');
     expect(refusedField({ ...decl, v2: { ...decl.v2, unit: 'apache2' } })).toBe('v2.unit');
+    expect(refusedField({ ...decl, v2: { ...decl.v2, unit: 'api@v2' } })).toBe('v2.unit'); // the scratch template would be malformed
   });
 
   test('releases_retained bounds', () => {

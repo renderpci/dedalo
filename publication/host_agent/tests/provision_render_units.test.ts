@@ -13,7 +13,7 @@ import {
   NGINX_CONFIGTEST_WRITE_PATHS,
   NNP_IMPLYING_DIRECTIVES,
 } from '../src/provision/render/unit_agent';
-import { ENV_BIN, v2UnitRenderer } from '../src/provision/render/unit_v2';
+import { ENV_BIN, v2ScratchUnitRenderer, v2UnitRenderer } from '../src/provision/render/unit_v2';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
 import { FIXTURE_FACTS, FIXTURE_TOKEN } from './fixtures/provision_facts';
 
@@ -153,5 +153,51 @@ describe('v2 unit', () => {
     const decl = unixDeclaration();
     const shared = derive({ ...decl, v2: { ...decl.v2, user: decl.agent_user } });
     expect(() => v2UnitRenderer.render(shared, FIXTURE_FACTS)).toThrow(/its own user/);
+  });
+});
+
+describe('v2 scratch template unit (the scratch boot runs as v2, never as the agent)', () => {
+  const scratch = (layout: AgentLayout) => v2ScratchUnitRenderer.render(layout, FIXTURE_FACTS)[0]!;
+
+  test('a root 0644 template that only reloads systemd: never enabled, never started, no [Install]', () => {
+    const a = scratch(UNIX);
+    expect([a.path, a.owner, a.group, a.mode]).toEqual([
+      '/etc/systemd/system/dedalo-publication-api-v2-scratch@.service',
+      'root',
+      'root',
+      0o644,
+    ]);
+    expect(parseStamp(a.body)?.kind).toBe('v2_scratch_unit');
+    expect(a.effects).toEqual(['daemon_reload']);
+    expect(a.service).toBeNull();
+    expect(a.body).not.toContain('[Install]');
+    expect(directives(a.body)).toContain('Restart=no');
+  });
+
+  test("v2's user and sandbox, the scratch link, v2.env; no credential, no writable path", () => {
+    const d = directives(scratch(UNIX).body);
+    expect(d).toContain('User=dedalo-api-v2');
+    expect(d).toContain('Group=dedalo-api-v2');
+    expect(d).toContain('WorkingDirectory=/srv/dedalo_publication/publication_api/v2/scratch');
+    expect(d).toContain('AssertPathIsDirectory=/srv/dedalo_publication/publication_api/v2/scratch');
+    expect(d).toContain('EnvironmentFile=/srv/dedalo_publication/publication_api/v2/shared/v2.env');
+    expect(d.filter(line => /^(LoadCredential|SetCredential|ReadWritePaths|SupplementaryGroups)/.test(line))).toEqual([]);
+    // The SAME sandbox as the v2 unit, line for line.
+    const sandbox = (body: string) =>
+      directives(body).filter(line => /^(NoNewPrivileges|Protect|Private|Restrict|LockPersonality|UMask)/.test(line));
+    expect(sandbox(scratch(UNIX).body)).toEqual(sandbox(v2Unit(UNIX).body));
+    expect(sandbox(scratch(UNIX).body)).toContain('NoNewPrivileges=yes');
+  });
+
+  test('the port is the instance (%i) and loopback is forced by env(1), not Environment=', () => {
+    const d = directives(scratch(UNIX).body);
+    expect(d).toContain(`ExecStart=${ENV_BIN} NODE_ENV=production HOST=127.0.0.1 PORT=%i /usr/local/bin/bun run src/index.ts`);
+    expect(d.filter(line => line.startsWith('Environment='))).toEqual([]);
+  });
+
+  test('v2 sharing the agent user is refused', () => {
+    const decl = unixDeclaration();
+    const shared = derive({ ...decl, v2: { ...decl.v2, user: decl.agent_user } });
+    expect(() => v2ScratchUnitRenderer.render(shared, FIXTURE_FACTS)).toThrow(/its own user/);
   });
 });

@@ -27,6 +27,7 @@ describe('apply on a fresh host', () => {
       l.engineFragmentPath,
       l.polkitPath,
       l.sudoersPath,
+      l.v2ScratchUnitPath,
       l.v2UnitPath,
       l.agentUnitPath,
     ]);

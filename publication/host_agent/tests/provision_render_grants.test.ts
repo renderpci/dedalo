@@ -87,6 +87,42 @@ describe('polkit', () => {
     expect(decide(body, U, 'org.freedesktop.login1.reboot', 'apache2.service', 'reload')).toBe('not_handled');
   });
 
+  test('YES for start/stop of a v2 scratch instance on a port 1024-65535 — and nothing near it', () => {
+    const S = 'dedalo-publication-api-v2-scratch@';
+    for (const verb of ['start', 'stop']) {
+      expect(decide(body, U, M, `${S}1024.service`, verb)).toBe('yes');
+      expect(decide(body, U, M, `${S}49152.service`, verb)).toBe('yes');
+      expect(decide(body, U, M, `${S}65535.service`, verb)).toBe('yes');
+    }
+    for (const unit of [
+      `${S}1023.service`, // privileged
+      `${S}65536.service`,
+      `${S}999.service`, // 3 digits
+      `${S}123456.service`, // 6 digits
+      `${S}01024.service`, // leading zero
+      `${S}.service`, // the template itself
+      `${S}4000.service.bak`,
+      `x${S}4000.service`, // another prefix
+      `${S}4000xservice`,
+      `dedalo-publication-api-v2-scratch@4000.socket`,
+      `dedalo-publication-api-v2Xscratch@4000.service`,
+      `dedalo-publication-host-test-scratch@4000.service`,
+    ]) {
+      expect(decide(body, U, M, unit, 'start')).toBe('not_handled');
+    }
+    for (const verb of ['restart', 'reload', 'enable', 'kill', 'reload-or-restart']) {
+      expect(decide(body, U, M, `${S}4000.service`, verb)).toBe('not_handled');
+    }
+    expect(decide(body, 'www-data', M, `${S}4000.service`, 'start')).toBe('not_handled');
+    expect(decide(body, U, 'org.freedesktop.systemd1.manage-unit-files', `${S}4000.service`, 'start')).toBe('not_handled');
+  });
+
+  test('a v2 unit name with a regex metacharacter is matched literally', () => {
+    const dotted = polkitRenderer.render({ ...UNIX, v2: { ...UNIX.v2, unit: 'api.v2' } }, FIXTURE_FACTS)[0]!.body;
+    expect(decide(dotted, U, M, 'api.v2-scratch@4000.service', 'start')).toBe('yes');
+    expect(decide(dotted, U, M, 'apiXv2-scratch@4000.service', 'start')).toBe('not_handled');
+  });
+
   test('stamped with // (the file is JavaScript), 0644 root, at the layout path', () => {
     const a = polkitRenderer.render(UNIX, FIXTURE_FACTS)[0]!;
     expect(a.body.startsWith('// dedalo-provision: test polkit ')).toBe(true);

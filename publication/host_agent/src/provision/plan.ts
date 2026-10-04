@@ -41,7 +41,7 @@ import { envRenderer } from './render/env';
 import { polkitRenderer } from './render/polkit';
 import { sudoersRenderer } from './render/sudoers';
 import { agentUnitRenderer } from './render/unit_agent';
-import { v2UnitRenderer } from './render/unit_v2';
+import { v2ScratchUnitRenderer, v2UnitRenderer } from './render/unit_v2';
 import type {
   Artifact,
   ArtifactEffect,
@@ -60,6 +60,7 @@ export const RENDERERS: readonly Renderer[] = Object.freeze([
   envRenderer,
   agentUnitRenderer,
   v2UnitRenderer,
+  v2ScratchUnitRenderer,
   sudoersRenderer,
   polkitRenderer,
   engineFragmentRenderer,

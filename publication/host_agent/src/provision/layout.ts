@@ -84,6 +84,11 @@ export const DEFAULT_PATHS = Object.freeze({
 });
 
 export const AGENT_UNIT_PREFIX = 'dedalo-publication-host-';
+/**
+ * The v2 scratch boot's TEMPLATE unit is `<v2.unit>-scratch@.service`; an
+ * instance is `<v2.unit>-scratch@<port>.service` (render/unit_v2.ts, the polkit start/stop grant).
+ */
+export const V2_SCRATCH_TEMPLATE_SUFFIX = '-scratch@';
 
 /* ── the declaration (validated structurally by schema.ts, semantically by derive) ── */
 
@@ -192,6 +197,11 @@ export interface ApiDirs {
   readonly staging: string;
   /** The `current` symlink. Created by the agent (store.ts promote), never by the provisioner. */
   readonly current: string;
+  /**
+   * The `scratch` symlink the v2 scratch template unit runs from. Repointed by the agent before
+   * each scratch boot (a release under test), never created by the provisioner.
+   */
+  readonly scratch: string;
 }
 
 export interface UnixListenLayout {
@@ -257,6 +267,8 @@ export interface AgentLayout {
   readonly agentUnitName: string;
   readonly agentUnitPath: string;
   readonly v2UnitPath: string;
+  /** The v2 scratch boot's template unit, `<v2.unit>-scratch@.service` (render/unit_v2.ts). */
+  readonly v2ScratchUnitPath: string;
   readonly sudoersPath: string;
   readonly polkitPath: string;
   readonly state: {
@@ -359,6 +371,7 @@ function apiDirs(publicationApi: string, api: ProvisionApi): ApiDirs {
     shared: join(root, 'shared'),
     staging: join(root, 'staging'),
     current: join(root, 'current'),
+    scratch: join(root, 'scratch'),
   });
 }
 
@@ -462,6 +475,9 @@ export function derive(decl: HostDeclaration): AgentLayout {
 
   const v2Unit = unitName('v2.unit', decl.v2.unit);
   if (v2Unit === webUnit) throw new LayoutError('v2.unit', 'must differ from web.unit');
+  if (v2Unit.includes('@')) {
+    throw new LayoutError('v2.unit', `'${v2Unit}': no '@' — the scratch boot's template unit is '<v2.unit>-scratch@.service'`);
+  }
   const v2Port = tcpPort('v2.port', decl.v2.port);
   const v2HealthUrl = healthUrl(decl.v2.health_url, v2Port);
 
@@ -606,6 +622,7 @@ export function derive(decl: HostDeclaration): AgentLayout {
     agentUnitName,
     agentUnitPath: join(unitDir, `${agentUnitName}.service`),
     v2UnitPath: join(unitDir, `${v2Unit}.service`),
+    v2ScratchUnitPath: join(unitDir, `${v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}.service`),
     sudoersPath: join(sudoersDir, `dedalo_publication_host_${instance}`),
     polkitPath: join(polkitRulesDir, `60-dedalo-publication-host-${instance}.rules`),
     state: Object.freeze({
