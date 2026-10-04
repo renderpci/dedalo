@@ -27,8 +27,10 @@
  *     for the two keystroke guards that have no component to register
  *     (view_default_edit_filter_records, view_default_edit_security_access).
  *  E. `reset_unsaved_data()` clears registry AND assertion together — the
- *     deliberate page-wide reset, reachable only from check_unsaved_data's two
- *     resolutions ("everything was just flushed" / "the user accepted the loss").
+ *     deliberate page-wide reset, reachable only from check_unsaved_data's ONE
+ *     resolution ("the user accepted the loss"; the auto-save sweep no longer
+ *     resets — what it could not flush must reach the prompt, see
+ *     client test_unsaved_guard CHECK_UNSAVED_DATA).
  *  F. Registration is idempotent and deregistering an unknown instance is a
  *     no-op, so a double save or a destroy-after-save cannot corrupt the count.
  *

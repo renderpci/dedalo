@@ -39,6 +39,7 @@ import { neighbourTests } from './lib/neighbour_tests.ts';
 // `[test] timeout`, so the number has to ride the command line — see
 // scripts/lib/test_flags.ts for the measurement that proves it.
 import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
+import { bunTestFileArgs } from './lib/test_order.ts';
 
 $.throws(false); // we inspect exit codes ourselves; a red stage is data, not a crash
 
@@ -78,6 +79,7 @@ const TRIPWIRES = [
 	'test/unit/matrix_copy_columns_tripwire.test.ts',
 	'test/unit/matrix_counter_monotonic_tripwire.test.ts',
 	'test/unit/tm_epoch_tripwire.test.ts',
+	'test/unit/tm_history_visibility_tripwire.test.ts',
 	'test/unit/relogin_identity_tripwire.test.ts',
 	'test/unit/pdf_extract_symmetry_tripwire.test.ts',
 	'test/unit/ssrf_one_guard_tripwire.test.ts',
@@ -87,6 +89,7 @@ const TRIPWIRES = [
 	'test/unit/batch_scope_tripwire.test.ts',
 	'test/unit/agent_alias_tripwire.test.ts',
 	'test/unit/agent_skills_tripwire.test.ts',
+	'test/unit/agent_workflows_parse_tripwire.test.ts',
 	'test/unit/css_source_tripwire.test.ts',
 	'test/unit/engineering_currency_tripwire.test.ts',
 	'test/unit/comment_doc_path_tripwire.test.ts',
@@ -102,6 +105,7 @@ const TRIPWIRES = [
 	'test/unit/client_store_principal_key_tripwire.test.ts',
 	'test/unit/component_teardown_tripwire.test.ts',
 	'test/unit/outbound_fetch_tripwire.test.ts',
+	'test/unit/guarded_text_pin_native.test.ts',
 	'test/unit/strip_comments_tripwire.test.ts',
 	'test/unit/private_state_mode_tripwire.test.ts',
 	'test/unit/wire_disclosure_tripwire.test.ts',
@@ -114,6 +118,7 @@ const TRIPWIRES = [
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',
+	'test/unit/tool_lossless_writeback_tethers_native.test.ts',
 	'test/unit/consultation_only_sections_tripwire.test.ts',
 	'test/unit/tm_mode_retired_tripwire.test.ts',
 	'test/unit/log_section_policy_tripwire.test.ts',
@@ -123,8 +128,6 @@ const TRIPWIRES = [
 	'test/unit/release_archive_tripwire.test.ts',
 	'test/unit/info_widget_registry_tripwire.test.ts',
 	'test/unit/maintenance_widget_get_value_tripwire.test.ts',
-	'test/unit/master_legacy_routing_tripwire.test.ts',
-	'test/unit/legacy_dialect_boundary_native.test.ts',
 	'test/unit/install_restart_supervisor_tripwire.test.ts',
 	'test/unit/ci_workflow_tripwire.test.ts',
 	'test/unit/local_db_stores_tripwire.test.ts',
@@ -173,6 +176,8 @@ const TRIPWIRES = [
 	'test/unit/diffusion_queue_stream_tripwire.test.ts',
 	'test/unit/dataframe_scan_coverage_tripwire.test.ts',
 	'test/unit/tool_header_contract_tripwire.test.ts',
+	'test/unit/tool_phone_tripwire.test.ts',
+	'test/unit/tool_color_contrast_tripwire.test.ts',
 	'test/unit/external_registry_totality_tripwire.test.ts',
 	'test/unit/external_outbound_tripwire.test.ts',
 	'test/unit/external_secret_confinement_tripwire.test.ts',
@@ -191,6 +196,7 @@ const TRIPWIRES = [
 	'test/unit/error_throw_ratchet.test.ts',
 	'test/unit/error_taxonomy_tripwire.test.ts',
 	'test/unit/client_error_contract_tripwire.test.ts',
+	'test/unit/sw_tombstone_tripwire.test.ts',
 	'test/unit/migration_shared_row_tripwire.test.ts',
 	'test/unit/generic_tld_tripwire.test.ts',
 	'test/unit/parity_baseline_tripwire.test.ts',
@@ -213,6 +219,7 @@ const TRIPWIRES = [
 	'test/unit/account_revocation_native.test.ts',
 	'test/unit/dd128_write_census_tripwire.test.ts',
 	'test/unit/tier_execution_tripwire.test.ts',
+	'test/unit/tier_file_order_tripwire.test.ts',
 	'test/unit/tier_assignment_tripwire.test.ts',
 	'test/unit/site_builder_pairing_tripwire.test.ts',
 	'test/unit/site_builder_single_source_tripwire.test.ts',
@@ -240,6 +247,8 @@ const TRIPWIRES = [
 	'test/unit/reconcile_registry_native.test.ts',
 	'test/unit/restore_door_native.test.ts',
 	'test/unit/unpublish_debt_native.test.ts',
+	'test/unit/suite_mariadb_target_native.test.ts',
+	'test/unit/shard_mariadb_sweep_native.test.ts',
 	'test/unit/diffusion_frontier_scope_native.test.ts',
 	'test/unit/diffusion_seed_compiles_native.test.ts',
 	'test/unit/diffusion_seed_vocabulary_tripwire.test.ts',
@@ -290,6 +299,46 @@ const TRIPWIRES = [
 	'test/unit/pre_push_gate_native.test.ts',
 	'test/unit/update_channel_native.test.ts',
 	'test/unit/audit_trigger_closure_native.test.ts',
+	'test/unit/update_engine_atomic_native.test.ts',
+	'test/unit/update_descriptor_tripwire.test.ts',
+	'test/unit/statement_ceiling_scope_native.test.ts',
+	'test/unit/maintenance_door_unbounded_native.test.ts',
+	'test/unit/optimize_concurrent_leftover_native.test.ts',
+	'test/unit/db_asset_rebuild_atomic_native.test.ts',
+	'test/unit/site_builder_public_address_differential.test.ts',
+	'test/unit/alias_target_grammar_native.test.ts',
+	'test/unit/search_alias_sink_native.test.ts',
+	'test/unit/dd_ontology_identifier_grammar_native.test.ts',
+	'test/unit/dd_ontology_grammar_migration_native.test.ts',
+	'test/unit/ontology_state_identifier_grammar_native.test.ts',
+	// DIFF-1/DIFF-2/DIFF-3/PERF-2 (audit 2026-09-26, 2026-10-01).
+	'test/unit/diffusion_target_fence_native.test.ts',
+	'test/unit/diffusion_resume_ledger_native.test.ts',
+	'test/unit/diffusion_frontier_replay.test.ts',
+	'test/unit/diffusion_attach_scope_native.test.ts',
+	'test/unit/diffusion_artifact_rss_native.test.ts',
+	'test/unit/media_index_reconcile_fence_native.test.ts',
+	// WRITE-DOOR / SEC-1 / SEC-2-media / SEC-3 / TOOLS-3 / TOOLS-4 grant half (closure Step 3, 2026-10-01).
+	'test/unit/write_door_native.test.ts',
+	'test/unit/authz_door_matrix_native.test.ts',
+	'test/unit/agent_access_native.test.ts',
+	'test/unit/tool_transcription_gate_native.test.ts',
+	'test/unit/identify_vision_grant_native.test.ts',
+	'test/unit/mcp_record_door_native.test.ts',
+	// CORE-1 / CORE-2 residual / TOOLS-5 / CORE-5 — the obligation ledger + locked media-key transform (closure Step 2, 2026-10-01).
+	'test/unit/obligation_ledger_native.test.ts',
+	'test/unit/media_files_info_lost_update_native.test.ts',
+	'test/unit/duplicate_record_media_verdict_native.test.ts',
+	// SEC-2-delete_locator — the portal unlink through the write door (closure Step 3, 2026-10-01).
+	'test/unit/portal_locator_door_native.test.ts',
+	// TOOLS-4 budget half — the AI spend ledger (closure Step 3, 2026-10-01).
+	'test/unit/ai_spend_budget_native.test.ts',
+	// Closure Step 3 req 7 — the change-plan validator asks the write door (2026-10-01).
+	'test/unit/change_plan_write_door_native.test.ts',
+	// Closure Step 3 req 10 residual — the importers' create door + legacy frame slots (2026-10-01).
+	'test/unit/import_create_door_native.test.ts',
+	// Plan item 5 — the npm rows of the client-lib versions doc are generated (2026-10-02).
+	'test/unit/client_lib_versions_doc_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
@@ -417,7 +466,8 @@ async function runTestFiles(name: string, files: string[], forgiven?: Set<string
 		results.push({ name, ok: true, detail: 'no files' });
 		return;
 	}
-	const r = await $`bun test ${TEST_TIMEOUT_FLAG} ${files}`.quiet();
+	// Sorted `./` paths (scripts/lib/test_order.ts): a bare name is a bun FILTER run in readdir order.
+	const r = await $`bun test ${TEST_TIMEOUT_FLAG} ${bunTestFileArgs(files)}`.quiet();
 	const output = r.stdout.toString() + r.stderr.toString();
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: \x1b is the ANSI escape being stripped
 	const clean = output.replace(/\x1b\[[0-9;]*m/g, '');

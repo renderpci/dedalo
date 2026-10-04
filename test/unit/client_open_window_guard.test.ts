@@ -37,138 +37,160 @@
 
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { join } from 'node:path';
+import { isIsolatedGateChild, mirrorIsolatedGate } from '../helpers/isolated_gate.ts';
 
-const CLIENT_COMMON = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js');
-const UTIL_PATH = join(CLIENT_COMMON, 'utils', 'util.js');
+// ISOLATED GATE (test/helpers/isolated_gate.ts): this file substitutes client
+// modules, which are process-global — in the tier's process it only MIRRORS a
+// child run of itself; its body below registers in that child alone.
+if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path);
+else {
+	const CLIENT_COMMON = join(
+		import.meta.dir,
+		'..',
+		'..',
+		'client',
+		'dedalo',
+		'core',
+		'common',
+		'js',
+	);
+	const UTIL_PATH = join(CLIENT_COMMON, 'utils', 'util.js');
 
-type UtilModule = {
-	open_window: (options: Record<string, unknown>) => unknown;
-};
-
-const globals = globalThis as unknown as Record<string, unknown>;
-const saved: Record<string, unknown> = {};
-let util: UtilModule;
-let event_manager: {
-	subscribe: (name: string, cb: (data: unknown) => void) => string;
-	unsubscribe: (t: string) => void;
-};
-
-/** what the next window.open answers */
-let open_answer: unknown = null;
-/** how many times window.open was called */
-let open_calls = 0;
-/** notifications published during the test */
-let notifications: unknown[] = [];
-let notification_token: string;
-
-beforeAll(async () => {
-	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
-		saved[key] = globals[key];
-
-	globals.window = globalThis;
-	globals.page_globals = {
-		dedalo_data_lang: 'lg-eng',
-		dedalo_data_nolan: 'lg-nolan',
-		stream_readers: [],
-	};
-	globals.SHOW_DEBUG = false;
-	globals.DEDALO_CORE_URL = '/dedalo/core';
-	globals.get_label = {};
-	(globals.window as Record<string, unknown>).screen = { width: 1920, height: 1080 };
-	(globals.window as Record<string, unknown>).open = (..._args: unknown[]) => {
-		open_calls++;
-		return open_answer;
+	type UtilModule = {
+		open_window: (options: Record<string, unknown>) => unknown;
 	};
 
-	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
-		ui: {
-			create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
-		},
-	}));
-
-	util = (await import(UTIL_PATH)) as unknown as UtilModule;
-	event_manager = (
-		(await import(join(CLIENT_COMMON, 'event_manager.js'))) as {
-			event_manager: typeof event_manager;
-		}
-	).event_manager;
-	notification_token = event_manager.subscribe('notification', (data) => notifications.push(data));
-});
-
-afterAll(() => {
-	event_manager.unsubscribe(notification_token);
-	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
-		globals[key] = saved[key];
-});
-
-beforeEach(() => {
-	open_answer = null;
-	open_calls = 0;
-	notifications = [];
-});
-
-/** a granted popup; `resize_throws` reproduces the cross-origin WindowProxy refusal */
-const fake_window = (resize_throws = false) => {
-	const calls = { resized: 0, focused: 0 };
-	return {
-		calls,
-		resizeTo() {
-			if (resize_throws) throw new Error('SecurityError (stub cross-origin)');
-			calls.resized++;
-		},
-		focus() {
-			calls.focused++;
-		},
+	const globals = globalThis as unknown as Record<string, unknown>;
+	const saved: Record<string, unknown> = {};
+	let util: UtilModule;
+	let event_manager: {
+		subscribe: (name: string, cb: (data: unknown) => void) => string;
+		unsubscribe: (t: string) => void;
 	};
-};
 
-describe('open_window', () => {
-	test('A. a refused popup returns null instead of throwing', () => {
+	/** what the next window.open answers */
+	let open_answer: unknown = null;
+	/** how many times window.open was called */
+	let open_calls = 0;
+	/** notifications published during the test */
+	let notifications: unknown[] = [];
+	let notification_token: string;
+
+	beforeAll(async () => {
+		for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
+			saved[key] = globals[key];
+
+		globals.window = globalThis;
+		globals.page_globals = {
+			dedalo_data_lang: 'lg-eng',
+			dedalo_data_nolan: 'lg-nolan',
+			stream_readers: [],
+		};
+		globals.SHOW_DEBUG = false;
+		globals.DEDALO_CORE_URL = '/dedalo/core';
+		globals.get_label = {};
+		(globals.window as Record<string, unknown>).screen = { width: 1920, height: 1080 };
+		(globals.window as Record<string, unknown>).open = (..._args: unknown[]) => {
+			open_calls++;
+			return open_answer;
+		};
+
+		mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
+			ui: {
+				create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+			},
+		}));
+
+		util = (await import(UTIL_PATH)) as unknown as UtilModule;
+		event_manager = (
+			(await import(join(CLIENT_COMMON, 'event_manager.js'))) as {
+				event_manager: typeof event_manager;
+			}
+		).event_manager;
+		notification_token = event_manager.subscribe('notification', (data) =>
+			notifications.push(data),
+		);
+	});
+
+	afterAll(() => {
+		event_manager.unsubscribe(notification_token);
+		for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
+			globals[key] = saved[key];
+	});
+
+	beforeEach(() => {
 		open_answer = null;
-
-		let result: unknown;
-		expect(() => {
-			result = util.open_window({ url: 'https://stub.invalid/page' });
-		}, 'a blocked popup still throws — the caller is aborted mid-operation').not.toThrow();
-
-		expect(open_calls).toBe(1);
-		expect(result).toBeNull();
+		open_calls = 0;
+		notifications = [];
 	});
 
-	test('B. a refused popup tells the user', () => {
-		open_answer = null;
+	/** a granted popup; `resize_throws` reproduces the cross-origin WindowProxy refusal */
+	const fake_window = (resize_throws = false) => {
+		const calls = { resized: 0, focused: 0 };
+		return {
+			calls,
+			resizeTo() {
+				if (resize_throws) throw new Error('SecurityError (stub cross-origin)');
+				calls.resized++;
+			},
+			focus() {
+				calls.focused++;
+			},
+		};
+	};
 
-		util.open_window({ url: 'https://stub.invalid/page' });
+	describe('open_window', () => {
+		test('A. a refused popup returns null instead of throwing', () => {
+			open_answer = null;
 
-		expect(notifications.length, 'nothing opened and nothing said so').toBeGreaterThan(0);
-		const notice = notifications[0] as { msg?: string; type?: string };
-		expect(typeof notice.msg).toBe('string');
-		expect(notice.msg!.length).toBeGreaterThan(0);
+			let result: unknown;
+			expect(() => {
+				result = util.open_window({ url: 'https://stub.invalid/page' });
+			}, 'a blocked popup still throws — the caller is aborted mid-operation').not.toThrow();
+
+			expect(open_calls).toBe(1);
+			expect(result).toBeNull();
+		});
+
+		test('B. a refused popup tells the user', () => {
+			open_answer = null;
+
+			util.open_window({ url: 'https://stub.invalid/page' });
+
+			expect(notifications.length, 'nothing opened and nothing said so').toBeGreaterThan(0);
+			const notice = notifications[0] as { msg?: string; type?: string };
+			expect(typeof notice.msg).toBe('string');
+			expect(notice.msg!.length).toBeGreaterThan(0);
+		});
+
+		test('C. a granted popup is returned, resized and focused', () => {
+			const win = fake_window();
+			open_answer = win;
+
+			const result = util.open_window({
+				url: 'https://stub.invalid/page',
+				width: 800,
+				height: 600,
+			});
+
+			expect(result).toBe(win as unknown as never);
+			expect(win.calls.resized).toBe(1);
+			expect(win.calls.focused).toBe(1);
+			expect(notifications.length, 'a successful open must not raise a notice').toBe(0);
+		});
+
+		test('D. a cross-origin resize refusal is not fatal and focus is still attempted', () => {
+			const win = fake_window(true);
+			open_answer = win;
+
+			let result: unknown;
+			expect(() => {
+				result = util.open_window({ url: 'https://external.invalid/record' });
+			}, 'a SecurityError from resizeTo still escapes and aborts the caller').not.toThrow();
+
+			expect(result).toBe(win as unknown as never);
+			expect(win.calls.resized).toBe(0);
+			expect(win.calls.focused, 'focus() is cross-origin legal and must still run').toBe(1);
+		});
 	});
-
-	test('C. a granted popup is returned, resized and focused', () => {
-		const win = fake_window();
-		open_answer = win;
-
-		const result = util.open_window({ url: 'https://stub.invalid/page', width: 800, height: 600 });
-
-		expect(result).toBe(win as unknown as never);
-		expect(win.calls.resized).toBe(1);
-		expect(win.calls.focused).toBe(1);
-		expect(notifications.length, 'a successful open must not raise a notice').toBe(0);
-	});
-
-	test('D. a cross-origin resize refusal is not fatal and focus is still attempted', () => {
-		const win = fake_window(true);
-		open_answer = win;
-
-		let result: unknown;
-		expect(() => {
-			result = util.open_window({ url: 'https://external.invalid/record' });
-		}, 'a SecurityError from resizeTo still escapes and aborts the caller').not.toThrow();
-
-		expect(result).toBe(win as unknown as never);
-		expect(win.calls.resized).toBe(0);
-		expect(win.calls.focused, 'focus() is cross-origin legal and must still run').toBe(1);
-	});
-});
+}

@@ -50,13 +50,12 @@ afterEach(() => {
   rmSync(GATE_DIR, { recursive: true, force: true });
 });
 
-/** A scratch instance: three roots, marked as `instance` unless told otherwise. */
+/** A scratch instance: its two daemon roots, marked as `instance` unless told otherwise. */
 function makeRoots(options: { instance?: string; mark?: boolean } = {}): InstanceRoot[] {
   const { instance = INSTANCE, mark = true } = options;
   const workspaces = join(GATE_DIR, 'workspaces');
-  const agentHome = join(GATE_DIR, 'agent_home');
   const audit = join(GATE_DIR, 'audit');
-  for (const path of [workspaces, agentHome, audit]) {
+  for (const path of [workspaces, audit]) {
     mkdirSync(path, { recursive: true });
     if (mark) writeFileSync(markerPath(path), markerContent(instance), 'utf8');
   }
@@ -65,7 +64,6 @@ function makeRoots(options: { instance?: string; mark?: boolean } = {}): Instanc
   writeFileSync(join(audit, 'audit.jsonl'), '', 'utf8');
   return [
     { label: 'SITES_ROOT', path: workspaces, probe: 'create', ownedByService: true },
-    { label: 'AGENT_HOME', path: agentHome, probe: 'create', ownedByService: true },
     {
       label: 'AUDIT_DIR',
       path: audit,
@@ -117,9 +115,9 @@ describe('a root must say whose it is', () => {
 
   test('a root that is not there at all is refused, and points at the provisioner', () => {
     const roots = makeRoots();
-    rmSync(join(GATE_DIR, 'agent_home'), { recursive: true, force: true });
+    rmSync(join(GATE_DIR, 'workspaces'), { recursive: true, force: true });
     const message = refusalFrom(() => assertInstanceRoots(INSTANCE, roots));
-    expect(message).toContain('AGENT_HOME');
+    expect(message).toContain('SITES_ROOT');
     expect(message).toContain('provision apply');
     expect(message).toContain('Nothing was written.');
   });
@@ -460,23 +458,45 @@ describe('the preflight runs before the first write', () => {
    */
   const CODE = INDEX.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-  test('bootPreflight() is called, and before sweepOnBoot()', () => {
-    const preflight = CODE.indexOf('bootPreflight()');
-    const sweep = CODE.indexOf('sweepOnBoot(');
+  /** The object literal the entry point hands `daemonBootSteps` — its ONE boot. */
+  const BOOT = (() => {
+    const at = CODE.indexOf('await bootSequence(');
+    return at < 0 ? '' : CODE.slice(at, CODE.indexOf('\n);\n', at) + 3);
+  })();
+
+  test('bootPreflight() is the preflight step, and sweepOnBoot is never CALLED by the entry point — only handed to the boot', () => {
+    // The ORDER the steps run in is an outcome gate (lead1b_c4_lease.test.ts G11 runs
+    // bootSequence(daemonBootSteps(…)) and asserts it); what this file holds is that the entry
+    // point hands the preflight in as THAT step and has no second, direct path to the sweep.
+    expect(BOOT).toMatch(/^await bootSequence\(\s*daemonBootSteps\(\{/);
+    const preflight = BOOT.indexOf('preflight:');
     expect(preflight).toBeGreaterThan(-1);
-    expect(sweep).toBeGreaterThan(preflight);
+    expect(BOOT.indexOf('bootPreflight()')).toBeGreaterThan(preflight);
+    expect([...CODE.matchAll(/\bsweepOnBoot\s*\(/g)].length).toBe(0);
+    expect(BOOT).toMatch(/^\s*sweepOnBoot,?\s*$/m);
   });
 
-  test('nothing is awaited before it', () => {
+  test('nothing is awaited before it — the first module-level await IS the boot, and the preflight is its first step', () => {
     // sweepOnBoot is the write that exists TODAY. The property is stronger and outlives it:
-    // no asynchronous work of any kind may precede the preflight.
-    const preflight = CODE.indexOf('bootPreflight()');
-    const firstAwait = CODE.indexOf('await ');
-    expect(firstAwait).toBeGreaterThan(preflight);
+    // no asynchronous work of any kind may precede the preflight. Since LEAD-1b the boot runs
+    // through `bootSequence(daemonBootSteps(…))` (src/boot.ts, whose ORDER lead1b_c4_lease.test.ts
+    // G11 holds), so what is asserted here is that the entry point has no second, earlier await.
+    const topLevelAwaits = [...CODE.matchAll(/^await\s+(\w+)/gm)].map(match => match[1]);
+    expect(topLevelAwaits).toEqual(['bootSequence']);
+    expect(BOOT.length).toBeGreaterThan(0);
   });
 
-  test('and the listener is opened after it', () => {
-    expect(CODE.indexOf('Bun.serve(')).toBeGreaterThan(CODE.indexOf('bootPreflight()'));
+  test('and the listener is opened only by the boot’s LAST step', () => {
+    // Every Bun.serve( is inside `listen()`, and `listen` is the step bootSequence runs last.
+    const listenAt = CODE.indexOf('async function listen(');
+    const listenEnd = CODE.indexOf('\n}\n', listenAt);
+    expect(listenAt).toBeGreaterThan(-1);
+    const serves = [...CODE.matchAll(/Bun\.serve\(/g)].map(match => match.index ?? -1);
+    expect(serves.length).toBeGreaterThan(0);
+    expect(serves.every(at => at > listenAt && at < listenEnd)).toBe(true);
+    expect(BOOT).toMatch(/^\s*listen,?\s*$/m);
+    // …and nothing but the boot calls it (its declaration is not a call).
+    expect([...CODE.matchAll(/(?<!function\s+)\blisten\s*\(\s*\)/g)].length).toBe(0);
   });
 
   test('the preflight runs every one of the checks this file gates', () => {

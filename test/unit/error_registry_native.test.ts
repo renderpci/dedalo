@@ -9,8 +9,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
 	EXTERNAL_STATE_LABEL_KEY,
 	EXTERNAL_STATE_RETRYABLE,
@@ -35,6 +35,28 @@ import type { ExternalErrorKind } from '../../src/external/errors.ts';
 const MASTER: Record<string, string> = JSON.parse(
 	readFileSync(resolve(import.meta.dir, '../../src/core/labels/master.json'), 'utf8'),
 );
+
+/** Every translated catalog (src/core/labels/catalog/lg-*.json), by file name. */
+const CATALOG_DIR = resolve(import.meta.dir, '../../src/core/labels/catalog');
+const CATALOGS: [string, Record<string, string>][] = readdirSync(CATALOG_DIR)
+	.filter((name) => /^lg-[a-z]+\.json$/.test(name))
+	.map((name) => [name, JSON.parse(readFileSync(join(CATALOG_DIR, name), 'utf8'))]);
+
+/**
+ * A placeholder the client never fills: `{key}` without the `$`. The renderer
+ * (client/dedalo/core/common/js/common.js format_label) replaces `${key}` only, so
+ * a bare `{key}` reaches the user verbatim ("The link into '{section_tipo}'…").
+ * PLACEHOLDER above matches both spellings, which is how twenty labels shipped
+ * that way unseen.
+ */
+const UNFILLED_PLACEHOLDER = /(?<!\$)\{[a-z0-9_]+\}/;
+
+/** `label_key → offending text` for every error label that spells a bare `{key}`. */
+function unfilledPlaceholders(labels: Record<string, string>): string[] {
+	return Object.entries(labels)
+		.filter(([key, text]) => key.startsWith('error_') && UNFILLED_PLACEHOLDER.test(text))
+		.map(([key]) => key);
+}
 
 /** The table viewed as a plain string-keyed record (loops over arbitrary strings below). */
 const TABLE: Record<string, ErrorSpec> = ERROR_REGISTRY;
@@ -105,6 +127,23 @@ describe('error registry — totality', () => {
 		expect(specViolations('probe.x', spec, master).some((v) => v.startsWith('placeholders'))).toBe(
 			true,
 		);
+	});
+
+	test('every error label spells its placeholders ${key} — the only form the client fills', () => {
+		expect(unfilledPlaceholders(MASTER), 'master.json').toEqual([]);
+		for (const [name, labels] of CATALOGS) {
+			expect(unfilledPlaceholders(labels), name).toEqual([]);
+		}
+		// Anti-vacuity: the catalogs were read, and a bare {key} is caught while ${key}
+		// and the positional {0} of non-error labels are not.
+		expect(CATALOGS.length).toBeGreaterThan(5);
+		expect(
+			unfilledPlaceholders({
+				error_probe_bare: 'Into {section_tipo}',
+				error_probe_filled: 'Into ${section_tipo}',
+				open_probe_positional: 'Open {0}',
+			}),
+		).toEqual(['error_probe_bare']);
 	});
 
 	test('STATUS_EXEMPTIONS entries are registered codes (and empty today)', () => {

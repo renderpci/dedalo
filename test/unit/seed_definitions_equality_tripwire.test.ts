@@ -38,8 +38,11 @@ interface AssetEntry {
 	name?: string;
 }
 
+// PostgreSQL's order is `CREATE INDEX [CONCURRENTLY] [IF NOT EXISTS] name` —
+// the online migrations (0011, 0012) spell both, and a matcher with the two
+// swapped silently never saw them.
 const INDEX_NAME =
-	/CREATE\s+INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:CONCURRENTLY\s+)?([A-Za-z0-9_]+)\s+ON/gi;
+	/CREATE\s+INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z0-9_]+)\s+ON/gi;
 
 /**
  * The five families retired 2026-07-20 as drop-only. A drop-only entry must be

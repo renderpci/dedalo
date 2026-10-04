@@ -6,11 +6,11 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
 	--tool_import_rdf: #5e77b3;
-	--tool_import_rdf_border: #475f97;
 }
 @tool_color : var(--tool_import_rdf);
 
@@ -47,8 +47,7 @@
 		.button_apply {
 			width: 8rem;
 			margin-top: 2rem;
-			background-color: @tool_color;
-			border-color: var(--tool_import_rdf_border);
+			.tool_action_button();
 		}
 		.component_data_label {
 			font-size: 16px;
@@ -70,10 +69,40 @@
 			left: calc(50% - 1.5rem);
 			top: 0.5rem;
 		}
+
+		// the import report: one block per IRI
+		.rdf_report {
+			margin-bottom: 1.5rem;
+			h4 {
+				overflow-wrap: anywhere;
+			}
+			.rdf_list_title {
+				margin-top: 0.75rem;
+				font-weight: bold;
+				&.created { color: @tool_color; }
+				&.skipped { opacity: 0.8; }
+			}
+			.rdf_list {
+				margin: 0.25rem 0 0 1.25rem;
+				padding: 0;
+				li {
+					overflow-wrap: anywhere;
+					// a skipped op the engine refused (it carries a registry code)
+					&.refused { color: @color_warning; }
+				}
+			}
+			.rdf_dump {
+				margin-top: 0.75rem;
+				summary {
+					cursor: pointer;
+				}
+				.rdf_subjects {
+					overflow-x: auto;
+				}
+			}
+		}
+		.rdf_bulk_process {
+			opacity: 0.7;
+		}
 	}
 }//end tool_wrapper
-
-// modal header tool modification
-.tool_header.tool_import_rdf {
-	background-color: @tool_color;
-}

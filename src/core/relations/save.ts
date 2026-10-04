@@ -12,9 +12,9 @@
  *   filter, then append the link locator (PHP
  *   component_relation_common::add_new_element, :3770 — the §8.7
  *   filter-inheritance security carry-over);
- * - relation_search ancestor index maintenance for the legacy
+ * - the relation_search ancestor-index DERIVATION for the legacy
  *   component_autocomplete_hi model (hierarchical 'search Spain matches
- *   Madrid' index);
+ *   Madrid' index) — derived here, WRITTEN by the record-write chokepoint;
  * - delete_locator: the dd_component_portal_api partial-locator removal.
  *
  * Phase A: verbatim strangler extraction — semantics unchanged. Phase C adds
@@ -47,15 +47,20 @@ import {
 import { dbTimestamp } from '../db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
-import { recordTimeMachine } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/index.ts';
 import type { Principal } from '../security/permissions.ts';
+import type { RecordGrant } from '../security/write_door.ts';
 import {
 	applyDataframeDeletePolicy,
 	type DataframeTarget,
 	dataframeDeletePolicyOf,
 	dataframeTargetsOf,
 } from './dataframe.ts';
+import {
+	readMainSlots,
+	recordKeyChangeRows,
+	resolveDataframeSlotTipos,
+} from './dataframe_slots.ts';
 import {
 	inCapScope,
 	isTargetAllowed,
@@ -365,24 +370,59 @@ export async function applyAddNewElement(
 }
 
 /**
- * Write relation_search[componentTipo] = the recursive PARENT locators of
- * every stored target (dedup, closest-first, tagged with the items' relation
- * type) — the autocomplete_hi ancestor index. Exported for the observer
- * DEFAULT branch (same-record refresh after tag-text saves).
+ * The two `relation_search` LAWS. `relation_search[tipo]` is the autocomplete_hi
+ * ancestor index: the recursive PARENT locators of every stored target (dedup,
+ * closest-first, tagged with the items' relation type) — what `conform.ts` reads
+ * for a broader-term search ('search Spain matches Madrid').
+ *
+ *  - `'save'`: only a node whose OWN stored model is the legacy
+ *    `component_autocomplete_hi` keeps an index — the exact test `conform.ts`
+ *    applies before it READS one. Every other model is left untouched (PHP
+ *    save_component_dato).
+ *  - `'removal'` (P1-7 / DATA-12): the three REMOVAL doors (the portal locator
+ *    delete, the inverse-reference strip of a record delete, the data wipe)
+ *    re-index every relation key they rewrite. The caller restricts it to the
+ *    `relation` column; here it is unconditional.
+ *
+ * WHO APPLIES IT (CLOSURE_PLAN Step 2, the obligation ledger): the write
+ * chokepoint itself (section_record/record_write.ts), in the SAME UPDATE as the
+ * value — never a door. The per-door helpers that used to write it
+ * (maintainRelationSearchIndex / reindexRelationSearchLikeSave /
+ * reindexRelationColumnLikeSave) are gone; a door that restored a relation key
+ * without remembering them left the index naming the ancestors of the value it
+ * replaced (CORE-2). Gated by write_obligations_tripwire leg B3.
  */
-export async function maintainRelationSearchIndex(
-	table: string,
-	sectionTipo: string,
-	sectionId: number,
+export type RelationSearchLaw = 'save' | 'removal';
+
+/** Whether `law` keeps an ancestor index for `componentTipo` (see RelationSearchLaw). */
+export async function relationSearchLaw(
 	componentTipo: string,
-	items: unknown[],
-): Promise<void> {
+	law: RelationSearchLaw,
+): Promise<boolean> {
+	if (law === 'removal') return true;
+	const { getNode } = await import('../ontology/resolver.ts');
+	return (await getNode(componentTipo))?.model === 'component_autocomplete_hi';
+}
+
+/**
+ * DERIVE `relation_search[componentTipo]` from the value being written — PURE
+ * (it reads the thesaurus parent chains, it writes nothing). `null` when the law
+ * keeps no index for this tipo (the caller leaves the column untouched); an
+ * array otherwise — EMPTY when the value names no target with ancestors, which
+ * the chokepoint writes as a key REMOVAL (PHP delete_key).
+ */
+export async function deriveRelationSearch(
+	componentTipo: string,
+	items: unknown,
+	law: RelationSearchLaw,
+): Promise<Record<string, unknown>[] | null> {
+	if (!(await relationSearchLaw(componentTipo, law))) return null;
+	const values = Array.isArray(items) ? items : [];
 	const { getParentChainLocators } = await import('../resolve/dd_info.ts');
-	const { updateMatrixKeyData } = await import('../db/matrix_write.ts');
-	const relationType = ((items[0] as { type?: string } | null)?.type ?? 'dd151') || 'dd151';
+	const relationType = ((values[0] as { type?: string } | null)?.type ?? 'dd151') || 'dd151';
 	const seenAncestors = new Set<string>();
 	const searchValue: Record<string, unknown>[] = [];
-	for (const item of items) {
+	for (const item of values) {
 		const locator = item as { section_tipo?: string; section_id?: unknown } | null;
 		if (typeof locator?.section_tipo !== 'string' || locator.section_id === undefined) continue;
 		for (const parent of await getParentChainLocators(
@@ -400,14 +440,7 @@ export async function maintainRelationSearchIndex(
 			});
 		}
 	}
-	await updateMatrixKeyData(
-		table,
-		sectionTipo,
-		sectionId,
-		'relation_search',
-		componentTipo,
-		searchValue.length > 0 ? searchValue : null, // null → delete_key
-	);
+	return searchValue;
 }
 
 /**
@@ -471,15 +504,34 @@ export async function validateRelationInsert(
 	rawValue: Record<string, unknown>,
 	context: RelationInsertContext,
 ): Promise<Record<string, unknown> | null> {
+	return (await validateRelationInsertVerdict(rawValue, context)).value;
+}
+
+/**
+ * The length-1 door WITH the drop's reason: exactly `validateRelationInsert`
+ * (constraint refusals THROW the same typed errors), but a PHP-era drop
+ * answers its `code` — and, for a `duplicate`, the existing item the law
+ * matched (`duplicateOf`) — instead of a bare null. The CSV append merge needs
+ * both: a duplicate re-pairs its file id with the matched item, any other drop
+ * pairs with nothing.
+ */
+export async function validateRelationInsertVerdict(
+	rawValue: Record<string, unknown>,
+	context: RelationInsertContext,
+): Promise<{
+	value: Record<string, unknown> | null;
+	code?: RelationInsertRefusalCode;
+	duplicateOf?: unknown;
+}> {
 	const { outcomes } = await validateRelationInserts([rawValue], context);
 	const outcome = outcomes[0];
 	if (outcome === undefined || outcome.status === 'refused') {
 		if (outcome?.code !== undefined && !PHP_ERA_DROPS.has(outcome.code)) {
 			throw refusalToError(outcome, context);
 		}
-		return null;
+		return { value: null, code: outcome?.code, duplicateOf: outcome?.duplicateOf };
 	}
-	return outcome.value ?? null;
+	return { value: outcome.value ?? null };
 }
 
 /**
@@ -599,6 +651,14 @@ export interface RelationInsertOutcome {
 	value?: Record<string, unknown>;
 	code?: RelationInsertRefusalCode;
 	reason?: string;
+	/**
+	 * On a `duplicate` refusal ONLY: the existing item (from `existingItems` or
+	 * an earlier acceptance in the batch) the law matched, BY REFERENCE. The
+	 * CSV append merge re-pairs a skipped duplicate's file id with it — read
+	 * from the law's own match, never re-derived with a second key that could
+	 * drift from this one (the normalized `type` fill, section_id canon).
+	 */
+	duplicateOf?: unknown;
 }
 
 export interface RelationInsertBatchResult {
@@ -701,6 +761,7 @@ export async function validateRelationInserts(
 				status: 'refused',
 				code: normalized.code,
 				reason: normalized.reason,
+				...(normalized.duplicateOf !== undefined ? { duplicateOf: normalized.duplicateOf } : {}),
 			});
 			continue;
 		}
@@ -753,7 +814,12 @@ async function normalizeRelationInsert(
 	rawValue: Record<string, unknown>,
 	context: RelationInsertContext,
 	batchAccepted: readonly Record<string, unknown>[],
-): Promise<{ value?: Record<string, unknown>; code?: RelationInsertRefusalCode; reason?: string }> {
+): Promise<{
+	value?: Record<string, unknown>;
+	code?: RelationInsertRefusalCode;
+	reason?: string;
+	duplicateOf?: unknown;
+}> {
 	const existingItems =
 		batchAccepted.length === 0
 			? context.existingItems
@@ -807,7 +873,11 @@ async function normalizeRelationInsert(
 		for (const item of existingItems) {
 			if (dataframeEntriesEqual(item, normalized)) {
 				// already framed — ignored
-				return { code: 'duplicate', reason: 'this record is already framed from that item' };
+				return {
+					code: 'duplicate',
+					reason: 'this record is already framed from that item',
+					duplicateOf: item,
+				};
 			}
 		}
 		return { value: normalized };
@@ -836,7 +906,7 @@ async function normalizeRelationInsert(
 		for (const item of existingItems) {
 			if (dataframeEntriesEqual(item, value)) {
 				// the same frame twice — ignored
-				return { code: 'duplicate', reason: 'the same frame is already stored' };
+				return { code: 'duplicate', reason: 'the same frame is already stored', duplicateOf: item };
 			}
 		}
 		return { value };
@@ -858,7 +928,7 @@ async function normalizeRelationInsert(
 	for (const item of existingItems) {
 		if (lookupKey(item) === valueKey) {
 			// already linked — ignored
-			return { code: 'duplicate', reason: 'that record is already linked here' };
+			return { code: 'duplicate', reason: 'that record is already linked here', duplicateOf: item };
 		}
 	}
 	return { value };
@@ -1184,22 +1254,27 @@ export async function getRelationTypeByTipo(tipo: string): Promise<string> {
 /**
  * PHP trait.dataframe_common::remove_dataframe_data_by_id (:280-369) — the
  * server-authoritative cascade fired when ONE data item of a main component
- * is removed: every dataframe slot declared in the main's request_config
- * ddo_map loses the frame locators paired with that item (id_key contract),
- * sibling items' frames untouched.
+ * is removed: every dataframe slot of the main (resolveDataframeSlotTipos —
+ * relation AND literal mains, iri's fixed dd560 included) loses the frame
+ * locators paired with that item (id_key contract), sibling items' frames
+ * untouched.
  *
  * PHP-fidelity details (S1-05):
  * - The slot strip emits NO Time Machine row: PHP suppresses the slot's own
  *   TM entry (tm_record::$save_tm=false, REL-01) because the MAIN component's
- *   TM row captures the full state; a separate slot row would break TM
- *   restore ordering. The modified stamps are the caller's responsibility
- *   too (the main save/delete path refreshes them).
+ *   TM row captures the full state — true since 2026-09-27: every caller's
+ *   main's lg-nolan row is written after this strip (relations/dataframe_slots.ts
+ *   recordMainHistory — the two lanes), so it
+ *   carries the slots' frames as the strip left them. A separate slot row
+ *   would break TM restore ordering. The modified stamps are the caller's
+ *   responsibility too (the main save/delete path refreshes them).
  * - The delete policy is the SLOT's (dataframeDeletePolicyOf, relations/
  *   dataframe.ts — PHP read it from the main, which no shipped node carried):
- *   'unlink' clears slot entries only; 'delete_target' soft-deletes the
- *   unlinked frame TARGET records; 'delete_target_record' (= the v6
- *   `hard_delete: true`) deletes them (targets collected BEFORE clearing,
- *   deleted AFTER every slot write; per-target failures log and continue).
+ *   'unlink' clears slot entries only; 'delete_target' empties the unlinked
+ *   frame TARGET records, row kept (targets collected BEFORE clearing, wiped
+ *   AFTER every slot write; per-target failures log and continue). No policy
+ *   removes a target row — the v6 `hard_delete: true` is inert
+ *   (WC-2026-09-29-dataframe-hard-delete-retired).
  */
 export async function removeDataframeDataById(
 	table: string,
@@ -1208,37 +1283,23 @@ export async function removeDataframeDataById(
 	mainComponentTipo: string,
 	itemId: number,
 	userId: number,
+	bulkProcessId: number | null = null,
 ): Promise<void> {
-	const { getNode, getModelByTipo } = await import('../ontology/resolver.ts');
-	const node = await getNode(mainComponentTipo);
-	if (node === undefined || node === null) return;
-
-	// dataframe slots declared in the main's request_config (PHP
-	// get_dataframe_ddo: ddo_map entries whose model is component_dataframe).
-	const { buildRequestConfigForElement } = await import('./request_config/build.ts');
-	const config = await buildRequestConfigForElement(node.properties ?? null, {
-		ownerTipo: mainComponentTipo,
-		ownerSectionTipo: sectionTipo,
-		mode: 'edit',
-		ownerIsSection: false,
-	});
-	const slotTipos: string[] = [];
-	for (const item of config) {
-		for (const ddo of item.show?.ddo_map ?? []) {
-			if (typeof ddo.tipo !== 'string' || slotTipos.includes(ddo.tipo)) continue;
-			if ((await getModelByTipo(ddo.tipo)) === 'component_dataframe') slotTipos.push(ddo.tipo);
-		}
-	}
+	const { getNode } = await import('../ontology/resolver.ts');
+	// THE one slot-discovery law (dataframe_slots.ts): ontology dataframe
+	// children ∪ own show/hide ddos ∪ the model's fixed frames — so a literal
+	// main switched on with has_dataframe (no request_config of its own) and
+	// component_iri's fixed dd560 slot cascade exactly like a relation main.
+	const slotTipos = await resolveDataframeSlotTipos(mainComponentTipo);
 	if (slotTipos.length === 0) return;
 
 	// Delete policy PER SLOT, read from the SLOT node (dataframeDeletePolicyOf:
-	// `hard_delete: true` = hard, `dataframe.delete_policy` = soft/hard, else
-	// unlink). The targets are lifted from the RAW stored entries BEFORE the
+	// `dataframe.delete_policy: "delete_target"` = soft wipe, else unlink). The targets are lifted from the RAW stored entries BEFORE the
 	// strip and handed to the applier only AFTER every slot write; the applier
 	// queues the deletes on the commit lane — a target is never deleted while a
 	// locator still addresses it (see applyDataframeDeletePolicy).
 	const pendingDeletes: {
-		policy: 'delete_target' | 'delete_target_record';
+		policy: 'delete_target';
 		targets: DataframeTarget[];
 	}[] = [];
 
@@ -1276,8 +1337,10 @@ export async function removeDataframeDataById(
 		);
 	}
 
+	// Under a bulk run the wipes carry its id: each emptied target gets its
+	// role-4 snapshot, so the run's revert can write its data back (D3).
 	for (const pending of pendingDeletes) {
-		await applyDataframeDeletePolicy(pending.policy, pending.targets, userId);
+		await applyDataframeDeletePolicy(pending.policy, pending.targets, userId, bulkProcessId);
 	}
 }
 
@@ -1301,9 +1364,23 @@ export interface PortalLocatorRemoval {
  * component's relation type; a MISMATCHED type aborts (PHP
  * remove_locator_from_data guard). Each removed locator cascades its paired
  * dataframe slot entries (remove_dataframe_data_by_id, S1-05). ANSWERS with a
- * `PortalLocatorRemoval` payload (never a wire envelope) and REFUSES by
- * THROWING — a missing address is `request.invalid_options`, a caller below
- * level 2 is `perm.denied` (ERRORS_SPEC §4).
+ * `PortalLocatorRemoval` payload (never a wire envelope).
+ *
+ * THIS IS THE DOOR (SEC-2, closure 2026-09-26 Step 3): the target goes
+ * through THE WRITE DOOR (`authorizeRecordAccess`: write, level 2, section
+ * floor 2 — the dd128-aware PAIR and the record SCOPE) BEFORE any read, lock
+ * or write; the effect ({@link removePortalLocatorUnderGrant}) is private and
+ * takes the grant, so it cannot be reached with an unauthorized request. The
+ * order: address → grammar → section floor 2 → pair 2 → scope → locator →
+ * the locked transaction. REFUSES by THROWING (ERRORS_SPEC §4):
+ *   - `request.invalid_options` — a missing address; once authorized, a
+ *     missing / non-object locator;
+ *   - `request.invalid`         — a tipo or section_id that is not a target
+ *     (identifier grammar, an integer id);
+ *   - `perm.denied`             — the section below 2 (consultation-capped) or
+ *     the (section, portal) pair below 2 (dd128 own-record aware);
+ *   - `perm.out_of_scope`       — the record is outside the caller's projects,
+ *     or its id is not a record address (non-positive), admins included.
  */
 export async function deletePortalLocator(
 	// `isDeveloper` is optional so an existing caller that only knows the
@@ -1313,62 +1390,75 @@ export async function deletePortalLocator(
 	principal: Omit<Principal, 'isDeveloper'> & Partial<Pick<Principal, 'isDeveloper'>>,
 	// KEPT UNION: `source` is the RQO body of dd_component_portal_api
 	// .delete_locator, an uncoerced wire door — legacy clients still post the
-	// string form. Consumed numerically (Number()) for the row address only.
+	// string form. The write door parses it (an integer id, gated tipos).
 	source: { tipo?: string; section_tipo?: string; section_id?: string | number },
 	options: { locator?: Record<string, unknown>; ar_properties?: string[] },
 ): Promise<PortalLocatorRemoval> {
-	const msg: string[] = [];
 	const tipo = source.tipo ?? '';
 	const sectionTipo = source.section_tipo ?? '';
 	const sectionId = source.section_id;
-	const locator = options.locator;
-	if (
-		tipo === '' ||
-		sectionTipo === '' ||
-		sectionId === undefined ||
-		sectionId === null ||
-		locator === undefined ||
-		locator === null ||
-		typeof locator !== 'object'
-	) {
+	// 1. The address — the door needs one to authorize.
+	if (tipo === '' || sectionTipo === '' || sectionId === undefined || sectionId === null) {
 		throw new DedaloError('request.invalid_options', {
-			publicMessage: 'Missing required source/options (section_tipo, tipo, section_id, locator)',
+			publicMessage: 'Missing required source (section_tipo, tipo, section_id)',
 			coordinates: { section_tipo: sectionTipo, tipo },
 		});
 	}
-	// SEC: write permission — PHP dd_component_portal_api::delete_locator runs
-	// `security::assert_section_permission($section_tipo, 2)`, i.e. the LEVEL-2
-	// matrix gate, not an admin flag. Gating on isGlobalAdmin (the old v0
-	// stand-in) half-completed the tool_indexation "delete index" for every
-	// ordinary cataloguer: the client had already stripped the transcription
-	// tags in every language before calling this, so the refusal left the
-	// rsc860 locator behind as an orphan (audit §5.4). getSectionPermissions is
-	// the section-level twin of PHP common::get_permissions(tipo, tipo) — it
-	// additionally caps consultation-only sections at read, which is exactly
-	// right for a removal.
-	const { getSectionPermissions } = await import('../security/permissions.ts');
+	// 2-4. THE WRITE DOOR: grammar, the section floor (2, consultation-capped:
+	// PHP security::assert_section_permission($section_tipo, 2)), the PAIR at 2
+	// (dd128 own-record aware — a user-manager cannot unlink their own
+	// profile/active/admin) and the record SCOPE (the caller's projects; a
+	// non-positive id refused for every caller, admins included). Nothing is
+	// read, locked or written before it answers.
+	const { authorizeRecordAccess } = await import('../security/write_door.ts');
 	const actor: Principal = { isDeveloper: false, ...principal };
-	if ((await getSectionPermissions(actor, sectionTipo)) < 2) {
-		throw new DedaloError('perm.denied', {
-			coordinates: { section_tipo: sectionTipo, tipo, required_level: 2 },
+	const grant = await authorizeRecordAccess(
+		actor,
+		{ section_tipo: sectionTipo, component_tipo: tipo, section_id: sectionId },
+		{ mode: 'write', level: 2, sectionFloor: 2, door: 'relations.delete_portal_locator' },
+	);
+	// 5. The locator — validated only once the caller is authorized (an
+	// unauthorized caller learns nothing about the payload's shape; the
+	// delete_tag precedent).
+	const locator = options.locator;
+	if (locator === undefined || locator === null || typeof locator !== 'object') {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'options.locator is mandatory',
+			coordinates: { section_tipo: grant.sectionTipo, tipo: grant.componentTipo },
 		});
 	}
-
-	const { getMatrixTableFromTipo, getModelByTipo, getColumnNameByModel } = await import(
-		'../ontology/resolver.ts'
-	);
-	const { readMatrixRecord } = await import('../db/matrix.ts');
-	const { persistRecordKeys } = await import('../section_record/index.ts');
-	const model = (await getModelByTipo(tipo)) ?? '';
-	const column = getColumnNameByModel(model) ?? 'relation';
-	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-
 	// Empty/omitted ar_properties passes through as [] — PHP's API layer never
 	// substitutes the method's 4-field default here, so compare_locators runs
 	// its full property-UNION strict compare (substituting the default
 	// over-deletes: a second locator to the same target with a different
 	// tag_id would be destroyed).
 	const properties = Array.isArray(options.ar_properties) ? options.ar_properties : [];
+	return removePortalLocatorUnderGrant(grant, locator, properties);
+}
+
+/**
+ * THE EFFECT of {@link deletePortalLocator}, reachable ONLY through it: module
+ * private, and typed on the write door's {@link RecordGrant} — every address
+ * (section, component, record) and the audit actor come from the grant. The
+ * whole read-modify-write runs in ONE transaction under the row lock.
+ */
+async function removePortalLocatorUnderGrant(
+	grant: RecordGrant,
+	locator: Record<string, unknown>,
+	properties: readonly string[],
+): Promise<PortalLocatorRemoval> {
+	// Every address below is the GRANT's — the door's validated, authorized
+	// target — never the request it was authorized from (no `source` or
+	// principal is in scope here).
+	const { componentTipo: tipo, sectionTipo, sectionId } = grant;
+	const { getMatrixTableFromTipo, getModelByTipo, getColumnNameByModel } = await import(
+		'../ontology/resolver.ts'
+	);
+	const { readMatrixRecord } = await import('../db/matrix.ts');
+	const { persistRelationRemovalKeys } = await import('../section_record/index.ts');
+	const model = (await getModelByTipo(tipo)) ?? '';
+	const column = getColumnNameByModel(model) ?? 'relation';
+	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
 
 	// W11 (2026-08-02, observer-cascade prerequisite): the read → JS filter →
 	// whole-key replace below was an UNLOCKED read-modify-write on the pooled
@@ -1394,7 +1484,7 @@ export async function deletePortalLocator(
 		// byte-identical empty-data response.
 		const lockedRows = (await sql.unsafe(
 			`SELECT id FROM "${table}" WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
-			[sectionTipo, Number(sectionId)],
+			[sectionTipo, sectionId],
 		)) as { id: number }[];
 		if (lockedRows.length === 0) {
 			return {
@@ -1404,7 +1494,7 @@ export async function deletePortalLocator(
 				removedLocators: [] as Record<string, unknown>[],
 			};
 		}
-		const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+		const record = await readMatrixRecord(table, sectionTipo, sectionId);
 		const items =
 			((
 				record?.columns[column as keyof typeof record.columns] as Record<string, unknown[]> | null
@@ -1457,6 +1547,9 @@ export async function deletePortalLocator(
 			}
 		}
 		if (removedLocators.length > 0) {
+			// The main's slots BEFORE the cascade strips them — the history's
+			// BEFORE side (two lanes: a stripped frame is an lg-nolan change).
+			const slotsBefore = await readMainSlots({ table, sectionTipo, sectionId: sectionId }, tipo);
 			// Dataframe cascade (PHP remove_locator_from_data :1362): each removed
 			// locator strips the frame entries paired with its item id (unified
 			// id_key pairing). Pre-migration locators without an id have no id_key
@@ -1467,46 +1560,44 @@ export async function deletePortalLocator(
 				await removeDataframeDataById(
 					table,
 					sectionTipo,
-					Number(sectionId),
+					sectionId,
 					tipo,
 					Math.trunc(Number(itemId)),
-					principal.userId,
+					grant.userId,
 				);
 			}
-			// THE ANCESTOR INDEX MOVES WITH THE LOCATORS (P1-7 / DATA-12) — see the
-			// same call in delete_record.ts. `relation_search` is read by
-			// conform.ts, so writing `relation` alone leaves the two stores
-			// disagreeing permanently.
-			if (column === 'relation') {
-				await maintainRelationSearchIndex(table, sectionTipo, Number(sectionId), tipo, kept);
-			}
-			// THE SURVIVORS GO THROUGH THE WRITE CHOKEPOINT (P1-8 / DATA-16 + DATA-17,
-			// 2026-09-03). This door used to re-persist them with the raw per-key
-			// primitive, so the record's own dd197/dd201 kept naming the PREVIOUS
-			// edit while the Time Machine said "user U changed this at T" — every
-			// modified-date sort and provenance read was wrong about the one change
-			// that actually happened (PHP's delete_locator → $component->Save() DID
-			// refresh the stamps) — and nothing enqueued the record for re-index, so
-			// the vector store kept naming the removed target. persistRecordKeys
-			// merges the stamps into the SAME UPDATE, and its post-write hook fires
-			// the save event (deferred to COMMIT), the security reaction (a removed
+			// THE SURVIVORS GO THROUGH THE WRITE CHOKEPOINT — its REMOVAL-LAW entry
+			// (P1-8 / DATA-16 + DATA-17; CLOSURE_PLAN Step 2). This door used to
+			// re-persist them with the raw per-key primitive, so the record's own
+			// dd197/dd201 kept naming the PREVIOUS edit while the Time Machine said
+			// "user U changed this at T" (PHP's delete_locator → $component->Save()
+			// DID refresh the stamps), and nothing enqueued the record for re-index.
+			// The chokepoint merges the stamps into the SAME UPDATE, derives
+			// `relation_search` there too (P1-7 / DATA-12: the ancestor index moves
+			// with the locators — this is one of the three removal doors, so every
+			// relation key is re-indexed), and its post-write hook fires the save
+			// event (deferred to COMMIT), the security reaction (a removed
 			// dd244/dd131 locator is an account transition — the revocation rides the
-			// COMMIT-ONLY lane) and the RAG index event (joins this transaction).
-			await persistRecordKeys(
-				{ table, sectionTipo, sectionId: Number(sectionId) },
+			// COMMIT-ONLY lane), the RAG index event (joins this transaction) AND the
+			// observer cascade: the ledger records the key's before-image read under
+			// this door's row lock and drains `{saved: kept, removed}` after COMMIT
+			// (PHP delete_locator → Save() → propagate_to_observers).
+			await persistRelationRemovalKeys(
+				{ table, sectionTipo, sectionId: sectionId },
 				[{ column: column as MatrixJsonbColumn, key: tipo, value: kept }],
-				{ userId: principal.userId },
+				{ userId: grant.userId },
+				{ actor: grant.userId },
 			);
-			await recordTimeMachine(
-				{
-					sectionTipo,
-					sectionId: Number(sectionId),
-					componentTipo: tipo,
-					lang: 'lg-nolan',
-					userId: principal.userId,
-					data: kept,
-				},
-				dbTimestamp(),
+			// The history, two lanes (dataframe_slots.ts recordMainHistory): the
+			// portal's kept locators in its value lane, and — when the cascade
+			// above stripped a frame — the lg-nolan row with the slots as they
+			// stand now. A slot tipo records the lg-nolan row of the main(s) the
+			// removed frames belonged to, never its own.
+			await recordKeyChangeRows(
+				{ table, sectionTipo, sectionId: sectionId },
+				tipo,
+				{ before: items, after: kept, requestLang: 'lg-nolan', slotsBefore },
+				{ userId: grant.userId, timestamp: dbTimestamp() },
 			);
 		}
 		return {
@@ -1517,6 +1608,16 @@ export async function deletePortalLocator(
 		};
 	});
 
+	return removalResponse(outcome, model, tipo);
+}
+
+/** The door's response to one removal outcome (PHP remove_locator_from_data's messages). */
+function removalResponse(
+	outcome: { emptyData: boolean; typeMismatch: boolean; removed: number },
+	model: string,
+	tipo: string,
+): PortalLocatorRemoval {
+	const msg: string[] = [];
 	if (outcome.emptyData) {
 		msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
 		return { removed: 0, msg };
@@ -1536,29 +1637,71 @@ export async function deletePortalLocator(
 		// transaction above, the revocation to its COMMIT-ONLY lane — so by this
 		// line they have all run against the committed bag. Nothing to remember
 		// here any more; the census gate pins the reach.
-		// Observer cascade (2026-07-24): this door bypasses saveComponentData,
-		// so it fires propagation itself. This is a PURE REMOVAL door — the
-		// removed locators name the records whose mirrors must recompute, and
-		// nothing was saved. Until 2026-08-06 they rode the `saved` slot, which
-		// happened to work only because the two sets were then handled
-		// identically; ObservedChange makes the semantics explicit. The
-		// recompute reads truth from matrix_relation_index, so the removal is
-		// already reflected. Dynamic import: runtime-only relations→section
-		// edge, no static SCC. Post-COMMIT (W11/B6): the recompute must read the
-		// committed removal.
-		{
-			const { propagateToObservers } = await import('../section/record/observers.ts');
-			await propagateToObservers(
-				tipo,
-				sectionTipo,
-				Number(sectionId),
-				{ saved: [], removed: outcome.removedLocators },
-				principal.userId,
-			);
-		}
+		// The observer cascade is NOT fired here any more: the removal-law write
+		// above declared it to the obligation ledger, which drained it after the
+		// COMMIT of the transaction above — `{saved: kept, removed}` from the
+		// before-image read under the row lock (CLOSURE_PLAN Step 2, CORE-1).
 		msg.push(`Deleted ${removed} locators (${model} - ${tipo})`);
 	} else {
 		msg.push(`No locators are removed (${model} - ${tipo})`);
 	}
 	return { removed, msg };
+}
+
+/** The locator fields a replace must match for an id-less locator to keep a stored twin's id. */
+const LOCATOR_IDENTITY = ['section_tipo', 'section_id', 'type', 'tag_id'] as const;
+
+/**
+ * `validated` (a relation `set_data` replace, already through the insert door)
+ * with each ID-LESS locator given the id of the stored locator it IS — a copy,
+ * the caller's objects never mutated. The relation twin of the literal
+ * `adoptStoredItemIds` (concepts/item_value.ts): a CSV cell or a propagate
+ * value names no locator id, and without this the save's id safety net
+ * re-minted one per element, so an unchanged re-import (a) wrote an undo pair +
+ * a visible row and (b) left every paired dataframe frame keyed (`id_key`) to
+ * the OLD id — unpaired (review 2026-09-28).
+ *
+ * The same LINK: `compareLocators` on section_tipo / section_id (loose) / type /
+ * tag_id, plus `lang` for a translatable component and the pairing block for a
+ * frame (String-loose, as `isAlreadyStored` compares it). The stored twin at the
+ * SAME position wins (a repeated target keeps its own id); otherwise the first
+ * unclaimed match. No stored id is ever adopted twice, nor one an incoming
+ * locator already names.
+ */
+export function adoptStoredLocatorIds(
+	validated: readonly Record<string, unknown>[],
+	stored: readonly unknown[],
+	options: { translatable: boolean; pairing: boolean },
+): Record<string, unknown>[] {
+	const fields: readonly string[] = options.translatable
+		? [...LOCATOR_IDENTITY, 'lang']
+		: LOCATOR_IDENTITY;
+	const sameLink = (a: Record<string, unknown>, b: Record<string, unknown>): boolean =>
+		compareLocators(a as never, b as never, fields) &&
+		(!options.pairing ||
+			(String(a.main_component_tipo) === String(b.main_component_tipo) &&
+				String(a.id_key) === String(b.id_key)));
+	const storedLocators = stored.map((item) =>
+		item !== null && typeof item === 'object' && !lacksId(item as Record<string, unknown>)
+			? (item as Record<string, unknown>)
+			: null,
+	);
+	const claimed = new Set(
+		validated.filter((item) => !lacksId(item)).map((item) => String(item.id)),
+	);
+	const claimable = (candidate: Record<string, unknown> | null, locator: Record<string, unknown>) =>
+		candidate !== null && !claimed.has(String(candidate.id)) && sameLink(locator, candidate);
+	return validated.map((locator, index) => {
+		if (!lacksId(locator)) return locator;
+		const twin = claimable(storedLocators[index] ?? null, locator)
+			? storedLocators[index]
+			: storedLocators.find((candidate) => claimable(candidate ?? null, locator));
+		if (twin === undefined || twin === null) return locator;
+		claimed.add(String(twin.id));
+		return { ...locator, id: twin.id };
+	});
+}
+
+function lacksId(item: Record<string, unknown>): boolean {
+	return item.id === undefined || item.id === null || item.id === '';
 }

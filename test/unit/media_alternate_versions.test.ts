@@ -72,6 +72,7 @@ import { regenerateMissingDerivatives } from '../../src/core/media/repair.ts';
 import { svgOverlayLocation } from '../../src/core/media/svg_overlay.ts';
 import { applyRotationCore } from '../../src/core/media/tools/rotation.ts';
 import { buildVersionCore, deleteAndResyncCore } from '../../src/core/media/tools/versions.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_alternate_versions_${process.pid}`;
@@ -196,6 +197,7 @@ async function makeImage(absolute: string, color: string, size = '900x600'): Pro
 	mkdirSync(dirOf(absolute), { recursive: true });
 	const result = await runBinary([resolveMagick(), '-size', size, `xc:${color}`, absolute], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 	if (result.exitCode !== 0) {
 		throw new Error(`fixture build failed for ${absolute}: ${result.stderr}`);
@@ -223,7 +225,7 @@ async function makeAlphaMaster(absolute: string): Promise<void> {
 			'rectangle 0,0 899,299',
 			absolute,
 		],
-		{ nice: false },
+		{ nice: false, env: magickTestEnv() },
 	);
 	if (result.exitCode !== 0) {
 		throw new Error(`alpha fixture build failed for ${absolute}: ${result.stderr}`);
@@ -253,6 +255,7 @@ async function makePdf(absolute: string): Promise<void> {
 async function identify(path: string, format: string): Promise<string> {
 	const result = await runBinary([resolveMagick(), path, '-format', format, 'info:'], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 	return result.stdout.trim();
 }

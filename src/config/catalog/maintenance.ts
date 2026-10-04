@@ -21,10 +21,8 @@ export const MAINTENANCE_KEYS = {
 \`url\` is the master's JSON API endpoint — it MUST end in \`/dedalo/core/api/v1/json/\` (or \`/api/v1/json\`); any other path answers 404 and the panel reports the server as unreachable. \`code\` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN \`CODE_SERVERS\`.
 
 \`\`\`bash
-CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedalo.dev/api/v1/json","code":"x3a0B4Y020Eg9w"}]
-\`\`\`
-
-On the OFFICIAL master both doors are live and they are not interchangeable: \`/api/v1/json\` is the v7 door, while \`/dedalo/core/api/v1/json/\` on that host is reserved for PRE-7 installations, whose dialect the v7 engine refuses by law and which the web server therefore hands to the retired pre-7 engine (\`engineering/MASTER_SERVER.md\`). Point a v7 install at the v7 door: aimed at the legacy one it reaches the wrong engine and the panel reports the server as unreachable.`,
+CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
+\`\`\``,
 	},
 	DEDALO_CODE_RESTORE_POINTS_KEEP: {
 		type: 'number',
@@ -86,9 +84,9 @@ DEDALO_CODE_SERVER_GIT_DIR="/my_dedalo_git_directory"
 		default: false,
 		heading: 'Publishing developer builds from a code server',
 		typeLabel: 'bool',
-		doc: `This parameter lets a code server OFFER developer builds (\`<version>-dev.zip\`, produced by building any branch other than \`master\`) to installations that explicitly ask for them.
+		doc: `This parameter lets a code server OFFER developer builds (\`<version>-dev.zip\`, built from the tip of the \`master\` branch) to installations that explicitly ask for them. Published releases (\`<version>.zip\`) are built from release tags (\`vX.Y.Z\`) and are offered regardless of this setting.
 
-It exists so a developer can test unreleased branch work on a real installation without cutting a release: a developer build carries no version bump, so it is installed OVER the same version. Both switches must be on — this one here, and the "Developer builds" switch in the target installation's code-update panel. A code server that leaves this unset answers a developer-channel request exactly as it answers a normal one, so branch builds are never enumerable from outside.
+It exists so a developer can test integrated but unreleased work on a real installation without cutting a release: a developer build carries no version bump of its own, so it can be installed OVER the same version. Both switches must be on — this one here, and the "Developer builds" switch in the target installation's code-update panel. A code server that leaves this unset answers a developer-channel request exactly as it answers a normal one, so developer builds are never enumerable from outside.
 
 Everything else is unchanged: the archive is still fetched from a configured code server, still verified against its \`.sha256\` sidecar, and the update still requires a superuser, maintenance mode and a recent backup.
 
@@ -116,6 +114,8 @@ DEDALO_SOURCE_VERSION_LOCAL_DIR="/tmp/my_museum"
 		typeLabel: 'bool',
 		doc: `This parameter defines if the server can provide code to other Dédalo servers. By default no Dédalo server provides code, but it is possible to set one up as a mirror server that provides code versions. To enable it, also set \`DEDALO_CODE_FILES_DIR\` — the URL other servers fetch from is derived automatically.
 
+When it is on, the maintenance area shows the **Serve Code** panel: whether this server can publish, the build source, the archives on disk, and the buttons that build a release. See [Updating code](../management/updates/updating_code.md).
+
 \`\`\`bash
 IS_A_CODE_SERVER=false
 \`\`\``,
@@ -127,6 +127,8 @@ IS_A_CODE_SERVER=false
 		heading: 'Is an ontology master server',
 		typeLabel: 'bool',
 		doc: `It defines if the installation server can provide his ontology files to other Dédalo servers.
+
+The maintenance area's **Serve Ontology** panel shows whether this key, \`ONTOLOGY_SERVER_CODE\` and \`DEDALO_CORS_ALLOWED_ORIGINS\` are set, and the endpoint other installations register. See [Updating ontology](../management/updates/updating_ontology.md#serving-other-installations-ontology-master).
 
 \`\`\`bash
 IS_AN_ONTOLOGY_SERVER=false
@@ -167,8 +169,16 @@ DEDALO_ONTOLOGY_RECOVERY_PATH="/srv/dedalo_private/db/dd_ontology_recovery.sql.g
 
 Unset, Dédalo prefers \`import/ontology\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and would otherwise carry downloaded or exported ontology files away with the old code. The legacy \`install/import/ontology\` directory inside the install tree ships the vendored ontology seed files, so it keeps being used until you create the private-directory home (move any files of your own there) or set this key explicitly.
 
+Files are organised in version directories, \`<major.minor>/\`: one \`<tld>.copy.gz\` per ontology, \`matrix_dd.copy.gz\` for the private lists, and the \`ontology.json\` (plus \`ontology_llm_map.json\`) that describe them. The canonical production layout is:
+
+\`\`\`
+/srv/dedalo/ontology/7.0/dd.copy.gz
+/srv/dedalo/ontology/7.0/matrix_dd.copy.gz
+/srv/dedalo/ontology/7.0/ontology.json
+\`\`\`
+
 \`\`\`bash
-ONTOLOGY_DATA_IO_DIR="/srv/dedalo/import/ontology"
+ONTOLOGY_DATA_IO_DIR="/srv/dedalo/ontology"
 \`\`\``,
 	},
 	ONTOLOGY_SERVER_CODE: {
@@ -200,12 +210,14 @@ This parameter needs to be included as \`code\` in [ONTOLOGY_SERVERS](#ontology-
 Each entry is a JSON object with \`name\`, \`url\` and \`code\`. Configuration for the official dedalo.dev server:
 
 \`\`\`bash
-ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://master.dedalo.dev/api/v1/json","code":"x3a0B4Y020Eg9w"}]
+ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 \`\`\`
 
-On the OFFICIAL master both doors are live and they are not interchangeable: \`/api/v1/json\` is the v7 door, while \`/dedalo/core/api/v1/json/\` on that host is reserved for PRE-7 installations, whose dialect the v7 engine refuses by law and which the web server therefore hands to the retired pre-7 engine (\`engineering/MASTER_SERVER.md\`). Point a v7 install at the v7 door: aimed at the legacy one it reaches the wrong engine and the panel reports the server as unreachable.
-
 It gets the tld from the [ACTIVE_ONTOLOGY_TLDS](#defining-active-ontology-tlds) definition.
+
+A master is identified by its \`url\`, not by its \`code\`: several masters may share one access
+code, and the update downloads only from the address of the master picked in the panel. List
+each master once.
 
 The update panel interrogates each master **from the browser**, so the engine adds every origin
 named here to its own \`connect-src\` Content-Security-Policy automatically — there is no second

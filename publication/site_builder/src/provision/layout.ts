@@ -49,6 +49,7 @@
  */
 
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { AGENT_IDENTITY_STEM, IDENTITY_INSTANCE_SOURCE } from '../drivers/agent_identity';
 import { isWithin } from '../util/paths';
 import { SLUG_PATTERN } from '../util/slug';
 import { SHARED_DIR_MODE } from '../util/shared_tree';
@@ -130,21 +131,15 @@ if (USER_PREFIX.length + MAX_INSTANCE_LENGTH > MAX_USERNAME_LENGTH) {
 }
 
 /**
- * THE AGENT'S OWN UNIX USER — the uid an agent turn runs as, which is NOT the daemon's.
+ * THE RETIRED PER-MUSEUM AGENT USER — `dedalo-agent-<instance>`, the uid every agent run of a
+ * museum shared until LEAD-1b. It is no longer created and never used: `provision apply`
+ * LOCKS it on upgrade (`usermod --lock --expiredate 1`, never `userdel` — its uid still owns
+ * bytes on the host, and a freed uid is inherited by the next account created), and the
+ * fleet census keeps its name out of every other namespace. Derived here so the lock, the
+ * removal and the census name the same account.
  *
- * WHY IT IS A SECOND IDENTITY. The daemon holds the museum's capabilities: the shared
- * bearer at `$CREDENTIALS_DIRECTORY/SERVICE_TOKEN`, every provider key, the append handle
- * on the audit trail. An agent turn executes text a language model wrote. While the two ran
- * as ONE uid, every one of those was same-uid readable — no filesystem mode, no
- * `ProtectSystem=`, no `ReadWritePaths=` can separate a process from itself — and the whole
- * confinement story was a set of directives that constrained the daemon and said nothing
- * about its children. A second uid is the only boundary the kernel will actually draw.
- *
- * The prefix is spelled from the project name rather than from `USER_PREFIX` because it
- * must leave room for the same 19-character instance name: `dedalo-site-` plus `-agent`
- * would exceed the unix ceiling for every museum whose name is longer than one character,
- * which is not a naming taste but a `useradd` that fails on the host, mid-run. The
- * arithmetic is ASSERTED below for exactly the reason the service prefix's is.
+ * The prefix is spelled from the project name rather than from `USER_PREFIX` because it must
+ * leave room for the same 19-character instance name, asserted below.
  */
 const VENDOR = PROJECT.slice(0, PROJECT.indexOf('-'));
 
@@ -158,33 +153,61 @@ if (AGENT_USER_PREFIX.length + MAX_INSTANCE_LENGTH > MAX_USERNAME_LENGTH) {
   );
 }
 
+/**
+ * THE PER-SITE IDENTITY STEM — owned by the builtins-only leaf `drivers/agent_identity.ts`
+ * (the shim and the daemon read it inside and beside a confined unit, where this module's
+ * siblings do not exist), and ASSERTED here to be spelled from the one vendor prefix: the
+ * three namespaces (`dedalo-site-`, `dedalo-agent-`, `dedalo-a-`) differ at characters 8 and
+ * 9, and a stem that drifted from the vendor would be a fourth.
+ */
+if (AGENT_IDENTITY_STEM !== `${VENDOR}-a-`) {
+  throw new Error(
+    `layout: the site identity stem '${AGENT_IDENTITY_STEM}' is not '${VENDOR}-a-'. It must be ` +
+      `spelled from the vendor prefix like every other identity on the host.`,
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────────────────────
- * THE RECORDED DECISION — ONE AGENT UID PER MUSEUM, NOT ONE PER SITE
+ * THE RECORDED DECISION — ONE AGENT IDENTITY PER DECLARED SITE (LEAD-1b)
  *
  * This is the acceptance the confinement work is required to state out loud rather than
  * leave as an absence, and `test/unit/agent_confinement_tripwire.test.ts` asserts that the
  * choice made here is the choice the derivation implements.
  *
- * WHAT IS DRAWN. `AGENT_USER_PREFIX + <instance>` is per INSTANCE, so an agent turn on
- * museum A cannot read museum B's workspaces, releases, transcripts or audit trail, and no
- * agent turn on any museum can read the DAEMON's credentials — which is the boundary the
- * subsystem's severity rested on, and the one that was not drawn at all before.
+ * WHAT IS DRAWN. Every declared site k of an instance has its own unix identity,
+ * `dedalo-a-<instance>_<k>` (`drivers/agent_identity.ts`), created by `provision apply` and
+ * recorded in /etc/passwd (GECOS `dedalo site <slug>`; ordinals are never reused, a retired
+ * identity is locked, never deleted). Every confined run of site k — a turn, a build step, a
+ * git command — is a process of THAT uid, started by PID 1 from a unit ROOT rendered for
+ * (site k, door) with `User=` fixed in the file (`render/agent_units.ts`): the daemon starts
+ * nothing and chooses no uid, it can only connect to the site's own sockets. So:
  *
- * WHAT IS NOT DRAWN, AND IS ACCEPTED. Every site of ONE museum shares that uid. An agent
- * turn on site A can therefore read (and, through the group-writable workspaces row of §3,
- * write) site B's workspace inside the SAME museum. That is accepted because the sites of
- * one instance are one tenant: they are declared together in one `instance.json`, served
- * from one webspace base, published by one operator, and every publisher of that museum is
- * already authorized by the engine against the same instance. A per-SITE uid would draw a
- * line the museum itself does not draw anywhere else.
+ *   - no agent run on any museum can read the DAEMON's credentials, audit trail or
+ *     transcripts (a different uid, `ProtectProc=invisible`, the `/run` mask);
+ *   - no agent run of site A can see a live run of site B of the same museum — not its
+ *     `/proc` entry, not its environment, not its egress sockets (a different uid; the
+ *     egress directory is group-owned by site B's PRIVATE group; `PrivatePIDs=` where PID 1
+ *     is 257 or newer is an extra layer on top);
+ *   - no site's agent state (`~/.claude`, session storage) is visible to another site, nor a
+ *     build's to its own site's turn (one HOME per (site, door), everything else masked);
+ *   - THE PER-RUN INVARIANT IS PID 1's: at most one live run per (site, door)
+ *     (`MaxConnections=1`, released only when the instance is dead) and one per site across
+ *     doors (the doors' targets `Conflicts=` each other). The daemon's own reservation
+ *     (`workspace_activity.ts`) serializes a site's runs before they reach PID 1 at all.
  *
- * WHAT WOULD CHANGE IT. The day one instance serves sites belonging to parties that are
- * NOT one tenant — a hosting arrangement where two organizations share a museum's daemon —
- * this acceptance expires, and the replacement is a PRE-PROVISIONED POOL of agent uids
- * (`AGENT_USER_PREFIX + <instance> + '-' + n`, sized by `limits.max_sites`, bound to a slug
- * at createSite and released at removeSite), because the daemon is not root and cannot mint
- * a uid at runtime. The pool is not built today: an unbuilt pool and a stated boundary are
- * honest, while a built pool nobody bound to a slug would be a boundary in name only.
+ * WHAT IS NOT DRAWN, AND IS ACCEPTED. Every site identity's PRIMARY group is the instance
+ * group, because the daemon must read and commit what the agent writes (the shared tree,
+ * 2770/0660, `UMask=0007`). An agent run of site A can therefore still WRITE site B's
+ * workspace of the SAME museum through the group bits — a cross-site plant (PLANT, open).
+ * That is accepted for the reason it always was: the sites of one instance are one tenant,
+ * declared together in one `instance.json`, published by one operator, every publisher of
+ * that museum authorized by the engine against the same instance.
+ *
+ * WHAT WOULD CHANGE IT. A per-site PRIMARY group (the workspace group-owned by the site's
+ * private group, the daemon a member of every one) would close the cross-site write too.
+ * It is not built today because the daemon's own shared-tree writers and every provisioned
+ * root assume one instance group; the day one instance serves sites of parties that are not
+ * one tenant, that is the change, and this acceptance expires.
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -198,6 +221,15 @@ if (AGENT_USER_PREFIX.length + MAX_INSTANCE_LENGTH > MAX_USERNAME_LENGTH) {
  * filename, and every one of those has a different opinion about anything else.
  */
 export const INSTANCE_PATTERN = new RegExp(`^[a-z][a-z0-9-]{1,${MAX_INSTANCE_LENGTH - 1}}$`);
+
+// The identity leaf restates the grammar (it may import nothing but builtins); one spelling
+// is enforced here, where the grammar is owned.
+if (INSTANCE_PATTERN.source !== IDENTITY_INSTANCE_SOURCE) {
+  throw new Error(
+    `layout: the instance grammar '${INSTANCE_PATTERN.source}' disagrees with the identity leaf's ` +
+      `'${IDENTITY_INSTANCE_SOURCE}' — one of them would build identity names the other refuses.`,
+  );
+}
 
 /**
  * A provider credential's key: it becomes a FILENAME under secrets/, a systemd
@@ -401,8 +433,37 @@ export const LIMIT_ENV: Readonly<Record<string, string>> = Object.freeze({
   session_turn_timeout_ms: 'SESSION_TURN_TIMEOUT_MS',
   install_timeout_ms: 'INSTALL_TIMEOUT_MS',
   build_timeout_ms: 'BUILD_TIMEOUT_MS',
+  git_timeout_ms: 'GIT_TIMEOUT_MS',
   site_disk_quota_mb: 'SITE_DISK_QUOTA_MB',
   releases_retained: 'RELEASES_RETAINED',
+});
+
+/**
+ * THE DOOR CEILINGS' DEFAULTS — ONE SOURCE FOR TWO READERS (LEAD-1b).
+ *
+ * A door's wall clock is enforced twice: by the daemon's own timer (it reads the four keys
+ * from its env, `src/config.ts`) and by PID 1, as `RuntimeMaxSec = ceiling + 15` in the unit
+ * root renders for the door (`render/agent_units.ts`). A limit the declaration omits is
+ * absent from the env, so the two could only agree if they used the SAME default — which is
+ * why the default lives here, and `src/config.ts` imports it rather than stating its own.
+ */
+export const DOOR_TIMEOUT_DEFAULTS_MS = Object.freeze({
+  session_turn_timeout_ms: 20 * 60 * 1000,
+  install_timeout_ms: 5 * 60 * 1000,
+  build_timeout_ms: 5 * 60 * 1000,
+  git_timeout_ms: 30_000,
+});
+
+/**
+ * THE PER-RUN CAPS every agent unit carries (MemoryMax=, CPUQuota=, TasksMax=). Stated once
+ * for the same reason as the ceilings: the daemon checks what PID 1 loaded against its own
+ * `AGENT_TURN_*` keys (`src/config.ts` defaults to these), and root renders them into the
+ * units — two readers, one value.
+ */
+export const AGENT_RUN_CAPS = Object.freeze({
+  memoryMax: '2G',
+  cpuQuota: '200%',
+  tasksMax: 512,
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -480,6 +541,12 @@ export const DEFAULT_PATHS = Object.freeze({
    * looking exactly like one that does.
    */
   polkitRulesDir: '/etc/polkit-1/rules.d',
+  /**
+   * Where systemd-tmpfiles reads its configuration. The sites' egress directories live in
+   * `/run` (a tmpfs, empty at every boot) and must be ROOT's — the source of a bind PID 1
+   * resolves as root — so a boot-time `d` line is the only creator that is both root and early.
+   */
+  tmpfilesDir: '/etc/tmpfiles.d',
 });
 
 /** The vhost directory follows the web server, so it is a function and not a constant. */
@@ -682,6 +749,8 @@ export interface ManifestPaths {
   readonly vhost_enabled_dir?: string;
   /** Where polkit reads its rules; the agent authorization is written there. */
   readonly polkit_rules_dir?: string;
+  /** Where systemd-tmpfiles reads its configuration; the sites' egress directories are declared there. */
+  readonly tmpfiles_dir?: string;
 }
 
 /**
@@ -740,6 +809,15 @@ export interface ManifestAgent {
   readonly driver: AgentDriverId;
   /** Only the drivers this museum has installed, pinned by ABSOLUTE path. */
   readonly bins?: Readonly<Partial<Record<AgentDriverId, string>>>;
+  /**
+   * The model provider HOSTNAMES an opencode/pi turn may reach through the egress gate
+   * (rendered as AGENT_PROVIDER_HOSTS). Claude Code's is derived and needs no entry.
+   */
+  readonly provider_hosts?: readonly string[];
+  /** The package registry HOSTNAMES a build may reach (BUILD_REGISTRY_HOSTS). */
+  readonly registry_hosts?: readonly string[];
+  /** `systemctl`, ABSOLUTE, only where it is not `/usr/bin/systemctl` (SYSTEMCTL_BIN). */
+  readonly systemctl_bin?: string;
 }
 
 /** The per-museum caps. Every field is optional and NONE has a default — see LIMIT_ENV. */
@@ -749,6 +827,7 @@ export interface ManifestLimits {
   readonly session_turn_timeout_ms?: number;
   readonly install_timeout_ms?: number;
   readonly build_timeout_ms?: number;
+  readonly git_timeout_ms?: number;
   readonly site_disk_quota_mb?: number;
   readonly releases_retained?: number;
 }
@@ -909,13 +988,11 @@ export interface InstanceLayout {
     /** The paired engine's group — reads the pairing fragment, owns the socket. */
     readonly engineGroup: string;
     /**
-     * THE UID AN AGENT TURN RUNS AS — never `user`, always derived, never adopted.
-     *
-     * Its primary group is `group` above, which is what lets the daemon and the agent share
-     * a workspace (the 2770 rows of §3) while the daemon's credentials, its
-     * `$CREDENTIALS_DIRECTORY` and its audit handle stay out of the agent's reach. See the
-     * recorded decision at the top of this file for what this boundary does and does not
-     * draw, and why it is per instance rather than per site.
+     * THE RETIRED PER-MUSEUM AGENT USER (`dedalo-agent-<instance>`) — never created any more,
+     * LOCKED by `provision apply` where a pre-LEAD-1b host still has it, and named here so
+     * the lock, the decommission and the fleet census speak of the same account. Agent runs
+     * are the per-SITE identities of `drivers/agent_identity.ts`; see the recorded decision
+     * at the top of this file.
      */
     readonly agentUser: string;
     /** True when the identity came from the declaration rather than from the prefix. */
@@ -932,7 +1009,12 @@ export interface InstanceLayout {
      * a webspace is servable, and an agent turn writes arbitrary files into a workspace.
      */
     readonly workspaces: string;
-    /** The agent's HOME (`~/.claude` and friends). 0700: nothing else has business here. */
+    /**
+     * THE RETIRED SHARED AGENT HOME — where the per-museum agent's `~/.claude` lived before
+     * LEAD-1b. Nothing writes it any more: `provision apply` ARCHIVES it (renamed under
+     * `retiredDir`, never copied — it was the shared cross-site plant channel) and each
+     * (site, door) gets its own HOME under `agentStateRoot` instead.
+     */
     readonly home: string;
     /**
      * The audit DIRECTORY. Root-owned; the FILE inside it is the daemon's, so the daemon
@@ -943,6 +1025,32 @@ export interface InstanceLayout {
   };
   /** The parent of the three roots. Root-owned: the daemon may not replace its own roots. */
   readonly stateDir: string;
+  /**
+   * THE AGENT STATE ROOT (`<stateDir>/agents`, root:root 0755) — one `s<k>/` per site
+   * identity (root 0755), holding `turn/` and `build/`, each that identity's own 0700 HOME.
+   * Every agent unit masks the whole root (`TemporaryFileSystem=<root>:ro`) and binds back
+   * only its own door's directory, so no site sees another's state and a build never sees
+   * its own site's turn state. A SIBLING of the retired `roots.home`, never it: the archive
+   * of the old HOME must not carry the new state with it.
+   */
+  readonly agentStateRoot: string;
+  /**
+   * WHERE THE PER-(SITE, DOOR) AGENT SOCKETS LISTEN — `/run/<ns>-agents/<instance>`, created
+   * by PID 1 (the socket units' `DirectoryMode=0755`, root-owned). Deliberately NOT under
+   * the daemon's `RuntimeDirectory=` (which systemd removes and recreates with the daemon),
+   * and in a namespace of its own so no instance name can make it another instance's
+   * runtime directory.
+   */
+  readonly agentSocketDir: string;
+  /** Archived trees (the retired shared HOME, a removed site's agent state). root 0700. */
+  readonly retiredDir: string;
+  /**
+   * EACH DOOR'S WALL-CLOCK CEILING in ms — the declared limit, else DOOR_TIMEOUT_DEFAULTS_MS.
+   * The unit's `RuntimeMaxSec=` is this plus 15 s; the daemon's own timer is the same number.
+   */
+  readonly doorCeilingsMs: Readonly<Record<'turn' | 'build' | 'git', number>>;
+  /** The per-run caps every agent unit renders (AGENT_RUN_CAPS). */
+  readonly agentRunCaps: Readonly<{ memoryMax: string; cpuQuota: string; tasksMax: number }>;
   /** The audit FILE. Created and chowned to the service user by the provisioner. */
   readonly auditFile: string;
   readonly configDir: string;
@@ -975,18 +1083,25 @@ export interface InstanceLayout {
   readonly unitName: string;
   readonly unitPath: string;
   /**
-   * THE NAME EVERY TRANSIENT AGENT UNIT OF THIS MUSEUM BEGINS WITH.
+   * THE NAME EVERY AGENT UNIT OF THIS MUSEUM BEGINS WITH.
    *
-   * One turn is one transient systemd service (`<prefix><uuid>.service`), started by the
-   * daemon through `systemd-run --uid=<agentUser>`. The prefix is the whole basis of the
-   * authorization: the rendered polkit rule permits this museum's service user to manage
-   * units whose name starts with it AND NOTHING ELSE, so the grant cannot reach another
-   * museum's units, the web server's, or the engine's. Derived here because three
-   * consumers spell it — the renderer, the rendered env, and `src/drivers/confinement.ts`.
+   * Root renders one socket, one target and one template per (site k, door d):
+   * `<prefix>s<k>-<d>.{socket,target}` and `<prefix>s<k>-<d>@.service`, whose instances PID 1
+   * starts per accepted connection (`@<nr>-<pid>-<uid>`). The polkit rule grants this
+   * museum's service user STOP and KILL on exactly those ENUMERATED instances and nothing
+   * else — never start (render/agent_authorization.ts). Derived here because the renderers,
+   * the rendered env and `src/drivers/confinement.ts` all spell it.
    */
   readonly agentUnitPrefix: string;
-  /** The rendered polkit rule that authorizes exactly those transient units. */
+  /** The rendered polkit rule that authorizes stop/kill (never start) of exactly those units. */
   readonly agentPolicyPath: string;
+  /**
+   * THE SITES' EGRESS DIRECTORIES, declared for systemd-tmpfiles: `<agentSocketDir>/egress`
+   * (root 0755) and one `s<k>` per declared site (root:<site's private group> 0770). ROOT's,
+   * because each is the source of a bind PID 1 resolves as root when it sets up the site's
+   * unit; `provision apply` applies it at once, the boot re-creates it in the empty `/run`.
+   */
+  readonly agentTmpfilesPath: string;
   /** The value of systemd's RuntimeDirectory= — relative to /run, as systemd requires. */
   readonly runtimeDirectory: string;
   readonly runtimeDir: string;
@@ -1036,8 +1151,12 @@ export const DAEMON_SUBDIR = join('publication', 'site_builder');
  * The ownership / mode matrix
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-/** Who owns a generated artifact. `user` is the instance's service user. */
-export type ModeOwner = 'root' | 'user';
+/**
+ * Who owns a generated artifact or directory. `user` is the instance's service user;
+ * `identity` is the SITE's agent identity (LEAD-1b) — a per-site owner, so only a directory
+ * the plan creates for one site can carry it, never a rendered artifact.
+ */
+export type ModeOwner = 'root' | 'user' | 'identity';
 
 /**
  * Which group owns it. Four values, and the choice between them IS the isolation design:
@@ -1131,11 +1250,22 @@ export const MODES = Object.freeze({
    */
   workspaces: artifactMode('user', 'group', SHARED_DIR_MODE),
   /**
-   * The agent's HOME. Same 2770 and the same reason: it is the AGENT's home (`~/.claude`,
-   * the driver's own state) and the agent must write it, while the daemon still owns it so
-   * a turn cannot replace the directory itself. It was 0700 while one uid was both.
+   * THE AGENT STATE ROOT and each site's directory in it — ROOT's, 0755. Neither the daemon
+   * nor any identity may create, rename or replace a site's state directory: the unit binds
+   * `<root>/s<k>/<door>` back by path, so whoever could rename `s<k>` could hand one site's
+   * unit another site's HOME. (It replaces the retired shared `home` row, 2770: one HOME for
+   * every site of a museum was the cross-site plant channel LEAD-1b closes.)
    */
-  home: artifactMode('user', 'group', SHARED_DIR_MODE),
+  agentStateRoot: artifactMode('root', 'root', 0o755),
+  agentStateSite: artifactMode('root', 'root', 0o755),
+  /**
+   * ONE (site, door)'s HOME — the site identity's own, 0700, group the instance group (so a
+   * file it creates is never another group's). Nothing but that identity can read it: not
+   * another site, not the same site's other door, not the daemon.
+   */
+  agentHome: artifactMode('identity', 'group', 0o700),
+  /** Archived agent state and the retired shared HOME. Root's alone. */
+  retired: artifactMode('root', 'root', 0o700),
   auditDir: artifactMode('root', 'group', 0o750),
   /**
    * THE AUDIT TRAIL — 0600, and the zero group bits are the whole point.
@@ -1217,6 +1347,7 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     'paths.polkit_rules_dir',
     paths.polkit_rules_dir ?? DEFAULT_PATHS.polkitRulesDir,
   );
+  const tmpfilesDir = absoluteRoot('paths.tmpfiles_dir', paths.tmpfiles_dir ?? DEFAULT_PATHS.tmpfilesDir);
 
   // ── Identity.
   //
@@ -1329,6 +1460,10 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
   // knob, it is a trap, so the knob does not exist.
   const runtimeDirectory = `${NAMESPACE}/${instance}`;
   const runtimeDir = join(runtimeBase, instance);
+  // The agent sockets' directory: PID 1 creates it (the socket units' DirectoryMode=), in a
+  // namespace of its own — `<runtimeBase>/<instance>-agents` would be the runtime directory
+  // of an instance NAMED `<instance>-agents`.
+  const agentSocketDir = join(AGENT_SOCKET_BASE, instance);
 
   // The three roots: an explicit `roots.<x>` wins, else a sibling under the state dir.
   // Both spellings exist because they answer different questions — `paths.state_base`
@@ -1367,6 +1502,34 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
   assertNoCollisions(sites);
   assertRootsAreNotServed(roots, sites, webspaceBase);
 
+  // THE AGENT STATE ROOT AND THE ARCHIVE, siblings of the roots under the root-owned state
+  // dir — and disjoint from every other tree this layout names, because a unit binds a site's
+  // HOME back BY PATH: a state root inside a workspace or a webspace would be a HOME an agent
+  // run (or a web server) could reach around its own mount view.
+  const agentStateRoot = join(stateDir, 'agents');
+  const retiredDir = join(stateDir, 'retired');
+  for (const [label, path] of [
+    ['the agent state root', agentStateRoot],
+    ['the archive directory', retiredDir],
+  ] as const) {
+    for (const [otherLabel, other] of [
+      ['roots.workspaces', roots.workspaces],
+      ['roots.home', roots.home],
+      ['roots.audit', roots.audit],
+      ['the runtime directory', runtimeDir],
+      ['the webspace base', webspaceBase],
+      ['the instance config directory', configDir],
+      ...sites.map(site => [`site '${site.slug}'s webspace`, site.webspace] as const),
+    ] as const) {
+      if (pathsOverlap(path, other)) {
+        throw new Error(
+          `layout: ${label} ('${path}') overlaps ${otherLabel} ('${other}'). Agent state is ` +
+            `bound into each unit BY PATH and must be a tree of its own. Nothing was derived.`,
+        );
+      }
+    }
+  }
+
   const enginePrivateDir = absoluteRoot(
     'engine.private_dir',
     manifest.engine?.private_dir as string,
@@ -1383,7 +1546,7 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     runtimeDir,
     sites,
     webspaceBase,
-    { configDir, secretsDir, unitDir },
+    { configDir, secretsDir, unitDir, tmpfilesDir },
   );
 
   // THE DAEMON MAY NOT WRITE ITS OWN CODE, NOR THE RUNTIME THAT EXECUTES IT. Every agent
@@ -1454,6 +1617,15 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     }),
     roots,
     stateDir,
+    agentStateRoot,
+    agentSocketDir,
+    retiredDir,
+    doorCeilingsMs: Object.freeze({
+      turn: limitOf(manifest, 'session_turn_timeout_ms'),
+      build: Math.max(limitOf(manifest, 'install_timeout_ms'), limitOf(manifest, 'build_timeout_ms')),
+      git: limitOf(manifest, 'git_timeout_ms'),
+    }),
+    agentRunCaps: AGENT_RUN_CAPS,
     auditFile: join(roots.audit, AUDIT_FILE_NAME),
     configDir,
     secretsDir,
@@ -1474,8 +1646,9 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
       socketPath,
       hostPrefix,
       siteTablePath: join(configDir, SITE_TABLE_FILE_NAME),
-      agentUser,
       agentUnitPrefix,
+      agentSocketDir,
+      agentStateRoot,
     }),
     engineFragment: join(configDir, 'engine.env.fragment'),
     // ONE UNIT PER INSTANCE, not a shared template. A template (`…@.service`) can vary the
@@ -1484,12 +1657,13 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     // is what systemd resolves first, so the generated unit is complete rather than a
     // template plus a drop-in that has to be kept in step with it. The vhosts go the other
     // way, per SITE, because a vhost carries one server_name and one document root.
-    unitName: `${USER_PREFIX}builder@${instance}.service`,
-    unitPath: join(unitDir, `${USER_PREFIX}builder@${instance}.service`),
+    unitName: daemonUnitName(instance),
+    unitPath: join(unitDir, daemonUnitName(instance)),
     agentUnitPrefix,
     // 49- so a museum's rule is read before a distro's 50-default.rules, and one file per
     // instance so removing a museum removes exactly its own grant.
     agentPolicyPath: join(polkitRulesDir, `49-${USER_PREFIX}${instance}-agent.rules`),
+    agentTmpfilesPath: join(tmpfilesDir, `${USER_PREFIX}${instance}-agent.conf`),
     runtimeDirectory,
     runtimeDir,
     socketPath,
@@ -1507,10 +1681,27 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
 }
 
 /**
+ * THE DAEMON'S UNIT NAME for an instance — one spelling for the layout, the agent units'
+ * `BindsTo=`/`After=` and the daemon's own conformance check.
+ */
+export function daemonUnitName(instance: string): string {
+  return `${USER_PREFIX}builder@${assertMatches(INSTANCE_PATTERN, 'instance name', instance)}.service`;
+}
+
+/** Where the agent sockets of every instance live: `/run/<ns>-agents/<instance>`. */
+export const AGENT_SOCKET_BASE = `/run/${NAMESPACE}-agents`;
+
+/** A door ceiling: the declared limit, else the one default both readers share. */
+function limitOf(manifest: InstanceManifest, field: keyof typeof DOOR_TIMEOUT_DEFAULTS_MS): number {
+  const declared = (manifest.limits ?? {})[field];
+  return typeof declared === 'number' ? declared : DOOR_TIMEOUT_DEFAULTS_MS[field];
+}
+
+/**
  * THE RENDERED ENV, as a record — the instance's `env` file before it is a file.
  *
  * Derived rather than hand-written because that is the whole point of the declaration:
- * `SITES_ROOT`, `AGENT_HOME`, `AUDIT_DIR` and `WEBSPACE_BASE` are the same roots
+ * `SITES_ROOT`, `AUDIT_DIR` and `WEBSPACE_BASE` are the same roots
  * `readWritePaths()` confines and the provisioner creates, so a root that moved in
  * instance.json moves in all three at once, or in none.
  *
@@ -1530,8 +1721,9 @@ function buildEnvVars(
     socketPath: string;
     hostPrefix: string;
     siteTablePath: string;
-    agentUser: string;
     agentUnitPrefix: string;
+    agentSocketDir: string;
+    agentStateRoot: string;
   },
 ): Readonly<Record<string, string>> {
   const env: Record<string, string> = {
@@ -1543,7 +1735,6 @@ function buildEnvVars(
     [LISTEN_KIND_KEY]: 'unix',
     [LISTEN_SOCKET_KEY]: derived.socketPath,
     SITES_ROOT: derived.roots.workspaces,
-    AGENT_HOME: derived.roots.home,
     AUDIT_DIR: derived.roots.audit,
     WEBSPACE_BASE: derived.webspaceBase,
     // WHERE EVERY SITE OF THIS INSTANCE LIVES — the file, not the rule.
@@ -1569,8 +1760,13 @@ function buildEnvVars(
     // absent — src/config.ts refuses `none` under NODE_ENV=production, and this file is why
     // that refusal never fires on a converged host.
     AGENT_CONFINEMENT: 'systemd_scope',
-    AGENT_USER: derived.agentUser,
     AGENT_UNIT_PREFIX: derived.agentUnitPrefix,
+    // WHERE THE SITE UNITS ARE REACHED AND WHAT THEY BIND — the same two paths root renders
+    // into every agent unit (`render/agent_units.ts`). AGENT_IDENTITIES (which site is which
+    // ordinal) and AGENT_IDENTITY_EPOCH are facts of the HOST's ledger, not of this
+    // declaration, so `render/env.ts` adds them from the render facts.
+    AGENT_SOCKET_DIR: derived.agentSocketDir,
+    AGENT_STATE_ROOT: derived.agentStateRoot,
     PREPROD_HOST_PREFIX: derived.hostPrefix,
     PROD_URL_SCHEME: manifest.serving?.prod?.tls?.mode === 'none' ? 'http' : 'https',
     PUBLICATION_API_URL: assertMatches(
@@ -1592,6 +1788,17 @@ function buildEnvVars(
     if (!bin) continue;
     env[DRIVER_BIN_ENV[driver as AgentDriverId]] = absoluteRoot(`agent.bins.${driver}`, bin);
   }
+  // THE CONTROL PLANE'S systemctl, only when declared (a host where it is not /usr/bin): the
+  // rendered env is the daemon's only env, and a hand edit to it is reverted by the next apply.
+  if (manifest.agent.systemctl_bin) {
+    env.SYSTEMCTL_BIN = absoluteRoot('agent.systemctl_bin', manifest.agent.systemctl_bin);
+  }
+
+  // EGRESS HOSTNAMES, only when declared: the daemon's defaults (Claude Code's own host, the
+  // npm registry) are the right answer for a museum that states nothing, and a hostname-only
+  // plan is the whole egress policy — there is no IP-range key to render any more.
+  if (manifest.agent.provider_hosts?.length) env.AGENT_PROVIDER_HOSTS = manifest.agent.provider_hosts.join(',');
+  if (manifest.agent.registry_hosts?.length) env.BUILD_REGISTRY_HOSTS = manifest.agent.registry_hosts.join(',');
 
   for (const [field, key] of Object.entries(LIMIT_ENV)) {
     const value = (manifest.limits ?? {})[field as keyof ManifestLimits];
@@ -1791,7 +1998,7 @@ function assertWritableSetIsSane(
   runtimeDir: string,
   sites: readonly SiteLayout[],
   webspaceBase: string,
-  control: { configDir: string; secretsDir: string; unitDir: string },
+  control: { configDir: string; secretsDir: string; unitDir: string; tmpfilesDir: string },
 ): void {
   // A site webspace may sit under the shared base or somewhere else entirely, but it may
   // never BE the base, nor contain it.
@@ -1834,6 +2041,7 @@ function assertWritableSetIsSane(
     { label: 'the instance config directory', path: control.configDir },
     { label: 'the secrets directory', path: control.secretsDir },
     { label: 'the systemd unit directory', path: control.unitDir },
+    { label: 'the tmpfiles.d directory', path: control.tmpfilesDir },
   ];
   for (const c of controls) {
     for (const w of writable) {
@@ -1866,8 +2074,10 @@ function assertWritableSetIsSane(
  * and forgotten.
  *
  * What is in, and why the rest is out:
- *   - the three state roots (workspaces, home, audit) — the daemon and its agent children
- *     write inside all three, wherever an override put them;
+ *   - the two state roots the daemon writes (workspaces, audit), wherever an override put
+ *     them. NOT the retired shared agent HOME (`roots.home`), which nothing writes any more,
+ *     and NOT the agent state root: that is root's, and each site identity writes only its
+ *     own HOME in it, through its own unit's bind (LEAD-1b);
  *   - the runtime dir — the daemon binds its socket there. systemd's RuntimeDirectory=
  *     already makes it writable; it is listed anyway so this set is complete on its own
  *     terms, and so a reader of this one function sees everything the process may write;
@@ -1875,6 +2085,8 @@ function assertWritableSetIsSane(
  *     Every site individually, including one whose `webspace` override put it outside the
  *     webspace base: naming the base instead of the sites is precisely the shortcut that
  *     produced the EROFS.
+ *   - the sites' egress base (`tmpfilesWritablePaths`) — the gate binds each proxy door's
+ *     sockets there; root creates it through tmpfiles, not the plan, and keeps it root's.
  * NOT the config dir, NOT the secrets dir, NOT the state dir itself: those are root-owned
  * on purpose. The daemon must be unable to rewrite its own env, read a credential file off
  * the disk, or replace one of its own roots.
@@ -1891,12 +2103,31 @@ function assertWritableSetIsSane(
 export function readWritePaths(layout: InstanceLayout): string[] {
   const paths = [
     layout.roots.workspaces,
-    layout.roots.home,
     layout.roots.audit,
     layout.runtimeDir,
     ...layout.sites.map(site => site.webspace),
+    ...tmpfilesWritablePaths(layout),
   ];
   return [...new Set(paths)].sort();
+}
+
+/**
+ * THE WRITABLE PATHS ROOT CREATES THROUGH systemd-tmpfiles, not through a plan `dir` action:
+ * `<agentSocketDir>/egress` — root 0755, holding one `s<k>` (root:<site k's private group>
+ * 0770) per declared site (render/agent_units.ts renders the lines; `provision apply` applies
+ * them before the daemon starts, the boot re-creates them in the empty `/run` before any
+ * service). The daemon's gate binds `proxy.sock`/`mcp.sock` INSIDE `s<k>`
+ * (`src/egress/gate.ts`), so under `ProtectSystem=strict` — which mounts all of `/run`
+ * read-only — the directory must be in `ReadWritePaths=` or every proxy-door run fails as
+ * EROFS. The mount is not the permission: `egress/` stays root 0755, so the daemon still
+ * cannot rename, remove or re-point any `s<k>` (the bind source PID 1 resolves as root); DAC
+ * alone lets it write inside the `s<k>` of the groups it is in. The BASE is listed, not each
+ * `s<k>`, so a site added later sits under a mount the running daemon already holds. NOT
+ * `agentSocketDir` itself (the door sockets are PID 1's; connect(2) needs no writable
+ * mount).
+ */
+export function tmpfilesWritablePaths(layout: InstanceLayout): string[] {
+  return [join(layout.agentSocketDir, 'egress')];
 }
 
 /**

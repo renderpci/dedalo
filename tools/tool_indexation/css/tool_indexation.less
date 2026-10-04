@@ -112,14 +112,12 @@
 		background-color: @tool_color;
 	}
 
-	// the identity hue; tool_common.less demotes it to the header's top edge and
-	// owns the rest of the header — surface, ink, and the controls band: its
+	// tool_common.less owns the header — the identity edge (generated
+	// --tool_edge), surface, ink, and the controls band: its
 	// geometry, the caption idiom (`.top_label` and friends), the select shape,
 	// one control height, and the narrow-viewport behaviour. Only what is
 	// genuinely this tool's stays below.
 	>.tool_header {
-		background-color: @tool_color;
-
 		>.tool_buttons_container {
 
 			// buttons of tools (tool print, tool time machine..)

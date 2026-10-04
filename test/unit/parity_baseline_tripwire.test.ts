@@ -70,13 +70,9 @@
 
 import { describe, expect, test } from 'bun:test';
 import { basename } from 'node:path';
-import {
-	childEnv,
-	parseJunit,
-	runParityTier,
-	TIER_COMMAND,
-} from '../../scripts/lib/parity_census.ts';
+import { childEnv, parseJunit, TIER_COMMAND } from '../../scripts/lib/parity_census.ts';
 import { emptyDrift } from '../../scripts/lib/red_baseline.ts';
+import { runParityTier } from '../../scripts/lib/tier_run.ts';
 import {
 	BASELINE_PATH,
 	computeDrift,
@@ -259,6 +255,30 @@ describe('parity baseline ratchet — anti-vacuity', () => {
 			'test/parity/x.test.ts | outer > green | pass',
 			'test/parity/x.test.ts | outer > red | fail',
 			'test/parity/x.test.ts | outer > grey | skip',
+		]);
+	});
+
+	test('the JUnit measure keeps the FAILURE TEXT of a red case (decoded body, message as fallback)', () => {
+		// What a drift report prints as the first failing assertion per file — the
+		// JUnit file itself is deleted when the census returns.
+		const xml = [
+			'<testsuites name="bun test" tests="3">',
+			'  <testsuite name="test/parity/x.test.ts" file="test/parity/x.test.ts" tests="3" skipped="0" assertions="2">',
+			'      <testcase name="body" classname="x">',
+			'        <failure type="AssertionError" message="short">AssertionError: expect(&quot;a&quot;)&#10;&#10;- &lt;b&gt; &amp; c&#10;      at x.test.ts:2:9&#10;</failure>',
+			'      </testcase>',
+			'      <testcase name="message only" classname="x">',
+			'        <error type="Error" message="boom &lt;tag&gt;" />',
+			'      </testcase>',
+			'      <testcase name="green" classname="x" />',
+			'  </testsuite>',
+			'</testsuites>',
+		].join('\n');
+		const parsed = parseJunit(xml);
+		expect(parsed.cases.map((c) => [c.name, c.status, c.failure])).toEqual([
+			['body', 'fail', 'AssertionError: expect("a")\n\n- <b> & c\n      at x.test.ts:2:9'],
+			['message only', 'fail', 'boom <tag>'],
+			['green', 'pass', undefined],
 		]);
 	});
 

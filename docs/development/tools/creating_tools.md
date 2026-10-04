@@ -204,6 +204,37 @@ tool_numisdata_import.prototype.do_import = async function() {
 
 The relative import `../../../core/tools_common/js/tool_common.js` resolves through the **served** URL tree, not the repo tree: `tool_common.js` itself lives at `client/dedalo/core/tools_common/js/tool_common.js` and is served at `/dedalo/core/tools_common/js/tool_common.js`. Lifecycle, `ddo_map`, modal/window modes, labels: [JS lifecycle](js_lifecycle.md).
 
+### Colour and styling
+
+Each tool has **one identity colour**, declared once in its own stylesheet (`css/tool_numisdata_import.less`):
+
+``` less
+:root {
+	--tool_numisdata_import: #2a7d6f;
+}
+@tool_color : var(--tool_numisdata_import);
+```
+
+Everything else is derived from it. `bun run css:tool-colors` writes, per tool and per theme, the header edge (`--tool_edge`), a button fill (`--tool_fill`, the colour made lighter or darker only as much as needed so its label reaches 4.5:1 contrast), its hover (`--tool_fill_hover`) and the label colour (`--tool_on_fill`, white or near-black). The output is the generated file `client/dedalo/core/tools_common/css/tool_colors.less` — never edit it; change the colour and run the command again, then `bun run css:build`. The scaffolder runs the generator once for a new tool.
+
+Three rules keep every tool readable and consistent:
+
+- **Do not style the header surface.** The header — its light surface tinted with the tool colour, the coloured top edge, the shadow and the text colours — is shared by every tool, in a modal and in its own window. A rule setting `background` or `box-shadow` on `.tool_header` in a tool stylesheet is refused by the test suite. Style the header's *children* (a wider select, an extra control) freely.
+
+    The header's height follows its content, and so does the dialog's title bar that holds it. The description sits beside the tool name when it gets at least about 18rem of width, and moves to its own line below the name when it does not. The dialog body always starts below the header, also after the user resizes the dialog, and scrolls under it. So do not give `.tool_header` or `.tool_name_container` a fixed or maximum height: the text would be cut off.
+- **Never put text on the raw colour.** Identity colours are mid-tones chosen to be recognisable: about half of them are unreadable under white text, the other half under black. A button in the tool colour uses the shared mixin, which applies the fill, the label colour and the icon colour together:
+
+    ``` less
+    @import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
+
+    .wrapper_tool.tool_numisdata_import button.button_import {
+    	.tool_action_button();
+    }
+    ```
+
+    A plain `button.primary` inside the tool gets the same treatment automatically. A `background-color: @tool_color` on a `button` is refused by the test suite.
+- **Keep the raw colour for decoration** — small accents, a hover tint on an icon, a selection outline — never under text.
+
 ## 7. Register the tool
 
 The final step that activates the tool is registering it. Go to:
@@ -233,6 +264,10 @@ The tool button now appears on matching elements (per *Affected models* / *Affec
 ## 9. Test
 
 Follow the existing test pattern for a real tool (e.g. `test/parity/tool_export_differential.test.ts` or `test/unit/tools_dispatch.test.ts`): drive the same `tool_request` through the dispatcher and assert on the response — parity gates replay the frozen fixture store (`test/parity/fixtures/oracle_harvest/`) rather than a live external server.
+
+### On a phone
+
+Every tool must work on a 360px phone. Add a probe for your tool to `test/helpers/tool_phone_ratchet.ts` and run `bun run test:tools:phone --tool <your_tool> --shots <dir>`; a new tool directory missing from that list fails `tool_phone_tripwire`. The contract, the shared rules you get for free and the touch gestures are in [Tools on a phone](phone_layout.md).
 
 ## Out-of-repo tools
 

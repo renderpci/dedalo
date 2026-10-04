@@ -1,65 +1,94 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global */
 /*eslint no-undef: "error"*/
 
 
 
 /**
 * DRAG_TOOL_EXPORT
-* Drag-and-drop event handlers used by tool_export to manage the user's
-* component selection list (the right-hand "columns to export" panel).
+* Drag-and-drop for tool_export's "Active elements" list (the columns to export).
 *
-* There are two distinct drag scenarios, distinguished by the `drag_type`
-* field embedded in the dataTransfer payload:
+* Two drags share ONE drop model:
 *
-*  - 'add'  — a component is dragged from the left-hand section elements list
-*              into the user-selection list. `on_dragstart` / `on_drop` handle
-*              this path. `on_drop` rebuilds a full `new_ddo` object, deduplicates
-*              against `self.ar_ddo_to_export`, delegates DOM insertion to
-*              `self.build_export_component`, then syncs `ar_ddo_to_export` and
-*              persists via `self.update_local_db_data`.
+*  - 'add'  — a component dragged from the left-hand section elements list
+*             (render_common wires its dragstart to `on_dragstart`).
+*  - 'sort' — an already-selected export_component dragged within the list
+*             (`do_sortable` in render_tool_export.js starts it and calls
+*             `set_sort_payload`).
 *
-*  - 'sort' — an already-selected export component is dragged within the
-*             selection list to reorder columns. The `do_sortable` function in
-*             render_tool_export.js wires this path; `on_drop` handles it here
-*             by moving the stored `self.dragged` node to the end of the
-*             container, then syncing and persisting.
+* THE DROP MODEL. The whole selection column (title + list + the free space
+* below it) is ONE drop zone. While dragging over it, the insertion index is
+* derived from the pointer: the first item whose vertical midpoint lies below
+* the pointer — upper half of a row = before it, lower half = after it, below
+* the last row = at the end. A single `.drop_marker` line is shown exactly at
+* that index, so the user sees where the element will land BEFORE releasing;
+* the rows never move under the pointer. The drop inserts at the same index.
 *
-* All handlers are attached as prototype methods on `tool_export` (see
-* tool_export.js prototype assignments). They therefore receive the tool
-* instance as `this` (`self`) when called through those prototype slots.
+* The payload is kept on the instance (`self.drag_payload`) at dragstart:
+* dataTransfer cannot be read during dragover, and the marker must know the
+* drag type and (for 'add') whether the element is already in the list. A
+* duplicate shows no marker, highlights the existing row and refuses the drop
+* (dropEffect 'none'); a sort onto its own position shows no marker either.
 *
-* Exports: on_dragstart, on_dragover, on_dragleave, on_drop
+* All handlers are prototype methods on tool_export (tool_export.js), so they
+* run with the tool instance as `this`.
+*
+* Exports: on_dragstart, on_dragover, on_dragleave, on_drop, on_dragend,
+*          set_sort_payload, get_drop_index
 */
 
 
 
 /**
+* GET_DROP_INDEX
+* The insertion index for a pointer at `client_y` over `items`: the index of
+* the first item whose vertical midpoint lies below the pointer, or
+* items.length (append) when the pointer is below every midpoint.
+* @param {HTMLElement[]} items - the list rows, in DOM order
+* @param {number} client_y - pointer Y (viewport coordinates)
+* @returns {number} 0..items.length
+*/
+export const get_drop_index = function(items, client_y) {
+
+	const items_length = items.length
+	for (let i = 0; i < items_length; i++) {
+		const rect = items[i].getBoundingClientRect()
+		if (client_y < rect.top + rect.height / 2) {
+			return i
+		}
+	}
+
+	return items_length
+}//end get_drop_index
+
+
+
+/**
+* GET_ITEMS
+* The list rows (export_component nodes) — never the marker.
+* @param {HTMLElement} list - user_selection_list
+* @returns {HTMLElement[]}
+*/
+const get_items = function(list) {
+
+	return [...list.children].filter(node => node.classList.contains('export_component'))
+}//end get_items
+
+
+
+/**
 * ON_DRAGSTART
-* Encodes the dragged component's path and ddo into the dataTransfer payload
-* so that the drop target can identify and reconstruct the component.
-*
-* Called when the user starts dragging an element from the left-hand section
-* elements list. Sets `drag_type = 'add'` so that `on_drop` knows this is a
-* new-component drop (as opposed to a reorder within the selection list, which
-* sets `drag_type = 'sort'`).
-*
-* The payload shape stored as 'text/plain' JSON:
-*   {
-*     drag_type : 'add',
-*     path      : Array   // full path from the current section — array of
-*                         // {section_tipo, component_tipo} objects built by
-*                         // common.calculate_component_path
-*     ddo       : Object  // descriptor-data-object from the section elements list
-*   }
-*
-* @param {Object} obj   - the draggable element's dataset proxy; must expose
-*                         `.path` (Array) and `.ddo` (Object)
-* @param {DragEvent} event - native drag event fired on the draggable element
-* @returns {boolean} always true (consumed by the drag API)
+* Starts an 'add' drag from the left-hand section elements list. The payload
+* goes to dataTransfer (the drag API requires data) AND to self.drag_payload,
+* which the dragover/drop handlers read.
+* @param {HTMLElement} obj - the dragged list node; exposes `.path` and `.ddo`
+* @param {DragEvent} event
+* @returns {boolean} true
 */
 export const on_dragstart = function(obj, event) {
 	event.stopPropagation();
+
+	const self = this
 
 	const data = {
 		drag_type	: 'add',
@@ -72,210 +101,271 @@ export const on_dragstart = function(obj, event) {
 		JSON.stringify(data)
 	);
 
+	self.drag_payload = {
+		...data,
+		id : self.compose_id(obj.ddo, obj.path)
+	}
+
 	return true
-}//end ondrag_start
+}//end on_dragstart
+
+
+
+/**
+* SET_SORT_PAYLOAD
+* Starts a 'sort' drag of an already-selected row (called by do_sortable).
+* @param {HTMLElement} element - the dragged export_component
+* @returns {void}
+*/
+export const set_sort_payload = function(element) {
+
+	const self = this
+
+	self.dragged		= element
+	self.drag_payload	= {
+		drag_type : 'sort'
+	}
+}//end set_sort_payload
 
 
 
 /**
 * ON_DRAGOVER
-* Keeps the drop zone active and clears any leftover 'displaced' highlight
-* classes from sibling children of the container while the dragged item hovers.
-*
-* Calls `event.preventDefault()` to allow drops (the browser's default is to
-* forbid drops). Sets `dropEffect = 'move'` to show the correct cursor.
-*
-* The 'displaced' class is applied by the sort-mode `dragenter` handler in
-* `do_sortable` (render_tool_export.js) to visually indicate the insertion
-* point. Clearing it here prevents stale highlights when the pointer moves
-* between siblings without triggering `dragleave`.
-*
-* @param {HTMLElement} obj   - the container element acting as drop target
-* @param {DragEvent} event   - native dragover event
+* Resolves the insertion index under the pointer and shows the marker there
+* (or, for a duplicate / no-op, highlights instead and refuses the drop).
+* @param {HTMLElement} zone - the selection column (the drop zone)
+* @param {DragEvent} event
 * @returns {void}
 */
-export const on_dragover = function(obj, event) {
+export const on_dragover = function(zone, event) {
+
+	const self = this
+
+	const payload = self.drag_payload
+	if (!payload) {
+		// not one of ours (a file from the desktop, a drag from another widget)
+		return
+	}
+
 	event.preventDefault();
 	event.stopPropagation();
 
-	event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
+	const list	= self.user_selection_list
+	const items	= get_items(list)
 
-	// Add dragover class
-	// obj.classList.add('dragover')
-
-	const element_children_length = obj.children.length
-	for (let i = 0; i < element_children_length; i++) {
-		const item = obj.children[i]
-		if (item.classList.contains('displaced')) {
-			item.classList.remove('displaced')
+	// duplicate: point at the row that already holds it
+	if (payload.drag_type==='add') {
+		const existing = items.find(node => node.ddo?.id===payload.id)
+		if (existing) {
+			event.dataTransfer.dropEffect = 'none'
+			hide_marker(self)
+			if (!existing.classList.contains('drop_duplicate')) {
+				existing.classList.add('drop_duplicate')
+				existing.scrollIntoView({block: 'nearest'})
+			}
+			return
 		}
 	}
 
+	event.dataTransfer.dropEffect = 'move'
+
+	const index = get_drop_index(items, event.clientY)
+
+	// sort onto its own position (just above or below itself): nothing moves
+	if (payload.drag_type==='sort') {
+		const dragged_index = items.indexOf(self.dragged)
+		if (dragged_index!==-1 && (index===dragged_index || index===dragged_index + 1)) {
+			hide_marker(self)
+			return
+		}
+	}
+
+	show_marker(self, list, items, index)
 }//end on_dragover
 
 
 
 /**
-* ON_DRAGLEAVE
-* Removes the 'dragover' highlight from the container when the drag pointer
-* exits it without dropping, so the visual cue is cleaned up correctly.
-*
-* @param {HTMLElement} obj   - the container element acting as drop target
-* @param {DragEvent} event   - native dragleave event
+* SHOW_MARKER
+* Places the one insertion marker at `index` (moves it only when the index
+* changed, so a still pointer causes no DOM churn).
+* @param {Object} self - tool_export instance
+* @param {HTMLElement} list - user_selection_list
+* @param {HTMLElement[]} items - the list rows
+* @param {number} index - insertion index
 * @returns {void}
 */
-export const on_dragleave = function(obj, event) {
-	event.preventDefault();
-	// remove dragover class
-	obj.classList.remove('dragover')
+const show_marker = function(self, list, items, index) {
+
+	if (self.drop_index===index && self.drop_marker?.parentNode===list) {
+		return
+	}
+
+	if (!self.drop_marker) {
+		self.drop_marker = document.createElement('div')
+		self.drop_marker.className = 'drop_marker'
+	}
+	list.insertBefore(self.drop_marker, items[index] || null)
+	self.drop_index = index
+}//end show_marker
+
+
+
+/**
+* HIDE_MARKER
+* Removes the marker and any duplicate highlight; forgets the index.
+* @param {Object} self - tool_export instance
+* @returns {void}
+*/
+const hide_marker = function(self) {
+
+	self.drop_marker?.remove()
+	self.drop_index = null
+}//end hide_marker
+
+
+
+/**
+* CLEAR_DRAG_STATE
+* Full reset: marker, duplicate highlight, payload.
+* @param {Object} self - tool_export instance
+* @returns {void}
+*/
+const clear_drag_state = function(self) {
+
+	hide_marker(self)
+	self.user_selection_list?.querySelectorAll('.drop_duplicate').forEach(node => {
+		node.classList.remove('drop_duplicate')
+	})
+}//end clear_drag_state
+
+
+
+/**
+* ON_DRAGLEAVE
+* Hides the marker when the pointer really leaves the zone (dragleave also
+* fires when moving between the zone's own children — those are ignored).
+* @param {HTMLElement} zone - the selection column
+* @param {DragEvent} event
+* @returns {void}
+*/
+export const on_dragleave = function(zone, event) {
+
+	const self = this
+
+	if (event.relatedTarget && zone.contains(event.relatedTarget)) {
+		return
+	}
+	clear_drag_state(self)
 }//end on_dragleave
 
 
 
 /**
 * ON_DRAGEND
-* (!) Commented-out handler — kept for future reference.
-* If re-enabled, it would mirror on_dragleave by removing the 'dragover'
-* class on the container when the drag operation ends (whether or not a
-* drop occurred). Currently drag-end cleanup is handled by the inline
-* 'dragend' listener inside do_sortable in render_tool_export.js.
+* Any drag of ours ended (dropped anywhere, or cancelled with Escape): no
+* marker, highlight or payload may outlive it. Wired on the tool's grid, which
+* contains both drag sources ('add' ends on the LEFT list, not on the zone).
+* @returns {void}
 */
-	// export const on_dragend = function(obj, event) {
-	// 	event.preventDefault();
-	// 	// remove dragover class
-	// 	obj.classList.remove('dragover')
-	// }//end on_dragend
+export const on_dragend = function() {
+
+	const self = this
+
+	clear_drag_state(self)
+	self.drag_payload	= null
+	self.dragged		= null
+}//end on_dragend
 
 
 
 /**
 * ON_DROP
-* Handles a drop on the user-selection list container. Branches on `drag_type`
-* to serve two distinct use-cases:
-*
-*  1. 'sort' (reorder within selection list)
-*     The dragged node is stored on `self.dragged` by the 'dragstart' listener
-*     in do_sortable (render_tool_export.js). On drop it is appended to the end
-*     of the container, marked active, and the in-memory `ar_ddo_to_export`
-*     array is rebuilt from DOM order via `self.sync_ar_ddo_to_export` and
-*     then persisted via `self.update_local_db_data`.
-*
-*     (!) Note: sort-mode appends to the END of the list rather than inserting
-*     before the hovered sibling. Precise positional insertion for sort-mode is
-*     handled by the per-element 'drop' listener inside do_sortable, not here.
-*     This branch is only reached when the drop lands on the container itself
-*     (not on a child export_component element).
-*
-*  2. 'add' (new component from the section elements list)
-*     Reads `path` and `ddo` from the payload, builds a stable `id` via
-*     `self.compose_id`, and short-circuits if that id is already present in
-*     `self.ar_ddo_to_export` (deduplication). Otherwise, constructs a clean
-*     `new_ddo` object — stripping any extra keys from the source ddo and
-*     replacing `ddo.path` with the full multi-hop `path` from the payload —
-*     then delegates DOM construction to `self.build_export_component`, appends
-*     the returned node, clears displaced highlights, syncs the array, and persists.
-*
-* The `new_ddo` object shape built for the 'add' path:
-*   {
-*     id           : string  // composed from path + lang; see compose_id
-*     tipo         : string  // ontology tipo of the component
-*     section_tipo : string  // ontology tipo of the owning section
-*     model        : string  // JS class name, e.g. 'component_input_text'
-*     parent       : string  // parent tipo (used for relational components)
-*     lang         : string  // language code, e.g. 'lg-eng'
-*     mode         : string  // render mode, e.g. 'edit'
-*     label        : string  // human-readable column label
-*     path         : Array   // full path of {section_tipo, component_tipo} hops
-*   }
-*
-* @param {HTMLElement} container - the drop-zone container (user_selection_list)
-* @param {DragEvent} event       - native drop event
-* @returns {boolean|void} true on success; void when deduplicated or async branch pending
+* Inserts at the index the marker showed: moves the dragged row ('sort') or
+* builds and inserts a new export_component ('add'). The DOM is the single
+* source of truth for column order — sync_ar_ddo_to_export then persists it.
+* @param {HTMLElement} zone - the selection column
+* @param {DragEvent} event
+* @returns {boolean} true when something was placed
 */
-export const on_drop = function(container, event) {
-	event.preventDefault() // Necessary. Allows us to drop.
-	event.stopPropagation()
-
-	container.classList.remove('dragover')
+export const on_drop = function(zone, event) {
 
 	const self = this
 
-	// data transfer
-		const data			= event.dataTransfer.getData('text/plain');// element that move
-		const parsed_data	= JSON.parse(data)
+	const payload	= self.drag_payload
+	const index		= self.drop_index
+	if (!payload) {
+		return false
+	}
 
-		if (parsed_data.drag_type!=='add') {
+	event.preventDefault()
+	event.stopPropagation()
 
-			const dragged = self.dragged
+	clear_drag_state(self)
+	self.drag_payload = null
 
-			const user_selection_list = container
+	// no marker was shown (duplicate, or a sort onto its own position)
+	if (index===null || index===undefined) {
+		return false
+	}
 
-			// move DOM node to the end, then derive order from the DOM
-			user_selection_list.appendChild(dragged)
+	const list	= self.user_selection_list
+	const ref	= get_items(list)[index] || null
 
-			dragged.classList.add('active')
-
-			// Update the ddo_export from the new DOM order
-				self.sync_ar_ddo_to_export()
-
-				// save local db data
-				self.update_local_db_data()
-			return true
+	// sort: move the row
+	if (payload.drag_type==='sort') {
+		const dragged = self.dragged
+		self.dragged = null
+		if (!dragged) {
+			return false
 		}
+		list.insertBefore(dragged, ref)
+		flash(dragged)
+		self.sync_ar_ddo_to_export()
+		self.update_local_db_data()
+		return true
+	}
 
-	// short vars
-		const path	= parsed_data.path
-		const ddo	= parsed_data.ddo
-		const id	= self.compose_id(ddo, path)
-
-	// rebuild ddo
-		const new_ddo = {
-			id				: id,
-			tipo			: ddo.tipo,
-			section_tipo	: ddo.section_tipo,
-			model			: ddo.model,
-			parent			: ddo.parent,
-			lang			: ddo.lang,
-			mode			: ddo.mode,
-			label			: ddo.label,
-			path			: path // full path from current section replaces ddo single path
-		}
-
-	// exists
-		const found = self.ar_ddo_to_export.find(el => el.id===new_ddo.id)
-		if (found) {
-			console.log('Ignored already included item ddo:', found);
-			return
-		}
-
-	// Build component html
-		self.build_export_component(new_ddo)
-		.then((export_component_node)=>{
-
-			const user_selection_list = container
-
-			// add DOM node
-			user_selection_list.appendChild(export_component_node)
-
-			// reset
-			const element_children_length = user_selection_list.children.length
-			for (let i = 0; i < element_children_length; i++) {
-				const item = user_selection_list.children[i]
-				if (item.classList.contains('displaced')) {
-					item.classList.remove('displaced')
-				}
-			}
-
-			// Update the ddo_export from the new DOM order
-			self.sync_ar_ddo_to_export()
-
-			// save local db data
-			self.update_local_db_data()
-		})
-
+	// add: build the new column
+	const new_ddo = {
+		id					: payload.id,
+		tipo				: payload.ddo.tipo,
+		section_tipo		: payload.ddo.section_tipo,
+		model				: payload.ddo.model,
+		parent				: payload.ddo.parent,
+		lang				: payload.ddo.lang,
+		mode				: payload.ddo.mode,
+		label				: payload.ddo.label,
+		value_with_parents	: false, // per-component parents export (checkbox in the item)
+		path				: payload.path // full path from current section replaces ddo single path
+	}
+	self.build_export_component(new_ddo)
+	.then((export_component_node)=>{
+		// the reference row may have been removed while the node was built
+		const anchor = ref && ref.parentNode===list ? ref : null
+		list.insertBefore(export_component_node, anchor)
+		flash(export_component_node)
+		self.sync_ar_ddo_to_export()
+		self.update_local_db_data()
+	})
 
 	return true
 }//end on_drop
+
+
+
+/**
+* FLASH
+* Re-triggers the 'active' arrival animation on a placed row.
+* @param {HTMLElement} node
+* @returns {void}
+*/
+const flash = function(node) {
+
+	node.classList.remove('active')
+	void node.offsetWidth // restart the animation
+	node.classList.add('active')
+}//end flash
 
 
 

@@ -52,7 +52,9 @@ For **out-of-repo roots** (`config.tools.additionalRoots` / `DEDALO_ADDITIONAL_T
 
 6. **Declare `backgroundRunnable`** explicitly for the (few) actions allowed to run detached. Everything else should not be listed, or a `background_running:true` request for it is refused with `background_not_allowed`.
 
-7. **Validate your inputs.** The framework guarantees `options` is an object from an authorized user who cleared the declared permission — not that its fields are sane. Check types and ranges before acting.
+7. **Fetch other sites only through the harvesting door.** A URL a user pastes, or one a redirect hands you, can point at your own network. `harvestFetch` re-checks every hop of a redirect chain, obeys `robots.txt` for every request (images, PDFs and POSTs included) and paces requests per origin for the whole installation; a tool's own `fetch` does none of that, and `ssrf_one_guard_tripwire` refuses it. Report its failures with `toErrorBody(toDedaloError(error))`, never `error.message`, which can name a refused internal address. See [Fetching from other sites](server_contract.md#fetching-from-other-sites-srccoreharvestharvestts).
+
+8. **Validate your inputs.** The framework guarantees `options` is an object from an authorized user who cleared the declared permission — not that its fields are sane. Check types and ranges before acting.
 
 ## Note on the development template
 

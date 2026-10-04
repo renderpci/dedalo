@@ -44,6 +44,11 @@ import {
 	type TranscriptionSegment,
 } from '../../src/core/tools/transcription_asr.ts';
 
+/** The save seam a leg that must NEVER reach the save passes (the save is the caller's to supply). */
+const NEVER_SAVE = async (): Promise<never> => {
+	throw new Error('this poll must not reach the save');
+};
+
 const BASE: Omit<TranscriberStatusRequest, 'engine'> = {
 	uri: 'https://asr.example.org/api',
 	key: 'k',
@@ -117,12 +122,15 @@ describe('pollTranscriptionCompletion — the provider follows the ENGINE', () =
 			throw new Error('the poll must not reach the network for an unimplemented engine');
 		}) as unknown as typeof fetch;
 
-		const outcome = await pollTranscriptionCompletion({
-			status: { ...BASE, engine: 'google_translation', avUrl: 'https://media.example.org/a.mp3' },
-			lang: 'lg-spa',
-			transcriptionDdo: { component_tipo: 'test17', section_tipo: 'test3', section_id: 1 },
-			userId: 16,
-		});
+		const outcome = await pollTranscriptionCompletion(
+			{
+				status: { ...BASE, engine: 'google_translation', avUrl: 'https://media.example.org/a.mp3' },
+				lang: 'lg-spa',
+				transcriptionDdo: { component_tipo: 'test17', section_tipo: 'test3', section_id: 1 },
+				userId: 16,
+			},
+			{ save: NEVER_SAVE },
+		);
 
 		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('not implemented');
@@ -136,7 +144,7 @@ describe('pollTranscriptionCompletion — the provider follows the ENGINE', () =
 				transcriptionDdo: { component_tipo: 'test17', section_tipo: 'test3', section_id: 1 },
 				userId: 16,
 			},
-			{ provider: async () => ({ status: 1 }), maxAttempts: 1 },
+			{ provider: async () => ({ status: 1 }), maxAttempts: 1, save: NEVER_SAVE },
 		);
 		expect(outcome.msg).toContain('status 1');
 	});

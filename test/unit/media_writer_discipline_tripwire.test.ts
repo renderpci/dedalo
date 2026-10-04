@@ -722,8 +722,6 @@ const READ_ONLY_PROBE: Record<string, string> = {
 		'ffprobe -show_format, read-only: a killed probe yields unparseable JSON and the function answers null. Its consumers ask for a DATE or a duration and treat null as "unknown", which is the documented probe degradation',
 	'src/core/media/engine/ffmpeg.ts::probeStreams':
 		'ffprobe -show_streams, read-only and null on a failed probe — but null here is NOT "no streams" (a stream-less file still answers {"streams":[]}), so av_versions.probeAvSource REFUSES to guess from it rather than silently skipping the audio tier of an interview',
-	'src/core/media/engine/ffmpeg.ts::getAudioCodec':
-		'`ffmpeg -buildconf` capability sniff: it picks the best available AAC encoder and falls back to plain `aac`, which every ffmpeg build has. A failed probe costs encoder quality, never an output file',
 	'src/core/media/engine/pdf.ts::getPageCount':
 		'pdfinfo page count, read-only: the Pages: line simply does not match and the function answers null, which callers already handle as "page count unknown"',
 	'src/core/media/file_date.ts::pdfDate':

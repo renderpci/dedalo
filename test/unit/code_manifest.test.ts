@@ -17,7 +17,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { UpdateDescriptor } from '../../src/core/update/catalog.ts';
+import type { CodeOnlyUpdateDescriptor, UpdateDescriptor } from '../../src/core/update/catalog.ts';
 import {
 	buildCodeUpdateInfo,
 	codeReleasePath,
@@ -29,7 +29,7 @@ function target(
 	major: number,
 	medium: number,
 	minor: number,
-	extra: Partial<UpdateDescriptor> = {},
+	extra: Partial<CodeOnlyUpdateDescriptor> = {},
 ): UpdateDescriptor {
 	return {
 		versionMajor: major,
@@ -40,6 +40,8 @@ function target(
 		updateFromMajor: major,
 		updateFromMedium: medium,
 		updateFromMinor: Math.max(0, minor - 1),
+		// A code release (the manifest walk ignores updateData too).
+		updateData: false,
 		...extra,
 	};
 }

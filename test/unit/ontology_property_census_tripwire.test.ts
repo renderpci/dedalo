@@ -35,8 +35,8 @@
  * unread set is a LOWER bound (everything it names is truly dead; a key spelled
  * like an ordinary word — `name`, `row`, `key` — may be dead and counted
  * honoured). Comments are stripped, so a commented-out reader counts as no
- * reader (that is how `hard_delete` stayed dead until it was wired on
- * 2026-09-06). The gate reads no database.
+ * reader (`hard_delete`'s v6 reader was commented out on purpose; it is
+ * retired again since 2026-09-29). The gate reads no database.
  *
  * Hermetic: repo files only.
  */

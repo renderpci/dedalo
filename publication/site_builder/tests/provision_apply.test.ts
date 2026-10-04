@@ -50,6 +50,7 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -72,6 +73,7 @@ import {
   type InstanceManifest,
 } from '../src/provision/layout';
 import {
+  agentPlan,
   changesTheHost,
   observedPaths,
   plan,
@@ -81,6 +83,8 @@ import {
   type PathObservation,
 } from '../src/provision/plan';
 import { renderAll, type Artifact } from '../src/provision/render';
+import { ledgerOrdinals } from '../src/provision/identities';
+import { type FakeAccount, fakeLedger, useraddAccount, usermodAccount } from './support/fake_accounts';
 import { parseManifest } from '../src/provision/schema';
 
 /** The one committed declaration. The gate provisions THAT, not a manifest of its own. */
@@ -136,6 +140,11 @@ interface FakeHost {
   readonly groups: Set<string>;
   unitEnabled: boolean;
   unitActive: boolean;
+  /** The identity ledger `getent` would report (LEAD-1b): what the stubbed commands did. */
+  readonly accounts: Map<string, FakeAccount>;
+  readonly ledgerGroups: Map<string, { name: string; gid: number; members: string[] }>;
+  readonly enabledSockets: Set<string>;
+  nextId: number;
 }
 
 interface Instance {
@@ -165,18 +174,34 @@ function makeInstance(): Instance {
     // else, so this gate writes inside its own scratch prefix and never into a real
     // /etc/polkit-1 on the machine running the suite.
     polkit_rules_dir: join(prefix, 'etc/polkit-1/rules.d'),
+    tmpfiles_dir: join(prefix, 'etc/tmpfiles.d'),
   };
 
   const manifest = parseManifest(raw);
   const layout = derive(manifest);
+  // The artifacts a FIRST apply renders: with the identities a fresh ledger allocates (one per
+  // declared site, in declaration order) and the PID 1 this fake host reports (LEAD-1b).
+  const { facts } = agentPlan(layout, { users: [], groups: [], entries: {}, unitEnabled: false, unitActive: false, pid1Version: PID1 });
   return {
     prefix,
     layout,
     manifest,
-    artifacts: renderAll(layout, manifest),
-    host: { users: new Set(), groups: new Set(), unitEnabled: false, unitActive: false },
+    artifacts: renderAll(layout, manifest, facts),
+    host: {
+      users: new Set(),
+      groups: new Set(),
+      unitEnabled: false,
+      unitActive: false,
+      accounts: new Map(),
+      ledgerGroups: new Map(),
+      enabledSockets: new Set(),
+      nextId: 30_000,
+    },
   };
 }
+
+/** The PID 1 release this fake host reports. */
+const PID1 = 255;
 
 /** Put a file on the synthetic host with a stated owner, group and mode. */
 function plant(
@@ -326,6 +351,13 @@ function makeIo(
       const recorded = access.get(path);
       access.set(path, { owner: recorded?.owner ?? 'root', group: recorded?.group ?? 'root', mode });
     },
+    rename(from: string, to: string): void {
+      mkdirSync(dirname(on(to)), { recursive: true });
+      renameSync(on(from), on(to));
+    },
+    unlink(path: string): void {
+      rmSync(on(path), { force: true });
+    },
     // The two non-deterministic operations, made deterministic. A gate that could predict a
     // real token would be a gate demanding the token be predictable; these stubs exist so
     // the SECRECY can be asserted — the value is written and never reported — without the
@@ -346,9 +378,45 @@ function makeIo(
       // The fake host CHANGES: a `groupadd` that left the group missing would make every
       // second plan repeat itself, and the idempotence gate would be measuring nothing.
       const line = argv.join(' ');
-      if (argv[0] === 'groupadd') host.groups.add(argv[argv.length - 1]!);
-      if (argv[0] === 'useradd') host.users.add(argv[argv.length - 1]!);
-      if (line.startsWith('systemctl enable')) host.unitEnabled = true;
+      const name = argv[argv.length - 1]!;
+      const flag = (key: string) => (argv.indexOf(key) >= 0 ? argv[argv.indexOf(key) + 1] : undefined);
+      const group = (groupName: string) => {
+        let entry = host.ledgerGroups.get(groupName);
+        if (!entry) {
+          entry = { name: groupName, gid: host.nextId++, members: [] };
+          host.ledgerGroups.set(groupName, entry);
+        }
+        return entry;
+      };
+      if (argv[0] === 'groupadd') {
+        host.groups.add(name);
+        group(name);
+      }
+      if (argv[0] === 'useradd') {
+        host.users.add(name);
+        host.accounts.set(name, useraddAccount(name, host.nextId++, group(flag('--gid') ?? name).gid, flag('--comment') ?? ''));
+        const supplementary = flag('--groups');
+        if (supplementary) group(supplementary).members.push(name);
+      }
+      if (argv[0] === 'gpasswd' && argv[1] === '-a' && !group(argv[3]!).members.includes(argv[2]!)) group(argv[3]!).members.push(argv[2]!);
+      if (argv[0] === 'usermod') {
+        const account = host.accounts.get(name);
+        if (account) host.accounts.set(name, usermodAccount(account, argv));
+      }
+      // Nothing of a retired identity is still running on this host.
+      if (argv[0] === 'pgrep') return { code: 1, stdout: '', stderr: '' };
+      // `systemd-tmpfiles --create <file>`: every `d` line of the file as written, made root's.
+      if (argv[0] === 'systemd-tmpfiles' && argv[1] === '--create') {
+        for (const entry of readFileSync(on(argv[2]!), 'utf8').split('\n')) {
+          const [type, path, mode, owner, group] = entry.trim().split(/\s+/);
+          if (type !== 'd' || !path || !mode || !owner || !group) continue;
+          mkdirSync(on(path), { recursive: true });
+          access.set(path, { owner, group, mode: Number.parseInt(mode, 8) });
+        }
+      }
+      if (line.startsWith('systemctl enable --now ')) for (const socket of argv.slice(3)) host.enabledSockets.add(socket);
+      if (line.startsWith('systemctl stop ') && argv[2] === instance.layout.unitName) host.unitActive = false;
+      if (line.startsWith('systemctl enable') && !line.startsWith('systemctl enable --now ')) host.unitEnabled = true;
       if (line.startsWith('systemctl start') || line.startsWith('systemctl restart')) {
         host.unitActive = true;
       }
@@ -388,14 +456,14 @@ function observe(instance: Instance, io: RecordingIo): HostState {
     ...instance.artifacts.map(artifact => artifact.path),
     ...[
       layout.roots.workspaces,
-      layout.roots.home,
       layout.roots.audit,
       ...layout.sites.map(site => site.webspace),
     ].map(root => join(root, INSTANCE_MARKER)),
   ]);
+  const agentLedger = fakeLedger(layout, instance.host.accounts.values(), instance.host.ledgerGroups.values());
 
   const entries: Record<string, PathObservation> = {};
-  for (const path of observedPaths(layout, manifest)) {
+  for (const path of observedPaths(layout, manifest, ledgerOrdinals(layout, agentLedger))) {
     const facts = io.stat(path);
     if (!facts) continue;
     const real = onHost(instance, path);
@@ -425,6 +493,9 @@ function observe(instance: Instance, io: RecordingIo): HostState {
       : undefined,
     nologinShell: '/usr/sbin/nologin',
     webServerUnit: 'nginx',
+    agentLedger,
+    pid1Version: PID1,
+    enabledSockets: [...instance.host.enabledSockets],
   };
 }
 
@@ -484,7 +555,6 @@ describe('a full apply against a synthetic host', () => {
   test('every root declares itself with a marker naming this instance', () => {
     for (const root of [
       instance.layout.roots.workspaces,
-      instance.layout.roots.home,
       instance.layout.roots.audit,
       ...instance.layout.sites.map(site => site.webspace),
     ]) {

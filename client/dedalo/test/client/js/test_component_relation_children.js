@@ -9,6 +9,7 @@ import {data_manager} from '../../../core/common/js/data_manager.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {clone, pause} from '../../../core/common/js/utils/util.js'
 import {response_data, request_failed} from '../../../core/common/js/api_error.js'
+import {component_portal} from '../../../core/component_portal/js/component_portal.js'
 
 
 
@@ -17,6 +18,7 @@ import {response_data, request_failed} from '../../../core/common/js/api_error.j
 	const children_tipo		= 'test201'
 	const children_section		= 'test3'
 	const children_section_id	= 1
+	const parent_tipo		= 'test71' // the paired component_relation_parent (write-through target)
 	const children_lang		= page_globals?.dedalo_data_nolan ?? 'lg-nolan'
 
 // modes and views to test
@@ -466,20 +468,20 @@ describe(`COMPONENT_RELATION_CHILDREN DATA OPERATIONS`, async function() {
 
 
 
-	// ─── CHANGE DATA (update via change_value) ──────────
-	// (!) change_value with set_data action works client-side
-	// but the server save is a no-op for this component.
-	// The test verifies the client-side data manipulation works.
-	//
-	// The block BUILDS its situation: a fresh record, created here and deleted in
-	// after(). The children of a SHARED record are whatever other suites linked to
-	// it — test_components_data_changes gives test3/10 a random test71 parent, and
-	// 1 run in 25 that parent was test3/1, which this block used to read: the save
-	// echo then listed test3/10 and "entries must be empty" failed (2026-09-26).
+	// ─── CHANGE DATA (write-through) ──────────
+	// component_relation_children owns no data: a save on it is a save on each
+	// CHILD's component_relation_parent (server relations/children_write.ts,
+	// WC-2026-10-02-relation-children-write-through). The block BUILDS its
+	// situation — a fresh parent and child created through the engine, swept in
+	// after() — because the children of a SHARED record are whatever any other
+	// suite linked to it (test_components_data_changes gives test3/10 a random
+	// test71 parent; 1 run in 25 that parent was test3/1).
+	// Bun half: test/unit/relation_children_write_through_native.test.ts.
 
-	describe(`CHANGE DATA (change_value)`, function() {
+	describe(`CHANGE DATA (write-through)`, function() {
 
-		let fresh_id = null
+		let parent_id	= null
+		let child_id	= null
 
 		const api = async function(body) {
 			const api_response = await data_manager.request({body})
@@ -500,76 +502,147 @@ describe(`COMPONENT_RELATION_CHILDREN DATA OPERATIONS`, async function() {
 				lang			: page_globals?.dedalo_data_lang ?? 'lg-eng'
 			}
 		}
+		// the child's own parent links, read back from ITS component_relation_parent
+		const parent_links_of = async function(section_id) {
+			const instance = await get_instance({
+				model			: 'component_relation_parent',
+				tipo			: parent_tipo,
+				section_tipo	: children_section,
+				section_id		: section_id,
+				mode			: 'edit',
+				view			: 'default',
+				lang			: children_lang,
+				id_variant		: 'parent_links_' + Math.random()
+			})
+			await instance.build(true)
+			const entries = (instance.data?.entries || []).map(el => ({
+				section_tipo	: el.section_tipo,
+				section_id		: Number(el.section_id),
+				type			: el.type
+			}))
+			await instance.destroy(true, true, true)
+			return entries
+		}
+		const child_ids_of = (instance) => (instance.data?.entries || []).map(el => Number(el.section_id))
 
 		before(async function() {
-			fresh_id = Number(await api({action: 'create', source: section_source()}))
-			assert.ok(fresh_id > 0, 'a fresh record was created')
+			parent_id	= Number(await api({action: 'create', source: section_source()}))
+			child_id	= Number(await api({action: 'create', source: section_source()}))
+			assert.ok(parent_id > 0 && child_id > 0 && parent_id!==child_id, 'two fresh records were created')
 		})
 
 		after(async function() {
-			if (fresh_id > 0) {
-				await api({
-					action	: 'delete',
-					source	: Object.assign(section_source(fresh_id), {delete_mode: 'delete_record'})
-				})
+			for (const id of [child_id, parent_id]) {
+				if (id > 0) {
+					await api({
+						action	: 'delete',
+						source	: Object.assign(section_source(id), {delete_mode: 'delete_record'})
+					})
+				}
 			}
 		})
 
-		it(`${children_model} change_value with set_data clears entries`, async function() {
+		it(`${children_model} is a component_portal subclass that removes by locator and never reorders`, async function() {
 
-			const instance = await get_children_instance('edit', 'default', fresh_id)
+			const instance = await get_children_instance('edit', 'default', parent_id)
+			assert.ok(instance instanceof component_portal, 'inherits the portal')
+			assert.equal(instance.reorderable, false, 'no drag reorder')
+			assert.deepEqual(
+				instance.get_unlink_changed_data([{section_tipo: children_section, section_id: '7', type: 'dd48'}]),
+				[{action: 'remove', id: null, value: {section_tipo: children_section, section_id: '7'}}],
+				'unlink removes BY LOCATOR'
+			)
+			assert.equal(await instance.sort_data({value: null, source_key: 0, target_key: 1}), false, 'sort_data sends nothing')
+			await instance.destroy(true, true, true)
+
+			// the portal itself is untouched by the override
+			const portal = new component_portal()
+			assert.deepEqual(
+				portal.get_unlink_changed_data([{id: 3, section_tipo: children_section, section_id: '7'}]),
+				[{action: 'remove', id: 3, value: null}],
+				'the portal still removes by item id'
+			)
+		})
+
+		it(`${children_model} change_value insert links the child through ITS relation_parent`, async function() {
+
+			const instance = await get_children_instance('edit', 'default', parent_id)
 			await instance.render()
+			assert.deepEqual(child_ids_of(instance), [], 'a fresh record has no children')
 
-			// set_data with null clears the entries client-side
-			const changed_data = [Object.freeze({
-				action	: 'set_data',
-				id		: null,
-				value	: null
-			})]
 			const api_response = await instance.change_value({
-				changed_data	: changed_data,
-				refresh		: false
+				changed_data	: [Object.freeze({
+					action	: 'insert',
+					id		: null,
+					value	: make_locator(child_id)
+				})],
+				refresh			: false
 			})
 
-			// asserts
-			assert.notEqual(api_response, null, 'api_response must not be null')
-			// After set_data(null), entries should be empty array client-side
-			assert.ok(
-				Array.isArray(instance.data?.entries) && instance.data.entries.length === 0,
-				'entries must be empty array after set_data(null)'
+			assert.ok(response_data(api_response), 'the save succeeded')
+			assert.deepEqual(child_ids_of(instance), [child_id], 'the echo lists the new child')
+			assert.deepEqual(
+				await parent_links_of(child_id),
+				[{section_tipo: children_section, section_id: parent_id, type: 'dd47'}],
+				'the child now declares the parent (canonical dd47 link)'
 			)
 
 			await instance.destroy(true, true, true)
 		})
 
-		it(`${children_model} change_value with insert returns api_response (read-only: insert does not persist)`, async function() {
+		it(`${children_model} unlink_record removes the child BY LOCATOR`, async function() {
 
-			const instance = await get_children_instance('edit', 'default', fresh_id)
+			const instance = await get_children_instance('edit', 'default', parent_id)
 			await instance.render()
+			// anti-vacuity: unlinking from an empty list proves nothing
+			assert.deepEqual(child_ids_of(instance), [child_id], 'the parent has the child before the unlink')
 
-			// insert a locator
-			// (!) component_relation_children is read-only: save() is a no-op
-			// and get_data() resolves from parent relations, so the inserted
-			// locator will NOT appear in the server response data.
-			// The client replaces instance.data with the server response,
-			// so entries won't contain the inserted item after change_value.
-			const locator = make_locator(1)
-			const insert_data = [Object.freeze({
-				action	: 'insert',
-				id		: null,
-				value	: locator
-			})]
+			const entry = instance.data.entries.find(el => Number(el.section_id)===child_id)
+			const result = await instance.unlink_record(entry)
+			assert.equal(result, true, 'unlink_record succeeded')
+			await instance.destroy(true, true, true)
+
+			// the server state, not the echo: a fresh read and the child's own links
+			const fresh = await get_children_instance('edit', 'default', parent_id)
+			assert.deepEqual(child_ids_of(fresh), [], 'a fresh read has no children')
+			await fresh.destroy(true, true, true)
+			assert.deepEqual(await parent_links_of(child_id), [], 'the child no longer declares the parent')
+		})
+
+		it(`${children_model} change_value with set_data(null) unlinks every child`, async function() {
+
+			// relink first (the previous case unlinked it)
+			const linker = await get_children_instance('edit', 'default', parent_id)
+			await linker.change_value({
+				changed_data	: [Object.freeze({action: 'insert', id: null, value: make_locator(child_id)})],
+				refresh			: false
+			})
+			await linker.destroy(true, true, true)
+
+			const instance = await get_children_instance('edit', 'default', parent_id)
+			await instance.render()
+			assert.deepEqual(child_ids_of(instance), [child_id], 'the parent has the child before the clear')
 
 			const api_response = await instance.change_value({
-				changed_data	: insert_data,
-				refresh		: false
+				changed_data	: [Object.freeze({
+					action	: 'set_data',
+					id		: null,
+					value	: null
+				})],
+				refresh			: false
 			})
 
-			// asserts - verify API response structure
-			assert.notEqual(api_response, null, 'api_response must not be null')
-			assert.ok(response_data(api_response), 'the api_response payload must be truthy')
-
+			assert.ok(response_data(api_response), 'the save succeeded')
+			assert.ok(
+				Array.isArray(instance.data?.entries) && instance.data.entries.length === 0,
+				'entries must be empty array after set_data(null)'
+			)
 			await instance.destroy(true, true, true)
+
+			const fresh = await get_children_instance('edit', 'default', parent_id)
+			assert.deepEqual(child_ids_of(fresh), [], 'a fresh read has no children')
+			await fresh.destroy(true, true, true)
+			assert.deepEqual(await parent_links_of(child_id), [], 'the child no longer declares the parent')
 		})
 	})//end describe CHANGE DATA
 

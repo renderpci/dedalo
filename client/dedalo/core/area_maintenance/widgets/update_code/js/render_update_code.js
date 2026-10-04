@@ -9,13 +9,12 @@
 	import {update_process_status} from '../../../../common/js/common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
-	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {normalize_stream_error, request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
-	import {render_code_server_status, render_consumer_status, refresh_readiness, backup_waiver_check} from './render_update_status.js'
+	import {render_consumer_status, refresh_readiness, backup_waiver_check} from './render_update_status.js'
 	import {
 		UPDATE_PHASES,
 		init_phase_state,
@@ -49,9 +48,8 @@
 *      reload (`login.quit`) via `ui.confirm`; a dismissed dialog leaves a
 *      persistent "reload pending" note with its own button.
 *
-* On code-server installations (is_a_code_server or entity === 'development'),
-* `make_builder_mounter` supplies the buttons that trigger a `git archive` build of
-* the master (`<v>.zip`) or developer (`<v>-dev.zip`) release.
+* The PUBLISH side (building `<v>.zip` / `<v>-dev.zip` from git on a code
+* server) is the serve_code widget since 2026-09-28.
 *
 * The 'development' entity REFUSES to update itself: the refusal renders in
 * the panel (disabled button + warning note) BEFORE any picker opens.
@@ -208,7 +206,6 @@ const get_content_data_edit = async function(self) {
 		const value = self.value || {}
 
 	// short vars
-		const is_a_code_server	= value.is_a_code_server
 		const servers			= value.servers || []
 		const is_development	= page_globals.dedalo_entity==='development'
 
@@ -235,15 +232,10 @@ const get_content_data_edit = async function(self) {
 	// pressing the button and reading the failure). Server: value.consumer,
 	// core/update/status.ts. Falls back to the two-row readout when an older
 	// server answers without the status halves.
-	// TWO ROLES, TWO BLOCKS. Everything from here to the update button is about
-	// the code THIS installation runs; the code-server half further down is about
-	// the code it PUBLISHES to others. Same widget, different owners.
-		const consumer_body = role_block(
-			content_data,
-			'consumer',
-			get_label.update_code_role_consumer || 'Update this installation',
-			get_label.update_code_role_consumer_note || 'The code this installation runs, and the code server it receives updates from.'
-		)
+	// The CONSUMER role only: the code THIS installation runs. The PUBLISH role
+	// (code server: build + serve releases) is its own widget since 2026-09-28,
+	// serve_code — the same split as update_ontology / serve_ontology.
+		const consumer_body = content_data
 		// ONE writer for the consumer half, callable again from the re-seed: a
 		// panel first painted through the FALLBACK (no `consumer` in the payload)
 		// could otherwise never gain a readiness block, because refresh_readiness
@@ -290,7 +282,7 @@ const get_content_data_edit = async function(self) {
 	// RE-READ the consumer half from the server. Deleting a restore point
 	// changes the very list this half renders, so the row that was acted on has
 	// to come back from disk rather than from the value this render closed over
-	// (the same reason the code-server half has refresh_code_server). Exposed on
+	// (the same reason serve_code re-reads its readout after a build). Exposed on
 	// the instance because the actor — delete_restore_point — is a module-level
 	// function, not a closure of this render.
 		self.refresh_consumer = async () => {
@@ -369,7 +361,7 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// dev_channel switch — ask the code server for DEVELOPER BUILDS too.
-	// A developer build is a branch build (any ref but 'master'), so it carries
+	// A developer build is a build of the 'master' tip (a release is a tag), so it carries
 	// NO version bump and installs over the same version: it is how unreleased
 	// work is tested on a real installation. Flipping this switch is the ARMING
 	// on this side — everything else (superuser, maintenance mode, a recent
@@ -406,7 +398,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note dev_channel_note',
-			text_content	: get_label.update_code_dev_channel_note || 'Also offers unreleased builds made from a development branch. They carry the same version number as the installed one, so they are installed over it. Use them to test development work, never on a production installation.',
+			text_content	: get_label.update_code_dev_channel_note || "Also offers developer builds made from the 'master' branch: the latest integrated code, not yet released. A developer build may carry the same version number as the installed one, and is then installed over it. Use them to test development work, never on a production installation.",
 			parent			: dev_channel_row
 		})
 
@@ -425,7 +417,7 @@ const get_content_data_edit = async function(self) {
 			e.stopPropagation()
 
 			// clean previous inline feedback
-				body_response.querySelectorAll('.error').forEach(el => el.remove())
+				body_response.querySelectorAll('.error').forEach(el => { el.remove() })
 				servers_list.classList.remove('empty')
 
 			// busy guard: a running update OR restore owns the panel (make_backup
@@ -545,7 +537,7 @@ const get_content_data_edit = async function(self) {
 						// get_value resolves an error envelope rather than throwing,
 						// so the real degrade path is the guard above; this is the
 						// backstop, and a failed re-seed must never take the panel
-						// down (same posture as refresh_code_server above)
+						// down (same posture as refresh_consumer above)
 						console.error('update_code: could not re-seed the panel value before the modal', error)
 					}
 
@@ -559,67 +551,6 @@ const get_content_data_edit = async function(self) {
 				spinner.remove()
 		}
 		button_submit.addEventListener('click', click_event)
-
-	// build code version
-	// Only rendered on code-server instances or the 'development' entity.
-	// These buttons invoke build_version_from_git_master on the server side to
-	// produce the distributable ZIP archives from the GIT repository.
-		if(is_a_code_server || is_development){
-			// The publish-side status BEFORE the builders: role and dirs through
-			// planCodeBuild itself, the commit a release would be built from,
-			// the archives already on disk, and what a consumer at this version
-			// is actually offered (an empty manifest over a published zip is the
-			// catalog's doing — the panel shows both instead of leaving the
-			// operator to infer it). Null on a non-code-server.
-			const server_body = role_block(
-				content_data,
-				'code_server',
-				get_label.update_code_role_server || 'Publish code to other installations',
-				get_label.update_code_role_server_note || 'This installation is a code server: it builds releases from GIT and serves them to the installations that ask it for updates.'
-			)
-			// The readout lays out one row per channel and calls back to mount
-			// the build action into it, so the button and the archive it writes
-			// are one entry instead of two disconnected blocks.
-			//
-			// It is rendered through a function because a BUILD invalidates it:
-			// the archive list, and what a consumer at this version is offered,
-			// are both answers about the disk that the build just changed. The
-			// pair is mutually recursive by design — the mounter needs the
-			// refresh, the refresh needs a mounter built from the FRESH value —
-			// and `refresh_code_server` is only ever read at call time.
-			const render_code_server_half = (code_server, build_mark) => {
-				while (server_body.firstChild) {
-					server_body.removeChild(server_body.firstChild)
-				}
-				render_code_server_status(
-					server_body,
-					code_server,
-					make_builder_mounter(self, body_response, code_server, refresh_code_server),
-					build_mark
-				)
-			}
-			// `build_mark` is {channel, previous} — the row whose button was just
-			// pressed and the facts it showed BEFORE. It survives exactly one
-			// render: the re-read below replaces the whole half, and without it
-			// the new archive line appears in place of the old one with nothing
-			// saying which of the two the operator is looking at.
-			const refresh_code_server = async (build_mark) => {
-				try {
-					const fresh = await self.get_value()
-					if (!fresh || !fresh.code_server) {
-						return
-					}
-					// keep the instance coherent too: the next render reads self.value
-					self.value = fresh
-					render_code_server_half(fresh.code_server, build_mark)
-				} catch (error) {
-					// a failed refresh must never take the panel down: the build
-					// already reported its own outcome in body_response
-					console.error('update_code: could not refresh the code-server readout', error)
-				}
-			}
-			render_code_server_half(value.code_server)
-		}
 
 	// add at end body_response
 		content_data.appendChild(body_response)
@@ -849,13 +780,8 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 	// with the surface complete lands at 26 exactly. rAF lets the appended nodes
 	// lay out first — without it the offset is computed from a stale layout
 	// again, just one frame earlier.
-		if (scroll_into_view===true && typeof body_response.scrollIntoView==='function') {
-			const bring_into_view = () => body_response.scrollIntoView({ behavior:'auto', block:'start' })
-			if (typeof requestAnimationFrame==='function') {
-				requestAnimationFrame(bring_into_view)
-			} else {
-				bring_into_view()
-			}
+		if (scroll_into_view===true) {
+			ui.reveal(body_response, { behavior:'auto', block:'start' })
 		}
 
 	// frame feed. update_process_status/render_stream expose no per-chunk hook
@@ -906,14 +832,9 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		// short window (update_code.less caps it for exactly this reason), so a
 		// refusal, a rollback or a lost connection landed in space the operator
 		// never saw: the panel looked like it had simply stopped. The track's
-		// cap makes room; this puts the sentence IN it. Guarded on the method
-		// because the render gate drives this file against a DOM stub.
-		const reveal = (node) => {
-			if (node && typeof node.scrollIntoView==='function') {
-				node.scrollIntoView({ behavior:'smooth', block:'center' })
-			}
-			return node
-		}
+		// cap makes room; this puts the sentence IN it (ui.reveal: next frame,
+		// DOM-stub guarded).
+		const reveal = (node) => ui.reveal(node, { block:'center' })
 
 		const finish_success = async (version) => {
 			end_tracking()
@@ -1167,305 +1088,6 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 
 
 /**
-* ROLE_BLOCK
-* One titled panel for ONE ROLE of this installation.
-*
-* The widget answers two unrelated questions on one screen — "what code does
-* THIS installation run, and where does it get updates?" and "what code does it
-* PUBLISH to other installations?" — and until 2026-08-24 they ran together as
-* a flat column of readouts. The ambiguity was real: 'Published releases' sat
-* among the update readouts, where it reads as something this install might
-* receive, and the GIT builders sat below everything, attached to nothing.
-*
-* @param {HTMLElement} parent
-* @param {string} role - 'consumer' | 'code_server' (drives the header icon)
-* @param {string} title
-* @param {string} note - one sentence saying whose code this half is about
-* @returns {HTMLElement} the block's body — append the role's content to it
-*/
-const role_block = function(parent, role, title, note) {
-
-	const block = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: `role_block role_${role}`,
-		parent			: parent
-	})
-	// the header IS the toggler (icon_arrow: house collapsible — chevron via
-	// :after, '.up' while open, mouseup handler)
-	const header = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'role_header icon_arrow',
-		parent			: block
-	})
-	// the icon is a CSS mask (.fn_maintenance_icon) chosen per role class
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'role_icon',
-		parent			: header
-	})
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'role_title',
-		text_content	: title,
-		parent			: header
-	})
-	// the note belongs to the OPEN state: collapsed, the title is the whole row
-	const note_node = note
-		? ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'role_note',
-			text_content	: note,
-			parent			: block
-		})
-		: null
-	const body = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'role_body',
-		parent			: block
-	})
-
-	// FOLD STATE, remembered per role. Same storage discipline as the server
-	// picker: localStorage in a try/catch, and no memory is a degradation (the
-	// block simply opens) — never an error.
-	const storage_key = `dedalo.update_code.fold.${role}`
-	const apply = (collapsed) => {
-		body.classList.toggle('hide', collapsed)
-		if (note_node) {
-			note_node.classList.toggle('hide', collapsed)
-		}
-		header.classList.toggle('up', !collapsed)
-		block.classList.toggle('collapsed', collapsed)
-	}
-	apply(read_fold(storage_key))
-	header.addEventListener('mouseup', () => {
-		const collapsed = !block.classList.contains('collapsed')
-		apply(collapsed)
-		store_fold(storage_key, collapsed)
-	})
-
-	return body
-}//end role_block
-
-
-
-/**
-* READ_FOLD / STORE_FOLD
-* The collapsed state of one role block, across navigations and reloads.
-* Default OPEN: a panel that hides its own status until the operator opens it
-* would be worse than one that is long. Private mode / disabled storage just
-* means the memory does not stick.
-* @param {string} storage_key
-*/
-const read_fold = function(storage_key) {
-	try {
-		return window.localStorage.getItem(storage_key)==='1'
-	} catch (_error) {
-		return false
-	}
-}
-const store_fold = function(storage_key, collapsed) {
-	try {
-		if (collapsed) {
-			window.localStorage.setItem(storage_key, '1')
-		} else {
-			window.localStorage.removeItem(storage_key)
-		}
-	} catch (_error) {
-		// no memory available — the fold still works for this visit
-	}
-}//end store_fold
-
-
-
-/**
-* MAKE_BUILDER_MOUNTER
-* Builds the "mount a build button HERE" function the code-server readout uses.
-*
-* The buttons and the archives they produce used to be two separate blocks —
-* 'Code builders from GIT' floating below a 'Published releases' list — so
-* nothing on screen said that pressing the first writes the second. Now the
-* readout owns the layout (one row per channel: the action and its artifact
-* side by side) and calls back here to mount the action, which is the only part
-* that needs the widget's wire machinery (`self.caller.init_form`).
-*
-* Two channels, and the difference is load-bearing:
-*   - 'master' → `<v>.zip`     — the published release
-*   - 'dev'    → `<v>-dev.zip` — a branch build; never overwrites the master
-*                                 archive of the same version
-*
-* When either build completes the 'build_code_done' event is published, so the
-* data-version widget (update_data_version) refreshes itself.
-*
-* @param {Object} self - update_code widget instance
-* @param {HTMLElement} body_response - the response area passed to init_form
-* @param {Object} code_server - value.code_server (its source.release_version
-*   is THE version a build will produce; see below)
-* @param {Function} [on_built] - called after a build finishes, so the readout
-*   that lists the archives can re-read them: the row next to the button is a
-*   claim about the disk, and a stale one is worse than none.
-* @returns {Function|null} (channel, node) => void, or null when this page
-*   provides no form builder
-*/
-const make_builder_mounter = function(self, body_response, code_server, on_built) {
-
-	if (!self.caller?.init_form) {
-		return null
-	}
-
-	// on_done. On build completion, execute this function
-	const on_done = (build_mark) => {
-
-		// event publish
-		// listen by widget update_data_version.init
-		event_manager.publish('build_code_done', self)
-
-		// COHERENCE: the archive list sitting beside these buttons was read
-		// BEFORE the build. Leaving it is how a panel comes to show '7.0.0.zip ·
-		// 16:25' next to a button that has just rewritten that very file — or
-		// 'Not built yet' next to a build that succeeded.
-		//
-		// The mark rides along so the row that comes back can say WHICH of the
-		// two values it is (see render_update_status.js release_facts).
-		if (on_built) {
-			on_built(build_mark)
-		}
-	}
-
-	// version parts (shared by both confirm texts)
-	// THE VERSION THE PUBLISH WILL ACTUALLY PRODUCE — the one the release
-	// REF declares, which the server sends as source.release_version. The
-	// running process's own version (page_globals.dedalo_version) is only a
-	// fallback: naming the artifact after it is exactly the bug that let a
-	// 7.0.0 master publish an uninstallable 7.0.0.zip, and it silently
-	// mislabels every build made by a master left running across a bump.
-	const ref_version	= code_server && code_server.source && code_server.source.release_version
-	const ar_version	= String(ref_version || page_globals.dedalo_version).split('.')
-	const major_version	= ar_version[0]
-	const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
-	const release_dir	= `<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/`
-
-	// THE DEVELOPER CHANNEL'S REF IS THE SERVER'S CHECKED-OUT BRANCH. The
-	// server sends it as source.branch; source.release_ref is the master
-	// channel's ref, and a branch equal to it publishes nothing new.
-	const source		= (code_server && code_server.source) || {}
-	const release_ref	= source.release_ref || 'master'
-	const dev_branch	= (source.branch && source.branch!==release_ref && source.branch!=='HEAD')
-		? source.branch
-		: null
-
-	const channels = {
-		master : {
-			// the panel's main publishing action — filled (widget_kit .primary)
-			button_class	: 'primary',
-			submit_label	: get_label.update_code_build_master || 'Build master release',
-			confirm_text	: (get_label.update_code_build_master_confirm || "A release of version %s will be created from branch 'master' as: %s")
-				.replace('%s', version)
-				.replace('%s', `\n\n${release_dir}${version}.zip\n`),
-			branch			: 'master'
-		},
-		dev : {
-			// secondary, but still unmistakably a control (see .build_action button)
-			button_class	: 'light',
-			submit_label	: get_label.update_code_build_developer || 'Build developer release',
-			// %branch% is NAMED, not positional: the branch appears in a
-			// different place in each translated sentence, and a third '%s'
-			// would land wherever that language happens to put it.
-			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of version %s will be created from branch '%branch%' as: %s The master build of the same version is kept.")
-				.replace('%s', version)
-				.replace('%s', `\n\n${release_dir}${version}-dev.zip\n\n`)
-				// LAST: a branch name may legally contain '%s', and substituting it
-				// first would hand the positional pass a token of its own.
-				.replaceAll('%branch%', String(dev_branch)),
-			branch			: dev_branch
-		}
-	}
-
-	return function(channel, node, artifact_cell, built_before) {
-
-		const def = channels[channel]
-		if (!def) {
-			return
-		}
-
-		// A DEVELOPER BUILD IS A BUILD OF THE BRANCH THIS SERVER HAS CHECKED
-		// OUT — never a branch name baked into the client. The hardcoded 'v7'
-		// refused on every server that does not carry that branch ("Could not
-		// read src/core/update/version.ts at ref 'v7'"). When HEAD IS the
-		// release ref there is no development work to publish, and a
-		// '<v>-dev.zip' that is byte-identical to the master build would be a
-		// lie: the row says so instead of offering a button.
-		if (channel==='dev' && !dev_branch) {
-			node.classList.add('none')
-			node.textContent = get_label.update_code_build_developer_unavailable
-				|| 'No developer branch: this code server has the release branch checked out'
-			return
-		}
-
-		const form = self.caller.init_form({
-			submit_label	: def.submit_label,
-			confirm_text	: def.confirm_text,
-			body_info		: node,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'widget_request',
-				source	: {
-					type	: 'widget',
-					model	: 'update_code',
-					action	: 'build_version_from_git_master'
-				},
-				options	: {
-					branch : def.branch
-				}
-			},
-			// the mark travels from the row that was pressed to the row that
-			// comes back — captured HERE, at mount time, because the refresh
-			// destroys this half before anything could read it back off the DOM.
-			on_done : () => on_done({
-				channel		: channel,
-				previous	: built_before
-					? { bytes : built_before.bytes, stamp : built_before.stamp }
-					: null
-			})
-		})
-		// build_form always emits `light button_submit`; the channel's own weight
-		// is added here (it exposes the node for exactly this kind of reach-in).
-		if (form && form.button_submit) {
-			form.button_submit.classList.add('build_button', def.button_class)
-		}
-
-		// IN FLIGHT: say WHICH artifact is being rewritten, on the artifact.
-		// The button's spinner reports that a request is running; it does not
-		// say that the line beside it — the file name, the size, the date — is
-		// about to stop being true. A build takes tens of seconds and rewrites
-		// the file in place, so for that whole time the row states something
-		// the operator cannot act on and cannot tell is stale.
-		//
-		// build_form's lifecycle is the hook: its submit handler runs the
-		// window.confirm gate SYNCHRONOUSLY and only then adds `button_spinner`,
-		// before its first await. A listener registered after it therefore runs
-		// once the request is under way — and never when the operator cancelled
-		// the confirm. Pinned by test/unit/client_update_code_render.test.ts.
-		if (form && form.button_submit && artifact_cell) {
-			form.addEventListener('submit', () => {
-				if (!form.button_submit.classList.contains('button_spinner')) {
-					return	// the confirm was declined: nothing is being built
-				}
-				artifact_cell.classList.add('building')
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'dd_badge pill_warning build_verdict',
-					text_content	: get_label.update_code_build_building || 'building…',
-					parent			: artifact_cell
-				})
-			})
-		}
-	}
-}//end make_builder_mounter
-
-
-
-/**
 * RENDER_INFO_MODAL
 * Opens a modal dialog that lets the administrator select a code version and
 * start the update.
@@ -1652,9 +1274,9 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 
 			// change event handler
 			const change_handler = () => {
-				files.forEach( el => delete el.active )
+				files.forEach( el => { delete el.active } )
 				current_version.active = input_radio.checked
-				body.querySelectorAll('.version_label, .value').forEach( el => el.classList.remove('active') )
+				body.querySelectorAll('.version_label, .value').forEach( el => { el.classList.remove('active') } )
 				version_label.classList.add('active')
 				value_node.classList.add('active')
 				date_node.classList.add('active')

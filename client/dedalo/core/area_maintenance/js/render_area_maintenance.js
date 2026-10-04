@@ -452,7 +452,7 @@ const build_list_view = async function(self, widgets) {
 			chip.addEventListener('click', (e) => {
 				e.preventDefault()
 				active_category = key
-				chips.forEach(c => c.classList.toggle('active', c===chip))
+				chips.forEach(c => { c.classList.toggle('active', c===chip) })
 				apply_filters()
 				// persist selection (fire-and-forget; default 'All' stores no record)
 				try {
@@ -625,7 +625,7 @@ const build_list_view = async function(self, widgets) {
 		{ id:'clients',	title:'Clients',		x:10, y:14, tools:['lock_components'] },
 		{ id:'web',		title:'Web server',		x:29, y:14, tools:['system_info','runtime_info','environment'] },
 		{ id:'core',	title:'Dédalo core',	x:50, y:14, kind:'core',
-			tools:['check_config','config_areas','menu_skip_tipos','update_code','update_data_version','error_reports'] },
+			tools:['check_config','config_areas','menu_skip_tipos','update_code','serve_code','update_data_version','error_reports'] },
 		// the tools/ package tree + its dd1324 registry records (matrix_tools) — a
 		// subsystem of its own, not part of the engine core: register_tools reconciles
 		// the two and touches nothing else.
@@ -642,7 +642,7 @@ const build_list_view = async function(self, widgets) {
 		{ id:'pub',		title:'Publication',	x:50, y:66, tools:['diffusion_server_control','publication_api','site_builder_status'] },
 		{ id:'media',	title:'Media store',	x:69, y:66, tools:['media_control','ai_models'] },
 		{ id:'onto',	title:'Ontology',		x:88, y:66,
-			tools:['update_ontology','move_tld','move_locator','move_to_portal','move_lang','export_hierarchy','add_hierarchy'] }
+			tools:['update_ontology','serve_ontology','move_tld','move_locator','move_to_portal','move_lang','export_hierarchy','add_hierarchy'] }
 	]
 	const MAP_EDGES = [
 		['clients','web'], ['web','core'], ['core','pg'], ['core','bak'],
@@ -672,6 +672,7 @@ const build_list_view = async function(self, widgets) {
 		dedalo_api_test_environment:'API endpoint testing sandbox.',
 		sqo_test_environment:		'Search-query-object testing sandbox.',
 		update_code:				'Downloads, verifies and installs a new code release, then restarts. The previous tree is kept as a restore point.',
+		serve_code:					'Code server: builds releases from git and serves them to the installations that update from this one.',
 		update_data_version:		'Runs pending data-version migrations against live data.',
 		lock_components:			'Active user sessions and component-lock tracking.',
 		database_info:				'Live PostgreSQL catalog snapshot and maintenance actions.',
@@ -688,6 +689,7 @@ const build_list_view = async function(self, widgets) {
 		media_control:				'Sets the media access-protection mode and rebuilds the gate rules.',
 		ai_models:					'Local AI model store: which speech models are installed and usable.',
 		update_ontology:			'Overwrites the live ontology with a snapshot from a master server. Irreversible.',
+		serve_ontology:				'Whether other installations can pull their ontology from this one: the three .env keys that decide it and the endpoint they register.',
 		move_tld:					'Rewrites the ontology tipo across every matrix table. Irreversible.',
 		move_locator:				'Bulk-moves locators from a source section to a target. Irreversible.',
 		move_to_portal:				'Portalizes component data into a portal-linked sub-section.',
@@ -887,7 +889,7 @@ const build_map_view = function(self, widgets, opts={}) {
 				badge.remove()
 			}
 		}
-		MAP_NODES.forEach(n => paint_node(n.id))
+		MAP_NODES.forEach(n => { paint_node(n.id) })
 
 	// ---- summary line ----
 		const paint_summary = () => {
@@ -976,7 +978,7 @@ const build_map_view = function(self, widgets, opts={}) {
 		const select_node = (id, preferred_tool) => {
 			selected = id
 			const n = MAP_NODES.find(x => x.id===id)
-			Object.keys(node_els).forEach(k => node_els[k].classList.toggle('sel', k===id))
+			Object.keys(node_els).forEach(k => { node_els[k].classList.toggle('sel', k===id) })
 
 			// available tools for this node (served ids only), preserving order
 			const tools = n.tools.filter(tid => by_id[tid])
@@ -1026,7 +1028,7 @@ const build_map_view = function(self, widgets, opts={}) {
 			const token = ++mount_token
 			const body = context.querySelector('.ctx_body')
 			if (!body) { return }
-			context.querySelectorAll('.tool_chip').forEach(c => c.classList.toggle('sel', c.dataset.id===tid))
+			context.querySelectorAll('.tool_chip').forEach(c => { c.classList.toggle('sel', c.dataset.id===tid) })
 			persist_sel(node_id, tid)
 
 			// (!) Destroy the outgoing tool BEFORE wiping its DOM. `innerHTML=''`

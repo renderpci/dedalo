@@ -5,15 +5,15 @@
  * ontology terms), where (section tipos touched), when (hour histogram) and
  * publish (per-section publish counts from dd1223 events).
  *
- * The rebuild flow (maintenance widget database_info.rebuild_user_stats)
- * DELETES a user's stats rows and recomputes every day from the surviving
- * matrix_activity rows. (!) That is intentionally lossy when the activity log
+ * The rebuild flow (maintenance widget database_info.rebuild_user_stats,
+ * rebuildUserActivityStats) recomputes every day from the surviving
+ * matrix_activity rows, then REPLACES the user's stats rows in one transaction. (!) That is intentionally lossy when the activity log
  * is shorter than the stats history — an admin decision; the differential
  * gate uses a SYNTHETIC user so real aggregates are never touched.
  */
 
 import { encodeForJsonb } from '../db/json_codec.ts';
-import { sql } from '../db/postgres.ts';
+import { sql, withTransaction } from '../db/postgres.ts';
 import { resolveUserName, USERS_SECTION } from '../security/user_identity.ts';
 
 /** dd1521 record components (PHP USER_ACTIVITY_* constants). */
@@ -411,14 +411,7 @@ export async function updateUserActivityStats(
 		pageRows,
 	);
 
-	const dayGroups = new Map<string, DayGroup>();
-	const byDay = new Map<string, ActivityTally[]>();
-	for (const tally of tallies) {
-		const list = byDay.get(tally.day);
-		if (list === undefined) byDay.set(tally.day, [tally]);
-		else list.push(tally);
-	}
-	for (const [day, list] of byDay) dayGroups.set(day, foldTallies(list));
+	const dayGroups = groupTalliesByDay(tallies);
 
 	if (rowCount === 0) {
 		response.ok = true;
@@ -448,24 +441,10 @@ export async function updateUserActivityStats(
 		)) as unknown[];
 		if (exists.length > 0) continue;
 
-		const group = dayGroups.get(day) as DayGroup;
-		const totals: Record<string, unknown>[] = [];
-		for (const [tipo, value] of group.what) {
-			totals.push({ type: 'what', tipo, value, label: await termByTipo(tipo, appLang) });
-		}
-		for (const [tipo, value] of group.where) {
-			totals.push({ type: 'where', tipo, value });
-		}
-		for (const [hour, value] of group.when) {
-			totals.push({ type: 'when', hour: Number(hour), value });
-		}
-		for (const [tipo, value] of group.publish) {
-			totals.push({ type: 'publish', tipo, value });
-		}
+		const totals = await dayTotals(dayGroups.get(day) as DayGroup, termByTipo, appLang);
 		if (totals.length === 0) continue;
 
-		const saved = await saveUserActivity(totals, userId, 'day', year, month, dayNum);
-		if (saved === false) continue;
+		await saveUserActivity(totals, userId, 'day', year, month, dayNum);
 		updatedDays.push({ user: userId, date: day });
 	}
 
@@ -474,6 +453,106 @@ export async function updateUserActivityStats(
 	response.msg =
 		response.errors.length === 0 ? 'OK. Request done.' : 'Warning! Request done with errors';
 	return response;
+}
+
+/** The tallies folded per day (insertion order = first-seen day). */
+function groupTalliesByDay(tallies: ActivityTally[]): Map<string, DayGroup> {
+	const byDay = new Map<string, ActivityTally[]>();
+	for (const tally of tallies) {
+		const list = byDay.get(tally.day);
+		if (list === undefined) byDay.set(tally.day, [tally]);
+		else list.push(tally);
+	}
+	const dayGroups = new Map<string, DayGroup>();
+	for (const [day, list] of byDay) dayGroups.set(day, foldTallies(list));
+	return dayGroups;
+}
+
+/** One day's dd1523 totals payload — what (labelled), where, when, publish, in that order. */
+async function dayTotals(
+	group: DayGroup,
+	termByTipo: (tipo: string, lang: string) => Promise<string | null>,
+	appLang: string,
+): Promise<Record<string, unknown>[]> {
+	const totals: Record<string, unknown>[] = [];
+	for (const [tipo, value] of group.what) {
+		totals.push({ type: 'what', tipo, value, label: await termByTipo(tipo, appLang) });
+	}
+	for (const [tipo, value] of group.where) {
+		totals.push({ type: 'where', tipo, value });
+	}
+	for (const [hour, value] of group.when) {
+		totals.push({ type: 'when', hour: Number(hour), value });
+	}
+	for (const [tipo, value] of group.publish) {
+		totals.push({ type: 'publish', tipo, value });
+	}
+	return totals;
+}
+
+/**
+ * THE REBUILD of one user's dd1521 aggregates (database_info.rebuild_user_stats)
+ * — ONE ATOMIC UNIT (OPS-6/PERF-11 review). It used to be a DELETE (autocommit)
+ * followed by updateUserActivityStats' per-day saves (each its own autocommit
+ * create + update), so any failure after the DELETE — a save that threw, a
+ * statement cut by a lock bound or a shutdown, a crash — left the user's
+ * statistics deleted or half rebuilt, and a day whose record could not be
+ * created was skipped silently.
+ *
+ * Now the long part — the paged aggregation of the user's WHOLE activity log up
+ * to yesterday and the label lookups — runs first, read-only and outside any
+ * transaction (it may take minutes on a multi-million-row actor; a transaction
+ * held open that long would pin the vacuum horizon). Then ONE short transaction
+ * DELETEs the user's aggregates and saves every day; a failure rolls the whole
+ * user back — the previous aggregates stand — and escapes typed. (!) Still
+ * intentionally lossy when it SUCCEEDS and the activity log is shorter than the
+ * stats history — an admin decision. Gate:
+ * test/unit/user_stats_rebuild_atomic_native.test.ts.
+ */
+export async function rebuildUserActivityStats(
+	userId: number,
+	/** Aggregation page size — a TEST SEAM only (see updateUserActivityStats). */
+	pageRows: number = AGGREGATE_PAGE_ROWS,
+): Promise<UpdateStatsResponse> {
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const isoDate = (date: Date): string =>
+		`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+			date.getDate(),
+		).padStart(2, '0')}`;
+	const { tallies, rows: rowCount } = await aggregateActivity(
+		userId,
+		null,
+		isoDate(today),
+		pageRows,
+	);
+	const dayGroups = groupTalliesByDay(tallies);
+	const { termByTipo } = await import('../ontology/labels.ts');
+	const { currentApplicationLang } = await import('../resolve/request_lang.ts');
+	const appLang = currentApplicationLang();
+	const planned: { day: string; totals: Record<string, unknown>[] }[] = [];
+	for (const day of [...dayGroups.keys()].sort()) {
+		const totals = await dayTotals(dayGroups.get(day) as DayGroup, termByTipo, appLang);
+		if (totals.length > 0) planned.push({ day, totals });
+	}
+
+	const updatedDays = await withTransaction(async () => {
+		await deleteUserActivityStats(userId);
+		const saved: { user: number; date: string }[] = [];
+		for (const { day, totals } of planned) {
+			const [year, month, dayNum] = day.split('-').map(Number) as [number, number, number];
+			await saveUserActivity(totals, userId, 'day', year, month, dayNum);
+			saved.push({ user: userId, date: day });
+		}
+		return saved;
+	});
+
+	return {
+		ok: true,
+		value: updatedDays,
+		msg: rowCount === 0 ? 'No activity records found' : 'OK. Request done.',
+		errors: [],
+	};
 }
 
 /** One canonical stats dimension entry (PHP cross_users_range_data shape). */
@@ -913,10 +992,11 @@ async function saveUserActivity(
 	year: number,
 	month: number | null,
 	day: number | null,
-): Promise<number | false> {
+): Promise<number> {
 	const { createSectionRecord } = await import('../section/record/create_record.ts');
+	// createSectionRecord answers a minted id or THROWS — a day is never skipped
+	// silently (it used to be `if (!sectionId) return false` → `continue`).
 	const sectionId = await createSectionRecord(UA_SECTION, -1);
-	if (!sectionId) return false;
 
 	const start: Record<string, number> = { year };
 	if (month !== null) start.month = month;

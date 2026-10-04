@@ -285,3 +285,16 @@ describe('the tap never opens on a production posture', () => {
 		expect(stdout).not.toContain('opened: yes');
 	}, 60000);
 });
+
+describe('slow-query log text cap', () => {
+	test('short statement arrives whole, one line', async () => {
+		const { capQueryText } = await import('../../src/core/db/postgres.ts');
+		expect(capQueryText('SELECT 1\n  FROM x')).toBe('SELECT 1 FROM x');
+	});
+	test('long statement is cut at 16 KB with an announced remainder', async () => {
+		const { capQueryText } = await import('../../src/core/db/postgres.ts');
+		const out = capQueryText('x'.repeat(20_000));
+		expect(out.startsWith('x'.repeat(16_384))).toBe(true);
+		expect(out.endsWith('… (+3616 chars)')).toBe(true);
+	});
+});

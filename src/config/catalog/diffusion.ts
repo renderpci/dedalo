@@ -7,6 +7,39 @@
 import type { CatalogEntry } from '../catalog_types.ts';
 
 export const DIFFUSION_KEYS = {
+	API_WEB_USER_CODE_MULTIPLE: {
+		type: 'publication_api_users',
+		scope: 'operator',
+		default: undefined,
+		heading: 'Publication server API v1 access codes',
+		typeLabel: 'array of objects',
+		typeSuffix: '*optional*',
+		doc: `The publication databases served by the legacy publication server API v1
+(\`publication/server_api/v1\`), each with the access \`code\` that API expects. The
+maintenance dashboard (Publication → Publication server API) shows one "Open Swagger UI"
+button per entry, opening the API's interactive documentation for that database with the
+code, the database name and the current interface language already filled in.
+
+Every entry is an object with \`db_name\` (the publication database) and \`code\` (the same
+value as \`API_WEB_USER_CODE\` in that API's own configuration). The optional \`api_ui\`
+is the address of the documentation page when the API runs on another server; unset, it
+is \`/dedalo/publication/server_api/v1/docu/ui/\` on this site. The v1 API and its
+documentation page are a separate application that Dédalo itself never serves: the default
+address only works when the web server in front of Dédalo routes \`/dedalo/publication/\`
+to that application —
+otherwise the button answers "not found", and \`api_ui\` must point at the server that does
+run v1. Only an \`http(s)://\` or a root-relative address is accepted. An entry without \`db_name\` or \`code\` is dropped and
+reported at boot. The v6 configuration migrator carries the v6 value across, leaving
+out the empty entry a stock v6 configuration ships.
+
+Empty by default: no buttons are shown. The codes are only sent to global administrators,
+the only users who can open the maintenance area. The publication server API v2 is configured in its own \`.env\`,
+not here.
+
+\`\`\`bash
+API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]
+\`\`\``,
+	},
 	DEDALO_DIFFUSION_BATCH_RECORDS: {
 		type: 'number',
 		scope: 'operator',
@@ -19,10 +52,11 @@ the format writer, so that a section of hundreds of thousands of records never h
 fit in memory at once. A smaller batch lowers the memory ceiling of a publication run;
 a larger one reduces the number of round trips to the database.
 
-The engine currently resolves in fixed batches of **500** records. This key is read for
-the diffusion panel of the maintenance dashboard, which reports the configured value —
-the resolver does not yet take it as an override, so leave it unset unless you were
-told otherwise.
+Unset, a run resolves **500** records per batch. Each publication run reads the key when
+it starts (a resumed run reads it again), so a change applies from the next start. Each
+batch is also one durable step: its records, its checkpoint and its run-ledger rows are
+written together, so a smaller batch means less work to redo when a run is resumed. The
+diffusion panel of the maintenance dashboard reports the configured value.
 
 \`\`\`bash
 DEDALO_DIFFUSION_BATCH_RECORDS=500

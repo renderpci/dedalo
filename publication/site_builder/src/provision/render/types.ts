@@ -61,9 +61,11 @@ import { stamp } from '../hash';
  * (unit.ts, env.ts, sites.ts, nginx.ts, apache.ts, engine_fragment.ts), so a stamp line read
  * off a museum's host names the file in this tree that produced it.
  *
- * `agent_authorization` is the polkit rule that lets the non-root daemon start an agent
- * turn under the AGENT's uid — a host permission, so a host artifact, with the same stamp
- * and the same drift story as the unit it stands beside.
+ * `agent_authorization` is the polkit rule that lets the non-root daemon stop and kill its
+ * agent units (never start one — see agent_authorization.ts) — a host permission, so a host
+ * artifact, with the same stamp and the same drift story as the unit it stands beside.
+ * `agent_units` is the socket, target and template root renders per (site, door) (LEAD-1b):
+ * the files that fix which uid an agent run is, so the daemon never chooses one.
  *
  * The list is closed and lives here rather than in each renderer: `renderAll()` must be
  * able to say "nothing rendered the unit" and `check` must be able to map a stamp back to a
@@ -76,6 +78,7 @@ import { stamp } from '../hash';
  */
 export const ARTIFACT_KINDS = [
   'unit',
+  'agent_units',
   'agent_authorization',
   'env',
   'sites',
@@ -204,6 +207,14 @@ function resolveOwner(layout: InstanceLayout, owner: ModeOwner): string {
       return 'root';
     case 'user':
       return layout.identity.user;
+    case 'identity':
+      // A SITE identity owns exactly one kind of thing: its own HOME directories, which the
+      // plan creates per site. No rendered artifact is any one site's, so a renderer naming
+      // this row is a renderer about to hand a file to the wrong principal.
+      throw new Error(
+        `render: a rendered artifact cannot be owned by a site identity — that row is for the ` +
+          `per-site agent HOME directories the plan creates, never for a host artifact.`,
+      );
     default: {
       // Exhaustiveness as a compile error: a fifth owner added to layout's matrix must be
       // resolved HERE in the same commit, not defaulted to root by a fall-through.
@@ -278,5 +289,31 @@ export interface Renderer {
    * owner or a mode in it has already been derived, and reading it off the manifest instead
    * is how an override reaches one artifact and misses another.
    */
-  render(layout: InstanceLayout, manifest: InstanceManifest): Artifact[];
+  render(layout: InstanceLayout, manifest: InstanceManifest, facts?: RenderFacts): Artifact[];
+}
+
+/**
+ * THE HOST FACTS a few renderers need beyond the declaration (LEAD-1b, spec §2.2).
+ *
+ * Which ORDINAL each declared site holds is a fact of the host's ledger (/etc/passwd, where
+ * `provision apply` records every site identity and never reuses one), not of instance.json;
+ * and which keys a unit may carry is a fact of the host's PID 1. `plan()` derives both from
+ * the observed host and threads them through `renderAll`; the renderers stay pure functions
+ * of (layout, manifest, facts).
+ *
+ * ABSENT FACTS RENDER NOTHING THAT GRANTS ANYTHING: no agent unit, a polkit rule that
+ * enumerates no site, an env with no identity. A host rendered without its facts therefore
+ * runs no confined agent at all — the fail-closed direction.
+ */
+export interface RenderFacts {
+  /** Declared slug → its identity ordinal k, from the host ledger (and this run's allocation). */
+  readonly agentIdentities: ReadonlyMap<string, number>;
+  /** PID 1's release (`systemctl show -p Version`). */
+  readonly systemdVersion: number;
+  /**
+   * The resume epoch the daemon stamps sessions with. Bumped by the plan whenever an agent
+   * identity changes under a site (the legacy agent retired, a slug re-declared), so a
+   * resume token minted by the previous uid is dropped rather than replayed.
+   */
+  readonly identityEpoch?: number;
 }

@@ -2,12 +2,16 @@
  * UNIT RED BASELINE — generator and drift checker for the unit tier
  * (test/unit + test/integration).
  *
- *   bun run scripts/unit_baseline.ts            # rewrite the JSON baseline (default)
+ *   bun run scripts/unit_baseline.ts            # rewrite the JSON baseline (default) —
+ *                                  # IN THE CI IMAGE ONLY (recordOnlyInCiImage): the door is
+ *                                  # `bun run ci:local --docker --record-unit-baseline`
  *   bun run scripts/unit_baseline.ts --check    # print drift, exit 1 if any
  *   bun run scripts/unit_baseline.ts --report   # failing tests per file
  *   bun run scripts/unit_baseline.ts --record-new [file…]  # ONLY a new file's per_file
  *                                  # floor, measured; refuses a red (scripts/lib/red_baseline.ts
- *                                  # recordNewDecision) — no file: every unrecorded one
+ *                                  # recordNewDecision) — no file: every unrecorded one.
+ *                                  # A WRITE too, so IN THE CI IMAGE ONLY: the door is
+ *                                  # `bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]`
  *
  * ── WHAT THIS IS ─────────────────────────────────────────────────────────────
  * The unit tier is the engine's real gate tier: 727 files, 8800 cases, and by
@@ -67,7 +71,7 @@
  * need the suite database (`bun run test:db:setup`). Expect ~5 minutes.
  */
 
-import { type ParityRun, runTier } from './lib/parity_census.ts';
+import type { ParityRun } from './lib/parity_census.ts';
 import {
 	buildBaseline as buildBaselineFor,
 	computeDrift as computeDriftFor,
@@ -77,6 +81,7 @@ import {
 	type TierDrift,
 	type TierSpec,
 } from './lib/red_baseline.ts';
+import { runTier } from './lib/tier_run.ts';
 
 export { formatDrift } from './lib/red_baseline.ts';
 
@@ -131,8 +136,15 @@ export const UNIT_TIER: TierSpec = {
 	// the docblock above for why exact size equality here would train the very reflex the
 	// ratchet exists to prevent. Debt frozen exactly, size held by the floors above.
 	exactCounts: false,
+	// The floors and the red set are facts about the platform the tier runs on (the
+	// runner's image: its media toolchain, a bare uid, a clone without the desk's audits/
+	// or ../private): a desk recording freezes the desk, and the runner reports the
+	// difference as drift. Both writers (the full one and --record-new) refuse outside the
+	// image (red_baseline.ts ciImageMarkerMatches); ci:local --docker --record-unit-baseline
+	// [--new <files>] is the door.
+	recordOnlyInCiImage: true,
 	whyRed:
-		"Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent: the 3 unit reds the CENSUS measured on 2026-08-30 (731 files / 8999 cases / 8982 pass / 14 skip — the census's own numbers, which a hand-run `bun test` does not reproduce because scripts/lib/parity_census.ts childEnv() strips the nine PER_RUN_SEAMS keys and pins ORACLE_MODE=fixtures) fall in two classes. (1) 2 deterministic golden mismatches (ontology_parser dd1, info_widget_native component_info) — a stale expectation or a real parser/widget defect, either way fixable. (2) 1 ORDER-DEPENDENT gate: search_store_ensure_native PASSES IN ISOLATION and fails only in full-suite order. That class is why this tier is ADVISORY and not blocking (see scripts/ci/db_tier.sh): a test that flaps red and green on its own flaps the ratchet with it, in both directions, so the fix is always determinism and never an entry. It is frozen here under --allow-regression only because leaving it out would have blocked locking in the shrink below; it is debt, not a decision. THE SHRINK, 2026-08-30: 7 reds -> 3. Three left because P1-14 and P1-16 landed — rag_api, rag_ask and rag_pipeline no longer inherit the machine's embedding provider and no longer write to the INSTALLATION's vector database, and retrieval.ts no longer launders `undefined` through an `as number[]` cast. Two more left when the leaked `setTimeout` in client_request_coalescing_tripwire was leashed: ops_health_db_down and activity_aggregate_native were never broken themselves, they were arbitrary victims of an uncaught exception bun attributes to whichever test is running. EVERY entry here is expected to be FIXED. The list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
+		"Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline` on the sorted tier order; the writer refuses anywhere else): 0 frozen reds. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes) -> 0 (2026-10-02: the dd1 install seed re-synced for ontology_parser; info_widget's media_icons golden builds its own term target). The stage is BLOCKING in scripts/ci/db_tier.sh since 2026-10-02 (zero drift on three executed GitHub db runs of 674c1f4f76; the 'loaded runner' leg of the old criterion was not separately exercised — engineering/CI.md): any drift from this file fails the db tier, on the runner and on the desk gate alike. Per-file floors are the image's, and a desk differs from them in BOTH directions: it asserts more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config) and less where the image has what the desk lacks (librsvg: media_svg_thumb skips 7 on a Mac, 0 in the image) — so a desk number is never a floor, either way. Any entry a future recording accepts (--allow-regression --reason) is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
 };
 
 /** Tier-named aliases of the shared types, mirroring what parity_baseline.ts exports, so a gate can import either tier alike. */

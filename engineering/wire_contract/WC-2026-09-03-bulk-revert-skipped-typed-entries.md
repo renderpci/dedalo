@@ -118,3 +118,21 @@ admin-gated report surfaces (ontology import/export, the maintenance widgets,
 the `tool_import_*` per-file reports, the update engine) still put raw
 Postgres/fs text inside ok:true payloads, each entry naming its class. They are
 a burn-down owned by their subsystems' passes.
+
+## Addendum 2026-09-27 — the payload grows, the disclosure law stays
+
+`bulk_revert_process` now replays the run's undo log (WC-2026-09-27-bulk-revert-undo-log).
+`data` becomes `{counter, unchanged, bulk_process_id, exact, skipped, inexact}`:
+`counter` counts UNITS reverted (a dataframe main and its frames are one, from its composed rows), `unchanged`
+the keys already at their pre-run value, `exact` is `'full' | 'partial' | 'none'`, and
+`inexact[]` lists typed `{basis, …coords}` entries for what was restored by inference or
+with side effects. `skipped[]` entries may carry `lang`, and the closed vocabulary gains
+`changed_since_run`, `interleaved_write`, `created_record_kept` and
+`cascade_delete_not_reverted`. Unchanged: codes on the wire, words in the log, and
+coordinates only after the scope gate — an out-of-scope key now skips its whole unit, still
+with no coordinates. The client reads the channel from this date: it shows a summary
+before closing the window, so the Reason's "the client never read the strings" no longer
+holds for the typed entries (it still holds for words, which never reach the wire).
+`frameless_wipe` leaves the vocabulary (addendum 2026-09-28 of the undo-log entry: a
+frameless row of a main means "no frames" and is restored, never refused); its gate line
+above is superseded by `tm_dataframe_restore_native`'s frameless-restore case.

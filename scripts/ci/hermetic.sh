@@ -59,6 +59,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
+# shellcheck source=scripts/ci/test_order.sh
+source scripts/ci/test_order.sh
 
 # Puppeteer is a devDep used only by the client gate (self-hosted); never
 # download Chrome on a hermetic runner.
@@ -134,6 +136,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/matrix_copy_columns_tripwire.test.ts
 	test/unit/matrix_counter_monotonic_tripwire.test.ts
 	test/unit/tm_epoch_tripwire.test.ts
+	test/unit/tm_history_visibility_tripwire.test.ts
 	test/unit/relogin_identity_tripwire.test.ts
 	test/unit/pdf_extract_symmetry_tripwire.test.ts
 	test/unit/ssrf_one_guard_tripwire.test.ts
@@ -143,6 +146,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/batch_scope_tripwire.test.ts
 	test/unit/agent_alias_tripwire.test.ts
 	test/unit/agent_skills_tripwire.test.ts
+	test/unit/agent_workflows_parse_tripwire.test.ts
 	test/unit/css_source_tripwire.test.ts
 	test/unit/engineering_currency_tripwire.test.ts
 	test/unit/comment_doc_path_tripwire.test.ts
@@ -159,6 +163,9 @@ HERMETIC_TRIPWIRES=(
 	test/unit/client_store_principal_key_tripwire.test.ts
 	test/unit/component_teardown_tripwire.test.ts
 	test/unit/outbound_fetch_tripwire.test.ts
+	# SURF-2 (2026-09-30): the pinned single-call door, hermetic by seams (injected
+	# lookup/socket, loopback peers). Verified DB-less (DB_PORT=59999): 26 pass / 0 fail.
+	test/unit/guarded_text_pin_native.test.ts
 	test/unit/strip_comments_tripwire.test.ts
 	test/unit/private_state_mode_tripwire.test.ts
 	test/unit/wire_disclosure_tripwire.test.ts
@@ -172,14 +179,13 @@ HERMETIC_TRIPWIRES=(
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
 	test/unit/update_ownership_tripwire.test.ts
-	test/unit/master_legacy_routing_tripwire.test.ts
-	test/unit/legacy_dialect_boundary_native.test.ts
 	test/unit/install_restart_supervisor_tripwire.test.ts
 	test/unit/ci_workflow_tripwire.test.ts
 	test/unit/backup_restorability_native.test.ts
 	test/unit/deploy_env_contract_tripwire.test.ts
 	test/unit/catalog_behaviour_tripwire.test.ts
 	test/unit/tier_execution_tripwire.test.ts
+	test/unit/tier_file_order_tripwire.test.ts
 	test/unit/tier_assignment_tripwire.test.ts
 	test/unit/docs_current_engine_tripwire.test.ts
 	test/unit/docs_versioning_tripwire.test.ts
@@ -212,6 +218,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/config_docs_tripwire.test.ts
 	test/unit/labels_tripwire.test.ts
 	test/unit/tool_header_contract_tripwire.test.ts
+	test/unit/tool_phone_tripwire.test.ts
+	test/unit/tool_color_contrast_tripwire.test.ts
 	test/unit/dataframe_scan_coverage_tripwire.test.ts
 	test/unit/diffusion_scope_tripwire.test.ts
 	test/unit/diffusion_queue_stream_tripwire.test.ts
@@ -259,6 +267,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/shard_partition_tripwire.test.ts
 	test/unit/tool_permission_census_tripwire.test.ts
 	test/unit/client_error_contract_tripwire.test.ts
+	test/unit/sw_tombstone_tripwire.test.ts
 	test/unit/date_flat_value_single_source_tripwire.test.ts
 	test/unit/error_throw_ratchet.test.ts
 	test/unit/log_section_policy_tripwire.test.ts
@@ -357,11 +366,24 @@ HERMETIC_TRIPWIRES=(
 	#     git repos and planted ratchets under the OS temp dir, a fake `docker` on PATH,
 	#     stub scripts, and the hermetic ratchets' own read-only `--check --json` runs.
 	#     Empirically verified DB-less (DB_HOST=127.0.0.1 DB_PORT=59999: 131 pass / 0 fail).
-	#     Their only blocking home: the unit tier that also runs them is advisory.
+	#     Here they block on the first push leg; the unit tier runs them again (blocking
+	#     since 2026-10-02) on the db tier.
 	test/unit/baseline_registry_tripwire.test.ts
 	test/unit/baselines_bank_native.test.ts
 	test/unit/ci_local_native.test.ts
 	test/unit/pre_push_gate_native.test.ts
+	# --- 2026-09-30 (LEAD-1 review r2): the daemon/engine address-classifier differential.
+	#     DB-free: pure classifier calls over both sides' exported tables; measured with
+	#     DB_PORT=1 (6/6 pass before the S3 table export, 7/7 after).
+	test/unit/site_builder_public_address_differential.test.ts
+	# --- 2026-10-01 (PERF-2/DIFF-4): the artifact peak-RSS gate. DB-free: a spawned child
+	#     zips/merges files it writes under a MARKED scratch media root (~1.2 GiB temp disk,
+	#     ~4 s); verified with the hermetic env (DB_HOST=127.0.0.1 DB_PORT=59999,
+	#     DB_NAME=ci_hermetic_no_db: 3 pass / 0 fail).
+	test/unit/diffusion_artifact_rss_native.test.ts
+	# --- 2026-10-02 (plan item 5): the client-lib versions doc byte-identity gate. DB-free:
+	#     reads package.json + the doc, imports the client-lib registry, renders in memory.
+	test/unit/client_lib_versions_doc_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
@@ -403,7 +425,10 @@ echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 # because Bun 1.4.0 SILENTLY IGNORES `[test] timeout` (measured: 5001.50 ms kill on an 8 s
 # test), which is how the repo ran its whole history under a 5000 ms cap nobody chose.
 tw_rc=0
-bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
+# Sorted `./` paths, never the bare array: a bare name is a bun FILTER run in readdir
+# order (per host). scripts/ci/test_order.sh; gate: tier_file_order_tripwire.
+order_test_paths "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
+bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
 [ "$tw_rc" -eq 0 ] || { echo "== hermetic: RED in static tripwires (exit $tw_rc)"; tier_status=1; }
 
 # THE DEBT LEDGER, APPEND-ONLY AGAINST HISTORY (P2-18 / GATE-22). The crap

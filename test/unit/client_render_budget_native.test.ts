@@ -58,7 +58,7 @@ import {
 	openSpoolReader,
 	PREVIEW_PAGE_SIZE_MAX,
 } from '../../tools/tool_export/server/spool_reader.ts';
-import { browserSources } from '../helpers/browser_corpus.ts';
+import { browserSources, firstPartyClientFiles } from '../helpers/browser_corpus.ts';
 import {
 	type ExportProtocolLine,
 	endedExportJob,
@@ -204,7 +204,10 @@ describe('client_render_budget', () => {
 	});
 
 	test('TOTAL census: every row loop routes through the window or is ENUMERATED with a reason (shrink-only)', () => {
-		const files = browserSources();
+		// First-party client code only: a client TEST that calls get_section_records
+		// to test it (test_section_record.js) is not a render surface, and counting
+		// it as a row loop made this census red on a suite, not on a page.
+		const files = firstPartyClientFiles();
 		expect(files.length, 'the client census found almost no files').toBeGreaterThan(300);
 
 		const loops = files

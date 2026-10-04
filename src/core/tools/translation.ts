@@ -13,12 +13,12 @@
 
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { DedaloError, ok } from '../errors/index.ts';
-import { LEGACY_TOKEN_MAP } from '../errors/registry.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { fetchGuardedText, isSsrfRefusal } from '../security/ssrf_guard.ts';
+import { authorizeRecordAccess, type RecordGrant } from '../security/write_door.ts';
 import { addBabelNotransTags, processBabelResponse } from './babel.ts';
 
 export interface TranslateRequest {
@@ -87,10 +87,37 @@ export interface TranslateItemsConfig {
 	targetLang: string;
 }
 
+/** One target-language item; `id` is the source item's, when it had one. */
+export interface TranslatedItem {
+	id?: number | string;
+	value: string;
+	lang: string;
+}
+
+/**
+ * The target item for one source item: the translated `value` in the target
+ * `lang`, carrying the source item's `id` (a number or a non-empty string) when
+ * it had one — never an invented one.
+ */
+function targetItem(source: unknown, value: string, lang: string): TranslatedItem {
+	const id =
+		source !== null && typeof source === 'object' ? (source as { id?: unknown }).id : undefined;
+	return typeof id === 'number' || (typeof id === 'string' && id !== '')
+		? { id, value, lang }
+		: { value, lang };
+}
+
 /**
  * Translate every source item's `value` into target-lang items. Stops and
  * surfaces the provider error on the first failure (PHP returns immediately). The
  * "Sorry. Quota exceeded" leading string is treated as an error, never persisted.
+ *
+ * A target item KEEPS its source item's `id`: the translation (or
+ * transliteration — Augustus lg-nolan / Αύγουστος lg-ell) of item N IS item N
+ * in another language. Dropping it left the frame of item N unpaired
+ * (dataframe `id_key`) and let the next save stamp a fresh id on the target —
+ * a spurious change of that language's TM lane. A source item without an id
+ * yields a target item without one (no id is invented here).
  */
 /*
  * COVERAGE-EXEMPT — the PROVIDER CALL below (coverage plan §5.2; reason
@@ -104,8 +131,8 @@ export async function translateItems(
 	sourceItems: readonly unknown[],
 	provider: TranslationProvider,
 	cfg: TranslateItemsConfig,
-): Promise<{ items: { value: string; lang: string }[]; error: string | null }> {
-	const out: { value: string; lang: string }[] = [];
+): Promise<{ items: TranslatedItem[]; error: string | null }> {
+	const out: TranslatedItem[] = [];
 	for (const item of sourceItems) {
 		const text =
 			item !== null && typeof item === 'object'
@@ -122,7 +149,7 @@ export async function translateItems(
 		if (res.text.startsWith('Sorry. Quota exceeded')) {
 			return { items: [], error: 'Sorry. Quota exceeded' };
 		}
-		out.push({ value: res.text, lang: cfg.targetLang });
+		out.push(targetItem(item, res.text, cfg.targetLang));
 	}
 	return { items: out, error: null };
 }
@@ -231,9 +258,16 @@ export function resolveTranslationProvider(engine: string): {
 /**
  * Read a component's source-lang items, translate them, and write the target-lang
  * slot (PHP automatic_translation save path). Empty source → nothing saved. Uses
- * the verified direct-write path (persistRecordKeys + recordTimeMachine, stamping
- * the record's modified metadata like PHP's component->save()). Shared
- * by tool_lang (one target) and tool_lang_multi (looped targets).
+ * the verified direct-write path (persistRecordKeys + recordMainHistory
+ * (dataframe_slots.ts, two lanes), stamping the record's modified metadata like
+ * PHP's component->save()). Shared by tool_lang (one target) and tool_lang_multi
+ * (looped targets).
+ *
+ * OBSERVERS (TOOLS-1, the observer half closed by CLOSURE_PLAN Step 2): the
+ * write goes through persistRecordKeys, whose post-write hook declares the
+ * key's before/after to the obligation ledger — so a component_info or
+ * use_self_section edge on a translatable literal recomputes after the COMMIT,
+ * exactly as it does for a save.
  *
  * THE LOCK (audit 2026-08 §5.6). The merge is a read-modify-write of ONE jsonb
  * key holding EVERY language of the component, so it is only safe under the
@@ -247,24 +281,46 @@ export function resolveTranslationProvider(engine: string): {
  * request that can take minutes, so it happens BEFORE the transaction opens.
  * The row lock is then taken for the merge only, and the merge base is the
  * freshly locked re-read — never the pre-translation snapshot.
+ *
+ * AUTHORIZED BY ITS GRANT: the caller passes the write door's RecordGrant
+ * (`authorizeRecordAccess`, write level 2) — `runAutomaticTranslation` is the
+ * door that mints it.
  */
-export async function translateAndWrite(input: {
-	model: string;
-	componentTipo: string;
-	sectionTipo: string;
-	sectionId: number;
-	sourceLang: string;
-	targetLang: string;
-	provider: TranslationProvider;
-	uri: string;
-	key: string;
-	userId: number;
-}): Promise<{ ok: boolean; msg: string; count: number; providerError?: boolean }> {
+export async function translateAndWrite(
+	grant: RecordGrant,
+	options: {
+		model: string;
+		sourceLang: string;
+		targetLang: string;
+		provider: TranslationProvider;
+		uri: string;
+		key: string;
+	},
+): Promise<{ ok: boolean; msg: string; count: number; providerError?: boolean }> {
+	// THE EFFECT IS BUILT FROM THE GRANT (closure Step 3 req 10): the record, the
+	// component and the audit actor are the write door's authorized coordinates —
+	// a branded RecordGrant only security/write_door.ts mints — never raw request
+	// values. An importer cannot reach this writer without asking the door.
+	if (grant.mode !== 'write') {
+		throw new DedaloError('internal.invariant', {
+			message: `translateAndWrite: a ${grant.mode} grant cannot write (door ${grant.door})`,
+			coordinates: { section_tipo: grant.sectionTipo, section_id: grant.sectionId },
+		});
+	}
+	const input = {
+		...options,
+		componentTipo: grant.componentTipo,
+		sectionTipo: grant.sectionTipo,
+		sectionId: grant.sectionId,
+		userId: grant.userId,
+	};
 	const { getColumnNameByModel, getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
 	const { readMatrixRecord } = await import('../db/matrix.ts');
 	const { readComponentItems, filterItemsByLang } = await import('../resolve/component_data.ts');
 	const { persistRecordKeys } = await import('../section_record/index.ts');
-	const { recordTimeMachine } = await import('../db/time_machine.ts');
+	const { mainIdentity, readMainSlots, recordMainHistory } = await import(
+		'../relations/dataframe_slots.ts'
+	);
 	const { dbTimestamp } = await import('../db/db_timestamp.ts');
 	const { withTransaction } = await import('../db/postgres.ts');
 	const { readMatrixKeyForUpdate } = await import('../db/matrix_write.ts');
@@ -356,17 +412,25 @@ export async function translateAndWrite(input: {
 			{ table, sectionTipo: input.sectionTipo, sectionId: input.sectionId },
 			[{ column: column as MatrixJsonbColumn, key: input.componentTipo, value: merged }],
 			{ userId: input.userId },
+			{ actor: input.userId },
 		);
-		await recordTimeMachine(
-			{
-				sectionTipo: input.sectionTipo,
-				sectionId: input.sectionId,
-				componentTipo: input.componentTipo,
-				lang: input.targetLang,
-				userId: input.userId,
-				data: merged,
-			},
-			dbTimestamp(),
+		// The history through the capture's own writer (dataframe_slots.ts
+		// recordMainHistory — two lanes): ONE row in the TARGET language's lane,
+		// its value only — one row is one language, engine-wide; the whole merged
+		// value under one tag put every other language back from this timeline. A
+		// translation changes no frame and no lg-nolan value, so no lg-nolan row
+		// (WC-2026-09-27-bulk-revert-undo-log, "two lanes").
+		const target = { table, sectionTipo: input.sectionTipo, sectionId: input.sectionId };
+		const identity = {
+			...(await mainIdentity(input.componentTipo, input.targetLang)),
+			lang: input.targetLang,
+		};
+		const slots = await readMainSlots(target, identity.tipo);
+		await recordMainHistory(
+			target,
+			identity,
+			{ before: { value: currentItems, slots }, after: { value: merged, slots } },
+			{ userId: input.userId, timestamp: dbTimestamp(), bulkId: null },
 		);
 		return { ok: true, msg: 'OK. Request done', count: targetItems.length };
 	});
@@ -403,7 +467,6 @@ export async function runAutomaticTranslation(
 	const o = ctx.options;
 	const componentTipo = String(o.component_tipo ?? '');
 	const sectionTipo = String(o.section_tipo ?? '');
-	const sectionId = Number(o.section_id ?? 0);
 	const sourceLang = String(o.source_lang ?? defaultTranslationSourceLang());
 	const targetLang = String(o.target_lang ?? '');
 	const engine = String(o.translator ?? 'babel');
@@ -415,16 +478,21 @@ export async function runAutomaticTranslation(
 		});
 	}
 
-	// PHP asserts BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124;
-	// TOOLS-10, 2026-07-28 audit): assert_tipo_permission(section_tipo,
-	// component_tipo, 2) — the SCHEMA pair, which a section-level check does not
-	// imply when the component carries its own dd774 grant, so a user with
-	// section write but NOT write on THIS component cannot translate-overwrite
-	// it — and assert_record_in_user_scope(section_tipo, section_id). The
-	// 'record' gate below is the second half only, so the pair is asserted
-	// explicitly first. (Both branches added this same check in parallel; merged
-	// 2026-07-29.)
-	await assertTranslationPermissions(ctx.principal, sectionTipo, componentTipo, sectionId);
+	// THE WRITE DOOR (closure Step 3 req 10; WC-2026-09-30-write-door): PHP
+	// asserted BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124;
+	// TOOLS-10) — the (section_tipo, component_tipo) pair at write and the
+	// record in the user's scope. The door asks them in its one order, with
+	// what the raw pair read never could: the section floor, the dd128
+	// own-record downgrade on the PAIR (a user-manager's own dd1725 is
+	// read-only), the integer id grammar (a missing / fractional / garbage id
+	// is request.invalid, never record 0) and the non-positive-id refusal ahead
+	// of the admin bypass. Before any provider call; the grant addresses the
+	// write.
+	const grant = await authorizeRecordAccess(
+		ctx.principal,
+		{ section_tipo: o.section_tipo, component_tipo: o.component_tipo, section_id: o.section_id },
+		{ mode: 'write', level: 2, sectionFloor: 1, door: `${configToolName}.automatic_translation` },
+	);
 
 	const { provider, error: providerError } = resolveTranslationProvider(engine);
 	if (provider === null) {
@@ -442,25 +510,21 @@ export async function runAutomaticTranslation(
 	}
 
 	const { getModelByTipo } = await import('../ontology/resolver.ts');
-	const model = await getModelByTipo(componentTipo);
+	const model = await getModelByTipo(grant.componentTipo);
 	if (model === null) {
 		throw new DedaloError('request.invalid_tipo', {
-			message: `unknown component tipo: ${componentTipo}`,
-			coordinates: { tipo: componentTipo },
+			message: `unknown component tipo: ${grant.componentTipo}`,
+			coordinates: { tipo: grant.componentTipo },
 		});
 	}
 
-	const outcome = await translateAndWrite({
+	const outcome = await translateAndWrite(grant, {
 		model,
-		componentTipo,
-		sectionTipo,
-		sectionId,
 		sourceLang,
 		targetLang,
 		provider,
 		uri: cfg.uri,
 		key: cfg.key,
-		userId: ctx.userId,
 	});
 	if (!outcome.ok) throw translationFailure(outcome);
 	return ok(true, {
@@ -470,53 +534,6 @@ export async function runAutomaticTranslation(
 		extend: { msg: outcome.msg, count: outcome.count },
 	});
 }
-
-/**
- * The two PHP permission asserts of automatic_translation, as ONE throwing gate
- * (tool_lang :164/:167, tool_lang_multi :122/:124; TOOLS-10, 2026-07-28 audit):
- * assert_tipo_permission(section_tipo, component_tipo, 2) — the SCHEMA pair,
- * which a section-level check does NOT imply when the component carries its own
- * dd774 grant, so a user with section write but NOT write on THIS component
- * cannot translate-overwrite it — and assert_record_in_user_scope(section_tipo,
- * section_id). The 'record' gate is the second half only, so the pair is
- * asserted explicitly here.
- */
-async function assertTranslationPermissions(
-	principal: Principal,
-	sectionTipo: string,
-	componentTipo: string,
-	sectionId: number,
-): Promise<void> {
-	const { getPermissions } = await import('../security/permissions.ts');
-	if ((await getPermissions(principal, sectionTipo, componentTipo)) < 2) {
-		throw new DedaloError('perm.denied', {
-			message: 'insufficient permissions on the target component',
-			coordinates: { section_tipo: sectionTipo, component_tipo: componentTipo },
-		});
-	}
-	const { assertActionPermission } = await import('./security.ts');
-	const gate = await assertActionPermission(
-		{ permission: 'record', minLevel: 2, handler: unreachableHandler },
-		{ section_tipo: sectionTipo, section_id: sectionId },
-		principal,
-	);
-	if (!gate.ok) {
-		// security.ts still answers with a legacy token; mapped through the ONE
-		// translation table until its own sweep makes it throw (tools/dispatch.ts
-		// does exactly this).
-		throw new DedaloError(LEGACY_TOKEN_MAP[gate.errors?.[0] ?? ''] ?? 'perm.denied', {
-			message: gate.msg,
-			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
-		});
-	}
-}
-
-/** Never called: assertActionPermission only consults the spec's gate fields. */
-const unreachableHandler = async (): Promise<never> => {
-	throw new DedaloError('internal.unexpected', {
-		message: 'translation permission probe handler must never run',
-	});
-};
 
 /**
  * A failed translateAndWrite → the thrown refusal.

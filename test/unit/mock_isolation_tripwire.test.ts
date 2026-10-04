@@ -105,10 +105,11 @@ const TEST_DIR = join(import.meta.dir, '..');
  * name.
  */
 const PARTIAL_MOCK_BASELINE: readonly string[] = [
-	// Both capture the REAL module up front and re-mock it back (a restore by
+	// Captures the REAL module up front and re-mocks it back (a restore by
 	// another name), but the stub is narrower than record_scope.ts while active.
+	// (tools_record_tipo_permission left the list 2026-09-30: rewritten without
+	// mocks, on real identities.)
 	'unit/record_scope_gates.test.ts',
-	'unit/tools_record_tipo_permission.test.ts',
 	// A VIRTUAL module id ('/virtual/…'): there is no file on disk to spread.
 	'unit/transcription_status_panel.test.ts',
 	// (The css.js truncations in client_render_queue_deadlock and
@@ -122,8 +123,9 @@ const PARTIAL_MOCK_BASELINE: readonly string[] = [
 const NO_RESTORE_BASELINE: readonly string[] = [
 	'unit/client_open_window_guard.test.ts',
 	'unit/client_show_interface_ownership.test.ts',
-	'unit/media_master_qualities_config.test.ts',
-	'unit/tm_bulk_revert.test.ts',
+	// (media_master_qualities_config and tm_bulk_revert left the list 2026-10-01:
+	// both re-mock every replaced module from a spread snapshot in teardown — the
+	// restore that works — and the outcome acquittal now sees it.)
 ];
 
 interface Site {
@@ -220,28 +222,41 @@ function filesRestoringGlobals(): Set<string> {
 		const targets = new Set<string>(['globalThis']);
 		for (const m of source.matchAll(GLOBAL_ALIAS)) targets.add(m[1] as string);
 
-		// Teardown bodies, brace-matched. `finally` is included deliberately: two
-		// files restore per-test in a finally rather than in afterEach, and a rule
-		// demanding the restore sit lexically inside afterAll reddens correct code.
-		const bodies: string[] = [];
-		for (const m of source.matchAll(/\b(?:afterAll|afterEach)\s*\(|\bfinally\s*\{/g)) {
-			const open = source.indexOf('{', (m.index ?? 0) + m[0].length - 1);
-			if (open === -1) continue;
-			let depth = 0;
-			let end = open;
-			while (end < source.length) {
-				if (source[end] === '{') depth += 1;
-				else if (source[end] === '}') {
-					depth -= 1;
-					if (depth === 0) break;
-				}
-				end += 1;
-			}
-			bodies.push(source.slice(open, end));
-		}
+		const bodies = teardownBodies(source);
 		if (bodies.some((body) => [...targets].some((t) => body.includes(t)))) restoring.add(file);
 	}
 	return restoring;
+}
+
+/**
+ * Teardown bodies, brace-matched: every `afterAll(…)` / `afterEach(…)` body and
+ * every `finally { … }` block. `finally` is included deliberately: files restore
+ * per-test in a finally rather than in afterEach, and a rule demanding the
+ * restore sit lexically inside afterAll reddens correct code.
+ */
+function teardownBodies(source: string): string[] {
+	return teardownRanges(source).map(([open, end]) => source.slice(open, end));
+}
+
+/** `[open, end)` offsets of every teardown body (see {@link teardownBodies}). */
+function teardownRanges(source: string): [number, number][] {
+	const ranges: [number, number][] = [];
+	for (const m of source.matchAll(/\b(?:afterAll|afterEach)\s*\(|\bfinally\s*\{/g)) {
+		const open = source.indexOf('{', (m.index ?? 0) + m[0].length - 1);
+		if (open === -1) continue;
+		let depth = 0;
+		let end = open;
+		while (end < source.length) {
+			if (source[end] === '{') depth += 1;
+			else if (source[end] === '}') {
+				depth -= 1;
+				if (depth === 0) break;
+			}
+			end += 1;
+		}
+		ranges.push([open, end]);
+	}
+	return ranges;
 }
 
 /** This file NAMES `mock.module(` in its prose and its regex; it never calls it. */
@@ -441,13 +456,104 @@ function narrowingFiles(): string[] {
  *    bun, so they snapshot the real module and re-mock it back in teardown —
  *    and each states that fact in a comment naming `mock.restore()`. The raw
  *    match keeps honoring that documented pattern exactly as the rule always
- *    has; a textual per-site "re-mocked the real module back" detector would be
- *    a rebuild of RULE 1's resolver for no new protection. The header's honest
- *    limitation stands: this reads SOURCE, not behaviour.
+ *    has. The header's honest limitation stands: this reads SOURCE, not
+ *    behaviour — and that raw acquittal is still a SPELLING (a comment naming
+ *    `mock.restore()` acquits a file that restores nothing).
+ *  - A file is ALSO acquitted on what it DOES (2026-10-01): every module it
+ *    replaces is re-mocked from a spread snapshot in teardown
+ *    ({@link restoresEveryMockFromSnapshot}, reusing RULE 1's id resolver). Two
+ *    compliant files were red for lacking only the comment.
  */
 function installsWithoutRestore(file: string): boolean {
 	const raw = readFileSync(join(TEST_DIR, file), 'utf8');
-	return stripComments(raw).includes('mock.module(') && !raw.includes('mock.restore()');
+	if (!stripComments(raw).includes('mock.module(')) return false;
+	if (raw.includes('mock.restore()')) return false;
+	return !restoresEveryMockFromSnapshot(stripComments(raw), dirname(join(TEST_DIR, file)));
+}
+
+/** One `mock.module(<id>, <factory>)` call: its resolved id and what the factory returns. */
+interface MockCall {
+	/** Resolved module path, or the whitespace-normalized id source when unresolvable. */
+	id: string;
+	/** `() => IDENT` ⇒ IDENT; any other factory (an object literal, a call) ⇒ null. */
+	returnsIdentifier: string | null;
+	/** Offset of the call in the comment-stripped source. */
+	at: number;
+}
+
+/** Every `mock.module(` call of a comment-stripped source, id resolved where possible. */
+function mockCalls(source: string, fileDir: string): MockCall[] {
+	const consts = pathConsts(source, fileDir);
+	const calls: MockCall[] = [];
+	let cursor = 0;
+	while (true) {
+		const start = source.indexOf('mock.module(', cursor);
+		if (start < 0) break;
+		const argsStart = start + 'mock.module('.length;
+		cursor = argsStart;
+		let depth = 1;
+		let index = argsStart;
+		while (index < source.length) {
+			const char = source[index] as string;
+			if ('([{'.includes(char)) depth++;
+			else if (')]}'.includes(char)) {
+				depth--;
+				if (depth === 0) break;
+			} else if (char === ',' && depth === 1) break;
+			index++;
+		}
+		if (source[index] !== ',') continue;
+		const idSource = source.slice(argsStart, index);
+		const resolved = evaluatePath(idSource, consts, fileDir);
+		const identifier = /^\s*(?:async\s*)?\(\)\s*=>\s*([A-Za-z_$][\w$]*)\s*,?\s*\)/.exec(
+			source.slice(index + 1),
+		);
+		calls.push({
+			id:
+				resolved === null
+					? idSource.replace(/\s+/g, ' ').trim()
+					: isAbsolute(resolved)
+						? resolved
+						: resolve(fileDir, resolved),
+			returnsIdentifier: identifier === null ? null : (identifier[1] as string),
+			at: start,
+		});
+	}
+	return calls;
+}
+
+/**
+ * RULE 2's OUTCOME acquittal: every module this file REPLACES is put back from
+ * a SNAPSHOT in TEARDOWN. Concretely, for every `mock.module(id, …)` whose
+ * factory is not a snapshot, the same file holds a `mock.module(<same id>, () =>
+ * SNAP)` that (a) sits inside an `afterAll`/`afterEach` body or a `finally`
+ * block, and (b) names a `const SNAP = { ...` SPREAD COPY declared in the file
+ * (RULE 3 separately refuses a restore from the live namespace). This is the
+ * restore that actually works — `mock.restore()` does not revert
+ * `mock.module` — so a file that does it is acquitted on what it DOES, not on
+ * whether a comment names `mock.restore()` (backup_freshness_deep_native and
+ * backup_inflight_native were convicted for that missing spelling,
+ * 2026-10-01; media_master_qualities_config and tm_bulk_revert sat in the
+ * baseline for it).
+ */
+function restoresEveryMockFromSnapshot(source: string, fileDir: string): boolean {
+	const snapshots = new Set(
+		[...source.matchAll(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\{\s*\.\.\./g)].map(
+			(match) => match[1] as string,
+		),
+	);
+	const teardown = teardownRanges(source);
+	const calls = mockCalls(source, fileDir);
+	const isRestore = (call: MockCall): boolean =>
+		call.returnsIdentifier !== null && snapshots.has(call.returnsIdentifier);
+	const restoredInTeardown = new Set(
+		calls
+			.filter(isRestore)
+			.filter((call) => teardown.some(([open, end]) => call.at > open && call.at < end))
+			.map((call) => call.id),
+	);
+	const replaced = calls.filter((call) => !isRestore(call));
+	return replaced.length > 0 && replaced.every((call) => restoredInTeardown.has(call.id));
 }
 
 /**
@@ -469,14 +575,73 @@ function installsWithoutRestore(file: string): boolean {
  * which is the whole argument for a rule instead of a repair.
  */
 function namespaceRestores(file: string): string[] {
-	const src = stripComments(readFileSync(join(TEST_DIR, file), 'utf8'));
+	return namespaceRestoresIn(stripComments(readFileSync(join(TEST_DIR, file), 'utf8')));
+}
+
+/** The pure reader behind {@link namespaceRestores}, so a control can feed it text. */
+function namespaceRestoresIn(src: string): string[] {
 	if (!src.includes('mock.module(')) return [];
-	const namespaces = [...src.matchAll(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s+from/g)].map(
-		(match) => match[1] as string,
-	);
+	// Both ways to bind the LIVE namespace: the static `import * as NS` and the
+	// dynamic `const NS = await import(…)` (no spread). The second shape hid in
+	// transform_run_native until 2026-10-02: its afterAll "restore" re-installed
+	// the definitions/tipos mocks, and transform_engine, matrix_counter_monotonic
+	// and record_generation went red in every order that ran it first.
+	const namespaces = [
+		...src.matchAll(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s+from/g),
+		...src.matchAll(/(?:const|let)\s+([A-Za-z0-9_$]+)\s*=\s*await\s+import\s*\(/g),
+	].map((match) => match[1] as string);
 	return namespaces.filter((name) =>
 		new RegExp(`mock\\.module\\([^;]*?\\)\\s*=>\\s*${name}\\s*\\)`, 's').test(src),
 	);
+}
+
+/**
+ * RULE 4 — A GATE THAT SUBSTITUTES A CLIENT MODULE RUNS IN ITS OWN PROCESS
+ * (2026-10-02, test/helpers/isolated_gate.ts).
+ *
+ * The client modules under test bind their leaves ONCE per process, and both
+ * substitution mechanisms are process-global (a module mock is never reverted,
+ * a plugin is never unregistered — and Bun's on-disk transpiler cache even
+ * carried a plugin's redirects into LATER processes). Eighteen client gates
+ * re-masked ui.js / events.js in turn and each measured the stubs of whichever
+ * ran before it: ~30 reds in the CI image's readdir order, none in the Mac's.
+ * So a test file that substitutes a module of the client tree (`client/`,
+ * `tools/`) — a `mock.module` of such a path, or any in-process `Bun.plugin` —
+ * must be an isolated gate: it calls BOTH `isIsolatedGateChild(import.meta.path)`
+ * and `mirrorIsolatedGate(import.meta.path)`. A plugin written inside a template
+ * literal (a driver a test spawns as its OWN process) is not in-process and is
+ * not counted.
+ */
+const REPO_DIR = join(TEST_DIR, '..');
+const CLIENT_TREES = [`${join(REPO_DIR, 'client')}/`, `${join(REPO_DIR, 'tools')}/`];
+
+/** What makes `source` (comment-stripped) a client-substituting file, or null. */
+function clientSubstitution(source: string, fileDir: string): string | null {
+	const inProcess = source.replace(/`(?:[^`\\]|\\.)*`/gs, '``');
+	if (/\b(?:Bun\.)?plugin\(\s*\{/.test(inProcess)) return 'Bun.plugin';
+	for (const call of mockCalls(source, fileDir)) {
+		if (CLIENT_TREES.some((tree) => call.id.startsWith(tree))) {
+			return `mock.module(${call.id.slice(REPO_DIR.length + 1)})`;
+		}
+	}
+	return null;
+}
+
+function isIsolatedGate(source: string): boolean {
+	return (
+		/\bisIsolatedGateChild\(\s*import\.meta\.path\s*\)/.test(source) &&
+		/\bmirrorIsolatedGate\(\s*import\.meta\.path\s*\)/.test(source)
+	);
+}
+
+/** Every test file that substitutes a client module, with what it substitutes. */
+function clientSubstitutingFiles(): { file: string; how: string; isolated: boolean }[] {
+	return testFiles().flatMap((file) => {
+		const path = join(TEST_DIR, file);
+		const source = stripComments(readFileSync(path, 'utf8'));
+		const how = clientSubstitution(source, dirname(path));
+		return how === null ? [] : [{ file, how, isolated: isIsolatedGate(source) }];
+	});
 }
 
 describe('mock isolation — one process, so a mock is everyone’s', () => {
@@ -493,12 +658,75 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 		).toEqual([]);
 	});
 
+	test('POSITIVE CONTROL: the namespace reader sees BOTH live-namespace bindings', () => {
+		const planted = [
+			"import * as A from '../../src/a.ts';",
+			"const B = await import('../../src/b.ts');",
+			"const C = { ...(await import('../../src/c.ts')) };",
+			"mock.module('../../src/a.ts', () => A);",
+			"mock.module('../../src/b.ts', () => B);",
+			"mock.module('../../src/c.ts', () => C);",
+		].join('\n');
+		expect(namespaceRestoresIn(planted)).toEqual(['A', 'B']);
+	});
+
 	test('NO NEW partial module mock (shrink-only)', () => {
 		const added = narrowingFiles().filter((file) => !PARTIAL_MOCK_BASELINE.includes(file));
 		expect(
 			added,
 			'A partial `mock.module` TRUNCATES that module for every other file in the tier — they fail at import with "Export named \'x\' not found", nowhere near this file. Spread the real module and override only what you stub.',
 		).toEqual([]);
+	});
+
+	test('the outcome acquittal: a snapshot re-mock in teardown restores, anything less does not (controls)', () => {
+		const dir = '/zz/unit';
+		const head = 'const NS_REAL = { ...ns };\nconst LIVE = ns;\n';
+		const replace = "mock.module('../a.ts', () => ({ ...NS_REAL, f: () => 1 }));\n";
+		// Restored in a finally, from a spread snapshot: acquitted.
+		expect(
+			restoresEveryMockFromSnapshot(
+				`${head}try { ${replace} } finally { mock.module('../a.ts', () => NS_REAL); }`,
+				dir,
+			),
+		).toBe(true);
+		// Restored in afterAll: acquitted.
+		expect(
+			restoresEveryMockFromSnapshot(
+				`${head}${replace}afterAll(() => { mock.module('../a.ts', () => NS_REAL); });`,
+				dir,
+			),
+		).toBe(true);
+		// Never restored.
+		expect(restoresEveryMockFromSnapshot(`${head}${replace}`, dir)).toBe(false);
+		// "Restored" outside teardown — runs before the test, not after it.
+		expect(
+			restoresEveryMockFromSnapshot(
+				`${head}mock.module('../a.ts', () => NS_REAL);\n${replace}`,
+				dir,
+			),
+		).toBe(false);
+		// Restored from a name that is not a spread snapshot.
+		expect(
+			restoresEveryMockFromSnapshot(
+				`${head}${replace}afterAll(() => { mock.module('../a.ts', () => LIVE); });`,
+				dir,
+			),
+		).toBe(false);
+		// Two modules replaced, one restored.
+		expect(
+			restoresEveryMockFromSnapshot(
+				`${head}${replace}mock.module('../b.ts', () => ({ g: 1 }));\n` +
+					"afterAll(() => { mock.module('../a.ts', () => NS_REAL); });",
+				dir,
+			),
+		).toBe(false);
+		// Same id spelled through join(import.meta.dir, …) resolves to the same module.
+		expect(
+			restoresEveryMockFromSnapshot(
+				`${head}${replace}afterAll(() => { mock.module(join(import.meta.dir, '..', 'a.ts'), () => NS_REAL); });`,
+				dir,
+			),
+		).toBe(true);
 	});
 
 	test('NO NEW unrestored module mock (shrink-only)', () => {
@@ -589,5 +817,36 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 		// File identity is tier-prefixed since the 2026-08-25 widening — a bare
 		// /^client_/ would match nothing and make this count vacuous.
 		expect([...files].filter((f) => !/^unit\/client_/.test(f)).length).toBeGreaterThan(2);
+	});
+
+	test('RULE 4: a gate that substitutes a client module is an ISOLATED gate (its own process)', () => {
+		const found = clientSubstitutingFiles();
+		// Floor: measured 2026-10-02, 19 files substitute a client module.
+		expect(found.length).toBeGreaterThanOrEqual(15);
+		const shared = found.filter((f) => !f.isolated).map((f) => `${f.file} (${f.how})`);
+		expect(
+			shared,
+			'these files replace a client module INSIDE the shared tier process, so every later client gate measures their stubs (file order decides the verdict). Make them isolated gates — test/helpers/isolated_gate.ts:\n  ' +
+				shared.join('\n  '),
+		).toEqual([]);
+	});
+
+	test('POSITIVE CONTROL: rule 4 sees a client mock, an in-process plugin, and not a spawned driver', () => {
+		const dir = join(TEST_DIR, 'unit');
+		expect(
+			clientSubstitution(
+				"const UI = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js', 'ui.js');\nmock.module(UI, () => ({ ui: {} }));",
+				dir,
+			),
+		).toBe('mock.module(client/dedalo/core/common/js/ui.js)');
+		expect(clientSubstitution('plugin({ name: "x", setup() {} });', dir)).toBe('Bun.plugin');
+		expect(clientSubstitution('const driver = `Bun.plugin({ name: "x" })`;', dir)).toBeNull();
+		expect(clientSubstitution("mock.module('../../src/core/x.ts', () => ({}));", dir)).toBeNull();
+		expect(
+			isIsolatedGate(
+				'if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path);',
+			),
+		).toBe(true);
+		expect(isIsolatedGate('mirrorIsolatedGate(import.meta.path);')).toBe(false);
 	});
 });

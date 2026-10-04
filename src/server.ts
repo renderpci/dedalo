@@ -27,7 +27,11 @@ import { chmodSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { Glob } from 'bun';
-import { runBootMigrations } from '../install/db/migrate.ts';
+import {
+	runBootSchema,
+	startOnlineMigrations,
+	stopOnlineMigrations,
+} from '../install/db/migrate.ts';
 import { initRagHooks } from './ai/rag/bootstrap.ts';
 import { config } from './config/config.ts';
 import { projectRoot, readEnv } from './config/env.ts';
@@ -1645,6 +1649,10 @@ async function shutdownGracefully(
 	} catch (error) {
 		console.error('[shutdown] background job journal failed:', error);
 	}
+	// The background online index build (migrate.ts) holds a reserved
+	// connection through an unbounded CONCURRENTLY build: cancel it, or the
+	// pool close below waits for the whole build. Unrecorded ⇒ next boot retries.
+	await stopOnlineMigrations();
 	try {
 		const { closeDatabasePool } = await import('./core/db/postgres.ts');
 		await closeDatabasePool();
@@ -1771,7 +1779,7 @@ export async function startServer() {
 		console.warn(`[boot] ${describeInstallAllowPolicy()}`);
 	}
 
-	// A MASTER must know its own public name. Both manifests hand OTHER machines
+	// An UPDATE SERVER must know its own public name. Both manifests hand OTHER machines
 	// absolute urls built from `publicOrigin()` (DEDALO_PROTOCOL + DEDALO_HOST), and
 	// the consumer then ORIGIN-PINS every download to the url it was configured with
 	// (WC-023 D5). With DEDALO_HOST unset that origin falls back to `localhost`, so a
@@ -1780,7 +1788,7 @@ export async function startServer() {
 	// here. The fallback itself stays (a same-machine dev master depends on it —
 	// src/core/resolve/public_origin.ts), so this is a loud line, not a refusal; without
 	// it the misconfiguration is invisible on the only box that could fix it.
-	// engineering/MASTER_SERVER.md §5. Gate: master_legacy_routing_tripwire.
+	// Gate: utils_update_manifest_native (the predicate, by behaviour, + this wiring).
 	if (config.ontologyIo.isOntologyServer || config.update.isCodeServer) {
 		if (publicOriginIsLocal()) {
 			const roles = [
@@ -1790,7 +1798,7 @@ export async function startServer() {
 				.filter((role) => role !== '')
 				.join(' + ');
 			console.warn(
-				`[boot] ${roles} is on but this install has no public name — every manifest it serves will advertise ${publicOrigin()}, which a remote install resolves to ITSELF. Set DEDALO_HOST to this master's public name.`,
+				`[boot] ${roles} is on but this install has no public name — every manifest it serves will advertise ${publicOrigin()}, which a remote install resolves to ITSELF. Set DEDALO_HOST to this server's public name.`,
 			);
 		}
 	}
@@ -1804,14 +1812,9 @@ export async function startServer() {
 	// smoke boot (read-only by construction — running migrations pre-swap would
 	// mutate the shared DB while the old code is live).
 	if (!config.installMode && !smokeBoot) {
-		try {
-			await runBootMigrations();
-		} catch (error) {
-			console.error(
-				'[migrations] boot migration run failed (continuing with lazy bootstraps):',
-				error,
-			);
-		}
+		// runBootSchema logs a failed run and continues, then heals the
+		// tm_role column outside any transaction (migrate.ts) — never throws.
+		await runBootSchema();
 
 		// Derived search-store self-provisioning (2026-07-21): a database from a
 		// previous beta (no matrix_string_search / matrix_relation_index, or
@@ -1839,6 +1842,33 @@ export async function startServer() {
 		} catch (error) {
 			console.error(
 				'[boot] search-store self-provisioning failed (relation searches will refuse with the maintenance remediation):',
+				error,
+			);
+		}
+
+		// THE ENGINE-OWNED ONTOLOGY (ontology/engine_ontology.ts, 2026-10-01): the
+		// sections the engine itself writes (the AI spend ledger) are defined in
+		// the repository and materialized HERE — a code update reaches an install
+		// through a restart, so boot is its update lane. Idempotent: it writes only
+		// when dd_ontology differs from engine_ontology.json. A failure logs and the
+		// server serves (S1-15); every consumer of an engine section fails CLOSED
+		// without it (AI requests refuse `ai.budget_unavailable`).
+		try {
+			const { ensureEngineOntology } = await import('./core/ontology/engine_ontology.ts');
+			const engine = await ensureEngineOntology();
+			if (engine.changed) {
+				console.warn(
+					`[boot] engine ontology materialized (${engine.written} records; drift was: ${engine.drift.join('; ')})`,
+				);
+			}
+			if (engine.strays.length > 0) {
+				console.warn(
+					`[boot] engine ontology: records the definitions do not declare (left in place): ${engine.strays.join(', ')}`,
+				);
+			}
+		} catch (error) {
+			console.error(
+				'[boot] engine ontology materialization FAILED (AI requests will refuse ai.budget_unavailable until it succeeds):',
 				error,
 			);
 		}
@@ -2341,6 +2371,13 @@ export async function startServer() {
 	}
 
 	console.log(`Dédalo TS server listening on unix socket ${socketPath} (entity: ${config.entity})`);
+
+	// ONLINE MIGRATIONS (migrate.ts runOnlineMigrations): the CONCURRENTLY index
+	// builds that must never hold the listener — a full-heap build pre-listen
+	// outlasted the systemd watchdog (rollback / restart loop). Background, never
+	// awaited; every reader is correct without the index. Same skips as the boot
+	// runner (install mode: no DB; smoke boot: read-only by construction).
+	if (!config.installMode && !smokeBoot) void startOnlineMigrations();
 
 	// CODE-UPDATE BOOT CONFIRMATION (core/update/boot_confirm.ts): once the
 	// listener is up AND the first DB ping is green, flip a pending update

@@ -113,3 +113,25 @@ ddos that originate in the **ontology** (server-side, trusted) may use the full 
 `typo`, `tipo`, `section_tipo`, `section_id`, `parent`, `mode`, `lang`, `view`, `label`, `fields_separator`, `records_separator`, `value_with_parents`, `column_id`, `width`, `in_mosaic`, `hover`, **`limit`**, **`offset`**.
 
 `limit` / `offset` are accepted **only as non-negative integers** (any other shape is dropped). They control only the *output slice* of an already permission-resolved, fully-loaded component — they are **not** a permission boundary — so a client may legitimately request all rows of a portal it can already read (`limit: 0`), exactly as the UI "show all" does. `model`, `permissions` and other server-authoritative fields are deliberately **absent** from the whitelist — they are recomputed and enforced server-side. `show.ddo_map`, `search.ddo_map` **and** `choose.ddo_map` all wrap the same `rqoDdoBlockSchema`, so the whitelist applies uniformly to all three blocks.
+
+### `properties.show_interface` on a client-sent ddo
+
+`properties` is not on the whitelist, so the server never receives a client ddo's `properties`. A page that builds its own form can still choose which buttons its fields draw: it declares `properties.show_interface` on the ddos of the `request_config` it hands to a section, and the **client** applies it (`apply_caller_show_interface` in `client/dedalo/core/section_record/js/section_record.js`) when the section creates each field. The server contract above is unchanged. `show_interface` only decides what the browser draws; permissions are separate and enforced by the server.
+
+The rules:
+
+- only fields of a **section** (portals and services are not affected), declared in the main Dédalo item's `show.ddo_map`;
+- the ddo must match the field by `tipo`, `section_tipo` (`'self'` or absent = the row's section; an array = any of them) and `parent` (`'self'` or absent = the row's section);
+- only the `show_interface` key is taken, and only when it is an object; any other `properties` key is ignored;
+- **the field's own configuration wins**: every key it already defines (its `request_config` `show.interface`, overlaid by its `properties.show_interface`) is kept, and the declaration only fills the keys left unset.
+
+The export and search preset editors and `tool_user_admin` use it to hide the tool buttons (`{"tools": false}`) on their fields:
+
+```json
+{
+  "tipo": "dd624",
+  "section_tipo": "dd1781",
+  "parent": "dd1781",
+  "properties": { "show_interface": { "tools": false } }
+}
+```

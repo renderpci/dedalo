@@ -14,6 +14,7 @@
  */
 
 import { ARGON2_OPTIONS } from '../security/argon2_params.ts';
+import { passwordPolicyFailure } from '../security/password_policy.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
@@ -41,8 +42,14 @@ export async function setRootPassword(
 	password: string,
 	conn?: DbConnDescriptor,
 ): Promise<SetRootPwResult> {
-	if (password.length < 8) {
-		refuseInstall('install.invalid_input', 'Password must be at least 8 characters');
+	// The engine's ONE password policy (password_policy.ts) — the root credential is
+	// not held to a weaker rule than any other account.
+	const brokenRule = passwordPolicyFailure(password);
+	if (brokenRule !== null) {
+		refuseInstall(
+			'install.invalid_input',
+			`Password does not meet the password policy (${brokenRule})`,
+		);
 	}
 	const connection = conn ?? connFromConfig();
 

@@ -20,6 +20,12 @@
  * 3. The per-column PARENTS checkbox per data format (WC-049 + addendum
  *    2026-09-25): enabled in value / grid_value, disabled with a visible note in
  *    dedalo_raw, re-evaluated on every format change and after a preset.
+ *
+ * 4. The DROP MODEL of the "Active elements" list (drag_tool_export.js): the
+ *    pointer's midpoint rule picks the insertion index, one marker shows it
+ *    (below the last row = after it, never before), a duplicate shows no marker
+ *    and is refused, a sort onto its own position is a no-op, and the drop
+ *    lands exactly where the marker was.
  */
 
 import {tool_export} from '../../../tools/tool_export/js/tool_export.js'
@@ -29,7 +35,16 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {request_failed, response_data, ApiError} from '../../../core/common/js/api_error.js'
 import {create_job_follower_group} from '../../../core/common/js/job_follow.js'
 import {ui} from '../../../core/common/js/ui.js'
-import {apply_export_preset} from '../../../tools/tool_export/js/export_user_presets.js'
+import {apply_export_preset, edit_user_export_preset} from '../../../tools/tool_export/js/export_user_presets.js'
+import {
+	get_drop_index,
+	on_dragstart,
+	on_dragover,
+	on_dragleave,
+	on_dragend,
+	on_drop,
+	set_sort_payload
+} from '../../../tools/tool_export/js/drag_tool_export.js'
 
 
 
@@ -1490,6 +1505,156 @@ describe('TOOL_EXPORT PARENTS CHECKBOX (per data format)', function() {
 		assert.equal(parents_nodes().check.checked, true, 'the preset flag is kept')
 		select_format('value')
 		assert_state('value', true)
+	})
+})
+
+describe('TOOL_EXPORT DROP MODEL (one zone, one marker)', function() {
+
+	// a fake tool: only what the drag handlers touch. Rows are real DOM nodes
+	// in a real, laid-out list so the midpoint rule reads real geometry.
+	let zone, list, self, rows
+	const ROW_H = 30
+
+	const make_row = (id) => {
+		const node = document.createElement('div')
+		node.className = 'export_component'
+		node.style.cssText = `height:${ROW_H}px;margin:0;padding:0`
+		node.textContent = id
+		node.ddo = {id}
+		return node
+	}
+	const fake_event = (client_y) => ({
+		clientY			: client_y,
+		dataTransfer	: {dropEffect: null, effectAllowed: null, setData() {}},
+		preventDefault() {},
+		stopPropagation() {}
+	})
+	// the pointer over the row `i`, at a fraction of its height
+	const y_at = (i, fraction) => list.getBoundingClientRect().top + ROW_H * (i + fraction)
+	const order = () => [...list.children].filter(n => n.classList.contains('export_component')).map(n => n.ddo.id)
+	const marker_index = () => [...list.children].indexOf(list.querySelector('.drop_marker'))
+
+	before(function() {
+		zone = document.createElement('div')
+		zone.style.cssText = 'position:fixed;top:0;left:0;width:300px;height:400px'
+		list = document.createElement('div')
+		zone.appendChild(list)
+		document.body.appendChild(zone)
+	})
+	after(function() {
+		zone.remove()
+	})
+
+	const reset = () => {
+		list.replaceChildren()
+		rows = ['a', 'b', 'c'].map(make_row)
+		list.append(...rows)
+		self = {
+			user_selection_list		: list,
+			compose_id				: (ddo) => ddo.tipo,
+			sync_ar_ddo_to_export() { this.synced = order() },
+			update_local_db_data() { this.saved = true },
+			build_export_component	: async (ddo) => make_row(ddo.id)
+		}
+	}
+	const start_add = (tipo) => on_dragstart.call(self, {path: [], ddo: {tipo, label: tipo}}, fake_event(0))
+
+	it('get_drop_index: upper half = before, lower half = after, below all = end', function() {
+		reset()
+		assert.equal(get_drop_index(rows, y_at(0, 0.25)), 0)
+		assert.equal(get_drop_index(rows, y_at(0, 0.75)), 1)
+		assert.equal(get_drop_index(rows, y_at(2, 0.75)), 3)
+		assert.equal(get_drop_index(rows, y_at(5, 0)), 3, 'far below the list appends')
+		assert.equal(get_drop_index([], 10), 0)
+	})
+
+	it('below the last row the marker sits AFTER it and the drop appends', async function() {
+		reset()
+		start_add('new')
+		on_dragover.call(self, zone, fake_event(y_at(4, 0.5)))
+		assert.equal(marker_index(), 3, 'the marker is the last child')
+		assert.equal(list.querySelectorAll('.drop_marker').length, 1, 'exactly one marker')
+		on_drop.call(self, zone, fake_event(y_at(4, 0.5)))
+		assert.equal(list.querySelector('.drop_marker'), null, 'no marker after the drop')
+		await new Promise(r => setTimeout(r, 0))
+		assert.deepEqual(order(), ['a', 'b', 'c', 'new'])
+		assert.deepEqual(self.synced, ['a', 'b', 'c', 'new'], 'the order is synced from the DOM')
+	})
+
+	it('the lower half of a row inserts after it', async function() {
+		reset()
+		start_add('new')
+		on_dragover.call(self, zone, fake_event(y_at(0, 0.8)))
+		assert.equal(marker_index(), 1)
+		on_drop.call(self, zone, fake_event(y_at(0, 0.8)))
+		await new Promise(r => setTimeout(r, 0))
+		assert.deepEqual(order(), ['a', 'new', 'b', 'c'])
+	})
+
+	it('a duplicate shows no marker, marks the existing row, and is refused', function() {
+		reset()
+		start_add('b')
+		const event = fake_event(y_at(0, 0.2))
+		on_dragover.call(self, zone, event)
+		assert.equal(list.querySelector('.drop_marker'), null, 'no marker')
+		assert.equal(event.dataTransfer.dropEffect, 'none', 'the drop is refused')
+		assert.ok(rows[1].classList.contains('drop_duplicate'), 'the existing row is marked')
+		assert.equal(on_drop.call(self, zone, fake_event(y_at(0, 0.2))), false)
+		assert.deepEqual(order(), ['a', 'b', 'c'])
+		assert.ok(!rows[1].classList.contains('drop_duplicate'), 'the mark is cleared')
+	})
+
+	it('a sort onto its own position is a no-op; elsewhere it moves the row', function() {
+		reset()
+		set_sort_payload.call(self, rows[0])
+		on_dragover.call(self, zone, fake_event(y_at(0, 0.8)))
+		assert.equal(list.querySelector('.drop_marker'), null, 'just below itself: no marker')
+		on_dragover.call(self, zone, fake_event(y_at(2, 0.8)))
+		assert.equal(marker_index(), 3)
+		on_drop.call(self, zone, fake_event(y_at(2, 0.8)))
+		assert.deepEqual(order(), ['b', 'c', 'a'])
+	})
+
+	it('leaving the zone or ending the drag leaves no marker nor payload', function() {
+		reset()
+		start_add('new')
+		on_dragover.call(self, zone, fake_event(y_at(1, 0.2)))
+		on_dragleave.call(self, zone, {relatedTarget: rows[0]})
+		assert.ok(list.querySelector('.drop_marker'), 'moving between its own children keeps the marker')
+		on_dragleave.call(self, zone, {relatedTarget: document.body})
+		assert.equal(list.querySelector('.drop_marker'), null, 'really leaving removes it')
+		on_dragover.call(self, zone, fake_event(y_at(1, 0.2)))
+		on_dragend.call(self)
+		assert.equal(list.querySelector('.drop_marker'), null)
+		assert.equal(self.drag_payload, null)
+	})
+})
+
+describe('TOOL_EXPORT PRESET EDITOR (dialog chrome)', function() {
+
+	this.timeout(10000)
+
+	// The preset editor is a small dialog: its fields declare, per ddo, the
+	// interface they need (applied client-side by section_record — the server
+	// strips client ddo properties). No tool buttons on any field, and the name
+	// (one per preset) offers no 'add value' button: with both off the name
+	// field draws no floating toolbar that could overlap the dialog header.
+	it('declares tools:false on every field and button_add:false on the name', async function() {
+
+		// a record id nobody has: the read is harmless, the declaration is what is pinned
+		const section = await edit_user_export_preset({}, 999999999)
+		try {
+			const ddo_map = section.request_config
+				.find(el => el.api_engine==='dedalo' && el.type==='main')
+				.show.ddo_map
+			const interface_of = (tipo) => ddo_map.find(el => el.tipo===tipo)?.properties?.show_interface
+
+			assert.deepEqual(interface_of('dd624'), {tools:false, button_add:false}, 'name: no tools, no add value')
+			assert.deepEqual(interface_of('dd640'), {tools:false}, 'public: no tools')
+			assert.deepEqual(interface_of('dd641'), {tools:false}, 'default: no tools')
+		} finally {
+			await section.destroy?.(true, true, true)
+		}
 	})
 })
 

@@ -87,12 +87,6 @@
 		},
 		{
 			"file": "src/core/area_maintenance/widgets/make_backup.ts",
-			"symbol": "makeBackupPsql",
-			"class": "unrunnable-destructive",
-			"reason": "A six-field forward of initBackupSequence (gated in ops_backup.test.ts); invoking it spawns a detached pg_dump of the live database and writes a multi-GB artifact to disk."
-		},
-		{
-			"file": "src/core/area_maintenance/widgets/make_backup.ts",
 			"symbol": "makeBackupGetFiles",
 			"class": "vacuous-projection",
 			"reason": "A slice over getBackupFiles (gated in ops_backup.test.ts) plus the constant empty MySQL list required by the engine boundary — MariaDB is the diffusion engine's responsibility."
@@ -114,12 +108,6 @@
 			"symbol": "moveWidgetGetValue",
 			"class": "vacuous-projection",
 			"reason": "The static body catalog plus listDefinitionFiles. Its `?? ''` fallback is UNREACHABLE by construction (all five buildMoveWidget call sites pass keys of MOVE_WIDGET_BODIES — ledgered as D20), and the registry-consistency claim it DOES carry is gated in move_widget_registry_native.test.ts, which asserts in both directions that every registered id is a switch arm and a body key."
-		},
-		{
-			"file": "src/core/area_maintenance/widgets/move_common.ts",
-			"symbol": "moveWidgetRun",
-			"class": "unrunnable-destructive",
-			"reason": "A zero-branch field rename over runTransform's report; the dry-run law and the transform semantics are gated in update_engine.test.ts and the per-transform gates. Running this shell executes a bulk rewrite of stored records against the shared database."
 		},
 		{
 			"file": "src/core/area_maintenance/widgets/publication_api.ts",
@@ -176,7 +164,7 @@
 			"reason": "A one-field unwrap forwarding to core/update/code_restore.ts, gated in its own suite (update_restore_native.test.ts drives the whole pipeline seam-first against a temp tree); executing THIS wrapper replaces the live code tree with a backup copy and restarts the process."
 		},
 		{
-			"file": "src/core/area_maintenance/widgets/update_code.ts",
+			"file": "src/core/area_maintenance/widgets/serve_code.ts",
 			"symbol": "buildVersionOwned",
 			"class": "unrunnable-destructive",
 			"reason": "A three-field unwrap forwarding to core/update/code_build.ts, gated in its own suite; running it shells out to git and writes a release archive into the tree."

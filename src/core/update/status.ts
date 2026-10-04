@@ -13,7 +13,7 @@
  * THE LAW OF THIS MODULE: it never re-implements a refusal. Every readiness
  * line asks the SAME function the pipeline refuses on — `isSupervised`,
  * `detectDeploymentChannel`, `runtimePathsInsideTree`, `backupRootIsInsideTree`,
- * `backupFreshness`, `planCodeBuild`, `buildCodeUpdateInfo`. A second copy
+ * `backupFreshnessWithin`, `planCodeBuild`, `buildCodeUpdateInfo`. A second copy
  * of a rule would drift, and a readiness panel that disagrees with the pipeline
  * is worse than no panel: it would earn trust it cannot keep. Where a check is
  * NOT decidable before the download (the release's own root whitelist and its
@@ -43,7 +43,15 @@ import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { detectDeploymentChannel } from './channel.ts';
-import { parseDeclaredTriple, planCodeBuild, VERSION_TS_PATH } from './code_build_plan.ts';
+import {
+	DEV_REF,
+	newestPublishableTag,
+	parseDeclaredTriple,
+	planCodeBuild,
+	qualifiedReleaseTag,
+	releaseTagVersion,
+	VERSION_TS_PATH,
+} from './code_build_plan.ts';
 import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
 import {
 	bunPinOf,
@@ -65,7 +73,7 @@ import {
 } from './code_update.ts';
 import { availableBytesAt } from './disk_space.ts';
 import { INSTALLED_CHANNEL, INSTALLED_DIGEST, type InstallChannel } from './install_stamp.ts';
-import { backupFreshness } from './preconditions.ts';
+import { type BackupVerifyOptions, backupFreshnessWithin, PANEL_WAIT_MS } from './preconditions.ts';
 import { type DeleteBlockReason, deletabilityOf, RESTORE_POINT_PREFIX } from './restore_points.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
 
@@ -89,7 +97,7 @@ export interface StatusCheck {
 	/**
 	 * WHAT the check was evaluated against, when that is not obvious — a git
 	 * ref, a path. Load-bearing on a code server: the publish checks look at
-	 * the RELEASE REF (`master`), not at the branch the operator has checked
+	 * the RELEASE TAG (`vX.Y.Z`) and `master`, not at the branch the operator has checked
 	 * out, so a fix committed on a working branch leaves them red and the
 	 * readout has to say why (2026-08-24: `archive_installable` blocked on
 	 * `.claude, CLAUDE.md` while HEAD had already excluded them — the panel was
@@ -114,6 +122,15 @@ function check(
 function probe(id: string, run: () => StatusCheck): StatusCheck {
 	try {
 		return run();
+	} catch (error) {
+		return check(id, 'unknown', error instanceof Error ? error.message : String(error));
+	}
+}
+
+/** `probe` for an asynchronous check: a rejection becomes `unknown` too. */
+async function probeAsync(id: string, run: () => Promise<StatusCheck>): Promise<StatusCheck> {
+	try {
+		return await run();
 	} catch (error) {
 		return check(id, 'unknown', error instanceof Error ? error.message : String(error));
 	}
@@ -234,8 +251,8 @@ function operatorChecks(principal: Principal): StatusCheck[] {
 
 /**
  * The recent-backup gate. Since 2026-08-23 this REFUSES a code update
- * (`backupRequire`) — but it is the ONE gate the request can waive, and since
- * 2026-08-25 the panel offers that waiver (the update_code modal's
+ * (`requireFreshBackup`) — but it is the ONE gate the request can waive, and
+ * since 2026-08-25 the panel offers that waiver (the update_code modal's
  * `waive_backup` checkbox). So the state is `warn`, the vocabulary's own word
  * for "allowed, but the operator should know (a waivable condition)": a stale
  * backup no longer forces `ready:false`, which would have headlined "Update
@@ -243,22 +260,45 @@ function operatorChecks(principal: Principal): StatusCheck[] {
  * this module's header forbids. The age fact rides in `detail` unchanged, and
  * an UNWAIVED request still refuses exactly as before.
  *
- * P0-13 (2026-08-30): the age it reports is now the age of the newest artifact
- * a `pg_restore` read has NOT DISPROVED — freshness is not usability, and a
- * pg_dump killed at 60% used to make this line read `ok`. Two consequences the
- * operator must be able to see: `none` can now mean "dumps exist but none of
- * them verified", and a dump being WRITTEN right now no longer counts. WHICH
- * artifact was counted (or refused, and why) rides in `scope` — otherwise the
- * panel would say `none` over a directory visibly full of .backup files and
- * give the operator nothing to act on. The verdict itself is still the
- * pipeline's own, computed exactly once.
+ * P0-13 (2026-08-30) / OPS-1 (2026-09-30): the age it reports is that of the
+ * newest artifact a FULL `pg_restore` read PROVED — freshness is not usability,
+ * and a pg_dump killed at 60% used to make this line read `ok`. `none` can mean
+ * "dumps exist but none of them verified"; WHICH artifact was counted (or
+ * refused, and why) rides in `scope`.
+ *
+ * THE PANEL NEVER WAITS FOR A READ (OPS-1): it races the pipeline's own shared
+ * scan against a bounded wait (`backupFreshnessWithin`). When the wait loses the
+ * line is `warn` / `verifying` with the artifact being read in `scope` — never
+ * `ok`, because nothing has been established yet — and the scan carries on, so
+ * the next refresh answers from its settled verdict. The verdict itself is still
+ * the pipeline's own, computed exactly once.
  */
-function backupFreshnessCheck(): StatusCheck {
-	return probe('backup_fresh', () => {
-		// The pipeline's OWN predicate, not a second copy of it — the panel
-		// rounded and the refusal did not, which made them disagree for the
-		// half hour after every freshness deadline (see backupFreshness).
-		const { hours, stale, verdict, rejected } = backupFreshness();
+function backupFreshnessCheck(
+	principal: Principal,
+	seams: ConsumerStatusSeams,
+): Promise<StatusCheck> {
+	// ONLY THE SUPERUSER'S PANEL ASKS (OPS-1 review). Every ask may start full
+	// archive reads, and the panel is open to any global admin — who cannot run an
+	// update (`superuser: blocked` above) and so has no use for the verdict. Their
+	// line is `unknown` / `superuser_required`, and nothing is read on their behalf.
+	if (principal.userId !== SUPERUSER_ID) {
+		return Promise.resolve(check('backup_fresh', 'unknown', 'superuser_required'));
+	}
+	return probeAsync('backup_fresh', async () => {
+		const answer = await backupFreshnessWithin(
+			seams.waitMs ?? PANEL_WAIT_MS,
+			seams.backupDir,
+			seams.backupVerify,
+		);
+		if ('pending' in answer) {
+			return check(
+				'backup_fresh',
+				'warn',
+				'verifying',
+				answer.candidate === null ? undefined : `${basename(answer.candidate)} (verifying)`,
+			);
+		}
+		const { hours, stale, verdict, rejected } = answer;
 		const scope = backupScope(verdict, rejected);
 		if (hours === null) return check('backup_fresh', 'warn', 'none', scope);
 		return check('backup_fresh', stale ? 'warn' : 'ok', String(Math.round(hours)), scope);
@@ -464,8 +504,21 @@ function readLiveBunPin(): string | null {
 	}
 }
 
+/** Test seams of `consumerStatus` — production passes none (the configured backup dir). */
+export interface ConsumerStatusSeams {
+	/** The DATABASE backup dir the `backup_fresh` line judges. */
+	backupDir?: string;
+	/** How its artifacts are verified (a recording pg_restore, a budget). */
+	backupVerify?: BackupVerifyOptions;
+	/** The bounded wait before `backup_fresh` answers `verifying` (default PANEL_WAIT_MS). */
+	waitMs?: number;
+}
+
 /** The consumer half of the panel: readiness + provenance + rollback state. */
-export function consumerStatus(principal: Principal): ConsumerStatus {
+export async function consumerStatus(
+	principal: Principal,
+	seams: ConsumerStatusSeams = {},
+): Promise<ConsumerStatus> {
 	const backupRoot = probeBackupRoot();
 	const livePin = readLiveBunPin();
 	const rootEntries = rootEntriesCheck();
@@ -473,7 +526,7 @@ export function consumerStatus(principal: Principal): ConsumerStatus {
 		supervisorCheck(),
 		channelCheck(),
 		...operatorChecks(principal),
-		backupFreshnessCheck(),
+		await backupFreshnessCheck(principal, seams),
 		backupLocationCheck(backupRoot),
 		runtimeDataCheck(),
 		toolchainCheck(),
@@ -523,13 +576,12 @@ function probeBackupRoot(): string {
 // ---------------------------------------------------------------------------
 
 /**
- * The ref a PUBLISHED release is built from. Not a preference: `releaseFileName`
- * (code_build_plan.ts) gives only a `master` build the advertised `<v>.zip`
- * name — every other ref gets the un-advertised `-dev` suffix. So the publish
- * checks below must ask THIS ref, whatever the operator happens to have checked
- * out, and say which ref they asked.
+ * The refs the two channels are built from (code_build_plan.ts, policy
+ * 2026-09-29): a PUBLISHED release from the newest `vX.Y.Z` tag — only a tag
+ * build gets the advertised `<v>.zip` name — and a developer build from the tip
+ * of {@link DEV_REF}. The publish checks below ask THOSE refs, whatever the
+ * operator happens to have checked out, and say which ref they asked.
  */
-const RELEASE_REF = 'master';
 
 export interface PublishedRelease {
 	version: string;
@@ -558,26 +610,36 @@ export interface CodeServerStatus {
 		head_date: string | null;
 		branch: string | null;
 		dirty: boolean | null;
+		/** Does the developer ref (`master`) exist in the build checkout. */
 		has_master_ref: boolean | null;
 		bun_pin: string | null;
-		/** The ref a published release is built from (never the checked-out one). */
-		release_ref: string;
+		/**
+		 * The release channel's ref: the NEWEST stable `vX.Y.Z` tag (short name),
+		 * or null when the checkout has none — then nothing can be published.
+		 */
+		release_ref: string | null;
 		release_sha: string | null;
 		release_date: string | null;
 		/**
-		 * The version RELEASE_REF's own `version.ts` DECLARES — the name a
+		 * The version the release tag's own `version.ts` DECLARES — the name a
 		 * publish will actually produce. Not the running engine's version: the
 		 * panel's confirm text used to promise "a release of the current
 		 * version (X)" from `page_globals.dedalo_version`, which is only true
 		 * while the process and the ref happen to agree.
 		 */
 		release_version: string | null;
+		/** The developer channel's ref — always {@link DEV_REF} (`master`). */
+		dev_ref: string;
+		dev_sha: string | null;
+		dev_date: string | null;
+		/** The version `master`'s own `version.ts` declares — a dev build's name. */
+		dev_version: string | null;
 		/**
-		 * How far the release ref is from the checked-out branch:
-		 * `behind` = commits on the branch that the release ref does NOT have
-		 * (work that will not ship until merged — the answer to "I fixed it,
-		 * why is the panel still red?"), `ahead` = the reverse. Null when the
-		 * two cannot be compared (a detached HEAD, a missing ref).
+		 * How far the release tag is from `master`:
+		 * `behind` = commits on `master` the release does NOT have (integrated,
+		 * not yet released — what a developer build would add), `ahead` = the
+		 * reverse (a tag cut off `master`). Null when the two cannot be compared
+		 * (no release tag, no `master`).
 		 */
 		divergence: { ahead: number; behind: number } | null;
 	};
@@ -602,10 +664,17 @@ export interface CodeServerStatus {
  * order the Build button hits (code server → dirs → version → ref → path), so
  * the panel can never promise a build the planner would refuse.
  */
-function buildPlanCheck(): StatusCheck {
+function buildPlanCheck(source: CodeServerStatus['source']): StatusCheck {
 	return probe('build_plan', () => {
+		if (source.release_ref === null) return check('build_plan', 'unknown', 'no release tag');
+		// the tag's own version is the name; unreadable, there is nothing to plan
+		// (release_version_matches_ref says why) — never the running version
+		if (source.release_version === null) {
+			return check('build_plan', 'unknown', VERSION_TS_PATH, source.release_ref);
+		}
+		const tagRef = qualifiedReleaseTag(releaseTagVersion(source.release_ref) as string);
 		const plan = planCodeBuild(
-			{ version: DEDALO_VERSION, ref: RELEASE_REF },
+			{ version: source.release_version, ref: tagRef },
 			{
 				isCodeServer: config.update.isCodeServer,
 				codeServerGitDir: config.update.codeServerGitDir,
@@ -613,8 +682,8 @@ function buildPlanCheck(): StatusCheck {
 			},
 		);
 		return plan.ok
-			? check('build_plan', 'ok', plan.filePath, RELEASE_REF)
-			: check('build_plan', 'blocked', plan.error, RELEASE_REF);
+			? check('build_plan', 'ok', plan.filePath, source.release_ref)
+			: check('build_plan', 'blocked', plan.error, source.release_ref);
 	});
 }
 
@@ -639,9 +708,9 @@ function directoryCheck(id: string, dir: string | null | undefined): StatusCheck
  * install — the 2026-08-23 agent-alias bug, surfaced where it is created
  * instead of where it lands. Gate for this repo: release_archive_tripwire.
  */
-function archiveShapeCheck(gitDir: string | null, ref: string): StatusCheck {
+function archiveShapeCheck(gitDir: string | null, ref: string, scope: string = ref): StatusCheck {
 	return probe('archive_installable', () => {
-		if (gitDir === null) return check('archive_installable', 'unknown', 'no git dir', ref);
+		if (gitDir === null) return check('archive_installable', 'unknown', 'no git dir', scope);
 		// `set -o pipefail` is LOAD-BEARING: without it a failing `git archive`
 		// (missing ref, unreadable dir) still exits 0 because `tar` happily
 		// consumes the empty stream — and an empty listing has no symlink lines,
@@ -654,8 +723,8 @@ function archiveShapeCheck(gitDir: string | null, ref: string): StatusCheck {
 		);
 		const symlinks = archiveSymlinkNames(listing);
 		return symlinks.length === 0
-			? check('archive_installable', 'ok', undefined, ref)
-			: check('archive_installable', 'blocked', symlinks.join(', '), ref);
+			? check('archive_installable', 'ok', undefined, scope)
+			: check('archive_installable', 'blocked', symlinks.join(', '), scope);
 	});
 }
 
@@ -698,8 +767,35 @@ function readBunPin(gitDir: string): string | null {
 	}
 }
 
-/** The RELEASE_REF half of `source`: present/absent, and what it points at. */
-function readReleaseRef(
+/**
+ * The newest PUBLISHABLE release tag of the build checkout (short name), or
+ * null: stable `vX.Y.Z` AND a tree of this engine (code_build_plan.ts
+ * newestPublishableTag — the PHP-era `v6.x` tags share the repository).
+ */
+function readReleaseTag(gitDir: string): string | null {
+	const listing = git(gitDir, ['tag', '--list', 'v*']);
+	if (listing === null) return null;
+	return newestPublishableTag(
+		listing.split('\n'),
+		(tag) => git(gitDir, ['cat-file', '-e', `refs/tags/${tag}:${VERSION_TS_PATH}`]) !== null,
+	);
+}
+
+/** A ref's commit, date and declared version — all null when the ref is absent. */
+function refFacts(
+	gitDir: string,
+	ref: string | null,
+): { sha: string | null; date: string | null; version: string | null } {
+	if (ref === null) return { sha: null, date: null, version: null };
+	return {
+		sha: git(gitDir, ['rev-parse', '--short', `${ref}^{commit}`]),
+		date: git(gitDir, ['log', '-1', '--format=%cI', ref]),
+		version: declaredVersionAtRef(gitDir, ref),
+	};
+}
+
+/** The two channels' refs in `source`: the release tag and the `master` tip. */
+function readChannelRefs(
 	gitDir: string,
 ): Pick<
 	CodeServerStatus['source'],
@@ -708,16 +804,28 @@ function readReleaseRef(
 	| 'release_sha'
 	| 'release_date'
 	| 'release_version'
+	| 'dev_ref'
+	| 'dev_sha'
+	| 'dev_date'
+	| 'dev_version'
 	| 'divergence'
 > {
-	const hasRelease = git(gitDir, ['rev-parse', '--verify', '--quiet', RELEASE_REF]) !== null;
+	const tag = readReleaseTag(gitDir);
+	const tagRef = tag === null ? null : `refs/tags/${tag}`;
+	const hasDev = git(gitDir, ['rev-parse', '--verify', '--quiet', DEV_REF]) !== null;
+	const release = refFacts(gitDir, tagRef);
+	const dev = refFacts(gitDir, hasDev ? DEV_REF : null);
 	return {
-		has_master_ref: hasRelease,
-		release_ref: RELEASE_REF,
-		release_sha: hasRelease ? git(gitDir, ['rev-parse', '--short', RELEASE_REF]) : null,
-		release_date: hasRelease ? git(gitDir, ['log', '-1', '--format=%cI', RELEASE_REF]) : null,
-		release_version: hasRelease ? declaredVersionAtRef(gitDir, RELEASE_REF) : null,
-		divergence: hasRelease ? readDivergence(gitDir) : null,
+		has_master_ref: hasDev,
+		release_ref: tag,
+		release_sha: release.sha,
+		release_date: release.date,
+		release_version: release.version,
+		dev_ref: DEV_REF,
+		dev_sha: dev.sha,
+		dev_date: dev.date,
+		dev_version: dev.version,
+		divergence: tagRef !== null && hasDev ? readDivergence(gitDir, tagRef) : null,
 	};
 }
 
@@ -732,10 +840,14 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 			dirty: null,
 			has_master_ref: null,
 			bun_pin: null,
-			release_ref: RELEASE_REF,
+			release_ref: null,
 			release_sha: null,
 			release_date: null,
 			release_version: null,
+			dev_ref: DEV_REF,
+			dev_sha: null,
+			dev_date: null,
+			dev_version: null,
 			divergence: null,
 		};
 	}
@@ -747,18 +859,18 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 		branch: git(gitDir, ['rev-parse', '--abbrev-ref', 'HEAD']),
 		dirty: dirty === null ? null : dirty !== '',
 		bun_pin: readBunPin(gitDir),
-		...readReleaseRef(gitDir),
+		...readChannelRefs(gitDir),
 	};
 }
 
 /**
- * `<ahead> <behind>` between the release ref and HEAD, via git's own
- * rev-list --count --left-right. `behind` counts commits HEAD has that the
- * release ref does not — the number an operator needs when the publish checks
- * are red on work they have already committed.
+ * `<ahead> <behind>` between the release tag and `master`, via git's own
+ * rev-list --count --left-right. `behind` counts commits `master` has that the
+ * release does not — integrated work a developer build carries and no release
+ * does yet.
  */
-function readDivergence(gitDir: string): { ahead: number; behind: number } | null {
-	const counted = git(gitDir, ['rev-list', '--left-right', '--count', `${RELEASE_REF}...HEAD`]);
+function readDivergence(gitDir: string, tagRef: string): { ahead: number; behind: number } | null {
+	const counted = git(gitDir, ['rev-list', '--left-right', '--count', `${tagRef}...${DEV_REF}`]);
 	if (counted === null) return null;
 	const [ahead, behind] = counted.split(/\s+/).map(Number);
 	if (!Number.isInteger(ahead) || !Number.isInteger(behind)) return null;
@@ -870,13 +982,32 @@ function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRe
 	return true;
 }
 
-/** `master_ref`: does the release ref exist at all (unknown when git could not answer). */
+/**
+ * `master_ref`: does the DEVELOPER ref exist (unknown when git could not
+ * answer). A warning, not a blocker: without it no developer build can be made,
+ * but a release tag still publishes.
+ */
 function masterRefCheck(source: CodeServerStatus['source']): StatusCheck {
 	return probe('master_ref', () =>
 		source.has_master_ref === null
-			? check('master_ref', 'unknown', undefined, RELEASE_REF)
-			: check('master_ref', source.has_master_ref ? 'ok' : 'blocked', undefined, RELEASE_REF),
+			? check('master_ref', 'unknown', undefined, DEV_REF)
+			: check('master_ref', source.has_master_ref ? 'ok' : 'warn', undefined, DEV_REF),
 	);
+}
+
+/**
+ * `release_tag`: is there a publishable `vX.Y.Z` tag? Blocked when not — a
+ * published release is a tagged version of THIS engine, never a branch tip nor
+ * a pre-release — with the sentence saying so. The normal state while a major
+ * is in beta: its code then reaches installations only as developer builds.
+ */
+function releaseTagCheck(source: CodeServerStatus['source']): StatusCheck {
+	return probe('release_tag', () => {
+		if (source.git_dir === null || source.head_sha === null) return check('release_tag', 'unknown');
+		return source.release_ref === null
+			? check('release_tag', 'blocked', 'no vX.Y.Z tag of this engine')
+			: check('release_tag', 'ok', source.release_ref);
+	});
 }
 
 /**
@@ -890,30 +1021,6 @@ function worktreeCleanCheck(source: CodeServerStatus['source']): StatusCheck {
 			? check('worktree_clean', 'unknown')
 			: check('worktree_clean', source.dirty ? 'warn' : 'ok'),
 	);
-}
-
-/**
- * `release_ref_current` — the commits-not-in-the-release-ref line. A WARNING,
- * not a blocker: publishing an older `master` is a legitimate act. It exists
- * because without it a publish check red on work the operator has ALREADY
- * committed reads as a false alarm — the fix is on their branch, and the panel
- * was looking at the release ref all along.
- */
-function releaseRefCurrentCheck(source: CodeServerStatus['source']): StatusCheck {
-	return probe('release_ref_current', () => {
-		if (source.divergence === null) {
-			return check('release_ref_current', 'unknown', undefined, RELEASE_REF);
-		}
-		if (source.divergence.behind === 0) {
-			return check('release_ref_current', 'ok', undefined, RELEASE_REF);
-		}
-		return check(
-			'release_ref_current',
-			'warn',
-			`${source.divergence.behind} / ${source.branch ?? 'HEAD'}`,
-			RELEASE_REF,
-		);
-	});
 }
 
 /** The code-server half of the panel: role, build source, artifacts, manifest. */
@@ -950,10 +1057,11 @@ function codeServerChecks(
 		check('is_a_code_server', config.update.isCodeServer ? 'ok' : 'blocked'),
 		directoryCheck('git_dir', gitDir ?? undefined),
 		directoryCheck('files_dir', filesDir ?? undefined),
-		buildPlanCheck(),
+		releaseTagCheck(source),
+		buildPlanCheck(source),
 		masterRefCheck(source),
 		worktreeCleanCheck(source),
-		archiveShapeCheck(gitDir, RELEASE_REF),
+		archiveShapeCheck(gitDir, releaseTagRefOf(source) ?? DEV_REF, source.release_ref ?? DEV_REF),
 		// WHAT VERSION WOULD A PUBLISH ACTUALLY PRODUCE? The release is named
 		// after the version its REF declares, so that question has an answer
 		// before the button is pressed — and it has a wrong answer worth
@@ -961,8 +1069,7 @@ function codeServerChecks(
 		// yields an archive assertLinearUpgrade refuses as a same-version
 		// install. Measured 2026-08-24: a 7.0.0 master published a 7.0.0.zip
 		// nobody could install, and nothing said so until a consumer tried.
-		releaseVersionCheck(gitDir, RELEASE_REF),
-		releaseRefCurrentCheck(source),
+		releaseVersionCheck(gitDir, source.release_ref),
 		// "No releases" and "I could not look" are DIFFERENT facts. Folding an
 		// unreadable level into an empty list is what let a stray `.DS_Store`
 		// present itself as an empty release dir.
@@ -1196,25 +1303,39 @@ function declaredVersionAtRef(gitDir: string, ref: string): string | null {
 	return source === null ? null : parseDeclaredTriple(source);
 }
 
-/** The version RELEASE_REF declares, and whether publishing it is useful. */
-function releaseVersionCheck(gitDir: string | null, ref: string): StatusCheck {
+/** The qualified ref of `source`'s release tag, or null when there is none. */
+function releaseTagRefOf(source: CodeServerStatus['source']): string | null {
+	const version = source.release_ref === null ? null : releaseTagVersion(source.release_ref);
+	return version === null ? null : qualifiedReleaseTag(version);
+}
+
+/**
+ * The version the release TAG's bytes declare, whether it agrees with the tag's
+ * own name (the build refuses a disagreement — code_build_plan.ts), and whether
+ * publishing it is useful.
+ */
+function releaseVersionCheck(gitDir: string | null, tag: string | null): StatusCheck {
 	return probe('release_version_matches_ref', () => {
-		if (gitDir === null) return check('release_version_matches_ref', 'unknown', undefined, ref);
-		const declared = declaredVersionAtRef(gitDir, ref);
-		if (declared === null) {
-			// Nothing can be named, so nothing can be built.
-			return check('release_version_matches_ref', 'blocked', VERSION_TS_PATH, ref);
+		if (gitDir === null || tag === null) {
+			return check('release_version_matches_ref', 'unknown', undefined, tag ?? undefined);
 		}
-		if (declared === DEDALO_VERSION) {
-			return check(
-				'release_version_matches_ref',
-				'warn',
-				`${declared} = the running engine — a same-version release is not installable`,
-				ref,
-			);
-		}
-		return check('release_version_matches_ref', 'ok', declared, ref);
+		const declared = declaredVersionAtRef(gitDir, `refs/tags/${tag}`);
+		const [state, detail] = tagVersionVerdict(tag, declared);
+		return check('release_version_matches_ref', state, detail, tag);
 	});
+}
+
+/** The verdict on what a release tag's own version.ts declares. */
+function tagVersionVerdict(tag: string, declared: string | null): [StatusCheck['state'], string] {
+	// Nothing can be named, so nothing can be built.
+	if (declared === null) return ['blocked', VERSION_TS_PATH];
+	if (declared !== releaseTagVersion(tag)) {
+		return ['blocked', `${tag} declares ${declared} in ${VERSION_TS_PATH}`];
+	}
+	if (declared === DEDALO_VERSION) {
+		return ['warn', `${declared} = the running engine — a same-version release is not installable`];
+	}
+	return ['ok', declared];
 }
 
 /** Localhost/empty origins make every advertised release URL unfetchable. */

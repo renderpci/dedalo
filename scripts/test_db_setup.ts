@@ -114,7 +114,7 @@ import {
 	TEST_MARKER_PURPOSE,
 	TEST_MARKER_TABLE,
 } from '../src/core/test_data/test_database_marker_constants.ts';
-import { testDatabaseName } from '../test/helpers/test_database.ts';
+import { readOnlyRoleClusterSql, testDatabaseName } from '../test/helpers/test_database.ts';
 import {
 	rebuildTestExportArtifactsRoot,
 	rebuildTestMediaRoot,
@@ -526,6 +526,15 @@ console.log(
 	`[test-db] test TLD ontology materialized from JSON: ${testTld.nodes} records in ${testTld.tlds.join(', ')} — ${testTld.rebuilt.join('; ')}${testTld.strays.length > 0 ? ` (STRAY records not in the JSON: ${testTld.strays.join(', ')})` : ''}`,
 );
 
+// 3b. The ENGINE-OWNED ontology (src/core/ontology/engine_ontology.json — the
+// sections the engine itself writes, e.g. the AI spend ledger), through the same
+// idempotent door production boot and the installer run.
+const { ensureEngineOntology } = await import('../src/core/ontology/engine_ontology.ts');
+const engineOntology = await ensureEngineOntology();
+console.log(
+	`[test-db] engine ontology ${engineOntology.changed ? `materialized (${engineOntology.written} records)` : 'already current'}${engineOntology.strays.length > 0 ? ` (STRAY records: ${engineOntology.strays.join(', ')})` : ''}`,
+);
+
 // 4. The numisdata TEST ontology — definitions only, no records.
 //
 // The vendored `numisdata` ontology fixture was REMOVED here on 2026-08-21,
@@ -603,10 +612,22 @@ console.log(
 // The marker is already written (2b), so this is a write to a database that
 // says it is disposable; the migration lane itself is the install's, not a
 // test-data writer, which is why it needs no assertTestDatabase of its own.
-const { runMigrations } = await import('../install/db/migrate.ts');
+//
+// A booted install ALSO runs the ONLINE migrations (install/db/online_migration.ts
+// — the CONCURRENTLY index builds the boot run DEFERS so they never hold the
+// listener; startServer runs them right after it binds). The suite database
+// never listens, so without this step its history indexes (0011/0012) existed
+// only after some test:client server had happened to start on it — the same
+// order-dependence as above, on the plans the TM read gates EXPLAIN. Awaited
+// here: nothing is serving, so there is no listener to hold.
+const { runMigrations, runOnlineMigrations } = await import('../install/db/migrate.ts');
 const migrations = await runMigrations();
 console.log(
 	`[test-db] boot migrations applied: ${migrations.applied.length} (${migrations.applied.join(', ')}; ${migrations.skipped} already recorded) — the suite database is a BOOTED install`,
+);
+const onlineMigrations = await runOnlineMigrations();
+console.log(
+	`[test-db] online migrations applied: ${onlineMigrations.applied.length} (${onlineMigrations.applied.join(', ')})`,
 );
 
 // 5d. THE DERIVED-STORE HEAL — the same self-provisioning a real boot runs
@@ -635,17 +656,14 @@ console.log(
 // password-less role rides local `trust` pg_hba and fails under CI's scram —
 // and because config.db carries exactly one user/password credential pair.
 // ALTER ROLE re-asserts LOGIN + the password every run, so drift heals.
-await psql(
-	'postgres',
-	['-f', '-'],
-	`DO $$ BEGIN
-	  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dedalo_test_ro') THEN
-	    CREATE ROLE dedalo_test_ro;
-	  END IF;
-	END $$;
-	ALTER ROLE dedalo_test_ro LOGIN PASSWORD 'dedalo_test_ro';
-	GRANT CONNECT ON DATABASE "${testDb}" TO dedalo_test_ro;\n`,
-);
+//
+// The role is CLUSTER-shared, so concurrent builds of different suite
+// databases (per-lane `DEDALO_TEST_DATABASE`) collide on it — `tuple
+// concurrently updated`, measured. The statement text lives in
+// readOnlyRoleClusterSql (test/helpers/test_database.ts), serialized under an
+// advisory lock, so the gate that proves concurrent runs succeed executes the
+// exact text this build does.
+await psql('postgres', ['-f', '-'], readOnlyRoleClusterSql(testDb));
 await psql(
 	testDb,
 	['-f', '-'],

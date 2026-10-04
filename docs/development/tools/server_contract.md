@@ -122,6 +122,124 @@ The declarative permission gate already ran (step 7 above) **before** the backgr
 !!! note "Ledgered (engineering/TOOLS_SPEC.md)"
     Background jobs die on server restart — the in-process job table does not survive a Bun restart — and a CPU-bound handler currently shares the event loop with every other request. A Bun `Worker`-based executor is a drop-in follow-up behind the same `scheduleBackground` signature.
 
+## Fetching from other sites (`src/core/harvest/harvest.ts`)
+
+A tool that reads another institution's site (an auction catalogue, a journal's OAI endpoint, a publisher's PDF) fetches through `harvestFetch`, never through `fetch` itself. A bare `fetch` in a tool fails `ssrf_one_guard_tripwire`.
+
+```ts
+import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
+
+const page = await harvestFetch({
+  url: lotUrl,
+  hosts: ['example.org'],           // or 'public' for a URL the cataloguer pasted
+  headers: { Accept: 'text/html' },
+  onWait: (ms, origin) => reportProgress(`waiting ${Math.round(ms / 1000)} s for ${origin}`),
+});
+if (!page.ok) {
+  // a 404 lot or a 403 bot wall: page.status says which — report it, don't retry blindly
+}
+const html = page.text();           // decoded in the charset the site declared
+
+const scan = await harvestFetch({
+  url: imageUrl,
+  hosts: ['example.org'],
+  expectContentType: ['image/'],    // a 200 HTML error page is refused before it is downloaded
+  maxBytes: 50 * 1024 * 1024,
+});
+```
+
+### What the door does on every hop
+
+A redirect is a new request, and each hop of a redirect chain goes through the whole policy again. For each one, the door:
+
+- accepts http(s) only, with no user name or password in the URL, and never a switch from https to http. With `requireHttps: true`, it accepts https only, the first hop included;
+- applies your host policy: `'public'`, or a list of sites. A name entry also admits its subdomains (`example.org` admits `lots.example.org`). An IP entry admits only that address; write an IPv6 address bracketed or bare. An entry is a host only: with a port or a path it is a programming error;
+- asks the site's `robots.txt` (RFC 9309) and obeys it — for every request: a page, an image, a PDF or a POST alike;
+- waits for the site's turn (see below);
+- checks that every address the host resolves to is public, and connects to the address it checked, not to a second lookup of the name;
+- follows at most 5 redirects; a sixth is refused.
+
+`robots.txt` is read once per origin and remembered for an hour. What it answers decides:
+
+| `robots.txt` answer | Meaning |
+| --- | --- |
+| 2xx | its rules apply, to the group that names `dedalo` (any case, `dedalo/7` included), else to `*` |
+| 4xx, including a missing file | everything is allowed |
+| 5xx, 429, a timeout, a network failure, or a 3xx the door does not follow (one with no `Location`, or a 300, 304 or 305) | nothing is allowed: `harvest.robots_unavailable`, asked again after 5 minutes |
+| more than 5 redirects | everything is allowed (RFC 9309 treats it like a missing file) |
+| a redirect the door refuses (https to http, a user name or password, a URL that is too long or not a URL) | nothing is allowed: `harvest.refused`, reason `robots_redirect_refused`, remembered for the hour — the same redirect is refused every time |
+| more than 4096 rules for us, or a rule longer than 2048 characters | nothing is allowed: `harvest.refused`, reason `robots_too_complex`. These two limits are stricter than RFC 9309, which asks a reader to parse at least 500 KiB: a short file of 4097 rules is refused. Within them, any file up to 512 KiB is obeyed as written, in any script |
+
+A `robots.txt` larger than 512 KiB is read up to that size and the rest is ignored. Redirects of the `robots.txt` request are followed to other hosts too, still address-checked, and the answer applies to the site you asked for. A path is judged both as sent and with repeated `/` collapsed and `;parameters` removed, each of those also with a literal `*` and `$` written `%2A` and `%24` (so `Disallow: /file-%2A.html` covers `/file-*.html`), and each form both as encoded and with percent-encoded reserved characters (`%3A`, `%2F`, …) decoded; if any form is disallowed, the request is refused. A rule and a path are compared in one percent-encoding, so `Disallow: /Collections Online/` also covers the `/Collections%20Online/` a browser sends, and `/%70rivate` is `/private`. A `robots.txt` that is not UTF-8 (an older site's Latin-1 file) is read byte by byte, so `Disallow: /café` written in Latin-1 still covers the `/caf%E9` that site's links send. Before any rule is matched, the work that judging the path would cost (the rules with a `*`, times the length of every form) is weighed; past a fixed bound the request is refused with `harvest.refused`, reason `robots_too_complex`, and no rule is matched. No real site comes near it.
+
+### The pace
+
+The door sends one request at a time per **origin** — scheme, host and port, so `example.org` and `www.example.org` are paced separately, while `example.org.` (with the trailing dot) is the same server as `example.org` and shares its pace and its `robots.txt`. The pace belongs to the installation, not to your job: every user and every job share it, because the remote site sees one Dédalo. A request holds the origin's turn until its whole body has arrived, and the next one starts at least 3 seconds after it ended. A site's `Crawl-delay` lengthens that interval, up to 60 seconds. A `429` or `503` answer with `Retry-After` makes the next request to that origin wait that long, also capped at 60 seconds. Each redirect hop is a request of its own and takes its own turn.
+
+`onWait(ms, origin)` is called before each wait. While your request is queued behind another one to the same origin, `ms` is the least that wait can last; once the pause is known, `ms` is the pause. Stopping the background job ends any of these waits at once. An `onWait` that throws is logged and ignored: the wait goes on, and the origin's queue is never held up by it.
+
+### Limits
+
+| Option | Default | Ceiling | Meaning |
+| --- | --- | --- | --- |
+| `maxBytes` | 20 MiB | 100 MiB | the body, counted as it streams; past it, `harvest.too_large` |
+| `timeoutMs` | 120 s | 10 min | the TOTAL time of one hop: connecting, headers and the whole body |
+| `idleTimeoutMs` | 30 s | `timeoutMs` | how long the body may stall without a byte before the site is dropped |
+
+A value above its ceiling is lowered to the ceiling. A value that is not a positive number (`0`, `NaN`, `Infinity`) is a programming error (`internal.invariant`). So a 100 MiB PDF can arrive over a slow link within 10 minutes, while a site that stops sending is dropped after 30 seconds.
+
+### The request
+
+- `method` is `GET` or `POST`. A `body` needs `POST`. A `URLSearchParams` body is sent as a form (`application/x-www-form-urlencoded`) unless you set a `Content-Type`.
+- A `301` or `302` turns a `POST` into a `GET` without a body, as browsers do; `303` always does; `307` and `308` keep the method and the body.
+- Of the headers, you may set only `Accept`, `Accept-Language`, `Content-Type`, `Referer` and `X-Requested-With`. Any other name, `Cookie` and `Authorization` included, is a programming error. The door sends its own `User-Agent` (`dedalo/<version>`, the name `robots.txt` rules are written for). The `robots.txt` request never carries your headers.
+
+### The answer
+
+A non-2xx answer is returned, not thrown: `ok` is `false` and `status` says what happened. The response is:
+
+| Field | Content |
+| --- | --- |
+| `url` | the URL that finally answered, after redirects |
+| `status`, `ok` | the HTTP status; `ok` is true for 200–299 |
+| `contentType` | the `Content-Type` header, lower-cased; `''` when absent |
+| `headers` | only `cf-mitigated`, `content-disposition`, `content-length`, `content-type`, `etag`, `last-modified` and `retry-after`, when present, keyed in lower case; read-only |
+| `bytes` | the body |
+| `text()` | the body decoded: the `charset` of the `Content-Type` header first; else, in the first KiB, an XML declaration's `encoding` or an HTML `<meta charset>`; else UTF-8. An unknown charset name falls back to UTF-8 |
+
+With `expectContentType`, a 2xx answer whose media type does not start with one of the listed prefixes is refused before its body is read (`harvest.unexpected_type`). A non-2xx answer is returned as usual.
+
+Recognising a bot-challenge page served with status 200 (the `cf-mitigated` header helps), and deciding what a page means, stay in your tool.
+
+### What it throws
+
+| Code | When | What the user is told |
+| --- | --- | --- |
+| `harvest.refused` | the URL or a redirect breaks the policy above | the site asked for and the reason: `unparseable`, `protocol`, `credentials`, `url_too_long`, `requires_https`, `downgrade`, `host_not_allowed`, `bad_location`, `too_many_redirects`, `robots_too_complex`, `robots_redirect_refused` |
+| `harvest.robots_disallowed` | `robots.txt` disallows the path | the site whose `robots.txt` said no |
+| `harvest.robots_unavailable` | `robots.txt` could not be read (retryable) | the site |
+| `harvest.too_large` | the body passed `maxBytes` | the site and the limit |
+| `harvest.unexpected_type` | `expectContentType` did not match | the site and the media type it sent |
+| `security.ssrf_blocked` | an address is not public (private, loopback, DNS failure…) | a fixed sentence only; the address stays in the server log |
+| `security.outbound_failed` | a timeout, a stalled body, a network failure, or the job was stopped (retryable) | a fixed sentence only |
+| `internal.invariant` | your call is wrong: a header you may not set, a bad limit, a body without `POST`, an allowlist entry that is not a host | a fixed sentence only |
+
+The site named on the wire is the origin you asked for, never a path, a query or credentials, never a resolved address. The exception is every `robots.txt` verdict — `harvest.robots_disallowed`, `harvest.robots_unavailable` and `harvest.refused` with reason `robots_too_complex` or `robots_redirect_refused`: after a redirect they name the site whose `robots.txt` decided, which has already answered from a public address. A URL that does not parse has no site, so `harvest.refused` with reason `unparseable` names the fixed text `(not a web address)`, never what was typed. The addresses the guard refused, and the host a refused redirect pointed at, go to the server log only.
+
+When a tool reports failures per item (one line per lot or per image), put the error system's wire body in the result, never `error.message`. The message is a log field: it can name the address the guard refused.
+
+```ts
+import { toDedaloError, toErrorBody } from '../../../src/core/errors/index.ts';
+
+try {
+  const page = await harvestFetch({ url, hosts: 'public' });
+  results.push({ url, status: page.status });
+} catch (error) {
+  // { code, category, message, label_key, retryable, details? } — the same text the user would see
+  results.push({ url, error: toErrorBody(toDedaloError(error)) });
+}
+```
+
 ## Configuration (`src/core/tools/config.ts`)
 
 Three storage points, one accessor set:

@@ -15,7 +15,8 @@
  * Scratch hygiene: seeds > threshold disposable rows on a scratch section_tipo
  * so the flip regime is actually reached on a small test DB (the perf DB is
  * proven separately via EXPLAIN); all seeded rows deleted in afterAll. The bare
- * browse counts EVERY row, so ground truth and acquisition see the same total.
+ * browse counts every VISIBLE row (withTmHistory), and ground truth is stated
+ * over the same set, so both see the same total.
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The one
 // install tipo was the `tipo` COLUMN VALUE of the disposable matrix_time_machine
@@ -27,6 +28,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Sqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { ensureRecordGenerationTable, withTmHistory } from '../../src/core/db/record_generation.ts';
 import { tmReadSource } from '../../src/core/resolve/read_tm.ts';
 import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
 
@@ -41,10 +43,20 @@ function bareSqo(offset: number): Sqo {
 	return { section_tipo: ['dd15'], limit: LIMIT, offset } as unknown as Sqo;
 }
 
+/**
+ * The rows the bare browse lists: the VISIBLE history (withTmHistory — the
+ * current generation, no undo-log row). Ground truth is stated over the same
+ * set, or a hidden BEFORE row another gate left would shift every page.
+ */
+function visibleWhere(): string {
+	return withTmHistory('true');
+}
+
 /** Ground truth: the plain page the flip must reproduce. */
 async function plainPageIds(offset: number): Promise<number[]> {
+	await ensureRecordGenerationTable();
 	const rows = (await sql.unsafe(
-		'SELECT id FROM matrix_time_machine ORDER BY id DESC LIMIT $1 OFFSET $2',
+		`SELECT id FROM matrix_time_machine WHERE ${visibleWhere()} ORDER BY id DESC LIMIT $1 OFFSET $2`,
 		[LIMIT, offset],
 	)) as { id: number }[];
 	return rows.map((r) => r.id);
@@ -56,7 +68,10 @@ async function acquiredPageIds(offset: number): Promise<number[]> {
 }
 
 async function totalRows(): Promise<number> {
-	const rows = (await sql.unsafe('SELECT COUNT(*)::int AS c FROM matrix_time_machine')) as {
+	await ensureRecordGenerationTable();
+	const rows = (await sql.unsafe(
+		`SELECT COUNT(*)::int AS c FROM matrix_time_machine WHERE ${visibleWhere()}`,
+	)) as {
 		c: number;
 	}[];
 	return Number(rows[0]?.c ?? 0);
@@ -127,10 +142,10 @@ describe('TM deep-page order-flip equivalence (real DB)', () => {
 		} as unknown as Sqo;
 		const acquired = (await tmReadSource.getRows(ascSqo)).map((r) => r.section_id);
 		const ground = (
-			(await sql.unsafe('SELECT id FROM matrix_time_machine ORDER BY id ASC LIMIT $1 OFFSET $2', [
-				LIMIT,
-				offset,
-			])) as { id: number }[]
+			(await sql.unsafe(
+				`SELECT id FROM matrix_time_machine WHERE ${visibleWhere()} ORDER BY id ASC LIMIT $1 OFFSET $2`,
+				[LIMIT, offset],
+			)) as { id: number }[]
 		).map((r) => r.id);
 		expect(acquired).toEqual(ground);
 	}, 60000);

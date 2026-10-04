@@ -39,6 +39,7 @@ import {
 	resolveMasterSource,
 	shouldApplyMetaAlpha,
 } from '../../src/core/media/processing.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_proc_${process.pid}`;
@@ -55,7 +56,10 @@ const HAVE_MAGICK = have(resolveMagick());
 async function makeImage(relative: string, size: string, color: string): Promise<void> {
 	const abs = `${ROOT}${relative}`;
 	mkdirSync(abs.slice(0, abs.lastIndexOf('/')), { recursive: true });
-	await runBinary([resolveMagick(), '-size', size, `xc:${color}`, abs], { nice: false });
+	await runBinary([resolveMagick(), '-size', size, `xc:${color}`, abs], {
+		nice: false,
+		env: magickTestEnv(),
+	});
 }
 
 /**
@@ -71,7 +75,10 @@ async function makeImage(relative: string, size: string, color: string): Promise
 async function makeMagickFixture(relative: string, args: string[]): Promise<void> {
 	const abs = `${ROOT}${relative}`;
 	mkdirSync(abs.slice(0, abs.lastIndexOf('/')), { recursive: true });
-	const result = await runBinary([resolveMagick(), ...args, abs], { nice: false });
+	const result = await runBinary([resolveMagick(), ...args, abs], {
+		nice: false,
+		env: magickTestEnv(),
+	});
 	// A fixture that failed to build must be LOUD. Silently continuing turns the
 	// gate below into a test of "the source is missing", which passes for the
 	// wrong reason and reports an ImageMagick output-contract failure to an
@@ -95,6 +102,7 @@ async function pixelAt(path: string, x: number, y: number): Promise<[number, num
 		`%[fx:int(255*p{${x},${y}}.b)]`;
 	const result = await runBinary([resolveMagick(), path, '-format', format, 'info:'], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 	const parts = result.stdout.trim().split(',').map(Number);
 	if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
@@ -235,6 +243,7 @@ describe('image processing (real ImageMagick)', () => {
 			expect(existsSync(webPath)).toBe(true);
 			const webResult = await runBinary([resolveMagick(), 'identify', '-format', '%m', webPath], {
 				nice: false,
+				env: magickTestEnv(),
 			});
 			expect(webResult.stdout.trim()).toBe('JPEG');
 			const webDims = await getDimensions(webPath);
@@ -825,6 +834,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			expect([alternate, existsSync(twin)]).toEqual([alternate, true]);
 			const opaque = await runBinary([resolveMagick(), twin, '-format', '%[opaque]', 'info:'], {
 				nice: false,
+				env: magickTestEnv(),
 			});
 			// Only for the targets that CAN store alpha: a twin configured as .bmp or
 			// .pnm is flattened exactly like the jpg, and must be.
@@ -835,7 +845,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// transparent: the tier's own jpg is opaque.
 		const tierOpaque = await runBinary(
 			[resolveMagick(), `${ROOT}/image/1.5MB/test99_test3_24.jpg`, '-format', '%[opaque]', 'info:'],
-			{ nice: false },
+			{ nice: false, env: magickTestEnv() },
 		);
 		expect(tierOpaque.stdout.trim()).toBe('True');
 	});
@@ -997,7 +1007,7 @@ describe('media write contract: a run must prove it produced ONE file', () => {
 				'xc:blue',
 				sequenceSource,
 			],
-			{ nice: false },
+			{ nice: false, env: magickTestEnv() },
 		);
 		if (HAVE_MAGICK && result.exitCode !== 0) {
 			throw new Error(
@@ -1054,6 +1064,7 @@ describe('media write contract: a run must prove it produced ONE file', () => {
 			const truncated = `${contractDir}/truncated.jpg`;
 			await runBinary([resolveMagick(), '-size', '400x300', 'gradient:red-blue', full], {
 				nice: false,
+				env: magickTestEnv(),
 			});
 			const bytes = readFileSync(full);
 			writeFileSync(truncated, bytes.subarray(0, Math.floor(bytes.length / 2)));

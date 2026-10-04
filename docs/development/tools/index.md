@@ -16,6 +16,7 @@ This directory is the **developer** documentation. For the curator-facing guides
 - **[Tools server contract](server_contract.md)** — what a tool's server module must export, how actions are keyed, and the ordered gate chain a request passes through.
 - **[Tools JS lifecycle](js_lifecycle.md)** — the client-side contract: the files, the constructor/prototype shape, and the lifecycle hooks.
 - **[Tools security model](security.md)** — what the framework guarantees for you, and what stays the tool author's responsibility.
+- **[Tools on a phone](phone_layout.md)** — the 360px contract every tool meets, the shared phone rules and touch gestures, and how `bun run test:tools:phone` checks it.
 
 ## Per-tool reference
 

@@ -85,6 +85,11 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { logSectionSuppressesSectionInfo } from '../../src/core/concepts/section.ts';
+import {
+	deleteDdOntologyNode,
+	readDdOntologyRow,
+	upsertDdOntologyNode,
+} from '../../src/core/db/dd_ontology.ts';
 import { getLabels } from '../../src/core/labels/catalog.ts';
 import { getChildrenNodes } from '../../src/core/ontology/resolver.ts';
 import { currentApplicationLang } from '../../src/core/resolve/request_lang.ts';
@@ -95,6 +100,7 @@ import {
 	ensureSituation,
 	situation,
 } from '../../src/core/test_data/situations/situation.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 
 interface ElementEntry {
 	tipo?: string;
@@ -252,17 +258,6 @@ const S = situation({
 		{ tipo: 'zzsec22', parent: 'zzsec25', model: 'component_date', order_number: 4 },
 		{ tipo: 'zzsec17', parent: 'zzsec25', model: 'component_image', order_number: 5 },
 		{ tipo: 'zzsec18', parent: 'zzsec25', model: 'component_password', order_number: 6 },
-		// A REAL node whose stored TLD is the situation's (`zzsec`) while its tipo
-		// spells `zzsecq` — the ONLY way to obtain a target that check_tipo_is_valid
-		// accepts and check_active_tld must refuse. Never emitted (not a child).
-		{
-			tipo: 'zzsecq1',
-			parent: 'test1',
-			model: 'section',
-			order_number: 93,
-			term: { 'lg-eng': 'Inactive-TLD section' },
-			relations: [{ tipo: 'test24' }],
-		},
 		// --- a REAL section with NO elements (dd196 must NOT be appended) ---------
 		{
 			tipo: 'zzsec30',
@@ -467,8 +462,29 @@ function byTipo(entries: ElementEntry[]): Map<string | undefined, ElementEntry> 
 	return new Map(entries.map((entry) => [entry.tipo, entry]));
 }
 
+/**
+ * A REAL node whose tipo spells `zzsecq` while no row carries the tld `zzsecq` —
+ * the ONLY way to obtain a target that check_tipo_is_valid accepts and
+ * check_active_tld must refuse. Never emitted (not a child). Written OUTSIDE the
+ * situation with a NULL tld: the situation forces its own tld (`zzsec`) onto
+ * every node, which the `dd_ontology_tipo_in_tld` grammar refuses for this tipo
+ * (SURF-1); a tld-less row is the legacy shape this gate needs (the active-TLD
+ * set ignores NULL). Deleted by tipo in afterAll.
+ */
+const INACTIVE_TLD_NODE = 'zzsecq1';
+
 beforeAll(async () => {
 	await ensureSituation(S);
+	await assertTestDatabase('section_elements_context_native');
+	await upsertDdOntologyNode({
+		tipo: INACTIVE_TLD_NODE,
+		parent: 'test1',
+		model: 'section',
+		tld: null,
+		order_number: 93,
+		term: { 'lg-eng': 'Inactive-TLD section' },
+		relations: [{ tipo: 'test24' }],
+	});
 });
 
 afterAll(async () => {
@@ -478,6 +494,8 @@ afterAll(async () => {
 	expect(tooltipsChecked).toBeGreaterThan(0);
 	// Every operator set the situation can reach, compared model by model.
 	expect(modelsPinned.size).toBeGreaterThanOrEqual(12);
+	await deleteDdOntologyNode(INACTIVE_TLD_NODE);
+	expect(await readDdOntologyRow(INACTIVE_TLD_NODE)).toBeNull();
 	expect(await dropSituation(S)).toBe(0);
 });
 

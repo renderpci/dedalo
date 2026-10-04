@@ -62,6 +62,11 @@ import {
 	parsePublishedRecordFileName,
 } from '../../../core/diffusion_bridge/published_files.ts';
 import {
+	fileTargetLockKey,
+	sqlTargetLockKey,
+	withTargetLock,
+} from '../../../core/diffusion_bridge/target_lock.ts';
+import {
 	findFirstDescendantTipoByModel,
 	getMatrixTableFromTipo,
 	getNode,
@@ -466,13 +471,51 @@ async function elementServiceName(elementTipo: string): Promise<string | null> {
  * APPLY: unpublish every ghost the scan found — nothing else. MISSING is
  * never repaired here (publishing is a job). Returns how many ghosts left the
  * tier; the ones that did not are reported in `failed`.
+ *
+ * Each publication TARGET is unpublished under its fence
+ * (jobs/target_fence.ts, 'wait', SHARED — the lock a publication run's batch
+ * holds exclusively, so a ghost never leaves while a runner writes the target —
+ * `sql:<database>` for a MariaDB target and its markers, `files:<type>/<service>`
+ * for a per-record file directory), targets in sorted order. A ghost is never
+ * removed while an exclusive writer is inside the same target.
  */
 export async function unpublishGhosts(
 	ghosts: readonly PublicTierGhost[],
 ): Promise<{ removed: number; failed: string[] }> {
 	const outcome = { removed: 0, failed: [] as string[] };
+	const byTarget = new Map<string, PublicTierGhost[]>();
+	for (const ghost of ghosts) {
+		const lockKey = ghostLockKey(ghost);
+		byTarget.set(lockKey, [...(byTarget.get(lockKey) ?? []), ghost]);
+	}
+	for (const lockKey of [...byTarget.keys()].sort()) {
+		const group = byTarget.get(lockKey) as PublicTierGhost[];
+		// SHARED (a delete-only door): excludes a writing runner, not a record delete.
+		await withTargetLock(lockKey, () => unpublishTargetGhosts(group, outcome), {
+			mode: 'wait',
+			shared: true,
+		});
+	}
+	return outcome;
+}
+
+/** The fence key of the target a ghost lives in. */
+function ghostLockKey(ghost: PublicTierGhost): string {
+	if (ghost.store === 'file') {
+		const separator = ghost.target.indexOf(':');
+		return fileTargetLockKey(ghost.target.slice(0, separator), ghost.target.slice(separator + 1));
+	}
+	return sqlTargetLockKey(ghost.target.split('|')[0] as string);
+}
+
+/** One target's ghosts (inside its fence). */
+async function unpublishTargetGhosts(
+	ghosts: readonly PublicTierGhost[],
+	outcome: { removed: number; failed: string[] },
+): Promise<void> {
 	// MariaDB rows: one executor call per (db|table, section), the record
-	// delete's own executor — it also drops the markers of the ids it removes.
+	// delete's own executor — it also drops the markers of the ids it removes
+	// (its own fence is re-entrant: this unit already holds the database).
 	const rowsByTarget = new Map<string, { target: PublicTierGhost; ids: number[] }>();
 	for (const ghost of ghosts) {
 		if (ghost.store !== 'mariadb') continue;
@@ -515,7 +558,6 @@ export async function unpublishGhosts(
 			);
 		}
 	}
-	return outcome;
 }
 
 /** The registry-shaped run (dry by default). */

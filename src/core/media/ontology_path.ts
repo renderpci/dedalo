@@ -47,7 +47,10 @@ import type { MediaIdentity, MediaPathOptions } from './path.ts';
  *
  * (Owned by other workstreams as of 2026-08-09; handed off, not silently left.
  * `src/core/media/file_ops.ts` was on this list for a few hours on that day and
- * came off it the same day, which is the intended lifecycle of an entry.)
+ * came off it the same day, which is the intended lifecycle of an entry.
+ * `section/record/duplicate_record.ts` and `media/repair.ts` came off it with
+ * CLOSURE_PLAN Step 2 (CORE-5 / TOOLS-5): the duplicate copies through the
+ * record-scoped walk, the repair resolves per record.)
  */
 export const SECTION_SCOPED_PATH_OPTION_CALLERS: ReadonlyArray<{
 	readonly file: string;
@@ -62,11 +65,6 @@ export const SECTION_SCOPED_PATH_OPTION_CALLERS: ReadonlyArray<{
 		file: 'src/core/section/indexation_grid.ts',
 		reason:
 			'NOT migration debt: the grid resolves properties.additional_path ITSELF (mediaCellUrl), because its export grammar deliberately omits initial_media_path and is oracle-pinned — it reads this resolver only for the parts it shares. Its own resolution must stay in step with normalizeAdditionalPath',
-	},
-	{
-		file: 'src/core/section/record/duplicate_record.ts',
-		reason:
-			'copies media between two records — needs the SOURCE id for the read and the TARGET id for the write, so it takes two resolutions, not one',
 	},
 	{
 		file: 'src/core/components/component_text_area/tag_endpoint.ts',
@@ -85,10 +83,6 @@ export const SECTION_SCOPED_PATH_OPTION_CALLERS: ReadonlyArray<{
 		file: 'src/core/media/component_emit.ts',
 		reason:
 			'holds row.section_id at all three call sites (av rescan, posterframe_url, base_svg_url)',
-	},
-	{
-		file: 'src/core/media/repair.ts',
-		reason: 'holds sectionId',
 	},
 	{
 		file: 'src/ai/rag/image_source.ts',

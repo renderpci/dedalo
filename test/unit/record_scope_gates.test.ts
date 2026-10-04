@@ -138,10 +138,10 @@ describe('AI-01 — MCP write tools honor the per-record scope gate', () => {
 				action: 'update',
 				value: { value: 'x' },
 			}),
-		).rejects.toThrow(/out of the user scope/);
+		).rejects.toMatchObject({ code: 'perm.out_of_scope' });
 		await expect(
 			deleteRecord(SUPERUSER, { section_tipo: 'test2', section_id: 999999 }),
-		).rejects.toThrow(/out of the user scope/);
+		).rejects.toMatchObject({ code: 'perm.out_of_scope' });
 		// Module restoration handled by the file-level afterEach (mock.restore()
 		// alone does not revert mock.module in this Bun version).
 	});

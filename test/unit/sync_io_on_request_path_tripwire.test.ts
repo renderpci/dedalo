@@ -84,12 +84,13 @@ const ROOT_MODULES = ['src/core/api/dispatch.ts', 'src/server.ts'];
 const ENGINE_CORPUS = writePathSourceFiles();
 
 /**
- * The ONE reachable module outside the engine corpus: the boot migration
- * entrypoint the server imports out of `install/`. Written as an exact expected
- * set, so a closure that wandered anywhere else is a failure and not a wider
- * census.
+ * The reachable modules outside the engine corpus: the boot migration
+ * entrypoint the server imports out of `install/`, and the ONLINE-migration
+ * grammar it parses post-listen files with (online_migration.ts, pure — no
+ * I/O). Written as an exact expected set, so a closure that wandered anywhere
+ * else is a failure and not a wider census.
  */
-const REACHABLE_OUTSIDE_CORPUS = ['install/db/migrate.ts'];
+const REACHABLE_OUTSIDE_CORPUS = ['install/db/migrate.ts', 'install/db/online_migration.ts'];
 
 /**
  * The forbidden class: a synchronous call whose cost scales with a file's bytes
@@ -127,8 +128,14 @@ const SCANNED_CALL_FLOOR = 60;
  * for, and they were converted rather than exempted (see the pinning test at the
  * bottom).
  */
-const CEILING_FILES = 41;
-const CEILING_CALLS = 93;
+// 41 → 39 (2026-10-01, DIFF-1/PERF-2): the rdf/xml writers stream their parts
+// through files.ts (readManifestPart) and write through core/files/durable.ts.
+const CEILING_FILES = 39;
+// 93 → 88 (2026-09-30, OPS-2 review): the backup's hand-written process-record
+// writes left backup.ts when the dump became a registered maintenance job.
+// 88 → 86 (2026-10-01, DIFF-1/PERF-2): files.ts stages through a numeric fd
+// (atomicWriteFile), the rdf merge reads its parts one at a time.
+const CEILING_CALLS = 86;
 
 const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
@@ -156,7 +163,7 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
 		file: 'src/core/area_maintenance/backup.ts',
 		reason:
-			'operator-driven backup/restore admin action: job record files, the log tail and pg_dump verification sidecars',
+			'operator-driven backup/restore admin action: the pg_dump log tail and the verification sidecars (a few hundred bytes each)',
 	},
 	{
 		file: 'src/core/geoip/download.ts',
@@ -296,15 +303,7 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
 		file: 'src/diffusion/writers/files.ts',
 		reason:
-			'stages one generated diffusion export file; the diffusion run is a background operator-driven publication, not a served request',
-	},
-	{
-		file: 'src/diffusion/writers/rdf.ts',
-		reason: 'merges the RDF part files of a finished diffusion run into one document',
-	},
-	{
-		file: 'src/diffusion/writers/xml.ts',
-		reason: 'merges the XML part files of a finished diffusion run into one document',
+			'reads one manifest part file while a diffusion close merges/zips the run; the diffusion run is a background operator-driven publication, not a served request',
 	},
 	{
 		file: 'src/server.ts',

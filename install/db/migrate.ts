@@ -28,6 +28,26 @@
  * Anything outside that shape is not a migration: it goes through
  * db/matrix_write.ts / ontology/ontology_write.ts like every other write.
  *
+ * ONE NAMED SCHEMA EXCEPTION — a "shared-schema additive column" (2026-09-27,
+ * first instance 0010_tm_role.sql: the time machine's undo-log role). An
+ * existing install receives the shared schema ONLY through this lane (the
+ * installer restores a seed once, at birth), so a column the engine needs on a
+ * shared table has no other road. Such a file may ALTER a shared table under
+ * FOUR constraints, gated by the same tripwire:
+ *   1. only `ADD COLUMN IF NOT EXISTS <name> <type> [NULL]` — no DEFAULT, no NOT
+ *      NULL, nothing else: a nullable default-less column is metadata-only (no
+ *      rewrite, no scan, no backfill on a 50M-row table) and changes the
+ *      meaning of no existing row; or `ADD CONSTRAINT <name> CHECK (…) NOT
+ *      VALID` (binds new rows, skips the validation scan). Never DROP / RENAME
+ *      / ALTER COLUMN / a validated constraint;
+ *   2. the file carries the tag comment `-- SHARED-SCHEMA ADDITIVE COLUMN:`
+ *      with its reason;
+ *   3. the file bounds its lock wait with `SET LOCAL lock_timeout` (the ALTER's
+ *      instant ACCESS EXCLUSIVE lock queues behind a long reader, and every
+ *      reader queues behind it);
+ *   4. the column's meaning is documented in its writer home and ledgered in
+ *      engineering/wire_contract/.
+ *
  * Model (boring on purpose):
  * - migrations/ holds numbered files `NNNN_name.sql`, applied in filename
  *   order inside one transaction each;
@@ -35,7 +55,22 @@
  *   (boot is idempotent);
  * - a failed migration ABORTS the run (later files must not leapfrog a hole)
  *   but the caller (startServer) logs and continues serving — the lazy
- *   CREATE IF NOT EXISTS bootstraps in each subsystem remain the fallback.
+ *   CREATE IF NOT EXISTS bootstraps in each subsystem remain the fallback;
+ * - a migration's RUN is never bounded (`SET LOCAL statement_timeout = 0`,
+ *   whatever the pool's DB_STATEMENT_TIMEOUT_MS) — see applyMigration;
+ * - every migration's lock WAIT is bounded (`SET LOCAL lock_timeout`, default
+ *   MIGRATION_LOCK_TIMEOUT; a file may set its own), and a file that times out
+ *   waiting for a lock (SQLSTATE 55P03) is RETRIED after a backoff before the
+ *   run gives up — a boot migration never queues forever behind a long reader,
+ *   and never makes every other reader queue behind it.
+ *
+ * ONLINE CLASS (2026-09-27, install/db/online_migration.ts): a file tagged
+ * `-- ONLINE MIGRATION:` is NOT run by the boot runner (it is not a hole —
+ * later boot files still apply) but by `runOnlineMigrations`, in the
+ * background AFTER the listener binds: `CREATE INDEX CONCURRENTLY` + `ANALYZE`
+ * only, outside any transaction, recorded once every index it names is VALID.
+ * A full-heap index build on a shared table belongs there — pre-listen it kept
+ * the socket closed past the systemd watchdog (migration_shared_row_tripwire).
  *
  * Evolving a TS-owned table = append a new numbered .sql here. Never edit an
  * applied file (the version table records names, not hashes — editing history
@@ -45,12 +80,35 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import {
+	ensureRecordGenerationTable,
+	ensureTmRoleColumn,
+} from '../../src/core/db/record_generation.ts';
+import {
+	isOnlineMigration,
+	type OnlineStatement,
+	parseOnlineMigration,
+} from './online_migration.ts';
 
 /** The in-repo migrations directory (this file's sibling). */
 export const MIGRATIONS_DIR = resolve(import.meta.dir, 'migrations');
 
 /** Default version table (dedalo_ts_* prefix like every TS-owned table). */
 export const MIGRATIONS_VERSION_TABLE = 'dedalo_ts_schema_migrations';
+
+/**
+ * The default bound on how long one migration WAITS for a lock (not how long it
+ * runs). Applied as `SET LOCAL`, so it dies with the migration's transaction.
+ */
+export const MIGRATION_LOCK_TIMEOUT = '5s';
+
+/** Backoff before each retry of a migration that hit its lock timeout. */
+export const MIGRATION_LOCK_RETRY_DELAYS_MS: readonly number[] = [1000, 2000, 4000, 8000];
+
+/** SQLSTATE lock_not_available — what a lock_timeout raises. */
+const LOCK_NOT_AVAILABLE = '55P03';
+/** SQLSTATE query_canceled — what pg_cancel_backend raises in an online build. */
+const QUERY_CANCELED = '57014';
 
 const MIGRATION_FILE_PATTERN = /^\d{4}_[a-z0-9_]+\.sql$/;
 const TABLE_NAME_PATTERN = /^[a-z_][a-z0-9_]*$/;
@@ -60,29 +118,23 @@ export interface MigrationRunResult {
 	applied: string[];
 	/** Count of already-recorded files skipped. */
 	skipped: number;
+	/** Pending ONLINE files left for runOnlineMigrations (boot run only). */
+	deferred?: string[];
 }
 
-/**
- * Apply all pending migrations in filename order. `dir`/`versionTable` are
- * injectable for tests (scratch `dedalo_ts_test_*` table + temp dir); the
- * production caller uses the defaults.
- */
-export async function runMigrations(options?: {
-	dir?: string;
-	versionTable?: string;
-}): Promise<MigrationRunResult> {
-	const dir = options?.dir ?? MIGRATIONS_DIR;
-	const versionTable = options?.versionTable ?? MIGRATIONS_VERSION_TABLE;
+/** The migration files of `dir`, in filename order. */
+function migrationFiles(dir: string): string[] {
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir)
+		.filter((name) => MIGRATION_FILE_PATTERN.test(name))
+		.sort();
+}
+
+/** Create the version table if needed; return the recorded filenames. */
+async function recordedVersions(versionTable: string): Promise<Set<string>> {
 	if (!TABLE_NAME_PATTERN.test(versionTable)) {
 		throw new Error(`runMigrations: invalid version table name '${versionTable}'`);
 	}
-	if (!existsSync(dir)) {
-		return { applied: [], skipped: 0 };
-	}
-	const files = readdirSync(dir)
-		.filter((name) => MIGRATION_FILE_PATTERN.test(name))
-		.sort();
-
 	await sql.unsafe(
 		`CREATE TABLE IF NOT EXISTS "${versionTable}" (
 			version    text PRIMARY KEY,
@@ -93,9 +145,31 @@ export async function runMigrations(options?: {
 	const rows = (await sql.unsafe(`SELECT version FROM "${versionTable}"`, [])) as {
 		version: string;
 	}[];
-	const alreadyApplied = new Set(rows.map((row) => row.version));
+	return new Set(rows.map((row) => row.version));
+}
+
+/**
+ * Apply all pending migrations in filename order. `dir`/`versionTable` are
+ * injectable for tests (scratch `dedalo_ts_test_*` table + temp dir); the
+ * production caller uses the defaults.
+ */
+export async function runMigrations(options?: {
+	dir?: string;
+	versionTable?: string;
+	/** Override MIGRATION_LOCK_RETRY_DELAYS_MS (tests: short delays). */
+	lockRetryDelaysMs?: readonly number[];
+}): Promise<MigrationRunResult> {
+	const dir = options?.dir ?? MIGRATIONS_DIR;
+	const versionTable = options?.versionTable ?? MIGRATIONS_VERSION_TABLE;
+	if (!TABLE_NAME_PATTERN.test(versionTable)) {
+		throw new Error(`runMigrations: invalid version table name '${versionTable}'`);
+	}
+	const files = migrationFiles(dir);
+	if (files.length === 0) return { applied: [], skipped: 0, deferred: [] };
+	const alreadyApplied = await recordedVersions(versionTable);
 
 	const applied: string[] = [];
+	const deferred: string[] = [];
 	let skipped = 0;
 	for (const file of files) {
 		if (alreadyApplied.has(file)) {
@@ -103,20 +177,314 @@ export async function runMigrations(options?: {
 			continue;
 		}
 		const content = await Bun.file(join(dir, file)).text();
-		// One transaction per migration: the DDL and its version record land
-		// together or not at all — a crash mid-file never records a half-applied
-		// migration (and never skips a failed one on the next boot).
-		await withTransaction(async () => {
-			await sql.unsafe(content, []);
-			await sql.unsafe(`INSERT INTO "${versionTable}" (version) VALUES ($1)`, [file]);
-		});
+		if (isOnlineMigration(content)) {
+			// Post-listen (runOnlineMigrations) — never a pre-listen heap scan.
+			deferred.push(file);
+			continue;
+		}
+		await applyWithLockRetry(
+			file,
+			() => applyMigration(content, file, versionTable),
+			options?.lockRetryDelaysMs ?? MIGRATION_LOCK_RETRY_DELAYS_MS,
+		);
 		applied.push(file);
 		console.log(`[migrations] applied ${file}`);
 	}
-	return { applied, skipped };
+	return { applied, skipped, deferred };
 }
 
-/** The startServer entry point: defaults only. */
+/**
+ * One migration in one transaction: the DDL and its version record land
+ * together or not at all — a crash mid-file never records a half-applied
+ * migration (and never skips a failed one on the next boot). The default lock
+ * bound is set FIRST, so a file's own `SET LOCAL lock_timeout` overrides it.
+ *
+ * The RUN is unbounded (`SET LOCAL statement_timeout = 0`): a migration is a
+ * deliberate boot-time maintenance statement — under the pool's
+ * `DB_STATEMENT_TIMEOUT_MS` a long one died 57014, which is not retried, so the
+ * file never landed and every later file queued behind the hole. (A full-heap
+ * index build is NOT such a statement: it runs post-listen as an ONLINE file —
+ * unbounded here, it held the socket closed past the systemd watchdog.) LOCAL: the pooled connection keeps its request ceiling after COMMIT.
+ */
+async function applyMigration(content: string, file: string, versionTable: string): Promise<void> {
+	await withTransaction(async () => {
+		await sql.unsafe(`SET LOCAL lock_timeout = '${MIGRATION_LOCK_TIMEOUT}'`, []);
+		await sql.unsafe('SET LOCAL statement_timeout = 0', []);
+		await sql.unsafe(content, []);
+		await sql.unsafe(`INSERT INTO "${versionTable}" (version) VALUES ($1)`, [file]);
+	});
+}
+
+/**
+ * Run `apply`, retrying after each delay while it fails on a lock timeout. Any
+ * other failure — and a lock timeout after the last delay — propagates: the
+ * run aborts with the file unrecorded, and the next boot retries it.
+ */
+async function applyWithLockRetry(
+	file: string,
+	apply: () => Promise<void>,
+	delaysMs: readonly number[],
+): Promise<void> {
+	for (let attempt = 0; ; attempt += 1) {
+		try {
+			await apply();
+			return;
+		} catch (error) {
+			const delay = delaysMs[attempt];
+			if (!isLockTimeout(error) || delay === undefined) throw error;
+			console.warn(
+				`[migrations] ${file}: lock wait timed out (attempt ${attempt + 1}); retrying in ${delay}ms`,
+			);
+			await Bun.sleep(delay);
+		}
+	}
+}
+
+/** Bun's PostgresError carries the SQLSTATE in `errno` (`code` is Bun's own). */
+function isLockTimeout(error: unknown): boolean {
+	const { errno, code } = (error ?? {}) as { errno?: unknown; code?: unknown };
+	return errno === LOCK_NOT_AVAILABLE || code === LOCK_NOT_AVAILABLE;
+}
+
+/**
+ * A fixed advisory-lock key: ONE online run per database at a time (two
+ * instances on one database must never race a build, nor drop each other's
+ * in-progress index as an "invalid leftover").
+ */
+const ONLINE_MIGRATION_LOCK_KEY = 7_020_926_001;
+
+/**
+ * THE ONLINE RUN (see the header and online_migration.ts): every pending
+ * ONLINE file, in filename order, on ONE reserved connection holding the
+ * advisory lock, with no statement or lock bound (a CONCURRENTLY build waits
+ * for every older transaction — a backup included — and that wait blocks
+ * nobody). Per index: an INVALID leftover of a killed build is dropped first;
+ * after the build the index must be VALID, else the file stays unrecorded and
+ * the next boot retries it. A failing file stops the run (later online files
+ * never leapfrog it). Another process holding the lock → nothing done here.
+ * Must be called OUTSIDE any transaction (CONCURRENTLY refuses one).
+ */
+export function runOnlineMigrations(options?: {
+	dir?: string;
+	versionTable?: string;
+}): Promise<MigrationRunResult> {
+	const run: OnlineRun = { pid: null, stopping: false, done: Promise.resolve() };
+	const result = runOnlineMigrationsAs(run, options);
+	run.done = result.then(
+		() => undefined,
+		() => undefined,
+	);
+	liveOnlineRuns.add(run);
+	void run.done.then(() => liveOnlineRuns.delete(run));
+	return result;
+}
+
+/**
+ * A live online run, as the shutdown sees it: the reserved backend's pid (once
+ * reserved), the stop latch the run checks before every statement, and the
+ * promise that settles when the run has released its connection.
+ */
+interface OnlineRun {
+	pid: number | null;
+	stopping: boolean;
+	done: Promise<void>;
+}
+
+/**
+ * The online runs of THIS process (at most one in practice — boot starts one).
+ * Process lifecycle state, never request state: the shutdown must reach a run
+ * nobody awaits (startOnlineMigrations is fire-and-forget).
+ */
+const liveOnlineRuns = new Set<OnlineRun>();
+
+/** Thrown inside a run that a shutdown stopped (the file stays unrecorded). */
+class OnlineRunStopped extends Error {}
+
+/**
+ * STOP every live online run — the graceful shutdown's hook (server.ts
+ * shutdownGracefully, before the pool closes). Without it `pool.end()` waits
+ * for the reserved connection's unbounded CONCURRENTLY build, so a SIGTERM
+ * mid-build hung the process for the whole build (systemd escalates to
+ * SIGKILL; a planned update restart stalls). The latch stops the run between
+ * statements; `pg_cancel_backend` cancels the statement in flight (57014). The
+ * cancelled file stays UNRECORDED and its INVALID leftover is dropped and
+ * rebuilt on the next boot — the same retry as a killed build. Waits at most
+ * `timeoutMs` for the run to release its connection; never throws.
+ */
+export async function stopOnlineMigrations(timeoutMs = 5_000): Promise<void> {
+	const runs = [...liveOnlineRuns];
+	if (runs.length === 0) return;
+	for (const run of runs) {
+		run.stopping = true;
+		if (run.pid === null) continue;
+		try {
+			await sql.unsafe('SELECT pg_cancel_backend($1)', [run.pid]);
+		} catch (error) {
+			console.error('[migrations] cancelling the online build failed:', error);
+		}
+	}
+	await Promise.race([Promise.all(runs.map((run) => run.done)), Bun.sleep(timeoutMs)]);
+}
+
+async function runOnlineMigrationsAs(
+	run: OnlineRun,
+	options?: { dir?: string; versionTable?: string },
+): Promise<MigrationRunResult> {
+	const dir = options?.dir ?? MIGRATIONS_DIR;
+	const versionTable = options?.versionTable ?? MIGRATIONS_VERSION_TABLE;
+	const recorded = await recordedVersions(versionTable);
+	const pending: { file: string; statements: OnlineStatement[] }[] = [];
+	for (const file of migrationFiles(dir)) {
+		if (recorded.has(file)) continue;
+		const content = await Bun.file(join(dir, file)).text();
+		if (isOnlineMigration(content)) {
+			pending.push({ file, statements: parseOnlineMigration(file, content) });
+		}
+	}
+	if (pending.length === 0) return { applied: [], skipped: recorded.size };
+	const reserved = await sql.reserve();
+	const applied: string[] = [];
+	try {
+		const [backend] = (await reserved.unsafe('SELECT pg_backend_pid() AS pid', [])) as {
+			pid: number;
+		}[];
+		run.pid = backend?.pid ?? null;
+		const [lock] = (await reserved.unsafe('SELECT pg_try_advisory_lock($1) AS got', [
+			ONLINE_MIGRATION_LOCK_KEY,
+		])) as { got: boolean }[];
+		if (lock?.got !== true) {
+			console.warn('[migrations] online run skipped: another process holds the lock');
+			return { applied, skipped: recorded.size };
+		}
+		try {
+			await reserved.unsafe('SET statement_timeout = 0', []);
+			await reserved.unsafe('SET lock_timeout = 0', []);
+			for (const { file, statements } of pending) {
+				for (const statement of statements) {
+					if (run.stopping) throw new OnlineRunStopped(`online run stopped before ${file}`);
+					await runOnlineStatement(reserved, file, statement);
+				}
+				if (run.stopping) throw new OnlineRunStopped(`online run stopped before recording ${file}`);
+				await reserved.unsafe(
+					`INSERT INTO "${versionTable}" (version) VALUES ($1) ON CONFLICT (version) DO NOTHING`,
+					[file],
+				);
+				applied.push(file);
+				console.log(`[migrations] applied ${file} (online)`);
+			}
+		} finally {
+			await resetOnlineSession(reserved);
+		}
+	} finally {
+		reserved.release();
+	}
+	return { applied, skipped: recorded.size };
+}
+
+/** One online statement; an index build is checked VALID after it runs. */
+async function runOnlineStatement(
+	reserved: typeof sql,
+	file: string,
+	statement: OnlineStatement,
+): Promise<void> {
+	if (statement.kind === 'analyze') {
+		await reserved.unsafe(statement.sql, []);
+		return;
+	}
+	if ((await indexValidity(reserved, statement.indexName)) === false) {
+		// A killed CONCURRENTLY build's leftover: IF NOT EXISTS would keep it forever.
+		console.warn(`[migrations] ${file}: dropping INVALID leftover ${statement.indexName}`);
+		await reserved.unsafe(`DROP INDEX CONCURRENTLY IF EXISTS "${statement.indexName}"`, []);
+	}
+	await reserved.unsafe(statement.sql, []);
+	if ((await indexValidity(reserved, statement.indexName)) !== true) {
+		throw new Error(
+			`online migration ${file}: ${statement.indexName} is not VALID after its build`,
+		);
+	}
+}
+
+/** `true` valid, `false` present but INVALID, `null` absent. */
+async function indexValidity(reserved: typeof sql, indexName: string): Promise<boolean | null> {
+	const rows = (await reserved.unsafe(
+		`SELECT i.indisvalid AS valid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+		 WHERE c.relname = $1 AND c.relnamespace = 'public'::regnamespace`,
+		[indexName],
+	)) as { valid: boolean }[];
+	return rows.length === 0 ? null : rows[0]?.valid === true;
+}
+
+/** Give the reserved connection back as the pool expects it. */
+async function resetOnlineSession(reserved: typeof sql): Promise<void> {
+	try {
+		await reserved.unsafe('RESET statement_timeout', []);
+		await reserved.unsafe('RESET lock_timeout', []);
+		await reserved.unsafe('SELECT pg_advisory_unlock($1)', [ONLINE_MIGRATION_LOCK_KEY]);
+	} catch {
+		// a broken connection — the pool discards it; the lock dies with the session
+	}
+}
+
+/**
+ * THE POST-LISTEN ENTRY POINT (startServer, right after the socket binds):
+ * the online run in the background. Never throws, never awaited by the boot —
+ * a failure is logged and the next boot retries the file.
+ */
+export function startOnlineMigrations(): Promise<void> {
+	return runOnlineMigrations().then(
+		() => undefined,
+		(error: unknown) => {
+			if (isStoppedRun(error)) {
+				console.warn('[migrations] online run stopped by shutdown — unrecorded, retried next boot');
+				return;
+			}
+			console.error('[migrations] online migration run failed (retried next boot):', error);
+		},
+	);
+}
+
+/** A run ended by stopOnlineMigrations: the latch, or the cancel (57014). */
+function isStoppedRun(error: unknown): boolean {
+	if (error instanceof OnlineRunStopped) return true;
+	const { errno, code } = (error ?? {}) as { errno?: unknown; code?: unknown };
+	return errno === QUERY_CANCELED || code === QUERY_CANCELED;
+}
+
+/** The migrations alone, defaults only. */
 export function runBootMigrations(): Promise<MigrationRunResult> {
 	return runMigrations();
+}
+
+/**
+ * THE startServer ENTRY POINT: the migrations, then — whatever they did — the
+ * `tm_role` column heal, OUTSIDE any transaction, before the first request.
+ *
+ * A failed run (0010 out of lock retries behind a long dd15 COUNT) is logged
+ * and the server serves on (S1-15). Without the heal here, the column stayed
+ * missing until some OUTSIDE-transaction reader (a dd15 view, a bulk run's
+ * start) happened to heal it — and every door that names it INSIDE its own
+ * transaction, where the heal refuses by design (a referenced record's delete,
+ * a data wipe, an observer mirror write), failed until then. Now the
+ * in-transaction fail-closed path covers only a heal that ALSO failed at boot.
+ *
+ * `migrate` / `tmTable` are injectable for the gate (a scratch table, a run
+ * that fails); production passes neither.
+ */
+export async function runBootSchema(
+	options: { migrate?: () => Promise<unknown>; tmTable?: string } = {},
+): Promise<void> {
+	try {
+		await (options.migrate ?? runBootMigrations)();
+	} catch (error) {
+		console.error(
+			'[migrations] boot migration run failed (continuing with lazy bootstraps):',
+			error,
+		);
+	}
+	try {
+		await ensureRecordGenerationTable();
+		await ensureTmRoleColumn(options.tmTable);
+	} catch (error) {
+		console.error('[migrations] tm_role heal failed at boot (history doors fail closed):', error);
+	}
 }

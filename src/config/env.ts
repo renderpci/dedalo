@@ -150,6 +150,19 @@ export function readEnv(key: string): string | undefined {
 }
 
 /**
+ * One value as `../private/.env` ITSELF names it — the FILE half of readEnv's
+ * chain only (the key, then its PHP-catalog alias), never the process
+ * environment. For a decision that
+ * must know the INSTALLATION's own value even after a test preload rewrote
+ * process.env (src/config/suite_database.ts: "is this the application
+ * database?"). Reads the map parsed once at load: no I/O.
+ */
+export function privateFileValue(key: string): string | undefined {
+	const alias = PHP_KEY_ALIASES[key];
+	return privateFileValues[key] ?? (alias === undefined ? undefined : privateFileValues[alias]);
+}
+
+/**
  * A merged env MAP with the same precedence readEnv applies (process env wins
  * over ../private/.env). For modules whose API takes an injectable env map
  * (e.g. ai/rag/multimodal_config.ts) — defaulting such a parameter to bare

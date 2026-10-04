@@ -78,7 +78,13 @@ import {
 } from './ontology_tipos.ts';
 import { getTermIdFromLocator, parseSectionRecordToOntologyNode } from './parser.ts';
 import { getMatrixTableFromTipo } from './resolver.ts';
-import { getSectionIdFromTipo, getTldFromTipo, mapTldToTargetSectionTipo, safeTld } from './tld.ts';
+import {
+	getSectionIdFromTipo,
+	getTldFromTipo,
+	LOCAL_ONTOLOGY_SECTION,
+	mapTldToTargetSectionTipo,
+	safeTld,
+} from './tld.ts';
 
 const RELATION_TYPE_FILTER = 'dd675'; // DEDALO_RELATION_TYPE_FILTER
 const LANG_SECTION = 'lg1';
@@ -619,6 +625,20 @@ export interface SetRecordsTarget {
 	userId?: number;
 }
 
+/** The record ids a target states (one id, a list, or the whole section); null = no scope stated. */
+async function scopedRecordIds(target: SetRecordsTarget, table: string): Promise<number[] | null> {
+	if (target.sectionId !== undefined && target.sectionId !== null) {
+		return [Number(target.sectionId)];
+	}
+	if (target.sectionIds !== undefined) return target.sectionIds.map((id) => Number(id));
+	if (target.wholeSection !== true) return null;
+	const rows = (await sql.unsafe(
+		`SELECT section_id FROM "${table}" WHERE section_tipo = $1 ORDER BY section_id ASC`,
+		[target.sectionTipo],
+	)) as { section_id: number }[];
+	return rows.map((row) => Number(row.section_id));
+}
+
 /**
  * Sync matrix ontology records into dd_ontology (PHP set_records_in_dd_ontology).
  * Partial success: ok=true when at least one record processed.
@@ -645,6 +665,16 @@ export async function setRecordsInDdOntology(
 		processed_count: 0,
 	};
 
+	// An override record is not a node (parser.ts): re-parse the node it
+	// overrides instead. Refused loudly, never skipped as "0 processed".
+	if (target.sectionTipo === LOCAL_ONTOLOGY_SECTION) {
+		response.errors.push(
+			`'${LOCAL_ONTOLOGY_SECTION}' records are overrides, not nodes — re-parse the overridden node (ontology42) instead`,
+		);
+		response.msg = `Error. Refusing to parse override records of '${LOCAL_ONTOLOGY_SECTION}' as nodes`;
+		return response;
+	}
+
 	const table = await getMatrixTableFromTipo(target.sectionTipo);
 	if (table === null) {
 		response.errors.push(`no matrix table for '${target.sectionTipo}'`);
@@ -652,18 +682,8 @@ export async function setRecordsInDdOntology(
 	}
 
 	// Resolve the record ids to process — see the scope contract in the doc above.
-	let ids: number[];
-	if (target.sectionId !== undefined && target.sectionId !== null) {
-		ids = [Number(target.sectionId)];
-	} else if (target.sectionIds !== undefined) {
-		ids = target.sectionIds.map((id) => Number(id));
-	} else if (target.wholeSection === true) {
-		const rows = (await sql.unsafe(
-			`SELECT section_id FROM "${table}" WHERE section_tipo = $1 ORDER BY section_id ASC`,
-			[target.sectionTipo],
-		)) as { section_id: number }[];
-		ids = rows.map((row) => Number(row.section_id));
-	} else {
+	const ids = await scopedRecordIds(target, table);
+	if (ids === null) {
 		// No scope stated: refuse LOUDLY rather than guess "all" (WC-043).
 		response.errors.push(
 			'no scope: pass sectionId, an explicit sectionIds list, or wholeSection:true',

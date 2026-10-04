@@ -6,8 +6,15 @@
  *   - authenticated              → 200, pretty JSON, == the buildEnvironment payload.
  *
  * The session gate runs without Postgres (superuser resolves in-memory); the 200
- * case exercises buildEnvironment (labels / page_globals) and so guards on a live
- * DB probe, honest on a machine without the shared database.
+ * case exercises buildEnvironment (labels / page_globals) and NEEDS the suite
+ * database — the unit tier always has one, so its absence is RED, never a silent
+ * pass (it used to `return` before asserting).
+ *
+ * THE PAYLOAD SAMPLES THE PROCESS: `php_memory` / `memory` are
+ * `process.memoryUsage().rss` rounded to MiB, read once per build — and the two
+ * builds compared here are two reads. Under load (a CI host, a full-suite run) the
+ * RSS moves between them, so those values are compared by SHAPE (`<n>M rss`) and
+ * everything else byte-for-byte.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -32,9 +39,22 @@ beforeAll(async () => {
 		await sql`SELECT 1`;
 		dbReady = true;
 	} catch {
-		dbReady = false; // no shared DB — the payload case skips honestly
+		dbReady = false; // asserted RED in the payload case, never skipped
 	}
 });
+
+/** A process-memory sample, as buildEnvironment formats it. */
+const RSS_SAMPLE = /^\d+M rss$/;
+
+/** Every RSS sample replaced by its shape — the rest of the payload is untouched. */
+function normaliseRss(value: unknown): unknown {
+	if (typeof value === 'string') return RSS_SAMPLE.test(value) ? '<n>M rss' : value;
+	if (Array.isArray(value)) return value.map(normaliseRss);
+	if (value !== null && typeof value === 'object') {
+		return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, normaliseRss(v)]));
+	}
+	return value;
+}
 
 describe('environment diagnostic view (dedicated GET, session-gated)', () => {
 	test('no session → 404 (endpoint not revealed)', async () => {
@@ -43,7 +63,7 @@ describe('environment diagnostic view (dedicated GET, session-gated)', () => {
 	});
 
 	test('authenticated → 200 pretty JSON == buildEnvironment payload', async () => {
-		if (!dbReady) return;
+		expect(dbReady, 'the suite database is unreachable — the unit tier always has one').toBe(true);
 		const token = createSession(-1, 'root', true);
 		const response = await handleRequest(envRequest(token), context);
 		expect(response.status).toBe(200);
@@ -60,6 +80,9 @@ describe('environment diagnostic view (dedicated GET, session-gated)', () => {
 		const session = getSession(token);
 		const principal = await resolvePrincipal(-1);
 		const expected = await buildEnvironment(session, principal);
-		expect(body).toEqual(expected);
+		// The payload DOES carry an RSS sample (else the normalisation hides nothing and
+		// proves nothing) — and only the sample is normalised.
+		expect(JSON.stringify(body)).toMatch(/"\d+M rss"/);
+		expect(normaliseRss(body)).toEqual(normaliseRss(expected));
 	});
 });

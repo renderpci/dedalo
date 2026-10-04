@@ -75,6 +75,14 @@ export interface ClientLib {
 	readonly devOnly?: boolean;
 	/** Why this lib is not package-manager-tracked. Required for vendor/fetched. */
 	readonly reason?: string;
+	/**
+	 * One human line for the npm version table in
+	 * docs/development/vendored_library_versions.md, which is GENERATED from this
+	 * registry + package.json (`bun run libs:gen`; byte-gated by
+	 * client_lib_versions_doc_tripwire). Version and package are derived, never
+	 * written here.
+	 */
+	readonly note?: string;
 }
 
 /**
@@ -84,18 +92,39 @@ export interface ClientLib {
  */
 export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 	// --- package-manager tracked ------------------------------------------------
-	three: { base: 'node_modules/three', source: 'npm', probe: 'build/three.module.js' },
-	d3: { base: 'node_modules/d3', source: 'npm', probe: 'dist/d3.min.js' },
+	three: {
+		base: 'node_modules/three',
+		source: 'npm',
+		probe: 'build/three.module.js',
+		note: '`examples/jsm/` reached via the client import map.',
+	},
+	d3: {
+		base: 'node_modules/d3',
+		source: 'npm',
+		probe: 'dist/d3.min.js',
+		note: 'The version does not appear in the URL.',
+	},
 	jsoneditor: { base: 'node_modules/vanilla-jsoneditor', source: 'npm', probe: 'standalone.js' },
 	leaflet: { base: 'node_modules/leaflet', source: 'npm', probe: 'dist/leaflet.js' },
 	geoman: {
 		base: 'node_modules/@geoman-io/leaflet-geoman-free',
 		source: 'npm',
 		probe: 'dist/leaflet-geoman.min.js',
+		note: "Was bundled *inside* leaflet's `dist/`; now its own dep.",
 	},
-	turf: { base: 'node_modules/@turf/turf', source: 'npm', probe: 'turf.min.js' },
+	turf: {
+		base: 'node_modules/@turf/turf',
+		source: 'npm',
+		probe: 'turf.min.js',
+		note: "Was bundled *inside* leaflet's `dist/`; now its own dep.",
+	},
 	flatpickr: { base: 'node_modules/flatpickr', source: 'npm', probe: 'dist/flatpickr.min.js' },
-	split: { base: 'node_modules/split.js', source: 'npm', probe: 'dist/split.es.js' },
+	split: {
+		base: 'node_modules/split.js',
+		source: 'npm',
+		probe: 'dist/split.es.js',
+		note: 'Used by the indexation tool.',
+	},
 	iro: { base: 'node_modules/@jaames/iro', source: 'npm', probe: 'dist/iro.min.js' },
 	'codex-tooltip': {
 		base: 'node_modules/codex-tooltip',
@@ -109,6 +138,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		base: 'node_modules/@highlightjs/cdn-assets',
 		source: 'npm',
 		probe: 'es/core.min.js',
+		note: 'Not `highlight.js` — see below.',
 	},
 	onnxruntime: {
 		// Transformers.js runs its models on onnxruntime-web, whose WASM binaries it
@@ -120,6 +150,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		base: 'node_modules/onnxruntime-web',
 		source: 'npm',
 		probe: 'dist/ort-wasm-simd-threaded.jsep.wasm',
+		note: "Transformers.js's WASM runtime; the only `onnxruntime-web` the lockfile holds.",
 	},
 	qrcode: {
 		// EasyQRCodeJS (tool_qr). Until P2-5-residue (CLI-12) this was a 4.6.1 copy
@@ -129,6 +160,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		base: 'node_modules/easyqrcodejs',
 		source: 'npm',
 		probe: 'dist/easy.qrcode.min.js',
+		note: 'The QR tool. Was a copy committed under its own `lib/` directory with no digest.',
 	},
 	svgedit: {
 		// Was a vendored ~7.2.x-era build (2.0 MB) with no upstream package. 7.4.2 is a
@@ -139,13 +171,26 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		base: 'node_modules/@svgedit/svgcanvas',
 		source: 'npm',
 		probe: 'dist/svgcanvas.js',
+		note: 'Replaced a vendored ~7.2.x build. See below.',
 	},
 
 	// --- dev-only (client test harness; devDependencies) -------------------------
-	mocha: { base: 'node_modules/mocha', source: 'npm', probe: 'mocha.js', devOnly: true },
+	mocha: {
+		base: 'node_modules/mocha',
+		source: 'npm',
+		probe: 'mocha.js',
+		devOnly: true,
+		note: 'Client test harness.',
+	},
 	// chai 5 dropped the UMD bundle: `index.js` is a self-contained ESM bundle (no bare
 	// specifiers), loaded through the harness import map. See client/dedalo/test/client/.
-	chai: { base: 'node_modules/chai', source: 'npm', probe: 'index.js', devOnly: true },
+	chai: {
+		base: 'node_modules/chai',
+		source: 'npm',
+		probe: 'index.js',
+		devOnly: true,
+		note: 'Client test harness.',
+	},
 
 	// --- COMMITTED under vendor/ (5 trees; digest-pinned, see the header) ---------
 	transformers: {

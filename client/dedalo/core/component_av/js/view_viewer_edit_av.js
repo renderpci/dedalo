@@ -151,6 +151,13 @@ view_viewer_edit_av.render = async function(self, options) {
 		// set the parameter when the posterframe is loaded
 			image.addEventListener('load', function(e) {
 
+				// fit the popup to the poster ratio first (it is known before any
+				// media byte loads); the stream ratio refines it on loadedmetadata
+				// (the fallback image says nothing about the media ratio)
+				if (image.src!==page_globals.fallback_image) {
+					fit_viewer_window(image.naturalWidth, image.naturalHeight)
+				}
+
 				// show download_image_button
 				// only if the user has permissions
 				// (!) download_image_button is declared further below via hoisting;
@@ -188,6 +195,14 @@ view_viewer_edit_av.render = async function(self, options) {
 			with_control_buttons	: false
 		})
 		content_data.appendChild(media_player_node)
+
+	// window fit to the real stream ratio. Audio-only media reports 0×0 and
+	// keeps the poster ratio already applied.
+		if (self.video) {
+			self.video.addEventListener('loadedmetadata', () => {
+				fit_viewer_window(self.video.videoWidth, self.video.videoHeight)
+			}, { once: true })
+		}
 
 	// button download
 		// Starts hidden; revealed by the posterframe 'load' handler above once
@@ -255,6 +270,56 @@ view_viewer_edit_av.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
+
+
+/**
+* FIT_VIEWER_WINDOW
+* Resizes the viewer popup so its viewport matches the media aspect ratio
+* (no letterbox bars). Keeps the current viewport width as anchor and shrinks
+* to the available screen when the derived height does not fit.
+* Only acts on the popup Dédalo opened itself (window.open target 'viewer',
+* see handler_open_viewer / open_av_player): a regular tab cannot be resized
+* and must never be. Skipped in fullscreen and for unknown (0) dimensions.
+* @param {number} media_width - intrinsic width (poster or video)
+* @param {number} media_height - intrinsic height (poster or video)
+* @returns {boolean} true when a resize was requested
+*/
+const fit_viewer_window = function (media_width, media_height) {
+
+	if (!window.opener || window.name!=='viewer' || document.fullscreenElement) {
+		return false
+	}
+	if (!media_width || !media_height) {
+		return false
+	}
+
+	const ratio		= media_width / media_height
+	const chrome_w	= window.outerWidth - window.innerWidth
+	const chrome_h	= window.outerHeight - window.innerHeight
+	const max_w		= window.screen.availWidth - chrome_w
+	const max_h		= window.screen.availHeight - chrome_h
+
+	let width	= window.innerWidth
+	let height	= Math.round(width / ratio)
+	if (height > max_h) {
+		height	= max_h
+		width	= Math.round(height * ratio)
+	}
+	if (width > max_w) {
+		width	= max_w
+		height	= Math.round(width / ratio)
+	}
+
+	// already fitting (2px tolerance for rounding)
+	if (Math.abs(width - window.innerWidth) < 2 && Math.abs(height - window.innerHeight) < 2) {
+		return false
+	}
+
+	window.resizeTo(width + chrome_w, height + chrome_h)
+
+	return true
+}//end fit_viewer_window
 
 
 

@@ -1269,6 +1269,12 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 			// 		"fr1"
 			// 	]
 			// }
+		// saved sections still available in current typology. If none match (stale or empty value), select all
+		const saved_value		= selected_search_sections[typology_id]
+		const saved_sections	= (Array.isArray(saved_value) ? saved_value : []).filter(
+			tipo => ar_sections.some(el => el.target_section_tipo===tipo)
+		)
+		const use_saved_sections = saved_sections.length > 0
 
 	// update sections components list (left)
 		const update_sections_list = async () => {
@@ -1318,8 +1324,6 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 			const item = ar_sections[i]
 
-			self.target_section_tipo.push(item.target_section_tipo)
-
 			// li
 				const li = ui.create_dom_element({
 					element_type	: 'li',
@@ -1344,15 +1348,14 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 				})
 				ar_check_box.push(check_box)
 
-				// selected
-				if (selected_search_sections[typology_id]) {
-					// defined cookie value case
-					if(selected_search_sections[typology_id].includes(item.target_section_tipo)){
-						check_box.checked = true
-					}
-				}else{
-					// non defined cookie value case
-					check_box.checked = true
+				// selected. Saved value case or all when not defined
+				check_box.checked = use_saved_sections
+					? saved_sections.includes(item.target_section_tipo)
+					: true
+
+				// only checked sections are searched
+				if (check_box.checked) {
+					self.target_section_tipo.push(item.target_section_tipo)
 				}
 
 				check_box.addEventListener('change', update_sections_list)
@@ -1379,9 +1382,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 					type			: 'checkbox',
 					value			: null
 				})
-				if (!selected_search_sections[typology_id]) {
-					check_box.checked = true
-				}
+				check_box.checked = ar_check_box.every(el => el.checked)
 				label.prepend(check_box)
 				const fn_change = function() {
 					// update checked states in all elements
@@ -1395,12 +1396,15 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 		}//end if (ar_check_box.length>1)
 
 	// event subscription. Fire update on each publication of update_sections_list_
+	// Remove previous typology subscription to avoid stale handlers overwriting current selection
+		if (self.update_sections_list_token) {
+			event_manager.unsubscribe(self.update_sections_list_token)
+		}
 		const update_sections_list_handler = () => {
 			update_sections_list()
 		}
-		self.events_tokens.push(
-			event_manager.subscribe('update_sections_list_' + self.id, update_sections_list_handler)
-		)
+		self.update_sections_list_token = event_manager.subscribe('update_sections_list_' + self.id, update_sections_list_handler)
+		self.events_tokens.push(self.update_sections_list_token)
 
 
 	return true

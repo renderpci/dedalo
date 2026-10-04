@@ -40,7 +40,7 @@ describe('DEDALO_DIFFUSION_NATIVE — native diffusion is the default', () => {
 		process.env[KEY] = 'true';
 		try {
 			const { buildPlainVars } = await import('../../src/core/resolve/environment.ts');
-			expect('DEDALO_DIFFUSION_API_URL' in buildPlainVars(true)).toBe(false);
+			expect('DEDALO_DIFFUSION_API_URL' in buildPlainVars(null, null)).toBe(false);
 		} finally {
 			if (prior === undefined) delete process.env[KEY];
 			else process.env[KEY] = prior;
@@ -54,7 +54,7 @@ describe('DEDALO_DIFFUSION_NATIVE — native diffusion is the default', () => {
 		process.env[KEY] = 'false';
 		try {
 			const { buildPlainVars } = await import('../../src/core/resolve/environment.ts');
-			expect(buildPlainVars(true).DEDALO_DIFFUSION_API_URL).toBe(LEGACY_URL);
+			expect(buildPlainVars(null, null).DEDALO_DIFFUSION_API_URL).toBe(LEGACY_URL);
 		} finally {
 			if (prior === undefined) delete process.env[KEY];
 			else process.env[KEY] = prior;

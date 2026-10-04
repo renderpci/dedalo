@@ -22,6 +22,16 @@
  * embed_groups, the capability probe, which answers `{groups: []}` instead
  * (see its doc block: a refusal there is a red alert nobody asked for).
  *
+ * SPEND (closure Step 3, TOOLS-4; WC-2026-10-01-ai-spend-budget): every action
+ * that calls a model is METERED against the caller's daily ledger
+ * (core/security/ai_spend.ts) after its request is validated and BEFORE the
+ * provider is touched — one query embedding for semantic_search / retrieve /
+ * get_agent_context / search_by_text_image; one run + its token reservation +
+ * one embedding for `ask`, which is also GRANTED (`tool_rag`: the generative
+ * answer is a tool, the retrievals are core search and stay ungranted).
+ * similar_to / similar_objects / characterize_object reuse STORED vectors and
+ * call no model, so they spend nothing; embed_groups is the capability probe.
+ *
  * Types are imported from response.ts (not dispatch.ts) to avoid an import cycle
  * with the registry that mounts these handlers.
  */
@@ -33,11 +43,13 @@ import type { ApiResult } from '../../core/api/response.ts';
 import { isValidTipo } from '../../core/concepts/ontology.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
 import { DedaloError, ok } from '../../core/errors/index.ts';
+import { chargeAiSpend, reserveAiSpend } from '../../core/security/ai_spend.ts';
 import {
 	getPermissions,
 	type Principal,
 	resolvePrincipal,
 } from '../../core/security/permissions.ts';
+import { assertToolGranted } from '../../core/tools/security.ts';
 import { RESTRICTED_MSG, runAsk } from './ask.ts';
 import {
 	askRuntimeConfigFromEnv,
@@ -145,6 +157,7 @@ async function recordSearch(rqo: Rqo, context: RagApiContext): Promise<ApiResult
 	if (principal === null) return noPrincipal();
 	const query = optionString(rqo.options, 'query');
 	if (query === '') return badRequest('Missing query');
+	await chargeAiSpend(principal, { door: 'dd_rag_api.semantic_search', embeds: 1 });
 	const hits = await semanticSearch(
 		principal,
 		query,
@@ -156,12 +169,18 @@ async function recordSearch(rqo: Rqo, context: RagApiContext): Promise<ApiResult
 }
 
 /** retrieve / get_agent_context (shared passage-shape response). */
-async function passageSearch(rqo: Rqo, context: RagApiContext, msg: string): Promise<ApiResult> {
+async function passageSearch(
+	rqo: Rqo,
+	context: RagApiContext,
+	msg: string,
+	door: string,
+): Promise<ApiResult> {
 	if (!isRagEnabled()) return disabled();
 	const principal = await resolveCaller(context);
 	if (principal === null) return noPrincipal();
 	const query = optionString(rqo.options, 'query');
 	if (query === '') return badRequest('Missing query');
+	await chargeAiSpend(principal, { door, embeds: 1 });
 	const passages = await retrievePassages(
 		principal,
 		query,
@@ -226,17 +245,39 @@ async function embedGroupsAction(rqo: Rqo, context: RagApiContext): Promise<ApiR
 	return envelope({ groups: groups.map((g) => g.id) }, 'ok', context);
 }
 
+/** The tool whose grant opens the GENERATIVE answer (retrieval is core search, ungranted). */
+export const GENERATIVE_RAG_TOOL = 'tool_rag';
+
 /** ask — grounded Q&A with citations (or a refusal when no context is found). */
 async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 	if (!isRagEnabled()) return disabled();
 	const principal = await resolveCaller(context);
 	if (principal === null) return noPrincipal();
+	// GRANTED before anything else is read: an ungranted caller learns nothing
+	// from the validation below (the agent door's order).
+	await assertToolGranted(principal, GENERATIVE_RAG_TOOL);
 	const query = optionString(rqo.options, 'query');
 	if (query === '') return badRequest('Missing query');
 
 	const env = defaultRagEnv();
 	const cfg = askRuntimeConfigFromEnv(env);
 	const ragConfig = new RagConfig(defaultOntologyPort());
+	// METERED: the model run (its most input + output: the context budget and the
+	// output cap) is reserved FIRST, so an exhausted run budget refuses before the
+	// query is embedded; then the retrieval's one embedding is charged.
+	const reservation = await reserveAiSpend(principal, {
+		door: 'dd_rag_api.ask',
+		runs: 1,
+		tokens: cfg.contextTokenBudget + cfg.maxOutputTokens,
+	});
+	try {
+		await chargeAiSpend(principal, { door: 'dd_rag_api.ask', embeds: 1 });
+	} catch (error) {
+		await reservation.release();
+		throw error;
+	}
+	let modelCalled = true;
+	let reportedTokens: number | undefined;
 	try {
 		const result = await runAsk(
 			{
@@ -260,6 +301,8 @@ async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 		);
 		// Both refusals are NORMAL envelopes (no external model was called): a
 		// grounding miss vs. an egress-restricted record.
+		modelCalled = result.grounded;
+		reportedTokens = askUsageTokens(result.usage);
 		const status = result.grounded
 			? 'ok'
 			: result.restricted
@@ -285,7 +328,20 @@ async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 		// information.
 		if (error instanceof DedaloError) throw error;
 		throw new DedaloError('rag.generation_failed', { cause: error });
+	} finally {
+		// No model call (a grounding miss, an egress refusal) refunds the run; a
+		// call settles on its reported usage — none reported keeps the reservation.
+		if (modelCalled) await reservation.settle({ tokens: reportedTokens });
+		else await reservation.release();
 	}
+}
+
+/** The answer's reported usage as one token count, or undefined when none was reported. */
+function askUsageTokens(usage: { inputTokens?: number; outputTokens?: number } | undefined) {
+	const parts = [usage?.inputTokens, usage?.outputTokens].filter(
+		(value): value is number => typeof value === 'number' && Number.isFinite(value),
+	);
+	return parts.length === 0 ? undefined : parts.reduce((sum, value) => sum + value, 0);
 }
 
 // ─────────────────────────────── multimodal (images) ───────────────────────────────
@@ -380,6 +436,7 @@ async function searchByTextImageAction(rqo: Rqo, context: RagApiContext): Promis
 	if (principal === null) return noPrincipal();
 	const query = optionString(rqo.options, 'query');
 	if (query === '') return badRequest('Missing query');
+	await chargeAiSpend(principal, { door: 'dd_rag_api.search_by_text_image', embeds: 1 });
 	const hits = await stack.objectRetrieval.searchByTextImage(principal, query, {
 		sectionTipos: optionScope(rqo.options) ?? [],
 		topK: clampTopK(rqo.options?.limit),
@@ -426,9 +483,10 @@ async function characterizeObjectAction(rqo: Rqo, context: RagApiContext): Promi
 export const ragApiActions = {
 	semantic_search: recordSearch,
 	embed_groups: embedGroupsAction,
-	retrieve: (rqo: Rqo, context: RagApiContext) => passageSearch(rqo, context, 'ok'),
+	retrieve: (rqo: Rqo, context: RagApiContext) =>
+		passageSearch(rqo, context, 'ok', 'dd_rag_api.retrieve'),
 	get_agent_context: (rqo: Rqo, context: RagApiContext) =>
-		passageSearch(rqo, context, 'agent_context'),
+		passageSearch(rqo, context, 'agent_context', 'dd_rag_api.get_agent_context'),
 	similar_to: similarToAction,
 	ask: askAction,
 	similar_objects: similarObjectsAction,

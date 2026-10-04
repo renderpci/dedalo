@@ -22,9 +22,11 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import { Glob } from 'bun';
-import { type FileCounts, type ParityRun, REPO_ROOT, runTier } from './parity_census.ts';
+import { ciImageFingerprint } from './ci_image.ts';
+import { type FileCounts, type ParityRun, REPO_ROOT } from './parity_census.ts';
 import { emitRatchetCheck, type RatchetCheck, wantsCheckJson } from './ratchet_check.ts';
+import { tierFiles } from './test_order.ts';
+import { runTier } from './tier_run.ts';
 
 /** Everything that differs between one ratcheted tier and another. */
 export interface TierSpec {
@@ -63,6 +65,34 @@ export interface TierSpec {
 	 * two, so the protection the comment promised did not exist on either tier.)
 	 */
 	exactCounts: boolean;
+	/**
+	 * The full writer (no flag) refuses to run anywhere but the CI IMAGE the tier is checked
+	 * in — see {@link ciImageMarkerMatches}. For a tier whose per-file floors and red set are
+	 * facts about the platform (the unit tier: media toolchain, uid, files a clone lacks),
+	 * a desk recording freezes the DESK and the runner then reports the difference as drift.
+	 * The CI-image door is `bun run ci:local --docker --record-unit-baseline`. `--record-new`
+	 * WRITES too (a new file's floor is a platform fact like any other floor), so it refuses
+	 * off the image the same way; its image door is `… --record-unit-baseline --new <files>`.
+	 * Only the READ doors, `--check` and `--report`, stay open on a desk.
+	 */
+	recordOnlyInCiImage?: boolean;
+}
+
+/** Where the CI image states its own fingerprint (ci/Dockerfile writes it at build time). */
+export const CI_IMAGE_MARKER = '/etc/dedalo-ci-image';
+
+/**
+ * Is this process running in the CI image built from THIS checkout's definition? The
+ * marker the image carries must equal `sha256(ci/Dockerfile ++ .bun-version)` of the tree
+ * being measured: no marker (a Mac, a bare Linux desk) or an image of another definition
+ * (a stale local build) is not the runner's platform. Parameterized for the gate.
+ */
+export function ciImageMarkerMatches(
+	markerPath: string = CI_IMAGE_MARKER,
+	repoRoot: string = REPO_ROOT,
+): boolean {
+	if (!existsSync(markerPath)) return false;
+	return readFileSync(markerPath, 'utf8').trim() === ciImageFingerprint(repoRoot);
 }
 
 export interface RedBaseline {
@@ -143,10 +173,20 @@ export interface TierDrift {
 	 * already is.
 	 */
 	floorsSilent: { file: string; line: string }[];
+	/**
+	 * WHY, not only WHAT: for every file with a NEW red, the first such case and
+	 * the failure text bun reported for it (assertion + first stack frames, from
+	 * the JUnit body — {@link ParityCase.failure}). Explanation, never a verdict:
+	 * not counted by {@link driftCount}, not classified by the bank, and printed
+	 * by {@link formatDrift} only beside a non-empty REGRESSIONS block. Without it
+	 * a hosted run's log named 123 reds and not one reason (2026-10-02), so every
+	 * diagnosis cost a CI cycle per guess. Optional: a hand-built drift has none.
+	 */
+	firstFailures?: string[];
 }
 
 export function generatedBy(spec: TierSpec): string {
-	const command = `bun test ${spec.paths.join(' ')} --timeout=30000`;
+	const command = `bun test --timeout=30000 $(bun scripts/lib/test_order.ts ${spec.paths.join(' ')})`;
 	return `${spec.fixCommand} (runs \`${command}\` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)`;
 }
 
@@ -251,11 +291,22 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
 	// Status of every case actually observed, keyed file + name.
 	const observed = new Map(run.cases.map((c) => [`${c.file} ${c.name}`, c.status]));
 
+	const explained = new Set<string>();
+	const firstFailures: string[] = [];
 	for (const c of run.cases) {
 		if (c.status !== 'fail') continue;
 		const frozen = baseline.files[c.file] ?? [];
-		if (!frozen.includes(c.name)) drift.regressions.push(`${c.file}: NEW red — ${c.name}`);
+		if (frozen.includes(c.name)) continue;
+		drift.regressions.push(`${c.file}: NEW red — ${c.name}`);
+		if (explained.has(c.file)) continue;
+		explained.add(c.file);
+		const text = (c.failure ?? '(the report carried no failure text)')
+			.split('\n')
+			.map((line) => `      ${line}`)
+			.join('\n');
+		firstFailures.push(`${c.file} — ${c.name}\n${text}`);
 	}
+	if (firstFailures.length > 0) drift.firstFailures = firstFailures;
 
 	for (const [file, names] of Object.entries(baseline.files)) {
 		for (const name of names) {
@@ -367,20 +418,19 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
  * from what the tier actually runs.
  */
 function onDiskTestFiles(spec: TierSpec): string[] {
-	const found: string[] = [];
-	for (const path of spec.paths) {
-		const root = join(REPO_ROOT, path);
-		if (!existsSync(root)) continue;
-		for (const match of new Glob('**/*.test.ts').scanSync({ cwd: root })) {
-			found.push(`${path}/${match}`);
-		}
-	}
-	return found.sort();
+	// The census's OWN expansion (scripts/lib/test_order.ts) — one walk, so the
+	// files run and the files expected to report cannot disagree.
+	return tierFiles(spec.paths, REPO_ROOT, { inventory: true });
 }
 
 export function formatDrift(d: TierDrift): string {
 	const lines: string[] = [];
 	if (d.regressions.length) lines.push('REGRESSIONS:', ...d.regressions.map((l) => `  ${l}`));
+	if (d.regressions.length && d.firstFailures?.length)
+		lines.push(
+			'FIRST FAILURE PER FILE (new reds — what bun reported):',
+			...d.firstFailures.map((l) => `  ${l}`),
+		);
 	if (d.stale.length) lines.push('STALE:', ...d.stale.map((l) => `  ${l}`));
 	if (d.summary.length) lines.push('SUMMARY:', ...d.summary.map((l) => `  ${l}`));
 	if (d.vacuity.length) lines.push('VACUITY:', ...d.vacuity.map((l) => `  ${l}`));
@@ -448,7 +498,7 @@ export function writeRefusal(
 	if (allowRegression) return null;
 	const refused = classifyTierDrift(spec, drift, onDisk).regressions;
 	if (refused.length === 0) return null;
-	return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds, LOWERED a per-file floor, or lost a file that is still on disk (it crashed). A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors })}${refused
+	return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds, LOWERED a per-file floor, or lost a file that is still on disk (it crashed). A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors, firstFailures: drift.firstFailures })}${refused
 		.filter((line) => line.includes('on disk but reported NOTHING'))
 		.map((line) => `\n  ${line}`)
 		.join(
@@ -531,6 +581,8 @@ export interface BaselineCliIo {
 	exit: (code: number) => never;
 	log: (line: string) => void;
 	error: (line: string) => void;
+	/** Running in the CI image? Default {@link ciImageMarkerMatches}; consulted only by a `recordOnlyInCiImage` tier's writer. */
+	inCiImage?: () => boolean;
 }
 
 export function realBaselineCliIo(): BaselineCliIo {
@@ -546,6 +598,7 @@ export function realBaselineCliIo(): BaselineCliIo {
 		exit: (code) => process.exit(code),
 		log: (line) => console.log(line),
 		error: (line) => console.error(line),
+		inCiImage: () => ciImageMarkerMatches(),
 	};
 }
 
@@ -575,7 +628,10 @@ export function baselineFile(spec: TierSpec): string {
  *     this floor exists to catch);
  *   - it REFUSES on an `exactCounts` tier (parity): its size is asserted exactly, so a new
  *     file there changes `measured` and only the full census may say so;
- *   - every other byte of the artifact — reds, counts, other records — is untouched.
+ *   - every other byte of the artifact — reds, counts, other records — is untouched;
+ *   - on a `recordOnlyInCiImage` tier (unit) it runs IN THE CI IMAGE only, like the full
+ *     writer: a floor measured on a desk is the desk's (`runBaselineCli`'s guard). The
+ *     door there is `bun run ci:local --docker --record-unit-baseline --new <files>`.
  *
  * No file named: every on-disk tier file without a record. Pure, so the gate proves the
  * refusals on planted runs (test/unit/baselines_bank_native.test.ts).
@@ -677,7 +733,25 @@ export function unrecordedFiles(spec: TierSpec, existing: RedBaseline): string[]
 export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineCliIo()): void {
 	const args = new Set(io.argv);
 
-	if (args.has('--record-new')) {
+	// EVERY writing door — the full writer AND --record-new — answers to the platform
+	// guard, before any measure (the answer does not depend on it). --record-new used to
+	// return above this check, so a desk could still freeze a new file's floor.
+	// --record-new wins over a read flag beside it (it is dispatched first below), so it
+	// is `writing` whatever else the argv says.
+	const recordingNew = args.has('--record-new');
+	const writing =
+		recordingNew || (!args.has('--report') && !args.has('--check') && !wantsCheckJson(io.argv));
+	if (writing && spec.recordOnlyInCiImage === true && !(io.inCiImage ?? ciImageMarkerMatches)()) {
+		const door = recordingNew
+			? 'bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]'
+			: 'bun run ci:local --docker --record-unit-baseline';
+		io.error(
+			`${spec.id}_baseline: REFUSING to write — this is not the CI image (no ${CI_IMAGE_MARKER} matching this checkout's ci/Dockerfile + .bun-version). The ${spec.id} tier's floors and red set are facts about the platform; a recording here freezes this machine, not the runner. Record it in the image: ${door}`,
+		);
+		io.exit(1);
+	}
+
+	if (recordingNew) {
 		// Before the full measure: this door runs ONLY the files it records.
 		const existing = loadBaseline(spec);
 		const named = io.argv.filter((arg) => !arg.startsWith('--'));
@@ -741,15 +815,19 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 		existing = null;
 	}
 	if (existing !== null) {
-		const refusal = writeRefusal(
-			spec,
-			computeDrift(spec, run, existing),
-			args.has('--allow-regression'),
-		);
+		const drift = computeDrift(spec, run, existing);
+		const refusal = writeRefusal(spec, drift, args.has('--allow-regression'));
 		if (refusal !== null) {
 			io.error(refusal);
 			io.exit(1);
 		}
+		// What --allow-regression ACCEPTED, printed: the commit message must name a reason
+		// per entry, and nobody can give one for a regression the log never showed.
+		const accepted = classifyTierDrift(spec, drift).regressions;
+		if (accepted.length > 0)
+			io.log(
+				`${spec.id}_baseline: ACCEPTED under --allow-regression (${accepted.length}) — each needs its reason in the commit message:\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors, firstFailures: drift.firstFailures })}`,
+			);
 	}
 	const baseline = buildBaseline(spec, run);
 	const target = baselineFile(spec);

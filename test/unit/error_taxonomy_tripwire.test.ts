@@ -72,6 +72,9 @@
  *        `external.${kind}`) OR carries a `reason` (a named exemption: parity
  *        tables, client-minted codes, reserved rows). An orphan code is dead
  *        vocabulary — delete it or say why it stays;
+ *     C1c a `reason` is ONLY for a code nothing references: a referenced code
+ *        carrying one would stay green after its last throw site is deleted
+ *        (its why goes in a comment above the row instead);
  *     C2 every code string the CLIENT speaks resolves: the literals in
  *        client/dedalo/core/common/js/error_policy.js (CORE_POLICY keys — a
  *        `<domain>.*` wildcard needs a registered domain) and every
@@ -230,11 +233,6 @@ const RAW_ON_WIRE_EXEMPTIONS: Readonly<Record<string, { count: number; reason: s
 		reason:
 			"zod's `parsed.error.message` describes the MCP caller's own tool input against the declared schema; publicMessage under a public-disclosure code",
 	},
-	'src/core/install/hierarchy_import.ts': {
-		count: 1,
-		reason:
-			'internal `{ok:false, msg}` outcome shape of the installer hierarchy import (B1-ratcheted), consumed by the install area, not a wire body',
-	},
 	'src/core/media/tools/versions.ts': {
 		count: 1,
 		reason:
@@ -352,7 +350,6 @@ const RAW_KEYED_EXEMPTIONS: Readonly<Record<string, { count: number; reason: Raw
 	'src/ai/mcp/registry.ts': { count: 1, reason: 'validator_sentence' },
 	'src/ai/mcp/tools/search.ts': { count: 1, reason: 'validator_sentence' },
 	'src/core/api/counters.ts': { count: 3, reason: 'admin_report' },
-	'src/core/area_maintenance/backup.ts': { count: 2, reason: 'admin_report' },
 	'src/core/area_maintenance/widgets/database_info.ts': { count: 2, reason: 'admin_report' },
 	'src/core/area_maintenance/widgets/dataframe_control.ts': {
 		count: 1,
@@ -393,7 +390,6 @@ const RAW_KEYED_EXEMPTIONS: Readonly<Record<string, { count: number; reason: Raw
 	'tools/tool_import_dedalo_csv/server/index.ts': { count: 3, reason: 'admin_report' },
 	'tools/tool_import_files/server/index.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_import_marc21/server/index.ts': { count: 1, reason: 'admin_report' },
-	'tools/tool_import_rdf/server/index.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_import_zotero/server/index.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_ontology_parser/server/tool_ontology_parser.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_propagate_component_data/server/index.ts': { count: 1, reason: 'admin_report' },
@@ -469,7 +465,7 @@ const FAILURE_LITERAL_BASELINE: Readonly<Record<string, number>> = {
 	'src/core/geoip/download.ts': 6,
 	'src/core/install/config_persist.ts': 4,
 	'src/core/install/hierarchy_activate.ts': 1,
-	'src/core/install/hierarchy_import.ts': 10,
+	'src/core/install/hierarchy_import.ts': 7,
 	'src/core/install/mailer_probe.ts': 2,
 	'src/core/mailer/mailer.ts': 4,
 	'src/core/media/tools/versions.ts': 1,
@@ -489,7 +485,7 @@ const FAILURE_LITERAL_BASELINE: Readonly<Record<string, number>> = {
 	'src/core/tools/transcription_asr.ts': 5,
 	'src/core/tools/transcription_local_asr.ts': 6,
 	'src/core/tools/translation.ts': 5,
-	'src/core/update/code_build_plan.ts': 6,
+	'src/core/update/code_build_plan.ts': 2,
 	'src/core/update/engine.ts': 2,
 	'src/core/update/transform/engine.ts': 1,
 	'tools/tool_import_dedalo_csv/server/index.ts': 1,
@@ -825,12 +821,22 @@ describe('C. vocabulary totality', () => {
 		).toEqual([]);
 	});
 
-	test('C1b — a `reason` is a real sentence, and a reasoned code is genuinely unreferenced or says why', () => {
+	test('C1b — a `reason` is a real sentence', () => {
 		for (const code of ERROR_CODES) {
 			const reason = specOf(code).reason;
 			if (reason === undefined) continue;
 			expect(reason.length, code).toBeGreaterThan(20);
 		}
+	});
+
+	test('C1c — a `reason` exempts only a code nothing throws (else C1 would be blind to its throw sites)', () => {
+		const reasoned = ERROR_CODES.filter((code) => specOf(code).reason !== undefined);
+		expect(reasoned.length).toBeGreaterThan(0); // non-vacuous: the exemption vocabulary exists
+		const stale = reasoned.filter((code) => isCodeReferenced(code, REFERENCE_CORPUS));
+		expect(
+			stale,
+			'STALE EXEMPTION: these codes carry a `reason` but src/ or tools/ references them — move the text into a comment above the row, so C1 depends on the real throw sites',
+		).toEqual([]);
 	});
 
 	test('C2 — every code the CLIENT speaks resolves to the registry (or is client.*)', () => {

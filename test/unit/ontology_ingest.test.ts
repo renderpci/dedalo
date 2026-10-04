@@ -290,7 +290,7 @@ describe('saveSimpleSchemaFile (additions-only diff, PHP bytes)', () => {
 // ---------------------------------------------------------------------------
 
 describe('updateOntology refusals', () => {
-	test('refuses a server code missing from the config catalog (WC-023 D5)', async () => {
+	test('refuses a server missing from the config catalog (WC-023 D5)', async () => {
 		const out = await updateOntology(
 			{
 				server: { name: 'x', url: 'http://localhost:9/', code: 'zz' },
@@ -299,7 +299,7 @@ describe('updateOntology refusals', () => {
 			-1,
 		);
 		expect(out.ok).toBe(false);
-		expect(out.errors).toContain('unknown ontology server code: zz');
+		expect(out.errors).toContain('unknown ontology server: http://localhost:9');
 	});
 });
 

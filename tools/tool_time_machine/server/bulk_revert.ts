@@ -1,84 +1,76 @@
 /**
  * tool_time_machine.bulk_revert_process (PHP tools/tool_time_machine::
- * bulk_revert_process) — undo a whole batch of component writes that share a
- * bulk_process_id (e.g. a tool_propagate_component_data run). For each component
- * touched by the batch, restore the value it had BEFORE the batch, and stamp the
- * restores with a NEW bulk_process_id so the revert is itself revertible.
+ * bulk_revert_process) — undo a whole bulk run: every component write, record
+ * creation and cascade delete that carries one dd800 `bulk_process_id` (a CSV
+ * import, import_execute, a propagation, an update_cache sweep, a revert).
+ * The revert runs under a NEW dd800 id and writes its own undo log, so it is
+ * itself exactly revertible.
  *
- * PERMISSION: module gate is section/level-2 on the request seed; because a batch
- * can span sections/components, EACH matched row is re-gated on its own
- * (section_tipo, tipo) SCHEMA pair AND on per-record scope (SEC-024 §9.4 — the
- * TM search applies no projects filter) inside the loop (skip-on-fail, never
- * abort — PHP parity).
+ * THE UNDO LOG (2026-09-27, WC-…-bulk-revert-undo-log). A run records, for
+ * every key it changes, the exact region it replaced (a hidden BEFORE row,
+ * tm_role 1) and the region it left (its visible after-row) — whatever the
+ * caller's saveTm says (decision D1). So this door does not INFER a pre-run
+ * value from history any more: it reads it. The steps:
+ *   1. REFUSE A LIVE RUN (D5): a run still executing in this process, or one
+ *      another revert is undoing, is refused `tool.bulk_run_live`
+ *      (src/core/tools/bulk_run_registry.ts). The chain and conflict checks
+ *      below are the backstop.
+ *   2. LOAD every row of the run, every role, id ASC — epoch-narrowed (P0-14:
+ *      a row written before an address was reborn belongs to the dead record).
+ *   3. PLAN (bulk_revert_plan.ts): one KEY per component region, counted once;
+ *      a dataframe main (every language) is ONE UNIT with its frames — its
+ *      rows follow the TWO LANES (a language's value; the lg-nolan value +
+ *      every slot's full frames), and bulk_revert_composed.ts restores them
+ *      lane by lane, in one transaction.
+ *   4. UNDELETE what the run's cascade deleted that no unit re-links (D3,
+ *      bulk_revert_records.ts), on the record's own gate.
+ *   5. REVERT each unit all-or-nothing in one transaction, NEWEST FIRST
+ *      (bulk_revert_undo.ts): exact when the key has BEFORE rows, inferred
+ *      (bulk_revert_legacy.ts) for a run made before the undo log. The cascade
+ *      targets a unit re-links are undeleted INSIDE its transaction, first —
+ *      they land or roll back with it.
+ *   6. DELETE the records the run created, where that is safe (D2).
+ * Observers and one activity row per written key follow each unit's COMMIT.
  *
- * Write path: the VERIFIED apply_value direct path (persistRecordKeys +
- * recordTimeMachine), NOT saveComponentData — only it threads the bulk id.
- * The chokepoint stamps the record's modified metadata like every PHP save.
+ * PERMISSION: the module gate is section/level 2 on the request seed; a run
+ * spans sections and components, so EACH unit is re-gated on every key's
+ * (section_tipo, tipo) SCHEMA pair — a composed unit ALSO on every dataframe
+ * slot its restore may write, which has no key of its own to be gated by —
+ * AND on the record's project scope (SEC-024
+ * §9.4 — the TM search applies no projects filter), skip-on-fail, never abort.
+ * A unit whose OWN record the run deleted (a revert's D2 delete, reverted in
+ * turn) is gated on the record's scope AFTER undeleting it, on the restored
+ * row, inside its transaction — the search cannot find a row that is not there.
+ * Record-level markers are gated on the section level and the record's scope,
+ * the delete door's own rule.
  *
- * DATAFRAME-PAIRED components take the SAME frame path as apply_value
- * (dataframe_restore.ts): the pre-batch snapshot's dd490 entries are replayed
- * into their slots and stripped out of the main column. PHP's bulk_revert did
- * neither — it fed the raw snapshot to set_data — which writes frame locators
- * into the main component's own key and leaves the slots at today's values.
- * That is the same corruption apply_value's strip exists to prevent, so the
- * two doors share one primitive rather than one of them keeping the defect
- * (deliberate divergence,
- * WC-2026-08-09-time-machine-restore-replays-paired-dataframe-frames).
- * A row whose pre-batch snapshot carries NO frames over LIVE frames is skipped
- * with a surfaced error instead of reverted (`refuseFramelessWipe` — the
- * unported capture half would make that revert an unrecoverable deletion).
+ * THE SKIP CHANNEL (SEC-16, WC-2026-09-03-bulk-revert-skipped-typed-entries,
+ * amended by WC-…-bulk-revert-undo-log): `data.skipped[]` holds TYPED entries
+ * `{reason, section_tipo?, tipo?, section_id?, lang?}`, never sentences. The
+ * bulk id is a small enumerable integer and the run's rows are found with no
+ * projects filter, so a unit's coordinates ride an entry ONLY once it has
+ * passed the scope gate (`inScope`); a denial is an `out_of_scope` entry with
+ * no coordinates (counted, never located); refusal TEXT (slot names, the
+ * exception message) goes to the server log with the request id.
  *
- * ATOMIC PER ROW, AND LOCKED FIRST (P1-9 / DATA-30, the same law `apply_value`
- * carries — gate `test/unit/bulk_operation_atomicity_native.test.ts`): every
- * read a row's revert depends on (the live frames the guard inspects, the
- * pre-revert items the cascade diffs against, the sibling languages the merge
- * keeps) happens INSIDE the row's transaction and BEHIND its `FOR UPDATE` row
- * lock, taken for every model — not only the lang-sliced one. The guard and
- * the pre-revert read used to run before the transaction opened and the lock
- * was taken only for lang-sliced models, so a portal main took NO lock at all
- * before `applyDataframeRestore`: a frame a curator committed in the
- * check-to-commit window was wiped by a plan built from a stale read, with
- * `ok:true` to both sides. A refusal raised inside the transaction rolls it
- * back, so a refused row writes NOTHING — no half-applied frames, no TM row.
- *
- * The observer cascade fires per reverted component, POST-COMMIT — PHP
- * reverted through `element->save()`, whose last act is
- * `propagate_to_observers()`.
- *
- * LANG SLICE (DATA-03, WC-2026-08-27-tm-lang-slice-restore-merge): a batch row's
- * pre-batch snapshot of a lang-sliced component is the EFFECTIVE-LANGUAGE SLICE
- * of that component, not its value. Writing it as the whole key deleted every
- * sibling language of every reverted component — the same defect `apply_value`
- * carries, with a whole batch's blast radius per click. This door merges through
- * the SAME helpers as that one (`mergeRestoredLangSlice` / `snapshotLangs` /
- * `tmAuditSlice`, imported from `tool_time_machine.ts`), so there is one law and
- * one implementation of it.
- *
- * THE SKIP CHANNEL (SEC-16, WC-2026-09-03-bulk-revert-skipped-typed-entries):
- * `data.skipped[]` is a list of TYPED entries `{reason, section_tipo?, tipo?,
- * section_id?}`, never sentences. The batch row set comes from a TM search with
- * NO projects filter and the bulk id is a small enumerable integer, so a
- * level-2 holder on ANY section could once read, off this channel, the
- * coordinates of every record outside their scope that a batch touched — plus
- * the raw Postgres/fs text of whatever threw. Now a row's coordinates ride an
- * entry ONLY once the row has passed the scope gate (`inScope`); a denial is an
- * `out_of_scope` entry with no coordinates (counted, never located); and the
- * refusal TEXT (frameless slot names, the exception message) goes to the server
- * log with the request id, never to the caller.
+ * THE REPORT: `data = {counter, unchanged, bulk_process_id, exact, skipped,
+ * inexact}` — `counter` the units written, `unchanged` the KEYS already at
+ * their pre-run value, `bulk_process_id` the REVERT's own id, `exact` 'full'
+ * (every unit exact, nothing skipped), 'none' (nothing reverted exactly) or
+ * 'partial', and `inexact[]` the writes that are not an exact inverse:
+ * `legacy_inference` / `legacy_born_in_run` (a legacy key) and
+ * `cascade_undelete` (the media and diffusion halves of a delete are not
+ * replayed as they were), `metadata_twin` (dd199/dd200 restored and their
+ * `data`-column twin RE-DERIVED from the restored value — the twin is a named
+ * exemption from the undo log, bulk_revert_undo.ts rederiveMetadataTwin).
  */
 
-import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
+import type { logActivity as logActivityType } from '../../../src/core/api/handlers/activity_log.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
-import {
-	absorbComponentItemIds,
-	readMatrixKeyForUpdate,
-} from '../../../src/core/db/matrix_write.ts';
+import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
-import {
-	ensureRecordGenerationTable,
-	tmEpochPredicate,
-} from '../../../src/core/db/record_generation.ts';
-import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
+import { ensureTmHistoryReady, tmEpochPredicate } from '../../../src/core/db/record_generation.ts';
+import { TM_IMAGE_ABSENT_COLUMN, TM_ROLE } from '../../../src/core/db/time_machine.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import {
 	getColumnNameByModel,
@@ -86,121 +78,135 @@ import {
 	getModelByTipo,
 } from '../../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
-import { isLangSlicedModel } from '../../../src/core/section/record/save_component.ts';
 import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
-import { getPermissions } from '../../../src/core/security/permissions.ts';
+import { getPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
-import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
+import {
+	claimBulkRevert,
+	isBulkRunLive,
+	releaseBulkRevert,
+	withLiveBulkRun,
+} from '../../../src/core/tools/bulk_run_registry.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
+import { revertComposedUnit } from './bulk_revert_composed.ts';
 import {
-	applyDataframeRestore,
-	composeTimeMachineSnapshot,
-	type DataframeSlotRestore,
-	planDataframeRestore,
-	refuseFramelessWipe,
-	resolveDataframeSlotTipos,
-} from './dataframe_restore.ts';
-import { propagateRestoreToObservers } from './restore_common.ts';
-import { mergeRestoredLangSlice, snapshotLangs, tmAuditSlice } from './tool_time_machine.ts';
+	planRun,
+	type RecordMarker,
+	type RevertKey,
+	RevertRefusal,
+	type RevertUnit,
+	type RunPlan,
+	type RunRow,
+	recordAddress,
+	unitReportKey,
+} from './bulk_revert_plan.ts';
+import {
+	assignCascadeMarkers,
+	type BornOutcome,
+	cascadeGroup,
+	deleteBornRecords,
+	goneBornAddresses,
+	isOwnRecord,
+	type RecordContext,
+	type RecordOutcome,
+	undeleteCascadeRecord,
+} from './bulk_revert_records.ts';
+import { revertUnit, type UnitResult } from './bulk_revert_undo.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';
 
 /**
- * Why a batch row was NOT reverted — a closed vocabulary, one code per branch
- * of the loop below. The wire carries the code; the WHY in words is the log's.
+ * Why a unit or record was NOT reverted — a closed vocabulary. The wire carries
+ * the code; the WHY in words is the log's.
  */
 export type BulkRevertSkipReason =
-	/** the caller lacks level 2 on the (section_tipo, tipo) pair OR the record
-	 *  is outside their project scope — one code for both halves, because
-	 *  telling them apart already says whether the record exists */
+	/** the caller lacks level 2 on a (section_tipo, tipo) pair of the unit, or
+	 *  the record is outside their project scope — one code for both halves,
+	 *  because telling them apart already says whether the record exists */
 	| 'out_of_scope'
-	/** no determinable pre-batch state (preBulkState found:false) */
+	/** legacy key: no pre-run row, and the record was not born in the run */
 	| 'no_pre_batch_state'
 	/** the model resolves to no matrix column, or the section to no table */
 	| 'no_column'
-	/** the snapshot carries no frames over LIVE frames (refuseFramelessWipe) */
-	| 'frameless_wipe'
-	/** a lang-sliced snapshot nothing can name a language for */
+	/** legacy key: a lang-sliced value nothing can name a language for */
 	| 'no_lang'
-	/** the row's revert threw; the exception text is in the server log */
+	/** the key changed after the run (or its record was deleted): restoring
+	 *  would destroy that change, so the whole unit is left as it is */
+	| 'changed_since_run'
+	/** something wrote the key BETWEEN two of the run's own writes without a
+	 *  pair (time machine off, another run, a direct write): the earliest
+	 *  BEFORE is no longer what undoing this run alone returns to */
+	| 'interleaved_write'
+	/** a record the run created was kept (see bulk_revert_records.ts) */
+	| 'created_record_kept'
+	/** a record the run's cascade deleted could not be undeleted (its
+	 *  address is occupied again) */
+	| 'cascade_delete_not_reverted'
+	/** the unit's revert threw; the exception text is in the server log */
 	| 'failed';
 
 /**
- * One `skipped[]` entry. Coordinates are present ONLY for a row the caller was
- * entitled to see (it passed the scope gate); an `out_of_scope` entry, or a
- * `failed` one from before the gate, carries the reason alone.
+ * One `skipped[]` entry. Coordinates are present ONLY for a unit the caller
+ * was entitled to see (it passed the scope gate); an `out_of_scope` entry, or
+ * a `failed` one from before the gate, carries the reason alone. `lang` names
+ * the language region of a lang-sliced key.
  */
 export interface BulkRevertSkipped {
 	reason: BulkRevertSkipReason;
 	section_tipo?: string;
 	tipo?: string;
 	section_id?: number;
+	lang?: string;
 }
 
-interface TmRow {
-	id: number;
-	section_id: number;
+/** Why a written key or record is not an exact inverse of the run. */
+export type BulkRevertInexactBasis =
+	| 'legacy_inference'
+	| 'legacy_born_in_run'
+	| 'cascade_undelete'
+	/** dd199/dd200 restored; their `data`-column twin re-derived, not replayed (a named exemption) */
+	| 'metadata_twin';
+
+/** One `inexact[]` entry — only ever for a unit or record that passed the scope gate. */
+export interface BulkRevertInexact {
+	basis: BulkRevertInexactBasis;
 	section_tipo: string;
+	section_id: number;
+	tipo?: string;
+	lang?: string;
+}
+
+/** The coordinates a report entry may carry (a key, or a record). */
+interface Located {
+	section_tipo: string;
+	section_id: number;
 	tipo: string;
-	/** NULLABLE in the table (`matrix_time_machine.lang`) — pre-migration rows
-	 *  carry no language, which is why the lang plan below has to name one. */
-	lang: string | null;
-	bulk_process_id: number | null;
-	data: unknown;
+	lang?: string;
 }
 
-/**
- * Given a component's TM history ordered id DESC (newest first) and the batch's
- * bulk_process_id, return the pre-batch data: the row immediately OLDER than
- * EVERY row belonging to the batch.
- *
- * (!) Skipping ALL of the batch's rows — not just the first one — is the PHP
- * shape: its inner loop `continue`s on each row whose bulk_process_id matches,
- * so a batch that touched the same component twice (a CSV import carrying the
- * record twice, a multi-lang run) still reverts to the value from BEFORE the
- * batch. Taking `idx + 1` blindly restored a value the batch itself wrote.
- *
- * `found:false` means "no pre-batch state could be determined" and the caller
- * MUST NOT write: PHP's loop simply runs off the end and saves nothing. The one
- * case where an empty value IS written is the component's first-ever change
- * (PHP sub_n_rows===1 → []).
- */
-export function preBulkState(
-	historyDesc: readonly { bulk_process_id: number | null; data: unknown }[],
-	targetBulkId: number,
-): { data: unknown; found: boolean } {
-	const idx = historyDesc.findIndex((row) => Number(row.bulk_process_id) === targetBulkId);
-	if (idx === -1) return { data: [], found: false };
-	// PHP sub_n_rows===1: the batch change is the only history row → blank it.
-	if (historyDesc.length === 1) return { data: [], found: true };
-	let older = idx + 1;
-	while (
-		older < historyDesc.length &&
-		Number(historyDesc[older]?.bulk_process_id) === targetBulkId
-	) {
-		older += 1;
-	}
-	const row = historyDesc[older];
-	// Every row belongs to the batch (and there is more than one): PHP writes
-	// nothing rather than blanking the component.
-	return row === undefined ? { data: [], found: false } : { data: row.data, found: true };
+/** Locate a key: `lang` only for a lang-sliced key, whose region it names. */
+function locateKey(key: RevertKey): Located {
+	return {
+		section_tipo: key.sectionTipo,
+		section_id: key.sectionId,
+		tipo: key.tipo,
+		lang: key.sliced ? key.lang : undefined,
+	};
 }
 
-/**
- * The frameless-wipe refusal, raised INSIDE a row's transaction so the rollback
- * writes nothing, and mapped right after it onto the closed skip vocabulary
- * (`frameless_wipe`). File-local on purpose: it is a control-flow marker
- * between the transaction body and the loop's catch, never a wire error — the
- * message is the guard's sentence, LOG-only (slot tipos), like every other
- * `detail` the skip channel keeps off the caller.
- */
-class FramelessWipeRefusal extends Error {}
+/** Locate a record marker (tipo = section_tipo, the TM's record-row convention). */
+function locateRecord(marker: RecordMarker): Located {
+	return {
+		section_tipo: marker.sectionTipo,
+		section_id: marker.sectionId,
+		tipo: marker.sectionTipo,
+	};
+}
 
 /** dd800 bulk-process record + label so this revert is itself revertible. */
 async function createRevertBulkProcess(label: string, userId: number): Promise<number> {
@@ -221,6 +227,7 @@ async function createRevertBulkProcess(label: string, userId: number): Promise<n
 						},
 					],
 					{ userId },
+					{ actor: userId },
 				);
 			}
 		} catch {
@@ -249,51 +256,103 @@ async function createRevertBulkProcess(label: string, userId: number): Promise<n
 }
 
 export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise<ToolResponse> {
-	const { options, userId, principal } = ctx;
-	const bulkProcessId = Number(options.bulk_process_id);
+	const bulkProcessId = Number(ctx.options.bulk_process_id);
 	if (!Number.isInteger(bulkProcessId) || bulkProcessId <= 0) {
 		throw new DedaloError('request.invalid_options', {
 			publicMessage: 'bulk_process_id must be a positive integer',
 		});
 	}
+	// D5: a run still writing its undo log is not revertable yet, and two
+	// reverts of one run would both read the log before either wrote.
+	if (isBulkRunLive(bulkProcessId) || !claimBulkRevert(bulkProcessId)) {
+		throw new DedaloError('tool.bulk_run_live', {
+			coordinates: { bulk_process_id: bulkProcessId },
+		});
+	}
+	try {
+		return await revertRun(ctx, bulkProcessId);
+	} finally {
+		releaseBulkRevert(bulkProcessId);
+	}
+}
 
-	// Every component write in the batch (id DESC).
-	await ensureRecordGenerationTable();
-	const batchRows = (await sql.unsafe(
-		// P0-14: a batch can span records, and a row written before the record at
-		// an address was reborn belongs to the DEAD one — reverting it would write
-		// a dead record's values into a living one.
-		`SELECT id, section_id, section_tipo, tipo, lang, bulk_process_id, data
+/**
+ * Every row of the run, every role, id ASC — the living generation's only
+ * (P0-14: a row written before an address was reborn belongs to the dead
+ * record; a bulk create at an explicit id opens that epoch too, create_record.ts
+ * recordBirthMarker) — EXCEPT a cascade-delete snapshot (role 4). That row
+ * describes a record the run DELETED, so it is a dead generation's by
+ * definition; a unit restoring a locator to its address must still meet it, and
+ * the undelete's identity test then refuses the record born there since
+ * (bulk_revert_records.ts) — dropping it would restore the locator onto that
+ * foreign record.
+ */
+async function loadRunRows(bulkProcessId: number): Promise<RunRow[]> {
+	await ensureTmHistoryReady();
+	const rows = (await sql.unsafe(
+		`SELECT id, section_id, section_tipo, tipo, lang, data, ${TM_IMAGE_ABSENT_COLUMN}, tm_role
 		 FROM matrix_time_machine
-		 WHERE bulk_process_id = $1 AND ${tmEpochPredicate()} ORDER BY id DESC`,
-		[bulkProcessId],
-	)) as TmRow[];
-	if (batchRows.length === 0) {
+		 WHERE bulk_process_id = $1
+		   AND (tm_role = $2 OR ${tmEpochPredicate()})
+		 ORDER BY id ASC`,
+		[bulkProcessId, TM_ROLE.cascadeDelete],
+	)) as RunRow[];
+	return rows.map((row) => ({
+		...row,
+		id: Number(row.id),
+		section_id: Number(row.section_id),
+		tm_role: row.tm_role === null ? null : Number(row.tm_role),
+	}));
+}
+
+/** The run's dd800 `created_date` (the legacy born-in-run rule), or null. */
+async function runCreatedDate(bulkProcessId: number): Promise<string | null> {
+	const table = await getMatrixTableFromTipo(BULK_PROCESS_SECTION_TIPO);
+	if (table === null) return null;
+	const record = await readMatrixRecord(table, BULK_PROCESS_SECTION_TIPO, bulkProcessId);
+	const created = (record?.columns.data as { created_date?: unknown } | null | undefined)
+		?.created_date;
+	return typeof created === 'string' && created !== '' ? created : null;
+}
+
+async function revertRun(ctx: ToolActionContext, bulkProcessId: number): Promise<ToolResponse> {
+	const rows = await loadRunRows(bulkProcessId);
+	if (rows.length === 0) {
 		throw new DedaloError('tool.target_not_found', {
 			coordinates: { bulk_process_id: bulkProcessId },
 			message: `No changes found for bulk_process_id ${bulkProcessId}`,
 		});
 	}
-
-	const label = String(options.bulk_revert_process_label ?? `Revert bulk process ${bulkProcessId}`);
-	const newBulkId = await createRevertBulkProcess(label, userId);
-
-	// Hoisted out of the loop: one dynamic import, not one per reverted row.
-	const { logActivity, hostFromClientIp } = await import(
-		'../../../src/core/api/handlers/activity_log.ts'
+	const plan = await planRun(rows);
+	const createdDate = await runCreatedDate(bulkProcessId);
+	const label = String(
+		ctx.options.bulk_revert_process_label ?? `Revert bulk process ${bulkProcessId}`,
 	);
-	const activityHost = hostFromClientIp(ctx.clientIp);
+	const newBulkId = await createRevertBulkProcess(label, ctx.userId);
+	// The revert is a bulk run too: while it writes, its own log is half-written.
+	return withLiveBulkRun(newBulkId, () =>
+		executeRevert(ctx, { bulkProcessId, newBulkId, plan, createdDate }),
+	);
+}
 
-	const requestId = toolRequestId(ctx);
+interface RevertRun {
+	bulkProcessId: number;
+	newBulkId: number;
+	plan: RunPlan;
+	createdDate: string | null;
+}
+
+/** The report under construction, and the one door every skip goes through. */
+function createReporter(requestId: string, bulkProcessId: number) {
 	const skipped: BulkRevertSkipped[] = [];
-	/** The coordinates of a row the caller may be told about; the log always may. */
-	const locate = (row: TmRow): string => `${row.section_tipo}/${row.tipo}#${row.section_id}`;
+	const inexact: BulkRevertInexact[] = [];
+	const tally = { counter: 0, unchanged: 0, exactDone: 0 };
 	/**
-	 * Refuse this row: the code goes on the wire, the coordinates only when the
-	 * row has passed the scope gate, and the words (if any) to the log.
+	 * Refuse a unit or record: the code goes on the wire, the coordinates only
+	 * when it has passed the scope gate, and the words (if any) to the log.
 	 */
 	const skip = (
-		row: TmRow,
+		row: Located,
 		reason: BulkRevertSkipReason,
 		inScope: boolean,
 		detail: string | null,
@@ -301,248 +360,491 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 	): void => {
 		skipped.push(
 			inScope
-				? { reason, section_tipo: row.section_tipo, tipo: row.tipo, section_id: row.section_id }
+				? {
+						reason,
+						section_tipo: row.section_tipo,
+						tipo: row.tipo,
+						section_id: row.section_id,
+						lang: row.lang,
+					}
 				: { reason },
 		);
-		const line = `[tool_time_machine/bulk_revert] request ${requestId}: bulk ${bulkProcessId} row ${locate(row)} skipped (${reason})${detail === null ? '' : `: ${detail}`}`;
+		const line = `[tool_time_machine/bulk_revert] request ${requestId}: bulk ${bulkProcessId} ${row.section_tipo}/${row.tipo}#${row.section_id} skipped (${reason})${detail === null ? '' : `: ${detail}`}`;
 		if (level === 'error') console.error(line);
 		else console.warn(line);
 	};
-	let counter = 0;
-	for (const row of batchRows) {
-		// Set ONLY after both halves of the per-row gate pass; the catch below
-		// reads it, so a throw from inside the gate itself locates nothing.
-		let inScope = false;
-		try {
-			const model = await getModelByTipo(row.tipo);
-			if (model === null || !model.startsWith('component_')) {
-				// Only component rows are reverted here (section restores = apply_value).
-				continue;
-			}
-			// Per-row (section_tipo, tipo) WRITE gate — skip on fail, never abort (PHP).
-			// SEC-024 §9.4 is the SECOND half: the batch row set comes from a TM
-			// search that applies NO projects filter, so a bulk id may name records
-			// outside the caller's scope. PHP asserts both here; only the schema
-			// half was ported.
-			if (
-				(await getPermissions(principal, row.section_tipo, row.tipo)) < 2 ||
-				!(await principalCanAccessRecord(row.section_tipo, row.section_id, principal))
-			) {
-				skip(row, 'out_of_scope', false, null);
-				continue;
-			}
-			inScope = true;
+	const markInexact = (row: Located, basis: BulkRevertInexactBasis): void => {
+		inexact.push({ basis, ...row });
+	};
+	return { skipped, inexact, tally, skip, markInexact };
+}
 
-			// Full per-component history (id DESC) → the pre-batch snapshot.
-			await ensureRecordGenerationTable();
-			const history = (await sql.unsafe(
-				// P0-14: preBulkState walks this history for the pre-batch snapshot;
-				// a dead generation's row must not be eligible to become it.
-				`SELECT bulk_process_id, data FROM matrix_time_machine
-				 WHERE tipo = $1 AND section_tipo = $2 AND section_id = $3
-				   AND ${tmEpochPredicate()} ORDER BY id DESC`,
-				[row.tipo, row.section_tipo, row.section_id],
-			)) as { bulk_process_id: number | null; data: unknown }[];
-			const { data: revertData, found } = preBulkState(history, bulkProcessId);
-			if (!found) {
-				// No determinable pre-batch state — PHP saves nothing rather than
-				// blanking the component. Surfaced, never silent.
-				skip(row, 'no_pre_batch_state', inScope, null);
-				continue;
-			}
+type Reporter = ReturnType<typeof createReporter>;
 
-			const column = getColumnNameByModel(model);
-			const table = await getMatrixTableFromTipo(row.section_tipo);
-			if (column === null || table === null) {
-				skip(row, 'no_column', inScope, `no column/table for ${model}/${row.section_tipo}`);
-				continue;
-			}
-			const writeTarget = { table, sectionTipo: row.section_tipo, sectionId: row.section_id };
+/**
+ * Level 2 on EVERY key's (section_tipo, tipo) pair — and, for a unit of a main
+ * with slots (composed or legacy), on every slot tipo it may write (the slots have no key of their own in the
+ * unit, so without this a frame could be written on the main's grant alone) —
+ * and the record in scope —
+ * unless `recordScopeDeferred`: the unit's own record is a deleted one it
+ * undeletes first, whose scope the undelete judges on the restored row
+ * (bulk_revert_records.ts restoreDeletedRecord); the search cannot find a row
+ * that is not there — or its record was BORN in the run and is gone
+ * (goneBornAddresses: nothing to write, and nothing the search could find).
+ */
+async function unitInScope(
+	unit: RevertUnit,
+	principal: Principal,
+	recordScopeDeferred: boolean,
+): Promise<boolean> {
+	const tipos = [...unit.keys.map((key) => key.tipo), ...unit.slotTipos];
+	for (const tipo of new Set(tipos)) {
+		if ((await getPermissions(principal, unit.sectionTipo, tipo)) < 2) return false;
+	}
+	return (
+		recordScopeDeferred || principalCanAccessRecord(unit.sectionTipo, unit.sectionId, principal)
+	);
+}
 
-			// int-canonical convergence on the reverted value (WC-2026-08-10-
-			// section-id-int-canonical D6.2): pre-migration TM states carry
-			// string-form addresses; converting on the way back in keeps the
-			// revert from undoing the sweep. Same kernel, same rule. Done BEFORE
-			// the frame strip/plan so both read the canonical addresses.
-			const revertContainer = { value: revertData };
-			await normalizeRestoredSectionIds(revertContainer);
-			const canonicalRevertData = revertContainer.value;
+async function executeRevert(ctx: ToolActionContext, run: RevertRun): Promise<ToolResponse> {
+	const { userId, principal } = ctx;
+	const requestId = toolRequestId(ctx);
+	const report = createReporter(requestId, run.bulkProcessId);
+	const { skip } = report;
+	const { logActivity, hostFromClientIp } = await import(
+		'../../../src/core/api/handlers/activity_log.ts'
+	);
+	const activity = { logActivity, host: hostFromClientIp(ctx.clientIp), userId };
+	// The revert's units per record (newest first, the order it applies them):
+	// what a cascade record is judged against (bulk_revert_records.ts producedStateOf).
+	const unitsByRecord = new Map<string, RevertUnit[]>();
+	for (const unit of run.plan.units) {
+		const address = recordAddress(unit.sectionTipo, unit.sectionId);
+		unitsByRecord.set(address, [...(unitsByRecord.get(address) ?? []), unit]);
+	}
+	const recordContext = {
+		principal,
+		userId,
+		newBulkId: run.newBulkId,
+		keyAddresses: run.plan.keyAddresses,
+		unitsByRecord,
+	};
+	// Records the run created that are GONE are at their pre-run state: never
+	// undeleted, never scope-searched (goneBornAddresses).
+	const goneBorn = await goneBornAddresses(run.plan.births);
+	const { byUnit, standalone, children } = assignCascadeMarkers(
+		run.plan.units,
+		run.plan.cascadeDeletes.filter(
+			(marker) => !goneBorn.has(recordAddress(marker.sectionTipo, marker.sectionId)),
+		),
+	);
 
-			// A `component_dataframe` row IS a slot: its snapshot's dd490 entries
-			// are its own value, so it takes neither the frame strip nor a slot
-			// plan (there is no TM preview to disagree with here, unlike
-			// apply_value — see that door's header).
-			const isSlotRow = model === 'component_dataframe';
-			const mainData = isSlotRow
-				? canonicalRevertData
-				: stripDataframeFramesFromTmMain(model, canonicalRevertData);
-			const framePlan: DataframeSlotRestore[] = isSlotRow
-				? []
-				: await planDataframeRestore(
-						row.tipo,
-						canonicalRevertData,
-						await resolveDataframeSlotTipos(row.tipo),
-					);
-
-			// THE LANG PLAN (DATA-03). `revertLangs` is the set of languages this
-			// row's snapshot speaks for — the only ones the revert may replace. For
-			// a model the engine does not slice by language it stays null and the
-			// key is replaced whole, exactly as before (merging there would
-			// resurrect locators and select values a later save legitimately
-			// removed).
-			const langSliced = isLangSlicedModel(model);
-			const snapshotItems = Array.isArray(mainData) ? mainData : [];
-			// Not gated on that array shape: a NULL or scalar snapshot is the EMPTY
-			// SLICE of its own language, never a licence to replace the key.
-			const rowLang = row.lang === null || row.lang === '' ? null : row.lang;
-			const revertLangs = langSliced ? snapshotLangs(snapshotItems, rowLang ?? '') : null;
-			// The language the audit row is TAGGED with and SLICED to — both from
-			// the same source, so the row this door writes is one-language by
-			// construction (tmAuditSlice). The batch row's own lang column names it;
-			// a row without one (pre-migration) is named by its snapshot when the
-			// snapshot names exactly one language.
-			const namedLangs = [...(revertLangs ?? [])].filter((entry) => entry !== '');
-			const auditLang = rowLang ?? (namedLangs.length === 1 ? (namedLangs[0] as string) : null);
-			if (langSliced && auditLang === null) {
-				// Nothing here can say WHICH language this snapshot speaks for, and
-				// unlike apply_value there is no request lang to fall back on. A guess
-				// deletes curated content nothing can name — refuse this row
-				// (surfaced in `skipped`), never the batch.
-				skip(row, 'no_lang', inScope, null);
-				continue;
-			}
-
-			// What this revert WRITES: the snapshot for an unsliced model, the
-			// snapshot merged over the languages it does not speak for otherwise.
-			// Declared out here because the observer cascade below diffs against it
-			// — fed the slice, it would report every surviving sibling language as
-			// a removed target and unwire mirrors the revert never touched.
-			let revertedValue: unknown = mainData;
-			// The locators this revert DROPS — the observer cascade needs them.
-			// Read under the lock, with everything else the row depends on.
-			let preRevertItems: unknown[] = [];
-
-			try {
-				await withTransaction(async () => {
-					// THE ROW LOCK, FIRST AND UNCONDITIONALLY (P1-9 / DATA-30; the
-					// header). Every model, not only the lang-sliced one: it is the
-					// same row this revert is about to write, and a portal main that
-					// took no lock had its curator's fresh frame wiped by a plan built
-					// from a read that predated it. One lock, one view: the guard, the
-					// pre-revert items and the merge all read behind it.
-					const lockedItems = await readMatrixKeyForUpdate(
-						table,
-						row.section_tipo,
-						row.section_id,
-						column as MatrixJsonbColumn,
-						row.tipo,
-					);
-					preRevertItems = Array.isArray(lockedItems) ? lockedItems : [];
-
-					// Same frameless-wipe guard as apply_value: a snapshot with no
-					// frames over live frames would DELETE them unrecoverably (the
-					// CAPTURE half is unported — dataframe_restore.ts). Raised INSIDE
-					// the transaction so the refusal rolls back and writes nothing;
-					// surfaced per row (the catch below maps it to `frameless_wipe`),
-					// never silent, and this component is left untouched rather than
-					// half-reverted.
-					const framelessRefusal = await refuseFramelessWipe(writeTarget, row.tipo, framePlan);
-					if (framelessRefusal !== null) throw new FramelessWipeRefusal(framelessRefusal);
-
-					// The merge, over the value read under the lock above: this is a
-					// read-modify-write of a whole component key, so an unlocked read
-					// would silently revert whatever a concurrent save committed on
-					// the sibling languages in between. null = the ROW does not exist;
-					// there is nothing to merge over.
-					if (revertLangs !== null) {
-						revertedValue = mergeRestoredLangSlice(lockedItems ?? [], snapshotItems, revertLangs);
-					}
-
-					// Frames FIRST (PHP apply_value's order; see dataframe_restore.ts).
-					await applyDataframeRestore(writeTarget, framePlan);
-					await persistRecordKeys(
-						writeTarget,
-						[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertedValue }],
-						{ userId },
-					);
-					// Reverted items carry explicit ids; raise the counter so a later
-					// insert cannot mint a duplicate (PHP raises on every set_data).
-					await absorbComponentItemIds(
-						table,
-						row.section_tipo,
-						row.section_id,
-						row.tipo,
-						Array.isArray(revertedValue) ? revertedValue : [],
-					);
-					// ONE ROW IS ONE LANGUAGE (tmAuditSlice): the audit row this revert
-					// appends carries the batch row's own language, sliced out of the
-					// post-merge value, so reverting THE REVERT replaces that language
-					// and leaves the others standing.
-					await recordTimeMachine(
-						{
-							sectionTipo: row.section_tipo,
-							sectionId: row.section_id,
-							componentTipo: row.tipo,
-							// The column is nullable; the UNSLICED branch preserves whatever
-							// the batch row held (PHP wrote it verbatim), so the cast widens
-							// the type, never the value.
-							lang: (langSliced ? auditLang : row.lang) as string,
-							userId,
-							data: composeTimeMachineSnapshot(
-								langSliced ? tmAuditSlice(revertedValue, auditLang as string) : revertedValue,
-								framePlan,
-							),
-							bulkProcessId: newBulkId,
-						},
-						dbTimestamp(),
-					);
-				});
-			} catch (error) {
-				// The guard's refusal, rolled back: the row is skipped on the closed
-				// vocabulary; anything else is the row's failure (the outer catch).
-				if (!(error instanceof FramelessWipeRefusal)) throw error;
-				skip(row, 'frameless_wipe', inScope, error.message);
-				continue;
-			}
-
-			// POST-COMMIT (a cascade hop refuses to run inside a transaction).
-			await propagateRestoreToObservers(
-				row.tipo,
-				row.section_tipo,
-				row.section_id,
-				preRevertItems,
-				revertedValue,
-				userId,
-			);
-			// One activity row PER REVERTED COMPONENT — PHP logs inside its loop
-			// too (tool_time_machine :419). A wide bulk therefore appends many
-			// rows; that is the audit trail behaving correctly, since each row is
-			// a distinct component whose value changed.
-			await logActivity({
-				what: 'RECOVER COMPONENT',
-				tipo: row.section_tipo, // WHERE = the SECTION tipo (PHP), not row.tipo
-				userId,
-				host: activityHost,
-				data: {
-					msg: 'Recovered component data from time machine',
-					model,
-					section_id: row.section_id,
-					section_tipo: row.section_tipo,
-					table,
-					tm_id: newBulkId,
-				},
-			});
-			counter += 1;
-		} catch (error) {
-			// The exception text (Postgres, fs — internal names and paths) is for
-			// the log; the caller learns that the row failed, and where, only if
-			// the row was theirs to see.
-			skip(row, 'failed', inScope, error instanceof Error ? error.message : String(error), 'error');
-		}
+	// 4. UNDELETE the cascade targets NO unit re-links, on their own gate (D3),
+	//    newest first — each WITH its nested children, as one group. A target a
+	//    unit re-links is undeleted inside that unit (step 5), so the two land or
+	//    roll back together.
+	for (const marker of standalone) {
+		await undeleteStandaloneGroup(cascadeGroup(marker, children), recordContext, report, activity);
 	}
 
-	// `skipped` is the per-row refusal/failure list — a NON-FATAL part of the
-	// payload (the batch never aborts on one row), so it rides inside `data`
-	// instead of the legacy body's `errors[]`, which meant "the call failed".
-	return ok({ counter, bulk_process_id: newBulkId, skipped }, { requestId });
+	// 5. THE UNITS, newest first — the records with a unit not reverted cleanly
+	//    are BLOCKED from step 6: a skipped key may still hold the run's data. A
+	//    key the plan could not place is such a unit: `failed`, located nowhere.
+	const blocked = new Set<string>();
+	for (const failure of run.plan.unplanned) {
+		const row = { section_tipo: failure.sectionTipo, section_id: failure.sectionId, tipo: '' };
+		skip(row, 'failed', false, failure.detail, 'error');
+		blocked.add(recordAddress(failure.sectionTipo, failure.sectionId));
+	}
+	const unitContext = {
+		principal,
+		userId,
+		newBulkId: run.newBulkId,
+		runCreatedDate: run.createdDate,
+		bulkId: run.bulkProcessId,
+		keyAddresses: run.plan.keyAddresses,
+		unitsByRecord,
+		goneBorn,
+	};
+	// TWO sets, never one (a refused marker must not read as handled): `landed`
+	// = cascade targets a committed unit really brought back (or found already
+	// back) — a later unit linking them skips them; `reported` = targets whose
+	// refusal is already on the report — de-duplication of the REPORT only. A
+	// target that refused one unit stays pending for every other unit linking
+	// it, and refuses that unit the same way: never a locator restored onto a
+	// missing or foreign record because an earlier unit's refusal marked it done.
+	const landed = new Set<RecordMarker>();
+	const reported = new Set<RecordMarker>();
+	for (const unit of run.plan.units) {
+		const row = locateKey(unitReportKey(unit));
+		// Set ONLY after the scope gate passes; the catch below reads it, so a
+		// throw from inside the gate itself locates nothing.
+		let inScope = false;
+		try {
+			const pending = (byUnit.get(unit) ?? []).filter((marker) => !landed.has(marker));
+			// The unit's OWN record deleted (and not yet undeleted by another
+			// unit): its scope is judged on the restored row, in the prelude.
+			// A record born in the run and gone has no row to search: its keys are
+			// unchanged (revertKey), and a row that reappears refuses the unit.
+			const deferred =
+				pending.some((marker) => isOwnRecord(unit, marker)) ||
+				goneBorn.has(recordAddress(unit.sectionTipo, unit.sectionId));
+			if (!(await unitInScope(unit, principal, deferred))) {
+				skip(row, 'out_of_scope', false, null);
+				blocked.add(recordAddress(unit.sectionTipo, unit.sectionId));
+				continue;
+			}
+			inScope = !deferred;
+			const result = await revertUnit(
+				unit,
+				unitContext,
+				async () => {
+					const prelude = await undeleteRelinked(unit, pending, children, landed, recordContext);
+					inScope = true;
+					return prelude;
+				},
+				revertComposedUnit,
+			);
+			for (const member of result.prelude) {
+				landed.add(member.marker);
+				await reportLanded(member, report, activity);
+			}
+			await afterUnitCommit(result, report, activity, run.newBulkId);
+		} catch (error) {
+			blocked.add(recordAddress(unit.sectionTipo, unit.sectionId));
+			if (error instanceof RevertRefusal) {
+				// A target that refused its unit is reported BY that refusal (located
+				// at the unit, which passed its gate — never at the target, which did
+				// not), not a second time below.
+				if (error.marker !== undefined) reported.add(error.marker);
+				const located = error.reason !== 'out_of_scope' && inScope;
+				skip(locateKey(error.key), error.reason, located, error.message);
+			} else {
+				skip(
+					row,
+					'failed',
+					inScope,
+					error instanceof Error ? error.message : String(error),
+					'error',
+				);
+			}
+		}
+	}
+	// A cascade target whose every re-linking unit was refused STAYS deleted:
+	// bringing it back without the link would leave a record no frame or
+	// locator references — a state it was never in. Counted, never located (no
+	// gate has passed for the target itself).
+	// Its nested children stay deleted with it.
+	reportUnlinkedTargets(byUnit, children, landed, reported, report);
+
+	// 6. THE RECORDS BORN IN THE RUN (D2). Every marker gets its own outcome —
+	//    a throw for one is that marker's `failed` (deleteBornRecords).
+	const outcomes = await deleteBornRecords(run.plan.births, recordContext, blocked);
+	for (const [marker, outcome] of outcomes) reportRecord(report, marker, outcome, null);
+
+	const { skipped, inexact, tally } = report;
+	const exact =
+		skipped.length === 0 && inexact.length === 0
+			? 'full'
+			: tally.exactDone === 0
+				? 'none'
+				: 'partial';
+	// `skipped` / `inexact` are NON-FATAL parts of the payload (the run never
+	// aborts on one unit), so they ride inside `data`.
+	return ok(
+		{
+			counter: tally.counter,
+			unchanged: tally.unchanged,
+			bulk_process_id: run.newBulkId,
+			exact,
+			skipped,
+			inexact,
+		},
+		{ requestId },
+	);
+}
+
+/**
+ * One cascade target a unit's transaction handled: undeleted (`done`), found
+ * already back as the snapshot says (`present`), or found back with a later
+ * write it must not overwrite (`kept`).
+ */
+interface Relinked {
+	marker: RecordMarker;
+	kind: 'done' | 'present' | 'kept';
+	afterCommit?: () => Promise<void>;
+}
+
+/** Report one handled cascade target, after its transaction committed. */
+async function reportLanded(
+	member: Relinked,
+	report: Reporter,
+	activity: ActivitySink,
+): Promise<void> {
+	await member.afterCommit?.();
+	if (member.kind === 'kept') {
+		// Its row exists, so its own scope gate passed (mayUndelete): located.
+		report.skip(locateRecord(member.marker), 'cascade_delete_not_reverted', true, 'written since');
+	} else if (member.kind === 'done') {
+		report.markInexact(locateRecord(member.marker), 'cascade_undelete');
+		await logRecover(activity, member.marker);
+	}
+}
+
+/** Report every re-linked target (and its nested children) that never came back. */
+function reportUnlinkedTargets(
+	byUnit: ReadonlyMap<RevertUnit, readonly RecordMarker[]>,
+	children: ReadonlyMap<RecordMarker, readonly RecordMarker[]>,
+	landed: ReadonlySet<RecordMarker>,
+	reported: Set<RecordMarker>,
+	report: Reporter,
+): void {
+	for (const markers of byUnit.values()) {
+		for (const marker of markers.flatMap((root) => cascadeGroup(root, children))) {
+			if (landed.has(marker) || reported.has(marker)) continue;
+			reported.add(marker);
+			report.skip(
+				locateRecord(marker),
+				'cascade_delete_not_reverted',
+				false,
+				'its re-linking unit was not reverted',
+			);
+		}
+	}
+}
+
+/** Thrown inside a standalone group's transaction: one member did not come back. */
+class GroupRefused extends Error {
+	constructor(
+		readonly marker: RecordMarker,
+		readonly outcome: RecordOutcome,
+	) {
+		super(`cascade group member ${describeRecord(marker)} did not come back`);
+	}
+}
+
+/**
+ * Undelete a STANDALONE cascade group — a target no unit re-links, and its
+ * nested children (assignCascadeMarkers) — parent first, in ONE transaction:
+ * the whole group lands, or none of it does (a child that cannot come back
+ * would leave the parent's restored frames pointing at a missing record; a
+ * child back without its parent is an orphan). The refusing member is
+ * reported by its own outcome, the rest `cascade_delete_not_reverted`; the
+ * file halves of the landed members run after COMMIT.
+ */
+async function undeleteStandaloneGroup(
+	group: readonly RecordMarker[],
+	context: RecordContext,
+	report: Reporter,
+	activity: ActivitySink,
+): Promise<void> {
+	let landed: Relinked[];
+	try {
+		landed = await withTransaction(async () => {
+			const members: Relinked[] = [];
+			for (const marker of group) {
+				const outcome = await undeleteCascadeRecord(marker, context);
+				if (!isHandled(outcome)) throw new GroupRefused(marker, outcome);
+				members.push(relinkedOf(marker, outcome));
+			}
+			return members;
+		});
+	} catch (error) {
+		reportGroupFailure(group, error, report);
+		return;
+	}
+	for (const member of landed) await reportLanded(member, report, activity);
+}
+
+/** An undelete outcome that leaves the record there as the run's referrers expect. */
+function isHandled(
+	outcome: RecordOutcome,
+): outcome is Extract<RecordOutcome, { kind: 'done' | 'present' | 'kept' }> {
+	return outcome.kind === 'done' || outcome.kind === 'present' || outcome.kind === 'kept';
+}
+
+/** The Relinked of a handled outcome. */
+function relinkedOf(
+	marker: RecordMarker,
+	outcome: Extract<RecordOutcome, { kind: 'done' | 'present' | 'kept' }>,
+): Relinked {
+	return {
+		marker,
+		kind: outcome.kind,
+		afterCommit: outcome.kind === 'done' ? outcome.afterCommit : undefined,
+	};
+}
+
+/** Report a standalone group that rolled back: the cause, then every other member. */
+function reportGroupFailure(
+	group: readonly RecordMarker[],
+	error: unknown,
+	report: Reporter,
+): void {
+	const refused = error instanceof GroupRefused ? error.marker : (group[0] as RecordMarker);
+	if (error instanceof GroupRefused) {
+		reportRecord(report, error.marker, error.outcome, 'cascade_undelete');
+	} else {
+		const detail = error instanceof Error ? error.message : String(error);
+		report.skip(locateRecord(refused), 'failed', false, detail, 'error');
+	}
+	for (const marker of group) {
+		if (marker === refused) continue;
+		report.skip(
+			locateRecord(marker),
+			'cascade_delete_not_reverted',
+			false,
+			`its cascade group did not come back (${describeRecord(refused)})`,
+		);
+	}
+}
+
+/**
+ * The prelude of a unit's transaction: undelete the cascade targets it
+ * re-links (newest first), each followed by its nested children (parent
+ * first). A target — or a child of one — that cannot come back (its address
+ * taken again by another record, its section not writable, out of scope)
+ * REFUSES the whole unit, so no frame or locator is restored onto a missing or
+ * foreign record and no child comes back without its parent. A target whose
+ * row is still there AS THE SAME RECORD (birth identity) never refuses: its
+ * keys are put back, or left as a later write left them (`kept`, reported at
+ * the record), or it is already back (`present`, a repeat revert).
+ */
+async function undeleteRelinked(
+	unit: RevertUnit,
+	markers: readonly RecordMarker[],
+	children: ReadonlyMap<RecordMarker, readonly RecordMarker[]>,
+	landed: ReadonlySet<RecordMarker>,
+	context: RecordContext,
+): Promise<Relinked[]> {
+	const prelude: Relinked[] = [];
+	const key = unitReportKey(unit);
+	for (const root of markers) {
+		for (const marker of cascadeGroup(root, children)) {
+			if (landed.has(marker)) continue;
+			prelude.push(await undeleteForUnit(unit, key, marker, marker === root, context));
+		}
+	}
+	return prelude;
+}
+
+/**
+ * One member of a unit's prelude. A REFERENCING unit's gate stands for a
+ * target it links directly; the unit's own record, and a nested child (linked
+ * by its parent's snapshot, not by the unit), are judged on the restored row.
+ */
+async function undeleteForUnit(
+	unit: RevertUnit,
+	key: RevertKey,
+	marker: RecordMarker,
+	linkedByUnit: boolean,
+	context: RecordContext,
+): Promise<Relinked> {
+	const outcome = await undeleteCascadeRecord(
+		marker,
+		context,
+		linkedByUnit && !isOwnRecord(unit, marker),
+	);
+	if (outcome.kind === 'out_of_scope') {
+		throw new RevertRefusal(
+			'out_of_scope',
+			key,
+			`cascade target ${describeRecord(marker)} out of scope`,
+			marker,
+		);
+	}
+	if (outcome.kind === 'refused') {
+		throw new RevertRefusal(
+			outcome.reason,
+			key,
+			`cascade target ${describeRecord(marker)} could not be undeleted`,
+			marker,
+		);
+	}
+	return relinkedOf(marker, outcome);
+}
+
+/** A record marker's coordinates for the LOG. */
+function describeRecord(marker: RecordMarker): string {
+	return `${marker.sectionTipo}#${marker.sectionId}`;
+}
+
+/** Map one record marker's outcome onto the report. */
+function reportRecord(
+	report: Reporter,
+	marker: RecordMarker,
+	outcome: BornOutcome,
+	doneBasis: BulkRevertInexactBasis | null,
+): void {
+	const row = locateRecord(marker);
+	if (outcome.kind === 'out_of_scope') report.skip(row, outcome.kind, false, null);
+	// Located only when its scope gate (bornGate) passed before the throw.
+	else if (outcome.kind === 'failed')
+		report.skip(row, 'failed', outcome.located, outcome.detail, 'error');
+	else if (outcome.kind === 'refused') report.skip(row, outcome.reason, true, null);
+	else if (outcome.kind === 'kept') report.skip(row, 'cascade_delete_not_reverted', true, null);
+	else if (outcome.kind === 'present') return;
+	else if (doneBasis !== null) report.markInexact(row, doneBasis);
+	else report.tally.exactDone += 1;
+}
+
+interface ActivitySink {
+	logActivity: typeof logActivityType;
+	host: string;
+	userId: number;
+}
+
+/**
+ * POST-COMMIT for one unit: ONE activity row PER WRITTEN KEY — PHP logs inside
+ * its loop too (tool_time_machine :419). The observer cascade of the unit's
+ * keys is not fired here: every key went through the write chokepoint, whose
+ * obligation ledger drained it after the unit's COMMIT (CLOSURE_PLAN Step 2).
+ */
+async function afterUnitCommit(
+	result: UnitResult,
+	report: Reporter,
+	activity: ActivitySink,
+	newBulkId: number,
+): Promise<void> {
+	// `counter` counts UNITS written; `unchanged` counts KEYS already at their
+	// pre-run value (WC …-bulk-revert-undo-log §5) — a unit with some keys
+	// written and some unchanged adds to both.
+	if (result.written.length > 0) report.tally.counter += 1;
+	report.tally.unchanged += result.unchanged;
+	report.tally.exactDone += result.unchanged;
+	for (const written of result.written) {
+		const { key } = written;
+		if (written.inexact === null) report.tally.exactDone += 1;
+		else report.markInexact(locateKey(key), written.inexact);
+		await activity.logActivity({
+			what: 'RECOVER COMPONENT',
+			tipo: key.sectionTipo, // WHERE = the SECTION tipo (PHP), not the component
+			userId: activity.userId,
+			host: activity.host,
+			data: {
+				msg: 'Recovered component data from time machine',
+				model: key.model,
+				section_id: key.sectionId,
+				section_tipo: key.sectionTipo,
+				table: written.table,
+				tm_id: newBulkId,
+			},
+		});
+	}
+}
+
+/** The RECOVER SECTION activity row of an undeleted record. */
+async function logRecover(activity: ActivitySink, marker: RecordMarker): Promise<void> {
+	await activity.logActivity({
+		what: 'RECOVER SECTION',
+		tipo: marker.sectionTipo,
+		userId: activity.userId,
+		host: activity.host,
+		data: {
+			msg: 'Recovered section record from time machine',
+			section_id: marker.sectionId,
+			section_tipo: marker.sectionTipo,
+			tm_id: marker.row.id,
+		},
+	});
 }

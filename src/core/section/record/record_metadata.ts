@@ -29,6 +29,7 @@
  * must not, itself, mark the record modified-now.
  */
 
+import { AUDIT_TIPOS } from '../../concepts/section.ts';
 import { readMatrixRecord } from '../../db/matrix.ts';
 import { updateMatrixRecord } from '../../db/matrix_write.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
@@ -40,6 +41,47 @@ export interface RecordMetadataPatch {
 	createdDate?: string;
 	/** The users-section id of the record's author. */
 	createdByUserId?: number;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** A dd_date {year, month, day, …} → the 'YYYY-MM-DD HH:MM:SS' the `data` column stores. */
+function ddDateToDbTimestamp(date: Record<string, unknown>): string | null {
+	const year = Number(date.year);
+	if (!Number.isFinite(year)) return null;
+	const pad = (value: unknown, fallback: number): string =>
+		String(Number.isFinite(Number(value)) ? Number(value) : fallback).padStart(2, '0');
+	const yyyy = (year < 0 ? '-' : '') + String(Math.abs(year)).padStart(4, '0');
+	return `${yyyy}-${pad(date.month, 1)}-${pad(date.day, 1)} ${pad(date.hour, 0)}:${pad(date.minute, 0)}:${pad(date.second, 0)}`;
+}
+
+/**
+ * The `data`-column twin an AUDIT component's value implies: dd199 (created
+ * date, its first item's `start`) → `createdDate`; dd200 (created-by user, its
+ * first locator) → `createdByUserId`. `{}` for any other tipo, or a value that
+ * implies nothing. THE ONE DERIVATION — the CSV importer writes the twin with
+ * it, and the bulk revert re-derives the twin with it after restoring dd199 /
+ * dd200, so the two stores cannot disagree by construction.
+ */
+export function metadataPatchFromAuditValue(tipo: string, value: unknown): RecordMetadataPatch {
+	const first = Array.isArray(value) ? value[0] : undefined;
+	if (!isObject(first)) return {};
+	if (tipo === AUDIT_TIPOS.createdDate && isObject(first.start)) {
+		const stamp = ddDateToDbTimestamp(first.start);
+		return stamp === null ? {} : { createdDate: stamp };
+	}
+	if (tipo === AUDIT_TIPOS.createdByUser && first.section_id !== undefined) {
+		const userId = Number(first.section_id);
+		return Number.isFinite(userId) ? { createdByUserId: userId } : {};
+	}
+	return {};
+}
+
+/** Whether a tipo is one of the two audit components the `data` column twins. */
+export function isMetadataTwinned(tipo: string): boolean {
+	return tipo === AUDIT_TIPOS.createdDate || tipo === AUDIT_TIPOS.createdByUser;
 }
 
 /**

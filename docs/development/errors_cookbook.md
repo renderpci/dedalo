@@ -99,7 +99,7 @@ a code needing a different HTTP status is always a *different* code.)
 ```
 
 **2 — the label**, sorted, in `src/core/labels/master.json`, in the **same commit** (its
-`{param}` placeholders must equal `details_keys`, both ways; a per-language translation is
+`${param}` placeholders must equal `details_keys`, both ways (with the `$`: a bare `{param}` is shown to the user verbatim, and `error_registry_native` refuses it); a per-language translation is
 optional and goes under the same key in `src/core/labels/catalog/lg-spa.json`):
 
 ```json

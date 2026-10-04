@@ -66,6 +66,7 @@
 import '../src/core/components/registry.ts';
 import { MATRIX_JSONB_COLUMNS, MATRIX_TABLE_ALLOWLIST } from '../src/core/db/matrix.ts';
 import { closeDatabasePool, sql } from '../src/core/db/postgres.ts';
+import { tmEpochPredicate, tmVisiblePredicate } from '../src/core/db/record_generation.ts';
 
 /** A reserved connection with the raw `unsafe` runner the proof needs. */
 interface Reserved {
@@ -219,8 +220,13 @@ function absorbedTailQuery(table: string): string {
  * characters backslash + quote, which is what the comparison strips.)
  *
  * Only the UPDATE-with-history case leaves this trace — see WHAT IT CANNOT DETECT.
+ *
+ * `history` narrows the walk to the VISIBLE history of the living generation
+ * (tmHistoryNarrowing): a bulk run's hidden BEFORE image sits between two
+ * visible versions and would otherwise be read as one of them.
  */
-const QUOTES_DELETED_QUERY = `
+function quotesDeletedQuery(history: string): string {
+	return `
 	WITH versions AS (
 		SELECT section_tipo,
 		       section_id,
@@ -231,6 +237,7 @@ const QUOTES_DELETED_QUERY = `
 		           PARTITION BY section_tipo, section_id, tipo, lang ORDER BY id
 		       ) AS previous_body
 		  FROM matrix_time_machine
+		 WHERE ${history}
 	)
 	SELECT section_tipo,
 	       tipo                              AS component_tipo,
@@ -243,6 +250,32 @@ const QUOTES_DELETED_QUERY = `
 	   AND replace(previous_body, chr(92) || chr(34), '') = body
 	 GROUP BY 1, 2
 	 ORDER BY 3 DESC`;
+}
+
+/**
+ * The history narrowing this installation can express — the SAME predicates
+ * every engine history reader splices (record_generation.ts withTmHistory),
+ * each included only when its schema exists. The scan is READ ONLY, so it
+ * cannot create the generation store the way ensureRecordGenerationTable does:
+ * an absent store means no record was ever reborn (nothing to fence), an absent
+ * `tm_role` column means the 0010 migration has not run (no undo-log row can
+ * exist). Neither absence narrows anything away.
+ */
+async function tmHistoryNarrowing(reserved: Reserved): Promise<string> {
+	const rows = (await reserved.unsafe(
+		`SELECT
+		   EXISTS (SELECT 1 FROM information_schema.columns
+		            WHERE table_schema='public' AND table_name='matrix_time_machine'
+		              AND column_name='tm_role') AS has_role,
+		   EXISTS (SELECT 1 FROM information_schema.tables
+		            WHERE table_schema='public'
+		              AND table_name='dedalo_ts_record_generation') AS has_generation`,
+	)) as { has_role: boolean; has_generation: boolean }[];
+	const predicates: string[] = [];
+	if (rows[0]?.has_role === true) predicates.push(tmVisiblePredicate());
+	if (rows[0]?.has_generation === true) predicates.push(tmEpochPredicate());
+	return predicates.length === 0 ? 'true' : predicates.join(' AND ');
+}
 
 interface GroupRow {
 	section_tipo: string | null;
@@ -305,7 +338,11 @@ async function main(): Promise<void> {
 				  WHERE table_schema='public' AND table_name='matrix_time_machine'`,
 			)) as { present: number }[];
 			if (tmPresent.length > 0) {
-				await run('C-quotes-deleted', 'matrix_time_machine', QUOTES_DELETED_QUERY);
+				await run(
+					'C-quotes-deleted',
+					'matrix_time_machine',
+					quotesDeletedQuery(await tmHistoryNarrowing(reserved)),
+				);
 			}
 		}
 		await reserved.unsafe('ROLLBACK');

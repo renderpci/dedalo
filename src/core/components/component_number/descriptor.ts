@@ -8,6 +8,7 @@ export const component_number: ComponentModel = {
 	model: 'component_number',
 	column: 'number',
 	render: 'number',
+	importAppend: 'items',
 	searchBuilder: 'number',
 	flatValue: 'string',
 	importValueProperty: true,

@@ -102,6 +102,9 @@ export const section_record = function() {
 
 	/** @var {string|null} matrix_id - Time-machine matrix row identifier; null in normal (non-TM) mode */
 	this.matrix_id		= null
+	/** @var {string|null} data_source - 'tm' when this record belongs to a time-machine preview; null otherwise.
+	 * Forwarded ONLY to component_dataframe children (see build_instance) */
+	this.data_source	= null
 	/** @var {string|null} id_variant - Suffix appended to the instance key for deduplication (propagated from parent) */
 	this.id_variant		= null
 
@@ -173,6 +176,7 @@ export const section_record = function() {
 * @param {Array} options.columns_map - Column layout descriptors built by get_columns_map
 * @param {Object|null} [options.caller] - Owning section/portal instance
 * @param {string|null} [options.matrix_id] - Time-machine matrix id (null in normal mode)
+* @param {string|null} [options.data_source] - 'tm' in a time-machine preview (null in normal mode)
 * @param {string|null} [options.column_id] - Grid column id (list mode)
 * @param {number|null} [options.offset] - Pagination offset of the current page
 * @param {Object} options.locator - Source locator { section_tipo, section_id, paginated_key, ... }
@@ -228,6 +232,7 @@ section_record.prototype.init = async function(options) {
 		self.caller						= options.caller || null
 
 		self.matrix_id					= options.matrix_id || null
+		self.data_source				= options.data_source || null
 		self.column_id					= options.column_id
 
 		self.offset						= options.offset
@@ -290,6 +295,9 @@ const build_instance = async (self, context, section_id, current_data, column_id
 	// current_context — clone so mutations below do not affect the shared datum.context entry
 		const current_context = clone(context)
 
+	// caller-declared show_interface (see apply_caller_show_interface)
+		apply_caller_show_interface(self, current_context)
+
 		// Fix context issues with parent value
 		// (!) Note that the API prevents more than one same component in context.
 		// For this, only the first one is added and therefore parent value it is not reliable. Use always self.caller.tipo as parent
@@ -330,15 +338,29 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 		// id_variant — Propagate a custom instance id to children
 		// Stable string (no Math.random()) to allow get_instance to reuse/move already-rendered nodes
-		// Format: <section_record.tipo>_<section_id>_<caller.section_tipo>_<caller.section_id>
-			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
+		// Format: <section_record.tipo>_<section_record.section_tipo>_<section_id>_<caller.section_tipo>_<caller.section_id>
+		// The row's section_tipo is load-bearing: rows of DIFFERENT sections may share a section_id
+		// (a multi-section autocomplete list), and their children's descendants (a portal cell's
+		// target record, the same for every row) would otherwise share one key → one instance,
+		// rendered in the last row only.
+			const section_record_id_variant = `${self.tipo}_${self.section_tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
 			instance_options.id_variant = self.id_variant
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
 
 		// matrix_id — time machine matrix_id; forwarded so TM children can address the correct matrix row
+		// and, being part of the instance key, never collide with the live children of the same record
 			if (self.matrix_id) {
 				instance_options.matrix_id = self.matrix_id
+			}
+
+		// data_source — time machine. Forwarded ONLY to component_dataframe: it is the only child
+		// whose coordinates are the TM row's own record (its frames live in the main's snapshot), so
+		// the server reads it from that row, and the client does not subscribe it to live sync_data.
+		// Any other child (e.g. a linked record material1/N) is a DIFFERENT record: the server would
+		// refuse the TM row for it (tmRowBelongsToRecord), so it keeps matrix_id (keying) only.
+			if (self.data_source==='tm' && instance_options.model==='component_dataframe') {
+				instance_options.data_source = 'tm'
 			}
 
 		// column_id — forwarded to child so the grid cell renderer knows which column it belongs to
@@ -346,10 +368,14 @@ const build_instance = async (self, context, section_id, current_data, column_id
 				instance_options.column_id = column_id
 			}
 
-		// dataframe — override id_variant to encode the virtual sub-section row identity
-		// Format: <base_id_variant>_<id_key>_<main_component_tipo>
+		// dataframe — extend id_variant to encode the virtual sub-section row identity
+		// Format: <base_id_variant>_<id_key>_<main_component_tipo>, where base_id_variant keeps
+		// the section_record's own id_variant prefix (e.g. 'tool_time_machine'). Dropping it would
+		// give the tool 'Now' pane's dataframe the same key as the page's live dataframe: get_instance
+		// would hand the page instance to the tool (moving its DOM node into the modal) and the
+		// tool's deep destroy on close would destroy and deregister the page's dataframe.
 			instance_options.id_variant = (instance_options.model==='component_dataframe')
-				? `${section_record_id_variant}_${current_data.id_key}_${current_data.main_component_tipo}`
+				? `${instance_options.id_variant}_${current_data.id_key}_${current_data.main_component_tipo}`
 				: instance_options.id_variant
 
 	// component / section group — get_instance either creates a fresh instance or reuses/moves an existing one
@@ -365,6 +391,97 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 	return current_instance
 }//end build_instance
+
+
+
+/**
+* APPLY_CALLER_SHOW_INTERFACE
+* Honours the `properties.show_interface` declared on the ddos of the
+* request_config a section was given (the preset editors and tool_user_admin
+* declare `{tools:false}`, so a small form draws no tool buttons).
+*
+* CLIENT-SIDE BY DESIGN. The server never receives these properties: its client
+* ddo whitelist strips every key but the display fields (src/core/concepts/ddo.ts,
+* spec §7.8 — exactly PHP's sanitize_client_ddo_map). show_interface only decides
+* which buttons the browser draws, so the declaration is applied here, to the
+* child's private context clone, without widening that contract.
+*
+* WHOSE DECLARATION. `caller.request_config` is whatever the section was given:
+* usually the page's own list (the three callers above), but a section can also
+* be handed a server/ontology-derived list (a nested section built by
+* build_instance, view_graph_solved_section). A show_interface declared in an
+* ontology ddo is honoured the same way — as PHP's get_subdatum injected
+* server-side ddo properties. (No ontology ddo declares one today.)
+*
+* Scope (every limit keeps an existing behaviour unchanged):
+*  - only rows whose caller is a SECTION (portals, services: untouched);
+*  - only the main dedalo request_config item's show.ddo_map; the ddo matched by
+*    tipo, section_tipo ('self'/absent = the row's section; an array = any of) AND
+*    parent ('self'/absent = the row's section) — a deeper ddo of the same
+*    tipo/section (a self-referencing portal's child) is another element;
+*  - only the `show_interface` key, and only a plain object;
+*  - the element's OWN interface wins: every key the context already resolves —
+*    its request_config main item's `show.interface`, overlaid by
+*    `properties.show_interface` (the precedence common.set_context_vars
+*    applies; the latter is the ontology's plus any server-stamped restriction,
+*    e.g. component_relation_related's button_add:false) — is kept. The
+*    declaration only fills keys left unset. Seeding from show.interface too is
+*    what keeps it: once properties.show_interface exists, set_context_vars no
+*    longer reads show.interface at all.
+*
+* @param {Object} self - The owning section_record instance
+* @param {Object} context - The child's CLONED context (mutated in place)
+* @returns {boolean} true when a caller show_interface was applied
+*/
+export const apply_caller_show_interface = function(self, context) {
+
+	const caller = self.caller
+	if (!caller || caller.model!=='section' || !Array.isArray(caller.request_config)) {
+		return false
+	}
+
+	const main_item = caller.request_config.find(el => el && el.api_engine==='dedalo' && el.type==='main')
+	const ddo_map = main_item?.show?.ddo_map
+	if (!Array.isArray(ddo_map)) {
+		return false
+	}
+
+	const is_plain_object = (value) => !!value && typeof value==='object' && !Array.isArray(value)
+
+	const ddo = ddo_map.find(el => {
+		if (!el || el.tipo!==context.tipo) {
+			return false
+		}
+		const st = el.section_tipo
+		const section_match = st===undefined || st==='self' || st===context.section_tipo
+			|| (Array.isArray(st) && st.includes(context.section_tipo))
+		const parent_match = el.parent===undefined || el.parent==='self' || el.parent===self.tipo
+		return section_match && parent_match
+	})
+	const caller_interface = ddo?.properties?.show_interface
+	if (!is_plain_object(caller_interface)) {
+		return false
+	}
+
+	// the element's own interface, in set_context_vars precedence
+	const own_request_config_object = Array.isArray(context.request_config)
+		? context.request_config.find(el => el && el.api_engine==='dedalo' && el.type==='main')
+		: null
+	const own_rco_interface	= own_request_config_object?.show?.interface
+	const own_interface		= context.properties?.show_interface
+	const element_interface	= {
+		...(is_plain_object(own_rco_interface) ? own_rco_interface : {}),
+		...(is_plain_object(own_interface) ? own_interface : {})
+	}
+
+	context.properties = {
+		...(context.properties || {}),
+		// clone: nested values (button_edit_options) must not be shared with the page's request_config
+		show_interface : {...clone(caller_interface), ...element_interface}
+	}
+
+	return true
+}//end apply_caller_show_interface
 
 
 
@@ -568,9 +685,6 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 			return self.ar_instances
 		}
 
-		// matrix_id — time machine case only; passed down to get_component_data for TM row matching
-			const matrix_id	= self.matrix_id
-
 		// columns_map — ordered column descriptors, built by common.get_columns_map during section build
 		// @see common.get_columns_map for a full overview of how columns are derived from ddo_map
 			const columns_map = self.columns_map || []
@@ -649,7 +763,6 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 									ddo				: current_ddo,
 									section_tipo	: section_tipo,
 									section_id		: section_id,
-									matrix_id		: matrix_id,
 									// dataframe pairing key = the MAIN item id (portal entry id = self.locator.id)
 									dataframe_id_key			: (current_ddo.model==='component_dataframe')
 										? (self.locator?.id ?? null)
@@ -697,6 +810,14 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 							// new_context — clone to prevent mutations from polluting the shared datum.context
 								const new_context = clone(current_context)
 								new_context.properties = new_context.properties || {}
+								// section_tipo — the coordinates computed above (the row's locator, or
+								// the ddo's own for a dataframe). A multi-section ddo matched its
+								// context by tipo+mode only, so the context may name ANOTHER section
+								// (the first one the server emitted). build_instance keys the child on
+								// context.section_tipo: without this, rows of different sections sharing
+								// a section_id resolved to ONE shared instance, whose node ends up in the
+								// last row only (every other row rendered empty).
+								new_context.section_tipo = section_tipo
 								// Propagate nested columns_map from the column descriptor (sub-grid layouts)
 								new_context.columns_map = (current_column.columns_map)
 									? current_column.columns_map
@@ -821,8 +942,9 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 *   id it already holds), so no server-side normalization is needed. (`ddo.caller_dataframe`
 *   is only populated by the Time Machine tool.)
 *
-* The `matrix_id` (time machine) match path is commented out in the current code;
-* the TM case is handled differently at a higher level.
+* Time machine: no `matrix_id` match is needed. The server never stamps `matrix_id`
+* on datum items; a time-machine preview datum is already the grafted snapshot of
+* its TM row, so the plain identity tuple (plus the dataframe pairing) selects it.
 *
 * Empty stub shape (when no data found):
 * ```json
@@ -842,7 +964,6 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 * @param {Object} options.ddo - The DDO descriptor for the component being looked up
 * @param {string} options.section_tipo - Section ontology tipo for the lookup
 * @param {string|number} options.section_id - Record identifier for the lookup
-* @param {string|null} [options.matrix_id] - Time-machine matrix id (currently unused in matching)
 * @returns {Object} component_data — the matched datum.data entry, or an empty stub
 *   if no match is found
 */
@@ -854,7 +975,6 @@ section_record.prototype.get_component_data = function(options) {
 		const ddo			= options.ddo
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
-		const matrix_id		= options.matrix_id || null
 
 	// dataframe pairing key (explicit, threaded from the caller's portal entry) takes priority
 		const dataframe_id_key = options.dataframe_id_key ?? null
@@ -886,23 +1006,6 @@ section_record.prototype.get_component_data = function(options) {
 				&& el.section_tipo			=== section_tipo // match section_tipo
 				&& el.mode					=== ddo.mode // match mode
 				){
-
-				// time machine case
-				// (!) This block is deliberately commented out; TM matching is handled at a higher level.
-				// Kept here for reference when revisiting TM + component_dataframe combination.
-				// if (el.matrix_id && matrix_id) {
-
-				// 	if (ddo.model==='component_dataframe') {
-
-				// 		return (
-				// 			parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
-				// 			parseInt(el.id_key)			=== parseInt(id_key) &&
-				// 			el.main_component_tipo		=== main_component_tipo
-				// 		)
-				// 	}
-
-				// 	return parseInt(el.matrix_id)===parseInt(matrix_id)
-				// }
 
 				// dataframe case — additional discriminators are needed because the same component_dataframe
 				// tipo can appear multiple times in datum.data (one per virtual row).

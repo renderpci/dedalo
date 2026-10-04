@@ -28,7 +28,8 @@
 		"tool_sitebuilder": "open_site_builder",
 		"submit": "start_upload",
 		"no_hay_etiqueta_seleccionada": "no_tag_selected",
-		"instalar": "install"
+		"instalar": "install",
+		"type_root_password": "root_password_intro"
 	},
 	"tool_migrations": {
 		"activate_all_columns": {
@@ -250,6 +251,7 @@
 		"pagina_de",
 		"para_crear_un_fragmento",
 		"para_revisar",
+		"password_too_short",
 		"php_extension_stopped_the_upload_file",
 		"por_favor_espere",
 		"por_favor_indexe_desde_una_seccion_de_inventario",

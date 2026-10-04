@@ -21,6 +21,9 @@
  *      "invalid version" must stay indistinguishable to a prober.
  *   4. The rewire itself (source assertions): a revert that re-inlines the old
  *      blocks must go red, not silently pass.
+ *   5. The local-origin refusal (WC-2026-09-30-update-manifest-local-origin-refusal),
+ *      DRIVEN on both doors in a child configured as a master: refused for a
+ *      remote peer, served to a same-machine one, only AFTER authorization.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -30,6 +33,7 @@ import { config } from '../../src/config/config.ts';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
 import {
 	authorizeUpdateManifest,
+	localOriginRefusal,
 	utilsApiActions,
 } from '../../src/core/api/handlers/dd_utils_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
@@ -343,5 +347,163 @@ describe('the rewire is real (source assertions — a revert must go red)', () =
 	test('the refusal bytes live in exactly one place now', () => {
 		expect(source.split("'Error. Invalid code'").length - 1).toBe(1);
 		expect(source.split("'Error. Invalid version number'").length - 1).toBe(1);
+	});
+});
+
+describe('localOriginRefusal — a local public origin is never advertised to another machine', () => {
+	test('a public origin serves everyone', () => {
+		expect(localOriginRefusal({ originIsLocal: false, clientIp: '203.0.113.9' })).toBeNull();
+	});
+
+	test.each(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'local'])(
+		'a local origin still serves a same-machine caller (%p — dev two-instance, update drill)',
+		(clientIp) => {
+			expect(localOriginRefusal({ originIsLocal: true, clientIp })).toBeNull();
+		},
+	);
+
+	test.each(['203.0.113.9', '192.168.1.20', '2001:db8::1'])(
+		'a local origin REFUSES a remote caller (%p) and names the key to fix',
+		(clientIp) => {
+			const msg = localOriginRefusal({ originIsLocal: true, clientIp });
+			expect(msg).not.toBeNull();
+			expect(msg as string).toContain('DEDALO_HOST');
+		},
+	);
+});
+
+/**
+ * THE LOCAL-ORIGIN REFUSAL, DRIVEN (F9, 2026-09-30; WC-2026-09-30-update-manifest-local-origin-refusal).
+ * Each case boots a CHILD process configured as a master of BOTH kinds (config
+ * is frozen at load, and a child avoids a mock.module leak), calls the
+ * registered door with a caller IP, and reports what it answered. Neither door
+ * touches the database; DB_NAME is never set. Replaces a source-ORDER pin
+ * (indexOf of two call spellings), which a rename defeated and an unreached
+ * `throw` satisfied.
+ */
+describe('both doors refuse a remote peer when this master would advertise a local origin', () => {
+	const HANDLER = join(import.meta.dir, '../../src/core/api/handlers/dd_utils_api.ts');
+	const ONTOLOGY_CODE = 'zzprobe';
+	const CODE_CODE = 'zzcode';
+	const REMOTE = '203.0.113.9';
+	type Door = 'get_ontology_update_info' | 'get_code_update_info';
+	const VERSION: Record<Door, string> = {
+		get_ontology_update_info: '7.0',
+		get_code_update_info: '7.0.0',
+	};
+	const VALID: Record<Door, string> = {
+		get_ontology_update_info: ONTOLOGY_CODE,
+		get_code_update_info: CODE_CODE,
+	};
+
+	interface Answer {
+		ok?: true;
+		code?: string;
+		publicMessage?: string;
+		error?: string;
+	}
+
+	function drive(door: Door, host: string, clientIp: string, code: string): Answer {
+		const script = `
+			const { utilsApiActions } = await import(${JSON.stringify(HANDLER)});
+			const context = { requestId: 'probe', clientIp: ${JSON.stringify(clientIp)}, session: null, sessionToken: null, csrfCandidate: null };
+			const rqo = { dd_api: 'dd_utils_api', action: ${JSON.stringify(door)}, options: { version: ${JSON.stringify(VERSION[door])}, code: ${JSON.stringify(code)} } };
+			try {
+				await utilsApiActions[${JSON.stringify(door)}](rqo, context);
+				console.log(JSON.stringify({ ok: true }));
+			} catch (error) {
+				console.log(JSON.stringify({ code: error?.code, publicMessage: error?.publicMessage, error: String(error?.message ?? error) }));
+			}
+			process.exit(0);`;
+		const env: Record<string, string> = {
+			...(process.env as Record<string, string>),
+			IS_AN_ONTOLOGY_SERVER: 'true',
+			ONTOLOGY_SERVER_CODE: ONTOLOGY_CODE,
+			IS_A_CODE_SERVER: 'true',
+			CODE_SERVERS: JSON.stringify([{ name: 'p', url: 'https://p.test', code: CODE_CODE }]),
+			DEDALO_HOST: host,
+		};
+		const run = Bun.spawnSync(['bun', '-e', script], { env, cwd: join(import.meta.dir, '../..') });
+		const out = run.stdout.toString().trim().split('\n').at(-1) ?? '';
+		if (run.exitCode !== 0 || !out.startsWith('{')) {
+			throw new Error(
+				`probe child failed (${run.exitCode}): ${run.stderr.toString().slice(-2000)}`,
+			);
+		}
+		return JSON.parse(out) as Answer;
+	}
+
+	const DOORS: Door[] = ['get_ontology_update_info', 'get_code_update_info'];
+
+	for (const door of DOORS) {
+		for (const host of ['', 'localhost']) {
+			test(`(a) ${door}: DEDALO_HOST=${JSON.stringify(host)} + a remote caller + a valid code → refused, naming DEDALO_HOST`, () => {
+				const answer = drive(door, host, REMOTE, VALID[door]);
+				expect(answer.code, JSON.stringify(answer)).toBe('update_server.refused');
+				expect(answer.publicMessage ?? '').toMatch(/DEDALO_HOST/);
+			}, 30_000);
+		}
+
+		for (const clientIp of ['127.0.0.1', 'local']) {
+			test(`(b) ${door}: a local origin still serves a same-machine caller (${clientIp})`, () => {
+				const answer = drive(door, 'localhost', clientIp, VALID[door]);
+				expect(JSON.stringify(answer)).not.toContain('DEDALO_HOST');
+				expect(answer, 'the manifest is served').toEqual({ ok: true });
+			}, 30_000);
+		}
+
+		test(`(c) ${door}: a WRONG code from a remote caller gets the authorization refusal — the origin refusal comes after auth`, () => {
+			const answer = drive(door, 'localhost', REMOTE, 'not-the-code');
+			expect(answer.code, JSON.stringify(answer)).toBe('update_server.refused');
+			expect(answer.publicMessage).toBe('Error. Invalid code');
+		}, 30_000);
+
+		test(`(d) ${door}: a public origin serves a remote caller (no origin refusal)`, () => {
+			const answer = drive(door, 'dedalo.test', REMOTE, VALID[door]);
+			expect(JSON.stringify(answer)).not.toContain('DEDALO_HOST');
+			expect(answer, 'the manifest is served').toEqual({ ok: true });
+		}, 30_000);
+	}
+});
+
+describe('publicOriginIsLocal — the predicate BOTH the refusal above and the boot warning read', () => {
+	// localOriginRefusal is tested with an INJECTED boolean; this is the thing that
+	// produces it. Behaviour, not a source grep: an earlier text-window assertion of
+	// this predicate matched the COMMENT above the code and stayed green with the
+	// loopback branch deleted.
+	const withHost = async (host: string): Promise<boolean> => {
+		const { publicOriginIsLocal } = await import('../../src/core/resolve/public_origin.ts');
+		const previous = process.env.DEDALO_HOST;
+		process.env.DEDALO_HOST = host;
+		try {
+			return publicOriginIsLocal();
+		} finally {
+			if (previous === undefined) delete process.env.DEDALO_HOST;
+			else process.env.DEDALO_HOST = previous;
+		}
+	};
+
+	test('unset is local — the documented `localhost` fallback', async () => {
+		expect(await withHost('')).toBe(true);
+	});
+
+	test.each(['localhost', 'LocalHost', '127.0.0.1', '127.1.2.3', '::1', '[::1]', 'localhost:4001'])(
+		'an EXPLICIT loopback name (%p) is local too — it advertises the same useless urls',
+		async (host) => {
+			expect(await withHost(host)).toBe(true);
+		},
+	);
+
+	test.each(['v7.master.dedalo.dev', 'dedalo.example.org', 'localhost.dedalo.dev', '10.0.0.5'])(
+		'a real name (%p) is NOT local — or every server would be refused or warned forever',
+		async (host) => {
+			expect(await withHost(host)).toBe(false);
+		},
+	);
+
+	test('a server with no usable public name says so at boot (role-gated, warned not dropped)', () => {
+		const server = readFileSync(join(import.meta.dir, '../../src/server.ts'), 'utf8');
+		expect(server).toMatch(/isOntologyServer\s*\|\|\s*config\.update\.isCodeServer/);
+		expect(server).toMatch(/publicOriginIsLocal\(\)\s*\)\s*\{[\s\S]{0,600}?console\.warn\(/);
 	});
 });

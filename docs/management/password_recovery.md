@@ -46,9 +46,12 @@ Recovery works only when all of the following hold:
 3. Check the mailbox. The message *"Your Dédalo password recovery code"*
    contains an 8-digit code. By default the code is valid for **10 minutes**
    and can be used **once**.
-4. Type the code and the new password (minimum **8 characters**, entered
-   twice). On success the screen returns to the login form and the new password
-   is active immediately.
+4. Type the code and the new password, entered twice. It must meet the
+   password requirements that apply everywhere in Dédalo: 8 to 64 characters,
+   at least one lowercase letter, one uppercase letter and one number, no `&`,
+   no common words such as "password", and no runs like `abcd` or `1234` (the
+   screen names the first requirement a password misses). On success the screen
+   returns to the login form and the new password is active immediately.
 5. Log in with the new password.
 
 After a successful reset the account owner also receives a *"Your Dédalo

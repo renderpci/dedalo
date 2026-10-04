@@ -432,7 +432,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 			'THE stamper itself — it owns fetch_api and is where the key is minted. Not a bypass, the door.',
 	},
 	{
-		file: 'client/dedalo/core/sw.js',
+		file: 'client/dedalo/core/service_worker.js',
 		basis: 'idempotent-actions',
 		actions: ['dd_utils_api:get_dedalo_files'],
 		reason:
@@ -442,7 +442,8 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		file: 'client/dedalo/core/page/js/worker_cache.js',
 		basis: 'idempotent-actions',
 		actions: ['dd_utils_api:get_dedalo_files'],
-		reason: 'The cache Worker, same single read action and the same reasoning as sw.js.',
+		reason:
+			'The cache Worker, same single read action and the same reasoning as service_worker.js.',
 	},
 	{
 		file: 'client/dedalo/core/page/js/page.js',
@@ -569,7 +570,7 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 		).toEqual([
 			// The installer helper forwards its caller's value and DEFAULTS to
 			// retries:1, so the unreadable case is the safe one.
-			'client/dedalo/core/installer/js/render_installer.js:317',
+			'client/dedalo/core/installer/js/render_installer.js:319',
 		]);
 	});
 
@@ -647,7 +648,8 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 
 /**
  * `data_manager.js` is a browser module whose leaf imports need a DOM. It is
- * copied VERBATIM (with the real api_transport.js and api_error.js beside it)
+ * copied VERBATIM (with the real api_transport.js, api_error.js and the
+ * import-free request_activity.js beside it)
  * into a scratch tree that reproduces the directory DEPTH its relative
  * specifiers assume, and the four leaves it does not need are written there as
  * minimal stubs. So the bytes under test are the shipped bytes.
@@ -665,7 +667,12 @@ beforeAll(async () => {
 	scratchRoot = mkdtempSync(join(tmpdir(), 'dd-idem-'));
 	const jsDir = join(scratchRoot, 'client', 'dedalo', 'core', 'common', 'js');
 	mkdirSync(join(jsDir, 'utils'), { recursive: true });
-	for (const name of ['data_manager.js', 'api_transport.js', 'api_error.js']) {
+	for (const name of [
+		'data_manager.js',
+		'api_transport.js',
+		'api_error.js',
+		'request_activity.js',
+	]) {
 		cpSync(join(REPO_ROOT, REAL_CLIENT, name), join(jsDir, name));
 	}
 	writeFileSync(

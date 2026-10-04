@@ -24,7 +24,7 @@
  *
  * Gate: test/unit/diffusion_scratch_tables_tripwire.test.ts — a test file that
  * binds a scratch table NAME (`activityTable`, `DIFFUSION_JOBS_TABLE`,
- * `DIFFUSION_JOB_EVENTS_TABLE`) must call this.
+ * `DIFFUSION_JOB_EVENTS_TABLE`, `DIFFUSION_JOB_LEDGER_TABLE`) must call this.
  */
 
 import {
@@ -34,6 +34,7 @@ import {
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import {
 	DIFFUSION_JOB_EVENTS_TABLE,
+	DIFFUSION_JOB_LEDGER_TABLE,
 	DIFFUSION_JOBS_TABLE,
 	ensureDiffusionJobTables,
 } from '../../src/diffusion/jobs/schema.ts';
@@ -41,6 +42,8 @@ import {
 export interface DiffusionScratchTables {
 	jobs: string;
 	jobEvents: string;
+	/** The job-scoped run ledger (DIFF-1) — built with the jobs table. */
+	jobLedger: string;
 	activity: string;
 }
 
@@ -55,6 +58,7 @@ export async function ensureDiffusionScratchTables(): Promise<DiffusionScratchTa
 	const tables = {
 		jobs: DIFFUSION_JOBS_TABLE,
 		jobEvents: DIFFUSION_JOB_EVENTS_TABLE,
+		jobLedger: DIFFUSION_JOB_LEDGER_TABLE,
 		activity: activityTable(),
 	};
 	for (const [role, name] of Object.entries(tables)) {

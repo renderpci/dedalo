@@ -220,7 +220,9 @@ render_tool_export.prototype.edit = async function (options) {
  *         is draggable ('add' drag_type) into the middle panel.
  *   MIDDLE (.selection_list_contaniner) — ordered list of columns chosen for
  *         export, each a draggable export_component node (sort drag_type).
- *         Restored from IndexedDB (tool_export_config) on first render.
+ *         Restored from IndexedDB (tool_export_config) on first render. The
+ *         whole column is ONE drop zone (drag_tool_export.js: a marker shows
+ *         the insertion point under the pointer).
  *   RIGHT  (.export_buttons_config) — export presets toolbar, record count,
  *         progress bar, format / breakdown selectors, option checkboxes,
  *         Export + Stop buttons, and the export status line.
@@ -295,17 +297,29 @@ const get_content_data_edit = async function(self) {
 		})
 		// store reference so user presets (apply_export_preset) can rebuild the selection
 		self.user_selection_list = user_selection_list
-		// empty_space
+		// empty_space. The free room below the rows; while the list is empty it
+		// shows the drop hint (CSS: .user_selection_list:empty + .empty_space)
 		const empty_space = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'empty_space',
 			parent			: selection_list_contaniner
 		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'drop_hint',
+			text_content	: get_label.drop_field_here || 'Drag a field here',
+			parent			: empty_space
+		})
 
-		// empty_space drag and drop events
-		empty_space.addEventListener('dragover', function(e){self.on_dragover(user_selection_list,e)})
-		empty_space.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
-		empty_space.addEventListener('drop', function(e){self.on_drop(user_selection_list,e)})
+		// drop zone. The WHOLE column (title + rows + free space) is one zone:
+		// the pointer picks the insertion index, a marker shows it
+		// (drag_tool_export.js)
+		selection_list_contaniner.addEventListener('dragover', (e) => self.on_dragover(selection_list_contaniner, e))
+		selection_list_contaniner.addEventListener('dragleave', (e) => self.on_dragleave(selection_list_contaniner, e))
+		selection_list_contaniner.addEventListener('drop', (e) => self.on_drop(selection_list_contaniner, e))
+		// every drag of ours ends inside grid_top ('add' starts in the left list):
+		// no marker, highlight or payload outlives it
+		grid_top.addEventListener('dragend', () => self.on_dragend())
 
 		// read saved ddo in local DB and restore elements if found
 		// The IndexedDB key 'tool_export_config' stores an object keyed by
@@ -3109,168 +3123,33 @@ render_tool_export.prototype.sync_ar_ddo_to_export = function() {
 
 /**
  * DO_SORTABLE
- * Attaches HTML5 drag-and-drop event listeners directly to an .export_component
- * element so it can be reordered within the user selection list or used as a
- * drop target for new components dragged from the left-panel component list.
- *
- * Two drag paths are handled (discriminated by dataTransfer 'drag_type'):
- *   'sort' — item is being reordered within the selection list. The stored
- *            self.dragged element is moved before this element; the DOM order
- *            then drives sync_ar_ddo_to_export().
- *   'add'  — item is dragged from the left component list. A new ddo is
- *            built from the dataTransfer payload, deduplicated against
- *            ar_ddo_to_export, then a new export_component is inserted before
- *            this element. sync_ar_ddo_to_export() derives the new order.
- *
- * The 'displaced' class is applied to the drop target element during dragenter
- * and cleared on drop/dragend via the inner reset() function, providing a
- * visual insertion hint.
+ * Makes an .export_component row draggable for reordering. Only the drag
+ * SOURCE lives here: where the row lands is decided by the one drop zone
+ * (the selection column — see drag_tool_export.js: pointer-midpoint index,
+ * a single insertion marker, drop at that index).
  *
  * @param {HTMLElement} element - The .export_component node to make sortable
- * @param {Object} self - The tool_export instance (for dragged, ar_ddo_to_export, callbacks)
+ * @param {Object} self - The tool_export instance
  * @returns {void}
  */
 const do_sortable = function(element, self) {
 
-	// sortable
-		element.draggable = true
+	element.draggable = true
 
-	// reset all items
-		function reset() {
-			const element_children_length = element.parentNode.children.length
-			for (let i = 0; i < element_children_length; i++) {
-				const item = element.parentNode.children[i]
-				if (item.classList.contains('displaced')) {
-					item.classList.remove('displaced')
-				}
-			}
-		}
+	element.addEventListener('dragstart', (event) => {
+		event.stopPropagation()
 
-	// events fired on the draggable target
+		element.classList.add('dragging')
+		self.set_sort_payload(element)
 
-		// drag start. Fix dragged element to recover later
-			element.addEventListener('dragstart', (event) => {
-				event.stopPropagation()
+		// the drag API needs data to start (Firefox); the handlers read self.drag_payload
+		event.dataTransfer.effectAllowed = 'move'
+		event.dataTransfer.setData('text/plain', JSON.stringify({drag_type : 'sort'}))
+	})
 
-				reset()
-
-				element.classList.add('dragging');
-
-				// fix dragged element
-					self.dragged = element
-
-				// dataTransfer
-					const data = {
-						drag_type : 'sort'
-					}
-					// event.dataTransfer.effectAllowed = 'move';
-					event.dataTransfer.dropEffect = 'move';
-					event.dataTransfer.setData(
-						'text/plain',
-						JSON.stringify(data)
-					)
-			});
-
-		// drag end
-			element.addEventListener('dragend', (event) => {
-				reset()
-				// reset the dragging style
-				event.target.classList.remove('dragging');
-			});
-
-	//  events fired on the drop targets
-
-		// drag enter - add displaced padding
-			element.addEventListener('dragenter', (event) => {
-				event.preventDefault();
-
-				reset()
-				// const new_empty_node = document.createElement('div')
-				// new_empty_node.classList.add('new_empty_node')
-				// element.parentNode.insertBefore(new_empty_node, element)
-
-				element.classList.add('displaced')
-			});
-
-		// allow to be dropable the element
-		element.addEventListener('dragover', (event) => {
-			event.preventDefault();
-		})
-		// on drop
-			element.addEventListener('drop', (event) => {
-				event.preventDefault();
-				event.stopPropagation()
-
-				reset()
-
-				// remove dragover class from user_selection_list container
-				element.parentNode.classList.remove('dragover')
-
-				// data transfer
-					const data			= event.dataTransfer.getData('text/plain');// element that move
-					const parsed_data	= JSON.parse(data)
-
-				if (parsed_data.drag_type==='sort') {
-
-					// sort case
-					// place drag item, then derive the order from the DOM
-					const dragged = self.dragged
-					element.parentNode.insertBefore(dragged, element)
-					dragged.classList.add('active')
-
-					// Update the ddo_export from the new DOM order
-						self.sync_ar_ddo_to_export()
-
-						// save local db data
-						self.update_local_db_data()
-
-				}else if (parsed_data.drag_type==='add') {
-
-					// add case
-
-					// short vars
-						const path	= parsed_data.path
-						const ddo	= parsed_data.ddo
-						const id	= self.compose_id(ddo, path)
-
-					// rebuild ddo
-						const new_ddo = {
-							id				: id,
-							tipo			: ddo.tipo,
-							section_tipo	: ddo.section_tipo,
-							model			: ddo.model,
-							parent			: ddo.parent,
-							lang			: ddo.lang,
-							mode			: ddo.mode,
-							label			: ddo.label,
-							value_with_parents	: false, // per-component parents export (checkbox in the item)
-							path			: path // full path from current section replaces ddo single path
-						}
-
-					// exists
-						const found = self.ar_ddo_to_export.find(el => el.id===new_ddo.id)
-						if (found) {
-							// Ignored already included item ddo
-							return
-						}
-
-					// Build component html
-					self.build_export_component(new_ddo)
-					.then((export_component_node)=>{
-
-						// add DOM node at the drop position, then derive order from DOM
-						element.parentNode.insertBefore(export_component_node, element)
-
-						export_component_node.classList.add('active')
-
-						// Update the ddo_export from the new DOM order
-						self.sync_ar_ddo_to_export()
-
-						// save local db data
-						self.update_local_db_data()
-					})
-				}
-			});
+	element.addEventListener('dragend', () => {
+		element.classList.remove('dragging')
+	})
 }//end do_sortable
 
 

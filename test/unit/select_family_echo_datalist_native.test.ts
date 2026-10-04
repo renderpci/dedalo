@@ -21,16 +21,26 @@
  * and the temporal echo's datalist deep-equal the edit read's; select_lang's is
  * the project languages; the echo stays small.
  *
- * Situation: a scratch test3 record created here (never a canonical id),
- * removed with its TM and activity rows in afterAll.
+ * THE MISSING-LANG ENTRY (PHP component_select_lang_json edit branch). A
+ * select_lang whose stored lang is NOT a project lang (one removed from
+ * DEDALO_PROJECTS_DEFAULT_LANGS after the save) must still show it: every edit
+ * door appends ONE "<name> *" entry, its name in the APPLICATION lang, and the
+ * list value is that same label (WC-2026-10-02-select-lang-missing-entry).
+ *
+ * Situation: scratch test3 records and a scratch lg1 language record (code
+ * 'qtx', ISO 639-3 local-use range — no project lang by construction) created here through the engine's
+ * save door, never canonical ids; removed with their TM and activity rows in
+ * afterAll.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getDatalist, probeDatalistSize } from '../../src/core/relations/datalist.ts';
-import { getSelectLangDatalist } from '../../src/core/relations/select_lang.ts';
+import { appendMissingLang, getSelectLangDatalist } from '../../src/core/relations/select_lang.ts';
+import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
@@ -62,6 +72,27 @@ const SELECT_LANG_ECHO_MAX_BYTES = 64 * 1024;
 let tsContext: Record<string, unknown>;
 let recordId = 0;
 
+/** The scratch non-project language (lg1 record) and the record storing it. */
+const LANGS_SECTION = 'lg1';
+const LANG_NAME_TIPO = 'hierarchy25';
+const LANG_CODE_TIPO = 'hierarchy41';
+// ISO 639-3 reserves qaa–qtz for local use: never a real (or project) language.
+// Not a `zz…` code, which the scratch-TLD census reads as a TLD carrier.
+const MISSING_CODE = 'qtx';
+let missingLangId = 0;
+let missingRecordId = 0;
+/** An lg1 record with NO name and NO code (a half-built language). */
+let barrenLangId = 0;
+/**
+ * Two DIFFERENT declared application langs: the session's interface lang and
+ * its data lang. The scratch lang carries a distinct name in each, so the gate
+ * tells "named in the application lang" from "named in the data lang".
+ */
+let appLang = '';
+let dataLang = '';
+const APP_NAME = 'Zzq interface name';
+const DATA_NAME = 'Zzq data name';
+
 type Item = Record<string, unknown> & { tipo?: string; datalist?: unknown[] };
 
 function mainItem(body: unknown, tipo: string): Item {
@@ -71,7 +102,12 @@ function mainItem(body: unknown, tipo: string): Item {
 	return found;
 }
 
-async function readEdit(model: string, tipo: string, sectionId: number): Promise<Item> {
+async function readEdit(
+	model: string,
+	tipo: string,
+	sectionId: number,
+	mode: 'edit' | 'list' = 'edit',
+): Promise<Item> {
 	const response = await dispatchRqo(
 		{
 			action: 'read',
@@ -81,7 +117,7 @@ async function readEdit(model: string, tipo: string, sectionId: number): Promise
 				tipo,
 				section_tipo: SECTION,
 				section_id: sectionId,
-				mode: 'edit',
+				mode,
 				lang: LANG,
 				action: 'get_data',
 			},
@@ -98,6 +134,7 @@ async function save(
 	sectionId: number,
 	changedData: unknown[],
 	extraSource: Record<string, unknown> = {},
+	sectionTipo: string = SECTION,
 ) {
 	const response = await dispatchRqo(
 		{
@@ -107,7 +144,7 @@ async function save(
 			source: {
 				model,
 				tipo,
-				section_tipo: SECTION,
+				section_tipo: sectionTipo,
 				section_id: sectionId,
 				mode: 'edit',
 				lang: LANG,
@@ -123,7 +160,15 @@ async function save(
 
 beforeAll(async () => {
 	const token = createSession(-1, 'root', true);
-	const session = getSession(token);
+	const declared = Object.keys(config.lang.applicationLangs);
+	appLang = declared[0] ?? '';
+	dataLang = declared[1] ?? '';
+	if (appLang === '' || dataLang === '') throw new Error('two declared application langs needed');
+	// The session pins both langs (dispatch scopes the request with them).
+	const session = { ...getSession(token), applicationLang: appLang, dataLang } as Record<
+		string,
+		unknown
+	>;
 	tsContext = {
 		requestId: 'select_family_echo_datalist_native',
 		clientIp: '127.0.0.1',
@@ -132,20 +177,59 @@ beforeAll(async () => {
 		principal: await resolvePrincipal(-1),
 	};
 	recordId = await createSectionRecord(SECTION, -1);
-});
 
-afterAll(async () => {
-	if (recordId > 0) {
-		await cleanScratchRecord(SECTION, recordId);
-		// The dd542 activity rows the save chokepoint appended for OUR record.
-		await sql.unsafe(
-			`DELETE FROM matrix_activity
-			 WHERE section_tipo = 'dd542'
-			   AND misc->'dd551'->0->'value'->>'section_tipo' = $1
-			   AND misc->'dd551'->0->'value'->>'section_id' = $2`,
-			[SECTION, String(recordId)],
+	// The non-project language, built through the engine's save door.
+	missingLangId = await createSectionRecord(LANGS_SECTION, -1);
+	await save(
+		'component_input_text',
+		LANG_CODE_TIPO,
+		missingLangId,
+		[{ action: 'set_data', value: [{ id: 1, lang: 'lg-nolan', value: MISSING_CODE }] }],
+		{ lang: 'lg-nolan' },
+		LANGS_SECTION,
+	);
+	for (const [lang, name] of [
+		[appLang, APP_NAME],
+		[dataLang, DATA_NAME],
+	] as const) {
+		await save(
+			'component_input_text',
+			LANG_NAME_TIPO,
+			missingLangId,
+			[{ action: 'set_data', value: [{ id: 1, lang, value: name }] }],
+			{ lang },
+			LANGS_SECTION,
 		);
 	}
+	missingRecordId = await createSectionRecord(SECTION, -1);
+	barrenLangId = await createSectionRecord(LANGS_SECTION, -1);
+});
+
+/** The project-lang options as the session's request scope labels them. */
+function sessionProjectLangs() {
+	return runWithRequestLangs({ applicationLang: appLang, dataLang }, () =>
+		getSelectLangDatalist(LANG),
+	);
+}
+
+/** Remove a scratch record, its TM rows and the dd542 activity rows of its saves. */
+async function cleanScratch(sectionTipo: string, sectionId: number, table: string): Promise<void> {
+	if (sectionId <= 0) return;
+	await cleanScratchRecord(sectionTipo, sectionId, table);
+	await sql.unsafe(
+		`DELETE FROM matrix_activity
+		 WHERE section_tipo = 'dd542'
+		   AND misc->'dd551'->0->'value'->>'section_tipo' = $1
+		   AND misc->'dd551'->0->'value'->>'section_id' = $2`,
+		[sectionTipo, String(sectionId)],
+	);
+}
+
+afterAll(async () => {
+	await cleanScratch(SECTION, recordId, 'matrix_test');
+	await cleanScratch(SECTION, missingRecordId, 'matrix_test');
+	await cleanScratch(LANGS_SECTION, missingLangId, 'matrix_langs');
+	await cleanScratch(LANGS_SECTION, barrenLangId, 'matrix_langs');
 });
 
 describe('the door — getDatalist applies the model option source', () => {
@@ -174,7 +258,8 @@ describe('the save echo carries the edit read datalist', () => {
 	}
 
 	test('a select_lang save persists the picked language and echoes a small body', async () => {
-		const options = await getSelectLangDatalist(LANG);
+		// A project lang stored: the options exactly, no "<name> *" entry.
+		const options = await sessionProjectLangs();
 		const picked = options[options.length - 1];
 		if (picked === undefined) throw new Error('no project language to pick');
 		const response = await save('component_select_lang', SELECT_LANG, recordId, [
@@ -206,5 +291,88 @@ describe('the temporal echo carries the edit read datalist', () => {
 			{ is_temporal: true },
 		);
 		expect(mainItem(response.body, SELECT_LANG).datalist).toEqual(read.datalist);
+	});
+});
+
+describe('a stored NON-project lang gets ONE "<name> *" entry at every edit door', () => {
+	/** The lg1 locator of the scratch language, as the widget posts it. */
+	const missingLocator = () => ({
+		section_tipo: LANGS_SECTION,
+		section_id: missingLangId,
+		type: 'dd151',
+		from_component_tipo: SELECT_LANG,
+	});
+	const expectedEntry = () => ({
+		value: { section_tipo: LANGS_SECTION, section_id: missingLangId },
+		label: `${APP_NAME} *`,
+		section_id: `lg-${MISSING_CODE}`,
+	});
+	const entriesOfMissing = (datalist: unknown[] | undefined) =>
+		(datalist ?? []).filter((option) => {
+			const value = (option as { value?: { section_tipo?: unknown; section_id?: unknown } }).value;
+			return value?.section_tipo === LANGS_SECTION && Number(value?.section_id) === missingLangId;
+		});
+
+	test('the scratch lang is no project lang (else the case is vacuous)', async () => {
+		expect(missingLangId).toBeGreaterThan(0);
+		const projectLangs = await getSelectLangDatalist(LANG);
+		expect(projectLangs.length).toBeGreaterThan(0);
+		expect(entriesOfMissing(projectLangs)).toEqual([]);
+	});
+
+	test('save echo == edit read == temporal echo, the entry present exactly once, appended last', async () => {
+		const options = await sessionProjectLangs();
+		const response = await save('component_select_lang', SELECT_LANG, missingRecordId, [
+			{ action: 'update', key: 0, value: missingLocator() },
+		]);
+		const echo = mainItem(response.body, SELECT_LANG);
+		expect(echo.entries).toEqual([expect.objectContaining({ section_id: missingLangId })]);
+
+		const read = await readEdit('component_select_lang', SELECT_LANG, missingRecordId);
+		expect(read.entries).toEqual([expect.objectContaining({ section_id: missingLangId })]);
+		// The project options untouched, then the one entry — named in the
+		// APPLICATION lang (not the data lang), coded 'lg-<code>'.
+		expect(read.datalist).toEqual([...options, expectedEntry()]);
+		expect(entriesOfMissing(read.datalist)).toHaveLength(1);
+
+		expect(echo.datalist).toEqual(read.datalist);
+
+		const temporal = await save(
+			'component_select_lang',
+			SELECT_LANG,
+			missingRecordId,
+			// The temporal door applies the delta to the client's entries.
+			[{ action: 'insert', key: 0, value: missingLocator() }],
+			{ is_temporal: true },
+		);
+		expect(mainItem(temporal.body, SELECT_LANG).datalist).toEqual(read.datalist);
+	});
+
+	test('the shared option list (getDatalist) never carries it', async () => {
+		expect(entriesOfMissing(await getDatalist(SELECT_LANG, null, SECTION, LANG))).toEqual([]);
+	});
+
+	test('list mode shows the same application-lang label', async () => {
+		const listed = await readEdit('component_select_lang', SELECT_LANG, missingRecordId, 'list');
+		expect(listed.value ?? listed.entries).toEqual([`${APP_NAME} *`]);
+	});
+
+	test('a nameless, codeless lang still shows: locator-string label, null code (never a bare " *")', async () => {
+		const options = await sessionProjectLangs();
+		const stored = [{ section_tipo: LANGS_SECTION, section_id: barrenLangId }];
+		const completed = await appendMissingLang(options, stored, appLang);
+		expect(completed).toEqual([
+			...options,
+			{
+				value: { section_tipo: LANGS_SECTION, section_id: barrenLangId },
+				label: `${LANGS_SECTION}_${barrenLangId} *`,
+				section_id: null,
+			},
+		]);
+		// The input is never mutated (the options may be a shared list).
+		expect(options).toHaveLength(completed.length - 1);
+		// Only the FIRST stored locator is guarded (PHP get_missing_lang($value[0])).
+		const firstIsOption = [{ ...options[0]?.value }, ...stored];
+		expect(await appendMissingLang(options, firstIsOption, appLang)).toEqual(options);
 	});
 });

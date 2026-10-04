@@ -44,10 +44,11 @@
 *   get_content_data_edit(self) →  returns `content_data` <div> →
 *   ui.widget.build_wrapper_edit wraps it into the final widget wrapper.
 *
-* `self.value` shape:
-*   No structured server value is required by this widget; `self.value` is
-*   normalized to `{}` defensively. All interactive content is built entirely
-*   client-side.
+* `self.value` shape (the catalog eager value, server unitTestPosture):
+*   { dev_mode: bool, harness_available: bool, harness_missing: string[] }
+*   Facilities 2 and 3 render only when the server says they can work:
+*   2 needs `harness_available` (dev mode AND mocha/chai installed), 3 needs
+*   `dev_mode`. A null value (eager value failed) hides both — fail closed.
 *
 * `self.caller` shape (the parent `area_maintenance` instance):
 *   init_form {Function} — builds and wires a submit `<form>` with a confirm
@@ -122,7 +123,7 @@ render_unit_test.prototype.list = async function(options) {
 * response from the create-test-record form renders below all static content.
 *
 * @param {Object} self - The unit_test widget instance.
-*   self.value    {Object}      — widget payload from the server (unused here; normalized to {}).
+*   self.value    {Object}      — server posture {dev_mode, harness_available, harness_missing}; null → {} (all dev-only options hidden).
 *   self.caller   {Object|null} — parent area_maintenance instance; must expose init_form().
 * @returns {Promise<HTMLElement>} The assembled content_data <div>.
 */
@@ -141,41 +142,69 @@ const get_content_data_edit = async function(self) {
 		const long_process_node = render_long_process()
 		content_data.appendChild(long_process_node)
 
-	// button_open
-	// Opens the Dédalo client-side test runner at /test/client/ in a new tab.
-	// (!) DEDALO_ROOT_WEB is a plain JS global injected by environment.js.php
-	//     and is NOT listed in the /*global*/ directive above — ESLint will
-	//     flag it as an undefined variable.
-		const button_open = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'light',
-			inner_html		: `Open JS unit test`,
-			parent			: content_data
-		})
-		const click_handler = (e) => {
-			e.stopPropagation()
+	// dev-only options
+	// `value` is the server posture (unit_test.ts unitTestPosture): the JS runner
+	// needs dev mode AND the dev-only libs (mocha/chai) installed — a production
+	// install drops them even with dev mode on; the matrix_test reset needs dev
+	// mode (the server refuses it otherwise). A missing value (eager value failed)
+	// fails CLOSED: nothing dev-only is offered.
+		const dev_mode			= value.dev_mode===true
+		const harness_available	= value.harness_available===true
+		const harness_missing	= Array.isArray(value.harness_missing) ? value.harness_missing : []
 
-			// url
-			const url = `${DEDALO_ROOT_WEB}/test/client/`
-
-			window.open(url)
+		if (!dev_mode) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				text_content	: 'JS unit test and test table reset are only available on a development server (DEDALO_DEV_MODE).',
+				parent			: content_data
+			})
+		}else if (!harness_available) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				text_content	: `JS unit test unavailable: dev-only client libs not installed (${harness_missing.join(', ')}). Install the dev dependencies (bun install without --production) or build the dev image.`,
+				parent			: content_data
+			})
 		}
-		button_open.addEventListener('click', click_handler)
 
-	// list_of_test
-	// Dynamically imports the test registry (test/client/js/list.js) and renders
-	// its exported `list_of_test` array as a pretty-printed JSON block so admins
-	// can quickly verify which test modules are registered without opening the tab.
-		const list_of_test = ui.create_dom_element({
-			element_type	: 'pre',
-			class_name		: 'list_of_test',
-			parent			: content_data
-		})
-		import('../../../../../test/client/js/list.js')
-		.then(function(module){
-			// module data as TEXT, never an HTML sink
-			list_of_test.textContent = JSON.stringify(module.list_of_test, null, 2)
-		})
+	if (harness_available) {
+		// button_open
+		// Opens the Dédalo client-side test runner at /test/client/ in a new tab.
+		// (!) DEDALO_ROOT_WEB is a plain JS global injected by environment.js.php
+		//     and is NOT listed in the /*global*/ directive above — ESLint will
+		//     flag it as an undefined variable.
+			const button_open = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light',
+				inner_html		: `Open JS unit test`,
+				parent			: content_data
+			})
+			const click_handler = (e) => {
+				e.stopPropagation()
+
+				// url
+				const url = `${DEDALO_ROOT_WEB}/test/client/`
+
+				window.open(url)
+			}
+			button_open.addEventListener('click', click_handler)
+
+		// list_of_test
+		// Dynamically imports the test registry (test/client/js/list.js) and renders
+		// its exported `list_of_test` array as a pretty-printed JSON block so admins
+		// can quickly verify which test modules are registered without opening the tab.
+			const list_of_test = ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'list_of_test',
+				parent			: content_data
+			})
+			import('../../../../../test/client/js/list.js')
+			.then(function(module){
+				// module data as TEXT, never an HTML sink
+				list_of_test.textContent = JSON.stringify(module.list_of_test, null, 2)
+			})
+	}
 
 	// body_response
 	// Placeholder div where the API response from the create-test-record form
@@ -192,7 +221,7 @@ const get_content_data_edit = async function(self) {
 	// truncates `matrix_test` and inserts a known-state row, giving unit tests a
 	// predictable starting dataset. The optional-chaining guard makes this safe
 	// in standalone render contexts where `self.caller` may be absent.
-		if (self.caller?.init_form) {
+		if (dev_mode && self.caller?.init_form) {
 			self.caller.init_form({
 				submit_label	: 'Truncate test table and Create new empty test record',
 				confirm_text	: get_label.sure || 'Sure?',
@@ -242,9 +271,6 @@ const get_content_data_edit = async function(self) {
 *   3. `update_process_status(local_db_id, pid, pfile, long_process_response)`
 *      opens an SSE stream from `dd_utils_api::get_process_status` and updates
 *      the response container on each tick until the background process exits.
-*
-* A static info block explains known Apache/HTTP1.1 SSE buffering issues and
-* suggested workarounds.
 *
 * @returns {HTMLElement} The assembled long_process_container <div>.
 */
@@ -388,23 +414,6 @@ const render_long_process = function() {
 			element_type	: 'div',
 			class_name		: 'long_process_response',
 			parent			: long_process_container
-		})
-
-	// warning
-	// Static informational note about known Apache/HTTP 1.1 SSE buffering issues
-	// (chunk merging) and the h2+SSL workaround. Rendered as an info_text div.
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'info_text',
-			inner_html		: `Note about SEE problems: <br>
-				Apache have issues where small chunks are not sent correctly over HTTP/1.1 <br>
-				Sometimes, the Apache server joins some outputs into one message (merge). <br>
-				On old versions, you can try this Apache vhosts configuration: <br>
-				<b>ProxyPass fcgi://127.0.0.1:9000/dedalo/ enablereuse=on flushpackets=on max=10</b> <br>
-				to prevent this behavior, but the problem doesn't disappear completely. <br>
-				With h2 protocol and SSL the problem disappear, but it is necessary to be compatibles with HTTP/1.1
-			`,
-			parent : long_process_container
 		})
 
 

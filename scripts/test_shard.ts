@@ -40,12 +40,16 @@
  *    ~38.7 GiB free (measured 2026-08-25), and each FILE_COPY clone of the
  *    7.6 GB suite database is real bytes. Free space is re-checked AFTER EACH
  *    clone and the remainder aborted rather than filling the volume.
- *  - CONNECTIONS: max_connections=100 on this cluster, and the shipped
- *    DB_POOL_ACQUIRE_TIMEOUT_MS default of 0 means WAIT FOREVER — cluster
- *    exhaustion becomes a silent HANG in an unrelated file, not an error. So
- *    every child in a multi-bin run gets a small pool (DB_POOL_MAX=3 — a shard
- *    runs one file at a time) and a NON-ZERO acquire timeout, and the budget
- *    is asserted before anything is cloned.
+ *  - CONNECTIONS: max_connections=100 on this cluster. Every child in a
+ *    multi-bin run gets a small request pool (DB_POOL_MAX=3 — a shard runs one
+ *    file at a time), a one-connection MAINTENANCE pool (DB_MAINTENANCE_POOL_MAX=1
+ *    — the separate unbounded pool withUnboundedStatements routes to, PERF-11)
+ *    and an EXPLICIT non-zero acquire timeout (PINNED because the catalog
+ *    default of DB_POOL_ACQUIRE_TIMEOUT_MS is still 0 — wait forever — until the
+ *    PERF-11 default flip lands, and an operator .env may say 0 after it too:
+ *    cluster exhaustion must never become a silent HANG in an unrelated file).
+ *    The budget counts BOTH pools per process and is asserted before anything
+ *    is cloned.
  *
  * COST comes from engineering/test_baseline/timings.json WHEN PRESENT; when
  * absent the pack falls back to file count and the manifest SAYS SO — never
@@ -64,17 +68,19 @@
 
 import { existsSync, readFileSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
+import { connectionsPerProcess } from '../src/core/db/connection_budget.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
 import { bandOf, classifyTestFile, type TestFootprint } from '../test/helpers/test_footprint.ts';
 import { childEnv } from './lib/parity_census.ts';
 import { buildTestComponentCensus } from './lib/test_components.ts';
 import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
+import { bunTestFileArgs, tierFiles } from './lib/test_order.ts';
 import {
 	assertShardableTemplate,
 	cloneShardMedia,
 	provisionShardDatabase,
 	psql,
+	type SweepReport,
 	shardDatabaseName,
 	sweepShardClones,
 } from './lib/test_shard_db.ts';
@@ -86,7 +92,24 @@ const TIMINGS_PATH = join(REPO_ROOT, 'engineering', 'test_baseline', 'timings.js
 export const DISK_HEADROOM_BYTES = 8 * 1024 ** 3;
 /** Per-child pool — a shard runs one file at a time; 3 covers pool + a stray cursor. */
 export const SHARD_POOL_MAX = 3;
-/** Non-zero ON PURPOSE: the shipped default 0 waits forever (src/config/catalog/db.ts). */
+/** Per-child MAINTENANCE pool (PERF-11): the unbounded lane a maintenance leg opens lazily. */
+export const SHARD_MAINTENANCE_POOL_MAX = 1;
+/**
+ * The PHYSICAL backends one child process may hold — the request pool, BOTH
+ * maintenance pools (the gate bounds slots in use; each Bun pool keeps its idle
+ * sockets), the dedicated cancel/verdict connections. The budget counts THIS
+ * (src/core/db/connection_budget.ts, measured by statement_ceiling_scope_native).
+ */
+export const SHARD_CONNECTIONS_PER_PROCESS = connectionsPerProcess(
+	SHARD_POOL_MAX,
+	SHARD_MAINTENANCE_POOL_MAX,
+);
+/**
+ * Non-zero ON PURPOSE, and PINNED explicitly: the catalog default
+ * (src/config/catalog/db.ts) is still 0 — wait forever — until the PERF-11
+ * default flip, and after it an operator's .env may still say 0. A child never
+ * inherits either.
+ */
 export const SHARD_POOL_ACQUIRE_TIMEOUT_MS = 30000;
 /** A pinned test may spawn ONE concurrent subprocess with its own pool. */
 export const EXPECTED_CONCURRENT_GRANDCHILDREN = 1;
@@ -106,23 +129,13 @@ const RECLAIMABLE_HINT =
 
 /**
  * The same discovery `bun test` performs under bunfig `root = "test"`: every
- * file under test/ whose basename matches bun's four test shapes. Today that
- * is exactly the `*.test.ts` set; the other shapes are matched so a file bun
- * would RUN can never be a file this runner cannot SEE.
+ * file under test/ whose basename matches bun's four test shapes (one walk,
+ * scripts/lib/test_order.ts). Today that is exactly the `*.test.ts` set; the
+ * other shapes are matched so a file bun would RUN can never be a file this
+ * runner cannot SEE.
  */
 export function discoverTestFiles(): string[] {
-	const out = new Set<string>();
-	for (const pattern of [
-		'**/*.test.{js,jsx,ts,tsx,mjs,cjs}',
-		'**/*_test.{js,jsx,ts,tsx,mjs,cjs}',
-		'**/*.spec.{js,jsx,ts,tsx,mjs,cjs}',
-		'**/*_spec.{js,jsx,ts,tsx,mjs,cjs}',
-	]) {
-		for (const file of new Glob(pattern).scanSync({ cwd: join(REPO_ROOT, 'test') })) {
-			out.add(`test/${file}`);
-		}
-	}
-	return [...out].sort();
+	return tierFiles(['test'], REPO_ROOT);
 }
 
 // ── costs ────────────────────────────────────────────────────────────────────
@@ -266,6 +279,61 @@ export function partition(
 
 // ── budgets (pure — the arithmetic is testable with synthetic inputs) ────────
 
+/**
+ * THE ONE VERDICT over a sweep report (PUB-05 review 2026-09-30, S3): one line per item
+ * that BLOCKS — `--sweep` exits 1 on any, the entry sweep refuses the run on any, the
+ * exit sweep prints them. Empty = nothing blocks. Pure, so every field is held without
+ * a multi-bin run (shard_mariadb_sweep_native); a field added to `SweepReport` that
+ * blocks belongs HERE, once, not in three hand-copied conditions.
+ */
+export function sweepBlockers(report: SweepReport): string[] {
+	return [
+		...report.refused.map(
+			(refusal) =>
+				`REFUSED to drop '${refusal.name}': ${refusal.state} — it did not declare itself a disposable test database naming itself. Investigate before dropping by hand.`,
+		),
+		...report.mediaRefused.map(
+			(dir) =>
+				`REFUSED to remove '${dir}': no .dedalo_test_media marker — not a declared test media root.`,
+		),
+		...report.mariadbRefused.map(
+			(lane) =>
+				`REFUSED to remove suite MariaDB lane '${lane}': no .dedalo_test_mariadb marker — the suite did not create it.`,
+		),
+		...report.mariadbFailed.map(
+			(failure) =>
+				`FAILED to sweep suite MariaDB lane '${failure.lane}' (marked, kept): ${failure.error}`,
+		),
+	];
+}
+
+/**
+ * What an entry-sweep refusal MEANS, after its blockers (review 2026-09-30, S3). "Not a
+ * shard clone" is said only when something at a shard name was REFUSED for its missing
+ * marker; a MARKED lane whose sweep FAILED is the suite's own clone and is named as a
+ * failure. "Nothing was removed" is said only when the sweep removed nothing — it may
+ * already have dropped marked clones before it met the blocker. Held by
+ * shard_mariadb_sweep_native.
+ */
+export function entrySweepTrailer(report: SweepReport): string[] {
+	const lines: string[] = [];
+	if (report.refused.length + report.mediaRefused.length + report.mariadbRefused.length > 0)
+		lines.push(
+			'something at a shard name is not a shard clone — provisioning over it would destroy it.',
+		);
+	if (report.mariadbFailed.length > 0)
+		lines.push(
+			'a MARKED suite MariaDB lane could not be swept (its error is above) — fix the cause, then `bun scripts/test_shard.ts --sweep`.',
+		);
+	const removed = report.dropped.length + report.mediaSwept.length + report.mariadbSwept.length;
+	lines.push(
+		removed > 0
+			? `The sweep removed ${removed} marked surface(s), listed above; no clone was built and no test ran.`
+			: 'Nothing was removed, no clone was built, no test ran.',
+	);
+	return lines;
+}
+
 export interface DiskBudgetInput {
 	freeBytes: number;
 	headroomBytes: number;
@@ -295,6 +363,7 @@ export interface ConnectionBudgetInput {
 	superuserReserved: number;
 	liveBackends: number;
 	children: number;
+	/** Physical backends ONE process may hold (connectionsPerProcess — every pool, idle included). */
 	poolMaxPerChild: number;
 	expectedConcurrentGrandchildren: number;
 }
@@ -374,6 +443,7 @@ export function composeChildEnv(
 	if (!multiBin) return { ...process.env };
 	const env = childEnv();
 	env.DB_POOL_MAX = String(SHARD_POOL_MAX);
+	env.DB_MAINTENANCE_POOL_MAX = String(SHARD_MAINTENANCE_POOL_MAX);
 	env.DB_POOL_ACQUIRE_TIMEOUT_MS = String(SHARD_POOL_ACQUIRE_TIMEOUT_MS);
 	if (shard !== null) {
 		env.DEDALO_TEST_DATABASE = shardDatabaseName(template, shard);
@@ -444,8 +514,9 @@ export function printManifest(
 			`\n== bin ${bin.index} — ${bin.files.length} files, cost ${Math.round(bin.cost)} ==`,
 		);
 		console.log(`   ${surface}`);
-		console.log(`   re-run alone: bun test ${TEST_TIMEOUT_FLAG} <files below>`);
-		for (const file of bin.files) console.log(`   ${file}`);
+		// `./`-prefixed and sorted: the exact argv the bin ran (a bare name is a bun FILTER).
+		console.log(`   re-run alone: bun test ${TEST_TIMEOUT_FLAG} <files below, in this order>`);
+		for (const file of bunTestFileArgs(bin.files, REPO_ROOT)) console.log(`   ${file}`);
 	}
 }
 
@@ -491,12 +562,21 @@ async function runBins(
 					junitDir === null
 						? []
 						: ['--reporter=junit', `--reporter-outfile=${join(junitDir, `bin${bin.index}.xml`)}`];
-				const proc = Bun.spawn(['bun', 'test', TEST_TIMEOUT_FLAG, ...reporterArgs, ...bin.files], {
-					cwd: REPO_ROOT,
-					env,
-					stdout: 'pipe',
-					stderr: 'pipe',
-				});
+				const proc = Bun.spawn(
+					[
+						'bun',
+						'test',
+						TEST_TIMEOUT_FLAG,
+						...reporterArgs,
+						...bunTestFileArgs(bin.files, REPO_ROOT),
+					],
+					{
+						cwd: REPO_ROOT,
+						env,
+						stdout: 'pipe',
+						stderr: 'pipe',
+					},
+				);
 				running.push(proc);
 				const prefix = `[bin ${bin.index}]`;
 				await Promise.all([
@@ -593,17 +673,11 @@ async function main(): Promise<number> {
 		const report = await sweepShardClones(template);
 		for (const name of report.dropped) console.log(`[sweep] dropped clone database ${name}`);
 		for (const dir of report.mediaSwept) console.log(`[sweep] removed media twin ${dir}`);
-		for (const refusal of report.refused) {
-			console.error(
-				`[sweep] REFUSED to drop '${refusal.name}': ${refusal.state} — it did not declare itself a disposable test database naming itself. Investigate before dropping by hand.`,
-			);
-		}
-		for (const dir of report.mediaRefused) {
-			console.error(
-				`[sweep] REFUSED to remove '${dir}': no .dedalo_test_media marker — not a declared test media root.`,
-			);
-		}
-		return report.refused.length > 0 || report.mediaRefused.length > 0 ? 1 : 0;
+		for (const lane of report.mariadbSwept)
+			console.log(`[sweep] stopped + removed suite MariaDB lane ${lane}`);
+		const blockers = sweepBlockers(report);
+		for (const blocker of blockers) console.error(`[sweep] ${blocker}`);
+		return blockers.length > 0 ? 1 : 0;
 	}
 
 	// Resolve the file set: explicit list (validated), else bun's own discovery.
@@ -653,16 +727,13 @@ async function main(): Promise<number> {
 	const entry = await sweepShardClones(template);
 	for (const name of entry.dropped) console.log(`[shard] entry sweep dropped stale clone ${name}`);
 	for (const dir of entry.mediaSwept) console.log(`[shard] entry sweep removed media twin ${dir}`);
-	if (entry.refused.length > 0 || entry.mediaRefused.length > 0) {
-		for (const refusal of entry.refused) {
-			console.error(`[shard] REFUSING to run: '${refusal.name}' is ${refusal.state}.`);
-		}
-		for (const dir of entry.mediaRefused) {
-			console.error(`[shard] REFUSING to run: '${dir}' has no test-media marker.`);
-		}
-		console.error(
-			'[shard] something at a shard name is not a shard clone — provisioning over it would destroy it. Nothing was dropped, nothing was written.',
-		);
+	for (const lane of entry.mariadbSwept)
+		console.log(`[shard] entry sweep removed suite MariaDB lane ${lane}`);
+	const entryBlockers = sweepBlockers(entry);
+	if (entryBlockers.length > 0) {
+		for (const blocker of entryBlockers)
+			console.error(`[shard] REFUSING to run — the entry sweep ${blocker}`);
+		for (const line of entrySweepTrailer(entry)) console.error(`[shard] ${line}`);
 		return 1;
 	}
 
@@ -687,13 +758,13 @@ async function main(): Promise<number> {
 		const connVerdict = assessConnectionBudget({
 			...conn,
 			children: bins.length,
-			poolMaxPerChild: SHARD_POOL_MAX,
+			poolMaxPerChild: SHARD_CONNECTIONS_PER_PROCESS,
 			expectedConcurrentGrandchildren: EXPECTED_CONCURRENT_GRANDCHILDREN,
 		});
 		console.log(`[shard] ${connVerdict.arithmetic}`);
 		if (!connVerdict.ok) {
 			console.error(
-				'[shard] REFUSING: the cluster cannot seat every shard pool. Lower --bins — an over-committed cluster plus the default wait-forever acquire would HANG an unrelated file, not error.',
+				'[shard] REFUSING: the cluster cannot seat every shard pool. Lower --bins — an over-committed cluster fails unrelated files on the acquire timeout instead of running them.',
 			);
 			return 1;
 		}
@@ -725,12 +796,8 @@ async function main(): Promise<number> {
 		const exit = await sweepShardClones(template);
 		for (const name of exit.dropped) console.log(`[shard] swept clone ${name}`);
 		for (const dir of exit.mediaSwept) console.log(`[shard] swept media twin ${dir}`);
-		for (const refusal of exit.refused) {
-			console.error(`[shard] exit sweep REFUSED '${refusal.name}': ${refusal.state}`);
-		}
-		for (const dir of exit.mediaRefused) {
-			console.error(`[shard] exit sweep REFUSED '${dir}': no test-media marker`);
-		}
+		for (const lane of exit.mariadbSwept) console.log(`[shard] swept suite MariaDB lane ${lane}`);
+		for (const blocker of sweepBlockers(exit)) console.error(`[shard] exit sweep ${blocker}`);
 	}
 }
 

@@ -14,16 +14,21 @@
  * database, through the real queue: enqueue → claim (the scheduler's own
  * transition) → runJob → read the job row + the published output back. The
  * situation is the zzdif generic domain (test/helpers/zzdif_diffusion_domain.ts)
- * — its markdown FILE element `zzdif80`, so the run needs Postgres + a scratch
- * files root and nothing else: the sql element's MariaDB target is not something the
- * suite owns, and `runJob` cannot be handed a plan (it compiles its own from
- * `DEDALO_DIFFUSION_DOMAIN`, which this gate points at the fixture's domain for
- * the duration of the run — readEnv is live, virtual_tree resolves by term).
- * The MariaDB leg is therefore NOT here, and that is stated rather than
- * papered over: every branch of `runJob` / `runPublicationJob` executes on the
- * file leg (plan → resolve → writeRows → removeRecords → dd1758 log →
- * progress → checkpoint → close / fail / cancel), only the sql writer session
- * differs, and it has its own gate.
+ * — its markdown FILE element `zzdif80` for every branch (plan → resolve →
+ * writeRows → removeRecords → dd1758 log → progress → checkpoint → close / fail /
+ * cancel), and its SQL element `zzdif42` for the one thing only a table can show.
+ * `runJob` cannot be handed a plan: it compiles its own from
+ * `DEDALO_DIFFUSION_DOMAIN`, which this gate points at the fixture's domain for the
+ * duration of the run (readEnv is live, virtual_tree resolves by term).
+ *
+ * THE SQL LEG (PUB-05, audit 2026-09-26). Until the suite owned a MariaDB target this
+ * leg could not exist, and the header said so. It does now: `beforeAll` acquires the
+ * zzdif situation's databases on the lane's suite server (`requireSuiteMariadb` — a
+ * throw, never a skip), and `runJob` publishes zzdif42 into the plan's OWN database
+ * `zzdif_publication_db` through the real mariadb_sql writer session. The destructive
+ * half is observed on a real table: a planted row for the dd64/no record is DELETED by
+ * the run's removeRecords, and the publishable rows are exactly what it wrote. Every
+ * table the run names in its result is dropped in afterAll.
  *
  * LEGS (each mutation-verified against runner.ts — see the row in
  * engineering/TRIPWIRES.md):
@@ -39,7 +44,8 @@
  *
  * WRITES: job rows in the per-run scratch jobs table, dd1758 rows in the
  * scratch activity table (both preload seams), files under a MARKED scratch
- * media root — all swept in afterAll; the situation's residue is asserted 0.
+ * media root, the sql run's tables on the suite MariaDB — all swept in afterAll;
+ * the situation's residue is asserted 0.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -60,13 +66,16 @@ import {
 import { pauseScheduler, resumeScheduler } from '../../src/diffusion/jobs/scheduler.ts';
 import { bumpOntologyRevision } from '../../src/diffusion/plan/cache.ts';
 import { runJob } from '../../src/diffusion/runner.ts';
+import { closeAllTargetPools, getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
 import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
+import { databasesOf, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
 import {
 	dropZzdifDomain,
 	ensureZzdifDomain,
 	ZZDIF_BROKEN_ELEMENT,
 	ZZDIF_DOMAIN_NAME,
+	ZZDIF_ELEMENT,
 	ZZDIF_EXTRA_PUBLISHABLE_IDS,
 	ZZDIF_FILE_ELEMENT,
 	ZZDIF_FILE_FORMAT,
@@ -74,8 +83,15 @@ import {
 	ZZDIF_FILE_TABLE_NAME,
 	ZZDIF_PUBLISHABLE_ID,
 	ZZDIF_SECTION,
+	ZZDIF_SITUATION,
 	ZZDIF_UNPUBLISHABLE_ID,
 } from '../helpers/zzdif_diffusion_domain.ts';
+
+/** The sql element's own database (its `database` node) and primary table. */
+const SQL_DATABASE = 'zzdif_publication_db';
+const SQL_PRIMARY_TABLE = 'zzdif_primary';
+/** Every table an sql run named in its result — dropped in teardown. */
+const sqlTablesCreated = new Set<string>();
 
 /** The superuser: unscoped selection, and a real owner for the dd1758 actor. */
 const OWNER = -1;
@@ -138,6 +154,7 @@ async function publishedActivityIds(): Promise<number[]> {
 async function enqueueAndClaim(
 	elementTipo: string,
 	options: Record<string, unknown> = {},
+	type: string = ZZDIF_FILE_FORMAT,
 ): Promise<DiffusionJobRow> {
 	const { job, attached } = await enqueueDiffusionJob({
 		ownerUserId: OWNER,
@@ -145,7 +162,7 @@ async function enqueueAndClaim(
 		spec: {
 			diffusion_element_tipo: elementTipo,
 			section_tipo: ZZDIF_SECTION,
-			type: ZZDIF_FILE_FORMAT,
+			type,
 			sqo: { section_tipo: ZZDIF_SECTION },
 			estimated_total: PUBLISHABLE_IDS.length + 1,
 			options,
@@ -185,6 +202,12 @@ async function teardown(): Promise<void> {
 		}
 	};
 	await step(() => deleteJobsForTests(createdJobIds));
+	await step(async () => {
+		const pool = getTargetPool(SQL_DATABASE);
+		for (const table of sqlTablesCreated)
+			await pool.unsafe(`DROP TABLE IF EXISTS \`${table}\``, []);
+	});
+	await step(() => closeAllTargetPools());
 	await step(() =>
 		sql.unsafe(
 			`DELETE FROM "${activityTable()}" WHERE section_tipo = 'dd1758'
@@ -212,6 +235,9 @@ async function teardown(): Promise<void> {
 }
 
 beforeAll(async () => {
+	// The sql leg publishes into the zzdif situation's own database on THIS lane's
+	// suite MariaDB — acquired first, or the file throws (never a skip).
+	await requireSuiteMariadb(import.meta.path, databasesOf(ZZDIF_SITUATION));
 	// The raw activity SQL below needs the scratch tables to EXIST — build them
 	// here, never inherit them from an earlier file's engine call.
 	await ensureDiffusionScratchTables();
@@ -292,6 +318,64 @@ describe('runJob — the real publication pipeline on the file element', () => {
 	});
 });
 
+describe('runJob — the sql element publishes into its OWN table on the suite MariaDB', () => {
+	/** DISTINCT section_ids currently in the primary table. */
+	async function tableIds(): Promise<number[]> {
+		const rows = (await getTargetPool(SQL_DATABASE).unsafe(
+			`SELECT DISTINCT section_id FROM \`${SQL_PRIMARY_TABLE}\` ORDER BY section_id`,
+			[],
+		)) as { section_id: number | string }[];
+		return rows.map((row) => Number(row.section_id)).sort();
+	}
+	async function runSql(): Promise<DiffusionJobRow> {
+		const job = await enqueueAndClaim(ZZDIF_ELEMENT, {}, 'sql');
+		await runJob(job.job_id, job.attempt);
+		const finished = await getJobById(job.job_id);
+		if (finished === null) throw new Error('job row vanished during the run');
+		for (const table of (finished.result?.tables ?? []) as { table_name: string }[])
+			sqlTablesCreated.add(table.table_name);
+		return finished;
+	}
+
+	test('a run writes EXACTLY the publishable primaries, and a planted row for the dd64/no record is DELETED by the next run', async () => {
+		const pool = getTargetPool(SQL_DATABASE);
+		sqlTablesCreated.add(SQL_PRIMARY_TABLE);
+		await pool.unsafe(`DROP TABLE IF EXISTS \`${SQL_PRIMARY_TABLE}\``, []);
+		// The file leg's dd1758 rows are not this leg's: count only what the sql runs log.
+		await sql.unsafe(
+			`DELETE FROM "${activityTable()}" WHERE section_tipo = 'dd1758'
+			   AND relation->'dd1763'->0->>'section_tipo' = $1`,
+			[ZZDIF_SECTION],
+		);
+
+		const first = await runSql();
+		expect(first.state).toBe('completed');
+		expect(first.result?.ok).toBe(true);
+		expect(first.result?.errors).toEqual([]);
+		const tables = first.result?.tables as { table_name: string; records_affected: number }[];
+		expect(tables.map((entry) => entry.table_name)).toContain(SQL_PRIMARY_TABLE);
+		expect(await tableIds()).toEqual(PUBLISHABLE_IDS);
+
+		// What a live site holds after an editor withdraws a record: its row is still
+		// in the public table. The run must remove it — and only it.
+		const [lang] = (await pool.unsafe(
+			`SELECT lang FROM \`${SQL_PRIMARY_TABLE}\` WHERE section_id = ? LIMIT 1`,
+			[ZZDIF_PUBLISHABLE_ID],
+		)) as { lang: string }[];
+		await pool.unsafe(`INSERT INTO \`${SQL_PRIMARY_TABLE}\` (section_id, lang) VALUES (?, ?)`, [
+			ZZDIF_UNPUBLISHABLE_ID,
+			lang?.lang ?? 'lg-spa',
+		]);
+		expect(await tableIds()).toEqual([...PUBLISHABLE_IDS, ZZDIF_UNPUBLISHABLE_ID].sort());
+
+		const second = await runSql();
+		expect(second.state).toBe('completed');
+		expect(second.result?.errors).toEqual([]);
+		expect(await tableIds()).toEqual(PUBLISHABLE_IDS);
+		expect(await publishedActivityIds()).toEqual([...PUBLISHABLE_IDS, ...PUBLISHABLE_IDS].sort());
+	}, 120_000);
+});
+
 describe('runJob — failure is a typed FAILURE RECORD on the job row', () => {
 	test('the broken element (unknown parser fn) fails the job with the compile code and msg prefix', async () => {
 		const job = await enqueueAndClaim(ZZDIF_BROKEN_ELEMENT);
@@ -319,11 +403,14 @@ describe('runJob — cancellation and idempotent restarts', () => {
 		expect(finished?.result?.msg).toBe(CANCELLED_MSG);
 	}, 120_000);
 
-	test('a RESUMED job continues after its checkpoint: cursor honoured, processed carried, run_started_at NOT re-stamped', async () => {
-		// The runner's checkpoint read (runner.ts runPublicationJob). A crashed
-		// runner's job is re-claimed with the checkpoint of its last COMMITTED
-		// batch; the resume must publish only the primaries AFTER the cursor,
-		// count on from `processed`, and keep the FIRST attempt's timestamp.
+	test('a LEGACY checkpoint (no `v:2`) RESTARTS the run from zero: every publishable id, run_started_at kept (DIFF-1)', async () => {
+		// The pre-ledger resume contract was the cursor alone: a checkpoint
+		// {cursor, run_started_at, processed} resumed AFTER the cursor, and the
+		// relation frontier + the run's artifact list — which lived only in the
+		// dead runner's memory — were lost (DIFF-1, audit 2026-09-26). A checkpoint
+		// without the run ledger (`v:2`) cannot say what the run already published,
+		// so it is honoured as a TIMESTAMP only: the run restarts from zero, keeps
+		// the first attempt's `run_started_at`, and republishes everything.
 		rmSync(outputDir(), { recursive: true, force: true });
 		await sql.unsafe(
 			`DELETE FROM "${activityTable()}" WHERE section_tipo = 'dd1758'
@@ -331,29 +418,23 @@ describe('runJob — cancellation and idempotent restarts', () => {
 			[ZZDIF_SECTION],
 		);
 		const job = await enqueueAndClaim(ZZDIF_FILE_ELEMENT);
-		// the first attempt "committed" the primaries up to the dd64/no record
-		const cursor = ZZDIF_UNPUBLISHABLE_ID;
-		const alreadyProcessed = 2; // 940001 + 940002
 		const firstAttemptStartedAt = 1_800_000_000; // a pinned past instant
 		await checkpointJob(
 			{ job_id: job.job_id, attempt: job.attempt },
 			{
-				cursor,
+				cursor: ZZDIF_UNPUBLISHABLE_ID,
 				run_started_at: firstAttemptStartedAt,
-				processed: alreadyProcessed,
+				processed: 2,
 			},
 		);
 		await runJob(job.job_id, job.attempt);
 		const finished = await getJobById(job.job_id);
 		expect(finished?.state).toBe('completed');
-		const remaining = PUBLISHABLE_IDS.filter((id) => id > cursor);
-		expect(remaining.length).toBeGreaterThan(0);
-		expect(publishedIds()).toEqual(remaining);
-		expect(await publishedActivityIds()).toEqual(remaining);
-		expect(finished?.totals.counter).toBe(alreadyProcessed + remaining.length);
-		expect(finished?.checkpoint.processed).toBe(alreadyProcessed + remaining.length);
+		expect(publishedIds()).toEqual(PUBLISHABLE_IDS);
+		expect(await publishedActivityIds()).toEqual(PUBLISHABLE_IDS);
+		// every primary seen by the restarted run (publish AND unpublish)
+		expect(finished?.totals.counter).toBe(PUBLISHABLE_IDS.length + 1);
 		expect(Number(finished?.checkpoint.run_started_at)).toBe(firstAttemptStartedAt);
-		expect(Number(finished?.checkpoint.cursor)).toBe(Math.max(...remaining));
 	}, 120_000);
 
 	test('a job that is not running (queued, never claimed) is left untouched', async () => {

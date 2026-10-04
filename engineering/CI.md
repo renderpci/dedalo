@@ -4,7 +4,7 @@ CI runs on `renderpci/dedalo` (GitHub), a **PUBLIC** repo whose default branch i
 **`master`**; development lands directly on **`v7`**. Both facts shape everything
 below (see Security posture). Active since 2026-07-11. Invariants in the workflow
 files are enforced by `test/unit/ci_workflow_tripwire.test.ts` (rules numbered in its
-header) and `test/unit/tier_wiring_tripwire.test.ts` (legs A–H).
+header) and `test/unit/tier_wiring_tripwire.test.ts` (legs A–L).
 
 The design in one paragraph: every check CI runs is runnable on the desk **in CI's own
 image** before the push leaves (`scripts/hooks/pre-push` → `bun run ci:local
@@ -21,12 +21,14 @@ not the commit, run nightly instead of on the push (`nightly.yml`).
 > fingerprint equal to the checkout's). Before it only `ci:local` used the image — and a
 > LOCAL build of it — so a desk verdict predicted neither host.
 >
-> **PART 2 PENDING** (not landed — do not describe it as done):
-> 1. **Blocking unit tier.** The unit tier stays ADVISORY in `db_tier.sh` (its one
->    reasoned `ADVISORY_STAGES` row in `tier_wiring_tripwire` leg H) until
->    `engineering/unit_baseline.json` is re-recorded IN the image. The jobs already run
->    in it; the baseline was recorded outside it, so blocking now would block on the
->    recording environment, not on the code.
+> **The unit tier is BLOCKING (2026-10-02).** Advisory since 2026-08-29 (its red set was
+> load- and order-dependent: 7 / 1 / 14 reds on one commit), it flipped once its criterion
+> held: the baseline RECORDED IN THE IMAGE on the sorted tier order
+> (`ci:local --docker --record-unit-baseline`, below; 0 frozen reds) and zero drift on three EXECUTED GitHub db runs of 674c1f4f76 (37039097260, the v7 push; 37042365421 and 37042378243, dispatched — the master push run was skipped by the dedupe, so it is not counted). The old criterion's "one of them on a loaded runner" leg was NOT separately exercised; a timing-sensitive red that only load exposes would still surface as drift and fail the tier. The desk skip (`--skip-advisory`) went in the same
+> commit — a desk that skipped a stage the runner can fail on predicts nothing; the CLI
+> now refuses the flag (`ci_local_native` §6). A red unit check fails `db_tier.sh`:
+> `tier_wiring_tripwire` legs H (the raise line) and L (executed, stubbed: the check
+> exiting 1 makes the root exit non-zero).
 
 ## Pipeline map
 
@@ -37,7 +39,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
-| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, then the DB-backed tripwires, the unit tier (advisory — Part 2) and the parity tier) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh` and both update drills). Both source `scripts/ci/hosted_env.sh` |
+| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (blocking since 2026-10-02) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract and both update drills). Both source `scripts/ci/hosted_env.sh` |
 | `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `report` keeps one `ci-nightly` issue open/updated/closed |
 | `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
@@ -46,7 +48,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners, in the CI image (digest-pinned, uid 1001) | hermetic tier only — the SAME `scripts/ci/hermetic.sh` |
 | *— PRIVATE MIRROR ONLY (inert on the public repo) —* | | | |
 | `.github/workflows-selfhosted/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` + `full` (`bun test test/unit test/parity`) — both twinned hosted |
-| `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` incl. `test/integration/**` MariaDB legs (the only thing that runs nowhere else) + client gate |
+| `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (incl. `test/integration/**`, whose MariaDB legs the hosted `db` tier's blocking MariaDB stage also runs, on the suite's own server — PUB-05) + client gate |
 | `.github/workflows-selfhosted/deploy.yml` | manual dispatch | self-hosted mac | **PARKED** — loud failure until DEPLOY_HOST/DEPLOY_SSH_KEY exist, then `deploy/deploy.sh` |
 
 **Every gate has an EXECUTING hosted home.** `tier_wiring_tripwire` holds the whole
@@ -127,6 +129,10 @@ re-recorded. The same verdict now happens on the desk.
         [--audit-base <sha>] # the push's `before` (the audit's skip base)
     any mode: [--fail-fast]  # stop after the first red tier; the rest report `not_run`
               [--summary <file.json>]
+    bun run ci:local --docker --record-unit-baseline [--ref HEAD]
+        [--allow-regression --reason "<why, per file>"]   # RECORD the unit baseline
+    bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]
+                                    # record ONLY new test files' floors (--record-new)
 
 It runs `scripts/ci/hermetic.sh`, `db_tier.sh` and `instance_tier.sh` UNCHANGED with an
 EMPTY private dir — the runner's condition; every `DEDALO_*` key the tiers need they
@@ -142,7 +148,8 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   `ci/compose.yml`: db/instance against the SAME pgvector digest `db.yml` pins, reached
   by its name `postgres` (`DB_HOST=postgres`) as a hosted container job reaches it;
   hermetic with no database at all;
-  every tier command as the unprivileged `runner` user (uid 1001, the hosted runner's).
+  every tier command as BARE uid 1001, gid 0 — what `--user 1001` makes on GitHub and
+  GitLab: no passwd entry, no user name (a named account once hid a GitLab-only red).
   Nothing is read from `../private`. The tree judged is the working tree made into one
   commit on HEAD, or `--ref` exactly; the host repo is mounted read-only. It runs as a
   push to the host's current branch (`GITHUB_REF`, the checkout's branch name), a
@@ -160,12 +167,87 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   branch's `@{upstream}`, none → the audit runs. Never HEAD/HEAD^. Refused together
   with `--base` (a PR diffs against its target).
 - **Verdicts.** Each tier is `green`, `red` or `not_run`; stages are parsed from the tier
-  scripts' own `== <tier>: …` lines (`green`/`red`/`skipped`/`advisory`; a red or advisory
-  stage carries its fix hint). `--fail-fast`: once a tier is red the run is red whatever follows, so
+  scripts' own `== <tier>: …` lines (`green`/`red`/`skipped`; a red stage carries its fix
+  hint). `--fail-fast`: once a tier is red the run is red whatever follows, so
   later tiers are not run — REPORTED `not_run` in the summary and the JSON, never
   silently absent (`ci_local_native`). `--summary` writes
   `{mode, tiers:[{tier, verdict, exit_code, duration_s, stages}]}`. Exit: 0 green,
   1 red, 2 could not run (no docker/image/Postgres, bad arguments).
+
+### Recording the unit baseline — in the image, never on a desk (2026-10-02)
+
+`engineering/unit_baseline.json` freezes per-file floors (cases, skips, executed
+`expect`s) and the red set — facts about the PLATFORM the tier runs on: the image's
+media toolchain, a bare uid, a clone that has no `audits/` and no `../private`. A desk
+recording froze the desk, and the runner reported the difference as drift. The difference
+runs in BOTH directions — a desk asserts more where it has what a runner lacks (`audits/`,
+a GeoIP database, its own configured addons and masters) and less where the image has
+what the desk lacks (librsvg: `media_svg_thumb` skips 7 on a Mac, 0 in the image) — so no
+desk number is a floor, in either direction. So:
+
+- **The writer refuses off the image.** `UNIT_TIER.recordOnlyInCiImage`: the flagless
+  `scripts/unit_baseline.ts` exits 1 BEFORE measuring unless `/etc/dedalo-ci-image`
+  (the fingerprint `ci/Dockerfile` writes) equals this checkout's
+  `sha256(ci/Dockerfile ++ .bun-version)` (`red_baseline.ts ciImageMarkerMatches`).
+  `--record-new` is a write too (a new file's floor is a platform fact like any other)
+  and refuses the same way, before measuring; only the READ doors, `--check` and
+  `--report`, stay open. `baselines:bank --with-db`'s unit row therefore fails on a desk
+  by design. Gate: `suite_assertion_floor_tripwire`.
+- **The door is `ci:local --docker --record-unit-baseline`** — the db tier alone, in the
+  image, with `db_tier.sh`'s unit stage in RECORD MODE (`DEDALO_CI_UNIT_RECORD_OUT`,
+  `DEDALO_CI_UNIT_RECORD_ALLOW`): the same suite build, MariaDB start, installs and
+  DB-tripwire stage the check runs after — one preparation, no copy of it to drift. The
+  written JSON leaves the container through the ONE writable mount, `/ci-out` (a scratch
+  dir, deleted after; the source mounts stay read-only), and is copied into the checkout
+  only when the writer did not refuse AND the whole db tier ended GREEN
+  (`ci_local.ts recordCopyFault`): a red suite build, DB-tripwire, parity or MariaDB
+  stage means the floors were measured on a broken run, so the copy is refused loudly,
+  naming the red stages, and the checkout's file stays as it was. Host mode refuses the
+  flag; so do `--hermetic`, `--instance`, `--fail-fast`, `--keep`.
+  `--ref` must name this checkout's HEAD on a clean working tree (`recordRefFault`): the
+  measure is written into THIS tree, so it must be this tree's.
+- **A new test file's floor goes through the same door**: `--new <file>[,<file>…]`
+  (`DEDALO_CI_UNIT_RECORD_NEW`) runs `unit_baseline.ts --record-new <files>` in the stage
+  instead of the full writer — it only ADDS records for files that have none and refuses
+  a red, a crash or a vacuous file. Unit-tier paths only (`test/unit|test/integration/…
+  .test.ts`, no spaces or shell characters — the list crosses `db_tier.sh`'s word split);
+  never beside `--allow-regression`. The working tree (untracked files included) is what
+  the container runs, so a new file needs no commit first.
+- **A refused write is a list to examine, not to wave through.** The writer prints every
+  regression; a real lost assertion is a defect to fix. Only an environment-explained
+  difference is accepted: `--allow-regression --reason "<cause, per file>"` (≥ 20
+  characters; `--reason` alone is refused). The writer prints what it ACCEPTED, and the
+  recorded baseline is committed ON ITS OWN with those reasons in the message.
+- **No workflow names any record key** (`ci_workflow_tripwire`); all three are always set
+  explicitly by `ci:local` (`ci_local_native` §7 also EXECUTES the pinned stage block
+  with `bun`/`cp` stubbed) and pinned off in `tier_wiring`'s drills.
+
+### Fixing a red — reproduce narrow, gate once (2026-10-02)
+
+A full gate is ~15 minutes; it CONFIRMS a fix, it does not find one. On 2026-10-01 ten full
+runs (~2.5 h) peeled one red per run. The rule since:
+
+1. **Read every red first.** The pre-push gate runs every tier to its verdict (no
+   `--fail-fast`), so one refusal lists them all; the hosts' logs likewise.
+2. **Reproduce the ONE failing file or package in the pinned image**, as the host runs it
+   (bare uid 1001, the host's checkout shape) — a minute, not fifteen:
+   `docker run --rm -v "$PWD/.git":/srcgit:ro <ci/image.json image@digest> bash -c '…clone, setpriv --reuid=1001 --regid=0, bun test <file>'`.
+   Fix against that until it is green there.
+3. **Then one full gate** (the push), never one per attempt.
+
+**Where the desk still differs from a host — reproduce THERE when the red is about it:**
+- *Architecture.* The Mac runs the image's arm64 half, the hosts amd64. For a media /
+  native-binary red, or an image change: `DOCKER_DEFAULT_PLATFORM=linux/amd64 bun run
+  ci:local --docker …` (emulated, slower; the pinned digest is a multi-arch index).
+- *The GitLab checkout.* The docker executor clones as root under `umask 0000` (every file
+  0666, every dir 0777); `.gitlab-ci.yml` works on a copy made under `umask 022`, the
+  shape GitHub's checkout and ci:local's clone have. A gate that judges who can write a
+  file reds on the raw tree (2026-10-01: site_builder confinement, 99 reds).
+- *The unit stage's floors.* They are the IMAGE's (a desk asserts more where it has
+  `audits/` or `../private`, less where it lacks librsvg), so reproduce a unit-floor red in
+  the image: `bun run ci:local --docker --db`. The stage is blocking on the host and on the
+  desk alike (no skip since 2026-10-02); improvement drift is re-RECORDED in the image
+  (`--record-unit-baseline`, above), never banked on the desk.
 
 ### `bun run baselines:bank` — improvements banked mechanically
 
@@ -205,14 +287,16 @@ against local bare remotes with stubbed bank/ci:local). For the pushed refs it:
    a commit to a push in progress; re-run it). Exit 1 blocks, reported as ERROR (a
    check that could not run — usually the environment) when the bank printed one,
    else as REGRESSED with the `--allow-regression --reason` path;
-2. runs `ci:local --docker --fail-fast --hermetic --ref <sha> --audit-base <base>
-   --summary <file>` — blocks on red, listing each red stage `✗` (advisory `!`) with
-   its fix hint; with `--fail-fast` a red tier ends the run and the later tiers are
-   `not_run`, so a red hermetic does not wait for db + instance;
+2. runs `ci:local --docker --hermetic --ref <sha> --audit-base <base>
+   --summary <file>` — blocks on red, listing each red stage `✗` with its fix hint; every tier runs to its verdict (no `--fail-fast`, 2026-10-02), so ONE
+   refused push names every red tier instead of one per 15-minute run;
 3. adds `--db --instance` unless every file the pushed range touches (renames count
    both paths; a merge is diffed against its first parent; >500 new commits or a URL
    remote count as everything) is in its `HERMETIC_ONLY_PATHS` allow-list (anything
-   unlisted selects the full gate), or always with `DEDALO_PREPUSH=full`.
+   unlisted selects the full gate), or always with `DEDALO_PREPUSH=full`. The db tier
+   runs WHOLE, its unit stage included: that stage is blocking on the runner, so the
+   full gate costs ~5 min more than it did while the desk skipped it (2026-10-02) —
+   the price of a desk verdict that predicts the runner's.
 
 **The audit base is the remote's sha**, per ref as git hands it: one gated remote sha
 this clone has → that sha; a new branch (`000…`), an unfetched remote tip, or gated refs
@@ -250,7 +334,7 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
           improvement-only → commit "chore(baselines): bank improvements" → exit 3
           → push.ts re-aligns + re-gates (bounded)
           regression → exit 1 (nothing written; the reasoned path is named)
-      → ci:local --docker --fail-fast (hermetic; + db/instance unless provably hermetic-only)
+      → ci:local --docker (hermetic; + db/instance unless provably hermetic-only)
       → git push --no-verify to every remote
       → GitHub: ci/db on master (runs) + on v7 (queues, then dedupe → skipped)
 
@@ -266,12 +350,25 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   dependency-audit ratchet (only when the push changed its inputs — see Time-based
   checks), and the two isolated publication packages (`site_builder`,
   `server_api/v2`: install + tsc + test). Required config keys get harmless stubs;
-  `DB_PORT` points at a closed port so any accidental DB touch fails loudly.
+  `DB_PORT` points at a closed port so any accidental DB touch fails loudly. No
+  hermetic gate starts a server: `suite_mariadb_target_native` (which drives the lane's
+  own `mariadbd`) is a DB-tier gate (`NOT_HERMETIC` row + `DB_TIER_TRIPWIRES`).
 - **DB** (`db` job, `scripts/ci/db_tier.sh`): builds the suite database from bytes
   vendored in the repo (`scripts/test_db_setup.ts`; the `test` TLD ontology, the
   hierarchy copies; it stamps `dedalo_test_marker`), then the DB-backed tripwires
-  (`DB_TIER_TRIPWIRES` = `NOT_HERMETIC` exactly), the unit tier (ADVISORY vs
-  `engineering/unit_baseline.json` — Part 2) and the parity tier. The service image is
+  (`DB_TIER_TRIPWIRES` = `NOT_HERMETIC` exactly), the unit tier (BLOCKING since
+  2026-10-02 vs `engineering/unit_baseline.json`, recorded in the image), the parity tier, and LAST the MariaDB tier
+  (BLOCKING — `scripts/ci/mariadb_tier.ts`, see *Suite MariaDB target* below). Last
+  because its leg 1b re-runs ~170 Postgres-writing unit and parity files in one extra
+  batch: before parity, that extra pass would move the suite database away from the state
+  the unit and parity baselines were recorded in (one unit pass, then parity). The order
+  is gated, not described: tier_wiring leg K executes every root that runs the stage
+  (commands stubbed) and reds any command recorded after it but the EXIT trap's stop
+  (mutation H1 — the stage moved ahead of the tripwires — left every other gate green). Before the tripwires it
+  starts the suite MariaDB target (`scripts/ci/suite_mariadb.ts start`, stopped by an
+  EXIT trap that tier_wiring leg J EXECUTES: a later `trap … EXIT` replacing it, or one
+  set after the start, is red) and installs `publication/server_api/v2` for the API
+  smoke. The service image is
   `pgvector/pgvector` (the RAG store needs `CREATE EXTENSION vector`), digest-pinned.
   Measured build cost (2026-08-25, warm Mac): ~15 min end to end, ~7.65 GB database,
   gates ~6 s — dominated by the per-row triggers deriving `matrix_relation_index` and
@@ -281,19 +378,143 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   database (the unit stage pollutes the fixture the client baseline was measured on),
   then the browser client suite (`scripts/ci/client_gate.sh` → `bun run test:client`:
   own server on the suite DB, real login, pinned diffusion domain + projects fixture,
-  Mocha in the system browser) and `bun run test:update` / `test:update:dev` (a real
+  Mocha in the system browser), `bun run test:tools:phone` (every tool at 360×740, same suite
+  server door) and `bun run test:update` / `test:update:dev` (a real
   master builds and serves a release; a supervised consumer copy installs it across the
   planned-death restart). The checkout is `fetch-depth: 0` (the drills `git clone` it);
   the release commit is cut with `git checkout -B` (a PR checkout is a detached HEAD).
   Drill config comes from `scripts/lib/operator_config.ts` (catalog keys of the process
   env; `update_drill_config_tripwire`).
-- **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers plus the
-  `test/integration/**` MariaDB legs. Everything else it runs is twinned hosted.
+- **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers. Everything it
+  runs is twinned hosted — including the `test/integration/**` MariaDB legs, which ran
+  nowhere else until PUB-05 moved them onto the suite's own MariaDB server and into the
+  DB tier's blocking MariaDB stage.
+
+### Suite MariaDB target (PUB-05, 2026-09-30)
+
+MariaDB is the fourth suite-owned surface, beside the suite Postgres database
+(`dedalo_test_marker`), the media root (`.dedalo_test_media`) and the vector database
+(`dedalo_test_rag_marker`). Before it, a test process reached the INSTALLATION's MariaDB
+(`DEDALO_DIFFUSION_DB_SOCKET` from `../private/.env`): a developer run created and
+dropped tables in a real publication database, and a runner without that socket skipped
+every live leg GREEN.
+
+- **Per lane.** The lane (`testDatabaseName()`) keys a root
+  `../private/test_mariadb/<suite db>/` (marked `.dedalo_test_mariadb`; datadir, pid,
+  logs, `acquisitions.ndjson`) and a socket `/tmp/dedalo_tmdb_<sha256(root)[:12]>/s`
+  (dir 0700 — macOS caps a socket path at 104 bytes). The server runs
+  `--skip-networking`, so the filesystem is the access control.
+- **Armed by a preload.** `test/preload/suite_mariadb.ts` sets `DEDALO_DIFFUSION_DB_*`
+  (the lane socket, the suite user, a blank host/port) in EVERY `bun test` process,
+  unconditionally and without I/O. Nothing exports them in CI.
+- **Acquired, never skipped.** A MariaDB gate calls
+  `requireSuiteMariadb(import.meta.path, databases)` in `beforeAll`
+  (`test/helpers/suite_mariadb.ts`): the names must be `database` nodes of the
+  registered situations (zzd, zzdif) — an installation's database is refused by name;
+  the process must be armed; the server is installed/started/provisioned; each
+  database's marker row, read through the engine's `getTargetPool`, must name this
+  lane. It throws otherwise, and appends an acquisition row when it does not.
+- **Grants = production posture.** The diffusion user has
+  `SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX` per target database, no global
+  privilege, no CREATE DATABASE, and SELECT only on `dedalo_test_mariadb_marker.targets`
+  (so the marker cannot be forged). Every ensure self-checks errno 1044 / 1142. Two
+  control databases (`zzd_unmarked_control`, `zzd_foreign_marker_control`) are granted
+  but refused by the classifier. A third, `zzd_granted_absent`, is granted (no CREATE)
+  and never created: the one name that answers errno 1049, since every ungranted
+  absent name answers 1044 first. The engine's 1049 branch is gated on it.
+- **The stage.** `scripts/ci/mariadb_tier.ts` runs `test/integration/**` (minus the
+  shrink-only `INSTALL_BOUND_EXEMPT`) plus every `test/unit` file that imports the
+  helper at runtime (resolved by Bun's transpiler, not a regex), EACH FILE IN ITS OWN
+  `bun test`, and requires per file: reported, >0 cases, 0 skipped, 0 failed, >0
+  assertions, an acquisition row; and that the rows the SUITE USER changed during THAT
+  file's run (`information_schema.USER_STATISTICS`, `--userstat=1`: inserted, deleted,
+  updated) match its declared `ROW_CONTRACT` row — every counter it declares rises, a
+  declared reader moves none. Per file because a set-wide sum rose whenever the
+  helper's own gate (which writes rows to prove the measure) passed, whatever the
+  product gates wrote. Not global `Com_*`: those count statements dispatched by anyone,
+  including the helper's root provisioning and its refused self-check insert
+  (measured). The measure is CALIBRATED live on every run: a planted file that only
+  acquires must move it by exactly 0, one that inserts, updates and deletes a row by
+  more than 0. A measure that cannot be read is a structured fault in the same report.
+- **The no-contact population.** Every `test/unit` and `test/parity` file (the preload
+  arms both) OUTSIDE the set whose runtime
+  import closure reaches `src/diffusion/targets/mariadb/db.ts` (the module that opens
+  pools) is derived — transitively, through `test/helpers`, `src` and `tools`, static and
+  literal dynamic imports, crossing the reasoned `SEAM_EDGES` of the product modules
+  that import by a computed path (the tool loader, the boot warm-up; an unlisted one is
+  red) — and RUN in one armed batch with the suite server up (173 files: 136 unit + 37
+  parity, measured 2026-09-30; parity replays the frozen fixtures, credless). The suite user's CONTACTS (`TOTAL_CONNECTIONS` + `DENIED_CONNECTIONS`)
+  must not move; a non-zero batch is re-run file by file and each file that opened a
+  pool without acquiring is named with its import chain; a contact no single file
+  reproduces reds the batch itself (fail-closed: an order-dependent or late contact is
+  bisected, never passed). Every population file must RUN ≥1 case — reported, not all
+  skipped (bun's `tests` counts skipped cases), and ≥1 assertion executed (a file whose
+  `beforeAll` threw reports one failed `(unnamed)` case and 0 assertions: it never ran) —
+  unless a reasoned, shrink-only `NO_CONTACT_IDLE` row (the three live-PHP-oracle parity
+  differentials) says why it runs nothing by construction; a row whose file runs, or left
+  the population, is red. Partial skips are printed, not judged; pass/fail is the unit /
+  parity tier's verdict. The contact measure has its own
+  live calibration: a file that imports the pool module and opens nothing moves it by
+  exactly 0; one that opens a pool unacquired (after proving it is armed at a live
+  socket) by more than 0 — which also proves the child is armed. Not closed here: a
+  contact made only in a situation the suite database does not hold, and a test-side
+  computed import.
+- **Bun's TCP fallback.** Measured: the `mariadb` adapter given a socket path that does
+  not exist connects to `localhost:3306` instead. The helper checks the socket exists
+  before any pool opens and its CLI forces `--protocol=socket`, so a gate that acquires
+  through `requireSuiteMariadb` never meets the fallback. Arming does NOT close it for
+  other `getTargetPool` callers while the lane server is down; only the engine seam
+  PUB-05b (`buildTargetOptions` refusing a socket that is not a unix socket;
+  `DEDALO_TEST_DIFFUSION_DB_SOCKET`) does.
+- **Lifecycle.** The server is detached and outlives the `bun test` that started it.
+  `scripts/ci/suite_mariadb.ts stop` ends it; `sweep` also deletes the lane root (only a
+  root carrying `.dedalo_test_mariadb`). Ensure/stop are serialized per lane by a
+  kernel-released `flock` on `<root>/.lock`, so a killed run leaves no stale lock; a
+  stop issued while another process holds it waits (`suite_mariadb_target_native`
+  leg j). A sweep stops the server AND renames the root off its path (same directory,
+  atomic) under that lock, then deletes it marker-last: the lane path is marked until
+  the instant it is absent (leg k), a process queued on the lock is told the lane was
+  swept instead of holding a lock over it — every flock is re-validated against the
+  current `.lock` inode (leg l) — and a killed sweep's `.<lane>.swept-…` leftover is
+  collected by the next one (leg m). Every client call and the installer have a
+  deadline, so a hung one cannot hold the lane lock (leg n); a waiter's lock wait is
+  DERIVED from those deadlines (the holder's worst ensure plus a margin), so it reports
+  the holder's real failure, never "lock held" (leg q). A start that misses its deadline
+  stops the server it spawned (leg o); a server that ANSWERS with a server-side error
+  (1040, 1045…) is alive and is surfaced, never restarted (leg p). The lane root is
+  claimed atomically — built marked under `.<lane>.claim-<pid>-<n>`, then renamed onto
+  its path — and a dead claimer's temp is collected by the next sweep (leg r). Before it
+installs, starts on or sweeps a datadir, the holder FENCES it: every process whose command
+line names that datadir is stopped, not only the pid-file server — an installer orphaned
+by a killed holder, a stray server (leg t) — and a stop returns only once the process is
+gone, SIGKILL included, or throws naming the survivor (leg s).
+  `sweepSuiteMariadbLanes(match)` (`test/helpers/suite_mariadb_lanes.ts`) sweeps every
+  marked lane root a matcher names — the shard runner's teardown for its
+  `<template>__shard<N>` lanes: `sweepShardClones` (`scripts/lib/test_shard_db.ts`) calls
+  it at the entry sweep, the exit sweep and `--sweep`. An unmarked lane root at a shard
+  name is REFUSED and a marked one whose sweep fails is a FAILURE with its real error —
+  each refuses the run and makes `--sweep` exit non-zero, through ONE pure verdict,
+  `sweepBlockers` (`shard_mariadb_sweep_native`, a DB-tier tripwire, which sweeps only a
+  probe template it built, never the lane's own).
+
+Locally (needs `mariadbd`, `mariadb-install-db`, `mariadb`; without them the MariaDB
+gates are RED, not skipped):
+
+```sh
+export DEDALO_TEST_DATABASE=<app db>_test_l3        # the lane key
+bun run scripts/ci/suite_mariadb.ts start           # optional: a gate's beforeAll starts it too
+bun test --timeout=30000 test/integration/diffusion_mariadb.test.ts
+bun run scripts/ci/mariadb_tier.ts                  # the blocking stage, as CI runs it
+bun run scripts/ci/suite_mariadb.ts stop            # the server outlives bun test until stopped
+```
 
 Every tier root keeps the independent-stage accumulator: each STAGE line aborts bare
-under `set -e` or raises `tier_status` (leg H); a `|| true` on a stage is red, with ONE
-shrink-only `ADVISORY_STAGES` row (the unit tier), whose restore criterion `db_tier.sh`
-states.
+under `set -e` or raises `tier_status` (leg H); a `|| true` on a stage is red, with no
+exemption (the unit tier's `ADVISORY_STAGES` row went when it turned blocking,
+2026-10-02). A red-baseline check that exits 1 fails its root while every later stage
+still runs (leg L, executed with stubbed commands). A root that starts the suite MariaDB must stop it on exit (leg J, executed with
+stubbed commands: to the end, and SIGTERMed at the first start), and a root that runs
+the MariaDB stage runs it LAST (leg K, the same stubbed run).
 
 ### Time-based checks — the nightly (2026-09-26)
 
@@ -410,9 +631,17 @@ Externally provided values win over `test/preload/session_db.ts` defaults and ov
 | `DEDALO_TS_STATE_PATH` | scratch json (runner) | real maintenance-mode state |
 | `DB_NAME` / `DEDALO_DATABASE_CONN` | the SUITE database (runner) | the application's records |
 | `DEDALO_TEST_MEDIA_ROOT` | `../private/test_media/<suite db>` (runner and preload) | the installation's media tree; the key also ARMS the `.dedalo_test_media` refusal |
+| `DEDALO_DIFFUSION_DB_SOCKET` / `_USER` / `_PASSWORD` / `_HOST` / `_PORT` | `bun test` ONLY: the lane's suite MariaDB socket, its suite user, blank host/port — set by `test/preload/suite_mariadb.ts`, which OVERRIDES any externally provided value (the exception to the precedence rule above). NOT yet the client suite's server (see below) | the installation's MariaDB publication databases |
 
-`scripts/client_test_runner.ts` starts its own server with all of these, so
-`bun run test:client` on a desk gets the isolation CI gets. The `dedalo_ts_test_` table
+`scripts/client_test_runner.ts` starts its own server with all of these EXCEPT the
+`DEDALO_DIFFUSION_DB_*` row, so `bun run test:client` on a desk gets the isolation CI
+gets for everything but MariaDB: its server still resolves `DEDALO_DIFFUSION_DB_*` from
+`../private/.env`, i.e. the installation's MariaDB, until `scripts/client_test_server.ts`
+composes `suiteMariadbEnvironment` and starts the lane's server first (arming alone is
+not enough: an absent socket falls back to TCP `localhost:3306`). Held as a tethered
+PENDING row, `CLIENT_SERVER_MARIADB_PENDING` in `suite_mariadb_target_native` leg (u): the
+leg composes the server's environment and goes red the day it is armed while the row still
+stands, so the row and this paragraph leave together. The `dedalo_ts_test_` table
 prefix is schema-enforced (rule 14 extracts the engine's own guard regex).
 
 ## Sibling paths and client libraries

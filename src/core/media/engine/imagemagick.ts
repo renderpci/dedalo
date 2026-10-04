@@ -857,14 +857,22 @@ export async function runConnectedComponents(
 }
 
 /**
- * Per-PROCESS memo of "can this ImageMagick, under OUR policy, write a `.<ext>`
- * file". Keyed by the lowercase extension, value is the in-flight probe promise
- * so N concurrent uploads of the same configured format spawn ONE probe.
+ * Per-BINARY memo of "can this ImageMagick, under OUR policy, write a `.<ext>`
+ * file". Keyed by the RESOLVED magick binary path plus the lowercase extension
+ * (`writableFormatKey`), value is the in-flight probe promise so N concurrent
+ * uploads of the same configured format spawn ONE probe.
  *
- * ONLY A `true` IS KEPT. A positive answer really is a fact about the HOST (the
+ * THE BINARY IS PART OF THE KEY because the answer is a fact about ONE
+ * executable: keyed by extension alone, the first binary to answer spoke for
+ * every binary the process later resolved (`config.media.binaries.magick`
+ * repointed, the v6 `convert` fallback). That is the `ffmpeg.ts:
+ * audioCodecByBinary` defect, where a fake ffmpeg's answer broke every later real
+ * encode in the same process; the same key closes it here.
+ *
+ * ONLY A `true` IS KEPT. A positive answer really is a fact about the binary (the
  * delegate is built in) plus the shipped policy.xml, and neither can change under
- * a running server — that is the ffmpeg.ts:cachedAudioCodec class, and caching it
- * is what keeps a bulk ingest from spawning a probe per file. A NEGATIVE is not
+ * a running server — caching it is what keeps a bulk ingest from spawning a probe
+ * per file. A NEGATIVE is not
  * the same kind of fact: the probe is a process spawn writing into os.tmpdir(),
  * so it also fails when the fd/PID table is saturated by the very bulk ingest
  * that asked, when tmp is full, or when tmp is momentarily unwritable. Memoized,
@@ -874,14 +882,19 @@ export async function runConnectedComponents(
  * only on a box that genuinely lacks the format, where it is asked once per
  * buildAlternateVersions pass, not once per tier.
  *
- * Request-INDEPENDENT by construction: the key is a file extension and the value
- * a boolean. Allowlisted in module_state_tripwire.
+ * Request-INDEPENDENT by construction: the key is a binary path and a file
+ * extension, the value a boolean. Allowlisted in module_state_tripwire.
  */
 const writableFormatCache = new Map<string, Promise<boolean>>();
 
+/** `writableFormatCache`'s key. NUL cannot occur in a path or an extension. */
+function writableFormatKey(binary: string, extension: string): string {
+	return `${binary}\0${extension}`;
+}
+
 /**
  * Can this host actually WRITE `extension`? Probed by encoding a real 1x1 image
- * through the very runner the derivative ladder uses, once per process.
+ * through the very runner the derivative ladder uses, once per magick binary.
  *
  * WHY NOT `magick -list format`. It answers a different question. Measured on
  * IM 7.1.2-18 with the repo policy dir:
@@ -901,16 +914,20 @@ const writableFormatCache = new Map<string, Promise<boolean>>();
  */
 export function canWriteImageFormat(extension: string): Promise<boolean> {
 	const normalized = extension.toLowerCase().replace(/^\./, '');
-	const cached = writableFormatCache.get(normalized);
+	// Resolved ONCE and handed to the probe, so the key names the binary that
+	// actually answered.
+	const binary = resolveMagick();
+	const key = writableFormatKey(binary, normalized);
+	const cached = writableFormatCache.get(key);
 	if (cached !== undefined) return cached;
-	const probe = probeWritableFormat(normalized);
+	const probe = probeWritableFormat(binary, normalized);
 	// The in-flight promise is cached immediately (no stampede: N concurrent first
 	// callers share ONE spawn) and a `false` is DROPPED once it resolves — see the
 	// cache's lifecycle note. Dropping it after resolution, not before, is what
 	// keeps both properties.
-	writableFormatCache.set(normalized, probe);
+	writableFormatCache.set(key, probe);
 	const dropIfStillOurs = (): void => {
-		if (writableFormatCache.get(normalized) === probe) writableFormatCache.delete(normalized);
+		if (writableFormatCache.get(key) === probe) writableFormatCache.delete(key);
 	};
 	// TWO arms, both required. This `.then` is a SECOND consumer of the shared
 	// promise, so a rejection needs its own handler here or it surfaces as a
@@ -927,7 +944,7 @@ export function canWriteImageFormat(extension: string): Promise<boolean> {
 }
 
 /** The one 1x1 encode behind `canWriteImageFormat`. Temp removed in a finally. */
-async function probeWritableFormat(extension: string): Promise<boolean> {
+async function probeWritableFormat(binary: string, extension: string): Promise<boolean> {
 	// os.tmpdir(), never the media tree: a probe artefact inside a quality dir
 	// would be scanned into files_info before the finally could remove it. The
 	// uuid keeps two concurrent probes of the same format apart.
@@ -937,7 +954,7 @@ async function probeWritableFormat(extension: string): Promise<boolean> {
 		// probe measures the ENCODER alone. The output token carries the coder, so
 		// an unrecognised format fails here instead of writing PNG bytes under the
 		// configured name (see coderToken).
-		await runMagickTo([resolveMagick(), '-size', '1x1', 'xc:white', coderToken(target)], target);
+		await runMagickTo([binary, '-size', '1x1', 'xc:white', coderToken(target)], target);
 		return true;
 	} catch {
 		return false;

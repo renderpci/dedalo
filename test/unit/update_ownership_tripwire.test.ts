@@ -116,7 +116,7 @@ const EXPECTED_GATED: Readonly<Record<string, { stub: boolean }>> = {
 	'update_ontology.update_ontology': { stub: false }, // phase 2 — LANDED
 	'update_data_version.update_data_version': { stub: false }, // phase 3 — LANDED
 	'update_code.update_code': { stub: false }, // phase 4 — LANDED
-	'update_code.build_version_from_git_master': { stub: false }, // phase 4 — LANDED
+	'serve_code.build_version_from_git_master': { stub: false }, // phase 4 — LANDED (moved from update_code 2026-09-28)
 	'update_code.restore_code': { stub: false }, // phase 4 — the swap in reverse
 	'update_code.delete_restore_point': { stub: false }, // phase 4 — retention's guarded manual delete
 	'move_tld.move_tld': { stub: false }, // phase 5 — LANDED

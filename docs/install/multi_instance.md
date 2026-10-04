@@ -334,8 +334,13 @@ first match wins. Every path points at **this instance's** socket, media and clo
     SSLCertificateKeyFile /etc/letsencrypt/live/site1.example.org/privkey.pem
     Include /etc/letsencrypt/options-ssl-apache.conf
 
+    # An EMPTY directory — nothing is ever served from it (see "The DocumentRoot"
+    # below). One shared /var/www/empty serves every vhost on the box.
+    DocumentRoot /var/www/empty
+
     ProxyPreserveHost On
-    ProxyTimeout 300                # >= SERVER_IDLE_TIMEOUT_S (255)
+    # >= SERVER_IDLE_TIMEOUT_S (255)
+    ProxyTimeout 300
 
     # --- Liveness probe → THIS instance's socket -------------------------------
     # At the ORIGIN ROOT, one per domain. See [Reverse proxy](reverse_proxy.md):
@@ -357,6 +362,16 @@ first match wins. Every path points at **this instance's** socket, media and clo
     ProxyPass /dedalo/ai_models/                    unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/ai_models/
     ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
     ProxyPass /dedalo/export/artifact/              unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/export/artifact/
+
+    # Media and the client tree are served from disk by Apache, never proxied.
+    ProxyPass /dedalo/media !
+    ProxyPass /dedalo       !
+
+    # --- Entry points: the client tree has no index above core/page/ -----------
+    # Must precede the aliases.
+    RedirectMatch 302 "^/dedalo/?$"      /dedalo/core/page/
+    RedirectMatch 302 "^/dedalo/core/?$" /dedalo/core/page/
+    RedirectMatch 302 "^/$"              /dedalo/core/page/
 
     # --- Media: the generated .htaccess lives inside THIS instance's MEDIA_PATH -
     Alias /dedalo/media /srv/dedalo/site1/media
@@ -381,6 +396,29 @@ first match wins. Every path points at **this instance's** socket, media and clo
     Header always set X-Frame-Options "SAMEORIGIN"
 </VirtualHost>
 ```
+
+#### The DocumentRoot
+
+Apache has no vhost without a DocumentRoot. If you leave the line out, the vhost
+inherits the server-wide one (often `/var/www/html`), and any path the vhost does
+not route is served from there. Point it at an **empty directory** instead, created
+once for the whole box:
+
+```shell
+mkdir -p /var/www/empty            # Apache warns at start if it is missing
+```
+
+- **Nothing is ever served from it.** Every real path is proxied to the instance's
+  socket or mapped by an `Alias`. An unrouted path answers `403` with `AH01630` in
+  the error log; on a path the vhost *should* serve (`/health` is the classic), that
+  means the route is missing. Add the route, never widen the DocumentRoot.
+- **One shared directory is enough.** It holds no files, so it isolates nothing and
+  leaks nothing. The per-instance boundary is the socket and the two `Alias` lines,
+  not the DocumentRoot. A per-tenant `/var/www/empty/<site>` works too, but it adds
+  no isolation.
+- **Never point it at the clone, `private/` or `MEDIA_PATH`.** A DocumentRoot on the
+  clone serves the repo tree to unrouted paths; on `private/` it exposes `.env`;
+  on the media tree it serves media at a second, unplanned URL.
 
 ### Shared to both
 
@@ -417,6 +455,9 @@ Issue a certificate per domain: `certbot --apache -d site1.example.org` (or
 - **`AllowOverride All` on every media `<Directory>`** (Apache). Without it that
   instance's generated `.htaccess` is ignored **silently** and its whole media tree
   is world-readable. Easy to forget on the third vhost.
+- **A `DocumentRoot` on every vhost** (Apache). A vhost without one inherits the
+  server-wide DocumentRoot and serves its contents on unrouted paths. Point each at
+  the empty directory — [The DocumentRoot](#the-documentroot).
 - **Wrong media root reads as a 404.** The proxy path to media must resolve to
   **this instance's** `MEDIA_PATH` (nginx `root + /dedalo/<media dir>/…`; Apache the
   `Alias`). A mismatch 404s every media file while the access gate itself works —

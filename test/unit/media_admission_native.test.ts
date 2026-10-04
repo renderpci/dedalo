@@ -61,6 +61,7 @@ import {
 import { magickPolicyEnv, resolveMagick } from '../../src/core/media/engine/binaries.ts';
 import { createPosterframe } from '../../src/core/media/engine/ffmpeg.ts';
 import { probeImageSource } from '../../src/core/media/engine/probe.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = scratchMediaRoot('dedalo_admission_');
@@ -272,7 +273,9 @@ describe.if(HAVE_MAGICK)('converter admission: the pixel-cache spill is redirect
 		// refusal can only mean the cache was attempted THERE — i.e. the variable, and
 		// not the operating system's default, decides the filesystem. Measured on this
 		// host: `unable to open pixel cache … Permission denied @ error/cache.c`.
-		await Bun.spawn([MAGICK, '-size', '1200x1200', 'xc:red', source]).exited;
+		await Bun.spawn([MAGICK, '-size', '1200x1200', 'xc:red', source], {
+			env: { ...(process.env as Record<string, string>), ...magickTestEnv() },
+		}).exited;
 		expect(existsSync(source), 'the situation was not built — no source image').toBe(true);
 		mkdirSync(unwritable, { recursive: true });
 		chmodSync(unwritable, 0o500);
@@ -416,21 +419,35 @@ describe.if(HAVE_MAGICK)('the shipped policy arms in a real ImageMagick', () => 
 		// single BACKTICK inside one — the `list-length` row read back as `unlimited`
 		// with the file parsing as valid XML. This leg asks the binary instead of the
 		// text, so the NEXT unknown disarming spelling is caught by the same assertion.
-		const declared = [
-			...readFileSync(POLICY_PATH, 'utf8').matchAll(
-				/<policy\s+domain="resource"\s+name="([^"]+)"\s+value="([^"]+)"/g,
-			),
-		].map((m) => m[1] as string);
+		const declaredValue = new Map(
+			[
+				...readFileSync(POLICY_PATH, 'utf8').matchAll(
+					/<policy\s+domain="resource"\s+name="([^"]+)"\s+value="([^"]+)"/g,
+				),
+			].map((m) => [m[1] as string, m[2] as string]),
+		);
+		const declared = [...declaredValue.keys()];
 		expect(declared.length, 'the policy declares no resource ceilings at all').toBeGreaterThan(6);
-		const child = Bun.spawn([MAGICK, '-list', 'resource'], {
-			env: {
-				...(process.env as Record<string, string>),
-				MAGICK_CONFIGURE_PATH: join(POLICY_PATH, '..'),
-			},
-			stderr: 'pipe',
-		});
-		const report = await new Response(child.stdout).text();
-		await child.exited;
+		const policyEnv = {
+			...(process.env as Record<string, string>),
+			MAGICK_CONFIGURE_PATH: join(POLICY_PATH, '..'),
+		};
+		const magick = async (...args: string[]) => {
+			const proc = Bun.spawn([MAGICK, ...args], { env: policyEnv, stderr: 'pipe' });
+			const text = await new Response(proc.stdout).text();
+			await proc.exited;
+			return text;
+		};
+		// ImageMagick 7.1.1 LOADS a `time` policy row but never ARMS it: `-list policy`
+		// shows it, `-list resource` reads `Time: unlimited` (measured 2026-10-01 on
+		// Debian trixie's 7.1.1-43, the CI and product base; 7.1.2 arms the same file).
+		// That is the binary, not a disarming spelling — so on 7.1.1 the time row is held
+		// to what that binary CAN show: loaded with its declared value. The engine's own
+		// spawns never depend on it: each carries `-limit time` and a process cap of the
+		// same length (magickResourceLimitArgs, runMagickTo's timeoutMs).
+		const timeRowUnarmable = /ImageMagick 7\.1\.1-/.test(await magick('-version'));
+		const report = await magick('-list', 'resource');
+		const policies = await magick('-list', 'policy');
 		expect(report).toMatch(/Resource limits/);
 		for (const name of declared) {
 			// `list-length` prints as `List length`; the report is title-cased words.
@@ -439,6 +456,13 @@ describe.if(HAVE_MAGICK)('the shipped policy arms in a real ImageMagick', () => 
 				.split('\n')
 				.find((line) => line.trim().toLowerCase().startsWith(`${label}:`));
 			expect(row, `the binary reports no ${name} row at all`).toBeDefined();
+			if (name === 'time' && timeRowUnarmable) {
+				expect(
+					policies,
+					'ImageMagick 7.1.1 did not even LOAD the time row — a disarming spelling, not the binary',
+				).toMatch(new RegExp(`name: time\\s+value: ${declaredValue.get('time')}\\b`));
+				continue;
+			}
 			expect(
 				(row as string).toLowerCase(),
 				`ImageMagick loaded the shipped policy but ${name} is UNLIMITED — a policy row after a disarming comment is dropped silently`,

@@ -56,6 +56,8 @@ const SECTION = 'test3';
 const TEXT = 'test52'; // test3's own component_input_text
 const TABLE = 'matrix_test';
 const USER = 987673;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 /** Scratch ids owned by THIS gate (reserved ≥ 900000 band). */
 const IMPORT_ID = 941721;
 const CREATED_MARKER_ID = 941722;
@@ -173,9 +175,9 @@ const BULK_DOORS: ReadonlyMap<string, { onCreateFailure: 'refuse' | 'proceed'; r
 		[
 			'tools/tool_propagate_component_data/server/index.ts',
 			{
-				onCreateFailure: 'proceed',
+				onCreateFailure: 'refuse',
 				reason:
-					'OPEN: createBulkProcess() catches its own failure and returns null, and the null is threaded straight into every TM row — so a propagation whose dd800 mint failed is written with NULL bulk_process_id and cannot be reverted as one operation. Outside P0-7’s edit scope; the same defect class as DATA-20, on the propagation door instead of the import door.',
+					'The propagation door (closed 2026-09-27, WC-2026-09-27-bulk-revert-undo-log): createBulkProcess() mints the dd800 row AND its label in ONE transaction and lets any failure propagate, before the record loop — a propagation that could not be attributed writes nothing. Behaviourally measured below (the mint fault case drives the real handler).',
 			},
 		],
 		[
@@ -188,8 +190,12 @@ const BULK_DOORS: ReadonlyMap<string, { onCreateFailure: 'refuse' | 'proceed'; r
 		],
 	]);
 
-/** Doors still allowed to proceed unattributably. FROZEN — this list may only shrink. */
-const OPEN_PROCEED_DOORS = new Set(['tools/tool_propagate_component_data/server/index.ts']);
+/**
+ * Doors still allowed to proceed unattributably. FROZEN — this list may only
+ * shrink, and it is EMPTY since the propagation door closed (2026-09-27): no
+ * door may re-enter it.
+ */
+const OPEN_PROCEED_DOORS = new Set<string>();
 
 function censusBulkDoors(): string[] {
 	const glob = new Glob('**/*.ts');
@@ -268,7 +274,7 @@ describe('the shared import executor attributes every TM row it writes', () => {
 		const report = await importMappedRecords(
 			[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['attributed'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 			{ bulkLabel: 'bulk_process_id_tripwire update run' },
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -287,7 +293,7 @@ describe('the shared import executor attributes every TM row it writes', () => {
 		const report = await importMappedRecords(
 			[{ sectionId: null, fields: [{ component_tipo: TEXT, values: ['created row'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 			{ bulkLabel: 'bulk_process_id_tripwire create run' },
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -295,13 +301,18 @@ describe('the shared import executor attributes every TM row it writes', () => {
 		const createdId = report.createdIds[0] as number;
 		try {
 			const rows = (await sql.unsafe(
-				`SELECT bulk_process_id FROM matrix_time_machine
-				  WHERE section_tipo = $1 AND section_id = $2`,
+				`SELECT tipo, tm_role, bulk_process_id FROM matrix_time_machine
+				  WHERE section_tipo = $1 AND section_id = $2 ORDER BY id ASC`,
 				[SECTION, createdId],
-			)) as { bulk_process_id: number | null }[];
+			)) as { tipo: string; tm_role: number | null; bulk_process_id: number | null }[];
 			expect(rows.length).toBeGreaterThan(0);
 			expect(rows.filter((row) => row.bulk_process_id === null)).toEqual([]);
 			expect([...new Set(rows.map((row) => row.bulk_process_id))]).toEqual([report.bulkProcessId]);
+			// The record the run CREATED carries exactly one BIRTH marker (role 3,
+			// tipo = the section), FIRST — what lets the revert delete it again
+			// (WC-2026-09-27-bulk-revert-undo-log, decision D2).
+			expect(rows.filter((row) => row.tm_role === 3).map((row) => row.tipo)).toEqual([SECTION]);
+			expect(rows[0]?.tm_role).toBe(3);
 		} finally {
 			await sql.unsafe(`DELETE FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
 				SECTION,
@@ -325,7 +336,7 @@ describe('the shared import executor attributes every TM row it writes', () => {
 				{ sectionId: CREATED_MARKER_ID, fields: [{ component_tipo: TEXT, values: ['survivor'] }] },
 			],
 			SECTION,
-			USER,
+			IMPORTER,
 		);
 		rememberBulkProcess(report.bulkProcessId);
 		expect(report.failed.map((entry) => entry.msg).join('\n')).toContain('IGNORED');
@@ -357,13 +368,57 @@ describe('a run whose dd800 mint FAILS writes nothing', () => {
 		const attempt = importMappedRecords(
 			[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['must not land'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 		);
 		await expect(attempt).rejects.toThrow('dd800 mint unavailable (gate)');
 		mock.module('../../src/core/section/record/create_record.ts', () => REAL_CREATE_RECORD);
 		// NOT "the run reported a failure" — the run must not have HAPPENED. An
 		// unattributable bulk write cannot be taken back, so it must never exist.
 		expect(await tmRows(IMPORT_ID)).toEqual(before);
+	});
+
+	test('the PROPAGATION door refuses too: the mint failure propagates, no record is touched', async () => {
+		requireReady();
+		const readText = async (): Promise<unknown> => {
+			const rows = (await sql.unsafe(
+				`SELECT string->$3 AS v FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
+				[SECTION, IMPORT_ID, TEXT],
+			)) as { v: unknown }[];
+			return rows[0]?.v ?? null;
+		};
+		const before = await tmRows(IMPORT_ID);
+		const valueBefore = await readText();
+		const { getLoadedTool } = await import('../../src/core/tools/loader.ts');
+		const loaded = await getLoadedTool('tool_propagate_component_data');
+		const handler = loaded?.module.apiActions.propagate_component_data?.handler;
+		expect(typeof handler).toBe('function');
+		mock.module('../../src/core/section/record/create_record.ts', () => ({
+			...REAL_CREATE_RECORD,
+			createSectionRecord: async () => {
+				throw new Error('dd800 mint unavailable (propagate gate)');
+			},
+		}));
+		const attempt = (handler as NonNullable<typeof handler>)({
+			principal: { userId: -1, isGlobalAdmin: true, isDeveloper: true },
+			userId: -1,
+			background: false,
+			options: {
+				section_tipo: SECTION,
+				component_tipo: TEXT,
+				action: 'replace',
+				lang: 'lg-spa',
+				total: 1,
+				propagate_data_value: [{ lang: 'lg-spa', value: 'must not land' }],
+				sqo: {
+					section_tipo: [SECTION],
+					filter_by_locators: [{ section_tipo: SECTION, section_id: String(IMPORT_ID) }],
+				},
+			},
+		} as Parameters<NonNullable<typeof handler>>[0]);
+		await expect(attempt).rejects.toThrow('dd800 mint unavailable (propagate gate)');
+		mock.module('../../src/core/section/record/create_record.ts', () => REAL_CREATE_RECORD);
+		expect(await tmRows(IMPORT_ID)).toEqual(before);
+		expect(await readText()).toEqual(valueBefore);
 	});
 });
 
@@ -394,7 +449,7 @@ describe('a mid-record failure leaves NO half-written record', () => {
 						},
 					],
 					SECTION,
-					USER,
+					IMPORTER,
 				),
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -431,7 +486,7 @@ describe('a run with NOTHING to write files no bulk process', () => {
 			return rows[0]?.n ?? 0;
 		};
 		const before = await countRows();
-		const report = await importMappedRecords([], SECTION, USER, { bulkLabel: 'empty run' });
+		const report = await importMappedRecords([], SECTION, IMPORTER, { bulkLabel: 'empty run' });
 		rememberBulkProcess(report.bulkProcessId);
 		expect(report.bulkProcessId).toBeNull();
 		expect(report).toMatchObject({ created: 0, updated: 0, failed: [], createdIds: [] });
@@ -468,7 +523,7 @@ describe('a dd800 whose label save FAILS leaves no orphan', () => {
 		const attempt = importMappedRecords(
 			[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['must not land'] }] }],
 			SECTION,
-			USER,
+			IMPORTER,
 		);
 		await expect(attempt).rejects.toThrow('dd800 label save unavailable (gate)');
 		mock.module('../../src/core/section/record/save_component.ts', () => REAL_SAVE_COMPONENT);

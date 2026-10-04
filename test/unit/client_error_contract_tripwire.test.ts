@@ -14,7 +14,7 @@
  *     The pre-v2 fetch layer threw every non-401 status away UNPARSED, which is
  *     how a 403 became "Not retry-able HTTP error 403" over a blank panel
  *     (WC-2026-08-12-authorization-denial-token).
- *  2. NO FOURTH COPY — `worker_cache.js` and `sw.js` (the two non-page
+ *  2. NO FOURTH COPY — `worker_cache.js` and `service_worker.js` (the two non-page
  *     contexts that fetch the API) import `api_transport.js`; and no file under
  *     client/ or tools/ (the WHOLE tree — a worker under `transcribers/lib/`
  *     is browser code too) defines a `request(` / `fetch_api(` function that
@@ -99,7 +99,7 @@ const DATA_MANAGER = 'client/dedalo/core/common/js/data_manager.js';
 const TRANSPORT_CONSUMERS = [
 	DATA_MANAGER,
 	'client/dedalo/core/page/js/worker_cache.js',
-	'client/dedalo/core/sw.js',
+	'client/dedalo/core/service_worker.js',
 ] as const;
 /**
  * The shared tool client machinery. Pinned because it is the one client tree

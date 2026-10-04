@@ -9,7 +9,7 @@
 
 // local vars
 :root {
-	--tool_update_cache: #62866a;
+	--tool_update_cache: #5f8367;
 }
 @tool_color: var(--tool_update_cache);
 
@@ -152,13 +152,18 @@
 
 		>.buttons_container {
 			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 0.75rem;
 			padding: 1rem;
 			position: relative;
 
-			.button_apply {
-				background-color: @tool_color;
-				padding-left: 1.5rem;
-				padding-right: 1.5rem;
+			// .button_apply is a plain `button.primary`: tool_common.less paints
+			// it (.tool_action_button()), no local override
+
+			.records_total {
+				color: @color_grey_6;
+				font-variant-numeric: tabular-nums;
 			}
 
 			.response_message {
@@ -193,8 +198,3 @@
 		}
 	}//end content_data
 }//end wrapper_tool
-
-// modal header tool modification
-.tool_header.tool_update_cache {
-	background-color: @tool_color;
-}

@@ -36,12 +36,17 @@
 #      2026-09-26: scripts/client_test_runner.ts reads client_gate_inventory.json,
 #      and the unit tier runs every tripwire that reads the others), so treating
 #      them as hermetic-only would be exactly the hole the allow-list forbids.
-#   2. `bun run ci:local --docker --fail-fast --hermetic` — blocks on red; with
-#      --fail-fast a red tier ends the run (the later tiers are reported not_run).
+#   2. `bun run ci:local --docker --hermetic` — blocks on red. EVERY tier runs to its
+#      verdict, red ones included: one gate reports every red at once (2026-10-02 — with
+#      --fail-fast a red hermetic hid db/instance, and each run peeled ONE layer: ten
+#      15-minute runs on 2026-10-01 to see what one would have shown).
 #   3. `--db --instance` too, UNLESS every file the pushed range touches is
 #      in HERMETIC_ONLY_PATHS below — or always, with DEDALO_PREPUSH=full. CI
 #      itself runs them on every push; skipping them here is a desk-time trade,
 #      and it is only taken where it is PROVABLY not a hole (see the list).
+#      The db tier runs WHOLE, its unit stage included (~5 min): that stage is
+#      blocking on the runner (2026-10-02), so a desk that skipped it would pass
+#      what the runner refuses.
 #
 # THE GATED TREE IS THE PUSHED COMMIT. ci:local gets `--ref <HEAD sha>`: the
 # container checks out exactly that commit, no working-tree overlay; and the
@@ -517,12 +522,12 @@ esac
 cleanup_bank
 
 # ── 2 + 3. the CI tiers, in the CI image ────────────────────────────────────
-# --fail-fast: the verdict is RED once one tier is red, so a red hermetic does
-# not wait ~11 more minutes for db + instance before the push is refused.
+# No --fail-fast: a red hermetic still runs db + instance, so the refusal lists EVERY
+# red tier — the next fix is made against all of them, not one per run (see step 2).
 if [ "$level" = full ]; then
-	set -- --docker --fail-fast --hermetic --db --instance
+	set -- --docker --hermetic --db --instance
 else
-	set -- --docker --fail-fast --hermetic
+	set -- --docker --hermetic
 fi
 bun run ci:local "$@" --ref "$head_sha" --audit-base "$audit_base" --summary "$summary_file" </dev/null
 ci_code=$?
@@ -534,10 +539,9 @@ if [ "$ci_code" -ne 0 ]; then
 		bun -e '
 			const s = await Bun.file(process.argv[1]).json();
 			for (const t of s.tiers ?? []) for (const st of t.stages ?? [])
-				// ci_local StageVerdict: green | red | skipped | advisory. Only
-				// red failed; advisory is shown (it carries a hint), never as ✗.
-				if (st.verdict === "red" || st.verdict === "advisory")
-					console.error(`    ${st.verdict === "red" ? "✗" : "! (advisory)"} ${t.tier} › ${st.name}${st.fix_hint ? ` — ${st.fix_hint}` : ""}`);
+				// ci_local StageVerdict: green | red | skipped. Only red failed.
+				if (st.verdict === "red")
+					console.error(`    ✗ ${t.tier} › ${st.name}${st.fix_hint ? ` — ${st.fix_hint}` : ""}`);
 		' "$summary_file" || true
 	fi
 	say 'Bypass (CI will still run): git push --no-verify'

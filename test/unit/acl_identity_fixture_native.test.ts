@@ -33,6 +33,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { sql } from '../../src/core/db/postgres.ts';
 import {
 	ddoIsAuthorized,
 	getPermissions,
@@ -41,7 +42,8 @@ import {
 	resolvePrincipal,
 	resolveProfileId,
 } from '../../src/core/security/permissions.ts';
-import { getUserTools } from '../../src/core/tools/registry.ts';
+import { getUserTools, resetRegistryCache } from '../../src/core/tools/registry.ts';
+import { isToolGranted } from '../../src/core/tools/security.ts';
 import {
 	ACL_ADMIN_LEVEL,
 	ACL_ADMIN_PROFILE_ID,
@@ -203,6 +205,39 @@ describe.if(DB_READY)('ACL identity fixture — the contrast is non-degenerate',
 			expect(id).toBeGreaterThanOrEqual(SCRATCH_ID_FLOOR);
 			expect(id).toBeLessThan(931000);
 		}
+	});
+
+	// A tool grant cached by an EARLIER file must not survive this fixture's
+	// install. The fixture mints users/profiles with raw SQL — no save event — so
+	// only its own cache reset can evict registry.ts's per-user grant cache.
+	// (2026-10-02: export_artifact_download left tool_export cached for 930002 and
+	// get_element_context then served 200 where it asserts 403.)
+	test('install evicts a tool grant an earlier file left cached for these ids', async () => {
+		const registryId = await resolveAclGrantedToolRegistryId();
+		const setNonAdminGrant = async (granted: boolean): Promise<void> => {
+			const grants = granted
+				? [
+						{
+							id: 1,
+							type: 'dd151',
+							section_id: registryId,
+							section_tipo: 'dd1324',
+							from_component_tipo: 'dd1067',
+						},
+					]
+				: [];
+			await sql`UPDATE matrix_profiles
+				SET relation = jsonb_set(COALESCE(relation, '{}'::jsonb), '{dd1067}', ${JSON.stringify(grants)}::text::jsonb)
+				WHERE section_tipo = 'dd234' AND section_id = ${ACL_NON_ADMIN_PROFILE_ID}`;
+		};
+		await setNonAdminGrant(true);
+		resetRegistryCache();
+		// The earlier file's view: granted, and now CACHED for this user id.
+		expect(await isToolGranted(ACL_NON_ADMIN_USER_ID, ACL_GRANTED_TOOL_NAME)).toBe(true);
+		// Its rows go away by raw SQL (as the fixture's sweep does) — no save event.
+		await setNonAdminGrant(false);
+		await installAclIdentityFixture();
+		expect(await isToolGranted(ACL_NON_ADMIN_USER_ID, ACL_GRANTED_TOOL_NAME)).toBe(false);
 	});
 
 	// LAST: the sweep must FAIL LOUDLY when it deletes nothing (a filter that

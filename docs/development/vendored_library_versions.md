@@ -2,15 +2,15 @@
 
 ## Purpose
 
-The Dédalo client loads 23 third-party browser libraries. **Since 2026-07-12 most
+The Dédalo client loads third-party browser libraries. **Since 2026-07-12 most
 of them are package-manager tracked**, which is what this document used to exist to
 compensate for.
 
 The old model was a 118 MB gitignored `client/dedalo/lib/` directory of hand-dropped
 bundles that no package manager watched — so **SEC-103** made a human re-check every
-one against the CVE feeds each release. That gap is now closed on both sides: 17 of
-the 23 libs are pinned dependencies in `package.json`, so Dependabot and `bun audit`
-see them like any other dep; the other six are committed under `vendor/`, pinned by a
+one against the CVE feeds each release. That gap is now closed on both sides: the
+npm-tracked libs are pinned dependencies in `package.json`, so Dependabot and `bun audit`
+see them like any other dep; the rest are committed under `vendor/`, pinned by a
 digest, bound to their declared version, licensed on record, and watched by a
 [gated advisory ledger](#advisories-and-staleness-the-axis-a-digest-cannot-cover)
 rather than by a human's memory. See also
@@ -25,12 +25,16 @@ human-facing companion; the registry is what the code reads.
 Every lib is served at `/dedalo/lib/<id>/<subpath>`. There is no `lib/` directory in
 the repo any more. **Two** sources back that URL, and that is the whole story:
 
+<!-- BEGIN GENERATED client-libs:sources — package.json + src/core/client_libs/registry.ts · regenerate: bun run libs:gen -->
+
 | Source | Count | Root | In git? |
 |---|---|---|---|
 | **npm** | 16 | `node_modules/` | no — `bun install` |
 | **vendor** | 5 | `vendor/` | **yes** — committed (ckeditor, json-view, lz-string, pdfjs, transformers) |
 
-A sixth committed tree, `swagger-ui`, is not a client lib at all: it is the Swagger
+<!-- END GENERATED client-libs:sources -->
+
+One more committed tree, `swagger-ui`, is not a client lib at all: it is the Swagger
 page of the v1 publication API and lives *inside* that self-contained folder
 (`publication/server_api/v1/docu/ui/swagger-ui/`) under a manifest row with an
 explicit `root` — see [Every committed third-party byte](#every-committed-third-party-byte-the-derived-census).
@@ -56,43 +60,56 @@ swapping the underlying package never touches a client file (`jsoneditor` →
 ## Versions
 
 Pinned **exactly** (no `^`). The pins were chosen by byte-comparing each file
-against the previously-vendored copy: **18 of the 20 files the client loads are
-byte-identical** to what shipped before this migration.
+against the previously-vendored copy: **18 of the 20 files the client loads were
+byte-identical** to what shipped before the 2026-07-12 migration.
 
-All 23, re-measured against `package.json` and `vendor/vendor_manifest.json` on
-2026-09-04.
+### npm-tracked
+
+**Generated** from `package.json` (the pin, and whether it is a runtime or a dev
+dependency) and `src/core/client_libs/registry.ts` (which lib id maps to which
+package, and the note). Do not edit the rows: change a source and run
+`bun run libs:gen`. `test/unit/client_lib_versions_doc_tripwire.test.ts`
+re-renders the table and demands byte identity, so a bumped pin with a stale row is
+a red gate — which is why it is generated: thirteen of these rows drifted while
+they were prose (eight found 2026-08-28, five more 2026-10-02).
+
+<!-- BEGIN GENERATED client-libs:npm — package.json + src/core/client_libs/registry.ts · regenerate: bun run libs:gen -->
+
+| id | Package | Version | Installed as | Notes |
+|---|---|---|---|---|
+| three | `three` | 0.186.0 | dependency | `examples/jsm/` reached via the client import map. |
+| d3 | `d3` | 7.9.0 | dependency | The version does not appear in the URL. |
+| jsoneditor | `vanilla-jsoneditor` | 3.13.0 | dependency |  |
+| leaflet | `leaflet` | 1.9.4 | dependency |  |
+| geoman | `@geoman-io/leaflet-geoman-free` | 2.20.2 | dependency | Was bundled *inside* leaflet's `dist/`; now its own dep. |
+| turf | `@turf/turf` | 7.4.0 | dependency | Was bundled *inside* leaflet's `dist/`; now its own dep. |
+| flatpickr | `flatpickr` | 4.6.13 | dependency |  |
+| split | `split.js` | 1.6.5 | dependency | Used by the indexation tool. |
+| iro | `@jaames/iro` | 5.5.2 | dependency |  |
+| codex-tooltip | `codex-tooltip` | 1.0.6 | dependency |  |
+| highlightjs | `@highlightjs/cdn-assets` | 11.12.0 | dependency | Not `highlight.js` — see below. |
+| onnxruntime | `onnxruntime-web` | 1.29.0 | dependency | Transformers.js's WASM runtime; the only `onnxruntime-web` the lockfile holds. |
+| qrcode | `easyqrcodejs` | 4.6.2 | dependency | The QR tool. Was a copy committed under its own `lib/` directory with no digest. |
+| svgedit | `@svgedit/svgcanvas` | 7.4.2 | dependency | Replaced a vendored ~7.2.x build. See below. |
+| mocha | `mocha` | 12.0.2 | **devDependency** | Client test harness. |
+| chai | `chai` | 6.2.2 | **devDependency** | Client test harness. |
+
+<!-- END GENERATED client-libs:npm -->
+
+### Vendored
+
+Hand-written, and **gated**: `test/unit/vendor_advisory_tripwire.test.ts` asserts
+every row of this table against `vendor/vendor_manifest.json`, which is in turn
+bound to the bytes. A bump updates the manifest row and this table together.
 
 | id | Package | Version | Notes |
 |---|---|---|---|
-| three | `three` | 0.185.1 | `examples/jsm/` reached via the client import map. |
 | pdfjs | *(vendor)* | 6.2.108 | Committed, minus 4 sourcemaps + the demo PDF. **Bumped 2026-08-28** for CVE-2026-16633. See below. |
 | ckeditor | *(vendor)* | CKEditor 5 42.0.1 | Custom build. See below. |
-| jsoneditor | `vanilla-jsoneditor` | 3.13.0 | |
-| leaflet | `leaflet` | 1.9.4 | |
-| geoman | `@geoman-io/leaflet-geoman-free` | 2.20.0 | Was bundled *inside* leaflet's `dist/`; now its own dep. |
-| turf | `@turf/turf` | 7.3.5 | Ditto. |
-| highlightjs | `@highlightjs/cdn-assets` | 11.11.1 | Not `highlight.js` — see below. |
-| svgedit | `@svgedit/svgcanvas` | 7.4.2 | **Upgraded 2026-07-12** from a vendored ~7.2.x build. See below. |
-| d3 | `d3` | 7.9.0 | The version no longer appears in the URL. |
-| flatpickr | `flatpickr` | 4.6.13 | |
-| split | `split.js` | 1.6.5 | Used by `tool_indexation`. |
-| iro | `@jaames/iro` | 5.5.2 | |
-| codex-tooltip | `codex-tooltip` | 1.0.6 | |
 | transformers | *(vendor)* | 4.2.0 | The in-browser AI runtime (`tool_transcription`, `tool_lang`, the remove-background processor). **Vendored 2026-09-04** — was the `@huggingface/transformers` npm pin, which no engine module imported and which shipped 567 MB of native Node code to every install. See below. |
-| qrcode | `easyqrcodejs` | 4.6.2 | `tool_qr`. **Pinned 2026-09-04** — was a 4.6.1 copy committed under `tools/tool_qr/lib/` with no digest. |
 | lz-string | *(vendor)* | 1.5.0 | URL-state compression (`tool_common`, `component_text_area`). UMD-only upstream; committed with one declared patch. See below. |
-| onnxruntime | `onnxruntime-web` | 1.29.0 | Transformers.js's WASM runtime; since the bundle is vendored this is the only `onnxruntime-web` the lockfile holds — see the registry's `reason`. |
 | json-view | *(vendor)* | — | The bundle carries no version string at all. See below. |
 | swagger-ui | *(vendor)* | 5.32.14 | Not a client lib: the v1 publication API's Swagger page, rooted inside that folder. **Bumped 2026-09-04** from 4.5.2. See below. |
-| mocha | `mocha` | 11.8.0 | **devDependency** — client test harness. |
-| chai | `chai` | 6.2.2 | **devDependency** — client test harness. |
-
-!!! warning "This table is prose, and prose rots"
-    Eight of these rows were stale when they were re-measured on 2026-08-28 — the
-    npm pins had moved under them with nothing to notice. The **vendored rows
-    are gated** (`test/unit/vendor_advisory_tripwire.test.ts` asserts this table
-    against `vendor/vendor_manifest.json`, which is in turn bound to the bytes); the
-    npm rows are not, and `package.json` remains the only authority for them.
 
 Two files are not byte-identical to the old copies, both benignly: `highlightjs`
 differs by the build hash in its banner (same 11.9.0 release), and the old `chai`
@@ -383,10 +400,10 @@ Two arms run these questions, and neither is sufficient alone:
 
 ## Upgrade checklist (SEC-103, reduced)
 
-For the 15 npm-tracked libs this is now ordinary dependency hygiene: read the
-Dependabot/advisory alert, bump the pin, run the gates.
+For the npm-tracked libs this is now ordinary dependency hygiene: read the
+Dependabot/advisory alert, bump the pin, run `bun run libs:gen`, run the gates.
 
-For the four vendored trees the old manual ritual still applies once per release
+For the vendored trees the old manual ritual still applies once per release
 cycle (and `bun run scripts/ci/audit.ts` prints when each was last reviewed):
 
 1. Check the upstream release feed for security advisories since the pinned version.
@@ -394,7 +411,7 @@ cycle (and `bun run scripts/ci/audit.ts` prints when each was last reviewed):
    the `pdfjs-<version>-dist.zip` GitHub release, check its sha256 against the digest
    GitHub publishes in the release API, and unzip it **excluding `*.map` and
    `compressed.tracemonkey-pldi-09.pdf`** (see above — they are 10 MB of dead weight).
-3. Update the version in the table above **and the row in
+3. Update the version in the *Vendored* table above **and the row in
    `vendor/vendor_manifest.json`** — `version`, `upstream`, `archive_sha256`,
    `reviewed`, `note`, **`version_evidence.clauses`** (the literals carry the version,
    so they change with it) and `advisory.version`. Then

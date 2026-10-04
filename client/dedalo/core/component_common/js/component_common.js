@@ -392,6 +392,16 @@ component_common.prototype.build = async function(autoload=false) {
 */
 const is_unresolved_id = (id) => id===null || typeof id==='undefined' || id===''
 
+// A remove on a model whose entries carry NO item id (`removes_by_locator`:
+// component_relation_children, whose entries are COMPUTED by the server) names
+// its target by the RECORD LOCATOR in `value` instead. That is a named remove,
+// not DATA-06's wildcard — the server removes exactly that child
+// (src/core/relations/children_write.ts). Every other model keeps the id law.
+const names_record_locator = (self, el) => self?.removes_by_locator===true
+	&& el?.value!==null && typeof el?.value==='object'
+	&& typeof el.value.section_tipo==='string' && el.value.section_tipo!==''
+	&& !is_unresolved_id(el.value.section_id)
+
 const do_build = async (self, autoload) => {
 
 	// self.datum. On building, if datum is not created, creation is needed
@@ -732,7 +742,7 @@ component_common.prototype.save = async function(new_changed_data) {
 		// the user could do nothing with it instead of where they made the gesture.
 		// `0` and `'0'` are REAL, deletable ids and must never be caught here.
 		const unresolved_remove = changed_data.find(el =>
-			el && el.action==='remove' && is_unresolved_id(el.id)
+			el && el.action==='remove' && is_unresolved_id(el.id) && !names_record_locator(self, el)
 		)
 		if (unresolved_remove) {
 
@@ -1022,7 +1032,9 @@ component_common.prototype.set_value = function(value) {
 *  - Existing items are matched by (tipo, section_tipo, section_id, mode) plus,
 *    for dataframe sub-entries, by (id_key, main_component_tipo).
 *  - Matching items have their `entries` and `fallback_value` updated in place.
-*  - New items that have no match are appended to datum.data.
+*  - New items that have no match are appended to datum.data, in the order the
+*    server emitted them (readers such as component_dataframe.get_rating may
+*    see one component emitted once per ddo, e.g. mode 'edit' then 'solved').
 *  - When new_datum.data is empty the matched item's entries are cleared to []
 *    (server sends no data node when a component has no value).
 *
@@ -1090,7 +1102,16 @@ component_common.prototype.update_datum = async function(new_datum) {
 
 		// datum (global shared with section)
 			// DATA
-			// remove the component old data in the datum (from down to top array items)
+			// update matching items in place; append unseen ones.
+			// The loop runs from down to top (historical), so a plain push appended the
+			// new items REVERSED — e.g. a rating frame child emitted [edit (datalist),
+			// solved] landed as [solved, edit], and the first-match readers painted
+			// from the datalist-less one. Unseen items are INSERTED at the end of the
+			// pre-merge datum instead: iterating backwards, each earlier item goes in
+			// front of the later ones, so the server's emission order is kept. They are
+			// still in the datum while the loop runs, so a later match sees them exactly
+			// as before (same in-place update semantics, only the order changed).
+				const append_at = self.datum.data.length
 				for (let i = new_data_length - 1; i >= 0; i--) {
 
 					const data_item			= new_data[i]
@@ -1125,8 +1146,8 @@ component_common.prototype.update_datum = async function(new_datum) {
 								  current_data_element.fallback_value	= data_item.fallback_value
 						}
 					}else{
-						// add new data item
-						self.datum.data.push(data_item)
+						// add new data item (in emission order, see append_at)
+						self.datum.data.splice(append_at, 0, data_item)
 					}
 				}
 
@@ -1141,6 +1162,9 @@ component_common.prototype.update_datum = async function(new_datum) {
 		// datum (global shared with section)
 			// adds new elements to the datum if they do not already exist
 			// Note that since 12-10-2023, the mode is taken into account here
+			// New items keep the server's emission order (inserted at the pre-merge end,
+			// as the DATA loop above does — a push from this backwards loop reversed them).
+				const context_append_at = self.datum.context.length
 				for (let i = new_context_length - 1; i >= 0; i--) {
 
 					const context_item	= new_context[i]
@@ -1152,8 +1176,8 @@ component_common.prototype.update_datum = async function(new_datum) {
 					)
 
 					if (!found_item) {
-						// add new context item
-						self.datum.context.push(context_item)
+						// add new context item (in emission order)
+						self.datum.context.splice(context_append_at, 0, context_item)
 					}
 				}
 
@@ -1399,6 +1423,17 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 	// reach the wire.
 	// `changed_id` is 0-safe: it is null only for the three no-id spellings
 	// normalised above (null, undefined, ''), so id 0 is a target like any other.
+	// remove BY LOCATOR (`removes_by_locator` models only — see names_record_locator):
+	// the computed entries carry no id, so the locator in `value` is the target.
+	// (The flag is read FIRST: an instance without it never evaluates the helper.)
+		if (action==='remove' && changed_id===null && self.removes_by_locator===true && names_record_locator(self, changed_data_item)) {
+			self.data.entries = (self.data.entries || []).filter(entry => !(
+				entry?.section_tipo===changed_value.section_tipo
+				&& String(entry?.section_id)===String(changed_value.section_id)
+			))
+			return true
+		}
+
 		if (action==='remove' && changed_id===null) {
 
 			// the transient search filter: the same wipe as action:'clear' above, on
@@ -1599,7 +1634,7 @@ component_common.prototype.change_value = async function(options) {
 			const changed_data_length = changed_data.length
 			for (let i = 0; i < changed_data_length; i++) {
 				const candidate = changed_data[i]
-				if (candidate && candidate.action==='remove' && is_unresolved_id(candidate.id)) {
+				if (candidate && candidate.action==='remove' && is_unresolved_id(candidate.id) && !names_record_locator(self, candidate)) {
 					// Same refusal the applier would raise, raised BEFORE anything moved.
 					self.update_data_value(candidate)
 					return false
@@ -2126,14 +2161,21 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 *     any component instances that still carry non-empty changed_data. This handles
 *     the common text-area debounce window (500 ms delay before the component marks
 *     itself changed) where the user navigates faster than the debounce fires.
-*     After the sweep the whole unsaved registry and the coarse assertion are
-*     cleared via reset_unsaved_data() — "everything was just flushed"
-*     (window.unsaved_data is DERIVED from the events.js registry; this function
-*     never assigns the boolean directly).
-*  2. After the auto-save pass, if window.unsaved_data is true again (an edit
-*     landed while the sweep's saves were awaited), show a browser confirm()
-*     dialog. Returning false signals the caller to abort the navigation; an
-*     acceptance resets the registry again — "the user accepted the loss".
+*     Each successful save retires its OWN registration; the sweep never wipes
+*     the registry, because whatever is still registered afterwards was NOT
+*     flushed: a save the server refused, a draft that is deliberately not
+*     auto-saveable (component_password: a password is committed only by its
+*     own Save), an instance-less assertion (set_before_unload(true)).
+*     (Until 2026-09-30 the sweep called reset_unsaved_data() unconditionally,
+*     so those were dropped with no prompt.) window.unsaved_data is DERIVED from
+*     the events.js registry; this function never assigns the boolean directly.
+*  2. Unless `flush_only`, if window.unsaved_data is still true, show a browser
+*     confirm() dialog. Returning false signals the caller to abort the
+*     navigation; an acceptance resets the registry — "the user accepted the
+*     loss". `flush_only` callers are the in-page ones (component activation,
+*     click outside components, the beforeunload handler whose native prompt
+*     does the asking): they flush and never prompt, so moving between fields
+*     with a pending draft does not raise a dialog.
 *
 * Called from:
 *   page.js        — beforeunload, mousedown, user_navigation events
@@ -2144,6 +2186,8 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 * @param {Object} [options={}] - Options bag
 * @param {string} [options.confirm_msg] - Confirmation prompt text; defaults to the
 *   'discard_changes' i18n label or 'Discard unsaved changes?'
+* @param {boolean} [options.flush_only=false] - Flush auto-saveable edits and return
+*   true without prompting (in-page callers; see phase 2)
 * @returns {Promise<boolean>} true when safe to navigate; false when the user cancelled
 */
 export const check_unsaved_data = async function(options={}) {
@@ -2158,13 +2202,14 @@ export const check_unsaved_data = async function(options={}) {
 		if (typeof window.unsaved_data!=='undefined' && window.unsaved_data===true) {
 			// look in all component instances for unsaved data
 			await save_unsaved_components()
-			// reset unsaved_data state: every dirty component was just flushed by
-			// the sweep (each save() already retired its own registration), so
-			// clear the whole registry plus the coarse assertion. (!) Direct
-			// window.unsaved_data assignment is retired — the flag is DERIVED
-			// (events.js registry) and only reset_unsaved_data() may clear
-			// unsaved state page-wide.
-			reset_unsaved_data()
+			// (!) no reset here: each successful save() retired its own
+			// registration; what is still registered was NOT flushed and must
+			// reach the prompt below, never be wiped silently.
+		}
+
+	// in-page callers: flush only, never prompt
+		if (options.flush_only===true) {
+			return true
 		}
 
 	// unsaved_data value check
@@ -2305,7 +2350,7 @@ export const deactivate_components = function(e) {
 		// unsaved_data case
 		// This allow catch page mousedown event (outside any component) and check for unsaved components
 		// usually happens in component_text_area editions because the delay (500 ms) to set as changed
-			check_unsaved_data()
+			check_unsaved_data({flush_only: true})
 	}
 }//end deactivate_components
 

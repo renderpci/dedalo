@@ -25,7 +25,7 @@
 # reseed on"). A second job with its own service container is that isolation.
 #
 # WHAT IT SHARES WITH THE DB TIER, by `source`: the whole composed environment
-# (scripts/ci/hosted_env.sh — the required keys, the seed's egress allowlist, the
+# (scripts/ci/hosted_env.sh — the required keys, the
 # fixture-harvest configuration, the seam tables, the Postgres client path). One
 # copy, so the two tiers cannot drift; the rules that pin it follow the `source`.
 #
@@ -85,6 +85,16 @@ echo "== instance_tier: browser client suite (scripts/ci/client_gate.sh)"
 client_rc=0
 bash scripts/ci/client_gate.sh || client_rc=$?
 [ "$client_rc" -eq 0 ] || { echo "== instance_tier: RED in the client suite (exit $client_rc)"; tier_status=1; }
+
+# ── STAGE 1b — EVERY TOOL AT PHONE WIDTH ─────────────────────────────────────
+#
+# scripts/tool_viewport_check.ts: every tool at 360×740 on the same suite database
+# through the same verified server door as the client suite, real login, scratch
+# records swept. Ratchet: test/helpers/tool_phone_ratchet.ts.
+echo "== instance_tier: tools at phone width (bun run test:tools:phone)"
+phone_rc=0
+bun run test:tools:phone || phone_rc=$?
+[ "$phone_rc" -eq 0 ] || { echo "== instance_tier: RED in the tool phone contract (exit $phone_rc)"; tier_status=1; }
 
 # ── STAGE 2 — THE CODE UPDATER, RELEASE CHANNEL ──────────────────────────────
 #

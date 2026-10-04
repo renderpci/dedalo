@@ -39,9 +39,6 @@
 .wrapper_tool.tool_transcription .spinner {
   background-color: var(--tool_transcription);
 }
-.wrapper_tool.tool_transcription > .tool_header {
-  background-color: var(--tool_transcription);
-}
 .wrapper_tool.tool_transcription > .tool_header > .tool_buttons_container > .related_list_container,
 .wrapper_tool.tool_transcription > .tool_header > .tool_buttons_container > .lang_selector {
   min-width: 0;

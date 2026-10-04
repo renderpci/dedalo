@@ -10,6 +10,10 @@ export const component_filter_records: ComponentModel = {
 	model: 'component_filter_records',
 	column: 'misc',
 	render: 'text',
+	importAppend: {
+		refuse:
+			'opaque: the row-ACL map is one document per section, not a list of items — use replace',
+	},
 	importValueProperty: true,
 	emitHook: 'filter_records',
 };

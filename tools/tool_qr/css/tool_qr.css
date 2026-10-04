@@ -112,12 +112,8 @@
     display: none !important;
   }
   .wrapper_tool.tool_qr .tool_header.tool_qr,
-  .wrapper_tool.tool_qr .info_container,
-  .wrapper_tool.tool_qr .footer_node {
+  .wrapper_tool.tool_qr .info_container {
     display: none !important;
   }
-}
-.tool_header.tool_qr {
-  background-color: var(--tool_qr);
 }
 /*# sourceMappingURL=tool_qr.css.map */

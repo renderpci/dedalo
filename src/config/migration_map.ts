@@ -41,7 +41,7 @@ export interface MigrationRule {
 }
 
 // ---------------------------------------------------------------------------
-// SAME — the v6 constant name IS the v7 env key (85).
+// SAME — the v6 constant name IS the v7 env key (92).
 // ---------------------------------------------------------------------------
 
 const SAME_KEYS: readonly string[] = [
@@ -165,6 +165,10 @@ const SAME_KEYS: readonly string[] = [
 	// migration-day snapshot. A genuinely different set (or order) is migrated.
 	'DEDALO_DIFFUSION_LANGS',
 	'DEDALO_DIFFUSION_RESOLVE_LEVELS',
+	// The publication server API v1 (PHP, `publication/server_api/v1`) still ships
+	// for existing websites; the maintenance panel needs its db_name/code pairs to
+	// open the v1 Swagger docu.
+	'API_WEB_USER_CODE_MULTIPLE',
 ];
 
 // ---------------------------------------------------------------------------
@@ -182,6 +186,23 @@ const asBinary =
 
 /** v6 ships a directory with a trailing slash; v7 wants it bare. */
 const asDir = (value: unknown): unknown => String(value ?? '').replace(/\/+$/, '');
+
+/**
+ * A stock v6 config.php ships API_WEB_USER_CODE_MULTIPLE as ONE placeholder entry
+ * (`db_name`/`code` = '', `api_ui` = null). Copied verbatim, v7's reader
+ * (`readPublicationApiUsers`) drops it and logs "1 of 1 entries were DROPPED" on
+ * every boot. So placeholder entries (no non-empty string `db_name`) are not
+ * migrated, and when none remain the key is SKIPPED (null) — unset = no v1 users,
+ * the same thing the reader would conclude. Real entries pass through unchanged.
+ */
+const asPublicationApiUsers = (value: unknown): unknown => {
+	if (!Array.isArray(value)) return value;
+	const real = value.filter((entry) => {
+		const dbName = (entry as { db_name?: unknown } | null)?.db_name;
+		return typeof dbName === 'string' && dbName.trim() !== '';
+	});
+	return real.length === 0 ? null : real;
+};
 
 /**
  * NOT a rename of SERVER_PROXY → TRUSTED_PROXY_HOPS. They point in opposite
@@ -296,7 +317,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_ADITIONAL_CSS',
 			'DEDALO_MCP_PROXY_URL',
 			'DEDALO_API_URL_UNIT_TEST',
-			'API_WEB_USER_CODE_MULTIPLE',
 			'GEONAMES_ACCOUNT_USERNAME',
 			'DEDALO_RECOVERY_KEY',
 			'DEDALO_BACKUP_ON_LOGIN',
@@ -376,19 +396,20 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 
 	// Never really CONFIG in v6: derived per REQUEST from the logged user —
 	// SHOW_DEBUG = "is the superuser", SHOW_DEVELOPER = the user's is_developer flag
-	// in the database. The client flags of the same name still exist in v7 (the
-	// client reads them in ~470 files); the server now derives them from ONE env key,
-	// DEDALO_DEV_MODE, instead of from the user. Nothing to carry across — but the
-	// capability is NOT gone, so do not call this "PHP-only".
+	// in the database. v7 derives them the SAME way (src/core/resolve/environment.ts,
+	// buildPlainVars), so there is nothing to carry across; the client flags of the
+	// same name still exist and are read in ~470 client files. Do NOT call these
+	// "PHP-only": the capability is live. DEDALO_DEV_MODE does NOT drive them — it
+	// is the SERVER posture (DEVELOPMENT_SERVER, no-cache path, readable libs).
 	SHOW_DEBUG: {
 		cls: 'DROPPED',
 		reason:
-			'per-user in v6 (superuser only); in v7 the client SHOW_DEBUG flag is driven server-wide by DEDALO_DEV_MODE=true',
+			'per-user in v6 (superuser only); in v7 the client SHOW_DEBUG flag is derived the same way (superuser), NOT from config',
 	},
 	SHOW_DEVELOPER: {
 		cls: 'DROPPED',
 		reason:
-			'per-user in v6 (the is_developer DB flag); in v7 the client SHOW_DEVELOPER flag is driven server-wide by DEDALO_DEV_MODE=true',
+			'per-user in v6 (the is_developer DB flag); in v7 the client SHOW_DEVELOPER flag is derived the same way (is_developer), NOT from config',
 	},
 	DEVELOPMENT_SERVER: {
 		cls: 'DROPPED',
@@ -538,6 +559,12 @@ function build(): Readonly<Record<string, MigrationRule>> {
 	const map: Record<string, MigrationRule> = {};
 
 	for (const name of SAME_KEYS) map[name] = { cls: 'SAME', target: name };
+	// Same name, same shape — only the stock placeholder entry is filtered out.
+	map.API_WEB_USER_CODE_MULTIPLE = {
+		cls: 'SAME',
+		target: 'API_WEB_USER_CODE_MULTIPLE',
+		transform: asPublicationApiUsers,
+	};
 
 	// ALIAS — derived from env.ts (TS-native key → PHP spelling). We invert it and
 	// emit the TS-native name: both work, but the native one is canonical.
@@ -587,6 +614,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'DB_POOL_MAX',
 	'DB_POOL_ACQUIRE_TIMEOUT_MS',
 	'DB_STATEMENT_TIMEOUT_MS',
+	// the maintenance pool (PERF-11): the separate connections withUnboundedStatements routes to
+	'DB_MAINTENANCE_POOL_MAX',
 	// Postgres TLS mode. NEW_IN_V7 and, more precisely, new in Bun 1.4: that
 	// release taught Bun.sql to fall back to the ambient PGSSLMODE/PG_SSLMODE
 	// when no `tls` option is given, so the engine now passes this value
@@ -601,6 +630,9 @@ export const NEW_IN_V7: readonly string[] = [
 	// shape is narrower on purpose — only the origin list is an operator's to
 	// set (core/security/cors.ts explains why methods/headers are constants).
 	'DEDALO_CORS_ALLOWED_ORIGINS',
+	// The outbound SSRF guard's declared NAT64 network-specific prefixes (RFC 6052).
+	// No v6 counterpart: v6's is_safe_remote_url had no IPv6-translation awareness.
+	'DEDALO_NAT64_PREFIXES',
 	// sessions / login / permissions (the TS-native auth stack)
 	'SESSION_TTL_SECONDS',
 	'SESSION_ABSOLUTE_TTL_SECONDS',
@@ -718,6 +750,12 @@ export const NEW_IN_V7: readonly string[] = [
 	// (src/core/media/test_media_root.ts). NEW_IN_V7 by construction — v6 had no
 	// dedicated test tier and no such guard.
 	'DEDALO_TEST_MEDIA_ROOT',
+	// The test-database seams: the suite database's name (which the preload pins
+	// and which ARMS the test-process pool guard, src/config/suite_database.ts)
+	// and the explicit run-against-my-own-database opt-out. NEW_IN_V7 by
+	// construction — v6 had no dedicated test database and no such guard.
+	'DEDALO_TEST_DATABASE',
+	'DEDALO_TEST_DB_DISABLE',
 	'MEDIA_DEV_ROUTE_ENABLED',
 	// The wall-clock budget of the per-BOOT media-tree pass. NEW_IN_V7 by
 	// construction: v6 re-ran the equivalent walk on every REQUEST and had no
@@ -731,6 +769,9 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_3D_ALTERNATIVE_EXTENSIONS',
 	// ops
 	'DEDALO_BACKUP_DIR',
+	// The full-read budget of backup verification (OPS-1, 2026-09-30). NEW_IN_V7 by
+	// construction: v6 never read a dump back, so there is no v6 constant to rename.
+	'DEDALO_BACKUP_VERIFY_SECONDS_PER_GB',
 	'DEDALO_TRANSFORM_DEFINITIONS_DIR',
 	'DEDALO_TS_STATE_PATH',
 	// runtime-path census (2026-08-23): the ontology recovery dump moved out of
@@ -850,6 +891,12 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_AGENT_WRITE_SECTIONS',
 	'DEDALO_AGENT_SYSTEM_PROMPT_APPEND',
 	'DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT',
+	// The per-user daily AI budgets (closure Step 3, TOOLS-4). No v6 equivalent —
+	// v6 metered no model spend.
+	'DEDALO_AI_USER_DAILY_RUNS',
+	'DEDALO_AI_USER_DAILY_TOKENS',
+	'DEDALO_AI_USER_DAILY_EMBED_QUERIES',
+	'DEDALO_AI_USER_DAILY_VISION',
 	'DEDALO_MCP_USER_ID',
 	'DEDALO_MCP_ALLOW_WRITE',
 	'DEDALO_MCP_WRITE_SECTIONS',

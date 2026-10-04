@@ -266,8 +266,8 @@
 			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
 		},
 		"client/dedalo/core/section/js/view_export_user_presets.js": {
-			"pointer_only_sites": 3,
-			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+			"pointer_only_sites": 4,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch. +1 (2026-10-01, presets redesign d7574288ed): the delegated row click on list_body is a POINTER-ONLY SHORTCUT that forwards to the row's native .button_apply_preset <button> — the keyboard path is that button (focusable, Enter/Space), so no function is pointer-only; making list_body itself activable (role=button over a list of rows) would be wrong semantics."
 		},
 		"client/dedalo/core/section/js/view_graph_list_section.js": {
 			"pointer_only_sites": 1,

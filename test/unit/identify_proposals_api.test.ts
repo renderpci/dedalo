@@ -207,6 +207,9 @@ function spyDeps(overrides: Partial<IdentifyProposalsDeps> = {}): Spy {
 		componentModel: async () => 'component_input_text',
 		readValues: async () => null,
 		scopeRecords: async (records) => records,
+		requireToolGrant: async () => {},
+		// The budget is ai_spend_budget_native's subject; here every vision call is admitted.
+		chargeVision: async () => {},
 		...overrides,
 	};
 	return { deps, voteCalls, visionCalls };

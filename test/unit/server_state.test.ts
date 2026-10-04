@@ -8,9 +8,10 @@
  * install's config_core.php, which a coexisting TS server must not touch.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { readEnv } from '../../src/config/env.ts';
+import { join } from 'node:path';
+import { privateDir, readEnv } from '../../src/config/env.ts';
 import {
 	dispatchGetWidgetValue,
 	dispatchWidgetRequest,
@@ -23,6 +24,7 @@ import {
 	ensureSuiteLoginPassword,
 	SUITE_LOGIN_PASSWORD,
 } from '../../src/core/test_data/suite_login.ts';
+import { requireSuiteMariadb, SUITE_MARIADB_DATABASES } from '../helpers/suite_mariadb.ts';
 
 const STATE_PATH = readEnv('DEDALO_TS_STATE_PATH');
 if (STATE_PATH === undefined) {
@@ -57,6 +59,13 @@ async function refusedCall(
 	}
 	throw new Error(`expected ${widget}.${action} to refuse, it answered`);
 }
+
+// check_config (get_value AND the catalog's eager value) audits the published
+// languages, opening a pool per diffusion target the ontology declares: acquire the
+// lane's suite MariaDB first (PUB-05) so those pools are proved to land there.
+beforeAll(async () => {
+	await requireSuiteMariadb(import.meta.path, SUITE_MARIADB_DATABASES());
+}, 120_000); // a cold suite MariaDB lane installs and starts a server
 
 afterAll(() => {
 	// never leave runtime overrides behind
@@ -153,7 +162,9 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		expect(result.db_status.db_writable_check).toBe(true);
 		const env = result.config_sources.find((source) => source.name === '.env');
 		expect(env?.required).toBe(true);
-		expect(env?.exists).toBe(true);
+		// The panel reports the TRUTH of the file, not this machine's: a developer has
+		// ../private/.env, a CI tier has none by design (env_guard --no-private-env).
+		expect(env?.exists).toBe(existsSync(join(privateDir, '.env')));
 		expect(typeof result.state.maintenance_mode).toBe('boolean');
 		// The session store is reported at its REAL filename (dedalo_ts_sessions.sqlite,
 		// or the DEDALO_SESSION_DB_PATH override) and is PRESENT — the old hardcoded

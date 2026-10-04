@@ -5,7 +5,6 @@
 */
 :root {
   --tool_hierarchy: #c80000;
-  --tool_hierarchy_border: #af0000;
 }
 .wrapper_tool.tool_hierarchy {
   position: relative;
@@ -69,6 +68,19 @@
 .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_detail {
   color: var(--color_grey_4);
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check {
+    flex-wrap: wrap;
+  }
+  .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_label {
+    flex: 1 1 calc(100% - 1.5rem);
+  }
+  .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_detail {
+    flex: 1 1 100%;
+    padding-left: 1.5rem;
+    overflow-wrap: anywhere;
+  }
+}
 .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check:before {
   flex: 0 0 1rem;
   font-weight: 700;
@@ -98,8 +110,16 @@
   justify-content: center;
 }
 .wrapper_tool.tool_hierarchy > .content_data > .buttons_container button {
-  background-color: var(--tool_hierarchy);
-  border-color: var(--tool_hierarchy_border);
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .buttons_container button:not(.button_spinner)::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+.wrapper_tool.tool_hierarchy > .content_data > .buttons_container button:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
 }
 .wrapper_tool.tool_hierarchy > .content_data > .buttons_container .checkbox-label {
   padding-left: 1rem;
@@ -121,8 +141,5 @@
 .wrapper_tool.tool_hierarchy > .content_data > .messages_container .error {
   padding: 0.5rem;
   border-radius: 4px;
-}
-.tool_header.tool_hierarchy {
-  background-color: var(--tool_hierarchy);
 }
 /*# sourceMappingURL=tool_hierarchy.css.map */

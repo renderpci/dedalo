@@ -123,14 +123,18 @@ function assertProducedFile(path: string, what: string): void {
 	}
 }
 
-/** Split a PHP filter fragment ('-vf yadif') into argv tokens; '' → []. */
-function fragmentTokens(fragment: string): string[] {
-	return fragment.trim() === '' ? [] : fragment.trim().split(/\s+/);
+/**
+ * The profile's video filter chain as argv: ONE `-vf a,b` (or nothing).
+ * Never one `-vf` per filter — ffmpeg keeps only the last `-vf` of an output
+ * stream, which is how PHP's recipe silently dropped `yadif` (deinterlace).
+ */
+export function videoFilterArgv(profile: FfmpegProfile): string[] {
+	return profile.videoFilters.length === 0 ? [] : ['-vf', profile.videoFilters.join(',')];
 }
 
 /**
  * Two-pass libx264 video encode — PASS 1 argv (PHP :766).
- * `<ffmpeg> -i <src> -an -pass 1 -vcodec .. -vb .. -s .. -g .. <yadif> <gamma> -f .. -loglevel error -passlogfile <log> -y /dev/null`
+ * `<ffmpeg> -i <src> -an -pass 1 -vcodec .. -vb .. -s .. -g .. -vf yadif,<gamma> -f .. -loglevel error -passlogfile <log> -y /dev/null`
  */
 export function buildTranscodePass1Argv(
 	profile: FfmpegProfile,
@@ -154,8 +158,7 @@ export function buildTranscodePass1Argv(
 		profile.scale ?? '',
 		'-g',
 		String(profile.gop ?? 0),
-		...fragmentTokens(profile.deinterlace),
-		...fragmentTokens(profile.gammaFilter),
+		...videoFilterArgv(profile),
 		'-f',
 		profile.force,
 		'-loglevel',
@@ -194,8 +197,7 @@ export function buildTranscodePass2Argv(
 		profile.scale ?? '',
 		'-g',
 		String(profile.gop ?? 0),
-		...fragmentTokens(profile.deinterlace),
-		...fragmentTokens(profile.gammaFilter),
+		...videoFilterArgv(profile),
 		'-f',
 		profile.force,
 		'-passlogfile',
@@ -208,12 +210,17 @@ export function buildTranscodePass2Argv(
 		profile.audioBitrate ?? '128k',
 		'-ac',
 		String(profile.audioChannels ?? 2),
+		// Not in PHP's recipe. Logging only — the encoded bytes are identical — but a
+		// failing pass 2 then reports its ERROR line instead of a stderr tail of
+		// banner, stream dump and per-frame stats (the pass 1 twin above).
+		'-loglevel',
+		'error',
 		'-y',
 		tempTarget,
 	];
 }
 
-/** Audio-only extraction argv (PHP :710): -vn -acodec .. -ar 44100 -ab 128k -ac 2. */
+/** Audio-only extraction argv (PHP :710): -vn -acodec .. -ar 44100 -ab 128k -ac 2 -loglevel error. */
 export function buildAudioArgv(source: string, target: string, audioCodec: string): string[] {
 	return [
 		ffmpeg(),
@@ -228,6 +235,9 @@ export function buildAudioArgv(source: string, target: string, audioCodec: strin
 		'128k',
 		'-ac',
 		'2',
+		// Logging only (bytes unchanged): a failed extraction reports its error line.
+		'-loglevel',
+		'error',
 		target,
 	];
 }
@@ -419,22 +429,86 @@ export function standardFromFps(avgFrameRate: string | undefined): 'pal' | 'ntsc
 }
 
 /**
- * Pick the best available AAC encoder (PHP get_audio_codec :1722):
- * libfdk_aac > libvo_aacenc > aac, from `ffmpeg -buildconf`. Cached per process.
+ * The AAC encoders this engine will use, best first (PHP get_audio_codec :1722).
+ * `aac` — FFmpeg's native encoder — closes the list because every build since 3.0
+ * carries it, so it is also the answer when the probe cannot run at all.
  */
-let cachedAudioCodec: string | null = null;
+const AAC_PREFERENCE = ['libfdk_aac', 'libvo_aacenc', 'aac'] as const;
+
+/**
+ * Per-BINARY memo of the AAC encoder pick: key = the ffmpeg PATH that was
+ * probed, value = the in-flight probe (N concurrent first encodes share ONE
+ * spawn). The answer is null when the probe could not run.
+ *
+ * WHY THE KEY IS THE BINARY. The answer is a fact about ONE executable, and
+ * `config.media.binaries.ffmpeg` is the only thing that says which one. A
+ * process-wide scalar (the pre-2026-10 `cachedAudioCodec`) answered for whatever
+ * binary asked FIRST: a gate pointing config at a fake ffmpeg that claims
+ * libfdk-aac primed it, and every later REAL two-pass encode in the same process
+ * asked the real ffmpeg for `libfdk_aac` — pass 2 exit 8, "Unknown encoder". The
+ * same holds in production for anything that resolves a second ffmpeg in one
+ * process. Keyed by path, a different binary is simply probed.
+ *
+ * ONLY A CONCLUSIVE ANSWER IS KEPT. A failed probe (spawn refused under fd/PID
+ * saturation, binary momentarily missing) is a fact about the MOMENT, not the
+ * binary: memoized, it would pin the whole server to the fallback encoder for its
+ * lifetime. It is answered with the fallback and dropped, so the next encode
+ * asks again — the `imagemagick.ts:writableFormatCache` lifecycle.
+ *
+ * Request-INDEPENDENT by construction: key a binary path, value an encoder name.
+ * Allowlisted in module_state_tripwire.
+ */
+const audioCodecByBinary = new Map<string, Promise<string | null>>();
+
+/**
+ * Pick the best available AAC encoder of the CONFIGURED ffmpeg: libfdk_aac >
+ * libvo_aacenc > aac. Probed once per binary path (see the cache above).
+ */
 export async function getAudioCodec(): Promise<string> {
-	if (cachedAudioCodec !== null) return cachedAudioCodec;
-	try {
-		const result = await runBinary([ffmpeg(), '-loglevel', 'error', '-buildconf'], { nice: false });
-		const conf = result.stdout + result.stderr;
-		if (/--enable-libfdk-aac/.test(conf)) cachedAudioCodec = 'libfdk_aac';
-		else if (/--enable-libvo-aacenc/.test(conf)) cachedAudioCodec = 'libvo_aacenc';
-		else cachedAudioCodec = 'aac';
-	} catch {
-		cachedAudioCodec = 'aac';
+	const binary = ffmpeg();
+	let probe = audioCodecByBinary.get(binary);
+	if (probe === undefined) {
+		const started = probeAudioCodec(binary);
+		probe = started;
+		audioCodecByBinary.set(binary, started);
+		// Never rejects (probeAudioCodec catches), so one arm suffices.
+		void started.then((codec) => {
+			if (codec === null && audioCodecByBinary.get(binary) === started) {
+				audioCodecByBinary.delete(binary);
+			}
+		});
 	}
-	return cachedAudioCodec;
+	return (await probe) ?? 'aac';
+}
+
+/**
+ * Ask `binary` which AAC encoders it actually HAS, from `ffmpeg -encoders`.
+ * Null when the probe could not run or its output is not an encoder list.
+ *
+ * WHY `-encoders`, NOT PHP's `-buildconf`. `-buildconf` prints the configure
+ * FLAGS the binary was built with; `-acodec <name>` resolves against the encoder
+ * REGISTRY. The two diverge: `--enable-libfdk-aac --disable-encoder=libfdk_aac`
+ * lists the flag and has no encoder, and a regex over the configure line also
+ * matches the flag text inside `--extra-cflags`/path arguments. `-encoders`
+ * prints that registry itself — the exact table pass 2's `-acodec` is looked up
+ * in — one encoder per line as `<6 capability flags> <name> <description>`, a
+ * format stable since FFmpeg 1.0, where an audio encoder's first flag is `A`.
+ * The six-char legend lines (` A..... = Audio`) carry `=` as their name token and
+ * so never match an encoder name.
+ */
+async function probeAudioCodec(binary: string): Promise<string | null> {
+	try {
+		const result = await runBinary([binary, '-hide_banner', '-encoders'], { nice: false });
+		if (!result.ok) return null;
+		const audioEncoders = new Set<string>();
+		for (const match of result.stdout.matchAll(/^\s*A[A-Z.]{5}\s+(\S+)/gm)) {
+			audioEncoders.add(match[1] as string);
+		}
+		if (audioEncoders.size === 0) return null; // not an encoder list: inconclusive
+		return AAC_PREFERENCE.find((codec) => audioEncoders.has(codec)) ?? 'aac';
+	} catch {
+		return null;
+	}
 }
 
 // -------- high-level runners --------

@@ -121,6 +121,14 @@
 			// GENERATED OUTPUT, never hand-edited: the built mkdocs site (untracked).
 			"!**/docs_site",
 
+			// LOCAL-ONLY, GITIGNORED, NEVER ON A CLONE: the local audit workspaces
+			// (audits/ — raw agent JSON, lane scripts) and the mkdocs plugin cache
+			// (.cache/ — vendored third-party bundles). A runner never has them, so
+			// linting them made host-mode `ci:local` red on bytes no CI run can see.
+			// Nothing under either is tracked (git ls-files is empty for both).
+			"!**/audits",
+			"!**/.cache",
+
 			// HAND-AUTHORED PROSE — the manual (mkdocs sources, the style guide, the
 			// docs_current_engine_tripwire gate read it), tracked and edited
 			// constantly, so NOT "generated" in the sense above. It is 395 files of

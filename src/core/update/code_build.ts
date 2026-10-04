@@ -21,9 +21,13 @@ import { DedaloError, ok } from '../errors/index.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import {
+	DEV_REF,
 	isSafeGitRef,
 	parseDeclaredTriple,
 	planCodeBuild,
+	qualifiedReleaseTag,
+	releaseTagsNewestFirst,
+	releaseTagVersion,
 	VERSION_TS_PATH,
 } from './code_build_plan.ts';
 import { ensureCodeFilesDir } from './code_files_dir.ts';
@@ -60,6 +64,123 @@ async function declaredVersionOfRef(
 	});
 	const [exitCode, source] = await Promise.all([child.exited, new Response(child.stdout).text()]);
 	return exitCode === 0 ? parseDeclaredTriple(source) : null;
+}
+
+/** Does `git -C <gitDir> <args>` succeed? (async: this runs on the request path) */
+async function gitSucceeds(gitDir: string, args: string[]): Promise<boolean> {
+	const child = Bun.spawn(['git', '-C', gitDir, ...args], {
+		stdout: 'ignore',
+		stderr: 'ignore',
+		env: envSnapshot() as Record<string, string>,
+	});
+	return (await child.exited) === 0;
+}
+
+/** The planner's config slice, from the live config. */
+function buildConfig() {
+	return {
+		isCodeServer: config.update.isCodeServer,
+		codeServerGitDir: config.update.codeServerGitDir,
+		codeFilesDir: config.update.codeFilesDir,
+	};
+}
+
+/**
+ * THE PLANNER'S FIRST GATES, BEFORE ANY REF IS RESOLVED. Resolving a ref asks
+ * git about tags, and those refusals ("no release tag") must never pre-empt the
+ * wire-contract order (code server → dirs → …): a non-code-server is told it is
+ * not one, not that it has no tag. The planner itself answers — with a
+ * placeholder version/ref that pass their own gates — so the order has ONE
+ * definition.
+ */
+function refuseUnlessBuildable(): void {
+	const plan = planCodeBuild({ version: '0.0.0', ref: DEV_REF }, buildConfig());
+	if (plan.ok !== true) {
+		throw new DedaloError('update.refused', {
+			message: `${plan.msg} (${plan.error})`,
+			publicMessage: plan.msg,
+		});
+	}
+}
+
+/** The operator sentence for "there is no release to publish". */
+function noReleaseTagSentence(asked: string | null): string {
+	return asked === null
+		? 'Error. No release tag (vX.Y.Z) of this engine in the build checkout: a release is built from a tag, and pre-release tags (beta) are never published. Until one exists, use a developer build; otherwise tag the release commit (and fetch tags) before publishing.'
+		: `Error. No release tag ${asked} in the build checkout. Tag the release commit (and fetch tags) before publishing.`;
+}
+
+/** Every tag of the build checkout (short names), or [] when git cannot answer. */
+async function listTags(gitDir: string | undefined): Promise<string[]> {
+	if (gitDir === undefined || gitDir === '') return [];
+	const child = Bun.spawn(['git', '-C', gitDir, 'tag', '--list', 'v*'], {
+		stdout: 'pipe',
+		stderr: 'ignore',
+		env: envSnapshot() as Record<string, string>,
+	});
+	const [exitCode, listing] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+	return exitCode === 0 ? listing.split('\n').filter((line) => line.trim() !== '') : [];
+}
+
+/**
+ * WHICH REF a build archives — resolved HERE, on the server, never taken as a
+ * branch name from the client (the hardcoded 'v7' of the old dev button refused
+ * on every server that did not carry that branch).
+ *
+ * - explicit `ref` (API callers, the drills): used as given, except that a bare
+ *   release tag `vX.Y.Z` is qualified to `refs/tags/vX.Y.Z` so a same-named
+ *   branch can never be archived in its place;
+ * - `channel: 'dev'`: the tip of {@link DEV_REF};
+ * - `channel: 'master'` (the release channel, the default): the version's own
+ *   tag when a `version` is asked (refused when that tag does not exist),
+ *   otherwise the newest PUBLISHABLE release tag (code_build_plan.ts
+ *   newestPublishableTag — stable, and a tree of this engine).
+ */
+async function resolveBuildRefOrRefuse(options: {
+	version?: string;
+	ref?: string;
+	channel?: 'master' | 'dev';
+}): Promise<string> {
+	if (options.ref !== undefined) return qualifiedIfReleaseTag(options.ref);
+	if (options.channel === 'dev') return DEV_REF;
+	// refuseUnlessBuildable() ran first: the git dir is configured
+	const gitDir = config.update.codeServerGitDir as string;
+	const asked = options.version === undefined ? null : releaseTagVersion(`v${options.version}`);
+	return asked === null ? newestTagOrRefuse(gitDir) : askedTagOrRefuse(gitDir, asked);
+}
+
+/** An explicit ref, a bare release tag qualified so a same-named branch never wins. */
+function qualifiedIfReleaseTag(ref: string): string {
+	const tagged = releaseTagVersion(ref);
+	return tagged === null ? ref : qualifiedReleaseTag(tagged);
+}
+
+/**
+ * The ASKED version's tag — which must exist: otherwise the build would
+ * provision the release dir and die in `git archive` with nothing naming the cause.
+ */
+async function askedTagOrRefuse(gitDir: string, version: string): Promise<string> {
+	const tagRef = qualifiedReleaseTag(version);
+	if (await gitSucceeds(gitDir, ['rev-parse', '--verify', '--quiet', `${tagRef}^{commit}`])) {
+		return tagRef;
+	}
+	const sentence = noReleaseTagSentence(`v${version}`);
+	throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
+}
+
+/**
+ * The newest PUBLISHABLE tag (the rule of code_build_plan.ts
+ * newestPublishableTag: stable, and a tree of this engine — never a PHP-era
+ * `v6.x`), or the no-release refusal.
+ */
+async function newestTagOrRefuse(gitDir: string): Promise<string> {
+	for (const tag of releaseTagsNewestFirst(await listTags(gitDir))) {
+		if (await gitSucceeds(gitDir, ['cat-file', '-e', `refs/tags/${tag}:${VERSION_TS_PATH}`])) {
+			return `refs/tags/${tag}`;
+		}
+	}
+	const sentence = noReleaseTagSentence(null);
+	throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
 }
 
 /**
@@ -131,32 +252,27 @@ function provisionReleaseDirOrRefuse(targetDir: string): void {
 
 /**
  * `git archive --format=zip --prefix=dedalo_code/ <ref>` of the code-server
- * checkout into the release path for `version`. `version` names the release
- * (e.g. '7.0.1'); `ref` is the git ref to archive (default the same tag).
+ * checkout into the release path. The ref comes from resolveBuildRefOrRefuse
+ * (release channel = a `vX.Y.Z` tag, dev channel = `master`); the version from
+ * that ref's own version.ts (`version`, when given, is a claim checked against it).
  */
 export async function buildVersionFromGit(options: {
 	version?: string;
 	ref?: string;
+	channel?: 'master' | 'dev';
 }): Promise<CodeBuildResponse> {
 	// THE BYTES NAME THE RELEASE. Resolve the version the REF declares before
 	// planning, so the artifact can never be named after the running process
 	// (see parseDeclaredTriple). An explicit caller `version` is now a claim to
 	// be CHECKED, not the source of the name.
-	const ref = options.ref ?? options.version ?? 'master';
+	refuseUnlessBuildable();
+	const ref = await resolveBuildRefOrRefuse(options);
 	const version = await resolveReleaseVersionOrRefuse(ref, options.version);
 	// All refusal gates (code-server flag → dirs → version → ref → confinement)
 	// and the release path live in the pure planner. The ref goes in EXPLICITLY:
-	// the planner's own fallback is the version string, which would have named a
-	// plain `master` build `<v>-dev.zip` (releaseFileName reads the ref) while
-	// `git archive` below packaged `master`.
-	const plan = planCodeBuild(
-		{ version, ref },
-		{
-			isCodeServer: config.update.isCodeServer,
-			codeServerGitDir: config.update.codeServerGitDir,
-			codeFilesDir: config.update.codeFilesDir,
-		},
-	);
+	// the channel (and so the file name) is read off the ref by releaseFileName,
+	// and it must be the very ref `git archive` below packages.
+	const plan = planCodeBuild({ version, ref }, buildConfig());
 	if (plan.ok !== true) {
 		// `plan.msg` is the operator sentence; `plan.error` the machine detail —
 		// the latter goes to the LOG side only (`message`), never to the wire.
@@ -172,7 +288,7 @@ export async function buildVersionFromGit(options: {
 
 	// sha256 sidecar (WC-024 — the integrity guarantee PHP never emitted).
 	// The sidecar line names the plan's ACTUAL artifact: the planner emits
-	// `<v>-dev.zip` for non-master refs, so composing the name from
+	// `<v>-dev.zip` for every non-tag ref, so composing the name from
 	// `versionString` alone would sign a dev build under the published name.
 	const archiveName = basename(filePath);
 	const digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');

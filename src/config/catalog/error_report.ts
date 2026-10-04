@@ -15,7 +15,9 @@ export const ERROR_REPORT_KEYS = {
 		typeLabel: 'string',
 		doc: `Only meaningful on the **master** installation (the one that receives reports). A
 comma-separated list of the IP addresses allowed to reach the intake; a report from any
-other address is refused. The shorthand \`loopback\` accepts the local machine.
+other address is refused. The shorthand \`loopback\` accepts the local machine. Write
+every IPv4 part in plain decimal: an entry with a leading zero (\`010.0.0.1\`) is refused,
+because some software reads it as octal — it matches no address at all.
 
 Unset (the default) leaves the intake open to any address — it is still anonymous,
 rate-limited and size-capped, but if you know which installations report to you, listing

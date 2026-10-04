@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, confirm */
+/*global get_label */
 /*eslint no-undef: "error"*/
 
 
@@ -15,8 +15,10 @@
 * (ontology section dd1781) instead of search presets (dd623).
 *
 * Responsibilities:
-*  - Build a columns_map augmented with three control columns: Apply, ID/edit,
-*    and (when permissions > 1) Delete.
+*  - Build a columns_map augmented with three control columns: Apply (the
+*    selection indicator, first), then after the name: Edit and (when
+*    permissions > 1) Delete.
+*  - Apply a preset on a click anywhere on its row (delegated on list_body).
 *  - Render the preset list as a paginated list of section_record rows.
 *  - Provide the Apply, Edit-modal, and Delete column callbacks that are
 *    invoked by each section_record row.
@@ -29,7 +31,7 @@
 *  - view_export_user_presets.render – async full/content render
 *  - render_column_apply_preset      – column callback: Apply button
 *  - render_column_id                – column callback: Edit/ID button
-*  - render_column_remove            – column callback: Delete button
+*  - render_column_remove            – column callback: Delete button (ui.confirm)
 *  - render_preset_modal             – modal launcher for preset name/visibility/default editing
 *  - select_preset                   – loads and applies a preset + updates the row highlight
 */
@@ -150,6 +152,20 @@ view_export_user_presets.render = async function(self, options) {
 	// content_data append
 		list_body.appendChild(content_data)
 
+	// row click applies the preset. Delegated on list_body, which survives the
+	// content-level refresh (pagination / delete replace content_data only).
+	// Edit and delete are their own targets: edit opens on mousedown, and the
+	// click that follows must not also apply the preset.
+		list_body.addEventListener('click', (e) => {
+			if (e.target.closest('.column_edit, .column_delete')) {
+				return
+			}
+			const button_apply = e.target.closest('.section_record')?.querySelector('.button_apply_preset')
+			if (button_apply && !e.target.closest('.button_apply_preset')) {
+				button_apply.click()
+			}
+		})
+
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
@@ -232,11 +248,12 @@ const get_content_data = async function(ar_section_record, self) {
 * appending control columns around the section's base columns.
 *
 * The result order is:
-*  1. 'apply_preset' – Apply button (always present, leftmost).
-*  2. 'edit'         – ID / edit button (always present).
-*  3. …base columns… – taken from self.columns_map as configured on the
-*     section (e.g. the preset name column).
+*  1. 'apply_preset' – Apply button / selection indicator (always, leftmost).
+*  2. …base columns… – taken from self.columns_map as configured on the
+*     section (the preset name column — the only one the read requests).
+*  3. 'edit'         – ID / edit button (always present).
 *  4. 'delete'       – Delete button (only when self.permissions > 1).
+* The row actions sit together at the right, after the name.
 *
 * Each control column specifies a `callback` function that is invoked per row
 * by the section_record renderer with a standard options object
@@ -263,6 +280,10 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_column_apply_preset
 		})
 
+	// columns base
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
+
 	// column section_id check
 		columns_map.push({
 			id			: 'edit',
@@ -280,10 +301,6 @@ const rebuild_columns_map = async function(self) {
 			}],
 			callback	: render_column_id
 		})
-
-	// columns base
-		const base_columns_map = await self.columns_map
-		columns_map.push(...base_columns_map)
 
 	// button_remove
 		if (self.permissions > 1) {
@@ -334,7 +351,8 @@ export const render_column_apply_preset = function(options) {
 		const button_apply = ui.create_dom_element({
 			element_type	: 'span',
 			id				: 'apply_preset_' + section_id,
-			class_name		: 'button_apply_preset button icon arrow_link'
+			class_name		: 'button_apply_preset button icon arrow_link',
+			title			: get_label.apply || 'Apply'
 		})
 		// click handler
 		const apply_preset_handler = async (e) => {
@@ -454,7 +472,8 @@ export const render_column_id = function(options) {
 	// button_edit
 		const button_edit = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button_edit button icon edit button_view_' + section.context.view
+			class_name		: 'button_edit button icon edit button_view_' + section.context.view,
+			title			: get_label.edit || 'Edit'
 		})
 		const click_handler = (e) => {
 			e.stopPropagation()
@@ -550,8 +569,8 @@ export const render_preset_modal = function (options) {
 * Only added to the columns_map when self.permissions > 1 (see rebuild_columns_map).
 *
 * On click:
-*  1. Shows a browser confirm() dialog (uses get_label.sure for i18n with
-*     a fallback of 'Sure?').
+*  1. Asks through ui.confirm (the application dialog, never the blocking
+*     native confirm()), naming the preset in the note.
 *  2. Calls section.delete_section with a targeted SQO (single-record locator,
 *     delete_record mode, diffusion disabled because presets are user data
 *     that should not propagate to publication targets).
@@ -560,10 +579,6 @@ export const render_preset_modal = function (options) {
 *  4. Also cleans up the tool_export state: hides the save-preset button if
 *     visible, and clears self.user_preset_section_id so no preset is
 *     considered active.
-*
-* (!) Uses the browser's built-in confirm() which is declared in the
-* global header directive because it is a global injected by the page
-* environment, not from an import.
 *
 * @param {Object}        options              - Standard column-callback options.
 * @param {Object}        options.caller       - The section instance (presets list).
@@ -584,14 +599,23 @@ export const render_column_remove = function(options) {
 	// delete_button
 		const delete_button = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button_delete button delete_light icon'
+			class_name		: 'button_delete button delete_light icon',
+			title			: get_label.delete || 'Delete'
 		})
 		// click event
 		const click_handler = async (e) => {
 			e.stopPropagation()
 
-			// confirm dialog
-				if (!confirm(get_label.sure || 'Sure?')) {
+			// confirm dialog. The preset name rides the note (the TEXT slot)
+				const preset_name = delete_button.closest('.section_record')
+					?.querySelector('.column_section')?.textContent?.trim() || null
+				const confirmed = await ui.confirm({
+					header			: get_label.delete || 'Delete',
+					note			: preset_name,
+					body			: get_label.sure || 'Sure?',
+					accept_class	: 'danger remove'
+				})
+				if (confirmed!==true) {
 					return
 				}
 

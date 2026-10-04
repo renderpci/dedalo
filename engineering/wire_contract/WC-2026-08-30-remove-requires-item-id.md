@@ -111,3 +111,15 @@ other door (MCP, imports, a stale client).
   change. `test/unit/ontology_tld_native.test.ts` keeps asserting `ok:false` for
   an id-less remove on `ontology7` — that refusal is the ONT-TLD allowlist,
   which runs first and is unchanged.
+
+## Addendum 2026-10-03 — the MCP door lets ONE model past: component_relation_children
+
+`component_relation_children` owns no items (its entries are computed, they carry no id),
+and the engine routes it to the write-through AHEAD of its remove sentinel, where a child
+is removed BY LOCATOR (user decision 2026-09-27). The MCP door's handler refusal now
+applies the engine's own test — the model of the DATA tipo, after the alias hop — and lets
+an id-less `remove` on that model through as `{action:'remove', id:null, value}`; the
+write-through refuses one naming no record (`request.invalid_data`, never a wipe). Every
+other model is refused at the door exactly as before. Tool schema descriptions say so.
+Gates: `relation_children_write_through_native` (MCP legs) + this entry's
+`remove_sentinel_native` census rows (amended the same day).

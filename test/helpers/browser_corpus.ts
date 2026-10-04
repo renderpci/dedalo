@@ -57,6 +57,14 @@ const gitBrowserView = (): string[] =>
 		.filter(Boolean);
 
 /**
+ * Every .js under the browser trees in git's view, UNFILTERED — for a census
+ * whose rule is not "first-party minus vendored" (a tool's own helper under a
+ * `lib/` directory is still the tool's code: tool_lossless_writeback's client
+ * census reads every tools/**\/js file but the `-min.js` builds).
+ */
+export const browserSourcesUnfiltered = (): string[] => gitBrowserView();
+
+/**
  * Every .js under the browser trees, excluding vendored libraries — tracked AND
  * untracked (a module not yet `git add`ed is still served), never ignored.
  */

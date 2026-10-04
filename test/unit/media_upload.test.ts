@@ -26,6 +26,7 @@ import {
 	receiveUpload,
 } from '../../src/core/media/ingest/upload.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -40,7 +41,10 @@ async function jpegBytes(size = '200x200'): Promise<Uint8Array> {
 	const tmp = `${ROOT}/_scratch_${Math.abs(size.length)}.jpg`;
 	const { mkdirSync } = await import('node:fs');
 	mkdirSync(ROOT, { recursive: true });
-	await runBinary([resolveMagick(), '-size', size, 'xc:purple', tmp], { nice: false });
+	await runBinary([resolveMagick(), '-size', size, 'xc:purple', tmp], {
+		nice: false,
+		env: magickTestEnv(),
+	});
 	const bytes = new Uint8Array(readFileSync(tmp));
 	rmSync(tmp, { force: true });
 	return bytes;

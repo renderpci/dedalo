@@ -9,6 +9,9 @@ export const component_security_access: ComponentModel = {
 	model: 'component_security_access',
 	column: 'misc',
 	render: 'text',
+	importAppend: {
+		refuse: 'opaque: the permission map is one document, not a list of items — use replace',
+	},
 	monovalue: true,
 	emitHook: 'security_access',
 	sortable: false, // PHP component_security_access::get_sortable() → false

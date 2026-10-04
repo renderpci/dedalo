@@ -47,7 +47,4 @@
   border: 1.2px solid var(--tool_tc_border_strong) !important;
   opacity: 0.7;
 }
-.tool_header.tool_tc {
-  background-color: var(--tool_tc);
-}
 /*# sourceMappingURL=tool_tc.css.map */

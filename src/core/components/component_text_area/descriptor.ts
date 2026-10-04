@@ -9,6 +9,7 @@ export const component_text_area: ComponentModel = {
 	model: 'component_text_area',
 	column: 'string',
 	render: 'html',
+	importAppend: 'text_paragraphs',
 	monovalue: true,
 	classSupportsTranslation: true,
 	searchBuilder: 'string',

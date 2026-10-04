@@ -279,9 +279,15 @@ export const render_column_id = function(options) {
 			return fragment
 		}
 
-	// drag_node
-		const drag_node = render_drag_node(options)
-		fragment.appendChild(drag_node)
+	// drag_node. Not for a model whose order is not a position in this list
+	// (`reorderable===false`: component_relation_children — each child holds its
+	// own order value, and the server refuses sort_data there).
+		const drag_node = self.reorderable===false
+			? null
+			: render_drag_node(options)
+		if (drag_node) {
+			fragment.appendChild(drag_node)
+		}
 
 	// button_edit events
 		button_edit.addEventListener('mouseenter', function(e) {
@@ -289,7 +295,7 @@ export const render_column_id = function(options) {
 
 			// permissions control
 			// with read only permissions, stop
-			if ( self.permissions >= 2 && drag_node.classList.contains('hide') ) {
+			if ( drag_node && self.permissions >= 2 && drag_node.classList.contains('hide') ) {
 				drag_node.classList.remove('hide')
 			}
 		});
@@ -298,7 +304,7 @@ export const render_column_id = function(options) {
 
 			// permissions control
 			// with read only permissions, stop
-			if ( self.permissions >= 2 && !drag_node.classList.contains('hide') ) {
+			if ( drag_node && self.permissions >= 2 && !drag_node.classList.contains('hide') ) {
 				drag_node.classList.add('hide')
 			}
 		});
@@ -1365,6 +1371,11 @@ export const add_section_record_drag_and_drop = function(options) {
 		const node = options.section_record_node
 		if(!node){
 			console.error('No node is given')
+			return false
+		}
+
+	// not reorderable (component_relation_children): no drag source at all
+		if (options.caller?.reorderable===false) {
 			return false
 		}
 

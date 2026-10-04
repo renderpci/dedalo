@@ -33,7 +33,7 @@
 // other two borrowed components from elsewhere in the `test` ontology. All three now
 // live in the situation this gate BUILDS (`zzecho`: one section on matrix_test
 // through the test24 matrix_table node + a translatable component_input_text, a
-// NON-translatable one carrying `with_lang_versions`, and a component_number), so
+// NON-translatable one, and a component_number), so
 // every ontology fact the echo rule branches on is authored here.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -96,10 +96,10 @@ const SITUATION = situation({
 			parent: TEST_SECTION_TIPO,
 			model: 'component_input_text',
 			is_translatable: false,
-			// The install twin of this branch carries `with_lang_versions`: the
-			// items are stored WITH a lang key (lg-nolan) although the component is
-			// not translatable — which is exactly what the echo must slice on.
-			properties: { with_lang_versions: true },
+			// Plain NON-translatable: the items are stored WITH a lang key
+			// (lg-nolan) — exactly what the echo must slice on. NOT
+			// `with_lang_versions` (a transliterable component keeps the request
+			// lang: resolver.ts effectiveSaveLang).
 			term: { 'lg-spa': 'Texto sin idioma', 'lg-eng': 'Text without language' },
 		},
 		{

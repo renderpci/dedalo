@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label*/
+/*global page_globals, get_label*/
 /*eslint no-undef: "error"*/
 
 
@@ -114,9 +114,7 @@ const get_content_data = async function(self) {
 				e.stopPropagation()
 				button_open.classList.add('button_spinner')
 				try {
-					// Dynamic import: only pull tool_common in when the admin actually launches.
-					const { open_tool } = await import('../../../../tools_common/js/tool_common.js')
-					await open_tool({ tool_context : 'tool_sitebuilder', open_as : 'window' })
+					await open_site_builder()
 				} catch (err) {
 					console.error('[site_builder_status] open failed', err)
 				} finally {
@@ -147,6 +145,39 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+/**
+* OPEN_SITE_BUILDER
+* Opens tool_sitebuilder in its own window. view_window REQUIRES a caller: it
+* serialises one into the window URL and the window REBUILDS it with
+* get_instance(model), so it must be a real, importable element. The widget's
+* own home, area_maintenance (dd88), is that caller. Without one open_tool
+* answered null ('view_window: caller is required') and the button silently
+* did nothing.
+* Exported so the phone harness (scripts/tool_viewport_check.ts) opens the
+* tool through THIS call, not a copy of it.
+* @returns {Promise<Window|null>}
+*/
+export const open_site_builder = async function() {
+
+	// Dynamic import: only pull tool_common in when the admin actually launches.
+	const { open_tool } = await import('../../../../tools_common/js/tool_common.js')
+
+	return open_tool({
+		tool_context	: 'tool_sitebuilder',
+		open_as			: 'window',
+		caller			: {
+			model			: 'area_maintenance',
+			tipo			: 'dd88', // area_maintenance, where the launcher lives
+			section_tipo	: 'dd88',
+			mode			: 'list',
+			lang			: (typeof page_globals!=='undefined' && page_globals.dedalo_data_lang) || 'lg-eng',
+			label			: 'Site builder'
+		}
+	})
+}//end open_site_builder
+
 
 
 // @license-end

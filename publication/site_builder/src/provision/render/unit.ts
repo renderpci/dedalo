@@ -44,7 +44,9 @@ import {
   pathsOverlap,
   readWritePaths,
 } from '../layout';
-import type { Renderer } from './types';
+import { agentUnitNames } from '../../drivers/agent_identity';
+import { DOORS } from '../../drivers/network_profile';
+import type { Renderer, RenderFacts } from './types';
 import { artifact } from './types';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -185,10 +187,23 @@ function octal(mode: number): string {
  * The renderer
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * `Wants=`/`After=` every declared site's door sockets — none without the facts (a host
+ * rendered without them runs no confined agent, and names no socket).
+ */
+function agentSocketLines(layout: InstanceLayout, facts: RenderFacts | undefined): string[] {
+  if (!facts) return [];
+  const sockets = [...facts.agentIdentities.values()]
+    .sort((a, b) => a - b)
+    .flatMap(k => DOORS.map(door => agentUnitNames(layout.agentUnitPrefix, k, door).socket));
+  if (sockets.length === 0) return [];
+  return [`Wants=${sockets.join(' ')}`, `After=${sockets.join(' ')}`];
+}
+
 export const unitRenderer: Renderer = {
   kind: 'unit',
 
-  render(layout: InstanceLayout, manifest: InstanceManifest) {
+  render(layout: InstanceLayout, manifest: InstanceManifest, facts?: RenderFacts) {
     const tree = layout.daemon;
     const lines: string[] = [];
 
@@ -217,6 +232,11 @@ export const unitRenderer: Renderer = {
       // answer inside the file rather than in somebody's memory.
       `Documentation=file://${unitPath('manifestPath', layout.manifestPath)}`,
       `After=network.target`,
+      // THE SITES' AGENT SOCKETS come up with the daemon, and listen before it starts. Each is
+      // PartOf= this unit (render/agent_units.ts): stopped in the daemon's own stop
+      // transaction — a socket with a stop pending accepts nothing, so no connect during the
+      // stop can activate a run whose BindsTo= would cancel it — and wanted back here.
+      ...agentSocketLines(layout, facts),
       ``,
       `# A wrong tree or a missing runtime refuses AT START, naming the path that is not`,
       `# there, instead of systemd's bare status=203/EXEC. Assert* are [Unit] settings; the`,
@@ -318,14 +338,14 @@ export const unitRenderer: Renderer = {
       `ProtectSystem=strict`,
       `ProtectHome=yes`,
       `PrivateTmp=yes`,
-      `# THE THREE THAT ARE ABOUT THE AGENT, not about the daemon. A turn runs as its own`,
-      `# uid now (systemd-run --uid=<agent user>, authorized by the rendered polkit rule),`,
-      `# and these are what keep that boundary from being walked around: ProtectProc hides`,
-      `# every other process's /proc entry — including this daemon's environ and its`,
-      `# $CREDENTIALS_DIRECTORY-holding self — from anything started underneath it;`,
-      `# RestrictSUIDSGID refuses the setuid bit a compromised turn would need to keep a`,
-      `# foothold across uids; LockPersonality closes the execution-domain switch that makes`,
-      `# a kernel exploit portable. None of the three costs this daemon anything it does.`,
+      `# THE THREE THAT ARE ABOUT THE AGENT, not about the daemon. Every agent run is a unit`,
+      `# of its own now, rendered by root per (site, door) with User= the SITE's identity`,
+      `# (agent_units.ts) — the daemon starts none of them, it connects to their sockets —`,
+      `# and these keep this daemon's side of that boundary closed too: ProtectProc hides`,
+      `# every other process's /proc entry, RestrictSUIDSGID refuses a setuid foothold, and`,
+      `# LockPersonality closes the execution-domain switch. None costs this daemon anything.`,
+      `# (Its membership of each site's private group — the egress sockets' group — comes from`,
+      `# /etc/group through User=, so a site added by 'provision apply' needs a restart.)`,
       `ProtectProc=invisible`,
       `RestrictSUIDSGID=yes`,
       `LockPersonality=yes`,
@@ -333,9 +353,11 @@ export const unitRenderer: Renderer = {
       `# on the host — derived from the webspace row of the ownership matrix (${octal(MODES.webspace.mode)}).`,
       `UMask=${octal(UMASK)}`,
       ``,
-      `# THE WRITABLE SET — the three state roots, the runtime dir, and EVERY site webspace,`,
-      `# straight from readWritePaths(layout): the same list the provisioner creates the`,
-      `# directories from, so an override in instance.json moves both or neither. Under`,
+      `# THE WRITABLE SET — the workspaces and audit roots, the runtime dir, EVERY site webspace,`,
+      `# and the sites' egress base (root's, from tmpfiles.d: the gate binds each proxy door's`,
+      `# sockets in its s<k> by group membership; the mount is not the permission, egress/ stays`,
+      `# root 0755), straight from readWritePaths(layout): the same list the provisioner creates`,
+      `# the directories from, so an override in instance.json moves both or neither. Under`,
       `# ProtectSystem=strict an omitted root is not an install failure — it is EROFS the`,
       `# first time that museum publishes. ReadWritePaths= is also what exempts the served`,
       `# trees from ProtectHome= above, which matters because the default webspace base is`,

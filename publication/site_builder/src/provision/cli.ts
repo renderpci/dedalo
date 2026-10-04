@@ -57,7 +57,9 @@ import { assertFleetDisjoint, loadFleet } from './fleet';
 import type { Fleet, FleetMember, FleetMembers } from './fleet';
 import { changesTheHost, describe, orphanedVhosts, plan } from './plan';
 import type { Action, HostState, OrphanedVhost } from './plan';
-import { apply, check, hostIo, observeHost } from './apply';
+import { apply, check, hostIo, observeHost, readAgentLedger } from './apply';
+import { type AgentLedger, ledgerOrdinals } from './identities';
+import { SYSTEMD_FLOOR } from '../drivers/unit_properties';
 import type { ApplyReport, CheckReport, ProvisionIo } from './apply';
 import {
   LEGACY_UNIT_PATH,
@@ -190,6 +192,11 @@ export interface ProvisionDeps {
   removalIo(base: AdoptIo): RemovalIo;
   publishedSites(layout: InstanceLayout, io: AdoptIo): { slug: string; domain: string; release: string }[];
   observeForRemoval(layout: InstanceLayout, artifacts: readonly Artifact[], io: RemovalIo): RemovalHost;
+  /**
+   * The host's site-identity ledger (LEAD-1b) — which agent units a decommission removes and
+   * which identities it locks. Optional in a fake: absent = no site identity is known.
+   */
+  observeAgentLedger?(layout: InstanceLayout): AgentLedger;
   removalPlan(layout: InstanceLayout, artifacts: readonly Artifact[], host: RemovalHost, at: Date): RemovalStep[];
   describeRemoval(step: RemovalStep): string;
   removalChangesTheHost(step: RemovalStep): boolean;
@@ -222,6 +229,7 @@ export function hostDeps(): ProvisionDeps {
     removalIo,
     publishedSites,
     observeForRemoval,
+    observeAgentLedger: readAgentLedger,
     removalPlan,
     describeRemoval,
     removalChangesTheHost,
@@ -1419,9 +1427,13 @@ function declaredMember(context: VerbContext, instance: string): FleetMember | n
 function removalFor(context: VerbContext, member: FleetMember, io: RemovalIo): readonly RemovalStep[] | number {
   const { deps, err } = context;
 
+  // The agent units are rendered for the identities the host's ledger binds (the version
+  // decides no PATH, so the floor stands in for it): removal proves each file ours by its stamp.
+  const agentLedger = deps.observeAgentLedger?.(member.layout);
+  const facts = { agentIdentities: ledgerOrdinals(member.layout, agentLedger), systemdVersion: SYSTEMD_FLOOR };
   let artifacts: readonly Artifact[];
   try {
-    artifacts = renderAll(member.layout, member.manifest);
+    artifacts = renderAll(member.layout, member.manifest, facts);
   } catch (error) {
     err(`provision remove: instance '${member.instance}' could not be removed — its artifacts do not render: ${messageOf(error)}`);
     err(`  Removal deletes only files it can PROVE it wrote, and proving that means rendering`);
@@ -1430,7 +1442,8 @@ function removalFor(context: VerbContext, member: FleetMember, io: RemovalIo): r
   }
 
   try {
-    return deps.removalPlan(member.layout, artifacts, deps.observeForRemoval(member.layout, artifacts, io), new Date());
+    const observed = deps.observeForRemoval(member.layout, artifacts, io);
+    return deps.removalPlan(member.layout, artifacts, agentLedger ? { ...observed, agentLedger } : observed, new Date());
   } catch (error) {
     err(`provision remove: refusing instance '${member.instance}' — ${messageOf(error)}`);
     return EXIT.REFUSED;

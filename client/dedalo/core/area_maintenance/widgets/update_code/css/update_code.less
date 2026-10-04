@@ -12,13 +12,12 @@
 	>.content_data {
 
 		// main submit button for Check available updates.
-		// NOTE these three live inside a ROLE BLOCK since 2026-08-24, so they are
-		// children of `.role_body`, not of `.content_data` — a plain `>` here
-		// silently stopped matching anything.
+		// (Direct children of `.content_data` again since 2026-09-28: the role
+		// blocks went away with the serve_code split.)
 		// The widget's ONE primary action. It used to inherit the shared `.light`
 		// grey-on-grey look and disappeared under the note text above it, so it is
 		// promoted here: accent fill, on-accent label, its own reading weight.
-		.role_body >.button_submit {
+		>.button_submit {
 			margin: 1rem;
 			margin-left: 0px;
 			margin-bottom: 2rem;
@@ -45,198 +44,18 @@
 			}
 		}
 
-		.role_body >.dd_readout {
+		>.dd_readout {
 			margin-bottom: 0.75rem;
 		}
 
-		.role_body >.dd_note {
+		>.dd_note {
 			margin: 0.5rem 0;
-		}
-
-		// ROLE BLOCKS — the widget serves two owners on one screen: the code this
-		// installation RUNS (consumer) and the code it PUBLISHES (code server).
-		// Each is a titled panel so a readout can never be read against the wrong
-		// one ('Published releases' used to float among the update readouts).
-		>.role_block {
-			margin: 0 0 1.5rem 0;
-			padding: 0.9rem 1rem 1rem 1rem;
-			border: 1px solid var(--border_default);
-			border-radius: 4px;
-			background-color: var(--bg_surface_alt);
-
-			>.role_header {
-				display: flex;
-				align-items: center;
-				gap: 0.5rem;
-				font-size: 1.05em;
-				font-weight: 600;
-				color: var(--fg_default);
-
-				.role_icon {
-					background-color: var(--fg_muted);
-				}
-			}
-
-			>.role_note {
-				margin: 0.35rem 0 0.9rem 1.6rem;
-				font-size: 0.85em;
-				color: var(--fg_muted);
-			}
-
-			// FOLDED: the header alone, with no bottom air — a stack of two
-			// collapsed blocks must read as a compact index, not as two empty cards
-			&.collapsed {
-				padding-bottom: 0.9rem;
-
-				>.role_header {
-					margin-bottom: 0px;
-				}
-			}
-
-			// the role's own icon (masked svg, area_maintenance vocabulary)
-			&.role_consumer >.role_header .role_icon { .fn_maintenance_icon('download.svg'); }
-			&.role_code_server >.role_header .role_icon { .fn_maintenance_icon('upload.svg'); }
-
-			// inside a block the halves already carry their own spacing
-			>.role_body >.update_status:first-child {
-				margin-top: 0;
-			}
-
-			// BUILD AND PUBLISH — one row per channel: the action button in the
-			// key cell, the archive it writes in the value cell. The key cell is
-			// the readout's label column, so its label styling (uppercase, small)
-			// has to be undone for a real control to sit in it.
-			.build_row {
-
-				>.dd_k.build_action {
-					display: flex;
-					align-items: center;
-					padding: 0.4rem 0.5rem;
-					text-transform: none;
-					letter-spacing: normal;
-
-					// a channel with no branch to build: stated, not blank —
-					// the same muted-italic voice as an unbuilt artifact cell
-					&.none {
-						color: var(--fg_muted);
-						font-style: italic;
-					}
-
-					// the form wrapper must not eat the cell (build_form emits a
-					// <form> around the button)
-					>.form_container {
-						width: 100%;
-						margin: 0px;
-					}
-
-					// READ AS A BUTTON. In the readout's label column these were a
-					// pale outline on a grey cell — the one thing in the panel that
-					// DOES something looked like a caption. Solid fill for the
-					// published channel (widget_kit .primary), a real raised border
-					// for the developer one, and both keep a button's own padding.
-					button.build_button {
-						display: block;
-						width: 100%;
-						margin: 0px;
-						padding: 0.55rem 0.8rem;
-						border-radius: 4px;
-						font-weight: 600;
-						line-height: 1.25;
-						white-space: normal;
-						cursor: pointer;
-						font-size: 0.8rem;
-
-						// THE PUBLISHED CHANNEL is the panel's main publishing act:
-						// filled, like widget_kit's .primary. It is restated here
-						// because `build_form` also stamps `.light` on every submit
-						// button, and THIS scope is more specific than the kit's — the
-						// kit's fill lost to the secondary styling below, leaving the
-						// primary action looking exactly like everything else.
-						&.primary {
-							color: var(--fg_inverse); // white in BOTH themes (audit P1-18)
-							background-color: var(--color_primary);
-							border: 1px solid var(--color_primary);
-
-							&:hover {
-								filter: brightness(1.08);
-							}
-						}
-
-						// the developer channel: secondary, but raised — a real
-						// control, not a caption in a label cell
-						&.light:not(.primary) {
-							color: var(--fg_default);
-							border: 1px solid var(--border_strong);
-							background-color: var(--bg_surface);
-							box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
-
-							&:hover {
-								background-color: var(--bg_surface_alt);
-							}
-						}
-					}
-				}
-
-				>.dd_v.build_file {
-					display: flex;
-					flex-wrap: wrap;
-					align-items: center;
-					gap: 0.5rem;
-
-					>.build_file_meta {
-						color: var(--fg_muted);
-					}
-
-					// a channel with no archive yet: stated, not blank
-					&.none {
-						color: var(--fg_muted);
-						font-style: italic;
-					}
-
-					// IN FLIGHT. The facts stay legible — the operator is meant
-					// to read what is being replaced — but they are visibly no
-					// longer current, and the row pulses so the change is
-					// noticed on a panel the eye is not resting on.
-					&.building {
-						>.build_file_name,
-						>.build_file_meta {
-							opacity: 0.45;
-						}
-
-						animation: build_pulse 1.4s ease-in-out infinite;
-
-						// (!) Reduced motion is an explicit STATIC STATE, never a
-						// collapsed animation: general.less squashes every animation to
-						// 0.001ms, which would park this pulse on whichever keyframe it
-						// happened to reach. A building row must read as PRESENT and
-						// active, so the resting state is fully opaque.
-						@media (prefers-reduced-motion: reduce) {
-							animation: none;
-							opacity: 1;
-						}
-					}
-
-					// THE VERDICT LINE, on its own row under the facts.
-					>.build_file_previous {
-						flex-basis: 100%;
-						font-size: 0.9em;
-						color: var(--fg_muted);
-					}
-
-					// DONE. A one-shot wash rather than a standing colour: the
-					// row is normal state again, and only the badge and the
-					// before-value have to persist.
-					&.built_updated {
-						animation: build_settled 1.6s ease-out 1;
-					}
-				}
-			}
 		}
 
 		// DEVELOPER-BUILDS switch — the arming for same-version (branch) builds.
 		// Deliberately quiet: it sits above the submit button as one checkbox row
 		// plus its note, never a warning bar (the note carries the caution).
-		.role_body >.dev_channel_row {
+		>.dev_channel_row {
 			margin: 0.75rem 0 0.25rem 0;
 
 			>.dev_channel_label {
@@ -269,154 +88,10 @@
 			}
 		}
 
-		// STATUS readouts (render_update_status.js) — LAYOUT ONLY.
-		// The severity vocabulary is the shared widget_kit's (.dd_badge +
-		// pill_ok / pill_warning / pill_danger, .dd_eyebrow, .dd_readout): a
-		// second chip system local to this widget would drift from every other
-		// maintenance panel, so nothing here defines a state colour.
-		.update_status {
-			margin-bottom: 1rem;
+		// STATUS readouts (render_update_status.js) — layout shared with
+		// serve_code through the .dd_update_status() mixin below.
+		.dd_update_status();
 
-			.status_block {
-				margin-bottom: 0.75rem;
-
-				.dd_eyebrow {
-					margin-bottom: 0.33rem;
-				}
-			}
-
-			// the headline verdict of a role, above its checks
-			.status_verdict {
-				font-size: 1rem;
-				font-weight: bold;
-				margin-top: 0.5rem;
-				margin-bottom: 2rem;
-
-				&.state_ok {
-					color: @color_success;
-				}
-				&.state_danger {
-					color: @color_danger;
-				}
-				// ready, but only because a gate is waivable: neither green nor
-				// red — the operator has one more decision to make.
-				&.state_warning {
-					color: @color_warning;
-				}
-			}
-
-			// a check's value cell: chip, then the server's fact, then the why
-			.check_row {
-
-				.dd_v {
-					display: flex;
-					flex-wrap: wrap;
-					align-items: baseline;
-					gap: 0.4rem;
-				}
-
-				// paths and offender lists can be long: wrap, never widen the
-				// grid column (the readout is a two-column grid — an unbroken
-				// path would push the whole panel sideways)
-				.check_detail {
-					overflow-wrap: anywhere;
-					opacity: 0.85;
-				}
-
-				// what the check looked at (a git ref, a path) — an axis label,
-				// deliberately quieter than the fact it qualifies
-				.check_scope {
-					font-size: 0.9em;
-					opacity: 0.7;
-					white-space: nowrap;
-				}
-
-				// the explanation, rendered only on a non-ok check
-				.check_note {
-					flex-basis: 100%;
-					font-size: 0.9em;
-					opacity: 0.75;
-				}
-			}
-
-			// restore points / releases put their chips after the value
-			.dd_v > .dd_badge {
-				margin-left: 0.4rem;
-				margin-right: 0.33rem;
-				white-space: nowrap;
-			}
-
-			// A RESTORE POINT IS AN ACTION ROW: stamp, version, bootability chip
-			// and the Restore button share one value cell, so the button must be
-			// laid out with them instead of dropping onto its own line. The
-			// button stays `light` — a destructive action is confirmed in the
-			// modal, never advertised by weight in a list.
-			.restore_row {
-
-				.dd_v {
-					display: flex;
-					flex-wrap: wrap;
-					align-items: center;
-					gap: 0.4rem;
-				}
-
-				.restore_version {
-					opacity: 0.85;
-				}
-
-				// the refusal sentence of a disabled Restore button: its own line
-				// UNDER the row (flex-basis 100% in the wrapping value cell), so
-				// the stamp/version/pill/button line keeps its layout and the
-				// reason is readable without a hover.
-				.restore_reason {
-					flex-basis: 100%;
-					font-size: 0.9em;
-					opacity: 0.75;
-				}
-
-				// the version numbers behind the refusal, on their own line: the
-				// sentence says WHAT is wrong, this says WHICH Bun to install.
-				// Slightly stronger than the sentence because it is the part the
-				// operator has to act on, and mono because it is two versions.
-				.restore_reason_detail {
-					flex-basis: 100%;
-					font-size: 0.9em;
-					opacity: 0.9;
-				}
-
-				// DELETE, beside Restore. Secondary weight (it is not the thing an
-				// operator came here to do) but unmistakably destructive — the
-				// panel's own colour for an irreversible action, applied to the
-				// text so a disabled one reads as unavailable rather than as safe.
-				>.dd_v >button.button_delete_point {
-					margin-left: 0.4rem;
-					padding: 0.15rem 0.7rem;
-					color: var(--state_danger_fg, #b3261e);
-
-					&[disabled] {
-						color: var(--fg_muted);
-					}
-				}
-
-				>.dd_v >button.button_restore {
-					margin-left: auto;
-					padding: 0.15rem 0.7rem;
-					font-size: 0.9em;
-
-					&[disabled] {
-						opacity: 0.5;
-						cursor: not-allowed;
-					}
-				}
-			}
-
-			// the divergence note lives in a plain fact row, not a check row
-			.dd_v > .check_note {
-				font-size: 0.9em;
-				opacity: 0.75;
-				margin-top: 0.2rem;
-			}
-		}
 
 		// phase track: the shared-kit progress bar + one row per job phase
 		.phase_track {
@@ -601,7 +276,7 @@
 		min-height: 6rem;
 
 		// waive_backup row. It lives in the MODAL FOOTER, above the Update
-		// button — not in .role_body with the dev-channel switch — because it is
+		// button — not in the panel with the dev-channel switch — because it is
 		// a decision about THIS install, taken at the moment of pressing Update.
 		// Rendered only when the `backup_fresh` check is not `ok`, so its mere
 		// presence is the warning; the note carries the caution in the shared
@@ -682,6 +357,162 @@
 		.spinner {
 			margin: 0px;
 			top: 2rem;
+		}
+	}
+}
+
+
+/**
+* .dd_update_status()
+* STATUS readouts (render_update_status.js) — LAYOUT ONLY.
+* The severity vocabulary is the shared widget_kit's (.dd_badge +
+* pill_ok / pill_warning / pill_danger, .dd_eyebrow, .dd_readout): a
+* second chip system local to this widget would drift from every other
+* maintenance panel, so nothing here defines a state colour.
+* Shared by update_code (consumer readout) and serve_code (code-server readout).
+*/
+.dd_update_status() {
+	.update_status {
+		margin-bottom: 1rem;
+
+		.status_block {
+			margin-bottom: 0.75rem;
+
+			.dd_eyebrow {
+				margin-bottom: 0.33rem;
+			}
+		}
+
+		// the headline verdict of a role, above its checks
+		.status_verdict {
+			font-size: 1rem;
+			font-weight: bold;
+			margin-top: 0.5rem;
+			margin-bottom: 2rem;
+
+			&.state_ok {
+				color: @color_success;
+			}
+			&.state_danger {
+				color: @color_danger;
+			}
+			// ready, but only because a gate is waivable: neither green nor
+			// red — the operator has one more decision to make.
+			&.state_warning {
+				color: @color_warning;
+			}
+		}
+
+		// a check's value cell: chip, then the server's fact, then the why
+		.check_row {
+
+			.dd_v {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: baseline;
+				gap: 0.4rem;
+			}
+
+			// paths and offender lists can be long: wrap, never widen the
+			// grid column (the readout is a two-column grid — an unbroken
+			// path would push the whole panel sideways)
+			.check_detail {
+				overflow-wrap: anywhere;
+				opacity: 0.85;
+			}
+
+			// what the check looked at (a git ref, a path) — an axis label,
+			// deliberately quieter than the fact it qualifies
+			.check_scope {
+				font-size: 0.9em;
+				opacity: 0.7;
+				white-space: nowrap;
+			}
+
+			// the explanation, rendered only on a non-ok check
+			.check_note {
+				flex-basis: 100%;
+				font-size: 0.9em;
+				opacity: 0.75;
+			}
+		}
+
+		// restore points / releases put their chips after the value
+		.dd_v > .dd_badge {
+			margin-left: 0.4rem;
+			margin-right: 0.33rem;
+			white-space: nowrap;
+		}
+
+		// A RESTORE POINT IS AN ACTION ROW: stamp, version, bootability chip
+		// and the Restore button share one value cell, so the button must be
+		// laid out with them instead of dropping onto its own line. The
+		// button stays `light` — a destructive action is confirmed in the
+		// modal, never advertised by weight in a list.
+		.restore_row {
+
+			.dd_v {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 0.4rem;
+			}
+
+			.restore_version {
+				opacity: 0.85;
+			}
+
+			// the refusal sentence of a disabled Restore button: its own line
+			// UNDER the row (flex-basis 100% in the wrapping value cell), so
+			// the stamp/version/pill/button line keeps its layout and the
+			// reason is readable without a hover.
+			.restore_reason {
+				flex-basis: 100%;
+				font-size: 0.9em;
+				opacity: 0.75;
+			}
+
+			// the version numbers behind the refusal, on their own line: the
+			// sentence says WHAT is wrong, this says WHICH Bun to install.
+			// Slightly stronger than the sentence because it is the part the
+			// operator has to act on, and mono because it is two versions.
+			.restore_reason_detail {
+				flex-basis: 100%;
+				font-size: 0.9em;
+				opacity: 0.9;
+			}
+
+			// DELETE, beside Restore. Secondary weight (it is not the thing an
+			// operator came here to do) but unmistakably destructive — the
+			// panel's own colour for an irreversible action, applied to the
+			// text so a disabled one reads as unavailable rather than as safe.
+			>.dd_v >button.button_delete_point {
+				margin-left: 0.4rem;
+				padding: 0.15rem 0.7rem;
+				color: var(--color_danger);
+
+				&[disabled] {
+					color: var(--fg_muted);
+				}
+			}
+
+			>.dd_v >button.button_restore {
+				margin-left: auto;
+				padding: 0.15rem 0.7rem;
+				font-size: 0.9em;
+
+				&[disabled] {
+					opacity: 0.5;
+					cursor: not-allowed;
+				}
+			}
+		}
+
+		// the divergence note lives in a plain fact row, not a check row
+		.dd_v > .check_note {
+			font-size: 0.9em;
+			opacity: 0.75;
+			margin-top: 0.2rem;
 		}
 	}
 }

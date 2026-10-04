@@ -203,6 +203,35 @@ export type FlatValueFamily =
 export type RenderClass = 'text' | 'html' | 'url' | 'number';
 
 /**
+ * What a CSV import column in APPEND mode (tool_import_dedalo_csv
+ * `import_mode:'append'`) does with the model's stored data — the
+ * `importAppend` facet, read by registry.ts getImportAppendPolicy.
+ *
+ * - 'items':           the imported items are ADDED next to the stored ones
+ *                      (relations: the insert dedup law; literals: per-lang
+ *                      value equality). Stored items stay byte-identical.
+ * - 'geo_layer':       the imported value becomes a NEW geolocation layer
+ *                      (fresh layer_id); stored layers and centre untouched.
+ * - 'text_paragraphs': per language, the imported text is appended as a new
+ *                      paragraph; a value carrying index/tc tags is refused.
+ * - { refuse }:        append has no meaning for the model (media,
+ *                      single-choice/opaque, derived) — the column is REFUSED
+ *                      loudly with this reason, never silently turned into
+ *                      replace.
+ *
+ * REQUIRED on every canonical descriptor; alias stubs inherit through the
+ * canonical hop and must NOT declare it. Pinned by
+ * descriptor_completeness_tripwire (placement laws: media refuse, no
+ * monovalue 'items', 'geo_layer' only on geolocation, 'text_paragraphs' only
+ * on the html render class, derived + no-import-conform models refuse).
+ */
+export type ImportAppendPolicy =
+	| 'items'
+	| 'geo_layer'
+	| 'text_paragraphs'
+	| { readonly refuse: string };
+
+/**
  * One component model's declarative descriptor. Only the fields the engines
  * actually READ live here; heavier per-model behavior is linked out via file
  * comments (see the DISCIPLINE note above).
@@ -290,6 +319,17 @@ export interface ComponentModel {
 	 */
 	readonly emitHook?: EmitHookId;
 	/**
+	 * The stored value is a CREDENTIAL (component_password): it is never
+	 * resolved for display. `resolveComponentValue` (resolve/component_data.ts)
+	 * — the one resolver every display door reads through (section read, save
+	 * response, Time Machine, portal list values, datalists, identify, term
+	 * resolution) — serves each non-empty value as `SECRET_MASK`, keeping the
+	 * item's `id`. The engine reads the real value only where it must (auth.ts
+	 * verification, the write path), never through that resolver.
+	 * WC-2026-09-30-password-hash-never-served.
+	 */
+	readonly secretValue?: true;
+	/**
 	 * The model's DEFAULT target source, named as DATA (the `emitHook` /
 	 * `resolveData` shape — see TargetSourceId): where this model's options come
 	 * from when the node's own `sqo.section_tipo` resolves no target. The ID is
@@ -352,4 +392,32 @@ export interface ComponentModel {
 	 * canonical descriptors; getRenderClass throws on a model without one.
 	 */
 	readonly render?: RenderClass;
+	/**
+	 * CSV-import APPEND policy (see ImportAppendPolicy). Consumed by
+	 * registry.ts getImportAppendPolicy → the tool_import_dedalo_csv column
+	 * mapper/resolver and the saveComponentData `appendImport` backstop.
+	 * Required on canonical descriptors; the accessor throws on a model
+	 * without one (no silent default — a guessed 'items' would append to a
+	 * single-choice model, a guessed refusal would hide a capability).
+	 */
+	readonly importAppend?: ImportAppendPolicy;
+	/**
+	 * DERIVED: the component OWNS NO STORED VALUE — what a read serves is
+	 * computed (an inverse question: who declares me as parent / who points at
+	 * me; a remote service), never read back from its own matrix key. Whatever
+	 * bytes sit under its tipo (an old no-op save's leftovers) are therefore NOT
+	 * its value, and no door may treat them as one. Consumers (registry.ts
+	 * isDerivedModel):
+	 *   - tool_update_cache SKIPS it server-side (a "regenerate" re-saves the
+	 *     stored bytes — for component_relation_children, whose save writes
+	 *     THROUGH to the children, that would re-parent a thesaurus from stale
+	 *     leftovers);
+	 *   - the CSV import REFUSES a column mapped to it in any mode (its
+	 *     `importAppend` refusal names what to import instead).
+	 * A derived model must refuse append. Declared `true` only; omitted = the
+	 * component stores what it serves. component_info is audited OUT: its
+	 * widget values are stored mirrors the read and search consult. Pinned by
+	 * descriptor_completeness_tripwire (the set of record, the append law).
+	 */
+	readonly derived?: true;
 }

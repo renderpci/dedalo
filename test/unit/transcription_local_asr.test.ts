@@ -6,14 +6,19 @@
  * an EXTERNAL service and fatal for a local one, so the exemption is explicit,
  * config-gated and asserted in both directions here: private hosts are refused
  * until `DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true` is set, and the cloud
- * metadata address stays refused either way.
+ * metadata addresses (all of IPv4 link-local among them) stay refused either way.
  *
  * The other load-bearing assertion is that the audio travels as BYTES. A sidecar
  * on the LAN cannot fetch a public media URL, and publishing one to give it the
  * chance would defeat the reason the institution runs recognition locally.
  */
 
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { packIpv6 } from '../../src/core/security/ip_address.ts';
+import {
+	nat64DiscoveryState,
+	setNat64DiscoveryForTests,
+} from '../../src/core/security/ssrf_guard.ts';
 import {
 	isSafeLocalAsrUrl,
 	localAsrProvider,
@@ -21,19 +26,46 @@ import {
 	privateTranscriberHostsAllowed,
 } from '../../src/core/tools/transcription_local_asr.ts';
 
-/** The exemption is read through the config chain; set it the same way tests do elsewhere. */
+/**
+ * The exemption is read through the config chain. "Unset" is PINNED to '' — never
+ * deleted: a deleted key falls back to ../private/.env through readEnv, so an
+ * operator's own `DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true` would silently turn
+ * every "exemption off" case into an "exemption on" one.
+ */
 function setExemption(value: string | undefined): void {
-	if (value === undefined) {
-		// unsetting an env var is the point
-		delete process.env.DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS;
-		return;
-	}
-	process.env.DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS = value;
+	process.env.DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS = value ?? '';
 }
+
+/** The guard's discovery cache as this file found it — restored after every case. */
+const originalDiscovery = nat64DiscoveryState();
+
+/**
+ * No DECLARED NAT64 prefix: pinned to '' (a deleted key falls back to
+ * ../private/.env through readEnv), so an operator's `DEDALO_NAT64_PREFIXES` cannot
+ * change what these cases judge — the guard's own gate (ssrf_guard.test.ts) does
+ * the same.
+ */
+const NAT64_SETTING = 'DEDALO_NAT64_PREFIXES';
+const originalNat64 = process.env[NAT64_SETTING];
+
+beforeEach(() => {
+	process.env[NAT64_SETTING] = '';
+});
 
 afterEach(() => {
 	setExemption(undefined);
+	setNat64DiscoveryForTests(originalDiscovery);
+	if (originalNat64 === undefined) delete process.env[NAT64_SETTING];
+	else process.env[NAT64_SETTING] = originalNat64;
 });
+
+/** Seed the guard's RFC 7050 discovery cache with a /96 a resolver "reported". */
+function seedDiscovered(network: string): void {
+	setNat64DiscoveryForTests({
+		prefixes: [{ network: packIpv6(network) as Uint8Array, prefixBits: 96 }],
+		expiresAt: Date.now() + 10 * 60_000,
+	});
+}
 
 describe('the private-host exemption', () => {
 	test('is OFF by default — a LAN transcriber is refused until it is configured', () => {
@@ -65,6 +97,93 @@ describe('the private-host exemption', () => {
 		// the other two endpoints that hand out credentials
 		expect(isSafeLocalAsrUrl('http://169.254.170.2/v2/credentials/')).toBe(false);
 		expect(isSafeLocalAsrUrl('http://metadata.google.internal/computeMetadata/v1/')).toBe(false);
+		expect(isSafeLocalAsrUrl('http://metadata.google.internal./computeMetadata/v1/')).toBe(false);
+		// Other clouds' metadata endpoints, and link-local at all (never a LAN sidecar).
+		for (const url of [
+			'http://100.100.100.200/latest/meta-data/', // Alibaba Cloud
+			'http://169.254.0.23/', // Tencent Cloud
+			'http://192.0.0.192/', // legacy OCI
+			'http://169.254.169.253:9000', // AWS VPC DNS: link-local, not a transcriber
+			'http://169.254.0.1/',
+			'http://169.254.255.255/',
+			'http://[64:ff9b::6464:64c8]/', // NAT64 → 100.100.100.200
+		]) {
+			expect(isSafeLocalAsrUrl(url), url).toBe(false);
+		}
+		// Neighbours of the single-address entries stay ordinary private hosts.
+		expect(isSafeLocalAsrUrl('http://100.100.100.201:9000')).toBe(true);
+		expect(isSafeLocalAsrUrl('http://192.0.0.193:9000')).toBe(true);
+		expect(isSafeLocalAsrUrl('http://169.253.255.255:9000')).toBe(true);
+	});
+
+	/**
+	 * A resolver's RFC 7050 answer is UNTRUSTED (RFC 7050 §7). A fold that replaced the
+	 * host with the IPv4 a discovered prefix claims would let a lying resolver LOOSEN
+	 * this check; the forms are added, never substituted, so it can only tighten.
+	 */
+	test('a discovered NAT64 prefix never loosens the check — exemption off or on', () => {
+		seedDiscovered('fd00::');
+		// A ULA LAN host would read as "public 8.8.8.8" if the fold replaced it.
+		expect(isSafeLocalAsrUrl('http://[fd00::808:808]:9000/')).toBe(false);
+		seedDiscovered('fd00:ec2::');
+		setExemption('true');
+		// AWS's IPv6 metadata endpoint would read as "0.0.2.84" if the fold replaced it.
+		expect(isSafeLocalAsrUrl('http://[fd00:ec2::254]/')).toBe(false);
+	});
+
+	test('a discovered NAT64 prefix still TIGHTENS: metadata through it is refused', () => {
+		seedDiscovered('2c0f:f248:64::');
+		setExemption('true');
+		expect(isSafeLocalAsrUrl('http://[2c0f:f248:64::a9fe:a9fe]/')).toBe(false);
+		setExemption(undefined);
+		expect(isSafeLocalAsrUrl('http://[2c0f:f248:64::c0a8:114]:9000/')).toBe(false); // → LAN
+		expect(isSafeLocalAsrUrl('http://[2c0f:f248:64::5db8:d822]/')).toBe(true); // → public
+	});
+
+	test('NEVER allows the metadata endpoint through an IPv4-carrying IPv6 address or a tunnel', () => {
+		// Measured 2026-09-29: with the exemption ON, each of these read as merely
+		// 'private' (which the exemption allows) because the refusal matched the
+		// metadata address as a literal string. Judged on packed bytes now.
+		setExemption('true');
+		for (const url of [
+			'http://[64:ff9b::a9fe:a9fe]/', // NAT64 well-known prefix
+			'http://[64:ff9b::169.254.169.254]/',
+			'http://[::ffff:0:a9fe:a9fe]/', // SIIT (RFC 2765) spelling
+			'http://[::a9fe:a9fe]/', // IPv4-compatible spelling
+			'http://[2002:a9fe:a9fe::]/', // 6to4 via a relay at the metadata address
+			'http://[2002:c0a8:101::1]/', // 6to4 at all: a tunnel is never a LAN sidecar
+			'http://[2001:0:a9fe:a9fe::]/', // Teredo
+			'http://[fd00:ec2::254]/', // AWS IMDS over IPv6
+			'http://[fd20:ce::254]/computeMetadata/v1/', // GCE metadata over IPv6
+			'http://[fd20:00ce:0::0254]/', // …in a non-canonical spelling
+			'http://[64:ff9b::a9fe:aa02]/', // NAT64 → the ECS endpoint 169.254.170.2
+			'http://[64:ff9b:1::a9fe:a9fe]/', // local-use NAT64 (RFC 8215), /96 layout
+			'http://[64:ff9b:1:a9fe:a9:fe00::]/', // …its /48 layout (u octet skipped)
+			'http://[64:ff9b:1:0:a9:fea9:fe00:0]/', // …its /64 layout
+			// Each layout ALONE, with a metadata address outside 169.254/16 (Alibaba's
+			// 100.100.100.200): the /48 spelling above is also 169.254.0.0 read as /64,
+			// so it could not tell whether the /48 layout is checked at all.
+			'http://[64:ff9b:1:6464:64:c800::]/', // /48 layout only
+			'http://[64:ff9b:1:64:64:64c8::]/', // /56 layout only
+			'http://2852039166/', // 169.254.169.254 as one decimal number
+		]) {
+			expect(isSafeLocalAsrUrl(url), url).toBe(false);
+		}
+		// Positive controls: the exemption still admits genuine LAN sidecars, including
+		// one reached through NAT64 or the mapped spelling (judged as the IPv4 it reaches).
+		for (const url of [
+			'http://[64:ff9b::c0a8:114]:9000', // → 192.168.1.20
+			'http://[::ffff:c0a8:114]:9000',
+			'http://[fd00:1::5]:9000', // a ULA sidecar
+			'http://[64:ff9b:1::c0a8:114]:9000', // local-use NAT64 → 192.168.1.20
+		]) {
+			expect(isSafeLocalAsrUrl(url), url).toBe(true);
+		}
+	});
+
+	test('an IPv4-carrying IPv6 address is judged as the IPv4 it reaches, exemption OFF', () => {
+		expect(isSafeLocalAsrUrl('http://[64:ff9b::c0a8:114]:9000')).toBe(false); // → 192.168.1.20
+		expect(isSafeLocalAsrUrl('http://[64:ff9b::5db8:d822]/')).toBe(true); // → 93.184.216.34
 	});
 
 	test('non-http protocols and malformed URLs are refused', () => {

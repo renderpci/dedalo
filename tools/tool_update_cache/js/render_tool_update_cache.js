@@ -8,7 +8,6 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
 	import {request_failed} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	import {error_text} from '../../../core/common/js/render_api_error.js'
@@ -124,8 +123,8 @@ render_tool_update_cache.prototype.edit = async function(options) {
 *     <ul> (from render_components_list)
 *   buttons_container
 *     button.button_apply  — triggers the cache-update background process
+*     span.records_total   — the scope: caller list's matched total
 *   div.response_message   — live SSE progress output area
-*   footer_node            — standard tool footer (from render_tool_common)
 *
 * On mount, `check_process_data` immediately consults IndexedDB (key
 * `process_update_cache`) and, if a pid/pfile pair is found there, reconnects
@@ -199,12 +198,21 @@ const get_content_data = async function(self) {
 		})
 
 	// button_apply (Update records)
-		// Label shows total record count sourced from self.caller.total so the
-		// editor knows the scope of the operation before confirming.
+		// The tool's primary action: `primary` gets the tool colour with its
+		// matched ink (tool_common.less → .tool_action_button()), `reload` the icon.
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'success button_apply',
-			inner_html		: (get_label.update || 'Update') +' '+ (self.get_tool_label('records') || 'Records') + ': ' + self.caller.total,
+			class_name		: 'primary reload button_apply',
+			text_content	: get_label.update || 'Update',
+			parent			: buttons_container
+		})
+	// records_total. Scope of the operation (self.caller.total), shown beside
+	// the action — not concatenated into its label — so the editor knows it
+	// before confirming.
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'records_total',
+			text_content	: (self.get_tool_label('records') || 'Records') + ': ' + (self.caller.total ?? '?'),
 			parent			: buttons_container
 		})
 		const click_handler = async (e) => {
@@ -252,6 +260,7 @@ const get_content_data = async function(self) {
 					// text, never innerHTML: this is server text
 					response_message.textContent = error_text(api_response.error)
 					handle_api_error(api_response.error, {wrapper: response_message.parentNode});
+					ui.reveal(response_message)
 					return
 				}
 
@@ -265,7 +274,8 @@ const get_content_data = async function(self) {
 					container					: response_message,
 					button						: button_apply,
 					components_list_container	: components_list_container,
-					self						: self
+					self						: self,
+					reveal						: true
 				})
 		}
 		button_apply.addEventListener('click', click_handler)
@@ -303,10 +313,6 @@ const get_content_data = async function(self) {
 			})
 		}
 		check_process_data()
-
-	// footer_node
-		const footer_node = render_footer(self)
-		fragment.appendChild(footer_node)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -774,6 +780,8 @@ const render_regenerate_options = function(self, item) {
 *                                          div; receives 'loading' class to block
 *                                          changes while a run is in progress.
 * @param {Object}        options.self    - The owning `tool_update_cache` instance.
+* @param {boolean}       [options.reveal=false] - Scroll the progress panel into
+*                                          view once built (user submit only).
 * @returns {void}
 */
 const update_process_status = (options) => {
@@ -785,6 +793,9 @@ const update_process_status = (options) => {
 	const container					= options.container
 	const components_list_container	= options.components_list_container
 	const self						= options.self
+	// reveal: scroll the progress panel into view once it exists. Only the
+	// user's submit asks for it — a page-load re-attach must not move the page.
+	const reveal					= options.reveal===true
 
 	// locks the button submit
 	button.classList.add('loading')
@@ -825,6 +836,10 @@ const update_process_status = (options) => {
 			pid			: pid,
 			pfile		: pfile
 		})
+		// it lands below the components list, under the fold on a long selection
+		if (reveal) {
+			ui.reveal(container)
+		}
 
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
@@ -839,11 +854,13 @@ const update_process_status = (options) => {
 				const is_running = sse_response?.is_running ?? true
 
 				// On the final chunk (is_running===false), append the compact
-				// summary report immediately so it is visible before on_done fires.
+				// summary report immediately so it is visible before on_done fires,
+				// and scroll it into view: it lands below the components list, under
+				// the fold on a long selection.
 				if (is_running===false && sse_response.data) {
-					container.appendChild(
+					ui.reveal(container.appendChild(
 						render_response_report(self, sse_response.data)
-					)
+					))
 				}
 
 				// compound_msg assembles a pipe-delimited status string from the

@@ -226,6 +226,13 @@
 			&:active {
 				opacity: 0.5;
 			}
+
+			// identical notices merged by notifications.js prepend_bubble
+			> .bubble_count {
+				margin-left: 0.4rem;
+				font-weight: bold;
+				opacity: 0.85;
+			}
 		}
 	}
 
@@ -989,4 +996,40 @@
 			animation: none !important;
 			visibility: visible !important;
 		}
+	}
+
+
+// touch_pick (common/js/touch_pick.js): the bar of TAP TO PICK, TAP TO PLACE —
+// the touch twin of a drag-and-drop. Bottom, full width, above page chrome.
+	.touch_pick_bar {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 2001; // above the floating dock column (2000)
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 1rem;
+		padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+		background-color: var(--bg_surface_alt);
+		color: var(--fg_default);
+		border-top: 3px solid @color_orange_dedalo;
+		box-shadow: var(--shadow-2);
+
+		>.touch_pick_text {
+			flex: 1 1 auto;
+			min-width: 0;
+			overflow-wrap: anywhere;
+		}
+		>.touch_pick_cancel {
+			flex: 0 0 auto;
+			min-height: 44px;
+			min-width: 44px;
+		}
+	}
+	// while carrying: every term row reads as a target
+	.touch_pick_active .wrap_ts_object > .content_data > .elements_container {
+		outline: 1px dashed @color_orange_dedalo;
+		outline-offset: -1px;
 	}

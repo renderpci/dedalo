@@ -9,6 +9,10 @@ export const component_av: ComponentModel = {
 	flatValue: 'media',
 	column: 'media',
 	render: 'text',
+	importAppend: {
+		refuse:
+			'media: the file is the value — replace it through the media tools, there is nothing to append',
+	},
 	monovalue: true,
 	emitHook: 'media',
 	sortable: false, // PHP component_media_common::get_sortable() → false

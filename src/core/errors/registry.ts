@@ -461,6 +461,16 @@ export const ERROR_REGISTRY = {
 			'Client-minted (component_date.js) for browser-side date validation before any ' +
 			'request leaves; the `validation.*` CORE_POLICY entry renders it inline.',
 	},
+	'validation.password_policy': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_validation_password_policy',
+		message: 'The password does not meet the password policy',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['rule'],
+	},
 	'request.invalid_context': {
 		category: 'caller',
 		status: 400,
@@ -1256,6 +1266,37 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: true,
 	},
+	/**
+	 * THE DAEMON WILL NOT RUN THE AGENT ON THIS HOST AS IT STANDS (2026-10-01). Its 503
+	 * `confinement_unavailable` / `confinement.*` refusals that an OPERATOR must act on: the
+	 * host cannot confine a run, a site has no agent identity, PID 1 loaded a unit that is not
+	 * what the daemon expects, a unit refused to start, or the installed agent CLI cannot be
+	 * told to ignore agent-written configuration (PLANT). Not retryable: nothing changes until
+	 * someone does. The daemon's own sentence (which names the key or command) is log-only.
+	 */
+	'site_builder.confinement_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_confinement_unavailable',
+		message: 'The site builder cannot run its agent safely on this server',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	/**
+	 * THE SITE IS BUSY ON THE DAEMON'S SIDE (2026-10-01): a run of this site is still alive or
+	 * being proved dead (`confinement.site_busy`, `identity_quarantined`), or the daemon is
+	 * restarting (`daemon_stopping`). Retryable — it clears without anyone acting.
+	 */
+	'site_builder.busy': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_busy',
+		message: 'The site builder is busy with this site',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
 
 	// ── mailer ──────────────────────────────────────────────────────────────
 	'mailer.not_configured': {
@@ -1424,6 +1465,19 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// DIFF-3: a second diffuse on an (element, section) with an ACTIVE run that
+	// is not the caller's own identical request (another owner, or another
+	// selection). The body names nothing of the live run (queue.ts
+	// enqueueDiffusionJob; WC-2026-09-30-diffusion-attach-scope).
+	'diffusion.target_busy': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_diffusion_target_busy',
+		message: 'The publication target is busy with another run; retry when it finishes',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
 	'diffusion.runner_spawn_failed': {
 		category: 'unavailable',
 		status: 503,
@@ -1513,6 +1567,36 @@ export const ERROR_REGISTRY = {
 		hint: 'Retry; if it persists, check the server model configuration.',
 	},
 
+	// THE AI SPEND BUDGET (closure Step 3, TOOLS-4; WC-2026-10-01-ai-spend-budget).
+	// Every model spend — an agent run, a generative RAG answer, a query embedding,
+	// a vision call — is RESERVED against the caller's per-day ledger
+	// (security/ai_spend.ts) before the provider is touched. `limit` (429): the
+	// same request succeeds after `window_resets_at` (the next UTC midnight) or
+	// once an administrator raises the DEDALO_AI_USER_DAILY_* budget.
+	'ai.budget_exhausted': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_ai_budget_exhausted',
+		message: 'The daily AI budget for this user is used up',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['budget_kind', 'limit', 'window_resets_at'],
+		hint: 'Stop: the user has no AI budget left today. It resets at window_resets_at (UTC); an administrator can raise the DEDALO_AI_USER_DAILY_* budgets.',
+	},
+	// The ledger could not be read or written (its engine ontology is missing, or
+	// the database failed): FAIL CLOSED — an unmetered spend is never admitted.
+	'ai.budget_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_ai_budget_unavailable',
+		message: 'The AI usage ledger is unavailable, so no AI request is admitted (see server logs)',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+		hint: 'Retry later; if it persists, the server log names why the AI usage ledger cannot be used.',
+	},
+
 	// ── install wizard ──────────────────────────────────────────────────────
 	'install.unknown_step': {
 		category: 'caller',
@@ -1562,6 +1646,48 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 	},
 
+	// ── db (PERF-11) ────────────────────────────────────────────────────────
+	// The two database ceilings, typed so a fired bound is a 503 the client can
+	// show — not a 500 `internal.unexpected` indistinguishable from an engine
+	// bug. Raised ONLY by core/db/postgres.ts; the numbers (lane, ceiling, pool)
+	// ride in operator-only `coordinates`.
+	// A 57014 at or past the lane ceiling (DB_STATEMENT_TIMEOUT_MS, or a recorded SET
+	// LOCAL). An operator cancel, an abort cancel and the reserved lane stay raw.
+	'db.statement_timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_statement_timeout',
+		message: 'A database statement ran past the configured statement ceiling',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// A 55P03 escaping a declared maintenance widget action: the maintenance pool
+	// lifts the statement ceiling but keeps a startup lock_timeout
+	// (MAINTENANCE_LOCK_TIMEOUT), so readers never queue behind its waiting ACCESS
+	// EXCLUSIVE request. The transaction that waited rolled back — not
+	// necessarily the whole action (units it committed earlier stand).
+	'db.lock_timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_lock_timeout',
+		message: 'A maintenance action waited too long for a database lock',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
+	// The acquire gate waited DB_POOL_ACQUIRE_TIMEOUT_MS for a pooled connection
+	// (every path that takes a connection takes a slot).
+	'db.pool_exhausted': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_pool_exhausted',
+		message: 'No database connection became available in time',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
+
 	// ── internal ────────────────────────────────────────────────────────────
 	'internal.unexpected': {
 		category: 'internal',
@@ -1572,6 +1698,9 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed
+	// form of a former `throw new Error(...)`. Coordinates carry the module + input;
+	// the sentence stays server-side.
 	'internal.invariant': {
 		category: 'internal',
 		status: 500,
@@ -1580,8 +1709,6 @@ export const ERROR_REGISTRY = {
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: false,
-		reason:
-			'Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed form of a former `throw new Error(...)`. Coordinates carry the module + input; the sentence stays server-side.',
 	},
 	'internal.module_poisoned': {
 		category: 'internal',
@@ -1813,6 +1940,15 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	'maintenance.dev_mode_required': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_maintenance_dev_mode_required',
+		message: 'This action is only available on a development server (DEDALO_DEV_MODE)',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
 
 	// ── the restore door (audit 2026-08-26 S-7, src/core/area_maintenance/restore_door.ts) ──
 	// A DATA restore the engine owns, CLI-only with the engine stopped. Each
@@ -1956,6 +2092,87 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 	},
+	// A request carries more items than the action processes in one call (an
+	// interactive action bounded by its caller's wait: tool_import_rdf dereferences
+	// at most RDF_MAX_URIS IRIs, each paced by the harvesting door). `caller`, not
+	// `limit`: the same request is refused every time — send fewer items.
+	'tool.too_many_items': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_too_many_items',
+		message: 'The request has more items than this action processes at once',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['count', 'limit'],
+	},
+	// An RDF/XML document past the graph reader's bounds (src/core/tools/rdf_graph.ts:
+	// element nesting deeper than maxDepth, or more than maxTriples statements). A
+	// remote linked-data answer is untrusted input: the bound stops a hostile or
+	// runaway document before it costs the server, and the same document is
+	// refused every time — `caller`, not retryable. The bound that tripped rides
+	// `coordinates.bound` (log-only); `limit` is its value.
+	'tool.rdf_graph_too_large': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_rdf_graph_too_large',
+		message: 'The RDF document is too large or too deeply nested to read',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['limit'],
+	},
+	// An RDF resource tool_import_rdf dereferenced whose rdf:type no owl:Class of
+	// the external ontology maps INTO the caller record's section (or maps at all):
+	// there is nothing the record can hold, so nothing of that IRI is written. A
+	// per-URI payload error (data.errors), never the call's failure. `type` is the
+	// subject's first type as the document names it (prefixed through the
+	// ontology's xmlns), '-' when it has none: remote data the cataloguer chose,
+	// public. Same document, same answer — caller, not retryable.
+	'tool.rdf_class_unmapped': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_rdf_class_unmapped',
+		message: 'The external ontology maps no class of this section to the RDF resource type',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['type'],
+	},
+	// A record tool_import_rdf would BIRTH (a linked term, an intermediate) whose
+	// identifier — what finds it again on the next run — the record cannot hold:
+	// the write is refused (a component grant, remote text carrying tag syntax, an
+	// undeclared language). Born without it, the record could never be found
+	// again and every run would add another, so the op is refused instead and its
+	// savepoint takes the record and its link back. A per-op skip of the import
+	// report, never the call's failure. `reason` is the skip sentence of the
+	// refused write (engine text naming no record). Same data, same answer —
+	// caller, not retryable.
+	'tool.rdf_identifier_unwritable': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_rdf_identifier_unwritable',
+		message: 'Not created: the record could not hold the identifier that finds it again',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['reason'],
+	},
+	// A remote source a tool reads interactively did not answer in time, dropped
+	// the connection, answered 5xx/408/429, or could not deliver its robots.txt
+	// (tool_import_rdf, RDF_IRI_DEADLINE_MS). For the cataloguer the source is out
+	// of service: the label says so and sends them to its maintainer. `site` is the
+	// origin of the address the cataloguer gave, never a redirect target.
+	'tool.source_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_tool_source_unavailable',
+		message: 'The remote server is not responding or is out of service',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+		details_keys: ['site'],
+	},
 	'tool.target_not_found': {
 		category: 'not_found',
 		status: 404,
@@ -1964,6 +2181,21 @@ export const ERROR_REGISTRY = {
 		severity: 'info',
 		disclosure: 'operator',
 		retryable: false,
+	},
+	/**
+	 * A bulk revert refused because the run it would undo is still executing in
+	 * this process, or another revert of the same run is (decision D5 of the
+	 * bulk-revert undo log; src/core/tools/bulk_run_registry.ts). Retryable: the
+	 * refusal lifts when the run or the other revert finishes.
+	 */
+	'tool.bulk_run_live': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_tool_bulk_run_live',
+		message: 'The bulk process is still running or already being reverted',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: true,
 	},
 	'tool.dependency_unavailable': {
 		category: 'unavailable',
@@ -2077,6 +2309,82 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'operator',
 		retryable: true,
+	},
+	// --- harvest.* — the harvesting door (core/harvest/) --------------------
+	// How a tool reads another institution's site: robots.txt obeyed, pace kept,
+	// every redirect hop re-vetted. The domain is the door's own (§2.1: the
+	// subsystem that OWNS the refusal), not `security`: these are the door's
+	// published POLICY answers, which a cataloguer who pasted a URL must be able to
+	// read — which site, and what said no. `site` is the origin the caller asked
+	// for — or, for every ROBOTS verdict (robots_disallowed, robots_unavailable, and
+	// harvest.refused reasons robots_too_complex / robots_redirect_refused), the public origin whose robots.txt
+	// decided — or a fixed token for text that is not a URL: never a path, never a
+	// query or credentials, never a resolved address (core/harvest/refusals.ts is
+	// the one builder and states that rule). ADDRESS refusals stay `security.ssrf_blocked`
+	// above — operator disclosure, because naming what a host resolved to is the
+	// internal-network oracle that code exists to deny.
+	'harvest.refused': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_harvest_refused',
+		// PUBLIC: the per-reason sentence is authored in refusals.ts (a closed
+		// table, never caller text); `reason` is the machine token beside it.
+		message: 'The harvesting rules refused this address',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['site', 'reason'],
+	},
+	// The site's robots.txt (RFC 9309) disallows the path. The site's own policy.
+	'harvest.robots_disallowed': {
+		category: 'permission',
+		status: 403,
+		label_key: 'error_harvest_robots_disallowed',
+		message: "The site's robots.txt does not allow automated access to this address",
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['site'],
+	},
+	// RFC 9309 §2.3.1.4: a robots.txt the SERVER failed to deliver (5xx, 429, a
+	// redirect without a target, or no answer) means "assume complete disallow" —
+	// never "assume allowed". Retryable: the verdict is re-asked after minutes.
+	'harvest.robots_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_harvest_robots_unavailable',
+		message: "The site's robots.txt could not be read, so automated access is not assumed",
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['site'],
+	},
+	// The body passed the caller's ceiling (maxBytes). Category `caller` (400), NOT
+	// `limit`, for media.too_large's reason: the request is wrong for this file, not
+	// rate-limited, and the same request reads the same file — a 429 that is not
+	// retryable would contradict itself on the wire. The primitive's own
+	// `security.outbound_failed` (reason body_cap) is mapped to this at the door.
+	'harvest.too_large': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_harvest_too_large',
+		message: 'The remote file is larger than this request allows',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['site', 'max_bytes'],
+	},
+	// A 2xx answer whose media type is not one the caller declared
+	// (`expectContentType`) — refused before its body is read.
+	'harvest.unexpected_type': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_harvest_unexpected_type',
+		message: 'The remote site answered with a different kind of file than expected',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['site', 'content_type'],
 	},
 	'diffusion.unported_fn': {
 		category: 'unavailable',

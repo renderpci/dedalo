@@ -215,8 +215,10 @@ describe('every field the schema accepts reaches the derived layout', () => {
     expect(layout.auditFile).toBe('/srv/audit/gate/audit.jsonl');
     // And the rendered env states what the unit confines — same values, one derivation.
     expect(layout.envVars.SITES_ROOT).toBe('/srv/work/gate');
-    expect(layout.envVars.AGENT_HOME).toBe('/srv/agent-home/gate');
     expect(layout.envVars.AUDIT_DIR).toBe('/srv/audit/gate');
+    // roots.home is the RETIRED shared agent HOME (LEAD-1b): the one thing it still moves is
+    // what `provision apply` archives. Nothing renders it into the daemon's env any more.
+    expect(layout.envVars.AGENT_HOME).toBeUndefined();
   });
 
   test('paths.state_base moves all three roots together', () => {
@@ -311,12 +313,36 @@ describe('every field the schema accepts reaches the derived layout', () => {
     expect(Object.values(layout.envVars).join('\n')).not.toContain('secret-value');
   });
 
-  test('agent.driver and agent.bins reach the rendered env', () => {
+  test('agent.driver, agent.bins and the egress hostnames reach the rendered env', () => {
     const layout = layoutFrom(
-      docWith({ agent: { driver: 'opencode', bins: { opencode: '/opt/opencode/bin/opencode' } } }),
+      docWith({
+        agent: {
+          driver: 'opencode',
+          bins: { opencode: '/opt/opencode/bin/opencode' },
+          provider_hosts: ['api.provider.example', 'fallback.provider.example'],
+          registry_hosts: ['registry.npmjs.org'],
+        },
+      }),
     );
     expect(layout.envVars.AGENT_DRIVER).toBe('opencode');
     expect(layout.envVars.OPENCODE_BIN).toBe('/opt/opencode/bin/opencode');
+    expect(layout.envVars.AGENT_PROVIDER_HOSTS).toBe('api.provider.example,fallback.provider.example');
+    expect(layout.envVars.BUILD_REGISTRY_HOSTS).toBe('registry.npmjs.org');
+    // Undeclared, neither is rendered: the daemon's own defaults apply.
+    const plain = layoutFrom(docWith({}));
+    expect(plain.envVars.AGENT_PROVIDER_HOSTS).toBeUndefined();
+    expect(plain.envVars.BUILD_REGISTRY_HOSTS).toBeUndefined();
+  });
+
+  test('agent.systemctl_bin reaches the rendered env as SYSTEMCTL_BIN — the one durable spelling (round 5)', () => {
+    // The rendered env is the daemon's ONLY env and plan.ts REVERTS a hand edit to it, so a
+    // hand-set SYSTEMCTL_BIN vanished on the next apply and every run was refused. Declared, it
+    // survives every apply; undeclared, it is absent and the daemon's default applies.
+    const layout = layoutFrom(
+      docWith({ agent: { driver: 'claude_code', bins: { claude_code: '/usr/local/bin/claude' }, systemctl_bin: '/bin/systemctl' } }),
+    );
+    expect(layout.envVars.SYSTEMCTL_BIN).toBe('/bin/systemctl');
+    expect(layoutFrom(docWith({})).envVars.SYSTEMCTL_BIN).toBeUndefined();
   });
 
   test('secrets become derivable credential paths', () => {
@@ -389,7 +415,6 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
     const layout = spread();
     const mustBeWritable = [
       layout.roots.workspaces,
-      layout.roots.home,
       layout.roots.audit,
       layout.runtimeDir,
       ...layout.sites.map(site => site.webspace),
@@ -405,7 +430,6 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
       layout.auditFile,
       layout.socketPath,
       join(layout.roots.workspaces, 'one', '.builder', 'state.json'),
-      join(layout.roots.home, '.claude', 'sessions'),
       ...layout.sites.flatMap(site => [
         ...SURFACES.map(surface => site.releasesDir(surface)),
         ...SURFACES.map(surface => site.linkPath(surface)),
@@ -422,6 +446,11 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
     const layout = spread();
     for (const path of [layout.configDir, layout.secretsDir, layout.envFile, layout.stateDir, layout.unitPath]) {
       expect(isWritablePath(layout, path)).toBe(false);
+    }
+    // LEAD-1b: the agent state root is root's (each site identity writes its own HOME in it,
+    // through its own unit), and the retired shared HOME is written by nobody.
+    for (const path of [layout.agentStateRoot, join(layout.agentStateRoot, 's1', 'turn'), layout.roots.home, layout.retiredDir]) {
+      expect({ path, writable: isWritablePath(layout, path) }).toEqual({ path, writable: false });
     }
   });
 
@@ -456,7 +485,6 @@ describe('the unit’s writable set covers everything the daemon writes', () => 
       const set = readWritePaths(layout);
       const uncovered = [
         layout.roots.workspaces,
-        layout.roots.home,
         layout.roots.audit,
         layout.runtimeDir,
         ...layout.sites.map(site => site.webspace),
@@ -514,6 +542,12 @@ describe('the declaration refuses what it must', () => {
     expect(refusal(docWith({ agent: { driver: 'claude_code', bins: { claude_code: 'claude' } } }))).toMatch(
       /ABSOLUTE paths, never bare command names/,
     );
+  });
+
+  test('a BARE systemctl — a PATH lookup is a substitution vector', () => {
+    expect(
+      refusal(docWith({ agent: { driver: 'claude_code', bins: { claude_code: '/usr/local/bin/claude' }, systemctl_bin: 'systemctl' } })),
+    ).toMatch(/agent\.systemctl_bin/);
   });
 
   test('duplicate slugs', () => {
@@ -618,6 +652,22 @@ describe('the declaration refuses what it must', () => {
     ).toMatch(/must lie OUTSIDE every site-builder root/);
   });
 
+  test('an egress host that is not a hostname', () => {
+    for (const bad of ['10.0.0.5', 'localhost', 'x.internal', '*', 'intranet']) {
+      expect(
+        refusal(
+          docWith({
+            agent: {
+              driver: 'opencode',
+              bins: { opencode: '/opt/opencode/bin/opencode' },
+              provider_hosts: [bad],
+            },
+          }),
+        ),
+      ).toMatch(/agent\.provider_hosts/);
+    }
+  });
+
   test('a selected driver with no binary', () => {
     expect(refusal(docWith({ agent: { driver: 'pi', bins: { claude_code: '/usr/local/bin/claude' } } }))).toMatch(
       /no binary is declared for it/,
@@ -691,9 +741,14 @@ describe('the mode matrix says who, not just how much', () => {
     // are the half that must never move.
     expect(MODES.workspaces).toEqual({ owner: 'user', group: 'group', mode: 0o2770 });
     expect(MODES.workspaces.mode & 0o007).toBe(0);
-    expect(MODES.home).toEqual({ owner: 'user', group: 'group', mode: 0o2770 });
-    expect(MODES.home.mode & 0o007).toBe(0);
     expect(MODES.stateDir).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
+    // LEAD-1b: the shared agent HOME row is gone; the agent state is root's, and each
+    // (site, door) HOME is its identity's alone.
+    expect('home' in MODES).toBe(false);
+    expect(MODES.agentStateRoot).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
+    expect(MODES.agentStateSite).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
+    expect(MODES.agentHome).toEqual({ owner: 'identity', group: 'group', mode: 0o700 });
+    expect(MODES.retired).toEqual({ owner: 'root', group: 'root', mode: 0o700 });
   });
 
   test('the audit trail is append-only by OWNERSHIP, and unreadable to the agent uid', () => {
@@ -720,7 +775,7 @@ describe('the mode matrix says who, not just how much', () => {
     for (const [key, row] of Object.entries(MODES)) {
       expect({ key, frozen: Object.isFrozen(row) }).toEqual({ key, frozen: true });
       expect(typeof row.mode).toBe('number');
-      expect(['root', 'user']).toContain(row.owner);
+      expect(['root', 'user', 'identity']).toContain(row.owner);
       expect(['root', 'group', 'webGroup', 'engineGroup']).toContain(row.group);
     }
   });
@@ -860,7 +915,7 @@ describe('the specification and the code agree', () => {
   });
 
   test('§3’s matrix is MODES, row for row and in both directions', () => {
-    const OWNER: Record<string, string> = { root: 'root', SU: 'user' };
+    const OWNER: Record<string, string> = { root: 'root', SU: 'user', SK: 'identity' };
     const GROUP: Record<string, string> = { root: 'root', SG: 'group', WG: 'webGroup', EG: 'engineGroup' };
 
     const rows = tableRows('## 3. The uid / gid / mode matrix', '`MODES` key');

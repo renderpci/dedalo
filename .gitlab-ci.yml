@@ -40,7 +40,7 @@ include:
 
 hermetic:
   image:
-    name: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe
+    name: ghcr.io/renderpci/dedalo-ci@sha256:b0d1884c8ff229641bd2e8104a92966b5663351c37dc78611206b216c5012cae
     docker:
       user: "1001"
   # uid 1001 has no passwd entry in the image, so HOME would be `/` (unwritable): bun's
@@ -48,9 +48,21 @@ hermetic:
   # as a job `variables:` entry — those reach the runner's helper container too, whose
   # clone then died on `could not lock config file /tmp/runner-home/.gitconfig`
   # (measured 2026-09-26, the first run in this image).
+  #
+  # THE CHECKOUT IS WORLD-WRITABLE (measured 2026-10-01, job 16877431807): the docker
+  # executor clones as root under `umask 0000`, so every file is 0666 and every dir 0777.
+  # Gates that judge WHO CAN CHANGE a file (site_builder's confinement: "the egress shim is
+  # group- or world-writable") refuse that tree — correctly; a museum host never looks like
+  # this. uid 1001 cannot chmod root's files, so the job works on its OWN copy, made under
+  # a normal umask: the modes GitHub's checkout and ci:local's clone have. The copy keeps
+  # .git (shallow history included); before_script and script share one shell, so the
+  # `cd` holds for the tier.
   before_script:
     - export HOME=/tmp/runner-home
     - mkdir -p "$HOME"
+    - umask 022
+    - cp -R "$CI_PROJECT_DIR" /tmp/dedalo-src
+    - cd /tmp/dedalo-src
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

@@ -153,11 +153,13 @@ it; run `--list` for the live view):
   2026-07-07): has_dataframe_literal, info_widget, iri_dataframe.
 
 All 23 gate on `hasLivePhpOracle()` and report explicit SKIPS under
-`ORACLE_MODE=fixtures`. One PARTIAL exemption inside a harvested gate:
-`widgets_differential > sequences_status` byte-compares live Postgres
-sequence counters that other suite tests legitimately bump, so that single
-test is `test.if(hasLivePhpOracle())` while the rest of the gate replays from
-fixtures.
+`ORACLE_MODE=fixtures`. The one PARTIAL exemption that lived inside a
+harvested gate — `widgets_differential > sequences_status`, a byte-compare of
+live Postgres sequence counters other suite tests legitimately bump — was
+DELETED 2026-10-01: with the oracle decommissioned it could never run again,
+and `widgets_differential` now acquires the suite MariaDB target, where a gate
+may not skip. The sequence decision is held natively by
+`test/unit/sequence_verdict_native.test.ts`.
 
 **`NO_ORACLE_GATES` — 9 TS+DB-only tests** in the parity directory with no
 `PhpApiClient` traffic (some use `hasPhpCredentials()` purely as a

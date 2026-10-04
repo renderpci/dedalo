@@ -6,9 +6,10 @@
 import { config } from '../../../config/config.ts';
 import { readString } from '../../../config/readers.ts';
 import { DedaloError, ok } from '../../errors/index.ts';
-import { publicOrigin } from '../../resolve/public_origin.ts';
+import { publicOrigin, publicOriginIsLocal } from '../../resolve/public_origin.ts';
 import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
+import { isLoopbackHost } from '../../security/ssrf_guard.ts';
 import { DEDALO_VERSION_TRIPLE, parseVersionString } from '../../update/version.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
@@ -28,6 +29,23 @@ export function resolveSqlForDisplay(sql: string, params: readonly unknown[]): s
 		resolved = resolved.replaceAll(`$${i}`, literal);
 	}
 	return resolved;
+}
+
+/**
+ * A manifest built on a LOCAL public origin (DEDALO_HOST unset or loopback) lists
+ * `http://localhost/...` urls: correct for a caller on this same machine, useless to
+ * any other — whose origin check then refuses every file with an "origin mismatch"
+ * that names the wrong machine. Refuse at the master instead, naming the key to fix.
+ * Runs AFTER authorizeUpdateManifest, so only an authorized peer learns of it.
+ * `clientIp` 'local' = the unix socket with no forwarded address (same machine).
+ */
+export function localOriginRefusal(input: {
+	originIsLocal: boolean;
+	clientIp: string;
+}): string | null {
+	if (!input.originIsLocal) return null;
+	if (input.clientIp === 'local' || isLoopbackHost(input.clientIp)) return null;
+	return 'Error. This update server advertises a local origin (DEDALO_HOST is unset or loopback); its download URLs are unreachable from other machines. Set DEDALO_HOST (and DEDALO_PROTOCOL) on the server.';
 }
 
 /**
@@ -201,7 +219,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// (not in NO_LOGIN_ACTIONS, matching PHP); CSRF-exempt like PHP (the
 		// SW calls without the page's token). `data` is the manifest;
 		// `dedalo_version` (the SW cache key) rides as an extension key —
-		// sw.js / worker_cache.js read `response_data()` + `dedalo_version`.
+		// service_worker.js / worker_cache.js read `response_data()` + `dedalo_version`.
 		const { buildDedaloFilesResponse } = await import('../dedalo_files.ts');
 		const manifest = buildDedaloFilesResponse();
 		return {
@@ -837,6 +855,13 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		if (auth.ok !== true) {
 			throw new DedaloError('update_server.refused', { publicMessage: auth.msg });
 		}
+		const originRefusal = localOriginRefusal({
+			originIsLocal: publicOriginIsLocal(),
+			clientIp: context.clientIp,
+		});
+		if (originRefusal !== null) {
+			throw new DedaloError('update_server.refused', { publicMessage: originRefusal });
+		}
 		const [major, minor] = auth.version as [number, number];
 		const { getOntologyIoPath, buildOntologyUpdateInfo } = await import(
 			'../../ontology/data_io_import.ts'
@@ -877,6 +902,13 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		});
 		if (auth.ok !== true) {
 			throw new DedaloError('update_server.refused', { publicMessage: auth.msg });
+		}
+		const originRefusal = localOriginRefusal({
+			originIsLocal: publicOriginIsLocal(),
+			clientIp: context.clientIp,
+		});
+		if (originRefusal !== null) {
+			throw new DedaloError('update_server.refused', { publicMessage: originRefusal });
 		}
 		const clientVersion = auth.version;
 		const { buildCodeUpdateInfo } = await import('../../update/code_manifest.ts');

@@ -43,7 +43,7 @@ async function makeEnclosingRepo(): Promise<{ dir: string; head: () => Promise<s
   // rule that keeps a build step or a git hook from executing as the daemon. Under the
   // suite's declared `none` it runs the same argv, unwrapped.
   const run = (...args: string[]) =>
-    runConfined({ argv: ['git', ...args], cwd: dir, env, timeoutMs: 30_000 });
+    runConfined({ door: 'git', argv: ['git', ...args], cwd: dir, env, timeoutMs: 30_000 });
   await run('init', '--quiet', '--initial-branch=main');
   await writeFile(join(dir, 'PRECIOUS.txt'), 'the enclosing project', 'utf8');
   await run('-c', 'user.email=a@b.c', '-c', 'user.name=A', 'add', '-A');

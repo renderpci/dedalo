@@ -80,8 +80,14 @@ export interface EmitRowContext {
  * who/when/where/what + cell-mode policy.
  */
 export interface SectionReadSource {
-	getRows(sqo: Sqo, principal?: Principal): Promise<SectionRow[]>;
-	count(sqo: Sqo, principal?: Principal): Promise<number>;
+	/**
+	 * `readFloor` — the subdatum read floor of a component-sourced search
+	 * (security/read_floor.ts subdatumReadFloor, computed by the caller from the
+	 * VERIFIED rqo.source): the (section, component) pairs the search may filter
+	 * and sort on although the profile holds 0 on them (closure Step 3, SEC-1).
+	 */
+	getRows(sqo: Sqo, principal?: Principal, readFloor?: ReadonlySet<string>): Promise<SectionRow[]>;
+	count(sqo: Sqo, principal?: Principal, readFloor?: ReadonlySet<string>): Promise<number>;
 	emitRow(context: EmitRowContext): Promise<void>;
 	/**
 	 * When present, OWNS the read's structure-context (readSection skips its
@@ -126,11 +132,15 @@ function emittedItemHasValue(item: object): boolean {
  * Behavior-identical to the pre-seam readSectionRows / count code.
  */
 export const matrixReadSource: SectionReadSource = {
-	async getRows(sqo, principal) {
+	async getRows(sqo, principal, readFloor) {
 		// idsOnly: the page's records are batch-hydrated below with the FULL
 		// projection (::text twins included, which the search SELECT lacks), so
 		// fetching the ten wide jsonb columns here would be paid twice.
-		const { sql: builtSql, params } = await buildSearchSql(sqo, { principal, idsOnly: true });
+		const { sql: builtSql, params } = await buildSearchSql(sqo, {
+			principal,
+			idsOnly: true,
+			...(readFloor === undefined ? {} : { readFloor }),
+		});
 		const rows = (await sql.unsafe(builtSql, params as (string | number | null)[])) as SectionRow[];
 
 		// ONE record read per page per section instead of one per row (the old
@@ -158,9 +168,12 @@ export const matrixReadSource: SectionReadSource = {
 		return rows;
 	},
 
-	async count(sqo, principal) {
+	async count(sqo, principal, readFloor) {
 		const countSqo = { ...(sqo as Record<string, unknown>), full_count: true } as Sqo;
-		const { sql: builtSql, params } = await buildSearchSql(countSqo, { principal });
+		const { sql: builtSql, params } = await buildSearchSql(countSqo, {
+			principal,
+			...(readFloor === undefined ? {} : { readFloor }),
+		});
 		const rows = (await sql.unsafe(builtSql, params as (string | number | null)[])) as {
 			full_count: number | string;
 		}[];

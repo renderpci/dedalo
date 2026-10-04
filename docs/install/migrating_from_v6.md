@@ -442,6 +442,9 @@ Expected: HTTP 200 with `db` reporting `ok`. If you run on a TCP port instead of
 !!! note "The login panel's version row is not the database's"
     It shows the engine constant, so it reads `7.0.0` even on a database still stamped 6.x. Only the update-data-version panel reads the real value.
 
+!!! note "The first visit from a browser that ran v6 reloads once"
+    v6 left a service worker in every browser that used it, caching the v6 scripts. On the first visit to v7, the browser replaces it, deletes the v6 cache and reloads the page by itself. For a moment before that reload the page may still show the v6 interface — wait for it; do not clear the browser cache by hand. If an interface still looks wrong after the reload, see [Troubleshooting → The interface misbehaves after the upgrade from v6](troubleshooting.md#the-interface-misbehaves-after-the-upgrade-from-v6).
+
 ## 8. Phase E — run it as a service
 
 Phase D started the engine by hand, as the service user. Phase E makes that permanent: **one supervised service per install**, reachable by the web server. On a new host this is [production](production.md) steps 10–11 and nothing else. On an **in-place upgrade** there is one more thing to do first, because the way the engine runs changed — and with it, who must own what.
@@ -589,6 +592,7 @@ Most trouble is found by the deep preflight, **before** the migration. The rule 
 | Thesaurus tree empty, portal resolves nothing | the hierarchy was imported but never activated | [hierarchy not activated](#96-hierarchy-not-activated-v7) |
 | New records collide with existing ids | the record counter is behind the data | [counters](#97-counters-and-sequences-v7) |
 | A relation points at a record that is not there | structural leftovers | [dangling relations](#95-dangling-relations-and-wrong-tipos-v7) |
+| The interface misbehaves in one browser only, after the upgrade | that browser still runs the v6 service worker and its cached v6 scripts | reload once; see [troubleshooting](troubleshooting.md#the-interface-misbehaves-after-the-upgrade-from-v6) |
 | Stale values after an ontology or media change | stored per-record data needs regenerating | clear the caches from the runtime panel, then run [tool_update_cache](../tools/using_update_cache.md) |
 
 ### 9.1 *Needs attention* findings (v6 host, before Phase A)
@@ -654,7 +658,9 @@ bun scripts/media_repair_files_info.ts --apply
 
 - It **refuses to run** unless the media root exists and holds the image originals — precisely so a wrong root cannot re-corrupt every index. If it refuses, fix `MEDIA_PATH` first.
 - It does not rebuild derivatives and writes no time machine version; it only re-reads the disk.
-- A rescan that finds **fewer** files than are stored is reported and skipped unless you pass `--allow-shrink`. That is the expected signal of an incomplete media copy — finish the copy, do not force it through.
+- A rescan that finds **fewer** files than are stored is reported and skipped unless you pass `--allow-shrink`. That is the expected signal of an incomplete media copy — finish the copy, do not force it through. It is judged per media item: one item whose files are missing keeps its stored list even when another item of the same field is repaired.
+- A media list that names **another record's** files (what a failed duplicate could leave) is always rewritten from the record's own files. A file named some other way (for example by an image id) is never mistaken for another record's.
+- Each record is written under its row lock from what it holds at that moment, so an upload made while the sweep runs is kept. A record another user holds for more than a few seconds is reported as locked and skipped; re-run to pick it up.
 
 To rebuild *missing derivatives* as well, use [tool_update_cache](../tools/using_update_cache.md) instead.
 

@@ -21,20 +21,27 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { config } from '../../../src/config/config.ts';
-import { BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
+import { envSnapshot } from '../../../src/config/env.ts';
+import { getImportAppendPolicy, isDerivedModel } from '../../../src/core/components/registry.ts';
+import type { ImportAppendPolicy } from '../../../src/core/components/types.ts';
+import { AUDIT_TIPOS, BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
+import { withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { sanitizeSegment } from '../../../src/core/media/ingest/add_file.ts';
 import { assertTestMediaRoot } from '../../../src/core/media/test_media_root.ts';
+import { resolveDataTipo } from '../../../src/core/ontology/alias.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import { withLiveBulkRun } from '../../../src/core/tools/bulk_run_registry.ts';
 import {
 	assertCsvStructure,
 	type CsvAnalysis,
 	type CsvColumn,
 	type CsvParseResult,
+	type ImportMode,
 	planCsvImport,
 } from '../../../src/core/tools/import_csv.ts';
 import { executeCsvImport } from '../../../src/core/tools/import_csv_execute.ts';
@@ -73,12 +80,30 @@ function mediaRootMissing(): DedaloError {
 }
 
 /**
+ * A fresh CSV worker that sees THIS process's environment. A Bun Worker started
+ * without `env` gets the LAUNCH environment, not process.env as it stands now —
+ * under `bun test` that is the environment before the suite preload pinned the
+ * suite database, and the parser's import graph builds the matrix pool, which a
+ * test process refuses to aim at the installation's database
+ * (src/config/suite_database.ts). The server's own env (envSnapshot: process env
+ * over ../private/.env) is the right one anyway.
+ */
+function newCsvWorker(): Worker {
+	const env = Object.fromEntries(
+		Object.entries(envSnapshot()).filter(
+			(entry): entry is [string, string] => entry[1] !== undefined,
+		),
+	);
+	return new Worker(new URL('./csv_worker.ts', import.meta.url).href, { env } as WorkerOptions);
+}
+
+/**
  * Parse CSV text OFF the serving event loop (audit S3-42): a fresh worker per
  * call (startup is milliseconds against multi-second parses; no idle thread
  * lingers) running the identical pure parser — see csv_worker.ts.
  */
 function parseCsvOffLoop(text: string, delimiter?: string): Promise<CsvParseResult> {
-	const worker = new Worker(new URL('./csv_worker.ts', import.meta.url).href);
+	const worker = newCsvWorker();
 	return new Promise<CsvParseResult>((resolvePromise, rejectPromise) => {
 		worker.onmessage = (event: MessageEvent) => {
 			const data = event.data as { result?: CsvParseResult; error?: string };
@@ -98,7 +123,7 @@ function parseCsvOffLoop(text: string, delimiter?: string): Promise<CsvParseResu
  * the bounded summary — the full row set never crosses the thread boundary.
  */
 function analyzeCsvOffLoop(text: string, delimiter?: string): Promise<CsvAnalysis | null> {
-	const worker = new Worker(new URL('./csv_worker.ts', import.meta.url).href);
+	const worker = newCsvWorker();
 	return new Promise<CsvAnalysis | null>((resolvePromise, rejectPromise) => {
 		worker.onmessage = (event: MessageEvent) => {
 			const data = event.data as { analysis?: CsvAnalysis | null; error?: string };
@@ -165,9 +190,76 @@ async function sectionComponentTipos(
 }
 
 /**
- * get_section_components_list: the section's components as {label,value,model} for
- * the CSV column-mapper dropdown, PLUS a top-level `label` (the section term). The
- * The payload carries the component list and the section's own label.
+ * The audit tipos every section stamps (created/modified by/date). The engine
+ * owns them — an import may REPLACE them (PHP parity: a re-import of an export
+ * restores its stamps) but never APPEND to them: a record has one creation
+ * date. Refused BY TIPO, because their models (date, select) say nothing about it.
+ */
+const AUDIT_TIPO_SET: ReadonlySet<string> = new Set(Object.values(AUDIT_TIPOS));
+
+/**
+ * Why an APPEND-mode column on (tipo, model) is refused, or null when it is
+ * allowed. `model` MUST be the server-resolved model (getModelByTipo), never
+ * the client's echo; `dataTipo` the tipo whose slot holds the data
+ * (resolveDataTipo — the alias target for a component_alias). Refused: the section_id record key, the audit tipos, and
+ * every model whose registry `importAppend` policy is `{refuse}` (media,
+ * single-choice/opaque, derived). A model with no policy at all (not a
+ * registered component) is refused with the registry's own sentence — loud,
+ * never a silent replace.
+ */
+function appendRefusal(tipo: string, model: string, dataTipo: string = tipo): string | null {
+	if (tipo === 'section_id' || model === 'component_section_id' || model === 'section_id') {
+		return 'the section_id column is the record key; it cannot be appended to';
+	}
+	// BOTH tipos: a component_alias of an audit tipo stores into the audit
+	// tipo's slot (resolveDataTipo), so it is that audit field.
+	const audit = [tipo, dataTipo].find((candidate) => AUDIT_TIPO_SET.has(candidate));
+	if (audit !== undefined) {
+		return `'${audit}' is a record audit field (created/modified by/date); it cannot be appended to`;
+	}
+	let policy: ImportAppendPolicy;
+	try {
+		policy = getImportAppendPolicy(model);
+	} catch (error) {
+		return (error as Error).message;
+	}
+	return typeof policy === 'object' ? policy.refuse : null;
+}
+
+/**
+ * Why a column on a DERIVED model is refused (any mode): the model's own
+ * `importAppend` refusal, which names what to import instead.
+ */
+function derivedRefusal(model: string): string {
+	const policy = getImportAppendPolicy(model);
+	return typeof policy === 'object'
+		? policy.refuse
+		: `'${model}' is derived (computed, nothing stored) — it cannot be imported`;
+}
+
+/**
+ * The component-list `import_append` field: the model's append policy
+ * ('items' | 'geo_layer' | 'text_paragraphs'), or null when append is refused
+ * for this component (the same verdict appendRefusal gives the import door,
+ * so the mapper never offers a mode the server would refuse).
+ */
+async function wireAppendPolicy(
+	tipo: string,
+	listedModel: string,
+): Promise<ImportAppendPolicy | null> {
+	// An alias is listed under its own model; the door judges the TARGET's
+	// model and data tipo (resolveMappedColumns), so the offer must too.
+	const dataTipo = await resolveDataTipo(tipo);
+	const model = dataTipo === tipo ? listedModel : ((await getModelByTipo(tipo)) ?? listedModel);
+	if (appendRefusal(tipo, model, dataTipo) !== null) return null;
+	return getImportAppendPolicy(model);
+}
+
+/**
+ * get_section_components_list: the section's components as
+ * {label,value,model,import_append} for the CSV column-mapper dropdown, PLUS a
+ * top-level `label` (the section term). `import_append` is the model's append
+ * policy, or null when an append-mode column on it would be refused.
  */
 async function getSectionComponentsList(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sectionTipo = String(ctx.options.section_tipo ?? '');
@@ -178,6 +270,7 @@ async function getSectionComponentsList(ctx: ToolActionContext): Promise<ToolRes
 			label: await termByTipo(t.tipo, config.menu.applicationLang),
 			value: t.tipo,
 			model: t.model,
+			import_append: await wireAppendPolicy(t.tipo, t.model),
 		})),
 	);
 	const label = await termByTipo(sectionTipo, config.menu.applicationLang);
@@ -309,7 +402,8 @@ async function processUploadedFile(ctx: ToolActionContext): Promise<ToolResponse
  * (the mapper builds one per header cell). `tipo` is the header cell it was built
  * for; `map_to` is the component the user chose as the target (usually the same,
  * but the mapper lets them re-point a column); `checked` is the per-column import
- * switch; `decimal` is the number column's separator choice.
+ * switch; `decimal` is the number column's separator choice; `import_mode` is
+ * the column's write mode ('replace' | 'append', absent = 'replace').
  */
 interface CsvColumnMapEntry {
 	tipo?: unknown;
@@ -317,6 +411,44 @@ interface CsvColumnMapEntry {
 	checked?: unknown;
 	map_to?: unknown;
 	decimal?: unknown;
+	import_mode?: unknown;
+}
+
+/**
+ * One column's mode verdict, reported by validate_import (`columns[]`) so the
+ * operator sees, per column, what the run will do — and which append the
+ * server refuses — before anything is written.
+ */
+interface ColumnModeReport {
+	index: number;
+	column: string;
+	tipo: string;
+	model: string;
+	mode: ImportMode;
+	/** Why the append is refused (the whole file is refused with it), or null. */
+	refused: string | null;
+}
+
+/** The resolved column plan + the per-column mode verdicts. */
+interface ResolvedColumns {
+	columns: (CsvColumn | null)[];
+	modes: ColumnModeReport[];
+	/** One sentence per refused append column; non-empty = the file is refused. */
+	refusals: string[];
+}
+
+/**
+ * Parse `import_mode` STRICTLY: absent (undefined/null) is 'replace'; anything
+ * but 'replace' | 'append' refuses the WHOLE file — an unknown mode must never
+ * be guessed (a typo of 'append' silently replacing would destroy data).
+ */
+function parseImportMode(entry: CsvColumnMapEntry, index: number, headerCell: string): ImportMode {
+	const raw = entry.import_mode;
+	if (raw === undefined || raw === null) return 'replace';
+	if (raw === 'replace' || raw === 'append') return raw;
+	throw invalidRequest(
+		`Column ${index} ('${headerCell}'): unknown import_mode ${JSON.stringify(raw)} (expected 'replace' or 'append')`,
+	);
 }
 
 /** One file of the client's import batch (options.files[]). */
@@ -341,13 +473,23 @@ function batchSectionTipos(options: Record<string, unknown>): unknown[] {
  *   - a map entry whose `tipo` no longer equals the header cell at its index was
  *     built for a DIFFERENT csv layout — skip rather than write to the wrong
  *     component (this is why the map is matched positionally AND by name).
+ *
+ * import_mode (per column): parsed strictly on every entry (an unknown value
+ * THROWS — the whole file is refused, before the caller creates its dd800
+ * bulk-process record). An APPEND column is checked against the SERVER-resolved
+ * model (appendRefusal); a column on a DERIVED model (isDerivedModel) is
+ * refused in ANY mode; a refused column lands in `refusals`, and both callers
+ * refuse the file on a non-empty list — import_files before any write,
+ * validate_import in its report.
  */
 async function resolveMappedColumns(
 	header: readonly string[],
 	columnsMap: readonly (CsvColumnMapEntry | null)[],
 	errors: string[],
-): Promise<(CsvColumn | null)[]> {
+): Promise<ResolvedColumns> {
 	const columns: (CsvColumn | null)[] = [];
+	const modes: ColumnModeReport[] = [];
+	const refusals: string[] = [];
 	for (let i = 0; i < header.length; i++) {
 		const entry = columnsMap[i] ?? null;
 		const headerCell = header[i] ?? '';
@@ -355,8 +497,24 @@ async function resolveMappedColumns(
 			columns.push(null);
 			continue;
 		}
+		const mode = parseImportMode(entry, i, headerCell);
 		// The record key: the planner reads it to match/create, never saves it.
+		// It is an imported column like any other: it ALWAYS has its columns[]
+		// entry (replace — the planner's key — or a refused append).
 		if (entry.model === 'section_id' || entry.model === 'component_section_id') {
+			const reason =
+				mode === 'append' ? (appendRefusal('section_id', 'component_section_id') as string) : null;
+			if (reason !== null) {
+				refusals.push(`Column ${i} ('${headerCell}'): append refused — ${reason}`);
+			}
+			modes.push({
+				index: i,
+				column: headerCell,
+				tipo: 'section_id',
+				model: 'component_section_id',
+				mode,
+				refused: reason,
+			});
 			columns.push({
 				tipo: 'section_id',
 				model: 'component_section_id',
@@ -386,10 +544,31 @@ async function resolveMappedColumns(
 		// columnName keeps the FULL header cell: the conform facets read its suffix
 		// (tipo_dmy → the date order; tipo_<section_tipo> → the relation target).
 		// tipo is the TARGET (map_to), which may differ from the header.
+		// The append gate reads the SERVER-resolved model (above), never entry.model.
+		// The data tipo (the alias TARGET for a component_alias): the audit
+		// refusal must see through an alias, and the executor keys every
+		// stored-data read, id allocation and frame pairing by it.
+		const dataTipo = await resolveDataTipo(mapTo);
+		// A DERIVED component (registry isDerivedModel) owns no stored value: a
+		// column on it is refused in EVERY mode — a replace would write leftover
+		// bytes no read serves (or, for component_relation_children, re-parent
+		// records from a cell). Its append policy's reason says what to import
+		// instead (user decision 2026-09-27: refuse, import the child's parent).
+		const derived = isDerivedModel(model) ? derivedRefusal(model) : null;
+		const refused = derived ?? (mode === 'append' ? appendRefusal(mapTo, model, dataTipo) : null);
+		if (derived !== null) {
+			refusals.push(`Column ${i} ('${headerCell}' → ${mapTo}, ${model}): refused — ${derived}`);
+		} else if (refused !== null) {
+			refusals.push(
+				`Column ${i} ('${headerCell}' → ${mapTo}, ${model}): append refused — ${refused}`,
+			);
+		}
+		modes.push({ index: i, column: headerCell, tipo: mapTo, model, mode, refused });
 		const translatable = await getTranslatableByTipo(mapTo);
 		columns.push({
 			tipo: mapTo,
 			model,
+			...(dataTipo !== mapTo ? { dataTipo } : {}),
 			columnName: headerCell,
 			// THE REQUEST's data language (audit DATA-01), never the static
 			// DEDALO_DATA_LANG: the write is lang-sliced, so the install default
@@ -399,37 +578,49 @@ async function resolveMappedColumns(
 			// so the request-language ALS is still in scope on the worker.
 			lang: translatable ? currentDataLang() : 'lg-nolan',
 			decimal: typeof entry.decimal === 'string' ? entry.decimal : undefined,
+			mode,
 		});
 	}
-	return columns;
+	return { columns, modes, refusals };
 }
 
 /**
- * The dd800 record that owns this import run. Every TM row the run writes is
- * stamped with its id, so the whole import can be reverted as ONE operation.
- * Created BEFORE any data row is touched — a failure here fails the file rather
- * than importing unattributably.
+ * The dd800 record that owns this import run. Every save the run makes is
+ * attributed to its id (its undo pair + visible TM row), so the whole import
+ * can be reverted as ONE operation. Created BEFORE any data row is touched — a
+ * failure here fails the file rather than importing unattributably — and ATOMIC:
+ * the row, its file and its label are ONE transaction, so a refused label
+ * leaves no orphan dd800 in the operator's Processes list (the twin of
+ * import_execute's mint).
  */
 async function createBulkProcessRecord(
 	fileName: string,
 	label: string,
 	userId: number,
 ): Promise<number> {
-	const bulkProcessId = await createSectionRecord(BULK_PROCESS_TIPOS.section, userId);
-	for (const [tipo, value] of [
-		[BULK_PROCESS_TIPOS.file, fileName],
-		[BULK_PROCESS_TIPOS.label, label],
-	] as const) {
-		await saveComponentData({
-			componentTipo: tipo,
-			sectionTipo: BULK_PROCESS_TIPOS.section,
-			sectionId: bulkProcessId,
-			lang: 'lg-nolan',
-			changedData: [{ action: 'set_data', id: null, value: [{ value }] }],
-			userId,
-		});
-	}
-	return bulkProcessId;
+	return await withTransaction(async () => {
+		const bulkProcessId = await createSectionRecord(BULK_PROCESS_TIPOS.section, userId);
+		for (const [tipo, value] of [
+			[BULK_PROCESS_TIPOS.file, fileName],
+			[BULK_PROCESS_TIPOS.label, label],
+		] as const) {
+			const outcome = await saveComponentData({
+				componentTipo: tipo,
+				sectionTipo: BULK_PROCESS_TIPOS.section,
+				sectionId: bulkProcessId,
+				lang: 'lg-nolan',
+				changedData: [{ action: 'set_data', id: null, value: [{ value }] }],
+				userId,
+			});
+			if (outcome.ok === false) {
+				throw new DedaloError('record.save_failed', {
+					message: `the dd800 run record was refused: ${outcome.message}`,
+					coordinates: { section_tipo: BULK_PROCESS_TIPOS.section, tipo },
+				});
+			}
+		}
+		return bulkProcessId;
+	});
 }
 
 /**
@@ -514,7 +705,9 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 			const columnsMap = Array.isArray(current.ar_columns_map)
 				? (current.ar_columns_map as (CsvColumnMapEntry | null)[])
 				: [];
-			const columns = await resolveMappedColumns(header, columnsMap, errors);
+			const { columns, modes, refusals } = await resolveMappedColumns(header, columnsMap, errors);
+			// A refused append is a FILE refusal at import time — report it as one.
+			errors.push(...refusals);
 
 			// Every mapped target must be a component of THIS section (PHP verify_csv_map).
 			const sectionTipos = new Set((await sectionComponentTipos(sectionTipo)).map((c) => c.tipo));
@@ -578,6 +771,8 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 				notices,
 				failed,
 				warnings: sampleWarnings,
+				// Per imported column: its write mode and, for an append, the refusal.
+				columns: modes,
 			});
 		} catch (error) {
 			// EVERY door refusal arrives here — including the structural ones
@@ -591,6 +786,7 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 				notices: [],
 				failed: [],
 				warnings: [],
+				columns: [],
 			});
 		}
 	}
@@ -611,7 +807,7 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 
 /**
  * import_files: the client posts a BATCH — options.files[] = {file, section_tipo,
- * ar_columns_map, bulk_process_label} + time_machine_save. Each file carries its
+ * ar_columns_map, bulk_process_label}. Each file carries its
  * own section target and column map, so the write gate is per file; it has already
  * run in the dispatcher ('section_list' spec below), i.e. BEFORE the background
  * fork, where a denial is still observable to the caller.
@@ -622,10 +818,12 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const files = Array.isArray(ctx.options.files) ? (ctx.options.files as CsvImportFile[]) : [];
 	if (files.length === 0) throw invalidRequest('Missing files');
-	// PHP defaults an absent flag to NO time machine; we default to KEEPING the
-	// audit trail — losing the history of a 10k-row write is not a safe default for
-	// a caller that simply forgot the flag. The client always sends the checkbox.
-	const saveTm = ctx.options.time_machine_save !== false;
+	// NO TIME-MACHINE OPT-OUT (decision D1, WC bulk-revert-undo-log). PHP's
+	// `time_machine_save` flag is retired: every save of a run records its
+	// BEFORE/AFTER undo pair and a visible after-row, because a run that left no
+	// record of what it replaced could not be reverted exactly. A legacy caller
+	// still sending the flag is not refused — the flag can only ask for LESS
+	// history, and none is withheld — it is simply not read.
 	const publish = ctx.publishProgress ?? ((): void => {});
 
 	const report: ImportFileReport[] = [];
@@ -663,7 +861,10 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			const columnsMap = Array.isArray(current.ar_columns_map)
 				? (current.ar_columns_map as (CsvColumnMapEntry | null)[])
 				: [];
-			const columns = await resolveMappedColumns(header, columnsMap, errors);
+			const { columns, refusals } = await resolveMappedColumns(header, columnsMap, errors);
+			// A refused APPEND refuses the whole file HERE — before the dd800 record
+			// below exists, so a refusal leaves no trace. Never downgraded to replace.
+			if (refusals.length > 0) throw invalidRequest(refusals.join('; '));
 			if (!columns.some((column) => column !== null && column.model !== 'component_section_id')) {
 				throw invalidRequest('No column is mapped for import');
 			}
@@ -674,24 +875,27 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				ctx.userId,
 			);
 			const plan = await planCsvImport(rows.slice(1), columns, sectionTipo);
-			report.push(
-				await executeCsvImport({
+			const labels = await resolveColumnLabels(columns);
+			// The run is held in the active-run registry while it writes: a revert
+			// of it is refused until it ends (decision D5).
+			const fileReport = await withLiveBulkRun(bulkProcessId, () =>
+				executeCsvImport({
 					plan,
 					sectionTipo,
-					userId: ctx.userId,
+					principal: ctx.principal,
 					bulkProcessId,
-					saveTm,
 					errors,
 					notices,
 					progress: {
 						file: fileName,
 						fileIndex: index + 1,
 						filesTotal: files.length,
-						labels: await resolveColumnLabels(columns),
+						labels,
 						publish,
 					},
 				}),
 			);
+			report.push(fileReport);
 		} catch (error) {
 			report.push({
 				ok: false,

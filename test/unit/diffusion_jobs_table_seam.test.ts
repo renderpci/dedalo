@@ -13,6 +13,7 @@ import { describe, expect, test } from 'bun:test';
 import { activityTable } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import {
 	DIFFUSION_JOB_EVENTS_TABLE,
+	DIFFUSION_JOB_LEDGER_TABLE,
 	DIFFUSION_JOBS_TABLE,
 } from '../../src/diffusion/jobs/schema.ts';
 
@@ -23,6 +24,9 @@ describe('diffusion jobs table seam (S1-17/DEC-18a)', () => {
 		expect(DIFFUSION_JOBS_TABLE.startsWith('dedalo_ts_test_')).toBe(true);
 		expect(DIFFUSION_JOBS_TABLE).not.toBe('dedalo_ts_diffusion_jobs');
 		expect(DIFFUSION_JOB_EVENTS_TABLE).toBe(`${DIFFUSION_JOBS_TABLE}_events`);
+		// The run ledger (DIFF-1) follows the same seam: a test run never
+		// appends to — or clears — the live queue's ledger.
+		expect(DIFFUSION_JOB_LEDGER_TABLE).toBe(`${DIFFUSION_JOBS_TABLE}_ledger`);
 	});
 
 	test('a non-scratch override is REJECTED at module load (fail-loud guard)', async () => {

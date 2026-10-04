@@ -12,7 +12,7 @@
  * ITSELF declaring what it is (the `dedalo_test_marker` row), and every
  * test-data writer asking it first.
  *
- * SEVEN RULES, and every one of them has an anti-vacuity probe:
+ * EIGHT RULES, and every one of them has an anti-vacuity probe:
  *
  *  1. THE INVENTORY (source scan). Every file under `src/core/test_data/**` and
  *     `test/helpers/**` that HAS A WRITE SEAM must call `assertTestDatabase(`,
@@ -68,6 +68,34 @@
  *     tree, so it must refuse a `<template>__shard<N>` target BEFORE any side
  *     effect (both existing name guards pass a shard name happily).
  *
+ *  6b. THE CLIENT SERVER'S SURFACES FOLLOW THE LANE (2026-09-30). The spawned
+ *     server's environment is composed in a CHILD process that starts from a
+ *     shell carrying none of the preload-set seams (so a value inherited from
+ *     this bun-test process cannot fake the answer): its database, media root
+ *     and VECTOR database must all be the suite database's own derivations —
+ *     the vector one was missing, so the client server read the installation's
+ *     semantic index — and two runs must get distinct session stores/sockets.
+ *  8. CONCURRENT LANES CAN BUILD (2026-09-30, closure plan Wave 0). Writer
+ *     lanes each own a suite database (`DEDALO_TEST_DATABASE=<db>_lN`) and
+ *     are provisioned in parallel — but `test:db:setup` step 5b mutates the
+ *     CLUSTER-shared `dedalo_test_ro` role, and two builds at once died with
+ *     `tuple concurrently updated` (measured). The step's exact text
+ *     (readOnlyRoleClusterSql) is run concurrently here and every run must
+ *     succeed; a positive control runs the same text MINUS its advisory lock
+ *     and must produce the collision, so the harness provably contends.
+ *  9. A TEST PROCESS THE PRELOAD NEVER REACHED OPENS NOTHING (2026-10-02). The
+ *     preload is wired through bunfig.toml, which Bun reads from the CURRENT
+ *     DIRECTORY: a `bun test` started outside the repo root (a scratch worktree,
+ *     an agent's scratchpad) ran with no preload, so DB_NAME still named the
+ *     APPLICATION database and every writing test wrote there (`dd128census_*`
+ *     rows were found in one; 234 of the 302 writing unit files carry no guard of
+ *     their own). The pool now refuses to build in a test process unless the
+ *     preload armed that exact database (src/config/suite_database.ts). Proved by
+ *     the decision table AND for real: a child `bun test` in a temp directory with
+ *     no bunfig.toml, the preload-set seams stripped from its environment, must
+ *     be REFUSED before any connection — and, as the positive control, the same
+ *     child with DEDALO_TEST_DATABASE armed at the suite database must connect.
+ *
  * HONEST LIMITS. The inventory is a REGEX classifier over stripped sources: it
  * sees DML text and the named write doors, not a write reached through an
  * arbitrary dynamic indirection. It covers the two directories test data lives
@@ -82,8 +110,9 @@
  * correct", never "someone rewrote the marker somewhere else".
  */
 
-import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
 import {
@@ -91,8 +120,15 @@ import {
 	probeServedDatabase,
 	resolveSuiteDatabase,
 } from '../../scripts/client_test_server.ts';
+import { config } from '../../src/config/config.ts';
+import {
+	currentSuiteDatabaseEnv,
+	suiteDatabaseRefusal,
+	suitePoolRefusal,
+} from '../../src/config/suite_database.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
+import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
 import {
 	assertTestDatabase,
 	clearTestDatabaseMarkerCache,
@@ -104,7 +140,13 @@ import {
 } from '../../src/core/test_data/test_database_marker.ts';
 import { materializeTestTldOntology } from '../../src/core/test_data/test_tld_materialize.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
-import { applicationDatabaseName } from '../helpers/test_database.ts';
+import {
+	applicationDatabaseName,
+	READ_ONLY_ROLE_LOCK_KEY,
+	readOnlyRoleClusterSql,
+} from '../helpers/test_database.ts';
+import { testMediaRootPath } from '../helpers/test_media_root.ts';
+import { installationRagDatabaseName, suiteRagDatabaseName } from '../helpers/test_rag_database.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf-8');
@@ -132,6 +174,10 @@ const WRITE_SEAMS: readonly RegExp[] = [
 	/\bupsertDdOntologyNode\s*\(/,
 	/\bdeleteTldNodes\s*\(/,
 	/\b(?:writeFileSync|copyFileSync|mkdirSync|rmSync)\s*\(/,
+	// ENGINE write drivers a helper can call without a single SQL string in
+	// its own source — a spawned runner child (runJob writes job, dd1758 and
+	// run-ledger rows and files), a component save, the ledgers' appenders.
+	/\b(?:runJob|saveComponent|appendRunLedger|logDiffusionActivity)\s*\(/,
 ];
 
 /**
@@ -147,6 +193,24 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		'WRITES NO DATA — it creates the suite MEDIA root and plants its `.dedalo_test_media` marker. It is the filesystem twin of this file and holds no database connection at all (importing config.ts there would freeze the connection before the preload repoints it); its own guard is test/unit/test_media_root_tripwire.test.ts.',
 	'test/helpers/media_scratch_root.ts':
 		"WRITES NO DATA — it plants the `.dedalo_test_media` marker in a gate's scratch directory so the media doors will write there. Filesystem only, no database.",
+	'test/helpers/child_driver.ts':
+		"WRITES NO DATA — its one write is a throwaway TS driver file in its own mkdtemp scratch dir (removed on cleanup), run in a CHILD bun process that inherits this run's environment: the preload-repointed suite DB and marked media root. It holds no database connection itself; every driver it runs writes only through test-data doors that call assertTestDatabase (PERF-11/OPS-6 gates).",
+	'test/helpers/isolated_gate.ts':
+		"WRITES NO DATA — its one write is the child's JUnit report in its own mkdtemp scratch dir (removed after reading). The child is `bun test` from the repo root, so bunfig's preloads arm the suite database and the marked media root in it exactly as in any test process (childEnv() pins the suite database explicitly); every write the gate's body makes goes through doors that call assertTestDatabase.",
+	'test/helpers/diffusion_rss_child.ts':
+		"WRITES NO DATA OF ITS OWN — its one direct write is `5` to `/proc/self/clear_refs` (Linux), which resets the process's own peak-RSS mark at the measurement baseline; no file, no database. Its record files go through the diffusion writer under the parent gate's MARKED scratch media root (DEDALO_DIFFUSION_FILES_ROOT, the media guard inherited armed); it holds no database connection (diffusion_artifact_rss_native, PERF-2).",
+	'test/helpers/suite_mariadb_lock.ts':
+		"WRITES NO DÉDALO DATA — its one write is the diagnostic pid line of the suite MariaDB lane lock, `../private/test_mariadb/<suite db>/.lock`, inside a root the suite created and marked `.dedalo_test_mariadb` (it refuses a lane with no root). The lock itself is a kernel-held flock; the file's content decides nothing. No database connection of any kind. Guarded by test/unit/suite_mariadb_target_native.test.ts leg (i) (PUB-05).",
+	'test/helpers/suite_mariadb.ts':
+		"WRITES NO DÉDALO DATA — it installs, starts and provisions the suite's OWN MariaDB server (../private/test_mariadb/<suite db>, marked `.dedalo_test_mariadb`, a unix socket in a 0700 dir, --skip-networking) and writes only to a server it started and marked: its datadir, its target databases, and the `dedalo_test_mariadb_marker` rows the suite user can read but not write. It holds no Postgres connection. Guarded by test/unit/suite_mariadb_target_native.test.ts (PUB-05).",
+	'test/helpers/suite_mariadb_lanes.ts':
+		"WRITES NO DÉDALO DATA — the suite MariaDB lane SWEEP: it deletes only lane roots under ../private/test_mariadb/ (and a killed sweep's or claim's leftover beside one) that carry `.dedalo_test_mariadb`, the marker the suite writes when it creates a lane; an unmarked root or look-alike is refused and kept. Marker-last, so an interrupted delete stays sweepable. No database connection of any kind (the stop goes through suite_mariadb.ts). Guarded by test/unit/suite_mariadb_target_native.test.ts legs (k)-(m), (r) and test/unit/shard_mariadb_sweep_native.test.ts (PUB-05).",
+	'test/helpers/matrix_writer_closure.ts':
+		'WRITES NO DATA — a STATIC analyser (the write-path census shared by write_obligations and tool_lossless_writeback): it reads source text and holds no database connection. Its `PSQL_MATRIX_DML` regex NAMES the SQL keywords (`TRUNCATE`, `INSERT INTO`…) it looks for in other files, which is what the seam scan matches.',
+	'test/helpers/media_seed_sweep.ts':
+		"WRITES NO DATABASE DATA — it deletes, by name, the media FILES a gate seeded under the caller's test media root, and REFUSES (throws, deletes nothing) a root without the `.dedalo_test_media` marker: the filesystem twin of the marker law. No database connection.",
+	'test/helpers/real_backup_archive.ts':
+		"WRITES NO DÉDALO DATA — it READS the suite database (`pg_dump -F c -t dd_ontology`) and writes the archive bytes, a truncated copy and an mtime into the CALLER's scratch directory (the backup gates' mkdtemp). No database write, no media root.",
 	'src/core/test_data/seed.ts':
 		'NOT A TEST-ONLY WRITER: `resetTestSection`/`restoreCanonicalTest3` write the test3 PLAYGROUND records that every install seed ships, and they are called by the INSTALLER (src/core/install/db_restore.ts) and by the maintenance area widget (area_maintenance/widgets/unit_test.ts) — both on a real database, by design.',
 };
@@ -183,6 +247,9 @@ describe('rule 1 — every test-data writer asks the marker', () => {
 			'src/core/test_data/situations/situation.ts',
 			'test/helpers/test_data.ts',
 			'test/helpers/acl_identity_fixture.ts',
+			// The spawned runner children's door: its only write seam is the
+			// engine's runJob() — no SQL string in its source.
+			'test/helpers/diffusion_runner_door.ts',
 			// `observer_term_seed.ts` was pinned here until 2026-08-20, when it
 			// stopped writing directly and became a composition over
 			// situations/situation.ts (pinned above). A file that writes nothing
@@ -277,6 +344,12 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			}),
 	},
 	{
+		// The AI spend ledger sweep (test/helpers/ai_spend_ledger.ts): a DELETE of
+		// every ledger row — refused, writing nothing, on an unmarked database.
+		name: 'sweepAiSpendLedger',
+		run: async () => (await import('../helpers/ai_spend_ledger.ts')).sweepAiSpendLedger(),
+	},
+	{
 		name: 'ensureTestCorpus',
 		run: async () =>
 			(await import('../../src/core/test_data/test_corpus/ensure.ts')).ensureTestCorpus('dd128'),
@@ -341,7 +414,7 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		run: async () =>
 			(await import('../../src/core/test_data/suite_login.ts')).ensureSuiteLoginPassword(
 				'root',
-				'dedalo_suite_client_tests',
+				'Dedalo-Suite-Client-7',
 			),
 	},
 	{
@@ -356,6 +429,22 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 	{
 		name: 'cleanScratchTipo',
 		run: async () => (await import('../helpers/test_data.ts')).cleanScratchTipo('zzmk1'),
+	},
+	{
+		name: 'insertLegacyBulkRow',
+		run: async () =>
+			(await import('../helpers/legacy_bulk_run.ts')).insertLegacyBulkRow({
+				sectionTipo: 'zzmk1',
+				sectionId: 999_997,
+				tipo: 'zzmk2',
+				lang: 'lg-nolan',
+				bulkId: null,
+				data: [],
+			}),
+	},
+	{
+		name: 'demoteToLegacyRun',
+		run: async () => (await import('../helpers/legacy_bulk_run.ts')).demoteToLegacyRun(999_997),
 	},
 	{
 		name: 'ensureSyntheticHierarchies',
@@ -392,6 +481,28 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			(await import('../helpers/read_door_identity_fixture.ts')).removeReadDoorIdentityFixture(),
 	},
 	{
+		name: 'installAuthzDoorFixture',
+		run: async () => (await import('../helpers/authz_door_fixture.ts')).installAuthzDoorFixture(),
+	},
+	{
+		name: 'removeAuthzDoorFixture',
+		run: async () => (await import('../helpers/authz_door_fixture.ts')).removeAuthzDoorFixture(),
+	},
+	{
+		name: 'createDoorRecord',
+		run: async () =>
+			(await import('../helpers/authz_door_fixture.ts')).createDoorRecord('test3', 944021),
+	},
+	{
+		name: 'sweepActivityRows',
+		run: async () =>
+			(await import('../helpers/activity_rows.ts')).sweepActivityRows('zzmk1', [999_997]),
+	},
+	{
+		name: 'dropDoorRecords',
+		run: async () => (await import('../helpers/authz_door_fixture.ts')).dropDoorRecords(),
+	},
+	{
 		name: 'installHierarchyPruningFixture',
 		run: async () =>
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).installHierarchyPruningFixture(),
@@ -417,6 +528,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		name: 'removeScopeBindingFixture',
 		run: async () =>
 			(await import('../helpers/scope_binding_fixture.ts')).removeScopeBindingFixture(),
+	},
+	{
+		// The spawned runner children (kill / pool legs) reach runJob only here;
+		// a child process cannot run inside this rollback, the door can.
+		name: 'runGuardedDiffusionJob',
+		run: async () =>
+			(await import('../helpers/diffusion_runner_door.ts')).runGuardedDiffusionJob(
+				'00000000-0000-4000-8000-000000000000',
+				1,
+			),
 	},
 	// NOT LISTED, deliberately: `test/helpers/observer_term_seed.ts`. Until
 	// 2026-08-20 it wrote an install thesaurus (`on1`) with its own
@@ -1194,7 +1315,7 @@ const POOL_VERDICTS: Readonly<Record<string, { verdict: PoolVerdict; reason: str
 	'src/diffusion/targets/mariadb/db.ts': {
 		verdict: 'PENDING',
 		reason:
-			"The diffusion TARGET pools — an operator-configured MariaDB publication database, not a Dédalo store, so neither the matrix marker nor the RAG marker applies and no equivalent exists. getTargetPool() genuinely writes (CREATE TABLE, DML through src/diffusion/writers/mariadb_sql.ts); probeTargetDatabase() issues only SELECT 1. FINDING 2026-08-30, same class as P1-16 on a third pool: test/integration/diffusion_mariadb.test.ts:68 targets the database `web_numisdata_mib` — one INSTALLATION's publication target, named in the suite — and creates/drops scratch tables in it. It is test.if(HAVE_DB)-guarded, so it SKIPS where MariaDB is unreachable and WRITES where it is. The fix is a marked-target equivalent plus a generic target name; until then this is counted debt, not an oversight.",
+			"The diffusion TARGET pools — an operator-configured MariaDB publication database, not a Dédalo store, so neither the matrix marker nor the RAG marker applies. getTargetPool() genuinely writes (CREATE TABLE, DML through src/diffusion/writers/mariadb_sql.ts); probeTargetDatabase() issues only SELECT 1. THE SUITE HALF IS CLOSED (PUB-05, 2026-09-30): test/preload/suite_mariadb.ts arms every `bun test` process at the lane's own suite server, the MariaDB gates acquire it through requireSuiteMariadb() (marker row `dedalo_test_mariadb_marker.targets` naming this lane, read through this pool; no skip path), and test/unit/suite_mariadb_target_native.test.ts holds it. STILL PENDING, and the reason this row stays: the ENGINE's write doors do not ask that marker themselves (no DEDALO_TEST_DIFFUSION_DB_SOCKET seam arming an assertTestMariadbTarget refusal in buildTargetOptions), so a test that bypassed the helper would not be refused by the pool — PUB-05b, the RAG precedent. Also measured: Bun's mariadb adapter given a socket path that does not exist falls back to TCP localhost:3306.",
 	},
 };
 
@@ -1261,4 +1382,361 @@ describe('rule 4 — every SQL pool the process can open is classified', () => {
 			).toBe(true);
 		}
 	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 8 — concurrent lane builds do not collide on the cluster-shared role.
+// ---------------------------------------------------------------------------
+
+describe('rule 8 — concurrent lane builds serialize the cluster-shared role step', () => {
+	/** Maintenance-database descriptor: step 5b runs against `postgres`. */
+	const admin: DbConnDescriptor = {
+		database: 'postgres',
+		host: config.db.host,
+		port: config.db.port,
+		user: config.db.user,
+		password: config.db.password,
+	};
+	const CONCURRENCY = 8;
+
+	/**
+	 * THE GATE NEVER TOUCHES THE SHARED ROLE (F8, 2026-09-30). `dedalo_test_ro`
+	 * is CLUSTER-shared: every lane's build and client run uses it. A gate that
+	 * rewrites it (ALTER ROLE … PASSWORD, and an UNLOCKED positive control that
+	 * contends on it by design) collides with another lane's `test:db:setup`
+	 * step 5b — the very `tuple concurrently updated` this rule exists to
+	 * prevent. So the gate runs the SAME text on a PROBE role named per lane
+	 * (`probeSql`: every `dedalo_test_ro` rewritten, the lock line kept), swept
+	 * before and after — a crashed run leaves nothing the next run of the same
+	 * lane does not reclaim. Measured by OUTCOME: the shared role's catalog
+	 * tuple version (pg_authid.xmin — every ALTER ROLE writes a new one) is
+	 * unchanged by the whole describe. HONEST LIMIT: another lane's build in
+	 * the same window rewrites it legitimately and would red that cell; re-run
+	 * it alone.
+	 */
+	const SHARED_ROLE = 'dedalo_test_ro';
+	let db = '';
+	let probe = '';
+	/** The role-step text retargeted at this lane's probe role, never the shared one. */
+	function probeSql(text: string): string {
+		const out = text.replaceAll(SHARED_ROLE, probe);
+		expect(out, 'probeSql left the shared role in the text').not.toMatch(/\bdedalo_test_ro\b/);
+		expect(out).toContain(`SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});`);
+		return out;
+	}
+	/** Drop this lane's probe role (its CONNECT grant first), if a run left one. */
+	async function sweepProbe(): Promise<void> {
+		const text = `DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${probe}') THEN
+    EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM %I', '${db}', '${probe}');
+  END IF;
+END $$;
+DROP ROLE IF EXISTS ${probe};
+`;
+		const run = await runPsql(admin, ['-v', 'ON_ERROR_STOP=1', '-q', '-f', '-'], { stdin: text });
+		expect(run.exitCode, `probe role sweep failed: ${run.stderr}`).toBe(0);
+	}
+	async function probeRoles(): Promise<string[]> {
+		const rows = (await sql.unsafe('SELECT rolname FROM pg_roles WHERE rolname = $1', [probe])) as {
+			rolname: string;
+		}[];
+		return rows.map((row) => row.rolname);
+	}
+	async function sharedRoleVersion(): Promise<string | null> {
+		const rows = (await sql.unsafe('SELECT xmin::text AS v FROM pg_authid WHERE rolname = $1', [
+			SHARED_ROLE,
+		])) as { v: string }[];
+		return rows[0]?.v ?? null;
+	}
+	let sharedBefore: string | null = null;
+	beforeAll(async () => {
+		await assertTestDatabase('test_db_marker_tripwire rule 8');
+		db = await currentDatabaseName();
+		probe = `dedalo_test_ro_probe_${db.replace(/[^A-Za-z0-9_]/g, '_')}`.toLowerCase().slice(0, 63);
+		sharedBefore = await sharedRoleVersion();
+		await sweepProbe();
+	});
+	afterAll(async () => {
+		// Nothing this describe creates may outlive it (a failed run included).
+		if (probe !== '') await sweepProbe();
+	});
+
+	/** Fire `CONCURRENCY` psql runs of `text` at once; return the failed ones' stderr. */
+	async function concurrentFailures(text: string): Promise<string[]> {
+		const runs = await Promise.all(
+			Array.from({ length: CONCURRENCY }, () =>
+				runPsql(admin, ['-v', 'ON_ERROR_STOP=1', '-q', '-f', '-'], { stdin: text }),
+			),
+		);
+		return runs.filter((run) => run.exitCode !== 0).map((run) => run.stderr);
+	}
+
+	test('the build sends the role step through the serialized text, and nowhere else', () => {
+		const setup = stripComments(read('scripts/test_db_setup.ts'));
+		expect(setup).toContain("psql('postgres', ['-f', '-'], readOnlyRoleClusterSql(testDb))");
+		// No second, unserialized mutation of the role can sit beside it.
+		expect(setup).not.toMatch(/\b(?:ALTER|CREATE)\s+ROLE\b/i);
+		expect(readOnlyRoleClusterSql('x')).toContain(
+			`SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});`,
+		);
+		expect(() => readOnlyRoleClusterSql('a"b')).toThrow(/refusing to interpolate/);
+	});
+
+	test('positive control: the same text WITHOUT the lock collides (the harness contends)', async () => {
+		const unlocked = probeSql(readOnlyRoleClusterSql(db)).replace(
+			`SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});\n`,
+			'',
+		);
+		expect(unlocked).not.toContain('pg_advisory_xact_lock');
+		const failures: string[] = [];
+		for (let round = 0; round < 10 && failures.length === 0; round++) {
+			failures.push(...(await concurrentFailures(unlocked)));
+		}
+		expect(
+			failures.length,
+			'no collision without the lock in 10 rounds — the concurrent harness is not contending, so the locked assertion below would prove nothing',
+		).toBeGreaterThan(0);
+		expect(failures.join('\n')).toMatch(/tuple concurrently updated|already exists/);
+	}, 60_000);
+
+	test('the serialized text: every concurrent run succeeds', async () => {
+		const locked = probeSql(readOnlyRoleClusterSql(db));
+		for (let round = 0; round < 3; round++) {
+			expect(await concurrentFailures(locked)).toEqual([]);
+		}
+	}, 60_000);
+
+	test('the cluster-shared role was never rewritten by this gate, and no probe role outlives it', async () => {
+		expect(sharedBefore, `the suite build creates ${SHARED_ROLE} (anti-vacuity)`).not.toBeNull();
+		expect(
+			await sharedRoleVersion(),
+			`${SHARED_ROLE} was rewritten while rule 8 ran: the gate mutates the role every lane shares`,
+		).toBe(sharedBefore);
+		expect(await probeRoles(), 'the probe was created by the runs above (anti-vacuity)').toEqual([
+			probe,
+		]);
+		await sweepProbe();
+		expect(await probeRoles()).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 6b — the client run's server surfaces follow the lane.
+// ---------------------------------------------------------------------------
+
+describe("rule 6b — the client server's stateful surfaces are the suite database's own", () => {
+	/** Seams the preloads set on THIS process; a fresh `bun run test:client` shell has none. */
+	const PRELOAD_SEAMS = [
+		'DEDALO_TEST_RAG_DB_NAME',
+		'DEDALO_TEST_MEDIA_ROOT',
+		'DEDALO_SESSION_DB_PATH',
+		'DEDALO_TS_STATE_PATH',
+	] as const;
+
+	/** Compose the spawned server's environment in a child, exactly as the runner does. */
+	function composeInChild(suiteDb: string): Record<string, string> {
+		const env: Record<string, string> = { ...(process.env as Record<string, string>) };
+		for (const key of PRELOAD_SEAMS) delete env[key];
+		const script = `
+			const m = await import(${JSON.stringify(join(REPO_ROOT, 'scripts', 'client_test_server.ts'))});
+			const paths = m.suiteServerPaths();
+			const out = m.suiteServerEnvironment({ suiteDb: ${JSON.stringify(suiteDb)}, port: 1, ...paths });
+			const keys = ['DB_NAME', 'DEDALO_TEST_MEDIA_ROOT', 'DEDALO_TEST_RAG_DB_NAME', 'DEDALO_SESSION_DB_PATH', 'SERVER_UNIX_SOCKET', 'DEDALO_TS_STATE_PATH'];
+			console.log(JSON.stringify(Object.fromEntries(keys.map((k) => [k, out[k] ?? null]))));
+		`;
+		const child = Bun.spawnSync(['bun', '-e', script], { cwd: REPO_ROOT, env });
+		expect(child.exitCode, child.stderr.toString()).toBe(0);
+		const lines = child.stdout.toString().trim().split('\n');
+		return JSON.parse(lines[lines.length - 1] as string);
+	}
+
+	test('database, media root and vector database are the suite derivations — never the installation', async () => {
+		const suiteDb = await currentDatabaseName();
+		const served = composeInChild(suiteDb);
+		expect(served.DB_NAME).toBe(suiteDb);
+		expect(served.DEDALO_TEST_MEDIA_ROOT).toBe(testMediaRootPath(suiteDb));
+		expect(
+			served.DEDALO_TEST_RAG_DB_NAME,
+			"the client server's vector database must be the suite's own `<suite db>_rag` — unset, its ragSql resolves to the installation's semantic index",
+		).toBe(suiteRagDatabaseName(suiteDb));
+		expect(served.DEDALO_TEST_RAG_DB_NAME).not.toBe(installationRagDatabaseName());
+	});
+
+	test('two concurrent runs get distinct session stores, sockets and state files', async () => {
+		const suiteDb = await currentDatabaseName();
+		const [a, b] = [composeInChild(suiteDb), composeInChild(suiteDb)];
+		for (const key of ['DEDALO_SESSION_DB_PATH', 'SERVER_UNIX_SOCKET', 'DEDALO_TS_STATE_PATH']) {
+			expect(a[key], key).toBeString();
+			expect(a[key], `${key} must be per-run`).not.toBe(b[key]);
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 9 — a test process the preload never reached opens no database.
+// ---------------------------------------------------------------------------
+
+describe('rule 9 — a bun test run without the preload opens no database', () => {
+	const ARMED = {
+		nodeEnv: 'test',
+		armedDatabase: 'suite_db',
+		disabled: undefined,
+		applicationDatabase: 'app_db',
+	};
+
+	test('matrix database: refused when unarmed, or when it is the .env application database', () => {
+		expect(suiteDatabaseRefusal('suite_db', ARMED)).toBeNull();
+		// A child a test deliberately points elsewhere (a shard, a scratch install DB).
+		expect(suiteDatabaseRefusal('scratch_db', ARMED)).toBeNull();
+		// Rule 2: the application database is refused whatever the pin says.
+		expect(suiteDatabaseRefusal('app_db', ARMED)).toContain('APPLICATION database');
+		expect(suiteDatabaseRefusal('app_db', { ...ARMED, armedDatabase: 'app_db' })).toContain(
+			'APPLICATION database',
+		);
+		// Rule 1: no pin at all — the preload never ran (foreign cwd, bare spawn).
+		expect(suiteDatabaseRefusal('suite_db', { ...ARMED, armedDatabase: undefined })).toContain(
+			'DEDALO_TEST_DATABASE is unset',
+		);
+		// No .env (CI composes its env): rule 1 still holds.
+		expect(
+			suiteDatabaseRefusal('x', {
+				...ARMED,
+				armedDatabase: undefined,
+				applicationDatabase: undefined,
+			}),
+		).not.toBeNull();
+	});
+
+	test('side pools (vector, MariaDB): refused only when unarmed', () => {
+		expect(suitePoolRefusal('vector database', 'rag', ARMED)).toBeNull();
+		expect(
+			suitePoolRefusal('vector database', 'rag', { ...ARMED, armedDatabase: undefined }),
+		).toContain("REFUSING to open vector database 'rag'");
+	});
+
+	test('the opt-out is the literal "true", and nothing refuses outside a test process', () => {
+		const unarmed = { ...ARMED, armedDatabase: undefined };
+		expect(suiteDatabaseRefusal('app_db', { ...unarmed, disabled: 'true' })).toBeNull();
+		expect(suiteDatabaseRefusal('app_db', { ...unarmed, disabled: 'yes' })).not.toBeNull();
+		expect(suitePoolRefusal('vector database', 'rag', { ...unarmed, disabled: 'true' })).toBeNull();
+		for (const nodeEnv of [undefined, 'production', 'development']) {
+			expect(suiteDatabaseRefusal('app_db', { ...unarmed, nodeEnv }), String(nodeEnv)).toBeNull();
+			expect(suitePoolRefusal('mariadb', 't', { ...unarmed, nodeEnv }), String(nodeEnv)).toBeNull();
+		}
+	});
+
+	test('this process passes for the right reason (anti-vacuity)', () => {
+		const env = currentSuiteDatabaseEnv();
+		expect(env.nodeEnv).toBe('test');
+		expect(env.armedDatabase).toBe(config.db.database);
+		expect(env.applicationDatabase).toBe(applicationDatabaseName());
+		expect(config.db.database).not.toBe(env.applicationDatabase);
+	});
+
+	/** Run `bun test` on a one-test file from a directory with NO bunfig.toml. */
+	const MATRIX_PROBE = `const { sql } = await import(${JSON.stringify(join(REPO_ROOT, 'src/core/db/postgres.ts'))});
+	const rows = await sql\`SELECT current_database() AS db\`;
+	console.log('CONNECTED TO ' + rows[0].db);`;
+
+	/**
+	 * The database an UNARMED child really falls back to: the installation's, as
+	 * ../private/.env names it — or, on a tier with no private file (the hosted CI
+	 * db tier composes its env), a synthetic stand-in, so the child's config still
+	 * loads and the GUARD is what answers (deleting DB_NAME there died in config.ts
+	 * first: "Missing required config key 'DB_NAME'").
+	 */
+	const FALLBACK_DB = applicationDatabaseName() ?? 'dedalo_probe_application_db';
+
+	function runOutsideRepo(
+		armed: string | null,
+		dbName: string = FALLBACK_DB,
+		probe: string = MATRIX_PROBE,
+		extraEnv: Record<string, string> = {},
+	): { exit: number; out: string } {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo-nopreload-'));
+		try {
+			writeFileSync(
+				join(dir, 'probe.test.ts'),
+				`import { test } from 'bun:test';\ntest('probe', async () => {\n${probe}\n});\n`,
+			);
+			// The preload-set seams are STRIPPED: an inherited value would fake the answer.
+			const env: Record<string, string | undefined> = { ...process.env };
+			for (const key of [
+				'DEDALO_TEST_DATABASE',
+				'DB_NAME',
+				'DEDALO_DATABASE_CONN',
+				'DEDALO_TEST_DB_DISABLE',
+			]) {
+				delete env[key];
+			}
+			if (armed !== null) env.DEDALO_TEST_DATABASE = armed;
+			env.DB_NAME = dbName;
+			Object.assign(env, extraEnv);
+			const child = Bun.spawnSync(['bun', 'test', './probe.test.ts'], {
+				cwd: dir,
+				env,
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			return {
+				exit: child.exitCode ?? -1,
+				out: `${child.stdout.toString()}${child.stderr.toString()}`,
+			};
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	}
+
+	test('outside the repo root the pool refuses before connecting', () => {
+		const run = runOutsideRepo(null);
+		expect(run.out).toContain('DEDALO_TEST_DATABASE is unset');
+		expect(run.out).not.toContain('CONNECTED TO');
+		expect(run.exit).not.toBe(0);
+	}, 60_000);
+
+	test('a pinned child aimed at the APPLICATION database is refused too', () => {
+		// The application database is what ../private/.env names. Where there is no
+		// such file (hosted CI), give the child one: a throwaway private dir whose
+		// .env names a synthetic application database (every other key the child
+		// needs comes from the process env there).
+		const appDb = applicationDatabaseName();
+		const privateDir = appDb === undefined ? mkdtempSync(join(tmpdir(), 'dedalo-private-')) : null;
+		try {
+			const target = appDb ?? 'dedalo_probe_application_db';
+			if (privateDir !== null) writeFileSync(join(privateDir, '.env'), `DB_NAME=${target}\n`);
+			const run = runOutsideRepo(
+				config.db.database,
+				target,
+				MATRIX_PROBE,
+				privateDir === null ? {} : { DEDALO_PRIVATE_DIR: privateDir },
+			);
+			expect(run.out).toContain('APPLICATION database named in ../private/.env');
+			expect(run.out).not.toContain('CONNECTED TO');
+		} finally {
+			if (privateDir !== null) rmSync(privateDir, { recursive: true, force: true });
+		}
+	}, 60_000);
+
+	test('the side pools refuse unarmed too: the vector store (built at import) and a MariaDB target', () => {
+		const rag = runOutsideRepo(
+			null,
+			FALLBACK_DB,
+			`await import(${JSON.stringify(join(REPO_ROOT, 'src/ai/rag/vector_store.ts'))}); console.log('CONNECTED TO rag');`,
+		);
+		expect(rag.out).toContain("REFUSING to open vector database '");
+		expect(rag.out).not.toContain('CONNECTED TO');
+		const maria = runOutsideRepo(
+			null,
+			FALLBACK_DB,
+			`const { getTargetPool } = await import(${JSON.stringify(join(REPO_ROOT, 'src/diffusion/targets/mariadb/db.ts'))}); getTargetPool('zz_probe_target'); console.log('CONNECTED TO maria');`,
+		);
+		expect(maria.out).toContain("REFUSING to open diffusion MariaDB database 'zz_probe_target'");
+		expect(maria.out).not.toContain('CONNECTED TO');
+	}, 60_000);
+
+	test('positive control: the same child, armed at the suite database, connects to it', () => {
+		const run = runOutsideRepo(config.db.database, config.db.database);
+		expect(run.out).toContain(`CONNECTED TO ${config.db.database}`);
+		expect(run.exit).toBe(0);
+	}, 60_000);
 });

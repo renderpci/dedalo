@@ -6,15 +6,19 @@
  *   'tipo' gate covers only the schema pair, so the handler adds the SEC-024
  *   §9.4 per-record assertion itself.
  * bulk_revert_process: WRITE (section/level 2). Undo a whole bulk_process_id
- *   batch (per-row re-gated on BOTH the schema pair and record scope); each
- *   matched component is reverted to its pre-batch value under a fresh bulk id
- *   (so the revert is revertible).
+ *   run (each unit re-gated on BOTH the schema pairs and record scope) from
+ *   its undo log — exactly for a run's BEFORE/AFTER pairs, by inference for a
+ *   run made before the undo log — under a fresh bulk id whose own undo log
+ *   makes the revert exactly revertible (bulk_revert.ts). Refused while the
+ *   run is still executing (tool.bulk_run_live).
  *
  * Both write doors restore the DATAFRAME half of a paired component
- * (dataframe_restore.ts) and fire the observer cascade post-commit
- * (restore_common.ts) — a restore that touched only the main column left
- * orphan frames and stale observer mirrors behind
- * (WC-2026-08-09-time-machine-restore-replays-paired-dataframe-frames).
+ * (dataframe_restore.ts) — a restore that touched only the main column left
+ * orphan frames behind
+ * (WC-2026-08-09-time-machine-restore-replays-paired-dataframe-frames) — and
+ * write through the record-write chokepoint, whose obligation ledger fires the
+ * observer cascade post-commit for every restore and undelete
+ * (WC-2026-09-30-record-write-obligation-ledger).
  * isAvailable: hidden on component_relation_children callers (PHP is_available),
  * relocated here from the core registry fallback.
  */

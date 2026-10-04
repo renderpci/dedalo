@@ -13,6 +13,13 @@ export const component_relation_index: ComponentModel = {
 	model: 'component_relation_index',
 	column: 'relation',
 	render: 'text',
+	// Computed, never stored forward (edit + list read the inverse question;
+	// only search mode reads the column) — an append would be written and never read.
+	derived: true, // owns no stored value (types.ts `derived`)
+	importAppend: {
+		refuse:
+			'derived: the index is computed from the inverse locators pointing at this record, there is no stored data to append to (import the link on the pointing records)',
+	},
 	defaultRelationType: 'dd96',
 	resolveData: 'relation_index',
 	search: { status: 'ported' }, // builder_relation_index.ts (dedicated computed-inverse pipeline)

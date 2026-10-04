@@ -53,8 +53,12 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { z } from 'zod';
+import { isAgentOrdinal, MAX_AGENT_ORDINAL } from './drivers/agent_identity';
+import { hostProblem, parseHostList } from './drivers/network_profile';
 import { parseEnvFile } from './env_file';
 import {
+  AGENT_RUN_CAPS,
+  DOOR_TIMEOUT_DEFAULTS_MS,
   DRIVER_IDS,
   INSTANCE_PATTERN,
   PUBLICATION_API_KEY_FILE_KEY,
@@ -62,6 +66,7 @@ import {
   SECRET_KEY_PATTERN,
   SERVICE_TOKEN_KEY,
 } from './provision/layout';
+import { SLUG_PATTERN } from './util/slug';
 
 /** This package's own directory — the anchor for the default env file. */
 const PACKAGE_DIR = resolve(import.meta.dir, '..');
@@ -76,9 +81,84 @@ const PACKAGE_DIR = resolve(import.meta.dir, '..');
  */
 let ENV_FILE_DIR = PACKAGE_DIR;
 
+/** A comma-separated list of egress HOSTNAMES, held to the gate's own grammar at boot. */
+function egressHostList(key: string) {
+  return z.string().superRefine((value, ctx) => {
+    for (const host of parseHostList(value)) {
+      const problem = hostProblem(host);
+      if (problem) ctx.addIssue({ code: 'custom', message: `${key}: ${problem}` });
+    }
+  });
+}
+
 // Absolute or resolved against the env file's directory, once, so nothing downstream ever
 // sees a relative root.
 const absolutePath = z.string().transform(value => resolve(ENV_FILE_DIR, value));
+/** The same, where an empty value is legitimate (an unprovisioned daemon states none). */
+const optionalAbsolutePath = z
+  .string()
+  .default('')
+  .transform(value => (value.trim() === '' ? '' : resolve(ENV_FILE_DIR, value)));
+
+/**
+ * A RETIRED KEY — a LOUD refusal rather than a silently ignored one (the AGENT_EGRESS_ALLOW
+ * precedent). An empty leftover is harmless and accepted; a value is a museum whose env
+ * still describes a confinement that no longer exists, told so at boot with the replacement
+ * named.
+ */
+function retired(key: string, replacement: string) {
+  return z
+    .string()
+    .refine(value => value.trim() === '', {
+      message: `${key} is retired (LEAD-1b). ${replacement} Remove ${key} from the env (provision apply renders it without).`,
+    })
+    .default('');
+}
+
+/**
+ * AGENT_IDENTITIES — which ordinal each declared site's agent identity holds, as JSON
+ * `{"<slug>": <k>}`, rendered by `provision apply` from the host's ledger. Refused at BOOT
+ * when malformed: a daemon that could not tell which uid a site's runs are must not start.
+ */
+const agentIdentities = z
+  .string()
+  .default('{}')
+  .transform((value, ctx) => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(value.trim() === '' ? '{}' : value);
+    } catch {
+      ctx.addIssue({ code: 'custom', message: `AGENT_IDENTITIES is not JSON ({"<slug>": <ordinal>, …})` });
+      return z.NEVER;
+    }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      ctx.addIssue({ code: 'custom', message: `AGENT_IDENTITIES must be a JSON object {"<slug>": <ordinal>, …}` });
+      return z.NEVER;
+    }
+    const out: Record<string, number> = {};
+    const seen = new Map<number, string>();
+    for (const [slug, k] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!SLUG_PATTERN.test(slug)) {
+        ctx.addIssue({ code: 'custom', message: `AGENT_IDENTITIES: '${slug}' is not a site slug (${SLUG_PATTERN.source})` });
+        continue;
+      }
+      if (!isAgentOrdinal(k)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `AGENT_IDENTITIES: '${slug}' → ${JSON.stringify(k)} is not an ordinal (an integer 1..${MAX_AGENT_ORDINAL})`,
+        });
+        continue;
+      }
+      const other = seen.get(k);
+      if (other !== undefined) {
+        ctx.addIssue({ code: 'custom', message: `AGENT_IDENTITIES: '${other}' and '${slug}' both hold ordinal ${k} — one identity is one site` });
+        continue;
+      }
+      seen.set(k, slug);
+      out[slug] = k;
+    }
+    return Object.freeze(out);
+  });
 
 const envSchema = z.object({
   /**
@@ -130,10 +210,12 @@ const envSchema = z.object({
    * museums would share.
    */
   SITES_ROOT: absolutePath,
-  /** The agent's HOME (`~/.claude` and friends). Never the workspaces root: an agent turn
-   *  writes into a workspace, and a HOME inside it is a site able to rewrite the agent's
-   *  own configuration. */
-  AGENT_HOME: absolutePath,
+  /** RETIRED (LEAD-1b): the one HOME every site shared. Each (site, door) has its own now. */
+  AGENT_HOME: retired(
+    'AGENT_HOME',
+    'Every (site, door) has its own HOME under AGENT_STATE_ROOT, fixed by its root-rendered unit; ' +
+      'which identity a site runs as is AGENT_IDENTITIES.',
+  ),
   /** The audit DIRECTORY. Root-owned; the FILE inside it is the daemon's, which is what
    *  makes the trail append-only in the filesystem rather than by convention. */
   AUDIT_DIR: absolutePath,
@@ -214,9 +296,10 @@ const envSchema = z.object({
    * HOW AN AGENT TURN IS CONFINED — the key that decides whether a turn is a process of
    * this daemon's own or a unit of its own.
    *
-   * `systemd_scope` runs each turn as a TRANSIENT systemd service under AGENT_USER, with
-   * per-turn memory/CPU/task/wall-clock caps and an egress policy the kernel enforces
-   * (src/drivers/confinement.ts). It is the default because the unsafe direction must be
+   * `systemd_scope` runs each agent run as an instance of a unit ROOT rendered for its site
+   * and door (User= the site's own identity, AGENT_IDENTITIES), with per-run memory/CPU/task/
+   * wall-clock caps, in a private network namespace whose one way out is the daemon's
+   * hostname-only egress gate (src/drivers/confinement.ts). It is the default because the unsafe direction must be
    * the one an operator asks for, and it is what `render/env.ts` writes on every
    * provisioned host.
    *
@@ -227,31 +310,76 @@ const envSchema = z.object({
    * absence.
    */
   AGENT_CONFINEMENT: z.enum(['systemd_scope', 'none']).default('systemd_scope'),
-  /** The unix user an agent turn runs as. Never the daemon's own — see layout.identity. */
-  AGENT_USER: z.string().default(''),
-  /** The name every transient agent unit begins with; the polkit grant's whole scope. */
+  /** RETIRED (LEAD-1b): the one uid every site's runs shared. */
+  AGENT_USER: retired(
+    'AGENT_USER',
+    'Every declared site runs as its own identity, fixed by root in the unit (User=) — which site is ' +
+      'which identity is AGENT_IDENTITIES.',
+  ),
+  /** RETIRED (LEAD-1b): the daemon starts no unit — it connects to root-rendered sockets. */
+  SYSTEMD_RUN_BIN: retired(
+    'SYSTEMD_RUN_BIN',
+    'The daemon starts nothing: every run is socket-activated from units root renders per (site, door) ' +
+      '(AGENT_SOCKET_DIR), bound to the identities in AGENT_IDENTITIES.',
+  ),
+  /** The name every agent unit of this museum begins with; the polkit grant's scope. */
   AGENT_UNIT_PREFIX: z.string().default(''),
+  /** Declared slug → its agent identity's ordinal (LEAD-1b). See `agentIdentities` above. */
+  AGENT_IDENTITIES: agentIdentities,
+  /** Where root's per-(site, door) agent sockets listen (`/run/<ns>-agents/<instance>`). */
+  AGENT_SOCKET_DIR: optionalAbsolutePath,
+  /** The agent state root the units mask and bind each door's HOME out of (root's). */
+  AGENT_STATE_ROOT: optionalAbsolutePath,
   /**
-   * The runner. Pinned absolute, like the driver binaries and for the same reason: PATH is
-   * the one thing a compromised turn can arrange to control, and this binary is the door to
-   * PID 1.
+   * The control plane: `systemctl show / list-units / stop`, pinned absolute (never PATH).
+   * The daemon never STARTS anything with it — the polkit rule grants stop and kill only.
    */
-  SYSTEMD_RUN_BIN: z.string().default('/usr/bin/systemd-run'),
+  SYSTEMCTL_BIN: z.string().default('/usr/bin/systemctl'),
   /**
-   * EXTRA destinations an agent turn may reach, as systemd `IPAddressAllow=` tokens
-   * (comma-separated: '10.4.0.7/32', 'localhost'). The turn already denies the host's own
-   * loopback and every private range — that is where the engine, the databases and the
-   * other museums live — while allowing the public internet the model provider is on. A
-   * museum whose Publication API answers on a private address states it here; the address
-   * derivable from PUBLICATION_API_URL is added automatically.
+   * THE RESUME EPOCH. A session stamps it; a resume token minted under another epoch is
+   * DROPPED (with a typed event) rather than replayed, because the agent state it names lived
+   * in a HOME owned by a uid this site no longer runs as. `provision apply` bumps it whenever
+   * an identity changes under a site. Sessions older than the field count as epoch 0.
    */
-  AGENT_EGRESS_ALLOW: z.string().default(''),
-  // The per-TURN share of the host, enforced by the kernel on the transient unit. Separate
+  AGENT_IDENTITY_EPOCH: z.coerce.number().int().min(0).default(0),
+  /**
+   * RETIRED — and a LOUD refusal rather than a silently ignored key (LEAD-1).
+   *
+   * It took systemd `IPAddressAllow=` tokens (IP ranges, `localhost`) that re-opened what a
+   * deny list claimed to close — and under systemd's ALLOW-WINS filter every one of them
+   * did. A confined run now lives in a private network namespace whose only way out is the
+   * daemon's egress gate, which speaks HOSTNAMES: AGENT_PROVIDER_HOSTS for a turn's model
+   * provider, BUILD_REGISTRY_HOSTS for a build's package registry. A museum whose env still
+   * states this key is told so at boot, with the replacements named; an empty leftover is
+   * harmless and accepted.
+   */
+  AGENT_EGRESS_ALLOW: z
+    .string()
+    .refine(value => value.trim() === '', {
+      message:
+        'AGENT_EGRESS_ALLOW is retired: an agent run no longer reaches IP ranges at all. Egress is ' +
+        'by HOSTNAME through the daemon gate — name a turn’s model provider in AGENT_PROVIDER_HOSTS ' +
+        'and a build’s package registry in BUILD_REGISTRY_HOSTS (comma-separated DNS names), and ' +
+        'remove AGENT_EGRESS_ALLOW. Loopback and LAN destinations are not reachable by design.',
+    })
+    .default(''),
+  /**
+   * The model provider host(s) an opencode/pi turn may reach through the egress gate
+   * (comma-separated DNS names, port 443 only). Claude Code's host is derived (api.anthropic.com)
+   * and needs no entry. Empty = an opencode/pi turn is REFUSED with this key named, because it
+   * could reach nothing. Never an IP literal, `localhost` or a wildcard.
+   */
+  AGENT_PROVIDER_HOSTS: egressHostList('AGENT_PROVIDER_HOSTS').default(''),
+  /** The package registry host(s) a build may reach through the egress gate. */
+  BUILD_REGISTRY_HOSTS: egressHostList('BUILD_REGISTRY_HOSTS').default('registry.npmjs.org'),
+  // The per-RUN share of the host, enforced by the kernel on the site's agent unit. Separate
   // from the daemon's own (instance.json `resources`): that one caps the museum, these cap
   // one agent run, and a runaway turn must not be able to spend the museum's whole budget.
-  AGENT_TURN_MEMORY_MAX: z.string().default('2G'),
-  AGENT_TURN_CPU_QUOTA: z.string().default('200%'),
-  AGENT_TURN_TASKS_MAX: z.coerce.number().int().min(1).default(512),
+  // The defaults are layout's AGENT_RUN_CAPS: root renders the same numbers into every agent
+  // unit, and the daemon checks what PID 1 loaded against these.
+  AGENT_TURN_MEMORY_MAX: z.string().default(AGENT_RUN_CAPS.memoryMax),
+  AGENT_TURN_CPU_QUOTA: z.string().default(AGENT_RUN_CAPS.cpuQuota),
+  AGENT_TURN_TASKS_MAX: z.coerce.number().int().min(1).default(AGENT_RUN_CAPS.tasksMax),
 
   // Limits. MAX_CONCURRENT_SESSIONS is a global semaphore across sites; per site it is
   // always exactly one active turn (sessions/manager.ts).
@@ -259,9 +387,12 @@ const envSchema = z.object({
   MAX_CONCURRENT_SESSIONS: z.coerce.number().int().min(1).default(2),
   // Wall clock for one agent turn (one CLI invocation). Generous: real build-a-page turns
   // run minutes, but nothing should run forever on an unattended server.
-  SESSION_TURN_TIMEOUT_MS: z.coerce.number().int().min(1000).default(20 * 60 * 1000),
-  INSTALL_TIMEOUT_MS: z.coerce.number().int().min(1000).default(5 * 60 * 1000),
-  BUILD_TIMEOUT_MS: z.coerce.number().int().min(1000).default(5 * 60 * 1000),
+  // The DOOR CEILINGS. Their defaults are layout's (DOOR_TIMEOUT_DEFAULTS_MS): PID 1 enforces
+  // each as the agent unit's RuntimeMaxSec (+15 s), rendered from the same numbers.
+  SESSION_TURN_TIMEOUT_MS: z.coerce.number().int().min(1000).default(DOOR_TIMEOUT_DEFAULTS_MS.session_turn_timeout_ms),
+  INSTALL_TIMEOUT_MS: z.coerce.number().int().min(1000).default(DOOR_TIMEOUT_DEFAULTS_MS.install_timeout_ms),
+  BUILD_TIMEOUT_MS: z.coerce.number().int().min(1000).default(DOOR_TIMEOUT_DEFAULTS_MS.build_timeout_ms),
+  GIT_TIMEOUT_MS: z.coerce.number().int().min(1000).default(DOOR_TIMEOUT_DEFAULTS_MS.git_timeout_ms),
   // Checked before starting a session or build; a workspace over quota refuses new work
   // until someone cleans it up (agents can pull surprisingly heavy node_modules trees).
   SITE_DISK_QUOTA_MB: z.coerce.number().int().min(1).default(1024),
@@ -527,7 +658,7 @@ export function resolveConfig(sources: ConfigSources): { config: Config; report:
       `AGENT_CONFINEMENT is 'none' under NODE_ENV=production. An unconfined turn runs the ` +
         `coding agent as this daemon's own uid, which is the uid holding the shared bearer, ` +
         `every provider key and the audit handle — no filesystem mode separates a process ` +
-        `from itself. Set AGENT_CONFINEMENT=systemd_scope with AGENT_USER (a provisioned ` +
+        `from itself. Set AGENT_CONFINEMENT=systemd_scope with AGENT_IDENTITIES (a provisioned ` +
         `instance renders both), or run this host as NODE_ENV=development and accept the ` +
         `announcement every turn will write into its own event log.`,
     );

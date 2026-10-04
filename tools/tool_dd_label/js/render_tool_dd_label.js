@@ -139,7 +139,9 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 		// Dynamic grid: 2em action column + one equal-width column per lang plus one for 'name'
-		label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr);`
+		// --label_cols: the column count, so the phone rule (tool_dd_label.less) can give
+		// every column a readable minimum width and let the matrix pan in its own box
+		label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr); --label_cols: ${ar_langs.length+1};`
 		// set pointer
 		self.label_matix = label_matix
 

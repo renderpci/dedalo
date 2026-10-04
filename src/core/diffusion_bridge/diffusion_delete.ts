@@ -46,6 +46,7 @@ import { readEnv } from '../../config/env.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
+import { fsyncDirectory } from '../files/durable.ts';
 import { assertTestMediaRoot } from '../media/test_media_root.ts';
 import { relationProbeGroups } from '../search/containment.ts';
 import { virtualDateNow } from '../section/record/create_record.ts';
@@ -58,6 +59,7 @@ import {
 	publishedTermLabel,
 	sanitizePublishedFileName,
 } from './published_files.ts';
+import { fileTargetLockKey, withDeleteDoorLock } from './target_lock.ts';
 
 // The sanitizer is the producer's (published_files.ts); the name stays exported
 // here for the delete-side callers and the gates that pin it.
@@ -233,7 +235,12 @@ export interface NativeMediaIndexOps {
 		auth_markers: number;
 		databases: string[];
 	}>;
-	reconcile(): Promise<{ added: number; removed: number } | null>;
+	/** Healed, DEFERRED (a writer kept a marker database past the bounded wait — nothing applied), or null (store off). */
+	reconcile(): Promise<
+		| { added: number; removed: number; deferred?: undefined }
+		| { deferred: { busy_target: string } }
+		| null
+	>;
 }
 
 let nativeMediaIndexOps: NativeMediaIndexOps | null = null;
@@ -1004,7 +1011,12 @@ export function pendingRowElementTipo(
  * configured here and now) — pending, retried.
  */
 export type PublishedFileResolution =
-	| { kind: 'file'; path: string }
+	| {
+			kind: 'file';
+			path: string;
+			/** The target the file belongs to: its lock key is `files:<type>/<dirLabel>`. */
+			dirLabel: string;
+	  }
 	| { kind: 'terminal'; reason: string }
 	| { kind: 'unavailable'; reason: string };
 
@@ -1084,7 +1096,7 @@ export async function resolvePublishedFile(
 	if (path === null) {
 		return { kind: 'terminal', reason: `'${type}' publishes no per-record file` };
 	}
-	return { kind: 'file', path };
+	return { kind: 'file', path, dirLabel: service };
 }
 
 /**
@@ -1112,8 +1124,23 @@ export type UnlinkOutcome =
 /**
  * Unlink a file element's published copy (+ rdf legacy '{base}_*.rdf'
  * variants). 'unpublished' on success INCLUDING the nothing-published
- * idempotent case; 'pending' when the root is unavailable or an unlink
- * fails; 'terminal' when no path can ever exist for this element.
+ * idempotent case; 'pending' when the root is unavailable, an unlink fails, or
+ * an EXCLUSIVE writer holds the target; 'terminal' when no path can ever exist
+ * for this element.
+ *
+ * A DELETE-ONLY DOOR of the publication target (target_lock.ts
+ * withDeleteDoorLock, key `files:<type>/<service>`, SHARED — the same lock a
+ * run's batch and close hold exclusively, WC-2026-09-30-diffusion-target-fence
+ * R2): a run's batch revalidates its records UNDER that lock, so a record
+ * deleted from the archive is either seen gone by the batch or unlinked after
+ * it — never written back over the unlink; and a close never archives a
+ * directory this door is changing. On the request path a held target is not
+ * waited for (the row stays pending for the retry queue); inside a patient
+ * drain it is, on the drain's one budget.
+ *
+ * DURABLE (core/files/durable.ts): the directory is fsynced after the unlinks
+ * — the dd1758 row flips to 'unpublished' on this answer, and an unlink a
+ * power cut takes back would put an unpublished record back on the public tier.
  */
 export async function unlinkPublishedFiles(
 	elementTipo: string,
@@ -1132,27 +1159,37 @@ export async function unlinkPublishedFiles(
 		);
 		if (resolved.kind === 'terminal') return resolved;
 		if (resolved.kind === 'unavailable') return { kind: 'pending', reason: resolved.reason };
-		const filePath = resolved.path;
-		const toUnlink: string[] = [];
-		if (existsSync(filePath)) toUnlink.push(filePath);
-		if (type === 'rdf') {
-			const slash = filePath.lastIndexOf('/');
-			const dir = filePath.slice(0, slash);
-			const base = filePath.slice(slash + 1).replace(/\.rdf$/, '');
-			if (existsSync(dir)) {
-				for (const name of readdirSync(dir)) {
-					if (name.startsWith(`${base}_`) && name.endsWith('.rdf')) {
-						toUnlink.push(`${dir}/${name}`);
-					}
-				}
-			}
+		const held = await withDeleteDoorLock(fileTargetLockKey(type, resolved.dirLabel), async () =>
+			unlinkRecordFiles(resolved.path, type),
+		);
+		if (!held.acquired) {
+			return {
+				kind: 'pending',
+				reason:
+					'publication target busy (another writer holds it) — the unpublish stays pending for the retry queue',
+			};
 		}
-		for (const path of toUnlink) unlinkSync(path);
-		return { kind: 'unpublished' }; // empty toUnlink = already removed (idempotent)
+		return { kind: 'unpublished' }; // nothing to unlink = already removed (idempotent)
 	} catch (error) {
 		console.error('published-file unlink failed:', error);
 		return { kind: 'pending', reason: 'published-file unlink failed (see log)' };
 	}
+}
+
+/** Unlink one record's file (+ the rdf legacy variants), then fsync the directory. */
+function unlinkRecordFiles(filePath: string, type: string): void {
+	const slash = filePath.lastIndexOf('/');
+	const dir = filePath.slice(0, slash);
+	const toUnlink: string[] = [];
+	if (existsSync(filePath)) toUnlink.push(filePath);
+	if (type === 'rdf' && existsSync(dir)) {
+		const base = filePath.slice(slash + 1).replace(/\.rdf$/, '');
+		for (const name of readdirSync(dir)) {
+			if (name.startsWith(`${base}_`) && name.endsWith('.rdf')) toUnlink.push(`${dir}/${name}`);
+		}
+	}
+	for (const path of toUnlink) unlinkSync(path);
+	if (toUnlink.length > 0) fsyncDirectory(dir);
 }
 
 /**

@@ -400,7 +400,10 @@ to the computed sources. Ledger:
   WC-067.
 - **Data plane = spawned runner.** `diffuse` enqueues a durable job; a
   scheduler claims it (`FOR UPDATE SKIP LOCKED`, global limit default 2,
-  uniqueness: one active run per element+section) and spawns
+  uniqueness: one active run per element+section — a second `diffuse` ATTACHES
+  only when it is the same owner's identical run, anything else is the typed
+  409 `diffusion.target_busy`, and the follow stream reads the job through an
+  owner-scoped getter: DIFF-3, `WC-2026-09-30-diffusion-attach-scope`) and spawns
   `<this process' bun> run src/diffusion/runner.ts --job <uuid> --epoch <n>` — same
   codebase, own process, own memory ceiling, killable. The interpreter is
   `process.execPath`, never a bare `bun` off `$PATH`: a deployment pins an
@@ -427,12 +430,15 @@ to the computed sources. Ledger:
   reachability requirements (Postgres, target DBs, shared media mount for file
   formats) and keep zero runner↔server RPC.
 - **Durable jobs:** TS-owned tables `diffusion_jobs` + `diffusion_job_events`
-  (created by the TS tree, accessed only through `src/core/db/`). Job row:
+  + `diffusion_job_ledger` (created by the TS tree, accessed only through
+  `src/core/db/`). Job row:
   server-UUID `job_id` (the capability), `client_process_id` (the client's
   deterministic label — correlation only, never authorization), owner,
   immutable sanitized `spec`, `state`
   (queued/running/completed/failed/cancelled/interrupted), `checkpoint`
-  (committed section_id cursor + per-target counts + attempt), totals/ETA,
+  (`{v: 2, cursor, run_started_at, processed, batch_seq, writer, errors}` —
+  the primary keyset position, the number of committed batches, the writer
+  session's own resumable state, the run's error lines so far), totals/ETA,
   bounded errors, runner pid/host, heartbeat. dd1758 remains the *user-facing*
   ledger; the queue is infrastructure (matrix-as-state is wrong for high-churn
   heartbeats/checkpoints — deliberate, documented exception to "no bespoke
@@ -464,13 +470,92 @@ to the computed sources. Ledger:
   Gates: `test/unit/queue_fence_native.test.ts`,
   `test/unit/queue_fence_tripwire.test.ts`. Wire:
   `engineering/wire_contract/WC-2026-09-05-diffusion-lease-epoch-fence.md`.
-- **Crash recovery:** boot + periodic sweep marks STALE-HEARTBEAT jobs
-  `interrupted` and auto-requeues from checkpoint (budget in `max_attempts`).
-  Liveness is the heartbeat alone — never `runner.pid`, see the sweep note
-  above; the epoch fence, not pid death, is what stops the old holder. Safe because
-  chunks are deterministic ordered slices and every write is an idempotent
-  upsert or temp+rename file. Keystone gate: kill -9 mid-run, resume →
-  byte-identical final artifacts.
+- **The TARGET is fenced too (DIFF-2, 2026-09-30).** The epoch fences the job
+  ROW; what two writers can corrupt is the publication TARGET (a MariaDB
+  database, a files directory). Every durable effect of a run — the schema
+  step, each batch, the close — is ONE unit (`jobs/target_fence.ts`
+  `withFencedBatch`, over the bridge's lock `core/diffusion_bridge/target_lock.ts`
+  — a core↔diffusion contract, so core's own doors can take it): one Postgres
+  transaction that takes the target's advisory
+  lock (`pg_try_advisory_xact_lock(17580002, hashtext('sql:<database>' |
+  'files:<format>/<label>'))`, a try-lock loop that holds no connection while
+  the target is busy and writes the busy message to the job row once), THEN
+  re-reads the lease `FOR KEY SHARE`, then does the target I/O and the batch's
+  tail (dd1758 rows — fatal on failure, run ledger, progress, checkpoint),
+  committed together. A runner revoked while it waited writes nothing; the
+  sweep takes stale rows `FOR UPDATE SKIP LOCKED` and so can never revoke a
+  runner mid-batch (heartbeat / progress / cancel are NO KEY UPDATE and never
+  wait on it); a record deleted while its batch waited is revalidated under the
+  lock and unpublished. The other target doors take the same key: the record
+  delete executor (on the request path it never waits — a busy target stays
+  pending in dd1758; a retry drain — a run's start, the
+  `retry_pending_deletions` action, the maintenance widget's retry — waits one
+  10 s budget in all), the ghost
+  unpublish, the lang sweep, the media-index apply. The two DELETE-ONLY doors
+  (record delete — the MariaDB executor and core's files unlink alike — and
+  ghost unpublish) take it SHARED: unpublishers never exclude each other, only
+  the exclusive writers (runner unit, lang sweep, media-index apply). The per-target
+  exclusion is batch-granular: two runs on one target interleave batch by
+  batch, and since consolidated artifacts are built from each run's own ledger,
+  that is equivalent to running them one after the other. ONLY a fence unit may
+  hold a Postgres transaction across target I/O (no matrix row locks, bounded
+  by `idle_in_transaction_session_timeout` = 300 s for a FROZEN holder; a live
+  unit's timer keepalive resets the clock however long its target step takes);
+  a runner needs a pool of at least two connections (the unit + its
+  heartbeat). Because progress, checkpoint and the terminal transition ride
+  the unit, their liveness stamps are the WALL clock (`clock_timestamp()`,
+  never the transaction-start `now()`), and a heartbeat stamp never moves
+  `heartbeat_at` backwards (`GREATEST`): a long unit's commit must not set the
+  heartbeat back to when it began, or the sweeper — its KEY SHARE gone at
+  commit — would revoke a healthy runner. The rdf/xml `abort()` sweeps no temps — it may run unfenced, and
+  a `.tmp-*` in a shared directory may be another session's; the runner's
+  FENCED close sweeps a crashed holder's leftovers.
+  Gate: `test/unit/diffusion_target_fence_native.test.ts`. Wire:
+  `engineering/wire_contract/WC-2026-09-30-diffusion-target-fence.md`.
+  Ledgered residuals: a thawed zombie whose fence session Postgres killed can
+  finish at most its one in-flight batch (a MariaDB `GET_LOCK` would close it
+  for sql targets — owner call); a live unit whose
+  target statement never returns (a lock wait, a half-open connection) holds
+  its target — and every door waiting on it — until the runner is killed:
+  the bound (a target socket/statement timeout, or a per-unit wall-clock
+  ceiling) is an owner call (WC R4). The media-index store's apply
+  doors ARE fenced, in `targets/mediastore/media_index.ts`: the reconcile
+  checks before it writes (a database it did not hold voids the round) and
+  the rebuild syncs each database under its fence (gate
+  `test/unit/media_index_reconcile_fence_native.test.ts`).
+- **Crash recovery:** boot + periodic sweep requeues STALE-HEARTBEAT jobs from
+  their checkpoint (budget in `max_attempts`). Liveness is the heartbeat alone —
+  never `runner.pid`, see the sweep note above; the epoch fence, not pid death,
+  is what stops the old holder. THE RUN LEDGER (DIFF-1, 2026-09-30) is what
+  makes the resume exact: a run's state is not its keyset cursor — the relation
+  FRONTIER (records queued by processed records, drained after the primaries),
+  the USED set and the per-record ARTIFACTS the run published all lived only
+  in the dead runner's memory. (PHP's queue-time publishable overrides are NOT
+  carried — neither in-run nor in the ledger: the drain asks the gate against
+  the record as it is when drained, so a record unpublished while a run was
+  down is never republished by its resume; WC-2026-09-30-diffusion-run-ledger.) Each
+  committed batch now appends those transitions (`queue`/`open`/`used` from the
+  resolver, `wrote`/`removed` from the writer) to the job-scoped
+  `diffusion_job_ledger` in its own unit; a resumed runner replays them
+  (`resolve/frontier_ledger.ts`) into the exact frontier, restarts the
+  primaries after the cursor, reopens its writer from the checkpoint (csv/json
+  truncate their job-scoped `.part-<job>` partial back to the checkpointed
+  durable length), and the close consolidates the WHOLE run from the ledger's
+  manifest. A pre-ledger checkpoint (no `v: 2`) restarts from zero. A cancelled
+  run never consolidates (the ledger is kept: an admin requeue resumes it); a
+  completed run clears it. What the ledger records is ON DISK before it is
+  recorded (`src/core/files/durable.ts`, 2026-10-01): each file fsynced before
+  its rename, a batch's directory fsynced once in the writer's `checkpoint()`,
+  every close artifact (snapshot, archive, merged document) and its directory
+  fsynced before the close returns — and the partial never unlinked before the
+  snapshot replacing it is durable; a power cut cannot leave a "completed" run
+  with empty, missing or resurrected files (gate: diffusion_file_writers
+  "what survives a power cut"). Gates: `test/unit/diffusion_resume_ledger_native.test.ts`
+  (a crash among the primaries, a crash inside the frontier drain, a real
+  kill -9 → byte-identical trees; exactly one dd1758 row per primary; cancel
+  leaves the published archive unchanged), `test/unit/diffusion_frontier_replay.test.ts`
+  (every cut of a real resolution). Wire:
+  `engineering/wire_contract/WC-2026-09-30-diffusion-run-ledger.md`.
 - **Progress:** SSE handlers are views over the durable job row — any server
   instance can stream any runner's progress. Keep the old status vocabulary and
   every field `render_tool_diffusion.js` consumes; echo `client_process_id` so
@@ -502,17 +587,31 @@ to the computed sources. Ledger:
 ```ts
 interface DiffusionWriter {
   readonly format: string;                          // ontology properties->diffusion->type
-  readonly consumes: 'projected-rows' | 'record-ir';
-  open(plan: PublicationPlan, run: RunContext): Promise<WriterSession>;
+  open(plan: PublicationPlan, context?: {jobId: string; resume: unknown | null}): Promise<WriterSession>;
 }
 interface WriterSession {
+  readonly continuity: 'fresh' | 'resumed' | 'restart_required';
   ensureSchema(): Promise<void>;      // ONCE per run, serialized per table (DDL auto-commits!)
-  write(input: ProjectedRow | RecordIR): Promise<void>;
-  remove(ref: {sectionTipo: string; sectionId: number}): Promise<void>;  // unpublish + delete propagation
-  close(): Promise<WriterRunSummary>; // merges/zips, marker union, counts
-  abort(): Promise<void>;             // temp-artifact cleanup
+  writeRows(section, rows): Promise<WriteBatchResult>;
+  removeRecords(section, ids): Promise<WriteBatchResult>;  // unpublish + delete propagation
+  takeArtifacts(): ArtifactEvent[];   // per-record files wrote/removed → the run ledger
+  checkpoint(): Promise<unknown>;     // durability barrier; the resumable state (JSON)
+  runSummary(): WriterRunSummary;     // counts so far (resumed counts included)
+  close(ctx?: WriterCloseContext): Promise<WriterRunSummary>; // consolidate the RUN (ledger manifest)
+  abort(): Promise<void>;             // release handles; never consolidates, never sweeps shared temps
 }
 ```
+
+Consolidated artifacts (the rdf/xml merged document, every zip) are built
+STREAMED in bounded memory (PERF-2/DIFF-4, 2026-09-30): the merge reads one
+part at a time and writes through a file handle; `createZip` stores each file
+from disk twice through ONE open handle (CRC + size, then bytes —
+`core/files/zip.ts` `addStoredFile`; an unlink after the open cannot break the
+entry), byte-identical to the frozen in-memory STORE writer, refusing
+duplicate entry names (case-insensitive), typed, and an empty archive — typed
+by default, or landing nothing (`empty: 'none'`, the markdown close over a
+manifest whose files were all unpublished mid-close). Gate:
+`test/unit/diffusion_artifact_rss_native.test.ts` (spawned-child peak RSS).
 
 Registry keyed by the ontology `type` string; unknown type = loud `validate`
 error (never a silent no-op). Adding a community format = ontology extension +
@@ -737,7 +836,10 @@ gates. The standing rule: no third resolution walker may ever be written.
   fixtures; merge/zip products valid; `.publication/` marker tree correct after
   publish and delete. Spot-check against old-engine output where convenient.
 - **P4 — Durability & scale.** *Gates:* kill -9 runner mid-run → resume →
-  byte-identical artifacts; server restart mid-run → job resumes; cancel
+  byte-identical artifacts — CLOSED 2026-09-30 by the run ledger:
+  `test/unit/diffusion_resume_ledger_native.test.ts` (before it the claim was
+  false: a resume lost the relation frontier and archived only the resumed
+  session's files); server restart mid-run → job resumes; cancel
   semantics; throughput benchmark vs old engine recorded (expect
   order-of-magnitude on SQL).
 - **P5 — Convergence & cutover.** Admin ops re-homed; maintenance widget
@@ -763,7 +865,8 @@ gates. The standing rule: no third resolution walker may ever be written.
   Compatibility of previously published **v6 diffusion data** is a separate
   migration process, out of scope.
 - Copied client works with zero edits; runs survive disconnects, logouts,
-  restarts; kill/resume is byte-equivalent.
+  restarts; kill/resume is byte-equivalent (gate:
+  `test/unit/diffusion_resume_ledger_native.test.ts`).
 - Runner placement (local spawn vs separate machine) is a deployment choice; no
   runner↔server RPC exists.
 - Security posture strictly stronger: no public engine socket, no internal

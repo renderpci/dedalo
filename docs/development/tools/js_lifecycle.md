@@ -26,6 +26,7 @@ wire_tool(tool_x, render_tool_x)
 // tool_x.prototype.render  = tool_common.prototype.render
 // tool_x.prototype.destroy = common.prototype.destroy
 // tool_x.prototype.refresh = common.prototype.refresh
+// tool_x.prototype.tool_request = tool_common.prototype.tool_request
 // tool_x.prototype.edit    = render_tool_x.prototype.edit   (when defined)
 // tool_x.prototype.list    = render_tool_x.prototype.list   (when defined)
 ```

@@ -29,13 +29,18 @@ import { config } from '../../../config/config.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import {
+	insertMatrixRecordIfAbsent,
 	insertMatrixRecordWithCounter,
 	insertMatrixRecordWithExplicitId,
+	type MatrixWriteValues,
 } from '../../db/matrix_write.ts';
-import { sql } from '../../db/postgres.ts';
+import { isInTransaction, sql, withTransaction } from '../../db/postgres.ts';
+import { openEpochIfReborn } from '../../db/record_generation.ts';
+import { recordBulkBirth } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { currentRequestContext } from '../../security/request_context.ts';
+import { bulkIdOf } from './bulk_capture.ts';
 
 /** Audit component tipos (PHP section::get_metadata_definition + relation types). */
 export const CREATED_BY_USER = 'dd200';
@@ -102,17 +107,103 @@ async function resolveSectionLabel(sectionTipo: string): Promise<string> {
 	return '';
 }
 
-/** Does a row already sit at this address? (the tolerated-conflict pre-check above). */
-async function recordExists(
+/** The options of createSectionRecord (see its header). */
+export interface CreateRecordOptions {
+	conflictTolerant?: boolean;
+	filterData?: readonly Record<string, unknown>[];
+	/**
+	 * The dd800 run creating this record (WC …-bulk-revert-undo-log). When the
+	 * call really inserts the row, the run's BIRTH marker is written with it
+	 * (time_machine.ts recordBulkBirth) — the undo log's proof that the run's
+	 * revert may remove the record. Never for the conflict-tolerant no-op.
+	 */
+	bulkProcessId?: number | null;
+}
+
+/**
+ * Was the row at the address WRITTEN by the ambient transaction? An xmin test,
+ * for a caller that runs the conflict-tolerant create inside its OWN transaction and must know whether the
+ * record is the one it created or one a concurrent writer committed first (the
+ * CSV importer: a row whose id was taken after its existence snapshot is NOT a
+ * create, and is authorized as a write to that record). Asked right after the
+ * create, before the caller writes the row: a later write by the same
+ * transaction would also stamp its xmin. Outside a transaction there is no
+ * "this transaction" to compare with — refused loudly, never a silent false.
+ * LIMIT: under a SAVEPOINT the row's xmin is the subtransaction's id, and this
+ * answers false for a row the caller did insert — createSectionRecord itself
+ * therefore decides its birth by the insert statement, never by this.
+ */
+export async function bornInCurrentTransaction(
 	table: string,
 	sectionTipo: string,
 	sectionId: number,
 ): Promise<boolean> {
+	if (!isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message: 'bornInCurrentTransaction: called outside a transaction (no xid to compare)',
+			coordinates: { table, section_tipo: sectionTipo, section_id: sectionId },
+		});
+	}
 	const rows = (await sql.unsafe(
-		`SELECT 1 FROM "${table}" WHERE section_tipo = $1 AND section_id = $2 LIMIT 1`,
+		`SELECT xmin = pg_current_xact_id_if_assigned()::xid AS mine
+		 FROM "${table}" WHERE section_tipo = $1 AND section_id = $2`,
 		[sectionTipo, sectionId],
-	)) as unknown[];
-	return rows.length > 0;
+	)) as { mine: boolean | null }[];
+	return rows[0]?.mine === true;
+}
+
+/**
+ * The run's BIRTH marker for a row this call really inserted — nothing otherwise.
+ * It carries the record's BIRTH IMAGE: the ontology-declared defaults the INSERT
+ * wrote (projects filter, dato_default — record_defaults.ts), which no save
+ * wrote and so no undo pair records. The revert needs them to tell the record's
+ * birth state from a later write by someone else (bulk_revert_records.ts).
+ *
+ * THE GENERATION FENCE (`explicitId`). A counter allocation opens its epoch in
+ * the INSERT itself (matrix_write.ts); the matrix-level explicit-id insert opens
+ * none. But THIS door only ever creates a NEW record (an undelete re-inserts
+ * through tool_time_machine's insertMatrixRecordIfAbsent, never here), so an
+ * explicit-id insert that really inserted at an address carrying history is a
+ * REBIRTH, bulk run or not, and opens the epoch. The generation epoch is what
+ * the bulk revert trusts to tell a cascade-deleted record from one born at its
+ * address since (bulk_revert_records.ts isRebornSince) — a door that re-used an
+ * address without opening one would let the revert pour the dead record's
+ * snapshot into the new one (2026-09-27 review). For a BULK create the stake is
+ * also the undo log: a record is being born where a dead one lived (a CSV
+ * re-imported with its section_id column after the record was deleted), and
+ * the dead record's undo log — an
+ * earlier run's birth marker and B/A pairs, byte-identical when the same CSV is
+ * imported again — must not read as the new record's: reverting that earlier
+ * run would restore its BEFORE (absent) over every key of this run and delete
+ * the record (the chain and conflict checks cannot tell two records with the
+ * same content apart). So the epoch is opened here, in the insert's
+ * transaction, BEFORE the marker — the marker sits at or above it
+ * (recordBulkBirth's contract). A no-op on a fresh address.
+ */
+async function recordBirthMarker(
+	inserted: boolean,
+	bulkProcessId: number | null | undefined,
+	record: {
+		sectionTipo: string;
+		sectionId: number;
+		userId: number;
+		now: Date;
+		birthImage: Record<string, unknown>;
+		explicitId: boolean;
+	},
+): Promise<void> {
+	if (!inserted) return;
+	if (record.explicitId) await openEpochIfReborn(record.sectionTipo, record.sectionId);
+	const bulkId = bulkIdOf(bulkProcessId);
+	if (bulkId === null) return;
+	await recordBulkBirth({
+		sectionTipo: record.sectionTipo,
+		sectionId: record.sectionId,
+		userId: record.userId,
+		bulkId,
+		timestamp: dbTimestamp(record.now),
+		image: record.birthImage,
+	});
 }
 
 /**
@@ -195,10 +286,7 @@ export async function createSectionRecord(
 	userId: number,
 	now: Date = new Date(),
 	sectionId?: number,
-	options: {
-		conflictTolerant?: boolean;
-		filterData?: readonly Record<string, unknown>[];
-	} = {},
+	options: CreateRecordOptions = {},
 ): Promise<number> {
 	// Consultation-only sections are read-only for every caller (Activity dd542,
 	// Time Machine dd15, …). PHP refuses this at section::create_record:452; the
@@ -234,23 +322,52 @@ export async function createSectionRecord(
 		},
 		date: { ...defaults.date, [CREATED_DATE]: [auditDateItem(now)] },
 	};
-	// THE 'NEW' ACTIVITY ROW needs to know whether this call CREATED the row. The
-	// tolerated-conflict insert answers the requested id either way (matrix_write
-	// opens no epoch and hands the id back), so the race loser — the one caller
-	// that did NOT create anything — is told apart by a pre-check on the address.
-	// Only on that path: an ordinary create allocates a fresh id and cannot
-	// pre-exist. The residual race (a row born between the check and the insert)
-	// costs one surplus NEW row on the address, never a missing one.
-	const preExisted =
-		sectionId !== undefined && options.conflictTolerant === true
-			? await recordExists(table, sectionTipo, sectionId)
-			: false;
-	const newSectionId =
-		sectionId === undefined
-			? await insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)
-			: await insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns, {
-					onConflict: options.conflictTolerant === true ? 'ignore' : 'throw',
-				});
+	// THE INSERT, and whether it BORE the row. The race loser of a tolerated
+	// conflict — the one caller that did NOT create anything — is told apart BY
+	// THE INSERT STATEMENT ITSELF (ON CONFLICT DO NOTHING … RETURNING answers a
+	// row only when it inserted one): exact, with no window
+	// between a pre-check and the insert, and exact under a savepoint, where a
+	// row's xmin is a subtransaction's. Two consumers need that answer to be exact: the
+	// 'NEW' activity row below, and a bulk run's BIRTH marker (a surplus one
+	// would let the run's revert delete a record it never created). The marker
+	// joins the insert's transaction, after any epoch the insert opened.
+	// THE BIRTH COLUMNS (record_write.ts prepareBirthColumns — the one law every
+	// record birth stores by): a relation default on an `_hi` component gets its
+	// ancestor index in the insert, and a default on a covered observer slot is
+	// left out (a mirror is derived — recomputed after the birth). Dynamic import:
+	// record_write.ts statically imports this module (import_scc_tripwire).
+	const { prepareBirthColumns } = await import('../../section_record/record_write.ts');
+	const pinned = await prepareBirthColumns(jsonbColumns as MatrixWriteValues);
+	const { newSectionId, inserted } = await withTransaction(async () => {
+		// The birth is the STATEMENT's answer: a counter allocation and an
+		// explicit-id insert that throws on conflict inserted or threw; the
+		// conflict-tolerant one is ON CONFLICT DO NOTHING … RETURNING
+		// (insertMatrixRecordIfAbsent), which returns a row only when IT inserted
+		// one. Never the row's xmin: under a SAVEPOINT that is the SUBtransaction's
+		// id, and a row this call did insert would read "not mine" — no birth
+		// marker, no NEW activity row, no epoch (tool_import_rdf runs every op under
+		// a savepoint — 2026-10-01 review; gate: rdf_import_execute_native).
+		let id = sectionId ?? 0;
+		let born = true;
+		if (sectionId === undefined) {
+			id = await insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns);
+		} else if (options.conflictTolerant === true) {
+			born = await insertMatrixRecordIfAbsent(table, sectionTipo, sectionId, jsonbColumns);
+		} else {
+			await insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns, {
+				onConflict: 'throw',
+			});
+		}
+		await recordBirthMarker(born, options.bulkProcessId, {
+			sectionTipo,
+			sectionId: id,
+			userId,
+			now,
+			birthImage: defaults,
+			explicitId: sectionId !== undefined,
+		});
+		return { newSectionId: id, inserted: born };
+	});
 
 	// THE POST-WRITE OBLIGATIONS. This writer inserts through matrix_write
 	// DIRECTLY, so it never passes the record_write.ts chokepoint that fires for
@@ -275,6 +392,10 @@ export async function createSectionRecord(
 	//  - the RAG index event (DATA-18): a born-empty record enqueues cheaply
 	//    (ON CONFLICT dedupes in the queue) and uniformly — the alternative was
 	//    one lifecycle door exempt "because it is nearly harmless".
+	//  - the observer ledger (CLOSURE_PLAN Step 2): the record's BIRTH — its
+	//    relation defaults (a projects filter, a `dato_default` locator) are new
+	//    edges, and every target an observer mirrors must list the record; a
+	//    race loser created nothing, and declares nothing.
 	// Fired unconditionally, including the conflictTolerant no-op (the S1-02
 	// materialize-on-save race loser) — that path is inside a transaction and
 	// every obligation self-defers or joins it. Dynamic import: record_write.ts
@@ -289,6 +410,9 @@ export async function createSectionRecord(
 				bag !== null && typeof bag === 'object' ? Object.keys(bag) : [],
 			),
 			rag: 'index',
+			observed: inserted
+				? { kind: 'birth', columns: jsonbColumns, selfRecompute: pinned, actor: userId, now }
+				: { kind: 'none', reason: 'the materialize-on-save race loser created nothing' },
 		},
 	);
 
@@ -300,7 +424,7 @@ export async function createSectionRecord(
 	// logActivity swallows its own errors. Skipped for the race loser (above):
 	// nothing was created, so a NEW row would describe an event that did not
 	// happen.
-	if (!preExisted) {
+	if (inserted) {
 		const { logActivity, hostFromClientIp } = await import('../../api/handlers/activity_log.ts');
 		await logActivity(
 			{

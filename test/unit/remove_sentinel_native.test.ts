@@ -284,8 +284,10 @@ describe('the remove sentinel — an id-less remove destroys nothing', () => {
 		const cleared = await save([{ action: 'clear', value: null }]);
 		expect(cleared.ok).toBe(true);
 		expect(await storedItems()).toEqual([]);
-		// A wipe is a change like any other: the Time Machine can undo it.
-		expect(await tmRowCount()).toBe(tmBefore + 1);
+		// A wipe is a change like any other: the Time Machine can undo it — one
+		// row per language it emptied (two lanes: one row is one language,
+		// WC-2026-09-27-bulk-revert-undo-log).
+		expect(await tmRowCount()).toBe(tmBefore + 4);
 	});
 
 	test('E. the MCP door refuses a remove with no item_id, before permissions or the engine', async () => {
@@ -659,12 +661,12 @@ const DOORS: Record<string, { proof: string; reason: string }> = {
 	'src/core/section/record/save_component.ts': {
 		proof: 'tests A, B, C, D — behavioural, through the real save door',
 		reason:
-			'THE CHOKEPOINT. saveComponentData refuses an id-less remove before withTransaction opens (the answer depends only on the incoming changes, so there is nothing to roll back). A THROW, not ok:false, because dd_core_api wraps ok:false in record.save_failed (internal/500, operator disclosure) and the reason would never reach the curator whose delete button did nothing.',
+			'THE CHOKEPOINT. saveComponentData refuses an id-less remove before withTransaction opens (the answer depends only on the incoming changes, so there is nothing to roll back). A THROW, not ok:false, because dd_core_api wraps ok:false in record.save_failed (internal/500, operator disclosure) and the reason would never reach the curator whose delete button did nothing. ONE model is routed AHEAD of it: component_relation_children owns no items (its entries are computed, they carry no id), so its save goes to the write-through (relations/children_write.ts), which accepts a remove only BY LOCATOR and refuses one naming no record (request.invalid_data, never a wipe — relation_children_write_through_native).',
 	},
 	'src/ai/mcp/tools/records_write.ts': {
 		proof: 'tests E, E2 — behavioural, with a principal holding no grants',
 		reason:
-			'THE AGENT DOOR, and the one where the defect was CONFIRMED empirically: item_id is optional in the schema (zod validates one field at a time), and an omitted item_id mapped straight onto id:null — so an agent asked to "remove the English title" wiped every other language and was told ok:true. The conditional requirement lives in the handler, ahead of the permission probe.',
+			'THE AGENT DOOR, and the one where the defect was CONFIRMED empirically: item_id is optional in the schema (zod validates one field at a time), and an omitted item_id mapped straight onto id:null — so an agent asked to "remove the English title" wiped every other language and was told ok:true. The conditional requirement lives in the handler, ahead of the permission probe. ONE model is let past it, by the engine\'s own test (the data tipo\'s model, after the alias hop): component_relation_children, whose child is removed BY LOCATOR in value (user decision 2026-09-27, plan item 2) and which the engine routes to the write-through ahead of its sentinel; every other model is still refused here (relation_children_write_through_native: the MCP remove-by-locator unlinks exactly that child with its TM row; the same shape on input_text / relation_parent refuses at the door, before permissions).',
 	},
 	'client/dedalo/core/component_common/js/component_common.js': {
 		proof: 'the G block — the shipped update_data_value, executed',
@@ -790,6 +792,7 @@ type Verdict =
 	| 'clear-pending'
 	| 'unresolved-id'
 	| 'search-local'
+	| 'locator-named'
 	| 'suite-fixture';
 
 interface CensusRow {
@@ -828,6 +831,14 @@ interface CensusRow {
  *                  breaks a daily gesture is how a data-loss fix gets reverted
  *                  wholesale.)
  *                  Migrating them to `clear` is tidiness, not a fix. SHRINK-ONLY.
+ *   locator-named  a model whose entries carry NO item id (`removes_by_locator`:
+ *                  component_relation_children, computed entries) names the
+ *                  record to remove by the LOCATOR in `value`, with `id:null`.
+ *                  Not the wildcard: the client doors accept it only with a full
+ *                  locator on such a model (component_common
+ *                  names_record_locator), and the server write-through refuses a
+ *                  remove naming no record (request.invalid_data —
+ *                  relation_children_write_through_native).
  *   suite-fixture  a client-suite fixture, derived by path (see below).
  */
 const CENSUS: Record<string, CensusRow> = {
@@ -836,7 +847,7 @@ const CENSUS: Record<string, CensusRow> = {
 		sites: 1,
 		verdict: 'guarded-door',
 		reason:
-			'`id: input.item_id ?? null` is the construction the agent door still uses for update/insert; the remove case is refused above it, before the permission probe (test E).',
+			'`id: input.item_id ?? null` is the construction the agent door still uses for update/insert; the remove case is refused above it, before the permission probe (test E) — except on a component_relation_children field, where the null id is the shape the write-through expects (removal BY LOCATOR in value; an id-less remove naming no record refuses there, request.invalid_data).',
 	},
 
 	// --- clear-pending: EMPTY on 2026-08-30. Every deliberate wipe was ported
@@ -891,7 +902,8 @@ const CENSUS: Record<string, CensusRow> = {
 	'client/dedalo/core/component_date/js/render_edit_component_date.js': {
 		sites: 1,
 		verdict: 'unresolved-id',
-		reason: '_do_remove(id, …) fed from `value[key]?.id || null`.',
+		reason:
+			'build_date_changed_data_item(data_value, id) — the ONE remove builder (the remove button and an emptied input both call it); it returns null for an id-less slot, which this lexical scan cannot see.',
 	},
 	'client/dedalo/core/component_password/js/component_password.js': {
 		sites: 1,
@@ -913,6 +925,14 @@ const CENSUS: Record<string, CensusRow> = {
 		sites: 1,
 		verdict: 'unresolved-id',
 		reason: 'unlink one locator with an entry_id resolved from the loaded (paginated) page.',
+	},
+
+	// --- locator-named (no item ids exist; the locator IS the name) --------
+	'client/dedalo/core/component_relation_children/js/component_relation_children.js': {
+		sites: 1,
+		verdict: 'locator-named',
+		reason:
+			'get_unlink_changed_data: `{action:"remove", id:null, value:{section_tipo, section_id}}` — the computed children carry no item id, so the child record is named by its locator (user decision 2026-09-27); the server removes exactly that child (WC-2026-10-02-relation-children-write-through).',
 	},
 
 	// --- search-local (never reaches the wire; carved out by mode) ---------
@@ -945,10 +965,11 @@ const CENSUS: Record<string, CensusRow> = {
  * still visible — it moved 11 -> 13 on 2026-08-30 when
  * test_component_common_changed_data.js was rewritten to FENCE the id-less
  * remove (a refusal case, a key case and the search carve-out) instead of
- * asserting the wipe it used to bless.
+ * asserting the wipe it used to bless; 13 -> 14 on 2026-10-02 when
+ * test_component_relation_children.js pinned the by-locator unlink shape.
  */
 const FIXTURE_TREE = 'client/dedalo/test/';
-const FIXTURE_SITES = 13;
+const FIXTURE_SITES = 14;
 
 /** Walk the three trees; the same file set the scan below reports on. */
 function scanFiles(trees: readonly string[]): string[] {

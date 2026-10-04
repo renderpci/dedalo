@@ -96,8 +96,9 @@ export interface RelationEmitContext {
 
 /**
  * One relation model's particularity. Phase A surface: row emission. The
- * resolver decides internally per mode (e.g. the select family only diverges
- * from the portal path in list/edit modes — exactly like the PHP controllers).
+ * resolver decides internally per mode (e.g. the select family answers label
+ * strings in list mode and locators + datalist in every other mode — exactly
+ * like the PHP controllers' `case 'edit': default:`).
  */
 export interface RelationModelResolver {
 	/** Canonical model name(s) this resolver serves (registration is explicit below). */
@@ -180,6 +181,18 @@ export type RelationSearchFragmentBuilder = (
 ) =>
 	| import('../search/builders/types.ts').BuilderResult
 	| Promise<import('../search/builders/types.ts').BuilderResult>;
+
+/**
+ * Relation models whose search does NOT read stored forward locators: their
+ * value is computed (the dedicated pipelines {@link getRelationSearchFragmentBuilder}
+ * dispatches to), so a multi-hop path through them unnests nothing — the
+ * request_config search-path expansion (request_config/search_display_paths.ts)
+ * never hops through one.
+ */
+export const COMPUTED_RELATION_SEARCH_MODELS: ReadonlySet<string> = new Set([
+	'component_relation_children',
+	'component_relation_index',
+]);
 
 /**
  * The fragment builder for a relation-column model. Models whose descriptor

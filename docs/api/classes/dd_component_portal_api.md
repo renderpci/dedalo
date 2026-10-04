@@ -29,7 +29,16 @@ Remove matching locators from a relation component's stored data. This is the se
 
 ### Authorization
 
-Section **write**: permission level ≥ 2 on `source.section_tipo`, which additionally caps consultation-only sections at read. It is the section-level gate, not an admin flag — an ordinary cataloguer running "delete index" must be able to finish the removal, or the client has already stripped the text marks and the locator is left behind as an orphan.
+The write door, in one order, before anything is read, locked or written:
+
+1. **Section**: permission level ≥ 2 on `source.section_tipo`, which caps consultation-only sections at read.
+2. **Field**: permission level ≥ 2 on the (`section_tipo`, `tipo`) pair. A user manager cannot unlink their own profile, active or administrator flag (the own-record rule of `dd128`).
+3. **Record**: the record must be in the caller's projects. A `section_id` of 0 or below is refused for every caller, administrators included.
+
+Only an authorized caller has `options.locator` validated. Each removed locator also strips its paired dataframe entries, and a slot whose policy deletes the frame's target record asks write access on that target section too.
+
+!!! note
+    This door asks section level 2; [`delete_tag`](dd_component_text_area_api.md#delete_tag), the text-mark half of "delete index", asks the field and the record but no section level. A profile that can edit the transcription field but only read the section gets its marks removed and the locator refused, so the locator is left behind. See `engineering/wire_contract/WC-2026-10-01-delete-locator-write-door.md`.
 
 ### Returns
 
@@ -45,8 +54,10 @@ Envelope: **v2**. A refusal is `{ ok: false, request_id, error: { code, category
 | code | when |
 | --- | --- |
 | `section_id.not_an_address` | `source.section_id` is present but is not a record address. |
-| `request.invalid_options` | `section_tipo`, `tipo`, `section_id` or `options.locator` missing (or `locator` is not an object). |
-| `perm.denied` | section permission level < 2. |
+| `request.invalid_options` | `section_tipo`, `tipo` or `section_id` missing; or, once the caller is authorized, `options.locator` missing or not an object. |
+| `request.invalid` | `section_tipo` or `tipo` is not a valid identifier. |
+| `perm.denied` | section permission level < 2, or (`section_tipo`, `tipo`) permission level < 2 (own-record aware). |
+| `perm.out_of_scope` | the record is outside the caller's projects, or `section_id` is 0 or below (every caller). |
 
 ### Example request
 

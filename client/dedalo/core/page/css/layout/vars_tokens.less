@@ -347,7 +347,7 @@
 	--menu_item_active_fg:     var(--fg_on_accent); // the active item's fill is the indexation amber — dark ink on it, 8.5:1 (audit P1-18)
 	--menu_item_active_accent: transparent;
 	--debug_info_bar_bg:        var(--color_grey_4);
-	--debug_info_bar_text:      var(--color_grey_8);
+	--debug_info_bar_text:      var(--color_grey_9); // #aaaaaa, 5.3:1 on --debug_info_bar_bg #353535 (was grey_8 #6c6c6c, 2.9:1)
 	--checkbox_bg:              var(--color_grey_16);
 	--checkbox_border:          var(--color_grey_8);
 	--checkbox_checked_bg:      var(--color_input_focus); // Dédalo orange, like every native checkbox/radio (accent-color, layout.less)
@@ -382,12 +382,20 @@
 	--modal_overlay_bg_weak:      rgba(0, 0, 0, 0.075);
 	--modal_content_bg:           var(--color_white);
 	--modal_content_shadow:       var(--shadow-4);
-	--modal_header_bg:            var(--color_grey_2); // charcoal: white ink ~13:1; brand orange lives in the accent
+	// THE MODAL HEADER IS ONE MODEL (2026-09-27): a neutral surface, the brand (or
+	// the tool's) colour only as the 4px edge, theme ink on it. Every value is a
+	// var() of a THEME token and dark does NOT redeclare these four: a custom
+	// property is resolved where it is declared, so these compute per theme at
+	// :root. Before, a charcoal bar with literal white ink here and a grey-blue one
+	// in dark forced tool_common to re-point the ink and the shadow-root glyphs
+	// for every tool modal. Gate: tool_header_contract_tripwire.
+	--modal_header_bg:            var(--bg_surface_alt);
 	--modal_header_accent:        var(--color_orange_dedalo); // 4px top stripe (dd-modal.js + layout.less .header)
 	--modal_header_shadow:        var(--shadow-2);
-	--modal_header_color:         #ffffff; // literal white on the charcoal --modal_header_bg
-	--modal_btn_color:            var(--color_white);
-	--modal_btn_hover_color:      var(--color_orange_dedalo); // black vanished on the charcoal header
+	--modal_header_color:         var(--fg_default);
+	--modal_btn_color:            var(--fg_muted); // 1.5rem bold glyphs = large text, 3:1 floor
+	--modal_btn_hover_color:      var(--fg_default);
+	--modal_btn_hover_bg:         color-mix(in srgb, var(--fg_default) 10%, transparent);
 	--modal_mini_header_bg:       var(--color_orange_dedalo);
 	--modal_radius:               var(--radius-lg);
 

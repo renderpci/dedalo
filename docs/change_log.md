@@ -15,9 +15,585 @@ shape by the id under which the source tree records each one
 
 Merged since the last release; these ship with the next one.
 
+!!! warning "Action needed when you update"
+
+    - Every AI request now counts against a daily budget per user, and generated answers need their own permission.
+    - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
+    - The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.
+    - A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.
+    - The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.
+    - Only profiles granted the assistant tool can use the assistant.
+    - The site builder can no longer start its agent units through polkit
+    - Outbound fetches now refuse every IPv6 route to an internal address.
+
 ### For users
 
+#### Security
+
+- **Searching or sorting by a field the user may not see no longer reveals its values.**
+
+    A search on a field of the section itself (not of a linked record) did not check the user's permission on that field, so repeated searches like "starts with A", "starts with B" could reveal a hidden field's value, and sorting by it revealed its order. A filter or a sort on a field the user's profile hides now matches nothing and sorts nothing, and the request carries the usual "some content was not shown" notice. Fields shown to the user through a portal or an autocomplete they are allowed to use remain searchable there — and only there: the server checks that the portal really belongs to the section the request names and that the user's own profile grants it, so a request cannot borrow that allowance by naming some other portal, and the record information fields every user may search (created and modified date and user) stay searchable for everyone. Which section's permissions apply is decided by the records being searched, never by what the request says about them. A sort over several sections at once is applied only when the field is visible to the user in every one of them.
+
+    Wire contract: `WC-2026-09-30-search-root-step-acl`.
+
+- **A search whose conditions are joined by OR at the top level no longer returns records outside the user's projects.**
+
+    When every condition of a search was joined by OR (for example "title contains
+    X **or** title contains Y"), one of the conditions was checked without the
+    user's project restrictions and the other without the section being searched.
+    A user limited to some projects could therefore see records of projects they
+    do not hold. The conditions are now always kept inside those restrictions.
+    Administrators without project restrictions see no difference.
+
+    Wire contract: `WC-2026-09-29-search-where-parts-parenthesized`.
+
+#### Changed
+
+- **The audio/video viewer window now fits the media: no size jump on play, no black bars.**
+
+    Opening a video from a list used to show the poster at one size and then shrink the player to the stream's size when playback started, pinned to the left with black space around it. The viewer now fills its window: poster and playback share the same box, the popup resizes itself to the media's aspect ratio, and the download button no longer covers the player controls.
+
+- **A slow server shows one quiet progress bar instead of a pile of warning bubbles.**
+
+    Before, every request that took more than about 2.5 seconds raised its own
+    yellow "Awaiting for busy server" bubble. A page that loads several things at
+    once stacked several identical bubbles, and they stayed on screen after the
+    answer had already arrived. Now a slow answer shows a thin moving bar along the
+    top of the window after 1.5 seconds, adds one short sentence ("The server is
+    taking longer than usual…") only after 8 seconds, and disappears as soon as the
+    last answer arrives. Background calls never trigger it, and neither do long
+    operations that show their own progress (backups, rebuilds, updates). Identical notices in the
+    notification corner now merge into one, with a ×N count. See
+    [the slow-server cue](./core/client/data_manager.md#the-slow-server-cue).
+
+- **A tool that opens in a dialog appears at once, even on a slow connection.**
+
+    Before, clicking a tool button on a component or section (for example
+    "Propagate component data") showed nothing until the tool's program files and
+    styles had downloaded. On a slow network the page looked frozen for several
+    seconds, and a second click could open the tool twice. Now the dialog opens on
+    the click with the tool's name, icon and a loading spinner, and the tool fills
+    in when it is ready. Clicking again while it loads does not open a second copy,
+    and closing the dialog before it finishes loading cancels the tool cleanly.
+
+- **The password field shows its requirements and says clearly whether a password was saved.**
+
+    Before, the password field of a user record was an opaque box: a rejected password
+    only turned the border red, without saying why, and nothing confirmed a successful
+    change. Now the field lists the password requirements and ticks each one as you
+    type, asks you to repeat the new password, and saves only when you press **Save**
+    (or Enter) — then says *Password saved*, or why it was not saved. A password typed
+    but not saved is marked as such, and leaving the record or closing the tab asks
+    before discarding it — as it now does for any change the automatic save could
+    not store, which was previously dropped without a word.
+
+    The same requirements now apply everywhere a password is set — this field, the
+    login screen's password recovery and the installer's root password — and the server
+    enforces them too: at least 8 (and at most 64) characters, with a lowercase letter,
+    an uppercase letter and a number, no `&`, no common words such as "password", and no
+    runs like `abcd` or `1234`. Existing passwords keep working; the rules apply when a
+    password is changed. A program that sets passwords through the API receives a
+    `validation.password_policy` error naming the first rule the password breaks.
+
+    Wire contract: `WC-2026-09-30-password-policy-enforced`.
+
+- **Tools no longer show a “Developed by” footer; *Update cache* uses the standard tool action button.**
+
+    *Update cache*, *PDF extractor* and *QR* ended their panel with the tool icon and a
+    “Developed by Dédalo team” line — noise below the work area. It is gone; the tool's
+    identity stays in its header.
+
+    *Update cache*'s action button now follows the shared tool style: the tool colour
+    with its contrast-checked label colour, a reload icon, and the label *Update*. The
+    number of records it will process is shown beside the button (“Records: 8583”)
+    instead of being joined into the label.
+
+- **The history of a field that links records is one timeline, whatever the working language.**
+
+    A field that links records — a portal, a select, a check box, a list of informants — holds
+    links, and links have no language, even when the field's definition is marked translatable.
+    Its [time machine](./tools/using_time_machine.md) history is now always one timeline: every
+    change is one entry holding the whole field and its dataframe frames, shown in the history of
+    every language, and restoring it or reverting a batch run puts back exactly that field,
+    whichever language you work in. Before, such a field marked translatable filed each change
+    under the language of the page that saved it. Language entries remain for text fields. Older entries a
+    previous version filed under a language are part of the same timeline and are listed in every
+    language too. The time machine no longer offers a language choice for such a field, and its
+    restore confirmation says the whole field is replaced.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **Tools work on phones**
+
+    On a phone (screens up to 600px wide), 34 of the 37 tools now display and work:
+    the page no longer scrolls sideways, buttons and fields are large enough to tap,
+    titles no longer break mid-word, and tools that open in a dialog fill the whole
+    screen. Wide tables (such as the label translation matrix) scroll inside their
+    own box, and the thesaurus tree has larger tap targets.
+
+    Tools that relied on dragging (cataloguing and coin ordering) gain a touch
+    alternative: tap a record to pick it, then tap the term or slot to place it.
+
+    Also fixed along the way: the site-builder tool could not be opened from its
+    maintenance widget; the subtitles tool crashed on a record with no subtitles
+    yet; the section list became wider than a phone after returning from a record
+    with a pinned semantic search; the AI assistant panel now fills the screen on a
+    phone.
+
+    For tool developers: every tool built from the template could not reach its
+    server (`tool_request` was missing from the standard wiring); `wire_tool` now
+    provides it. New tools are entered in the phone check automatically.
+
+- **Tool windows and dialogs: readable buttons and one consistent header**
+
+    Every tool keeps its own colour, but that colour no longer makes text hard to read.
+
+    - **Buttons** painted in a tool's colour now always pair it with a readable label
+      colour (at least 4.5:1, in the light and the dark theme). Before, some tools put
+      dark text on their colour — the *Replace* and *Delete* buttons of *Propagate
+      component data* were barely legible on red.
+    - **Headers** look the same in every tool and every dialog, whether the tool opens
+      in a dialog or in its own window: a light bar with the tool's colour as a thin top
+      edge and a faint tint, the same shadow, and the title in the normal text colour.
+      Plain dialogs (confirmations, record pickers) use the same header instead of a dark
+      bar. Several tools that showed the generic orange edge now show their own colour.
+    - The dialog's **minimise and close** buttons are larger click targets and show a
+      visible outline when reached with the keyboard.
+
+#### Added
+
+- **The RDF import fills the record again, and links or creates its related records.**
+
+    The RDF import only fetched and showed a resource's RDF; nothing reached the record. It now imports as it did in Dédalo 6: the resource is mapped through the External Ontology an administrator described, and its labels (in every language the source gives), descriptions, dates and places are written into the record. Related authorities (a mint, a material, a person) are linked: an authority some record already carries is linked without being fetched; a new one is fetched from its own site, created and linked. The import only fills: a field that already has a value is never overwritten, and running it twice changes nothing. Each run that changes something is one bulk process, so it can be reverted; a run that changes nothing leaves no bulk process behind. One refused value never costs the rest: a link or a field the engine refuses is listed as skipped, with the reason, and everything else of the resource is still written. A link the External Ontology maps to a section the field does not accept is skipped before anything is fetched or created, and the reason names the ontology node to fix. The result now lists what was created, what was written and what was skipped, and why. An authority that does not fit in the 15-second budget is reported *not fetched — run again*: the next run completes it. Only web (`http`/`https`) addresses from the source are written or linked. An authority is looked for in every project, so one another project already holds is linked, never duplicated. A new authority is also looked for by its equivalent addresses (the same concept on Getty, Wikidata…): when exactly one record already has one, that record is linked and given the authority's address, instead of a duplicate; when several do, nothing is linked and the result names them. The same address under `http://` and `https://` counts as one. A creator (or any record between this one and an authority) is only created together with its link to that authority, and a source text carrying Dédalo tag syntax is never written. A record is never created without the identifier that finds it again: when that value cannot be written, nothing of the record is created and the line says why — nor of a chain of records leading to it (a creator and the person under it): when one of them cannot be created, none is. An authority the import created stays when its link is refused for another reason than the External Ontology (the field is full, the term is not selectable): it is a complete record, linked by the next run that may. See [RDF import](./tools/using_import_rdf.md).
+
+    Wire contract: `WC-2026-10-01-rdf-ontology-import`.
+
+- **The CSV import can now add a column's values to what a record already holds, instead of replacing them.**
+
+    Until now every column of a CSV import replaced the component's data, and an
+    empty cell cleared it. Each mapped column now has a **Mode**: *Replace* (the
+    default, unchanged) or *Append*. In append mode the file's values are added
+    after the stored ones and nothing stored is changed: related records are added
+    next to the existing links, a geolocation cell becomes a **new map layer**, a
+    text becomes a new paragraph, and an empty cell leaves the record untouched.
+    Values already present are skipped and counted in the report, so importing the
+    same file twice adds nothing the second time. Components where adding has no
+    meaning — media, single-choice lists, computed values — refuse append before
+    anything is written. An append records the same Time Machine entry per language
+    as a replace import. See
+    [Adding instead of replacing](./tools/using_import_dedalo_csv.md#adding-instead-of-replacing).
+
+    Wire contract: `WC-2026-09-27-csv-import-append-mode`.
+
 #### Fixed
+
+- **The MARC21 and Zotero imports refuse a computed field, and an AI agent can remove one child of a thesaurus term.**
+
+    A field whose value is computed and never stored (a term's children, an inverse or index list, an external record) can no longer be the target of a MARC21 or Zotero import map. Before, an import mapped onto a term's children could quietly move records under another parent in the thesaurus. Now the whole import is refused before anything is written, and the message names the field and tells you what to import instead (for children: the parent, on the child records). The CSV import already worked this way.
+
+    An AI agent using the save tool can now remove one child from a term by naming the child record. Each removal is checked against the agent user's permissions and recorded in the Time Machine. On every other field, a remove still has to name the item id.
+
+    Wire contract: `WC-2026-10-02-relation-children-write-through`, `WC-2026-08-30-remove-requires-item-id`.
+
+- **Error messages now show their details instead of placeholders like `{section_tipo}`.**
+
+    About twenty error messages showed their placeholders literally, for example *The link into '{section_tipo}' was refused ({constraint})* or *Your daily AI budget is used up ({budget_kind}: {limit})*. They now show the actual values: the section, the limit, the file size, the action that was still running. The affected messages include link refusals, the AI budget, export limits and quotas, duplicate-request notices, image and file size limits, and unknown API actions.
+
+- **Adding or removing a term's children from its Children field now saves.**
+
+    A Children field lists the records that name this one as their parent. Linking a
+    record there, removing one, or emptying the field looked accepted but changed nothing:
+    the field showed the old children again and no record was re-parented. Each change now
+    updates the Parent field of the child records themselves, as the thesaurus tree does —
+    a new child gets this record as its parent (and its place at the end of the siblings),
+    a removed child loses it. Each child's change is checked against your permissions on
+    that child, recorded in its history, and undone by **Revert the bulk process** when it
+    was part of a batch run. A link that would make a record its own ancestor is refused
+    with an error, and the children cannot be reordered by dragging in this field (each
+    child keeps its own order, as in the tree).
+
+    Three batch tools no longer touch a Children field: **Update cache** skips it (it holds
+    nothing to regenerate), **Propagate component data** refuses it, and a CSV import
+    refuses a column mapped to it — import or propagate the Parent field on the child
+    records instead. Administrators can remove the leftover
+    bytes the old behaviour stored with `bun scripts/relation_children_orphan_sweep.ts`
+    (a dry run that lists them; add `--apply` to remove them).
+
+    Wire contract: `WC-2026-10-02-relation-children-write-through`.
+
+- **A language field whose stored language is no longer a project language shows it again.**
+
+    When a record stores a language that was later removed from the project languages
+    (for example an "Original language" saved before the list changed), the edit form's
+    language picker showed no selection, as if the field were empty. The picker now lists
+    that language as an extra option marked with an asterisk ("French *") and keeps it
+    selected, also right after a save. The name is shown in the interface language, the
+    same as in list view.
+
+    Wire contract: `WC-2026-10-02-select-lang-missing-entry`.
+
+- **The subtitles tool opens again instead of failing with an error.**
+
+    Opening the subtitles tool from an audiovisual transcription showed an error instead of the tool. It now opens, with its play/pause, auto-rewind and tag-insert key settings working.
+
+- **Browsers that ran Dédalo v6 no longer load stale v6 scripts after the upgrade to v7.**
+
+    A browser that had used Dédalo v6 kept v6's file-caching service worker after the
+    installation moved to v7. That worker went on answering the browser's requests for
+    Dédalo's scripts with the old v6 copies, so the v7 interface loaded a mix of v6 and
+    v7 code and misbehaved — and the browser could not replace the worker on its own.
+
+    Now the first visit to v7 removes the v6 worker and its cache, and reloads the page
+    once with the v7 code. Nobody has to clear the browser cache by hand, and saved
+    preferences stay where they are.
+
+- **Autocomplete searches work again in pickers with a related-record field, and the field inputs search as you type**
+
+    In an autocomplete whose search fields include a related-record field (for
+    example the ontology "Sobrescritura" picker, with its "Modelo" field), typing in
+    the main search box answered "No se ha podido completar la búsqueda". Such a
+    field is now searched through the values it shows, each with its own input
+    under the search box ("Modelo › Término", "Modelo › Código"): "section" there
+    finds the terms whose model is *section*. A related-record field that shows
+    nothing searchable (only an image, for example) no longer gets a search input.
+
+    The per-field inputs under the search box (Término, Código, tld…) also search
+    on their own a moment after you stop typing; before, the search waited until you
+    moved to another input.
+
+    Wire contract: `WC-2026-10-01-relation-search-display-paths`.
+
+- **Result lists spanning several sections show every row again**
+
+    In a result list whose records come from several sections — the ontology
+    "Sobrescritura" picker searching across all ontology sections, for example —
+    records of different sections that share the same number (Andorra 1, Portugal 1,
+    Costa Rica 1…) rendered as empty rows ("`, , ,`"), with only the last of them
+    showing its values. Every row now shows its own values.
+
+- **RDF import now works with linked-data servers that redirect, and respects their robots.txt.**
+
+    Linked-data servers usually answer an IRI by redirecting to the document that describes it (or from `http` to `https`). The RDF import refused every redirect, so on those servers each import failed. It now asks the IRI itself for RDF/XML and follows the redirects, checking every step. Servers that only answer at the IRI with `.rdf` appended still work: the tool tries that form when the first answer is not RDF/XML. The tool now also reads each site's `robots.txt` and spaces its requests to the same site a few seconds apart. A site that does not allow automated access gets a per-IRI message saying so, and nothing is fetched from it. The tool's IRI list was empty, so nothing could be imported at all; it now lists the record's IRIs again. The tool now always shows why an IRI could not be imported; before, a failed IRI only showed *Empty results*. When a remote server does not answer within 15 seconds (or drops the connection, or reports an error of its own), the result says that server is out of service and to contact its maintainer, instead of waiting until the request times out. One run fetches at most three IRIs. See [RDF import](./tools/using_import_rdf.md).
+
+    Wire contract: `WC-2026-10-01-rdf-harvest-door`.
+
+- **Small editing forms no longer show tool buttons they turn off.**
+
+    Some forms turn off the tool buttons on their fields, but the buttons were still
+    shown. Now they are hidden where the form asks for it:
+
+    - the dialogs for editing a saved *Export* preset or a saved search preset;
+    - the fields of the *User administration* tool (the user image keeps its buttons,
+      so a picture can still be uploaded).
+
+    A field whose own configuration sets these options keeps its configured settings.
+
+- **A duplicated record never points at the original record's image or document files.**
+
+    Duplicating a record copies its image, audio, video and document files to the new record. If a copy failed, the new record could keep pointing at the ORIGINAL record's files, with no message anywhere — and deleting either record later moved files the other still showed. The duplicate is now saved with no file list of its own, the files are copied (into the record's named folder when the media field stores its files by a folder name taken from another field), and the new record's file list is then built from the files it really has. A copy that did not complete is reported to the administrator (the `duplicate_media_incomplete` counter and a `media.operation_failed` line in the server log); the duplicate itself is still created.
+
+    Wire contract: `WC-2026-09-30-media-key-locked-transform`.
+
+- **Export — a marker shows where a dragged column will land.**
+
+    In *Export*, dropping a field just below the *Active elements* list put it above the
+    last column instead of at the end. Now, while you drag a field or a column over the
+    list, a line shows exactly where it will be placed: before or after the row under
+    the pointer, depending on which half of the row you are over, and at the end when
+    you are below the list. The rows no longer shift while you drag.
+
+    Dragging a field that is already in the list highlights the existing column instead,
+    and the drop is refused. An empty list shows a "Drag a field here" area.
+
+- **Export preset editor — the name field no longer offers a second value.**
+
+    In the dialog for editing a saved *Export* preset, the name field showed an "add
+    value" button, as if a preset could have several names, and its floating button bar
+    overlapped the dialog title. A preset has one name: the button is gone, so nothing
+    covers the title any more.
+
+- **Export presets panel — one-line rows, lighter design, click a row to apply.**
+
+    In *Export*, each saved preset showed on two lines, with its delete button wrapped
+    below and blank cells in between. Each preset now fits on one line, and the name gets the
+    full width: the edit and delete buttons appear when the pointer is over the row
+    (they stay visible on touch screens). The same cause (the list received every configured column
+    instead of only the name) is fixed for the search presets list too.
+
+    The panel is lighter, so *Export* stays the one prominent button: a neutral header
+    with the tool colour as text, an outlined *Save changes* button, and a tinted row with
+    a filled ring for the applied preset. Header, button and rows share one left margin. Click anywhere on a row to apply the preset.
+    Deleting a preset now asks in an application dialog that names the preset.
+
+- **Dialogs with an edit form leave room for the field's button bar.**
+
+    When a dialog shows a record to edit (editing a saved preset, or opening a linked
+    record from a portal, a select list or a dataframe), the floating button bar of the
+    active field went under the dialog title when that field was the first one. The
+    form now starts a little lower, so the bar is always fully visible.
+
+- **A tall dialog title no longer covers the dialog's content.**
+
+    When a dialog's title took several lines (a long tool name and description, or a
+    small screen), the title bar kept a fixed height and the extra lines covered the
+    top of the dialog's content. The title bar now grows with its text, also after resizing the dialog by hand, and the content
+    always starts below it. Tool titles also use the space better: the description sits
+    beside the tool name when there is room and moves below it when there is not,
+    instead of squeezing both into narrow columns.
+
+- **The Ontology parser button in the Ontology area is readable again**
+
+    In the Ontology area, the *Ontology parser* button was painted solid green with
+    dark grey text and icon, which made it hard to read. It now looks like the other
+    toolbar buttons next to it (*Search*, *Show all*): outlined at rest and
+    highlighted on hover.
+
+- **Restoring or undeleting a record now updates every list and search that shows who references it.**
+
+    Some fields are filled in automatically from other records — for example a thesaurus term that lists every object indexed with it, or a broader-term search that finds an object indexed with a narrower term. Restoring a record from the Time Machine, undeleting it (from the Time Machine or by reverting a bulk operation) and recalculating such an automatic list did not always bring these up to date: an undeleted object could stay missing from the term that indexes it, an undeleted term could come back listing objects that no longer point at it, and a broader-term search could miss an object until someone saved it again. Every way of writing a record now brings them up to date, right after the change is saved. During a CSV import, the automatic lists are updated after each row is committed; a failure there is reported to the administrator (the `observers_propagation_failed` counter and the server log) and repaired by the observer reconcile, and it no longer undoes the imported row. A duplicated record no longer matches a broader-term search for terms only its original is listed under. Reverting a bulk revert that brought back a term together with the objects indexed with it now deletes them again, instead of keeping them as records someone else changed. Restoring an automatic list from its Time Machine history (or reverting a bulk operation that changed one) no longer brings back objects that have stopped pointing at the record since: the restored list is recalculated right after the restore, and the objects still listed keep their extra data. When such a list is itself shown in another record's automatic list, an object that stops pointing at a record now also leaves that second list. Extra data attached to the entries of such an automatic list (for example a rating on each object a term lists) now stays with the right object when the record is undeleted, restored or duplicated: it used to be reattached to a different object after an undelete, kept for objects no longer listed after a restore, and copied onto the duplicate. For a virtual section that has a field of its own, deleting a record's data now also empties its automatic lists, and restoring it recalculates them.
+
+    Wire contract: `WC-2026-09-30-record-write-obligation-ledger`.
+
+- **Tool action buttons show a spinning ring while working, not a solid disc.**
+
+    The main action button of several tools (*Update cache*, *Diffusion*, *Hierarchy*,
+    *Import RDF*, *Ontology*, *Ontology parser*, *Propagate component data*) showed a
+    still, solid disc while its process ran. It now shows the rotating ring used by every
+    other button.
+
+    *Update cache*: pressing *Update* now scrolls to the progress panel as soon as it
+    appears, instead of leaving it below the component list, and the button label is
+    white in the light theme.
+
+- **The Update cache tool scrolls to its result**
+
+    When an Update cache run finished, its summary (or a refusal) appeared below
+    the components list, out of sight on a long selection. The tool now scrolls to
+    it, with the same mechanism the Update code and Update ontology panels use.
+
+- **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
+
+    Reverting a bulk revert, or a run whose dataframe removal had emptied a record,
+    and then repeating that revert used to report some records as
+    *cascade_delete_not_reverted*, as if someone had edited them. It happened when
+    the record carried values the run itself had written, even though nothing had
+    changed. A repeat now reports them unchanged.
+
+    A value someone really did edit after the revert is still reported as before:
+    at the record, and also at the field when the edit touched the very value the
+    run wrote.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **Removing a dataframe frame no longer deletes the frame's target record.**
+
+    Since the late-September update, removing a frame (a valuation rating, say)
+    from the frame window, or removing the value it qualified, deleted the frame's
+    target record whenever the ontology slot carried the old `hard_delete: true`
+    flag. That flag was retired on purpose in v6, because the Time Machine needs
+    the target to show past states. It is ignored again: a removed frame is only
+    unlinked, and its target record stays.
+
+    Targets deleted during that window can be recovered from the Time Machine.
+    Ontology authors who want frame-private targets emptied on unlink can set
+    `"dataframe": {"delete_policy": "delete_target"}` on the slot. The data is
+    cleared and the record is kept.
+
+    Wire contract: `WC-2026-09-29-dataframe-hard-delete-retired`.
+
+- **Choosing an option in a radio-button field no longer makes the field flicker.**
+
+    Clicking an option used to dim the whole field while the value saved and, for a
+    moment, show both the previous and the new option as selected. The new option is
+    now highlighted at once and the previous one cleared. Any field that saves on a
+    click (radio buttons, check boxes…) only dims when a save takes noticeably long.
+
+- **Applying a Time Machine value no longer breaks a record's rated portal.**
+
+    A portal whose items carry a rating (the coloured chip of a dataframe, such as
+    the certainty of an attribution) could stop rendering right after the Time
+    Machine tool applied an earlier value to it: the refresh failed and the portal
+    stayed broken until the page was reloaded. The server now sends the rating's
+    list of options with every copy of the rating it returns, so the chip always
+    finds its colour, and the portal refreshes normally after an apply. The client no longer
+    depends on it either: it picks the copy of the rating that carries the options,
+    keeps new items in the order the server sent them, and paints the default
+    colour instead of failing when a rating has no options.
+
+    Wire contract: `WC-2026-09-29-select-family-mode-datalist`.
+
+- **Searches through a related section now answer negations and combined conditions correctly.**
+
+    A search condition that looks inside a related record (for example *Movements →
+    Municipality*) now means what it says:
+
+    - **Negations mean "none".** "Does not contain X", "is empty" and "different
+      from X" now return the records where *no* related record matches. Before, a
+      record linked to one matching and one non-matching record was returned too,
+      so the result was silently too large (on one installation, 38,749 records
+      instead of 18,635).
+    - **Two conditions on the same field** joined with AND can now be met by
+      different related records: "Municipality = Madrid AND Municipality =
+      Valencia" finds people with one movement to each. Before it always found
+      nobody.
+    - **Conditions on different fields** joined with AND still describe the same
+      related record: "Municipality = Madrid AND Year = 1939" finds a movement to
+      Madrid in 1939, not one to Madrid and another in 1939.
+    - A number search "different from *n*" now returns the records whose value is
+      not *n*. Before, it returned the records whose value is zero.
+
+    Wire contract: `WC-2026-09-29-search-deep-leaf-mixed-rule`, `WC-2026-09-29-number-not-equal`.
+
+- **The time machine shows a field's frames and their values as they were at the chosen change.**
+
+    In the [time machine](./tools/using_time_machine.md), the preview of a field with a
+    [dataframe](./core/components/component_dataframe.md) could show today's frames instead of
+    the ones of the chosen entry, and a frame's own values — a role, a rating and its colour —
+    were always shown as they are now. The preview and the history list now show the frames and
+    their values as they were at that change: an entry from before a frame was added shows no
+    frame, a rating edited later shows its earlier value, and a frame record emptied since shows
+    what it held. Switching between entries, or clicking the same entry again, never shows the
+    previous entry's frames, and a save made elsewhere no longer changes an open preview. The
+    history list's frame column now matches the preview for every entry, including the entries
+    of one language of a translatable field, which showed no frames before, and each entry's frame
+    button shows the rating colour of that entry, not the newest one. In a record's whole history
+    (the entries of a deleted or recovered record), each field's frames show their values as they
+    were at that entry: a deleted record shows them as they were when it was deleted, not the
+    emptied values its dataframe policy left after the deletion. Recovering a deleted record now
+    adds its own entry to the record's history, so the deleted record's entry keeps showing those
+    values after the recovery. In the time machine a frame's button is now read-only: it shows the
+    frame's label and colour, but offers no **+** and opens nothing — before, clicking it opened the
+    record as it is now, editable, from a view of the past. The same holds for a user without
+    permission to edit the dataframe.
+
+    Wire contract: `WC-2026-09-29-tm-preview-frame-children-as-of`.
+
+- **A section that fails to load says why, and can be reloaded**
+
+    When a section or thesaurus element could not be loaded, the red banner always
+    suggested a permissions problem, even when the real cause was a failed request
+    (server restarting, timeout, network). The banner now shows the actual error,
+    keeps the permissions hint only when the server answered with nothing to show,
+    and offers a Reload button for temporary failures that rebuilds just that
+    element.
+
+    It also no longer appears after logging back in: when a session expired and the
+    user re-logged, the page loaded but the "permissions" banner was painted over
+    it anyway. The request is now re-sent once after re-login and the page builds
+    normally.
+
+- **Deleting a record's data now also empties every dataframe of its fields.**
+
+    **Delete data** empties every field of a record, and now also removes the frames of every
+    [dataframe](./core/components/component_dataframe.md) those fields had — whatever the field
+    is: a portal, a text or number field, or a link (IRI) with its labels — even a field that
+    held no value of its own when the frames were saved first. Before, a dataframe
+    that was not itself a field of the section (an IRI's labels, a dataframe named only in a
+    field's configuration) kept its frames after the wipe, attached to nothing and impossible to
+    remove from the edit view. Restoring an older entry from the
+    [Time machine](./tools/using_time_machine.md) likewise removes the frames of the values it
+    takes out, in every dataframe of the field. The history entries **Delete data** writes are
+    filed in each language's own history (and the frames in the `lg-nolan` entry), so every
+    language's time machine lists the wipe.
+
+- **A field's history now keeps its dataframe with it, and restoring an entry restores both.**
+
+    A field with a [dataframe](./core/components/component_dataframe.md) — informants with their
+    role, a value with its certainty — stores the two apart, but they mean one thing. Until now
+    the history recorded them apart as well: the field's entries held no frames, so restoring
+    an entry left the frames as they were today. The field's history now holds both, in two
+    kinds of entry: an entry of a **language** holds that language's value, and an entry marked
+    **lg-nolan** holds the value that has no language (a field that is not translatable, or the
+    base form of a name with transliterations — *Augustus*, beside *Αύγουστος* in Greek) and
+    **all** the frames. A change to a frame adds ONE lg-nolan entry to the field's own history
+    (the dataframe has none), never a copy per language, and the history of a language lists
+    its own entries and the lg-nolan entries together. It does not matter whether the value or
+    the frame was saved first: the preview of any entry shows the whole state at that moment —
+    the language's value and the frames as they were — and restoring it returns that state:
+    a language entry puts its language back with the frames of that moment, an lg-nolan entry
+    puts its frames back. The field's other languages, and another field sharing the same
+    dataframe, keep theirs; a frame of an item deleted since is never put back.
+    This holds for every kind of field a dataframe can hang from — a list of linked records, a
+    text in several languages, a transliterable name, a number, a date, a web address with its
+    label. Translations and duplicated records record their history the same way. Reverting a
+    batch run does the same for every field it changed, language by language.
+    Entries recorded by Dédalo v6 are read the same way: an entry that carries frames gives its
+    language value and the frames of that moment, and a dataframe such an entry is silent about
+    was empty then; a v6 language entry with no frames at all takes the frames recorded before it.
+    Removing an item of any such field — a text, a number, a date, a web address, not only a
+    list of linked records — now removes its frames too. See
+    [Time machine](./tools/using_time_machine.md).
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A field's history now shows the dataframe it had at that moment.**
+
+    In the [Time machine](./tools/using_time_machine.md) preview, an entry of a field with a
+    [dataframe](./core/components/component_dataframe.md) now shows the frames the field had at
+    that moment — the role of each informant, the certainty of each value — instead of
+    today's, together with the field's value as it stood then, and the field's own values no
+    longer list the frames among them. Entries recorded by Dédalo v6 show their frames too: in
+    an entry that carries frames, a dataframe it holds none for shows empty — which is what a
+    restore leaves there; a v6 language entry with no frames at all shows the frames recorded
+    before it.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A transliteration saved in its language no longer replaces the base form.**
+
+    A field that keeps a base form and per-language versions — a person's name such as
+    *Augustus* with its Greek form *Αύγουστος* ([component_input_text](./core/components/component_input_text.md)
+    with `with_lang_versions`) — now stores a version saved in a language beside the base
+    form. Before, editing the field in Greek, importing a CSV cell with both forms, or running
+    *Propagate component data* or *Update cache* on it replaced the base form with the
+    version, and *Update cache* could even create a base form that never existed. Each form
+    now also has its own entry in the [Time machine](./tools/using_time_machine.md) history, listed
+    while you work in that form's language; its preview shows the base form, and restoring it puts
+    the form back.
+
+- **Reverting a batch run now restores exactly what the run replaced, and says what it could not.**
+
+    **Revert the bulk process** used to guess each value's state before the run from the
+    history just older than it. Where that history was missing — values stored before the time
+    machine recorded them, written with it off, or appended to by a CSV import — the revert
+    **emptied** the field instead of restoring it; where a later edit had been made with the
+    time machine off, it rolled that edit back. Every batch run (CSV import, bulk component
+    edit, update cache, MARC21 and Zotero imports, and a revert itself) now records, with each
+    change, the exact value it replaced, so the revert puts that value back. A field someone
+    edited after the run is **left alone** and reported, never overwritten; records the run
+    created are removed only when nothing else refers to them, and records the run deleted
+    come back together with every link that pointed at them. Reverting an old import never
+    touches a record that a later import created again at the same id. When the revert finishes, a
+    summary lists what was reverted, what was skipped and why, and the id of the revert, which
+    can itself be reverted; reverting the same run a second time changes nothing and says
+    so. Re-importing an unchanged file, or repeating the same bulk replace, records nothing,
+    portal links included, and the dataframe frames of those links stay attached. Runs made
+    before this update are still reverted the old way, with its known fixes, and the summary
+    marks those values as inferred; a frame edited after such a run is left alone and reported, and
+    the dataframe frames of an old run that saved several languages of a field are restored together
+    instead of being refused as changed. The CSV import no longer
+    has a *Save time machine history on import* switch: every import can be reverted. A revert,
+    a single-field restore or a record recovery of a hierarchical term field now also updates
+    its broader-term search index, so a search for a broader term finds the restored value (and
+    no longer the value it replaced) without waiting for a later save. See
+    [Time machine](./tools/using_time_machine.md).
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A CSV import that carries the modification date and user keeps them on records whose cells embed dataframe frames.**
+
+    When a CSV row carried the record's *modified date* / *modified by* columns and
+    also a cell with embedded dataframe frames (a `{"data":…,"dataframe":…}` value
+    from a raw export), saving those frames re-stamped the record as modified
+    "now, by the importer", overwriting the imported values. The frames are now
+    saved without touching the stamp, so the record keeps the date and user from
+    the file — as it already did for every other column.
+
+- **Searching through a related record (e.g. a coin's type → its mint → the mint's name) is much faster.**
+
+    A filter on a field of a linked record used to scan every record of the section being searched, whatever the filter selected. On a 184,000-coin collection, searching coins by the name of their type's mint took about 3 seconds per paint (up to 9 with a cold cache). The search now starts from the few linked records that match and walks the links back, so the same search answers in a few tens of milliseconds.
+
+    The results are the same: the faster route is used only where it provably returns exactly the same records, and every other search (for example "is empty") keeps the previous route.
 
 - **Saving a language selector is instant again and keeps showing only the project languages.**
 
@@ -29,9 +605,730 @@ Merged since the last release; these ship with the next one.
     opens. The same list is now used everywhere a language selector's options are
     offered, including list filters and the state widget.
 
-### For developers
+### For administrators
+
+#### Security
+
+- **Every AI request now counts against a daily budget per user, and generated answers need their own permission.** *(action needed)*
+
+    Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily budget before the model is called: assistant runs and model tokens, semantic-search queries, and vision calls of the identification tool. When a budget is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included. The four budgets are `DEDALO_AI_USER_DAILY_RUNS` (50), `DEDALO_AI_USER_DAILY_TOKENS` (1000000), `DEDALO_AI_USER_DAILY_EMBED_QUERIES` (2000) and `DEDALO_AI_USER_DAILY_VISION` (50) — see [the configuration reference](./config/config.md). The day's usage of every user is listed in the new **AI usage** section under Administration.
+
+    **Action needed:** generated answers over the collection now require the **Generated answers** tool permission (`tool_rag`). Run *Register tools* after the update to add it, then grant it in the profile editor to the profiles that should use generated answers. Semantic search does not need it.
+
+    Wire contract: `WC-2026-10-01-ai-spend-budget`.
+
+- **The assistant no longer proposes changes its own apply step would refuse.**
+
+    In write mode the assistant proposes a change plan that a person confirms before it runs. The check made before the plan was shown was weaker than the one made when it runs: some plans that named a record outside the user's projects, a field the user may not edit, or a read-only section were shown as valid and then failed when applied. Plans are now checked by the same permission rules that apply when they run, so what the person confirms is what the user is allowed to do.
+
+    Wire contract: `WC-2026-10-01-change-plan-write-door`.
+
+- **Removing a linked record from a portal now checks the portal field and the record's projects.**
+
+    Removing a linked record from a portal (the unlink button, and the "delete index" of the indexation tool) used to check only the section's permission. A profile that could edit the section but only read the portal field could still unlink from it, a record outside the user's projects could be changed, and a user manager could unlink their own profile, active or administrator flag. Removing a link now requires write access to that portal field and to the record itself (its projects), checked before anything is read or locked; a user manager can no longer unlink their own profile, active or administrator flag; and a record id of 0 or below is refused for every user, administrators included.
+
+    Wire contract: `WC-2026-10-01-delete-locator-write-door`.
+
+- **Asking a vision model for proposals, or identifying a photograph with an external encoder, now requires the identification tool permission.**
+
+    Proposals from a vision model and image identification through an external service call a paid model and may send the object's photograph off the server. Any user who could read the section could start them. They now require the user's profile to include the identification tool; without it the request is refused before any model is called. Matching by record, proposals voted by similar records and a locally run image encoder cost nothing and are unchanged. Grant the identification tool to the profiles that should use the vision source.
+
+    Wire contract: `WC-2026-10-01-identify-vision-grant`.
+
+- **Searches through a related field only reach the sections that field links to, and that the user may read**
+
+    A search that follows a related-record field (a portal or autocomplete column)
+    checked the user's permission on the section named in the search, then read
+    whichever section each stored link pointed to. Between sections that share a
+    table and a field — a section and its virtual twin — a user with access to one
+    could match values stored in the other.
+
+    A search now follows a related field only into the sections that field is
+    configured to link to, and only into those the user may read, each under its own
+    record restrictions. Links that point outside the field's configured sections —
+    left over from an earlier configuration or an import — no longer match in
+    searches, for administrators too; they already showed nothing on screen. The
+    data is untouched: adding the section back to the field's configuration makes
+    them searchable again.
+
+    Wire contract: `WC-2026-10-01-search-hop-configured-targets`.
+
+- **The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.** *(action needed)*
+
+    Claude Code reads hooks, MCP servers, skills and settings from the project it works in and from its home directory. In a site builder workspace both are written by the agent itself (and by the site's build scripts), so a file planted in one turn ran as a shell command in the next, although the agent is denied a shell. Each Claude Code turn now loads its settings only from the site builder (no user, project or local source; only the site builder's own MCP server), and the site brief (AGENTS.md) is handed to the agent by the site builder instead of being read from the workspace. **Action needed:** the installed Claude Code must list `--setting-sources`, `--settings` and `--strict-mcp-config` in `claude --help` (verified on 2.1.286). The site builder checks this at start and before every turn; an older Claude Code is reported in the start log and every turn is refused until it is upgraded. In the site builder tool these refusals now read "cannot run its agent safely on this server" (an administrator must act) or "busy with this site" (try again in a moment) instead of a generic error.
+
+    Wire contract: `WC-2026-10-01-site-builder-confinement-codes`.
+
+- **The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.** *(action needed)*
+
+    Five gaps around the site builder's confined agent are closed.
+
+    - **The agent program is chosen by the site builder.** A site's agent program (Claude Code, OpenCode, …) was read from the site's own `site.json`, which the agent can edit. An agent could switch its next session to another program and plant a plugin that program loads. That bypassed every restriction placed on Claude Code. The choice made when the site is created is now kept in the site builder's private state, outside every site's folder, where no agent run can rename or remove it. A site created before this update gets its record when the site builder starts, from the program its `site.json` named at that moment. From then on `site.json` decides nothing. A site with no record is refused ("no driver record") and never falls back to the instance's default program (`agent.driver`): restart the site builder, or start the session naming its program.
+    - **One site's agent can no longer watch another's.** Each agent run already hid other sites' processes. It could still read the system's process-accounting files (`/sys/fs/cgroup`), which show another site's runs, when they started and how much they used. Every agent unit now hides that directory. **Action needed:** run `provision apply` after updating. Until the units are re-rendered, the site builder finds them different from what it expects and refuses every agent run.
+    - **A planted brief no longer stalls the site.** The site brief (`AGENTS.md`) is in a folder the agent writes. Replacing it with a pipe, a huge file or a file containing a NUL byte could hang every later turn or make every turn fail. The brief is now read without blocking, only up to its size limit, and refused with a clear message when it is not an ordinary text file. The same holds for every file the site builder reads or writes in a site's folder: a pipe planted at `site.json` or at the agent's connection settings is refused at once instead of stalling it. A turn's setup now also counts against the turn's time limit, and stopping a session reaches it.
+    - **An unusable Claude Code is reported, not hidden.** A Claude Code binary the site builder cannot run (missing, not executable, or under `/home`, which the site builder's service cannot see) was a generic, retryable error. It is now refused with "cannot run its agent safely on this server", naming the binary. A Claude Code check that fails once on a busy server, for example by timing out, is asked again at the next turn. It no longer refuses every turn until the site builder restarts.
+    - **Unsaved agent work is no longer lost to a failed save.** After each turn the site builder saves the agent's work as a restore point. When that save failed for any reason other than the site builder shutting down, or when the restart's own recovery save failed or had to wait, the work was left unsaved and never retried. The next turn then saved it under its own name. Any save that did not happen is now retried at every start of the site builder until it succeeds.
+
+- **A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.** *(action needed)*
+
+    Eight gaps around the site builder's confined agent are closed.
+
+    - **A turn no longer runs commands planted in the site's git settings.** Claude Code runs `git` itself when a turn starts. It switches off git's hooks for that, but not its content filters. A build script, a git hook or the agent itself could add a filter to the site's `.git/config`, and the next turn then ran that filter's command as the site's user, with the AI provider's key and the museum connection. Setting git's own environment variables does not help: Claude Code removes them. Each turn now runs with the site's `.git` folder hidden, so no `git` the turn starts finds a repository. **Action needed:** run `provision apply` after updating. Until the units are re-rendered, the site builder finds them different from what it expects and refuses every turn. A site whose folder has no `.git` is now refused a turn, with a message that names the missing folder.
+    - **The site builder reads systemd's answers correctly on Ubuntu 24.04 and Debian 12.** systemd prints some settings, such as `TemporaryFileSystem=`, as one line per entry. The site builder kept only the last line, so on those systems it would have refused every agent run as "not what this daemon expects". It now reads every line.
+    - **"systemd cannot say" never frees a site.** When systemd does not answer a question about a run (a timeout, a D-Bus or polkit error, an answer with a value missing), the site stays held until systemd answers. It is never treated as finished or idle.
+    - **A refused stop is named.** When systemd refuses to stop a run, for example because the polkit rule is missing or polkitd is not running, the refusal and the site's "unavailable" message now quote systemd's answer and point at the polkit rule.
+    - **A host that cannot confine runs says so at start.** The site builder now checks the host when it starts: the systemd version, each site's user and groups, and the files a run starts from. If something is wrong, it writes the reason to its log at start, instead of failing the first request. It still starts, and refuses each run until the host is fixed.
+    - **Session records and site folders are checked before a run.** A session's saved settings are used only if they name that same session and site, and only from folders the site builder created itself. A site folder that has been replaced by a link is refused before any run starts.
+    - **A broken turn setup is reported at start, not at the first turn.** The git settings file root renders for every turn, and the systemd units each site's runs use, are now checked when the site builder starts and before a session is accepted. A missing or altered settings file, or an extra drop-in on a unit, is written to the log at start and refused before any work is reserved. A site whose `.git` is a link or not a folder is refused a turn, with a message naming it.
+    - **One site's damaged session folder no longer stops the others.** When one site's session folder was replaced by a link, the start-up sweep stopped for every site: interrupted sessions were not marked and their work was not committed. The sweep now skips that site, logs why, and goes on with the others.
+
+- **The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.** *(action needed)*
+
+    Until now, every site of a museum ran its AI turns, builds and `git` commands as one agent user, so one site's run could read or change another site's agent state. The daemon also asked systemd to start those runs itself, which the previous release had to stop allowing (see the entry on the narrowed polkit rule).
+
+    Now each declared site has its own system user, `dedalo-a-<instance>_<n>`, with a private group that only that user and the service user belong to. `provision apply` creates them and never reuses a number. For each site and each kind of run (turn, build, `git`), root installs a socket and a service template. The daemon only connects to that socket, and systemd starts the run as the site's user, which the daemon cannot choose. The polkit rule now lets the service user stop or kill those runs and nothing else. What systemd enforces:
+
+    - A site never has two runs at once, and runs of different sites run as different users.
+    - Each run gets only its own site's workspace and its own HOME. A build cannot read the turn's `~/.claude`, and `git` gets no HOME.
+    - A turn or build reaches the network through its site's egress directory under `/run/dedalo-sites-agents/<instance>/egress/`. Root creates this directory at every boot from a rendered `/etc/tmpfiles.d/` file, and the run sees it read-only.
+    - A run of a site whose units differ from what the daemon expects (for example, a hand-added drop-in) is refused, naming the setting. This includes a drop-in that stops a run without killing its last processes, or one that makes systemd open or mount a file for the run as root.
+    - A run counts as finished only when systemd reports none of its processes left, so the site's next run never starts beside a survivor of the last one.
+    - Stopping or restarting the daemon also stops that museum's run sockets, which then accept no new run. Starting the daemon starts them again.
+
+    Other changes:
+
+    - The daemon starts no new run once it is shutting down. A turn whose final commit was refused that way is committed when the daemon next starts.
+    - The oldest supported systemd is now 248. polkit must be 0.106 or newer, because the stop rule is a JavaScript rules file, and `provision apply` refuses an older one. Supported hosts are Ubuntu 24.04 or newer, Debian 12 or newer, and RHEL 9 or newer. Ubuntu 22.04 is not supported: its polkit 0.105 ignores the rule. Server and minimal installs often have no polkit at all; install it first (`apt install polkitd` on Debian and Ubuntu, `dnf install polkit` on RHEL). On systemd 257 or newer each run also gets its own process namespace.
+    - A site's user may belong only to the instance group and its own private group. `provision apply` refuses a site user that any other group lists as a member, and the daemon refuses every run of a site user that has any other group, because a run gets every group of its user.
+    - The `opencode` agent is refused on a host where runs are confined (`AGENT_CONFINEMENT=systemd_scope`, every provisioned host): it loads configuration and plugins from files a run can write, so a planted plugin would run as the site's user. Use `claude_code` there.
+    - When the daemon is not running, `provision apply` clears its failed state before starting it. A daemon that the updated code stopped in a restart loop can then be started.
+    - If the daemon crashes on systemd older than 254, systemd does not stop its runs. The daemon stops them, or keeps their site unavailable, when it starts again.
+    - `provision apply` refuses a site user whose uid, or a private group whose gid, belongs to any other account or group on the host. It also refuses any other account whose primary group is a site's private group, and it refuses when the system id range in `/etc/login.defs` has no room left. The daemon checks the same things before every run.
+    - Creating a site is refused (503) before anything is written when the daemon cannot run that site's `git` yet, for example after `provision apply` added the site but before the daemon restarted.
+    - An agent run that was left running (for example, after the daemon was killed) is stopped before its site runs again. If it will not stop, that site stays unavailable until it does.
+    - A turn's own `git` never treats the workspace itself as a repository. Root installs `<state dir>/agents/turn.gitconfig` (`safe.bareRepository = explicit`, nothing else), and every turn sees it as `/etc/gitconfig`, read-only. A turn is refused, naming the file, when that file is missing or says anything else, and when the workspace root contains a `HEAD` entry. Remove a stray `HEAD` from the workspace root to run the site again.
+    - The daemon checks that it may stop its sites' runs at start and before each run, by asking systemd to stop a run that does not exist. Without the polkit rule, or without a running polkitd, every run is refused with a message that names the rule, instead of failing at the first interruption.
+    - A run is refused when its site's user cannot reach the runtime, the shim or the Claude Code binary (`CLAUDE_CODE_BIN`), for example because a directory on the path is closed to it. The message names the directory.
+    - The daemon's `.builder/` directory in each workspace is now `0710`, so a turn, which runs as the site's user, can open the MCP configuration it is given there. The site's user still cannot list or change anything in it. An existing `.builder/` is changed at the site's next turn.
+
+    **Action needed:** as root, run `provision apply` for every instance before the updated daemon starts, or in the same maintenance window as the code update. This includes an update installed from within the application.
+
+    - The daemon no longer starts while its environment still sets `AGENT_USER`, `AGENT_HOME` or `SYSTEMD_RUN_BIN`. `provision apply` removes those keys and writes `AGENT_IDENTITIES`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT` and `AGENT_IDENTITY_EPOCH`. It writes `SYSTEMCTL_BIN` only when the declaration names `agent.systemctl_bin`. Otherwise the daemon uses `/usr/bin/systemctl`, so declare it only on a host where `systemctl` is somewhere else. Do not add the key to the rendered environment file by hand: the next `provision apply` removes it.
+    - The first run of `provision apply` stops the daemon, gives each site's files that the old agent user wrote to the site's new user, installs the units, and starts the daemon again.
+    - It also opens to the instance group the files and directories in each existing workspace that are owned by the service user, except `.builder/`. Sites created before 2026-09-05 have these: back then turns and `git` ran as the service user and left `.git` closed to the group, so the site's new user could not commit. The service user keeps owning them.
+    - It locks the old agent user without deleting it.
+    - It moves the old shared agent HOME aside, next to itself, as `<home>.retired-<date>`, owned by root and closed to everyone else (`0700`). Nothing from it is copied to the new users.
+    - Once, after the update, a conversation cannot resume its earlier context: its next turn starts a new agent session.
+    - Adding a site later also needs `provision apply`, which restarts the daemon.
+
+    See [the site builder internals](./development/site_builder_internals.md).
+
+- **The thesaurus term picker grants link mode only from a profile, never from a blanket rule.**
+
+    The term picker opens a thesaurus in link mode only for a user who may edit the field that asked for it. That edit right was read without asking where it came from, so a field under the editing-preset section — which every user may edit through a built-in rule, bounded only to their own presets — counted as a link-mode grant for every user. Link mode now requires edit permission granted by the user's profile (or the root account); otherwise the thesaurus opens in ordinary browse mode.
+
+- **Translation, imports, cache rebuilds, uploads and bulk reverts now check permissions on every record and field they write.**
+
+    Several tools checked a user's permission on a section and field but not on the specific record they then wrote, so the rule that keeps a user from changing parts of their own account (for example their own profile) did not apply there. Automatic translation, the poster-frame tool, the cache rebuild, file and CSV/MARC21/Zotero imports, the fields an upload fills in automatically, and the bulk revert of a process now check each record and field exactly as the edit form does. A field or row the user may not change is reported and left untouched; CSV imports now need permission on every imported column, including the creation and modification metadata columns.
+
+    Wire contract: `WC-2026-10-01-write-door-delegations`.
+
+- **The assistant can no longer search or count records of a section the user may not read.**
+
+    The assistant's search, count and find-or-create tools applied the user's projects but not the section permission, so a user whose profile did not grant a section could still list and count its records through the assistant. They now refuse such a section, exactly as the record list does.
+
+    Wire contract: `WC-2026-09-30-mcp-search-section-grant`.
+
+- **Only profiles granted the assistant tool can use the assistant.** *(action needed)*
+
+    With the assistant enabled on the server (`DEDALO_AGENT_HTTP_ENABLED`), any logged-in user could run it, even if their profile did not include the assistant tool. The assistant now requires the profile to grant `tool_assistant`, for global administrators too; only the root account holds every tool. **Action needed:** in the profile editor, grant the assistant tool to the profiles whose users should keep using it.
+
+    Wire contract: `WC-2026-09-30-agent-tool-grant`.
+
+- **Translation, transcription and RDF-import fetches now connect to the address the SSRF guard vetted (DNS rebinding closed); network failures report a typed reason.**
+
+    The guard used to check the server's address and then let the connection look the name up again, so a hostile DNS server could answer "public" to the check and "this machine" or "the internal network" to the connection. The connection now goes to the address that was checked, with the real name kept for the certificate and the `Host` header, for the translation and transcription services and for every RDF URI a cataloguer imports. Failures are typed instead of carrying the runtime's own error text: the RDF import reports the fixed sentence "The outbound request could not be completed" for each URI that failed (see [the RDF import tool reference](./development/tools/reference/tool_import_rdf.md)), while translation and transcription report a short message naming the reason, such as `hop connect failed (timeout)` or `redirect refused (HTTP 302)`, never an address. A translation or transcription request (a POST) that may already have reached the server is never re-sent to the server's other address, so a failed transcription request cannot start a second job; an RDF-import fetch (a GET, safe to repeat) may be retried on the next address.
+
+    Wire contract: `WC-2026-09-30-guarded-text-pinned-typed-transport`.
+
+- **Posterframes, audio streams and clip downloads now respect the component's own permission and the user's projects.**
+
+    The audiovisual and 3D media actions (create or delete a posterframe, attach a 3D snapshot, read an audiovisual file's streams, cut and download a clip) used to check only the section's permission. A profile that was explicitly denied the audiovisual component could still use them, and any record id could be reached even outside the user's projects. They now check the section, the component itself and the record's project, in that order, before they look at the file. A user who can see a record's video in the player can still download its clips as before.
+
+    Wire contract: `WC-2026-09-30-media-pair-scope`.
+
+- **Ontology identifiers are checked on every read and write, and the database now refuses malformed ones.**
+
+    An ontology node's identifiers (its tipo, its parent, its model, its TLD, and the target of a component alias) are used by the search engine to build its queries. Until now a malformed value stored in the ontology table (for example an alias pointing at a tipo that contains quotes or spaces) could reach a search query unchecked. Now every identifier must be letters followed by digits (a TLD: two or more lowercase letters), no longer than its database column: an alias with a malformed target is refused as an invalid ontology node, the search engine checks the alias target again before using it, the ontology write doors refuse a malformed node, an archive restore refuses one before writing anything, and the ontology recovery file leaves such rows out and names them. The update adds six checks to the `dd_ontology` table that refuse any malformed identifier from then on. An installation that already holds malformed rows still updates normally: the checks start in a "not yet validated" state, and the reconcile `ontology_identifiers` (maintenance area, reconcile status, or `bun run scripts/reconcile.ts`) lists those rows and what it would do with each. Applying it rebuilds each row from its ontology source where one exists, deletes the rows that cannot be rebuilt (every deleted row is listed in full in the report and in the server log, even if the final validation fails), and then validates the checks. Until it is applied, reordering a malformed node is refused with a message that names the check and the reconcile to run. When an ontology source record holds a malformed reference (a parent, model or related-term pointer), the rebuild now drops that reference from the node and names the record in its message, instead of storing the malformed value or failing the whole TLD.
+
+    Wire contract: `WC-2026-09-30-ontology-identifier-grammar`.
+
+- **Stored password hashes are no longer sent to the browser.**
+
+    Until now, anyone able to open a user record received the stored password hash
+    of that account (and, for accounts not yet migrated from v6, the reversible
+    legacy value) — material an attacker could try to crack offline. Every screen
+    and API answer now shows a fixed mask (`****************`) instead: it says only
+    that a password is set. Logins, password changes and imports are unaffected.
+
+    Wire contract: `WC-2026-09-30-password-hash-never-served`.
+
+- **Site builder agent turns and builds run in a private network namespace and reach the outside only by hostname, through the daemon's egress gate; the Publication API key no longer reaches the agent, and AGENT_EGRESS_ALLOW is refused.**
+
+    A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its site's socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another site's socket directory: only its own site's is mounted, and runs of different sites run as different users, so a concurrent run cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
+
+    The hostnames are:
+
+    - Claude Code turns: `api.anthropic.com`.
+    - opencode/pi turns: the hosts named in `AGENT_PROVIDER_HOSTS`. With none named, such a turn is refused, naming the key.
+    - Builds: the hosts in `BUILD_REGISTRY_HOSTS` (default `registry.npmjs.org`).
+
+    On a provisioned host these come from the declaration's `agent.provider_hosts` / `agent.registry_hosts`. The Publication API key now stays with the daemon, which adds it on its side of the agent's MCP connection; it is no longer written into the site workspace.
+
+    What changes for an operator:
+
+    - A non-empty `AGENT_EGRESS_ALLOW` stops the daemon at boot, with a message naming its replacements.
+    - A model served on loopback or the museum's LAN can no longer be used by a turn.
+    - Builds can no longer reach anything on loopback or the LAN.
+    - A command-line tool that ignores the standard proxy environment variables has no network.
+    - A tool that tunnels anything but TLS naming the host it asked for (plain HTTP over port 443, Encrypted Client Hello, a handshake naming two hosts) is disconnected, with a line in the log.
+    - A run may hold at most 128 connections through the daemon at once. One more is refused, with a line in the log.
+    - An opencode turn installs its provider's package from `registry.npmjs.org` on first use. Name that host in `agent.provider_hosts` too.
+    - The daemon refuses to start any confined run (503, naming the cause) when:
+      - the host's systemd is older than 248, or its version cannot be read;
+      - its socket (`LISTEN_SOCKET`) or the agent socket directory is not under `/run`;
+      - it cannot read its own network namespace;
+      - the site has no agent user of its own on the host (see the entry on per-site agent users);
+      - the site builder or its bun can be changed by any site's agent user, or cannot be read or run by it (a directory above them that such a user owns counts as one it can change, whatever its permissions);
+      - the site builder or its bun lives under `/home`, `/root`, `/run`, `/tmp` or `/var/tmp`.
+    - A site builder and bun owned by the engine's own user, as the documented install lays them out, are accepted.
+
+    See [the site builder internals](./development/site_builder_internals.md).
+
+- **The site builder can no longer start its agent units through polkit** *(action needed)*
+
+    The polkit rule the site-builder provisioner installs
+    (`/etc/polkit-1/rules.d/49-dedalo-site-<instance>-agent.rules`) allowed the site builder's
+    service user to *start* any systemd unit whose name began with the instance's agent
+    prefix. polkit is told the unit's name, but not which user the unit will run as. On
+    systemd 257 or newer that meant the service user could start a unit with that name as
+    root, so the site builder's daemon was effectively root on the host.
+
+    The rule now allows only *stop* and *kill*, and only on the runs of the museum's declared
+    sites. The daemon no longer starts any unit. A run is started by systemd from units that root
+    installs for each site, as that site's own user (see the entry on per-site agent users, in
+    this same release). No per-run file is written for systemd to read as root.
+
+    **Action needed:** run the site-builder provisioner (`provision apply`) on every host. It
+    installs the narrowed rule together with the per-site units.
+
+- **Transcription actions check the audiovisual component and the user's projects before they touch a recording.**
+
+    Building the audio file for transcription, sending a recording to the transcription server, checking its status and building subtitles checked only the section's permission, and two of them skipped the check when a field was missing from the request. They now check the section, the audiovisual component (or the transcription field they write) and the record's project first, before anything is read, sent or written; every transcription path asks the same thing of the recording — permission to consult it — and write access only to the transcription field it fills, so a transcriber gets the same answer whichever engine they choose, and a user with no access to the recording gets none of them. A transcription that finishes after the user lost access to the record, or after their account was deactivated or deleted, is no longer saved. Checking a server transcription's progress now reaches only the checking user's own job on that recording, and answers its progress alone: it no longer accepts a guessed job number, and it never returns the finished text, which the server saves into the record itself.
+
+    Wire contract: `WC-2026-09-30-transcription-record-tipo`.
+
+- **Every write through a tool, the assistant or the record doors now asks the same four questions, in the same order.**
+
+    A write names a section, often a component and a record. Every door that performs one — the record save, duplicate and delete, the tools, the tag delete of a transcription, the assistant's write tools — now answers through one shared rule: is the record id a real id, does the profile grant the section, does it grant that component of that record (with the rule that a user cannot raise their own profile, developer flag or username), and is the record inside the user's projects. Before, some tools asked only part of it: a global administrator with write access to user passwords could reach the root account's record through a tool, a record id like `1.5` or `abc` was accepted, and a user could change their own profile assignment through a tool that the record editor refused. These requests are now refused. A section that is read-only by design (Activity, the Time Machine) is also refused to every tool, importer and record door that would create, overwrite or delete its records, for administrators too. A CSV import row that names a record id still free when the file was read, but taken by another user's new record while the import ran, no longer writes into that record as if it were the import's own: the row is now checked as a change to that existing record (its projects, and the rule on a user's own account) and reported as updated, not created. The same holds for a file import whose file name names a record id: if the id was still free when the import started but another user's new record took it during the import, the file is now checked as a write to that existing record (its projects) instead of being treated as the import's own new record, and is refused when that record is outside the user's projects. When the assistant is asked to find a record or create it, it now checks every field it would fill before creating anything, and a refused fill no longer leaves an empty record behind. The one exception kept is the record editor's save, and the deletion of a tag in a text field, which is an edit of that same field: as before, they ask the field's grant only, so a user can still edit a linked record's fields through a portal they may edit; your review of that exception is invited in the wire-contract entry.
+
+    Wire contract: `WC-2026-09-30-write-door`.
+
+- **Outbound fetches now refuse every IPv6 route to an internal address.** *(action needed)*
+
+    When the server fetches a URL on a user's behalf (an RDF import, an external catalogue
+    lookup, a translation or transcription service, a harvest), it first checks that the
+    address is on the public internet, so a user cannot point it at your internal network or
+    at the cloud metadata endpoint. Until now several IPv6 forms passed that check although
+    they lead to an internal address: the NAT64 prefix `64:ff9b::/96` (on an IPv6-only host
+    this reaches `169.254.169.254`), 6to4 `2002::/16`, the IPv4-compatible and IPv4-translated
+    forms, the old site-local range, multicast, Teredo, and any address carrying a zone
+    (`%eth0`). The documentation ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`,
+    `2001:db8::/32`) were also accepted.
+
+    Now all of them are refused. An IPv6 address is accepted only inside the global unicast
+    space. One that carries an IPv4 address through the IPv4-mapped form or NAT64 is judged by
+    that IPv4 address, so on an IPv6-only install public sites stay reachable. 6to4 and Teredo
+    are tunnels and are refused whole.
+
+    **Action needed on an IPv6-only server behind a NAT64 translator that uses its own
+    prefix** (a network-specific one, or one taken from the local-use block `64:ff9b:1::/48`
+    or a unique-local range): IPv4 sites are unreachable from it until you declare the
+    translator's prefix, exactly as it is configured, in the new setting
+    `DEDALO_NAT64_PREFIXES` (for example `2001:db8:64::/96` or `64:ff9b:1::/96`). Addresses
+    inside it are then judged by the IPv4 address they reach. The server also asks the network
+    for its NAT64 prefix on its own, but uses the answer only to refuse more, never to allow
+    more. Nothing to configure anywhere else.
+
+    With `DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS` on, an on-premise transcription server may
+    still not sit on IPv4 link-local (`169.254.0.0/16`) or on another cloud's metadata address
+    (`100.100.100.200`, `192.0.0.192`, and the IPv6 metadata servers of AWS, `fd00:ec2::254`,
+    and Google Compute Engine, `fd20:ce::254`), in any spelling — through a local-use NAT64
+    address (`64:ff9b:1::/48`) included.
+
+    **Action needed if an address allowlist** (`DEDALO_INSTALL_ALLOWED_IPS`,
+    `DEDALO_ERROR_REPORT_ALLOWED_IPS`) **has an IPv4 part with a leading zero**
+    (`127.0.0.01`, `010.0.0.1`): such an entry is no longer read as a number and matches no
+    client, because some systems read it as octal — so the installer or the error report
+    refuses that client until you rewrite the entry without leading zeros. The install
+    allowlist line the server logs when it starts names such an entry as ignored. An entry now
+    matches its address in every spelling: `2001:db8:0::1` matches a client reported as
+    `2001:db8::1`, `127.0.0.1` (or the `loopback` token) matches `::ffff:7f00:1`, the form a
+    dual-stack listener may report, and a block written in the IPv4-mapped form
+    (`::ffff:10.0.0.0/104` or `::ffff:a00:0/104`) is the IPv4 block it spells (`10.0.0.0/8`).
+
+#### Changed
+
+- **The maintenance *Unit test area* only offers the JS test runner and the test-table reset where they can work.**
+
+    *Open JS unit test* is shown only on a development server (`DEDALO_DEV_MODE`) whose
+    dev dependencies are installed. A production install (the default Docker image, or
+    one kept current by the code updater) does not have the browser test libraries, so
+    the runner page used to open and fail with unreadable MIME-type errors; the panel now
+    says which libraries are missing instead. *Truncate test table and Create new empty
+    test record* is shown only on a development server, and the server refuses it
+    elsewhere (`maintenance.dev_mode_required`). *Run long process* stays available
+    everywhere.
+
+    Wire contract: `WC-2026-10-01-unit-test-widget-dev-gate`.
+
+- **Hitting a database limit now shows a clear "try again" error, and maintenance runs on its own database connections.**
+
+    When a database statement runs past `DB_STATEMENT_TIMEOUT_MS`, or a request waits past `DB_POOL_ACQUIRE_TIMEOUT_MS` for a free database connection, the user now sees a "took longer than the server allows" or "the server is busy, try again" message instead of a generic server error. Maintenance no longer runs under the statement limit: the long maintenance-area actions (rebuilds, VACUUM and REINDEX, bulk transforms, imports) and data updates use a separate set of database connections without it, sized by the new `DB_MAINTENANCE_POOL_MAX` (default 2 per process). Count it TWICE in your connection budget, plus 2: each engine process may hold `DB_POOL_MAX + 2 × DB_MAINTENANCE_POOL_MAX + 2` connections (16 with the defaults), because the index-rebuild lane keeps its own idle connections and a stop or an update verdict opens up to 2 short-lived ones of their own (see [the database settings](./config/config_db.md)). The other maintenance-area actions keep the limit and never wait behind a long one, and the dataframe integrity scan now stops a batch that runs past its time budget instead of running on. When the server stops, it cancels only its own running maintenance statements: another installation sharing the same PostgreSQL server is never touched. The defaults of the three limits are unchanged (`0`, off); `60000`, `30000` and `5000` are the recommended production values, and the database settings page lists the long operations to measure on a large installation before you set the statement limit. A concurrent index rebuild, plain VACUUM or ANALYZE that is still running when the server stops is left to finish on the database instead of being cancelled, because a cancelled concurrent rebuild leaves a broken index behind (the blocking forms — the `REINDEX TABLE` and `VACUUM FULL` of "Re-create db assets" — wait at most 5 seconds for their table like any other maintenance step, are retried a few times, and are cancelled at shutdown, which undoes them cleanly; before, such a statement queued behind a long backup kept every later reader of the table waiting for the whole backup); and "Optimize tables" now first removes any such broken index an earlier interrupted rebuild left on the tables it optimizes. A long maintenance action still gives up after 5 seconds of waiting for a table another operation is using, so it never holds up the users reading that table: the step it was on is undone, steps it had already finished are kept, and the action reports "try again in a moment" (or, for the search-store rebuild, an error line for that store). The bulk transforms (move TLD, move locator, move to portal, move to table, move language) now apply each definition file all-or-nothing: a file that waits too long is retried a few times and, if it still cannot finish, is left completely unapplied and named in the report. Before, a file could stop part-way with some tables already changed, leaving a section's records split between the old and the new tipo. Rebuilding the database constraints, triggers or indexes is now all-or-nothing for each table: if the new constraint, trigger or index cannot be created (including after that 5-second wait), the old one is kept instead of being left removed, and the action lists the failure by constraint, trigger or index, table and database error code (the full database message is in the server log). An index is now built next to the old one, which keeps serving searches until the new one takes its place, so the table stays readable during the rebuild.
+
+    Wire contract: `WC-2026-09-30-db-typed-503`.
+
+- **The official update server for v7 installations is v7.master.dedalo.dev.**
+
+    Code and ontology updates are now split by version. v7 installations update from `https://v7.master.dedalo.dev/dedalo/core/api/v1/json/` — the address the configuration examples for `CODE_SERVERS` and `ONTOLOGY_SERVERS` now show. v6 installations keep updating from their own server exactly as before; a v7 update server answers only v7 installations.
+
+    For an installation that serves updates to others, the suggested layout keeps the release archives in `/srv/dedalo/code` (`DEDALO_CODE_FILES_DIR`) and the ontology files in `/srv/dedalo/ontology` (`ONTOLOGY_DATA_IO_DIR`), next to the media in `/srv/dedalo/media`. Nothing changes for an installation that leaves these settings unset.
+
+- **A published code release is now built from a release tag (`vX.Y.Z`); developer builds come from `master`.**
+
+    On a code server, **Serve Code**'s *Build release* button used to archive the tip of the `master` branch, and *Build developer release* whatever other branch the server had checked out. Now a published release is always a tagged version: *Build release* archives the newest `vX.Y.Z` tag of this engine in the build checkout (prerelease tags such as betas are not releases, earlier-engine `v6` tags are never candidates, and a tag whose version file disagrees with its name is refused), and *Build developer release* archives the tip of `master` — the latest integrated code, before its release. The branch the server has checked out no longer matters.
+
+    What to do on a code server: tag each release commit (`git tag v7.0.1`, pushed to the remote) and fetch tags into the build checkout (`git fetch --tags`) before building; until a tag exists the panel reports that nothing can be published. While v7 is in beta this is the expected state: installations receive v7 code only as developer builds. See [Updating code](./management/updates/updating_code.md).
+
+    Wire contract: `WC-2026-09-29-code-release-channel-refs`.
+
+- **Building and serving code releases now has its own maintenance panel, Serve Code.**
+
+    The **Update code** panel used to hold two jobs: installing a new release on this installation, and — on a code server — building releases from git and serving them to others. The second job is now its own panel, **Serve Code**, shown only on a code server (`IS_A_CODE_SERVER=true`) or the development installation. **Update code** keeps installing, restoring and deleting restore points.
+
+    For scripts that build releases through the API: send the build request to `serve_code` instead of `update_code` (same action name, `build_version_from_git_master`, same options).
+
+    Wire contract: `WC-2026-09-28-maintenance-serve-code-widget`.
+
+- **Serving your ontology to other installations now has its own maintenance panel, Serve Ontology.**
+
+    The **Update Ontology** panel used to do two jobs: download an ontology from a master server, and — folded away at the bottom — report whether this installation can serve its own ontology to others. The two are now separate panels. **Update Ontology** only downloads; the new **Serve Ontology** panel shows the three `../private/.env` settings that decide serving (`IS_AN_ONTOLOGY_SERVER`, `ONTOLOGY_SERVER_CODE`, `DEDALO_CORS_ALLOWED_ORIGINS`), the lines to add, and the address other installations must register.
+
+    Wire contract: `WC-2026-09-28-maintenance-serve-ontology-widget`.
 
 #### Fixed
+
+- **The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box.**
+
+    The Docker image's ImageMagick could read AVIF but not write it: the Debian package it is built on ships the AVIF decoder only. An installation that lists `avif` in `DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS` therefore had those alternative versions refused on every upload. The image now includes the AVIF encoder (`libheif-plugin-aomenc`). Docker installations get it with the next image build; on a host install, add the same package to have AVIF versions written.
+
+- **Interlaced videos are now deinterlaced when their web versions are built.**
+
+    Every video quality was meant to be deinterlaced, but the encoder was given the deinterlace filter and the colour-correction filter as two separate options, and ffmpeg keeps only the last one. The deinterlace step was silently skipped, so video recorded interlaced (most analogue and DV tape transfers) got web versions with visible combing on movement. Both encoding passes now receive one combined filter, and interlaced video is deinterlaced. Progressive video is left untouched: only frames marked as interlaced are processed.
+
+    Existing versions are **not** rebuilt automatically. To fix a video already in the archive, rebuild its qualities with the [media versions tool](./tools/using_media_versions.md); the original file is never changed.
+
+- **The audio encoder for video and audio derivatives is chosen from what the configured ffmpeg can actually encode, and a failed encode names its error.**
+
+    The AAC encoder used for video and audio derivatives (`libfdk_aac`, then `aac`) is now
+    read from the configured ffmpeg's own encoder list (`ffmpeg -encoders`) instead of its
+    build flags, which could name an encoder the binary does not have. The answer is
+    remembered per ffmpeg binary, so a different ffmpeg resolved by the same server is asked
+    again rather than handed the first one's answer — and the same holds for ImageMagick's
+    "can this format be written" check. A probe that cannot run is no longer remembered for
+    the life of the server. A failing second encoding pass or audio extraction now reports
+    ffmpeg's error line instead of the tail of its banner and progress output; the encoded
+    files are byte-identical. See [the media engine](./core/system/media_engine.md).
+
+- **The profile permissions tree opens in a fraction of a second instead of several seconds.**
+
+    Opening a profile record rebuilt the whole permissions tree (every area, section
+    and field of the ontology — some 13,000 entries) on every visit, with several
+    database queries per entry: 6–7 seconds on a real installation. The tree is now
+    built from one ontology query and kept per interface language and per set of
+    granted areas, so the first opening takes well under a second and later ones are
+    immediate. It is rebuilt automatically after any ontology change and after any
+    change to a profile or a user's profile assignment, so it never shows outdated
+    structure or another user's areas.
+
+    Siblings that share the same ontology order number now always appear in the same
+    order (by creation), where before their relative order could vary between
+    servers.
+
+- **Published files survive a power cut, and deleting a record no longer races a running publication into the same directory.**
+
+    Two gaps in file publications (Markdown, XML, RDF, CSV, JSON) are closed:
+
+    - **A power cut no longer leaves a "completed" run with broken files.** A run
+      recorded each batch, and finally its *completed* state, in the database
+      while the files it had written could still be only in the operating
+      system's memory. A power cut (or a kernel crash) could then leave empty or
+      missing record files, a deleted record's file back in place, or a truncated
+      CSV/JSON export — behind a job that said *completed* and could no longer be
+      resumed. Every file, archive and merged document is now forced to disk, and
+      its directory with it, before the run records it.
+    - **Deleting a record waits its turn on file targets too.** When a record is
+      deleted, its published file is removed under the same per-target hold the
+      publication runs use. It could otherwise be removed just before a running
+      batch wrote it again (the deleted record reappeared on the public site), or
+      while a run was building its archive. If a run is writing that directory at
+      the moment of the deletion, the removal stays pending and the retry queue
+      completes it, as it already did for publication databases.
+
+    Wire contract: `WC-2026-09-30-diffusion-run-ledger`, `WC-2026-09-30-diffusion-target-fence`.
+
+- **Resetting a hierarchy to its seed can no longer delete it without restoring it.**
+
+    "Reset to seed" (Add hierarchy) and the installer's hierarchy step now apply each hierarchy all-or-nothing. The reset used to delete the hierarchy's terms first and load the seed in a separate step: if the seed then failed to load, the hierarchy was left empty — every edit and addition gone and the seed not restored. A models file that failed to load, or a failed update of the record counter, was ignored and the hierarchy reported as imported. Now the delete, the terms, the models and the counter are one database transaction: if any part fails, nothing changes and the hierarchy is reported as failed with the reason.
+
+- **Local ontology overrides now apply to the node they point at, and change only what they state.**
+
+    A record in the local ontology (`localontology0`) overrides a shared node through
+    its **Overwrite** field. Before, any link in the record counted as an override (so
+    its parent was overridden too), and re-parsing the node could move it to the
+    `localontology` namespace, erase its other translations, drop its layout CSS and
+    make it translatable. Now only the Overwrite field links an override; the node's
+    TLD, translatable flag, order and model flag stay as shared; the term merges per
+    language, and each property the override fills (CSS included) replaces the shared
+    one whole while the others are kept — set a property to `null` to remove it. Local
+    records are no longer parsed as nodes of their own. See
+    [Overriding shared ontology nodes](./core/ontology/local_ontology_overrides.md).
+
+    Wire contract: `WC-2026-10-01-ontology-overwrite-scoped`.
+
+- **The Publication server API maintenance panel shows its "Open Swagger UI" buttons again.**
+
+    The panel (Maintenance → Publication → Publication server API) never showed the buttons that open the interactive documentation of the publication server API v1, because `API_WEB_USER_CODE_MULTIPLE` was not read. It is a configuration key again: list each publication database and its API code, e.g. `API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]`, optionally with `api_ui` when the API runs on another server — see [the configuration reference](./config/config.md). A v6 configuration migrated with the config migrator now carries the value across; the empty placeholder entry of a stock v6 configuration is left out, so a migrated install does not report a dropped entry on every start.
+
+- **Creating a site twice at the same moment can no longer overwrite or delete the first site.**
+
+    When two requests created a site with the same name at nearly the same time, the second one could pass its checks while the first was still being set up. It then wrote its own settings over the finished site, and if anything later failed, it deleted the whole site folder, including the first site's work. The site folder is now claimed by exactly one request: the second request is refused with "a site with this name already exists", and the first site is left untouched.
+
+    A site folder that exists but has no `site.json` (left by a create that was interrupted, or by a site whose settings file was removed) is no longer reused. Creating a site with that name is refused with the reason `workspace_exists`, and nothing in the folder is changed. An administrator must inspect the folder and remove it before the name can be used.
+
+- **Deleting a site while an agent session or a build is running is refused, and no longer blocks the site name.**
+
+    A site could be deleted while an agent session was still working on it. The session kept writing its own history, which re-created an empty folder with the site's name. Creating a site with that name was then refused with the reason `workspace_exists` until an administrator removed the folder by hand. Every restart of the site builder also retried a recovery that could never succeed for that folder.
+
+    Now a delete is refused while a session, a build or a repository operation is running on the site. The response names what is running (for example `session_running`), and nothing is removed. Stop the session or wait for the build, then delete again. Sessions and builds can no longer re-create a deleted site's folder. At startup, the site builder ignores folders left by the old behaviour, so it no longer retries their recovery. Remove those folders by hand to free the name.
+
+- **Site builder state survives a power cut, and a damaged driver record is reported at startup.**
+
+    The site builder's own state (each site's driver record, session and build
+    records, `site.json`) was written atomically but not forced to disk. After a
+    power cut or kernel crash, a newly written driver record could come back
+    empty. The site then refused every session that did not name its driver, on
+    every restart, and nothing explained why until a session was attempted. These
+    files, and the directories they are created in, are now forced to disk before
+    the write is reported done. A driver record that is present but unreadable is
+    now named in the startup log with the steps to fix it. It is left as found
+    and never rebuilt from `site.json`, which the agent can edit.
+
+- **A second Site Builder started by hand no longer stops the running service's agent runs.**
+
+    When the Site Builder daemon was started a second time for an instance that was already running (for example, by hand as the service user while debugging), the second process stopped the running service's agent turns and marked its sessions interrupted. Only after that did it notice the instance was already served and exit.
+
+    The daemon now checks first. If the instance's socket or port already answers, or (with systemd confinement) systemd says another process is the service's main process, the second start exits with one line saying why. It stops nothing and writes nothing. Start the service with `systemctl`, not by hand.
+
+- **Administrators' toolbars now show only the tools their profile grants.**
+
+    Global administrators (other than root) saw every installed tool in their toolbars, even tools their profile does not grant — and clicking one was then refused. The toolbar and every tool door now follow the same rule: a tool is available when the user's profile grants it (or it is always active); only the root account holds every tool. An administrator who asks for a tool their profile does not grant now gets "not authorized" rather than "unknown tool".
+
+    Wire contract: `WC-2026-10-01-tool-grant-one-decision`.
+
+- **Rebuilding a user's activity statistics can no longer lose them half-way.**
+
+    "Rebuild user stats" (Database info) used to delete a user's daily statistics first and then recompute and save them day by day, each step on its own. A failure part-way — a database error, a server restart — left that user's statistics deleted or half rebuilt. Now the activity log is read first and the old statistics are replaced in one transaction: if the rebuild fails, the user's previous statistics are kept and the error names the user (and the users already rebuilt before it). A day whose statistics record could not be created is no longer skipped silently. The rebuild still recomputes only from the activity log that exists, so statistics older than the log are still lost when it succeeds.
+
+- **A database backup counts only once it has been read back completely.**
+
+    The code updater requires a recent database backup, and the update panel shows whether there is one. Both used a quick check that reads only the start of a dump, so a dump that had stopped part way through still counted as a backup, and a code update could go ahead with no usable way back. Now a backup counts only after PostgreSQL has read it back from beginning to end; a dump that is cut short is named in the refusal ("did not verify (truncated)"), and the next older complete backup is used if there is one. The read happens once per backup file and never makes the server unresponsive: while it is running the panel shows the backup as "verifying" instead of guessing. A read that does not finish in time proves nothing, so that backup does not count either; on slow backup storage raise the new setting [`DEDALO_BACKUP_VERIFY_SECONDS_PER_GB`](./config/config.md) (default 60 seconds per gigabyte), which the refusal names. A file named like a Dédalo backup (`.custom.backup`) that does not even start like a PostgreSQL dump — for example one left full of zeros by a crash — no longer counts as a backup either. Only a problem in the file itself marks a backup as broken: if the read is interrupted, the backup disk reports an error, or the server's PostgreSQL tools are older than the dump, the backup does not count for now but is read again next time instead of being written off — and a backup that an earlier version wrote off for one of those reasons is read again once. This holds whatever language the server's system runs in: PostgreSQL's messages were misread when they came out translated (for example on a server set to Spanish), which could write off a good backup. Stopping a code update while its backup is being checked, or before it replaces the code, now really stops it: nothing is installed and the server is not restarted. The backup line of the update panel is checked only for the superuser, the only account that can run an update. If the backup cannot be checked at all (for example the server's PostgreSQL tools cannot be started), a data update now warns that the backup could not be checked instead of refusing to run.
+
+    Wire contract: `WC-2026-09-30-backup-freshness-deep-async`.
+
+- **A database backup that is still being written no longer appears as a backup.**
+
+    Before, a dump started from the maintenance area was written straight under its final backup name, so for the whole time it ran the backup list showed an unfinished file, and pressing the button twice in the same second could throw away the dump that was already running. Now a dump is written under a temporary `.part` name and receives its backup name only after it has finished successfully and — where the server can check it — has been read back completely (a finished dump that could not be checked — no time, a disk error, the check interrupted — is named but reported as "not verified", never thrown away); the list shows only finished backups, and a second press while one is running is simply skipped. A dump that fails is kept as `.failed` for you to inspect (a later failure under the same name becomes `.failed.1`, and so on — nothing is overwritten), and never looks like a backup. While the finished dump is being read back, the progress panel keeps showing it as running (it used to report a successful backup as interrupted), and you can stop a running backup from the panel. A `.part` file left behind by a server that restarted mid-dump is never deleted: after 24 hours the next backup reads it back and, if it is complete, gives it its backup name; if the file itself is broken it is kept as `.orphaned` for you to inspect, and if it simply could not be read this time it is left where it is and read again next time (the nightly backup job follows the same rule). The progress of a backup now belongs to the user who started it. An empty `.part` is left alone, because it may belong to a dump that is still waiting to start.
+
+    Wire contract: `WC-2026-09-30-backup-part-promotion`.
+
+- **A publication run that crashes, is cancelled or meets another run now publishes exactly what it should — and large archives no longer exhaust memory.**
+
+    Four defects of the publication (diffusion) runs are closed:
+
+    - **Resume after a crash.** A run that was interrupted and resumed used to lose
+      the records its primary records link to, and rebuilt the downloadable archive
+      (`diffusion_md.zip`, the merged RDF/XML document and its zip) from only the
+      part it did after the restart. Each run now keeps a ledger of what it has
+      queued and published, committed with every batch: a resumed run publishes
+      byte for byte what an uninterrupted run would, and its report still says
+      *Partial success* for problems met before the crash. A run left by a version
+      before this one restarts from the beginning. A **cancelled** run no longer
+      rewrites the published archive from its partial work. A linked record that
+      was unpublished while a run was stopped is not published again when the run
+      is resumed: the run checks each linked record's publication state when it
+      reaches it.
+    - **One writer per target.** Two runs, a record deletion and the maintenance
+      repairs could write the same publication database or directory at the same
+      moment, and a run whose job had been taken over could keep writing. Each
+      target is now written by one batch at a time — a waiting run shows
+      *Waiting for the publication target (busy)…* — and a record deleted while its
+      batch waited is removed from the public site instead of published. A long
+      step (adding a column to a large published table, a language sweep) keeps
+      its hold on the target for as long as it runs, and a batch that takes longer
+      than about 20 seconds no longer makes a healthy run look stopped (it used to
+      be restarted, and could end *failed* after its retries). Deleting records while a run
+      holds their target no longer waits: the unpublish is queued and retried.
+      Deletions never hold each other up: two users deleting records published
+      in the same database both have them removed from the public site at once.
+      `DB_POOL_MAX` must be at least 2 for a publication run to start. The
+      media-file allowlist is covered too: *Rebuild media index* and the startup
+      repair wait for a run that is publishing, so the media of a record that was
+      just published no longer disappears from the public site until the next
+      repair. They wait for at most two minutes and hold nothing while they wait:
+      a run or a deletion on one publication database is never held up because a
+      run is busy on another. When the wait runs out, *Rebuild media index* names
+      the database it could not repair, and the startup repair is reported as not
+      applied.
+    - **Another user's publication.** Pressing *Publish* on an element and section
+      another user is already publishing used to show you that user's run as if it
+      were yours. You now get a clear "the publication target is busy" message;
+      pressing *Publish* again on your own running request still reconnects to it.
+    - **Archives in bounded memory.** Zip archives and merged documents are now
+      built from disk one file at a time, with unchanged bytes, instead of loading
+      the whole publication into memory at the last step. Two files with the same
+      name in one archive are refused instead of one silently replacing the other.
+      A file removed while its archive or merged document is being built (a
+      record unpublished at that moment) is left out and named in the run's
+      report, instead of the whole run failing — including when every file of a
+      Markdown run is gone, which now just produces no archive. A file removed
+      after the archive started reading it is archived whole.
+
+    Wire contract: `WC-2026-09-30-diffusion-run-ledger`, `WC-2026-09-30-diffusion-target-fence`, `WC-2026-09-30-diffusion-attach-scope`, `WC-2026-09-30-diffusion-zip-streamed`.
+
+- **Duplicating a record now files the history of a transliterable or IRI field in the language it was saved in.**
+
+    When a record was duplicated, a field that keeps per-language versions beside a base value (a transliterable field) or an IRI field got its history row in the language-neutral lane, next to an empty extra row, while a normal save of the same field files it in the working language. The Time Machine of the copy therefore listed the change under the wrong language. The copy's history now lands in the working language, exactly where a save puts it, and the empty extra row is gone. The rule that decides which language a history row belongs to is now one rule shared by every door that writes history.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **Regenerating the media cache no longer undoes an upload made while it runs.**
+
+    The "Update cache" tool (media components) and the media files repair (`scripts/media_repair_files_info.ts`, and the `files_info` entry of the reconcile tools) rebuild files and then record which files a record has. They used to record that from what they had read at the start, so a file a curator uploaded to the same record while they ran — and its original file name — was silently undone. They now record it from the record as it stands at that moment, so the curator's upload is kept. "Update cache" also reports records deleted while it ran (and rows that stayed locked) instead of counting them as regenerated. The repair now also fixes a record whose media list names another record's files (what a failed duplicate could leave), and reports records it could not write instead of counting them as repaired. It judges each media item on its own: an item whose files are not on this server keeps its record of them (unless you allow shrinking), even when another item of the same field is repaired, and a file named some other way (for example by an image id) is never mistaken for another record's. Both tools now give up on a record another user is holding after a few seconds, report it, and go on with the next one, instead of waiting indefinitely.
+
+    Wire contract: `WC-2026-09-30-media-key-locked-transform`.
+
+- **A move_* data transform can be stopped, and only one runs at a time.**
+
+    Running a move transform for real (Move TLD, Move locator, Move to portal, Move to table, Move lang with `dry_run: false`) used to happen inside the web request. Nothing could stop it except restarting the server. It kept every record it had changed locked until the end of each definition file. If it was sent again it waited behind itself and then reported a failure while the first run carried on unseen. Now the transform runs as a background process that answers at once, reports its progress in the maintenance panel and has no time limit. Stopping it cancels the definition file it is working on and undoes that file completely; the files after it are reported as not run. A second transform started while one is running is refused ("Another move_* transform is running") instead of waiting. The maintenance panel can now actually run a transform: until now the five move widgets only ever sent a dry run, so no button reached the real run. The submit button now runs a preview (dry run); when the preview ends without errors an Execute button appears, which asks for confirmation and runs exactly the files that were previewed (change the selection and it asks you to preview again). The preview also runs in the background, with the same progress panel and Stop button. A run that fails — a definition file undone, a file refused because another transform is running, an unknown outcome — now ends as an error in the panel, with the reason; before, the panel said "Process completed" and the failure was visible only in the raw report. If a definition file fails at the moment its changes are being saved (a lost database connection, a server shutdown), the report now says what the database actually did with it: applied, undone, or, when that cannot be read back, an unknown outcome that stops the run and asks you to check the data before running that file again. Before, every failed file was reported as undone, and running a Move locator file again after it had in fact been applied moved its locators twice.
+
+    Wire contract: `WC-2026-09-30-move-transform-execute-job`.
+
+- **A failed ontology update now says why, inside the Update ontology panel**
+
+    When fetching the master's file list or importing the ontology failed, the
+    panel showed nothing — the error only reached the browser console. The panel
+    now shows the failure in place: the error, the server's explanation (for
+    example which address was refused) and the request id to find it in the
+    server log.
+
+- **The Update ontology panel scrolls to its result**
+
+    The result of an ontology update — success, warnings or a failure — appeared
+    below the submit button, out of sight unless the admin scrolled down, so the
+    panel looked idle. It now scrolls to the version change while the import runs,
+    and then to the outcome, as the Update code panel already does.
+
+- **Updating the ontology works from every configured master, not only the first**
+
+    When `ONTOLOGY_SERVERS` listed several masters sharing the same access code,
+    choosing any of them except the first failed every file with
+    `Download failed … (origin mismatch: <chosen> != <first>)`. The engine now
+    identifies the chosen master by its address, so each listed server updates
+    from itself. A server address that is not in `ONTOLOGY_SERVERS` is still
+    refused before anything is downloaded.
+
+- **A site builder turn whose egress gate fails to close now still ends, instead of leaving the session running forever.**
+
+    When the daemon could not remove a turn's egress sockets (for example, the host refused the unlink), the turn's remaining cleanup was skipped: the driver's MCP configuration stayed in the workspace and the session never left the running state. Each cleanup step now runs on its own. The turn ends normally, and the failure is written as an `[egress]` line in the session log. The same holds for a build or git step: its gate failing to close no longer replaces the step's own result, and the `[egress]` line goes to the build log. A run refused after its gate opened (for example, an environment value with a control character) now reports that refusal, not the error from closing the gate.
+
+- **A data update now applies completely or not at all, and two updates can no longer run at once.**
+
+    Before, each step of a data update was saved as soon as it ran: a failing step, a stopped update or a server restart left the earlier steps applied while the installation still reported the old data version, and running the update again applied them twice. Now the whole update — every step and the new version number — is saved in one piece. If anything goes wrong, or the update is stopped, nothing of it is kept and the report ends with "Rolled back: no statement of this run persisted"; after a restart, simply run the update again. A second update started while one is running, or an update that was already applied from another window, is refused. Stopping the update job now also stops the statement it was running, even while the server is busy. A statement stopped by a server shutdown is reported as an interruption, not as an error in the update's SQL, and the update log marks every run that was saved with a `COMMITTED` line. The installed data version shown in the panel is the final word: if the update log cannot be written (a full disk, say), the update still completes and reports its real outcome. Every required step must stay checked: the update refuses a selection that leaves one out, because the new version number would otherwise claim work that was never done. If the connection to the database is lost at the very end, the report says whether the update was saved after all — as the database itself records it, not as the version number happens to read — or asks you to reload the panel when that cannot be read; it never claims a rollback it cannot confirm. Long updates are no longer cut short by the database statement limit or by the background-job time limit, and a step waiting for a busy table waits only briefly and retries, so ordinary work on that table is not held up behind it. An update step can no longer end the update's own database transaction half-way (a `COMMIT` inside a step is refused before it reaches the database); should that ever happen anyway, the report says the update was partially applied and was not recorded as done, instead of claiming nothing was kept.
+
+    Wire contract: `WC-2026-09-30-update-engine-atomic`.
+
+- **Error reports now include logged client errors**
+
+    The "Report a problem" tool now attaches errors the client caught and logged (`console.error`), not only uncaught ones, so a report of real breakage no longer says "0 errors". Only a short message and stack are kept; repeats are counted, not duplicated.
+
+- **An update server with no public host now says so, instead of sending download links that point at localhost.**
+
+    When an ontology or code update server had no `DEDALO_HOST` set (or set it to `localhost`), it still answered other installations, but every download link in its answer pointed at `http://localhost`. The installation being updated rightly refused them, with an "origin mismatch" error that seemed to blame its own setup.
+
+    The server now refuses those requests itself, and its message names the setting to fix: set `DEDALO_HOST` (and `DEDALO_PROTOCOL`) on the update server. Requests from the same machine are still served, so local development setups keep working.
+
+    Wire contract: `WC-2026-09-30-update-manifest-local-origin-refusal`.
+
+- **Time machine restore no longer fails on installs whose outbound host allowlist is empty.**
+
+    Before, restoring any value from the [time machine](./tools/using_time_machine.md) was
+    refused when `DEDALO_EXTERNAL_ALLOWED_HOSTS` was empty — which is the default. The error
+    named a section you had not touched (on a standard install, `test3`) and its external
+    catalogue host (Zenon), because the engine checked the allowlist while merely reading an
+    [external service](./core/system/external_services.md) binding, even though a restore
+    never contacts that service.
+
+    Now restores work with no change to your `.env`. The allowlist still guards every request
+    the server sends out: a request to a host that is not listed is refused before any
+    connection is opened. Where a host is not allowed, what you see changes in three places: an
+    external search notice now names the real service and says the host is blocked, and an
+    external value in a record and an export's degradation report name the real service, all
+    instead of reporting an unknown, misconfigured source.
+
+    Wire contract: `WC-2026-09-27-external-allowlist-at-door-only`.
+
+- **The multi-instance Apache example now sets an empty `DocumentRoot` and the entry redirects.**
+
+    The Apache virtual host in [Multiple instances](./install/multi_instance.md) had no
+    `DocumentRoot`, so a vhost copied from it inherited the server-wide one (often
+    `/var/www/html`) and served its contents on any path it did not route. It now points
+    at an empty directory, like the single-instance reference, and carries the `302`
+    redirects from `/`, `/dedalo/` and `/dedalo/core/` to the login page. Check each
+    existing Dédalo vhost for a `DocumentRoot` line.
+
+- **The developer information bar is shown to developers and root again, on any server.**
+
+    The information strip at the top of the interface — engine version, build, database and runtime — is a developer surface. It had become tied to `DEDALO_DEV_MODE`, so on an installation that did not set that key it was hidden even from a logged-in developer, and setting it in `private/.env` did nothing because the container environment takes precedence. That is what a Docker installation saw: no developer bar, whatever the `.env` said.
+
+    The bar now follows the logged-in user, as the application itself did before the TypeScript rewrite: a user flagged as a developer in their record sees it, and root (superuser) always counts as a developer. `DEDALO_DEV_MODE` keeps its own meaning as the server posture — it selects the no-cache boot, the readable client libraries and the dev-only libraries the browser test harness needs — but it no longer decides who sees developer surfaces.
+
+    Debug-only surfaces (`SHOW_DEBUG`) are now shown to root alone, as before the rewrite; other developers keep the developer surfaces but not the debug ones, and non-developers see neither, even on a development server.
+
+    The main navigation bar is unchanged; only the extra information strip and the developer-only shortcuts are affected.
+
+### For developers
+
+#### Security
+
+- **The RDF import no longer shows the internal address a refused link resolved to.**
+
+    When an RDF link was refused because its host leads into the institution's own network,
+    the per-link error list of `get_rdf_data` repeated the server's log text, which names the
+    internal address the host resolved to. Each failed link is now reported as
+    `{uri, error}`, where `error` is the same error body a failed request carries: a fixed,
+    public sentence and a code (`security.ssrf_blocked`), never the address. The import
+    screen shows one line per failed link, as before, now in the user's language when that
+    error has a translated label.
+
+    Wire contract: `WC-2026-09-29-rdf-per-uri-error-wire-body`.
+
+#### Changed
+
+- **The test suite now runs its diffusion gates against its own MariaDB server, never an installation's.**
+
+    Before, the gates that publish to MariaDB used whatever server the machine's
+    configuration named. On a developer machine they created and dropped tables in
+    a real publication database. On a machine without that server they skipped
+    silently and reported green.
+
+    Now `bun test` starts a MariaDB server of its own for each test lane, under
+    `../private/test_mariadb/<suite database>`. It listens on a private unix socket
+    and never on the network. The gates check a marker on that server before they
+    write, and they fail loudly rather than skip when it is missing. The gates
+    never write to an installation's databases. CI runs each of these gates on its
+    own and checks that the rows that gate is declared to write really changed on
+    the suite's server during its run. It also runs every other unit and parity test
+    that can reach the MariaDB connection code, directly or through other modules,
+    with the suite's server up. It fails if any of them connects to the server without
+    first passing the suite's check, or if any of them never really ran. These runs
+    come last in CI's database tier, after the parity tests, so they cannot change
+    the data the earlier stages measure. A check fails if they are ever moved
+    earlier. The tier stops the server when it exits. One gap remains until the engine
+    itself is fixed: while a lane's server is not running, a test that opens a
+    MariaDB connection without going through the suite's own check can still make a
+    login attempt against the machine's default MariaDB server. It cannot write
+    there, since the attempt uses the suite's own user.
+
+    Removing a lane's server is safe against a run that is still using it. The
+    lane's directory is either fully there, with its marker, or gone, both when it
+    is created and when it is removed. A test waiting to use a removed lane is told
+    so instead of carrying on. A removal that was killed halfway is finished by the
+    next one. A MariaDB command that hangs is killed after a deadline, so it cannot
+    block the lane for everyone else, and a test waiting for the lane waits long
+    enough to report the real problem instead of "lane busy". A server that does
+    not start in time is stopped, not left running. A server that answers with an
+    error is reported and never restarted. Stopping or sweeping a lane also stops
+    any stray MariaDB server or installer still running on that lane's data
+    directory, for example one left behind by a killed run, and waits until it has
+    really exited; if a process survives, the command fails and names it. The shard
+    runner (`bun run test:shard`, and its `bun run test:shard:sweep`) removes the
+    servers of its shard lanes too, and reports a lane it could not remove with the
+    real error, refusing to run or exiting with an error for it, instead of
+    claiming the lane was not the suite's.
+
+    What this means for you: running the full suite on a development machine now
+    needs the MariaDB server binaries (`mariadbd`, `mariadb-install-db` and
+    `mariadb`; on macOS, `brew install mariadb`). Without them the MariaDB gates
+    fail and name what is missing. Stop a lane's server with
+    `bun run scripts/ci/suite_mariadb.ts stop`. To remove it together with its data,
+    use `bun run scripts/ci/suite_mariadb.ts sweep`.
+
+#### Added
+
+- **Tool authors can read other sites through `harvestFetch`, a harvesting door that obeys robots.txt and paces its requests.**
+
+    A tool that imports from another institution's site (an auction catalogue, a journal's
+    OAI endpoint, a publisher's PDF) can now call `harvestFetch` instead of building its own
+    fetch layer. For every hop of a redirect chain it re-checks the address and your host
+    policy, refuses a switch from https to http, and asks the site's `robots.txt` — for
+    images, PDFs and POSTs too. It sends one request at a time per origin, for the whole
+    installation, at least three seconds apart, or at the site's `Crawl-delay` or
+    `Retry-After` capped at one minute. It connects to the address it checked, bounds each
+    hop by a total and an idle timeout and a byte ceiling, and can refuse an unexpected
+    media type before downloading it. Its refusals carry their own codes
+    (`harvest.refused`, `harvest.robots_disallowed`, `harvest.robots_unavailable`,
+    `harvest.too_large`, `harvest.unexpected_type`), which name the site and the reason, so
+    a cataloguer learns why a URL was not fetched. See
+    [Fetching from other sites](./development/tools/server_contract.md#fetching-from-other-sites-srccoreharvestharvestts).
+
+#### Fixed
+
+- **A save whose value is not shaped like the field's data is now refused instead of stored.**
+
+    The save API accepted a value in any shape and answered success: a bare text sent to a translatable text field was stored beside the other languages, and the next save in another language silently removed it; a number sent as text, an empty `null` item or a non-list replacement were stored or emptied the field the same way. Such a save is now refused with `request.invalid_data`, before anything is written. Each item must be an object — `{value: "…"}` for a text field, `{value: 12}` for a number, `{start: {…}}` for a date, `{iri: "…", title: "…"}` for a link — and a replacement (`set_data`) must be a list of them. The application's own editors already send these shapes. The CSV/JSON importer now converts numbers written as text in a number column (`"55"`) and numbers in a text column, and refuses a number cell it cannot read instead of storing it. Emptying a date field in the record editor now removes the stored date; before, it left an empty placeholder in the record. Records that still hold numbers stored as text by earlier versions keep working with the cache-update and propagate-data tools: those tools convert such numbers when they save the record again. The RDF importer converts a value mapped to a number field (a Nomisma weight, diameter or axis) into a number, and reports one that is not a number (`number_unparsed`) instead of sending it.
+
+    Wire contract: `WC-2026-10-03-save-refuses-malformed-value-shape`.
+
+- **The client-library version table in the manual is generated from the pins, so it can no longer go stale.**
+
+    [Client library versions](./development/vendored_library_versions.md) listed
+    outdated versions for five npm-tracked libraries (three, geoman, turf,
+    highlight.js, mocha). Its npm table is now generated from `package.json` and the
+    client-library registry (`bun run libs:gen`) and checked byte for byte by a gate,
+    so a version bump that leaves the page behind fails the build. The vendored
+    table stays hand-written and is checked against `vendor/vendor_manifest.json`, as
+    before.
+
+- **A refused save no longer leaves an empty record behind.**
+
+    A save to a record that does not exist yet creates the record first. When the change itself was
+    then refused (for example, removing a value the field does not hold), the answer was a failure,
+    but the new empty record stayed, the section's id counter had moved to its id, and the activity
+    log recorded its creation. A refused save now leaves nothing behind: no record, no counter move,
+    no history or activity entry. The answer to the request is unchanged. A save run inside a
+    larger operation (an import row, for example) leaves that choice to the operation, which rolls
+    the row back as before.
 
 - **A relation search with an unreadable value now fails with an error instead of quietly matching every record.**
 
@@ -47,7 +1344,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 45 entries"
+??? note "Wire contract — 96 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -94,6 +1391,57 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-external-record-field-set`
     - `WC-2026-09-24-multi-section-search-identity-dedup`
     - `WC-2026-09-24-tool-export-server-built-artifacts`
+    - `WC-2026-09-27-bulk-revert-undo-log`
+    - `WC-2026-09-27-csv-import-append-mode`
+    - `WC-2026-09-27-external-allowlist-at-door-only`
+    - `WC-2026-09-28-maintenance-serve-code-widget`
+    - `WC-2026-09-28-maintenance-serve-ontology-widget`
+    - `WC-2026-09-29-code-release-channel-refs`
+    - `WC-2026-09-29-dataframe-hard-delete-retired`
+    - `WC-2026-09-29-number-not-equal`
+    - `WC-2026-09-29-rdf-per-uri-error-wire-body`
+    - `WC-2026-09-29-search-deep-leaf-mixed-rule`
+    - `WC-2026-09-29-search-where-parts-parenthesized`
+    - `WC-2026-09-29-select-family-mode-datalist`
+    - `WC-2026-09-29-tm-preview-frame-children-as-of`
+    - `WC-2026-09-30-agent-tool-grant`
+    - `WC-2026-09-30-backup-freshness-deep-async`
+    - `WC-2026-09-30-backup-part-promotion`
+    - `WC-2026-09-30-db-typed-503`
+    - `WC-2026-09-30-diffusion-attach-scope`
+    - `WC-2026-09-30-diffusion-run-ledger`
+    - `WC-2026-09-30-diffusion-target-fence`
+    - `WC-2026-09-30-diffusion-zip-streamed`
+    - `WC-2026-09-30-guarded-text-pinned-typed-transport`
+    - `WC-2026-09-30-mcp-search-section-grant`
+    - `WC-2026-09-30-media-key-locked-transform`
+    - `WC-2026-09-30-media-pair-scope`
+    - `WC-2026-09-30-move-transform-execute-job`
+    - `WC-2026-09-30-ontology-identifier-grammar`
+    - `WC-2026-09-30-password-hash-never-served`
+    - `WC-2026-09-30-password-policy-enforced`
+    - `WC-2026-09-30-record-write-obligation-ledger`
+    - `WC-2026-09-30-search-root-step-acl`
+    - `WC-2026-09-30-transcription-record-tipo`
+    - `WC-2026-09-30-update-engine-atomic`
+    - `WC-2026-09-30-update-manifest-local-origin-refusal`
+    - `WC-2026-09-30-write-door`
+    - `WC-2026-10-01-ai-spend-budget`
+    - `WC-2026-10-01-change-plan-write-door`
+    - `WC-2026-10-01-delete-locator-write-door`
+    - `WC-2026-10-01-identify-vision-grant`
+    - `WC-2026-10-01-ontology-overwrite-scoped`
+    - `WC-2026-10-01-rdf-harvest-door`
+    - `WC-2026-10-01-rdf-ontology-import`
+    - `WC-2026-10-01-relation-search-display-paths`
+    - `WC-2026-10-01-search-hop-configured-targets`
+    - `WC-2026-10-01-site-builder-confinement-codes`
+    - `WC-2026-10-01-tool-grant-one-decision`
+    - `WC-2026-10-01-unit-test-widget-dev-gate`
+    - `WC-2026-10-01-write-door-delegations`
+    - `WC-2026-10-02-relation-children-write-through`
+    - `WC-2026-10-02-select-lang-missing-entry`
+    - `WC-2026-10-03-save-refuses-malformed-value-shape`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

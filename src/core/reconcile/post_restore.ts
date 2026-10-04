@@ -77,6 +77,11 @@ export const POST_RESTORE_PLAN: readonly PostRestoreStep[] = [
 		why: 'apply is a DESTRUCTIVE re-projection of dd_ontology per drifted TLD; the dry verdict names the TLDs and the operator decides',
 	},
 	{
+		name: 'ontology_identifiers',
+		apply: false,
+		why: "apply DELETES every dd_ontology row it cannot re-derive from a tld source (returned whole in the report); the restored table carries its backup instant's rows and CHECK states, so the dry list is the operator's to confirm",
+	},
+	{
 		name: 'hierarchy',
 		apply: false,
 		why: 'ensure re-provisions a hierarchy; the dry verdict names the broken ones and the operator applies from the maintenance area',

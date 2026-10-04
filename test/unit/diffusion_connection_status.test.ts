@@ -27,21 +27,28 @@
  * plan compiler, never forked) and a CLIENT pin (the consumer still reads
  * `.result`/`.msg`), which weld the two ends together.
  *
- * DB TIER (stated choice, per the no-silent-green rule): the real-payload check
- * is OPPORTUNISTIC. `buildDiffusionInfo` returns `{section_diffusion_nodes: []}`
- * whenever the virtual tree is null, which is the case on every box whose test
- * database lacks the configured DEDALO_DIFFUSION_DOMAIN — asserting over an
- * empty list would be silently green. So the contract is carried by the pure
- * helper + the type pin + the source pins (all DB-less and always run), and the
- * payload sweep asserts only when the tree actually produced panels, logging
- * loudly when it did not.
+ * THE REAL PAYLOAD IS BUILT, NOT BORROWED (review 2026-09-30). The payload leg used
+ * to call `buildDiffusionInfo('dd1190')` on whatever the ambient ontology carried and
+ * `return` green when it produced no panel — measured on the l3 suite lane: it logged
+ * "asserted nothing" and reported a pass, inside the MariaDB tier set that claims
+ * `skipped === 0` per file (the PUB-05 class: a MariaDB leg that runs nothing, green).
+ * It now provisions the `zzd` situation (test/helpers/zzd_diffusion_fixture.ts: a
+ * domain named after DEDALO_DIFFUSION_DOMAIN whose two sql elements publish `test3`
+ * into `zzd_probe_db` / `zzd_probe_db_two`, plus rdf/xml/csv elements on other
+ * sections), acquires both target databases on the lane's suite server, and asserts the
+ * EXACT panels of `test3`: two sql tables, each carrying a READY verdict from the REAL
+ * probe of the database its element names. An empty payload is a failure, never a pass.
  *
- * MariaDB is NOT required: every probe is INJECTED except the memo test, which
- * deliberately targets a non-existent database (a failed probe is a valid
- * verdict and still populates the memo).
+ * Every probe is INJECTED except the memo leg and the payload leg, which run the REAL
+ * probe — so each acquires the lane's suite MariaDB first (`requireSuiteMariadb`, PUB-05) and probes
+ * two databases whose verdicts are fixed by the suite, not by the machine: a suite
+ * target (ready) and the granted-never-created control (not ready, errno 1049). It
+ * used to probe an arbitrary absent name with no server acquired, which on a
+ * developer machine reached the INSTALLATION's MariaDB through the driver's TCP
+ * fallback, and whose verdict changed with whatever was listening.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -55,6 +62,17 @@ import {
 	closeAllTargetPools,
 	getTargetDatabaseStatus,
 } from '../../src/diffusion/targets/mariadb/db.ts';
+import { GRANTED_ABSENT_CONTROL_DB, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
+import {
+	countZzdOntology,
+	dropZzdOntology,
+	FILE_PANELS,
+	FILE_SECTION,
+	SQL_PANELS,
+	SQL_SECTION,
+	seedZzdOntology,
+	zzdTargetDatabases,
+} from '../helpers/zzd_diffusion_fixture.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 const read = (relative: string): string => readFileSync(join(ROOT, relative), 'utf8');
@@ -136,20 +154,33 @@ describe('connection_status — the shape the accordion panel consumes', () => {
 });
 
 describe('connection_status — the per-database memo (N panels, ONE round-trip)', () => {
+	const target = zzdTargetDatabases()[0] as string;
+
+	beforeAll(async () => {
+		// The real probe connects: only ever to the lane's suite server (never the TCP
+		// fallback a missing socket would take).
+		await requireSuiteMariadb(import.meta.path, [target]);
+	}, 120_000);
+
 	afterAll(async () => {
 		// Also the lifecycle claim in the module_state_tripwire allowlist entry.
 		await closeAllTargetPools();
 	});
 
-	test('a repeated database inside the TTL reuses the SAME verdict object', async () => {
-		// A database that cannot exist: the verdict is result:false either way,
-		// and a memo hit is proven by object IDENTITY (no second round-trip).
-		const database = 'dedalo_probe_memo_absent_db';
-		const first = await getTargetDatabaseStatus(database);
-		const second = await getTargetDatabaseStatus(database);
-		expect(second).toBe(first);
-		expect(typeof first.ok).toBe('boolean');
-		expect(typeof first.message).toBe('string');
+	test('a repeated database inside the TTL reuses the SAME verdict object — ready and not-ready alike', async () => {
+		// A memo hit is proven by object IDENTITY (no second round-trip), on a verdict
+		// the suite fixes: a marked target is ready, the granted-never-created control
+		// is not (a failed probe is a valid verdict and still populates the memo).
+		for (const [database, ready] of [
+			[target, true],
+			[GRANTED_ABSENT_CONTROL_DB, false],
+		] as const) {
+			const first = await getTargetDatabaseStatus(database);
+			const second = await getTargetDatabaseStatus(database);
+			expect(second).toBe(first);
+			expect(first.ok, database).toBe(ready);
+			expect(first.message).toBe(ready ? MSG_READY : MSG_NOT_READY);
+		}
 	});
 });
 
@@ -224,14 +255,47 @@ describe('connection_status — single source of truth and client welding', () =
 });
 
 describe('connection_status — the real get_diffusion_info payload', () => {
-	test('every emitted node carries null or {result,msg} (never a string)', async () => {
-		const { section_diffusion_nodes } = await buildDiffusionInfo('dd1190');
-		if (section_diffusion_nodes.length === 0) {
-			console.warn(
-				'[test] no diffusion panels for dd1190 in this database — payload sweep asserted ' +
-					'nothing (the pure-helper, type and source pins above carry the contract).',
-			);
-			return;
+	// The situation, not the ambient ontology: the fixture's table nodes that relate to
+	// SQL_SECTION, each under an sql element whose `database` child names a suite target.
+	const EXPECTED_PANELS = SQL_PANELS;
+
+	beforeAll(async () => {
+		await requireSuiteMariadb(import.meta.path, zzdTargetDatabases());
+		const { preCount } = await seedZzdOntology();
+		expect(preCount).toBe(0);
+	}, 120_000);
+
+	afterAll(async () => {
+		await closeAllTargetPools();
+		await dropZzdOntology();
+		expect(await countZzdOntology()).toBe(0);
+	});
+
+	test('the situation declares exactly the databases the panels must probe', () => {
+		expect([...zzdTargetDatabases()].sort()).toEqual(
+			EXPECTED_PANELS.map((panel) => panel.database).sort(),
+		);
+	});
+
+	test('every emitted node carries null or {ok,message} (never a string) — and the sql panels are READY on the real probe', async () => {
+		const { section_diffusion_nodes } = await buildDiffusionInfo(SQL_SECTION);
+		// Never vacuous: the situation guarantees these panels; an empty or partial
+		// payload is the defect this leg exists to catch, not a reason to pass.
+		const byTipo = new Map(section_diffusion_nodes.map((node) => [node.tipo, node]));
+		for (const expected of EXPECTED_PANELS) {
+			const node = byTipo.get(expected.tipo);
+			if (node === undefined)
+				throw new Error(
+					`buildDiffusionInfo('${SQL_SECTION}') emitted no panel for ${expected.tipo} (panels: ${[...byTipo.keys()].join(', ') || 'none'}) — the fixture situation's sql table is not reaching the payload`,
+				);
+			expect(node.type, expected.tipo).toBe('sql');
+			expect(
+				node.parents.some((parent) => parent.tipo === expected.element),
+				`${expected.tipo} must sit under its sql element ${expected.element}`,
+			).toBe(true);
+			// The REAL probe, on the database the element names — ready, because the
+			// suite server holds that database for this lane (acquired above).
+			expect(node.connection_status, expected.tipo).toEqual({ ok: true, message: MSG_READY });
 		}
 		for (const node of section_diffusion_nodes) {
 			const status = node.connection_status;
@@ -243,6 +307,17 @@ describe('connection_status — the real get_diffusion_info payload', () => {
 			expect(isMariadbTargetFormat(node.type)).toBe(true);
 			expect(typeof status.ok).toBe('boolean');
 			expect(typeof status.message).toBe('string');
+		}
+	});
+
+	test('a non-MariaDB element in the same situation emits NULL through the real payload', async () => {
+		// FILE_SECTION is published only by the rdf and xml elements: its panels must
+		// exist and carry no verdict (PHP: the row disappears).
+		const { section_diffusion_nodes } = await buildDiffusionInfo(FILE_SECTION);
+		expect(section_diffusion_nodes.map((node) => node.tipo).sort()).toEqual([...FILE_PANELS]);
+		for (const node of section_diffusion_nodes) {
+			expect(isMariadbTargetFormat(node.type), node.tipo).toBe(false);
+			expect(node.connection_status, node.tipo).toBeNull();
 		}
 	});
 });

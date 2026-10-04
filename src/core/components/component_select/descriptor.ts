@@ -10,6 +10,10 @@ export const component_select: ComponentModel = {
 	model: 'component_select',
 	column: 'relation',
 	render: 'text',
+	importAppend: {
+		refuse:
+			'single-choice: only one value is ever read, a second one cannot be added — use replace',
+	},
 	monovalue: true,
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',

@@ -219,7 +219,7 @@ login.prototype.build = async function(autoload=false) {
 
 /**
 * DEDALO_CACHE_PREFIX
-* Prefix of every Cache Storage key owned by the service worker (core/sw.js).
+* Prefix of every Cache Storage key owned by the service worker (core/service_worker.js).
 * (!) The cache is keyed by the SERVED CODE ('dedalo_files_<dedalo_version>'), so the
 * old fixed-name `caches.delete('dedalo_files')` deleted a key that is never created
 * any more — both the post-login purge and the logout purge were silent no-ops and the
@@ -321,7 +321,7 @@ login.prototype.login = async function(options) {
 	// call — dead code once the cache became versioned, and actively wrong once the
 	// sweep works: it ran even on a FAILED login, and it opened a window where the
 	// page had no cache at all until the new pass finished. Superseding is the
-	// service worker's job (sw.js delete_old_caches, keyed by the served code) and
+	// service worker's job (service_worker.js delete_old_caches, keyed by the served code) and
 	// the pass re-fetches with cache:'reload' anyway. The logout purge (quit) is the
 	// one that must actually delete.
 
@@ -489,7 +489,7 @@ login.quit = async function() {
 			// Unregistering does not clear Cache Storage, so the purge is what
 			// actually removes the files. Purging first is worse: the worker sees an
 			// unrestorable state on the next intercepted request and REBUILDS the
-			// cache it was just relieved of (sw.js revalidate), so the logout would
+			// cache it was just relieved of (service_worker.js revalidate), so the logout would
 			// end with the files back on disk. (!) This order NARROWS that window, it
 			// does not close it — an unregistered worker keeps controlling clients
 			// already loaded until they unload, so it can still intercept until the
@@ -775,7 +775,7 @@ login.prototype.action_dispatch = async function(api_response) {
 
 						case 'waiting':
 							// heartbeat from a pass QUEUED behind an in-flight one
-							// (sw.js). It carries no payload: arriving at all is the
+							// (service_worker.js). It carries no payload: arriving at all is the
 							// point — it re-armed the watchdog above. Explicit case so
 							// nobody "tidies" the sender's status string away; see
 							// WC-2026-08-21-files-cache-finish-message.
@@ -864,7 +864,9 @@ login.prototype.action_dispatch = async function(api_response) {
 * Prepares the service worker to manage the files cache
 * and the login sequence (circle animation, etc.)
 *
-* Registers the Dédalo service worker located at DEDALO_ROOT_WEB + '/core/sw.js'.
+* Registers the Dédalo service worker located at DEDALO_ROOT_WEB + '/core/service_worker.js'.
+* (!) Never back to '/core/sw.js': that URL is the tombstone that evicts the v6
+* classic worker (core/sw.js header) — registering there would install the tombstone.
 * Once registered, posts the 'update_files' message so the SW refreshes its cached
 * asset list immediately. Attaches the caller-supplied on_message listener to
 * navigator.serviceWorker so worker progress events (ready/loading/finish) reach
@@ -896,12 +898,12 @@ export const run_service_worker = async (options) => {
 	try {
 		// register serviceWorker
 		// Once registered, it will be loaded in every page load across the site
-		// {type:'module'}: sw.js imports the shared transport (core/common/js/
+		// {type:'module'}: service_worker.js imports the shared transport (core/common/js/
 		// api_transport.js) instead of carrying its own copy of the request
 		// algorithm. A classic SW cannot `import`; every supported browser
 		// (Chromium 91+, Firefox 114+, Safari 16.4+) runs module SWs.
 		const registration = await navigator.serviceWorker.register(
-			DEDALO_ROOT_WEB + '/core/sw.js',
+			DEDALO_ROOT_WEB + '/core/service_worker.js',
 			{ type: 'module' }
 		);
 

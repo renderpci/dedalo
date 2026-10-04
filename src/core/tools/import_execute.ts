@@ -26,20 +26,36 @@
  *      per record. Inside an ambient transaction a failed statement has already
  *      ABORTED it (observers.ts B6), so the swallow could only hide the cause
  *      and hand the record's remaining saves a poisoned transaction.
+ *   4. EVERY WRITE IS ASKED OF THE WRITE DOOR (closure Step 3 req 10), as the
+ *      importing principal: a matched record's field through
+ *      `authorizeRecordAccess` (section floor, the dd128-aware pair — an import
+ *      into dd128 must not set a user-manager's own dd1725 — and the write
+ *      scope); a new record's section and every field's pair through
+ *      `authorizeSectionTarget` before the create. The door the run's doors
+ *      asked (the section, once) never named a record. A refused field is NOT
+ *      written and is reported, like a refused value.
  *   3. THE WRITE LANGUAGE IS THE REQUEST'S. It comes from the request-language
  *      ALS (`currentDataLang()`), never from the static DEDALO_DATA_LANG: the
  *      write is lang-sliced, so the install default REPLACED the operator's
  *      actual working language and an empty cell CLEARED it. The ALS survives
  *      into the background job the import runs in (mediaJobs.submit exits only
  *      the transaction stores), so a backgrounded run keeps the session's lang.
+ *   5. A DERIVED FIELD REFUSES THE RUN, before the dd800 mint and any write
+ *      (assertNoDerivedField — the CSV door's posture).
  */
 
+import { getImportAppendPolicy, isDerivedModel } from '../components/registry.ts';
 import { BULK_PROCESS_TIPOS } from '../concepts/section.ts';
 import { withTransaction } from '../db/postgres.ts';
+import { DedaloError, isDedaloError } from '../errors/dedalo_error.ts';
+import { resolveDataTipo } from '../ontology/alias.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../ontology/resolver.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import { saveComponentData } from '../section/record/save_component.ts';
+import type { Principal } from '../security/permissions.ts';
+import { authorizeRecordAccess, authorizeSectionTarget } from '../security/write_door.ts';
+import { withLiveBulkRun } from './bulk_run_registry.ts';
 import { type ConformFailure, conformImportData, groupItemsByLang } from './import_data.ts';
 
 export interface MappedField {
@@ -76,9 +92,12 @@ export interface ImportReport {
 /**
  * The dd800 record that owns this import run — the twin of the CSV door's own
  * `createBulkProcessRecord`. Created BEFORE any data row is touched: a failure
- * here fails the RUN rather than importing unattributably.
+ * here fails the RUN rather than importing unattributably. Exported for the one
+ * other mapped door that writes through its own executor, tool_import_rdf's
+ * ontology-driven import (tools/tool_import_rdf/server/rdf_import_execute.ts):
+ * one mint, one label shape, never a second copy.
  */
-async function createBulkProcessRecord(
+export async function createBulkProcessRecord(
 	sectionTipo: string,
 	userId: number,
 	options: { bulkLabel?: string; sourceFile?: string },
@@ -119,6 +138,89 @@ interface RecordOutcome {
 }
 
 /**
+ * THE WRITE DOOR for one field (closure Step 3 req 10): a MATCHED record's
+ * field through authorizeRecordAccess (grammar, section floor 1, the dd128-aware
+ * pair, the write scope); a NEW record's field through authorizeSectionTarget
+ * (the pair level — nothing references a record born in this transaction).
+ * Answers the refusal sentence (IGNORED, never written) or null. Anything that
+ * is not the door's refusal propagates (the record rolls back, the run reports).
+ */
+async function fieldRefusal(
+	principal: Principal,
+	sectionTipo: string,
+	componentTipo: string,
+	matchedId: number | null,
+): Promise<string | null> {
+	try {
+		if (matchedId === null) {
+			await authorizeSectionTarget(
+				principal,
+				{ section_tipo: sectionTipo, tipo: componentTipo },
+				{ level: 2, door: 'import_execute.field' },
+			);
+		} else {
+			await authorizeRecordAccess(
+				principal,
+				{ section_tipo: sectionTipo, component_tipo: componentTipo, section_id: matchedId },
+				{ mode: 'write', level: 2, sectionFloor: 1, door: 'import_execute.field' },
+			);
+		}
+		return null;
+	} catch (error) {
+		if (
+			isDedaloError(error) &&
+			(error.code.startsWith('perm.') || error.code === 'request.invalid')
+		) {
+			return `IGNORED: not writable by the importer (${error.code}) — the field was NOT written`;
+		}
+		throw error;
+	}
+}
+
+/**
+ * The record a mapped record writes into: its matched id, or a NEW record —
+ * asked of the write door first (the section level, consultation-capped; a
+ * refusal throws and the record's transaction rolls back), then born with the
+ * run's birth marker (tm_role 3) so a revert knows the run made it (D2).
+ */
+async function recordIdFor(
+	record: MappedRecord,
+	sectionTipo: string,
+	principal: Principal,
+	bulkProcessId: number,
+): Promise<number> {
+	if (record.sectionId !== null) return record.sectionId;
+	await authorizeSectionTarget(
+		principal,
+		{ section_tipo: sectionTipo },
+		{ level: 2, door: 'import_execute.create' },
+	);
+	return createSectionRecord(sectionTipo, principal.userId, new Date(), undefined, {
+		bulkProcessId,
+	});
+}
+
+/** True (and the refusal reported) when the write door refuses this field. */
+async function refusedField(
+	principal: Principal,
+	sectionTipo: string,
+	field: MappedField,
+	matchedId: number | null,
+	sectionId: number,
+	failed: ConformFailure[],
+): Promise<boolean> {
+	const refusal = await fieldRefusal(principal, sectionTipo, field.component_tipo, matchedId);
+	if (refusal === null) return false;
+	failed.push({
+		section_id: sectionId,
+		data: field.values,
+		component_tipo: field.component_tipo,
+		msg: refusal,
+	});
+	return true;
+}
+
+/**
  * Write ONE mapped record. Runs inside the caller's per-record transaction, so
  * everything it does — the record create and every component save — commits or
  * rolls back together.
@@ -126,15 +228,19 @@ interface RecordOutcome {
 async function writeMappedRecord(
 	record: MappedRecord,
 	sectionTipo: string,
-	userId: number,
+	principal: Principal,
 	bulkProcessId: number,
 	dataLang: string,
 ): Promise<RecordOutcome> {
 	const failed: ConformFailure[] = [];
 	const wasCreated = record.sectionId === null;
-	const sectionId = record.sectionId ?? (await createSectionRecord(sectionTipo, userId));
+	const sectionId = await recordIdFor(record, sectionTipo, principal, bulkProcessId);
+	const userId = principal.userId;
 
 	for (const field of record.fields) {
+		if (await refusedField(principal, sectionTipo, field, record.sectionId, sectionId, failed)) {
+			continue;
+		}
 		const model = await getModelByTipo(field.component_tipo);
 		if (model === null) {
 			failed.push({
@@ -229,6 +335,39 @@ async function writeMappedRecord(
 }
 
 /**
+ * 5. A DERIVED COMPONENT IS NEVER AN IMPORT TARGET (descriptor `derived`,
+ * registry isDerivedModel — the twin of tool_import_dedalo_csv's column
+ * refusal and import_csv_execute's backstop). A derived model owns no stored
+ * value: a set_data on it would write bytes no read serves (component_inverse,
+ * component_relation_index, component_external) or, for
+ * component_relation_children, RE-PARENT records through the write-through from
+ * a mapped cell. The whole run is refused — typed (`request.invalid_data`),
+ * naming the field, its model and what to import instead — before the dd800
+ * mint and before any record is touched. Checked on the field tipo AND its
+ * data tipo (a component_alias onto a derived target is the same write).
+ */
+async function assertNoDerivedField(
+	records: readonly MappedRecord[],
+	sectionTipo: string,
+): Promise<void> {
+	const tipos = new Set(records.flatMap((record) => record.fields.map((f) => f.component_tipo)));
+	for (const tipo of tipos) {
+		const dataTipo = await resolveDataTipo(tipo);
+		for (const candidate of new Set([tipo, dataTipo])) {
+			const model = await getModelByTipo(candidate);
+			if (model === null || !isDerivedModel(model)) continue;
+			const policy = getImportAppendPolicy(model);
+			const instead = typeof policy === 'object' ? ` — ${policy.refuse}` : '';
+			throw new DedaloError('request.invalid_data', {
+				message: `mapped import refused: field '${tipo}' (${model}) is derived — computed, nothing stored to import${instead}`,
+				publicMessage: `Import refused: field '${tipo}' (${model}) is derived — computed, nothing stored to import${instead}`,
+				coordinates: { section_tipo: sectionTipo, tipo },
+			});
+		}
+	}
+}
+
+/**
  * Execute an import of mapped records into `sectionTipo`. Creates a record per
  * mapped record when sectionId is null. Each field's flat values are conformed
  * (wrapping into {value} items for value-property models) and merged into a single
@@ -241,9 +380,10 @@ async function writeMappedRecord(
 export async function importMappedRecords(
 	records: readonly MappedRecord[],
 	sectionTipo: string,
-	userId: number,
+	principal: Principal,
 	options: { bulkLabel?: string; sourceFile?: string } = {},
 ): Promise<ImportReport> {
+	const userId = principal.userId;
 	let created = 0;
 	let updated = 0;
 	const failed: ConformFailure[] = [];
@@ -259,6 +399,10 @@ export async function importMappedRecords(
 		return { created, updated, failed, createdIds, bulkProcessId: null };
 	}
 
+	// DERIVED FIELDS ARE REFUSED, THE RUN BEFORE ANY WRITE (the CSV door's
+	// posture). Ahead of the dd800 mint, so a refused run files no event.
+	await assertNoDerivedField(records, sectionTipo);
+
 	// REFUSE rather than proceed: a throw here reaches the caller before a single
 	// data row is touched, which is the whole point of creating it first.
 	const bulkProcessId = await createBulkProcessRecord(sectionTipo, userId, options);
@@ -268,31 +412,35 @@ export async function importMappedRecords(
 	// would split the file across two language slices.
 	const dataLang = currentDataLang();
 
-	for (const record of records) {
-		try {
-			// ONE TRANSACTION PER RECORD (the CSV door's posture): a failure part-way
-			// through a record leaves NO half-written record behind.
-			const outcome = await withTransaction(() =>
-				writeMappedRecord(record, sectionTipo, userId, bulkProcessId, dataLang),
-			);
-			if (outcome.wasCreated) {
-				created += 1;
-				createdIds.push(outcome.sectionId);
-			} else {
-				updated += 1;
+	// The run is held in the active-run registry while it writes: a revert of it
+	// is refused until it ends (decision D5).
+	await withLiveBulkRun(bulkProcessId, async () => {
+		for (const record of records) {
+			try {
+				// ONE TRANSACTION PER RECORD (the CSV door's posture): a failure part-way
+				// through a record leaves NO half-written record behind.
+				const outcome = await withTransaction(() =>
+					writeMappedRecord(record, sectionTipo, principal, bulkProcessId, dataLang),
+				);
+				if (outcome.wasCreated) {
+					created += 1;
+					createdIds.push(outcome.sectionId);
+				} else {
+					updated += 1;
+				}
+				failed.push(...outcome.failed);
+			} catch (error) {
+				// The row is rolled back, so the run continues and REPORTS it — an engine
+				// fault used to escape here and discard the whole report, `createdIds`
+				// included, leaving the operator with records they could not find.
+				failed.push({
+					section_id: record.sectionId ?? 0,
+					data: '',
+					component_tipo: sectionTipo,
+					msg: `IGNORED: the record was not written — ${error instanceof Error ? error.message : String(error)}`,
+				});
 			}
-			failed.push(...outcome.failed);
-		} catch (error) {
-			// The row is rolled back, so the run continues and REPORTS it — an engine
-			// fault used to escape here and discard the whole report, `createdIds`
-			// included, leaving the operator with records they could not find.
-			failed.push({
-				section_id: record.sectionId ?? 0,
-				data: '',
-				component_tipo: sectionTipo,
-				msg: `IGNORED: the record was not written — ${error instanceof Error ? error.message : String(error)}`,
-			});
 		}
-	}
+	});
 	return { created, updated, failed, createdIds, bulkProcessId };
 }

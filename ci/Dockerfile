@@ -16,10 +16,20 @@
 #   postgresql-client-18 (PGDG) — pg_dump/pg_restore/psql refuse a NEWER server
 #             than the client, and the service is pgvector:pg18. Resolved through
 #             DEDALO_PG_BIN_PATH=/usr/lib/postgresql/18/bin (scripts/ci/hosted_env.sh).
-#   ffmpeg (ships ffprobe + qt-faststart), imagemagick (7: `magick`), poppler-utils
+#             Its message catalogs are KEPT (the slim base drops /usr/share/locale)
+#             and es_ES/de_DE/fr_FR are generated (`locales`): the backup verifier
+#             must reach the same verdict under a server's translated locale, and
+#             backup_freshness_deep_native's translated-locale legs (S2-S4) measure
+#             that only on a pg_restore that really translates — absent, they SKIP.
+#   ffmpeg (ships ffprobe + qt-faststart), imagemagick (7: `magick`) +
+#             libheif-plugin-aomenc (AVIF WRITE: trixie's libheif ships decoders
+#             only, so without it `.avif` twins — DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS
+#             — are refused and the media_tools / alternate-versions gates go red),
+#             poppler-utils
 #             (pdfinfo/pdftotext/pdftohtml/pdftoppm), ghostscript (the engine-owned
 #             PDF rasterizer — explicit, --no-install-recommends drops it),
-#             librsvg2-bin (rsvg-convert, the only SVG rasterizer), file — the media
+#             librsvg2-bin (rsvg-convert, the only SVG rasterizer), ocrmypdf (the
+#             OCR door, engine/pdf.ts buildOcrArgv; pulls tesseract + eng data), file — the media
 #             toolchain the media gates probe with existsSync and otherwise SKIP.
 #             Same distro and packages as the product image (../Dockerfile), so a
 #             media gate measures what ships.
@@ -75,11 +85,22 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # --- base + PostgreSQL 18 client (PGDG) ---------------------------------------
 # Debian's own postgresql-client is older than the pg18 service; an older client
 # refuses a newer server.
+# The slim base path-excludes /usr/share/locale/*; re-include PostgreSQL's client
+# catalogs only (<prog>-18.mo, every language — small), so pg_restore can translate.
+# dpkg reads dpkg.cfg.d/ in name order and the LAST match wins: the file must sort
+# after the base's `docker` (hence zz-), or the exclude silently outranks it.
 RUN set -eux; \
+    echo 'path-include /usr/share/locale/*/LC_MESSAGES/*-18.mo' \
+      > /etc/dpkg/dpkg.cfg.d/zz-dedalo-ci-pg-messages; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      ca-certificates curl gnupg bash coreutils procps tzdata \
+      ca-certificates curl gnupg bash coreutils procps tzdata locales \
       git rsync unzip zip xz-utils gzip file jq openssl; \
+    for l in es_ES de_DE fr_FR; do \
+      sed -i "s/^# *\($l\.UTF-8 UTF-8\)/\1/" /etc/locale.gen; \
+      grep -q "^$l\.UTF-8 UTF-8" /etc/locale.gen; \
+    done; \
+    locale-gen; \
     install -d /usr/share/postgresql-common/pgdg; \
     curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
       https://www.postgresql.org/media/keys/ACCC4CF8.asc; \
@@ -87,13 +108,15 @@ RUN set -eux; \
       > /etc/apt/sources.list.d/pgdg.list; \
     apt-get update; \
     apt-get install -y --no-install-recommends postgresql-client-18; \
+    test -f /usr/share/locale/es/LC_MESSAGES/pg_dump-18.mo; \
     rm -rf /var/lib/apt/lists/*
 
 # --- media toolchain ------------------------------------------------------------
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      ffmpeg imagemagick poppler-utils ghostscript librsvg2-bin; \
+      ffmpeg imagemagick libheif-plugin-aomenc poppler-utils ghostscript librsvg2-bin \
+      ocrmypdf; \
     rm -rf /var/lib/apt/lists/*
 
 # --- MariaDB (diffusion target) -------------------------------------------------
@@ -160,6 +183,8 @@ RUN set -eu; \
       echo "$(magick -version | head -n1)"; \
       echo "$(pdftoppm -v 2>&1 | head -n1)"; \
       echo "gs $(gs --version)"; \
+      echo "ocrmypdf $(ocrmypdf --version)"; \
+      echo "$(tesseract --version 2>&1 | head -n1)"; \
       echo "$(mariadb --version)"; \
       echo "$(git --version)"; \
     } > /etc/dedalo-ci-versions; \

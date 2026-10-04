@@ -2,8 +2,18 @@
  * ONE OUTBOUND GUARD, AND NO NEW DOOR BESIDE IT (P1-26 / CARRY-10 / CARRY-14).
  *
  * `src/core/security/ssrf_guard.ts` is the hardened primitive: it RESOLVES the
- * hostname and vets every address, refuses redirects (a 3xx re-chooses the
- * target), and bounds both the wait and the read.
+ * hostname and vets every address, and bounds both the wait and the read. What
+ * it does with a redirect depends on the door (engineering/OUTBOUND_SPEC.md):
+ * the single-call door (`fetchGuardedText`) REFUSES one, because a 3xx
+ * re-chooses the target; the pinned hop (`fetchPinnedHop`) RETURNS it unread,
+ * so the harvesting door (`src/core/harvest/`) can put the new target through
+ * the whole policy again before a socket opens to it.
+ *
+ * WHO MAY HOLD WHICH DOOR is censused here too, by IMPORT GRAPH: the pinned hop
+ * has exactly one production importer (the harvest redirect loop), that loop
+ * (`followVetted`) exactly two (`harvestFetch` and the robots.txt fetch), and a tool
+ * reaches a raw door only by a written, reasoned exemption — a tool harvests
+ * through `harvestFetch`. Before this census both rules were prose.
  *
  * Two doors carried private four-string blocklists — `localhost`, `127.0.0.1`,
  * `::1`, `169.254.169.254`, plus a private-range regex — and the transcriber's
@@ -27,18 +37,52 @@
  * are fine". An entry may only be REMOVED.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { basename, dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
+import { parse } from '@babel/parser';
 import { Glob } from 'bun';
-import { isLoopbackHost, isPrivateIp, isPublicUrl } from '../../src/core/security/ssrf_guard.ts';
+import type { DedaloError } from '../../src/core/errors/index.ts';
+import { extractRfc6052Ipv4, packCidr } from '../../src/core/security/ip_address.ts';
+import {
+	type AddressLookup,
+	assertPublicUrl,
+	claimedIpv4s,
+	isAddressRefusal,
+	isLoopbackHost,
+	isPrivateIp,
+	isPublicUrl,
+	nat64DiscoveryState,
+	SSRF_REFUSAL_KINDS,
+	setNat64DiscoveryForTests,
+} from '../../src/core/security/ssrf_guard.ts';
+import { isSafeLocalAsrUrl } from '../../src/core/tools/transcription_local_asr.ts';
 // String-literal aware. The regex version this replaced ate 71 lines of
 // dd_mcp_api.ts, because the literal 'image/*' opens a block comment that runs
 // to the next `*/` — and a marker planted in that window scanned as absent.
 import { stripComments } from '../helpers/strip_comments.ts';
 
+/**
+ * No DECLARED NAT64 prefix while the behavioural cases run: pinned to '' (a deleted
+ * key falls back to ../private/.env through readEnv), so an operator's
+ * `DEDALO_NAT64_PREFIXES` — a typo fails every IPv6 closed — cannot change what
+ * they judge. The guard's own gate (ssrf_guard.test.ts) does the same.
+ */
+const NAT64_SETTING = 'DEDALO_NAT64_PREFIXES';
+const originalNat64 = process.env[NAT64_SETTING];
+beforeEach(() => {
+	process.env[NAT64_SETTING] = '';
+});
+afterEach(() => {
+	if (originalNat64 === undefined) delete process.env[NAT64_SETTING];
+	else process.env[NAT64_SETTING] = originalNat64;
+});
+
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const GUARD = 'src/core/security/ssrf_guard.ts';
+/** The harvesting door — what a tool that reads another site's pages imports. */
+const HARVEST_DOOR = 'src/core/harvest/harvest.ts';
 
 /**
  * An outbound CALL — `await fetch(`, `= fetch(`, `return fetch(`, `(fetch(`.
@@ -51,6 +95,17 @@ const GUARD = 'src/core/security/ssrf_guard.ts';
  * read as an assignment and missed.
  */
 const OUTBOUND_CALL = /(?:await|return|=>|=|\(|\?\?)[ \t]*fetch[ \t]*\(/;
+
+/**
+ * `fetch` handed over as a VALUE — `deps.fetch ?? fetch`, `fetchImpl: fetch`,
+ * `impl: typeof fetch = fetch` — and called later under another name. That is a
+ * socket the call pattern above cannot see: measured 2026-09-29, six modules
+ * dialled out this way unseen (the four model providers, the error-report relay,
+ * the update reachability probe). Not a key (`fetch:`), not a member (`x.fetch`),
+ * not a type (`typeof fetch`); run on code with literals BLANKED, so a sentence
+ * saying "fetch" is not a socket.
+ */
+const OUTBOUND_VALUE = /(?<![\w$.])(?<!typeof\s+)fetch(?![\w$])(?!\s*(?:\(|\??:))/;
 
 /**
  * The frozen burn-down (CARRY-14). Each reason says what the site talks to and
@@ -82,15 +137,42 @@ const EXEMPT: Record<string, string> = {
 	'src/core/ontology/data_io_import.ts':
 		'Ontology/code import from a configured master. NOT YET on the guarded transport ' +
 		'(CARRY-14) — the largest remaining one, since the URL is operator-entered.',
+	// SEEN 2026-09-29, when the census learned OUTBOUND_VALUE — pre-existing
+	// sockets it had been blind to, not new doors. Same burn-down, same rule.
+	'src/core/update/status.ts':
+		'advertisedUrlReachableCheck: a code server probes its OWN advertised release URL ' +
+		'(operator config) to prove consumers can reach it — which may legitimately be a LAN ' +
+		'address (the docker museum case), so the public-address guard cannot apply. ' +
+		'redirect:"error" and a timeout at the call.',
+	'src/ai/agent/openai_compat_provider.ts':
+		'The agent’s model endpoint, operator-configured and commonly an on-premise sidecar ' +
+		'on loopback or the LAN, which the public-address guard would refuse. Signal + idle ' +
+		'timer at the call; NOT byte-capped (CARRY-14).',
+	'src/ai/rag/llm_provider.ts':
+		'The RAG answer model endpoint, operator-configured (commonly a local Ollama the guard ' +
+		'would refuse). Signal + timeout at the call; NOT byte-capped (CARRY-14).',
+	'src/ai/rag/embedding_provider.ts':
+		'The embedding endpoint, operator-configured (commonly a local Ollama the guard would ' +
+		'refuse). Signal + timeout at the call; NOT byte-capped (CARRY-14).',
+	'src/ai/rag/multimodal_embedding_provider.ts':
+		'The multimodal embedding endpoint, operator-configured (endpointIsLocal names the ' +
+		'local case the guard would refuse). Signal + timeout at the call; NOT byte-capped (CARRY-14).',
+	'tools/tool_error_report/server/index.ts':
+		'Relays an error report to the operator-configured master (masterUrlAllowed: https, ' +
+		'or loopback http). Signal + timeout at the call; no resolve-and-vet and NOT ' +
+		'byte-capped — NOT YET on the guarded transport (CARRY-14).',
 };
 
-function sourceFiles(): { file: string; code: string }[] {
-	const files: { file: string; code: string }[] = [];
+/** `code`: comments stripped, literals kept. `blanked`: literal bodies blanked too. */
+function sourceFiles(): { file: string; code: string; blanked: string }[] {
+	const files: { file: string; code: string; blanked: string }[] = [];
 	for (const dir of ['src', 'tools'] as const) {
 		for (const match of new Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, dir) })) {
 			if (match.endsWith('.test.ts')) continue;
 			const file = relative(REPO_ROOT, join(REPO_ROOT, dir, match));
-			files.push({ file, code: stripComments(readFileSync(join(REPO_ROOT, file), 'utf8')) });
+			const source = readFileSync(join(REPO_ROOT, file), 'utf8');
+			const blanked = stripComments(source, { blankStrings: true, blankRegexBodies: true });
+			files.push({ file, code: stripComments(source), blanked });
 		}
 	}
 	return files.sort((a, b) => a.file.localeCompare(b.file));
@@ -100,7 +182,7 @@ describe('outbound SSRF: one guard', () => {
 	const scanned = sourceFiles();
 	const raw = scanned
 		.filter((entry) => entry.file !== GUARD)
-		.filter((entry) => OUTBOUND_CALL.test(entry.code))
+		.filter((entry) => OUTBOUND_CALL.test(entry.code) || OUTBOUND_VALUE.test(entry.blanked))
 		.map((entry) => entry.file);
 
 	test('the scan actually sees the tree (anti-vacuity)', () => {
@@ -118,10 +200,12 @@ describe('outbound SSRF: one guard', () => {
 		const offenders = raw.filter((file) => EXEMPT[file] === undefined);
 		expect(
 			offenders,
-			'A new outbound door skips the resolve-and-vet, the redirect refusal, the timeout ' +
-				`and the byte cap. Route it through ${GUARD} (fetchGuardedText), or — if it ` +
-				'genuinely cannot be (a unix socket, a deliberate loopback dial) — add it to ' +
-				`EXEMPT with a reason saying so.\n  ${offenders.join('\n  ')}`,
+			'A new outbound door skips the resolve-and-vet, the redirect policy, the timeout ' +
+				'and the byte cap. Harvesting pages from another site (redirects, robots.txt, ' +
+				`pacing): harvestFetch in ${HARVEST_DOOR}. One API call to a public service: ` +
+				`fetchGuardedText in ${GUARD}. If it genuinely can be neither (a unix socket, a ` +
+				'deliberate loopback dial) add it to EXEMPT with a reason saying so. ' +
+				`engineering/OUTBOUND_SPEC.md names the doors.\n  ${offenders.join('\n  ')}`,
 		).toEqual([]);
 	});
 
@@ -149,12 +233,752 @@ describe('outbound SSRF: one guard', () => {
 		}
 	});
 
-	test('the guard itself still resolves, refuses redirects and bounds the read', () => {
+	test('the guard itself still resolves, has a redirect policy per door and bounds the read', () => {
+		// Coarse by design: that each door ENFORCES its policy (the single-call door
+		// refuses a 3xx, the pinned hop returns it unread) is asserted per function,
+		// and driven, in outbound_fetch_tripwire.test.ts.
 		const guard = readFileSync(join(REPO_ROOT, GUARD), 'utf8');
 		expect(guard).toContain("redirect: 'error'");
+		expect(guard).toContain("redirect: 'manual'");
 		expect(guard).toContain('maxBytes');
 		expect(guard).toContain('AbortController');
 		expect(guard).toMatch(/lookup|resolve/);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// WHO HOLDS WHICH DOOR — an IMPORT-GRAPH census, not a grep for a name.
+//
+// The socket census above proves no module dials out BESIDE the guard. It cannot
+// see which module dials THROUGH which door, and two rules depend on that:
+//   - `fetchPinnedHop` returns a redirect unread and vets only the ADDRESS. Every
+//     other rule a new target must pass again (scheme, https → http, the host
+//     allowlist, robots.txt, pacing, the hop limit) lives in ITS CALLER. A second
+//     caller is a second redirect loop, and the first one that forgets a rule is
+//     an open redirect into an institution's harvester.
+//   - A tool reading another site's pages owes robots.txt and a polite pace,
+//     which only `harvestFetch` pays. A tool on a raw door skips both silently —
+//     and so does one on `followVetted`, whose per-hop robots/pacing check is
+//     whatever its caller passes, so it is censused as a door of its own.
+//
+// A binding is followed, not a spelling: named, renamed, namespace, default,
+// `export … from`, `export *`, a top-level `const x = door` re-exported, a
+// literal `import()` / `require()` — through any number of re-exporting
+// modules. What it deliberately does NOT follow is a WRAPPER (`function get(u)
+// { return fetchGuardedText(u) }`): a wrapper is a new function with its own
+// contract, reviewed where it is written, and `harvestFetch` is exactly such a
+// wrapper around the pinned hop.
+// ---------------------------------------------------------------------------
+
+/** The raw doors whose holders are censused. Policy helpers (isPrivateIp, assertPublicUrl…) are free to import. */
+const RAW_DOORS = ['fetchPinnedHop', 'fetchBoundedText', 'fetchGuardedText'] as const;
+
+/** The harvest redirect loop — the half-door between the pinned hop and `harvestFetch`. */
+const FOLLOW = 'src/core/harvest/follow.ts';
+
+/**
+ * `followVetted` is a DOOR too, and censused as one. It vets every hop's URL, but
+ * robots.txt and pacing are whatever its CALLER passes as `beforeHop` — the robots
+ * fetch itself passes a no-op. A tool importing it gets redirects followed and a
+ * pinned socket with neither, and no socket census sees it (it spells no `fetch(`).
+ */
+const FOLLOW_DOOR = 'followVetted';
+
+/** Every door-carrying module the census starts from, with the doors it hands out. */
+const DOOR_SEEDS: Record<string, readonly string[]> = {
+	[GUARD]: RAW_DOORS,
+	[FOLLOW]: [FOLLOW_DOOR],
+};
+
+/**
+ * The reach of a module that names a door-carrying module AND loads something
+ * through a NON-literal `import()`. The census cannot know what that loads, so
+ * it reports the module instead of guessing it clean.
+ */
+const OPAQUE = '<non-literal import()>';
+
+/**
+ * The ONLY production importer of `fetchPinnedHop`. Exact in both directions: a
+ * second importer is refused, and this row fails if its file stops importing it.
+ * (Inside the guard, `fetchGuardedText` uses the hop ONCE and refuses any `Location`
+ * — no redirect loop, so not a second caller in the sense above.)
+ */
+const PINNED_HOP_IMPORTERS: Record<string, string> = {
+	'src/core/harvest/follow.ts':
+		'THE redirect loop of the harvesting door: for EVERY hop it re-runs the scheme, the ' +
+		'https → http refusal, the caller’s host policy, the URL length ceiling and the ' +
+		'caller’s robots/pacing check before handing the hop to fetchPinnedHop, and stops at ' +
+		'MAX_REDIRECTS.',
+};
+
+/**
+ * The ONLY importers of `followVetted`. Exact in both directions, like
+ * `PINNED_HOP_IMPORTERS`: each passes its own per-hop gate, and a third is refused.
+ */
+const FOLLOW_VETTED_IMPORTERS: Record<string, string> = {
+	'src/core/harvest/harvest.ts':
+		'harvestFetch: THE harvesting door. Its beforeHop is hopGate — robots.txt for the ' +
+		'hop’s origin, then that origin’s paced turn, released with the hop’s Retry-After.',
+	'src/core/harvest/robots.ts':
+		'The robots.txt fetch itself, under one fixed policy: it IS the robots check (so its ' +
+		'beforeHop is a no-op) and is not paced — RFC 9309 §2.3.1.2 asks redirects followed.',
+};
+
+/**
+ * Tools hold NO raw door. This was a SHRINK-ONLY list of reasoned rows; its last
+ * row (tool_import_rdf, which refused the 303/301 every linked-data server answers
+ * with) moved to `harvestFetch` on 2026-10-01, and a shrink-only list at zero stays
+ * at zero. A tool harvests through `harvestFetch`; a single API call to a
+ * configured service belongs in engine code (`src/core/tools/translation.ts`).
+ */
+
+type AstNode = { type: string; [key: string]: unknown };
+
+/** One runtime binding a module takes from another. `imported` '*' = the whole namespace. */
+interface ImportLink {
+	specifier: string;
+	imported: string;
+	local: string | null;
+}
+
+/** `export { a as b } from`, `export * as ns from` (imported '*'), `export * from` (exported '*'). */
+interface ReExportLink {
+	specifier: string;
+	imported: string;
+	exported: string;
+}
+
+/** A local binding (or a namespace member of one) exported under a name. */
+interface LocalRef {
+	local: string;
+	member: string | null;
+}
+
+interface ModuleLinks {
+	imports: ImportLink[];
+	reexports: ReExportLink[];
+	localExports: Array<LocalRef & { exported: string }>;
+	/** Top-level `const x = y` / `const x = ns.y` — one module-internal rename. */
+	aliases: Map<string, LocalRef>;
+	opaque: boolean;
+}
+
+type Exposure = Map<string, Set<string>>;
+
+interface CensusState {
+	sources: ReadonlyMap<string, string>;
+	/** The door-carrying modules the census starts from (`DOOR_SEEDS` unless told otherwise). */
+	seeds: Readonly<Record<string, readonly string[]>>;
+	links: Map<string, ModuleLinks>;
+	/** For each door-CARRYING module: export name → the doors it hands out. */
+	exposure: Map<string, Exposure>;
+}
+
+/** An identifier or string-literal name (`import { 'x' as y }` is legal). */
+function nameOf(node: unknown): string {
+	const named = node as { name?: string; value?: string };
+	return named.name ?? named.value ?? '';
+}
+
+/** A module specifier written as a literal, or null. */
+function literalSpecifier(node: unknown): string | null {
+	const literal = node as AstNode | undefined;
+	if (literal?.type === 'StringLiteral') return literal.value as string;
+	const quasis = literal?.quasis as Array<{ value: { cooked: string } }> | undefined;
+	if (literal?.type === 'TemplateLiteral' && (literal.expressions as unknown[]).length === 0) {
+		return quasis?.[0]?.value.cooked ?? null;
+	}
+	return null;
+}
+
+/**
+ * `x`, `ns.x`, `ns['x']`, and any of them under a type assertion — else null.
+ * `ns[key]` with a key the scanner cannot read is the WHOLE namespace: the
+ * census cannot know which member it is, so it assumes every one.
+ */
+function refOf(expression: unknown): LocalRef | null {
+	const node = expression as AstNode | null;
+	if (node === null || node === undefined) return null;
+	if (/^TS(As|Satisfies|NonNull)Expression$|^ParenthesizedExpression$/.test(node.type)) {
+		return refOf(node.expression);
+	}
+	if (node.type === 'Identifier') return { local: node.name as string, member: null };
+	const object = node.object as AstNode | undefined;
+	if (node.type !== 'MemberExpression' || object?.type !== 'Identifier') return null;
+	const member = node.computed === true ? literalSpecifier(node.property) : nameOf(node.property);
+	return { local: object.name as string, member };
+}
+
+function collectImport(statement: AstNode, links: ModuleLinks): void {
+	if (statement.importKind === 'type') return; // erased at compile time: reaches nothing
+	const specifier = (statement.source as AstNode).value as string;
+	for (const binding of statement.specifiers as AstNode[]) {
+		if (binding.importKind === 'type') continue;
+		const imported =
+			binding.type === 'ImportSpecifier'
+				? nameOf(binding.imported)
+				: binding.type === 'ImportDefaultSpecifier'
+					? 'default'
+					: '*';
+		links.imports.push({ specifier, imported, local: nameOf(binding.local) });
+	}
+}
+
+function collectDeclaredRefs(
+	declaration: AstNode | null,
+	links: ModuleLinks,
+	exported: boolean,
+): void {
+	if (declaration?.type !== 'VariableDeclaration') return;
+	for (const declarator of declaration.declarations as AstNode[]) {
+		const id = declarator.id as AstNode;
+		const ref = refOf(declarator.init);
+		if (id.type !== 'Identifier' || ref === null) continue;
+		links.aliases.set(id.name as string, ref);
+		if (exported) links.localExports.push({ ...ref, exported: id.name as string });
+	}
+}
+
+function collectExportNamed(statement: AstNode, links: ModuleLinks): void {
+	if (statement.exportKind === 'type') return;
+	const source = statement.source as AstNode | null;
+	for (const binding of (statement.specifiers ?? []) as AstNode[]) {
+		if (binding.exportKind === 'type') continue;
+		const exported = nameOf(binding.exported);
+		const imported = binding.type === 'ExportNamespaceSpecifier' ? '*' : nameOf(binding.local);
+		if (source !== null) {
+			links.reexports.push({ specifier: source.value as string, imported, exported });
+		} else {
+			links.localExports.push({ local: imported, member: null, exported });
+		}
+	}
+	collectDeclaredRefs(statement.declaration as AstNode | null, links, true);
+}
+
+function collectStatement(statement: AstNode, links: ModuleLinks): void {
+	if (statement.type === 'ImportDeclaration') collectImport(statement, links);
+	else if (statement.type === 'ExportNamedDeclaration') collectExportNamed(statement, links);
+	else if (statement.type === 'VariableDeclaration') collectDeclaredRefs(statement, links, false);
+	else if (statement.type === 'ExportAllDeclaration' && statement.exportKind !== 'type') {
+		const specifier = (statement.source as AstNode).value as string;
+		links.reexports.push({ specifier, imported: '*', exported: '*' });
+	} else if (statement.type === 'ExportDefaultDeclaration') {
+		const ref = refOf(statement.declaration);
+		if (ref !== null) links.localExports.push({ ...ref, exported: 'default' });
+	} else if (statement.type === 'TSImportEqualsDeclaration' && statement.importKind !== 'type') {
+		const specifier = literalSpecifier((statement.moduleReference as AstNode).expression);
+		const local = nameOf(statement.id);
+		if (specifier !== null) links.imports.push({ specifier, imported: '*', local });
+	}
+}
+
+/** The specifier an `import()` / `require()` node loads: a string, null when not literal, undefined when not a load. */
+function loadedSpecifier(node: AstNode): string | null | undefined {
+	if (node.type === 'ImportExpression') return literalSpecifier(node.source);
+	if (node.type !== 'CallExpression') return undefined;
+	const callee = node.callee as AstNode;
+	const isLoad =
+		callee.type === 'Import' || (callee.type === 'Identifier' && callee.name === 'require');
+	return isLoad ? literalSpecifier((node.arguments as unknown[])[0]) : undefined;
+}
+
+const NOT_CODE_KEYS = new Set([
+	'loc',
+	'extra',
+	'leadingComments',
+	'trailingComments',
+	'innerComments',
+]);
+
+/** Every `import()` / `require()` anywhere in the module, however deeply nested. */
+function collectLoads(node: unknown, links: ModuleLinks): void {
+	if (Array.isArray(node)) {
+		for (const child of node) collectLoads(child, links);
+		return;
+	}
+	if (node === null || typeof node !== 'object') return;
+	const loaded = loadedSpecifier(node as AstNode);
+	if (loaded === null) links.opaque = true;
+	else if (loaded !== undefined)
+		links.imports.push({ specifier: loaded, imported: '*', local: null });
+	for (const [key, child] of Object.entries(node)) {
+		if (!NOT_CODE_KEYS.has(key) && typeof child === 'object') collectLoads(child, links);
+	}
+}
+
+function parseLinks(file: string, source: string): ModuleLinks {
+	const links: ModuleLinks = {
+		imports: [],
+		reexports: [],
+		localExports: [],
+		aliases: new Map(),
+		opaque: false,
+	};
+	let program: AstNode;
+	try {
+		// A parse failure THROWS: a module the census cannot read is not a clean one.
+		const ast = parse(source, {
+			sourceType: 'module',
+			plugins: ['typescript', 'decorators-legacy'],
+		});
+		program = ast.program as unknown as AstNode;
+	} catch (error) {
+		throw new Error(`door census: cannot parse ${file}: ${String(error)}`);
+	}
+	for (const statement of program.body as AstNode[]) collectStatement(statement, links);
+	collectLoads(program.body, links);
+	return links;
+}
+
+/** The repo file a relative specifier names, or null (packages, `bun:` — never a door). */
+function resolveSpecifier(
+	from: string,
+	specifier: string,
+	known: ReadonlyMap<string, string>,
+): string | null {
+	if (!specifier.startsWith('.')) return null;
+	const base = normalizePosix(joinPosix(dirname(from), specifier));
+	const candidates = [base, base.replace(/\.js$/, '.ts'), `${base}.ts`, `${base}/index.ts`];
+	return candidates.find((candidate) => known.has(candidate)) ?? null;
+}
+
+/** The doors a module hands out under `name` ('*' = all of them). */
+function exposed(state: CensusState, from: string, specifier: string, name: string): Set<string> {
+	const target = resolveSpecifier(from, specifier, state.sources);
+	const exposure = target === null ? undefined : state.exposure.get(target);
+	if (exposure === undefined) return new Set();
+	if (name !== '*') return new Set(exposure.get(name) ?? []);
+	return new Set([...exposure.values()].flatMap((doors) => [...doors]));
+}
+
+/** The doors a module-local name is bound to, following local `const` renames. */
+function localReach(
+	state: CensusState,
+	file: string,
+	links: ModuleLinks,
+	ref: LocalRef,
+): Set<string> {
+	let current: LocalRef = ref;
+	for (let step = 0; step < 8; step++) {
+		const binding = links.imports.find((link) => link.local === current.local);
+		if (binding !== undefined) {
+			const key =
+				binding.imported === '*'
+					? (current.member ?? '*')
+					: current.member === null
+						? binding.imported
+						: null;
+			return key === null ? new Set() : exposed(state, file, binding.specifier, key);
+		}
+		const alias = links.aliases.get(current.local);
+		if (alias === undefined || (alias.member !== null && current.member !== null)) return new Set();
+		current = { local: alias.local, member: alias.member ?? current.member };
+	}
+	return new Set();
+}
+
+function addDoors(exposure: Exposure, name: string, doors: Set<string>): void {
+	if (doors.size === 0) return;
+	const held = exposure.get(name) ?? new Set<string>();
+	for (const door of doors) held.add(door);
+	exposure.set(name, held);
+}
+
+/** What a module hands out: its re-exports and its exported bindings that carry a door. */
+function computeExposure(state: CensusState, file: string, links: ModuleLinks): Exposure {
+	const exposure: Exposure = new Map();
+	for (const link of links.reexports) {
+		if (link.exported !== '*') {
+			addDoors(exposure, link.exported, exposed(state, file, link.specifier, link.imported));
+			continue;
+		}
+		const target = resolveSpecifier(file, link.specifier, state.sources);
+		for (const [name, doors] of state.exposure.get(target ?? '') ?? []) {
+			if (name !== 'default') addDoors(exposure, name, doors);
+		}
+	}
+	for (const ref of links.localExports) {
+		addDoors(exposure, ref.exported, localReach(state, file, links, ref));
+	}
+	return exposure;
+}
+
+/** A stable fingerprint, so the fixpoint knows when nothing changed. */
+function exposureKey(exposure: Exposure | undefined): string {
+	const entries = [...(exposure ?? new Map<string, Set<string>>())];
+	return JSON.stringify(entries.map(([name, doors]) => [name, [...doors].sort()]).sort());
+}
+
+/** The name a specifier must spell to reach `file` (a directory for an index module). */
+function specifierStem(file: string): string {
+	const stem = basename(file).replace(/\.ts$/, '');
+	return stem === 'index' ? basename(dirname(file)) : stem;
+}
+
+/** One fixpoint pass; true when some module's exposure grew. */
+function exposurePass(state: CensusState): boolean {
+	const stems = [...state.exposure.keys()].map(specifierStem);
+	let grew = false;
+	for (const [file, source] of state.sources) {
+		// Only a module whose text spells a carrier's name can bind to it — which is
+		// what keeps this from parsing the whole tree.
+		if (file === GUARD || !stems.some((stem) => source.includes(stem))) continue;
+		const links = state.links.get(file) ?? parseLinks(file, source);
+		state.links.set(file, links);
+		// A seeded door module hands out exactly its seed (its own imports still count).
+		if (state.seeds[file] !== undefined) continue;
+		const next = computeExposure(state, file, links);
+		if (exposureKey(next) === exposureKey(state.exposure.get(file))) continue;
+		if (next.size > 0) state.exposure.set(file, next);
+		grew = true;
+	}
+	return grew;
+}
+
+/** Everything a module binds to: imports, re-exports, and the opaque marker. */
+function reachOf(state: CensusState, file: string, links: ModuleLinks): Set<string> {
+	const reach = new Set<string>();
+	for (const link of [...links.imports, ...links.reexports]) {
+		for (const door of exposed(state, file, link.specifier, link.imported)) reach.add(door);
+	}
+	if (links.opaque) reach.add(OPAQUE);
+	return reach;
+}
+
+/**
+ * file → the raw doors it can reach by BINDING (directly or through any chain
+ * of re-exporting modules). Pure over its input, so a synthetic tree can prove
+ * what the real one is checked for.
+ */
+function doorCensus(
+	sources: ReadonlyMap<string, string>,
+	seeds: Readonly<Record<string, readonly string[]>> = DOOR_SEEDS,
+): Map<string, Set<string>> {
+	const state: CensusState = { sources, seeds, links: new Map(), exposure: new Map() };
+	for (const [file, doors] of Object.entries(seeds)) {
+		if (sources.has(file)) state.exposure.set(file, new Map(doors.map((d) => [d, new Set([d])])));
+	}
+	// Exposure only grows and is bounded by modules × doors, so this terminates.
+	while (exposurePass(state)) {
+		/* until no carrier's exposure grows */
+	}
+	const census = new Map<string, Set<string>>();
+	for (const [file, links] of state.links) {
+		const reach = reachOf(state, file, links);
+		if (reach.size > 0) census.set(file, reach);
+	}
+	return census;
+}
+
+function toolViolations(file: string, doors: Set<string>): string[] {
+	return [...doors]
+		.filter((door) => door !== OPAQUE)
+		.map(
+			(door) =>
+				`${file}: a tool holds ${door}. Harvest pages through harvestFetch (${HARVEST_DOOR}); ` +
+				'one API call to a configured service belongs in engine code, not in a tool',
+		);
+}
+
+/** Every rule the census enforces, as messages; empty when the tree is clean. */
+function doorViolations(census: Map<string, Set<string>>): string[] {
+	const found: string[] = [];
+	for (const [file, doors] of census) {
+		if (doors.has(OPAQUE)) {
+			found.push(
+				`${file}: names a door module but loads a non-literal import() — the census cannot see what it reaches`,
+			);
+		}
+		if (doors.has('fetchPinnedHop') && PINNED_HOP_IMPORTERS[file] === undefined) {
+			found.push(
+				`${file}: holds fetchPinnedHop — only the harvest redirect loop may (it owes every per-hop ` +
+					`rule the primitive does not apply). Harvest through harvestFetch (${HARVEST_DOOR}).`,
+			);
+		}
+		if (doors.has(FOLLOW_DOOR) && FOLLOW_VETTED_IMPORTERS[file] === undefined) {
+			found.push(
+				`${file}: holds ${FOLLOW_DOOR} — it follows redirects but owes robots.txt and pacing to ` +
+					`its caller's beforeHop. Harvest through harvestFetch (${HARVEST_DOOR}).`,
+			);
+		}
+		if (file.startsWith('tools/')) found.push(...toolViolations(file, doors));
+	}
+	return found.sort();
+}
+
+describe('who holds which door (import-graph census)', () => {
+	const scanned = sourceFiles();
+	const census = doorCensus(new Map(scanned.map((entry) => [entry.file, entry.code])));
+
+	test('the census finds the holders it is supposed to (anti-vacuity)', () => {
+		// A census that resolved nothing would pass every rule below.
+		expect([...(census.get('src/core/harvest/follow.ts') ?? [])]).toEqual(['fetchPinnedHop']);
+		for (const file of Object.keys(FOLLOW_VETTED_IMPORTERS)) {
+			expect([...(census.get(file) ?? [])], file).toEqual([FOLLOW_DOOR]);
+		}
+		expect(census.get('src/core/tools/translation.ts')?.has('fetchGuardedText')).toBe(true);
+		expect(census.get('src/core/tools/transcription_local_asr.ts')?.has('fetchBoundedText')).toBe(
+			true,
+		);
+		// The harvesting tool holds the door it should, and through it no raw one.
+		const rdf = 'tools/tool_import_rdf/server/index.ts';
+		const withHarvest = doorCensus(
+			new Map(scanned.map((entry) => [entry.file, entry.code])),
+			OUTBOUND_DOOR_SEEDS,
+		);
+		expect([...(withHarvest.get(rdf) ?? [])]).toEqual(['harvestFetch']);
+		expect(census.has(rdf)).toBe(false);
+	});
+
+	test('the pinned hop has one holder, and no tool holds a raw door', () => {
+		const violations = doorViolations(census);
+		expect(
+			violations,
+			`engineering/OUTBOUND_SPEC.md names the doors.\n  ${violations.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test('the exemptions may only SHRINK', () => {
+		const stale: string[] = [];
+		for (const file of Object.keys(PINNED_HOP_IMPORTERS)) {
+			if (census.get(file)?.has('fetchPinnedHop') !== true)
+				stale.push(`${file}: no longer holds fetchPinnedHop`);
+		}
+		for (const file of Object.keys(FOLLOW_VETTED_IMPORTERS)) {
+			if (census.get(file)?.has(FOLLOW_DOOR) !== true)
+				stale.push(`${file}: no longer holds ${FOLLOW_DOOR}`);
+		}
+		expect(stale, 'a row for a debt already paid hides that it was paid').toEqual([]);
+	});
+
+	test('the census sees through every binding form (synthetic tree)', () => {
+		// The rules above are only as good as the census, and a clean real tree
+		// cannot show that it would catch anything. So a synthetic tree carries one
+		// module per evasion, and each must be caught — or, for the legitimate
+		// shapes, must NOT be.
+		const up = '../../../src/core';
+		const synthetic = new Map<string, string>([
+			[
+				GUARD,
+				'export async function fetchPinnedHop() {}\nexport async function fetchBoundedText() {}\n' +
+					'export async function fetchGuardedText() {}\nexport function isPrivateIp() {}',
+			],
+			// The legitimate shapes.
+			[
+				'src/core/harvest/follow.ts',
+				"import { fetchPinnedHop as hop } from '../security/ssrf_guard.ts';\nexport const followVetted = () => hop;",
+			],
+			[
+				'src/core/harvest/robots.ts',
+				"import { followVetted } from './follow.ts';\nexport const load = () => followVetted();",
+			],
+			// A tool on the redirect loop with a no-op beforeHop: no robots, no pace.
+			[
+				'tools/tool_follow/server/index.ts',
+				`import { followVetted } from '${up}/harvest/follow.ts';\n` +
+					'export const go = () => followVetted({}, { beforeHop: async () => undefined });',
+			],
+			['src/core/x/follow_barrel.ts', "export * from '../harvest/follow.ts';"],
+			[
+				'tools/tool_follow_barrel/server/index.ts',
+				`import { followVetted as f } from '${up}/x/follow_barrel.ts';`,
+			],
+			[
+				'src/core/harvest/harvest.ts',
+				"import { followVetted } from './follow.ts';\nexport const harvestFetch = () => followVetted();",
+			],
+			[
+				'tools/tool_clean/server/index.ts',
+				`import { harvestFetch } from '${up}/harvest/harvest.ts';\n` +
+					`import type { fetchPinnedHop as HopType, PinnedHopRequest } from '${up}/security/ssrf_guard.ts';\n` +
+					`import { isPrivateIp, type fetchPinnedHop } from '${up}/security/ssrf_guard.ts';`,
+			],
+			// A tool importing a raw door directly: no row can excuse it any more —
+			// neither an arbitrary tool nor the one the last row used to exempt.
+			[
+				'tools/tool_raw/server/index.ts',
+				`import { fetchGuardedText } from '${up}/security/ssrf_guard.ts';`,
+			],
+			[
+				'tools/tool_import_rdf/server/index.ts',
+				`import { fetchGuardedText } from '${up}/security/ssrf_guard.ts';`,
+			],
+			// The evasions: re-export chains, namespace members, renames, loads.
+			[
+				'src/core/x/barrel.ts',
+				"export { fetchGuardedText as get } from '../security/ssrf_guard.ts';",
+			],
+			['src/core/x/star.ts', "export * from './barrel.ts';"],
+			[
+				'src/core/y/alias.ts',
+				"import * as guard from '../security/ssrf_guard.ts';\nconst hop = guard['fetchPinnedHop'];\nexport { hop as pull };",
+			],
+			[
+				'src/core/z/second_hop.ts',
+				"import { fetchPinnedHop } from '../security/ssrf_guard';\nexport default fetchPinnedHop;",
+			],
+			[
+				'src/core/y/computed.ts',
+				"import * as guard from '../security/ssrf_guard.ts';\nconst key = pick();\nexport const any = guard[key];",
+			],
+			['tools/tool_barrel/server/index.ts', `import { get } from '${up}/x/star.ts';`],
+			['tools/tool_computed/server/index.ts', `import { any } from '${up}/y/computed.ts';`],
+			['tools/tool_alias/server/index.ts', `import { pull as p } from '${up}/y/alias.ts';`],
+			['tools/tool_default/server/index.ts', `import anything from '${up}/z/second_hop.ts';`],
+			[
+				'tools/tool_dynamic/server/index.ts',
+				`export async function go() { return (await import('${up}/security/ssrf_guard.ts')).fetchBoundedText; }`,
+			],
+			['tools/tool_require/server/index.ts', `import m = require('${up}/security/ssrf_guard.ts');`],
+			[
+				'tools/tool_opaque/server/index.ts',
+				`const which = 'ssrf_guard';\nexport const go = () => import(\`${up}/security/\${which}.ts\`);`,
+			],
+		]);
+		const synth = doorCensus(synthetic);
+		const doorsOf = (file: string): string[] => [...(synth.get(file) ?? [])].sort();
+		expect(doorsOf('tools/tool_clean/server/index.ts')).toEqual([]);
+		expect(doorsOf('tools/tool_barrel/server/index.ts')).toEqual(['fetchGuardedText']);
+		expect(doorsOf('tools/tool_alias/server/index.ts')).toEqual(['fetchPinnedHop']);
+		expect(doorsOf('tools/tool_default/server/index.ts')).toEqual(['fetchPinnedHop']);
+		// A key the scanner cannot read is every key.
+		expect(doorsOf('tools/tool_computed/server/index.ts')).toEqual([...RAW_DOORS].sort());
+		expect(doorsOf('tools/tool_dynamic/server/index.ts')).toEqual([...RAW_DOORS].sort());
+		expect(doorsOf('tools/tool_require/server/index.ts')).toEqual([...RAW_DOORS].sort());
+		expect(doorsOf('tools/tool_opaque/server/index.ts')).toEqual([OPAQUE]);
+		expect(doorsOf('tools/tool_follow/server/index.ts')).toEqual([FOLLOW_DOOR]);
+		expect(doorsOf('tools/tool_follow_barrel/server/index.ts')).toEqual([FOLLOW_DOOR]);
+		expect(doorsOf('src/core/harvest/harvest.ts')).toEqual([FOLLOW_DOOR]);
+		expect(doorsOf('src/core/harvest/follow.ts')).toEqual(['fetchPinnedHop']);
+
+		const violators = [...new Set(doorViolations(synth).map((line) => line.split(':')[0]))].sort();
+		expect(violators).toEqual(
+			[
+				'src/core/x/follow_barrel.ts',
+				'src/core/y/alias.ts',
+				'src/core/y/computed.ts',
+				'src/core/z/second_hop.ts',
+				'tools/tool_alias/server/index.ts',
+				'tools/tool_follow/server/index.ts',
+				'tools/tool_follow_barrel/server/index.ts',
+				'tools/tool_barrel/server/index.ts',
+				'tools/tool_computed/server/index.ts',
+				'tools/tool_default/server/index.ts',
+				'tools/tool_dynamic/server/index.ts',
+				'tools/tool_import_rdf/server/index.ts',
+				'tools/tool_opaque/server/index.ts',
+				'tools/tool_raw/server/index.ts',
+				'tools/tool_require/server/index.ts',
+			].sort(),
+		);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// WHAT A DOOR'S HOLDER SAYS, AND WHO READS THE GUARD'S REASONS.
+//
+// The guard's own `Error.message` names the address it refused (`… resolves to a
+// private/reserved address (::1)`): right for the log, an internal-network oracle
+// on the wire. So a TOOL that holds any outbound door — a raw one or
+// `harvestFetch` — reports a failure as `toErrorBody(toDedaloError(error))` and
+// reads no error's `.message` at all (docs/development/tools/security.md item 7).
+// And the address-vs-shape split of the guard's refusals is ONE table
+// (`SSRF_REFUSAL_KINDS`) read through ONE predicate (`isAddressRefusal`): a module
+// spelling an address reason itself is a private copy of that table, which drifts
+// the day the guard learns a new reason.
+// ---------------------------------------------------------------------------
+
+/** Every door a tool may hold, the harvesting door included. */
+const OUTBOUND_DOOR_SEEDS: Record<string, readonly string[]> = {
+	...DOOR_SEEDS,
+	[HARVEST_DOOR]: ['harvestFetch'],
+};
+
+/**
+ * `.message` read off a value. Read in code with LITERALS KEPT: a template literal's
+ * `${(error as Error).message}` is the commonest read, and blanking literals blanks
+ * it too (measured: the census went green over tool_import_rdf that way).
+ */
+const MESSAGE_READ = /\.message\b/;
+
+/** Tools that hold an outbound door (by binding) and read an error's `.message`. */
+function messageDisclosures(code: ReadonlyMap<string, string>): string[] {
+	const holders = doorCensus(code, OUTBOUND_DOOR_SEEDS);
+	return [...holders.keys()]
+		.filter((file) => file.startsWith('tools/') && MESSAGE_READ.test(code.get(file) ?? ''))
+		.sort();
+}
+
+/** The guard's ADDRESS reasons, from its own table. */
+const ADDRESS_REASONS = Object.entries(SSRF_REFUSAL_KINDS)
+	.filter(([, kind]) => kind === 'address')
+	.map(([reason]) => reason);
+
+/** Modules other than the guard that spell an address reason as a string literal. */
+function reasonCopies(files: readonly { file: string; code: string }[]): string[] {
+	const spelled = new RegExp(`(['"\`])(?:${ADDRESS_REASONS.join('|')})\\1`);
+	return files
+		.filter((entry) => entry.file !== GUARD && spelled.test(entry.code))
+		.map((entry) => entry.file)
+		.sort();
+}
+
+describe('a door holder discloses no address, and reads no reason of its own', () => {
+	const scanned = sourceFiles();
+	const code = new Map(scanned.map((entry) => [entry.file, entry.code]));
+
+	test('a tool holding an outbound door never reads an error’s .message', () => {
+		const found = messageDisclosures(code);
+		expect(
+			found,
+			'report a failure as toErrorBody(toDedaloError(error)) — the guard’s message names ' +
+				`the refused address:\n  ${found.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test('the disclosure census sees a door holder and a harvester (synthetic tree)', () => {
+		const up = '../../../src/core';
+		const synthetic = new Map<string, string>([
+			[GUARD, 'export async function fetchGuardedText() {}'],
+			[HARVEST_DOOR, 'export async function harvestFetch() {}'],
+			[
+				'tools/tool_a/server/index.ts',
+				`import { fetchGuardedText } from '${up}/security/ssrf_guard.ts';\ntry { await fetchGuardedText(u) } catch (e) { out.push((e as Error).message) }`,
+			],
+			[
+				'tools/tool_b/server/index.ts',
+				[
+					`import { harvestFetch as h } from '${up}/harvest/harvest.ts';`,
+					// The read inside a template literal — the shape tool_import_rdf had.
+					'try { await h(u) } catch (err) { out.push(`${u}: ${err.message}`) }',
+				].join('\n'),
+			],
+			[
+				'tools/tool_c/server/index.ts',
+				`import { toErrorBody } from '${up}/errors/index.ts';\nconst m = error.message;`,
+			],
+			[
+				'tools/tool_d/server/index.ts',
+				`import { harvestFetch } from '${up}/harvest/harvest.ts';\ntry { await harvestFetch(u) } catch (e) { out.push(toErrorBody(toDedaloError(e))) }`,
+			],
+		]);
+		expect(messageDisclosures(synthetic)).toEqual([
+			'tools/tool_a/server/index.ts',
+			'tools/tool_b/server/index.ts',
+		]);
+	});
+
+	test('no module but the guard spells an address reason (read them with isAddressRefusal)', () => {
+		expect(ADDRESS_REASONS.length).toBeGreaterThan(4); // the table is read, not empty
+		const guard = scanned.find((entry) => entry.file === GUARD);
+		expect(reasonCopies(guard === undefined ? [] : [{ ...guard, file: 'x.ts' }])).toEqual(['x.ts']);
+		expect(
+			reasonCopies([
+				{ file: 'copy.ts', code: "if (error.coordinates?.reason === 'dns_failed') throw error;" },
+				{ file: 'fine.ts', code: "if (isAddressRefusal(error)) throw error; const r = 'dns';" },
+			]),
+		).toEqual(['copy.ts']);
+		expect(reasonCopies(scanned)).toEqual([]);
 	});
 });
 
@@ -233,4 +1057,945 @@ describe('the IPv4-mapped IPv6 bypass (found 2026-08-31, pre-existing)', () => {
 			expect(await isPublicUrl(uri), `${uri} must be refused`).toBe(false);
 		}
 	});
+});
+
+// ---------------------------------------------------------------------------
+// THE ATTACKER-AAAA TRUTH TABLE (SURF-2, 2026-09-30)
+// ---------------------------------------------------------------------------
+
+/*
+ * Every way an IPv6 address can CARRY an IPv4 — standardized (mapped, NAT64 /96),
+ * local-use NAT64 in every RFC 6052 layout, the deprecated IPv4-compatible and SIIT
+ * forms, the 6to4 and Teredo tunnels, a DISCOVERED network-specific prefix and a
+ * DECLARED one at every layout — crossed with non-public and public payloads, plus the
+ * special blocks, a first-hextet allowlist sweep and multi-record answers. Each row is
+ * the AAAA an attacker's own DNS server hands out for `attacker.test`, and it is driven
+ * through EVERY consumer of the address policy:
+ *
+ *   1. assertPublicUrl('http://attacker.test/', {lookup}) — refused `private_resolved`,
+ *      or passes returning exactly the row;
+ *   2. assertPublicUrl on the literal `http://[row]/` — `private_literal`, or passes;
+ *   3. isPrivateIp(row) — the synchronous verdict, equal to 2;
+ *   4. isSafeLocalAsrUrl('http://[row]/') — the on-premise transcriber's policy. With
+ *      the private-host exemption ON it refuses iff the row reaches a cloud metadata
+ *      address through ANY carrier (or is one, or is a tunnel) and ALLOWS loopback and
+ *      RFC 1918 payloads (so the exemption is not over-blocked); OFF it equals 2.
+ *   5. claimedIpv4s(row) — the guard's ONE answer to "which IPv4 may this reach", which
+ *      the transcriber already reads for every form of its host (consumer 4 judges each
+ *      claim; its own redundant copy of the deprecated/local-use tables is PENDING
+ *      deletion): it must hold every IPv4 the oracle says the row's carrier may deliver
+ *      (tighten-only superset) — and, under an authoritative carrier, no spurious
+ *      layout reading, or consumer 4 with the exemption OFF refuses what 2 accepts.
+ *
+ * THE ORACLE IS THE TEST'S OWN: an RFC 6052 §2.2 encoder/decoder, a byte parser, the
+ * metadata set and the tunnel blocks are written here, never read from the guard — a
+ * table derived from the code under test agrees with any bug in it.
+ *
+ * A REGRESSION LOCK, not a red-first reproduction: at the sha this block was written
+ * the guard's verdict path already matched it (the allowlist landed 2026-09-29), and
+ * the one open class — the transcriber judging carriers with tables of its own — is
+ * behaviour-equal until one copy drifts. Its teeth are the mutations recorded below
+ * (SURF-2 closure plan §D), each of which must turn this block red.
+ *
+ * MUTATIONS — run 2026-09-30 against src/core/security/ssrf_guard.ts, each applied
+ * alone, each RED (this file + guarded_text_pin_native + outbound_fetch_tripwire):
+ *   M1  TUNNEL_IPV6 = []                     6to4 public rows pass 1-3; tunnel metadata allowed (4 on)
+ *   M1b drop '2001::/32' only                Teredo rows allowed by the transcriber (4 on)
+ *   M2  drop '64:ff9b::/96'                  NAT64 public control refused
+ *   M3  drop '::ffff:0:0/96'                 mapped public control refused
+ *   M4  no 2000::/3 check (a blocklist)      sweep, fec0::1, 100::1, compat rows pass
+ *   M5  carried isNonPublicIpv4 deleted      mapped / NAT64 / declared non-public rows pass
+ *   M6  drop 2001:db8::/32 | 3fff::/20 | 2001::/23, one at a time — its row passes
+ *   M7  discovered prefix authoritative      hostile-mode public rows pass (3, 4 off)
+ *   M8  discoveredNat64 → []                 discovered non-public rows pass (1, 2)
+ *   M9  no unbracket                         literal rows answer dns_failed
+ *   M10 vet addresses.slice(0, 1)            multi-record rows pass
+ *   M11 declaredNat64 → no prefixes          declared non-public rows pass
+ *   M12 deprecated embeddings not claimed    compat/SIIT rows: claimedIpv4s misses the payload (5)
+ *   M13 LOCAL_USE_LAYOUTS = [96]             local-use /48-/64 rows: claimedIpv4s misses it (5)
+ *   M14 fetchGuardedText = assertPublicUrl + fetchBoundedText — pin gate red (rebinding case)
+ *   M15 fetchGuardedText follows the Location — the pin gate's 3xx case red
+ *   M16 possibleIpv4s also read under an authoritative carrier — declared local-use
+ *       rows: the transcriber (4, exemption OFF) refuses the public payload the guard
+ *       accepts, and claimedIpv4s is not the declared reading (5)
+ * M12/M13 bite through consumer 5 while the transcriber still carries its own copy of
+ * those tables; once it reads only `claimedIpv4s` they bite through consumer 4 too.
+ */
+
+/** The test's OWN IPv6 text → 16 bytes (hex groups and at most one `::`). */
+function oracleV6(text: string): Uint8Array {
+	const [head = '', tail] = text.split('::');
+	const groups = (part: string): number[] =>
+		part === '' ? [] : part.split(':').map((group) => Number.parseInt(group, 16));
+	const left = groups(head);
+	const right = tail === undefined ? [] : groups(tail);
+	const zeros = new Array<number>(8 - left.length - right.length).fill(0);
+	return Uint8Array.from([...left, ...zeros, ...right].flatMap((h) => [h >> 8, h & 0xff]));
+}
+
+/** 16 bytes → uncompressed IPv6 text (valid for isIP and URL). */
+function oracleText(bytes: Uint8Array): string {
+	const hextets: string[] = [];
+	for (let at = 0; at < 16; at += 2) {
+		hextets.push((((bytes[at] ?? 0) << 8) | (bytes[at + 1] ?? 0)).toString(16));
+	}
+	return hextets.join(':');
+}
+
+function oracleV4(text: string): Uint8Array {
+	return Uint8Array.from(text.split('.').map(Number));
+}
+
+/** The byte positions an RFC 6052 layout of `bits` puts the IPv4 in (byte 8, the u octet, skipped). */
+function layoutPositions(bits: number): number[] {
+	const positions: number[] = [];
+	for (let at = bits >> 3; positions.length < 4; at++) if (at !== 8) positions.push(at);
+	return positions;
+}
+
+/** RFC 6052 §2.2: `prefix`'s first `bits`, then the IPv4 around the u octet, zero suffix. */
+function embedV4(prefix: string, bits: number, v4: Uint8Array): Uint8Array {
+	const bytes = new Uint8Array(16);
+	bytes.set(oracleV6(prefix).subarray(0, bits >> 3));
+	layoutPositions(bits).forEach((position, index) => {
+		bytes[position] = v4[index] ?? 0;
+	});
+	return bytes;
+}
+
+function decodeV4(bytes: Uint8Array, bits: number): Uint8Array {
+	return Uint8Array.from(layoutPositions(bits).map((position) => bytes[position] ?? 0));
+}
+
+const NON_PUBLIC_PAYLOADS = [
+	'127.0.0.1',
+	'10.0.0.1',
+	'172.16.0.1',
+	'192.168.0.1',
+	'169.254.169.254',
+	'100.100.100.200',
+	'100.64.0.1',
+	'0.0.0.0',
+	'192.0.0.170',
+	'198.18.0.1',
+	'224.0.0.1',
+	'240.0.0.1',
+] as const;
+const PUBLIC_PAYLOADS = ['93.184.216.34', '8.8.8.8'] as const;
+const PAYLOADS = [
+	...NON_PUBLIC_PAYLOADS.map((text) => ({ text, public: false })),
+	...PUBLIC_PAYLOADS.map((text) => ({ text, public: true })),
+];
+
+/**
+ * The documented cloud metadata set (transcription_local_asr's header): 169.254/16,
+ * 100.100.100.200, 192.0.0.192, AWS IPv6 IMDS, GCE IPv6 metadata. Held HERE; its
+ * equality with the transcriber's set is measured at the boundaries below.
+ */
+function isMetadataV4(v4: Uint8Array): boolean {
+	const dotted = [...v4].join('.');
+	return (
+		(v4[0] === 169 && v4[1] === 254) || dotted === '100.100.100.200' || dotted === '192.0.0.192'
+	);
+}
+const METADATA_V6 = ['fd00:ec2::254', 'fd20:ce::254'].map((text) => oracleText(oracleV6(text)));
+function isMetadataV6(bytes: Uint8Array): boolean {
+	return METADATA_V6.includes(oracleText(bytes));
+}
+
+/** 6to4 2002::/16 and Teredo 2001::/32, by the test's own bytes. */
+function isTunnelOracle(bytes: Uint8Array): boolean {
+	const first = ((bytes[0] ?? 0) << 8) | (bytes[1] ?? 0);
+	return first === 0x2002 || (first === 0x2001 && bytes[2] === 0 && bytes[3] === 0);
+}
+
+interface TruthRow {
+	readonly label: string;
+	readonly address: string;
+	/** Refused by the public-address guard (consumers 1-3; 4 with the exemption off). */
+	readonly refused: boolean;
+	/** Refused by the transcriber with the private-host exemption ON. */
+	readonly asrForbidden: boolean;
+	/** Extra `ipv4only.arpa` AAAA answers this row's network reports (RFC 7050). */
+	readonly discovery: readonly string[];
+	/** Every IPv4 (dotted) the oracle says this row's carrier may deliver to. */
+	readonly carried: readonly string[];
+}
+
+/** A row from bytes and the IPv4s its carrier may deliver to. */
+function truthRow(
+	label: string,
+	bytes: Uint8Array,
+	refused: boolean,
+	carried: readonly Uint8Array[],
+	discovery: readonly string[] = [],
+): TruthRow {
+	const asrForbidden = isTunnelOracle(bytes) || isMetadataV6(bytes) || carried.some(isMetadataV4);
+	const dotted = carried.map((v4) => [...v4].join('.'));
+	return { label, address: oracleText(bytes), refused, asrForbidden, discovery, carried: dotted };
+}
+
+interface Carrier {
+	readonly label: string;
+	readonly place: (v4: Uint8Array) => Uint8Array;
+	/** A public payload settles it as public (the carrier is authoritative and routable). */
+	readonly publicPasses: boolean;
+	/** Every layout the carrier may be read in (the transcriber refuses a metadata hit in any). */
+	readonly layouts: readonly number[];
+	readonly discovery?: readonly string[];
+}
+
+const LOCAL_USE_LAYOUTS = [48, 56, 64, 96] as const;
+
+function tunnelPlace(first: number, at: number): (v4: Uint8Array) => Uint8Array {
+	return (v4) => {
+		const bytes = new Uint8Array(16);
+		bytes[0] = first >> 8;
+		bytes[1] = first & 0xff;
+		bytes.set(v4, at);
+		if (first === 0x2002) bytes[15] = 1; // 2002:V4::1
+		return bytes;
+	};
+}
+
+const CARRIERS: readonly Carrier[] = [
+	{
+		label: 'mapped ::ffff:0:0/96',
+		place: (v4) => embedV4('::ffff:0:0', 96, v4),
+		publicPasses: true,
+		layouts: [96],
+	},
+	{
+		label: 'NAT64 64:ff9b::/96',
+		place: (v4) => embedV4('64:ff9b::', 96, v4),
+		publicPasses: true,
+		layouts: [96],
+	},
+	...LOCAL_USE_LAYOUTS.map((bits) => ({
+		label: `local-use 64:ff9b:1::/48 at /${bits} (undeclared)`,
+		place: (v4: Uint8Array) => embedV4('64:ff9b:1::', bits, v4),
+		publicPasses: false,
+		layouts: LOCAL_USE_LAYOUTS,
+	})),
+	{
+		label: 'IPv4-compatible ::/96',
+		place: (v4) => embedV4('::', 96, v4),
+		publicPasses: false,
+		layouts: [96],
+	},
+	{
+		label: 'SIIT ::ffff:0:0:0/96',
+		place: (v4) => embedV4('::ffff:0:0:0', 96, v4),
+		publicPasses: false,
+		layouts: [96],
+	},
+	{ label: '6to4 2002:V4::1', place: tunnelPlace(0x2002, 2), publicPasses: false, layouts: [] },
+	{ label: 'Teredo 2001:0:V4::', place: tunnelPlace(0x2001, 4), publicPasses: false, layouts: [] },
+	{
+		label: 'discovered 2c0f:f248:64::/96',
+		place: (v4) => embedV4('2c0f:f248:64::', 96, v4),
+		publicPasses: true,
+		layouts: [96],
+		discovery: ['2c0f:f248:64::c000:aa'],
+	},
+];
+
+function carrierRows(carrier: Carrier): TruthRow[] {
+	return PAYLOADS.map((payload) => {
+		const bytes = carrier.place(oracleV4(payload.text));
+		const carried = carrier.layouts.map((bits) => decodeV4(bytes, bits));
+		const refused = !payload.public || !carrier.publicPasses;
+		return truthRow(
+			`${carrier.label} ← ${payload.text}`,
+			bytes,
+			refused,
+			carried,
+			carrier.discovery,
+		);
+	});
+}
+
+const SPECIAL_REFUSED = [
+	'fec0::1',
+	'2001:db8::1',
+	'2001:db8:64::a9fe:a9fe',
+	'3fff::1',
+	'2001:2::1',
+	'::',
+	'::1',
+	'fe80::1',
+	'fc00::1',
+	'fd00:ec2::254',
+	'ff02::1',
+	'100::1',
+];
+const SPECIAL_PASS = ['2606:4700:4700::1111', '2a00:1450:4001:830::200e'];
+
+function specialRows(): TruthRow[] {
+	return [
+		...SPECIAL_REFUSED.map((text) => truthRow(`special ${text}`, oracleV6(text), true, [])),
+		...SPECIAL_PASS.map((text) => truthRow(`special ${text}`, oracleV6(text), false, [])),
+	];
+}
+
+/** `XX00::1` for every first octet: only 0x20-0x3f (2000::/3) is public. */
+function sweepRows(): TruthRow[] {
+	return Array.from({ length: 256 }, (_, octet) => {
+		const text = `${octet.toString(16)}00::1`;
+		return truthRow(`sweep ${text}`, oracleV6(text), octet < 0x20 || octet > 0x3f, []);
+	});
+}
+
+const TRUTH_ROWS: readonly TruthRow[] = [
+	...CARRIERS.flatMap(carrierRows),
+	...specialRows(),
+	...sweepRows(),
+];
+
+/** Multi-record answers: ONE bad record among good ones refuses the name. */
+const MULTI_RECORD_ROWS: readonly (readonly string[])[] = [
+	['2606:4700:4700::1111', '64:ff9b::7f00:1'],
+	['93.184.216.34', '::ffff:7f00:1'],
+];
+
+interface DiscoveryMode {
+	readonly name: string;
+	/** What `ipv4only.arpa` answers on this network. */
+	readonly ipv4only: readonly string[];
+	/** Rows only this network's (hostile) discovery makes meaningful. */
+	readonly extraRows: readonly TruthRow[];
+}
+
+/**
+ * A HOSTILE resolver that says "your NAT64 prefix is fd00::/96" must not turn a
+ * unique-local address into an accepted one: every row inside it stays refused, and a
+ * metadata payload it claims is still refused by the transcriber.
+ */
+const HOSTILE_ULA_ROWS: readonly TruthRow[] = PAYLOADS.map((payload) => {
+	const bytes = embedV4('fd00::', 96, oracleV4(payload.text));
+	return truthRow(`hostile-discovered fd00::/96 ← ${payload.text}`, bytes, true, [
+		decodeV4(bytes, 96),
+	]);
+});
+
+const DISCOVERY_MODES: readonly DiscoveryMode[] = [
+	{ name: 'no DNS64', ipv4only: ['192.0.0.170'], extraRows: [] },
+	{ name: 'hostile ULA', ipv4only: ['fd00::c000:aa'], extraRows: HOSTILE_ULA_ROWS },
+	// 64:ff9b:1::5db8:d822 is a local-use /96 row above: refused whatever discovery says.
+	{ name: 'hostile local-use', ipv4only: ['64:ff9b:1::c000:aa'], extraRows: [] },
+];
+
+/** The attacker's DNS: `attacker.test` → the row, `ipv4only.arpa` → the mode, else ENOTFOUND. */
+function attackerLookup(records: readonly string[], ipv4only: readonly string[]): AddressLookup {
+	return async (host) => {
+		const answer = host === 'attacker.test' ? records : host === 'ipv4only.arpa' ? ipv4only : null;
+		if (answer === null) throw new Error(`ENOTFOUND ${host}`);
+		return answer.map((address) => ({ address, family: address.includes(':') ? 6 : 4 }));
+	};
+}
+
+/** `pass:<addresses>`, the refusal reason, or `unexpected:<error>` (never an address refusal). */
+async function guardOutcome(uri: string, lookup: AddressLookup): Promise<string> {
+	try {
+		const { addresses } = await assertPublicUrl(uri, { lookup });
+		return `pass:${addresses.join(',')}`;
+	} catch (error) {
+		if (!isAddressRefusal(error)) return `unexpected:${String(error)}`;
+		return String((error as DedaloError).coordinates?.reason);
+	}
+}
+
+/** The discovery cache a synchronous consumer on this network would hold: every /96 reported. */
+function seededPrefixes(answers: readonly string[]): { network: Uint8Array; prefixBits: number }[] {
+	return answers
+		.filter((answer) => answer.includes(':'))
+		.map((answer) => {
+			const network = oracleV6(answer);
+			network.fill(0, 12);
+			return packCidr(`${oracleText(network)}/96`) as { network: Uint8Array; prefixBits: number };
+		});
+}
+
+const EXEMPTION = 'DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS';
+const originalExemption = process.env[EXEMPTION];
+
+/** Pinned, never deleted: a deleted key falls back to ../private/.env through readEnv. */
+function setExemption(on: boolean): void {
+	process.env[EXEMPTION] = on ? 'true' : '';
+}
+
+/** Per-consumer pass/refusal tallies and the executed-row count (anti-vacuity). */
+const tally = {
+	rows: 0,
+	resolved: { pass: 0, refused: 0 },
+	literal: { pass: 0, refused: 0 },
+	isPrivateIp: { pass: 0, refused: 0 },
+	asr: { pass: 0, refused: 0 },
+	/** Rows whose carried IPv4s were checked against claimedIpv4s (consumer 5). */
+	claims: 0,
+};
+
+function count(consumer: { pass: number; refused: number }, refused: boolean): void {
+	if (refused) consumer.refused++;
+	else consumer.pass++;
+}
+
+/** Consumers 1 and 2 on one row, mismatches as sentences. */
+async function guardMismatches(row: TruthRow, mode: DiscoveryMode): Promise<string[]> {
+	const lookup = attackerLookup([row.address], [...mode.ipv4only, ...row.discovery]);
+	const resolved = await guardOutcome('http://attacker.test/', lookup);
+	const literal = await guardOutcome(`http://[${row.address}]/`, lookup);
+	count(tally.resolved, !resolved.startsWith('pass:'));
+	count(tally.literal, !literal.startsWith('pass:'));
+	const wantResolved = row.refused ? 'private_resolved' : `pass:${row.address}`;
+	const wantLiteral = row.refused ? 'private_literal' : 'pass';
+	const problems: string[] = [];
+	if (resolved !== wantResolved) problems.push(`[resolved] want ${wantResolved} got ${resolved}`);
+	if (literal.split(':')[0] !== wantLiteral)
+		problems.push(`[literal] want ${wantLiteral} got ${literal}`);
+	return problems.map((problem) => `${mode.name} / ${row.label} (${row.address}) ${problem}`);
+}
+
+/** Consumers 3 and 4 (synchronous) on one row, with the network's discovery cached. */
+function syncMismatches(row: TruthRow, mode: DiscoveryMode): string[] {
+	setNat64DiscoveryForTests({
+		prefixes: seededPrefixes([...mode.ipv4only, ...row.discovery]),
+		expiresAt: Date.now() + 10 * 60_000,
+	});
+	const uri = `http://[${row.address}]/`;
+	const privateVerdict = isPrivateIp(row.address);
+	setExemption(true);
+	const asrOn = isSafeLocalAsrUrl(uri);
+	setExemption(false);
+	const asrOff = isSafeLocalAsrUrl(uri);
+	const claimed = claimedIpv4s(oracleV6(row.address));
+	const unclaimed = row.carried.filter((v4) => !claimed.includes(v4));
+	if (row.carried.length > 0) tally.claims++;
+	count(tally.isPrivateIp, privateVerdict);
+	count(tally.asr, !asrOn);
+	const problems: string[] = [];
+	if (privateVerdict !== row.refused)
+		problems.push(`[isPrivateIp] want ${row.refused} got ${privateVerdict}`);
+	if (asrOn !== !row.asrForbidden)
+		problems.push(`[asr exemption ON] want allowed=${!row.asrForbidden} got ${asrOn}`);
+	if (asrOff !== !row.refused)
+		problems.push(`[asr exemption OFF] want allowed=${!row.refused} got ${asrOff}`);
+	if (unclaimed.length > 0)
+		problems.push(`[claimedIpv4s] missing ${unclaimed.join(',')} (got ${claimed.join(',')})`);
+	return problems.map((problem) => `${mode.name} / ${row.label} (${row.address}) ${problem}`);
+}
+
+describe('the attacker-AAAA truth table (SURF-2): every carrier × payload through every consumer', () => {
+	const originalDiscovery = nat64DiscoveryState();
+	beforeEach(() => {
+		// Empty and UNEXPIRED: no consumer here may trigger a real ipv4only.arpa query.
+		setNat64DiscoveryForTests({ prefixes: [], expiresAt: Date.now() + 10 * 60_000 });
+		setExemption(false);
+	});
+	afterEach(() => {
+		setNat64DiscoveryForTests(originalDiscovery);
+		process.env[EXEMPTION] = originalExemption ?? '';
+	});
+
+	test('the oracle: the encoder round-trips through the guard’s RFC 6052 reader, at every layout', () => {
+		for (const bits of [32, 40, 48, 56, 64, 96]) {
+			for (const payload of PAYLOADS) {
+				const v4 = oracleV4(payload.text);
+				const bytes = embedV4('2a0b:4e00:6400:6400:64:6400::', bits, v4);
+				expect([...(extractRfc6052Ipv4(bytes, bits) ?? [])], `/${bits} ${payload.text}`).toEqual([
+					...v4,
+				]);
+				expect([...decodeV4(bytes, bits)]).toEqual([...v4]);
+				expect(bytes[8], `/${bits}: the u octet carries no address bit`).toBe(
+					bits >= 72 ? bytes[8] : 0,
+				);
+			}
+		}
+	});
+
+	test('the payloads are what they claim: non-public refused, public not', () => {
+		for (const text of NON_PUBLIC_PAYLOADS) expect(isPrivateIp(text), text).toBe(true);
+		for (const text of PUBLIC_PAYLOADS) expect(isPrivateIp(text), text).toBe(false);
+	});
+
+	test('the metadata set held here IS the transcriber’s, measured at its boundaries', () => {
+		setExemption(true);
+		const members = [
+			'169.254.0.0',
+			'169.254.255.255',
+			'100.100.100.200',
+			'192.0.0.192',
+			'[fd00:ec2::254]',
+			'[fd20:ce::254]',
+		];
+		const neighbours = [
+			'169.253.255.255',
+			'169.255.0.0',
+			'100.100.100.199',
+			'100.100.100.201',
+			'192.0.0.191',
+			'192.0.0.193',
+			'[fd00:ec2::253]',
+			'[fd20:ce::255]',
+		];
+		for (const host of members)
+			expect(isSafeLocalAsrUrl(`http://${host}/`), `${host} is metadata`).toBe(false);
+		for (const host of neighbours)
+			expect(isSafeLocalAsrUrl(`http://${host}/`), `${host} is not`).toBe(true);
+	});
+
+	test('the table is not vacuous: row floor, and every carrier row is really an IPv6 literal', () => {
+		expect(TRUTH_ROWS.length).toBeGreaterThanOrEqual(400);
+		expect(new Set(TRUTH_ROWS.map((row) => row.address)).size).toBeGreaterThan(380);
+		expect(TRUTH_ROWS.some((row) => row.asrForbidden)).toBe(true);
+		expect(TRUTH_ROWS.some((row) => !row.asrForbidden && row.refused)).toBe(true);
+	});
+
+	for (const mode of DISCOVERY_MODES) {
+		const rows = [...TRUTH_ROWS, ...mode.extraRows];
+
+		test(`${mode.name}: assertPublicUrl — the attacker's AAAA and the literal`, async () => {
+			const problems: string[] = [];
+			for (const row of rows) problems.push(...(await guardMismatches(row, mode)));
+			tally.rows += rows.length;
+			expect(problems).toEqual([]);
+		});
+
+		test(`${mode.name}: isPrivateIp and isSafeLocalAsrUrl (exemption on and off)`, () => {
+			const problems = rows.flatMap((row) => syncMismatches(row, mode));
+			expect(problems).toEqual([]);
+		});
+
+		test(`${mode.name}: multi-record answers — one bad record refuses the name`, async () => {
+			for (const records of MULTI_RECORD_ROWS) {
+				const outcome = await guardOutcome(
+					'http://attacker.test/',
+					attackerLookup(records, mode.ipv4only),
+				);
+				expect(outcome, records.join(' + ')).toBe('private_resolved');
+			}
+		});
+	}
+
+	test('every row ran, and every consumer both passed and refused something', () => {
+		const expected = DISCOVERY_MODES.reduce(
+			(sum, mode) => sum + TRUTH_ROWS.length + mode.extraRows.length,
+			0,
+		);
+		expect(tally.rows).toBe(expected);
+		expect(tally.claims, 'consumer 5 checked no carried IPv4 at all').toBeGreaterThan(100);
+		for (const consumer of [tally.resolved, tally.literal, tally.isPrivateIp, tally.asr]) {
+			expect(consumer.pass).toBeGreaterThan(0);
+			expect(consumer.refused).toBeGreaterThan(0);
+		}
+	});
+});
+
+/*
+ * A DECLARED network-specific prefix (DEDALO_NAT64_PREFIXES) is the operator's word:
+ * AUTHORITATIVE. At every RFC 6052 layout a non-public payload is refused and a public
+ * one passes, and the transcriber refuses a metadata payload through it. The prefixes
+ * are synthetic global space, verified here to sit outside every special-purpose and
+ * tunnel block, so it is the declaration — not some other rule — deciding each row.
+ */
+const DECLARED_PREFIXES: readonly (readonly [string, number])[] = [
+	['2a0b:4e00::', 32],
+	['2a0b:4e01:6400::', 40],
+	['2a0b:4e02:64::', 48],
+	['2a0b:4e03:64:6400::', 56],
+	['2a0b:4e04:64:64::', 64],
+	['2a0b:4e05:64:64:0:64::', 96],
+];
+
+/** The test's own copy of the special blocks inside 2000::/3 (prefix text, bits). */
+const SPECIAL_GLOBAL_BLOCKS: readonly (readonly [string, number])[] = [
+	['2001::', 23],
+	['2001:db8::', 32],
+	['3fff::', 20],
+	['2002::', 16],
+	['2001::', 32],
+];
+
+function inBlock(bytes: Uint8Array, block: readonly [string, number]): boolean {
+	const network = oracleV6(block[0]);
+	for (let bit = 0; bit < block[1]; bit++) {
+		const mask = 0x80 >> (bit & 7);
+		if (((bytes[bit >> 3] ?? 0) & mask) !== ((network[bit >> 3] ?? 0) & mask)) return false;
+	}
+	return true;
+}
+
+describe('the attacker-AAAA truth table: a DECLARED NAT64 prefix at every layout', () => {
+	const originalDiscovery = nat64DiscoveryState();
+	beforeEach(() => {
+		process.env[NAT64_SETTING] = DECLARED_PREFIXES.map(
+			([prefix, bits]) => `${prefix}/${bits}`,
+		).join(',');
+		setNat64DiscoveryForTests({ prefixes: [], expiresAt: Date.now() + 10 * 60_000 });
+		setExemption(false);
+	});
+	afterEach(() => {
+		setNat64DiscoveryForTests(originalDiscovery);
+		process.env[EXEMPTION] = originalExemption ?? '';
+	});
+
+	const rows = DECLARED_PREFIXES.flatMap(([prefix, bits]) =>
+		PAYLOADS.map((payload) => {
+			const bytes = embedV4(prefix, bits, oracleV4(payload.text));
+			return truthRow(`declared ${prefix}/${bits} ← ${payload.text}`, bytes, !payload.public, [
+				decodeV4(bytes, bits),
+			]);
+		}),
+	);
+
+	test('the declared prefixes are global unicast outside every special and tunnel block', () => {
+		for (const [prefix] of DECLARED_PREFIXES) {
+			const bytes = oracleV6(prefix);
+			expect(inBlock(bytes, ['2000::', 3]), prefix).toBe(true);
+			for (const block of SPECIAL_GLOBAL_BLOCKS)
+				expect(inBlock(bytes, block), `${prefix} in ${block[0]}/${block[1]}`).toBe(false);
+		}
+		expect(rows.length).toBe(DECLARED_PREFIXES.length * PAYLOADS.length);
+	});
+
+	test('assertPublicUrl, isPrivateIp and isSafeLocalAsrUrl honour the declaration', async () => {
+		const mode = DISCOVERY_MODES[0] as DiscoveryMode;
+		const problems: string[] = [];
+		for (const row of rows)
+			problems.push(...(await guardMismatches(row, mode)), ...syncMismatches(row, mode));
+		expect(problems).toEqual([]);
+		expect(rows.some((row) => row.refused) && rows.some((row) => !row.refused)).toBe(true);
+	});
+});
+
+/*
+ * A DECLARED prefix INSIDE RFC 8215's local-use block, `64:ff9b:1::/48` — the case the
+ * guard documents as "honoured like any other", and the one the global-unicast
+ * declared table above cannot build. The declaration fixes the layout: a public
+ * payload passes every consumer, and the transcriber with the exemption OFF must
+ * EQUAL the guard (consumer 4 = consumer 2). Measured 2026-09-30: reading the other
+ * local-use layouts too (the zero suffix of a /48 embedding reads as 0.0.0.0 at /96)
+ * made the transcriber refuse `64:ff9b:1:5db8:d8:2200::` — 93.184.216.34, declared
+ * public — while the guard accepted it. One prefix per run: two overlapping
+ * declarations would let the first one's layout read the second one's addresses.
+ */
+const DECLARED_LOCAL_USE: readonly (readonly [string, number])[] = [
+	['64:ff9b:1::', 48],
+	['64:ff9b:1::', 96],
+];
+
+for (const [prefix, bits] of DECLARED_LOCAL_USE) {
+	describe(`the attacker-AAAA truth table: a DECLARED local-use prefix ${prefix}/${bits}`, () => {
+		const originalDiscovery = nat64DiscoveryState();
+		beforeEach(() => {
+			process.env[NAT64_SETTING] = `${prefix}/${bits}`;
+			setNat64DiscoveryForTests({ prefixes: [], expiresAt: Date.now() + 10 * 60_000 });
+			setExemption(false);
+		});
+		afterEach(() => {
+			setNat64DiscoveryForTests(originalDiscovery);
+			process.env[EXEMPTION] = originalExemption ?? '';
+		});
+
+		const rows = PAYLOADS.map((payload) => {
+			const bytes = embedV4(prefix, bits, oracleV4(payload.text));
+			return truthRow(`declared ${prefix}/${bits} ← ${payload.text}`, bytes, !payload.public, [
+				decodeV4(bytes, bits),
+			]);
+		});
+
+		test('the prefix really is inside the local-use block (so the declaration decides)', () => {
+			for (const row of rows)
+				expect(inBlock(oracleV6(row.address), ['64:ff9b:1::', 48])).toBe(true);
+			expect(rows.some((row) => !row.refused)).toBe(true);
+		});
+
+		test('assertPublicUrl, isPrivateIp and isSafeLocalAsrUrl (exemption OFF equals the guard)', async () => {
+			const mode = DISCOVERY_MODES[0] as DiscoveryMode;
+			const problems: string[] = [];
+			for (const row of rows)
+				problems.push(...(await guardMismatches(row, mode)), ...syncMismatches(row, mode));
+			expect(problems).toEqual([]);
+		});
+
+		test('claimedIpv4s under the declaration is exactly the declared reading', () => {
+			for (const row of rows) {
+				expect(claimedIpv4s(oracleV6(row.address)), row.label).toEqual([...row.carried]);
+			}
+		});
+	});
+}
+
+// ---------------------------------------------------------------------------
+// WHO READS CARRIERS (SURF-2 class: an address judged by carrier knowledge that is
+// not the guard's)
+// ---------------------------------------------------------------------------
+
+/*
+ * The truth table above measures the consumers it NAMES. A third module that builds
+ * its own carrier table out of the byte primitives — an RFC 6052 reader, a block
+ * matcher, a block packer — would judge addresses unmeasured, and that is exactly how
+ * the transcriber's copy came to exist. So the primitives are censused by import
+ * BINDING (the same resolver as the door census: renames, namespaces, barrels,
+ * re-exports), and outside `src/core/security/` a module holds one only by a row
+ * here. The rows may only SHRINK: a row whose module no longer holds the primitive is
+ * red until it is deleted.
+ *
+ * ITS LIMIT: it sees the four NAMED block / RFC 6052 primitives, not a hand-rolled
+ * comparison — a module that takes `packIpv6` (legitimately needed elsewhere), compares
+ * the leading bytes to `::ffff:0:0/96` itself and slices `subarray(12, 16)` holds none
+ * of them. That wider class is closed by OUTCOME in the next block (WHO JUDGES
+ * ADDRESSES): every module outside the guard holding ANY address byte primitive is
+ * registered, and an outbound one is driven through the truth table.
+ */
+const IP_ADDRESS = 'src/core/security/ip_address.ts';
+const CARRIER_PRIMITIVE_SEEDS: Record<string, readonly string[]> = {
+	[IP_ADDRESS]: ['extractRfc6052Ipv4', 'packedInBlock', 'packCidr'],
+	[GUARD]: ['packBlocks'],
+};
+
+const CARRIER_PRIMITIVE_IMPORTERS: Record<
+	string,
+	{ primitives: readonly string[]; reason: string }
+> = {
+	'src/core/tools/transcription_local_asr.ts': {
+		primitives: ['extractRfc6052Ipv4', 'packBlocks', 'packedInBlock'],
+		reason:
+			'PENDING DELETION (SURF-2 integrator request 1): its LEGACY_IPV4_EMBEDDINGS / ' +
+			'LOCAL_USE_NAT64 tables re-read carriers the guard’s claimedIpv4s already answers — ' +
+			'extractRfc6052Ipv4 goes with them. packBlocks/packedInBlock stay for METADATA_BLOCKS, ' +
+			'the cloud metadata endpoints: a destination list, not a carrier.',
+	},
+};
+
+function carrierViolations(census: Map<string, Set<string>>): string[] {
+	const found: string[] = [];
+	for (const [file, held] of census) {
+		if (file.startsWith('src/core/security/')) continue;
+		const allowed = new Set(CARRIER_PRIMITIVE_IMPORTERS[file]?.primitives ?? []);
+		for (const primitive of held) {
+			if (primitive === OPAQUE)
+				found.push(`${file}: names a carrier module but loads a non-literal import()`);
+			else if (!allowed.has(primitive))
+				found.push(
+					`${file}: holds ${primitive} — ask the guard (claimedIpv4s / embeddedIpv4 / isPrivateIp) ` +
+						'which IPv4 an address reaches instead of building a carrier table of your own',
+				);
+		}
+	}
+	return found.sort();
+}
+
+describe('who reads carriers (import-graph census of the address primitives)', () => {
+	const census = doorCensus(
+		new Map(sourceFiles().map((entry) => [entry.file, entry.code])),
+		CARRIER_PRIMITIVE_SEEDS,
+	);
+
+	test('no module outside the guard builds a carrier table without a written row', () => {
+		expect(carrierViolations(census)).toEqual([]);
+	});
+
+	test('the rows may only SHRINK, and each carries a real reason', () => {
+		const stale: string[] = [];
+		for (const [file, row] of Object.entries(CARRIER_PRIMITIVE_IMPORTERS)) {
+			expect(row.reason.length, file).toBeGreaterThan(80);
+			const unused = row.primitives.filter(
+				(primitive) => census.get(file)?.has(primitive) !== true,
+			);
+			if (unused.length > 0)
+				stale.push(`${file}: no longer holds ${unused.join(', ')} — narrow or delete the row`);
+		}
+		expect(stale).toEqual([]);
+	});
+
+	test('the census sees a namespace, a rename and a barrel (synthetic tree)', () => {
+		const synthetic = new Map<string, string>([
+			[IP_ADDRESS, 'export function extractRfc6052Ipv4() {}'],
+			[GUARD, 'export function packBlocks() {}'],
+			[
+				'src/core/x/namespace.ts',
+				"import * as ip from '../security/ip_address.ts';\nexport const read = ip.extractRfc6052Ipv4;",
+			],
+			[
+				'src/core/x/rename.ts',
+				"import { packBlocks as blocks } from '../security/ssrf_guard.ts';\nblocks([]);",
+			],
+			[
+				'src/core/x/barrel.ts',
+				"export { packedInBlock as inside } from '../security/ip_address.ts';",
+			],
+			['tools/tool_y/server/index.ts', "import { inside } from '../../../src/core/x/barrel.ts';"],
+			['src/core/x/clean.ts', "import { formatIpv4 } from '../security/ip_address.ts';"],
+		]);
+		const found = carrierViolations(doorCensus(synthetic, CARRIER_PRIMITIVE_SEEDS));
+		const holders = new Set(found.map((line) => line.split(':')[0]));
+		expect([...holders].sort()).toEqual([
+			'src/core/x/barrel.ts',
+			'src/core/x/namespace.ts',
+			'src/core/x/rename.ts',
+			'tools/tool_y/server/index.ts',
+		]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// WHO JUDGES ADDRESSES (the wider SURF-2 class, closed by outcome)
+// ---------------------------------------------------------------------------
+
+/*
+ * The carrier census above names four primitives; a module can still judge an address
+ * with a table of its own built from the plain byte parsers (`packIpv6`, `packAddress`
+ * …). So EVERY address byte primitive of ip_address.ts (and the guard's block packer)
+ * is censused by binding, and outside `src/core/security/` a holder needs a row saying
+ * which way it judges:
+ *
+ *   - `outbound` — it decides where the server may CONNECT. Its row names the exported
+ *     predicate `(uri) => boolean | Promise<boolean>` (true = allowed), and that
+ *     predicate is DRIVEN here through every truth-table row with every exemption OFF:
+ *     it must equal the guard. Registering a new outbound module is what puts it under
+ *     the table — the verdict is measured, not the spelling.
+ *   - `inbound` — it judges a CLIENT's address against an operator allowlist (no
+ *     destination, no carrier question); its reason says so.
+ *
+ * Rows may only SHRINK (a row whose module holds no primitive is red). The census's
+ * own limit: a module that parses addresses with NO primitive of ip_address.ts (its own
+ * regex, `node:net`) is invisible to it — review-diff's ssrf-egress lens owns that.
+ */
+const ADDRESS_BYTE_SEEDS: Record<string, readonly string[]> = {
+	[IP_ADDRESS]: [
+		'peerBytes',
+		'sameBytes',
+		'sameAddress',
+		'packIpv4',
+		'packIpv6',
+		'packAddress',
+		'ipInCidr',
+		'peerBlock',
+		'packCidr',
+		'packedInBlock',
+		'extractRfc6052Ipv4',
+	],
+	[GUARD]: ['packBlocks'],
+};
+
+type AddressJudgeRow =
+	| { direction: 'outbound'; predicate: string; reason: string }
+	| { direction: 'inbound'; reason: string };
+
+const ADDRESS_JUDGES: Record<string, AddressJudgeRow> = {
+	'src/core/tools/transcription_local_asr.ts': {
+		direction: 'outbound',
+		predicate: 'isSafeLocalAsrUrl',
+		reason:
+			'the on-premise transcriber’s destination policy (the private-host exemption); with ' +
+			'the exemption OFF it must be the guard, which the drive below measures row by row.',
+	},
+	'src/core/install/gate.ts': {
+		direction: 'inbound',
+		reason:
+			'the installer’s CLIENT-IP allowlist (DEDALO_INSTALL_ALLOWED_IPS, loopback by ' +
+			'default): matches the caller’s address against operator CIDRs; no destination is chosen.',
+	},
+};
+
+function addressJudgeViolations(census: Map<string, Set<string>>): string[] {
+	const found: string[] = [];
+	for (const [file, held] of census) {
+		if (file.startsWith('src/core/security/')) continue;
+		if (held.has(OPAQUE))
+			found.push(`${file}: names an address module but loads a non-literal import()`);
+		else if (ADDRESS_JUDGES[file] === undefined)
+			found.push(
+				`${file}: holds ${[...held].sort().join(', ')} — register it in ADDRESS_JUDGES ` +
+					'(outbound: its predicate is driven through the truth table; inbound: why no ' +
+					'destination is judged), or ask the guard instead',
+			);
+	}
+	return found.sort();
+}
+
+describe('who judges addresses (every holder of an address byte primitive is registered)', () => {
+	const census = doorCensus(
+		new Map(sourceFiles().map((entry) => [entry.file, entry.code])),
+		ADDRESS_BYTE_SEEDS,
+	);
+
+	test('no module outside the guard judges addresses without a row', () => {
+		expect(addressJudgeViolations(census)).toEqual([]);
+	});
+
+	test('the rows may only SHRINK, and each carries a real reason', () => {
+		const stale: string[] = [];
+		for (const [file, row] of Object.entries(ADDRESS_JUDGES)) {
+			expect(row.reason.length, file).toBeGreaterThan(80);
+			if ((census.get(file)?.size ?? 0) === 0)
+				stale.push(`${file}: holds no address primitive — delete the row`);
+		}
+		expect(stale).toEqual([]);
+	});
+
+	test('the census sees a plain byte parser behind a barrel (synthetic tree)', () => {
+		const synthetic = new Map<string, string>([
+			[IP_ADDRESS, 'export function packIpv6() {}'],
+			[GUARD, 'export function packBlocks() {}'],
+			[
+				'src/core/x/hand_rolled.ts',
+				"import { packIpv6 as parse } from '../security/ip_address.ts';\n" +
+					'export const isOk = (h) => parse(h)?.subarray(12, 16);',
+			],
+			['src/core/x/barrel.ts', "export * from '../security/ip_address.ts';"],
+			['tools/tool_y/server/index.ts', "import { packIpv6 } from '../../../src/core/x/barrel.ts';"],
+		]);
+		const found = addressJudgeViolations(doorCensus(synthetic, ADDRESS_BYTE_SEEDS));
+		expect(found.map((line) => line.split(':')[0])).toEqual([
+			'src/core/x/barrel.ts',
+			'src/core/x/hand_rolled.ts',
+			'tools/tool_y/server/index.ts',
+		]);
+	});
+});
+
+describe('every OUTBOUND address judge equals the guard on the truth table (exemptions off)', () => {
+	const originalDiscovery = nat64DiscoveryState();
+	beforeEach(() => setExemption(false));
+	afterEach(() => {
+		setNat64DiscoveryForTests(originalDiscovery);
+		process.env[EXEMPTION] = originalExemption ?? '';
+	});
+
+	const outbound = Object.entries(ADDRESS_JUDGES).flatMap(([file, row]) =>
+		row.direction === 'outbound' ? [{ file, predicate: row.predicate }] : [],
+	);
+
+	test('at least one outbound judge is registered (the drive is not vacuous)', () => {
+		expect(outbound.length).toBeGreaterThan(0);
+	});
+
+	for (const { file, predicate } of outbound) {
+		test(`${file} ${predicate}: allowed exactly when the guard allows, every row`, async () => {
+			const module = (await import(join(process.cwd(), file))) as Record<string, unknown>;
+			const judge = module[predicate];
+			expect(typeof judge, `${file} exports ${predicate}`).toBe('function');
+			const mode = DISCOVERY_MODES[0] as DiscoveryMode;
+			const problems: string[] = [];
+			let allowed = 0;
+			for (const row of TRUTH_ROWS) {
+				setNat64DiscoveryForTests({
+					prefixes: seededPrefixes([...mode.ipv4only, ...row.discovery]),
+					expiresAt: Date.now() + 10 * 60_000,
+				});
+				const verdict = await (judge as (uri: string) => boolean | Promise<boolean>)(
+					`http://[${row.address}]/`,
+				);
+				if (verdict) allowed++;
+				if (verdict !== !row.refused)
+					problems.push(
+						`${row.label} (${row.address}) want allowed=${!row.refused} got ${verdict}`,
+					);
+			}
+			expect(problems).toEqual([]);
+			expect(allowed > 0 && allowed < TRUTH_ROWS.length, 'both verdicts occurred').toBe(true);
+		});
+	}
 });

@@ -7,7 +7,7 @@
 /**
 * API_TRANSPORT
 * The ONE fetch+normalise core of the client. No DOM, no page globals: imported
-* by data_manager.js (page), page/js/worker_cache.js (Worker) and core/sw.js
+* by data_manager.js (page), page/js/worker_cache.js (Worker) and core/service_worker.js
 * (module Service Worker) — there is no fourth copy of "how to call the API"
 * (client_error_contract_tripwire).
 *

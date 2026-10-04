@@ -114,3 +114,10 @@ the registry) · `external_search_action_native.test.ts` ·
 not classify any body from this path — the eight rows they hold are the
 oracle-era root `result:false` bodies listed in
 `WC-2026-08-15-error-envelope-v2`.
+
+## Addendum 2026-09-27 — a non-allowlisted host degrades via the door
+
+A host outside `DEDALO_EXTERNAL_ALLOWED_HOSTS` no longer fails at parse as
+`external.bad_config` with `service: "unknown"`; it reaches the door and
+degrades as `external.blocked_host` naming the real service. See
+`WC-2026-09-27-external-allowlist-at-door-only`.

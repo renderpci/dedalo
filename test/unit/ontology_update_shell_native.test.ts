@@ -35,6 +35,14 @@
  *   - The remote arm is driven against a local `Bun.serve` fixture (the
  *     configured origin IS that server), never the network.
  *
+ * SURF-1 (identifier grammar): the success tail VALIDATEs the dd_ontology
+ * grammar CHECKs a legacy install carries NOT VALID, and a row still breaking
+ * a rule is REPORTED as one `response.errors` line, never a failed update.
+ * Cases 5 and 6 reset the CHECKs to NOT VALID first (committed DDL in ONE
+ * transaction on the suite database — the table is never without them).
+ * Mutations: delete the tail step → case 5 (states stay not_valid) and case 6
+ * (no line) red; VALIDATE without reporting, or report a raw value → case 6 red.
+ *
  * COVERAGE-EXEMPT, by construction and stated here rather than left implied:
  * the real remote-download arm (no network fetch in a test, ever — the fixture
  * server stands in for it) and the `engineOwnsInstall()` refusal (collapsed to
@@ -65,11 +73,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { config } from '../../src/config/config.ts';
+import { validateDdOntologyIdentifierConstraints } from '../../src/core/db/dd_ontology.ts';
 import { MATRIX_COPY_COLUMNS } from '../../src/core/db/matrix_write.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { updateOntology } from '../../src/core/ontology/ontology_update.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 
 // ---------------------------------------------------------------------------
 // scratch surface
@@ -199,9 +209,9 @@ function remoteCatalog(origin: string): {
 
 function optionsFor(origin: string, tlds: readonly string[]): unknown {
 	return {
-		// The client-supplied url is IGNORED (WC-023 D5) — point it somewhere
-		// else entirely so a shell that trusted it would fetch the wrong host.
-		server: { name: 'zzd master', url: 'http://never.trusted.example/', code: 'zzdmaster' },
+		// The client url only SELECTS a configured server by origin (WC-023 D5);
+		// the files are still origin-pinned to the catalog entry it selects.
+		server: { name: 'zzd master', url: `${origin}/api/`, code: 'zzdmaster' },
 		files: tlds.map((tld) => ({ tld, url: `${origin}/${tld}.copy.gz` })),
 	};
 }
@@ -301,6 +311,78 @@ async function seedScratchRow(): Promise<void> {
 	                  ${JSON.stringify({ ontology5: [{ id: 1, lang: 'lg-spa', value: 'zzd seeded' }] })}::text::jsonb)`;
 }
 
+// ---------------------------------------------------------------------------
+// SURF-1 — the identifier-grammar CHECKs as a legacy install carries them
+// ---------------------------------------------------------------------------
+
+/** The six grammar CHECKs of migration `*_dd_ontology_identifier_grammar.sql` (hand-written). */
+const GRAMMAR_CONSTRAINTS = [
+	'dd_ontology_alias_of_grammar',
+	'dd_ontology_model_tipo_grammar',
+	'dd_ontology_parent_grammar',
+	'dd_ontology_tipo_grammar',
+	'dd_ontology_tipo_in_tld',
+	'dd_ontology_tld_grammar',
+];
+
+/**
+ * A legacy-install violator: a valid tipo whose PARENT is not a tipo. Filed
+ * under its own scratch tld `zzdv` (inside the `zzd%` sweep, OUTSIDE the `zzd`
+ * tld the update re-derives — a `zzd` row would be wiped by that re-derive and
+ * the case would measure nothing).
+ */
+const VIOLATOR = { tipo: 'zzdv1', tld: 'zzdv', parent: "zzdv0'" };
+
+async function grammarStates(): Promise<Record<string, string>> {
+	const rows = (await sql.unsafe(
+		`SELECT conname, convalidated FROM pg_constraint
+		  WHERE conrelid = 'dd_ontology'::regclass AND contype = 'c'`,
+	)) as { conname: string; convalidated: boolean }[];
+	const live = new Map(rows.map((row) => [row.conname, row.convalidated]));
+	return Object.fromEntries(
+		GRAMMAR_CONSTRAINTS.map((name) => {
+			const validated = live.get(name);
+			return [name, validated === undefined ? 'absent' : validated ? 'valid' : 'not_valid'];
+		}),
+	);
+}
+
+/**
+ * Put the suite database in the state a LEGACY install is in right after the
+ * boot migration: the six CHECKs present and NOT VALID — optionally over a
+ * planted violator. ONE transaction (drop → plant → re-run the idempotent
+ * migration), so the table is never left without its CHECKs. Committed: the
+ * update under test runs COPY through psql on its own connections.
+ */
+async function legacyGrammarState(plantViolator: boolean): Promise<void> {
+	await assertTestDatabase('ontology_update_shell_native');
+	const migrations = join(import.meta.dir, '../../install/db/migrations');
+	const file = readdirSync(migrations).find((name) =>
+		name.endsWith('_dd_ontology_identifier_grammar.sql'),
+	);
+	if (file === undefined) throw new Error('no *_dd_ontology_identifier_grammar.sql migration');
+	const migration = readFileSync(join(migrations, file), 'utf8');
+	await withTransaction(async () => {
+		for (const name of GRAMMAR_CONSTRAINTS) {
+			await sql.unsafe(`ALTER TABLE dd_ontology DROP CONSTRAINT IF EXISTS "${name}"`);
+		}
+		if (plantViolator) {
+			await sql.unsafe(
+				`INSERT INTO dd_ontology (tipo, parent, term, model, order_number, tld, is_model, is_translatable, is_main)
+				 VALUES ($1, $2, $3::text::jsonb, 'component_input_text', 1, $4, false, true, false)`,
+				[
+					VIOLATOR.tipo,
+					VIOLATOR.parent,
+					JSON.stringify({ 'lg-eng': 'zzd violator' }),
+					VIOLATOR.tld,
+				],
+			);
+		}
+		await sql.unsafe(migration);
+	});
+	expect(Object.values(await grammarStates())).toEqual(GRAMMAR_CONSTRAINTS.map(() => 'not_valid'));
+}
+
 beforeEach(async () => {
 	await sweepScratch(false);
 });
@@ -315,7 +397,7 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 
 describe('target refusal short-circuits before any artifact exists', () => {
-	test('an unknown server code is refused with NO io dir, staging dir or recovery dir', async () => {
+	test('an unconfigured server is refused with NO io dir, staging dir or recovery dir', async () => {
 		const { ioBaseDir, changesDir } = makeDirs();
 		const out = await updateOntology(optionsFor('http://x.example', [TLD]), -1, {
 			catalog: {
@@ -327,7 +409,7 @@ describe('target refusal short-circuits before any artifact exists', () => {
 		});
 
 		expect(out.ok).toBe(false);
-		expect(out.errors).toEqual(['unknown ontology server code: zzdmaster']);
+		expect(out.errors).toEqual(['unknown ontology server: http://x.example']);
 		expect(out.msg).toBe('Error. The selected server is not configured on this instance');
 		// The refusal is BEFORE setOntologyIoPath: nothing at all was created.
 		// A future edit that trusted the client-supplied `server.url` (WC-023 D5
@@ -348,7 +430,7 @@ describe('target refusal short-circuits before any artifact exists', () => {
 			ioBaseDir,
 			changesDir,
 		});
-		expect(refused.errors).toEqual(['unknown ontology server code: localhost']);
+		expect(refused.errors).toEqual(['unknown ontology server: http://localhost']);
 		expect(readdirSync(ioBaseDir)).toEqual([]);
 
 		// Same call, same client bytes — only the INJECTED catalog differs. This
@@ -526,6 +608,10 @@ describe('success tail', () => {
 		// the imported ids that hands out colliding ids (the D1 class).
 		await sql`INSERT INTO matrix_counter (tipo, value) VALUES ('zzd0', 5)
 		          ON CONFLICT (tipo) DO UPDATE SET value = 5`;
+		// SURF-1: the grammar CHECKs as a legacy install carries them — NOT VALID.
+		// Without this reset the case is vacuous on a database an earlier run
+		// already validated.
+		await legacyGrammarState(false);
 
 		await assertScratchOnly(async () => {
 			const out = await updateOntology(optionsFor(fixture.origin, [TLD]), -1, {
@@ -559,11 +645,68 @@ describe('success tail', () => {
 			// -- root_info read-back
 			expect(out.root_info).not.toBeUndefined();
 
+			// -- SURF-1: on clean data the update is where the NOT VALID grammar
+			// CHECKs of a legacy install turn VALID (and it reports nothing).
+			expect(await grammarStates()).toEqual(
+				Object.fromEntries(GRAMMAR_CONSTRAINTS.map((name) => [name, 'valid'])),
+			);
+
 			// -- the counter was consolidated to MAX(section_id): the NEXT record
 			// created in this section must not collide with an imported id.
 			const nextId = await createSectionRecord('zzd0', -1);
 			expect(nextId).toBe(Math.max(...IMPORT_IDS) + 1);
 		});
 		await sweepScratch(true);
+	}, 120_000);
+});
+
+// ---------------------------------------------------------------------------
+// 6. SURF-1 — a legacy violator is REPORTED by the update, never a failure
+// ---------------------------------------------------------------------------
+
+describe('SURF-1 identifier-grammar tail step', () => {
+	test('a violating row: one operator line naming it + the repair; its CHECK stays NOT VALID, the clean ones turn VALID', async () => {
+		const { ioBaseDir, changesDir } = makeDirs();
+		const fixture = serveFiles({ 'zzd.copy.gz': validPayload('zzd0') });
+		await legacyGrammarState(true);
+
+		await assertScratchOnly(async () => {
+			const out = await updateOntology(optionsFor(fixture.origin, [TLD]), -1, {
+				catalog: remoteCatalog(fixture.origin),
+				ioBaseDir,
+				changesDir,
+			});
+			fixture.stop();
+
+			// Reported, never a failed update (owner decision 2026-09-30).
+			expect(out.ok).toBe(true);
+			expect(out.msg.startsWith('Warning! Request done with errors')).toBe(true);
+			expect(out.errors.length).toBe(1);
+			const line = String(out.errors[0]);
+			expect(line).toContain(`${JSON.stringify(VIOLATOR.tipo)}:parent`);
+			expect(line).toContain('run reconcile ontology_identifiers');
+			// The violator's value itself never reaches the operator line raw.
+			expect(line).not.toContain(VIOLATOR.parent);
+
+			// The broken rule's CHECK stays NOT VALID; every clean one was VALIDATEd.
+			expect(await grammarStates()).toEqual({
+				...Object.fromEntries(GRAMMAR_CONSTRAINTS.map((name) => [name, 'valid'])),
+				dd_ontology_parent_grammar: 'not_valid',
+			});
+			// and the violator is left where it stands — repairing is the reconcile's job.
+			expect(
+				(await sql`SELECT parent FROM dd_ontology WHERE tipo = ${VIOLATOR.tipo}`) as unknown as {
+					parent: string;
+				}[],
+			).toEqual([{ parent: VIOLATOR.parent }]);
+		});
+		await sweepScratch(true);
+		// Leave the suite database as a clean one has it: the violator is gone, so
+		// the parent CHECK validates — no later gate inherits a NOT VALID CHECK.
+		const outcome = await validateDdOntologyIdentifierConstraints();
+		expect(outcome.blocked).toEqual([]);
+		expect(await grammarStates()).toEqual(
+			Object.fromEntries(GRAMMAR_CONSTRAINTS.map((name) => [name, 'valid'])),
+		);
 	}, 120_000);
 });

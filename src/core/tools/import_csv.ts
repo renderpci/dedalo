@@ -309,20 +309,42 @@ export function analyzeCsv(text: string, delimiter?: string): CsvAnalysis | null
 	};
 }
 
+/**
+ * A column's CSV-import write mode (wire `ar_columns_map[i].import_mode`):
+ * 'replace' (the default — the cell REPLACES the component's data, an empty
+ * cell clears it) or 'append' (the cell's items are ADDED to the stored ones
+ * per the model's registry `importAppend` policy; an empty cell is a no-op).
+ * The tool server refuses append for refuse-policy models, the section_id key
+ * and the audit tipos BEFORE any write; this layer only carries the choice.
+ */
+export type ImportMode = 'replace' | 'append';
+
 /** A resolved CSV column → its target component (null = header not matched, skip). */
 export interface CsvColumn {
 	tipo: string;
 	model: string;
+	/**
+	 * The tipo whose slot holds the DATA, when it differs from `tipo`: the
+	 * alias TARGET of a component_alias (ontology/alias.ts resolveDataTipo).
+	 * Absent = `tipo`. `tipo` stays the alias (conform + save read its merged
+	 * properties; the save hops itself), but stored items, the item-id
+	 * counter and frame `main_component_tipo` all name the data tipo.
+	 */
+	dataTipo?: string;
 	/** The raw header string (may carry a suffix like tipo_dmy / tipo_sectiontipo). */
 	columnName: string;
 	/** The component's save lang, resolved from the ontology `translatable` flag. */
 	lang: string;
 	/** The column map's decimal separator (component_number). */
 	decimal?: string;
+	/** The column's write mode; absent = 'replace'. */
+	mode?: ImportMode;
 }
 
 export interface PlannedColumn {
 	tipo: string;
+	/** CsvColumn.dataTipo, carried (absent = `tipo`). */
+	dataTipo?: string;
 	model: string;
 	/** The component's save lang ('lg-nolan' when not translatable). */
 	lang: string;
@@ -332,6 +354,8 @@ export interface PlannedColumn {
 	dataframe: unknown[] | null;
 	/** False when the envelope carried ONLY frames: do not touch the component's data. */
 	hasData: boolean;
+	/** The column's write mode (CsvColumn.mode, defaulted to 'replace'). */
+	mode: ImportMode;
 }
 
 export interface PlannedRecord {
@@ -466,11 +490,13 @@ export async function planCsvImport(
 			});
 			plannedColumns.push({
 				tipo: column.tipo,
+				...(column.dataTipo !== undefined ? { dataTipo: column.dataTipo } : {}),
 				model: column.model,
 				lang: column.lang,
 				conform,
 				dataframe: unwrapped.dataframe,
 				hasData: unwrapped.hasData,
+				mode: column.mode ?? 'replace',
 			});
 		}
 		plan.push({ sectionId, keyError, row: firstRowNumber + rowIndex, columns: plannedColumns });

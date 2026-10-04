@@ -37,7 +37,8 @@
  * history. This fences the future.
  */
 
-import { isInTransaction, sql } from './postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
+import { isInTransaction, sql, withTransaction } from './postgres.ts';
 
 /** The epoch store. Also created by install/db/migrations/0005_record_generation.sql. */
 const GENERATION_TABLE = 'dedalo_ts_record_generation';
@@ -81,6 +82,190 @@ export async function ensureRecordGenerationTable(): Promise<void> {
 		[],
 	);
 	if (!inTransaction) tableReady = true;
+}
+
+/**
+ * THE PRECONDITION OF EVERY `tm_role` READER: the epoch store
+ * (ensureRecordGenerationTable — the predicate is spliced into their SQL) AND
+ * the `tm_role` column (ensureTmRoleColumn — the visibility predicate names
+ * it). Every reader that splices `withTmHistory` / `tmVisiblePredicate` or
+ * selects `tm_role` calls THIS, never the epoch half alone.
+ *
+ * (!) The two halves are separate on purpose. The epoch store is also the
+ * record-minting doors' precondition (insertMatrixRecordWithCounter,
+ * openEpochIfReborn), which never touch `tm_role`: chaining the column heal
+ * onto it made every counter-allocated create (run inside a transaction, where
+ * the heal refuses by design) fail while 0010 was unapplied, and — the heal
+ * sitting behind the epoch memo — ran it at most once per process, so a heal
+ * that lost its lock race was never retried. The column half has its own memo,
+ * set only on success: a reader after a failed heal tries again.
+ */
+export async function ensureTmHistoryReady(): Promise<void> {
+	await ensureRecordGenerationTable();
+	await ensureTmRoleColumn();
+}
+
+/** The time machine table the undo-log role lives on. */
+const TIME_MACHINE_TABLE = 'matrix_time_machine';
+
+/** Tables whose `tm_role` column is verified present in this process (a bootstrap memo). */
+const tmRoleReadyTables = new Set<string>();
+
+/**
+ * TEST SEAM: forget the bootstrap memos — both (`'all'`: the epoch store's
+ * `tableReady` and the tm_role column's verified tables) or the column's alone
+ * (`'tm_role'`: the state a process is in after a heal that failed) — so a gate
+ * can replay a first call against a schema it altered inside a rolled-back
+ * transaction. Both memos only ever skip an idempotent probe.
+ */
+export function resetSchemaMemosForTests(which: 'all' | 'tm_role' = 'all'): void {
+	if (which === 'all') tableReady = false;
+	tmRoleReadyTables.clear();
+}
+
+/**
+ * `matrix_time_machine.tm_role` PRESENT, or a typed failure — never a server
+ * that looks healthy while every history read and every bulk write dies on
+ * `column "tm_role" does not exist`.
+ *
+ * The column's authority is `install/db/migrations/0010_tm_role.sql`, applied
+ * by the boot runner before the server serves. But that runner gives up after
+ * its lock retries (a long dd15 COUNT holding the table on a big install) and
+ * startServer then serves on — and no lazy bootstrap existed for this column,
+ * so every narrowed reader (`withTmHistory` / `tmVisiblePredicate`: the dd15
+ * list, count and preview, apply_value, the delete and observer probes) and
+ * every undo-log INSERT failed until the next restart. This SELF-HEALS: the
+ * first caller that finds the column missing adds it with the migration's own
+ * two statements (the nullable, default-less column — metadata-only — and the
+ * NOT VALID CHECK), in its own transaction with a bounded lock wait — and
+ * only OUTSIDE a caller's transaction (an ACCESS EXCLUSIVE lock must never be
+ * held to a caller's COMMIT; the dd15 list, count and preview read outside
+ * one). A caller inside a transaction, or a heal that cannot get its lock,
+ * throws `internal.invariant` naming the migration: fail closed, and the next
+ * caller tries again (the memo is set only on success). One catalog probe per
+ * process otherwise.
+ *
+ * `table` / `lockTimeout` are injectable for the gate (a scratch table);
+ * production passes neither.
+ */
+export async function ensureTmRoleColumn(
+	table: string = TIME_MACHINE_TABLE,
+	lockTimeout = '5s',
+): Promise<void> {
+	if (tmRoleReadyTables.has(table)) return;
+	const state = await tmRoleColumnState(table);
+	// No table yet (an installer before its seed restore): nothing reads or
+	// writes it either — not memoized, so the next call checks again.
+	if (state === 'no_table') return;
+	if (state === 'missing') await healTmRoleColumn(table, lockTimeout);
+	tmRoleReadyTables.add(table);
+}
+
+/**
+ * Add the missing column — never inside a caller's transaction: the ACCESS
+ * EXCLUSIVE lock would be held to that caller's COMMIT (and queue every reader
+ * behind it). The caller fails closed; the next caller outside one heals.
+ */
+async function healTmRoleColumn(table: string, lockTimeout: string): Promise<void> {
+	if (isInTransaction()) {
+		throw tmRoleMissing(table, 'inside a transaction, where it is never added');
+	}
+	try {
+		await addTmRoleColumn(table, lockTimeout);
+	} catch (error) {
+		throw tmRoleMissing(table, error instanceof Error ? error.message : String(error), error);
+	}
+}
+
+/** The typed failure of a missing, unhealable tm_role column. */
+function tmRoleMissing(table: string, why: string, cause?: unknown): DedaloError {
+	return new DedaloError('internal.invariant', {
+		cause,
+		message: `${table}.tm_role is missing (migration 0010_tm_role.sql unapplied) and could not be added: ${why}`,
+		coordinates: { table, migration: '0010_tm_role.sql' },
+	});
+}
+
+async function tmRoleColumnState(table: string): Promise<'present' | 'missing' | 'no_table'> {
+	const rows = (await sql.unsafe(
+		`SELECT to_regclass($1) IS NOT NULL AS has_table,
+		        EXISTS (SELECT 1 FROM pg_attribute
+		          WHERE attrelid = to_regclass($1) AND attname = 'tm_role'
+		            AND NOT attisdropped) AS has_column`,
+		[table],
+	)) as { has_table: boolean; has_column: boolean }[];
+	const row = rows[0];
+	if (row?.has_table !== true) return 'no_table';
+	return row.has_column ? 'present' : 'missing';
+}
+
+/**
+ * 0010_tm_role.sql's two statements, for `table` (gated equal by
+ * tm_role_self_heal_native),
+ * then 0011's statistics half (the partial index stays ONLINE migration 0011's,
+ * built CONCURRENTLY after the listener binds: a full-heap build never belongs
+ * in a reader's request).
+ */
+async function addTmRoleColumn(table: string, lockTimeout: string): Promise<void> {
+	if (!/^[a-z_][a-z0-9_]*$/.test(table) || !/^\d+(ms|s)$/.test(lockTimeout)) {
+		throw new DedaloError('internal.invariant', {
+			message: `addTmRoleColumn: invalid table '${table}' or lock timeout '${lockTimeout}'`,
+			coordinates: { table, lock_timeout: lockTimeout },
+		});
+	}
+	await withTransaction(async () => {
+		await sql.unsafe(`SET LOCAL lock_timeout = '${lockTimeout}'`, []);
+		await sql.unsafe(`ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS tm_role smallint NULL`, []);
+		await sql.unsafe(
+			`DO $tm_role$
+			BEGIN
+				IF NOT EXISTS (
+					SELECT 1 FROM pg_constraint
+					 WHERE conname = '${table}_tm_role_check' AND conrelid = '"${table}"'::regclass
+				) THEN
+					ALTER TABLE "${table}" ADD CONSTRAINT "${table}_tm_role_check" CHECK (tm_role IS NULL OR tm_role IN (1, 3, 4)) NOT VALID;
+				END IF;
+			END
+			$tm_role$`,
+			[],
+		);
+	});
+	// STATISTICS, after the ALTER's COMMIT (never under its ACCESS EXCLUSIVE
+	// lock — ANALYZE samples the heap). A column added by ALTER has no pg_stats
+	// row, and the planner then guesses `tm_role IS NULL` at its default
+	// selectivity (61,356 estimated vs 29.27M actual, measured): every history
+	// reader plans from that until an autoanalyze that a large, mostly static
+	// table may not get for a long time. Online migration 0011 does the same
+	// post-listen (it cannot land before the column exists, so it is still
+	// unrecorded whenever this heal runs).
+	await analyzeTmRoleColumn(table, lockTimeout);
+}
+
+/**
+ * The statistics half of the heal — BEST-EFFORT, bounded, and never reported as
+ * a missing column. The column is already added and COMMITTED when this runs,
+ * so its failure must not become `tmRoleMissing` (a false internal.invariant
+ * whose log points at the wrong cause). Its own transaction carries the same
+ * `lock_timeout` as the ALTER: the ALTER's SET LOCAL died with that
+ * transaction, and an unbounded ANALYZE waits for its SHARE UPDATE EXCLUSIVE
+ * lock behind anything holding one — an anti-wraparound vacuum does not yield,
+ * and can hold it for hours on a large table, hanging the request that healed.
+ * On failure (lock, statement timeout, cancel) the degraded outcome is the
+ * planner's default estimate until online migration 0011 ANALYZEs on the next
+ * post-listen run (or an autoanalyze does) — logged, not thrown.
+ */
+async function analyzeTmRoleColumn(table: string, lockTimeout: string): Promise<void> {
+	try {
+		await withTransaction(async () => {
+			await sql.unsafe(`SET LOCAL lock_timeout = '${lockTimeout}'`, []);
+			await sql.unsafe(`ANALYZE "${table}" (tm_role)`, []);
+		});
+	} catch (error) {
+		console.warn(
+			`[record_generation] ${table}.tm_role added, statistics not collected; online migration 0011 will ANALYZE on its next run`,
+			error,
+		);
+	}
 }
 
 /** An address with no epoch row: its whole history belongs to it. */
@@ -139,6 +324,44 @@ export function tmEpochPredicate(alias = 'matrix_time_machine'): string {
 /** `whereSql` narrowed to the record living at each address now. See tmEpochPredicate. */
 export function withTmEpoch(whereSql: string, alias = 'matrix_time_machine'): string {
 	return `(${whereSql}) AND ${tmEpochPredicate(alias)}`;
+}
+
+/**
+ * A SQL predicate confining time-machine rows to ordinary, VISIBLE history:
+ * `tm_role IS NULL`. A row with a role is a bulk run's undo-log bookkeeping
+ * (time_machine.ts TM_ROLE — a hidden BEFORE image, a birth marker, a cascade
+ * delete snapshot) and must never reach a history list, count, filter, preview,
+ * restore source or backfill probe: a hidden BEFORE image served as history
+ * shows a curator a value nobody saved at that moment, and a restore from it
+ * writes it back.
+ *
+ * (!) NOT for the bulk revert (it reads every role of its own run) nor the
+ * counter floors (they witness every id ever used, whatever its role).
+ */
+export function tmVisiblePredicate(alias = 'matrix_time_machine'): string {
+	return `${alias}.tm_role IS NULL`;
+}
+
+/**
+ * The complement of tmVisiblePredicate: a bulk run's undo-log row. For ONE
+ * reader only — the HIDDEN half of the dd15 history count (read_tm.ts
+ * tmHistoryCountSql, total − hidden), which exists so that count stays
+ * index-only (on the partial matrix_time_machine_tm_role_hidden_idx, whose
+ * predicate this spells EXACTLY — the planner matches a partial index by its
+ * predicate). Never a filter that SERVES rows.
+ */
+export function tmHiddenPredicate(alias = 'matrix_time_machine'): string {
+	return `${alias}.tm_role IS NOT NULL`;
+}
+
+/**
+ * `whereSql` narrowed to the VISIBLE history of the record living at each
+ * address now: the generation epoch (tmEpochPredicate) AND no undo-log role
+ * (tmVisiblePredicate). THE narrowing for every history reader. A caller that
+ * splices it must `ensureRecordGenerationTable()` first, as for withTmEpoch.
+ */
+export function withTmHistory(whereSql: string, alias = 'matrix_time_machine'): string {
+	return `${withTmEpoch(whereSql, alias)} AND ${tmVisiblePredicate(alias)}`;
 }
 
 /**

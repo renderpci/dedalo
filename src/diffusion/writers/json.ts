@@ -11,31 +11,43 @@
  *   - `<tableName>.meta.json` — the plan's column list, lang policy and the
  *     run's counts (written at close, after the counts are final).
  *
- * Same discipline as csv.ts: FileSink streaming onto a sibling temp,
- * temp → atomic rename at close, ZIP when more than one section produced a
- * data file (`diffusion_json.zip`, data + meta files), abort() drops temps.
+ * Same discipline as csv.ts: streamed onto the table's partial (files.ts
+ * FullExportFile — job-scoped when a runner drives the session, so a resumed
+ * run continues the SAME snapshot from its last checkpoint, DIFF-1), partial →
+ * atomic rename at close, ZIP when more than one section produced a data file
+ * (`diffusion_json.zip`, data + meta files); abort() keeps a job-scoped
+ * partial and deletes only a session-owned temp.
  *
  * removeRecords: identical full-export stance as csv (see csv.ts doc): when
- * the section's ndjson was written this run the removed section_ids are
+ * the section's ndjson was started this run, every id the RUN removed is
  * filtered out at finalize (NDJSON lines are single-line JSON, so a line
  * filter is exact); otherwise no-op + a warning in the summary.
  */
 
-import { existsSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
-import type { FileSink } from 'bun';
-import { tempPathFor } from '../../core/files/temp_path.ts';
+import { mkdirDurably } from '../../core/files/durable.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import {
+	ArtifactEventLog,
 	atomicWriteFile,
 	createZip,
+	type FullExportCheckpoint,
+	FullExportFile,
 	fileTargetDirLabel,
 	formatTargetDir,
 	planColumnNames,
+	removedIdSet,
+	sweepOrphanPartials,
+	sweepStaleTemps,
+	WriterErrors,
 } from './files.ts';
 import type {
+	ArtifactEvent,
 	DiffusionWriter,
 	WriteBatchResult,
+	WriterCloseContext,
+	WriterContinuity,
+	WriterOpenContext,
 	WriterRunSummary,
 	WriterSession,
 } from './types.ts';
@@ -98,42 +110,51 @@ export async function filterNdjsonRecords(
 /** Per-section streaming state. */
 interface JsonSectionState {
 	section: SectionPlan;
-	finalPath: string;
 	metaPath: string;
-	tempPath: string;
-	sink: FileSink | null;
-	written: number;
-	deleted: number;
-	removedIds: Set<string>;
+	file: FullExportFile;
 }
 
 class JsonWriterSession implements WriterSession {
 	private readonly plan: PublicationPlan;
 	private readonly targetDir: string;
+	private readonly jobId: string | null;
 	/** Insertion-ordered so close() reports tables in plan order. */
 	private readonly states = new Map<string, JsonSectionState>();
-	private readonly errors: string[] = [];
+	private readonly errors: WriterErrors;
+	private readonly events: ArtifactEventLog;
 	private schemaEnsured = false;
+	continuity: WriterContinuity = 'fresh';
 
-	constructor(plan: PublicationPlan) {
+	constructor(plan: PublicationPlan, context?: WriterOpenContext) {
 		this.plan = plan;
 		this.targetDir = formatTargetDir('json', fileTargetDirLabel(plan));
+		this.jobId = context?.jobId ?? null;
+		this.errors = new WriterErrors(context?.resume ?? null);
+		this.events = new ArtifactEventLog(context);
 		for (const section of plan.sections) this.stateFor(section);
+	}
+
+	/** Honour the resume checkpoint (open-time; see FullExportFile.resume). */
+	async restore(resume: unknown): Promise<void> {
+		if (resume === null || resume === undefined) return;
+		const tables = ((resume as { tables?: unknown }).tables ?? {}) as Record<
+			string,
+			Partial<FullExportCheckpoint>
+		>;
+		let honoured = true;
+		for (const [tableName, state] of this.states) {
+			if (!(await state.file.resume(tables[tableName]))) honoured = false;
+		}
+		this.continuity = honoured ? 'resumed' : 'restart_required';
 	}
 
 	private stateFor(section: SectionPlan): JsonSectionState {
 		let state = this.states.get(section.tableName);
 		if (state === undefined) {
-			const finalPath = `${this.targetDir}/${section.tableName}.ndjson`;
 			state = {
 				section,
-				finalPath,
 				metaPath: `${this.targetDir}/${section.tableName}.meta.json`,
-				tempPath: tempPathFor(finalPath),
-				sink: null,
-				written: 0,
-				deleted: 0,
-				removedIds: new Set(),
+				file: new FullExportFile(`${this.targetDir}/${section.tableName}.ndjson`, this.jobId),
 			};
 			this.states.set(section.tableName, state);
 		}
@@ -142,11 +163,11 @@ class JsonWriterSession implements WriterSession {
 
 	/** File-target "schema" = the run directory exists. */
 	async ensureSchema(): Promise<void> {
-		mkdirSync(this.targetDir, { recursive: true });
+		mkdirDurably(this.targetDir);
 		this.schemaEnsured = true;
 	}
 
-	/** Append NDJSON lines to the section's streamed temp. */
+	/** Append NDJSON lines to the section's partial. */
 	async writeRows(section: SectionPlan, rows: ProjectedRow[]): Promise<WriteBatchResult> {
 		if (rows.length === 0) return { written: 0, deleted: 0 };
 		if (!this.schemaEnsured) {
@@ -156,13 +177,10 @@ class JsonWriterSession implements WriterSession {
 		}
 		const state = this.stateFor(section);
 		const columnNames = planColumnNames(section);
-		if (state.sink === null) {
-			state.sink = Bun.file(state.tempPath).writer();
-		}
-		for (const row of rows) {
-			state.sink.write(ndjsonLine(row, columnNames));
-		}
-		state.written += rows.length;
+		let text = '';
+		for (const row of rows) text += ndjsonLine(row, columnNames);
+		await state.file.append(text);
+		state.file.written += rows.length;
 		return { written: rows.length, deleted: 0 };
 	}
 
@@ -173,41 +191,59 @@ class JsonWriterSession implements WriterSession {
 	): Promise<WriteBatchResult> {
 		if (sectionIds.length === 0) return { written: 0, deleted: 0 };
 		const state = this.stateFor(section);
-		if (state.sink === null) {
-			this.errors.push(
+		if (!state.file.started) {
+			this.errors.add(
 				`json removeRecords('${section.tableName}'): no ndjson written this run — json is a full-export format; re-publish the element to regenerate the file without these records.`,
 			);
 			return { written: 0, deleted: 0 };
 		}
-		for (const sectionId of sectionIds) state.removedIds.add(String(sectionId));
+		for (const sectionId of sectionIds) this.events.note('removed', section.sectionTipo, sectionId);
 		return { written: 0, deleted: 0 };
 	}
 
-	/** Finalize temps (filter removed ids) → rename, write metas, zip (>1 section). */
-	async close(): Promise<WriterRunSummary> {
+	takeArtifacts(): ArtifactEvent[] {
+		return this.events.take();
+	}
+
+	/** Durability barrier: every partial fsynced; its durable length + counters, and the error lines. */
+	async checkpoint(): Promise<unknown> {
+		const tables: Record<string, FullExportCheckpoint> = {};
+		for (const [tableName, state] of this.states) tables[tableName] = await state.file.durable();
+		return { tables, errors: this.errors.list() };
+	}
+
+	runSummary(): WriterRunSummary {
+		return {
+			tables: [...this.states.values()].map((state) => ({
+				table_name: state.section.tableName,
+				records_affected: state.file.written + state.file.deleted,
+				records_count: state.file.written,
+			})),
+			errors: this.errors.list(),
+		};
+	}
+
+	/** Finalize partials (filter the run's removed ids) → rename, write metas, zip (>1 section). */
+	async close(context?: WriterCloseContext): Promise<WriterRunSummary> {
+		const run = this.events.closeContext(context);
+		// This session's own partials are temps too (a job-less session's are
+		// `.tmp-*`): never swept from under the finalize below.
+		await sweepStaleTemps(
+			this.targetDir,
+			run,
+			[...this.states.values()].map((state) => state.file.partialPath),
+		);
 		const dataPaths: string[] = [];
 		const metaPaths: string[] = [];
 		for (const state of this.states.values()) {
-			if (state.sink === null) continue;
-			await state.sink.end();
-			state.sink = null;
-			if (state.removedIds.size > 0) {
-				const filteredPath = tempPathFor(state.finalPath);
-				const { dropped } = await filterNdjsonRecords(
-					state.tempPath,
-					filteredPath,
-					state.removedIds,
-				);
-				state.deleted += dropped;
-				state.written -= dropped;
-				unlinkSync(state.tempPath);
-				renameSync(filteredPath, state.finalPath);
-			} else {
-				renameSync(state.tempPath, state.finalPath);
-			}
-			dataPaths.push(state.finalPath);
+			if (!state.file.started) continue;
+			await state.file.finalize(
+				await removedIdSet(run, state.section.sectionTipo),
+				filterNdjsonRecords,
+			);
+			dataPaths.push(state.file.finalPath);
 
-			// Meta sidecar: the plan's shape + this run's final counts.
+			// Meta sidecar: the plan's shape + this RUN's final counts.
 			atomicWriteFile(
 				state.metaPath,
 				`${JSON.stringify(
@@ -217,8 +253,8 @@ class JsonWriterSession implements WriterSession {
 						columns: planColumnNames(state.section),
 						langs: this.plan.langPolicy.langs,
 						main_lang: this.plan.langPolicy.mainLang,
-						records_count: state.written,
-						records_removed: state.deleted,
+						records_count: state.file.written,
+						records_removed: state.file.deleted,
 					},
 					null,
 					'\t',
@@ -229,36 +265,22 @@ class JsonWriterSession implements WriterSession {
 		if (dataPaths.length > 1) {
 			await createZip([...dataPaths, ...metaPaths], `${this.targetDir}/diffusion_json.zip`);
 		}
-		return {
-			tables: [...this.states.values()].map((state) => ({
-				table_name: state.section.tableName,
-				records_affected: state.written + state.deleted,
-				records_count: state.written,
-			})),
-			errors: [...this.errors],
-		};
+		await sweepOrphanPartials(this.targetDir, run, this.jobId);
+		return this.runSummary();
 	}
 
-	/** Drop every in-flight temp — nothing partial ever reaches a final path. */
+	/** Release the handles; a job-scoped partial stays for the job's resume (FullExportFile.abort). */
 	async abort(): Promise<void> {
-		for (const state of this.states.values()) {
-			if (state.sink !== null) {
-				try {
-					await state.sink.end();
-				} catch {
-					// already broken — temp unlink below is the cleanup that matters
-				}
-				state.sink = null;
-			}
-			if (existsSync(state.tempPath)) unlinkSync(state.tempPath);
-		}
+		for (const state of this.states.values()) await state.file.abort();
 	}
 }
 
 /** The 'json' format writer (registry entry). */
 export const jsonWriter: DiffusionWriter = {
 	format: 'json',
-	async open(plan: PublicationPlan): Promise<WriterSession> {
-		return new JsonWriterSession(plan);
+	async open(plan: PublicationPlan, context?: WriterOpenContext): Promise<WriterSession> {
+		const session = new JsonWriterSession(plan, context);
+		await session.restore(context?.resume ?? null);
+		return session;
 	},
 };

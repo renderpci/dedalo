@@ -28,6 +28,14 @@
   overflow: scroll;
   height: calc(100vh - 90px);
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_cataloging > .content_data .left_container,
+  .wrapper_tool.tool_cataloging > .content_data .right_container {
+    overflow: visible;
+    height: auto;
+    width: 100%;
+  }
+}
 .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic {
   position: relative;
   width: 100%;
@@ -213,6 +221,11 @@
 .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data > .section_record {
   outline: 1px solid var(--color_grey_14);
 }
+@media screen and (max-width: 1024px) {
+  .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data > .section_record .column:before {
+    display: none;
+  }
+}
 .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data > .section_record .button.info {
   height: 1.5rem;
   width: 1.5rem;
@@ -234,8 +247,5 @@
 .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data > .section_record.mosaic_over {
   outline: 1px solid var(--color_orange_dedalo);
   z-index: 2;
-}
-.tool_header.tool_cataloging {
-  background-color: var(--tool_cataloging);
 }
 /*# sourceMappingURL=tool_cataloging.css.map */

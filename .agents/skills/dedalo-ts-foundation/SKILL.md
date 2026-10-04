@@ -43,7 +43,8 @@ Current per-subsystem state lives in rewrite/LEDGER.md (local-only). The durable
 - **Kernel:** `src/core/db/` (Postgres/Bun.sql, transactions, jsonb codec, matrix writes) + `src/core/concepts/` (locators, subdatum, ddo/rqo). Everything depends inward on these; they depend on nothing above.
 - **Layers above:** ontology, resolve, section, components, search, relations, security — each imports the kernel and lower layers, never sideways into a peer's internals.
 - **Diffusion is self-contained** under `src/diffusion/` behind the `src/core/diffusion_bridge/` seam (a DIRECTORY: `diffusion_delete.ts`, `diffusion_graph.ts`, `diffusion_map.ts`, `published_files.ts`). Core reaches diffusion ONLY through that facade (`src/diffusion/api/`); diffusion never imports core upward. MariaDB dialect lives only in `src/diffusion/targets/mariadb/`. Both directions are tripwired. Spec: `engineering/DIFFUSION_SPEC.md`.
-- **External record services** (`src/external/`) are a PEER of core with one outbound door. Spec: `engineering/EXTERNAL_SPEC.md`.
+- **External record services** (`src/external/`) are a PEER of core with one outbound door — one of the engine's three. Spec: `engineering/EXTERNAL_SPEC.md`.
+- **Harvesting door** (`src/core/harvest/`) — how a tool reads another site: per-hop vetting, robots.txt, per-origin pacing, on the shared pinned hop. Doors map: `engineering/OUTBOUND_SPEC.md`.
 - **AI** (`src/ai/` — agent, MCP, RAG, identify) runs on its own connections (the RAG vector store has its own pool), not the request kernel.
 
 ### The post-WS-C home rule (know this before adding a handler or read sub-action)
@@ -73,7 +74,8 @@ Reach for the specialist when you cross into its area:
 - **`dedalo-ts-isolation-caching`** — request identity on AsyncLocalStorage (the transaction stores in `postgres.ts` — `withTransaction`, `deferPostTransaction`, `registerCommitAction`; request-lang ALS `runWithRequestLangs`/`currentApplicationLang`/`currentDataLang` in `src/core/resolve/request_lang.ts`; request-context ALS `currentPrincipal` in `src/core/security/request_context.ts`) and the cache factories `createOntologyCache`/`createDataCache` (`src/core/ontology/cache_factory.ts`). Model: `engineering/REQUEST_ISOLATION.md`.
 - **`dedalo-ts-testing`** — the suite: the dedicated suite DB + `dedalo_test_marker`, the suite media root, the generic `test` TLD law, frozen-fixture parity (`test/parity/oracle_fixtures.ts`), TS-native write gates, vacuity and mock leaks. Fixture store: `engineering/ORACLE_HARVEST.md`.
 - **`dedalo-parity-debugging`** — when a frozen-fixture parity gate reds (divergence vs bug, fixture edit = same-day WC entry, the retired-differential twin map), probe scripts against our own server, and driving the client via Chrome DevTools MCP.
-- **`dedalo-ts-extension`** — adding component models / descriptors / facets, tools, areas.
+- **`dedalo-ts-extension`** — adding component models / descriptors / facets, areas.
+- **`dedalo-tools-ts`** — creating or adapting a tool (`tools/tool_<name>/`): registration, permissions, client, CSS, phone.
 - **`dedalo-ts-ops-config`** — env/config catalog, pool/observability, running & supervising the server.
 - **`dedalo-errors-ts`** — the closed error system: the `DedaloError` code registry (`src/core/errors/registry.ts`), the ONE converter (`convert.ts`), envelope v2 + its schema (`schema.ts`), the disclosure ladder and `DEDALO_DEBUG_API_ERRORS`, and the client contract (`api_error.js`, `error_policy.js`, `error_dispatch.js`). Spec: `engineering/ERRORS_SPEC.md`.
 - **`dedalo-labels-ts`** — repo-owned UI-label catalogs (WC-033/034): `master.json` + `catalog/lg-<code>.json`, the `getLabels` fallback chain (`src/core/labels/catalog.ts`), `labels_tripwire`, `scripts/labels_fill.ts`. Labels ship with code, never ontology updates.

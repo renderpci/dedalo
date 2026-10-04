@@ -10,6 +10,12 @@
  *      checkout's sha256(ci/Dockerfile ++ .bun-version) — the image installs
  *      exactly .bun-version (rule 1b). The pin is load-bearing: Bun.sql
  *      jsonb-inference drift is a data-corruption class.
+ *  1c. THE CI IMAGE CARRIES WHAT SHIPS (2026-10-02) — every package the product
+ *      `Dockerfile` apt-installs is apt-installed by `ci/Dockerfile` too, MEASURED
+ *      from both files (never a typed list), minus CI_IMAGE_MISSING_PACKAGES: a
+ *      shrink-only list, each entry with its reason. The AVIF encoder
+ *      (libheif-plugin-aomenc) was in neither, then in the product image only for a
+ *      day — a media gate on the hosts measured a toolchain that does not ship.
  *   2. Oracle honesty — every self-hosted workflow that runs test/parity or
  *      scripts/verify.ts sets ORACLE_REQUIRED: "1", so an absent PHP oracle is
  *      a RED canary, never a silent green (the AGENTS.md "oracle trap").
@@ -133,6 +139,38 @@ import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 const repoRoot = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
 
+/**
+ * Every package a Dockerfile's `apt-get install` lines name (rule 1c). Comment lines
+ * are dropped first (both Dockerfiles DISCUSS apt-get in their headers), `\`-newline
+ * continuations are joined, and a command's arguments end at `&&`, `;` or the end of
+ * the joined line; flags are not packages. Pure, so the positive control below can
+ * prove it reads both spellings the two files use.
+ */
+function aptInstalledPackages(dockerfile: string): Set<string> {
+	const joined = dockerfile
+		.split('\n')
+		.filter((line) => !/^\s*#/.test(line))
+		.join('\n')
+		.replace(/\\\n/g, ' ');
+	const packages = new Set<string>();
+	for (const m of joined.matchAll(/\bapt-get\s+install\b([^\n;&]*)/g)) {
+		for (const token of (m[1] ?? '').split(/\s+/)) {
+			if (token.length > 0 && !token.startsWith('-')) packages.add(token);
+		}
+	}
+	return packages;
+}
+
+/**
+ * Product-image packages the CI image does NOT carry yet — SHRINK-ONLY, each with
+ * its reason. An image change moves the fingerprint, so adding one is the publish
+ * flow (side branch → ci-image.yml → `bun run ci:image:pin`, Dockerfile + pin in ONE
+ * commit; engineering/CI.md "The pin"), never a hermetic-red edit of ci/Dockerfile.
+ */
+// Empty since 2026-10-03: ocrmypdf (the last row) is in ci/Dockerfile, and the OCR
+// door now has a real-binary leg (test/unit/media_engine.test.ts).
+const CI_IMAGE_MISSING_PACKAGES: Record<string, string> = {};
+
 const yaml = (f: string) => f.endsWith('.yml') || f.endsWith('.yaml');
 
 /**
@@ -232,7 +270,7 @@ function dbTierTripwires(): string[] {
 /**
  * THE HOSTED TIER SCRIPTS — DERIVED from the executing workflows, never a hand list.
  *
- * Rules 6, 6b and 13 used to iterate `['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']`.
+ * Rules 6 and 13 used to iterate `['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']`.
  * A third hosted tier (scripts/ci/instance_tier.sh, 2026-09-02) would then have been
  * held to none of them until somebody remembered the list — the rot every derived
  * census in this repo exists to prevent. So the set is read off the `run:` lines of
@@ -402,6 +440,14 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'Every leg drives the real dd1758 ledger, the zzd diffusion ontology and a real record delete on the suite Postgres (describe.if(DB_READY) skips all 5 cases on a closed port)',
 	],
 	[
+		'test/unit/suite_mariadb_target_native.test.ts',
+		"Its live legs install, start and drive THIS lane's own suite mariadbd (a --skip-networking unix socket under ../private/test_mariadb/<lane>, per-database grants, the marker schema) and read its USER_STATISTICS; the hermetic tier builds no server, while db_tier.sh starts that server before its gates and its EXIT trap stops it",
+	],
+	[
+		'test/unit/shard_mariadb_sweep_native.test.ts',
+		"sweepShardClones enumerates shard clones and their vector twins through psql on the suite Postgres cluster and the vector server before it sweeps the planted suite MariaDB lane roots, so without a live cluster the sweep throws at its first enumeration; its only other executors are the unit stage (one of ~1000 files in one pass) and the MariaDB tier's no-contact batch, which never judges a failed case",
+	],
+	[
 		'test/unit/diffusion_frontier_scope_native.test.ts',
 		'It runs the real resolver over the zzdif domain records and the ACL identity fixture on the suite Postgres (describe.if(DB_READY) skips both cases on a closed port)',
 	],
@@ -416,6 +462,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
 		'test/unit/conform_locator_existence_native.test.ts',
 		'The gate extracts from and restores into the suite database (a second, outside-only situation plays the destination); with the port closed all 5 cases SKIP via describe.if(DB_READY)',
+	],
+	[
+		'test/unit/tool_lossless_writeback_tethers_native.test.ts',
+		'It builds the zzlwt situation on the suite database and runs translateAndWrite, toolTimeMachineBulkRevert and pollTranscriptionCompletion on its records (assertTestDatabase in beforeAll), so without Postgres every case fails in beforeAll',
 	],
 	[
 		'test/unit/write_obligations_native.test.ts',
@@ -596,6 +646,122 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
 		'test/unit/dataframe_contract_tripwire.test.ts',
 		"Its normalizer and identity-predicate legs are pure, but the last describe drives the real dataframe doors against the generic test TLD's sections on the suite database — the frame is written and read back, and the deliberate test6100 target exemption is ASSERTED by asking the ontology what selectability contract that section declares — so with the port closed the behavioural half is red.",
+	],
+	[
+		'test/unit/update_engine_atomic_native.test.ts',
+		'Every leg runs the real data-update engine in ONE transaction on the suite Postgres maintenance pool (scratch dedalo_ts_test_upd_<pid> tables, advisory try-lock, pg_xact_status, pg_cancel_backend/pg_terminate_backend of its own backends), several in a child process with pinned pool sizes, so it cannot run without a live suite Postgres carrying the dedalo_test_marker.',
+	],
+	[
+		'test/unit/update_descriptor_tripwire.test.ts',
+		'Its truth-table half is pure, but every refusal is also asserted as an OUTCOME through updateVersion against the suite Postgres (query-tap count 0, a scratch INSERT that must stay absent), the non-vacuity legs run real steps on the maintenance pool, and the module-load leg loads catalog.ts in a child — with the port closed those legs are red.',
+	],
+	[
+		'test/unit/statement_ceiling_scope_native.test.ts',
+		'Its lexer and recorder truth tables are pure, but the pool legs drive real 57014s, acquire timeouts, reserved connections, session-state and transaction-control refusals and a shutdown cancel against the suite Postgres, in child processes with pinned DB_STATEMENT_TIMEOUT_MS / pool sizes — they need a live Postgres.',
+	],
+	[
+		'test/unit/maintenance_door_unbounded_native.test.ts',
+		'A child with a 300 ms ceiling holds a real conflicting lock on the suite Postgres and drives the widget door (backfill_search_stores, move_to_table on a zz* scratch section, the detached data-update job) plus a saturated maintenance pool, so the gate needs a live suite Postgres carrying the dedalo_test_marker.',
+	],
+	[
+		'test/unit/optimize_concurrent_leftover_native.test.ts',
+		'It builds a scratch table with a deliberately slow index on the suite Postgres, cancels a real REINDEX CONCURRENTLY mid-build and reads pg_index / pg_stat_progress_create_index, so it cannot run without a live Postgres.',
+	],
+	[
+		'test/unit/db_asset_rebuild_atomic_native.test.ts',
+		"It rebuilds constraints, triggers and indexes on scratch tables of the suite Postgres while holding a real lock on a blocker table, so its legs drive the maintenance pool's 55P03 lock timeout, a concurrent reader and pg_indexes / pg_constraint / pg_trigger reads, and its control runs the real rebuild_db_constraints / rebuild_db_indexes door; it cannot run without a live suite Postgres carrying the dedalo_test_marker.",
+	],
+	[
+		'test/unit/alias_target_grammar_native.test.ts',
+		'It builds its alias situation on the suite Postgres through upsertDdOntologyNode and plants hostile dd_ontology rows inside a sentinel-rolled-back transaction with the six grammar CHECKs dropped, so every leg reads the live resolver against a live dd_ontology; it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/search_alias_sink_native.test.ts',
+		'It builds one alias per builder family on matrix_test in the suite Postgres, runs real searches through them, and spawns a child bun that searches the same suite database with the alias module mocked, so both the hostile and the sink legs need a live suite Postgres.',
+	],
+	[
+		'test/unit/dd_ontology_identifier_grammar_native.test.ts',
+		'Its truth table is checked against raw INSERTs under the live dd_ontology CHECK constraints and against the write doors with those constraints dropped inside sentinel-rolled-back transactions, and it drives the archive restore plan and the recovery slice, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/dd_ontology_grammar_migration_native.test.ts',
+		'It executes migration 0013 and the ontology_identifiers reconcile (DELETE, rebuildOntology, ALTER TABLE VALIDATE CONSTRAINT) against planted dd_ontology and matrix_ontology rows inside sentinel-rolled-back transactions, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/ontology_state_identifier_grammar_native.test.ts',
+		"It seeds ontology source records into matrix_ontology and runs rebuildOntology, which rewrites the scratch tld's dd_ontology rows under the live grammar CHECKs, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/diffusion_target_fence_native.test.ts',
+		"It holds the publication-target advisory locks from second Postgres sessions, runs the real runner on the suite database's diffusion jobs/dd1758/ledger tables, spawns a runner child on a one- and two-connection pool, and publishes into the lane's suite MariaDB, so it needs a live suite Postgres (and the suite MariaDB the DB tier starts).",
+	],
+	[
+		'test/unit/diffusion_resume_ledger_native.test.ts',
+		"It crashes and resumes real publication runs (in-process and a SIGKILLed runner child) on the suite database's diffusion jobs, dd1758 and run-ledger tables, with test triggers planted on them, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/diffusion_frontier_replay.test.ts',
+		"Its cut-by-cut resume legs resolve the zzdif publication against the suite database's matrix records and replay a run ledger stored in the suite database's ledger table, and its manifest/paging legs read that table through SQL, so it needs a live suite Postgres.",
+	],
+	[
+		'test/unit/diffusion_attach_scope_native.test.ts',
+		"It enqueues real diffusion jobs on the suite database's jobs table through diffuseAction and resolves the ACL fixture's principals from matrix_users/matrix_profiles, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/media_index_reconcile_fence_native.test.ts',
+		'It models a runner batch holding the publication-target advisory lock from a second Postgres session while the media-index reconcile and rebuild doors run, so the exclusion it proves exists only on a live suite Postgres.',
+	],
+	[
+		'test/unit/write_door_native.test.ts',
+		'It drives the real declarative tool gate and the write-door primitives as principals minted in matrix_users/matrix_profiles/dd153 projects by authz_door_fixture, against records it builds through the engine, so every leg is a statement about stored grants and rows and cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/authz_door_matrix_native.test.ts',
+		'Each cell runs a real door (dispatch handler, tool gate, MCP tool, agent door) as a fixture principal resolved from matrix_users/matrix_profiles against engine-built records and asserts the stored effect, so the matrix cannot be evaluated without a live suite Postgres.',
+	],
+	[
+		'test/unit/agent_access_native.test.ts',
+		'It logs fixture users into real sessions and drives every dd_mcp_api action through dispatchRqo; the tool grant it tests is a dd1067 locator on a profile row in the suite database, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/tool_transcription_gate_native.test.ts',
+		"It runs tool_transcription's handlers as fixture principals against engine-built test3 records and measures the stored transcript after a mid-poll revocation saved through the engine's own save door, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/identify_vision_grant_native.test.ts',
+		"The grant it tests is resolved by getUserTools from the fixture profiles' dd1067 locators in the suite database, and the handlers it drives read engine-built records, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/mcp_record_door_native.test.ts',
+		"It asserts the section table's row count and its row-id sequence around the MCP delete/duplicate/find_or_create doors, run as fixture principals, so the measure itself is the suite database's stored state.",
+	],
+	[
+		'test/unit/obligation_ledger_native.test.ts',
+		'Every case builds the zzot / zzoh observer fixtures on the suite database, drives a real restore, undelete, bulk revert, create, duplicate or delete door, and reads back the stored mirrors, relation_search and Time Machine rows after COMMIT; the ledger it tests drains through the transaction commit lane, which exists only on a live suite Postgres.',
+	],
+	[
+		'test/unit/media_files_info_lost_update_native.test.ts',
+		'Its legs are two-connection interleaves on the suite database: a second session holds an uncommitted write on the zzmu row while the update_cache and files_info doors run, and the wait is proven by pg_blocking_pids and a real 55P03 lock timeout, so the lost update it gates cannot be reproduced without a live suite Postgres.',
+	],
+	[
+		'test/unit/duplicate_record_media_verdict_native.test.ts',
+		"It duplicates zzdm records it creates on the suite database (with the section's own counter, so the clone's id is known in advance) and reads back the clone's stored and Time Machine file_path values beside the files copied under the lane's marked media root, so every case needs the suite Postgres.",
+	],
+	[
+		'test/unit/portal_locator_door_native.test.ts',
+		'It mints scratch projects, profiles and users through the counter on the suite database, creates the host records it unlinks from, and measures every refusal on the stored portal and slot bytes and the Time Machine row count, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/ai_spend_budget_native.test.ts',
+		"It materializes the engine ontology into the suite database's dd_ontology, reserves and settles against the shipped ledger section's rows (concurrent reservations racing on its row locks) and drives the metered doors as fixture users resolved from the suite database, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/change_plan_write_door_native.test.ts',
+		"It installs the authz door fixture's scratch projects, profiles and users on the suite database, creates the record its plans address, and validates every plan through the write door's real permission and scope resolution, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/import_create_door_native.test.ts',
+		"It installs the authz door fixture's scratch projects, profiles and users on the suite database, runs the mapped and CSV importers as those users so they create (or are refused) real test3 records, and measures every refusal on the stored rows and the section's row count, so it cannot run without a live suite Postgres.",
 	],
 ]);
 
@@ -903,67 +1069,6 @@ describe('CI workflow tripwire', () => {
 			expect(
 				unstubbed,
 				`Required config keys not assigned-and-exported in ${script} (or the scripts it sources). On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole tier dies (with cascading "Cannot access 'config' before initialization" TDZ noise). Add a harmless stub — it only has to parse — and put the key on an export line:`,
-			).toEqual([]);
-		}
-	});
-
-	/**
-	 * Rule 6b — db_tier.sh ALLOWLISTS EVERY EGRESS HOST THE VENDORED SEED NAMES.
-	 *
-	 * `src/external/config.ts` refuses an `api_config` whose `api_url` host is not in
-	 * DEDALO_EXTERNAL_ALLOWED_HOSTS AT PARSE TIME — `fetched` is a property of the FIELD,
-	 * not of the caller, so nothing has to be about to make a request. And
-	 * `isExternalReferenceSection` THROWS on a refused config by design ("is this external?"
-	 * must not be where a configuration error becomes silence), which
-	 * `listExternalSectionTipos` turns into `update.refused` on the TIME MACHINE RESTORE
-	 * path.
-	 *
-	 * So an unset allowlist does not degrade the external subsystem — it reds gates that
-	 * have nothing to do with external services. MEASURED 2026-08-31: 14 of the 15 red
-	 * gates in the db tier's first stage, all of them in tm_lang_slice_restore_native,
-	 * every one green on a developer box because ../private/.env happens to carry the
-	 * host the seed uses.
-	 *
-	 * DERIVED FROM THE SEED, never a second list: the hosts come out of
-	 * install/db/dedalo_install.pgsql.gz itself, so adding an api_config to the seed
-	 * without allowlisting its host reds THIS gate rather than a dozen unrelated ones on
-	 * a runner nobody can reproduce.
-	 */
-	test('every suite-building hosted tier allowlists every api_config host the vendored seed ships', () => {
-		const sql = new TextDecoder().decode(
-			Bun.gunzipSync(readFileSync(join(repoRoot, 'install', 'db', 'dedalo_install.pgsql.gz'))),
-		);
-		const seedHosts = [
-			...new Set(
-				[...sql.matchAll(/"api_url(?:_search)?"\s*:\s*"(https?:\/\/[^"/]+)/g)].map(
-					(match) => new URL(match[1] as string).hostname,
-				),
-			),
-		].sort();
-		// The seed is the corpus: if it stops naming any host at all the rule below would
-		// pass over nothing, which is the vacuity this repo gates everywhere else.
-		expect(
-			seedHosts.length,
-			'no api_config host found in the install seed — the extraction broke, or the seed changed shape',
-		).toBeGreaterThan(0);
-
-		const tiers = suiteBuildingTiers();
-		expect(
-			tiers,
-			'no hosted tier runs `bun run test:db:setup` — the derivation is blind',
-		).toContain('scripts/ci/db_tier.sh');
-		for (const tier of tiers) {
-			const declared = effectiveSource(tier).match(
-				/^\s*: "\$\{DEDALO_EXTERNAL_ALLOWED_HOSTS:=([^}]*)\}"/m,
-			)?.[1];
-			expect(
-				declared,
-				`${tier} must compose DEDALO_EXTERNAL_ALLOWED_HOSTS (itself or via scripts/ci/hosted_env.sh) — the tier builds its whole environment, and the seed it installs names external hosts`,
-			).toBeDefined();
-			const allowed = new Set((declared ?? '').split(',').map((host) => host.trim()));
-			expect(
-				seedHosts.filter((host) => !allowed.has(host)),
-				`api_config hosts the seed ships that ${tier} does not allowlist. The refusal lands on the RESTORE path, not on anything external — add the host to scripts/ci/hosted_env.sh:`,
 			).toEqual([]);
 		}
 	});
@@ -1440,6 +1545,67 @@ describe('CI workflow tripwire', () => {
 	// 2026-09-26): a Dockerfile/.bun-version change was red in hermetic, so the pre-push
 	// gate refused the push that ci-image.yml needs in order to publish it. The lock's
 	// freshness is nightly's `ci:image:pin --check` (tier_wiring leg D credits it).
+	// Rule 1c (2026-10-02) — the CI image carries every package the product image does.
+	test('the CI image apt-installs every package the product image does (measured, minus reasoned debt)', () => {
+		const product = aptInstalledPackages(read('Dockerfile'));
+		const ci = aptInstalledPackages(read('ci/Dockerfile'));
+		// Floors: a parser that read nothing would make the superset vacuous.
+		expect(product.size, 'read no package from the product Dockerfile').toBeGreaterThan(10);
+		expect(ci.size, 'read no package from ci/Dockerfile').toBeGreaterThan(10);
+		for (const anchor of [
+			'imagemagick',
+			'libheif-plugin-aomenc',
+			'ffmpeg',
+			'ghostscript',
+			'ocrmypdf',
+		]) {
+			expect(product.has(anchor), `product Dockerfile: ${anchor} not read`).toBe(true);
+			// The CI side's reader sees the same names (a ci/Dockerfile reader that missed
+			// one would report it "missing" and push a needless debt row).
+			expect(ci.has(anchor), `ci/Dockerfile: ${anchor} not read`).toBe(true);
+		}
+		const missing = [...product].filter((p) => !ci.has(p) && !(p in CI_IMAGE_MISSING_PACKAGES));
+		expect(
+			missing,
+			'the product image installs these and the CI image does not — a gate on the hosts measures a toolchain that does not ship. Add them to ci/Dockerfile through the publish flow (engineering/CI.md "The pin"):',
+		).toEqual([]);
+		// Shrink-only, and never stale: an excused package must really be missing, and
+		// must really be one the product image installs.
+		for (const [pkg, reason] of Object.entries(CI_IMAGE_MISSING_PACKAGES)) {
+			expect(
+				product.has(pkg),
+				`${pkg}: excused but the product image no longer installs it — delete the row`,
+			).toBe(true);
+			expect(
+				ci.has(pkg),
+				`${pkg}: excused but ci/Dockerfile installs it now — delete the row`,
+			).toBe(false);
+			expect(reason.length, `${pkg}: an exemption carries a reason`).toBeGreaterThan(40);
+		}
+	});
+
+	test('POSITIVE CONTROL: the apt reader sees both Dockerfile spellings and ignores comments', () => {
+		const planted = [
+			'# apt-get install -y commented-out',
+			'RUN apt-get update \\',
+			' && apt-get install -y --no-install-recommends \\',
+			'      ffmpeg imagemagick \\',
+			'      git \\',
+			' && rm -rf /var/lib/apt/lists/*',
+			'RUN set -eux; \\',
+			'    apt-get install -y --no-install-recommends \\',
+			'      poppler-utils ghostscript; \\',
+			'    rm -rf /var/lib/apt/lists/*',
+		].join('\n');
+		expect([...aptInstalledPackages(planted)].sort()).toEqual([
+			'ffmpeg',
+			'ghostscript',
+			'git',
+			'imagemagick',
+			'poppler-utils',
+		]);
+	});
+
 	test('every tier on every host runs the ONE locked CI image, as uid 1001, built from THIS definition', () => {
 		const lock = readCiImageLock(repoRoot);
 		expect(lock.image, 'ci/image.json names another repository').toBe(CI_IMAGE_NAME);
@@ -2511,5 +2677,32 @@ describe('CI workflow tripwire', () => {
 				true,
 			);
 		}
+	});
+
+	test('no CI definition names DEDALO_CI_SKIP_ADVISORY — the retired desk skip stays retired', () => {
+		// The key skipped db_tier.sh's unit stage while that stage could not fail its tier.
+		// Since 2026-10-02 it is BLOCKING and nothing reads the key (ci_local_native §6 holds
+		// the tier scripts, compose and the CLI); a host setting it again would be a stale
+		// skip waiting for a reader to come back.
+		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
+		expect(hosts.length).toBeGreaterThan(2);
+		expect(
+			hosts.filter(({ src }) => src.includes('DEDALO_CI_SKIP_ADVISORY')).map(({ rel }) => rel),
+		).toEqual([]);
+	});
+
+	test('no CI definition names DEDALO_CI_UNIT_RECORD_* — a runner checks the unit baseline, never writes it', () => {
+		// db_tier.sh's unit stage turns into the baseline WRITER under these keys (`ci:local
+		// --docker --record-unit-baseline` only; ci_local_native executes that branch). A
+		// workflow setting one would rewrite the baseline it is meant to check, green.
+		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
+		expect(hosts.length).toBeGreaterThan(2);
+		expect(
+			hosts.filter(({ src }) => /DEDALO_CI_UNIT_RECORD/.test(src)).map(({ rel }) => rel),
+		).toEqual([]);
+		// The key the rule scans for is the one the tier reads (a rename blinds it).
+		expect(read('scripts/ci/db_tier.sh')).toContain('${DEDALO_CI_UNIT_RECORD_OUT:-}');
+		// Control: the scan sees a planted workflow line.
+		expect(/DEDALO_CI_UNIT_RECORD/.test('env:\n  DEDALO_CI_UNIT_RECORD_OUT: /tmp\n')).toBe(true);
 	});
 });

@@ -51,6 +51,7 @@
 import { isAbsolute } from 'node:path';
 import { z } from 'zod';
 import { SLUG_PATTERN } from '../util/slug';
+import { hostProblem } from '../drivers/network_profile';
 import type { DriverId } from '../drivers/types';
 import {
   API_URL_PATTERN,
@@ -196,6 +197,21 @@ const agentBinSchema = z
   })
   .transform(tidyPath);
 
+/**
+ * `systemctl`, pinned — the daemon's control plane (`show` / `list-units` / `stop`). Only for a
+ * host where it is not at the daemon's default `/usr/bin/systemctl`. DECLARED because the
+ * rendered env is the daemon's only env and the plan reverts any hand edit to it: a hand-set
+ * key vanished on the next apply and every run was then refused. Absolute, like every bin.
+ */
+const systemctlBinSchema = z
+  .string()
+  .refine(value => isAbsolute(value.trim()), {
+    message: 'agent.systemctl_bin must be an ABSOLUTE path, never a bare command name resolved through the shared PATH',
+    abort: true,
+  })
+  .transform(tidyPath)
+  .optional();
+
 /** A unix user or group name the host already owns, or an adopted instance already uses. */
 function unixNameSchema(what: string) {
   return z
@@ -321,10 +337,32 @@ const servingSchema = z.strictObject({
   aliases: z.record(hostnameSchema('serving.aliases key'), z.string().regex(SLUG_PATTERN)).prefault({}),
 });
 
+/**
+ * An egress HOSTNAME — held to the gate's own grammar (`drivers/network_profile.ts`
+ * hostProblem): never an IP literal, `localhost`, a local special-use name or a wildcard. A
+ * confined run reaches the outside by name only, through the daemon's gate.
+ */
+function egressHostsSchema(what: string) {
+  return z
+    .array(
+      z.string().superRefine((value, ctx) => {
+        const problem = hostProblem(value);
+        if (problem) ctx.addIssue({ code: 'custom', message: `${what}: ${problem}` });
+      }),
+    )
+    .optional();
+}
+
 const agentSchema = z.strictObject({
   driver: z.enum(DRIVER_IDS),
   /** Only the drivers this museum actually has installed; the selected one is required (checked below). */
   bins: z.partialRecord(z.enum(DRIVER_IDS), agentBinSchema).prefault({}),
+  /** An opencode/pi turn's model provider host(s) → AGENT_PROVIDER_HOSTS. */
+  provider_hosts: egressHostsSchema('agent.provider_hosts'),
+  /** A build's package registry host(s) → BUILD_REGISTRY_HOSTS. */
+  registry_hosts: egressHostsSchema('agent.registry_hosts'),
+  /** `systemctl` where it is not `/usr/bin/systemctl` → SYSTEMCTL_BIN (absent: the daemon's default). */
+  systemctl_bin: systemctlBinSchema,
 });
 
 /**
@@ -369,6 +407,7 @@ const limitsSchema = z
     session_turn_timeout_ms: z.number().int().min(1000).optional(),
     install_timeout_ms: z.number().int().min(1000).optional(),
     build_timeout_ms: z.number().int().min(1000).optional(),
+    git_timeout_ms: z.number().int().min(1000).optional(),
     site_disk_quota_mb: z.number().int().min(1).optional(),
     releases_retained: z.number().int().min(1).optional(),
   })
@@ -433,6 +472,8 @@ const pathsSchema = z.strictObject({
    * otherwise be the one host this provisioner writes outside the tree it was pointed at.
    */
   polkit_rules_dir: absolutePathSchema('paths.polkit_rules_dir').optional(),
+  /** Where systemd-tmpfiles reads its configuration (`/etc/tmpfiles.d`); stated for the same reason. */
+  tmpfiles_dir: absolutePathSchema('paths.tmpfiles_dir').optional(),
 });
 
 /**

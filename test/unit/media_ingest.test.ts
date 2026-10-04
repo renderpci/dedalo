@@ -36,6 +36,7 @@ import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_ingest_${process.pid}`;
@@ -78,6 +79,7 @@ async function stageImage(tmpName: string, size = '2500x1800'): Promise<void> {
 	mkdirSync(dir, { recursive: true });
 	await runBinary([resolveMagick(), '-size', size, 'xc:green', `${dir}/${tmpName}`], {
 		nice: false,
+		env: magickTestEnv(),
 	});
 }
 

@@ -46,217 +46,230 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { isIsolatedGateChild, mirrorIsolatedGate } from '../helpers/isolated_gate.ts';
 
-const CLIENT_ROOT = join(import.meta.dir, '..', '..', 'client', 'dedalo');
-const COMPONENT_COMMON_PATH = join(
-	CLIENT_ROOT,
-	'core',
-	'component_common',
-	'js',
-	'component_common.js',
-);
-const UI_PATH = join(CLIENT_ROOT, 'core', 'common', 'js', 'ui.js');
-const DATA_MANAGER_PATH = join(CLIENT_ROOT, 'core', 'common', 'js', 'data_manager.js');
+// ISOLATED GATE (test/helpers/isolated_gate.ts): this file substitutes client
+// modules, which are process-global — in the tier's process it only MIRRORS a
+// child run of itself; its body below registers in that child alone.
+if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path);
+else {
+	const CLIENT_ROOT = join(import.meta.dir, '..', '..', 'client', 'dedalo');
+	const COMPONENT_COMMON_PATH = join(
+		CLIENT_ROOT,
+		'core',
+		'component_common',
+		'js',
+		'component_common.js',
+	);
+	const UI_PATH = join(CLIENT_ROOT, 'core', 'common', 'js', 'ui.js');
+	const DATA_MANAGER_PATH = join(CLIENT_ROOT, 'core', 'common', 'js', 'data_manager.js');
 
-const globals = globalThis as unknown as Record<string, unknown>;
-const saved: Record<string, unknown> = {};
+	const globals = globalThis as unknown as Record<string, unknown>;
+	const saved: Record<string, unknown> = {};
 
-/** a permissive stand-in for anything the masked ui.js is asked for */
-// biome-ignore lint/suspicious/noExplicitAny: the client module is untyped vanilla JS
-const ui_stub: any = new Proxy((() => {}) as unknown as Record<string, unknown>, {
-	get: (_target, prop) => (prop === 'then' ? undefined : ui_stub),
-	apply: () => ui_stub,
-});
-
-/** the envelope the stubbed transport answers with */
-let next_envelope: unknown = null;
-/** everything console.error printed during a test */
-let errors: unknown[][] = [];
-let real_console_error: typeof console.error;
-
-// biome-ignore lint/suspicious/noExplicitAny: the client module is untyped vanilla JS
-let component_common: any;
-let data_manager: { request: (options: unknown) => Promise<unknown> };
-let real_request: (options: unknown) => Promise<unknown>;
-
-beforeAll(async () => {
-	for (const key of ['window', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'DEDALO_CORE_URL', 'page_globals']) {
-		saved[key] = globals[key];
-	}
-	globals.window = globals;
-	globals.SHOW_DEBUG = false;
-	globals.SHOW_DEVELOPER = false;
-	globals.DEDALO_CORE_URL = '';
-
-	// ui.js reaches for a vendor bundle and a DOM that do not exist here
-	mock.module(UI_PATH, () => ({ ui: ui_stub, default: ui_stub }));
-
-	// the transport is patched IN PLACE, never module-masked
-	const transport = (await import(DATA_MANAGER_PATH)) as unknown as {
-		data_manager: { request: (options: unknown) => Promise<unknown> };
-	};
-	data_manager = transport.data_manager;
-	real_request = data_manager.request;
-	data_manager.request = async () => next_envelope;
-
-	const module = await import(COMPONENT_COMMON_PATH);
-	component_common = module.component_common;
-});
-
-afterAll(() => {
-	// guarded: a module-mask leaked by an EARLIER file can make beforeAll throw
-	// before the transport was captured (the events.js stub other client files
-	// install does exactly that) — an unguarded restore adds a second, noisier
-	// failure on top of that one.
-	if (data_manager && real_request) data_manager.request = real_request;
-	for (const [key, value] of Object.entries(saved)) {
-		if (value === undefined) delete globals[key];
-		else globals[key] = value;
-	}
-	mock.restore();
-});
-
-beforeAll(() => {
-	real_console_error = console.error;
-});
-
-beforeEach(() => {
-	errors = [];
-	console.error = (...args: unknown[]) => {
-		errors.push(args);
-	};
-});
-
-// restore in afterEach, NOT inline in each test: an assertion throws past an
-// inline restore and would leave console.error swallowed for the whole process
-afterEach(() => {
-	console.error = real_console_error;
-});
-
-/** a bare instance carrying only what save()'s success path reads */
-const make_instance = () =>
-	({
-		__proto__: component_common.prototype,
-		id_base: 'test_component',
-		model: 'component_input_text',
-		tipo: 'test1',
-		section_tipo: 'test2',
-		section_id: '3',
-		mode: 'edit',
-		node: null,
-		saving: false,
-		permissions: 2,
-		data: {
-			tipo: 'test1',
-			section_tipo: 'test2',
-			section_id: '3',
-			entries: ['the value the user just saved'],
-			changed_data: [],
-		},
-		db_data: {
-			tipo: 'test1',
-			section_tipo: 'test2',
-			section_id: '3',
-			entries: ['the value before the edit'],
-		},
-		// biome-ignore lint/suspicious/noExplicitAny: the client module is untyped vanilla JS
-	}) as any;
-
-const CHANGED = [{ action: 'update', key: 0, value: 'the value the user just saved' }];
-
-describe('component_common.save — a response that omits the record', () => {
-	test('A+B: keeps the previous data model and flags the instance degraded', async () => {
-		const self = make_instance();
-		const before = structuredClone(self.data);
-		// the envelope is a SUCCESS: it simply does not carry this record
-		next_envelope = {
-			ok: true,
-			data: {
-				data: [{ tipo: 'other9', section_tipo: 'test2', section_id: '3', entries: [] }],
-				context: [],
-			},
-		};
-
-		await self.save(CHANGED);
-
-		expect(self.data.tipo).toBe(before.tipo);
-		expect(self.data.section_tipo).toBe(before.section_tipo);
-		expect(self.data.section_id).toBe(before.section_id);
-		expect(self.data.entries).toEqual(before.entries);
-		expect(self.get_value()).toEqual(before.entries);
-		expect(self.data_degraded).toBe(true);
+	/** a permissive stand-in for anything the masked ui.js is asked for */
+	// biome-ignore lint/suspicious/noExplicitAny: the client module is untyped vanilla JS
+	const ui_stub: any = new Proxy((() => {}) as unknown as Record<string, unknown>, {
+		get: (_target, prop) => (prop === 'then' ? undefined : ui_stub),
+		apply: () => ui_stub,
 	});
 
-	test('F: the db_data baseline is NOT advanced to the unconfirmed value', async () => {
-		const self = make_instance();
-		const baseline = structuredClone(self.db_data);
-		next_envelope = { ok: true, data: { data: [], context: [] } };
+	/** the envelope the stubbed transport answers with */
+	let next_envelope: unknown = null;
+	/** everything console.error printed during a test */
+	let errors: unknown[][] = [];
+	let real_console_error: typeof console.error;
 
-		await self.save(CHANGED);
+	// biome-ignore lint/suspicious/noExplicitAny: the client module is untyped vanilla JS
+	let component_common: any;
+	let data_manager: { request: (options: unknown) => Promise<unknown> };
+	let real_request: (options: unknown) => Promise<unknown>;
 
-		// the baseline still holds the last value the SERVER confirmed
-		expect(self.db_data.entries).toEqual(baseline.entries);
-		expect(self.db_data.entries).not.toEqual(self.data.entries);
-	});
-
-	test('G: a degraded instance still sends the retry (no no-change short-circuit)', async () => {
-		const self = make_instance();
-		next_envelope = { ok: true, data: { data: [], context: [] } };
-		await self.save(CHANGED);
-		expect(self.data_degraded).toBe(true);
-
-		// the same edit again: with the baseline advanced this would report
-		// "nothing changed" and never reach the wire
-		let sent = 0;
-		const previous = data_manager.request;
-		data_manager.request = async (options: unknown) => {
-			sent++;
-			return previous(options);
-		};
-		const answer = await self.save(CHANGED);
-		data_manager.request = previous;
-
-		expect(sent).toBe(1);
-		expect(answer).not.toBe(false);
-	});
-
-	test('D: the miss is reported with SHOW_DEBUG off', async () => {
-		const self = make_instance();
+	beforeAll(async () => {
+		for (const key of [
+			'window',
+			'SHOW_DEBUG',
+			'SHOW_DEVELOPER',
+			'DEDALO_CORE_URL',
+			'page_globals',
+		]) {
+			saved[key] = globals[key];
+		}
+		globals.window = globals;
 		globals.SHOW_DEBUG = false;
-		next_envelope = { ok: true, data: { data: [], context: [] } };
+		globals.SHOW_DEVELOPER = false;
+		globals.DEDALO_CORE_URL = '';
 
-		await self.save(CHANGED);
+		// ui.js reaches for a vendor bundle and a DOM that do not exist here
+		mock.module(UI_PATH, () => ({ ui: ui_stub, default: ui_stub }));
 
-		const said_it = errors.some((args) => String(args[0]).includes('data not found'));
-		expect(said_it).toBe(true);
+		// the transport is patched IN PLACE, never module-masked
+		const transport = (await import(DATA_MANAGER_PATH)) as unknown as {
+			data_manager: { request: (options: unknown) => Promise<unknown> };
+		};
+		data_manager = transport.data_manager;
+		real_request = data_manager.request;
+		data_manager.request = async () => next_envelope;
+
+		const module = await import(COMPONENT_COMMON_PATH);
+		component_common = module.component_common;
 	});
 
-	test('C: a response that carries the record adopts it and clears the flag', async () => {
-		const self = make_instance();
-		self.data_degraded = true;
-		const server_record = {
+	afterAll(() => {
+		// guarded: a module-mask leaked by an EARLIER file can make beforeAll throw
+		// before the transport was captured (the events.js stub other client files
+		// install does exactly that) — an unguarded restore adds a second, noisier
+		// failure on top of that one.
+		if (data_manager && real_request) data_manager.request = real_request;
+		for (const [key, value] of Object.entries(saved)) {
+			if (value === undefined) delete globals[key];
+			else globals[key] = value;
+		}
+		mock.restore();
+	});
+
+	beforeAll(() => {
+		real_console_error = console.error;
+	});
+
+	beforeEach(() => {
+		errors = [];
+		console.error = (...args: unknown[]) => {
+			errors.push(args);
+		};
+	});
+
+	// restore in afterEach, NOT inline in each test: an assertion throws past an
+	// inline restore and would leave console.error swallowed for the whole process
+	afterEach(() => {
+		console.error = real_console_error;
+	});
+
+	/** a bare instance carrying only what save()'s success path reads */
+	const make_instance = () =>
+		({
+			__proto__: component_common.prototype,
+			id_base: 'test_component',
+			model: 'component_input_text',
 			tipo: 'test1',
 			section_tipo: 'test2',
 			section_id: '3',
-			entries: ['server value'],
-		};
-		next_envelope = { ok: true, data: { data: [server_record], context: [] } };
+			mode: 'edit',
+			node: null,
+			saving: false,
+			permissions: 2,
+			data: {
+				tipo: 'test1',
+				section_tipo: 'test2',
+				section_id: '3',
+				entries: ['the value the user just saved'],
+				changed_data: [],
+			},
+			db_data: {
+				tipo: 'test1',
+				section_tipo: 'test2',
+				section_id: '3',
+				entries: ['the value before the edit'],
+			},
+			// biome-ignore lint/suspicious/noExplicitAny: the client module is untyped vanilla JS
+		}) as any;
 
-		await self.save(CHANGED);
+	const CHANGED = [{ action: 'update', key: 0, value: 'the value the user just saved' }];
 
-		expect(self.data.entries).toEqual(['server value']);
-		expect(self.data_degraded).toBe(false);
-		expect(self.db_data.entries).toEqual(['server value']);
+	describe('component_common.save — a response that omits the record', () => {
+		test('A+B: keeps the previous data model and flags the instance degraded', async () => {
+			const self = make_instance();
+			const before = structuredClone(self.data);
+			// the envelope is a SUCCESS: it simply does not carry this record
+			next_envelope = {
+				ok: true,
+				data: {
+					data: [{ tipo: 'other9', section_tipo: 'test2', section_id: '3', entries: [] }],
+					context: [],
+				},
+			};
+
+			await self.save(CHANGED);
+
+			expect(self.data.tipo).toBe(before.tipo);
+			expect(self.data.section_tipo).toBe(before.section_tipo);
+			expect(self.data.section_id).toBe(before.section_id);
+			expect(self.data.entries).toEqual(before.entries);
+			expect(self.get_value()).toEqual(before.entries);
+			expect(self.data_degraded).toBe(true);
+		});
+
+		test('F: the db_data baseline is NOT advanced to the unconfirmed value', async () => {
+			const self = make_instance();
+			const baseline = structuredClone(self.db_data);
+			next_envelope = { ok: true, data: { data: [], context: [] } };
+
+			await self.save(CHANGED);
+
+			// the baseline still holds the last value the SERVER confirmed
+			expect(self.db_data.entries).toEqual(baseline.entries);
+			expect(self.db_data.entries).not.toEqual(self.data.entries);
+		});
+
+		test('G: a degraded instance still sends the retry (no no-change short-circuit)', async () => {
+			const self = make_instance();
+			next_envelope = { ok: true, data: { data: [], context: [] } };
+			await self.save(CHANGED);
+			expect(self.data_degraded).toBe(true);
+
+			// the same edit again: with the baseline advanced this would report
+			// "nothing changed" and never reach the wire
+			let sent = 0;
+			const previous = data_manager.request;
+			data_manager.request = async (options: unknown) => {
+				sent++;
+				return previous(options);
+			};
+			const answer = await self.save(CHANGED);
+			data_manager.request = previous;
+
+			expect(sent).toBe(1);
+			expect(answer).not.toBe(false);
+		});
+
+		test('D: the miss is reported with SHOW_DEBUG off', async () => {
+			const self = make_instance();
+			globals.SHOW_DEBUG = false;
+			next_envelope = { ok: true, data: { data: [], context: [] } };
+
+			await self.save(CHANGED);
+
+			const said_it = errors.some((args) => String(args[0]).includes('data not found'));
+			expect(said_it).toBe(true);
+		});
+
+		test('C: a response that carries the record adopts it and clears the flag', async () => {
+			const self = make_instance();
+			self.data_degraded = true;
+			const server_record = {
+				tipo: 'test1',
+				section_tipo: 'test2',
+				section_id: '3',
+				entries: ['server value'],
+			};
+			next_envelope = { ok: true, data: { data: [server_record], context: [] } };
+
+			await self.save(CHANGED);
+
+			expect(self.data.entries).toEqual(['server value']);
+			expect(self.data_degraded).toBe(false);
+			expect(self.db_data.entries).toEqual(['server value']);
+		});
 	});
-});
 
-describe('source shape', () => {
-	test('E: neither path resurrects `self.data = data || {}`', () => {
-		const source = readFileSync(COMPONENT_COMMON_PATH, 'utf8');
-		const offenders = source
-			.split('\n')
-			.map((line, index) => ({ line: line.trim(), n: index + 1 }))
-			.filter((entry) => /^self\.data\s*=\s*data\s*\|\|\s*\{\s*\}/.test(entry.line));
-		expect(offenders).toEqual([]);
+	describe('source shape', () => {
+		test('E: neither path resurrects `self.data = data || {}`', () => {
+			const source = readFileSync(COMPONENT_COMMON_PATH, 'utf8');
+			const offenders = source
+				.split('\n')
+				.map((line, index) => ({ line: line.trim(), n: index + 1 }))
+				.filter((entry) => /^self\.data\s*=\s*data\s*\|\|\s*\{\s*\}/.test(entry.line));
+			expect(offenders).toEqual([]);
+		});
 	});
-});
+}

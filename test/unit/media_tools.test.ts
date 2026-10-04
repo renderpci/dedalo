@@ -29,6 +29,7 @@ import {
 } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -67,7 +68,10 @@ const pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: null,
 async function makeImage(relative: string, size: string): Promise<void> {
 	const abs = `${ROOT}${relative}`;
 	mkdirSync(abs.slice(0, abs.lastIndexOf('/')), { recursive: true });
-	await runBinary([resolveMagick(), '-size', size, 'xc:orange', abs], { nice: false });
+	await runBinary([resolveMagick(), '-size', size, 'xc:orange', abs], {
+		nice: false,
+		env: magickTestEnv(),
+	});
 }
 async function makePdf(relative: string): Promise<void> {
 	const abs = `${ROOT}${relative}`;

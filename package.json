@@ -17,6 +17,7 @@
 		"css:build": "bun run scripts/build_css.ts",
 		"css:watch": "bun run scripts/build_css.ts --watch",
 		"css:check": "bun run scripts/build_css.ts --check",
+		"css:tool-colors": "bun run scripts/tool_colors.ts",
 		"docs:serve": "${npm_config_venv:-.venv}/bin/mkdocs serve",
 		"docs:build": "DISABLE_MKDOCS_2_WARNING=true ${npm_config_venv:-.venv}/bin/mkdocs build --strict",
 		"docs:setup": "python3 -m venv .venv && .venv/bin/pip install -r docs/requirements.txt",
@@ -24,6 +25,8 @@
 		"changelog": "bun run scripts/changelog.ts",
 		"config:gen": "bun run scripts/gen_config_docs.ts",
 		"config:check": "bun run scripts/gen_config_docs.ts --check",
+		"libs:gen": "bun run scripts/gen_client_lib_docs.ts",
+		"libs:check": "bun run scripts/gen_client_lib_docs.ts --check",
 		"context:gen": "bun run deploy/build_context.ts",
 		"context:check": "bun run deploy/build_context.ts --check",
 		"dedalo:install": "bun run scripts/install.ts",
@@ -44,6 +47,7 @@
 		"test:shard:sweep": "bun run scripts/test_shard.ts --sweep",
 		"test:client": "bun run scripts/client_test_runner.ts",
 		"test:client:server": "bun run scripts/client_test_serve.ts",
+		"test:tools:phone": "bun run scripts/tool_viewport_check.ts",
 		"test:update": "bun run scripts/update_drill.ts",
 		"test:update:dev": "bun run scripts/update_drill.ts --dev",
 		"probe:update": "bun run scripts/update_probe.ts",
@@ -99,7 +103,7 @@
 		"brace-expansion": "^2.1.4",
 		"fast-uri": "^3.1.8",
 		"hono": "^4.13.8",
-		"ip-address": "^10.4.0",
+		"ip-address": "^10.7.2",
 		"js-yaml": "^4.3.2"
 	}
 }

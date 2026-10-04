@@ -142,8 +142,8 @@ Binaries `DEDALO_AV_FFMPEG_PATH` / `_FFPROBE_PATH` / `_FASTSTART_PATH` (§3). Se
 - **`build_fragment` (`:1200`)** — no watermark → `<ffmpeg> -ss <in> -i <src> -t <dur> -vcodec copy -acodec copy -y <dst>` (`:1281`); watermark → stream-copy temp then `-vf "movie=<wm> [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]"` (`:1273-1274`). TC via `OptimizeTC::seg2tc`.
 - **`conform_header` (`:1346`)** — `<ffmpeg> -i <src> -c:v copy -c:a copy <tmp> && mv <src> <src>_untouched && <qt-faststart> <tmp> <src> && rm -f <tmp>` (`:1374-1385`).
 - **`convert_to_dedalo_av` (`:1497`)** — one-pass: `nice <ffmpeg> -y -i <src> -vf "yadif=0:-1:0, scale=-2:<DEDALO_AV_QUALITY_DEFAULT>" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart <tmp> && mv <tmp> <target>` (`:1522-1523`); `$async` (default true) appends `> /dev/null &` (`:1531`).
-- **Probes**: `get_media_attributes` = `ffprobe -v quiet -print_format json -show_format` (`:1585`); `get_media_streams` = `ffprobe -v quiet -show_streams -print_format json`, cached per path (`:1651`); `get_audio_codec` picks `libfdk_aac > libvo_aacenc > aac` from `ffmpeg -loglevel error -buildconf` (`:1722`).
-- **Settings profiles**: `lib/ffmpeg_settings/*.php` — port ALL 39 to ONE typed TS data table (§5.2) keyed `setting_name`. Sample `404_pal_16x9.php`: `$vb='1024k'; $s='720x404'; $g=25; $vcodec='libx264'; $progresivo='-vf yadif'; $force='mp4'; $ar=44100; $ab='64k'; $ac='1'; $acodec` (overridden by the buildconf pick); `audio.php`: `$force='mp4'`, `$target_path='audio'` (audio branch hard-codes `-ar 44100 -ab 128k -ac 2`).
+- **Probes**: `get_media_attributes` = `ffprobe -v quiet -print_format json -show_format` (`:1585`); `get_media_streams` = `ffprobe -v quiet -show_streams -print_format json`, cached per path (`:1651`); `get_audio_codec` picks `libfdk_aac > libvo_aacenc > aac` from `ffmpeg -loglevel error -buildconf` (`:1722`) — TS asks `ffmpeg -hide_banner -encoders` instead (the registry `-acodec` resolves against, not the configure flags) and caches per binary path (`engine/ffmpeg.ts:audioCodecByBinary`).
+- **Settings profiles**: `lib/ffmpeg_settings/*.php` — port ALL 39 to ONE typed TS data table (§5.2) keyed `setting_name`. Sample `404_pal_16x9.php`: `$vb='1024k'; $s='720x404'; $g=25; $vcodec='libx264'; $progresivo='-vf yadif'; $force='mp4'; $ar=44100; $ab='64k'; $ac='1'; $acodec` (overridden by the buildconf pick); `audio.php`: `$force='mp4'`, `$target_path='audio'` (audio branch hard-codes `-ar 44100 -ab 128k -ac 2`). **TS divergence (2026-10-02):** PHP passed `$progresivo` and `$gammma` as two `-vf` options; ffmpeg keeps only the last, so `yadif` never ran. TS profiles carry `videoFilters` (bare specs, deinterlace first, `yadif=deint=interlaced` so progressive frames pass untouched) and both passes emit ONE `-vf a,b` (`engine/ffmpeg.ts:videoFilterArgv`; gates `media_engine.test.ts` + `media_deinterlace_native.test.ts`).
 
 ### 4.3 PDF (`core/component_pdf/class.component_pdf.php`)
 - **Text/HTML extraction** (`get_text_from_pdf :743`): `source = get_media_filepath(get_default_quality())` (`:757`); resolve engine binary `shell_exec('type -P '.$engine)` (`:773`) → TS boot-probe equivalent; flags `-f <page_in> -l <page_out>`, html mode adds `-i -p -noframes -layout` and `.html` ext (text → `.txt`) (`:806-821`); command `<engine> -enc UTF-8<config> <src> <text_filename>` (`:831`), `exec` synchronous (`:838`); output containing `error` → fail. Read → `valid_utf8` → `utf8_clean` (iconv IGNORE + control-char strip) → JSON round-trip validation (`:863-892`).
@@ -460,14 +460,37 @@ any other tier gets `regenerateMissingDerivatives` (`media/repair.ts`, the v6
 `component_av` has no branch there, so a non-original av upload submits a
 transcode only when an ORIGINAL is on this box AND the default tier is absent.
 
-**`files_info` has ONE writer: `media/tools/files_info_persist.ts`.** Every
-write-back — the tool mutations, the AV job completion, the `sync_files` repair,
-the upload persist — goes through it, and each is a read-modify-write of the
-whole `media -> <tipo>` key held under a `FOR UPDATE` row lock
-(`readMatrixKeyForUpdate`, `db/matrix_write.ts`) inside one transaction. Callers
-must NOT hand in a snapshot: theirs is stale by the time the write lands, and the
-write replaces the key whole, so a stale snapshot silently reverts whatever
-another session committed on it. Two entry points, deliberately named apart:
+**`files_info` has ONE writer: `media/tools/files_info_persist.ts`
+`transformStoredMediaItems`** (CLOSURE_PLAN Step 2, TOOLS-5 + CORE-5,
+`WC-2026-09-30-media-key-locked-transform`). Every write-back — the tool
+mutations, the AV job completion, the `sync_files` repair, the upload persist,
+`tool_update_cache`'s media branch, the `files_info` reconcile sweep and the
+duplicate's refresh of its clone — goes through it: it reads the whole
+`media -> <tipo>` key under a `FOR UPDATE` row lock (`readMatrixKeyForUpdate`,
+`db/matrix_write.ts`) and writes what a SYNCHRONOUS transform returns FROM THOSE
+ITEMS, in one short transaction it owns (refused inside a caller's — its lock
+would be held to the caller's COMMIT). File work (derivative rebuilds) happens
+OUTSIDE the lock, before. Callers must NOT hand in a snapshot: theirs is stale by
+the time the write lands, and the write replaces the key whole, so a stale
+snapshot silently reverts whatever another session committed on it. Outcomes per
+record — `written`, `noop`, `held` (a shrink the transform refuses), `missing`
+(the record is gone), `locked` (SQLSTATE 55P03) — never an escape that aborts a
+run. Every caller declares its lock wait: `lockWait: 'per-record'` (update_cache,
+the sweep — many records on the request pool) sets `SET LOCAL lock_timeout` to
+the maintenance bound, or half the statement ceiling when that is shorter
+(`perRecordLockWaitMs`), so the wait ends as the handled 55P03, never as a
+statement timeout; `'request'` (uploads, write-backs, the duplicate) waits under
+the caller's own bounds. The sweep judges PER ITEM — GROW / DIFF / SHRINK on the
+item's own existing-file count, a SHRINK item kept as stored unless
+`allowShrink`, re-judged under the lock — plus the **`FOREIGN`** kind: an item
+whose entries carry the CLONE SIGNATURE (`<component>_<section>_<N>` with N ≠
+this record's id, what a failed duplicate could leave) is always rewritten; any
+other name the scan does not build (an `image_id` rename) is a held SHRINK. The
+duplicate inserts its clone with `files_info: []`, copies through the
+record-scoped walk and re-scans at the clone's identity; an incomplete copy is a
+verdict (`duplicate_media_incomplete`, `media.operation_failed`,
+`duplicateSectionRecordWithVerdict`), never a swallowed catch.
+Two entry points for the rescan transform, deliberately named apart:
 - `reconcileStoredFilesInfo` — refreshes existing items, NEVER mints. The
   passive-scan rule: a background or incidental scan must not resurrect media
   someone removed.

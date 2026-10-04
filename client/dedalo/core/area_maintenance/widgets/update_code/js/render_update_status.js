@@ -15,12 +15,11 @@
 * pressing a button that replaces the code tree, and — on a code master — before
 * publishing a release other installations will install.
 *
-* It renders the two payload halves that `update_code.get_value` answers
-* (server: core/update/status.ts):
-*   value.consumer    — always present: readiness, provenance, last update,
-*                       restore points.
-*   value.code_server — only on a code server (null otherwise), so a plain
-*                       install renders nothing for it and pays for nothing.
+* It renders `value.consumer` (server: core/update/status.ts) — readiness,
+* provenance, last update, restore points. The code-server readout moved to the
+* serve_code widget (2026-09-28), which imports the row helpers exported here
+* (section / fact_row / check_row / verdict / release_facts / channel_label) so both panels speak one
+* layout vocabulary.
 *
 * THE CONTRACT WITH THE SERVER: the server sends check IDS and FACTS, never
 * sentences. Every word here comes from the label catalog, keyed by check id
@@ -78,7 +77,7 @@ const state_chip = function(state) {
 * @param {string} title
 * @returns {HTMLElement} the block's body, ready to receive rows
 */
-const section = function(parent, title) {
+export const section = function(parent, title) {
 
 	const block = ui.create_dom_element({
 		element_type	: 'div',
@@ -102,10 +101,10 @@ const section = function(parent, title) {
 
 
 /** The two build channels, in the order the readout lists them. */
-const CHANNELS = ['master', 'dev']
+export const CHANNELS = ['master', 'dev']
 
 /** What a channel is CALLED (the badge vocabulary, reused as a fallback title). */
-const channel_label = function(channel) {
+export const channel_label = function(channel) {
 	return channel==='master'
 		? (get_label.update_code_channel_master || 'published')
 		: (get_label.update_code_channel_dev || 'developer')
@@ -130,7 +129,7 @@ const channel_label = function(channel) {
 *   the before-value the operator has nothing to compare against, and no way to
 *   tell a build that wrote from one that did not.
 */
-const release_facts = function(value, release, mark) {
+export const release_facts = function(value, release, mark) {
 
 	ui.create_dom_element({
 		element_type	: 'span',
@@ -226,7 +225,7 @@ const release_facts = function(value, release, mark) {
 * @param {boolean} [mono]
 * @returns {HTMLElement}
 */
-const fact_row = function(parent, k, v, mono) {
+export const fact_row = function(parent, k, v, mono) {
 
 	const row = ui.create_dom_element({
 		element_type	: 'div',
@@ -261,7 +260,7 @@ const fact_row = function(parent, k, v, mono) {
 * @param {{id:string, state:string, detail:string|undefined}} check
 * @returns {HTMLElement}
 */
-const check_row = function(parent, check) {
+export const check_row = function(parent, check) {
 
 	const row = ui.create_dom_element({
 		element_type	: 'div',
@@ -379,7 +378,7 @@ export const backup_waiver_check = function(consumer) {
 *   ready only because a warning is waivable (omitted ⇒ the two-state verdict).
 * @returns {HTMLElement}
 */
-const verdict = function(parent, ready, ok_label, bad_label, waived_label) {
+export const verdict = function(parent, ready, ok_label, bad_label, waived_label) {
 
 	const waived = ready===true && typeof waived_label==='string'
 	const node = ui.create_dom_element({
@@ -423,7 +422,7 @@ const render_readiness = function(parent, consumer) {
 			? (get_label.update_code_ready_with_waiver || 'Ready to update, but only with a waiver')
 			: undefined
 	)
-	;(consumer.checks || []).forEach(check => check_row(readiness, check))
+	;(consumer.checks || []).forEach(check => { check_row(readiness, check) })
 
 	return readiness.parentNode
 }//end render_readiness
@@ -527,7 +526,7 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 		const posture_text = engine.posture==='release'
 			? (get_label.update_code_posture_release || 'Release build')
 			: engine.install_channel==='dev'
-				? (get_label.update_code_posture_dev_build || 'Developer build (unreleased branch code)')
+				? (get_label.update_code_posture_dev_build || "Developer build (unreleased code from 'master')")
 				: (get_label.update_code_posture_dev || 'Development checkout')
 		fact_row(
 			installation,
@@ -718,171 +717,6 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 
 	return wrapper
 }//end render_consumer_status
-
-
-
-/**
-* RENDER_CODE_SERVER_STATUS
-* The master half: can this instance publish, from which commit, what is
-* already on disk, and what a consumer would actually be offered.
-* @param {HTMLElement} parent
-* @param {Object|null} code_server - value.code_server, null on a plain install
-* @returns {HTMLElement|null}
-*/
-export const render_code_server_status = function(parent, code_server, mount_builder, build_mark) {
-
-	if (!code_server) return null
-
-	const wrapper = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'update_status code_server_status',
-		parent			: parent
-	})
-
-	// role + publish readiness
-		const role = section(wrapper, get_label.update_code_server_role || 'Code server')
-		verdict(
-			role.parentNode,
-			code_server.ready===true,
-			get_label.update_code_publish_ready || 'Ready to publish',
-			get_label.update_code_publish_blocked || 'Cannot publish'
-		)
-		;(code_server.checks || []).forEach(check => check_row(role, check))
-
-	// the tree releases are built FROM
-		const source = code_server.source || {}
-		const build_source = section(wrapper, get_label.update_code_build_source || 'Build source')
-		fact_row(build_source, get_label.update_code_check_git_dir || 'Git source directory', source.git_dir, true)
-		fact_row(build_source, get_label.update_code_commit || 'Commit', source.head_sha, true)
-		fact_row(build_source, get_label.update_code_current_build || 'Current build', source.head_date, true)
-		fact_row(build_source, get_label.update_code_head_branch || 'Checked-out branch', source.branch, true)
-		fact_row(build_source, get_label.update_code_bun || 'Bun runtime', source.bun_pin, true)
-
-	// THE RELEASE REF — what a published release is actually built from. It is
-	// its own block because it is routinely NOT the checked-out branch, and the
-	// publish checks above all read it: without these rows a red check on a
-	// fix the operator just committed is unexplainable from the panel.
-		const release = section(wrapper, get_label.update_code_release_ref || 'Release ref')
-		fact_row(release, get_label.update_code_release_ref || 'Release ref', source.release_ref, true)
-		fact_row(release, get_label.update_code_release_commit || 'Release ref commit', source.release_sha, true)
-		fact_row(release, get_label.update_code_release_date || 'Release ref date', source.release_date, true)
-		if (source.divergence) {
-			const behind_row = fact_row(
-				release,
-				get_label.update_code_behind || 'Commits not in the release ref',
-				String(source.divergence.behind)
-			)
-			if (source.divergence.behind > 0) {
-				const behind_value = behind_row.querySelector('.dd_v')
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'dd_badge pill_warning',
-					text_content	: source.branch || 'HEAD',
-					parent			: behind_value
-				})
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'check_note',
-					text_content	: get_label.update_code_note_release_ref_current || '',
-					parent			: behind_value
-				})
-			}
-		}
-
-	// BUILD AND PUBLISH — ONE ENTRY PER CHANNEL: the action, and the archive
-	// that action produces, on the same row.
-	//
-	// They were two blocks ('Code builders from GIT' below a 'Published
-	// releases' list) and nothing on screen said the first writes the second —
-	// nor which of two same-sized archives belonged to which button. The pairing
-	// key is the version a build WOULD produce (source.release_version), so the
-	// row shows the artifact that the button beside it would overwrite.
-		const releases = code_server.releases || []
-		const target_version = (code_server.source || {}).release_version || null
-		const build = section(wrapper, get_label.update_code_build_publish || 'Build and publish')
-		CHANNELS.forEach(channel => {
-			const row = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'dd_row build_row',
-				parent			: build
-			})
-			const action = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'dd_k build_action',
-				parent			: row
-			})
-			// THE ARTIFACT CELL IS CREATED BEFORE THE BUTTON IS MOUNTED, and is
-			// handed to the mounter: while a build runs, the row that says what
-			// is on disk is the row that has to say it is being rewritten. The
-			// button's own spinner reports that the REQUEST is in flight; only
-			// this cell can report that THIS artifact is the one changing.
-			const value = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'dd_v build_file',
-				parent			: row
-			})
-			const built = releases.find(release =>
-				release.channel===channel && (target_version===null || release.version===target_version)
-			)
-			if (mount_builder) {
-				mount_builder(channel, action, value, built || null)
-			} else {
-				// no form builder on this page: name the channel anyway, so the
-				// artifact below is still attributable
-				action.textContent = channel_label(channel)
-			}
-			// the verdict belongs to the channel whose button was pressed
-			const mark = (build_mark && build_mark.channel===channel) ? build_mark : null
-			if (!built) {
-				value.classList.add('none')
-				value.textContent = get_label.update_code_not_built || 'Not built yet'
-				return
-			}
-			release_facts(value, built, mark)
-		})
-
-	// Archives on disk for OTHER versions. They have no builder (a build always
-	// produces the release ref's version), but hiding them would leave an
-	// operator wondering where the disk space went — and a stale archive of a
-	// neighbouring version is exactly what a manifest may still advertise.
-		const others = releases.filter(release =>
-			target_version!==null && release.version!==target_version
-		)
-		if (others.length) {
-			const other_block = section(wrapper, get_label.update_code_other_archives || 'Other archives on disk')
-			others.forEach(release => {
-				const row = fact_row(other_block, release.file, '', true)
-				release_facts(row.querySelector('.dd_v'), release)
-			})
-		}
-
-	// what a consumer is ACTUALLY offered — the gap operators cannot otherwise see
-		const advertises = code_server.advertises || {files:[], rungs:[]}
-		const offered = section(wrapper, get_label.update_code_advertised || 'Offered to an installation at this version')
-		// One row per REACHABLE consumer version. Asking only about the
-		// master's OWN version was the least useful question available: a
-		// master publishes releases AT its own version, so a correctly
-		// operating one that had just published <v>.zip rendered
-		// "No release is offered" — the panel reporting a fault in exactly the
-		// steady state it exists to confirm — while a real museum, one or more
-		// rungs behind, got an answer nobody could see.
-		const rungs = (advertises.rungs && advertises.rungs.length)
-			? advertises.rungs
-			: [{for_version:advertises.for_version, files:advertises.files}]
-		rungs.forEach(rung => {
-			if (!rung.files.length) {
-				fact_row(
-					offered,
-					rung.for_version,
-					get_label.update_code_note_advertised_empty || 'No release is offered.'
-				)
-				return
-			}
-			rung.files.forEach(file => fact_row(offered, `${rung.for_version} → ${file.version}`, file.url, true))
-		})
-
-	return wrapper
-}//end render_code_server_status
 
 
 

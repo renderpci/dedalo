@@ -14,7 +14,7 @@ import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { SEED_DUMP_PATH } from './paths.ts';
+import { SEED_DUMP_PATH, SEED_PREDATED_MIGRATION_PATHS } from './paths.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
@@ -33,6 +33,31 @@ async function targetIsEmpty(conn: DbConnDescriptor): Promise<boolean> {
 	}
 	// to_regclass returns the relation name when it exists, empty/NULL otherwise.
 	return probe.stdout.trim() === '';
+}
+
+/**
+ * Apply the migrations the seed predates (paths.ts SEED_PREDATED_MIGRATION_PATHS),
+ * each in ONE transaction (`-1`: its `SET LOCAL lock_timeout` binds, and a
+ * failure leaves nothing half-applied). Install mode skips the boot runner, and
+ * the installer's own writes must find the schema the engine reads.
+ */
+async function applySeedPredatedMigrations(connection: DbConnDescriptor): Promise<void> {
+	for (const path of SEED_PREDATED_MIGRATION_PATHS) {
+		const applied = await runPsql(connection, [
+			'-v',
+			'ON_ERROR_STOP=1',
+			'--quiet',
+			'-1',
+			'-f',
+			path,
+		]);
+		if (applied.exitCode !== 0) {
+			refuseInstall(
+				'install.step_failed',
+				`Migration ${path} failed after the seed restore: ${applied.stderr || 'psql nonzero exit'}`,
+			);
+		}
+	}
 }
 
 /** Restore the seed dump into an empty database. `conn` defaults to config.db. */
@@ -82,6 +107,7 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 				`Restore failed: ${restore.stderr || 'psql nonzero exit'}`,
 			);
 		}
+		await applySeedPredatedMigrations(connection);
 		// Fresh installs get the full canonical test3 playground (WC-021 —
 		// single verified source, src/core/test_data/; the dump ships one bare
 		// row). Default-config path only: seed.ts writes through the pool, which
@@ -107,9 +133,14 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 				allowAnyDatabase: true,
 				scope: 'core',
 			});
+			// The ENGINE-OWNED ontology (the sections the engine writes — the AI
+			// spend ledger): the same idempotent door boot runs, so a fresh install
+			// is complete before its first boot (ontology/engine_ontology.ts).
+			const { ensureEngineOntology } = await import('../ontology/engine_ontology.ts');
+			const engine = await ensureEngineOntology();
 			return {
 				ok: true,
-				msg: `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) — OK`,
+				msg: `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) + engine ontology (${engine.written} records) — OK`,
 			};
 		}
 		return {

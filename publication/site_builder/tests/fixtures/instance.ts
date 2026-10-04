@@ -7,7 +7,7 @@
  * Seven copies of the same knowledge: seven files to edit whenever the daemon's idea of
  * "where my roots are" changes, and seven chances to edit six of them. Two changes have
  * since landed through this seam without a single filesystem test file learning a path —
- * the roots becoming instance-scoped (AGENT_HOME / AUDIT_DIR / WEBSPACE_BASE, one instance
+ * the roots becoming instance-scoped (AUDIT_DIR / WEBSPACE_BASE, one instance
  * per daemon), and the served surfaces becoming PER-SITE WEBSPACE PAIRS (`<webspace>/pre`,
  * `<webspace>/web`), which deleted PREPROD_ROOT and PROD_ROOT outright. The config shape
  * moves HERE, once, and the test files keep reading `roots.sitesRoot`, calling
@@ -86,8 +86,12 @@ export const INSTANCE_MARKER_CONTENT = markerContent(INSTANCE);
 export const roots = Object.freeze({
   /** Workspaces: the git repos the agents work in. */
   sitesRoot: config.SITES_ROOT,
-  /** The agent's HOME — its own root, never inside a tree an agent turn writes to. */
-  agentHome: config.AGENT_HOME,
+  /**
+   * The agent STATE root (LEAD-1b: it replaced the one shared AGENT_HOME). On a provisioned
+   * host it is root's and each (site, door) has its own HOME in it; under the suite's
+   * declared `none`, the unconfined runs' HOMEs live in `<root>/unconfined/<door>`.
+   */
+  agentStateRoot: config.AGENT_STATE_ROOT,
   /** The audit trail's directory. On a provisioned host root-owned; here, the suite's. */
   auditDir: config.AUDIT_DIR,
   /**
@@ -125,14 +129,15 @@ export type { Surface, SurfacePaths };
 /**
  * Every root, in the order a reset walks them.
  *
- * FOUR: the three the daemon's boot preflight holds, plus the webspace base. A root the
+ * FOUR: the two the daemon's boot preflight holds (workspaces, audit), the agent state root
+ * the unconfined runs' HOMEs live under, and the webspace base. A root the
  * reset does not walk is a root one test leaves dirty for the next (the audit gate's
  * "reading an absent log returns empty" is exactly that shape). The seam existed for moves
  * like this one — the surfaces stopped being roots and no filesystem test file learned a
  * path for it.
  */
 export function allRoots(): readonly string[] {
-  return [roots.sitesRoot, roots.agentHome, roots.auditDir, roots.webspaceBase];
+  return [roots.sitesRoot, roots.agentStateRoot, roots.auditDir, roots.webspaceBase];
 }
 
 /** Where a root's instance marker lives. */
@@ -320,7 +325,7 @@ function instanceDeclaration(): InstanceManifest {
       prod: { tls: { mode: 'none' } },
     },
     paths: { config_base: dirname(roots.configDir), state_base: join(SCRATCH_ROOT, 'state') },
-    roots: { workspaces: roots.sitesRoot, home: roots.agentHome, audit: roots.auditDir },
+    roots: { workspaces: roots.sitesRoot, audit: roots.auditDir },
     webspace_base: roots.webspaceBase,
     sites: [...declaredSites.values()],
   } as InstanceManifest;

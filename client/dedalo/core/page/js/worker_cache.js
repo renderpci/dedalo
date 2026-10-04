@@ -10,10 +10,10 @@
  * tool JS/CSS files into the browser's HTTP cache immediately after user login.
  *
  * This is the HTTP-level fallback cache strategy for environments that cannot
- * run a Service Worker (plain HTTP, Firefox quirks, sw.js registration failures).
+ * run a Service Worker (plain HTTP, Firefox quirks, service_worker.js registration failures).
  * When HTTPS is available and the service worker registers successfully,
- * sw.js handles caching instead; this worker is used only as the secondary path.
- * @see core/sw.js              — the primary HTTPS/Service-Worker cache path
+ * service_worker.js handles caching instead; this worker is used only as the secondary path.
+ * @see core/service_worker.js — the primary HTTPS/Service-Worker cache path
  * @see login.js#run_worker_cache — the caller that spawns this Worker
  * @see dd_utils_api::get_dedalo_files — the PHP API endpoint that returns the
  *      manifest of files to cache
@@ -36,14 +36,14 @@
  *   { status: 'ready',   total_files: number }
  *   { status: 'loading', key: number, total_files: number, file_loaded: true }
  *   { status: 'finish',  total_files: number, time: number, error: string|null }
- * The 'finish' shape is SHARED with core/sw.js (one login handler consumes both)
+ * The 'finish' shape is SHARED with core/service_worker.js (one login handler consumes both)
  * and is ALWAYS sent, success or failure: the login navigates on it, so a
  * swallowed failure leaves the user on the progress ring forever.
  *
  * This Worker does NOT import the full `core/common/js/data_manager.js` (that
  * module depends on page globals a Worker scope lacks); it uses the shared,
  * DOM-free transport `core/common/js/api_transport.js` — the same one
- * data_manager.js and core/sw.js use, so there is no second copy of the
+ * data_manager.js and core/service_worker.js use, so there is no second copy of the
  * request algorithm.
  */
 
@@ -99,7 +99,7 @@ self.addEventListener('message', async (event) => {
 		const files = response_data(api_response)
 		if (api_response.error || !Array.isArray(files)) {
 			console.error('Error on get api response:', api_response);
-			// (!) Same 'finish' shape as core/sw.js: the login has ONE handler for both
+			// (!) Same 'finish' shape as core/service_worker.js: the login has ONE handler for both
 			// cache paths and navigates on this message. Keep the keys identical.
 			self.postMessage({
 				status		: 'finish',

@@ -10,6 +10,7 @@ export const component_filter: ComponentModel = {
 	model: 'component_filter',
 	column: 'relation',
 	render: 'text',
+	importAppend: 'items',
 	defaultRelationType: 'dd675',
 	resolveData: 'filter',
 	search: { status: 'ported' },

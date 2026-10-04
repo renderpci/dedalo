@@ -54,7 +54,6 @@ import {
 	DataframeRestoreError,
 	planDataframeRestore,
 } from '../../tools/tool_time_machine/server/dataframe_restore.ts';
-import { removedLocators } from '../../tools/tool_time_machine/server/restore_common.ts';
 import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
 import {
 	dropObserverTerm,
@@ -200,6 +199,7 @@ async function makeTwin(
 		`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id, data)
 		 VALUES ($1, $2, $3, 'lg-nolan', '2026-07-01 10:00:00', -1, $4::text::jsonb)
 		 RETURNING id`,
+		// A PHP-shaped row: raw-inserted, composed (main + frames) or frameless.
 		[recordId, SECTION, MAIN, JSON.stringify(snapshot)],
 	)) as { id: number }[];
 	return { recordId, tmRowId: rows[0]?.id ?? 0 };
@@ -289,23 +289,16 @@ describe('apply_value restores the paired dataframe frames', () => {
 });
 
 /**
- * THE FRAMELESS-WIPE GUARD (the destructive half of this change).
+ * A FRAMELESS ROW MEANS "NO FRAMES AT THAT TIME" (decision 2026-09-28).
  *
- * `save_component.ts` builds a main's TM snapshot from its OWN items and never
- * appends the paired slots' frames (PHP `get_time_machine_data_to_save` :1580
- * did), so EVERY TM row the TS engine has written for a dataframe-paired main
- * is frameless. Replaying PHP's "a slot absent from the snapshot is emptied"
- * contract on such a row DELETES frames that exist in no other row — PHP writes
- * no TM row for a slot (the SLOT has 0 in the live archive against the MAIN's 172)
- * and the slot-row restore door is itself refused. The pre-fix defect merely
- * left the frames STALE; the wipe is UNRECOVERABLE, so the door refuses.
- *
- * Narrow on purpose: only when the snapshot carries NO frame for ANY planned
- * slot AND a planned slot actually holds live frames. Retire these two tests
- * together with the guard when the capture half lands — never by loosening
- * them.
+ * Every supported row of a main is COMPOSED: PHP's `get_time_machine_data_to_save`
+ * :1580 always appended every slot's full frames, and TS-era beta rows are not
+ * supported history. So a raw PHP-shaped row carrying the main alone recorded
+ * EMPTY slots, and restoring it over live frames restores the main and EMPTIES
+ * the main's frames — PHP's own "a slot absent from the snapshot is emptied".
+ * No refusal (the retired `refuseFramelessWipe` guarded TS-era rows only).
  */
-describe('apply_value refuses a frameless snapshot that would delete live frames', () => {
+describe('apply_value of a PHP-shaped FRAMELESS row empties the live frames', () => {
 	let recordId = 0;
 	let tmRowId = 0;
 
@@ -313,31 +306,31 @@ describe('apply_value refuses a frameless snapshot that would delete live frames
 		({ recordId, tmRowId } = await makeTwin([...MAIN_A]));
 	});
 
-	test('nothing is written — main AND frames stay exactly as they were', async () => {
-		const refusal = await refusalOf(
-			toolTimeMachineApplyValue(
-				await context({
-					section_tipo: SECTION,
-					section_id: recordId,
-					tipo: MAIN,
-					lang: 'lg-nolan',
-					matrix_id: tmRowId,
-				}),
-			),
+	test('the main restores and the slot is emptied — the version as it was recorded', async () => {
+		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_B); // FLOOR: live frames to lose
+		const response = await toolTimeMachineApplyValue(
+			await context({
+				section_tipo: SECTION,
+				section_id: recordId,
+				tipo: MAIN,
+				lang: 'lg-nolan',
+				matrix_id: tmRowId,
+			}),
 		);
-		expect(refusal.code).toBe('engine.uncovered_scope');
-		// The slot tipo names the refusal in the LOG line (operator disclosure).
-		expect(refusal.message).toContain(SLOT);
-		// The whole restore is refused, not partially applied.
-		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_B);
-		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_B);
-		// And no audit row was minted for a restore that never happened.
-		const fresh = (await sql.unsafe(
-			`SELECT id FROM matrix_time_machine
+		expect(response.ok).toBe(true);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
+		expect(await storedKey(recordId, SLOT)).toBeUndefined();
+	});
+
+	test('the restore’s own row is frameless — exactly the state it wrote', async () => {
+		// (Restoring THIS row later empties the slot again.)
+		const rows = (await sql.unsafe(
+			`SELECT data FROM matrix_time_machine
 			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND id <> $4`,
 			[SECTION, recordId, MAIN, tmRowId],
-		)) as unknown[];
-		expect(fresh.length).toBe(0);
+		)) as { data: unknown }[];
+		expect(rows.length).toBe(1);
+		expect(rows[0]?.data).toEqual(MAIN_A_STORED);
 	});
 });
 
@@ -346,11 +339,11 @@ describe('apply_value applies a frameless snapshot when the slot is already empt
 	let tmRowId = 0;
 
 	beforeAll(async () => {
-		// No live frames ⇒ nothing to lose ⇒ PHP's contract stands unguarded.
+		// No live frames ⇒ the empty slot stays empty (no key written).
 		({ recordId, tmRowId } = await makeTwin([...MAIN_A], false));
 	});
 
-	test('the main restores and the empty slot stays empty (guard is not a blanket)', async () => {
+	test('the main restores and the empty slot stays empty', async () => {
 		const response = await toolTimeMachineApplyValue(
 			await context({
 				section_tipo: SECTION,
@@ -406,6 +399,104 @@ describe('apply_value drops a frame naming a tipo that is not a live slot', () =
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
 		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A_STORED);
 		expect(await storedKey(recordId, FOREIGN)).toBeUndefined();
+	});
+});
+
+/**
+ * AN UNSTAMPED FROM-LESS FRAME IS THE MAIN'S OWN (decision D-A) ON EVERY SIDE.
+ * A pre-migration frame names neither `main_component_tipo` nor
+ * `from_component_tipo`. The preview (snapshotSlotFrames) shows it in the only
+ * slot and the apply (restoreSlot) removes its live copy as the main's own —
+ * so the plan must claim it by the SAME predicate (isOwnFrame), or the restore
+ * deletes a frame the row recorded.
+ */
+describe('apply_value keeps a recorded unstamped from-less frame (one slot)', () => {
+	let recordId = 0;
+	let tmRowId = 0;
+	const UNSTAMPED = { id: 5, type: 'dd490', id_key: 1, section_id: 4, section_tipo: 'test2819' };
+
+	beforeAll(async () => {
+		({ recordId, tmRowId } = await makeTwin([...MAIN_A, ...FRAMES_A, UNSTAMPED]));
+		const live = (await storedKey(recordId, SLOT)) as unknown[];
+		await sql.unsafe(
+			`UPDATE ${TABLE} SET relation = relation || $3::text::jsonb
+			 WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, recordId, JSON.stringify({ [SLOT]: [...live, UNSTAMPED] })],
+		);
+	});
+
+	test('the frame the row recorded is still in the slot after the restore', async () => {
+		const response = await toolTimeMachineApplyValue(
+			await context({
+				section_tipo: SECTION,
+				section_id: recordId,
+				tipo: MAIN,
+				lang: 'lg-nolan',
+				matrix_id: tmRowId,
+			}),
+		);
+		expect(response.ok).toBe(true);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
+		expect(await storedKey(recordId, SLOT)).toEqual([...FRAMES_A_STORED, UNSTAMPED]);
+	});
+});
+
+/**
+ * THE SLOT SET IS THE ONTOLOGY'S, NEVER THE CLIENT'S. The slot discovery reads
+ * the main's ONTOLOGY request_config (core relations/dataframe_slots.ts
+ * `resolveDataframeSlotTipos`, since 2026-09-27 — which is also why the tool no
+ * longer spells `ddo_map` and action_scope_binding_tripwire needs no exemption
+ * for apply_value any more), never a client map. This is the OUTCOME PROOF: a
+ * request that smuggles a foreign component_dataframe in every client-map shape
+ * leaves every other slot untouched.
+ */
+describe('apply_value ignores a client-supplied ddo_map', () => {
+	let recordId = 0;
+	let tmRowId = 0;
+	/** A real component_dataframe node of the test TLD that is NOT a slot of MAIN. */
+	const FOREIGN_SLOT = 'test60';
+	const smuggledDdoMap = [{ tipo: FOREIGN_SLOT, section_tipo: SECTION, parent: MAIN }];
+
+	/**
+	 * LIVE frames under the foreign slot. The snapshot names NO frame of it (a
+	 * snapshot frame naming a real slot is planned by design — see "a frame
+	 * naming an UNDISCOVERED real slot"), and the frame is UNSTAMPED (names no
+	 * main), so the live discovery does not make the slot MAIN's either (a live
+	 * slot holding a frame NAMING MAIN is one of its slots and IS emptied —
+	 * tm_save_order_native "an UNDECLARED live slot"). Only the smuggled map
+	 * could put it in the plan; if it did, the restore would rewrite this key
+	 * to the snapshot's (empty) share — an unstamped frame is every main's own —
+	 * and wipe it.
+	 */
+	const { main_component_tipo: _main, ...unstampedB } = FRAMES_B[0] as Record<string, unknown>;
+	const LIVE_FOREIGN = [{ ...unstampedB, id: 5, from_component_tipo: FOREIGN_SLOT }];
+
+	beforeAll(async () => {
+		({ recordId, tmRowId } = await makeTwin([...MAIN_A, ...FRAMES_A]));
+		await sql.unsafe(
+			`UPDATE ${TABLE} SET relation = relation || $3::text::jsonb
+			 WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, recordId, JSON.stringify({ [FOREIGN_SLOT]: LIVE_FOREIGN })],
+		);
+	});
+
+	test('the smuggled slot is left exactly as it was; the real slot restores', async () => {
+		const response = await toolTimeMachineApplyValue(
+			await context({
+				section_tipo: SECTION,
+				section_id: recordId,
+				tipo: MAIN,
+				lang: 'lg-nolan',
+				matrix_id: tmRowId,
+				ddo_map: smuggledDdoMap,
+				tool_config: { ddo_map: smuggledDdoMap },
+				request_config: [{ show: { ddo_map: smuggledDdoMap } }],
+			}),
+		);
+		expect(response.ok).toBe(true);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
+		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A_STORED);
+		expect(await storedKey(recordId, FOREIGN_SLOT)).toEqual(LIVE_FOREIGN);
 	});
 });
 
@@ -527,7 +618,7 @@ describe('bulk_revert_process restores the paired frames too', () => {
 	});
 });
 
-describe('bulk_revert_process refuses a frameless pre-batch state too', () => {
+describe('bulk_revert_process of a PHP-era run restores a FRAMELESS pre-batch state: frames emptied', () => {
 	let recordId = 0;
 	const BATCH = 987002;
 	const mintedBulkIds: number[] = [];
@@ -541,7 +632,7 @@ describe('bulk_revert_process refuses a frameless pre-batch state too', () => {
 			 WHERE section_tipo = $1 AND section_id = $2`,
 			[SECTION, recordId, JSON.stringify({ [MAIN]: MAIN_B, [SLOT]: FRAMES_B })],
 		);
-		// Pre-batch snapshot with NO frames (the shape TS capture writes today).
+		// Pre-batch snapshot with NO frames (a PHP row whose slots were empty).
 		await sql.unsafe(
 			`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id, data)
 			 VALUES ($1, $2, $3, 'lg-nolan', '2026-07-01 09:00:00', -1, $4::text::jsonb)`,
@@ -560,45 +651,35 @@ describe('bulk_revert_process refuses a frameless pre-batch state too', () => {
 		}
 	});
 
-	test('the row is skipped with a surfaced error and its frames survive', async () => {
+	test('the key reverts: main back to the pre-batch value, the main’s frames emptied', async () => {
 		const response = await toolTimeMachineBulkRevert(
 			await context({ section_tipo: SECTION, bulk_process_id: BATCH }),
 		);
-		const skippedBatch = response.data as {
-			skipped: { reason: string; tipo?: string; section_id?: number }[];
+		expect(response.ok).toBe(true);
+		const batch = response.data as {
+			counter: number;
+			skipped: { reason: string }[];
 			bulk_process_id?: unknown;
 		};
-		if (typeof skippedBatch.bulk_process_id === 'number') {
-			mintedBulkIds.push(skippedBatch.bulk_process_id);
-		}
-		// Typed entry, coordinates present (the row is in scope); the refusal's
-		// words (the slot names) are the log's (SEC-16).
-		expect(
-			skippedBatch.skipped.some(
-				(entry) =>
-					entry.reason === 'frameless_wipe' && entry.tipo === MAIN && entry.section_id === recordId,
-			),
-		).toBe(true);
-		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_B);
-		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_B);
+		if (typeof batch.bulk_process_id === 'number') mintedBulkIds.push(batch.bulk_process_id);
+		expect(batch.skipped).toEqual([]);
+		expect(batch.counter).toBe(1);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
+		expect(await storedKey(recordId, SLOT)).toBeUndefined();
 	});
 });
 
 /**
- * TRIPWIRE for a stated-but-unenforced invariant (audit follow-up).
- *
- * `restore_common.ts removedLocators` re-expresses, byte-for-byte, the
- * `removedItems` closure inside `saveComponentData` (save_component.ts) — the
- * observer cascade's removed-target set. Its header asserts "the two MUST
- * agree" and, until now, NOTHING bound them: a change to the save door's rule
- * would silently diverge the TM write doors' observer propagation. The closure
- * is private to the save body and that file is owned elsewhere, so this gates
- * the invariant BEHAVIOURALLY instead of by extraction: run a real save that
- * drops a locator, and require the save's own `removedItems` to equal what
- * `removedLocators` computes from the same before/after. Retire this test only
- * together with the extraction it is standing in for.
+ * THE REMOVED-SET RULE, at the save door. It used to exist twice (the save
+ * body's `removedItems` closure and the TM doors' `restore_common.ts` copy) and
+ * this test bound the two. The extraction it stood in for has landed
+ * (CLOSURE_PLAN Step 2): ONE rule, `section_record/obligation_ledger.ts
+ * removedLocators`, which the ledger applies to every write's before-image and
+ * the save door reports through. What stays is the rule's OUTCOME on a mixed
+ * main column: the dropped locator is removed, the dropped dd490 frame is not
+ * (a pairing record, not an edge).
  */
-describe('removedLocators agrees with saveComponentData.removedItems', () => {
+describe('the removed-set rule at the save door (dd490 frames are not edges)', () => {
 	let recordId = 0;
 
 	beforeAll(async () => {
@@ -633,10 +714,8 @@ describe('removedLocators agrees with saveComponentData.removedItems', () => {
 		expect(saved.ok).toBe(true);
 		const doorRemoved = Array.isArray(saved.removedItems) ? saved.removedItems : [];
 		// Exactly one removal: the dropped locator. The dropped dd490 frame is a
-		// pairing record, not an edge, so it is NOT a removed observer target —
-		// and the TM door's copy of the rule must agree exactly.
+		// pairing record, not an edge, so it is NOT a removed observer target.
 		expect(doorRemoved).toEqual([MAIN_A[1]]);
-		expect(removedLocators(before, after)).toEqual(doorRemoved);
 	});
 });
 

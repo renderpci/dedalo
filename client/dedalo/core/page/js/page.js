@@ -50,7 +50,8 @@
 		object_to_url_vars,
 		generate_hash
 	} from '../../common/js/utils/index.js'
-	import {render_node_info} from '../../common/js/utils/notifications.js'
+	import {render_node_info, prepend_bubble} from '../../common/js/utils/notifications.js'
+	import {mount_request_activity_indicator} from './request_activity_indicator.js'
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {ApiError, CLIENT_ERROR, request_failed, response_data, response_extension} from '../../common/js/api_error.js'
@@ -231,6 +232,10 @@ page.prototype.scroll_component_into_view = function(component) {
 *   'render_page'          → restores section selection after full renders
 *   'render_instance'      → restores section selection after pagination
 *   'notification'         → prepends inspector bubble to bubbles_notification_container
+*                            (identical bubbles merge into one with a ×N count)
+*
+* Also mounts the slow-server cue (request_activity_indicator.js), which
+* subscribes to 'request_activity' itself.
 *   'quit'                 → calls delete_cache to clear local storage
 *   'change_lang'          → calls delete_cache so stale translations are dropped
 *   'api_error'            → hands the ApiError to the policy (relogin, no-access, toast)
@@ -289,7 +294,7 @@ page.prototype.init = async function(options) {
 			const activate_component_handler = function(component_instance) {
 
 				// lock_component. launch worker
-				if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
+				if (typeof DEDALO_LOCK_COMPONENTS!=='undefined' && DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
 					dd_request_idle_callback(
 						() => {
 							data_manager.request({
@@ -472,14 +477,20 @@ page.prototype.init = async function(options) {
 						// render notification bubble
 							const node_info = render_node_info(options)
 
-						// prepend node (at top of the list)
-							container.prepend(node_info)
+						// prepend node (at top of the list), merging an identical one
+							prepend_bubble(container, node_info)
 					}
 				)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('notification', notifications_handler)
 			)
+
+		// slow-server cue
+			// A STATE, not a notification: one top-edge bar (+ one sentence after a
+			// long wait) driven by data_manager's request_activity, gone the instant
+			// the last request settles. Document-level and idempotent.
+			mount_request_activity_indicator()
 
 		// event quit
 			const quit_handler = () => {
@@ -1192,7 +1203,9 @@ page.prototype.add_events = function() {
 			// just frees the lock immediately when the browser allows a final beacon.
 			// sendBeacon cannot set headers, so the CSRF token travels in the body (the
 			// API accepts rqo->csrf_token); text/plain avoids a CORS preflight on unload.
-				if (DEDALO_LOCK_COMPONENTS===true && page_globals.component_active && typeof navigator!=='undefined' && navigator.sendBeacon) {
+				// typeof-guarded: a window unloaded before `start` delivered the
+				// environment (a reload while booting) has no such global yet
+				if (typeof DEDALO_LOCK_COMPONENTS!=='undefined' && DEDALO_LOCK_COMPONENTS===true && page_globals.component_active && typeof navigator!=='undefined' && navigator.sendBeacon) {
 					try {
 						const ca		= page_globals.component_active
 						const api_url	= (typeof DEDALO_API_URL!=='undefined') ? DEDALO_API_URL : '../api/v1/json/'
@@ -1239,8 +1252,8 @@ page.prototype.add_events = function() {
 			// Check for unsaved components, usually happens in component_text_area editions because
 			// the delay (500 ms) to set as changed
 				if (unsaved_data===true) {
-					// check_unsaved_data
-					check_unsaved_data()
+					// check_unsaved_data (flush only: the native beforeunload prompt asks)
+					check_unsaved_data({flush_only: true})
 				}
 
 			// unsaved_data is false. Nothing to worry about

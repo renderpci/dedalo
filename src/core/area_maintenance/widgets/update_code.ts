@@ -1,16 +1,15 @@
 /**
- * update_code widget (UPDATE_PROCESS Phase 4) — panel + the code-update
- * EXECUTE + the server-side release BUILD.
+ * update_code widget (UPDATE_PROCESS Phase 4) — the CONSUMER side: panel + the
+ * code-update EXECUTE. The PUBLISH side (release build + code-server readout)
+ * is serve_code.ts since 2026-09-28.
  * Panel (PHP update_code::get_value): the configured CODE_SERVERS probed for
- * reachability, the local staging dir, and whether this instance is itself a
- * code server (shows the build panel).
+ * reachability, the consumer readiness readout, and whether this instance is
+ * itself a code server (a self-report only; the build panel is serve_code).
  * update_code EXECUTE: ownership-gated. Closed keeps the frozen engine_denied;
  * open downloads the selected release, verifies + extracts + swaps the TS
  * tree, and restarts (core/update/code_update.ts, WC-024).
  * restore_code EXECUTE: ownership-gated; open puts a RESTORE POINT back on the
  * tree — the same swap, run in reverse (core/update/code_restore.ts).
- * build_version_from_git_master: ownership-gated; open runs the git-archive
- * release build (core/update/code_build.ts).
  */
 
 import { config } from '../../../config/config.ts';
@@ -26,20 +25,13 @@ import {
 /**
  * update_code panel.
  *
- * Answers BOTH ROLES in one payload, because one installation can be either or
- * both and the operator should not have to guess which half applies:
+ * The CONSUMER role only (since 2026-09-28 the publish half is its own widget,
+ * serve_code.ts — WC-2026-09-28-maintenance-serve-code-widget):
  *  - `consumer` — the readiness readout (core/update/status.ts): every gate the
  *    update pipeline would refuse on, asked through the SAME predicates, plus
  *    the running build's provenance, the last update's sentinel and the
  *    restore points on disk. Before 2026-08-24 every one of those refusals was
- *    discoverable only by pressing the button and reading the failure;
- *  - `code_server` — the publish readiness: role + dirs through `planCodeBuild`
- *    itself, the build source's git state, the archives already on disk, and
- *    the manifest a consumer at this version would actually be offered (an
- *    empty manifest over a published zip is the catalog's doing, and the panel
- *    now shows both rather than leaving the operator to infer it).
- * The code-server half is computed ONLY for a code server: on a plain install
- * it is null, so no git spawn or directory walk happens at all.
+ *    discoverable only by pressing the button and reading the failure.
  *
  * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
  * engineering/crap_coverage_exempt.json): a NETWORK probe loop over
@@ -68,8 +60,7 @@ async function updateCodeGetValue(
 			result: probe.data,
 		});
 	}
-	const { codeServerStatus, consumerStatus } = await import('../../update/status.ts');
-	const { publicOrigin } = await import('../../resolve/public_origin.ts');
+	const { consumerStatus } = await import('../../update/status.ts');
 	return {
 		data: {
 			servers,
@@ -78,35 +69,9 @@ async function updateCodeGetValue(
 			// <DEDALO_BACKUP_PATH>/.code_staging — and the client no longer
 			// displays it. The config-catalog key is a retirement candidate.
 			is_a_code_server: config.update.isCodeServer,
-			consumer: consumerStatus(principal),
-			// The self-probe is composed HERE, not inside codeServerStatus: that
-			// function is synchronous filesystem work and stays that way, while
-			// this one check has to go out over the network. It is appended to
-			// the same list so the panel renders it like any other, and it can
-			// only ever ADD a row — a probe that throws is impossible (the check
-			// catches its own failures), and `ready` still follows the same
-			// blocked-if-any rule.
-			code_server: config.update.isCodeServer
-				? await withReachability(codeServerStatus(`${publicOrigin()}/dedalo/install/code`))
-				: null,
+			consumer: await consumerStatus(principal),
 		},
 	};
-}
-
-/**
- * Append the advertised-URL self-probe to a code-server readout.
- *
- * Kept out of `codeServerStatus` so that function stays sync and pure — the
- * network is the only asynchronous thing in the whole readout, and folding it
- * in would make every caller await a fetch to read a directory listing.
- */
-async function withReachability(
-	status: Awaited<ReturnType<typeof import('../../update/status.ts').codeServerStatus>>,
-): Promise<typeof status> {
-	const { advertisedUrlReachableCheck } = await import('../../update/status.ts');
-	const reachable = await advertisedUrlReachableCheck(status.releases);
-	const checks = [...status.checks, reachable];
-	return { ...status, checks, ready: !checks.some((entry) => entry.state === 'blocked') };
 }
 
 /**
@@ -136,10 +101,14 @@ async function updateCodeOwned(
 	const { mediaJobs } = await import('../../media/jobs.ts');
 	const record = mediaJobs.submit(
 		'update_code',
-		async ({ onData }) => {
+		async ({ onData, signal }) => {
 			// core/update/** REFUSES BY THROWING (update.refused / update.failed);
-			// phase frames stream through the job's data channel as it advances.
-			return await updateCode(options, principal, { onPhase: (frame) => onData(frame) });
+			// phase frames stream through the job's data channel as it advances. The
+			// job's signal lets a STOP end the run before the swap (refuseIfStopped).
+			return await updateCode(options, principal, {
+				onPhase: (frame) => onData(frame),
+				signal,
+			});
 		},
 		// THE lane starvation this class exists to end: an operator's code update
 		// must never queue behind a transcode backlog (PERF-11).
@@ -214,35 +183,6 @@ async function restoreCodeOwned(
 	};
 }
 
-/**
- * The OPEN (owned) release build: git archive of a ref.
- *
- * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
- * engineering/crap_coverage_exempt.json): a three-field unwrap forwarding to
- * `core/update/code_build.ts`, gated in its own suite; running it shells out to
- * git and writes a release archive.
- */
-async function buildVersionOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
-	const { buildVersionFromGit } = await import('../../update/code_build.ts');
-	// The panel's two buttons send a BRANCH ('master' / 'developer') and nothing
-	// else. The release they build is the version THE REF DECLARES — no longer
-	// the engine's current version: taking the name from the running process
-	// while the bytes came from a ref meant a master left running across a
-	// version bump published mislabelled archives, and a master whose ref
-	// declares its OWN version published a same-version zip that
-	// assertLinearUpgrade refuses as a downgrade (measured 2026-08-24: a 7.0.0
-	// master produced an uninstallable 7.0.0.zip). An explicit `version` from an
-	// API caller is now a CLAIM, checked against the ref and refused on mismatch.
-	const branch = typeof options.branch === 'string' ? options.branch : undefined;
-	const ref = typeof options.ref === 'string' ? options.ref : branch;
-	return fromEnvelope(
-		await buildVersionFromGit({
-			...(typeof options.version === 'string' ? { version: options.version } : {}),
-			...(ref === undefined ? {} : { ref }),
-		}),
-	);
-}
-
 export const widget: WidgetModule = {
 	spec: {
 		id: 'update_code',
@@ -265,14 +205,6 @@ export const widget: WidgetModule = {
 			'update_code.delete_restore_point',
 			engineDenied('update_code.delete_restore_point', 'it DELETES a code backup copy'),
 			deleteRestorePointOwned,
-		),
-		build_version_from_git_master: gated(
-			'update_code.build_version_from_git_master',
-			engineDenied(
-				'update_code.build_version_from_git_master',
-				'it packages the PHP code tree from its git checkout',
-			),
-			buildVersionOwned,
 		),
 	},
 	getValue: updateCodeGetValue,

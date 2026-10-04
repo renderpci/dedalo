@@ -23,18 +23,29 @@
  *   (non-custom-format) dump, still counts — a precondition that refuses a
  *   legitimate update because it could not LOOK is an outage.
  *
+ * OPS-2 (2026-09-30): pg_dump writes `<final>.part`; a failure leaves neither
+ * a `*.backup` nor a `.part` behind.
+ *
  * WHAT IS NOT COVERED HERE, stated rather than implied: a REAL custom-format
  * archive truncated mid-data. Building one needs a live pg_dump against a
- * server, which this hermetic gate has no right to require. That case was
- * measured by hand on 2026-08-30 and the numbers are recorded in backup.ts's
- * verification header: `pg_restore --list` accepts the 60% copy (1121 entries,
- * exit 0) and only the deep `pg_restore -f /dev/null` read rejects it. What IS
- * gated below is the mechanism that makes the deep read happen: a cached TOC
- * verdict must never satisfy a deep question.
+ * server, which this hermetic gate has no right to require — it lives in
+ * backup_restorability_native / backup_freshness_deep_native /
+ * backup_inflight_native. What IS gated below is that a legacy cached TOC
+ * verdict (`verified_toc`, written by engines before OPS-1) is never trusted.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { chmodSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	chmodSync,
+	existsSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	utimesSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
@@ -84,7 +95,10 @@ if [ "$mode" = "fail_partial" ]; then
   echo "pg_dump: error: query failed: server closed the connection unexpectedly" >&2
   exit 1
 fi
-echo "not-really-a-dump-but-nonempty" > "$out"
+# The archive magic and nothing else: this hermetic gate has no real dump, so the
+# success leg runs on a host that CANNOT verify (pgRestoreBin: null) — a
+# \`.custom.backup\` name without the magic is not_an_archive (OPS-2 review).
+printf 'PGDMP-not-a-real-dump-but-nonempty' > "$out"
 exit 0
 `,
 );
@@ -120,9 +134,12 @@ describe('initBackupSequence verification (S2-35)', () => {
 		});
 		expect(response.ok).toBe(false);
 		expect(response.msg).toContain('fe_sendauth'); // pg_dump's own words surfaced
-		// The zero-byte artifact was removed → nothing restorable is listed.
+		// The zero-byte artifact was removed → nothing restorable is listed, and no
+		// in-flight part is left behind either.
 		const leftover = readdirSync(backupDir).filter((name) => name.endsWith('.backup'));
 		expect(leftover).toHaveLength(0);
+		expect(readdirSync(backupDir).filter((name) => name.endsWith('.part'))).toHaveLength(0);
+		expect(getBackupFiles(backupDir)).toEqual([]);
 		// The process record ends 'error' with the log tail (the status stream
 		// a re-attached widget would poll must not report a dead dump as live).
 		const pfiles = readdirSync(join(scratch, 'processes')).filter((n) => n.startsWith('backup_'));
@@ -139,6 +156,9 @@ describe('initBackupSequence verification (S2-35)', () => {
 		const response = await initBackupSequence(-1, true, {
 			backupDir,
 			pgDumpBin: fakePgDump,
+			// A host that cannot read the bytes back: exit 0 is the proof of
+			// completion, and the dump is promoted unproven (the degradation).
+			pgRestoreBin: null,
 			fastFailWindowMs: 5000,
 		});
 		expect(response.ok).toBe(true);
@@ -152,10 +172,11 @@ describe('initBackupSequence verification (S2-35)', () => {
 		expect(existsSync(pfilePath)).toBe(true);
 		const record = JSON.parse(await Bun.file(pfilePath).text()) as {
 			status: string;
-			data: { file_path?: string };
+			data: { file_path?: string; msg?: string };
 		};
 		expect(record.status).toBe('done');
 		expect(record.data.file_path).toBe(response.file_path as string);
+		expect(record.data.msg ?? '').toContain('not verified (unverifiable_no_pg_restore)');
 	});
 
 	test('PGPASSWORD threads from config.db.password when set', async () => {
@@ -172,19 +193,39 @@ describe('initBackupSequence verification (S2-35)', () => {
 	});
 
 	test('getBackupFiles lists newest-first with human sizes (the widget surface)', () => {
-		// The success artifact from the previous test lives in the override dir,
-		// which getBackupFiles does not see (it reads the config dir) — assert
-		// only the shape contract on whatever the real dir holds.
-		const files = getBackupFiles();
-		for (const file of files) {
-			expect(typeof file.name).toBe('string');
-			expect(file.size).toMatch(/(bytes|KB|MB|GB)$/);
-		}
+		// Its OWN scratch dir (the directory seam, OPS-2) — never the previous
+		// test's artifact, never the installation's backup dir. Newest-first is BY
+		// NAME (the timestamp leads it, as PHP listed them): the mtimes are planted
+		// in the OPPOSITE order, so a sort by mtime reds here. Only `*.backup`
+		// names are listed — a running `.part` and a retired `.failed` are not.
+		const dir = mkdtempSync(join(scratch, 'listing_'));
+		const plant = (name: string, bytes: number, mtimeSeconds: number) => {
+			const path = join(dir, name);
+			writeFileSync(path, Buffer.alloc(bytes, 1));
+			utimesSync(path, mtimeSeconds, mtimeSeconds);
+		};
+		plant('2026-01-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup', 1, 3_000_000);
+		plant('2026-03-01_000000.zz.postgresql_timer.custom.backup', 2048, 1_000_000);
+		plant('2026-02-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup', 1_572_864, 2_000_000);
+		plant('2026-04-01_000000.zz.postgresql_timer.custom.backup.part', 10, 4_000_000);
+		plant('2026-05-01_000000.zz.postgresql_timer.custom.backup.failed', 10, 5_000_000);
+		expect(getBackupFiles(dir)).toEqual([
+			{ name: '2026-03-01_000000.zz.postgresql_timer.custom.backup', size: '2.00 KB' },
+			{ name: '2026-02-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup', size: '1.50 MB' },
+			{ name: '2026-01-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup', size: '1 byte' },
+		]);
 	});
 });
 
 /** Far enough ahead that the in-progress window is not what decides a verdict. */
 const AFTER_THE_WRITE_WINDOW = Date.now() + 3_600_000;
+
+/**
+ * The legs that ask pg_restore itself gate at COLLECTION time — never an early
+ * `return` in a body, which reports a PASS having asserted nothing (S2-40). A
+ * host without pg_restore is covered by the degradation leg.
+ */
+const HAS_PG_RESTORE = resolvePgRestore() !== null;
 
 describe('restore-point verification (P0-13)', () => {
 	test('a dump that dies PART WAY is retired, not listed as a backup', async () => {
@@ -203,58 +244,63 @@ describe('restore-point verification (P0-13)', () => {
 		const names = readdirSync(partialDir);
 		expect(names.filter((name) => name.endsWith('.backup'))).toHaveLength(0);
 		expect(names.some((name) => name.endsWith('.backup.failed'))).toBe(true);
+		expect(names.filter((name) => name.endsWith('.part'))).toHaveLength(0);
 		// …and nothing in the directory now counts as a restore point.
-		expect(newestUsableBackup(partialDir, { nowMs: AFTER_THE_WRITE_WINDOW }).mtimeMs).toBe(0);
+		expect((await newestUsableBackup(partialDir, { nowMs: AFTER_THE_WRITE_WINDOW })).mtimeMs).toBe(
+			0,
+		);
 	});
 
-	test('a file that only LOOKS like an archive is refused (pg_restore is asked)', () => {
-		const bin = resolvePgRestore();
-		if (bin === null) return; // no pg_restore on this host: covered by the degradation test
-		const fake = join(scratch, 'looks-real.custom.backup');
-		writeFileSync(fake, `PGDMP${'\u0000'.repeat(64)}`);
-		const verdict = verifyBackupArtifact(fake, { deep: true, nowMs: AFTER_THE_WRITE_WINDOW });
-		expect(verdict.usable).toBe(false);
-		expect(verdict.reason).toBe('not_an_archive');
-		// The decisive verdict is cached beside the artifact, so the panel and the
-		// update precondition inherit it instead of re-reading the archive.
-		expect(existsSync(`${fake}.verified`)).toBe(true);
-		// A cached verdict is keyed on (size, mtime) and survives a pg_restore
-		// that no longer exists — the cache, not the binary, answers the retry.
-		const cached = verifyBackupArtifact(fake, {
-			deep: true,
-			pgRestoreBin: join(scratch, 'no-such-pg_restore'),
-			nowMs: AFTER_THE_WRITE_WINDOW,
-		});
-		expect(cached.reason).toBe('not_an_archive');
-	});
+	test.if(HAS_PG_RESTORE)(
+		'a file that only LOOKS like an archive is refused (pg_restore is asked)',
+		async () => {
+			const fake = join(scratch, 'looks-real.custom.backup');
+			writeFileSync(fake, `PGDMP${'\u0000'.repeat(64)}`);
+			const verdict = await verifyBackupArtifact(fake, { nowMs: AFTER_THE_WRITE_WINDOW });
+			expect(verdict.usable).toBe(false);
+			expect(verdict.reason).toBe('not_an_archive');
+			// The decisive verdict is cached beside the artifact, so the panel and the
+			// update precondition inherit it instead of re-reading the archive.
+			expect(existsSync(`${fake}.verified`)).toBe(true);
+			// A cached verdict is keyed on (size, mtime) and survives a pg_restore
+			// that no longer exists — the cache, not the binary, answers the retry.
+			const cached = await verifyBackupArtifact(fake, {
+				pgRestoreBin: join(scratch, 'no-such-pg_restore'),
+				nowMs: AFTER_THE_WRITE_WINDOW,
+			});
+			expect(cached.reason).toBe('not_an_archive');
+		},
+	);
 
-	test('an artifact being written RIGHT NOW is not a restore point', () => {
-		// A running pg_dump owns the freshest mtime in the directory, which is
-		// precisely why recency cannot be the test — in EITHER direction. Recency
-		// does not make an artifact good, and it does not make one bad: a blanket
-		// "too fresh to count" window refused every finished backup for its first
-		// 90 seconds, so an operator who took a backup and immediately tried to
-		// update was told there was no restore point (2026-08-30).
-		//
-		// What is asserted is the PROPERTY — a partial write is not a restore
-		// point — and the engine reports what it PROVED. A six-byte stub is not an
-		// archive and is named as such; a genuinely truncated dump is named
-		// `truncated` (backup_restorability_native covers that one against a real
-		// pg_dump). `in_progress` remains only for the host that cannot verify.
-		const growing = join(scratch, 'still-writing.custom.backup');
-		writeFileSync(growing, 'PGDMP…');
-		const verdict = verifyBackupArtifact(growing, {});
-		expect(verdict.usable).toBe(false);
-		expect(verdict.reason).toBe('not_an_archive');
-	});
+	test.if(HAS_PG_RESTORE)(
+		'an artifact being written RIGHT NOW is not a restore point',
+		async () => {
+			// A running pg_dump owns the freshest mtime in the directory, which is
+			// precisely why recency cannot be the test — in EITHER direction. Recency
+			// does not make an artifact good, and it does not make one bad: a blanket
+			// "too fresh to count" window refused every finished backup for its first
+			// 90 seconds, so an operator who took a backup and immediately tried to
+			// update was told there was no restore point (2026-08-30).
+			//
+			// What is asserted is the PROPERTY — a partial write is not a restore
+			// point — and the engine reports what it PROVED. A six-byte stub is not an
+			// archive and is named as such; a genuinely truncated dump is named
+			// `truncated` (backup_restorability_native covers that one against a real
+			// pg_dump). `in_progress` remains only for the host that cannot verify.
+			const growing = join(scratch, 'still-writing.custom.backup');
+			writeFileSync(growing, 'PGDMP…');
+			const verdict = await verifyBackupArtifact(growing, {});
+			expect(verdict.usable).toBe(false);
+			expect(verdict.reason).toBe('not_an_archive');
+		},
+	);
 
-	test('DEGRADATION NEVER REFUSES: no pg_restore, and foreign formats, still count', () => {
+	test('DEGRADATION NEVER REFUSES: no pg_restore, and foreign formats, still count', async () => {
 		// A host with no pg_restore cannot judge its dumps. Refusing every update
 		// there would be an outage caused by the guard, not by a missing backup.
 		const custom = join(scratch, 'unjudgeable.custom.backup');
 		writeFileSync(custom, 'PGDMP-whatever');
-		const blind = verifyBackupArtifact(custom, {
-			deep: true,
+		const blind = await verifyBackupArtifact(custom, {
 			pgRestoreBin: null,
 			nowMs: AFTER_THE_WRITE_WINDOW,
 		});
@@ -263,34 +309,44 @@ describe('restore-point verification (P0-13)', () => {
 		expect(blind.reason).toBe('unverifiable_no_pg_restore');
 		// Nor is a plain-SQL / foreign dump named *.backup refused for a format
 		// this module never claimed to verify: it behaves exactly as before P0-13.
-		const foreign = join(scratch, 'plain-sql.custom.backup');
+		// (Under any name but OUR `.custom.backup` suffix — that one promises the
+		// custom format, and without its magic it is not_an_archive.)
+		const foreign = join(scratch, 'plain-sql.backup');
 		writeFileSync(foreign, '-- PostgreSQL database dump\nSET statement_timeout = 0;\n');
-		const verdict = verifyBackupArtifact(foreign, { deep: true, nowMs: AFTER_THE_WRITE_WINDOW });
+		const verdict = await verifyBackupArtifact(foreign, { nowMs: AFTER_THE_WRITE_WINDOW });
 		expect(verdict.usable).toBe(true);
 		expect(verdict.verified).toBe(false);
 		expect(verdict.reason).toBe('unverifiable_foreign_format');
 		// …and it IS what a "do we have a backup" question finds.
 		expect(
-			newestUsableBackup(scratch, { deep: true, nowMs: AFTER_THE_WRITE_WINDOW }).mtimeMs,
+			(await newestUsableBackup(scratch, { nowMs: AFTER_THE_WRITE_WINDOW })).mtimeMs,
 		).toBeGreaterThan(0);
 	});
 
-	test('a cached TOC verdict does NOT answer a deep question', () => {
-		// The measured fact behind the whole finding: `pg_restore --list` accepts
-		// an archive truncated to 60%. If a cheap verdict could satisfy a deep
-		// caller, the code-update refusal would inherit that blindness.
-		const bin = resolvePgRestore();
-		if (bin === null) return;
-		const file = join(scratch, 'toc-only.custom.backup');
-		writeFileSync(file, `PGDMP${'\u0000'.repeat(32)}`);
-		verifyBackupArtifact(file, { nowMs: AFTER_THE_WRITE_WINDOW }); // cheap pass, writes the sidecar
-		const deep = verifyBackupArtifact(file, {
-			deep: true,
-			pgRestoreBin: join(scratch, 'no-such-pg_restore'),
-			nowMs: AFTER_THE_WRITE_WINDOW,
-		});
-		// It re-ran instead of trusting the cheap sidecar — with an absent binary
-		// that re-run can only answer "unverifiable", never "verified".
-		expect(deep.verified).toBe(false);
-	});
+	test.if(HAS_PG_RESTORE)(
+		'a legacy `verified_toc` sidecar is NOT trusted — the artifact is read again',
+		async () => {
+			// Engines before OPS-1 cached a cheap TOC verdict, and `pg_restore --list`
+			// accepts an archive truncated to 60%. Field installs still carry those
+			// sidecars: trusting one would bring the blindness straight back.
+			const file = join(scratch, 'toc-only.custom.backup');
+			writeFileSync(file, `PGDMP${'\u0000'.repeat(32)}`);
+			const stats = statSync(file);
+			writeFileSync(
+				`${file}.verified`,
+				JSON.stringify({
+					size: stats.size,
+					mtimeMs: stats.mtimeMs,
+					reason: 'verified_toc',
+					verifiedAt: Date.now(),
+				}),
+			);
+			const verdict = await verifyBackupArtifact(file, { nowMs: AFTER_THE_WRITE_WINDOW });
+			// It re-ran instead of trusting the legacy sidecar, and the read decided.
+			expect(verdict.reason).toBe('not_an_archive');
+			expect(verdict.usable).toBe(false);
+			const rewritten = JSON.parse(readFileSync(`${file}.verified`, 'utf-8')) as { reason: string };
+			expect(rewritten.reason).toBe('not_an_archive');
+		},
+	);
 });

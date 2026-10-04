@@ -31,33 +31,38 @@
  * and legacy-key stripping. Item-id counters absorb explicit ids on every
  * save (PHP set_data :1009-1019).
  *
- * POST-SAVE CASCADE (header re-dated 2026-07-07, S2-45): the observer
- * propagation (PHP propagate_to_observers) and the activity log run at the
- * DISPATCH chokepoint after this save returns (api/dispatch.ts save handler)
- * — they are covered, not uncovered; this module deliberately keeps only the
- * data write + TM audit. The dataframe removal cascade (PHP
+ * POST-SAVE CASCADE (re-dated 2026-09-30, CLOSURE_PLAN Step 2): the observer
+ * propagation (PHP propagate_to_observers) is an obligation of the WRITE
+ * CHOKEPOINT (section_record/record_write.ts → obligation_ledger.ts), drained
+ * after this save's COMMIT; the activity log runs at the DISPATCH door after
+ * this save returns (api/dispatch.ts save handler). This module keeps the data
+ * write + TM audit. The dataframe removal cascade (PHP
  * remove_dataframe_data_by_id on item remove) is covered here (S1-05,
  * relations/save.ts removeDataframeDataById). Coverage-state lists live in
  * rewrite/STATUS.md, never in this header.
  */
 
 import { INSTALLED_DATA_LANGS } from '../../../config/config.ts';
-import { getComponentModel, getRenderClass, isMonovalueModel } from '../../components/registry.ts';
+import {
+	getComponentModel,
+	getImportAppendPolicy,
+	getRenderClass,
+	isLangSlicedModel,
+	isMonovalueModel,
+} from '../../components/registry.ts';
+import { adoptStoredItemIds } from '../../concepts/item_value.ts';
+import { isOtherLangItem } from '../../concepts/lang_region.ts';
 import { dataframePairingOf } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import type { DataframePairing } from '../../concepts/subdatum.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts';
-import {
-	absorbComponentItemIds,
-	allocateComponentItemId,
-	appendMatrixKeyItems,
-} from '../../db/matrix_write.ts';
+import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
 import { deferPostTransaction, sql, withTransaction } from '../../db/postgres.ts';
-import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
+	effectiveSaveLang,
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
@@ -71,20 +76,26 @@ import {
 	dataframeTargetsOf,
 } from '../../relations/dataframe.ts';
 import {
+	adoptStoredLocatorIds,
 	applyAddNewElement,
 	applySortByColumn,
 	applySortData,
-	maintainRelationSearchIndex,
+	type RelationInsertContext,
 	removeDataframeDataById,
 	type SortByColumnChange,
 	type SortDataChange,
+	validateRelationInsert,
 } from '../../relations/save.ts';
 import {
-	afterRecordWrite,
-	persistModifiedStamp,
+	persistAppendedKeyItems,
 	persistRecordKeys,
+	removedLocators,
+	type WriteReceipt,
 } from '../../section_record/index.ts';
 import type { Principal } from '../../security/permissions.ts';
+import type { AppendMergeResult, RelationAppendValidator } from './append_merge.ts';
+import { beginSaveHistory, finishSaveHistory } from './bulk_capture.ts';
+import { valueShapeRefusal } from './value_shape.ts';
 
 /** One change from the client (PHP changed_data item). */
 export interface ChangedDataItem {
@@ -127,10 +138,16 @@ export interface SaveRequest {
 	 * BULK import/propagation context (PHP component_common::set_bulk_process_id +
 	 * tm_record::$save_tm — both are globals there, request state here).
 	 *
-	 * `bulkProcessId` stamps every TM row this save writes with the dd800 run that
-	 * caused it, which is what makes a bulk import revertable as ONE operation.
-	 * `saveTm: false` suppresses the TM row entirely (the import UI's "save time
-	 * machine history" checkbox, unchecked → no per-row history for a 10k-row run).
+	 * `bulkProcessId` makes this save part of the dd800 run's UNDO LOG
+	 * (bulk_capture.ts, WC …-bulk-revert-undo-log): a hidden BEFORE image of the
+	 * region it replaces plus its ordinary VISIBLE after-row, both carrying the
+	 * run id, for every key it changes (nothing for a save that changes
+	 * nothing); a record the save materializes gets the run's BIRTH marker, and
+	 * a target its dataframe cascade wipes gets a role-4 snapshot. That is what
+	 * makes a bulk run revertable EXACTLY, as one operation.
+	 * `saveTm: false` suppresses the TM row entirely — OUTSIDE a bulk run only.
+	 * Under a bulk id it is IGNORED (decision D1): an unrecorded bulk write is
+	 * the one write its revert could not undo.
 	 * Absent → normal interactive behavior: audited, unattributed.
 	 */
 	bulkProcessId?: number | null;
@@ -178,6 +195,33 @@ export interface SaveRequest {
 	 * path never answers "allowed" because it could not see who was asking.
 	 */
 	principal?: Principal;
+	/**
+	 * CSV-import APPEND (plan §4): the one `set_data` change is MERGED onto the
+	 * stored items instead of replacing them — per the model's `importAppend`
+	 * descriptor policy (components/types.ts), in `append_merge.ts`, under this
+	 * save's `FOR UPDATE` lock and after the value gates. Stored items are kept
+	 * byte-for-byte (never replayed through the set_data re-validation);
+	 * relations run the insert law with `existingItems = stored + accepted`.
+	 * A `refuse` policy, or any change list other than exactly one `set_data`,
+	 * throws `request.invalid_data` before the transaction opens.
+	 *
+	 * NOT A WIRE FIELD: no rqo, no MCP schema and no tool option carries it —
+	 * every door builds its SaveRequest field by field (dd_core_api save never
+	 * spreads the wire payload), so no remote caller can reach it. Only the
+	 * CSV import executor and tool_import_rdf's executor set it — the census is
+	 * a scan in test/unit/save_append_import_native.test.ts (the gate).
+	 */
+	appendImport?: true | AppendImportOptions;
+}
+
+/** The object form of `SaveRequest.appendImport`. */
+export interface AppendImportOptions {
+	/**
+	 * Item ids the executor PRE-ALLOCATED, by incoming position, so the
+	 * translations of one row share one item id across lang saves. Every other
+	 * incoming id is stripped (a file id is never a stored id).
+	 */
+	preallocatedIds?: readonly (number | undefined)[];
 }
 
 export interface SaveResult {
@@ -187,17 +231,18 @@ export interface SaveResult {
 	data?: unknown[];
 	/**
 	 * Recomputed observer data items whose target IS the saved record (PHP
-	 * observers_data) — filled post-commit by the observer cascade; the
-	 * dispatch save handler merges them into the response so the client
-	 * refreshes info widgets in place.
+	 * observers_data) — filled post-commit by the chokepoint's observer ledger
+	 * (the receipt); EMPTY when a caller's transaction defers the drain past
+	 * this save's return. The dispatch save handler merges them into the
+	 * response so the client refreshes info widgets in place.
 	 */
 	observersData?: unknown[];
 	/**
 	 * INTERNAL, never on the wire: the relation locators present BEFORE this
-	 * save and absent after it. Feeds the observer cascade's removed-target set
-	 * (ObservedChange in ./observers.ts) — those records' mirrors still list the
-	 * saved record and only a visit can drop that dead entry. Absent when the
-	 * save removed nothing, and for every literal (non-relation) component.
+	 * save and absent after it (the ONE rule, obligation_ledger.ts
+	 * removedLocators). The observer cascade computes its own from the
+	 * chokepoint's before-image; this is for the callers that report it. Absent
+	 * when the save removed nothing, and for every literal (non-relation) component.
 	 */
 	removedItems?: unknown[];
 	/**
@@ -207,6 +252,15 @@ export interface SaveResult {
 	 * by ADDRESS instead of guessing it from the echoed page.
 	 */
 	created_section_id?: number;
+	/**
+	 * INTERNAL, never on the wire (appendImport saves only): incoming FILE item
+	 * id (String()-keyed) → the final stored id — the new item's allocated id,
+	 * or the existing item's id for a skipped duplicate. The CSV executor
+	 * re-pairs dataframe frames (`id_key`) through it.
+	 */
+	appendedIdMap?: Map<string, unknown>;
+	/** INTERNAL, never on the wire: incoming entries skipped as already present. */
+	appendSkipped?: number;
 }
 
 /**
@@ -603,23 +657,11 @@ export function unnamedRemoveRefusal(changedData: readonly ChangedDataItem[]): s
 }
 
 /**
- * PHP lang-slice gate — supports_translation && !is_relation (PHP
- * update_data_value :4110-4126/:4169-4180 conditions): only the literal
- * translation-supporting CLASSES (registry classSupportsTranslation, PHP
- * component_string_common subclasses + iri) slice their data by language;
- * relation/locator classes never do. The ontology `translatable` flag alone
- * would mis-slice: an ontology-non-translatable input_text still slices, on the
- * lg-nolan lang PHP normalizes to at instantiation (__construct :677; read-path
- * twin: resolve/component_data.ts effective-lang rule).
- *
- * Exported because the TEMPORAL door (./temporal.ts) applies the same delta in
- * memory and must slice identically — two copies of this predicate would drift
- * into two different notions of "the current language".
+ * The lang-slice gate lives with the component-model facets
+ * (components/registry.ts `isLangSlicedModel`); re-exported here for the
+ * temporal door and the tools that import it from the save path.
  */
-export function isLangSlicedModel(model: string): boolean {
-	const descriptor = getComponentModel(model);
-	return descriptor?.classSupportsTranslation === true && descriptor.resolveData === undefined;
-}
+export { isLangSlicedModel };
 
 /*
  * MONOVALUE models — data is an array but only element 0 is ever read (PHP
@@ -770,15 +812,26 @@ async function cascadeAppliedRemoves(input: {
 	componentTipo: string;
 	userId: number;
 	removes: readonly AppliedRemove[];
+	/** The save's bulk id — null outside a bulk run (the cascade's deletes carry it). */
+	bulkId: number | null;
 }): Promise<void> {
 	if (input.removes.length === 0) return;
 	if (input.model === 'component_dataframe') {
 		const policy = dataframeDeletePolicyOf((await getNode(input.componentTipo))?.properties);
 		if (policy === 'unlink') return;
 		const entries = input.removes.flatMap((remove) => remove.removedEntries);
-		await applyDataframeDeletePolicy(policy, dataframeTargetsOf(entries), input.userId);
+		// Under a bulk id the cascade's wipes carry the run's id: each emptied
+		// target gets its role-4 snapshot, so the run's revert can restore it.
+		await applyDataframeDeletePolicy(
+			policy,
+			dataframeTargetsOf(entries),
+			input.userId,
+			input.bulkId,
+		);
 		return;
 	}
+	// The slots the per-item strip rewrites write no history of their own: the
+	// main's COMPOSED row / pair (bulk_capture.ts) records them, read after this.
 	for (const remove of input.removes) {
 		await removeDataframeDataById(
 			input.table,
@@ -787,12 +840,13 @@ async function cascadeAppliedRemoves(input: {
 			input.componentTipo,
 			Number(remove.targetId),
 			input.userId,
+			input.bulkId,
 		);
 	}
 }
 
 /**
- * The pre-save snapshot the observer removed-set diff compares against: the
+ * The pre-save snapshot the removed-set diff (result.removedItems) compares against: the
  * full slot for a relation column (a shallow copy suffices — every mutation
  * path REBINDS `items`), nothing for a literal (no locators to remove).
  */
@@ -878,7 +932,7 @@ export function applyUpdate(
 		const itemLang = (item as { lang?: string }).lang;
 		if (itemLang === sliceLang) {
 			slice.push(item as Record<string, unknown>);
-		} else if (typeof itemLang === 'string' && itemLang !== '') {
+		} else if (isOtherLangItem(item, sliceLang)) {
 			otherLangs.push(item);
 		}
 	}
@@ -932,9 +986,13 @@ export function applyUpdate(
  * TRANSACTIONAL (S1-02 / DEC-01): the whole change application runs in ONE
  * transaction, so the FOR UPDATE row lock holds to COMMIT and the data write +
  * TM audit row are atomic — a deliberate break with the PHP oracle's
- * last-writer-wins window (DECISIONS.md DEC-01: recommendation (b)). A save
- * that returns ok:false COMMITS whatever cascade steps already ran (matching
- * the PHP no-tx posture for validation failures); a THROWN error rolls back.
+ * last-writer-wins window (DECISIONS.md DEC-01: recommendation (b)). A REFUSED
+ * save (ok:false) leaves NO TRACE: everything it wrote before refusing — the
+ * create-on-first-save record and its counter move, the NEW activity row, TM
+ * rows, item-id absorption — is rolled back when this door owns the
+ * transaction (runSaveAtomically; under a caller's transaction the caller
+ * owns that choice). A THROWN error rolls back as always. The wire answer is
+ * unchanged.
  */
 export async function saveComponentData(request: SaveRequest): Promise<SaveResult> {
 	// Consultation-only sections (Activity dd542, Time Machine dd15, …) are
@@ -981,6 +1039,24 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	if (tldRefusal !== null) {
 		return { ok: false, message: tldRefusal, data: [] };
 	}
+	// component_relation_children OWNS NO DATA (descriptor `derived`, RELATIONS_SPEC
+	// §6.3): a save on it is a set of saves of each CHILD's component_relation_parent
+	// (relations/children_write.ts — its own transaction, node lock, per-child
+	// authorization; WC-2026-10-02-relation-children-write-through). It used to fall
+	// through to the generic engine below, which stored the locators under the
+	// children tipo — bytes no read consults — and answered ok while no child
+	// changed. BEFORE the remove sentinel: a child is removed BY LOCATOR (computed
+	// children carry no item id). The append backstop still runs first — the
+	// model's policy refuses an append import.
+	// Dynamic import: CYCLE-BREAKING at this chokepoint (CONVENTIONS §2 rationale 1)
+	// — the write-through's nested child saves call back into saveComponentData.
+	const dataModel = await getModelByTipo(effectiveRequest.componentTipo);
+	if (dataModel === 'component_relation_children') {
+		await assertAppendImportRequest(effectiveRequest);
+		const { saveRelationChildren } = await import('../../relations/children_write.ts');
+		return saveRelationChildren(effectiveRequest);
+	}
+
 	// THE REMOVE SENTINEL (see unnamedRemoveRefusal above). Same pre-transaction
 	// reasoning: the answer is a property of the incoming changes alone.
 	// A THROW, not `ok:false`: the dispatch save handler wraps an ok:false in
@@ -1000,7 +1076,40 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 		});
 	}
 
-	const result = await withTransaction(() => applySaveComponentData(effectiveRequest));
+	// THE VALUE-SHAPE LAW (value_shape.ts;
+	// WC-2026-10-03-save-refuses-malformed-value-shape): a value the model's
+	// column does not store — a bare scalar, a null item, a non-array set_data,
+	// a string number — is refused here, not stored. Same pre-transaction reasoning: the answer is a property of the
+	// model and the incoming changes alone. BEFORE the value gates
+	// (applyWriteValueGates), which assume the item shape.
+	const shapeRefusal = valueShapeRefusal(
+		dataModel === null ? null : getColumnNameByModel(dataModel),
+		effectiveRequest.changedData,
+	);
+	if (shapeRefusal !== null) {
+		throw new DedaloError('request.invalid_data', {
+			message: `saveComponentData: malformed value for ${dataModel ?? 'unknown model'} '${effectiveRequest.componentTipo}' — ${shapeRefusal}`,
+			coordinates: {
+				tipo: effectiveRequest.componentTipo,
+				model: dataModel ?? 'unknown',
+				section_tipo: effectiveRequest.sectionTipo,
+				section_id: effectiveRequest.sectionId,
+			},
+		});
+	}
+
+	// APPEND BACKSTOP (plan §4), same pre-transaction reasoning: the policy is a
+	// property of the model, the shape a property of the request. The tool
+	// refuses per column first; this holds for any other caller.
+	await assertAppendImportRequest(effectiveRequest);
+
+	// THE RECEIPT (CLOSURE_PLAN Step 2): the write chokepoint's observer ledger
+	// drains after the save's COMMIT — before runSaveAtomically returns, since
+	// withTransaction awaits its commit-only lane — and hands back the recomputed
+	// observer items whose target IS this record (PHP observers_data). Under a
+	// caller's transaction the drain waits for THAT commit, so it stays empty.
+	const receipt: WriteReceipt = { observersData: [] };
+	const result = await runSaveAtomically(effectiveRequest, receipt);
 
 	// Post-commit side effect — deliberately OUTSIDE the transaction (S1-14
 	// posture: clearing a shared cache mid-tx invites repopulation with
@@ -1036,30 +1145,321 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 		// it returns false when there is no ambient transaction, which is the
 		// interactive path, and then the clear runs inline exactly as before.
 		if (!deferPostTransaction(invalidate)) invalidate();
-		// Server-side observers (PHP propagate_to_observers) fire at THIS
-		// chokepoint so every save door propagates — dispatch, imports, MCP
-		// tools, transcription (2026-07-24: the api-layer-only wiring left
-		// import-written rsc387 data with permanently stale hierarchy93
-		// mirrors). Post-commit like the cache invalidation above: observer
-		// mirror writes run their own row updates against committed state.
-		// No-op for the vast majority of components (no `observers` in
-		// ontology properties — the first check inside). Never throws HERE
-		// (no ambient tx at this point on the interactive path); under an
-		// OUTER transaction (import_csv row wrap) a propagation failure
-		// rethrows so the row owner sees the real error (B6, observers.ts).
-		const { propagateToObservers } = await import('./observers.ts');
-		result.observersData = await propagateToObservers(
-			effectiveRequest.componentTipo,
-			effectiveRequest.sectionTipo,
-			Number(effectiveRequest.sectionId),
-			{
-				saved: Array.isArray(result.data) ? result.data : [],
-				removed: Array.isArray(result.removedItems) ? result.removedItems : [],
-			},
-			effectiveRequest.userId,
-		);
+		// Server-side observers (PHP propagate_to_observers) are NOT fired here any
+		// more: the write chokepoint declares every key change to the obligation
+		// ledger (section_record/obligation_ledger.ts), which drains post-commit
+		// for EVERY writer — this door, the restores, the undeletes, the bulk
+		// revert (CLOSURE_PLAN Step 2, CORE-1). What the interactive door still
+		// owes its caller is the same-record observer data, collected on the
+		// receipt. A copy: the receipt belongs to the ledger.
+		result.observersData = [...receipt.observersData];
+	}
+	// A credential (descriptor `secretValue`) never leaves the write engine: the
+	// returned items are what every door echoes (the dispatch save response, the
+	// MCP tools, the change-plan) — masked like every read
+	// (WC-2026-09-30-password-hash-never-served). After the observer cascade
+	// above, which is internal and reads the real items.
+	if (Array.isArray(result.data) && result.data.length > 0) {
+		const { getModelByTipo } = await import('../../ontology/resolver.ts');
+		const model = await getModelByTipo(effectiveRequest.componentTipo);
+		if (model !== null && getComponentModel(model)?.secretValue === true) {
+			const { maskSecretItems } = await import('../../resolve/component_data.ts');
+			return { ...result, data: maskSecretItems(result.data) ?? [] };
+		}
 	}
 	return result;
+}
+
+// ---------------------------------------------------------------------------
+// A REFUSED SAVE LEAVES NO TRACE (2026-09-29).
+//
+// applySaveComponentData answers a refusal with `{ok:false}` — some of them
+// AFTER it already wrote: the create-on-first-save branch materializes a
+// missing record (row + matrix_counter raise + NEW activity row) before the
+// change loop runs, and a `remove` of an absent id then refuses. Committing
+// that left an empty record and a jumped counter for a save that reported
+// failure. The refusal is therefore carried OUT of the transaction as a
+// throw (so it rolls back) and converted back to the unchanged ok:false
+// result at this boundary — the throw never escapes saveComponentData.
+//
+// AMBIENT TRANSACTION (the import doors' per-record wrap): `withTransaction`
+// joins, the throw is caught here, and the refused part's writes stay in the
+// CALLER's transaction — its owner decides (the CSV door throws on ok:false and
+// rolls the row back). Deliberately NOT a SAVEPOINT here: whether the refused
+// part stays is the caller's decision, and a caller that wants it undone opens
+// its own (tool_import_rdf: one per op). Either way a create-on-save keeps its
+// NEW activity row and bulk-run BIRTH marker — create_record.ts decides the
+// birth by the insert statement, never by xmin, which under
+// a savepoint is the SUBtransaction's id (measured 2026-09-29; fixed 2026-10-01).
+// ---------------------------------------------------------------------------
+
+/** The refusal in flight — thrown inside the transaction, caught right here. */
+class SaveRefusedRollback extends DedaloError {
+	readonly result: SaveResult;
+
+	constructor(result: SaveResult) {
+		super('record.save_failed', { message: `saveComponentData refused: ${result.message}` });
+		this.name = 'SaveRefusedRollback';
+		this.result = result;
+	}
+}
+
+/** Apply the save; a refusal becomes a throw so the enclosing transaction rolls it back. */
+async function applyOrThrowRefusal(
+	request: SaveRequest,
+	receipt: WriteReceipt,
+): Promise<SaveResult> {
+	const result = await applySaveComponentData(request, receipt);
+	if (!result.ok) throw new SaveRefusedRollback(result);
+	return result;
+}
+
+/** One save, atomically: committed whole on success, no trace on a refusal. */
+async function runSaveAtomically(request: SaveRequest, receipt: WriteReceipt): Promise<SaveResult> {
+	try {
+		return await withTransaction(() => applyOrThrowRefusal(request, receipt));
+	} catch (error) {
+		if (error instanceof SaveRefusedRollback) return error.result;
+		throw error;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CSV-import APPEND (SaveRequest.appendImport) — the engine half of plan §4.
+// The merge itself is the pure module append_merge.ts (dynamic import,
+// engineering/CONVENTIONS.md §2); these helpers only bind it to the save.
+// ---------------------------------------------------------------------------
+
+/** Whether this save is an append-import save (either form of the flag). */
+function isAppendImport(request: SaveRequest): boolean {
+	const flag: unknown = request.appendImport;
+	return flag === true || (typeof flag === 'object' && flag !== null);
+}
+
+function appendRefusal(request: SaveRequest, why: string): DedaloError {
+	return new DedaloError('request.invalid_data', {
+		message: `saveComponentData: append refused for '${request.componentTipo}' — ${why}`,
+		coordinates: {
+			tipo: request.componentTipo,
+			section_tipo: request.sectionTipo,
+			section_id: request.sectionId,
+		},
+	});
+}
+
+/**
+ * A literal `set_data` replace: the items the component holds after it.
+ *   - LANG-SLICED (PHP set_data_lang :1052-1128): replace ONLY the
+ *     effective-lang slice. Other-lang stored items are kept untouched; stored
+ *     items WITHOUT a lang are dropped (PHP logs and skips lang orphans); every
+ *     new item is persisted as a CLONE stamped with the slice lang (non-objects
+ *     are skipped — PHP set_data_lang accepts only objects).
+ *   - otherwise the whole key is the incoming array.
+ * An id-less incoming item equal (id aside) to the stored item at the same
+ * position KEEPS that item's id (concepts/item_value.ts adoptStoredItemIds):
+ * a CSV cell names no id, and re-minting one made every re-import of an
+ * unchanged file a change — an undo pair plus a visible row per cell — and
+ * unpaired any dataframe frame keyed to the old id (review 2026-09-27).
+ */
+function replaceLiteralItems(
+	stored: unknown[],
+	rawItems: unknown[],
+	langSliced: boolean,
+	effectiveLang: string,
+): unknown[] {
+	if (!langSliced) return adoptStoredItemIds(rawItems, stored);
+	const otherLangs = stored.filter((item) => isOtherLangItem(item, effectiveLang));
+	// The slice's OWN items only: a lang-less orphan is dropped by the replace,
+	// never a position an incoming item could take the id of.
+	const ownLang = stored.filter(
+		(item) =>
+			item !== null &&
+			typeof item === 'object' &&
+			(item as { lang?: unknown }).lang === effectiveLang,
+	);
+	const stamped = rawItems
+		.filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
+		.map((item) => ({ ...item, lang: effectiveLang }));
+	return [...otherLangs, ...adoptStoredItemIds(stamped, ownLang)];
+}
+
+/**
+ * A relation `set_data` replace: the locators the component holds after it.
+ * Every element goes through the insert door (`validateRelationInsert` —
+ * normalized, deduped against the NEW array, stored links exempt from the
+ * constraint gates via the `stored` baseline); then each id-less locator that
+ * IS a stored link keeps that link's id (relations/save.ts
+ * adoptStoredLocatorIds) — else the id safety net re-minted it, an unchanged
+ * CSV/propagate replace wrote an undo pair, and the frames keyed to the old id
+ * were unpaired (review 2026-09-28).
+ */
+async function replaceRelationItems(
+	rawItems: readonly unknown[],
+	stored: unknown[],
+	context: Omit<RelationInsertContext, 'existingItems' | 'storedItems'>,
+): Promise<unknown[]> {
+	const validatedItems: Record<string, unknown>[] = [];
+	for (const element of rawItems) {
+		if (element === null || typeof element !== 'object') {
+			continue; // PHP wraps a scalar into {value}, which then fails the locator law
+		}
+		const safeElement = await validateRelationInsert(element as Record<string, unknown>, {
+			...context,
+			existingItems: validatedItems,
+			storedItems: stored,
+		});
+		if (safeElement !== null) validatedItems.push(safeElement);
+	}
+	return adoptStoredLocatorIds(validatedItems, stored, {
+		translatable: context.translatable === true,
+		pairing: context.pairing != null,
+	});
+}
+
+/**
+ * The BACKSTOP: an append save carries exactly one `set_data` change, on a
+ * model whose descriptor policy is not `refuse`. Throws; no-op otherwise.
+ */
+async function assertAppendImportRequest(request: SaveRequest): Promise<void> {
+	if (!isAppendImport(request)) return;
+	const changes = request.changedData;
+	if (changes.length !== 1 || changes[0]?.action !== 'set_data') {
+		throw appendRefusal(request, 'an append save carries exactly one set_data change');
+	}
+	const refusal = appendPolicyRefusal(await getModelByTipo(request.componentTipo));
+	if (refusal !== null) throw appendRefusal(request, refusal);
+}
+
+/** Why the model refuses append (its policy's reason), or null when it appends. */
+function appendPolicyRefusal(model: string | null): string | null {
+	if (model === null || getComponentModel(model) === undefined) {
+		return `no component descriptor for model '${String(model)}'`;
+	}
+	const policy = getImportAppendPolicy(model);
+	return typeof policy === 'object' ? policy.refuse : null;
+}
+
+/** What the append merge needs from the save it runs inside. */
+interface AppendSaveContext {
+	request: SaveRequest;
+	model: string;
+	column: MatrixJsonbColumn;
+	/** The effective data lang of the save. */
+	lang: string;
+	langSliced: boolean;
+	translatable: boolean;
+	dataframePairing: DataframePairing | null;
+}
+
+/** The merge, bound to this save: policy, equality family, insert law. */
+async function mergeAppendForSave(
+	context: AppendSaveContext,
+	stored: unknown[],
+	incoming: unknown[],
+): Promise<AppendMergeResult> {
+	const { mergeAppend, literalEqualityFamilyOf } = await import('./append_merge.ts');
+	const options = context.request.appendImport;
+	return mergeAppend({
+		policy: getImportAppendPolicy(context.model),
+		family: context.column === 'relation' ? 'relation' : literalEqualityFamilyOf(context.model),
+		stored,
+		incoming,
+		lang: context.lang,
+		langSliced: context.langSliced,
+		preallocatedIds: typeof options === 'object' ? options.preallocatedIds : undefined,
+		// The first-translation rule (getIdFromKey, as the lang-sliced insert
+		// path): a new translation takes the id its sibling languages already
+		// give that slice position, read from the LOCKED stored array.
+		siblingIdAt: context.langSliced
+			? (position) => getIdFromKey(stored, position, [context.lang])
+			: undefined,
+		validateRelation: await relationAppendValidator(context),
+		componentTipo: context.request.componentTipo,
+	});
+}
+
+/**
+ * The relation insert law bound to the save — the length-1 VERDICT door
+ * (`validateRelationInsertVerdict`: constraint refusals throw exactly as
+ * `validateRelationInsert`, a PHP-era drop answers its code + the matched
+ * item). The merge supplies `existingItems = stored + accepted` per call and
+ * that alone drives the dedup and the cap — the INSERT door's context.
+ *
+ * (!) NO `storedItems`. That is the re-persist baseline of a REPLACE, whose
+ * whole array is replayed through the door; append hands the law only
+ * INCOMING items, every one of them a candidate for growth. The baseline's
+ * gate-0 short-circuit compares ADDRESS ONLY (no id_key when pairing is null,
+ * no tag_id, no type), so passing it let a net-new locator that merely shared
+ * a stored target record — a new tag_id on an already-indexed record, a new
+ * frame for another main item — skip every constraint gate, the data_limit
+ * cap included.
+ */
+async function relationAppendValidator(
+	context: AppendSaveContext,
+): Promise<RelationAppendValidator> {
+	const { validateRelationInsertVerdict } = await import('../../relations/save.ts');
+	const { request } = context;
+	return (raw, existingItems) =>
+		validateRelationInsertVerdict(raw, {
+			componentTipo: request.componentTipo,
+			model: context.model,
+			hostSectionTipo: request.sectionTipo,
+			hostSectionId: request.sectionId,
+			translatable: context.translatable,
+			lang: context.lang,
+			existingItems: [...existingItems],
+			pairing: context.dataframePairing,
+			principal: request.principal,
+		});
+}
+
+/**
+ * Whether an append merge changed anything: the result is not the stored
+ * array item-for-item BY REFERENCE (every policy keeps unchanged stored items
+ * by reference and replaces a changed one with a new object), or the id map
+ * needs an id allocated on a matched id-less item.
+ */
+function appendMergeChanged(stored: readonly unknown[], outcome: AppendMergeResult): boolean {
+	if (outcome.items.length !== stored.length) return true;
+	if (outcome.items.some((item, index) => item !== stored[index])) return true;
+	return outcome.idMapPlan.some((entry) => entry.target.kind === 'new');
+}
+
+/**
+ * One append `set_data` change: the merge, and — for a NO-OP append (every
+ * incoming item a duplicate / empty / dropped) — the finished result, so the
+ * save writes NOTHING: no key rewrite, no dd197/dd201 bump, no RAG event, no
+ * Time Machine row. Re-importing the same file changes nothing (plan §0/§7),
+ * and the dd800 bulk-revert set is not polluted with identity rows. The one
+ * exception is a matched id-less stored item (PHP-era data): its id must be
+ * allocated for the id map, which is a real change and takes the normal write.
+ * `storedValue` is the echo of an unchanged save (the full dataframe slot).
+ */
+async function appendChangeStep(
+	context: AppendSaveContext,
+	stored: unknown[],
+	incoming: unknown[],
+	storedValue: unknown[],
+): Promise<{ outcome: AppendMergeResult; noop: SaveResult | null }> {
+	const outcome = await mergeAppendForSave(context, stored, incoming);
+	if (appendMergeChanged(stored, outcome)) return { outcome, noop: null };
+	const noop: SaveResult = { ok: true, message: 'ok', data: storedValue };
+	await attachAppendOutcome(noop, outcome);
+	return { outcome, noop };
+}
+
+/**
+ * The append save's internal outputs — never on the wire. Called AFTER the id
+ * allocation loop, so every new item's final id is readable.
+ */
+async function attachAppendOutcome(
+	result: SaveResult,
+	outcome: AppendMergeResult | null,
+): Promise<void> {
+	if (outcome === null) return;
+	const { resolveAppendedIdMap } = await import('./append_merge.ts');
+	result.appendedIdMap = resolveAppendedIdMap(outcome.idMapPlan);
+	result.appendSkipped = outcome.skipped.filter((skip) => skip.reason === 'duplicate').length;
 }
 
 /** The transactional body of saveComponentData (see the wrapper above). */
@@ -1100,7 +1500,44 @@ async function applyWriteValueGates(
 	return changedData;
 }
 
-async function applySaveComponentData(request: SaveRequest): Promise<SaveResult> {
+/** One component key read under the save's row lock (see applySaveComponentData). */
+interface LockedComponentKey {
+	/** The stored value as the change loop consumes it: always an array. */
+	items: unknown[];
+	/** The stored value verbatim — `undefined` when the key (or its column) is absent. */
+	image: unknown;
+}
+
+/**
+ * `SELECT … FOR UPDATE` of one component key — null when the ROW does not
+ * exist. The `?` probe tells an absent key from a stored JSON null (Bun maps
+ * both to JS null): the undo log records absence as absence.
+ */
+async function lockComponentKey(
+	table: string,
+	column: MatrixJsonbColumn,
+	componentTipo: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<LockedComponentKey | null> {
+	const rows = (await sql.unsafe(
+		`SELECT ("${column}" ? $3) AS present, "${column}"->$3 AS items FROM "${table}"
+		 WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
+		[sectionTipo, sectionId, componentTipo],
+	)) as { present: boolean | null; items: unknown }[];
+	const row = rows[0];
+	if (row === undefined) return null;
+	const raw = row.items;
+	return {
+		items: Array.isArray(raw) ? raw : raw == null ? [] : [raw],
+		image: row.present === true ? raw : undefined,
+	};
+}
+
+async function applySaveComponentData(
+	request: SaveRequest,
+	receipt: WriteReceipt,
+): Promise<SaveResult> {
 	const { componentTipo, sectionTipo, sectionId, lang, userId } = request;
 	const callerDataframe = request.callerDataframe ?? null;
 
@@ -1137,7 +1574,9 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 
 	// PHP lang-slice gate (isLangSlicedModel above — shared with the temporal door).
 	const langSliced = isLangSlicedModel(model);
-	const effectiveLang = translatable || model === 'component_iri' ? lang : 'lg-nolan';
+	// PHP's effective lang (resolver.ts effectiveSaveLang): a transliterable
+	// (with_lang_versions) component keeps the request lang like a translatable one.
+	const effectiveLang = await effectiveSaveLang(componentTipo, model, lang);
 
 	// SERIALIZED read-modify-write (S1-02, DEC-01: deliberately STRONGER than
 	// the PHP oracle, whose save flow has no lock/tx and loses one of two
@@ -1147,13 +1586,8 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// saves on the same record queue instead of clobbering each other's items,
 	// and the data write + Time Machine audit row land atomically. No wire
 	// change; nothing in the response shape depends on this.
-	let items: unknown[] = [];
-	const lockRows = (await sql.unsafe(
-		`SELECT "${column}"->'${componentTipo}' AS items FROM "${table}"
-		 WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
-		[sectionTipo, sectionId],
-	)) as { items: unknown[] | unknown | null }[];
-	if (lockRows.length === 0) {
+	let locked = await lockComponentKey(table, column, componentTipo, sectionTipo, sectionId);
+	if (locked === null) {
 		// PHP set_dato upserts: saving component data to a section_id whose matrix
 		// row does not exist yet CREATES the record (class.section_record::save_key_data
 		// → matrix INSERT), rather than erroring. Mirror that so an edit-mode save on a
@@ -1162,24 +1596,34 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		// >= 2) were already validated by the dispatch save handler, so the create is
 		// authorized. The create is CONFLICT-TOLERANT and the row is RE-LOCKED after it
 		// (S1-02 Wave-2 correction: the upsert branch would otherwise lock nothing when
-		// a concurrent save materializes the row first).
+		// a concurrent save materializes the row first). Under a bulk id the create
+		// writes the run's BIRTH marker — only when it really inserted the row.
 		const { createSectionRecord } = await import('./create_record.ts');
 		await createSectionRecord(sectionTipo, userId, new Date(), Number(sectionId), {
 			conflictTolerant: true,
+			bulkProcessId: request.bulkProcessId,
 		});
-		const relockRows = (await sql.unsafe(
-			`SELECT "${column}"->'${componentTipo}' AS items FROM "${table}"
-			 WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
-			[sectionTipo, sectionId],
-		)) as { items: unknown[] | unknown | null }[];
-		const relocked = relockRows[0]?.items;
-		items = Array.isArray(relocked) ? relocked : relocked == null ? [] : [relocked];
-	} else {
-		const rawItems = lockRows[0]?.items;
-		items = Array.isArray(rawItems) ? rawItems : rawItems == null ? [] : [rawItems];
+		locked = await lockComponentKey(table, column, componentTipo, sectionTipo, sectionId);
 	}
+	let items: unknown[] = locked?.items ?? [];
+	// THE SAVE'S HISTORY (bulk_capture.ts): its BEFORE is cut and CLONED here,
+	// under the lock and before any branch below mutates a stored item in place.
+	const history = await beginSaveHistory({
+		bulkProcessId: request.bulkProcessId,
+		target: { table, sectionTipo, sectionId },
+		column,
+		componentTipo,
+		model,
+		sliced: langSliced,
+		translatable,
+		lang: effectiveLang,
+		requestLang: lang,
+		userId,
+		lockedImage: locked?.image,
+		callerMain: callerDataframe?.main_component_tipo ?? null,
+	});
 
-	// PRE-SAVE SNAPSHOT for the observer cascade (2026-08-06). Taken here, on
+	// PRE-SAVE SNAPSHOT for result.removedItems (2026-08-06). Taken here, on
 	// the FULL slot under the lock and before any narrowing, so it matches what
 	// `result.data` reports on both the dataframe and non-dataframe paths. A
 	// shallow copy suffices: every mutation path REBINDS `items` (applyUpdate
@@ -1226,7 +1670,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// instead of silently persisting garbage (the project's "uncovered paths
 	// throw loudly" rule). Frames written with NO caller context at all —
 	// maintenance, import — keep their own doors and never reach here.
-	if (model === 'component_dataframe' && callerDataframe !== null && validPairing === null) {
+	if (isDataframeSave && validPairing === null) {
 		return {
 			ok: false,
 			message:
@@ -1237,13 +1681,10 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// Absorb explicit item ids into the meta counter BEFORE any allocation
 	// (PHP set_data :1009-1019 runs the raise on every write, so a counter can
 	// never lag behind seeded/imported ids and hand out a duplicate).
-	await absorbComponentItemIds(
-		table,
-		sectionTipo,
-		sectionId,
-		componentTipo,
-		isDataframeSave ? fullSlotItems : items,
-	);
+	// The whole stored value as the caller sees it echoed: the full slot for a
+	// dataframe save, the stored array otherwise (read before the change loop).
+	const storedValue = isDataframeSave ? fullSlotItems : items;
+	await absorbComponentItemIds(table, sectionTipo, sectionId, componentTipo, storedValue);
 
 	// Split changes: updates mutate the read array; inserts are applied as
 	// ATOMIC single-statement appends (no read-modify-write), so concurrent
@@ -1254,6 +1695,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	let hasReplacingInserts = false;
 	const monovalue = isMonovalueModel(model);
 	let createdSectionId: number | null = null;
+	let appendOutcome: AppendMergeResult | null = null;
 	for (const change of changedData) {
 		if (
 			change.action !== 'update' &&
@@ -1328,6 +1770,30 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// import multi-language bug: the CSV executor saves one language at a
 			// time, and each save wiped the previous language's items.
 			const rawItems = Array.isArray(change.value) ? (change.value as unknown[]) : [];
+			// CSV-import APPEND: merge onto the stored items (read under the lock
+			// above, value gates already applied) instead of the replace below —
+			// stored items are never replayed through its re-validation.
+			if (isAppendImport(request)) {
+				const step = await appendChangeStep(
+					{
+						request,
+						model,
+						column,
+						lang: effectiveLang,
+						langSliced,
+						translatable,
+						dataframePairing,
+					},
+					items,
+					rawItems,
+					storedValue,
+				);
+				appendOutcome = step.outcome;
+				if (step.noop !== null) return step.noop;
+				items = step.outcome.items;
+				hasRemovals = true; // full-array write + id allocation for the new items
+				continue;
+			}
 			// RELATION elements are NORMALIZED here, not stored raw. PHP's bulk-replace
 			// is not a raw assignment either: component_common::set_data (:997) runs
 			// validate_data_element over EVERY element, which is the same normalizer the
@@ -1354,46 +1820,18 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// a different question (the dedup scope, see above).
 			const storedItemsBaseline = items.slice();
 			if (column === 'relation') {
-				const { validateRelationInsert } = await import('../../relations/save.ts');
-				const validatedItems: unknown[] = [];
-				for (const element of rawItems) {
-					if (element === null || typeof element !== 'object') {
-						continue; // PHP wraps a scalar into {value}, which then fails the locator law
-					}
-					const safeElement = await validateRelationInsert(element as Record<string, unknown>, {
-						componentTipo,
-						model,
-						hostSectionTipo: sectionTipo,
-						hostSectionId: sectionId,
-						translatable,
-						lang: effectiveLang,
-						existingItems: validatedItems,
-						storedItems: storedItemsBaseline,
-						pairing: dataframePairing,
-						principal: request.principal,
-					});
-					if (safeElement !== null) validatedItems.push(safeElement);
-				}
-				items = validatedItems;
-			} else if (langSliced) {
-				// PHP set_data_lang (:1052-1128): replace ONLY the effective-lang
-				// slice. Other-lang stored items are kept untouched; stored items
-				// WITHOUT a lang are dropped (PHP logs and skips lang orphans); every
-				// new item is persisted as a CLONE stamped with the slice lang
-				// (non-objects are skipped — PHP set_data_lang accepts only objects).
-				const otherLangs = items.filter((item) => {
-					if (item === null || typeof item !== 'object') return false;
-					const itemLang = (item as { lang?: string }).lang;
-					return typeof itemLang === 'string' && itemLang !== '' && itemLang !== effectiveLang;
+				items = await replaceRelationItems(rawItems, storedItemsBaseline, {
+					componentTipo,
+					model,
+					hostSectionTipo: sectionTipo,
+					hostSectionId: sectionId,
+					translatable,
+					lang: effectiveLang,
+					pairing: dataframePairing,
+					principal: request.principal,
 				});
-				const stamped = rawItems
-					.filter(
-						(item): item is Record<string, unknown> => item !== null && typeof item === 'object',
-					)
-					.map((item) => ({ ...item, lang: effectiveLang }));
-				items = [...otherLangs, ...stamped];
 			} else {
-				items = rawItems;
+				items = replaceLiteralItems(items, rawItems, langSliced, effectiveLang);
 			}
 			hasRemovals = true; // force the full-array write path
 			continue;
@@ -1497,29 +1935,8 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 					(value as { id?: unknown }).id = resolved;
 				}
 			}
-			// component_relation_children is a READ-ONLY projection of the target
-			// records' component_relation_parent (PHP class.component_relation_children
-			// get_data :113). A link whose target record does not exist cannot create
-			// the backing parent relation, so PHP's save fails and the client's
-			// link_record sees an unchanged pagination.total → returns false. Reject
-			// the insert here to honor that contract (the full children→parent write
-			// redirect stays uncovered; this only gates the non-existent-target case).
-			if (model === 'component_relation_children') {
-				const targetSectionTipo = (value as { section_tipo?: unknown }).section_tipo;
-				const targetSectionId = (value as { section_id?: unknown }).section_id;
-				if (typeof targetSectionTipo === 'string') {
-					const targetTable = await getMatrixTableFromTipo(targetSectionTipo);
-					if (targetTable !== null) {
-						const { readMatrixRecord } = await import('../../db/matrix.ts');
-						const targetRecord = await readMatrixRecord(
-							targetTable,
-							targetSectionTipo,
-							Number(targetSectionId),
-						);
-						if (targetRecord === null) continue; // non-existent target — drop the link
-					}
-				}
-			}
+			// (component_relation_children never reaches this engine: saveComponentData
+			// hands it to the write-through, relations/children_write.ts.)
 			if ((value as { id?: unknown }).id === undefined || (value as { id?: unknown }).id === null) {
 				(value as { id: number }).id = await allocateComponentItemId(
 					table,
@@ -1538,16 +1955,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 				// slot is a read-modify-write under the row lock, so it takes the
 				// full-array persist below, never the atomic concatenation.
 				items = langSliced
-					? [
-							...items.filter((item) => {
-								if (item === null || typeof item !== 'object') return false;
-								const itemLang = (item as { lang?: string }).lang;
-								return (
-									typeof itemLang === 'string' && itemLang !== '' && itemLang !== effectiveLang
-								);
-							}),
-							value,
-						]
+					? [...items.filter((item) => isOtherLangItem(item, effectiveLang)), value]
 					: [value];
 				hasReplacingInserts = true;
 				continue;
@@ -1668,6 +2076,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			writeTarget,
 			[{ column, key: componentTipo, value: merged }],
 			auditStamp,
+			{ actor: userId, receipt },
 		);
 		items = merged ?? [];
 	} else if (hasUpdates) {
@@ -1677,27 +2086,21 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			writeTarget,
 			[{ column, key: componentTipo, value: items }],
 			auditStamp,
+			{ actor: userId, receipt },
 		);
 	} else if (atomicInserts.length > 0) {
 		// Pure inserts: atomic concatenation — concurrent inserts both survive.
-		// (Deliberate divergence from the read-modify-write chokepoint shape;
-		// the modified stamps are refreshed right after, like every PHP save.)
-		// The statement lives in matrix_write.ts (T2): this file issues no DML.
-		await appendMatrixKeyItems(table, sectionTipo, sectionId, column, componentTipo, atomicInserts);
-		if (auditStamp !== false) await persistModifiedStamp(writeTarget, auditStamp);
-		// THE OBLIGATIONS of the one branch that does NOT go through persistRecordKeys
-		// (P1-4, 2026-08-28; unified on the chokepoint's own hook P1-8, 2026-09-03).
-		// This path writes the component key with a raw atomic concatenation, so it
-		// reaches neither the chokepoint's cache invalidation, nor the revocation
-		// seam (the branch a FIRST dd244 grant takes — an `insert` onto a record
-		// that carried no flag yet, i.e. exactly a promotion), nor the RAG index
-		// event. It declares all three through the SAME hook every chokepoint
-		// writer ends in, instead of remembering them one by one; persistModifiedStamp
-		// above is stamp-only (rag: null), so the content write fires the index here.
-		await afterRecordWrite(writeTarget, {
-			door: 'saveComponentData atomic insert',
-			touchedKeys: [componentTipo],
-			rag: 'index',
+		// (Deliberate divergence from the read-modify-write chokepoint shape.) The
+		// chokepoint's APPEND entry carries every obligation of the branch: the
+		// modified stamps and the derived relation_search in one UPDATE after the
+		// append, then the post-write hook (the cache fan-out, the revocation seam
+		// — the branch a FIRST dd244 grant takes, an `insert` onto a record that
+		// carried no flag yet, i.e. exactly a promotion — the RAG index event and
+		// the observer ledger). The statements live in matrix_write.ts (T2): this
+		// file issues no DML.
+		await persistAppendedKeyItems(writeTarget, column, componentTipo, atomicInserts, auditStamp, {
+			actor: userId,
+			receipt,
 		});
 	}
 
@@ -1715,101 +2118,53 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		componentTipo,
 		userId,
 		removes: appliedRemoves,
+		bulkId: history.bulkId,
 	});
 
 	// relation_search ancestor index (PHP save_component_dato: for LEGACY
 	// component_autocomplete_hi, the save ALSO writes relation_search[tipo] =
-	// the recursive PARENT locators of every stored target — the hierarchical
-	// search index ('search Spain matches Madrid'). Empty data clears the key.
-	{
-		const { getNode } = await import('../../ontology/resolver.ts');
-		const storedModel = (await getNode(componentTipo))?.model;
-		if (storedModel === 'component_autocomplete_hi') {
-			await maintainRelationSearchIndex(table, sectionTipo, sectionId, componentTipo, items);
-		}
-	}
+	// the recursive PARENT locators of every stored target). It is DERIVED by the
+	// write chokepoint in the SAME UPDATE as the value (record_write.ts §3e), for
+	// every branch above and for every other writer of a relation key.
 
-	// Time Machine audit with the NEW data snapshot (PHP save :2097-2135).
-	// PHP stores get_time_machine_data_to_save() = get_data_lang(): the
-	// EFFECTIVE-lang slice for the translation-supporting literal classes
-	// (:1297-1332 no-slices when supports_translation is false), the full array
-	// for everything else — stamped with the component's normalized lang.
-	const tmSnapshot = langSliced
-		? items.filter(
-				(item) =>
-					item !== null &&
-					typeof item === 'object' &&
-					(item as { lang?: string }).lang === effectiveLang,
-			)
-		: items;
-	// saveTm:false suppresses the audit row (the bulk-import opt-out — PHP
-	// tm_record::$save_tm); bulkProcessId attributes it to the dd800 run.
-	if (request.saveTm !== false) {
-		await recordTimeMachine(
-			{
-				sectionTipo,
-				sectionId,
-				componentTipo,
-				lang: langSliced ? effectiveLang : lang,
-				userId,
-				data: tmSnapshot,
-				bulkProcessId: request.bulkProcessId ?? null,
-			},
-			dbTimestamp(),
-		);
-	}
+	// THE SAVE'S HISTORY — TWO LANES, one of two laws (bulk_capture.ts, WC
+	// …-bulk-revert-undo-log "two lanes"): under a bulk id the undo-log pairs
+	// under the MAIN's tipo, one per lane touched, whatever `saveTm` says
+	// (decision D1); otherwise the ordinary visible rows — the saved language's
+	// value, plus the lg-nolan row (lg-nolan value + every slot's frames) when
+	// the save changed it — unless the caller opted out (`saveTm: false` — PHP
+	// tm_record::$save_tm). A SLOT save writes no row under the slot: it writes
+	// the lg-nolan row of the main(s) it changed. Read after the cascade and the
+	// relation_search write, so the images are the save's final state.
+	await finishSaveHistory(history, {
+		saveTm: request.saveTm !== false,
+		timestamp: dbTimestamp(),
+	});
 
 	// RAG re-index event (S2-13): PHP save() enqueues the record for re-indexing
 	// on every component save (class.section_record.php:988). Since P1-8
-	// (2026-09-03) it is an obligation of the write chokepoint itself — the two
-	// persistRecordKeys branches above fire it from afterRecordWrite, and the
-	// atomic-insert branch fires the same hook explicitly — so no branch of this
+	// (2026-09-03) it is an obligation of the write chokepoint itself — every
+	// branch above (persistRecordKeys, persistAppendedKeyItems) fires it from
+	// afterRecordWrite — so no branch of this
 	// save, and no other caller of the chokepoint, can forget it. The enqueue
 	// joins this transaction (the queue writes through the ambient sql handle),
 	// so a rolled-back save never leaves a marker; with RAG disabled the hook is
 	// null — zero cost.
 
 	const result: SaveResult = { ok: true, message: 'ok', data: items };
+	// After the id allocation above: every new appended item now has its id.
+	await attachAppendOutcome(result, appendOutcome);
 	if (createdSectionId !== null) {
 		result.created_section_id = createdSectionId;
 	}
-	// The locators this save DROPPED — the observer cascade's removed-target
-	// set (see ObservedChange in ./observers.ts). Keyed on
-	// (section_tipo, section_id), NEVER on the item id: an `update` that
-	// retargets a locator replaces the object IN PLACE keeping its id, so an
-	// id-keyed diff would see neither the old target leaving nor the new one
-	// arriving.
-	//
-	// BOTH SIDES ARE THE FULL SLOT. `preSaveItems` is snapshotted before the
-	// dataframe narrowing, and on the dataframe path `items` is REBOUND to
-	// `merged` (the caller's subset merged back over its untouched siblings)
-	// before we get here — so this never compares a full slot against a
-	// caller subset and reports every sibling as removed. dd490 frames are
-	// excluded on top of that: they are pairing records, not edges, exactly as
-	// getStoredWithReferences excludes them from the seed.
-	if (preSaveItems.length > 0) {
-		const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
-		const locatorKey = (entry: unknown): string | null => {
-			if (entry === null || typeof entry !== 'object') return null;
-			const locator = entry as { section_tipo?: unknown; section_id?: unknown; type?: unknown };
-			if (typeof locator.section_tipo !== 'string' || locator.section_id === undefined) return null;
-			if (locator.type === DATAFRAME_RELATION_TYPE) return null;
-			return `${locator.section_tipo}|${String(locator.section_id)}`;
-		};
-		const postKeys = new Set<string>();
-		for (const entry of items) {
-			const key = locatorKey(entry);
-			if (key !== null) postKeys.add(key);
-		}
-		const removed: unknown[] = [];
-		const seenRemoved = new Set<string>();
-		for (const entry of preSaveItems) {
-			const key = locatorKey(entry);
-			if (key === null || postKeys.has(key) || seenRemoved.has(key)) continue;
-			seenRemoved.add(key);
-			removed.push(entry);
-		}
-		if (removed.length > 0) result.removedItems = removed;
-	}
+	// The locators this save DROPPED, for the callers that report them (the
+	// observer cascade itself no longer reads this: the chokepoint's ledger
+	// computes the removed set from the before-image it read under the row lock).
+	// THE ONE RULE (section_record/obligation_ledger.ts removedLocators): keyed on
+	// the target, dd490 frames excluded. BOTH SIDES ARE THE FULL SLOT:
+	// `preSaveItems` is snapshotted before the dataframe narrowing, and on the
+	// dataframe path `items` is REBOUND to `merged` before we get here.
+	const removed = removedLocators(preSaveItems, items);
+	if (removed.length > 0) result.removedItems = removed;
 	return result;
 }

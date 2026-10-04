@@ -54,19 +54,28 @@ import {
 	FILTER_MASTER_COMPONENT as USERS_FILTER_MASTER_COMPONENT,
 } from '../security/permissions.ts';
 import { bareBrowseCount, scopedBrowseCount } from './bare_count.ts';
-import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';
 import { conformFilter } from './conform.ts';
 import { composeContains, relationProbeGroups } from './containment.ts';
+import { planDeepFilters } from './deep_path.ts';
 import {
 	assertValidDataColumn,
 	assertValidLang,
 	assertValidTipo,
 	assertValidTipoOrColumn,
+	resolveSqlDataTipo,
 } from './identifier_gate.ts';
-import { ParamsCollector } from './params.ts';
+import {
+	NamedTokenCollector,
+	ParamsCollector,
+	resolveBuilderResult,
+	substituteUsed,
+} from './params.ts';
 
 const DEFAULT_DATA_LANG = readString('DATA_LANG');
+
+/** Named-token prefix of a filter chain's hop ACL (`_ACL1_`…, NamedTokenCollector). */
+const HOP_ACL_TOKEN_PREFIX = 'ACL';
 
 /** Default SELECT data columns (PHP trait.select.php:122 — relation_search excluded). */
 const DEFAULT_SELECT_COLUMNS = [
@@ -94,36 +103,6 @@ export interface BuiltQuery {
 	params: unknown[];
 }
 
-/** Resolve a BuilderResult into an SQL fragment string (or '' when empty). */
-function resolveBuilderResult(result: BuilderResult, params: ParamsCollector): string {
-	if (result === false) return '';
-	if (result.kind === 'fragment') {
-		return params.substitute(result.sentence, result.tokenValues);
-	}
-	// compound: recurse and join
-	const parts = result.items
-		.map((item) => resolveBuilderResult(item, params))
-		.filter((part) => part !== '');
-	if (parts.length === 0) return '';
-	const joiner = result.op === '$and' ? '\n AND ' : '\n OR ';
-	return parts.length === 1 ? (parts[0] as string) : `( ${parts.join(joiner)} )`;
-}
-
-/**
- * The recursive filter parser (PHP filter_parser, trait.where.php:281):
- * AND/OR join; NOT/NAND wrap in NOT(...AND...); NOR wraps NOT(...OR...).
- */
-/** Gather every leaf's join fragments (dedup by alias, first wins). */
-function collectJoins(node: ConformedFilter, sink: Map<string, string>): void {
-	if (node.kind === 'leaf') {
-		for (const join of node.joins ?? []) {
-			if (!sink.has(join.alias)) sink.set(join.alias, join.sql);
-		}
-		return;
-	}
-	for (const item of node.items) collectJoins(item, sink);
-}
-
 /**
  * PUBLIC: render one conformed filter tree to a WHERE fragment, registering
  * its values on the given collector. Consumers with their OWN query shells
@@ -133,20 +112,9 @@ export function renderConformedFilter(node: ConformedFilter, params: ParamsColle
 	return parseConformedFilter(node, params);
 }
 
-function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): string {
-	if (node.kind === 'leaf') {
-		return resolveBuilderResult(node.fragment, params);
-	}
-	const fragments = node.items
-		.map((item) => {
-			const parsed = parseConformedFilter(item, params);
-			// Nested groups get wrapped in parentheses (PHP :315-318).
-			return item.kind === 'group' && parsed !== '' ? `( ${parsed} )` : parsed;
-		})
-		.filter((sqlFragment) => sqlFragment !== '');
-	if (fragments.length === 0) return '';
-
-	const operator = node.op.slice(1).toUpperCase(); // '$and' → 'AND'
+/** Join a group's rendered fragments by its boolean operator. */
+function joinGroupFragments(op: string, fragments: string[]): string {
+	const operator = op.slice(1).toUpperCase(); // '$and' → 'AND'
 	switch (operator) {
 		case 'AND':
 			return fragments.join('\n AND ');
@@ -160,6 +128,45 @@ function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): s
 		default:
 			return '';
 	}
+}
+
+/** deep_path.ts semi-join: the shell around the innermost leaf predicate. */
+function parseSemijoinNode(
+	node: Extract<ConformedFilter, { kind: 'semijoin' }>,
+	params: ParamsCollector,
+): string {
+	const inner = resolveBuilderResult(node.inner, params);
+	if (inner === '') return '';
+	// The hop ACL's named tokens ride open/close AND the inner predicate (the
+	// deep '!!' aggregate carries the last hop's ACL); bind only those present.
+	return substituteUsed(params, `${node.open}${inner}${node.close}`, node.tokens);
+}
+
+/**
+ * The recursive filter parser (PHP filter_parser, trait.where.php:281):
+ * AND/OR join; NOT/NAND wrap in NOT(...AND...); NOR wraps NOT(...OR...).
+ */
+function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): string {
+	if (node.kind === 'leaf') {
+		return resolveBuilderResult(node.fragment, params);
+	}
+	if (node.kind === 'semijoin') return parseSemijoinNode(node, params);
+	if (node.kind === 'deep') {
+		// planDeepFilters replaces every deep node before rendering; one reaching
+		// here would be rendered as NOTHING, i.e. silently widen the search.
+		throw new DedaloError('internal.invariant', {
+			message: 'search assembler: a deep filter leaf reached rendering unplanned (deep_path.ts)',
+		});
+	}
+	const fragments = node.items
+		.map((item) => {
+			const parsed = parseConformedFilter(item, params);
+			// Nested groups get wrapped in parentheses (PHP :315-318).
+			return item.kind === 'group' && parsed !== '' ? `( ${parsed} )` : parsed;
+		})
+		.filter((sqlFragment) => sqlFragment !== '');
+	if (fragments.length === 0) return '';
+	return joinGroupFragments(node.op, fragments);
 }
 
 /**
@@ -191,6 +198,8 @@ async function buildOrderClauses(
 	selectExtra: string[],
 	joinSink: Map<string, string>,
 	scope?: SqlFrontierScope,
+	/** The MAIN matrix table — what the root step's component key is judged on. */
+	mainTable?: string,
 ): Promise<string[]> {
 	const orderClauses: string[] = [];
 	// PHP build_sql_query_order iterates sqo->order and tolerates a SINGLE order
@@ -270,6 +279,27 @@ async function buildOrderClauses(
 			continue;
 		}
 
+		// THE ROOT STEP (closure Step 3, SEC-1): `path[0]` names the MAIN
+		// section's own component — the sort key of a single-step order, the hop
+		// component of a multi-hop one. buildJoinChain keys every hop from index
+		// 1 on and never this one, so a non-admin sorted her own records by a
+		// component she holds 0 on (the relative order IS a comparison oracle).
+		// Refused → the entry is DROPPED, exactly as a refused hop below: the rows
+		// and the count are unchanged, the ORDER BY falls back to the section_id
+		// default. Loud through noteFrontierRefusal (conform.ts rootStepKey).
+		if (scope?.principal !== undefined && mainTable !== undefined) {
+			const { rootOrderStepAllowed } = await import('./conform.ts');
+			if (
+				!(await rootOrderStepAllowed(
+					scope,
+					path as { section_tipo?: string; component_tipo?: string }[],
+					mainTable,
+				))
+			) {
+				continue;
+			}
+		}
+
 		// Multi-hop ORDER path: sort by a RELATED section's component — build
 		// the same join chain the filter leaves use and extract the sort key
 		// from the LAST join alias (PHP trait.order case d).
@@ -338,8 +368,8 @@ async function buildOrderClauses(
 		const lang = langRaw ?? (translatable ? DEFAULT_DATA_LANG : 'lg-nolan');
 		// component_alias (WC-020): the sort value lives under the TARGET's key
 		// (the emitted order path carries the alias tipo; execution hops here).
-		const { resolveDataTipo } = await import('../ontology/alias.ts');
-		const orderDataTipo = await resolveDataTipo(componentTipo);
+		// Re-gated as an identifier of its own (SURF-1): it names the sort alias too.
+		const orderDataTipo = await resolveSqlDataTipo(componentTipo, 'order');
 		const sortAlias = `${orderDataTipo}_order`;
 
 		// Per-family order-select (PHP $model::build_order_select).
@@ -491,6 +521,16 @@ export interface SearchOptions {
 	 * principal only when it intends user-scoped results.
 	 */
 	principal?: Principal;
+	/**
+	 * THE SUBDATUM READ FLOOR (closure Step 3, SEC-1) — `${section}_${component}`
+	 * pairs this search may FILTER and SORT on although the principal's profile
+	 * holds 0 on them: the components a Gate-A-verified source component's
+	 * request_config `ddo_map` names (a portal / autocomplete searching its
+	 * target section — PHP get_subdatum's floor). Computed SERVER-SIDE by the
+	 * caller from the verified source (section/read_source.ts / read_facade.ts);
+	 * NEVER from the client payload, never from ALS. Absent = no floor.
+	 */
+	readFloor?: ReadonlySet<string>;
 	/**
 	 * Selection-identity projection: SELECT only section_id + section_tipo
 	 * (plus any sort aliases), skipping the ten wide jsonb data columns. For
@@ -1093,11 +1133,16 @@ function buildPathScope(
 	principal: Principal | undefined,
 	skipProjectsFilter: boolean,
 	params: ParamsCollector,
+	/** The SQO's own sections — the ROOT key binds each main row to its own (SEC-1). */
+	mainSectionTipos: readonly string[],
+	readFloor: ReadonlySet<string> | undefined,
 ): SqlFrontierScope {
 	return {
 		...(principal === undefined ? {} : { principal }),
 		surface: 'search',
 		door: 'search.path',
+		mainSectionTipos,
+		...(readFloor === undefined ? {} : { readFloor }),
 		recordPredicate: async ({ sectionTipo: hopSection, table: hopTable, alias: hopAlias }) => {
 			const parts: string[] = [];
 			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable, hopSection)) {
@@ -1362,7 +1407,13 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	// would blank the thesaurus for every non-admin — see
 	// PROJECTS_FILTER_EXEMPT_TABLES). The dd478 allow-list applies to admins too.
 	const principal = options.principal;
-	const pathScope = buildPathScope(principal, sqo.skip_projects_filter === true, params);
+	const pathScope = buildPathScope(
+		principal,
+		sqo.skip_projects_filter === true,
+		params,
+		sectionTipos,
+		options.readFloor,
+	);
 
 	// --- WHERE: user filter tree -------------------------------------------
 	const whereParts: string[] = [];
@@ -1379,13 +1430,23 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	let nonAclWhereParts = 0;
 	const joinFragments = new Map<string, string>();
 	if (sqo.filter !== undefined && sqo.filter !== null) {
-		const conformed = await conformFilter(
-			sqo.filter as Record<string, unknown>,
-			alias,
-			matrixTable,
-			pathScope,
+		// Deep paths → semi-joins over the related records (deep_path.ts): the
+		// filter never adds a join to the main FROM.
+		// The hop ACL of a FILTER chain binds through named tokens: a leaf that
+		// renders nothing (refused, inert) must leave no orphan `$N` behind.
+		const filterAcl = new NamedTokenCollector(HOP_ACL_TOKEN_PREFIX);
+		const filterScope = buildPathScope(
+			principal,
+			sqo.skip_projects_filter === true,
+			filterAcl,
+			sectionTipos,
+			options.readFloor,
 		);
-		collectJoins(conformed, joinFragments);
+		const conformed = await planDeepFilters(
+			await conformFilter(sqo.filter as Record<string, unknown>, alias, matrixTable, filterScope),
+			tables,
+			filterAcl.tokenValues,
+		);
 		const filterSql = parseConformedFilter(conformed, params);
 		if (filterSql !== '') {
 			whereParts.push(filterSql);
@@ -1454,7 +1515,14 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 
 	// --- ORDER ---------------------------------------------------------------
 	const selectExtra: string[] = [];
-	let orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments, pathScope);
+	let orderClauses = await buildOrderClauses(
+		sqo,
+		alias,
+		selectExtra,
+		joinFragments,
+		pathScope,
+		matrixTable,
+	);
 
 	// Flatten the explicit-order shape when DISTINCT ON is provably a no-op:
 	// single-section + no join fragments + the table's UNIQUE (section_id,
@@ -1511,7 +1579,14 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	// repeated path in another clause reuses the same joined rows, PHP rule).
 	const joinsSql = joinFragments.size > 0 ? `\n${[...joinFragments.values()].join('\n')}` : '';
 	const fromClause = `${matrixTable} AS ${alias}${joinsSql}`;
-	const whereAll = [...mainWhere, ...whereParts].filter((part) => part !== '');
+	// Every part is ONE conjunct: parenthesized here, the single place all WHERE
+	// parts meet, so no part's own OR can bind across its neighbours. A bare
+	// root `$or` filter used to render `pin AND A OR B AND acl` = `(pin AND A)
+	// OR (B AND acl)` — branch A escaped the record ACL, branch B the section
+	// pin (WC-2026-09-29-search-where-parts-parenthesized).
+	const whereAll = [...mainWhere, ...whereParts]
+		.filter((part) => part !== '')
+		.map((part) => `(${part})`);
 	let queryInside = `SELECT ${select.join(',\n')}\nFROM ${fromClause}${whereAll.length > 0 ? `\nWHERE ${whereAll.join('\n AND ')}` : ''}`;
 
 	// --- multi-section UNION ALL (exact-substring FROM swap, PHP :1035) ---------

@@ -339,6 +339,58 @@ export function readToolRoots(key: string): readonly { path: string; url: string
 	}
 }
 
+/**
+ * Publication server API v1 users (JSON `[{"db_name":...,"code":...,"api_ui":...}]`).
+ * An entry without string db_name/code is DROPPED, loudly. `api_ui` is optional and is
+ * opened by the browser, so only an http(s) or root-relative address survives — any other
+ * scheme (`javascript:`, `data:`) is dropped and the entry falls back to the default docu.
+ */
+export function readPublicationApiUsers(
+	key: string,
+): readonly { db_name: string; code: string; api_ui: string | null }[] {
+	const configured = raw(key);
+	if (configured === undefined || configured.trim() === '') return Object.freeze([]);
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(configured);
+	} catch (error) {
+		console.error(
+			`[config] ${key} is not valid JSON (${error instanceof Error ? error.message : 'parse error'}) — ignoring the value. It must be a JSON array of {db_name,code,api_ui?}.`,
+		);
+		return Object.freeze([]);
+	}
+	if (!Array.isArray(parsed)) {
+		console.error(
+			`[config] ${key} is valid JSON but not an ARRAY — ignoring the value. It must be a JSON array of {db_name,code,api_ui?}.`,
+		);
+		return Object.freeze([]);
+	}
+	const users: { db_name: string; code: string; api_ui: string | null }[] = [];
+	for (const entry of parsed) {
+		const dbName = (entry as { db_name?: unknown })?.db_name;
+		const code = (entry as { code?: unknown })?.code;
+		if (typeof dbName !== 'string' || dbName === '' || typeof code !== 'string') continue;
+		const apiUi = (entry as { api_ui?: unknown })?.api_ui;
+		const safeUi =
+			typeof apiUi === 'string' &&
+			(/^https?:\/\//i.test(apiUi) || (apiUi.startsWith('/') && !apiUi.startsWith('//')))
+				? apiUi
+				: null;
+		if (apiUi !== undefined && apiUi !== null && apiUi !== '' && safeUi === null) {
+			console.error(
+				`[config] ${key}: api_ui of '${dbName}' is not an http(s) or root-relative address — using the default docu path.`,
+			);
+		}
+		users.push(Object.freeze({ db_name: dbName, code, api_ui: safeUi }));
+	}
+	if (users.length !== parsed.length) {
+		console.error(
+			`[config] ${key}: ${parsed.length - users.length} of ${parsed.length} entries were DROPPED (each needs string db_name and code).`,
+		);
+	}
+	return Object.freeze(users);
+}
+
 // ---------------------------------------------------------------------------
 // Required (install-sentinel aware)
 // ---------------------------------------------------------------------------

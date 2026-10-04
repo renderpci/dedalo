@@ -8,7 +8,7 @@
  *
  * PURE MODULE: no DOM, no `window`, no `page_globals`, no labels. It is imported
  * by the page (data_manager.js), by the cache Worker (page/js/worker_cache.js)
- * and by the module Service Worker (core/sw.js), so nothing here may touch a
+ * and by the module Service Worker (core/service_worker.js), so nothing here may touch a
  * browser global that a worker scope lacks.
  *
  * CONTRACT (envelope v2 — the wire law, see engineering/wire_contract/

@@ -8,7 +8,6 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
-	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
 
 
 
@@ -116,7 +115,6 @@ render_tool_qr.prototype.edit = async function(options) {
 * Regions built:
 *   - info_container   — header row (section label, record count, orientation selector)
 *   - qr_canvas        — the printable A4 grid of QR codes
-*   - footer_node      — common tool footer (icon + developer attribution)
 *
 * This function is async because render_canvas calls generate_qr which
 * returns Promises; however those Promises are not awaited inside this function —
@@ -153,10 +151,6 @@ const get_content_data = async function(self) {
 		qr_container.appendChild(
 			render_canvas(self)
 		)
-
-	// footer_node
-		const footer_node = render_footer(self)
-		fragment.appendChild(footer_node)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)

@@ -8,7 +8,8 @@
  * Semantics mirror db_tasks: each entry runs drop-then-add; `{$table}`
  * templates expand per declared table (skipping tables absent on this
  * install); a failed statement records the error and continues; `success`
- * counts completed ENTRIES (not statements).
+ * counts completed ENTRIES (not statements). One departure, the templated
+ * passes' ATOMICITY (rebuildTemplated): a DROP never commits without its ADD.
  *
  * (!) These are heavyweight admin operations over the SHARED database —
  * constraints/indexes take long locks on the 9 GB matrix tables. The gates
@@ -17,9 +18,10 @@
  */
 
 import { sectionIdAddressSqlPredicate } from '../concepts/section_id.ts';
+import { currentRequestId } from '../security/request_context.ts';
 import definitions from './db_pg_definitions.json';
 import { classifyIndex, type LiveIndex, policyForTable } from './matrix_index_policy.ts';
-import { runWithoutStatementTimeout, sql, withTransaction } from './postgres.ts';
+import { runWithoutStatementTimeout, sql, sqlStateOf, withTransaction } from './postgres.ts';
 
 export interface AssetEntry {
 	tables?: string[];
@@ -173,8 +175,21 @@ export async function rebuildFunctions(): Promise<AssetResponse> {
 	return response;
 }
 
-/** Per-entry, per-declared-table drop + add (constraints / indexes). */
-async function rebuildTemplated(
+/**
+ * Per-entry, per-declared-table drop + add (constraints / triggers / indexes).
+ * Exported for its gate (db_asset_rebuild_atomic_native).
+ *
+ * A DROP NEVER COMMITS WITHOUT ITS ADD (OPS-6/PERF-11 review, 2026-09-30).
+ * Each (entry, table) pair is ONE transaction (rebuildPair). As two autocommit
+ * statements, an ADD that failed after its DROP committed left the object gone
+ * — the (section_id, section_tipo) unique key, or a search-store sync trigger —
+ * and the maintenance pool's 5s lock_timeout (postgres.ts
+ * MAINTENANCE_LOCK_TIMEOUT) made that an ordinary outcome under write load: the
+ * ADD queues behind a writer and gives up. Transactional, a failed ADD (a lock
+ * wait that timed out or any other error) rolls the DROP back; the error is
+ * recorded and the pass continues, as before.
+ */
+export async function rebuildTemplated(
 	entries: AssetEntry[],
 	selectedTables: string[] = [],
 ): Promise<AssetResponse> {
@@ -187,13 +202,95 @@ async function rebuildTemplated(
 				continue;
 			}
 			const drop = cleanSql(entry.drop.replaceAll('{$table}', table));
-			if (drop !== '' && !(await execSql(drop, response.errors))) continue;
 			const add = cleanSql(entry.add.replaceAll('{$table}', table));
-			if (add !== '' && !(await execSql(add, response.errors))) continue;
+			await rebuildPair(`${entry.name} on ${table}`, drop, add, response.errors);
 		}
 		response.success++;
 	}
 	return finishResponse(response);
+}
+
+/** Longest PostgreSQL identifier (NAMEDATALEN − 1); a longer one is silently truncated. */
+const MAX_IDENTIFIER_LENGTH = 63;
+const TEMPORARY_INDEX_SUFFIX = '_rebuild';
+
+/** The leading `CREATE [UNIQUE] INDEX [IF NOT EXISTS] <name> ON` of an index add. */
+const INDEX_ADD_HEAD =
+	/^CREATE\s+(UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?("?)([A-Za-z_][A-Za-z0-9_]*)\2\s+ON\s/i;
+
+interface IndexSwap {
+	/** The add, building the index under `temporaryName` (no IF NOT EXISTS: a clash fails loudly). */
+	build: string;
+	/** The index name the add declares, as written (quoted when it was). */
+	name: string;
+	temporaryName: string;
+}
+
+/**
+ * The build-then-swap plan of an index add, or null (not a CREATE INDEX — a
+ * constraint, a trigger). A temporary name is truncated so it can never exceed
+ * the identifier limit (a silently truncated name could equal the real one).
+ */
+function indexSwapPlan(add: string): IndexSwap | null {
+	const head = INDEX_ADD_HEAD.exec(add);
+	if (head === null) return null;
+	const [matched, unique = '', quote = '', bareName = ''] = head;
+	const temporaryBare = `${bareName.slice(0, MAX_IDENTIFIER_LENGTH - TEMPORARY_INDEX_SUFFIX.length)}${TEMPORARY_INDEX_SUFFIX}`;
+	const temporaryName = `${quote}${temporaryBare}${quote}`;
+	return {
+		build: `CREATE ${unique}INDEX ${temporaryName} ON ${add.slice(matched.length)}`,
+		name: `${quote}${bareName}${quote}`,
+		temporaryName,
+	};
+}
+
+/**
+ * ONE (entry, table) rebuild, atomic (see rebuildTemplated). A pair with an
+ * empty add is a cleanup — its drop IS the action, alone.
+ *
+ * An INDEX add builds FIRST, under a temporary name, then the drop runs and the
+ * new index takes the name, all in the one transaction: while it builds, the
+ * table keeps serving reads through the OLD index (CREATE INDEX holds SHARE,
+ * which blocks writes only). Dropping first would hold the drop's ACCESS
+ * EXCLUSIVE — every reader queued — for the whole build. An entry whose drop
+ * does not free the declared name fails its rename, loudly, and rolls back.
+ *
+ * A failed pair is reported as a SENTENCE — `pair` (entry on table), the
+ * SQLSTATE, "rolled back" — on the ok:true admin report; the raw server text
+ * goes to the log with the request id (A6, SEC-18).
+ */
+async function rebuildPair(
+	pair: string,
+	drop: string,
+	add: string,
+	errors: unknown[],
+): Promise<void> {
+	if (add === '') {
+		if (drop !== '') await execSql(drop, errors);
+		return;
+	}
+	const swap = indexSwapPlan(add);
+	try {
+		await withTransaction(async () => {
+			if (swap === null) {
+				if (drop !== '') await sql.unsafe(drop, []);
+				await sql.unsafe(add, []);
+				return;
+			}
+			await sql.unsafe(swap.build, []);
+			if (drop !== '') await sql.unsafe(drop, []);
+			await sql.unsafe(`ALTER INDEX ${swap.temporaryName} RENAME TO ${swap.name}`, []);
+		});
+	} catch (error) {
+		const state = sqlStateOf(error);
+		console.error(
+			`db_assets: rebuild of ${pair} rolled back [request ${currentRequestId() || '-'}]:`,
+			error,
+		);
+		errors.push(
+			`${pair}: rebuild failed and was rolled back${state === undefined ? '' : ` (SQLSTATE ${state})`} — the previous definition is intact; see the server log`,
+		);
+	}
 }
 
 export function rebuildConstraints(): Promise<AssetResponse> {
@@ -208,7 +305,11 @@ export function rebuildIndexes(selectedTables: string[] = []): Promise<AssetResp
 export async function execMaintenance(): Promise<AssetResponse> {
 	const response = newResponse();
 	// Every ar_maintenance sentence is a REINDEX/VACUUM (incl. VACUUM FULL) — the
-	// long-by-design class, so they run unbounded (WC-055).
+	// long-by-design class, so they run without a statement ceiling (WC-055).
+	// The non-CONCURRENTLY `REINDEX TABLE` and `VACUUM FULL` are STRONG-lock: they
+	// wait under MAINTENANCE_LOCK_TIMEOUT (postgres.ts nonTransactionalLockClass),
+	// so behind a long reader (a pg_dump) they give up — `db.lock_timeout` in
+	// `errors` — instead of queueing every later reader of the table behind them.
 	for (const sentence of definitions.ar_maintenance as string[]) {
 		if (await execLongSql(cleanSql(sentence), response.errors)) response.success++;
 	}

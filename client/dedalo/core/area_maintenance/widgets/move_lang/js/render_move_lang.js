@@ -38,6 +38,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {update_process_status} from '../../../../common/js/common.js'
+	import {init_move_transform_form} from '../../../js/move_transform.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
@@ -129,10 +130,11 @@ render_move_lang.prototype.list = async function(options) {
 *         pre.file_content_container — syntax-highlighted JSON of the file
 *     div.body_response         — SSE process status output area
 *
-* The form is wired through self.caller.init_form, which appends a submit
-* button labelled "Move TLD terms" to the widget body.  On submit, if at
-* least one file is selected, exec_move_lang is called and the returned
-* {pid, pfile} is handed to update_process_status to start SSE polling.
+* The form is the shared move_* run flow (init_move_transform_form,
+* move_transform.js): the submit runs the PREVIEW (dry run) job of the checked
+* files; a preview that ends clean reveals the Execute control, which runs
+* exactly the previewed files (dry_run:false) after a confirm. Each job's
+* {pid, pfile} is handed to update_process_status.
 *
 * On every render, check_process_data queries IndexedDB for any previously
 * stored process record under 'process_move_lang' and re-attaches SSE polling
@@ -274,41 +276,18 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'body_response'
 		})
 
-	// form init — delegates to self.caller.init_form (area_maintenance::init_form →
-	// render_area_maintenance::build_form) to create the submit button and wire the
-	// on_submit callback.  The optional-chaining guard (?.) means the form is only
-	// initialised when self.caller provides init_form (i.e. when running inside
-	// area_maintenance; the guard prevents errors in standalone/test contexts).
-		if (self.caller?.init_form) {
-			self.caller.init_form({
-				submit_label	: 'Move TLD terms',
-				// confirm_text	: confirm_text,
-				body_info		: content_data,
-				body_response	: body_response,
-				on_submit	: (e, values) => {
-
-					// Guard: require at least one file before firing the long-running process.
-					// (!) Uses alert() for the error UX — acceptable for a maintenance tool.
-					if (!files_selected.length) {
-						alert("Error: no files are selected");
-						return
-					}
-
-					// move_lang — fire the background CLI process and immediately begin
-					// SSE polling via update_process_status.  The promise resolves once
-					// the server has forked the process and returned {pid, pfile}.
-					self.exec_move_lang(files_selected)
-					.then(function(response){
-						update_process_status(
-							local_db_id,
-							response.pid,
-							response.pfile,
-							body_response
-						)
-					})
-				}
-			})
-		}
+	// form init
+		// PREVIEW (dry run) first, then EXECUTE exactly the previewed selection —
+		// the one run flow of the five move_* widgets (move_transform.js). Both runs
+		// are server jobs answering {pid, pfile}; their streams render in body_response.
+		init_move_transform_form(self, {
+			model			: 'move_lang',
+			submit_label	: 'Move language data',
+			files_selected	: files_selected,
+			content_data	: content_data,
+			body_response	: body_response,
+			local_db_id		: local_db_id
+		})
 
 		// check process status always — on every render, probe IndexedDB for any
 		// previously stored process state so a page reload re-attaches SSE polling

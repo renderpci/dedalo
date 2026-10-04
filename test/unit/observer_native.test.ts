@@ -62,9 +62,13 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
-import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
+import {
+	deleteSectionData,
+	deleteSectionRecord,
+} from '../../src/core/section/record/delete_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -496,6 +500,103 @@ describe('bypass doors fire the observer cascade', () => {
 					[REF_SECTION, id],
 				);
 			}
+		}
+		expect(await termBag()).toEqual(base);
+	}, 30000);
+
+	/** The mirror entries that name `id` as their referencer. */
+	const mirrorsOf = async (id: number): Promise<number> =>
+		(await termBag()).filter(
+			(entry) => (entry as { section_id?: number | string }).section_id === id,
+		).length;
+
+	/** Sweep a scratch referencer whole (the delete pipeline restores the mirror first). */
+	async function dropReferencer(id: number): Promise<void> {
+		if (id === 0) return;
+		await deleteSectionRecord(REF_SECTION, id, -1).catch(() => {});
+		await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
+			REF_SECTION,
+			id,
+		]);
+		await sql.unsafe(
+			`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`,
+			[REF_SECTION, id],
+		);
+	}
+
+	// tool_propagate_component_data writes through saveComponentData (the
+	// chokepoint) since 2026-09-2x — it is NOT a bypass door any more; this cell
+	// pins the outcome the module header now claims for it.
+	test('tool_propagate REPLACE on the indexer of a NEW referencer: the mirror gains it', async () => {
+		const base = await termBag();
+		let twin = 0;
+		let bulkId: number | null = null;
+		try {
+			twin = await createSectionRecord(REF_SECTION, -1);
+			expect(await mirrorsOf(twin)).toBe(0);
+			const loaded = await getLoadedTool('tool_propagate_component_data');
+			const action = loaded?.module.apiActions.propagate_component_data;
+			expect(action, 'the propagate action is registered').toBeDefined();
+			const response = await (action as NonNullable<typeof action>).handler({
+				principal: await resolvePrincipal(-1),
+				userId: -1,
+				background: false,
+				options: {
+					section_tipo: REF_SECTION,
+					component_tipo: INDEXER,
+					action: 'replace',
+					lang: 'lg-nolan',
+					total: 1,
+					propagate_data_value: [
+						{
+							type: 'dd96',
+							section_id: String(TERM.section_id),
+							section_tipo: TERM.section_tipo,
+							from_component_tipo: INDEXER,
+						},
+					],
+					sqo: {
+						section_tipo: [REF_SECTION],
+						filter_by_locators: [{ section_tipo: REF_SECTION, section_id: String(twin) }],
+					},
+				},
+			} as never);
+			expect(response.ok, JSON.stringify(response)).toBe(true);
+			const data = response.data as { counter: number; bulk_process_id: number | null };
+			bulkId = data.bulk_process_id;
+			expect(data.counter).toBe(1);
+			expect(await mirrorsOf(twin), 'the mirror names the propagated referencer').toBe(1);
+		} finally {
+			await dropReferencer(twin);
+			if (typeof bulkId === 'number') {
+				await sql.unsafe(
+					`DELETE FROM matrix_time_machine WHERE section_tipo = 'dd800' AND section_id = $1`,
+					[bulkId],
+				);
+				const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+				const bulkTable = (await getMatrixTableFromTipo('dd800')) as string;
+				await sql.unsafe(
+					`DELETE FROM "${bulkTable}" WHERE section_tipo = 'dd800' AND section_id = $1`,
+					[bulkId],
+				);
+			}
+		}
+		expect(await termBag()).toEqual(base);
+	}, 30000);
+
+	// deleteSectionData writes the emptied keys through persistRecordKeys (no
+	// chokepoint) and fires propagateToObservers itself (delete_record.ts).
+	test('a DATA WIPE (deleteSectionData) of a referencer: the mirror loses it', async () => {
+		const base = await termBag();
+		let twin = 0;
+		try {
+			twin = await createSectionRecord(REF_SECTION, -1);
+			await dispatchAsRoot(saveRqo(twin));
+			expect(await mirrorsOf(twin), 'FLOOR: the save mirrored the referencer').toBe(1);
+			await deleteSectionData(REF_SECTION, twin, -1);
+			expect(await mirrorsOf(twin), 'the wipe dropped the referencer from the mirror').toBe(0);
+		} finally {
+			await dropReferencer(twin);
 		}
 		expect(await termBag()).toEqual(base);
 	}, 30000);

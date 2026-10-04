@@ -4,7 +4,7 @@
 
 Dédalo is a free, open-source project and community where the ability to innovate often is key. All code is developed under free and open-source rules.
 
-Dédalo has three independent update processes, each with its own maintenance-panel control and, for code, a manual path too:
+Dédalo has three independent update processes, each with its own maintenance-panel control and, for code, a manual path too. An installation that SERVES updates to others has its own panels for that side: **Serve Ontology** (an ontology master) and **Serve Code** (a code server).
 
 1. [Update ontology](updating_ontology.md) — import the latest definition for one or more TLDs from a configured ontology server.
 2. [Update code](updating_code.md) — install a new release of the server tree, either from a configured code server or by pulling the repository yourself.

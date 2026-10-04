@@ -4,13 +4,13 @@
 * Loaded on tool init
 */
 :root {
-  --tool_ontology_color: var(--color_green_ontology);
+  --tool_ontology: var(--color_green_ontology);
 }
 .wrapper_tool.tool_ontology {
   position: relative;
 }
 .wrapper_tool.tool_ontology .spinner {
-  background-color: var(--tool_ontology_color);
+  background-color: var(--tool_ontology);
   left: calc(50% - 1.4rem);
   top: calc(50% + 2.5rem);
 }
@@ -36,8 +36,16 @@
   justify-content: center;
 }
 .wrapper_tool.tool_ontology > .content_data > .buttons_container button {
-  background-color: var(--tool_ontology_color);
-  border-color: var(--tool_ontology_color);
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
+}
+.wrapper_tool.tool_ontology > .content_data > .buttons_container button:not(.button_spinner)::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+.wrapper_tool.tool_ontology > .content_data > .buttons_container button:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
 }
 .wrapper_tool.tool_ontology > .content_data > .buttons_container .checkbox-label {
   padding-left: 1rem;
@@ -64,8 +72,5 @@
 .wrapper_tool.tool_ontology > .content_data > .messages_container.error {
   background-color: transparent !important;
   color: var(--color_danger);
-}
-.tool_header.tool_ontology {
-  background-color: var(--tool_ontology_color);
 }
 /*# sourceMappingURL=tool_ontology.css.map */

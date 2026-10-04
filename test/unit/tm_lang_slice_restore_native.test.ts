@@ -124,10 +124,10 @@ const SITUATION = situation({
 			parent: SECTION,
 			model: 'component_input_text',
 			is_translatable: false,
-			// The install twin of this branch carries `with_lang_versions`: the items
-			// are stored WITH a lang key (lg-nolan) although the component is not
-			// translatable — which is the slice the engine addresses it on.
-			properties: { with_lang_versions: true },
+			// Plain NON-translatable: every save is addressed on lg-nolan whatever
+			// the request lang (resolver.ts effectiveSaveLang). NOT
+			// `with_lang_versions` — a transliterable component keeps the request
+			// lang (PHP component_common :666-678; tm_save_order_native).
 			term: { 'lg-spa': 'Signatura', 'lg-eng': 'Shelf mark' },
 		},
 		{
@@ -787,7 +787,8 @@ describe('the destructive client action is confirmed', () => {
 		// Component, language and record — a generic are-you-sure teaches nothing
 		// and gets clicked through.
 		expect(handler).toContain('component_label');
-		expect(handler).toContain('self.main_element.lang');
+		// the language is the main's HISTORY lane (the server's lane law, decision 2026-09-29)
+		expect(handler).toContain('self.history_lang()');
 		expect(handler).toContain('record_address');
 		expect(handler).toMatch(/OVERWRITTEN/);
 	});
@@ -825,8 +826,8 @@ describe('the destructive client action is confirmed', () => {
 		// label reads them.
 		const call = handler.slice(handler.indexOf("'apply_value_confirm_msg'"));
 		expect(call.indexOf('component_label')).toBeGreaterThan(-1);
-		expect(call.indexOf('self.main_element.lang')).toBeGreaterThan(call.indexOf('component_label'));
-		expect(call.indexOf('record_address')).toBeGreaterThan(call.indexOf('self.main_element.lang'));
+		expect(call.indexOf('history_lang,')).toBeGreaterThan(call.indexOf('component_label'));
+		expect(call.indexOf('record_address')).toBeGreaterThan(call.indexOf('history_lang,'));
 	});
 
 	test('the bulk-revert door still confirms too (the door that always did)', () => {
@@ -849,7 +850,9 @@ describe('the restore-door census', () => {
 	 * saying so.
 	 *
 	 * A third door added without the lang merge is a silent re-introduction of
-	 * DATA-03 on a new surface. It reddens here.
+	 * DATA-03 on a new surface. It reddens here. (The bulk revert's region law is
+	 * proved behaviourally by bulk_revert_undo_native: a one-language run's
+	 * revert leaves the other language byte-identical.)
 	 */
 	const DOOR_DIR = 'tools/tool_time_machine/server';
 	const doorSource = (file: string) => readFileSync(`${DOOR_DIR}/${file}`, 'utf8');
@@ -879,44 +882,92 @@ describe('the restore-door census', () => {
 			.some((line) => call.test(line));
 	}
 
-	test('exactly two doors write a TM snapshot back onto a live record', () => {
-		const doors = readdirSync(DOOR_DIR)
+	/**
+	 * A door is a file that writes a value back onto a live record
+	 * (`persistRecordKeys` / `persistRestoredKeys`) AND audits that write in the time machine — through
+	 * the plain door (`recordTimeMachine`) or the undo-log pair writer
+	 * (`recordBulkPair`, WC-2026-09-27-bulk-revert-undo-log) — or through the
+	 * two-lane writer over them (relations/dataframe_slots.ts
+	 * `recordMainHistory`, WC addendum "two lanes"). Since the undo log, the bulk revert's WRITE
+	 * lives in `bulk_revert_undo.ts` (a dataframe main's composed unit is
+	 * PLANNED by `bulk_revert_composed.ts`, which writes nothing and is no door);
+	 * `bulk_revert.ts` is the orchestrator and persists only its own dd800 label.
+	 */
+	const TM_WRITERS = ['recordTimeMachine', 'recordBulkPair', 'recordMainHistory'] as const;
+	/**
+	 * The key entries a write-back goes through: persistRecordKeys, or the
+	 * COMPONENT-RESTORE entry persistRestoredKeys (a key's past value — its
+	 * covered observer slot recomputed, never propagated; record_write.ts §3e).
+	 */
+	const KEY_WRITERS = ['persistRecordKeys', 'persistRestoredKeys'] as const;
+	const restoreDoors = (): string[] =>
+		readdirSync(DOOR_DIR)
 			.filter((file) => file.endsWith('.ts'))
 			.filter((file) => {
 				const source = doorSource(file);
-				return source.includes('persistRecordKeys(') && source.includes('recordTimeMachine(');
+				return (
+					KEY_WRITERS.some((writer) => callsHelper(source, writer)) &&
+					TM_WRITERS.some((writer) => callsHelper(source, writer))
+				);
 			})
 			.sort();
+
+	/**
+	 * How each door keeps the languages it did not restore. The two doors restore
+	 * DIFFERENT things, so they merge through different — each ONE shared — rules:
+	 *   - apply_value restores ONE LANE of a TM row (two lanes — the row's own
+	 *     language, read for its lane only: a PHP row carrying several languages
+	 *     restores just its tag's): `restoredLaneValue` (src/core/tm_record/
+	 *     lane_state.ts, shared with the TM preview), which merges through
+	 *     `mergeRestoredLangSlice` — pinned below — audited per lane by
+	 *     `recordMainHistory`;
+	 *   - the bulk revert restores a REGION it recorded exactly, cut with the
+	 *     capture's lane law: `restoreLane` puts the live other-language items
+	 *     back beside it and `laneRegion` cuts the live key the same way the
+	 *     capture cut its pair (src/core/relations/main_lanes.ts, over
+	 *     concepts/lang_region.ts). Its legacy
+	 *     inference (bulk_revert_legacy.ts) reads whole history rows again, so
+	 *     it merges through `mergeRestoredLangSlice` — pinned below;
+	 *   - the soft-cascade restore (bulk_revert_records.ts) writes a WHOLE key
+	 *     back over a key a data wipe emptied — every language was wiped, so
+	 *     there is no sibling to keep — and only while `isWipedState` proves the
+	 *     live key is still what the wipe left; `regionOf` cuts its audit pairs.
+	 */
+	const DOOR_MERGE: Readonly<Record<string, readonly string[]>> = {
+		'tool_time_machine.ts': ['restoredLaneValue', 'recordMainHistory'],
+		'bulk_revert_undo.ts': ['restoreLane', 'laneRegion'],
+		'bulk_revert_records.ts': ['isWipedState', 'regionOf'],
+	};
+
+	test('exactly three doors write a TM snapshot back onto a live record', () => {
+		const doors = restoreDoors();
 		// Anti-vacuity: a moved or renamed directory would otherwise enumerate
 		// nothing and pass.
-		expect(doors.length).toBe(2);
-		expect(doors).toEqual(['bulk_revert.ts', 'tool_time_machine.ts']);
+		expect(doors.length).toBe(3);
+		expect(doors).toEqual([
+			'bulk_revert_records.ts',
+			'bulk_revert_undo.ts',
+			'tool_time_machine.ts',
+		]);
 	});
 
-	test('EVERY door merges the slice through the ONE shared helper', () => {
-		// No exemptions left: the named, shrink-only carve-out for `bulk_revert.ts`
-		// was deleted when that door adopted the merge, which is what closes P0-4
-		// (the census covers BOTH restore doors). A door that writes a snapshot
-		// back and does NOT go through this helper deletes sibling languages, so
-		// the requirement is stated over the enumeration rather than per file.
-		const doors = readdirSync(DOOR_DIR)
-			.filter((file) => file.endsWith('.ts'))
-			.filter((file) => {
-				const source = doorSource(file);
-				return source.includes('persistRecordKeys(') && source.includes('recordTimeMachine(');
-			});
+	test('EVERY door merges the slice through its ONE shared rule', () => {
+		// Stated over the enumeration rather than per file: a door that writes a
+		// value back and does NOT go through its rule deletes sibling languages.
+		const doors = restoreDoors();
 		expect(doors.length).toBeGreaterThan(1);
+		expect(doors.filter((door) => DOOR_MERGE[door] === undefined)).toEqual([]);
 		for (const door of doors) {
-			expect(callsHelper(doorSource(door), 'mergeRestoredLangSlice')).toBe(true);
-			// …and the audit row it appends is sliced to one language by the same
-			// shared rule, never assembled locally.
-			expect(callsHelper(doorSource(door), 'tmAuditSlice')).toBe(true);
-			// …and the language that slice is taken on is the one the RESTORED ROW
-			// speaks for. Both doors read it off the row (`tmRow.lang` /
-			// `row.lang`); a door deriving it from the request would file the audit
-			// row in the timeline of a language it did not touch.
-			expect(callsHelper(doorSource(door), 'snapshotLangs')).toBe(true);
+			for (const helper of DOOR_MERGE[door] ?? []) {
+				expect(callsHelper(doorSource(door), helper), `${door} → ${helper}`).toBe(true);
+			}
 		}
+		// The bulk revert's legacy inference restores whole history rows: the
+		// apply_value merge, applied — not a local re-implementation.
+		expect(callsHelper(doorSource('bulk_revert_legacy.ts'), 'mergeRestoredLangSlice')).toBe(true);
+		// apply_value's lane value (and the preview's): the same merge, in core.
+		const laneState = readFileSync('src/core/tm_record/lane_state.ts', 'utf8');
+		expect(callsHelper(laneState, 'mergeRestoredLangSlice')).toBe(true);
 	});
 
 	test('the helper predicate is honest: it rejects a mention, an import and a definition', () => {

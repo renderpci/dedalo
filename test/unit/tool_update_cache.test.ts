@@ -27,8 +27,10 @@ import { createSectionRecord } from '../../src/core/section/record/create_record
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -339,6 +341,50 @@ describe('tool_update_cache module', () => {
 		expect(stored).toHaveLength(2);
 	});
 
+	test('a record WITHOUT the component: the sweep writes nothing — no `[]`, no TM rows', async () => {
+		// The undo log keeps ABSENCE and `[]` apart, so a re-save of an absent key
+		// as `[]` would be a real change: a hidden BEFORE row and a visible "[]
+		// saved by the sweep" history row per empty record (WC bulk-revert-undo-log §2).
+		await assertTestDatabase('tool_update_cache: absent key');
+		const loaded = await getLoadedTool('tool_update_cache');
+		const scratchId = await createSectionRecord(SCRATCH_SECTION, -1);
+		scratchIds.push(scratchId);
+		const { sql } = await import('../../src/core/db/postgres.ts');
+		const table = mustGet(await getMatrixTableFromTipo(SCRATCH_SECTION), 'scratch table');
+		const keyState = async (): Promise<{ present: boolean; tm: number }> => {
+			const rows = (await sql.unsafe(
+				`SELECT (string ? $3) AS present,
+				        (SELECT count(*)::int FROM matrix_time_machine
+				          WHERE section_tipo = $1 AND section_id = $2) AS tm
+				 FROM "${table}" WHERE section_tipo = $1 AND section_id = $2`,
+				[SCRATCH_SECTION, scratchId, SCRATCH_INPUT_TEXT],
+			)) as { present: boolean | null; tm: number }[];
+			return { present: rows[0]?.present === true, tm: Number(rows[0]?.tm ?? -1) };
+		};
+		const before = await keyState();
+		// FLOOR: the key really is absent (else the case is the regenerate one above).
+		expect(before.present).toBe(false);
+		const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
+			principal: await resolvePrincipal(-1),
+			userId: -1,
+			background: true,
+			publishProgress: () => {},
+			options: {
+				section_tipo: SCRATCH_SECTION,
+				components_selection: [{ tipo: SCRATCH_INPUT_TEXT }],
+				sqo: {
+					section_tipo: [SCRATCH_SECTION],
+					filter_by_locators: [{ section_tipo: SCRATCH_SECTION, section_id: String(scratchId) }],
+				},
+			},
+		});
+		expect(res.ok).toBe(true);
+		const run = res.data as { records: number; bulk_process_id?: unknown };
+		if (typeof run.bulk_process_id === 'number') bulkIds.push(run.bulk_process_id);
+		expect(run.records).toBe(1);
+		expect(await keyState()).toEqual(before);
+	});
+
 	test('media repair HOLDS shrinks: a partial-media box never wipes a valid index', async () => {
 		// The 2026-07-19 incident class: the stored files_info claims files that are
 		// not on THIS box (partial local media copy). holdShrink must KEEP the
@@ -520,6 +566,7 @@ describe('tool_update_cache: the twin pass is MISSING-ONLY', () => {
 		mkdirSync(absolute.slice(0, absolute.lastIndexOf('/')), { recursive: true });
 		const result = await runBinary([resolveMagick(), '-size', '400x300', `xc:${color}`, absolute], {
 			nice: false,
+			env: magickTestEnv(),
 		});
 		if (result.exitCode !== 0) throw new Error(`fixture failed: ${result.stderr}`);
 		return absolute;

@@ -40,6 +40,7 @@ import {
 import { buildRelationChildrenFragment } from '../../src/core/search/builders/builder_relation_children.ts';
 import { buildRelationIndexFragment } from '../../src/core/search/builders/builder_relation_index.ts';
 import type { BuilderContext } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 import { ParamsCollector } from '../../src/core/search/params.ts';
 import { findInverseReferences } from '../../src/core/search/search_related.ts';
 import {
@@ -209,7 +210,7 @@ afterAll(async () => {
 const tmContext: BuilderContext = {
 	alias: 'tm',
 	column: 'relation',
-	tipo: 'dd578', // the TM envelope's user portal
+	tipo: asSqlTipo('dd578', 'test context'), // the TM envelope's user portal
 	sectionTipo: 'dd15',
 	table: 'matrix_time_machine',
 	lang: 'lg-nolan',
@@ -221,7 +222,7 @@ const tmContext: BuilderContext = {
 const childrenContext: BuilderContext = {
 	alias: 'te3',
 	column: 'relation',
-	tipo: 'test201',
+	tipo: asSqlTipo('test201', 'test context'),
 	sectionTipo: 'test3',
 	table: 'matrix_test',
 	lang: 'lg-nolan',
@@ -287,7 +288,7 @@ describe('_tm twin (matrix_time_machine scalar user_id column)', () => {
 const relationContext: BuilderContext = {
 	alias: 'te3',
 	column: 'relation',
-	tipo: 'test80',
+	tipo: asSqlTipo('test80', 'test context'),
 	sectionTipo: 'test3',
 	table: 'matrix_test',
 	lang: 'lg-nolan',
@@ -426,7 +427,7 @@ describe('relation_children builder (PHP trait.search_component_relation_childre
 		expect(
 			await buildRelationChildrenFragment(null, '*', {
 				...childrenContext,
-				tipo: OWNER_PORTAL,
+				tipo: asSqlTipo(OWNER_PORTAL, 'test context'),
 				sectionTipo: OWNER_SECTION,
 				table: TABLE,
 			}),
@@ -446,7 +447,7 @@ describe('relation_index builder (PHP trait.search_component_relation_index)', (
 	const indexContext: BuilderContext = {
 		alias: 'h1',
 		column: 'relation',
-		tipo: INDEX_COLUMN,
+		tipo: asSqlTipo(INDEX_COLUMN, 'test context'),
 		sectionTipo: INDEXED_SECTION,
 		table: 'matrix_test',
 		lang: 'lg-nolan',
@@ -479,7 +480,12 @@ describe('relation_index builder (PHP trait.search_component_relation_index)', (
 		// The set is EMPTY, not special-cased: `IN (empty)` is false for every row
 		// and `NOT IN (empty)` is true for every row. The behavioural proof (real
 		// rows, both operators) is relation_index_semijoin_native.test.ts.
-		const bare = { ...indexContext, tipo: 'test149', sectionTipo: 'test65', table: 'matrix_test' };
+		const bare = {
+			...indexContext,
+			tipo: asSqlTipo('test149', 'test context'),
+			sectionTipo: 'test65',
+			table: 'matrix_test',
+		};
 		expect(render((await buildRelationIndexFragment(null, '*', bare)) as never).sql).not.toBe(
 			'1=0',
 		);
@@ -511,7 +517,7 @@ describe('autocomplete_hi ancestor wrap (LIVE since 2026-08-09 — the builder, 
 		const context: BuilderContext = {
 			alias: 'm',
 			column: 'relation',
-			tipo: ANCESTOR_PORTAL,
+			tipo: asSqlTipo(ANCESTOR_PORTAL, 'test context'),
 			sectionTipo: OWNER_SECTION,
 			table: TABLE,
 			lang: 'lg-nolan',

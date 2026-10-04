@@ -10,6 +10,7 @@ export const component_portal: ComponentModel = {
 	model: 'component_portal',
 	column: 'relation',
 	render: 'text',
+	importAppend: 'items',
 	defaultRelationType: 'dd151',
 	resolveData: 'portal',
 	flatValue: 'datalist',

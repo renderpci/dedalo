@@ -20,7 +20,7 @@
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getRelatedParentTipo } from '../../relations/children.ts';
-import { type BuilderContext, type BuilderResult, fragment } from './types.ts';
+import { type BuilderContext, type BuilderResult, type Classified, fragment } from './types.ts';
 
 /** The lateral-unnest core shared by every operator (PHP :315-326). */
 function childScan(table: string, alias: string): string {
@@ -71,6 +71,40 @@ function normalizeRelationQ(rawQ: unknown): string {
 	return text;
 }
 
+/** The one parsed operator of a relation_children leaf. */
+export type RelationChildrenOp =
+	| 'empty'
+	| 'notEmpty'
+	| 'different'
+	| 'strictDifferent'
+	| 'references';
+
+/**
+ * THE relation_children classifier (see builder_string classifyString — same
+ * law): '!*' neg(twin '*'); '!=' neq(has '*', twin "references child q");
+ * '!==' neg(twin "references child q"); everything else pos. q is validated by
+ * the builder when the twin renders (the same request.invalid either depth).
+ */
+export function classifyRelationChildren(
+	rawQ: unknown,
+	qOperator: string | null,
+): Classified<RelationChildrenOp> {
+	if (qOperator === '!*') return { kind: 'neg', op: 'empty', twin: { q: null, qOperator: '*' } };
+	if (qOperator === '*') return { kind: 'pos', op: 'notEmpty' };
+	if (qOperator === '!=') {
+		return {
+			kind: 'neq',
+			op: 'different',
+			has: { q: null, qOperator: '*' },
+			twin: { q: rawQ, qOperator: null },
+		};
+	}
+	if (qOperator === '!==') {
+		return { kind: 'neg', op: 'strictDifferent', twin: { q: rawQ, qOperator: null } };
+	}
+	return { kind: 'pos', op: 'references' };
+}
+
 /** Dispatch (PHP dispatch_relation_operator_sql :252-270). */
 export async function buildRelationChildrenFragment(
 	rawQ: unknown,
@@ -86,16 +120,17 @@ export async function buildRelationChildrenFragment(
 	const targetParentTipo = await getRelatedParentTipo(context.tipo, context.sectionTipo);
 	if (targetParentTipo === null) return false; // PHP :214-222 — clause dropped
 
+	const { op } = classifyRelationChildren(rawQ, qOperator);
 	const scan = childScan(context.table, context.alias);
 	const tokens: Record<string, unknown> = { _Q1_: targetParentTipo };
-	if (qOperator === '!*') return fragment(`NOT EXISTS (${scan})`, tokens);
-	if (qOperator === '*') return fragment(`EXISTS (${scan})`, tokens);
+	if (op === 'empty') return fragment(`NOT EXISTS (${scan})`, tokens);
+	if (op === 'notEmpty') return fragment(`EXISTS (${scan})`, tokens);
 
 	tokens._Q2_ = normalizeRelationQ(rawQ);
-	if (qOperator === '!=') {
+	if (op === 'different') {
 		return fragment(`EXISTS (${scan}) AND NOT EXISTS (${scan}${SPECIFIC_CHILD})`, tokens);
 	}
-	if (qOperator === '!==') {
+	if (op === 'strictDifferent') {
 		return fragment(`NOT EXISTS (${scan}${SPECIFIC_CHILD})`, tokens);
 	}
 	// default / '==' — "parent references child X" (PHP :522-535).

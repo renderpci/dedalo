@@ -1081,11 +1081,23 @@ export const change_handler = function(options) {
 		})()
 
 	// changed_data_item
-		const changed_data_item = Object.freeze({
-			action	: 'update',
-			id      : value[key]?.id || null,
-			value	: data_value
-		})
+	// Search mode applies the delta in memory only (a null value empties the slot
+	// of the search instance). Edit mode talks to the save door, which REFUSES a
+	// null item (WC-2026-10-03-save-refuses-malformed-value-shape): an emptied
+	// date is a remove by id — see build_date_changed_data_item.
+		const item_id = value[key]?.id ?? null
+		const changed_data_item = self.mode==='search'
+			? Object.freeze({
+				action	: 'update',
+				id		: item_id,
+				value	: data_value
+			})
+			: build_date_changed_data_item(data_value, item_id)
+
+	// nothing stored and nothing typed: there is nothing to save
+		if (changed_data_item===null) {
+			return true
+		}
 
 	if (self.mode==='search') {
 		// update the instance data (previous to save)
@@ -1098,14 +1110,56 @@ export const change_handler = function(options) {
 	}else{
 
 		// change_value
+		// remove_dialog: emptying the input IS the user's decision to drop the
+		// date — no destructive-delete confirm() on top of it (as the sibling
+		// select-family components do for a cleared value).
 			self.change_value({
 				changed_data	: [changed_data_item],
-				refresh			: false
+				refresh			: false,
+				remove_dialog	: () => true
 			})
 	}
 
 	return true
 }//end change_handler
+
+
+
+/**
+* BUILD_DATE_CHANGED_DATA_ITEM
+* The edit-mode change for one date slot, in a shape the save door accepts.
+*
+* - a value item → `update` of that item (id null: the server allocates one);
+* - an EMPTIED slot (data_value null) that is stored → `remove` of its id —
+*   never `update` with a null value, which the save door refuses (a null is
+*   not an item: WC-2026-10-03-save-refuses-malformed-value-shape);
+* - an emptied slot that was never stored → null: there is nothing to save.
+*
+* @param {Object|null} data_value - The slot's new item, or null when emptied
+* @param {number|string|null} id - The stored item id of the slot, or null
+* @returns {Object|null} A frozen changed_data item, or null for nothing to save
+*/
+export const build_date_changed_data_item = function(data_value, id) {
+
+	if (data_value!==null) {
+		return Object.freeze({
+			action	: 'update',
+			id		: id,
+			value	: data_value
+		})
+	}
+
+	// the save door's "no id" spellings (namesNoItem in save_component.ts)
+	if (id===null || id===undefined || id==='') {
+		return null
+	}
+
+	return Object.freeze({
+		action	: 'remove',
+		id		: id,
+		value	: null
+	})
+}//end build_date_changed_data_item
 
 
 
@@ -1143,13 +1197,14 @@ const render_button_remove = function (self, id) {
 				return false
 			}
 
-			const changed_data = [Object.freeze({
-				action	: 'remove',
-				id		: id,
-				value	: null
-			})]
+			// the ONE remove builder of this component: an unsaved slot (no id)
+			// has nothing stored to remove, and an id-less remove is refused
+			const remove_item = build_date_changed_data_item(null, id)
+			if (remove_item===null) {
+				return false
+			}
 			self.change_value({
-				changed_data	: changed_data,
+				changed_data	: [remove_item],
 				label			: null,
 				refresh			: true
 			})

@@ -71,7 +71,7 @@ const EXEMPTIONS: Readonly<Record<string, string>> = {
 	claimNextQueuedJob:
 		'The epoch ISSUER: this statement is what increments attempt. Its guard is state = queued under FOR UPDATE SKIP LOCKED plus the admission advisory lock.',
 	sweepStaleJobs:
-		'The epoch REVOKER: it takes the row back from a lost runner. Guarded by state = running plus a stale heartbeat. It deliberately does NOT check runner.pid — a runner on another host has no pid here — because the epoch fence, not pid liveness, is what stops the loser writing.',
+		'The epoch REVOKER: it takes the row back from a lost runner. Guarded by state = running plus a stale heartbeat, taken FOR UPDATE SKIP LOCKED so a runner inside a fenced batch (its row held FOR KEY SHARE, DIFF-2) is skipped, never revoked mid-batch. It deliberately does NOT check runner.pid — a runner on another host has no pid here — because the epoch fence, not pid liveness, is what stops the loser writing.',
 	finalizeQueuedJob:
 		'Terminal transition of a row that was never claimed (the owner-scoped cancel of a QUEUED job). No runner ever owned it, so there is no lease; the guard is state = queued.',
 	requestCancel:
@@ -84,13 +84,20 @@ const EXEMPTIONS: Readonly<Record<string, string>> = {
 		'Test-only hard delete of rows a suite created, by explicit id list; never reachable from production code.',
 };
 
-/** The lease-holder writes, pinned so no exemption can quietly absorb one. */
+/**
+ * The lease-holder writes, pinned so no exemption can quietly absorb one —
+ * including the job-scoped RUN LEDGER's (DIFF-1): its rows are run state as
+ * much as the checkpoint is, so a revoked runner may neither append to it nor
+ * clear it.
+ */
 const MUST_BE_FENCED = [
 	'recordRunnerPid',
 	'heartbeatJob',
 	'updateJobProgress',
 	'checkpointJob',
 	'finishJob',
+	'appendRunLedger',
+	'clearRunLedger',
 ];
 
 interface DmlStatement {
@@ -133,7 +140,9 @@ const DML = /(INSERT INTO|UPDATE|DELETE FROM)\s+"\$\{([A-Za-z0-9_]+)\}"/g;
  * and is where sql_confinement_tripwire, not this census, is the door.
  */
 function jobsTableAliases(source: string): Set<string> {
-	const aliases = new Set(['DIFFUSION_JOBS_TABLE']);
+	// The run ledger (DIFF-1) is job-row state too: every write to it is a
+	// lease-holder write, fenced on the same epoch.
+	const aliases = new Set(['DIFFUSION_JOBS_TABLE', 'DIFFUSION_JOB_LEDGER_TABLE']);
 	const ASSIGNMENT = /\b(?:const|let|var)\s+([A-Za-z0-9_]+)\s*(?::[^=;]+)?=\s*([A-Za-z0-9_]+)\s*;/g;
 	for (let grew = true; grew; ) {
 		grew = false;

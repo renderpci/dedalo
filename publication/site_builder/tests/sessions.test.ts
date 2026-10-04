@@ -221,6 +221,41 @@ describe('session flow', () => {
    * through it. The escape targets below are REAL FILES, planted first: a null/empty answer
    * can therefore only be a refusal, never an absence.
    */
+  test('a meta sidecar whose CONTENT names another site or session is not this session: 404, no turn anywhere, nothing left reserved', async () => {
+    await makeSite('alpha', 'Alpha');
+    await makeSite('beta', 'Beta');
+    let turns = 0;
+    const counted = (): AgentDriver => {
+      const inner = fakeDriver([{ type: 'result', ok: true, resumeToken: 'tok-1', durationMs: 1 }]);
+      return {
+        ...inner,
+        startTurn(start: SessionStartOptions): AgentProcess {
+          turns++;
+          return inner.startTurn(start);
+        },
+      };
+    };
+    __setTestDriver('claude_code', counted());
+    const { session_id } = await startSession('alpha', 'first');
+    await collectStream(sessionEventStream('alpha', session_id, -1));
+    const metaFile = join(workspacePath('alpha'), '.builder', 'sessions', `${session_id}.meta.json`);
+    const meta = JSON.parse(await Bun.file(metaFile).text());
+    for (const forged of [{ ...meta, slug: 'beta' }, { ...meta, session_id: 'another-session' }]) {
+      await writeFile(metaFile, JSON.stringify(forged));
+      expect(await readMeta('alpha', session_id)).toBeNull();
+      const refused = await sendMessage(session_id, 'second').then(
+        () => null,
+        error => error,
+      );
+      expect({ status: (refused as { status?: number } | null)?.status, turns }).toEqual({ status: 404, turns: 1 });
+    }
+    // Nothing is held: the site's own next session starts.
+    await writeFile(metaFile, JSON.stringify(meta));
+    const next = await startSession('alpha', 'again');
+    await collectStream(sessionEventStream('alpha', next.session_id, -1));
+    expect(turns).toBe(2);
+  });
+
   test('a session id spelling a traversal reads nothing', async () => {
     await makeSite('confined-session', 'Confined Session');
 
@@ -261,6 +296,10 @@ describe('workspace mutual exclusion (turns vs builds)', () => {
     manifest.build = { install: 'sleep 1', build: 'true', output: 'src' };
     await writeManifest(manifest);
 
+    // The driver is the gate's stand-in from the start: the REAL claude_code driver answers its
+    // own admission first (an unconfigured CLI is a 503 before any reservation — PLANT), and
+    // this row is about the reservation, not the CLI.
+    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
     const { build_id } = await startBuild('excl-b');
     await expect(startSession('excl-b', 'while building')).rejects.toThrow(/build is running/);
 
@@ -272,7 +311,6 @@ describe('workspace mutual exclusion (turns vs builds)', () => {
       if (Date.now() - start > 8000) throw new Error('build never settled');
       await new Promise(r => setTimeout(r, 25));
     }
-    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
     const { session_id } = await startSession('excl-b', 'after build');
     expect(session_id).toBeTruthy();
     await collectStream(sessionEventStream('excl-b', session_id, -1));

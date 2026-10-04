@@ -58,18 +58,27 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { agentUnitNames } from '../drivers/agent_identity';
+import { DOORS } from '../drivers/network_profile';
+import { SYSTEMD_FLOOR } from '../drivers/unit_properties';
+import { type AgentLedger, ledgerAllOrdinals, ledgerOrdinals, parseAgentLedger } from './identities';
 import { INSTANCE_MARKER, type InstanceLayout, type InstanceManifest } from './layout';
 import { renderAll } from './render';
+import { SHIM_RELATIVE } from './render/agent_units';
+import { retiredName } from './remove';
 import {
   changesTheHost,
   observedPaths,
+  parsePolkitVersion,
   type Action,
+  type ArchiveAction,
   type EntryType,
   type FileAction,
   type HostState,
@@ -105,6 +114,9 @@ export interface ExecResult {
   readonly stderr: string;
 }
 
+/** An archived tree (the retired shared HOME, a removed site's agent state): root:root, this. */
+export const ARCHIVE_MODE = 0o700;
+
 /**
  * EVERYTHING `apply` IS ALLOWED TO DO, as one injected interface.
  *
@@ -139,6 +151,16 @@ export interface ProvisionIo {
   chmod(path: string, mode: number): void;
   /** Run a command. The argv comes from the plan; it never carries a credential VALUE. */
   exec(argv: readonly string[]): ExecResult;
+  /**
+   * Rename a tree aside (LEAD-1b: the retired agent HOME, a removed site's agent state). The
+   * one way this io moves bytes; nothing is ever copied or deleted through it.
+   */
+  rename(from: string, to: string): void;
+  /**
+   * Remove ONE generated agent unit file of a site that is no longer declared. The plan may
+   * emit nothing else for it (`assertPlanIsCoherent`), and it follows no link.
+   */
+  unlink(path: string): void;
   /** Mint a credential. Returned to the writer and to nothing else, ever. */
   mintToken(bytes: number, encoding: 'base64url'): string;
   /** One bcrypt line's worth of hash. The password reaches this and stops here. */
@@ -210,6 +232,16 @@ export interface CheckReport {
  * apply
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
+/** `20261001T000000Z` — a compact UTC instant for an archived tree's name. */
+/** Where an archive goes, as a plan or a dry run spells it (the instant is apply's). */
+export function archiveTarget(action: ArchiveAction): string {
+  return 'beside' in action.to ? `${action.from}.retired-<utc>` : `${action.to.dir}/${action.to.stem}.<utc>`;
+}
+
+function archiveStamp(at: Date): string {
+  return at.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
 /** Mode as an operator reads it in a §3 row: four octal digits, setgid visible. */
 function octal(mode: number): string {
   return (mode & 0o7777).toString(8).padStart(4, '0');
@@ -264,7 +296,7 @@ function reconcileAccess(
 }
 
 /** Run one command and turn it into an outcome. The argv is reported verbatim. */
-function runCommand(io: ProvisionIo, argv: readonly string[]): { ok: boolean; detail: string } {
+function runCommand(io: ProvisionIo, argv: readonly string[], succeedsOn: readonly number[] = [0]): { ok: boolean; detail: string } {
   if (!Array.isArray(argv) || argv.length === 0 || argv.some(part => typeof part !== 'string')) {
     return {
       ok: false,
@@ -275,7 +307,7 @@ function runCommand(io: ProvisionIo, argv: readonly string[]): { ok: boolean; de
   }
   const result = io.exec(argv);
   const spelled = argv.join(' ');
-  if (result.code === 0) return { ok: true, detail: spelled };
+  if (succeedsOn.includes(result.code)) return { ok: true, detail: spelled };
   const output = firstLines(`${result.stderr}\n${result.stdout}`);
   return { ok: false, detail: `\`${spelled}\` exited ${result.code}${output ? `: ${output}` : ''}` };
 }
@@ -457,8 +489,13 @@ function executeOne(action: Action, io: ProvisionIo, state: RunState): ActionOut
     // on: `web_configtest` stands immediately before `web_reload`, so halting here is the
     // mechanism that makes reloading a broken configuration impossible.
     case 'exec': {
-      const result = runCommand(io, action.argv);
+      const result = runCommand(io, action.argv, action.succeedsOn);
       if (result.ok) return { action, status: 'done', detail: result.detail };
+      // A failure over a path that does not exist (a declared site's workspace the museum
+      // has not created yet) is a skip, and says so; any other failure halts the run.
+      if (action.absentOk !== undefined && io.stat(action.absentOk) === null) {
+        return { action, status: 'skipped', detail: `${action.absentOk} does not exist yet — nothing to ${action.step}` };
+      }
       const consequence =
         action.step === 'web_configtest'
           ? ' — NOTHING was reloaded and the running configuration is untouched'
@@ -466,8 +503,46 @@ function executeOne(action: Action, io: ProvisionIo, state: RunState): ActionOut
       return { action, status: 'failed', detail: `${action.step}: ${result.detail}${consequence}` };
     }
 
+    // ── A tree moved aside (LEAD-1b). Renamed, never copied and never deleted; its name is
+    // stamped with THIS instant, and an existing archive is never overwritten.
+    case 'archive': {
+      const facts = io.stat(action.from);
+      if (!facts) return { action, status: 'skipped', detail: `${action.from} is not there — nothing to archive` };
+      const now = new Date();
+      const to = 'beside' in action.to ? retiredName(action.from, now) : join(action.to.dir, `${action.to.stem}.${archiveStamp(now)}`);
+      if (io.stat(to)) {
+        return { action, status: 'failed', detail: `'${to}' already exists; an archive is never overwritten` };
+      }
+      // CLOSED BEFORE IT MOVES: an archive is root's alone. The retired shared HOME was 2770
+      // <svc>:<instance group>, and `beside` leaves it in the state dir (root 0755) — readable to
+      // every site identity, whose PRIMARY group is the instance group, so every site's run could
+      // read every other site's pre-migration `~/.claude`. The directory ITSELF is re-owned and
+      // re-moded (never recursively: nothing is followed through what an agent planted inside),
+      // and only a directory: `chmod` follows a link.
+      if (facts.type !== 'dir') {
+        return { action, status: 'failed', detail: `'${action.from}' is a ${facts.type}, not a directory; an archive is never a link` };
+      }
+      io.chown(action.from, 'root', 'root');
+      io.chmod(action.from, ARCHIVE_MODE);
+      io.rename(action.from, to);
+      state.written.push(to);
+      return { action, status: 'done', detail: `archived ${action.from} -> ${to}` };
+    }
+
+    // ── A removed site's generated agent unit file. Absent is a skip; a symlink is refused.
+    case 'unlink': {
+      const facts = io.stat(action.path);
+      if (!facts) return { action, status: 'skipped', detail: `${action.path} is already gone` };
+      if (facts.type !== 'file') {
+        return { action, status: 'failed', detail: `'${action.path}' is a ${facts.type}, not the generated unit file; refusing` };
+      }
+      io.unlink(action.path);
+      state.written.push(action.path);
+      return { action, status: 'done', detail: `removed ${action.path}` };
+    }
+
     default: {
-      // Exhaustiveness as a compile error. A seventh action kind must be given an execution
+      // Exhaustiveness as a compile error. A new action kind must be given an execution
       // rule HERE, in the same commit that adds it — never defaulted to "ignore", which
       // would make the provisioner silently skip the one step the release added.
       const unreachable: never = action;
@@ -670,6 +745,12 @@ export function check(actions: readonly Action[]): CheckReport {
       case 'user':
         execs.push(action.argv);
         break;
+      case 'archive':
+        writes.push({ path: action.from, disposition: `archive -> ${archiveTarget(action)}` });
+        break;
+      case 'unlink':
+        writes.push({ path: action.path, disposition: 'unlink' });
+        break;
     }
   }
 
@@ -778,6 +859,14 @@ export function hostIo(): ProvisionIo {
     chmod(path: string, mode: number): void {
       chmodSync(path, mode);
     },
+    rename(from: string, to: string): void {
+      renameSync(from, to);
+    },
+    unlink(path: string): void {
+      // lstat first: never through a link (the plan names a file this provisioner wrote).
+      if (lstatSync(path).isSymbolicLink()) throw new Error(`apply: '${path}' is a symlink; refusing to unlink through it`);
+      unlinkSync(path);
+    },
     exec(argv: readonly string[]): ExecResult {
       const [command, ...args] = argv;
       const result = spawnSync(command as string, args, { encoding: 'utf8' });
@@ -849,14 +938,16 @@ function systemctlSays(verb: string, unit: string): boolean {
  * The markers are added separately because no renderer produces them: `plan.ts` mints them
  * from the instance name. They are the only contentful paths that are not artifacts.
  */
-function contentfulPaths(layout: InstanceLayout, manifest: InstanceManifest): Set<string> {
-  const paths = new Set<string>(renderAll(layout, manifest).map(artifact => artifact.path));
-  for (const root of [
-    layout.roots.workspaces,
-    layout.roots.home,
-    layout.roots.audit,
-    ...layout.sites.map(site => site.webspace),
-  ]) {
+function contentfulPaths(
+  layout: InstanceLayout,
+  manifest: InstanceManifest,
+  identities: ReadonlyMap<string, number>,
+): Set<string> {
+  const facts = { agentIdentities: identities, systemdVersion: SYSTEMD_FLOOR };
+  const paths = new Set<string>(renderAll(layout, manifest, facts).map(artifact => artifact.path));
+  // The daemon's roots, every webspace — and the retired shared agent HOME, whose marker the
+  // plan reads before it archives the tree (never another instance's).
+  for (const root of [layout.roots.workspaces, layout.roots.home, layout.roots.audit, ...layout.sites.map(site => site.webspace)]) {
     paths.add(join(root, INSTANCE_MARKER));
   }
   return paths;
@@ -904,11 +995,76 @@ function directoryListings(dirs: readonly string[]): Record<string, readonly str
   return listings;
 }
 
+/**
+ * THE SITE-IDENTITY LEDGER, READ (LEAD-1b) — `getent passwd`/`shadow`/`group` (NSS, so an
+ * LDAP/SSSD user resolves as PID 1 will resolve `User=`), parsed by `identities.ts`. Retired is
+ * the shadow EXPIRY, never the password lock (see there); `shadow` needs root, and an account
+ * whose entry was not read is refused by the plan rather than guessed. `/etc/login.defs` gives
+ * the SYSTEM id ranges the plan's budget check counts against.
+ */
+export function readAgentLedger(layout: InstanceLayout): AgentLedger {
+  const read = (database: string): string | null => {
+    const result = spawnSync('getent', [database], { encoding: 'utf8' });
+    return result.status === 0 ? String(result.stdout) : null;
+  };
+  let loginDefs: string | null = null;
+  try {
+    loginDefs = readFileSync('/etc/login.defs', 'utf8');
+  } catch {
+    loginDefs = null; // shadow-utils' compiled-in defaults apply
+  }
+  return parseAgentLedger(layout, { passwd: read('passwd'), shadow: read('shadow'), group: read('group'), loginDefs });
+}
+
+/**
+ * WHAT THE AGENT UNITS' ExecStart RESOLVES TO: `realpath` of the declared runtime and of the
+ * shim under the declared checkout, keyed by the declared path. A path that does not resolve
+ * (absent) contributes no entry — "I could not look" is never "it is its own realpath".
+ */
+export function resolvedExecPaths(layout: InstanceLayout): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const path of [layout.daemon.bun, join(layout.daemon.workingDirectory, SHIM_RELATIVE)]) {
+    try {
+      out[path] = realpathSync(path);
+    } catch {
+      // Absent or unreadable: not observed.
+    }
+  }
+  return out;
+}
+
+/** PID 1's release (`systemctl show -p Version --value`, leading integer), or null. */
+function readPid1Version(): number | null {
+  const result = spawnSync('systemctl', ['show', '-p', 'Version', '--value'], { encoding: 'utf8' });
+  const match = result.status === 0 ? /^(\d+)/.exec(String(result.stdout).trim()) : null;
+  return match ? Number(match[1]) : null;
+}
+
+/** polkit's release (`pkaction --version`), normalised; null when unreadable. */
+function readPolkitVersion(): number | null {
+  const result = spawnSync('pkaction', ['--version'], { encoding: 'utf8' });
+  return result.status === 0 ? parsePolkitVersion(String(result.stdout)) : null;
+}
+
+/** The agent sockets of every ordinal the ledger knows that `systemctl <verb>` reports (`is-enabled` / `is-active`). */
+function readSockets(layout: InstanceLayout, ordinals: readonly number[], verb: 'is-enabled' | 'is-active'): string[] {
+  const out: string[] = [];
+  for (const k of ordinals) {
+    for (const door of DOORS) {
+      const socket = agentUnitNames(layout.agentUnitPrefix, k, door).socket;
+      if (systemctlSays(verb, socket)) out.push(socket);
+    }
+  }
+  return out;
+}
+
 export function observeHost(layout: InstanceLayout, manifest: InstanceManifest): HostState {
-  const contentful = contentfulPaths(layout, manifest);
+  const agentLedger = readAgentLedger(layout);
+  const identities = ledgerOrdinals(layout, agentLedger);
+  const contentful = contentfulPaths(layout, manifest, identities);
 
   const entries: Record<string, PathObservation> = {};
-  for (const path of observedPaths(layout, manifest)) {
+  for (const path of observedPaths(layout, manifest, identities)) {
     const facts = factsOf(path);
     // AN OBSERVER THAT CANNOT STAT A PATH OMITS THE ENTRY. `PathObservation`'s header says
     // why: a blank observation is read as drift, and "I did not look" must never read as
@@ -951,10 +1107,9 @@ export function observeHost(layout: InstanceLayout, manifest: InstanceManifest):
   ];
 
   return Object.freeze({
-    // BOTH identities: the daemon's and the agent's. A host observation that named only the
-    // first would plan the agent's useradd on every run, or — worse, once the plan learned
-    // to skip it — never at all.
-    users: Object.freeze([layout.identity.user, layout.identity.agentUser].filter(userExists)),
+    // The service user (the retired per-museum agent is read into the ledger instead: it is
+    // only ever locked, never created).
+    users: Object.freeze([layout.identity.user].filter(userExists)),
     groups: Object.freeze(
       declaredNames
         .filter((name, index) => declaredNames.indexOf(name) === index)
@@ -972,6 +1127,12 @@ export function observeHost(layout: InstanceLayout, manifest: InstanceManifest):
     // host remembers. A directory that cannot be read contributes no entry rather than an
     // empty one — the same rule as every stat above.
     vhostDirEntries: directoryListings([layout.vhostDir, layout.vhostEnabledDir]),
+    agentLedger,
+    resolvedPaths: resolvedExecPaths(layout),
+    pid1Version: readPid1Version(),
+    polkitVersion: readPolkitVersion(),
+    enabledSockets: Object.freeze(readSockets(layout, ledgerAllOrdinals(layout, agentLedger), 'is-enabled')),
+    activeSockets: Object.freeze(readSockets(layout, ledgerAllOrdinals(layout, agentLedger), 'is-active')),
   });
 }
 

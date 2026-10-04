@@ -54,7 +54,6 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {LZString as lzstring} from '/dedalo/lib/lz-string/lz-string.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {response_data} from '../../../core/common/js/api_error.js'
 	import {
@@ -196,6 +195,10 @@ tool_common.prototype.init = async function(options) {
 							//	 caller_ddo : object {...},
 							//	 tool_config : object {...}
 							// }
+							// Lazy (CONVENTIONS.md §2, rationale 3 — rarely hit): only a tool
+							// opened in its own window carries raw_data; keeps lz-string off
+							// the boot graph (page_load_budget_native).
+							const { LZString: lzstring } = await import('/dedalo/lib/lz-string/lz-string.js')
 							const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
 							if (!url_data_string) {
 								throw new Error('Decompression returned empty result')
@@ -695,6 +698,11 @@ export const wire_tool = function(tool_constructor, render_module) {
 	tool_constructor.prototype.render	= tool_common.prototype.render
 	tool_constructor.prototype.destroy	= common.prototype.destroy
 	tool_constructor.prototype.refresh	= common.prototype.refresh
+	// tool_request: the server round-trip. Part of the standard wiring: it was not,
+	// so tool_dev_template (the scaffolder's source) and every tool copied from it
+	// called self.tool_request on a prototype that lacked it ('not a function' —
+	// how tool_sitebuilder shipped unable to reach its server).
+	tool_constructor.prototype.tool_request	= tool_common.prototype.tool_request
 
 	if (render_module) {
 		if (typeof render_module.prototype.edit==='function') {
@@ -751,6 +759,11 @@ export const wire_tool = function(tool_constructor, render_module) {
 *   defaults to the owning tool's model name to prevent cross-page collisions
 * @param {Object[]} [options.to_delete_instances] - Existing instances to destroy
 *   before loading the new one (used when swapping the displayed component)
+* @param {boolean} [options.delete_dependencies=false] - Destroy the
+*   `to_delete_instances` DEEP (their whole subtree: section_records, children).
+*   Default false keeps the shallow destroy every other tool relies on;
+*   tool_time_machine sets it so a superseded preview does not leave its subtree,
+*   with that row's data, registered in the instances map
 * @param {Object|null} [options.caller_dataframe=null] - Dataframe context for
 *   `component_dataframe` callers; threads the row key through to the new instance
 * @returns {Promise<Object>} The fully initialised and built component instance
@@ -771,6 +784,7 @@ export const load_component = async function(options) {
 		const data_source			= options.data_source || null
 		const id_variant			= options.id_variant || self.model
 		const to_delete_instances	= options.to_delete_instances
+		const delete_dependencies	= options.delete_dependencies===true
 		const caller_dataframe		= options.caller_dataframe || null
 
 	// component instance_options
@@ -811,7 +825,11 @@ export const load_component = async function(options) {
 				if (to_delete_instances.includes(current_instance)) {
 					// remove from array of instances and destroy
 					self.ar_instances.splice(i, 1)
-					await current_instance.destroy()
+					await current_instance.destroy(
+						true, // delete_self
+						delete_dependencies, // delete_dependencies (default false: shallow)
+						false // remove_dom
+					)
 				}
 			}
 		}
@@ -985,14 +1003,32 @@ export const open_tool = async (options) => {
 
 
 /**
+* OPEN_TOOL_MODALS
+* Keys (tool name + caller id_base + lang) of the tool modals currently open or
+* opening. Lets view_modal refuse a second open synchronously, before the async
+* tool load, so repeated clicks on a slow network never stack two modals.
+*/
+const open_tool_modals = new Set()
+
+
+
+/**
 * VIEW_MODAL
 * Opens the tool inside a Dédalo modal panel within the current window.
 * Handles the full tool lifecycle: instance resolution, spinner UI, build, render,
 * header wiring, and modal close/cleanup.
 *
-* Toggle behaviour: if `get_instance` returns an already-running instance (status
-* other than 'initialized'), the function returns false immediately so a second click
-* on the same tool button collapses rather than re-opens the modal.
+* Open-first: the modal (placeholder header + spinner) is attached synchronously on
+* the click; the slow part — `get_instance` (tool ES module import + init), the tool
+* CSS, build and render — runs behind the spinner. On a slow network the user sees
+* the tool open at once instead of a frozen page.
+*
+* Toggle behaviour: a second open of the same tool for the same caller while one is
+* open or still loading is refused synchronously (`open_tool_modals`), returning
+* false. If `get_instance` returns an already-running instance (status other than
+* 'initialized', e.g. opened through another path), the just-opened modal is dropped
+* and false is returned. A modal closed while loading destroys the late instance
+* unless a reopen of the same tool+caller is already awaiting it.
 *
 * Tool instance ID scoping: `id_variant` is set to `caller.id_base` so that the
 * same tool model opened from two different caller components gets separate instance
@@ -1019,8 +1055,9 @@ export const open_tool = async (options) => {
 *   'popup'); currently informational only — modal rendering does not differ by sub-mode
 * @param {Object|null} [options.windowFeatures] - Object whose keys are CSS property
 *   names and values are CSS values, applied to `modal.modal_content` to size the modal
-* @returns {Promise<Object|boolean>} The tool instance on success; false when the
-*   caller is missing or the tool is already open (toggle)
+* @returns {Promise<Object|boolean>} Resolves once the tool instance is loaded (before
+*   build/render) with the instance; false when the caller is missing, the tool is
+*   already open (toggle) or the modal was closed while loading
 */
 const view_modal = async function(options) {
 
@@ -1049,31 +1086,52 @@ const view_modal = async function(options) {
 			caller_options	: options.caller_options || null // per-open data, e.g. the tag_id to land on
 		}, tool_context)
 
-	// instance load / recover
-		const tool_instance = await get_instance(instance_options)
-
-	// stop if already loaded (toggle tool)
-	// If the tool is in any lifecycle state other than 'initialized', it is already
-	// open in the UI.  Returning false tells the caller button to treat this as a
-	// toggle-close rather than a duplicate open.
-		if (tool_instance && tool_instance.status && tool_instance.status!=='initialized') {
+	// opening guard (toggle tool)
+	// Synchronous, so a second click while the first open is still loading
+	// (slow network: module import + build) is refused before a second modal
+	// exists. Cleared on modal close.
+		const open_key = `${tool_context.name}_${caller.id_base}_${caller.lang}`
+		if (open_tool_modals.has(open_key)) {
 			return false
 		}
+		open_tool_modals.add(open_key)
 
-	// load tool CSS
-	// Pre-load the stylesheet so the first paint after build() has styles applied.
-	// load_style is idempotent; duplicate calls for the same URL are no-ops.
-	// (!) Build the versioned URL exactly as build() does (line ~398) so the two
-	// loads dedup to a single request — the server css.url is unversioned, and
-	// load_style keys on the exact string, so a bare url would fetch the file twice.
-		const tool_css_url = tool_context.model
-			? tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
-			: tool_context.css?.url
-		if(tool_css_url) {
-			// Await to prevent a first paint of the tool before its stylesheet
-			// is applied (build() awaits its own load_style the same way)
-			await load_style(tool_css_url)
+	// tool_instance. Resolved inside the modal spinner callback (see below), so the
+	// modal opens on the click and the slow part (tool ES module import, CSS, build)
+	// runs behind the spinner instead of before anything is painted.
+		let tool_instance = null
+		let modal_closed = false // set by modal.on_close
+
+	// load_tool_instance. Instance load / recover + tool CSS.
+		const load_tool_instance = async () => {
+
+			const instance = await get_instance(instance_options)
+
+			// already running elsewhere (status other than 'initialized'): toggle-close
+			if (instance && instance.status && instance.status!=='initialized') {
+				return {instance, already_open : true}
+			}
+
+			// load tool CSS
+			// Await to prevent a first paint of the tool before its stylesheet is
+			// applied (build() awaits its own load_style the same way).
+			// (!) Build the versioned URL exactly as build() does so the two loads
+			// dedup to a single request — the server css.url is unversioned, and
+			// load_style keys on the exact string, so a bare url would fetch twice.
+			const tool_css_url = tool_context.model
+				? tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
+				: tool_context.css?.url
+			if(tool_css_url) {
+				await load_style(tool_css_url)
+			}
+
+			return {instance, already_open : false}
 		}
+
+	// resolve. view_modal resolves with the tool instance once it is loaded (or
+	// false), preserving the open_tool return contract.
+		let resolve_view
+		const view_promise = new Promise(resolve => { resolve_view = resolve })
 
 	// modal
 	// Construct a placeholder header + body immediately so the modal can open with a
@@ -1081,16 +1139,40 @@ const view_modal = async function(options) {
 		const loading_label = get_label.loading || 'Loading tool..'
 		const header = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `tool_header ${tool_context.name} header`,
-			inner_html		: `<div class="tool_name_container">
-								<div class="label"><span class="button white" style="mask: url("${tool_context.icon}");"></span>${tool_context.label}</div>
-								<div class="description">${loading_label}</div>
-							  </div>`
+			class_name		: `tool_header ${tool_context.name} header`
+		})
+		const header_name_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tool_name_container',
+			parent			: header
+		})
+		const header_label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			parent			: header_name_container
+		})
+		if (tool_context.icon) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button white',
+				style			: {
+					'-webkit-mask'	: `url('${tool_context.icon}')`,
+					'mask'			: `url('${tool_context.icon}')`
+				},
+				parent			: header_label
+			})
+		}
+		header_label.append(tool_context.label || tool_context.name || '')
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description',
+			text_content	: loading_label,
+			parent			: header_name_container
 		})
 		const body = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: `wrapper_tool ${tool_context.name} edit body`,
-			inner_html		: loading_label
+			text_content	: loading_label
 		})
 		body.style.minHeight = '15rem'
 		const modal = ui.attach_to_modal({
@@ -1143,6 +1225,41 @@ const view_modal = async function(options) {
 							return wrapper;
 						}
 
+						// load the tool instance (module import + CSS) behind the spinner
+						let loaded
+						try {
+							loaded = await load_tool_instance()
+						} catch (error) {
+							console.error(error, caller);
+							resolve_view(false)
+							return render_invalid_tool(error);
+						}
+
+						// already open elsewhere (toggle): drop this modal, keep that one
+						if (loaded.already_open) {
+							open_tool_modals.delete(open_key)
+							modal.remove()
+							resolve_view(false)
+							return null
+						}
+
+						// closed by the user while loading: nothing to render.
+						// (!) Destroy the late instance only when no newer open of the
+						// same tool+caller is in progress: get_instance de-dups in-flight
+						// builds, so a reopen during this load awaits the SAME instance,
+						// and destroying it here would hand that open a dead tool (caller
+						// nulled — its on_close_actions then threw on caller.refresh).
+						if (modal_closed) {
+							if (!open_tool_modals.has(open_key)) {
+								loaded.instance?.destroy?.(true, true, true)
+							}
+							resolve_view(false)
+							return null
+						}
+
+						tool_instance = loaded.instance
+						resolve_view(tool_instance || false)
+
 						// no valid tool instance case
 						if (!tool_instance) {
 							return render_invalid_tool();
@@ -1151,6 +1268,10 @@ const view_modal = async function(options) {
 						try {
 							// Build and render the tool instance
 							await tool_instance.build(true);
+							// closed while building (on_close already destroyed it)
+							if (modal_closed) {
+								return null
+							}
 							const wrapper = await tool_instance.render();
 
 							// Ensure the wrapper contains a valid tool header
@@ -1192,6 +1313,9 @@ const view_modal = async function(options) {
 			}
 		})
 		modal.on_close	= () => {
+
+			modal_closed = true
+			open_tool_modals.delete(open_key)
 
 			// remove modal from DOM (original on_close was overwritten,
 			// so we must call remove() explicitly to avoid DOM leak)
@@ -1248,7 +1372,7 @@ const view_modal = async function(options) {
 		}
 
 
-	return tool_instance
+	return view_promise
 }//end view_modal
 
 
@@ -1359,6 +1483,8 @@ const view_window = async function(options) {
 		// raw_data will be compressed and de-compressed from target window
 		// The full payload is JSON-stringified then LZString-compressed to stay
 		// within URL-length limits.  The new window decompresses it in init().
+		// Lazy (CONVENTIONS.md §2, rationale 3): see the decompress site in init().
+		const { LZString: lzstring } = await import('/dedalo/lib/lz-string/lz-string.js')
 		const raw_data = lzstring.compressToEncodedURIComponent(
 			JSON.stringify({
 				caller_ddo		: caller_ddo,

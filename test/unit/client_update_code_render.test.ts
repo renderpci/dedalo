@@ -670,46 +670,6 @@ describe('update_code developer-builds switch', () => {
 		expect(/options\s*:\s*\{[^}]*channel/s.test(model_src)).toBe(true);
 	});
 
-	test("the developer channel builds THE SERVER'S branch, never a literal ref", () => {
-		// A client-baked 'v7' refused on every code server that does not carry
-		// that branch ("Could not read src/core/update/version.ts at ref 'v7'").
-		// The ref is source.branch; when it IS the release ref there is nothing
-		// unreleased to publish and the row says so instead of offering a button.
-		// no branch LITERAL other than the release ref's own channel
-		expect(/branch\s*:\s*['"](?!master['"])/.test(render_src)).toBe(false);
-		expect(render_src).toContain('const dev_branch');
-		expect(/branch\s*:\s*dev_branch/.test(render_src)).toBe(true);
-		expect(render_src).toContain('source.release_ref');
-		expect(render_src).toContain('update_code_build_developer_unavailable');
-		// the branch is a NAMED placeholder: its position differs per language
-		expect(render_src).toContain("replaceAll('%branch%'");
-		expect(master_labels.update_code_build_developer_confirm).toContain('%branch%');
-	});
-
-	test('every translation of the confirm keeps ONE %branch% and TWO %s', () => {
-		// The client substitutes %branch% by NAME and then the two %s POSITIONALLY
-		// (version, then path). A translator dropping %branch% ships a sentence
-		// naming no branch; a third %s puts the path where the version belongs —
-		// both silent, and both invisible to the labels tripwire (it checks key
-		// sets, never placeholders).
-		const key = 'update_code_build_developer_confirm';
-		const catalog_dir = join(import.meta.dir, '../../src/core/labels/catalog');
-		const sentences: Array<[string, string]> = [['master', master_labels[key] as string]];
-		for (const file of readdirSync(catalog_dir).filter((name) => name.endsWith('.json'))) {
-			const labels = JSON.parse(readFileSync(join(catalog_dir, file), 'utf8')) as Record<
-				string,
-				string
-			>;
-			// lg-eng carries no copy of master.json (the tripwire refuses duplicates)
-			if (typeof labels[key] === 'string') sentences.push([file, labels[key]]);
-		}
-		expect(sentences.length).toBeGreaterThan(10);
-		for (const [where, sentence] of sentences) {
-			expect(`${where}: ${sentence.split('%branch%').length - 1}`).toBe(`${where}: 1`);
-			expect(`${where}: ${sentence.split('%s').length - 1}`).toBe(`${where}: 2`);
-		}
-	});
-
 	test('the panel offers the switch and re-lists through it', () => {
 		expect(render_src).toContain('dev_channel');
 		expect(render_src).toContain('update_code_dev_channel');
@@ -724,105 +684,30 @@ describe('update_code developer-builds switch', () => {
 		expect(status_src).toContain('update_code_posture_dev_build');
 	});
 
-	test('the panel is split into TWO ROLE BLOCKS, each naming whose code it is about', () => {
-		// One screen answers two unrelated questions — what THIS install runs, and
-		// what it PUBLISHES. Flat, they read as one list and 'Published releases'
-		// looks like something the install might receive.
-		expect(render_src).toContain('role_block');
-		expect(render_src).toContain("role_block(\n\t\t\tcontent_data,\n\t\t\t'consumer'");
-		expect(render_src).toContain("'code_server'");
-		expect(render_src).toContain('update_code_role_consumer');
-		expect(render_src).toContain('update_code_role_server');
+	test('the panel is the CONSUMER role only — the publish half is serve_code', () => {
+		// Split 2026-09-28 (WC-2026-09-28-maintenance-serve-code-widget): no role
+		// blocks, no build machinery, no second model on the wire from this panel.
+		expect(render_src).not.toContain('role_block');
+		expect(render_src).not.toContain('make_builder_mounter');
+		expect(render_src).not.toContain('render_code_server_status');
+		expect(render_src).not.toContain('build_version_from_git_master');
+		expect(status_src).not.toContain('render_code_server_status');
+		expect(render_src).toContain('const consumer_body = content_data');
 	});
 
-	test('each build action is ONE entry with the archive it produces', () => {
-		// The buttons and the archives were two blocks, and nothing said the first
-		// writes the second. The readout now lays out a row per channel and calls
-		// back to mount the action into it.
-		expect(render_src).toContain('make_builder_mounter');
-		// rendered through render_code_server_half, so a build can re-run it
-		expect(
-			/render_code_server_status\(\s*server_body,\s*code_server,\s*make_builder_mounter/.test(
-				render_src,
-			),
-		).toBe(true);
-		expect(render_src).toContain('render_code_server_half(value.code_server)');
-		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
-		// the mounter also receives the ARTIFACT CELL and the facts it currently
-		// shows: the in-flight state belongs on the row being rewritten, and the
-		// before-value has to be captured before the refresh destroys this half.
-		expect(status_src).toContain('mount_builder(channel, action, value, built || null)');
-		expect(status_src).toContain('build_row');
-		expect(status_src).toContain('update_code_build_publish');
-		// an unbuilt channel still shows its row, saying so
-		expect(status_src).toContain('update_code_not_built');
-		// and archives of other versions are listed, never dropped
-		expect(status_src).toContain('update_code_other_archives');
-		// ONE writer for the archive facts, called from BOTH lists (the duplicate
-		// is how the stale 'developer (not offered)' wording survived in one)
-		expect(status_src).toContain('const release_facts = function(');
-		expect((status_src.match(/release_facts\(/g) ?? []).length).toBe(2);
-	});
-
-	test('the build actions read as BUTTONS, weighted by channel', () => {
-		// In the readout's label column a pale outline reads as a caption; the one
-		// thing on the row that DOES something must not be the quietest mark on it.
-		expect(render_src).toContain("button_class\t: 'primary'");
-		expect(render_src).toContain("classList.add('build_button', def.button_class)");
-		expect(css_src).toContain('button.build_button');
-	});
-
-	test('a finished build REFRESHES the archive list beside the button', () => {
-		// The row next to the button is a claim about the disk that the build just
-		// changed: stale, it shows the old timestamp — or 'Not built yet' next to a
-		// build that succeeded.
-		expect(render_src).toContain('on_built');
-		expect(render_src).toContain('refresh_code_server');
-		// re-read from the SERVER, not from the value this render closed over
-		expect(
-			/refresh_code_server\s*=\s*async\s*\(build_mark\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(
-				render_src,
-			),
-		).toBe(true);
-		// and the half is re-rendered from that fresh value, carrying the mark:
-		// the whole half is replaced, so without it the new archive line appears
-		// where the old one was with nothing saying which one is on screen.
-		expect(render_src).toContain('render_code_server_half(fresh.code_server, build_mark)');
-		// a failed refresh must not take the panel down
-		expect(
-			/catch \(error\) \{[\s\S]{0,240}console\.error\('update_code: could not refresh/.test(
-				render_src,
-			),
-		).toBe(true);
-	});
-
-	test('both role blocks fold, and remember it', () => {
-		expect(render_src).toContain('role_header icon_arrow');
-		expect(render_src).toContain('dedalo.update_code.fold.');
-		expect(render_src).toContain('read_fold');
-		expect(render_src).toContain('store_fold');
-		// storage failures degrade to an OPEN block, never to an error
-		expect(render_src).toContain('} catch (_error) {\n\t\treturn false');
-	});
-
-	test('the switch carries an icon, and both role blocks carry theirs', () => {
+	test('the switch carries its icon', () => {
 		expect(render_src).toContain('dev_channel_icon');
-		expect(render_src).toContain('role_icon');
 		expect(css_src).toContain(".fn_maintenance_icon('bug.svg')");
-		expect(css_src).toContain(".fn_maintenance_icon('download.svg')");
-		expect(css_src).toContain(".fn_maintenance_icon('upload.svg')");
 	});
 
-	test('no `>` selector still points at content_data for a node that moved into a role block', () => {
-		// The restructure re-parented these; a direct-child selector left behind
-		// matches NOTHING and fails silently — the styles simply vanish.
-		for (const moved of ['button_submit', 'dd_readout', 'dd_note', 'dev_channel_row']) {
-			expect(
-				new RegExp(`^\\t\\t>\\.${moved}\\b`, 'm').test(css_src),
-				`.${moved} moved into .role_body — its selector must not be a direct child of content_data`,
-			).toBe(false);
+	test('the panel nodes are direct children of content_data again, and styled as such', () => {
+		// The role blocks re-parented these once (2026-08-24) and their selectors
+		// followed; with the blocks gone a left-behind `.role_body >` matches
+		// NOTHING and the styles silently vanish.
+		expect(css_src).not.toContain('.role_body');
+		for (const node of ['button_submit', 'dd_readout', 'dd_note', 'dev_channel_row']) {
+			expect(new RegExp(`^\\t\\t>\\.${node}\\b`, 'm').test(css_src), `>.${node}`).toBe(true);
 		}
-		expect(css_src).toContain('.role_body >.dev_channel_row');
 	});
 
 	test('the health poll reads install_digest and hands it to the verdict', () => {
@@ -904,7 +789,7 @@ describe('update_code tracking surface', () => {
 
 	test("the run's scroll is issued AFTER the stream node, and is not animated", () => {
 		const stream_at = tracker.indexOf("class_name\t\t: 'update_stream'");
-		const scroll_at = tracker.indexOf('scrollIntoView');
+		const scroll_at = tracker.indexOf('ui.reveal(body_response');
 		expect(stream_at, 'the stream node is created in the tracker').toBeGreaterThan(-1);
 		expect(scroll_at, 'the tracker scrolls its surface into view').toBeGreaterThan(-1);
 		// ORDER is the fix: scrolling before the stream exists chased a layout
@@ -929,8 +814,10 @@ describe('update_code tracking surface', () => {
 				`an ending note is appended unrevealed: ${note.slice(0, 120)}`,
 			).toBe(true);
 		}
-		// reveal itself must tolerate the DOM stub this gate drives it against
-		expect(tracker).toContain("typeof node.scrollIntoView==='function'");
+		// reveal is the shared ui.reveal (next frame, DOM-stub guarded — pinned
+		// in client_ui_reveal.test.ts), not a local scrollIntoView copy
+		expect(tracker).toContain("const reveal = (node) => ui.reveal(node, { block:'center' })");
+		expect(tracker).not.toContain('scrollIntoView');
 	});
 
 	test('the pinned phase track cannot own its scrollport', () => {
@@ -1007,81 +894,6 @@ describe('update_code restore-reason detail', () => {
  * an in-flight state with no before/after cannot confirm the write happened,
  * and a verdict with no in-flight state leaves the panel mute while it runs.
  */
-describe('update_code build feedback', () => {
-	test('the in-flight state is armed by the REQUEST, never by the click', () => {
-		// build_form runs window.confirm synchronously and only then adds
-		// `button_spinner`, before its first await — so a listener registered
-		// after it sees the spinner iff the operator confirmed. Marking on click
-		// would leave a declined confirm showing "building…" forever.
-		expect(render_src).toContain("form.addEventListener('submit'");
-		expect(render_src).toContain("classList.contains('button_spinner')");
-		expect(render_src).toContain("artifact_cell.classList.add('building')");
-		expect(render_src).toContain('update_code_build_building');
-		// the marker goes on the ARTIFACT cell, not on the button: the button
-		// already reports the request; only the row can report that ITS file is
-		// the one being rewritten.
-		expect(render_src).toContain('function(channel, node, artifact_cell, built_before)');
-	});
-
-	test('the before-value is captured at mount and survives the refresh', () => {
-		// the refresh destroys this half, so nothing could read it back off the
-		// DOM afterwards — it has to be closed over when the row is built.
-		expect(render_src).toContain('built_before');
-		expect(/previous\s*:\s*built_before/.test(render_src)).toBe(true);
-		expect(render_src).toContain('channel\t\t: channel');
-		// …and reaches the renderer as the mark for that channel only
-		expect(status_src).toContain('build_mark && build_mark.channel===channel');
-		expect(
-			/render_code_server_status = function\(parent, code_server, mount_builder, build_mark\)/.test(
-				status_src,
-			),
-		).toBe(true);
-	});
-
-	test('the verdict is read off the STAMP, not asserted', () => {
-		// "updated" must be a statement about the disk that the disk supports: a
-		// build that wrote nothing leaves the stamp where it was, and the row
-		// says THAT instead of claiming a change.
-		expect(status_src).toContain('previous.stamp!==release.stamp');
-		expect(status_src).toContain('update_code_build_updated');
-		expect(status_src).toContain('update_code_build_unchanged');
-		// the archive that did not exist before is an update, not "unchanged"
-		expect(status_src).toContain('previous===null || previous.stamp!==release.stamp');
-	});
-
-	test('the before-value shows only what MOVED', () => {
-		// Repeating the unchanged facts ("173 MB · 28/08/2026, 11:41:43" above,
-		// "was 173 MB · 28/08/2026, 11:41:12" below) buries the one figure the
-		// operator is reading for in three that did not change.
-		expect(status_src).toContain('previous.bytes!==release.bytes');
-		expect(status_src).toContain('same_day(previous.stamp, release.stamp)');
-		expect(status_src).toContain('format_time');
-		// and an UNCHANGED build renders no before-line at all: it would be
-		// identical to the value above it, and the badge already says so.
-		expect(/if \(!wrote\) \{\s*return null/.test(status_src)).toBe(true);
-		expect(status_src).toContain('if (previous_text!==null)');
-	});
-
-	test('the value it replaced is spelled out, and every label is defined', () => {
-		expect(status_src).toContain('build_file_previous');
-		expect(status_src).toContain('update_code_build_previous');
-		for (const key of [
-			'update_code_build_building',
-			'update_code_build_previous',
-			'update_code_build_unchanged',
-			'update_code_build_updated',
-		]) {
-			expect(master_labels[key], `${key} is defined in master.json`).toBeDefined();
-		}
-		// one substitution slot: the size · date the row showed before
-		expect(((master_labels.update_code_build_previous ?? '').match(/%s/g) ?? []).length).toBe(1);
-		// and the states have somewhere to render
-		expect(css_src).toContain('&.building');
-		expect(css_src).toContain('.build_file_previous');
-		expect(css_src).toContain('&.built_updated');
-	});
-});
-
 /**
  * THE DELETE AFFORDANCE — the client half of restore-point retention.
  *

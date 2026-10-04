@@ -319,8 +319,6 @@ const FLOORLESS_WALK_BASELINE: Readonly<Record<string, string>> = {
 		'DEBT: the recursive `readdirSync` walk is never floored.',
 	'test/unit/operator_commands_tripwire.test.ts':
 		'NOT-A-CENSUS: `readdirSync` lists the scratch backup trees the gate builds under test/.tmp-* (retention generations), not a corpus.',
-	'test/unit/parity_baseline_tripwire.test.ts':
-		'DEBT: the on-disk parity glob (`scripts/lib/red_baseline.ts`) is never floored; the floors are on the tier RUN.',
 	'test/unit/proxy_trust_tripwire.test.ts': 'DEBT: the src/ proxy-trust glob is never floored.',
 	'test/unit/remove_sentinel_native.test.ts':
 		'DEBT: `scanFiles()` over src/ is never floored (floors are on call sites and reasons).',
@@ -483,13 +481,11 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/tier_assignment_tripwire.test.ts': 'ROOTS: `scripts`; `scripts/ci` ×2; `test`.',
 	'test/unit/tier_execution_tripwire.test.ts': 'ROOTS: `scripts/ci`.',
 	'test/unit/tier_wiring_tripwire.test.ts':
-		'ROOTS: `.github/workflows`; `.github/workflows-selfhosted`; `scripts/ci`; `test` ×2.',
+		'ROOTS: `.github/workflows`; `.github/workflows-selfhosted`; `scripts/ci` ×2; `test` ×3.',
 	'test/unit/tm_epoch_tripwire.test.ts': 'ROOTS: `src` `tools` — CENSUS_ROOTS.',
-	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server` ×2.',
+	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server`.',
 	'test/unit/tm_mode_retired_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
 	'test/unit/tool_header_contract_tripwire.test.ts': 'ROOTS: `tools` — `*/css/*.less`.',
-	'test/unit/tool_lossless_writeback_tripwire.test.ts':
-		'ROOTS: `src` `tools` — src/ beside tools/.',
 	'test/unit/tool_permission_census_tripwire.test.ts': 'ROOTS: `tools`.',
 	'test/unit/tool_picker_wiring_tripwire.test.ts': 'ROOTS: `tools` ×2.',
 	'test/unit/tools_cache_invalidation.test.ts': 'ROOTS: `src/core/tools` ×2.',
@@ -525,6 +521,11 @@ interface SharedLister {
  * repo knows about is written next to the roots it is a subset of.
  */
 const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
+	'scripts/ci/mariadb_tier.ts': {
+		roots: [['test/integration', 'test/unit', 'test/parity']],
+		scope:
+			"the MariaDB tier's test corpus — every test file under test/integration, test/unit and test/parity (the preload arms all three), from which it walks the RUNTIME import graph (Bun's transpiler) to derive the set that acquires the suite MariaDB and the no-contact population that reaches the pool module; its SEAM_EDGES rows add each computed-import seam's glob (tools/*/server/**, src/core/**). Read by the stage itself, by suite_mariadb_target_native and by tier_wiring leg J (the starter classification).",
+	},
 	'test/helpers/write_path_corpus.ts': {
 		roots: [['scripts', 'src', 'tools']],
 		scope: 'the code that runs in the engine process — the write-path class corpus',
@@ -560,7 +561,7 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			['client/dedalo', 'tools'],
 		],
 		scope:
-			"the first-party browser trees — every served .js of the app client and of every tool client, vendored libraries excluded (browserSources is git's view, firstPartyClientFiles the on-disk walk)",
+			"browserSources: git's view minus vendored lib/vendor/min; browserSourcesUnfiltered: the same git view UNFILTERED (tool_lossless_writeback's client census — a tool's own lib/ helper is its code)",
 	},
 	'test/helpers/deploy_conf_corpus.ts': {
 		roots: [
@@ -609,6 +610,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['tools']],
 		scope:
 			'the tool NAMES of this checkout — every `tools/tool_<name>/` directory, for gates that census where src/ names a specific tool (core_tool_edge_tripwire)',
+	},
+	'scripts/tool_colors.ts': {
+		roots: [['tools']],
+		scope:
+			"every tool's identity hue — the `--<tool>` declaration in each `tools/tool_<name>/css/tool_<name>.less`, the input of the GENERATED tool_colors.less; read by tool_color_contrast_tripwire to prove the generated file is fresh",
 	},
 	'test/helpers/migrations_corpus.ts': {
 		roots: [['install/db/migrations']],
@@ -684,19 +690,17 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'hierarchy TLD carriers in tests and the repo-owned situations (SCAN_ROOTS), and the shipped hierarchy archives the allowlist is derived from',
 	},
-	'scripts/lib/red_baseline.ts': {
-		roots: [['test/integration', 'test/parity', 'test/unit']],
+
+	'scripts/lib/test_order.ts': {
+		roots: [['test/parity']],
 		scope:
-			'a parameterized tier lister — the CALLER supplies a TierSpec naming the paths its baseline covers; the union of the tiers fed to it is written here',
+			"a parameterized tier lister — the CALLER names the tier's paths and this expands them into the sorted file list bun runs (one walk for runTier, the shard runner, verify and the drift report). Known subset: only the parity tier's `test/parity` reaches it from an indexed gate (parity_baseline_tripwire → runParityTier); the unit tier's `test/unit` + `test/integration`, the shard runner's `test` and the MariaDB set are fed by scripts no indexed gate reaches — tier_file_order_tripwire holds those lists complete against an independent walk",
 	},
 	'scripts/lib/parity_census.ts': {
 		roots: [['test/parity']],
 		scope: 'the parity TierSpec: the one path the parity baseline covers',
 	},
-	'scripts/unit_baseline.ts': {
-		roots: [['test/integration', 'test/unit']],
-		scope: 'the unit TierSpec: the two paths the unit baseline covers',
-	},
+
 	'scripts/lib/twin_census.ts': {
 		roots: [['test/parity'], ['test/unit']],
 		scope: 'the retired-differential twin map: parity gates and their native twins',
@@ -705,27 +709,49 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['test'], ['test/helpers']],
 		scope: 'every test file and helper — the corpus-scope and shard census',
 	},
-	'scripts/test_shard.ts': {
-		roots: [['test']],
-		scope: 'the shard runner: the test files a shard selects, by pattern under test/',
-	},
+
 	'scripts/lib/test_shard_db.ts': {
 		roots: [],
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',
+	},
+	'test/helpers/suite_mariadb_lanes.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `suiteMariadbLaneEntries` lists the suite MariaDB lane base (`../private/test_mariadb/`, outside the repo — the module's own root, never a caller's) for the lanes and killed-sweep/claim leftovers a sweep visits; the second site lists one swept lane's trash to delete it marker-last. Kept out of test/helpers/suite_mariadb.ts so the gates that only ACQUIRE the target are not walkers.",
 	},
 	'test/helpers/agent_skills_corpus.ts': {
 		roots: [['.agents/skills'], ['.']],
 		scope:
 			'the project skills — every `.agents/skills/*/SKILL.md` (the real path, never the `.claude` alias), and the git index a skill may point at (`git ls-files` at the repo root: a clone is what a skill is read on)',
 	},
+	'test/helpers/agent_workflows_corpus.ts': {
+		roots: [['.agents/workflows']],
+		scope:
+			'the multi-agent workflow scripts — every `.agents/workflows/*.js` (the real path, never the `.claude` alias), the corpus agent_workflows_parse_tripwire compiles',
+	},
 	'test/helpers/docs_corpus.ts': {
 		roots: [['docs'], ['docs']],
 		scope: 'the manual — every docs/**/*.md page, the one lister a docs-censusing gate imports',
+	},
+	'test/helpers/scratch_run_entries.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `scratchRunEntries` lists the scratch directory a diffusion gate's OWN publication run wrote (a run directory, a files target); the CALLER hands its own scratch root",
+	},
+	'test/helpers/power_loss_model.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `startPowerLossModel` snapshots the entries already under the CALLER's scratch root (a gate's marked files root) when the model starts — what predates the test is durable by assumption; never a repo directory",
 	},
 	'test/helpers/zzarc_media_digests.ts': {
 		roots: [],
 		scope:
 			'NOT a corpus: `zzarcMediaDigests` fingerprints the scratch media tree the zzarc situation plants; the CALLER hands its own scratch root',
+	},
+	'test/helpers/media_seed_sweep.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `sweepSeededMediaEntries` deletes, by name, the media files a gate seeded under the CALLER's marked test media root (the lane's suite root or a scratch root — refused without `.dedalo_test_media`); never a repo directory",
 	},
 	'scripts/seed_diffusion_type_rewrite.ts': {
 		roots: [['install/import/ontology/7.0']],
@@ -772,12 +798,16 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 	},
 };
 
-/** The four gates that census the write path; each must use the shared corpus. */
+/**
+ * The four gates that census the write path; each must use the shared corpus.
+ * (write_obligations_tripwire replaced section_record's grep gate with CLOSURE_PLAN
+ * Step 2 — that gate's regex never matched a single-key writer, so it held nothing.)
+ */
 const WRITE_PATH_GATES: readonly string[] = [
 	'test/unit/sql_confinement_tripwire.test.ts',
 	'test/unit/ws_a_tripwires.test.ts',
 	'test/unit/matrix_counter_monotonic_tripwire.test.ts',
-	'test/unit/section_record.test.ts',
+	'test/unit/write_obligations_tripwire.test.ts',
 ];
 
 /** Positive control: a script that mass-rewrites matrix jsonb, outside src/ and tools/. */
@@ -1006,6 +1036,10 @@ interface ExpectSite {
 	statementPrefix: string;
 }
 
+/** The isolated-gate guard statement (test/helpers/isolated_gate.ts), as it ends the code before its `else {`. */
+const ISOLATED_GATE_GUARD =
+	/if\s*\(\s*!\s*isIsolatedGateChild\(\s*import\.meta\.path\s*\)\s*\)\s*mirrorIsolatedGate\(\s*import\.meta\.path\s*\)\s*;\s*$/;
+
 /**
  * ONE forward pass over the code: every `expect(` outside a literal, with the
  * stack of brackets open around it and, for each, the statement text that
@@ -1028,7 +1062,20 @@ function expectSites(code: string): ExpectSite[] {
 		const ch = code[i] as string;
 		if (ch === '(' || ch === '[' || ch === '{') {
 			const depth = stack.length;
-			stack.push({ ch, header: code.slice(boundary[depth] ?? 0, i) });
+			let header = code.slice(boundary[depth] ?? 0, i);
+			// THE ISOLATED GATE'S BODY IS THE FILE (test/helpers/isolated_gate.ts): the
+			// top-level `else {` after the guard is what the gate's own child process
+			// runs, every time — the tier process mirrors that run. Read it as the
+			// top-level body it is, not as a branch.
+			if (
+				ch === '{' &&
+				depth === 0 &&
+				/^\s*else\s*$/.test(header) &&
+				ISOLATED_GATE_GUARD.test(code.slice(0, boundary[depth] ?? 0))
+			) {
+				header = '';
+			}
+			stack.push({ ch, header });
 			boundary[depth + 1] = i + 1;
 		} else if (ch === ')' || ch === ']' || ch === '}') {
 			stack.pop();
@@ -3747,6 +3794,20 @@ test('y', () => { expect(globalAcc.length).toBeGreaterThan(0); });
 				"expect(files).toBeDefined(); expect(other.length, 'a (msg').toBeGreaterThan(2);",
 			).map((site) => site.argument),
 		).toEqual(["other.length, 'a (msg'"]);
+		// The isolated gate's `else {` body is the file's top level (its child runs it);
+		// any OTHER else-branch is still a branch.
+		const unconditional = (code: string): boolean[] =>
+			floorSites(code).map((site) => site.unconditional);
+		expect(
+			unconditional(
+				"if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path);\nelse {\n\ttest('t', () => { expect(n).toBeGreaterThan(0); });\n}",
+			),
+		).toEqual([true]);
+		expect(
+			unconditional(
+				"if (ready) setup();\nelse {\n\ttest('t', () => { expect(n).toBeGreaterThan(0); });\n}",
+			),
+		).toEqual([false]);
 		expect(numericConstantValue('SOME_FLOOR', ['const SOME_FLOOR = 700;'])).toBe(700);
 		expect(numericConstantValue('SOME_FLOOR', ['const SOME_FLOOR = other;'])).toBeUndefined();
 		// A floor REJECTS AN EMPTY WALK: `>= 0` (literal or through a zero constant) admits one.

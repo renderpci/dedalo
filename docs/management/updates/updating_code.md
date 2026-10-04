@@ -16,7 +16,9 @@ Updating the Dédalo code should be supervised by the IT team. Some changes — 
 ## Panel self-update
 
 The "Update code" maintenance panel (`update_code` widget,
-`src/core/area_maintenance/widgets/update_code.ts`) downloads a release
+`src/core/area_maintenance/widgets/update_code.ts`) is the RECEIVING side; building
+and serving releases is the [Serve Code panel](#what-the-serve-code-panel-tells-a-code-server).
+It downloads a release
 archive from a configured code server, verifies its sha256 checksum,
 pre-validates every archive entry, extracts it into a quarantine directory,
 installs its dependencies and boot-tests it **there**, and only then swaps it
@@ -225,22 +227,27 @@ or an institution's own mirror. Set in `../private/.env` (see the
 | `CODE_SERVERS` | Must include this server's own entry: the `code` in it is the shared secret a caller has to present. |
 | `DEDALO_CORS_ALLOWED_ORIGINS` | The origins allowed to read the manifest. Each client fetches it **from the browser**, so without this the update panel of every remote install fails with a network error. Use `*` for a public master. |
 
-### What the panel tells a code server
+### What the Serve Code panel tells a code server
 
-On a code server the panel adds a second status block, answering whether this
-instance can publish at all:
+Publishing has its own maintenance panel, **Serve Code** (`serve_code` widget),
+next to Update Code. It is shown only on a code server (`IS_A_CODE_SERVER=true`)
+and on the `development` installation, and it answers whether this instance can
+publish at all:
 
 - **Code server** — the role flag, the two directories, and whether the build
   itself would be accepted, checked through the same planner the Build buttons
-  use. Also whether a `master` ref exists (only a `master` build claims the
-  published release name), whether the worktree is clean, and whether an
-  archive of it carries symbolic links.
+  use. Also whether a release tag (`vX.Y.Z`) exists — only a tag build claims
+  the published release name —, whether the tag's own version file agrees
+  with its name, whether a `master` branch exists (the developer channel),
+  whether the worktree is clean, and whether an archive of the release
+  carries symbolic links.
 - **Build source** — the commit, its date and the branch currently checked
   out, plus the checkout's Bun pin.
-- **Release ref** — the ref a *published* release is actually built from
-  (`master`), its own commit and date, and how many commits the checked-out
-  branch has that it does not. Every check in the first block reads this ref,
-  not the checked-out branch, and each says so ("checked against master").
+- **Release tag** — the refs the two channels are actually built from: the
+  newest release tag (`vX.Y.Z`) with its commit and date, the `master` branch
+  with its commit and declared version, and how many commits `master` has
+  that the release does not. Every check in the first block reads one of
+  these refs, never the checked-out branch, and each says which.
 - **Published releases** — every archive already on disk with its size and
   date, marked *published* or *developer*, and flagged when its `.sha256`
   sidecar is missing (without it a remote install has no digest to verify).
@@ -251,17 +258,17 @@ instance can publish at all:
   The panel shows both so the difference is visible rather than inferred.
 
 !!! warning "A dirty worktree does not stop a build"
-    A release archives the **committed** `HEAD` of the configured checkout.
-    Uncommitted changes are simply absent from the archive, which is why the
-    panel marks a dirty worktree as a warning before you press Build.
+    A build archives **committed** refs of the configured checkout (the
+    release tag, or `master`). Uncommitted changes are simply absent from the
+    archive, which is why the panel marks a dirty worktree as a warning before
+    you press Build.
 
-!!! warning "The checks read the release ref, not your branch"
-    Work committed on a working branch is not in a release until it is merged
-    into the release ref. Until then the publish checks keep reporting the old
-    state — correctly, because that is what a release built now would contain.
-    The panel names the ref on every such line, and counts the commits the
-    release ref is missing, so a check that looks like a false alarm can be
-    told apart from a real one.
+!!! warning "The panel reads LOCAL refs: fetch first"
+    The release tag and `master` are read from the configured checkout as
+    they are on disk. A tag cut on the git remote does not exist for the panel
+    until it is fetched (`git fetch --tags`), and `master` is only as recent as
+    the last pull. Work integrated on `master` is not in a release until a new
+    `vX.Y.Z` tag is cut; the panel counts those commits so the gap is visible.
 
 !!! warning "An archive with symbolic links cannot be installed"
     The installer refuses an entire archive that contains a symbolic-link
@@ -271,17 +278,31 @@ instance can publish at all:
 
 ### Building a release
 
-On a code server, the "Update code" panel shows two extra buttons, "Build
-master release" and "Build developer release". Each archives a branch of the
-configured git checkout at the engine's **current version**. A build of the
-`master` branch writes the published release name; a build of any other branch
-gets a `-dev` suffix, so it can never overwrite the published master release
-of the same version:
+On a code server, the **Serve Code** panel shows two buttons, "Build
+release" and "Build developer release", each beside the archive it writes:
+
+- **Build release** archives the **newest release tag** (`vX.Y.Z`) of the
+  configured git checkout — a version that was cut and tagged, never a moving
+  branch. Prerelease tags (`v7.0.1-beta.1`) are not releases, and neither
+  are tags of the earlier engine (v6): while a version is in beta there is
+  nothing to publish, and its code reaches installations only as developer
+  builds. A tag whose version file declares a different version than its name
+  is refused.
+- **Build developer release** archives the tip of the **`master`** branch —
+  the latest integrated code, before its release. It gets a `-dev` suffix, so
+  it can never overwrite the published release of the same version.
+
+Each archive is named after the version its own source declares, not after
+the running engine:
 
 ```
-<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip        (master)
-<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>-dev.zip    (any other branch)
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip        (release tag vX.Y.Z)
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>-dev.zip    (master)
 ```
+
+A button with nothing to build says why instead: no release tag in the
+checkout, no `master` branch, or a `master` with no commits beyond the release
+tag (a developer build would then be identical to the release).
 
 Each archive is written together with its `.sha256` sidecar — that sidecar is
 what remote installs verify against; keep the two files together, because an
@@ -355,13 +376,16 @@ itself to the public before it may reclaim it.
     this is usually a mount the host still holds on a directory inside the
     copy: free it and retry.
 
-### Testing branch work on a real installation
+### Testing development work on a real installation
 
-A developer build carries **no version bump** — it is the same version as the
-release it was branched from. That is deliberate: a version number that moves
-without a release stops naming a release. So a developer build is installed
-*over* the same version, and it can be installed again as often as the branch
-moves.
+A developer build is the tip of the **`master`** branch — integrated code that
+is not yet released. It carries **no version bump of its own**: it has the
+version `master` declares, usually the same as the last release. That is
+deliberate: a version number that moves without a release stops naming a
+release. So a developer build is installed *over* the same version, and it can
+be installed again as often as `master` moves. While a major version is in beta
+(no `vX.Y.Z` tag yet), developer builds are the only way its code reaches an
+installation.
 
 The receiving install ticks **Developer builds**, checks for updates, and picks
 the build (marked as a developer build, and listed first). Everything else is
@@ -373,10 +397,10 @@ update landed. Each installed tree records the archive it came from, and the
 panel shows it as **Installed archive** — that value changing is the proof, and
 it is also what the rollback machinery compares. An install running a developer
 build says so everywhere: its version reads `<version>.dev` and its build
-posture is *Developer build (unreleased branch code)*.
+posture is *Developer build (unreleased code from 'master')*.
 
 !!! warning "Not for production installations"
-    A developer build is unreleased branch code. Use it to test development
+    A developer build is unreleased code. Use it to test development
     work on an installation you can afford to break — never on a production
     one.
 

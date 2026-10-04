@@ -158,3 +158,20 @@ there because the dedup keeps the FIRST occurrence, which makes the flattening a
 strict no-op for a single-item config (every other node those gates touch) and
 purely ADDITIVE for `rsc368`, whose compared projection is ddo identity.
 **Re-harvest: NO — impossible by definition.**
+
+## Addendum 2026-09-29 — what the second (`solved`) item carries
+
+§2 said the `solved` and `edit` renders of the rating are two ddos "and the
+client widgets read both". Only half of that was verified: the client reads
+the rating item through `component_dataframe.get_rating`, which looks the
+picked option up in the item's `datalist` — and the `solved` item carried
+none. The select-family resolver sent every mode other than list/edit/search
+down the portal path, so the kept hide twin was a paginated locator list
+without options, and a time machine apply that put it first in the datum
+crashed the portal refresh.
+
+Since `WC-2026-09-29-select-family-mode-datalist` the `solved` item is the PHP
+controllers' `default:` arm: stored locators + `datalist`, the same keys as
+its `edit` twin. §2's measured effect on the rating slots (48 re-measured 2026-09-29) is therefore now:
+per framed target, TWO `rsc1246` items (`edit`, `solved`), BOTH carrying the
+datalist. The superset stands; what it carries is now what the client reads.

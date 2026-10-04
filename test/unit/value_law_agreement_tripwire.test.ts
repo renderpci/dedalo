@@ -261,7 +261,8 @@ describe('DATA-33 — getSectionRealTipo is the ONE virtual→real law', () => {
 			'src/core/section/buttons.ts',
 			'src/core/ts_object/ts_object.ts',
 			'src/core/resolve/relation_index.ts',
-			'src/core/section/record/delete_record.ts',
+			// the record wipe AND the covered-slot recompute share ONE section census
+			'src/core/section/record/declared_components.ts',
 			'src/core/identify/profile.ts',
 			'src/core/identify/profile_source.ts',
 			'src/core/relations/request_config/implicit.ts',

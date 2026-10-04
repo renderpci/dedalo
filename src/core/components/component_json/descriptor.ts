@@ -8,6 +8,9 @@ export const component_json: ComponentModel = {
 	model: 'component_json',
 	column: 'misc',
 	render: 'text',
+	importAppend: {
+		refuse: 'opaque: a JSON document has no item boundary to append at — use replace',
+	},
 	monovalue: true,
 	searchBuilder: 'json',
 	importValueProperty: true,

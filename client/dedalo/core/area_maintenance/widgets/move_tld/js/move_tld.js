@@ -45,9 +45,9 @@
 
 
 // imports
-	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../js/area_maintenance.js'
+	import {exec_move_transform} from '../../../js/move_transform.js'
 	import {render_move_tld} from './render_move_tld.js'
 
 
@@ -135,69 +135,23 @@ export const move_tld = function() {
 
 /**
 * EXEC_MOVE_TLD
+* Fire one move_tld run through the shared move_* flow (move_transform.js). The
+* server runs it as a JOB and answers {pid, pfile, dry_run} at once; the
+* caller streams it with update_process_status.
 *
-* Fires the server-side `move_tld` action via the area_maintenance API and
-* returns the response once the server has spawned the background process.
-*
-* The server dispatches `transform_data::changes_in_tipos` across all matrix
-* tables as a long-running CLI process (background_running: true).  The
-* immediate response therefore contains process identifiers for progress
-* polling — not the final result:
-*
-*   response.pid   {string|number} - OS process id of the spawned CLI worker.
-*   response.pfile {string}        - Server-side path to the process status file
-*                                    read by update_process_status (SSE stream).
-*
-* The caller (render_move_tld → on_submit) pipes these values into
-* `update_process_status` to display a live status feed while the job runs.
-*
-* Request options:
-*   retries : 1       — no automatic retry; the process may already be running.
-*   timeout : 3600 s  — large timeout to accommodate very long database sweeps
-*                       across all matrix tables.
-*
-* (!) `prevent_lock: true` is set so that no section record lock is acquired for
-*     this maintenance operation, which touches many records across many tables.
-*
-* (!) This method is defined as an arrow function on the prototype, so `this`
-*     inside the body refers to the enclosing module scope, not the widget
-*     instance.  The method does not use `this`, which makes the binding
-*     irrelevant in practice, but callers should be aware of the pattern.
-*
-* @param {Array<string>} files_selected - Non-empty array of JSON definition
-*        file names to process, e.g. ['finds_numisdata279_to_tchi1.json'].
-*        The server validates each name against the known definition files
-*        returned by area_maintenance::get_definitions_files('move_tld').
-* @returns {Promise<Object|undefined>} Resolves to the API response object on
-*        success, or `undefined` if `files_selected` is empty (early return).
+* @param {Array<string>} files_selected - Non-empty array of definition file names.
+* @param {boolean} [dry_run=true] - true = PREVIEW (writes nothing); false =
+*        EXECUTE (rewrites stored data — the server mutates only on exactly false).
+* @returns {Promise<Object|undefined>} The API response, or `undefined` when
+*        `files_selected` is empty.
 */
-move_tld.prototype.exec_move_tld = async (files_selected) => {
+move_tld.prototype.exec_move_tld = async (files_selected, dry_run=true) => {
 
 	if (!files_selected.length) {
 		return
 	}
 
-	// move_tld process fire
-	const response = await data_manager.request({
-		body : {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'widget_request',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'move_tld',
-				action	: 'move_tld'
-			},
-			options : {
-				background_running	: true, // set run in background CLI
-				files_selected		: files_selected // array e.g. ['finds_numisdata279_to_tchi1.json']
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-
-	return response
+	return exec_move_transform('move_tld', files_selected, dry_run)
 }//end exec_move_tld
 
 

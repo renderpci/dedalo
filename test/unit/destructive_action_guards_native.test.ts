@@ -67,16 +67,14 @@ async function rejectedBy(run: () => Promise<unknown>): Promise<DedaloError> {
 
 const ADMIN: Principal = { userId: 938001, isGlobalAdmin: true, isDeveloper: false };
 
-/** Recording stub for the dd1521 aggregate writer pair. Never touches the DB. */
+/** Recording stub for the dd1521 aggregate rebuilder (DELETE + recompute). Never touches the DB. */
 function userStatsSpy(): { deps: UserStatsDeps; deleted: number[]; updated: number[] } {
 	const deleted: number[] = [];
 	const updated: number[] = [];
 	const deps = {
-		deleteUserActivityStats: async (userId: number) => {
+		// The rebuild IS the delete + the recompute (one atomic unit per user).
+		rebuildUserActivityStats: async (userId: number) => {
 			deleted.push(userId);
-			return true;
-		},
-		updateUserActivityStats: async (userId: number) => {
 			updated.push(userId);
 			return { ok: true, value: [], msg: 'OK', errors: [] };
 		},

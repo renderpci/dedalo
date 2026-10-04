@@ -45,6 +45,7 @@ export type ConfigType =
 	| 'string_map' // JSON object of string → string
 	| 'server_list' // [{name,url,code}]
 	| 'tool_roots' // [{path,url}]
+	| 'publication_api_users' // [{db_name,code,api_ui?}]
 	| 'media_access_mode'; // the one bespoke enum
 
 /**

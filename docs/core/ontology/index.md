@@ -129,7 +129,8 @@ with shared, global or standardised ontologies.
 Dédalo provides two ways to add a local ontology:
 
 1. Creating a custom TLD for the ontology.
-2. Overriding specific nodes of a shared / standard ontology.
+2. Overriding specific nodes of a shared / standard ontology — see
+   [Overriding shared ontology nodes](local_ontology_overrides.md).
 
 ### Creating a custom TLD
 
@@ -237,6 +238,9 @@ and the two halves of the job are separate:
   *writing* the ontology: the shape of a node, creating sections / components /
   groups / tools, the `properties` descriptor grammar, and how an edit becomes
   live.
+- **[Overriding shared ontology nodes](local_ontology_overrides.md)** — the
+  administrator guide to local overrides (`localontology`): relabel, restyle or
+  adjust a shared node for one installation, with samples.
 - **[ontology (build layer)](ontology_write.md)** — the write/compile layer that
   owns the editable definitions and compiles them into the flat runtime
   `dd_ontology` table.

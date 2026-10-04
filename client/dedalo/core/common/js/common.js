@@ -1915,7 +1915,8 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 *  4. Resolve `limit`/`offset` from choose.sqo_config → sqo_config → choose_limit_default (25).
 *     The choose.sqo_config branch is kept in sync with the server-side chain in
 *     request_config_v6 parse_choose_config.
-*  5. Build `filter_free` by walking search.ddo_map (or show.ddo_map as fallback)
+*  5. Build `filter_free` by walking search_paths (server-emitted, when present),
+*     else search.ddo_map (or show.ddo_map as fallback)
 *     through get_ar_inverted_paths(), reversing each path to server order, and
 *     adding one `{q:'', path:[...]}` entry per leaf per operator group.
 *     component_dataframe paths are skipped (they have their own independent sqo).
@@ -2008,10 +2009,18 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 						mode			: 'list'
 					}]
 
-			if (search_ddo_map) {
+			// search_paths — server-emitted filter paths (relation columns spelled
+			// through what they display: Modelo › Término; search_display_paths.ts).
+			// Used for the filter_free paths ONLY: the result columns below keep
+			// choose → search → show.
+			const paths_ddo_map = Array.isArray(request_config_object.search_paths) && request_config_object.search_paths.length > 0
+				? request_config_object.search_paths
+				: search_ddo_map
+
+			if (paths_ddo_map) {
 				// get the sub elements with the ddo_map, the method is recursive,
 				// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-				const ar_paths = get_ar_inverted_paths(search_ddo_map)
+				const ar_paths = get_ar_inverted_paths(paths_ddo_map)
 				// change the order of the paths to correct order for sqo and set all ddo to 'list' mode
 				const paths_length = ar_paths.length
 				paths: for (let i = 0; i < paths_length; i++) {
@@ -2797,15 +2806,23 @@ export const push_browser_history = function(options) {
 *
 * @param {Object} self - The Dédalo instance (area, section, or component_portal)
 *   that owns `self.rqo` (the pre-built request query object) and `self.status`
+* @param {Object} [options]
+* @param {boolean} [options.recovery_retry=false] - internal: this call is the one
+*   re-send after a recovered auth failure (re-login); it never retries again
 * @returns {Promise<Object|boolean>} The raw api_response object on success, or false
 *   when the response is missing/invalid or a known error was handled
 */
-export const build_autoload = async function(self) {
+export const build_autoload = async function(self, {recovery_retry=false}={}) {
 
 	// load context and data
 		const api_response = self.tmp_api_response || await data_manager.request({
 			body : self.rqo
 		})
+
+	// build_error. The request's ApiError, kept so a caller that only sees
+	// build()===false can say what actually failed (render_build_failure)
+	// instead of guessing permissions. null on success / empty-data answers.
+		self.build_error = request_failed(api_response) ? api_response.error : null
 
 	// debug last server error. Only for development
 		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
@@ -2843,12 +2860,15 @@ export const build_autoload = async function(self) {
 			// is gone — today that means the user logged back in.
 				if (request_failed(api_response)) {
 					const {recovered} = await handle_api_error(api_response.error, {wrapper: self.node})
-					if (recovered===true && !(window.unsaved_data ?? false)) {
-						await self.build(true)
-						await self.render({
-							render_level	: 'full', // content|full
-							render_mode		: self.mode
-						})
+					// Recovered (re-login): re-send the SAME request and hand its answer
+					// back to the build() in flight. (!) Never a nested build()+render()
+					// here: that rendered a second copy, reset build_error, and this
+					// function still answered false — so the caller painted a phantom
+					// "permissions" banner over a page that had in fact loaded.
+					// One retry only (`recovery_retry`): a second auth failure stops.
+					if (recovered===true && !(window.unsaved_data ?? false) && recovery_retry!==true) {
+						self.tmp_api_response = undefined
+						return build_autoload(self, {recovery_retry: true})
 					}
 				}
 
@@ -2954,7 +2974,9 @@ export const set_environment = function (api_response_environment) {
 * @param {string} pfile - Path to the process status file on the server
 * @param {HTMLElement} container - DOM element to render status updates into
 * @param {number} [update_rate=1000] - Polling interval in milliseconds
-* @param {Function} [callback] - Called once when the stream finishes (no arguments)
+* @param {Function} [callback] - Called once when the stream finishes, with the LAST
+*   frame read (null when none arrived) — a caller that acts on the outcome (the
+*   move_* preview → execute gate) reads it instead of re-polling.
 * @returns {void}
 */
 export const update_process_status = function (id, pid, pfile, container, update_rate=1000, callback) {
@@ -3006,8 +3028,12 @@ export const update_process_status = function (id, pid, pfile, container, update
 			display_json	: true
 		})
 
+		// last frame read, handed to the optional callback on done
+		let last_response = null
+
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
+			last_response = sse_response
 			// fire update_info_node on every reader read chunk
 			render_stream_response.update_info_node(sse_response)
 		}
@@ -3020,7 +3046,7 @@ export const update_process_status = function (id, pid, pfile, container, update
 
 			// optional callback on done
 			if (callback && typeof callback === 'function') {
-				callback()
+				callback(last_response)
 			}
 		}
 

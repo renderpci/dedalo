@@ -63,8 +63,10 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
 import { getCounters } from '../../src/core/api/counters.ts';
+import { DATAFRAME_RELATION_TYPE } from '../../src/core/concepts/subdatum.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { recomputeExternalRelation } from '../../src/core/section/record/observers.ts';
+import { removedLocators } from '../../src/core/section_record/index.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -122,7 +124,10 @@ describe('observer shrink fail-safe (static)', () => {
 		// The exact required-parameter form. `allowShrink` is deliberately NOT in
 		// it any more (2026-08-06) — see the next test. A reintroduced default
 		// initializer recreates the omitted-argument hole that armed the wipe.
-		expect(kernelSource).toContain('options: { write?: boolean; referencesLimit?: number },');
+		// MEASURED, not spelled: a function's `length` counts the parameters BEFORE
+		// the first one with a default — six required parameters (the sixth being
+		// `options`) is exactly "no default on options". An `= {}` makes it five.
+		expect(recomputeExternalRelation.length).toBe(6);
 		expect(/options:\s*\{[^}]*\}\s*=\s*\{\}/.test(kernelSource)).toBe(false);
 	});
 
@@ -301,18 +306,21 @@ describe('removal plumbing (static)', () => {
 		).toEqual([]);
 	});
 
-	test('the save chokepoint diffs on locator identity, never on item id', () => {
+	test('the removed-set rule diffs on locator identity, never on item id (the ONE rule, obligation_ledger)', () => {
 		// An `update` that RETARGETS a locator replaces the object in place and
 		// keeps its id, so an id-keyed diff sees neither the old target leaving
-		// nor the new one arriving.
-		const saveSource = readFileSync(
-			join(REPO_ROOT, 'src/core/section/record/save_component.ts'),
-			'utf-8',
-		);
-		expect(saveSource).toContain('const preSaveItems');
-		expect(saveSource).toContain('`${locator.section_tipo}|${String(locator.section_id)}`');
-		// dd490 frames are pairing records, not edges — excluded like the seed does.
-		expect(saveSource).toContain('locator.type === DATAFRAME_RELATION_TYPE');
+		// nor the new one arriving. The rule every write's ledger entry uses
+		// (section_record/obligation_ledger.ts removedLocators) — judged on its
+		// OUTCOME, not its spelling.
+		const retargeted = { id: 1, type: 'dd151', section_tipo: 'zzx1', section_id: 7 };
+		const frame = { id: 2, type: DATAFRAME_RELATION_TYPE, section_tipo: 'zzx2', section_id: 5 };
+		const kept = { id: 3, type: 'dd151', section_tipo: 'zzx1', section_id: 9 };
+		const after = [{ ...retargeted, section_id: 8 }, kept];
+		// the old target left (same item id, other record); the dd490 frame is a
+		// pairing record, not an edge — never a removed observer target
+		expect(removedLocators([retargeted, frame, kept], after)).toEqual([retargeted]);
+		// a legacy string address of the SAME record is the same edge
+		expect(removedLocators([{ ...kept, section_id: '9' }], after)).toEqual([]);
 	});
 });
 

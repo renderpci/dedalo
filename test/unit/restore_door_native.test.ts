@@ -106,6 +106,7 @@ import {
 import { lastReconcileRun, REGISTERED_NAMES } from '../../src/core/reconcile/registry.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
+import { requireSuiteMariadb, SUITE_MARIADB_DATABASES } from '../helpers/suite_mariadb.ts';
 
 const SCRATCH_PREFIX = 'dedalo_rdoor';
 const TARGET = `${SCRATCH_PREFIX}${process.pid}`;
@@ -244,6 +245,10 @@ function nextStamp(): string {
 
 beforeAll(async () => {
 	if (!READY) return;
+	// Leg 10 runs the REAL post-restore plan, whose public-tier reconcile opens a pool
+	// per diffusion target the ontology declares: acquire the lane's suite MariaDB first
+	// (PUB-05) so every such pool is proved to land there, never on an installation's.
+	await requireSuiteMariadb(import.meta.path, SUITE_MARIADB_DATABASES());
 	await sweepOrphanScratchDatabases(admin, SCRATCH_PREFIX, { derivedSuffix: DERIVED });
 	for (const name of await databasesLike(TARGET)) {
 		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`]);
@@ -260,7 +265,7 @@ beforeAll(async () => {
 	]);
 	expect(seeded.stderr).toBe('');
 	setServerState({ maintenance_mode: false });
-});
+}, 120_000); // a cold suite MariaDB lane installs and starts a server
 
 afterAll(async () => {
 	for (const name of await databasesLike(TARGET).catch(() => [] as string[])) {
@@ -272,11 +277,15 @@ afterAll(async () => {
 
 describe.if(READY)('restore door — the artifact, the writers, the failure, the restore', () => {
 	test('the situation is real: a verified archive, a truncated prefix --list cannot see, an old target', async () => {
-		expect(verifyBackupArtifact(CLEAN, { deep: true, pgRestoreBin }).reason).toBe('verified_deep');
-		expect(verifyBackupArtifact(TRUNCATED, { deep: false, pgRestoreBin }).reason).toBe(
-			'verified_toc',
-		);
-		expect(verifyBackupArtifact(TRUNCATED, { deep: true, pgRestoreBin }).reason).toBe('truncated');
+		expect((await verifyBackupArtifact(CLEAN, { pgRestoreBin })).reason).toBe('verified_deep');
+		// The cheap pass cannot see the cut (raw `pg_restore --list` exits 0 on it)…
+		const list = Bun.spawnSync([pgRestoreBin as string, '--list', TRUNCATED], {
+			stdout: 'ignore',
+			stderr: 'ignore',
+		});
+		expect(list.exitCode).toBe(0);
+		// …the engine's one verdict, the full read, does.
+		expect((await verifyBackupArtifact(TRUNCATED, { pgRestoreBin })).reason).toBe('truncated');
 		expect(await scalar(TARGET, 'SELECT v FROM restore_door_sentinel')).toBe('old contents');
 		expect(await databasesLike(TARGET)).toEqual([TARGET]);
 		// The rehearsal leg relies on the scratch target NOT being the configured one.
@@ -717,6 +726,9 @@ describe('the CLI (`bun run dedalo:restore`) refuses a malformed invocation befo
 	const run = (args: string[]) => {
 		const child = Bun.spawnSync(['bun', CLI, ...args], {
 			cwd: join(import.meta.dir, '..', '..'),
+			// EXPLICIT: a bare spawn inherits the LAUNCH env, not the preload's pins (the
+			// MariaDB tier launches with DB_NAME stripped, and config throws at import).
+			env: { ...process.env },
 			stdout: 'pipe',
 			stderr: 'pipe',
 		});

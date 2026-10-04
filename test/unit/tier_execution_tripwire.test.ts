@@ -73,6 +73,63 @@ function arrayEntries(source: string, name: string): string[] {
 		.filter((line) => line.length > 0);
 }
 
+interface Stage {
+	lines: string[];
+	/** Index of `order_test_paths "${NAME[@]}"`, -1 when absent. */
+	orderLine: number;
+	/** Index of the first `bun test … "${TEST_ORDER_PATHS[@]}"` after it, -1 when absent. */
+	bunLine: number;
+}
+
+function tierStage(tier: Tier): Stage {
+	const lines = tier.source.split('\n');
+	const orderLine = lines.findIndex(
+		(line) =>
+			!line.trimStart().startsWith('#') &&
+			line.includes(`order_test_paths "\${${tier.arrayName}[@]}"`),
+	);
+	const bunLine =
+		orderLine === -1
+			? -1
+			: lines.findIndex(
+					(line, index) =>
+						index > orderLine &&
+						!line.trimStart().startsWith('#') &&
+						line.includes('bun test') &&
+						line.includes('"${TEST_ORDER_PATHS[@]}"'),
+				);
+	return { lines, orderLine, bunLine };
+}
+
+/** Run the tier's array block + its stage lines under bash, `bun` stubbed to print its argv. */
+function runStageWithStubBun(tier: Tier): { argv: string[]; rc: number } {
+	const stage = tierStage(tier);
+	if (stage.orderLine === -1 || stage.bunLine === -1) {
+		throw new Error(`${tier.file}: no ordered tripwire stage to execute`);
+	}
+	const start = tier.source.indexOf(`${tier.arrayName}=(`);
+	const arrayBlock = tier.source.slice(start, tier.source.indexOf('\n)', start) + 2);
+	const script = [
+		'set -euo pipefail',
+		'source scripts/ci/test_order.sh',
+		arrayBlock,
+		'tw_rc=0',
+		'bun() { printf \'ARG\\t%s\\n\' "$@"; }',
+		...stage.lines.slice(stage.orderLine, stage.bunLine + 1),
+		'printf \'RC\\t%s\\n\' "$tw_rc"',
+	].join('\n');
+	const proc = Bun.spawnSync(['bash', '-c', script], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+	const out = proc.stdout.toString().split('\n');
+	const argv = out.filter((l) => l.startsWith('ARG\t')).map((l) => l.slice(4));
+	const rcLine = out.find((l) => l.startsWith('RC\t'));
+	if (proc.exitCode !== 0 || rcLine === undefined) {
+		throw new Error(
+			`${tier.file}: the stubbed stage did not complete (exit ${proc.exitCode}): ${proc.stderr}`,
+		);
+	}
+	return { argv, rc: Number(rcLine.slice(3)) };
+}
+
 const TIERS = discoverTiers();
 
 describe('tier execution — a declared array is an EXECUTED array', () => {
@@ -89,16 +146,20 @@ describe('tier execution — a declared array is an EXECUTED array', () => {
 			test('runs its own array through bun test', () => {
 				// `"${NAME[@]}"` and not a path list: an invocation that re-spells the
 				// files can drift from the array silently, which is the same failure as
-				// not running at all, one refactor later.
-				const expansion = `"\${${tier.arrayName}[@]}"`;
-				const lines = tier.source
-					.split('\n')
-					.filter((line) => line.includes('bun test') && line.includes(expansion));
+				// not running at all, one refactor later. The array reaches bun through
+				// `order_test_paths` (scripts/ci/test_order.sh: sorted `./` paths — a bare
+				// name is a bun FILTER run in per-host readdir order), so the stage is two
+				// lines: the ordering call on the OWN array, then `bun test` on its result.
+				const stage = tierStage(tier);
 				expect(
-					lines.length,
-					`${tier.file} declares ${tier.arrayName} but no \`bun test\` line expands it. ` +
+					stage.orderLine,
+					`${tier.file} declares ${tier.arrayName} but never orders it (\`order_test_paths "\${${tier.arrayName}[@]}"\`). ` +
 						'A declared array that nothing runs is a tier reporting green by silence.',
-				).toBeGreaterThanOrEqual(1);
+				).toBeGreaterThanOrEqual(0);
+				expect(
+					stage.bunLine,
+					`${tier.file}: no \`bun test … "\${TEST_ORDER_PATHS[@]}"\` line follows the ordering of ${tier.arrayName}.`,
+				).toBeGreaterThanOrEqual(0);
 			});
 
 			test('the array is non-empty', () => {
@@ -114,18 +175,29 @@ describe('tier execution — a declared array is an EXECUTED array', () => {
 				}
 			});
 
+			test('bun receives exactly the array, sorted and ./-prefixed (stage executed, bun stubbed)', () => {
+				// OUTCOME, not spelling: the stage's own lines run under bash with `bun`
+				// replaced by a function that prints its argv. Reverting to the bare array,
+				// dropping the sort, or running a different list all change what bun gets.
+				const entries = arrayEntries(tier.source, tier.arrayName);
+				const expected = [...new Set(entries)].sort().map((entry) => `./${entry}`);
+				const { argv, rc } = runStageWithStubBun(tier);
+				expect(
+					rc,
+					`${tier.file}: the stage reported tw_rc=${rc} with every array entry present`,
+				).toBe(0);
+				expect(argv[0]).toBe('test');
+				expect(argv.filter((arg) => !arg.startsWith('-')).slice(1)).toEqual(expected);
+			});
+
 			test('the invocation passes the explicit timeout', () => {
 				// Bun 1.4.0 silently ignores `[test] timeout` in bunfig.toml, so a tier
 				// without the flag runs on an unchosen 5 s cap: gates that pass in
 				// isolation fail under a loaded runner, and the tier's red set becomes
 				// load-dependent rather than a statement about the code.
-				const expansion = `"\${${tier.arrayName}[@]}"`;
-				const line = tier.source
-					.split('\n')
-					.find((candidate) => candidate.includes('bun test') && candidate.includes(expansion));
-				expect(line).toBeDefined();
+				const { argv } = runStageWithStubBun(tier);
 				expect(
-					line?.includes(REQUIRED_TIMEOUT_FLAG),
+					argv.includes(REQUIRED_TIMEOUT_FLAG),
 					`${tier.file}: the bun test invocation must pass ${REQUIRED_TIMEOUT_FLAG} explicitly ` +
 						'(bunfig [test] timeout is silently ignored by Bun).',
 				).toBe(true);
@@ -135,10 +207,11 @@ describe('tier execution — a declared array is an EXECUTED array', () => {
 				// The 45-commit failure in another spelling. `set -e` was one way to make
 				// the tripwires conditional on lint; `previous && bun test ...` is the
 				// other, and it survives the tier_status refactor unnoticed.
-				const expansion = `"\${${tier.arrayName}[@]}"`;
-				for (const line of tier.source.split('\n')) {
-					if (!line.includes('bun test') || !line.includes(expansion)) continue;
-					const beforeCommand = line.slice(0, line.indexOf('bun test'));
+				const stage = tierStage(tier);
+				for (const index of [stage.orderLine, stage.bunLine]) {
+					const line = stage.lines[index] ?? '';
+					const command = line.includes('bun test') ? 'bun test' : 'order_test_paths';
+					const beforeCommand = line.slice(0, line.indexOf(command));
 					expect(
 						beforeCommand.includes('&&'),
 						`${tier.file}: the tripwire run is chained behind an earlier command with '&&' — ` +

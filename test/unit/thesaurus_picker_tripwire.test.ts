@@ -221,6 +221,10 @@ const WINDOW_OPENER = /window\s*\.\s*opener/;
 const NON_PICKER_WINDOW_OPENER = new Set([
 	'client/dedalo/core/component_iri/js/render_edit_component_iri.js',
 	'tools/tool_time_machine/js/render_tool_time_machine.js',
+	// fit_viewer_window: `window.opener` only proves this window is the popup Dédalo
+	// opened ('viewer'), so it may resize itself to the media ratio — no pick, no
+	// cross-window write (052e8242fd).
+	'client/dedalo/core/component_av/js/view_viewer_edit_av.js',
 ]);
 
 // ---------------------------------------------------------------------------

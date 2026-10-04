@@ -57,6 +57,14 @@ The live-oracle era is over. The baselines of record are FROZEN:
 - `bun run dev` — server (unix socket / port per `../private/.env`). 
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds — but see the verification story above: corpus-bound   parity gates are red on the suite DB by construction until replaced). 
 - `bun run test:db:setup` — build the SUITE database (stamps `dedalo_test_marker`) AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
+- **Suite MariaDB (PUB-05)** — the diffusion gates run against the suite's OWN MariaDB per lane
+  (`../private/test_mariadb/<suite db>`, marked `.dedalo_test_mariadb`, `--skip-networking` unix
+  socket), armed in every `bun test` by `test/preload/suite_mariadb.ts`; never an installation's.
+  Needs `mariadbd`, `mariadb-install-db` and `mariadb` locally (macOS: `brew install mariadb`):
+  without them the MariaDB gates go RED, not skip. The server is detached and outlives `bun test`:
+  `bun run scripts/ci/suite_mariadb.ts stop` ends it; `… sweep` also deletes the lane root (marked
+  roots only). CI: `db_tier.sh` starts it (EXIT trap stops it) and runs `scripts/ci/mariadb_tier.ts`
+  LAST. Canon: `engineering/CI.md` → *Suite MariaDB target*.
 - `bun run test:client` — the browser client suite (Mocha in headless Chrome).   It STARTS ITS OWN SERVER on the dedicated SUITE database and stops it again:   no dev server to start first, no port to pass, no client test can reach the   application's data (`scripts/client_test_server.ts`; build the database once   with `bun run test:db:setup`). 
   - `bun run test:client:server` — the SAME suite server kept alive for BROWSING
     the page by hand (`scripts/client_test_serve.ts`): same repoint, same login
@@ -100,6 +108,12 @@ The live-oracle era is over. The baselines of record are FROZEN:
     allocator raises it with GREATEST (`insertMatrixRecordWithExplicitId`),
     which is why `test3`'s counter stands in the hundreds of thousands. That is
     correct behaviour, not drift. 
+- `bun run test:tools:phone` — every tool at 360×740 on the SUITE database (own
+  server, real login, click-path probes, scratch records swept): the phone
+  contract of `tools_common/css/tool_responsive.less`. `--shots <dir>` for the
+  visual review, `--tool a,b` to narrow, `--discover <tipo>/<id|list>` to find
+  callers, `--overflow '<query>|<query>'` to find what widens a page. Ratchet:
+  `test/helpers/tool_phone_ratchet.ts`.
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
 - `bun run test:update` — the code-updater's REAL-SCENARIO drill (opt-in, `scripts/update_drill.ts`): a scratch `git clone` gets the release commit (version bump + bun pin), a REAL master instance builds + serves the 7.0.1 release through the wire, a git-archive copy of this checkout under a supervisor loop installs it across the planned-death restart — panel probe → manifest → tampered-sha refusal → job frames → `/health` answering 7.0.1 → sentinel confirmed. Needs the suite DB (`test:db:setup`) + network for the quarantine `bun install`; ~3–5 min; never touches the app DB or the live private state. 
 - `bun run test:update:dev` — the same drill on the DEVELOPER CHANNEL: the
@@ -128,12 +142,12 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `engineering/RELATIONS_SPEC.md`, `engineering/SECTION_SPEC.md` | Family specs — **read the dated §1 addenda first**: the rebuilds they instruct already landed. | 
 | `engineering/DIFFUSION_SPEC.md` | Native diffusion subsystem (`src/diffusion/`, Bun-owns-MariaDB tiering). | 
 | `engineering/EXTERNAL_SPEC.md` | External record services (`src/external/`, a PEER of core) — the four ontology pieces, the one outbound door and its order, egress classes, the write invariant. | 
+| `engineering/OUTBOUND_SPEC.md` | Every request that leaves the institution — the THREE outbound doors (single API call / external record service / tool harvesting via `src/core/harvest/`), the one SSRF guard under them, the harvest hop order, who may use which door. | 
 | `engineering/IDENTIFY_SPEC.md` | Object identification (`src/core/identify/` + the RAG image index) — a criterion IS an SQO path; read §4 for what each match mode actually does today. | 
 | `engineering/CONVENTIONS.md` | Error-handling/logging convention + the dynamic-import rules. | 
 | `engineering/ERRORS_SPEC.md` | The error system: closed DedaloError registry, the ONE converter, envelope v2, client contract, gates. | 
 | `engineering/ORACLE_HARVEST.md` | The frozen fixture store: how it replays, why a re-harvest is impossible, the retired-differential twin map. | 
 | `engineering/PRODUCTION.md` | Ops: supervision, socket, backups, health. | 
-| `engineering/MASTER_SERVER.md` | The official master: the v7 door + the Apache overlay that keeps every PRE-7 install updating. | 
 | `engineering/STAGING_VALIDATION.md` | Exercise the ops hardening before production. | 
 | `engineering/CI.md` | CI/CD: pipeline map, hermetic vs self-hosted tiers, seam env, activation runbook. | 
 | *— internal, not in the repo —* | | 

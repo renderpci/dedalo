@@ -4,23 +4,50 @@
  * Every site workspace is a git repo. The first commit is the scaffolded template; after
  * every agent turn the daemon commits whatever the agent wrote, so the site's history is
  * a turn-by-turn ledger a UI can later walk back through. git is invoked with argv
- * arrays through the no-shell spawner (util/spawn.ts) and a constructed environment: git
- * needs a HOME (for a global config it will not find) and an identity, both supplied
- * explicitly so the daemon never depends on the ambient user's git config.
+ * arrays through the confinement and a constructed environment: git's HOME and global
+ * configuration are fixed by its unit (none at all), and its identity is supplied explicitly
+ * so the daemon never depends on the ambient user's git config.
  *
  * The author is a fixed service identity; the acting user is recorded in the audit log,
  * not the git author, because git author is free-text and must not be mistaken for an
  * authenticated fact.
+ *
+ * Every git command goes through the `git` DOOR (`drivers/network_profile.ts`: no proxy, no
+ * bind, no inet family), as the SITE's own identity, under the site's reservation (see
+ * `withSite` below). The confinement policy is a trailing PARAMETER, defaulted to this
+ * daemon's, for the reason `startBuild`'s is: the door these real call sites state is then
+ * assertable on a host with no systemd (tests/agent_confinement.test.ts, "the real call
+ * sites").
  */
 
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { confinedPath } from '../util/paths';
 import { mkdirShared, writeFileSharedAtomic } from '../util/shared_tree';
-import { runConfined } from '../drivers/confinement';
+import { policyFromConfig, runConfined, type ConfinementPolicy } from '../drivers/confinement';
 import { config } from '../config';
+import { ConflictError } from '../errors';
+import { busyDetail, busyReason, end, holdsReservation, tryBegin } from '../workspace_activity';
 
-const GIT_TIMEOUT_MS = 30_000;
+/**
+ * EVERY GIT COMMAND HOLDS THE SITE (LEAD-1b). git runs agent-authored hooks and filters as
+ * the site's identity, so it runs under the site's reservation like a turn or a build: the
+ * caller's own (a turn's commit, `createSite`'s init, the boot recovery), or — for a caller
+ * that holds none — a `git` reservation taken here for the operation's duration, refused
+ * (409) while anything else holds the site.
+ */
+async function withSite<T>(slug: string, fn: () => Promise<T>): Promise<T> {
+  if (holdsReservation(slug)) return fn();
+  if (!tryBegin(slug, 'git')) {
+    const reason = busyReason(slug) ?? 'git_running';
+    throw new ConflictError(busyDetail(reason, slug), reason);
+  }
+  try {
+    return await fn();
+  } finally {
+    end(slug, 'git');
+  }
+}
 
 /**
  * THE DAEMON'S OWN STATE IS NEVER COMMITTED — and above all not `.builder/mcp.json`.
@@ -57,12 +84,12 @@ const EXCLUDE_BODY = [
   '',
 ].join('\n');
 
-// A minimal, constructed environment for git: no inheritance of the daemon's secrets.
+// A minimal, constructed environment for git: no inheritance of the daemon's secrets. NO
+// HOME: the git unit fixes it to /nonexistent, with no global and no system configuration
+// (LEAD-1b) — git's whole configuration is the repository's.
 function gitEnv(workspace?: string): Record<string, string> {
   const env: Record<string, string> = {
     PATH: process.env.PATH ?? '/usr/bin:/bin',
-    // git reads ~/.gitconfig; point it at the agent home, not at the tree it is committing.
-    HOME: config.AGENT_HOME,
     GIT_AUTHOR_NAME: 'Dédalo Site Builder',
     GIT_AUTHOR_EMAIL: 'site-builder@dedalo.local',
     GIT_COMMITTER_NAME: 'Dédalo Site Builder',
@@ -115,7 +142,14 @@ function assertIsRepository(workspace: string, what: string): void {
  * already spent, and is an operator's key-rotation problem, not something a daemon may
  * pretend to fix by rewriting a museum's repository.
  */
-export async function excludeDaemonState(slug: string): Promise<void> {
+export async function excludeDaemonState(
+  slug: string,
+  policy: ConfinementPolicy = policyFromConfig(),
+): Promise<void> {
+  return withSite(slug, () => excludeDaemonStateHeld(slug, policy));
+}
+
+async function excludeDaemonStateHeld(slug: string, policy: ConfinementPolicy): Promise<void> {
   const cwd = confinedPath(config.SITES_ROOT, slug);
   // Refuse before the mkdir below, which would otherwise CREATE `.git/info` in a directory
   // that holds no repository — manufacturing the very evidence the caller's guard looks
@@ -134,39 +168,45 @@ export async function excludeDaemonState(slug: string): Promise<void> {
   await mkdirShared(config.SITES_ROOT, join(slug, '.git', 'info'));
   await writeFileSharedAtomic(config.SITES_ROOT, join(slug, '.git', 'info', 'exclude'), EXCLUDE_BODY);
   await runConfined({
+    door: 'git',
+    slug,
     argv: ['git', 'rm', '-r', '--cached', '--quiet', '--ignore-unmatch', DAEMON_STATE_DIR],
     cwd,
     env: gitEnv(cwd),
-    timeoutMs: GIT_TIMEOUT_MS,
+    timeoutMs: config.GIT_TIMEOUT_MS,
     label: 'git command',
-  });
+  }, policy);
 }
 
-async function git(slug: string, ...args: string[]): Promise<void> {
+async function git(policy: ConfinementPolicy, slug: string, ...args: string[]): Promise<void> {
   const cwd = confinedPath(config.SITES_ROOT, slug);
   // Every command but `init` REQUIRES the repository to already exist here. Without this,
   // a missing `.git` is not an error — it is a silent promotion to whatever repository
   // encloses the workspace.
   if (args[0] !== 'init') assertIsRepository(cwd, `git ${args[0]}`);
   const result = await runConfined({
+    door: 'git',
+    slug,
     argv: ['git', ...args],
     cwd,
     env: gitEnv(cwd),
-    timeoutMs: GIT_TIMEOUT_MS,
+    timeoutMs: config.GIT_TIMEOUT_MS,
     label: 'git command',
-  });
+  }, policy);
   if (result.exitCode !== 0) {
     throw new Error(`git ${args[0]} failed (exit ${result.exitCode}): ${result.stderr.trim()}`);
   }
 }
 
 /** Initialize the repo and record the scaffolded template as the first commit. */
-export async function initRepo(slug: string): Promise<void> {
-  await git(slug, 'init', '--quiet', '--initial-branch=main');
-  // Before the FIRST commit: `.git/info/exclude` only exists once `git init` has made the
-  // .git directory, and the first commit is already capable of carrying daemon state.
-  await excludeDaemonState(slug);
-  await commitAll(slug, 'scaffold: initial template');
+export async function initRepo(slug: string, policy: ConfinementPolicy = policyFromConfig()): Promise<void> {
+  return withSite(slug, async () => {
+    await git(policy, slug, 'init', '--quiet', '--initial-branch=main');
+    // Before the FIRST commit: `.git/info/exclude` only exists once `git init` has made the
+    // .git directory, and the first commit is already capable of carrying daemon state.
+    await excludeDaemonStateHeld(slug, policy);
+    await commitAllHeld(slug, 'scaffold: initial template', policy);
+  });
 }
 
 /**
@@ -174,38 +214,54 @@ export async function initRepo(slug: string): Promise<void> {
  * clean (no changes to commit — a turn where the agent wrote nothing). A clean tree is
  * not an error.
  */
-export async function commitAll(slug: string, message: string): Promise<boolean> {
+export async function commitAll(
+  slug: string,
+  message: string,
+  policy: ConfinementPolicy = policyFromConfig(),
+): Promise<boolean> {
+  return withSite(slug, () => commitAllHeld(slug, message, policy));
+}
+
+async function commitAllHeld(slug: string, message: string, policy: ConfinementPolicy): Promise<boolean> {
   // Re-asserted here and not only at init: this is the one function every commit goes
   // through, so a repo created by an older daemon — or one whose .git was restored from a
   // backup taken before the rule existed — gets the exclusion before its next `add -A`.
-  await excludeDaemonState(slug);
-  await git(slug, 'add', '-A');
+  await excludeDaemonStateHeld(slug, policy);
+  await git(policy, slug, 'add', '-A');
   const cwd = confinedPath(config.SITES_ROOT, slug);
   // `git diff --cached --quiet` exits 1 when there IS something staged.
   const staged = await runConfined({
+    door: 'git',
+    slug,
     argv: ['git', 'diff', '--cached', '--quiet'],
     cwd,
     env: gitEnv(cwd),
-    timeoutMs: GIT_TIMEOUT_MS,
+    timeoutMs: config.GIT_TIMEOUT_MS,
     label: 'git command',
-  });
+  }, policy);
   if (staged.exitCode === 0) {
     return false; // nothing staged
   }
-  await git(slug, 'commit', '--quiet', '--no-verify', '-m', message);
+  await git(policy, slug, 'commit', '--quiet', '--no-verify', '-m', message);
   return true;
 }
 
 /** The porcelain status — used to derive a turn's file-change list for all drivers. */
-export async function changedFiles(slug: string): Promise<string[]> {
+export async function changedFiles(slug: string, policy: ConfinementPolicy = policyFromConfig()): Promise<string[]> {
+  return withSite(slug, () => changedFilesHeld(slug, policy));
+}
+
+async function changedFilesHeld(slug: string, policy: ConfinementPolicy): Promise<string[]> {
   const cwd = confinedPath(config.SITES_ROOT, slug);
   const result = await runConfined({
+    door: 'git',
+    slug,
     argv: ['git', 'status', '--porcelain'],
     cwd,
     env: gitEnv(cwd),
-    timeoutMs: GIT_TIMEOUT_MS,
+    timeoutMs: config.GIT_TIMEOUT_MS,
     label: 'git command',
-  });
+  }, policy);
   if (result.exitCode !== 0) return [];
   return result.stdout
     .split('\n')

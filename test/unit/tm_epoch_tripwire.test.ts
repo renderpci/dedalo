@@ -9,13 +9,18 @@
  * snapshots as the living record's own, and a restore built on it writes the
  * dead record's values in with `ok:true`.
  *
- * WHY A GATE AND NOT A CONVENTION. The narrowing is applied by hand at six
- * separate statements across five modules, because `tmEpochPredicate()` is a
- * SQL fragment spliced into other people's queries. Nothing about adding a
- * seventh TM reader makes its author think of this file. The already-exported
- * `readTimeMachineHistory` is the standing proof: it selects a record's
- * component history with no epoch predicate at all, and is harmless ONLY
- * because it currently has no production caller.
+ * WHY A GATE AND NOT A CONVENTION. The narrowing is spliced by hand, because
+ * `tmEpochPredicate()` is a SQL fragment spliced into other people's queries —
+ * `NARROWED_READERS` / `EXEMPT_TM_READERS` below hold the count (no number goes
+ * in prose). Nothing about adding a new TM reader makes its author think of
+ * this file. `readTimeMachineHistory` is `withTmHistory`-narrowed, and that is
+ * pinned by an OUTCOME in test/unit/record_generation_native.test.ts
+ * ("readTimeMachineHistory serves only the living generation"), because
+ * `time_machine.ts` is exempt from this census.
+ *
+ * The census measures CODE: comments are stripped by the shared scanner
+ * (test/helpers/strip_comments.ts), so prose naming the table or a helper is
+ * neither a statement nor a narrowing.
  *
  * THE TWO DIRECTIONS BOTH MATTER. A leaking reader shows a dead record's
  * history; a leaking WRITE-GATE probe (delete_record, observers) sees the dead
@@ -32,6 +37,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const CENSUS_ROOTS = ['src', 'tools'] as const;
@@ -47,8 +53,12 @@ const CENSUS_ROOTS = ['src', 'tools'] as const;
  */
 const TM_SELECT = /(?:FROM|JOIN|UPDATE|DELETE\s+FROM)\s+matrix_time_machine/gi;
 
-/** The two ways a statement declares itself narrowed to one generation. */
-const TM_NARROWING = /tmEpochPredicate\(|withTmEpoch\(/g;
+/**
+ * The ways a statement declares itself narrowed to one generation. withTmHistory
+ * is withTmEpoch AND `tm_role IS NULL` (the undo-log visibility law), so it
+ * carries the epoch narrowing too.
+ */
+const TM_NARROWING = /tmEpochPredicate\(|withTmEpoch\(|withTmHistory\(/g;
 
 /**
  * Files that read `matrix_time_machine` WITHOUT the epoch narrowing, each with
@@ -74,9 +84,9 @@ const EXEMPT_TM_READERS: Readonly<Record<string, { reads: number; reason: string
 			'The epoch MINT itself: it reads the address’s existing rows to place the boundary. It is what the other readers are narrowed BY.',
 	},
 	'src/core/db/time_machine.ts': {
-		reads: 2,
+		reads: 6,
 		reason:
-			'readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed). readTimeMachineHistory has NO production caller (dead code); narrow or delete it before wiring one.',
+			'readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed); it is VISIBILITY-narrowed (tmVisiblePredicate) but deliberately not epoch-narrowed, so a dead-generation id answers the specific "does not belong" refusal. readTimeMachineHistory, readOtherLangItemIds (the frame pairing law\'s input) and newestRowAt (the two-lane as-of reader: readFrameStateRowAt / readLaneRowAt), nextVisibleRow (the TM preview bound: nextVisibleRowAfter, and the record-lifecycle probe nextVisibleRecordRowAfter) and readKeyLanesAt (the per-lane as-of reader of frame targets) are narrowed with withTmHistory (epoch AND visible).',
 	},
 	'src/core/update/transform/locators.ts': {
 		reads: 2,
@@ -131,15 +141,20 @@ interface TmReader {
 	narrowSites: number;
 }
 
+/** One file's census: its TM statements and the narrowings it declares. */
+function measure(file: string, source: string): TmReader {
+	const src = stripComments(source);
+	return {
+		file,
+		reads: (src.match(TM_SELECT) ?? []).length,
+		narrowSites: (src.match(TM_NARROWING) ?? []).length,
+	};
+}
+
 function tmReaders(): TmReader[] {
-	const found: TmReader[] = [];
-	for (const file of censusFiles()) {
-		const src = readFileSync(join(REPO_ROOT, file), 'utf8');
-		const reads = (src.match(TM_SELECT) ?? []).length;
-		if (reads === 0) continue;
-		found.push({ file, reads, narrowSites: (src.match(TM_NARROWING) ?? []).length });
-	}
-	return found;
+	return censusFiles()
+		.map((file) => measure(file, readFileSync(join(REPO_ROOT, file), 'utf8')))
+		.filter((reader) => reader.reads > 0);
 }
 
 /**
@@ -153,12 +168,19 @@ const NARROWED_READERS: Readonly<Record<string, { reads: number; narrowSites: nu
 	// narrowSites < reads is CORRECT here: the deep-page barrier and late-lookup
 	// shapes each name the table twice (an outer `FROM matrix_time_machine tm`
 	// joined to an inner scoped subquery), and the narrowing belongs on the INNER
-	// one that selects the ids. Four narrowings cover the four WHERE clauses:
-	// the count twin, the barrier inner, the late-lookup inner, and the plain page.
-	'src/core/resolve/read_tm.ts': { reads: 6, narrowSites: 4 },
-	'src/core/section/record/delete_record.ts': { reads: 2, narrowSites: 2 },
+	// one that selects the ids. Five narrowings cover the five WHERE clauses:
+	// the count's TWO halves (tmHistoryCountSql: total − hidden, each
+	// withTmEpoch-narrowed), the barrier inner, the late-lookup inner, and the
+	// plain page.
+	'src/core/resolve/read_tm.ts': { reads: 7, narrowSites: 5 },
+	'src/core/section/record/delete_record.ts': { reads: 1, narrowSites: 1 },
 	'src/core/section/record/observers.ts': { reads: 1, narrowSites: 1 },
-	'tools/tool_time_machine/server/bulk_revert.ts': { reads: 2, narrowSites: 2 },
+	// The undo-log rewrite (2026-09-27): the orchestrator's one read is the run
+	// loader (every role, epoch-narrowed); the legacy inference's three are the
+	// per-language pre-run row, its wipe-sibling subquery and the record's
+	// pre-run-history probe — each epoch- (and visibility-) narrowed.
+	'tools/tool_time_machine/server/bulk_revert.ts': { reads: 1, narrowSites: 1 },
+	'tools/tool_time_machine/server/bulk_revert_legacy.ts': { reads: 3, narrowSites: 3 },
 };
 
 describe('time-machine epoch tripwire', () => {
@@ -175,6 +197,28 @@ describe('time-machine epoch tripwire', () => {
 		]) {
 			expect(files.has(door)).toBe(true);
 		}
+	});
+
+	test('the classifier is honest: prose is not a narrowing (nor a statement)', () => {
+		// A comment that NAMES the helper next to a bare reader must not count as
+		// the reader's narrowing — else a header explaining the law hides a leak.
+		const commented = measure(
+			'x.ts',
+			'// narrowed with withTmEpoch( … ) elsewhere\nawait sql`SELECT data FROM matrix_time_machine WHERE id = 1`;',
+		);
+		expect([commented.reads, commented.narrowSites]).toEqual([1, 0]);
+		const blockProse = measure(
+			'x.ts',
+			'/* see tmEpochPredicate( ) */ await sql`SELECT data FROM matrix_time_machine`;',
+		);
+		expect([blockProse.reads, blockProse.narrowSites]).toEqual([1, 0]);
+		const prose = measure('x.ts', '// reads FROM matrix_time_machine in prose\nconst a = 1;');
+		expect(prose.reads).toBe(0);
+		const narrowed = measure(
+			'x.ts',
+			'await sql.unsafe(`SELECT 1 FROM matrix_time_machine WHERE ${withTmEpoch("id = 1")}`);',
+		);
+		expect([narrowed.reads, narrowed.narrowSites]).toEqual([1, 1]);
 	});
 
 	test('every TM reader is epoch-narrowed, or exempt with a reason', () => {

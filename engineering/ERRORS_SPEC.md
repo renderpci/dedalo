@@ -97,10 +97,11 @@ not only the dispatch catch.
 says the same thing (`no_access_page`, the `external_source_*` family,
 `fail_to_save`, `search_failed`, `external_search_failed`). A shared label key
 must be a reused pre-existing key and its codes must agree on category. Label
-`{param}` placeholders ≡ `details_keys`, both ways. Labels ship in
+`${param}` placeholders ≡ `details_keys`, both ways — always with the `$` (the client's `format_label` fills `${param}` only; a bare `{param}` in any error label, master or catalog, is refused by `error_registry_native`). Labels ship in
 `src/core/labels/master.json` in the same commit as the code (labels_tripwire).
 Client-side transport codes have their own keys (`error_client_network|timeout|
-aborted|bad_response|http_status|worker|offline|render_failed`, `awaiting_busy_server`).
+aborted|bad_response|http_status|worker|offline|render_failed`; the slow-server
+cue's `server_slow_response` is a state label, not an error).
 `client.render_failed` is the one non-transport client code: a render callback
 threw inside `ui.load_item_with_spinner`, and the engine's own panel
 (`render_error_panel`) takes the place the node would have had — never an
@@ -415,7 +416,7 @@ tripwired or deleted"). Rows in `engineering/TRIPWIRES.md` + `scripts/verify.ts`
 | `test/unit/error_registry_native.test.ts` | the REGISTRY is coherent: grammar, every code has a `master.json` label, label `{params}` ≡ `details_keys`, status↔category (named exemptions), `external.<kind>` totality + retryable/label agreement with the component state map, every former MCP HINT key mapped and hinted, LEGACY_TOKEN_MAP targets exist |
 | `test/unit/error_envelope_native.test.ts`, `error_converter_native.test.ts` | the envelope shapes and the converter's disclosure ladder (publicMessage only for `public`, details filtered to `details_keys`, `debug` only under the flag, poison latch inside `toDedaloError`); a failure body is exactly `{ok, request_id, error}`, `result` refused on both shapes (`ENVELOPE_FORBIDDEN_KEYS`), a `msg`/`errors` extension on success parses, `extend:{result}` cannot smuggle it in |
 | `test/unit/dispatch_error_native.test.ts` | the chokepoint: registry status, `ok:false ⇒ non-2xx`, Retry-After, csrf_token on both outcomes, Gate 1 ≡ Gate 1c-disabled, a NON-envelope handler body refused as `internal.unexpected`, server.ts's three doors |
-| `test/unit/error_taxonomy_tripwire.test.ts` | the TREE only speaks through the registry: (A) zero builder calls / `result:false` literals ANYWHERE (src/core/errors/ included) and no `result:` key written by convert.ts / stray `debug` keys / builtin `instanceof` outside convert.ts+process_health.ts / raw exception text on a wire key in the 8 former passthrough files; (B) shrink-only ratchets on hand-built `ok:false` failure literals and prose `errors:[…]`; (C) every code referenced or `reason`ed, every client code string resolves; (D) runtime: every registered `(class,action)` converts a throw; (E) anti-vacuity |
+| `test/unit/error_taxonomy_tripwire.test.ts` | the TREE only speaks through the registry: (A) zero builder calls / `result:false` literals ANYWHERE (src/core/errors/ included) and no `result:` key written by convert.ts / stray `debug` keys / builtin `instanceof` outside convert.ts+process_health.ts / raw exception text on a wire key in the 8 former passthrough files; (B) shrink-only ratchets on hand-built `ok:false` failure literals and prose `errors:[…]`; (C) every code referenced or `reason`ed (a `reason` only on a code referenced nowhere, C1c), every client code string resolves; (D) runtime: every registered `(class,action)` converts a throw; (E) anti-vacuity |
 | `test/unit/error_throw_ratchet.test.ts` | untyped `throw new Error(` per file may only shrink (`engineering/error_throw_baseline.json`); ZERO_TIER dirs are at 0 (`ZERO_TIER_ENFORCED = true`, P3 exit) |
 | `test/unit/client_error_contract_tripwire.test.ts` | the client half: one transport (`api_transport.fetch_api`, no status allowlist), no fourth fetch wrapper, the compat-read census at ZERO (no baseline — `scripts/lib/client_compat_census.ts` + `NON_ENVELOPE_READS` exemptions, each live and reasoned), and the server compat block ABSENT (no `ERROR_ENVELOPE_COMPAT`, no `result:` written by convert.ts, `result` in `ENVELOPE_FORBIDDEN_KEYS`) — P4 landed 2026-08-16 |
 | `test/parity/error_envelope_transform.test.ts` | the fixture-side transform: total over the 8 frozen `result:false` bodies, and it REFUSES a TS-shaped body (`ok` present) — fixture-side only |

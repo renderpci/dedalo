@@ -114,7 +114,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		mapped.push(...applyRdfMap(subjects, map));
 	}
 
-	const report = await importMappedRecords(mapped, sectionTipo, ctx.userId);
+	const report = await importMappedRecords(mapped, sectionTipo, ctx.principal);
 	// CONSUME the staging form (WC-079). See the tool_import_marc21 twin: this
 	// tool's client also builds a service_tmp_section, so its scratch rows need
 	// the same clear. Best effort.

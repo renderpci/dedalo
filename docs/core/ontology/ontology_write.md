@@ -115,20 +115,20 @@ flowchart LR
 | **node record** | `matrix_ontology` under `<tld>0` | One editable record per node, with definition components: tld (`ontology7`), parent (`ontology15`), model (`ontology6`), order (`ontology41`), translatable (`ontology8`), relations (`ontology10`), term (`ontology5`), properties (`ontology18` + css `ontology16` + rqo `ontology17` + v5 `ontology19`). All named in `src/core/ontology/ontology_tipos.ts`. |
 | **dd_ontology row** | `dd_ontology` table | The compiled, flat runtime node keyed by `tipo`. Read by `resolver.ts`, written by `src/core/db/dd_ontology.ts`. |
 | **tipo** | `<tld><section_id>` | A node's runtime id, built from its TLD + the editable record's `section_id` (`` `${tld}${sectionId}` ``). |
-| **overwrite (local ontology)** | section `localontology0` | A local record that points at a shared node and overrides selected fields. `getOverwriteLocator()` (`parser.ts`) finds it; the parser favours the overwrite locator for most fields. **`is_model` is never overwritten** (always read from the canonical node); `model`/`model_tipo` themselves ARE overwrite-aware. |
+| **overwrite (local ontology)** | section `localontology0` | A local record linked to a shared node through `ontology42` (Overwrite) that overrides selected fields when that node is parsed. `getOverwriteLocator()` (`parser.ts`) finds it. **Canonical-only**: tld, `is_model`, `is_translatable`, order. **Term** merges per language. **Properties** go per top-level key (`css` and `source` included): a key the override states replaces the shared key whole, unstated keys are kept, and `null` in the override's `ontology18` removes a key. Parent, model/model_tipo, relations and propiedades are replaced when the override fills them. An override record is never a node itself. |
 
 !!! note "What `parseSectionRecordToOntologyNode()` resolves"
     For each node it reads (overwrite-favoured where applicable): **TLD**
-    (mandatory — returns `null` if empty), **parent** (term-id of the parent
+    (mandatory, canonical-only — returns `null` if empty), **parent** (term-id of the parent
     locator; `null` for the `dd1`/`dd2` roots), **is_model** (canonical-only),
     **model** + **model_tipo** (overwrite-aware; `model` = strict `lg-spa` term
     of the model node, no lang fallback), **order_number** (canonical-only,
-    integer-cast, empty → `null`), **is_translatable** (default `true` when
-    missing), **is_main** (`tipo === <tld>0`), **relations** (each resolved to
+    integer-cast, empty → `null`), **is_translatable** (canonical-only, default
+    `true` when missing), **is_main** (`tipo === <tld>0`), **relations** (each resolved to
     `{tipo}`), **properties** (merging css and source/`request_config`
     sub-components), legacy **propiedades** (v5, stored as pretty-printed JSON
     text so legacy readers see byte-identical output), and the **term**
-    (`{lg-*: value}`).
+    (`{lg-*: value}`; an override's languages merge over the canonical ones).
 
 ## Instantiation & lifecycle
 
@@ -175,7 +175,16 @@ module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a 
 | function | module | purpose |
 | --- | --- | --- |
 | `inspectOntology(tld)` | `ontology/ontology_state.ts` | **Pure read.** The drift of one TLD: nodes `missing` / `stale` / `orphaned` vs the parsed source, plus `mainNodeOk` and `inSync`. Compared by meaning (jsonb key order normalized, empty ≡ null, `propiedades` parsed) so formatting is not false drift. |
-| `rebuildOntology(tld, userId?)` | `ontology/ontology_state.ts` | **Transactional wipe-and-rebuild** — the ONE writer. The delete + reinsert run in one `withTransaction`, so the new projection is published atomically: no reader ever observes the empty window, a failure rolls back, and no backup table is involved. |
+| `rebuildOntology(tld, userId?, {reclaimIds?})` | `ontology/ontology_state.ts` | **Transactional wipe-and-rebuild** — the ONE writer. The delete + reinsert run in one `withTransaction`, so the new projection is published atomically: no reader ever observes the empty window, a failure rolls back, and no backup table is involved. `reclaimIds` deletes further rows by id in the same transaction (the identifier-grammar repair). |
+
+!!! note "A malformed reference is dropped and reported, never projected"
+    When a source record's parent, model or related-term locator composes into something
+    that is not a tipo (a `section_id` of `'1 OR'` would give `zzgs1 OR`), or its
+    `properties.alias_of` is not one, the parser drops that reference from the node
+    (`parent` / `model_tipo` become null, the relation entry is skipped, `alias_of` is
+    removed) and the rebuild names the source record in its message and in
+    `state.invalidReferenceRecords` (`{source, tipo, column, value}`). It is a warning, like
+    `tldlessRecords`, not drift: one bad record never fails its whole TLD.
 
 !!! note "The incremental `ensureOntology` companion was removed (2026-08-11)"
     A second, non-destructive writer used to apply only the delta. Its sole advantage over
@@ -188,8 +197,8 @@ module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a 
 
 | function | module | purpose |
 | --- | --- | --- |
-| `getTermIdFromLocator(locator)` | `ontology/parser.ts` | Build a node's term-id (`<tld><section_id>`, e.g. `dd55`) from a locator: fast path from the TLD string, slow fallback reading the TLD component off the pointed record. Returns `null` if unresolvable. |
-| `getOverwriteLocator(sectionTipo, sectionId)` | `ontology/parser.ts` | Find the local-ontology override (`localontology0`) pointing at this node, or `null`. Returns `null` for model nodes and for local-ontology records themselves. |
+| `getTermIdFromLocator(locator)` | `ontology/parser.ts` | Build a node's term-id (`<tld><section_id>`, e.g. `dd55`) from a locator: fast path from the TLD string, slow fallback reading the TLD component off the pointed record. Returns `null` if unresolvable, or if the result is not a valid tipo. |
+| `getOverwriteLocator(sectionTipo, sectionId)` | `ontology/parser.ts` | Find the local-ontology override (`localontology0`) linked to this node through `ontology42`, or `null` (lowest `section_id` when several). Returns `null` for model nodes (canonical `ontology30`) and for local-ontology records themselves. |
 | `root_terms` projection | `area/tree.ts` | The children that seed a thesaurus tree view (`hierarchy45`, or `hierarchy59` in the model view) — folded into the tree-area boot payload rather than a standalone helper. |
 
 ### TLD ↔ section-tipo mapping
@@ -254,9 +263,12 @@ the read half, `resolver.ts`:
   calls `getModelByTipo()` / `getMatrixTableFromTipo()` while parsing.
 - **`src/core/db/dd_ontology.ts`** provides the low-level `dd_ontology`
   operations the write layer leans on: `getActiveTlds()` / `deleteTldNodes()`,
-  plus the backup-table protocol (`createBackupTable()` /
-  `restoreFromBackupTable()` / `dropBackupTable()`) that regenerate uses as its
-  rollback.
+  and the write doors `upsertDdOntologyNode()` / `updateDdOntologyColumns()`,
+  which refuse a node whose identifiers break the grammar
+  (`ontology.invalid_node`) before any SQL. The same grammar is enforced by six
+  CHECK constraints on the table — see
+  [the identifier grammar](../system/db.md#the-identifier-grammar). There is no
+  backup table: a rebuild is one transaction.
 - **Import/export** moves *shared* ontologies between installations as files
   (`data_io.ts` / `data_io_import.ts`), driven by the developer-only
   `tool_ontology_parser` (actions `get_ontologies`, `inspect_ontologies`,

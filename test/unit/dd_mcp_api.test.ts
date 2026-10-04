@@ -28,6 +28,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
 	createSession,
@@ -35,7 +36,10 @@ import {
 	getSession,
 	type Session,
 } from '../../src/core/security/session_store.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { resetRegistryCache } from '../../src/core/tools/registry.ts';
 import {
+	ACL_NON_ADMIN_PROFILE_ID,
 	ACL_NON_ADMIN_USER_ID,
 	ACL_PROJECT_ID,
 	installAclIdentityFixture,
@@ -46,6 +50,7 @@ import {
 	createScratchRecord,
 	ensureCanonicalTest3,
 } from '../helpers/test_data.ts';
+import { toolGrantLocator } from '../helpers/tool_grant_fixture.ts';
 
 /** The project-gated section, and the component_filter buildProjectsFilter keys on. */
 const GATED_SECTION = 'test3';
@@ -94,6 +99,15 @@ beforeAll(async () => {
 	process.env.DEDALO_AGENT_HTTP_ENABLED = 'true';
 	await ensureCanonicalTest3();
 	await installAclIdentityFixture();
+	// THE AGENT DOOR asks the caller's tool grant (closure Step 3, SEC-3): the
+	// gated user's profile authorizes tool_assistant, BUILT here through the one
+	// grant derivation (tool_grant_fixture) — the superuser holds every tool.
+	await assertTestDatabase('dd_mcp_api.test: tool_assistant grant');
+	await sql.unsafe(
+		`UPDATE matrix_profiles SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object('dd1067', $1::text::jsonb) WHERE section_tipo = 'dd234' AND section_id = $2`,
+		[encodeForJsonb([await toolGrantLocator('tool_assistant')]), ACL_NON_ADMIN_PROFILE_ID],
+	);
+	resetRegistryCache();
 	for (const id of VISIBLE_IDS) await createGatedRecord(id, ACL_PROJECT_ID);
 	await createGatedRecord(HIDDEN_ID, OTHER_PROJECT_ID);
 	adminToken = createSession(-1, 'debug_superuser', true);

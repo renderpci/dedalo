@@ -137,6 +137,10 @@ graph acyclic and the SCC tripwire green.
 
 ## Adding a tool
 
+**Creating or adapting a tool is its own skill: `dedalo-tools-ts`** (registration,
+permission kinds, client traps, phone contract, done-checklist). The framework
+map, for orientation:
+
 The tool framework is native TS under `src/core/tools/` — dispatch + gates in
 `dispatch.ts` (Gate 6 = the per-module `apiActions` allowlist, the API_ACTIONS
 successor), the module shape in `module.ts`, schema in `register_schema.ts`,

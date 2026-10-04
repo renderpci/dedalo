@@ -38,81 +38,14 @@ import { identifyAvailable, runIdentify } from './engine/binaries.ts';
 import { probeFormat } from './engine/ffmpeg.ts';
 import { runBinary } from './engine/spawn.ts';
 
-/** Sparse dd_date fields (PHP core/common/class.dd_date.php — nulls omitted). */
-export interface DdDate {
-	year?: number;
-	month?: number;
-	day?: number;
-	hour?: number;
-	minute?: number;
-	second?: number;
-	ms?: number;
-	/** Virtual-calendar sort seconds — injected by {@link withDedaloTime} on save. */
-	time?: number;
-}
+export {
+	addTimeToDateItem,
+	type DdDate,
+	ddDateToSeconds,
+	withDedaloTime,
+} from '../concepts/dd_date_time.ts';
 
-/**
- * PHP dd_date::convert_date_to_seconds (:1027): virtual 372-day years and
- * 31-day months (31*12, symmetric partial-date arithmetic; NOT Unix time).
- * Twins: search/builders/builder_date.ts convertDateToSeconds (search ranges),
- * section/record/create_record.ts virtualDateNow (audit dates).
- */
-export function ddDateToSeconds(date: DdDate): number {
-	const year = date.year ?? 0;
-	let month = date.month ?? 0;
-	let day = date.day ?? 0;
-	// PHP "Rectified 25-11-2017": month/day are 1-based when present.
-	if (month !== 0) month -= 1;
-	if (day !== 0) day -= 1;
-	month = month >= 0 ? month : 0;
-	day = day >= 0 ? day : 0;
-	const hour = Math.max(date.hour ?? 0, 0);
-	const minute = Math.max(date.minute ?? 0, 0);
-	const second = Math.max(date.second ?? 0, 0);
-	return year * 372 * 86400 + month * 31 * 86400 + day * 86400 + hour * 3600 + minute * 60 + second;
-}
-
-/**
- * The persisted-shape stamp (PHP component_date::save → add_time →
- * build_dd_date_with_time): recompute 'time' server-side and attach it. The
- * media-import path stamps explicitly; interactive saves go through
- * {@link addTimeToDateItem} on the component_date save path.
- */
-export function withDedaloTime(date: DdDate): DdDate {
-	return { ...date, time: ddDateToSeconds(date) };
-}
-
-/**
- * PHP component_date::add_time (class.component_date.php:634) — (re)compute the
- * absolute-seconds `time` on each dd_date container of ONE stored date item,
- * mutating in place, and always overriding any client-supplied value (the
- * server never trusts the client's `time`). The modes are mutually exclusive by
- * the top-level key present:
- *   - `period` → stamp `period.time`;
- *   - `start`  → stamp `start.time` (+ `end.time` when `end` is present);
- *   - bare `hour` at root → the item itself is the dd_date.
- * Unknown/empty shapes are left untouched. This is the sort/range-search key —
- * without it a stored date can't be ordered or range-filtered.
- */
-export function addTimeToDateItem(item: unknown): void {
-	if (item === null || typeof item !== 'object') return;
-	const container = item as { period?: DdDate | null; start?: DdDate | null; end?: DdDate | null };
-
-	if (container.period !== undefined && container.period !== null) {
-		container.period.time = ddDateToSeconds(container.period);
-		return;
-	}
-	if (container.start !== undefined && container.start !== null) {
-		container.start.time = ddDateToSeconds(container.start);
-		if (container.end !== undefined && container.end !== null) {
-			container.end.time = ddDateToSeconds(container.end);
-		}
-		return;
-	}
-	if ((item as DdDate).hour !== undefined) {
-		(item as DdDate).time = ddDateToSeconds(item as DdDate);
-	}
-}
+import type { DdDate } from '../concepts/dd_date_time.ts';
 
 /** Build a DdDate from ordered field values, dropping undefined/NaN slots. */
 function sparseDate(

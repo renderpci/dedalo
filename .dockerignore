@@ -173,6 +173,9 @@ dev
 **/*/dev
 dev_tools
 **/*/dev_tools
+install/import/ontology/*
+!install/import/ontology/7.0
+install/import/ontology/*/recovery
 publication/server_api/v2/node_modules
 publication/server_api/v2/**/*/node_modules
 publication/server_api/v2/.env

@@ -55,9 +55,10 @@ export async function executeChangesInTipos(
 	//    below can reach, so the whole ontology would keep declaring the old
 	//    namespace and parse into it (ontology_state's `foreign` drift, en masse);
 	//  - `matrix_ontology` has a UNIQUE (section_id, section_tipo) index, and two
-	//    real ontologies routinely share section_ids, so the bulk UPDATE aborts
-	//    part-way — with no transaction and no rollback here (WC-025), that leaves
-	//    the database half-renamed and unrecoverable.
+	//    real ontologies routinely share section_ids, so the bulk UPDATE aborts.
+	//    (The file is one atomic unit now — engine.ts runDefinitionFile — so the
+	//    abort rolls the whole file back instead of leaving it half-renamed; it
+	//    would still never succeed.)
 	// A tld rename is done in the ontology MASTER and redistributed by the ontology
 	// import, which rewrites ontology7 as it lands (data_io_import's
 	// normalizeOntologyTld). Refused loudly rather than half-performed.

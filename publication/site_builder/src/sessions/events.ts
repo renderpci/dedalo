@@ -17,7 +17,12 @@ import type { SessionState } from './manager';
 export type SessionEventBody =
   | { type: 'turn_start'; turn: number; prompt: string }
   | AgentEvent
-  | { type: 'turn_end'; state: SessionState; resumeToken?: string };
+  | { type: 'turn_end'; state: SessionState; resumeToken?: string }
+  /**
+   * A resume token was DROPPED: it was minted under another agent identity (the epoch moved
+   * — LEAD-1b), so the agent state it names is not this identity's. The turn starts fresh.
+   */
+  | { type: 'resume_unavailable'; reason: 'agent identity migrated' };
 
 export interface StoredEvent {
   seq: number;
@@ -35,4 +40,17 @@ export interface SessionMeta {
   state: SessionState;
   /** Driver-native resume token from the last completed turn, if any. */
   resume_token: string | null;
+  /**
+   * The agent-identity epoch the session last ran under (AGENT_IDENTITY_EPOCH). A token from
+   * another epoch is dropped. Absent on sessions from before LEAD-1b, which count as epoch 0.
+   */
+  identity_epoch?: number;
+  /**
+   * A commit this session OWES was not recorded — its turn's commit was refused (for any
+   * reason: the daemon stopping, a connection PID 1 dropped, a quarantined identity), or a
+   * boot's recovery commit was refused or skipped (the site held). The work is still in the
+   * tree; every boot's sweep asks again, commits it as a recovery point, and only then clears
+   * this. Absent otherwise.
+   */
+  recovery_pending?: boolean;
 }

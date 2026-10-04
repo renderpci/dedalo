@@ -96,6 +96,8 @@ const OTHER_TEXT = 'test17';
 const OTHER_MODEL = 'component_text_area';
 const TABLE = 'matrix_test';
 const USER = 987672;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 /** Scratch ids owned by THIS gate (reserved ≥ 900000 band). */
 const IMPORT_ID = 941701;
 const SET_FIELD_ID = 941702;
@@ -352,8 +354,24 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 		},
 	],
 	[
+		'tools/tool_import_rdf/server/rdf_import_execute.ts',
+		{
+			lang: 'request+items+nolan',
+			reason:
+				'Writes the lang each PLAN op carries (rdf_import_plan.ts): a literal tagged xml:lang lands in the installed data lang it maps to (items); an untagged literal takes currentDataLang() resolved once per run (request); a non-translatable component, an IRI or a locator is lg-nolan.',
+		},
+	],
+	[
 		'tools/tool_posterframe/server/index.ts',
 		{ lang: 'nolan', reason: 'add_new_element on a portal — a locator write, no language.' },
+	],
+	[
+		'src/core/relations/children_write.ts',
+		{
+			lang: 'nolan',
+			reason:
+				"A children save writes each child's parent link and its order value — locators and a sort number, never translated: DATA_NOLAN whatever lang the request carried.",
+		},
 	],
 	[
 		'tools/tool_tc/server/index.ts',
@@ -362,9 +380,17 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 	[
 		'tools/tool_update_cache/server/index.ts',
 		{
-			lang: 'items',
+			lang: 'request+items',
 			reason:
-				'OPEN (DATA-01, third site): re-saves each stored lang group, but the DEFAULT bucket for lang-less items and for an empty component is still config.menu.dataLang. Outside P0-7’s edit scope.',
+				'Re-saves each stored lang group (groupItemsByLang); the DEFAULT bucket for lang-less items and for an empty component is currentDataLang() (lg-nolan when not translatable) — the language the operator works in, never config.menu.dataLang (DATA-01 third site, closed). The dd800 label save is lg-nolan.',
+		},
+	],
+	[
+		'tools/tool_propagate_component_data/server/index.ts',
+		{
+			lang: 'caller',
+			reason:
+				'The propagation writes in the language the operator chose in the tool (options.lang), handed to the save door as the request lang; the door’s effectiveLang rule then slices on it for a translatable model and on lg-nolan otherwise (the region the propagate transform reads is cut with the same rule). The lg-nolan save in the same file is the dd800 run label (2026-09-27, WC-2026-09-27-bulk-revert-undo-log: propagate saves through saveComponentData).',
 		},
 	],
 ]);
@@ -495,7 +521,7 @@ describe('a write lands in the SESSION’s data language, not the install defaul
 				importMappedRecords(
 					[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['import value'] }] }],
 					SECTION,
-					USER,
+					IMPORTER,
 				),
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -562,7 +588,7 @@ describe('a write lands in the SESSION’s data language, not the install defaul
 				importMappedRecords(
 					[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: [''] }] }],
 					SECTION,
-					USER,
+					IMPORTER,
 				),
 		);
 		rememberBulkProcess(report.bulkProcessId);

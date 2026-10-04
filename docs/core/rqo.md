@@ -319,11 +319,11 @@ Pretty-printed JSON response (debugging).
 	"dd_api" : "dd_core_api",
 	"source" : { "typo":"source", "type":"component", "action":null, "model":"component_input_text",
 		"tipo":"oh16", "section_tipo":"oh1", "section_id":124, "mode":"edit", "lang":"lg-eng" },
-	"data"   : { "changed_data": [ {"action":"update","key":0,"value":"Interview about..."} ] }
+	"data"   : { "changed_data": [ {"action":"update","id":1,"key":0,"value":{"id":1,"lang":"lg-eng","value":"Interview about..."}} ] }
 }
 ```
 
-`save` dispatches on `source->type` (only `component` is implemented), instantiates the element and applies `data->changed_data`. `oh16` here is a `component_input_text`. The per-value operation is `changed_data[].action` (`update` shown; also `insert`, `remove`, `set_data`, `sort_data`, `sort_by_column`, `add_new_element`).
+`save` dispatches on `source->type` (only `component` is implemented), instantiates the element and applies `data->changed_data`. `oh16` here is a `component_input_text`. The per-value operation is `changed_data[].action` (`update` shown; also `insert`, `remove`, `set_data`, `sort_data`, `sort_by_column`, `add_new_element`). The `value` of an `update`/`insert` is ONE value item (an object — never a bare string), and a `set_data` value is an array of them; any other shape is refused with `request.invalid_data` and nothing is written (see [value items](./data_model/value_item.md)).
 
 ### Autocomplete search (service_autocomplete)
 

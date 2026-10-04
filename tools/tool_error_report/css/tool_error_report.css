@@ -149,7 +149,4 @@
 .tool_error_report .error_report_note {
   font-style: italic;
 }
-.tool_header.tool_error_report {
-  background-color: var(--tool_error_report);
-}
 /*# sourceMappingURL=tool_error_report.css.map */

@@ -51,7 +51,12 @@ export interface ImportFileReport {
 	updated: number[];
 	/** Cells the import refused. The record keeps its previous value. */
 	failed: ImportRowIssue[];
-	/** Cells the import wrote, but that need a human look. */
+	/**
+	 * Cells the import wrote, but that need a human look. An APPEND-mode cell
+	 * whose entries were already stored reports one issue per (row, column):
+	 * `msg` "N already present, not added", `data` null — written only once
+	 * the row committed.
+	 */
 	warnings: ImportRowIssue[];
 	/** File-level errors (unreadable CSV, no mapped column, missing section_id column). */
 	errors: string[];

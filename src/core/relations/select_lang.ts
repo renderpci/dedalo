@@ -9,7 +9,10 @@
  *   (class.component_select_lang.php get_list_of_values);
  * - list value = the labels of the options whose locator matches the stored
  *   data, resolved in DEDALO_DATA_LANG, with the get_missing_lang `*` guard for a
- *   stored lang that is not a project lang (get_list_value / get_missing_lang).
+ *   stored lang that is not a project lang (get_list_value / get_missing_lang);
+ * - edit datalist = the options + that same "<name> *" entry when the first
+ *   stored locator is not an option (component_select_lang_json edit branch) —
+ *   appendMissingLang, applied by relations/datalist.ts getEditDatalist.
  *
  * PHP constants (config): DEDALO_LANGS_SECTION_TIPO 'lg1', langs table
  * 'matrix_langs', DEDALO_THESAURUS_TERM_TIPO 'hierarchy25' (names),
@@ -18,7 +21,7 @@
 
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
-import { currentDataLang } from '../resolve/request_lang.ts';
+import { currentApplicationLang, currentDataLang } from '../resolve/request_lang.ts';
 import { registerSectionDataListener } from '../section_record/save_event.ts';
 
 /**
@@ -33,9 +36,10 @@ export interface SelectLangDatalistItem {
 	/**
 	 * NOT a record address: the 'lg-<code>' language token the widget keys its
 	 * options by. It stays a STRING verbatim — same field name, different
-	 * concept (concepts/section_id.ts header).
+	 * concept (concepts/section_id.ts header). Null only on a missing-lang
+	 * entry whose record carries no code (PHP get_code_from_locator → null).
 	 */
-	section_id: string;
+	section_id: string | null;
 }
 
 const LANGS_SECTION_TIPO = 'lg1'; // DEDALO_LANGS_SECTION_TIPO
@@ -184,42 +188,115 @@ export async function getSelectLangDatalist(lang: string): Promise<SelectLangDat
 	return items;
 }
 
+/** A stored select_lang value item: a locator into lg1 (shape not trusted). */
+type StoredLangLocator = { section_tipo?: unknown; section_id?: unknown };
+
+/** PHP get_missing_lang containment: same section_tipo, loosely-equal section_id. */
+function isLangOption(
+	locator: StoredLangLocator,
+	option: { value: { section_tipo: string; section_id: number } },
+): boolean {
+	return (
+		String(locator.section_tipo) === option.value.section_tipo &&
+		String(locator.section_id) === String(option.value.section_id)
+	);
+}
+
+/**
+ * PHP component_select_lang::get_missing_lang's ENTRY for a stored lang that is
+ * not a project option: `{value, label: "<name> *", section_id: 'lg-<code>'}`.
+ *
+ * - The name is resolved in the APPLICATION lang (PHP lang::get_lang_name_by_locator
+ *   defaults to DEDALO_APPLICATION_LANG — in edit AND list mode), through the
+ *   module's fallback chain (that lang → data lang → any name).
+ * - The label never collapses to PHP's bare " *" (PHP concatenated a null name):
+ *   a nameless record falls back to its code, a dangling locator to the
+ *   `<section_tipo>_<section_id>` string the term resolver uses for orphan
+ *   locators — the stored value stays identifiable
+ *   (WC-2026-10-02-select-lang-missing-entry).
+ * - `section_id` is the 'lg-<code>' token, null when the record carries no code
+ *   (PHP get_code_from_locator → null).
+ *
+ * Null when the locator is not an address at all (no tipo / no positive int id).
+ */
+async function missingLangItem(
+	locator: StoredLangLocator,
+	appLang: string,
+): Promise<SelectLangDatalistItem | null> {
+	const sectionTipo = locator.section_tipo;
+	const sectionId = Number(locator.section_id);
+	if (typeof sectionTipo !== 'string' || sectionTipo === '') return null;
+	if (!Number.isInteger(sectionId) || sectionId < 1) return null;
+
+	// TERM_TIPO is a fixed ontology constant (tipo-grammar safe); the address is bound.
+	const rows = (await sql.unsafe(
+		`SELECT "string"->'${TERM_TIPO}' AS names
+		 FROM "${LANGS_TABLE}"
+		 WHERE section_tipo = $1 AND section_id = $2`,
+		[sectionTipo, sectionId],
+	)) as { names: LangName[] | null }[];
+	const names = Array.isArray(rows[0]?.names) ? (rows[0]?.names as LangName[]) : [];
+	const code = sectionTipo === LANGS_SECTION_TIPO ? await getLangCodeBySectionId(sectionId) : null;
+	const name = fallbackLangValue(names, appLang) ?? code ?? `${sectionTipo}_${sectionId}`;
+	return {
+		value: { section_tipo: sectionTipo, section_id: sectionId },
+		label: `${name} *`,
+		section_id: code,
+	};
+}
+
+/**
+ * EDIT-mode guard (PHP component_select_lang_json edit branch): when the FIRST
+ * stored locator is not among the project-lang options — a lang removed from
+ * DEDALO_PROJECTS_DEFAULT_LANGS after the record was saved — its "<name> *"
+ * entry is appended AFTER the sorted options, so the stored value is visible in
+ * the picker instead of silently lost. Returns a new array; the input is never
+ * mutated. Edit doors only (the read, the save echo, the temporal echo — all
+ * through relations/datalist.ts getEditDatalist); never the shared option list
+ * that filters, the state widget or identify consume.
+ *
+ * Divergence: PHP skipped the guard when the option list was empty; here the
+ * stored value is shown whatever the project config resolves
+ * (WC-2026-10-02-select-lang-missing-entry).
+ */
+export async function appendMissingLang<
+	T extends { value: { section_tipo: string; section_id: number } },
+>(
+	datalist: readonly T[],
+	storedLocators: readonly unknown[],
+	appLang: string,
+): Promise<(T | SelectLangDatalistItem)[]> {
+	const first = storedLocators[0];
+	if (first === null || typeof first !== 'object') return [...datalist];
+	const locator = first as StoredLangLocator;
+	if (datalist.some((option) => isLangOption(locator, option))) return [...datalist];
+	const missing = await missingLangItem(locator, appLang);
+	return missing === null ? [...datalist] : [...datalist, missing];
+}
+
 /**
  * The list-mode value for component_select_lang (PHP get_list_value): labels of
  * the project-lang options whose locator matches the stored data, resolved in
- * the install data lang; the get_missing_lang `*` guard covers a stored lang
- * outside the project set.
+ * the install data lang; when none matched, the get_missing_lang "<name> *"
+ * label of the FIRST stored locator — its name in the APPLICATION lang, the
+ * same entry the edit doors append (PHP parity: get_lang_name_by_locator's
+ * default lang).
  */
 export async function getSelectLangListValue(
-	storedLocators: { section_tipo?: unknown; section_id?: unknown }[],
+	storedLocators: StoredLangLocator[],
 	dataLang: string,
 ): Promise<string[]> {
 	if (storedLocators.length === 0) return [];
 	const datalist = await getSelectLangDatalist(dataLang);
 	const labels: string[] = [];
 	for (const option of datalist) {
-		const matched = storedLocators.some(
-			(locator) =>
-				String(locator.section_tipo) === option.value.section_tipo &&
-				String(locator.section_id) === String(option.value.section_id),
-		);
-		if (matched) labels.push(option.label);
+		if (storedLocators.some((locator) => isLangOption(locator, option))) labels.push(option.label);
 	}
-	// PHP get_missing_lang: a stored lang not among the project options is shown
-	// as "<name> *" so the value is never silently dropped.
 	if (labels.length === 0) {
 		const first = storedLocators[0];
-		if (first !== undefined) {
-			const rows = (await sql.unsafe(
-				`SELECT "string"->'${TERM_TIPO}' AS names
-				 FROM "${LANGS_TABLE}"
-				 WHERE section_tipo = $1 AND section_id = $2`,
-				[String(first.section_tipo ?? LANGS_SECTION_TIPO), Number(first.section_id ?? 0)],
-			)) as { names: LangName[] | null }[];
-			const names = Array.isArray(rows[0]?.names) ? (rows[0]?.names as LangName[]) : [];
-			const name = fallbackLangValue(names, dataLang);
-			if (name !== null) labels.push(`${name} *`);
-		}
+		const missing =
+			first === undefined ? null : await missingLangItem(first, currentApplicationLang());
+		if (missing !== null) labels.push(missing.label);
 	}
 	return labels;
 }

@@ -352,15 +352,17 @@ describe('dd_rag_api ask', () => {
 		expect(result.citations.length).toBeGreaterThan(0);
 	});
 
-	test('a denied user gets a NORMAL refusal envelope (no_grounded_context)', async () => {
-		const res = await ragApiActions.ask(
-			askRqo({ query: 'moneda de bronce con jinete', limit: 5 }),
-			{
+	// The ACL half (a caller who reads nothing gets the NORMAL no_grounded_context
+	// envelope) is runAsk's, pinned above with the same NO_ACCESS principal. At the
+	// DOOR that caller holds no `tool_rag` grant (TOOLS-4, WC-2026-10-01-ai-spend-budget):
+	// it is refused before anything is read or spent — ai_spend_budget_native drives
+	// the granted / ungranted pair with real fixture profiles.
+	test('a caller without the tool_rag grant is refused tool.not_authorized at the door', async () => {
+		await expect(
+			ragApiActions.ask(askRqo({ query: 'moneda de bronce con jinete', limit: 5 }), {
 				principal: NO_ACCESS,
-			} as Ctx,
-		);
-		expect(res.body.msg).toBe('no_grounded_context');
-		expect((res.body.data as { grounded: boolean }).grounded).toBe(false);
+			} as Ctx),
+		).rejects.toMatchObject({ code: 'tool.not_authorized' });
 	});
 
 	test('a dead LLM endpoint maps to generation_failed', async () => {

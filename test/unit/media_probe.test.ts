@@ -27,13 +27,14 @@ import {
 	probeMetaChannels,
 } from '../../src/core/media/engine/probe.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_probe_${process.pid}`;
 const HAVE_MAGICK = existsSync(resolveMagick());
 
 /** Run a real `magick` command building a fixture; a failure must be loud. */
 async function magick(args: string[]): Promise<void> {
-	const result = await runBinary([resolveMagick(), ...args], { nice: false });
+	const result = await runBinary([resolveMagick(), ...args], { nice: false, env: magickTestEnv() });
 	if (result.exitCode !== 0) {
 		throw new Error(`fixture build failed (exit ${String(result.exitCode)}): ${result.stderr}`);
 	}

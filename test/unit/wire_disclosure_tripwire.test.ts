@@ -93,15 +93,18 @@ describe('no raw exception text reaches the caller', () => {
 		// …the entry carries `reason:`, and the coordinates are gated on the scope flag.
 		expect(body).toMatch(/inScope\s*\?\s*\{\s*reason,\s*section_tipo:/);
 		expect(body).toMatch(/:\s*\{\s*reason\s*\}/);
-		// The located entry names ONLY the four keys: no `detail` (the words the
-		// skip() closure receives are the log's — forwarding them onto the entry
-		// would re-route the raw text through the parameter the fix introduced).
+		// The located entry names ONLY the coordinate keys — the four, plus `lang`
+		// (the language region of a lang-sliced key, since the undo-log revert
+		// works per region: WC-2026-09-27-bulk-revert-undo-log) — and no `detail`
+		// (the words the skip() closure receives are the log's — forwarding them
+		// onto the entry would re-route the raw text through the parameter the
+		// fix introduced).
 		const entry = /inScope\s*\?\s*\{([^}]*)\}/.exec(body);
 		expect(entry).not.toBeNull();
 		const entryKeys = [...(entry?.[1] ?? '').matchAll(/(?:^|,)\s*([a-z_]+)\s*(?=:|,|$)/g)].map(
 			(m) => m[1],
 		);
-		expect(entryKeys.sort()).toEqual(['reason', 'section_id', 'section_tipo', 'tipo']);
+		expect(entryKeys.sort()).toEqual(['lang', 'reason', 'section_id', 'section_tipo', 'tipo']);
 		expect(entry?.[1]).not.toMatch(/detail|\.\.\./);
 		// The gate sets the flag AFTER both halves pass, and the denial passes `false`.
 		expect(body).toMatch(/skip\(row, 'out_of_scope', false, null\)/);
@@ -109,10 +112,41 @@ describe('no raw exception text reaches the caller', () => {
 		// The words go to the log, with the request id.
 		expect(body).toMatch(/console\.(warn|error)\(line\)/);
 		expect(body).toMatch(/request \$\{requestId\}/);
-		// …and the catch hands the exception text to the log path, never to an entry.
-		const catchBlock = body.slice(body.lastIndexOf('} catch (error) {'));
-		expect(catchBlock.slice(0, 600)).toMatch(/skip\(row, 'failed', inScope,/);
-		expect(catchBlock.slice(0, 600)).not.toMatch(/push\(/);
+		// …and EVERY catch hands the exception text to the log path, never to an
+		// entry: each one reports through skip(…, 'failed', <scope flag>, …) and
+		// pushes nothing itself. (Several since the undo-log rewrite: the
+		// cascade undelete and the units.) The unit loop's catch is the one that
+		// may locate — gated on the SAME inScope flag. The born-record deletes
+		// catch PER RECORD in bulk_revert_records.ts (failedOnThrow): the text
+		// becomes that record's `failed` outcome's detail, which reportRecord
+		// hands to skip() — the log parameter — never onto an entry (below).
+		const catchBlocks = body
+			.split('} catch (error) {')
+			.slice(1)
+			.map((block) => block.slice(0, 700));
+		expect(catchBlocks.length).toBeGreaterThanOrEqual(2);
+		const failedBranch = /outcome\.kind === 'failed'\)([^;]*);/.exec(body);
+		// Located ONLY on the flag the per-record catch sets after the scope gate.
+		expect(failedBranch?.[1]).toMatch(
+			/skip\(\s*row,\s*'failed',\s*outcome\.located,\s*outcome\.detail,/,
+		);
+		// A catch may hand the exception to ONE same-file helper (the cascade
+		// group's reportGroupFailure, extracted for the complexity cap): the
+		// helper's body is then held to the same law as an inline catch.
+		const helperBody = (block: string): string => {
+			const call = /^\s*([a-zA-Z_]\w*)\([^;]*\berror\b[^;]*\);/.exec(block);
+			if (call === null || /\bskip\(/.test(block)) return block;
+			const at = source.indexOf(`function ${call[1]}(`);
+			expect(at, `catch delegates to ${call[1]}, not found in the file`).toBeGreaterThan(0);
+			return source.slice(at, at + 1200);
+		};
+		for (const block of catchBlocks) {
+			const handled = helperBody(block);
+			expect(handled).toMatch(/skip\(\s*[^;]*?,\s*'failed',\s*(?:inScope|false),/);
+			expect(handled).not.toMatch(/push\(/);
+			expect(block).not.toMatch(/push\(/);
+		}
+		expect(catchBlocks.some((block) => /'failed',\s*inScope,/.test(block))).toBe(true);
 	});
 
 	test('vision: a model that fails declines with a DELIBERATE sentence, the exception stays in the log (SEC-18)', () => {

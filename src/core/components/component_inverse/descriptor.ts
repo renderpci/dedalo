@@ -10,4 +10,9 @@ export const component_inverse: ComponentModel = {
 	model: 'component_inverse',
 	column: 'misc',
 	render: 'text',
+	derived: true, // owns no stored value (types.ts `derived`)
+	importAppend: {
+		refuse:
+			'derived: the value is the computed backlinks of other records, there is no stored data to append to',
+	},
 };

@@ -20,6 +20,7 @@ import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../../core/search/sql_assembler.ts';
 import { readSection } from '../../../core/section/read.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
+import { authorizeComponentRead } from '../../../core/security/read_door.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
 /** The default page size an MCP search returns when the caller omits `limit`. */
@@ -72,6 +73,14 @@ export async function searchSectionRecords(
 	},
 ): Promise<SectionSearchResult> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.search.section_tipo');
+	// THE SECTION READ GRANT FIRST (closure Step 3, SEC-1): the assembler's
+	// principal applies the PROJECTS filter only — a record key. The human read's
+	// Gate B refuses a section the profile holds 0 on; this door must too, before
+	// a count or a page can say anything about it.
+	await authorizeComponentRead(
+		{ principal, door: 'mcp.dedalo_search_section' },
+		{ sectionTipo, componentTipo: sectionTipo },
+	);
 	const limit = clampLimit(input.limit);
 	const offset = input.offset !== undefined && input.offset > 0 ? Math.floor(input.offset) : 0;
 
@@ -152,7 +161,6 @@ export async function readSectionRecord(
 ): Promise<{ context: unknown[]; data: unknown[] }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.read.section_tipo');
 	const sectionId = Math.floor(input.section_id);
-	const { authorizeComponentRead } = await import('../../../core/security/read_door.ts');
 	await authorizeComponentRead(
 		{ principal, door: 'mcp.dedalo_read_record' },
 		{ sectionTipo, componentTipo: sectionTipo },

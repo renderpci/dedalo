@@ -15,7 +15,11 @@ import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/r
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import { checkUpdatePreconditions } from '../../src/core/update/preconditions.ts';
+import {
+	backupWarningsWithin,
+	checkUpdatePreconditions,
+	requireFreshBackup,
+} from '../../src/core/update/preconditions.ts';
 
 /** The DedaloError a thunk threw (fails the test when it threw nothing typed). */
 function thrownBy(run: () => unknown): DedaloError {
@@ -71,131 +75,126 @@ describe('checkUpdatePreconditions — required checks (registered refusal codes
 		expect(error.message).toBe('This action requires maintenance mode to be enabled');
 	});
 
-	test('superuser + maintenance mode passes (backupWarn off → no warnings)', () => {
+	test('superuser + maintenance mode passes — and asks nothing about backups', () => {
+		// SYNCHRONOUS and backup-free by design (OPS-1): the backup verdict is a
+		// full archive read, asked separately and only after these gates.
 		setServerState({ maintenance_mode: true });
 		try {
-			const out = checkUpdatePreconditions(SUPERUSER, { backupWarn: false });
-			expect(out).toEqual({ warnings: [] });
+			expect(checkUpdatePreconditions(SUPERUSER)).toBeUndefined();
 		} finally {
 			setServerState({ maintenance_mode: false });
 		}
 	});
 });
 
-describe('checkUpdatePreconditions — recent-backup warning (never refuses)', () => {
+/**
+ * The stubs below are NOT custom-format archives, so on every host they take the
+ * foreign-format path: counted, never claimed as proven — the degradation that
+ * keeps an install whose `*.backup` files are plain-SQL dumps working. They are
+ * named `db.backup`, NOT `db.custom.backup`: that suffix is the engine's own
+ * grammar, and a file under it without the archive magic is `not_an_archive`
+ * (backup_freshness_deep_native leg N). The deep verdict on REAL archive bytes
+ * is backup_freshness_deep_native's.
+ */
+function stub(dir: string, name: string, hoursOld: number): void {
+	mkdirSync(dir, { recursive: true });
+	const file = join(dir, name);
+	writeFileSync(file, 'x');
+	const at = (Date.now() - hoursOld * 3600000) / 1000;
+	utimesSync(file, at, at);
+}
+
+describe('backupWarningsWithin — the data-migration WARNING (never refuses)', () => {
 	const scratch = join(
 		readEnv('TMPDIR') ?? '/tmp',
 		`dedalo_precond_backup_${process.pid}_${Math.random().toString(36).slice(2)}`,
 	);
 
-	function passWithDir(dir: string) {
-		setServerState({ maintenance_mode: true });
-		try {
-			return checkUpdatePreconditions(SUPERUSER, { backupDir: dir });
-		} finally {
-			setServerState({ maintenance_mode: false });
-		}
-	}
-
-	test('no backup dir / no *.backup files → warns, still ok', () => {
-		const out = passWithDir(join(scratch, 'absent'));
-		expect(out.warnings).toEqual([
+	test('no backup dir / no *.backup files → warns, still ok', async () => {
+		expect(await backupWarningsWithin(60_000, join(scratch, 'absent'))).toEqual([
 			'Warning. No database backup found — make a backup before updating',
 		]);
 	});
 
-	test('fresh *.backup → no warning; non-backup files ignored', () => {
+	test('fresh *.backup → no warning; non-backup files ignored', async () => {
 		const dir = join(scratch, 'fresh');
 		mkdirSync(dir, { recursive: true });
 		writeFileSync(join(dir, 'note.txt'), 'not a backup');
-		const artifact = join(dir, 'db.custom.backup');
-		writeFileSync(artifact, 'x');
-		// AGED PAST THE IN-PROGRESS WINDOW, deliberately. This stub is not a real
-		// archive, so on a host that cannot verify it the engine falls back to the
-		// only question left — "might a dump still be writing this?" — and a file
-		// whose mtime is THIS INSTANT is exactly what that question is about.
-		// "Fresh" here means recent, not written a millisecond ago; a minute-old
-		// backup is what an operator actually has when they click update.
-		const aged = Date.now() - 10 * 60_000;
-		utimesSync(artifact, aged / 1000, aged / 1000);
-		const out = passWithDir(dir);
-		expect(out.warnings).toEqual([]);
+		// AGED PAST THE IN-PROGRESS WINDOW, deliberately: on a host that cannot
+		// verify a stub the engine falls back to "might a dump still be writing
+		// this?", and a file whose mtime is THIS INSTANT is exactly that question.
+		stub(dir, 'db.backup', 10 / 60);
+		expect(await backupWarningsWithin(60_000, dir)).toEqual([]);
 	});
 
-	test('stale *.backup (older than the throttle window) → hours-old warning', () => {
+	test('stale *.backup (older than the throttle window) → hours-old warning', async () => {
 		const dir = join(scratch, 'stale');
+		stub(dir, 'db.backup', 10);
+		expect(await backupWarningsWithin(60_000, dir)).toEqual([
+			'Warning. Newest database backup is about 10 hours old — make a fresh backup before updating',
+		]);
+	});
+
+	test('a backup check that FAILS (pg_restore cannot be spawned) is a warning, never a refusal', async () => {
+		// A real custom-format header, so the verdict must READ it — through a
+		// pg_restore that does not exist: the scan itself rejects (spawn ENOENT).
+		// The data migration must still run: its caller gets a warning, not a throw.
+		const dir = join(scratch, 'unreadable');
 		mkdirSync(dir, { recursive: true });
 		const file = join(dir, 'db.custom.backup');
-		writeFileSync(file, 'x');
-		const tenHoursAgo = (Date.now() - 10 * 3600000) / 1000;
-		utimesSync(file, tenHoursAgo, tenHoursAgo);
-		const out = passWithDir(dir);
-		expect(out.warnings).toEqual([
-			'Warning. Newest database backup is about 10 hours old — make a fresh backup before updating',
+		writeFileSync(file, 'PGDMP\u0001\u000e\u0000 not a whole archive');
+		const at = (Date.now() - 3600000) / 1000;
+		utimesSync(file, at, at);
+		const missingBin = join(scratch, 'no_such_pg_restore');
+		let warnings: string[] | undefined;
+		let thrown: unknown;
+		try {
+			warnings = await backupWarningsWithin(60_000, dir, { pgRestoreBin: missingBin });
+		} catch (error) {
+			thrown = error;
+		}
+		expect(thrown, 'the backup check threw — the migration would be refused').toBeUndefined();
+		expect(warnings).toEqual([
+			'Warning. The database backup could not be checked (see the server log) — make sure a restorable backup exists before updating',
 		]);
 	});
 });
 
-describe('checkUpdatePreconditions — backupRequire (the code-update REFUSAL mode)', () => {
+describe('requireFreshBackup — the code-update REFUSAL', () => {
 	const scratch = join(
 		readEnv('TMPDIR') ?? '/tmp',
 		`dedalo_precond_require_${process.pid}_${Math.random().toString(36).slice(2)}`,
 	);
 
-	function runRequired(dir: string) {
-		setServerState({ maintenance_mode: true });
-		try {
-			return checkUpdatePreconditions(SUPERUSER, { backupDir: dir, backupRequire: true });
-		} finally {
-			setServerState({ maintenance_mode: false });
-		}
-	}
-
-	test('no backup → update.refused (never a warning), naming the waiver', () => {
-		const error = thrownBy(() => runRequired(join(scratch, 'absent')));
+	test('no backup → update.refused (never a warning), naming the waiver', async () => {
+		const error = await rejectedBy(() => requireFreshBackup(join(scratch, 'absent')));
 		expect(error.code).toBe('update.refused');
 		expect(error.publicMessage).toContain('No database backup found');
 		expect(error.publicMessage).toContain('waive_backup');
 	});
 
-	test('stale backup (older than the throttle window) → update.refused', () => {
+	test('stale backup (older than the throttle window) → update.refused', async () => {
 		const dir = join(scratch, 'stale');
-		mkdirSync(dir, { recursive: true });
-		const file = join(dir, 'db.custom.backup');
-		writeFileSync(file, 'x');
-		const tenHoursAgo = (Date.now() - 10 * 3600000) / 1000;
-		utimesSync(file, tenHoursAgo, tenHoursAgo);
-		const error = thrownBy(() => runRequired(dir));
+		stub(dir, 'db.backup', 10);
+		const error = await rejectedBy(() => requireFreshBackup(dir));
 		expect(error.code).toBe('update.refused');
 		expect(error.publicMessage).toContain('hours old');
 	});
 
-	test('fresh backup passes with no warnings', () => {
+	test('fresh backup passes', async () => {
+		// THE REFUSAL MODE IS WHY THE AGEING MATTERS — here a wrong answer does not
+		// warn, it BLOCKS the update.
 		const dir = join(scratch, 'fresh');
-		mkdirSync(dir, { recursive: true });
-		const artifact = join(dir, 'db.custom.backup');
-		writeFileSync(artifact, 'x');
-		// Aged past the in-progress window for the same reason as the WARN twin
-		// above: this stub cannot be verified, so a mtime of THIS INSTANT is the
-		// one shape the fallback question is about. THE REFUSAL MODE IS WHY IT
-		// MATTERS — here a wrong answer does not warn, it BLOCKS the update.
-		const aged = Date.now() - 10 * 60_000;
-		utimesSync(artifact, aged / 1000, aged / 1000);
-		expect(runRequired(dir)).toEqual({ warnings: [] });
+		stub(dir, 'db.backup', 10 / 60);
+		expect(await requireFreshBackup(dir)).toBeUndefined();
 	});
 
-	test('the WARN path is untouched: same findings stay warnings without backupRequire', () => {
+	test('the WARN path is untouched: same findings stay warnings', async () => {
 		// update_data_version's responses are byte-frozen — the require mode must
 		// not have changed a single warn byte.
-		setServerState({ maintenance_mode: true });
-		try {
-			const out = checkUpdatePreconditions(SUPERUSER, { backupDir: join(scratch, 'absent') });
-			expect(out.warnings).toEqual([
-				'Warning. No database backup found — make a backup before updating',
-			]);
-		} finally {
-			setServerState({ maintenance_mode: false });
-		}
+		expect(await backupWarningsWithin(60_000, join(scratch, 'absent'))).toEqual([
+			'Warning. No database backup found — make a backup before updating',
+		]);
 	});
 });
 

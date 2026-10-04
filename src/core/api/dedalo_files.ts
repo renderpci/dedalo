@@ -2,7 +2,7 @@
  * get_dedalo_files — the service-worker pre-cache manifest (PHP
  * dd_utils_api::get_dedalo_files, class.dd_utils_api.php:1897).
  *
- * The client SW (sw.js / worker_cache.js) calls this on install and whenever a
+ * The client SW (service_worker.js / worker_cache.js) calls this on install and whenever a
  * new dedalo_version is detected, then pre-caches every returned URL. PHP walks
  * the real filesystem rather than keeping a static list so newly added files
  * are included automatically; this port keeps that behavior, but walks the
@@ -77,6 +77,25 @@ function walkDirFiles(root: string, extensions: readonly string[], relBase = '')
 	return files;
 }
 
+/** Core path fragments dropped case-INSENSITIVELY (PHP stripos). */
+const CORE_EXCLUDED_ANY_CASE: readonly string[] = [
+	'/acc/',
+	'/old/',
+	'/lib/', // libraries
+];
+
+/** Core path fragments dropped case-SENSITIVELY (PHP strpos). */
+const CORE_EXCLUDED_EXACT_CASE: readonly string[] = [
+	'/themes/', // themes directory
+	'/ontology/', // old ontology files (no modules)
+	'/test/',
+	'/plug-ins/',
+	'/fonts/',
+	'worker_cache.js',
+	'/service_worker.js', // the service worker itself
+	'/sw.js', // the retired-URL tombstone (core/sw.js)
+];
+
 /**
  * Core JS filter (PHP get_dedalo_files, core branch) — exact port, including
  * which checks are case-insensitive (PHP stripos) vs case-sensitive (strpos).
@@ -84,16 +103,8 @@ function walkDirFiles(root: string, extensions: readonly string[], relBase = '')
 function coreFileUrl(rel: string): string | null {
 	const lower = rel.toLowerCase();
 	if (
-		lower.includes('/acc/') ||
-		rel.includes('/themes/') || // ignore themes directory
-		rel.includes('/ontology/') || // ignore old ontology files (no modules)
-		lower.includes('/old/') ||
-		lower.includes('/lib/') || // ignore libraries
-		rel.includes('/test/') || // ignore test
-		rel.includes('/plug-ins/') ||
-		rel.includes('/fonts/') || // ignore fonts
-		rel.includes('worker_cache.js') ||
-		rel.includes('/sw.js') // ignore service worker
+		CORE_EXCLUDED_ANY_CASE.some((needle) => lower.includes(needle)) ||
+		CORE_EXCLUDED_EXACT_CASE.some((needle) => rel.includes(needle))
 	) {
 		return null;
 	}
@@ -194,7 +205,7 @@ function walkDedaloFilesManifest(): DedaloFilesManifest {
 
 	return Object.freeze({
 		result: Object.freeze(files),
-		// dedalo_version: THE SERVICE-WORKER CACHE KEY (sw.js names its cache after
+		// dedalo_version: THE SERVICE-WORKER CACHE KEY (service_worker.js names its cache after
 		// it and purges every other one). PHP sent DEDALO_VERSION, which only moves
 		// on a release — so a client file edited between releases stayed cached
 		// FOREVER: the browser kept running the old JS against the new server, and

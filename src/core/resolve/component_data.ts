@@ -98,7 +98,48 @@ function classSupportsTranslation(model: string): boolean {
 	return getComponentModel(model)?.classSupportsTranslation === true;
 }
 
+/**
+ * What a `secretValue` model's stored value resolves as, on every display
+ * door: "something is set", never the value (see ComponentModel.secretValue).
+ * Sent back, it cannot become a credential — it breaks the password policy.
+ */
+export const SECRET_MASK = '****************';
+
+/** Whether a stored scalar is empty ("no value" stays visible through the mask). */
+function isEmptyStored(value: unknown): boolean {
+	return value === null || value === undefined || value === '';
+}
+
+/** One item with its stored value replaced by SECRET_MASK (empty stays empty). */
+function maskSecretItem(item: unknown): unknown {
+	if (item === null || typeof item !== 'object' || !('value' in item)) {
+		return isEmptyStored(item) ? item : SECRET_MASK;
+	}
+	return isEmptyStored((item as { value: unknown }).value)
+		? item
+		: { ...(item as object), value: SECRET_MASK };
+}
+
+/** Replace every non-empty stored value in an item array with SECRET_MASK. */
+export function maskSecretItems(items: unknown[] | null): unknown[] | null {
+	return items === null ? null : items.map(maskSecretItem);
+}
+
 export async function resolveComponentValue(
+	record: MatrixRecord,
+	componentTipo: string,
+	model: string,
+	lang: string,
+): Promise<{ value: unknown[] | null; fallbackValue: unknown[] | null }> {
+	const resolved = await resolveStoredComponentValue(record, componentTipo, model, lang);
+	if (getComponentModel(model)?.secretValue !== true) return resolved;
+	return {
+		value: maskSecretItems(resolved.value),
+		fallbackValue: maskSecretItems(resolved.fallbackValue),
+	};
+}
+
+async function resolveStoredComponentValue(
 	record: MatrixRecord,
 	componentTipo: string,
 	model: string,
@@ -218,6 +259,33 @@ export interface DataItem {
 }
 
 /**
+ * THE TM PREVIEW'S BOUND (WC-2026-09-29-tm-preview-frame-children-as-of): the
+ * previewed main row and the record it belongs to. `boundId` = the id just
+ * below the row that ends the row's interval (Number.MAX_SAFE_INTEGER when
+ * none does) — which rows end it is the WC entry's bound law, not restated
+ * here. Another record "as of the row" is its state at that bound
+ * (tm_record/frame_as_of.ts). Declared here, a type only, so the resolve layer
+ * takes no edge to tm_record.
+ */
+export interface TmAsOf {
+	readonly rowId: number;
+	readonly boundId: number;
+	readonly sectionTipo: string;
+	readonly sectionId: number;
+	readonly mainTipo: string;
+	/**
+	 * THE EMISSION ROOT: the record OBJECT the subject is emitted from at the
+	 * top of this emission — the preview's own (grafted) record, or the dd15
+	 * history list's virtual row record standing in for it. Confinement is by
+	 * this identity, never by address (frame_as_of.ts subjectRowOf): the
+	 * subject's record met again NESTED (a portal target) is another object and
+	 * stays live on both surfaces. Absent (no emission yet: the door-3 target
+	 * and bag reads, which confine per frame) → no emission frame matches.
+	 */
+	readonly root?: MatrixRecord;
+}
+
+/**
  * EmissionContext — the EXPLICIT per-read emission protocol (audit S2-29).
  *
  * One instance is created wherever a response data array is born (a section
@@ -236,6 +304,11 @@ export interface DataItem {
  * - cross-item per-read memory (e.g. relation_index's solved pointing
  *   sections) lives in `scratch` under a module-local symbol — never in
  *   module-level state keyed by request objects.
+ * - `tmAsOf` (set ONLY by the two tool_time_machine doors: section/read.ts
+ *   resolveTmPreview — the preview's row, rooted at its own record — and
+ *   resolve/read_tm.ts graftRowFrameState — one bound per framed history-list
+ *   row, rooted at the virtual dd15 record): the subject's frame children read as of
+ *   the row — tm_record/frame_as_of.ts. Null for every other read.
  */
 export class EmissionContext {
 	/** The response data array (envelope at [0] on section reads). */
@@ -245,8 +318,18 @@ export class EmissionContext {
 	/** Per-read emitter scratch, keyed by module-local symbols (see class doc). */
 	readonly scratch = new Map<symbol, unknown>();
 
-	constructor(items: (SectionsEnvelope | DataItem)[] = []) {
+	/**
+	 * The row's bound (see TmAsOf): set by a TM preview (resolveTmPreview) or a
+	 * framed TM-list row (read_tm.ts graftRowFrameState); null for every other read.
+	 */
+	readonly tmAsOf: TmAsOf | null;
+
+	constructor(
+		items: (SectionsEnvelope | DataItem)[] = [],
+		options: { tmAsOf?: TmAsOf | null } = {},
+	) {
 		this.items = items;
+		this.tmAsOf = options.tmAsOf ?? null;
 	}
 
 	markStamped(item: object): void {

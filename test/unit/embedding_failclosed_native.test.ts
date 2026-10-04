@@ -569,6 +569,12 @@ function identifyConfig(): MultimodalRuntimeConfig {
 
 function identifyDeps(vectors: number[][], onQuery: () => void): IdentifyByImageDeps {
 	return {
+		requireToolGrant: async () => {
+			throw new Error('a LOCAL encoder spends nothing: the vision grant must never be asked');
+		},
+		chargeVision: async () => {
+			throw new Error('a LOCAL encoder spends nothing: no vision call may be charged');
+		},
 		ragEnabled: () => true,
 		mediaEnabled: () => true,
 		config: identifyConfig,

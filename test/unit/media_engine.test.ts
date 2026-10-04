@@ -14,6 +14,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { config } from '../../src/config/config.ts';
 import {
 	buildConformHeaderArgv,
 	buildPosterframeArgv,
@@ -44,6 +45,7 @@ import {
 import { sniffAndValidate, sniffBytes } from '../../src/core/media/engine/mime.ts';
 import { buildExtractArgv, buildOcrArgv } from '../../src/core/media/engine/pdf.ts';
 import { verifyFileContent } from '../../src/core/media/engine/verify_content.ts';
+import { magickTestEnv } from '../helpers/magick_test_env.ts';
 
 describe('ffmpeg profiles (37 settings files → typed data)', () => {
 	test('all 37 profiles present', () => {
@@ -61,12 +63,18 @@ describe('ffmpeg profiles (37 settings files → typed data)', () => {
 		expect(p.audioChannels).toBe(1);
 		expect(p.force).toBe('mp4');
 		expect(p.targetPath).toBe('404');
-		expect(p.deinterlace).toBe('-vf yadif');
-		expect(p.gammaFilter).toContain('lutyuv=u=gammaval(1.01)');
+		// One ordered chain of bare specs: deinterlace FIRST, then gamma.
+		expect(p.videoFilters).toEqual([
+			'yadif=deint=interlaced',
+			'lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)',
+		]);
 	});
 
-	test('1080i has NO deinterlace fragment; audio tiers are video-null', () => {
-		expect(getFfmpegProfile('1080i_pal')!.deinterlace).toBe('');
+	test('1080i has NO deinterlace filter; audio tiers are video-null', () => {
+		expect(getFfmpegProfile('1080i_pal')!.videoFilters).toEqual([
+			'lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)',
+		]);
+		expect(getFfmpegProfile('audio')!.videoFilters).toEqual([]);
 		const audio = getFfmpegProfile('audio')!;
 		expect(audio.videoCodec).toBeNull();
 		expect(audio.force).toBe('mp4');
@@ -96,12 +104,50 @@ describe('ffmpeg argv recipes (PHP class.Ffmpeg.php)', () => {
 		expect(s).toContain('-vb 1024k');
 		expect(s).toContain('-s 720x404');
 		expect(s).toContain('-g 25');
-		expect(s).toContain('-vf yadif');
+		expect(s).toContain(
+			'-vf yadif=deint=interlaced,lutyuv=u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97) -f mp4',
+		);
 		expect(s).toContain('-passlogfile /log');
 		expect(argv[argv.length - 1]).toBe('/dev/null');
 		// no shell tokens ever
 		expect(argv).not.toContain('sh');
 		expect(argv.some((t) => t.includes('"'))).toBe(false);
+	});
+
+	// ffmpeg honours only the LAST -vf of an output stream ("Multiple -filter/-af/-vf
+	// options specified … only the last option … will be used"): PHP's recipe passed
+	// '-vf yadif' and '-vf lutyuv=…' separately, so yadif was silently dropped and no
+	// interlaced source was ever deinterlaced. Every video profile, both passes: ONE
+	// -vf carrying the profile's whole chain, in order. Real-encode twin (the warning
+	// and the deinterlace measured on output): media_deinterlace_native.test.ts.
+	test('every video profile: exactly ONE -vf per pass, carrying the whole chain', () => {
+		let videoProfiles = 0;
+		for (const name of ffmpegProfileNames()) {
+			const profile = getFfmpegProfile(name)!;
+			if (profile.videoCodec === null) continue;
+			videoProfiles++;
+			for (const argv of [
+				buildTranscodePass1Argv(profile, '/src.mov', '/log'),
+				buildTranscodePass2Argv(profile, '/src.mov', '/log', '/tmp.mp4', 'aac'),
+			]) {
+				const flags = argv.filter(
+					(t) => t === '-vf' || t.startsWith('-filter') || t === '-vfilter',
+				);
+				if (profile.videoFilters.length === 0) {
+					expect(flags).toEqual([]);
+					continue;
+				}
+				expect(flags).toEqual(['-vf']);
+				const chain = argv[argv.indexOf('-vf') + 1]!;
+				expect(chain).toBe(profile.videoFilters.join(','));
+			}
+			// The ladder's deinterlacing tiers carry BOTH filters, yadif first.
+			if (!name.startsWith('1080i') && name !== '288_pal') {
+				expect(profile.videoFilters[0]).toBe('yadif=deint=interlaced');
+				expect(profile.videoFilters[1]).toStartWith('lutyuv=');
+			}
+		}
+		expect(videoProfiles).toBe(35);
 	});
 
 	test('two-pass pass2 adds the audio track + temp target', () => {
@@ -118,6 +164,9 @@ describe('ffmpeg argv recipes (PHP class.Ffmpeg.php)', () => {
 		expect(s).toContain('-ar 44100');
 		expect(s).toContain('-ab 64k');
 		expect(s).toContain('-ac 1');
+		// A failing pass 2 must report its ERROR line, not a stderr tail of banner
+		// and per-frame stats (logging only: output bytes are unchanged).
+		expect(s).toContain('-loglevel error -y /tmp.mp4');
 		expect(argv[argv.length - 1]).toBe('/tmp.mp4');
 	});
 
@@ -590,6 +639,58 @@ describe('pdf argv recipes (PHP component_pdf)', () => {
 		const s = buildOcrArgv('/s.pdf', '/s.pdf', 'spa').join(' ');
 		expect(s).toContain('--pdfa-image-compression lossless -l spa --force-ocr');
 	});
+
+	// THE OCR DOOR ON A REAL BINARY. The argv leg above pins the recipe's spelling; this
+	// one proves the recipe still RUNS on the ocrmypdf a host ships (flags drift between
+	// majors) and really adds text. Fixture: an IMAGE-ONLY PDF (ghostscript's pdfimage24
+	// rasterizes a PostScript page — built-in font, no ImageMagick PDF policy), so the
+	// control finds no text before and any text after is the OCR's. In place, as the door
+	// runs (source === target). Skips where the binaries are absent; the CI image ships
+	// all three (ci/Dockerfile), so there it runs.
+	const ocrBinaries = [
+		config.media.binaries.ocrmypdf,
+		config.media.binaries.ghostscript,
+		config.media.binaries.pdftotext,
+	];
+	test.if(ocrBinaries.every((bin) => existsSync(bin)))(
+		'ocr (real binary): the recipe runs and puts the page words into an image-only PDF',
+		() => {
+			const dir = mkdtempSync(join(tmpdir(), 'dedalo-ocr-'));
+			// ocrmypdf resolves tesseract/gs through PATH, so the host env stays; the
+			// shipped ImageMagick policy rides on top (magick_policy_tripwire).
+			const spawnEnv = { ...(process.env as Record<string, string>), ...magickTestEnv() };
+			try {
+				const ps = join(dir, 'page.ps');
+				writeFileSync(
+					ps,
+					'%!PS\n/Helvetica findfont 48 scalefont setfont\n72 600 moveto (HERITAGE LEDGER) show\nshowpage\n',
+				);
+				const pdf = join(dir, 'scan.pdf');
+				const raster = Bun.spawnSync(
+					[config.media.binaries.ghostscript, '-q', '-sDEVICE=pdfimage24', '-r200', '-o', pdf, ps],
+					{ stderr: 'pipe' },
+				);
+				expect(raster.exitCode, raster.stderr.toString()).toBe(0);
+				const textOf = (): string => {
+					const out = join(dir, 'out.txt');
+					const run = Bun.spawnSync(buildExtractArgv(pdf, out, { method: 'text' }), {
+						stderr: 'pipe',
+						env: spawnEnv,
+					});
+					expect(run.exitCode, run.stderr.toString()).toBe(0);
+					return readFileSync(out, 'utf-8');
+				};
+				// Control: the fixture really is image-only.
+				expect(textOf()).not.toContain('HERITAGE');
+				const ocr = Bun.spawnSync(buildOcrArgv(pdf, pdf, 'eng'), { stderr: 'pipe', env: spawnEnv });
+				expect(ocr.exitCode, ocr.stderr.toString()).toBe(0);
+				expect(textOf()).toContain('HERITAGE LEDGER');
+			} finally {
+				rmSync(dir, { recursive: true, force: true });
+			}
+		},
+		120_000,
+	);
 });
 
 describe('mime sniffer (magic bytes, no library)', () => {

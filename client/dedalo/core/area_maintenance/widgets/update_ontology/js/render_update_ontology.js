@@ -21,9 +21,9 @@
 *      pill; unreachable servers are disabled. The choice is REMEMBERED in this
 *      browser (by URL) and restored on the next render. Selecting one fires
 *      `ontology_server_select_change` so the TLD input auto-fills. Below it, a
-*      two collapsed admin notes: `build_client_info` (the ONTOLOGY_SERVERS key
-*      that populates the picker) and `build_serving_info` (whether THIS install
-*      can serve its ontology to others, and the .env keys that decide it).
+*      collapsed admin note: `build_client_info` (the ONTOLOGY_SERVERS key that
+*      populates the picker). Whether THIS install can SERVE its ontology is its
+*      own widget since 2026-09-28 (serve_ontology).
 *   d. Update form — a TLD reference block (where the default list comes from +
 *      the configured/master lists to copy from) over the TLD input, which is the
 *      OPERATOR's (persisted in localStorage, never overwritten by a server
@@ -51,7 +51,7 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
-	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -213,6 +213,47 @@ const build_version_change = function (installed, incoming) {
 
 	return wrap
 }//end build_version_change
+
+
+
+/**
+* BUILD_FAILURE
+* The failure of a Phase 1/Phase 2 request, IN the panel. The page-wide
+* 'api_error' channel (data_manager → page.js → handle_api_error) already runs
+* the policy (relogin, error report signal), but its toast lands in the
+* inspector bubble container, which this area does not show — so a refused
+* update used to surface in the console only.
+* The label alone ('The maintenance action failed') is useless to an operator:
+* the server message carries the cause (e.g. an origin mismatch naming both
+* hosts), and the request_id joins the server log. Text nodes only — server
+* text never reaches an HTML sink.
+*
+* @param {Object} api_error - envelope `error` (ApiError or its plain shape)
+* @returns {HTMLElement}
+*/
+export const build_failure = function (api_error) {
+
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'error'
+	})
+
+	const headline	= String(error_text(api_error))
+	const message	= typeof api_error?.message==='string' ? api_error.message : ''
+	const lines		= [headline]
+	if (message.length && message!==headline) {
+		lines.push(...message.split(/\n/))
+	}
+	if (typeof api_error?.request_id==='string' && api_error.request_id.length) {
+		lines.push(`request_id: ${api_error.request_id}`)
+	}
+	lines.forEach((line, i) => {
+		if (i>0) node.appendChild(document.createElement('br'))
+		node.appendChild(document.createTextNode(line))
+	})
+
+	return node
+}//end build_failure
 
 
 
@@ -648,142 +689,6 @@ const build_client_info = function (servers) {
 
 
 /**
-* BUILD_SERVING_INFO
-* Admin help: what makes THIS installation able to SERVE its ontology to other
-* installs (the mirror image of this panel — a remote client lists us under its
-* own ONTOLOGY_SERVERS). Three settings decide it, so each is shown as a live
-* checklist row plus the exact `../private/.env` lines to add.
-*
-* `serving` comes from update_ontology.ts getValue:
-* `{ enabled, has_server_code, cors_enabled, url }` — the access code itself is
-* never sent, only whether one is configured.
-*
-* @param {Object} serving
-* @returns {HTMLElement} collapsed <details>
-*/
-const build_serving_info = function (serving) {
-
-	const ready = serving.enabled===true && serving.has_server_code===true && serving.cors_enabled===true
-
-	const details = ui.create_dom_element({
-		element_type	: 'details',
-		class_name		: 'serving_info'
-	})
-	const summary = ui.create_dom_element({
-		element_type	: 'summary',
-		parent			: details
-	})
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'ttl',
-		inner_html		: (get_label.update_ontology_serve_title || 'Serve this ontology to other installations'),
-		parent			: summary
-	})
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: ready ? 'dd_badge pill_ok' : 'dd_badge pill_warning',
-		inner_html		: ready
-			? (get_label.update_ontology_serve_state_on || 'Enabled')
-			: (get_label.update_ontology_serve_state_off || 'Not configured'),
-		parent			: summary
-	})
-
-	const body = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'serving_body',
-		parent			: details
-	})
-	ui.create_dom_element({
-		element_type	: 'p',
-		class_name		: 'dd_note',
-		inner_html		: (get_label.update_ontology_serve_body || 'This panel PULLS an ontology. To let other installations pull <i>from here</i> — they add this server to their own <code>ONTOLOGY_SERVERS</code> — configure <code>../private/.env</code> with at least these keys and restart the server.'),
-		parent			: body
-	})
-
-	// live checklist
-	const checks = [
-		{
-			ok	: serving.enabled===true,
-			k	: 'IS_AN_ONTOLOGY_SERVER',
-			v	: serving.enabled===true ? 'true' : (get_label.update_ontology_state_not_set || 'not set'),
-			d	: (get_label.update_ontology_serve_key_server_info || 'Opens the ontology JSON endpoint and adds the “Local files” source here.')
-		},
-		{
-			ok	: serving.has_server_code===true,
-			k	: 'ONTOLOGY_SERVER_CODE',
-			v	: serving.has_server_code===true
-				? (get_label.update_ontology_state_configured || 'configured')
-				: (get_label.update_ontology_state_not_set || 'not set'),
-			d	: (get_label.update_ontology_serve_key_code_info || 'Shared access code a client must present. Pick your own; clients store it in their ONTOLOGY_SERVERS entry.')
-		},
-		{
-			ok	: serving.cors_enabled===true,
-			k	: 'DEDALO_CORS_ALLOWED_ORIGINS',
-			v	: serving.cors_enabled===true
-				? (get_label.update_ontology_state_configured || 'configured')
-				: (get_label.update_ontology_state_not_set || 'not set'),
-			d	: (get_label.update_ontology_serve_key_cors_info || 'Clients call this server from their browser, so their origin must be allowed. <code>["*"]</code> opens it to any origin; list the client origins instead when you know them.')
-		}
-	]
-	const list = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'serving_checks',
-		parent			: body
-	})
-	checks.forEach(check => {
-		const row = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: check.ok ? 'chk on' : 'chk off',
-			parent			: list
-		})
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'mark',
-			inner_html		: check.ok ? '✓' : '•',
-			parent			: row
-		})
-		const txt = ui.create_dom_element({ element_type:'div', class_name:'txt', parent:row })
-		const head = ui.create_dom_element({ element_type:'div', class_name:'hd', parent:txt })
-		ui.create_dom_element({ element_type:'code', text_content:check.k, parent:head })
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'val',
-			text_content	: check.v,
-			parent			: head
-		})
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'desc',
-			inner_html		: check.d,
-			parent			: txt
-		})
-	})
-
-	// the literal .env block
-	ui.create_dom_element({
-		element_type	: 'pre',
-		class_name		: 'env_sample',
-		text_content	: [
-			'IS_AN_ONTOLOGY_SERVER=true',
-			'ONTOLOGY_SERVER_CODE=xx-myspecialcode-xxx',
-			'DEDALO_CORS_ALLOWED_ORIGINS=["*"]'
-		].join('\n'),
-		parent			: body
-	})
-
-	// the URL clients must register
-	if (serving.url) {
-		const url_row = ui.create_dom_element({ element_type:'div', class_name:'serve_url', parent:body })
-		ui.create_dom_element({ element_type:'span', class_name:'dd_k', inner_html:(get_label.update_ontology_endpoint_register || 'Endpoint clients register'), parent:url_row })
-		ui.create_dom_element({ element_type:'code', text_content:String(serving.url), parent:url_row })
-	}
-
-	return details
-}//end build_serving_info
-
-
-
-/**
 * GET_CONTENT_DATA_EDIT
 * Builds the full inner content DOM for the update_ontology widget and wires the
 * two-phase submit flow.
@@ -809,7 +714,6 @@ const get_content_data_edit = async function(self) {
 		const servers				= value.servers || []
 		const active_ontology_tlds	= value.active_ontology_tlds || []
 		const confirm_text			= value.confirm_text || 'Sure?'
-		const serving				= value.serving || {}
 
 	// content_data (own class — the wrapper's content node is otherwise classless,
 	// so styles must hang off this, not a non-existent `.content_data` class)
@@ -848,7 +752,6 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({ element_type:'span', class_name:'dd_eyebrow', inner_html:(get_label.update_ontology_master_server || 'Master server'), parent:servers_section })
 		servers_section.appendChild(render_servers_list(value, 'ONTOLOGY_SERVERS', 'dedalo.update_ontology.server', on_server_change))
 		servers_section.appendChild(build_client_info(servers))
-		servers_section.appendChild(build_serving_info(serving))
 
 	// body_response: result surface, declared before init_form so on_submit can close over it
 		const body_response = ui.create_dom_element({
@@ -958,21 +861,20 @@ const get_content_data_edit = async function(self) {
 						const result = response_data(server_ontology_api_response)
 						if(request_failed(server_ontology_api_response) || !result){
 							if (request_failed(server_ontology_api_response)) {
-								// ONE error model: policy + renderer decide the surface
-								await handle_api_error(server_ontology_api_response.error, {wrapper: body_response})
+								ui.reveal(body_response.appendChild(build_failure(server_ontology_api_response.error)))
 							} else {
-								ui.create_dom_element({
+								ui.reveal(ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
 									text_content	: String(response_extension(server_ontology_api_response, 'msg') || get_label.update_ontology_unreachable_error || 'Could not reach the master server.'),
 									parent			: body_response
-								})
+								}))
 							}
 							return
 						}
 
 					// show installed → incoming before the import completes
-						body_response.appendChild(build_version_change(current_ontology, result.info))
+						ui.reveal(body_response.appendChild(build_version_change(current_ontology, result.info)))
 
 					// build the file list: user-selected TLDs, enriched, with matrix_dd always first
 						const files_filtered = result.files.filter( el => ar_active_ontology_tlds.find(item => item === el.tld) )
@@ -1000,26 +902,25 @@ const get_content_data_edit = async function(self) {
 					// fail case
 						if(request_failed(api_response) || !response_data(api_response)){
 							if (request_failed(api_response)) {
-								// ONE error model: policy + renderer decide the surface
-								await handle_api_error(api_response.error, {wrapper: body_response})
+								ui.reveal(body_response.appendChild(build_failure(api_response.error)))
 							} else {
-								ui.create_dom_element({
+								ui.reveal(ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
 									text_content	: String(response_extension(api_response, 'msg') || get_label.update_ontology_import_failed || 'The ontology import failed.'),
 									parent			: body_response
-								})
+								}))
 							}
 							return
 						}
 
-					// status line
-						ui.create_dom_element({
+					// status line (revealed: the whole result reads down from it)
+						ui.reveal(ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'ok',
 							inner_html		: (get_label.update_ontology_done || 'Ontology updated.'),
 							parent			: body_response
-						})
+						}))
 
 					// version compatibility warning
 						const required_version = api_response.root_info?.properties?.version || null
@@ -1203,7 +1104,7 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS', 
 			const change_handler = () => {
 				servers.forEach( el => delete el.active )
 				current_server.active = input_radio.checked
-				picker.querySelectorAll('.server_row').forEach( el => el.classList.remove('on') )
+				picker.querySelectorAll('.server_row').forEach( el => { el.classList.remove('on') } )
 				server_row.classList.add('on')
 				store_server(storage_key, current_server.url)
 				if (typeof on_change==='function') {

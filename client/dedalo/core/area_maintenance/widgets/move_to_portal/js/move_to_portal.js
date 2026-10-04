@@ -5,9 +5,9 @@
 
 
 // imports
-	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../js/area_maintenance.js'
+	import {exec_move_transform} from '../../../js/move_transform.js'
 	import {render_move_to_portal} from './render_move_to_portal.js'
 
 
@@ -123,70 +123,23 @@ export const move_to_portal = function() {
 
 /**
 * EXEC_MOVE_TO_PORTAL
-* Dispatches the 'move_to_portal' action to the server-side maintenance API and
-* returns the initial response object.
+* Fire one move_to_portal run through the shared move_* flow (move_transform.js). The
+* server runs it as a JOB and answers {pid, pfile, dry_run} at once; the
+* caller streams it with update_process_status.
 *
-* The operation is deliberately fire-and-track: the PHP handler launches a
-* background CLI process (background_running: true) and immediately returns a
-* process handle ({ pid, pfile }).  The caller (render_move_to_portal's submit
-* handler) then feeds that handle to update_process_status() so the UI can poll
-* for completion without blocking the browser.
-*
-* The request uses a dedicated timeout of 1 hour (3 600 000 ms) because the
-* portalization walk can span millions of records.  retries is set to 1 (one
-* attempt only) to avoid accidentally triggering duplicate migrations if the
-* network hiccups partway through the long-poll period.
-*
-* API route:
-*   dd_api  : 'dd_area_maintenance_api'
-*   action  : 'widget_request'
-*   source  : { type: 'widget', model: 'move_to_portal', action: 'move_to_portal' }
-*
-* Server handler: class.move_to_portal::move_to_portal()
-*   Resolves the file names against the definitions directory, then delegates to
-*   transform_data::portalize_data($ar_file_name).
-*
-* (!) This method uses an arrow function (`= async (files_selected) =>`), so
-*     `this` inside the body is the enclosing module scope, NOT the widget
-*     instance.  The method therefore cannot access instance properties such as
-*     `this.section_tipo`.  All required inputs must be passed via the
-*     `files_selected` argument or captured from the API request body literals.
-*
-* @param {Array<string>} files_selected - Names of the JSON definition files to
-*   process, e.g. ['finds_numisdata279_to_tchi1.json'].  Must be non-empty;
-*   the function returns undefined immediately if the array is empty.
-* @returns {Promise<Object>|undefined} The raw API response object on success,
-*   or undefined when files_selected is empty.
-*   Response shape (from class.move_to_portal::move_to_portal):
-*   { result: boolean|*, msg: string, errors: Array, pid: string, pfile: string }
+* @param {Array<string>} files_selected - Non-empty array of definition file names.
+* @param {boolean} [dry_run=true] - true = PREVIEW (writes nothing); false =
+*        EXECUTE (rewrites stored data — the server mutates only on exactly false).
+* @returns {Promise<Object|undefined>} The API response, or `undefined` when
+*        `files_selected` is empty.
 */
-move_to_portal.prototype.exec_move_to_portal = async (files_selected) => {
+move_to_portal.prototype.exec_move_to_portal = async (files_selected, dry_run=true) => {
 
 	if (!files_selected.length) {
 		return
 	}
 
-	// move_to_portal process fire
-	const response = await data_manager.request({
-		body : {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'widget_request',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'move_to_portal',
-				action	: 'move_to_portal'
-			},
-			options : {
-				background_running	: true, // set run in background CLI
-				files_selected		: files_selected // array e.g. ['finds_numisdata279_to_tchi1.json']
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-
-	return response
+	return exec_move_transform('move_to_portal', files_selected, dry_run)
 }//end exec_move_to_portal
 
 

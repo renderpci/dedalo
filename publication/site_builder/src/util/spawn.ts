@@ -19,7 +19,7 @@ import { resolve, sep } from 'node:path';
 import { config } from '../config';
 
 /**
- * THE TOKEN THAT SAYS "THIS ARGV WAS ALREADY CONFINED".
+ * THE TOKEN THAT SAYS "THE CONFINEMENT DECIDED THIS RUN".
  *
  * A command whose working directory is inside a SITE WORKSPACE is a command over
  * agent-authored bytes: a build spec the turn rewrote, a `package.json` whose lifecycle
@@ -28,10 +28,12 @@ import { config } from '../config';
  * verbatim, one door over from the turn the confinement already closed.
  *
  * So the rule is enforced HERE, at the one place a process is created, rather than asserted
- * about call sites: `runBinary` REFUSES a cwd inside `SITES_ROOT` unless the caller carries
- * this token, and the only module that has it is `drivers/confinement.ts` (`runConfined`),
- * which obtains it by wrapping the argv under the agent uid first. A new call site cannot
- * forget the rule; it can only fail loudly at the first run.
+ * about call sites: a cwd inside `SITES_ROOT` is REFUSED unless the caller carries this
+ * token, and the only module that has it is `drivers/confinement.ts`. Since LEAD-1b a
+ * CONFINED run spawns nothing at all (PID 1 starts the site's unit when the daemon connects
+ * to its socket); the token is used only for the one run this daemon still starts itself —
+ * a DECLARED-unconfined one (`AGENT_CONFINEMENT=none`), which announces itself. A new call
+ * site cannot forget the rule; it can only fail loudly at the first run.
  */
 export const CONFINED_ARGV: unique symbol = Symbol('runBinary: argv already confined');
 
@@ -121,9 +123,29 @@ function assertConfinedInsideWorkspaces(argv: readonly string[], options: SpawnO
     `runBinary: '${argv[0]}' would run in '${cwd}', inside the site workspaces, as this ` +
       `daemon's own uid. Everything under that root is agent-authored — a build spec, a ` +
       `package script, a git hook — so it goes through runConfined() (drivers/confinement.ts), ` +
-      `which runs it as the agent uid under this museum's transient-unit grant. Nothing was ` +
+      `which runs it as the SITE's own identity, in a unit root rendered for it. Nothing was ` +
       `spawned.`,
   );
+}
+
+/**
+ * START A CHILD AND HAND IT BACK — the declared-unconfined agent run's one spawn
+ * (`drivers/confinement.ts`, mode `none`), which consumes its streams itself. Same
+ * constructed-environment and workspace-refusal rules as `runBinary`.
+ */
+export function spawnChild(
+  argv: readonly string[],
+  options: { cwd: string; env: Record<string, string>; confined: typeof CONFINED_ARGV },
+): ReturnType<typeof Bun.spawn> {
+  if (argv.length === 0) throw new Error('spawnChild: empty argv');
+  assertConfinedInsideWorkspaces(argv, { timeoutMs: 0, cwd: options.cwd, confined: options.confined });
+  return Bun.spawn(argv as string[], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+    stdin: 'ignore',
+    cwd: options.cwd,
+    env: options.env,
+  });
 }
 
 /** Read a stream to a utf-8 string, invoking `onChunk` per decoded chunk if given. */

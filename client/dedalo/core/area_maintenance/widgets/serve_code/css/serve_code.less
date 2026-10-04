@@ -1,0 +1,158 @@
+/**
+* serve_code
+*
+* Included from area_maintenance.less file.
+* The status readout layout is update_code's .dd_update_status() mixin (one
+* vocabulary for both halves of the code exchange); only the build rows — the
+* action button beside the archive it writes — live here.
+*/
+.wrapper_widget.serve_code {
+
+	>.content_data {
+
+		>.serve_code_note {
+			margin: 0 0 0.9rem 0;
+		}
+
+		.dd_update_status();
+
+		>.serve_code_body >.update_status:first-child {
+			margin-top: 0;
+		}
+
+		.dd_readout {
+			grid-template-columns: minmax(min-content, 20rem) 1fr;
+		}
+
+		// BUILD AND PUBLISH — one row per channel: the action button in the
+		// key cell, the archive it writes in the value cell. The key cell is
+		// the readout's label column, so its label styling (uppercase, small)
+		// has to be undone for a real control to sit in it.
+		.build_row {
+
+			>.dd_k.build_action {
+				display: flex;
+				align-items: center;
+				padding: 0.4rem 0.5rem;
+				text-transform: none;
+				letter-spacing: normal;
+				white-space: normal;
+
+				// a channel with no branch to build: stated, not blank —
+				// the same muted-italic voice as an unbuilt artifact cell
+				&.none {
+					color: var(--fg_muted);
+					font-style: italic;
+				}
+
+				// the form wrapper must not eat the cell (build_form emits a
+				// <form> around the button)
+				>.form_container {
+					width: 100%;
+					margin: 0px;
+				}
+
+				// READ AS A BUTTON. In the readout's label column these were a
+				// pale outline on a grey cell — the one thing in the panel that
+				// DOES something looked like a caption. Solid fill for the
+				// published channel (widget_kit .primary), a real raised border
+				// for the developer one, and both keep a button's own padding.
+				button.build_button {
+					display: block;
+					width: 100%;
+					margin: 0px;
+					padding: 0.55rem 0.8rem;
+					border-radius: 4px;
+					font-weight: 600;
+					line-height: 1.25;
+					white-space: normal;
+					cursor: pointer;
+					font-size: 0.8rem;
+
+					// THE PUBLISHED CHANNEL is the panel's main publishing act:
+					// filled, like widget_kit's .primary. It is restated here
+					// because `build_form` also stamps `.light` on every submit
+					// button, and THIS scope is more specific than the kit's — the
+					// kit's fill lost to the secondary styling below, leaving the
+					// primary action looking exactly like everything else.
+					&.primary {
+						color: var(--fg_inverse); // white in BOTH themes (audit P1-18)
+						background-color: var(--color_primary);
+						border: 1px solid var(--color_primary);
+
+						&:hover {
+							filter: brightness(1.08);
+						}
+					}
+
+					// the developer channel: secondary, but raised — a real
+					// control, not a caption in a label cell
+					&.light:not(.primary) {
+						color: var(--fg_default);
+						border: 1px solid var(--border_strong);
+						background-color: var(--bg_surface);
+						box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+
+						&:hover {
+							background-color: var(--bg_surface_alt);
+						}
+					}
+				}
+			}
+
+			>.dd_v.build_file {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 0.5rem;
+
+				>.build_file_meta {
+					color: var(--fg_muted);
+				}
+
+				// a channel with no archive yet: stated, not blank
+				&.none {
+					color: var(--fg_muted);
+					font-style: italic;
+				}
+
+				// IN FLIGHT. The facts stay legible — the operator is meant
+				// to read what is being replaced — but they are visibly no
+				// longer current, and the row pulses so the change is
+				// noticed on a panel the eye is not resting on.
+				&.building {
+					>.build_file_name,
+					>.build_file_meta {
+						opacity: 0.45;
+					}
+
+					animation: build_pulse 1.4s ease-in-out infinite;
+
+					// (!) Reduced motion is an explicit STATIC STATE, never a
+					// collapsed animation: general.less squashes every animation to
+					// 0.001ms, which would park this pulse on whichever keyframe it
+					// happened to reach. A building row must read as PRESENT and
+					// active, so the resting state is fully opaque.
+					@media (prefers-reduced-motion: reduce) {
+						animation: none;
+						opacity: 1;
+					}
+				}
+
+				// THE VERDICT LINE, on its own row under the facts.
+				>.build_file_previous {
+					flex-basis: 100%;
+					font-size: 0.9em;
+					color: var(--fg_muted);
+				}
+
+				// DONE. A one-shot wash rather than a standing colour: the
+				// row is normal state again, and only the badge and the
+				// before-value have to persist.
+				&.built_updated {
+					animation: build_settled 1.6s ease-out 1;
+				}
+			}
+		}
+	}
+}

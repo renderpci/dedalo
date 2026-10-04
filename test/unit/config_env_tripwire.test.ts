@@ -26,10 +26,11 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
-import { envSnapshot, parseEnvFile, privateDir, readEnv } from '../../src/config/env.ts';
+import { envSnapshot, readEnv } from '../../src/config/env.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -45,7 +46,8 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
 const PROCESS_ENV_ALLOWLIST: Record<string, { maxLines: number; reason: string }> = {
 	'src/core/area_maintenance/backup.ts': {
 		maxLines: 1,
-		reason: 'subprocess passthrough: pg_dump child gets the whole env',
+		reason:
+			'subprocess passthrough (inheritedEnvironment): pg_dump gets the whole env; pg_restore the same with the message locale pinned to C and no PGPASSWORD',
 	},
 	'src/core/media/engine/spawn.ts': {
 		maxLines: 1,
@@ -130,15 +132,57 @@ describe('readEnv / envSnapshot precedence contract', () => {
 		expect(readEnv(PROBE_KEY)).toBeUndefined();
 	});
 
-	test('../private/.env values reach readEnv AND envSnapshot when not shadowed', () => {
-		const envFilePath = join(privateDir, '.env');
-		if (!existsSync(envFilePath)) return; // fresh checkout without a private file
-		const fileValues = parseEnvFile(readFileSync(envFilePath, 'utf-8'));
-		const unshadowed = Object.keys(fileValues).filter((key) => process.env[key] === undefined);
-		if (unshadowed.length === 0) return; // everything shadowed in this run
-		for (const key of unshadowed) {
-			expect(readEnv(key)).toBe(fileValues[key] as string);
-			expect(envSnapshot()[key]).toBe(fileValues[key] as string);
+	test('the private .env values reach readEnv AND envSnapshot when not shadowed (scratch private dir)', () => {
+		// BUILT, never borrowed: the developer's ../private/.env is not on a CI host
+		// (by design — the tiers compose their env), so reading it made this leg return
+		// before asserting there and test a different file on every desk. A child
+		// process boots env.ts against a scratch DEDALO_PRIVATE_DIR whose .env this
+		// test wrote: an unshadowed key must come from the file, a shadowed one from
+		// the process env, and a quoted value must lose its quotes.
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo-private-env-'));
+		try {
+			writeFileSync(
+				join(dir, '.env'),
+				[
+					'# a scratch private .env',
+					'DEDALO_ZZ_ENV_PROBE_FILE=from-file',
+					'DEDALO_ZZ_ENV_PROBE_QUOTED="quoted value"',
+					'DEDALO_ZZ_ENV_PROBE_SHADOWED=from-file',
+				].join('\n'),
+			);
+			const child = Bun.spawnSync(
+				[
+					process.execPath,
+					'-e',
+					`import { envSnapshot, readEnv, privateDir } from ${JSON.stringify(join(import.meta.dir, '../../src/config/env.ts'))};
+const keys = ['DEDALO_ZZ_ENV_PROBE_FILE', 'DEDALO_ZZ_ENV_PROBE_QUOTED', 'DEDALO_ZZ_ENV_PROBE_SHADOWED'];
+const snap = envSnapshot();
+console.log(JSON.stringify({ privateDir, read: keys.map((k) => readEnv(k)), snap: keys.map((k) => snap[k]) }));`,
+				],
+				{
+					cwd: dir,
+					env: {
+						PATH: Bun.env.PATH ?? '',
+						HOME: Bun.env.HOME ?? '',
+						DEDALO_PRIVATE_DIR: dir,
+						DEDALO_ZZ_ENV_PROBE_SHADOWED: 'from-process',
+					},
+					stdout: 'pipe',
+					stderr: 'pipe',
+				},
+			);
+			expect(child.exitCode, child.stderr.toString()).toBe(0);
+			const out = JSON.parse(child.stdout.toString().trim()) as {
+				privateDir: string;
+				read: string[];
+				snap: string[];
+			};
+			expect(realpathSync(out.privateDir)).toBe(realpathSync(dir));
+			const expected = ['from-file', 'quoted value', 'from-process'];
+			expect(out.read).toEqual(expected);
+			expect(out.snap).toEqual(expected);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
 		}
 	});
 });

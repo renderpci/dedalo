@@ -82,7 +82,10 @@ describe('definition files (confined loading)', () => {
 		writeFileSync(join(base, 'move_tld', 'a.json'), JSON.stringify([{ old: 'x1', new: 'y1' }]));
 		writeFileSync(join(base, 'move_tld', 'bad.txt'), 'ignored');
 
-		const realConfig = await import('../../src/config/config.ts');
+		// A SNAPSHOT: mock.module rewrites the live namespace in place, so restoring
+		// from `await import()` itself would leave the scratch definitions dir in the
+		// config of every later file (mock_isolation_tripwire rule 3).
+		const realConfig = { ...(await import('../../src/config/config.ts')) };
 		mock.module('../../src/config/config.ts', () => ({
 			...realConfig,
 			config: {

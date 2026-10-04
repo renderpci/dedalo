@@ -25,6 +25,18 @@
  *
  *   consults      — the file resolves a record-addressed component level through
  *                   `getRecordComponentPermission`. CHECKED: the symbol is present.
+ *   delegates     — the file's dd128-reachable writes are authorized by THE WRITE
+ *                   DOOR (security/write_door.ts — closure Step 3), which applies the
+ *                   rule. CHECKED BY OUTCOME, never by spelling: the file is a key of
+ *                   DD128_PROBED (test/helpers/authz_door_probes.ts), and the
+ *                   authorization-door matrix (authz_door_matrix_native) drives every
+ *                   door listed for it with a `(dd128, dd1725)` user-manager on their
+ *                   OWN account and requires the refusal. An ENGINE (no principal of
+ *                   its own) may claim it only through its callers, so its IMPORTER
+ *                   SET is derived from the source on every run and must equal the
+ *                   delegating doors named in DELEGATING_ENGINES — a new caller puts
+ *                   the row back to red until it is named (and probed) or the row
+ *                   returns to PENDING.
  *   engine        — a write PRIMITIVE. Its docblock states that authorization is the
  *                   caller's responsibility; putting the rule here would authorize
  *                   nothing (there is no principal) — the callers above are the doors.
@@ -51,7 +63,15 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
+import { DD128_PROBED } from '../helpers/authz_door_probes.ts';
+import {
+	AFTER_RECORD_WRITE,
+	buildWriterClosure,
+	RECORD_WRITE_CHOKEPOINTS,
+	SANCTIONED_DERIVED_WRITERS,
+	type WriterClosure,
+} from '../helpers/matrix_writer_closure.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -81,10 +101,11 @@ const WRITE_MODULES = [
  * has to make in this file, not an omission nobody notices.
  */
 const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
+	wipedComponentValue:
+		'a pure value rule (what a data wipe leaves in one key); reads config, writes nothing.',
 	isInstalledDataLang: 'a language predicate; reads config, writes nothing.',
 	installedDataLangs: 'a language accessor; reads config, writes nothing.',
 	ontologyTldRefusal: 'builds a refusal message from an ontology node; writes nothing.',
-	isLangSlicedModel: 'a model-descriptor predicate; writes nothing.',
 	normalizeItemId: 'a value normalizer over an in-memory item; writes nothing.',
 	getIdFromKey: 'parses an id out of a key string; writes nothing.',
 	applyUpdate: 'the in-memory merge that PRODUCES the value a primitive then persists.',
@@ -97,6 +118,16 @@ const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
 		'a PURE PREDICATE over a changed_data array (P0-8, 2026-08-30): it answers with a refusal message when a `remove` names no item, and writes nothing at all. It is exported so the in-memory temporal door can refuse exactly what the persisted door refuses — one law, two doors — which is the opposite of a second write path.',
 	persistModifiedStamp:
 		'DOES write the matrix, but only the modified-by/modified-date audit columns of a record a primitive is already writing. It can never carry a dd131/dd244/dd133 value, so it is not an account transition and adding it to the primitive list would widen the door set to every save path twice over.',
+	prepareBirthColumns:
+		'the NEW-record birth-column law (CLOSURE_PLAN Step 2): drops the covered observer units (mirror + its frames) out of a whole-record column set and re-derives its `_hi` relation_search, IN MEMORY — the create/duplicate primitives persist what it returns; it writes nothing.',
+	dropCoveredObserverUnits:
+		'the covered-unit half of the birth law, IN MEMORY: removes each covered observer mirror AND its own dataframe frames from a column set (the duplicate calls it before its frame-target re-mint); it writes nothing.',
+	requestCoveredSlotRecompute:
+		'writes NOTHING itself: it queues a recompute of the record’s covered observer slots on the obligation ledger; the recompute writes the mirror through persistObserverMirrorKeys, a chokepoint primitive below. A mirror slot is derived state, never a credential.',
+	hiIndexDisagrees:
+		'a PURE comparison of a stored `_hi` ancestor index against the save law’s derivation; reads the thesaurus chain, writes nothing.',
+	bornInCurrentTransaction:
+		'a READ-ONLY xmin predicate (2026-10-01): one SELECT comparing a row’s xmin with the ambient transaction’s xid, answering whether the record was written by that transaction (the conflict-tolerant create’s birth law, shared with the CSV importer); refuses outside a transaction and writes nothing.',
 	afterRecordWrite:
 		'writes NOTHING to the matrix: it is the post-write obligation hook (P1-8, 2026-09-03) every primitive ends in — save event, the security reaction, the RAG seam — and the two insert doors call it AFTER their own primitive. A caller of it is already a caller of a primitive; listing it would double-count every door.',
 };
@@ -114,6 +145,15 @@ const WRITE_PRIMITIVES = [
 	'deleteSectionRecord(',
 	'deleteSectionData(',
 	'deletePortalLocator(',
+	// The chokepoint's own ENTRIES (CLOSURE_PLAN Step 2, the obligation ledger): each
+	// persists a record's keys or columns and ends in afterRecordWrite — so a file that
+	// calls one IS a write door, exactly like a persistRecordKeys caller.
+	'persistRelationRemovalKeys(',
+	'persistRestoredKeys(',
+	'persistObserverMirrorKeys(',
+	'persistAppendedKeyItems(',
+	'persistRecordBirth(',
+	'duplicateSectionRecordWithVerdict(',
 ];
 
 /** The resolver that carries the rule. */
@@ -121,6 +161,7 @@ const RULE_SYMBOL = 'getRecordComponentPermission';
 
 type Verdict =
 	| 'consults'
+	| 'delegates'
 	| 'engine'
 	| 'section-level'
 	| 'system'
@@ -135,20 +176,41 @@ interface CensusRow {
 
 const CENSUS: Record<string, CensusRow> = {
 	// --- CONSULTS ---------------------------------------------------------
+	// --- DELEGATES (the write door; measured by the matrix, DD128_PROBED) --
 	'src/core/api/handlers/dd_core_api.ts': {
-		verdict: 'consults',
+		verdict: 'delegates',
 		reason:
-			'the human save door — the ONE door that already consulted the rule, now through the shared resolver so its number and every other door’s are the same number.',
+			'the human save door delegates to authorizeRecordAccess (sectionFloor 0, the named exception), duplicate / delete of a named record to authorizeSectionRecord and create to authorizeSectionTarget — the rule is the write door’s pair half; the matrix’s dd_core_api:save DD1725 leg proves it.',
 	},
 	'src/ai/mcp/tools/fields_write.ts': {
-		verdict: 'consults',
+		verdict: 'delegates',
 		reason:
-			'MCP set_field / portal_link / portal_unlink. Its assertWritePermission helper took no sectionId, which is why the audit called the rule unconsultable here even in principle; the signature now requires one.',
+			'MCP set_field / portal_link / portal_unlink / find_or_create / duplicate: the private assertWritePermission is gone; authorizeRecordAccess (write, level 2, section floor 1) for a record — BOTH self-authorizing writers, setField and portalUnlink, are probed doors (DD128_PROBED) — authorizeSectionTarget for find_or_create’s create and its field pre-flight, authorizeSectionRecord for a duplicate.',
 	},
 	'src/ai/mcp/tools/records_write.ts': {
-		verdict: 'consults',
+		verdict: 'delegates',
 		reason:
-			'MCP save_component / create_record / delete_record — same helper, same signature change; the section-level calls pass null explicitly.',
+			'MCP save_component (authorizeRecordAccess), create_record (authorizeSectionTarget) and delete_record (authorizeSectionRecord — the id required by the door), consultation-capped — same write door as the human doors.',
+	},
+	'src/core/relations/save.ts': {
+		verdict: 'delegates',
+		reason:
+			'deletePortalLocator mints a RecordGrant through authorizeRecordAccess (write, level 2, floor 2: dd128-aware pair + scope) before any read, lock or write; the effect is a private function typed on the grant and audited as grant.userId; applyAddNewElement’s createSectionRecord is a birth under the save door. Matrix dd_component_portal_api:delete_locator DD1725 leg.',
+	},
+	'src/core/relations/children_write.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'the component_relation_children write-through (WC-2026-10-02): its writes are HARD-BOUND to the child section’s component_relation_parent (and that section’s section_map order number) — the users section declares no parent component (relation_children_write_through_native asserts getParentTipo(dd128) is null), so no dd128 component is reachable. Every child is still asked of authorizeRecordAccess (write, level 2, door `save`, the dd128-aware pair + scope) before any write.',
+	},
+	'src/core/relations/children_orphan_sweep.ts': {
+		verdict: 'system',
+		reason:
+			'the operator CLI sweep (scripts/relation_children_orphan_sweep.ts, dry-run default) removing leftover bytes under component_relation_children tipos through persistRecordKeys as userId -1; its keys are derived children tipos (never a dd128 component), and no request or principal exists.',
+	},
+	'src/core/api/handlers/dd_component_portal_api.ts': {
+		verdict: 'delegates',
+		reason:
+			'no gate of its own; its only effect is deletePortalLocator, the write door; the matrix drives the handler gate-free, so the DD1725 leg measures the engine.',
 	},
 	'tools/tool_propagate_component_data/server/index.ts': {
 		verdict: 'consults',
@@ -206,7 +268,7 @@ const CENSUS: Record<string, CensusRow> = {
 	'src/core/section/record/observers.ts': {
 		verdict: 'system',
 		reason:
-			'the observer mirror propagation. It runs as the engine after a committed save, with no actor to judge; gating it would make a mirror depend on who happened to trigger it.',
+			'the observer mirror propagation (its recompute writes through persistObserverMirrorKeys). It runs as the engine after a committed save, with no actor to judge; gating it would make a mirror depend on who happened to trigger it.',
 	},
 	'src/core/update/transform/portalize.ts': {
 		verdict: 'system',
@@ -237,12 +299,22 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'writes its own hard-bound stats section as userId -1; the maintenance area is already global-admin/developer gated.',
 	},
+	'src/core/ontology/engine_ontology.ts': {
+		verdict: 'system',
+		reason:
+			'the ENGINE-OWNED ontology door: writes only `ddengine0` matrix_ontology source records (persistRecordColumns, actor -1) from the repo-owned engine_ontology.json — refused unless every node is under the engine TLD — at boot, install and suite setup. No request, no principal.',
+	},
 	'src/core/area_maintenance/widgets/export_hierarchy.ts': {
 		verdict: 'system',
 		reason: 'maintenance-area hierarchy export; hard-bound hierarchy/lang sections.',
 	},
 
 	// --- NOT dd128 --------------------------------------------------------
+	'src/core/security/ai_spend.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'the AI spend ledger: its only writes are the HARD-BOUND ledger section (AI_SPEND_LEDGER.section, `ddengine1` — createSectionRecord for the day, persistRecordKeys for its user/day/counter components); the caller supplies a principal and amounts, never a section or a component, so no dd128 component is reachable through it.',
+	},
 	'src/core/security/section_permissions.ts': {
 		verdict: 'not-dd128',
 		reason:
@@ -262,70 +334,80 @@ const CENSUS: Record<string, CensusRow> = {
 	},
 
 	// --- PENDING (real SEC-03 residuals) ----------------------------------
-	'src/core/relations/save.ts': {
-		verdict: 'PENDING',
-		reason:
-			'SEC-03 residual + a NEW observation (2026-08-28): deletePortalLocator gates SECTION-level only — getSectionPermissions(sectionTipo) >= 2 — with NO component level check and NO per-record scope check, so a level-2 grant on (dd128, dd128) removes dd131/dd244/dd1725 locators from ANY user record, the caller’s own included.',
-	},
-	'src/core/api/handlers/dd_component_portal_api.ts': {
-		verdict: 'PENDING',
-		reason:
-			'the wire door onto the deletePortalLocator hole above: it coerces the id and delegates, adding no level, component or record gate of its own.',
-	},
 	'src/core/components/component_text_area/tag_delete.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'the tag-delete write path; its door (api/handlers/dd_component_text_area_api.ts) reads the raw matrix level and puts isRecordInScope inside `if (!principal.isGlobalAdmin)`. dd128 carries dd135, so the pair is reachable.',
+			'the tag-delete engine; its ONLY importer is dd_component_text_area_api (DERIVED on every run — DELEGATING_ENGINES), whose delete_tag runs authorizeRecordAccess (write, level 2) before it and hands it the grant’s address.',
 	},
 	'src/core/tools/translation.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'takes section_tipo + component_tipo from caller options and gates on the raw getPermissions of that pair.',
+			'runAutomaticTranslation mints a RecordGrant through authorizeRecordAccess (write, level 2, section floor 1: grammar, the dd128-aware pair, the write scope) before any provider call; the writer translateAndWrite TAKES the grant (branded, only write_door mints it) and builds its target and actor from it, so no importer reaches the write ungated. Matrix tool:tool_lang / tool_lang_multi automatic_translation DD1725 legs (closure Step 3 req 10).',
 	},
 	'src/core/tools/import_execute.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'the import executor writes caller-declared (section, component) pairs; its gate is the declarative tool gate, which reads the raw level.',
+			'importMappedRecords takes the importing PRINCIPAL and asks the write door per field: a matched record through authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), a new record and its fields through authorizeSectionTarget before the create; a refused field is reported IGNORED and never written (req 10). Matrix engine:import_execute.importMappedRecords DD1725 leg (matched record); the create door: import_create_door_native (LEVEL_1 refused, zero rows; CONTROL created).',
 	},
 	'src/core/tools/import_csv_execute.ts': {
-		verdict: 'PENDING',
-		reason: 'the CSV import executor — same caller-declared pair, same raw-level gate.',
+		verdict: 'delegates',
+		reason:
+			'executeCsvImport takes the importing PRINCIPAL: a row that creates its record asks authorizeSectionTarget (section) first; every column — and every slot a legacy frame envelope names — of an existing record asks authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), of a new one authorizeSectionTarget (the pair); a refused column is reported IGNORED, never written, its metadata never applied (req 10). Matrix engine:import_csv_execute.executeCsvImport DD1725 leg (existing record); the create door, the column pair of a created row and the legacy frame slots: import_create_door_native.',
 	},
 	'src/core/tools/transcription_asr.ts': {
 		verdict: 'PENDING',
 		reason:
-			'writes the transcription ddo’s (section, component) pair behind the declarative tipo gate.',
+			'the transcript writer: pollTranscriptionCompletion REQUIRES its caller’s save (no default since closure Step 3), and tool_transcription passes one that re-runs the write door for a live principal — but the exported saveTranscriptionResult itself checks no pair, dd128 or scope (any future importer writes ungated), and no matrix door drives the poll’s save with a (dd128, dd1725) manager, so the file claims nothing of its own.',
 	},
 	'src/core/media/ingest/companion_writes.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'media-ingest companion writes take sectionTipo/componentTipo from their input; the ingest doors gate at the raw level.',
+			'every ontology-declared companion (target_filename / target_duration) is asked of authorizeRecordAccess AS THE UPLOADER (write, level 2, section floor 1, dd128-aware pair, write scope) before saveComponentData, which the grant addresses; a refusal is a message, never a write (req 10). Matrix engine:media_ingest.companion_writes DD1725 leg (a scratch media component whose target_filename names dd1725).',
 	},
 	'tools/tool_import_files/server/index.ts': {
-		verdict: 'PENDING',
-		reason: 'caller-supplied (section_tipo, component_tipo) behind the declarative tipo gate.',
+		verdict: 'delegates',
+		reason:
+			'every component this run writes into a record bound at RUN TIME asks the write door for the whole triple (req 10): the ddo_map role writes (setComponentsData → authorizeRecordAccess, whose grant addresses the save), the media component and the host portal (assertWritableComponent → authorizeRecordAccess; a record born in the run → authorizeSectionTarget). Matrix tool:tool_import_files:import_files:roles DD1725 leg.',
+	},
+	'tools/tool_import_rdf/server/rdf_import_execute.ts': {
+		verdict: 'delegates',
+		reason:
+			'executeRdfImport takes the importing PRINCIPAL and asks the write door per component: the caller record and every term bound at RUN TIME by the code lookup through authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope); a create through authorizeSectionTarget (the section, then the match component pair) before createSectionRecord, the new record\u2019s components at the pair; a refused write is reported skipped and never written. Gate: rdf_import_execute_native (LEVEL_1 refused, zero rows; CONTROL written).',
 	},
 	'tools/tool_import_dedalo_csv/server/index.ts': {
-		verdict: 'PENDING',
-		reason: 'caller-supplied section/component import behind the declarative tipo gate.',
+		verdict: 'not-dd128',
+		reason:
+			'its OWN writes are the hard-bound dd800 run record (createSectionRecord + its label save); every data row is written by executeCsvImport (import_csv_execute.ts — `delegates`, the write door per row and column, req 10), handed the request principal.',
 	},
 	'tools/tool_posterframe/server/index.ts': {
-		verdict: 'PENDING',
-		reason: 'declarative record_tipo gate — raw level on a caller-supplied pair.',
+		verdict: 'delegates',
+		reason:
+			'create_identifying_image: the AV SOURCE behind the declarative record_tipo/1 gate, the HOST portal of the host record through authorizeRecordAccess in the handler (write, level 2, section floor 1, dd128-aware pair, write scope with the non-positive-id refusal ahead of the admin bypass — req 10) whose GRANT addresses the portal save, and the new record\u2019s image through authorizeSectionTarget. Matrix tool:tool_posterframe:create_identifying_image:host DD1725 leg.',
 	},
 	'tools/tool_tc/server/index.ts': {
 		verdict: 'PENDING',
-		reason: 'declarative record_tipo gate — raw level on a caller-supplied pair.',
+		reason:
+			'its one writer, change_all_timecodes, is behind the declarative record_tipo kind — the write door, proven for the GATE by the security.ts row — but that the handler writes exactly the pair the gate authorized is not measured (the matrix never runs the handler), so this row claims nothing of its own.',
 	},
 	'tools/tool_update_cache/server/index.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'gated at permission:’section’ yet its handlers rewrite COMPONENTS, so a section-level grant admits a component write the per-component rule never sees.',
+			'update_cache: the declarative targets gate authorizes the (sqo section, component) pairs, and the handler asks authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope) for EVERY matched row × component before touching it — the grant addresses the save / the media transform; a refused target is skipped and reported (req 10). Matrix tool:tool_update_cache:update_cache DD1725 leg.',
 	},
 	'tools/tool_time_machine/server/bulk_revert.ts': {
-		verdict: 'PENDING',
+		verdict: 'not-dd128',
 		reason:
-			'SEC-03, named: the per-row gate holds row.section_id and reads the raw level of (row.section_tipo, row.tipo).',
+			'Since the undo-log rewrite (2026-09-27) the orchestrator writes ONLY its own run record: the dd800 row (createSectionRecord) and its dd796 label (persistRecordKeys) — never a dd128 component. The component writes moved to bulk_revert_undo.ts (PENDING, SEC-03 carried over) and the record writes to bulk_revert_records.ts.',
+	},
+	'tools/tool_time_machine/server/bulk_revert_undo.ts': {
+		verdict: 'delegates',
+		reason:
+			'every component a revert unit WRITES — the key, each slot its frame plan restores, each key of a composed unit — asks authorizeRecordAccess (write, level 2, section floor 1, the dd128-aware pair, the write scope) with the reverting principal, behind the unit\u2019s lock and after any undelete (authorizeKeyWrite, req 10); a refusal is the unit\u2019s out_of_scope skip, rolled back. Matrix tool:tool_time_machine:bulk_revert_process:units DD1725 leg (the orchestrator\u2019s raw-pair pre-gate does not see the own-record rule, so the leg measures this writer).',
+	},
+	'tools/tool_time_machine/server/bulk_revert_records.ts': {
+		verdict: 'section-level',
+		reason:
+			'the bulk revert’s RECORD half: undeletes a record the run’s cascade deleted (restoreSection) and deletes a record the run created (the delete door) — whole records only, gated by getSectionPermissions(section) >= 2 plus the record scope (the delete door’s own rule). No component pair exists to downgrade.',
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts': {
 		verdict: 'PENDING',
@@ -347,19 +429,53 @@ const CENSUS: Record<string, CensusRow> = {
  */
 const EXTRA_ROWS: Record<string, CensusRow> = {
 	'src/core/tools/security.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'THE declarative tool gate every tool inherits. Kind ’tipo’ and kind ’record_tipo’ both read the raw getPermissions of a caller-supplied pair, and ’record_tipo’ already parses a section_id it does not pass on. Fixing this one closes most of the PENDING rows above at once.',
+			'THE declarative tool gate every tool inherits: kinds record / record_tipo / tipo / section / targets delegate to the write door (authorizeRecordAccess / authorizeSectionTarget) — the dd128-aware pair, the id grammar, the non-positive-id refusal ahead of the admin bypass.',
 	},
 	'src/core/api/handlers/dd_component_text_area_api.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'the tag-delete wire door: raw level, then isRecordInScope INSIDE `if (!principal.isGlobalAdmin)` — the SEC-05 shape as well as the SEC-03 one.',
+			'the tag-delete wire door: authorizeRecordAccess (write, level 2, section floor 0 — the save door’s named exception, write_door SECTION_FLOOR_ZERO_DOORS, WC-2026-09-30-write-door) before the options are read — the SEC-05 and SEC-03 shapes both closed by the write door’s order.',
 	},
 };
 
 /** PINNED. Shrink-only: this may go DOWN, never up. */
-const PENDING_COUNT = 18;
+const PENDING_COUNT = 4;
+
+/**
+ * THE DELEGATING ENGINES — a `delegates` row on a file with no principal of its
+ * own stands ONLY on its callers. Each engine names the exact set of files that
+ * import it; the set is DERIVED from the source (static and dynamic imports
+ * across src/ and tools/) on every run and must be EQUAL, and every importer
+ * must itself be a probed `delegates` door. A new importer — which would write
+ * through the engine with no gate of its own — is red here until it is named
+ * and probed, or the engine row goes back to PENDING.
+ */
+const DELEGATING_ENGINES: Readonly<Record<string, readonly string[]>> = {
+	'src/core/components/component_text_area/tag_delete.ts': [
+		'src/core/api/handlers/dd_component_text_area_api.ts',
+	],
+};
+
+/** Every non-test .ts file under src/ and tools/ that imports `engine` (static or dynamic). */
+function importersOf(engine: string): string[] {
+	const target = join(ROOT, engine);
+	const importers: string[] = [];
+	for (const file of [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'tools'))]) {
+		if (file === target) continue;
+		const source = readFileSync(file, 'utf8');
+		for (const match of source.matchAll(
+			/(?:\bfrom\s*|\bimport\s*\(\s*)['"](\.{1,2}\/[^'"]+)['"]/g,
+		)) {
+			if (resolve(dirname(file), match[1] as string) === target) {
+				importers.push(relative(ROOT, file));
+				break;
+			}
+		}
+	}
+	return importers.sort();
+}
 
 function walk(dir: string, acc: string[] = []): string[] {
 	for (const entry of readdirSync(dir)) {
@@ -440,6 +556,45 @@ describe('the verdicts are true of the source, not just of the table', () => {
 		}
 	});
 
+	test("every 'delegates' door is MEASURED: a DD128_PROBED key (the matrix drives its DD1725 leg)", () => {
+		const delegating = Object.entries(allRows).filter(([, row]) => row.verdict === 'delegates');
+		expect(delegating.length).toBeGreaterThan(0);
+		for (const [file] of delegating) {
+			expect(
+				DD128_PROBED[file] !== undefined && (DD128_PROBED[file]?.length ?? 0) > 0,
+				`${file} is marked 'delegates' but is not in DD128_PROBED — name the matrix door whose DD1725 leg proves it (test/helpers/authz_door_probes.ts), or it is not delegating, it is hoping.`,
+			).toBe(true);
+		}
+		// And no DD128_PROBED entry names a file the census does not call 'delegates'.
+		for (const file of Object.keys(DD128_PROBED)) {
+			expect({ file, verdict: allRows[file]?.verdict }).toEqual({ file, verdict: 'delegates' });
+		}
+	});
+
+	test('a delegating ENGINE stands on its callers: its DERIVED importer set equals the named delegating doors', () => {
+		expect(Object.keys(DELEGATING_ENGINES).length).toBeGreaterThan(0);
+		for (const [engine, named] of Object.entries(DELEGATING_ENGINES)) {
+			expect({ engine, verdict: allRows[engine]?.verdict }).toEqual({
+				engine,
+				verdict: 'delegates',
+			});
+			const derivedImporters = importersOf(engine);
+			// FLOOR: the scan really resolved an import (a broken regex would pass on []).
+			expect(derivedImporters.length, `${engine}: no importer found at all`).toBeGreaterThan(0);
+			expect({ engine, importers: derivedImporters }).toEqual({
+				engine,
+				importers: [...named].sort(),
+			});
+			for (const importer of named) {
+				expect({ importer, verdict: allRows[importer]?.verdict }).toEqual({
+					importer,
+					verdict: 'delegates',
+				});
+				expect((DD128_PROBED[importer]?.length ?? 0) > 0, `${importer} is not probed`).toBe(true);
+			}
+		}
+	});
+
 	test("every 'PENDING' door really does NOT — so a fix cannot land silently", () => {
 		for (const [file, row] of Object.entries(allRows)) {
 			if (row.verdict !== 'PENDING') continue;
@@ -485,49 +640,21 @@ describe('the rule is part of the resolution, not a helper', () => {
 		expect(await getRecordComponentPermission(self, 'dd128', 'dd133', 424242)).toBe(2);
 	});
 
-	test('the MCP write helpers take a sectionId at all (the audit’s "not even in principle")', () => {
-		for (const file of ['src/ai/mcp/tools/fields_write.ts', 'src/ai/mcp/tools/records_write.ts']) {
-			const source = readFileSync(join(ROOT, file), 'utf8');
-			expect(source).toContain('async function assertWritePermission(');
-			// The signature must carry the record address, or the rule is unreachable
-			// from inside the helper no matter what the call sites hold.
-			const signature = /async function assertWritePermission\([\s\S]*?\): Promise<void>/.exec(
-				source,
-			);
-			expect(signature?.[0] ?? '', `${file}: assertWritePermission has no sectionId`).toContain(
-				'sectionId',
-			);
-		}
-	});
+	// The MCP write doors used to be pinned here by the SPELLING of a private
+	// helper's signature. Since closure Step 3 they hold no helper at all: they
+	// delegate to THE WRITE DOOR, and the OUTCOME — a `(dd128, dd1725)` manager
+	// refused on their own account through dedalo_set_field / save_component — is
+	// driven by authz_door_matrix_native (DD128_PROBED, test/helpers/authz_door_probes.ts).
 });
 
-describe('the three record-lifecycle doors refuse a non-positive id ahead of the admin bypass', () => {
-	const doorSource = readFileSync(join(ROOT, 'src/core/api/handlers/dd_core_api.ts'), 'utf8');
-
-	test('save, duplicate and delete all go through assertRecordWriteTarget', () => {
-		const calls = doorSource.match(/assertRecordWriteTarget\(/g) ?? [];
-		// One import + one call per door, three doors.
-		expect(calls.length).toBeGreaterThanOrEqual(3);
-		for (const operation of ['save', 'duplicate', 'delete']) {
-			expect(
-				new RegExp(`assertRecordWriteTarget\\([^;]*?'${operation}'`, 's').test(doorSource),
-				`no assertRecordWriteTarget call tagged '${operation}'`,
-			).toBe(true);
-		}
-	});
-
-	test('none of them still scopes INSIDE an isGlobalAdmin guard (the SEC-05 shape)', () => {
-		// The exact inlining that made root writable: the admin bypass above the
-		// non-positive-id refusal, so for an admin the refusal never ran.
-		const inlined = /if\s*\(!principal\.isGlobalAdmin\)\s*\{[\s\S]{0,400}?isRecordInScope\(/.exec(
-			doorSource,
-		);
-		expect(
-			inlined?.[0] ?? null,
-			'dd_core_api still inlines the admin bypass above the refusal',
-		).toBeNull();
-	});
-});
+// THE THREE RECORD-LIFECYCLE DOORS (save, duplicate, delete) refusing a non-positive id
+// ahead of the admin bypass used to be pinned here by SPELLING (a count of
+// `assertRecordWriteTarget(` calls). Since closure Step 3 they delegate to the write door
+// (authorizeRecordAccess / authorizeSectionTarget), whose order is the module's own; the
+// OUTCOME — a global admin refused on a non-positive id through each of the three doors — is
+// driven by authz_door_matrix_native (ADMIN_ID0 on dd_core_api:save / :duplicate / :delete,
+// aimed at the scratch section's -1 so a regressed door writes nothing that matters) and, on
+// root's own dd128/-1, gate-only by write_door_native (leg b).
 
 describe('the revocation trigger set is stated ONCE', () => {
 	test('the transition set lives in security/revocation.ts and nowhere else', async () => {
@@ -588,6 +715,10 @@ describe('the revocation trigger set is stated ONCE', () => {
  *                (P1-8, 2026-09-03 — it used to write with a direct updateMatrixKeyData
  *                and call invalidatePermissionsForWrite post-commit for itself). Nothing
  *                is asked of the caller: this is the point of moving the seam here.
+ *                The obligation ledger's entries (persistRelationRemovalKeys,
+ *                persistRestoredKeys, persistObserverMirrorKeys, persistAppendedKeyItems,
+ *                persistRecordBirth — CLOSURE_PLAN Step 2) are the same class. Every 'chokepoint' verdict
+ *                is MEASURED on the writer closure's call graph (reaches afterRecordWrite).
  *   callee     — a different function owns it, so its callers inherit the reach. No
  *                primitive is in this class today; the verdict stays defined so the
  *                next door that reaches the seam through a callee has a name for it.
@@ -609,7 +740,39 @@ const PRIMITIVE_REACH: Record<string, 'chokepoint' | 'callee' | 'n/a' | 'caller'
 	'deletePortalLocator(': 'chokepoint',
 	'deleteSectionRecord(': 'caller',
 	'deleteSectionData(': 'caller',
+	// The ledger's entries (record_write.ts): each ends in afterRecordWrite — asserted
+	// on the CALL GRAPH below, not on a body's spelling.
+	'persistRelationRemovalKeys(': 'chokepoint',
+	'persistRestoredKeys(': 'chokepoint',
+	'persistObserverMirrorKeys(': 'chokepoint',
+	'persistAppendedKeyItems(': 'chokepoint',
+	'persistRecordBirth(': 'chokepoint',
+	// the duplicate's verdict-returning twin: writes a NEW record, like duplicateSectionRecord.
+	'duplicateSectionRecordWithVerdict(': 'n/a',
 };
+
+/** The security reaction the post-write hook must reach (security/revocation.ts). */
+const REACTION = 'src/core/security/revocation.ts#reactToRecordComponentWrite';
+/** The hook's private step that fires it (record_write.ts). */
+const REACT_TO_SECURITY_WRITE = 'src/core/section_record/record_write.ts#reactToSecurityWrite';
+
+/** Built once, on first use: the writer closure (test/helpers/matrix_writer_closure.ts). */
+let closureMemo: WriterClosure | undefined;
+function writerClosure(): WriterClosure {
+	closureMemo ??= buildWriterClosure();
+	return closureMemo;
+}
+
+/** `file#name` of the module that EXPORTS a primitive (the write modules + relations/save.ts). */
+function definitionKey(name: string): string | null {
+	for (const module of [...WRITE_MODULES, 'src/core/relations/save.ts']) {
+		const source = readFileSync(join(ROOT, module), 'utf8');
+		if (new RegExp(`^export (?:async )?function ${name}\\(`, 'm').test(source)) {
+			return `${module}#${name}`;
+		}
+	}
+	return null;
+}
 
 /** Any of these in a file's source means it reaches the seam explicitly. */
 const SEAM_SYMBOLS = [
@@ -623,7 +786,7 @@ const SEAM_SYMBOLS = [
 /** Doors that call a CALLER-owned primitive but can never address a dd128 record. */
 const REACH_EXEMPT: Record<string, string> = {
 	'src/core/relations/dataframe.ts':
-		'its only caller-owned deletes are applyDataframeDeletePolicy’s `delete_target` / `delete_target_record` policies, which empty or delete the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
+		'its only caller-owned delete is applyDataframeDeletePolicy’s `delete_target` policy, which empties (never removes) the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
 	'src/core/section/record/delete_record.ts':
 		'the delete ENGINE — it DEFINES both primitives, holds no principal and no component tipo, and its own docblock puts authorization on the caller. Putting the seam here would revoke on an ontology delete too.',
 	'src/core/test_data/synthetic_hierarchy_fixture.ts':
@@ -637,13 +800,10 @@ const REACH_EXEMPT: Record<string, string> = {
  * names the finding; the list is SHRINK-ONLY and a door that starts reaching FAILS this
  * gate, so a fix cannot land silently.
  */
-const REACH_PENDING: Record<string, string> = {
-	'src/ai/mcp/tools/fields_write.ts':
-		'MCP portal_unlink reaches deletePortalLocator, which DOES fire the seam in relations/save.ts — but only when its own section/level gate lets the call through, and that gate is the SEC-03 hole this file’s CENSUS row also names. Listed so the pair is visible in one place.',
-};
+const REACH_PENDING: Record<string, string> = {};
 
 /** PINNED. Shrink-only. */
-const REACH_PENDING_COUNT = 1;
+const REACH_PENDING_COUNT = 0;
 
 describe('every record-write door REACHES the revocation seam', () => {
 	const callerOwned = Object.entries(PRIMITIVE_REACH)
@@ -693,32 +853,48 @@ describe('every record-write door REACHES the revocation seam', () => {
 	});
 
 	test('the CHOKEPOINT really fires the reaction (or every "chokepoint" verdict is a lie)', () => {
-		const source = readFileSync(join(ROOT, 'src/core/section_record/record_write.ts'), 'utf8');
-		expect(source).toContain('reactToRecordComponentWrite');
-		// The reaction lives inside the ONE post-write hook, and every writer of the
-		// module ends in that hook — the per-key door, the whole-column door (the Time
-		// Machine's full-record restore, which was the one shape that reached nothing
-		// at all) and the stamp-only door. Asserted on function BODIES, not on a call
-		// count: a hook nobody calls would still match a count.
-		const hookBody = /export async function afterRecordWrite\([\s\S]*?\n\}/.exec(source)?.[0] ?? '';
-		expect(hookBody, 'afterRecordWrite does not fire the security reaction').toContain(
-			'reactToSecurityWrite(',
-		);
-		for (const writer of ['persistRecordKeys', 'persistRecordColumns', 'persistModifiedStamp']) {
-			const body =
-				new RegExp(`export async function ${writer}\\([\\s\\S]*?\\n\\}`).exec(source)?.[0] ?? '';
-			expect(body, `${writer} does not end in afterRecordWrite`).toContain('afterRecordWrite(');
+		// MEASURED ON THE CALL GRAPH (the writer closure's RESOLVED references), never on
+		// a body's spelling: a chokepoint that delegates to a shared key-write body still
+		// reaches the hook, and one that stops reaching it is red however its body reads.
+		// (The body-regex version of this test went red on a pure delegation refactor and
+		// would have stayed green on a hook moved behind an unresolvable indirection.)
+		const closure = writerClosure();
+		// 1. The hook fires the security reaction.
+		expect(
+			closure.reachesPrecisely(AFTER_RECORD_WRITE, REACTION),
+			'afterRecordWrite does not reach the security reaction',
+		).toBe(true);
+		// 2. Every primitive whose verdict is 'chokepoint', and the stamp-only writer,
+		//    reaches the hook — the verdict is true of the code, or it is a lie.
+		const chokepoints = Object.entries(PRIMITIVE_REACH)
+			.filter(([, kind]) => kind === 'chokepoint')
+			.map(([primitive]) => primitive.slice(0, -1));
+		expect(chokepoints.length).toBeGreaterThan(4);
+		for (const name of [...chokepoints, 'persistModifiedStamp']) {
+			const key = definitionKey(name);
+			expect(
+				key,
+				`${name}: no module under scan exports it — the verdict names nothing`,
+			).not.toBeNull();
+			expect(
+				closure.reachesPrecisely(key as string, AFTER_RECORD_WRITE),
+				`${key} does not reach afterRecordWrite — its 'chokepoint' verdict is a lie`,
+			).toBe(true);
 		}
-		// And the reaction is fired from the hook ALONE — a second inline call would be
-		// a door remembering again.
-		expect((source.match(/reactToSecurityWrite\(/g) ?? []).length).toBe(2); // definition + hook
-		// deletePortalLocator's chokepoint verdict: its survivors are persisted through
-		// persistRecordKeys, not through the raw per-key primitive.
-		const relations = readFileSync(join(ROOT, 'src/core/relations/save.ts'), 'utf8');
-		const door =
-			/export async function deletePortalLocator\([\s\S]*?\n\}/.exec(relations)?.[0] ?? '';
-		expect(door).toContain('persistRecordKeys(');
-		expect(door).not.toContain('updateMatrixKeyData(');
+		// 3. The reaction is fired from the hook ALONE — a second direct caller would be
+		//    a door remembering again.
+		const direct = [...closure.bodies.keys()].filter((key) =>
+			closure.preciseEdgesOf(key).has(REACT_TO_SECURITY_WRITE),
+		);
+		expect(direct).toEqual([AFTER_RECORD_WRITE]);
+		// 4. deletePortalLocator's chokepoint verdict: nothing it writes reaches the
+		//    matrix past a chokepoint, except a sanctioned DERIVED writer (the dataframe
+		//    slot strip) — however many wrappers deep.
+		const cut = new Set([
+			...Object.keys(RECORD_WRITE_CHOKEPOINTS),
+			...Object.keys(SANCTIONED_DERIVED_WRITERS),
+		]);
+		expect(closure.bypassPath('src/core/relations/save.ts#deletePortalLocator', cut)).toBeNull();
 	});
 
 	test('the revocation is on the COMMIT-ONLY lane, and the cache clear is not', () => {
@@ -802,6 +978,7 @@ import {
 	type Principal,
 	resolvePrincipal,
 } from '../../src/core/security/permissions.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { tool as propagateTool } from '../../tools/tool_propagate_component_data/server/index.ts';
 
 const CENSUS_TAG = `dd128census_${process.pid}_${Math.random().toString(36).slice(2, 8)}`;
@@ -825,6 +1002,10 @@ function profileLocator(profileId: number) {
 }
 
 beforeAll(async () => {
+	// This gate writes users, profiles, a project and TM rows through the raw matrix
+	// doors: ask the suite database's marker first (the 2026-10-02 dd128census_*
+	// rows in an application database were this file, run with no preload).
+	await assertTestDatabase('dd128_write_census_tripwire');
 	// The grant the audit describes: level 2 on the users SECTION and on the PROFILE
 	// component of it. Nothing else — no global-admin flag, no developer flag.
 	managerProfileId = await insertMatrixRecordWithCounter('matrix_profiles', 'dd234', {

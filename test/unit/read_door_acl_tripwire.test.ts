@@ -71,15 +71,14 @@ const census = [...actionKeys, ...toolKeys, ...extraKeys];
 
 /**
  * THE OPEN CEILING — the doors that read component values behind a section
- * grant / record scope only, measured 2026-09-03. Shrink-only: remove an entry
+ * grant / record scope only, measured 2026-09-03 (7); the two AV reads closed
+ * 2026-09-30 (closure Step 3, SEC-2-media → 5). Shrink-only: remove an entry
  * when its door closes; a new entry is a new hole and is refused here.
  */
 const OPEN_CEILING: ReadonlySet<string> = new Set([
 	'dd_core_api:get_section_terms',
 	'dd_core_api:get_indexation_grid',
 	'dd_component_text_area_api:get_tags_info',
-	'dd_component_av_api:get_media_streams',
-	'dd_component_av_api:download_fragment',
 	'dd_component_info:get_widget_data',
 	'dd_utils_api:convert_search_object_to_sql_query',
 ]);

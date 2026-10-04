@@ -103,12 +103,14 @@ psql -At -c "SELECT section_id, jsonb_pretty(relation) FROM matrix
 ## Document what is WIRED, and mark what is inert
 
 An ontology key that exists in real nodes is not proof it does anything.
-`hard_delete` sat on 59 dataframe slot nodes and **nothing read it** from v6
-until 2026-09-06 (its only reader was a commented-out client branch); the page
-had to say so, or a reader copying it got silence. It is wired now (the hard
-value of the slot's `dataframe.delete_policy`), and the page says THAT — with
-the date the meaning changed, because the same key on the same node was inert
-the day before.
+`hard_delete` sits on 59 dataframe slot nodes and **nothing reads it**. v6
+commented its reader out ON PURPOSE ("time machine needs to show the previous
+state, so, never deletes it"), and the page must say it is inert, or a reader
+copying it expects a delete. The cautionary tale: on 2026-09-06 it was taken
+for a forgotten promise, wired as a hard delete, and removed real frame targets
+until 2026-09-29 (WC-2026-09-29-dataframe-hard-delete-retired). A commented-out
+branch is not proof of neglect — read the comment beside it before calling
+a key dead or reviving it.
 
 Before documenting a property as having an effect:
 

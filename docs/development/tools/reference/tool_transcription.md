@@ -32,7 +32,7 @@ The five implemented actions:
 - **Remote ASR status poll** — `checkServerTranscriberStatus` is the client-facing, read-gated poll of a running remote job: it rebuilds the same audio URL `automatic_transcription` submitted and asks the provider for status, without deleting the provider's stored result (`deleteResult: false`) so the detached background poll can still consume it.
 - **Subtitles** — `buildSubtitlesFile` reads the transcription text, resolves the paired `component_av`'s duration, and writes a WEBVTT file under the AV subtitles folder; the target subtitles directory must already exist (it is not created on demand), and the action returns the file's public URL on success.
 
-Permission gating: the write/read target for each action is a nested `media_ddo`/`transcription_ddo` locator, not a top-level RQO field a declarative gate kind can name directly — so `apiActions` declares `permission: null` for every action, and each handler runs the equivalent `record` gate (`assertActionPermission`, level 2 for writes, level 1 for the read-only status poll) against the lifted locator itself. Tool configuration (transcriber URIs/keys, quality list) is read through `getToolConfig('tool_transcription')`.
+Permission gating: the write/read target for each action is a nested `media_ddo`/`transcription_ddo` locator (or, for `build_subtitles_file`, a top-level triple whose RELATED AV must be gated too), which a declarative gate kind cannot name on both halves — so `apiActions` declares `permission: null` for every action, and each handler runs `gateRecord`: the **write door** (`src/core/security/write_door.ts` `authorizeRecordAccess`) on the lifted locator — the section floor, the (section, **component**) pair (level 2 on what the action authors — the transcript; level 1 on the audiovisual SOURCE, which every path only reads or derives throwaway files from: the browser-ASR WAV, the local engine's WAV, the remote engine's `audio` quality, the duration a VTT is cut to — so a transcriber who may hear the recording and write its transcript gets the same answer from every engine), the record scope. Every gate is **unconditional and runs first** — before validation, any config lookup, any ASR call and any file; a ddo without `component_tipo` / `section_tipo`, or a missing `section_id`, is refused as `request.invalid`, and an out-of-scope record as `perm.out_of_scope`. The detached background poll re-runs the write door on the transcription target immediately before it saves, for the principal resolved at that moment — and only while the account is still active (`resolveLivePrincipal`: a deactivated or deleted account is refused even if its profile still grants the component) — so a grant revoked, or an account deactivated, after the enqueue writes nothing. Tool configuration (transcriber URIs/keys, quality list) is read through `getToolConfig('tool_transcription')`.
 
 ### Client
 
@@ -162,15 +162,15 @@ Styling: `css/tool_transcription.less`.
 
 ## Actions & options
 
-`apiActions` declares five actions, each `permission: null` + an imperative gate on the nested locator (see above):
+`apiActions` declares five record actions (plus the install-level model actions), each `permission: null` + the write door on the nested locator (see above):
 
 | Action | Gate | Key options it reads |
 | --- | --- | --- |
-| `automatic_transcription` | `record`/2 on `transcription_ddo.section_tipo`/`section_id` | `source_lang` (`lg-…`), `transcription_ddo` `{component_tipo, section_id, section_tipo}` (where the text is written), `media_ddo` `{…}` (source AV), `transcriber_engine`, `transcriber_quality`, `config` (optional) |
-| `create_transcribable_audio_file` | `record`/2 on `media_ddo.section_tipo`/`section_id` | `media_ddo` `{component_tipo, section_id, section_tipo}` — builds the temporary `audio_tr` WAV/16 kHz/mono and returns its URL |
-| `delete_transcribable_audio_file` | `record`/2 on `media_ddo.section_tipo`/`section_id` | `media_ddo` `{…}` — hard-deletes the `audio_tr` file |
-| `check_server_transcriber_status` | `record`/1 on `media_ddo.section_tipo`/`section_id` (gated only when `media_ddo.section_tipo` is present) | `media_ddo`, `transcriber_engine`, `pid` — rebuilds the submitted audio URL and asks the provider for status |
-| `build_subtitles_file` | `tipo`/2 on `(section_tipo, component_tipo)`, plus a `record`/2 scope check on `section_id` when present | `component_tipo`, `section_tipo`, `section_id`, `lang`, `max_charline`, `key` — builds the WEBVTT file and returns its URL |
+| `automatic_transcription` | write door, write/2 on `transcription_ddo` (component REQUIRED) + read/1 on `media_ddo`; the background save re-gates write/2 | `source_lang` (`lg-…`), `transcription_ddo` `{component_tipo, section_id, section_tipo}` (where the text is written), `media_ddo` `{…}` (source AV), `transcriber_engine`, `transcriber_quality`, `config` (optional) |
+| `create_transcribable_audio_file` | write door, read/1 on `media_ddo` (section, component, record) — the WAV is a derivative of the AV, the level every WAV-deriving path asks — with the SECTION at write/2: the WAV is one shared file per record | `media_ddo` `{component_tipo, section_id, section_tipo}` — builds the temporary `audio_tr` WAV/16 kHz/mono and returns its URL |
+| `delete_transcribable_audio_file` | write door, read/1 on `media_ddo` with the SECTION at write/2 — the same level as its creation: deleting the one shared WAV affects every other user of the record, so a read-only viewer may not | `media_ddo` `{…}` — hard-deletes the `audio_tr` file |
+| `check_server_transcriber_status` | write door, read/1 on `media_ddo` — unconditional, before validation — then the POLL HANDLE: `pid` must be the handle `automatic_transcription` issued to this user for this record | `media_ddo`, `pid` (the handle) — polls the handle's job on the handle's engine and answers `{status, msg?}` only; a handle that does not verify or belongs to another user or record answers `{status: 1}` without polling anything. `transcriber_engine` is no longer read |
+| `build_subtitles_file` | write door, write/2 on `(section_tipo, component_tipo, section_id)` (the transcript the VTT is derived from) AND read/1 on the RELATED AV (whose duration it reads and whose media folder receives the VTT) — unconditional, before the record is read | `component_tipo`, `section_tipo`, `section_id`, `lang`, `max_charline`, `key` — builds the WEBVTT file and returns its URL |
 
 Notes:
 
@@ -236,9 +236,11 @@ const rqo = {
     }
 }
 data_manager.request({ body: rqo, retries: 1, timeout: 3600 * 1000 })
-// → response.result.pid; the client then polls check_server_transcriber_status with
-//   that pid every ~4s until the job completes, while a detached server-side poll
-//   writes the finished transcript back automatically
+// → response.data.pid — an OPAQUE poll handle (not the transcriber's job id): it is
+//   bound to this user, this engine and this recording, and sealed per server process.
+//   The client polls check_server_transcriber_status with it every ~4s until the job
+//   completes, while a detached server-side poll writes the finished transcript back
+//   automatically (the status poll never returns the text itself)
 ```
 
 `build_subtitles_file()` generates the VTT file once a transcript is ready:
@@ -275,6 +277,15 @@ client, the things that fail silently rather than loudly:
 | severity paint | Every emittable severity has a rule in the `.less` AND in the committed `.css`; and the panel prefixes the class (`severity_error`), so no row can collide with a page-wide utility. |
 | readiness facts | The language line renders no `undefined` when a project language has no 2-letter code, and the model line names its model. |
 | interrupted-run recovery | Partials stay isolated per model, records in the older single-slot shape still migrate, a finished run clears only its own slot, both resume remedies are pressable AND handled, and the unload guard is armed and disarmed at every exit. |
+
+`test/unit/tool_transcription_gate_native.test.ts` drives every record action through
+its handler with real identities (the component denied, out of scope, a missing ddo key,
+the transcript writable but its AV not, the transcript in scope but ONLY the media record
+out of scope) and asserts the refusal code — and, for the media source, that it names the
+AV — AND that nothing was produced: no WAV, no VTT, no config or provider call. Its
+background-save legs read the STORED transcription back: a grant revoked, or the account
+deactivated, between the enqueue and the save leaves it empty; the live, granted twin
+stores the transcript.
 
 The pure client functions are tested as the REAL bytes — sliced out of the source
 by their `}//end <name>` terminator, which the slice asserts — rather than

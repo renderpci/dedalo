@@ -62,19 +62,42 @@ async function callJobStatus(
 }
 
 describe('tool_upload module', () => {
-	test('loads with process_uploaded_file (record/WRITE) + get_job_status', async () => {
+	test('loads with process_uploaded_file (record_tipo/WRITE) + get_job_status', async () => {
 		const loaded = await getLoadedTool('tool_upload');
 		expect(loaded).not.toBeNull();
 		const actions = loaded!.module.apiActions;
 		expect(Object.keys(actions).sort()).toEqual(['get_job_status', 'process_uploaded_file']);
 		const upload = mustGet(actions.process_uploaded_file, 'process_uploaded_file');
-		expect(upload.permission).toBe('record');
+		// The handler writes ONE component (its file + files_info): the pair gate.
+		expect(upload.permission).toBe('record_tipo');
 		expect(upload.minLevel).toBe(2);
 		// The poll wire has no section/record target in its payload for a
 		// declarative gate to read — it authorizes on the job record instead.
 		expect(mustGet(actions.get_job_status, 'get_job_status').permission).toBeNull();
 		// Nothing here forks: the transcode job is started by the ingest itself.
 		expect(loaded!.module.backgroundRunnable).toBeUndefined();
+	});
+
+	// THE SELF-SERVICE CARVE-OUT REACHES THE UPLOAD (closure Step 3 review r8): the
+	// `record` kind names no component, so it refused dd128/-1 for every caller —
+	// root uploading its OWN user image included. record_tipo sees the
+	// self-service write (dd522 is a self-editable component of one's own account).
+	test('process_uploaded_file: root uploads its OWN image (dd128, dd522, -1) through the real gate; without the component it is refused', async () => {
+		const loaded = await getLoadedTool('tool_upload');
+		const spec = mustGet(loaded!.module.apiActions.process_uploaded_file, 'process_uploaded_file');
+		const root = await resolvePrincipal(-1);
+		const { assertActionPermission } = await import('../../src/core/tools/security.ts');
+		expect(
+			await assertActionPermission(
+				spec,
+				{ section_tipo: 'dd128', tipo: 'dd522', section_id: -1 },
+				root,
+			),
+		).toEqual({ ok: true });
+		// TWIN: the same target naming no component is not a record_tipo target.
+		expect(
+			(await assertActionPermission(spec, { section_tipo: 'dd128', section_id: -1 }, root)).ok,
+		).toBe(false);
 	});
 
 	test('process_uploaded_file fails cleanly (never throws) on an unusable payload', async () => {

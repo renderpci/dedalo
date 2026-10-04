@@ -290,7 +290,9 @@ describe("'misconfigured' rather than a bare []", () => {
 		await clearOntologyDerivedCaches();
 		const item = await emitOne(REMOTE_ID);
 		expect(item.entries).toEqual([]);
-		expect((item.source_status as { state: string }).state).toBe('misconfigured');
+		// Classified via the DOOR (blocked_host), so the real service is named —
+		// before 2026-09-27 parse refused and it read 'unknown'.
+		expect(item.source_status).toMatchObject({ state: 'misconfigured', service: 'zenon' });
 	});
 });
 

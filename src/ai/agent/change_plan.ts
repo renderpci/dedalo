@@ -6,10 +6,13 @@
  * (`{op_id, tool, args, summary}`), with `{ref: <op_id>}` chaining later ops
  * onto records created earlier in the same plan. The plan is:
  *
- *   1. VALIDATED here (dry-run: tool exists+write, section allowlist,
- *      level>=2 permission, field labels resolved AND STAMPED to tipos,
- *      concrete record targets scope-checked, refs point at earlier
- *      create-ops) — the human confirms the RESOLVED plan, not a vague one;
+ *   1. VALIDATED here (dry-run: tool exists+write, section allowlist, field
+ *      labels resolved AND STAMPED to tipos, refs point at earlier create-ops,
+ *      and every op authorized by THE WRITE DOOR its tool asks at apply —
+ *      security/write_door.ts, closure Step 3 req 7: grammar, section floor,
+ *      the dd128-aware pair, the write scope with the non-positive-id refusal
+ *      ahead of the admin bypass) — the human confirms the RESOLVED plan, and
+ *      never one its own apply would refuse;
  *   2. HASHED over canonical JSON (sorted keys) — apply recomputes the hash,
  *      so what executes is byte-what was confirmed (plan_hash_mismatch else);
  *   3. APPLIED statelessly: the client resends the full plan; every gate
@@ -24,8 +27,14 @@
  */
 
 import { z } from 'zod';
+import { canonicalJson } from '../../core/concepts/canonical_json.ts';
 import { toStructuredErr } from '../../core/errors/convert.ts';
 import { DedaloError } from '../../core/errors/dedalo_error.ts';
+import {
+	authorizeRecordAccess,
+	authorizeSectionRecord,
+	authorizeSectionTarget,
+} from '../../core/security/write_door.ts';
 import type { Structured } from '../mcp/envelope.ts';
 import {
 	getToolSpec,
@@ -89,21 +98,6 @@ const CREATE_TOOLS: ReadonlySet<string> = new Set([
 // ---------------------------------------------------------------------------
 // Canonical hash
 // ---------------------------------------------------------------------------
-
-/** JSON.stringify with recursively sorted object keys (canonical form). */
-function canonicalJson(value: unknown): string {
-	if (Array.isArray(value)) {
-		return `[${value.map(canonicalJson).join(',')}]`;
-	}
-	if (value !== null && typeof value === 'object') {
-		const entries = Object.entries(value as Record<string, unknown>)
-			.filter(([, entryValue]) => entryValue !== undefined)
-			.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-			.map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalJson(entryValue)}`);
-		return `{${entries.join(',')}}`;
-	}
-	return JSON.stringify(value) ?? 'null';
-}
 
 /** SHA-256 hex of the plan's canonical JSON (plan_hash itself excluded). */
 export function hashChangePlan(plan: ChangePlan): string {
@@ -171,6 +165,130 @@ function substituteRefs(value: unknown, created: Record<string, number>): unknow
 // ---------------------------------------------------------------------------
 
 /**
+ * WHAT EACH WRITE TOOL'S OP TOUCHES — the component its value lands in (`field`,
+ * stamped to a tipo above, or save_component's `tipo`), or the whole record
+ * (`record`), or a new record (`create`; find_or_create adds every match/set
+ * field's pair, exactly its tool's own pre-flight). A write tool with no row is
+ * REFUSED: a plan the validator cannot authorize is never confirmed (fail closed,
+ * so a new registry write tool must be taught its target here first —
+ * agent_change_plan's "every write tool has a plan target" leg).
+ */
+const OP_TARGET: Readonly<Record<string, 'field' | 'tipo' | 'record' | 'create'>> = {
+	dedalo_set_field: 'field',
+	dedalo_portal_link: 'field',
+	dedalo_portal_unlink: 'field',
+	dedalo_upload_media: 'field',
+	dedalo_save_component: 'tipo',
+	dedalo_delete_record: 'record',
+	dedalo_duplicate_record: 'record',
+	dedalo_create_record: 'create',
+	dedalo_find_or_create: 'create',
+};
+
+/** The write door's question for one op, at write level 2 (the door the tool itself asks at apply). */
+async function authorizeOp(
+	principal: RegistryPrincipal,
+	op: ChangeOp,
+	sectionTipo: string,
+): Promise<void> {
+	const door = `agent.change_plan.${op.tool}`;
+	const shape = OP_TARGET[op.tool];
+	try {
+		if (shape === undefined) {
+			throw new DedaloError('request.invalid', {
+				publicMessage: `Op '${op.op_id}': '${op.tool}' has no plan target rule.`,
+			});
+		}
+		if (shape === 'create') {
+			await authorizeCreateOp(principal, op, sectionTipo, door);
+			return;
+		}
+		const component = shape === 'record' ? undefined : op.args[shape];
+		await authorizeTargetOp(principal, sectionTipo, component, op.args.section_id, door);
+	} catch (error) {
+		throw withOpId(error, op.op_id);
+	}
+}
+
+/**
+ * A record-addressed op. A {ref} id is a record THIS plan creates: it does not
+ * exist yet, so its section / pair is the question now and the full door
+ * (scope included) is re-asked by the tool at apply. Any other id — a string, a
+ * non-integer, 0, a negative — goes to the door as given: grammar, the section
+ * floor, the dd128-aware pair, the scope with the non-positive-id refusal ahead
+ * of the admin bypass.
+ */
+async function authorizeTargetOp(
+	principal: RegistryPrincipal,
+	sectionTipo: string,
+	component: unknown,
+	sectionId: unknown,
+	door: string,
+): Promise<void> {
+	if (isRef(sectionId)) {
+		await authorizeSectionTarget(
+			principal,
+			{ section_tipo: sectionTipo, tipo: component },
+			{ level: 2, door },
+		);
+		return;
+	}
+	if (component === undefined) {
+		await authorizeSectionRecord(
+			principal,
+			{ section_tipo: sectionTipo, section_id: sectionId },
+			{ level: 2, door },
+		);
+		return;
+	}
+	await authorizeRecordAccess(
+		principal,
+		{ section_tipo: sectionTipo, component_tipo: component, section_id: sectionId },
+		{ mode: 'write', level: 2, sectionFloor: 1, door },
+	);
+}
+
+/** A create (create_record / find_or_create): the section level, plus every match/set field's pair. */
+async function authorizeCreateOp(
+	principal: RegistryPrincipal,
+	op: ChangeOp,
+	sectionTipo: string,
+	door: string,
+): Promise<void> {
+	await authorizeSectionTarget(principal, { section_tipo: sectionTipo }, { level: 2, door });
+	const rules = [...ruleFields(op.args.match), ...ruleFields(op.args.set)];
+	for (const field of rules) {
+		const tipo = await resolveFieldReference(sectionTipo, field);
+		await authorizeSectionTarget(
+			principal,
+			{ section_tipo: sectionTipo, tipo },
+			{ level: 2, door },
+		);
+	}
+}
+
+/** The `field` of every {field, …} rule of a find_or_create match/set list. */
+function ruleFields(value: unknown): string[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.map((rule) => (rule as { field?: unknown } | null)?.field)
+		.filter((field): field is string => typeof field === 'string');
+}
+
+/** A refusal re-thrown with WHICH op it refused, as the extension key the model reads. */
+function withOpId(error: unknown, opId: string): unknown {
+	if (!(error instanceof DedaloError)) return error;
+	return new DedaloError(error.code, {
+		message: error.message,
+		details: error.details,
+		coordinates: error.coordinates,
+		publicMessage: error.publicMessage,
+		extend: { ...error.extend, op_id: opId },
+		cause: error,
+	});
+}
+
+/**
  * Dry-run the plan under the principal + gates: every failure throws a
  * DedaloError the caller envelopes (toStructuredErr). Returns the RESOLVED plan (field labels
  * stamped to tipos) with its hash — that is what the human confirms.
@@ -190,11 +308,6 @@ export async function validateChangePlan(
 		});
 	}
 	const plan = parsed.data as ChangePlan;
-
-	const { getPermissions, getRecordComponentPermission } = await import(
-		'../../core/security/permissions.ts'
-	);
-	const { principalCanAccessRecord } = await import('../../core/security/record_scope.ts');
 
 	const seenOps = new Set<string>();
 	const createOps = new Set<string>();
@@ -246,44 +359,11 @@ export async function validateChangePlan(
 		// the exact component the apply will touch (never re-guessed later).
 		if (typeof op.args.field === 'string') {
 			op.args.field = await resolveFieldReference(sectionTipo, op.args.field);
-			// P1-2 (SEC-03): through the RECORD-addressed resolver, so the dd128
-			// own-record rule applies here exactly as it does at the human save door.
-			// `op.args.section_id` is the concrete target when the op names one; a
-			// ref-shaped op has none yet, and the apply re-runs this validation with
-			// the resolved id through the tools' own gates.
-			const opSectionId =
-				typeof op.args.section_id === 'number' ? Math.floor(op.args.section_id) : null;
-			if (
-				(await getRecordComponentPermission(
-					principal,
-					sectionTipo,
-					op.args.field as string,
-					opSectionId,
-				)) < 2
-			) {
-				throw new DedaloError('perm.denied', {
-					coordinates: { section_tipo: sectionTipo, tipo: op.args.field as string },
-					extend: { op_id: op.op_id },
-				});
-			}
-		} else if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 2) {
-			throw new DedaloError('perm.denied', {
-				coordinates: { section_tipo: sectionTipo },
-				extend: { op_id: op.op_id },
-			});
 		}
 
-		// Concrete record targets must be in the principal's scope NOW (refs are
-		// re-checked at apply through the tools' own gates).
-		const concreteId = op.args.section_id;
-		if (typeof concreteId === 'number') {
-			if (!(await principalCanAccessRecord(sectionTipo, concreteId, principal))) {
-				throw new DedaloError('perm.out_of_scope', {
-					coordinates: { section_tipo: sectionTipo, section_id: concreteId },
-					extend: { op_id: op.op_id },
-				});
-			}
-		}
+		// THE WRITE DOOR (closure Step 3 req 7): the op is authorized by the SAME
+		// door its tool asks at apply — never a weaker preview of it.
+		await authorizeOp(principal, op, sectionTipo);
 
 		if (CREATE_TOOLS.has(op.tool)) createOps.add(op.op_id);
 	}

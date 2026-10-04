@@ -81,6 +81,27 @@
  *       [--audit-base <sha>]      # the push's `before`: what the remote had (the pre-push
  *                                 # hook passes its remote sha; default: host upstream)
  *   Any mode: [--summary <file.json>]
+ *   bun run ci:local --docker --record-unit-baseline [--allow-regression --reason "<why>"]
+ *                                 # RECORD engineering/unit_baseline.json in the CI image
+ *   bun run ci:local --docker --record-unit-baseline --new <file>[,<file>…]
+ *                                 # record ONLY new files' floors (unit_baseline --record-new)
+ *
+ * RECORDING THE UNIT BASELINE (`--record-unit-baseline`, --docker only). The unit tier's
+ * per-file floors and red set are a fact about the IMAGE (its toolchain, its uid, the
+ * files a clone has and a desk has besides), so the baseline the runner checks against
+ * is recorded where the runner runs: the db tier alone, in the image, with db_tier.sh's
+ * unit stage switched to the WRITER (`DEDALO_CI_UNIT_RECORD_OUT`, its record mode — the
+ * same suite build, MariaDB start, installs and DB-tripwire stage the check runs after,
+ * not a second copy of them). The written JSON leaves the container through the one
+ * WRITABLE mount, /ci-out, and is copied into this checkout; the source mounts stay
+ * read-only. `--allow-regression` requires `--reason` (the commit message carries it; the
+ * writer prints every regression it accepted). Host mode refuses the flag, and the
+ * writer itself refuses outside the image (UNIT_TIER.recordOnlyInCiImage) — a Mac
+ * recording is impossible from either door. `--new <files>` swaps the full writer for
+ * `--record-new` (a new test file's floor, nothing else; refuses a red). The written file
+ * is copied into the checkout only when the WHOLE db tier is green (recordCopyFault), and
+ * `--ref` must name this checkout's HEAD on a clean tree (recordRefFault) — the recording
+ * is written into this tree, so it must have measured this tree.
  *
  * The db and instance tiers each DROP AND REBUILD their own suite database. In host mode
  * that is `dedalo_ci_test` on your Postgres (distinct from the one `bun run
@@ -168,10 +189,26 @@ const BOOLEAN_FLAGS = new Set([
 	'--docker',
 	'--build',
 	'--fail-fast',
+	'--record-unit-baseline',
+	'--allow-regression',
 	'--help',
 	'-h',
 ]);
-const VALUE_FLAGS = new Set(['--summary', '--ref', '--base', '--audit-base']);
+const VALUE_FLAGS = new Set(['--summary', '--ref', '--base', '--audit-base', '--reason', '--new']);
+
+/**
+ * Flags that EXISTED and were removed, refused with why — never as a generic unknown flag,
+ * so an old habit (a shell alias, a stale hook copy) learns what changed instead of
+ * guessing. `--skip-advisory` skipped db_tier.sh's unit stage on the desk while that stage
+ * could not fail its tier; since 2026-10-02 it can, so a desk that skipped it would pass
+ * what the runner refuses (ci_local_native §6).
+ */
+export const RETIRED_FLAGS: ReadonlyMap<string, string> = new Map([
+	[
+		'--skip-advisory',
+		'--skip-advisory is retired (2026-10-02): the unit stage is blocking, so the desk runs it too',
+	],
+]);
 
 interface Args {
 	flags: Set<string>;
@@ -198,6 +235,8 @@ function parseArgs(argv: string[]): Args {
 			values.set(name, value as string);
 		} else if (BOOLEAN_FLAGS.has(arg)) {
 			flags.add(arg);
+		} else if (RETIRED_FLAGS.has(name)) {
+			fail(RETIRED_FLAGS.get(name) as string);
 		} else {
 			fail(`unknown argument '${arg}' (bun run ci:local --help)`);
 		}
@@ -249,6 +288,112 @@ export function gitScrubbedEnv(
 	);
 }
 
+/** Where the container sees the run's one WRITABLE mount (the recorded baseline's way out). */
+export const CONTAINER_OUT = '/ci-out';
+
+/**
+ * `--record-unit-baseline` → db_tier.sh's record mode. ALWAYS both keys, set explicitly
+ * (`''` / `'0'` when not recording), so a value exported in the caller's shell never turns
+ * a check into a write. `out` is the directory the TIER sees: /ci-out in the container.
+ */
+export function recordEnv(
+	args: Pick<Args, 'flags'> & { values?: ReadonlyMap<string, string> },
+	out: string,
+): {
+	DEDALO_CI_UNIT_RECORD_OUT: string;
+	DEDALO_CI_UNIT_RECORD_ALLOW: '0' | '1';
+	DEDALO_CI_UNIT_RECORD_NEW: string;
+} {
+	const recording = args.flags.has('--record-unit-baseline');
+	const fresh = recording ? recordNewFiles(args.values?.get('--new')) : [];
+	return {
+		DEDALO_CI_UNIT_RECORD_OUT: recording ? out : '',
+		DEDALO_CI_UNIT_RECORD_ALLOW: recording && args.flags.has('--allow-regression') ? '1' : '0',
+		// Space-joined for db_tier.sh's word split — recordArgsFault admits only paths with
+		// no space or glob character, so the split is exact.
+		DEDALO_CI_UNIT_RECORD_NEW: fresh.join(' '),
+	};
+}
+
+/** `--new a,b` → the files a `--record-new` recording names (empty when not given). */
+export function recordNewFiles(value: string | undefined): string[] {
+	if (value === undefined) return [];
+	return value
+		.split(',')
+		.map((file) => file.trim())
+		.filter((file) => file !== '');
+}
+
+/**
+ * A `--new` path the recording may pass through db_tier.sh's word split: a unit-tier test
+ * file (test/unit or test/integration), repo-relative, no `..`, no space, no glob or
+ * shell character. Anything else is refused before docker starts.
+ */
+const RECORD_NEW_PATH = /^test\/(?:unit|integration)\/[A-Za-z0-9_-][A-Za-z0-9_./-]*\.test\.ts$/;
+
+/**
+ * The flag combinations a recording refuses, as the message, or null. A recording is the
+ * db tier alone, in the image, run in full: host mode would record the desk (the very
+ * thing the image exists to avoid), another tier adds nothing, `--fail-fast` has one tier
+ * to stop. `--allow-regression`
+ * without a `--reason` is a ratchet loosened with no why, and the reverse is a reason for
+ * nothing.
+ */
+export function recordArgsFault(args: Args): string | null {
+	const recording = args.flags.has('--record-unit-baseline');
+	if (!recording) {
+		if (
+			args.flags.has('--allow-regression') ||
+			args.values.has('--reason') ||
+			args.values.has('--new')
+		)
+			return '--allow-regression / --reason / --new belong to --record-unit-baseline';
+		return null;
+	}
+	if (!args.flags.has('--docker'))
+		return '--record-unit-baseline needs --docker: the unit baseline is recorded in the CI image, never on this machine';
+	for (const flag of ['--hermetic', '--instance', '--fail-fast', '--keep'])
+		if (args.flags.has(flag)) return `--record-unit-baseline runs the db tier alone; drop ${flag}`;
+	const reason = args.values.get('--reason');
+	if (args.flags.has('--allow-regression') && (reason === undefined || reason.trim().length < 20))
+		return '--allow-regression needs --reason "<why, per file>" (≥ 20 characters) — the commit message must carry it';
+	if (!args.flags.has('--allow-regression') && reason !== undefined)
+		return '--reason without --allow-regression: there is no accepted regression to explain';
+	if (args.values.has('--new')) {
+		// --record-new only ADDS a new file's floor and refuses a red: there is no
+		// regression for --allow-regression to accept.
+		if (args.flags.has('--allow-regression'))
+			return '--new records new files only and refuses a red — --allow-regression has nothing to accept there';
+		const files = recordNewFiles(args.values.get('--new'));
+		if (files.length === 0) return '--new needs <file>[,<file>…] (test/unit or test/integration)';
+		const bad = files.filter((file) => !RECORD_NEW_PATH.test(file) || file.includes('..'));
+		if (bad.length > 0)
+			return `--new takes unit-tier test files (test/unit|test/integration/…/*.test.ts, no spaces): ${bad.join(', ')}`;
+	}
+	return null;
+}
+
+/**
+ * `--record-unit-baseline --ref <rev>`: the recording measures <rev> and writes the result
+ * into THIS checkout, so <rev> must be what the checkout IS — HEAD, with a clean working
+ * tree (a dirty tree is not HEAD's tree; drop `--ref` to record the working tree, which is
+ * what the plain recording measures). Anything else would commit one tree's floors beside
+ * another tree's tests. Pure: the caller resolves the shas and the dirt.
+ */
+export function recordRefFault(
+	ref: string | undefined,
+	refSha: string,
+	headSha: string,
+	dirty: boolean,
+): string | null {
+	if (ref === undefined) return null;
+	if (refSha !== headSha)
+		return `--record-unit-baseline --ref ${ref} (${refSha.slice(0, 12)}) is not this checkout's HEAD (${headSha.slice(0, 12)}): its measurement would be written into a different tree — check out ${ref} first, or drop --ref`;
+	if (dirty)
+		return `--record-unit-baseline --ref ${ref}: the working tree has changes, so the checkout is not ${ref}'s tree — commit or drop them, or drop --ref to record the working tree`;
+	return null;
+}
+
 /** Could-not-run: exit 2, distinct from a red tier (1). */
 function fail(message: string): never {
 	console.error(`ci:local: ${message}`);
@@ -257,9 +402,9 @@ function fail(message: string): never {
 
 // ── stage parsing ────────────────────────────────────────────────────────────
 
-type StageVerdict = 'green' | 'red' | 'skipped' | 'advisory';
+type StageVerdict = 'green' | 'red' | 'skipped';
 
-interface Stage {
+export interface Stage {
 	name: string;
 	verdict: StageVerdict;
 	fix_hint: string | null;
@@ -305,7 +450,6 @@ const TEST_FILE_HEADER = /^(?:::group::|##\[group\])?(\S+\.test\.[cm]?[jt]sx?):$
  * The tier scripts' OWN stage protocol, read back:
  *   `== <prefix>: <label>`                  a stage begins
  *   `== <prefix>: RED in <what> (exit N)`   the running stage is red
- *   `== <prefix>: … — ADVISORY …`           the running stage drifted but does not fail the tier
  *   `== <prefix>: RED` / `GREEN` / `OK`     the tier's own final verdict (not a stage)
  *   `== <other>: SKIPPED — <why>`           a child (audit.ts) skipped the running stage
  *   `== workflow_step: <command>`           (ci:local's own) a workflow `run:` step, as a stage
@@ -383,15 +527,15 @@ export function parseStages(
 				stage.verdict = 'red';
 				stage.notes.push(text);
 			}
-		} else if (/^(RED|GREEN|OK)\b/.test(text)) {
-			// the tier's final verdict line
-		} else if (/ADVISORY/.test(text) && !/\[ADVISORY\]\s*$/.test(text)) {
-			// `… drift (exit N) — ADVISORY, not failing the tier`; a HEADER that merely
-			// labels its stage `[ADVISORY]` opens a stage like any other (below).
+		} else if (text.startsWith('SKIPPED')) {
+			// the tier skipped its OWN open stage; a red verdict already recorded is never
+			// downgraded
 			if (stage !== undefined && stage.verdict === 'green') {
-				stage.verdict = 'advisory';
+				stage.verdict = 'skipped';
 				stage.notes.push(text);
 			}
+		} else if (/^(RED|GREEN|OK)\b/.test(text)) {
+			// the tier's final verdict line
 		} else if (/^(bun \d|installing )/.test(text)) {
 			// a version banner / a toolchain note, not a stage
 			stage?.lines.push(line);
@@ -415,7 +559,7 @@ export function parseStages(
 		const { lines, ...rest } = stage;
 		return {
 			...rest,
-			fix_hint: stage.verdict === 'red' || stage.verdict === 'advisory' ? fixHint(stage) : null,
+			fix_hint: stage.verdict === 'red' ? fixHint(stage) : null,
 		};
 	});
 }
@@ -465,8 +609,11 @@ function fixHint(stage: Stage): string {
 		return 'cd publication/<site_builder|server_api/v2> && bun install --frozen-lockfile && bunx tsc --noEmit && bun test (all pass + exit 1 = coverageThreshold)';
 	if (name.includes('suite database'))
 		return 'bun run test:db:setup (the suite build itself failed — every later stage never ran)';
+	if (name.startsWith('recording engineering/unit_baseline.json'))
+		return 'the writer REFUSED (see REGRESSIONS above): fix each, or re-record with --allow-regression --reason naming the cause per file';
 	if (name.includes('unit tier'))
-		return `bun run scripts/unit_baseline.ts --check — ${driftHint ?? `drift: ${bank} --with-db`}`;
+		// Recorded in the CI image only (UNIT_TIER.recordOnlyInCiImage) — never a desk bank.
+		return `bun run scripts/unit_baseline.ts --check — ${grew && driftHint !== undefined ? driftHint : 'drift: re-record in the image: bun run ci:local --docker --record-unit-baseline'}`;
 	if (name.includes('parity'))
 		return `bun run scripts/parity_baseline.ts --check — ${driftHint ?? `drift: ${bank} --with-db`}; an intended wire change needs an engineering/wire_contract/ entry the same day`;
 	if (name.includes('client suite'))
@@ -628,6 +775,8 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 				.map((key) => [key, process.env[key]]),
 		),
 		DEDALO_PRIVATE_DIR: privateDir,
+		// Never records on the host (recordArgsFault refuses the flag): both keys pinned off.
+		...recordEnv({ flags: new Set() }, ''),
 		...(binPath === undefined ? {} : { DEDALO_PG_BIN_PATH: binPath }),
 	};
 
@@ -656,12 +805,21 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 /**
  * What runs INSIDE the container, written to /ci-in/driver.sh (the compose entrypoint).
  *
- * As root, only: create `runner` at uid/gid 1001 (the GitHub-hosted runner's), give it its
- * home and the bun cache mount. Then everything else as `runner` via `runuser` — which,
- * without `-l`, keeps the compose environment and sets HOME/USER/SHELL, as a runner step
- * sees them.
+ * As root, only: give uid 1001 its home and the bun cache mount. Then everything else as
+ * BARE uid 1001, gid 0 — exactly what `--user 1001` makes on BOTH hosts (GitHub's
+ * `options: --user 1001`, GitLab's `docker: user: "1001"`): NO passwd entry, so no user
+ * name (`id -un` fails, os.userInfo().username is 'unknown'), groups = {0}. A named
+ * `runner` account here once hid a GitLab-only red (2026-10-01: a site_builder gate
+ * passed `-user <name>` to find). `setpriv` sets ids and nothing else, so HOME is set
+ * explicitly (each host sets its own; none is `/`, docker's default for a nameless uid).
  *
- * As runner: clone the host's COMMON git dir (mounted read-only at CONTAINER_GIT) SHARING
+ * PID 1 NEVER REAPS ORPHANS, as on GitHub (`tail -f /dev/null`, steps arrive by `docker
+ * exec`): perl stays PID 1 and waits ONLY on its own child (waitpid(pid), never -1), so a
+ * killed detached server stays a zombie — the condition suite_mariadb's pidAlive guards.
+ * An exec'd bash as PID 1 would reap it and hide that path. The child's exit status (or
+ * 128+signal) is perl's.
+ *
+ * As uid 1001: clone the host's COMMON git dir (mounted read-only at CONTAINER_GIT) SHARING
  * its object store — full history, nothing copied — check out the requested sha on the branch name a push checkout has, and, in
  * working-tree mode, lay the host's changes over it and COMMIT them, so HEAD is the tree
  * under test and HEAD^ is the commit you are standing on (see the header: the crap
@@ -670,12 +828,12 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 const IN_CONTAINER_DRIVER = `#!/usr/bin/env bash
 set -euo pipefail
 if [ "$(id -u)" = 0 ]; then
-	getent group 1001 >/dev/null || groupadd -g 1001 runner
-	id runner >/dev/null 2>&1 || useradd -u 1001 -g 1001 -M -d /home/runner -s /bin/bash runner
 	mkdir -p /home/runner/work/dedalo /home/runner/work/_temp /home/runner/.bun/install/cache
-	chown runner:runner /home/runner /home/runner/work /home/runner/work/dedalo /home/runner/work/_temp \\
+	chown 1001:0 /home/runner /home/runner/work /home/runner/work/dedalo /home/runner/work/_temp \\
 		/home/runner/.bun /home/runner/.bun/install /home/runner/.bun/install/cache
-	exec runuser -u runner -- bash /ci-in/driver.sh
+	exec perl -e 'my $p = fork(); die "fork: $!" unless defined $p; if (!$p) { exec @ARGV or die "exec: $!" } waitpid($p, 0); exit(($? & 127) ? 128 + ($? & 127) : $? >> 8)' \\
+		setpriv --reuid=1001 --regid=0 --clear-groups -- \\
+		env -u USER -u LOGNAME HOME=/home/runner bash /ci-in/driver.sh
 fi
 cd /home/runner/work/dedalo
 echo "== ci:local(docker): image $(cat /etc/dedalo-ci-image 2>/dev/null | cut -c1-12) · $(uname -m) · uid $(id -u) · bun $(bun --version)"
@@ -939,6 +1097,16 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 	// What to run: an exact commit (--ref), or HEAD + the working tree as one commit.
 	const ref = args.values.get('--ref');
 	const sha = git(['rev-parse', '--verify', `${ref ?? 'HEAD'}^{commit}`]).trim();
+	if (args.flags.has('--record-unit-baseline') && ref !== undefined) {
+		const lists = workingTreeLists();
+		const refFault = recordRefFault(
+			ref,
+			sha,
+			git(['rev-parse', '--verify', 'HEAD^{commit}']).trim(),
+			lists.copy.length + lists.remove.length > 0,
+		);
+		if (refFault !== null) fail(refFault);
+	}
 	const branchName = git(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
 	const branch = branchName === 'HEAD' || branchName === '' ? 'master' : branchName;
 	const base = args.values.get('--base');
@@ -954,6 +1122,10 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 	const inputs = mkdtempSync(join(tmpdir(), 'dedalo-ci-docker-'));
 	chmodSync(inputs, 0o755);
 	writeFileSync(join(inputs, 'driver.sh'), IN_CONTAINER_DRIVER, { mode: 0o644 });
+	// The ONE writable mount (/ci-out): empty, world-writable (the container writes as
+	// uid 1001, not as you), removed after the run. Only a recording writes to it.
+	const outputs = mkdtempSync(join(tmpdir(), 'dedalo-ci-out-'));
+	chmodSync(outputs, 0o777);
 	let overlay = false;
 	if (ref === undefined) {
 		const lists = workingTreeLists();
@@ -990,6 +1162,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 			]),
 		),
 		DEDALO_CI_IN: inputs,
+		DEDALO_CI_OUT: outputs,
 		DEDALO_CI_SHA: sha,
 		DEDALO_CI_BRANCH: base === undefined ? branch : `ci-local-pr`,
 		DEDALO_CI_GITHUB_REF: base === undefined ? `refs/heads/${branch}` : 'refs/pull/0/merge',
@@ -997,6 +1170,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 		DEDALO_CI_BASE_REF: base ?? '',
 		DEDALO_CI_AUDIT_BASE: auditBase,
 		DEDALO_CI_OVERLAY: overlay ? '1' : '0',
+		...recordEnv(args, CONTAINER_OUT),
 		// compose.yml REQUIRES this (`:?`) for every command it parses, `down` included —
 		// without it the teardown fails to interpolate and leaks the project's network.
 		DEDALO_CI_TIER_SCRIPT: 'none',
@@ -1030,6 +1204,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 			teardown(activeProject);
 		}
 		rmSync(inputs, { recursive: true, force: true });
+		rmSync(outputs, { recursive: true, force: true });
 		process.exit(130);
 	};
 	process.on('SIGINT', onSignal);
@@ -1064,17 +1239,76 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 				activeProject = undefined;
 			}
 		}
+		if (args.flags.has('--record-unit-baseline'))
+			copyRecordedBaseline(
+				outputs,
+				args,
+				results.find((result) => result.tier === 'db'),
+			);
 	} finally {
 		process.off('SIGINT', onSignal);
 		process.off('SIGTERM', onSignal);
 		rmSync(inputs, { recursive: true, force: true });
+		rmSync(outputs, { recursive: true, force: true });
 	}
 	return results;
 }
 
+/** The baseline the recording writes, repo-relative (scripts/unit_baseline.ts BASELINE_PATH). */
+const UNIT_BASELINE = 'engineering/unit_baseline.json';
+
+/**
+ * May a recording that LEFT the container (the writer did not refuse) be copied into the
+ * checkout? Only when the db tier it ran in is GREEN. The writer's own verdict is not
+ * enough: a red suite build, DB-tripwire, parity or MariaDB stage means the platform the
+ * floors were measured on was not the runner's healthy one (a half-built suite DB, a dead
+ * MariaDB skipping the gates that need it) — a baseline frozen there is a broken run's
+ * numbers, and committing it would make the runner check against them. Refused LOUDLY,
+ * naming the red stages; the checkout's file is left as it was. Pure, for the gate.
+ */
+export function recordCopyFault(result: TierResult | undefined): string | null {
+	if (result === undefined) return 'the db tier never ran — nothing was recorded';
+	if (result.verdict === 'green' && result.exit_code === 0) return null;
+	const red = result.stages.filter((stage) => stage.verdict === 'red').map((stage) => stage.name);
+	return `the db tier is RED (exit ${result.exit_code}${red.length > 0 ? `; red: ${red.join(' | ')}` : ''}) — a baseline recorded on a red tier is a broken run's measure, not the runner's. Fix the red and record again`;
+}
+
+/**
+ * Copy the recorded baseline out of /ci-out into the checkout — only what db_tier.sh's
+ * record mode put there (a write the writer did NOT refuse), and only when the whole db
+ * tier is green ({@link recordCopyFault}). Parsed first: a truncated copy never replaces
+ * the committed file.
+ */
+function copyRecordedBaseline(outputs: string, args: Args, db: TierResult | undefined): void {
+	const recorded = join(outputs, 'unit_baseline.json');
+	if (!existsSync(recorded)) {
+		console.log(
+			`\n== ci:local: NOT RECORDED — the writer refused or the stage never ran (see the RED stage above); ${UNIT_BASELINE} is unchanged`,
+		);
+		return;
+	}
+	const fault = recordCopyFault(db);
+	if (fault !== null) {
+		console.error(
+			`\n== ci:local: NOT RECORDED — REFUSING to copy the written baseline into the checkout: ${fault}. ${UNIT_BASELINE} is unchanged.`,
+		);
+		return;
+	}
+	const text = readFileSync(recorded, 'utf8');
+	JSON.parse(text);
+	writeFileSync(join(REPO_ROOT, UNIT_BASELINE), text);
+	const reason = args.values.get('--reason');
+	console.log(
+		`\n== ci:local: RECORDED ${UNIT_BASELINE} (in the CI image). Commit it on its own` +
+			(reason === undefined
+				? '.'
+				: `, with the accepted regressions' reason in the message:\n   ${reason}`),
+	);
+}
+
 // ── summary ──────────────────────────────────────────────────────────────────
 
-const GLYPH: Record<StageVerdict, string> = { green: '✓', red: '✗', skipped: '–', advisory: '!' };
+const GLYPH: Record<StageVerdict, string> = { green: '✓', red: '✗', skipped: '–' };
 
 function printSummary(results: TierResult[]): void {
 	console.log('\n── CI:LOCAL SUMMARY ──');
@@ -1090,7 +1324,7 @@ function printSummary(results: TierResult[]): void {
 			console.log(
 				`      ${GLYPH[stage.verdict]} ${stage.name}${stage.verdict === 'green' ? '' : `  [${stage.verdict}]`}`,
 			);
-			if (stage.verdict === 'red' || stage.verdict === 'advisory') {
+			if (stage.verdict === 'red') {
 				for (const note of stage.notes) console.log(`          ${note}`);
 				// A ratchet stage's (fail) lines include every red its baseline already
 				// lists; what it said MOVED is the drift, so that is what is shown for it.
@@ -1109,7 +1343,8 @@ async function main(): Promise<void> {
 	if (args.flags.has('--help') || args.flags.has('-h')) {
 		console.log(
 			'bun run ci:local [--hermetic] [--db] [--instance] [--keep] [--fail-fast] [--summary <file>]\n' +
-				'bun run ci:local --docker [--hermetic] [--db] [--instance] [--ref <rev>] [--audit-base <sha>] [--build] [--base <branch>] [--fail-fast] [--summary <file>]\n\n' +
+				'bun run ci:local --docker [--hermetic] [--db] [--instance] [--ref <rev>] [--audit-base <sha>] [--build] [--base <branch>] [--fail-fast] [--summary <file>]\n' +
+				'bun run ci:local --docker --record-unit-baseline [--ref HEAD] [--allow-regression --reason "<why>" | --new <file>[,<file>…]]\n\n' +
 				'Runs the CI tiers with the environment a RUNNER has: no ../private/.env, every\n' +
 				'DEDALO_* key composed by the tier itself. Host mode takes only the Postgres\n' +
 				'connection from your machine; on macOS run --instance under a short TMPDIR\n' +
@@ -1121,6 +1356,8 @@ async function main(): Promise<void> {
 		);
 		process.exit(0);
 	}
+	const recordFault = recordArgsFault(args);
+	if (recordFault !== null) fail(recordFault);
 	if (!args.flags.has('--docker')) {
 		for (const flag of ['--ref', '--base', '--audit-base'])
 			if (args.values.has(flag))
@@ -1128,7 +1365,9 @@ async function main(): Promise<void> {
 		if (args.flags.has('--build')) fail('--build needs --docker');
 	}
 
-	const selected = TIERS.filter((tier) => args.flags.has(tier.flag));
+	const selected = args.flags.has('--record-unit-baseline')
+		? TIERS.filter((tier) => tier.id === 'db')
+		: TIERS.filter((tier) => args.flags.has(tier.flag));
 	const tiers = selected.length > 0 ? selected : TIERS;
 
 	const results = args.flags.has('--docker')

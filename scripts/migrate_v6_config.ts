@@ -193,7 +193,7 @@ function main(): void {
 
 	if (skippedNull.length > 0) {
 		console.log(
-			`\x1b[2mNULL in v6 (= unset; the v7 default stands)\x1b[0m (${skippedNull.length}): ${skippedNull.join(', ')}\n`,
+			`\x1b[2mNULL in v6, or only a stock placeholder (= unset; the v7 default stands)\x1b[0m (${skippedNull.length}): ${skippedNull.join(', ')}\n`,
 		);
 	}
 

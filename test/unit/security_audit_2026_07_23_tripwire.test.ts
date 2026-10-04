@@ -225,6 +225,10 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 			kind: 'system',
 			why: 'same-section descendants of an already-resolved host record; also driven by principal-free paths (tree build, diffusion), and dropping an intermediate would orphan its subtree rather than hide it',
 		},
+		'tools/tool_time_machine/server/bulk_revert_records.ts': {
+			kind: 'system',
+			why: 'the bulk revert’s D2 safety check (isReferenced, inside the delete’s transaction): a born record is deleted only when NOTHING links to it — a link the reverting operator cannot see still makes the delete unsafe, so the check must see every one; the hits never leave the check (only the yes/no decides keep-or-delete)',
+		},
 		'src/core/relations/related.ts': {
 			kind: 'system',
 			why: 'component_relation_related’s same-section back-reference graph (PHP get_references): principal-free by signature, and the traversal is a closure whose result changes shape if nodes are removed mid-walk',

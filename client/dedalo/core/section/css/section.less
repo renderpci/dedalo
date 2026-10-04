@@ -300,6 +300,25 @@ body.inspector_resizing {
 				display: flex;
 			}
 
+			// phone: the row wraps. Unwrapped, a semantic-search pin chip
+			// (render_semantic.js) joined Buscar / Mostrar todos on one line and
+			// widened the whole list page to 415px — every card stretched with it
+			// and the fixed-edge launchers (error-report tab, menu buttons) left
+			// the screen.
+			@media screen and (max-width: @width_break_point_phone) {
+				flex-wrap: wrap;
+				gap: 0.25rem;
+
+				>.search_buttons_container {
+					flex-wrap: wrap;
+					min-width: 0;
+					max-width: 100%;
+				}
+				.semantic_pinned_chip {
+					max-width: 100%;
+				}
+			}
+
 			// other_buttons_block
 			>.other_buttons_block {
 				display: flex;

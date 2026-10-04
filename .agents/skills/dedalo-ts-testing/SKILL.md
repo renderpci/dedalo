@@ -88,7 +88,11 @@ const REAL_RECORD_SCOPE = { ...record_scope };
 afterEach(() => { mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE); });
 ```
 
-A test that fails **only in full-suite order** but passes standalone is almost always a leaked module mock or a scratch-row/session-store collision — not a real regression. Check the leak before "fixing" the code.
+The snapshot must be a SPREAD COPY — `const REAL = await import(x)` (no spread) is the live namespace, which `mock.module` rewrites in place, so "restoring" from it re-installs the mock (`mock_isolation_tripwire` rule 3 reads both the `import * as` and the `await import()` shape).
+
+**Client-module substitution is a different class: make the file an ISOLATED GATE.** A `mock.module` of a `client/`/`tools/` path, or any in-process `Bun.plugin`, cannot be undone (the client modules under test bind their leaves once per process; a plugin is never unregistered), so such a file wraps its body as `if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path); else { … }` (`test/helpers/isolated_gate.ts`): the tier process mirrors a child run of the file, case by case, with the child's failure text and assertion count. Enforced by `mock_isolation_tripwire` rule 4. The child runs with Bun's on-disk transpiler cache OFF — that cache bakes plugin-RESOLVED imports into a module's cached build and serves them to LATER processes (measured 2026-10-02: a gate alone imported another gate's stub). If a client gate reds alone on your machine with a stub path in the error, purge `~/Library/Caches/bun/@t@` entries that name `client_module_stubs`.
+
+A test that fails **only in full-suite order** but passes standalone is almost always a leaked module mock or a scratch-row/session-store collision — not a real regression. Check the leak before "fixing" the code. File order differs per host (readdir: alphabetical on APFS, hash order on the CI image's ext4/overlay) — replay the image's order on the desk with an explicit file list (`bun test ./a ./b …` keeps the order given).
 
 ## Checklist for a new test
 
@@ -98,6 +102,6 @@ A test that fails **only in full-suite order** but passes standalone is almost a
 4. Replaces a retired differential? → `@twin-of` / `@twin-status` header directives, then `scripts/twin_map.ts`.
 5. Diverges from the frozen shape on purpose? → an `engineering/wire_contract/` entry the same day.
 6. New invariant? → new tripwire + index row, proved red-on-violation.
-7. Uses `mock.module`? → snapshot + `afterEach` re-install.
+7. Uses `mock.module`? → spread snapshot + `afterEach` re-install; of a client module or a `Bun.plugin`? → an isolated gate (`test/helpers/isolated_gate.ts`).
 
 Write-path primitives you may assert against: `withTransaction` (`src/core/db/postgres.ts`), `insertMatrixRecordWithCounter` (`src/core/db/matrix_write.ts`), `encodeForJsonb` (`src/core/db/json_codec.ts`), `compareLocators` (`src/core/concepts/locator.ts`), `dbTimestamp` (`src/core/db/db_timestamp.ts`).

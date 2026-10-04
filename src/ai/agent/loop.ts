@@ -68,6 +68,29 @@ import { type AgentUiContext, buildContextBlock, buildSystemPrompt } from './sys
 /** Hard cap on model turns — a runaway-loop backstop, not a tuning knob. */
 const MAX_ITERATIONS = 12;
 
+/**
+ * The token RESERVATION of one run (security/ai_spend.ts): the most OUTPUT it
+ * can produce — the per-turn output limit times MAX_ITERATIONS. Input is not
+ * bounded ahead of the run; the reservation is replaced by the reported usage
+ * when the run ends (`reportedRunTokens`).
+ */
+export function agentRunTokenReservation(maxTokensPerTurn: number): number {
+	return maxTokensPerTurn * MAX_ITERATIONS;
+}
+
+/**
+ * A run's reported usage as ONE token count (input + output + cache reads: every
+ * token the provider says it processed), or null when the provider reported
+ * none — which keeps the full reservation charged.
+ */
+export function reportedRunTokens(usage: AgentTurnUsage | undefined): number | null {
+	if (usage === undefined) return null;
+	const parts = [usage.input_tokens, usage.output_tokens, usage.cache_read_input_tokens].filter(
+		(value): value is number => typeof value === 'number' && Number.isFinite(value),
+	);
+	return parts.length === 0 ? null : parts.reduce((sum, value) => sum + value, 0);
+}
+
 /** The RAG tools are loop-local (they are not part of the MCP registry). */
 const SEMANTIC_SEARCH_TOOL: AgentToolDefinition = {
 	name: 'dedalo_semantic_search',

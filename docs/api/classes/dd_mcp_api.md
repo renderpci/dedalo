@@ -13,6 +13,7 @@ Registered actions (`src/core/api/dispatch.ts`): `mcp_proxy`, `agent_models`, `a
 ## Notes
 
 - Every action **fails closed** unless `DEDALO_AGENT_HTTP_ENABLED=true`; while off, each returns the generic `Undefined or unauthorized method (action)` denial (no existence leak).
+- With the switch on, every action also requires the caller's **profile to grant the `tool_assistant` tool**; otherwise it answers `403` with the error code `tool.not_authorized`, before the action runs (so `agent_chat_stream` answers JSON and never opens a stream). Global administrators are not exempt; only the root account holds every tool. The check wraps every action of this class by construction, so a new action cannot be added without it.
 - Every call runs under a **session** and passes the **CSRF** gate (none of these actions is login- or CSRF-exempt), as the logged-in user's principal — never a service principal.
 - **Write capability** requires `DEDALO_AGENT_ALLOW_WRITE=true` and is **denied to global-admin principals** per request (the confused-deputy wall); `DEDALO_AGENT_WRITE_SECTIONS` narrows the writable sections. Write mode returns a change plan for confirmation — the loop never writes on its own.
 - Egress: when the chosen catalog model's egress class is `external`, the loop gates every record-content tool call through the default-deny egress policy, so restricted repository content never reaches a third-party provider. Full config: [the assistant docs](../../core/ai/assistant/configuration.md).

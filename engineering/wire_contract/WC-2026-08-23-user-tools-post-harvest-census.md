@@ -13,6 +13,8 @@
    compare, each with its own ledger entry for the registration itself:
    - `tool_identify` (**WC-062**, registered post-harvest; the frozen list cannot carry it).
    - `tool_sitebuilder` (**WC-035**, same).
+   - `tool_rag` (**WC-2026-10-01-ai-spend-budget**, a grant-only registry row, same;
+     added 2026-10-01).
    The gate's recovery half asserts each filtered name IS still served by the TS
    registry, so the filter can never hide a tool that fell out of `matrix_tools`.
 

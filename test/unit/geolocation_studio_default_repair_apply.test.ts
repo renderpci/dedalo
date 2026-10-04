@@ -222,7 +222,15 @@ const SCRIPT = new URL('../../scripts/repair_geolocation_studio_default.ts', imp
 	.pathname;
 
 async function run(...args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
-	const child = Bun.spawn([process.execPath, SCRIPT, ...args], { stdout: 'pipe', stderr: 'pipe' });
+	// env EXPLICIT: a bare Bun.spawn passes the LAUNCH environment, not this
+	// process's — the child would lose the preload's suite-database pin, read
+	// ../private/.env and aim at the APPLICATION database (refused by
+	// src/config/suite_database.ts the moment its pool is built).
+	const child = Bun.spawn([process.execPath, SCRIPT, ...args], {
+		env: { ...process.env },
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
 	const [stdout, stderr] = await Promise.all([
 		new Response(child.stdout).text(),
 		new Response(child.stderr).text(),

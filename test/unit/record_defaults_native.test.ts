@@ -92,7 +92,7 @@ const SCRATCH_USER = 99999871;
 const SCRATCH_USER_NO_PROJECTS = 99999872;
 /** Deliberately NOT DEDALO_DEFAULT_PROJECT, so "their own project" is provable. */
 const SCRATCH_PROJECT = 99871;
-/** A scratch dd234 profile granting SCRATCH_USER level 2 on the host section. */
+/** A scratch dd234 profile granting SCRATCH_USER level 2 on the host section and its portal. */
 const SCRATCH_PROFILE = 99999871;
 
 const created: { sectionTipo: string; sectionId: number }[] = [];
@@ -172,7 +172,12 @@ beforeAll(async () => {
 			'dd234',
 			SCRATCH_PROFILE,
 			JSON.stringify({
-				dd774: [{ tipo: HOST_SECTION, section_tipo: HOST_SECTION, value: 2 }],
+				// The section AND the portal at 2: deletePortalLocator goes through
+				// the write door (section floor 2 + the pair at 2 + the scope).
+				dd774: [
+					{ tipo: HOST_SECTION, section_tipo: HOST_SECTION, value: 2 },
+					{ tipo: PORTAL, section_tipo: HOST_SECTION, value: 2 },
+				],
 			}),
 		],
 	);
@@ -707,10 +712,11 @@ describe('portal "+" creates as the REAL caller, in a project they can see', () 
 });
 
 // ---------------------------------------------------------------------------
-// 5. deletePortalLocator gates on the LEVEL-2 write grant, not isGlobalAdmin.
+// 5. deletePortalLocator gates on the LEVEL-2 write grant, not isGlobalAdmin
+//    (the full door — pair, scope, dd128, order — is portal_locator_door_native).
 // ---------------------------------------------------------------------------
 
-describe('deletePortalLocator permission gate (PHP assert_section_permission …, 2)', () => {
+describe('deletePortalLocator goes through the write door (section 2 + pair 2 + scope)', () => {
 	async function seedPortal(host: number, items: unknown[]): Promise<void> {
 		await sql.unsafe(
 			`UPDATE ${TABLE} SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
@@ -755,6 +761,8 @@ describe('deletePortalLocator permission gate (PHP assert_section_permission …
 		const host = track(HOST_SECTION, await createSectionRecord(HOST_SECTION, SCRATCH_USER));
 		await seedPortal(host, [link(1, 101), link(2, 102)]);
 		expect(await getSectionPermissions(nonAdmin, HOST_SECTION)).toBe(2);
+		// In scope through the filter birth default (the creator's own project).
+		expect(await isRecordInScope(HOST_SECTION, host, nonAdmin)).toBe(true);
 
 		const response = await deletePortalLocator(
 			nonAdmin,

@@ -24,7 +24,7 @@
 	import {render_children, reveal_child} from './view_default_edit_ts_object.js'
 	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error} from '../../common/js/error_dispatch.js'
-	import {error_text} from '../../common/js/render_api_error.js'
+	import {error_text, render_build_failure} from '../../common/js/render_api_error.js'
 	import {request_complete} from '../../common/js/sqo_limit.js'
 
 
@@ -2060,17 +2060,24 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 					const build_result = await current_component.build(true)
 					const component_node = !build_result
 						? (function(){
-							const parts = []
-							if(current_component.section_tipo) parts.push(current_component.section_tipo)
-							if(current_component.section_id) parts.push(current_component.section_id)
-							const _id = parts.join(' - ')
-							const node = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'wrapper_component error_alert',
-								inner_html		: `Error: Could not build element "${current_component.model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${_id}`
-							})
-							node.failed = true
-							return node
+							const on_retry = async () => {
+								const retry_result = await current_component.build(true)
+								const new_node = retry_result
+									? await current_component.render()
+									: render_failure()
+								new_node.instance = current_component
+								return new_node
+							}
+							const render_failure = () => {
+								const node = render_build_failure({
+									instance	: current_component,
+									on_retry,
+									class_name	: 'wrapper_component error_alert'
+								})
+								node.failed = true
+								return node
+							}
+							return render_failure()
 						  })()
 						: await current_component.render()
 					// set pointer instance to DOM node

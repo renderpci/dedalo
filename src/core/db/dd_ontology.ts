@@ -15,11 +15,43 @@
  *  - `upsertDdOntologyNode` = whole-row INSERT … ON CONFLICT(tipo) DO UPDATE
  *    writing EVERY column, so a cleared matrix component nulls its dd_ontology
  *    column on re-parse (parity with PHP create()'s full-shape upsert);
- *  - `updateDdOntologyColumns` = partial SET with INSERT fallback on 0 rows
- *    (PHP update()'s upsert fallback — the sync_order path);
- *  - the backup-table protocol (dd_ontology_bk) used by regenerate.
+ *  - `updateDdOntologyColumns` = partial SET of an EXISTING row; an absent tipo
+ *    answers false and writes nothing (SURF-1 deleted PHP update()'s INSERT
+ *    fallback: it planted a partial row — no tld, no model — for any tipo it
+ *    was handed, and its one caller, the sync_order path, already skips
+ *    absent rows);
  *  - every INSERT door first heals a lagging id sequence
  *    (`alignDdOntologyIdSequence`): `ON CONFLICT (tipo)` does not cover the pkey.
+ *  (The PHP backup-table protocol, dd_ontology_bk, is gone: regenerate is ONE
+ *  transaction — ontology_state.ts rebuildOntology — so it had no caller.)
+ *
+ * THE IDENTIFIER GRAMMAR (SURF-1). `tipo`, `parent`, `model_tipo`, `tld` and
+ * `properties.alias_of` are read back as IDENTIFIERS — the search engine
+ * interpolates them into JSONB paths and SQL, tree walks follow `parent`, model
+ * lookups join `model_tipo`. So they obey one grammar, stated THREE times that
+ * must agree (gate: test/unit/dd_ontology_identifier_grammar_native.test.ts,
+ * a hand-written truth table checked against all three):
+ *   1. `ddOntologyIdentifierViolations` below — the pure TS predicate;
+ *   2. the write doors here (`upsertDdOntologyNode`, `updateDdOntologyColumns`)
+ *      and the archive restore plan run it BEFORE any SQL and refuse
+ *      `ontology.invalid_node`;
+ *   3. the six CHECK constraints of migration
+ *      `0013_dd_ontology_identifier_grammar.sql` (`DD_ONTOLOGY_GRAMMAR_CONSTRAINTS`):
+ *        tipo        letters+digits (TIPO_PATTERN), <= 32 chars
+ *        parent      NULL, or the tipo grammar, <= 32
+ *        model_tipo  NULL, or the tipo grammar, <= 8 (varchar(8))
+ *        tld         NULL, or two-or-more letters (TLD_PATTERN), <= 32
+ *        tipo_in_tld NULL tld, or the tipo's letter prefix IS the tld
+ *        alias_of    when `properties` is an object carrying the key: a string
+ *                    in the tipo grammar, <= 32
+ *      NULL passes and '' fails, in the predicate exactly as in the CHECK.
+ *      They are added NOT VALID (an installed DB may already hold violators;
+ *      owner decision 2026-09-30): they bind every write from then on — an
+ *      UPDATE of a legacy violating row is re-checked, and the 23514 is
+ *      converted, typed, by `ddOntologyConstraintRefusal` — and the reconcile
+ *      `ontology_identifiers` (ontology/identifier_grammar.ts) reports the
+ *      violators, repairs them on an operator apply, and VALIDATEs each
+ *      constraint whose column is clean (`validateDdOntologyIdentifierConstraints`).
  *
  * HARD RULE: this file is the ONLY dd_ontology SQL. Every WRITE ends by fanning
  * out `clearOntologyDerivedCaches()` (the single invalidation chokepoint) so no
@@ -32,6 +64,7 @@
  *    layer's readDdOntologyRow is an uncached raw-row probe for the parser.
  */
 
+import { isValidTipo, isValidTld } from '../concepts/ontology.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	clearOntologyDerivedCaches,
@@ -39,7 +72,7 @@ import {
 } from '../ontology/cache_invalidation.ts';
 import { safeTld } from '../ontology/tld.ts';
 import { encodeForJsonb } from './json_codec.ts';
-import { sql, withTransaction } from './postgres.ts';
+import { sql, sqlStateOf, withTransaction } from './postgres.ts';
 
 /**
  * One dd_ontology node — the shape the parser produces and the writer persists.
@@ -147,6 +180,232 @@ function nodeColumnValue(node: Partial<DdOntologyNode>, column: DdOntologyColumn
 	return value;
 }
 
+// --- The identifier grammar (SURF-1) -------------------------------------------
+
+/**
+ * The varchar lengths of the identifier columns — equal to the live schema
+ * (`information_schema.columns.character_maximum_length`; the G3 gate re-reads
+ * them). A value longer than its column is refused by the predicate, never
+ * left to die as an untyped 22001.
+ */
+export const DD_ONTOLOGY_IDENTIFIER_LIMITS = {
+	tipo: 32,
+	parent: 32,
+	model_tipo: 8,
+	tld: 32,
+} as const;
+
+/** The six CHECK constraints of migration 0013, by the rule each enforces. */
+const GRAMMAR_CONSTRAINT_OF = {
+	tipo: 'dd_ontology_tipo_grammar',
+	parent: 'dd_ontology_parent_grammar',
+	model_tipo: 'dd_ontology_model_tipo_grammar',
+	tld: 'dd_ontology_tld_grammar',
+	tipo_in_tld: 'dd_ontology_tipo_in_tld',
+	alias_of: 'dd_ontology_alias_of_grammar',
+} as const;
+
+/** One rule of the identifier grammar (the column, or the tipo↔tld / alias_of rule). */
+export type DdOntologyIdentifierRule = keyof typeof GRAMMAR_CONSTRAINT_OF;
+
+/** The constraint names — the ONLY identifiers ever spliced into a VALIDATE statement. */
+export const DD_ONTOLOGY_GRAMMAR_CONSTRAINTS: readonly string[] =
+	Object.values(GRAMMAR_CONSTRAINT_OF);
+
+/** Why a value broke the grammar. */
+export type DdOntologyIdentifierReason = 'required' | 'grammar' | 'length' | 'prefix';
+
+export interface DdOntologyIdentifierViolation {
+	column: DdOntologyIdentifierRule;
+	value: unknown;
+	reason: DdOntologyIdentifierReason;
+}
+
+/** The identifier fields the predicate reads (all optional except tipo). */
+export type DdOntologyIdentifierFields = Partial<
+	Pick<DdOntologyNode, 'parent' | 'model_tipo' | 'tld' | 'properties'>
+> & { tipo?: unknown };
+
+/** The tipo grammar with a column bound: `null` when valid, else the reason. */
+function tipoGrammarReason(value: unknown, limit: number): DdOntologyIdentifierReason | null {
+	if (typeof value !== 'string' || !isValidTipo(value)) return 'grammar';
+	return value.length > limit ? 'length' : null;
+}
+
+/** The letter prefix of a tipo (`zzgram1` → `zzgram`), null when it has none. */
+function letterPrefixOf(tipo: unknown): string | null {
+	if (typeof tipo !== 'string') return null;
+	return /^[a-z]+/.exec(tipo)?.[0] ?? null;
+}
+
+/**
+ * THE identifier predicate (pure; SURF-1). Every rule broken by `row`, as
+ * `{column, value, reason}`. A field that is ABSENT from `row` (undefined) is
+ * not checked — a partial update states only the columns it writes — except
+ * `tipo`, which is always required. NULL passes and '' fails, exactly as in
+ * the CHECK constraints (see the header).
+ */
+export function ddOntologyIdentifierViolations(
+	row: DdOntologyIdentifierFields,
+): DdOntologyIdentifierViolation[] {
+	return IDENTIFIER_RULES.flatMap((rule) => rule(row));
+}
+
+/** A field the predicate does not check (absent from a partial row, or NULL). */
+function isUnstated(value: unknown): value is null | undefined {
+	return value === undefined || value === null;
+}
+
+/** `[violation]` when `reason` is set, else `[]`. */
+function violation(
+	column: DdOntologyIdentifierRule,
+	value: unknown,
+	reason: DdOntologyIdentifierReason | null,
+): DdOntologyIdentifierViolation[] {
+	return reason === null ? [] : [{ column, value, reason }];
+}
+
+/** Rule `tipo`: required, the tipo grammar, the column bound. */
+function tipoViolations(row: DdOntologyIdentifierFields): DdOntologyIdentifierViolation[] {
+	return violation(
+		'tipo',
+		row.tipo,
+		isUnstated(row.tipo)
+			? 'required'
+			: tipoGrammarReason(row.tipo, DD_ONTOLOGY_IDENTIFIER_LIMITS.tipo),
+	);
+}
+
+/** Rules `parent` / `model_tipo`: NULL passes, else the tipo grammar within the column bound. */
+function referenceViolations(row: DdOntologyIdentifierFields): DdOntologyIdentifierViolation[] {
+	return (['parent', 'model_tipo'] as const).flatMap((column) => {
+		const value = row[column];
+		if (isUnstated(value)) return [];
+		return violation(
+			column,
+			value,
+			tipoGrammarReason(value, DD_ONTOLOGY_IDENTIFIER_LIMITS[column]),
+		);
+	});
+}
+
+/** The tld grammar with its column bound: `null` when valid, else the reason. */
+function tldGrammarReason(tld: string): DdOntologyIdentifierReason | null {
+	if (!isValidTld(tld)) return 'grammar';
+	return tld.length > DD_ONTOLOGY_IDENTIFIER_LIMITS.tld ? 'length' : null;
+}
+
+/** Rules `tld` + `tipo_in_tld`: NULL passes; else the tld grammar, and the tipo's letter prefix IS the tld. */
+function tldViolations(row: DdOntologyIdentifierFields): DdOntologyIdentifierViolation[] {
+	const tld = row.tld;
+	if (isUnstated(tld)) return [];
+	return [
+		...violation('tld', tld, tldGrammarReason(tld)),
+		...violation('tipo_in_tld', row.tipo, letterPrefixOf(row.tipo) === tld ? null : 'prefix'),
+	];
+}
+
+/** Properties that state an `alias_of` key (an object, the key own-present). */
+function statesAliasOf(properties: unknown): properties is { alias_of?: unknown } {
+	return (
+		properties !== null &&
+		typeof properties === 'object' &&
+		!Array.isArray(properties) &&
+		Object.hasOwn(properties, 'alias_of')
+	);
+}
+
+/** Rule `alias_of`: when stated, a string tipo within the tipo bound. */
+function aliasOfViolations(row: DdOntologyIdentifierFields): DdOntologyIdentifierViolation[] {
+	const properties = row.properties as unknown;
+	if (!statesAliasOf(properties)) return [];
+	return violation(
+		'alias_of',
+		properties.alias_of,
+		tipoGrammarReason(properties.alias_of, DD_ONTOLOGY_IDENTIFIER_LIMITS.tipo),
+	);
+}
+
+/** The rules, in report order (tipo, parent, model_tipo, tld, tipo_in_tld, alias_of). */
+const IDENTIFIER_RULES: readonly ((
+	row: DdOntologyIdentifierFields,
+) => DdOntologyIdentifierViolation[])[] = [
+	tipoViolations,
+	referenceViolations,
+	tldViolations,
+	aliasOfViolations,
+];
+
+/** A value as it may appear in a log line / coordinate: JSON-escaped, cut to 64. */
+function shownValue(value: unknown): string {
+	return (JSON.stringify(value) ?? 'undefined').slice(0, 64);
+}
+
+/** Refuse `violations` (non-empty) as the typed `ontology.invalid_node`. */
+function refuseIdentifierViolations(
+	door: string,
+	tipo: unknown,
+	violations: readonly DdOntologyIdentifierViolation[],
+): never {
+	const summary = violations.map((v) => `${v.column}:${v.reason}`).join(',');
+	throw new DedaloError('ontology.invalid_node', {
+		message: `${door}: dd_ontology node ${shownValue(tipo)} refused — ${violations
+			.map((v) => `${v.column} ${shownValue(v.value)} (${v.reason})`)
+			.join('; ')} — identifier columns obey the tipo/tld grammar (SURF-1)`,
+		coordinates: { tipo: shownValue(tipo), violations: summary },
+	});
+}
+
+/** The constraint name a PostgreSQL error carries (own or on its cause chain). */
+function constraintNameOf(error: unknown): string | undefined {
+	let current: unknown = error;
+	for (let depth = 0; depth < 5 && current !== null && typeof current === 'object'; depth++) {
+		const name = (current as { constraint?: unknown; constraint_name?: unknown }).constraint;
+		if (typeof name === 'string' && name !== '') return name;
+		current = (current as { cause?: unknown }).cause;
+	}
+	return undefined;
+}
+
+/**
+ * THE ONE converter of a dd_ontology grammar failure raised by the DATABASE:
+ * a 23514 on one of the six grammar constraints, or a 22001 (a value longer
+ * than its varchar), becomes `ontology.invalid_node` with
+ * `coordinates.constraint`. Reached when a door's own check was satisfied but
+ * the ROW was not — above all a NOT VALID legacy row, which PostgreSQL
+ * re-checks whole on an UPDATE of any column (an `order_number` sync of a row
+ * whose parent predates the grammar). Null for any other error (rethrow it).
+ */
+export function ddOntologyConstraintRefusal(error: unknown, tipo: unknown): DedaloError | null {
+	const state = sqlStateOf(error);
+	const constraint = constraintNameOf(error);
+	const grammar =
+		(state === '23514' &&
+			constraint !== undefined &&
+			DD_ONTOLOGY_GRAMMAR_CONSTRAINTS.includes(constraint)) ||
+		state === '22001';
+	if (!grammar) return null;
+	const named = state === '22001' ? 'column_length' : (constraint as string);
+	return new DedaloError('ontology.invalid_node', {
+		message: `dd_ontology: the write of ${shownValue(tipo)} violates ${named} — the stored row breaks the identifier grammar (SURF-1); run reconcile ontology_identifiers`,
+		coordinates: {
+			tipo: shownValue(tipo),
+			constraint: named,
+			hint: 'run reconcile ontology_identifiers',
+		},
+		cause: error,
+	});
+}
+
+/** Run one dd_ontology statement, converting a grammar failure (see above). */
+async function guardedWrite<T>(tipo: unknown, write: () => Promise<T>): Promise<T> {
+	try {
+		return await write();
+	} catch (error) {
+		throw ddOntologyConstraintRefusal(error, tipo) ?? error;
+	}
+}
+
 /**
  * UPSERT a whole ontology node (PHP dd_ontology_db_manager::create).
  * Writes EVERY allowlisted column with the supplied-or-default value, then
@@ -158,6 +417,16 @@ function nodeColumnValue(node: Partial<DdOntologyNode>, column: DdOntologyColumn
 export async function upsertDdOntologyNode(
 	node: Partial<DdOntologyNode> & { tipo: string },
 ): Promise<number> {
+	// The WHOLE row is checked (an omitted field writes its default, null).
+	const violations = ddOntologyIdentifierViolations({
+		tipo: node.tipo,
+		parent: node.parent ?? null,
+		model_tipo: node.model_tipo ?? null,
+		tld: node.tld ?? null,
+		properties: node.properties ?? null,
+	});
+	if (violations.length > 0)
+		refuseIdentifierViolations('upsertDdOntologyNode', node.tipo, violations);
 	const params: (string | number | null)[] = [];
 	const columnIdents: string[] = [];
 	const placeholders: string[] = [];
@@ -170,12 +439,14 @@ export async function upsertDdOntologyNode(
 		(column) => `"${column}" = EXCLUDED."${column}"`,
 	);
 	await alignDdOntologyIdSequence();
-	const rows = (await sql.unsafe(
-		`INSERT INTO dd_ontology (${columnIdents.join(', ')})
-		 VALUES (${placeholders.join(', ')})
-		 ON CONFLICT (tipo) DO UPDATE SET ${updateParts.join(', ')}
-		 RETURNING id`,
-		params,
+	const rows = (await guardedWrite(node.tipo, () =>
+		sql.unsafe(
+			`INSERT INTO dd_ontology (${columnIdents.join(', ')})
+			 VALUES (${placeholders.join(', ')})
+			 ON CONFLICT (tipo) DO UPDATE SET ${updateParts.join(', ')}
+			 RETURNING id`,
+			params,
+		),
 	)) as { id: number }[];
 	await clearOntologyDerivedCaches();
 	return Number(rows[0]?.id);
@@ -220,11 +491,46 @@ export async function readDdOntologyRow(tipo: string): Promise<DdOntologyRow | n
 	return row;
 }
 
+/** The row as it will read after an UPDATE's SET, restricted to what the SET states. */
+function statedIdentifierFields(
+	tipo: string,
+	values: Partial<Record<DdOntologyColumn, unknown>>,
+	columns: readonly DdOntologyColumn[],
+): DdOntologyIdentifierFields {
+	const stated: Record<string, unknown> = { tipo };
+	for (const column of ['parent', 'model_tipo', 'tld', 'properties'] as const) {
+		if (columns.includes(column)) stated[column] = values[column] ?? null;
+	}
+	return stated as DdOntologyIdentifierFields;
+}
+
+/**
+ * Every grammar rule an UPDATE of `tipo` with `values` would break. The WHERE
+ * tipo names an identifier too: a non-grammar tipo is refused, not probed.
+ */
+function updateViolations(
+	tipo: string,
+	values: Partial<Record<DdOntologyColumn, unknown>>,
+	columns: readonly DdOntologyColumn[],
+): DdOntologyIdentifierViolation[] {
+	const stated = statedIdentifierFields(tipo, values, columns);
+	return [
+		...ddOntologyIdentifierViolations({ tipo }),
+		...(columns.includes('tipo')
+			? ddOntologyIdentifierViolations({ ...stated, tipo: values.tipo })
+			: ddOntologyIdentifierViolations(stated).filter((v) => v.column !== 'tipo')),
+	];
+}
+
 /**
  * Partial column update (PHP dd_ontology_db_manager::update). Only the given
- * columns are written; when the UPDATE matches no row it falls back to an INSERT
- * (with tipo first, then the given columns) — the exact upsert fallback PHP uses,
- * relied on by the sync_order path. Unknown columns are rejected (allowlist).
+ * columns are written, on an EXISTING row: true when a row matched, false when
+ * the tipo is absent — nothing is inserted (SURF-1: PHP's INSERT fallback
+ * planted a partial row, no tld and no model, for any tipo it was handed).
+ * Unknown columns are rejected (allowlist). The tipo and every identifier
+ * column given are checked against the grammar BEFORE any SQL; a NOT VALID
+ * legacy row that the database re-checks on this UPDATE is refused, typed
+ * (`ddOntologyConstraintRefusal`).
  */
 export async function updateDdOntologyColumns(
 	tipo: string,
@@ -235,6 +541,9 @@ export async function updateDdOntologyColumns(
 	if (validColumns.length === 0) {
 		return false;
 	}
+	const violations = updateViolations(tipo, values, validColumns);
+	if (violations.length > 0)
+		refuseIdentifierViolations('updateDdOntologyColumns', tipo, violations);
 
 	// UPDATE: $1 = tipo (WHERE), then each column.
 	const updateParams: (string | number | null)[] = [tipo];
@@ -243,25 +552,13 @@ export async function updateDdOntologyColumns(
 		updateParams.push(boundValueFor(column, values[column]));
 		setClauses.push(`"${column}" = ${placeholderFor(column, index + 2)}`);
 	});
-	const updated = (await sql.unsafe(
-		`UPDATE dd_ontology SET ${setClauses.join(', ')} WHERE tipo = $1 RETURNING id`,
-		updateParams,
-	)) as { id: number }[];
-
-	if (updated.length === 0) {
-		// Upsert fallback: INSERT (tipo, ...columns). $1 = tipo becomes the tipo
-		// column value; the same param order as the UPDATE (tipo first).
-		const insertColumns = ['"tipo"', ...validColumns.map((column) => `"${column}"`)];
-		const insertPlaceholders = [
-			'$1',
-			...validColumns.map((column, index) => placeholderFor(column, index + 2)),
-		];
-		await alignDdOntologyIdSequence();
-		await sql.unsafe(
-			`INSERT INTO dd_ontology (${insertColumns.join(', ')}) VALUES (${insertPlaceholders.join(', ')})`,
+	const updated = (await guardedWrite(tipo, () =>
+		sql.unsafe(
+			`UPDATE dd_ontology SET ${setClauses.join(', ')} WHERE tipo = $1 RETURNING id`,
 			updateParams,
-		);
-	}
+		),
+	)) as { id: number }[];
+	if (updated.length === 0) return false;
 	await clearOntologyDerivedCaches();
 	return true;
 }
@@ -486,20 +783,20 @@ export async function deleteTldNodesReturningTipos(tld: string): Promise<string[
 	return removed.map((row) => row.tipo);
 }
 
-// --- Backup table protocol (PHP ontology_utils create/restore/delete_bk_table) -
+// --- Recovery slice + the retired backup table ----------------------------------
 
 /**
- * Validate a list of TLDs for the backup protocol. Since safe TLDs are strictly
+ * Validate a list of TLDs for the recovery slice. Since safe TLDs are strictly
  * `[a-z]{2,}`, they can be inlined into DDL that cannot take bind parameters
- * (CREATE TABLE AS … WHERE …) with zero injection surface — the same reasoning
- * PHP uses (pg_escape_literal there; a validated allowlist here).
+ * with zero injection surface — the same reasoning PHP uses (pg_escape_literal
+ * there; a validated allowlist here).
  */
 function assertSafeTlds(tlds: readonly string[]): string[] {
 	const safe = tlds.map((tld) => {
 		const value = safeTld(tld);
 		if (value === null) {
 			throw new DedaloError('internal.invariant', {
-				message: `dd_ontology backup: refusing unsafe tld '${tld}'`,
+				message: `dd_ontology recovery slice: refusing unsafe tld '${tld}'`,
 				coordinates: { tld },
 			});
 		}
@@ -507,80 +804,248 @@ function assertSafeTlds(tlds: readonly string[]): string[] {
 	});
 	if (safe.length === 0) {
 		throw new DedaloError('internal.invariant', {
-			message: 'dd_ontology backup: empty tld list',
+			message: 'dd_ontology recovery slice: empty tld list',
 		});
 	}
 	return safe;
 }
 
 /**
- * Snapshot the dd_ontology rows of the given TLDs into dd_ontology_bk
- * (PHP create_bk_table). Drops any prior backup first. Returns false on empty
- * input. The backup table IS the rollback for regenerate (not a transaction —
- * matches PHP and two-server coexistence).
+ * Drop the dd_ontology_bk table the retired PHP backup protocol
+ * (create/restore_bk_table) left behind on an upgraded install. Idempotent.
+ * (The protocol itself is gone: regenerate is one transaction.)
  */
-export async function createBackupTable(tlds: readonly string[]): Promise<boolean> {
-	if (tlds.length === 0) {
-		return false;
-	}
-	const safe = assertSafeTlds(tlds);
-	const whereSql = safe.map((tld) => `tld = '${tld}'`).join(' OR ');
-	await sql.unsafe('DROP TABLE IF EXISTS "dd_ontology_bk" CASCADE', []);
-	await sql.unsafe(
-		`CREATE TABLE dd_ontology_bk AS SELECT * FROM dd_ontology WHERE ${whereSql}`,
-		[],
-	);
-	return true;
-}
-
-/**
- * Restore the given TLDs from dd_ontology_bk (PHP restore_from_bk_table): delete
- * the current (possibly partial) rows for each TLD, then re-insert the backed-up
- * rows. Does NOT drop the backup table (the caller does). Fans out invalidation.
- */
-export async function restoreFromBackupTable(tlds: readonly string[]): Promise<boolean> {
-	if (tlds.length === 0) {
-		return false;
-	}
-	const safe = assertSafeTlds(tlds);
-	for (const tld of safe) {
-		await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1', [tld]);
-	}
-	const whereSql = safe.map((tld) => `"tld" = '${tld}'`).join(' OR ');
-	await sql.unsafe(`INSERT INTO dd_ontology SELECT * FROM "dd_ontology_bk" WHERE ${whereSql}`, []);
-	// Explicit ids in, sequence untouched — the exact lag alignDdOntologyIdSequence heals.
-	await alignDdOntologyIdSequence();
-	await clearOntologyDerivedCaches();
-	return true;
-}
-
-/** Drop the dd_ontology_bk backup table (PHP delete_bk_table). Idempotent. */
 export async function dropBackupTable(): Promise<boolean> {
 	await sql.unsafe('DROP TABLE IF EXISTS "dd_ontology_bk" CASCADE', []);
 	return true;
 }
 
+/** What `createRecoverySlice` produced: whether a slice exists, and the tipos it left out. */
+export interface RecoverySliceResult {
+	created: boolean;
+	/** Rows of the whitelisted TLDs that break the identifier grammar — NOT in the slice. */
+	skipped: string[];
+}
+
 /**
  * Materialize the dd_ontology_recovery slice table (PHP
  * installer_ontology_manager::build_recovery_version_file SQL half): DROP +
- * CREATE LIKE + INSERT of the whitelisted TLDs. The caller dumps it with
- * pg_dump and then drops it (dropRecoverySlice).
+ * CREATE LIKE … INCLUDING ALL + INSERT of the whitelisted TLDs. The caller
+ * dumps it with pg_dump and then drops it (dropRecoverySlice).
+ *
+ * SURF-1: rows that break the identifier grammar are LEFT OUT and reported in
+ * `skipped` (the TS scan decides, one predicate). `INCLUDING ALL` copies the
+ * grammar CHECKs onto the slice VALIDATED (the slice starts empty), so a slice
+ * that loads here is certified loadable by any destination carrying them — a
+ * recovery file must never carry a row its own install would refuse.
  */
-export async function createRecoverySlice(tlds: readonly string[]): Promise<boolean> {
-	if (tlds.length === 0) return false;
+export async function createRecoverySlice(tlds: readonly string[]): Promise<RecoverySliceResult> {
+	if (tlds.length === 0) return { created: false, skipped: [] };
 	const safe = assertSafeTlds(tlds);
 	const inList = safe.map((tld) => `'${tld}'`).join(',');
+	const violators = await scanDdOntologyIdentifierRows({ tlds: safe });
 	await sql.unsafe('DROP TABLE IF EXISTS "dd_ontology_recovery" CASCADE', []);
 	await sql.unsafe('CREATE TABLE "dd_ontology_recovery" ( LIKE "dd_ontology" INCLUDING ALL )', []);
-	await sql.unsafe(
-		`INSERT INTO "dd_ontology_recovery" SELECT * FROM dd_ontology WHERE tld IN (${inList})`,
-		[],
+	await guardedWrite('dd_ontology_recovery', () =>
+		sql.unsafe(
+			`INSERT INTO "dd_ontology_recovery" SELECT * FROM dd_ontology
+			  WHERE tld IN (${inList}) AND id <> ALL(string_to_array($1, ',')::bigint[])`,
+			[violators.map((row) => String(row.id)).join(',')],
+		),
 	);
-	return true;
+	return { created: true, skipped: violators.map((row) => row.tipo) };
 }
 
 /** Drop the dd_ontology_recovery slice table (always run after the dump). */
 export async function dropRecoverySlice(): Promise<boolean> {
 	await sql.unsafe('DROP TABLE IF EXISTS "dd_ontology_recovery" CASCADE', []);
 	return true;
+}
+
+// --- Report + repair primitives (reconcile `ontology_identifiers`) -------------
+
+/** One stored dd_ontology row that breaks the identifier grammar. */
+export interface DdOntologyIdentifierRow {
+	id: number;
+	tipo: string;
+	parent: string | null;
+	model_tipo: string | null;
+	tld: string | null;
+	violations: DdOntologyIdentifierViolation[];
+}
+
+/** One row as the identifier scan reads it (identifier columns + the alias_of probe). */
+interface ScannedIdentifierRow {
+	id: number | string;
+	tipo: string;
+	parent: string | null;
+	model_tipo: string | null;
+	tld: string | null;
+	properties_type: string | null;
+	has_alias_of: boolean | null;
+	alias_of: unknown;
+}
+
+/**
+ * Every STORED row that breaks the identifier grammar, judged by the TS
+ * predicate (one grammar — the CHECKs state the same). Reads only the
+ * identifier columns plus `properties->'alias_of'`; narrowed to `tlds`
+ * (safeTld-validated by the caller) when given.
+ */
+export async function scanDdOntologyIdentifierRows(
+	options: { tlds?: readonly string[] } = {},
+): Promise<DdOntologyIdentifierRow[]> {
+	const narrowed = options.tlds !== undefined;
+	const rows = (await sql.unsafe(
+		`SELECT id, tipo, parent, model_tipo, tld,
+		        jsonb_typeof(properties) AS properties_type,
+		        (jsonb_typeof(properties) = 'object' AND properties ? 'alias_of') AS has_alias_of,
+		        properties->'alias_of' AS alias_of
+		   FROM dd_ontology
+		  ${narrowed ? `WHERE tld = ANY(string_to_array($1, ','))` : ''}
+		  ORDER BY id`,
+		narrowed ? [(options.tlds ?? []).join(',')] : [],
+	)) as ScannedIdentifierRow[];
+	return rows.flatMap((row) => {
+		const violations = ddOntologyIdentifierViolations(scannedIdentifierFields(row));
+		if (violations.length === 0) return [];
+		return [
+			{
+				id: Number(row.id),
+				tipo: row.tipo,
+				parent: row.parent,
+				model_tipo: row.model_tipo,
+				tld: row.tld,
+				violations,
+			},
+		];
+	});
+}
+
+/**
+ * The predicate's view of one scanned row: `properties` stands in as
+ * `{alias_of}` when the key is present on an object, `{}` for an object
+ * without it, null otherwise — the scan never reads the whole payload.
+ */
+function scannedIdentifierFields(row: ScannedIdentifierRow): DdOntologyIdentifierFields {
+	const properties =
+		row.has_alias_of === true
+			? { alias_of: row.alias_of }
+			: row.properties_type === 'object'
+				? {}
+				: null;
+	return {
+		tipo: row.tipo,
+		parent: row.parent,
+		model_tipo: row.model_tipo,
+		tld: row.tld,
+		properties: properties as DdOntologyIdentifierFields['properties'],
+	};
+}
+
+/** A grammar constraint's state on this database. */
+export type DdOntologyConstraintState = 'absent' | 'not_valid' | 'valid';
+
+/** The state of each of the six grammar constraints (pg_constraint.convalidated). */
+export async function ddOntologyConstraintStates(): Promise<
+	Record<string, DdOntologyConstraintState>
+> {
+	const rows = (await sql.unsafe(
+		`SELECT conname, convalidated FROM pg_constraint
+		  WHERE conrelid = 'dd_ontology'::regclass AND contype = 'c'`,
+		[],
+	)) as { conname: string; convalidated: boolean }[];
+	const live = new Map(rows.map((row) => [row.conname, row.convalidated]));
+	return Object.fromEntries(
+		DD_ONTOLOGY_GRAMMAR_CONSTRAINTS.map((name) => {
+			const validated = live.get(name);
+			return [name, validated === undefined ? 'absent' : validated ? 'valid' : 'not_valid'];
+		}),
+	);
+}
+
+/** What `validateDdOntologyIdentifierConstraints` did. */
+export interface DdOntologyValidationOutcome {
+	/** Constraints VALIDATEd by this call. */
+	validated: string[];
+	/** NOT VALID constraints left so, because stored rows still break their rule. */
+	blocked: { constraint: string; rows: number }[];
+	/** Violating rows found by the scan (all rules). */
+	violators: DdOntologyIdentifierRow[];
+	states: Record<string, DdOntologyConstraintState>;
+}
+
+/** Violating-row count per grammar constraint (a row counts once per rule it breaks). */
+function brokenRowsByConstraint(
+	violators: readonly DdOntologyIdentifierRow[],
+): Map<string, number> {
+	const brokenRows = new Map<string, number>();
+	for (const row of violators) {
+		for (const rule of new Set(row.violations.map((v) => v.column))) {
+			const constraint = GRAMMAR_CONSTRAINT_OF[rule];
+			brokenRows.set(constraint, (brokenRows.get(constraint) ?? 0) + 1);
+		}
+	}
+	return brokenRows;
+}
+
+/** VALIDATE one grammar constraint, lock wait bounded (`constraint` ∈ DD_ONTOLOGY_GRAMMAR_CONSTRAINTS). */
+async function validateGrammarConstraint(constraint: string): Promise<void> {
+	await withTransaction(async () => {
+		await sql.unsafe(`SET LOCAL lock_timeout = '5s'`, []);
+		await guardedWrite(constraint, () =>
+			sql.unsafe(`ALTER TABLE dd_ontology VALIDATE CONSTRAINT "${constraint}"`, []),
+		);
+	});
+}
+
+/**
+ * VALIDATE every grammar constraint that is NOT VALID and whose rule has zero
+ * violating rows (the TS scan decides). A constraint whose rule is still
+ * broken stays NOT VALID and is reported in `blocked` — never a failure: an
+ * install with legacy violators keeps serving and updating (owner decision
+ * 2026-09-30); the reconcile `ontology_identifiers` repairs them. The lock wait
+ * is bounded (VALIDATE takes SHARE UPDATE EXCLUSIVE: readers and writers
+ * proceed; it scans the table once). Only names from the fixed
+ * DD_ONTOLOGY_GRAMMAR_CONSTRAINTS list reach the statement.
+ */
+export async function validateDdOntologyIdentifierConstraints(): Promise<DdOntologyValidationOutcome> {
+	const violators = await scanDdOntologyIdentifierRows();
+	const brokenRows = brokenRowsByConstraint(violators);
+	const before = await ddOntologyConstraintStates();
+	const validated: string[] = [];
+	const blocked: { constraint: string; rows: number }[] = [];
+	for (const constraint of DD_ONTOLOGY_GRAMMAR_CONSTRAINTS) {
+		if (before[constraint] !== 'not_valid') continue;
+		const rows = brokenRows.get(constraint) ?? 0;
+		if (rows > 0) {
+			blocked.push({ constraint, rows });
+			continue;
+		}
+		await validateGrammarConstraint(constraint);
+		validated.push(constraint);
+	}
+	return { validated, blocked, violators, states: await ddOntologyConstraintStates() };
+}
+
+/** A whole dd_ontology row as the repair deleted it (kept for the report and the log). */
+export type DeletedDdOntologyRow = DdOntologyRow & { id: number };
+
+/**
+ * Delete rows by id, returning each WHOLE row (the repair of rows no request
+ * gate can address — a non-grammar tipo, or one under no safe tld; the caller
+ * reports and logs every row it removed). Fans out cache invalidation.
+ */
+export async function deleteDdOntologyRowsReturning(
+	ids: readonly number[],
+): Promise<DeletedDdOntologyRow[]> {
+	if (ids.length === 0) return [];
+	const rows = (await sql.unsafe(
+		`DELETE FROM dd_ontology WHERE id = ANY(string_to_array($1, ',')::bigint[])
+		 RETURNING id, tipo, parent, term, model, order_number, relations, tld,
+		           properties, model_tipo, is_model, is_translatable, is_main, propiedades`,
+		[ids.map((id) => String(Math.trunc(id))).join(',')],
+	)) as DeletedDdOntologyRow[];
+	await clearOntologyDerivedCaches();
+	return rows.map((row) => ({ ...row, id: Number(row.id) }));
 }

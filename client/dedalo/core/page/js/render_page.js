@@ -28,8 +28,8 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {instantiate_page_element} from './page.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {render_update_data_maintenance} from '../../area_maintenance/js/render_update_data_maintenance.js'
 	import {render_job_tray} from './job_tray.js'
+	import {render_build_failure} from '../../common/js/render_api_error.js'
 
 
 
@@ -172,6 +172,10 @@ const get_content_data = async function(self) {
 		const data_version		= Array.isArray(page_globals?.data_version) ? page_globals.data_version.join('.') : (page_globals?.data_version || '');
 
 		if( dedalo_version && data_version && dedalo_version!==data_version ){
+			// Lazy (engineering/CONVENTIONS.md §2, rationale 3 — rarely hit): only a
+			// data/code version mismatch renders this widget, so it stays off the
+			// boot graph (test/unit/page_load_budget_native.test.ts).
+			const { render_update_data_maintenance } = await import('../../area_maintenance/js/render_update_data_maintenance.js')
 			const update_data_node = await render_update_data_maintenance()
 			content_data.appendChild(update_data_node)
 			return content_data
@@ -247,15 +251,15 @@ const get_content_data = async function(self) {
 						try {
 							const build_result = await current_instance.build(true)
 							if (build_result === false) {
-								const parts = []
-								if(current_instance.section_tipo) parts.push(current_instance.section_tipo)
-								if(current_instance.section_id) parts.push(current_instance.section_id)
-								const _id = parts.join(' - ')
-								return ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'error_alert',
-									inner_html		: `Error: Could not build element "${current_instance.model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${_id}`
-								})
+								// on_retry: a transient failure (server restarting, timeout)
+								// rebuilds just this element; still failing → a fresh banner.
+								const on_retry = async () => {
+									const retry_result = await current_instance.build(true)
+									return retry_result === false
+										? render_build_failure({instance: current_instance, on_retry})
+										: await current_instance.render()
+								}
+								return render_build_failure({instance: current_instance, on_retry})
 							}
 
 							// render node

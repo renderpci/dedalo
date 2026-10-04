@@ -128,7 +128,7 @@ import { emitRatchetCheck } from './lib/ratchet_check.ts';
 /** The install seed's own user, and the credential the suite database gets. */
 const SUITE_LOGIN_USER = 'root';
 /** Kept in step with src/core/test_data/suite_login.ts (imported lazily below). */
-const SUITE_LOGIN_PASSWORD = 'dedalo_suite_client_tests';
+const SUITE_LOGIN_PASSWORD = 'Dedalo-Suite-Client-7';
 
 // ---------------------------------------------------------------------------
 // CLI / env argument resolution (mirrors the PHP runner's getArg helper).

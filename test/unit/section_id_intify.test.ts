@@ -11,7 +11,10 @@
 // seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
 // which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
 	canonicalizeStoredSectionId,
 	isConvertibleSectionIdString,
@@ -21,6 +24,8 @@ import {
 	intifySectionIdsInValue,
 } from '../../src/core/update/transform/section_id_intify.ts';
 import vectors from './fixtures/section_id_conversion_vectors.json';
+
+const REPO_ROOT = join(import.meta.dir, '..', '..');
 
 /** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
 const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
@@ -58,19 +63,68 @@ describe('the shared conversion rule (vector file, both runtimes)', () => {
 			}
 		});
 	}
+});
 
-	test('the v6 package carries a byte-identical copy of the vector file', async () => {
-		// Self-contained-package rule: the v6 step cannot reference this repo, so
-		// it ships its own copy — this assertion is the anti-drift tripwire. The
-		// v6 tree is a sibling checkout on dev machines; absent → skip (CI of the
-		// v7 repo alone cannot see it).
-		const v6Copy = Bun.file(
-			'../../v6/master_dedalo/core/area_maintenance/widgets/close_v6_prepare_v7/run/lib/section_id_conversion_vectors.json',
-		);
-		if (!(await v6Copy.exists())) return;
-		const v7Copy = Bun.file('test/unit/fixtures/section_id_conversion_vectors.json');
-		expect(await v6Copy.text()).toBe(await v7Copy.text());
+// ── THE V6 COPY ANTI-DRIFT TRIPWIRE ─────────────────────────────────────────
+// Self-contained-package rule: the v6 step cannot reference this repo, so it
+// ships its OWN copy of the vector file. The detector is one pure function over
+// two paths; it runs twice through the SAME code — against a situation BUILT in
+// a scratch dir (identical, drifted, missing: runs on every host), and against
+// the real sibling v6 checkout where one exists (a dev machine; a clone of the
+// v7 repo alone cannot see it — a named skip, never a silent pass).
+
+const V7_VECTORS = join(REPO_ROOT, 'test/unit/fixtures/section_id_conversion_vectors.json');
+const V6_VECTORS = join(
+	REPO_ROOT,
+	'../../v6/master_dedalo/core/area_maintenance/widgets/close_v6_prepare_v7/run/lib/section_id_conversion_vectors.json',
+);
+
+type CopyVerdict = 'identical' | 'drift' | 'absent';
+
+/** The v6 copy against the v7 source, byte for byte. */
+function vectorCopyVerdict(v6Path: string, v7Path: string): CopyVerdict {
+	if (!existsSync(v6Path)) return 'absent';
+	return readFileSync(v6Path).equals(readFileSync(v7Path)) ? 'identical' : 'drift';
+}
+
+describe('the v6 copy of the vector file (anti-drift)', () => {
+	const scratch = mkdtempSync(join(tmpdir(), 'dd-intify-vectors-'));
+	afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+	const source = readFileSync(V7_VECTORS);
+
+	test('BUILT SITUATION: a byte-identical copy passes', () => {
+		const copy = join(scratch, 'identical.json');
+		writeFileSync(copy, source);
+		expect(source.length).toBeGreaterThan(100);
+		expect(vectorCopyVerdict(copy, V7_VECTORS)).toBe('identical');
 	});
+
+	test('BUILT SITUATION: a one-byte drift (whitespace included) is caught', () => {
+		const flipped = join(scratch, 'flipped.json');
+		writeFileSync(
+			flipped,
+			source.toString('utf8').replace('"convertible": true', '"convertible": false'),
+		);
+		expect(vectorCopyVerdict(flipped, V7_VECTORS)).toBe('drift');
+		const trailing = join(scratch, 'trailing.json');
+		writeFileSync(trailing, Buffer.concat([source, Buffer.from('\n')]));
+		expect(vectorCopyVerdict(trailing, V7_VECTORS)).toBe('drift');
+	});
+
+	test('BUILT SITUATION: a missing copy reads as absent, never as identical', () => {
+		expect(vectorCopyVerdict(join(scratch, 'never_written.json'), V7_VECTORS)).toBe('absent');
+	});
+
+	const v6Present = existsSync(V6_VECTORS);
+	// ONE registration: a pass where the sibling exists, a skip that names why where it does not.
+	test.skipIf(!v6Present)(
+		v6Present
+			? 'the real v6 package carries a byte-identical copy'
+			: 'SKIPPED — the sibling v6 checkout (../../v6/master_dedalo) is absent on this host; the built-situation legs above still prove the detector',
+		() => {
+			expect(vectorCopyVerdict(V6_VECTORS, V7_VECTORS)).toBe('identical');
+		},
+	);
 });
 
 describe('walk shape', () => {

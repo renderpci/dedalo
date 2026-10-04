@@ -9,6 +9,7 @@
  * test/unit/verify_selector_selftest.test.ts.
  */
 
+import { existsSync } from 'node:fs';
 import { $ } from 'bun';
 
 /** A changed source file's import-tail — the substring test files import it by,
@@ -23,9 +24,13 @@ export function importTail(file: string): string | null {
 export async function neighbourTests(changed: string[]): Promise<string[]> {
 	const out = new Set<string>();
 
-	// A changed test file is its own neighbour.
+	// A changed test file is its own neighbour — IF IT STILL EXISTS. `git diff
+	// --name-only` lists deleted files and a rename's old path; a deleted test
+	// is a legitimate absence here, and the runner's file expansion
+	// (scripts/lib/test_order.ts) throws on a missing path by design (bun drops
+	// a missing `./path` silently with exit 0), so the selector filters it.
 	for (const f of changed) {
-		if (f.startsWith('test/') && f.endsWith('.test.ts')) out.add(f);
+		if (f.startsWith('test/') && f.endsWith('.test.ts') && existsSync(f)) out.add(f);
 	}
 
 	// Src files: find every test that imports their module tail.

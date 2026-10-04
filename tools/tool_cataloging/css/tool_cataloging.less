@@ -39,6 +39,14 @@
 		.right_container {
 			overflow: scroll;
 				height: calc(100vh - 90px);
+
+			// phone: the two panes stack, so each takes its content height —
+			// two viewport-tall scrollers one above the other trap the page
+			@media screen and (max-width: @width_break_point_phone) {
+				overflow: visible;
+				height: auto;
+				width: 100%;
+			}
 		}
 
 		.left_container {
@@ -277,6 +285,16 @@
 				>.list_body >.content_data >.section_record {
 					outline: 1px solid @color_grey_14;
 
+					// narrow: a mosaic TILE is not a list row. The list's card
+					// layout (list.less, @width_break_point_0) prints each column's
+					// label in ::before; inside a tile those labels had a few px
+					// each and stood one letter per line ("N/ú/m/e/r/o").
+					@media screen and (max-width: @width_break_point_0) {
+						.column:before {
+							display: none;
+						}
+					}
+
 					// button info
 					.button.info {
 						height: 1.5rem;
@@ -324,9 +342,4 @@
 	}//end .content_data
 
 }//end .wrapper_tool
-
-// modal and new window header tool modification
-.tool_header.tool_cataloging {
-	background-color: @tool_color;
-}
 

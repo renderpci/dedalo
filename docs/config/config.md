@@ -2244,7 +2244,8 @@ The one workflow that needs it is a Dédalo acting as an **ontology master**
 (`IS_AN_ONTOLOGY_SERVER=true`): the update panel on the *client* Dédalo fetches
 `get_ontology_update_info` from the master **directly from the browser**
 (`client/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js`),
-so the master must name the client origins here. The server-to-server probe
+so the master must name the client origins here. The master's **Serve Ontology** maintenance
+panel shows whether this key (and the other two serving keys) is set. The server-to-server probe
 (`checkRemoteServer`) is unaffected — it is a Bun `fetch`, and CORS is a browser rule.
 
 An entry is matched as an **exact, case-sensitive origin string** — scheme + host + port, no
@@ -2352,6 +2353,48 @@ DEDALO_MEDIA_PUBLIC_QUALITIES=["image/1.5MB","av/404","av/subtitles"]
 ```
 
 *Default: (unset)*
+
+---
+
+### Declaring the NAT64 prefixes of an IPv6-only host
+
+DEDALO_NAT64_PREFIXES `array`
+
+Only for a server on an **IPv6-only network that reaches the IPv4 internet through a
+NAT64 translator using its own network-specific prefix** (RFC 6052). Leave it empty
+everywhere else — that is almost every installation.
+
+Whenever the server fetches a URL on a user's behalf (an RDF import, a catalogue lookup,
+a translation or transcription service, a harvest), it first checks that the address is on
+the public internet. Behind a NAT64 translator an IPv6 address *inside the translator's
+prefix* actually reaches the IPv4 address embedded in it — so with a provider prefix such
+as `2001:db8:64::/96`, the address `2001:db8:64::a9fe:a9fe` is really `169.254.169.254`,
+the cloud metadata endpoint, although it looks like an ordinary public IPv6 address.
+Declaring the prefix here makes the check judge every address inside it by the IPv4
+address it carries.
+
+The well-known prefix `64:ff9b::/96` is always understood and needs no entry. The engine
+also asks the network itself (the RFC 7050 `ipv4only.arpa` lookup) and uses what it
+learns, but only to refuse MORE: an answer from a resolver is not your word, so a prefix it
+reports never makes an otherwise-refused address acceptable. If your translator's prefix
+is taken from the local-use block `64:ff9b:1::/48` or from a unique-local range such as
+`fd00::/8` — those are the RANGES it comes from, not entries to copy — sites on the IPv4
+internet are reachable only once you declare the translator's OWN prefix here, for example
+`64:ff9b:1::/96`.
+
+Each entry is the translator's prefix exactly as it is configured, of length 32, 40, 48, 56,
+64 or 96 — the only lengths RFC 6052 defines (most translators use /96). Declare the length
+the translator uses: the length decides which bytes carry the IPv4 address, so a /48 entry
+for a /96 translator reads the wrong bytes and every IPv4 site it reaches is refused. An
+entry of any other length (`fd00::/8` is one) is refused loudly: until it is fixed,
+**every IPv6 destination is refused**, because the check can no longer tell which of them
+lead into IPv4.
+
+```bash
+DEDALO_NAT64_PREFIXES=2001:db8:64::/96
+```
+
+*Default: []*
 
 ---
 
@@ -3132,15 +3175,43 @@ Making the backups is the operating system's job — a nightly timer, described 
 - **Whether the maintenance "Make backup" button would skip.** It never does today: that
   button always forces a dump, so the throttle it belongs to is not reached.
 
-Age is judged by the newest backup file's modification time. Keep the value in step with how
-often the nightly job actually runs — set it below the real interval and the updater refuses
-on an installation that is backing up perfectly well.
+Age is judged by the modification time of the newest backup that PostgreSQL's own
+`pg_restore` can read back end to end. A dump that is cut short, or whose read did not finish
+within its time budget (see `DEDALO_BACKUP_VERIFY_SECONDS_PER_GB`), does not count, however
+recent it is. Keep the value in step with how often the nightly job actually runs — set it
+below the real interval and the updater refuses on an installation that is backing up
+perfectly well.
 
 ```bash
 DEDALO_BACKUP_TIME_RANGE=8
 ```
 
 *Default: 8*
+
+---
+
+### Defining the backup verification budget
+
+DEDALO_BACKUP_VERIFY_SECONDS_PER_GB `int`
+
+How long the engine may spend proving that a database backup can be restored, in
+**seconds per gigabyte** of dump. Before a backup counts — for the code updater's "is there a
+recent backup" check, for the update panel, and for a dump the maintenance button just made —
+the engine reads the whole archive back with PostgreSQL's `pg_restore`, because only a full
+read can tell a complete dump from one that stopped part way. That read gets this many seconds
+for every started gigabyte, and never less than one minute.
+
+A read that does not finish within its budget proves nothing, so that backup does **not**
+count: the code updater refuses (it can still be waived explicitly) and says so, naming this
+key. On an installation whose backups live on slow storage (a network share, a USB disk), raise
+the value until the read fits; a verification that succeeded is remembered, so the cost is paid
+once per backup file.
+
+```bash
+DEDALO_BACKUP_VERIFY_SECONDS_PER_GB=60
+```
+
+*Default: 60*
 
 ---
 
@@ -3172,15 +3243,20 @@ DEDALO_DEBUG_API_ERRORS=true
 
 DEDALO_DEV_MODE `bool`
 
-Marks this installation as a development server. With `true`, logged-in users get the
-debug and developer surfaces in the interface (the extra inspection panels), the client is told
+Marks this installation as a development server. With `true`, the client is told
 it is talking to a development server so it takes the no-cache path instead of the offline
-service-worker one, and the readable, non-minified versions of the client libraries are served.
-The configuration widget in the maintenance area reports the mode it resolved, so you can always
-check what a running server thinks it is.
+service-worker one, the readable, non-minified versions of the client libraries are served,
+and the dev-only client libraries the browser test harness needs (mocha/chai) are served. The configuration widget in the maintenance
+area reports the mode it resolved, so you can always check what a running server thinks it is.
 
-Default `false`, the production posture. Never `true` on a shared or public installation: the
-developer surfaces expose internal structure that ordinary users have no business seeing.
+This key is the SERVER's posture only. It does NOT control the debug/developer surfaces in the
+interface (the info bar, the ontology/inspector shortcuts): those follow the LOGGED USER — a
+user flagged `is_developer` in their record sees them, root (superuser) included. A
+non-developer gets neither even on a development server — the surfaces follow the person, not
+the box.
+
+Default `false`, the production posture. Never `true` on a shared or public installation: it
+switches the client off the offline cache and serves unminified libraries.
 
 The real environment wins over the configuration file, so a single development run can be marked
 without editing anything:
@@ -3766,7 +3842,9 @@ DEDALO_ERROR_REPORT_ALLOWED_IPS `string`
 
 Only meaningful on the **master** installation (the one that receives reports). A
 comma-separated list of the IP addresses allowed to reach the intake; a report from any
-other address is refused. The shorthand `loopback` accepts the local machine.
+other address is refused. The shorthand `loopback` accepts the local machine. Write
+every IPv4 part in plain decimal: an entry with a leading zero (`010.0.0.1`) is refused,
+because some software reads it as octal — it matches no address at all.
 
 Unset (the default) leaves the intake open to any address — it is still anonymous,
 rate-limited and size-capped, but if you know which installations report to you, listing
@@ -3941,6 +4019,98 @@ ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
 *Default: (unset)*
+
+---
+
+### Defining the daily semantic-search budget per user
+
+DEDALO_AI_USER_DAILY_EMBED_QUERIES `int`
+
+This parameter defines how many semantic-search queries (each one embeds the query text with the embedding model) one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Counted per query: a semantic search, a passage retrieval, a text-to-image search and the retrieval step of a generated answer each count one. The searches the assistant makes INSIDE a conversation are part of that conversation and are not counted here.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_EMBED_QUERIES=2000
+```
+
+*Default: 2000*
+
+---
+
+### Defining the daily assistant-run budget per user
+
+DEDALO_AI_USER_DAILY_RUNS `int`
+
+This parameter defines how many model runs one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. A run is one assistant conversation turn (which may call the model up to twelve times) or one generated answer over the collection (`ask`).
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_RUNS=50
+```
+
+*Default: 50*
+
+---
+
+### Defining the daily model-token budget per user
+
+DEDALO_AI_USER_DAILY_TOKENS `int`
+
+This parameter defines how many model tokens one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Each run reserves the most output it can produce (the per-turn output limit times the turns it may take) and is then charged what the model reports it used; a model that reports no usage keeps the whole reservation charged.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_TOKENS=1000000
+```
+
+*Default: 1000000*
+
+---
+
+### Defining the daily vision-model budget per user
+
+DEDALO_AI_USER_DAILY_VISION `int`
+
+This parameter defines how many vision-model calls one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Counted per call: the identification tool's vision proposals and an image identification that sends the photograph to an external image encoder each count one.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_VISION=50
+```
+
+*Default: 50*
 
 ---
 
@@ -4882,7 +5052,8 @@ Outbound requests to private ranges are refused by default, because an *external
 must never be able to make the engine reach inside the network. An *on-premise* recogniser
 (faster-whisper, WhisperX, whisper.cpp on a LAN machine) is the legitimate opposite case, and
 this parameter is how you say so — deliberately, per installation, rather than by weakening
-the guard for everyone. The cloud metadata address stays refused either way.
+the guard for everyone. The cloud metadata addresses stay refused either way, and so does all
+of IPv4 link-local (`169.254.0.0/16`), which is never a machine on your LAN.
 
 It applies only to the `local_whisper` engine, which is POSTed the audio bytes; the external
 engine keeps the strict guard regardless.
@@ -5356,7 +5527,7 @@ This parameter defines which addresses may reach the install wizard.
 
 A fresh installation has no users yet, so the wizard cannot ask anyone to log in: until the installation is SEALED (the last step of the wizard), its actions are reachable without a password by whoever can open the page — and those actions write the configuration file and restart the server. **Unset, the wizard answers the local machine and nobody else.** To install from another machine — which is the normal case for a container, a virtual machine or a hosted server — you must name the address you will browse from, before you start the wizard.
 
-An entry is one of four things: the word `loopback` (the local machine), a literal address, a range in CIDR notation such as `10.0.0.0/24`, or the word `any`, which opens the wizard to every address. Write `any` only when nothing else can reach the machine — a firewall, or a laptop with no network — and remove it once the installation is sealed. Separate several entries with commas.
+An entry is one of four things: the word `loopback` (the local machine), a literal address, a range in CIDR notation such as `10.0.0.0/24`, or the word `any`, which opens the wizard to every address. Write `any` only when nothing else can reach the machine — a firewall, or a laptop with no network — and remove it once the installation is sealed. Separate several entries with commas. Write every IPv4 part in plain decimal: a part with a leading zero (`127.0.0.01`, `010.0.0.0/8`) is refused, because some software reads it as octal and some as decimal — such an entry matches no address, and the server log names it as ignored.
 
 The address is taken from the trusted hop reported by the web server in front of Dédalo, so behind a proxy `loopback` will NOT match: name the real address of the machine you install from. If a request arrives with no such information the engine treats it as local, so put the wizard behind the proxy the production guide prescribes, or behind a closed port, whenever the machine is reachable from a network. The effective list is printed in the server log when the engine starts, so an installation you cannot reach tells you why. Once the installation is sealed, the whole install surface answers "not found" for good and this parameter no longer matters.
 
@@ -5395,10 +5566,8 @@ This parameter defines the code servers this install offers releases from. By de
 `url` is the master's JSON API endpoint — it MUST end in `/dedalo/core/api/v1/json/` (or `/api/v1/json`); any other path answers 404 and the panel reports the server as unreachable. `code` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN `CODE_SERVERS`.
 
 ```bash
-CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedalo.dev/api/v1/json","code":"x3a0B4Y020Eg9w"}]
+CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 ```
-
-On the OFFICIAL master both doors are live and they are not interchangeable: `/api/v1/json` is the v7 door, while `/dedalo/core/api/v1/json/` on that host is reserved for PRE-7 installations, whose dialect the v7 engine refuses by law and which the web server therefore hands to the retired pre-7 engine (`engineering/MASTER_SERVER.md`). Point a v7 install at the v7 door: aimed at the legacy one it reaches the wrong engine and the panel reports the server as unreachable.
 
 *Default: (unset)*
 
@@ -5468,9 +5637,9 @@ DEDALO_CODE_SERVER_GIT_DIR="/my_dedalo_git_directory"
 
 DEDALO_CODE_SERVER_DEV_CHANNEL `bool`
 
-This parameter lets a code server OFFER developer builds (`<version>-dev.zip`, produced by building any branch other than `master`) to installations that explicitly ask for them.
+This parameter lets a code server OFFER developer builds (`<version>-dev.zip`, built from the tip of the `master` branch) to installations that explicitly ask for them. Published releases (`<version>.zip`) are built from release tags (`vX.Y.Z`) and are offered regardless of this setting.
 
-It exists so a developer can test unreleased branch work on a real installation without cutting a release: a developer build carries no version bump, so it is installed OVER the same version. Both switches must be on — this one here, and the "Developer builds" switch in the target installation's code-update panel. A code server that leaves this unset answers a developer-channel request exactly as it answers a normal one, so branch builds are never enumerable from outside.
+It exists so a developer can test integrated but unreleased work on a real installation without cutting a release: a developer build carries no version bump of its own, so it can be installed OVER the same version. Both switches must be on — this one here, and the "Developer builds" switch in the target installation's code-update panel. A code server that leaves this unset answers a developer-channel request exactly as it answers a normal one, so developer builds are never enumerable from outside.
 
 Everything else is unchanged: the archive is still fetched from a configured code server, still verified against its `.sha256` sidecar, and the update still requires a superuser, maintenance mode and a recent backup.
 
@@ -5502,6 +5671,8 @@ IS_A_CODE_SERVER `bool`
 
 This parameter defines if the server can provide code to other Dédalo servers. By default no Dédalo server provides code, but it is possible to set one up as a mirror server that provides code versions. To enable it, also set `DEDALO_CODE_FILES_DIR` — the URL other servers fetch from is derived automatically.
 
+When it is on, the maintenance area shows the **Serve Code** panel: whether this server can publish, the build source, the archives on disk, and the buttons that build a release. See [Updating code](../management/updates/updating_code.md).
+
 ```bash
 IS_A_CODE_SERVER=false
 ```
@@ -5515,6 +5686,8 @@ IS_A_CODE_SERVER=false
 IS_AN_ONTOLOGY_SERVER `bool`
 
 It defines if the installation server can provide his ontology files to other Dédalo servers.
+
+The maintenance area's **Serve Ontology** panel shows whether this key, `ONTOLOGY_SERVER_CODE` and `DEDALO_CORS_ALLOWED_ORIGINS` are set, and the endpoint other installations register. See [Updating ontology](../management/updates/updating_ontology.md#serving-other-installations-ontology-master).
 
 ```bash
 IS_AN_ONTOLOGY_SERVER=false
@@ -5548,8 +5721,16 @@ This parameter defines the directory to input/output the ontology files in the s
 
 Unset, Dédalo prefers `import/ontology` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and would otherwise carry downloaded or exported ontology files away with the old code. The legacy `install/import/ontology` directory inside the install tree ships the vendored ontology seed files, so it keeps being used until you create the private-directory home (move any files of your own there) or set this key explicitly.
 
+Files are organised in version directories, `<major.minor>/`: one `<tld>.copy.gz` per ontology, `matrix_dd.copy.gz` for the private lists, and the `ontology.json` (plus `ontology_llm_map.json`) that describe them. The canonical production layout is:
+
+```
+/srv/dedalo/ontology/7.0/dd.copy.gz
+/srv/dedalo/ontology/7.0/matrix_dd.copy.gz
+/srv/dedalo/ontology/7.0/ontology.json
+```
+
 ```bash
-ONTOLOGY_DATA_IO_DIR="/srv/dedalo/import/ontology"
+ONTOLOGY_DATA_IO_DIR="/srv/dedalo/ontology"
 ```
 
 *Default: `<private dir>/import/ontology` once that directory exists; until then the legacy `<install dir>/install/import/ontology` (which ships the vendored ontology seeds) keeps being used*
@@ -5585,12 +5766,14 @@ This parameter defines the ontology master servers to get the ontology updates. 
 Each entry is a JSON object with `name`, `url` and `code`. Configuration for the official dedalo.dev server:
 
 ```bash
-ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://master.dedalo.dev/api/v1/json","code":"x3a0B4Y020Eg9w"}]
+ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 ```
 
-On the OFFICIAL master both doors are live and they are not interchangeable: `/api/v1/json` is the v7 door, while `/dedalo/core/api/v1/json/` on that host is reserved for PRE-7 installations, whose dialect the v7 engine refuses by law and which the web server therefore hands to the retired pre-7 engine (`engineering/MASTER_SERVER.md`). Point a v7 install at the v7 door: aimed at the legacy one it reaches the wrong engine and the panel reports the server as unreachable.
-
 It gets the tld from the [ACTIVE_ONTOLOGY_TLDS](#defining-active-ontology-tlds) definition.
+
+A master is identified by its `url`, not by its `code`: several masters may share one access
+code, and the update downloads only from the address of the master picked in the panel. List
+each master once.
 
 The update panel interrogates each master **from the browser**, so the engine adds every origin
 named here to its own `connect-src` Content-Security-Policy automatically — there is no second
@@ -5679,6 +5862,40 @@ DEDALO_GEOIP_DB_URL="https://mirror.example.org/dbip-country-lite-2026-07.mmdb.g
 
 ## Diffusion variables {#diffusion}
 
+### Publication server API v1 access codes
+
+API_WEB_USER_CODE_MULTIPLE `array of objects` *optional*
+
+The publication databases served by the legacy publication server API v1
+(`publication/server_api/v1`), each with the access `code` that API expects. The
+maintenance dashboard (Publication → Publication server API) shows one "Open Swagger UI"
+button per entry, opening the API's interactive documentation for that database with the
+code, the database name and the current interface language already filled in.
+
+Every entry is an object with `db_name` (the publication database) and `code` (the same
+value as `API_WEB_USER_CODE` in that API's own configuration). The optional `api_ui`
+is the address of the documentation page when the API runs on another server; unset, it
+is `/dedalo/publication/server_api/v1/docu/ui/` on this site. The v1 API and its
+documentation page are a separate application that Dédalo itself never serves: the default
+address only works when the web server in front of Dédalo routes `/dedalo/publication/`
+to that application —
+otherwise the button answers "not found", and `api_ui` must point at the server that does
+run v1. Only an `http(s)://` or a root-relative address is accepted. An entry without `db_name` or `code` is dropped and
+reported at boot. The v6 configuration migrator carries the v6 value across, leaving
+out the empty entry a stock v6 configuration ships.
+
+Empty by default: no buttons are shown. The codes are only sent to global administrators,
+the only users who can open the maintenance area. The publication server API v2 is configured in its own `.env`,
+not here.
+
+```bash
+API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]
+```
+
+*Default: (unset)*
+
+---
+
 ### Publication record batch size
 
 DEDALO_DIFFUSION_BATCH_RECORDS `int`
@@ -5689,10 +5906,11 @@ the format writer, so that a section of hundreds of thousands of records never h
 fit in memory at once. A smaller batch lowers the memory ceiling of a publication run;
 a larger one reduces the number of round trips to the database.
 
-The engine currently resolves in fixed batches of **500** records. This key is read for
-the diffusion panel of the maintenance dashboard, which reports the configured value —
-the resolver does not yet take it as an override, so leave it unset unless you were
-told otherwise.
+Unset, a run resolves **500** records per batch. Each publication run reads the key when
+it starts (a resumed run reads it again), so a change applies from the next start. Each
+batch is also one durable step: its records, its checkpoint and its run-ledger rows are
+written together, so a smaller batch means less work to redo when a run is resumed. The
+diffusion panel of the maintenance dashboard reports the configured value.
 
 ```bash
 DEDALO_DIFFUSION_BATCH_RECORDS=500

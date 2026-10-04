@@ -138,6 +138,22 @@ DEDALO_APPLICATION_LANGS={"lg-eng":"English","lg-spa":"Castellano"}
 Simple lists also accept a comma list (`dd,rsc,oh`), which is easier to read. Maps
 and lists-of-objects (`ONTOLOGY_SERVERS`, `MENU_SKIP_TIPOS`) must be JSON.
 
+`API_WEB_USER_CODE_MULTIPLE` (the publication server API v1 databases and codes
+behind the maintenance panel's "Open Swagger UI" buttons) keeps its name and is
+written as a JSON list of objects:
+
+```bash
+# v6
+define('API_WEB_USER_CODE_MULTIPLE', [['db_name'=>'web_my_entity','code'=>'my_api_code','api_ui'=>null]]);
+
+# v7
+API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code","api_ui":null}]
+```
+
+The empty entry a stock v6 `config.php` ships (`db_name` and `code` blank) is not
+migrated; when it is the only entry, the key is not written at all and the panel
+shows no buttons until you add one.
+
 ---
 
 ## Settings that are gone
@@ -169,12 +185,14 @@ dropping them silently.
 
 PHP sessions and the cache manager (`DEDALO_SESSION_HANDLER`,
 `DEDALO_SESSIONS_PATH`, `DEDALO_CACHE_MANAGER`) — v7 has its own session store.
-The PHP logger and debug flags (`LOGGER_LEVEL`, `SHOW_DEBUG`, `SHOW_DEVELOPER`).
+The PHP logger (`LOGGER_LEVEL`). The debug flags `SHOW_DEBUG` and `SHOW_DEVELOPER`
+are no longer configuration: v7 derives them per logged user, as v6 did (root →
+`SHOW_DEBUG`; a user flagged as developer, root included → `SHOW_DEVELOPER`).
 The front-end CDN/library URLs (`USE_CDN`, `JQUERY_*`, `BOOTSTRAP_*`, `D3_URL_JS`,
 `LEAFLET_JS_URL`, …) — v7 serves its own client. PHP binaries and DB management
 (`PHP_BIN_PATH`, `DEDALO_DB_TYPE`, `DEDALO_DB_MANAGEMENT`). Plus
 `ENCRYPTION_MODE`, `MAGICK_CONFIG`, `DEDALO_AV_FFMPEG_SETTINGS`,
-`DEDALO_PROFILE_DEFAULT`, `API_WEB_USER_CODE_MULTIPLE` and the glTF converters.
+`DEDALO_PROFILE_DEFAULT` and the glTF converters.
 
 **Superseded by a native subsystem**
 

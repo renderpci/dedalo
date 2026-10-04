@@ -145,9 +145,27 @@ describe('render class — the save half', () => {
 		// or an IRI that fails its own shape is the client's to escape (the
 		// 'number' class renders non-numerals as text, 'url' renders a refused
 		// scheme as text), never a value the write engine rewrites.
+		// A number item whose `value` is a string is not a number item at all: since
+		// 2026-10-03 the save door's value-shape law refuses it before any value
+		// gate runs (WC-2026-10-03-save-refuses-malformed-value-shape) — refused,
+		// never rewritten, and nothing stored: the number a canonical save put there
+		// first is exactly what the column still holds after the refusal.
 		expect(getRenderClass('component_number')).toBe('number');
-		await saveInto(NUMBER, PAYLOAD);
-		expect(await storedValues(NUMBER, 'number')).toEqual([PAYLOAD]);
+		const numberSaved = await saveComponentData({
+			componentTipo: NUMBER,
+			sectionTipo: SECTION,
+			sectionId: RECORD_ID,
+			lang: 'lg-nolan',
+			changedData: [{ action: 'insert', id: null, value: { id: null, value: 42 } }],
+			userId: -1,
+		});
+		expect(numberSaved.ok, JSON.stringify(numberSaved)).toBe(true);
+		const numberBefore = await storedItems(NUMBER, 'number');
+		expect(numberBefore?.map((item) => item.value)).toEqual([42]);
+		await expect(saveInto(NUMBER, PAYLOAD)).rejects.toMatchObject({
+			code: 'request.invalid_data',
+		});
+		expect(await storedItems(NUMBER, 'number')).toEqual(numberBefore);
 		expect(getRenderClass('component_iri')).toBe('url');
 		await saveInto(IRI, PAYLOAD);
 		expect(await storedValues(IRI, 'iri')).toEqual([PAYLOAD]);

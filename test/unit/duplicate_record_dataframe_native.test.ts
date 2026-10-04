@@ -831,6 +831,27 @@ describe('duplicate × dataframe — the copy owns its frames, or the duplicate 
 		}
 	});
 
+	test('the duplicate’s HISTORY is composed: no row under the slot, both MAIN rows carry the copy’s frames', async () => {
+		const rows = (await sql.unsafe(
+			`SELECT tipo, data FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND section_id = $2 ORDER BY id`,
+			[HOST_SECTION, dupId],
+		)) as { tipo: string; data: unknown }[];
+		// A slot never writes a row of its own (WC …-bulk-revert-undo-log §8).
+		expect(rows.filter((row) => row.tipo === FRAME)).toEqual([]);
+		const mainRows = rows.filter((row) => row.tipo === MAIN);
+		expect(mainRows.length).toBe(2); // the backfill + the save row
+		const stored = (await readRow(HOST_TABLE, HOST_SECTION, dupId))?.relation as Record<
+			string,
+			unknown[]
+		>;
+		expect((stored[FRAME] ?? []).length).toBe(3); // FLOOR: the copy holds frames
+		for (const row of mainRows) {
+			// the RE-MINTED frames (the copy's own), after the main's items
+			expect(row.data).toEqual([...(stored[MAIN] ?? []), ...(stored[FRAME] ?? [])]);
+		}
+	});
+
 	test('REFERENCE locators beside the frames stay SHARED (the fix re-mints ownership only)', async () => {
 		// A portal/autocomplete locator points at a record it does not own —
 		// copying it is CORRECT. A fix that re-minted everything would be a

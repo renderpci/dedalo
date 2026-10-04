@@ -58,18 +58,44 @@
  * "no file found (already removed)").
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import {
+	closeSync,
+	existsSync,
+	fsyncSync,
+	openSync,
+	readdirSync,
+	renameSync,
+	unlinkSync,
+} from 'node:fs';
+import { dirname } from 'node:path';
 import {
 	publishedRecordFileName,
 	sanitizePublishedFileName,
 } from '../../core/diffusion_bridge/published_files.ts';
 import { DedaloError } from '../../core/errors/index.ts';
+import { fsyncDirectory, mkdirDurably, writeAllSync } from '../../core/files/durable.ts';
+import { tempPathFor } from '../../core/files/temp_path.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
-import { atomicWriteFile, createZip, formatTargetDir, planColumnNames } from './files.ts';
+import {
+	atomicWriteFile,
+	createZip,
+	formatTargetDir,
+	manifestPaths,
+	planColumnNames,
+	readManifestPart,
+	sweepStaleTemps,
+	WriterRunLog,
+	withTrailingPath,
+} from './files.ts';
 import type {
+	ArtifactEvent,
 	DiffusionWriter,
+	ManifestEntry,
 	WriteBatchResult,
+	WriterCloseContext,
+	WriterContinuity,
+	WriterOpenContext,
 	WriterRunSummary,
 	WriterSession,
 } from './types.ts';
@@ -320,72 +346,156 @@ export function renderRdfRecord(
 }
 
 /**
- * Type-aware consolidation — VERBATIM port of the old engine's
- * merge_rdf_parts (rdf_file_utils.ts:72-85): envelope (opening <rdf:RDF …>
- * tag with its namespaces) from the FIRST part, inner blocks of every part
- * concatenated. Single part returns untouched; empty input returns ''.
- * NOTE the merged declaration has NO space before '?>' — old engine :84.
+ * A streamed consolidation's output: parts are read ONE at a time (as utf-8
+ * text — a BOM is kept, like the frozen in-memory merge's readFileSync), the
+ * result goes through a numeric descriptor (synchronous writes,
+ * core/files/durable.ts) onto a temp sibling, fsynced, renamed over `outPath`,
+ * the directory fsynced — the merged document a close reports is on disk
+ * before the runner commits the run 'completed'. Memory is bounded by the two
+ * largest parts (the held-back first part + the current one). Zero non-empty
+ * parts ⇒ nothing is written (the caller does not consolidate).
  */
-export function mergeRdfParts(rawParts: string[]): string {
-	const nonEmpty = rawParts.filter((part) => part && part.trim().length > 0);
-	if (nonEmpty.length === 0) return '';
-	if (nonEmpty.length === 1) return nonEmpty[0] as string;
+export class StreamedMergeOutput {
+	private fd: number | null = null;
+	private tempPath: string | null = null;
 
-	const first = nonEmpty[0] as string;
-	const openingMatch = first.match(/<rdf:RDF[^>]*>/s);
-	const openingTag = openingMatch ? openingMatch[0] : '<rdf:RDF>';
+	constructor(private readonly outPath: string) {}
 
-	const innerBlocks = nonEmpty
-		.map((part) => {
-			const open = part.match(/<rdf:RDF[^>]*>/s);
-			const closeIndex = part.lastIndexOf('</rdf:RDF>');
-			if (!open || closeIndex === -1) return '';
-			const bodyStart = (open.index ?? 0) + open[0].length;
-			return part.slice(bodyStart, closeIndex).trim();
-		})
-		.filter((block) => block.length > 0)
-		.join('\n\n');
+	async write(text: string): Promise<void> {
+		if (text === '') return;
+		if (this.fd === null) {
+			mkdirDurably(dirname(this.outPath));
+			this.tempPath = tempPathFor(this.outPath);
+			this.fd = openSync(this.tempPath, 'w');
+		}
+		writeAllSync(this.fd, Buffer.from(text, 'utf-8'));
+	}
 
-	return `<?xml version="1.0" encoding="utf-8"?>\n${openingTag}\n\n${innerBlocks}\n\n</rdf:RDF>\n`;
+	/** Finalize: fsync + rename + directory fsync (nothing written ⇒ nothing lands). */
+	async commit(): Promise<void> {
+		if (this.fd === null || this.tempPath === null) return;
+		fsyncSync(this.fd);
+		closeSync(this.fd);
+		this.fd = null;
+		renameSync(this.tempPath, this.outPath);
+		this.tempPath = null;
+		fsyncDirectory(dirname(this.outPath));
+	}
+
+	/** Drop the temp (a failed merge leaves no partial final file). */
+	async discard(): Promise<void> {
+		if (this.fd !== null) {
+			try {
+				closeSync(this.fd);
+			} catch {
+				// already closed — nothing held
+			}
+		}
+		this.fd = null;
+		if (this.tempPath !== null) {
+			try {
+				unlinkSync(this.tempPath);
+			} catch {
+				// never created, or already gone — nothing left behind
+			}
+		}
+		this.tempPath = null;
+	}
+}
+
+/** A part the merge keeps: non-empty after trim (the oracle's filter). */
+function isMergeablePart(part: string): boolean {
+	return part.trim().length > 0;
+}
+
+/** The rdf part's inner block (between its <rdf:RDF …> and its last </rdf:RDF>), trimmed. */
+function rdfInnerBlock(part: string): string {
+	const open = part.match(/<rdf:RDF[^>]*>/s);
+	const closeIndex = part.lastIndexOf('</rdf:RDF>');
+	if (!open || closeIndex === -1) return '';
+	const bodyStart = (open.index ?? 0) + open[0].length;
+	return part.slice(bodyStart, closeIndex).trim();
+}
+
+/**
+ * Type-aware consolidation, STREAMED (PERF-2/DIFF-4) — the old engine's
+ * merge_rdf_parts (rdf_file_utils.ts:72-85), byte for byte (the frozen
+ * in-memory port is test/helpers/merge_oracle.ts; gate:
+ * diffusion_rdfxml_writers "streamed merge == frozen oracle"): envelope
+ * (opening <rdf:RDF …> tag with its namespaces) from the FIRST non-empty part,
+ * inner blocks of every part joined by a blank line. A single part is written
+ * untouched. NOTE the merged declaration has NO space before '?>' — old
+ * engine :84. Returns how many non-empty parts were merged.
+ */
+export async function writeMergedRdf(
+	paths: AsyncIterable<string>,
+	outPath: string,
+	onMissing: (path: string) => void = () => {},
+): Promise<{ parts: number }> {
+	const output = new StreamedMergeOutput(outPath);
+	let first: string | null = null;
+	let parts = 0;
+	let blocks = 0;
+	const writeBlock = async (block: string): Promise<void> => {
+		if (block.length === 0) return;
+		await output.write(blocks > 0 ? `\n\n${block}` : block);
+		blocks++;
+	};
+	try {
+		for await (const path of paths) {
+			const part = readManifestPart(path);
+			if (part === null) {
+				onMissing(path); // gone since the manifest pass saw it: a line, not a crash
+				continue;
+			}
+			if (!isMergeablePart(part)) continue;
+			parts++;
+			if (first === null) {
+				first = part; // held back: alone, it is the result verbatim
+				continue;
+			}
+			if (parts === 2) {
+				const openingTag = first.match(/<rdf:RDF[^>]*>/s)?.[0] ?? '<rdf:RDF>';
+				await output.write(`<?xml version="1.0" encoding="utf-8"?>\n${openingTag}\n\n`);
+				await writeBlock(rdfInnerBlock(first));
+			}
+			await writeBlock(rdfInnerBlock(part));
+		}
+		if (parts === 1) await output.write(first as string);
+		else if (parts > 1) await output.write('\n\n</rdf:RDF>\n');
+		await output.commit();
+		return { parts };
+	} catch (error) {
+		await output.discard();
+		throw error;
+	}
 }
 
 /** Consolidated artifact names — old grammar minus the wall-clock date tag. */
 const RDF_MERGED_NAME = 'diffusion_rdf_merged.rdf';
 const RDF_ZIP_NAME = 'diffusion_rdf.zip';
 
-/** Per-table counters feeding the close() summary (markdown writer shape). */
-interface RdfTableCounters {
-	records_affected: number;
-	records_count: number;
-}
-
 class RdfWriterSession implements WriterSession {
 	private readonly serviceName: string;
 	private readonly targetDir: string;
-	/** Insertion-ordered so close() reports tables in plan order. */
-	private readonly counters = new Map<string, RdfTableCounters>();
-	private readonly errors: string[] = [];
-	/** Files THIS RUN finalized, insertion-ordered — merge + zip manifest. */
-	private readonly writtenFiles = new Set<string>();
+	private readonly sections: Map<string, SectionPlan>;
+	private readonly log: WriterRunLog;
 	/** Per-section namespace sets, memoized (unknown prefixes error ONCE). */
 	private readonly namespacesBySection = new Map<string, RdfNamespaceSet>();
 	private schemaEnsured = false;
 
-	constructor(plan: PublicationPlan) {
+	constructor(plan: PublicationPlan, context?: WriterOpenContext) {
 		this.serviceName = requireFilesTarget('rdf', plan);
 		this.targetDir = formatTargetDir('rdf', this.serviceName);
-		for (const section of plan.sections) {
-			this.counters.set(section.tableName, { records_affected: 0, records_count: 0 });
-		}
+		this.sections = new Map(plan.sections.map((section) => [section.sectionTipo, section]));
+		this.log = new WriterRunLog(
+			plan.sections.map((section) => section.tableName),
+			context,
+		);
 	}
 
-	private countersFor(tableName: string): RdfTableCounters {
-		let counters = this.counters.get(tableName);
-		if (counters === undefined) {
-			counters = { records_affected: 0, records_count: 0 };
-			this.counters.set(tableName, counters);
-		}
-		return counters;
+	get continuity(): WriterContinuity {
+		return this.log.continuity;
 	}
 
 	private namespacesFor(section: SectionPlan): RdfNamespaceSet {
@@ -393,7 +503,7 @@ class RdfWriterSession implements WriterSession {
 		if (namespaces === undefined) {
 			namespaces = collectRdfNamespaces(section);
 			for (const prefix of namespaces.unknownPrefixes) {
-				this.errors.push(
+				this.log.errors.add(
 					`rdf writer: no xmlns known for prefix '${prefix}' (section '${section.tableName}') — ` +
 						`emitted fallback ${fallbackXmlnsUri(prefix)}; declare the vocabulary in the element ontology.`,
 				);
@@ -409,7 +519,7 @@ class RdfWriterSession implements WriterSession {
 
 	/** File-target "schema" = the run directory exists (no DDL). */
 	async ensureSchema(): Promise<void> {
-		mkdirSync(this.targetDir, { recursive: true });
+		mkdirDurably(this.targetDir);
 		this.schemaEnsured = true;
 	}
 
@@ -437,11 +547,14 @@ class RdfWriterSession implements WriterSession {
 			group.rows.push(row);
 		}
 		for (const group of grouped.values()) {
-			const filePath = this.recordPath(section, group.sectionId);
-			atomicWriteFile(filePath, renderRdfRecord(section, group.sectionId, group.rows, namespaces));
-			this.writtenFiles.add(filePath);
+			atomicWriteFile(
+				this.recordPath(section, group.sectionId),
+				renderRdfRecord(section, group.sectionId, group.rows, namespaces),
+				this.log.barrier,
+			);
+			this.log.note('wrote', section.sectionTipo, group.sectionId);
 		}
-		const counters = this.countersFor(section.tableName);
+		const counters = this.log.countersFor(section.tableName);
 		counters.records_affected += grouped.size;
 		counters.records_count += rows.length;
 		return { written: rows.length, deleted: 0 };
@@ -451,7 +564,9 @@ class RdfWriterSession implements WriterSession {
 	 * Unlink the canonical per-record file PLUS the legacy '{base}_*.rdf'
 	 * variants — the EXACT diffusion_delete.ts unlinkPublishedFiles rdf branch
 	 * (:412-423; PHP delete_record_file legacy glob :369-379). Missing files =
-	 * idempotent success with zero deletions.
+	 * idempotent success with zero deletions. The removal event names the
+	 * RECORD (its canonical file leaves the manifest); legacy variants were
+	 * never in a manifest.
 	 */
 	async removeRecords(
 		section: SectionPlan,
@@ -472,32 +587,69 @@ class RdfWriterSession implements WriterSession {
 			}
 			for (const path of toUnlink) {
 				unlinkSync(path);
+				this.log.barrier.add(this.targetDir); // durable at checkpoint()
 				deleted++;
-				this.writtenFiles.delete(path); // never merge/zip a file we just removed
 			}
-			this.writtenFiles.delete(filePath);
+			this.log.note('removed', section.sectionTipo, sectionId);
 		}
-		this.countersFor(section.tableName).records_affected += deleted;
+		this.log.countersFor(section.tableName).records_affected += deleted;
 		return { written: 0, deleted };
 	}
 
+	takeArtifacts(): ArtifactEvent[] {
+		return this.log.take();
+	}
+
 	/**
-	 * Consolidate: merge every per-record document this run wrote into ONE
-	 * envelope (mergeRdfParts), then ZIP the per-record files + the merged
-	 * document (old engine index.ts:543-563), everything temp+rename. The
-	 * consolidated paths ride the summary as prefixed zero-count table
-	 * entries — see CONSOLIDATED_MERGED_PREFIX for the runner mapping.
+	 * THE DURABILITY BARRIER (WriterRunLog.checkpoint): every record file of the
+	 * batch was fsynced before its rename (atomicWriteFile); the directory —
+	 * the renames and unlinks — is fsynced here, before the runner commits the
+	 * batch's events to the run ledger. The state is the counters.
 	 */
-	async close(): Promise<WriterRunSummary> {
-		const consolidated: { table_name: string; records_affected: number; records_count: number }[] =
-			[];
-		if (this.writtenFiles.size > 0) {
-			const files = [...this.writtenFiles];
-			const merged = mergeRdfParts(files.map((path) => readFileSync(path, 'utf-8')));
-			const mergedPath = `${this.targetDir}/${RDF_MERGED_NAME}`;
-			atomicWriteFile(mergedPath, merged);
-			const zipPath = `${this.targetDir}/${RDF_ZIP_NAME}`;
-			await createZip([...files, mergedPath], zipPath);
+	async checkpoint(): Promise<unknown> {
+		return this.log.checkpoint();
+	}
+
+	runSummary(): WriterRunSummary {
+		return this.log.summary();
+	}
+
+	/**
+	 * Consolidate the RUN: merge every per-record document of the run's
+	 * manifest into ONE envelope (writeMergedRdf, streamed), then ZIP the
+	 * per-record files + the merged document (old engine index.ts:543-563) —
+	 * two manifest passes, everything temp+rename, memory bounded. The
+	 * consolidated paths ride the summary as prefixed zero-count table entries
+	 * — see CONSOLIDATED_MERGED_PREFIX for the runner mapping.
+	 */
+	async close(context?: WriterCloseContext): Promise<WriterRunSummary> {
+		const run = this.log.closeContext(context);
+		await sweepStaleTemps(this.targetDir, run);
+		const pathOf = (entry: ManifestEntry): string | null => {
+			const section = this.sections.get(entry.sectionTipo);
+			return section === undefined ? null : this.recordPath(section, entry.sectionId);
+		};
+		const consolidated: WriterRunSummary['tables'] = [];
+		const mergedPath = `${this.targetDir}/${RDF_MERGED_NAME}`;
+		const missing = (path: string): void => {
+			this.log.errors.add(`rdf close: published file missing, left out of the archive: ${path}`);
+		};
+		const { parts } = await writeMergedRdf(
+			manifestPaths(run, pathOf, missing),
+			mergedPath,
+			missing,
+		);
+		if (parts > 0) {
+			// The zip pass reports what the merge pass could not see: a record
+			// file removed between the two (the merged document then names a
+			// record the archive omits — the line says so). The engine's
+			// files-unlink door cannot do it (it takes this close's fence, WC R2
+			// closed); a hand outside the engine can.
+			await createZip(
+				withTrailingPath(manifestPaths(run, pathOf, missing), mergedPath),
+				`${this.targetDir}/${RDF_ZIP_NAME}`,
+				{ onMissing: missing },
+			);
 			const relativeDir = `/rdf/${this.serviceName}`;
 			consolidated.push(
 				{
@@ -512,37 +664,27 @@ class RdfWriterSession implements WriterSession {
 				},
 			);
 		}
-		return {
-			tables: [
-				...[...this.counters.entries()].map(([tableName, counters]) => ({
-					table_name: tableName,
-					records_affected: counters.records_affected,
-					records_count: counters.records_count,
-				})),
-				...consolidated,
-			],
-			errors: [...this.errors],
-		};
+		return this.log.summary(consolidated);
 	}
 
 	/**
 	 * Per-record files land via their own temp+rename (atomicWriteFile cleans
 	 * its temp on failure) and stay finalized — the PHP per-record save
-	 * posture. Consolidation temps only exist inside close(); this sweep is a
-	 * defensive cleanup of any '.tmp-*' sibling a crash left behind.
+	 * posture; consolidation temps clean themselves (writeMergedRdf,
+	 * createZip). NOTHING is swept here: abort may run unfenced, and a `.tmp-*`
+	 * in the shared directory may be another session's in-flight write (DIFF-2).
+	 * A crashed holder's leftovers are swept by the next FENCED close
+	 * (sweepStaleTemps).
 	 */
 	async abort(): Promise<void> {
-		if (!existsSync(this.targetDir)) return;
-		for (const name of readdirSync(this.targetDir)) {
-			if (name.includes('.tmp-')) unlinkSync(`${this.targetDir}/${name}`);
-		}
+		// no-op by design
 	}
 }
 
 /** The 'rdf' format writer (registry entry). */
 export const rdfWriter: DiffusionWriter = {
 	format: 'rdf',
-	async open(plan: PublicationPlan): Promise<WriterSession> {
-		return new RdfWriterSession(plan);
+	async open(plan: PublicationPlan, context?: WriterOpenContext): Promise<WriterSession> {
+		return new RdfWriterSession(plan, context);
 	},
 };

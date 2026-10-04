@@ -10,6 +10,9 @@
  *   - matrix_time_machine rows for those tipos (none are written, swept + asserted anyway)
  *   - the dd_ontology_recovery slice table (created and dropped by the code under test)
  *   - a mkdtemp() scratch directory for every .gz / .copy artifact
+ *   - SURF-1 leg: dropped CHECKs + a planted dd_ontology violator (test990011),
+ *     inside ONE sentinel-rolled-back transaction — nothing survives it. Mutation:
+ *     drop the skipped-rows push in buildRecoveryVersionFile → that leg red.
  *
  * NEVER assert a table-global count: every count here is a delta taken inside the
  * same test body, or is scoped to the zzt04 namespace.
@@ -20,7 +23,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { sql } from '../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { connFromConfig, type DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { restoreSnapshots, snapshotTableRows } from '../../src/core/ontology/ontology_update.ts';
 import {
@@ -28,6 +31,7 @@ import {
 	RECOVERY_PRESERVE_TLDS,
 	restoreDdOntologyRecoveryFromFile,
 } from '../../src/core/ontology/recovery_file.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 
 const TIPO_A = 'zzt04';
 const TIPO_B = 'zzt04b';
@@ -153,6 +157,51 @@ describe('buildRecoveryVersionFile', () => {
 
 		const after = await sql.unsafe(`SELECT to_regclass('dd_ontology_recovery')::text AS t`, []);
 		expect((after as unknown as { t: string | null }[])[0]?.t).toBeNull();
+	}, 60_000);
+
+	test('SURF-1: a slice row breaking the identifier grammar is left out and NAMED, with the repair', async () => {
+		// The operator line is pushed BEFORE pg_dump runs, so a conn that makes
+		// pg_dump fail fast observes it with nothing committed: everything below
+		// (the dropped CHECKs, the planted legacy violator under the preserved tld
+		// `test`, the slice table) lives in ONE transaction ended by a sentinel.
+		const outFile = join(workDir, 'build_skipped.sql.gz');
+		const badConn: DbConnDescriptor = { ...conn, database: 'zzt04_no_such_database' };
+		const violator = { tipo: 'test990011', parent: "test0' OR '1" };
+		const rollback = new Error('ontology_recovery_file: sentinel rollback');
+		let response: Awaited<ReturnType<typeof buildRecoveryVersionFile>> | null = null;
+		await assertTestDatabase('ontology_recovery_file_native');
+		try {
+			await withTransaction(async () => {
+				const checks = (await sql.unsafe(
+					`SELECT conname FROM pg_constraint WHERE conrelid = 'dd_ontology'::regclass AND contype = 'c'`,
+				)) as { conname: string }[];
+				for (const { conname } of checks) {
+					if (!/^[a-z0-9_]+$/.test(conname)) throw new Error(`unexpected constraint ${conname}`);
+					await sql.unsafe(`ALTER TABLE dd_ontology DROP CONSTRAINT "${conname}"`);
+				}
+				await sql.unsafe(
+					`INSERT INTO dd_ontology (tipo, parent, tld, model, is_model, is_translatable, is_main)
+					 VALUES ($1, $2, 'test', 'component_input_text', false, false, false)`,
+					[violator.tipo, violator.parent],
+				);
+				response = await buildRecoveryVersionFile(badConn, outFile);
+				throw rollback;
+			});
+		} catch (error) {
+			if (error !== rollback) throw error;
+		}
+		const built = response as unknown as Awaited<ReturnType<typeof buildRecoveryVersionFile>>;
+		expect(built.ok).toBe(false);
+		expect(built.errors.length).toBe(2);
+		const line = String(built.errors[0]);
+		expect(line).toContain(JSON.stringify(violator.tipo));
+		expect(line).toContain('run reconcile ontology_identifiers');
+		expect(line).not.toContain(violator.parent);
+		expect(built.errors[1]?.startsWith('pg_dump failed:')).toBe(true);
+		const planted = await sql.unsafe('SELECT count(*)::int AS n FROM dd_ontology WHERE tipo = $1', [
+			violator.tipo,
+		]);
+		expect((planted as unknown as { n: number }[])[0]?.n).toBe(0);
 	}, 60_000);
 
 	test('a failed build does not destroy the PREVIOUS recovery artifact (D9)', async () => {

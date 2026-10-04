@@ -101,17 +101,16 @@ describe('full_count SELECT shape', () => {
 		expect(builtSql).not.toContain('count(*) as full_count');
 	});
 
-	test('multi-hop join filter keeps count(DISTINCT (LATERAL multiplies rows)', async () => {
-		// Two-step path: rsc197.rsc91 → test2827 term — conform builds the LATERAL
-		// unnest + LEFT JOIN chain, so the count must dedup section_id.
-		const sqo = sanitizeClientSqo(
+	/** Two-step path rsc197.rsc91 → test2827 term, with the given q. */
+	const deepSqo = (q: string) =>
+		sanitizeClientSqo(
 			structuredClone({
 				section_tipo: [seed('rsc', 197)],
 				full_count: true,
 				filter: {
 					$and: [
 						{
-							q: 'ea',
+							q,
 							path: [
 								{ section_tipo: seed('rsc', 197), component_tipo: seed('rsc', 91) },
 								{ section_tipo: SECTION, component_tipo: TERM },
@@ -122,10 +121,25 @@ describe('full_count SELECT shape', () => {
 				},
 			}),
 		);
-		const { sql: builtSql } = await buildSearchSql(sqo, {});
-		expect(builtSql).toContain('LEFT JOIN LATERAL');
-		expect(builtSql).toContain('count(DISTINCT');
-		expect(builtSql).not.toContain('count(*) as full_count');
+
+	test('multi-hop NEGATED filter is a NOT EXISTS semi-join → plain count(*)', async () => {
+		// '!*' (is empty) on a deep path = "no related record holds a value"
+		// (deep_path.ts): a correlated NOT EXISTS, never a join in the main FROM,
+		// so there is no fan-out to dedup.
+		const { sql: builtSql } = await buildSearchSql(deepSqo('!*'), {});
+		expect(builtSql).toContain('NOT EXISTS (SELECT 1 FROM jsonb_array_elements(');
+		expect(builtSql).not.toContain('LEFT JOIN LATERAL');
+		expect(builtSql).not.toContain('count(DISTINCT');
+		expect(builtSql).toContain('count(*) as full_count');
+	});
+
+	test('multi-hop REVERSED filter has no fan-out → plain count(*)', async () => {
+		// A positive leaf is driven from the leaf through matrix_relation_index
+		// (deep_path.ts): no join fragments, one row per record.
+		const { sql: builtSql } = await buildSearchSql(deepSqo('ea'), {});
+		expect(builtSql).toContain('FROM matrix_relation_index AS ri_');
+		expect(builtSql).not.toContain('LEFT JOIN LATERAL');
+		expect(builtSql).toContain('count(*) as full_count');
 	});
 
 	test('count(*) value equals count(DISTINCT section_id) on a real section', async () => {

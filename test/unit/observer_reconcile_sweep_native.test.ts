@@ -5,8 +5,8 @@
  * the value law (`recomputeExternalRelation`) and the pure budget predicate;
  * THIS file drives the SWEEP — discovery → candidate narrowing → the per-record
  * census fold → the apply/dry-run split — because the sweep is the offline door
- * that repairs mirrors the bulk writers (v6→v7 update, tool_propagate, portalize)
- * bypass. A regression here is silent by construction: the CLI prints a clean
+ * that repairs mirrors the bulk writers bypass (the v6→v7 update and portalize,
+ * and any door that states it does not propagate). A regression here is silent by construction: the CLI prints a clean
  * summary and the operator concludes the corpus is healthy.
  *
  * The three laws that only an EXECUTED sweep can gate:

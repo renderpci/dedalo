@@ -74,8 +74,8 @@ PostgreSQL                      matrix tables (typed JSONB columns)
   `deleteMatrixRecord` (`matrix_write.ts`).
 - **JSONB codec** — the single encode/decode chokepoint every write passes through
   (`json_codec.ts`).
-- **Ontology I/O** — CRUD, whole-row upsert, filtered search and the backup-table
-  protocol over the ontology table `dd_ontology` (`dd_ontology.ts`).
+- **Ontology I/O** — CRUD, whole-row upsert, filtered search and the identifier
+  grammar over the ontology table `dd_ontology` (`dd_ontology.ts`).
 - **Time Machine I/O** — read of `matrix_time_machine` snapshots and the audit
   `recordTimeMachine` write appended by the save pipeline (`time_machine.ts`).
 - **Schema maintenance** — (re)apply the declared extensions/tables/functions/
@@ -125,7 +125,7 @@ src/core/db/
 ├── matrix_write.ts        matrix CRUD writes + item-id allocators + inserts
 ├── json_codec.ts          encodeForJsonb / decodeFromJsonb — the byte-compat chokepoint
 ├── time_machine.ts        matrix_time_machine read + recordTimeMachine audit write
-├── dd_ontology.ts         dd_ontology CRUD/upsert/search + backup-table protocol
+├── dd_ontology.ts         dd_ontology CRUD/upsert/search + identifier grammar
 ├── db_assets.ts           schema-asset (re)build over the vendored definitions
 └── db_pg_definitions.json the canonical extension/table/trigger/function/constraint/index SQL
 ```
@@ -230,13 +230,44 @@ in `src/core/ontology/resolver.ts`.
 
 | symbol | purpose |
 | --- | --- |
-| `upsertDdOntologyNode(node)` | Whole-row `INSERT … ON CONFLICT(tipo) DO UPDATE` writing every allowlisted column, so a re-parse never leaves stale data behind. Returns the row id. |
+| `upsertDdOntologyNode(node)` | Whole-row `INSERT … ON CONFLICT(tipo) DO UPDATE` writing every allowlisted column, so a re-parse never leaves stale data behind. Refuses a node that breaks the identifier grammar (below) before any SQL. Returns the row id. |
 | `readDdOntologyRow(tipo)` | Read one raw node's columns by `tipo` (uncached probe for the parser). |
-| `updateDdOntologyColumns(tipo, values)` | Partial column update with an INSERT fallback on 0 rows — the sync-order path. |
+| `updateDdOntologyColumns(tipo, values)` | Partial column update of an EXISTING row — the sync-order path. An absent tipo answers `false` and writes nothing (there is no INSERT fallback). Checks the tipo and every identifier column it is given. |
 | `deleteDdOntologyNode(tipo)` | Delete one node. |
 | `searchDdOntology(values, order?, limit?)` | Filtered node search (scalar `=` or `{operator, value}` over an operator allowlist); returns matching tipos. |
 | `getActiveTlds()` / `deleteTldNodes(tld)` | The installed-TLD set and per-TLD delete (`safeTld`-gated). |
-| `createBackupTable(tlds)` / `restoreFromBackupTable(tlds)` / `dropBackupTable()` | The `dd_ontology_bk` backup protocol that is the rollback for a destructive regenerate. |
+| `ddOntologyIdentifierViolations(row)` | The identifier grammar as a pure predicate: every rule the row breaks, as `{column, value, reason}`. |
+| `createRecoverySlice(tlds)` | Build the `dd_ontology_recovery` slice the recovery file dumps. Rows that break the grammar are left out and returned in `skipped`. |
+| `validateDdOntologyIdentifierConstraints()` | VALIDATE each grammar constraint that is still NOT VALID and whose rule no stored row breaks; report the ones that stay blocked. |
+| `dropBackupTable()` | Remove the `dd_ontology_bk` table an upgraded installation may still hold. The backup protocol itself is gone: a rebuild is one transaction. |
+
+#### The identifier grammar
+
+`tipo`, `parent`, `model_tipo`, `tld` and `properties.alias_of` are read back as
+identifiers (the search engine builds queries from them, tree walks follow them), so
+they obey one grammar, stated in the predicate, the write doors, and six CHECK
+constraints on the table (migration `0013_dd_ontology_identifier_grammar.sql`):
+
+| constraint | rule |
+| --- | --- |
+| `dd_ontology_tipo_grammar` | `tipo` is lowercase letters then digits (`dd55`, `rsc170`), at most 32 characters |
+| `dd_ontology_parent_grammar` | `parent` is NULL or the same grammar, at most 32 |
+| `dd_ontology_model_tipo_grammar` | `model_tipo` is NULL or the same grammar, at most 8 |
+| `dd_ontology_tld_grammar` | `tld` is NULL or two or more lowercase letters, at most 32 |
+| `dd_ontology_tipo_in_tld` | `tld` is NULL, or the tipo's letter prefix is exactly the tld (`rsc170` in `rsc`) |
+| `dd_ontology_alias_of_grammar` | when `properties` is an object with an `alias_of` key, its value is a string in the tipo grammar, at most 32 |
+
+The constraints are added NOT VALID: an installation that already holds violating rows
+keeps booting and updating, and every row written from then on is checked. A legacy
+violating row is also re-checked when anything UPDATEs it, so such a write is refused
+with `ontology.invalid_node` naming the constraint. The reconcile `ontology_identifiers`
+(`src/core/ontology/identifier_grammar.ts`) reports the violating rows (a dry run, also at
+boot) and, applied by an operator, first deletes the rows that cannot be rebuilt (each
+returned whole in the report and written whole to the server log), then rebuilds each
+remaining row from its TLD's ontology source, and then VALIDATEs every clean constraint.
+If that final VALIDATE fails, the report still comes back, listing the deleted rows and a
+`validation_error`; run the reconcile again to validate. An ontology update runs the same validation
+after its rebuild and lists any rows that still block it.
 
 Every write fans out `clearOntologyDerivedCaches()` — the single invalidation
 chokepoint, in `src/core/ontology/cache_invalidation.ts` — so no reader observes a
