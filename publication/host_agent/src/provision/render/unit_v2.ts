@@ -10,7 +10,7 @@
  * settings from EnvironmentFile= override Environment= whatever their order, and v2.env is
  * operator-edited state — a HOST=0.0.0.0 there would publish v2 on every interface, past the
  * web server and its media rules. env(1) sets NODE_ENV/HOST/PORT after every file is loaded,
- * the same override Task 3's v2ScratchBoot applies to the scratch boot.
+ * the same override the scratch template unit below applies to a release under test.
  *
  * ENABLED, NEVER STARTED BY THE PROVISIONER (service.start = false): until the first
  * release.install promotes one, `current` does not exist and AssertPathIsDirectory= would fail

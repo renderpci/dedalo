@@ -22,9 +22,10 @@
  *              `current` (D9).
  *
  * THE EXEC SEAM — STAND-INS AT THE AGENT'S ABSOLUTE BINARIES, INSIDE THE CI IMAGE.
- * The agent's src/exec.ts is a closed set of named commands, and its argv[0] is ABSOLUTE:
+ * The agent's publication/host_agent/src/exec.ts is a closed set of named commands, and its argv[0] is ABSOLUTE:
  * `SUDO -n WEB_CONFIGTEST_BINARY[server] -t`, `SYSTEMCTL reload <WEB_UNIT>`, `SYSTEMCTL
- * restart <V2_UNIT>`, `<PHP_BIN> -l`, `<BUN_BIN> run src/index.ts`, every child with the
+ * restart <V2_UNIT>`, `SYSTEMCTL start|stop <V2_UNIT>-scratch@<port>.service` (the release
+ * under test runs in the v2 user's template unit, never as the agent), `<PHP_BIN> -l`, every child with the
  * fixed CHILD_PATH (plan Task 1 DEVIATION 7: no ambient input chooses which binary runs as
  * the agent). So the only seam that runs exec.ts UNMODIFIED is a stand-in AT /usr/bin/sudo
  * and /usr/bin/systemctl — which needs a machine the drill may rewrite. That is the CI
@@ -67,15 +68,21 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	openSync,
+	readdirSync,
 	readFileSync,
 	realpathSync,
 	rmSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
-import { SUDO, SYSTEMCTL, WEB_CONFIGTEST_BINARY } from '../publication/host_agent/src/exec.ts';
+import {
+	SUDO,
+	SYSTEMCTL,
+	V2_SCRATCH_TEMPLATE_SUFFIX,
+	WEB_CONFIGTEST_BINARY,
+} from '../publication/host_agent/src/exec.ts';
 import { buildNginxMap } from '../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
@@ -267,19 +274,35 @@ function logLines(scene: Scene): string[] {
 	return existsSync(scene.log) ? readFileSync(scene.log, 'utf8').split('\n').filter(Boolean) : [];
 }
 
-function callsSince(scene: Scene, since: number, want: string[]): string | null {
+/** A wanted line is exact text, or a RegExp for a line carrying a run-time value (the scratch port). */
+function callsSince(scene: Scene, since: number, want: (string | RegExp)[]): string | null {
 	const got = logLines(scene).slice(since);
-	if (JSON.stringify(got) === JSON.stringify(want)) return null;
+	const same =
+		got.length === want.length &&
+		want.every((w, i) => (typeof w === 'string' ? got[i] === w : w.test(got[i] as string)));
+	if (same) return null;
 	const hint =
 		got.length === 0 && want.length > 0
 			? ` — no stand-in was called: does src/exec.ts still spawn ${SUDO} / ${SYSTEMCTL}, and is the seam armed?`
 			: '';
-	return `stand-in calls ${JSON.stringify(got)}, expected ${JSON.stringify(want)}${hint}`;
+	return `stand-in calls ${JSON.stringify(got)}, expected ${JSON.stringify(want.map(String))}${hint}`;
 }
 
 const configtestCall = (server: Server) => `${SUDO} -n ${WEB_CONFIGTEST_BINARY[server]} -t`;
 const reloadCall = (server: Server) => `${SYSTEMCTL} reload ${WEB_UNIT[server]}`;
 const restartCall = `${SYSTEMCTL} restart ${V2_UNIT}`;
+const reEscape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** `systemctl start|stop <V2_UNIT>-scratch@<port>.service` — the polkit rule's 4-5 digit port. */
+const scratchCall = (verb: 'start' | 'stop') =>
+	new RegExp(
+		`^${reEscape(`${SYSTEMCTL} ${verb} ${V2_UNIT}${V2_SCRATCH_TEMPLATE_SUFFIX}`)}[1-9][0-9]{3,4}\\.service$`,
+	);
+/** A scratch boot of releases/<id>: the template unit started from it, then stopped. */
+const scratchCalls = (dir: string): (string | RegExp)[] => [
+	scratchCall('start'),
+	`scratch started in ${dir}`,
+	scratchCall('stop'),
+];
 
 // ── the agent ────────────────────────────────────────────────────────────────
 
@@ -494,6 +517,7 @@ async function setupScene(server: Server, shared: Shared): Promise<Scene> {
 		webUnit: WEB_UNIT[server],
 		v2Unit: V2_UNIT,
 		v2Current: join(scene.state, 'publication_api', 'v2', 'current'),
+		v2Scratch: join(scene.state, 'publication_api', 'v2', 'scratch'),
 		v2EnvFile: v2Env,
 		v2PidFile: scene.v2Pid,
 		v2Output: join(dir, 'v2.log'),
@@ -537,9 +561,15 @@ async function setupScene(server: Server, shared: Shared): Promise<Scene> {
 async function teardown(scene: Scene): Promise<void> {
 	scene.agent?.kill('SIGTERM');
 	await scene.agent?.exited;
-	if (existsSync(scene.v2Pid)) {
+	const pids = readdirSync(dirname(scene.v2Pid))
+		.filter(
+			(name) =>
+				name === basename(scene.v2Pid) || name.startsWith(`${basename(scene.v2Pid)}.scratch-`),
+		)
+		.map((name) => join(dirname(scene.v2Pid), name));
+	for (const file of pids) {
 		try {
-			process.kill(Number(readFileSync(scene.v2Pid, 'utf8').trim()), 'SIGTERM');
+			process.kill(Number(readFileSync(file, 'utf8').trim()), 'SIGTERM');
 		} catch {
 			// already gone
 		}
@@ -742,7 +772,7 @@ async function rulesRows(scene: Scene): Promise<void> {
 			? buildPublicationHostApacheConf(input)
 			: buildPublicationHostNginxConf(input);
 	const hash = getPublicationHostConfigHash(scene.server, normalizePublicationHostInput(input));
-	// Directives the agent's ALLOWLIST accepts (src/rules/directives.ts: negative Options; a
+	// Directives the agent's ALLOWLIST accepts (publication/host_agent/src/rules/directives.ts: negative Options; a
 	// two-word location) that the SERVER refuses: the failure must reach configtest, or this
 	// row would prove the allowlist, not Review Focus 4.
 	const broken =
@@ -819,8 +849,9 @@ const v2Health = async (scene: Scene) => {
 	return { status: res.status, body: (await res.json()) as { databases?: Record<string, string> } };
 };
 
+/** releases/<id> as `pwd -P` prints it; the parent is resolved, so a release a failed install removed still names. */
 const releaseDir = (scene: Scene, id: string) =>
-	realpathSync(join(scene.state, 'publication_api', 'v2', 'releases', id));
+	join(realpathSync(join(scene.state, 'publication_api', 'v2', 'releases')), id);
 
 const v2PidNow = (scene: Scene) =>
 	existsSync(scene.v2Pid) ? readFileSync(scene.v2Pid, 'utf8').trim() : null;
@@ -871,7 +902,11 @@ async function releaseRows(scene: Scene): Promise<void> {
 				body.reused !== want.reused ||
 				body.health !== 'ok') &&
 				`body ${text}`,
-			callsSince(scene, since, [restartCall, `v2 started in ${releaseDir(scene, bundle.id)}`]),
+			callsSince(scene, since, [
+				...(want.reused ? [] : scratchCalls(releaseDir(scene, bundle.id))),
+				restartCall,
+				`v2 started in ${releaseDir(scene, bundle.id)}`,
+			]),
 			...(await servingCheck(scene, bundle.id, want.previous)),
 		]);
 	};
@@ -901,7 +936,8 @@ async function releaseRows(scene: Scene): Promise<void> {
 			return problems([
 				(res.status !== 422 || reason !== 'scratch_health_failed') &&
 					`status ${res.status}: ${text}`,
-				callsSince(scene, since, []),
+				// booted in the v2 user's scratch unit (from releases/<id>, removed after), never restarted
+				callsSince(scene, since, scratchCalls(releaseDir(scene, bad.id))),
 				v2PidNow(scene) !== pid && 'the serving v2 process was replaced',
 				...(await servingCheck(scene, r2.id, r1.id)),
 			]);
@@ -939,7 +975,12 @@ async function execRow(scene: Scene): Promise<void> {
 				restartCall,
 			]);
 			const stray = logLines(scene).filter(
-				(line) => !allowed.has(line) && !line.startsWith('v2 started in '),
+				(line) =>
+					!allowed.has(line) &&
+					!line.startsWith('v2 started in ') &&
+					!line.startsWith('scratch started in ') &&
+					!scratchCall('start').test(line) &&
+					!scratchCall('stop').test(line),
 			);
 			return stray.length === 0 ? null : `outside the closed set: ${stray.join(' | ')}`;
 		},

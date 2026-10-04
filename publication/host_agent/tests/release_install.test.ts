@@ -256,7 +256,7 @@ describe('the real exec confinement', () => {
   test('the real v2ScratchBoot refuses a staging dir: an install that booted from staging would fail', async () => {
     const staged = await createStaging('v2');
     const { spawner, calls } = recordingSpawner();
-    expect(() => createExec(config, spawner).v2ScratchBoot(staged, 3200)).toThrow(ValidationError);
+    await expect(createExec(config, spawner).v2ScratchBoot(staged, 3200)).rejects.toBeInstanceOf(ValidationError);
     expect(calls).toEqual([]);
   });
 });

@@ -10,11 +10,19 @@
  *   A drill that wants stand-ins puts them AT these paths (Task 11: inside the CI-image
  *   container or a private mount namespace), never earlier on PATH: PATH is not consulted.
  * - A FIXED child environment: nothing of the agent's own environment (its token
- *   included) reaches a child. The v2 scratch boot gets shared/v2.env + HOST/PORT only.
+ *   included) reaches a child.
+ * - PUSHED RELEASE CODE NEVER RUNS AS THE AGENT. The v2 scratch boot repoints
+ *   `publication_api/v2/scratch` at the release under test and `systemctl start`s the
+ *   rendered template instance `<V2_UNIT>-scratch@<port>.service` (polkit: start/stop only,
+ *   render/unit_v2.ts): the release runs as the v2 user in v2's sandbox, with v2.env read
+ *   by systemd. Never a child of this process — the agent uid owns rules/ (root parses it
+ *   at configtest), holds the sudo configtest grant, the TLS key and the bearer; a release
+ *   running as it could reach root (spec §2.5). tests/exec.test.ts pins that no named
+ *   command ever runs BUN_BIN.
  * - Every path argument is confined by realpath to the agent's own state root; the v2
  *   scratch boot accepts ONLY a directory directly under publication_api/v2/releases/ —
  *   the committed, not-yet-recorded, not-yet-promoted release Task 7 health-checks before
- *   the swap. Never staging/: it is agent-only (Task 8 MODES), so the v2 user a scratch
+ *   the swap. Never staging/: it is agent-only (Task 8 MODES), so the v2 user the scratch
  *   unit runs as could not read it.
  * - Short commands are killed after COMMAND_TIMEOUT_MS; their output is capped.
  * - IMPORTING THIS MODULE DOES NOT RESOLVE THE AGENT'S CONFIGURATION: `createExec` takes
@@ -22,22 +30,24 @@
  *   A root-run tool on a host with no agent env file can import the names below.
  */
 
-import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, renameSync, rmSync, statSync, symlinkSync } from 'node:fs';
 import { dirname, join, sep } from 'node:path';
 import type { AgentConfig } from './config';
-import { parseEnvFile } from './env_file';
-import { ConflictError, ValidationError } from './errors';
+import { ConflictError, HostActionFailedError, ValidationError } from './errors';
 import { PUBLICATION_API_DIR } from './instance/roots';
 import {
   ABSOLUTE_PATH_PATTERN,
   UNIT_NAME_PATTERN,
   UNIX_NAME_PATTERN,
+  V2_SCRATCH_TEMPLATE_SUFFIX,
   WEB_CONFIGTEST_BINARY,
 } from './provision/layout';
 
 export type ExecResult = { code: number; stdout: string; stderr: string };
 
+/** A started scratch unit. stop() is idempotent; a failed stop throws (a release must not keep serving unseen). */
 export interface ScratchProcess {
+  readonly unit: string;
   stop(): Promise<void>;
 }
 
@@ -46,17 +56,16 @@ export interface Exec {
   webReload(): Promise<ExecResult>;
   v2Restart(): Promise<ExecResult>;
   phpLint(file: string): Promise<ExecResult>;
-  v2ScratchBoot(releaseDir: string, port: number): ScratchProcess;
+  v2ScratchBoot(releaseDir: string, port: number): Promise<ScratchProcess>;
 }
 
 export const SUDO = '/usr/bin/sudo';
 export const SYSTEMCTL = '/usr/bin/systemctl';
 /** THE one definition lives in src/provision/layout.ts (the provisioner's trust check and sudoers rule name it). */
-export { WEB_CONFIGTEST_BINARY };
+export { V2_SCRATCH_TEMPLATE_SUFFIX, WEB_CONFIGTEST_BINARY };
 
 export const CHILD_PATH = '/usr/local/bin:/usr/bin:/bin';
 export const COMMAND_TIMEOUT_MS = 60_000;
-export const SCRATCH_STOP_GRACE_MS = 10_000;
 const OUTPUT_CAP = 64 * 1024;
 
 export interface SpawnOptions {
@@ -67,7 +76,6 @@ export interface SpawnOptions {
 /** HOW a named command is started — the seam a gate replaces to observe argv. */
 export interface Spawner {
   run(argv: readonly string[], options: SpawnOptions): Promise<ExecResult>;
-  start(argv: readonly string[], options: SpawnOptions): ScratchProcess;
 }
 
 function cap(text: string): string {
@@ -98,27 +106,15 @@ const bunSpawner: Spawner = {
     ]);
     return { code, stdout: cap(stdout), stderr: cap(stderr) };
   },
-  start(argv, options) {
-    const child = Bun.spawn([...argv], {
-      cwd: options.cwd,
-      env: options.env,
-      stdin: 'ignore',
-      stdout: 'ignore',
-      stderr: 'inherit',
-    });
-    return {
-      async stop() {
-        if (child.exitCode !== null || child.signalCode !== null) return;
-        child.kill('SIGTERM');
-        const exited = await Promise.race([child.exited.then(() => true), Bun.sleep(SCRATCH_STOP_GRACE_MS).then(() => false)]);
-        if (!exited) {
-          child.kill('SIGKILL');
-          await child.exited;
-        }
-      },
-    };
-  },
 };
+
+/** The symlink under publication_api/v2/ the scratch template unit runs from (layout.ts ApiDirs.scratch). */
+export const SCRATCH_LINK = 'scratch';
+
+/** `<V2_UNIT>-scratch@<port>.service` — the one instance name the polkit rule grants start/stop of. */
+export function v2ScratchUnit(v2Unit: string, port: number): string {
+  return `${v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}${port}.service`;
+}
 
 function realOrRefuse(path: string, what: string): string {
   try {
@@ -143,7 +139,7 @@ export function createExec(cfg: AgentConfig, spawner: Spawner = bunSpawner): Exe
       }
       return spawner.run([cfg.PHP_BIN, '-l', real], { env: env() });
     },
-    v2ScratchBoot: (releaseDir, port) => {
+    v2ScratchBoot: async (releaseDir, port) => {
       if (!Number.isInteger(port) || port < 1024 || port > 65535) {
         throw new ValidationError(`v2ScratchBoot refuses port ${port}: expected an integer in 1024-65535.`);
       }
@@ -160,11 +156,36 @@ export function createExec(cfg: AgentConfig, spawner: Spawner = bunSpawner): Exe
       if (!existsSync(envFile)) {
         throw new ConflictError(`The v2 environment file '${envFile}' does not exist; the provisioner renders it.`, 'v2_env_missing');
       }
-      const v2Env = parseEnvFile(readFileSync(envFile, 'utf8'), envFile);
-      return spawner.start([cfg.BUN_BIN, 'run', 'src/index.ts'], {
-        cwd: real,
-        env: { PATH: CHILD_PATH, ...v2Env, HOST: '127.0.0.1', PORT: String(port) },
-      });
+      // The template unit runs WorkingDirectory=<v2>/scratch: repoint it atomically.
+      const link = join(v2Root, SCRATCH_LINK);
+      const next = `${link}.next`;
+      rmSync(next, { force: true });
+      symlinkSync(real, next);
+      renameSync(next, link);
+      const unit = v2ScratchUnit(cfg.V2_UNIT, port);
+      const started = await spawner.run([SYSTEMCTL, 'start', unit], { env: env() });
+      if (started.code !== 0) {
+        await spawner.run([SYSTEMCTL, 'stop', unit], { env: env() });
+        throw new HostActionFailedError(
+          `systemctl start ${unit} exited ${started.code}: ${started.stderr.split('\n')[0] ?? ''}`,
+          'scratch_start_failed',
+        );
+      }
+      let stopped = false;
+      return {
+        unit,
+        async stop() {
+          if (stopped) return;
+          const result = await spawner.run([SYSTEMCTL, 'stop', unit], { env: env() });
+          if (result.code !== 0) {
+            throw new HostActionFailedError(
+              `systemctl stop ${unit} exited ${result.code}: ${result.stderr.split('\n')[0] ?? ''}`,
+              'scratch_stop_failed',
+            );
+          }
+          stopped = true;
+        },
+      };
     },
   };
 }

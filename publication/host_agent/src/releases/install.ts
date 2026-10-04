@@ -21,8 +21,8 @@
  *   → prune → audit (release.install, outcome ok).
  *
  * A failure before the swap leaves the old release serving. v2 reads only its process environment: its
- * unit has EnvironmentFile=shared/v2.env, the scratch boot gets the same file through
- * exec().v2ScratchBoot, and the bundle may not carry an env file. Every child process goes
+ * unit has EnvironmentFile=shared/v2.env, so does the scratch template unit exec().v2ScratchBoot
+ * starts (as the v2 user, never the agent), and the bundle may not carry an env file. Every child process goes
  * through exec.ts.
  */
 
@@ -374,7 +374,7 @@ function assertNodeModules(stageDir: string, releaseId: string): void {
 /** Boot the COMMITTED release (releases/<id>) on a scratch loopback port; health within a bound. */
 async function scratchHealth(releaseDir: string, releaseId: string): Promise<void> {
   const port = freeLoopbackPort();
-  const scratch = exec().v2ScratchBoot(releaseDir, port);
+  const scratch = await exec().v2ScratchBoot(releaseDir, port);
   try {
     const health = await waitHealthy(scratchHealthUrl(port), timing.scratchHealthMs);
     if (!health.ok) {

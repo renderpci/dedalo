@@ -1,14 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { chmodSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
 import { config } from '../src/config';
-import { ConflictError, ValidationError } from '../src/errors';
+import { ConflictError, HostActionFailedError, ValidationError } from '../src/errors';
 import {
   CHILD_PATH,
   type Exec,
   type ExecResult,
   type SpawnOptions,
   type Spawner,
+  SCRATCH_LINK,
   SUDO,
   SYSTEMCTL,
   WEB_CONFIGTEST_BINARY,
@@ -16,7 +17,9 @@ import {
   exec,
   execOverrideAllowed,
   setExecForTests,
+  v2ScratchUnit,
 } from '../src/exec';
+import { V2_SCRATCH_TEMPLATE_SUFFIX } from '../src/provision/layout';
 import { freshScratch } from './fixtures/instance';
 
 const PACKAGE_DIR = join(import.meta.dir, '..');
@@ -70,24 +73,21 @@ describe('the spawner tripwire', () => {
 });
 
 interface Recorded {
-  kind: 'run' | 'start';
   argv: readonly string[];
   options: SpawnOptions;
 }
 
-function recordingSpawner(): { spawner: Spawner; calls: Recorded[] } {
+/** Records every argv; `fail` names argv[1] verbs that exit 1 (a polkit/systemd refusal). */
+function recordingSpawner(fail: readonly string[] = []): { spawner: Spawner; calls: Recorded[] } {
   const calls: Recorded[] = [];
-  const ok: ExecResult = { code: 0, stdout: '', stderr: '' };
   return {
     calls,
     spawner: {
       async run(argv, options) {
-        calls.push({ kind: 'run', argv, options });
-        return ok;
-      },
-      start(argv, options) {
-        calls.push({ kind: 'start', argv, options });
-        return { stop: async () => {} };
+        calls.push({ argv, options });
+        const refused = fail.includes(argv[1] as string);
+        const result: ExecResult = { code: refused ? 1 : 0, stdout: '', stderr: refused ? 'Access denied\nmore' : '' };
+        return result;
       },
     },
   };
@@ -156,37 +156,84 @@ describe('the named commands', () => {
     expect(calls).toEqual([]);
   });
 
-  test('v2ScratchBoot: only a directory directly under v2/releases, port range, env = shared/v2.env + HOST/PORT', async () => {
+  test('v2ScratchBoot: only a directory directly under v2/releases, port range, v2.env present — refused before anything runs', async () => {
     const { spawner, calls } = recordingSpawner();
     const root = await stateTree('ex_v2');
     const v2 = join(root, 'publication_api', 'v2');
     const committed = join(v2, 'releases', COMMITTED);
     const x = createExec({ ...config, STATE_ROOT: root, BUN_BIN: '/opt/bun/bin/bun' }, spawner);
 
-    expect(() => x.v2ScratchBoot(committed, 3200)).toThrow(ConflictError); // no v2.env yet
+    await expect(x.v2ScratchBoot(committed, 3200)).rejects.toBeInstanceOf(ConflictError); // no v2.env yet
     writeFileSync(join(v2, 'shared', 'v2.env'), 'DB_NAME="web_test"\nPORT="9"\n');
-    expect(() => x.v2ScratchBoot(committed, 80)).toThrow(ValidationError);
+    await expect(x.v2ScratchBoot(committed, 80)).rejects.toBeInstanceOf(ValidationError);
+    await expect(x.v2ScratchBoot(committed, 70000)).rejects.toBeInstanceOf(ValidationError);
     // staging/ is agent-only (Task 8 MODES): a STAGED tree is never scratch-booted, only a
     // committed releases/<id> (Task 7 boots it before the sha record and the promote)
-    expect(() => x.v2ScratchBoot(join(v2, 'staging', STAGED), 3200)).toThrow(ValidationError);
-    expect(() => x.v2ScratchBoot(join(v2, 'releases'), 3200)).toThrow(ValidationError);
-    expect(() => x.v2ScratchBoot(join(root, 'rules'), 3200)).toThrow(ValidationError);
-    expect(() => x.v2ScratchBoot('/tmp', 3200)).toThrow(ValidationError);
+    await expect(x.v2ScratchBoot(join(v2, 'staging', STAGED), 3200)).rejects.toBeInstanceOf(ValidationError);
+    await expect(x.v2ScratchBoot(join(v2, 'releases'), 3200)).rejects.toBeInstanceOf(ValidationError);
+    await expect(x.v2ScratchBoot(join(root, 'rules'), 3200)).rejects.toBeInstanceOf(ValidationError);
+    await expect(x.v2ScratchBoot('/tmp', 3200)).rejects.toBeInstanceOf(ValidationError);
     writeFileSync(join(v2, 'releases', 'loose_file'), '');
-    expect(() => x.v2ScratchBoot(join(v2, 'releases', 'loose_file'), 3200)).toThrow(ValidationError);
+    await expect(x.v2ScratchBoot(join(v2, 'releases', 'loose_file'), 3200)).rejects.toBeInstanceOf(ValidationError);
     // a link under releases/ resolves elsewhere: refused by realpath
     symlinkSync(join(v2, 'staging', STAGED), join(v2, 'releases', '7.0.4_bbbbbbb'));
-    expect(() => x.v2ScratchBoot(join(v2, 'releases', '7.0.4_bbbbbbb'), 3200)).toThrow(ValidationError);
+    await expect(x.v2ScratchBoot(join(v2, 'releases', '7.0.4_bbbbbbb'), 3200)).rejects.toBeInstanceOf(ValidationError);
     expect(calls).toEqual([]);
+  });
 
-    x.v2ScratchBoot(committed, 3200);
+  test('v2ScratchBoot STARTS THE TEMPLATE UNIT (v2 user, polkit), never release code as the agent', async () => {
+    const { spawner, calls } = recordingSpawner();
+    const root = await stateTree('ex_v2_unit');
+    const v2 = join(root, 'publication_api', 'v2');
+    const committed = join(v2, 'releases', COMMITTED);
+    writeFileSync(join(v2, 'shared', 'v2.env'), 'DB_NAME="web_test"\n');
+    const cfg = { ...config, STATE_ROOT: root, V2_UNIT: 'dedalo-v2-test', BUN_BIN: '/opt/bun/bin/bun' };
+    const x = createExec(cfg, spawner);
+
+    const scratch = await x.v2ScratchBoot(committed, 3200);
+    const unit = 'dedalo-v2-test-scratch@3200.service';
+    expect(scratch.unit).toBe(unit);
+    // the unit's WorkingDirectory is <v2>/scratch: repointed at the release under test
+    expect(readlinkSync(join(v2, SCRATCH_LINK))).toBe(realpathSync(committed));
+    await scratch.stop();
+    await scratch.stop(); // idempotent: one systemctl stop
     expect(calls).toEqual([
-      {
-        kind: 'start',
-        argv: ['/opt/bun/bin/bun', 'run', 'src/index.ts'],
-        options: { cwd: realpathSync(committed), env: { PATH: CHILD_PATH, DB_NAME: 'web_test', HOST: '127.0.0.1', PORT: '3200' } },
-      },
+      { argv: [SYSTEMCTL, 'start', unit], options: { env: { PATH: CHILD_PATH, LANG: 'C' } } },
+      { argv: [SYSTEMCTL, 'stop', unit], options: { env: { PATH: CHILD_PATH, LANG: 'C' } } },
     ]);
+    // a second boot repoints the same link (atomic rename over it, no leftover .next)
+    mkdirSync(join(v2, 'releases', '7.0.4_ccccccc'));
+    await x.v2ScratchBoot(join(v2, 'releases', '7.0.4_ccccccc'), 3201);
+    expect(readlinkSync(join(v2, SCRATCH_LINK))).toBe(realpathSync(join(v2, 'releases', '7.0.4_ccccccc')));
+    expect(readdirSync(v2).sort()).toEqual(['releases', 'scratch', 'shared', 'staging']);
+    // THE INVARIANT (spec §2.5): no named command ever runs BUN_BIN — pushed code runs only
+    // under the v2 user's unit, never as a child holding the agent's grants, key and bearer.
+    for (const c of calls) {
+      expect(c.argv).not.toContain(cfg.BUN_BIN);
+      expect(c.options.cwd).toBeUndefined();
+    }
+    // the name is the one the polkit rule's regex grants (render/polkit.ts)
+    expect(v2ScratchUnit('dedalo-v2-test', 3200)).toBe(`dedalo-v2-test${V2_SCRATCH_TEMPLATE_SUFFIX}3200.service`);
+  });
+
+  test('v2ScratchBoot: a refused start is a 503 scratch_start_failed (stop attempted); a refused stop is loud', async () => {
+    const root = await stateTree('ex_v2_fail');
+    const v2 = join(root, 'publication_api', 'v2');
+    const committed = join(v2, 'releases', COMMITTED);
+    writeFileSync(join(v2, 'shared', 'v2.env'), 'DB_NAME="web_test"\n');
+    const cfg = { ...config, STATE_ROOT: root, V2_UNIT: 'dedalo-v2-test' };
+
+    const startRefused = recordingSpawner(['start']);
+    const error = await createExec(cfg, startRefused.spawner).v2ScratchBoot(committed, 3200).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(HostActionFailedError);
+    expect((error as HostActionFailedError).extensions).toEqual({ reason: 'scratch_start_failed' });
+    expect((error as Error).message).toContain('Access denied');
+    expect((error as Error).message).not.toContain('more');
+    expect(startRefused.calls.map(c => c.argv[1])).toEqual(['start', 'stop']);
+
+    const stopRefused = recordingSpawner(['stop']);
+    const scratch = await createExec(cfg, stopRefused.spawner).v2ScratchBoot(committed, 3200);
+    await expect(scratch.stop()).rejects.toBeInstanceOf(HostActionFailedError);
   });
 });
 
@@ -204,36 +251,6 @@ describe('the real spawner', () => {
     const missing = await createExec({ ...config, STATE_ROOT: root, PHP_BIN: join(root, 'no_such_php') }).phpLint(target);
     expect(missing.code).toBe(127);
   });
-
-  test('v2ScratchBoot starts the committed release with only its own env, and stop() ends it', async () => {
-    const root = await stateTree('ex_boot');
-    const staged = join(root, 'publication_api', 'v2', 'releases', COMMITTED);
-    mkdirSync(join(staged, 'src'), { recursive: true });
-    writeFileSync(
-      join(staged, 'src', 'index.ts'),
-      "Bun.serve({ hostname: process.env.HOST, port: Number(process.env.PORT), fetch: () => Response.json({ keys: Object.keys(process.env), probe: process.env.V2_PROBE ?? null }) });\n",
-    );
-    writeFileSync(join(root, 'publication_api', 'v2', 'shared', 'v2.env'), 'V2_PROBE="from-shared"\n');
-    const probe = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response('') });
-    const port = probe.port as number;
-    probe.stop(true);
-
-    const child = createExec({ ...config, STATE_ROOT: root, BUN_BIN: process.execPath }).v2ScratchBoot(staged, port);
-    let body: { keys: string[]; probe: string | null } | null = null;
-    for (let i = 0; i < 100 && body === null; i++) {
-      try {
-        body = (await (await fetch(`http://127.0.0.1:${port}/`)).json()) as { keys: string[]; probe: string | null };
-      } catch {
-        await Bun.sleep(50);
-      }
-    }
-    await child.stop();
-    expect(body?.probe).toBe('from-shared');
-    expect(body?.keys).not.toContain('SERVICE_TOKEN');
-    expect(body?.keys).toContain('PORT');
-    await expect(fetch(`http://127.0.0.1:${port}/`)).rejects.toThrow();
-    await child.stop(); // a second stop on an exited child is a no-op
-  });
 });
 
 describe('the test override', () => {
@@ -249,7 +266,7 @@ describe('the test override', () => {
       webReload: async () => ({ code: 0, stdout: '', stderr: '' }),
       v2Restart: async () => ({ code: 0, stdout: '', stderr: '' }),
       phpLint: async () => ({ code: 0, stdout: '', stderr: '' }),
-      v2ScratchBoot: () => ({ stop: async () => {} }),
+      v2ScratchBoot: async () => ({ unit: 'stand-in', stop: async () => {} }),
     };
     const restore = setExecForTests(standIn);
     expect(exec()).toBe(standIn);

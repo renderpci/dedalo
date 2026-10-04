@@ -8,7 +8,7 @@
  *   - php -l: fails exactly the files containing SYNTAX_ERROR.
  *   - v2 scratch boot: FIRST runs Task 3's REAL `createExec(config, spawner).v2ScratchBoot`
  *     (its confinement — a direct child of v2/releases/ — and its shared/v2.env check), with a
- *     recording spawner instead of a process. An install that hands the scratch boot any
+ *     recording spawner instead of systemctl. An install that hands the scratch boot any
  *     other directory is refused here exactly as in production. Then a real loopback
  *     Bun.serve on the chosen port answers 200 only for release ids in `scratchHealthy`.
  *   - v2 restart: records which release is live (= the `current` link at restart time).
@@ -92,10 +92,6 @@ export function recordingSpawner(): { spawner: Spawner; calls: string[][] } {
         calls.push([...argv]);
         return ok;
       },
-      start(argv) {
-        calls.push([...argv]);
-        return { stop: async () => {} };
-      },
     },
   };
 }
@@ -158,9 +154,9 @@ export function fakeReleaseHost(): FakeReleaseHost {
         ? { code: 255, stdout: '', stderr: `PHP Parse error:  syntax error in ${file} on line 1` }
         : { code: 0, stdout: `No syntax errors detected in ${file}`, stderr: '' };
     },
-    v2ScratchBoot: (releaseDir: string, port: number) => {
+    v2ScratchBoot: async (releaseDir: string, port: number) => {
       // Task 3's REAL confinement first: throws for anything but a direct child of v2/releases/.
-      confinement.v2ScratchBoot(releaseDir, port);
+      const unit = await confinement.v2ScratchBoot(releaseDir, port);
       state.scratchDirs.push(releaseDir);
       state.scratchHadRecord.push(existsSync(join(releaseDir, BUNDLE_SHA_FILE)));
       const id = basename(releaseDir);
@@ -172,6 +168,7 @@ export function fakeReleaseHost(): FakeReleaseHost {
         fetch: () => new Response(null, { status: healthy ? 200 : 503 }),
       });
       return {
+        unit: unit.unit,
         stop: async () => {
           server.stop(true);
         },

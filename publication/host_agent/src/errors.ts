@@ -47,6 +47,10 @@ export const REASON_CODES = Object.freeze([
   'rollback_unhealthy',
   'no_current_release',
   'store_refused',
+  // The v2 scratch boot (exec.ts v2ScratchBoot): 503 HostActionFailedError — systemd/polkit
+  // refused to start or stop `<V2_UNIT>-scratch@<port>`, a host fault, not the release's.
+  'scratch_start_failed',
+  'scratch_stop_failed',
 ] as const);
 
 export type ReasonCode = (typeof REASON_CODES)[number];

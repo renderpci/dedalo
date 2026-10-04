@@ -14,7 +14,8 @@
  * lets the engine — and nobody else — connect (spec §1.1). SupplementaryGroups= carries the
  * two shared-state groups: v1/shared is root:<web group> 0750 and v2/shared is root:<v2 group>
  * 0750 (layout.ts MODES). The agent stats and links the v1 config (src/releases/install.ts)
- * and READS v2/shared/v2.env (src/exec.ts v2ScratchBoot); without these groups every install
+ * and checks v2/shared/v2.env exists (src/exec.ts v2ScratchBoot; systemd reads it for the
+ * scratch template unit, never the agent's child); without these groups every install
  * dies EACCES on a provisioned host and on no test host.
  *
  * CONFIGURATION. src/config.ts parses the env file itself; this unit only NAMES it

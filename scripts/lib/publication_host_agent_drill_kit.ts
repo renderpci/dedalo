@@ -20,7 +20,7 @@
  *   - issueTlsMaterial: a private CA, the server and client leaves, and a ROGUE CA + client
  *     leaf, with the openssl CLI (OpenSSL 3 and LibreSSL 3 both accept every call below).
  *
- * No engine import. The only package import is exec.ts's three constants (exec.ts imports
+ * No engine import. The only package import is exec.ts's four constants (exec.ts imports
  * nothing outside node builtins and zero-dep agent modules; it never loads the agent's
  * configuration at import — its header).
  */
@@ -38,7 +38,12 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { SUDO, SYSTEMCTL, WEB_CONFIGTEST_BINARY } from '../../publication/host_agent/src/exec.ts';
+import {
+	SUDO,
+	SYSTEMCTL,
+	V2_SCRATCH_TEMPLATE_SUFFIX,
+	WEB_CONFIGTEST_BINARY,
+} from '../../publication/host_agent/src/exec.ts';
 
 // ── the bundle ───────────────────────────────────────────────────────────────
 
@@ -247,6 +252,8 @@ export interface StandInInput {
 	readonly v2Unit: string;
 	/** `<STATE_ROOT>/publication_api/v2/current` and `…/shared/v2.env`. */
 	readonly v2Current: string;
+	/** `<STATE_ROOT>/publication_api/v2/scratch`: the scratch template unit's WorkingDirectory. */
+	readonly v2Scratch: string;
 	readonly v2EnvFile: string;
 	readonly v2PidFile: string;
 	readonly v2Output: string;
@@ -314,6 +321,27 @@ export function renderStandIns(input: StandInInput): StandIns {
 		// of the agent's own environment (its CREDENTIALS_DIRECTORY above all).
 		`\t\tnohup env -i PATH="$PATH" HOME="\${HOME:-/}" bash -c 'set -a; . "$1"; set +a; exec "$2" run src/index.ts' _ ${q(input.v2EnvFile)} ${q(input.bun)} >> ${q(input.v2Output)} 2>&1 < /dev/null &`,
 		`\t\techo "$!" > ${pid}`,
+		'\t\texit 0 ;;',
+		// The scratch TEMPLATE instance (exec.ts v2ScratchBoot): what the rendered
+		// `<V2_UNIT>-scratch@.service` does — WorkingDirectory=<v2>/scratch, EnvironmentFile=v2.env,
+		// then env(1) NODE_ENV/HOST/PORT=%i. The port must be the polkit rule's 4-5 digits.
+		`\t${q(`start ${input.v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}`)}[1-9][0-9][0-9][0-9]${q('.service')}|${q(`start ${input.v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}`)}[1-9][0-9][0-9][0-9][0-9]${q('.service')})`,
+		`\t\tport="\${2#${input.v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}}"; port="\${port%.service}"`,
+		`\t\tcd ${q(input.v2Scratch)} || exit 1`,
+		`\t\tprintf '%s\\n' "scratch started in $(pwd -P)" >> ${q(input.log)}`,
+		`\t\tnohup env -i PATH="$PATH" HOME="\${HOME:-/}" bash -c 'set -a; . "$1"; set +a; export NODE_ENV=production HOST=127.0.0.1 PORT="$3"; exec "$2" run src/index.ts' _ ${q(input.v2EnvFile)} ${q(input.bun)} "$port" >> ${q(input.v2Output)} 2>&1 < /dev/null &`,
+		`\t\techo "$!" > ${pid}.scratch-"$port"`,
+		'\t\texit 0 ;;',
+		`\t${q(`stop ${input.v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}`)}[1-9][0-9][0-9][0-9]${q('.service')}|${q(`stop ${input.v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}`)}[1-9][0-9][0-9][0-9][0-9]${q('.service')})`,
+		`\t\tport="\${2#${input.v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}}"; port="\${port%.service}"`,
+		`\t\tf=${pid}.scratch-"$port"`,
+		'\t\tif [ -f "$f" ]; then',
+		'\t\t\told="$(cat "$f")"',
+		'\t\t\tkill "$old" 2>/dev/null || true',
+		'\t\t\tfor _ in $(seq 1 200); do kill -0 "$old" 2>/dev/null || break; sleep 0.05; done',
+		'\t\t\tkill -9 "$old" 2>/dev/null || true',
+		'\t\t\trm -f "$f"',
+		'\t\tfi',
 		'\t\texit 0 ;;',
 		'esac',
 		...refuse(SYSTEMCTL),

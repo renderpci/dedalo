@@ -23,13 +23,19 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SUDO, SYSTEMCTL, WEB_CONFIGTEST_BINARY } from '../../publication/host_agent/src/exec.ts';
+import {
+	SUDO,
+	SYSTEMCTL,
+	V2_SCRATCH_TEMPLATE_SUFFIX,
+	WEB_CONFIGTEST_BINARY,
+} from '../../publication/host_agent/src/exec.ts';
 import { extractBundle } from '../../publication/host_agent/src/releases/ustar.ts';
 import {
 	AGENT_ACTOR_HEADER,
@@ -122,6 +128,7 @@ describe('drill kit — the exec stand-ins', () => {
 				webUnit: 'apache2',
 				v2Unit: 'dedalo-publication-api-v2',
 				v2Current: join(dir, 'no_current'),
+				v2Scratch: join(dir, 'no_scratch'),
 				v2EnvFile: join(dir, 'v2.env'),
 				v2PidFile: join(dir, 'v2.pid'),
 				v2Output: join(dir, 'v2.log'),
@@ -152,6 +159,73 @@ describe('drill kit — the exec stand-ins', () => {
 			`${SYSTEMCTL} stop apache2`,
 			`${SYSTEMCTL} reload nginx`,
 			'php -l /etc/passwd',
+		]);
+	});
+	test('the v2 scratch TEMPLATE stand-in: start boots <v2>/scratch on the unit port (v2.env cannot move it), stop ends it; only the polkit port grammar', async () => {
+		const sdir = join(scratch, 'standins_scratch');
+		const slog = join(sdir, 'calls.log');
+		const release = join(sdir, 'releases', '7.0.3_a1b2c3d');
+		mkdirSync(join(release, 'src'), { recursive: true });
+		writeFileSync(
+			join(release, 'src', 'index.ts'),
+			'Bun.serve({ hostname: process.env.HOST, port: Number(process.env.PORT), fetch: () => Response.json({ env: process.env.NODE_ENV, probe: process.env.V2_PROBE ?? null, cwd: process.cwd() }) });\n',
+		);
+		symlinkSync(release, join(sdir, 'scratch'));
+		writeFileSync(join(sdir, 'v2.env'), 'V2_PROBE="from-shared"\nPORT="9"\nHOST="0.0.0.0"\n');
+		const sbin = join(sdir, 'bin');
+		writeStandIns(
+			sbin,
+			renderStandIns({
+				server: 'nginx',
+				webBinary: '/bin/echo',
+				webMain: '/drill/main.nginx.conf',
+				webDir: '/drill',
+				webErrorLog: '/drill/error.log',
+				webUnit: 'nginx',
+				v2Unit: 'dedalo-publication-api-v2',
+				v2Current: join(sdir, 'no_current'),
+				v2Scratch: join(sdir, 'scratch'),
+				v2EnvFile: join(sdir, 'v2.env'),
+				v2PidFile: join(sdir, 'v2.pid'),
+				v2Output: join(sdir, 'v2.log'),
+				bun: process.execPath,
+				log: slog,
+			}),
+		);
+		const sys = (...argv: string[]) =>
+			Bun.spawnSync([join(sbin, 'systemctl'), ...argv], { stdout: 'pipe', stderr: 'pipe' })
+				.exitCode;
+		const probe = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response('') });
+		const port = probe.port as number;
+		probe.stop(true);
+		expect(port).toBeGreaterThanOrEqual(1024);
+		const unit = `dedalo-publication-api-v2${V2_SCRATCH_TEMPLATE_SUFFIX}${port}.service`;
+
+		for (const bad of ['0999', '999', '123456', 'x1234']) {
+			expect(
+				sys('start', `dedalo-publication-api-v2${V2_SCRATCH_TEMPLATE_SUFFIX}${bad}.service`),
+			).toBe(64);
+		}
+		expect(sys('start', `other${V2_SCRATCH_TEMPLATE_SUFFIX}${port}.service`)).toBe(64);
+		expect(sys('start', unit, 'extra')).toBe(64);
+
+		expect(sys('start', unit)).toBe(0);
+		let body: { env: string; probe: string | null; cwd: string } | null = null;
+		for (let i = 0; i < 100 && body === null; i++) {
+			try {
+				body = (await (await fetch(`http://127.0.0.1:${port}/`)).json()) as typeof body;
+			} catch {
+				await Bun.sleep(50);
+			}
+		}
+		expect(sys('stop', unit)).toBe(0);
+		expect(body).toEqual({ env: 'production', probe: 'from-shared', cwd: realpathSync(release) });
+		await expect(fetch(`http://127.0.0.1:${port}/`)).rejects.toThrow();
+		const lines = readFileSync(slog, 'utf8').split('\n').filter(Boolean);
+		expect(lines.slice(-3)).toEqual([
+			`${SYSTEMCTL} start ${unit}`,
+			`scratch started in ${realpathSync(release)}`,
+			`${SYSTEMCTL} stop ${unit}`,
 		]);
 	});
 });
