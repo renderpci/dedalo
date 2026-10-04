@@ -3101,6 +3101,11 @@
 			"skipped": 0,
 			"assertions": 93
 		},
+		"test/unit/publication_host_wire_native.test.ts": {
+			"tests": 19,
+			"skipped": 0,
+			"assertions": 333
+		},
 		"test/unit/query_tap_tripwire.test.ts": {
 			"tests": 8,
 			"skipped": 0,
