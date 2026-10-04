@@ -278,6 +278,12 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	'probe',
 	'publication',
 	'sitebuilder',
+	// `hostagent:*` (2026-10-04) drives publication/host_agent — an ISOLATED daemon package
+	// (own lockfile, own tsc, own coverage-ENFORCING suite in the hermetic daemon_gate), like
+	// `sitebuilder`. Its targets live outside the root src/ census, so a PRODUCTION reading
+	// would cover nothing here; `hostagent:provision` is operator-run on a PUBLICATION host,
+	// not a Dédalo installation, and is gated by the package's own provision_* tests.
+	'hostagent',
 	'typecheck',
 	'format',
 	// `baselines:bank` (ratchet banking) and `push` (the gated multi-remote
