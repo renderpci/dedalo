@@ -3071,6 +3071,11 @@
 			"skipped": 0,
 			"assertions": 41
 		},
+		"test/unit/publication_host_pairing_tripwire.test.ts": {
+			"tests": 14,
+			"skipped": 0,
+			"assertions": 96
+		},
 		"test/unit/query_tap_tripwire.test.ts": {
 			"tests": 8,
 			"skipped": 0,
