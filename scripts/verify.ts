@@ -339,6 +339,8 @@ const TRIPWIRES = [
 	'test/unit/import_create_door_native.test.ts',
 	// Plan item 5 — the npm rows of the client-lib versions doc are generated (2026-10-02).
 	'test/unit/client_lib_versions_doc_tripwire.test.ts',
+	// #125 — the vendored transformers.js core and the onnxruntime-web pin are one build (2026-10-04).
+	'test/unit/onnxruntime_alignment_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

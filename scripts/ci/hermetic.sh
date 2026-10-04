@@ -384,6 +384,9 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-02 (plan item 5): the client-lib versions doc byte-identity gate. DB-free:
 	#     reads package.json + the doc, imports the client-lib registry, renders in memory.
 	test/unit/client_lib_versions_doc_tripwire.test.ts
+	# --- 2026-10-04 (#125): the onnxruntime alignment gate. DB-free: reads the vendored
+	#     transformers bundle, package.json and bun.lock; compares three version strings.
+	test/unit/onnxruntime_alignment_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

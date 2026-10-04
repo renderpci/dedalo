@@ -879,6 +879,17 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The in-browser AI runtime is updated to transformers.js 4.3.0, running on the exact ONNX Runtime build it was made for.**
+
+    Browser-side transcription, translation and background removal run on transformers.js,
+    which is now 4.3.0 (WebGPU on Safari 26 and later, plus fixes to Whisper's progress
+    reporting). Its ONNX Runtime is now exactly the build that release was made and tested
+    with (`onnxruntime-web` 1.31.0-dev.20260914). Before, the installed ONNX Runtime was a
+    different version from the one the bundle was built against. That combination worked,
+    but nobody had tested it. The two versions are now checked against each other on every
+    build and always update together. Nothing to do on update. Models you already
+    downloaded keep working.
+
 - **The maintenance *Unit test area* only offers the JS test runner and the test-table reset where they can work.**
 
     *Open JS unit test* is shown only on a development server (`DEDALO_DEV_MODE`) whose
