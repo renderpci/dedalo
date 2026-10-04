@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # INSTANCE CI TIER — the gates that BOOT A REAL SERVER over the wire, on a HOSTED
-# runner: the browser client suite, the two code-update drills and the
-# publication-host media drill (live Apache + nginx).
+# runner: the browser client suite, the two code-update drills, the
+# publication-host media drill (live Apache + nginx) and the publication-host
+# agent drill (the real agent over mTLS, live Apache + nginx, real v2 releases).
 #
 # WHY THIS EXISTS. Three commands the repo relies on ran on NO executing CI:
 # scripts/ci/client_gate.sh (the 133-suite browser gate), `bun run test:update`
@@ -133,6 +134,33 @@ echo "== instance_tier: publication-host media drill (bun run test:media:pubhost
 pubhost_rc=0
 bun run test:media:pubhost || pubhost_rc=$?
 [ "$pubhost_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host media drill (exit $pubhost_rc)"; tier_status=1; }
+
+# ── STAGE 5 — THE PUBLICATION-HOST AGENT, LIVE ───────────────────────────────
+#
+# scripts/publication_host_agent_drill.ts boots the REAL agent (publication/host_agent)
+# over mTLS (openssl-issued private CA), drives rules.apply into a live user-mode Apache
+# and nginx, and installs / refuses / rolls back REAL Publication API v2 releases built
+# from publication/server_api/v2 (production node_modules installed into scratch:
+# network). Its exec module runs unmodified and spawns /usr/bin/sudo and
+# /usr/bin/systemctl by absolute path; in this image those are the EXEC SEAM's
+# dispatchers (ci/Dockerfile), which run the drill's stand-ins accepting only its closed
+# argv — no real sudo or systemctl exists to be reached. v2's /health needs a database:
+# the suite MariaDB's zzd target, so this stage starts that server and the EXIT trap
+# stops it (tier_wiring_tripwire leg J). openssl, apxs, nginx, MariaDB or the seam
+# missing is RED, never a skip.
+trap 'bun run scripts/ci/suite_mariadb.ts stop >/dev/null 2>&1 || :' EXIT
+echo "== instance_tier: publication-host agent: start the suite MariaDB target"
+agent_mdb_rc=0
+bun run scripts/ci/suite_mariadb.ts start || agent_mdb_rc=$?
+[ "$agent_mdb_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host agent's suite MariaDB start (exit $agent_mdb_rc)"; tier_status=1; }
+echo "== instance_tier: publication-host agent dependencies"
+agent_deps_rc=0
+bun install --frozen-lockfile --cwd publication/host_agent || agent_deps_rc=$?
+[ "$agent_deps_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host agent dependencies (exit $agent_deps_rc)"; tier_status=1; }
+echo "== instance_tier: publication-host agent drill (bun run test:pubhost:agent)"
+agent_rc=0
+bun run test:pubhost:agent || agent_rc=$?
+[ "$agent_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host agent drill (exit $agent_rc)"; tier_status=1; }
 
 [ "$tier_status" -eq 0 ] || { echo "== instance_tier: RED"; exit 1; }
 echo "== instance_tier: OK"

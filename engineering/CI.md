@@ -39,7 +39,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
-| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (blocking since 2026-10-02) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract, both update drills and the publication-host media drill on live Apache + nginx). Both source `scripts/ci/hosted_env.sh` |
+| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (blocking since 2026-10-02) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract, both update drills, the publication-host media drill on live Apache + nginx, and the publication-host agent drill (the suite MariaDB started for it)). Both source `scripts/ci/hosted_env.sh` |
 | `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `report` keeps one `ci-nightly` issue open/updated/closed |
 | `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
@@ -359,7 +359,7 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   rendered rule with `cvtsudoers` from the `sudo` package when present — it parses
   without a passwd entry, so it works as the job's bare uid 1001 — else `visudo -cf -`,
   which is what macOS ships). The CI image ships both (`ci/Dockerfile`; sudo is never
-  configured nor invoked there, and its setuid bit is stripped via `dpkg-statoverride`). Missing = RED, never a skip. Required config keys get harmless stubs;
+  configured nor invoked there, its setuid bit is stripped via `dpkg-statoverride`, and the binary is diverted to `/usr/bin/sudo.distrib`: `/usr/bin/sudo` is the exec seam's dispatcher — the Instance bullet). Missing = RED, never a skip. Required config keys get harmless stubs;
   `DB_PORT` points at a closed port so any accidental DB touch fails loudly. No
   hermetic gate starts a server: `suite_mariadb_target_native` (which drives the lane's
   own `mariadbd`) is a DB-tier gate (`NOT_HERMETIC` row + `DB_TIER_TRIPWIRES`).
@@ -395,7 +395,7 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   the release commit is cut with `git checkout -B` (a PR checkout is a detached HEAD).
   Drill config comes from `scripts/lib/operator_config.ts` (catalog keys of the process
   env; `update_drill_config_tripwire`).
-  LAST, `bun run test:media:pubhost` (`scripts/media_publication_host_drill.ts`, no
+  Then `bun run test:media:pubhost` (`scripts/media_publication_host_drill.ts`, no
   database): the publication-host include rendered by the engine's builders, driven
   through the MEDIA_PROTECTION §9 curl matrix on a REAL Apache and a REAL nginx bound to
   127.0.0.1 as the job's uid — rewrite phase order, alias + captures and location
@@ -407,6 +407,28 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   `apache2 apache2-dev nginx` (Debian's nginx carries the mp4 module). A missing binary
   is RED, never a skip — the suite MariaDB's policy (the drill exits 1 naming it). Locally
   (macOS): `brew install httpd nginx`.
+  LAST, `bun run test:pubhost:agent` (`scripts/publication_host_agent_drill.ts`): the
+  publication-host AGENT (`publication/host_agent`) booted for real over mTLS
+  (openssl-issued private CA; no client cert, a rogue-CA client cert and a wrong server CA
+  are refused; a missing client CA refuses to BOOT, and so does `NODE_ENV=production` on
+  the drill's unprovisioned tree — the audit preflight), `rules.apply` of the engine's
+  render into the same user-mode Apache and nginx (published 200 / unpublished 404 through
+  the server; an include the allowlist passes but configtest fails restores the previous
+  one and never reloads), and REAL Publication API v2 releases (built from
+  `publication/server_api/v2`, production `node_modules` installed into scratch with
+  `--linker hoisted` — network) installed, refused when their scratch boot fails, rolled
+  back and re-pointed, over the suite MariaDB (the tier starts it for this stage; its EXIT
+  trap stops it). The agent's exec module runs UNMODIFIED and spawns `/usr/bin/sudo` and
+  `/usr/bin/systemctl` by ABSOLUTE path, so the only seam is a stand-in AT those paths: in
+  the CI image both are the **exec seam**'s dispatchers (`ci/Dockerfile`; the real sudo is
+  diverted, setuid stripped), which run the stand-ins the drill writes into
+  `/opt/dedalo-ci/exec-seam/`; they accept only exec.ts's closed argv and log every call,
+  and the drill asserts the exact call sequence. The agent runs with `NODE_ENV=test`
+  stated in its env file (the job's uid 1001 cannot make the root-owned, `chattr +a`
+  audit trail production demands — the drill's header). **Runner requirement**: the media
+  drill's plus openssl, git, bash, MariaDB and the exec seam — all in the CI image, so the
+  drill runs ONLY there: anywhere else it is RED, naming the seam, and never touches a real
+  sudo/systemctl. Locally: `bun run ci:local --docker --instance`.
 - **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers. Everything it
   runs is twinned hosted — including the `test/integration/**` MariaDB legs, which ran
   nowhere else until PUB-05 moved them onto the suite's own MariaDB server and into the
