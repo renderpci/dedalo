@@ -381,7 +381,14 @@ export function resolveConfig(sources: ConfigSources): AgentConfig {
     const value = sources.ambient[key];
     if (value === undefined || value === '') continue;
     if (values[key] !== undefined && values[key] !== '') continue;
-    if (key === 'NODE_ENV' && value !== 'production') {
+    if (key === 'NODE_ENV' && value !== 'production' && value !== 'test') {
+      refuse(
+        `NODE_ENV='${value}' is not a mode of this agent: it runs as 'production' (the default) or ` +
+          `'test', and test mode may come only from the env file '${envFilePath}'. Unset the ` +
+          `ambient NODE_ENV or set it to production.`,
+      );
+    }
+    if (key === 'NODE_ENV' && value === 'test') {
       refuse(
         `NODE_ENV=test may come only from the env file '${envFilePath}' (test mode relaxes the ` +
           `credential law); the ambient environment may fill only NODE_ENV=production.`,

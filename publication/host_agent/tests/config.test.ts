@@ -391,6 +391,21 @@ describe('the ambient allowlist', () => {
     expect(message).toContain('NODE_ENV=test may come only from the env file');
   });
 
+  test.each(['development', 'staging', 'Production', 'TEST'])(
+    'an ambient NODE_ENV=%p that is neither production nor test gets its own refusal',
+    value => {
+      const values = unixEnv();
+      delete values.NODE_ENV;
+      delete values.SERVICE_TOKEN;
+      writeEnvFile(values);
+      const message = refusal(
+        sources({ ambient: { NODE_ENV: value }, credentialsDir: writeCredential('SERVICE_TOKEN', TOKEN) }),
+      );
+      expect(message).toContain(`NODE_ENV='${value}' is not a mode of this agent`);
+      expect(message).not.toContain('NODE_ENV=test may come only from the env file');
+    },
+  );
+
   test('…while a file that states NODE_ENV wins over the ambient one', () => {
     writeEnvFile(unixEnv());
     expect(resolveConfig(sources({ ambient: { NODE_ENV: 'production' } })).NODE_ENV).toBe('test');
