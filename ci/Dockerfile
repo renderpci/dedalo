@@ -42,6 +42,9 @@
 #             `bun install` fetching a second one.
 #   git, rsync, unzip, zip, xz, curl, procps — the tier scripts, the code-update
 #             drills (git clone + zip release) and the backup gates.
+#   openssl — the publication-host agent's mTLS boot gate (publication/host_agent
+#             tests/boot_mtls.test.ts issues its scratch CA with the CLI) and the
+#             agent's live drill (instance tier).
 #
 # BASE: debian:trixie-slim, DIGEST-pinned — the distro of the product image
 # (oven/bun:<v>-debian is trixie), so CI and production share a package set.
@@ -193,6 +196,8 @@ RUN set -eu; \
       echo "$(apache2 -v | head -n1)"; \
       echo "$(nginx -v 2>&1)"; \
       echo "$(git --version)"; \
+      echo "$(openssl version)"; \
+      echo "$(cvtsudoers -V | head -n1)"; \
     } > /etc/dedalo-ci-versions; \
     cat /etc/dedalo-ci-versions
 LABEL org.dedalo.ci.fingerprint="${DEDALO_CI_FINGERPRINT}" \
