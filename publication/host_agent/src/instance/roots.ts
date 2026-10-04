@@ -17,22 +17,25 @@
  * which the provisioner's MODES matrix (src/provision/layout.ts) is built from: one rule,
  * two readers.
  *
- * THE AUDIT TRAIL IS APPEND-ONLY BY THE FILESYSTEM, and that is two facts, both checked:
- *   - audit/ is ROOT-owned (root:root 0755): unlink, rename and create are permissions on
- *     the DIRECTORY, so the agent cannot remove, replace or re-create its trail;
+ * THE AUDIT TRAIL IS APPEND-ONLY BY THE FILESYSTEM, and that is three facts, all checked:
+ *   - audit/ is ROOT-owned (root:root 0755): unlink, rename and create of the FILE are
+ *     permissions on this directory, so the agent cannot remove, replace or re-create it;
+ *   - STATE_ROOT and every ancestor up to / are root-owned and not writable by others
+ *     (sticky excepted; auditAncestryProblem): renaming a directory is a permission on its
+ *     PARENT, so without this the agent could move audit/ itself aside, trail and all;
  *   - audit.jsonl (agent-owned 0600, created by the provisioner) carries the APPEND-ONLY
  *     attribute (chattr +a, Linux FS_APPEND_FL): the kernel refuses any open for writing
  *     without O_APPEND and any truncate — to its owner too — and clearing the attribute
  *     needs CAP_LINUX_IMMUTABLE, which the agent never holds. File ownership alone would
  *     prove nothing: an owner can O_TRUNC its own file.
- * Under NODE_ENV=test ('suite' mode) neither fact can hold — an unprivileged suite cannot
+ * Under NODE_ENV=test ('suite' mode) none of them can hold — an unprivileged suite cannot
  * own a directory as root nor set +a — so only the mode and an append probe are checked;
  * 'suite' is refused under any other NODE_ENV. The journald echo (audit.ts) is the second,
  * independent record.
  */
 
-import { closeSync, constants as FS, existsSync, lstatSync, openSync, readFileSync, unlinkSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { closeSync, constants as FS, existsSync, lstatSync, openSync, readFileSync, realpathSync, unlinkSync } from 'node:fs';
+import { dirname, isAbsolute, join } from 'node:path';
 import type { AgentConfig } from '../config';
 
 /** A root that belongs to an agent instance holds this file. */
@@ -95,6 +98,11 @@ export interface PreflightOptions {
   readonly rootUid?: number;
   /** Default: 'suite' under NODE_ENV=test, 'enforce' otherwise. 'suite' is refused outside test. */
   readonly auditProtection?: AuditProtection;
+  /**
+   * Default probeAppendOnly. Injectable ONLY so an unprivileged gate reaches the checks
+   * after it (an unprivileged suite cannot set chattr +a); src/index.ts passes no options.
+   */
+  readonly appendOnlyProbe?: (path: string) => string;
 }
 
 /**
@@ -108,8 +116,9 @@ export interface PreflightOptions {
  *      not at the first rules.apply); publication_api/ is root-owned on a provisioned host,
  *      so it takes none (the agent writes only in its per-API children);
  *   5. audit/: 'enforce' — root-owned directory, an existing agent-owned regular file that
- *      is append-only, then an O_APPEND probe (no create); 'suite' — mode only, then an
- *      O_APPEND|O_CREAT probe.
+ *      is append-only, an O_APPEND probe (no create), then the ANCESTRY (auditAncestryProblem:
+ *      STATE_ROOT and every ancestor up to /, lexical and real, root-owned and not writable
+ *      by others unless sticky); 'suite' — mode only, then an O_APPEND|O_CREAT probe.
  */
 export function bootPreflight(
   cfg: Pick<AgentConfig, 'INSTANCE' | 'STATE_ROOT' | 'NODE_ENV'>,
@@ -175,7 +184,7 @@ export function bootPreflight(
   assertOwnerAndMode(`STATE_ROOT/${AUDIT_DIR}`, auditDir, uid, rootUid, STATE_TREE_OWNERSHIP.audit);
   if (protection === 'enforce') {
     // Stricter than the shared rule: in enforce mode audit/ must be ROOT's, never the agent's.
-    assertAuditEnforced(auditDir, uid, rootUid);
+    assertAuditEnforced(auditDir, uid, rootUid, options.appendOnlyProbe ?? probeAppendOnly);
   } else {
     probeAppend(join(auditDir, AUDIT_FILE_NAME), true);
   }
@@ -199,7 +208,63 @@ export function probeAppendOnly(path: string): string {
   return 'writable';
 }
 
-function assertAuditEnforced(auditDir: string, uid: number | null, rootUid: number): void {
+/** The two filesystem reads auditAncestryProblem makes — injectable for the gate. */
+export interface AncestryFs {
+  readonly lstat: (path: string) => { uid: number; mode: number; isSymbolicLink(): boolean };
+  readonly realpath: (path: string) => string;
+}
+
+const REAL_FS: AncestryFs = { lstat: lstatSync, realpath: realpathSync };
+
+/**
+ * CAN THE AGENT MOVE ITS TRAIL ASIDE? Renaming a directory needs write permission only on
+ * its PARENT, so a root-owned audit/ is as safe as the directory holding it, and that one as
+ * safe as its own parent, up to /. Every directory on the chain from STATE_ROOT (audit/'s
+ * parent) to / — the lexical path AND its realpath, so a symlinked ancestor is followed as
+ * the kernel follows it — must be owned by root (rootUid or 0) and must not be group- or
+ * world-writable unless sticky (in a sticky directory only an entry's owner may rename it,
+ * and every entry on the chain is root's). A symlink on the lexical chain must be root's
+ * (its mode bits mean nothing). Returns the first problem, or null.
+ */
+export function auditAncestryProblem(auditDir: string, rootUid: number, fs: AncestryFs = REAL_FS): string | null {
+  const parent = dirname(auditDir);
+  const chains = [parent];
+  try {
+    const real = fs.realpath(parent);
+    if (real !== parent) chains.push(real);
+  } catch (error) {
+    return `'${parent}' could not be resolved (${(error as NodeJS.ErrnoException).code ?? 'error'})`;
+  }
+  const seen = new Set<string>();
+  for (const start of chains) {
+    for (let dir = start; ; dir = dirname(dir)) {
+      if (!seen.has(dir)) {
+        seen.add(dir);
+        let st: ReturnType<AncestryFs['lstat']>;
+        try {
+          st = fs.lstat(dir);
+        } catch (error) {
+          return `'${dir}' could not be inspected (${(error as NodeJS.ErrnoException).code ?? 'error'})`;
+        }
+        if (st.uid !== rootUid && st.uid !== 0) {
+          return `'${dir}' is owned by uid ${st.uid}, not root`;
+        }
+        if (!st.isSymbolicLink() && (st.mode & 0o022) !== 0 && (st.mode & 0o1000) === 0) {
+          return `'${dir}' is group- or world-writable without the sticky bit (mode ${(st.mode & 0o7777).toString(8)})`;
+        }
+      }
+      if (dirname(dir) === dir) break;
+    }
+  }
+  return null;
+}
+
+function assertAuditEnforced(
+  auditDir: string,
+  uid: number | null,
+  rootUid: number,
+  appendOnlyProbe: (path: string) => string,
+): void {
   const label = `STATE_ROOT/${AUDIT_DIR}`;
   const dirOwner = lstatSync(auditDir).uid;
   if (dirOwner !== rootUid) {
@@ -241,7 +306,7 @@ function assertAuditEnforced(auditDir: string, uid: number | null, rootUid: numb
       `the audit trail '${file}' is owned by uid ${owner} and this process is uid ${uid}; the agent could not append.`,
     );
   }
-  const verdict = probeAppendOnly(file);
+  const verdict = appendOnlyProbe(file);
   if (verdict === 'writable') {
     throw new PreflightRefused(
       'assertAuditTrail',
@@ -254,6 +319,16 @@ function assertAuditEnforced(auditDir: string, uid: number | null, rootUid: numb
     throw new PreflightRefused('assertAuditTrail', `the audit trail '${file}' could not be probed (${verdict}).`);
   }
   probeAppend(file, false);
+  const ancestry = auditAncestryProblem(auditDir, rootUid);
+  if (ancestry !== null) {
+    throw new PreflightRefused(
+      'assertAuditTrail',
+      `the audit directory '${auditDir}' could be renamed aside, trail and all: ${ancestry}. ` +
+        `Renaming a directory needs write permission only on its parent, so STATE_ROOT and every ` +
+        `ancestor up to / must be root-owned and not writable by others (sticky excepted). The ` +
+        `provisioner creates STATE_ROOT root:root 0755; choose a state_root under root-owned directories.`,
+    );
+  }
 }
 
 function safeRead(path: string): string | null {

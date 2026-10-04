@@ -10,6 +10,7 @@ import {
   RULES_DIR,
   STATE_SUBDIRS,
   STATE_TREE_OWNERSHIP,
+  auditAncestryProblem,
   bootPreflight,
   markerContent,
   probeAppendOnly,
@@ -145,6 +146,94 @@ describe('the audit trail is append-only by the filesystem (enforce mode)', () =
     expect(probeAppendOnly(file)).toBe('writable');
     expect(refusal(() => bootPreflight(cfg(root), enforce))).toContain('without O_APPEND');
     expect(readFileSync(file, 'utf8')).toBe('kept\n');
+  });
+});
+
+describe('the audit trail cannot be moved aside (enforce mode): every ancestor is root-owned', () => {
+  // Renaming a directory needs write permission only on its PARENT: a root-owned audit/
+  // inside an agent-writable STATE_ROOT (or under any agent-writable ancestor) can be
+  // renamed aside, trail and all, and a fresh one put in its place.
+  type Entry = { uid: number; mode: number; link?: boolean };
+  const DIR = 0o040000;
+  const LNK = 0o120000;
+  function fakeFs(tree: Record<string, Entry>, real: Record<string, string> = {}) {
+    return {
+      lstat: (path: string) => {
+        const e = tree[path];
+        if (e === undefined) throw Object.assign(new Error(`ENOENT ${path}`), { code: 'ENOENT' });
+        return { uid: e.uid, mode: (e.link ? LNK : DIR) | e.mode, isSymbolicLink: () => e.link === true };
+      },
+      realpath: (path: string) => real[path] ?? path,
+    };
+  }
+  const safe: Record<string, Entry> = {
+    '/': { uid: 0, mode: 0o755 },
+    '/var': { uid: 0, mode: 0o755 },
+    '/var/lib': { uid: 0, mode: 0o755 },
+    '/var/lib/dph': { uid: 0, mode: 0o755 },
+    '/var/lib/dph/state': { uid: 0, mode: 0o755 },
+  };
+  const AUDIT = '/var/lib/dph/state/audit';
+
+  test('a root-owned, non-writable chain passes; a sticky world-writable ancestor is fine', () => {
+    expect(auditAncestryProblem(AUDIT, 0, fakeFs(safe))).toBeNull();
+    expect(auditAncestryProblem(AUDIT, 0, fakeFs({ ...safe, '/var': { uid: 0, mode: 0o1777 } }))).toBeNull();
+  });
+
+  test.each([
+    ['an agent-owned STATE_ROOT', '/var/lib/dph/state', { uid: 1001, mode: 0o755 }, 'owned by uid 1001'],
+    ['an agent-owned ancestor', '/var/lib/dph', { uid: 1001, mode: 0o755 }, 'owned by uid 1001'],
+    ['a group-writable STATE_ROOT', '/var/lib/dph/state', { uid: 0, mode: 0o775 }, 'writable'],
+    ['a world-writable ancestor without the sticky bit', '/var', { uid: 0, mode: 0o777 }, 'writable'],
+    ['a symlinked ancestor owned by the agent', '/var/lib', { uid: 1001, mode: 0o777, link: true }, 'owned by uid 1001'],
+  ])('refuses %s', (_name, path, entry, expected) => {
+    const problem = auditAncestryProblem(AUDIT, 0, fakeFs({ ...safe, [path]: entry as Entry }));
+    expect(problem).toContain(path);
+    expect(problem).toContain(expected);
+  });
+
+  test('the REAL chain is walked too: a symlinked ancestor resolving into an agent-owned tree is refused', () => {
+    const tree = {
+      ...safe,
+      '/var/lib': { uid: 0, mode: 0o777, link: true },
+      '/home': { uid: 0, mode: 0o755 },
+      '/home/agent': { uid: 1001, mode: 0o700 },
+      '/home/agent/lib': { uid: 0, mode: 0o755 },
+      '/home/agent/lib/dph': { uid: 0, mode: 0o755 },
+      '/home/agent/lib/dph/state': { uid: 0, mode: 0o755 },
+    };
+    const real = { '/var/lib/dph/state': '/home/agent/lib/dph/state' };
+    expect(auditAncestryProblem(AUDIT, 0, fakeFs(tree, real))).toContain("'/home/agent' is owned by uid 1001");
+  });
+
+  test('bootPreflight enforces it: an append-only trail under a world-writable ancestor is refused', async () => {
+    expect(UID).not.toBeNull();
+    const corner = await freshScratch('pf_audit_ancestry');
+    const root = join(corner, 'state');
+    mkdirSync(root);
+    chmodSync(root, 0o755);
+    writeFileSync(join(root, INSTANCE_MARKER), markerContent('test'));
+    for (const dir of STATE_SUBDIRS) {
+      mkdirSync(join(root, dir));
+      chmodSync(join(root, dir), 0o755);
+    }
+    writeFileSync(join(root, AUDIT_DIR, AUDIT_FILE_NAME), '', { mode: 0o600 });
+    chmodSync(corner, 0o777);
+    try {
+      const message = refusal(() =>
+        bootPreflight(cfg(root), {
+          auditProtection: 'enforce',
+          rootUid: UID as number,
+          // Stands in for chattr +a, which an unprivileged suite cannot set.
+          appendOnlyProbe: () => 'append_only',
+        }),
+      );
+      expect(message).toContain('assertAuditTrail');
+      expect(message).toContain(`'${corner}'`);
+      expect(message).toContain('renamed');
+    } finally {
+      chmodSync(corner, 0o755);
+    }
   });
 });
 

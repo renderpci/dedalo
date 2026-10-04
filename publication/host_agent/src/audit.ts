@@ -10,9 +10,11 @@
  *
  * APPEND-ONLY IS ENFORCED, NOT HOPED (instance/roots.ts bootPreflight refuses to boot
  * otherwise, outside NODE_ENV=test): audit/ is root:root 0755, so the agent cannot unlink,
- * rename or re-create the file; audit.jsonl is agent-owned 0600 WITH the append-only
- * attribute (chattr +a), so the kernel refuses a truncate or a non-append write — even by
- * its owner — and only CAP_LINUX_IMMUTABLE could clear it. The journald echo is the second,
+ * rename or re-create the file; STATE_ROOT and every ancestor up to / are root-owned and not
+ * writable by others (sticky excepted), so it cannot rename audit/ itself aside either (a
+ * directory rename is a permission on the PARENT); audit.jsonl is agent-owned 0600 WITH the
+ * append-only attribute (chattr +a), so the kernel refuses a truncate or a non-append write —
+ * even by its owner — and only CAP_LINUX_IMMUTABLE could clear it. The journald echo is the second,
  * independent record: the journal is not writable by the agent user, so a line it emits
  * cannot be taken back. `audit()` never throws into the request path.
  */
