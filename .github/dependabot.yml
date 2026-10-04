@@ -58,6 +58,12 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    groups:
+      # init + analyze are ONE dependency (init builds the database analyze
+      # consumes); ungrouped, Dependabot splits them into two PRs that each
+      # fail ci_workflow_tripwire's same-SHA leg.
+      codeql-action:
+        patterns: ["github/codeql-action*"]
 
   # The documentation toolchain (docs/requirements.txt — mkdocs, mkdocs-material,
   # pymdown-extensions, mkdocs-redirects). Exactly the case this file's header
