@@ -89,6 +89,7 @@ export class FakeHost implements ProvisionIo {
       reloadUnit: unitName => command(`reload ${unitName}`),
       webConfigtest: (_bin, server) => command(`configtest ${server}`),
       visudoCheck: file => command(`visudo ${file}`),
+      visudoCheckPolicy: () => command('visudo -c'),
       appendOnly: file => command(`chattr ${file}`),
     };
   }

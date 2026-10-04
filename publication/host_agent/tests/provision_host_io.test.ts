@@ -42,17 +42,28 @@ const ok = { code: 0, stdout: '', stderr: '' };
 /** What the stub's `chattr +a` sealed; the paired probe reports exactly these. */
 const sealed = new Set<string>();
 
+/** Stateful units: once Task 9's units are rendered, a second plan must see the first apply's enable/start. */
+const units = new Map<string, { enabled: boolean; active: boolean }>();
+const unitOf = (unit: string) => units.get(unit) ?? { enabled: false, active: false };
+
 const stubExec: ProvisionExec = {
   userId: () => uid,
   groupId: () => gid,
-  unitState: () => ({ enabled: false, active: false }),
+  unitState: unit => unitOf(unit),
   daemonReload: () => ok,
-  enableUnit: () => ok,
-  startUnit: () => ok,
+  enableUnit: unit => {
+    units.set(unit, { ...unitOf(unit), enabled: true });
+    return ok;
+  },
+  startUnit: unit => {
+    units.set(unit, { ...unitOf(unit), active: true });
+    return ok;
+  },
   restartUnit: () => ok,
   reloadUnit: () => ok,
   webConfigtest: () => ok,
   visudoCheck: () => ok,
+  visudoCheckPolicy: () => ok,
   appendOnly: file => {
     sealed.add(file);
     return ok;

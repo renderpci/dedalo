@@ -135,3 +135,55 @@ describe('unit actions go through the closed exec', () => {
     expect(host.calls).toEqual(['daemon-reload', 'configtest apache', 'reload apache2', 'enable u', 'start u', 'restart v']);
   });
 });
+
+describe('sudoers: visudo -cf on the temp file, then visudo -c on the whole policy', () => {
+  const sudoersWrite = (disposition: 'create' | 'rewrite', body: string): WriteAction => ({
+    op: 'write',
+    path: l.sudoersPath,
+    label: 'env',
+    content: { source: 'literal', body },
+    disposition,
+    owner: 'root',
+    group: 'root',
+    uid: 0,
+    gid: 0,
+    mode: 0o440,
+    validate: 'sudoers',
+  });
+  const strays = (host: FakeHost) => [...host.entries.keys()].filter(path => path.startsWith(`${l.sudoersPath}.`));
+
+  test('valid alone and as a policy: in place, no temp, no backup left', () => {
+    const host = new FakeHost(l);
+    host.entries.set(l.sudoersPath, { type: 'file', uid: 0, gid: 0, mode: 0o440, body: 'OLD\n' });
+    const report = apply([sudoersWrite('rewrite', 'NEW\n')], host);
+    expect(report.ok).toBe(true);
+    expect(host.body(l.sudoersPath)).toBe('NEW\n');
+    expect(strays(host)).toEqual([]);
+    expect(host.calls.filter(call => call.startsWith('visudo'))).toEqual([
+      `visudo ${l.sudoersPath}${TEMP_SUFFIX}`,
+      'visudo -c',
+    ]);
+  });
+
+  test('the policy refuses it: the previous bytes come back by rename, the failure says so', () => {
+    const host = new FakeHost(l);
+    host.entries.set(l.sudoersPath, { type: 'file', uid: 0, gid: 0, mode: 0o440, body: 'OLD\n' });
+    host.failOn = 'visudo -c';
+    const report = apply([sudoersWrite('rewrite', 'NEW\n')], host);
+    expect(report.ok).toBe(false);
+    expect(report.failure?.detail).toContain('visudo -c exited 1');
+    expect(report.failure?.detail).toContain('the previous state was restored');
+    expect(host.body(l.sudoersPath)).toBe('OLD\n');
+    expect(strays(host)).toEqual([]);
+    expect(report.written).toEqual([]);
+  });
+
+  test('the policy refuses a first install: the new file is removed', () => {
+    const host = new FakeHost(l);
+    host.failOn = 'visudo -c';
+    const report = apply([sudoersWrite('create', 'NEW\n')], host);
+    expect(report.ok).toBe(false);
+    expect(host.entries.has(l.sudoersPath)).toBe(false);
+    expect(strays(host)).toEqual([]);
+  });
+});

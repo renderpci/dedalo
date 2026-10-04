@@ -44,11 +44,17 @@ import type { ExecResult, ProvisionExec } from '../exec';
 import { provisionExec } from '../exec';
 import { probeAppendOnly } from '../instance/roots';
 import type { AgentLayout } from './layout';
-import type { Action, EntryType, HostState, PathFacts, UnitFacts } from './plan';
+import type { Action, EntryType, HostState, PathFacts, UnitFacts, WriteAction } from './plan';
 import { agentScratchPath, ancestorsBelow, describe, renderAll, trustProblem } from './plan';
 
 /** Suffix of the temp file a write goes through. `removeTemp` refuses anything else. */
 export const TEMP_SUFFIX = '.dedalo-provision.tmp';
+
+/**
+ * The previous sudoers file while the new one is checked against the whole policy. Both this
+ * and TEMP_SUFFIX contain a '.', so sudo's #includedir skips them: neither is ever policy.
+ */
+export const BACKUP_SUFFIX = '.dedalo-provision.bak';
 
 export interface ProvisionIo {
   /** One level; the plan guarantees the parent. Mode is re-asserted by chmod (umask). */
@@ -89,6 +95,57 @@ function firstLine(text: string, cap = Number.POSITIVE_INFINITY): string {
 
 const OUTPUT_LINE_CAP = 200;
 
+/** temp → chown → chmod → rename: the one atomic write, for a writer outside the plan (tls.ts via cli.ts). */
+export function writeAtomic(io: ProvisionIo, path: string, body: string, mode: number, uid: number, gid: number): void {
+  const temp = io.writeTemp(path, body, mode);
+  try {
+    io.chown(temp, uid, gid);
+    io.chmod(temp, mode);
+    io.rename(temp, path);
+  } catch (error) {
+    io.removeTemp(temp);
+    throw error;
+  }
+}
+
+/**
+ * THE SUDOERS INSTALL — still ONE write path (this file), with the second check a single-file
+ * `visudo -cf` cannot make: `visudo -c` over the whole policy (a duplicate Cmnd_Alias in
+ * another include is only visible there). A broken policy breaks sudo for EVERY user on the
+ * host, so on that failure the previous file comes back by rename (its exact bytes, owner and
+ * mode), or the new file is removed when there was none. The live path is briefly absent
+ * between the two renames: the grant is missing for that instant, nothing else is.
+ * The only removal door is removeTemp, so a file to delete is first renamed to the temp name.
+ */
+function installValidatedSudoers(action: WriteAction, temp: string, io: ProvisionIo): void {
+  const backup = `${action.path}${BACKUP_SUFFIX}`;
+  const hadPrevious = action.disposition === 'rewrite';
+  if (hadPrevious) io.rename(action.path, backup);
+  try {
+    io.rename(temp, action.path);
+  } catch (error) {
+    if (hadPrevious) io.rename(backup, action.path);
+    io.removeTemp(temp);
+    throw error;
+  }
+  const policy = io.exec.visudoCheckPolicy();
+  if (policy.code === 0) {
+    if (hadPrevious) {
+      io.rename(backup, temp);
+      io.removeTemp(temp);
+    }
+    return;
+  }
+  if (hadPrevious) {
+    io.rename(backup, action.path);
+  } else {
+    io.rename(action.path, temp);
+    io.removeTemp(temp);
+  }
+  const said = firstLine(policy.stderr, OUTPUT_LINE_CAP) || firstLine(policy.stdout, OUTPUT_LINE_CAP) || 'no output';
+  throw new Error(`visudo -c exited ${policy.code} with the new rule in place (${said}); the previous state was restored`);
+}
+
 function checked(label: string, result: ExecResult): void {
   if (result.code !== 0) {
     throw new Error(`${label} exited ${result.code}: ${firstLine(result.stderr, OUTPUT_LINE_CAP) || firstLine(result.stdout, OUTPUT_LINE_CAP) || '(no output)'}`);
@@ -109,11 +166,12 @@ function run(action: Action, io: ProvisionIo, written: string[]): void {
         io.chown(temp, action.uid, action.gid);
         io.chmod(temp, action.mode);
         if (action.validate === 'sudoers') checked('visudo -cf', io.exec.visudoCheck(temp));
-        io.rename(temp, action.path);
       } catch (error) {
         io.removeTemp(temp);
         throw error;
       }
+      if (action.validate === 'sudoers') installValidatedSudoers(action, temp, io);
+      else io.rename(temp, action.path);
       written.push(action.path);
       return;
     }

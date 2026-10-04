@@ -225,6 +225,7 @@ export interface ProvisionExec {
   reloadUnit(unit: string): ExecResult; //               ['systemctl','reload',<unit>.service]
   webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult; // [WEB_CONFIGTEST_BINARY[server],'-t']
   visudoCheck(file: string): ExecResult; //              ['visudo','-cf',file]
+  visudoCheckPolicy(): ExecResult; //                    ['visudo','-c'] — the whole policy, includes and all
   /** Task 3's audit contract: the trail is append-only by the kernel (FS_APPEND_FL). */
   appendOnly(file: string): ExecResult; //               ['chattr','+a',file]
 }
@@ -295,6 +296,7 @@ export function provisionExec(): ProvisionExec {
       return provisionRun([expected, '-t']);
     },
     visudoCheck: (file: string) => provisionRun(['visudo', '-cf', provisionAbsolute('sudoers candidate', file)]),
+    visudoCheckPolicy: () => provisionRun(['visudo', '-c']),
     appendOnly: (file: string) => provisionRun(['chattr', '+a', provisionAbsolute('append-only target', file)]),
   });
 }
