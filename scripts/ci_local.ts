@@ -606,7 +606,7 @@ function fixHint(stage: Stage): string {
 	if (name.includes('audit'))
 		return 'bun run scripts/ci/audit.ts --force (time-based inputs: a new upstream advisory or an expired vendor window — see .github/workflows/nightly.yml)';
 	if (name.includes('daemon'))
-		return 'cd publication/<site_builder|server_api/v2> && bun install --frozen-lockfile && bunx tsc --noEmit && bun test (all pass + exit 1 = coverageThreshold)';
+		return 'cd publication/<site_builder|server_api/v2|host_agent> && bun install --frozen-lockfile && bunx tsc --noEmit && bun test (all pass + exit 1 = coverageThreshold; host_agent needs openssl + cvtsudoers|visudo)';
 	if (name.includes('suite database'))
 		return 'bun run test:db:setup (the suite build itself failed — every later stage never ran)';
 	if (name.startsWith('recording engineering/unit_baseline.json'))

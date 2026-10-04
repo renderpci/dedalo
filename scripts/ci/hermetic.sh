@@ -571,18 +571,19 @@ fi
 #
 # NO --timeout HERE, DELIBERATELY. The root suite gets it because it LOST a number it had
 # chosen: bunfig.toml declared `[test] timeout = 30000` and Bun 1.4.0 silently ignored it.
-# These packages never made that claim: BOTH bunfig.toml files declare only
-# coverage/coverageThreshold and no timeout, so their green baselines were measured under
-# bun's built-in 5000 ms cap and stay comparable run to run.
+# These packages never made that claim: EVERY daemon bunfig.toml declares coverage (and,
+# where enforced, coverageThreshold) and no timeout, so their green baselines were measured
+# under bun's built-in 5000 ms cap and stay comparable run to run.
 # (Corrected 2026-08-31, P2-23/GATE-43: this said publication/site_builder had NO
 # bunfig.toml at all, while eleven lines below the same file said "Both daemons set
 # coverageThreshold in their bunfig.toml" and the diagnostic below greps that file. One of
 # the two had to be false; it was this one, and the package's coverage was measured by
 # nothing. It now has the bunfig its sibling has, at the same 0.8 floor.) Widening them on no evidence would be silently loosening a gate, not restoring one.
-# Same reasoning, same wording, at the other exempt site: the site_builder stage in
-# scripts/verify.ts.
+# Same reasoning, same wording, at the other exempt sites: the site_builder and host_agent
+# stages in scripts/verify.ts.
 #
-# Both daemons set `coverageThreshold` in their bunfig.toml, and a threshold miss makes
+# A daemon that ENFORCES sets `coverageThreshold` in its bunfig.toml (server_api/v2 and
+# host_agent; site_builder only reports — ci_workflow_tripwire rule 11), and a miss makes
 # `bun test` exit 1 while printing NOTHING about coverage — the log reads
 # "290 pass / 0 fail" followed by a bare "exit code 1", which is indistinguishable from
 # a crash and sent one CI failure (2026-08-03) round several wrong hypotheses. Bun does
@@ -613,7 +614,8 @@ daemon_gate() {
 	return 1
 }
 
-# THE TWO DAEMON PACKAGES RUN CONCURRENTLY, and this is where the tier's minutes
+# THE DAEMON PACKAGES RUN CONCURRENTLY (the set is DERIVED and held by ci_workflow_tripwire
+# rule 15: every locked package with its own bunfig.toml), and this is where the tier's minutes
 # actually are: each does its OWN `bun install --frozen-lockfile` (separate
 # lockfiles) plus its own tsc and its own suite. They share no state — separate
 # directories, separate node_modules, separate bunfig, no database, no ../private
@@ -626,29 +628,35 @@ daemon_gate() {
 # exit 1). Moving these into package.json scripts to reach the flag would throw
 # that diagnostic away to use a mechanism that buys the same concurrency.
 #
-# BOTH ARE ALWAYS WAITED ON AND BOTH VERDICTS ARE REPORTED: `set -e` must not
-# abort on the first failure here, or one red daemon would hide the other's
+# EVERY ONE IS ALWAYS WAITED ON AND EVERY VERDICT IS REPORTED: `set -e` must not
+# abort on the first failure here, or one red daemon would hide the others'
 # result — the same reason --no-exit-on-error is used for typecheck+lint above.
-echo "== hermetic: daemon packages, concurrently (site_builder + publication API v2)"
+echo "== hermetic: daemon packages, concurrently (site_builder + publication API v2 + publication-host agent)"
 daemon_status=0
 
 daemon_gate publication/site_builder > /tmp/dedalo_daemon_sb.$$ 2>&1 &
 sb_pid=$!
 daemon_gate publication/server_api/v2 > /tmp/dedalo_daemon_pa.$$ 2>&1 &
 pa_pid=$!
+daemon_gate publication/host_agent > /tmp/dedalo_daemon_ha.$$ 2>&1 &
+ha_pid=$!
 
 # `wait <pid>` returns the job's exit status; `|| rc=$?` keeps `set -e` from
-# aborting before the second job has been waited on and reported.
+# aborting before every other job has been waited on and reported.
 sb_rc=0; wait "$sb_pid" || sb_rc=$?
 pa_rc=0; wait "$pa_pid" || pa_rc=$?
+ha_rc=0; wait "$ha_pid" || ha_rc=$?
 
 echo "---- publication/site_builder ----"
 cat /tmp/dedalo_daemon_sb.$$ ; rm -f /tmp/dedalo_daemon_sb.$$
 echo "---- publication/server_api/v2 ----"
 cat /tmp/dedalo_daemon_pa.$$ ; rm -f /tmp/dedalo_daemon_pa.$$
+echo "---- publication/host_agent ----"
+cat /tmp/dedalo_daemon_ha.$$ ; rm -f /tmp/dedalo_daemon_ha.$$
 
 [ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
 [ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }
+[ "$ha_rc" -eq 0 ] || { echo "== hermetic: RED in publication/host_agent (exit $ha_rc)"; daemon_status=1; }
 # ONE exit, after EVERY verdict is in. `[ "$daemon_status" -eq 0 ] || exit 1`
 # used to stand here on its own line, which meant a red daemon left the tier
 # without its summary — the same hide-the-other-verdict shape the stages above

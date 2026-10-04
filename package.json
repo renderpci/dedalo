@@ -60,6 +60,10 @@
 		"start:sitebuilder": "cd publication/site_builder && bun run start",
 		"test:sitebuilder": "cd publication/site_builder && bunx tsc --noEmit && bun test",
 		"sitebuilder:provision": "cd publication/site_builder && bun run src/provision/cli.ts",
+		"hostagent:install": "cd publication/host_agent && bun install",
+		"hostagent:start": "cd publication/host_agent && bun run src/index.ts",
+		"hostagent:test": "cd publication/host_agent && bunx tsc --noEmit && bun test",
+		"hostagent:provision": "cd publication/host_agent && bun run src/provision/cli.ts",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"format": "biome format --write ."

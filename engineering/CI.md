@@ -348,8 +348,18 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   or assigned to the DB tier with a reason in `NOT_HERMETIC` — stale rows red both
   ways), the crap-ledger append-only check against a FETCHED reference, the
   dependency-audit ratchet (only when the push changed its inputs — see Time-based
-  checks), and the two isolated publication packages (`site_builder`,
-  `server_api/v2`: install + tsc + test). Required config keys get harmless stubs;
+  checks), and the isolated daemon packages, concurrently (`site_builder`,
+  `server_api/v2`, `host_agent`: install + tsc + test + coverage). The set is DERIVED —
+  every locked package but the root that has its own `bunfig.toml` — and
+  `ci_workflow_tripwire` rules 11/11b/15 hold hermetic.sh, the coverage split and
+  `.github/dependabot.yml` to it. Each also has a path-triggered stage in
+  `scripts/verify.ts` (`site_builder`, `host_agent`). **Runner requirement** of the
+  `host_agent` suite: the `openssl` CLI (`tests/boot_mtls.test.ts` issues a scratch CA)
+  and sudo's own sudoers parser (`tests/provision_render_grants.test.ts` checks the
+  rendered rule with `cvtsudoers` from the `sudo` package when present — it parses
+  without a passwd entry, so it works as the job's bare uid 1001 — else `visudo -cf -`,
+  which is what macOS ships). The CI image ships both (`ci/Dockerfile`; sudo is never
+  configured nor invoked there). Missing = RED, never a skip. Required config keys get harmless stubs;
   `DB_PORT` points at a closed port so any accidental DB touch fails loudly. No
   hermetic gate starts a server: `suite_mariadb_target_native` (which drives the lane's
   own `mariadbd`) is a DB-tier gate (`NOT_HERMETIC` row + `DB_TIER_TRIPWIRES`).

@@ -615,6 +615,30 @@ if (runTests) {
 			detail: `${passM?.[1] ?? '?'} pass / ${failM?.[1] ?? '?'} fail`,
 		});
 	}
+
+	// The publication-host agent (publication/host_agent) is the THIRD isolated daemon
+	// package, with the site_builder stage's shape and reasoning: it sits outside the
+	// src/+test/ trees the neighbour scan covers, and it is hermetic (no DB, no oracle,
+	// scratch roots under its own .test-tmp/). It runs here when the change touches it,
+	// and always via scripts/ci/hermetic.sh daemon_gate(). NO --timeout, deliberately,
+	// for the same reason: its bunfig.toml declares coverage + coverageThreshold and no
+	// timeout (test_timeout_tripwire DAEMON_EXEMPT names this site).
+	if (changed.some((f) => f.startsWith('publication/host_agent/'))) {
+		banner('host_agent (tsc + bun test in publication/host_agent)');
+		const r = await $`bash -c "cd publication/host_agent && bunx tsc --noEmit && bun test 2>&1"`
+			.quiet()
+			.nothrow();
+		const text = r.stdout.toString() + r.stderr.toString();
+		console.log(text.split('\n').slice(-6).join('\n'));
+		const passM = text.match(/(\d+) pass/);
+		const failM = text.match(/(\d+) fail/);
+		const ok = r.exitCode === 0 && failM?.[1] === '0';
+		results.push({
+			name: 'host_agent',
+			ok,
+			detail: `${passM?.[1] ?? '?'} pass / ${failM?.[1] ?? '?'} fail`,
+		});
+	}
 } else {
 	console.log('\n(--no-tests: skipping tripwires + neighbours)');
 }
