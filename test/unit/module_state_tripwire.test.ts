@@ -288,6 +288,13 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// cleared around each case; never request identity (the production paths are
 	// install-static: config.media.rootPath and <private>/).
 	'core/media/protection.ts:pathOverridesForTests',
+	// Publication-host stores test seam (phase 3, 2026-10-03): the
+	// core/media/protection.ts:pathOverridesForTests shape, stricter — it accepts only a
+	// directory under the OS temp dir that carries `.dedalo_test_publication_hosts`, so no
+	// test can point the registry or the secret writer at a real <private>. Holds a PATH,
+	// never request identity; null in production, set and cleared around each case
+	// (test/helpers/publication_host_fixtures.ts).
+	'core/publication_host/registry.ts:baseOverrideForTests',
 	// REMOVED 2026-08-24 with the per-session media credential
 	// (WC-2026-08-24-media-auth-session-scoped). It cached "today's install-wide cookie
 	// value" so the per-request re-issue could be a string compare instead of a JSON
