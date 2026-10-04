@@ -19,6 +19,7 @@ import { MethodNotAllowedError, NotFoundError, ServiceError } from './errors';
 import { handleHealth } from './routes/health';
 import { handleMediaProbe } from './routes/media_probe';
 import { handleRulesApply } from './routes/rules_apply';
+import { handleStatus } from './routes/status';
 import { requireBearer } from './security/auth';
 import { problem } from './util/response';
 
@@ -56,7 +57,7 @@ function route(
 
 export const ROUTES: readonly Route[] = Object.freeze([
   route('GET', '/health', 'health', handleHealth, { public: true }),
-  route('GET', '/v1/status', 'status', notYetBuilt('status')),
+  route('GET', '/v1/status', 'status', handleStatus),
   route('GET', '/v1/media/probe', 'media.probe', handleMediaProbe),
   route('POST', '/v1/rules/apply', 'rules.apply', handleRulesApply),
   route('POST', '/v1/releases/v1', 'release.install', notYetBuilt('release.install')),
