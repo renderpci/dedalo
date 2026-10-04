@@ -157,6 +157,7 @@ export const MODES = Object.freeze({
   tlsServerKey: row('agent', 'root', 0o400),
   engineBundleDir: row('root', 'root', 0o700),
   engineBundleFile: row('root', 'root', 0o600),
+  engineFragment: row('root', 'root', 0o644),
   unitFile: row('root', 'root', 0o644),
   sudoers: row('root', 'root', 0o440),
   polkit: row('root', 'root', 0o644),
@@ -249,6 +250,10 @@ export interface AgentLayout {
   readonly envFile: string;
   readonly tls: TlsPaths | null;
   readonly engineBundleDir: string;
+  /** The engine's client cert + key + CA, one root 0600 file the operator carries (tls.ts). */
+  readonly engineBundlePath: string;
+  /** What the engine will need to pair (render/engine_fragment.ts); secret-free. */
+  readonly engineFragmentPath: string;
   readonly agentUnitName: string;
   readonly agentUnitPath: string;
   readonly v2UnitPath: string;
@@ -596,6 +601,8 @@ export function derive(decl: HostDeclaration): AgentLayout {
     envFile: join(instanceDir, 'agent.env'),
     tls,
     engineBundleDir,
+    engineBundlePath: join(engineBundleDir, 'engine_bundle.pem'),
+    engineFragmentPath: join(instanceDir, 'engine.env.fragment'),
     agentUnitName,
     agentUnitPath: join(unitDir, `${agentUnitName}.service`),
     v2UnitPath: join(unitDir, `${v2Unit}.service`),

@@ -22,7 +22,7 @@ import {
   trustProblem,
 } from '../src/provision/plan';
 import type { Renderer } from '../src/provision/render/types';
-import { artifact } from '../src/provision/render/types';
+import { artifact, PENDING_FACTS } from '../src/provision/render/types';
 import { unixDeclaration } from './fixtures/provision_declaration';
 import { FakeHost } from './support/provision_fake_host';
 
@@ -80,7 +80,7 @@ describe('renderer registry', () => {
     const l = layout();
     expect(renderAll(l).map(a => a.path)).toEqual([l.envFile]);
     const twin: Renderer = { kind: 'env', render: x => [artifact(x, { kind: 'env', path: x.envFile, mode: 'envFile', body: 'x\n' })] };
-    expect(() => renderAll(l, [...RENDERERS, twin])).toThrow(/written twice/);
+    expect(() => renderAll(l, PENDING_FACTS, [...RENDERERS, twin])).toThrow(/written twice/);
   });
 });
 
@@ -368,7 +368,7 @@ describe('the tail, through a renderer with effects', () => {
         }),
       ],
     };
-    const tail = plan(l, new FakeHost(l).state(), [probe]).filter(a => !['mkdir', 'write', 'append-only'].includes(a.op));
+    const tail = plan(l, new FakeHost(l).state(), PENDING_FACTS, [probe]).filter(a => !['mkdir', 'write', 'append-only'].includes(a.op));
     expect(tail).toEqual([
       { op: 'daemon-reload' },
       { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apachectl' },

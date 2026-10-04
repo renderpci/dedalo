@@ -81,10 +81,25 @@ export function artifact(layout: AgentLayout, input: ArtifactInput): Artifact {
   });
 }
 
+/**
+ * What a renderer needs that the declaration does not hold. Today only the pairing
+ * fingerprint: it depends on the minted SERVICE_TOKEN, which observeHost never reads. The CLI
+ * computes it (render/engine_fragment.ts renderFacts) from the root-only credential and
+ * passes it in. PENDING_FACTS is the honest value before the token exists, and the default
+ * for every caller that renders only to learn paths and modes (observeHost, the plan gates):
+ * no artifact's PATH, MODE, OWNER or EFFECTS may depend on facts.
+ */
+export interface RenderFacts {
+  /** instanceFingerprint(instance, token), or null until the token is minted. */
+  readonly fingerprint: string | null;
+}
+
+export const PENDING_FACTS: RenderFacts = Object.freeze({ fingerprint: null });
+
 export interface Renderer {
   readonly kind: ArtifactKind;
   /** Absent = always. E.g. a tls-only artifact returns false for a unix instance. */
   appliesTo?(layout: AgentLayout): boolean;
-  /** Pure: same layout, same bytes. */
-  render(layout: AgentLayout): Artifact[];
+  /** Pure: same layout + facts, same bytes. */
+  render(layout: AgentLayout, facts: RenderFacts): Artifact[];
 }

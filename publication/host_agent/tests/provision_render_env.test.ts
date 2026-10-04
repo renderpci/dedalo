@@ -11,6 +11,7 @@ import { parseEnvFile } from '../src/env_file';
 import { hasDrifted, parseStamp } from '../src/provision/hash';
 import { derive } from '../src/provision/layout';
 import { envAssignment, envRenderer, renderEnvBody } from '../src/provision/render/env';
+import { PENDING_FACTS } from '../src/provision/render/types';
 import { scratchPath } from './fixtures/instance';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
 
@@ -21,7 +22,7 @@ describe('envRenderer', () => {
   ] as const) {
     test(`${name}: one stamped artifact at layout.envFile`, () => {
       const layout = derive(decl);
-      const [artifact, ...rest] = envRenderer.render(layout);
+      const [artifact, ...rest] = envRenderer.render(layout, PENDING_FACTS);
       expect(rest).toHaveLength(0);
       expect(artifact?.path).toBe(layout.envFile);
       expect(artifact?.owner).toBe('root');
@@ -54,7 +55,7 @@ describe('envRenderer', () => {
       rmSync(dir, { recursive: true, force: true });
       mkdirSync(join(dir, 'credentials'), { recursive: true });
       try {
-        writeFileSync(join(dir, 'agent.env'), envRenderer.render(layout)[0]?.body ?? '');
+        writeFileSync(join(dir, 'agent.env'), envRenderer.render(layout, PENDING_FACTS)[0]?.body ?? '');
         writeFileSync(join(dir, 'credentials', 'SERVICE_TOKEN'), `${'t'.repeat(43)}\n`);
         const resolved = resolveConfig({
           envFilePath: join(dir, 'agent.env'),

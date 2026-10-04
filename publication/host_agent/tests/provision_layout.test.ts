@@ -90,6 +90,11 @@ describe('derive — unix instance', () => {
     expect(layout.tls).toBeNull();
   });
 
+  test('engine fragment and engine bundle paths', () => {
+    expect(layout.engineFragmentPath).toBe('/etc/dedalo_publication_host/test/engine.env.fragment');
+    expect(layout.engineBundlePath).toBe('/etc/dedalo_publication_host/test/engine_bundle/engine_bundle.pem');
+  });
+
   test('unix listener: socket under the instance runtime dir', () => {
     expect(layout.listen).toEqual({
       kind: 'unix',

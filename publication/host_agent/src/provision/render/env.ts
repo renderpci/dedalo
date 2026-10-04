@@ -1,6 +1,7 @@
 /**
- * The agent's env file — `<config_base>/<instance>/agent.env`, 0644 root:root. The unit names
- * it through Task 1's DEDALO_HOST_AGENT_ENV_FILE and the agent's own config parses it (Task 9).
+ * The agent's env file — `<config_base>/<instance>/agent.env`, 0644 root:root. NOT a systemd
+ * EnvironmentFile=: the agent's own src/config.ts parses it (render/unit_agent.ts only NAMES it
+ * through DEDALO_HOST_AGENT_ENV_FILE), so one parser and one grammar read it.
  *
  * Exactly `layout.envVars` (Task 1's env-file keys: INSTANCE for the instance,
  * never a credential: SERVICE_TOKEN arrives via systemd LoadCredential), one `KEY="value"`
@@ -54,7 +55,7 @@ export function renderEnvBody(layout: AgentLayout): string {
 
 export const envRenderer: Renderer = {
   kind: 'env',
-  render(layout) {
+  render(layout, _facts) {
     return [
       artifact(layout, {
         kind: 'env',

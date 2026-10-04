@@ -37,8 +37,16 @@ import { hasDrifted, parseStamp } from './hash';
 import type { AgentLayout, WebServer } from './layout';
 import { MODES, SERVICE_TOKEN_BYTES, groupName, markerContent, ownerName } from './layout';
 import { envRenderer } from './render/env';
-import type { Artifact, ArtifactEffect, ArtifactKind, ArtifactService, ArtifactValidator, Renderer } from './render/types';
-import { ARTIFACT_KINDS } from './render/types';
+import type {
+  Artifact,
+  ArtifactEffect,
+  ArtifactKind,
+  ArtifactService,
+  ArtifactValidator,
+  RenderFacts,
+  Renderer,
+} from './render/types';
+import { ARTIFACT_KINDS, PENDING_FACTS } from './render/types';
 
 /* ── the renderer registry ────────────────────────────────────────────────────────── */
 
@@ -63,12 +71,16 @@ export function assertRendererCensus(renderers: readonly Renderer[]): void {
 assertRendererCensus(RENDERERS);
 
 /** Every artifact this instance should hold, sorted by path; one path one artifact, all stamped. */
-export function renderAll(layout: AgentLayout, renderers: readonly Renderer[] = RENDERERS): Artifact[] {
+export function renderAll(
+  layout: AgentLayout,
+  facts: RenderFacts = PENDING_FACTS,
+  renderers: readonly Renderer[] = RENDERERS,
+): Artifact[] {
   const artifacts: Artifact[] = [];
   const byPath = new Map<string, ArtifactKind>();
   for (const renderer of renderers) {
     if (renderer.appliesTo && !renderer.appliesTo(layout)) continue;
-    for (const produced of renderer.render(layout)) {
+    for (const produced of renderer.render(layout, facts)) {
       if (produced.kind !== renderer.kind) {
         throw new Error(`render: the '${renderer.kind}' renderer produced a '${produced.kind}' artifact`);
       }
@@ -230,9 +242,14 @@ export class PlanRefused extends Error {
 
 /* ── plan ─────────────────────────────────────────────────────────────────────────── */
 
-export function plan(layout: AgentLayout, host: HostState, renderers: readonly Renderer[] = RENDERERS): Action[] {
+export function plan(
+  layout: AgentLayout,
+  host: HostState,
+  facts: RenderFacts = PENDING_FACTS,
+  renderers: readonly Renderer[] = RENDERERS,
+): Action[] {
   const refusals: string[] = [];
-  const artifacts = renderAll(layout, renderers);
+  const artifacts = renderAll(layout, facts, renderers);
 
   // 1. What the provisioner never creates: accounts.
   const users = ['root', layout.identity.agentUser, layout.identity.v2User];
