@@ -1,6 +1,6 @@
 # PUBLICATION HOST — a separate publication machine, controlled from the work system
 
-> **Status 2026-10-03: DESIGN; phase 1 (the `publication_host` rule profile) BUILT.** Nothing below is built yet except where a phase in §8
+> **Status 2026-10-03: DESIGN; phase 1 (the `publication_host` rule profile) and phase 2 (the publication agent) BUILT.** Nothing below is built yet except where a phase in §8
 > says so. Each phase gets its own implementation plan (internal process); this file is
 > the definition they implement. Media-access details extend `engineering/MEDIA_PROTECTION.md`.
 
@@ -59,27 +59,68 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
 1. **Direction is work → publication, only.** The publication host never opens a
    connection to the work host. The firewall states it; the agent holds no work-host
    credential and no work-host address.
-2. **The channel is private.** A private network (WireGuard) or mTLS on a non-public port,
-   firewalled to the work host's address. Never routed through the public vhost. On a
-   single machine (§1.1): a unix socket, mode 0660, group = the engine's.
-   Under mTLS the agent pins its OWN instance CA as the only client CA, so it trusts any
-   client certificate that CA signed: reissuing the engine bundle revokes nothing. Revoking a
-   leaked bundle = rotating the CA (remove `tls/ca.pem` + `tls/ca.key`, `provision apply`):
-   new CA and leaves, and the running agent is restarted (it loads TLS once, at boot).
-3. **Pairing is proved, not assumed.** Shared bearer + the domain-separated pairing
-   fingerprint recipe of `src/core/site_builder/pairing.ts` (a mis-pasted env file must
-   name the mismatch, never silently drive another institution's host).
+2. **The channel is private and mutually authenticated (decided in phase 2).** Over a
+   network: **mTLS** on a non-public port, firewalled to the work host's address, never
+   routed through the public vhost. The provisioner runs a private CA on the publication
+   host and issues a server certificate (SAN = the declared listen address) plus ONE
+   engine client certificate and key. The agent pins exactly that client CA (`Bun.serve`
+   `requestCert` + `rejectUnauthorized`, constants in `src/boot.ts`, never configuration).
+   A TLS listener whose certificate, key or client CA is missing, unreadable or not PEM
+   refuses to BOOT. It never serves unverified. The engine's half leaves the host as one
+   root-only `0600` file (`engine_bundle.pem`: client certificate, client key, CA) that the
+   operator carries to the work host. WireGuard stays a RECOMMENDED network layer
+   underneath, not a substitute: the agent cannot verify a tunnel, but it can verify a
+   certificate. On a single machine (§1.1): a unix socket, mode 0660, group = the
+   engine's. **Plain TCP does not exist**: the listener is `unix` or `tls` and nothing
+   else. The agent's suite listens on a unix socket, and its mTLS gates bind TLS on
+   `127.0.0.1` with their own scratch CA.
+   The agent trusts any client certificate its OWN instance CA signed, so reissuing the
+   engine bundle revokes nothing. Revoking a leaked bundle = rotating the CA (remove
+   `tls/ca.pem` + `tls/ca.key`, `provision apply`): new CA and leaves, and the running
+   agent is restarted (it loads TLS once, at boot).
+3. **Pairing is proved, not assumed.** Every request except `GET /health` carries
+   `Authorization: Bearer <token>` (≥ 32 chars, constant-time compare). The bearer is
+   checked BEFORE route matching, so unauthenticated 401/404/405 answers are
+   indistinguishable. `/health` publishes `instance_fingerprint =
+   sha256('dedalo-publication-host:' + instance + '\n' + token)` (lowercase hex) and never
+   the instance name. The engine recomputes it (`src/core/publication_host/pairing.ts`);
+   `test/unit/publication_host_pairing_tripwire.test.ts` twins that with
+   `publication/host_agent/src/security/pairing.ts`. The prefix is this protocol's own,
+   not the site builder's `dedalo-site-instance:`: a proof for one protocol is never valid
+   for the other. A wrong instance and a wrong token produce the same mismatch. The three
+   layers do three jobs. The certificate proves the caller is the paired engine's
+   machine. The bearer proves it holds this host's secret. The fingerprint proves both
+   sides mean the SAME host, so a mis-pasted env file names the mismatch instead of
+   silently driving another institution's host.
 4. **Closed command set.** The agent executes ONLY the commands in §6. There is no
-   "run script", no shell, no path argument outside its own roots.
-5. **Least privilege.** The agent runs as its own user, writes only under its roots
-   (API releases, media copy, generated web-server includes), and reloads the web server
-   through one sudo rule for `apachectl configtest && apachectl graceful` (or the nginx
-   pair) — nothing else.
+   "run script", no shell, and no route that takes a filesystem path. Every child process
+   goes through `publication/host_agent/src/exec.ts`, whose public API is a closed set of
+   named commands with no free argv. A package test fails if any other module spawns.
+5. **Least privilege, no root at runtime.** The agent runs as its own user and writes
+   only under its state root (`publication_api/`, `rules/`, `audit/`). It holds exactly
+   two grants, both rendered and hash-stamped by the provisioner: a **sudoers** rule for
+   the web server's configtest argv only (`apachectl -t` / `nginx -t`, because a
+   configtest must read root-only TLS keys), and a **polkit** rule allowing `reload` of the
+   observed web unit, `restart` of the v2 unit, and `start`/`stop` of the v2 scratch
+   template unit `<v2 unit>-scratch@<port>` (port 1024–65535; the `publication/site_builder`
+   precedent). There is no shell and no free argv. OPEN: the rendered scratch template
+   unit runs a release under test as the v2 user, but `exec.ts` `v2ScratchBoot` still
+   spawns it itself, as the agent user, confined to a committed `releases/<id>` directory.
+6. **Trust model (stated, not hoped).** A compromised work host means a compromised
+   publication host, because `release.install` runs code the work host pushed. The reverse
+   does not hold: the publication host has no work-host credential and no work-host
+   address (1.). The agent therefore validates SHAPE (the sha256 stamp, the bundle grammar
+   of §3, path confinement) and never the INTENT of the paired engine. Checks that
+   second-guess the only writer would protect nothing. There is no downgrade refusal.
+   Every `current` swap is recorded `from → to` in the agent's append-only audit log.
 
 Rejected alternatives, for the record: manual operation (drift, no panel visibility,
 unpublish depends on a human); SSH scripts from the engine (a shell credential for a
 public host in the engine's hands); a hosting panel's API (far wider than the job);
 publication-host pull (reverses the firewall direction).
+
+Rejected for the transport (phase 2): bearer over WireGuard alone. A leaked bearer would
+then be enough to drive the host. With mTLS it is useless without the engine's client key.
 
 ## 3. Publication API deployment
 
@@ -94,9 +135,34 @@ release, state outside the code:
 
 - Apache `Alias` (v1) and the systemd unit (`WorkingDirectory`, `EnvironmentFile=` v2.env)
   point at `current`. v2 reads only `process.env`, so `EnvironmentFile` needs no code change.
-- Install = stage the release → (v2) `bun install --frozen-lockfile --production` →
-  health check → atomic `current` swap (`rename`) → restart. A failure before the swap
-  leaves the old release serving. Rollback = swap back. Keep the last 3 releases.
+- **Release id** = `<version>_<digest7>`, validated `^\d+(\.\d+){1,3}_[0-9a-f]{7}$`
+  (e.g. `7.0.3_a1b2c3d`). Developer-channel installs keep the version, so only the digest
+  tells two releases apart. Re-installing an existing id only re-points `current`.
+- **Bundle = gzip'd ustar, parsed in-process** (`publication/host_agent/src/releases/ustar.ts`).
+  There is no system `tar`, so there are no GNU-vs-BSD differences, and validation and
+  extraction are one code path. Only entry types `0` (file) and `5` (dir) are allowed,
+  plus PAX `x` records that carry only `path`. Total bytes (`MAX_BUNDLE_BYTES`), entry
+  count (`MAX_BUNDLE_ENTRIES`) and path length (1024) are capped. No absolute, `..` or
+  duplicate path is allowed. An offending entry is refused BEFORE it is written, and
+  staging is removed. The stream's sha256 must equal the declared one. Phase 4 writes the
+  engine-side writer and its round-trip twin test.
+- **No registry egress.** A v2 bundle carries its production `node_modules`, built on the
+  work host with the pinned Bun (phase 4). The agent never runs `bun install`.
+  `bun build --compile` is not an option: v2 reads `swagger-ui-dist` assets from
+  `node_modules` at runtime (`src/routes/docs.ts`). Its dependencies are pure JS, so the
+  tree is platform-neutral.
+- **v1 config stays outside the release.** v1 resolves its config at the fixed path
+  `dirname(__FILE__,2)/config_api/`. After extraction the agent links
+  `releases/<r>/config_api/server_config_api.php` (and `server_config_headers.php` when
+  `shared/` has one) → `shared/`. A v1 bundle that carries either file is refused
+  (`reserved_path`).
+- **Install** = stream into staging with the stamp verified → (v1) `php -l` lint →
+  (v2) boot the release on a scratch port and probe its health → atomic `current` swap
+  (temporary symlink + `rename`) → (v2) restart the unit, then health. A failure before
+  the swap leaves the old release serving. A failed post-restart health swaps `current`
+  back and restarts the unit on the previous release. **Rollback** = swap back to the
+  newest non-current release. Keep `RELEASES_RETAINED` releases (default 3, minimum 2).
+  Pruning never removes the current or the previous release.
 - **Why `shared/`:** the engine's code updater keeps only `.git` across a tree swap
   (`PRESERVE_ROOT_ENTRIES`, `src/core/update/code_update.ts`), so any state stored inside
   a code tree dies on update.
@@ -175,14 +241,27 @@ A diffusion target beside MariaDB, driven by the same publish/unpublish events a
 
 ## 6. Agent command set (closed)
 
-| command | effect |
-|---|---|
-| `status` | agent + API versions, health, disk, media mode, applied rule hash, mount state, manifest hash |
-| `release.install {api, release, sha256, bundle}` | §3 install, auto-rollback on failed health |
-| `release.rollback {api}` | swap `current` back |
-| `rules.apply {server, text, hash}` | write the include, `configtest`, graceful; keep the previous file on failure |
-| `media.probe` | mount present, read-only, `pub/` readable, marker count |
-| `media.put` / `media.delete` / `media.manifest` | `copy` mode only |
+Every route is under `BASE_PATH` `/publication/host_agent`. Only `/health` is public.
+Every route is a literal path: no route takes a parameter, so the per-API release routes
+are spelled out one per API. The route column is gated against
+`publication/host_agent/src/router.ts` in both directions
+(`publication/host_agent/tests/spec_routes.test.ts`).
+
+| command | route | effect |
+|---|---|---|
+| (pairing) | `GET /health` | liveness + `instance_fingerprint` (§2.3); unauthenticated |
+| `status` | `GET /v1/status` | agent + Bun version, platform, fingerprint, per-API `current`/`previous` release, applied rule hash, media probe, state-root free bytes |
+| `media.probe` | `GET /v1/media/probe` | mount present, read-only, `pub/` readable, marker count |
+| `rules.apply {server, text, hash}` | `POST /v1/rules/apply` | write the include, `configtest`, reload; on a failed configtest restore the previous file, re-run configtest, never reload |
+| `release.install {api: v1, release, sha256, bundle}` | `POST /v1/releases/v1` | §3 install of a v1 release; the bundle is the request body |
+| `release.install {api: v2, release, sha256, bundle}` | `POST /v1/releases/v2` | §3 install of a v2 release, auto-rollback on failed health; the bundle is the request body |
+| `release.rollback {api: v1}` | `POST /v1/releases/v1/rollback` | swap v1 `current` back to the previous release |
+| `release.rollback {api: v2}` | `POST /v1/releases/v2/rollback` | swap v2 `current` back to the previous release, restart, health |
+| `media.put` / `media.delete` / `media.manifest` | (phase 5) | `copy` mode only |
+
+Errors are `application/problem+json` (RFC 9457, type base
+`https://dedalo.dev/publication-host/problems/`, `Cache-Control: no-store`). Every
+mutating call names its actor in the `X-Dedalo-Actor` header and is audited.
 
 ## 7. Verification — the public-URL probe
 
@@ -196,11 +275,12 @@ probe is red in the panel. The two probe records are scratch records the engine 
 | # | deliverable | depends on |
 |---|---|---|
 | 1 | `publication_host` rule profile (Apache + nginx), a CLI rendering it, the lockstep tripwire extended, a real-engine drill. Usable by hand before any agent exists. **Built:** `src/core/media/publication_host_rules.ts`, `bun run media:publication-host-rules`, `bun run test:media:pubhost`. | — |
-| 2 | The agent: pairing, `status`, `rules.apply`, `media.probe`, `release.install/rollback`. | 1 |
+| 2 | The agent: pairing, `status`, `rules.apply`, `media.probe`, `release.install/rollback`. **Built:** `publication/host_agent/` (daemon + root-run provisioner: mTLS material, units, sudoers, polkit, engine bundle), `src/core/publication_host/pairing.ts` + its twin tripwire, `bun run hostagent:test`, `bun run test:pubhost:agent`. Operator page: `docs/install/publication_host.md`. | 1 |
 | 3 | Engine side: publication-host registry, client, `media_control` per-host mode + status. | 2 |
 | 4 | Updater pushes the API bundles after an engine update. | 2, 3 |
 | 5 | `copy` mode: the diffusion media-copy target + reconcile. | 2, 3 |
 | 6 | Public-URL probe, on change and scheduled. | 3 |
 
-Decided per phase, in its own plan: host registry storage (phase 3), transport choice
-WireGuard+bearer vs mTLS (phase 2), probe record provisioning (phase 6).
+Decided per phase, in its own plan: host registry storage (phase 3), transport
+(decided in phase 2: mTLS + bearer + pairing fingerprint, §2), probe record provisioning
+(phase 6).
