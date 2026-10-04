@@ -3091,6 +3091,11 @@
 			"skipped": 0,
 			"assertions": 14
 		},
+		"test/unit/publication_host_pair_cli_native.test.ts": {
+			"tests": 26,
+			"skipped": 0,
+			"assertions": 180
+		},
 		"test/unit/publication_host_pairing_tripwire.test.ts": {
 			"tests": 14,
 			"skipped": 0,
