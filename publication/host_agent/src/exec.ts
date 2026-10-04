@@ -1,7 +1,8 @@
 /**
  * THE ONLY SPAWNER. Every child process the agent starts is one of the five named
  * commands below; no exported function takes a free argv. tests/exec.test.ts fails when
- * any other file under src/ spawns.
+ * any other file under src/ spawns. A SECOND closed set, provisionExec() at the end, is the
+ * root-run provisioner's (Task 8): same law, its own fixed root PATH, never reached by a route.
  *
  * - ABSOLUTE BINARIES, NEVER A PATH LOOKUP: sudo, systemctl and the configtest binary are
  *   the constants below; PHP_BIN and BUN_BIN are absolute by config law. The sudoers rule
@@ -27,6 +28,12 @@ import type { AgentConfig } from './config';
 import { parseEnvFile } from './env_file';
 import { ConflictError, ValidationError } from './errors';
 import { PUBLICATION_API_DIR } from './instance/roots';
+import {
+  ABSOLUTE_PATH_PATTERN,
+  UNIT_NAME_PATTERN,
+  UNIX_NAME_PATTERN,
+  WEB_CONFIGTEST_BINARY,
+} from './provision/layout';
 
 export type ExecResult = { code: number; stdout: string; stderr: string };
 
@@ -44,10 +51,8 @@ export interface Exec {
 
 export const SUDO = '/usr/bin/sudo';
 export const SYSTEMCTL = '/usr/bin/systemctl';
-export const WEB_CONFIGTEST_BINARY = Object.freeze({
-  apache: '/usr/sbin/apachectl',
-  nginx: '/usr/sbin/nginx',
-} as const);
+/** THE one definition lives in src/provision/layout.ts (the provisioner's trust check and sudoers rule name it). */
+export { WEB_CONFIGTEST_BINARY };
 
 export const CHILD_PATH = '/usr/local/bin:/usr/bin:/bin';
 export const COMMAND_TIMEOUT_MS = 60_000;
@@ -197,4 +202,99 @@ export function setExecForTests(standIn: Exec): () => void {
 export function exec(): Exec {
   if (current === null) current = realExec();
   return current;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// THE PROVISIONER'S CLOSED COMMAND SET (Task 8). Used only by the root-run CLI
+// (src/provision/apply.ts); no route reaches it. Same law as the agent's set above: named
+// commands, every argument validated before anything spawns, no free argv. It never reads
+// the agent's config (tests/provision_exec.test.ts imports this module with an empty env).
+// ─────────────────────────────────────────────────────────────────────────────────────
+
+/** A fixed PATH: the provisioner runs as root and never inherits one. */
+const PROVISION_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+
+export interface ProvisionExec {
+  userId(name: string): number | null; //               ['id','-u',name]
+  groupId(name: string): number | null; //              ['getent','group',name]
+  unitState(unit: string): { enabled: boolean; active: boolean }; // is-enabled / is-active --quiet
+  daemonReload(): ExecResult; //                         ['systemctl','daemon-reload']
+  enableUnit(unit: string): ExecResult; //               ['systemctl','enable',<unit>.service]
+  startUnit(unit: string): ExecResult; //                ['systemctl','start',<unit>.service]
+  restartUnit(unit: string): ExecResult; //              ['systemctl','restart',<unit>.service]
+  reloadUnit(unit: string): ExecResult; //               ['systemctl','reload',<unit>.service]
+  webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult; // [WEB_CONFIGTEST_BINARY[server],'-t']
+  visudoCheck(file: string): ExecResult; //              ['visudo','-cf',file]
+  /** Task 3's audit contract: the trail is append-only by the kernel (FS_APPEND_FL). */
+  appendOnly(file: string): ExecResult; //               ['chattr','+a',file]
+}
+
+function provisionRun(argv: readonly string[]): ExecResult {
+  try {
+    const proc = Bun.spawnSync({
+      cmd: [...argv],
+      env: { PATH: PROVISION_PATH, LC_ALL: 'C' },
+      stdin: 'ignore',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    return { code: proc.exitCode ?? -1, stdout: proc.stdout.toString(), stderr: proc.stderr.toString() };
+  } catch (error) {
+    return { code: 127, stdout: '', stderr: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function provisionUnit(unit: string): string {
+  if (!UNIT_NAME_PATTERN.test(unit) || unit.endsWith('.service')) {
+    throw new Error(`exec: '${unit}' is not a bare unit name (${UNIT_NAME_PATTERN.source})`);
+  }
+  return `${unit}.service`;
+}
+
+function provisionAbsolute(label: string, path: string): string {
+  if (!ABSOLUTE_PATH_PATTERN.test(path) || path.split('/').includes('..')) {
+    throw new Error(`exec: ${label} '${path}' is not a clean absolute path`);
+  }
+  return path;
+}
+
+function provisionName(name: string): string {
+  if (!UNIX_NAME_PATTERN.test(name)) throw new Error(`exec: '${name}' is not a unix account name`);
+  return name;
+}
+
+export function provisionExec(): ProvisionExec {
+  return Object.freeze({
+    userId(name: string): number | null {
+      const result = provisionRun(['id', '-u', provisionName(name)]);
+      const out = result.stdout.trim();
+      return result.code === 0 && /^\d+$/.test(out) ? Number(out) : null;
+    },
+    groupId(name: string): number | null {
+      const result = provisionRun(['getent', 'group', provisionName(name)]);
+      const gid = result.stdout.split('\n')[0]?.split(':')[2] ?? '';
+      return result.code === 0 && /^\d+$/.test(gid) ? Number(gid) : null;
+    },
+    unitState(unit: string): { enabled: boolean; active: boolean } {
+      const name = provisionUnit(unit);
+      return {
+        enabled: provisionRun(['systemctl', 'is-enabled', '--quiet', name]).code === 0,
+        active: provisionRun(['systemctl', 'is-active', '--quiet', name]).code === 0,
+      };
+    },
+    daemonReload: () => provisionRun(['systemctl', 'daemon-reload']),
+    enableUnit: (unit: string) => provisionRun(['systemctl', 'enable', provisionUnit(unit)]),
+    startUnit: (unit: string) => provisionRun(['systemctl', 'start', provisionUnit(unit)]),
+    restartUnit: (unit: string) => provisionRun(['systemctl', 'restart', provisionUnit(unit)]),
+    reloadUnit: (unit: string) => provisionRun(['systemctl', 'reload', provisionUnit(unit)]),
+    webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult {
+      const expected = WEB_CONFIGTEST_BINARY[server];
+      if (bin !== expected) {
+        throw new Error(`exec: '${bin}' is not the ${server} configtest binary '${expected}'`);
+      }
+      return provisionRun([expected, '-t']);
+    },
+    visudoCheck: (file: string) => provisionRun(['visudo', '-cf', provisionAbsolute('sudoers candidate', file)]),
+    appendOnly: (file: string) => provisionRun(['chattr', '+a', provisionAbsolute('append-only target', file)]),
+  });
 }
