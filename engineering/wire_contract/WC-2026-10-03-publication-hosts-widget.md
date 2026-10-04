@@ -15,8 +15,11 @@
   served right after `site_builder_status` on every install (no eager `value`; the
   panel loads through `get_widget_value`).
   - **panel** (`get_widget_value`, global-admin readable):
-    `{ registry: { state: 'ok' | 'registry_invalid' | 'registry_locked', reason },
-    registry_path, engine_qualities, is_root, hosts }`. `hosts` is one row per
+    `{ registry: { state: 'ok' | 'registry_invalid' | 'registry_locked', reason, check },
+    registry_path, engine_qualities, is_root, hosts }`. `registry.check` is `null` when
+    the state is `'ok'`, else Task 6's `registryInvalidCheck(reason)` —
+    `{ id: 'registry', state: 'blocked', detail: reason }`, a row the panel renders
+    with the host check renderer (amended 2026-10-04, Task 7 review). `hosts` is one row per
     registered host, built by `src/core/publication_host/host_status.ts`
     (`buildHostPanelRow`, served unchanged): `{ name, address_label, public_url,
     checks: [{id, state, detail?}], rules: { expected, reported },
@@ -39,10 +42,18 @@
     `perm.denied` before anything is loaded or dialled):
     `apply_rules({name})` → `{ host, server, hash, dropped }`;
     `probe({name})` → `{ host, probe }` (the agent's `media.probe` body under `probe`);
-    `rollback_api({name, api: 'v1'|'v2'})` → `{ host, api, from, to }`;
+    `rollback_api({name, api: 'v1'|'v2'})` → `{ host, api, from, to }` (`from`/`to` are
+    the agent's release ids only when they match `AGENT_RELEASE_ID`, else the literal
+    `'malformed'`: agent prose is log-only, E7);
     `set_host_fields({name, public_url?, qualities?, probe?})` → `{ host, fields }`;
-    `remove_host({name})` → `{ host, removed: true }` (secrets, registry entry, then the
-    in-process pairing proof). Every answer carries an operator `msg`.
+    `remove_host({name})` → `{ host, removed: true }` (under ONE registry lock hold:
+    the entry is re-checked to be the pairing read before — same `fingerprint` and
+    `paired_at`, else `maintenance.action_refused` "re-paired, retry" — then secrets,
+    then the registry entry; then the in-process pairing proof). Every answer carries an
+    operator `msg`. `set_host_fields` judges `qualities` / `probe` with the registry's
+    own field checks (`validateQualities` / `validateProbePath`), so a value the registry
+    would refuse is `maintenance.action_refused`, never `registry_invalid`. A hash the
+    agent reports that is not 64-hex is named only as "a malformed rule hash".
     Failures: agent failures surface as the `publication_host.*` codes; a registry that
     cannot be read or written as `publication_host.registry_invalid`, or
     `publication_host.busy` when its lock is held (`wire.ts` `registryError`); input

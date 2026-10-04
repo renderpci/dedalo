@@ -298,9 +298,33 @@ describe('the strict shape', () => {
 			}),
 		],
 		[
-			'a quality with a slash',
+			'a quality climbing out (..)',
 			mutate((h) => {
 				h.qualities = ['../original'];
+			}),
+		],
+		[
+			'a quality with an empty segment',
+			mutate((h) => {
+				h.qualities = ['image//thumb'];
+			}),
+		],
+		[
+			'a quality segment starting with a dot',
+			mutate((h) => {
+				h.qualities = ['image/.thumb'];
+			}),
+		],
+		[
+			'an absolute quality',
+			mutate((h) => {
+				h.qualities = ['/image/thumb'];
+			}),
+		],
+		[
+			'a quality with an embedded ..',
+			mutate((h) => {
+				h.qualities = ['image/a..b'];
 			}),
 		],
 		[
@@ -358,6 +382,12 @@ describe('the strict shape', () => {
 				unpublished: 'image/1.5MB/0/a_test3_2.jpg',
 			},
 		});
+		expect(validateRegistry(file(record)).hosts[0]).toEqual(record);
+	});
+
+	test('a real public quality list (the engine grammar, /-separated) is accepted', () => {
+		// what filterPublicQualities emits: the widget's set_host_fields stores exactly this
+		const record = host({ qualities: ['image/1.5MB', 'av/404', 'pdf/web'] });
 		expect(validateRegistry(file(record)).hosts[0]).toEqual(record);
 	});
 });

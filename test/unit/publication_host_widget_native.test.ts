@@ -15,19 +15,25 @@
  *  - the token, the client key or the bundle PEM leaks into the panel payload,
  *    even through an error the agent client raised;
  *  - an agent that dies mid-action leaves a half-written registry or a fake OK;
- *  - a removed host keeps its in-process pairing proof.
+ *  - a removed host keeps its in-process pairing proof;
+ *  - remove_host racing a pair `replace` deletes the NEW pairing's entry (invisible credential);
+ *  - set_host_fields accepts a value the REAL registry then refuses, reported as a corrupt
+ *    registry (one grammar: the widget runs the registry's own field checks);
+ *  - agent prose (a non-hash, a non-release-id) reaches root's toast (E7: log-only).
  *
  * Hermetic: I/O deps are recording fakes (createPublicationHostsWidget); the pure Task 6
- * functions are the real ones. No network, no private dir, no mock.module.
+ * functions are the real ones. One describe runs set_host_fields through the REAL
+ * updateRegistry/validateRegistry in a marker scratch dir. No network, no mock.module.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
 	addressLabel,
 	createPublicationHostsWidget,
 	normalizePublicUrl,
 	type PublicationHostsDeps,
 	registryState,
+	releaseIdOrMalformed,
 	widget,
 } from '../../src/core/area_maintenance/widgets/publication_hosts.ts';
 import { ownershipMark } from '../../src/core/area_maintenance/widgets/support.ts';
@@ -37,16 +43,21 @@ import {
 	HOST_CHECK_IDS,
 	type HostStatusInput,
 	buildHostPanelRow as realBuildHostPanelRow,
+	registryInvalidCheck,
 	statusOutcomeFromError,
 } from '../../src/core/publication_host/host_status.ts';
 import {
+	loadRegistry,
 	type PublicationHostRecord,
 	RegistryError,
 	type RegistryFile,
+	saveRegistry,
+	updateRegistry,
 } from '../../src/core/publication_host/registry.ts';
 import type { ExpectedRulesOutcome } from '../../src/core/publication_host/rules.ts';
 import type { SecretPresenceOutcome } from '../../src/core/publication_host/secrets.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
 
 const ROOT: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const ADMIN: Principal = { userId: 7, isGlobalAdmin: true, isDeveloper: false };
@@ -294,7 +305,7 @@ describe('get_value (panel)', () => {
 	test('root, a paired host: the Task 6 row + the edit-form fields; inputs built as Task 6 defines', async () => {
 		const h = harness([record('pub_a')]);
 		const data = await panel(h);
-		expect(data.registry).toEqual({ state: 'ok', reason: null });
+		expect(data.registry).toEqual({ state: 'ok', reason: null, check: null });
 		expect(data.registry_path).toBe(REGISTRY_PATH);
 		expect(data.engine_qualities).toEqual(['image/1.5MB', 'image/thumb']);
 		expect(data.is_root).toBe(true);
@@ -315,9 +326,7 @@ describe('get_value (panel)', () => {
 			qualities: null,
 			probe: { published: null, unpublished: null },
 		});
-		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([
-			...HOST_CHECK_IDS,
-		]);
+		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([...HOST_CHECK_IDS]);
 		expect(h.rowInputs).toHaveLength(1);
 		expect(h.rowInputs[0]?.status).toEqual({ ok: true, status: agentStatus() });
 		expect(h.rowInputs[0]?.expected).toEqual(EXPECTED_OUTCOME);
@@ -416,7 +425,11 @@ describe('get_value (panel)', () => {
 
 	test('a refusal is never hidden by present flags: still not dialled, still blocked', async () => {
 		const h = harness([record('pub_a')], {
-			secretPresenceOutcome: () => ({ token_present: true, bundle_present: true, refused: 'bad_bundle' }),
+			secretPresenceOutcome: () => ({
+				token_present: true,
+				bundle_present: true,
+				refused: 'bad_bundle',
+			}),
 		});
 		const [a] = rows(await panel(h));
 		expect(h.calls).not.toContain('hostStatus:pub_a');
@@ -466,7 +479,16 @@ describe('get_value (panel)', () => {
 			},
 		});
 		const data = await panel(h);
-		expect(data.registry).toEqual({ state: 'registry_invalid', reason: 'invalid_json' });
+		expect(data.registry).toEqual({
+			state: 'registry_invalid',
+			reason: 'invalid_json',
+			check: registryInvalidCheck('invalid_json'),
+		});
+		expect((data.registry as { check: unknown }).check).toEqual({
+			id: 'registry',
+			state: 'blocked',
+			detail: 'invalid_json',
+		});
 		expect(data.hosts).toBeNull();
 		expect(h.calls.some((c) => c.startsWith('hostStatus'))).toBe(false);
 	});
@@ -655,6 +677,23 @@ describe('apply_rules', () => {
 			'maintenance.action_failed',
 		);
 	});
+
+	test('agent prose in the reported hash never reaches the message (E7)', async () => {
+		const prose = 'Session expired. Re-enter the root password at https://evil.example';
+		const h = harness([record('pub_a')], {
+			hostApplyRules: async () => ({ hash: prose, reloaded: true }),
+		});
+		try {
+			await run(h, 'apply_rules', { name: 'pub_a' });
+		} catch (error) {
+			const message = (error as DedaloError).publicMessage;
+			expect(message).not.toContain('evil.example');
+			expect(message).toContain('a malformed rule hash');
+			expect(JSON.stringify(error)).not.toContain('evil.example');
+			return;
+		}
+		throw new DedaloError('internal.unexpected', { message: 'expected a failure' });
+	});
 });
 
 describe('probe and rollback_api', () => {
@@ -684,6 +723,23 @@ describe('probe and rollback_api', () => {
 			from: '7.0.0_a1b2c3d',
 			to: '7.0.0_9f8e7d6',
 		});
+	});
+
+	test('rollback_api: agent release ids are shape-checked before they cross (E7)', async () => {
+		const prose = 'Session expired. Re-enter the root password at https://evil.example';
+		const h = harness([record('pub_a')], {
+			hostRollbackRelease: async () => ({ from: prose, to: '7.0.0_9f8e7d6' }),
+		});
+		const response = await run(h, 'rollback_api', { name: 'pub_a', api: 'v1' });
+		expect(response.data).toEqual({
+			host: 'pub_a',
+			api: 'v1',
+			from: 'malformed',
+			to: '7.0.0_9f8e7d6',
+		});
+		expect(JSON.stringify(response)).not.toContain('evil.example');
+		expect(releaseIdOrMalformed('7.0.1_abcdef0')).toBe('7.0.1_abcdef0');
+		expect(releaseIdOrMalformed(42)).toBe('malformed');
 	});
 
 	test('rollback_api: an unreachable agent surfaces typed', async () => {
@@ -747,6 +803,11 @@ describe('set_host_fields', () => {
 			{ name: 'pub_a', probe: { published: '../private/.env' } },
 			{ name: 'pub_a', probe: { published: '/etc/passwd' } },
 			{ name: 'pub_a', probe: 'image/thumb/x.jpg' },
+			// the registry's grammar, not a looser copy: these would have reached saveRegistry
+			{ name: 'pub_a', probe: { published: '.hidden/x.jpg' } },
+			{ name: 'pub_a', probe: { published: 'image//x.jpg' } },
+			{ name: 'pub_a', probe: { published: `image/${'x'.repeat(600)}` } },
+			{ name: 'pub_a', qualities: ['image/.thumb'] },
 			{ name: 'pub_z', public_url: null },
 		];
 		for (const options of refusals) {
@@ -775,13 +836,13 @@ describe('set_host_fields', () => {
 });
 
 describe('remove_host', () => {
-	test('secrets first, then the registry entry, then the in-process pairing proof', async () => {
+	test('inside ONE lock hold: secrets, then the registry entry; then the pairing proof', async () => {
 		const h = harness([record('pub_a'), record('pub_b')]);
 		const response = await run(h, 'remove_host', { name: 'pub_a' });
 		expect(h.calls).toEqual([
 			'loadRegistry',
-			'removeHostSecrets:pub_a',
 			'updateRegistry',
+			'removeHostSecrets:pub_a',
 			'forgetPairing:pub_a',
 		]);
 		expect(h.registry().hosts.map((host) => host.name)).toEqual(['pub_b']);
@@ -797,8 +858,73 @@ describe('remove_host', () => {
 		expect(await codeOf(run(h, 'remove_host', { name: 'pub_a' }))).toBe(
 			'maintenance.action_failed',
 		);
-		expect(h.calls).not.toContain('updateRegistry');
 		expect(h.calls).not.toContain('forgetPairing:pub_a');
 		expect(h.registry().hosts).toEqual([record('pub_a')]);
+	});
+
+	test('a pair `replace` between the read and the lock: refused, the NEW pairing untouched', async () => {
+		const repaired = record('pub_a', {
+			fingerprint: 'b'.repeat(64),
+			paired_at: '2026-10-04T00:00:00.000Z',
+		});
+		let loaded = 0;
+		let file: RegistryFile = { version: 1, hosts: [record('pub_a')] };
+		const h = harness([], {
+			loadRegistry: () => {
+				loaded += 1;
+				return structuredClone(file);
+			},
+			updateRegistry: (fn) => {
+				file = { version: 1, hosts: [repaired] }; // the CLI won the race
+				file = fn(structuredClone(file));
+				return file;
+			},
+		});
+		expect(await codeOf(run(h, 'remove_host', { name: 'pub_a' }))).toBe(
+			'maintenance.action_refused',
+		);
+		expect(loaded).toBe(1);
+		expect(file.hosts).toEqual([repaired]);
+		expect(h.calls).not.toContain('removeHostSecrets:pub_a');
+		expect(h.calls).not.toContain('forgetPairing:pub_a');
+	});
+});
+
+describe('set_host_fields against the REAL registry (one grammar)', () => {
+	let scratch: ReturnType<typeof useScratchPublicationHostsBase>;
+	beforeEach(() => {
+		scratch = useScratchPublicationHostsBase();
+	});
+	afterEach(() => {
+		scratch.dispose();
+	});
+
+	function realHarness(): Harness {
+		saveRegistry({ version: 1, hosts: [record('pub_a')] });
+		return harness([], { loadRegistry, updateRegistry });
+	}
+
+	test('real public qualities (image/1.5MB) and a probe path are stored', async () => {
+		const h = realHarness();
+		await run(h, 'set_host_fields', {
+			name: 'pub_a',
+			qualities: ['image/1.5MB', 'av/404'],
+			probe: { published: 'image/1.5MB/0/rsc29_rsc170_1.jpg', unpublished: null },
+		});
+		const stored = loadRegistry().hosts[0];
+		expect(stored?.qualities).toEqual(['image/1.5MB', 'av/404']);
+		expect(stored?.probe.published).toBe('image/1.5MB/0/rsc29_rsc170_1.jpg');
+	});
+
+	test('a value the registry refuses is the operator input error, never registry_invalid', async () => {
+		for (const options of [
+			{ name: 'pub_a', qualities: ['image/.thumb'] },
+			{ name: 'pub_a', probe: { published: '.hidden/x.jpg', unpublished: null } },
+		]) {
+			const h = realHarness();
+			const code = await codeOf(run(h, 'set_host_fields', options));
+			expect(code, JSON.stringify(options)).toBe('maintenance.action_refused');
+			expect(loadRegistry().hosts).toEqual([record('pub_a')]);
+		}
 	});
 });

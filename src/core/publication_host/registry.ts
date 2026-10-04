@@ -66,8 +66,14 @@ const DNS_NAME =
 const SOCKET_PATH = /^\/[A-Za-z0-9._/-]+$/;
 /** sun_path is 104 bytes on macOS (NUL included), 108 on Linux: the stricter target wins. */
 const MAX_SOCKET_PATH_BYTES = 103;
-/** A media quality folder name (the rules builder filters it further: phase-1 contract). */
-const QUALITY = /^[A-Za-z0-9_][A-Za-z0-9._-]{0,63}$/;
+/**
+ * A public media quality, in the engine's own grammar: `/`-separated folders under the media
+ * dir (`image/1.5MB`, `av/404`), each segment starting with `[A-Za-z0-9_]`, no `..` anywhere.
+ * The rules builder filters it further (filterPublicQualities: no master tier, >= 2 segments).
+ * A bare-folder grammar here refused every real public quality (Task 7 review, 2026-10-04).
+ */
+const QUALITY = /^[A-Za-z0-9_][A-Za-z0-9._-]*(?:\/[A-Za-z0-9_][A-Za-z0-9._-]*)*$/;
+const MAX_QUALITY_LENGTH = 128;
 /** A media path relative to `/dedalo/<mediaDir>/` (phase-6 probe records). */
 const PROBE_PATH = /^[A-Za-z0-9_][A-Za-z0-9._/-]{0,511}$/;
 
@@ -263,7 +269,20 @@ function validatePublicUrl(value: unknown, where: string): string | null {
 	return value;
 }
 
-function validateQualities(value: unknown, where: string): string[] | null {
+function qualityName(value: unknown, where: string): string {
+	const quality = matching(value, QUALITY, where);
+	if (quality.length > MAX_QUALITY_LENGTH || quality.includes('..')) {
+		throw shapeError(where, `must be at most ${MAX_QUALITY_LENGTH} characters, without '..'`);
+	}
+	return quality;
+}
+
+/**
+ * The registry's own `qualities` check, exported so a writer (the publication_hosts widget)
+ * judges a field by the SAME grammar saveRegistry will apply: one grammar, no drift where
+ * the writer accepts what the registry then refuses as a corrupt file.
+ */
+export function validateQualities(value: unknown, where = 'qualities'): string[] | null {
 	if (value === null) return null;
 	if (!Array.isArray(value) || value.length === 0) {
 		throw shapeError(
@@ -271,12 +290,13 @@ function validateQualities(value: unknown, where: string): string[] | null {
 			'must be null or a non-empty array (a host that may serve nothing is a misconfiguration)',
 		);
 	}
-	const names = value.map((quality, index) => matching(quality, QUALITY, `${where}[${index}]`));
+	const names = value.map((quality, index) => qualityName(quality, `${where}[${index}]`));
 	if (new Set(names).size !== names.length) throw shapeError(where, 'must not repeat a quality');
 	return names;
 }
 
-function probePath(value: unknown, where: string): string | null {
+/** The registry's own probe-path check, exported for the same reason as validateQualities. */
+export function validateProbePath(value: unknown, where = 'probe'): string | null {
 	if (value === null) return null;
 	return cleanSegments(matching(value, PROBE_PATH, where), where);
 }
@@ -284,8 +304,8 @@ function probePath(value: unknown, where: string): string | null {
 function validateProbe(value: unknown, where: string): PublicationHostRecord['probe'] {
 	const probe = exactKeys(value, ['published', 'unpublished'], where);
 	return {
-		published: probePath(probe.published, `${where}.published`),
-		unpublished: probePath(probe.unpublished, `${where}.unpublished`),
+		published: validateProbePath(probe.published, `${where}.published`),
+		unpublished: validateProbePath(probe.unpublished, `${where}.unpublished`),
 	};
 }
 

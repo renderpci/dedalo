@@ -51,11 +51,16 @@
  */
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import type { AgentStatus, MediaProbe } from '../../publication_host/agent_client.ts';
-import type {
-	HostPanelRow,
-	HostStatusInput,
-	StatusOutcome,
+import {
+	AGENT_RELEASE_ID,
+	type AgentStatus,
+	type MediaProbe,
+} from '../../publication_host/agent_client.ts';
+import {
+	type HostPanelRow,
+	type HostStatusInput,
+	registryInvalidCheck,
+	type StatusOutcome,
 } from '../../publication_host/host_status.ts';
 import {
 	HOST_NAME,
@@ -65,6 +70,8 @@ import {
 	type RegistryFile,
 	registryPath,
 	updateRegistry,
+	validateProbePath,
+	validateQualities,
 } from '../../publication_host/registry.ts';
 import type { ExpectedRules, ExpectedRulesOutcome } from '../../publication_host/rules.ts';
 // BY NAME, never a namespace: publication_host_door_tripwire allows only the door to load
@@ -97,6 +104,7 @@ export interface PublicationHostsDeps {
 	updateRegistry(fn: (current: RegistryFile) => RegistryFile): RegistryFile;
 	/** Never throws a SecretError: a refused secret is reported as `refused` (Task 1). */
 	secretPresenceOutcome(name: string): SecretPresenceOutcome;
+	/** Called INSIDE the registry lock by remove_host (never before taking it). */
 	removeHostSecrets(name: string): void;
 	forgetPairing(name: string): void;
 	hostStatus(name: string): Promise<AgentStatus>;
@@ -260,7 +268,9 @@ export function addressLabel(address: PublicationHostRecord['address']): string 
 /** Dial only a host whose required secrets are present AND accepted (bundle: TLS hosts only). */
 function dialable(record: PublicationHostRecord, secrets: SecretPresenceOutcome): boolean {
 	if (secrets.refused !== null) {
-		console.warn(`[publication_hosts] secret refused host=${record.name} reason=${secrets.refused}`);
+		console.warn(
+			`[publication_hosts] secret refused host=${record.name} reason=${secrets.refused}`,
+		);
 		return false;
 	}
 	return secrets.token_present && (record.address.kind !== 'tls' || secrets.bundle_present);
@@ -342,13 +352,17 @@ export async function publicationHostsValue(
 		return {
 			data: {
 				...common,
-				registry: { state: registryState(read.reason), reason: read.reason },
+				registry: {
+					state: registryState(read.reason),
+					reason: read.reason,
+					check: registryInvalidCheck(read.reason),
+				},
 				hosts: null,
 			},
 		};
 	}
 	const hosts = await Promise.all(read.file.hosts.map((record) => hostRow(record, deps, isRoot)));
-	return { data: { ...common, registry: { state: 'ok', reason: null }, hosts } };
+	return { data: { ...common, registry: { state: 'ok', reason: null, check: null }, hosts } };
 }
 
 // ── field validation (set_host_fields) ──────────────────────────────────────
@@ -398,19 +412,29 @@ export function normalizeQualities(
 		refuseAction(`Error. Not a public quality: ${refused.join(', ')}.`);
 	}
 	if (new Set(kept).size !== kept.length) refuseAction('Error. qualities holds a duplicate.');
-	return kept;
+	return registryField(() => validateQualities(kept), 'Error. qualities: ');
 }
 
-const PROBE_PATH = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
+/**
+ * The registry's OWN field check (registry.ts), run before the locked write: a value the
+ * registry would refuse is the operator's input error, never a "corrupt registry"
+ * (saveRegistry's invalid_shape would map to publication_host.registry_invalid).
+ */
+function registryField<T>(validate: () => T, prefix: string): T {
+	try {
+		return validate();
+	} catch (error) {
+		if (error instanceof RegistryError) refuseAction(`${prefix}${error.message}.`);
+		throw error;
+	}
+}
 
 function probePath(value: unknown, which: string): string | null {
 	if (value === null || value === undefined) return null;
-	if (typeof value !== 'string' || value.includes('..') || !PROBE_PATH.test(value)) {
-		refuseAction(
-			`Error. probe.${which} must be a media path relative to the media folder, or null.`,
-		);
-	}
-	return value;
+	return registryField(
+		() => validateProbePath(value, `probe.${which}`),
+		'Error. A probe path must be a media path relative to the media folder, or null: ',
+	);
 }
 
 /** The two phase-6 probe files, as paths relative to /dedalo/<mediaDir>/. */
@@ -458,6 +482,19 @@ export function withoutHost(current: RegistryFile, name: string): RegistryFile {
 	return { ...current, hosts: current.hosts.filter((host) => host.name !== name) };
 }
 
+/** withoutHost, only while the entry is still the pairing `seen` (never a newer re-pairing). */
+export function withoutPairing(current: RegistryFile, seen: PublicationHostRecord): RegistryFile {
+	const now = current.hosts.find((host) => host.name === seen.name);
+	if (now === undefined) refuseUnknownHost(seen.name);
+	if (now.fingerprint !== seen.fingerprint || now.paired_at !== seen.paired_at) {
+		refuseAction(
+			`Error. Host '${seen.name}' was re-paired while it was being removed; nothing was removed. Reload the panel and retry.`,
+			{ host: seen.name },
+		);
+	}
+	return withoutHost(current, seen.name);
+}
+
 // ── actions ─────────────────────────────────────────────────────────────────
 
 function renderRules(
@@ -474,6 +511,20 @@ function renderRules(
 			{ host: record.name },
 		);
 	}
+}
+
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+/** An agent-reported hash, named only when it has the shape of one. */
+function reportedHash(hash: unknown): string {
+	return typeof hash === 'string' && SHA256_HEX.test(hash)
+		? `rule hash ${hash}`
+		: 'a malformed rule hash';
+}
+
+/** An agent-reported release id, only when it has the shape of one (E7); otherwise 'malformed'. */
+export function releaseIdOrMalformed(value: unknown): string {
+	return typeof value === 'string' && AGENT_RELEASE_ID.test(value) ? value : 'malformed';
 }
 
 function rulesAppliedMsg(
@@ -507,8 +558,10 @@ const applyRulesAction: BoundAction = async (options, principal, loadDeps) => {
 	const request = { server: rules.server, text: rules.text, hash: rules.hash };
 	const applied = await deps.hostApplyRules(name, request, actorFor(principal));
 	if (applied.hash !== rules.hash) {
+		// agent prose is log-only (E7): the raw value goes to the log, never into the sentence
+		console.warn(`[publication_hosts] rule hash mismatch host=${name} reported=${applied.hash}`);
 		failAction(
-			`Error. Host '${name}' reports rule hash ${applied.hash}, but ${rules.hash} was sent. Check the agent audit log.`,
+			`Error. Host '${name}' reports ${reportedHash(applied.hash)}, but ${rules.hash} was sent. Check the agent audit log.`,
 			{ coordinates: { host: name } },
 		);
 	}
@@ -544,10 +597,17 @@ const rollbackApiAction: BoundAction = async (options, principal, loadDeps) => {
 	const deps = await loadDeps();
 	requireHost(deps, name);
 	const swap = await deps.hostRollbackRelease(name, api, actorFor(principal));
-	logMutation('rollback_api', name, principal, `api=${api} ${swap.from} -> ${swap.to}`);
+	const from = releaseIdOrMalformed(swap.from);
+	const to = releaseIdOrMalformed(swap.to);
+	logMutation('rollback_api', name, principal, `api=${api} ${from} -> ${to}`);
+	if (from === 'malformed' || to === 'malformed') {
+		console.warn(
+			`[publication_hosts] rollback_api host=${name} malformed release id from=${JSON.stringify(swap.from)} to=${JSON.stringify(swap.to)}`,
+		);
+	}
 	return {
-		data: { host: name, api, from: swap.from, to: swap.to },
-		msg: `OK. API ${api} on '${name}' rolled back: ${swap.from} → ${swap.to}.`,
+		data: { host: name, api, from, to },
+		msg: `OK. API ${api} on '${name}' rolled back: ${from} → ${to}.`,
 	};
 };
 
@@ -571,25 +631,31 @@ const setHostFieldsAction: BoundAction = async (options, principal, loadDeps) =>
 };
 
 /**
- * remove_host: SECRETS FIRST, then the registry entry, then this process's pairing proof
- * (Task 4 forgetPairing). A failure between the first two leaves a VISIBLE entry whose
- * `secrets` check is red and which the operator can remove again — the other order would
- * leave an invisible credential on disk that no panel lists.
+ * remove_host: ONE registry lock hold — re-check that the entry is still the pairing the
+ * operator saw (fingerprint + paired_at; a pair `replace` in between refuses, retry), delete
+ * the SECRETS, then drop the entry — then this process's pairing proof (Task 4
+ * forgetPairing). Secrets before the entry: a failure between them leaves a VISIBLE entry
+ * whose `secrets` check is red and which the operator can remove again; the other order
+ * would leave an invisible credential on disk that no panel lists. A secrets failure throws
+ * inside the lock, so the registry is not written.
  */
 const removeHostAction: BoundAction = async (options, principal, loadDeps) => {
 	requireRoot(principal, 'remove_host');
 	const name = hostName(options);
 	const deps = await loadDeps();
-	requireHost(deps, name);
-	try {
-		deps.removeHostSecrets(name);
-	} catch (error) {
-		failAction(
-			`Error. The credentials of host '${name}' could not be deleted, so the host stays registered. See the server log.`,
-			{ cause: error, coordinates: { host: name } },
-		);
-	}
-	writeRegistry(deps, (current) => withoutHost(current, name));
+	const seen = requireHost(deps, name);
+	writeRegistry(deps, (current) => {
+		const next = withoutPairing(current, seen);
+		try {
+			deps.removeHostSecrets(name);
+		} catch (error) {
+			failAction(
+				`Error. The credentials of host '${name}' could not be deleted, so the host stays registered. See the server log.`,
+				{ cause: error, coordinates: { host: name } },
+			);
+		}
+		return next;
+	});
 	deps.forgetPairing(name);
 	logMutation('remove_host', name, principal, 'removed');
 	return {
