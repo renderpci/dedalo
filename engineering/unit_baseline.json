@@ -3076,6 +3076,11 @@
 			"skipped": 0,
 			"assertions": 34
 		},
+		"test/unit/publication_host_operator_doc.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 14
+		},
 		"test/unit/publication_host_pairing_tripwire.test.ts": {
 			"tests": 14,
 			"skipped": 0,

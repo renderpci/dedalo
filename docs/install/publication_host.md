@@ -110,7 +110,17 @@ bun run hostagent:install
 ```
 
 Then copy the `publication/host_agent/` directory, including `node_modules/`, to the
-publication host.
+publication host. Root runs the provisioner from this copy and systemd starts the agent
+from it, so step 4's `check` refuses a copy that anyone but root could change:
+
+- **place it as root**, for example under `/opt/dedalo/publication/host_agent`. The
+  directory, its entry point and **every parent directory** must be owned by root and not
+  writable by group or others. A copy made by `scp` or `rsync` as a normal user is owned
+  by that user; fix it with `chown -R root:root` and `chmod -R go-w`;
+- **declare the real path**, not a symbolic link (a link can be repointed after the check);
+- **leave out `.test-tmp/`**. It appears in a checkout where the agent's own test suite
+  ran (`bun run hostagent:test`). Copy from a checkout where it did not, or delete it on
+  the publication host.
 
 ### 2. Create the accounts
 
@@ -132,16 +142,19 @@ states:
 - the **instance** name: lowercase letters, digits and `_`, starting with a letter, 2 to
   32 characters;
 - the **listener**: `{"kind": "unix"}` on one machine (the socket path is derived), or
-  `{"kind": "tls", "host": …, "port": …}` on two machines (the host becomes the server
-  certificate's name);
+  `{"kind": "tls", "host": …, "port": …}` on two machines. The host is the **private IPv4
+  address** the agent binds, written as a literal such as `10.20.0.2`: no hostname, no
+  wildcard (`0.0.0.0`). It also becomes the server certificate's name, so the work system
+  connects to that address;
 - the agent's user, and on one machine the work system's group;
 - where the agent's code was copied (step 1);
 - the **web server** (`apache` or `nginx`), its systemd unit, and the group it runs as
   (the configuration-test command, `apachectl -t` or `nginx -t`, follows from the server);
 - the **state root**, the directory the agent owns;
 - the **media mode** (`shared`, `copy` or `none`) and, unless `none`, the media root;
-- the absolute paths of the two runtimes the agent calls: Bun, and the language runtime of
-  the Publication API v1 (used only for its syntax check);
+- the absolute paths of two runtimes: Bun, which runs the agent and the Publication API v2
+  units, and the language runtime of the Publication API v1, which the agent calls only
+  for its syntax check;
 - the Publication API v2 unit, its user and group, its local port, and its health URL on
   `127.0.0.1` at that port.
 
@@ -165,9 +178,27 @@ anything and without root. Every generated file carries a hash of its own conten
 someone edits one by hand, the next `check` refuses and names it instead of overwriting
 it. A declaration at another path is passed with `--declaration <file>`.
 
-### 5. Carry the engine bundle to the work system
+### 5. Create the API configuration files
 
-`apply` writes the work system's half of the pairing as one root-only file,
+The provisioner does not write the configuration of the Publication APIs, and the agent
+cannot: the `shared/` directories belong to root. Until each file exists, installing a
+release of that API is refused with `shared_config_missing`. As root, for each API you
+install:
+
+- **v2**: `<state root>/publication_api/v2/shared/v2.env`, the environment the v2 unit
+  reads. Owned by root, readable by the v2 service's group, not by others (for example
+  `root:<v2 group>`, mode `0640`).
+- **v1**: the v1 API configuration file in `<state root>/publication_api/v1/shared/`
+  (the refusal names it). Start from the sample in the v1 release's `config_api/`
+  directory. Owned by root, readable by the web server's group, not by others
+  (`root:<web group>`, mode `0640`).
+
+### 6. Carry the engine bundle to the work system (two machines only)
+
+On one machine there is no bundle: the agent listens on a local socket and no
+certificate is issued. Skip to step 7.
+
+On two machines, `apply` writes the work system's half of the pairing as one root-only file,
 `/etc/dedalo_publication_host/<instance>/engine_bundle/engine_bundle.pem`. It holds three
 parts, in this order: the client certificate, its private key, and the certificate
 authority. Copy it to the work host over a channel you trust, keep it `0600`, and delete
@@ -177,16 +208,18 @@ one.
 The bearer token is **not** in the bundle or in any generated file. It stays in a
 root-only credential file on the publication host.
 
-### 6. Check the pairing
+### 7. Check the pairing
 
-From the work host (two machines), split the bundle once and ask for the health answer:
+From the work host (two machines), split the bundle once and ask for the health answer.
+Use the listener's IPv4 address exactly as declared in step 3 (here the example's
+`10.20.0.2`, port `8471`): the certificate names that address, not a hostname.
 
 ```bash
 umask 077
 sed -n '1,/-----END PRIVATE KEY-----/p' engine_bundle.pem > client.pem   # certificate + key
 sed '1,/-----END PRIVATE KEY-----/d'    engine_bundle.pem > ca.pem       # the authority
 curl --cacert ca.pem --cert client.pem \
-  https://pub.example.org:9443/publication/host_agent/health
+  https://10.20.0.2:8471/publication/host_agent/health
 ```
 
 On one machine, ask the socket instead:
@@ -235,10 +268,15 @@ Each API keeps its releases side by side, with its configuration outside them:
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `provision check` stops, naming a user or group | the provisioner never creates accounts | run the `useradd` / `groupadd` line it prints, then `check` again |
+| `provision check` refuses `agent_dir` or `agent entry`, or a directory above them, as not root-owned or writable | the code was copied as a normal user, or a parent directory is group- or world-writable | `chown -R root:root` the copy, `chmod go-w` it and every parent (step 1) |
+| `provision check` refuses `agent_dir` as a symlink | the declaration names a link | declare the real path (`realpath <dir>`) |
+| `provision check` refuses "a test scratch tree" `.test-tmp` | the copy came from a checkout where the agent suite ran | delete `.test-tmp/` from the copy on the publication host |
+| `provision check` refuses `listen.host` | the host is a hostname, a wildcard or not a canonical IPv4 address | declare the private IPv4 address literal the agent binds (step 3) |
 | `provision check` refuses a file "edited by hand" | a generated file no longer matches its own hash | move it aside or restore it; change the declaration instead and re-run `apply` |
 | the agent does not start, naming the client certificate authority | the certificate, key or authority file is missing or unreadable | re-run `bun run provision apply <instance>`; never disable client verification |
-| `curl` fails at the TLS handshake | the client certificate is missing, from another host's authority, or the server name does not match the certificate | use the bundle this host issued, split as in step 6, and the exact address declared in the instance |
-| every request answers 401 | the bearer token does not match | compare the pairing fingerprints (step 6) |
+| `curl` fails at the TLS handshake | the client certificate is missing, from another host's authority, or the server name does not match the certificate | use the bundle this host issued, split as in step 7, and the exact IPv4 address declared in the instance |
+| every request answers 401 | the bearer token does not match | compare the pairing fingerprints (step 7) |
 | the fingerprints differ | wrong instance name or wrong token; the two are indistinguishable by design | check both against the declaration and the credential file |
 | applying media rules fails | the web server's configuration test rejected the new include | the previous include is still active and nothing was reloaded; read the error and re-render the rules |
+| an API install is refused: `shared_config_missing` | the API's configuration file in `shared/` does not exist yet | create it as root (step 5), then install again |
 | an API install fails its health check | the new release did not answer healthy | the previous release is still `current` and serving; the audit log names both releases |
