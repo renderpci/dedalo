@@ -3131,6 +3131,11 @@
 			"skipped": 0,
 			"assertions": 100
 		},
+		"test/unit/publication_host_widget_native.test.ts": {
+			"tests": 38,
+			"skipped": 0,
+			"assertions": 218
+		},
 		"test/unit/publication_host_wire_native.test.ts": {
 			"tests": 19,
 			"skipped": 0,
