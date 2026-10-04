@@ -49,6 +49,12 @@ import { fsyncDirectory, writeAllSync } from '../files/durable.ts';
 
 /** Registry key of a host. */
 export const HOST_NAME = /^[a-z][a-z0-9_]{1,31}$/;
+/**
+ * Reserved for the pairing CLI's live-proof staging dirs (scripts/publication_host_pair.ts).
+ * No registered host may carry it, so the CLI's stale-staging sweep can never delete a
+ * registered host's secrets.
+ */
+export const RESERVED_HOST_PREFIX = 'pairing_' as const;
 /** The agent's INSTANCE (publication/host_agent/src/config.ts INSTANCE_PATTERN). */
 const INSTANCE_NAME = /^[a-z][a-z0-9_]{1,31}$/;
 /** sha256 lowercase hex — what the agent publishes as `instance_fingerprint`. */
@@ -295,11 +301,22 @@ function validatePairedAt(value: unknown, where: string): string {
 	return value;
 }
 
+function hostNameField(value: unknown, where: string): string {
+	const name = matching(value, HOST_NAME, where);
+	if (name.startsWith(RESERVED_HOST_PREFIX)) {
+		throw shapeError(
+			where,
+			`must not start with '${RESERVED_HOST_PREFIX}' (reserved for pairing staging)`,
+		);
+	}
+	return name;
+}
+
 function validateHost(value: unknown, index: number): PublicationHostRecord {
 	const where = `hosts[${index}]`;
 	const host = exactKeys(value, HOST_KEYS, where);
 	return {
-		name: matching(host.name, HOST_NAME, `${where}.name`),
+		name: hostNameField(host.name, `${where}.name`),
 		instance: matching(host.instance, INSTANCE_NAME, `${where}.instance`),
 		fingerprint: matching(host.fingerprint, FINGERPRINT, `${where}.fingerprint`),
 		address: validateAddress(host.address, `${where}.address`),

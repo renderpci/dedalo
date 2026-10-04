@@ -178,6 +178,12 @@ describe('the strict shape', () => {
 			}),
 		],
 		[
+			'a reserved staging name',
+			mutate((h) => {
+				h.name = 'pairing_0a1b2c3d';
+			}),
+		],
+		[
 			'a bad instance',
 			mutate((h) => {
 				h.instance = '9museum';
