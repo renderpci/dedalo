@@ -27,6 +27,14 @@ export const REASON_CODES = Object.freeze([
   'health_failed',
   'v2_env_missing',
   'busy',
+  // rules.apply (Task 5). Status per event: every one is a 422 RefusedError except
+  // reload_failed (503 HostActionFailedError). configtest_failed is listed above.
+  'server_mismatch',
+  'hash_invalid',
+  'rules_too_large',
+  'rules_nul_byte',
+  'stamp_missing',
+  'directive_refused',
 ] as const);
 
 export type ReasonCode = (typeof REASON_CODES)[number];
@@ -106,14 +114,16 @@ export class RefusedError extends ApiError {
 }
 
 /**
- * A HOST EFFECT FAILED: configtest, reload, restart or a health check said no. 503: the
- * request was right, the host could not carry it out, and the previous state is what
- * serves (each caller restores before throwing). The detail is scrubbed in production
- * like every 5xx; `reason` survives the scrub.
+ * A HOST EFFECT FAILED: a reload, restart or health check said no. 503: the request was
+ * right, the host could not carry it out. The detail is scrubbed in production like every
+ * 5xx; `reason` and `extensions` survive the scrub, so extensions carry MACHINE fields only
+ * (codes, hashes, booleans), never a child process's output. A configtest that refuses
+ * SUBMITTED text is not this class: the bytes are wrong, not the host, so it is a
+ * RefusedError(…, 'configtest_failed') 422 (rules.apply, Task 5).
  */
 export class HostActionFailedError extends ApiError {
-  constructor(detail: string, reason: ReasonCode) {
-    super(503, `${PROBLEM_TYPE_BASE}host-action-failed`, 'Host Action Failed', detail, { reason });
+  constructor(detail: string, reason: ReasonCode, extensions: Record<string, unknown> = {}) {
+    super(503, `${PROBLEM_TYPE_BASE}host-action-failed`, 'Host Action Failed', detail, { reason, ...extensions });
     this.name = 'HostActionFailedError';
   }
 }
