@@ -339,6 +339,8 @@ const TRIPWIRES = [
 	'test/unit/import_create_door_native.test.ts',
 	// Plan item 5 — the npm rows of the client-lib versions doc are generated (2026-10-02).
 	'test/unit/client_lib_versions_doc_tripwire.test.ts',
+	// Publication host phase 2 — the engine/agent pairing twin + domain separation (2026-10-03).
+	'test/unit/publication_host_pairing_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

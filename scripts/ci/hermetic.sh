@@ -384,6 +384,10 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-02 (plan item 5): the client-lib versions doc byte-identity gate. DB-free:
 	#     reads package.json + the doc, imports the client-lib registry, renders in memory.
 	test/unit/client_lib_versions_doc_tripwire.test.ts
+	# --- 2026-10-03 (publication host phase 2): the engine/agent pairing twin. DB-free: it
+	#     imports four pairing recipes (node builtins + type-only imports at most), reads shipped
+	#     code via test/helpers/shipped_text_corpus.ts; no DB, no network, no ../private.
+	test/unit/publication_host_pairing_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
