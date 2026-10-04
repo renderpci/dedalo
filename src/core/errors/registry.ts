@@ -1298,6 +1298,117 @@ export const ERROR_REGISTRY = {
 		retryable: true,
 	},
 
+	// ── publication host (src/core/publication_host/ — PUBLICATION_HOST_SPEC §2) ──
+	// The engine's side of its paired publication-host agents. One code per thing the panel
+	// must tell apart. The agent's own prose is LOG-ONLY (src/core/publication_host/wire.ts),
+	// so no agent can write a browser's error text. `rejected` is the one public code: its
+	// sentence is ENGINE-authored, chosen by a closed machine `reason`. `rejected` and
+	// `failed` carry that reason in `details` (always a closed-list member or 'unspecified'),
+	// and only wire.ts mints them (publication_host_wire_native source law).
+	'publication_host.unconfigured': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_unconfigured',
+		message:
+			'The publication host is not registered on this install, or its credentials are missing',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	/**
+	 * THE REGISTRY FILE IS CORRUPT OR HAND-EDITED INTO AN INVALID SHAPE (phase-3 Review Focus 2).
+	 * Never read as "no hosts" and never as a partial list: every action refuses until an
+	 * operator repairs the file or re-pairs. Not retryable — nothing changes until someone acts.
+	 */
+	'publication_host.registry_invalid': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_registry_invalid',
+		message: 'The publication host registry is unreadable or invalid',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'publication_host.unreachable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_unreachable',
+		message: 'The publication host agent could not be reached',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	'publication_host.timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_timeout',
+		message: 'The publication host agent did not answer in time',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	/**
+	 * THE PAIRING PROOF FAILED: the agent at the registered address did not publish the
+	 * fingerprint this engine's registry instance + token imply. Nothing was sent — not the
+	 * bearer, not the actor, not the request. One undifferentiated message on purpose: a wrong
+	 * instance and a wrong token must be indistinguishable (same reasoning as
+	 * site_builder.instance_mismatch); which one it is lives in the server log.
+	 */
+	'publication_host.pairing_mismatch': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_pairing_mismatch',
+		message: 'The publication host agent is not the paired instance',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'publication_host.auth': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_auth',
+		message: 'The publication host agent rejected the engine credentials',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'publication_host.rejected': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_publication_host_rejected',
+		message: 'The publication host refused the request',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['reason'],
+	},
+	/**
+	 * THE AGENT COULD NOT CARRY OUT A HOST EFFECT (a 5xx: reload, restart, health), answered
+	 * a route it does not know (404/405 with a valid bearer = version skew), or answered
+	 * something this engine cannot take (an oversized or unreadable body). Not retryable:
+	 * repeating the command before an operator acts repeats the refusal. The agent restores
+	 * the previous state before answering (phase-2 Review Focus 3/4).
+	 */
+	'publication_host.failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_failed',
+		message: 'The publication host could not carry out the action',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['reason'],
+	},
+	'publication_host.busy': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_publication_host_busy',
+		message: 'The publication host is busy with another operation',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
+
 	// ── mailer ──────────────────────────────────────────────────────────────
 	'mailer.not_configured': {
 		category: 'unavailable',
