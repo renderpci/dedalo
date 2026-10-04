@@ -3071,6 +3071,11 @@
 			"skipped": 0,
 			"assertions": 41
 		},
+		"test/unit/publication_host_agent_drill_kit.test.ts": {
+			"tests": 10,
+			"skipped": 0,
+			"assertions": 34
+		},
 		"test/unit/publication_host_pairing_tripwire.test.ts": {
 			"tests": 14,
 			"skipped": 0,
