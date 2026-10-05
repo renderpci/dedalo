@@ -1,7 +1,7 @@
 /**
  * The publication-hosts SCRATCH DECLARATION — a directory says it is a test's stores,
- * the same law as the suite database's `dedalo_test_marker` and the suite media root's
- * `.dedalo_test_media`: location is never the guarantee, the marker is.
+ * the same law as the suite database marker row (assertTestDatabase) and the suite
+ * media root's `.dedalo_test_media`: location is never the guarantee, the marker is.
  *
  * Its own module, importing nothing, because the drills declare their engine children's
  * scratch private dir BEFORE any engine module may load (loading config freezes it on the
