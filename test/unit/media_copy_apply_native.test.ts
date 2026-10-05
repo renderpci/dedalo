@@ -633,6 +633,30 @@ describe('a grant or a landed put drops its own pending entry (no reverify neede
 	});
 });
 
+describe('a withdraw-only pass never supersedes a pending FILE deletion (it has no desired set)', () => {
+	test('a locally removed file of a still-published key stays pending through the withdraw-only pass', async () => {
+		const world = newWorld();
+		world.published.add(K1);
+		world.agentMarkers.add(K1);
+		world.agentMarkers.add(K2);
+		world.agentFiles.set(P1, 'jpeg'); // removed locally; its record stays published
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_deletions: [{ path: P1, since: new Date(T0 - 1).toISOString() }],
+		});
+		const report = await applyCopyWith(
+			worldDeps(world),
+			'pub1',
+			{ put: [], del: [], mark: [{ key: K2, published: false }] },
+			{ withdrawOnly: true },
+		);
+		expect(world.calls).toEqual(['mark test3_2 false']);
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([P1]);
+		expect(report).toMatchObject({ state: 'pending', error: null, pending_deletions: 1 });
+	});
+});
+
 describe('withdrawn consent never waits for a put (the grant race closed)', () => {
 	test('unpublished while its grant (mark true) is in flight: re-checked after the mark, undone at once, never put', async () => {
 		for (const viaGrant of [true, false]) {

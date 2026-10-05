@@ -20,8 +20,9 @@
  *  A GRANT SUPERSEDES A PENDING WITHDRAWAL. A record republished before its deletion was
  *     verified (agent down at the unpublish; unpublished and republished inside a round)
  *     must not stay `deletion_unverified` forever: VERIFY also clears a pending marker whose
- *     key is published again, and a pending file whose key is published under this host's
- *     Rule B and that the round does not delete; a `mark true` clears the key's pending
+ *     key is published again, and (planned rounds only, never a withdraw-only pass) a
+ *     pending file whose key is published under this host's Rule B and that the round
+ *     does not delete; a `mark true` clears the key's pending
  *     marker, a landed put its own path. Only entries recorded no later than the instant
  *     before the deciding `pub/` check — a withdrawal recorded after it is a newer unpublish.
  *  4. GRANT, one target-lock unit: `media.mark true` for each plan grant whose key
@@ -358,15 +359,19 @@ async function dropPending(
 
 /**
  * A pending path the work host wants served again: a marker whose key is published, or a
- * file whose key is published under this host's Rule B and that this round does not delete.
+ * file whose key is published under this host's Rule B and that this round does not delete
+ * — in a PLANNED round only (`deleting` = plan.del, which holds every agent path outside
+ * the desired set, so a present file it omits IS desired). A withdraw-only pass has no
+ * desired set (`deleting` null): it never supersedes a file deletion.
  */
 async function isSuperseded(
 	deps: CopyDeps,
 	classify: (relpath: string) => string | null,
-	deleting: ReadonlySet<string>,
+	deleting: ReadonlySet<string> | null,
 	path: string,
 ): Promise<boolean> {
 	if (path.startsWith(MARKER_PREFIX)) return deps.isPublished(path.slice(MARKER_PREFIX.length));
+	if (deleting === null) return false;
 	const key = classify(path);
 	return key !== null && !deleting.has(path) && (await deps.isPublished(key));
 }
@@ -374,7 +379,7 @@ async function isSuperseded(
 async function supersededPaths(
 	deps: CopyDeps,
 	host: string,
-	deleting: ReadonlySet<string>,
+	deleting: ReadonlySet<string> | null,
 ): Promise<Set<string>> {
 	const pending = (await deps.updateRuntime(host, (cur) => cur)).pending_deletions;
 	const classify = deps.classifier(host);
@@ -392,7 +397,7 @@ async function supersededPaths(
 async function verifyDeletions(
 	deps: CopyDeps,
 	host: string,
-	deleting: ReadonlySet<string>,
+	deleting: ReadonlySet<string> | null,
 ): Promise<Set<string>> {
 	const decidedAt = deps.now().getTime();
 	const superseded = await supersededPaths(deps, host, deleting);
@@ -621,9 +626,10 @@ async function runRound(
 	withdrawn: readonly string[],
 	report: CopyApplyReport,
 	takeWithdrawn: () => readonly string[],
+	withdrawOnly: boolean,
 ): Promise<void> {
 	await withdraw(deps, host, withdrawn, plan.del, report);
-	const deleting: ReadonlySet<string> = new Set(plan.del);
+	const deleting: ReadonlySet<string> | null = withdrawOnly ? null : new Set(plan.del);
 	const known = await verifyDeletions(deps, host, deleting);
 	const round: Round = {
 		deps,
@@ -696,7 +702,15 @@ export async function applyCopyWith(
 	const withdrawn = plan.mark.filter((mark) => !mark.published).map((mark) => mark.key);
 	await recordPending(deps, host, [...withdrawn.map(agentMarkerPath), ...plan.del]);
 	try {
-		await runRound(deps, host, plan, withdrawn, report, options.takeWithdrawn ?? NOTHING_WITHDRAWN);
+		await runRound(
+			deps,
+			host,
+			plan,
+			withdrawn,
+			report,
+			options.takeWithdrawn ?? NOTHING_WITHDRAWN,
+			options.withdrawOnly === true,
+		);
 	} catch (error) {
 		noteFailure(report, error);
 	}
