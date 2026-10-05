@@ -356,7 +356,7 @@ describe('the COMMITTED provisioner output parses through this CLI (never a hand
 				tlsBundle: null, // the placeholder reads as absent
 				token: null,
 			});
-			expect(parseAgentAddress(committed)).toEqual(address);
+			expect<unknown>(parseAgentAddress(committed)).toEqual(address);
 			// the engine's fingerprint recipe accepts the agent's rendered fingerprint
 			expect(assertFragmentFingerprint(committed, EXAMPLE_TOKEN)).toBe(committed.fingerprint);
 			const fresh = provisionerOutput(exampleDeclaration(declarationFile), EXAMPLE_TOKEN);
