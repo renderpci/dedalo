@@ -95,7 +95,18 @@ describe('GET /v1/status', () => {
 
 describe('status helpers', () => {
   test('buildStatus is what the route serialises', async () => {
-    expect(await buildStatus()).toEqual(await getStatus());
+    // Two reads, two statfs calls: free bytes is a LIVE gauge, and any concurrent
+    // writer (the CI image runs the daemon packages side by side) moves it between
+    // them — a 4 KiB drift once failed this as a serialisation mismatch. The shape
+    // and every other field must match exactly; the gauge must be a real reading.
+    const built = await buildStatus();
+    const served = await getStatus();
+    for (const status of [built, served]) {
+      expect(Number.isInteger(status.disk.state_root_free_bytes)).toBe(true);
+      expect(status.disk.state_root_free_bytes).toBeGreaterThan(0);
+    }
+    const gauge = { state_root_free_bytes: 0 };
+    expect({ ...built, disk: gauge }).toEqual({ ...served, disk: gauge });
   });
 
   test('stateRootFreeBytes measures a real root and refuses a missing one', async () => {
