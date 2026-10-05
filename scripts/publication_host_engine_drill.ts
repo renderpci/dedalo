@@ -25,6 +25,22 @@
  *             time, a dead one → unreachable, the registry byte-identical (Review Focus 4);
  *             a truncated or hand-edited registry → registry.state registry_invalid with
  *             hosts null, never an empty list, never rewritten, apply refused (Review Focus 2).
+ *   lockstep  (phase 4, first pass, after [release]) the engine's Publication API
+ *             reconciler against the live agent:
+ *             - the live engine (this checkout: no install stamp) answers push_apis with a
+ *               refusal (L2), nothing reaching the agent;
+ *             - a SCRATCH INSTALLED tree of this checkout (install stamp + extract-time
+ *               publication manifest, scripts/lib/publication_host_lockstep.ts) runs the
+ *               reconciler through scripts/publication_host_lockstep_driver.ts: a drifted
+ *               file (named) and a foreign stamp are refused with nothing sent (L1, Review
+ *               Focus 1);
+ *             - the confirm hook (server.ts's own callback) in a smoke boot answers
+ *               skipped_smoke_boot and pushes nothing (Review Focus 5); after a swap it
+ *               starts the push: v2 then v1 (L6), engine-built node_modules (L3), a real
+ *               `php -l` per v1 file, the agent serving <version>_<digest7> (L2), the
+ *               runtime file recording ok;
+ *             - a re-run is `none`; a second tree installs, and restoring the first is
+ *               promote_existing (L5: lockstep both ways).
  *
  * TWO TRANSPORTS, ONE PER SERVER. E5 allows exactly two: mTLS over TCP and a unix socket.
  * Apache's pass pairs over TLS, nginx's over the socket: a full run proves both doors.
@@ -35,10 +51,11 @@
  * server with its widget dispatch, door, client, registry and secret stores, the pair CLI,
  * Apache, nginx, Publication API v2 releases over the suite MariaDB. Stand-ins: sudo and
  * systemctl AT the agent's absolute binaries (the CI image's exec seam — so this drill,
- * like the agent drill, runs only inside the CI image), php as a refusing PHP_BIN (the
- * shared scene, scripts/lib/publication_host_agent_scene.ts). The releases rollback_api
- * undoes are planted through the agent's own wire (engine install is
- * phase 4). HONEST LIMITS: "no agent call was made" for a refused action is proved by its
+ * like the agent drill, runs only inside the CI image), and php (PHP_BIN): on the first
+ * pass it accepts only `php -l <*.php under the v1 API root>` and execs the REAL php (the
+ * [lockstep] rows push a real v1 release), elsewhere it refuses everything (the shared
+ * scene, scripts/lib/publication_host_agent_scene.ts). The releases rollback_api undoes are
+ * planted through the agent's own wire; the [lockstep] rows install through the engine. HONEST LIMITS: "no agent call was made" for a refused action is proved by its
  * EFFECT here (no stand-in call, registry and include unchanged), made observable first: the
  * [authz] and [repair] pairing_mismatch rows move the expected rules off the live include
  * (withDivergedRules), so a leaked apply_rules WOULD configtest, reload and rewrite; a leaked
@@ -63,7 +80,8 @@
  *
  * Needs: what test:pubhost:agent needs (openssl, git, bash, Apache 2.4 + apxs, nginx,
  * MariaDB, publication/host_agent's node_modules, network for the v2 bundle install, the
- * CI image's exec seam), the suite database (`bun run test:db:setup`) and
+ * CI image's exec seam), php (CLI: the real v1 lint), network for the engine's own v2
+ * dependency builds (two releases), the suite database (`bun run test:db:setup`) and
  * scripts/publication_host_pair.ts. Missing = RED, never a skip. The agent's unix socket
  * must fit sun_path (a short TMPDIR). Wired: scripts/ci/instance_tier.sh stage 6
  * (`bun run test:pubhost:engine`); locally: `bun run ci:local --docker --instance`.
@@ -75,6 +93,7 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	openSync,
+	readdirSync,
 	readFileSync,
 	realpathSync,
 	rmSync,
@@ -102,6 +121,7 @@ import { operatorConfig } from './lib/operator_config.ts';
 import { execSeamProblem, issueTlsMaterial } from './lib/publication_host_agent_drill_kit.ts';
 import {
 	AGENT_DIR,
+	agentStatus,
 	buildBundles,
 	callsSince,
 	configtestCall,
@@ -126,11 +146,13 @@ import {
 	type Scene,
 	type Server,
 	type Shared,
+	scratchCalls,
 	setupScene,
 	spawnAgent,
 	tail,
 	teardown,
 	UNPUBLISHED,
+	v1RootOf,
 	v2Health,
 	WIRE,
 	waitAgent,
@@ -159,6 +181,15 @@ import {
 	stagingLeftovers,
 	writeEngineBundle,
 } from './lib/publication_host_engine_drill_kit.ts';
+import {
+	auditBytes,
+	drillDigest,
+	materializeScratchTree,
+	parseDriverResult,
+	plantPendingSentinel,
+	sentinelStatus,
+	writeScratchStamp,
+} from './lib/publication_host_lockstep.ts';
 
 const LISTEN_OF: Readonly<Record<Server, Listen>> = { apache: 'tls', nginx: 'unix' };
 const API_PATH = '/api/v1/json';
@@ -707,6 +738,7 @@ async function authzRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 					[ACTIONS.rollbackApi, { name, api: 'v2' }],
 					[ACTIONS.setHostFields, { name, public_url: 'https://elsewhere.drill.test' }],
 					[ACTIONS.removeHost, { name }],
+					[ACTIONS.pushApis, { hosts: [name] }],
 				];
 				const wrong: string[] = [];
 				for (const [action, options] of tries) {
@@ -983,11 +1015,438 @@ async function downRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 	);
 }
 
-async function execRow(ctx: Ctx, scene: Scene, releases: boolean): Promise<void> {
+// ── phase 4: API lockstep, engine → agent, from a scratch INSTALLED tree ─────
+
+const DRIFT_FILE = 'publication/server_api/v2/src/index.ts';
+/** A push builds v2's production node_modules (network) and scratch-boots it: generous. */
+const PUSH_WAIT_MS = 600_000;
+const V1_TREE = 'publication/server_api/v1';
+
+interface Lockstep {
+	readonly base: string;
+	readonly tree: string;
+	readonly backupRoot: string;
+	readonly env: Record<string, string>;
+	version: string;
+}
+
+interface ApiActionOut {
+	action?: string;
+	result?: string;
+	error?: string;
+}
+interface ReportOut {
+	release: string | null;
+	refused: string | null;
+	hosts: { name: string; v1: ApiActionOut; v2: ApiActionOut }[];
+}
+interface ReconcileOut {
+	version: string;
+	digest: string | null;
+	report: ReportOut;
+}
+interface VerifyOne {
+	ok?: boolean;
+	reason?: string;
+	drift?: string[];
+}
+interface VerifyOut {
+	v1?: VerifyOne;
+	v2?: VerifyOne;
+}
+interface RuntimeApi {
+	state?: string;
+	release?: string | null;
+	at?: string | null;
+	error?: string | null;
+}
+type RuntimeApis = Record<'v1' | 'v2', RuntimeApi> | null;
+interface ConfirmOut {
+	/** What triggerPublicationApiPush answered; null = the hook never ran (no flip). */
+	trigger: 'started' | 'skipped_smoke_boot' | 'skipped_install_mode' | null;
+	settled: boolean;
+	before: RuntimeApis;
+	apis: RuntimeApis;
+}
+interface Mark {
+	readonly since: number;
+	readonly audit: number;
+}
+type Held = { v1: string | null; v2: string | null };
+
+/**
+ * The scratch installed tree and the driver's environment: the engine server's own
+ * (operator config, the suite database, THE scratch private dir the pair CLI wrote — so the
+ * driver reaches exactly the host this pass paired), plus a scratch backup root (the
+ * `.pubapi_build` cache, the sentinel). Also planted: v1's operator configuration in the
+ * agent's shared/ (§3, outside every release; the bundle carries the headers file).
+ */
+function lockstepSetup(ctx: Ctx, scene: Scene): Lockstep {
+	const base = join(scene.shared.root, 'lockstep');
+	const tree = join(base, 'tree');
+	const backupRoot = join(base, 'backups');
+	mkdirSync(backupRoot, { recursive: true, mode: 0o700 });
+	materializeScratchTree(REPO, tree);
+	writeFileSync(
+		join(scene.state, 'publication_api', 'v1', 'shared', 'server_config_api.php'),
+		'<?php\n// drill: the Publication API v1 shared configuration\n',
+	);
+	const env: Record<string, string> = {
+		...ctx.engineEnv,
+		DEDALO_BACKUP_PATH: backupRoot,
+		DEDALO_RECONCILE_SCHEDULER_ENABLED: 'false',
+	};
+	return { base, tree, backupRoot, env, version: '' };
+}
+
+async function driver<T>(
+	lk: Lockstep,
+	command: string,
+	args: Record<string, unknown>,
+	extraEnv: Record<string, string> = {},
+): Promise<T> {
+	const proc = Bun.spawn(
+		[
+			process.execPath,
+			'run',
+			join('scripts', 'publication_host_lockstep_driver.ts'),
+			command,
+			JSON.stringify(args),
+		],
+		{ cwd: lk.tree, env: { ...lk.env, ...extraEnv }, stdout: 'pipe', stderr: 'pipe' },
+	);
+	const [out, err, code] = await Promise.all([
+		new Response(proc.stdout).text(),
+		new Response(proc.stderr).text(),
+		proc.exited,
+	]);
+	return parseDriverResult<T>(out, err, code);
+}
+
+const releaseOf = (lk: Lockstep, digest: string) => `${lk.version}_${digest.slice(0, 7)}`;
+const auditOf = (scene: Scene) => auditBytes(join(scene.state, 'audit'));
+const mark = (scene: Scene): Mark => ({ since: logLines(scene).length, audit: auditOf(scene) });
+const heldOf = async (scene: Scene): Promise<Held> => {
+	const st = await agentStatus(scene);
+	return { v1: st.apis?.v1?.current ?? null, v2: st.apis?.v2?.current ?? null };
+};
+
+/**
+ * NOTHING reached the agent. No stand-in call. The audit log did not grow: the agent
+ * audits every mutation it receives, refusals included, so a request refused agent-side
+ * still turns this row red. Neither API's `current` moved.
+ */
+async function nothingSent(scene: Scene, m: Mark, want: Held): Promise<(string | null | false)[]> {
+	const held = await heldOf(scene);
+	return [
+		callsSince(scene, m.since, []),
+		auditOf(scene) !== m.audit && 'a mutation reached the agent (its audit log grew)',
+		held.v2 !== want.v2 && `agent v2 current ${held.v2}, expected ${want.v2}`,
+		held.v1 !== want.v1 && `agent v1 current ${held.v1}, expected ${want.v1}`,
+	];
+}
+
+/** Every `.php` the v1 tree carries: the agent lints each one before it promotes. */
+function v1PhpCount(lk: Lockstep): number {
+	return readdirSync(join(lk.tree, V1_TREE), { recursive: true, withFileTypes: true }).filter(
+		(entry) => entry.isFile() && /\.php$/i.test(entry.name),
+	).length;
+}
+
+/**
+ * A push of `id` landed:
+ *   - v2's calls are exactly one install's (a fresh one scratch-boots first; a promote only
+ *     restarts), and all of them precede v1's first lint (L6: v2 then v1);
+ *   - v1 was linted once per .php, every one under its root — or, on a promote, not at all;
+ *   - v2 is healthy over the suite MariaDB, and both APIs report `id` current with the
+ *     expected previous.
+ */
+async function pushedCheck(
+	lk: Lockstep,
+	scene: Scene,
+	since: number,
+	id: string,
+	want: { previous: Held; fresh: boolean },
+): Promise<(string | false)[]> {
+	const got = logLines(scene).slice(since);
+	const isLint = (line: string) => line.startsWith('php ');
+	const lint = got.filter(isLint);
+	const v2 = got.filter((line) => !isLint(line));
+	const firstLint = got.findIndex(isLint);
+	const root = v1RootOf(scene.state);
+	const outside = lint.find((line) => !inClosedSet(scene, line, { phpLintRoot: root }));
+	const dir = releaseDir(scene, id);
+	const v2Calls = [...(want.fresh ? scratchCalls(dir) : []), restartCall, `v2 started in ${dir}`];
+	const st = await agentStatus(scene);
+	const health = await v2Health(scene);
+	const php = want.fresh ? v1PhpCount(lk) : 0;
+	return [
+		v2.length !== v2Calls.length ||
+		v2Calls.some((w, i) => (typeof w === 'string' ? v2[i] !== w : !w.test(v2[i] as string)))
+			? `v2 stand-in calls ${JSON.stringify(v2)}, expected ${JSON.stringify(v2Calls.map(String))}`
+			: false,
+		lint.length !== php && `${lint.length} php -l call(s), expected ${php} (one per v1 .php)`,
+		new Set(lint).size !== lint.length && 'a v1 file was linted twice',
+		outside !== undefined && `php outside the v1 root: ${outside}`,
+		firstLint !== -1 &&
+			got.slice(firstLint).some((line) => !isLint(line)) &&
+			'v1 began before v2 finished (L6: v2 then v1)',
+		(health.status !== 200 || health.body.databases?.[scene.shared.database] !== 'connected') &&
+			`v2 health ${health.status} ${JSON.stringify(health.body)}`,
+		...(['v2', 'v1'] as const).flatMap((api) => [
+			(st.apis?.[api]?.current ?? null) !== id &&
+				`agent ${api} current ${st.apis?.[api]?.current}, expected ${id}`,
+			(st.apis?.[api]?.previous ?? null) !== want.previous[api] &&
+				`agent ${api} previous ${st.apis?.[api]?.previous}, expected ${want.previous[api]}`,
+		]),
+	];
+}
+
+const runtimeOk = (apis: RuntimeApis, id: string): (string | false)[] =>
+	(['v2', 'v1'] as const).map(
+		(api) =>
+			(apis?.[api]?.state !== 'ok' || apis?.[api]?.release !== id) &&
+			`runtime ${api} ${JSON.stringify(apis?.[api])}, expected ok @ ${id}`,
+	);
+
+const actionIs = (act: ApiActionOut | undefined, action: string, result: string): string | false =>
+	(act?.action !== action || act?.result !== result) &&
+	`${JSON.stringify(act)}, expected ${action}/${result}`;
+
+async function lockstepRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
+	const s = `[${scene.server}][lockstep]`;
+	let lk: Lockstep;
+	try {
+		lk = lockstepSetup(ctx, scene);
+	} catch (error) {
+		ctx.book.fail(`${s} the scratch installed tree could not be set up`, error);
+		return;
+	}
+	const was = await heldOf(scene);
+	const A = drillDigest('A');
+	const B = drillDigest('B');
+	const reconcile = (apply: boolean) => driver<ReconcileOut>(lk, 'reconcile', { apply, name });
+	const hostOf = (out: ReconcileOut) => out.report.hosts.find((h) => h.name === name);
+	const stamp = async (digest: string) => {
+		writeScratchStamp(lk.tree, digest);
+		return driver<{ digest: string; version: string }>(lk, 'manifest', {});
+	};
+
 	await ctx.book.row(
-		`[${scene.server}][exec] every stand-in call was in the closed set${releases ? '' : ' (no release planted: no scratch boot, no v2 start)'}; php never called`,
+		`${s} push_apis (root) on the live engine — this checkout, no install stamp → refused no_verified_release, nothing reaches the agent (L2)`,
+		async () => {
+			const m = mark(scene);
+			const a = await act(ctx, ctx.root, ACTIONS.pushApis, { hosts: [name] });
+			const report = (a.env.report ?? null) as ReportOut | null;
+			return problems([
+				a.env.ok !== true && `push_apis: ${codeOf(a)}`,
+				a.env.data !== false && `data ${JSON.stringify(a.env.data)}, expected false`,
+				(report?.release !== null || report?.refused !== 'no_verified_release') &&
+					`report ${JSON.stringify(report)}`,
+				...(await nothingSent(scene, m, was)),
+			]);
+		},
+	);
+
+	await ctx.book.row(
+		`${s} install stamp + extract-time manifest → verifyPublicationTree ok for v1 and v2`,
+		async () => {
+			const m = await stamp(A);
+			lk.version = m.version;
+			const v = await driver<VerifyOut>(lk, 'verify', {});
+			return problems([
+				m.digest !== A && `manifest digest ${m.digest}, expected ${A}`,
+				v.v1?.ok !== true && `v1 ${JSON.stringify(v.v1)}`,
+				v.v2?.ok !== true && `v2 ${JSON.stringify(v.v2)}`,
+			]);
+		},
+	);
+
+	await ctx.book.row(
+		`${s} a file edited after the install (${DRIFT_FILE}) → drift named, push refused, nothing reaches the agent (L1, Review Focus 1)`,
+		async () => {
+			const path = join(lk.tree, DRIFT_FILE);
+			const original = readFileSync(path);
+			writeFileSync(
+				path,
+				Buffer.concat([original, Buffer.from('\n// drill: drift after the install\n')]),
+			);
+			try {
+				const m = mark(scene);
+				const v = await driver<VerifyOut>(lk, 'verify', {});
+				const out = await reconcile(true);
+				return problems([
+					(v.v2?.ok !== false ||
+						v.v2.reason !== 'drift' ||
+						!(v.v2.drift ?? []).some((d) => d.startsWith(DRIFT_FILE))) &&
+						`verify v2 ${JSON.stringify(v.v2)}`,
+					v.v1?.ok !== true && `verify v1 ${JSON.stringify(v.v1)} (only v2 drifted)`,
+					!(out.report.refused ?? '').includes(DRIFT_FILE) &&
+						`the refusal does not name the file: ${out.report.refused}`,
+					out.report.release !== null && `release ${out.report.release} on a drifted tree`,
+					...(await nothingSent(scene, m, was)),
+				]);
+			} finally {
+				writeFileSync(path, original);
+			}
+		},
+	);
+
+	await ctx.book.row(
+		`${s} a stamp that is not the manifest's (another archive) → digest_mismatch, push refused, nothing reaches the agent`,
+		async () => {
+			writeScratchStamp(lk.tree, B);
+			try {
+				const m = mark(scene);
+				const v = await driver<VerifyOut>(lk, 'verify', {});
+				const out = await reconcile(true);
+				return problems([
+					v.v1?.reason !== 'digest_mismatch' && `verify v1 ${JSON.stringify(v.v1)}`,
+					v.v2?.reason !== 'digest_mismatch' && `verify v2 ${JSON.stringify(v.v2)}`,
+					(out.report.refused === null || out.report.release !== null) &&
+						`report ${JSON.stringify(out.report)}`,
+					...(await nothingSent(scene, m, was)),
+				]);
+			} finally {
+				writeScratchStamp(lk.tree, A);
+			}
+		},
+	);
+
+	await ctx.book.row(
+		`${s} the confirm hook in a SMOKE BOOT → sentinel confirmed, trigger skipped_smoke_boot: no bundle built, runtime untouched, nothing reaches the agent (Review Focus 5)`,
+		async () => {
+			plantPendingSentinel(lk.backupRoot, lk.version, A);
+			const m = mark(scene);
+			const out = await driver<ConfirmOut>(
+				lk,
+				'confirm',
+				{ name, waitMs: 10_000 },
+				{ DEDALO_SMOKE_BOOT: 'true' },
+			);
+			return problems([
+				// The hook ran (afterConfirmed fires only after the flip) and its own guard refused.
+				sentinelStatus(lk.backupRoot) !== 'confirmed' &&
+					`sentinel ${sentinelStatus(lk.backupRoot)}: the hook path never ran`,
+				out.trigger !== 'skipped_smoke_boot' &&
+					`trigger answered ${out.trigger}, expected skipped_smoke_boot`,
+				JSON.stringify(out.apis) !== JSON.stringify(out.before) &&
+					`the runtime moved: ${JSON.stringify(out.apis)}`,
+				existsSync(join(lk.backupRoot, '.pubapi_build')) && 'a bundle build dir appeared',
+				...(await nothingSent(scene, m, was)),
+			]);
+		},
+	);
+
+	await ctx.book.row(
+		`${s} dry run → release <version>_<digest7>, both APIs planned 'install', nothing reaches the agent`,
+		async () => {
+			const m = mark(scene);
+			const out = await reconcile(false);
+			const host = hostOf(out);
+			const id = releaseOf(lk, A);
+			return problems([
+				out.report.release !== id && `release ${out.report.release}, expected ${id}`,
+				out.report.refused !== null && `refused: ${out.report.refused}`,
+				actionIs(host?.v2, 'install', 'dry_run'),
+				actionIs(host?.v1, 'install', 'dry_run'),
+				...(await nothingSent(scene, m, was)),
+			]);
+		},
+	);
+
+	await ctx.book.row(
+		`${s} the confirm hook after a swap (same driver, no smoke boot) → trigger started; v2 then v1 pushed (engine-built deps, real php -l); the agent serves <version>_${A.slice(0, 7)} (L2/L3/L5/L6)`,
+		async () => {
+			plantPendingSentinel(lk.backupRoot, lk.version, A);
+			const m = mark(scene);
+			const out = await driver<ConfirmOut>(lk, 'confirm', { name, waitMs: PUSH_WAIT_MS });
+			const id = releaseOf(lk, A);
+			return problems([
+				sentinelStatus(lk.backupRoot) !== 'confirmed' &&
+					`sentinel ${sentinelStatus(lk.backupRoot)}`,
+				out.trigger !== 'started' && `trigger answered ${out.trigger}, expected started`,
+				out.trigger === 'started' &&
+					!out.settled &&
+					`the detached push never settled in ${PUSH_WAIT_MS} ms: ${JSON.stringify(out.apis)}`,
+				// L3: the engine built and cached the bundle (its deps dir is removed after the
+				// pack), and the release the agent promoted carries node_modules.
+				!existsSync(join(lk.backupRoot, '.pubapi_build', id, 'v2.tar.gz')) &&
+					'no engine-side v2 bundle in the build cache (L3)',
+				!existsSync(join(releaseDir(scene, id), 'node_modules')) &&
+					'the promoted v2 release carries no node_modules (L3)',
+				...runtimeOk(out.apis, id),
+				...(await pushedCheck(lk, scene, m.since, id, { previous: was, fresh: true })),
+			]);
+		},
+	);
+
+	await ctx.book.row(
+		`${s} again, nothing changed → 'none' for both, nothing reaches the agent`,
+		async () => {
+			const m = mark(scene);
+			const out = await reconcile(true);
+			const host = hostOf(out);
+			const id = releaseOf(lk, A);
+			return problems([
+				actionIs(host?.v2, 'none', 'ok'),
+				actionIs(host?.v1, 'none', 'ok'),
+				...(await nothingSent(scene, m, { v1: id, v2: id })),
+			]);
+		},
+	);
+
+	await ctx.book.row(
+		`${s} another tree installed (an update) → push installs <version>_${B.slice(0, 7)} for v2 and v1`,
+		async () => {
+			await stamp(B);
+			const m = mark(scene);
+			const out = await reconcile(true);
+			const host = hostOf(out);
+			const idA = releaseOf(lk, A);
+			const idB = releaseOf(lk, B);
+			return problems([
+				out.report.release !== idB && `release ${out.report.release}, expected ${idB}`,
+				actionIs(host?.v2, 'install', 'ok'),
+				actionIs(host?.v1, 'install', 'ok'),
+				...(await pushedCheck(lk, scene, m.since, idB, {
+					previous: { v1: idA, v2: idA },
+					fresh: true,
+				})),
+			]);
+		},
+	);
+
+	await ctx.book.row(
+		`${s} the first tree restored → promote_existing for both; <version>_${A.slice(0, 7)} serves again, no re-lint (L5: lockstep both ways)`,
+		async () => {
+			await stamp(A);
+			const m = mark(scene);
+			const out = await reconcile(true);
+			const host = hostOf(out);
+			const idA = releaseOf(lk, A);
+			const idB = releaseOf(lk, B);
+			return problems([
+				out.report.release !== idA && `release ${out.report.release}, expected ${idA}`,
+				actionIs(host?.v2, 'promote_existing', 'ok'),
+				actionIs(host?.v1, 'promote_existing', 'ok'),
+				...(await pushedCheck(lk, scene, m.since, idA, {
+					previous: { v1: idB, v2: idB },
+					fresh: false,
+				})),
+			]);
+		},
+	);
+}
+
+async function execRow(ctx: Ctx, scene: Scene, releases: boolean): Promise<void> {
+	const phpLintRoot = releases ? v1RootOf(scene.state) : undefined;
+	await ctx.book.row(
+		`[${scene.server}][exec] every stand-in call was in the closed set${releases ? '; php only ever linted a .php under the v1 API root' : ' (no release planted: no scratch boot, no v2 start); php never called'}`,
 		() => {
-			const stray = logLines(scene).filter((line) => !inClosedSet(scene, line, { releases }));
+			const stray = logLines(scene).filter(
+				(line) => !inClosedSet(scene, line, { releases, phpLintRoot }),
+			);
 			return stray.length === 0 ? null : `outside the closed set: ${stray.join(' | ')}`;
 		},
 	);
@@ -1047,7 +1506,12 @@ async function pass(
 	earlier: readonly string[],
 	nginxMap: string,
 ): Promise<void> {
-	const scene = await setupScene(server, shared, { listen: LISTEN_OF[server], nginxMap });
+	const scene = await setupScene(server, shared, {
+		listen: LISTEN_OF[server],
+		nginxMap,
+		// The first pass pushes a REAL v1 release ([lockstep]): php lints for real there.
+		...(first ? { phpLint: Bun.which('php') as string } : {}),
+	});
 	ctx.secrets.push({ label: `the ${server} agent token`, value: scene.token });
 	try {
 		// LOG_LEVEL info STATED (not the agent's default): [repair] reads the per-request lines.
@@ -1060,7 +1524,10 @@ async function pass(
 		await rulesRows(ctx, scene, name);
 		await probeRow(ctx, scene, name);
 		await authzRows(ctx, scene, name);
-		if (first) await releaseRows(ctx, scene, name);
+		if (first) {
+			await releaseRows(ctx, scene, name);
+			await lockstepRows(ctx, scene, name);
+		}
 		if (earlier.length > 0) await multiRow(ctx, scene, name, earlier);
 		await repairRows(ctx, scene, name);
 		await registryRows(ctx, scene, name);
@@ -1247,10 +1714,10 @@ if (import.meta.main) {
 		process.exit(1);
 	}
 	const servers = (['apache', 'nginx'] as const).filter((s) => only === undefined || s === only);
-	const missing = missingBinaries(servers);
+	const missing = missingBinaries(servers, ['php']);
 	if (missing.length > 0) {
 		console.error(
-			`RED — missing on PATH: ${missing.join(', ')}. Needs openssl, git, bash, Apache 2.4 + apxs, nginx (engineering/CI.md).`,
+			`RED — missing on PATH: ${missing.join(', ')}. Needs openssl, git, bash, php (CLI), Apache 2.4 + apxs, nginx (engineering/CI.md).`,
 		);
 		process.exit(1);
 	}

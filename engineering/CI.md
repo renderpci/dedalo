@@ -446,10 +446,20 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   (get_value and every action, error states included) and every pair-CLI output (any exit
   code), plus the registry file, is scanned centrally for the tokens (the refused foreign
   one too), the client key and any PEM block. A refused action's "nothing applied" is
-  made observable first (expected rules moved off the live include). It reuses the agent
-  drill's suite MariaDB, agent dependencies and exec seam. **Runner requirement**: the
-  agent drill's plus the suite database (the tier builds it first). Missing = RED. Runs
-  ONLY in the CI image, like the agent drill: `bun run ci:local --docker --instance`.
+  made observable first (expected rules moved off the live include). Its first pass also
+  runs the phase-4 LOCKSTEP rows: the live engine (no install stamp) refuses `push_apis`;
+  a scratch INSTALLED tree of the checkout (install stamp + extract-time publication
+  manifest) runs the engine's own reconciler (`scripts/publication_host_lockstep_driver.ts`)
+  against the paired agent — a drifted file (named) and a foreign stamp are refused with
+  nothing sent; the confirm hook, driven with server.ts's own callback, answers
+  `skipped_smoke_boot` in a smoke boot and pushes nothing, and after a swap starts the
+  push: v2 then v1, engine-built `node_modules`, a real `php -l` per v1 file through the
+  stand-in; the agent serves `<version>_<digest7>`, a re-run is `none`, a second tree
+  installs and the restore back is `promote_existing`. It reuses the agent drill's suite
+  MariaDB, agent dependencies and exec seam. **Runner requirement**: the agent drill's plus
+  php-cli, network for the engine's v2 dependency builds, and the suite database (the tier
+  builds it first). Missing = RED. Runs ONLY in the CI image, like the agent drill:
+  `bun run ci:local --docker --instance`.
 - **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers. Everything it
   runs is twinned hosted — including the `test/integration/**` MariaDB legs, which ran
   nowhere else until PUB-05 moved them onto the suite's own MariaDB server and into the
