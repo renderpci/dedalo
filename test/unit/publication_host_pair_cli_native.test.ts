@@ -283,6 +283,8 @@ interface MockAgent {
 	readonly port: number;
 	readonly requests: AgentHit[];
 	reset(publish: string): void;
+	/** Run once on the next /health (models a concurrent writer during the proof). */
+	onHealth(hook: () => void): void;
 	stop(): void;
 }
 
@@ -290,10 +292,14 @@ interface MockAgent {
 function startAgent(listen: { tls: TestPki } | { unix: string }, publish: string): MockAgent {
 	const requests: AgentHit[] = [];
 	let published = publish;
+	let healthHook: (() => void) | null = null;
 	const fetch = (req: Request): Response => {
 		const path = new URL(req.url).pathname;
 		requests.push({ method: req.method, path, authorization: req.headers.get('authorization') });
 		if (req.method === 'GET' && path === `${AGENT_BASE_PATH}/health`) {
+			const hook = healthHook;
+			healthHook = null;
+			hook?.();
 			return Response.json({
 				status: 'ok',
 				service: 'dedalo-publication-host-agent',
@@ -323,6 +329,10 @@ function startAgent(listen: { tls: TestPki } | { unix: string }, publish: string
 		reset(next: string): void {
 			published = next;
 			requests.length = 0;
+			healthHook = null;
+		},
+		onHealth(hook: () => void): void {
+			healthHook = hook;
 		},
 		stop(): void {
 			server.stop(true);
@@ -496,6 +506,26 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		expectNothingWritten();
 		// not even the secrets root the proof's transient staging needed
 		expect(existsSync(join(privateRoot, 'publication_hosts'))).toBe(false);
+	});
+
+	test('--dry-run: a concurrent writer into the root it created never masks the proof outcome', async () => {
+		// another pair run writes a host dir into the root this dry run just created: the
+		// root is no longer only the dry run's, so it stays — and the verdict is the proof's
+		const other = join(privateRoot, 'publication_hosts', 'other_pub');
+		tlsAgent.onHealth(() => mkdirSync(other, { mode: 0o700 }));
+		const ok = await runCli(['add', ...addTlsArgs(), '--dry-run']);
+		expect(ok.code, ok.out).toBe(EXIT.ok);
+		expect(ok.out).not.toContain('ENOTEMPTY');
+		expect(secretEntries()).toEqual(['other_pub']);
+		rmSync(join(privateRoot, 'publication_hosts'), { recursive: true });
+
+		tlsAgent.reset(fp(OTHER_TOKEN)); // a failed proof keeps its own verdict too
+		tlsAgent.onHealth(() => mkdirSync(other, { recursive: true, mode: 0o700 }));
+		const bad = await runCli(['add', ...addTlsArgs(), '--dry-run']);
+		expect(bad.code, bad.out).toBe(EXIT.refused);
+		expect(bad.out).toContain('pairing_mismatch');
+		expect(bad.out).not.toContain('ENOTEMPTY');
+		expect(secretEntries()).toEqual(['other_pub']);
 	});
 
 	test('--dry-run never sweeps: a stale staging dir survives a dry add and a dry remove', async () => {

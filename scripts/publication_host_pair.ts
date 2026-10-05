@@ -520,6 +520,7 @@ async function proveStaged(
 	token: string,
 	bundlePem: string | null,
 	dryRun: boolean,
+	out: string[],
 ): Promise<void> {
 	const staging = `${STAGING_PREFIX}${randomBytes(4).toString('hex')}`;
 	const createdRoot = !existsSync(secretsRoot());
@@ -529,7 +530,24 @@ async function proveStaged(
 		await proveHostPairing({ ...record, name: staging });
 	} finally {
 		removeHostSecrets(staging);
-		if (dryRun && createdRoot) rmdirSync(secretsRoot()); // empty: only the staging was in it
+		if (dryRun && createdRoot) removeOwnEmptyRoot(out);
+	}
+}
+
+/**
+ * The dry run's own root, removed only while it is still EMPTY. A root a concurrent pair run
+ * wrote into is no longer only the dry run's, so it stays (ENOTEMPTY/ENOENT ignored), and
+ * no cleanup error ever replaces the proof's own verdict: anything else is a note.
+ */
+function removeOwnEmptyRoot(out: string[]): void {
+	try {
+		rmdirSync(secretsRoot());
+	} catch (error) {
+		const code = (error as NodeJS.ErrnoException).code;
+		if (code === 'ENOTEMPTY' || code === 'EEXIST' || code === 'ENOENT') return;
+		out.push(
+			`${TAG} note: could not remove the dry run's empty secrets root (${code ?? 'error'}).`,
+		);
 	}
 }
 
@@ -602,7 +620,7 @@ async function pair(
 	const fingerprint = assertFragmentFingerprint(fields, token);
 	const existing = assertSlot(loadRegistry(), command, opts.name, address, fingerprint);
 	const record = buildRecord(opts.name, fields.instance, address, fingerprint, existing);
-	await proveStaged(record, token, bundlePem, opts.dryRun);
+	await proveStaged(record, token, bundlePem, opts.dryRun, out);
 	out.push(
 		`${TAG} pairing proved: '${opts.name}' → ${addressLabel(address)} (the agent published the expected fingerprint on this channel; no bearer was sent).`,
 	);
