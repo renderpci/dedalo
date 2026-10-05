@@ -15,7 +15,7 @@ Registered action (`src/core/api/handlers/dd_external_api.ts`): `search`.
 
 The browser used to POST at the remote service directly. That request went round every control the external subsystem has — the kill switches, the host allowlist, the SSRF guard and socket pin, the circuit breaker, the concurrency ceiling, the byte cap, the egress classification — because a request the server never makes cannot be gated by the server. It also stopped working outright once the app's CSP dropped third-party origins from `connect-src`.
 
-So the request goes through the external-services door (one of the engine's three outbound doors, the one bound to the ontology's record services), and **the client may not name the target**:
+So the request goes through the external-services door (one of the engine's four outbound doors, the one bound to the ontology's record services), and **the client may not name the target**:
 
 | the client sends | the server resolves |
 | --- | --- |

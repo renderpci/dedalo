@@ -278,6 +278,12 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	'probe',
 	'publication',
 	'sitebuilder',
+	// `hostagent:*` (2026-10-04) drives publication/host_agent — an ISOLATED daemon package
+	// (own lockfile, own tsc, own coverage-ENFORCING suite in the hermetic daemon_gate), like
+	// `sitebuilder`. Its targets live outside the root src/ census, so a PRODUCTION reading
+	// would cover nothing here; `hostagent:provision` is operator-run on a PUBLICATION host,
+	// not a Dédalo installation, and is gated by the package's own provision_* tests.
+	'hostagent',
 	'typecheck',
 	'format',
 	// `baselines:bank` (ratchet banking) and `push` (the gated multi-remote
@@ -286,7 +292,10 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	'baselines',
 	'push',
 ]);
-const PRODUCTION_SCRIPT_PREFIXES = new Set(['start', 'dedalo']);
+// `media:*` (2026-10-03, `media:publication-host-rules`) is OPERATOR-run: it renders the
+// web-server gate of a publication host serving an installation's media. Covered by
+// test/unit/media_publication_host_rules_cli.test.ts (imports the CLI's runner).
+const PRODUCTION_SCRIPT_PREFIXES = new Set(['start', 'dedalo', 'media']);
 
 function scriptPrefix(key: string): string {
 	return key.split(':')[0] as string;

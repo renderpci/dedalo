@@ -176,7 +176,7 @@ describe('dependency integrity — installed', () => {
 	test('the root census is the one scripts/ci/audit.ts declares (guards a silently empty scan)', () => {
 		// Imported, never re-listed. If the import ever yields nothing, this gate would
 		// pass by checking zero packages — the failure mode it exists to prevent.
-		expect(PACKAGES.length).toBeGreaterThanOrEqual(4);
+		expect(PACKAGES.length).toBeGreaterThanOrEqual(5);
 		for (const root of PACKAGES) {
 			expect(existsSync(join(REPO_ROOT, root, 'package.json')), `${root}/package.json`).toBe(true);
 			expect(existsSync(join(REPO_ROOT, root, 'bun.lock')), `${root}/bun.lock`).toBe(true);
@@ -204,7 +204,7 @@ describe('dependency integrity — installed', () => {
 			.sort();
 
 		expect(tracked.length, 'git found no tracked manifests — the census is blind').toBeGreaterThan(
-			3,
+			4,
 		);
 		expect(
 			[...PACKAGES].sort(),
@@ -313,7 +313,7 @@ describe('dependency integrity — committed under vendor/', () => {
 		expect(LICENCE_SPDX_IDS).not.toContain('AGPL-3.0-only');
 	});
 
-	test('the four package manifests declare the same licence as the project', () => {
+	test('every package manifest declares the same licence as the project', () => {
 		// OPS-08: a `license` field is what every registry, SBOM tool and downstream
 		// reads; none of the four declared one. AGPL-3.0-only — License.md is the plain
 		// AGPL text with no "or any later version" grant, so `-only` is the honest id.
@@ -323,7 +323,7 @@ describe('dependency integrity — committed under vendor/', () => {
 			) as PackageJson;
 			return `${root}: ${String(pkg.license)}`;
 		});
-		expect(PACKAGES.length).toBeGreaterThan(3);
+		expect(PACKAGES.length).toBeGreaterThanOrEqual(5);
 		expect(declared).toEqual(PACKAGES.map((root) => `${root}: AGPL-3.0-only`));
 	});
 

@@ -474,8 +474,16 @@ async function runClient(
 		proc.kill('SIGKILL');
 	}, timeoutMs);
 	try {
-		proc.stdin.write(sql);
-		await proc.stdin.end();
+		// A client that EXITS before reading its stdin (refused connection, `ERROR 1040`)
+		// closes the pipe: the write then fails EPIPE, and that throw would REPLACE the
+		// client's own error with "broken pipe" — a race the desk wins and the CI image
+		// loses. Its exit code and stderr are the verdict; only EPIPE is swallowed.
+		try {
+			proc.stdin.write(sql);
+			await proc.stdin.end();
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== 'EPIPE') throw error;
+		}
 		const [stdout, stderr, code] = await Promise.all([
 			new Response(proc.stdout).text(),
 			new Response(proc.stderr).text(),

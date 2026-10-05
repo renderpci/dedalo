@@ -35,8 +35,8 @@
  *     the `.gitignore` census. Add a secret to `.gitignore`, forget to
  *     regenerate, and this is red.
  *  C. THE CENSUS IS TOTAL OVER EVERY TRACKED `.gitignore`. Every rule of the
- *     root one AND of each nested one (`publication/server_api/v2`,
- *     `publication/site_builder`) — derived from `git ls-files`, never
+ *     root one AND of each nested one (`publication/host_agent`,
+ *     `publication/server_api/v2`, `publication/site_builder`) — derived from `git ls-files`, never
  *     enumerated here — is excluded from the build context, at the depth git
  *     would apply it RELATIVE TO ITS OWN DIRECTORY, and inside its subtree. The
  *     scoping is asserted in both directions: a nested rule must NOT reach
@@ -534,6 +534,7 @@ describe('E. the files install.sh writes before `compose build` cannot enter the
 		'private/.env',
 		'media/1/5/original/coin.jpg',
 		'src/core/update/install_stamp.json',
+		'src/core/update/publication_manifest.json',
 		'.agents/settings.local.json',
 		'publication/server_api/v1/config_api/server_config_api.php',
 		'backup.pem',
@@ -1154,6 +1155,11 @@ const SECRET_SHAPED_IN_CONTEXT: ReadonlyArray<{ path: string; reason: string }> 
 		path: 'publication/server_api/v2/.env.example',
 		reason:
 			'The publication API v2 sample configuration — the file an operator COPIES to .env and fills in. Placeholder values only (DB_PASSWORD=secret); the real one is .gitignored and outside the context.',
+	},
+	{
+		path: 'publication/host_agent/.env.test',
+		reason:
+			"The publication-host agent's test fixture, loaded by `bun test` in that package (NODE_ENV=test, the only mode its config accepts an env-file SERVICE_TOKEN in): instance `test`, a dummy service token and ./.test-tmp roots, no live credential.",
 	},
 	{
 		path: 'publication/site_builder/.env.test',

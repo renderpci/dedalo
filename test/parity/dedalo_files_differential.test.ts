@@ -91,6 +91,9 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *  - serve_code maintenance widget
  *    (WC-2026-09-28-maintenance-serve-code-widget) — the code-server half
  *    split out of update_code.
+ *  - publication_hosts maintenance widget
+ *    (WC-2026-10-03-publication-hosts-widget) — the panel over the native
+ *    publication-host registry and agent channel, which have no PHP peer.
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
@@ -103,7 +106,9 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		// WC-2026-09-03-maintenance-reconcile-status-widget (audit S-10, TS-only registry)
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/reconcile_status/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_ontology/') ||
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_code/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_code/') ||
+		// WC-2026-10-03-publication-hosts-widget (TS-only publication-host panel)
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/publication_hosts/')
 	);
 }
 
@@ -256,6 +261,9 @@ const POST_HARVEST_CLIENT_ADDITIONS: readonly string[] = [
 	'/dedalo/tools/tool_diffusion/js/report_model.js',
 	// ontologies filter — census-adopted post-harvest addition
 	'/dedalo/tools/tool_ontology_parser/js/ontologies_filter.js',
+	// the maintenance area's cross-widget event leaf (OPEN_WIDGET_EVENT: media_control's
+	// line opening publication_hosts; WC-2026-10-03-publication-hosts-widget)
+	'/dedalo/core/area_maintenance/js/maintenance_events.js',
 ];
 function isPostHarvestClientAdditionEntry(entry: ManifestEntry): boolean {
 	return POST_HARVEST_CLIENT_ADDITIONS.includes(entry.url);

@@ -104,6 +104,21 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'dataframe_control.run_check': 'read-only dataframe consistency check',
 	'dataframe_control.run_fix': 'dataframe repair through the TS write path',
 	'error_reports.get_reports': 'read-only listing of the TS-owned error-report intake table',
+	'publication_hosts.apply_rules':
+		'root-only; renders the phase-1 publication_host profile and sends rules.apply to a PAIRED agent through the one channel door (core/publication_host) — a publication-host surface no PHP install ever owned',
+	'publication_hosts.probe': 'root-only; read-only media.probe on a paired agent',
+	'publication_hosts.rollback_api':
+		'root-only; release.rollback on a paired agent (swaps the API current link back on the PUBLICATION host) — no PHP-install surface',
+	'publication_hosts.set_host_fields':
+		'root-only; edits public_url/qualities/probe in the TS-owned <private>/publication_hosts.json registry (atomic, locked)',
+	'publication_hosts.remove_host':
+		'root-only; deletes a host from the TS-owned registry and its secret dir under <private>/publication_hosts/, and forgets its in-process pairing proof — the agent itself is untouched',
+	'publication_hosts.push_apis':
+		"root-only push of the installed tree's verified Publication API releases to paired publication hosts through the TS-owned registry + agent channel (phase 4) — no PHP-tree surface",
+	'publication_hosts.reconcile_media_copy':
+		'root-only door onto the registered media_copy reconcile (core/reconcile): copies/unmarks/deletes published public-quality media on ONE copy-mode publication host through the copy worker lane and the paired agent channel (phase 5) — no PHP-tree surface',
+	'publication_hosts.probe_public':
+		'TS-native publication-host public-URL probe (phase 6): two bounded GETs through the public door (fetchGuardedText) + the runtime observation file — root-only, writes no gate, media or registry',
 };
 
 /**

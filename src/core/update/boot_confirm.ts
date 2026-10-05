@@ -87,11 +87,18 @@ function bootedTreeMatches(
 /**
  * Confirm (or loudly report) a pending code update. `sentinelPath` /
  * `runningVersion` / `runningDigest` are test seams; production passes nothing.
+ *
+ * `afterConfirmed` (publication host phase 4, L5) runs ONLY after THIS tree flipped
+ * the sentinel — never on a mismatch, an absent or a non-pending sentinel — and a
+ * throw from it is logged, never propagated: server.ts passes the detached
+ * Publication API push. A restore writes the same pending sentinel, so a restored
+ * tree's confirmation fires it too (lockstep both ways).
  */
 export async function confirmBootedCodeUpdate(
 	sentinelPath: string | null = codeUpdateSentinelPath(),
 	runningVersion: string = DEDALO_VERSION,
 	runningDigest: string | null = INSTALLED_DIGEST,
+	afterConfirmed: (() => void) | null = null,
 ): Promise<void> {
 	try {
 		if (sentinelPath === null || !existsSync(sentinelPath)) return;
@@ -103,6 +110,7 @@ export async function confirmBootedCodeUpdate(
 		}
 		await Bun.write(sentinelPath, JSON.stringify({ ...sentinel, status: 'confirmed' }, null, '\t'));
 		reportBootConfirmed(runningVersion, runningDigest);
+		runAfterConfirmed(afterConfirmed);
 		// RETENTION RUNS HERE AND NOWHERE ELSE. Not when the swap happens — until
 		// this flip the new tree is unproven and the points behind it are the way
 		// back; pruning them at swap time would delete the rollbacks for an update
@@ -129,6 +137,16 @@ function reportBootConfirmed(runningVersion: string, runningDigest: string | nul
 	console.log(
 		`[code update] boot CONFIRMED: running ${runningVersion} (installed digest ${runningDigest ?? 'none'}) matches the pending update (sentinel flipped to confirmed)`,
 	);
+}
+
+/** The post-confirm hook: never throws into the boot path, never undoes the flip. */
+function runAfterConfirmed(afterConfirmed: (() => void) | null): void {
+	if (afterConfirmed === null) return;
+	try {
+		afterConfirmed();
+	} catch (error) {
+		console.error('[code update] post-confirm hook failed (the confirmation stands):', error);
+	}
 }
 
 /**

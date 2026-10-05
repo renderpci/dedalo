@@ -48,6 +48,7 @@ import { widget as move_tld } from './move_tld.ts';
 import { widget as move_to_portal } from './move_to_portal.ts';
 import { widget as move_to_table } from './move_to_table.ts';
 import { widget as publication_api } from './publication_api.ts';
+import { widget as publication_hosts } from './publication_hosts.ts';
 import { widget as reconcile_status } from './reconcile_status.ts';
 import { widget as register_tools } from './register_tools.ts';
 import { widget as runtime_info } from './runtime_info.ts';
@@ -127,6 +128,7 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	runtime_info,
 	system_info,
 	site_builder_status,
+	publication_hosts,
 	ai_models,
 ];
 

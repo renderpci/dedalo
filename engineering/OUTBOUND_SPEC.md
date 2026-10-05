@@ -1,15 +1,19 @@
 # OUTBOUND_SPEC — how the engine reaches another server
 
-Standing spec for every request that LEAVES the institution. Built 2026-09-29,
-when the harvesting door (`src/core/harvest/`) joined the two doors that
-already existed. Companions: `engineering/EXTERNAL_SPEC.md` §5 (the external
+Standing spec for every request the engine sends to another server. Built
+2026-09-29, when the harvesting door (`src/core/harvest/`) joined the two doors
+that already existed; the fourth, the paired private agent channel
+(`src/core/publication_host/transport.ts`, §2.1), joined 2026-10-03. Companions: `engineering/EXTERNAL_SPEC.md` §5 (the external
 door's own order, which this file does not repeat), `engineering/ERRORS_SPEC.md`
 (the code registry), `engineering/TRIPWIRES.md` (the gates named in §6).
 
-The rule in one line: **the engine has THREE outbound doors, the request's
-KIND chooses the door, and all three stand on one guard.** A new outbound need
-fits one of the three; a fourth door, or a private copy of any piece of the
-guard, is the defect the gates in §6 exist to refuse.
+The rule in one line: **the engine has FOUR outbound doors, and the request's
+KIND chooses the door. The three that reach servers the institution does not
+run stand on one guard; the fourth reaches only the institution's OWN paired
+publication agent, at the address the operator paired, and stands on that
+pairing instead (§2.1).** A new outbound need fits one of the four; a fifth
+door, or a private copy of any piece of the guard, is the defect the gates in
+§6 exist to refuse.
 
 ---
 
@@ -41,21 +45,35 @@ carries its `status` (message `HTTP <n>`), its body cancelled unread — an erro
 page never costs the ceiling or the deadline, and never turns into a timeout or a
 `body_cap`.
 
-## 2. The three doors
+## 2. The four doors
 
 | Door | For | Redirects | May be used by |
 |---|---|---|---|
 | `fetchGuardedText` (`ssrf_guard.ts`) | ONE call to an API: a translation service, a speech-to-text provider — vetted and PINNED | REFUSED — a 3xx re-chooses the target | engine code only — never a tool (§6) |
 | `fetchExternalJson` (`src/external/transport.ts`) | an external RECORD SERVICE bound in the ontology | REFUSED | `src/external/` only |
 | `harvestFetch` (`src/core/harvest/harvest.ts`) | a page, image or file on ANOTHER SITE, the way a person would reach it | FOLLOWED, one vetted hop at a time (§3) | tools that harvest |
+| `agentRequest` (`src/core/publication_host/transport.ts`) | the institution's OWN paired publication agent (`engineering/PUBLICATION_HOST_SPEC.md` §2), over mTLS or a unix socket | REFUSED — the agent never redirects | the publication-host client only (§2.1, §6) |
 
 Choosing: a service whose endpoint the operator configured → `fetchGuardedText`.
 A record resolved from a third-party catalogue → `src/external/`. Anything a
 cataloguer pasted or a crawler found on someone else's website → `harvestFetch`.
+The institution's own publication host → `agentRequest`, through the
+publication-host client, never directly.
 No tool holds a raw door. The shrink-only list of reasoned tool rows reached
 zero on 2026-10-01, when `tool_import_rdf` (whose single-call fetch refused the
 303/301 every linked-data server answers with) moved to `harvestFetch`; a list
 at zero stays at zero (`test/unit/ssrf_one_guard_tripwire.test.ts`).
+
+**The publication-host public-URL probe is a `fetchGuardedText` caller, not a door**
+(`src/core/publication_host/probe.ts`, `engineering/PUBLICATION_HOST_SPEC.md` §7). It
+requests two media files from the institution's own public site exactly as a stranger
+would, so it relies on the public guard unchanged. A public URL that resolves to a private
+address (split-horizon DNS included) is refused like any other, and the probe reports
+`unknown`, never a pass. The 404 it expects for the unpublished file arrives as the typed
+`security.outbound_failed` carrying `status: 404`, with the error page cancelled unread;
+the probe reads the status, never a body. The same subsystem's agent channel is a door of
+its own (`agentRequest`, above). The probe never uses it: a gate seen from the private side
+proves nothing about what the public sees.
 
 `fetchBoundedText` is the SAME transport core as `fetchGuardedText` (the hop's
 total deadline composed with the job's signal, the shared capped reader, the same
@@ -81,6 +99,86 @@ The external door's nine-step order (kill switches, breaker, host allowlist
 before any DNS, vet + pin, credential attached last, capped read, retry,
 breaker update) is `engineering/EXTERNAL_SPEC.md` §5, and its failures are the
 external taxonomy there — not repeated here.
+
+### 2.1 The paired private agent channel
+
+The publication agent (`engineering/PUBLICATION_HOST_SPEC.md` §2) listens on an
+address that is private BY DESIGN: a WireGuard peer, a firewalled LAN port, or a
+unix socket on this machine. `assertPublicUrl` refuses exactly that, so the
+agent cannot be reached through `fetchGuardedText`; and an `EXEMPT` row would
+say "not yet on the guard" about a destination that must never be on it. It is
+therefore a named door, `src/core/publication_host/transport.ts`, with its own
+policy, in this order:
+
+1. **The route table is closed.** The path is one of the agent's literal routes
+   (`AGENT_PATHS`, below `AGENT_BASE_PATH`, which only the door prefixes), the
+   method GET or POST — PUT on exactly the routes `AGENT_PUT_PATHS` names (today
+   copy mode's `/v1/media/file`), which take nothing else — the bounds inside
+   their ceilings (1 MiB default / 16 MiB response, 10 s default / 30 min
+   deadline — a PUT route's ceiling is `MAX_PUT_TIMEOUT_MS`, the agent's largest
+   media file at the slowest sized link; a put's own deadline is
+   `mediaPutDeadlineMs(size)`), the bearer one token of the secrets store's own grammar, and the
+   caller sets none of the transport's headers. A query is never part of the
+   path: a route that takes one declares its keys in `AGENT_QUERY_GRAMMAR`
+   (`/v1/media/manifest`: `cursor`, the agent's own base64url, and `limit`, a
+   plain decimal; `/v1/media/file`: `path`, REQUIRED, a relative media path with
+   no control character, backslash, or empty / `.` / `..` segment, at most 1024
+   UTF-8 bytes — the agent's bound), every value
+   must match its closed grammar, and the door encodes it, so no value changes
+   the URL's structure. A breach is a programming error (`internal.unexpected`),
+   refused before any socket opens.
+2. **The target is the registry entry, exactly** (`agentTarget`). TCP:
+   `https://<host>:<port>` with mTLS from the host's engine bundle — the client
+   certificate and key, the bundle's CA as the ONLY trust root,
+   `rejectUnauthorized: true`, the certificate checked against the REGISTRY host.
+   The explicit `true` is load-bearing: measured on Bun 1.4.2, it is what keeps
+   verification on when `NODE_TLS_REJECT_UNAUTHORIZED=0` is in the environment.
+   A unix-socket host is dialled at its socket, and only after the filesystem
+   vouches for it (`assertSocketSafe`): the path exists (else reason `transport`),
+   `lstat` says it IS a socket (a symlink or any other node is refused), its
+   directory is writable by nobody but its owner (any group/other write bit is
+   refused — no sticky exemption: a sticky world-writable directory such as `/tmp`
+   lets anyone CREATE the name), the socket is owned by that directory's owner,
+   root or the engine user, and every directory above it — on the path as written
+   and on its realpath — is owned by one of those uids and writable by no one else
+   (a sticky ancestor passes only when the entry below it is owned by root or the
+   engine user — never the directory's owner: anyone may create a name in a sticky
+   world-writable directory, so a squatted `/tmp/x` owned by its squatter is refused)
+   — else reason `socket_perms`. The guarantee: only the owner of the directory
+   the operator registered (or root, or the engine user) could have placed the
+   socket. The registry holds no agent uid, so which uid that is stays the
+   operator's choice; the provisioned shape (the agent's 0750 RuntimeDirectory
+   under root-owned `/run`) passes. No caller text reaches the URL.
+   A TCP host without its engine bundle, or with one the secrets store refuses,
+   is `publication_host.unconfigured`.
+3. **One request.** `redirect: 'manual'`; any 3xx is refused, its body cancelled
+   unread — a 3xx means something other than the agent answered.
+4. **Bounded.** One total deadline from connect to the last body byte, an idle
+   bound on the body (default min(deadline, 30 s), a caller may only lower it; an
+   idle body is `publication_host.timeout` even when the deadline is far off), the
+   guard's `readBytesCapped` (cancelled over the ceiling). A request body may be a stream (release bundles).
+
+The bearer is attached only when the caller passes one, and the one production
+caller passes it only after proving the pairing on the agent's unauthenticated
+`/health` (`PUBLICATION_HOST_SPEC.md` §2 rule 3) — which is why `agentRequest`
+has exactly one production holder (§6). A non-2xx answer is returned for that
+client to map; transport failures are `publication_host.unreachable` (reason
+`transport`, `tls`, `redirect` or `socket_perms`), `publication_host.timeout` and
+`publication_host.failed` (reason `body_cap`), all minted by
+`src/core/publication_host/wire.ts`, with log-only coordinates that never carry
+the bearer or key material.
+
+**Named residual — the proxy environment.** Bun's fetch routes a TCP (https)
+agent target through `HTTPS_PROXY` when it is set, and no per-request option
+turns that off (measured on Bun 1.4.2: `proxy: false`, `null` and `''` are all
+still proxied). `HTTP_PROXY` alone does not apply to the https target, and a
+unix-socket agent is never proxied. mTLS still ends at the agent, so a proxy sees the channel's
+address and ciphertext, never the bearer, but the channel is then not private
+and the agent's firewall sees the proxy's address. The operator lists every
+agent address in `NO_PROXY`. Three canaries in `publication_host_transport_native`
+turn red when Bun stops proxying this call through `HTTPS_PROXY`, starts
+proxying it through `HTTP_PROXY` alone, or starts proxying a unix-socket agent,
+so the residual is re-read then.
 
 ## 3. The harvesting door, hop by hop
 
@@ -184,19 +282,42 @@ on the institution's LAN), and the operator-configured downloads still being
 moved onto the guard. They
 are a SHRINK-ONLY burn-down list with a reason each, in
 `test/unit/ssrf_one_guard_tripwire.test.ts` (`EXEMPT`) — that list is the
-record, not this file.
+record, not this file. The paired agent channel is not on that list: it is a
+door with its own policy (§2.1, `src/core/publication_host/transport.ts`),
+registered as one in both gates.
+
+**The dependency installs.** Two engine paths run the PINNED Bun (`process.execPath`)
+`install --frozen-lockfile --production`, which fetches packages from the npm registry:
+the code updater's own install in the quarantine (`installDepsReal`,
+`src/core/update/code_update.ts`) and the Publication API v2 build
+(`installV2DepsReal`, `src/core/publication_host/api_bundles.ts`, which also passes
+`--linker hoisted --ignore-scripts`). They are child processes, not engine sockets, so no
+guard can stand in front of them. What bounds them is the lockfile: every version and
+integrity hash is the one the verified release shipped. The v2 build refuses a release
+without `bun.lock` before the child starts (Bun accepts `--frozen-lockfile` with no
+lockfile and floats every version); the updater's install has no such check yet. The v2 child runs with a minimal environment
+(`v2DepsInstallEnv`):
+- it passes through only `PATH`, `TMPDIR` and the standard proxy keys;
+- its `HOME` is the build dir and its cache a shared dir under the build root;
+- it gets no engine secret.
+
+`test/unit/publication_host_api_bundles_native.test.ts` holds that environment to the exact
+key set. The registry this egress reaches is the release's own `bunfig.toml` (verified
+input) or Bun's default; no operator registry override is passed.
 
 ## 6. The gates
 
 | Gate | Enforces |
 |---|---|
-| `test/unit/ssrf_one_guard_tripwire.test.ts` | No outbound socket outside the guard except the burn-down list; `fetchPinnedHop` has one production importer and `followVetted` two; no tool holds a raw door. The importer census follows import BINDINGS through re-exports, not spellings. A tool holding ANY outbound door (`harvestFetch` included) reads no error's `.message` (the guard's names the refused address — report `toErrorBody(toDedaloError(error))`); no module but the guard spells an address reason (read them with `isAddressRefusal`). The ATTACKER-AAAA TRUTH TABLE drives every IPv4 carrier (mapped, NAT64, declared at every layout, local-use in every layout, IPv4-compatible, SIIT, 6to4, Teredo, discovered) × non-public/public payloads, special blocks, a first-hextet allowlist sweep and multi-record answers, under three discovery modes, through `assertPublicUrl` (resolved and literal), `isPrivateIp`, `isSafeLocalAsrUrl` (exemption on and off) and `claimedIpv4s`; a DECLARED local-use prefix (`64:ff9b:1::/48`, `/96`) keeps the transcriber with the exemption OFF equal to the guard and `claimedIpv4s` exactly the declared reading; the oracle is the test's own RFC 6052 encoder, and the mutations that must turn it red are recorded in its header. Outside `src/core/security/` a module imports a carrier primitive (`extractRfc6052Ipv4`, `packedInBlock`, `packBlocks`, `packCidr`) only by a reasoned, shrink-only census row (by import binding); that census cannot see a hand-rolled byte comparison, so every holder of ANY address byte primitive (`packIpv6`, `packAddress`, `ipInCidr` …) is registered as an `inbound` (client-IP allowlist) or `outbound` judge, and each outbound judge's exported predicate is DRIVEN through the truth table with every exemption off and must equal the guard (shrink-only rows). A module that parses addresses with no primitive of `ip_address.ts` is outside the census. |
+| `test/unit/ssrf_one_guard_tripwire.test.ts` | No outbound socket outside the guard except the burn-down list and the private agent channel, which is a registered door (`PRIVATE_CHANNEL_DOORS`), never an `EXEMPT` row; `fetchPinnedHop` has one production importer and `followVetted` two; `agentRequest` is held only by the publication-host client (`AGENT_CHANNEL_IMPORTERS`, exact both ways) and `dialAgent` by no production module; no tool holds a raw door. The importer census follows import BINDINGS through re-exports, not spellings. A tool holding ANY outbound door (`harvestFetch` included) reads no error's `.message` (the guard's names the refused address — report `toErrorBody(toDedaloError(error))`); no module but the guard spells an address reason (read them with `isAddressRefusal`). The ATTACKER-AAAA TRUTH TABLE drives every IPv4 carrier (mapped, NAT64, declared at every layout, local-use in every layout, IPv4-compatible, SIIT, 6to4, Teredo, discovered) × non-public/public payloads, special blocks, a first-hextet allowlist sweep and multi-record answers, under three discovery modes, through `assertPublicUrl` (resolved and literal), `isPrivateIp`, `isSafeLocalAsrUrl` (exemption on and off) and `claimedIpv4s`; a DECLARED local-use prefix (`64:ff9b:1::/48`, `/96`) keeps the transcriber with the exemption OFF equal to the guard and `claimedIpv4s` exactly the declared reading; the oracle is the test's own RFC 6052 encoder, and the mutations that must turn it red are recorded in its header. Outside `src/core/security/` a module imports a carrier primitive (`extractRfc6052Ipv4`, `packedInBlock`, `packBlocks`, `packCidr`) only by a reasoned, shrink-only census row (by import binding); that census cannot see a hand-rolled byte comparison, so every holder of ANY address byte primitive (`packIpv6`, `packAddress`, `ipInCidr` …) is registered as an `inbound` (client-IP allowlist) or `outbound` judge, and each outbound judge's exported predicate is DRIVEN through the truth table with every exemption off and must equal the guard (shrink-only rows). A module that parses addresses with no primitive of `ip_address.ts` is outside the census. |
 | `test/unit/guarded_text_pin_native.test.ts` | `fetchGuardedText` connects to the address it vetted: a rebinding resolver gets ONE lookup and the socket the vetted IP (Host and SNI kept); a 3xx is refused unfollowed; a non-2xx, a stalled resolver and a failing socket are typed `security.outbound_failed`; a POST reset after sending is not re-sent to the next address (a refused one is, and a GET always); a `URLSearchParams` body reaches the socket unchanged; an unsupported method, body or init key is refused before any socket. On BOTH text doors (`fetchBoundedText` against a loopback peer) a caller's `maxBytes` and the default ceiling end the read as `body_cap`, the stream cancelled, and a non-2xx is `HTTP <n>` with its body cancelled unread (a stalled or oversized error page included). On both doors a caller's `timeoutMs` ends a stall within an upper bound, and with none the 15 s default ends it at exactly 15 s (fake clock). On `fetchBoundedText`, as loopback outcomes: a 302 is refused typed with its `Location` never contacted, a closed port is `transport`/`connect`, and the running job's stop reaches the connect (`aborted`). On `fetchGuardedText` — the door translation and transcription take inside job lanes (PERF-11) — a socket that never answers is released by the job's stop as `aborted`/`connect`, long before the deadline. |
-| `test/unit/outbound_fetch_tripwire.test.ts` | Every outbound call carries a signal and every fetching file declares its byte bound; each door's call closure applies what it claims (vetting, pin, shared reader, deadline, redirect mode) and the primitives are driven through their seams; every `fetchBoundedText` caller applies an address policy. |
+| `test/unit/outbound_fetch_tripwire.test.ts` | Every outbound call carries a signal and every fetching file declares its byte bound; each door's call closure applies what it claims (vetting, pin, shared reader, deadline, redirect mode) and the primitives are driven through their seams; every `fetchBoundedText` caller applies an address policy; the private agent channel's one call dials `agentTarget`'s output and reads through the shared `readBytesCapped`. |
 | `test/unit/external_outbound_tripwire.test.ts` | The external door is the only one under `src/external/`, in its order. |
 | `test/unit/harvest_door_native.test.ts` | The harvesting door's rules, driven — and, by OUTCOME, the two guard pieces a spelling census cannot pin: no wait leaves an abort listener behind (`untilAborted`), and a `Retry-After` only `Date.parse` would read asks no wait (`parseRetryAfterMs`). |
 | `test/unit/external_transport_native.test.ts` | The external door's order (`EXTERNAL_SPEC.md` §5) — and the same `Retry-After` outcome at that door. |
+| `test/unit/publication_host_door_tripwire.test.ts` | Only the agent channel loads an agent's TLS material (`readHostTls`, by binding) and spells the agent's base path; `rejectUnauthorized` only there and only `true`, no `checkServerIdentity`; the door's one call (AST): `target.url`, redirect `manual`, a signal, the shared reader; the door is registered in this file and both outbound tripwires. It also holds the docs to code: this file's door count equals the §2 table, §2.1 and this row exist once, §5 names the door module, every repo path a `PUBLICATION_HOST_SPEC.md` §8 "Built" row names exists, and the operator page's pair commands use the CLI's verbs, flags and invoking user. |
+| `test/unit/publication_host_transport_native.test.ts` | §2.1, driven against loopback agents with an in-test PKI: mTLS with the pinned CA and the registry host as identity, the unix socket, the unix socket's filesystem check (`socket_perms`: a tight parent, a trusted owner, every ancestor on the path as written and on its realpath, a sticky `/tmp`-style squat refused), the closed route table and its closed per-route query grammar, a 3xx refused unread, deadline, idle bound (a caller may only lower it: zero, fractional, above the 30 s ceiling or the request deadline refused before any socket), byte ceiling, a streamed body, the bearer grammar shared with the secrets store, a refused stored bundle typed as unconfigured, `NODE_TLS_REJECT_UNAUTHORIZED=0` changing nothing, no secret in any failure, and the proxy residual's three canaries (`HTTPS_PROXY` proxies a TCP agent, `HTTP_PROXY` alone does not, a unix-socket agent never is). |
 
-The three tripwires' and `guarded_text_pin_native`'s full rows are in
-`engineering/TRIPWIRES.md`; the other two `_native` gates are behavioural suites,
-not index rows.
+The four tripwires' and `guarded_text_pin_native`'s full rows are in
+`engineering/TRIPWIRES.md`; the other three `_native` gates are behavioural
+suites, not index rows.

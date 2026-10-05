@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 595,
-		"functions": 7183,
+		"files": 614,
+		"functions": 7795,
 		"functionsOverCap": 681,
 		"filesOverCap": 263
 	},
@@ -258,7 +258,7 @@
 		"src/core/ontology/recovery_file.ts": 9,
 		"src/core/ontology/resolver.ts": 13,
 		"src/core/ontology/section_map.ts": 9,
-		"src/core/reconcile/registry.ts": 15,
+		"src/core/reconcile/registry.ts": 13,
 		"src/core/relations/children.ts": 12,
 		"src/core/relations/config_ddo_map.ts": 12,
 		"src/core/relations/dataframe.ts": 9,

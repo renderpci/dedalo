@@ -126,6 +126,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Glob } from 'bun';
+import { PACKAGES } from '../../scripts/ci/audit.ts';
 import {
 	CI_IMAGE_NAME,
 	CI_IMAGE_REF,
@@ -138,6 +139,21 @@ import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
+
+/**
+ * THE ISOLATED DAEMON PACKAGES, DERIVED — never a list kept here. A daemon package is a
+ * locked package (scripts/ci/audit.ts `PACKAGES`: every package.json with a sibling
+ * bun.lock) other than the root, that carries its OWN bunfig.toml — a Bun program with its
+ * own test configuration, gated by its own install + tsc + suite. The site template
+ * (publication/site_builder/templates/basic) locks but has no bunfig: a vite toolchain
+ * copied into generated sites, not a daemon. Rules 11, 11b and 15 hold every place a
+ * daemon package must be wired to THIS set, so the next package is red the day its
+ * lockfile lands instead of silently unrun. The hand lists they replace said "exactly
+ * two", and a third package (publication/host_agent) had to edit around each of them.
+ */
+const DAEMON_PACKAGES: readonly string[] = PACKAGES.filter(
+	(root) => root !== '.' && existsSync(join(repoRoot, root, 'bunfig.toml')),
+);
 
 /**
  * Every package a Dockerfile's `apt-get install` lines name (rule 1c). Comment lines
@@ -1263,17 +1279,21 @@ describe('CI workflow tripwire', () => {
 	// that "Both daemons set coverageThreshold in their bunfig.toml". A comment
 	// cannot be the thing that keeps two facts in step.
 	test('every isolated daemon package MEASURES coverage, and the script says which enforce', () => {
-		// Both packages must at least MEASURE. Enforcement differs today and that
+		// Every package must at least MEASURE. Enforcement differs today and that
 		// difference has to be written down, because the previous state was a
 		// script asserting two contradictory things eleven lines apart while one
 		// package's coverage was measured by nothing.
+		// Anti-vacuity AT the corpus: site_builder, server_api/v2, host_agent. A
+		// derivation that finds fewer has gone blind, and every loop below would
+		// pass over nothing.
+		expect(
+			DAEMON_PACKAGES.length,
+			'the daemon-package derivation (PACKAGES with a bunfig.toml) found too few packages',
+		).toBeGreaterThanOrEqual(3);
 		const enforcing: string[] = [];
 		const reportingOnly: string[] = [];
-		for (const pkg of ['publication/site_builder', 'publication/server_api/v2']) {
+		for (const pkg of DAEMON_PACKAGES) {
 			const path = join(repoRoot, pkg, 'bunfig.toml');
-			expect(existsSync(path), `${pkg}/bunfig.toml does not exist — hermetic.sh greps it`).toBe(
-				true,
-			);
 			const bunfig = readFileSync(path, 'utf8');
 			expect(bunfig, `${pkg} does not even measure coverage`).toMatch(/^\s*coverage\s*=\s*true/m);
 			// A `coverageThreshold` in a COMMENT is not a threshold.
@@ -1285,9 +1305,28 @@ describe('CI workflow tripwire', () => {
 			// A floor of zero enforces nothing while looking like a gate.
 			expect(lines, `${pkg} lines threshold is not a floor`).toBeGreaterThanOrEqual(0.8);
 			expect(functions, `${pkg} functions threshold is not a floor`).toBeGreaterThanOrEqual(0.8);
+			// An ignore pattern is an exemption from that floor: none may reach src/.
+			const ignoreDecl = bunfig.match(
+				/^\s*coveragePathIgnorePatterns\s*=\s*(\[[\s\S]*?\]|"[^"]*"|'[^']*')/m,
+			);
+			const ignored = ignoreDecl
+				? [...ignoreDecl[1]!.matchAll(/["']([^"']*)["']/g)].map((m) => m[1]!)
+				: [];
+			for (const pattern of ignored) {
+				const glob = new Bun.Glob(pattern);
+				const hitsSrc =
+					pattern.includes('src') ||
+					['src/index.ts', 'src/a/b.ts', `${pkg}/src/index.ts`].some((p) => glob.match(p));
+				expect(hitsSrc, `${pkg} coveragePathIgnorePatterns '${pattern}' exempts src/`).toBe(false);
+			}
 		}
 		expect(enforcing, 'server_api/v2 must keep enforcing 0.8').toContain(
 			'publication/server_api/v2',
+		);
+		// host_agent is born enforcing: its plan's global constraint states that the
+		// site_builder reporting-only exemption is NOT inherited.
+		expect(enforcing, 'host_agent must enforce coverageThreshold from day one').toContain(
+			'publication/host_agent',
 		);
 		// site_builder reports but does not enforce YET (three route modules at
 		// 0.00% functions, measured 2026-08-31). When that is fixed and a threshold
@@ -1303,10 +1342,36 @@ describe('CI workflow tripwire', () => {
 		expect(script).not.toMatch(/publication\/site_builder has NO bunfig\.toml/);
 		// If it greps a package's bunfig, that bunfig must exist.
 		if (script.includes('$dir/bunfig.toml')) {
-			for (const pkg of ['publication/site_builder', 'publication/server_api/v2']) {
+			for (const pkg of DAEMON_PACKAGES) {
 				expect(existsSync(join(repoRoot, pkg, 'bunfig.toml')), `${pkg}`).toBe(true);
 			}
 		}
+	});
+
+	// Rule 11b — EVERY LOCKED PACKAGE WE RUN HAS A DEPENDABOT ENTRY. Dependabot does
+	// not discover packages: a directory left out of .github/dependabot.yml is a
+	// lockfile nobody proposes bumps for, and "dependencies default to the latest
+	// stable version" decays in silence. Held for the root and every DERIVED daemon
+	// package, so the next daemon cannot land without its updater.
+	test('the root and every isolated daemon package have their own Dependabot bun entry (rule 11b)', () => {
+		const bunDirectories = (yaml: string): string[] =>
+			[...yaml.matchAll(/^\s*- package-ecosystem: bun\s*\n\s+directory: "([^"]+)"/gm)].map(
+				(m) => m[1] as string,
+			);
+		// Positive control: the reader sees a bun entry and ignores another ecosystem's.
+		expect(
+			bunDirectories(
+				'  - package-ecosystem: bun\n    directory: "/a/b"\n  - package-ecosystem: pip\n    directory: "/docs"\n',
+			),
+		).toEqual(['/a/b']);
+		const declared = bunDirectories(read('.github/dependabot.yml'));
+		const missing = ['.', ...DAEMON_PACKAGES]
+			.map((root) => (root === '.' ? '/' : `/${root}`))
+			.filter((dir) => !declared.includes(dir));
+		expect(
+			missing,
+			'.github/dependabot.yml: a locked package with no `bun` entry gets no update PRs — its lockfile only ever ages',
+		).toEqual([]);
 	});
 
 	// Rule 12 — A TIER'S PROMISES ARE KEPT BY CODE, NOT BY COMMENTS
@@ -1992,8 +2057,8 @@ describe('CI workflow tripwire', () => {
 	 *
 	 * Phase 4 of the parallel-test work made three whole-tree stages run at the
 	 * same time: typecheck ∥ lint in BOTH `scripts/ci/hermetic.sh` and
-	 * `scripts/verify.ts`, and the two isolated daemon packages
-	 * (publication/site_builder, publication/server_api/v2) concurrently in
+	 * `scripts/verify.ts`, and the isolated daemon packages (DAEMON_PACKAGES,
+	 * derived — site_builder, server_api/v2, host_agent) concurrently in
 	 * hermetic.sh. Every one of those is safe ONLY while both branches are still
 	 * waited on and both verdicts still reported. The failure mode is silent and
 	 * it is the reason this rule exists rather than a comment: under `set -e` a
@@ -2064,19 +2129,55 @@ describe('CI workflow tripwire', () => {
 			).toBeString();
 		}
 
-		// hermetic.sh: BOTH daemon jobs are backgrounded, BOTH are waited on by
-		// pid, and BOTH exit codes are consulted. Anti-vacuity floor: exactly two
-		// of each, so deleting one job silently is red.
-		const backgrounded = hermeticRaw.match(/daemon_gate \S+ > \S+ 2>&1 &/g) ?? [];
+		// hermetic.sh: EVERY daemon package is backgrounded, waited on by pid with
+		// its status captured, and named in its own RED verdict. The set is the
+		// DERIVED one (DAEMON_PACKAGES), never a count typed here. Anchored at line
+		// start: a comment MENTIONING the call is not a job.
+		const backgroundedIn = (text: string): string[] =>
+			[...text.matchAll(/^daemon_gate (\S+) > \S+ 2>&1 &$/gm)].map((m) => m[1] as string);
 		expect(
-			backgrounded.length,
-			'hermetic.sh must background exactly the two daemon packages — a third or a missing one means this rule no longer describes the tier',
-		).toBe(2);
+			backgroundedIn('# daemon_gate x > /tmp/y 2>&1 &\ndaemon_gate a/b > /tmp/z.$$ 2>&1 &\n'),
+			'matcher control: a commented call is prose, an unindented call is a job',
+		).toEqual(['a/b']);
+		expect(
+			backgroundedIn(hermeticRaw).sort(),
+			'hermetic.sh must background exactly the derived daemon packages (every locked package with its own bunfig.toml) — a missing one runs nowhere, an extra one is not a package',
+		).toEqual([...DAEMON_PACKAGES].sort());
+		// Each job's log is a mktemp'd variable, never a predictable path: a literal
+		// `/tmp/x.$$` redirect follows a pre-planted symlink and can be pre-created
+		// world-readable (the agent suite prints test bearer/pairing material).
+		const unsafeLogsIn = (text: string): string[] =>
+			[...text.matchAll(/^daemon_gate \S+ > (\S+) 2>&1 &$/gm)]
+				.map((m) => m[1] as string)
+				.filter((target) => {
+					const v = /^"\$(\w+)"$/.exec(target)?.[1];
+					if (v === undefined) return true;
+					return !new RegExp(
+						`^${v}="\\$\\(mktemp "\\$\\{TMPDIR:-/tmp\\}/[\\w.]+\\.XXXXXX"\\)"$`,
+						'm',
+					).test(text);
+				});
+		expect(
+			unsafeLogsIn(
+				'daemon_gate a > /tmp/z.$$ 2>&1 &\nx_log="$(mktemp "${TMPDIR:-/tmp}/d.XXXXXX")"\ndaemon_gate b > "$x_log" 2>&1 &\ndaemon_gate c > "$y_log" 2>&1 &\n',
+			),
+			'matcher control: a literal path and an unassigned var are unsafe, a mktemp var is not',
+		).toEqual(['/tmp/z.$$', '"$y_log"']);
+		expect(
+			unsafeLogsIn(hermeticRaw),
+			'hermetic.sh daemon job logs must be mktemp-created variables (symlink/pre-create safe), like daemon_gate() own log',
+		).toEqual([]);
 		const waits = hermeticRaw.match(/wait "\$\w+" \|\| \w+=\$\?/g) ?? [];
 		expect(
 			waits.length,
 			"every backgrounded daemon gate must be waited on with its exit status captured, or `set -e` drops the other package's verdict",
-		).toBe(2);
+		).toBe(DAEMON_PACKAGES.length);
+		for (const pkg of DAEMON_PACKAGES) {
+			expect(
+				hermeticRaw.includes(`== hermetic: RED in ${pkg} (exit `),
+				`hermetic.sh never names ${pkg} in a RED verdict — its exit status is captured and then consulted by nobody`,
+			).toBe(true);
+		}
 
 		// verify.ts: the concurrent static stages have a PINNED report order, so
 		// the summary table cannot reshuffle between runs.

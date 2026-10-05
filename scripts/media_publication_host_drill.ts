@@ -1,0 +1,331 @@
+#!/usr/bin/env bun
+/**
+ * PUBLICATION-HOST MEDIA DRILL: the curl matrix of engineering/MEDIA_PROTECTION.md §9
+ * for the publication-host profile (engineering/PUBLICATION_HOST_SPEC.md §5.1), run
+ * against REAL Apache and nginx. The tripwire proves the regexes; only a live server
+ * proves the engines (rewrite phase order, alias + captures, location precedence).
+ *
+ * Builds a scratch media tree under the OS temp dir, renders the include with the
+ * ENGINE's builders (never hand-written rules), boots each server on 127.0.0.1, runs
+ * the matrix, stops it, deletes the tree. Exit 1 on any red row.
+ *
+ * The harness is HOSTILE on purpose: the mount sits UNDER the server document root at
+ * the same URL, and nginx declares an operator static-asset regex location BEFORE the
+ * include. A gate that loses location precedence would then serve masters and
+ * unpublished files from `root`; every 404 row below proves it does not.
+ * Needs: Apache 2.4 + apxs (the binary is RESOLVED through `apxs -q SBINDIR/TARGET`:
+ * `httpd` on Homebrew/RHEL, `apache2` on Debian), nginx with ngx_http_mp4_module. A
+ * missing one is RED, never a skip — the instance CI tier runs this drill
+ * (scripts/ci/instance_tier.sh; runner requirement: engineering/CI.md).
+ */
+
+import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { parseArgs } from 'node:util';
+import { buildNginxMap, MEDIA_AUTH_COOKIE } from '../src/core/media/protection.ts';
+import {
+	buildPublicationHostApacheConf,
+	buildPublicationHostNginxConf,
+	publicationHostMediaUrl,
+} from '../src/core/media/publication_host_rules.ts';
+import { SVG_ENVELOPE_CSP, SVG_QUARANTINE_CSP } from '../src/core/media/svg_safety.ts';
+import {
+	apacheBinary,
+	apacheMainConf,
+	freePort,
+	nginxMainConf,
+	sh,
+	waitUp,
+} from './lib/web_server_harness.ts';
+
+const QUALITIES = ['image/thumb', 'image/svg', 'av/404', 'av/subtitles', 'svg/web'];
+const WORK_COOKIE = 'a'.repeat(128);
+const PUBLISHED = 'image/thumb/0/test94_test3_1.jpg';
+
+/** The scratch tree: a published record (test3_1), an unpublished one (test3_2). */
+const FILES: Record<string, string> = {
+	[PUBLISHED]: 'JPEG-published',
+	'image/thumb/0/test94_test3_2.jpg': 'JPEG-unpublished',
+	'image/original/0/test94_test3_1.jpg': 'MASTER',
+	'image/thumb/0/my_custom_name.jpg': 'NON-GRAMMAR',
+	'image/thumb/0/test94_test3_1.php': "<?php echo 'EXECUTED';",
+	'image/thumb/0/test94_test3_1.html': '<script>ACTIVE</script>',
+	// Working files of a PUBLISHED record: grammar-valid names, so Rule B alone would serve them.
+	'image/thumb/0/test94_test3_1.tmp': 'WORKING-TMP',
+	'image/thumb/0/test94_test3_1.csv': 'WORKING-CSV',
+	'image/svg/0/test94_test3_1.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>',
+	'svg/web/test94_test3_1.xml': '<x/>',
+	'av/404/test94_test3_1.mp4': 'M'.repeat(1000),
+	'av/subtitles/test94_test3_1_lg-spa.vtt': 'WEBVTT',
+	'svg/web/test94_test3_1.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>',
+	'.publication/pub/test3_1': '',
+	[`.publication/auth/${WORK_COOKIE}`]: '',
+	// A PERMISSIVE work-host .htaccess on the shared tree: AllowOverride None must ignore it.
+	'.htaccess': 'RewriteEngine Off\nRequire all granted\n',
+};
+
+interface Row {
+	name: string;
+	path: string;
+	headers?: Record<string, string>;
+	expect: number[];
+	before?: (root: string) => void;
+	check?: (res: Response, body: string) => string | null;
+}
+
+const ROWS: Row[] = [
+	{ name: 'published, public quality → 200', path: PUBLISHED, expect: [200] },
+	{
+		name: 'nosniff on every media file',
+		path: PUBLISHED,
+		expect: [200],
+		check: (r) => (r.headers.get('x-content-type-options') === 'nosniff' ? null : 'no nosniff'),
+	},
+	{
+		name: 'unpublished → 404 (permissive work .htaccess ignored)',
+		path: 'image/thumb/0/test94_test3_2.jpg',
+		expect: [404],
+	},
+	{
+		name: 'unpublished + VALID work cookie → 404 (no Rule A)',
+		path: 'image/thumb/0/test94_test3_2.jpg',
+		headers: { Cookie: `${MEDIA_AUTH_COOKIE}=${WORK_COOKIE}` },
+		expect: [404],
+	},
+	{
+		name: 'master tier, published record → 404',
+		path: 'image/original/0/test94_test3_1.jpg',
+		expect: [404],
+	},
+	{
+		name: 'subtitle of a published record → 200',
+		path: 'av/subtitles/test94_test3_1_lg-spa.vtt',
+		expect: [200],
+	},
+	{ name: 'non-grammar filename → 404', path: 'image/thumb/0/my_custom_name.jpg', expect: [404] },
+	{ name: 'marker store pub/ → 404', path: '.publication/pub/test3_1', expect: [404] },
+	{ name: 'marker store auth/ → 404', path: `.publication/auth/${WORK_COOKIE}`, expect: [404] },
+	{
+		// F3: 404, never 403 (a 403 confirms the upload exists — MEDIA_PROTECTION §2).
+		name: 'uploaded .php → 404, never executed, source never served',
+		path: 'image/thumb/0/test94_test3_1.php',
+		expect: [404],
+		check: (_r, body) =>
+			body.includes('<?php') || body.includes('EXECUTED') ? 'php leaked' : null,
+	},
+	{
+		// On a case-insensitive mount (APFS/SMB) `.PHP` opens the `.php` file; elsewhere 404s.
+		name: 'uploaded script, upper-case suffix .PHP → 404, source never served',
+		path: 'image/thumb/0/test94_test3_1.PHP',
+		expect: [404],
+		check: (_r, body) =>
+			body.includes('<?php') || body.includes('EXECUTED') ? 'php leaked' : null,
+	},
+	{
+		name: 'published uploaded .html → 404 (MEDIA-03 active document)',
+		path: 'image/thumb/0/test94_test3_1.html',
+		expect: [404],
+		check: (_r, body) => (body.includes('ACTIVE') ? 'html served' : null),
+	},
+	{
+		name: 'published-record working file .tmp → 404',
+		path: 'image/thumb/0/test94_test3_1.tmp',
+		expect: [404],
+		check: (_r, body) => (body.includes('WORKING') ? 'working file served' : null),
+	},
+	{
+		name: 'published-record working file .csv → 404',
+		path: 'image/thumb/0/test94_test3_1.csv',
+		expect: [404],
+		check: (_r, body) => (body.includes('WORKING') ? 'working file served' : null),
+	},
+	{
+		// On a case-insensitive mount (APFS/SMB) `.TMP` opens the `.tmp` file; elsewhere 404s.
+		name: 'working file, upper-case suffix .TMP → 404',
+		path: 'image/thumb/0/test94_test3_1.TMP',
+		expect: [404],
+		check: (_r, body) => (body.includes('WORKING') ? 'working file served' : null),
+	},
+	{
+		name: 'work .htaccess on the shared tree → 404',
+		path: '.htaccess',
+		expect: [404],
+		check: (_r, body) => (body.includes('RewriteEngine') ? '.htaccess served' : null),
+	},
+	{
+		name: 'Range → 206 + Content-Range',
+		path: 'av/404/test94_test3_1.mp4',
+		headers: { Range: 'bytes=0-99' },
+		expect: [206],
+		check: (r) =>
+			(r.headers.get('content-range') ?? '').startsWith('bytes 0-99/') ? null : 'bad Content-Range',
+	},
+	{
+		name: 'raw svg → attachment + sandbox CSP',
+		path: 'svg/web/test94_test3_1.svg',
+		expect: [200],
+		check: (r) =>
+			(r.headers.get('content-disposition') ?? '').includes('attachment') &&
+			r.headers.get('content-security-policy') === SVG_QUARANTINE_CSP
+				? null
+				: 'svg not quarantined',
+	},
+	{
+		name: 'server-generated envelope → 200, inline, envelope CSP',
+		path: 'image/svg/0/test94_test3_1.svg',
+		expect: [200],
+		check: (r) =>
+			!(r.headers.get('content-disposition') ?? '').includes('attachment') &&
+			r.headers.get('content-security-policy') === SVG_ENVELOPE_CSP
+				? null
+				: `envelope headers wrong (disposition ${r.headers.get('content-disposition')}, csp ${r.headers.get('content-security-policy')})`,
+	},
+	{
+		name: '.xml → attachment + sandbox CSP',
+		path: 'svg/web/test94_test3_1.xml',
+		expect: [200],
+		check: (r) =>
+			(r.headers.get('content-disposition') ?? '').includes('attachment') &&
+			r.headers.get('content-security-policy') === SVG_QUARANTINE_CSP
+				? null
+				: 'xml not quarantined',
+	},
+	{
+		name: 'unpublish: rm pub marker → 404 on the very next request',
+		path: PUBLISHED,
+		expect: [404],
+		before: (root) => unlinkSync(join(root, '.publication/pub/test3_1')),
+	},
+	{
+		name: 'republish: marker back → 200',
+		path: PUBLISHED,
+		expect: [200],
+		before: (root) => writeFileSync(join(root, '.publication/pub/test3_1'), ''),
+	},
+];
+
+/** The binaries a server's drill needs that PATH lacks (asked, not spawned: no ENOENT stack). */
+function missingBinaries(server: 'apache' | 'nginx'): string[] {
+	const need = server === 'apache' ? ['apxs'] : ['nginx'];
+	return need.filter((bin) => Bun.which(bin) === null);
+}
+
+function buildTree(root: string): void {
+	for (const [rel, content] of Object.entries(FILES)) {
+		const path = join(root, rel);
+		mkdirSync(dirname(path), { recursive: true });
+		writeFileSync(path, content);
+	}
+}
+
+async function runRows(server: string, base: string, root: string): Promise<number> {
+	let red = 0;
+	for (const row of ROWS) {
+		row.before?.(root);
+		const res = await fetch(`${base}${publicationHostMediaUrl()}/${row.path}`, {
+			headers: row.headers,
+		});
+		const body = await res.text();
+		const problem = !row.expect.includes(res.status)
+			? `status ${res.status}, expected ${row.expect.join('|')}`
+			: (row.check?.(res, body) ?? null);
+		if (problem !== null) red++;
+		console.log(
+			`${problem === null ? 'ok  ' : 'RED '} [${server}] ${row.name}${problem ? ` (${problem})` : ''}`,
+		);
+	}
+	return red;
+}
+
+async function drill(server: 'apache' | 'nginx'): Promise<number> {
+	const dir = mkdtempSync(join(tmpdir(), `dd_pubhost_${server}_`));
+	// Under the document root, at the media URL: the mapping a same-URL mount invites.
+	const root = join(dir, 'www', publicationHostMediaUrl());
+	mkdirSync(join(dir, 'nginx_tmp'), { recursive: true });
+	buildTree(root);
+	const port = freePort();
+	const include = join(dir, `pubhost.${server}.conf`);
+	const main = join(dir, `main.${server}.conf`);
+	let red = 0;
+	let proc: ReturnType<typeof Bun.spawn> | null = null;
+	try {
+		if (server === 'apache') {
+			const conf = buildPublicationHostApacheConf({ root, qualities: QUALITIES });
+			const ownsOverride = conf.includes('AllowOverride None');
+			if (!ownsOverride) red++;
+			console.log(
+				`${ownsOverride ? 'ok  ' : 'RED '} [apache] include declares its own AllowOverride None`,
+			);
+			writeFileSync(include, conf);
+			// Review Focus #5: without mod_rewrite the include must NOT pass the syntax check.
+			writeFileSync(main, apacheMainConf(dir, port, include, false));
+			const httpd = apacheBinary();
+			const norewrite = sh([httpd, '-t', '-f', main]);
+			// Refused FOR THAT REASON: any other configtest failure (a missing module .so,
+			// a bad path) would otherwise pass this row while proving nothing.
+			const bootRefused =
+				norewrite.code !== 0 && norewrite.out.includes("Invalid command 'RewriteEngine'");
+			if (!bootRefused) red++;
+			console.log(
+				`${bootRefused ? 'ok  ' : 'RED '} [apache] no mod_rewrite → configtest refuses${bootRefused ? '' : ` (exit ${norewrite.code}: ${norewrite.out.trim()})`}`,
+			);
+			writeFileSync(main, apacheMainConf(dir, port, include, true));
+			const t = sh([httpd, '-t', '-f', main]);
+			if (t.code !== 0) throw new Error(`${httpd} -t failed:\n${t.out}`);
+			proc = Bun.spawn([httpd, '-DFOREGROUND', '-f', main], { stdout: 'ignore', stderr: 'pipe' });
+		} else {
+			const map = join(dir, 'map.nginx.conf');
+			writeFileSync(map, buildNginxMap());
+			writeFileSync(include, buildPublicationHostNginxConf({ root, qualities: QUALITIES }));
+			writeFileSync(main, nginxMainConf(dir, port, include, map));
+			const t = sh(['nginx', '-e', join(dir, 'nginx_error.log'), '-t', '-p', dir, '-c', main]);
+			if (t.code !== 0) throw new Error(`nginx -t failed:\n${t.out}`);
+			proc = Bun.spawn(['nginx', '-e', join(dir, 'nginx_error.log'), '-p', dir, '-c', main], {
+				stdout: 'ignore',
+				stderr: 'pipe',
+			});
+		}
+		const base = `http://127.0.0.1:${port}`;
+		await waitUp(base);
+		red += await runRows(server, base, root);
+	} finally {
+		proc?.kill('SIGTERM');
+		await proc?.exited;
+		rmSync(dir, { recursive: true, force: true });
+	}
+	return red;
+}
+
+if (import.meta.main) {
+	// strict: an unknown flag or a value-less `--only` is refused, never silently ignored.
+	let only: string | undefined;
+	try {
+		only = parseArgs({ options: { only: { type: 'string' } }, strict: true }).values.only;
+	} catch (error) {
+		console.error(error instanceof Error ? error.message : String(error));
+		process.exit(1);
+	}
+	if (only !== undefined && only !== 'apache' && only !== 'nginx') {
+		console.error(`--only must be 'apache' or 'nginx' (got ${JSON.stringify(only)})`);
+		process.exit(1);
+	}
+	const servers = (['apache', 'nginx'] as const).filter((s) => only === undefined || s === only);
+	let red = 0;
+	if (servers.length === 0) {
+		console.error('no server selected — refusing a vacuous green');
+		process.exit(1);
+	}
+	// Binaries missing = RED, never a skip (the suite MariaDB's policy): a drill that
+	// skipped on a bare runner would report green while proving nothing.
+	const missing = servers.flatMap((s) => missingBinaries(s).map((bin) => `${s}: ${bin}`));
+	if (missing.length > 0) {
+		console.error(
+			`RED — missing on PATH: ${missing.join(', ')}. Needs Apache 2.4 + apxs and nginx with ngx_http_mp4_module (engineering/CI.md).`,
+		);
+		process.exit(1);
+	}
+	for (const server of servers) red += await drill(server);
+	console.log(red === 0 ? '\nALL GREEN' : `\n${red} RED row(s)`);
+	process.exit(red === 0 ? 0 : 1);
+}

@@ -75,7 +75,16 @@ export const MEDIA_AUTH_COOKIE = 'dedalo_media_auth';
  * whose inputs are otherwise unchanged. Forget it and installs keep the old rules
  * forever.
  */
-export const TEMPLATE_VERSION = 3;
+/** SEC-088: script extensions never served or executed under the media root. ONE list
+ * for the Apache FilesMatch (htaccessHardeningBlock) and nginx (nginxHardeningLocations). */
+export const MEDIA_SCRIPT_DENY_PATTERN = 'phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp';
+
+// 4 (F2): the working-file deny reached nginx (both profiles — it was Apache-only, so a
+// published record's .tmp/.csv was served by nginx) and became a case-insensitive 404
+// rewrite on Apache (was a case-SENSITIVE 403 FilesMatch: `.TMP` on APFS/SMB was served).
+// (F3, same unreleased series, no second bump): the Apache script deny is a 404 rewrite
+// too (was an unconditional 403 FilesMatch); the FilesMatch is now the no-mod_rewrite fallback.
+export const TEMPLATE_VERSION = 4;
 
 /** The effective access mode. 'off' is a GENERATOR-only value — never returned here. */
 export type MediaAccessMode = 'private' | 'publication' | false;
@@ -118,11 +127,11 @@ export const MEDIA_FILENAME_GRAMMAR =
 
 /**
  * WORKING-FILE suffixes under the media root — soft-deleted, temp, import and CSV
- * files the Apache hardening block denies to EVERYONE, logged in or not
- * (`<FilesMatch "\\.(deleted|temp|tmp|import|csv)$">`). ONE definition: the
- * generated rule interpolates it, and any engine door that hands out a media file
- * without the web server in the byte path (tool_export's media ZIP) refuses the
- * same names.
+ * files the hardening denies to EVERYONE, logged in or not, as a case-insensitive 404
+ * (htaccessHardeningBlock AND nginxHardeningLocations, so both profiles of both
+ * servers). ONE definition: the generated rules interpolate it, and any engine door
+ * that hands out a media file without the web server in the byte path (tool_export's
+ * media ZIP) refuses the same names.
  */
 export const MEDIA_WORKING_FILE_EXTENSIONS = ['deleted', 'temp', 'tmp', 'import', 'csv'] as const;
 
@@ -447,9 +456,20 @@ export function masterQualities(): ReadonlySet<string> {
 	]);
 }
 
-/** Whether a BARE quality tier name is an archival master. */
+/**
+ * masterQualities() LOWERCASED — the set every master check compares against.
+ * Case-insensitive on purpose: on APFS/SMB/NTFS `image/ORIGINAL/` IS
+ * `image/original/`, so a case-sensitive compare let a configured
+ * `image/ORIGINAL` through the filter and serve the masters anonymously.
+ * Callers lowercase the probed segment too (both sides, never one).
+ */
+function masterQualitiesFolded(): ReadonlySet<string> {
+	return new Set([...masterQualities()].map((quality) => quality.toLowerCase()));
+}
+
+/** Whether a BARE quality tier name is an archival master (any letter case). */
 export function isMasterQuality(quality: string): boolean {
-	return masterQualities().has(quality.replace(/^\/+|\/+$/g, ''));
+	return masterQualitiesFolded().has(quality.replace(/^\/+|\/+$/g, '').toLowerCase());
 }
 
 /**
@@ -458,7 +478,7 @@ export function isMasterQuality(quality: string): boolean {
  * directly testable) rather than reachable only through the frozen config catalog.
  */
 export function filterPublicQualities(configured: readonly string[]): string[] {
-	const forbidden = masterQualities();
+	const forbidden = masterQualitiesFolded();
 
 	const qualities: string[] = [];
 	for (const raw of configured) {
@@ -468,7 +488,7 @@ export function filterPublicQualities(configured: readonly string[]): string[] {
 			continue;
 		}
 		const segments = quality.split('/');
-		if (segments.some((segment) => forbidden.has(segment))) {
+		if (segments.some((segment) => forbidden.has(segment.toLowerCase()))) {
 			console.error(
 				`[media_protection] refused MASTER quality folder in the public list: ${quality}`,
 			);
@@ -575,18 +595,31 @@ function getNginxMapConfigHash(): string {
  * operator loses the ability to download a curator's raw SVG until they enable
  * mod_headers; they never lose the guarantee.
  */
-function htaccessHardeningBlock(): string {
+export function htaccessHardeningBlock(): string {
 	const quarantine = SVG_QUARANTINE_EXTENSIONS.join('|');
 	const activeDocs = MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|');
+	const working = MEDIA_WORKING_FILE_EXTENSIONS.join('|');
 	const envelope = imageEnvelopePcre();
 	return [
 		'# SEC-088: block script execution inside the media root.',
 		'<FilesMatch "(?i)\\.(phps?|phtml|phar|pht)$">',
 		'\tSetHandler none',
 		'</FilesMatch>',
-		'<FilesMatch "(?i)\\.(phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$">',
-		'\tRequire all denied',
-		'</FilesMatch>',
+		// F3: the script population is DENIED as 404, never 403 (§2) — a rewrite, for the
+		// same measured reason as the active-document deny below (authz answers before the
+		// per-dir rewrite, so a `Require all denied` here 403s and confirms the upload).
+		// `SetHandler none` above stays: denial and non-execution are separate guarantees.
+		'# Script uploads are denied as 404 (a 403 would confirm the file exists).',
+		'<IfModule mod_rewrite.c>',
+		'RewriteEngine On',
+		`RewriteRule (?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ - [R=404,L]`,
+		'</IfModule>',
+		'# FAIL CLOSED without mod_rewrite: refused (403) rather than served.',
+		'<IfModule !mod_rewrite.c>',
+		`\t<FilesMatch "(?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$">`,
+		'\t\tRequire all denied',
+		'\t</FilesMatch>',
+		'</IfModule>',
 		// MEDIA-03: active-document extensions no media model accepts are never served.
 		//
 		// A REWRITE, not `Require all denied`, and the difference was measured rather
@@ -630,9 +663,17 @@ function htaccessHardeningBlock(): string {
 		'\t</If>',
 		'</IfModule>',
 		'# Protect working files from prying eyes.',
-		`<FilesMatch "\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$">`,
-		'\tRequire all denied',
-		'</FilesMatch>',
+		'# 404 (never 403) and case-insensitive: on an APFS/SMB mount `.TMP` opens `.tmp`.',
+		'<IfModule mod_rewrite.c>',
+		'RewriteEngine On',
+		`RewriteRule (?i)\\.(${working})$ - [R=404,L]`,
+		'</IfModule>',
+		'# FAIL CLOSED without mod_rewrite: refused (403) rather than served.',
+		'<IfModule !mod_rewrite.c>',
+		`\t<FilesMatch "(?i)\\.(${working})$">`,
+		'\t\tRequire all denied',
+		'\t</FilesMatch>',
+		'</IfModule>',
 		'# The marker store is NEVER served, in any mode: auth/ filenames are live media',
 		'# credentials and pub/ filenames enumerate every published record.',
 		'<IfModule mod_rewrite.c>',
@@ -643,6 +684,26 @@ function htaccessHardeningBlock(): string {
 		'AddHandler default-handler .php .phtml .phar .pht',
 		'',
 	].join('\n');
+}
+
+/**
+ * Rule B as Apache lines: the publication-marker RewriteCond and the RewriteRule it
+ * belongs to. Shared by the work profile (buildHtaccess) and the publication-host
+ * profile (publication_host_rules.ts), so the pattern the two gates stat can never drift.
+ *
+ * (!) $1_$2, NOT %1_%2 — the captures of the RewriteRule that FOLLOWS the condition.
+ * The two lines must stay adjacent.
+ */
+export function ruleBApacheLines(root: string, qualities: readonly string[]): string[] {
+	const alternation = qualities.map(escapeRegexLiteral).join('|');
+	return [
+		'',
+		'# 2. Rule B: public quality folders, gated by the publication marker the',
+		'#    diffusion engine maintains. The file name identifies the record:',
+		'#    ...{component_tipo}_{section_tipo}_{section_id}[_lg-xxx].ext',
+		`RewriteCond "${root}/.publication/pub/$1_$2" -f`,
+		`RewriteRule ^(?:${alternation})/(?:.+/)?${MEDIA_FILENAME_GRAMMAR} - [L]`,
+	];
 }
 
 /**
@@ -699,16 +760,7 @@ export function buildHtaccess(
 	);
 
 	if (mode === 'publication' && qualities.length > 0) {
-		const alternation = qualities.map(escapeRegexLiteral).join('|');
-		lines.push(
-			'',
-			'# 2. Rule B: public quality folders, gated by the publication marker the',
-			'#    diffusion engine maintains. The file name identifies the record:',
-			'#    ...{component_tipo}_{section_tipo}_{section_id}[_lg-xxx].ext',
-			// (!) $1_$2, NOT %1_%2 — see the docblock.
-			`RewriteCond "${root}/.publication/pub/$1_$2" -f`,
-			`RewriteRule ^(?:${alternation})/(?:.+/)?${MEDIA_FILENAME_GRAMMAR} - [L]`,
-		);
+		lines.push(...ruleBApacheLines(root, qualities));
 	}
 
 	if (addons.length > 0) {
@@ -773,28 +825,7 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 		'#  - Behind a CDN, PURGE the record media paths on unpublish (especially .vtt',
 		'#    subtitles): the origin denies immediately, downstream caches do not.',
 		'',
-		'# 0. The marker store itself is never served. `^~` beats every regex below.',
-		`location ^~ ${url}/.publication/ { deny all; return 404; }`,
-		'',
-		// SEC-088. Emitted in EVERY mode, including 'off' — this is NOT part of the access
-		// gate. The media root is full of user-uploaded files; a server with PHP-FPM wired
-		// would otherwise happily execute an uploaded .php. Regex locations match in order,
-		// so this must precede rule B.
-		'# SEC-088: never serve or execute scripts under the media root (uploaded files!).',
-		`location ~* ^${escapeRegexLiteral(url)}/.+\\.(phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ {`,
-		'\tdeny all;',
-		'\treturn 404;',
-		'}',
-		'',
-		// The Apache twin of this lives in htaccessHardeningBlock(); the three-surface
-		// lockstep gate compares them, so a deny added to one and forgotten in the other
-		// is red rather than a quiet asymmetry between two installs of the same version.
-		'# MEDIA-03: active-document extensions no media model accepts are never served.',
-		`location ~* ^${escapeRegexLiteral(url)}/.+\\.(${MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|')})$ {`,
-		'\tdeny all;',
-		'\treturn 404;',
-		'}',
-		'',
+		...nginxHardeningLocations(url),
 	];
 
 	if (mode === 'off') {
@@ -852,6 +883,49 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 }
 
 /**
+ * The always-on nginx hardening locations: rule 0 (marker store), SEC-088 (scripts),
+ * MEDIA-03 (active documents), working files. ONE builder for BOTH profiles — the work conf
+ * (buildNginxConf) and the publication-host include (publication_host_rules.ts) — so an
+ * extension added here reaches both; the tripwire pins both outputs to this function.
+ * Regex locations match in order, so these must precede every byte-serving location.
+ */
+export function nginxHardeningLocations(url: string): string[] {
+	const escaped = escapeRegexLiteral(url);
+	return [
+		'# 0. The marker store itself is never served. `^~` beats every regex below.',
+		`location ^~ ${url}/.publication/ { deny all; return 404; }`,
+		'',
+		// SEC-088. Emitted in EVERY mode, including 'off' — this is NOT part of the access
+		// gate. The media root is full of user-uploaded files; a server with PHP-FPM wired
+		// would otherwise happily execute an uploaded .php. Regex locations match in order,
+		// so this must precede rule B.
+		'# SEC-088: never serve or execute scripts under the media root (uploaded files!).',
+		`location ~* ^${escaped}/.+\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ {`,
+		'\tdeny all;',
+		'\treturn 404;',
+		'}',
+		'',
+		// The Apache twin of this lives in htaccessHardeningBlock(); the three-surface
+		// lockstep gate compares them, so a deny added to one and forgotten in the other
+		// is red rather than a quiet asymmetry between two installs of the same version.
+		'# MEDIA-03: active-document extensions no media model accepts are never served.',
+		`location ~* ^${escaped}/.+\\.(${MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|')})$ {`,
+		'\tdeny all;',
+		'\treturn 404;',
+		'}',
+		'',
+		// Apache twin: the working-file rewrite in htaccessHardeningBlock(). Without it a
+		// published record's grammar-valid `.tmp`/`.csv` passed Rule B and was served.
+		'# Working files (soft-deleted, temp, import, CSV) are never served, to anyone.',
+		`location ~* ^${escaped}/.+\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$ {`,
+		'\tdeny all;',
+		'\treturn 404;',
+		'}',
+		'',
+	];
+}
+
+/**
  * The filename grammar with NAMED captures, for nginx.
  *
  * Named captures are MANDATORY here, not cosmetic: the `if (-f …)` directives inside the
@@ -859,7 +933,7 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
  * built on $1/$2 would silently stat `pub/_` for every request and deny everything.
  * Derived from the ONE grammar constant so the two can never drift.
  */
-function nginxNamedGrammar(): string {
+export function nginxNamedGrammar(): string {
 	return MEDIA_FILENAME_GRAMMAR.replace('([a-z0-9]+)', '(?<dd_s>[a-z0-9]+)').replace(
 		'([0-9]+)',
 		'(?<dd_i>[0-9]+)',
@@ -921,7 +995,7 @@ export function buildNginxMap(): string {
  * declares any add_header of its own, so there is no server-level shortcut here; each
  * location must carry the full set or it silently serves bare.
  */
-function nginxSvgHeaderLines(): string[] {
+export function nginxSvgHeaderLines(): string[] {
 	return [
 		`\tadd_header X-Content-Type-Options "${MEDIA_NOSNIFF}" always;`,
 		'\tadd_header Content-Disposition $dedalo_svg_disposition always;',
@@ -931,7 +1005,7 @@ function nginxSvgHeaderLines(): string[] {
 
 /** Escape a literal for embedding in an Apache/nginx regex (quality folders carry '.'
  * and '/', e.g. 'image/1.5MB' — an unescaped '.' would match any character). */
-function escapeRegexLiteral(value: string): string {
+export function escapeRegexLiteral(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

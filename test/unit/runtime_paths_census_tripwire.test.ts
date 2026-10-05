@@ -37,12 +37,15 @@ import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { Glob } from 'bun';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
+import { privateDir } from '../../src/config/env.ts';
 import {
 	RUNTIME_PATH_BOOTSTRAP_KEYS,
 	RUNTIME_PATH_CENSUS,
 	RUNTIME_PATH_SCAN_EXEMPTIONS,
 	runtimePathsInsideTree,
 } from '../../src/core/install/runtime_paths.ts';
+import { registryPath } from '../../src/core/publication_host/registry.ts';
+import { secretsRoot } from '../../src/core/publication_host/secrets.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -140,6 +143,16 @@ describe('runtime_paths_census_tripwire', () => {
 					'so an operator could never follow the updater refusal that names it',
 			).toBe(true);
 		}
+	});
+
+	test('the publication-host stores are censused through their own resolvers (phase 3)', () => {
+		const resolved = new Map(RUNTIME_PATH_CENSUS.map((entry) => [entry.id, entry.resolve()]));
+		expect(resolved.get('publication_hosts_registry')).toBe(
+			join(privateDir, 'publication_hosts.json'),
+		);
+		expect(resolved.get('publication_hosts_secrets')).toBe(join(privateDir, 'publication_hosts'));
+		expect(resolved.get('publication_hosts_registry')).toBe(registryPath());
+		expect(resolved.get('publication_hosts_secrets')).toBe(secretsRoot());
 	});
 
 	// -----------------------------------------------------------------------

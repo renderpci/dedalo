@@ -39,6 +39,7 @@ import {
 	upsertEmbeddingRows,
 } from '../../src/ai/rag/vector_store.ts';
 import { config } from '../../src/config/config.ts';
+import { privateDir } from '../../src/config/env.ts';
 import { widget as reconcileStatusWidget } from '../../src/core/area_maintenance/widgets/reconcile_status.ts';
 import {
 	ddOntologyConstraintStates,
@@ -49,22 +50,32 @@ import {
 import { insertMatrixRecordWithCounter } from '../../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { buildMediaLocation } from '../../src/core/media/path.ts';
+import { getPublicQualities } from '../../src/core/media/protection.ts';
 import { resolveMediaToolContext } from '../../src/core/media/tool_support.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { ensureHierarchy } from '../../src/core/ontology/hierarchy_state.ts';
 import { deleteOntologyByTld } from '../../src/core/ontology/ontology_delete.ts';
 import { rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { registryPath, updateRegistry } from '../../src/core/publication_host/registry.ts';
 import { registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
 import {
+	lastReconcileRun,
+	listReconciles,
 	REGISTERED_NAMES,
 	type ReconcileReport,
 	reconcileGauge,
 	runReconcile,
 } from '../../src/core/reconcile/registry.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
-import type { Principal } from '../../src/core/security/permissions.ts';
+import { type Principal, SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import {
+	type CopyMockAgent,
+	startCopyMockAgent,
+	unregisterCopyMockHost,
+	useScratchMediaCopyStores,
+} from '../helpers/media_copy_mock_agent.ts';
 import {
 	dropObserverTerm,
 	ensureObserverTerm,
@@ -101,6 +112,20 @@ const HIER_ID = 900031;
 const USER_ID = -1;
 
 const RAG_MODEL = `zzrcmodel${process.pid}`;
+/** The scratch publication host the publication_apis planter pairs (never dialled). */
+const PUBHOST = 'zzrc_pubhost';
+/**
+ * The publication-host stores this file reads and writes: ONE declared scratch base for
+ * the WHOLE file (armed in beforeAll) — registry, secrets, runtime, plus the media-copy
+ * sha cache — so the clean publication_apis / media_copy dry runs never read — nor dial —
+ * the installation's paired hosts in `<private>/publication_hosts.json`.
+ */
+let pubhostBase: { base: string; dispose: () => void } | null = null;
+/** The scratch copy host the media_copy planter starts (a stateful loopback mock agent). */
+const COPY_HOST = 'zzrc_copy';
+/** publication_probe's planted host (phase 6): a configured, unprovable gate. */
+const PROBE_HOST = 'zzrc_probe';
+let copyAgent: CopyMockAgent | null = null;
 
 /** Scratch files planted in the SUITE media root, removed by path. */
 const planted: string[] = [];
@@ -205,6 +230,7 @@ async function sweepObserverScratch(): Promise<void> {
 }
 
 beforeAll(async () => {
+	pubhostBase = useScratchMediaCopyStores();
 	await registerAllReconciles();
 	// The situation is BUILT, not inherited: a freshly rebuilt suite media root
 	// (`bun run test:db:setup`) holds only its marker, and files_info's sweep
@@ -282,6 +308,8 @@ beforeAll(async () => {
 }, 120000);
 
 afterAll(async () => {
+	pubhostBase?.dispose();
+	pubhostBase = null;
 	await sweepObserverScratch();
 	await dropObserverTerm();
 	await deleteRagRecord({ sectionTipo: RAG_SECTION, sectionId: 7 }).catch(() => {});
@@ -521,6 +549,98 @@ const PLANTERS: Record<string, Planter> = {
 			});
 		},
 	},
+	publication_apis: {
+		async plant() {
+			// A paired host whose lockstep the running tree cannot prove. The suite runs a
+			// dev checkout (no install stamp → no verified release, refused before any hash),
+			// so both APIs count as drift WITHOUT dialling the socket; an installed tree
+			// would instead fail both on the unreachable socket — 2 either way. The
+			// registry must be the test-isolated one, never the installation's.
+			expect(registryPath()).not.toBe(join(privateDir, 'publication_hosts.json'));
+			expect(registryPath().startsWith(pubhostBase?.base ?? '<unarmed>')).toBe(true);
+			updateRegistry((current) => ({
+				...current,
+				hosts: [
+					...current.hosts,
+					{
+						name: PUBHOST,
+						instance: 'test',
+						fingerprint: '0'.repeat(64),
+						address: { kind: 'unix', socket: `/nonexistent/${PUBHOST}.sock` },
+						public_url: null,
+						qualities: null,
+						probe: { published: null, unpublished: null },
+						paired_at: '2026-10-03T00:00:00.000Z',
+					},
+				],
+			}));
+			return 2;
+		},
+		async unplant() {
+			updateRegistry((current) => ({
+				...current,
+				hosts: current.hosts.filter((host) => host.name !== PUBHOST),
+			}));
+		},
+	},
+	media_copy: {
+		async plant() {
+			// A copy-mode host still holding a file (and its mirrored marker) the work host
+			// does not publish — an unpublish whose deletion never reached the agent: one
+			// deletion + one marker withdrawal (any file the suite media root publishes is a
+			// planned put on top).
+			const quality = getPublicQualities()[0] as string;
+			copyAgent = await startCopyMockAgent(COPY_HOST, 'copy', {
+				entries: {
+					[`${quality}/0/${IMAGE}_${MEDIA_SECTION}_999995.jpg`]: {
+						size: 1,
+						sha256: '0'.repeat(64),
+					},
+				},
+				markers: [`${MEDIA_SECTION}_999995`],
+			});
+			return 2;
+		},
+		async unplant() {
+			await copyAgent?.stop();
+			await unregisterCopyMockHost(COPY_HOST);
+			copyAgent = null;
+		},
+	},
+	publication_probe: {
+		scope: [PROBE_HOST],
+		async plant() {
+			// A configured host whose gate cannot be proven: its probe paths name a quality
+			// that is not public, and its public URL is a private literal — the probe is
+			// `unknown` before any request leaves (validation, then the public door's
+			// address check), so drift 1. The per-name test runs DRY: nothing is written
+			// to the runtime file. Other planters' hosts are preserved.
+			expect(registryPath().startsWith(pubhostBase?.base ?? '<unarmed>')).toBe(true);
+			updateRegistry((current) => ({
+				...current,
+				hosts: [
+					...current.hosts.filter((host) => host.name !== PROBE_HOST),
+					{
+						name: PROBE_HOST,
+						instance: 'test',
+						fingerprint: 'b'.repeat(64),
+						address: { kind: 'unix', socket: `/nonexistent/${PROBE_HOST}.sock` },
+						public_url: 'https://127.0.0.1',
+						qualities: null,
+						probe: { published: 'image/zz/a_test3_1.jpg', unpublished: 'image/zz/a_test3_2.jpg' },
+						paired_at: '2026-10-03T00:00:00.000Z',
+					},
+				],
+			}));
+			return 1;
+		},
+		async unplant() {
+			updateRegistry((current) => ({
+				...current,
+				hosts: current.hosts.filter((host) => host.name !== PROBE_HOST),
+			}));
+		},
+	},
 	hierarchy: {
 		scope: [String(HIER_ID)],
 		async plant() {
@@ -616,6 +736,39 @@ describe('reconcile registry — every definition measures its pair (S-10)', () 
 			{ isGlobalAdmin: true } as unknown as Principal,
 		);
 		expect(unknown?.data).toBe(false);
+	});
+
+	test('applyRootOnly (media_copy, E10): the widget door refuses a non-root APPLY before running; dry stays admin-level', async () => {
+		const admin = { isGlobalAdmin: true, userId: 7 } as unknown as Principal;
+		const before = lastReconcileRun('media_copy');
+		await expect(
+			reconcileStatusWidget.apiActions?.run_reconcile?.(
+				{ name: 'media_copy', apply: true, scope: ['zz_root_only_nohost'] },
+				admin,
+			) as Promise<unknown>,
+		).rejects.toMatchObject({ code: 'perm.denied' });
+		expect(lastReconcileRun('media_copy')).toBe(before); // never reached the registry
+		// a DRY run by the same admin passes the gate (it reaches the registry)
+		await reconcileStatusWidget.apiActions?.run_reconcile?.(
+			{ name: 'media_copy', scope: ['zz_root_only_nohost'] },
+			admin,
+		);
+		expect(lastReconcileRun('media_copy')).toMatchObject({ apply: false });
+		// root passes the gate: the run reaches the registry (the unknown scoped host is then
+		// the definition's own refusal, recorded as the run's error)
+		await reconcileStatusWidget.apiActions?.run_reconcile?.(
+			{ name: 'media_copy', apply: true, scope: ['zz_root_only_nohost'] },
+			{ isGlobalAdmin: true, userId: SUPERUSER_ID } as unknown as Principal,
+		);
+		expect(lastReconcileRun('media_copy')).toMatchObject({
+			apply: true,
+			error: 'resource.not_found',
+		});
+		// the facet is declared exactly where the apply touches a public machine
+		const rootOnly = listReconciles()
+			.filter((definition) => definition.applyRootOnly !== undefined)
+			.map((definition) => definition.name);
+		expect(rootOnly).toEqual(['media_copy']);
 	});
 
 	test('the widget door is DRY unless apply is the boolean true: a planted drift is reported, not repaired', async () => {

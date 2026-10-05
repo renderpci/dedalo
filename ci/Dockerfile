@@ -34,6 +34,12 @@
 #             Same distro and packages as the product image (../Dockerfile), so a
 #             media gate measures what ships.
 #   mariadb-server + mariadb-client — the diffusion tier's MariaDB target.
+#   apache2 + apache2-dev (apxs) + nginx (mp4 module) — the publication-host media
+#             drill (`bun run test:media:pubhost`, instance tier) boots both live.
+#   sudo — for its parser only (cvtsudoers): publication/host_agent's sudoers gate
+#             validates the rendered rule with the real grammar. setuid bit stripped,
+#             and the binary diverted: /usr/bin/sudo and /usr/bin/systemctl are the
+#             EXEC SEAM's dispatchers (section below), never the real programs.
 #   chromium — the browser the client suite (scripts/client_test_runner.ts) drives.
 #             NOT google-chrome: Google publishes no linux/arm64 build, and this
 #             image is multi-arch so an Apple-Silicon Mac runs it natively. One
@@ -44,6 +50,9 @@
 #             `bun install` fetching a second one.
 #   git, rsync, unzip, zip, xz, curl, procps — the tier scripts, the code-update
 #             drills (git clone + zip release) and the backup gates.
+#   openssl — the publication-host agent's mTLS boot gate (publication/host_agent
+#             tests/boot_mtls.test.ts issues its scratch CA with the CLI) and the
+#             agent's live drill (instance tier).
 #
 # BASE: debian:trixie-slim, DIGEST-pinned — the distro of the product image
 # (oven/bun:<v>-debian is trixie), so CI and production share a package set.
@@ -127,6 +136,42 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends mariadb-server mariadb-client; \
     rm -rf /var/lib/apt/lists/*
 
+# --- web servers (publication-host media drill) ---------------------------------
+# scripts/media_publication_host_drill.ts boots a REAL Apache and nginx (instance tier).
+# apache2-dev ships apxs, through which the drill resolves the binary (`apache2` here,
+# `httpd` elsewhere) and the module dir; Debian's nginx is built --with-http_mp4_module.
+# Neither is started as a service: the drill writes its own configs and runs both as
+# the job's uid on 127.0.0.1.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends apache2 apache2-dev nginx; \
+    rm -rf /var/lib/apt/lists/*
+
+# --- PHP CLI (publication-host engine drill) -----------------------------------
+# scripts/publication_host_engine_drill.ts pushes a REAL Publication API v1 release through
+# the engine's lockstep reconciler; the agent runs `php -l` on every .php before it
+# promotes one. Lint only: no SAPI, no web-server module — the CLI binary is all the
+# drill's `php` stand-in execs.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends php-cli; \
+    rm -rf /var/lib/apt/lists/*
+
+# --- sudo (sudo's parser: the publication-host agent's sudoers gate) -------------
+# publication/host_agent/tests/provision_render_grants.test.ts parses the rendered sudoers
+# rule with `cvtsudoers` (hermetic daemon gate) — sudo's own grammar, and unlike `visudo`
+# it does not refuse the job's BARE uid 1001 (no passwd entry). sudo itself is never
+# configured nor invoked in this image. Its SETUID BIT IS STRIPPED (dpkg-statoverride, so
+# a package upgrade keeps it stripped): the parser needs none, and a setuid-root binary is
+# local-escalation surface for uid 1001 (cf. CVE-2025-32463) — without the bit, uid 1001
+# truly gains nothing. The `test ! -u` below fails the build if the override ever lapses.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends sudo; \
+    dpkg-statoverride --update --add root root 0755 /usr/bin/sudo; \
+    test ! -u /usr/bin/sudo; \
+    rm -rf /var/lib/apt/lists/*
+
 # --- browser (client suite) -----------------------------------------------------
 # Fonts explicitly: --no-install-recommends drops them, and a font-less Chromium
 # lays text out with nothing — a layout-sensitive suite would measure a different page.
@@ -164,6 +209,38 @@ RUN set -eux; \
     rm -rf "$asset" "$asset.zip" SHASUMS256.txt /tmp/.bun-version; \
     test "$(bun --version)" = "$version"
 
+# --- exec seam (the publication-host agent's live drill) -------------------------
+# The agent's src/exec.ts spawns ABSOLUTE binaries (/usr/bin/sudo, /usr/bin/systemctl —
+# its SUDO / SYSTEMCTL; never a PATH lookup), so the instance tier's drill
+# (scripts/publication_host_agent_drill.ts) can only observe and steer the agent's
+# privileged commands by putting stand-ins AT those paths, with exec.ts unmodified. This
+# disposable image is where that is allowed: each path becomes a DISPATCHER that runs
+# <seam dir>/<name> when the drill has written one and otherwise fails (exit 1, saying
+# so). The real sudo is diverted to /usr/bin/sudo.distrib (setuid still stripped, and
+# re-checked here), and so is systemd's systemctl, which a dependency pulls in (nothing
+# here runs systemd). The seam dir is root:root 0770: the job's bare uid 1001 runs with gid
+# 0 on every host, so it may arm the seam, and nothing it can arm is privileged.
+# Pinned to exec.ts's constants by test/unit/publication_host_agent_drill_kit.test.ts.
+RUN set -eux; \
+    for bin in /usr/bin/sudo /usr/bin/systemctl; do \
+      dpkg-divert --local --rename --divert "$bin.distrib" --add "$bin"; \
+    done; \
+    dpkg-statoverride --update --add root root 0755 /usr/bin/sudo.distrib; \
+    test ! -u /usr/bin/sudo.distrib; \
+    install -d -o root -g root -m 0770 /opt/dedalo-ci/exec-seam; \
+    for bin in /usr/bin/sudo /usr/bin/systemctl; do \
+      name="${bin##*/}"; \
+      printf '%s\n' '#!/bin/sh' \
+        "# DEDALO CI EXEC SEAM DISPATCHER for $bin (ci/Dockerfile, exec seam)." \
+        "seam=/opt/dedalo-ci/exec-seam/$name" \
+        'if [ -x "$seam" ]; then exec "$seam" "$@"; fi' \
+        "echo \"$name: not available in the CI image (the publication-host agent drill's exec seam is not armed)\" >&2" \
+        'exit 1' > "$bin"; \
+      chmod 0755 "$bin"; \
+    done; \
+    ! /usr/bin/sudo -n true 2>/dev/null; \
+    ! /usr/bin/systemctl --version 2>/dev/null
+
 # --- fingerprint + version record (LAST — see header) ---------------------------
 ARG DEDALO_CI_FINGERPRINT
 COPY ci/Dockerfile .bun-version /usr/local/share/dedalo-ci/
@@ -186,12 +263,17 @@ RUN set -eu; \
       echo "ocrmypdf $(ocrmypdf --version)"; \
       echo "$(tesseract --version 2>&1 | head -n1)"; \
       echo "$(mariadb --version)"; \
+      echo "$(apache2 -v | head -n1)"; \
+      echo "$(nginx -v 2>&1)"; \
+      echo "$(php -v | head -n1)"; \
       echo "$(git --version)"; \
+      echo "$(openssl version)"; \
+      echo "$(cvtsudoers -V | head -n1)"; \
     } > /etc/dedalo-ci-versions; \
     cat /etc/dedalo-ci-versions
 LABEL org.dedalo.ci.fingerprint="${DEDALO_CI_FINGERPRINT}" \
       org.opencontainers.image.source="https://github.com/renderpci/dedalo" \
-      org.opencontainers.image.description="Dédalo v7 CI toolchain: bun (.bun-version), pg18 client, media tools, MariaDB, Chromium"
+      org.opencontainers.image.description="Dédalo v7 CI toolchain: bun (.bun-version), pg18 client, media tools, MariaDB, Apache, nginx, Chromium"
 ENV DEDALO_CI_IMAGE=1
 
 CMD ["bash"]

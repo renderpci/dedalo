@@ -21,7 +21,7 @@
  * catalog (the `reconcile_status` widget with its `run_reconcile` action, the
  * `scripts/reconcile.ts` shell, the server boot + SIGTERM stop of the
  * scheduler); the gauge lists every name; every `sources` path exists; and the
- * media_index boot apply is the ONLY auto-apply, with a reason.
+ * scheduled applies are exactly media_index, media_copy and publication_probe, each with a reason.
  *
  * Hermetic: the catalog is imported (module wiring only, no query is issued);
  * the behavioural half is reconcile_registry_native.test.ts.
@@ -32,6 +32,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { ALL_WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
 import { loadAllReconciles, registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
+import { POST_RESTORE_PLAN } from '../../src/core/reconcile/post_restore.ts';
 import {
 	REGISTERED_NAMES,
 	type ReconcileDefinition,
@@ -210,6 +211,9 @@ describe('reconcile registry completeness (S-10)', () => {
 			ontology_identifiers: 'src/core/ontology/identifier_grammar.ts',
 			hierarchy: 'src/core/ontology/hierarchy_state.ts',
 			public_tier: 'src/diffusion/api/reconcile.ts',
+			publication_apis: 'src/core/publication_host/api_reconcile.ts',
+			media_copy: 'src/diffusion/api/reconcile.ts',
+			publication_probe: 'src/core/publication_host/probe.ts',
 		};
 		for (const definition of REGISTERED) {
 			const owner = owners[definition.name];
@@ -220,9 +224,17 @@ describe('reconcile registry completeness (S-10)', () => {
 		}
 	});
 
-	test('a scheduled APPLY is the exception with a reason — today only media_index (the pub/ derivation)', () => {
+	test('a scheduled APPLY is the exception with a reason — media_index (the pub/ derivation), media_copy (pub/ ∩ public files onto copy hosts), publication_probe (records an observation, repairs nothing)', () => {
 		const auto = REGISTERED.filter((definition) => definition.autoApply !== undefined);
-		expect(auto.map((definition) => definition.name)).toEqual(['media_index']);
+		expect(auto.map((definition) => definition.name)).toEqual([
+			'media_index',
+			'media_copy',
+			'publication_probe',
+		]);
+		expect(
+			(REGISTERED.find((definition) => definition.name === 'media_copy') as ReconcileDefinition)
+				.schedule,
+		).toEqual({ everyMs: expect.any(Number) });
 		for (const definition of auto) {
 			expect(definition.schedule).not.toBe('operator');
 			expect((definition.autoApply as { reason: string }).reason.length).toBeGreaterThan(40);
@@ -240,8 +252,40 @@ describe('reconcile registry completeness (S-10)', () => {
 				'operator',
 			);
 		}
+		// Publication API lockstep (phase 4): an INTERVAL dry check — code is never
+		// pushed by a timer (its apply is refused at the registry, perm.denied).
+		const lockstep = REGISTERED.find((d) => d.name === 'publication_apis') as ReconcileDefinition;
+		expect(typeof lockstep.schedule).toBe('object');
+		expect(lockstep.autoApply).toBeUndefined();
+		// An operator APPLY that touches a public machine is root-only at the widget door
+		// (E10): media_copy alone declares it, with a reason; reconcile_status enforces it.
+		const rootOnly = REGISTERED.filter((d) => d.applyRootOnly !== undefined);
+		expect(rootOnly.map((d) => d.name)).toEqual(['media_copy']);
+		for (const definition of rootOnly) {
+			expect((definition.applyRootOnly as { reason: string }).reason.length).toBeGreaterThan(40);
+		}
+		const widgetSource = readFileSync(
+			join(ROOT, 'src/core/area_maintenance/widgets/reconcile_status.ts'),
+			'utf8',
+		);
+		expect(widgetSource).toContain('requireApplyPrincipal(name, apply, principal)');
 	});
 
+	test('publication_probe is an INTERVAL observation whose scheduled apply only records it (phase 6, P3)', () => {
+		const probe = REGISTERED.find((definition) => definition.name === 'publication_probe');
+		expect(probe, 'publication_probe must be registered').toBeDefined();
+		expect(typeof (probe as ReconcileDefinition).schedule).toBe('object');
+		expect((probe as ReconcileDefinition).autoApply?.reason).toContain('runtime.probe');
+		expect((probe as ReconcileDefinition).applyRootOnly).toBeUndefined();
+		// The dry contract (ReconcileRunOptions: write nothing) is asserted behaviourally in
+		// publication_host_probe_native.test.ts; here: the dry path never calls the writer.
+		const source = stripComments(
+			readFileSync(join(ROOT, 'src/core/publication_host/probe.ts'), 'utf8'),
+		);
+		expect(source).toContain(
+			'return apply ? (host) => probeAndRecord(host, {}) : (host) => probeHostRecord(host);',
+		);
+	});
 	test('the gauge publishes every registered name with the wire keys the ops doc names', () => {
 		const gauge = reconcileGauge() as Record<string, Record<string, unknown>>;
 		expect(Object.keys(gauge)).toEqual([...REGISTERED_NAMES]);
@@ -256,6 +300,40 @@ describe('reconcile registry completeness (S-10)', () => {
 					'last_run_at',
 					'schedule',
 				].sort(),
+			);
+		}
+	});
+});
+
+describe('the ops doc (PRODUCTION.md §6.5) names what the registry runs', () => {
+	const doc = readFileSync(join(ROOT, 'engineering/PRODUCTION.md'), 'utf8');
+	test('every registered name has a row in the registered-set table', () => {
+		for (const name of REGISTERED_NAMES) {
+			expect(doc, `${name}: add its §6.5 table row`).toMatch(
+				new RegExp(`^\\| \`${name}\` \\|`, 'm'),
+			);
+		}
+	});
+
+	test('the scheduled-apply sentence names exactly the autoApply set', () => {
+		const sentence =
+			/applies only when its definition says `autoApply` WITH a reason — today([\s\S]*?);/.exec(
+				doc,
+			);
+		expect(sentence).not.toBeNull();
+		const named = [...(sentence?.[1] ?? '').matchAll(/`([a-z_]+)`/g)].map((m) => m[1]);
+		const auto = REGISTERED.filter((d) => d.autoApply !== undefined).map((d) => d.name);
+		expect(
+			named.filter((name) => (REGISTERED_NAMES as readonly string[]).includes(name as string)),
+		).toEqual(auto);
+	});
+
+	test('the post-restore paragraph names every DRY plan entry', () => {
+		const start = doc.indexOf('**After a data restore**');
+		const paragraph = doc.slice(start, doc.indexOf('\n\n', start));
+		for (const step of POST_RESTORE_PLAN) {
+			expect(paragraph, `${step.name}: name it in the post-restore paragraph`).toContain(
+				`\`${step.name}\``,
 			);
 		}
 	});

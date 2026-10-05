@@ -130,6 +130,9 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// code-server half split out of update_code, catalogued only on a code
 		// server or the development entity. Asserted natively by
 		// test/unit/serve_code_widget_native.test.ts.
+		// publication_hosts (WC-2026-10-03-publication-hosts-widget) is TS-ONLY: the
+		// publication-host registry and agent channel have no PHP peer. Asserted
+		// natively by test/unit/publication_host_widget_native.test.ts.
 		const TS_ONLY_WIDGET_IDS = new Set([
 			'error_reports',
 			'site_builder_status',
@@ -137,6 +140,7 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 			'reconcile_status',
 			'serve_ontology',
 			'serve_code',
+			'publication_hosts',
 		]);
 		const tsList = ((tsItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).filter(
 			(item) => !TS_ONLY_WIDGET_IDS.has((item as { id?: string }).id ?? ''),

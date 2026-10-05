@@ -156,8 +156,35 @@ const runnerModulePath = new URL('../runner.ts', import.meta.url).pathname;
 
 let schedulerTimer: ReturnType<typeof setInterval> | null = null;
 let sweeperTimer: ReturnType<typeof setInterval> | null = null;
-/** Re-entrancy latch: one tick at a time (spawn + count are async). */
-let ticking = false;
+
+/**
+ * Single-flight with a COALESCED re-run: one `pass` at a time, and a kick that
+ * lands DURING a pass buys exactly one more pass after it (any number of such
+ * kicks coalesce into that one). The tick's old latch DROPPED that kick, which
+ * lost work: the running pass may already have read an empty queue before the
+ * kicker's INSERT committed, so the new job waited for the 2 s interval — and
+ * forever where no interval runs (a test process: diffusion_actions' crash leg,
+ * "runner never registered a pid" under load). State lives in the closure.
+ */
+export function coalescingKick(pass: () => Promise<void>): () => Promise<void> {
+	let running = false;
+	let requested = false;
+	return async () => {
+		if (running) {
+			requested = true;
+			return;
+		}
+		running = true;
+		try {
+			do {
+				requested = false;
+				await pass();
+			} while (requested);
+		} finally {
+			running = false;
+		}
+	};
+}
 
 /**
  * Spawn the runner process for a claimed job and record its pid.
@@ -226,8 +253,12 @@ function spawnRunner(lease: JobLease): void {
 export async function schedulerTick(): Promise<void> {
 	if (!DISPATCH_ENABLED) return;
 	if (paused) return;
-	if (ticking) return;
-	ticking = true;
+	await claimPass();
+}
+
+/** One claim pass, single-flight via coalescingKick — reached only through schedulerTick. */
+const claimPass = coalescingKick(async () => {
+	if (paused) return; // a coalesced re-run must not claim past a pause/drain
 	try {
 		// Budget INSIDE the claim (audit S3-64): the old read-count-then-claim
 		// two-step let two scheduler instances both observe count<max and both
@@ -240,10 +271,8 @@ export async function schedulerTick(): Promise<void> {
 		}
 	} catch (error) {
 		console.error('[diffusion scheduler] tick failed:', error);
-	} finally {
-		ticking = false;
 	}
-}
+});
 
 /** Terminal jobs older than this are purged by the sweeper cadence (S3-46/62). */
 const TERMINAL_PURGE_AFTER_HOURS = 7 * 24;

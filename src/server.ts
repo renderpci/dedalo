@@ -2028,9 +2028,28 @@ export async function startServer() {
 			if (readString('DEDALO_RECONCILE_SCHEDULER_ENABLED') !== 'false') {
 				const { startReconcileScheduler } = await import('./core/reconcile/scheduler.ts');
 				startReconcileScheduler();
+				// MEDIA COPY WORKER (PUBLICATION_HOST_SPEC §5.2, M3/M4): forwards every
+				// pub/ flip to the copy-mode publication hosts, serialized per host —
+				// unpublish at once, publish debounced. Same gate as the reconcile
+				// scheduler (an ephemeral/smoke instance must not drive a public host);
+				// stopped by the shutdown drain.
+				const { startMediaCopy } = await import('./diffusion/api/media_copy.ts');
+				// PUBLIC-URL PROBE (PUBLICATION_HOST_SPEC §7, phase 6): a worker run that
+				// changed a copy host proves its gate through the public URL — detached,
+				// coalesced per host. The ONE copy trigger of a worker run (applyCopy
+				// itself never schedules). Dynamic like the line above (CONVENTIONS §2
+				// rationale 3: a cold path, once per boot).
+				const { scheduleProbeAfterCopyBatch } = await import('./core/publication_host/probe.ts');
+				shutdownStops.push(
+					startMediaCopy({
+						afterSync: (host, report) => {
+							void scheduleProbeAfterCopyBatch(host, report);
+						},
+					}),
+				);
 			} else {
 				console.warn(
-					'[reconcile] scheduler disabled (DEDALO_RECONCILE_SCHEDULER_ENABLED=false) — boot/interval reconciles will not run',
+					'[reconcile] scheduler disabled (DEDALO_RECONCILE_SCHEDULER_ENABLED=false) — boot/interval reconciles will not run, and no pub/ flip reaches a copy-mode publication host',
 				);
 			}
 		} catch (error) {
@@ -2388,7 +2407,24 @@ export async function startServer() {
 		void (async () => {
 			if (await checkDbHealth()) {
 				const { confirmBootedCodeUpdate } = await import('./core/update/boot_confirm.ts');
-				await confirmBootedCodeUpdate();
+				// PUBLICATION API LOCKSTEP (PUBLICATION_HOST_SPEC §3, phase 4): once THIS tree
+				// is confirmed, push its verified API releases to every paired publication
+				// host — detached, never throwing. Dynamic for the same reason as the line
+				// above (CONVENTIONS §2 rationale 3: a cold path, once per confirmed boot).
+				// The module is loaded INSIDE the hook, AFTER the flip: a publication-host
+				// module that fails to load is logged and can never veto the confirmation
+				// (an unconfirmed sentinel makes the supervisor roll back a healthy update).
+				// The trigger re-checks smoke/install itself: this block's guard is the
+				// first line of defence, not the only one.
+				await confirmBootedCodeUpdate(undefined, undefined, undefined, () => {
+					void import('./core/publication_host/api_reconcile.ts')
+						.then(({ triggerPublicationApiPush }) => {
+							triggerPublicationApiPush({ smokeBoot, installMode: config.installMode });
+						})
+						.catch((error) =>
+							console.error('[publication_apis] post-confirm trigger failed to load:', error),
+						);
+				});
 			} else {
 				console.warn('[code update] boot confirmation deferred: DB ping failed at boot');
 			}

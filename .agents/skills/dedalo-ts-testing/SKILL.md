@@ -29,7 +29,7 @@ Bun counts a test body that `return`s before asserting as a PASS. So:
 
 - **A re-harvest is impossible** — the oracle is gone. `scripts/oracle_harvest.ts` and the `record` mode are history. **Any fixture change is a deliberate contract edit** and needs its `engineering/wire_contract/` entry the same day.
 - `FIXTURE_EXEMPT_GATES` is EMPTY: the live-only (write-path) differentials retired with the oracle. Their contracts live in `test/unit/*_native.test.ts` twins, mapped in `engineering/ORACLE_HARVEST.md` (DEC-14b punch list, § Generic-TLD replacement map) and derived into `engineering/twin_map.json` from each twin's `@twin-of` / `@twin-status` header directives (`scripts/twin_map.ts`).
-- **Corpus-bound by construction.** Every harvested gate carries `entity: monedaiberica`; on the suite DB the tier is mostly red from corpus absence (2026-08-18: 173 pass / 208 fail, 186 of the reds corpus absence). Do NOT restore the harvest-day snapshot to make them green — that tests one install, not the engine. Each corpus-bound gate is replaced by a generic-TLD twin, or re-expressed to replay under the `test` TLD.
+- **Corpus-bound by construction.** Every harvested gate carries `entity: monedaiberica`; on the suite DB the tier is mostly red from corpus absence (the frozen reds are banked per test name in `engineering/parity_baseline.json`). Do NOT restore the harvest-day snapshot to make them green — that tests one install, not the engine. Each corpus-bound gate is replaced by a generic-TLD twin, or re-expressed to replay under the `test` TLD.
 
 ## The generic `test` TLD law
 

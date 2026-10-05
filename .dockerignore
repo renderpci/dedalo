@@ -107,6 +107,7 @@ certs
 # The tracked files of that shape, re-included by exact path (placeholder
 # samples, never live credentials). DERIVED from `git ls-files` — a new one
 # rewrites this artifact and reddens the gate until a human reviews it.
+!publication/host_agent/.env.test
 !publication/server_api/v2/.env.example
 !publication/site_builder/.env.test
 
@@ -120,6 +121,7 @@ certs
 # client/…/service_ckeditor/css/dist/, which the image needs.
 # Sources:
 #   .gitignore
+#   publication/host_agent/.gitignore
 #   publication/server_api/v2/.gitignore
 #   publication/site_builder/.gitignore
 node_modules
@@ -167,6 +169,7 @@ CHANGELOG.md
 docker-compose.update-probe.yml
 code
 src/core/update/install_stamp.json
+src/core/update/publication_manifest.json
 .scratch_*
 **/*/.scratch_*
 dev
@@ -176,6 +179,16 @@ dev_tools
 install/import/ontology/*
 !install/import/ontology/7.0
 install/import/ontology/*/recovery
+publication/host_agent/.env
+publication/host_agent/**/*/.env
+publication/host_agent/node_modules
+publication/host_agent/**/*/node_modules
+publication/host_agent/*.tsbuildinfo
+publication/host_agent/**/*/*.tsbuildinfo
+publication/host_agent/.test-tmp
+publication/host_agent/**/*/.test-tmp
+publication/host_agent/coverage
+publication/host_agent/**/*/coverage
 publication/server_api/v2/node_modules
 publication/server_api/v2/**/*/node_modules
 publication/server_api/v2/.env

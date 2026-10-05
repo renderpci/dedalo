@@ -384,6 +384,25 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-02 (plan item 5): the client-lib versions doc byte-identity gate. DB-free:
 	#     reads package.json + the doc, imports the client-lib registry, renders in memory.
 	test/unit/client_lib_versions_doc_tripwire.test.ts
+	# --- 2026-10-03 (publication host phase 2): the engine/agent pairing twin. DB-free: it
+	#     imports four pairing recipes (node builtins + type-only imports at most), reads shipped
+	#     code via test/helpers/shipped_text_corpus.ts narrowed to `git ls-files` (tracked only);
+	#     no DB, no network, no ../private.
+	test/unit/publication_host_pairing_tripwire.test.ts
+	# --- 2026-10-03 (publication host phase 2): rules.apply's directive allowlist vs the
+	#     engine's publication-host renderers. DB-free: it imports the agent's import-free
+	#     directives.ts and the pure renderers (config.mediaDir only); no DB, no network.
+	test/unit/publication_host_rules_allowlist_tripwire.test.ts
+	# --- 2026-10-03 (publication host phase 3): the agent-channel door gate. DB-free: reads
+	#     src/ + tools/ sources and three docs/gates, Babel AST only, imports no src/ module.
+	test/unit/publication_host_door_tripwire.test.ts
+	# --- 2026-10-03 (publication host phase 4, L4): the bundle writer/reader twin. DB-free: a
+	#     mkdtemp scratch dir, `git ls-files` over tracked source, and a zero-dep import of the
+	#     agent's reader (node: builtins only, no agent `bun install` needed).
+	test/unit/publication_host_bundle_twin_tripwire.test.ts
+	# --- 2026-10-03 (publication host phases 4–6): the spec's path/script references exist.
+	#     DB-free: reads the spec and two package.json files, existsSync only; no network.
+	test/unit/publication_host_spec_refs_tripwire.test.ts
 	# --- 2026-10-04 (#125): the onnxruntime alignment gate. DB-free: reads the vendored
 	#     transformers bundle, package.json and bun.lock; compares three version strings.
 	test/unit/onnxruntime_alignment_tripwire.test.ts
@@ -566,18 +585,19 @@ fi
 #
 # NO --timeout HERE, DELIBERATELY. The root suite gets it because it LOST a number it had
 # chosen: bunfig.toml declared `[test] timeout = 30000` and Bun 1.4.0 silently ignored it.
-# These packages never made that claim: BOTH bunfig.toml files declare only
-# coverage/coverageThreshold and no timeout, so their green baselines were measured under
-# bun's built-in 5000 ms cap and stay comparable run to run.
+# These packages never made that claim: EVERY daemon bunfig.toml declares coverage (and,
+# where enforced, coverageThreshold) and no timeout, so their green baselines were measured
+# under bun's built-in 5000 ms cap and stay comparable run to run.
 # (Corrected 2026-08-31, P2-23/GATE-43: this said publication/site_builder had NO
 # bunfig.toml at all, while eleven lines below the same file said "Both daemons set
 # coverageThreshold in their bunfig.toml" and the diagnostic below greps that file. One of
 # the two had to be false; it was this one, and the package's coverage was measured by
 # nothing. It now has the bunfig its sibling has, at the same 0.8 floor.) Widening them on no evidence would be silently loosening a gate, not restoring one.
-# Same reasoning, same wording, at the other exempt site: the site_builder stage in
-# scripts/verify.ts.
+# Same reasoning, same wording, at the other exempt sites: the site_builder and host_agent
+# stages in scripts/verify.ts.
 #
-# Both daemons set `coverageThreshold` in their bunfig.toml, and a threshold miss makes
+# A daemon that ENFORCES sets `coverageThreshold` in its bunfig.toml (server_api/v2 and
+# host_agent; site_builder only reports — ci_workflow_tripwire rule 11), and a miss makes
 # `bun test` exit 1 while printing NOTHING about coverage — the log reads
 # "290 pass / 0 fail" followed by a bare "exit code 1", which is indistinguishable from
 # a crash and sent one CI failure (2026-08-03) round several wrong hypotheses. Bun does
@@ -608,7 +628,8 @@ daemon_gate() {
 	return 1
 }
 
-# THE TWO DAEMON PACKAGES RUN CONCURRENTLY, and this is where the tier's minutes
+# THE DAEMON PACKAGES RUN CONCURRENTLY (the set is DERIVED and held by ci_workflow_tripwire
+# rule 15: every locked package with its own bunfig.toml), and this is where the tier's minutes
 # actually are: each does its OWN `bun install --frozen-lockfile` (separate
 # lockfiles) plus its own tsc and its own suite. They share no state — separate
 # directories, separate node_modules, separate bunfig, no database, no ../private
@@ -621,29 +642,43 @@ daemon_gate() {
 # exit 1). Moving these into package.json scripts to reach the flag would throw
 # that diagnostic away to use a mechanism that buys the same concurrency.
 #
-# BOTH ARE ALWAYS WAITED ON AND BOTH VERDICTS ARE REPORTED: `set -e` must not
-# abort on the first failure here, or one red daemon would hide the other's
+# EVERY ONE IS ALWAYS WAITED ON AND EVERY VERDICT IS REPORTED: `set -e` must not
+# abort on the first failure here, or one red daemon would hide the others'
 # result — the same reason --no-exit-on-error is used for typecheck+lint above.
-echo "== hermetic: daemon packages, concurrently (site_builder + publication API v2)"
+echo "== hermetic: daemon packages, concurrently (site_builder + publication API v2 + publication-host agent)"
 daemon_status=0
 
-daemon_gate publication/site_builder > /tmp/dedalo_daemon_sb.$$ 2>&1 &
+# Per-job logs come from mktemp (fresh, 0600, O_EXCL), the same pattern daemon_gate() uses:
+# a predictable `/tmp/name.$$` redirect follows a pre-planted symlink (truncates whatever
+# file it points at) and can be pre-created world-readable (the agent suite prints test
+# bearer/pairing material). ci_workflow_tripwire rule 15 holds the mktemp shape.
+sb_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_sb.XXXXXX")"
+pa_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_pa.XXXXXX")"
+ha_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_ha.XXXXXX")"
+
+daemon_gate publication/site_builder > "$sb_log" 2>&1 &
 sb_pid=$!
-daemon_gate publication/server_api/v2 > /tmp/dedalo_daemon_pa.$$ 2>&1 &
+daemon_gate publication/server_api/v2 > "$pa_log" 2>&1 &
 pa_pid=$!
+daemon_gate publication/host_agent > "$ha_log" 2>&1 &
+ha_pid=$!
 
 # `wait <pid>` returns the job's exit status; `|| rc=$?` keeps `set -e` from
-# aborting before the second job has been waited on and reported.
+# aborting before every other job has been waited on and reported.
 sb_rc=0; wait "$sb_pid" || sb_rc=$?
 pa_rc=0; wait "$pa_pid" || pa_rc=$?
+ha_rc=0; wait "$ha_pid" || ha_rc=$?
 
 echo "---- publication/site_builder ----"
-cat /tmp/dedalo_daemon_sb.$$ ; rm -f /tmp/dedalo_daemon_sb.$$
+cat "$sb_log" ; rm -f "$sb_log"
 echo "---- publication/server_api/v2 ----"
-cat /tmp/dedalo_daemon_pa.$$ ; rm -f /tmp/dedalo_daemon_pa.$$
+cat "$pa_log" ; rm -f "$pa_log"
+echo "---- publication/host_agent ----"
+cat "$ha_log" ; rm -f "$ha_log"
 
 [ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
 [ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }
+[ "$ha_rc" -eq 0 ] || { echo "== hermetic: RED in publication/host_agent (exit $ha_rc)"; daemon_status=1; }
 # ONE exit, after EVERY verdict is in. `[ "$daemon_status" -eq 0 ] || exit 1`
 # used to stand here on its own line, which meant a red daemon left the tier
 # without its summary — the same hide-the-other-verdict shape the stages above

@@ -339,6 +339,16 @@ const TRIPWIRES = [
 	'test/unit/import_create_door_native.test.ts',
 	// Plan item 5 — the npm rows of the client-lib versions doc are generated (2026-10-02).
 	'test/unit/client_lib_versions_doc_tripwire.test.ts',
+	// Publication host phase 2 — the engine/agent pairing twin + domain separation (2026-10-03).
+	'test/unit/publication_host_pairing_tripwire.test.ts',
+	// Publication host phase 2 — rules.apply's directive allowlist held to the engine renderers (2026-10-03).
+	'test/unit/publication_host_rules_allowlist_tripwire.test.ts',
+	// Publication host phase 3 — the paired private agent channel has one door (2026-10-03).
+	'test/unit/publication_host_door_tripwire.test.ts',
+	// Publication host phase 4 L4 — engine bundle writer ↔ agent extractBundle twin (2026-10-03).
+	'test/unit/publication_host_bundle_twin_tripwire.test.ts',
+	// Publication host phases 4–6 — the spec names only paths and scripts that exist (2026-10-03).
+	'test/unit/publication_host_spec_refs_tripwire.test.ts',
 	// #125 — the vendored transformers.js core and the onnxruntime-web pin are one build (2026-10-04).
 	'test/unit/onnxruntime_alignment_tripwire.test.ts',
 ];
@@ -609,6 +619,30 @@ if (runTests) {
 		const ok = r.exitCode === 0 && failM?.[1] === '0';
 		results.push({
 			name: 'site_builder',
+			ok,
+			detail: `${passM?.[1] ?? '?'} pass / ${failM?.[1] ?? '?'} fail`,
+		});
+	}
+
+	// The publication-host agent (publication/host_agent) is the THIRD isolated daemon
+	// package, with the site_builder stage's shape and reasoning: it sits outside the
+	// src/+test/ trees the neighbour scan covers, and it is hermetic (no DB, no oracle,
+	// scratch roots under its own .test-tmp/). It runs here when the change touches it,
+	// and always via scripts/ci/hermetic.sh daemon_gate(). NO --timeout, deliberately,
+	// for the same reason: its bunfig.toml declares coverage + coverageThreshold and no
+	// timeout (test_timeout_tripwire DAEMON_EXEMPT names this site).
+	if (changed.some((f) => f.startsWith('publication/host_agent/'))) {
+		banner('host_agent (tsc + bun test in publication/host_agent)');
+		const r = await $`bash -c "cd publication/host_agent && bunx tsc --noEmit && bun test 2>&1"`
+			.quiet()
+			.nothrow();
+		const text = r.stdout.toString() + r.stderr.toString();
+		console.log(text.split('\n').slice(-6).join('\n'));
+		const passM = text.match(/(\d+) pass/);
+		const failM = text.match(/(\d+) fail/);
+		const ok = r.exitCode === 0 && failM?.[1] === '0';
+		results.push({
+			name: 'host_agent',
 			ok,
 			detail: `${passM?.[1] ?? '?'} pass / ${failM?.[1] ?? '?'} fail`,
 		});

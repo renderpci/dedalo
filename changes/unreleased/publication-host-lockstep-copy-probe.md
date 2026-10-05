@@ -1,0 +1,7 @@
+---
+title: A paired publication server now gets the Publication APIs matching the work system's version, can keep a verified copy of the published media, and is checked from the public side.
+type: added
+audience: admin
+date: 2026-10-05
+---
+After every confirmed code update or code restore (a rollback to an earlier version), the work system sends the matching Publication API releases to each paired publication server, exactly as the update verified them. A database restore does not change the code and sends nothing; the panel shows any lag and **Push API releases** realigns it. A file changed on disk since then stops the push and is named in the panel. In **copy** mode the publication server keeps its own copy of the published media, only public qualities of published records. Unpublishing makes the files answer "not found" as soon as the publication server accepts the unmark (until it does, for example while it cannot be reached, the panel shows the deletion as pending and the files stay public), then deletes them, and the deletion counts as done only once the server's file list confirms it. The maintenance panel can also check each publication server through its public address: a published file must load and an unpublished one must not, after every rules change and on a schedule. On a copy server, where the unpublished file is normally absent, a "not found" proves nothing and the check says unknown, never a pass. See [Publication host agent](./install/publication_host.md).

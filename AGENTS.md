@@ -19,10 +19,10 @@ Native TS/Bun Dédalo server. **CUTOVER EXECUTED 2026-07-11** (`rewrite/CUTOVER_
 
 The live-oracle era is over. The baselines of record are FROZEN: 
 
-- **Read-path parity** replays the frozen fixture store   (`test/parity/fixtures/oracle_harvest/`, final harvest 2026-07-11) —   `ORACLE_MODE` defaults to `fixtures`, credless. **It is NOT green on the   suite DB** (measured 2026-08-18: 173 pass / 208 fail; 186 of the reds are   corpus absence — the 76 gates were harvested against the `monedaiberica`   install's records, which the vendored test DB does not and must not hold).   The store + the same-instant snapshot (`../private/backups/db/2026-07-11_102750.….custom.backup`,   on disk) are a pinned pair, but restoring it is NOT the fix: a gate that   passes only against one install's records tests that install, not the engine.   The corpus-bound gates are being replaced by generic-`test`-TLD twins   (`engineering/ORACLE_HARVEST.md`, DEC-14b map). 
+- **Read-path parity** replays the frozen fixture store   (`test/parity/fixtures/oracle_harvest/`, final harvest 2026-07-11) —   `ORACLE_MODE` defaults to `fixtures`, credless. **It is NOT green on the   suite DB** (the 76 gates were harvested against the `monedaiberica`   install's records, which the vendored test DB does not and must not hold;   the frozen reds are banked per test name in `engineering/parity_baseline.json`).   The store + the same-instant snapshot (`../private/backups/db/2026-07-11_102750.….custom.backup`,   on disk) are a pinned pair, but restoring it is NOT the fix: a gate that   passes only against one install's records tests that install, not the engine.   The corpus-bound gates are being replaced by generic-`test`-TLD twins   (`engineering/ORACLE_HARVEST.md`, DEC-14b map). 
 - **Write-path contracts** live in the TS-native `test/unit/*_native.test.ts`   gates (DEC-14b — each retired differential's twin is mapped in   `engineering/ORACLE_HARVEST.md`). 
 - A re-harvest is IMPOSSIBLE by definition. Any fixture change is a   deliberate contract edit and needs its `engineering/wire_contract/`   entry the same day — the WC ledger remains the wire law. 
-- Never assert against a mutable production record — use scratch twins   (see the `dedalo-parity-debugging` skill; its live-oracle workflow is   historical). 
+- Never assert against a mutable production record — use scratch twins   (see the `dedalo-parity-debugging` skill). 
 
 ## Hard rules 
 
@@ -86,12 +86,9 @@ The live-oracle era is over. The baselines of record are FROZEN:
   - **The baseline is IN the runner**: `KNOWN_FAILING` (shrink-only, reasons
     inline — a listed suite that PASSES is red too); `--strict` ignores it.
     `KNOWN_FAILING` is currently EMPTY, so a plain run equals `--strict`. 
-  - **Last measured 2026-08-31** on the run's OWN server, on the suite
-    database, with real authentication: 133 suites, 133 pass. (Was 131/131 on
-    2026-08-22; the count rose because `test_section_map` — 104 lines of real
-    assertions that were in no manifest and had therefore NEVER RUN — was
-    registered, P2-28/DEAD-10.) ALWAYS measure
-    with the reseed on — a polluted test3 fakes ~7 failures. 
+  - **The suite size is banked, not quoted**: `engineering/client_gate_inventory.json`
+    (`suite_floor`, `mocha_test_floor` — shrink-only, raised by `--update` after a
+    green run). ALWAYS measure with the reseed on — a polluted test3 fakes ~7 failures. 
   - **The run PINS what two suites need instead of borrowing it from the
     machine**. The diffusion domain is `SUITE_DIFFUSION_DOMAIN` (`test`, the
     repo-owned generic domain — the engine matches a domain BY TERM, so the
@@ -115,7 +112,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
   callers, `--overflow '<query>|<query>'` to find what widens a page. Ratchet:
   `test/helpers/tool_phone_ratchet.ts`.
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
-- `bun run test:update` — the code-updater's REAL-SCENARIO drill (opt-in, `scripts/update_drill.ts`): a scratch `git clone` gets the release commit (version bump + bun pin), a REAL master instance builds + serves the 7.0.1 release through the wire, a git-archive copy of this checkout under a supervisor loop installs it across the planned-death restart — panel probe → manifest → tampered-sha refusal → job frames → `/health` answering 7.0.1 → sentinel confirmed. Needs the suite DB (`test:db:setup`) + network for the quarantine `bun install`; ~3–5 min; never touches the app DB or the live private state. 
+- `bun run test:update` — the code-updater's REAL-SCENARIO drill (opt-in, `scripts/update_drill.ts`): a scratch `git clone` gets the release commit (version bump + bun pin), a REAL master instance builds + serves the newest `UPDATE_CATALOG` release through the wire, a git-archive copy of this checkout under a supervisor loop installs it across the planned-death restart — panel probe → manifest → tampered-sha refusal → job frames → `/health` answering that version → sentinel confirmed. Needs the suite DB (`test:db:setup`) + network for the quarantine `bun install`; ~3–5 min; never touches the app DB or the live private state. 
 - `bun run test:update:dev` — the same drill on the DEVELOPER CHANNEL: the
   release is cut from a branch that is not `master` (built and served as
   `<v>-dev.zip`) and installed OVER THE SAME VERSION, which is how unreleased
@@ -125,7 +122,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
   NOTE both drills bind a smoke-boot unix socket under the scratch dir and
   macOS caps that path at 104 bytes: on a long default `TMPDIR` every run dies
   at `preflight`. Use `TMPDIR=/tmp/dd bun run test:update…`.
-- `bun run probe:update` — the MUSEUM-CYCLE probe against the REAL stacks (`scripts/update_probe.ts`): the docker simple stack plays a museum install (recreated with its code tree bind-mounted, so the channel is `tree_swap`), the local dev server plays master; prepares origin consistency (LAN-IP `DEDALO_HOST`), cuts the 7.0.1 release into `<repo>/code/`, materializes the museum tree + override, then verifies channel/serving/manifest — or drives the whole update with `--drive --user/--pass`. Touches the real docker install and appends to `../private/.env` when the advertised origin drifted. 
+- `bun run probe:update` — the MUSEUM-CYCLE probe against the REAL stacks (`scripts/update_probe.ts`): the docker simple stack plays a museum install (recreated with its code tree bind-mounted, so the channel is `tree_swap`), the local dev server plays master; prepares origin consistency (LAN-IP `DEDALO_HOST`), cuts the next patch release (museum version +1) into `<repo>/code/`, materializes the museum tree + override, then verifies channel/serving/manifest — or drives the whole update with `--drive --user/--pass`. Touches the real docker install and appends to `../private/.env` when the advertised origin drifted. 
 - `bun run lint` — biome (burn-down owned by a dedicated pass).
 - `bun run changelog` — re-render `docs/change_log.md` (GENERATED — never edit it). A reader-visible change ships a fragment in the same commit: `bun run changelog new <slug>`, fill it, re-render. `bun run changelog release <version>` at a release cut. Rules: `changes/README.md`; gate: `change_log_tripwire`. 
 
@@ -142,7 +139,8 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `engineering/RELATIONS_SPEC.md`, `engineering/SECTION_SPEC.md` | Family specs — **read the dated §1 addenda first**: the rebuilds they instruct already landed. | 
 | `engineering/DIFFUSION_SPEC.md` | Native diffusion subsystem (`src/diffusion/`, Bun-owns-MariaDB tiering). | 
 | `engineering/EXTERNAL_SPEC.md` | External record services (`src/external/`, a PEER of core) — the four ontology pieces, the one outbound door and its order, egress classes, the write invariant. | 
-| `engineering/OUTBOUND_SPEC.md` | Every request that leaves the institution — the THREE outbound doors (single API call / external record service / tool harvesting via `src/core/harvest/`), the one SSRF guard under them, the harvest hop order, who may use which door. | 
+| `engineering/OUTBOUND_SPEC.md` | Every request the engine sends to another server — the FOUR outbound doors (single API call / external record service / tool harvesting via `src/core/harvest/` / the paired private publication-agent channel `src/core/publication_host/transport.ts`), the one SSRF guard under the first three, the harvest hop order, who may use which door. | 
+| `engineering/PUBLICATION_HOST_SPEC.md` | A separate publication machine controlled from the work system — the agent channel (work → publication only), API deployment, media modes `copy`/`shared`, the `publication_host` rule profile, phases. | 
 | `engineering/IDENTIFY_SPEC.md` | Object identification (`src/core/identify/` + the RAG image index) — a criterion IS an SQO path; read §4 for what each match mode actually does today. | 
 | `engineering/CONVENTIONS.md` | Error-handling/logging convention + the dynamic-import rules. | 
 | `engineering/ERRORS_SPEC.md` | The error system: closed DedaloError registry, the ONE converter, envelope v2, client contract, gates. | 
@@ -160,7 +158,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 
 ## Architecture in one breath 
 
-Ontology-driven: `dd_ontology` defines everything; `src/core/ontology/resolver.ts` is the cached accessor layer. Reads flow RQO → `core/api/dispatch.ts` → `section/read.ts` (context+data, the PHP build_json_rows shape) with relations expanding through `core/relations/registry.ts`. Component models are declarative descriptors (`core/components/README.md` — the honest model-addition checklist). Writes go through `section/record/save_component.ts` (tx-wrapped, TM-audited) + `db/matrix_write.ts`/`json_codec.ts`. SQL confinement is tiered (README "Hard rules"). Diffusion is native under `src/diffusion/` (facade: `diffusion/api/`). Request identity (lang, principal) is ALS-scoped — never captured at module level. 
+Ontology-driven: `dd_ontology` defines everything; `src/core/ontology/resolver.ts` is the cached accessor layer. Reads flow RQO → `core/api/dispatch.ts` → `section/read.ts` (context+data, the PHP build_json_rows shape) with relations expanding through `core/relations/registry.ts`. Component models are declarative descriptors (`core/components/README.md` — the honest model-addition checklist). Writes go through `section/record/save_component.ts` (tx-wrapped, TM-audited) → the record chokepoint `section_record/record_write.ts` (`persist*` → `afterRecordWrite`; observer propagation rides its post-COMMIT obligation ledger) → `db/matrix_write.ts`/`json_codec.ts`. SQL confinement is tiered (T1–T4, DEC-09: `engineering/TRIPWIRES.md` → `sql_confinement_tripwire`). Diffusion is native under `src/diffusion/` (facade: `diffusion/api/`). Request identity (lang, principal) is ALS-scoped — never captured at module level. 
 
 ## Virtual sections 
 

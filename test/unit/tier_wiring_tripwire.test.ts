@@ -644,6 +644,19 @@ const VERIFY_STAGE_TWINS: Record<string, (ctx: TwinContext) => string | null> = 
 			? null
 			: 'no reached script runs `bun test` in publication/site_builder';
 	},
+	host_agent: ({ lines }) => {
+		// Same shape as site_builder: hermetic.sh's daemon_gate() names the package on the
+		// invocation line and carries the `bun test` in its body.
+		const inline = lines.some(
+			(l) => l.includes('publication/host_agent') && /\bbun test\b/.test(l),
+		);
+		const viaFunction =
+			lines.some((l) => /^daemon_gate publication\/host_agent\b/.test(l)) &&
+			lines.some((l) => /\(cd "\$dir" && .*\bbun test\b/.test(l));
+		return inline || viaFunction
+			? null
+			: 'no reached script runs `bun test` in publication/host_agent';
+	},
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

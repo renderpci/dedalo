@@ -15,7 +15,8 @@
  *    NOT a signal: that is how the readers sniff (media/engine/mime.ts,
  *    verify_content.ts, update/code_update.ts) — reading is not emission;
  *  - raw DEFLATE (node:zlib `deflateRaw*` / `createDeflateRaw`, a
- *    `CompressionStream('deflate-raw')`) — ZIP's entry codec, used by nothing else;
+ *    `CompressionStream('deflate-raw')`) — ZIP's entry codec; a self-framed gzip
+ *    member uses it too, and is then a named EXEMPTION (it emits no ZIP record);
  *  - a runtime `Bun.zip`, a spawned `zip` binary, `git archive --format=zip`
  *    (an `allowed_extensions: ['zip', …]` list is not a spawn);
  *  - an import of a ZIP library.
@@ -50,11 +51,27 @@ const ENCODER = 'src/core/files/zip.ts';
  * Files that produce ZIP bytes WITHOUT being an in-process encoder, each with
  * its reason. Shrink-only.
  */
-const EXEMPTIONS: Readonly<Record<string, string>> = {
-	'src/core/update/code_build.ts':
-		'release packaging DELEGATES the code archive to `git archive --format=zip`: the release artifact must be exactly what git holds for the ref (the update drill verifies it with unzip/zipinfo), and it never carries user data — an external producer, not a second encoder',
-	'scripts/update_probe.ts':
-		'the museum-cycle dev probe cuts the release the same way code_build.ts does — `git archive --format=zip` of a ref, never user data; operator tooling that delegates to git, not a second encoder',
+interface Exemption {
+	reason: string;
+	/** The ONLY signals it may carry; absent = every signal (a whole-file delegation). */
+	signals?: readonly string[];
+}
+
+const EXEMPTIONS: Readonly<Record<string, Exemption>> = {
+	'src/core/update/code_build.ts': {
+		reason:
+			'release packaging DELEGATES the code archive to `git archive --format=zip`: the release artifact must be exactly what git holds for the ref (the update drill verifies it with unzip/zipinfo), and it never carries user data — an external producer, not a second encoder',
+	},
+	'scripts/update_probe.ts': {
+		reason:
+			'the museum-cycle dev probe cuts the release the same way code_build.ts does — `git archive --format=zip` of a ref, never user data; operator tooling that delegates to git, not a second encoder',
+	},
+	'src/core/publication_host/bundle_writer.ts': {
+		reason:
+			'NOT a ZIP producer: the publication-host release bundle is gzip (RFC 1952) around ustar, and its raw deflate is the gzip member body the writer frames itself (fixed header with OS 255, CRC-32 + ISIZE) so the bytes are deterministic across platforms; no ZIP record is ever written — held by publication_host_bundle_twin_tripwire',
+		// scoped: any OTHER signal here (PK records, Bun.zip, spawned zip, a ZIP library) is red
+		signals: ['raw deflate'],
+	},
 };
 
 /** ZIP libraries (encoders, or encoder+reader) — none may be a dependency or an import. */
@@ -159,7 +176,14 @@ describe('one ZIP encoder (src/core/files/zip.ts) — census', () => {
 
 	test('no file outside the encoder and its named exemptions emits ZIP bytes', () => {
 		const outside = [...hits.entries()]
-			.filter(([file]) => file !== ENCODER && EXEMPTIONS[file] === undefined)
+			.filter(([file]) => file !== ENCODER)
+			.map(([file, found]): [string, string[]] => {
+				const allowed = EXEMPTIONS[file];
+				if (allowed === undefined) return [file, found];
+				const scope = allowed.signals;
+				return [file, scope === undefined ? [] : found.filter((s) => !scope.includes(s))];
+			})
+			.filter(([, found]) => found.length > 0)
 			.map(([file, found]) => `${file}: ${found.join(', ')}`);
 		expect(
 			outside,
@@ -168,9 +192,19 @@ describe('one ZIP encoder (src/core/files/zip.ts) — census', () => {
 	});
 
 	test('every exemption is alive and carries a reason (shrink-only)', () => {
-		for (const [file, reason] of Object.entries(EXEMPTIONS)) {
+		const names = new Set(SIGNALS.map((signal) => signal.name));
+		for (const [file, { reason, signals }] of Object.entries(EXEMPTIONS)) {
 			expect({ file, alive: hits.has(file) }).toEqual({ file, alive: true });
 			expect(reason.length).toBeGreaterThan(40);
+			for (const signal of signals ?? []) {
+				// a scoped signal must exist and still be carried, or the scope is stale
+				expect({ file, signal, known: names.has(signal) }).toEqual({ file, signal, known: true });
+				expect({ file, signal, carried: (hits.get(file) ?? []).includes(signal) }).toEqual({
+					file,
+					signal,
+					carried: true,
+				});
+			}
 		}
 	});
 

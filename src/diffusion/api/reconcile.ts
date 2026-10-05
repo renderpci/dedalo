@@ -3,11 +3,14 @@
  * (core/reconcile/registry.ts, S-10). The ONE legal core→diffusion import
  * target for them (boundary_seam_tripwire: facade-only).
  *
- * Two definitions: `media_index` (pub/ markers derived from dbs/ markers — a
- * pure filesystem hygiene, applied at boot) and `public_tier` (P1-12: what the
+ * Three definitions: `media_index` (pub/ markers derived from dbs/ markers — a
+ * pure filesystem hygiene, applied at boot), `public_tier` (P1-12: what the
  * public tier holds — MariaDB rows, dbs/ markers, per-record files — against
  * what the matrix holds and flags publishable; operator-run, apply removes
- * ghosts only).
+ * ghosts only) and `media_copy` (pub/ ∩ public files against each copy-mode
+ * publication agent's manifest, applied on its interval through the copy
+ * worker's per-host lane — PUBLICATION_HOST_SPEC §5.2; its run lives in
+ * media_copy_reconcile.ts).
  *
  * Stores: `.publication/dbs/<db>/<table>/<key>` (ground truth per publication
  * target, written by applyTableState) versus `.publication/pub/<key>` (the
@@ -17,6 +20,7 @@
  * BOOT run keeps applying (today's server.ts posture, oracle index.ts:1183).
  */
 
+import { MEDIA_COPY_PERIOD_MS } from '../../core/publication_host/media_copy_status.ts';
 import type {
 	ReconcileDefinition,
 	ReconcileReport,
@@ -28,6 +32,7 @@ import {
 	type MediaIndexFenceOptions,
 	reconcileMediaIndex,
 } from '../targets/mediastore/media_index.ts';
+import { runMediaCopyReconcile } from './media_copy_reconcile.ts';
 
 /**
  * The `media_index` run. The APPLY holds every marker database's fence (the
@@ -101,4 +106,31 @@ export const PUBLIC_TIER_RECONCILE: ReconcileDefinition = {
 	async run({ apply, scope }) {
 		return runPublicTierReconcile(scope === undefined ? { apply } : { apply, scope });
 	},
+};
+
+export const MEDIA_COPY_RECONCILE: ReconcileDefinition = {
+	name: 'media_copy',
+	stores: [
+		'work host: .publication/pub ∩ public-quality media files',
+		'copy-mode publication agents: media manifest + mirrored pub/ markers',
+	],
+	description:
+		"Diff each copy-mode publication host's media (files + mirrored pub/ markers, from the agent manifest) against what the work host publishes; apply runs through the copy worker's per-host lane — copies what is missing (sha-verified), unmarks then deletes what is no longer published, verifies deletions against the manifest — and re-plans to measure what it fixed. Non-copy hosts are skipped (one withdrawn from copy mode while still holding bytes stays failed); an unreachable host is reported with its pending deletions, never as done.",
+	scopeLabel: 'publication host name',
+	schedule: { everyMs: MEDIA_COPY_PERIOD_MS },
+	autoApply: {
+		reason:
+			'pure derivation of pub/ ∩ public files: an apply can only copy a file the work host already publishes or remove one it no longer does — withdrawn consent must not wait for an operator',
+	},
+	applyRootOnly: {
+		reason:
+			'an operator apply puts and deletes files on a public machine (E10): root only, as publication_hosts.reconcile_media_copy',
+	},
+	sources: [
+		'src/diffusion/targets/mediastore/media_copy.ts',
+		'src/diffusion/api/media_copy.ts',
+		'src/diffusion/api/media_copy_reconcile.ts',
+		'src/diffusion/api/reconcile.ts',
+	],
+	run: (options) => runMediaCopyReconcile(options),
 };

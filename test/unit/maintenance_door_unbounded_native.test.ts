@@ -657,10 +657,48 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'runtime_info.clear_cache_files': 'clears in-process caches and cache files; no statement',
 	'runtime_info.clear_session_files': 'clears the session store; no data-sized statement',
 	'serve_code.build_version_from_git_master': 'packages the code tree from git; no statement',
+	// Every bearer call is preceded by the unauthenticated /health pairing proof: cached for a
+	// read (status, media.probe), live on EVERY mutation (agent_client.ts mutateCall). A bearer
+	// call answered 401 costs one more /health (bearerRefused re-proves before naming auth).
+	'publication_hosts.apply_rules':
+		'reads the registry file, then up to five bounded round trips to a paired agent (health unless cached + status, health + rules.apply, one more health on a 401), then the phase-6 public-URL probe (two bounded GETs through the public door, 10 s deadline and 1 KiB cap each, + one runtime-file write); no statement',
+	'publication_hosts.probe':
+		'up to three bounded round trips to a paired agent (health unless cached + media.probe, one more health on a 401); no statement',
+	'publication_hosts.rollback_api':
+		'up to three bounded round trips to a paired agent (health + release.rollback, one more health on a 401); no statement',
+	'publication_hosts.set_host_fields': 'one locked rewrite of the registry file; no statement',
+	'publication_hosts.remove_host':
+		'deletes one secret dir and rewrites the registry file; no statement',
+	// The tree hash + the v2 deps build are file/child-process work; the pool holds nothing.
+	'publication_hosts.push_apis':
+		'hashes the installed API trees, may run one child `bun install` in the build cache, then per paired agent: health unless cached + status, and per API one release.install behind its live health proof (one more health on a 401); no statement. The REQUEST waits at most pushAnswerWithinMs (min 60 s, half SERVER_IDLE_TIMEOUT_S ≤ 255 s): a longer round answers running and finishes detached',
+	// Phase 5: the media_copy reconcile for one host. Its statements are the copy lane's
+	// advisory TRY-locks (one short main-pool transaction per control unit, never held across
+	// a hash or a transfer — media_copy_apply.ts THE POOL BOUND); the rest is a walk of the
+	// public qualities and agent calls, none of it a data-sized statement.
+	'publication_hosts.reconcile_media_copy':
+		'walks the public-quality media folders, then per paired copy agent: health unless cached + status, health + media.manifest, per unit a short advisory try-lock transaction around media.mark/delete (one more health on a 401) and puts outside it; no data-sized statement. The REQUEST waits at most pushAnswerWithinMs (like push_apis): a longer round answers running and finishes detached in the copy lane',
+	// Phase 6: the public-URL probe of one host.
+	'publication_hosts.probe_public':
+		'two bounded GETs through the public door (10 s deadline, 1 KiB cap each) + one runtime-file write; no database statement',
 	'error_reports.get_reports': 'one LIMITed page + one count of the error-report table',
 };
 
 describe('only DECLARED actions are maintenance', () => {
+	test('a publication_hosts agent call counts its /health pairing proof (mutations prove live)', () => {
+		const agentRows = Object.entries(REQUEST_BOUNDED).filter(
+			([key, reason]) => key.startsWith('publication_hosts.') && reason.includes('paired agent'),
+		);
+		expect(agentRows.length).toBeGreaterThanOrEqual(3); // apply_rules, probe, rollback_api
+		for (const [key, reason] of agentRows) {
+			expect(reason, key).toContain('health');
+			// a 401 is answered by one more /health proof before auth (agent_client bearerRefused)
+			expect(reason, key).toContain('401');
+		}
+		// apply_rules = health? + status, health + rules.apply, + health on a 401 → five
+		expect(REQUEST_BOUNDED['publication_hosts.apply_rules']).toContain('up to five');
+	});
+
 	test('every unboundedActions name is a registered action of its widget', () => {
 		const declared = ALL_WIDGET_MODULES.flatMap((module) =>
 			(module.unboundedActions ?? []).map((action) => ({ module, action })),

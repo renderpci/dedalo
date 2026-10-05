@@ -76,6 +76,12 @@ export interface ReconcileDefinition {
 	 * pure hygiene (idempotent, non-destructive) — say why.
 	 */
 	autoApply?: { reason: string };
+	/**
+	 * An OPERATOR apply through the maintenance door (reconcile_status.run_reconcile) is
+	 * root-only, not merely global admin — say why. Scheduled / post-restore runs carry no
+	 * principal and are unaffected; the owner's own root door may still apply.
+	 */
+	applyRootOnly?: { reason: string };
 	/** The repo-relative modules this definition wraps (owner + shells) — the census maps hits through it. */
 	sources: readonly string[];
 	run(options: ReconcileRunOptions): Promise<ReconcileReport>;
@@ -112,6 +118,9 @@ export const REGISTERED_NAMES: readonly string[] = [
 	'ontology_identifiers',
 	'hierarchy',
 	'public_tier',
+	'publication_apis',
+	'media_copy',
+	'publication_probe',
 ];
 
 // Process-lifetime registry state (module_state_tripwire allowlisted): the
@@ -131,6 +140,14 @@ export function registerReconcile(definition: ReconcileDefinition): void {
 	}
 	definitions.set(definition.name, definition);
 	ensureGauge();
+}
+
+/** The reason-required facets: each one declared must say why. */
+function facetProblems(definition: ReconcileDefinition): string[] {
+	const facets = { autoApply: definition.autoApply, applyRootOnly: definition.applyRootOnly };
+	return Object.entries(facets).flatMap(([facet, value]) =>
+		value !== undefined && value.reason.trim() === '' ? [`${facet} needs a reason`] : [],
+	);
 }
 
 /** The facet contract, enforced at registration so a half definition cannot hide. */
@@ -153,9 +170,7 @@ export function validateDefinition(definition: ReconcileDefinition): void {
 	) {
 		problems.push('schedule must be operator | boot | {everyMs > 0}');
 	}
-	if (definition.autoApply !== undefined && definition.autoApply.reason.trim() === '') {
-		problems.push('autoApply needs a reason');
-	}
+	problems.push(...facetProblems(definition));
 	if (problems.length > 0) {
 		throw new DedaloError('internal.invariant', {
 			message: `reconcile definition '${definition.name}' is incomplete: ${problems.join('; ')}`,

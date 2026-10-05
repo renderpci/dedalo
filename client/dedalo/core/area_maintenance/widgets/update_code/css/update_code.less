@@ -86,6 +86,12 @@
 				margin: 0.25rem 0 0 3.1rem;
 				max-width: 60rem;
 			}
+
+			// the caution reads once the switch is armed; the label's title
+			// carries it before that (render_update_code.js)
+			&:not(:has(.dev_channel_check:checked)) >.dd_note.dev_channel_note {
+				display: none;
+			}
 		}
 
 		// STATUS readouts (render_update_status.js) — layout shared with
@@ -380,6 +386,79 @@
 
 			.dd_eyebrow {
 				margin-bottom: 0.33rem;
+			}
+		}
+
+		// FOLDED blocks (fold_section): the summary IS the block's one-line
+		// readout — eyebrow, then the hint / count chips — and the readout
+		// opens under it. Same ▸ disclosure as update_ontology's serving_info.
+		.status_fold {
+			margin-bottom: 0.4rem;
+
+			>.status_fold_summary {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: baseline;
+				gap: 0.5rem;
+				padding: 0.3rem 0;
+				cursor: pointer;
+				list-style: none;
+				user-select: none;
+
+				&::-webkit-details-marker {
+					display: none;
+				}
+				&:before {
+					content: '\25B8';
+					color: var(--fg_muted);
+					font-size: 0.8rem;
+					transition: transform 0.12s ease;
+				}
+				>.dd_eyebrow {
+					margin-bottom: 0;
+				}
+				// the facts that make opening optional: quieter than a value,
+				// wrapping rather than widening the panel
+				>.fold_hint {
+					font-size: 0.9em;
+					color: var(--fg_muted);
+					overflow-wrap: anywhere;
+				}
+				>.dd_badge {
+					white-space: nowrap;
+				}
+				&:hover >.dd_eyebrow {
+					color: var(--fg_default);
+				}
+			}
+			&[open] >.status_fold_summary {
+				margin-bottom: 0.33rem;
+
+				&:before {
+					transform: rotate(90deg);
+				}
+			}
+			// a closed <details> hides its content through UA styles, but an
+			// explicit `display` (the readout grid) wins in some engines
+			&:not([open]) >.dd_readout {
+				display: none;
+			}
+		}
+
+		// readiness: eyebrow, verdict, what needs attention, then the folded
+		// complete list nested in the same block
+		.readiness_block {
+
+			// here the verdict HEADS its rows instead of closing them
+			>.status_verdict {
+				margin-top: 0.25rem;
+				margin-bottom: 0.5rem;
+			}
+			>.attention_checks {
+				margin-bottom: 0.5rem;
+			}
+			>.status_fold {
+				margin-bottom: 0;
 			}
 		}
 

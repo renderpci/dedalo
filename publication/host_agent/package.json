@@ -1,0 +1,21 @@
+{
+  "name": "dedalo-publication-host-agent",
+  "version": "0.1.0",
+  "description": "Dédalo publication host agent - the work engine's closed command channel to a publication host",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "provision": "bun run src/provision/cli.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}

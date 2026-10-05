@@ -1,8 +1,9 @@
 {
-	"generated": "2026-09-23",
+	"generated": "2026-10-03",
 	"note": "Accepted (known, triaged) dependency advisories. Every entry carries the reason it is accepted rather than fixed (validated by scripts/lib/reason_validator.ts; a reason-less entry is RED). A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts). Regenerate with `bun run scripts/ci/audit.ts --update`; accepting an advisory the baseline does not hold (compared by KEY, so a swap is a regression; a missing baseline makes every advisory new; a conflicted one is refused, never compared against nothing) REFUSES without `--allow-regression --reason \"<text>\"`, and the reason is written here, per entry.",
 	"accepted": {
 		".": [],
+		"publication/host_agent": [],
 		"publication/server_api/v2": [],
 		"publication/site_builder": [],
 		"publication/site_builder/templates/basic": []

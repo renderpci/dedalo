@@ -76,6 +76,15 @@ export function currentSuiteDatabaseEnv(): SuiteDatabaseEnv {
 	};
 }
 
+/**
+ * Is this a TEST process (`bun test` sets `NODE_ENV=test`; its children inherit it)?
+ * No opt-out: callers use it to keep a test away from the installation's OUTSIDE world
+ * (the publication-host agent door), which `DEDALO_TEST_DB_DISABLE` was never meant to open.
+ */
+export function isTestProcess(env: SuiteDatabaseEnv = currentSuiteDatabaseEnv()): boolean {
+	return env.nodeEnv === 'test';
+}
+
 /** Is the guard live for this process? Only inside a test, and not opted out. */
 function guardLive(env: SuiteDatabaseEnv): boolean {
 	return env.nodeEnv === 'test' && env.disabled !== 'true';

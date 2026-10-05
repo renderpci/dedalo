@@ -16,7 +16,10 @@
  *
  * Consumers: test/unit/docs_versioning_tripwire.test.ts,
  * test/unit/zip_encoder_census_tripwire.test.ts,
- * test/unit/export_download_safety_tripwire.test.ts.
+ * test/unit/export_download_safety_tripwire.test.ts,
+ * test/unit/publication_host_pairing_tripwire.test.ts,
+ * test/unit/publication_host_door_tripwire.test.ts,
+ * test/unit/publication_host_bundle_twin_tripwire.test.ts.
  */
 
 import { existsSync } from 'node:fs';

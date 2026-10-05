@@ -211,6 +211,10 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		"WRITES NO DATABASE DATA — it deletes, by name, the media FILES a gate seeded under the caller's test media root, and REFUSES (throws, deletes nothing) a root without the `.dedalo_test_media` marker: the filesystem twin of the marker law. No database connection.",
 	'test/helpers/real_backup_archive.ts':
 		"WRITES NO DÉDALO DATA — it READS the suite database (`pg_dump -F c -t dd_ontology`) and writes the archive bytes, a truncated copy and an mtime into the CALLER's scratch directory (the backup gates' mkdtemp). No database write, no media root.",
+	'test/helpers/publication_host_fixtures.ts':
+		'WRITES NO DATABASE DATA — the phase-3 publication-host helper (the ONLY one: the transport, mock-agent and pair-CLI gates import it). It creates a mkdtemp scratch base under the OS temp dir and plants `.dedalo_test_publication_hosts` in it (the only directory overridePublicationHostsBaseForTests accepts), and mints a throwaway PKI with the openssl CLI in a second mkdtemp dir it removes before returning. No database connection, no media root, never the live <private>.',
+	'test/helpers/media_copy_mock_agent.ts':
+		"WRITES NO DATABASE DATA — the phase-5 stateful mock copy agent: it keeps the agent's files and markers IN MEMORY, binds a unix socket in a 0700 mkdtemp dir under /tmp, and writes host records, tokens and runtime rows only through the publication-host stores while they resolve under the scratch base publication_host_fixtures.ts declares (useScratchMediaCopyStores arms it, plus a mkdtemp sha-cache dir). No database connection, no media root, never the live <private>.",
 	'src/core/test_data/seed.ts':
 		'NOT A TEST-ONLY WRITER: `resetTestSection`/`restoreCanonicalTest3` write the test3 PLAYGROUND records that every install seed ships, and they are called by the INSTALLER (src/core/install/db_restore.ts) and by the maintenance area widget (area_maintenance/widgets/unit_test.ts) — both on a real database, by design.',
 };

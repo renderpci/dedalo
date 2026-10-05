@@ -606,7 +606,7 @@ function fixHint(stage: Stage): string {
 	if (name.includes('audit'))
 		return 'bun run scripts/ci/audit.ts --force (time-based inputs: a new upstream advisory or an expired vendor window — see .github/workflows/nightly.yml)';
 	if (name.includes('daemon'))
-		return 'cd publication/<site_builder|server_api/v2> && bun install --frozen-lockfile && bunx tsc --noEmit && bun test (all pass + exit 1 = coverageThreshold)';
+		return 'cd publication/<site_builder|server_api/v2|host_agent> && bun install --frozen-lockfile && bunx tsc --noEmit && bun test (all pass + exit 1 = coverageThreshold; host_agent needs openssl + cvtsudoers|visudo)';
 	if (name.includes('suite database'))
 		return 'bun run test:db:setup (the suite build itself failed — every later stage never ran)';
 	if (name.startsWith('recording engineering/unit_baseline.json'))
@@ -620,6 +620,14 @@ function fixHint(stage: Stage): string {
 		return 'bun run test:client (reseed on; the suite starts its own server)';
 	if (name.includes('release channel')) return 'TMPDIR=/tmp/dd bun run test:update';
 	if (name.includes('developer channel')) return 'TMPDIR=/tmp/dd bun run test:update:dev';
+	if (name.includes('publication-host engine'))
+		return "bun run test:pubhost:engine [--only apache|nginx] — inside the CI image only (the agent drill's exec seam: bun run ci:local --docker --instance); needs the suite database (bun run test:db:setup), php-cli and network for the engine's v2 dependency builds (the lockstep rows) plus everything test:pubhost:agent needs";
+	if (name.includes('publication-host agent'))
+		return 'bun install --frozen-lockfile --cwd publication/host_agent && bun run test:pubhost:agent [--only apache|nginx] — inside the CI image only (its exec seam: bun run ci:local --docker --instance); needs openssl, Apache 2.4 + apxs, nginx, MariaDB, the suite database for the copy pass (bun run test:db:setup); network for the v2 bundle install';
+	if (name.includes('public-URL probe'))
+		return 'bun run test:pubhost:probe [--only apache|nginx] (needs Apache 2.4 + apxs and nginx; no database)';
+	if (name.includes('publication-host'))
+		return 'bun run test:media:pubhost [--only apache|nginx] (needs Apache 2.4 + apxs, nginx with the mp4 module)';
 	if (name.includes('tripwire')) {
 		const run = `bun test --timeout=30000 <the failing file>${firstFailure}`;
 		return ratchet

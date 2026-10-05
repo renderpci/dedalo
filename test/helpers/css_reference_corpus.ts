@@ -17,7 +17,9 @@
  * Tracked, not on-disk: the question is about COMMITTED bytes, because a deploy
  * is a checkout (.gitattributes) and untracked build output ships nowhere.
  *
- * Consumers: test/unit/css_corpus_tripwire.test.ts.
+ * Consumers: test/unit/css_corpus_tripwire.test.ts; trackedRepoFiles() alone also
+ * test/unit/publication_host_pairing_tripwire.test.ts (its corpus is classified per
+ * tracked file).
  */
 
 import { join } from 'node:path';

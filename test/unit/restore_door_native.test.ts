@@ -48,16 +48,19 @@
  *     injected seam is never called, the registry's run records are
  *     byte-identical before and after) and NEVER stamps maintenance mode. This
  *     is the "live engine + wrong database" class: the plan runs through the
- *     pool, bound to the CONFIGURED database, and its two apply steps would
+ *     pool, bound to the CONFIGURED database, and its apply steps would
  *     write to production while the stamp flipped the serving engine into
  *     maintenance mode.
  *  9. POST_RESTORE_PLAN is TOTAL over `REGISTERED_NAMES` and its apply set is
- *     exactly {counters_media, media_index} — a new reconcile has to decide
+ *     exactly {counters_media, media_index, media_copy} — a new reconcile has to decide
  *     what a restore does with it, and widening the apply set is deliberate.
  * 10. `runPostRestore` RECORDS A THROWN STEP BY CODE AND CONTINUES: a plan
  *     step the registry does not know throws the registry's own
  *     `resource.not_found`; it lands in `failed` with its code, every later
  *     step still ran, and `held` is exactly the dry steps that reported drift.
+ * 11. The plan's publication_apis step (phase 4) dials paired agents: the file arms a
+ *     declared scratch publication-hosts store for its whole run (never the
+ *     installation's registry/secrets), asserted here.
  *
  * ── HONEST LIMITS ───────────────────────────────────────────────────────────
  *
@@ -86,6 +89,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
+import { privateDir } from '../../src/config/env.ts';
 import {
 	resolvePgDump,
 	resolvePgRestore,
@@ -98,6 +102,7 @@ import {
 } from '../../src/core/area_maintenance/restore_door.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
+import { publicationHostsBase } from '../../src/core/publication_host/registry.ts';
 import {
 	POST_RESTORE_PLAN,
 	type PostRestoreReport,
@@ -105,6 +110,7 @@ import {
 } from '../../src/core/reconcile/post_restore.ts';
 import { lastReconcileRun, REGISTERED_NAMES } from '../../src/core/reconcile/registry.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
+import { useScratchMediaCopyStores } from '../helpers/media_copy_mock_agent.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 import { requireSuiteMariadb, SUITE_MARIADB_DATABASES } from '../helpers/suite_mariadb.ts';
 
@@ -243,7 +249,15 @@ function nextStamp(): string {
 	return `20260903_${String(100000 + stampCounter).slice(1)}`;
 }
 
+// The whole plan runs publication_apis (phase 4, dry) and media_copy (phase 5, APPLY),
+// whose rounds read the publication-host registry + secrets + runtime (and the media-copy
+// sha cache) and ask every paired agent its status: armed for the WHOLE file so they
+// read declared scratch stores, never `<private>`'s (the agent door also refuses an
+// unarmed test process — door tripwire rule 7).
+let pubhostBase: ReturnType<typeof useScratchMediaCopyStores> | null = null;
+
 beforeAll(async () => {
+	pubhostBase = useScratchMediaCopyStores();
 	if (!READY) return;
 	// Leg 10 runs the REAL post-restore plan, whose public-tier reconcile opens a pool
 	// per diffusion target the ontology declares: acquire the lane's suite MariaDB first
@@ -268,6 +282,7 @@ beforeAll(async () => {
 }, 120_000); // a cold suite MariaDB lane installs and starts a server
 
 afterAll(async () => {
+	pubhostBase?.dispose();
 	for (const name of await databasesLike(TARGET).catch(() => [] as string[])) {
 		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`]);
 	}
@@ -693,7 +708,7 @@ describe.if(READY)('restore door — the artifact, the writers, the failure, the
 });
 
 describe('the post-restore plan is total over the registry', () => {
-	test('9. every REGISTERED_NAMES entry has exactly one plan step with a reason; apply = {counters_media, media_index}', () => {
+	test('9. every REGISTERED_NAMES entry has exactly one plan step with a reason; apply = {counters_media, media_index, media_copy}', () => {
 		expect(REGISTERED_NAMES.length).toBeGreaterThanOrEqual(7);
 		expect(POST_RESTORE_PLAN.map((s) => s.name)).toEqual([...REGISTERED_NAMES]);
 		for (const step of POST_RESTORE_PLAN) {
@@ -702,7 +717,16 @@ describe('the post-restore plan is total over the registry', () => {
 		expect(POST_RESTORE_PLAN.filter((s) => s.apply).map((s) => s.name)).toEqual([
 			'counters_media',
 			'media_index',
+			'media_copy',
 		]);
+	});
+
+	test("11. the whole plan's publication_apis and media_copy steps read a scratch publication-hosts store, never <private>'s", () => {
+		expect(POST_RESTORE_PLAN.map((s) => s.name)).toContain('publication_apis');
+		expect(POST_RESTORE_PLAN.map((s) => s.name)).toContain('media_copy');
+		expect(pubhostBase).not.toBeNull();
+		expect(publicationHostsBase()).toBe(pubhostBase?.base as string);
+		expect(publicationHostsBase()).not.toBe(privateDir);
 	});
 
 	test('the door refuses a database name it cannot interpolate safely, before anything', () => {

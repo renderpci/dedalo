@@ -44,6 +44,7 @@ import {
 	layAuthMarker,
 	MARKER_REAP_GRACE_MS,
 	MEDIA_AUTH_COOKIE,
+	MEDIA_WORKING_FILE_EXTENSIONS,
 	mediaTreeUnreachableReason,
 	mintAuthCookieValue,
 	overrideMediaProtectionPathsForTests,
@@ -158,6 +159,43 @@ describe('public qualities (rule B folder allowlist)', () => {
 		).toEqual(['image/thumb']);
 	});
 
+	test('master tiers are refused in ANY letter case (case-insensitive storage)', () => {
+		// On APFS/SMB/NTFS `image/ORIGINAL/` IS `image/original/`: a case-sensitive
+		// compare would let the rule allowlist the master folder and serve it anonymously.
+		expect(
+			filterPublicQualities([
+				'image/ORIGINAL',
+				'image/Original',
+				'image/MODIFIED',
+				'av/oRiGiNaL',
+				'Foo/Modified/bar',
+				'image/thumb',
+			]),
+		).toEqual(['image/thumb']);
+		for (const quality of ['ORIGINAL', 'Original', 'MODIFIED', '/Modified/']) {
+			expect(protection.isMasterQuality(quality)).toBe(true);
+		}
+		expect(protection.isMasterQuality('thumb')).toBe(false);
+	});
+
+	test('a configured custom master name is refused in any case, either side', () => {
+		// config.media is frozen at import, so the custom name is configured in a child
+		// process. Configured mixed-case, probed upper and lower: both sides normalize.
+		const probe = `const p = await import('./src/core/media/protection.ts');
+console.log(JSON.stringify({
+	filtered: p.filterPublicQualities(['image/ARCHIVO', 'image/archivo', 'image/Archivo', 'image/thumb']),
+	master: ['ARCHIVO', 'archivo'].map((q) => p.isMasterQuality(q)),
+}));`;
+		const run = Bun.spawnSync(['bun', '-e', probe], {
+			cwd: join(import.meta.dir, '..', '..'),
+			env: { ...process.env, DEDALO_IMAGE_QUALITY_ORIGINAL: 'Archivo' },
+		});
+		expect(run.exitCode).toBe(0);
+		const lines = run.stdout.toString().trim().split('\n');
+		const out = JSON.parse(lines[lines.length - 1] ?? '{}');
+		expect(out).toEqual({ filtered: ['image/thumb'], master: [true, true] });
+	}, 30_000);
+
 	test('traversal and hostile charsets are refused', () => {
 		expect(
 			filterPublicQualities(['image/../../etc', '..', 'image/1.5MB;rm -rf /', 'image/thumb', '']),
@@ -265,6 +303,17 @@ describe('the generated nginx rules', () => {
 	test('the SEC-088 script block is emitted in EVERY mode, including off', () => {
 		for (const mode of ['off', 'private', 'publication'] as const) {
 			expect(buildNginxConf(mode, ['image/thumb'])).toContain('phps?|phtml|phar');
+		}
+	});
+
+	test('working files (F2) are denied as 404 in EVERY mode, before rule B', () => {
+		const deny = `location ~* ^/dedalo/media/.+\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$ {\n\tdeny all;\n\treturn 404;\n}`;
+		for (const mode of ['off', 'private', 'publication'] as const) {
+			const text = buildNginxConf(mode, ['image/thumb']);
+			expect(text).toContain(deny);
+			if (mode === 'publication') {
+				expect(text.indexOf(deny)).toBeLessThan(text.indexOf('location ~ "^'));
+			}
 		}
 	});
 });

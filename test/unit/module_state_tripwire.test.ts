@@ -235,12 +235,12 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/geoip/reader.ts:reader',
 	// Diffusion job service (DIFFUSION_SPEC §4.2) — all request-INDEPENDENT
 	// process state: a table-bootstrap memo plus the scheduler's process-wide
-	// timers/latch. No request identity (user/session/lang) ever lands here;
-	// per-run state lives in the durable dedalo_ts_diffusion_jobs rows.
+	// timers (the tick's single-flight latch lives in a closure: coalescingKick).
+	// No request identity (user/session/lang) ever lands here; per-run state
+	// lives in the durable dedalo_ts_diffusion_jobs rows.
 	'diffusion/jobs/schema.ts:ensured',
 	'diffusion/jobs/scheduler.ts:schedulerTimer',
 	'diffusion/jobs/scheduler.ts:sweeperTimer',
-	'diffusion/jobs/scheduler.ts:ticking',
 	// Diffusion plan compiler (DIFFUSION_SPEC §4.1): a lazily-imported parser
 	// classifier memo and the ontology-revision counter that keys the plan
 	// cache — both request-INDEPENDENT (ontology/install-stable, bumped only
@@ -267,6 +267,15 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// identity (a run is keyed by reconcile NAME, actor-less by design).
 	'core/reconcile/registry.ts:gaugeRegistered',
 	'core/reconcile/scheduler.ts:started',
+	// Publication API push single-flight latch (publication host phase 4): set
+	// synchronously before the first await of an APPLY round, cleared in finally.
+	// Process-wide operational state like the reconcile scheduler's latch above —
+	// it says only "a push is running", never who asked (the actor rides the call).
+	'core/publication_host/api_reconcile.ts:applyRunning',
+	// The last Publication API round's verdict (phase 4): the panel shows it instead
+	// of hashing two API trees on every get_value. Install-static facts (the running
+	// tree's release or refusal + a time), overwritten by every round, never identity.
+	'core/publication_host/api_reconcile.ts:lastVerdict',
 	// Retention scheduler (audit 2026-08-26 P2-9): the armed latch and the daily
 	// interval handle. Same class as the reconcile scheduler above — process-wide
 	// wiring, no request identity (a retention pass is keyed by STORE name and has
@@ -282,12 +291,29 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// set/cleared by the marker-store tests around each case — never request
 	// identity (the production base is install-static config.media.rootPath).
 	'diffusion/targets/mediastore/media_index.ts:baseOverrideForTests',
+	// The started media-copy worker (PUBLICATION_HOST_SPEC §5.2, M3/M4): set once by
+	// startMediaCopyWorker at boot, cleared by its stop (shutdown drain, gates). It
+	// holds per-HOST lanes (registry names) and marker keys, never a user, session
+	// or language; a second start is refused.
+	'diffusion/targets/mediastore/media_copy_worker.ts:activeWorker',
+	// Media-copy test seam (publication-host copy mode): the same guarded temp-dir-only
+	// shape as the marker-store seam above — it refuses any non-temp path, so a test can
+	// never point the sha-cache writer at the real <private>/media_copy. Set and cleared
+	// around each case; never request identity (production is install-static privateDir).
+	'diffusion/targets/mediastore/media_copy.ts:stateDirOverrideForTests',
 	// Media-protection test seam (Rule A port): the same guarded temp-dir-only shape as
 	// the marker-store seam above — it refuses any non-temp path, so a test can never
 	// point the auth-marker writer or the rule-file writer at a real media tree. Set and
 	// cleared around each case; never request identity (the production paths are
 	// install-static: config.media.rootPath and <private>/).
 	'core/media/protection.ts:pathOverridesForTests',
+	// Publication-host stores test seam (phase 3, 2026-10-03): the
+	// core/media/protection.ts:pathOverridesForTests shape, stricter — it accepts only a
+	// directory under the OS temp dir that carries `.dedalo_test_publication_hosts`, so no
+	// test can point the registry or the secret writer at a real <private>. Holds a PATH,
+	// never request identity; null in production, set and cleared around each case
+	// (test/helpers/publication_host_fixtures.ts).
+	'core/publication_host/registry.ts:baseOverrideForTests',
 	// REMOVED 2026-08-24 with the per-session media credential
 	// (WC-2026-08-24-media-auth-session-scoped). It cached "today's install-wide cookie
 	// value" so the per-request re-issue could be a string compare instead of a JSON
@@ -357,6 +383,22 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// Orphan adoptions in flight, keyed on the resolved backup directory, deleted
 	// when the pass settles — concurrent dumps share one pass. No request identity.
 	'core/area_maintenance/backup.ts:adoptionInFlight',
+	// Publication API bundle builds in flight (phase 4, L3): keyed on backupRoot +
+	// release id + api — never request identity — so the boot-confirm hook and a
+	// panel push of the same release share one `bun install`. Deleted the moment the
+	// build settles (`.finally`); a restart clears it.
+	'core/publication_host/api_bundles.ts:buildsInFlight',
+	// Publication-host READ proofs (phase 3, E6): host NAME → the registry fingerprint +
+	// address its unauthenticated /health proved. A fact about a fixed registry entry —
+	// no user, session or language. Success only; deleted on any transport failure, a
+	// 401, a status body naming another fingerprint, a failed proof and forgetPairing.
+	// A re-pair in ANOTHER process (pair CLI) changes the key, so the next read re-proves;
+	// mutations never consult it (they prove live on every call).
+	'core/publication_host/agent_client.ts:provenPairings',
+	// Per-host serialization of the publication-host AFTER-CHANGE probe (phase 6):
+	// keyed on the registry host name, never request identity; an entry is deleted
+	// when its own probe settles, so at most one queued lane per changing host.
+	'core/publication_host/probe.ts:probeLanes',
 	// Bootstrap memo for matrix_time_machine.tm_role (ensureTmRoleColumn — the
 	// self-heal when migration 0010 did not land at boot): the TABLES verified
 	// to carry the column. No request identity; set only on success, cleared by
@@ -465,6 +507,11 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// in the finally of the very chain it serializes (self-draining); keys are
 	// marker names, never request identity.
 	'diffusion/targets/mediastore/media_index.ts:keyLocks',
+	// The pub/ transition seam's sinks (PUBLICATION_HOST_SPEC §5.2, M3): boot
+	// wiring — the media-copy worker registers ONE sink at boot and removes it on
+	// shutdown (the returned unregister); gates add/remove their own around each
+	// case. Functions, never request identity; not a cache.
+	'diffusion/targets/mediastore/pub_transitions.ts:sinks',
 	// --- content caches with a NON-hub invalidation contract (lifecycle
 	// documented at the declaration site) -------------------------------------
 	// Install-static media type specs (concepts/media.ts): derived from code
@@ -783,6 +830,12 @@ describe('runDetachedFromTransaction — frozen caller set', () => {
 	const ALLOWED_IMPORTERS = new Set([
 		// The job manager: submit() runs inside a request, the worker must not.
 		'src/core/media/jobs.ts',
+		// The media-copy worker (PUBLICATION_HOST_SPEC §5.2): a pub/ flip is emitted
+		// INSIDE a marker writer's transaction (a runner batch, the fenced media_index
+		// reconcile); the copy run it schedules is background work that outlives that
+		// writer and must never join its (expiring) handle — media_copy_worker_native
+		// drives a flip from inside withTransaction and pins the run detached.
+		'src/diffusion/targets/mediastore/media_copy_worker.ts',
 	]);
 
 	test('only the job manager imports the transaction-ALS escape hatch', () => {

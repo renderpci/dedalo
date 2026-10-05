@@ -63,6 +63,7 @@ import {
 	logDiffusionActivity,
 } from '../core/diffusion_bridge/diffusion_delete.ts';
 import { DedaloError, isDedaloError, logError, toErrorBody } from '../core/errors/index.ts';
+import { startRunnerMediaCopyRelay } from './api/media_copy.ts';
 import type { DiffusionJobRow, JobLease } from './jobs/queue.ts';
 import {
 	checkpointJob,
@@ -589,7 +590,12 @@ if (import.meta.main) {
 	// SIGTERM (cancel_process on this host / systemd stop): exit promptly; the
 	// job row keeps its checkpoint, and the sweeper or cancel flag settles state.
 	process.on('SIGTERM', () => process.exit(143));
+	// The pub/ seam reaches only this process's sinks: an unpublish this run flips must
+	// reach every copy host's agent now, not at the server's next reconcile
+	// (PUBLICATION_HOST_SPEC §5.2 M2). Drained, bounded, before exit.
+	const relay = startRunnerMediaCopyRelay();
 	await runJob(jobId, epoch);
+	await relay.stop();
 	await closeDatabasePool();
 	process.exit(0);
 }

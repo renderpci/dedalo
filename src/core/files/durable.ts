@@ -23,7 +23,8 @@
  *
  * A neutral kernel (no subsystem's vocabulary): the diffusion writers
  * (src/diffusion/writers/files.ts) and the core files-unlink door
- * (src/core/diffusion_bridge/diffusion_delete.ts) both import it.
+ * (src/core/diffusion_bridge/diffusion_delete.ts) import it, and so does the
+ * atomic JSON state-file kernel (src/core/files/atomic_json.ts).
  */
 
 import { closeSync, fsyncSync, mkdirSync, openSync, writeSync } from 'node:fs';

@@ -16,7 +16,7 @@ Native TS since 2026-07-12 (closes audit `MEDIA-01` / `SECURITY_DECISIONS.md` DE
 option B). Before that, Rule A and the rule generation were PHP-owned; the PHP engine is
 retired, so nothing minted the cookie and nothing generated the rules.
 
-Engine: `src/core/media/protection.ts`. Marker writer: `src/diffusion/targets/mediastore/media_index.ts`.
+Engine: `src/core/media/protection.ts`. Publication-host profile: `src/core/media/publication_host_rules.ts` (`engineering/PUBLICATION_HOST_SPEC.md` §5.1). Marker writer: `src/diffusion/targets/mediastore/media_index.ts`.
 Gates: `test/unit/media_protection*.test.ts` (one of them a registered tripwire).
 
 ## 1. Why the web server enforces, and not Bun
@@ -299,13 +299,14 @@ rule files (never hand-written ones) over a scratch media tree, then:
 | any of the above | valid | **200** (rule A) |
 | `.publication/auth/<value>`, `.publication/pub/<key>`, `.htaccess` | any | **404** |
 | any protected file | `../../../etc/passwd`, short, non-hex, 128-hex non-marker | **404**, never 500 |
-| uploaded `.php` under the media root | valid | **denied — never executed** (also in mode `off`) |
+| uploaded `.php` (or any SEC-088 script extension, any case) under the media root | valid | **404 — never executed, source never served** (also in mode `off`) |
 | AV file, `Range: bytes=0-99` | none | **206** + `Content-Range` |
 | any media file | any | `X-Content-Type-Options: nosniff` (MEDIA-03) |
 | raw uploaded `.svg` (`svg/…`) | valid | **200** + `Content-Disposition: attachment` + `Content-Security-Policy: default-src 'none'; sandbox` |
 | server-generated envelope (`<image>/…/svg/…/*.svg`) | valid | **200**, NO disposition, CSP with `script-src 'none'` — and the `<object>` edit view still renders |
 | `.xml` under the media root | valid | **200** + `attachment` + sandbox CSP |
 | uploaded `.html` / `.swf` under the media root | valid | **404 — denied outright** (also in mode `off`) |
+| working file (`.deleted`/`.temp`/`.tmp`/`.import`/`.csv`, any case) of a **published** record | any | **404 — denied outright**, before rule B (also in mode `off`) |
 | published file, then `rm` its `pub/` marker | none | **404 on the very next request**; `touch` it back → 200 |
 
 **Status (2026-08-24): the whole matrix, including the five MEDIA-03 header rows, was run
@@ -323,6 +324,51 @@ authorization, so an authz denial answers first — the opposite of what the cod
 is now a `RewriteRule … [R=404,L]`, and both engines answer 404. Pattern gates cannot see
 this class of defect at all.
 
+**2026-10-03 (F2):** the working-file row was missing, and it was red: nginx (both profiles)
+had no working-file deny at all, so a published record's grammar-valid `…_test3_1.tmp`/`.csv`
+passed rule B and was served; Apache denied it with a case-sensitive `FilesMatch` → **403**,
+and `.TMP` on a case-insensitive mount (APFS/SMB) was served (**200**). Both now 404 it from
+the shared hardening (`MEDIA_WORKING_FILE_EXTENSIONS`; Apache a `(?i)` `RewriteRule … [R=404,L]`
+with a `FilesMatch` deny as the no-mod_rewrite fallback). Proven live on Apache 2.4.68 +
+nginx 1.31.6: the publication-host profile by `bun run test:media:pubhost` (`.tmp`, `.csv`,
+`.TMP` rows), the work profile (modes `publication` and `off`, with and without a valid
+cookie) by a one-off run against the generated `.htaccess`/nginx conf; pinned by the
+tripwire's F2 lockstep block (all four generated texts).
+
+**2026-10-03 (F3):** the same 403 trap, still live for SEC-088: Apache denied an uploaded
+`.php` (every `MEDIA_SCRIPT_DENY_PATTERN` extension) with an unconditional `FilesMatch`
+`Require all denied`, and since authz runs before the per-dir rewrite it answered **403**,
+confirming the upload exists. Now `SetHandler none` (never executed) + a `(?i)`
+`RewriteRule … [R=404,L]`, the `FilesMatch` deny kept ONLY inside `<IfModule !mod_rewrite.c>`
+as the no-mod_rewrite fallback. Proven live on Apache + nginx by `bun run test:media:pubhost`
+(`.php`, `.PHP` rows: exactly 404, source never served; the pre-fix template reds both Apache
+rows with 403); the work `.htaccess` emits the identical shared block; pinned by the
+tripwire's F3 block (every Apache text, any case, deny-only-as-fallback).
+
 Historic note: the **nginx block used to be pattern-verified only**
 (the tripwire compiles its regexes and pins the `^~`/named-capture traps) — it has not yet
 been run against a live nginx. Do that before the first nginx deployment.
+
+## 10. The publication-host profile (separate publication machine, shared storage)
+
+When a SEPARATE publication machine reads this media tree through a read-only mount, the
+rule files above are wrong there twice: they embed the WORK host's root, and they honour
+Rule A, whose `auth/` markers are work-session credentials. That host gets its own profile,
+rendered from the same templates by `src/core/media/publication_host_rules.ts`:
+
+- hardening + rule 0 + **Rule B against the host's mount root** + 404 default deny; **no Rule A**;
+- Apache: a vhost include (`Alias` + `<Directory>` with `AllowOverride None`, so the work
+  `.htaccess` on the shared tree is never read), gate NOT in `<IfModule>` (no mod_rewrite = no boot);
+- nginx: a server{} include = ONE outer `location ^~ <url>/` (no server-level regex location
+  can take a media request) with the shared hardening (`nginxHardeningLocations`) and Rule B
+  (aliasing into the root) nested, `return 404` default; the http{} map is `buildNginxMap()`
+  unchanged. The mount must not sit under a document root.
+
+Render: `bun run media:publication-host-rules --root <mount> [--server apache|nginx|nginx-map]`.
+Lockstep: `media_protection_tripwire.test.ts` (same filename verdicts, host-root markers, no
+Rule A). Engine proof: `bun run test:media:pubhost` (the §9 matrix for this profile on live
+Apache and nginx, in a HOSTILE harness — mount under the document root, an operator
+static-asset regex location before the nginx include — plus: a work cookie is refused, a
+permissive work `.htaccess` is ignored, and Apache without mod_rewrite refuses the config).
+Hostile-cookie rows are N/A: this profile reads no cookie. Exports, NFS/SMB attribute caching and
+the mount layout: `engineering/PUBLICATION_HOST_SPEC.md` §5.1.

@@ -28,8 +28,8 @@
  * stated-but-unenforced invariant, which DEC-12 forbids.
  *
  * THE DAEMON EXEMPTION (ratified decision 3(b), verified against the files on
- * disk 2026-08-25). The two isolated publication packages run `bun test` BARE,
- * on purpose, at four sites (DAEMON_EXEMPT below): publication/site_builder has
+ * disk 2026-08-25). The isolated publication daemon packages run `bun test` BARE,
+ * on purpose, at six sites (DAEMON_EXEMPT below): publication/site_builder has
  * NO bunfig.toml AT ALL, and publication/server_api/v2's declares only
  * install/coverage/run keys — neither ever chose a 30000 timeout, so unlike the
  * root suite they are not losing a number they picked. Their green baselines
@@ -83,7 +83,7 @@ const DAEMON_EXEMPT: ReadonlyArray<{ file: string; signature: string; reason: st
 		signature: 'bun install --frozen-lockfile && bunx tsc --noEmit && bun test',
 		reason:
 			'daemon_gate(): runs each publication package IN its own directory under its own ' +
-			'bunfig; neither bunfig ever declared 30000 and both baselines were cut under the ' +
+			'bunfig; no daemon bunfig ever declared 30000 and every baseline was cut under the ' +
 			'built-in 5000 ms cap — widening on no evidence silently loosens the gate.',
 	},
 	{
@@ -106,6 +106,20 @@ const DAEMON_EXEMPT: ReadonlyArray<{ file: string; signature: string; reason: st
 		signature: 'cd publication/site_builder && bunx tsc --noEmit && bun test',
 		reason:
 			'test:sitebuilder script — developer entry point to the site_builder daemon suite; ' +
+			'same rationale as test:publication.',
+	},
+	{
+		file: 'scripts/verify.ts',
+		signature: 'cd publication/host_agent && bunx tsc --noEmit && bun test',
+		reason:
+			'host_agent stage: the third daemon package, same cut-under-5000ms baseline as the ' +
+			'hermetic.sh daemon_gate site — its bunfig declares coverage + coverageThreshold, never a timeout.',
+	},
+	{
+		file: 'package.json',
+		signature: 'cd publication/host_agent && bunx tsc --noEmit && bun test',
+		reason:
+			'hostagent:test script — developer entry point to the publication-host agent suite; ' +
 			'same rationale as test:publication.',
 	},
 ];
@@ -362,6 +376,7 @@ describe('test_timeout_tripwire: one timeout value, carried everywhere it runs',
 		for (const bunfig of [
 			'publication/site_builder/bunfig.toml',
 			'publication/server_api/v2/bunfig.toml',
+			'publication/host_agent/bunfig.toml',
 		]) {
 			if (!existsSync(join(ROOT, bunfig))) continue; // no file = no declared timeout
 			const live = read(bunfig)

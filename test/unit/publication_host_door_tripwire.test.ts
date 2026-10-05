@@ -1,0 +1,808 @@
+/**
+ * THE PAIRED PRIVATE AGENT CHANNEL HAS ONE DOOR, AND IT STAYS SHUT (2026-10-03;
+ * engineering/OUTBOUND_SPEC.md §2.1, engineering/PUBLICATION_HOST_SPEC.md §2).
+ *
+ * The publication agent runs pushed code (`release.install`) and reloads a public web
+ * server, so whatever can dial it can change what an institution publishes. The engine
+ * dials it through ONE module, `src/core/publication_host/transport.ts`, and this gate
+ * holds what a socket census cannot see:
+ *
+ *   1. ONLY THE DOOR LOADS AN AGENT'S TLS MATERIAL. `readHostTls` is taken from the secrets
+ *      module by the door alone — followed by BINDING (named, renamed, namespace, default,
+ *      `export … from`, `export *`, literal `import()` / `require()`), never by spelling.
+ *      Without the client key a second dialler cannot complete the handshake.
+ *   2. ONLY THE DOOR SPELLS THE AGENT'S BASE PATH. A second literal `/publication/host_agent`
+ *      is a second URL builder, the first step of a second door.
+ *   3. TLS VERIFICATION IS NEVER RELAXED. `rejectUnauthorized` appears in the door only, and
+ *      only as `true` — LOAD-BEARING, not decoration: measured on Bun 1.4.2, the explicit
+ *      `true` is what keeps a rogue agent refused when NODE_TLS_REJECT_UNAUTHORIZED=0 is in
+ *      the environment (the native gate drives it). `checkServerIdentity` appears nowhere.
+ *   4. THE DOOR'S SHAPE (Babel AST): exactly one `fetch(` call, on `target.url`, with
+ *      `redirect: 'manual'` and a `signal`; `rejectUnauthorized: true` as a boolean
+ *      literal; the shared capped reader imported from the guard and called; `agentRequest`
+ *      reads the TLS material itself and dials through `dialAgent`.
+ *   5. THE DOOR IS REGISTERED where the outbound gates and the spec look for it.
+ *   7. NO TEST REACHES A REAL AGENT (2026-10-05, phase-4 review): in a test process
+ *      (`NODE_ENV=test`) `agentRequest` refuses — FIRST, before any TLS read — unless the
+ *      publication-hosts store resolves under the OS temp dir (the declared scratch seam,
+ *      or a child whose DEDALO_PRIVATE_DIR is scratch). A whole reconcile plan run by a
+ *      gate that never armed the seam once sent the installation's bearer to its real
+ *      paired agents. Driven both ways here; the order is pinned from the AST.
+ *   6. THE DOOR IS DOCUMENTED ONCE, AND THE DOCS ARE HELD TO CODE (appended blocks, phase-3
+ *      Task 10): OUTBOUND_SPEC's door count equals its §2 table, §2.1 and the §6 row exist
+ *      once, §2.1 names every `unreachable` reason the door mints, §5 names the door
+ *      module; every path a PUBLICATION_HOST_SPEC §8 "Built" row
+ *      names exists; the operator page pairs with the CLI's verbs, flags and invoking user.
+ *      Phase-3 docs review (2026-10-05): the secrets bullet (no bundle on a unix pairing),
+ *      the transient 0600 proof copy and its one-hour sweep, the chown of carried copies,
+ *      the manual nginx http{} map include, the proxy residual as measured (canaries in
+ *      publication_host_transport_native), the public-fingerprint limit of the pairing
+ *      check, the agent client's re-pair log lines, and the widget WC addendum.
+ *
+ * The behaviour is driven in publication_host_transport_native; who may HOLD the door is
+ * the import-graph census in ssrf_one_guard_tripwire.
+ *
+ * Honest limits: it scans the engine (`src/`, `tools/`), not `scripts/` — the operator CLI
+ * and the drills there are reviewed where they are written; a non-literal `import()` of the
+ * secrets module is not followed; and it proves no secret reaches a PAYLOAD only for the
+ * door's failures (the native gate) — a widget's payload is pinned by the widget's own gate.
+ */
+
+import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
+import { parse } from '@babel/parser';
+import { isTestProcess } from '../../src/config/suite_database.ts';
+import {
+	type PublicationHostRecord,
+	publicationHostsTestRefusal,
+} from '../../src/core/publication_host/registry.ts';
+import { agentRequest } from '../../src/core/publication_host/transport.ts';
+import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
+import { shippedTextFiles } from '../helpers/shipped_text_corpus.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
+import { writePathSourceFiles } from '../helpers/write_path_corpus.ts';
+
+const REPO_ROOT = join(import.meta.dir, '..', '..');
+const DOOR = 'src/core/publication_host/transport.ts';
+const SECRETS = 'src/core/publication_host/secrets.ts';
+const GUARD = 'src/core/security/ssrf_guard.ts';
+const TLS_LOADER = 'readHostTls';
+const TEST_GUARD = 'publicationHostsTestRefusal';
+/** The agent's base path at the START of a literal (a filesystem path ending in it is not a URL). */
+const BASE_PATH_LITERAL = /['"`]\/publication\/host_agent(?=[/'"`])/;
+
+type AstNode = { type: string; [key: string]: unknown };
+
+const NOT_CODE_KEYS = new Set([
+	'loc',
+	'extra',
+	'leadingComments',
+	'trailingComments',
+	'innerComments',
+]);
+
+function read(rel: string): string {
+	return readFileSync(join(REPO_ROOT, rel), 'utf8');
+}
+
+/**
+ * Non-test TypeScript under the engine's two trees, walked from disk (unstaged files
+ * included) by the SHARED write-path lister (census_derivation_tripwire: no private walk
+ * root), narrowed to `src/` + `tools/` — `scripts/` is the honest limit above.
+ */
+function engineFiles(): string[] {
+	return writePathSourceFiles().filter(
+		(file) => /^(src|tools)\//.test(file) && !file.endsWith('.d.ts'),
+	);
+}
+
+function parseProgram(source: string): AstNode {
+	const ast = parse(source, { sourceType: 'module', plugins: ['typescript', 'decorators-legacy'] });
+	return ast.program as unknown as AstNode;
+}
+
+function visit(root: unknown, fn: (node: AstNode) => void): void {
+	if (Array.isArray(root)) {
+		for (const child of root) visit(child, fn);
+		return;
+	}
+	if (root === null || typeof root !== 'object') return;
+	fn(root as AstNode);
+	for (const [key, child] of Object.entries(root)) {
+		if (!NOT_CODE_KEYS.has(key) && typeof child === 'object') visit(child, fn);
+	}
+}
+
+function nameOf(node: unknown): string {
+	const named = node as { name?: string; value?: string } | undefined;
+	return named?.name ?? named?.value ?? '';
+}
+
+/** The repo file a relative specifier names (`.ts` assumed when it carries no extension). */
+function resolveSpecifier(file: string, specifier: unknown): string | null {
+	if (typeof specifier !== 'string' || !specifier.startsWith('.')) return null;
+	const joined = normalizePosix(joinPosix(dirname(file), specifier));
+	return /\.[cm]?[jt]s$/.test(joined) ? joined : `${joined}.ts`;
+}
+
+/** `import('x')` / `require('x')` with a literal argument: its specifier, else null. */
+function loaderSpecifier(node: AstNode): string | null {
+	// Babel spells a dynamic import either way, depending on its options and version.
+	if (node.type === 'ImportExpression') return literalValue(node.source);
+	if (node.type !== 'CallExpression') return null;
+	const callee = node.callee as AstNode;
+	const isLoader =
+		callee.type === 'Import' || (callee.type === 'Identifier' && callee.name === 'require');
+	return isLoader ? literalValue((node.arguments as AstNode[])[0]) : null;
+}
+
+function literalValue(node: unknown): string | null {
+	const literal = node as AstNode | undefined;
+	return literal?.type === 'StringLiteral' ? (literal.value as string) : null;
+}
+
+/** The bindings an import / re-export statement takes from its module ('*' = all of it). */
+function bindingsOf(node: AstNode): string[] {
+	if (node.type === 'ExportAllDeclaration') return ['*'];
+	const specifiers = (node.specifiers ?? []) as AstNode[];
+	return specifiers
+		.filter((s) => s.importKind !== 'type' && s.exportKind !== 'type')
+		.map((s) => {
+			if (s.type === 'ImportSpecifier') return nameOf(s.imported);
+			if (s.type === 'ExportSpecifier') return nameOf(s.local);
+			return '*'; // namespace or default: the whole module
+		});
+}
+
+const MODULE_STATEMENTS = new Set([
+	'ImportDeclaration',
+	'ExportNamedDeclaration',
+	'ExportAllDeclaration',
+]);
+
+/** What `file` takes from `module`, by binding. */
+function takenFrom(file: string, source: string, module: string): string[] {
+	const taken: string[] = [];
+	visit(parseProgram(source), (node) => {
+		const typeOnly = node.importKind === 'type' || node.exportKind === 'type';
+		const specifier = (node.source as AstNode | null | undefined)?.value;
+		if (
+			MODULE_STATEMENTS.has(node.type) &&
+			!typeOnly &&
+			resolveSpecifier(file, specifier) === module
+		) {
+			taken.push(...bindingsOf(node));
+		}
+		if (resolveSpecifier(file, loaderSpecifier(node)) === module) taken.push('*');
+		const reference = (node.moduleReference as AstNode | undefined)?.expression as
+			| AstNode
+			| undefined;
+		if (
+			node.type === 'TSImportEqualsDeclaration' &&
+			resolveSpecifier(file, reference?.value) === module
+		) {
+			taken.push('*');
+		}
+	});
+	return taken;
+}
+
+function loadsTlsMaterial(file: string, source: string): boolean {
+	const taken = takenFrom(file, source, SECRETS);
+	return taken.includes(TLS_LOADER) || taken.includes('*');
+}
+
+/** Engine files (code, comments stripped, literals KEPT) matching `pattern`. */
+function filesMatching(pattern: RegExp): string[] {
+	return engineFiles().filter((file) => pattern.test(stripComments(read(file))));
+}
+
+describe('the scanners see what they claim (synthetic sources)', () => {
+	const at = 'src/core/area_maintenance/widgets/x.ts';
+	const spec = "'../../publication_host/secrets.ts'";
+	const cases: Array<[string, string, boolean]> = [
+		['named', `import { readHostTls } from ${spec};`, true],
+		['renamed', `import { readHostTls as r } from ${spec};`, true],
+		['namespace', `import * as s from ${spec};`, true],
+		['default', `import s from ${spec};`, true],
+		['no extension', "import { readHostTls } from '../../publication_host/secrets';", true],
+		['re-export', `export { readHostTls } from ${spec};`, true],
+		['export star', `export * from ${spec};`, true],
+		['export star as', `export * as s from ${spec};`, true],
+		['dynamic import', `const s = await import(${spec});`, true],
+		['require', `const s = require(${spec});`, true],
+		['import equals', `import s = require(${spec});`, true],
+		['another binding only', `import { secretPresence } from ${spec};`, false],
+		['type only', `import type { HostTls } from ${spec};`, false],
+		['type specifier', `import { type HostTls } from ${spec};`, false],
+		['another module', "import { readHostTls } from './secrets.ts';", false],
+	];
+	for (const [name, source, expected] of cases) {
+		test(`TLS material census: ${name}`, () => {
+			expect(loadsTlsMaterial(at, source)).toBe(expected);
+		});
+	}
+
+	test('the base-path literal matches a URL path, not a filesystem path', () => {
+		expect(BASE_PATH_LITERAL.test("const p = '/publication/host_agent';")).toBe(true);
+		expect(BASE_PATH_LITERAL.test('const u = `/publication/host_agent/health`;')).toBe(true);
+		expect(BASE_PATH_LITERAL.test("const d = '../publication/host_agent/package.json';")).toBe(
+			false,
+		);
+		expect(BASE_PATH_LITERAL.test("const d = '/publication/host_agents';")).toBe(false);
+	});
+});
+
+describe('one door to the publication agent', () => {
+	test('the scan sees the tree (anti-vacuity)', () => {
+		const files = engineFiles();
+		expect(files.length).toBeGreaterThan(500);
+		expect(files).toContain(DOOR);
+		expect(files).toContain(SECRETS);
+	});
+
+	test('only the door loads an agent’s TLS material', () => {
+		const holders = engineFiles().filter(
+			(file) => file !== SECRETS && loadsTlsMaterial(file, read(file)),
+		);
+		expect(
+			holders,
+			`only ${DOOR} may take ${TLS_LOADER} from ${SECRETS} — dial through agentRequest`,
+		).toEqual([DOOR]);
+	});
+
+	test('only the door spells the agent’s base path', () => {
+		expect(
+			filesMatching(BASE_PATH_LITERAL),
+			`a second agent URL builder — import AGENT_BASE_PATH from ${DOOR}`,
+		).toEqual([DOOR]);
+	});
+
+	test('TLS verification is never relaxed', () => {
+		expect(filesMatching(/\brejectUnauthorized\b/)).toEqual([DOOR]);
+		const door = stripComments(read(DOOR));
+		// The value AND its type annotation: every spelling must say `true`.
+		const all = [...door.matchAll(/\brejectUnauthorized\b\s*:\s*(\w+)/g)].map((m) => m[1]);
+		expect(all.length).toBeGreaterThan(0);
+		expect(all, 'rejectUnauthorized spelled as anything but true').toEqual(all.map(() => 'true'));
+		expect(filesMatching(/\bcheckServerIdentity\b/)).toEqual([]);
+	});
+});
+
+describe('the door’s shape (AST)', () => {
+	const program = parseProgram(read(DOOR));
+
+	function calls(name: string, root: unknown = program): AstNode[] {
+		const found: AstNode[] = [];
+		visit(root, (node) => {
+			if (node.type === 'CallExpression' && nameOf(node.callee) === name) found.push(node);
+		});
+		return found;
+	}
+
+	function topLevelFunction(name: string): AstNode {
+		let found: AstNode | undefined;
+		for (const statement of program.body as AstNode[]) {
+			const declaration = (statement.declaration as AstNode | undefined) ?? statement;
+			if (declaration.type === 'FunctionDeclaration' && nameOf(declaration.id) === name)
+				found = declaration;
+		}
+		expect(found, `${DOOR} no longer defines ${name}`).toBeDefined();
+		return found as AstNode;
+	}
+
+	function property(object: AstNode, key: string): AstNode | undefined {
+		return (object.properties as AstNode[]).find(
+			(p) => p.type === 'ObjectProperty' && nameOf(p.key) === key,
+		);
+	}
+
+	test('exactly one fetch call, on target.url, redirect manual, a signal armed', () => {
+		const members: string[] = [];
+		visit(program, (node) => {
+			const callee = node.callee as AstNode | undefined;
+			if (
+				node.type === 'CallExpression' &&
+				callee?.type === 'MemberExpression' &&
+				nameOf(callee.property) === 'fetch'
+			) {
+				members.push('member fetch');
+			}
+		});
+		expect(members, 'a member-spelled fetch is a second call').toEqual([]);
+		const sites = calls('fetch');
+		expect(sites.length).toBe(1);
+		const [url, init] = (sites[0] as AstNode).arguments as AstNode[];
+		expect(url?.type).toBe('MemberExpression');
+		expect(`${nameOf(url?.object)}.${nameOf(url?.property)}`).toBe('target.url');
+		expect(init?.type).toBe('ObjectExpression');
+		const redirect = property(init as AstNode, 'redirect')?.value as AstNode | undefined;
+		expect(redirect?.type === 'StringLiteral' ? redirect.value : '<missing>').toBe('manual');
+		expect(property(init as AstNode, 'signal'), 'no signal on the call').toBeDefined();
+		expect(
+			property(init as AstNode, 'proxy'),
+			'a proxy option on the private channel',
+		).toBeUndefined();
+	});
+
+	test('rejectUnauthorized is the boolean literal true', () => {
+		const values: string[] = [];
+		visit(program, (node) => {
+			if (node.type === 'ObjectProperty' && nameOf(node.key) === 'rejectUnauthorized') {
+				const value = node.value as AstNode;
+				values.push(value.type === 'BooleanLiteral' ? String(value.value) : value.type);
+			}
+		});
+		expect(values).toEqual(['true']);
+	});
+
+	test('the body is read through the guard’s shared capped reader', () => {
+		const imported = new Map<string, string>();
+		for (const statement of program.body as AstNode[]) {
+			if (statement.type !== 'ImportDeclaration') continue;
+			if (resolveSpecifier(DOOR, (statement.source as AstNode).value) !== GUARD) continue;
+			for (const s of statement.specifiers as AstNode[])
+				imported.set(nameOf(s.local), nameOf(s.imported));
+		}
+		const local = [...imported].find(([, original]) => original === 'readBytesCapped')?.[0];
+		expect(local, 'readBytesCapped is not imported from the guard').toBeDefined();
+		expect(calls(local as string).length).toBeGreaterThanOrEqual(1);
+	});
+
+	test('agentRequest reads the TLS material itself and dials through dialAgent', () => {
+		const door = topLevelFunction('agentRequest');
+		expect(calls(TLS_LOADER, door).length).toBe(1);
+		expect(calls('dialAgent', door).length).toBe(1);
+		expect(calls('agentTarget', topLevelFunction('dialAgent')).length).toBe(1);
+	});
+
+	test('rule 7: agentRequest consults the test-process guard FIRST, before any TLS read', () => {
+		const door = topLevelFunction('agentRequest');
+		const guard = calls(TEST_GUARD, door);
+		expect(guard.length).toBe(1);
+		const start = (node: AstNode) => (node as unknown as { start: number }).start;
+		expect(start(guard[0] as AstNode)).toBeLessThan(start(calls(TLS_LOADER, door)[0] as AstNode));
+	});
+});
+
+describe('rule 7: in a TEST process the door dials only from a scratch store', () => {
+	const host: PublicationHostRecord = {
+		name: 'www',
+		instance: 'test',
+		fingerprint: 'a'.repeat(64),
+		// a TLS host with no secrets: past the guard it is publication_host.unconfigured,
+		// so the two outcomes below tell the guard from the secrets store
+		address: { kind: 'tls', host: '127.0.0.1', port: 1 },
+		public_url: null,
+		qualities: null,
+		probe: { published: null, unpublished: null },
+		paired_at: '2026-10-05T00:00:00.000Z',
+	};
+	const health = { method: 'GET', path: '/health' } as const;
+
+	test('bun test is a test process; an installation never is', () => {
+		expect(isTestProcess()).toBe(true);
+		expect(publicationHostsTestRefusal(false)).toBeNull();
+	});
+
+	test("the installation's store (no scratch armed) is refused before the TLS material is read", async () => {
+		expect(publicationHostsTestRefusal()).toContain('scratch publication-hosts store');
+		await expect(agentRequest(host, health, null)).rejects.toMatchObject({
+			code: 'internal.unexpected',
+			message: expect.stringContaining('scratch publication-hosts store'),
+		});
+	});
+
+	test('a declared scratch store passes the guard (the refusal is not blanket)', async () => {
+		const scratch = useScratchPublicationHostsBase();
+		try {
+			expect(publicationHostsTestRefusal()).toBeNull();
+			await expect(agentRequest(host, health, null)).rejects.toMatchObject({
+				code: 'publication_host.unconfigured',
+			});
+		} finally {
+			scratch.dispose();
+		}
+	});
+});
+
+describe('the door is registered where the outbound gates look', () => {
+	test('OUTBOUND_SPEC names it as the fourth door', () => {
+		const spec = read('engineering/OUTBOUND_SPEC.md');
+		expect(spec).toContain(DOOR);
+		expect(spec).toContain('FOUR outbound doors');
+		expect(spec).not.toContain('THREE outbound doors');
+		expect(spec).toContain('### 2.1 The paired private agent channel');
+	});
+
+	test('both outbound tripwires carry its rows', () => {
+		const ssrf = read('test/unit/ssrf_one_guard_tripwire.test.ts');
+		expect(ssrf).toContain(`const AGENT_CHANNEL = '${DOOR}';`);
+		expect(ssrf).toContain('[AGENT_CHANNEL]: AGENT_CHANNEL_DOORS');
+		const outbound = read('test/unit/outbound_fetch_tripwire.test.ts');
+		expect(outbound.split(`'${DOOR}':`).length - 1, 'BOUNDED_BY + ADDRESS_POLICY').toBe(2);
+	});
+
+	test('this gate is indexed', () => {
+		expect(read('engineering/TRIPWIRES.md')).toContain(
+			'| test/unit/publication_host_door_tripwire.test.ts |',
+		);
+	});
+});
+
+// ─── THE DOOR IS DOCUMENTED ONCE, WHERE IT IS READ ─────────────────────────────
+// The fourth door is stated in prose in two specs. A rule stated in a document needs a
+// gate (DEC-12), so each statement is held to something countable: the rule sentence's
+// door count to the §2 table, §2.1 and the §6 row to ONE copy each, §5 to the door module,
+// and the publication-host spec's "Built" rows to files that exist.
+
+const DOCS_GATE_ROOT = `${import.meta.dir}/../..`;
+const DOOR_TRIPWIRE_ROW = '| `test/unit/publication_host_door_tripwire.test.ts` |';
+
+async function docsGateRead(rel: string): Promise<string> {
+	const file = Bun.file(`${DOCS_GATE_ROOT}/${rel}`);
+	if (!(await file.exists()))
+		throw new Error(`${rel}: missing — the door's documentation has nowhere to live`);
+	return file.text();
+}
+
+async function docsGatePathExists(rel: string): Promise<boolean> {
+	try {
+		await Bun.file(`${DOCS_GATE_ROOT}/${rel}`).stat(); // stat: directories count too
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function docsGateSection(text: string, heading: string): string {
+	const start = text.indexOf(`\n## ${heading}`);
+	if (start === -1) throw new Error(`no "## ${heading}" heading`);
+	const end = text.indexOf('\n## ', start + 1);
+	return text.slice(start, end === -1 ? undefined : end);
+}
+
+function docsGateCount(text: string, needle: string): number {
+	return text.split(needle).length - 1;
+}
+
+const DOOR_COUNT_WORDS: Record<string, number> = { THREE: 3, FOUR: 4, FIVE: 5, SIX: 6 };
+
+describe('the agent channel door is documented once, where it is read', () => {
+	test('OUTBOUND_SPEC: the door count in the rule sentence equals the §2 table rows', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const word = /the engine has ([A-Z]+) outbound doors/.exec(spec)?.[1] ?? '';
+		const lines = docsGateSection(spec, '2.').split('\n');
+		const header = lines.findIndex((l) => l.startsWith('| Door |'));
+		expect(header).toBeGreaterThan(-1);
+		const rows: string[] = [];
+		for (const line of lines.slice(header + 2)) {
+			if (!line.startsWith('|')) break;
+			rows.push(line);
+		}
+		expect(DOOR_COUNT_WORDS[word]).toBe(rows.length);
+		expect(rows.filter((r) => r.includes('src/core/publication_host/transport.ts')).length).toBe(1);
+	});
+
+	test('OUTBOUND_SPEC: §2.1 and the door-tripwire §6 row exist ONCE; the row claims only what the gate checks', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		expect(docsGateCount(spec, '### 2.1 The paired private agent channel')).toBe(1);
+		const gates = docsGateSection(spec, '6.');
+		expect(docsGateCount(gates, DOOR_TRIPWIRE_ROW)).toBe(1);
+		const row = gates.split('\n').find((l) => l.startsWith(DOOR_TRIPWIRE_ROW)) ?? '';
+		// A payload's secrets are the widget gate's (publication_host_widget_native), not this file's.
+		expect(row).not.toMatch(/payload/i);
+		expect(row).toContain('§8');
+	});
+
+	test('OUTBOUND_SPEC §2.1 names every `unreachable` reason the door mints (socket_perms included)', async () => {
+		const source = read('src/core/publication_host/transport.ts');
+		const reasons = new Set<string>();
+		for (const chunk of source.split('failure(').slice(1)) {
+			if (!chunk.trimStart().startsWith("'publication_host.unreachable'")) continue;
+			const literal = /reason:\s*'(\w+)'/.exec(chunk.slice(0, 200))?.[1];
+			if (literal !== undefined) reasons.add(literal);
+		}
+		for (const m of source.matchAll(/function transportReason[\s\S]*?\? '(\w+)' : '(\w+)'/g)) {
+			reasons.add(m[1] as string);
+			reasons.add(m[2] as string);
+		}
+		// anti-vacuity: transport, tls, redirect, socket_perms at least
+		expect(reasons.size).toBeGreaterThanOrEqual(4);
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const section = spec.slice(spec.indexOf('### 2.1 '), spec.indexOf('\n## 3.'));
+		const missing = [...reasons].filter((r) => !section.includes(`\`${r}\``));
+		expect(missing).toEqual([]);
+		expect(section).toContain('assertSocketSafe');
+	});
+
+	test('OUTBOUND_SPEC: §5 says the channel is a door, naming the door module', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		expect(docsGateSection(spec, '5.')).toContain('`src/core/publication_host/transport.ts`');
+	});
+
+	test('PUBLICATION_HOST_SPEC §8: phase 3 is Built and every repo path a Built row names exists', async () => {
+		const phases = docsGateSection(
+			await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md'),
+			'8.',
+		).split('\n');
+		expect(phases.find((l) => l.startsWith('| 3 |')) ?? '').toContain('**Built:**');
+		const missing: string[] = [];
+		for (const row of phases.filter((l) => l.includes('**Built:**'))) {
+			for (const m of row.matchAll(
+				/`((?:src|scripts|test|client|engineering|docs|publication)\/[^`\s]*)`/g,
+			)) {
+				const rel = (m[1] ?? '').replace(/\/$/, '');
+				if (!(await docsGatePathExists(rel))) missing.push(rel);
+			}
+		}
+		expect(missing).toEqual([]);
+	});
+});
+
+/**
+ * The invocation the CLI's own usage and owner rule name (Task 5: invocationOwnerProblem):
+ * the package script, run as the engine user. The page uses it verbatim.
+ */
+const PAIR_INVOCATION = 'sudo -u <engine user> bun run dedalo:pair-publication-host ';
+const PAIR_SCRIPT = 'dedalo:pair-publication-host';
+const PAIR_LINE = /publication_host_pair\.ts |dedalo:pair-publication-host /;
+
+describe('the operator is told how pairing and the panel really work', () => {
+	test('the operator page pairs through the real CLI: its verbs, its flags, its invoking user', async () => {
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const cli = await docsGateRead('scripts/publication_host_pair.ts');
+		expect(
+			cli,
+			'the CLI no longer names the engine-user invocation: re-read its owner rule',
+		).toContain(PAIR_INVOCATION.trim());
+		const scripts = JSON.parse(await docsGateRead('package.json')).scripts as Record<
+			string,
+			string
+		>;
+		expect(scripts[PAIR_SCRIPT]).toBe('bun run scripts/publication_host_pair.ts');
+		// The flags are the keys of the CLI's parseArgs `options` block — nothing else.
+		const optionsBlock = /\boptions: \{\n([\s\S]*?)\n\t*\},/.exec(cli)?.[1] ?? '';
+		const cliFlags = new Set(
+			[...optionsBlock.matchAll(/^\s*'?([a-z][a-z-]*)'?: \{/gm)].map((m) => m[1] ?? ''),
+		);
+		expect([...cliFlags].sort()).toEqual([
+			'bundle',
+			'dry-run',
+			'fragment',
+			'token-file',
+			'token-stdin',
+		]);
+		// The verbs are the CLI's DISPATCH: the guard parseCliArgs refuses every other command
+		// with, and the CliOptions type it narrows to — never any quoted literal in the file.
+		const guard =
+			/if \(((?:command !== '[a-z]+'(?: && )?)+)\) \{\n\s*throw new Error\('the command is /.exec(
+				cli,
+			)?.[1] ?? '';
+		const cliVerbs = new Set([...guard.matchAll(/'([a-z]+)'/g)].map((m) => m[1] ?? ''));
+		expect([...cliVerbs].sort(), 'the CLI dispatch guard was not found or changed').toEqual([
+			'add',
+			'remove',
+			'replace',
+		]);
+		const typed = /\bcommand: ((?:'[a-z]+'(?: \| )?)+);/.exec(cli)?.[1] ?? '';
+		expect([...typed.matchAll(/'([a-z]+)'/g)].map((m) => m[1]).sort()).toEqual(
+			[...cliVerbs].sort(),
+		);
+		const lines = page.split('\n').filter((l) => PAIR_LINE.test(l));
+		expect(lines.length).toBeGreaterThanOrEqual(4);
+		const unknown: string[] = [];
+		for (const line of lines) {
+			if (!line.includes(PAIR_INVOCATION))
+				unknown.push(`not run as the engine user: ${line.trim()}`);
+			const verb =
+				/(?:publication_host_pair\.ts|dedalo:pair-publication-host) ([a-z]+|…)/.exec(line)?.[1] ??
+				'';
+			if (verb !== '…' && !cliVerbs.has(verb)) unknown.push(`verb ${verb}`);
+			for (const m of line.matchAll(/ (--[a-z][a-z-]*)/g)) {
+				const flag = m[1] ?? '';
+				if (!cliFlags.has(flag.slice(2))) unknown.push(`flag ${flag}`);
+			}
+		}
+		expect(unknown).toEqual([]);
+	});
+
+	test('no reader is told to pair as root (the CLI refuses any uid that does not own <private>)', async () => {
+		const asRoot = /\*\*Pair\*\*,? as root|pair[^.\n]{0,60}\bas root\b/i;
+		const page = await docsGateRead('docs/install/publication_host.md');
+		expect(asRoot.test(docsGateSection(page, 'Pair it with the work system'))).toBe(false);
+		expect(asRoot.test(await docsGateRead('docs/change_log.md'))).toBe(false);
+		expect(await docsGateRead('publication/host_agent/README.md')).not.toContain('root-run');
+	});
+
+	test('in-product text points at the documented pair command, as the engine user', async () => {
+		const documented = 'sudo -u <engine user> bun run dedalo:pair-publication-host';
+		// the translated catalogs, from the registered shipped-text lister (no private walk)
+		const catalogs = shippedTextFiles().filter((file) =>
+			/^src\/core\/labels\/catalog\/lg-[^/]+\.json$/.test(file),
+		);
+		const sources = [
+			'src/core/labels/master.json',
+			...catalogs,
+			'client/dedalo/core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js',
+			// the server log lines an operator acts on (re-pair instructions)
+			'src/core/publication_host/agent_client.ts',
+		];
+		let pointers = 0;
+		for (const rel of sources) {
+			const text = await docsGateRead(rel);
+			// the raw script path is not what an operator runs (and run as root it is refused)
+			expect(text.includes('scripts/publication_host_pair.ts'), rel).toBe(false);
+			if (text.includes(documented)) pointers += 1;
+		}
+		// master + the client fallback + every translated catalog + the agent client (anti-vacuity)
+		expect(pointers).toBeGreaterThanOrEqual(20);
+		const widget = await docsGateRead('src/core/area_maintenance/widgets/publication_hosts.ts');
+		const refusal = /function refuseUnknownHost[\s\S]*?\n}/.exec(widget)?.[0] ?? '';
+		expect(refusal).toContain(documented);
+		expect(refusal).not.toContain('scripts/publication_host_pair.ts');
+	});
+
+	test('busy names BOTH causes: the agent, and the work host registry lock (wire.ts registryError)', async () => {
+		const wire = await docsGateRead('src/core/publication_host/wire.ts');
+		expect(wire).toContain("reason === 'locked' ? 'publication_host.busy'");
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const row = page.split('\n').find((l) => l.startsWith('| busy |')) ?? '';
+		expect(row).toContain('on the work system');
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		expect(spec).toMatch(/`busy` \(an agent 409, OR the work host's own registry lock/);
+	});
+
+	test('secrets: a unix pairing stores no bundle (writeHostSecrets takes a null bundle)', async () => {
+		const secrets = await docsGateRead('src/core/publication_host/secrets.ts');
+		expect(secrets).toContain('bundlePem: string | null');
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		const bullet = /\n- \*\*Secrets\.\*\*[\s\S]*?(?=\n- \*\*)/.exec(spec)?.[0] ?? '';
+		expect(bullet).toContain('for a TLS host only');
+		expect(bullet).toContain('a unix pairing stores none');
+	});
+
+	test('the live proof stages a transient 0600 copy, swept after an hour (never "writes nothing")', async () => {
+		const cli = await docsGateRead('scripts/publication_host_pair.ts');
+		expect(cli).toContain('const STAGING_STALE_MS = 60 * 60 * 1000;');
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		const ceremony = /\n- \*\*Adding a host[\s\S]*?(?=\n- \*\*)/.exec(spec)?.[0] ?? '';
+		const pair = docsGateSection(
+			await docsGateRead('docs/install/publication_host.md'),
+			'Pair it with the work system',
+		);
+		for (const [where, text] of [
+			['spec ceremony', ceremony],
+			['page', pair],
+		] as const) {
+			expect(text, where).toMatch(/temporary\s+0600\s+copy/);
+			expect(text, where).toMatch(/after\s+an\s+hour/);
+			expect(text, where).not.toMatch(/[Bb]efore writing anything|writes nothing/);
+		}
+	});
+
+	test('the carried copies: chown to the engine user, then chmod 600; "could not be read" is a row', async () => {
+		const cli = await docsGateRead('scripts/publication_host_pair.ts');
+		expect(cli).toContain('could not be read (');
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const pair = docsGateSection(page, 'Pair it with the work system');
+		expect(pair).toContain('chown <engine user>');
+		const rows = docsGateSection(page, 'Troubleshooting').split('\n');
+		expect(rows.some((l) => l.includes('could not be read') && l.includes('chown'))).toBe(true);
+		expect(rows.some((l) => l.includes('readable by group or others') && l.includes('chown'))).toBe(
+			true,
+		);
+	});
+
+	test('Apply media rules: the nginx http{} map include stays manual (linked)', async () => {
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const bullet = page.split('\n').find((l) => l.startsWith('- **Apply media rules**')) ?? '';
+		const i = page.indexOf(bullet);
+		const text = page.slice(i, page.indexOf('\n- **', i + 1));
+		expect(text).toContain('`http{}`');
+		expect(text).toContain(
+			'../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage',
+		);
+		const target = await docsGateRead('docs/core/system/media_protection.md');
+		expect(target).toContain('## A separate publication server with shared media storage');
+		expect(target).toContain('include the map in `http{}`');
+	});
+
+	test('the panel rows name every strict-read refusal the code has (registry 0600+owner, secrets mode/owner, socket_perms)', async () => {
+		// The registry reads through the shared state-file kernel at its DEFAULT mode (0600);
+		// the kernel holds the refusals (atomic_json.ts, shared with runtime.ts).
+		const registry = await docsGateRead('src/core/publication_host/registry.ts');
+		expect(registry).toContain('readPrivateJsonTextSync(path, { maxBytes: REGISTRY_MAX_BYTES })');
+		const kernel = await docsGateRead('src/core/files/atomic_json.ts');
+		expect(kernel).toContain('must be owned by the engine user');
+		expect(kernel).toContain('options.mode ?? 0o600');
+		expect(kernel).toContain('if (found !== mode)');
+		const secrets = await docsGateRead('src/core/publication_host/secrets.ts');
+		expect(secrets).toContain("'bad_mode' | 'bad_owner'");
+		const transport = await docsGateRead('src/core/publication_host/transport.ts');
+		expect(transport).toContain("reason: 'socket_perms'");
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const rows = page.split('\n').filter((l) => l.startsWith('| '));
+		const row = (start: string): string => rows.find((l) => l.startsWith(start)) ?? '';
+		const invalid = row('| the registry is invalid |');
+		for (const fact of ['`0600`', 'owned by the Dédalo user', 'chown <engine user>', 'chmod 600']) {
+			expect(invalid, fact).toContain(fact);
+		}
+		const credentials = row('| Credentials is blocked');
+		for (const fact of ['`bad_mode`', '`bad_owner`', '`0700`', '`0600`', 'no symlinks', 'chown']) {
+			expect(credentials, fact).toContain(fact);
+		}
+		const socket = rows.find((l) => l.includes('`socket_perms`')) ?? '';
+		for (const fact of ['unreachable', '`/tmp`', '`/run`']) expect(socket, fact).toContain(fact);
+	});
+
+	test('OUTBOUND §6 transport row counts the proxy canaries the suite really has', async () => {
+		const suite = await docsGateRead('test/unit/publication_host_transport_native.test.ts');
+		const canaries = suite.match(/test\('RESIDUAL CANARY:/g)?.length ?? 0;
+		expect(canaries).toBe(3);
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const row =
+			spec
+				.split('\n')
+				.find((l) => l.startsWith('| `test/unit/publication_host_transport_native.test.ts`')) ?? '';
+		expect(row).toContain("proxy residual's three canaries");
+		expect(row).toContain('`socket_perms`');
+		expect(spec).toContain('Three canaries in `publication_host_transport_native`');
+	});
+
+	test('the proxy residual names what Bun really proxies (HTTPS_PROXY; never HTTP_PROXY alone, never a socket)', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const transport = await docsGateRead('src/core/publication_host/transport.ts');
+		for (const [where, text] of [
+			['OUTBOUND_SPEC', spec],
+			['transport.ts', transport],
+		] as const) {
+			expect(text, where).not.toMatch(/HTTPS_PROXY`? \/ `?HTTP_PROXY/);
+			expect(text, where).toMatch(/HTTP_PROXY`? alone does not apply/);
+			expect(text, where).toMatch(/unix-socket agent is never proxied/);
+		}
+	});
+
+	test('pairing-before-bearer: the fingerprint is public, impostors are kept out by mTLS / the socket check', async () => {
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		const bullet =
+			/\n- \*\*Pairing before the bearer\*\*[\s\S]*?(?=\n- \*\*)/.exec(spec)?.[0] ?? '';
+		expect(bullet).toContain('drift and misrouting');
+		expect(bullet).toContain('`socket_perms`');
+		expect(bullet).toMatch(/CA pin/);
+		expect(bullet).toMatch(/cached/);
+	});
+
+	test('the WC entry and the drill tell the shipped story (engine-user CLI; no registry_locked state)', async () => {
+		const wc = await docsGateRead(
+			'engineering/wire_contract/WC-2026-10-03-publication-hosts-widget.md',
+		);
+		// WIRE_CONTRACT.md: a landed entry is amended by an appended Addendum, not in place
+		const addendum = wc.slice(wc.indexOf('\n## Addendum 2026-10-05'));
+		expect(addendum.length).toBeGreaterThan(1);
+		expect(addendum).toContain('is run as the engine user');
+		expect(addendum).toContain('never sends a `registry_locked` state');
+		expect(addendum).toContain('`busy` therefore has two causes');
+		const client = await docsGateRead(
+			'client/dedalo/core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js',
+		);
+		expect(client).toContain('registry.check');
+		expect(client).toContain("'publication_host.busy'");
+		const kit = await docsGateRead('scripts/lib/publication_host_engine_drill_kit.ts');
+		expect(kit).not.toContain("'registry_locked'");
+	});
+
+	test('no reader is still told the panel comes later', async () => {
+		const stale =
+			/panel learns to[\s\S]{0,80}?later\s+release|the panel are phase 3|later pairing settings/;
+		for (const rel of [
+			'docs/install/publication_host.md',
+			'publication/host_agent/README.md',
+			'docs/change_log.md',
+		]) {
+			expect(stale.test(await docsGateRead(rel)), rel).toBe(false);
+		}
+	});
+});

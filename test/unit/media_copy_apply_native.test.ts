@@ -1,0 +1,1390 @@
+/**
+ * MEDIA COPY APPLY (PUBLICATION_HOST_SPEC §5.2 "unpublish is a verified deletion";
+ * decisions M2/M4/M6; Review Focus 2 and 3; the agent's put invariant).
+ *
+ * The situations are BUILT in a fake copy world (test/helpers/media_copy_world.ts):
+ * the work host's pub/ markers and public files, and one agent that refuses a put
+ * for an unmarked key, as the real one does. The real publication-target lock is
+ * exercised in its own leg (another Postgres session holds `media:<host>`).
+ *
+ * WRITES: a scratch media root (openLocalMediaFile leg); advisory locks on the
+ * lane database, released.
+ */
+
+import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { mkdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { config } from '../../src/config/config.ts';
+import { isInTransaction, sql } from '../../src/core/db/postgres.ts';
+import {
+	DIFFUSION_TARGET_LOCK_CLASS,
+	mediaCopyTargetLockKey,
+	withTargetLock,
+} from '../../src/core/diffusion_bridge/target_lock.ts';
+import { DedaloError } from '../../src/core/errors/index.ts';
+import { MEDIA_DELETE_BATCH } from '../../src/core/publication_host/agent_client.ts';
+import {
+	COPY_MODE_WITHDRAWN,
+	nonCopyRuntime,
+} from '../../src/core/publication_host/media_copy_status.ts';
+import { defaultHostRuntime } from '../../src/core/publication_host/runtime.ts';
+import {
+	type ApplyPlan,
+	applyCopyWith,
+	type CopyDeps,
+	DELETE_FAILED,
+	DELETION_UNVERIFIED,
+	explicitCopyState,
+	hostTakesCopy,
+	LINKED_QUALITY,
+	MEDIA_COPY_ACTOR,
+	MEDIA_COPY_UNIT_KEYS,
+	type MediaCopyRuntime,
+	openLocalMediaFile,
+	recordRoundFailure,
+	syncHostWith,
+	type TakesCopyIo,
+	withdrawNowWith,
+} from '../../src/diffusion/targets/mediastore/media_copy_apply.ts';
+import {
+	desired,
+	emptyRuntime,
+	imageQuality,
+	mediaPath,
+	newWorld,
+	okReport,
+	planFrom,
+	T0,
+	worldDeps,
+} from '../helpers/media_copy_world.ts';
+import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
+
+const K1 = 'test3_1';
+const K2 = 'test3_2';
+const P1 = mediaPath(K1);
+const P1B = mediaPath(K1, 'test88');
+const P2 = mediaPath(K2);
+const EMPTY: ApplyPlan = { put: [], del: [], mark: [] };
+
+let logSpy: ReturnType<typeof spyOn>;
+beforeAll(() => {
+	logSpy = spyOn(console, 'error').mockImplementation(() => {});
+});
+afterAll(() => {
+	logSpy.mockRestore();
+});
+
+async function holdLock(key: string): Promise<{ release: () => Promise<void> }> {
+	const connection = await sql.reserve();
+	await connection.unsafe('SELECT pg_advisory_lock($1::int, hashtext($2))', [
+		DIFFUSION_TARGET_LOCK_CLASS,
+		key,
+	]);
+	return {
+		async release() {
+			await connection.unsafe('SELECT pg_advisory_unlock($1::int, hashtext($2))', [
+				DIFFUSION_TARGET_LOCK_CLASS,
+				key,
+			]);
+			connection.release();
+		},
+	};
+}
+
+describe('withdraw → delete → verify (unpublish is a verified deletion)', () => {
+	test('pending is recorded before the first agent call; marker false, then delete, then verified', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		const d = worldDeps(world);
+		let pendingAtFirstCall = null as string[] | null;
+		const spied: CopyDeps = {
+			...d,
+			mark: async (host, key, published, actor) => {
+				pendingAtFirstCall ??= (world.runtime.get('pub1')?.pending_deletions ?? []).map(
+					(p) => p.path,
+				);
+				return d.mark(host, key, published, actor);
+			},
+		};
+		const report = await applyCopyWith(spied, 'pub1', planFrom(world));
+		expect(pendingAtFirstCall).toEqual(['.publication/pub/test3_1', P1]);
+		expect(world.calls).toEqual(['mark test3_1 false', `del ${P1}`]);
+		expect([...world.actors]).toEqual([MEDIA_COPY_ACTOR]);
+		expect(report).toMatchObject({
+			state: 'ok',
+			withdrawn: 1,
+			deleted: 1,
+			pending_deletions: 0,
+			error: null,
+		});
+		const runtime = world.runtime.get('pub1');
+		expect(runtime?.pending_deletions).toEqual([]);
+		expect(runtime?.last_verified_at).toBe(new Date(T0).toISOString());
+		expect(runtime?.state).toBe('ok');
+	});
+
+	test('Review Focus 3: agent down → stays pending (first since kept), no put tried; the next round completes it', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 5 });
+		world.published.add(K2);
+		const d = worldDeps(world);
+		const plan = planFrom(world);
+
+		world.down = true;
+		const first = await applyCopyWith(d, 'pub1', plan);
+		expect(first).toMatchObject({
+			state: 'pending',
+			error: 'publication_host.unreachable',
+			put: 0,
+		});
+		expect(world.calls).toEqual([]);
+		const since = new Date(T0).toISOString();
+		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([
+			{ path: '.publication/pub/test3_1', since },
+			{ path: P1, since },
+		]);
+
+		world.clock.t = T0 + 60_000;
+		const again = await applyCopyWith(d, 'pub1', plan);
+		expect(again.state).toBe('pending');
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.since)).toEqual([
+			since,
+			since,
+		]);
+
+		world.down = false;
+		world.clock.t = T0 + 3_600_000;
+		const recovered = await applyCopyWith(d, 'pub1', plan);
+		expect(recovered).toMatchObject({ state: 'ok', put: 1, published: 1, pending_deletions: 0 });
+		expect(world.calls).toEqual([
+			'mark test3_1 false',
+			`del ${P1}`,
+			'mark test3_2 true',
+			`put ${P2}`,
+		]);
+		expect(world.agentFiles.has(P1)).toBe(false);
+		expect(world.agentMarkers.has(K1)).toBe(false);
+		expect(world.agentFiles.get(P2)).toBe('png!');
+		expect(world.agentMarkers.has(K2)).toBe(true);
+		expect(world.runtime.get('pub1')?.last_verified_at).toBe(
+			new Date(T0 + 3_600_000).toISOString(),
+		);
+	});
+
+	test('a deletion the manifest still lists stays pending and the round is failed (deletion_unverified)', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		const d = worldDeps(world);
+		const lying: CopyDeps = { ...d, del: async () => ({ failed: [] }) };
+		const report = await applyCopyWith(lying, 'pub1', planFrom(world));
+		expect(report).toMatchObject({
+			state: 'failed',
+			error: DELETION_UNVERIFIED,
+			pending_deletions: 1,
+		});
+		expect(world.runtime.get('pub1')).toMatchObject({
+			state: 'failed',
+			error: DELETION_UNVERIFIED,
+		});
+	});
+
+	test('a path the agent answers it cannot delete stays pending; the grant and the put still run; failed / delete_failed', async () => {
+		const world = newWorld();
+		const stuck = `${imageQuality()}/0/test99_test3_8.jpg`;
+		world.agentFiles.set(stuck, 'old');
+		world.undeletable.add(stuck);
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(report).toMatchObject({
+			state: 'failed',
+			error: DELETE_FAILED,
+			delete_failed: 1,
+			deleted: 0,
+			put: 1,
+			published: 1,
+			pending_deletions: 1,
+		});
+		expect(world.agentFiles.has(P1)).toBe(true);
+		expect(world.runtime.get('pub1')?.pending_deletions.map((entry) => entry.path)).toEqual([
+			stuck,
+		]);
+		// once the agent can delete it, the next round verifies and returns to ok
+		world.undeletable.clear();
+		const next = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(next).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+	});
+
+	test('THE UNIT BOUND: grant, withdraw and pre-empt hold the lock for at most MEDIA_COPY_UNIT_KEYS keys, a delete unit for one batch; the round pre-empts between grant units', async () => {
+		const world = newWorld();
+		const n = 3 * MEDIA_COPY_UNIT_KEYS + 1;
+		const granted = Array.from({ length: n }, (_, i) => `test3_${1000 + i}`);
+		const withdrawnKeys = Array.from({ length: n }, (_, i) => `test3_${5000 + i}`);
+		const stale = Array.from({ length: MEDIA_DELETE_BATCH + 1 }, (_, i) =>
+			mediaPath(`test3_${9000 + i}`),
+		);
+		for (const key of granted) world.published.add(key);
+		for (const key of withdrawnKeys) world.agentMarkers.add(key);
+		for (const path of stale) world.agentFiles.set(path, 'old');
+		const base = worldDeps(world);
+		const units: string[][] = [];
+		const counted: CopyDeps = {
+			...base,
+			async lock(host, work) {
+				const from = world.calls.length;
+				const outcome = await base.lock(host, work);
+				units.push(world.calls.slice(from));
+				return outcome;
+			},
+		};
+		let drains = 0;
+		const late = 'test3_7777';
+		world.agentMarkers.add(late);
+		const report = await applyCopyWith(
+			counted,
+			'pub1',
+			{
+				put: [],
+				del: stale,
+				mark: [
+					...withdrawnKeys.map((key) => ({ key, published: false })),
+					...granted.map((key) => ({ key, published: true })),
+				],
+			},
+			{ takeWithdrawn: () => (++drains === 3 ? [late] : []) },
+		);
+		expect(report).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+		expect(report.published).toBe(n);
+		expect(report.withdrawn).toBe(n + 1);
+		for (const unit of units) {
+			const marks = unit.filter((call) => call.startsWith('mark ')).length;
+			const dels = unit.filter((call) => call.startsWith('del ')).length;
+			expect(marks).toBeLessThanOrEqual(2 * MEDIA_COPY_UNIT_KEYS);
+			expect(dels).toBeLessThanOrEqual(1);
+			expect(marks === 0 || dels === 0).toBe(true);
+		}
+		// n keys each way + 2 delete batches + the pre-empt: many units, never one
+		expect(units.length).toBeGreaterThanOrEqual(2 * 4 + 2 + 1);
+		// the pre-empt drained between grant units ran before the last grant unit
+		const lateUnmark = world.calls.indexOf(`mark ${late} false`);
+		const lastGrant = world.calls.lastIndexOf(`mark ${granted[n - 1]} true`);
+		expect(lateUnmark).toBeGreaterThanOrEqual(0);
+		expect(lateUnmark).toBeLessThan(lastGrant);
+		expect(world.agentMarkers.has(late)).toBe(false);
+	});
+
+	test('an IRREGULAR agent path (a link) is deleted and verified against the irregular list, never cleared while listed', async () => {
+		const world = newWorld();
+		const link = `${imageQuality()}/0/test99_test3_7.jpg`;
+		world.agentIrregular.add(link);
+		const d = worldDeps(world);
+		const plan = planFrom(world);
+		expect(plan.del).toEqual([link]);
+		const stubborn = await applyCopyWith({ ...d, del: async () => ({ failed: [] }) }, 'pub1', plan);
+		expect(stubborn).toMatchObject({
+			state: 'failed',
+			error: DELETION_UNVERIFIED,
+			pending_deletions: 1,
+		});
+		const done = await applyCopyWith(d, 'pub1', plan);
+		expect(done).toMatchObject({ state: 'ok', pending_deletions: 0 });
+		expect(world.agentIrregular.size).toBe(0);
+	});
+
+	test('withdrawal is per key best-effort: a refused key never shields the keys after it', async () => {
+		const world = newWorld();
+		world.agentMarkers.add(K1);
+		world.agentMarkers.add(K2);
+		const d = worldDeps(world);
+		const refusing: CopyDeps = {
+			...d,
+			mark: async (host, key, published, actor) => {
+				if (key === K1)
+					throw new DedaloError('publication_host.rejected', { message: 'key_invalid (test)' });
+				return d.mark(host, key, published, actor);
+			},
+		};
+		const plan: ApplyPlan = {
+			put: [],
+			del: [],
+			mark: [
+				{ key: K1, published: false },
+				{ key: K2, published: false },
+			],
+		};
+		const report = await applyCopyWith(refusing, 'pub1', plan);
+		expect(world.calls).toEqual(['mark test3_2 false']);
+		expect(world.agentMarkers.has(K2)).toBe(false);
+		expect(report).toMatchObject({
+			state: 'failed',
+			error: 'publication_host.rejected',
+			withdrawn: 1,
+		});
+	});
+
+	test('a held lock (fake) defers the unit: nothing is sent, the deletion stays pending', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		world.lockBusy = true;
+		const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(world.calls).toEqual([]);
+		expect(report.deferred).toBe(1);
+		expect(report.state).toBe('pending');
+		expect(report.pending_deletions).toBe(2);
+	});
+
+	test('a runtime file the round cannot record in stops it BEFORE any agent call', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		const broken: CopyDeps = {
+			...worldDeps(world),
+			updateRuntime: async () => {
+				throw new Error('runtime file corrupt (test)');
+			},
+		};
+		await expect(applyCopyWith(broken, 'pub1', planFrom(world))).rejects.toThrow('corrupt');
+		expect(world.calls).toEqual([]);
+	});
+});
+
+describe('marks and puts (a put lands only while pub/<key> exists on the agent; M4: re-check locally)', () => {
+	test('the fake agent refuses a put for a key it holds no marker for (the real invariant)', async () => {
+		const world = newWorld();
+		await expect(
+			worldDeps(world).put(
+				'pub1',
+				{ path: P1, sha256: 'a'.repeat(64), size: 4, body: new Blob(['jpeg']).stream() },
+				MEDIA_COPY_ACTOR,
+			),
+		).rejects.toMatchObject({
+			code: 'publication_host.rejected',
+			coordinates: { agent_reason: 'key_unpublished' },
+		});
+		expect(world.agentFiles.size).toBe(0);
+	});
+
+	test('grants precede the puts, only for keys still published', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.published.add(K2);
+		const plan: ApplyPlan = {
+			put: [desired(world, P1)],
+			del: [],
+			mark: [
+				{ key: K1, published: true },
+				{ key: 'test3_3', published: true },
+			],
+		};
+		const report = await applyCopyWith(worldDeps(world), 'pub1', plan);
+		expect(world.calls).toEqual(['mark test3_1 true', `put ${P1}`]);
+		expect(report).toMatchObject({ state: 'ok', put: 1, published: 1 });
+	});
+
+	test('the marker is ensured in the put own unit when the plan carries no grant', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		const report = await applyCopyWith(worldDeps(world), 'pub1', plan);
+		expect(world.calls).toEqual(['mark test3_1 true', `put ${P1}`]);
+		expect(report).toMatchObject({ state: 'ok', put: 1, published: 1 });
+	});
+
+	test('a key unpublished before its unit is never marked nor sent', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		const report = await applyCopyWith(worldDeps(world), 'pub1', plan);
+		expect(world.calls).toEqual([]);
+		expect(report).toMatchObject({ state: 'ok', put: 0, skipped_unpublished: 1 });
+	});
+
+	test('Review Focus 2: unpublished while the bytes are in flight → marker withdrawn, file deleted again at once', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.duringPut = async () => {
+			world.published.delete(K1);
+		};
+		const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(world.calls).toEqual([
+			'mark test3_1 true',
+			`put ${P1}`,
+			'mark test3_1 false',
+			`del ${P1}`,
+		]);
+		expect(world.agentFiles.size).toBe(0);
+		expect(world.agentMarkers.size).toBe(0);
+		expect(report).toMatchObject({
+			state: 'ok',
+			compensated: 1,
+			withdrawn: 1,
+			pending_deletions: 0,
+		});
+	});
+
+	test('compensation removes EVERY file of the key this round landed', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P1B, { bytes: 'jpeg-b', mtimeMs: 1 });
+		world.published.add(K1);
+		world.duringPut = async (path) => {
+			if (path === P1B) world.published.delete(K1);
+		};
+		const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(world.calls).toEqual([
+			'mark test3_1 true',
+			`put ${P1}`,
+			`put ${P1B}`,
+			'mark test3_1 false',
+			`del ${P1},${P1B}`,
+		]);
+		expect(world.agentFiles.size).toBe(0);
+		expect(report).toMatchObject({ state: 'ok', put: 1, compensated: 1, pending_deletions: 0 });
+	});
+
+	test('a put that times out is DEFERRED: the files after it still land, the host stays pending', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 });
+		world.published.add(K1);
+		world.published.add(K2);
+		const d = worldDeps(world);
+		const slow: CopyDeps = {
+			...d,
+			put: async (host, file, actor) => {
+				if (file.path !== P1) return d.put(host, file, actor);
+				await file.body.cancel();
+				throw new DedaloError('publication_host.timeout', { message: 'slow link (test)' });
+			},
+		};
+		const report = await applyCopyWith(slow, 'pub1', planFrom(world));
+		expect(world.agentFiles.get(P2)).toBe('png!');
+		expect(world.agentFiles.has(P1)).toBe(false);
+		expect(report).toMatchObject({ state: 'pending', error: null, put: 1, deferred: 1 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'pending', pending_puts: 1 });
+	});
+
+	test('a put that times out while its record is unpublished is compensated (its bytes may have landed)', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d = worldDeps(world);
+		const slow: CopyDeps = {
+			...d,
+			put: async (host, file, actor) => {
+				await d.put(host, file, actor); // landed…
+				world.published.delete(K1);
+				throw new DedaloError('publication_host.timeout', { message: 'answer lost (test)' });
+			},
+		};
+		const report = await applyCopyWith(slow, 'pub1', planFrom(world));
+		expect(world.calls).toEqual([
+			'mark test3_1 true',
+			`put ${P1}`,
+			'mark test3_1 false',
+			`del ${P1}`,
+		]);
+		expect(world.agentFiles.size).toBe(0);
+		expect(report).toMatchObject({ state: 'ok', compensated: 1, pending_deletions: 0 });
+	});
+
+	test('a file changed since the plan is deferred, never marked nor sent', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		world.local.set(P1, { bytes: 'jpeg-v2', mtimeMs: 2 });
+		const report = await applyCopyWith(worldDeps(world), 'pub1', plan);
+		expect(world.calls).toEqual([]);
+		expect(report).toMatchObject({ state: 'pending', deferred: 1 });
+		expect(world.runtime.get('pub1')?.pending_puts).toBe(1);
+	});
+
+	test('an unstable sha (the cache answers null) is deferred, never sent with a null X-Sha256', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.unstable.add(P1);
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		const report = await applyCopyWith(worldDeps(world), 'pub1', plan);
+		expect(world.calls).toEqual([]);
+		expect(report).toMatchObject({ state: 'pending', deferred: 1, error: null });
+	});
+
+	test('a plan naming a master, a working file, an unsafe path or the wrong key is refused before any agent call', async () => {
+		const world = newWorld();
+		const master = `${imageQuality().split('/')[0]}/${config.media.image.originalQuality}/0/test99_test3_1.jpg`;
+		const working = `${imageQuality()}/0/test99_test3_1.tmp`;
+		const entries = [
+			{ path: master, key: K1 },
+			{ path: working, key: K1 },
+			{ path: `/${P1}`, key: K1 },
+			{ path: `${imageQuality()}/../x/test99_test3_1.jpg`, key: K1 },
+			{ path: P1, key: 'test3_9' },
+		];
+		expect(entries.length).toBeGreaterThan(4); // the loop below really runs every refusal
+		for (const { path, key } of entries) {
+			const plan: ApplyPlan = { put: [{ path, key, size: 1, mtimeMs: 1 }], del: [], mark: [] };
+			let caught: unknown = null;
+			try {
+				await applyCopyWith(worldDeps(world), 'pub1', plan);
+			} catch (error) {
+				caught = error;
+			}
+			expect((caught as DedaloError).code, path).toBe('internal.invariant');
+		}
+		expect(world.calls).toEqual([]);
+		expect(world.runtime.size).toBe(0);
+	});
+});
+
+describe('a grant supersedes a pending withdrawal (republished before the deletion was verified)', () => {
+	test('agent down during the unpublish, then republished: the next round returns to ok (never a stuck deletion_unverified)', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		const d = worldDeps(world);
+		// Unpublished while the agent is down: the withdrawal is recorded pending.
+		world.down = true;
+		const first = await applyCopyWith(d, 'pub1', planFrom(world));
+		expect(first).toMatchObject({ state: 'pending', error: 'publication_host.unreachable' });
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([
+			'.publication/pub/test3_1',
+			P1,
+		]);
+		// Republished; the agent is back and still holds the marker and the file.
+		world.published.add(K1);
+		world.down = false;
+		const plan = planFrom(world);
+		expect(plan).toEqual(EMPTY);
+		const again = await applyCopyWith(d, 'pub1', plan);
+		expect(again).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'ok', pending_deletions: [] });
+		expect(world.agentMarkers.has(K1)).toBe(true);
+		expect(world.agentFiles.get(P1)).toBe('jpeg');
+	});
+
+	test('unpublished and republished inside one round (takeWithdrawn): the re-grant drops the pending marker, the round is ok', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P1B, { bytes: 'jpeg-b', mtimeMs: 1 });
+		world.published.add(K1);
+		const d = worldDeps(world);
+		let drained = false;
+		const takeWithdrawn = (): readonly string[] => {
+			// After the first put: K1 was unpublished and republished meanwhile.
+			if (drained || !world.agentFiles.has(P1)) return [];
+			drained = true;
+			return [K1];
+		};
+		const report = await applyCopyWith(d, 'pub1', planFrom(world), { takeWithdrawn });
+		expect(world.calls).toEqual([
+			'mark test3_1 true',
+			`put ${P1}`,
+			'mark test3_1 false',
+			'mark test3_1 true',
+			`put ${P1B}`,
+		]);
+		expect(report).toMatchObject({ state: 'ok', error: null, put: 2, pending_deletions: 0 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'ok', pending_deletions: [] });
+		expect(world.agentMarkers.has(K1)).toBe(true);
+	});
+
+	test('a put that lands drops its own path from pending; a still-unpublished path, or one recorded after the decision, is never dropped', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			pending_deletions: [
+				{ path: P1, since: new Date(T0 - 1).toISOString() },
+				{ path: P2, since: new Date(T0 - 1).toISOString() },
+				// Recorded AFTER this round's decision instant: a newer unpublish, never superseded.
+				{ path: '.publication/pub/test3_1', since: new Date(T0 + 1).toISOString() },
+			],
+		});
+		world.agentMarkers.add(K1);
+		world.agentFiles.set(P1, 'old');
+		world.agentFiles.set(P2, 'png!');
+		const d: CopyDeps = { ...worldDeps(world), del: async () => ({ failed: [] }) };
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [P2], mark: [] };
+		const report = await applyCopyWith(d, 'pub1', plan);
+		expect(world.agentFiles.get(P1)).toBe('jpeg');
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([
+			P2,
+			'.publication/pub/test3_1',
+		]);
+		expect(report).toMatchObject({ state: 'failed', error: DELETION_UNVERIFIED });
+	});
+});
+
+// The round's CLOSING manifest read (a round that landed re-measures `present`) also
+// verifies; each gate below captures the pending set AT that read, so the drop it pins is
+// the grant's / the landing put's own, never the closing verify's.
+describe('a grant or a landed put drops its own pending entry (no reverify needed)', () => {
+	test('recorded after the round verified: only the grant (mark true) and the landing put can clear it', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d = worldDeps(world);
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		let manifests = 0;
+		let pendingAtClose: string[] | null = null;
+		const report = await applyCopyWith(
+			{
+				...d,
+				manifest: async (host) => {
+					manifests += 1;
+					if (manifests === 2)
+						pendingAtClose = (world.runtime.get('pub1')?.pending_deletions ?? []).map(
+							(p) => p.path,
+						);
+					return d.manifest(host);
+				},
+				// After the verify, before the grant: an older withdrawal surfaces in the file.
+				sha256: async (file) => {
+					await d.updateRuntime('pub1', (cur) => ({
+						...cur,
+						pending_deletions: [
+							{ path: '.publication/pub/test3_1', since: new Date(T0).toISOString() },
+							{ path: P1, since: new Date(T0).toISOString() },
+						],
+					}));
+					return d.sha256(file);
+				},
+			},
+			'pub1',
+			plan,
+		);
+		expect(manifests).toBe(2);
+		expect(pendingAtClose as string[] | null).toEqual([]);
+		expect(world.calls).toEqual(['mark test3_1 true', `put ${P1}`]);
+		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([]);
+		expect(report).toMatchObject({ state: 'ok', put: 1, pending_deletions: 0 });
+	});
+
+	test('an entry recorded after the put decided (a newer unpublish) survives the landing', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.agentMarkers.add(K1);
+		const d = worldDeps(world);
+		world.duringPut = async () => {
+			world.clock.t = T0 + 1;
+			await d.updateRuntime('pub1', (cur) => ({
+				...cur,
+				pending_deletions: [{ path: P1, since: new Date(T0 + 1).toISOString() }],
+			}));
+		};
+		let manifests = 0;
+		let pendingAtClose: string[] | null = null;
+		await applyCopyWith(
+			{
+				...d,
+				manifest: async (host) => {
+					manifests += 1;
+					if (manifests === 2)
+						pendingAtClose = (world.runtime.get('pub1')?.pending_deletions ?? []).map(
+							(p) => p.path,
+						);
+					return d.manifest(host);
+				},
+			},
+			'pub1',
+			{ put: [desired(world, P1)], del: [], mark: [] },
+		);
+		expect(pendingAtClose as string[] | null).toEqual([P1]);
+	});
+
+	test('re-withdrawn after the supersede decision: the refreshed entry is kept (never lost to an older since)', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		world.published.add(K1);
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_deletions: [
+				{ path: '.publication/pub/test3_1', since: new Date(T0 - 3_600_000).toISOString() },
+			],
+		});
+		const d = worldDeps(world);
+		const report = await applyCopyWith(
+			{
+				...d,
+				manifest: async (host) => {
+					// Between the supersede decision and the filter: unpublished again, its
+					// immediate `mark false` fails (the agent blinked).
+					world.clock.t = T0 + 5;
+					world.published.delete(K1);
+					await withdrawNowWith(
+						{
+							...d,
+							takesCopy: async () => true,
+							mark: async () => {
+								throw new DedaloError('publication_host.unreachable', { message: 'blink (test)' });
+							},
+						},
+						host,
+						[K1],
+					).catch(() => undefined);
+					return d.manifest(host);
+				},
+			},
+			'pub1',
+			EMPTY,
+		);
+		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([
+			{ path: '.publication/pub/test3_1', since: new Date(T0 + 5).toISOString() },
+		]);
+		expect(report).toMatchObject({ state: 'failed', error: DELETION_UNVERIFIED });
+	});
+});
+
+describe('a withdraw-only pass never supersedes a pending FILE deletion (it has no desired set)', () => {
+	test('a locally removed file of a still-published key stays pending through the withdraw-only pass', async () => {
+		const world = newWorld();
+		world.published.add(K1);
+		world.agentMarkers.add(K1);
+		world.agentMarkers.add(K2);
+		world.agentFiles.set(P1, 'jpeg'); // removed locally; its record stays published
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_deletions: [{ path: P1, since: new Date(T0 - 1).toISOString() }],
+		});
+		const report = await applyCopyWith(
+			worldDeps(world),
+			'pub1',
+			{ put: [], del: [], mark: [{ key: K2, published: false }] },
+			{ withdrawOnly: true },
+		);
+		expect(world.calls).toEqual(['mark test3_2 false']);
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([P1]);
+		expect(report).toMatchObject({ state: 'pending', error: null, pending_deletions: 1 });
+	});
+});
+
+describe('a quality folder kept as a link is named, never silent (plan.linked)', () => {
+	test('linked files only: the round settles failed / linked_quality; a real failure still wins', async () => {
+		const world = newWorld();
+		world.published.add(K1);
+		world.agentMarkers.add(K1);
+		const d = worldDeps(world);
+		const report = await applyCopyWith(d, 'pub1', { ...EMPTY, linked: [P1] });
+		expect(world.calls).toEqual([]);
+		expect(report).toMatchObject({ state: 'failed', error: LINKED_QUALITY });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'failed', error: LINKED_QUALITY });
+		world.down = true;
+		const down = await applyCopyWith(d, 'pub1', { ...EMPTY, linked: [P1] });
+		expect(down).toMatchObject({ state: 'pending', error: 'publication_host.unreachable' });
+		world.down = false;
+		expect(await applyCopyWith(d, 'pub1', EMPTY)).toMatchObject({ state: 'ok', error: null });
+	});
+});
+
+describe('withdrawn consent never waits for a put (the grant race closed)', () => {
+	test('unpublished while its grant (mark true) is in flight: re-checked after the mark, undone at once, never put', async () => {
+		for (const viaGrant of [true, false]) {
+			const world = newWorld();
+			world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+			world.published.add(K1);
+			const d = worldDeps(world);
+			const racing: CopyDeps = {
+				...d,
+				mark: async (host, key, published, actor) => {
+					await d.mark(host, key, published, actor);
+					if (published) world.published.delete(K1); // the unpublish lands meanwhile
+				},
+			};
+			const plan: ApplyPlan = viaGrant
+				? planFrom(world)
+				: { put: [desired(world, P1)], del: [], mark: [] };
+			const report = await applyCopyWith(racing, 'pub1', plan);
+			expect(world.calls).toEqual(['mark test3_1 true', 'mark test3_1 false']);
+			expect(world.agentMarkers.has(K1)).toBe(false);
+			expect(world.agentFiles.size).toBe(0);
+			expect(report).toMatchObject({
+				state: 'ok',
+				error: null,
+				put: 0,
+				published: 0,
+				withdrawn: 1,
+				skipped_unpublished: 1,
+				pending_deletions: 0,
+			});
+		}
+	});
+
+	test('a put the agent refuses at landing (marker withdrawn meanwhile): compensated when unpublished, deferred when republished — never a failed round', async () => {
+		for (const stillPublished of [false, true]) {
+			const world = newWorld();
+			world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+			world.published.add(K1);
+			world.duringPut = async () => {
+				world.agentMarkers.delete(K1); // a withdrawal sent outside the put unit
+				if (!stillPublished) world.published.delete(K1);
+			};
+			const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+			expect(world.agentFiles.size).toBe(0);
+			expect(report.error).toBeNull();
+			if (stillPublished) {
+				expect(report).toMatchObject({ state: 'pending', put: 0, deferred: 1 });
+			} else {
+				expect(report).toMatchObject({ state: 'ok', put: 0, compensated: 1 });
+				expect(world.agentMarkers.has(K1)).toBe(false);
+			}
+		}
+	});
+});
+
+describe('a put never holds the target lock (nor a main-pool transaction) for its hash or its transfer', () => {
+	test('hash + re-stat before the lock; the lock only around the pub/ re-check + marker; the transfer outside it', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d = worldDeps(world);
+		const seen: string[] = [];
+		world.duringPut = async () => {
+			seen.push(`put depth=${world.lockDepth}`);
+		};
+		const spied: CopyDeps = {
+			...d,
+			sha256: async (file) => {
+				seen.push(`sha depth=${world.lockDepth}`);
+				return d.sha256(file);
+			},
+			open: async (path) => {
+				seen.push(`open depth=${world.lockDepth}`);
+				return d.open(path);
+			},
+			mark: async (host, key, published, actor) => {
+				seen.push(`mark ${published} depth=${world.lockDepth}`);
+				return d.mark(host, key, published, actor);
+			},
+		};
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		const report = await applyCopyWith(spied, 'pub1', plan);
+		expect(report).toMatchObject({ state: 'ok', put: 1, published: 1 });
+		expect(seen).toEqual(['sha depth=0', 'open depth=0', 'mark true depth=1', 'put depth=0']);
+	});
+
+	test('a held lock defers the put after its hash: the opened file is closed, nothing is sent', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.lockBusy = true;
+		const d = worldDeps(world);
+		let cancelled = false;
+		const spied: CopyDeps = {
+			...d,
+			open: async (path) => {
+				const local = await d.open(path);
+				if (local === null) return null;
+				const body = new ReadableStream<Uint8Array>({
+					cancel() {
+						cancelled = true;
+					},
+				});
+				return { ...local, body };
+			},
+		};
+		const report = await applyCopyWith(spied, 'pub1', {
+			put: [desired(world, P1)],
+			del: [],
+			mark: [],
+		});
+		expect(world.calls).toEqual([]);
+		expect(cancelled).toBe(true);
+		expect(report).toMatchObject({ state: 'pending', put: 0, deferred: 1 });
+	});
+});
+
+describe('the real publication-target lock', () => {
+	test('another session holding media:<host> defers every unit; released, the round completes', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		const d: CopyDeps = {
+			...worldDeps(world),
+			lock: (host, work) => withTargetLock(mediaCopyTargetLockKey(host), work, { mode: 'try' }),
+		};
+		const plan = planFrom(world);
+		const holder = await holdLock(mediaCopyTargetLockKey('pubtest'));
+		try {
+			const blocked = await applyCopyWith(d, 'pubtest', plan);
+			expect(blocked).toMatchObject({ state: 'pending', deferred: 1 });
+			expect(world.calls).toEqual([]);
+		} finally {
+			await holder.release();
+		}
+		const done = await applyCopyWith(d, 'pubtest', plan);
+		expect(done.state).toBe('ok');
+		expect(world.agentFiles.size).toBe(0);
+		expect(world.agentMarkers.size).toBe(0);
+	});
+
+	test('the bound: while a put streams, no transaction is open and another session can take media:<host>', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d: CopyDeps = {
+			...worldDeps(world),
+			lock: (host, work) => withTargetLock(mediaCopyTargetLockKey(host), work, { mode: 'try' }),
+		};
+		const during: { inTransaction: boolean; otherSessionGotLock: boolean }[] = [];
+		world.duringPut = async () => {
+			const connection = await sql.reserve();
+			try {
+				const rows = (await connection.unsafe(
+					'SELECT pg_try_advisory_lock($1::int, hashtext($2)) AS got',
+					[DIFFUSION_TARGET_LOCK_CLASS, mediaCopyTargetLockKey('pubtest')],
+				)) as { got: boolean }[];
+				const got = rows[0]?.got === true;
+				if (got)
+					await connection.unsafe('SELECT pg_advisory_unlock($1::int, hashtext($2))', [
+						DIFFUSION_TARGET_LOCK_CLASS,
+						mediaCopyTargetLockKey('pubtest'),
+					]);
+				during.push({ inTransaction: isInTransaction(), otherSessionGotLock: got });
+			} finally {
+				connection.release();
+			}
+		};
+		const report = await applyCopyWith(d, 'pubtest', planFrom(world));
+		expect(report).toMatchObject({ state: 'ok', put: 1 });
+		expect(during).toEqual([{ inTransaction: false, otherSessionGotLock: true }]);
+	});
+});
+
+describe('held bytes stay counted (a copy host withdrawn after a put round is never a silent n/a)', () => {
+	const at = () => new Date(T0).toISOString();
+
+	test('a round that landed files re-reads the manifest at its close: present + desired are facts', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 });
+		world.published.add(K1);
+		world.published.add(K2);
+		const plan: ApplyPlan = { ...planFrom(world), desired: 2 };
+		const report = await applyCopyWith(worldDeps(world), 'pub1', plan);
+		expect(report).toMatchObject({ state: 'ok', put: 2 });
+		const runtime = world.runtime.get('pub1');
+		expect(runtime).toMatchObject({ state: 'ok', present: 2, desired: 2, pending_deletions: [] });
+		// the mode switch right after: debt kept, never n/a
+		const withdrawn = nonCopyRuntime(runtime as MediaCopyRuntime, at());
+		expect(withdrawn).toMatchObject({ state: 'failed', error: COPY_MODE_WITHDRAWN });
+	});
+
+	test('a round stopped after a put landed counts it into present (upper bound until the next verify)', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 });
+		world.published.add(K1);
+		world.published.add(K2);
+		world.duringPut = async () => {
+			world.down = true;
+		};
+		const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(report).toMatchObject({
+			state: 'pending',
+			error: 'publication_host.unreachable',
+			put: 1,
+		});
+		const runtime = world.runtime.get('pub1') as MediaCopyRuntime;
+		expect(runtime.present).toBe(1);
+		expect(nonCopyRuntime(runtime, at())).toMatchObject({
+			state: 'failed',
+			error: COPY_MODE_WITHDRAWN,
+		});
+		// the next reachable round re-measures from the manifest
+		world.down = false;
+		world.duringPut = null;
+		await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'ok', present: 2 });
+	});
+
+	test('a round with nothing landed keeps the opening count (no extra manifest read)', async () => {
+		const world = newWorld();
+		const report = await applyCopyWith(worldDeps(world), 'pub1', EMPTY);
+		expect(report).toMatchObject({ state: 'ok', put: 0 });
+		const runtime = world.runtime.get('pub1') as MediaCopyRuntime;
+		expect(runtime.present).toBe(0);
+		expect(nonCopyRuntime(runtime, at())).toMatchObject({ state: 'n/a' });
+	});
+});
+
+describe('syncHostWith', () => {
+	test('a host not in copy mode is left alone', async () => {
+		const seen: string[] = [];
+		const result = await syncHostWith(
+			{
+				takesCopy: async () => false,
+				plan: async () => {
+					seen.push('plan');
+					return EMPTY;
+				},
+				apply: async () => {
+					seen.push('apply');
+					return okReport('pub1');
+				},
+				recordFailure: async () => okReport('pub1'),
+			},
+			'pub1',
+			[K1],
+		);
+		expect(result).toBeNull();
+		expect(seen).toEqual([]);
+	});
+
+	test('withdrawn keys go first; an agent that is down stops the sync before planning', async () => {
+		const world = newWorld();
+		world.down = true;
+		const d = worldDeps(world);
+		let planned = false;
+		const report = await syncHostWith(
+			{
+				takesCopy: async () => true,
+				plan: async () => {
+					planned = true;
+					return planFrom(world);
+				},
+				apply: (host, plan) => applyCopyWith(d, host, plan),
+				recordFailure: (host, error) => recordRoundFailure(d, host, error),
+			},
+			'pub1',
+			[K1],
+		);
+		expect(planned).toBe(false);
+		expect(report).toMatchObject({ state: 'pending', error: 'publication_host.unreachable' });
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([
+			'.publication/pub/test3_1',
+		]);
+	});
+
+	test('withdrawn keys go first, then the plan from ground truth', async () => {
+		const world = newWorld();
+		world.agentMarkers.add(K1);
+		world.agentFiles.set(P1, 'jpeg');
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 5 });
+		world.published.add(K2);
+		const d = worldDeps(world);
+		const report = await syncHostWith(
+			{
+				takesCopy: async () => true,
+				plan: async () => planFrom(world),
+				apply: (host, plan) => applyCopyWith(d, host, plan),
+				recordFailure: (host, error) => recordRoundFailure(d, host, error),
+			},
+			'pub1',
+			[K1],
+		);
+		expect(world.calls).toEqual([
+			'mark test3_1 false',
+			`del ${P1}`,
+			'mark test3_2 true',
+			`put ${P2}`,
+		]);
+		expect(report).toMatchObject({ state: 'ok', put: 1 });
+	});
+
+	test('a stale pending deletion never stops a hook unpublish before planning: both deleted and verified', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg'); // left pending by an earlier round that failed after recording
+		world.agentMarkers.add(K2);
+		world.agentFiles.set(P2, 'png!');
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_deletions: [{ path: P1, since: new Date(T0 - 3_600_000).toISOString() }],
+		});
+		const d = worldDeps(world);
+		let planned = false;
+		const report = await syncHostWith(
+			{
+				takesCopy: async () => true,
+				plan: async () => {
+					planned = true;
+					return planFrom(world);
+				},
+				apply: (host, plan, options) => applyCopyWith(d, host, plan, options),
+				recordFailure: (host, error) => recordRoundFailure(d, host, error),
+			},
+			'pub1',
+			[K2],
+		);
+		expect(planned).toBe(true);
+		expect(world.agentFiles.size).toBe(0);
+		expect(world.agentMarkers.has(K2)).toBe(false);
+		expect(report).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'ok', pending_deletions: [] });
+	});
+
+	test('a withdraw-only pass keeps pending_puts and never judges an older pending deletion unverified', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K2);
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_puts: 3,
+			pending_deletions: [{ path: P1, since: new Date(T0).toISOString() }],
+		});
+		const report = await applyCopyWith(
+			worldDeps(world),
+			'pub1',
+			{ put: [], del: [], mark: [{ key: K2, published: false }] },
+			{ withdrawOnly: true },
+		);
+		expect(report).toMatchObject({ state: 'pending', error: null, withdrawn: 1 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'pending', pending_puts: 3 });
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([P1]);
+	});
+
+	test('keys withdrawn while a round runs pre-empt its NEXT unit: recorded, then marked false before the next put', async () => {
+		const world = newWorld();
+		world.agentMarkers.add(K2);
+		world.agentFiles.set(P2, 'png!');
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P1B, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 }); // B copied in an earlier round
+		world.published.add(K1);
+		world.published.add(K2);
+		const withdrawnMeanwhile: string[] = [];
+		world.duringPut = async (path) => {
+			if (path === P1) {
+				world.published.delete(K2);
+				withdrawnMeanwhile.push(K2);
+			}
+		};
+		const recordedBeforeMark: boolean[] = [];
+		const d = worldDeps(world);
+		const spying: CopyDeps = {
+			...d,
+			mark: async (host, key, published, actor) => {
+				if (key === K2 && !published) {
+					recordedBeforeMark.push(
+						world.runtime
+							.get(host)
+							?.pending_deletions.some((p) => p.path === '.publication/pub/test3_2') === true,
+					);
+				}
+				await d.mark(host, key, published, actor);
+			},
+		};
+		const report = await applyCopyWith(spying, 'pub1', planFrom(world), {
+			takeWithdrawn: () => withdrawnMeanwhile.splice(0),
+		});
+		expect(world.calls).toEqual([
+			'mark test3_1 true',
+			`put ${P1}`,
+			'mark test3_2 false',
+			`put ${P1B}`,
+		]);
+		expect(recordedBeforeMark).toEqual([true]);
+		// The pre-empted marker is VERIFIED gone at the round's end (never a false
+		// deletion_unverified); its files are the queued run's plan to delete.
+		expect(world.agentMarkers.has(K2)).toBe(false);
+		expect(report).toMatchObject({
+			state: 'ok',
+			error: null,
+			withdrawn: 1,
+			put: 2,
+			deferred: 0,
+			pending_deletions: 0,
+		});
+		expect(world.runtime.get('pub1')).toMatchObject({
+			state: 'ok',
+			error: null,
+			pending_deletions: [],
+		});
+	});
+
+	test('a planning failure is recorded as a code in the runtime file (typed → its code, untyped → internal.unexpected)', async () => {
+		const world = newWorld();
+		const d = worldDeps(world);
+		const deps = (error: Error) => ({
+			takesCopy: async () => true,
+			plan: async (): Promise<ApplyPlan> => {
+				throw error;
+			},
+			apply: (host: string, plan: ApplyPlan) => applyCopyWith(d, host, plan),
+			recordFailure: (host: string, failure: unknown) => recordRoundFailure(d, host, failure),
+		});
+		const timeout = await syncHostWith(
+			deps(new DedaloError('publication_host.timeout')),
+			'pub1',
+			[],
+		);
+		expect(timeout).toMatchObject({ state: 'pending', error: 'publication_host.timeout' });
+		expect(world.runtime.get('pub1')).toMatchObject({
+			state: 'pending',
+			error: 'publication_host.timeout',
+		});
+		const broken = await syncHostWith(deps(new Error('walk broke (test)')), 'pub1', []);
+		expect(broken).toMatchObject({ state: 'failed', error: 'internal.unexpected' });
+	});
+});
+
+describe('hostTakesCopy (the agent decides; unreachable → the last runtime state)', () => {
+	function io(mode: string | Error, last: MediaCopyRuntime['state'] | undefined) {
+		const marked: string[] = [];
+		const probe: TakesCopyIo = {
+			status: async () => {
+				if (mode instanceof Error) throw mode;
+				return { media: { mode } };
+			},
+			lastState: async () => last,
+			markNotCopy: async (name: string) => {
+				marked.push(name);
+			},
+		};
+		return { marked, io: probe };
+	}
+	const down = new DedaloError('publication_host.unreachable', { message: 'down (test)' });
+
+	test('a host the agent says is not copy: n/a (stamped) only when it holds nothing; debt is kept as copy_mode_withdrawn', () => {
+		const clean: MediaCopyRuntime = { ...emptyRuntime(), state: 'ok', error: DELETION_UNVERIFIED };
+		expect(nonCopyRuntime(clean, new Date(T0).toISOString())).toMatchObject({
+			state: 'n/a',
+			error: null,
+			pending_deletions: [],
+			last_verified_at: new Date(T0).toISOString(),
+		});
+		const pending = [{ path: '.publication/pub/test3_1', since: new Date(T0).toISOString() }];
+		const cur: MediaCopyRuntime = {
+			...emptyRuntime(),
+			state: 'failed',
+			error: DELETION_UNVERIFIED,
+			pending_deletions: pending,
+		};
+		const withdrawn = nonCopyRuntime(cur, new Date(T0).toISOString());
+		expect(withdrawn).toMatchObject({ state: 'failed', error: COPY_MODE_WITHDRAWN });
+		expect(withdrawn.pending_deletions).toEqual(pending);
+		// never the agent's "not copy" proof: an unreachable agent then still answers true
+		expect(explicitCopyState(withdrawn)).toBe('failed');
+	});
+	test("'n/a' counts only when the agent said so: a default row (another writer created it) is no answer", () => {
+		expect(explicitCopyState(undefined)).toBeUndefined();
+		expect(explicitCopyState(defaultHostRuntime().media_copy)).toBeUndefined();
+		const said = nonCopyRuntime(defaultHostRuntime().media_copy, new Date(T0).toISOString());
+		expect(explicitCopyState(said)).toBe('n/a');
+		expect(explicitCopyState({ ...emptyRuntime(), state: 'ok' })).toBe('ok');
+	});
+	test('a copy flow never leaves a host n/a: an unreachable agent after a default row still answers true', async () => {
+		const world = newWorld();
+		world.agentMarkers.add(K1);
+		world.down = true;
+		const d = worldDeps(world);
+		await expect(
+			withdrawNowWith({ ...d, takesCopy: async () => true }, 'pub1', [K1]),
+		).rejects.toMatchObject({ code: 'publication_host.unreachable' });
+		const row = world.runtime.get('pub1');
+		expect(row?.state).toBe('pending');
+		expect(row?.pending_deletions.map((p) => p.path)).toEqual(['.publication/pub/test3_1']);
+		expect(await hostTakesCopy('pub1', io(down, explicitCopyState(row)).io)).toBe(true);
+		// A round that dies before it settles (marker granted, put sent) never reads n/a either.
+		const live = newWorld();
+		live.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		live.published.add(K1);
+		const ld = worldDeps(live);
+		const atPut: (string | undefined)[] = [];
+		await applyCopyWith(
+			{
+				...ld,
+				put: async (host, file, actor) => {
+					atPut.push(live.runtime.get('pub1')?.state);
+					return ld.put(host, file, actor);
+				},
+			},
+			'pub1',
+			planFrom(live),
+		);
+		expect(atPut).toEqual(['pending']);
+	});
+	test('copy → true', async () => {
+		expect(await hostTakesCopy('pub1', io('copy', undefined).io)).toBe(true);
+	});
+	test('shared → false, and the runtime is marked n/a', async () => {
+		const probe = io('shared', 'ok');
+		expect(await hostTakesCopy('pub1', probe.io)).toBe(false);
+		expect(probe.marked).toEqual(['pub1']);
+	});
+	test('unreachable after a copy round → true (the withdrawal must be recorded pending)', async () => {
+		expect(await hostTakesCopy('pub1', io(down, 'ok').io)).toBe(true);
+		expect(await hostTakesCopy('pub1', io(down, 'failed').io)).toBe(true);
+	});
+	test('unreachable: false ONLY for an explicit n/a; no runtime row or an unreadable one → true (never fail open)', async () => {
+		expect(await hostTakesCopy('pub1', io(down, 'n/a').io)).toBe(false);
+		expect(await hostTakesCopy('pub1', io(down, undefined).io)).toBe(true);
+		const unreadable: TakesCopyIo = {
+			...io(down, 'n/a').io,
+			lastState: async () => {
+				throw new Error('runtime file corrupt (test)');
+			},
+		};
+		expect(await hostTakesCopy('pub1', unreadable)).toBe(true);
+	});
+});
+
+describe('openLocalMediaFile (confined to the media root, never through a link)', () => {
+	test('stat + stream of a real file; absent → null; a link → null; traversal refused', async () => {
+		const root = scratchMediaRoot('dedalo_media_copy_open_');
+		try {
+			const relative = `${imageQuality()}/0/test99_test3_1.jpg`;
+			mkdirSync(join(root, imageQuality(), '0'), { recursive: true });
+			writeFileSync(join(root, relative), 'jpeg');
+			const opened = await openLocalMediaFile(relative, root);
+			expect(opened?.size).toBe(4);
+			expect(typeof opened?.mtimeMs).toBe('number');
+			expect(await new Response(opened?.body).text()).toBe('jpeg');
+			expect(await openLocalMediaFile(`${imageQuality()}/0/test99_test3_404.jpg`, root)).toBeNull();
+			const linked = `${imageQuality()}/0/test99_test3_2.jpg`;
+			symlinkSync(join(root, relative), join(root, linked));
+			expect(await openLocalMediaFile(linked, root)).toBeNull();
+			mkdirSync(join(root, imageQuality(), '0', 'test99_test3_3.jpg'));
+			expect(await openLocalMediaFile(`${imageQuality()}/0/test99_test3_3.jpg`, root)).toBeNull();
+			await expect(openLocalMediaFile('../../etc/passwd', root)).rejects.toMatchObject({
+				code: 'media.invalid_path',
+			});
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	test('an intermediate directory swapped for a link (the quality dir → the master dir) is deferred (null), never read through', async () => {
+		const root = scratchMediaRoot('dedalo_media_copy_open_link_');
+		try {
+			const quality = imageQuality();
+			const relative = `${quality}/0/test99_test3_1.jpg`;
+			mkdirSync(join(root, quality, '0'), { recursive: true });
+			writeFileSync(join(root, relative), 'public');
+			mkdirSync(join(root, 'image', 'original', '0'), { recursive: true });
+			writeFileSync(join(root, 'image', 'original', '0', 'test99_test3_1.jpg'), 'MASTER');
+			expect(await new Response((await openLocalMediaFile(relative, root))?.body).text()).toBe(
+				'public',
+			);
+			// The quality folder is swapped for a link to the master folder after the plan.
+			renameSync(join(root, quality), join(root, `${quality}.moved`));
+			symlinkSync(join(root, 'image', 'original'), join(root, quality));
+			expect(await openLocalMediaFile(relative, root)).toBeNull();
+			// A deeper intermediate directory swapped the same way.
+			rmSync(join(root, quality));
+			renameSync(join(root, `${quality}.moved`), join(root, quality));
+			rmSync(join(root, quality, '0'), { recursive: true });
+			symlinkSync(join(root, 'image', 'original', '0'), join(root, quality, '0'));
+			expect(await openLocalMediaFile(relative, root)).toBeNull();
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+});

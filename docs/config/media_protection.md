@@ -375,7 +375,10 @@ Area Maintenance carries the **Media access control** widget:
   already hold a cookie keep access without re-authenticating. Everyone else receives the
   cookie at their next login;
 * **Rebuild media index** (global admins) resyncs the publication markers from the publication
-  databases. It is safe to re-run at any time and never opens a deny-everything window.
+  databases. It is safe to re-run at any time and never opens a deny-everything window;
+* a read-only line links to the **Publication hosts** panel, where the media rules of each
+  separate publication server are compared and applied
+  ([publication host agent](../install/publication_host.md#the-publication-hosts-panel)).
 
 The mode switch is **root-only**, not merely admin-only: setting the mode to `off` opens the
 entire media tree to the world.

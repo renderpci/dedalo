@@ -1,11 +1,13 @@
 /**
  * MEDIA-PROTECTION LOCKSTEP TRIPWIRE (DEC-12).
  *
- * Media access control is enforced by THREE surfaces that must agree, forever:
+ * Media access control is enforced by surfaces that must agree, forever:
  *
  *   1. the generated Apache rules   (buildHtaccess)
  *   2. the generated nginx rules    (buildNginxConf)
  *   3. the marker WRITER            (diffusion/targets/mediastore/media_index.ts)
+ *   4. the COPY classifier          (diffusion/targets/mediastore/media_copy.ts publicFileKey —
+ *                                    what a publication host in `copy` mode receives)
  *
  * Surfaces 1 and 2 decide, from a media FILE NAME, which record marker to stat().
  * Surface 3 decides, from a record, which marker to create. If they ever disagree, the
@@ -29,6 +31,14 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
+import {
+	MEDIA_ACTIVE_DOCUMENT_EXTENSIONS as AGENT_ACTIVE_DOCUMENT_EXTENSIONS,
+	MEDIA_FILENAME_GRAMMAR as AGENT_GRAMMAR,
+	ALWAYS_MASTER_TIERS as AGENT_MASTER_TIERS,
+	MEDIA_SCRIPT_DENY_PATTERN as AGENT_SCRIPT_DENY_PATTERN,
+	MEDIA_WORKING_FILE_EXTENSIONS as AGENT_WORKING_FILE_EXTENSIONS,
+	classifyMediaPath as classifyAgentMediaPath,
+} from '../../publication/host_agent/src/media/grammar.ts';
 import { config } from '../../src/config/config.ts';
 import {
 	buildHtaccess,
@@ -37,13 +47,23 @@ import {
 	filterPublicQualities,
 	getPublicQualities,
 	MEDIA_AUTH_COOKIE,
+	MEDIA_FILENAME_GRAMMAR,
+	MEDIA_SCRIPT_DENY_PATTERN,
+	MEDIA_WORKING_FILE_EXTENSIONS,
+	masterQualities,
+	nginxHardeningLocations,
 } from '../../src/core/media/protection.ts';
+import {
+	buildPublicationHostApacheConf,
+	buildPublicationHostNginxConf,
+} from '../../src/core/media/publication_host_rules.ts';
 import {
 	MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
 	SVG_ENVELOPE_CSP,
 	SVG_QUARANTINE_CSP,
 	SVG_QUARANTINE_DISPOSITION,
 } from '../../src/core/media/svg_safety.ts';
+import { publicFileKey } from '../../src/diffusion/targets/mediastore/media_copy.ts';
 import { makeMarkerKey } from '../../src/diffusion/targets/mediastore/media_index.ts';
 import { mediaSvgSafetyHeaders } from '../../src/server.ts';
 
@@ -62,9 +82,14 @@ const QUALITIES = [
 const HTACCESS = buildHtaccess('publication', QUALITIES, []);
 const NGINX = buildNginxConf('publication', QUALITIES);
 
+/** A publication host mounting the published media read-only somewhere ELSE. */
+const HOST_ROOT = '/srv/dedalo_media_ro';
+const HOST_APACHE = buildPublicationHostApacheConf({ root: HOST_ROOT, qualities: QUALITIES });
+const HOST_NGINX = buildPublicationHostNginxConf({ root: HOST_ROOT, qualities: QUALITIES });
+
 /** Pull the rule-B pattern back out of the generated Apache text. */
-function apachePattern(): RegExp {
-	const line = HTACCESS.split('\n').find((l) => l.startsWith('RewriteRule ^(?:'));
+function apachePattern(text: string = HTACCESS): RegExp {
+	const line = text.split('\n').find((l) => l.startsWith('RewriteRule ^(?:'));
 	if (line === undefined) throw new Error('rule B not found in the generated .htaccess');
 	const match = /^RewriteRule \^(.+?) - \[L\]$/.exec(line);
 	if (match?.[1] === undefined) throw new Error(`could not extract the Apache pattern: ${line}`);
@@ -80,8 +105,12 @@ function apachePattern(): RegExp {
  * shipped as a real bug (publication mode was unusable on nginx), so the quotes are
  * asserted below, not merely tolerated.
  */
-function nginxPattern(): RegExp {
-	const line = NGINX.split('\n').find((l) => l.startsWith('location ~ "^/dedalo/'));
+function nginxPattern(text: string = NGINX): RegExp {
+	// trimStart: the publication-host include NESTS Rule B inside its outer ^~ prefix.
+	const line = text
+		.split('\n')
+		.map((l) => l.trimStart())
+		.find((l) => l.startsWith('location ~ "^/dedalo/'));
 	if (line === undefined) {
 		throw new Error(
 			'rule B not found in the generated nginx conf — it must be `location ~ "<regex>" {`, ' +
@@ -196,6 +225,35 @@ describe('media protection: the three enforcement surfaces stay in lockstep', ()
 			if (testCase.key === null) continue;
 			const [sectionTipo, sectionId] = testCase.key.split('_');
 			expect(makeMarkerKey(sectionTipo as string, sectionId as string)).toBe(testCase.key);
+		}
+	});
+
+	test('the COPY desired-set classifier (media_copy.ts) agrees with Rule B on every filename', () => {
+		// Publication-host `copy` mode ships exactly what Rule B would serve. If the
+		// classifier drifted from the generated pattern, a copy host would hold (and serve)
+		// files the shared/work gate refuses — or silently miss published ones.
+		for (const testCase of CASES) {
+			expect(
+				publicFileKey(testCase.path, QUALITIES),
+				`media_copy disagrees on ${testCase.path} (${testCase.why})`,
+			).toBe(testCase.key);
+		}
+	});
+
+	test('the COPY classifier also refuses everything the hardening 404s, in any letter case', () => {
+		const denied = [
+			...MEDIA_WORKING_FILE_EXTENSIONS,
+			...MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
+			...MEDIA_SCRIPT_DENY_PATTERN.replace('phps?', 'php|phps').split('|'),
+		];
+		expect(denied.length).toBeGreaterThan(15); // anti-vacuity: all three lists were read
+		for (const ext of denied) {
+			for (const spelled of [ext, ext.toUpperCase()]) {
+				expect(
+					publicFileKey(`image/1.5MB/0/rsc29_rsc170_770.${spelled}`, QUALITIES),
+					spelled,
+				).toBeNull();
+			}
 		}
 	});
 });
@@ -524,5 +582,233 @@ describe('media protection: the MEDIA-03 response headers stay in lockstep', () 
 		expect(source).toContain('const AUTH_MARKER_DIR_MODE = 0o750;');
 		const inlineModes = source.match(/mkdirSync\([^)]*mode:\s*0o\d+/g) ?? [];
 		expect(inlineModes).toEqual([]); // every creator goes through the constant
+	});
+});
+
+describe('media protection: the PUBLICATION-HOST profile stays in lockstep (PUBLICATION_HOST_SPEC §5.1)', () => {
+	test('it classifies every filename exactly like the work profile', () => {
+		const apache = apachePattern(HOST_APACHE);
+		const nginx = nginxPattern(HOST_NGINX);
+		for (const testCase of CASES) {
+			const a = apache.exec(testCase.path);
+			const apacheKey = a === null ? null : `${a[1] ?? ''}_${a[2] ?? ''}`;
+			const n = nginx.exec(`/dedalo/media/${testCase.path}`);
+			const nginxKey = n === null ? null : `${n.groups?.dd_s ?? ''}_${n.groups?.dd_i ?? ''}`;
+			expect(apacheKey, `host Apache disagrees on ${testCase.path} (${testCase.why})`).toBe(
+				testCase.key,
+			);
+			expect(nginxKey, `host nginx disagrees on ${testCase.path} (${testCase.why})`).toBe(
+				testCase.key,
+			);
+			// nginx aliases the WHOLE matched media path, never a fragment of it.
+			if (n !== null) expect(n.groups?.dd_path).toBe(testCase.path);
+		}
+	});
+
+	test('it stats markers under the HOST root, never the work root', () => {
+		expect(HOST_APACHE).toContain(`RewriteCond "${HOST_ROOT}/.publication/pub/$1_$2" -f`);
+		expect(HOST_NGINX).toContain(`if (!-f ${HOST_ROOT}/.publication/pub/\${dd_s}_\${dd_i})`);
+	});
+
+	test('host and work nginx share ONE hardening builder (SEC-088 / MEDIA-03 / rule 0)', () => {
+		const work = nginxHardeningLocations(`/dedalo/${config.mediaDir}`);
+		expect(NGINX).toContain(work.join('\n'));
+		expect(HOST_NGINX).toContain(work.map((l) => (l === '' ? '' : `\t${l}`)).join('\n'));
+		// and the shared script list is the Apache 404 rewrite's too (F3)
+		expect(HTACCESS).toContain(`RewriteRule (?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ - [R=404,L]`);
+		expect(HOST_APACHE).toContain(`RewriteRule (?i)\\.(${MEDIA_SCRIPT_DENY_PATTERN})$ - [R=404,L]`);
+	});
+
+	test('it carries NO Rule A: a work-session cookie is never honoured publicly', () => {
+		for (const text of [HOST_APACHE, HOST_NGINX]) {
+			expect(text).not.toContain(MEDIA_AUTH_COOKIE);
+			expect(text).not.toContain('.publication/auth/');
+			expect(text).not.toContain('$dedalo_auth_key');
+		}
+	});
+});
+
+/**
+ * F2: the working-file deny (MEDIA_WORKING_FILE_EXTENSIONS) used to be Apache-only, and a
+ * case-SENSITIVE 403 there: a published record's grammar-valid `…_test3_1.tmp` passed Rule
+ * B and nginx served it, and `.TMP` on an APFS/SMB mount was served by Apache too.
+ * Behavioral: the deny rules are pulled back OUT of all four generated texts, compiled, and
+ * must refuse every suffix of the constant (any case) as 404, BEFORE Rule B can serve it.
+ */
+describe('media protection: working files are denied by Apache AND nginx, both profiles (F2)', () => {
+	const PROBE_DIR = 'image/1.5MB/0/rsc29_rsc170_1';
+	const probes = MEDIA_WORKING_FILE_EXTENSIONS.flatMap((ext) => [ext, ext.toUpperCase()]).map(
+		(ext) => `${PROBE_DIR}.${ext}`,
+	);
+
+	/** Apache `RewriteRule <pcre> - [R=404,L]` lines, as [line index, regex]. */
+	function apacheDenies(text: string): [number, RegExp][] {
+		return text.split('\n').flatMap((line, i): [number, RegExp][] => {
+			const m = /^RewriteRule (\(\?i\))?(.+) - \[R=404,L\]$/.exec(line);
+			return m?.[2] === undefined ? [] : [[i, new RegExp(m[2], m[1] ? 'i' : '')]];
+		});
+	}
+
+	/** nginx regex locations whose body is `deny all; return 404;`, as [line index, regex]. */
+	function nginxDenies(text: string): [number, RegExp][] {
+		const lines = text.split('\n').map((l) => l.trimStart());
+		return lines.flatMap((line, i): [number, RegExp][] => {
+			const m = /^location (~\*?) (\S+) \{$/.exec(line);
+			if (m?.[2] === undefined) return [];
+			if (lines[i + 1] !== 'deny all;' || lines[i + 2] !== 'return 404;') return [];
+			return [[i, new RegExp(m[2], m[1] === '~*' ? 'i' : '')]];
+		});
+	}
+
+	const ruleBIndex = (text: string, prefix: string): number =>
+		text.split('\n').findIndex((l) => l.trimStart().startsWith(prefix));
+
+	const SURFACES: { name: string; text: string; server: 'apache' | 'nginx'; url: string }[] = [
+		{ name: 'work Apache (.htaccess)', text: HTACCESS, server: 'apache', url: '' },
+		{ name: 'host Apache (vhost include)', text: HOST_APACHE, server: 'apache', url: '' },
+		{ name: 'work nginx', text: NGINX, server: 'nginx', url: `/dedalo/${config.mediaDir}/` },
+		{ name: 'host nginx', text: HOST_NGINX, server: 'nginx', url: '/dedalo/media/' },
+	];
+
+	for (const surface of SURFACES) {
+		test(`${surface.name}: every working suffix (any case) is a 404 that precedes Rule B`, () => {
+			const denies =
+				surface.server === 'apache' ? apacheDenies(surface.text) : nginxDenies(surface.text);
+			const ruleB =
+				surface.server === 'apache'
+					? ruleBIndex(surface.text, 'RewriteRule ^(?:')
+					: ruleBIndex(surface.text, 'location ~ "^/dedalo/');
+			expect(ruleB).toBeGreaterThan(-1);
+			for (const probe of probes) {
+				const path = `${surface.url}${probe}`;
+				const hit = denies.find(([, re]) => re.test(path));
+				expect(hit, `${surface.name} does not deny ${path}`).toBeDefined();
+				expect(hit?.[0] ?? Infinity, `${surface.name}: deny of ${path} after Rule B`).toBeLessThan(
+					ruleB,
+				);
+			}
+			// and it is the WORKING-file deny, not a catch-all: a plain published .jpg reaches
+			// Rule B (the default deny AFTER Rule B is a different rule and does not count).
+			const jpg = `${surface.url}${PROBE_DIR}.jpg`;
+			expect(denies.some(([i, re]) => i < ruleB && re.test(jpg))).toBe(false);
+		});
+	}
+
+	test('the Apache .htaccess fails CLOSED without mod_rewrite (FilesMatch fallback)', () => {
+		const working = MEDIA_WORKING_FILE_EXTENSIONS.join('|');
+		const fallback = `<IfModule !mod_rewrite.c>\n\t<FilesMatch "(?i)\\.(${working})$">\n\t\tRequire all denied`;
+		expect(HTACCESS).toContain(fallback);
+		expect(HOST_APACHE).toContain(fallback);
+	});
+
+	test('mode off keeps the deny on both servers (it is hardening, not the access gate)', () => {
+		for (const text of [buildHtaccess('off', [], []), buildNginxConf('off', [])]) {
+			expect(text).toContain(`(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$`);
+		}
+	});
+});
+
+/**
+ * F3: Apache denied the script population (MEDIA_SCRIPT_DENY_PATTERN) with an unconditional
+ * `<FilesMatch> Require all denied`. In .htaccess / <Directory> context authz runs BEFORE the
+ * per-dir rewrite, so an uploaded `.php` answered 403 — confirming it exists (§2: 404, never
+ * 403). Now: `SetHandler none` (never executed) + a `(?i)` `RewriteRule … [R=404,L]`, with the
+ * authz deny ONLY inside `<IfModule !mod_rewrite.c>` (a host without mod_rewrite never serves
+ * the source either).
+ */
+describe('media protection: uploaded scripts are a 404 on Apache, never a 403 (F3)', () => {
+	const SCRIPT_EXTS = MEDIA_SCRIPT_DENY_PATTERN.replace('phps?', 'php|phps').split('|');
+	const APACHE_TEXTS = [
+		['work .htaccess (publication)', HTACCESS],
+		['work .htaccess (off)', buildHtaccess('off', [], [])],
+		['host Apache', HOST_APACHE],
+	] as const;
+
+	/** Every `<FilesMatch "(?i)…">` whose body denies, with whether it sits in !mod_rewrite. */
+	function authzDenies(text: string): { re: RegExp; fallback: boolean }[] {
+		const lines = text.split('\n').map((l) => l.trim());
+		const out: { re: RegExp; fallback: boolean }[] = [];
+		let inNoRewrite = false;
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i] ?? '';
+			if (line === '<IfModule !mod_rewrite.c>') inNoRewrite = true;
+			else if (line === '</IfModule>') inNoRewrite = false;
+			const m = /^<FilesMatch "\(\?i\)(.+)">$/.exec(line);
+			if (m?.[1] !== undefined && lines[i + 1] === 'Require all denied') {
+				out.push({ re: new RegExp(m[1], 'i'), fallback: inNoRewrite });
+			}
+		}
+		return out;
+	}
+
+	for (const [name, text] of APACHE_TEXTS) {
+		test(`${name}: every script extension (any case) is a 404 rewrite, the authz deny only a fallback`, () => {
+			const rewrites = text
+				.split('\n')
+				.map((l) => /^RewriteRule (\(\?i\))?(.+) - \[R=404,L\]$/.exec(l))
+				.flatMap((m) => (m?.[2] === undefined ? [] : [new RegExp(m[2], m[1] ? 'i' : '')]));
+			const denies = authzDenies(text);
+			for (const ext of SCRIPT_EXTS.flatMap((e) => [e, e.toUpperCase()])) {
+				const file = `image/thumb/0/test94_test3_1.${ext}`;
+				expect(
+					rewrites.some((re) => re.test(file)),
+					`${name}: no 404 rewrite for ${file}`,
+				).toBe(true);
+				// a 403 that wins over the rewrite: an authz deny OUTSIDE the !mod_rewrite fallback
+				const eager = denies.filter((d) => !d.fallback && d.re.test(file));
+				expect(eager.length, `${name}: ${file} is authz-denied (403) with mod_rewrite loaded`).toBe(
+					0,
+				);
+				// and the no-mod_rewrite host still never serves the source
+				expect(
+					denies.some((d) => d.fallback && d.re.test(file)),
+					`${name}: no fallback for ${file}`,
+				).toBe(true);
+			}
+			// never executed: SetHandler none stays on the PHP family
+			expect(text).toContain('<FilesMatch "(?i)\\.(phps?|phtml|phar|pht)$">\n\tSetHandler none');
+		});
+	}
+});
+
+/**
+ * AGENT AXIS (PUBLICATION_HOST_SPEC §5.2/§6): a copy-mode publication host is served by the
+ * publication_host profile over the agent's copy root, and the agent refuses a media.put
+ * the gate could never serve. Its grammar is a COPY (publication/host_agent never imports
+ * the engine), so it is held equal here and run over the same CASES table: a drift would
+ * copy files the gate never serves, or refuse files it does.
+ */
+describe('media protection: the publication-host AGENT classifies like the gates (PUBLICATION_HOST_SPEC §5.2)', () => {
+	test("its grammar, working-file list and master tiers are the engine's", () => {
+		expect(AGENT_GRAMMAR).toBe(MEDIA_FILENAME_GRAMMAR);
+		expect([...AGENT_WORKING_FILE_EXTENSIONS]).toEqual([...MEDIA_WORKING_FILE_EXTENSIONS]);
+		for (const tier of AGENT_MASTER_TIERS) expect(masterQualities().has(tier)).toBe(true);
+		expect([...AGENT_ACTIVE_DOCUMENT_EXTENSIONS]).toEqual([...MEDIA_ACTIVE_DOCUMENT_EXTENSIONS]);
+		expect(AGENT_SCRIPT_DENY_PATTERN).toBe(MEDIA_SCRIPT_DENY_PATTERN);
+	});
+
+	test('its media.put refuses everything the hardening 404s, in any letter case', () => {
+		const denied = [
+			...MEDIA_WORKING_FILE_EXTENSIONS,
+			...MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
+			...MEDIA_SCRIPT_DENY_PATTERN.replace('phps?', 'php|phps').split('|'),
+		];
+		expect(denied.length).toBeGreaterThan(15); // anti-vacuity: all three lists were read
+		for (const ext of denied) {
+			for (const spelled of [ext, ext.toUpperCase()]) {
+				const path = `image/thumb/0/x_rsc29_1.${spelled}`;
+				expect(classifyAgentMediaPath(path, 'put').ok, path).toBe(false);
+			}
+		}
+	});
+
+	test('its media.put classifier accepts exactly the gate-public rows, with the same key', () => {
+		for (const testCase of CASES) {
+			const verdict = classifyAgentMediaPath(testCase.path, 'put');
+			expect(
+				verdict.ok ? verdict.key : null,
+				`agent disagrees on ${testCase.path} (${testCase.why})`,
+			).toBe(testCase.key);
+		}
 	});
 });

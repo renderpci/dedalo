@@ -51,6 +51,9 @@ import { legacyAwareDefaultDir } from '../../config/catalog/media.ts';
 import { privateDir, projectRoot, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { deriveProcessesDir } from '../media/processes_dir.ts';
+import { registryPath } from '../publication_host/registry.ts';
+import { runtimePath } from '../publication_host/runtime.ts';
+import { secretsRoot } from '../publication_host/secrets.ts';
 
 /** One runtime-writable path the engine (or its operator) can aim somewhere. */
 export interface RuntimePathEntry {
@@ -172,6 +175,15 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 			optional('DEDALO_SESSION_DB_PATH') ?? join(privateDir, 'dedalo_ts_sessions.sqlite'),
 	},
 	{
+		// Core never imports diffusion: the path is spelled here and pinned equal to
+		// mediaCopyStateDir() by test/unit/media_copy_native.test.ts.
+		id: 'media_copy_state_dir',
+		envKey: null,
+		consumer:
+			'src/diffusion/targets/mediastore/media_copy.ts:mediaCopyStateDir (publication-host copy: local sha cache)',
+		resolve: () => join(privateDir, 'media_copy'),
+	},
+	{
 		id: 'backup_dir',
 		envKey: 'DEDALO_BACKUP_DIR',
 		consumer: 'src/config/config.ts:buildConfig (ops.backupDir)',
@@ -247,6 +259,30 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 		envKey: 'DEDALO_SOURCE_VERSION_LOCAL_DIR',
 		consumer: 'src/core/update (downloaded release staging)',
 		resolve: () => optional('DEDALO_SOURCE_VERSION_LOCAL_DIR'),
+	},
+	{
+		id: 'publication_hosts_registry',
+		envKey: null,
+		consumer: 'src/core/publication_host/registry.ts:registryPath',
+		// THE SAME FUNCTION the store uses (design rule: mirror the consumer exactly):
+		// <private>/publication_hosts.json, the non-secret host list (phase 3, E2).
+		resolve: () => registryPath(),
+	},
+	{
+		id: 'publication_hosts_runtime',
+		envKey: null,
+		consumer: 'src/core/publication_host/runtime.ts:runtimePath',
+		// THE SAME FUNCTION the store uses: beside the registry,
+		// <private>/publication_hosts_runtime.json, the observed per-host results (phases 4-6).
+		resolve: () => runtimePath(),
+	},
+	{
+		id: 'publication_hosts_secrets',
+		envKey: null,
+		consumer: 'src/core/publication_host/secrets.ts:secretsRoot',
+		// <private>/publication_hosts/<name>/{token,engine_bundle.pem}, 0700/0600 (phase 3, E3);
+		// a unix-socket host holds `token` only.
+		resolve: () => secretsRoot(),
 	},
 ]);
 
