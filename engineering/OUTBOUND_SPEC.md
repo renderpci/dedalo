@@ -114,10 +114,18 @@ policy, in this order:
    verification on when `NODE_TLS_REJECT_UNAUTHORIZED=0` is in the environment.
    A unix-socket host is dialled at its socket, and only after the filesystem
    vouches for it (`assertSocketSafe`): the path exists (else reason `transport`),
-   `lstat` says it IS a socket (a symlink or any other node is refused), and its
-   directory is writable by nobody but its owner (group/other write bits refused,
-   except a root-owned sticky directory, `/tmp`'s shape) — else reason
-   `socket_perms`. No caller text reaches the URL.
+   `lstat` says it IS a socket (a symlink or any other node is refused), its
+   directory is writable by nobody but its owner (any group/other write bit is
+   refused — no sticky exemption: a sticky world-writable directory such as `/tmp`
+   lets anyone CREATE the name), the socket is owned by that directory's owner,
+   root or the engine user, and every directory above it — on the path as written
+   and on its realpath — is owned by one of those uids and writable by no one else
+   (a sticky ancestor passes only when the entry below it is owned by one of them)
+   — else reason `socket_perms`. The guarantee: only the owner of the directory
+   the operator registered (or root, or the engine user) could have placed the
+   socket. The registry holds no agent uid, so which uid that is stays the
+   operator's choice; the provisioned shape (the agent's 0750 RuntimeDirectory
+   under root-owned `/run`) passes. No caller text reaches the URL.
    A TCP host without its engine bundle, or with one the secrets store refuses,
    is `publication_host.unconfigured`.
 3. **One request.** `redirect: 'manual'`; any 3xx is refused, its body cancelled

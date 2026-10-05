@@ -18,7 +18,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -354,6 +354,48 @@ describe('the unix socket on this machine', () => {
 		expect(res.status).toBe(200);
 		expect(JSON.parse(res.text).path).toBe(`${AGENT_BASE_PATH}/v1/status`);
 		expect(state.authorizations.at(-1)).toBe(`Bearer ${BEARER}`);
+	});
+
+	/** A live agent socket at `path`; the dial must be refused socket_perms with no request. */
+	async function refusedAt(path: string): Promise<void> {
+		const squatter = Bun.serve({ unix: path, fetch: agentHandler });
+		try {
+			const before = state.hits.length;
+			const error = await rejection(
+				dialAgent(record({ kind: 'unix', socket: path }), null, GET_STATUS, BEARER),
+			);
+			expect(error.code).toBe('publication_host.unreachable');
+			expect(error.coordinates?.reason).toBe('socket_perms');
+			expect(state.hits.length).toBe(before); // nothing reached the listener
+		} finally {
+			squatter.stop(true);
+			rmSync(path, { force: true });
+		}
+	}
+
+	test('a socket directly in a sticky world-writable dir (/tmp) is refused: anyone may create the name', async () => {
+		// root-owned 1777 /tmp is the squatting shape: sticky stops deletion, not creation
+		const sticky = statSync('/tmp');
+		expect(sticky.mode & 0o1777).toBe(0o1777);
+		await refusedAt(`/tmp/dd_pubhost_${process.pid}_${Date.now()}.sock`);
+	});
+
+	test('an ancestor writable by others refuses the socket (its child dir could be swapped)', async () => {
+		const open = join(dir, 'open_ancestor');
+		mkdirSync(join(open, 'run'), { recursive: true, mode: 0o755 });
+		chmodSync(open, 0o777);
+		try {
+			await refusedAt(join(open, 'run', 'agent.sock'));
+		} finally {
+			chmodSync(open, 0o755);
+		}
+	});
+
+	test('a parent dir writable by group is refused', async () => {
+		const group = join(dir, 'group_parent');
+		mkdirSync(group, { mode: 0o755 });
+		chmodSync(group, 0o775);
+		await refusedAt(join(group, 'agent.sock'));
 	});
 
 	test('a missing socket is publication_host.unreachable', async () => {

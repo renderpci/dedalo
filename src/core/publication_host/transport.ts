@@ -19,11 +19,13 @@
  *      `rejectUnauthorized: true`, and the certificate checked against the REGISTRY host.
  *      The explicit `true` is load-bearing: measured on Bun 1.4.2, it is what keeps a rogue
  *      agent refused while NODE_TLS_REJECT_UNAUTHORIZED=0 is in the environment. A
- *      unix-socket host is dialled at its socket only when the filesystem vouches for it:
- *      the path is a socket (not a symlink) and its directory is not writable by group or
- *      others (unless sticky and root-owned) — otherwise `unreachable` (reason socket_perms)
- *      and no connection (the fingerprint is public; on a socket this check is what keeps
- *      an impostor's listener out). No caller text reaches the URL. A TCP host
+ *      unix-socket host is dialled at its socket only when the filesystem vouches for it
+ *      (`socketSafe`: a socket, not a symlink; its parent writable by its owner alone — no
+ *      sticky exemption; the socket owned by the parent's owner, root or the engine user;
+ *      every directory above unswappable by anyone else) — otherwise `unreachable` (reason
+ *      socket_perms) and no connection (the fingerprint is public; on a socket this check
+ *      is what keeps an impostor's listener out). It trusts the owner of the directory the
+ *      operator registered: the registry holds no agent uid. No caller text reaches the URL. A TCP host
  *      with no engine bundle — or one the secrets store refuses — is
  *      `publication_host.unconfigured`, and no socket opens.
  *   3. ONE REQUEST. `redirect: 'manual'`, and any 3xx is REFUSED with its body cancelled
@@ -48,7 +50,7 @@
  * NO_PROXY. The residual canary in publication_host_transport_native pins the behaviour.
  */
 
-import { lstatSync, type Stats, statSync } from 'node:fs';
+import { lstatSync, realpathSync, type Stats, statSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DedaloError, isDedaloError } from '../errors/index.ts';
 import { readBytesCapped } from '../security/ssrf_guard.ts';
@@ -184,23 +186,76 @@ function statOrNull(path: string, follow: boolean): Stats | null {
 	}
 }
 
-/** Group/other write bits, unless the directory is sticky and root-owned (/tmp's shape). */
-function writableByOthers(dir: Stats): boolean {
-	const stickyRoot = (dir.mode & 0o1000) !== 0 && dir.uid === 0;
-	return (dir.mode & 0o022) !== 0 && !stickyRoot;
+const STICKY = 0o1000;
+/** Group or other write bits. */
+const loose = (stat: Stats): boolean => (stat.mode & 0o022) !== 0;
+
+/**
+ * The prefixes of an absolute directory path, '/' first, each with the next component
+ * below it (null for the last): `/a/b` → ['/', 'a'], ['/a', 'b'], ['/a/b', null].
+ */
+function prefixes(path: string): Array<[string, string | null]> {
+	const parts = path.split('/').filter((part) => part !== '');
+	return [...parts.keys(), parts.length].map((index) => [
+		`/${parts.slice(0, index).join('/')}`,
+		parts[index] ?? null,
+	]);
 }
 
 /**
- * The filesystem vouches for a unix socket before anything is sent to it: it exists, it IS
- * a socket (lstat: a symlink is refused), and nobody but its directory's owner could have
- * placed it there. The provisioned agent socket (RuntimeDirectoryMode=0750) passes.
+ * Every directory ABOVE the socket's parent (`/` down to the grandparent) could swap the
+ * parent out from under the check, so each must be owned by a trusted uid and writable by
+ * nobody else — except a sticky directory (`/tmp`), where only an entry's owner may rename
+ * it, so the entry below must be owned by a trusted uid. `trusted` = root, the engine
+ * user, and the parent's owner (the uid the operator's registered path already trusts).
  */
-function assertSocketSafe(host: PublicationHostRecord, socket: string): void {
+function ancestorsSafe(parentPath: string, trusted: (uid: number) => boolean): boolean {
+	for (const [path, child] of prefixes(dirname(parentPath))) {
+		const dir = statOrNull(path, true);
+		if (dir === null || !dir.isDirectory() || !trusted(dir.uid)) return false;
+		if (!loose(dir)) continue;
+		const next = child === null ? parentPath : `${path === '/' ? '' : path}/${child}`;
+		const entry = statOrNull(next, false);
+		if ((dir.mode & STICKY) === 0 || entry === null || !trusted(entry.uid)) return false;
+	}
+	return true;
+}
+
+/**
+ * THE UNIX IMPOSTOR CHECK. What it guarantees: the socket was placed by the owner of its
+ * directory (or root, or the engine user), and nobody else can create, replace or rename
+ * anything on the path to it. Concretely: the node IS a socket (lstat: a symlink is
+ * refused); its parent is a real directory with NO group/other write bit — no sticky
+ * exemption: a sticky world-writable dir lets anyone CREATE the name (squatting); the
+ * socket is owned by the parent's owner, root or the engine user; and every directory
+ * above the parent, on the path as written AND on its realpath, passes ancestorsSafe.
+ * What it does NOT know: which uid the agent runs as (the registry holds no uid), so it
+ * trusts whoever owns the directory the operator registered. The provisioned shape —
+ * the agent's RuntimeDirectory (0750, owned by the agent user) under root-owned /run —
+ * passes. Any refusal is `unreachable` (reason socket_perms), nothing is sent.
+ */
+function socketSafe(socket: string): boolean {
 	const node = statOrNull(socket, false);
-	if (node === null)
+	const parentPath = dirname(socket);
+	const parent = statOrNull(parentPath, true);
+	if (node === null || !node.isSocket() || parent === null || !parent.isDirectory()) return false;
+	if (loose(parent)) return false;
+	const engine = process.geteuid?.();
+	const trusted = (uid: number): boolean => uid === 0 || uid === engine || uid === parent.uid;
+	if (!trusted(node.uid)) return false;
+	let real: string;
+	try {
+		real = realpathSync(parentPath);
+	} catch {
+		return false;
+	}
+	return ancestorsSafe(parentPath, trusted) && ancestorsSafe(real, trusted);
+}
+
+function assertSocketSafe(host: PublicationHostRecord, socket: string): void {
+	if (statOrNull(socket, false) === null)
 		throw failure('publication_host.unreachable', host, { reason: 'transport', stage: 'connect' });
-	const parent = statOrNull(dirname(socket), true);
-	if (!node.isSocket() || parent === null || writableByOthers(parent)) {
+	if (!socketSafe(socket)) {
 		throw failure('publication_host.unreachable', host, {
 			reason: 'socket_perms',
 			stage: 'connect',
