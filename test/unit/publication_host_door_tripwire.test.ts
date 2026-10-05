@@ -22,6 +22,12 @@
  *      literal; the shared capped reader imported from the guard and called; `agentRequest`
  *      reads the TLS material itself and dials through `dialAgent`.
  *   5. THE DOOR IS REGISTERED where the outbound gates and the spec look for it.
+ *   7. NO TEST REACHES A REAL AGENT (2026-10-05, phase-4 review): in a test process
+ *      (`NODE_ENV=test`) `agentRequest` refuses — FIRST, before any TLS read — unless the
+ *      publication-hosts store resolves under the OS temp dir (the declared scratch seam,
+ *      or a child whose DEDALO_PRIVATE_DIR is scratch). A whole reconcile plan run by a
+ *      gate that never armed the seam once sent the installation's bearer to its real
+ *      paired agents. Driven both ways here; the order is pinned from the AST.
  *   6. THE DOOR IS DOCUMENTED ONCE, AND THE DOCS ARE HELD TO CODE (appended blocks, phase-3
  *      Task 10): OUTBOUND_SPEC's door count equals its §2 table, §2.1 and the §6 row exist
  *      once, §2.1 names every `unreachable` reason the door mints, §5 names the door
@@ -47,6 +53,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
 import { parse } from '@babel/parser';
+import { isTestProcess } from '../../src/config/suite_database.ts';
+import {
+	type PublicationHostRecord,
+	publicationHostsTestRefusal,
+} from '../../src/core/publication_host/registry.ts';
+import { agentRequest } from '../../src/core/publication_host/transport.ts';
+import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
 import { shippedTextFiles } from '../helpers/shipped_text_corpus.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 import { writePathSourceFiles } from '../helpers/write_path_corpus.ts';
@@ -56,6 +69,7 @@ const DOOR = 'src/core/publication_host/transport.ts';
 const SECRETS = 'src/core/publication_host/secrets.ts';
 const GUARD = 'src/core/security/ssrf_guard.ts';
 const TLS_LOADER = 'readHostTls';
+const TEST_GUARD = 'publicationHostsTestRefusal';
 /** The agent's base path at the START of a literal (a filesystem path ending in it is not a URL). */
 const BASE_PATH_LITERAL = /['"`]\/publication\/host_agent(?=[/'"`])/;
 
@@ -342,6 +356,55 @@ describe('the door’s shape (AST)', () => {
 		expect(calls(TLS_LOADER, door).length).toBe(1);
 		expect(calls('dialAgent', door).length).toBe(1);
 		expect(calls('agentTarget', topLevelFunction('dialAgent')).length).toBe(1);
+	});
+
+	test('rule 7: agentRequest consults the test-process guard FIRST, before any TLS read', () => {
+		const door = topLevelFunction('agentRequest');
+		const guard = calls(TEST_GUARD, door);
+		expect(guard.length).toBe(1);
+		const start = (node: AstNode) => (node as unknown as { start: number }).start;
+		expect(start(guard[0] as AstNode)).toBeLessThan(start(calls(TLS_LOADER, door)[0] as AstNode));
+	});
+});
+
+describe('rule 7: in a TEST process the door dials only from a scratch store', () => {
+	const host: PublicationHostRecord = {
+		name: 'www',
+		instance: 'test',
+		fingerprint: 'a'.repeat(64),
+		// a TLS host with no secrets: past the guard it is publication_host.unconfigured,
+		// so the two outcomes below tell the guard from the secrets store
+		address: { kind: 'tls', host: '127.0.0.1', port: 1 },
+		public_url: null,
+		qualities: null,
+		probe: { published: null, unpublished: null },
+		paired_at: '2026-10-05T00:00:00.000Z',
+	};
+	const health = { method: 'GET', path: '/health' } as const;
+
+	test('bun test is a test process; an installation never is', () => {
+		expect(isTestProcess()).toBe(true);
+		expect(publicationHostsTestRefusal(false)).toBeNull();
+	});
+
+	test("the installation's store (no scratch armed) is refused before the TLS material is read", async () => {
+		expect(publicationHostsTestRefusal()).toContain('scratch publication-hosts store');
+		await expect(agentRequest(host, health, null)).rejects.toMatchObject({
+			code: 'internal.unexpected',
+			message: expect.stringContaining('scratch publication-hosts store'),
+		});
+	});
+
+	test('a declared scratch store passes the guard (the refusal is not blanket)', async () => {
+		const scratch = useScratchPublicationHostsBase();
+		try {
+			expect(publicationHostsTestRefusal()).toBeNull();
+			await expect(agentRequest(host, health, null)).rejects.toMatchObject({
+				code: 'publication_host.unconfigured',
+			});
+		} finally {
+			scratch.dispose();
+		}
 	});
 });
 

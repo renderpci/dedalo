@@ -58,6 +58,9 @@
  *     step the registry does not know throws the registry's own
  *     `resource.not_found`; it lands in `failed` with its code, every later
  *     step still ran, and `held` is exactly the dry steps that reported drift.
+ * 11. The plan's publication_apis step (phase 4) dials paired agents: the file arms a
+ *     declared scratch publication-hosts store for its whole run (never the
+ *     installation's registry/secrets), asserted here.
  *
  * ── HONEST LIMITS ───────────────────────────────────────────────────────────
  *
@@ -86,6 +89,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
+import { privateDir } from '../../src/config/env.ts';
 import {
 	resolvePgDump,
 	resolvePgRestore,
@@ -98,6 +102,7 @@ import {
 } from '../../src/core/area_maintenance/restore_door.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
+import { publicationHostsBase } from '../../src/core/publication_host/registry.ts';
 import {
 	POST_RESTORE_PLAN,
 	type PostRestoreReport,
@@ -105,6 +110,7 @@ import {
 } from '../../src/core/reconcile/post_restore.ts';
 import { lastReconcileRun, REGISTERED_NAMES } from '../../src/core/reconcile/registry.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
+import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 import { requireSuiteMariadb, SUITE_MARIADB_DATABASES } from '../helpers/suite_mariadb.ts';
 
@@ -243,7 +249,14 @@ function nextStamp(): string {
 	return `20260903_${String(100000 + stampCounter).slice(1)}`;
 }
 
+// The whole plan runs publication_apis (phase 4), whose dry round reads the
+// publication-host registry + secrets and asks every paired agent its status: armed
+// for the WHOLE file so it reads a declared scratch store, never `<private>`'s
+// (the agent door also refuses an unarmed test process — door tripwire rule 7).
+let pubhostBase: ReturnType<typeof useScratchPublicationHostsBase> | null = null;
+
 beforeAll(async () => {
+	pubhostBase = useScratchPublicationHostsBase();
 	if (!READY) return;
 	// Leg 10 runs the REAL post-restore plan, whose public-tier reconcile opens a pool
 	// per diffusion target the ontology declares: acquire the lane's suite MariaDB first
@@ -268,6 +281,7 @@ beforeAll(async () => {
 }, 120_000); // a cold suite MariaDB lane installs and starts a server
 
 afterAll(async () => {
+	pubhostBase?.dispose();
 	for (const name of await databasesLike(TARGET).catch(() => [] as string[])) {
 		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`]);
 	}
@@ -703,6 +717,13 @@ describe('the post-restore plan is total over the registry', () => {
 			'counters_media',
 			'media_index',
 		]);
+	});
+
+	test("11. the whole plan's publication_apis step reads a scratch publication-hosts store, never <private>'s", () => {
+		expect(POST_RESTORE_PLAN.map((s) => s.name)).toContain('publication_apis');
+		expect(pubhostBase).not.toBeNull();
+		expect(publicationHostsBase()).toBe(pubhostBase?.base as string);
+		expect(publicationHostsBase()).not.toBe(privateDir);
 	});
 
 	test('the door refuses a database name it cannot interpolate safely, before anything', () => {

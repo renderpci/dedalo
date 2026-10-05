@@ -39,6 +39,7 @@ import { isIP } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { privateDir } from '../../config/env.ts';
+import { isTestProcess } from '../../config/suite_database.ts';
 import {
 	JsonFileError,
 	readPrivateJsonTextSync,
@@ -167,6 +168,26 @@ function isDeclaredScratch(base: string): boolean {
 /** `<private>` in production; the declared scratch dir under the test seam. */
 export function publicationHostsBase(): string {
 	return baseOverrideForTests ?? privateDir;
+}
+
+/**
+ * Why the agent door (transport.ts `agentRequest`) may NOT dial from this process, or null
+ * (2026-10-05, phase-4 review). In a TEST process the stores must resolve under the OS temp
+ * dir — the declared scratch seam above, or a child whose `DEDALO_PRIVATE_DIR` is a scratch
+ * dir (the pair-CLI gate) — so no test, however it reaches the door (a whole reconcile
+ * plan, a whole catalog), sends the installation's bearer to a real paired agent. Outside
+ * a test process it is always null: the guard can never stop an installation.
+ * Gate: publication_host_door_tripwire rule 7.
+ */
+export function publicationHostsTestRefusal(isTest: boolean = isTestProcess()): string | null {
+	if (!isTest) return null;
+	const base = resolve(publicationHostsBase());
+	if (base.startsWith(resolve(tmpdir()) + sep)) return null;
+	return (
+		'a test process may dial a publication agent only through a scratch publication-hosts ' +
+		'store (useScratchPublicationHostsBase, or a child DEDALO_PRIVATE_DIR under the OS temp ' +
+		"dir) — this one resolves to the installation's private dir"
+	);
 }
 
 /** `<private>/publication_hosts.json`. */

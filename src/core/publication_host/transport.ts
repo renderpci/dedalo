@@ -57,7 +57,7 @@ import { lstatSync, realpathSync, type Stats, statSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DedaloError, isDedaloError } from '../errors/index.ts';
 import { readBytesCapped } from '../security/ssrf_guard.ts';
-import type { PublicationHostRecord } from './registry.ts';
+import { type PublicationHostRecord, publicationHostsTestRefusal } from './registry.ts';
 import { type HostTls, readHostTls, SecretError, TOKEN_SHAPE } from './secrets.ts';
 import { engineFailure, hostError } from './wire.ts';
 
@@ -459,13 +459,18 @@ export async function dialAgent(
  * host's secret directory (never from the caller). A bundle the secrets store REFUSES
  * (widened mode, wrong owner, symlink, incoherent pieces) is `publication_host.unconfigured`
  * naming the store's reason in the log — a typed state, never an untyped throw. A non-2xx
- * answer is RETURNED — the agent's problem+json is the client's to map.
+ * answer is RETURNED — the agent's problem+json is the client's to map. In a TEST process
+ * the door dials only from a scratch publication-hosts store (`publicationHostsTestRefusal`):
+ * a test that runs a whole reconcile plan never sends the installation's bearer anywhere.
  */
 export async function agentRequest(
 	host: PublicationHostRecord,
 	req: AgentRequest,
 	withBearer: string | null,
 ): Promise<AgentResponse> {
+	// bun test never reaches a real agent: refused before the TLS material is read
+	const testRefusal = publicationHostsTestRefusal();
+	if (testRefusal !== null) throw misuse(testRefusal);
 	let tls: HostTls | null = null;
 	if (host.address.kind === 'tls') {
 		try {
