@@ -192,8 +192,10 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   `engineering/wire_contract/WC-2026-10-03-publication-hosts-widget.md`). For each host it
   shows the checks `registry`, `secrets`, `reachable`, `pairing`, `agent_version`,
   `media_mode`, `media_mount`, `media_read_only`, `rules_hash`, `api_v1` and `api_v2`, the
-  expected vs reported rule hash (§5.1), and each API's current/previous release. The
-  actions `apply_rules`, `probe`, `rollback_api`, `set_host_fields` and `remove_host` are
+  expected vs reported rule hash (§5.1), and each API's current/previous release. A
+  failure minted before anything was dialled (the local token-vs-registry pairing check,
+  the registry lock's `busy`; coordinate `stage: 'local'`) never reads `ok` on `reachable`
+  or `pairing`. The actions `apply_rules`, `probe`, `rollback_api`, `set_host_fields` and `remove_host` are
   ROOT-ONLY: the Dédalo root user, as in the `media_control` precedent. A global admin
   who is not root gets `perm.denied`, and no agent call is made; it reads the checks
   without the host's network address. `media_control` carries one read-only line

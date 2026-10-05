@@ -37,7 +37,7 @@ import { publicationHostFingerprintMatches } from './pairing.ts';
 import type { PublicationHostRecord, RegistryError } from './registry.ts';
 import type { ExpectedRulesOutcome } from './rules.ts';
 import type { SecretPresenceOutcome } from './secrets.ts';
-import { AGENT_ANSWER_CODES } from './wire.ts';
+import { AGENT_ANSWER_CODES, LOCAL_STAGE } from './wire.ts';
 
 /** ONE state vocabulary with update_code's readiness lines. */
 export type CheckState = StatusCheck['state'];
@@ -65,8 +65,14 @@ export interface HostCheck {
 	detail?: string;
 }
 
-/** What `hostStatus(name)` produced: the body, or the typed code it failed with. */
-export type StatusOutcome = { ok: true; status: AgentStatus } | { ok: false; code: ErrorCode };
+/**
+ * What `hostStatus(name)` produced: the body, or the typed code it failed with. `local`:
+ * the failure was minted before anything was dialled (wire.ts LOCAL_STAGE) — it says
+ * nothing about the agent, so it never reads reachable ok or pairing ok.
+ */
+export type StatusOutcome =
+	| { ok: true; status: AgentStatus }
+	| { ok: false; code: ErrorCode; local?: true };
 
 export interface HostStatusInput {
 	record: PublicationHostRecord;
@@ -105,6 +111,9 @@ export interface HostPanelRow {
  *  - pairing_mismatch / auth: the agent answered and the proof FAILED;
  *  - rejected / failed / busy: the bearer request was answered after the proof (the
  *    first two from wire.ts AGENT_ANSWER_CODES: only wire.ts spells them).
+ * Those `ok`s hold only for an ANSWER: a failure minted before any dial (`local` — the
+ * local token-vs-registry pairing check, the registry lock's `busy`) reads `unknown`
+ * instead (failureState), never ok.
  */
 export const REACHABLE_ON_FAILURE: ReadonlyMap<string, CheckState> = new Map<string, CheckState>([
 	['publication_host.unconfigured', 'unknown'],
@@ -167,9 +176,20 @@ export function registryInvalidCheck(reason: RegistryError['reason']): HostCheck
 /** A failed `hostStatus` as a code. Only the code crosses: an error MESSAGE may carry
  * agent prose, and agent prose is log-only. */
 export function statusOutcomeFromError(thrown: unknown): StatusOutcome {
-	return thrown instanceof DedaloError
-		? { ok: false, code: thrown.code }
-		: { ok: false, code: 'internal.unexpected' };
+	if (!(thrown instanceof DedaloError)) return { ok: false, code: 'internal.unexpected' };
+	return thrown.coordinates?.stage === LOCAL_STAGE
+		? { ok: false, code: thrown.code, local: true }
+		: { ok: false, code: thrown.code };
+}
+
+/** A failure minted before any dial can never read `ok` on an agent check. */
+function failureState(
+	table: ReadonlyMap<string, CheckState>,
+	code: string,
+	local: boolean,
+): CheckState {
+	const state = table.get(code) ?? 'unknown';
+	return local && state === 'ok' ? 'unknown' : state;
 }
 
 /** The status body, only when its fingerprint is the registry's. */
@@ -203,12 +223,20 @@ function secretsCheck(
 
 function reachableCheck(outcome: StatusOutcome): HostCheck {
 	if (outcome.ok) return check('reachable', 'ok');
-	return check('reachable', REACHABLE_ON_FAILURE.get(outcome.code) ?? 'unknown', outcome.code);
+	return check(
+		'reachable',
+		failureState(REACHABLE_ON_FAILURE, outcome.code, outcome.local === true),
+		outcome.code,
+	);
 }
 
 function pairingCheck(record: PublicationHostRecord, outcome: StatusOutcome): HostCheck {
 	if (!outcome.ok) {
-		return check('pairing', PAIRING_ON_FAILURE.get(outcome.code) ?? 'unknown', outcome.code);
+		return check(
+			'pairing',
+			failureState(PAIRING_ON_FAILURE, outcome.code, outcome.local === true),
+			outcome.code,
+		);
 	}
 	return trustedStatus(record, outcome) === null
 		? check('pairing', 'blocked', 'status_fingerprint')

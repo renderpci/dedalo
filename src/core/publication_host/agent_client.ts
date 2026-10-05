@@ -52,6 +52,7 @@ import {
 	engineFailure,
 	engineRefusal,
 	hostError,
+	LOCAL_STAGE,
 	registryError,
 } from './wire.ts';
 
@@ -266,7 +267,8 @@ function requireToken(host: PublicationHostRecord): string {
 
 // ── the pairing ──────────────────────────────────────────────────────────────────────
 
-function pairingRefused(host: PublicationHostRecord, why: string): DedaloError {
+/** `local`: refused before anything was dialled (stage coordinate LOCAL_STAGE). */
+function pairingRefused(host: PublicationHostRecord, why: string, local = false): DedaloError {
 	provenPairings.delete(host.name);
 	console.error(
 		`[publication_host] PAIRING REFUSED for host '${host.name}': ${why}. Nothing carrying the bearer was sent on this proof. ` +
@@ -274,13 +276,14 @@ function pairingRefused(host: PublicationHostRecord, why: string): DedaloError {
 	);
 	return hostError('publication_host.pairing_mismatch', host.name, {
 		message: `publication host '${host.name}' did not prove the pairing: ${why}`,
+		...(local ? { coordinates: { stage: LOCAL_STAGE } } : {}),
 	});
 }
 
 function assertLocalPairing(host: PublicationHostRecord, token: string): void {
 	const implied = publicationHostFingerprint(host.instance, token);
 	if (!publicationHostFingerprintMatches(host.fingerprint, implied)) {
-		throw pairingRefused(host, 'its token file does not imply the registry fingerprint');
+		throw pairingRefused(host, 'its token file does not imply the registry fingerprint', true);
 	}
 }
 

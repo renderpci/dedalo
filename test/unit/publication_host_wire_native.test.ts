@@ -383,10 +383,14 @@ describe('engine-side refusals', () => {
 
 	test('registryError: a held lock is busy; every other registry fault is registry_invalid', () => {
 		expect(registryError('locked').code).toBe('publication_host.busy');
+		expect(registryError('locked').coordinates).toEqual({
+			registry_reason: 'locked',
+			stage: 'local',
+		});
 		for (const reason of ['unreadable', 'invalid_json', 'invalid_shape', 'duplicate_name']) {
 			const error = registryError(reason);
 			expect(error.code, reason).toBe('publication_host.registry_invalid');
-			expect(error.coordinates).toEqual({ registry_reason: reason });
+			expect(error.coordinates).toEqual({ registry_reason: reason, stage: 'local' });
 		}
 	});
 });

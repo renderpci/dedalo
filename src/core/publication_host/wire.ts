@@ -82,6 +82,13 @@ export interface HostErrorFields {
 	coordinates?: Readonly<Record<string, string | number>>;
 }
 
+/**
+ * The `stage` coordinate of a failure minted BEFORE anything was dialled (the registry lock,
+ * the local token-vs-registry pairing check). The panel reads it (host_status
+ * statusOutcomeFromError) so such a failure never renders as "the agent answered".
+ */
+export const LOCAL_STAGE = 'local';
+
 /** Why the engine itself refuses an agent's 2xx answer (→ `failed`). */
 export type EngineFailureReason = 'body_cap' | 'unreadable_body';
 /** Why the engine refuses to send a request at all (→ `rejected`). */
@@ -325,6 +332,6 @@ export function registryError(reason: string): DedaloError {
 	const safe = capLogText(reason);
 	return new DedaloError(code, {
 		message: `publication host registry refused: ${safe}`,
-		coordinates: { registry_reason: safe },
+		coordinates: { registry_reason: safe, stage: LOCAL_STAGE },
 	});
 }

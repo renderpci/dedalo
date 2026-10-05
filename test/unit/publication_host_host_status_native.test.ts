@@ -24,6 +24,7 @@ import {
 } from '../../src/core/publication_host/host_status.ts';
 import { publicationHostFingerprint } from '../../src/core/publication_host/pairing.ts';
 import type { PublicationHostRecord } from '../../src/core/publication_host/registry.ts';
+import { registryError } from '../../src/core/publication_host/wire.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 
 const TOKEN = 'publication-host-status-token-000000000000';
@@ -163,6 +164,44 @@ describe('pairing and transport (Review Focus 1)', () => {
 		const row = buildHostPanelRow(input);
 		expect(row.pairing_proved).toBe(false);
 		expect(row.rules).toEqual({ expected: null, reported: null });
+	});
+
+	// A failure minted BEFORE any dial (the local token-vs-registry check, the registry lock)
+	// says nothing about the agent: never reachable ok, never pairing ok.
+	test('a LOCAL pairing_mismatch (nothing dialled) is reachable unknown, pairing blocked', () => {
+		const input = healthy({
+			status: { ok: false, code: 'publication_host.pairing_mismatch', local: true },
+			expected: null,
+		});
+		const checks = byId(buildHostChecks(input));
+		expect(checks.reachable).toEqual({
+			state: 'unknown',
+			detail: 'publication_host.pairing_mismatch',
+		});
+		expect(checks.pairing).toEqual({
+			state: 'blocked',
+			detail: 'publication_host.pairing_mismatch',
+		});
+		expect(buildHostPanelRow(input).pairing_proved).toBe(false);
+	});
+
+	test('a LOCAL busy (the registry lock, nothing dialled) is reachable unknown, pairing unknown', () => {
+		const input = healthy({
+			status: { ok: false, code: 'publication_host.busy', local: true },
+			expected: null,
+		});
+		const checks = byId(buildHostChecks(input));
+		expect(checks.reachable).toEqual({ state: 'unknown', detail: 'publication_host.busy' });
+		expect(checks.pairing).toEqual({ state: 'unknown', detail: 'publication_host.busy' });
+		expect(buildHostPanelRow(input).pairing_proved).toBe(false);
+	});
+
+	test('statusOutcomeFromError marks an error minted before any dial as local', () => {
+		expect(statusOutcomeFromError(registryError('locked'))).toEqual({
+			ok: false,
+			code: 'publication_host.busy',
+			local: true,
+		});
 	});
 
 	test('a status body whose fingerprint is not the registry one is NOT trusted', () => {

@@ -40,6 +40,7 @@ import {
 	pairingProved,
 	proveHostPairing,
 } from '../../src/core/publication_host/agent_client.ts';
+import { statusOutcomeFromError } from '../../src/core/publication_host/host_status.ts';
 import {
 	getHost,
 	type PublicationHostRecord,
@@ -231,8 +232,14 @@ describe('pairing before the bearer', () => {
 	});
 
 	test('a token file that does not imply the registry fingerprint is a mismatch, nothing dialled', async () => {
-		await expectCode(hostStatus('drifted_pub'), 'publication_host.pairing_mismatch');
+		const error = await expectCode(hostStatus('drifted_pub'), 'publication_host.pairing_mismatch');
 		expect(mock.requests).toEqual([]);
+		// the panel must not read this as "the agent answered" (reachable ok)
+		expect(statusOutcomeFromError(error)).toEqual({
+			ok: false,
+			code: 'publication_host.pairing_mismatch',
+			local: true,
+		});
 	});
 
 	test('a token file the secrets store refuses (mode widened) is unconfigured, nothing dialled', async () => {
@@ -249,7 +256,11 @@ describe('pairing before the bearer', () => {
 
 	test('an agent publishing another fingerprint: only the anonymous /health crosses the wire', async () => {
 		mock.setToken(TOKEN_B);
-		await expectCode(hostStatus('museum_pub'), 'publication_host.pairing_mismatch');
+		const error = await expectCode(hostStatus('museum_pub'), 'publication_host.pairing_mismatch');
+		expect(statusOutcomeFromError(error)).toEqual({
+			ok: false,
+			code: 'publication_host.pairing_mismatch',
+		}); // the agent answered: not local
 		expect(trail(mock)).toEqual([`GET ${B}/health anon`]);
 		expect(bearerSent(mock)).toEqual([]);
 		expect(pairingProved(hostRecord('museum_pub'))).toBe(false);
