@@ -7,6 +7,13 @@
  * the media_copy reconcile, which recomputes from ground truth whatever a sink
  * missed.
  *
+ * PER PROCESS. `sinks` is this process's: the server registers the worker, a diffusion
+ * runner (its own spawned process) registers a MediaCopyRelay (runner.ts main →
+ * media_copy_worker.ts), and a process that registers neither (a CLI) emits into
+ * nothing — its flips reach the agents at the reconcile, whose apply withdraws stray
+ * agent markers before it queues behind a running round (media_copy.ts
+ * withdrawStrayMarkers).
+ *
  * A LEAF on purpose: media_index.ts and media_copy.ts both import it, never each
  * other's values in a cycle (import_scc_tripwire).
  *
