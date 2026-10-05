@@ -355,6 +355,7 @@ describe('marks and puts (a put lands only while pub/<key> exists on the agent; 
 			{ path: `${imageQuality()}/../x/test99_test3_1.jpg`, key: K1 },
 			{ path: P1, key: 'test3_9' },
 		];
+		expect(entries.length).toBeGreaterThan(4); // the loop below really runs every refusal
 		for (const { path, key } of entries) {
 			const plan: ApplyPlan = { put: [{ path, key, size: 1, mtimeMs: 1 }], del: [], mark: [] };
 			let caught: unknown = null;

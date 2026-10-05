@@ -43,6 +43,7 @@ afterEach(() => {
 describe('pub/ transitions', () => {
 	test('the first publication fires (key, true) once; a second table publishing it fires nothing', async () => {
 		await applyTableState('web_db', 't1', 'test3', [1], []);
+		expect(events).toHaveLength(1); // the sink really hears (positive control for the silent cases)
 		expect(events).toEqual([['test3_1', true]]);
 		await applyTableState('web_db', 't2', 'test3', [1], []);
 		await applyTableState('web_db', 't1', 'test3', [1], []);
