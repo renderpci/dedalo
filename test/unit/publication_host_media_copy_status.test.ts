@@ -238,4 +238,35 @@ describe("the agent's live media_mode decides at once (no wait for the next sche
 		});
 		expect(mediaCopyCheck(rt(), NOW, 'copy')).toMatchObject({ state: 'ok', detail: '12/12' });
 	});
+
+	test('a media_mode check with no detail decides nothing (never read as a non-copy mode)', () => {
+		const noDetail = {
+			name: 'h1',
+			checks: [{ id: 'media_mode', state: 'ok' }],
+		} as unknown as HostPanelRow;
+		expect(liveMediaMode(noDetail)).toBeNull();
+		const debt = rt({ present: 3, desired: 3, pending_puts: 2, state: 'pending' });
+		expect(withMediaCopyCheck(noDetail, { h1: host(debt) }, NOW).checks.at(-1)).toEqual({
+			id: 'media_copy',
+			state: 'warn',
+			detail: 'puts:2 deletions:0',
+		});
+	});
+
+	test('copy NOW on a stamped n/a holding nothing (shared→copy) → not_reconciled at once, row + button', () => {
+		const stamped = rt({
+			state: 'n/a',
+			present: 0,
+			desired: 0,
+			pending_puts: 0,
+			pending_deletions: [],
+			last_verified_at: AT,
+		});
+		expect(mediaCopyCheck(stamped, NOW)).toBeNull();
+		expect(mediaCopyCheck(stamped, NOW, 'copy')).toEqual({
+			id: 'media_copy',
+			state: 'unknown',
+			detail: 'not_reconciled',
+		});
+	});
 });

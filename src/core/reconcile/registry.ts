@@ -141,6 +141,14 @@ export function registerReconcile(definition: ReconcileDefinition): void {
 	ensureGauge();
 }
 
+/** The reason-required facets: each one declared must say why. */
+function facetProblems(definition: ReconcileDefinition): string[] {
+	const facets = { autoApply: definition.autoApply, applyRootOnly: definition.applyRootOnly };
+	return Object.entries(facets).flatMap(([facet, value]) =>
+		value !== undefined && value.reason.trim() === '' ? [`${facet} needs a reason`] : [],
+	);
+}
+
 /** The facet contract, enforced at registration so a half definition cannot hide. */
 export function validateDefinition(definition: ReconcileDefinition): void {
 	const problems: string[] = [];
@@ -161,12 +169,7 @@ export function validateDefinition(definition: ReconcileDefinition): void {
 	) {
 		problems.push('schedule must be operator | boot | {everyMs > 0}');
 	}
-	if (definition.autoApply !== undefined && definition.autoApply.reason.trim() === '') {
-		problems.push('autoApply needs a reason');
-	}
-	if (definition.applyRootOnly !== undefined && definition.applyRootOnly.reason.trim() === '') {
-		problems.push('applyRootOnly needs a reason');
-	}
+	problems.push(...facetProblems(definition));
 	if (problems.length > 0) {
 		throw new DedaloError('internal.invariant', {
 			message: `reconcile definition '${definition.name}' is incomplete: ${problems.join('; ')}`,

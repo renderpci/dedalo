@@ -92,14 +92,43 @@ function progressCheck(rt: MediaCopyRuntime): HostCheck {
 	);
 }
 
-/** The trusted agent's live media mode on a panel row, or null (unavailable / absent). */
+/** The trusted agent's live media mode on a panel row, or null (unavailable / absent / no detail). */
 export function liveMediaMode(row: Pick<HostPanelRow, 'checks'>): string | null {
 	const mode = row.checks.find((item) => item.id === 'media_mode');
-	return mode === undefined || mode.state === 'unknown' ? null : mode.detail;
+	if (mode === undefined || mode.state === 'unknown') return null;
+	return mode.detail ?? null;
+}
+
+/** A host the agent says is NOT copy: nothing held → no row; held → blocked withdrawn. */
+function notCopyCheck(rt: MediaCopyRuntime): HostCheck | null {
+	return holdsNothing(rt) ? null : check('blocked', COPY_MODE_WITHDRAWN);
 }
 
 /**
- * The `media_copy` check of one host; null only for a host the agent said is not copy,
+ * An n/a row holding nothing. The agent saying copy NOW makes the stamped n/a stale →
+ * not_reconciled (row + button appear at once); unknown mode keeps the stamp's word.
+ */
+function naCheck(rt: MediaCopyRuntime, liveMode: string | null): HostCheck | null {
+	if (liveMode === 'copy' || rt.last_verified_at === null) {
+		return check('unknown', 'not_reconciled');
+	}
+	return null;
+}
+
+/** The agent said a mode, and it is not copy (null = not known → decides nothing). */
+function isNotCopy(liveMode: string | null): boolean {
+	return liveMode !== null && liveMode !== 'copy';
+}
+
+/** The verdict of a runtime row with nothing blocked. */
+function settledCheck(rt: MediaCopyRuntime, liveMode: string | null): HostCheck | null {
+	if (isNotCopy(liveMode)) return notCopyCheck(rt);
+	if (rt.state !== 'n/a' || !holdsNothing(rt)) return progressCheck(rt);
+	return naCheck(rt, liveMode);
+}
+
+/**
+ * The `media_copy` check of one host; null only for a host not (known to be) copy,
  * holding nothing. `liveMode` = the agent's word now (liveMediaMode); null = not known.
  */
 export function mediaCopyCheck(
@@ -107,13 +136,8 @@ export function mediaCopyCheck(
 	nowMs: number,
 	liveMode: string | null = null,
 ): HostCheck | null {
-	const notCopy = liveMode !== null && liveMode !== 'copy';
-	if (rt === undefined) return notCopy ? null : check('unknown', 'not_reconciled');
-	const blocked = blockedCheck(rt, nowMs);
-	if (blocked !== null) return blocked;
-	if (notCopy) return holdsNothing(rt) ? null : check('blocked', COPY_MODE_WITHDRAWN);
-	if (rt.state !== 'n/a' || !holdsNothing(rt)) return progressCheck(rt);
-	return rt.last_verified_at === null ? check('unknown', 'not_reconciled') : null;
+	if (rt === undefined) return isNotCopy(liveMode) ? null : check('unknown', 'not_reconciled');
+	return blockedCheck(rt, nowMs) ?? settledCheck(rt, liveMode);
 }
 
 /** The panel row with its media_copy check appended (the input row is never mutated). */
