@@ -44,12 +44,13 @@
  * `failed` (wire reason `body_cap`), with LOG-ONLY coordinates (publication_host, reason,
  * stage).
  *
- * NAMED RESIDUAL — the proxy environment. Bun's fetch routes a TCP target through
- * HTTPS_PROXY / HTTP_PROXY when they are set, and no per-request option turns that off
- * (measured on Bun 1.4.2: `proxy: false | null | ''` are all still proxied). mTLS still ends
+ * NAMED RESIDUAL — the proxy environment. Bun's fetch routes a TCP (https) target through
+ * HTTPS_PROXY when it is set, and no per-request option turns that off (measured on Bun
+ * 1.4.2: `proxy: false | null | ''` are all still proxied). HTTP_PROXY alone does not apply
+ * to the https target, and a unix-socket agent is never proxied. mTLS still ends
  * at the agent, so a proxy sees the channel's address and ciphertext, never the bearer —
  * but the channel is then not private. The operator excludes the agent's address with
- * NO_PROXY. The residual canary in publication_host_transport_native pins the behaviour.
+ * NO_PROXY. The residual canaries in publication_host_transport_native pin both sides.
  */
 
 import { lstatSync, realpathSync, type Stats, statSync } from 'node:fs';

@@ -27,6 +27,11 @@
  *      once, §2.1 names every `unreachable` reason the door mints, §5 names the door
  *      module; every path a PUBLICATION_HOST_SPEC §8 "Built" row
  *      names exists; the operator page pairs with the CLI's verbs, flags and invoking user.
+ *      Phase-3 docs review (2026-10-05): the secrets bullet (no bundle on a unix pairing),
+ *      the transient 0600 proof copy and its one-hour sweep, the chown of carried copies,
+ *      the manual nginx http{} map include, the proxy residual as measured (canaries in
+ *      publication_host_transport_native), the public-fingerprint limit of the pairing
+ *      check, the agent client's re-pair log lines, and the widget WC addendum.
  *
  * The behaviour is driven in publication_host_transport_native; who may HOLD the door is
  * the import-graph census in ssrf_one_guard_tripwire.
@@ -559,6 +564,8 @@ describe('the operator is told how pairing and the panel really work', () => {
 			'src/core/labels/master.json',
 			...catalogs,
 			'client/dedalo/core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js',
+			// the server log lines an operator acts on (re-pair instructions)
+			'src/core/publication_host/agent_client.ts',
 		];
 		let pointers = 0;
 		for (const rel of sources) {
@@ -567,8 +574,8 @@ describe('the operator is told how pairing and the panel really work', () => {
 			expect(text.includes('scripts/publication_host_pair.ts'), rel).toBe(false);
 			if (text.includes(documented)) pointers += 1;
 		}
-		// master + the client fallback + every translated catalog (anti-vacuity)
-		expect(pointers).toBeGreaterThanOrEqual(19);
+		// master + the client fallback + every translated catalog + the agent client (anti-vacuity)
+		expect(pointers).toBeGreaterThanOrEqual(20);
 		const widget = await docsGateRead('src/core/area_maintenance/widgets/publication_hosts.ts');
 		const refusal = /function refuseUnknownHost[\s\S]*?\n}/.exec(widget)?.[0] ?? '';
 		expect(refusal).toContain(documented);
@@ -583,6 +590,103 @@ describe('the operator is told how pairing and the panel really work', () => {
 		expect(row).toContain('on the work system');
 		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
 		expect(spec).toMatch(/`busy` \(an agent 409, OR the work host's own registry lock/);
+	});
+
+	test('secrets: a unix pairing stores no bundle (writeHostSecrets takes a null bundle)', async () => {
+		const secrets = await docsGateRead('src/core/publication_host/secrets.ts');
+		expect(secrets).toContain('bundlePem: string | null');
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		const bullet = /\n- \*\*Secrets\.\*\*[\s\S]*?(?=\n- \*\*)/.exec(spec)?.[0] ?? '';
+		expect(bullet).toContain('for a TLS host only');
+		expect(bullet).toContain('a unix pairing stores none');
+	});
+
+	test('the live proof stages a transient 0600 copy, swept after an hour (never "writes nothing")', async () => {
+		const cli = await docsGateRead('scripts/publication_host_pair.ts');
+		expect(cli).toContain('const STAGING_STALE_MS = 60 * 60 * 1000;');
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		const ceremony = /\n- \*\*Adding a host[\s\S]*?(?=\n- \*\*)/.exec(spec)?.[0] ?? '';
+		const pair = docsGateSection(
+			await docsGateRead('docs/install/publication_host.md'),
+			'Pair it with the work system',
+		);
+		for (const [where, text] of [
+			['spec ceremony', ceremony],
+			['page', pair],
+		] as const) {
+			expect(text, where).toMatch(/temporary\s+0600\s+copy/);
+			expect(text, where).toMatch(/after\s+an\s+hour/);
+			expect(text, where).not.toMatch(/[Bb]efore writing anything|writes nothing/);
+		}
+	});
+
+	test('the carried copies: chown to the engine user, then chmod 600; "could not be read" is a row', async () => {
+		const cli = await docsGateRead('scripts/publication_host_pair.ts');
+		expect(cli).toContain('could not be read (');
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const pair = docsGateSection(page, 'Pair it with the work system');
+		expect(pair).toContain('chown <engine user>');
+		const rows = docsGateSection(page, 'Troubleshooting').split('\n');
+		expect(rows.some((l) => l.includes('could not be read') && l.includes('chown'))).toBe(true);
+		expect(rows.some((l) => l.includes('readable by group or others') && l.includes('chown'))).toBe(
+			true,
+		);
+	});
+
+	test('Apply media rules: the nginx http{} map include stays manual (linked)', async () => {
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const bullet = page.split('\n').find((l) => l.startsWith('- **Apply media rules**')) ?? '';
+		const i = page.indexOf(bullet);
+		const text = page.slice(i, page.indexOf('\n- **', i + 1));
+		expect(text).toContain('`http{}`');
+		expect(text).toContain(
+			'../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage',
+		);
+		const target = await docsGateRead('docs/core/system/media_protection.md');
+		expect(target).toContain('## A separate publication server with shared media storage');
+		expect(target).toContain('include the map in `http{}`');
+	});
+
+	test('the proxy residual names what Bun really proxies (HTTPS_PROXY; never HTTP_PROXY alone, never a socket)', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const transport = await docsGateRead('src/core/publication_host/transport.ts');
+		for (const [where, text] of [
+			['OUTBOUND_SPEC', spec],
+			['transport.ts', transport],
+		] as const) {
+			expect(text, where).not.toMatch(/HTTPS_PROXY`? \/ `?HTTP_PROXY/);
+			expect(text, where).toMatch(/HTTP_PROXY`? alone does not apply/);
+			expect(text, where).toMatch(/unix-socket agent is never proxied/);
+		}
+	});
+
+	test('pairing-before-bearer: the fingerprint is public, impostors are kept out by mTLS / the socket check', async () => {
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		const bullet =
+			/\n- \*\*Pairing before the bearer\*\*[\s\S]*?(?=\n- \*\*)/.exec(spec)?.[0] ?? '';
+		expect(bullet).toContain('drift and misrouting');
+		expect(bullet).toContain('`socket_perms`');
+		expect(bullet).toMatch(/CA pin/);
+		expect(bullet).toMatch(/cached/);
+	});
+
+	test('the WC entry and the drill tell the shipped story (engine-user CLI; no registry_locked state)', async () => {
+		const wc = await docsGateRead(
+			'engineering/wire_contract/WC-2026-10-03-publication-hosts-widget.md',
+		);
+		// WIRE_CONTRACT.md: a landed entry is amended by an appended Addendum, not in place
+		const addendum = wc.slice(wc.indexOf('\n## Addendum 2026-10-05'));
+		expect(addendum.length).toBeGreaterThan(1);
+		expect(addendum).toContain('is run as the engine user');
+		expect(addendum).toContain('never sends a `registry_locked` state');
+		expect(addendum).toContain('`busy` therefore has two causes');
+		const client = await docsGateRead(
+			'client/dedalo/core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js',
+		);
+		expect(client).toContain('registry.check');
+		expect(client).toContain("'publication_host.busy'");
+		const kit = await docsGateRead('scripts/lib/publication_host_engine_drill_kit.ts');
+		expect(kit).not.toContain("'registry_locked'");
 	});
 
 	test('no reader is still told the panel comes later', async () => {

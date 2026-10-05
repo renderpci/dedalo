@@ -87,3 +87,25 @@
   - TS ground truth: `test/unit/publication_host_widget_native.test.ts`.
 - **Fixture interaction (DEC-14b):** NO re-harvest; the frozen PHP fixtures never
   contained this id.
+
+## Addendum 2026-10-05 — the shipped story, read against the code (docs review)
+
+- **Who adds a host.** "the root pairing CLI" above is superseded: the pairing CLI
+  (`scripts/publication_host_pair.ts`) is run as the engine user, the owner of
+  `<private>` (`sudo -u <engine user> bun run dedalo:pair-publication-host …`), never root.
+  It refuses any other uid, root included, because root-owned 0600 secrets would be
+  unreadable by the engine. The panel's own unknown-host refusal and the
+  `publication_hosts_none` label say the same.
+- **`registry.check` is rendered.** The client draws the server's `registry.check` row with
+  `check_row(…, 'publication_hosts')` inside the loud registry note; with no row it shows
+  `registry.reason` as text. The wire shape above is unchanged.
+- **`busy` on the panel read.** The server never sends a `registry_locked` state. A held
+  registry lock fails `get_value` with `publication_host.busy` (`wire.ts` `registryError`,
+  logged `registry_reason: locked`); the client keeps that failure on `read_error` and
+  shows the `publication_hosts_registry_busy` note with a Reload retry, never the
+  "invalid, repair" sentence. It still reads a `registry_locked` state as busy, defensively
+  only. `busy` therefore has two causes: the agent (a 409, another change running on that
+  host) and the work host's own registry lock (the pairing CLI or another panel write).
+- **Gate:** `test/unit/publication_host_door_tripwire.test.ts` (*the operator is told how
+  pairing and the panel really work*) holds this addendum, the operator page and the spec
+  to the code. No fixture interaction.

@@ -34,8 +34,9 @@ import { check_row, fact_row, section } from '../../update_code/js/render_update
  * A registry the server could not use (registry_invalid, or a value with no
  * registry block) is a LOUD state: no card, no control, the reason shown — as
  * the server's `registry.check` row (check_row) when it sends one. It is never shown as an empty list.
- * A registry LOCK held by a writer (the read answered publication_host.busy, or
- * a registry_locked state) is BUSY: transient, its own sentence and a retry —
+ * A registry LOCK held by a writer (the read answered publication_host.busy; a
+ * registry_locked state is read the same, defensively — the server never sends
+ * one) is BUSY: transient, its own sentence and a retry —
  * never "invalid, repair it". Any other failed read shows its own error.
  * The last action outcome survives the post-action reload (self.last_outcome).
  * Controls render only for root (the server refuses everyone else anyway).
@@ -146,8 +147,8 @@ const get_content_data = function (self) {
 
 /**
  * IS_BUSY
- * A writer holds the registry lock: the read was refused publication_host.busy,
- * or the server named the state registry_locked.
+ * A writer holds the registry lock: the read was refused publication_host.busy.
+ * A registry_locked state is read the same, defensively (the server never sends one).
  * @returns {boolean}
  */
 const is_busy = function (read_error, registry) {

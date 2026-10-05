@@ -658,13 +658,14 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'runtime_info.clear_session_files': 'clears the session store; no data-sized statement',
 	'serve_code.build_version_from_git_master': 'packages the code tree from git; no statement',
 	// Every bearer call is preceded by the unauthenticated /health pairing proof: cached for a
-	// read (status, media.probe), live on EVERY mutation (agent_client.ts mutateCall).
+	// read (status, media.probe), live on EVERY mutation (agent_client.ts mutateCall). A bearer
+	// call answered 401 costs one more /health (bearerRefused re-proves before naming auth).
 	'publication_hosts.apply_rules':
-		'reads the registry file, then up to four bounded round trips to a paired agent (health + status, health + rules.apply); no statement',
+		'reads the registry file, then up to five bounded round trips to a paired agent (health unless cached + status, health + rules.apply, one more health on a 401); no statement',
 	'publication_hosts.probe':
-		'up to two bounded round trips to a paired agent (health, unless cached + media.probe); no statement',
+		'up to three bounded round trips to a paired agent (health unless cached + media.probe, one more health on a 401); no statement',
 	'publication_hosts.rollback_api':
-		'two bounded round trips to a paired agent (health + release.rollback); no statement',
+		'up to three bounded round trips to a paired agent (health + release.rollback, one more health on a 401); no statement',
 	'publication_hosts.set_host_fields': 'one locked rewrite of the registry file; no statement',
 	'publication_hosts.remove_host':
 		'deletes one secret dir and rewrites the registry file; no statement',
@@ -677,7 +678,13 @@ describe('only DECLARED actions are maintenance', () => {
 			([key, reason]) => key.startsWith('publication_hosts.') && reason.includes('paired agent'),
 		);
 		expect(agentRows.length).toBeGreaterThanOrEqual(3); // apply_rules, probe, rollback_api
-		for (const [key, reason] of agentRows) expect(reason, key).toContain('health');
+		for (const [key, reason] of agentRows) {
+			expect(reason, key).toContain('health');
+			// a 401 is answered by one more /health proof before auth (agent_client bearerRefused)
+			expect(reason, key).toContain('401');
+		}
+		// apply_rules = health? + status, health + rules.apply, + health on a 401 → five
+		expect(REQUEST_BOUNDED['publication_hosts.apply_rules']).toContain('up to five');
 	});
 
 	test('every unboundedActions name is a registered action of its widget', () => {

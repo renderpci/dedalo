@@ -164,7 +164,8 @@ export interface PanelRow {
 }
 /**
  * Task 7's get_value data: `registry: {state, reason}` and `hosts`, an array exactly when
- * the state is 'ok' and NULL otherwise ('registry_invalid' / 'registry_locked'). An unusable
+ * the state is 'ok' and NULL otherwise ('registry_invalid'; a held registry lock is no state:
+ * get_value fails publication_host.busy, WC-2026-10-03 addendum 2026-10-05). An unusable
  * registry carrying an array is refused here: that is the empty list Review Focus 2 forbids.
  */
 export interface Panel {

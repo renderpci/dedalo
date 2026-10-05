@@ -153,9 +153,10 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   symlink, no FIFO) of mode exactly 0600 owned by the engine user; anything else is
   `unreadable`. The lock file is opened `O_NOFOLLOW` too. It is not `ts_state.json`,
   whose writer is not atomic and resets to defaults when the file is corrupt.
-- **Secrets.** Each host has `<private>/publication_hosts/<name>/` (0700) holding `token` and
-  `engine_bundle.pem`, both 0600 and owned by the engine user
-  (`src/core/publication_host/secrets.ts`). Every read `lstat`s the root and the host dir
+- **Secrets.** Each host has `<private>/publication_hosts/<name>/` (0700) holding `token`,
+  plus `engine_bundle.pem` for a TLS host only (a unix pairing stores none:
+  `writeHostSecrets(name, token, null)` removes a stale one), each 0600 and owned by the
+  engine user (`src/core/publication_host/secrets.ts`). Every read `lstat`s the root and the host dir
   first (a symlink, a non-directory or a mode other than 0700 is refused, never read as
   absence) and opens the file `O_NOFOLLOW|O_NONBLOCK`. They never appear in the registry,
   `ts_state.json`, a panel payload, a log, the activity audit or an error detail. The panel
@@ -168,9 +169,13 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   because root-owned 0600 secrets would be unreadable by the engine. It reads the agent's
   `engine.env.fragment` and `engine_bundle.pem`. The token comes from the pasted fragment
   line, a 0600 `--token-file` or `--token-stdin`, and never from argv. The CLI refuses
-  placeholders, contradictions and credential files readable by others, proves the pairing
-  live (the `/health` fingerprint, no bearer), and only then writes the secrets and the
-  registry record. An address typed into a web form would be an SSRF and
+  placeholders, contradictions and credential files readable by others, and proves the
+  pairing live (the `/health` fingerprint, no bearer). The proof reads its TLS material from
+  the secrets store (the one door reads it nowhere else), so it uses a temporary 0600 copy
+  under the reserved name `pairing_<hex>` in `<private>/publication_hosts/`, removed whatever
+  the outcome; a killed run leaves it until a later run sweeps it, after an hour. Only after
+  the proof does it write the secrets under the host's name and the registry record, under
+  one registry lock. `--dry-run` keeps nothing and sweeps nothing. An address typed into a web form would be an SSRF and
   credential-exfiltration surface. The panel edits only `public_url`, `qualities` and the
   probe paths, and it can remove a host.
 - **One door.** `src/core/publication_host/transport.ts` is the only engine code that
@@ -180,7 +185,12 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   `tools/tool_sitebuilder/server/daemon_client.ts` order): an unauthenticated `GET /health`,
   the fingerprint compared, and only then the bearer request. A mismatch (for example, the
   agent re-provisioned with a new token) is `publication_host.pairing_mismatch`. The
-  bearer is never sent and nothing is applied.
+  bearer is never sent and nothing is applied. The fingerprint is public (the agent
+  publishes it on `/health`), so this check detects drift and misrouting, not an impostor:
+  impostor resistance comes from the mTLS CA pin (a TLS host) and the socket filesystem
+  check (a unix host, `socket_perms`, `engineering/OUTBOUND_SPEC.md` §2.1). Read-path
+  residual: a read (`status`, `media.probe`) reuses a cached proof keyed on the registry's
+  fingerprint and address; every mutation proves live.
 - **Errors** are the `publication_host.*` family: `unconfigured`, `registry_invalid`,
   `unreachable`, `pairing_mismatch`, `auth`, `rejected` (an agent 4xx refusal), `failed`
   (an agent 5xx), `busy` (an agent 409, OR the work host's own registry lock held past its

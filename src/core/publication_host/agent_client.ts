@@ -263,11 +263,15 @@ function readToken(host: PublicationHostRecord): string | null {
 	}
 }
 
+/** The operator's pair command, as documented (docs/install/publication_host.md): run as the
+ * owner of <private>, never root — the CLI refuses any other uid. */
+const REPAIR_COMMAND = 'sudo -u <engine user> bun run dedalo:pair-publication-host';
+
 function requireToken(host: PublicationHostRecord): string {
 	const token = readToken(host);
 	if (token === null) {
 		console.error(
-			`[publication_host] host '${host.name}' has no token file; re-pair it with scripts/publication_host_pair.ts`,
+			`[publication_host] host '${host.name}' has no token file; re-pair it, as the user that runs Dédalo (never root): ${REPAIR_COMMAND} replace ${host.name} …`,
 		);
 		throw hostError('publication_host.unconfigured', host.name, {
 			message: `publication host '${host.name}' has no token`,
@@ -283,7 +287,7 @@ function pairingRefused(host: PublicationHostRecord, why: string, local = false)
 	provenPairings.delete(host.name);
 	console.error(
 		`[publication_host] PAIRING REFUSED for host '${host.name}': ${why}. Nothing carrying the bearer was sent on this proof. ` +
-			'Re-pair the host with scripts/publication_host_pair.ts from the agent artifacts.',
+			`Re-pair the host from the agent artifacts, as the user that runs Dédalo (never root): ${REPAIR_COMMAND} replace ${host.name} …`,
 	);
 	return hostError('publication_host.pairing_mismatch', host.name, {
 		message: `publication host '${host.name}' did not prove the pairing: ${why}`,

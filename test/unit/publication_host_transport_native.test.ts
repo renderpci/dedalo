@@ -635,7 +635,11 @@ describe('no secret reaches a failure (review focus 5)', () => {
 async function dialInChild(
 	port: number | undefined,
 	env: Record<string, string>,
+	unixSocket?: string,
 ): Promise<{ outcome: string; status?: number; code?: string; reason?: string }> {
+	const address = unixSocket
+		? `{ kind: 'unix' as const, socket: ${JSON.stringify(unixSocket)} }`
+		: `{ kind: 'tls' as const, host: '127.0.0.1', port: ${portOf(port)} }`;
 	const driver = childDriver('dd_pubhost_env');
 	try {
 		const { stdout, stderr } = await driver.run(
@@ -643,11 +647,11 @@ async function dialInChild(
 			`import { dialAgent } from ${repoModule('src/core/publication_host/transport.ts')};
 const host = {
 	name: 'test', instance: 'test', fingerprint: '0'.repeat(64),
-	address: { kind: 'tls' as const, host: '127.0.0.1', port: ${portOf(port)} },
+	address: ${address},
 	public_url: null, qualities: null, probe: { published: null, unpublished: null },
 	paired_at: '2026-10-03T00:00:00.000Z',
 };
-const tls = ${JSON.stringify(clientTls)};
+const tls = ${unixSocket ? 'null' : JSON.stringify(clientTls)};
 try {
 	const res = await dialAgent(host, tls, { method: 'GET', path: '/health' }, ${JSON.stringify(BEARER)});
 	console.log('RESULT ' + JSON.stringify({ outcome: 'answered', status: res.status }));
@@ -693,6 +697,54 @@ describe('the process environment cannot open the channel', () => {
 				proxied,
 				'Bun no longer proxies this call: re-read the residual in transport.ts and OUTBOUND_SPEC §2.1',
 			).toBe(1);
+		} finally {
+			proxy.close();
+		}
+	});
+
+	test('RESIDUAL CANARY: HTTP_PROXY alone does not apply to the https agent target', async () => {
+		let proxied = 0;
+		const proxy = createServer((socket) => {
+			proxied++;
+			socket.destroy();
+		});
+		await new Promise<void>((resolve) => proxy.listen(0, '127.0.0.1', resolve));
+		const { port: proxyPort } = proxy.address() as { port: number };
+		try {
+			const result = await dialInChild(agent.port, {
+				HTTP_PROXY: `http://127.0.0.1:${proxyPort}`,
+				http_proxy: `http://127.0.0.1:${proxyPort}`,
+			});
+			expect(result).toEqual({ outcome: 'answered', status: 200 });
+			expect(
+				proxied,
+				'Bun now proxies the https agent through HTTP_PROXY: re-read the residual in transport.ts and OUTBOUND_SPEC §2.1',
+			).toBe(0);
+		} finally {
+			proxy.close();
+		}
+	});
+
+	test('RESIDUAL CANARY: a unix-socket agent is never proxied', async () => {
+		let proxied = 0;
+		const proxy = createServer((socket) => {
+			proxied++;
+			socket.destroy();
+		});
+		await new Promise<void>((resolve) => proxy.listen(0, '127.0.0.1', resolve));
+		const { port: proxyPort } = proxy.address() as { port: number };
+		const url = `http://127.0.0.1:${proxyPort}`;
+		try {
+			const result = await dialInChild(
+				undefined,
+				{ HTTPS_PROXY: url, https_proxy: url, HTTP_PROXY: url, http_proxy: url },
+				socketPath,
+			);
+			expect(result).toEqual({ outcome: 'answered', status: 200 });
+			expect(
+				proxied,
+				'Bun now proxies a unix-socket agent: re-read the residual in transport.ts and OUTBOUND_SPEC §2.1',
+			).toBe(0);
 		} finally {
 			proxy.close();
 		}

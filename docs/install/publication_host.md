@@ -254,8 +254,11 @@ system send its credentials somewhere else.
 1. **Carry the files to the work host**, over a channel you trust:
    `/etc/dedalo_publication_host/<instance>/engine.env.fragment` and, on two machines, the
    engine bundle from step 6 above. On one machine there is no bundle: the fragment names
-   the socket instead. Make your copies readable by the Dédalo user alone (`chmod 600`):
-   the command refuses a token or bundle file that group or others can read.
+   the socket instead. Make your copies owned by the Dédalo user and readable by it alone
+   (`chown <engine user> <file>`, then `chmod 600 <file>`). A copy you carried as root or as
+   another administrator is owned by that account, and the Dédalo user cannot read it. The
+   command refuses a token or bundle file that group or others can read: change its owner,
+   never its mode.
 2. **Give the command the token.** The fragment names the bearer token but never holds it.
    On the publication host, as root, read the token from the credential file the fragment's
    comment names. Then do one of these:
@@ -283,14 +286,17 @@ system send its credentials somewhere else.
     and you can pipe the token straight from the credential file:
     `sudo cat <credential file> | sudo -u <engine user> bun run dedalo:pair-publication-host add museum_pub --fragment ./engine.env.fragment --token-stdin`.
 
-    Before writing anything, the command checks that no placeholder is left in the
-    fragment and that the fingerprint the fragment carries matches its instance and the
-    token, so a mis-pasted token is named here. It then connects to the agent and checks
-    that the agent publishes that same fingerprint, without sending the token. Only when
-    everything matches does it record the host and store the token and the bundle in the
-    work system's private directory, readable by the work system alone. On any mismatch
-    the command names it and keeps nothing. `--dry-run` runs every check, including the
-    live connection, and keeps nothing: the temporary copy the connection check needs is
+    First, the command checks that no placeholder is left in the fragment and that the
+    fingerprint the fragment carries matches its instance and the token, so a mis-pasted
+    token is named here. It then connects to the agent and checks that the agent publishes
+    that same fingerprint, without sending the token. That connection check needs the
+    token and the bundle on disk, so the command stores a temporary 0600 copy of them in
+    the work system's private directory (`publication_hosts/pairing_<hex>/`) and removes
+    it whatever the outcome. If the command is killed, the copy stays until a later run
+    removes it, after an hour. Only when everything matches does the command record the
+    host and store the token and the bundle under the host's name, readable by the work
+    system alone. On any mismatch the command names it and keeps nothing. `--dry-run` runs
+    every check, including the live connection, and keeps nothing: the temporary copy is
     removed, and no leftover from an earlier run is cleaned up either.
 4. **Delete every copy you carried.** The work system keeps its own.
 
@@ -337,7 +343,10 @@ without the hosts' network addresses.
 - **Apply media rules** renders the publication-host media rules for that host's web server
   and mount (as the host reports them) and its public quality folders (the host's own list,
   or the work system's), then sends them. The host runs its web server's configuration test
-  before reloading, and keeps the previous rules if the test fails.
+  before reloading, and keeps the previous rules if the test fails. On nginx, the one-time
+  `http{}` map include stays manual: install it once as described in
+  [media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage),
+  step 4. Without it, `nginx -t` fails and the host keeps its previous rules.
 - **Probe media** checks that the media mount is present, read-only and readable.
 - **Roll back API** switches a Publication API (v1 or v2) back to its previous release.
 - **Edit settings** changes the host's public website address, its public quality folders
@@ -394,5 +403,6 @@ Each API keeps its releases side by side, with its configuration outside them:
 | an API install fails its health check | the new release did not answer healthy | the previous release is still `current` and serving; the audit log names both releases |
 | `dedalo:pair-publication-host` says to run it as the owner of the private directory | it was run as root or as another user, or the private directory is owned by root | run it as the Dédalo user, who must own the private directory: `sudo -u <engine user> bun run dedalo:pair-publication-host …` |
 | `dedalo:pair-publication-host` refuses a placeholder | no token was given: the fragment line still holds the placeholder and no `--token-file` / `--token-stdin` was passed | give the token as in *Pair it with the work system*, step 2 |
-| `dedalo:pair-publication-host` says a file is readable by group or others | the token file, the fragment holding the token, or the bundle copy is not `0600` | `chmod 600` it and run the command again |
+| `dedalo:pair-publication-host` says a file is readable by group or others | the token file, the fragment holding the token, or the bundle copy is not `0600` | `chown <engine user>` it, then `chmod 600` it, and run the command again |
+| `dedalo:pair-publication-host` says a file could not be read (`EACCES`) | the copy is owned by root or another account, so the Dédalo user cannot read it | `chown <engine user>` the copy and keep it `chmod 600`; never loosen the mode |
 | `dedalo:pair-publication-host` names a fingerprint mismatch | the token or instance you gave is not this host's | copy the fragment and the token again from the publication host |

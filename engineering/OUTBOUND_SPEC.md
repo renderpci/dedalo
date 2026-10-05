@@ -147,14 +147,16 @@ client to map; transport failures are `publication_host.unreachable` (reason
 `src/core/publication_host/wire.ts`, with log-only coordinates that never carry
 the bearer or key material.
 
-**Named residual — the proxy environment.** Bun's fetch routes a TCP target
-through `HTTPS_PROXY` / `HTTP_PROXY` when they are set, and no per-request option
+**Named residual — the proxy environment.** Bun's fetch routes a TCP (https)
+agent target through `HTTPS_PROXY` when it is set, and no per-request option
 turns that off (measured on Bun 1.4.2: `proxy: false`, `null` and `''` are all
-still proxied). mTLS still ends at the agent, so a proxy sees the channel's
+still proxied). `HTTP_PROXY` alone does not apply to the https target, and a
+unix-socket agent is never proxied. mTLS still ends at the agent, so a proxy sees the channel's
 address and ciphertext, never the bearer, but the channel is then not private
 and the agent's firewall sees the proxy's address. The operator lists every
-agent address in `NO_PROXY`. A canary in `publication_host_transport_native`
-turns red when Bun stops proxying this call, so the residual is re-read then.
+agent address in `NO_PROXY`. Two canaries in `publication_host_transport_native`
+turn red when Bun stops proxying this call through `HTTPS_PROXY` or starts
+proxying it through `HTTP_PROXY` alone, so the residual is re-read then.
 
 ## 3. The harvesting door, hop by hop
 
