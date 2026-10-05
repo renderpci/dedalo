@@ -975,14 +975,17 @@ and demands it be here):
 | `ontology_identifiers` | `dd_ontology` identifier columns ↔ the identifier grammar (six CHECKs) | boot (dry) | re-derive each violator's tld from source, delete the unaddressable rest (returned whole), VALIDATE the clean CHECKs |
 | `hierarchy` | `hierarchy1` active rows ↔ their provisioning | operator | `ensure` per broken hierarchy |
 | `publication_apis` | installed tree's verified Publication API release (`publication/server_api` + its extract-time manifest) ↔ each publication host's current v1/v2 | every 1 h (dry; hashes nothing when no publication host is paired) | **refused here** (`perm.denied`): root pushes from the `publication_hosts` widget (**Push API releases**), and a confirmed code update/restore boot pushes by itself (`src/core/publication_host/api_reconcile.ts`) |
+| `media_copy` | work `.publication/pub` ∩ public-quality files ↔ each copy-mode publication host's agent manifest + mirrored markers | every 10 min, **auto-apply** | through the copy worker's per-host lane: copies missing published files (sha-verified), unmarks then deletes unpublished ones, verifies deletions against the manifest; an unverified deletion is red in the `publication_hosts` panel, and a host withdrawn from copy mode while still holding bytes stays `failed` (`copy_mode_withdrawn`); root runs it for one host from the panel (**Reconcile media copy**) |
 
 **After a data restore** the door runs the registry through
 `POST_RESTORE_PLAN` (`src/core/reconcile/post_restore.ts`): EVERY registered
 name, in registry order, with an explicit verdict and reason per entry — the
 gate holds the plan and `REGISTERED_NAMES` equal, so a new reconcile has to
-decide what a restore does with it. Two APPLY: `counters_media` (raise-only,
+decide what a restore does with it. Three APPLY: `counters_media` (raise-only,
 idempotent — only the disk remembers the ids minted after the backup) and
-`media_index` (a pure derivation). The rest run DRY and their drift is
+`media_index` (a pure derivation) and `media_copy` (the copy-mode publication
+hosts follow the restored `pub/`: a record unpublished in the restored data
+loses its public bytes). The rest run DRY and their drift is
 reported as `held` in the journal and the CLI's exit 2: `files_info`,
 `observer_mirrors`, `rag_index`, `ontology`, `ontology_identifiers`, `hierarchy`,
 `public_tier`, `publication_apis` — each a decision (a shrink, a budgeted recompute, a re-embed, a code push to a public host, a
@@ -996,8 +999,9 @@ fire-and-forget and non-fatal (`last_error` in the gauge), stopped on SIGTERM.
 `DEDALO_RECONCILE_SCHEDULER_ENABLED=false` (same posture as the diffusion
 scheduler, §8) keeps a smoke/maintenance copy from healing a shared store from
 the wrong root; the widget, the CLI and the gauge keep working. A scheduled run
-applies only when its definition says `autoApply` WITH a reason — today only
-`media_index`; a walk of the whole media tree or a destructive re-projection
+applies only when its definition says `autoApply` WITH a reason — today
+`media_index` and `media_copy` (its walk covers the public qualities only, its
+hashing rides the sha cache); a walk of the whole media tree or a destructive re-projection
 is an operator's decision, with the dry report in view.
 
 ## 7. Schema: migrations + provisioning (S2-39, DEC-17/DEC-19)

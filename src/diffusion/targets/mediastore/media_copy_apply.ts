@@ -88,12 +88,12 @@ import {
 	type MediaManifest,
 	type MediaPutFile,
 } from '../../../core/publication_host/agent_client.ts';
+import { nonCopyRuntime } from '../../../core/publication_host/media_copy_status.ts';
 import {
 	type HostRuntime,
 	loadRuntime,
 	updateHostRuntime,
 } from '../../../core/publication_host/runtime.ts';
-import { nonCopyRuntime } from '../../../core/publication_host/media_copy_status.ts';
 import { isAgentRefusal } from '../../../core/publication_host/wire.ts';
 import type { CopyPlan, DesiredFile } from './media_copy.ts';
 

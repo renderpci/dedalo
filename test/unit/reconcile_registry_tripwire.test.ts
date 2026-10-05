@@ -21,7 +21,7 @@
  * catalog (the `reconcile_status` widget with its `run_reconcile` action, the
  * `scripts/reconcile.ts` shell, the server boot + SIGTERM stop of the
  * scheduler); the gauge lists every name; every `sources` path exists; and the
- * media_index boot apply is the ONLY auto-apply, with a reason.
+ * scheduled applies are exactly media_index and media_copy, each with a reason.
  *
  * Hermetic: the catalog is imported (module wiring only, no query is issued);
  * the behavioural half is reconcile_registry_native.test.ts.
@@ -211,6 +211,7 @@ describe('reconcile registry completeness (S-10)', () => {
 			hierarchy: 'src/core/ontology/hierarchy_state.ts',
 			public_tier: 'src/diffusion/api/reconcile.ts',
 			publication_apis: 'src/core/publication_host/api_reconcile.ts',
+			media_copy: 'src/diffusion/api/reconcile.ts',
 		};
 		for (const definition of REGISTERED) {
 			const owner = owners[definition.name];
@@ -221,9 +222,13 @@ describe('reconcile registry completeness (S-10)', () => {
 		}
 	});
 
-	test('a scheduled APPLY is the exception with a reason — today only media_index (the pub/ derivation)', () => {
+	test('a scheduled APPLY is the exception with a reason — media_index (the pub/ derivation) and media_copy (pub/ ∩ public files onto copy hosts)', () => {
 		const auto = REGISTERED.filter((definition) => definition.autoApply !== undefined);
-		expect(auto.map((definition) => definition.name)).toEqual(['media_index']);
+		expect(auto.map((definition) => definition.name)).toEqual(['media_index', 'media_copy']);
+		expect(
+			(REGISTERED.find((definition) => definition.name === 'media_copy') as ReconcileDefinition)
+				.schedule,
+		).toEqual({ everyMs: expect.any(Number) });
 		for (const definition of auto) {
 			expect(definition.schedule).not.toBe('operator');
 			expect((definition.autoApply as { reason: string }).reason.length).toBeGreaterThan(40);

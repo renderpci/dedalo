@@ -50,6 +50,7 @@ import {
 import { insertMatrixRecordWithCounter } from '../../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { buildMediaLocation } from '../../src/core/media/path.ts';
+import { getPublicQualities } from '../../src/core/media/protection.ts';
 import { resolveMediaToolContext } from '../../src/core/media/tool_support.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { ensureHierarchy } from '../../src/core/ontology/hierarchy_state.ts';
@@ -68,6 +69,12 @@ import { deleteSectionRecord } from '../../src/core/section/record/delete_record
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import {
+	type CopyMockAgent,
+	startCopyMockAgent,
+	unregisterCopyMockHost,
+	useScratchMediaCopyStores,
+} from '../helpers/media_copy_mock_agent.ts';
+import {
 	dropObserverTerm,
 	ensureObserverTerm,
 	INDEXER,
@@ -75,7 +82,6 @@ import {
 	SEED_TERM,
 	TERM_SECTION,
 } from '../helpers/observer_term_seed.ts';
-import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
 import { cleanScratchTipo } from '../helpers/test_data.ts';
 
 /* ------------------------------------------------------------ situations */
@@ -107,11 +113,15 @@ const RAG_MODEL = `zzrcmodel${process.pid}`;
 /** The scratch publication host the publication_apis planter pairs (never dialled). */
 const PUBHOST = 'zzrc_pubhost';
 /**
- * The publication-host registry this file reads and writes: a declared scratch base for
- * the WHOLE file (armed in beforeAll), so the clean publication_apis dry run never reads —
- * nor dials — the installation's paired hosts in `<private>/publication_hosts.json`.
+ * The publication-host stores this file reads and writes: ONE declared scratch base for
+ * the WHOLE file (armed in beforeAll) — registry, secrets, runtime, plus the media-copy
+ * sha cache — so the clean publication_apis / media_copy dry runs never read — nor dial —
+ * the installation's paired hosts in `<private>/publication_hosts.json`.
  */
 let pubhostBase: { base: string; dispose: () => void } | null = null;
+/** The scratch copy host the media_copy planter starts (a stateful loopback mock agent). */
+const COPY_HOST = 'zzrc_copy';
+let copyAgent: CopyMockAgent | null = null;
 
 /** Scratch files planted in the SUITE media root, removed by path. */
 const planted: string[] = [];
@@ -216,7 +226,7 @@ async function sweepObserverScratch(): Promise<void> {
 }
 
 beforeAll(async () => {
-	pubhostBase = useScratchPublicationHostsBase();
+	pubhostBase = useScratchMediaCopyStores();
 	await registerAllReconciles();
 	// The situation is BUILT, not inherited: a freshly rebuilt suite media root
 	// (`bun run test:db:setup`) holds only its marker, and files_info's sweep
@@ -567,6 +577,30 @@ const PLANTERS: Record<string, Planter> = {
 				...current,
 				hosts: current.hosts.filter((host) => host.name !== PUBHOST),
 			}));
+		},
+	},
+	media_copy: {
+		async plant() {
+			// A copy-mode host still holding a file (and its mirrored marker) the work host
+			// does not publish — an unpublish whose deletion never reached the agent: one
+			// deletion + one marker withdrawal (any file the suite media root publishes is a
+			// planned put on top).
+			const quality = getPublicQualities()[0] as string;
+			copyAgent = await startCopyMockAgent(COPY_HOST, 'copy', {
+				entries: {
+					[`${quality}/0/${IMAGE}_${MEDIA_SECTION}_999995.jpg`]: {
+						size: 1,
+						sha256: '0'.repeat(64),
+					},
+				},
+				markers: [`${MEDIA_SECTION}_999995`],
+			});
+			return 2;
+		},
+		async unplant() {
+			await copyAgent?.stop();
+			await unregisterCopyMockHost(COPY_HOST);
+			copyAgent = null;
 		},
 	},
 	hierarchy: {

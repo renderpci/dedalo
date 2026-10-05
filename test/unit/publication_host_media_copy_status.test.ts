@@ -170,7 +170,11 @@ describe('withMediaCopyCheck', () => {
 	});
 
 	test('a clean n/a host keeps its row unchanged; a host absent from the runtime shows unknown', () => {
-		const na = withMediaCopyCheck(row, { h1: host(rt({ state: 'n/a', present: 0, desired: 0 })) }, NOW);
+		const na = withMediaCopyCheck(
+			row,
+			{ h1: host(rt({ state: 'n/a', present: 0, desired: 0 })) },
+			NOW,
+		);
 		expect(na).toBe(row);
 		const absent = withMediaCopyCheck(row, {}, NOW);
 		expect(absent.checks.at(-1)).toMatchObject({ id: 'media_copy', state: 'unknown' });

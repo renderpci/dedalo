@@ -96,6 +96,11 @@ export const POST_RESTORE_PLAN: readonly PostRestoreStep[] = [
 		apply: false,
 		why: 'a DATA restore does not change the code tree, and pushing Publication API code to a public host is root-only (publication_hosts push_apis) or done by a confirmed CODE restore boot; the dry verdict names the hosts that lag',
 	},
+	{
+		name: 'media_copy',
+		apply: true,
+		why: 'a data restore re-derives pub/ (media_index, applied just before in registry order); every copy-mode publication host must follow it, or a record unpublished in the restored data keeps its public bytes — the same pure derivation the scheduler applies every period',
+	},
 ];
 
 export interface PostRestoreStepResult {
