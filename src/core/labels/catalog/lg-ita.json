@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "File di prova (non pubblicato)",
 	"publication_hosts_public_url": "URL pubblico",
 	"publication_hosts_qualities": "Qualità pubbliche",
+	"publication_hosts_registry_busy": "Il registro dei server di pubblicazione è occupato: è in corso la scrittura di un'altra modifica. Riprova tra un momento.",
 	"publication_hosts_registry_invalid": "Il registro dei server di pubblicazione non è valido. Nulla viene mostrato o applicato finché non viene riparato.",
 	"publication_hosts_remove_host": "Rimuovi server",
 	"publication_hosts_rollback_api": "Ripristina API precedente",

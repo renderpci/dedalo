@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "Testdatei (unveröffentlicht)",
 	"publication_hosts_public_url": "Öffentliche URL",
 	"publication_hosts_qualities": "Öffentliche Qualitäten",
+	"publication_hosts_registry_busy": "Das Register der Publikationsserver ist belegt: Eine andere Änderung wird gerade geschrieben. Versuchen Sie es gleich noch einmal.",
 	"publication_hosts_registry_invalid": "Das Register der Publikationsserver ist ungültig. Bis zur Reparatur wird nichts angezeigt oder angewendet.",
 	"publication_hosts_remove_host": "Server entfernen",
 	"publication_hosts_rollback_api": "API zurücksetzen",

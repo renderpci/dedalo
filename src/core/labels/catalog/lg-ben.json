@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "যাচাই ফাইল (অপ্রকাশিত)",
 	"publication_hosts_public_url": "পাবলিক URL",
 	"publication_hosts_qualities": "পাবলিক মান",
+	"publication_hosts_registry_busy": "প্রকাশনা হোস্ট রেজিস্ট্রি ব্যস্ত: অন্য একটি পরিবর্তন লেখা হচ্ছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।",
 	"publication_hosts_registry_invalid": "প্রকাশনা হোস্ট রেজিস্ট্রি অবৈধ। মেরামত না হওয়া পর্যন্ত কিছুই দেখানো বা প্রয়োগ করা হবে না।",
 	"publication_hosts_remove_host": "হোস্ট সরান",
 	"publication_hosts_rollback_api": "API রোলব্যাক করুন",

@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "Proba-fitxategia (argitaratu gabea)",
 	"publication_hosts_public_url": "URL publikoa",
 	"publication_hosts_qualities": "Kalitate publikoak",
+	"publication_hosts_registry_busy": "Argitalpen-zerbitzarien erregistroa lanpetuta dago: beste aldaketa bat idazten ari da. Saiatu berriro une batean.",
 	"publication_hosts_registry_invalid": "Argitalpen-zerbitzarien erregistroa ez da baliozkoa. Ez da ezer erakusten ez aplikatzen konpondu arte.",
 	"publication_hosts_remove_host": "Kendu zerbitzaria",
 	"publication_hosts_rollback_api": "Leheneratu APIa",

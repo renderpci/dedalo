@@ -726,11 +726,14 @@ const build_list_view = async function(self, widgets) {
 *     verdict (the `danger`/`success` class it sets on its card).
 *   - Every other node stays neutral until touched.
 *
+* Exported for the browser suite (test_publication_hosts: the OPEN_WIDGET_EVENT
+* receive half); the area itself is its only production caller.
+*
 * @param {Object} self - The area_maintenance instance
 * @param {Array}  widgets - The engine-served widget descriptors (already filtered)
-* @returns {{node:HTMLElement, on_show:Function, open_palette:Function}}
+* @returns {{node:HTMLElement, on_show:Function, open_palette:Function, open_tool:Function, destroy:Function}}
 */
-const build_map_view = function(self, widgets, opts={}) {
+export const build_map_view = function(self, widgets, opts={}) {
 
 	// persist the current selection (node|tool) for restore on reload/navigation
 		const persist_sel = (node, tool) => {

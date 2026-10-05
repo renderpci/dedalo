@@ -34,6 +34,10 @@ import { check_row, fact_row, section } from '../../update_code/js/render_update
  * A registry the server could not use (registry_invalid, or a value with no
  * registry block) is a LOUD state: no card, no control, the reason shown — as
  * the server's `registry.check` row (check_row) when it sends one. It is never shown as an empty list.
+ * A registry LOCK held by a writer (the read answered publication_host.busy, or
+ * a registry_locked state) is BUSY: transient, its own sentence and a retry —
+ * never "invalid, repair it". Any other failed read shows its own error.
+ * The last action outcome survives the post-action reload (self.last_outcome).
  * Controls render only for root (the server refuses everyone else anyway).
  * Agent commands are disabled while the pairing is not proved: the server never
  * sends the bearer then, so an enabled button could only fail.
@@ -81,9 +85,21 @@ const get_content_data = function (self) {
 		class_name: 'content_data publication_hosts_content',
 	});
 
-	// any state but 'ok' (registry_invalid, or no block) is loud;
-	// hosts is null then, and is never read
+	// a failed read: busy (a held lock) is transient; anything else names its
+	// error. Neither is "the registry is invalid".
+	const read_error = self.read_error || null;
 	const registry = value.registry || {};
+	if (is_busy(read_error, registry)) {
+		render_registry_busy(self, content_data);
+		return content_data;
+	}
+	if (read_error) {
+		render_read_failed(content_data, read_error);
+		return content_data;
+	}
+
+	// any other state but 'ok' (registry_invalid, or no block) is loud;
+	// hosts is null then, and is never read
 	if (registry.state !== 'ok') {
 		render_registry_invalid(content_data, registry);
 		return content_data;
@@ -116,6 +132,7 @@ const get_content_data = function (self) {
 	const body_response = ui.create_dom_element({
 		element_type: 'pre',
 		class_name: 'body_response',
+		text_content: typeof self.last_outcome === 'string' ? self.last_outcome : '',
 	});
 
 	for (const host of hosts) {
@@ -126,6 +143,69 @@ const get_content_data = function (self) {
 
 	return content_data;
 }; //end get_content_data
+
+/**
+ * IS_BUSY
+ * A writer holds the registry lock: the read was refused publication_host.busy,
+ * or the server named the state registry_locked.
+ * @returns {boolean}
+ */
+const is_busy = function (read_error, registry) {
+	if (read_error && read_error.code === 'publication_host.busy') {
+		return true;
+	}
+	return registry.state === 'registry_locked';
+}; //end is_busy
+
+/**
+ * RENDER_REGISTRY_BUSY
+ * The transient state: another writer (the pairing CLI, a panel action) holds
+ * the registry lock. Nothing is wrong with the file; retry re-reads it.
+ * @returns {HTMLElement}
+ */
+const render_registry_busy = function (self, parent) {
+	const note = ui.create_dom_element({
+		element_type: 'div',
+		class_name: 'dd_note state_warning registry_busy',
+		parent: parent,
+	});
+	ui.create_dom_element({
+		element_type: 'span',
+		text_content:
+			get_label.publication_hosts_registry_busy ||
+			'The publication host registry is busy: another change is being written. Retry in a moment.',
+		parent: note,
+	});
+	const button = action_button(note, 'button_retry', get_label.reload || 'Reload', false);
+	button.addEventListener('click', async (e) => {
+		e.stopPropagation();
+		button.classList.add('button_spinner');
+		try {
+			await self.reload();
+		} finally {
+			button.classList.remove('button_spinner');
+		}
+	});
+
+	return note;
+}; //end render_registry_busy
+
+/**
+ * RENDER_READ_FAILED
+ * The value could not be read (not busy): the error, as TEXT. Never the
+ * "registry invalid" sentence — nothing says the file is wrong.
+ * @returns {HTMLElement}
+ */
+const render_read_failed = function (parent, error) {
+	const note = ui.create_dom_element({
+		element_type: 'div',
+		class_name: 'dd_note state_danger read_failed',
+		text_content: error_text(error),
+		parent: parent,
+	});
+
+	return note;
+}; //end render_read_failed
 
 /**
  * RENDER_REGISTRY_INVALID
@@ -185,7 +265,11 @@ const render_host = function (self, host, is_root, body_response, parent) {
 
 	const facts = section(card, host.name);
 	const rules = host.rules || {};
-	fact_row(facts, get_label.publication_hosts_address || 'Address', host.address_label, true);
+	// the server withholds the address from non-root viewers: no row then (an
+	// "Address: —" would read as "no address", not "hidden")
+	if (typeof host.address_label === 'string') {
+		fact_row(facts, get_label.publication_hosts_address || 'Address', host.address_label, true);
+	}
 	fact_row(facts, get_label.publication_hosts_public_url || 'Public URL', host.public_url, true);
 	fact_row(
 		facts,
@@ -495,23 +579,28 @@ export const run_action = async function (self, spec) {
 	}
 
 	const heading = `${spec.options.name} · ${spec.action}\n`;
+	// shown now AND kept on the instance: the reload rebuilds content_data, and
+	// its new body_response repaints this text (get_content_data)
+	const show = (text) => {
+		self.last_outcome = heading + text;
+		spec.body_response.textContent = self.last_outcome;
+	};
 	spec.button.classList.add('button_spinner');
 	try {
 		const api_response = await self.widget_request(spec.action, spec.options);
 		if (request_failed(api_response)) {
-			spec.body_response.textContent = heading + error_text(api_response.error);
+			show(error_text(api_response.error));
 			await handle_api_error(api_response.error, { wrapper: spec.body_response });
 			return false;
 		}
-		spec.body_response.textContent =
-			heading + JSON.stringify(response_data(api_response) ?? null, null, 2);
+		show(JSON.stringify(response_data(api_response) ?? null, null, 2));
 		if (spec.reload === true) {
 			await self.reload();
 		}
 		return true;
 	} catch (error) {
 		console.error('publication_hosts action failed:', spec.action, error);
-		spec.body_response.textContent = heading + error_text(error);
+		show(error_text(error));
 		return false;
 	} finally {
 		spec.button.classList.remove('button_spinner');

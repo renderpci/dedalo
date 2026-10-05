@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "Тестовый файл (не опубликован)",
 	"publication_hosts_public_url": "Публичный URL",
 	"publication_hosts_qualities": "Публичные качества",
+	"publication_hosts_registry_busy": "Реестр серверов публикации занят: записывается другое изменение. Повторите попытку через мгновение.",
 	"publication_hosts_registry_invalid": "Реестр серверов публикации недействителен. Ничего не показывается и не применяется, пока он не будет исправлен.",
 	"publication_hosts_remove_host": "Удалить сервер",
 	"publication_hosts_rollback_api": "Откатить API",

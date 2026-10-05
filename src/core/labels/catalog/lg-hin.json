@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "जाँच फ़ाइल (अप्रकाशित)",
 	"publication_hosts_public_url": "सार्वजनिक URL",
 	"publication_hosts_qualities": "सार्वजनिक गुणवत्ताएँ",
+	"publication_hosts_registry_busy": "प्रकाशन होस्ट रजिस्ट्री व्यस्त है: कोई अन्य परिवर्तन लिखा जा रहा है। कुछ क्षण बाद पुनः प्रयास करें।",
 	"publication_hosts_registry_invalid": "प्रकाशन होस्ट रजिस्ट्री अमान्य है। ठीक होने तक कुछ भी दिखाया या लागू नहीं किया जाएगा।",
 	"publication_hosts_remove_host": "होस्ट हटाएँ",
 	"publication_hosts_rollback_api": "API वापस लें",

@@ -67,6 +67,12 @@ export const publication_hosts = function () {
 	this.ar_instances = [];
 
 	this.status;
+
+	// the last action outcome (text), repainted into the new body_response
+	// after a reload — a refresh rebuilds content_data from scratch
+	this.last_outcome = null;
+	// the ApiError of the last failed value read (get_value), or null
+	this.read_error = null;
 }; //end publication_hosts
 
 // prototypes assign
@@ -130,7 +136,9 @@ publication_hosts.prototype.confirm_action = function (message) {
 
 /**
  * RELOAD
- * Re-reads the widget value and repaints the body (after a successful action).
+ * Re-reads the widget value and repaints the body (after a successful action,
+ * or the busy note's retry). A read that throws is kept as `read_error`, so the
+ * view says so instead of repainting the previous value as if it were fresh.
  * @returns {Promise<void>}
  */
 publication_hosts.prototype.reload = async function () {
@@ -140,6 +148,7 @@ publication_hosts.prototype.reload = async function () {
 		self.value = await self.get_value();
 	} catch (error) {
 		console.error(error);
+		self.read_error = error;
 	}
 	dd_request_idle_callback(() => {
 		self.refresh({

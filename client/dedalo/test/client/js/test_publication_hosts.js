@@ -18,9 +18,17 @@
  *  - controls exist only for root; agent commands are disabled while the
  *    pairing is not proved; every agent-changing action is confirm-gated, shows
  *    the spinner while in flight, reports its outcome, and reloads only on success;
+ *  - after a success the REAL reload path (get_value → refresh) repaints the
+ *    fresh state and the outcome survives the repaint;
+ *  - a held registry lock (a failed read answering publication_host.busy, or a
+ *    registry_locked state) reads as BUSY — transient, retryable — never as
+ *    "invalid, repair it"; any other failed read shows its own error;
+ *  - a non-root row (address withheld by the server) shows no Address fact;
  *  - the edit form is prefilled from the row's qualities/probe; set_host_fields
  *    sends null for a blank field (= engine default);
- *  - media_control's line asks the dashboard to open publication_hosts.
+ *  - media_control's line asks the dashboard to open publication_hosts, and the
+ *    System Map's listener (the RECEIVE half) opens it — and ignores an
+ *    unknown id or a map no longer in the document.
  *
  * The fixtures follow the Task 7 panel wire ({registry:{state,reason},
  * registry_path, engine_qualities, is_root, hosts}) and its action answers
@@ -32,11 +40,13 @@
  */
 
 import { OPEN_WIDGET_EVENT } from '../../../core/area_maintenance/js/maintenance_events.js';
+import { build_map_view } from '../../../core/area_maintenance/js/render_area_maintenance.js';
 import { media_control } from '../../../core/area_maintenance/widgets/media_control/js/media_control.js';
 import { publication_hosts } from '../../../core/area_maintenance/widgets/publication_hosts/js/publication_hosts.js';
 import { read_host_fields } from '../../../core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js';
 import { check_row } from '../../../core/area_maintenance/widgets/update_code/js/render_update_status.js';
-import { ApiError } from '../../../core/common/js/api_error.js';
+import { ApiError, CLIENT_ERROR } from '../../../core/common/js/api_error.js';
+import { data_manager } from '../../../core/common/js/data_manager.js';
 import { error_text } from '../../../core/common/js/render_api_error.js';
 
 // DOM container
@@ -45,6 +55,16 @@ const container = document.getElementById('content');
 // helpers
 const mounted = [];
 const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+/** Poll until `probe` returns a truthy value (the real reload repaints at idle priority). */
+const until = async (probe, ms = 4000) => {
+	const end = Date.now() + ms;
+	for (;;) {
+		const found = probe();
+		if (found) return found;
+		if (Date.now() > end) throw new Error('until: the condition never held');
+		await new Promise((resolve) => setTimeout(resolve, 25));
+	}
+};
 const labels = () => window.get_label || {};
 
 const build_host = (overrides = {}) =>
@@ -169,6 +189,95 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			);
 			assert.include(row.textContent, 'invalid_json', 'its detail (the reason) is shown');
 			assert.strictEqual(content.querySelectorAll('button').length, 0, 'no control');
+		});
+
+		it('a held registry lock (read answered publication_host.busy) is BUSY, never "invalid": its own sentence, a retry', async function () {
+			const self = build_widget(null);
+			self.read_error = new ApiError({
+				code: 'publication_host.busy',
+				status: 409,
+				message: 'busy',
+				source: 'envelope',
+			});
+			const content = await mount(self);
+
+			const note = content.querySelector('.registry_busy');
+			assert.ok(note, 'the busy note renders');
+			assert.strictEqual(content.querySelector('.registry_invalid'), null, 'never the invalid note');
+			assert.include(
+				note.textContent,
+				labels().publication_hosts_registry_busy || 'busy',
+				'its own transient sentence',
+			);
+			assert.notInclude(note.textContent, 'repaired', 'it never asks for a repair');
+			assert.strictEqual(content.querySelectorAll('.publication_host').length, 0, 'no card');
+			let reloads = 0;
+			self.reload = async () => {
+				reloads++;
+			};
+			note.querySelector('.button_retry').click();
+			await settle();
+			assert.strictEqual(reloads, 1, 'retry re-reads the value');
+		});
+
+		it('a registry_locked state reads as busy too (never the invalid sentence)', async function () {
+			const self = build_widget(panel_value({ state: 'registry_locked', reason: 'locked' }, null));
+			const content = await mount(self);
+
+			assert.ok(content.querySelector('.registry_busy'), 'busy note');
+			assert.strictEqual(content.querySelector('.registry_invalid'), null, 'not invalid');
+		});
+
+		it('any other failed read shows ITS error, never the "registry invalid" sentence', async function () {
+			const self = build_widget(null);
+			const error = new ApiError({
+				code: CLIENT_ERROR.TIMEOUT,
+				status: 0,
+				message: 'The request timed out',
+				source: 'transport',
+			});
+			self.read_error = error;
+			const content = await mount(self);
+
+			const note = content.querySelector('.read_failed');
+			assert.ok(note, 'the read-failed note renders');
+			assert.include(note.textContent, error_text(error), 'the error is named');
+			assert.strictEqual(content.querySelector('.registry_invalid'), null, 'not invalid');
+		});
+
+		it('get_value keeps the failed read: data_manager error → value null + read_error', async function () {
+			const self = build_widget(null);
+			delete self.read_error;
+			const error = new ApiError({
+				code: 'publication_host.busy',
+				status: 409,
+				message: 'busy',
+				source: 'envelope',
+			});
+			const original = data_manager.request;
+			data_manager.request = async () => ({ ok: false, error: error });
+			let value;
+			try {
+				value = await self.get_value();
+			} finally {
+				data_manager.request = original;
+			}
+			assert.isNotOk(value, 'no value from a failed read');
+			assert.strictEqual(self.read_error, error, 'the error is kept for the view');
+		});
+
+		it('a non-root row (address withheld by the server) shows no Address fact', async function () {
+			const host = build_host();
+			delete host.address_label;
+			const self = build_widget(ok_value([host], false));
+			const content = await mount(self);
+
+			const card = content.querySelector('.publication_host');
+			assert.notInclude(
+				card.textContent,
+				labels().publication_hosts_address || 'Address',
+				'no "Address: —" that reads as "no address"',
+			);
 		});
 
 		it('a value with no registry block reads as invalid, never as an empty list', async function () {
@@ -315,6 +424,38 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 				'c'.repeat(64),
 				'the applied hash is shown',
 			);
+		});
+
+		it('after a success the REAL reload repaints the FRESH state and keeps the outcome on screen', async function () {
+			const self = build_widget(ok_value([build_host()]));
+			delete self.reload; // the prototype's: get_value → refresh({destroy:true})
+			self.get_value = async () =>
+				ok_value([build_host({ rules: { expected: 'c'.repeat(64), reported: 'c'.repeat(64) } })]);
+			self.next_response = {
+				ok: true,
+				data: { host: 'www', server: 'apache', hash: 'c'.repeat(64), dropped: ['Header set X-Dropped'] },
+			};
+			await self.build(false);
+			const wrapper = await self.render();
+			container.appendChild(wrapper);
+			mounted.push(wrapper);
+			const before = wrapper.content_data;
+			assert.include(before.textContent, 'b'.repeat(64), 'the stale reported hash shows first');
+
+			wrapper.querySelector('.button_apply_rules').click();
+			const after = await until(() =>
+				wrapper.content_data !== before && self.status === 'rendered' ? wrapper.content_data : null,
+			);
+
+			assert.notInclude(after.textContent, 'b'.repeat(64), 'the stale state is gone');
+			assert.include(
+				after.querySelector('.publication_host').textContent,
+				'c'.repeat(64),
+				'the fresh reported hash is painted',
+			);
+			const response = after.querySelector('.body_response').textContent;
+			assert.include(response, 'apply_rules', 'the outcome survives the repaint');
+			assert.include(response, 'X-Dropped', "apply_rules' dropped list stays visible");
 		});
 
 		it('a refused action shows the error sentence and does not reload', async function () {
@@ -482,6 +623,78 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 				labels()['update_code_check_superuser'] || 'superuser',
 			);
 		});
+	});
+});
+
+describe('SYSTEM MAP receives OPEN_WIDGET_EVENT', function () {
+	this.timeout(10000);
+
+	const WIDGETS = [
+		{ id: 'media_control', label: 'Media control', category: 'media' },
+		{ id: 'publication_hosts', label: 'Publication hosts', category: 'publication' },
+	];
+
+	const build = (show_map) => build_map_view({ id: 'area_maintenance_test' }, WIDGETS, { show_map });
+
+	const selected_chip = (root) => root.querySelector('.tool_chip.sel');
+
+	it('a live map switches to the map view and opens the asked widget', async function () {
+		let shown = 0;
+		const map = build(() => {
+			shown++;
+		});
+		container.appendChild(map.node);
+		try {
+			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }));
+			assert.strictEqual(shown, 1, 'the map view is shown first');
+			const chip = selected_chip(map.node);
+			assert.ok(chip, 'a tool chip is selected');
+			assert.strictEqual(chip.dataset.id, 'publication_hosts', 'the asked widget is the one opened');
+		} finally {
+			map.destroy();
+			map.node.remove();
+		}
+	});
+
+	it('an unknown id does nothing', async function () {
+		let shown = 0;
+		const map = build(() => {
+			shown++;
+		});
+		container.appendChild(map.node);
+		try {
+			const before = selected_chip(map.node);
+			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'no_such_widget' } }));
+			assert.strictEqual(shown, 0, 'the view is not switched');
+			assert.strictEqual(selected_chip(map.node), before, 'the selection is unchanged');
+		} finally {
+			map.destroy();
+			map.node.remove();
+		}
+	});
+
+	it('a map no longer in the document, or destroyed, never acts', async function () {
+		let shown = 0;
+		const detached = build(() => {
+			shown++;
+		});
+		try {
+			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }));
+			assert.strictEqual(shown, 0, 'a stale (detached) map ignores the event');
+		} finally {
+			detached.destroy();
+		}
+		const live = build(() => {
+			shown++;
+		});
+		container.appendChild(live.node);
+		live.destroy();
+		try {
+			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }));
+			assert.strictEqual(shown, 0, 'destroy() removed the listener');
+		} finally {
+			live.node.remove();
+		}
 	});
 });
 

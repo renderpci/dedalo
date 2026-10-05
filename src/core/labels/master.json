@@ -609,6 +609,7 @@
 	"publication_hosts_probe_unpublished": "Probe file (unpublished)",
 	"publication_hosts_public_url": "Public URL",
 	"publication_hosts_qualities": "Public qualities",
+	"publication_hosts_registry_busy": "The publication host registry is busy: another change is being written. Retry in a moment.",
 	"publication_hosts_registry_invalid": "The publication host registry is invalid. Nothing is shown or applied until it is repaired.",
 	"publication_hosts_remove_host": "Remove host",
 	"publication_hosts_rollback_api": "Roll back API",

@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "確認用ファイル（非公開）",
 	"publication_hosts_public_url": "公開 URL",
 	"publication_hosts_qualities": "公開品質",
+	"publication_hosts_registry_busy": "公開ホストのレジストリは使用中です：別の変更を書き込んでいます。しばらくしてから再試行してください。",
 	"publication_hosts_registry_invalid": "公開ホストのレジストリが無効です。修復されるまで何も表示・適用されません。",
 	"publication_hosts_remove_host": "ホストを削除",
 	"publication_hosts_rollback_api": "API をロールバック",

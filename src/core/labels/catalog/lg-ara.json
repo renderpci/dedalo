@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "ملف الفحص (غير منشور)",
 	"publication_hosts_public_url": "عنوان URL العام",
 	"publication_hosts_qualities": "الجودات العامة",
+	"publication_hosts_registry_busy": "سجل مضيفات النشر مشغول: يجري حفظ تغيير آخر. أعد المحاولة بعد لحظة.",
 	"publication_hosts_registry_invalid": "سجل مضيفات النشر غير صالح. لن يُعرض أو يُطبق أي شيء حتى يتم إصلاحه.",
 	"publication_hosts_remove_host": "إزالة المضيف",
 	"publication_hosts_rollback_api": "التراجع عن API",

@@ -45,7 +45,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_area_maintenance, build_form} from './render_area_maintenance.js'
-	import {response_data} from '../../common/js/api_error.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
 
 
 
@@ -369,6 +369,10 @@ area_maintenance.prototype.init_form = function(widget_object) {
 *   guards against accidental calls before init().
 * @returns {Promise<*>} The `result` field of the API response, whose shape
 *   varies per widget (object, array, or scalar).
+*
+* A FAILED read also leaves its ApiError on `this.read_error` (null after a
+* success), so a widget can tell "the server refused the read" (e.g. a busy
+* lock) from a value it does not understand — response_data alone cannot.
 */
 area_maintenance.prototype.get_value = async function () {
 
@@ -396,6 +400,7 @@ area_maintenance.prototype.get_value = async function () {
 		console.log(`))) get_value ${this.id} api_response:`, api_response);
 	}
 
+	this.read_error = request_failed(api_response) ? api_response.error : null
 	const result = response_data(api_response)
 
 

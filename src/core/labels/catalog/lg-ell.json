@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "Αρχείο ελέγχου (μη δημοσιευμένο)",
 	"publication_hosts_public_url": "Δημόσιο URL",
 	"publication_hosts_qualities": "Δημόσιες ποιότητες",
+	"publication_hosts_registry_busy": "Το μητρώο διακομιστών δημοσίευσης είναι απασχολημένο: γράφεται μια άλλη αλλαγή. Δοκιμάστε ξανά σε λίγο.",
 	"publication_hosts_registry_invalid": "Το μητρώο διακομιστών δημοσίευσης δεν είναι έγκυρο. Τίποτα δεν εμφανίζεται ούτε εφαρμόζεται μέχρι να επισκευαστεί.",
 	"publication_hosts_remove_host": "Αφαίρεση διακομιστή",
 	"publication_hosts_rollback_api": "Επαναφορά API",

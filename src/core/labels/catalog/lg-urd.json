@@ -385,6 +385,7 @@
 	"publication_hosts_probe_unpublished": "جانچ فائل (غیر شائع شدہ)",
 	"publication_hosts_public_url": "عوامی URL",
 	"publication_hosts_qualities": "عوامی معیارات",
+	"publication_hosts_registry_busy": "اشاعتی ہوسٹ رجسٹری مصروف ہے: ایک اور تبدیلی لکھی جا رہی ہے۔ کچھ دیر بعد دوبارہ کوشش کریں۔",
 	"publication_hosts_registry_invalid": "اشاعتی ہوسٹ رجسٹری غلط ہے۔ مرمت ہونے تک کچھ بھی دکھایا یا لاگو نہیں کیا جائے گا۔",
 	"publication_hosts_remove_host": "ہوسٹ ہٹائیں",
 	"publication_hosts_rollback_api": "API واپس لیں",
