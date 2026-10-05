@@ -602,7 +602,7 @@ nightly home that can fail and report is red. The ratchet itself (DEC-12) is unc
 One definition for the desk and both hosts: bun at `.bun-version`,
 postgresql-client-18, the media tools (ffmpeg, ImageMagick 7, poppler, ghostscript,
 rsvg), MariaDB, Apache (`apache2` + `apache2-dev` for `apxs`) and nginx (the
-publication-host drill), chromium, git/zip/jq; the fingerprint (sha256 of `ci/Dockerfile` ++ `.bun-version`) in
+publication-host drills), php-cli (the engine drill lints real v1 releases), chromium, git/zip/jq; the fingerprint (sha256 of `ci/Dockerfile` ++ `.bun-version`) in
 `/etc/dedalo-ci-image` and the `org.dedalo.ci.fingerprint` label. `ci-image.yml`
 publishes on a push that moved the definition, weekly with the layer cache OFF (the
 updater for the distro half — a cached rebuild would republish old packages forever) and

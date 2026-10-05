@@ -128,6 +128,16 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends apache2 apache2-dev nginx; \
     rm -rf /var/lib/apt/lists/*
 
+# --- PHP CLI (publication-host engine drill) -----------------------------------
+# scripts/publication_host_engine_drill.ts pushes a REAL Publication API v1 release through
+# the engine's lockstep reconciler; the agent runs `php -l` on every .php before it
+# promotes one. Lint only: no SAPI, no web-server module — the CLI binary is all the
+# drill's `php` stand-in execs.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends php-cli; \
+    rm -rf /var/lib/apt/lists/*
+
 # --- sudo (sudo's parser: the publication-host agent's sudoers gate) -------------
 # publication/host_agent/tests/provision_render_grants.test.ts parses the rendered sudoers
 # rule with `cvtsudoers` (hermetic daemon gate) — sudo's own grammar, and unlike `visudo`
@@ -234,6 +244,7 @@ RUN set -eu; \
       echo "$(mariadb --version)"; \
       echo "$(apache2 -v | head -n1)"; \
       echo "$(nginx -v 2>&1)"; \
+      echo "$(php -v | head -n1)"; \
       echo "$(git --version)"; \
       echo "$(openssl version)"; \
       echo "$(cvtsudoers -V | head -n1)"; \
