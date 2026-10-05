@@ -25,6 +25,7 @@ import { dirname, join } from 'node:path';
 import { RUNTIME_PATH_CENSUS } from '../../src/core/install/runtime_paths.ts';
 import { overrideMediaProtectionPathsForTests } from '../../src/core/media/protection.ts';
 import type { MediaManifest } from '../../src/core/publication_host/agent_client.ts';
+import { isAgentMediaRelpath } from '../../src/core/publication_host/transport.ts';
 import {
 	type AgentManifestView,
 	type DesiredFile,
@@ -383,6 +384,27 @@ describe('diffCopyPlan — the pure planner', () => {
 			'image/.DS_Store',
 			'image/1.5MB/0/link_test3_9.jpg',
 		]);
+	});
+});
+
+describe('ONE relpath grammar: what the planner sends is what the door takes (and the agent)', () => {
+	test('a C1-named (mojibake) irregular path is planned for deletion AND passes the door; a C0 path aborts the plan', async () => {
+		const c1 = 'image/1.5MB/0/x\u0085y_test3_1.jpg';
+		const view = toManifestView({ entries: [], irregular: [c1], markers: [] });
+		const plan = await diffCopyPlan([], view, async () => null);
+		expect(plan.del).toEqual([c1]);
+		expect(plan.del.every(isAgentMediaRelpath)).toBe(true);
+		const c0 = 'image/1.5MB/0/x\u0001y_test3_1.jpg';
+		expect(isAgentMediaRelpath(c0)).toBe(false);
+		expect(codeOf(() => toManifestView({ entries: [], irregular: [c0], markers: [] }))).toBe(
+			'publication_host.failed',
+		);
+	});
+
+	test('the planner classifies a C1-named public file (the door then takes it), never a C0 one', () => {
+		const quality = 'image/1.5MB';
+		expect(publicFileKey(`${quality}/0/x\u0085y_test3_1.jpg`, [quality])).toBe('test3_1');
+		expect(publicFileKey(`${quality}/0/x\u0001y_test3_1.jpg`, [quality])).toBeNull();
 	});
 });
 

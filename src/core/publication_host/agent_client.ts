@@ -712,6 +712,8 @@ export async function hostMediaPut(name: string, file: MediaPutFile, actor: stri
 		assertPutRequest(name, file, actor);
 		return requireHost(name);
 	});
+	// A call that fails before (or while) sending — the live /health proof of an unreachable
+	// agent above all — must not leave the caller's stream (an open file) to the GC.
 	const answer = await mutateCall(
 		host,
 		command('media.put', 'PUT', MEDIA_FILE_PATH, {
@@ -725,7 +727,10 @@ export async function hostMediaPut(name: string, file: MediaPutFile, actor: stri
 			body: file.body,
 			timeoutMs: MEDIA_PUT_TIMEOUT_MS,
 		}),
-	);
+	).catch(async (error: unknown) => {
+		await file.body.cancel().catch(() => undefined);
+		throw error;
+	});
 	const landed = expectShape(host, 'media.put', answer, isPutResult);
 	if (landed.path !== file.path || landed.sha256 !== file.sha256)
 		throw unreadable(host, 'media.put', answer.status);

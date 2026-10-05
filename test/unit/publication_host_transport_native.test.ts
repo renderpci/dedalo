@@ -22,6 +22,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { classifyMediaPath } from '../../publication/host_agent/src/media/grammar.ts';
 import { type DedaloError, isDedaloError, toErrorBody } from '../../src/core/errors/index.ts';
 import type { PublicationHostRecord } from '../../src/core/publication_host/registry.ts';
 import {
@@ -36,6 +37,7 @@ import {
 	type AgentRequest,
 	agentRequest,
 	dialAgent,
+	isAgentMediaRelpath,
 } from '../../src/core/publication_host/transport.ts';
 import { childDriver, driverResult, repoModule } from '../helpers/child_driver.ts';
 import {
@@ -658,6 +660,37 @@ describe('the copy-mode PUT: the one route that takes it, its path encoded by th
 			`PUT ${AGENT_BASE_PATH}/v1/media/file?path=image%2F1.5MB%2F0%2Fa+b%252F%2Ftest99_test3_1.jpg`,
 		]);
 		expect(new URLSearchParams(state.hits.at(-1)?.split('?')[1]).get('path')).toBe(path);
+	});
+});
+
+describe('the media path grammar is the agent’s own, character for character', () => {
+	test('every code point below U+0800 (C0, DEL, C1, Latin): the door accepts it iff the agent does', () => {
+		const disagree: string[] = [];
+		for (let cp = 0; cp < 0x800; cp += 1) {
+			const ch = String.fromCodePoint(cp);
+			if (ch === '/' || ch === '\\') continue; // separators: the door refuses a backslash outright
+			const path = `image/1.5MB/0/x${ch}y_test3_1.jpg`;
+			if (isAgentMediaRelpath(path) !== classifyMediaPath(path, 'delete').ok)
+				disagree.push(cp.toString(16));
+		}
+		expect(disagree).toEqual([]);
+		expect(isAgentMediaRelpath('image/1.5MB/0/x\u0085y_test3_1.jpg')).toBe(true);
+		expect(isAgentMediaRelpath('image/1.5MB/0/x\u007fy_test3_1.jpg')).toBe(false);
+	});
+
+	test('a C1-named path reaches the agent through the door (a delete of mojibake is never refused)', async () => {
+		const before = state.hits.length;
+		const path = 'image/1.5MB/0/x\u0085y_test99_test3_1.jpg';
+		const res = await dialAgent(
+			tlsHost(agent.port),
+			clientTls,
+			{ ...PUT_FILE, query: { path } },
+			BEARER,
+		);
+		expect(res.status).toBe(200);
+		expect(new URLSearchParams(state.hits.slice(before).at(-1)?.split('?')[1]).get('path')).toBe(
+			path,
+		);
 	});
 });
 

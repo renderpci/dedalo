@@ -88,13 +88,29 @@ export const AGENT_PATHS: readonly string[] = Object.freeze([
 /** The routes that take PUT — and take nothing else (the copy-mode media put streams a file). */
 export const AGENT_PUT_PATHS: readonly string[] = Object.freeze(['/v1/media/file']);
 
+/** The agent's CONTROL_CHAR range (C0 + DEL), as a character-class body. */
+const AGENT_CONTROL_RANGE = '\\u0000-\\u001f\\u007f';
+const MEDIA_SEGMENT = `[^/\\\\${AGENT_CONTROL_RANGE}]+`;
+
 /**
- * The copy-mode media path (PUT /v1/media/file?path=): media-root relative, 1–1024
- * characters, no control character or backslash, no empty / `.` / `..` segment, no leading
- * `/`. The agent re-checks it (its grammar.ts, then realpath confinement under its root).
+ * The copy-mode media path (PUT /v1/media/file?path=, and every media.delete path):
+ * media-root relative, 1–1024 characters, no backslash, no empty / `.` / `..` segment, no
+ * leading `/`, and no C0 control character or DEL — EXACTLY the agent's CONTROL_CHAR
+ * (publication/host_agent/src/media/grammar.ts), never wider: a path the agent lists in its
+ * manifest but this door refused (a C1 character, e.g. mojibake) could never be deleted,
+ * and one refused path stops a whole round. The engine planner checks the same grammar
+ * (isAgentMediaRelpath), so the two never disagree. The agent re-checks it (its
+ * grammar.ts, then realpath confinement under its root).
  */
-const MEDIA_PUT_PATH =
-	/^(?!.{1025})(?!(?:.*\/)?\.{1,2}(?:\/|$))[^/\\\p{Cc}]+(?:\/[^/\\\p{Cc}]+)*$/su;
+const MEDIA_PUT_PATH = new RegExp(
+	`^(?!.{1025})(?!(?:.*\\/)?\\.{1,2}(?:\\/|$))${MEDIA_SEGMENT}(?:\\/${MEDIA_SEGMENT})*$`,
+	'su',
+);
+
+/** THE agent media relpath grammar (the door's, see MEDIA_PUT_PATH) — the planner's too. */
+export function isAgentMediaRelpath(path: string): boolean {
+	return MEDIA_PUT_PATH.test(path);
+}
 
 /**
  * THE ONLY QUERY KEYS ANY ROUTE TAKES, each with its value grammar (anchored, no flags).

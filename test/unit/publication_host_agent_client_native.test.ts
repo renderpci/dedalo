@@ -869,6 +869,35 @@ describe('copy-mode media commands (phase 5): mutations, re-proved live, through
 		expect(cancelled).toBe(7);
 		expect(mock.requests).toEqual([]);
 	});
+
+	test('a put whose live proof fails (agent unreachable) cancels the caller stream — never an fd left to the GC', async () => {
+		downMock.stop();
+		let cancelled = 0;
+		const body = new ReadableStream<Uint8Array>({
+			cancel() {
+				cancelled += 1;
+			},
+		});
+		await expectCode(
+			hostMediaPut('down_pub', { path: PUT_PATH, sha256: SHA, size: 1, body }, ACTOR),
+			'publication_host.unreachable',
+		);
+		expect(cancelled).toBe(1);
+	});
+
+	test('a C1 character (mojibake) is a media path the door takes, like the agent: put AND delete', async () => {
+		const c1 = 'image/1.5MB/0/x\u0085y_test99_test3_1.jpg';
+		await hostMediaDelete('museum_pub', [c1], ACTOR);
+		expect(trail(mock)).toEqual([`GET ${B}/health anon`, `POST ${B}/v1/media/delete bearer`]);
+		expect(JSON.parse(new TextDecoder().decode(last(mock).body))).toEqual({ paths: [c1] });
+		mock.reply('PUT', '/v1/media/file', { status: 200, body: { path: c1, sha256: SHA } });
+		await hostMediaPut(
+			'museum_pub',
+			{ path: c1, sha256: SHA, size: 1, body: streamOf(new Uint8Array(1)) },
+			ACTOR,
+		);
+		expect(last(mock).query).toBe(`?path=${encodeURIComponent(c1)}`);
+	});
 });
 
 describe('no secret leaves in an error or a log line (Review Focus 5)', () => {
