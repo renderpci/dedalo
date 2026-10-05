@@ -64,6 +64,17 @@ zero on 2026-10-01, when `tool_import_rdf` (whose single-call fetch refused the
 303/301 every linked-data server answers with) moved to `harvestFetch`; a list
 at zero stays at zero (`test/unit/ssrf_one_guard_tripwire.test.ts`).
 
+**The publication-host public-URL probe is a `fetchGuardedText` caller, not a door**
+(`src/core/publication_host/probe.ts`, `engineering/PUBLICATION_HOST_SPEC.md` §7). It
+requests two media files from the institution's own public site exactly as a stranger
+would, so it relies on the public guard unchanged. A public URL that resolves to a private
+address (split-horizon DNS included) is refused like any other, and the probe reports
+`unknown`, never a pass. The 404 it expects for the unpublished file arrives as the typed
+`security.outbound_failed` carrying `status: 404`, with the error page cancelled unread;
+the probe reads the status, never a body. The same subsystem's agent channel is a door of
+its own (`agentRequest`, above). The probe never uses it: a gate seen from the private side
+proves nothing about what the public sees.
+
 `fetchBoundedText` is the SAME transport core as `fetchGuardedText` (the hop's
 total deadline composed with the job's signal, the shared capped reader, the same
 typed failures, any 3xx refused) with NO pin and NO address policy. It exists for

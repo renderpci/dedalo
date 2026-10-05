@@ -400,6 +400,9 @@ HERMETIC_TRIPWIRES=(
 	#     mkdtemp scratch dir, `git ls-files` over tracked source, and a zero-dep import of the
 	#     agent's reader (node: builtins only, no agent `bun install` needed).
 	test/unit/publication_host_bundle_twin_tripwire.test.ts
+	# --- 2026-10-03 (publication host phases 4–6): the spec's path/script references exist.
+	#     DB-free: reads the spec and two package.json files, existsSync only; no network.
+	test/unit/publication_host_spec_refs_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

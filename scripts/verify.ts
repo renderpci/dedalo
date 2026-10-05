@@ -347,6 +347,8 @@ const TRIPWIRES = [
 	'test/unit/publication_host_door_tripwire.test.ts',
 	// Publication host phase 4 L4 — engine bundle writer ↔ agent extractBundle twin (2026-10-03).
 	'test/unit/publication_host_bundle_twin_tripwire.test.ts',
+	// Publication host phases 4–6 — the spec names only paths and scripts that exist (2026-10-03).
+	'test/unit/publication_host_spec_refs_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

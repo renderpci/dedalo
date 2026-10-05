@@ -1,8 +1,8 @@
 # PUBLICATION HOST — a separate publication machine, controlled from the work system
 
-> **Status 2026-10-03: DESIGN; phase 1 (the `publication_host` rule profile), phase 2 (the publication agent) and phase 3 (the engine side: registry, agent channel, panel) BUILT.** Nothing below is built yet except where a phase in §8
-> says so. Each phase gets its own implementation plan (internal process); this file is
-> the definition they implement. Media-access details extend `engineering/MEDIA_PROTECTION.md`.
+> **Status 2026-10-05: BUILT — phases 1 to 6 (§8).** This file is the definition the code
+> implements; each phase's BUILT line in §8 names its modules and the command that proves
+> it. Media-access details extend `engineering/MEDIA_PROTECTION.md`.
 
 ## 1. Topology and scope
 
@@ -260,9 +260,43 @@ release, state outside the code:
 - **Why `shared/`:** the engine's code updater keeps only `.git` across a tree swap
   (`PRESERVE_ROOT_ENTRIES`, `src/core/update/code_update.ts`), so any state stored inside
   a code tree dies on update.
-- **Lockstep:** the API release equals the engine release that published the data. The
-  engine updates first, then pushes the API bundle; the panel shows both versions and
-  flags a mismatch.
+- **Lockstep (built, phase 4).** The API release equals the engine release that published
+  the data, in both directions: a restore confirms through the same boot sentinel, so it
+  pushes the older release too.
+  - **Release id** = `<DEDALO_VERSION>_<INSTALLED_DIGEST[0:7]>` (the digest is
+    `src/core/update/install_stamp.ts`'s). An install with no digest (a development
+    checkout, or a tree installed before this feature) has no verified release, so the
+    push is REFUSED, never guessed.
+  - **What ships is what was verified.** The verified zip is deleted after the swap, so
+    `updateCode` writes a per-file sha256 manifest of `publication/server_api/**` at
+    extract time, beside the install stamp
+    (`<installed tree>/src/core/update/publication_manifest.json`, written and checked by
+    `src/core/update/publication_manifest.ts`). Before packing, every file is re-hashed
+    against it. A missing manifest, a manifest digest that is not the installed one, or
+    any drift (a file edited, added or removed) REFUSES the push. The refusal names the
+    files, and nothing is sent.
+  - **v2 `node_modules` are built on the work host** with the pinned Bun
+    (`process.execPath install --frozen-lockfile --production …`) in
+    `<backup root>/.pubapi_build/<release>/v2/`, cached per release id, then packed. This
+    is the no-egress law above.
+  - **One deterministic writer** (`src/core/publication_host/bundle_writer.ts`): ustar +
+    gzip, entries sorted, mtime/uid/gid 0, modes 0644/0755, types `0`/`5` only, and a PAX
+    `path` record only when a path exceeds 100 bytes. The same tree always gives the same
+    sha256. A round-trip twin gate feeds the writer's output into the agent's own reader,
+    so the two deployables cannot disagree on the format. The bundle builder is
+    `src/core/publication_host/api_bundles.ts`.
+  - **One reconciler, three triggers** (`reconcilePublicationApis`,
+    `src/core/publication_host/api_reconcile.ts`):
+    (1) detached and best-effort once `confirmBootedCodeUpdate` has flipped the sentinel
+    (wired in `src/server.ts`); a smoke boot or install mode pushes nothing;
+    (2) the root-only panel action `push_apis`;
+    (3) a scheduled DRY-RUN reconcile that reports drift; its apply is refused, so a
+    timer never pushes code.
+  - **Per host: v2, then v1, independently.** Each API's outcome is recorded per host in
+    `<private>/publication_hosts_runtime.json` (`apis.<api> = {state, release, error, at}`,
+    `src/core/publication_host/runtime.ts`) and shown red on failure. A partial success is
+    visible, never hidden. The panel shows the engine release beside each host's two API
+    releases and flags a mismatch.
 
 ## 4. Media URL
 
@@ -275,7 +309,7 @@ No rewriting of published data, and the MEDIA-03 envelope pattern
 
 | mode | who holds the bytes | gate on the publication host |
 |---|---|---|
-| `copy` | the agent, a copy of the published files only | none needed — everything present is public |
+| `copy` | the agent: a copy of the published public-quality files only | the SAME §5.1 profile, rendered for the copy root; the agent mirrors the `pub/` markers (§5.2) |
 | `shared` | shared storage: work host RW, publication host RO | Rule B only, rendered for the host's mount root |
 | `none` | nobody — the host serves no published media | — |
 
@@ -331,17 +365,61 @@ compromised publication host reads everything it can mount.
 visible, a publish stays hidden, until it expires. Mount `.publication/pub` separately
 with `lookupcache=none,noac` (NFS) or `actimeo=0` (SMB). Media folders keep normal caching.
 
-### 5.2 `copy` — the media copy target
+### 5.2 `copy` — the media copy target (built, phase 5)
 
-A diffusion target beside MariaDB, driven by the same publish/unpublish events and by the
-`media_index` ground truth:
+The engine keeps a copy host equal to the published set by recomputing it from ground
+truth, the `media_index` law.
 
-- Copies the public qualities only; originals never leave the work host.
-- Transfer = `media.put` (temp file → sha256 verify → atomic rename) / `media.delete`.
-- Reconcile = the agent's manifest (path, size, sha256) diffed against the published set;
-  the same "recompute from ground truth" law as `media_index`.
-- **Unpublish is a verified deletion**: logged, then confirmed against the manifest.
-  Withdrawn consent must remove bytes from the public host, not an index entry.
+- **Desired set** (`desiredPublicFiles`, `src/diffusion/targets/mediastore/media_copy.ts`):
+  every file under a `getPublicQualities()` folder (recursive) that meets three
+  conditions:
+  - its basename matches `MEDIA_FILENAME_GRAMMAR`;
+  - it is not a `MEDIA_WORKING_FILE_EXTENSIONS` file;
+  - its key `$1_$2` has a `pub/<key>` marker.
+
+  This is Rule B's own decision, so `copy` and `shared` serve the same set by
+  construction. Originals never leave the work host.
+- **The gate is the same.** The agent mirrors the `pub/` markers beside the copy
+  (`media.mark`), and the copy root is served with the §5.1 profile. Both modes share one
+  gate code path. A copy host never relies on "everything present is public".
+- **Transfer:**
+  - `media.put`: stream → temp file → sha256 and size verified → atomic rename. The path
+    is confined under the agent's media root, and the agent checks its shape too (§6:
+    grammar-valid name, no working file, never a master tier).
+  - `media.delete`.
+  - `media.manifest`: path, size and sha256. The agent computes each sha256 at put time
+    and persists it.
+
+  The engine caches its own hashes by `(relpath, size, mtimeMs)` in
+  `<private>/media_copy/sha_cache.ndjson`, so multi-GB AV is not rehashed every round.
+- **Correctness = reconcile, latency = hook.**
+  - A scheduled reconcile (`MEDIA_COPY_RECONCILE` in `src/diffusion/api/reconcile.ts`;
+    auto-apply, because it is a pure derivation of `pub/` ∩ public files; an operator's
+    apply is root-only) diffs the desired set against the agent's manifest and markers.
+  - A best-effort hook on every `pub/` transition
+    (`src/diffusion/targets/mediastore/pub_transitions.ts`, emitted by the marker store in
+    `src/diffusion/targets/mediastore/media_index.ts` whenever the gate's decision flips)
+    wakes a per-host serialized worker
+    (`src/diffusion/targets/mediastore/media_copy_worker.ts`).
+  - The worker runs in-process, not as a diffusion runner, so long AV transfers never hold
+    the runner slots that publishing uses.
+  - Cross-process ordering uses the advisory target lock (`mediaCopyTargetLockKey(host)`,
+    `src/core/diffusion_bridge/target_lock.ts`).
+  - `pub/<key>` is re-checked immediately before each put, so a put never lands after its
+    record was unpublished.
+- **Unpublish is a verified deletion**, in this order
+  (`src/diffusion/targets/mediastore/media_copy_apply.ts`):
+  1. `media.mark false`. The gate answers 404 on the next request, so withdrawn consent
+     takes effect at the first command.
+  2. The files are deleted.
+  3. Their absence is confirmed against the manifest.
+
+  Until it is confirmed, the deletion is pending in
+  `<private>/publication_hosts_runtime.json` (`media_copy.pending_deletions[]`,
+  `last_verified_at`). One older than a reconcile period is `blocked` (red) in the panel
+  (`src/core/publication_host/media_copy_status.ts`). A failed delete never re-exposes the
+  record, because its marker is already gone, and it is never reported as done.
+- No DB table: the copy state is the agent's manifest plus the runtime file.
 - **Database pool cost** (built, phase 5): the cross-process `media:<host>` target lock
   is one main-pool transaction per unit, and a unit spans only agent CONTROL calls — a
   put's unit is the `pub/<key>` re-check plus at most two `media.mark` calls (60 s agent
@@ -401,12 +479,48 @@ on the same markers, and rule 0 keeps `.publication/` (markers, incoming files, 
 index) unserved. A copy host's request-body cap is the larger of `MAX_BUNDLE_BYTES` and the
 64 GiB media-file cap.
 
-## 7. Verification — the public-URL probe
+## 7. Verification — the public-URL probe (built, phase 6)
 
-A rule hash proves rules are INSTALLED, not that they GATE. The engine fetches through the
-publication host's **public URL** a known published file (must answer 200) and a known
-unpublished one (must answer 404), after every rule change and on a schedule. A failed
-probe is red in the panel. The two probe records are scratch records the engine owns.
+A rule hash proves rules are INSTALLED, not that they GATE. The engine fetches, through the
+publication host's **public URL**, a published file (must answer 200) and an unpublished
+one (must answer 404): `src/core/publication_host/probe.ts` (`validateProbePaths`,
+`probePublicGate`).
+
+- **The public URL is a bare origin** (`http(s)://host[:port]`, no path, query, fragment or
+  credentials). The probe requests `<origin>/dedalo/<mediaDir>/<path>`.
+- **The operator chooses the two files.** They are the registry's `probe.published` and
+  `probe.unpublished`: paths relative to `/dedalo/<mediaDir>/`, edited in the panel. There
+  are no scratch records. A production database holds no test records, and a probe file
+  the engine invented would prove the engine, not the site.
+- **Before every probe, the engine proves the two files mean what they claim:**
+  - the published path's key has `pub/<key>`;
+  - the unpublished path's key has none;
+  - both are regular files of the work media tree, in a public quality
+    (`filterPublicQualities`, never a master tier), not working files;
+  - both match `MEDIA_FILENAME_GRAMMAR`.
+
+  A failed validation is `unknown` with its reason, and no request is sent. So a
+  "published" file whose record was later unpublished makes the probe `unknown`, never
+  `ok`.
+- **Through the PUBLIC door** (`fetchGuardedText`, `engineering/OUTBOUND_SPEC.md` §2):
+  vetted and pinned, redirects refused, a one-byte `Range` request under a tiny byte cap. A
+  `public_url` that resolves to a non-public address is `unknown` (*not a public host … a
+  private address*), never a pass. The guard is not relaxed for the institution's own
+  site: a probe that reached an internal address would prove what an insider sees, not
+  what the public sees.
+- **Verdict:** `ok` only when the published file answers 2xx AND the unpublished one
+  answers 404. Any other pair of answers is `failed` (red), with both statuses recorded. A
+  transport failure is `unknown`, never `ok`.
+- **When it runs:** after every successful `apply_rules`, after every copy-mode
+  publish/unpublish batch, on demand (the root-only `probe_public` action), and on a
+  schedule (`PUBLICATION_PROBE_RECONCILE`, report-only: it records the observation and
+  changes nothing on the host). Results go to `<private>/publication_hosts_runtime.json`
+  as `probe = {state, at, published_status, unpublished_status, detail}`; a proof older
+  than two periods reads `warn` in the panel.
+- **Drill:** `bun run test:pubhost:probe` (`scripts/publication_host_probe_drill.ts`) drives
+  `probePublicGate` against a REAL Apache and a REAL nginx serving the §5.1 include. It
+  checks a gated host, an open gate, a stopped server, invalid probe files and a public
+  name that resolves to a private address.
 
 ## 8. Phases
 
@@ -415,10 +529,13 @@ probe is red in the panel. The two probe records are scratch records the engine 
 | 1 | `publication_host` rule profile (Apache + nginx), a CLI rendering it, the lockstep tripwire extended, a real-engine drill. Usable by hand before any agent exists. **Built:** `src/core/media/publication_host_rules.ts`, `bun run media:publication-host-rules`, `bun run test:media:pubhost`. | — |
 | 2 | The agent: pairing, `status`, `rules.apply`, `media.probe`, `release.install/rollback`. **Built:** `publication/host_agent/` (daemon + root-run provisioner: mTLS material, units, sudoers, polkit, engine bundle), `src/core/publication_host/pairing.ts` + its twin tripwire, `bun run hostagent:test`, `bun run test:pubhost:agent`. Operator page: `docs/install/publication_host.md`. | 1 |
 | 3 | Engine side: publication-host registry, the paired agent channel (the fourth outbound door), client, and the `publication_hosts` maintenance panel (`media_control` links to it; the media mode is declared on the host, §5). **Built:** `src/core/publication_host/` (registry, secrets, door, agent client, host status, expected rules), `scripts/publication_host_pair.ts`, `src/core/area_maintenance/widgets/publication_hosts.ts` + `client/dedalo/core/area_maintenance/widgets/publication_hosts/`, `test/unit/publication_host_door_tripwire.test.ts`, `engineering/wire_contract/WC-2026-10-03-publication-hosts-widget.md`. Operator page: `docs/install/publication_host.md` (*Pair it with the work system*, *The Publication hosts panel*). | 2 |
-| 4 | Updater pushes the API bundles after an engine update. | 2, 3 |
-| 5 | `copy` mode: the diffusion media-copy target + reconcile. | 2, 3 |
-| 6 | Public-URL probe, on change and scheduled. | 3 |
+| 4 | Updater pushes the API bundles after an engine update. **Built:** `src/core/update/publication_manifest.ts` (extract-time manifest), `src/core/publication_host/bundle_writer.ts`, `src/core/publication_host/api_bundles.ts`, `src/core/publication_host/api_reconcile.ts` (confirm hook, `push_apis`, scheduled dry run), `src/core/publication_host/runtime.ts`, `bun run test:pubhost:engine` (`[lockstep]` rows). §3 *Lockstep*. | 2, 3 |
+| 5 | `copy` mode: the media copy target + reconcile. **Built:** agent `media.put` / `media.delete` / `media.mark` / `media.manifest` (§6), `src/diffusion/targets/mediastore/media_copy.ts` (desired set, planner), `src/diffusion/targets/mediastore/media_copy_apply.ts`, `src/diffusion/targets/mediastore/media_copy_worker.ts`, `mediaCopyTargetLockKey` in `src/core/diffusion_bridge/target_lock.ts`, the `pub/` transition seam `src/diffusion/targets/mediastore/pub_transitions.ts`, `bun run test:pubhost:agent` (`[copy]` rows). §5.2. | 2, 3 |
+| 6 | Public-URL probe, on change and scheduled. **Built:** `src/core/publication_host/probe.ts`, `bun run test:pubhost:probe` (`scripts/publication_host_probe_drill.ts`). §7. | 3 |
 
-Decided per phase, in its own plan: host registry storage (decided in phase 3: a
-dedicated atomic registry file + per-host secret files, §2.1), transport (decided in
-phase 2: mTLS + bearer + pairing fingerprint, §2), probe record provisioning (phase 6).
+Decided per phase, in its own plan: host registry storage (phase 3:
+`<private>/publication_hosts.json` + per-host secret dirs, §2.1), transport (phase 2: mTLS +
+bearer + pairing fingerprint, §2), bundle source and triggers (phase 4: the installed tree
+under its extract-time manifest; the confirm hook, the panel, a dry-run schedule, §3), copy
+worker placement (phase 5: in-process, not a diffusion runner, §5.2), probe file
+provisioning (phase 6: operator-chosen, engine-validated, §7).
