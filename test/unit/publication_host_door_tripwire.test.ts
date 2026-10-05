@@ -647,6 +647,43 @@ describe('the operator is told how pairing and the panel really work', () => {
 		expect(target).toContain('include the map in `http{}`');
 	});
 
+	test('the panel rows name every strict-read refusal the code has (registry 0600+owner, secrets mode/owner, socket_perms)', async () => {
+		const registry = await docsGateRead('src/core/publication_host/registry.ts');
+		expect(registry).toContain('must be owned by the engine user');
+		expect(registry).toContain('if (mode !== 0o600)');
+		const secrets = await docsGateRead('src/core/publication_host/secrets.ts');
+		expect(secrets).toContain("'bad_mode' | 'bad_owner'");
+		const transport = await docsGateRead('src/core/publication_host/transport.ts');
+		expect(transport).toContain("reason: 'socket_perms'");
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const rows = page.split('\n').filter((l) => l.startsWith('| '));
+		const row = (start: string): string => rows.find((l) => l.startsWith(start)) ?? '';
+		const invalid = row('| the registry is invalid |');
+		for (const fact of ['`0600`', 'owned by the Dédalo user', 'chown <engine user>', 'chmod 600']) {
+			expect(invalid, fact).toContain(fact);
+		}
+		const credentials = row('| Credentials is blocked');
+		for (const fact of ['`bad_mode`', '`bad_owner`', '`0700`', '`0600`', 'no symlinks', 'chown']) {
+			expect(credentials, fact).toContain(fact);
+		}
+		const socket = rows.find((l) => l.includes('`socket_perms`')) ?? '';
+		for (const fact of ['unreachable', '`/tmp`', '`/run`']) expect(socket, fact).toContain(fact);
+	});
+
+	test('OUTBOUND §6 transport row counts the proxy canaries the suite really has', async () => {
+		const suite = await docsGateRead('test/unit/publication_host_transport_native.test.ts');
+		const canaries = suite.match(/test\('RESIDUAL CANARY:/g)?.length ?? 0;
+		expect(canaries).toBe(3);
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const row =
+			spec
+				.split('\n')
+				.find((l) => l.startsWith('| `test/unit/publication_host_transport_native.test.ts`')) ?? '';
+		expect(row).toContain("proxy residual's three canaries");
+		expect(row).toContain('`socket_perms`');
+		expect(spec).toContain('Three canaries in `publication_host_transport_native`');
+	});
+
 	test('the proxy residual names what Bun really proxies (HTTPS_PROXY; never HTTP_PROXY alone, never a socket)', async () => {
 		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
 		const transport = await docsGateRead('src/core/publication_host/transport.ts');

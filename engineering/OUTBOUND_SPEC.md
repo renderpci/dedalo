@@ -154,9 +154,10 @@ still proxied). `HTTP_PROXY` alone does not apply to the https target, and a
 unix-socket agent is never proxied. mTLS still ends at the agent, so a proxy sees the channel's
 address and ciphertext, never the bearer, but the channel is then not private
 and the agent's firewall sees the proxy's address. The operator lists every
-agent address in `NO_PROXY`. Two canaries in `publication_host_transport_native`
-turn red when Bun stops proxying this call through `HTTPS_PROXY` or starts
-proxying it through `HTTP_PROXY` alone, so the residual is re-read then.
+agent address in `NO_PROXY`. Three canaries in `publication_host_transport_native`
+turn red when Bun stops proxying this call through `HTTPS_PROXY`, starts
+proxying it through `HTTP_PROXY` alone, or starts proxying a unix-socket agent,
+so the residual is re-read then.
 
 ## 3. The harvesting door, hop by hop
 
@@ -275,7 +276,7 @@ registered as one in both gates.
 | `test/unit/harvest_door_native.test.ts` | The harvesting door's rules, driven — and, by OUTCOME, the two guard pieces a spelling census cannot pin: no wait leaves an abort listener behind (`untilAborted`), and a `Retry-After` only `Date.parse` would read asks no wait (`parseRetryAfterMs`). |
 | `test/unit/external_transport_native.test.ts` | The external door's order (`EXTERNAL_SPEC.md` §5) — and the same `Retry-After` outcome at that door. |
 | `test/unit/publication_host_door_tripwire.test.ts` | Only the agent channel loads an agent's TLS material (`readHostTls`, by binding) and spells the agent's base path; `rejectUnauthorized` only there and only `true`, no `checkServerIdentity`; the door's one call (AST): `target.url`, redirect `manual`, a signal, the shared reader; the door is registered in this file and both outbound tripwires. It also holds the docs to code: this file's door count equals the §2 table, §2.1 and this row exist once, §5 names the door module, every repo path a `PUBLICATION_HOST_SPEC.md` §8 "Built" row names exists, and the operator page's pair commands use the CLI's verbs, flags and invoking user. |
-| `test/unit/publication_host_transport_native.test.ts` | §2.1, driven against loopback agents with an in-test PKI: mTLS with the pinned CA and the registry host as identity, the unix socket, the closed route table, a 3xx refused unread, deadline, idle bound, byte ceiling, a streamed body, the bearer grammar shared with the secrets store, a refused stored bundle typed as unconfigured, `NODE_TLS_REJECT_UNAUTHORIZED=0` changing nothing, no secret in any failure, and the proxy residual's canary. |
+| `test/unit/publication_host_transport_native.test.ts` | §2.1, driven against loopback agents with an in-test PKI: mTLS with the pinned CA and the registry host as identity, the unix socket, the unix socket's filesystem check (`socket_perms`: a tight parent, a trusted owner, every ancestor on the path as written and on its realpath, a sticky `/tmp`-style squat refused), the closed route table, a 3xx refused unread, deadline, idle bound (a caller may only lower it: zero, fractional, above the 30 s ceiling or the request deadline refused before any socket), byte ceiling, a streamed body, the bearer grammar shared with the secrets store, a refused stored bundle typed as unconfigured, `NODE_TLS_REJECT_UNAUTHORIZED=0` changing nothing, no secret in any failure, and the proxy residual's three canaries (`HTTPS_PROXY` proxies a TCP agent, `HTTP_PROXY` alone does not, a unix-socket agent never is). |
 
 The four tripwires' and `guarded_text_pin_native`'s full rows are in
 `engineering/TRIPWIRES.md`; the other three `_native` gates are behavioural

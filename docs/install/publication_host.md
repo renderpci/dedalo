@@ -328,7 +328,7 @@ paired host. The **Media access control** panel links to it. For each host it sh
 | Check | What it tells you |
 | --- | --- |
 | Registry entry | the host's record in the work system is readable |
-| Credentials | the token and the engine bundle are present (their values are never shown) |
+| Credentials | the token and the engine bundle are present and private to the Dédalo user (their values are never shown) |
 | Reachable | the agent answered |
 | Pairing | the agent still publishes the expected fingerprint; when it does not, the work system stops before sending its token |
 | Agent version | which agent release runs there |
@@ -356,10 +356,12 @@ without the hosts' network addresses.
 
 | The panel says | Cause | Fix |
 | --- | --- | --- |
-| the registry is invalid | the `publication_hosts.json` file in the work system's private directory is unreadable or was edited by hand | restore it from a backup, or remove it and pair each host again; the panel never treats a broken file as "no hosts" |
+| the registry is invalid | the `publication_hosts.json` file in the work system's private directory is unreadable or was edited by hand, or it is not a regular file of mode `0600` owned by the Dédalo user (for example, a backup restored as root or with default permissions) | restore it from a backup, then `chown <engine user> publication_hosts.json` and `chmod 600 publication_hosts.json`; or remove it and pair each host again. The panel never treats a broken file as "no hosts" |
+| Credentials is blocked with `bad_mode` or `bad_owner` | the host's secrets are not private to the Dédalo user: the `publication_hosts/` directory and the host's directory under it must be real directories of mode `0700`, and `token` and `engine_bundle.pem` regular files of mode `0600`, all owned by the Dédalo user, with no symlinks. The pairing command refuses such a directory too (it never repairs it silently) | `chown -R <engine user>` the directory, then `chmod 700` the directories and `chmod 600` the files; or `replace` the host once the directories are fixed |
 | pairing mismatch | the publication host was re-provisioned (new token), or another host answers at that address | `replace` the host with its current fragment and bundle |
 | rejected credentials | the agent refused the token | `replace` the host |
 | unreachable, or did not answer in time | the agent is down, the firewall blocks the port, the address changed, or a proxy is in the way | check the agent's service, the firewall and `NO_PROXY`; nothing was applied |
+| unreachable, on one machine, with the reason `socket_perms` | the work system refuses the agent's socket before connecting: its directory is writable by group or others, the socket or a directory above it is owned by an account other than root, the Dédalo user or the directory's owner, or it sits under a shared sticky directory such as `/tmp` | keep the socket where the provisioner puts it: the agent's runtime directory under `/run`. Never move it to `/tmp` or loosen a directory's mode |
 | busy | another change is running on that host, or, on the work system, the pairing command or another panel action is editing the host list | try again when it finishes |
 | refused | the host refused the request, for example a failed configuration test | the message names the reason; the previous state is still active |
 
