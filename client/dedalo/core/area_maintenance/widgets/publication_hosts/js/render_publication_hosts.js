@@ -16,7 +16,8 @@ import { check_row, fact_row, section } from '../../update_code/js/render_update
  * Widget value (server: src/core/area_maintenance/widgets/publication_hosts.ts,
  * WC-2026-10-03-publication-hosts-widget):
  *   {
- *     registry         : { state: 'ok' | 'registry_invalid' | 'registry_locked', reason: string|null },
+ *     registry         : { state: 'ok' | 'registry_invalid', reason: string|null,
+ *                          check: {id:'registry', state:'blocked', detail}|null },
  *     registry_path    : string,
  *     engine_qualities : string[],
  *     is_root          : boolean,
@@ -30,9 +31,9 @@ import { check_row, fact_row, section } from '../../update_code/js/render_update
  * `publication_hosts` label prefix (`publication_hosts_check_<id>`). Every
  * server string is set as TEXT (SEC-XSS): addresses and URLs are operator data.
  *
- * A registry the server could not use (registry_invalid, registry_locked, or a
- * value with no registry block) is a LOUD state: no card, no control, the
- * reason shown. It is never shown as an empty list.
+ * A registry the server could not use (registry_invalid, or a value with no
+ * registry block) is a LOUD state: no card, no control, the reason shown — as
+ * the server's `registry.check` row (check_row) when it sends one. It is never shown as an empty list.
  * Controls render only for root (the server refuses everyone else anyway).
  * Agent commands are disabled while the pairing is not proved: the server never
  * sends the bearer then, so an enabled button could only fail.
@@ -80,7 +81,7 @@ const get_content_data = function (self) {
 		class_name: 'content_data publication_hosts_content',
 	});
 
-	// any state but 'ok' (registry_invalid, registry_locked, or no block) is loud;
+	// any state but 'ok' (registry_invalid, or no block) is loud;
 	// hosts is null then, and is never read
 	const registry = value.registry || {};
 	if (registry.state !== 'ok') {
@@ -97,7 +98,7 @@ const get_content_data = function (self) {
 			class_name: 'dd_note no_hosts',
 			text_content:
 				get_label.publication_hosts_none ||
-				'No publication host is paired. Pair one on this server with scripts/publication_host_pair.ts.',
+				'No publication host is paired. Pair one on this server with sudo -u <engine user> bun run dedalo:pair-publication-host.',
 			parent: content_data,
 		});
 	}
@@ -128,10 +129,12 @@ const get_content_data = function (self) {
 
 /**
  * RENDER_REGISTRY_INVALID
- * The loud state: the registry file is unreadable / invalid / locked (or the
- * value carries no registry block at all).
+ * The loud state: the registry file is unreadable / invalid (or the value
+ * carries no registry block at all). The server's `registry.check` row renders
+ * through the shared check_row (its detail is the reason); without one, the
+ * reason is a badge.
  * @param {HTMLElement} parent
- * @param {{state:string, reason:string|null}} registry
+ * @param {{state:string, reason:string|null, check:object|null}} registry
  * @returns {HTMLElement}
  */
 const render_registry_invalid = function (parent, registry) {
@@ -147,7 +150,15 @@ const render_registry_invalid = function (parent, registry) {
 			'The publication host registry is invalid. Nothing is shown or applied until it is repaired.',
 		parent: note,
 	});
-	if (registry.reason) {
+	const check = registry.check;
+	if (check && typeof check === 'object' && typeof check.id === 'string') {
+		const facts = ui.create_dom_element({
+			element_type: 'div',
+			class_name: 'registry_check',
+			parent: note,
+		});
+		check_row(facts, check, 'publication_hosts');
+	} else if (registry.reason) {
 		ui.create_dom_element({
 			element_type: 'span',
 			class_name: 'dd_badge mono',

@@ -15,11 +15,15 @@
   served right after `site_builder_status` on every install (no eager `value`; the
   panel loads through `get_widget_value`).
   - **panel** (`get_widget_value`, global-admin readable):
-    `{ registry: { state: 'ok' | 'registry_invalid' | 'registry_locked', reason, check },
+    `{ registry: { state: 'ok' | 'registry_invalid', reason, check },
     registry_path, engine_qualities, is_root, hosts }`. `registry.check` is `null` when
     the state is `'ok'`, else Task 6's `registryInvalidCheck(reason)` —
     `{ id: 'registry', state: 'blocked', detail: reason }`, a row the panel renders
-    with the host check renderer (amended 2026-10-04, Task 7 review). `hosts` is one row per
+    with the host check renderer (amended 2026-10-04, Task 7 review; the client
+    renders it through `check_row(…, 'publication_hosts')` inside the loud note since
+    2026-10-05). The panel read takes no registry lock, so `registry_locked` is not a
+    panel state (dropped 2026-10-05, review finding): were a read ever to meet a held
+    lock, get_value fails with `publication_host.busy`, never a "repair" instruction. `hosts` is one row per
     registered host, built by `src/core/publication_host/host_status.ts`
     (`buildHostPanelRow`, served unchanged): `{ name, address_label, public_url,
     checks: [{id, state, detail?}], rules: { expected, reported },

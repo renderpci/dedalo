@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "Учётные данные",
 	"publication_hosts_edit": "Изменить настройки",
 	"publication_hosts_lead": "Отдельные машины публикации: сопряжение, правила медиа и версии API. Серверы сопрягаются из командной строки.",
-	"publication_hosts_none": "Нет сопряжённых серверов публикации. Сопрягите сервер на этой машине с помощью scripts/publication_host_pair.ts.",
+	"publication_hosts_none": "Нет сопряжённых серверов публикации. Сопрягите сервер на этой машине с помощью sudo -u <engine user> bun run dedalo:pair-publication-host.",
 	"publication_hosts_open": "Открыть панель серверов публикации",
 	"publication_hosts_probe": "Проверить медиа",
 	"publication_hosts_probe_published": "Тестовый файл (опубликован)",

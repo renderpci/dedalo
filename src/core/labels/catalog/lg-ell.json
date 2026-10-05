@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "Διαπιστευτήρια",
 	"publication_hosts_edit": "Επεξεργασία ρυθμίσεων",
 	"publication_hosts_lead": "Ξεχωριστά μηχανήματα δημοσίευσης: σύζευξη, κανόνες πολυμέσων και εκδόσεις API. Οι διακομιστές συζευγνύονται από τη γραμμή εντολών.",
-	"publication_hosts_none": "Δεν υπάρχει συζευγμένος διακομιστής δημοσίευσης. Συζεύξτε έναν σε αυτόν τον διακομιστή με το scripts/publication_host_pair.ts.",
+	"publication_hosts_none": "Δεν υπάρχει συζευγμένος διακομιστής δημοσίευσης. Συζεύξτε έναν σε αυτόν τον διακομιστή με το sudo -u <engine user> bun run dedalo:pair-publication-host.",
 	"publication_hosts_open": "Άνοιγμα του πίνακα διακομιστών δημοσίευσης",
 	"publication_hosts_probe": "Έλεγχος πολυμέσων",
 	"publication_hosts_probe_published": "Αρχείο ελέγχου (δημοσιευμένο)",

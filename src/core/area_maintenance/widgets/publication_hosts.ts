@@ -193,7 +193,7 @@ function apiName(options: Record<string, unknown>): ApiName {
 
 function refuseUnknownHost(name: string): never {
 	refuseAction(
-		`Error. No publication host named '${name}' is registered. Hosts are added on the work host with scripts/publication_host_pair.ts.`,
+		`Error. No publication host named '${name}' is registered. Hosts are added on the work host with sudo -u <engine user> bun run dedalo:pair-publication-host (run as the user that runs Dédalo, never root).`,
 		{ host: name },
 	);
 }
@@ -250,15 +250,12 @@ function readRegistry(deps: PublicationHostsDeps): RegistryRead {
 		return { ok: true, file: deps.loadRegistry() };
 	} catch (error) {
 		if (!(error instanceof RegistryError)) throw error;
+		// loadRegistry takes no lock, so a read never meets a held one; were it to, the file
+		// is busy, not broken: the action family's `publication_host.busy`, never a "repair".
+		if (error.reason === 'locked') throw registryFailure(error);
 		console.error(`[publication_hosts] registry unusable: ${error.reason}`, error);
 		return { ok: false, reason: error.reason };
 	}
-}
-
-export function registryState(
-	reason: RegistryError['reason'],
-): 'registry_invalid' | 'registry_locked' {
-	return reason === 'locked' ? 'registry_locked' : 'registry_invalid';
 }
 
 export function addressLabel(address: PublicationHostRecord['address']): string {
@@ -353,7 +350,7 @@ export async function publicationHostsValue(
 			data: {
 				...common,
 				registry: {
-					state: registryState(read.reason),
+					state: 'registry_invalid',
 					reason: read.reason,
 					check: registryInvalidCheck(read.reason),
 				},

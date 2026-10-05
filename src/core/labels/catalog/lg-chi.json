@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "凭据",
 	"publication_hosts_edit": "编辑设置",
 	"publication_hosts_lead": "独立的发布服务器：配对、媒体规则和 API 版本。主机通过命令行配对。",
-	"publication_hosts_none": "尚未配对任何发布主机。请在本服务器上使用 scripts/publication_host_pair.ts 配对。",
+	"publication_hosts_none": "尚未配对任何发布主机。请在本服务器上使用 sudo -u <engine user> bun run dedalo:pair-publication-host 配对。",
 	"publication_hosts_open": "打开发布主机面板",
 	"publication_hosts_probe": "检测媒体",
 	"publication_hosts_probe_published": "探测文件（已发布）",

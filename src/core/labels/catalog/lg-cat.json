@@ -387,7 +387,7 @@
 	"publication_hosts_check_secrets": "Credencials",
 	"publication_hosts_edit": "Edita la configuració",
 	"publication_hosts_lead": "Màquines de publicació separades: aparellament, regles de mitjans i versions de les API. Els servidors s'aparellen des de la línia d'ordres.",
-	"publication_hosts_none": "No hi ha cap servidor de publicació aparellat. Aparelleu-ne un en aquest servidor amb scripts/publication_host_pair.ts.",
+	"publication_hosts_none": "No hi ha cap servidor de publicació aparellat. Aparelleu-ne un en aquest servidor amb sudo -u <engine user> bun run dedalo:pair-publication-host.",
 	"publication_hosts_open": "Obre el tauler de servidors de publicació",
 	"publication_hosts_probe": "Comprova els mitjans",
 	"publication_hosts_probe_published": "Fitxer de prova (publicat)",

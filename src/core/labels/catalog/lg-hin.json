@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "क्रेडेंशियल",
 	"publication_hosts_edit": "सेटिंग्स संपादित करें",
 	"publication_hosts_lead": "अलग प्रकाशन मशीनें: पेयरिंग, मीडिया नियम और API रिलीज़। होस्ट कमांड लाइन से पेयर किए जाते हैं।",
-	"publication_hosts_none": "कोई प्रकाशन होस्ट पेयर नहीं है। इस सर्वर पर scripts/publication_host_pair.ts से एक पेयर करें।",
+	"publication_hosts_none": "कोई प्रकाशन होस्ट पेयर नहीं है। इस सर्वर पर sudo -u <engine user> bun run dedalo:pair-publication-host से एक पेयर करें।",
 	"publication_hosts_open": "प्रकाशन होस्ट पैनल खोलें",
 	"publication_hosts_probe": "मीडिया जाँचें",
 	"publication_hosts_probe_published": "जाँच फ़ाइल (प्रकाशित)",

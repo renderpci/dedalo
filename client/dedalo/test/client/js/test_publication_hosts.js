@@ -8,9 +8,10 @@
  * media_control's one line pointing at it.
  *
  * What it pins:
- *  - a registry the server could not use (registry_invalid, registry_locked, or
- *    no registry block at all; hosts: null) is a LOUD state (reason shown, no
- *    card, no control), never an empty list;
+ *  - a registry the server could not use (registry_invalid, or no registry
+ *    block at all; hosts: null) is a LOUD state (reason shown — the server's
+ *    registry.check row through check_row when sent — no card, no control),
+ *    never an empty list;
  *  - every server string renders as TEXT (addresses and URLs are operator data);
  *  - check rows are labelled through check_row's `publication_hosts` prefix,
  *    and check_row's default prefix is unchanged for update_code / serve_code;
@@ -144,18 +145,29 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			assert.strictEqual(content.querySelectorAll('button').length, 0, 'no control');
 		});
 
-		it('a locked registry is the same loud state, naming the lock', async function () {
-			const self = build_widget(panel_value({ state: 'registry_locked', reason: 'locked' }, null));
+		it('the server registry.check row renders through check_row (publication_hosts prefix)', async function () {
+			const self = build_widget(
+				panel_value(
+					{
+						state: 'registry_invalid',
+						reason: 'invalid_json',
+						check: { id: 'registry', state: 'blocked', detail: 'invalid_json' },
+					},
+					null,
+				),
+			);
 			const content = await mount(self);
 
 			const note = content.querySelector('.registry_invalid');
-			assert.ok(note, 'registry_locked renders the loud note (state !== ok)');
-			assert.include(note.textContent, 'locked', 'the reason is shown');
+			assert.ok(note, 'the invalid-registry note renders');
+			const row = note.querySelector('.registry_check .check_row.state_blocked');
+			assert.ok(row, 'the registry check renders as a blocked check row');
 			assert.strictEqual(
-				content.querySelector('.no_hosts'),
-				null,
-				'never the "no host paired" note',
+				row.querySelector('.dd_k').textContent,
+				labels().publication_hosts_check_registry || 'registry',
+				'labelled through the publication_hosts prefix',
 			);
+			assert.include(row.textContent, 'invalid_json', 'its detail (the reason) is shown');
 			assert.strictEqual(content.querySelectorAll('button').length, 0, 'no control');
 		});
 
@@ -177,7 +189,8 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 
 			const note = content.querySelector('.no_hosts');
 			assert.ok(note, 'the no-host note renders');
-			assert.include(note.textContent, 'publication_host_pair', 'it names the pairing CLI');
+			assert.include(note.textContent, 'dedalo:pair-publication-host', 'it names the documented pair command');
+			assert.include(note.textContent, 'sudo -u', 'run as the engine user, never root');
 			assert.strictEqual(content.querySelectorAll('.publication_host').length, 0);
 		});
 

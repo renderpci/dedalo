@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "শংসাপত্র",
 	"publication_hosts_edit": "সেটিংস সম্পাদনা করুন",
 	"publication_hosts_lead": "পৃথক প্রকাশনা মেশিন: পেয়ারিং, মিডিয়া নিয়ম এবং API রিলিজ। হোস্টগুলি কমান্ড লাইন থেকে পেয়ার করা হয়।",
-	"publication_hosts_none": "কোনো প্রকাশনা হোস্ট পেয়ার করা নেই। এই সার্ভারে scripts/publication_host_pair.ts দিয়ে একটি পেয়ার করুন।",
+	"publication_hosts_none": "কোনো প্রকাশনা হোস্ট পেয়ার করা নেই। এই সার্ভারে sudo -u <engine user> bun run dedalo:pair-publication-host দিয়ে একটি পেয়ার করুন।",
 	"publication_hosts_open": "প্রকাশনা হোস্ট প্যানেল খুলুন",
 	"publication_hosts_probe": "মিডিয়া যাচাই করুন",
 	"publication_hosts_probe_published": "যাচাই ফাইল (প্রকাশিত)",

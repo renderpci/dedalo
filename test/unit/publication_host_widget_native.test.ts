@@ -34,7 +34,6 @@ import {
 	createPublicationHostsWidget,
 	normalizePublicUrl,
 	type PublicationHostsDeps,
-	registryState,
 	releaseIdOrMalformed,
 	widget,
 } from '../../src/core/area_maintenance/widgets/publication_hosts.ts';
@@ -505,16 +504,32 @@ describe('get_value (panel)', () => {
 		expect(h.calls.some((c) => c.startsWith('hostStatus'))).toBe(false);
 	});
 
-	test('registry states: locked is its own state; every other reason is invalid', () => {
-		expect(registryState('locked')).toBe('registry_locked');
+	test('every registry fault on the panel read is registry_invalid; a held lock is busy, never "repair"', async () => {
 		for (const reason of [
 			'unreadable',
 			'invalid_json',
 			'invalid_shape',
 			'duplicate_name',
 		] as const) {
-			expect(registryState(reason), reason).toBe('registry_invalid');
+			const h = harness([], {
+				loadRegistry: () => {
+					throw new RegistryError(reason, 'x');
+				},
+			});
+			expect(((await panel(h)).registry as { state: string }).state, reason).toBe(
+				'registry_invalid',
+			);
 		}
+		// loadRegistry takes no lock (only writes do), so this cannot happen in production;
+		// if it ever did, the panel must not tell root to repair a file that is only busy.
+		const locked = harness([], {
+			loadRegistry: () => {
+				throw new RegistryError('locked', 'held');
+			},
+		});
+		expect(await codeOf(locked.module.getValue?.({}, ROOT) as Promise<unknown>)).toBe(
+			'publication_host.busy',
+		);
 	});
 
 	test('an unexpected (untyped) registry failure is not swallowed', async () => {

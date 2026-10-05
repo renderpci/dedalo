@@ -602,7 +602,7 @@
 	"publication_hosts_check_secrets": "Credentials",
 	"publication_hosts_edit": "Edit settings",
 	"publication_hosts_lead": "Separate publication machines: pairing, media rules and API releases. Hosts are paired on the command line.",
-	"publication_hosts_none": "No publication host is paired. Pair one on this server with scripts/publication_host_pair.ts.",
+	"publication_hosts_none": "No publication host is paired. Pair one on this server with sudo -u <engine user> bun run dedalo:pair-publication-host.",
 	"publication_hosts_open": "Open the publication hosts panel",
 	"publication_hosts_probe": "Probe media",
 	"publication_hosts_probe_published": "Probe file (published)",

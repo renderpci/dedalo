@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "اسناد",
 	"publication_hosts_edit": "ترتیبات میں ترمیم کریں",
 	"publication_hosts_lead": "الگ اشاعتی مشینیں: جوڑی بندی، میڈیا قواعد اور API ریلیز۔ ہوسٹ کمانڈ لائن سے جوڑے جاتے ہیں۔",
-	"publication_hosts_none": "کوئی اشاعتی ہوسٹ جوڑا نہیں گیا۔ اس سرور پر scripts/publication_host_pair.ts کے ذریعے ایک جوڑیں۔",
+	"publication_hosts_none": "کوئی اشاعتی ہوسٹ جوڑا نہیں گیا۔ اس سرور پر sudo -u <engine user> bun run dedalo:pair-publication-host کے ذریعے ایک جوڑیں۔",
 	"publication_hosts_open": "اشاعتی ہوسٹ پینل کھولیں",
 	"publication_hosts_probe": "میڈیا جانچیں",
 	"publication_hosts_probe_published": "جانچ فائل (شائع شدہ)",

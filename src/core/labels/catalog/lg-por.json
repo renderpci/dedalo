@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "Credenciais",
 	"publication_hosts_edit": "Editar definições",
 	"publication_hosts_lead": "Máquinas de publicação separadas: emparelhamento, regras de média e versões das API. Os servidores são emparelhados na linha de comandos.",
-	"publication_hosts_none": "Nenhum servidor de publicação está emparelhado. Emparelhe um neste servidor com scripts/publication_host_pair.ts.",
+	"publication_hosts_none": "Nenhum servidor de publicação está emparelhado. Emparelhe um neste servidor com sudo -u <engine user> bun run dedalo:pair-publication-host.",
 	"publication_hosts_open": "Abrir o painel de servidores de publicação",
 	"publication_hosts_probe": "Verificar média",
 	"publication_hosts_probe_published": "Ficheiro de teste (publicado)",

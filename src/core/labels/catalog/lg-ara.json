@@ -378,7 +378,7 @@
 	"publication_hosts_check_secrets": "بيانات الاعتماد",
 	"publication_hosts_edit": "تعديل الإعدادات",
 	"publication_hosts_lead": "أجهزة نشر منفصلة: الاقتران وقواعد الوسائط وإصدارات واجهات API. تُقرن المضيفات من سطر الأوامر.",
-	"publication_hosts_none": "لا يوجد مضيف نشر مقترن. اقرن واحدًا على هذا الخادم باستخدام scripts/publication_host_pair.ts.",
+	"publication_hosts_none": "لا يوجد مضيف نشر مقترن. اقرن واحدًا على هذا الخادم باستخدام sudo -u <engine user> bun run dedalo:pair-publication-host.",
 	"publication_hosts_open": "فتح لوحة مضيفات النشر",
 	"publication_hosts_probe": "فحص الوسائط",
 	"publication_hosts_probe_published": "ملف الفحص (منشور)",

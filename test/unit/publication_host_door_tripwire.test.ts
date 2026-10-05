@@ -38,7 +38,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
 import { parse } from '@babel/parser';
@@ -529,6 +529,41 @@ describe('the operator is told how pairing and the panel really work', () => {
 		expect(asRoot.test(docsGateSection(page, 'Pair it with the work system'))).toBe(false);
 		expect(asRoot.test(await docsGateRead('docs/change_log.md'))).toBe(false);
 		expect(await docsGateRead('publication/host_agent/README.md')).not.toContain('root-run');
+	});
+
+	test('in-product text points at the documented pair command, as the engine user', async () => {
+		const documented = 'sudo -u <engine user> bun run dedalo:pair-publication-host';
+		const catalogs = readdirSync(`${DOCS_GATE_ROOT}/src/core/labels/catalog`).map(
+			(name) => `src/core/labels/catalog/${name}`,
+		);
+		const sources = [
+			'src/core/labels/master.json',
+			...catalogs,
+			'client/dedalo/core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js',
+		];
+		let pointers = 0;
+		for (const rel of sources) {
+			const text = await docsGateRead(rel);
+			// the raw script path is not what an operator runs (and run as root it is refused)
+			expect(text.includes('scripts/publication_host_pair.ts'), rel).toBe(false);
+			if (text.includes(documented)) pointers += 1;
+		}
+		// master + the client fallback + every translated catalog (anti-vacuity)
+		expect(pointers).toBeGreaterThanOrEqual(19);
+		const widget = await docsGateRead('src/core/area_maintenance/widgets/publication_hosts.ts');
+		const refusal = /function refuseUnknownHost[\s\S]*?\n}/.exec(widget)?.[0] ?? '';
+		expect(refusal).toContain(documented);
+		expect(refusal).not.toContain('scripts/publication_host_pair.ts');
+	});
+
+	test('busy names BOTH causes: the agent, and the work host registry lock (wire.ts registryError)', async () => {
+		const wire = await docsGateRead('src/core/publication_host/wire.ts');
+		expect(wire).toContain("reason === 'locked' ? 'publication_host.busy'");
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const row = page.split('\n').find((l) => l.startsWith('| busy |')) ?? '';
+		expect(row).toContain('on the work system');
+		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
+		expect(spec).toMatch(/`busy` \(an agent 409, OR the work host's own registry lock/);
 	});
 
 	test('no reader is still told the panel comes later', async () => {
