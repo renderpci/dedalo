@@ -1483,11 +1483,11 @@ else {
 	 * One agent file's import edges: `next` (relative targets inside the agent package, to
 	 * follow) and `escapes` (a relative target outside it, a bare package that is neither a
 	 * node:/bun builtin nor an agent dependency, or a require(/import( whose specifier is not
-	 * a literal). Bun's scan erases type-only imports (they execute nothing) but misses
+	 * a literal). Bun's scanImports (never `.scan(`: the census reads that spelling as a Glob walk) erases type-only imports (they execute nothing) but misses
 	 * require(, so that is read from the comment-stripped code.
 	 */
 	function agentImportEdges(rel: string, text: string): { next: string[]; escapes: string[] } {
-		const specifiers = AGENT_SCANNER.scan(text).imports.map((entry) => entry.path);
+		const specifiers = AGENT_SCANNER.scanImports(text).map((entry) => entry.path);
 		const escapes: string[] = [];
 		const code = stripComments(text);
 		for (const match of code.matchAll(/(?<![\w$.])(require|import)\s*\(\s*([^)]*)\)/g)) {
