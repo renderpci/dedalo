@@ -121,7 +121,8 @@ const TRANSIENT_CODES: ReadonlySet<string> = new Set([
 export type MediaCopyRuntime = HostRuntime['media_copy'];
 
 /** What an apply needs from a plan (media_copy.ts CopyPlan carries more). */
-export type ApplyPlan = Pick<CopyPlan, 'put' | 'del' | 'mark'> & Partial<Pick<CopyPlan, 'linked'>>;
+export type ApplyPlan = Pick<CopyPlan, 'put' | 'del' | 'mark'> &
+	Partial<Pick<CopyPlan, 'linked' | 'desired'>>;
 
 export interface LocalFile {
 	size: number;
@@ -186,6 +187,20 @@ interface Round {
 	takeWithdrawn: () => readonly string[];
 	/** A deletion was recorded after the round's verify (pre-empt, compensation): verify again. */
 	reverify: boolean;
+	progress: RoundProgress;
+}
+
+/**
+ * HELD BYTES STAY COUNTED. `present` (the last manifest count) is what lets a host withdrawn
+ * from copy mode go silent `n/a` (media_copy_status.ts nonCopyRuntime). A file that landed
+ * (or may have: a timed-out put) after the round's opening verify is not in it, so a round
+ * that landed any re-reads the manifest at its close; a round stopped before that close
+ * adds its `landed` count to `present` in settle (an upper bound, corrected by the next
+ * verify) — never a stale 0 while the agent serves the bytes.
+ */
+interface RoundProgress {
+	landed: number;
+	closed: boolean;
 }
 
 export interface ApplyOptions {
@@ -496,6 +511,7 @@ async function sendFile(round: Round, file: DesiredFile, prepared: PreparedFile)
 		MEDIA_COPY_ACTOR,
 	);
 	round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
+	round.progress.landed++;
 	await dropPending(round.deps, round.host, new Set([file.path]), decidedAt);
 }
 
@@ -530,6 +546,7 @@ async function sendOrDefer(
 		if (!(error instanceof DedaloError) || error.code !== 'publication_host.timeout') throw error;
 		console.error(`[media_copy] ${round.host}: put ${file.path} timed out (deferred):`, error);
 		round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
+		round.progress.landed++;
 		return 'timed_out';
 	}
 }
@@ -636,6 +653,7 @@ async function runRound(
 	report: CopyApplyReport,
 	takeWithdrawn: () => readonly string[],
 	withdrawOnly: boolean,
+	progress: RoundProgress,
 ): Promise<void> {
 	await withdraw(deps, host, withdrawn, plan.del, report);
 	const deleting: ReadonlySet<string> | null = withdrawOnly ? null : new Set(plan.del);
@@ -648,6 +666,7 @@ async function runRound(
 		landed: new Map(),
 		takeWithdrawn,
 		reverify: false,
+		progress,
 	};
 	await preempt(round);
 	await grantMarks(
@@ -658,7 +677,8 @@ async function runRound(
 		await preempt(round);
 		await putOne(round, file);
 	}
-	if (round.reverify) await verifyDeletions(deps, host, deleting);
+	if (round.reverify || progress.landed > 0) await verifyDeletions(deps, host, deleting);
+	progress.closed = true;
 }
 
 function noteFailure(report: CopyApplyReport, error: unknown): void {
@@ -682,6 +702,13 @@ function finalState(
 	return { state: 'ok', error: null };
 }
 
+interface SettleFacts {
+	/** Files that landed after the last manifest count (RoundProgress): added to `present`. */
+	landedUnverified?: number;
+	/** The plan's desired-file count (CopyPlan.desired); absent = kept. */
+	desired?: number;
+}
+
 async function settle(
 	deps: Pick<CopyDeps, 'updateRuntime'>,
 	host: string,
@@ -689,6 +716,7 @@ async function settle(
 	pendingPuts: number | null,
 	withdrawOnly = false,
 	linked = 0,
+	facts: SettleFacts = {},
 ): Promise<void> {
 	let outcome: RoundOutcome = finalState(report, 0);
 	const settled = await deps.updateRuntime(host, (cur) => {
@@ -698,6 +726,8 @@ async function settle(
 			state: outcome.state,
 			error: outcome.error,
 			pending_puts: pendingPuts ?? cur.pending_puts,
+			present: cur.present + (facts.landedUnverified ?? 0),
+			desired: facts.desired ?? cur.desired,
 		};
 	});
 	report.state = outcome.state;
@@ -717,6 +747,7 @@ export async function applyCopyWith(
 	const report = newReport(host);
 	const withdrawn = plan.mark.filter((mark) => !mark.published).map((mark) => mark.key);
 	await recordPending(deps, host, [...withdrawn.map(agentMarkerPath), ...plan.del]);
+	const progress: RoundProgress = { landed: 0, closed: false };
 	try {
 		await runRound(
 			deps,
@@ -726,16 +757,21 @@ export async function applyCopyWith(
 			report,
 			options.takeWithdrawn ?? NOTHING_WITHDRAWN,
 			options.withdrawOnly === true,
+			progress,
 		);
 	} catch (error) {
 		noteFailure(report, error);
 	}
+	const landedUnverified = progress.closed ? 0 : progress.landed;
 	if (options.withdrawOnly === true) {
-		await settle(deps, host, report, null, true);
+		await settle(deps, host, report, null, true, 0, { landedUnverified });
 		return report;
 	}
 	const unsent = plan.put.length - report.put - report.skipped_unpublished - report.compensated;
-	await settle(deps, host, report, Math.max(0, unsent), false, plan.linked?.length ?? 0);
+	await settle(deps, host, report, Math.max(0, unsent), false, plan.linked?.length ?? 0, {
+		landedUnverified,
+		desired: plan.desired,
+	});
 	return report;
 }
 

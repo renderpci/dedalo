@@ -274,6 +274,24 @@ describe('media_copy run', () => {
 		expect(host.events).toEqual([]);
 	}, 60_000);
 
+	test('a REAL put round, then re-declared shared: the landed bytes are counted, never a silent n/a', async () => {
+		plantPublished();
+		const host = await agent('zzmc_landed', 'copy');
+		const first = await runMediaCopyReconcile({ apply: true, scope: ['zzmc_landed'] });
+		expect(hostsOf(first.detail).zzmc_landed?.state).toBe('ok');
+		const after = (await loadRuntime()).zzmc_landed?.media_copy;
+		// facts from the round itself: the closing manifest count + the plan's desired set
+		expect(after?.present).toBe(host.entries.size);
+		expect(after?.present ?? 0).toBeGreaterThanOrEqual(1);
+		expect(after?.desired ?? 0).toBeGreaterThanOrEqual(1);
+		host.setMode('shared');
+		await runMediaCopyReconcile({ apply: true, scope: ['zzmc_landed'] });
+		const runtime = (await loadRuntime()).zzmc_landed?.media_copy;
+		expect(runtime?.state).toBe('failed');
+		expect(runtime?.error).toBe(COPY_MODE_WITHDRAWN);
+		expect(mediaCopyCheck(runtime, Date.now())?.state).toBe('blocked');
+	}, 60_000);
+
 	test('an unknown scoped host is a typed resource.not_found (never an empty success)', async () => {
 		await expect(
 			runMediaCopyReconcile({ apply: false, scope: ['zzmc_nope'] }),

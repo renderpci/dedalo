@@ -538,6 +538,9 @@ describe('a grant supersedes a pending withdrawal (republished before the deleti
 	});
 });
 
+// The round's CLOSING manifest read (a round that landed re-measures `present`) also
+// verifies; each gate below captures the pending set AT that read, so the drop it pins is
+// the grant's / the landing put's own, never the closing verify's.
 describe('a grant or a landed put drops its own pending entry (no reverify needed)', () => {
 	test('recorded after the round verified: only the grant (mark true) and the landing put can clear it', async () => {
 		const world = newWorld();
@@ -546,11 +549,16 @@ describe('a grant or a landed put drops its own pending entry (no reverify neede
 		const d = worldDeps(world);
 		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
 		let manifests = 0;
+		let pendingAtClose: string[] | null = null;
 		const report = await applyCopyWith(
 			{
 				...d,
 				manifest: async (host) => {
 					manifests += 1;
+					if (manifests === 2)
+						pendingAtClose = (world.runtime.get('pub1')?.pending_deletions ?? []).map(
+							(p) => p.path,
+						);
 					return d.manifest(host);
 				},
 				// After the verify, before the grant: an older withdrawal surfaces in the file.
@@ -568,7 +576,8 @@ describe('a grant or a landed put drops its own pending entry (no reverify neede
 			'pub1',
 			plan,
 		);
-		expect(manifests).toBe(1);
+		expect(manifests).toBe(2);
+		expect(pendingAtClose as string[] | null).toEqual([]);
 		expect(world.calls).toEqual(['mark test3_1 true', `put ${P1}`]);
 		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([]);
 		expect(report).toMatchObject({ state: 'ok', put: 1, pending_deletions: 0 });
@@ -587,8 +596,24 @@ describe('a grant or a landed put drops its own pending entry (no reverify neede
 				pending_deletions: [{ path: P1, since: new Date(T0 + 1).toISOString() }],
 			}));
 		};
-		await applyCopyWith(d, 'pub1', { put: [desired(world, P1)], del: [], mark: [] });
-		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([P1]);
+		let manifests = 0;
+		let pendingAtClose: string[] | null = null;
+		await applyCopyWith(
+			{
+				...d,
+				manifest: async (host) => {
+					manifests += 1;
+					if (manifests === 2)
+						pendingAtClose = (world.runtime.get('pub1')?.pending_deletions ?? []).map(
+							(p) => p.path,
+						);
+					return d.manifest(host);
+				},
+			},
+			'pub1',
+			{ put: [desired(world, P1)], del: [], mark: [] },
+		);
+		expect(pendingAtClose as string[] | null).toEqual([P1]);
 	});
 
 	test('re-withdrawn after the supersede decision: the refreshed entry is kept (never lost to an older since)', async () => {
@@ -850,6 +875,63 @@ describe('the real publication-target lock', () => {
 		const report = await applyCopyWith(d, 'pubtest', planFrom(world));
 		expect(report).toMatchObject({ state: 'ok', put: 1 });
 		expect(during).toEqual([{ inTransaction: false, otherSessionGotLock: true }]);
+	});
+});
+
+describe('held bytes stay counted (a copy host withdrawn after a put round is never a silent n/a)', () => {
+	const at = () => new Date(T0).toISOString();
+
+	test('a round that landed files re-reads the manifest at its close: present + desired are facts', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 });
+		world.published.add(K1);
+		world.published.add(K2);
+		const plan: ApplyPlan = { ...planFrom(world), desired: 2 };
+		const report = await applyCopyWith(worldDeps(world), 'pub1', plan);
+		expect(report).toMatchObject({ state: 'ok', put: 2 });
+		const runtime = world.runtime.get('pub1');
+		expect(runtime).toMatchObject({ state: 'ok', present: 2, desired: 2, pending_deletions: [] });
+		// the mode switch right after: debt kept, never n/a
+		const withdrawn = nonCopyRuntime(runtime as MediaCopyRuntime, at());
+		expect(withdrawn).toMatchObject({ state: 'failed', error: COPY_MODE_WITHDRAWN });
+	});
+
+	test('a round stopped after a put landed counts it into present (upper bound until the next verify)', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 });
+		world.published.add(K1);
+		world.published.add(K2);
+		world.duringPut = async () => {
+			world.down = true;
+		};
+		const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(report).toMatchObject({
+			state: 'pending',
+			error: 'publication_host.unreachable',
+			put: 1,
+		});
+		const runtime = world.runtime.get('pub1') as MediaCopyRuntime;
+		expect(runtime.present).toBe(1);
+		expect(nonCopyRuntime(runtime, at())).toMatchObject({
+			state: 'failed',
+			error: COPY_MODE_WITHDRAWN,
+		});
+		// the next reachable round re-measures from the manifest
+		world.down = false;
+		world.duringPut = null;
+		await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'ok', present: 2 });
+	});
+
+	test('a round with nothing landed keeps the opening count (no extra manifest read)', async () => {
+		const world = newWorld();
+		const report = await applyCopyWith(worldDeps(world), 'pub1', EMPTY);
+		expect(report).toMatchObject({ state: 'ok', put: 0 });
+		const runtime = world.runtime.get('pub1') as MediaCopyRuntime;
+		expect(runtime.present).toBe(0);
+		expect(nonCopyRuntime(runtime, at())).toMatchObject({ state: 'n/a' });
 	});
 });
 
