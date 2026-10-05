@@ -27,6 +27,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
 	addressLabel,
 	createPublicationHostsWidget,
@@ -292,11 +294,21 @@ describe('registration', () => {
 		const { dispatchWidgetRequest } = await import(
 			'../../src/core/area_maintenance/widgets/registry.ts'
 		);
-		for (const action of ACTIONS) {
-			const code = await codeOf(
-				dispatchWidgetRequest(ADMIN, { model: 'publication_hosts', action }, { name: 'pub_a' }),
-			);
-			expect(code, action).toBe('perm.denied');
+		// The production widget wires the REAL registry/secrets: armed on a scratch base, a
+		// broken root guard fails here and never reaches the live <private>.
+		const scratch = useScratchPublicationHostsBase();
+		try {
+			saveRegistry({ version: 1, hosts: [record('pub_a')] });
+			const before = readFileSync(join(scratch.base, 'publication_hosts.json'), 'utf8');
+			for (const action of ACTIONS) {
+				const code = await codeOf(
+					dispatchWidgetRequest(ADMIN, { model: 'publication_hosts', action }, { name: 'pub_a' }),
+				);
+				expect(code, action).toBe('perm.denied');
+			}
+			expect(readFileSync(join(scratch.base, 'publication_hosts.json'), 'utf8')).toBe(before);
+		} finally {
+			scratch.dispose();
 		}
 	});
 });
