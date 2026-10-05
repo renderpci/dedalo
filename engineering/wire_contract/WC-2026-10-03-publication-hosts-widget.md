@@ -163,7 +163,7 @@
   round's code, else `puts:<n> deletions:<n>` (puts or young deletions pending); `blocked`
   `unverified_deletions:<n>` (a deletion unverified past one reconcile period — decided before
   anything else) or the recorded failure code (e.g. `copy_mode_withdrawn`,
-  `deletion_unverified`, `linked_quality`, a `publication_host.*` code); `unknown`
+  `deletion_unverified`, `delete_failed`, `linked_quality`, a `publication_host.*` code); `unknown`
   `not_reconciled` (no runtime row, or only a default row another writer created). A host the
   agent said is not a copy host, holding nothing, carries no such check. The row's own live
   `media_mode` (the trusted agent's word) decides at once: `shared` / `none` with nothing held

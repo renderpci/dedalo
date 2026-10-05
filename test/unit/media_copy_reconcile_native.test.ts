@@ -23,6 +23,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { getPublicQualities } from '../../src/core/media/protection.ts';
+import { MEDIA_DELETE_BATCH } from '../../src/core/publication_host/agent_client.ts';
 import {
 	COPY_MODE_WITHDRAWN,
 	MEDIA_COPY_PERIOD_MS,
@@ -239,6 +240,32 @@ describe('media_copy run', () => {
 		);
 		expect((await loadRuntime()).zzmc_copy?.media_copy.pending_deletions).toEqual([]);
 		expect((await runMediaCopyReconcile({ apply: false, scope: ['zzmc_copy'] })).drift).toBe(0);
+	}, 60_000);
+
+	test('one path the agent cannot delete is DATA: the later delete batch, the grant and the put still run; failed / delete_failed, the path kept pending', async () => {
+		plantPublished();
+		const strays = Array.from(
+			{ length: MEDIA_DELETE_BATCH + 1 },
+			(_, i) => `${QUALITY}/0/zzmc2_zzmc1_${980000 + i}.jpg`,
+		);
+		const seed: MockSeed = {
+			entries: Object.fromEntries(strays.map((rel) => [rel, { size: 3, sha256: 'a'.repeat(64) }])),
+		};
+		const copy = await agent('zzmc_eacces', 'copy', seed);
+		const stuck = strays[0] as string;
+		copy.undeletable.add(stuck);
+		const report = await runMediaCopyReconcile({ apply: true, scope: ['zzmc_eacces'] });
+		const outcome = hostsOf(report.detail).zzmc_eacces;
+		expect(outcome?.state).toBe('failed');
+		expect(outcome?.error).toBe('delete_failed');
+		// the second batch was sent: its stray is gone
+		expect(copy.entries.has(strays[MEDIA_DELETE_BATCH] as string)).toBe(false);
+		expect(copy.entries.has(stuck)).toBe(true);
+		// the grant and the put ran after the failing batch
+		expect(copy.markers.has(PUBLISHED.key)).toBe(true);
+		expect(copy.entries.has(PUBLISHED.rel)).toBe(true);
+		const pending = (await loadRuntime()).zzmc_eacces?.media_copy.pending_deletions ?? [];
+		expect(pending.map((entry) => entry.path)).toEqual([stuck]);
 	}, 60_000);
 
 	test('agent unreachable: dry reports + writes nothing; apply records the Task 9 verdict, KEEPS the deletion, panel blocked', async () => {

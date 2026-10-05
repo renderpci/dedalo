@@ -59,6 +59,8 @@ export interface CopyMockAgent {
 	readonly name: string;
 	readonly entries: Map<string, MockEntry>;
 	readonly markers: Set<string>;
+	/** Paths media.delete answers `failed` (EACCES) for and keeps. */
+	readonly undeletable: Set<string>;
 	readonly calls: string[];
 	readonly events: string[];
 	setMode(mode: MockMode): void;
@@ -69,6 +71,7 @@ interface State {
 	mode: MockMode;
 	entries: Map<string, MockEntry>;
 	markers: Set<string>;
+	undeletable: Set<string>;
 	calls: string[];
 	events: string[];
 }
@@ -179,12 +182,17 @@ async function putFile(state: State, url: URL, req: Request): Promise<Response> 
 
 async function deleteFiles(state: State, req: Request): Promise<Response> {
 	const { paths } = (await req.json()) as { paths: string[] };
-	const deleted = paths.filter((path) => state.entries.delete(path));
-	for (const path of paths) state.events.push(`delete ${path}`);
+	// The real agent's per-path failure shape (copy.ts noteDeleteFailure): kept, reported.
+	const failed = paths
+		.filter((path) => state.undeletable.has(path))
+		.map((path) => ({ path, error: 'EACCES' }));
+	const deletable = paths.filter((path) => !state.undeletable.has(path));
+	const deleted = deletable.filter((path) => state.entries.delete(path));
+	for (const path of deletable) state.events.push(`delete ${path}`);
 	return json(200, {
 		deleted,
-		absent: paths.filter((path) => !deleted.includes(path)),
-		failed: [],
+		absent: deletable.filter((path) => !deleted.includes(path)),
+		failed,
 	});
 }
 
@@ -294,6 +302,7 @@ export async function startCopyMockAgent(
 		mode,
 		entries: new Map(Object.entries(seed.entries ?? {})),
 		markers: new Set(seed.markers ?? []),
+		undeletable: new Set(),
 		calls: [],
 		events: [],
 	};
@@ -304,6 +313,7 @@ export async function startCopyMockAgent(
 		name,
 		entries: state.entries,
 		markers: state.markers,
+		undeletable: state.undeletable,
 		calls: state.calls,
 		events: state.events,
 		setMode(next) {

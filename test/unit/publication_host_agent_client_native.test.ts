@@ -784,6 +784,33 @@ describe('copy-mode media commands (phase 5): mutations, re-proved live, through
 		).toBe(true);
 	});
 
+	test('media.delete per-path failures are DATA (the agent copy.ts shape): every batch still sent, failures merged', async () => {
+		const failure = { path: 'image/1.5MB/0/test99_test3_0.jpg', error: 'EACCES' };
+		mock.reply('POST', '/v1/media/delete', {
+			status: 200,
+			body: { deleted: [], absent: [], failed: [failure] },
+		});
+		const paths = Array.from(
+			{ length: MEDIA_DELETE_BATCH + 1 },
+			(_, i) => `image/1.5MB/0/test99_test3_${i}.jpg`,
+		);
+		const result = await hostMediaDelete('museum_pub', paths, ACTOR);
+		expect(bearerSent(mock)).toHaveLength(2);
+		expect(result.failed).toEqual([failure, failure]);
+	});
+
+	test('media.delete with a malformed failure entry (bare string) is unreadable', async () => {
+		mock.reply('POST', '/v1/media/delete', {
+			status: 200,
+			body: { deleted: [], absent: [], failed: ['image/1.5MB/0/test99_test3_0.jpg'] },
+		});
+		const error = await expectCode(
+			hostMediaDelete('museum_pub', ['image/1.5MB/0/test99_test3_0.jpg'], ACTOR),
+			'publication_host.failed',
+		);
+		expect(error.details).toEqual({ reason: 'unreadable_body' });
+	});
+
 	test('media.mark posts {key, published}', async () => {
 		await hostMediaMark('museum_pub', 'test3_1', false, ACTOR);
 		const sent = last(mock);

@@ -67,7 +67,9 @@
  * the keys after it (a transient failure stops at once). Any other transport failure
  * (unreachable / timeout / busy) stops the round as `pending`, any other as `failed`; the CODE (never agent prose) goes to the runtime file and the
  * recorded deletions stay for the next round (Review Focus 3). A deletion still listed
- * after a round that deferred nothing is `failed` / `deletion_unverified`. A planned round
+ * after a round that deferred nothing is `failed` / `deletion_unverified`; a path the agent
+ * ANSWERED it could not delete (media.delete `failed`) is data, not a stop: it stays
+ * pending, the round goes on, and settles `failed` / `delete_failed`. A planned round
  * whose plan names linked files (media_copy.ts `plan.linked`, never put) is `failed` /
  * `linked_quality` — the narrowing is named on the panel, never a silent `pending`.
  *
@@ -85,6 +87,7 @@ import { DedaloError } from '../../../core/errors/index.ts';
 import { absoluteFromRelative, requireMediaRoot } from '../../../core/media/path.ts';
 import {
 	hostStatus,
+	type MediaDeleteResult,
 	type MediaManifest,
 	type MediaPutFile,
 } from '../../../core/publication_host/agent_client.ts';
@@ -112,6 +115,13 @@ export const DELETION_UNVERIFIED = 'deletion_unverified';
  */
 export const LINKED_QUALITY = 'linked_quality';
 
+/**
+ * The runtime error of a round in which the agent answered that it could not delete some
+ * paths (media.delete `failed`: an errno code or escapes_root, logged per path). Those
+ * paths stay pending; every other batch, the grants and the puts still ran.
+ */
+export const DELETE_FAILED = 'delete_failed';
+
 const TRANSIENT_CODES: ReadonlySet<string> = new Set([
 	'publication_host.unreachable',
 	'publication_host.timeout',
@@ -132,7 +142,12 @@ export interface LocalFile {
 
 export interface CopyDeps {
 	put(host: string, file: MediaPutFile, actor: string): Promise<void>;
-	del(host: string, paths: readonly string[], actor: string): Promise<void>;
+	/** Per-path failures are data (`failed`), never a throw: the round goes on. */
+	del(
+		host: string,
+		paths: readonly string[],
+		actor: string,
+	): Promise<Pick<MediaDeleteResult, 'failed'>>;
 	mark(host: string, key: string, published: boolean, actor: string): Promise<void>;
 	manifest(host: string): Promise<MediaManifest>;
 	isPublished(key: string): Promise<boolean>;
@@ -154,8 +169,10 @@ export interface CopyApplyReport {
 	state: 'ok' | 'pending' | 'failed';
 	/** Keys marked unpublished on the agent (withdrawals + compensations). */
 	withdrawn: number;
-	/** Paths sent to media.delete (withdrawal + compensations). */
+	/** Paths media.delete removed or found absent (withdrawal + compensations). */
 	deleted: number;
+	/** Paths the agent answered it could not delete (kept pending; DELETE_FAILED). */
+	delete_failed: number;
 	put: number;
 	/** Keys marked published on the agent. */
 	published: number;
@@ -241,6 +258,7 @@ function newReport(host: string): CopyApplyReport {
 		state: 'ok',
 		withdrawn: 0,
 		deleted: 0,
+		delete_failed: 0,
 		put: 0,
 		published: 0,
 		skipped_unpublished: 0,
@@ -319,6 +337,28 @@ async function unmarkEach(
 	return { done, failure };
 }
 
+/**
+ * media.delete `paths`, counting what the agent could not delete as DATA: those paths stay
+ * pending (the manifest still lists them, so verifyDeletions keeps them) and the round goes
+ * on — one undeletable file never blocks the other batches, the grants or the puts.
+ */
+async function deleteCounted(
+	deps: Pick<CopyDeps, 'del'>,
+	host: string,
+	paths: readonly string[],
+	report: CopyApplyReport,
+): Promise<void> {
+	if (paths.length === 0) return;
+	const { failed } = await deps.del(host, paths, MEDIA_COPY_ACTOR);
+	report.deleted += paths.length - failed.length;
+	report.delete_failed += failed.length;
+	for (const failure of failed.slice(0, 20)) {
+		console.error(
+			`[media_copy] ${host}: the agent could not delete ${failure.path} (${failure.error}); kept pending`,
+		);
+	}
+}
+
 async function withdraw(
 	deps: CopyDeps,
 	host: string,
@@ -331,8 +371,7 @@ async function withdraw(
 		const unmarked = await unmarkEach(deps, host, keys);
 		report.withdrawn += unmarked.done.length;
 		if (unmarked.failure !== null && isTransient(unmarked.failure)) throw unmarked.failure;
-		await deps.del(host, paths, MEDIA_COPY_ACTOR);
-		report.deleted += paths.length;
+		await deleteCounted(deps, host, paths, report);
 		if (unmarked.failure !== null) throw unmarked.failure;
 	});
 	if (!held.acquired) report.deferred += 1;
@@ -488,9 +527,8 @@ async function compensate(round: Round, key: string): Promise<PutOutcome> {
 	await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
 	round.known.delete(key);
 	report.withdrawn += 1;
-	if (paths.length > 0) await deps.del(host, paths, MEDIA_COPY_ACTOR);
+	await deleteCounted(deps, host, paths, report);
 	round.landed.delete(key);
-	report.deleted += paths.length;
 	return 'compensated';
 }
 
@@ -695,6 +733,7 @@ function finalState(
 	if (report.error !== null) {
 		return { state: TRANSIENT_CODES.has(report.error) ? 'pending' : 'failed', error: report.error };
 	}
+	if (report.delete_failed > 0) return { state: 'failed', error: DELETE_FAILED };
 	if (pending > 0 && report.deferred === 0 && !withdrawOnly)
 		return { state: 'failed', error: DELETION_UNVERIFIED };
 	if (linked > 0) return { state: 'failed', error: LINKED_QUALITY };

@@ -34,6 +34,8 @@ export interface World {
 	/** Agent paths that are not regular files (links, fifos): listed as `irregular`. */
 	agentIrregular: Set<string>;
 	agentMarkers: Set<string>;
+	/** Agent paths media.delete answers `failed` for (EACCES), never removed. */
+	undeletable: Set<string>;
 	calls: string[];
 	actors: Set<string>;
 	runtime: Map<string, MediaCopyRuntime>;
@@ -55,6 +57,7 @@ export function newWorld(): World {
 		agentFiles: new Map(),
 		agentIrregular: new Set(),
 		agentMarkers: new Set(),
+		undeletable: new Set(),
 		calls: [],
 		actors: new Set(),
 		runtime: new Map(),
@@ -153,13 +156,19 @@ export function worldDeps(world: World): CopyDeps {
 		},
 		async del(_host, paths, actor) {
 			reach(world);
-			if (paths.length === 0) return;
+			const failed: { path: string; error: string }[] = [];
+			if (paths.length === 0) return { failed };
 			world.actors.add(actor);
 			world.calls.push(`del ${paths.join(',')}`);
 			for (const path of paths) {
+				if (world.undeletable.has(path)) {
+					failed.push({ path, error: 'EACCES' });
+					continue;
+				}
 				world.agentFiles.delete(path);
 				world.agentIrregular.delete(path);
 			}
+			return { failed };
 		},
 		async mark(_host, key, published, actor) {
 			reach(world);
@@ -220,6 +229,7 @@ export function okReport(host: string): CopyApplyReport {
 		state: 'ok',
 		withdrawn: 0,
 		deleted: 0,
+		delete_failed: 0,
 		put: 0,
 		published: 0,
 		skipped_unpublished: 0,

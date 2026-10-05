@@ -418,7 +418,10 @@ truth, the `media_index` law.
   `<private>/publication_hosts_runtime.json` (`media_copy.pending_deletions[]`,
   `last_verified_at`). One older than a reconcile period is `blocked` (red) in the panel
   (`src/core/publication_host/media_copy_status.ts`). A failed delete never re-exposes the
-  record, because its marker is already gone, and it is never reported as done.
+  record, because its marker is already gone, and it is never reported as done. A path
+  the agent answers it could not delete (`media.delete` `failed: {path, error}[]`) is
+  data, not a stop: it stays pending, every later batch, grant and put still runs, and the
+  round settles `failed` / `delete_failed` (the per-path errno in the log).
 - No DB table: the copy state is the agent's manifest plus the runtime file.
 - **Database pool cost** (built, phase 5): the cross-process `media:<host>` target lock
   is one main-pool transaction per unit, and a unit spans only agent CONTROL calls — a

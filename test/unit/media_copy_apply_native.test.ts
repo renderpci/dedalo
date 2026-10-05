@@ -31,6 +31,7 @@ import {
 	type ApplyPlan,
 	applyCopyWith,
 	type CopyDeps,
+	DELETE_FAILED,
 	DELETION_UNVERIFIED,
 	explicitCopyState,
 	hostTakesCopy,
@@ -175,7 +176,7 @@ describe('withdraw → delete → verify (unpublish is a verified deletion)', ()
 		const world = newWorld();
 		world.agentFiles.set(P1, 'jpeg');
 		const d = worldDeps(world);
-		const lying: CopyDeps = { ...d, del: async () => undefined };
+		const lying: CopyDeps = { ...d, del: async () => ({ failed: [] }) };
 		const report = await applyCopyWith(lying, 'pub1', planFrom(world));
 		expect(report).toMatchObject({
 			state: 'failed',
@@ -188,6 +189,33 @@ describe('withdraw → delete → verify (unpublish is a verified deletion)', ()
 		});
 	});
 
+	test('a path the agent answers it cannot delete stays pending; the grant and the put still run; failed / delete_failed', async () => {
+		const world = newWorld();
+		const stuck = `${imageQuality()}/0/test99_test3_8.jpg`;
+		world.agentFiles.set(stuck, 'old');
+		world.undeletable.add(stuck);
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(report).toMatchObject({
+			state: 'failed',
+			error: DELETE_FAILED,
+			delete_failed: 1,
+			deleted: 0,
+			put: 1,
+			published: 1,
+			pending_deletions: 1,
+		});
+		expect(world.agentFiles.has(P1)).toBe(true);
+		expect(world.runtime.get('pub1')?.pending_deletions.map((entry) => entry.path)).toEqual([
+			stuck,
+		]);
+		// once the agent can delete it, the next round verifies and returns to ok
+		world.undeletable.clear();
+		const next = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+		expect(next).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+	});
+
 	test('an IRREGULAR agent path (a link) is deleted and verified against the irregular list, never cleared while listed', async () => {
 		const world = newWorld();
 		const link = `${imageQuality()}/0/test99_test3_7.jpg`;
@@ -195,7 +223,7 @@ describe('withdraw → delete → verify (unpublish is a verified deletion)', ()
 		const d = worldDeps(world);
 		const plan = planFrom(world);
 		expect(plan.del).toEqual([link]);
-		const stubborn = await applyCopyWith({ ...d, del: async () => undefined }, 'pub1', plan);
+		const stubborn = await applyCopyWith({ ...d, del: async () => ({ failed: [] }) }, 'pub1', plan);
 		expect(stubborn).toMatchObject({
 			state: 'failed',
 			error: DELETION_UNVERIFIED,
@@ -526,7 +554,7 @@ describe('a grant supersedes a pending withdrawal (republished before the deleti
 		world.agentMarkers.add(K1);
 		world.agentFiles.set(P1, 'old');
 		world.agentFiles.set(P2, 'png!');
-		const d: CopyDeps = { ...worldDeps(world), del: async () => undefined };
+		const d: CopyDeps = { ...worldDeps(world), del: async () => ({ failed: [] }) };
 		const plan: ApplyPlan = { put: [desired(world, P1)], del: [P2], mark: [] };
 		const report = await applyCopyWith(d, 'pub1', plan);
 		expect(world.agentFiles.get(P1)).toBe('jpeg');

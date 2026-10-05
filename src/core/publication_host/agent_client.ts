@@ -698,14 +698,30 @@ function isPutResult(value: unknown): value is { path: string; sha256: string } 
 	return isRecord(value) && typeof value.path === 'string' && typeof value.sha256 === 'string';
 }
 
-function isDeleteResult(
-	value: unknown,
-): value is { deleted: string[]; absent: string[]; failed: string[] } {
+/** One path the agent could not delete (its copy.ts noteDeleteFailure): an errno code or `escapes_root`. */
+export interface MediaDeleteFailure {
+	path: string;
+	error: string;
+}
+
+/** What every media.delete batch answered, merged: per-path failures are DATA, never a throw. */
+export interface MediaDeleteResult {
+	deleted: string[];
+	absent: string[];
+	failed: MediaDeleteFailure[];
+}
+
+function isDeleteFailure(value: unknown): value is MediaDeleteFailure {
+	return isRecord(value) && typeof value.path === 'string' && typeof value.error === 'string';
+}
+
+function isDeleteResult(value: unknown): value is MediaDeleteResult {
 	return (
 		isRecord(value) &&
 		isStringList(value.deleted) &&
 		isStringList(value.absent) &&
-		isStringList(value.failed)
+		Array.isArray(value.failed) &&
+		value.failed.every(isDeleteFailure)
 	);
 }
 
@@ -751,16 +767,22 @@ function mediaPost(commandName: string, path: string, body: unknown, actor: stri
 	});
 }
 
-/** media.delete, MEDIA_DELETE_BATCH paths per request. Absent paths are not an error (idempotent). */
+/**
+ * media.delete, MEDIA_DELETE_BATCH paths per request. Absent paths are not an error
+ * (idempotent). A path the agent could not delete (EACCES, a read-only subtree, an
+ * escapes_root refusal) is DATA in `failed`, never a throw: every later batch is still
+ * sent, and the caller keeps those paths pending (verified deletion never trusts this).
+ */
 export async function hostMediaDelete(
 	name: string,
 	paths: readonly string[],
 	actor: string,
-): Promise<void> {
+): Promise<MediaDeleteResult> {
 	assertActor(name, 'media.delete', actor);
 	if (!paths.every(isMediaPath))
 		throw refuse(name, 'media.delete', 'a path is not a safe relative media path');
-	if (paths.length === 0) return;
+	const merged: MediaDeleteResult = { deleted: [], absent: [], failed: [] };
+	if (paths.length === 0) return merged;
 	const host = requireHost(name);
 	for (let start = 0; start < paths.length; start += MEDIA_DELETE_BATCH) {
 		const batch = paths.slice(start, start + MEDIA_DELETE_BATCH);
@@ -768,8 +790,12 @@ export async function hostMediaDelete(
 			host,
 			mediaPost('media.delete', '/v1/media/delete', { paths: batch }, actor),
 		);
-		expectShape(host, 'media.delete', answer, isDeleteResult);
+		const result = expectShape(host, 'media.delete', answer, isDeleteResult);
+		merged.deleted.push(...result.deleted);
+		merged.absent.push(...result.absent);
+		merged.failed.push(...result.failed);
 	}
+	return merged;
 }
 
 /** media.mark: writes (true) or removes (false) the agent's `pub/<key>` marker. */
