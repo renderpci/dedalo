@@ -507,6 +507,22 @@ describe('the operator is told how pairing and the panel really work', () => {
 			'token-file',
 			'token-stdin',
 		]);
+		// The verbs are the CLI's DISPATCH: the guard parseCliArgs refuses every other command
+		// with, and the CliOptions type it narrows to — never any quoted literal in the file.
+		const guard =
+			/if \(((?:command !== '[a-z]+'(?: && )?)+)\) \{\n\s*throw new Error\('the command is /.exec(
+				cli,
+			)?.[1] ?? '';
+		const cliVerbs = new Set([...guard.matchAll(/'([a-z]+)'/g)].map((m) => m[1] ?? ''));
+		expect([...cliVerbs].sort(), 'the CLI dispatch guard was not found or changed').toEqual([
+			'add',
+			'remove',
+			'replace',
+		]);
+		const typed = /\bcommand: ((?:'[a-z]+'(?: \| )?)+);/.exec(cli)?.[1] ?? '';
+		expect([...typed.matchAll(/'([a-z]+)'/g)].map((m) => m[1]).sort()).toEqual(
+			[...cliVerbs].sort(),
+		);
 		const lines = page.split('\n').filter((l) => PAIR_LINE.test(l));
 		expect(lines.length).toBeGreaterThanOrEqual(4);
 		const unknown: string[] = [];
@@ -516,7 +532,7 @@ describe('the operator is told how pairing and the panel really work', () => {
 			const verb =
 				/(?:publication_host_pair\.ts|dedalo:pair-publication-host) ([a-z]+|…)/.exec(line)?.[1] ??
 				'';
-			if (verb !== '…' && !cli.includes(`'${verb}'`)) unknown.push(`verb ${verb}`);
+			if (verb !== '…' && !cliVerbs.has(verb)) unknown.push(`verb ${verb}`);
 			for (const m of line.matchAll(/ (--[a-z][a-z-]*)/g)) {
 				const flag = m[1] ?? '';
 				if (!cliFlags.has(flag.slice(2))) unknown.push(`flag ${flag}`);
