@@ -36,6 +36,7 @@ import { AGENT_RELEASE_ID, type AgentStatus, type MediaProbe } from './agent_cli
 import { publicationHostFingerprintMatches } from './pairing.ts';
 import type { PublicationHostRecord, RegistryError } from './registry.ts';
 import type { ExpectedRulesOutcome } from './rules.ts';
+import type { HostRuntime } from './runtime.ts';
 import type { SecretPresenceOutcome } from './secrets.ts';
 import { AGENT_ANSWER_CODES, LOCAL_STAGE } from './wire.ts';
 
@@ -61,9 +62,10 @@ export type HostCheckId = (typeof HOST_CHECK_IDS)[number];
 
 /**
  * Checks a widget DECORATOR appends after the fixed list, from the runtime file — never
- * built here, and not on every row (media_copy_status.ts withMediaCopyCheck: phase 5).
+ * part of buildHostChecks: `media_copy` (media_copy_status.ts withMediaCopyCheck, phase 5,
+ * not on every row) and `public_gate` (attachProbe below, phase 6, on every row).
  */
-export const DECORATOR_CHECK_IDS = Object.freeze(['media_copy'] as const);
+export const DECORATOR_CHECK_IDS = Object.freeze(['media_copy', 'public_gate'] as const);
 
 export type DecoratorCheckId = (typeof DECORATOR_CHECK_IDS)[number];
 
@@ -390,4 +392,53 @@ export function buildHostPanelRow(input: HostStatusInput): HostPanelRow {
 		bundle_present: input.secrets.bundle_present,
 		pairing_proved: checks.some((entry) => entry.id === 'pairing' && entry.state === 'ok'),
 	};
+}
+
+// ── phase 6: the public-URL probe (probe.ts) ────────────────────────────────
+
+export const PUBLIC_GATE_CHECK_ID = 'public_gate';
+
+type GateProbe = HostRuntime['probe'];
+
+function statusFact(status: number | null): string {
+	return status === null ? 'none' : String(status);
+}
+
+/** The two answers as a FACT (`published:200 unpublished:404`); the sentence stays in probe.detail. */
+function answersFact(probe: GateProbe): string {
+	return `published:${statusFact(probe.published_status)} unpublished:${statusFact(probe.unpublished_status)}`;
+}
+
+function unprovenCheck(probe: GateProbe): HostCheck {
+	const detail = probe.at === null ? 'never_probed' : 'unproven';
+	return { id: PUBLIC_GATE_CHECK_ID, state: 'unknown', detail };
+}
+
+/**
+ * The panel check for the public-URL probe (phase 6). Failed → blocked; unknown or never
+ * probed → unknown; an ok proof older than `maxAgeMs` (or with an unreadable time) → warn.
+ * `detail` is a fact (the answers, `stale:<at>`, `never_probed`, `unproven`); the probe's
+ * own sentence travels in the row's `probe.detail`.
+ */
+export function publicGateCheck(probe: GateProbe, nowMs: number, maxAgeMs: number): HostCheck {
+	if (probe.state === 'failed') {
+		return { id: PUBLIC_GATE_CHECK_ID, state: 'blocked', detail: answersFact(probe) };
+	}
+	if (probe.state === 'unknown' || probe.at === null) return unprovenCheck(probe);
+	const age = nowMs - Date.parse(probe.at);
+	if (!(age <= maxAgeMs)) {
+		return { id: PUBLIC_GATE_CHECK_ID, state: 'warn', detail: `stale:${probe.at}` };
+	}
+	return { id: PUBLIC_GATE_CHECK_ID, state: 'ok', detail: answersFact(probe) };
+}
+
+/** The row plus its probe and ONE public_gate check (a previous one is replaced). Pure. */
+export function attachProbe<R extends Pick<HostPanelRow, 'checks'>>(
+	row: R,
+	probe: GateProbe,
+	nowMs: number,
+	maxAgeMs: number,
+): R & { probe: GateProbe } {
+	const checks = row.checks.filter((check) => check.id !== PUBLIC_GATE_CHECK_ID);
+	return { ...row, probe, checks: [...checks, publicGateCheck(probe, nowMs, maxAgeMs)] };
 }

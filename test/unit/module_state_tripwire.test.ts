@@ -395,6 +395,10 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// A re-pair in ANOTHER process (pair CLI) changes the key, so the next read re-proves;
 	// mutations never consult it (they prove live on every call).
 	'core/publication_host/agent_client.ts:provenPairings',
+	// Per-host serialization of the publication-host AFTER-CHANGE probe (phase 6):
+	// keyed on the registry host name, never request identity; an entry is deleted
+	// when its own probe settles, so at most one queued lane per changing host.
+	'core/publication_host/probe.ts:probeLanes',
 	// Bootstrap memo for matrix_time_machine.tm_role (ensureTmRoleColumn — the
 	// self-heal when migration 0010 did not land at boot): the TABLES verified
 	// to carry the column. No request identity; set only on success, cleared by
