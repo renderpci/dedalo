@@ -10,9 +10,9 @@
  * presence read (secretPresenceOutcome) REPORTS a refusal instead of throwing it; and no
  * error message carries a byte of a secret.
  *
- * Honest limit: `bad_owner` (a file owned by another uid) needs a second uid and root to
- * stage, so it is not exercised here; the owner check sits in the same assertPrivate
- * function as the mode check this file drives.
+ * `bad_owner` needs no second uid: the engine's euid is stubbed (asForeignEngine), so a
+ * test-owned root, host dir or file reads as foreign — each leg pinned by the path its
+ * message names. A write never chmod-repairs an EXISTING widened or foreign dir: it refuses.
  *
  * Runs on a declared scratch base and a PKI minted in-test (no live <private>, no network).
  */
@@ -312,13 +312,78 @@ describe('stored secrets are checked on every read', () => {
 				mode: 0o600,
 			},
 		);
-		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_token');
+		// the token leg is isolated by the MESSAGE: any over-cap token also fails TOKEN_SHAPE,
+		// so only the cap's own refusal names the byte limit
+		const oversize = failure(() => readHostToken('pub_main'));
+		expect(oversize.reason).toBe('bad_token');
+		expect(oversize.message).toContain(`exceeds ${SECRET_MAX_BYTES} bytes`);
 	});
 
 	test('a hand-edited token file with CRLF is bad_token', () => {
 		writeHostSecrets('pub_main', TOKEN, pki.bundlePem);
 		writeFileSync(join(hostSecretDir('pub_main'), TOKEN_FILE), `${TOKEN}\r\n`, { mode: 0o600 });
 		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_token');
+	});
+});
+
+/**
+ * The engine's euid stubbed to a foreign uid for the first-matching call onward: calls before
+ * `from` see the real euid, so one leg (root → host dir → file, the read order) at a time is
+ * judged foreign.
+ */
+function asForeignEngine<T>(body: () => T, from = 0): T {
+	const real = process.geteuid;
+	let calls = 0;
+	process.geteuid = () => (calls++ < from ? (real?.() ?? 0) : 4_242_424);
+	try {
+		return body();
+	} finally {
+		process.geteuid = real;
+	}
+}
+
+describe('ownership: the engine euid owns the root, the host dir and each file', () => {
+	test('foreign root → bad_owner naming the root', () => {
+		writeHostSecrets('pub_main', TOKEN, pki.bundlePem);
+		const f = asForeignEngine(() => failure(() => readHostToken('pub_main')));
+		expect(f.reason).toBe('bad_owner');
+		expect(f.message).toContain(`${secretsRoot()} must be owned`);
+	});
+
+	test('foreign host dir (root own) → bad_owner naming the host dir', () => {
+		writeHostSecrets('pub_main', TOKEN, pki.bundlePem);
+		const f = asForeignEngine(() => failure(() => readHostToken('pub_main')), 1);
+		expect(f.reason).toBe('bad_owner');
+		expect(f.message).toContain(`${hostSecretDir('pub_main')} must be owned`);
+	});
+
+	test('foreign 0600 file (root + dir own) → bad_owner naming the file; the panel reports it', () => {
+		writeHostSecrets('pub_main', TOKEN, pki.bundlePem);
+		const f = asForeignEngine(() => failure(() => readHostToken('pub_main')), 2);
+		expect(f.reason).toBe('bad_owner');
+		expect(f.message).toContain(`${join(hostSecretDir('pub_main'), TOKEN_FILE)} must be owned`);
+		expect(asForeignEngine(() => secretPresenceOutcome('pub_main').refused, 2)).toBe('bad_owner');
+		expect(readHostToken('pub_main')).toBe(TOKEN); // control: own euid reads it
+	});
+
+	test('a write never repairs an EXISTING root: widened → bad_mode, foreign → bad_owner, mode kept', () => {
+		mkdirSync(secretsRoot(), { mode: 0o700 });
+		chmodSync(secretsRoot(), 0o750);
+		expect(failure(() => writeHostSecrets('pub_main', TOKEN, null)).reason).toBe('bad_mode');
+		expect(mode(secretsRoot())).toBe(0o750);
+		expect(existsSync(hostSecretDir('pub_main'))).toBe(false);
+		chmodSync(secretsRoot(), 0o700);
+		expect(
+			asForeignEngine(() => failure(() => writeHostSecrets('pub_main', TOKEN, null))).reason,
+		).toBe('bad_owner');
+		expect(existsSync(hostSecretDir('pub_main'))).toBe(false);
+	});
+
+	test('a write never repairs an EXISTING widened host dir', () => {
+		writeHostSecrets('pub_main', TOKEN, null);
+		chmodSync(hostSecretDir('pub_main'), 0o755);
+		expect(failure(() => writeHostSecrets('pub_main', TOKEN, null)).reason).toBe('bad_mode');
+		expect(mode(hostSecretDir('pub_main'))).toBe(0o755);
 	});
 });
 

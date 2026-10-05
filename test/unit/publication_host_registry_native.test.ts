@@ -131,6 +131,25 @@ describe('read', () => {
 		expect(loadRegistry()).toEqual(file(host()));
 	});
 
+	test('a valid 0600 registry owned by another uid is unreadable (the owner check, not the mode)', () => {
+		// no second uid needed: the engine's euid is stubbed, so the test-owned file reads as foreign
+		writeFileSync(registryPath(), JSON.stringify(file(host())), { mode: 0o600 });
+		chmodSync(registryPath(), 0o600);
+		expect(loadRegistry()).toEqual(file(host())); // control: same file, own euid, loads
+		const real = process.geteuid;
+		process.geteuid = () => 4_242_424;
+		let caught: unknown = null;
+		try {
+			loadRegistry();
+		} catch (error) {
+			caught = error;
+		} finally {
+			process.geteuid = real;
+		}
+		expect(caught instanceof RegistryError && caught.reason).toBe('unreadable');
+		expect((caught as Error).message).toContain('must be owned by the engine user');
+	});
+
 	test('a symlinked registry is unreadable even when its target is a valid 0600 file', () => {
 		const target = join(scratch.base, 'elsewhere.json');
 		writeFileSync(target, JSON.stringify(file(host())), { mode: 0o600 });

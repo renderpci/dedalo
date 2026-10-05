@@ -333,14 +333,39 @@ export function secretPresenceOutcome(name: string): SecretPresenceOutcome {
 // Write (the pairing CLI only)
 // ---------------------------------------------------------------------------
 
+/**
+ * An EXISTING store directory is judged by the read side's own rule (privateDirPresent:
+ * real directory, exactly 0700, engine-owned) and REFUSED otherwise — never chmod-repaired:
+ * a widened or foreign root is evidence the panel reports (bad_mode/bad_owner), and a
+ * write (a --dry-run proof included) must not erase it. Only a directory THIS call just
+ * created (non-recursive mkdir, so EEXIST means it was not ours) gets the exact chmod.
+ */
 function ensurePrivateDir(dir: string): void {
-	mkdirSync(dir, { recursive: true, mode: DIR_MODE });
+	if (privateDirPresent(dir)) return;
+	mkdirSync(dirname(dir), { recursive: true, mode: DIR_MODE });
+	try {
+		mkdirSync(dir, { mode: DIR_MODE });
+	} catch (error) {
+		if (errorCode(error) !== 'EEXIST') throw error;
+		// a concurrent creator won: judged, never repaired
+		if (privateDirPresent(dir)) return;
+		throwBadMode(`${dir} vanished while it was being created`);
+	}
 	// refuse a symlink BEFORE chmod (chmod follows one): a planted link is never written through
 	if (!lstatSync(dir).isDirectory()) {
 		throwBadMode(`${dir} must be a real directory (not a symlink or a file)`);
 	}
-	chmodSync(dir, DIR_MODE); // exact, whatever the umask or an older mode was
+	chmodSync(dir, DIR_MODE); // exact, whatever the umask — on the directory this call created
 	fsyncDirectory(dirname(dir));
+}
+
+/**
+ * The secrets root judged by the read side's rule, for a caller about to walk or delete
+ * under it (the pair CLI's staging sweep): false when absent; SecretError bad_mode /
+ * bad_owner for a symlink, a non-directory, a widened or a foreign-owned root.
+ */
+export function secretsRootPresent(): boolean {
+	return privateDirPresent(secretsRoot());
 }
 
 function writeSecretFile(path: string, body: string): void {

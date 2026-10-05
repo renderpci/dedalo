@@ -703,6 +703,39 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		expect(existsSync(registryFile())).toBe(false);
 	});
 
+	test('--dry-run never repairs an existing widened secrets root: refused bad_mode, mode kept, no network', async () => {
+		const root = join(privateRoot, 'publication_hosts');
+		mkdirSync(root, { recursive: true, mode: 0o700 });
+		chmodSync(root, 0o750);
+		const r = await runCli(['add', ...addTlsArgs(), '--dry-run']);
+		expect(r.code, r.out).toBe(EXIT.refused);
+		expect(r.out).toContain('bad_mode');
+		expect(statSync(root).mode & 0o777).toBe(0o750); // the panel's bad_mode evidence survives
+		expect(tlsAgent.requests).toEqual([]);
+		expect(secretEntries()).toEqual([]);
+	});
+
+	test('a symlinked secrets root is refused before the sweep: nothing under its target is walked or deleted', async () => {
+		const target = join(work, 'elsewhere_root');
+		const stale = join(target, 'pairing_0a1b2c3d');
+		mkdirSync(stale, { recursive: true, mode: 0o700 });
+		const old = new Date(Date.now() - 2 * 60 * 60 * 1000);
+		utimesSync(stale, old, old);
+		symlinkSync(target, join(privateRoot, 'publication_hosts'));
+		try {
+			for (const argv of [['remove', NAME], addTlsArgs()]) {
+				const r = await runCli(argv[0] === 'remove' ? argv : ['add', ...argv]);
+				expect(r.code, r.out).toBe(EXIT.refused);
+				expect(r.out).toContain('bad_mode');
+				expect(existsSync(stale)).toBe(true);
+			}
+			expect(tlsAgent.requests).toEqual([]);
+		} finally {
+			rmSync(join(privateRoot, 'publication_hosts'), { force: true });
+			rmSync(target, { recursive: true, force: true });
+		}
+	});
+
 	test('a dangling pairing_<hex> symlink is skipped by the sweep, never fatal, never followed', async () => {
 		const root = join(privateRoot, 'publication_hosts');
 		mkdirSync(root, { recursive: true, mode: 0o700 });

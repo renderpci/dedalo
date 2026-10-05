@@ -55,7 +55,7 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import { existsSync, lstatSync, readdirSync, readFileSync, rmdirSync, statSync } from 'node:fs';
+import { lstatSync, readdirSync, readFileSync, rmdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { parseEnvFile, privateDir } from '../src/config/env.ts';
@@ -82,6 +82,7 @@ import {
 	SecretError,
 	secretPresenceOutcome,
 	secretsRoot,
+	secretsRootPresent,
 	TOKEN_SHAPE,
 	writeHostSecrets,
 } from '../src/core/publication_host/secrets.ts';
@@ -465,7 +466,9 @@ function buildRecord(
  */
 function sweepStaleStaging(now: number, out: string[]): void {
 	const root = secretsRoot();
-	if (!existsSync(root)) return;
+	// the root itself is judged like the read path judges it (lstat: real dir, 0700, engine
+	// uid) BEFORE readdir/rm: a symlinked root is refused, never walked or deleted through
+	if (!secretsRootPresent()) return;
 	const skip = (entry: string): void => {
 		out.push(
 			`${TAG} skipped '${entry}' under ${root}: not a staging dir this command writes. Remove it by hand.`,
@@ -490,6 +493,16 @@ function sweepStaleStaging(now: number, out: string[]): void {
 			continue;
 		}
 		if (now - st.mtimeMs > STAGING_STALE_MS) removeHostSecrets(entry);
+	}
+}
+
+/** Exists WITHOUT following a symlink (a dangling link to the root is not "absent"). */
+function lexists(path: string): boolean {
+	try {
+		lstatSync(path);
+		return true;
+	} catch {
+		return false;
 	}
 }
 
@@ -523,7 +536,7 @@ async function proveStaged(
 	out: string[],
 ): Promise<void> {
 	const staging = `${STAGING_PREFIX}${randomBytes(4).toString('hex')}`;
-	const createdRoot = !existsSync(secretsRoot());
+	const createdRoot = !lexists(secretsRoot());
 	try {
 		writeHostSecrets(staging, token, bundlePem);
 		assertBundleSplits(staging, record.address.kind);
