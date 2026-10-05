@@ -29,6 +29,12 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
+import {
+	MEDIA_FILENAME_GRAMMAR as AGENT_GRAMMAR,
+	ALWAYS_MASTER_TIERS as AGENT_MASTER_TIERS,
+	MEDIA_WORKING_FILE_EXTENSIONS as AGENT_WORKING_FILE_EXTENSIONS,
+	classifyMediaPath as classifyAgentMediaPath,
+} from '../../publication/host_agent/src/media/grammar.ts';
 import { config } from '../../src/config/config.ts';
 import {
 	buildHtaccess,
@@ -37,8 +43,10 @@ import {
 	filterPublicQualities,
 	getPublicQualities,
 	MEDIA_AUTH_COOKIE,
+	MEDIA_FILENAME_GRAMMAR,
 	MEDIA_SCRIPT_DENY_PATTERN,
 	MEDIA_WORKING_FILE_EXTENSIONS,
+	masterQualities,
 	nginxHardeningLocations,
 } from '../../src/core/media/protection.ts';
 import {
@@ -727,4 +735,29 @@ describe('media protection: uploaded scripts are a 404 on Apache, never a 403 (F
 			expect(text).toContain('<FilesMatch "(?i)\\.(phps?|phtml|phar|pht)$">\n\tSetHandler none');
 		});
 	}
+});
+
+/**
+ * AGENT AXIS (PUBLICATION_HOST_SPEC §5.2/§6): a copy-mode publication host is served by the
+ * publication_host profile over the agent's copy root, and the agent refuses a media.put
+ * the gate could never serve. Its grammar is a COPY (publication/host_agent never imports
+ * the engine), so it is held equal here and run over the same CASES table: a drift would
+ * copy files the gate never serves, or refuse files it does.
+ */
+describe('media protection: the publication-host AGENT classifies like the gates (PUBLICATION_HOST_SPEC §5.2)', () => {
+	test("its grammar, working-file list and master tiers are the engine's", () => {
+		expect(AGENT_GRAMMAR).toBe(MEDIA_FILENAME_GRAMMAR);
+		expect([...AGENT_WORKING_FILE_EXTENSIONS]).toEqual([...MEDIA_WORKING_FILE_EXTENSIONS]);
+		for (const tier of AGENT_MASTER_TIERS) expect(masterQualities().has(tier)).toBe(true);
+	});
+
+	test('its media.put classifier accepts exactly the gate-public rows, with the same key', () => {
+		for (const testCase of CASES) {
+			const verdict = classifyAgentMediaPath(testCase.path, 'put');
+			expect(
+				verdict.ok ? verdict.key : null,
+				`agent disagrees on ${testCase.path} (${testCase.why})`,
+			).toBe(testCase.key);
+		}
+	});
 });
