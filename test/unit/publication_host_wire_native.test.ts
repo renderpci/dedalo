@@ -16,7 +16,8 @@
  *  5. `rejected` / `failed` always carry a closed `details.reason`, because only wire.ts can
  *     mint them: no other file spells either literal or builds a `publication_host.` code
  *     dynamically, EVERY wire.ts export that can yield an answer code (AGENT_ANSWER_CODES,
- *     PUBLICATION_HOST_CODES; the status→code classifier is module-private) is read only by
+ *     PUBLICATION_HOST_CODES; the status→code classifier is module-private — wire.ts's value
+ *     exports are an EXACT, hand-classified name census, so a new one is red) is read only by
  *     the declared classifiers (none of which constructs a DedaloError), and hostError's type
  *     excludes both. A hand-built throw would render a literal `${reason}`.
  *
@@ -480,18 +481,65 @@ describe('source law: rejected / failed are minted only by wire.ts', () => {
 		expect(readers.filter((r) => r.constructs).map((r) => r.path)).toEqual([]);
 	});
 
-	test('wire.ts exports nothing else that yields an answer code (the status classifier is private)', () => {
-		const wire = stripComments(readFileSync(join(REPO_ROOT, WIRE), 'utf8'));
-		const exported = [...wire.matchAll(/^export\s+(?:const|function|let|var)\s+(\w+)/gm)].map(
-			(m) => m[1],
-		);
-		// the answer-code-valued exports are exactly the gated sources + the four minters
-		// (agentResponseError / engineFailure / engineRefusal return a DedaloError WITH a reason)
-		const yieldsCode = exported.filter((name) =>
-			new RegExp(
-				`export\\s+(?:const|function)\\s+${name}\\b[^{;]*(?::\\s*(?:PublicationHostCode|AgentAnswerCode)\\b|Object\\.freeze\\(\\[)`,
-			).test(wire),
-		);
-		expect(yieldsCode.sort()).toEqual([...ANSWER_CODE_SOURCES].sort());
+	/**
+	 * wire.ts's VALUE exports, EXACT (both directions) and each classified by hand: a new export
+	 * is red until it is classified here. A text census of "what yields a code" (annotation /
+	 * Object.freeze shape) misses a typed map or a Set — exporting the module-private status
+	 * classifier (a Record<number, PublicationHostCode>) would slip past it; a name census cannot.
+	 * `answer_code_source` exports must equal ANSWER_CODE_SOURCES (gated by the reader law above).
+	 */
+	const WIRE_VALUE_EXPORTS: Record<string, 'answer_code_source' | 'minter' | 'no_code'> = {
+		PUBLICATION_HOST_CODES: 'answer_code_source',
+		AGENT_ANSWER_CODES: 'answer_code_source',
+		LOCAL_STAGE: 'no_code', // the coordinate value 'local'
+		AGENT_REASON_SENTENCES: 'no_code', // reason → sentence
+		ENGINE_REASON_SENTENCES: 'no_code', // reason → sentence
+		DETAIL_REASONS: 'no_code', // the closed reason vocabulary
+		capLogText: 'no_code',
+		parseAgentProblem: 'no_code',
+		agentReason: 'no_code', // returns a reason, never a code
+		agentResponseError: 'minter', // rejected/failed always WITH details.reason
+		engineFailure: 'minter',
+		engineRefusal: 'minter',
+		hostError: 'minter', // its type excludes both answer codes
+		registryError: 'minter', // registry_invalid only
+	};
+
+	/**
+	 * Every exported VALUE name, read by Bun's own parser (Bun.Transpiler.scan — types are
+	 * erased, so `export type`/`interface` never count; a re-export `export { X }`, a
+	 * multi-declarator and `export default` do), plus any `export *` (which names nothing a
+	 * census could classify, so it is forbidden outright).
+	 */
+	const SCANNER = new Bun.Transpiler({ loader: 'ts' });
+	function wireValueExports(text: string): { names: string[]; forbidden: string[] } {
+		const names = [...SCANNER.scan(text).exports].sort();
+		const forbidden = [...stripComments(text).matchAll(/^\s*export\s*\*.*$/gm)].map((m) => m[0]);
+		return { names, forbidden };
+	}
+
+	test('the export census sees what it claims (constructed reds: a typed map, a Set, a re-export)', () => {
+		const typedMap =
+			"export const STATUS_CODES: Readonly<Record<number, PublicationHostCode>> = Object.freeze({ 404: 'publication_host.failed' });";
+		const set = 'export const FAMILY = new Set<PublicationHostCode>(PUBLICATION_HOST_CODES);';
+		expect(wireValueExports(typedMap).names).toEqual(['STATUS_CODES']);
+		expect(wireValueExports(set).names).toEqual(['FAMILY']);
+		expect(wireValueExports('const STATUS_CODES = 1;\nexport { STATUS_CODES };').names).toEqual([
+			'STATUS_CODES',
+		]);
+		expect(wireValueExports('export const a = 1, b = 2;').names).toEqual(['a', 'b']);
+		expect(wireValueExports("export * from './x.ts';").forbidden).toHaveLength(1);
+		expect(wireValueExports('export async function f() {}').names).toEqual(['f']);
+		expect(wireValueExports('export type T = 1;\nexport interface I {}').names).toEqual([]);
+	});
+
+	test('wire.ts exports exactly the classified values (the status classifier is private)', () => {
+		const census = wireValueExports(readFileSync(join(REPO_ROOT, WIRE), 'utf8'));
+		expect(census.forbidden).toEqual([]);
+		expect(census.names).toEqual(Object.keys(WIRE_VALUE_EXPORTS).sort());
+		const sources = Object.entries(WIRE_VALUE_EXPORTS)
+			.filter(([, kind]) => kind === 'answer_code_source')
+			.map(([name]) => name);
+		expect(sources.sort()).toEqual([...ANSWER_CODE_SOURCES].sort());
 	});
 });
