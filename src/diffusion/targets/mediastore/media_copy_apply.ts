@@ -643,26 +643,32 @@ export interface TakesCopyIo {
 	markNotCopy(name: string): Promise<void>;
 }
 
+/**
+ * The runtime of a host the agent says is NOT a copy host: `n/a`, and its pending
+ * deletions cleared — such an agent refuses every media route, so nothing recorded there
+ * can be withdrawn or verified (a `shared` host serves the work host's own markers).
+ */
+export function notCopyRuntime(cur: MediaCopyRuntime): MediaCopyRuntime {
+	return { ...cur, state: 'n/a', error: null, pending_deletions: [] };
+}
+
 const realTakesCopyIo: TakesCopyIo = {
 	status: (name) => hostStatus(name),
 	lastState: async (name) => (await loadRuntime())[name]?.media_copy.state,
 	markNotCopy: async (name) => {
 		await updateHostRuntime(name, (cur) => ({
 			...cur,
-			media_copy: { ...cur.media_copy, state: 'n/a' },
+			media_copy: notCopyRuntime(cur.media_copy),
 		}));
 	},
 };
 
-function tookCopy(state: MediaCopyRuntime['state'] | undefined): boolean {
-	return state !== undefined && state !== 'n/a';
-}
-
 /**
  * Is `name` a copy-mode host? The agent's own word (`status.media.mode`). When it cannot
- * be asked, the last runtime state decides: a host that never took a copy (`n/a`) holds
- * nothing to withdraw; any other must have its withdrawal recorded. A runtime file that
- * cannot be read answers true: recording a withdrawal is never the unsafe side.
+ * be asked, the last runtime state decides, and ONLY an explicit `n/a` (the agent said
+ * so before) answers false. No runtime row yet, or a runtime file that cannot be read,
+ * answers true: an unpublish must never fail open — its withdrawal is recorded pending
+ * and the panel turns red until the agent answers.
  */
 export async function hostTakesCopy(
 	name: string,
@@ -672,7 +678,8 @@ export async function hostTakesCopy(
 	try {
 		mode = (await io.status(name)).media.mode;
 	} catch {
-		return tookCopy(await io.lastState(name).catch(() => 'failed' as const));
+		const last = await io.lastState(name).catch(() => undefined);
+		return last !== 'n/a';
 	}
 	if (mode === 'copy') return true;
 	await io.markNotCopy(name);

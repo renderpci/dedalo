@@ -30,6 +30,7 @@ import {
 	hostTakesCopy,
 	MEDIA_COPY_ACTOR,
 	type MediaCopyRuntime,
+	notCopyRuntime,
 	openLocalMediaFile,
 	recordRoundFailure,
 	syncHostWith,
@@ -784,6 +785,15 @@ describe('hostTakesCopy (the agent decides; unreachable → the last runtime sta
 	}
 	const down = new DedaloError('publication_host.unreachable', { message: 'down (test)' });
 
+	test('a host the agent says is not copy: n/a, and its pending deletions are cleared (nothing to verify there)', () => {
+		const cur: MediaCopyRuntime = {
+			...emptyRuntime(),
+			state: 'failed',
+			error: DELETION_UNVERIFIED,
+			pending_deletions: [{ path: '.publication/pub/test3_1', since: new Date(T0).toISOString() }],
+		};
+		expect(notCopyRuntime(cur)).toMatchObject({ state: 'n/a', error: null, pending_deletions: [] });
+	});
 	test('copy → true', async () => {
 		expect(await hostTakesCopy('pub1', io('copy', undefined).io)).toBe(true);
 	});
@@ -796,9 +806,16 @@ describe('hostTakesCopy (the agent decides; unreachable → the last runtime sta
 		expect(await hostTakesCopy('pub1', io(down, 'ok').io)).toBe(true);
 		expect(await hostTakesCopy('pub1', io(down, 'failed').io)).toBe(true);
 	});
-	test('unreachable and never a copy host → false (it holds nothing to withdraw)', async () => {
-		expect(await hostTakesCopy('pub1', io(down, undefined).io)).toBe(false);
+	test('unreachable: false ONLY for an explicit n/a; no runtime row or an unreadable one → true (never fail open)', async () => {
 		expect(await hostTakesCopy('pub1', io(down, 'n/a').io)).toBe(false);
+		expect(await hostTakesCopy('pub1', io(down, undefined).io)).toBe(true);
+		const unreadable: TakesCopyIo = {
+			...io(down, 'n/a').io,
+			lastState: async () => {
+				throw new Error('runtime file corrupt (test)');
+			},
+		};
+		expect(await hostTakesCopy('pub1', unreadable)).toBe(true);
 	});
 });
 
