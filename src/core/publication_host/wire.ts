@@ -309,6 +309,18 @@ export function agentResponseError(
 	});
 }
 
+/**
+ * Is `error` the agent's refusal (`rejected`) for the closed agent `reason`? The one reader
+ * of an answer error's reason (agentResponseError writes it), so no caller spells the code.
+ */
+export function isAgentRefusal(error: unknown, reason: string): boolean {
+	return (
+		error instanceof DedaloError &&
+		error.code === 'publication_host.rejected' &&
+		error.coordinates?.agent_reason === reason
+	);
+}
+
 /** The engine refuses an agent's 2xx answer (oversized, unreadable): `failed` + the engine reason. */
 export function engineFailure(
 	hostName: string,

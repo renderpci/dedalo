@@ -498,6 +498,7 @@ describe('source law: rejected / failed are minted only by wire.ts', () => {
 		capLogText: 'no_code',
 		parseAgentProblem: 'no_code',
 		agentReason: 'no_code', // returns a reason, never a code
+		isAgentRefusal: 'no_code', // a predicate over an answer error: reads the code, mints none
 		agentResponseError: 'minter', // rejected/failed always WITH details.reason
 		engineFailure: 'minter',
 		engineRefusal: 'minter',

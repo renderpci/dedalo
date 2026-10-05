@@ -89,6 +89,7 @@ import {
 	loadRuntime,
 	updateHostRuntime,
 } from '../../../core/publication_host/runtime.ts';
+import { isAgentRefusal } from '../../../core/publication_host/wire.ts';
 import type { CopyPlan, DesiredFile } from './media_copy.ts';
 
 /** The actor every copy command carries (the agent's audit names it). */
@@ -462,11 +463,7 @@ async function sendFile(round: Round, file: DesiredFile, prepared: PreparedFile)
 
 /** The agent refused the put because the key's marker is gone (a withdrawal landed first). */
 function isKeyUnpublishedRefusal(error: unknown): boolean {
-	return (
-		error instanceof DedaloError &&
-		error.code === 'publication_host.rejected' &&
-		error.coordinates?.agent_reason === 'key_unpublished'
-	);
+	return isAgentRefusal(error, 'key_unpublished');
 }
 
 type SendOutcome = 'sent' | 'timed_out' | 'refused';
