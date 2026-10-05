@@ -17,7 +17,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -202,7 +202,11 @@ describe('copy drill kit — the tree listing', () => {
 			'image/thumb/0/a.jpg',
 			'image/thumb/0/b.jpg',
 		]);
-		expect(listTree(join(scratch, 'absent'))).toEqual([]);
+		// an absent root lists as nothing — witnessed by length 0 on a path proven absent,
+		// beside the populated listing above (the floor)
+		const absent = join(scratch, 'absent');
+		expect(existsSync(absent)).toBe(false);
+		expect(listTree(absent).length).toBe(0);
 	});
 });
 
@@ -226,6 +230,8 @@ describe('the engine child, spawned — refuses before it can write anywhere', (
 	test('an unmarked private dir → exit 2, REFUSED, nothing written into it', () => {
 		const priv = join(scratch, 'unmarked_private');
 		mkdirSync(priv);
+		// a sentinel: the listing must equal exactly it — proves the read saw the dir and nothing was added
+		writeFileSync(join(priv, 'sentinel'), '');
 		const r = run(['runtime'], {
 			DEDALO_PRIVATE_DIR: priv,
 			DEDALO_TEST_MEDIA_ROOT: join(scratch, 'nowhere'),
@@ -234,7 +240,7 @@ describe('the engine child, spawned — refuses before it can write anywhere', (
 		expect(r.err).toContain('publication_host_copy_engine REFUSED');
 		expect(r.err).toContain(COPY_DRILL_PRIVATE_MARKER);
 		expect(r.out).not.toContain('DRILL_RESULT');
-		expect(readdirSync(priv)).toEqual([]);
+		expect(readdirSync(priv)).toEqual(['sentinel']);
 	});
 
 	test('a marked private dir but an unmarked media root → exit 2, nothing written into either', () => {
@@ -243,11 +249,12 @@ describe('the engine child, spawned — refuses before it can write anywhere', (
 		mkdirSync(priv);
 		mkdirSync(media);
 		writeFileSync(join(priv, COPY_DRILL_PRIVATE_MARKER), '');
+		writeFileSync(join(media, 'sentinel'), '');
 		const r = run(['runtime'], { DEDALO_PRIVATE_DIR: priv, DEDALO_TEST_MEDIA_ROOT: media });
 		expect(r.code).toBe(2);
 		expect(r.err).toContain('publication_host_copy_engine REFUSED');
 		expect(r.err).toContain('.dedalo_test_media');
 		expect(readdirSync(priv)).toEqual([COPY_DRILL_PRIVATE_MARKER]);
-		expect(readdirSync(media)).toEqual([]);
+		expect(readdirSync(media)).toEqual(['sentinel']);
 	});
 });
