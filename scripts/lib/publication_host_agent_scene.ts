@@ -144,6 +144,13 @@ export interface SceneOptions {
 	 * php refuses everything.
 	 */
 	readonly phpLint?: string;
+	/**
+	 * `copy` (the agent drill's phase-5 pass): the scene lives in `<server>_copy` and its
+	 * media root starts EMPTY — everything in it must come from the engine. The agent's
+	 * MEDIA_MODE is its env file's (writeAgentEnv overrides). Default `shared`: the
+	 * planted published/unpublished pair + marker.
+	 */
+	readonly media?: 'shared' | 'copy';
 }
 
 export interface Scene {
@@ -504,7 +511,8 @@ export async function setupScene(
 	shared: Shared,
 	options: SceneOptions,
 ): Promise<Scene> {
-	const dir = join(shared.root, server);
+	const copy = options.media === 'copy';
+	const dir = join(shared.root, copy ? `${server}_copy` : server);
 	const agentSocket = join(dir, 'agent.sock');
 	if (options.listen === 'unix' && Buffer.byteLength(agentSocket) > SOCKET_PATH_MAX_BYTES)
 		throw new Error(
@@ -531,7 +539,8 @@ export async function setupScene(
 		agent: null,
 	};
 	for (const sub of ['www', 'nginx_tmp']) mkdirSync(join(dir, sub), { recursive: true });
-	plantFiles(scene.media, MEDIA_FILES);
+	if (copy) mkdirSync(scene.media, { recursive: true });
+	else plantFiles(scene.media, MEDIA_FILES);
 	plantStateRoot(scene.state);
 	const v2Env = join(scene.state, 'publication_api', 'v2', 'shared', 'v2.env');
 	writeFileSync(

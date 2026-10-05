@@ -20,6 +20,16 @@
  *              second release; one whose scratch boot fails leaves the old release serving
  *              (Review Focus 3); rollback; a re-install of a known id only re-points
  *              `current` (D9).
+ *   copy       (phase 5, PUBLICATION_HOST_SPEC.md §5.2) a SECOND agent with MEDIA_MODE=copy
+ *              over an empty copy root; the ENGINE side in child processes on the suite
+ *              database (scripts/lib/publication_host_copy_engine.ts — why a child: its
+ *              header): pair → rules over the COPY root → publish → reconcile → exactly the
+ *              public files + the pub/ marker on the agent, gate 200 → unpublish through the
+ *              REAL hook (the started copy worker) with the agent's deletes made to FAIL
+ *              (quality dir 0555) → marker gone FIRST (404) while the bytes remain, deletion
+ *              pending → reconcile → verified gone; agent DOWN during an unpublish → the
+ *              marker's withdrawal pending, still served (no channel, no withdrawal) →
+ *              completed on its return.
  *
  * THE EXEC SEAM — STAND-INS AT THE AGENT'S ABSOLUTE BINARIES, INSIDE THE CI IMAGE.
  * The agent's publication/host_agent/src/exec.ts is a closed set of named commands, and its argv[0] is ABSOLUTE:
@@ -65,11 +75,22 @@
  * (scripts/publication_host_engine_drill.ts): one scene, never two.
  */
 
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	realpathSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { SUDO, SYSTEMCTL } from '../publication/host_agent/src/exec.ts';
+import { envSnapshot } from '../src/config/env.ts';
 import { buildNginxMap } from '../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
@@ -82,14 +103,21 @@ import {
 	publicationHostFingerprint,
 	publicationHostFingerprintMatches,
 } from '../src/core/publication_host/pairing.ts';
+import type { HostRuntime } from '../src/core/publication_host/runtime.ts';
 import {
 	ensureSuiteMariadb,
 	stopSuiteMariadb,
 	suiteMariadbStatus,
 } from '../test/helpers/suite_mariadb.ts';
 import { SUITE_MARIADB_PASSWORD, SUITE_MARIADB_USER } from '../test/helpers/suite_mariadb_env.ts';
+import { markProcessesDir, TEST_MEDIA_MARKER } from '../test/helpers/test_media_root.ts';
 import { zzdTargetDatabases } from '../test/helpers/zzd_diffusion_fixture.ts';
-import { execSeamProblem, issueTlsMaterial } from './lib/publication_host_agent_drill_kit.ts';
+import { resolveSuiteDatabase } from './client_test_server.ts';
+import {
+	execSeamProblem,
+	issueTlsMaterial,
+	sha256Hex,
+} from './lib/publication_host_agent_drill_kit.ts';
 import {
 	ACTOR,
 	AGENT_DIR,
@@ -113,6 +141,7 @@ import {
 	postRelease,
 	problems,
 	QUALITIES,
+	REPO,
 	refused,
 	releaseDir,
 	reloadCall,
@@ -131,6 +160,20 @@ import {
 	waitAgent,
 	writeAgentEnv,
 } from './lib/publication_host_agent_scene.ts';
+import {
+	COPY_DRILL_HOST,
+	COPY_DRILL_PRIVATE_MARKER,
+	type CopyEngineCommand,
+	type CopyPlanView,
+	copyEngineEnv,
+	listTree,
+	type ManifestView,
+	parseDrillResult,
+	type ReconcileView,
+	type RulesView,
+	type UnpublishView,
+} from './lib/publication_host_copy_drill_kit.ts';
+import { writeEngineBundle } from './lib/publication_host_engine_drill_kit.ts';
 
 export { missingBinaries };
 
@@ -479,6 +522,504 @@ async function pass(server: Server, shared: Shared, first: boolean): Promise<voi
 	}
 }
 
+// ── the copy pass (phase 5) ──────────────────────────────────────────────────
+
+/*
+ * THE COPY PASS — PUBLICATION_HOST_SPEC §5.2 on real processes. A second agent with
+ * MEDIA_MODE=copy over an EMPTY copy root, the phase-1 publication_host profile rendered
+ * over that root (one gate code path for both modes), and the ENGINE side (registry,
+ * client, planner, copy apply, reconcile, the copy worker) run in child processes
+ * (scripts/lib/publication_host_copy_engine.ts — why a child: its header). The child's
+ * private dir and WORK media root are scratch dirs that declare themselves (marker
+ * files); every child asserts the suite database's marker first.
+ *
+ * What stands in for what: a publish is left to MEDIA_COPY_RECONCILE (the correctness
+ * path, M3); an unpublish goes through the REAL latency hook — the child starts the copy
+ * worker as server.ts does, withdraws the work marker, and the pub/ flip reaches the
+ * worker (immediate withdrawal, then the host's lane run). Review Focus 2's interleaving
+ * (a put in flight vs an unpublish) stays Task 9's hermetic gate: no live timing can pin
+ * it. The failing delete is a REAL filesystem fault (the copy root's quality dir made
+ * 0555; the agent refuses root, so chmod binds it), not a seam. With the agent DOWN no
+ * channel exists: what the engine can know is that the key's withdrawal is owed (its
+ * agent marker, pending); the public gate keeps serving until the agent returns — stated
+ * by a row, never hidden.
+ */
+
+const COPY_ENGINE = join(REPO, 'scripts', 'lib', 'publication_host_copy_engine.ts');
+const ENGINE_CHILD_TIMEOUT_MS = 120_000;
+const COPY_KEY = 'test3_1';
+/** The agent-side marker path, as the runtime records its withdrawal (agentMarkerPath). */
+const COPY_MARKER_PATH = `.publication/pub/${COPY_KEY}`;
+/** The published record's two public files, sorted: exactly what the plan must name. */
+const COPY_PUBLISHED = [
+	'image/thumb/0/test88_test3_1_lg-spa.jpg',
+	'image/thumb/0/test99_test3_1.jpg',
+] as const;
+const ALL_PENDING = JSON.stringify([...COPY_PUBLISHED]);
+/** Work-side files that must NEVER reach the agent, each for its own reason. */
+const COPY_NEVER = {
+	master: 'image/original/0/test99_test3_1.tif',
+	non_public_quality: 'image/1.5MB/0/test99_test3_1.jpg',
+	working_file: 'image/thumb/0/test99_test3_1.tmp',
+	unparseable_name: 'image/thumb/0/renamed_by_hand.jpg',
+	unpublished_record: 'image/thumb/0/test99_test3_2.jpg',
+} as const;
+/** The agent-side directory made read-only to stage the failing delete. */
+const COPY_LOCKED_DIR = 'image/thumb/0';
+const COPY_MANIFEST = `${BASE}/v1/media/manifest`;
+
+type MediaCopyRuntime = HostRuntime['media_copy'];
+
+interface CopyScene {
+	readonly scene: Scene;
+	/** The engine's WORK media root (marked .dedalo_test_media): marker store + media files. */
+	readonly work: string;
+	/** The engine's scratch private dir (marked): registry, secrets, runtime, sha cache. */
+	readonly enginePrivate: string;
+	readonly engineEnv: Record<string, string>;
+	/** The copy agent's env file, reused when it is restarted. */
+	readonly agentEnv: string;
+	/** Stand-in log length after the rules apply: the media commands may spawn nothing. */
+	execSince: number;
+	/** last_verified_at after the first verified deletion; the agent-down leg must advance it. */
+	lastVerified: string | null;
+}
+
+function copyWorkFiles(): Record<string, Uint8Array> {
+	const text = (value: string) => new TextEncoder().encode(value);
+	return {
+		// 5 MiB: a streamed put over many chunks, hashed both sides.
+		[COPY_PUBLISHED[0]]: randomBytes(5 * 2 ** 20),
+		[COPY_PUBLISHED[1]]: randomBytes(3000),
+		[COPY_NEVER.master]: text('TIFF master: never leaves the work host'),
+		[COPY_NEVER.non_public_quality]: text('a quality that is not public'),
+		[COPY_NEVER.working_file]: text('a working file the hardening denies to everyone'),
+		[COPY_NEVER.unparseable_name]: text('no record in its name: login-only by design'),
+		[COPY_NEVER.unpublished_record]: text('a record nobody published'),
+	};
+}
+
+function prepareCopy(scene: Scene): CopyScene {
+	const { suiteDb } = resolveSuiteDatabase();
+	const work = join(scene.dir, 'work_media');
+	mkdirSync(work, { recursive: true });
+	writeFileSync(
+		join(work, TEST_MEDIA_MARKER),
+		'publication-host copy drill: the scratch WORK media root\n',
+	);
+	for (const [rel, bytes] of Object.entries(copyWorkFiles())) {
+		mkdirSync(dirname(join(work, rel)), { recursive: true });
+		writeFileSync(join(work, rel), bytes);
+	}
+	const enginePrivate = join(scene.dir, 'engine_private');
+	mkdirSync(enginePrivate, { recursive: true, mode: 0o700 });
+	writeFileSync(
+		join(enginePrivate, COPY_DRILL_PRIVATE_MARKER),
+		'publication-host copy drill: the scratch engine private dir\n',
+	);
+	return {
+		scene,
+		work,
+		enginePrivate,
+		engineEnv: copyEngineEnv({
+			base: envSnapshot(),
+			privateDir: enginePrivate,
+			suiteDb,
+			mediaRoot: work,
+			processesDir: markProcessesDir(`${work}.processes`),
+		}),
+		agentEnv: writeAgentEnv(scene, 'agent_copy.env', { MEDIA_MODE: 'copy' }),
+		execSince: 0,
+		lastVerified: null,
+	};
+}
+
+/** One engine command in a fresh child; a failure result or a refusal throws (→ RED row). */
+async function engine<T>(
+	copy: CopyScene,
+	command: CopyEngineCommand,
+	...args: string[]
+): Promise<T> {
+	const proc = Bun.spawn([process.execPath, 'run', COPY_ENGINE, command, ...args], {
+		cwd: REPO,
+		env: copy.engineEnv,
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	const timer = setTimeout(() => proc.kill('SIGKILL'), ENGINE_CHILD_TIMEOUT_MS);
+	try {
+		const [stdout, stderr] = await Promise.all([
+			new Response(proc.stdout).text(),
+			new Response(proc.stderr).text(),
+		]);
+		await proc.exited;
+		const result = parseDrillResult(stdout, stderr);
+		if (!result.ok) throw new Error(`engine ${command} failed: ${result.error}`);
+		return result.value as T;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+const gateUrl = (scene: Scene, rel: string) =>
+	`http://127.0.0.1:${scene.webPort}${publicationHostMediaUrl()}/${rel}`;
+
+async function gateIs(
+	scene: Scene,
+	rels: readonly string[],
+	want: number,
+): Promise<(string | null)[]> {
+	return Promise.all(
+		rels.map(async (rel) => {
+			const problem = await eventually(async () => (await fetch(gateUrl(scene, rel))).status, want);
+			return problem === null ? null : `gate ${rel}: ${problem}`;
+		}),
+	);
+}
+
+const workSha = (copy: CopyScene, rel: string) => sha256Hex(readFileSync(join(copy.work, rel)));
+
+/**
+ * What the agent's copy root holds. Top-level dot entries (the agent's own `.publication`
+ * and its transient probe file) are not media; everything else must be exactly the
+ * published files, byte-identical to the work side, and pub/ must hold exactly the key.
+ */
+function agentHolds(copy: CopyScene, held: boolean): (string | false)[] {
+	const { media } = copy.scene;
+	const served = listTree(media).filter((path) => !path.startsWith('.'));
+	const want: string[] = held ? [...COPY_PUBLISHED] : [];
+	const markers = listTree(join(media, '.publication', 'pub'));
+	return [
+		JSON.stringify(served) !== JSON.stringify(want) &&
+			`copy root holds ${JSON.stringify(served)}, expected ${JSON.stringify(want)}`,
+		...want.map(
+			(rel) =>
+				existsSync(join(media, rel)) &&
+				sha256Hex(readFileSync(join(media, rel))) !== workSha(copy, rel) &&
+				`bytes differ from the work file: ${rel}`,
+		),
+		JSON.stringify(markers) !== JSON.stringify(held ? [COPY_KEY] : []) &&
+			`agent pub/ markers ${JSON.stringify(markers)}`,
+	];
+}
+
+async function mediaCopyRuntime(copy: CopyScene): Promise<MediaCopyRuntime> {
+	const runtime = await engine<HostRuntime | null>(copy, 'runtime');
+	if (runtime === null) throw new Error(`the runtime file holds no entry for ${COPY_DRILL_HOST}`);
+	return runtime.media_copy;
+}
+
+const pending = (mc: MediaCopyRuntime) =>
+	JSON.stringify(mc.pending_deletions.map((entry) => entry.path).sort());
+
+/** The agent's audit actions, in order (it audits media.put / media.delete / media.mark). */
+function auditActions(scene: Scene): string[] {
+	const file = join(scene.state, 'audit', 'audit.jsonl');
+	if (!existsSync(file)) return [];
+	return readFileSync(file, 'utf8')
+		.split('\n')
+		.filter(Boolean)
+		.flatMap((line) => {
+			try {
+				const action = (JSON.parse(line) as { action?: unknown }).action;
+				return typeof action === 'string' ? [action] : [];
+			} catch {
+				return [];
+			}
+		});
+}
+
+/** Can this uid still create a file in `dir`? (root ignores 0555: the fault cannot be staged) */
+function uidCanWrite(dir: string): boolean {
+	const probe = join(dir, '.drill_write_probe');
+	try {
+		writeFileSync(probe, '');
+		rmSync(probe, { force: true });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+async function copySetupRows(copy: CopyScene): Promise<void> {
+	const { scene } = copy;
+	const s = `[${scene.server}][copy]`;
+	await row(
+		`${s} pair: registry + secrets in the scratch private dir, pairing proved`,
+		async () => {
+			const tokenFile = join(scene.dir, 'engine_token');
+			writeFileSync(tokenFile, scene.token, { mode: 0o600 });
+			const bundleFile = join(scene.dir, 'engine_bundle', 'engine_bundle.pem');
+			writeEngineBundle(bundleFile, scene.shared.tls);
+			const spec = join(scene.dir, 'pair_spec.json');
+			const record = {
+				name: COPY_DRILL_HOST,
+				instance: INSTANCE,
+				fingerprint: publicationHostFingerprint(INSTANCE, scene.token),
+				address: { kind: 'tls', host: '127.0.0.1', port: scene.agentPort },
+				public_url: null,
+				qualities: null,
+				probe: { published: null, unpublished: null },
+				paired_at: new Date().toISOString(),
+			};
+			writeFileSync(
+				spec,
+				JSON.stringify({ record, token_file: tokenFile, bundle_file: bundleFile }),
+				{ mode: 0o600 },
+			);
+			const paired = await engine<{ name: string; paired: boolean }>(copy, 'pair', spec);
+			const registry = join(copy.enginePrivate, 'publication_hosts.json');
+			return problems([
+				(paired.name !== COPY_DRILL_HOST || paired.paired !== true) &&
+					`pair answered ${JSON.stringify(paired)}`,
+				!existsSync(registry) && 'no registry in the scratch private dir',
+				existsSync(registry) &&
+					readFileSync(registry, 'utf8').includes(scene.token) &&
+					'the token is in the registry file',
+			]);
+		},
+	);
+	await row(
+		`${s} rules over the COPY root (engine render → configtest + reload); nothing served before a copy`,
+		async () => {
+			const since = logLines(scene).length;
+			const applied = await engine<RulesView>(copy, 'rules');
+			copy.execSince = logLines(scene).length;
+			const include = existsSync(scene.include) ? readFileSync(scene.include, 'utf8') : '';
+			return problems([
+				applied.applied_hash !== applied.expected_hash &&
+					`applied ${applied.applied_hash}, expected ${applied.expected_hash}`,
+				applied.root !== scene.media &&
+					`the agent reported media root ${applied.root}, not its copy root ${scene.media}`,
+				!include.includes(`# config-hash: ${applied.expected_hash}`) &&
+					'the live include does not carry the expected hash',
+				callsSince(scene, since, [configtestCall(scene.server), reloadCall(scene.server)]),
+				...(await gateIs(scene, COPY_PUBLISHED, 404)),
+			]);
+		},
+	);
+}
+
+async function copyPublishRows(copy: CopyScene): Promise<void> {
+	const { scene } = copy;
+	const s = `[${scene.server}][copy]`;
+	await row(
+		`${s} publish ${COPY_KEY} → the plan names exactly its 2 public files + the marker (never a master, a non-public quality, a working file, an unparseable name, an unpublished record)`,
+		async () => {
+			await engine(copy, 'publish', 'test3', '1');
+			const plan = await engine<CopyPlanView>(copy, 'plan');
+			return problems([
+				JSON.stringify(plan.put) !== ALL_PENDING && `put ${JSON.stringify(plan.put)}`,
+				plan.del.length !== 0 && `del ${JSON.stringify(plan.del)}`,
+				JSON.stringify(plan.mark) !== JSON.stringify([{ key: COPY_KEY, published: true }]) &&
+					`mark ${JSON.stringify(plan.mark)}`,
+			]);
+		},
+	);
+	await row(
+		`${s} reconcile → the agent holds the 2 files byte-identical + pub/${COPY_KEY}; the gate serves them, nothing else`,
+		async () => {
+			const report = await engine<ReconcileView>(copy, 'reconcile');
+			const served = await Promise.all(
+				COPY_PUBLISHED.map(async (rel) => {
+					const res = await fetch(gateUrl(scene, rel));
+					const body = new Uint8Array(await res.arrayBuffer());
+					return res.status === 200 && sha256Hex(body) === workSha(copy, rel)
+						? null
+						: `gate ${rel}: ${res.status}, ${body.length} bytes`;
+				}),
+			);
+			return problems([
+				(report.applied === 0 || report.state !== 'ok') && `reconcile ${JSON.stringify(report)}`,
+				...agentHolds(copy, true),
+				...served,
+				...(await gateIs(scene, Object.values(COPY_NEVER), 404)),
+			]);
+		},
+	);
+	await row(
+		`${s} GET /v1/media/manifest: the 2 files with the work sha256, markers [${COPY_KEY}]`,
+		async () => {
+			const res = await agentFetch(scene, `${COPY_MANIFEST}?limit=1000`);
+			if (res.status !== 200) return `status ${res.status}: ${await res.text()}`;
+			const body = (await res.json()) as ManifestView;
+			const entries = [...body.entries].sort((a, b) => (a.path < b.path ? -1 : 1));
+			const want = COPY_PUBLISHED.map((rel) => [rel, workSha(copy, rel)]);
+			return problems([
+				JSON.stringify(entries.map((e) => [e.path, e.sha256])) !== JSON.stringify(want) &&
+					`entries ${JSON.stringify(entries)}`,
+				(body.irregular ?? []).length !== 0 && `irregular ${JSON.stringify(body.irregular)}`,
+				JSON.stringify(body.markers) !== JSON.stringify([COPY_KEY]) &&
+					`markers ${JSON.stringify(body.markers)}`,
+				body.next !== null && `next ${body.next}`,
+			]);
+		},
+	);
+	await row(`${s} runtime: media_copy ok, desired 2, present 2, nothing pending`, async () => {
+		const mc = await mediaCopyRuntime(copy);
+		return problems([
+			mc.state !== 'ok' && `state ${mc.state} (${mc.error})`,
+			mc.desired !== 2 && `desired ${mc.desired}`,
+			mc.present !== 2 && `present ${mc.present}`,
+			mc.pending_puts !== 0 && `pending_puts ${mc.pending_puts}`,
+			mc.pending_deletions.length !== 0 && `pending_deletions ${pending(mc)}`,
+		]);
+	});
+	await row(`${s} in sync → empty plan, reconcile drift 0`, async () => {
+		const plan = await engine<CopyPlanView>(copy, 'plan');
+		const report = await engine<ReconcileView>(copy, 'reconcile');
+		return problems([
+			plan.put.length + plan.del.length + plan.mark.length !== 0 && `plan ${JSON.stringify(plan)}`,
+			(report.drift !== 0 || report.applied !== 0) && `reconcile ${JSON.stringify(report)}`,
+		]);
+	});
+}
+
+async function copyFailingDeleteRows(copy: CopyScene): Promise<void> {
+	const { scene } = copy;
+	const s = `[${scene.server}][copy]`;
+	await row(
+		`${s} unpublish (real hook) with the agent's deletes FAILING (quality dir 0555) → marker FIRST: 404 while the bytes are still on disk; deletion pending, never reported done`,
+		async () => {
+			const locked = join(scene.media, COPY_LOCKED_DIR);
+			const auditFrom = auditActions(scene).length;
+			chmodSync(locked, 0o555);
+			try {
+				if (uidCanWrite(locked)) {
+					return 'chmod 0555 does not stop this uid (root?): the failing-delete fault cannot be staged';
+				}
+				const sent = await engine<UnpublishView>(copy, 'unpublish', 'test3', '1');
+				const mc = await mediaCopyRuntime(copy);
+				const media = auditActions(scene)
+					.slice(auditFrom)
+					.filter((action) => action.startsWith('media.'));
+				return problems([
+					JSON.stringify(sent.paths) !== ALL_PENDING &&
+						`unpublish targeted ${JSON.stringify(sent.paths)}`,
+					(sent.round === null || sent.round.state === 'ok') &&
+						`the worker's round reported ${JSON.stringify(sent.round)}`,
+					existsSync(join(scene.media, COPY_MARKER_PATH)) &&
+						'the agent marker survived the unpublish',
+					...(await gateIs(scene, COPY_PUBLISHED, 404)),
+					...COPY_PUBLISHED.map(
+						(rel) =>
+							!existsSync(join(scene.media, rel)) &&
+							`${rel} is gone although its delete was made to fail (the fault was not staged)`,
+					),
+					pending(mc) !== ALL_PENDING && `pending_deletions ${pending(mc)}`,
+					mc.state === 'ok' && 'media_copy reports ok with deletions outstanding',
+					media[0] !== 'media.mark' &&
+						`first media command after the unpublish: ${media[0] ?? 'none'} (the marker must go first)`,
+					!media.includes('media.delete') && 'no media.delete was attempted',
+					media.includes('media.put') && 'a media.put was sent during an unpublish',
+				]);
+			} finally {
+				chmodSync(locked, 0o755);
+			}
+		},
+	);
+	await row(
+		`${s} the failed deletion recovers: dir writable again → reconcile → files gone, verified`,
+		async () => {
+			const startedAt = Date.now();
+			const report = await engine<ReconcileView>(copy, 'reconcile');
+			const mc = await mediaCopyRuntime(copy);
+			copy.lastVerified = mc.last_verified_at;
+			return problems([
+				(report.applied === 0 || report.state !== 'ok') && `reconcile ${JSON.stringify(report)}`,
+				...agentHolds(copy, false),
+				...(await gateIs(scene, COPY_PUBLISHED, 404)),
+				mc.pending_deletions.length !== 0 && `pending_deletions ${pending(mc)}`,
+				mc.state !== 'ok' && `state ${mc.state} (${mc.error})`,
+				(mc.last_verified_at === null || Date.parse(mc.last_verified_at) < startedAt - 1000) &&
+					`last_verified_at ${mc.last_verified_at} was not set by this reconcile`,
+			]);
+		},
+	);
+}
+
+async function copyAgentDownRows(copy: CopyScene): Promise<void> {
+	const { scene } = copy;
+	const s = `[${scene.server}][copy]`;
+	await row(`${s} republish → reconcile → served again (200)`, async () => {
+		await engine(copy, 'publish', 'test3', '1');
+		const report = await engine<ReconcileView>(copy, 'reconcile');
+		return problems([
+			report.state !== 'ok' && `reconcile ${JSON.stringify(report)}`,
+			...agentHolds(copy, true),
+			...(await gateIs(scene, COPY_PUBLISHED, 200)),
+		]);
+	});
+	await row(
+		`${s} agent DOWN during an unpublish (real hook) → the marker's withdrawal pending, media_copy not ok, error recorded; the public gate still serves (honest limit: no channel, no withdrawal)`,
+		async () => {
+			scene.agent?.kill('SIGTERM');
+			await scene.agent?.exited;
+			scene.agent = null;
+			const sent = await engine<UnpublishView>(copy, 'unpublish', 'test3', '1');
+			const mc = await mediaCopyRuntime(copy);
+			return problems([
+				JSON.stringify(sent.paths) !== ALL_PENDING &&
+					`unpublish targeted ${JSON.stringify(sent.paths)}`,
+				(sent.round === null || sent.round.state === 'ok' || sent.round.error === null) &&
+					`the worker's round reported ${JSON.stringify(sent.round)}`,
+				!mc.pending_deletions.some((entry) => entry.path === COPY_MARKER_PATH) &&
+					`pending_deletions ${pending(mc)} lack ${COPY_MARKER_PATH}`,
+				mc.state === 'ok' && 'media_copy reports ok with the host unreachable',
+				mc.error === null && 'no error recorded',
+				...agentHolds(copy, true),
+				...(await gateIs(scene, COPY_PUBLISHED, 200)),
+			]);
+		},
+	);
+	await row(
+		`${s} agent back → reconcile completes the pending deletion: files + marker gone, 404, verified again`,
+		async () => {
+			scene.agent = spawnAgent(scene, copy.agentEnv, 'agent_restarted.log');
+			await waitAgent(scene);
+			const report = await engine<ReconcileView>(copy, 'reconcile');
+			const mc = await mediaCopyRuntime(copy);
+			return problems([
+				(report.applied === 0 || report.state !== 'ok') && `reconcile ${JSON.stringify(report)}`,
+				...agentHolds(copy, false),
+				...(await gateIs(scene, COPY_PUBLISHED, 404)),
+				mc.pending_deletions.length !== 0 && `pending_deletions ${pending(mc)}`,
+				mc.state !== 'ok' && `state ${mc.state} (${mc.error})`,
+				(mc.last_verified_at === null ||
+					copy.lastVerified === null ||
+					Date.parse(mc.last_verified_at) <= Date.parse(copy.lastVerified)) &&
+					`last_verified_at ${mc.last_verified_at} did not advance past ${copy.lastVerified}`,
+			]);
+		},
+	);
+	await row(
+		`[${scene.server}][copy][exec] the media commands spawned nothing (no stand-in call after the rules apply)`,
+		() => callsSince(scene, copy.execSince, []),
+	);
+}
+
+async function copyPass(server: Server, shared: Shared): Promise<void> {
+	const scene = await setupScene(server, shared, {
+		listen: 'tls',
+		nginxMap: buildNginxMap(),
+		media: 'copy',
+	});
+	try {
+		const copy = prepareCopy(scene);
+		scene.agent = spawnAgent(scene, copy.agentEnv, 'agent.log');
+		await waitAgent(scene);
+		await copySetupRows(copy);
+		await copyPublishRows(copy);
+		await copyFailingDeleteRows(copy);
+		await copyAgentDownRows(copy);
+	} finally {
+		// A row that died mid-fault must not leave a 0555 dir rmSync cannot empty.
+		const locked = join(scene.media, COPY_LOCKED_DIR);
+		if (existsSync(locked)) chmodSync(locked, 0o755);
+		await teardown(scene);
+	}
+}
+
 if (import.meta.main) {
 	let only: string | undefined;
 	try {
@@ -530,6 +1071,11 @@ if (import.meta.main) {
 				await pass(server, shared, i === 0);
 			} catch (error) {
 				book.fail(`[${server}] the pass could not run`, error);
+			}
+			try {
+				await copyPass(server, shared);
+			} catch (error) {
+				book.fail(`[${server}][copy] the pass could not run`, error);
 			}
 		}
 	} catch (error) {

@@ -623,7 +623,7 @@ function fixHint(stage: Stage): string {
 	if (name.includes('publication-host engine'))
 		return "bun run test:pubhost:engine [--only apache|nginx] — inside the CI image only (the agent drill's exec seam: bun run ci:local --docker --instance); needs the suite database (bun run test:db:setup), php-cli and network for the engine's v2 dependency builds (the lockstep rows) plus everything test:pubhost:agent needs";
 	if (name.includes('publication-host agent'))
-		return 'bun install --frozen-lockfile --cwd publication/host_agent && bun run test:pubhost:agent [--only apache|nginx] — inside the CI image only (its exec seam: bun run ci:local --docker --instance); needs openssl, Apache 2.4 + apxs, nginx, MariaDB; network for the v2 bundle install';
+		return 'bun install --frozen-lockfile --cwd publication/host_agent && bun run test:pubhost:agent [--only apache|nginx] — inside the CI image only (its exec seam: bun run ci:local --docker --instance); needs openssl, Apache 2.4 + apxs, nginx, MariaDB, the suite database for the copy pass (bun run test:db:setup); network for the v2 bundle install';
 	if (name.includes('publication-host'))
 		return 'bun run test:media:pubhost [--only apache|nginx] (needs Apache 2.4 + apxs, nginx with the mp4 module)';
 	if (name.includes('tripwire')) {

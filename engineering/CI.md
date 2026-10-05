@@ -425,9 +425,18 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   `/opt/dedalo-ci/exec-seam/`; they accept only exec.ts's closed argv and log every call,
   and the drill asserts the exact call sequence. The agent runs with `NODE_ENV=test`
   stated in its env file (the job's uid 1001 cannot make the root-owned, `chattr +a`
-  audit trail production demands — the drill's header). **Runner requirement**: the media
-  drill's plus openssl, git, bash, MariaDB and the exec seam — all in the CI image, so the
-  drill runs ONLY there: anywhere else it is RED, naming the seam, and never touches a real
+  audit trail production demands — the drill's header). Its COPY pass (phase 5) boots a
+  second agent with `MEDIA_MODE=copy` over an empty copy root and drives the ENGINE side in
+  child processes (`scripts/lib/publication_host_copy_engine.ts`: the suite database, a
+  scratch private dir and a scratch WORK media root, each marker-guarded; no DB row is
+  written): publish → reconcile → exactly the public files + the `pub/` marker on the
+  agent, served 200; an unpublish through the real hook (the started copy worker) with the
+  agent's deletes made to fail → the marker goes first (404) and the deletion stays pending
+  until a reconcile verifies it; agent down during an unpublish → the marker's withdrawal
+  pending (the gate still serves: no channel), completed when it returns. **Runner
+  requirement**: the media drill's plus openssl, git, bash, MariaDB, the exec seam and the
+  suite database (the tier builds it first) — all in the CI image, so the drill runs ONLY
+  there: anywhere else it is RED, naming the seam, and never touches a real
   sudo/systemctl. Locally: `bun run ci:local --docker --instance`.
   LAST, `bun run test:pubhost:engine` (`scripts/publication_host_engine_drill.ts`): the
   ENGINE side of the publication host against that same real agent (one scene, shared:
