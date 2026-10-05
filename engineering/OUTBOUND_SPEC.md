@@ -265,6 +265,25 @@ record, not this file. The paired agent channel is not on that list: it is a
 door with its own policy (§2.1, `src/core/publication_host/transport.ts`),
 registered as one in both gates.
 
+**The dependency installs.** Two engine paths run the PINNED Bun (`process.execPath`)
+`install --frozen-lockfile --production`, which fetches packages from the npm registry:
+the code updater's own install in the quarantine (`installDepsReal`,
+`src/core/update/code_update.ts`) and the Publication API v2 build
+(`installV2DepsReal`, `src/core/publication_host/api_bundles.ts`, which also passes
+`--linker hoisted --ignore-scripts`). They are child processes, not engine sockets, so no
+guard can stand in front of them. What bounds them is the lockfile: every version and
+integrity hash is the one the verified release shipped. The v2 build refuses a release
+without `bun.lock` before the child starts (Bun accepts `--frozen-lockfile` with no
+lockfile and floats every version); the updater's install has no such check yet. The v2 child runs with a minimal environment
+(`v2DepsInstallEnv`):
+- it passes through only `PATH`, `TMPDIR` and the standard proxy keys;
+- its `HOME` is the build dir and its cache a shared dir under the build root;
+- it gets no engine secret.
+
+`test/unit/publication_host_api_bundles_native.test.ts` holds that environment to the exact
+key set. The registry this egress reaches is the release's own `bunfig.toml` (verified
+input) or Bun's default; no operator registry override is passed.
+
 ## 6. The gates
 
 | Gate | Enforces |

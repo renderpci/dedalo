@@ -364,6 +364,11 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// Orphan adoptions in flight, keyed on the resolved backup directory, deleted
 	// when the pass settles — concurrent dumps share one pass. No request identity.
 	'core/area_maintenance/backup.ts:adoptionInFlight',
+	// Publication API bundle builds in flight (phase 4, L3): keyed on backupRoot +
+	// release id + api — never request identity — so the boot-confirm hook and a
+	// panel push of the same release share one `bun install`. Deleted the moment the
+	// build settles (`.finally`); a restart clears it.
+	'core/publication_host/api_bundles.ts:buildsInFlight',
 	// Publication-host READ proofs (phase 3, E6): host NAME → the registry fingerprint +
 	// address its unauthenticated /health proved. A fact about a fixed registry entry —
 	// no user, session or language. Success only; deleted on any transport failure, a
