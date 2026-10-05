@@ -24,7 +24,14 @@ import { join } from 'node:path';
 import { type AgentConfig, config } from './config';
 import { AUDIT_DIR, AUDIT_FILE_NAME } from './instance/roots';
 
-export type AuditAction = 'rules.apply' | 'release.install' | 'release.rollback' | 'release.auto_rollback';
+export type AuditAction =
+  | 'rules.apply'
+  | 'release.install'
+  | 'release.rollback'
+  | 'release.auto_rollback'
+  | 'media.put'
+  | 'media.delete'
+  | 'media.mark';
 export type AuditOutcome = 'ok' | 'refused' | 'failed';
 
 export interface AuditEntry {
