@@ -4,7 +4,9 @@
  * `get_label['x']` references, so these keys are invisible to it:
  *   - `publication_hosts_check_<id>` through check_row(…, 'publication_hosts') — for every
  *     fixed check id AND every decorator check id (phase 5: media_copy);
- *   - `publication_hosts_lead` through the System Map's MAP_TOOL_DESC_LABEL.
+ *   - `publication_hosts_lead` through the System Map's MAP_TOOL_DESC_LABEL;
+ *   - the phase-6 probe fact labels through probe_view.js probe_facts (its own keys,
+ *     read off a full probe — never copied here).
  * Each key must be defined in master.json and translated in every catalog except
  * the master-source lang. CHECK_IDS IS host_status.ts HOST_CHECK_IDS (imported, never
  * copied): a new id ships red here until its label exists.
@@ -12,6 +14,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { probe_facts } from '../../client/dedalo/core/area_maintenance/widgets/publication_hosts/js/probe_view.js';
 import { MASTER_SOURCE_LANG } from '../../src/core/labels/catalog.ts';
 import {
 	DECORATOR_CHECK_IDS,
@@ -22,9 +25,13 @@ const LABELS_DIR = resolve(import.meta.dir, '../../src/core/labels');
 
 // THE engine's lists, imported: a new HostCheck id without its label reds this gate.
 const CHECK_IDS = [...HOST_CHECK_IDS, ...DECORATOR_CHECK_IDS];
+const PROBE_FACT_KEYS = probe_facts({
+	public_probe: { state: 'failed', at: 'x', detail: 'y' },
+}).map(([key]) => key);
 const DYNAMIC_KEYS = [
 	...CHECK_IDS.map((id) => `publication_hosts_check_${id}`),
 	'publication_hosts_lead',
+	...PROBE_FACT_KEYS,
 ];
 
 const readJson = (path: string): Record<string, string> =>
@@ -37,7 +44,8 @@ describe('publication_hosts client labels', () => {
 		// corpus floor: at least the 11 phase-3 check ids + media_copy + the lead, so an emptied list cannot pass vacuously
 		expect(CHECK_IDS.length).toBeGreaterThanOrEqual(12);
 		expect(CHECK_IDS).toContain('media_copy');
-		expect(DYNAMIC_KEYS).toHaveLength(CHECK_IDS.length + 1);
+		expect(PROBE_FACT_KEYS).toHaveLength(2);
+		expect(DYNAMIC_KEYS).toHaveLength(CHECK_IDS.length + 1 + PROBE_FACT_KEYS.length);
 		expect(DYNAMIC_KEYS.filter((key) => master[key] === undefined)).toEqual([]);
 	});
 

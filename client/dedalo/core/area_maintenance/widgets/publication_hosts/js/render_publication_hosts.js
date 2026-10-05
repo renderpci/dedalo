@@ -13,6 +13,7 @@ import { error_text } from '../../../../common/js/render_api_error.js';
 import { ui } from '../../../../common/js/ui.js';
 import { check_row, fact_row, section } from '../../update_code/js/render_update_status.js';
 import { has_media_copy } from './media_copy_view.js';
+import { probe_facts } from './probe_view.js';
 import { render_api_lockstep, render_runtime_invalid } from './render_api_lockstep.js';
 
 /**
@@ -32,7 +33,8 @@ import { render_api_lockstep, render_runtime_invalid } from './render_api_lockst
  *     api_lockstep     : {engine_release, refused, checked_at, rows} // phase 4 (render_api_lockstep.js)
  *   }
  *   HostPanelRow carries `qualities` and `probe` (non-secret registry fields)
- *   for the edit form.
+ *   for the edit form, and `public_probe` (phase 6: the last public-URL probe
+ *   verdict, beside its `public_gate` check).
  *
  * THE CONTRACT WITH THE SERVER is update_code's: ids and facts, never
  * sentences. Check rows go through the shared check_row with the
@@ -315,6 +317,10 @@ const render_host = function (self, host, is_root, body_response, parent) {
 	for (const check of checks) {
 		check_row(facts, check, 'publication_hosts');
 	}
+	// phase 6: when the public gate was last probed, and why it is not proven (TEXT)
+	for (const [label_key, fallback, value] of probe_facts(host)) {
+		fact_row(facts, get_label[label_key] || fallback, value, false);
+	}
 
 	if (is_root) {
 		render_actions(self, host, card, body_response);
@@ -353,7 +359,7 @@ const confirm_text = function (action_label, target) {
  * RENDER_ACTIONS
  * Apply media rules · Probe media · Roll back API · Reconcile media copy
  * (rows carrying a media_copy check: not proven a non-copy host holding nothing) ·
- * Remove host.
+ * Probe public gate · Remove host.
  */
 const render_actions = function (self, host, card, body_response) {
 	const actions = ui.create_dom_element({
@@ -401,6 +407,8 @@ const render_actions = function (self, host, card, body_response) {
 		render_media_copy(self, host, actions, body_response, agent_blocked);
 	}
 
+	render_probe_public(self, host, actions, body_response);
+
 	const remove_label = get_label.publication_hosts_remove_host || 'Remove host';
 	const button_remove = action_button(actions, 'danger button_remove_host', remove_label, false);
 	button_remove.addEventListener('click', async (e) => {
@@ -447,6 +455,35 @@ const render_media_copy = (self, host, parent, body_response, agent_blocked) => 
 
 	return button;
 }; //end render_media_copy
+
+/**
+ * RENDER_PROBE_PUBLIC
+ * Root: prove this host's media gate through its PUBLIC URL now (phase 6) —
+ * the published probe file must answer 2xx, the unpublished one 404. It dials
+ * no agent (two bounded GETs through the engine's public door), so it is never
+ * disabled by an unproved pairing, and it changes nothing on the host: no
+ * confirm. The server's sentence is shown as TEXT; the reload repaints the
+ * Public gate row from the recorded verdict.
+ * @returns {HTMLButtonElement}
+ */
+const render_probe_public = (self, host, parent, body_response) => {
+	const label = get_label.publication_hosts_probe_public || 'Probe public gate';
+	const button = action_button(parent, 'button_probe_public', label, false);
+	button.addEventListener('click', async (e) => {
+		e.stopPropagation();
+		await run_action(self, {
+			button: button,
+			body_response: body_response,
+			action: 'probe_public',
+			options: { name: host.name },
+			result_text: (api_response) => String(response_extension(api_response, 'msg') || ''),
+			confirm_text: null, // an observation: nothing on the host changes
+			reload: true,
+		});
+	});
+
+	return button;
+}; //end render_probe_public
 
 /**
  * RENDER_ROLLBACK

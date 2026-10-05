@@ -610,6 +610,54 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			assert.isNull(response.querySelector('b'), 'never parsed as HTML');
 		});
 
+		it('probe_public (phase 6): no confirm, never disabled by the pairing, sends {name}, server sentence as TEXT, reloads', async () => {
+			const self = build_widget(ok_value([build_host({ pairing_proved: false })]));
+			self.next_response = {
+				ok: true,
+				data: { state: 'failed', at: '2026-10-05T10:00:00.000Z' },
+				msg: "Error. 'www': <b>the gate is OPEN</b>",
+			};
+			const content = await mount(self);
+			const button = content.querySelector('.button_probe_public');
+			assert.isNotNull(button, 'every root row offers the public probe');
+			assert.isFalse(button.disabled, 'it dials no agent: an unproved pairing does not disable it');
+
+			button.click();
+			await settle();
+			assert.strictEqual(self.confirms.length, 0, 'an observation asks nothing');
+			assert.deepEqual(self.calls, [{ action: 'probe_public', options: { name: 'www' } }]);
+			assert.strictEqual(self.reloads, 1);
+			const response = content.querySelector('.body_response');
+			assert.include(
+				response.textContent,
+				'<b>the gate is OPEN</b>',
+				'the server sentence, as text',
+			);
+			assert.isNull(response.querySelector('b'), 'never parsed as HTML');
+		});
+
+		it('public_probe facts: when, and the server detail as TEXT (phase 6)', async () => {
+			const host = build_host({
+				checks: [
+					...build_host().checks,
+					{ id: 'public_gate', state: 'unknown', detail: 'unproven' },
+				],
+				public_probe: {
+					state: 'unknown',
+					at: '2026-10-05T10:00:00.000Z',
+					published_status: null,
+					unpublished_status: null,
+					detail: '<img src=x onerror="window.__probe_xss=1">',
+				},
+			});
+			const content = await mount(build_widget(ok_value([host])));
+			const text = content.textContent;
+			assert.include(text, '2026-10-05T10:00:00.000Z');
+			assert.include(text, '<img src=x');
+			assert.isNull(content.querySelector('img'), 'the detail is never parsed as HTML');
+			assert.isUndefined(window.__probe_xss);
+		});
+
 		it('set_host_fields sends the edited fields; a blank field is null', async function () {
 			const self = build_widget(ok_value([build_host()]));
 			self.next_response = {
