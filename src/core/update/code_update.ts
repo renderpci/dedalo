@@ -125,6 +125,7 @@ import {
 	type PendingFreshness,
 	requireFreshBackup,
 } from './preconditions.ts';
+import { writePublicationManifest } from './publication_manifest.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
@@ -1611,6 +1612,11 @@ export async function updateCode(
 		const quarantine = join(stagingDir, 'extract');
 		const codeRoot = await extractArchive(zipPath, quarantine);
 		writeInstallStampSync(codeRoot, request);
+		// The Publication API census (publication_manifest.ts, publication host
+		// L1): what was verified is what the engine may later push to a
+		// publication host. Written with the stamp, before the deps install and
+		// the smoke boot, so the tree validated is the tree that lands.
+		await writePublicationManifest(codeRoot, request.declaredSha);
 
 		await prepareQuarantine(codeRoot, targetRoot, stagingDir, seams, phases);
 

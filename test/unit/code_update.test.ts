@@ -55,6 +55,10 @@ import {
 	updateCode,
 } from '../../src/core/update/code_update.ts';
 import * as realOwnershipModule from '../../src/core/update/ownership.ts';
+import {
+	PUBLICATION_MANIFEST_PATH,
+	verifyPublicationTree,
+} from '../../src/core/update/publication_manifest.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 import { ageMinutes, buildRealArchive, truncatedCopy } from '../helpers/real_backup_archive.ts';
 import { refusalOf, refusalOfSync } from '../helpers/refusal.ts';
@@ -1792,4 +1796,90 @@ describe('a non-superuser code update starts NO archive read (identity before th
 			rmSync(dir, { recursive: true, force: true });
 		}
 	});
+});
+
+// ---------------------------------------------------------------------------
+// THE PUBLICATION MANIFEST (publication host L1): written into the quarantine at
+// extract, BEFORE the smoke boot, so the validated tree is the tree that lands;
+// the outgoing tree's own manifest rides into its restore point (a restore
+// pushes the release the restored tree verified, never this one's).
+// ---------------------------------------------------------------------------
+describe('the publication manifest is written at extract (publication host L1)', () => {
+	test('the landed tree carries a manifest of its Publication API files, written before the smoke boot', async () => {
+		expect(zipAvailable).toBe(true); // no silent early return (gate_vacuity_tripwire): no zip CLI = red here too
+		const base = join(ROOT, 'pub_manifest');
+		const v1Index = '<?php // v1 json entry';
+		const v2Server = '// v2 server';
+		const zipPath = await buildReleaseZip(base, (codeDir) => {
+			mkdirSync(join(codeDir, 'publication', 'server_api', 'v1', 'json'), { recursive: true });
+			writeFileSync(join(codeDir, 'publication', 'server_api', 'v1', 'json', 'index.php'), v1Index);
+			mkdirSync(join(codeDir, 'publication', 'server_api', 'v2', 'src'), { recursive: true });
+			writeFileSync(join(codeDir, 'publication', 'server_api', 'v2', 'src', 'server.ts'), v2Server);
+		});
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const origin = `http://localhost:${server.port}`;
+
+		const targetRoot = join(base, 'live');
+		buildLiveTree(targetRoot);
+		// The outgoing tree was installed by an earlier release and holds ITS manifest.
+		const oldManifest = JSON.stringify({ version: 1, digest: 'c'.repeat(64), files: {} });
+		mkdirSync(join(targetRoot, 'src', 'core', 'update'), { recursive: true });
+		writeFileSync(join(targetRoot, PUBLICATION_MANIFEST_PATH), oldManifest);
+		const backupRoot = join(base, 'backups');
+		let manifestAtPreflight = false;
+
+		try {
+			mockUpdateEnv(origin);
+			const out = await updateCode(
+				{
+					file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: sha },
+					waive_backup: true,
+				},
+				SUPERUSER,
+				pipelineSeams({
+					targetRoot,
+					backupRoot,
+					smokeBoot: async (codeRoot) => {
+						manifestAtPreflight = existsSync(join(codeRoot, PUBLICATION_MANIFEST_PATH));
+					},
+				}),
+			);
+			expect(out.ok).toBe(true);
+			// written BEFORE the smoke boot: the validated tree is the landed tree
+			expect(manifestAtPreflight).toBe(true);
+			const manifest = JSON.parse(
+				readFileSync(join(targetRoot, PUBLICATION_MANIFEST_PATH), 'utf8'),
+			) as Record<string, unknown>;
+			expect(manifest).toEqual({
+				version: 1,
+				digest: sha,
+				files: {
+					'publication/server_api/v1/json/index.php': createHash('sha256')
+						.update(v1Index)
+						.digest('hex'),
+					'publication/server_api/v2/src/server.ts': createHash('sha256')
+						.update(v2Server)
+						.digest('hex'),
+				},
+			});
+			// manifest digest == the landed tree's install stamp == the release the restarted
+			// process will name → both APIs verify with the caller's digest too
+			expect(await verifyPublicationTree(targetRoot, 'v1', sha)).toEqual({ ok: true });
+			expect(await verifyPublicationTree(targetRoot, 'v2', sha)).toEqual({ ok: true });
+			// the OLD process (restart pending) must not ship it under its own release
+			expect(await verifyPublicationTree(targetRoot, 'v1', 'c'.repeat(64))).toMatchObject({
+				reason: 'digest_mismatch',
+			});
+			// the old tree's manifest went WITH it into the restore point
+			const backups = readdirSync(backupRoot).filter((n) => n.startsWith('dedalo_'));
+			expect(backups.length).toBe(1);
+			expect(
+				readFileSync(join(backupRoot, backups[0] as string, PUBLICATION_MANIFEST_PATH), 'utf8'),
+			).toBe(oldManifest);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
 });

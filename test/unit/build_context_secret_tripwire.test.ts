@@ -534,6 +534,7 @@ describe('E. the files install.sh writes before `compose build` cannot enter the
 		'private/.env',
 		'media/1/5/original/coin.jpg',
 		'src/core/update/install_stamp.json',
+		'src/core/update/publication_manifest.json',
 		'.agents/settings.local.json',
 		'publication/server_api/v1/config_api/server_config_api.php',
 		'backup.pem',

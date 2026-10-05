@@ -169,6 +169,7 @@ CHANGELOG.md
 docker-compose.update-probe.yml
 code
 src/core/update/install_stamp.json
+src/core/update/publication_manifest.json
 .scratch_*
 **/*/.scratch_*
 dev
