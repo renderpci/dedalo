@@ -13,6 +13,8 @@ queries:
 # that are, which is the failure mode that makes teams stop reading the Security tab.
 paths-ignore:
   - client/dedalo/lib          # third-party client libs (registry-served, not tracked)
+  - vendor                     # vendored third-party trees (vendor/vendor_manifest.json), digest-pinned and
+                               # advisory-watched by vendor_advisory_tripwire — the feed, not CodeQL, covers them
   - publication/**/docu/ui     # vendored API-docs UI (swagger/scalar bundles)
   - test/parity/fixtures       # recorded oracle payloads — data, not code
   - docs_site                  # generated mkdocs output (gitignored, belt-and-braces)
