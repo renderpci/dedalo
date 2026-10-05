@@ -487,7 +487,7 @@ describe('boot wiring', () => {
 			await Bun.sleep(0);
 		});
 		await created.idle();
-		expect(seen.toSorted()).toEqual([
+		expect([...seen].sort()).toEqual([
 			['sync', false],
 			['withdrawNow', false],
 		]);
