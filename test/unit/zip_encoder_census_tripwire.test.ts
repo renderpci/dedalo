@@ -15,7 +15,8 @@
  *    NOT a signal: that is how the readers sniff (media/engine/mime.ts,
  *    verify_content.ts, update/code_update.ts) — reading is not emission;
  *  - raw DEFLATE (node:zlib `deflateRaw*` / `createDeflateRaw`, a
- *    `CompressionStream('deflate-raw')`) — ZIP's entry codec, used by nothing else;
+ *    `CompressionStream('deflate-raw')`) — ZIP's entry codec; a self-framed gzip
+ *    member uses it too, and is then a named EXEMPTION (it emits no ZIP record);
  *  - a runtime `Bun.zip`, a spawned `zip` binary, `git archive --format=zip`
  *    (an `allowed_extensions: ['zip', …]` list is not a spawn);
  *  - an import of a ZIP library.
@@ -55,6 +56,8 @@ const EXEMPTIONS: Readonly<Record<string, string>> = {
 		'release packaging DELEGATES the code archive to `git archive --format=zip`: the release artifact must be exactly what git holds for the ref (the update drill verifies it with unzip/zipinfo), and it never carries user data — an external producer, not a second encoder',
 	'scripts/update_probe.ts':
 		'the museum-cycle dev probe cuts the release the same way code_build.ts does — `git archive --format=zip` of a ref, never user data; operator tooling that delegates to git, not a second encoder',
+	'src/core/publication_host/bundle_writer.ts':
+		'NOT a ZIP producer: the publication-host release bundle is gzip (RFC 1952) around ustar, and its raw deflate is the gzip member body the writer frames itself (fixed header with OS 255, CRC-32 + ISIZE) so the bytes are deterministic across platforms; no ZIP record is ever written — held by publication_host_bundle_twin_tripwire',
 };
 
 /** ZIP libraries (encoders, or encoder+reader) — none may be a dependency or an import. */

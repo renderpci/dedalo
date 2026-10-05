@@ -396,6 +396,10 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-03 (publication host phase 3): the agent-channel door gate. DB-free: reads
 	#     src/ + tools/ sources and three docs/gates, Babel AST only, imports no src/ module.
 	test/unit/publication_host_door_tripwire.test.ts
+	# --- 2026-10-03 (publication host phase 4, L4): the bundle writer/reader twin. DB-free: a
+	#     mkdtemp scratch dir, `git ls-files` over tracked source, and a zero-dep import of the
+	#     agent's reader (node: builtins only, no agent `bun install` needed).
+	test/unit/publication_host_bundle_twin_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

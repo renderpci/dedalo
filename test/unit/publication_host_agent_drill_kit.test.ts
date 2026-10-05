@@ -39,6 +39,7 @@ import {
 import { extractBundle } from '../../publication/host_agent/src/releases/ustar.ts';
 import {
 	AGENT_ACTOR_HEADER,
+	bundleBytes,
 	collectTree,
 	EXEC_SEAM_DIR,
 	EXEC_SEAM_MARKER,
@@ -46,7 +47,6 @@ import {
 	releaseIdFor,
 	renderStandIns,
 	writeStandIns,
-	writeUstarGz,
 } from '../../scripts/lib/publication_host_agent_drill_kit.ts';
 
 const REPO = join(import.meta.dir, '..', '..');
@@ -60,7 +60,7 @@ const streamOf = (bytes: Uint8Array<ArrayBuffer>) => new Blob([bytes]).stream();
 describe('drill kit — the bundle', () => {
 	test('round-trips through the agent reader: dirs, modes, a PAX long path, UTF-8', async () => {
 		const deep = `node_modules/${'a'.repeat(70)}/${'b'.repeat(70)}`;
-		const gz = writeUstarGz([
+		const gz = await bundleBytes([
 			{ path: 'src', type: 'dir', mode: 0o755 },
 			{ path: 'src/index.ts', type: 'file', mode: 0o644, data: text('export {};\n') },
 			{ path: 'run.sh', type: 'file', mode: 0o755, data: new Uint8Array(1500).fill(7) },
@@ -80,9 +80,9 @@ describe('drill kit — the bundle', () => {
 		expect(readFileSync(join(dest, 'ñandú.txt')).length).toBe(0);
 	});
 
-	test('the same entries always yield the same bytes (uid/gid/mtime 0)', () => {
+	test('the same entries always yield the same bytes (uid/gid/mtime 0)', async () => {
 		const entries = [{ path: 'a', type: 'file' as const, mode: 0o644, data: text('1') }];
-		expect(writeUstarGz(entries)).toEqual(writeUstarGz(entries));
+		expect(await bundleBytes(entries)).toEqual(await bundleBytes(entries));
 	});
 
 	test('collectTree drops node_modules/.bin at any depth and refuses any other symlink', () => {

@@ -45,6 +45,7 @@ import {
 import {
 	AGENT_ACTOR_HEADER,
 	type BundleSourceEntry,
+	bundleBytes,
 	collectTree,
 	EXEC_SEAM_DIR,
 	releaseIdFor,
@@ -53,7 +54,6 @@ import {
 	sha256Hex,
 	type TlsMaterial,
 	writeStandIns,
-	writeUstarGz,
 } from './publication_host_agent_drill_kit.ts';
 import {
 	apacheBinary,
@@ -624,7 +624,7 @@ export async function teardown(scene: Scene): Promise<void> {
  * and really reaches the scratch boot) with an entrypoint that throws at import: its
  * scratch health can never pass.
  */
-export function buildBundles(root: string): Shared['bundles'] {
+export async function buildBundles(root: string): Promise<Shared['bundles']> {
 	const src = join(root, 'v2_src');
 	const prefix = 'publication/server_api/v2/';
 	const listed = Bun.spawnSync(['git', 'ls-files', '-z', '--', prefix], {
@@ -659,8 +659,8 @@ export function buildBundles(root: string): Shared['bundles'] {
 		mode: 0o644,
 		data: text(`${name}\n`),
 	});
-	const make = (entries: BundleSourceEntry[]): Bundle => {
-		const bytes = writeUstarGz(entries);
+	const make = async (entries: BundleSourceEntry[]): Promise<Bundle> => {
+		const bytes = await bundleBytes(entries);
 		return {
 			id: releaseIdFor(version, bytes),
 			sha256: sha256Hex(bytes),
@@ -671,9 +671,9 @@ export function buildBundles(root: string): Shared['bundles'] {
 	};
 	const broken = text("throw new Error('drill: a deliberately broken release');\n");
 	return {
-		r1: make([...tree, marker('r1')]),
-		r2: make([...tree, marker('r2')]),
-		bad: make(
+		r1: await make([...tree, marker('r1')]),
+		r2: await make([...tree, marker('r2')]),
+		bad: await make(
 			[...tree, marker('bad')].map((e) => (e.path === 'src/index.ts' ? { ...e, data: broken } : e)),
 		),
 	};

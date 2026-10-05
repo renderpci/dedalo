@@ -519,7 +519,7 @@ if (import.meta.main) {
 		const shared: Shared = {
 			root,
 			tls: issueTlsMaterial(join(root, 'tls')),
-			bundles: buildBundles(root),
+			bundles: await buildBundles(root),
 			mariadbSocket: mariadb.socket,
 			mariadbUser: SUITE_MARIADB_USER,
 			mariadbPassword: SUITE_MARIADB_PASSWORD,

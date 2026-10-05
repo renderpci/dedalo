@@ -1156,7 +1156,7 @@ async function run(
 	const shared: Shared = {
 		root,
 		tls,
-		bundles: buildBundles(root),
+		bundles: await buildBundles(root),
 		mariadbSocket: mariadb.socket,
 		mariadbUser: mdb.SUITE_MARIADB_USER,
 		mariadbPassword: SUITE_MARIADB_PASSWORD,

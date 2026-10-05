@@ -4,10 +4,10 @@
  * importing the drill (which reaches the engine config and the suite MariaDB helpers, and
  * would make the gate an acquirer of the suite server).
  *
- *   - writeUstarGz / collectTree / releaseIdFor: the D7 bundle (gzip'd ustar, entry types
- *     `0` and `5`, PAX `x` records carrying only `path`) and the D9 release id. Written here
- *     until phase 4 lands the engine-side writer; the drill then imports that writer and
- *     these three are deleted (one writer, never two).
+ *   - bundleBytes / collectTree / releaseIdFor: the D7 bundle and the D9 release id. The
+ *     bytes come from THE engine writer (src/core/publication_host/bundle_writer.ts, node
+ *     builtins only — one writer, never two, held by publication_host_bundle_twin_tripwire);
+ *     collectTree and releaseIdFor stay until the phase-4 API bundle builder replaces them.
  *   - renderStandIns: the drill's `sudo` / `systemctl` / `php` stand-ins (why: the drill's
  *     header, THE EXEC SEAM). The argv they accept is spelled by the AGENT's own constants
  *     (publication/host_agent/src/exec.ts SUDO, SYSTEMCTL, WEB_CONFIGTEST_BINARY — the one
@@ -20,8 +20,9 @@
  *   - issueTlsMaterial: a private CA, the server and client leaves, and a ROGUE CA + client
  *     leaf, with the openssl CLI (OpenSSL 3 and LibreSSL 3 both accept every call below).
  *
- * No engine import. The only package import is exec.ts's four constants (exec.ts imports
- * nothing outside node builtins and zero-dep agent modules; it never loads the agent's
+ * One engine import: the bundle writer (itself node-builtins-only, so no engine config is
+ * reached). The only package import is exec.ts's four constants (exec.ts imports nothing
+ * outside node builtins and zero-dep agent modules; it never loads the agent's
  * configuration at import — its header).
  */
 
@@ -44,11 +45,9 @@ import {
 	V2_SCRATCH_TEMPLATE_SUFFIX,
 	WEB_CONFIGTEST_BINARY,
 } from '../../publication/host_agent/src/exec.ts';
+import { compareBundlePaths, writeBundle } from '../../src/core/publication_host/bundle_writer.ts';
 
 // ── the bundle ───────────────────────────────────────────────────────────────
-
-const BLOCK = 512;
-const encoder = new TextEncoder();
 
 export interface BundleSourceEntry {
 	/** Relative, '/'-separated: no leading '/', no trailing '/', no '.'/'..' segment. */
@@ -58,72 +57,22 @@ export interface BundleSourceEntry {
 	readonly data?: Uint8Array;
 }
 
-function field(header: Uint8Array, text: string, offset: number, length: number): void {
-	const bytes = encoder.encode(text);
-	if (bytes.length > length)
-		throw new Error(`ustar field at offset ${offset} overflows ${length} bytes: '${text}'`);
-	header.set(bytes, offset);
-}
-
-const octal = (value: number, width: number): string =>
-	`${value.toString(8).padStart(width - 1, '0')}\0`;
-
-/** One ustar header. uid/gid/mtime 0: the same tree always yields the same bytes. */
-function headerBlock(name: string, type: '0' | '5' | 'x', size: number, mode: number): Uint8Array {
-	const header = new Uint8Array(BLOCK);
-	field(header, name, 0, 100);
-	field(header, octal(mode & 0o7777, 8), 100, 8);
-	field(header, octal(0, 8), 108, 8);
-	field(header, octal(0, 8), 116, 8);
-	field(header, octal(size, 12), 124, 12);
-	field(header, octal(0, 12), 136, 12);
-	header.fill(0x20, 148, 156); // the checksum is computed over spaces in its own field
-	field(header, type, 156, 1);
-	field(header, 'ustar\0', 257, 6);
-	field(header, '00', 263, 2);
-	let sum = 0;
-	for (const byte of header) sum += byte;
-	field(header, `${sum.toString(8).padStart(6, '0')}\0 `, 148, 8);
-	return header;
-}
-
-function padded(data: Uint8Array): Uint8Array[] {
-	const rest = data.length % BLOCK;
-	return rest === 0 ? [data] : [data, new Uint8Array(BLOCK - rest)];
-}
-
-/** `<len> path=<path>\n`, where <len> counts its own digits (POSIX pax). */
-export function paxPathRecord(path: string): Uint8Array {
-	const body = ` path=${path}\n`;
-	const bodyBytes = encoder.encode(body).length;
-	let length = bodyBytes + String(bodyBytes).length;
-	if (String(length).length !== String(bodyBytes).length)
-		length = bodyBytes + String(length).length;
-	return encoder.encode(`${length}${body}`);
-}
-
 /**
- * The bundle. A name of ≤100 bytes goes in the header; a longer one in a PAX `x` record
- * carrying ONLY `path` (D7 refuses any other key), never the ustar `prefix` split — one
- * long-path mechanism, the one the reader must implement anyway.
+ * The D7 bundle, written by THE engine writer (src/core/publication_host/bundle_writer.ts —
+ * one writer, never two; held by test/unit/publication_host_bundle_twin_tripwire.test.ts).
+ * The writer refuses entries out of tree order, so they are sorted here; the drill appends
+ * its DRILL_RELEASE marker after the walked tree.
  */
-export function writeUstarGz(entries: Iterable<BundleSourceEntry>): Uint8Array<ArrayBuffer> {
-	const chunks: Uint8Array[] = [];
-	for (const entry of entries) {
-		const name = entry.type === 'dir' ? `${entry.path}/` : entry.path;
-		const data = entry.type === 'file' ? (entry.data ?? new Uint8Array(0)) : new Uint8Array(0);
-		const type = entry.type === 'dir' ? '5' : '0';
-		if (encoder.encode(name).length <= 100) {
-			chunks.push(headerBlock(name, type, data.length, entry.mode));
-		} else {
-			const record = paxPathRecord(name);
-			chunks.push(headerBlock('PaxHeader', 'x', record.length, 0o644), ...padded(record));
-			chunks.push(headerBlock('pax_path', type, data.length, entry.mode));
-		}
-		if (data.length > 0) chunks.push(...padded(data));
-	}
-	chunks.push(new Uint8Array(BLOCK * 2));
-	return Bun.gzipSync(Buffer.concat(chunks));
+export async function bundleBytes(
+	entries: readonly BundleSourceEntry[],
+): Promise<Uint8Array<ArrayBuffer>> {
+	const sorted = [...entries].sort((a, b) => compareBundlePaths(a.path, b.path));
+	const out = await writeBundle(
+		(async function* () {
+			yield* sorted;
+		})(),
+	);
+	return new Uint8Array(await new Response(out.stream).arrayBuffer());
 }
 
 /** Any `node_modules/.bin`, at any depth: package-binary symlinks v2 never runs (D6). */

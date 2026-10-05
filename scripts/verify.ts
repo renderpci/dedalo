@@ -345,6 +345,8 @@ const TRIPWIRES = [
 	'test/unit/publication_host_rules_allowlist_tripwire.test.ts',
 	// Publication host phase 3 — the paired private agent channel has one door (2026-10-03).
 	'test/unit/publication_host_door_tripwire.test.ts',
+	// Publication host phase 4 L4 — engine bundle writer ↔ agent extractBundle twin (2026-10-03).
+	'test/unit/publication_host_bundle_twin_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
