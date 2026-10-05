@@ -4,12 +4,20 @@
  * caller) and the copy apply.
  *
  *  - Unpublish (`published:false`) is flushed on the next microtask, to every host,
- *    twice: into the queued sync (withdraw-only pass first, then the plan deletes the
- *    files), AND into the host's PRE-EMPT set, which the round already running there
- *    drains before its next unit (media_copy_apply.ts ApplyOptions.takeWithdrawn). So the
- *    agent marker drops at the next unit boundary — at most one in-flight put (bounded by
- *    MEDIA_PUT_TIMEOUT_MS) — never only after the whole round (M2: the first command the
- *    lane can send). Publish is debounced (PUBLISH_DEBOUNCE_MS): one planning walk.
+ *    three ways: (1) AT ONCE, outside the lane (deps.withdrawNow → media_copy_apply.ts
+ *    withdrawNowWith: recorded pending, `media.mark false`), never behind a running unit;
+ *    (2) into the host's PRE-EMPT set, which the round running there drains before its
+ *    next unit (ApplyOptions.takeWithdrawn: drops the key from the round's known markers,
+ *    withdraws again); (3) into the queued sync (withdraw-only pass first, then the plan
+ *    deletes the files and verifies). Publish is debounced (PUBLISH_DEBOUNCE_MS): one
+ *    planning walk.
+ *  - THE LATENCY BOUND of a withdrawal (M2) is path (1)'s, independent of any transfer:
+ *    after the flip, one status read (hostTakesCopy; AGENT_TIMEOUTS_MS.read, plus the
+ *    pairing proof's AGENT_TIMEOUTS_MS.health when not yet proved) and one runtime write,
+ *    then the `mark false` (AGENT_TIMEOUTS_MS.media); the keys of one flush go in order,
+ *    each after the previous answered. Without withdrawNow the bound would be the next
+ *    unit boundary — after the running unit, i.e. a whole put (its hash on a cache miss
+ *    plus a transfer of up to mediaPutDeadlineMs(size)), which is why it is wired at boot.
  *  - Per host: ONE run at a time, and at most ONE queued sync, which absorbs every
  *    transition arriving meanwhile (its withdrawn keys merge). Hosts never wait on
  *    each other. A failed run is logged; the lane goes on.
@@ -18,14 +26,16 @@
  *    round) onto the same tail, so no caller applies a stale plan beside a hook run.
  *  - In-process only: a long AV transfer must not hold a diffusion runner slot.
  *    Cross-process ordering is the advisory target lock each unit takes
- *    (media_copy_apply.ts, `media:<host>`).
+ *    (media_copy_apply.ts, `media:<host>`; held for control calls only, never a
+ *    transfer); an immediate withdrawal takes none (see withdrawNowWith).
  *  - DETACHED FROM THE WRITER'S TRANSACTION. A flip is emitted from inside a marker
  *    writer's transaction (a runner batch's fenced unit, the fenced media_index
  *    reconcile), and a timer or microtask scheduled there inherits its async context.
  *    A run is background work that outlives that writer (its handle expires at COMMIT),
- *    so the sink and every queued run leave the transaction context
- *    (runDetachedFromTransaction) — a run never joins, or outlives, a batch's
+ *    so the sink, every immediate withdrawal and every queued run leave the transaction
+ *    context (runDetachedFromTransaction) — a run never joins, or outlives, a batch's
  *    transaction. So does every `exclusive` / `inMediaCopyLane` unit, worker or not.
+ *    Each layer is pinned on its own (media_copy_worker_native "detach layer").
  *
  * Correctness does not depend on this worker: the media_copy reconcile recomputes
  * from ground truth whatever it missed (a registry it could not read, a crash).
