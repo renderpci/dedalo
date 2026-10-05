@@ -32,8 +32,9 @@
  *   - an argv outside the closed command set (parseEngineArgv);
  *   - a private dir that is unset, relative, or not marked .dedalo_copy_drill_private;
  *   - a media root that is unset, relative, or not marked .dedalo_test_media;
- * and every command asserts the suite database's dedalo_test_marker row first. It writes
- * NO database row: the suite database supplies only the media-copy target lock.
+ * and every command asserts the suite database's test marker row first
+ * (assertTestDatabase). It writes NO database row: the suite database supplies only the
+ * media-copy target lock.
  *
  * Prints ONE result line (`DRILL_RESULT {…}`) as its last stdout line; engine logs may
  * surround it. Exit 0 = ok result, 1 = failure result, 2 = refused (no result line).
