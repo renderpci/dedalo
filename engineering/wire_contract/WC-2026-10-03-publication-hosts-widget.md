@@ -154,3 +154,34 @@
   `checked_at` next to an ENABLED button — the push re-verifies the tree before sending.
 - TS ground truth: `test/unit/publication_host_push_apis_widget.test.ts`; client:
   `client/dedalo/test/client/js/test_publication_api_lockstep.js`. No fixture interaction.
+
+## Amendment 2026-10-05 — phase 5 (media copy)
+
+- `get_value` host rows gain one check `media_copy` (`HostCheck`, appended AFTER the fixed
+  `HOST_CHECK_IDS` list from the same runtime read; `host_status.ts DECORATOR_CHECK_IDS`).
+  `detail` is a fact, never a sentence: `ok` `<present>/<desired>` (in sync); `warn` the
+  round's code, else `puts:<n> deletions:<n>` (puts or young deletions pending); `blocked`
+  `unverified_deletions:<n>` (a deletion unverified past one reconcile period — decided before
+  anything else) or the recorded failure code (e.g. `copy_mode_withdrawn`,
+  `deletion_unverified`, `linked_quality`, a `publication_host.*` code); `unknown`
+  `not_reconciled` (no runtime row, or only a default row another writer created). A host the
+  agent said is not a copy host, holding nothing, carries no such check. No secret field.
+- Copy-mode hosts now get the media rules too: `apply_rules` refuses only a `none` host
+  (`maintenance.action_refused`); a `copy` host is gated by the same `publication_host`
+  profile over its copy root. The rows' `media_mode` reads `ok` for `copy` and `rules_hash`
+  is compared for it (it was `warn` / `not_applicable`).
+- New ROOT-ONLY action `reconcile_media_copy {name}` (a registry name, the same `name`
+  option as every other per-host action): runs the registered `media_copy` reconcile APPLY
+  for that host through the registry door and answers `data: true`, `msg`,
+  `extend: {report, running: false}` (`ReconcileReport`, `detail.hosts[name]` =
+  `{takes_copy, planned, sent, state, pending_deletions, remaining, error}`). Non-root →
+  `perm.denied` (nothing loaded or dialled); invalid, unknown or missing host →
+  `maintenance.action_refused`; the host's round failed → `maintenance.action_failed`
+  naming the code. Like `push_apis` it waits at most `pushAnswerWithinMs`: a round still
+  going answers `data: null`, `extend: {report: null, running: true}` and finishes detached
+  in the copy lane. Request-bounded (not in `unboundedActions`): its statements are short
+  advisory try-locks.
+- TS ground truth: `test/unit/publication_host_media_copy_widget_native.test.ts`,
+  `test/unit/publication_host_widget_native.test.ts`,
+  `test/unit/publication_host_media_copy_status.test.ts`; client:
+  `test/unit/publication_host_media_copy_client.test.ts`. No fixture interaction.

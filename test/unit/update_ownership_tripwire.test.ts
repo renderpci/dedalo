@@ -115,6 +115,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 		'root-only; deletes a host from the TS-owned registry and its secret dir under <private>/publication_hosts/, and forgets its in-process pairing proof — the agent itself is untouched',
 	'publication_hosts.push_apis':
 		"root-only push of the installed tree's verified Publication API releases to paired publication hosts through the TS-owned registry + agent channel (phase 4) — no PHP-tree surface",
+	'publication_hosts.reconcile_media_copy':
+		'root-only door onto the registered media_copy reconcile (core/reconcile): copies/unmarks/deletes published public-quality media on ONE copy-mode publication host through the copy worker lane and the paired agent channel (phase 5) — no PHP-tree surface',
 };
 
 /**

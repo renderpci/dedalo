@@ -963,6 +963,12 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The publication hosts panel shows each copy-mode host's media copy, and root can bring one host back in sync on demand.**
+
+    For a publication server that keeps its own copy of the published media, the publication hosts panel now has a **Media copy** row. It reads OK when the copy matches what the work system publishes. It reads pending while files are still being copied or removed, and red when an unpublished file has not been confirmed deleted from the public server after one check period (ten minutes), or when the server stopped being a copy server while it still held files. The engine checks and repairs every copy server by itself every ten minutes, and right after a data restore. The root user can run it for one server at once with **Reconcile media copy**. A server that cannot be reached is reported as a failure, never as done, and its pending deletions are completed on the next check. A copy server is now protected by the same media rules as a server that mounts the shared media (**Apply media rules** works for it too), so an unpublished record stops being served before its files are deleted.
+
+    Wire contract: `WC-2026-10-03-publication-hosts-widget`.
+
 - **A separate publication server can now run a small agent that the work system pairs with, to install the Publication APIs, apply media rules and report status, without root access.**
 
     Institutions whose public website runs on its own server, or on its own hostname on the same server, can install the **publication host agent** there. It accepts a fixed list of requests from the work system and nothing else: report status, check the media mount, apply the web server's media rules (keeping the previous rules if the new ones fail the configuration test), and install or roll back a Publication API release (the previous release keeps serving when a new one is not healthy). The work system connects over mutual TLS, or over a local socket on a single server, and proves the pairing with a fingerprint. The agent runs as its own user with two narrow grants (the web server's configuration test; and reloading the web server, restarting the v2 API, and starting or stopping a scratch copy of the v2 API on a local port to test a new release), and the publication server never needs to download packages. See [Publication host agent](./install/publication_host.md).

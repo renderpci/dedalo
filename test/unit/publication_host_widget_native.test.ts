@@ -59,6 +59,7 @@ import {
 	updateRegistry,
 } from '../../src/core/publication_host/registry.ts';
 import type { ExpectedRulesOutcome } from '../../src/core/publication_host/rules.ts';
+import { defaultHostRuntime } from '../../src/core/publication_host/runtime.ts';
 import type { SecretPresenceOutcome } from '../../src/core/publication_host/secrets.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
@@ -78,6 +79,7 @@ const ACTIONS = [
 	'set_host_fields',
 	'remove_host',
 	'push_apis', // phase 4 (publication_host_push_apis_widget.test.ts gates its behaviour)
+	'reconcile_media_copy', // phase 5 (publication_host_media_copy_widget_native.test.ts too)
 ] as const;
 
 /** The served row keys, pinned: root gets the edit-form fields, a non-root admin no topology. */
@@ -234,6 +236,11 @@ function harness(
 			throw new DedaloError('internal.unexpected', { message: 'push_apis is gated elsewhere' });
 		},
 		pushAnswerWithinMs: () => 5_000,
+		reconcileMediaCopy: async (name) => {
+			calls.push(`reconcileMediaCopy:${name}`);
+			return { drift: 0, applied: 0, detail: { hosts: {} } };
+		},
+		now: () => Date.parse('2026-10-03T12:00:00.000Z'),
 		...over,
 	};
 	const module = createPublicationHostsWidget(async () => {
@@ -289,7 +296,7 @@ describe('registration', () => {
 		expect(ids[ids.indexOf('site_builder_status') + 1]).toBe('publication_hosts');
 	});
 
-	test('spec, lazy get_value, exactly the six actions, none unbounded, none ownership-marked', () => {
+	test('spec, lazy get_value, exactly the seven actions, none unbounded, none ownership-marked', () => {
 		expect(widget.spec).toEqual({
 			id: 'publication_hosts',
 			category: 'publication',
@@ -353,7 +360,16 @@ describe('get_value (panel)', () => {
 			qualities: null,
 			probe: { published: null, unpublished: null },
 		});
-		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([...HOST_CHECK_IDS]);
+		// the fixed list, then the phase-5 decorator: no runtime row yet → media_copy unknown
+		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([
+			...HOST_CHECK_IDS,
+			'media_copy',
+		]);
+		expect(checkOf(row ?? {}, 'media_copy')).toEqual({
+			id: 'media_copy',
+			state: 'unknown',
+			detail: 'not_reconciled',
+		});
 		expect(h.rowInputs).toHaveLength(1);
 		expect(h.rowInputs[0]?.status).toEqual({ ok: true, status: agentStatus() });
 		expect(h.rowInputs[0]?.expected).toEqual(EXPECTED_OUTCOME);
@@ -606,7 +622,13 @@ describe('root-only actions', () => {
 	});
 
 	test('an unknown host is refused with no agent call', async () => {
-		for (const action of ['apply_rules', 'probe', 'rollback_api', 'remove_host'] as const) {
+		for (const action of [
+			'apply_rules',
+			'probe',
+			'rollback_api',
+			'remove_host',
+			'reconcile_media_copy',
+		] as const) {
 			const h = harness([record('pub_a')]);
 			const code = await codeOf(run(h, action, { name: 'pub_z', api: 'v1' }));
 			expect(code, action).toBe('maintenance.action_refused');
@@ -645,6 +667,83 @@ describe('root-only actions', () => {
 			},
 		});
 		await expect(run(h, 'probe', { name: 'pub_a' })).rejects.toThrow(TypeError);
+	});
+});
+
+describe('reconcile_media_copy (phase 5)', () => {
+	const report = (hosts: Record<string, unknown>, drift = 3, applied = 3) => ({
+		drift,
+		applied,
+		detail: { hosts },
+	});
+
+	test('runs the media_copy reconcile for THAT host only, answers the report', async () => {
+		const h = harness([record('pub_a'), record('pub_b')], {
+			reconcileMediaCopy: async (name) => {
+				h.calls.push(`reconcileMediaCopy:${name}`);
+				return report({ [name]: { takes_copy: true, error: null } });
+			},
+		});
+		const response = await run(h, 'reconcile_media_copy', { name: 'pub_a' });
+		expect(h.calls).toEqual(['loadRegistry', 'reconcileMediaCopy:pub_a']);
+		expect(response.data).toBe(true);
+		expect(response.msg).toBe(
+			"'pub_a': drift 3, applied 3. The panel shows what is still pending.",
+		);
+		expect((response.extend as { running: boolean }).running).toBe(false);
+	});
+
+	test('a host that is not a copy host is an OK with its own sentence', async () => {
+		const h = harness([record('pub_a')], {
+			reconcileMediaCopy: async () => report({ pub_a: { takes_copy: false, error: null } }, 0, 0),
+		});
+		const response = await run(h, 'reconcile_media_copy', { name: 'pub_a' });
+		expect(response.data).toBe(true);
+		expect(response.msg).toContain('does not take a media copy');
+	});
+
+	test("the host's round failed → maintenance.action_failed naming the code, never an OK", async () => {
+		const h = harness([record('pub_a')], {
+			reconcileMediaCopy: async () =>
+				report({ pub_a: { takes_copy: true, error: 'publication_host.unreachable' } }, 1, 0),
+		});
+		const thrown = await run(h, 'reconcile_media_copy', { name: 'pub_a' }).catch((e) => e);
+		expect(thrown).toBeInstanceOf(DedaloError);
+		expect((thrown as DedaloError).code).toBe('maintenance.action_failed');
+		expect((thrown as DedaloError).publicMessage).toContain('publication_host.unreachable');
+	});
+
+	test('a round still going past the bounded wait answers running (data null), never a cut connection', async () => {
+		const h = harness([record('pub_a')], {
+			pushAnswerWithinMs: () => 20,
+			reconcileMediaCopy: () => new Promise(() => {}),
+		});
+		const response = await run(h, 'reconcile_media_copy', { name: 'pub_a' });
+		expect(response.data).toBeNull();
+		expect(response.extend).toEqual({ report: null, running: true });
+	});
+
+	test('get_value: a runtime deletion unverified past one period reads blocked on that row', async () => {
+		const runtime = {
+			pub_a: {
+				...defaultHostRuntime(),
+				media_copy: {
+					...defaultHostRuntime().media_copy,
+					state: 'pending' as const,
+					present: 1,
+					pending_deletions: [{ path: 'a', since: '2026-10-03T11:00:00.000Z' }],
+				},
+			},
+		};
+		const h = harness([record('pub_a')], {
+			loadPanelRuntime: async () => ({ runtime, runtime_invalid: null }),
+		});
+		const [row] = rows(await panel(h));
+		expect(checkOf(row ?? {}, 'media_copy')).toEqual({
+			id: 'media_copy',
+			state: 'blocked',
+			detail: 'unverified_deletions:1',
+		});
 	});
 });
 

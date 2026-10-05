@@ -672,6 +672,12 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	// The tree hash + the v2 deps build are file/child-process work; the pool holds nothing.
 	'publication_hosts.push_apis':
 		'hashes the installed API trees, may run one child `bun install` in the build cache, then per paired agent: health unless cached + status, and per API one release.install behind its live health proof (one more health on a 401); no statement. The REQUEST waits at most pushAnswerWithinMs (min 60 s, half SERVER_IDLE_TIMEOUT_S ≤ 255 s): a longer round answers running and finishes detached',
+	// Phase 5: the media_copy reconcile for one host. Its statements are the copy lane's
+	// advisory TRY-locks (one short main-pool transaction per control unit, never held across
+	// a hash or a transfer — media_copy_apply.ts THE POOL BOUND); the rest is a walk of the
+	// public qualities and agent calls, none of it a data-sized statement.
+	'publication_hosts.reconcile_media_copy':
+		'walks the public-quality media folders, then per paired copy agent: health unless cached + status, health + media.manifest, per unit a short advisory try-lock transaction around media.mark/delete (one more health on a 401) and puts outside it; no data-sized statement. The REQUEST waits at most pushAnswerWithinMs (like push_apis): a longer round answers running and finishes detached in the copy lane',
 	'error_reports.get_reports': 'one LIMITed page + one count of the error-report table',
 };
 

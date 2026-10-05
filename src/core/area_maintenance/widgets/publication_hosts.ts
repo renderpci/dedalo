@@ -1,6 +1,6 @@
 /**
  * publication_hosts widget — the work engine's view of its publication hosts, and the
- * five things the panel may do to one (engineering/PUBLICATION_HOST_SPEC.md §2, §5, §6).
+ * things the panel may do to one (engineering/PUBLICATION_HOST_SPEC.md §2, §5, §6).
  *
  * WHAT IT READS. The registry (`core/publication_host/registry.ts`) lists the hosts; for
  * each one the panel asks the agent for its `status` through `agent_client.ts`, which
@@ -48,6 +48,11 @@
  * decorate the rows from the SAME runtime map, in the fixed order
  * rows → withMediaCopyCheck → attachProbe, then api_lockstep from the final rows.
  *
+ * MEDIA COPY (phase 5). `get_value` appends each row's `media_copy` check from the SAME
+ * runtime map (media_copy_status.ts withMediaCopyCheck: blocked for a deletion unverified
+ * past one period or a failed round, n/a hosts holding nothing carry none);
+ * `reconcile_media_copy` (root) applies the registered `media_copy` reconcile to one host.
+ *
  * Hosts are ADDED only by `scripts/publication_host_pair.ts` on the work host. The panel
  * edits `public_url` / `qualities` / `probe` and removes a host; it never takes an
  * address or a credential.
@@ -75,6 +80,7 @@ import {
 	registryInvalidCheck,
 	type StatusOutcome,
 } from '../../publication_host/host_status.ts';
+import { withMediaCopyCheck } from '../../publication_host/media_copy_status.ts';
 import type { PanelRuntime } from '../../publication_host/panel_runtime.ts';
 import {
 	HOST_NAME,
@@ -97,6 +103,7 @@ import {
 	secretPresenceOutcome,
 } from '../../publication_host/secrets.ts';
 import { registryError } from '../../publication_host/wire.ts';
+import type { ReconcileReport } from '../../reconcile/registry.ts';
 import { type Principal, SUPERUSER_ID } from '../../security/permissions.ts';
 import { failAction, refuseAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
@@ -151,10 +158,18 @@ export interface PublicationHostsDeps {
 	/** THE Publication API reconciler (push_apis runs it as an apply round). */
 	reconcilePublicationApis: ReconcileApisFn;
 	/**
-	 * How long push_apis waits for its round before answering `running` (the round goes on,
-	 * detached). Below the server's idle timeout, so the answer always reaches the client.
+	 * How long push_apis / reconcile_media_copy wait for their round before answering
+	 * `running` (the round goes on, detached). Below the server's idle timeout, so the
+	 * answer always reaches the client.
 	 */
 	pushAnswerWithinMs(): number;
+	/**
+	 * THE registered `media_copy` reconcile, APPLY, scoped to ONE host, through the registry
+	 * door (runReconcile: the run is recorded in the gauge). Phase 5.
+	 */
+	reconcileMediaCopy(name: string): Promise<ReconcileReport>;
+	/** The panel clock (epoch ms) the media_copy check ages pending deletions against. */
+	now(): number;
 }
 
 export type DepsLoader = () => Promise<PublicationHostsDeps>;
@@ -199,7 +214,21 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 		buildApiLockstepPanel: lockstep.buildApiLockstepPanel,
 		reconcilePublicationApis: (opts) => lockstep.reconcilePublicationApis(opts),
 		pushAnswerWithinMs: () => pushAnswerWithinMs(config.ops.idleTimeoutSeconds),
+		reconcileMediaCopy,
+		now: () => Date.now(),
 	};
+}
+
+/**
+ * The media_copy reconcile for one host, APPLY, through the registry door. The catalog is
+ * imported lazily (it reaches the diffusion facade by its own dynamic import — core never
+ * imports src/diffusion statically).
+ */
+async function reconcileMediaCopy(name: string): Promise<ReconcileReport> {
+	const { registerAllReconciles } = await import('../../reconcile/catalog.ts');
+	const { runReconcile } = await import('../../reconcile/registry.ts');
+	await registerAllReconciles();
+	return (await runReconcile('media_copy', { apply: true, scope: [name] })).report;
 }
 
 /** Never wait longer than this for a push round, even under a generous idle timeout. */
@@ -415,7 +444,10 @@ export async function publicationHostsValue(
 			},
 		};
 	}
-	const hosts = await Promise.all(read.file.hosts.map((record) => hostRow(record, deps, isRoot)));
+	const now = deps.now();
+	const hosts = (
+		await Promise.all(read.file.hosts.map((record) => hostRow(record, deps, isRoot)))
+	).map((row) => withMediaCopyCheck(row, panelRuntime.runtime, now));
 	return {
 		data: {
 			...common,
@@ -813,6 +845,73 @@ const pushApisAction: BoundAction = async (options, principal, loadDeps) => {
 	};
 };
 
+/** The per-host slice of the media_copy report this door reads (no diffusion type import). */
+type MediaCopyHostSummary = { takes_copy: boolean | null; error: string | null };
+
+function mediaCopySummary(report: ReconcileReport, name: string): MediaCopyHostSummary | null {
+	const hosts = report.detail.hosts as Record<string, MediaCopyHostSummary> | undefined;
+	return hosts?.[name] ?? null;
+}
+
+function mediaCopyMessage(name: string, report: ReconcileReport): string {
+	if (mediaCopySummary(report, name)?.takes_copy !== true) {
+		return `OK. '${name}' does not take a media copy (its agent reports another media mode): nothing to copy.`;
+	}
+	return report.drift === 0
+		? `OK. '${name}': the media copy matches the published set.`
+		: `'${name}': drift ${report.drift}, applied ${report.applied}. The panel shows what is still pending.`;
+}
+
+/**
+ * reconcile_media_copy: the registered `media_copy` reconcile, APPLY, for ONE host — the
+ * same pure derivation the scheduler applies every period, through the copy worker's
+ * per-host lane (the dry form is reconcile_status.run_reconcile). ROOT ONLY (E10): it puts
+ * and deletes files on a public machine. A host whose round failed (an unreachable agent,
+ * a deletion not verified, a host withdrawn from copy mode while holding bytes) FAILS
+ * VISIBLY (maintenance.action_failed, its code named) — never an OK; its pending deletions
+ * stay pending. BOUNDED ANSWER like push_apis: a first copy of AV media outlives any
+ * request, so a round still going after `pushAnswerWithinMs` answers `running` and
+ * finishes detached in the lane; its outcome lands in the runtime file the panel reads.
+ */
+const reconcileMediaCopyAction: BoundAction = async (options, principal, loadDeps) => {
+	requireRoot(principal, 'reconcile_media_copy');
+	const name = hostName(options);
+	const deps = await loadDeps();
+	requireHost(deps, name);
+	const round = deps.reconcileMediaCopy(name);
+	const waitMs = deps.pushAnswerWithinMs();
+	const report = await settledWithin(round, waitMs);
+	if (report === STILL_RUNNING) {
+		void round.catch((error) =>
+			console.error(`[publication_hosts] reconcile_media_copy host=${name} failed:`, error),
+		);
+		logMutation('reconcile_media_copy', name, principal, 'running');
+		return {
+			data: null,
+			msg: `Media copy of '${name}' started and still running after ${Math.round(waitMs / 1000)} s (a first copy of large media takes long). Its outcome is recorded: reload this panel to see the Media copy row.`,
+			extend: { report: null, running: true },
+		};
+	}
+	const failed = mediaCopySummary(report, name)?.error ?? null;
+	logMutation(
+		'reconcile_media_copy',
+		name,
+		principal,
+		`drift=${report.drift} applied=${report.applied} error=${failed ?? 'none'}`,
+	);
+	if (failed !== null) {
+		failAction(
+			`Error. Media copy of '${name}' failed (${failed}). Pending deletions stay pending; the next reconcile retries them.`,
+			{ coordinates: { host: name } },
+		);
+	}
+	return {
+		data: true,
+		msg: mediaCopyMessage(name, report),
+		extend: { report, running: false },
+	};
+};
+
 const STILL_RUNNING = Symbol('still_running');
 
 /** The round's report if it settles within `ms` (a rejection propagates), else STILL_RUNNING. */
@@ -891,6 +990,7 @@ export function createPublicationHostsWidget(loadDeps: DepsLoader): WidgetModule
 			set_host_fields: bind(setHostFieldsAction),
 			remove_host: bind(removeHostAction),
 			push_apis: bind(pushApisAction),
+			reconcile_media_copy: bind(reconcileMediaCopyAction),
 		},
 		getValue: async (_options, principal) => publicationHostsValue(await loadDeps(), principal),
 	};

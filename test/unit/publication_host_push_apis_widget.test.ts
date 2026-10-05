@@ -116,6 +116,8 @@ function harness(options: HarnessOptions = {}) {
 			return options.report ?? okReport;
 		},
 		pushAnswerWithinMs: () => options.waitMs ?? 5_000,
+		reconcileMediaCopy: unused('reconcileMediaCopy'),
+		now: () => Date.now(),
 	};
 	const module = createPublicationHostsWidget(async () => {
 		counts.loads += 1;
