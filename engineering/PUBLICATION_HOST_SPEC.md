@@ -178,7 +178,9 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   bearer is never sent and nothing is applied.
 - **Errors** are the `publication_host.*` family: `unconfigured`, `registry_invalid`,
   `unreachable`, `pairing_mismatch`, `auth`, `rejected` (an agent 4xx refusal), `failed`
-  (an agent 5xx), `busy` (409) and `timeout`. The agent's problem `reason` maps to a public
+  (an agent 5xx), `busy` (an agent 409, OR the work host's own registry lock held past its
+  wait by the pairing command or another panel write — `wire.ts` `registryError`, logged as
+  `registry_reason: locked`) and `timeout`. The agent's problem `reason` maps to a public
   sentence (`src/core/publication_host/wire.ts`). The agent's prose is logged, never shown.
 - **The panel** is the `publication_hosts` maintenance widget (category `publication`,
   `src/core/area_maintenance/widgets/publication_hosts.ts`, wire entry

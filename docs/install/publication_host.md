@@ -350,7 +350,7 @@ without the hosts' network addresses.
 | pairing mismatch | the publication host was re-provisioned (new token), or another host answers at that address | `replace` the host with its current fragment and bundle |
 | rejected credentials | the agent refused the token | `replace` the host |
 | unreachable, or did not answer in time | the agent is down, the firewall blocks the port, the address changed, or a proxy is in the way | check the agent's service, the firewall and `NO_PROXY`; nothing was applied |
-| busy | another change is running on that host | try again when it finishes |
+| busy | another change is running on that host, or, on the work system, the pairing command or another panel action is editing the host list | try again when it finishes |
 | refused | the host refused the request, for example a failed configuration test | the message names the reason; the previous state is still active |
 
 ## Publication API releases
