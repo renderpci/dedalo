@@ -18,7 +18,7 @@
         "flatpickr": "4.6.13",
         "leaflet": "1.9.4",
         "mmdb-lib": "3.0.3",
-        "nodemailer": "^10.0.10",
+        "nodemailer": "^10.0.13",
         "onnxruntime-web": "1.29.0",
         "split.js": "1.6.5",
         "three": "0.186.1",
@@ -801,7 +801,7 @@
 
     "negotiator": ["negotiator@1.1.0", "", { "dependencies": { "content-type": "^2.1.0" } }, "sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg=="],
 
-    "nodemailer": ["nodemailer@10.0.10", "", {}, "sha512-He9XskOFms62SyAKkLu8CcGcYHAo+BSHSsORI8s4PJH8qZgZY4L4lDfvyN0twvmbpyG+eGrxpyBlskj9d9rJ8A=="],
+    "nodemailer": ["nodemailer@10.0.13", "", {}, "sha512-SzG86OlvcW/NNhUFC6uROMwRTL4n7MswfQqC/T8mhkmnY1YVa23zUEMYi4ijSeXSl9GLz9ZeTJDUatEDuY5FeQ=="],
 
     "object-assign": ["object-assign@4.1.1", "", {}, "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg=="],
 
