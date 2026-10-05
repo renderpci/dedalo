@@ -2392,13 +2392,19 @@ export async function startServer() {
 				// is confirmed, push its verified API releases to every paired publication
 				// host — detached, never throwing. Dynamic for the same reason as the line
 				// above (CONVENTIONS §2 rationale 3: a cold path, once per confirmed boot).
+				// The module is loaded INSIDE the hook, AFTER the flip: a publication-host
+				// module that fails to load is logged and can never veto the confirmation
+				// (an unconfirmed sentinel makes the supervisor roll back a healthy update).
 				// The trigger re-checks smoke/install itself: this block's guard is the
 				// first line of defence, not the only one.
-				const { triggerPublicationApiPush } = await import(
-					'./core/publication_host/api_reconcile.ts'
-				);
 				await confirmBootedCodeUpdate(undefined, undefined, undefined, () => {
-					triggerPublicationApiPush({ smokeBoot, installMode: config.installMode });
+					void import('./core/publication_host/api_reconcile.ts')
+						.then(({ triggerPublicationApiPush }) => {
+							triggerPublicationApiPush({ smokeBoot, installMode: config.installMode });
+						})
+						.catch((error) =>
+							console.error('[publication_apis] post-confirm trigger failed to load:', error),
+						);
 				});
 			} else {
 				console.warn('[code update] boot confirmation deferred: DB ping failed at boot');

@@ -116,4 +116,27 @@ describe('server.ts wiring', () => {
 		expect(confirmImport).toBeGreaterThan(guard);
 		expect(confirmImport).toBeLessThan(call);
 	});
+
+	test('the publication-host module loads INSIDE the hook, after the flip, its failure caught', () => {
+		const source = stripComments(
+			readFileSync(join(import.meta.dir, '..', '..', 'src', 'server.ts'), 'utf8'),
+		);
+		const confirmCall = source.indexOf(
+			'confirmBootedCodeUpdate(undefined, undefined, undefined, () => {',
+		);
+		const lockstepImport = source.search(
+			/import\(\s*'\.\/core\/publication_host\/api_reconcile\.ts'\s*\)/,
+		);
+		const call = source.indexOf(
+			'triggerPublicationApiPush({ smokeBoot, installMode: config.installMode })',
+		);
+		expect(confirmCall).toBeGreaterThan(-1);
+		// a load failure before the call would skip the flip → supervisor rollback of a healthy update
+		expect(lockstepImport).toBeGreaterThan(confirmCall);
+		expect(call).toBeGreaterThan(lockstepImport);
+		// exactly one import of the module in server.ts, and it is caught (never escapes the hook)
+		expect(source.match(/publication_host\/api_reconcile\.ts/g)?.length).toBe(1);
+		const tail = source.slice(call, call + 400);
+		expect(tail).toMatch(/\.catch\(/);
+	});
 });
