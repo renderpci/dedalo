@@ -657,11 +657,14 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'runtime_info.clear_cache_files': 'clears in-process caches and cache files; no statement',
 	'runtime_info.clear_session_files': 'clears the session store; no data-sized statement',
 	'serve_code.build_version_from_git_master': 'packages the code tree from git; no statement',
+	// Every bearer call is preceded by the unauthenticated /health pairing proof: cached for a
+	// read (status, media.probe), live on EVERY mutation (agent_client.ts mutateCall).
 	'publication_hosts.apply_rules':
-		'reads the registry file, then two bounded round trips to a paired agent (status, rules.apply); no statement',
-	'publication_hosts.probe': 'one bounded round trip to a paired agent (media.probe); no statement',
+		'reads the registry file, then up to four bounded round trips to a paired agent (health + status, health + rules.apply); no statement',
+	'publication_hosts.probe':
+		'up to two bounded round trips to a paired agent (health, unless cached + media.probe); no statement',
 	'publication_hosts.rollback_api':
-		'one bounded round trip to a paired agent (release.rollback); no statement',
+		'two bounded round trips to a paired agent (health + release.rollback); no statement',
 	'publication_hosts.set_host_fields': 'one locked rewrite of the registry file; no statement',
 	'publication_hosts.remove_host':
 		'deletes one secret dir and rewrites the registry file; no statement',
@@ -669,6 +672,14 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 };
 
 describe('only DECLARED actions are maintenance', () => {
+	test('a publication_hosts agent call counts its /health pairing proof (mutations prove live)', () => {
+		const agentRows = Object.entries(REQUEST_BOUNDED).filter(
+			([key, reason]) => key.startsWith('publication_hosts.') && reason.includes('paired agent'),
+		);
+		expect(agentRows.length).toBeGreaterThanOrEqual(3); // apply_rules, probe, rollback_api
+		for (const [key, reason] of agentRows) expect(reason, key).toContain('health');
+	});
+
 	test('every unboundedActions name is a registered action of its widget', () => {
 		const declared = ALL_WIDGET_MODULES.flatMap((module) =>
 			(module.unboundedActions ?? []).map((action) => ({ module, action })),
