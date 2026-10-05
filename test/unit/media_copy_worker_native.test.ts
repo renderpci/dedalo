@@ -455,6 +455,72 @@ describe('boot wiring', () => {
 		expect(seen.every((inTx) => inTx === false)).toBe(true);
 	});
 
+	test('detach layer: sync/enqueue called INSIDE a transaction (no sink in between) runs the sync detached', async () => {
+		const seen: boolean[] = [];
+		const w = worker(async () => {
+			seen.push(isInTransaction());
+			return null;
+		});
+		await withTransaction(async () => {
+			expect(isInTransaction()).toBe(true);
+			await w.sync('pub1');
+		});
+		expect(seen).toEqual([false]);
+	});
+
+	test('detach layer: notify INSIDE a transaction (no sink) — the immediate withdrawal and the queued run are both detached', async () => {
+		const seen: [string, boolean][] = [];
+		const created = new MediaCopyWorker({
+			listHosts: () => ['pub1'],
+			publishDebounceMs: 60_000,
+			syncHost: async () => {
+				seen.push(['sync', isInTransaction()]);
+				return null;
+			},
+			withdrawNow: async () => {
+				seen.push(['withdrawNow', isInTransaction()]);
+			},
+		});
+		stops.push(() => created.stop());
+		await withTransaction(async () => {
+			created.notify('test3_15', false);
+			await Bun.sleep(0);
+		});
+		await created.idle();
+		expect(seen.toSorted()).toEqual([
+			['sync', false],
+			['withdrawNow', false],
+		]);
+	});
+
+	test('detach layer: the pub/ sink itself calls notify outside the writer transaction', async () => {
+		const notified: boolean[] = [];
+		const original = MediaCopyWorker.prototype.notify;
+		const spy = spyOn(MediaCopyWorker.prototype, 'notify').mockImplementation(function (
+			this: MediaCopyWorker,
+			key: string,
+			published: boolean,
+		) {
+			notified.push(isInTransaction());
+			return original.call(this, key, published);
+		});
+		try {
+			const stop = startMediaCopyWorker({
+				listHosts: () => [],
+				publishDebounceMs: 60_000,
+				syncHost: async () => null,
+			});
+			stops.push(stop);
+			await withTransaction(async () => {
+				emitPubTransition('test3_16', false);
+			});
+			await activeMediaCopyWorker()?.idle();
+		} finally {
+			spy.mockRestore();
+		}
+		expect(notified).toEqual([false]);
+	});
+
 	test('exclusive / inMediaCopyLane entered INSIDE a transaction run detached from it (worker or not)', async () => {
 		const seen: [string, boolean][] = [];
 		const probe = (what: string) => async () => {
