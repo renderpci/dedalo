@@ -472,12 +472,18 @@ export function getHost(name: string): PublicationHostRecord | null {
 function writeRegistryFile(next: RegistryFile): RegistryFile {
 	// Round-trip through JSON first: what is validated is exactly what is written.
 	const valid = validateRegistry(JSON.parse(JSON.stringify(next)));
+	const bytes = new TextEncoder().encode(`${JSON.stringify(valid, null, '\t')}\n`);
+	// The write is bounded like the read: a file every later read refuses would lock the
+	// registry out of its own repair (updateRegistry loads before it writes).
+	if (bytes.length > REGISTRY_MAX_BYTES) {
+		throw new RegistryError('invalid_shape', `registry would exceed ${REGISTRY_MAX_BYTES} bytes`);
+	}
 	const path = registryPath();
 	const temp = `${path}.tmp-${process.pid}`;
 	rmSync(temp, { force: true });
 	const fd = openSync(temp, 'wx', 0o600);
 	try {
-		writeAllSync(fd, new TextEncoder().encode(`${JSON.stringify(valid, null, '\t')}\n`));
+		writeAllSync(fd, bytes);
 		fsyncSync(fd);
 	} finally {
 		closeSync(fd);

@@ -491,6 +491,19 @@ describe('write', () => {
 		expect(getHost('pub_main')).toEqual(moved);
 	});
 
+	test('the WRITE is bounded like the read: an oversize registry is refused and the file stays readable', () => {
+		saveRegistry(file(host()));
+		const before = readFileSync(registryPath(), 'utf8');
+		// Each entry passes the per-item grammar; together they exceed what any read accepts.
+		const qualities = Array.from({ length: 9000 }, (_, i) => `image/${'q'.repeat(100)}${i}`);
+		expect(
+			reasonOf(() => updateRegistry((current) => ({ ...current, hosts: [host({ qualities })] }))),
+		).toBe('invalid_shape');
+		expect(readFileSync(registryPath(), 'utf8')).toBe(before);
+		expect(loadRegistry()).toEqual(file(host()));
+		expect(readdirSync(scratch.base).filter((name) => name.includes('.tmp-'))).toEqual([]);
+	});
+
 	test('a throwing update writes nothing', () => {
 		saveRegistry(file(host()));
 		const before = readFileSync(registryPath(), 'utf8');
