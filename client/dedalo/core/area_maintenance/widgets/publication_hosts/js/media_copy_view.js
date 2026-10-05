@@ -4,8 +4,9 @@
 /**
  * HAS_MEDIA_COPY
  * Pure: does this publication-host panel row carry a `media_copy` check?
- * The server appends that check to every host except one its agent said is not
- * a copy host and that holds nothing (src/core/publication_host/media_copy_status.ts),
+ * The server appends that check to every host except one its agent says (live
+ * media_mode) or said is not a copy host and that holds nothing
+ * (src/core/publication_host/media_copy_status.ts),
  * so its presence is the "Reconcile media copy" button's condition.
  * No imports: unit-tested from test/unit (publication_host_media_copy_client.test.ts).
  * @param {Object|null} row - one host row from get_value

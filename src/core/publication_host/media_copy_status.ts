@@ -25,6 +25,13 @@
  * operator re-declares copy (the next round finishes the deletions) or empties the copy
  * root and removes the host's runtime entry (re-derived on the next run).
  *
+ * THE AGENT'S LIVE WORD. The panel row already carries the trusted agent's `media_mode`
+ * check (host_status.ts). When it says `shared` / `none`, the row is judged as the next
+ * scheduled apply would judge it (nonCopyRuntime), at once: nothing held → no row (a shared
+ * or freshly paired host never shows a copy check or the copy action); bytes or debt held →
+ * `blocked` / copy_mode_withdrawn. An unavailable mode decides nothing (the stored verdict
+ * stands). Overdue deletions are decided first, as always.
+ *
  * The period is the `media_copy` reconcile's own: src/diffusion/api/reconcile.ts imports
  * it from here (diffusion → core, never the reverse).
  */
@@ -85,11 +92,26 @@ function progressCheck(rt: MediaCopyRuntime): HostCheck {
 	);
 }
 
-/** The `media_copy` check of one host; null only for a host the agent said is not copy, holding nothing. */
-export function mediaCopyCheck(rt: MediaCopyRuntime | undefined, nowMs: number): HostCheck | null {
-	if (rt === undefined) return check('unknown', 'not_reconciled');
+/** The trusted agent's live media mode on a panel row, or null (unavailable / absent). */
+export function liveMediaMode(row: Pick<HostPanelRow, 'checks'>): string | null {
+	const mode = row.checks.find((item) => item.id === 'media_mode');
+	return mode === undefined || mode.state === 'unknown' ? null : mode.detail;
+}
+
+/**
+ * The `media_copy` check of one host; null only for a host the agent said is not copy,
+ * holding nothing. `liveMode` = the agent's word now (liveMediaMode); null = not known.
+ */
+export function mediaCopyCheck(
+	rt: MediaCopyRuntime | undefined,
+	nowMs: number,
+	liveMode: string | null = null,
+): HostCheck | null {
+	const notCopy = liveMode !== null && liveMode !== 'copy';
+	if (rt === undefined) return notCopy ? null : check('unknown', 'not_reconciled');
 	const blocked = blockedCheck(rt, nowMs);
 	if (blocked !== null) return blocked;
+	if (notCopy) return holdsNothing(rt) ? null : check('blocked', COPY_MODE_WITHDRAWN);
 	if (rt.state !== 'n/a' || !holdsNothing(rt)) return progressCheck(rt);
 	return rt.last_verified_at === null ? check('unknown', 'not_reconciled') : null;
 }
@@ -100,6 +122,6 @@ export function withMediaCopyCheck<R extends Pick<HostPanelRow, 'name' | 'checks
 	runtime: Readonly<Record<string, HostRuntime>>,
 	nowMs: number,
 ): R {
-	const media = mediaCopyCheck(runtime[row.name]?.media_copy, nowMs);
+	const media = mediaCopyCheck(runtime[row.name]?.media_copy, nowMs, liveMediaMode(row));
 	return media === null ? row : { ...row, checks: [...row.checks, media] };
 }

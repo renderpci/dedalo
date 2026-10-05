@@ -352,7 +352,8 @@ const confirm_text = function (action_label, target) {
 /**
  * RENDER_ACTIONS
  * Apply media rules · Probe media · Roll back API · Reconcile media copy
- * (copy-mode rows only) · Remove host.
+ * (rows carrying a media_copy check: not proven a non-copy host holding nothing) ·
+ * Remove host.
  */
 const render_actions = function (self, host, card, body_response) {
 	const actions = ui.create_dom_element({
@@ -419,7 +420,7 @@ const render_actions = function (self, host, card, body_response) {
 
 /**
  * RENDER_MEDIA_COPY
- * Root: run the media_copy reconcile (APPLY) for this copy-mode host — the
+ * Root: run the media_copy reconcile (APPLY) for this host — the
  * same pure derivation the engine applies every 10 min: copy what is missing,
  * unmark then delete what is no longer published, verify. Only on a row that
  * carries a `media_copy` check (has_media_copy); confirm-gated (it puts and

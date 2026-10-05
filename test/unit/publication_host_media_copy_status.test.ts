@@ -11,6 +11,7 @@ import { describe, expect, test } from 'bun:test';
 import type { HostPanelRow } from '../../src/core/publication_host/host_status.ts';
 import {
 	COPY_MODE_WITHDRAWN,
+	liveMediaMode,
 	MEDIA_COPY_PERIOD_MS,
 	mediaCopyCheck,
 	nonCopyRuntime,
@@ -178,5 +179,63 @@ describe('withMediaCopyCheck', () => {
 		expect(na).toBe(row);
 		const absent = withMediaCopyCheck(row, {}, NOW);
 		expect(absent.checks.at(-1)).toMatchObject({ id: 'media_copy', state: 'unknown' });
+	});
+});
+
+describe("the agent's live media_mode decides at once (no wait for the next scheduled apply)", () => {
+	const withMode = (state: string, detail: string) =>
+		({
+			name: 'h1',
+			checks: [
+				{ id: 'reachable', state: 'ok' },
+				{ id: 'media_mode', state, detail },
+			],
+		}) as unknown as HostPanelRow;
+
+	test('liveMediaMode: the trusted detail; unavailable or absent → null', () => {
+		expect(liveMediaMode(withMode('ok', 'shared'))).toBe('shared');
+		expect(liveMediaMode(withMode('warn', 'none'))).toBe('none');
+		expect(liveMediaMode(withMode('unknown', 'unavailable'))).toBeNull();
+		expect(liveMediaMode({ checks: [] } as unknown as HostPanelRow)).toBeNull();
+	});
+
+	test('shared / none, nothing held: no row — a shared or freshly paired host never shows the copy check', () => {
+		for (const mode of ['shared', 'none']) {
+			const row = withMode(mode === 'none' ? 'warn' : 'ok', mode);
+			expect(withMediaCopyCheck(row, {}, NOW)).toBe(row);
+			expect(withMediaCopyCheck(row, { h1: defaultHostRuntime() }, NOW)).toBe(row);
+			expect(withMediaCopyCheck(row, { h1: host(rt({ present: 0, desired: 0 })) }, NOW)).toBe(row);
+		}
+	});
+
+	test('shared while bytes or debt are held: blocked / copy_mode_withdrawn at once', () => {
+		const row = withMode('ok', 'shared');
+		expect(withMediaCopyCheck(row, { h1: host(rt()) }, NOW).checks.at(-1)).toEqual({
+			id: 'media_copy',
+			state: 'blocked',
+			detail: COPY_MODE_WITHDRAWN,
+		});
+		const debt = rt({ present: 0, pending_deletions: [{ path: 'a', since: ago(60_000) }] });
+		expect(mediaCopyCheck(debt, NOW, 'shared')).toEqual({
+			id: 'media_copy',
+			state: 'blocked',
+			detail: COPY_MODE_WITHDRAWN,
+		});
+		// overdue deletions are still decided first
+		const overdue = rt({
+			pending_deletions: [{ path: 'a', since: ago(2 * MEDIA_COPY_PERIOD_MS) }],
+		});
+		expect(mediaCopyCheck(overdue, NOW, 'shared')?.detail).toBe('unverified_deletions:1');
+	});
+
+	test('copy, or the mode unavailable: the stored verdict stands (unknown when never reconciled)', () => {
+		expect(mediaCopyCheck(undefined, NOW, 'copy')).toMatchObject({ state: 'unknown' });
+		expect(
+			withMediaCopyCheck(withMode('unknown', 'unavailable'), {}, NOW).checks.at(-1),
+		).toMatchObject({
+			id: 'media_copy',
+			state: 'unknown',
+		});
+		expect(mediaCopyCheck(rt(), NOW, 'copy')).toMatchObject({ state: 'ok', detail: '12/12' });
 	});
 });

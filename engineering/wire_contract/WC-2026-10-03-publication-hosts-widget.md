@@ -165,7 +165,12 @@
   anything else) or the recorded failure code (e.g. `copy_mode_withdrawn`,
   `deletion_unverified`, `linked_quality`, a `publication_host.*` code); `unknown`
   `not_reconciled` (no runtime row, or only a default row another writer created). A host the
-  agent said is not a copy host, holding nothing, carries no such check. No secret field.
+  agent said is not a copy host, holding nothing, carries no such check. The row's own live
+  `media_mode` (the trusted agent's word) decides at once: `shared` / `none` with nothing held
+  → no check (a shared or freshly paired host never shows it); with bytes or debt held →
+  `blocked` `copy_mode_withdrawn`; an unavailable mode leaves the stored verdict. `present` is
+  the round's closing manifest count (a stopped round adds what it landed), `desired` the
+  plan's. No secret field.
 - Copy-mode hosts now get the media rules too: `apply_rules` refuses only a `none` host
   (`maintenance.action_refused`); a `copy` host is gated by the same `publication_host`
   profile over its copy root. The rows' `media_mode` reads `ok` for `copy` and `rules_hash`

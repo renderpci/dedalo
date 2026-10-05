@@ -360,12 +360,16 @@ describe('get_value (panel)', () => {
 			qualities: null,
 			probe: { published: null, unpublished: null },
 		});
-		// the fixed list, then the phase-5 decorator: no runtime row yet → media_copy unknown
-		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([
-			...HOST_CHECK_IDS,
-			'media_copy',
-		]);
-		expect(checkOf(row ?? {}, 'media_copy')).toEqual({
+		// the fixed list; the phase-5 decorator adds NO media_copy check: the agent says
+		// `shared` and the host holds nothing (media_copy_status.ts liveMediaMode)
+		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([...HOST_CHECK_IDS]);
+		// a COPY-mode agent with no runtime row yet → media_copy unknown
+		const copyHarness = harness([record('pub_a')], {
+			hostStatus: async () =>
+				agentStatus({ media: mediaProbe({ mode: 'copy', root: '/srv/copy', read_only: false }) }),
+		});
+		const [copyRow] = rows(await panel(copyHarness));
+		expect(checkOf(copyRow ?? {}, 'media_copy')).toEqual({
 			id: 'media_copy',
 			state: 'unknown',
 			detail: 'not_reconciled',
