@@ -183,10 +183,9 @@ function aptInstalledPackages(dockerfile: string): Set<string> {
  * flow (side branch → ci-image.yml → `bun run ci:image:pin`, Dockerfile + pin in ONE
  * commit; engineering/CI.md "The pin"), never a hermetic-red edit of ci/Dockerfile.
  */
-const CI_IMAGE_MISSING_PACKAGES: Record<string, string> = {
-	ocrmypdf:
-		'the OCR door (src/core/media/engine/pdf.ts, config.media.binaries.ocrmypdf) — no gate exercises a real ocrmypdf today, so its absence reds nothing; it is DEBT: until the image carries it the OCR path runs on no host. Next image publish adds it and deletes this row',
-};
+// Empty since 2026-10-03: ocrmypdf (the last row) is in ci/Dockerfile, and the OCR
+// door now has a real-binary leg (test/unit/media_engine.test.ts).
+const CI_IMAGE_MISSING_PACKAGES: Record<string, string> = {};
 
 const yaml = (f: string) => f.endsWith('.yml') || f.endsWith('.yaml');
 
@@ -1618,8 +1617,17 @@ describe('CI workflow tripwire', () => {
 		// Floors: a parser that read nothing would make the superset vacuous.
 		expect(product.size, 'read no package from the product Dockerfile').toBeGreaterThan(10);
 		expect(ci.size, 'read no package from ci/Dockerfile').toBeGreaterThan(10);
-		for (const anchor of ['imagemagick', 'libheif-plugin-aomenc', 'ffmpeg', 'ghostscript']) {
+		for (const anchor of [
+			'imagemagick',
+			'libheif-plugin-aomenc',
+			'ffmpeg',
+			'ghostscript',
+			'ocrmypdf',
+		]) {
 			expect(product.has(anchor), `product Dockerfile: ${anchor} not read`).toBe(true);
+			// The CI side's reader sees the same names (a ci/Dockerfile reader that missed
+			// one would report it "missing" and push a needless debt row).
+			expect(ci.has(anchor), `ci/Dockerfile: ${anchor} not read`).toBe(true);
 		}
 		const missing = [...product].filter((p) => !ci.has(p) && !(p in CI_IMAGE_MISSING_PACKAGES));
 		expect(

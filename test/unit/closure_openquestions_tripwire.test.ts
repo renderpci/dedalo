@@ -25,10 +25,17 @@
  *    anywhere in the section is a stale record.
  *  - the three OWED measurements must each be named in the block.
  *
- * The detectors are pure functions over text, so each leg is exercised twice:
- * once against the real record, and once against a SYNTHETIC block planted with
- * the offence it is supposed to catch (the positive controls below). The
- * synthetic leg runs EVERYWHERE, because it needs no artifact.
+ * The detectors are pure functions over text, and the whole record check is ONE
+ * function ({@link auditVerdicts}) over ONE reader ({@link readAuditRecord}), so
+ * every leg runs twice through the SAME code: once against the real record, and
+ * once against a SITUATION this gate BUILDS — a synthetic audit tree (a register
+ * with a §5.2 of fourteen bullets, a CLOSURE.md with its delimited block, the
+ * evidence files it cites) written into a scratch directory. The clean situation
+ * must pass every leg; each planted offence (a collapsed parse, a lost block, an
+ * unanswered bullet, a register bullet added later, an evidence-less ANSWERED,
+ * a resolution-less OPEN, a dead citation elsewhere, an unnamed owed
+ * measurement) must red EXACTLY its own leg. The situation legs run EVERYWHERE,
+ * because they need no artifact — the gate's LOGIC is verified on every host.
  *
  * (!) THE ARTIFACT IS LOCAL-ONLY. `audits/` is gitignored, exactly like
  * `rewrite/`, so on a clone neither the register nor CLOSURE.md exists. This
@@ -36,17 +43,22 @@
  * declares itself skipped, with the reason in the test name, when the audit
  * tree is absent — instead of dying at module load on every checkout that is
  * not the maintainer's. Where the artifact IS present, every leg below is
- * enforced in full. What cannot be honestly claimed is that this runs on CI:
- * the artifact it gates does not ship.
+ * enforced in full. What cannot be honestly claimed is that the REAL register is
+ * checked on CI: the artifact it gates does not ship. The built situation proves
+ * the checker; only the maintainer's tree proves the record.
  */
 
-import { describe, expect, test } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const REPO_ROOT = new URL('../../', import.meta.url).pathname;
 const AUDIT_DIR = `${REPO_ROOT}audits/2026-08-26_deep/`;
-const REGISTER = `${AUDIT_DIR}raw/canonical_register.md`;
-const CLOSURE = `${AUDIT_DIR}CLOSURE.md`;
+const REGISTER_REL = 'raw/canonical_register.md';
+const CLOSURE_REL = 'CLOSURE.md';
+const REGISTER = `${AUDIT_DIR}${REGISTER_REL}`;
+const CLOSURE = `${AUDIT_DIR}${CLOSURE_REL}`;
 
 /** The delimiters this item owns; the rest of CLOSURE.md is another lane's. */
 const BLOCK_START = '<!-- BEGIN open-questions -->';
@@ -54,6 +66,10 @@ const BLOCK_END = '<!-- END open-questions -->';
 
 /** Fourteen bullets of record. A parse below this floor is a broken parse. */
 const QUESTION_FLOOR = 14;
+/** A block shorter than this is a stub, not the section. */
+const BLOCK_MIN_CHARS = 500;
+/** A block citing this few paths (or fewer) is unevidenced prose. */
+const CITATION_FLOOR = 10;
 
 /** The measurements REMEDIATION §"does NOT cover" (2) says the audit owes. */
 const OWED_MEASUREMENTS = [
@@ -118,19 +134,97 @@ function citationsIn(text: string): string[] {
 }
 
 /** A citation resolves from the repo root or from the audit directory. */
-function citationResolves(citation: string): boolean {
-	return existsSync(`${REPO_ROOT}${citation}`) || existsSync(`${AUDIT_DIR}${citation}`);
+function citationResolves(citation: string, auditDir: string): boolean {
+	return existsSync(`${REPO_ROOT}${citation}`) || existsSync(join(auditDir, citation));
+}
+
+/** One audit tree as read off disk: the register, the closure record, where they live. */
+interface AuditRecord {
+	auditDir: string;
+	registerText: string;
+	closureText: string;
+}
+
+/** Both artifacts of an audit tree, or null when either is absent (never throws). */
+function readAuditRecord(auditDir: string): AuditRecord | null {
+	const register = join(auditDir, REGISTER_REL);
+	const closure = join(auditDir, CLOSURE_REL);
+	if (!existsSync(register) || !existsSync(closure)) return null;
+	return {
+		auditDir,
+		registerText: readFileSync(register, 'utf8'),
+		closureText: readFileSync(closure, 'utf8'),
+	};
+}
+
+/** What every leg measures, computed ONCE per record by the same code. */
+interface AuditVerdicts {
+	labels: string[];
+	block: string;
+	/** §5.2 labels with no verdict entry. */
+	missing: string[];
+	/** ANSWERED entries with no resolving citation. */
+	bare: string[];
+	/** OPEN entries with no "What would answer it". */
+	silent: string[];
+	/** Every citation in the block. */
+	cited: string[];
+	/** Citations in the block that resolve nowhere (deduplicated). */
+	dead: string[];
+	/** Owed measurements not named in the block. */
+	absentOwed: string[];
+}
+
+function auditVerdicts(record: AuditRecord): AuditVerdicts {
+	const labels = parseQuestionLabels(record.registerText);
+	const block = extractBlock(record.closureText);
+	const resolves = (citation: string) => citationResolves(citation, record.auditDir);
+	const missing: string[] = [];
+	const bare: string[] = [];
+	const silent: string[] = [];
+	for (const label of labels) {
+		const entry = findEntry(block, label);
+		if (entry === null) missing.push(label);
+		else if (entry.verdict === 'ANSWERED') {
+			if (citationsIn(entry.body).filter(resolves).length === 0) bare.push(label);
+		} else if (!/What would answer it/i.test(entry.body)) silent.push(label);
+	}
+	const cited = citationsIn(block);
+	return {
+		labels,
+		block,
+		missing,
+		bare,
+		silent,
+		cited,
+		dead: [...new Set(cited.filter((c) => !resolves(c)))],
+		absentOwed: OWED_MEASUREMENTS.filter((m) => !block.includes(m)),
+	};
+}
+
+/** The legs a record FAILS, by name — the same thresholds the real legs assert. */
+type Leg = 'census' | 'block' | 'verdict' | 'answered' | 'open' | 'citations' | 'owed';
+function failingLegs(v: AuditVerdicts): Leg[] {
+	const failing: Leg[] = [];
+	if (v.labels.length < QUESTION_FLOOR) failing.push('census');
+	if (v.block.trim().length <= BLOCK_MIN_CHARS) failing.push('block');
+	if (v.missing.length > 0) failing.push('verdict');
+	if (v.bare.length > 0) failing.push('answered');
+	if (v.silent.length > 0) failing.push('open');
+	if (v.cited.length <= CITATION_FLOOR || v.dead.length > 0) failing.push('citations');
+	if (v.absentOwed.length > 0) failing.push('owed');
+	return failing;
 }
 
 /** Both artifacts present? (`audits/` is gitignored — absent on a clone.) */
-const auditTreePresent = existsSync(REGISTER) && existsSync(CLOSURE);
-const registerText = auditTreePresent ? await Bun.file(REGISTER).text() : '';
-const closureText = auditTreePresent ? await Bun.file(CLOSURE).text() : '';
-const labels = parseQuestionLabels(registerText);
-const block = extractBlock(closureText);
+const realRecord = readAuditRecord(AUDIT_DIR);
+const auditTreePresent = realRecord !== null;
+const real: AuditVerdicts | null = realRecord === null ? null : auditVerdicts(realRecord);
+const labels = real?.labels ?? [];
+const block = real?.block ?? '';
 
 describe.if(!auditTreePresent)('the audit artifact is absent on this checkout', () => {
-	test.skip('SKIPPED — audits/ is gitignored, so the 2026-08-26 register and CLOSURE.md are not on this checkout; the detector legs below still run', () => {});
+	test.skip('SKIPPED — audits/ is gitignored, so the 2026-08-26 register and CLOSURE.md are not on this checkout; the built-situation and detector legs below still run', () => {});
 });
 
 describe.if(auditTreePresent)(
@@ -149,11 +243,11 @@ describe.if(auditTreePresent)(
 				block.trim().length,
 				`${CLOSURE} carries no ${BLOCK_START} … ${BLOCK_END} block — the open-questions section ` +
 					'was removed or its markers were edited away.',
-			).toBeGreaterThan(500);
+			).toBeGreaterThan(BLOCK_MIN_CHARS);
 		});
 
 		test('every question of §5.2 has an entry carrying a verdict', () => {
-			const missing = labels.filter((label) => findEntry(block, label) === null);
+			const missing = real?.missing ?? [];
 			expect(
 				missing,
 				`${missing.length} question(s) of §5.2 have no verdict entry in the block: ` +
@@ -162,12 +256,7 @@ describe.if(auditTreePresent)(
 		});
 
 		test('every ANSWERED entry cites evidence that resolves on disk', () => {
-			const bare: string[] = [];
-			for (const label of labels) {
-				const entry = findEntry(block, label);
-				if (entry === null || entry.verdict !== 'ANSWERED') continue;
-				if (citationsIn(entry.body).filter(citationResolves).length === 0) bare.push(label);
-			}
+			const bare = real?.bare ?? [];
 			expect(
 				bare,
 				`ANSWERED without a resolving citation: ${bare.join(' | ')}. An answer with no path, ` +
@@ -176,12 +265,7 @@ describe.if(auditTreePresent)(
 		});
 
 		test('every OPEN entry states what would answer it', () => {
-			const silent: string[] = [];
-			for (const label of labels) {
-				const entry = findEntry(block, label);
-				if (entry === null || entry.verdict !== 'OPEN') continue;
-				if (!/What would answer it/i.test(entry.body)) silent.push(label);
-			}
+			const silent = real?.silent ?? [];
 			expect(
 				silent,
 				`OPEN with no resolution path: ${silent.join(' | ')}. An open question that does not ` +
@@ -190,12 +274,11 @@ describe.if(auditTreePresent)(
 		});
 
 		test('CENSUS TOTAL: every citation in the block resolves', () => {
-			const cited = citationsIn(block);
 			expect(
-				cited.length,
+				real?.cited.length ?? 0,
 				'the block cites no repo path at all — the whole section is unevidenced prose.',
-			).toBeGreaterThan(10);
-			const dead = [...new Set(cited.filter((c) => !citationResolves(c)))];
+			).toBeGreaterThan(CITATION_FLOOR);
+			const dead = real?.dead ?? [];
 			expect(
 				dead,
 				`dead citation(s) in the open-questions block: ${dead.join(' | ')}. A path that no ` +
@@ -204,13 +287,182 @@ describe.if(auditTreePresent)(
 		});
 
 		test('the three owed measurements are each named', () => {
-			const absent = OWED_MEASUREMENTS.filter((m) => !block.includes(m));
+			const absent = real?.absentOwed ?? [];
 			expect(absent, `owed measurement(s) not named in the block: ${absent.join(' | ')}.`).toEqual(
 				[],
 			);
 		});
 	},
 );
+
+// ── THE BUILT SITUATION ─────────────────────────────────────────────────────
+// A synthetic audit tree, written to a scratch directory and read back through
+// readAuditRecord → auditVerdicts: the SAME reader and checker the real legs use.
+
+/** The offences a situation can be planted with — one per leg, plus the drift case. */
+type Offence =
+	| 'collapsed-register'
+	| 'no-block'
+	| 'unanswered'
+	| 'bullet-added-later'
+	| 'answered-dead-citation'
+	| 'open-silent'
+	| 'dead-citation-elsewhere'
+	| 'owed-unnamed';
+
+const SITUATION_QUESTIONS = Array.from(
+	{ length: QUESTION_FLOOR },
+	(_, i) => `Synthetic question ${i + 1}`,
+);
+const scratchRoots: string[] = [];
+
+/** Write one audit tree into a fresh scratch dir, planted with at most one offence. */
+function buildSituation(offence?: Offence): string {
+	const dir = mkdtempSync(join(tmpdir(), 'dd-closure-oq-'));
+	scratchRoots.push(dir);
+	mkdirSync(join(dir, 'raw'), { recursive: true });
+	mkdirSync(join(dir, 'evidence'), { recursive: true });
+
+	const bullets = SITUATION_QUESTIONS.map(
+		(q) => `- **${q}.** Whether the filed severity holds depends on this.\n  A continuation line.`,
+	);
+	if (offence === 'bullet-added-later') bullets.push('- **A bullet added after closure.** New.');
+	const heading =
+		offence === 'collapsed-register'
+			? '### 5.2 Questions, renamed'
+			: '### 5.2 Open questions the surviving findings depend on';
+	writeFileSync(
+		join(dir, REGISTER_REL),
+		[
+			'# Canonical register',
+			'',
+			'### 5.1 Something before',
+			'- **Not a question.** Outside §5.2, never parsed.',
+			'',
+			heading,
+			'',
+			...bullets,
+			'',
+			'### 5.3 Something after',
+			'- **Also not a question.** Outside §5.2.',
+			'',
+		].join('\n'),
+	);
+
+	const entries: string[] = [];
+	for (const [i, q] of SITUATION_QUESTIONS.entries()) {
+		if (offence === 'unanswered' && i === 3) continue;
+		const evidence = `evidence/q${i + 1}.md`;
+		writeFileSync(join(dir, evidence), `evidence for ${q}\n`);
+		if (i % 2 === 0) {
+			const cite =
+				offence === 'answered-dead-citation' && i === 0 ? 'evidence/never_written.md' : evidence;
+			entries.push(`**${q}** — ANSWERED.`, `Measured; the record is \`${cite}\`.`, '');
+		} else {
+			const answerLine =
+				offence === 'open-silent' && i === 1
+					? 'Nobody says how this closes.'
+					: 'What would answer it: one measured run on the runner.';
+			const extra =
+				offence === 'dead-citation-elsewhere' && i === 1
+					? ' See also `src/core/db/no_such_file_here.ts`.'
+					: '';
+			entries.push(
+				`**${q}** — OPEN.`,
+				`${answerLine} Context: \`${evidence}\` and \`src/core/db/query_tap.ts\`.${extra}`,
+				'',
+			);
+		}
+	}
+	const owed = OWED_MEASUREMENTS.filter(
+		(m) => !(offence === 'owed-unnamed' && m === 'CLI-26 step 5'),
+	);
+	const blockBody = [
+		'',
+		'## The register’s open questions, answered or restated',
+		'',
+		...entries,
+		'### Owed measurements',
+		...owed.map((m) => `- ${m}: named here, owed by the audit.`),
+		'',
+	].join('\n');
+	writeFileSync(
+		join(dir, CLOSURE_REL),
+		[
+			'# Closure',
+			'',
+			'Another lane’s prose, outside the block: `src/core/db/no_such_file_either.ts`.',
+			'',
+			offence === 'no-block' ? blockBody : `${BLOCK_START}\n${blockBody}\n${BLOCK_END}`,
+			'',
+		].join('\n'),
+	);
+	return dir;
+}
+
+afterAll(() => {
+	for (const dir of scratchRoots) rmSync(dir, { recursive: true, force: true });
+});
+
+function situationVerdicts(offence?: Offence): AuditVerdicts {
+	const record = readAuditRecord(buildSituation(offence));
+	expect(record, 'the built situation must read back as a record').not.toBeNull();
+	return auditVerdicts(record as AuditRecord);
+}
+
+describe('THE BUILT SITUATION: the record checker, run on a synthetic audit tree', () => {
+	test('a clean situation passes every leg — and is not vacuous', () => {
+		const v = situationVerdicts();
+		expect(v.labels).toEqual(SITUATION_QUESTIONS);
+		expect(v.block.trim().length).toBeGreaterThan(BLOCK_MIN_CHARS);
+		expect(v.cited.length).toBeGreaterThan(CITATION_FLOOR);
+		expect(failingLegs(v)).toEqual([]);
+	});
+
+	test('a missing tree reads as absent, never throws', () => {
+		expect(readAuditRecord(join(tmpdir(), 'dd-closure-oq-never-created'))).toBeNull();
+	});
+
+	const CASES: [Offence, Leg[], (v: AuditVerdicts) => void][] = [
+		// A collapsed parse yields NO labels, so the per-label legs see nothing to
+		// check — exactly why the census floor exists: it alone reds here.
+		['collapsed-register', ['census'], (v) => expect(v.labels).toEqual([])],
+		// The block exists only between its markers: unmarked, nothing is read —
+		// the entries vanish, so the verdict, citation and owed legs fall with it.
+		['no-block', ['block', 'verdict', 'citations', 'owed'], (v) => expect(v.block).toBe('')],
+		['unanswered', ['verdict'], (v) => expect(v.missing).toEqual(['Synthetic question 4'])],
+		[
+			'bullet-added-later',
+			['verdict'],
+			(v) => expect(v.missing).toEqual(['A bullet added after closure']),
+		],
+		[
+			'answered-dead-citation',
+			['answered', 'citations'],
+			(v) => {
+				expect(v.bare).toEqual(['Synthetic question 1']);
+				expect(v.dead).toEqual(['evidence/never_written.md']);
+			},
+		],
+		['open-silent', ['open'], (v) => expect(v.silent).toEqual(['Synthetic question 2'])],
+		[
+			'dead-citation-elsewhere',
+			['citations'],
+			(v) => {
+				expect(v.dead).toEqual(['src/core/db/no_such_file_here.ts']);
+				expect(v.bare).toHaveLength(0);
+			},
+		],
+		['owed-unnamed', ['owed'], (v) => expect(v.absentOwed).toEqual(['CLI-26 step 5'])],
+	];
+	for (const [offence, legs, detail] of CASES) {
+		test(`planted offence '${offence}' reds exactly: ${legs.join(', ')}`, () => {
+			const v = situationVerdicts(offence);
+			expect(failingLegs(v)).toEqual(legs);
+			detail(v);
+		});
+	}
+});
 
 describe('POSITIVE CONTROLS: the detectors fire on planted offences', () => {
 	const SYNTHETIC = [
@@ -239,10 +491,12 @@ describe('POSITIVE CONTROLS: the detectors fire on planted offences', () => {
 		expect(entry).not.toBeNull();
 		const cites = citationsIn(entry?.body ?? '');
 		expect(cites.length).toBeGreaterThan(0);
-		expect(cites.filter(citationResolves)).toEqual([]);
+		expect(cites.filter((c) => citationResolves(c, AUDIT_DIR))).toEqual([]);
 		// and the real one does
 		expect(
-			citationsIn(findEntry(synthetic, 'Answered question')?.body ?? '').filter(citationResolves),
+			citationsIn(findEntry(synthetic, 'Answered question')?.body ?? '').filter((c) =>
+				citationResolves(c, AUDIT_DIR),
+			),
 		).toEqual(['src/core/db/query_tap.ts']);
 	});
 

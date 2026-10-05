@@ -8,7 +8,7 @@ import {
 import {get_instance} from '../../../core/common/js/instances.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
 import {ui} from '../../../core/common/js/ui.js'
-import {change_handler} from '../../../core/component_date/js/render_edit_component_date.js'
+import {change_handler, build_date_changed_data_item} from '../../../core/component_date/js/render_edit_component_date.js'
 
 
 
@@ -329,20 +329,27 @@ describe(`COMPONENT_DATE DATA OPERATIONS (date mode)`, function() {
 			? null
 			: item
 
-		const changed_data_item = Object.freeze({
-			action	: 'update',
-			id		: entries[key]?.id || null,
-			value	: data_value
-		})
+		// the shipped edit builder: an emptied slot is a REMOVE by id (a null
+		// update value is refused by the save door,
+		// WC-2026-10-03-save-refuses-malformed-value-shape), a non-empty one an update
+		const changed_data_item = build_date_changed_data_item(data_value, entries[key]?.id ?? null)
+		if (data_value===null) {
+			assert.equal(changed_data_item?.action, 'remove', 'an emptied stored slot expected a remove')
+			assert.isOk(changed_data_item.id, 'the remove expected to name the stored item')
+		} else {
+			assert.equal(changed_data_item.action, 'update', 'a slot with content expected an update')
+		}
 
 		// Verify start was deleted (value may be null if only id left,
 		// or may still contain other keys like 'end' from server data)
 		assert.isUndefined(changed_data_item.value?.start, 'expected start to be deleted after clearing date')
 
-		await instance.change_value({
+		const response = await instance.change_value({
 			changed_data	: [changed_data_item],
-			refresh		: false
+			refresh		: false,
+			remove_dialog	: false
 		})
+		assert.isTrue(response?.ok, 'the server expected to accept the change (envelope ok)')
 	});
 
 
@@ -541,20 +548,27 @@ describe(`COMPONENT_DATE PERIOD MODE`, function() {
 			? null
 			: item
 
-		const changed_data_item = Object.freeze({
-			action	: 'update',
-			id		: entries[key]?.id || null,
-			value	: data_value
-		})
+		// the shipped edit builder: an emptied slot is a REMOVE by id (a null
+		// update value is refused by the save door,
+		// WC-2026-10-03-save-refuses-malformed-value-shape), a non-empty one an update
+		const changed_data_item = build_date_changed_data_item(data_value, entries[key]?.id ?? null)
+		if (data_value===null) {
+			assert.equal(changed_data_item?.action, 'remove', 'an emptied stored slot expected a remove')
+			assert.isOk(changed_data_item.id, 'the remove expected to name the stored item')
+		} else {
+			assert.equal(changed_data_item.action, 'update', 'a slot with content expected an update')
+		}
 
 		// Verify period was deleted (value may be null if only id left,
 		// or may still contain other keys from server data)
 		assert.isUndefined(changed_data_item.value?.period, 'expected period to be deleted after clearing')
 
-		await instance.change_value({
+		const response = await instance.change_value({
 			changed_data	: [changed_data_item],
-			refresh		: false
+			refresh		: false,
+			remove_dialog	: false
 		})
+		assert.isTrue(response?.ok, 'the server expected to accept the change (envelope ok)')
 	});
 
 

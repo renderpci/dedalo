@@ -187,6 +187,14 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The MARC21 and Zotero imports refuse a computed field, and an AI agent can remove one child of a thesaurus term.**
+
+    A field whose value is computed and never stored (a term's children, an inverse or index list, an external record) can no longer be the target of a MARC21 or Zotero import map. Before, an import mapped onto a term's children could quietly move records under another parent in the thesaurus. Now the whole import is refused before anything is written, and the message names the field and tells you what to import instead (for children: the parent, on the child records). The CSV import already worked this way.
+
+    An AI agent using the save tool can now remove one child from a term by naming the child record. Each removal is checked against the agent user's permissions and recorded in the Time Machine. On every other field, a remove still has to name the item id.
+
+    Wire contract: `WC-2026-10-02-relation-children-write-through`, `WC-2026-08-30-remove-requires-item-id`.
+
 - **Error messages now show their details instead of placeholders like `{section_tipo}`.**
 
     About twenty error messages showed their placeholders literally, for example *The link into '{section_tipo}' was refused ({constraint})* or *Your daily AI budget is used up ({budget_kind}: {limit})*. They now show the actual values: the section, the limit, the file size, the action that was still running. The affected messages include link refusals, the AI budget, export limits and quotas, duplicate-request notices, image and file size limits, and unknown API actions.
@@ -1365,6 +1373,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **A save whose value is not shaped like the field's data is now refused instead of stored.**
+
+    The save API accepted a value in any shape and answered success: a bare text sent to a translatable text field was stored beside the other languages, and the next save in another language silently removed it; a number sent as text, an empty `null` item or a non-list replacement were stored or emptied the field the same way. Such a save is now refused with `request.invalid_data`, before anything is written. Each item must be an object — `{value: "…"}` for a text field, `{value: 12}` for a number, `{start: {…}}` for a date, `{iri: "…", title: "…"}` for a link — and a replacement (`set_data`) must be a list of them. The application's own editors already send these shapes. The CSV/JSON importer now converts numbers written as text in a number column (`"55"`) and numbers in a text column, and refuses a number cell it cannot read instead of storing it. Emptying a date field in the record editor now removes the stored date; before, it left an empty placeholder in the record. Records that still hold numbers stored as text by earlier versions keep working with the cache-update and propagate-data tools: those tools convert such numbers when they save the record again. The RDF importer converts a value mapped to a number field (a Nomisma weight, diameter or axis) into a number, and reports one that is not a number (`number_unparsed`) instead of sending it.
+
+    Wire contract: `WC-2026-10-03-save-refuses-malformed-value-shape`.
+
 - **The client-library version table in the manual is generated from the pins, so it can no longer go stale.**
 
     [Client library versions](./development/vendored_library_versions.md) listed
@@ -1399,7 +1413,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 96 entries"
+??? note "Wire contract — 97 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1497,6 +1511,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-02-relation-children-write-through`
     - `WC-2026-10-02-select-lang-missing-entry`
     - `WC-2026-10-03-publication-hosts-widget`
+    - `WC-2026-10-03-save-refuses-malformed-value-shape`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

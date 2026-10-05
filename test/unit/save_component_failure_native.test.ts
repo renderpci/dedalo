@@ -137,7 +137,11 @@ describe('save_component failure propagation (write paths never absorb integrity
 				lang: 'lg-spa',
 				// No id → allocateComponentItemId writes meta.<tipo>[0].count inside
 				// the tx BEFORE the value is encoded; NaN is not JSON → the guard.
-				changedData: [{ action: 'insert', value: { lang: 'lg-spa', value: Number.NaN } }],
+				// The NaN rides an UNTYPED field: a NaN `value` is refused earlier, by the
+				// value-shape law (value_shape.ts), and would never reach the guard.
+				changedData: [
+					{ action: 'insert', value: { lang: 'lg-spa', value: 'x', note: Number.NaN } },
+				],
 				userId: -1,
 			}),
 		);
@@ -178,7 +182,11 @@ describe('save_component failure propagation (write paths never absorb integrity
 				sectionTipo: SECTION_TIPO,
 				sectionId: UNBORN_ID,
 				lang: 'lg-spa',
-				changedData: [{ action: 'insert', value: { lang: 'lg-spa', value: Number.NaN } }],
+				// The NaN rides an UNTYPED field: a NaN `value` is refused earlier, by the
+				// value-shape law (value_shape.ts), and would never reach the guard.
+				changedData: [
+					{ action: 'insert', value: { lang: 'lg-spa', value: 'x', note: Number.NaN } },
+				],
 				userId: -1,
 			}),
 		);
@@ -200,7 +208,8 @@ describe('save_component failure propagation (write paths never absorb integrity
 			}),
 		);
 		expect(notAnObject.code).toBe('request.invalid_data');
-		expect(notAnObject.message).toContain('insert value must be an object item');
+		// The value-shape law (value_shape.ts) answers before the transaction opens.
+		expect(notAnObject.message).toContain('an item must be an object');
 
 		const unknownAction = await refusalOf(
 			saveComponentData({

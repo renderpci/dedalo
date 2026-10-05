@@ -303,8 +303,8 @@
 		},
 		"test/unit/backup_freshness_deep_native.test.ts": {
 			"tests": 30,
-			"skipped": 3,
-			"assertions": 149
+			"skipped": 0,
+			"assertions": 155
 		},
 		"test/unit/backup_inflight_native.test.ts": {
 			"tests": 20,
@@ -692,9 +692,9 @@
 			"assertions": 65
 		},
 		"test/unit/closure_openquestions_tripwire.test.ts": {
-			"tests": 12,
+			"tests": 22,
 			"skipped": 8,
-			"assertions": 9
+			"assertions": 41
 		},
 		"test/unit/code_build_native.test.ts": {
 			"tests": 51,
@@ -1754,7 +1754,7 @@
 		"test/unit/gate_vacuity_tripwire.test.ts": {
 			"tests": 5,
 			"skipped": 0,
-			"assertions": 166
+			"assertions": 165
 		},
 		"test/unit/generic_tld_tripwire.test.ts": {
 			"tests": 12,
@@ -1777,9 +1777,9 @@
 			"assertions": 34
 		},
 		"test/unit/geoip_resolve.test.ts": {
-			"tests": 44,
-			"skipped": 1,
-			"assertions": 47
+			"tests": 51,
+			"skipped": 0,
+			"assertions": 73
 		},
 		"test/unit/geolocation_studio_default_repair.test.ts": {
 			"tests": 31,
@@ -2447,9 +2447,9 @@
 			"assertions": 74
 		},
 		"test/unit/media_engine.test.ts": {
-			"tests": 48,
+			"tests": 49,
 			"skipped": 0,
-			"assertions": 425
+			"assertions": 431
 		},
 		"test/unit/media_export_base.test.ts": {
 			"tests": 5,
@@ -3422,14 +3422,14 @@
 			"assertions": 104
 		},
 		"test/unit/rdf_import_execute_native.test.ts": {
-			"tests": 46,
+			"tests": 47,
 			"skipped": 0,
-			"assertions": 337
+			"assertions": 343
 		},
 		"test/unit/rdf_import_plan.test.ts": {
-			"tests": 56,
+			"tests": 59,
 			"skipped": 0,
-			"assertions": 189
+			"assertions": 202
 		},
 		"test/unit/rdf_map.test.ts": {
 			"tests": 3,
@@ -3532,9 +3532,9 @@
 			"assertions": 15
 		},
 		"test/unit/relation_children_write_through_native.test.ts": {
-			"tests": 23,
+			"tests": 27,
 			"skipped": 0,
-			"assertions": 115
+			"assertions": 135
 		},
 		"test/unit/relation_hierarchy_types_native.test.ts": {
 			"tests": 5,
@@ -3624,7 +3624,7 @@
 		"test/unit/render_class_native.test.ts": {
 			"tests": 16,
 			"skipped": 0,
-			"assertions": 55
+			"assertions": 57
 		},
 		"test/unit/render_escape_tripwire.test.ts": {
 			"tests": 15,
@@ -3992,9 +3992,9 @@
 			"assertions": 5
 		},
 		"test/unit/section_id_intify.test.ts": {
-			"tests": 40,
-			"skipped": 0,
-			"assertions": 190
+			"tests": 43,
+			"skipped": 1,
+			"assertions": 195
 		},
 		"test/unit/section_id_intify_apply.test.ts": {
 			"tests": 6,
@@ -5190,6 +5190,11 @@
 			"tests": 15,
 			"skipped": 0,
 			"assertions": 147
+		},
+		"test/unit/value_shape_native.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 214
 		},
 		"test/unit/vendor_advisory_tripwire.test.ts": {
 			"tests": 44,

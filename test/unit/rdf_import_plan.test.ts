@@ -365,6 +365,8 @@ const NODES: FixtureNode[] = [
 ];
 
 const HTML_MODELS = new Set(['component_text_area']);
+/** The models whose matrix column is `number` (as `getColumnNameByModel` answers). */
+const NUMBER_MODELS = new Set(['component_number']);
 /** The legacy models the engine reports as their runtime model (as `getModelByTipo` does). */
 const RUNTIME_MODEL: Record<string, string> = {
 	component_autocomplete: 'component_portal',
@@ -394,6 +396,7 @@ function memoryReader(nodes: readonly FixtureNode[]): RdfOntologyReader {
 				model: model === null ? null : (RUNTIME_MODEL[model] ?? model),
 				translatable: node?.translatable ?? false,
 				html: HTML_MODELS.has(node?.model ?? ''),
+				number: NUMBER_MODELS.has(node?.model ?? ''),
 			};
 		},
 	};
@@ -1053,6 +1056,7 @@ async function smallOntology(props: FixtureNode[], extra: FixtureNode[] = []) {
 		comp('zzrdf904', 'zzrdf900', 'text_area'),
 		comp('zzrdf905', 'zzrdf900', 'date'),
 		comp('zzrdf906', 'zzrdf900', 'iri'),
+		comp('zzrdf907', 'zzrdf900', 'number'),
 		comp('zzrdf911', 'zzrdf910', 'iri'),
 		{ ...cls('zzrdf801', 'ex:Thing', 'zzrdf900', 'zzrdf906'), parent: 'zzrdf800' },
 		{ ...cls('zzrdf802', 'ex:Other', 'zzrdf910', 'zzrdf911'), parent: 'zzrdf800' },
@@ -1437,6 +1441,62 @@ describe('rdf_import_plan — rules', () => {
 				{ start: { year: 14 } },
 			]),
 		]);
+	});
+
+	test('numbers: a numeral is cast to a number (PHP is_numeric grammar); anything else is a skip', async () => {
+		const weight = prop('zzrdf820', 'zzrdf801', 'ex:weight', ['zzrdf907']);
+		const at: [string, string, string] = ['zzrdf900', 'zzrdf907', 'component_number'];
+		expect(await planSmall([weight], '<ex:weight> 7.85 </ex:weight>')).toEqual([
+			setOp(['zzrdf820', 'ex:weight'], CALLER, at, 'lg-nolan', [{ lang: 'lg-nolan', value: 7.85 }]),
+		]);
+		expect(await planSmall([weight], '<ex:weight>-1.5e2</ex:weight>')).toEqual([
+			setOp(['zzrdf820', 'ex:weight'], CALLER, at, 'lg-nolan', [{ lang: 'lg-nolan', value: -150 }]),
+		]);
+		// surrounding blanks are no part of the numeral (a data_map value keeps them verbatim)
+		const mapped = prop('zzrdf820', 'zzrdf801', 'ex:weight', ['zzrdf907'], {
+			process: { data_map: { heavy: ' 12 ' } },
+		});
+		expect(await planSmall([mapped], '<ex:weight>heavy</ex:weight>')).toEqual([
+			setOp(['zzrdf820', 'ex:weight'], CALLER, at, 'lg-nolan', [{ lang: 'lg-nolan', value: 12 }]),
+		]);
+		for (const bad of ['7,85', '0x1A', 'heavy', '', '1e999']) {
+			expect(await planSmall([weight], `<ex:weight>${bad}</ex:weight>`)).toEqual([
+				skipOf('zzrdf820', 'ex:weight', 'zzrdf907', 'number_unparsed'),
+			]);
+		}
+		// a split of the subject IRI into a number component: `a` spells no number
+		const split = prop('zzrdf820', 'zzrdf801', 'Number', ['zzrdf907'], {
+			process: { split: { get: 'end', source: '$base_uri', split_by: '#' } },
+		});
+		expect(await planSmall([split], '')).toEqual([
+			skipOf('zzrdf820', 'Number', 'zzrdf907', 'number_unparsed'),
+		]);
+	});
+
+	test('a number match component: a numeral finds-or-creates by its number, text is a skip', async () => {
+		const extra: FixtureNode[] = [
+			section('zzrdf920'),
+			comp('zzrdf921', 'zzrdf920', 'number'),
+			{ ...cls('zzrdf804', 'ex:Count', 'zzrdf920', 'zzrdf921'), parent: 'zzrdf800' },
+		];
+		const ont = await smallOntology(
+			[prop('zzrdf820', 'zzrdf801', 'ex:count', ['zzrdf903', 'zzrdf804'])],
+			extra,
+		);
+		const plan = (value: string) =>
+			planRdfImport(
+				ont,
+				parseRdfGraph(
+					exDoc(`<ex:Thing rdf:about="${EX}a"><ex:count>${value}</ex:count></ex:Thing>`),
+				),
+				{ subject: `${EX}a`, langs: LANGS },
+			).ops;
+		expect(plan('12')[0]).toMatchObject({
+			op: 'find_or_create',
+			match_value: '12',
+			match_item: { lang: 'lg-nolan', value: 12 },
+		});
+		expect(plan('twelve')).toEqual([skipOf('zzrdf820', 'ex:count', 'zzrdf903', 'number_unparsed')]);
 	});
 
 	test('a date format resolves the datatype through either prefix map', async () => {
@@ -1953,13 +2013,20 @@ describe('rdf_import_plan — loadRdfImportOntology', () => {
 			model: 'component_text_area',
 			translatable: true,
 			html: true,
+			number: false,
 		});
 		expect(ONT.tipos.get(C_SERIES_NAME)).toEqual({
 			model: 'component_input_text',
 			translatable: true,
 			html: false,
+			number: false,
 		});
-		expect(ONT.tipos.get(S_TYPE)).toEqual({ model: 'section', translatable: false, html: false });
+		expect(ONT.tipos.get(S_TYPE)).toEqual({
+			model: 'section',
+			translatable: false,
+			html: false,
+			number: false,
+		});
 		// sections are not walked as children; only referenced tipos get model facts
 		expect(ONT.nodes.has(S_TYPE)).toBe(false);
 		expect(ONT.tipos.has(ROOT)).toBe(false);
@@ -2007,7 +2074,12 @@ describe('rdf_import_plan — loadRdfImportOntology', () => {
 								{ tipo: 'b', model: 'owl:Class', term: null, properties: null, relations: null },
 							] as RdfReaderNode[])
 						: [],
-			tipoInfo: async (tipo) => ({ model: `m_${tipo}`, translatable: false, html: false }),
+			tipoInfo: async (tipo) => ({
+				model: `m_${tipo}`,
+				translatable: false,
+				html: false,
+				number: false,
+			}),
 		};
 		const ont = await loadRdfImportOntology('r', reader);
 		expect(ont.nodes.get('a')).toMatchObject({ name: 'ex:A', related: [], properties: {} });
@@ -2064,6 +2136,22 @@ describe('rdf_import_plan — production reader on the suite database', () => {
 			model: null,
 			translatable: false,
 			html: false,
+			number: false,
+		});
+	});
+
+	test('the engine reader flags the number column and the markup render, from the engine', async () => {
+		// test22: component_number, test17: component_text_area (repo-owned test TLD ontology)
+		const reader = engineRdfOntologyReader('lg-spa');
+		expect(await reader.tipoInfo('test22')).toMatchObject({
+			model: 'component_number',
+			html: false,
+			number: true,
+		});
+		expect(await reader.tipoInfo('test17')).toMatchObject({
+			model: 'component_text_area',
+			html: true,
+			number: false,
 		});
 	});
 

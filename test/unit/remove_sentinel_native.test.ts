@@ -666,7 +666,7 @@ const DOORS: Record<string, { proof: string; reason: string }> = {
 	'src/ai/mcp/tools/records_write.ts': {
 		proof: 'tests E, E2 — behavioural, with a principal holding no grants',
 		reason:
-			'THE AGENT DOOR, and the one where the defect was CONFIRMED empirically: item_id is optional in the schema (zod validates one field at a time), and an omitted item_id mapped straight onto id:null — so an agent asked to "remove the English title" wiped every other language and was told ok:true. The conditional requirement lives in the handler, ahead of the permission probe.',
+			'THE AGENT DOOR, and the one where the defect was CONFIRMED empirically: item_id is optional in the schema (zod validates one field at a time), and an omitted item_id mapped straight onto id:null — so an agent asked to "remove the English title" wiped every other language and was told ok:true. The conditional requirement lives in the handler, ahead of the permission probe. ONE model is let past it, by the engine\'s own test (the data tipo\'s model, after the alias hop): component_relation_children, whose child is removed BY LOCATOR in value (user decision 2026-09-27, plan item 2) and which the engine routes to the write-through ahead of its sentinel; every other model is still refused here (relation_children_write_through_native: the MCP remove-by-locator unlinks exactly that child with its TM row; the same shape on input_text / relation_parent refuses at the door, before permissions).',
 	},
 	'client/dedalo/core/component_common/js/component_common.js': {
 		proof: 'the G block — the shipped update_data_value, executed',
@@ -847,7 +847,7 @@ const CENSUS: Record<string, CensusRow> = {
 		sites: 1,
 		verdict: 'guarded-door',
 		reason:
-			'`id: input.item_id ?? null` is the construction the agent door still uses for update/insert; the remove case is refused above it, before the permission probe (test E).',
+			'`id: input.item_id ?? null` is the construction the agent door still uses for update/insert; the remove case is refused above it, before the permission probe (test E) — except on a component_relation_children field, where the null id is the shape the write-through expects (removal BY LOCATOR in value; an id-less remove naming no record refuses there, request.invalid_data).',
 	},
 
 	// --- clear-pending: EMPTY on 2026-08-30. Every deliberate wipe was ported
@@ -902,7 +902,8 @@ const CENSUS: Record<string, CensusRow> = {
 	'client/dedalo/core/component_date/js/render_edit_component_date.js': {
 		sites: 1,
 		verdict: 'unresolved-id',
-		reason: '_do_remove(id, …) fed from `value[key]?.id || null`.',
+		reason:
+			'build_date_changed_data_item(data_value, id) — the ONE remove builder (the remove button and an emptied input both call it); it returns null for an id-less slot, which this lexical scan cannot see.',
 	},
 	'client/dedalo/core/component_password/js/component_password.js': {
 		sites: 1,

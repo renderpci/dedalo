@@ -67,6 +67,7 @@
  */
 
 import type { DdDate } from '../../../src/core/concepts/dd_date_time.ts';
+import { PHP_NUMERIC } from '../../../src/core/section/record/value_shape.ts';
 import { textAsParagraph } from '../../../src/core/tools/import_code_lookup.ts';
 import type { RdfGraph, RdfLiteral, XmlnsMap } from '../../../src/core/tools/rdf_graph.ts';
 
@@ -92,6 +93,11 @@ export interface RdfTipoInfo {
 	readonly translatable: boolean;
 	/** The model stores markup (render class 'html'): remote text is escaped and wrapped. */
 	readonly html: boolean;
+	/**
+	 * The model stores in the `number` column: remote text is cast to a number
+	 * (the save door refuses a string there — value_shape.ts), never sent as text.
+	 */
+	readonly number: boolean;
 }
 
 /** The external ontology, read once. */
@@ -236,6 +242,7 @@ export type RdfSkipReason =
 	| 'data_map_no_match'
 	| 'blank_node'
 	| 'date_unparsed'
+	| 'number_unparsed'
 	| 'geo_unparsed'
 	| 'unsupported_process'
 	| 'ddo_map_unresolved'
@@ -401,7 +408,14 @@ async function engineTipoInfo(tipo: string): Promise<RdfTipoInfo> {
 		model,
 		translatable: await getTranslatableByTipo(tipo),
 		html: model !== null && (await rendersHtml(model)),
+		number: model !== null && (await storesNumber(model)),
 	};
+}
+
+/** Whether a model's matrix column is `number` — the save door's own column lookup. */
+async function storesNumber(model: string): Promise<boolean> {
+	const { getColumnNameByModel } = await import('../../../src/core/ontology/resolver.ts');
+	return getColumnNameByModel(model) === 'number';
 }
 
 /**
@@ -480,7 +494,12 @@ interface LangGroup {
 	readonly literals: readonly RdfLiteral[];
 }
 
-const UNKNOWN_TIPO: RdfTipoInfo = Object.freeze({ model: null, translatable: false, html: false });
+const UNKNOWN_TIPO: RdfTipoInfo = Object.freeze({
+	model: null,
+	translatable: false,
+	html: false,
+	number: false,
+});
 
 function newWalk(ont: RdfImportOntology, graph: RdfGraph, langs: RdfPlanLangs): Walk {
 	return { ont, graph, langs, ops: [], keys: new Set(), described: new Set(graph.subjects()) };
@@ -767,11 +786,27 @@ function processOps(walk: Walk, leaf: Leaf): void {
 /**
  * One item of `text` for a component, in its own shape. A markup component gets
  * the text escaped and wrapped in one paragraph — `textAsParagraph`, the form
- * the code lookup searches for, so a record created here is found again.
+ * the code lookup searches for, so a record created here is found again. A
+ * number component gets the number the text spells (PHP `is_numeric`'s
+ * grammar, as Dédalo 6's set_data cast it); text that spells none is null —
+ * the caller reports it as a `number_unparsed` skip, never sends the string
+ * (the save door would refuse it, rolling the operation back).
  */
-function itemFor(info: RdfTipoInfo, lang: string, text: string): RdfPlanItem {
+function itemFor(info: RdfTipoInfo, lang: string, text: string): RdfPlanItem | null {
 	if (info.model === 'component_iri') return { iri: text, lang };
+	if (info.number) {
+		const value = numberOf(text);
+		return value === null ? null : { lang, value };
+	}
 	return { lang, value: info.html ? textAsParagraph(text) : text };
+}
+
+/** The finite number `text` spells (surrounding blanks ignored), else null. */
+function numberOf(text: string): number | null {
+	const trimmed = text.trim();
+	if (!PHP_NUMERIC.test(trimmed)) return null;
+	const value = Number(trimmed);
+	return Number.isFinite(value) ? value : null;
 }
 
 /** The language of a value that has none of its own. */
@@ -939,14 +974,14 @@ function findOrCreate(
 	}
 	const key = `${cls.section_tipo}|${cls.match}|${value}`;
 	if (!walk.keys.has(key)) {
+		const matchLang = lang ?? langFor(walk, cls.info);
+		const item = itemFor(cls.info, matchLang, value);
+		if (item === null) {
+			skip(walk, leaf.node, leaf.frame, leaf.slot.component_tipo, 'number_unparsed');
+			return null;
+		}
 		walk.keys.add(key);
-		emitFindOrCreate(walk, leaf, {
-			cls,
-			key,
-			value,
-			lang: lang ?? langFor(walk, cls.info),
-			resource,
-		});
+		emitFindOrCreate(walk, leaf, { cls, key, value, lang: matchLang, resource, item });
 	}
 	return { key, cls };
 }
@@ -972,7 +1007,14 @@ function linkedRead(
 function emitFindOrCreate(
 	walk: Walk,
 	leaf: Leaf,
-	found: { cls: MatchClass; key: string; value: string; lang: string; resource: string | null },
+	found: {
+		cls: MatchClass;
+		key: string;
+		value: string;
+		lang: string;
+		resource: string | null;
+		item: RdfPlanItem;
+	},
 ): void {
 	const { cls, key, resource } = found;
 	const read = linkedRead(walk, cls, resource);
@@ -987,7 +1029,7 @@ function emitFindOrCreate(
 		match_model: cls.info.model,
 		match_lang: found.lang,
 		match_value: found.value,
-		match_item: itemFor(cls.info, found.lang, found.value),
+		match_item: found.item,
 		needs_fetch_iri: read.fetch,
 	});
 	if (read.inGraph !== null) {
@@ -1016,7 +1058,11 @@ function literalOps(walk: Walk, leaf: Leaf): void {
 		const items = [...new Set(texts as string[])].map((text) =>
 			itemFor(leaf.slot.info, group.lang, text),
 		);
-		pushSet(walk, leaf.slot, leaf.node, leaf.node.name, group.lang, items);
+		if (items.includes(null)) {
+			skip(walk, leaf.node, leaf.frame, leaf.slot.component_tipo, 'number_unparsed');
+			return;
+		}
+		pushSet(walk, leaf.slot, leaf.node, leaf.node.name, group.lang, items as RdfPlanItem[]);
 	}
 }
 
@@ -1076,9 +1122,12 @@ function translationOps(
 	for (const group of groups) {
 		const text = group === preferred ? null : mappedValue(leaf, group.literals[0]?.value ?? '');
 		if (text === null) continue;
-		pushSet(walk, slot, leaf.node, leaf.node.name, group.lang, [
-			itemFor(cls.info, group.lang, text),
-		]);
+		const item = itemFor(cls.info, group.lang, text);
+		if (item === null) {
+			skip(walk, leaf.node, leaf.frame, leaf.slot.component_tipo, 'number_unparsed');
+			continue;
+		}
+		pushSet(walk, slot, leaf.node, leaf.node.name, group.lang, [item]);
 	}
 }
 
@@ -1280,15 +1329,20 @@ function splitOps(walk: Walk, leaf: Leaf, spec: Readonly<Record<string, unknown>
 		return;
 	}
 	const { info } = leaf.slot;
+	if (info.number && numberOf(value) === null) {
+		skip(walk, leaf.node, leaf.frame, leaf.slot.component_tipo, 'number_unparsed');
+		return;
+	}
+	const item = (lang: string) => itemFor(info, lang, value) as RdfPlanItem;
 	const driver = asString(spec.property_name);
 	if (driver === null) {
 		const lang = langFor(walk, info);
-		pushSet(walk, leaf.slot, leaf.node, leaf.node.name, lang, [itemFor(info, lang, value)]);
+		pushSet(walk, leaf.slot, leaf.node, leaf.node.name, lang, [item(lang)]);
 		return;
 	}
 	const iri = predicateIri(walk, leaf.frame.subject, driver);
 	for (const group of installedGroups(walk, leaf, iri, info.translatable)) {
-		pushSet(walk, leaf.slot, leaf.node, driver, group.lang, [itemFor(info, group.lang, value)]);
+		pushSet(walk, leaf.slot, leaf.node, driver, group.lang, [item(group.lang)]);
 	}
 }
 
