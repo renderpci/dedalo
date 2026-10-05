@@ -18,11 +18,16 @@
  * classifier against the generated rules.
  *
  * SYMLINKS ARE NEVER FOLLOWED inside a quality folder: a link could point at a master.
- * The walk itself enters a quality folder that is a link, but the apply opens a file only
- * when NO link lies between the media root's realpath and the file
- * (media_copy_apply.ts openLocalMediaFile) — so a quality folder kept as a link stays
- * deferred (pending_puts), never copied through it. This makes copy NARROWER than a
- * FollowSymLinks shared host, the safe direction.
+ * The apply opens a file only when NO link lies between the media root's realpath and the
+ * file (media_copy_apply.ts openLocalMediaFile), and the PLANNER applies the same rule: a
+ * quality folder reached through a link (the folder itself or a directory above it, e.g.
+ * `av/` kept on another volume) is still walked as DESIRED — so its keys stay marked and
+ * the copies the agent already holds are never deleted — but its files are never hashed
+ * nor put: they go to `plan.linked`, and the round settles `failed` / `linked_quality`
+ * (media_copy_apply.ts LINKED_QUALITY) so the panel names why. NARROWING, LEDGERED HERE:
+ * copy is narrower than a FollowSymLinks shared host (the safe direction); a linked
+ * quality is copied only once the operator mounts it in place (a bind mount is not a
+ * link).
  *
  * THE SHA CACHE is advisory, never authoritative: `(path, size, mtimeMs) → sha256` in
  * <private>/media_copy/sha_cache.ndjson (0700 dir, 0600 file), append + periodic
@@ -237,6 +242,33 @@ async function toDesired(ctx: WalkContext, relpath: string): Promise<DesiredFile
 	if (key === null || !(await isPublished(ctx, key))) return null;
 	const stat = await lstatQuiet(path.join(ctx.root, relpath));
 	return stat?.isFile() ? { path: relpath, key, size: stat.size, mtimeMs: stat.mtimeMs } : null;
+}
+
+/** ENOENT → null; any other error propagates. */
+async function realpathQuiet(abs: string): Promise<string | null> {
+	try {
+		return await fs.realpath(abs);
+	} catch (error) {
+		if (isEnoent(error)) return null;
+		throw error;
+	}
+}
+
+/**
+ * The public quality folders reached through a link (the folder itself or a directory
+ * between it and the media root): their realpath is not the lexical path under the root's
+ * own realpath (a media root that is itself a link is storage layout). An absent folder
+ * is not linked (it holds nothing). See the header: such a folder's files are never put.
+ */
+export async function linkedQualities(qualities: readonly string[]): Promise<string[]> {
+	const { root } = requireMediaStores();
+	const realRoot = await fs.realpath(root);
+	const linked: string[] = [];
+	for (const quality of filterPublicQualities(qualities)) {
+		const real = await realpathQuiet(path.join(root, quality));
+		if (real !== null && real !== path.join(realRoot, quality)) linked.push(quality);
+	}
+	return linked;
 }
 
 /**
@@ -470,6 +502,8 @@ export interface CopyPlan {
 	mark: { key: string; published: boolean }[];
 	/** Desired files that changed while hashed, or that the agent holds irregularly: not put this round. */
 	deferred: string[];
+	/** Desired files under a quality folder reached through a link: never hashed nor put (see the header). */
+	linked: string[];
 	desired: number;
 	present: number;
 }
@@ -572,15 +606,26 @@ export async function diffCopyPlan(
 	desired: AsyncIterable<DesiredFile> | Iterable<DesiredFile>,
 	agent: AgentManifestView,
 	sha: (file: DesiredFile) => Promise<string | null>,
+	linkedQualities: readonly string[] = [],
 ): Promise<CopyPlan> {
-	const plan: CopyPlan = { put: [], del: [], mark: [], deferred: [], desired: 0, present: 0 };
+	const plan: CopyPlan = {
+		put: [],
+		del: [],
+		mark: [],
+		deferred: [],
+		linked: [],
+		desired: 0,
+		present: 0,
+	};
 	const paths = new Set<string>();
 	const keys = new Set<string>();
+	const isLinked = (p: string) => linkedQualities.some((quality) => p.startsWith(`${quality}/`));
 	for await (const file of desired) {
 		plan.desired++;
 		paths.add(file.path);
 		keys.add(file.key);
-		await classifyDesired(plan, file, agent, sha);
+		if (isLinked(file.path)) plan.linked.push(file.path);
+		else await classifyDesired(plan, file, agent, sha);
 	}
 	const stale = [...agent.entries.keys()].filter((p) => !paths.has(p));
 	plan.del = [...stale, ...agent.irregular].sort();
@@ -623,8 +668,11 @@ export async function planCopy(
 	const qualities = deps.qualities(host);
 	const agent = toManifestView(await deps.manifest(host), host);
 	const cache = await openShaCache();
-	const plan = await diffCopyPlan(desiredPublicFiles(qualities), agent, (file) =>
-		cache.sha256(file),
+	const plan = await diffCopyPlan(
+		desiredPublicFiles(qualities),
+		agent,
+		(file) => cache.sha256(file),
+		await linkedQualities(qualities),
 	);
 	await cache.maybeCompact();
 	return plan;

@@ -450,6 +450,33 @@ describe('planCopy — desired set × injected agent manifest × sha cache', () 
 		expect(readFileSync(cacheFile(), 'utf8').trim().split('\n')).toHaveLength(1);
 	});
 
+	test('a quality folder kept as a link: its files are named (plan.linked), never put, never hashed, never deleted', async () => {
+		plant(IMG1, 'aaa');
+		const volume = mkdtempSync(join(tmpdir(), 'dedalo_media_copy_volume_'));
+		try {
+			mkdirSync(join(volume, '404'), { recursive: true });
+			writeFileSync(join(volume, '404', 'test95_test3_1.mp4'), 'vvvvv');
+			mkdirSync(join(root, 'av'), { recursive: true });
+			symlinkSync(join(volume, '404'), join(root, 'av/404'));
+			publish('test3_1');
+			const plan = await planCopy('scratch', {
+				qualities: () => QUALITIES,
+				manifest: async () => ({
+					entries: [{ path: AV1, size: 5, sha256: sha('old') }],
+					irregular: [],
+					markers: ['test3_1'],
+				}),
+			});
+			expect(plan.put.map((p) => p.path)).toEqual([IMG1]);
+			expect(plan.linked).toEqual([AV1]);
+			expect(plan.del).toEqual([]);
+			expect(plan.mark).toEqual([]);
+			expect(existsSync(cacheFile())).toBe(false);
+		} finally {
+			rmSync(volume, { recursive: true, force: true });
+		}
+	});
+
 	test('a malformed agent manifest aborts the plan', async () => {
 		await expect(
 			planCopy('scratch', {

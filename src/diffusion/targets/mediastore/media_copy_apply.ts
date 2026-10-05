@@ -67,7 +67,9 @@
  * the keys after it (a transient failure stops at once). Any other transport failure
  * (unreachable / timeout / busy) stops the round as `pending`, any other as `failed`; the CODE (never agent prose) goes to the runtime file and the
  * recorded deletions stay for the next round (Review Focus 3). A deletion still listed
- * after a round that deferred nothing is `failed` / `deletion_unverified`.
+ * after a round that deferred nothing is `failed` / `deletion_unverified`. A planned round
+ * whose plan names linked files (media_copy.ts `plan.linked`, never put) is `failed` /
+ * `linked_quality` — the narrowing is named on the panel, never a silent `pending`.
  *
  * Every dependency is injected (CopyDeps); media_copy.ts binds the real ones. The import
  * of media_copy.ts here is TYPE-only (erased), so the two never form a value cycle.
@@ -103,6 +105,12 @@ export const MEDIA_COPY_LOCK_BOUND_MS = 60_000;
 /** The runtime error of a deletion the manifest still lists after a full round. */
 export const DELETION_UNVERIFIED = 'deletion_unverified';
 
+/**
+ * The runtime error of a planned round that left desired files uncopied because their
+ * quality folder is reached through a link (media_copy.ts header: never put through it).
+ */
+export const LINKED_QUALITY = 'linked_quality';
+
 const TRANSIENT_CODES: ReadonlySet<string> = new Set([
 	'publication_host.unreachable',
 	'publication_host.timeout',
@@ -112,7 +120,7 @@ const TRANSIENT_CODES: ReadonlySet<string> = new Set([
 export type MediaCopyRuntime = HostRuntime['media_copy'];
 
 /** What an apply needs from a plan (media_copy.ts CopyPlan carries more). */
-export type ApplyPlan = Pick<CopyPlan, 'put' | 'del' | 'mark'>;
+export type ApplyPlan = Pick<CopyPlan, 'put' | 'del' | 'mark'> & Partial<Pick<CopyPlan, 'linked'>>;
 
 export interface LocalFile {
 	size: number;
@@ -156,7 +164,7 @@ export interface CopyApplyReport {
 	/** Puts undone: the record was unpublished while its bytes were in flight. */
 	compensated: number;
 	pending_deletions: number;
-	/** A DedaloError code, `internal.unexpected` or `deletion_unverified` — never prose. */
+	/** A DedaloError code, `internal.unexpected`, `deletion_unverified` or `linked_quality` — never prose. */
 	error: string | null;
 }
 
@@ -657,12 +665,18 @@ function noteFailure(report: CopyApplyReport, error: unknown): void {
 	console.error(`[media_copy] ${report.host}: round stopped (${report.error}):`, error);
 }
 
-function finalState(report: CopyApplyReport, pending: number, withdrawOnly = false): RoundOutcome {
+function finalState(
+	report: CopyApplyReport,
+	pending: number,
+	withdrawOnly = false,
+	linked = 0,
+): RoundOutcome {
 	if (report.error !== null) {
 		return { state: TRANSIENT_CODES.has(report.error) ? 'pending' : 'failed', error: report.error };
 	}
 	if (pending > 0 && report.deferred === 0 && !withdrawOnly)
 		return { state: 'failed', error: DELETION_UNVERIFIED };
+	if (linked > 0) return { state: 'failed', error: LINKED_QUALITY };
 	if (pending > 0 || report.deferred > 0) return { state: 'pending', error: null };
 	return { state: 'ok', error: null };
 }
@@ -673,10 +687,11 @@ async function settle(
 	report: CopyApplyReport,
 	pendingPuts: number | null,
 	withdrawOnly = false,
+	linked = 0,
 ): Promise<void> {
 	let outcome: RoundOutcome = finalState(report, 0);
 	const settled = await deps.updateRuntime(host, (cur) => {
-		outcome = finalState(report, cur.pending_deletions.length, withdrawOnly);
+		outcome = finalState(report, cur.pending_deletions.length, withdrawOnly, linked);
 		return {
 			...cur,
 			state: outcome.state,
@@ -719,7 +734,7 @@ export async function applyCopyWith(
 		return report;
 	}
 	const unsent = plan.put.length - report.put - report.skipped_unpublished - report.compensated;
-	await settle(deps, host, report, Math.max(0, unsent));
+	await settle(deps, host, report, Math.max(0, unsent), false, plan.linked?.length ?? 0);
 	return report;
 }
 

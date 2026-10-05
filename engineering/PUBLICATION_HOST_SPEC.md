@@ -351,6 +351,13 @@ A diffusion target beside MariaDB, driven by the same publish/unpublish events a
   waited for holding no connection. A withdrawal (`mark false`) is sent at once, outside
   every lane and lock — the agent's per-key lock and the grant's post-`mark` re-check make
   that order-safe (`media_copy_apply.ts` header).
+- **Never through a link** (built, phase 5): a file is opened only when no link lies
+  between the media root's realpath and it. A public quality folder reached through a link
+  (itself or a directory above it, e.g. `av/` on another volume) stays desired — its keys
+  stay marked, the agent's copies are kept — but nothing in it is hashed or put; the round
+  settles `failed` / `linked_quality` until it is mounted in place (a bind mount is not a
+  link). Narrower than a FollowSymLinks shared host, the safe direction (`media_copy.ts`
+  header).
 
 ## 6. Agent command set (closed)
 

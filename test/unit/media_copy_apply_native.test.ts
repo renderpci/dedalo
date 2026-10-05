@@ -30,6 +30,7 @@ import {
 	DELETION_UNVERIFIED,
 	explicitCopyState,
 	hostTakesCopy,
+	LINKED_QUALITY,
 	MEDIA_COPY_ACTOR,
 	type MediaCopyRuntime,
 	notCopyRuntime,
@@ -654,6 +655,24 @@ describe('a withdraw-only pass never supersedes a pending FILE deletion (it has 
 		expect(world.calls).toEqual(['mark test3_2 false']);
 		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([P1]);
 		expect(report).toMatchObject({ state: 'pending', error: null, pending_deletions: 1 });
+	});
+});
+
+describe('a quality folder kept as a link is named, never silent (plan.linked)', () => {
+	test('linked files only: the round settles failed / linked_quality; a real failure still wins', async () => {
+		const world = newWorld();
+		world.published.add(K1);
+		world.agentMarkers.add(K1);
+		const d = worldDeps(world);
+		const report = await applyCopyWith(d, 'pub1', { ...EMPTY, linked: [P1] });
+		expect(world.calls).toEqual([]);
+		expect(report).toMatchObject({ state: 'failed', error: LINKED_QUALITY });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'failed', error: LINKED_QUALITY });
+		world.down = true;
+		const down = await applyCopyWith(d, 'pub1', { ...EMPTY, linked: [P1] });
+		expect(down).toMatchObject({ state: 'pending', error: 'publication_host.unreachable' });
+		world.down = false;
+		expect(await applyCopyWith(d, 'pub1', EMPTY)).toMatchObject({ state: 'ok', error: null });
 	});
 });
 
