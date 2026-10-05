@@ -113,6 +113,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 		'root-only; edits public_url/qualities/probe in the TS-owned <private>/publication_hosts.json registry (atomic, locked)',
 	'publication_hosts.remove_host':
 		'root-only; deletes a host from the TS-owned registry and its secret dir under <private>/publication_hosts/, and forgets its in-process pairing proof — the agent itself is untouched',
+	'publication_hosts.push_apis':
+		"root-only push of the installed tree's verified Publication API releases to paired publication hosts through the TS-owned registry + agent channel (phase 4) — no PHP-tree surface",
 };
 
 /**

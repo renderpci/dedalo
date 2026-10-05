@@ -42,6 +42,7 @@ import {
 import { ownershipMark } from '../../src/core/area_maintenance/widgets/support.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { AgentStatus, MediaProbe } from '../../src/core/publication_host/agent_client.ts';
+import { buildApiLockstepPanel } from '../../src/core/publication_host/api_reconcile.ts';
 import {
 	HOST_CHECK_IDS,
 	type HostStatusInput,
@@ -70,7 +71,14 @@ const TOKEN = 'SECRET-TOKEN-7f3a9c1e5b2d4f6a8c0e2b4d6f8a0c2e4b6d';
 const KEY_PEM = '-----BEGIN PRIVATE KEY-----\nMIIEvQSECRETKEYBYTESZZ\n-----END PRIVATE KEY-----';
 const REGISTRY_PATH = '/scratch/private/publication_hosts.json';
 
-const ACTIONS = ['apply_rules', 'probe', 'rollback_api', 'set_host_fields', 'remove_host'] as const;
+const ACTIONS = [
+	'apply_rules',
+	'probe',
+	'rollback_api',
+	'set_host_fields',
+	'remove_host',
+	'push_apis', // phase 4 (publication_host_push_apis_widget.test.ts gates its behaviour)
+] as const;
 
 /** The served row keys, pinned: root gets the edit-form fields, a non-root admin no topology. */
 const ROOT_ROW_KEYS = [
@@ -220,6 +228,11 @@ function harness(
 		filterPublicQualities: (configured) =>
 			configured.map((q) => q.replace(/^\/+|\/+$/g, '')).filter((q) => !q.endsWith('/original')),
 		engineVersion: () => '7.0.0',
+		loadPanelRuntime: async () => ({ runtime: {}, runtime_invalid: null }),
+		buildApiLockstepPanel,
+		reconcilePublicationApis: async () => {
+			throw new DedaloError('internal.unexpected', { message: 'push_apis is gated elsewhere' });
+		},
 		...over,
 	};
 	const module = createPublicationHostsWidget(async () => {
@@ -275,7 +288,7 @@ describe('registration', () => {
 		expect(ids[ids.indexOf('site_builder_status') + 1]).toBe('publication_hosts');
 	});
 
-	test('spec, lazy get_value, exactly the five actions, none unbounded, none ownership-marked', () => {
+	test('spec, lazy get_value, exactly the six actions, none unbounded, none ownership-marked', () => {
 		expect(widget.spec).toEqual({
 			id: 'publication_hosts',
 			category: 'publication',
@@ -583,7 +596,9 @@ describe('root-only actions', () => {
 	test('an invalid host name is refused before any module load', async () => {
 		for (const action of ACTIONS) {
 			const h = harness([record('pub_a')]);
-			const code = await codeOf(run(h, action, { name: '../etc' }));
+			// push_apis names its hosts as a list (`hosts`), every other action one `name`
+			const bad = action === 'push_apis' ? { hosts: ['../etc'] } : { name: '../etc' };
+			const code = await codeOf(run(h, action, bad));
 			expect(code, action).toBe('maintenance.action_refused');
 			expect(h.loads(), action).toBe(0);
 		}

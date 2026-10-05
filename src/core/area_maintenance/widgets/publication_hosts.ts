@@ -40,6 +40,14 @@
  * public host's media gate or roll back a public API. The root check runs FIRST, before
  * any module is loaded or any agent is dialled.
  *
+ * PUBLICATION API LOCKSTEP (phase 4). `push_apis` (root) runs THE reconciler
+ * (core/publication_host/api_reconcile.ts) as an apply round; `get_value` adds
+ * `api_lockstep` — the LAST round's verdict, never a hash of the tree on a panel load —
+ * and `runtime_invalid`: the runtime results file is read ONCE per get_value
+ * (panel_runtime.ts), and a corrupt one degrades to that reason, never a 500. Phases 5/6
+ * decorate the rows from the SAME runtime map, in the fixed order
+ * rows → withMediaCopyCheck → attachProbe, then api_lockstep from the final rows.
+ *
  * Hosts are ADDED only by `scripts/publication_host_pair.ts` on the work host. The panel
  * edits `public_url` / `qualities` / `probe` and removes a host; it never takes an
  * address or a credential.
@@ -56,12 +64,18 @@ import {
 	type AgentStatus,
 	type MediaProbe,
 } from '../../publication_host/agent_client.ts';
+import type {
+	ApiLockstepPanel,
+	ApiReconcileReport,
+	ReconcileApisFn,
+} from '../../publication_host/api_reconcile.ts';
 import {
 	type HostPanelRow,
 	type HostStatusInput,
 	registryInvalidCheck,
 	type StatusOutcome,
 } from '../../publication_host/host_status.ts';
+import type { PanelRuntime } from '../../publication_host/panel_runtime.ts';
 import {
 	HOST_NAME,
 	loadRegistry,
@@ -74,6 +88,7 @@ import {
 	validateQualities,
 } from '../../publication_host/registry.ts';
 import type { ExpectedRules, ExpectedRulesOutcome } from '../../publication_host/rules.ts';
+import type { HostRuntime } from '../../publication_host/runtime.ts';
 // BY NAME, never a namespace: publication_host_door_tripwire allows only the door to load
 // the TLS material (readHostTls); a namespace / whole-module import() would count as one.
 import {
@@ -126,6 +141,15 @@ export interface PublicationHostsDeps {
 	engineQualities(): string[];
 	filterPublicQualities(configured: readonly string[]): string[];
 	engineVersion(): string;
+	/** THE one runtime read of a get_value (phase 4): a corrupt file → runtime_invalid. */
+	loadPanelRuntime(): Promise<PanelRuntime>;
+	/** The last round's lockstep verdict vs each row — never hashes the tree. */
+	buildApiLockstepPanel(
+		rows: readonly Pick<HostPanelRow, 'name' | 'pairing_proved' | 'apis'>[],
+		runtime: Readonly<Record<string, HostRuntime>>,
+	): ApiLockstepPanel;
+	/** THE Publication API reconciler (push_apis runs it as an apply round). */
+	reconcilePublicationApis: ReconcileApisFn;
 }
 
 export type DepsLoader = () => Promise<PublicationHostsDeps>;
@@ -145,6 +169,8 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 	// DEDALO_VERSION, not DEDALO_ENGINE_VERSION: release ids are `<DEDALO_VERSION>_<digest7>`
 	// (Task 6 lockstep); the prerelease tag would put every API check at warn.
 	const { DEDALO_VERSION } = await import('../../update/version.ts');
+	const lockstep = await import('../../publication_host/api_reconcile.ts');
+	const { loadPanelRuntime } = await import('../../publication_host/panel_runtime.ts');
 	return {
 		registryPath,
 		loadRegistry,
@@ -163,6 +189,9 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 		engineQualities: protection.getPublicQualities,
 		filterPublicQualities: protection.filterPublicQualities,
 		engineVersion: () => DEDALO_VERSION,
+		loadPanelRuntime: () => loadPanelRuntime(),
+		buildApiLockstepPanel: lockstep.buildApiLockstepPanel,
+		reconcilePublicationApis: (opts) => lockstep.reconcilePublicationApis(opts),
 	};
 }
 
@@ -340,10 +369,16 @@ export async function publicationHostsValue(
 ): Promise<WidgetResponse> {
 	const isRoot = principal.userId === SUPERUSER_ID;
 	const read = readRegistry(deps);
+	// ONE runtime read for the whole panel (panel_runtime.ts): a corrupt file is a red
+	// `runtime_invalid`, never a 500. Fixed decorator order for phases 5/6:
+	// rows → withMediaCopyCheck → attachProbe, each taking panelRuntime.runtime; then
+	// api_lockstep from the final rows (the last round's verdict — never a tree hash).
+	const panelRuntime = await deps.loadPanelRuntime();
 	const common = {
 		registry_path: isRoot ? deps.registryPath() : null,
 		engine_qualities: deps.engineQualities(),
 		is_root: isRoot,
+		runtime_invalid: panelRuntime.runtime_invalid,
 	};
 	if (!read.ok) {
 		return {
@@ -355,11 +390,19 @@ export async function publicationHostsValue(
 					check: registryInvalidCheck(read.reason),
 				},
 				hosts: null,
+				api_lockstep: deps.buildApiLockstepPanel([], panelRuntime.runtime),
 			},
 		};
 	}
 	const hosts = await Promise.all(read.file.hosts.map((record) => hostRow(record, deps, isRoot)));
-	return { data: { ...common, registry: { state: 'ok', reason: null, check: null }, hosts } };
+	return {
+		data: {
+			...common,
+			registry: { state: 'ok', reason: null, check: null },
+			hosts,
+			api_lockstep: deps.buildApiLockstepPanel(hosts, panelRuntime.runtime),
+		},
+	};
 }
 
 // ── field validation (set_host_fields) ──────────────────────────────────────
@@ -702,6 +745,70 @@ const removeHostAction: BoundAction = async (options, principal, loadDeps) => {
 	};
 };
 
+/**
+ * push_apis: push the installed tree's verified Publication API releases to every paired
+ * host (or `options.hosts`), v2 then v1 (phase 4, L5/L6). ROOT ONLY (E10): this installs
+ * code on a public machine — the guard runs before anything is loaded. `data` is true
+ * only when nothing was refused and nothing failed; `msg` names the refusal, or each
+ * failed host×API with its code and named paths. A concurrent push is resource.conflict,
+ * an unregistered name resource.not_found (both from the reconciler).
+ */
+const pushApisAction: BoundAction = async (options, principal, loadDeps) => {
+	requireRoot(principal, 'push_apis');
+	const hosts = pushHosts(options.hosts);
+	const deps = await loadDeps();
+	const report = await deps.reconcilePublicationApis({
+		apply: true,
+		actor: actorFor(principal),
+		...(hosts === null ? {} : { hosts }),
+	});
+	const failed = failedPushes(report);
+	console.info(
+		`[publication_hosts] push_apis user=${principal.userId} release=${report.release ?? 'none'} hosts=${report.hosts.length} failed=${failed.length}${report.refused === null ? '' : ' REFUSED'}`,
+	);
+	return {
+		data: report.refused === null && failed.length === 0,
+		msg: pushMessage(report, failed) + runtimeNote(report),
+		extend: { report },
+	};
+};
+
+/** `options.hosts`: absent = every host; else an array of host names (validated whole). */
+export function pushHosts(value: unknown): string[] | null {
+	if (value === undefined || value === null) return null;
+	if (Array.isArray(value) && value.every((n) => typeof n === 'string' && HOST_NAME.test(n))) {
+		return value as string[];
+	}
+	refuseAction('Error. push_apis: hosts must be a list of registered publication host names.');
+}
+
+/** `www v2 (bundle_refused:drift: a, b)` per failed host×API, v2 first. */
+function failedPushes(report: ApiReconcileReport): string[] {
+	return report.hosts.flatMap((host) =>
+		(['v2', 'v1'] as const)
+			.filter((api) => host[api].result === 'failed')
+			.map((api) => {
+				const { error, detail } = host[api];
+				return `${host.name} ${api} (${error ?? 'failed'}${detail === undefined ? '' : `: ${detail}`})`;
+			}),
+	);
+}
+
+function pushMessage(report: ApiReconcileReport, failed: string[]): string {
+	if (report.refused !== null) {
+		return `Error. Nothing was pushed: this engine tree has no verified Publication API release (${report.refused}).`;
+	}
+	if (failed.length > 0) {
+		return `Error. Release ${report.release}: the push failed on ${failed.join('; ')}. Each host and API is shown below.`;
+	}
+	return `OK. Release ${report.release ?? 'none'} is current on ${report.hosts.length} publication host(s).`;
+}
+
+function runtimeNote(report: ApiReconcileReport): string {
+	if (report.runtime_error === undefined) return '';
+	return ` The result could not be recorded (${report.runtime_error}): the panel cannot show it until the runtime file is fixed or deleted (deleting it is safe).`;
+}
+
 export function createPublicationHostsWidget(loadDeps: DepsLoader): WidgetModule {
 	const bind =
 		(action: BoundAction) =>
@@ -719,6 +826,7 @@ export function createPublicationHostsWidget(loadDeps: DepsLoader): WidgetModule
 			rollback_api: bind(rollbackApiAction),
 			set_host_fields: bind(setHostFieldsAction),
 			remove_host: bind(removeHostAction),
+			push_apis: bind(pushApisAction),
 		},
 		getValue: async (_options, principal) => publicationHostsValue(await loadDeps(), principal),
 	};

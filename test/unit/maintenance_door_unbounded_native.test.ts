@@ -669,6 +669,9 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'publication_hosts.set_host_fields': 'one locked rewrite of the registry file; no statement',
 	'publication_hosts.remove_host':
 		'deletes one secret dir and rewrites the registry file; no statement',
+	// The tree hash + the v2 deps build are file/child-process work; the pool holds nothing.
+	'publication_hosts.push_apis':
+		'hashes the installed API trees, may run one child `bun install` in the build cache, then per paired agent: health unless cached + status, and per API one release.install behind its live health proof (one more health on a 401); no statement',
 	'error_reports.get_reports': 'one LIMITed page + one count of the error-report table',
 };
 
