@@ -225,6 +225,20 @@ function newReport(host: string): CopyApplyReport {
 	};
 }
 
+/** A host a copy flow writes for is a copy host: never left `n/a` (see explicitCopyState). */
+function asCopyHost(cur: MediaCopyRuntime): MediaCopyRuntime {
+	return cur.state === 'n/a' ? { ...cur, state: 'pending' } : cur;
+}
+
+/** `deps` whose every runtime write lifts `n/a` (asCopyHost) — bound at each entry point. */
+function copyHostDeps<D extends Pick<CopyDeps, 'updateRuntime'>>(deps: D): D {
+	return {
+		...deps,
+		updateRuntime: (host: string, fn: (cur: MediaCopyRuntime) => MediaCopyRuntime) =>
+			deps.updateRuntime(host, (cur) => asCopyHost(fn(cur))),
+	};
+}
+
 async function recordPending(
 	deps: Pick<CopyDeps, 'updateRuntime' | 'now'>,
 	host: string,
@@ -661,11 +675,12 @@ async function settle(
 
 /** Run one plan against one host (see the header). Never throws on an agent failure. */
 export async function applyCopyWith(
-	deps: CopyDeps,
+	rawDeps: CopyDeps,
 	host: string,
 	plan: ApplyPlan,
 	options: ApplyOptions = {},
 ): Promise<CopyApplyReport> {
+	const deps = copyHostDeps(rawDeps);
 	assertPlanPublic(deps, host, plan);
 	const report = newReport(host);
 	const withdrawn = plan.mark.filter((mark) => !mark.published).map((mark) => mark.key);
@@ -774,36 +789,53 @@ export async function openLocalMediaFile(
 
 export interface TakesCopyIo {
 	status(name: string): Promise<{ media: { mode: string } }>;
+	/** The last state the runtime PROVES (explicitCopyState); undefined = no answer on record. */
 	lastState(name: string): Promise<MediaCopyRuntime['state'] | undefined>;
 	markNotCopy(name: string): Promise<void>;
 }
 
 /**
- * The runtime of a host the agent says is NOT a copy host: `n/a`, and its pending
+ * The runtime of a host the agent says is NOT a copy host: `n/a`, stamped with the instant
+ * of that answer (`last_verified_at` — the proof explicitCopyState reads), and its pending
  * deletions cleared — such an agent refuses every media route, so nothing recorded there
  * can be withdrawn or verified (a `shared` host serves the work host's own markers).
  */
-export function notCopyRuntime(cur: MediaCopyRuntime): MediaCopyRuntime {
-	return { ...cur, state: 'n/a', error: null, pending_deletions: [] };
+export function notCopyRuntime(cur: MediaCopyRuntime, at: string): MediaCopyRuntime {
+	return { ...cur, state: 'n/a', error: null, pending_deletions: [], last_verified_at: at };
+}
+
+/**
+ * The state a runtime row PROVES. `n/a` is also the DEFAULT of every row another writer
+ * creates (api_reconcile, the probe), so it counts only when stamped (notCopyRuntime sets
+ * `last_verified_at`; every copy-flow write lifts `n/a` to `pending` — asCopyHost — so a
+ * stamped `n/a` is the agent's word). An unstamped `n/a` is no answer: undefined.
+ */
+export function explicitCopyState(
+	row: MediaCopyRuntime | undefined,
+): MediaCopyRuntime['state'] | undefined {
+	if (row === undefined) return undefined;
+	if (row.state === 'n/a' && row.last_verified_at === null) return undefined;
+	return row.state;
 }
 
 const realTakesCopyIo: TakesCopyIo = {
 	status: (name) => hostStatus(name),
-	lastState: async (name) => (await loadRuntime())[name]?.media_copy.state,
+	lastState: async (name) => explicitCopyState((await loadRuntime())[name]?.media_copy),
 	markNotCopy: async (name) => {
+		const at = new Date().toISOString();
 		await updateHostRuntime(name, (cur) => ({
 			...cur,
-			media_copy: notCopyRuntime(cur.media_copy),
+			media_copy: notCopyRuntime(cur.media_copy, at),
 		}));
 	},
 };
 
 /**
  * Is `name` a copy-mode host? The agent's own word (`status.media.mode`). When it cannot
- * be asked, the last runtime state decides, and ONLY an explicit `n/a` (the agent said
- * so before) answers false. No runtime row yet, or a runtime file that cannot be read,
- * answers true: an unpublish must never fail open — its withdrawal is recorded pending
- * and the panel turns red until the agent answers.
+ * be asked, the last PROVEN runtime state decides (explicitCopyState), and ONLY an `n/a`
+ * the agent answered before answers false. No row, a default row another writer created,
+ * or a runtime file that cannot be read answers true: an unpublish must never fail open —
+ * its withdrawal is recorded pending and the panel turns red until the agent answers.
  */
 export async function hostTakesCopy(
 	name: string,
@@ -835,12 +867,13 @@ export interface WithdrawNowDeps extends Pick<CopyDeps, 'mark' | 'updateRuntime'
  * Throws the first failure (the worker logs it; the queued run withdraws again).
  */
 export async function withdrawNowWith(
-	deps: WithdrawNowDeps,
+	rawDeps: WithdrawNowDeps,
 	host: string,
 	keys: readonly string[],
 ): Promise<void> {
 	const unique = [...new Set(keys)];
-	if (unique.length === 0 || !(await deps.takesCopy(host))) return;
+	if (unique.length === 0 || !(await rawDeps.takesCopy(host))) return;
+	const deps = copyHostDeps(rawDeps);
 	await recordPending(deps, host, unique.map(agentMarkerPath));
 	const { failure } = await unmarkEach(deps, host, unique);
 	if (failure !== null) throw failure;

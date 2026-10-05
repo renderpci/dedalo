@@ -22,11 +22,13 @@ import {
 	withTargetLock,
 } from '../../src/core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
+import { defaultHostRuntime } from '../../src/core/publication_host/runtime.ts';
 import {
 	type ApplyPlan,
 	applyCopyWith,
 	type CopyDeps,
 	DELETION_UNVERIFIED,
+	explicitCopyState,
 	hostTakesCopy,
 	MEDIA_COPY_ACTOR,
 	type MediaCopyRuntime,
@@ -35,6 +37,7 @@ import {
 	recordRoundFailure,
 	syncHostWith,
 	type TakesCopyIo,
+	withdrawNowWith,
 } from '../../src/diffusion/targets/mediastore/media_copy_apply.ts';
 import {
 	desired,
@@ -941,7 +944,50 @@ describe('hostTakesCopy (the agent decides; unreachable → the last runtime sta
 			error: DELETION_UNVERIFIED,
 			pending_deletions: [{ path: '.publication/pub/test3_1', since: new Date(T0).toISOString() }],
 		};
-		expect(notCopyRuntime(cur)).toMatchObject({ state: 'n/a', error: null, pending_deletions: [] });
+		expect(notCopyRuntime(cur, new Date(T0).toISOString())).toMatchObject({
+			state: 'n/a',
+			error: null,
+			pending_deletions: [],
+			last_verified_at: new Date(T0).toISOString(),
+		});
+	});
+	test("'n/a' counts only when the agent said so: a default row (another writer created it) is no answer", () => {
+		expect(explicitCopyState(undefined)).toBeUndefined();
+		expect(explicitCopyState(defaultHostRuntime().media_copy)).toBeUndefined();
+		const said = notCopyRuntime(defaultHostRuntime().media_copy, new Date(T0).toISOString());
+		expect(explicitCopyState(said)).toBe('n/a');
+		expect(explicitCopyState({ ...emptyRuntime(), state: 'ok' })).toBe('ok');
+	});
+	test('a copy flow never leaves a host n/a: an unreachable agent after a default row still answers true', async () => {
+		const world = newWorld();
+		world.agentMarkers.add(K1);
+		world.down = true;
+		const d = worldDeps(world);
+		await expect(
+			withdrawNowWith({ ...d, takesCopy: async () => true }, 'pub1', [K1]),
+		).rejects.toMatchObject({ code: 'publication_host.unreachable' });
+		const row = world.runtime.get('pub1');
+		expect(row?.state).toBe('pending');
+		expect(row?.pending_deletions.map((p) => p.path)).toEqual(['.publication/pub/test3_1']);
+		expect(await hostTakesCopy('pub1', io(down, explicitCopyState(row)).io)).toBe(true);
+		// A round that dies before it settles (marker granted, put sent) never reads n/a either.
+		const live = newWorld();
+		live.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		live.published.add(K1);
+		const ld = worldDeps(live);
+		const atPut: (string | undefined)[] = [];
+		await applyCopyWith(
+			{
+				...ld,
+				put: async (host, file, actor) => {
+					atPut.push(live.runtime.get('pub1')?.state);
+					return ld.put(host, file, actor);
+				},
+			},
+			'pub1',
+			planFrom(live),
+		);
+		expect(atPut).toEqual(['pending']);
 	});
 	test('copy → true', async () => {
 		expect(await hostTakesCopy('pub1', io('copy', undefined).io)).toBe(true);
