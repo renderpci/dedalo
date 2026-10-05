@@ -392,6 +392,46 @@ describe('boot wiring', () => {
 		expect(seen.every((inTx) => inTx === false)).toBe(true);
 	});
 
+	test('exclusive / inMediaCopyLane entered INSIDE a transaction run detached from it (worker or not)', async () => {
+		const seen: [string, boolean][] = [];
+		const probe = (what: string) => async () => {
+			seen.push([what, isInTransaction()]);
+			return what;
+		};
+		const w = worker(async () => null);
+		await withTransaction(async () => {
+			expect(isInTransaction()).toBe(true);
+			expect(await inMediaCopyLane('pub1', probe('no worker'))).toBe('no worker');
+			expect(await w.exclusive('pub1', probe('exclusive'))).toBe('exclusive');
+		});
+		const stop = startMediaCopyWorker({
+			listHosts: () => ['pub1'],
+			publishDebounceMs: 60_000,
+			syncHost: async () => null,
+		});
+		stops.push(stop);
+		await withTransaction(async () => {
+			expect(await inMediaCopyLane('pub1', probe('worker lane'))).toBe('worker lane');
+		});
+		expect(seen).toEqual([
+			['no worker', false],
+			['exclusive', false],
+			['worker lane', false],
+		]);
+	});
+
+	test('an unpublished key outside the agent marker grammar is dropped, never fails the batch it came with', async () => {
+		const calls: string[][] = [];
+		const w = worker(async (host, keys) => {
+			calls.push([host, ...keys]);
+			return null;
+		});
+		w.notify('Rsc1_1', false);
+		w.notify('rsc1_2', false);
+		await w.idle();
+		expect(calls).toEqual([['pub1', 'rsc1_2']]);
+	});
+
 	test('inMediaCopyLane: directly without a worker; through the started worker lane otherwise', async () => {
 		expect(await inMediaCopyLane('pub1', async () => 'direct')).toBe('direct');
 		const order: string[] = [];

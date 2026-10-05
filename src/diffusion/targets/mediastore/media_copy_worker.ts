@@ -25,7 +25,7 @@
  *    A run is background work that outlives that writer (its handle expires at COMMIT),
  *    so the sink and every queued run leave the transaction context
  *    (runDetachedFromTransaction) — a run never joins, or outlives, a batch's
- *    transaction.
+ *    transaction. So does every `exclusive` / `inMediaCopyLane` unit, worker or not.
  *
  * Correctness does not depend on this worker: the media_copy reconcile recomputes
  * from ground truth whatever it missed (a registry it could not read, a crash).
@@ -34,6 +34,7 @@
 
 import { runDetachedFromTransaction } from '../../../core/db/postgres.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
+import { isAgentMarkerKey } from '../../../core/publication_host/agent_client.ts';
 import { registerMediaCopySink } from './media_copy.ts';
 import type { CopyApplyReport } from './media_copy_apply.ts';
 
@@ -83,11 +84,21 @@ export class MediaCopyWorker {
 		this.deps = deps;
 	}
 
-	/** A pub/ flip from the seam. Never throws, only enqueues. */
+	/**
+	 * A pub/ flip from the seam. Never throws, only enqueues. An unpublished key outside the
+	 * agent's marker grammar is dropped (logged): the agent can hold no marker for it, so
+	 * there is nothing to withdraw — and media.mark would refuse it inside the batch.
+	 */
 	notify(key: string, published: boolean): void {
 		if (this.stopped) return;
 		if (published) {
 			this.armPublishTimer();
+			return;
+		}
+		if (!isAgentMarkerKey(key)) {
+			console.error(
+				`[media_copy] unpublished key ${JSON.stringify(key)} is outside the agent marker grammar: nothing to withdraw (dropped)`,
+			);
 			return;
 		}
 		this.withdrawn.add(key);
@@ -105,7 +116,10 @@ export class MediaCopyWorker {
 	 */
 	exclusive<T>(host: string, work: (takeWithdrawn: TakeWithdrawn) => Promise<T>): Promise<T> {
 		const lane = this.lane(host);
-		const done = lane.tail.then(() => work(() => this.drain(lane)));
+		// Detached: a caller inside a transaction must not lend it to the lane's units.
+		const done = lane.tail.then(() =>
+			runDetachedFromTransaction(() => work(() => this.drain(lane))),
+		);
 		this.advance(host, lane, done);
 		return done;
 	}
@@ -273,5 +287,7 @@ export function inMediaCopyLane<T>(
 	host: string,
 	work: (takeWithdrawn: TakeWithdrawn) => Promise<T>,
 ): Promise<T> {
-	return activeWorker === null ? work(() => []) : activeWorker.exclusive(host, work);
+	return activeWorker === null
+		? runDetachedFromTransaction(() => work(() => []))
+		: activeWorker.exclusive(host, work);
 }
