@@ -120,7 +120,9 @@ policy, in this order:
    lets anyone CREATE the name), the socket is owned by that directory's owner,
    root or the engine user, and every directory above it — on the path as written
    and on its realpath — is owned by one of those uids and writable by no one else
-   (a sticky ancestor passes only when the entry below it is owned by one of them)
+   (a sticky ancestor passes only when the entry below it is owned by root or the
+   engine user — never the directory's owner: anyone may create a name in a sticky
+   world-writable directory, so a squatted `/tmp/x` owned by its squatter is refused)
    — else reason `socket_perms`. The guarantee: only the owner of the directory
    the operator registered (or root, or the engine user) could have placed the
    socket. The registry holds no agent uid, so which uid that is stays the

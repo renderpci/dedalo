@@ -22,7 +22,8 @@
  *      unix-socket host is dialled at its socket only when the filesystem vouches for it
  *      (`socketSafe`: a socket, not a symlink; its parent writable by its owner alone — no
  *      sticky exemption; the socket owned by the parent's owner, root or the engine user;
- *      every directory above unswappable by anyone else) — otherwise `unreachable` (reason
+ *      every directory above unswappable by anyone else; below a sticky ancestor only a
+ *      root- or engine-owned name) — otherwise `unreachable` (reason
  *      socket_perms) and no connection (the fingerprint is public; on a socket this check
  *      is what keeps an impostor's listener out). It trusts the owner of the directory the
  *      operator registered: the registry holds no agent uid. No caller text reaches the URL. A TCP host
@@ -206,25 +207,34 @@ function prefixes(path: string): Array<[string, string | null]> {
  * Every directory ABOVE the socket's parent (`/` down to the grandparent) could swap the
  * parent out from under the check, so each must be owned by a trusted uid and writable by
  * nobody else — except a sticky directory (`/tmp`), where only an entry's owner may rename
- * it, so the entry below must be owned by a trusted uid. `trusted` = root, the engine
- * user, and the parent's owner (the uid the operator's registered path already trusts).
+ * it. `trusted` = root, the engine user, and the parent's owner (the uid the operator's
+ * registered path already trusts). The entry BELOW a sticky ancestor is judged against
+ * `creator` = root and the engine user ONLY: in a sticky world-writable dir anyone may
+ * CREATE a name, so its owner vouches for nothing — trusting the parent's owner there is
+ * circular (a squatter's /tmp/x owns itself). Never parent.uid.
  */
-function ancestorsSafe(parentPath: string, trusted: (uid: number) => boolean): boolean {
+function ancestorsSafe(
+	parentPath: string,
+	trusted: (uid: number) => boolean,
+	creator: (uid: number) => boolean,
+): boolean {
 	for (const [path, child] of prefixes(dirname(parentPath))) {
 		const dir = statOrNull(path, true);
 		if (dir === null || !dir.isDirectory() || !trusted(dir.uid)) return false;
 		if (!loose(dir)) continue;
 		const next = child === null ? parentPath : `${path === '/' ? '' : path}/${child}`;
 		const entry = statOrNull(next, false);
-		if ((dir.mode & STICKY) === 0 || entry === null || !trusted(entry.uid)) return false;
+		if ((dir.mode & STICKY) === 0 || entry === null || !creator(entry.uid)) return false;
 	}
 	return true;
 }
 
 /**
  * THE UNIX IMPOSTOR CHECK. What it guarantees: the socket was placed by the owner of its
- * directory (or root, or the engine user), and nobody else can create, replace or rename
- * anything on the path to it. Concretely: the node IS a socket (lstat: a symlink is
+ * directory (or root, or the engine user), and no other uid can create, replace or rename
+ * anything on the path to it — in particular no name below a sticky world-writable
+ * ancestor (`/tmp/x`) is trusted unless root or the engine user owns it, so a squatted
+ * directory is refused. Concretely: the node IS a socket (lstat: a symlink is
  * refused); its parent is a real directory with NO group/other write bit — no sticky
  * exemption: a sticky world-writable dir lets anyone CREATE the name (squatting); the
  * socket is owned by the parent's owner, root or the engine user; and every directory
@@ -241,7 +251,8 @@ function socketSafe(socket: string): boolean {
 	if (node === null || !node.isSocket() || parent === null || !parent.isDirectory()) return false;
 	if (loose(parent)) return false;
 	const engine = process.geteuid?.();
-	const trusted = (uid: number): boolean => uid === 0 || uid === engine || uid === parent.uid;
+	const creator = (uid: number): boolean => uid === 0 || uid === engine;
+	const trusted = (uid: number): boolean => creator(uid) || uid === parent.uid;
 	if (!trusted(node.uid)) return false;
 	let real: string;
 	try {
@@ -249,7 +260,7 @@ function socketSafe(socket: string): boolean {
 	} catch {
 		return false;
 	}
-	return ancestorsSafe(parentPath, trusted) && ancestorsSafe(real, trusted);
+	return ancestorsSafe(parentPath, trusted, creator) && ancestorsSafe(real, trusted, creator);
 }
 
 function assertSocketSafe(host: PublicationHostRecord, socket: string): void {

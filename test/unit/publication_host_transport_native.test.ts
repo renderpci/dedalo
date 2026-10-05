@@ -380,6 +380,42 @@ describe('the unix socket on this machine', () => {
 		await refusedAt(`/tmp/dd_pubhost_${process.pid}_${Date.now()}.sock`);
 	});
 
+	/** Run `body` with the engine euid modelled as a foreign uid (the test user plays another uid). */
+	async function asForeignEngine(body: () => Promise<void>): Promise<void> {
+		const real = process.geteuid;
+		process.geteuid = () => 4_242_424;
+		try {
+			await body();
+		} finally {
+			process.geteuid = real;
+		}
+	}
+
+	test('a squatted dir under a sticky world-writable dir (/tmp/x/agent.sock, x owned by a non-engine uid) is refused', async () => {
+		// the squatter owns /tmp/x: parent not loose, socket owner = parent owner — only the
+		// sticky-entry rule (root/engine owner, never parent.uid) can refuse it
+		const squat = `/tmp/dd_pubhost_squat_${process.pid}_${Date.now()}`;
+		mkdirSync(squat, { mode: 0o755 });
+		try {
+			await asForeignEngine(() => refusedAt(join(squat, 'agent.sock')));
+		} finally {
+			rmSync(squat, { recursive: true, force: true });
+		}
+	});
+
+	test('the parent owner stays trusted on a non-sticky path (foreign engine uid)', async () => {
+		state.mode = 'ok';
+		await asForeignEngine(async () => {
+			const res = await dialAgent(
+				record({ kind: 'unix', socket: socketPath }),
+				null,
+				GET_STATUS,
+				BEARER,
+			);
+			expect(res.status).toBe(200);
+		});
+	});
+
 	test('an ancestor writable by others refuses the socket (its child dir could be swapped)', async () => {
 		const open = join(dir, 'open_ancestor');
 		mkdirSync(join(open, 'run'), { recursive: true, mode: 0o755 });
