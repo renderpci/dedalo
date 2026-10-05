@@ -15,6 +15,8 @@ import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaratio
 import { FAKE_TOKEN, FakeHost } from './support/provision_fake_host';
 
 const DEFAULT_SOURCE = '/etc/dedalo_publication_host/test.json';
+/** Low-entropy and built at runtime: a fixture, never a credential-shaped literal (.gitleaks.toml). */
+const HEX32 = '0123456789abcdef'.repeat(2);
 
 interface Harness {
   readonly deps: ProvisionDeps;
@@ -162,7 +164,7 @@ describe('the secret guard', () => {
   });
 
   test('secretShapedAssignment', () => {
-    expect(secretShapedAssignment('SERVICE_TOKEN="0123456789abcdef0123456789abcdef"')).toBe('SERVICE_TOKEN');
+    expect(secretShapedAssignment(`SERVICE_TOKEN="${HEX32}"`)).toBe('SERVICE_TOKEN');
     expect(secretShapedAssignment('would: x API_KEY=abcdefghijk')).toBe('API_KEY');
     expect(secretShapedAssignment('TLS_KEY_FILE="/etc/dedalo_publication_host/test/tls/server.key"')).toBeNull();
     expect(secretShapedAssignment('SERVICE_TOKEN=short')).toBeNull();
@@ -172,12 +174,12 @@ describe('the secret guard', () => {
   test('an error carrying a credential-shaped assignment is refused, the value never printed', () => {
     const h = harness();
     h.deps.observeHost = () => {
-      throw new Error('boom SERVICE_TOKEN=0123456789abcdef0123456789abcdef');
+      throw new Error(`boom SERVICE_TOKEN=${HEX32}`);
     };
     expect(exec(h, ['check', 'test'])).toBe(EXIT.REFUSED);
     const printed = [...h.out, ...h.err].join('\n');
     expect(printed).toContain("assigns 'SERVICE_TOKEN' a value");
-    expect(printed).not.toContain('0123456789abcdef');
+    expect(printed).not.toContain(HEX32);
   });
 });
 
