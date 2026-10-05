@@ -18,8 +18,11 @@
  * classifier against the generated rules.
  *
  * SYMLINKS ARE NEVER FOLLOWED inside a quality folder: a link could point at a master.
- * (The quality folder itself may be a link — that is storage layout, not content.) This
- * makes copy NARROWER than a FollowSymLinks shared host, the safe direction.
+ * The walk itself enters a quality folder that is a link, but the apply opens a file only
+ * when NO link lies between the media root's realpath and the file
+ * (media_copy_apply.ts openLocalMediaFile) — so a quality folder kept as a link stays
+ * deferred (pending_puts), never copied through it. This makes copy NARROWER than a
+ * FollowSymLinks shared host, the safe direction.
  *
  * THE SHA CACHE is advisory, never authoritative: `(path, size, mtimeMs) → sha256` in
  * <private>/media_copy/sha_cache.ndjson (0700 dir, 0600 file), append + periodic

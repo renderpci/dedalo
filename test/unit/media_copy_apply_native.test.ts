@@ -12,7 +12,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { isInTransaction, sql } from '../../src/core/db/postgres.ts';
@@ -988,6 +988,33 @@ describe('openLocalMediaFile (confined to the media root, never through a link)'
 			await expect(openLocalMediaFile('../../etc/passwd', root)).rejects.toMatchObject({
 				code: 'media.invalid_path',
 			});
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	test('an intermediate directory swapped for a link (the quality dir → the master dir) is deferred (null), never read through', async () => {
+		const root = scratchMediaRoot('dedalo_media_copy_open_link_');
+		try {
+			const quality = imageQuality();
+			const relative = `${quality}/0/test99_test3_1.jpg`;
+			mkdirSync(join(root, quality, '0'), { recursive: true });
+			writeFileSync(join(root, relative), 'public');
+			mkdirSync(join(root, 'image', 'original', '0'), { recursive: true });
+			writeFileSync(join(root, 'image', 'original', '0', 'test99_test3_1.jpg'), 'MASTER');
+			expect(await new Response((await openLocalMediaFile(relative, root))?.body).text()).toBe(
+				'public',
+			);
+			// The quality folder is swapped for a link to the master folder after the plan.
+			renameSync(join(root, quality), join(root, `${quality}.moved`));
+			symlinkSync(join(root, 'image', 'original'), join(root, quality));
+			expect(await openLocalMediaFile(relative, root)).toBeNull();
+			// A deeper intermediate directory swapped the same way.
+			rmSync(join(root, quality));
+			renameSync(join(root, `${quality}.moved`), join(root, quality));
+			rmSync(join(root, quality, '0'), { recursive: true });
+			symlinkSync(join(root, 'image', 'original', '0'), join(root, quality, '0'));
+			expect(await openLocalMediaFile(relative, root)).toBeNull();
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}

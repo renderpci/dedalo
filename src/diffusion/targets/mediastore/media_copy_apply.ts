@@ -73,11 +73,12 @@
  * (one lane per host); the worker calls this from inside the lane.
  */
 
-import { constants, promises as fs } from 'node:fs';
+import { constants, promises as fs, type Stats } from 'node:fs';
+import path from 'node:path';
 import { Readable } from 'node:stream';
 import type { TargetLockOutcome } from '../../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
-import { absoluteFromRelative } from '../../../core/media/path.ts';
+import { absoluteFromRelative, requireMediaRoot } from '../../../core/media/path.ts';
 import {
 	hostStatus,
 	type MediaManifest,
@@ -704,10 +705,46 @@ function isAbsentOrLink(error: unknown): boolean {
 }
 
 /**
+ * The opened file IS `<real media root>/<relpath>`, reached through NO link: the realpath
+ * of the lexical path equals that path under the root's own realpath (a media root that
+ * is itself a link is storage layout), and the lstat of it is the very inode the handle
+ * holds (a link swapped back between the open and this check is caught too). O_NOFOLLOW
+ * guards only the last component; this guards every directory above it — a quality folder
+ * swapped for a link to a master folder would otherwise stream the master's bytes.
+ */
+async function isReachedWithoutLink(
+	handleIno: { dev: bigint; ino: bigint },
+	absolute: string,
+	root: string,
+): Promise<boolean> {
+	try {
+		const expected = path.join(await fs.realpath(root), path.relative(root, absolute));
+		if ((await fs.realpath(absolute)) !== expected) return false;
+		const seen = await fs.lstat(expected, { bigint: true });
+		return seen.dev === handleIno.dev && seen.ino === handleIno.ino;
+	} catch (error) {
+		if (isAbsentOrLink(error)) return false;
+		throw error;
+	}
+}
+
+async function statOpened(
+	handle: fs.FileHandle,
+	absolute: string,
+	root: string,
+): Promise<Stats | null> {
+	const info = await handle.stat();
+	if (!info.isFile()) return null;
+	const ids = await handle.stat({ bigint: true });
+	return (await isReachedWithoutLink(ids, absolute, root)) ? info : null;
+}
+
+/**
  * Open + stat + stream one media-root-relative file, confined to the media root
- * (absoluteFromRelative) and with NO link followed at the last component (O_NOFOLLOW —
- * the planner never yields a link: one swapped in since the walk could point at a
- * master). Absent, a link, or not a regular file → null. The stream closes the file
+ * (absoluteFromRelative) and reached through NO link: O_NOFOLLOW at the last component
+ * (the planner never yields a link: one swapped in since the walk could point at a
+ * master), isReachedWithoutLink for every directory above it. Absent, a link anywhere on
+ * the way, or not a regular file → null (the round defers it). The stream closes the file
  * when it ends or is cancelled.
  */
 export async function openLocalMediaFile(
@@ -715,6 +752,7 @@ export async function openLocalMediaFile(
 	mediaRoot?: string,
 ): Promise<LocalFile | null> {
 	const absolute = absoluteFromRelative(`/${relPath}`, mediaRoot);
+	const root = requireMediaRoot(mediaRoot);
 	let handle: fs.FileHandle;
 	try {
 		handle = await fs.open(
@@ -725,11 +763,11 @@ export async function openLocalMediaFile(
 		if (isAbsentOrLink(error)) return null;
 		throw error;
 	}
-	const info = await handle.stat().catch(async (error: unknown) => {
+	const info = await statOpened(handle, absolute, root).catch(async (error: unknown) => {
 		await handle.close();
 		throw error;
 	});
-	if (!info.isFile()) {
+	if (info === null) {
 		await handle.close();
 		return null;
 	}
