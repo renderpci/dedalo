@@ -33,6 +33,8 @@ import {
 	addressLabel,
 	createPublicationHostsWidget,
 	normalizePublicUrl,
+	PROBE_PROBLEMS_MAX,
+	PROBE_TEXT_MAX,
 	type PublicationHostsDeps,
 	releaseIdOrMalformed,
 	widget,
@@ -732,6 +734,34 @@ describe('probe and rollback_api', () => {
 			probe: mediaProbe({ problems: ['pub/ is not readable'] }),
 		});
 		expect(response.msg).toBe("Media probe on 'pub_a' found 1 problem(s).");
+	});
+
+	test('probe output is BOUNDED: known fields only, problems capped in count and length, printable only, a bad root is malformed', async () => {
+		const hostile = {
+			...mediaProbe({
+				root: '/srv/pub\n[publication_hosts] FORGED',
+				problems: Array.from(
+					{ length: 40 },
+					(_, i) => `p${i}\u202e\u0007${'x'.repeat(5000)}\r\nFORGED`,
+				),
+			}),
+			injected: '<img src=x onerror=alert(1)>',
+		} as MediaProbe;
+		const h = harness([record('pub_a')], { hostMediaProbe: async () => hostile });
+		const response = await run(h, 'probe', { name: 'pub_a' });
+		const probe = (response.data as { probe: Record<string, unknown> }).probe;
+		expect(Object.keys(probe).sort()).toEqual(
+			['mode', 'pub_markers', 'pub_readable', 'present', 'problems', 'read_only', 'root'].sort(),
+		);
+		expect(probe.root).toBe('malformed');
+		const problems = probe.problems as string[];
+		expect(problems.length).toBe(PROBE_PROBLEMS_MAX + 1); // the cap + one '… N more' line
+		expect(problems.at(-1)).toBe(`… ${40 - PROBE_PROBLEMS_MAX} more`);
+		for (const line of problems) {
+			expect(line.length).toBeLessThanOrEqual(PROBE_TEXT_MAX);
+			expect(/[\p{Cc}\p{Cf}]/u.test(line)).toBe(false);
+		}
+		expect(response.msg).toBe("Media probe on 'pub_a' found 40 problem(s).");
 	});
 
 	test('rollback_api: api validated before any load; the swap is reported', async () => {

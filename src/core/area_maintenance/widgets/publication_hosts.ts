@@ -569,14 +569,55 @@ const applyRulesAction: BoundAction = async (options, principal, loadDeps) => {
 	};
 };
 
+/** The most agent problem lines one probe answer carries to the wire (then '… N more'). */
+export const PROBE_PROBLEMS_MAX = 16;
+/** The longest agent string (a problem line, the media root) one probe answer carries. */
+export const PROBE_TEXT_MAX = 300;
+/** An absolute path of printable ASCII: the only media-root shape passed through (E7). */
+const PROBE_ROOT = /^\/[\x20-\x7e]*$/;
+
+/** Agent prose, made display-safe: control/format characters out, length capped. */
+function probeText(text: string): string {
+	const flat = text.replace(/[\p{Cc}\p{Cf}]+/gu, ' ').trim();
+	return flat.length > PROBE_TEXT_MAX ? `${flat.slice(0, PROBE_TEXT_MAX - 1)}…` : flat;
+}
+
+/**
+ * The agent's MediaProbe as the wire carries it (E7: an agent string is checked, never
+ * trusted). Only the known fields are copied — an extra key the shape guard let through
+ * never reaches data.probe; `root` passes only as a printable absolute path within the cap
+ * (else 'malformed'); `problems` is capped in count and length, control and format
+ * characters (CR/LF, bidi overrides) removed. The client renders it as text (textContent).
+ */
+export function boundMediaProbe(probe: MediaProbe): MediaProbe {
+	const lines = probe.problems.slice(0, PROBE_PROBLEMS_MAX).map(probeText);
+	const extra = probe.problems.length - lines.length;
+	const root =
+		probe.root === null
+			? null
+			: PROBE_ROOT.test(probe.root) && probe.root.length <= PROBE_TEXT_MAX
+				? probe.root
+				: 'malformed';
+	return {
+		mode: probe.mode,
+		root,
+		present: probe.present,
+		read_only: probe.read_only,
+		pub_readable: probe.pub_readable,
+		pub_markers: probe.pub_markers,
+		problems: extra > 0 ? [...lines, `… ${extra} more`] : lines,
+	};
+}
+
 /** probe: the agent's media.probe, read-only, but still root-only (E10: one rule for every action). */
 const probeAction: BoundAction = async (options, principal, loadDeps) => {
 	requireRoot(principal, 'probe');
 	const name = hostName(options);
 	const deps = await loadDeps();
 	requireHost(deps, name);
-	const probe = await deps.hostMediaProbe(name);
-	const count = probe.problems.length;
+	const raw = await deps.hostMediaProbe(name);
+	const count = raw.problems.length;
+	const probe = boundMediaProbe(raw);
 	return {
 		data: { host: name, probe },
 		msg:

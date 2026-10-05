@@ -45,7 +45,11 @@
   - **actions** (`widget_request`, ROOT-ONLY — a global admin who is not root gets
     `perm.denied` before anything is loaded or dialled):
     `apply_rules({name})` → `{ host, server, hash, dropped }`;
-    `probe({name})` → `{ host, probe }` (the agent's `media.probe` body under `probe`);
+    `probe({name})` → `{ host, probe }` (the agent's `media.probe` BOUNDED, E7 —
+    amended 2026-10-05: exactly the seven known fields; `root` only as a printable
+    absolute path ≤ 300 chars, else `'malformed'`; `problems` at most 16 lines of
+    ≤ 300 chars with control/format characters removed, then one `… N more` line; the
+    `msg` counts every problem the agent reported; the client renders it as text);
     `rollback_api({name, api: 'v1'|'v2'})` → `{ host, api, from, to }` (`from`/`to` are
     the agent's release ids only when they match `AGENT_RELEASE_ID`, else the literal
     `'malformed'`: agent prose is log-only, E7);
