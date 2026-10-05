@@ -2388,7 +2388,18 @@ export async function startServer() {
 		void (async () => {
 			if (await checkDbHealth()) {
 				const { confirmBootedCodeUpdate } = await import('./core/update/boot_confirm.ts');
-				await confirmBootedCodeUpdate();
+				// PUBLICATION API LOCKSTEP (PUBLICATION_HOST_SPEC §3, phase 4): once THIS tree
+				// is confirmed, push its verified API releases to every paired publication
+				// host — detached, never throwing. Dynamic for the same reason as the line
+				// above (CONVENTIONS §2 rationale 3: a cold path, once per confirmed boot).
+				// The trigger re-checks smoke/install itself: this block's guard is the
+				// first line of defence, not the only one.
+				const { triggerPublicationApiPush } = await import(
+					'./core/publication_host/api_reconcile.ts'
+				);
+				await confirmBootedCodeUpdate(undefined, undefined, undefined, () => {
+					triggerPublicationApiPush({ smokeBoot, installMode: config.installMode });
+				});
 			} else {
 				console.warn('[code update] boot confirmation deferred: DB ping failed at boot');
 			}
