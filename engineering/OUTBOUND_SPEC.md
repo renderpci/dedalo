@@ -101,14 +101,18 @@ policy, in this order:
 
 1. **The route table is closed.** The path is one of the agent's literal routes
    (`AGENT_PATHS`, below `AGENT_BASE_PATH`, which only the door prefixes), the
-   method GET or POST, the bounds inside their ceilings (1 MiB default / 16 MiB
-   response, 10 s default / 30 min deadline), the bearer one token of the secrets
-   store's own grammar, and the caller sets none of the transport's headers. A
-   query is never part of the path: a route that takes one declares its keys in
-   `AGENT_QUERY_GRAMMAR` (today only `/v1/media/manifest`: `cursor`, the agent's
-   own base64url, and `limit`, a plain decimal), every value must match its
-   closed grammar, and the door encodes it. A breach is a programming error
-   (`internal.unexpected`), refused before any socket opens.
+   method GET or POST — PUT on exactly the routes `AGENT_PUT_PATHS` names (today
+   copy mode's `/v1/media/file`), which take nothing else — the bounds inside
+   their ceilings (1 MiB default / 16 MiB response, 10 s default / 30 min
+   deadline), the bearer one token of the secrets store's own grammar, and the
+   caller sets none of the transport's headers. A query is never part of the
+   path: a route that takes one declares its keys in `AGENT_QUERY_GRAMMAR`
+   (`/v1/media/manifest`: `cursor`, the agent's own base64url, and `limit`, a
+   plain decimal; `/v1/media/file`: `path`, REQUIRED, a relative media path with
+   no control character, backslash, or empty / `.` / `..` segment), every value
+   must match its closed grammar, and the door encodes it, so no value changes
+   the URL's structure. A breach is a programming error (`internal.unexpected`),
+   refused before any socket opens.
 2. **The target is the registry entry, exactly** (`agentTarget`). TCP:
    `https://<host>:<port>` with mTLS from the host's engine bundle — the client
    certificate and key, the bundle's CA as the ONLY trust root,

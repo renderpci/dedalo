@@ -144,6 +144,8 @@ const tlsHost = (port: number | undefined, host = '127.0.0.1') =>
 const GET_HEALTH: AgentRequest = { method: 'GET', path: '/health' };
 const GET_STATUS: AgentRequest = { method: 'GET', path: '/v1/status' };
 const GET_MANIFEST: AgentRequest = { method: 'GET', path: '/v1/media/manifest' };
+const PUT_FILE: AgentRequest = { method: 'PUT', path: '/v1/media/file', body: 'jpeg' };
+const PUT_PATH = 'image/1.5MB/0/test99_test3_1.jpg';
 
 /** The error a promise rejects with (fails the test when it resolves). */
 async function rejection(promise: Promise<unknown>): Promise<DedaloError> {
@@ -556,7 +558,42 @@ describe('the door contract: closed routes, the transport’s own headers', () =
 		['a query string', { method: 'GET', path: '/v1/status?x=1' }, null],
 		['an already-prefixed path', { method: 'GET', path: `${AGENT_BASE_PATH}/health` }, null],
 		['an empty path', { method: 'GET', path: '' }, null],
-		['a method outside GET/POST', { method: 'PUT' as 'GET', path: '/v1/status' }, null],
+		['a PUT to a route that takes none', { method: 'PUT', path: '/v1/status' }, null],
+		['a method outside GET/POST/PUT', { method: 'DELETE' as 'GET', path: '/v1/status' }, null],
+		['a POST to the PUT route', { ...PUT_FILE, method: 'POST', query: { path: PUT_PATH } }, null],
+		[
+			'a GET of the PUT route',
+			{ method: 'GET', path: '/v1/media/file', query: { path: PUT_PATH } },
+			null,
+		],
+		['a PUT with no path', PUT_FILE, null],
+		[
+			'a put path with a parent segment',
+			{ ...PUT_FILE, query: { path: 'image/../x/test99_test3_1.jpg' } },
+			null,
+		],
+		[
+			'a put path with a dot segment',
+			{ ...PUT_FILE, query: { path: 'image/./x/test99_test3_1.jpg' } },
+			null,
+		],
+		['an absolute put path', { ...PUT_FILE, query: { path: `/${PUT_PATH}` } }, null],
+		[
+			'a put path with an empty segment',
+			{ ...PUT_FILE, query: { path: 'image//test99_test3_1.jpg' } },
+			null,
+		],
+		[
+			'a put path with a line break',
+			{ ...PUT_FILE, query: { path: 'image/a\r\nX: 1/b.jpg' } },
+			null,
+		],
+		['a put path with a backslash', { ...PUT_FILE, query: { path: 'image\\..\\x.jpg' } }, null],
+		[
+			'a put path past 1024 characters',
+			{ ...PUT_FILE, query: { path: `image/${'a'.repeat(1020)}.jpg` } },
+			null,
+		],
 		['a GET with a body', { method: 'GET', path: '/v1/status', body: 'x' }, null],
 		[
 			'a caller-set Authorization',
@@ -603,6 +640,24 @@ describe('the door query: closed per route, each value its grammar, encoded by t
 		expect(state.hits.slice(before)).toEqual([
 			`GET ${AGENT_BASE_PATH}/v1/media/manifest?cursor=aW1hZ2UvYQ&limit=1000`,
 		]);
+	});
+});
+
+describe('the copy-mode PUT: the one route that takes it, its path encoded by the door', () => {
+	test('a media path reaches the agent as one encoded query value, the body streamed', async () => {
+		const before = state.hits.length;
+		const path = 'image/1.5MB/0/a b%2F/test99_test3_1.jpg';
+		const res = await dialAgent(
+			tlsHost(agent.port),
+			clientTls,
+			{ ...PUT_FILE, query: { path } },
+			BEARER,
+		);
+		expect(res.status).toBe(200);
+		expect(state.hits.slice(before)).toEqual([
+			`PUT ${AGENT_BASE_PATH}/v1/media/file?path=image%2F1.5MB%2F0%2Fa+b%252F%2Ftest99_test3_1.jpg`,
+		]);
+		expect(new URLSearchParams(state.hits.at(-1)?.split('?')[1]).get('path')).toBe(path);
 	});
 });
 

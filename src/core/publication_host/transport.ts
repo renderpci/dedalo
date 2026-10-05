@@ -9,12 +9,15 @@
  *
  *   1. THE ROUTE TABLE IS CLOSED. `path` is one of the agent's literal routes BELOW the base
  *      (`AGENT_PATHS`; the door prefixes `AGENT_BASE_PATH` itself, so callers never spell
- *      it), the method GET or POST (a GET carries no body), the bounds inside their ceilings,
- *      the bearer one token of the secrets store's own grammar (`TOKEN_SHAPE`), and the
- *      caller sets none of the transport's own headers. A query string is never part of
- *      `path`: a route that takes one declares its keys in `AGENT_QUERY_GRAMMAR`, each value
- *      must match its own closed grammar (no `/`, `%`, space or line break can pass), and the
- *      door encodes it. A breach is a programming error, refused before any socket.
+ *      it), the method GET or POST (a GET carries no body) — PUT on exactly the routes
+ *      `AGENT_PUT_PATHS` names and nowhere else — the bounds inside their ceilings, the
+ *      bearer one token of the secrets store's own grammar (`TOKEN_SHAPE`), and the caller
+ *      sets none of the transport's own headers. A query string is never part of `path`: a
+ *      route that takes one declares its keys in `AGENT_QUERY_GRAMMAR`, each value must
+ *      match its own closed grammar (no line break or control character ever passes; only
+ *      the copy-mode media path admits `/`, `%` or a space, as a relative path with no
+ *      empty, `.` or `..` segment), and the door encodes it, so a value never changes the
+ *      URL's structure. A breach is a programming error, refused before any socket.
  *   2. THE TARGET IS THE REGISTRY ENTRY, EXACTLY (`agentTarget`). TCP is
  *      `https://<host>:<port>` + `AGENT_BASE_PATH` with mTLS from the host's engine bundle:
  *      the client certificate and key, the CA PINNED as the only trust root,
@@ -77,7 +80,21 @@ export const AGENT_PATHS: readonly string[] = Object.freeze([
 	'/v1/releases/v1/rollback',
 	'/v1/releases/v2/rollback',
 	'/v1/media/manifest',
+	'/v1/media/file',
+	'/v1/media/delete',
+	'/v1/media/mark',
 ]);
+
+/** The routes that take PUT — and take nothing else (the copy-mode media put streams a file). */
+export const AGENT_PUT_PATHS: readonly string[] = Object.freeze(['/v1/media/file']);
+
+/**
+ * The copy-mode media path (PUT /v1/media/file?path=): media-root relative, 1–1024
+ * characters, no control character or backslash, no empty / `.` / `..` segment, no leading
+ * `/`. The agent re-checks it (its grammar.ts, then realpath confinement under its root).
+ */
+const MEDIA_PUT_PATH =
+	/^(?!.{1025})(?!(?:.*\/)?\.{1,2}(?:\/|$))[^/\\\p{Cc}]+(?:\/[^/\\\p{Cc}]+)*$/su;
 
 /**
  * THE ONLY QUERY KEYS ANY ROUTE TAKES, each with its value grammar (anchored, no flags).
@@ -91,7 +108,13 @@ export const AGENT_QUERY_GRAMMAR: Readonly<Record<string, Readonly<Record<string
 			cursor: /^[A-Za-z0-9_-]{1,2000}$/,
 			limit: /^[1-9][0-9]{0,3}$/,
 		}),
+		'/v1/media/file': Object.freeze({ path: MEDIA_PUT_PATH }),
 	});
+
+/** Query keys a route cannot be called without. */
+const REQUIRED_QUERY: Readonly<Record<string, readonly string[]>> = Object.freeze({
+	'/v1/media/file': Object.freeze(['path']),
+});
 
 export const DEFAULT_MAX_RESPONSE_BYTES = 1024 * 1024;
 export const MAX_RESPONSE_BYTES_CEILING = 16 * 1024 * 1024;
@@ -111,7 +134,8 @@ const TRANSPORT_HEADERS: readonly string[] = Object.freeze([
 ]);
 
 export interface AgentRequest {
-	method: 'GET' | 'POST';
+	/** PUT only on AGENT_PUT_PATHS (which take nothing else). */
+	method: 'GET' | 'POST' | 'PUT';
 	/** One of AGENT_PATHS — below the base path; the door prefixes it. */
 	path: string;
 	/** Only keys AGENT_QUERY_GRAMMAR declares for `path`, each matching its grammar; the door encodes. */
@@ -172,9 +196,16 @@ function misuse(what: string): DedaloError {
 	});
 }
 
+function assertMethod(req: AgentRequest): void {
+	const putRoute = AGENT_PUT_PATHS.includes(req.path);
+	if (putRoute !== (req.method === 'PUT')) throw misuse('a PUT route takes PUT, and only it');
+	if (req.method !== 'GET' && req.method !== 'POST' && !putRoute)
+		throw misuse('method outside GET/POST');
+}
+
 function assertRoute(req: AgentRequest): void {
-	if (req.method !== 'GET' && req.method !== 'POST') throw misuse('method outside GET/POST');
 	if (!AGENT_PATHS.includes(req.path)) throw misuse('path outside the agent route table');
+	assertMethod(req);
 	if (req.method === 'GET' && req.body !== undefined) throw misuse('a GET carries no body');
 }
 
@@ -184,14 +215,25 @@ function queryRule(path: string, key: string): RegExp | undefined {
 	return grammar !== undefined && Object.hasOwn(grammar, key) ? grammar[key] : undefined;
 }
 
+/** The keys `path` cannot be called without (own properties only). */
+function requiredKeys(path: string): readonly string[] {
+	return (Object.hasOwn(REQUIRED_QUERY, path) ? REQUIRED_QUERY[path] : undefined) ?? [];
+}
+
+function assertQueryEntry(path: string, key: string, value: unknown): void {
+	const rule = queryRule(path, key);
+	if (rule === undefined)
+		throw misuse(`query key ${JSON.stringify(key)} is not declared for this route`);
+	if (typeof value !== 'string' || !rule.test(value))
+		throw misuse(`query ${key} outside its grammar`);
+}
+
 function assertQuery(req: AgentRequest): void {
-	for (const [key, value] of Object.entries(req.query ?? {})) {
-		const rule = queryRule(req.path, key);
-		if (rule === undefined)
-			throw misuse(`query key ${JSON.stringify(key)} is not declared for this route`);
-		if (typeof value !== 'string' || !rule.test(value))
-			throw misuse(`query ${key} outside its grammar`);
+	const query = req.query ?? {};
+	for (const key of requiredKeys(req.path)) {
+		if (!Object.hasOwn(query, key)) throw misuse(`query ${key} is required on this route`);
 	}
+	for (const [key, value] of Object.entries(query)) assertQueryEntry(req.path, key, value);
 }
 
 /** The route plus its (already asserted) query — the only text appended to the base path. */

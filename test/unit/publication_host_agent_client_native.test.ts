@@ -34,9 +34,14 @@ import {
 	forgetPairing,
 	hostApplyRules,
 	hostInstallRelease,
+	hostMediaDelete,
+	hostMediaMark,
 	hostMediaProbe,
+	hostMediaPut,
 	hostRollbackRelease,
 	hostStatus,
+	MEDIA_DELETE_BATCH,
+	MEDIA_PUT_TIMEOUT_MS,
 	pairingProved,
 	proveHostPairing,
 } from '../../src/core/publication_host/agent_client.ts';
@@ -728,6 +733,140 @@ describe('agent refusals map onto publication_host.* (Task 2 wire.ts)', () => {
 			const error = await expectCode(run(), 'publication_host.rejected');
 			expect(error.details).toEqual({ reason: 'input_invalid' });
 		}
+		expect(mock.requests).toEqual([]);
+	});
+});
+
+describe('copy-mode media commands (phase 5): mutations, re-proved live, through the door', () => {
+	const PUT_PATH = 'image/1.5MB/0/test99_test3_1.jpg';
+	const SHA = 'a'.repeat(64);
+
+	test('media.put streams the file, path in the encoded query, sha + size + actor headers', async () => {
+		const body = new Uint8Array(70_000).fill(9);
+		const sha = new Bun.CryptoHasher('sha256').update(body).digest('hex');
+		await hostMediaPut(
+			'museum_pub',
+			{ path: PUT_PATH, sha256: sha, size: body.length, body: streamOf(body) },
+			ACTOR,
+		);
+		expect(trail(mock)).toEqual([`GET ${B}/health anon`, `PUT ${B}/v1/media/file bearer`]);
+		const sent = last(mock);
+		expect(sent.query).toBe(`?path=${encodeURIComponent(PUT_PATH)}`);
+		expect(sent.sha256).toBe(sha);
+		expect(sent.size).toBe(String(body.length));
+		expect(sent.actor).toBe(ACTOR);
+		expect(sent.contentType).toBe('application/octet-stream');
+		expect(Buffer.from(sent.body).equals(Buffer.from(body))).toBe(true);
+		expect(MEDIA_PUT_TIMEOUT_MS).toBe(30 * 60_000);
+	});
+
+	test('media.delete posts JSON in batches, each re-proved; an empty list dials nothing', async () => {
+		await hostMediaDelete('museum_pub', [], ACTOR);
+		expect(mock.requests).toEqual([]);
+		const paths = Array.from(
+			{ length: MEDIA_DELETE_BATCH + 1 },
+			(_, i) => `image/1.5MB/0/test99_test3_${i}.jpg`,
+		);
+		await hostMediaDelete('museum_pub', paths, ACTOR);
+		expect(trail(mock)).toEqual([
+			`GET ${B}/health anon`,
+			`POST ${B}/v1/media/delete bearer`,
+			`GET ${B}/health anon`,
+			`POST ${B}/v1/media/delete bearer`,
+		]);
+		const bodies = bearerSent(mock).map(
+			(r) => JSON.parse(new TextDecoder().decode(r.body)) as { paths: string[] },
+		);
+		expect(bodies[0]?.paths).toHaveLength(MEDIA_DELETE_BATCH);
+		expect(bodies[1]?.paths).toEqual(paths.slice(MEDIA_DELETE_BATCH));
+		expect(
+			bearerSent(mock).every((r) => r.actor === ACTOR && r.contentType === 'application/json'),
+		).toBe(true);
+	});
+
+	test('media.mark posts {key, published}', async () => {
+		await hostMediaMark('museum_pub', 'test3_1', false, ACTOR);
+		const sent = last(mock);
+		expect(sent.method).toBe('POST');
+		expect(sent.path).toBe(`${B}/v1/media/mark`);
+		expect(JSON.parse(new TextDecoder().decode(sent.body))).toEqual({
+			key: 'test3_1',
+			published: false,
+		});
+	});
+
+	test('a put refused for an unmarked key is rejected (key_unpublished), never busy', async () => {
+		mock.reply(
+			'PUT',
+			'/v1/media/file',
+			mockProblem(409, 'conflict', 'Conflict', AGENT_PROSE, { reason: 'key_unpublished' }),
+		);
+		const error = await expectCode(
+			hostMediaPut(
+				'museum_pub',
+				{ path: PUT_PATH, sha256: SHA, size: 1, body: streamOf(new Uint8Array(1)) },
+				ACTOR,
+			),
+			'publication_host.rejected',
+		);
+		expect(error.details).toEqual({ reason: 'key_unpublished' });
+		expect(wireText(error)).not.toContain('secret.conf');
+	});
+
+	test('an answer naming another file, key or state is unreadable_body (failed)', async () => {
+		mock.reply('PUT', '/v1/media/file', {
+			status: 200,
+			body: { path: 'image/x/test99_test3_2.jpg', sha256: SHA },
+		});
+		const put = await expectCode(
+			hostMediaPut(
+				'museum_pub',
+				{ path: PUT_PATH, sha256: SHA, size: 1, body: streamOf(new Uint8Array(1)) },
+				ACTOR,
+			),
+			'publication_host.failed',
+		);
+		expect(put.details).toEqual({ reason: 'unreadable_body' });
+		mock.reply('POST', '/v1/media/mark', {
+			status: 200,
+			body: { key: 'test3_1', published: true, changed: true },
+		});
+		await expectCode(
+			hostMediaMark('museum_pub', 'test3_1', false, ACTOR),
+			'publication_host.failed',
+		);
+		mock.reply('POST', '/v1/media/delete', { status: 200, body: { deleted: 'all' } });
+		await expectCode(hostMediaDelete('museum_pub', [PUT_PATH], ACTOR), 'publication_host.failed');
+	});
+
+	test('a malformed path, sha, size, key or actor is refused (input_invalid) before dialling, the body cancelled', async () => {
+		let cancelled = 0;
+		const body = () =>
+			new ReadableStream<Uint8Array>({
+				cancel() {
+					cancelled += 1;
+				},
+			});
+		const put = (path: string, sha256 = SHA, size = 1, actor = ACTOR) =>
+			hostMediaPut('museum_pub', { path, sha256, size, body: body() }, actor);
+		const refusals = [
+			() => put('image/../x/test99_test3_1.jpg'),
+			() => put(`/${PUT_PATH}`),
+			() => put('image/a\nb/test99_test3_1.jpg'),
+			() => put(PUT_PATH, 'XYZ'),
+			() => put(PUT_PATH, SHA, -1),
+			() => put(PUT_PATH, SHA, 1.5),
+			() => put(PUT_PATH, SHA, 1, 'a\tb'),
+			() => hostMediaDelete('museum_pub', ['ok/test99_test3_1.jpg', '../escape'], ACTOR),
+			() => hostMediaMark('museum_pub', '../auth/x', true, ACTOR),
+			() => hostMediaMark('museum_pub', 'Test3_1', true, ACTOR),
+			() => hostMediaMark('museum_pub', 'test3_1', 'yes' as unknown as boolean, ACTOR),
+		];
+		for (const run of refusals) {
+			const error = await expectCode(run(), 'publication_host.rejected');
+			expect(error.details).toEqual({ reason: 'input_invalid' });
+		}
+		expect(cancelled).toBe(7);
 		expect(mock.requests).toEqual([]);
 	});
 });

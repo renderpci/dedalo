@@ -6,7 +6,8 @@
  * /publication/host_agent; GET /health as the one public route, publishing
  * `instance_fingerprint`; the bearer checked BEFORE any other route (401 otherwise);
  * RFC 9457 problem bodies with a machine `reason`; `X-Dedalo-Actor` on mutations; the
- * release headers X-Release-Id / X-Bundle-Sha256 with a raw gzip body. It is NOT the
+ * release headers X-Release-Id / X-Bundle-Sha256 with a raw gzip body; copy mode's media
+ * put (`?path=`, X-Sha256, X-Size, raw body), delete and mark. It is NOT the
  * agent: it keeps no state on disk, answers what a test scripts into it, and RECORDS every
  * request so a gate can assert what crossed the wire — above all, whether a bearer did.
  *
@@ -36,11 +37,16 @@ export interface RecordedRequest {
 	method: string;
 	/** The full request pathname, BASE_PATH included. */
 	path: string;
+	/** The raw query string ('' when none; '?…' otherwise). */
+	query: string;
 	authorization: string | null;
 	actor: string | null;
 	contentType: string | null;
 	releaseId: string | null;
 	bundleSha256: string | null;
+	/** The copy-mode put metadata headers (X-Sha256, X-Size). */
+	sha256: string | null;
+	size: string | null;
 	body: Uint8Array;
 }
 
@@ -61,7 +67,7 @@ export interface MockAgent {
 	/** Make GET /v1/status report this fingerprint (null = the honest one). */
 	setStatusFingerprint(fingerprint: string | null): void;
 	/** Script one authenticated route's answer (route = path below BASE_PATH). */
-	reply(method: 'GET' | 'POST', route: string, reply: MockReply): void;
+	reply(method: 'GET' | 'POST' | 'PUT', route: string, reply: MockReply): void;
 	/** Back to the start token, no scripted replies, no recorded requests. */
 	reset(): void;
 	stop(): void;
@@ -121,17 +127,34 @@ async function record(req: Request): Promise<RecordedRequest> {
 	return {
 		method: req.method,
 		path: new URL(req.url).pathname,
+		query: new URL(req.url).search,
 		authorization: req.headers.get('authorization'),
 		actor: req.headers.get('x-dedalo-actor'),
 		contentType: req.headers.get('content-type'),
 		releaseId: req.headers.get('x-release-id'),
 		bundleSha256: req.headers.get('x-bundle-sha256'),
+		sha256: req.headers.get('x-sha256'),
+		size: req.headers.get('x-size'),
 		body: new Uint8Array(await req.arrayBuffer()),
 	};
 }
 
 function routeOf(path: string): string {
 	return path.startsWith(`${MOCK_BASE_PATH}/`) ? path.slice(MOCK_BASE_PATH.length) : '';
+}
+
+/** The agent's PutResult for the recorded put (no state: every put lands as new). */
+function mediaPutAnswer(r: RecordedRequest): Record<string, unknown> {
+	const path = new URLSearchParams(r.query).get('path') ?? '';
+	const match = /_([a-z0-9]+)_([0-9]+)(?:_lg-[a-zA-Z0-9-]{2,12})?\.[A-Za-z0-9]+$/.exec(path);
+	return {
+		path,
+		key: match === null ? null : `${match[1]}_${match[2]}`,
+		size: Number(r.size),
+		sha256: r.sha256,
+		replaced: false,
+		unchanged: false,
+	};
 }
 
 function defaultAnswer(r: RecordedRequest, route: string, statusFingerprint: string): Response {
@@ -154,6 +177,21 @@ function defaultAnswer(r: RecordedRequest, route: string, statusFingerprint: str
 				reused: false,
 				health: 'ok',
 			});
+		case 'PUT /v1/media/file':
+			return respond(200, mediaPutAnswer(r));
+		case 'POST /v1/media/delete':
+			return respond(200, {
+				deleted: (JSON.parse(new TextDecoder().decode(r.body)) as { paths: string[] }).paths,
+				absent: [],
+				failed: [],
+			});
+		case 'POST /v1/media/mark': {
+			const mark = JSON.parse(new TextDecoder().decode(r.body)) as {
+				key: string;
+				published: boolean;
+			};
+			return respond(200, { key: mark.key, published: mark.published, changed: true });
+		}
 		case 'POST /v1/releases/v1/rollback':
 		case 'POST /v1/releases/v2/rollback':
 			return respond(200, { from: '7.0.3_a1b2c3d', to: '7.0.2_aaaaaaa' });
@@ -219,7 +257,7 @@ export function startMockAgent(listen: MockListen, instance: string, token: stri
 		setStatusFingerprint(fingerprint: string | null) {
 			statusFingerprint = fingerprint;
 		},
-		reply(method: 'GET' | 'POST', route: string, reply: MockReply) {
+		reply(method: 'GET' | 'POST' | 'PUT', route: string, reply: MockReply) {
 			scripted.set(`${method} ${route}`, reply);
 		},
 		reset() {

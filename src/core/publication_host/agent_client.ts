@@ -11,7 +11,8 @@
  *     (publicationHostFingerprint(instance, token)) — refused before anything is dialled.
  *  2. LIVE: the unauthenticated GET /health must publish that fingerprint
  *     (publicationHostFingerprintMatches, constant time). Only then is the bearer sent.
- *  3. MUTATIONS (rules.apply, release.install, release.rollback) prove LIVE on EVERY call:
+ *  3. MUTATIONS (rules.apply, release.install, release.rollback, and copy mode's media.put,
+ *     media.delete, media.mark) prove LIVE on EVERY call:
  *     a re-provisioned agent receives the anonymous /health and nothing else — no bearer,
  *     no actor, no body (Review Focus 1).
  *  4. READS (status, media.probe, media.manifest) may ride a cached proof (E6). The cache key is host name
@@ -51,6 +52,7 @@ import {
 	type AgentRequest,
 	type AgentResponse,
 	agentRequest,
+	MAX_TIMEOUT_MS,
 } from './transport.ts';
 import {
 	agentResponseError,
@@ -72,7 +74,17 @@ export const AGENT_TIMEOUTS_MS = Object.freeze({
 	rules: 60_000,
 	rollback: 120_000,
 	install: 900_000,
+	media: 60_000,
 });
+
+/**
+ * A put streams one public derivative (an AV file may be gigabytes): the door's own
+ * ceiling. A slower link defers nothing — the put fails `timeout` (transient) and the
+ * next round retries it.
+ */
+export const MEDIA_PUT_TIMEOUT_MS = MAX_TIMEOUT_MS;
+/** Paths per media.delete request (the agent takes at most 1000). */
+export const MEDIA_DELETE_BATCH = 500;
 const HEALTH_MAX_BYTES = 4_096;
 
 export type AgentApi = 'v1' | 'v2';
@@ -631,6 +643,142 @@ export async function hostRollbackRelease(
 	);
 	const swap = expectShape(host, 'release.rollback', answer, isSwap);
 	return { from: swap.from, to: swap.to };
+}
+
+// ── copy-mode media mutations (spec §6, phase 5): put / delete / mark ─────────────────
+// The agent re-checks everything (copy mode, its path grammar + realpath confinement, the
+// sha256 and size of the bytes it received, and that `pub/<key>` exists before a put
+// lands). These checks only keep a request this engine could not mean off the wire.
+
+export interface MediaPutFile {
+	/** Media-root relative ('/'-separated) — the agent's path. */
+	path: string;
+	sha256: string;
+	size: number;
+	body: ReadableStream<Uint8Array>;
+}
+
+const MEDIA_FILE_PATH = '/v1/media/file';
+const MEDIA_PATH_SHAPE = AGENT_QUERY_GRAMMAR[MEDIA_FILE_PATH]?.path;
+/** The agent's MARKER_KEY (its grammar.ts): what media.mark takes. */
+const MEDIA_MARKER_KEY = /^[a-z0-9]+_[0-9]+$/;
+
+function isMediaPath(path: unknown): path is string {
+	return typeof path === 'string' && MEDIA_PATH_SHAPE?.test(path) === true;
+}
+
+function assertPutRequest(name: string, file: MediaPutFile, actor: string): void {
+	assertActor(name, 'media.put', actor);
+	if (!isMediaPath(file.path))
+		throw refuse(name, 'media.put', 'the path is not a safe relative media path');
+	if (!SHA256_HEX.test(file.sha256))
+		throw refuse(name, 'media.put', 'the sha256 must be 64 lowercase hex');
+	if (!Number.isSafeInteger(file.size) || file.size < 0)
+		throw refuse(name, 'media.put', 'the size must be a non-negative integer');
+}
+
+/** The put refused before the bearer request: the caller's stream is cancelled, never left open. */
+async function cancelled<T>(body: ReadableStream<Uint8Array>, check: () => T): Promise<T> {
+	try {
+		return check();
+	} catch (error) {
+		await body.cancel().catch(() => undefined);
+		throw error;
+	}
+}
+
+function isPutResult(value: unknown): value is { path: string; sha256: string } {
+	return isRecord(value) && typeof value.path === 'string' && typeof value.sha256 === 'string';
+}
+
+function isDeleteResult(
+	value: unknown,
+): value is { deleted: string[]; absent: string[]; failed: string[] } {
+	return (
+		isRecord(value) &&
+		isStringList(value.deleted) &&
+		isStringList(value.absent) &&
+		isStringList(value.failed)
+	);
+}
+
+function isMarkResult(value: unknown): value is { key: string; published: boolean } {
+	return isRecord(value) && typeof value.key === 'string' && typeof value.published === 'boolean';
+}
+
+/** media.put: the file lands on the agent only while its `pub/<key>` marker exists there. */
+export async function hostMediaPut(name: string, file: MediaPutFile, actor: string): Promise<void> {
+	const host = await cancelled(file.body, () => {
+		assertPutRequest(name, file, actor);
+		return requireHost(name);
+	});
+	const answer = await mutateCall(
+		host,
+		command('media.put', 'PUT', MEDIA_FILE_PATH, {
+			query: { path: file.path },
+			headers: {
+				'content-type': 'application/octet-stream',
+				'x-sha256': file.sha256,
+				'x-size': String(file.size),
+				[AGENT_ACTOR_HEADER]: actor,
+			},
+			body: file.body,
+			timeoutMs: MEDIA_PUT_TIMEOUT_MS,
+		}),
+	);
+	const landed = expectShape(host, 'media.put', answer, isPutResult);
+	if (landed.path !== file.path || landed.sha256 !== file.sha256)
+		throw unreadable(host, 'media.put', answer.status);
+}
+
+function mediaPost(commandName: string, path: string, body: unknown, actor: string): Command {
+	return command(commandName, 'POST', path, {
+		headers: { 'content-type': 'application/json', [AGENT_ACTOR_HEADER]: actor },
+		body: JSON.stringify(body),
+		timeoutMs: AGENT_TIMEOUTS_MS.media,
+	});
+}
+
+/** media.delete, MEDIA_DELETE_BATCH paths per request. Absent paths are not an error (idempotent). */
+export async function hostMediaDelete(
+	name: string,
+	paths: readonly string[],
+	actor: string,
+): Promise<void> {
+	assertActor(name, 'media.delete', actor);
+	if (!paths.every(isMediaPath))
+		throw refuse(name, 'media.delete', 'a path is not a safe relative media path');
+	if (paths.length === 0) return;
+	const host = requireHost(name);
+	for (let start = 0; start < paths.length; start += MEDIA_DELETE_BATCH) {
+		const batch = paths.slice(start, start + MEDIA_DELETE_BATCH);
+		const answer = await mutateCall(
+			host,
+			mediaPost('media.delete', '/v1/media/delete', { paths: batch }, actor),
+		);
+		expectShape(host, 'media.delete', answer, isDeleteResult);
+	}
+}
+
+/** media.mark: writes (true) or removes (false) the agent's `pub/<key>` marker. */
+export async function hostMediaMark(
+	name: string,
+	key: string,
+	published: boolean,
+	actor: string,
+): Promise<void> {
+	assertActor(name, 'media.mark', actor);
+	if (!MEDIA_MARKER_KEY.test(key)) throw refuse(name, 'media.mark', 'the key is not a marker key');
+	if (typeof published !== 'boolean')
+		throw refuse(name, 'media.mark', 'published must be a boolean');
+	const host = requireHost(name);
+	const answer = await mutateCall(
+		host,
+		mediaPost('media.mark', '/v1/media/mark', { key, published }, actor),
+	);
+	const marked = expectShape(host, 'media.mark', answer, isMarkResult);
+	if (marked.key !== key || marked.published !== published)
+		throw unreadable(host, 'media.mark', answer.status);
 }
 
 // ── media.manifest (copy mode): GET /v1/media/manifest?cursor=<c>&limit=<n> ─────────────
