@@ -43,6 +43,7 @@ import {
 import { statusOutcomeFromError } from '../../src/core/publication_host/host_status.ts';
 import {
 	getHost,
+	loadRegistry,
 	type PublicationHostRecord,
 	registryPath,
 	saveRegistry,
@@ -346,6 +347,51 @@ describe('pairing before the bearer', () => {
 		);
 		expect(pairingProved({ ...host, fingerprint: mockFingerprint(INSTANCE, TOKEN_B) })).toBe(false);
 		expect(pairingProved(host)).toBe(true);
+	});
+
+	/** Rewrite museum_pub in the scratch registry (as a re-pair from another process would). */
+	function repairMuseum(change: Partial<PublicationHostRecord>): () => void {
+		const before = loadRegistry();
+		saveRegistry({
+			...before,
+			hosts: before.hosts.map((h) => (h.name === 'museum_pub' ? { ...h, ...change } : h)),
+		});
+		return () => saveRegistry(before);
+	}
+
+	test('THROUGH THE CALL PATH: a re-pair to another ADDRESS makes the next read re-prove /health there', async () => {
+		await hostStatus('museum_pub'); // proof cached for the mTLS address
+		const restore = repairMuseum({
+			address: { kind: 'unix', socket: join(sockRoot, 'agent.sock') },
+		});
+		try {
+			await hostStatus('museum_pub');
+			expect(trail(unixMock), 'the read rode a proof made for another address').toEqual([
+				`GET ${B}/health anon`,
+				`GET ${B}/v1/status bearer`,
+			]);
+		} finally {
+			restore();
+		}
+	});
+
+	test('THROUGH THE CALL PATH: a re-pair to another FINGERPRINT makes the next read re-prove /health', async () => {
+		await hostStatus('museum_pub'); // proof cached for TOKEN_A's fingerprint
+		mock.reset();
+		mock.setToken(TOKEN_B); // the agent was re-provisioned, and the engine re-paired to it
+		writeHostSecrets('museum_pub', TOKEN_B, pki.bundlePem);
+		const restore = repairMuseum({ fingerprint: mockFingerprint(INSTANCE, TOKEN_B) });
+		try {
+			await hostStatus('museum_pub');
+			expect(trail(mock), 'the read rode a proof made for another fingerprint').toEqual([
+				`GET ${B}/health anon`,
+				`GET ${B}/v1/status bearer`,
+			]);
+			expect(bearerSent(mock).map((r) => r.authorization)).toEqual([`Bearer ${TOKEN_B}`]);
+		} finally {
+			restore();
+			writeHostSecrets('museum_pub', TOKEN_A, pki.bundlePem);
+		}
 	});
 
 	test('READ residual: re-provisioned after a proof → one read bearer, the 401 drops the proof, the re-probe names the mismatch', async () => {
