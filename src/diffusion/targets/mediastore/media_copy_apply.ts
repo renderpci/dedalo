@@ -26,6 +26,11 @@
  *     while its bytes were in flight is COMPENSATED at once (recorded pending first,
  *     marker withdrawn, every file of that key landed this round deleted) and the
  *     round verifies again. No put outlives an unpublish (Review Focus 2).
+ *  PRE-EMPT. Before the grant unit and before EVERY put unit the round drains the
+ *     keys withdrawn since it began (ApplyOptions.takeWithdrawn — the worker's per-host
+ *     set): recorded pending, then `media.mark false` in their own lock unit. A record
+ *     unpublished during a long round stops being served at the next unit boundary,
+ *     never only after the round (M2). Its files are deleted by the queued run's plan.
  *
  * Before any call the plan is checked against this host's OWN Rule B (the injected
  * classifier = media_copy.ts publicFileClassifier over the host's qualities): a put
@@ -140,7 +145,20 @@ interface Round {
 	report: CopyApplyReport;
 	known: Set<string>;
 	landed: Map<string, string[]>;
+	takeWithdrawn: () => readonly string[];
 }
+
+export interface ApplyOptions {
+	/** Keys withdrawn since the round began, drained before every unit (the worker's per-host set). */
+	takeWithdrawn?: () => readonly string[];
+	/**
+	 * A withdraw-only pass ahead of a planned round (syncHostWith): it never judges older
+	 * pending deletions (the plan that follows deletes them) and keeps `pending_puts`.
+	 */
+	withdrawOnly?: boolean;
+}
+
+const NOTHING_WITHDRAWN = (): readonly string[] => [];
 
 /** The agent-side path of a key's marker (as recorded in pending_deletions). */
 export function agentMarkerPath(key: string): string {
@@ -212,6 +230,27 @@ async function withdraw(
 	}
 	report.withdrawn += keys.length;
 	report.deleted += paths.length;
+}
+
+/**
+ * Withdraw the keys unpublished since the round began, between units (see the header):
+ * recorded pending first, then marked false in one lock unit. A held lock defers it —
+ * the keys stay recorded and the worker's queued run withdraws them again.
+ */
+async function preempt(round: Round): Promise<void> {
+	const keys = [...new Set(round.takeWithdrawn())];
+	if (keys.length === 0) return;
+	const { deps, host, report } = round;
+	await recordPending(deps, host, keys.map(agentMarkerPath));
+	const held = await deps.lock(host, async () => {
+		for (const key of keys) await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
+	});
+	if (!held.acquired) {
+		report.deferred += 1;
+		return;
+	}
+	for (const key of keys) round.known.delete(key);
+	report.withdrawn += keys.length;
 }
 
 /** Clears verified deletions; answers the marker keys the agent holds now. */
@@ -325,15 +364,20 @@ async function runRound(
 	plan: ApplyPlan,
 	withdrawn: readonly string[],
 	report: CopyApplyReport,
+	takeWithdrawn: () => readonly string[],
 ): Promise<void> {
 	await withdraw(deps, host, withdrawn, plan.del, report);
 	const known = await verifyDeletions(deps, host);
-	const round: Round = { deps, host, report, known, landed: new Map() };
+	const round: Round = { deps, host, report, known, landed: new Map(), takeWithdrawn };
+	await preempt(round);
 	await grantMarks(
 		round,
 		plan.mark.filter((mark) => mark.published).map((mark) => mark.key),
 	);
-	for (const file of plan.put) await putOne(round, file);
+	for (const file of plan.put) {
+		await preempt(round);
+		await putOne(round, file);
+	}
 	if (report.compensated > 0) await verifyDeletions(deps, host);
 }
 
@@ -342,11 +386,12 @@ function noteFailure(report: CopyApplyReport, error: unknown): void {
 	console.error(`[media_copy] ${report.host}: round stopped (${report.error}):`, error);
 }
 
-function finalState(report: CopyApplyReport, pending: number): RoundOutcome {
+function finalState(report: CopyApplyReport, pending: number, withdrawOnly = false): RoundOutcome {
 	if (report.error !== null) {
 		return { state: TRANSIENT_CODES.has(report.error) ? 'pending' : 'failed', error: report.error };
 	}
-	if (pending > 0 && report.deferred === 0) return { state: 'failed', error: DELETION_UNVERIFIED };
+	if (pending > 0 && report.deferred === 0 && !withdrawOnly)
+		return { state: 'failed', error: DELETION_UNVERIFIED };
 	if (pending > 0 || report.deferred > 0) return { state: 'pending', error: null };
 	return { state: 'ok', error: null };
 }
@@ -356,10 +401,11 @@ async function settle(
 	host: string,
 	report: CopyApplyReport,
 	pendingPuts: number | null,
+	withdrawOnly = false,
 ): Promise<void> {
 	let outcome: RoundOutcome = finalState(report, 0);
 	const settled = await deps.updateRuntime(host, (cur) => {
-		outcome = finalState(report, cur.pending_deletions.length);
+		outcome = finalState(report, cur.pending_deletions.length, withdrawOnly);
 		return {
 			...cur,
 			state: outcome.state,
@@ -377,15 +423,20 @@ export async function applyCopyWith(
 	deps: CopyDeps,
 	host: string,
 	plan: ApplyPlan,
+	options: ApplyOptions = {},
 ): Promise<CopyApplyReport> {
 	assertPlanPublic(deps, host, plan);
 	const report = newReport(host);
 	const withdrawn = plan.mark.filter((mark) => !mark.published).map((mark) => mark.key);
 	await recordPending(deps, host, [...withdrawn.map(agentMarkerPath), ...plan.del]);
 	try {
-		await runRound(deps, host, plan, withdrawn, report);
+		await runRound(deps, host, plan, withdrawn, report, options.takeWithdrawn ?? NOTHING_WITHDRAWN);
 	} catch (error) {
 		noteFailure(report, error);
+	}
+	if (options.withdrawOnly === true) {
+		await settle(deps, host, report, null, true);
+		return report;
 	}
 	const unsent = plan.put.length - report.put - report.skipped_unpublished - report.compensated;
 	await settle(deps, host, report, Math.max(0, unsent));
@@ -488,7 +539,7 @@ export async function hostTakesCopy(
 export interface SyncDeps {
 	takesCopy(host: string): Promise<boolean>;
 	plan(host: string): Promise<ApplyPlan>;
-	apply(host: string, plan: ApplyPlan): Promise<CopyApplyReport>;
+	apply(host: string, plan: ApplyPlan, options?: ApplyOptions): Promise<CopyApplyReport>;
 	recordFailure(host: string, error: unknown): Promise<CopyApplyReport>;
 }
 
@@ -498,17 +549,23 @@ function withdrawOnlyPlan(keys: readonly string[]): ApplyPlan {
 
 /**
  * One worker run for one host: skip a non-copy host; withdraw the hook's keys FIRST
- * (recorded pending, marker false — before the planning walk); an agent that failed
- * that stops here; otherwise plan from ground truth and apply.
+ * (recorded pending, marker false — before the planning walk; a withdraw-only pass that
+ * never judges older pending deletions, so a stale one never stops the plan that deletes
+ * it); an agent that failed that stops here; otherwise plan from ground truth and apply.
+ * `takeWithdrawn` drains the keys withdrawn while this run is in flight (pre-emption).
  */
 export async function syncHostWith(
 	deps: SyncDeps,
 	host: string,
 	withdrawnKeys: readonly string[],
+	takeWithdrawn: () => readonly string[] = NOTHING_WITHDRAWN,
 ): Promise<CopyApplyReport | null> {
 	if (!(await deps.takesCopy(host))) return null;
 	if (withdrawnKeys.length > 0) {
-		const first = await deps.apply(host, withdrawOnlyPlan(withdrawnKeys));
+		const first = await deps.apply(host, withdrawOnlyPlan(withdrawnKeys), {
+			withdrawOnly: true,
+			takeWithdrawn,
+		});
 		if (first.error !== null) return first;
 	}
 	let plan: ApplyPlan;
@@ -517,5 +574,5 @@ export async function syncHostWith(
 	} catch (error) {
 		return deps.recordFailure(host, error);
 	}
-	return deps.apply(host, plan);
+	return deps.apply(host, plan, { takeWithdrawn });
 }

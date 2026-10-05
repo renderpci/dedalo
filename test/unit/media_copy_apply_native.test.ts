@@ -37,6 +37,7 @@ import {
 } from '../../src/diffusion/targets/mediastore/media_copy_apply.ts';
 import {
 	desired,
+	emptyRuntime,
 	imageQuality,
 	mediaPath,
 	newWorld,
@@ -468,6 +469,107 @@ describe('syncHostWith', () => {
 			`put ${P2}`,
 		]);
 		expect(report).toMatchObject({ state: 'ok', put: 1 });
+	});
+
+	test('a stale pending deletion never stops a hook unpublish before planning: both deleted and verified', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg'); // left pending by an earlier round that failed after recording
+		world.agentMarkers.add(K2);
+		world.agentFiles.set(P2, 'png!');
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_deletions: [{ path: P1, since: new Date(T0 - 3_600_000).toISOString() }],
+		});
+		const d = worldDeps(world);
+		let planned = false;
+		const report = await syncHostWith(
+			{
+				takesCopy: async () => true,
+				plan: async () => {
+					planned = true;
+					return planFrom(world);
+				},
+				apply: (host, plan, options) => applyCopyWith(d, host, plan, options),
+				recordFailure: (host, error) => recordRoundFailure(d, host, error),
+			},
+			'pub1',
+			[K2],
+		);
+		expect(planned).toBe(true);
+		expect(world.agentFiles.size).toBe(0);
+		expect(world.agentMarkers.has(K2)).toBe(false);
+		expect(report).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'ok', pending_deletions: [] });
+	});
+
+	test('a withdraw-only pass keeps pending_puts and never judges an older pending deletion unverified', async () => {
+		const world = newWorld();
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K2);
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_puts: 3,
+			pending_deletions: [{ path: P1, since: new Date(T0).toISOString() }],
+		});
+		const report = await applyCopyWith(
+			worldDeps(world),
+			'pub1',
+			{ put: [], del: [], mark: [{ key: K2, published: false }] },
+			{ withdrawOnly: true },
+		);
+		expect(report).toMatchObject({ state: 'pending', error: null, withdrawn: 1 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'pending', pending_puts: 3 });
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([P1]);
+	});
+
+	test('keys withdrawn while a round runs pre-empt its NEXT unit: recorded, then marked false before the next put', async () => {
+		const world = newWorld();
+		world.agentMarkers.add(K2);
+		world.agentFiles.set(P2, 'png!');
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P1B, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 }); // B copied in an earlier round
+		world.published.add(K1);
+		world.published.add(K2);
+		const withdrawnMeanwhile: string[] = [];
+		world.duringPut = async (path) => {
+			if (path === P1) {
+				world.published.delete(K2);
+				withdrawnMeanwhile.push(K2);
+			}
+		};
+		const recordedBeforeMark: boolean[] = [];
+		const d = worldDeps(world);
+		const spying: CopyDeps = {
+			...d,
+			mark: async (host, key, published, actor) => {
+				if (key === K2 && !published) {
+					recordedBeforeMark.push(
+						world.runtime
+							.get(host)
+							?.pending_deletions.some((p) => p.path === '.publication/pub/test3_2') === true,
+					);
+				}
+				await d.mark(host, key, published, actor);
+			},
+		};
+		const report = await applyCopyWith(spying, 'pub1', planFrom(world), {
+			takeWithdrawn: () => withdrawnMeanwhile.splice(0),
+		});
+		expect(world.calls).toEqual([
+			'mark test3_1 true',
+			`put ${P1}`,
+			'mark test3_2 false',
+			`put ${P1B}`,
+		]);
+		expect(recordedBeforeMark).toEqual([true]);
+		expect(report).toMatchObject({ withdrawn: 1, put: 2 });
+		// The marker is verified gone; its files are the queued run's plan to delete.
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([
+			'.publication/pub/test3_2',
+		]);
 	});
 
 	test('a planning failure is recorded as a code in the runtime file (typed → its code, untyped → internal.unexpected)', async () => {

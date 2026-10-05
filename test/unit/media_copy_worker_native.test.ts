@@ -43,7 +43,11 @@ afterAll(() => {
 });
 
 function worker(
-	syncHost: (host: string, keys: readonly string[]) => Promise<CopyApplyReport | null>,
+	syncHost: (
+		host: string,
+		keys: readonly string[],
+		takeWithdrawn: () => readonly string[],
+	) => Promise<CopyApplyReport | null>,
 	hosts: string[] = ['pub1'],
 	publishDebounceMs = 60_000,
 ): MediaCopyWorker {
@@ -252,6 +256,87 @@ describe('MediaCopyWorker', () => {
 		expect(world.calls.lastIndexOf(`mark ${K} false`)).toBeGreaterThan(putAt);
 		expect(world.calls.lastIndexOf(`del ${path}`)).toBeGreaterThan(putAt);
 		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([]);
+	});
+
+	test('M2: an unpublish during a long multi-put round drops the agent marker at the NEXT unit, not after the round', async () => {
+		const world = newWorld();
+		const A = 'test3_1';
+		const B = 'test3_2';
+		const a1 = mediaPath(A);
+		const a2 = mediaPath(A, 'test88');
+		const b1 = mediaPath(B);
+		world.local.set(a1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(a2, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(b1, { bytes: 'png!', mtimeMs: 1 });
+		world.published.add(A);
+		world.published.add(B);
+		world.agentMarkers.add(B); // B copied in an earlier round
+		world.agentFiles.set(b1, 'png!');
+		const inFlight = gated();
+		const putStarted = gated();
+		world.duringPut = async (path) => {
+			if (path === a1) {
+				putStarted.release();
+				await inFlight.gate;
+			}
+		};
+		const d = worldDeps(world);
+		const w = worker(
+			(host, keys, takeWithdrawn) =>
+				syncHostWith(
+					{
+						takesCopy: async () => true,
+						plan: async () => planFrom(world),
+						apply: (h, plan, options) => applyCopyWith(d, h, plan, options),
+						recordFailure: (h, error) => recordRoundFailure(d, h, error),
+					},
+					host,
+					keys,
+					takeWithdrawn,
+				),
+			['pub1'],
+			0,
+		);
+		w.notify(A, true);
+		await putStarted.gate;
+		world.published.delete(B);
+		w.notify(B, false);
+		await Bun.sleep(1);
+		inFlight.release();
+		await w.idle();
+		const withdrawnAt = world.calls.indexOf(`mark ${B} false`);
+		expect(withdrawnAt).toBeGreaterThan(world.calls.indexOf(`put ${a1}`));
+		expect(withdrawnAt).toBeLessThan(world.calls.indexOf(`put ${a2}`));
+		// The queued run then deletes B's bytes and verifies.
+		expect(world.calls.lastIndexOf(`del ${b1}`)).toBeGreaterThan(world.calls.indexOf(`put ${a2}`));
+		expect(world.agentFiles.has(b1)).toBe(false);
+		expect(world.agentMarkers.has(B)).toBe(false);
+		expect(world.agentFiles.has(a2)).toBe(true);
+		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([]);
+	});
+
+	test('exclusive work receives the lane pre-empt drain; a queued run starting clears it', async () => {
+		const drained: string[][] = [];
+		const { gate, release } = gated();
+		const w = worker(async () => {
+			await gate;
+			return null;
+		});
+		const sync = w.sync('pub1');
+		await Bun.sleep(1);
+		w.notify('test3_5', false);
+		await Bun.sleep(1);
+		const work = w.exclusive('pub1', async (take) => {
+			drained.push([...take()]);
+			return 1;
+		});
+		release();
+		await Promise.all([sync, work]);
+		await w.idle();
+		// The flush's queued run started before the exclusive work: it owns the key.
+		expect(drained).toEqual([[]]);
+		const work2 = w.exclusive('pub1', async (take) => [...take()]);
+		expect(await work2).toEqual([]);
 	});
 });
 

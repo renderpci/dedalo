@@ -3,9 +3,13 @@
  * per-host SERIALIZED lane between the pub/ transition seam (and every other copy
  * caller) and the copy apply.
  *
- *  - Unpublish (`published:false`) is flushed on the next microtask: withdrawn
- *    consent reaches every copy-mode host as soon as the marker store drops it.
- *    Publish is debounced (PUBLISH_DEBOUNCE_MS): a batch run needs one planning walk.
+ *  - Unpublish (`published:false`) is flushed on the next microtask, to every host,
+ *    twice: into the queued sync (withdraw-only pass first, then the plan deletes the
+ *    files), AND into the host's PRE-EMPT set, which the round already running there
+ *    drains before its next unit (media_copy_apply.ts ApplyOptions.takeWithdrawn). So the
+ *    agent marker drops at the next unit boundary — at most one in-flight put (bounded by
+ *    MEDIA_PUT_TIMEOUT_MS) — never only after the whole round (M2: the first command the
+ *    lane can send). Publish is debounced (PUBLISH_DEBOUNCE_MS): one planning walk.
  *  - Per host: ONE run at a time, and at most ONE queued sync, which absorbs every
  *    transition arriving meanwhile (its withdrawn keys merge). Hosts never wait on
  *    each other. A failed run is logged; the lane goes on.
@@ -38,8 +42,15 @@ export const PUBLISH_DEBOUNCE_MS = 2_000;
 export interface MediaCopyWorkerDeps {
 	/** Every registry host name (copy mode is decided per run by syncHost). */
 	listHosts(): string[];
-	/** One run for one host (media_copy.ts syncHost). */
-	syncHost(host: string, withdrawnKeys: readonly string[]): Promise<CopyApplyReport | null>;
+	/**
+	 * One run for one host (media_copy.ts syncHost). `takeWithdrawn` drains the keys
+	 * withdrawn while the run is in flight (the run pre-empts its units with them).
+	 */
+	syncHost(
+		host: string,
+		withdrawnKeys: readonly string[],
+		takeWithdrawn: () => readonly string[],
+	): Promise<CopyApplyReport | null>;
 	publishDebounceMs: number;
 	/** Told after every run that produced a report (the phase-6 probe trigger). */
 	afterSync?(host: string, report: CopyApplyReport): void;
@@ -53,7 +64,12 @@ interface QueuedRun {
 interface HostLane {
 	tail: Promise<void>;
 	queued: QueuedRun | null;
+	/** Keys withdrawn since the running unit began: drained by it between its units. */
+	preempt: Set<string>;
 }
+
+/** What a lane unit drains to pre-empt itself with the keys withdrawn meanwhile. */
+export type TakeWithdrawn = () => readonly string[];
 
 export class MediaCopyWorker {
 	private readonly lanes = new Map<string, HostLane>();
@@ -83,10 +99,13 @@ export class MediaCopyWorker {
 		return this.enqueue(host, []);
 	}
 
-	/** Run `work` in `host`'s lane: after everything already queued there, before anything later. */
-	exclusive<T>(host: string, work: () => Promise<T>): Promise<T> {
+	/**
+	 * Run `work` in `host`'s lane: after everything already queued there, before anything
+	 * later. `work` gets the lane's pre-empt drain (pass it to applyCopy's takeWithdrawn).
+	 */
+	exclusive<T>(host: string, work: (takeWithdrawn: TakeWithdrawn) => Promise<T>): Promise<T> {
 		const lane = this.lane(host);
-		const done = lane.tail.then(work);
+		const done = lane.tail.then(() => work(() => this.drain(lane)));
 		this.advance(host, lane, done);
 		return done;
 	}
@@ -131,6 +150,7 @@ export class MediaCopyWorker {
 		this.withdrawn.clear();
 		if (this.stopped) return;
 		for (const host of this.hostsOrNone()) {
+			for (const key of keys) this.lane(host).preempt.add(key);
 			this.enqueue(host, keys).catch((error) => {
 				console.error(
 					`[media_copy] ${host}: sync failed (the media_copy reconcile retries):`,
@@ -155,7 +175,7 @@ export class MediaCopyWorker {
 	private lane(host: string): HostLane {
 		const existing = this.lanes.get(host);
 		if (existing !== undefined) return existing;
-		const created: HostLane = { tail: Promise.resolve(), queued: null };
+		const created: HostLane = { tail: Promise.resolve(), queued: null, preempt: new Set() };
 		this.lanes.set(host, created);
 		return created;
 	}
@@ -193,10 +213,18 @@ export class MediaCopyWorker {
 		run: QueuedRun,
 	): Promise<CopyApplyReport | null> {
 		if (lane.queued === run) lane.queued = null;
+		// Every key pre-empt holds now was merged into this run's keys at the same flush.
+		lane.preempt.clear();
 		if (this.stopped) return null;
-		const report = await this.deps.syncHost(host, [...run.keys]);
+		const report = await this.deps.syncHost(host, [...run.keys], () => this.drain(lane));
 		if (report !== null) this.tell(host, report);
 		return report;
+	}
+
+	private drain(lane: HostLane): string[] {
+		const keys = [...lane.preempt];
+		lane.preempt.clear();
+		return keys;
 	}
 
 	private tell(host: string, report: CopyApplyReport): void {
@@ -241,6 +269,9 @@ export function activeMediaCopyWorker(): MediaCopyWorker | null {
  * lock orders it against the server). Never call it from inside a lane run (syncHost):
  * that would wait on itself.
  */
-export function inMediaCopyLane<T>(host: string, work: () => Promise<T>): Promise<T> {
-	return activeWorker === null ? work() : activeWorker.exclusive(host, work);
+export function inMediaCopyLane<T>(
+	host: string,
+	work: (takeWithdrawn: TakeWithdrawn) => Promise<T>,
+): Promise<T> {
+	return activeWorker === null ? work(() => []) : activeWorker.exclusive(host, work);
 }

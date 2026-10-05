@@ -680,24 +680,30 @@ export function realCopyDeps(): CopyDeps {
  * the host lane; any other caller wraps plan + apply in inMediaCopyLane
  * (media_copy_worker.ts), so it never applies a stale plan beside a hook run.
  */
-export function applyCopy(host: string, plan: ApplyPlan): Promise<CopyApplyReport> {
-	return applyCopyWith(realCopyDeps(), host, plan);
+export function applyCopy(
+	host: string,
+	plan: ApplyPlan,
+	takeWithdrawn?: () => readonly string[],
+): Promise<CopyApplyReport> {
+	return applyCopyWith(realCopyDeps(), host, plan, { takeWithdrawn });
 }
 
 /** One worker run for one host: withdraw the hook's keys first, then plan + apply. */
 export function syncHost(
 	host: string,
 	withdrawnKeys: readonly string[],
+	takeWithdrawn?: () => readonly string[],
 ): Promise<CopyApplyReport | null> {
 	const deps = realCopyDeps();
 	return syncHostWith(
 		{
 			takesCopy: (name) => hostTakesCopy(name),
 			plan: (name) => planCopy(name),
-			apply: (name, plan) => applyCopyWith(deps, name, plan),
+			apply: (name, plan, options) => applyCopyWith(deps, name, plan, options),
 			recordFailure: (name, error) => recordRoundFailure(deps, name, error),
 		},
 		host,
 		withdrawnKeys,
+		takeWithdrawn,
 	);
 }
