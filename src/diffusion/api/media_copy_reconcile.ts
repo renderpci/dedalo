@@ -10,9 +10,10 @@
  * (src/diffusion/api/media_copy.ts):
  *   - DRY: planMediaCopyHost — Task 9's hostTakesCopy with no n/a write, then planCopy.
  *     Writes NOTHING but the local sha cache (no runtime, no agent mutation).
- *   - APPLY: syncMediaCopyHost — the started worker's per-host serialized lane (direct in a
- *     CLI process; the advisory target lock orders it across processes), so a scheduled run
- *     never interleaves with a pub/ hook run. Mode detection, the non-copy verdict (debt
+ *   - APPLY: inMediaCopyHostLane — ONE unit of the started worker's per-host serialized
+ *     lane (direct in a CLI process; the advisory target lock orders it across processes)
+ *     holds the pre-plan, the round and the re-plan, so a scheduled run never interleaves
+ *     with a pub/ hook run and `applied` never counts a hook run's work. Mode detection, the non-copy verdict (debt
  *     kept: media_copy_status.ts nonCopyRuntime), round failures (transient → pending,
  *     other → failed, by CODE) and the pending-deletion bookkeeping are all Task 9's; this
  *     run writes the runtime ONLY when the lane itself throws (no other writer records
@@ -37,7 +38,7 @@ import type {
 } from '../../core/reconcile/registry.ts';
 import { type CopyPlan, planCopy } from '../targets/mediastore/media_copy.ts';
 import type { CopyApplyReport } from '../targets/mediastore/media_copy_apply.ts';
-import { planMediaCopyHost, syncMediaCopyHost } from './media_copy.ts';
+import { inMediaCopyHostLane, type LaneSync, planMediaCopyHost } from './media_copy.ts';
 
 export interface MediaCopyHostOutcome {
 	/** Task 9's copy-mode verdict; null when it could not be decided (the run failed first). */
@@ -185,18 +186,23 @@ async function sentOutcome(
 	};
 }
 
-async function applyOutcome(name: string): Promise<MediaCopyHostOutcome> {
-	// A pre-plan that fails (an unreachable agent) yields planned null; the lane runs
+/** Inside ONE lane unit: planned → round → remaining (no hook run between them). */
+async function applyInLane(name: string, sync: LaneSync): Promise<MediaCopyHostOutcome> {
+	// A pre-plan that fails (an unreachable agent) yields planned null; the round runs
 	// anyway, so Task 9 records the round failure through its own writer.
 	const { planned } = await dryOutcome(name);
 	let report: CopyApplyReport | null;
 	try {
-		report = await syncMediaCopyHost(name);
+		report = await sync();
 	} catch (error) {
 		return laneThrew(name, error, planned);
 	}
 	if (report === null) return notCopyOutcome(name);
 	return sentOutcome(name, planned, report);
+}
+
+function applyOutcome(name: string): Promise<MediaCopyHostOutcome> {
+	return inMediaCopyHostLane(name, (sync) => applyInLane(name, sync));
 }
 
 /** A failed host's drift is its known debt (at least 1: its state is unknown). */

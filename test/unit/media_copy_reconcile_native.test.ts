@@ -5,7 +5,8 @@
  *   - only copy-mode hosts are reconciled (Task 9 hostTakesCopy); a dry run of a shared
  *     host writes NOTHING, an apply records n/a (Task 9 markNotCopy);
  *   - a DRY run plans and sends nothing mutating, and is byte-equal twice;
- *   - APPLY goes through Task 9's lane (syncMediaCopyHost) and converges: missing
+ *   - APPLY runs pre-plan → round → re-plan as ONE unit of the host lane
+ *     (inMediaCopyHostLane: a hook run queued meanwhile waits for all three) and converges: missing
  *     published files are put (sha-verified) and marked, an unpublished file is UNMARKED
  *     BEFORE it is deleted, and `applied` is measured by re-planning (remaining 0);
  *   - an unreachable agent: the dry run reports it and writes nothing; an apply records
@@ -35,6 +36,10 @@ import {
 	runMediaCopyReconcile,
 } from '../../src/diffusion/api/media_copy_reconcile.ts';
 import { MEDIA_COPY_RECONCILE } from '../../src/diffusion/api/reconcile.ts';
+import {
+	activeMediaCopyWorker,
+	startMediaCopyWorker,
+} from '../../src/diffusion/targets/mediastore/media_copy_worker.ts';
 import {
 	type CopyMockAgent,
 	type MockMode,
@@ -142,11 +147,12 @@ describe('media_copy definition', () => {
 		]);
 	});
 
-	test('the run applies ONLY through the Task 9 lane (syncMediaCopyHost), never applyCopy directly', () => {
+	test('the run applies ONLY through the Task 9 lane (inMediaCopyHostLane), never applyCopy directly', () => {
 		const source = stripComments(
 			readFileSync(join(REPO, 'src/diffusion/api/media_copy_reconcile.ts'), 'utf8'),
 		);
-		expect(source).toContain('syncMediaCopyHost(');
+		expect(source).toContain('inMediaCopyHostLane(');
+		expect(source).not.toContain('inMediaCopyLane(');
 		expect(source).toContain('planMediaCopyHost(');
 		expect(source).not.toContain('applyCopy(');
 		expect(source).not.toContain('syncHost(');
@@ -290,6 +296,49 @@ describe('media_copy run', () => {
 		expect(runtime?.state).toBe('failed');
 		expect(runtime?.error).toBe(COPY_MODE_WITHDRAWN);
 		expect(mediaCopyCheck(runtime, Date.now())?.state).toBe('blocked');
+	}, 60_000);
+
+	test('C2: with a started worker, pre-plan + round + re-plan are ONE lane unit (a hook run never lands between)', async () => {
+		plantPublished();
+		const copy = await agent('zzmc_lane', 'copy');
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const hookSaw: number[] = [];
+		const stop = startMediaCopyWorker({
+			listHosts: () => ['zzmc_lane'],
+			publishDebounceMs: 60_000,
+			// the hook's run: held at first, then it records what the agent had received
+			syncHost: async () => {
+				hookSaw.push(copy.events.length);
+				await gate;
+				return null;
+			},
+		});
+		try {
+			const worker = activeMediaCopyWorker();
+			if (worker === null) throw new Error('worker not started');
+			const firstHook = worker.sync('zzmc_lane');
+			await Bun.sleep(1);
+			const run = runMediaCopyReconcile({ apply: true, scope: ['zzmc_lane'] });
+			const secondHook = worker.sync('zzmc_lane');
+			await Bun.sleep(20);
+			// the reconcile waits behind the held hook run: nothing sent yet
+			expect(copy.events).toEqual([]);
+			release();
+			const report = await run;
+			await firstHook;
+			await secondHook;
+			const outcome = hostsOf(report.detail).zzmc_lane;
+			// the REAL round ran inside the unit (never the worker's own syncHost)
+			expect(outcome?.sent?.put ?? 0).toBeGreaterThanOrEqual(1);
+			expect(outcome?.remaining).toBe(0);
+			// the hook queued after it ran only once the whole unit (re-plan included) was done
+			expect(hookSaw).toEqual([0, copy.events.length]);
+		} finally {
+			stop();
+		}
 	}, 60_000);
 
 	test('an unknown scoped host is a typed resource.not_found (never an empty success)', async () => {

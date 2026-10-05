@@ -21,7 +21,6 @@ import {
 	type TakesCopyIo,
 } from '../targets/mediastore/media_copy_apply.ts';
 import {
-	activeMediaCopyWorker,
 	inMediaCopyLane,
 	PUBLISH_DEBOUNCE_MS,
 	startMediaCopyWorker,
@@ -43,14 +42,21 @@ export function startMediaCopy(
 	});
 }
 
+/** One full copy round, RAW (no lane of its own): only callable inside the host's lane. */
+export type LaneSync = () => Promise<CopyApplyReport | null>;
+
 /**
- * One full copy round for `host`: through the started worker's lane when there is one
- * (it joins a queued sync), else directly (a CLI process — the advisory lock orders it
- * against the server).
+ * Run `work` as ONE unit of `host`'s lane (inMediaCopyLane: the started worker's lane, else
+ * direct — a CLI process, the advisory lock orders it against the server). `sync` runs a
+ * full copy round inside that unit (syncHost with the lane's pre-empt drain — never
+ * worker.sync, which would wait on the unit itself), so a caller can plan, apply and
+ * re-measure with no hook run between them.
  */
-export function syncMediaCopyHost(host: string): Promise<CopyApplyReport | null> {
-	const worker = activeMediaCopyWorker();
-	return worker === null ? syncHost(host, []) : worker.sync(host);
+export function inMediaCopyHostLane<T>(
+	host: string,
+	work: (sync: LaneSync) => Promise<T>,
+): Promise<T> {
+	return inMediaCopyLane(host, (takeWithdrawn) => work(() => syncHost(host, [], takeWithdrawn)));
 }
 
 export type MediaCopyHostPlan = { takesCopy: false } | { takesCopy: true; plan: CopyPlan };
