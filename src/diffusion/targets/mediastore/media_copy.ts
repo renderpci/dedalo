@@ -83,6 +83,7 @@ import {
 	openLocalMediaFile,
 	recordRoundFailure,
 	syncHostWith,
+	withdrawNowWith,
 } from './media_copy_apply.ts';
 import { hasPubMarker, makeMarkerKey, markerStoreBase } from './media_index.ts';
 import { type PubTransitionSink, registerPubTransitionSink } from './pub_transitions.ts';
@@ -684,6 +685,12 @@ export function applyCopy(
 	takeWithdrawn?: () => readonly string[],
 ): Promise<CopyApplyReport> {
 	return applyCopyWith(realCopyDeps(), host, plan, { takeWithdrawn });
+}
+
+/** Withdraw `keys` on `host` at once, outside the lane (media_copy_apply.ts withdrawNowWith). */
+export function withdrawNow(host: string, keys: readonly string[]): Promise<void> {
+	const deps = realCopyDeps();
+	return withdrawNowWith({ ...deps, takesCopy: (name) => hostTakesCopy(name) }, host, keys);
 }
 
 /** One worker run for one host: withdraw the hook's keys first, then plan + apply. */

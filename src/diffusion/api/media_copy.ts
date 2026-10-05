@@ -5,7 +5,7 @@
  */
 
 import { loadRegistry } from '../../core/publication_host/registry.ts';
-import { syncHost } from '../targets/mediastore/media_copy.ts';
+import { syncHost, withdrawNow } from '../targets/mediastore/media_copy.ts';
 import type { CopyApplyReport } from '../targets/mediastore/media_copy_apply.ts';
 import {
 	activeMediaCopyWorker,
@@ -24,6 +24,7 @@ export function startMediaCopy(
 	return startMediaCopyWorker({
 		listHosts: () => loadRegistry().hosts.map((host) => host.name),
 		syncHost,
+		withdrawNow,
 		publishDebounceMs: PUBLISH_DEBOUNCE_MS,
 		afterSync: options.afterSync,
 	});

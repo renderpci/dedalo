@@ -53,6 +53,11 @@ export interface MediaCopyWorkerDeps {
 		takeWithdrawn: () => readonly string[],
 	): Promise<CopyApplyReport | null>;
 	publishDebounceMs: number;
+	/**
+	 * Withdraw `keys` on `host` AT ONCE, outside the lane (media_copy_apply.ts
+	 * withdrawNowWith): never behind a running put unit. Absent = only the lane withdraws.
+	 */
+	withdrawNow?(host: string, keys: readonly string[]): Promise<void>;
 	/** Told after every run that produced a report (the phase-6 probe trigger). */
 	afterSync?(host: string, report: CopyApplyReport): void;
 }
@@ -75,6 +80,8 @@ export type TakeWithdrawn = () => readonly string[];
 export class MediaCopyWorker {
 	private readonly lanes = new Map<string, HostLane>();
 	private readonly withdrawn = new Set<string>();
+	/** Immediate withdrawals in flight (idle() waits for them). */
+	private readonly withdrawals = new Set<Promise<void>>();
 	private publishTimer: ReturnType<typeof setTimeout> | null = null;
 	private flushScheduled = false;
 	private stopped = false;
@@ -127,7 +134,9 @@ export class MediaCopyWorker {
 	/** Resolves once nothing is queued, running or about to be flushed (gates, shutdown). */
 	async idle(): Promise<void> {
 		for (;;) {
-			if (this.lanes.size > 0) await Promise.all([...this.lanes.values()].map((lane) => lane.tail));
+			if (this.withdrawals.size > 0) await Promise.all([...this.withdrawals]);
+			else if (this.lanes.size > 0)
+				await Promise.all([...this.lanes.values()].map((lane) => lane.tail));
 			else if (this.flushScheduled || this.publishTimer !== null) await Bun.sleep(1);
 			else return;
 		}
@@ -165,6 +174,7 @@ export class MediaCopyWorker {
 		if (this.stopped) return;
 		for (const host of this.hostsOrNone()) {
 			for (const key of keys) this.lane(host).preempt.add(key);
+			this.withdrawAtOnce(host, keys);
 			this.enqueue(host, keys).catch((error) => {
 				console.error(
 					`[media_copy] ${host}: sync failed (the media_copy reconcile retries):`,
@@ -172,6 +182,21 @@ export class MediaCopyWorker {
 				);
 			});
 		}
+	}
+
+	/** The out-of-lane withdrawal (deps.withdrawNow), detached, logged, never thrown. */
+	private withdrawAtOnce(host: string, keys: readonly string[]): void {
+		const withdrawNow = this.deps.withdrawNow;
+		if (withdrawNow === undefined || keys.length === 0) return;
+		const sent: Promise<void> = runDetachedFromTransaction(() => withdrawNow(host, keys))
+			.catch((error: unknown) => {
+				console.error(
+					`[media_copy] ${host}: immediate withdrawal failed (the queued run withdraws again):`,
+					error,
+				);
+			})
+			.finally(() => this.withdrawals.delete(sent));
+		this.withdrawals.add(sent);
 	}
 
 	private hostsOrNone(): string[] {

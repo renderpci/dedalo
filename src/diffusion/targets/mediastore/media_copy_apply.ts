@@ -33,6 +33,13 @@
  *     while its bytes were in flight is COMPENSATED at once (recorded pending first,
  *     marker withdrawn, every file of that key landed this round deleted) and the
  *     round verifies again. No put outlives an unpublish (Review Focus 2).
+ *  WITHDRAWN CONSENT NEVER WAITS FOR A PUT. The worker sends a hook unpublish's
+ *     `mark false` at once, outside the lane and every lock (withdrawNowWith) — never
+ *     behind a streaming put. The agent re-checks the marker under its key lock before a
+ *     put lands (a refused put is re-checked here: compensated when unpublished, deferred
+ *     when not), and every `mark true` is followed by a `pub/<key>` re-check that undoes
+ *     it when the record was unpublished meanwhile — whichever call reaches the agent
+ *     first, an unpublished key ends unmarked.
  *  PRE-EMPT. Before the grant unit and before EVERY put unit the round drains the
  *     keys withdrawn since it began (ApplyOptions.takeWithdrawn — the worker's per-host
  *     set): recorded pending, then `media.mark false` in their own lock unit. A record
@@ -141,7 +148,7 @@ export interface CopyApplyReport {
 	error: string | null;
 }
 
-type PutOutcome = 'put' | 'unpublished' | 'changed' | 'timed_out' | 'compensated';
+type PutOutcome = 'put' | 'unpublished' | 'changed' | 'timed_out' | 'refused' | 'compensated';
 
 interface RoundOutcome {
 	state: CopyApplyReport['state'];
@@ -235,7 +242,7 @@ function isTransient(error: unknown): boolean {
  * and the first failure (null when none).
  */
 async function unmarkEach(
-	deps: CopyDeps,
+	deps: Pick<CopyDeps, 'mark'>,
 	host: string,
 	keys: readonly string[],
 ): Promise<{ done: string[]; failure: unknown }> {
@@ -375,13 +382,28 @@ async function verifyDeletions(
 	return new Set(manifest.markers);
 }
 
-async function ensureMarker(round: Round, key: string): Promise<void> {
-	if (round.known.has(key)) return;
-	const decidedAt = round.deps.now().getTime();
-	await round.deps.mark(round.host, key, true, MEDIA_COPY_ACTOR);
+/**
+ * `mark true` for `key` unless the round knows the agent holds it, then RE-CHECK `pub/<key>`:
+ * a withdrawal is sent outside the put units (withdrawNowWith), so it may reach the agent
+ * BEFORE this grant — a record unpublished meanwhile is withdrawn again at once (recorded
+ * pending first). Answers whether the key stands granted.
+ */
+async function ensureMarker(round: Round, key: string): Promise<boolean> {
+	if (round.known.has(key)) return true;
+	const { deps, host } = round;
+	const decidedAt = deps.now().getTime();
+	await deps.mark(host, key, true, MEDIA_COPY_ACTOR);
+	if (!(await deps.isPublished(key))) {
+		await recordPending(deps, host, [agentMarkerPath(key)]);
+		round.reverify = true;
+		await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
+		round.report.withdrawn += 1;
+		return false;
+	}
 	round.known.add(key);
 	round.report.published += 1;
-	await dropPending(round.deps, round.host, new Set([agentMarkerPath(key)]), decidedAt);
+	await dropPending(deps, host, new Set([agentMarkerPath(key)]), decidedAt);
+	return true;
 }
 
 async function grantMarks(round: Round, keys: readonly string[]): Promise<void> {
@@ -403,7 +425,7 @@ async function compensate(round: Round, key: string): Promise<PutOutcome> {
 	await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
 	round.known.delete(key);
 	report.withdrawn += 1;
-	await deps.del(host, paths, MEDIA_COPY_ACTOR);
+	if (paths.length > 0) await deps.del(host, paths, MEDIA_COPY_ACTOR);
 	round.landed.delete(key);
 	report.deleted += paths.length;
 	return 'compensated';
@@ -422,12 +444,17 @@ async function sendFile(
 	file: DesiredFile,
 	local: LocalFile,
 	sha256: string,
-): Promise<void> {
+): Promise<'sent' | 'ungranted'> {
+	let granted: boolean;
 	try {
-		await ensureMarker(round, file.key);
+		granted = await ensureMarker(round, file.key);
 	} catch (error) {
 		await local.body.cancel();
 		throw error;
+	}
+	if (!granted) {
+		await local.body.cancel();
+		return 'ungranted';
 	}
 	const body = local.body;
 	const decidedAt = round.deps.now().getTime();
@@ -438,30 +465,53 @@ async function sendFile(
 	);
 	round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
 	await dropPending(round.deps, round.host, new Set([file.path]), decidedAt);
+	return 'sent';
 }
+
+/** The agent refused the put because the key's marker is gone (a withdrawal landed first). */
+function isKeyUnpublishedRefusal(error: unknown): boolean {
+	return (
+		error instanceof DedaloError &&
+		error.code === 'publication_host.rejected' &&
+		error.coordinates?.agent_reason === 'key_unpublished'
+	);
+}
+
+type SendOutcome = 'sent' | 'timed_out' | 'refused' | 'ungranted';
 
 /**
  * A put that TIMED OUT is deferred, never the end of the round: one file the link cannot
  * push in time must not starve every file sorted after it, round after round. Its bytes
  * may have landed all the same, so it counts as landed for a compensation, and a record
- * unpublished meanwhile is compensated exactly as after a put that answered.
+ * unpublished meanwhile is compensated exactly as after a put that answered. A put the
+ * agent REFUSED for want of the key's marker (a withdrawal reached it first) is not a
+ * failure either: the key is no longer known, and the caller re-checks `pub/<key>`.
  */
 async function sendOrDefer(
 	round: Round,
 	file: DesiredFile,
 	local: LocalFile,
 	sha256: string,
-): Promise<'sent' | 'timed_out'> {
+): Promise<SendOutcome> {
 	try {
-		await sendFile(round, file, local, sha256);
-		return 'sent';
+		return await sendFile(round, file, local, sha256);
 	} catch (error) {
+		if (isKeyUnpublishedRefusal(error)) {
+			round.known.delete(file.key);
+			return 'refused';
+		}
 		if (!(error instanceof DedaloError) || error.code !== 'publication_host.timeout') throw error;
 		console.error(`[media_copy] ${round.host}: put ${file.path} timed out (deferred):`, error);
 		round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
 		return 'timed_out';
 	}
 }
+
+const SENT_OUTCOME = {
+	sent: 'put',
+	timed_out: 'timed_out',
+	refused: 'refused',
+} as const satisfies Record<Exclude<SendOutcome, 'ungranted'>, PutOutcome>;
 
 async function putUnderLock(round: Round, file: DesiredFile): Promise<PutOutcome> {
 	const { deps } = round;
@@ -471,8 +521,9 @@ async function putUnderLock(round: Round, file: DesiredFile): Promise<PutOutcome
 	const local = await openUnchanged(deps, file);
 	if (local === null) return 'changed';
 	const sent = await sendOrDefer(round, file, local, sha256);
+	if (sent === 'ungranted') return 'unpublished';
 	if (!(await deps.isPublished(file.key))) return compensate(round, file.key);
-	return sent === 'sent' ? 'put' : 'timed_out';
+	return SENT_OUTCOME[sent];
 }
 
 const PUT_FIELD = {
@@ -480,6 +531,7 @@ const PUT_FIELD = {
 	unpublished: 'skipped_unpublished',
 	changed: 'deferred',
 	timed_out: 'deferred',
+	refused: 'deferred',
 	compensated: 'compensated',
 } as const satisfies Record<PutOutcome, keyof CopyApplyReport>;
 
@@ -684,6 +736,31 @@ export async function hostTakesCopy(
 	if (mode === 'copy') return true;
 	await io.markNotCopy(name);
 	return false;
+}
+
+export interface WithdrawNowDeps extends Pick<CopyDeps, 'mark' | 'updateRuntime' | 'now'> {
+	takesCopy(host: string): Promise<boolean>;
+}
+
+/**
+ * WITHDRAWN CONSENT, AT ONCE: `media.mark false` for `keys` on `host` outside every round
+ * and every lock — never behind a put unit (an AV transfer may stream for minutes). Safe
+ * without the target lock: the agent re-checks the marker under its per-key lock before a
+ * put lands, and a grant re-checks `pub/<key>` after its `mark true` (ensureMarker), so
+ * neither order of the two calls leaves an unpublished key marked. Recorded pending first;
+ * the files are the queued run's plan to delete, the marker its manifest to verify.
+ * Throws the first failure (the worker logs it; the queued run withdraws again).
+ */
+export async function withdrawNowWith(
+	deps: WithdrawNowDeps,
+	host: string,
+	keys: readonly string[],
+): Promise<void> {
+	const unique = [...new Set(keys)];
+	if (unique.length === 0 || !(await deps.takesCopy(host))) return;
+	await recordPending(deps, host, unique.map(agentMarkerPath));
+	const { failure } = await unmarkEach(deps, host, unique);
+	if (failure !== null) throw failure;
 }
 
 export interface SyncDeps {

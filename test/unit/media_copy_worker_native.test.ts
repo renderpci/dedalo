@@ -20,6 +20,7 @@ import {
 	type CopyApplyReport,
 	recordRoundFailure,
 	syncHostWith,
+	withdrawNowWith,
 } from '../../src/diffusion/targets/mediastore/media_copy_apply.ts';
 import {
 	activeMediaCopyWorker,
@@ -315,6 +316,68 @@ describe('MediaCopyWorker', () => {
 		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([]);
 	});
 
+	test('withdrawn consent: an unpublish during a long streaming put reaches the agent BEFORE the put ends', async () => {
+		const world = newWorld();
+		const K = 'test3_1';
+		const path = mediaPath(K);
+		world.local.set(path, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K);
+		const inFlight = gated();
+		const putStarted = gated();
+		world.duringPut = async () => {
+			putStarted.release();
+			await inFlight.gate;
+		};
+		const d = worldDeps(world);
+		const pendingAtWithdrawal: string[][] = [];
+		const created = new MediaCopyWorker({
+			listHosts: () => ['pub1'],
+			publishDebounceMs: 0,
+			syncHost: (host, keys, takeWithdrawn) =>
+				syncHostWith(
+					{
+						takesCopy: async () => true,
+						plan: async () => planFrom(world),
+						apply: (h, plan, options) => applyCopyWith(d, h, plan, options),
+						recordFailure: (h, error) => recordRoundFailure(d, h, error),
+					},
+					host,
+					keys,
+					takeWithdrawn,
+				),
+			withdrawNow: (host, keys) =>
+				withdrawNowWith(
+					{
+						...d,
+						takesCopy: async () => true,
+						mark: async (h, key, published, actor) => {
+							pendingAtWithdrawal.push(
+								(world.runtime.get('pub1')?.pending_deletions ?? []).map((p) => p.path),
+							);
+							return d.mark(h, key, published, actor);
+						},
+					},
+					host,
+					keys,
+				),
+		});
+		stops.push(() => created.stop());
+		created.notify(K, true);
+		await putStarted.gate;
+		world.published.delete(K);
+		created.notify(K, false);
+		for (let i = 0; i < 200 && world.agentMarkers.has(K); i++) await Bun.sleep(1);
+		// The put is still streaming, and the agent already holds no marker for the key.
+		expect(world.agentMarkers.has(K)).toBe(false);
+		expect(world.agentFiles.has(path)).toBe(false);
+		expect(pendingAtWithdrawal[0]).toEqual(['.publication/pub/test3_1']);
+		inFlight.release();
+		await created.idle();
+		expect(world.agentFiles.has(path)).toBe(false);
+		expect(world.agentMarkers.has(K)).toBe(false);
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'ok', pending_deletions: [] });
+	});
+
 	test('exclusive work receives the lane pre-empt drain; a queued run starting clears it', async () => {
 		const drained: string[][] = [];
 		const { gate, release } = gated();
@@ -483,5 +546,11 @@ describe('boot wiring', () => {
 			text.lastIndexOf("readString('DEDALO_RECONCILE_SCHEDULER_ENABLED') !== 'false'", at),
 		).toBeGreaterThan(guard);
 		expect(text).toContain("await import('./diffusion/api/media_copy.ts')");
+		// The boot worker withdraws at once, outside the lane (withdrawn consent never waits for a put).
+		const facade = readFileSync(
+			join(import.meta.dir, '..', '..', 'src', 'diffusion', 'api', 'media_copy.ts'),
+			'utf8',
+		);
+		expect(facade).toMatch(/startMediaCopyWorker\(\{[^}]*\bwithdrawNow,/);
 	});
 });

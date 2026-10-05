@@ -2,13 +2,14 @@
  * A FAKE COPY WORLD for the media-copy gates: the work host's pub/ markers and
  * public files, and one agent's files + markers, all in memory. No database, no
  * filesystem, no network — the gates that need the real advisory lock take it
- * themselves. `calls` is the ordered log of agent MUTATIONS that landed (manifest
- * reads and refused puts are not logged).
+ * themselves. `calls` is the ordered log of agent MUTATIONS (manifest reads and puts
+ * refused up front are not logged): a put logs `put <path>` when its body starts.
  *
  * The fake agent enforces the real agent's invariant (publication/host_agent
  * src/media/copy.ts): a put for a key with no agent marker is REFUSED
- * (publication_host.rejected / key_unpublished), so a gate that put before marking
- * goes red here, not only in the live drill.
+ * (publication_host.rejected / key_unpublished) — up front AND again at the landing,
+ * after the body was read (the agent's re-check under its key lock) — so a gate that put
+ * before marking goes red here, not only in the live drill.
  */
 
 import { DedaloError } from '../../src/core/errors/index.ts';
@@ -119,6 +120,13 @@ export function planFrom(world: World): ApplyPlan {
 	return { put, del, mark };
 }
 
+function keyUnpublished(path: string): DedaloError {
+	return new DedaloError('publication_host.rejected', {
+		message: `key_unpublished (test): ${path}`,
+		coordinates: { agent_reason: 'key_unpublished' },
+	});
+}
+
 function reach(world: World): void {
 	if (world.down)
 		throw new DedaloError('publication_host.unreachable', { message: 'agent down (test)' });
@@ -130,15 +138,14 @@ export function worldDeps(world: World): CopyDeps {
 			reach(world);
 			if (!world.agentMarkers.has(keyOf(file.path))) {
 				await file.body.cancel();
-				throw new DedaloError('publication_host.rejected', {
-					message: `key_unpublished (test): ${file.path}`,
-					coordinates: { agent_reason: 'key_unpublished' },
-				});
+				throw keyUnpublished(file.path);
 			}
 			world.actors.add(actor);
 			world.calls.push(`put ${file.path}`);
 			const bytes = await new Response(file.body).text();
 			if (world.duringPut !== null) await world.duringPut(file.path);
+			// The real agent re-checks the marker under its key lock before the rename.
+			if (!world.agentMarkers.has(keyOf(file.path))) throw keyUnpublished(file.path);
 			world.agentFiles.set(file.path, bytes);
 		},
 		async del(_host, paths, actor) {

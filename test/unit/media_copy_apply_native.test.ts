@@ -531,6 +531,61 @@ describe('a grant supersedes a pending withdrawal (republished before the deleti
 	});
 });
 
+describe('withdrawn consent never waits for a put (the grant race closed)', () => {
+	test('unpublished while its grant (mark true) is in flight: re-checked after the mark, undone at once, never put', async () => {
+		for (const viaGrant of [true, false]) {
+			const world = newWorld();
+			world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+			world.published.add(K1);
+			const d = worldDeps(world);
+			const racing: CopyDeps = {
+				...d,
+				mark: async (host, key, published, actor) => {
+					await d.mark(host, key, published, actor);
+					if (published) world.published.delete(K1); // the unpublish lands meanwhile
+				},
+			};
+			const plan: ApplyPlan = viaGrant
+				? planFrom(world)
+				: { put: [desired(world, P1)], del: [], mark: [] };
+			const report = await applyCopyWith(racing, 'pub1', plan);
+			expect(world.calls).toEqual(['mark test3_1 true', 'mark test3_1 false']);
+			expect(world.agentMarkers.has(K1)).toBe(false);
+			expect(world.agentFiles.size).toBe(0);
+			expect(report).toMatchObject({
+				state: 'ok',
+				error: null,
+				put: 0,
+				published: 0,
+				withdrawn: 1,
+				skipped_unpublished: 1,
+				pending_deletions: 0,
+			});
+		}
+	});
+
+	test('a put the agent refuses at landing (marker withdrawn meanwhile): compensated when unpublished, deferred when republished — never a failed round', async () => {
+		for (const stillPublished of [false, true]) {
+			const world = newWorld();
+			world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+			world.published.add(K1);
+			world.duringPut = async () => {
+				world.agentMarkers.delete(K1); // a withdrawal sent outside the put unit
+				if (!stillPublished) world.published.delete(K1);
+			};
+			const report = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
+			expect(world.agentFiles.size).toBe(0);
+			expect(report.error).toBeNull();
+			if (stillPublished) {
+				expect(report).toMatchObject({ state: 'pending', put: 0, deferred: 1 });
+			} else {
+				expect(report).toMatchObject({ state: 'ok', put: 0, compensated: 1 });
+				expect(world.agentMarkers.has(K1)).toBe(false);
+			}
+		}
+	});
+});
+
 describe('the real publication-target lock', () => {
 	test('another session holding media:<host> defers every unit; released, the round completes', async () => {
 		const world = newWorld();
