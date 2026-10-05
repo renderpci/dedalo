@@ -104,7 +104,6 @@ import {
 	publicationHostFingerprintMatches,
 } from '../src/core/publication_host/pairing.ts';
 import type { HostRuntime } from '../src/core/publication_host/runtime.ts';
-import { declareScratchPublicationHostsDir } from '../src/core/publication_host/test_marker.ts';
 import {
 	ensureSuiteMariadb,
 	stopSuiteMariadb,
@@ -175,6 +174,7 @@ import {
 	type UnpublishView,
 } from './lib/publication_host_copy_drill_kit.ts';
 import { writeEngineBundle } from './lib/publication_host_engine_drill_kit.ts';
+import { declareScratchPublicationHostsDir } from './lib/publication_host_scratch.ts';
 
 export { missingBinaries };
 

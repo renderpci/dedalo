@@ -175,8 +175,8 @@ export function publicationHostsBase(): string {
  * (2026-10-05, phase-4 review). In a TEST process the stores must resolve to a DECLARED
  * scratch dir — under the OS temp dir AND carrying PUBLICATION_HOSTS_TEST_MARKER: the
  * in-process seam above, or a child whose `DEDALO_PRIVATE_DIR` was declared with
- * test_marker.ts `declareScratchPublicationHostsDir` (the pair-CLI gate, the drills) — so
- * no test, however it reaches the door (a whole reconcile plan, a whole catalog), sends
+ * `declareScratchPublicationHostsDir` (scripts/lib/publication_host_scratch.ts: the
+ * pair-CLI gate, the drills) — so no test, however it reaches the door (a whole reconcile plan, a whole catalog), sends
  * the installation's bearer to a real paired agent. The marker, not the location, is the
  * guarantee: an installation whose private dir sits under the temp dir (a CI job that runs
  * the checkout from /tmp, so `<private>` = /tmp/private) is still an installation.

@@ -44,6 +44,7 @@ import {
 	renderFacts,
 } from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
 import { ensureTls, type TlsIo } from '../../publication/host_agent/src/provision/tls.ts';
+import { declareScratchPublicationHostsDir } from '../../scripts/lib/publication_host_scratch.ts';
 import {
 	AGENT_BASE_PATH,
 	assertFragmentFingerprint,
@@ -69,7 +70,6 @@ import {
 	saveRegistry,
 } from '../../src/core/publication_host/registry.ts';
 import { splitEngineBundle, writeHostSecrets } from '../../src/core/publication_host/secrets.ts';
-import { declareScratchPublicationHostsDir } from '../../src/core/publication_host/test_marker.ts';
 import {
 	mintTestPki,
 	type TestPki,

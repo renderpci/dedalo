@@ -26,7 +26,6 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { declareScratchPublicationHostsDir } from '../src/core/publication_host/test_marker.ts';
 import { operatorConfig } from './lib/operator_config.ts';
 import {
 	type DrillServer,
@@ -34,6 +33,7 @@ import {
 	probeChildEnv,
 	selectServers,
 } from './lib/publication_host_probe_drill_kit.ts';
+import { declareScratchPublicationHostsDir } from './lib/publication_host_scratch.ts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..');
 const CHILD = join(import.meta.dir, 'lib', 'publication_host_probe_drill_child.ts');

@@ -108,7 +108,6 @@ import {
 	TOKEN_PLACEHOLDER,
 } from '../publication/host_agent/src/provision/render/engine_fragment.ts';
 import { publicationHostFingerprint } from '../src/core/publication_host/pairing.ts';
-import { declareScratchPublicationHostsDir } from '../src/core/publication_host/test_marker.ts';
 import { markProcessesDir } from '../test/helpers/test_media_root.ts';
 import {
 	assertServedDatabase,
@@ -191,6 +190,7 @@ import {
 	sentinelStatus,
 	writeScratchStamp,
 } from './lib/publication_host_lockstep.ts';
+import { declareScratchPublicationHostsDir } from './lib/publication_host_scratch.ts';
 
 const LISTEN_OF: Readonly<Record<Server, Listen>> = { apache: 'tls', nginx: 'unix' };
 const API_PATH = '/api/v1/json';

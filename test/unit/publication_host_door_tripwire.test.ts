@@ -54,12 +54,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
 import { parse } from '@babel/parser';
+import { declareScratchPublicationHostsDir } from '../../scripts/lib/publication_host_scratch.ts';
 import { isTestProcess } from '../../src/config/suite_database.ts';
 import {
 	type PublicationHostRecord,
 	publicationHostsTestRefusal,
 } from '../../src/core/publication_host/registry.ts';
-import { declareScratchPublicationHostsDir } from '../../src/core/publication_host/test_marker.ts';
 import { agentRequest } from '../../src/core/publication_host/transport.ts';
 import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
 import { shippedTextFiles } from '../helpers/shipped_text_corpus.ts';
