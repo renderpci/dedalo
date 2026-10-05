@@ -22,6 +22,10 @@ import {
 	withTargetLock,
 } from '../../src/core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
+import {
+	COPY_MODE_WITHDRAWN,
+	nonCopyRuntime,
+} from '../../src/core/publication_host/media_copy_status.ts';
 import { defaultHostRuntime } from '../../src/core/publication_host/runtime.ts';
 import {
 	type ApplyPlan,
@@ -33,7 +37,6 @@ import {
 	LINKED_QUALITY,
 	MEDIA_COPY_ACTOR,
 	type MediaCopyRuntime,
-	notCopyRuntime,
 	openLocalMediaFile,
 	recordRoundFailure,
 	syncHostWith,
@@ -1079,24 +1082,31 @@ describe('hostTakesCopy (the agent decides; unreachable → the last runtime sta
 	}
 	const down = new DedaloError('publication_host.unreachable', { message: 'down (test)' });
 
-	test('a host the agent says is not copy: n/a, and its pending deletions are cleared (nothing to verify there)', () => {
-		const cur: MediaCopyRuntime = {
-			...emptyRuntime(),
-			state: 'failed',
-			error: DELETION_UNVERIFIED,
-			pending_deletions: [{ path: '.publication/pub/test3_1', since: new Date(T0).toISOString() }],
-		};
-		expect(notCopyRuntime(cur, new Date(T0).toISOString())).toMatchObject({
+	test('a host the agent says is not copy: n/a (stamped) only when it holds nothing; debt is kept as copy_mode_withdrawn', () => {
+		const clean: MediaCopyRuntime = { ...emptyRuntime(), state: 'ok', error: DELETION_UNVERIFIED };
+		expect(nonCopyRuntime(clean, new Date(T0).toISOString())).toMatchObject({
 			state: 'n/a',
 			error: null,
 			pending_deletions: [],
 			last_verified_at: new Date(T0).toISOString(),
 		});
+		const pending = [{ path: '.publication/pub/test3_1', since: new Date(T0).toISOString() }];
+		const cur: MediaCopyRuntime = {
+			...emptyRuntime(),
+			state: 'failed',
+			error: DELETION_UNVERIFIED,
+			pending_deletions: pending,
+		};
+		const withdrawn = nonCopyRuntime(cur, new Date(T0).toISOString());
+		expect(withdrawn).toMatchObject({ state: 'failed', error: COPY_MODE_WITHDRAWN });
+		expect(withdrawn.pending_deletions).toEqual(pending);
+		// never the agent's "not copy" proof: an unreachable agent then still answers true
+		expect(explicitCopyState(withdrawn)).toBe('failed');
 	});
 	test("'n/a' counts only when the agent said so: a default row (another writer created it) is no answer", () => {
 		expect(explicitCopyState(undefined)).toBeUndefined();
 		expect(explicitCopyState(defaultHostRuntime().media_copy)).toBeUndefined();
-		const said = notCopyRuntime(defaultHostRuntime().media_copy, new Date(T0).toISOString());
+		const said = nonCopyRuntime(defaultHostRuntime().media_copy, new Date(T0).toISOString());
 		expect(explicitCopyState(said)).toBe('n/a');
 		expect(explicitCopyState({ ...emptyRuntime(), state: 'ok' })).toBe('ok');
 	});

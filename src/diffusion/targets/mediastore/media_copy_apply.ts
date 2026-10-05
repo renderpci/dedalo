@@ -93,6 +93,7 @@ import {
 	loadRuntime,
 	updateHostRuntime,
 } from '../../../core/publication_host/runtime.ts';
+import { nonCopyRuntime } from '../../../core/publication_host/media_copy_status.ts';
 import { isAgentRefusal } from '../../../core/publication_host/wire.ts';
 import type { CopyPlan, DesiredFile } from './media_copy.ts';
 
@@ -834,18 +835,8 @@ export interface TakesCopyIo {
 }
 
 /**
- * The runtime of a host the agent says is NOT a copy host: `n/a`, stamped with the instant
- * of that answer (`last_verified_at` — the proof explicitCopyState reads), and its pending
- * deletions cleared — such an agent refuses every media route, so nothing recorded there
- * can be withdrawn or verified (a `shared` host serves the work host's own markers).
- */
-export function notCopyRuntime(cur: MediaCopyRuntime, at: string): MediaCopyRuntime {
-	return { ...cur, state: 'n/a', error: null, pending_deletions: [], last_verified_at: at };
-}
-
-/**
  * The state a runtime row PROVES. `n/a` is also the DEFAULT of every row another writer
- * creates (api_reconcile, the probe), so it counts only when stamped (notCopyRuntime sets
+ * creates (api_reconcile, the probe), so it counts only when stamped (nonCopyRuntime sets
  * `last_verified_at`; every copy-flow write lifts `n/a` to `pending` — asCopyHost — so a
  * stamped `n/a` is the agent's word). An unstamped `n/a` is no answer: undefined.
  */
@@ -860,11 +851,16 @@ export function explicitCopyState(
 const realTakesCopyIo: TakesCopyIo = {
 	status: (name) => hostStatus(name),
 	lastState: async (name) => explicitCopyState((await loadRuntime())[name]?.media_copy),
+	// The agent's non-copy answer (media_copy_status.ts nonCopyRuntime): `n/a`, stamped, only
+	// when the host holds nothing — its media routes are refused now, so nothing it holds can
+	// be withdrawn or verified. A host withdrawn from copy mode while it still holds bytes or
+	// unverified deletions is `failed` / copy_mode_withdrawn, its debt kept (red, never a
+	// silent n/a: the old copy root may still be served).
 	markNotCopy: async (name) => {
 		const at = new Date().toISOString();
 		await updateHostRuntime(name, (cur) => ({
 			...cur,
-			media_copy: notCopyRuntime(cur.media_copy, at),
+			media_copy: nonCopyRuntime(cur.media_copy, at),
 		}));
 	},
 };

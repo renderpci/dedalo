@@ -59,8 +59,16 @@ export const HOST_CHECK_IDS = Object.freeze([
 
 export type HostCheckId = (typeof HOST_CHECK_IDS)[number];
 
+/**
+ * Checks a widget DECORATOR appends after the fixed list, from the runtime file — never
+ * built here, and not on every row (media_copy_status.ts withMediaCopyCheck: phase 5).
+ */
+export const DECORATOR_CHECK_IDS = Object.freeze(['media_copy'] as const);
+
+export type DecoratorCheckId = (typeof DECORATOR_CHECK_IDS)[number];
+
 export interface HostCheck {
-	id: HostCheckId;
+	id: HostCheckId | DecoratorCheckId;
 	state: CheckState;
 	detail?: string;
 }
