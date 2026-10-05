@@ -982,7 +982,8 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 	'scripts/publication_host_agent_drill.ts': {
 		modes: ['0o700'],
 		kind: 'not_media',
-		reason: "agent drill copy pass: the engine children's scratch private dir, in the drill's scratch dir, NOT under the media root",
+		reason:
+			"agent drill copy pass: the engine children's scratch private dir, in the drill's scratch dir, NOT under the media root",
 	},
 	'scripts/publication_host_engine_drill.ts': {
 		modes: ['0o700', '0o700', '0o700'],
