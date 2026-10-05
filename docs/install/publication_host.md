@@ -386,6 +386,90 @@ Each API keeps its releases side by side, with its configuration outside them:
 - The configuration in `shared/` survives every release. A release that tries to ship its
   own copy of the v1 configuration is refused.
 
+## Keeping the Publication APIs in step with the work system
+
+After every confirmed code update of the work system, and after every restore, the work
+system sends the matching Publication API releases to each paired publication host: v2
+first, then v1. The two are independent. The publication hosts panel shows the work
+system's own release beside each host's two API releases, and shows each failure in red
+without hiding the API that succeeded.
+
+- **What is sent is exactly what the update verified.** When the code updater installs a
+  release, it records a checksum of every Publication API file. Before every push, each
+  file is checked again. If any file changed on disk since then (a hand edit, a partial
+  copy), the push is refused, the panel names the file, and nothing is sent.
+- **A development checkout cannot push.** A work system that was not installed through
+  the code updater has no verified release to send. Install a release with the updater
+  first.
+- **The publication host never downloads packages.** The work system assembles the v2
+  libraries once per release in its code backup directory and sends them inside the
+  release.
+- **When a host was down during the update,** use **Push API releases** in the panel once
+  it is back. A scheduled check reports any host whose APIs are behind, but it never sends
+  code by itself.
+- **Restoring an older version** of the work system sends the older APIs too, so the API
+  always matches the data it publishes.
+
+## Copy mode: a verified copy of the published media
+
+Choose the `copy` media mode in the instance declaration when the publication host
+cannot mount the work system's media storage. The agent then keeps its own copy:
+
+- **Only what is public is copied.** That means files in the public quality folders,
+  belonging to published records. Originals and working files never leave the work
+  system. The rule is the same one the web server applies in shared mode, so both modes
+  serve exactly the same files.
+- **The copy is served through the same rules.** The agent keeps the publication markers
+  beside the copy. Apply the media rules to a copy host exactly as you would to a shared
+  one: the panel renders them for the copy's directory.
+- **Publishing** sends new files shortly after the record is published. A periodic check
+  (every ten minutes) compares the host's file list with what should be there and sends
+  anything missed, as long as the reconcile scheduler is on
+  (`DEDALO_RECONCILE_SCHEDULER_ENABLED`). Every file is verified by checksum before it
+  replaces anything.
+- **Unpublishing removes the bytes, and proves it:**
+  1. The record's marker is removed first, so its files answer "not found" on the very
+     next request.
+  2. The files are deleted.
+  3. The deletion is confirmed against the host's file list.
+
+  Until it is confirmed, the panel shows the deletion as pending. If it is still not
+  confirmed after one check period, the panel turns red. A deletion is never reported as
+  done before it is confirmed.
+- **Reconcile media copy** in the panel runs the comparison on demand.
+
+## Checking the gate from the public side
+
+Installed rules prove nothing until a visitor's request is refused. The work system
+checks this through the public address, exactly as a visitor would.
+
+1. In the publication hosts panel, use **Edit settings** to set the host's **public
+   URL** (the site's origin only, such as `https://www.example.org`, with no path) and
+   two **probe files**, written as they appear in a file's address after
+   `/dedalo/<media folder>/`:
+    - a file of a **published** record, in a public quality;
+    - a file of an **unpublished** record, in a public quality.
+
+   Choose records whose publication state you do not expect to change.
+2. Before each check, the work system confirms the two files still mean what you said:
+   the first record is still published, the second is not, and both are in a public
+   quality. If they no longer do, the check says **unknown** and names the reason, and no
+   request is sent. Choose new files.
+3. The check passes only when the published file loads and the unpublished one answers
+   404. Any other pair of answers is a **failure** (red), with both answers shown.
+
+The check runs after every rules apply, after every batch of copy-mode changes, on demand
+(**Probe public gate**), and on a schedule (every fifteen minutes, while the reconcile
+scheduler is on). The panel's **Public gate** row shows the last answer and when it was
+taken.
+
+!!! note "A public address that points inside the network"
+    If the public address resolves, from the work system, to an internal address (internal
+    DNS, a NAT shortcut), the check refuses it and says **unknown**: *not a public host …
+    a private address*. It never treats an internal address as public: a check that
+    reached the site from inside would show what an insider sees, not what the public
+    sees.
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -408,3 +492,10 @@ Each API keeps its releases side by side, with its configuration outside them:
 | `dedalo:pair-publication-host` says a file is readable by group or others | the token file, the fragment holding the token, or the bundle copy is not `0600` | `chown <engine user>` it, then `chmod 600` it, and run the command again |
 | `dedalo:pair-publication-host` says a file could not be read (`EACCES`) | the copy is owned by root or another account, so the Dédalo user cannot read it | `chown <engine user>` the copy and keep it `chmod 600`; never loosen the mode |
 | `dedalo:pair-publication-host` names a fingerprint mismatch | the token or instance you gave is not this host's | copy the fragment and the token again from the publication host |
+| an API push is refused, naming a file | a Publication API file changed on disk after the update was verified | reinstall the release with the code updater; never edit the API files in place |
+| an API push is refused: no verified release | the work system runs from a development checkout, or was installed before this feature | install a release with the code updater |
+| one API is up to date, the other is red | each API installs independently | read the error in the panel, fix it, push again |
+| a pending deletion turns red | the agent could not be reached, or the deletion was not confirmed | the file already answers "not found" (its marker is gone); bring the host back and the next check completes the deletion |
+| the public check says **unknown**, naming a path | one of the two chosen files changed publication state, or is not in a public quality | choose two new files in the panel |
+| the public check says **unknown**: *not a public host* | the public address resolves to an internal address from the work system, or does not resolve | use the address visitors use, resolvable from outside; the check never accepts an internal one |
+| the public check fails: the unpublished file is publicly served | the gate is not active on the public site: rules not applied, the media folder under a document root, or another virtual host serving it | apply the rules from the panel, check the virtual host, and run the check again |
