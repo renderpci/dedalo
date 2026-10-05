@@ -469,6 +469,16 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   php-cli, network for the engine's v2 dependency builds, and the suite database (the tier
   builds it first). Missing = RED. Runs ONLY in the CI image, like the agent drill:
   `bun run ci:local --docker --instance`.
+  Then `bun run test:pubhost:probe` (`scripts/publication_host_probe_drill.ts`, no
+  database): the publication-host public-URL probe (`engineering/PUBLICATION_HOST_SPEC.md`
+  §7) driven against a REAL Apache and a REAL nginx serving the engine-rendered include.
+  Its engine half runs in a child process whose `DEDALO_PRIVATE_DIR` and marked
+  `DEDALO_TEST_MEDIA_ROOT` are the drill's own scratch dirs. The guard is not bypassed:
+  the drill passes `probePublicGate` only `fetchGuardedText`'s two seams, as that call's
+  optional `deps` argument (nothing process-wide): a resolver for its own names and a
+  forwarder that accepts only requests pinned to the vetted public address. So the
+  private-address refusal is proven in the same run. Same runner requirement as the media
+  drill; a missing binary is RED.
 - **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers. Everything it
   runs is twinned hosted — including the `test/integration/**` MariaDB legs, which ran
   nowhere else until PUB-05 moved them onto the suite's own MariaDB server and into the

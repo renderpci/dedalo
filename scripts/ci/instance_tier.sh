@@ -180,5 +180,18 @@ engine_rc=0
 bun run test:pubhost:engine || engine_rc=$?
 [ "$engine_rc" -eq 0 ] || { echo "== instance_tier: RED in the publication-host engine drill (exit $engine_rc)"; tier_status=1; }
 
+# ── STAGE — THE PUBLIC-URL PROBE ON LIVE SERVERS (publication host phase 6) ───
+#
+# scripts/publication_host_probe_drill.ts runs the engine's probePublicGate
+# (engineering/PUBLICATION_HOST_SPEC.md §7) against a REAL Apache and a REAL nginx serving
+# the engine-rendered publication-host include. Rows: gated → ok, open gate → failed,
+# gate down → never ok; invalid probe files and a private address → unknown, with nothing
+# sent. The engine half runs in a child process on scratch private and media roots. No
+# database. Same binaries as the media drill; a missing one is RED.
+echo "== instance_tier: public-URL probe drill (bun run test:pubhost:probe)"
+probe_rc=0
+bun run test:pubhost:probe || probe_rc=$?
+[ "$probe_rc" -eq 0 ] || { echo "== instance_tier: RED in the public-URL probe drill (exit $probe_rc)"; tier_status=1; }
+
 [ "$tier_status" -eq 0 ] || { echo "== instance_tier: RED"; exit 1; }
 echo "== instance_tier: OK"
