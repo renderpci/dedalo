@@ -979,11 +979,16 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 		kind: 'not_media',
 		reason: "engine drill: the engine bundle's dir (holds a client key) in the drill's scratch dir",
 	},
+	'scripts/publication_host_agent_drill.ts': {
+		modes: ['0o700'],
+		kind: 'not_media',
+		reason: "agent drill copy pass: the engine children's scratch private dir, in the drill's scratch dir, NOT under the media root",
+	},
 	'scripts/publication_host_engine_drill.ts': {
-		modes: ['0o700', '0o700'],
+		modes: ['0o700', '0o700', '0o700'],
 		kind: 'not_media',
 		reason:
-			"engine drill: the engine's scratch private dir and the pairing-fragment dir (carries tokens), NOT under the media root",
+			"engine drill: the engine's scratch private dir, the pairing-fragment dir (carries tokens) and the lockstep pass's scratch backup root, NOT under the media root",
 	},
 	'src/core/media/jobs.ts': {
 		modes: ['0o750'],
