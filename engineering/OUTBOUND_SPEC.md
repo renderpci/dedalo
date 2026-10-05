@@ -112,7 +112,12 @@ policy, in this order:
    `rejectUnauthorized: true`, the certificate checked against the REGISTRY host.
    The explicit `true` is load-bearing: measured on Bun 1.4.2, it is what keeps
    verification on when `NODE_TLS_REJECT_UNAUTHORIZED=0` is in the environment.
-   A unix-socket host is dialled at its socket. No caller text reaches the URL.
+   A unix-socket host is dialled at its socket, and only after the filesystem
+   vouches for it (`assertSocketSafe`): the path exists (else reason `transport`),
+   `lstat` says it IS a socket (a symlink or any other node is refused), and its
+   directory is writable by nobody but its owner (group/other write bits refused,
+   except a root-owned sticky directory, `/tmp`'s shape) — else reason
+   `socket_perms`. No caller text reaches the URL.
    A TCP host without its engine bundle, or with one the secrets store refuses,
    is `publication_host.unconfigured`.
 3. **One request.** `redirect: 'manual'`; any 3xx is refused, its body cancelled
@@ -126,7 +131,7 @@ caller passes it only after proving the pairing on the agent's unauthenticated
 `/health` (`PUBLICATION_HOST_SPEC.md` §2 rule 3) — which is why `agentRequest`
 has exactly one production holder (§6). A non-2xx answer is returned for that
 client to map; transport failures are `publication_host.unreachable` (reason
-`transport`, `tls` or `redirect`), `publication_host.timeout` and
+`transport`, `tls`, `redirect` or `socket_perms`), `publication_host.timeout` and
 `publication_host.failed` (reason `body_cap`), all minted by
 `src/core/publication_host/wire.ts`, with log-only coordinates that never carry
 the bearer or key material.

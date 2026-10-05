@@ -24,7 +24,8 @@
  *   5. THE DOOR IS REGISTERED where the outbound gates and the spec look for it.
  *   6. THE DOOR IS DOCUMENTED ONCE, AND THE DOCS ARE HELD TO CODE (appended blocks, phase-3
  *      Task 10): OUTBOUND_SPEC's door count equals its §2 table, §2.1 and the §6 row exist
- *      once, §5 names the door module; every path a PUBLICATION_HOST_SPEC §8 "Built" row
+ *      once, §2.1 names every `unreachable` reason the door mints, §5 names the door
+ *      module; every path a PUBLICATION_HOST_SPEC §8 "Built" row
  *      names exists; the operator page pairs with the CLI's verbs, flags and invoking user.
  *
  * The behaviour is driven in publication_host_transport_native; who may HOLD the door is
@@ -425,6 +426,27 @@ describe('the agent channel door is documented once, where it is read', () => {
 		// A payload's secrets are the widget gate's (publication_host_widget_native), not this file's.
 		expect(row).not.toMatch(/payload/i);
 		expect(row).toContain('§8');
+	});
+
+	test('OUTBOUND_SPEC §2.1 names every `unreachable` reason the door mints (socket_perms included)', async () => {
+		const source = read('src/core/publication_host/transport.ts');
+		const reasons = new Set<string>();
+		for (const chunk of source.split('failure(').slice(1)) {
+			if (!chunk.trimStart().startsWith("'publication_host.unreachable'")) continue;
+			const literal = /reason:\s*'(\w+)'/.exec(chunk.slice(0, 200))?.[1];
+			if (literal !== undefined) reasons.add(literal);
+		}
+		for (const m of source.matchAll(/function transportReason[\s\S]*?\? '(\w+)' : '(\w+)'/g)) {
+			reasons.add(m[1] as string);
+			reasons.add(m[2] as string);
+		}
+		// anti-vacuity: transport, tls, redirect, socket_perms at least
+		expect(reasons.size).toBeGreaterThanOrEqual(4);
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const section = spec.slice(spec.indexOf('### 2.1 '), spec.indexOf('\n## 3.'));
+		const missing = [...reasons].filter((r) => !section.includes(`\`${r}\``));
+		expect(missing).toEqual([]);
+		expect(section).toContain('assertSocketSafe');
 	});
 
 	test('OUTBOUND_SPEC: §5 says the channel is a door, naming the door module', async () => {
