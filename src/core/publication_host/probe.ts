@@ -26,6 +26,20 @@
  * No cache-busting header, on purpose: a CDN still serving an unpublished file is
  * exactly the exposure this probe exists to see.
  *
+ * COPY HOSTS — A 404 MUST BE THE GATE'S, NOT ABSENCE'S. On a `copy`-mode host the
+ * unpublished file is, by construction, never copied (the desired set holds published
+ * keys only, the agent refuses an unmarked put), so its public URL answers 404 whether
+ * Rule B is installed or not. After the two requests the probe asks the host's agent
+ * (`copyHolding`): not a copy host (the agent's word, else a STAMPED `n/a` in the runtime
+ * — the last proven answer) → the 404 stands; a copy host whose manifest LISTS the
+ * unpublished file (a pending deletion: exactly the exposure §7 exists to see) → the 404
+ * proves the gate; a copy host that does not hold it, or an agent that cannot be asked
+ * → that 404 is `unknown` with the reason, never `ok`. Only a 404 is downgraded: a 2xx
+ * is the gate OPEN whatever the agent holds. (A canary the agent holds unmarked, so a
+ * copy host can prove its gate on every run, is not built: an unmarked file under a
+ * public quality needs synthetic bytes and a planner exemption — never an unpublished
+ * record's real bytes on the public machine.)
+ *
  * VERDICT. A definite failure on either side (the unpublished file served → the
  * gate is OPEN) is `failed` even when the other side is `unknown`; otherwise any
  * unknown side is `unknown`; otherwise `ok`. A 2xx is recorded as 200.
@@ -66,15 +80,24 @@ import {
 	isSsrfRefusal,
 	type PinnedHopDeps,
 } from '../security/ssrf_guard.ts';
+import { hostMediaManifest, hostStatus } from './agent_client.ts';
 import { getHost, loadRegistry, type PublicationHostRecord } from './registry.ts';
-import { type HostRuntime, updateHostRuntime } from './runtime.ts';
+import { type HostRuntime, loadRuntime, updateHostRuntime } from './runtime.ts';
 
 export type GateProbe = HostRuntime['probe'];
 export type ProbeCause = 'apply_rules' | 'copy_batch';
 
-/** Injectable seams (production supplies none): the guard's resolver/fetch + the deadline. */
+/**
+ * What the host holds of the unpublished probe file (the COPY HOSTS clause above):
+ * `not_copy` = not a copy-mode host; `held` / `not_held` = a copy host's manifest lists /
+ * does not list it; `{unknown}` = the agent could not tell.
+ */
+export type CopyHolding = 'not_copy' | 'held' | 'not_held' | { readonly unknown: string };
+
+/** Injectable seams (production supplies none): the guard's resolver/fetch, the deadline, the agent. */
 export interface ProbeDeps extends PinnedHopDeps {
 	readonly timeoutMs?: number;
+	readonly copyHolding?: (record: PublicationHostRecord, path: string) => Promise<CopyHolding>;
 }
 
 /**
@@ -321,6 +344,67 @@ function verdict(published: Answer, unpublished: Answer, at: string): GateProbe 
 	return { ...statuses, state: 'ok', detail: null };
 }
 
+// ---------------------------------------------------------------------------
+// Copy hosts: a 404 must be the gate's, not absence's
+// ---------------------------------------------------------------------------
+
+const NOT_HELD_DETAIL =
+	'the copy host does not hold the unpublished probe file (a 404 proves absence, not the gate)';
+
+/** The agent's word on copy mode; unreachable → the last PROVEN (stamped) `n/a`, else unknown. */
+async function takesCopy(name: string): Promise<boolean | { unknown: string }> {
+	try {
+		return (await hostStatus(name)).media.mode === 'copy';
+	} catch {
+		const row = ((await loadRuntime().catch(() => ({}))) as Record<string, HostRuntime>)[name];
+		const provenNotCopy =
+			row?.media_copy.state === 'n/a' && row.media_copy.last_verified_at !== null;
+		return provenNotCopy
+			? false
+			: { unknown: 'the agent could not be asked whether it copies media' };
+	}
+}
+
+async function manifestHolds(name: string, path: string): Promise<CopyHolding> {
+	try {
+		const manifest = await hostMediaManifest(name);
+		return manifest.entries.some((entry) => entry.path === path) ? 'held' : 'not_held';
+	} catch {
+		return { unknown: "the copy host's manifest could not be read" };
+	}
+}
+
+/** Production `copyHolding`: status (or the stamped runtime), then the manifest of a copy host. */
+export async function agentCopyHolding(
+	record: PublicationHostRecord,
+	path: string,
+): Promise<CopyHolding> {
+	const copy = await takesCopy(record.name);
+	if (copy === false) return 'not_copy';
+	return copy === true ? manifestHolds(record.name, path) : copy;
+}
+
+function holdingDetail(holding: CopyHolding): string | null {
+	if (holding === 'not_copy' || holding === 'held') return null;
+	return holding === 'not_held' ? NOT_HELD_DETAIL : holding.unknown;
+}
+
+/**
+ * A 404 on the unpublished side counts only when the host could have served the file;
+ * the agent is asked only then (any other answer stands as it is).
+ */
+async function gateAnswer(
+	record: PublicationHostRecord,
+	path: string,
+	unpublished: Answer,
+	deps: ProbeDeps,
+): Promise<Answer> {
+	if (!('status' in unpublished) || unpublished.status !== 404) return unpublished;
+	// AFTER the request: a file listed now was there then (an unmarked put is refused).
+	const detail = holdingDetail(await (deps.copyHolding ?? agentCopyHolding)(record, path));
+	return detail === null ? unpublished : { unknown: detail };
+}
+
 function unknownProbe(at: string, detail: string): GateProbe {
 	return { state: 'unknown', at, published_status: null, unpublished_status: null, detail };
 }
@@ -339,7 +423,7 @@ export async function probeHostRecord(
 	const paths = record.probe as { published: string; unpublished: string };
 	const published = await publicAnswer(probeUrl(origin, paths.published), deps);
 	const unpublished = await publicAnswer(probeUrl(origin, paths.unpublished), deps);
-	return verdict(published, unpublished, at);
+	return verdict(published, await gateAnswer(record, paths.unpublished, unpublished, deps), at);
 }
 
 async function probeAndRecord(record: PublicationHostRecord, deps: ProbeDeps): Promise<GateProbe> {

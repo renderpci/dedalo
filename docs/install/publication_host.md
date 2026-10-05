@@ -462,7 +462,9 @@ checks this through the public address, exactly as a visitor would.
 3. The check passes only when the published file loads and the unpublished one answers
    404. A definite wrong answer from either file is a **failure** (red), with both answers
    shown, even when the other file could not be checked. Otherwise, a file that could not
-   be reached or validated makes the check **unknown**, never a pass.
+   be reached or validated makes the check **unknown**, never a pass. On a **copy** server
+   the unpublished file is normally not there at all, so its "not found" proves nothing:
+   the check then says **unknown** (see Troubleshooting).
 
 The check runs after every rules apply, after every batch of copy-mode changes, on demand
 (**Probe public gate**), and on a schedule (every fifteen minutes, while the reconcile
@@ -504,5 +506,6 @@ taken.
 | a pending deletion turns red: the agent could not be reached | the publication server's agent was down or unreachable when the record was unpublished | the marker may still be there, so the files may **STILL BE PUBLIC**; bring the host back and run **Reconcile media copy** in the panel. Until then, if consent was withdrawn, take the host or its media offline |
 | a pending deletion turns red: the deletion was not confirmed | the marker was removed but the host's file list still lists the files | the files already answer "not found" (the marker is gone); bring the host back and the next check completes the deletion |
 | the public check says **unknown**, naming a path | one of the two chosen files changed publication state, or is not in a public quality | choose two new files in the panel |
+| the public check says **unknown**: *the copy host does not hold the unpublished probe file* | the publication server is in **copy** mode: it only ever receives published files, so the unpublished one is not there and its "not found" proves nothing about the rules | expected on a copy host: the check can prove the rules there only while the server still holds an unpublished file waiting for deletion. It never reports a pass it cannot prove |
 | the public check says **unknown**: *not a public host* | the public address resolves to an internal address from the work system, or does not resolve | use the address visitors use, resolvable from outside; the check never accepts an internal one |
 | the public check fails: the unpublished file is publicly served | the gate is not active on the public site: rules not applied, the media folder under a document root, or another virtual host serving it | apply the rules from the panel, check the virtual host, and run the check again |

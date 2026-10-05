@@ -28,8 +28,10 @@ import {
 	publicGateCheck,
 } from '../../src/core/publication_host/host_status.ts';
 import {
+	agentCopyHolding,
 	BARE_ORIGIN_REFUSAL,
 	bareOrigin,
+	type CopyHolding,
 	copyBatchChanged,
 	NEVER_PROBED,
 	PROBE_MAX_AGE_MS,
@@ -47,7 +49,7 @@ import {
 	type PublicationHostRecord,
 	saveRegistry,
 } from '../../src/core/publication_host/registry.ts';
-import { loadRuntime } from '../../src/core/publication_host/runtime.ts';
+import { loadRuntime, updateHostRuntime } from '../../src/core/publication_host/runtime.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { PinnedFetchInit } from '../../src/core/security/ssrf_guard.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
@@ -83,12 +85,18 @@ interface Seen {
 	range: string | null;
 }
 
+/**
+ * The guard seams + the agent's copy answer. Default `not_copy` (a shared host: the files
+ * are the work tree's); the COPY HOSTS legs pass their own.
+ */
 function fakeDeps(
 	answers: Record<string, Answer>,
 	seen: Seen[] = [],
 	address: string = PUBLIC_IP,
+	holding: CopyHolding = 'not_copy',
 ): ProbeDeps {
 	return {
+		copyHolding: async () => holding,
 		lookup: async () => [{ address, family: 4 }],
 		fetch: async (url: string, init: PinnedFetchInit) => {
 			const { pathname, search } = new URL(url);
@@ -389,6 +397,61 @@ describe('probeHostRecord (P2): through the PUBLIC door, as the public sees it',
 	test('no public_url → unknown, nothing sent', async () => {
 		const probe = await probeHostRecord(record({ public_url: null }), fakeDeps({}));
 		expect(probe).toMatchObject({ state: 'unknown', detail: 'the public URL is not set' });
+	});
+});
+
+describe("COPY HOSTS: a 404 must be the gate's, never absence's (§7)", () => {
+	test('a copy host that does not hold the unpublished file → unknown with the reason, NEVER ok', async () => {
+		const probe = await probeHostRecord(
+			record(),
+			fakeDeps({ [PUB_FILE]: partial, [UNPUB_FILE]: notFound }, [], PUBLIC_IP, 'not_held'),
+		);
+		expect(probe.state).toBe('unknown');
+		expect(probe.detail).toContain('does not hold the unpublished probe file');
+		expect(probe.detail).toContain('proves absence, not the gate');
+	});
+
+	test('a copy host whose manifest lists it (a pending deletion) → the 404 proves the gate: ok', async () => {
+		const probe = await probeHostRecord(
+			record(),
+			fakeDeps({ [PUB_FILE]: partial, [UNPUB_FILE]: notFound }, [], PUBLIC_IP, 'held'),
+		);
+		expect(probe.state).toBe('ok');
+		expect(probe.unpublished_status).toBe(404);
+	});
+
+	test('an agent that cannot tell → unknown; a 2xx is the gate OPEN whatever the agent holds', async () => {
+		const asked = await probeHostRecord(
+			record(),
+			fakeDeps({ [PUB_FILE]: partial, [UNPUB_FILE]: notFound }, [], PUBLIC_IP, {
+				unknown: 'agent down (test)',
+			}),
+		);
+		expect(asked.state).toBe('unknown');
+		expect(asked.detail).toContain('agent down (test)');
+		const open = await probeHostRecord(
+			record(),
+			fakeDeps({ [PUB_FILE]: partial, [UNPUB_FILE]: partial }, [], PUBLIC_IP, 'not_held'),
+		);
+		expect(open.state).toBe('failed');
+		expect(open.detail).toContain('the gate is OPEN');
+	});
+
+	test('the PRODUCTION answer: unreachable agent + no proven n/a → unknown; a stamped n/a → not_copy', async () => {
+		saveRegistry({ version: 1, hosts: [record()] });
+		expect(await agentCopyHolding(record(), UNPUB_PATH)).toEqual({
+			unknown: 'the agent could not be asked whether it copies media',
+		});
+		const probe = await probeHostRecord(record(), {
+			...fakeDeps({ [PUB_FILE]: partial, [UNPUB_FILE]: notFound }),
+			copyHolding: undefined,
+		});
+		expect(probe.state).toBe('unknown');
+		await updateHostRuntime('probe_host', (cur) => ({
+			...cur,
+			media_copy: { ...cur.media_copy, state: 'n/a', last_verified_at: new Date().toISOString() },
+		}));
+		expect(await agentCopyHolding(record(), UNPUB_PATH)).toBe('not_copy');
 	});
 });
 

@@ -46,7 +46,11 @@ import {
 	type PublicationHostRecord,
 	updateRegistry,
 } from '../../src/core/publication_host/registry.ts';
-import { type HostRuntime, loadRuntime } from '../../src/core/publication_host/runtime.ts';
+import {
+	type HostRuntime,
+	loadRuntime,
+	updateHostRuntime,
+} from '../../src/core/publication_host/runtime.ts';
 import { makeMarkerKey } from '../../src/diffusion/targets/mediastore/media_index.ts';
 import { markMediaRoot } from '../../test/helpers/media_scratch_root.ts';
 import {
@@ -421,8 +425,21 @@ async function row(server: DrillServer, name: string, check: Check): Promise<num
 	return problem === null ? 0 : 1;
 }
 
+/**
+ * The drill host is a SHARED host (the server serves the work tree) and has no agent: the
+ * runtime carries the agent's last proven word, a stamped `n/a` — else the probe's COPY
+ * HOSTS clause (probe.ts) would rightly refuse to read a 404 as the gate's.
+ */
+async function declareShared(): Promise<void> {
+	await updateHostRuntime(HOST, (cur) => ({
+		...cur,
+		media_copy: { ...cur.media_copy, state: 'n/a', last_verified_at: new Date().toISOString() },
+	}));
+}
+
 async function drillServer(server: DrillServer, ctx: DrillContext): Promise<number> {
 	putHost(freshRecord(ctx));
+	await declareShared();
 	let red = 0;
 	let live: LiveServer | null = await startServer(
 		server,

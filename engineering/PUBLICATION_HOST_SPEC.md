@@ -515,6 +515,17 @@ one (must answer 404): `src/core/publication_host/probe.ts` (`validateProbePaths
   private address*), never a pass. The guard is not relaxed for the institution's own
   site: a probe that reached an internal address would prove what an insider sees, not
   what the public sees.
+- **Copy hosts: a 404 must be the gate's, not absence's.** On a `copy`-mode host the
+  unpublished file is never copied (§5.2 desired set; the agent refuses an unmarked put),
+  so its URL answers 404 with or without Rule B. After a 404 the engine asks the agent
+  (`probe.ts` `agentCopyHolding`): not a copy host (`status.media.mode`, or, unreachable, a
+  stamped `n/a` runtime row) → the 404 stands; a copy host whose `media.manifest` lists the
+  file (a pending deletion — the exposure this probe exists to see) → the 404 proves the
+  gate; a copy host that does not hold it, or an agent that cannot tell → `unknown`
+  (*the copy host does not hold the unpublished probe file …*), never `ok`. A 2xx is
+  `failed` whatever the agent holds. Not built: a synthetic unmarked canary the agent
+  holds so a copy host proves its gate on every run (needs synthetic bytes and a planner
+  exemption; never an unpublished record's real bytes on the public machine).
 - **Verdict** (`probe.ts` `verdict()`, in this order): a definite bad answer on either side
   (published not 2xx, unpublished not 404) is `failed` (red), with both statuses recorded,
   even when the other side is `unknown`; otherwise any transport or validation failure is
