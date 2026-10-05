@@ -14,9 +14,11 @@
  *  4. every agent answer maps onto the right code; the agent's prose and the host name never
  *     reach the wire; an unknown reason is never echoed;
  *  5. `rejected` / `failed` always carry a closed `details.reason`, because only wire.ts can
- *     mint them: no other file spells either literal, the AGENT_ANSWER_CODES constant is read
- *     only by the declared classifiers (none of which constructs a DedaloError), and
- *     hostError's type excludes both. A hand-built throw would render a literal `${reason}`.
+ *     mint them: no other file spells either literal or builds a `publication_host.` code
+ *     dynamically, EVERY wire.ts export that can yield an answer code (AGENT_ANSWER_CODES,
+ *     PUBLICATION_HOST_CODES; the status→code classifier is module-private) is read only by
+ *     the declared classifiers (none of which constructs a DedaloError), and hostError's type
+ *     excludes both. A hand-built throw would render a literal `${reason}`.
  *
  * HERMETIC: no DB, no network; reads tracked source + the label catalogs.
  */
@@ -37,7 +39,6 @@ import {
 	AGENT_REASON_SENTENCES,
 	agentReason,
 	agentResponseError,
-	codeForAgentResponse,
 	DETAIL_REASONS,
 	ENGINE_REASON_SENTENCES,
 	engineFailure,
@@ -55,12 +56,21 @@ const TABLE: Record<string, ErrorSpec> = ERROR_REGISTRY;
 const WIRE = 'src/core/publication_host/wire.ts';
 
 /**
- * The ONLY files besides wire.ts that may name AGENT_ANSWER_CODES — classifiers, never
- * minters. Exact in both directions: host_status.ts builds its failure-code maps from it.
+ * Every wire.ts export whose VALUE can be an answer code (rejected / failed). A file outside
+ * wire.ts that holds one could feed it to `new DedaloError(` without `details.reason`.
  */
-const AGENT_ANSWER_CODE_READERS: Record<string, string> = {
-	'src/core/publication_host/host_status.ts':
-		'classifies agent-answer codes into reachable/pairing check states; mints nothing',
+const ANSWER_CODE_SOURCES = ['AGENT_ANSWER_CODES', 'PUBLICATION_HOST_CODES'] as const;
+
+/**
+ * The ONLY files besides wire.ts that may name an ANSWER_CODE_SOURCES export — classifiers,
+ * never minters — and exactly which ones. Exact in both directions: host_status.ts builds its
+ * failure-code maps from AGENT_ANSWER_CODES.
+ */
+const ANSWER_CODE_READERS: Record<string, { reads: string[]; why: string }> = {
+	'src/core/publication_host/host_status.ts': {
+		reads: ['AGENT_ANSWER_CODES'],
+		why: 'classifies agent-answer codes into reachable/pairing check states; mints nothing',
+	},
 };
 
 function readLabels(path: string): Record<string, string> {
@@ -266,7 +276,6 @@ describe('agent answer → code', () => {
 
 	test('every status/reason pair lands on its code, with a closed reason and no prose or host name on the wire', () => {
 		for (const [label, status, body, code] of CASES) {
-			expect(codeForAgentResponse(status, parseAgentProblem(body)), label).toBe(code);
 			const error = agentResponseError('museum_a', status, body);
 			expect(error.code, label).toBe(code);
 			expect(DETAIL_REASONS.has(String(error.details?.reason)), label).toBe(true);
@@ -397,8 +406,12 @@ describe('engine-side refusals', () => {
 
 describe('source law: rejected / failed are minted only by wire.ts', () => {
 	const ANSWER_LITERAL = /['"`]publication_host\.(?:rejected|failed)['"`]/;
-	const READER = /\bAGENT_ANSWER_CODES\b/;
+	const READER = new RegExp(`\\b(?:${ANSWER_CODE_SOURCES.join('|')})\\b`, 'g');
+	const reads = (code: string): string[] =>
+		[...new Set([...code.matchAll(READER)].map((m) => m[0]))].sort();
 	const CONSTRUCTS = /\bnew\s+DedaloError\s*\(/;
+	/** A family code assembled at runtime: `publication_host.${x}` or 'publication_host.' + x. */
+	const DYNAMIC = /`publication_host\.\$\{|['"`]publication_host\.['"`]\s*\+/;
 
 	/** Non-test TypeScript under the three trees the engine ships (comments stripped, literals kept). */
 	function sources(): Map<string, string> {
@@ -421,8 +434,18 @@ describe('source law: rejected / failed are minted only by wire.ts', () => {
 		expect(ANSWER_LITERAL.test(stripComments("// 'publication_host.failed'\nconst a = 1;"))).toBe(
 			false,
 		);
-		expect(READER.test('const m = new Map(AGENT_ANSWER_CODES.map((c) => [c, 1]));')).toBe(true);
+		expect(reads('const m = new Map(AGENT_ANSWER_CODES.map((c) => [c, 1]));')).toEqual([
+			'AGENT_ANSWER_CODES',
+		]);
+		expect(reads('const c = PUBLICATION_HOST_CODES[7]; AGENT_ANSWER_CODES;')).toEqual([
+			'AGENT_ANSWER_CODES',
+			'PUBLICATION_HOST_CODES',
+		]);
+		expect(reads('const PUBLICATION_HOST_CODES_X = 1;')).toEqual([]);
 		expect(CONSTRUCTS.test('throw new DedaloError(code, {});')).toBe(true);
+		expect(DYNAMIC.test('new DedaloError(`publication_host.${kind}`, {})')).toBe(true);
+		expect(DYNAMIC.test("const c = 'publication_host.' + kind;")).toBe(true);
+		expect(DYNAMIC.test("error.code.startsWith('publication_host.')")).toBe(false);
 	});
 
 	test('no file but wire.ts spells either literal (the registry row is the code’s definition)', () => {
@@ -435,13 +458,38 @@ describe('source law: rejected / failed are minted only by wire.ts', () => {
 		expect(spelling).toEqual([WIRE]);
 	});
 
-	test('AGENT_ANSWER_CODES is read only by the declared classifiers, and none of them constructs a DedaloError', () => {
+	test('no file but wire.ts assembles a publication_host code at runtime', () => {
+		const dynamic = [...sources()]
+			.filter(([path, code]) => path !== WIRE && DYNAMIC.test(code))
+			.map(([path]) => path);
+		expect(dynamic).toEqual([]);
+	});
+
+	test('every answer-code export of wire.ts is read only by the declared classifiers, and none of them constructs a DedaloError', () => {
 		const readers = [...sources()]
-			.filter(([path, code]) => path !== WIRE && READER.test(code))
-			.map(([path, code]) => ({ path, constructs: CONSTRUCTS.test(code) }));
-		expect(readers.map((r) => r.path).sort()).toEqual(
-			Object.keys(AGENT_ANSWER_CODE_READERS).sort(),
+			.filter(([path]) => path !== WIRE)
+			.map(([path, code]) => ({ path, reads: reads(code), constructs: CONSTRUCTS.test(code) }))
+			.filter((r) => r.reads.length > 0);
+		expect(Object.fromEntries(readers.map((r) => [r.path, r.reads]))).toEqual(
+			Object.fromEntries(
+				Object.entries(ANSWER_CODE_READERS).map(([path, entry]) => [path, entry.reads]),
+			),
 		);
 		expect(readers.filter((r) => r.constructs).map((r) => r.path)).toEqual([]);
+	});
+
+	test('wire.ts exports nothing else that yields an answer code (the status classifier is private)', () => {
+		const wire = stripComments(readFileSync(join(REPO_ROOT, WIRE), 'utf8'));
+		const exported = [...wire.matchAll(/^export\s+(?:const|function|let|var)\s+(\w+)/gm)].map(
+			(m) => m[1],
+		);
+		// the answer-code-valued exports are exactly the gated sources + the four minters
+		// (agentResponseError / engineFailure / engineRefusal return a DedaloError WITH a reason)
+		const yieldsCode = exported.filter((name) =>
+			new RegExp(
+				`export\\s+(?:const|function)\\s+${name}\\b[^{;]*(?::\\s*(?:PublicationHostCode|AgentAnswerCode)\\b|Object\\.freeze\\(\\[)`,
+			).test(wire),
+		);
+		expect(yieldsCode.sort()).toEqual([...ANSWER_CODE_SOURCES].sort());
 	});
 });

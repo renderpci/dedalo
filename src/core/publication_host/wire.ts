@@ -244,9 +244,11 @@ function codeForStatus(status: number): PublicationHostCode {
 /**
  * A non-2xx agent answer → its code. `busy` wins on its reason (a 409 ConflictError); 401/403
  * are credentials; 404/405 behind a valid bearer are version skew (`failed`); any other 4xx
- * is a refusal of the request's content (`rejected`); the rest is `failed`.
+ * is a refusal of the request's content (`rejected`); the rest is `failed`. MODULE-PRIVATE:
+ * its value can be an answer code, and only agentResponseError may pair it with a reason
+ * (publication_host_wire_native source law).
  */
-export function codeForAgentResponse(status: number, problem: AgentProblem): PublicationHostCode {
+function codeForAgentResponse(status: number, problem: AgentProblem): PublicationHostCode {
 	return problem.reason === 'busy' ? 'publication_host.busy' : codeForStatus(status);
 }
 
