@@ -25,6 +25,7 @@ import { HIERARCHY_RECONCILE } from '../ontology/hierarchy_state.ts';
 import { ONTOLOGY_IDENTIFIERS_RECONCILE } from '../ontology/identifier_grammar.ts';
 import { ONTOLOGY_RECONCILE } from '../ontology/ontology_state.ts';
 import { PUBLICATION_APIS_RECONCILE } from '../publication_host/api_reconcile.ts';
+import { PUBLICATION_PROBE_RECONCILE } from '../publication_host/probe.ts';
 import { OBSERVER_MIRRORS_RECONCILE } from '../section/record/observer_reconcile.ts';
 import {
 	listReconciles,
@@ -50,6 +51,7 @@ export async function loadAllReconciles(): Promise<readonly ReconcileDefinition[
 		PUBLIC_TIER_RECONCILE,
 		PUBLICATION_APIS_RECONCILE,
 		MEDIA_COPY_RECONCILE,
+		PUBLICATION_PROBE_RECONCILE,
 	];
 }
 

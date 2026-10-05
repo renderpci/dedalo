@@ -123,6 +123,8 @@ const PUBHOST = 'zzrc_pubhost';
 let pubhostBase: { base: string; dispose: () => void } | null = null;
 /** The scratch copy host the media_copy planter starts (a stateful loopback mock agent). */
 const COPY_HOST = 'zzrc_copy';
+/** publication_probe's planted host (phase 6): a configured, unprovable gate. */
+const PROBE_HOST = 'zzrc_probe';
 let copyAgent: CopyMockAgent | null = null;
 
 /** Scratch files planted in the SUITE media root, removed by path. */
@@ -603,6 +605,40 @@ const PLANTERS: Record<string, Planter> = {
 			await copyAgent?.stop();
 			await unregisterCopyMockHost(COPY_HOST);
 			copyAgent = null;
+		},
+	},
+	publication_probe: {
+		scope: [PROBE_HOST],
+		async plant() {
+			// A configured host whose gate cannot be proven: its probe paths name a quality
+			// that is not public, and its public URL is a private literal — the probe is
+			// `unknown` before any request leaves (validation, then the public door's
+			// address check), so drift 1. The per-name test runs DRY: nothing is written
+			// to the runtime file. Other planters' hosts are preserved.
+			expect(registryPath().startsWith(pubhostBase?.base ?? '<unarmed>')).toBe(true);
+			updateRegistry((current) => ({
+				...current,
+				hosts: [
+					...current.hosts.filter((host) => host.name !== PROBE_HOST),
+					{
+						name: PROBE_HOST,
+						instance: 'test',
+						fingerprint: 'b'.repeat(64),
+						address: { kind: 'unix', socket: `/nonexistent/${PROBE_HOST}.sock` },
+						public_url: 'https://127.0.0.1',
+						qualities: null,
+						probe: { published: 'image/zz/a_test3_1.jpg', unpublished: 'image/zz/a_test3_2.jpg' },
+						paired_at: '2026-10-03T00:00:00.000Z',
+					},
+				],
+			}));
+			return 1;
+		},
+		async unplant() {
+			updateRegistry((current) => ({
+				...current,
+				hosts: current.hosts.filter((host) => host.name !== PROBE_HOST),
+			}));
 		},
 	},
 	hierarchy: {

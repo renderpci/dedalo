@@ -21,7 +21,7 @@
  * catalog (the `reconcile_status` widget with its `run_reconcile` action, the
  * `scripts/reconcile.ts` shell, the server boot + SIGTERM stop of the
  * scheduler); the gauge lists every name; every `sources` path exists; and the
- * scheduled applies are exactly media_index and media_copy, each with a reason.
+ * scheduled applies are exactly media_index, media_copy and publication_probe, each with a reason.
  *
  * Hermetic: the catalog is imported (module wiring only, no query is issued);
  * the behavioural half is reconcile_registry_native.test.ts.
@@ -212,6 +212,7 @@ describe('reconcile registry completeness (S-10)', () => {
 			public_tier: 'src/diffusion/api/reconcile.ts',
 			publication_apis: 'src/core/publication_host/api_reconcile.ts',
 			media_copy: 'src/diffusion/api/reconcile.ts',
+			publication_probe: 'src/core/publication_host/probe.ts',
 		};
 		for (const definition of REGISTERED) {
 			const owner = owners[definition.name];
@@ -222,9 +223,13 @@ describe('reconcile registry completeness (S-10)', () => {
 		}
 	});
 
-	test('a scheduled APPLY is the exception with a reason — media_index (the pub/ derivation) and media_copy (pub/ ∩ public files onto copy hosts)', () => {
+	test('a scheduled APPLY is the exception with a reason — media_index (the pub/ derivation), media_copy (pub/ ∩ public files onto copy hosts), publication_probe (records an observation, repairs nothing)', () => {
 		const auto = REGISTERED.filter((definition) => definition.autoApply !== undefined);
-		expect(auto.map((definition) => definition.name)).toEqual(['media_index', 'media_copy']);
+		expect(auto.map((definition) => definition.name)).toEqual([
+			'media_index',
+			'media_copy',
+			'publication_probe',
+		]);
 		expect(
 			(REGISTERED.find((definition) => definition.name === 'media_copy') as ReconcileDefinition)
 				.schedule,
@@ -265,6 +270,21 @@ describe('reconcile registry completeness (S-10)', () => {
 		expect(widgetSource).toContain('requireApplyPrincipal(name, apply, principal)');
 	});
 
+	test('publication_probe is an INTERVAL observation whose scheduled apply only records it (phase 6, P3)', () => {
+		const probe = REGISTERED.find((definition) => definition.name === 'publication_probe');
+		expect(probe, 'publication_probe must be registered').toBeDefined();
+		expect(typeof (probe as ReconcileDefinition).schedule).toBe('object');
+		expect((probe as ReconcileDefinition).autoApply?.reason).toContain('runtime.probe');
+		expect((probe as ReconcileDefinition).applyRootOnly).toBeUndefined();
+		// The dry contract (ReconcileRunOptions: write nothing) is asserted behaviourally in
+		// publication_host_probe_native.test.ts; here: the dry path never calls the writer.
+		const source = stripComments(
+			readFileSync(join(ROOT, 'src/core/publication_host/probe.ts'), 'utf8'),
+		);
+		expect(source).toContain(
+			'return apply ? (host) => probeAndRecord(host, {}) : (host) => probeHostRecord(host);',
+		);
+	});
 	test('the gauge publishes every registered name with the wire keys the ops doc names', () => {
 		const gauge = reconcileGauge() as Record<string, Record<string, unknown>>;
 		expect(Object.keys(gauge)).toEqual([...REGISTERED_NAMES]);

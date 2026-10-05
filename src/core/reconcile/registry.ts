@@ -120,6 +120,7 @@ export const REGISTERED_NAMES: readonly string[] = [
 	'public_tier',
 	'publication_apis',
 	'media_copy',
+	'publication_probe',
 ];
 
 // Process-lifetime registry state (module_state_tripwire allowlisted): the

@@ -101,6 +101,11 @@ export const POST_RESTORE_PLAN: readonly PostRestoreStep[] = [
 		apply: true,
 		why: 'a data restore re-derives pub/ (media_index, applied just before in registry order); every copy-mode publication host must follow it, or a record unpublished in the restored data keeps its public bytes — the same pure derivation the scheduler applies every period',
 	},
+	{
+		name: 'publication_probe',
+		apply: false,
+		why: 'an observation, never a repair: the dry run probes each host through its public URL and reports, writing nothing; after a restore its verdict tells the operator whether media unpublished since the backup instant is still served publicly (the next scheduled apply records it in the panel)',
+	},
 ];
 
 export interface PostRestoreStepResult {

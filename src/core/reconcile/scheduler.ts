@@ -5,7 +5,9 @@
  * A scheduled run REPORTS (dry) unless the definition carries `autoApply`
  * with its reason — `media_index` (whose boot apply this replaces: server.ts
  * used to fire `reconcileMediaIndex()` directly) and `media_copy` (the
- * copy-mode publication hosts, every MEDIA_COPY_PERIOD_MS). Every outcome
+ * copy-mode publication hosts, every MEDIA_COPY_PERIOD_MS), and `publication_probe`
+ * (every PUBLICATION_PROBE_EVERY_MS: its apply only records the public-URL probe
+ * observation). Every outcome
  * goes through `runReconcile`, so the `reconcile` gauge on /api/v1/counters
  * shows the last drift of each, whether an operator or the clock ran it.
  *
