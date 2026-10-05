@@ -16,6 +16,13 @@
  *  3. VERIFY. The agent manifest is read back: a pending path it no longer lists
  *     (as a file, an irregular path or a marker) is cleared, every other stays
  *     pending. Its marker list is the round's `known` set.
+ *  A GRANT SUPERSEDES A PENDING WITHDRAWAL. A record republished before its deletion was
+ *     verified (agent down at the unpublish; unpublished and republished inside a round)
+ *     must not stay `deletion_unverified` forever: VERIFY also clears a pending marker whose
+ *     key is published again, and a pending file whose key is published under this host's
+ *     Rule B and that the round does not delete; a `mark true` clears the key's pending
+ *     marker, a landed put its own path. Only entries recorded no later than the instant
+ *     before the deciding `pub/` check — a withdrawal recorded after it is a newer unpublish.
  *  4. GRANT, one target-lock unit: `media.mark true` for each plan grant whose key
  *     is still published locally and not yet known. A marker with no file serves
  *     nothing (Rule B also needs the file), so granting first is gate-safe.
@@ -285,8 +292,69 @@ async function preempt(round: Round): Promise<void> {
 	if (!held.acquired) report.deferred += 1;
 }
 
-/** Clears verified deletions; answers the marker keys the agent holds now. */
-async function verifyDeletions(deps: CopyDeps, host: string): Promise<Set<string>> {
+const MARKER_PREFIX = agentMarkerPath('');
+
+/**
+ * Drop `paths` from pending_deletions — a grant or a landed put SUPERSEDES the withdrawal
+ * recorded for it. Only entries recorded no later than `decidedAt` (the instant before the
+ * local `pub/` check that justified the drop): a withdrawal recorded after that check is
+ * a newer unpublish, never superseded by it.
+ */
+async function dropPending(
+	deps: Pick<CopyDeps, 'updateRuntime'>,
+	host: string,
+	paths: ReadonlySet<string>,
+	decidedAt: number,
+): Promise<void> {
+	if (paths.size === 0) return;
+	await deps.updateRuntime(host, (cur) => ({
+		...cur,
+		pending_deletions: cur.pending_deletions.filter(
+			(entry) => !(paths.has(entry.path) && Date.parse(entry.since) <= decidedAt),
+		),
+	}));
+}
+
+/**
+ * A pending path the work host wants served again: a marker whose key is published, or a
+ * file whose key is published under this host's Rule B and that this round does not delete.
+ */
+async function isSuperseded(
+	deps: CopyDeps,
+	classify: (relpath: string) => string | null,
+	deleting: ReadonlySet<string>,
+	path: string,
+): Promise<boolean> {
+	if (path.startsWith(MARKER_PREFIX)) return deps.isPublished(path.slice(MARKER_PREFIX.length));
+	const key = classify(path);
+	return key !== null && !deleting.has(path) && (await deps.isPublished(key));
+}
+
+async function supersededPaths(
+	deps: CopyDeps,
+	host: string,
+	deleting: ReadonlySet<string>,
+): Promise<Set<string>> {
+	const pending = (await deps.updateRuntime(host, (cur) => cur)).pending_deletions;
+	const classify = deps.classifier(host);
+	const superseded = new Set<string>();
+	for (const { path } of pending) {
+		if (await isSuperseded(deps, classify, deleting, path)) superseded.add(path);
+	}
+	return superseded;
+}
+
+/**
+ * Clears verified deletions (absent from the manifest) and superseded ones (republished
+ * since: see isSuperseded); answers the marker keys the agent holds now.
+ */
+async function verifyDeletions(
+	deps: CopyDeps,
+	host: string,
+	deleting: ReadonlySet<string>,
+): Promise<Set<string>> {
+	const decidedAt = deps.now().getTime();
+	const superseded = await supersededPaths(deps, host, deleting);
 	const manifest = await deps.manifest(host);
 	const present = new Set([
 		...manifest.entries.map((entry) => entry.path),
@@ -296,7 +364,11 @@ async function verifyDeletions(deps: CopyDeps, host: string): Promise<Set<string
 	const at = deps.now().toISOString();
 	await deps.updateRuntime(host, (cur) => ({
 		...cur,
-		pending_deletions: cur.pending_deletions.filter((entry) => present.has(entry.path)),
+		pending_deletions: cur.pending_deletions.filter(
+			(entry) =>
+				present.has(entry.path) &&
+				!(superseded.has(entry.path) && Date.parse(entry.since) <= decidedAt),
+		),
 		present: manifest.entries.length,
 		last_verified_at: at,
 	}));
@@ -305,9 +377,11 @@ async function verifyDeletions(deps: CopyDeps, host: string): Promise<Set<string
 
 async function ensureMarker(round: Round, key: string): Promise<void> {
 	if (round.known.has(key)) return;
+	const decidedAt = round.deps.now().getTime();
 	await round.deps.mark(round.host, key, true, MEDIA_COPY_ACTOR);
 	round.known.add(key);
 	round.report.published += 1;
+	await dropPending(round.deps, round.host, new Set([agentMarkerPath(key)]), decidedAt);
 }
 
 async function grantMarks(round: Round, keys: readonly string[]): Promise<void> {
@@ -356,12 +430,14 @@ async function sendFile(
 		throw error;
 	}
 	const body = local.body;
+	const decidedAt = round.deps.now().getTime();
 	await round.deps.put(
 		round.host,
 		{ path: file.path, sha256, size: file.size, body },
 		MEDIA_COPY_ACTOR,
 	);
 	round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
+	await dropPending(round.deps, round.host, new Set([file.path]), decidedAt);
 }
 
 /**
@@ -425,7 +501,8 @@ async function runRound(
 	takeWithdrawn: () => readonly string[],
 ): Promise<void> {
 	await withdraw(deps, host, withdrawn, plan.del, report);
-	const known = await verifyDeletions(deps, host);
+	const deleting: ReadonlySet<string> = new Set(plan.del);
+	const known = await verifyDeletions(deps, host, deleting);
 	const round: Round = {
 		deps,
 		host,
@@ -444,7 +521,7 @@ async function runRound(
 		await preempt(round);
 		await putOne(round, file);
 	}
-	if (round.reverify) await verifyDeletions(deps, host);
+	if (round.reverify) await verifyDeletions(deps, host, deleting);
 }
 
 function noteFailure(report: CopyApplyReport, error: unknown): void {
