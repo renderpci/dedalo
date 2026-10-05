@@ -49,6 +49,10 @@ describe('classifyMediaPath(put): only what the publication_host gate could serv
     ['image/Modified/0/test99_test3_770.jpg', 'master_tier'],
     ['image/1.5MB/0/test99_test3_770.tmp', 'working_file'],
     ['image/1.5MB/0/test99_test3_770.CSV', 'working_file'],
+    ['image/thumb/0/x_test3_1.php', 'denied_extension'],
+    ['image/thumb/0/x_test3_1.PHTML', 'denied_extension'],
+    ['image/thumb/0/x_test3_1.html', 'denied_extension'],
+    ['image/thumb/0/x_test3_1.Swf', 'denied_extension'],
     ['image/1.5MB/0/my_custom_name.jpg', 'grammar'],
     ['av/404/test95_TEST3_2.mp4', 'grammar'],
   ])('refuses %s (%s)', (path, reason) => {

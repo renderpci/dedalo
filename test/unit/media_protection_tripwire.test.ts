@@ -32,8 +32,10 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import {
+	MEDIA_ACTIVE_DOCUMENT_EXTENSIONS as AGENT_ACTIVE_DOCUMENT_EXTENSIONS,
 	MEDIA_FILENAME_GRAMMAR as AGENT_GRAMMAR,
 	ALWAYS_MASTER_TIERS as AGENT_MASTER_TIERS,
+	MEDIA_SCRIPT_DENY_PATTERN as AGENT_SCRIPT_DENY_PATTERN,
 	MEDIA_WORKING_FILE_EXTENSIONS as AGENT_WORKING_FILE_EXTENSIONS,
 	classifyMediaPath as classifyAgentMediaPath,
 } from '../../publication/host_agent/src/media/grammar.ts';
@@ -781,6 +783,23 @@ describe('media protection: the publication-host AGENT classifies like the gates
 		expect(AGENT_GRAMMAR).toBe(MEDIA_FILENAME_GRAMMAR);
 		expect([...AGENT_WORKING_FILE_EXTENSIONS]).toEqual([...MEDIA_WORKING_FILE_EXTENSIONS]);
 		for (const tier of AGENT_MASTER_TIERS) expect(masterQualities().has(tier)).toBe(true);
+		expect([...AGENT_ACTIVE_DOCUMENT_EXTENSIONS]).toEqual([...MEDIA_ACTIVE_DOCUMENT_EXTENSIONS]);
+		expect(AGENT_SCRIPT_DENY_PATTERN).toBe(MEDIA_SCRIPT_DENY_PATTERN);
+	});
+
+	test('its media.put refuses everything the hardening 404s, in any letter case', () => {
+		const denied = [
+			...MEDIA_WORKING_FILE_EXTENSIONS,
+			...MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
+			...MEDIA_SCRIPT_DENY_PATTERN.replace('phps?', 'php|phps').split('|'),
+		];
+		expect(denied.length).toBeGreaterThan(15); // anti-vacuity: all three lists were read
+		for (const ext of denied) {
+			for (const spelled of [ext, ext.toUpperCase()]) {
+				const path = `image/thumb/0/x_rsc29_1.${spelled}`;
+				expect(classifyAgentMediaPath(path, 'put').ok, path).toBe(false);
+			}
+		}
 	});
 
 	test('its media.put classifier accepts exactly the gate-public rows, with the same key', () => {
