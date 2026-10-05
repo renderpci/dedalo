@@ -10,12 +10,14 @@
  * deps seam (createPublicationHostsWidget); the real pure row/lockstep builders are used.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	createPublicationHostsWidget,
+	PUSH_ANSWER_CAP_MS,
 	type PublicationHostsDeps,
+	pushAnswerWithinMs,
 	pushHosts,
 	widget,
 } from '../../src/core/area_maintenance/widgets/publication_hosts.ts';
@@ -68,6 +70,9 @@ const unused = (what: string) => () => {
 
 interface HarnessOptions {
 	report?: ApiReconcileReport;
+	/** Replaces the reconciler's answer (a pending / rejecting round). */
+	round?: () => Promise<ApiReconcileReport>;
+	waitMs?: number;
 	hosts?: PublicationHostRecord[];
 	registryFails?: RegistryError;
 	runtimeInvalid?: string;
@@ -107,8 +112,10 @@ function harness(options: HarnessOptions = {}) {
 		buildApiLockstepPanel,
 		reconcilePublicationApis: async (opts) => {
 			reconciles.push(opts);
+			if (options.round !== undefined) return options.round();
 			return options.report ?? okReport;
 		},
+		pushAnswerWithinMs: () => options.waitMs ?? 5_000,
 	};
 	const module = createPublicationHostsWidget(async () => {
 		counts.loads += 1;
@@ -152,7 +159,7 @@ describe('publication_hosts.push_apis', () => {
 		]);
 		expect(all.data).toBe(true);
 		expect(all.msg).toBe(`OK. Release ${REL} is current on 1 publication host(s).`);
-		expect(all.extend?.report).toEqual(okReport);
+		expect(all.extend).toEqual({ report: okReport, running: false });
 		expect(one.data).toBe(true);
 	});
 
@@ -195,6 +202,69 @@ describe('publication_hosts.push_apis', () => {
 		const response = await h.push({});
 		expect(response.data).toBe(true);
 		expect(response.msg).toContain('runtime_invalid');
+	});
+
+	test('a round that outlives the wait answers running (data:null) and finishes detached, logged', async () => {
+		let finish: (report: ApiReconcileReport) => void = () => {};
+		const pending = new Promise<ApiReconcileReport>((done) => {
+			finish = done;
+		});
+		const h = harness({ round: () => pending, waitMs: 20 });
+		const info = spyOn(console, 'info').mockImplementation(() => {});
+		try {
+			const response = await h.push({});
+			expect(response.data).toBeNull();
+			expect(response.extend).toEqual({ report: null, running: true });
+			expect(response.msg).toContain('still running');
+			expect(response.msg).toContain('reload this panel');
+			finish(okReport);
+			await pending;
+			await Bun.sleep(0);
+			const lines = info.mock.calls.map((call) => String(call[0]));
+			expect(lines.some((line) => line.includes('answered running'))).toBe(true);
+			expect(lines.some((line) => line.includes(`release=${REL}`))).toBe(true);
+		} finally {
+			info.mockRestore();
+		}
+	});
+
+	test('a round that fails after the answer is logged, never an unhandled rejection', async () => {
+		let fail: (error: Error) => void = () => {};
+		const pending = new Promise<ApiReconcileReport>((_, reject) => {
+			fail = reject;
+		});
+		const h = harness({ round: () => pending, waitMs: 20 });
+		const info = spyOn(console, 'info').mockImplementation(() => {});
+		const errors = spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			expect((await h.push({})).extend?.running).toBe(true);
+			fail(new Error('late boom'));
+			await pending.catch(() => undefined);
+			await Bun.sleep(0);
+			expect(errors.mock.calls.some((call) => String(call[0]).includes('push_apis'))).toBe(true);
+		} finally {
+			info.mockRestore();
+			errors.mockRestore();
+		}
+	});
+
+	test('a refusal inside the wait still answers as itself (resource.conflict propagates)', async () => {
+		const h = harness({
+			round: async () => {
+				throw new DedaloError('resource.conflict', { message: 'a push is already running' });
+			},
+		});
+		await expect(h.push({})).rejects.toMatchObject({ code: 'resource.conflict' });
+	});
+
+	test('the production wait stays below the server idle timeout (Bun cuts a silent socket there)', () => {
+		for (const idle of [1, 2, 10, 60, 120, 255]) {
+			const ms = pushAnswerWithinMs(idle);
+			expect(ms, `idle ${idle}s`).toBeLessThan(idle * 1000);
+			expect(ms).toBeLessThanOrEqual(PUSH_ANSWER_CAP_MS);
+		}
+		expect(pushAnswerWithinMs(255)).toBe(PUSH_ANSWER_CAP_MS);
+		expect(pushAnswerWithinMs(10)).toBe(5_000);
 	});
 
 	test('the production widget registers push_apis', () => {

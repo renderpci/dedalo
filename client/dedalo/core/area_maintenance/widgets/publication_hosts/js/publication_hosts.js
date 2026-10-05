@@ -52,13 +52,15 @@ export const PUBLICATION_HOST_ACTIONS = Object.freeze([
 
 /**
  * ACTION_TIMEOUT_MS
- * The client deadline per action (default 120 s). push_apis can build the v2
- * node_modules for a new release and stream both bundles to every host — each
- * agent install alone may take up to 15 min (agent_client AGENT_TIMEOUTS_MS).
+ * The client deadline for every action, push_apis included. A first push of a
+ * release can run far longer (v2 deps build, up to 15 min per agent install),
+ * but the server never holds the request that long: Bun cuts a silent
+ * connection at SERVER_IDLE_TIMEOUT_S (at most 255 s), so push_apis answers
+ * within min(60 s, half that) — `running: true` when the round goes on
+ * detached (widgets/publication_hosts.ts pushAnswerWithinMs). A longer client
+ * deadline here would buy nothing.
  */
-const ACTION_TIMEOUT_MS = Object.freeze({
-	push_apis: 3600 * 1000,
-});
+const ACTION_TIMEOUT_MS = 120 * 1000;
 
 /**
  * PUBLICATION_HOSTS
@@ -128,7 +130,7 @@ publication_hosts.prototype.widget_request = async function (action, options) {
 		},
 		retries: 1, // one try only
 		// the agent's own deadlines are shorter; covers a web-server reload (push_apis: above)
-		timeout: ACTION_TIMEOUT_MS[action] || 120 * 1000,
+		timeout: ACTION_TIMEOUT_MS,
 	});
 	if (SHOW_DEBUG === true) {
 		console.log(`publication_hosts ${action} api_response:`, api_response);

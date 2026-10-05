@@ -8,8 +8,9 @@
  * engine release vs each host's v2/v1, the last push, a severity chip per row, the
  * refusal named in a danger note, "not verified yet" before any round, the runtime
  * file flagged unreadable, and the root push button — confirm-gated, one push_apis
- * call, the server sentence shown, the value reloaded; disabled only on a real
- * refusal; absent for a non-root viewer.
+ * call, the server sentence shown, the value reloaded (a `running` answer too);
+ * disabled only with no host rows — a remembered refusal keeps it enabled, since
+ * the push re-verifies the tree; absent for a non-root viewer.
  *
  * Backend-free: the pure view is rendered directly, and the wired button runs on a
  * REAL publication_hosts instance whose widget_request / confirm_action / reload
@@ -154,12 +155,19 @@ describe('PUBLICATION HOSTS — API LOCKSTEP', function () {
 		assert.ok(rows[2].querySelector('.dd_badge.state_warning'));
 	});
 
-	it('names the refusal and disables the push', function () {
+	it('names the refusal with its check time and keeps the push enabled (it re-verifies)', function () {
 		const refused = 'v1: drift: publication/server_api/v1/json/index.php (modified)';
 		const node = render_api_lockstep(make_panel({ engine_release: null, refused }), {
 			is_root: true,
 		});
-		assert.include(node.querySelector('.dd_note.state_danger').textContent, refused);
+		const note = node.querySelector('.dd_note.state_danger').textContent;
+		assert.include(note, refused);
+		assert.include(note, AT, 'the refusal says when it was checked (it may be stale)');
+		assert.isFalse(node.querySelector('button.push_apis').disabled);
+	});
+
+	it('no host rows: nothing to push to, the push is disabled', function () {
+		const node = render_api_lockstep(make_panel({ rows: [] }), { is_root: true });
 		assert.isTrue(node.querySelector('button.push_apis').disabled);
 	});
 
@@ -212,6 +220,23 @@ describe('PUBLICATION HOSTS — API LOCKSTEP', function () {
 			`Release ${ENGINE} is current`,
 		);
 		assert.strictEqual(self.reloads, 1, 'value reloaded once');
+	});
+
+	it('a push still running server-side shows its sentence and reloads', async function () {
+		const self = build_widget(panel_value());
+		self.next_response = {
+			ok: true,
+			data: null,
+			msg: 'Push started and still running after 60 s',
+			running: true,
+			report: null,
+		};
+		const content = await mount(self);
+		content.querySelector('button.push_apis').click();
+		await settle();
+		assert.deepEqual(self.calls, [{ action: 'push_apis', options: {} }]);
+		assert.include(content.querySelector('.body_response').textContent, 'still running');
+		assert.strictEqual(self.reloads, 1);
 	});
 
 	it('a declined confirm sends nothing', async function () {

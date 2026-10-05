@@ -137,3 +137,20 @@
 - TS ground truth: `test/unit/publication_host_push_apis_widget.test.ts`,
   `test/unit/publication_host_api_reconcile.test.ts`; client:
   `client/dedalo/test/client/js/test_publication_api_lockstep.js`. No fixture interaction.
+
+## Addendum 2026-10-05 — push_apis answers within a bounded wait; a refusal no longer disables the push (phase-4 review)
+
+- `push_apis` waits for its round at most `pushAnswerWithinMs` = min(60 s, half
+  `SERVER_IDLE_TIMEOUT_S`): Bun cuts a silent connection at the idle timeout (at most
+  255 s), and a first push of a release can run far longer (v2 deps build, agent installs).
+  A round that settles in time answers exactly as before, plus `running: false`. A round
+  still going answers `data: null`, `running: true`, `report: null` and a `msg` saying it is
+  still running; it finishes detached (outcome logged, every host×API recorded in the
+  runtime file each row's `last_push` reads; the single-flight latch still refuses a second
+  push with `resource.conflict` until it ends). A refusal or throw INSIDE the wait answers
+  as itself. The client deadline is the widget's common 120 s (no per-action override).
+- Client: the push button is disabled only when there are no host rows. `api_lockstep.refused`
+  is the LAST round's verdict (it refreshes only on the next round), so it is shown with its
+  `checked_at` next to an ENABLED button — the push re-verifies the tree before sending.
+- TS ground truth: `test/unit/publication_host_push_apis_widget.test.ts`; client:
+  `client/dedalo/test/client/js/test_publication_api_lockstep.js`. No fixture interaction.

@@ -150,6 +150,11 @@ export interface PublicationHostsDeps {
 	): ApiLockstepPanel;
 	/** THE Publication API reconciler (push_apis runs it as an apply round). */
 	reconcilePublicationApis: ReconcileApisFn;
+	/**
+	 * How long push_apis waits for its round before answering `running` (the round goes on,
+	 * detached). Below the server's idle timeout, so the answer always reaches the client.
+	 */
+	pushAnswerWithinMs(): number;
 }
 
 export type DepsLoader = () => Promise<PublicationHostsDeps>;
@@ -171,6 +176,7 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 	const { DEDALO_VERSION } = await import('../../update/version.ts');
 	const lockstep = await import('../../publication_host/api_reconcile.ts');
 	const { loadPanelRuntime } = await import('../../publication_host/panel_runtime.ts');
+	const { config } = await import('../../../config/config.ts');
 	return {
 		registryPath,
 		loadRegistry,
@@ -192,7 +198,22 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 		loadPanelRuntime: () => loadPanelRuntime(),
 		buildApiLockstepPanel: lockstep.buildApiLockstepPanel,
 		reconcilePublicationApis: (opts) => lockstep.reconcilePublicationApis(opts),
+		pushAnswerWithinMs: () => pushAnswerWithinMs(config.ops.idleTimeoutSeconds),
 	};
+}
+
+/** Never wait longer than this for a push round, even under a generous idle timeout. */
+export const PUSH_ANSWER_CAP_MS = 60_000;
+
+/**
+ * push_apis's bounded wait: half the server's idle timeout (SERVER_IDLE_TIMEOUT_S, at most
+ * 255 s — Bun cuts a silent connection there), never above PUSH_ANSWER_CAP_MS. A first push
+ * of a release can build the v2 deps (up to 10 min) and stream to every host (up to 15 min
+ * per install): that round outlives any request, so it is answered `running` and finishes
+ * detached — its outcome lands in the runtime file each row's last push reads.
+ */
+export function pushAnswerWithinMs(idleTimeoutSeconds: number): number {
+	return Math.min(PUSH_ANSWER_CAP_MS, idleTimeoutSeconds * 500);
 }
 
 // ── guards ──────────────────────────────────────────────────────────────────
@@ -751,27 +772,69 @@ const removeHostAction: BoundAction = async (options, principal, loadDeps) => {
  * code on a public machine — the guard runs before anything is loaded. `data` is true
  * only when nothing was refused and nothing failed; `msg` names the refusal, or each
  * failed host×API with its code and named paths. A concurrent push is resource.conflict,
- * an unregistered name resource.not_found (both from the reconciler).
+ * an unregistered name resource.not_found (both from the reconciler). BOUNDED ANSWER: a
+ * round still going after `pushAnswerWithinMs` (below the server idle timeout) answers
+ * `data: null, running: true` and finishes detached — never a connection cut mid-push.
  */
 const pushApisAction: BoundAction = async (options, principal, loadDeps) => {
 	requireRoot(principal, 'push_apis');
 	const hosts = pushHosts(options.hosts);
 	const deps = await loadDeps();
-	const report = await deps.reconcilePublicationApis({
+	const round = deps.reconcilePublicationApis({
 		apply: true,
 		actor: actorFor(principal),
 		...(hosts === null ? {} : { hosts }),
 	});
+	const waitMs = deps.pushAnswerWithinMs();
+	const report = await settledWithin(round, waitMs);
+	if (report === STILL_RUNNING) {
+		// Detached: the reconciler records every host×API in the runtime file; a refusal or
+		// a throw after the answer is logged here (the single-flight latch clears either way).
+		void round
+			.then((late) => logPush(principal, late))
+			.catch((error) =>
+				console.error(`[publication_hosts] push_apis user=${principal.userId} failed:`, error),
+			);
+		console.info(
+			`[publication_hosts] push_apis user=${principal.userId} still running after ${waitMs} ms: answered running`,
+		);
+		return {
+			data: null,
+			msg: `Push started and still running after ${Math.round(waitMs / 1000)} s (a new release builds its dependencies and streams to every host). Its outcome is recorded per host and API: reload this panel to see each row's last push. A second push is refused until this one ends.`,
+			extend: { report: null, running: true },
+		};
+	}
+	const failed = logPush(principal, report);
+	return {
+		data: report.refused === null && failed.length === 0,
+		msg: pushMessage(report, failed) + runtimeNote(report),
+		extend: { report, running: false },
+	};
+};
+
+const STILL_RUNNING = Symbol('still_running');
+
+/** The round's report if it settles within `ms` (a rejection propagates), else STILL_RUNNING. */
+async function settledWithin<T>(round: Promise<T>, ms: number): Promise<T | typeof STILL_RUNNING> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const deadline = new Promise<typeof STILL_RUNNING>((done) => {
+		timer = setTimeout(() => done(STILL_RUNNING), ms);
+	});
+	try {
+		return await Promise.race([round, deadline]);
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+/** One log line per finished push (answered or detached); returns the failed host×APIs. */
+function logPush(principal: Principal, report: ApiReconcileReport): string[] {
 	const failed = failedPushes(report);
 	console.info(
 		`[publication_hosts] push_apis user=${principal.userId} release=${report.release ?? 'none'} hosts=${report.hosts.length} failed=${failed.length}${report.refused === null ? '' : ' REFUSED'}`,
 	);
-	return {
-		data: report.refused === null && failed.length === 0,
-		msg: pushMessage(report, failed) + runtimeNote(report),
-		extend: { report },
-	};
-};
+	return failed;
+}
 
 /** `options.hosts`: absent = every host; else an array of host names (validated whole). */
 export function pushHosts(value: unknown): string[] | null {

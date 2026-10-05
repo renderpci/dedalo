@@ -161,10 +161,11 @@ export const render_api_lockstep = function (panel, options = {}) {
 		parent: wrap,
 	});
 	if (panel.refused) {
+		const checked = panel.checked_at ? ` (checked ${panel.checked_at})` : '';
 		ui.create_dom_element({
 			element_type: 'div',
 			class_name: 'dd_note state_danger lockstep_refused',
-			text_content: `Push refused: ${panel.refused}`,
+			text_content: `Push refused${checked}: ${panel.refused}. Fix the tree and push again — the push verifies it first.`,
 			parent: wrap,
 		});
 	}
@@ -179,9 +180,11 @@ export const render_api_lockstep = function (panel, options = {}) {
 			text_content: 'Push API releases',
 			parent: wrap,
 		});
-		// Disabled only on a REAL refusal (or nothing to push to): "not verified yet"
-		// stays enabled, because the push verifies the tree first.
-		button.disabled = Boolean(panel.refused) || rows.length === 0;
+		// Disabled only when there is nothing to push to. A refusal is the LAST round's
+		// verdict (it refreshes only on the next round — hourly, or never with the
+		// scheduler off): disabling on it would lock root out after fixing the tree.
+		// Safe to keep enabled: the push re-verifies the tree before sending anything.
+		button.disabled = rows.length === 0;
 		button.addEventListener('click', async (e) => {
 			e.stopPropagation();
 			if (typeof options.on_push === 'function') {

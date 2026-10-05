@@ -233,6 +233,7 @@ function harness(
 		reconcilePublicationApis: async () => {
 			throw new DedaloError('internal.unexpected', { message: 'push_apis is gated elsewhere' });
 		},
+		pushAnswerWithinMs: () => 5_000,
 		...over,
 	};
 	const module = createPublicationHostsWidget(async () => {

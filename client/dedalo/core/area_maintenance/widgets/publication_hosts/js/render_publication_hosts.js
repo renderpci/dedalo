@@ -595,7 +595,9 @@ export const read_host_fields = function (name, inputs) {
  * Root: push the installed tree's verified Publication API releases (v2, then v1)
  * to every paired host — confirm-gated (it installs code on public machines), one
  * request, the server's sentence shown (it names a refusal or each failed host and
- * API), then the value reloads so every row shows its new last push.
+ * API), then the value reloads so every row shows its new last push. A round that
+ * outlives the server's bounded wait answers `running` (its sentence says so) and
+ * finishes detached; a later reload shows its outcome.
  * @returns {Promise<boolean>}
  */
 const push_apis = function (self, panel, button, body_response) {
