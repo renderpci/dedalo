@@ -38,7 +38,7 @@ import { check_row, fact_row, section } from '../../update_code/js/render_update
  * registry_locked state is read the same, defensively — the server never sends
  * one) is BUSY: transient, its own sentence and a retry —
  * never "invalid, repair it". Any other failed read shows its own error.
- * The last action outcome survives the post-action reload (self.last_outcome).
+ * The last action outcome survives the post-action reload (self.last_outcome), once.
  * Controls render only for root (the server refuses everyone else anyway).
  * Agent commands are disabled while the pairing is not proved: the server never
  * sends the bearer then, so an enabled button could only fail.
@@ -130,10 +130,13 @@ const get_content_data = function (self) {
 		});
 	}
 
+	// consumed once: the repaint right after an action shows its outcome, later ones do not
+	const outcome = typeof self.last_outcome === 'string' ? self.last_outcome : '';
+	self.last_outcome = null;
 	const body_response = ui.create_dom_element({
 		element_type: 'pre',
 		class_name: 'body_response',
-		text_content: typeof self.last_outcome === 'string' ? self.last_outcome : '',
+		text_content: outcome,
 	});
 
 	for (const host of hosts) {

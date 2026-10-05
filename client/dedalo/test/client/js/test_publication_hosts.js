@@ -465,6 +465,18 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			const response = after.querySelector('.body_response').textContent;
 			assert.include(response, 'apply_rules', 'the outcome survives the repaint');
 			assert.include(response, 'X-Dropped', "apply_rules' dropped list stays visible");
+
+			// the outcome belongs to the repaint that FOLLOWS the action, not to every later one
+			const shown = wrapper.content_data;
+			await self.reload();
+			const later = await until(() =>
+				wrapper.content_data !== shown && self.status === 'rendered' ? wrapper.content_data : null,
+			);
+			assert.strictEqual(
+				later.querySelector('.body_response').textContent,
+				'',
+				'a later repaint does not replay the old outcome',
+			);
 		});
 
 		it('a refused action shows the error sentence and does not reload', async function () {
