@@ -9,7 +9,8 @@
  *  1. RECORD. Every path the round will delete — a withdrawn key's agent marker
  *     (`.publication/pub/<key>`) and every `plan.del` path — goes into the host's
  *     runtime `pending_deletions` BEFORE the first agent call (a path already
- *     pending keeps its first `since`). A runtime file that refuses the record
+ *     pending keeps its first `since`; a NEW unpublish — withdrawNowWith, a pre-empt,
+ *     a compensation — renews it). A runtime file that refuses the record
  *     stops the round before anything is sent.
  *  2. WITHDRAW, one target-lock unit: `media.mark false` per key — the gate 404s
  *     from that instant — then `media.delete`.
@@ -239,19 +240,28 @@ function copyHostDeps<D extends Pick<CopyDeps, 'updateRuntime'>>(deps: D): D {
 	};
 }
 
+/**
+ * Add `paths` to pending_deletions. A path already pending keeps its first `since` —
+ * unless `renew` (a NEW unpublish: withdrawNowWith, a pre-empt, a compensation, an undone
+ * grant), which moves it to now: a supersede decided before this withdrawal (dropPending,
+ * verifyDeletions compare `since` to their decision instant) must never drop it.
+ */
 async function recordPending(
 	deps: Pick<CopyDeps, 'updateRuntime' | 'now'>,
 	host: string,
 	paths: readonly string[],
+	renew = false,
 ): Promise<void> {
 	if (paths.length === 0) return;
 	const since = deps.now().toISOString();
+	const wanted = new Set(paths);
 	await deps.updateRuntime(host, (cur) => {
 		const known = new Set(cur.pending_deletions.map((entry) => entry.path));
-		const added = [...new Set(paths)]
-			.filter((path) => !known.has(path))
-			.map((path) => ({ path, since }));
-		return { ...cur, pending_deletions: [...cur.pending_deletions, ...added] };
+		const kept = renew
+			? cur.pending_deletions.map((entry) => (wanted.has(entry.path) ? { ...entry, since } : entry))
+			: cur.pending_deletions;
+		const added = [...wanted].filter((path) => !known.has(path)).map((path) => ({ path, since }));
+		return { ...cur, pending_deletions: [...kept, ...added] };
 	});
 }
 
@@ -312,7 +322,7 @@ async function preempt(round: Round): Promise<void> {
 	const keys = [...new Set(round.takeWithdrawn())];
 	if (keys.length === 0) return;
 	const { deps, host, report } = round;
-	await recordPending(deps, host, keys.map(agentMarkerPath));
+	await recordPending(deps, host, keys.map(agentMarkerPath), true);
 	const held = await deps.lock(host, async () => {
 		const unmarked = await unmarkEach(deps, host, keys);
 		for (const key of unmarked.done) round.known.delete(key);
@@ -418,7 +428,7 @@ async function ensureMarker(round: Round, key: string): Promise<boolean> {
 	const decidedAt = deps.now().getTime();
 	await deps.mark(host, key, true, MEDIA_COPY_ACTOR);
 	if (!(await deps.isPublished(key))) {
-		await recordPending(deps, host, [agentMarkerPath(key)]);
+		await recordPending(deps, host, [agentMarkerPath(key)], true);
 		round.reverify = true;
 		await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
 		round.report.withdrawn += 1;
@@ -444,7 +454,7 @@ async function grantMarks(round: Round, keys: readonly string[]): Promise<void> 
 async function compensate(round: Round, key: string): Promise<PutOutcome> {
 	const { deps, host, report } = round;
 	const paths = round.landed.get(key) ?? [];
-	await recordPending(deps, host, [agentMarkerPath(key), ...paths]);
+	await recordPending(deps, host, [agentMarkerPath(key), ...paths], true);
 	round.reverify = true;
 	await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
 	round.known.delete(key);
@@ -874,7 +884,7 @@ export async function withdrawNowWith(
 	const unique = [...new Set(keys)];
 	if (unique.length === 0 || !(await rawDeps.takesCopy(host))) return;
 	const deps = copyHostDeps(rawDeps);
-	await recordPending(deps, host, unique.map(agentMarkerPath));
+	await recordPending(deps, host, unique.map(agentMarkerPath), true);
 	const { failure } = await unmarkEach(deps, host, unique);
 	if (failure !== null) throw failure;
 }

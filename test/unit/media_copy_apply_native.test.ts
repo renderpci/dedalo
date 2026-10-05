@@ -534,6 +534,105 @@ describe('a grant supersedes a pending withdrawal (republished before the deleti
 	});
 });
 
+describe('a grant or a landed put drops its own pending entry (no reverify needed)', () => {
+	test('recorded after the round verified: only the grant (mark true) and the landing put can clear it', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d = worldDeps(world);
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		let manifests = 0;
+		const report = await applyCopyWith(
+			{
+				...d,
+				manifest: async (host) => {
+					manifests += 1;
+					return d.manifest(host);
+				},
+				// After the verify, before the grant: an older withdrawal surfaces in the file.
+				sha256: async (file) => {
+					await d.updateRuntime('pub1', (cur) => ({
+						...cur,
+						pending_deletions: [
+							{ path: '.publication/pub/test3_1', since: new Date(T0).toISOString() },
+							{ path: P1, since: new Date(T0).toISOString() },
+						],
+					}));
+					return d.sha256(file);
+				},
+			},
+			'pub1',
+			plan,
+		);
+		expect(manifests).toBe(1);
+		expect(world.calls).toEqual(['mark test3_1 true', `put ${P1}`]);
+		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([]);
+		expect(report).toMatchObject({ state: 'ok', put: 1, pending_deletions: 0 });
+	});
+
+	test('an entry recorded after the put decided (a newer unpublish) survives the landing', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.agentMarkers.add(K1);
+		const d = worldDeps(world);
+		world.duringPut = async () => {
+			world.clock.t = T0 + 1;
+			await d.updateRuntime('pub1', (cur) => ({
+				...cur,
+				pending_deletions: [{ path: P1, since: new Date(T0 + 1).toISOString() }],
+			}));
+		};
+		await applyCopyWith(d, 'pub1', { put: [desired(world, P1)], del: [], mark: [] });
+		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([P1]);
+	});
+
+	test('re-withdrawn after the supersede decision: the refreshed entry is kept (never lost to an older since)', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.agentFiles.set(P1, 'jpeg');
+		world.agentMarkers.add(K1);
+		world.published.add(K1);
+		world.runtime.set('pub1', {
+			...emptyRuntime(),
+			state: 'pending',
+			pending_deletions: [
+				{ path: '.publication/pub/test3_1', since: new Date(T0 - 3_600_000).toISOString() },
+			],
+		});
+		const d = worldDeps(world);
+		const report = await applyCopyWith(
+			{
+				...d,
+				manifest: async (host) => {
+					// Between the supersede decision and the filter: unpublished again, its
+					// immediate `mark false` fails (the agent blinked).
+					world.clock.t = T0 + 5;
+					world.published.delete(K1);
+					await withdrawNowWith(
+						{
+							...d,
+							takesCopy: async () => true,
+							mark: async () => {
+								throw new DedaloError('publication_host.unreachable', { message: 'blink (test)' });
+							},
+						},
+						host,
+						[K1],
+					).catch(() => undefined);
+					return d.manifest(host);
+				},
+			},
+			'pub1',
+			EMPTY,
+		);
+		expect(world.runtime.get('pub1')?.pending_deletions).toEqual([
+			{ path: '.publication/pub/test3_1', since: new Date(T0 + 5).toISOString() },
+		]);
+		expect(report).toMatchObject({ state: 'failed', error: DELETION_UNVERIFIED });
+	});
+});
+
 describe('withdrawn consent never waits for a put (the grant race closed)', () => {
 	test('unpublished while its grant (mark true) is in flight: re-checked after the mark, undone at once, never put', async () => {
 		for (const viaGrant of [true, false]) {
