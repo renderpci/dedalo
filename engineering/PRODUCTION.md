@@ -974,8 +974,10 @@ and demands it be here):
 | `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
 | `ontology_identifiers` | `dd_ontology` identifier columns ↔ the identifier grammar (six CHECKs) | boot (dry) | re-derive each violator's tld from source, delete the unaddressable rest (returned whole), VALIDATE the clean CHECKs |
 | `hierarchy` | `hierarchy1` active rows ↔ their provisioning | operator | `ensure` per broken hierarchy |
+| `public_tier` | matrix (record existence + publication flag) ↔ public tier (MariaDB rows, `.publication/dbs` markers, per-record rdf/xml/markdown files) | operator | unpublishes GHOSTS only (records the matrix no longer holds or no longer flags publishable, still served); a missing publication is reported, never published — that is a job (`src/diffusion/targets/mariadb/public_tier_reconcile.ts`) |
 | `publication_apis` | installed tree's verified Publication API release (`publication/server_api` + its extract-time manifest) ↔ each publication host's current v1/v2 | every 1 h (dry; hashes nothing when no publication host is paired) | **refused here** (`perm.denied`): root pushes from the `publication_hosts` widget (**Push API releases**), and a confirmed code update/restore boot pushes by itself (`src/core/publication_host/api_reconcile.ts`) |
 | `media_copy` | work `.publication/pub` ∩ public-quality files ↔ each copy-mode publication host's agent manifest + mirrored markers | every 10 min, **auto-apply** | through the copy worker's per-host lane: copies missing published files (sha-verified), unmarks then deletes unpublished ones, verifies deletions against the manifest; an unverified deletion is red in the `publication_hosts` panel, and a host withdrawn from copy mode while still holding bytes stays `failed` (`copy_mode_withdrawn`); root runs it for one host from the panel (**Reconcile media copy**); an operator APPLY through the Reconcile widget is root-only too (`applyRootOnly`), a dry run admin-level |
+| `publication_probe` | registry probe paths + work `.publication/pub` ↔ each publication host's PUBLIC URL answers | every 15 min, **auto-apply** (records only) | an observation, never a repair: the dry run sends two public GETs per configured host (published → 2xx, unpublished → 404) through the public door and writes nothing; apply records each verdict in `runtime.probe` (`applied` always 0); the repair is root's **Apply rules** (`src/core/publication_host/probe.ts`) |
 
 **After a data restore** the door runs the registry through
 `POST_RESTORE_PLAN` (`src/core/reconcile/post_restore.ts`): EVERY registered
@@ -988,8 +990,8 @@ hosts follow the restored `pub/`: a record unpublished in the restored data
 loses its public bytes). The rest run DRY and their drift is
 reported as `held` in the journal and the CLI's exit 2: `files_info`,
 `observer_mirrors`, `rag_index`, `ontology`, `ontology_identifiers`, `hierarchy`,
-`public_tier`, `publication_apis` — each a decision (a shrink, a budgeted recompute, a re-embed, a code push to a public host, a
-destructive re-projection or row delete, an unpublish from a museum site) the operator takes with the dry
+`public_tier`, `publication_apis`, `publication_probe` — each a decision (a shrink, a budgeted recompute, a re-embed, a code push to a public host, a
+destructive re-projection or row delete, an unpublish from a museum site; the probe is an observation whose dry verdict says whether media unpublished since the backup instant is still public) the operator takes with the dry
 list in view, through the three doors above. A step that throws is recorded by
 its error code and the plan continues.
 
@@ -1000,8 +1002,9 @@ fire-and-forget and non-fatal (`last_error` in the gauge), stopped on SIGTERM.
 scheduler, §8) keeps a smoke/maintenance copy from healing a shared store from
 the wrong root; the widget, the CLI and the gauge keep working. A scheduled run
 applies only when its definition says `autoApply` WITH a reason — today
-`media_index` and `media_copy` (its walk covers the public qualities only, its
-hashing rides the sha cache); a walk of the whole media tree or a destructive re-projection
+`media_index`, `media_copy` (its walk covers the public qualities only, its
+hashing rides the sha cache) and `publication_probe` (apply only records the
+observation in `runtime.probe`; the set is pinned by `reconcile_registry_tripwire`); a walk of the whole media tree or a destructive re-projection
 is an operator's decision, with the dry report in view.
 
 ## 7. Schema: migrations + provisioning (S2-39, DEC-17/DEC-19)

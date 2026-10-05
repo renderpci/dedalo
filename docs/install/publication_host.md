@@ -388,11 +388,14 @@ Each API keeps its releases side by side, with its configuration outside them:
 
 ## Keeping the Publication APIs in step with the work system
 
-After every confirmed code update of the work system, and after every restore, the work
-system sends the matching Publication API releases to each paired publication host: v2
+After every confirmed code update or code restore (a rollback to an earlier version) of
+the work system, the work system sends the matching Publication API releases to each paired publication host: v2
 first, then v1. The two are independent. The publication hosts panel shows the work
 system's own release beside each host's two API releases, and shows each failure in red
 without hiding the API that succeeded.
+
+A database restore does not change the code, so it sends nothing: the panel shows any lag,
+and **Push API releases** realigns it.
 
 - **What is sent is exactly what the update verified.** When the code updater installs a
   release, it records a checksum of every Publication API file. Before every push, each

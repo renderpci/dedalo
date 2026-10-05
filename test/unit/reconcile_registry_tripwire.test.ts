@@ -32,6 +32,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { ALL_WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
 import { loadAllReconciles, registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
+import { POST_RESTORE_PLAN } from '../../src/core/reconcile/post_restore.ts';
 import {
 	REGISTERED_NAMES,
 	type ReconcileDefinition,
@@ -299,6 +300,40 @@ describe('reconcile registry completeness (S-10)', () => {
 					'last_run_at',
 					'schedule',
 				].sort(),
+			);
+		}
+	});
+});
+
+describe('the ops doc (PRODUCTION.md §6.5) names what the registry runs', () => {
+	const doc = readFileSync(join(ROOT, 'engineering/PRODUCTION.md'), 'utf8');
+	test('every registered name has a row in the registered-set table', () => {
+		for (const name of REGISTERED_NAMES) {
+			expect(doc, `${name}: add its §6.5 table row`).toMatch(
+				new RegExp(`^\\| \`${name}\` \\|`, 'm'),
+			);
+		}
+	});
+
+	test('the scheduled-apply sentence names exactly the autoApply set', () => {
+		const sentence =
+			/applies only when its definition says `autoApply` WITH a reason — today([\s\S]*?);/.exec(
+				doc,
+			);
+		expect(sentence).not.toBeNull();
+		const named = [...(sentence?.[1] ?? '').matchAll(/`([a-z_]+)`/g)].map((m) => m[1]);
+		const auto = REGISTERED.filter((d) => d.autoApply !== undefined).map((d) => d.name);
+		expect(
+			named.filter((name) => (REGISTERED_NAMES as readonly string[]).includes(name as string)),
+		).toEqual(auto);
+	});
+
+	test('the post-restore paragraph names every DRY plan entry', () => {
+		const start = doc.indexOf('**After a data restore**');
+		const paragraph = doc.slice(start, doc.indexOf('\n\n', start));
+		for (const step of POST_RESTORE_PLAN) {
+			expect(paragraph, `${step.name}: name it in the post-restore paragraph`).toContain(
+				`\`${step.name}\``,
 			);
 		}
 	});

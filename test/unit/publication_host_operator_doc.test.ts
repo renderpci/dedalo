@@ -82,4 +82,18 @@ describe('publication host operator page', () => {
 			/is `failed` \(red\), with both statuses recorded,\s+even when the other side is `unknown`/,
 		);
 	});
+
+	test('the API push is promised after a CODE update/restore only; a database restore sends nothing', () => {
+		// post_restore.ts runs publication_apis DRY; only boot_confirm (a code sentinel) pushes.
+		const fragment = readFileSync(
+			join(repoRoot, 'changes/unreleased/publication-host-lockstep-copy-probe.md'),
+			'utf8',
+		);
+		for (const text of [page, fragment]) {
+			expect(text).not.toMatch(/after every restore/i);
+			expect(text).not.toMatch(/every code update or restore/i);
+			expect(text).toMatch(/code update or code restore/);
+			expect(text).toMatch(/database restore does not change the code/i);
+		}
+	});
 });
