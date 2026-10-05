@@ -32,7 +32,8 @@
  *   3. ONE REQUEST. `redirect: 'manual'`, and any 3xx is REFUSED with its body cancelled
  *      unread: the agent never redirects, so a 3xx means something else answered.
  *   4. BOUNDED. One total deadline from connect to the last body byte, an idle bound on the
- *      body, and the body read through the shared capped reader (`readBytesCapped`), which
+ *      body (default min(deadline, 30 s); a caller may only lower it — an idle body is a
+ *      timeout even with the deadline far off), and the body read through the shared capped reader (`readBytesCapped`), which
  *      cancels it over the ceiling. A request body may be a stream (release bundles).
  *
  * THE BEARER IS THE CALLER'S DECISION. It is attached only when passed, and the one
@@ -101,6 +102,11 @@ export interface AgentRequest {
 	maxResponseBytes?: number;
 	/** Total deadline, connect to last body byte. Default 10 s, ceiling 30 min. */
 	timeoutMs?: number;
+	/**
+	 * Longest silence between two body chunks. Default min(timeoutMs, 30 s); never above
+	 * either. An idle body ends as publication_host.timeout even when the deadline is far off.
+	 */
+	idleTimeoutMs?: number;
 }
 
 export interface AgentResponse {
@@ -119,6 +125,7 @@ type Coordinates = Record<string, string | number>;
 interface Bounds {
 	maxBytes: number;
 	timeoutMs: number;
+	idleMs: number;
 }
 
 interface AgentTarget {
@@ -171,7 +178,10 @@ function boundsOf(req: AgentRequest): Bounds {
 	const timeoutMs = req.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 	if (!inRange(maxBytes, MAX_RESPONSE_BYTES_CEILING)) throw misuse('maxResponseBytes out of range');
 	if (!inRange(timeoutMs, MAX_TIMEOUT_MS)) throw misuse('timeoutMs out of range');
-	return { maxBytes, timeoutMs };
+	const idleCeiling = Math.min(timeoutMs, IDLE_CEILING_MS);
+	const idleMs = req.idleTimeoutMs ?? idleCeiling;
+	if (!inRange(idleMs, idleCeiling)) throw misuse('idleTimeoutMs out of range');
+	return { maxBytes, timeoutMs, idleMs };
 }
 
 /** An IPv6 literal needs brackets in a URL authority. */
@@ -361,7 +371,7 @@ async function readAnswer(
 ): Promise<string> {
 	try {
 		const { bytes } = await readBytesCapped(response, bounds.maxBytes, {
-			idleTimeoutMs: Math.min(bounds.timeoutMs, IDLE_CEILING_MS),
+			idleTimeoutMs: bounds.idleMs,
 			signal: deadline,
 			onBreach: (maxBytes) =>
 				engineFailure(host.name, 'body_cap', {

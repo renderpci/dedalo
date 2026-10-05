@@ -133,8 +133,9 @@ policy, in this order:
 3. **One request.** `redirect: 'manual'`; any 3xx is refused, its body cancelled
    unread — a 3xx means something other than the agent answered.
 4. **Bounded.** One total deadline from connect to the last body byte, an idle
-   bound on the body, the guard's `readBytesCapped` (cancelled over the
-   ceiling). A request body may be a stream (release bundles).
+   bound on the body (default min(deadline, 30 s), a caller may only lower it; an
+   idle body is `publication_host.timeout` even when the deadline is far off), the
+   guard's `readBytesCapped` (cancelled over the ceiling). A request body may be a stream (release bundles).
 
 The bearer is attached only when the caller passes one, and the one production
 caller passes it only after proving the pairing on the agent's unauthenticated

@@ -233,6 +233,10 @@ describe('mTLS to the registry address', () => {
 			dialAgent(tlsHost(agent.port, 'localhost'), clientTls, GET_STATUS, BEARER),
 		);
 		expect(error.code).toBe('publication_host.unreachable');
+		// the TLS identity check refused it — a plain connection refusal (e.g. a `localhost`
+		// that resolves only to ::1) would read reason 'transport' and prove nothing
+		expect(error.coordinates?.reason).toBe('tls');
+		expect(error.coordinates?.stage).toBe('connect');
 		expect(state.hits.length, 'an HTTP request reached the agent under the wrong identity').toBe(
 			before,
 		);
@@ -287,6 +291,44 @@ describe('one request, bounded', () => {
 		expect(error.code).toBe('publication_host.timeout');
 		expect(error.coordinates?.stage).toBe('body');
 		expect(Date.now() - started).toBeLessThan(3_000);
+	});
+
+	test('the IDLE bound alone (deadline far off) ends a silent body as publication_host.timeout', async () => {
+		state.mode = 'stall_body';
+		const started = Date.now();
+		const error = await rejection(
+			dialAgent(
+				tlsHost(agent.port),
+				clientTls,
+				{ ...GET_STATUS, timeoutMs: 60_000, idleTimeoutMs: 300 },
+				BEARER,
+			),
+		);
+		state.mode = 'ok';
+		// the 60 s deadline never fired: only the idle classification can make this a timeout
+		expect(Date.now() - started, 'the idle bound did not end the read').toBeLessThan(3_000);
+		expect(error.code).toBe('publication_host.timeout');
+		expect(error.coordinates?.reason).toBe('timeout');
+		expect(error.coordinates?.stage).toBe('body');
+	});
+
+	test.each([
+		['zero', 0],
+		['above the 30 s ceiling', 30_001],
+		['above the request deadline', 1_001],
+		['fractional', 1.5],
+	])('idleTimeoutMs %s is refused before any socket opens', async (_label, idleTimeoutMs) => {
+		const before = state.hits.length;
+		const error = await rejection(
+			dialAgent(
+				tlsHost(agent.port),
+				clientTls,
+				{ ...GET_STATUS, timeoutMs: 1_000, idleTimeoutMs },
+				BEARER,
+			),
+		);
+		expect(error.code).toBe('internal.unexpected');
+		expect(state.hits.length).toBe(before);
 	});
 
 	test('over the byte ceiling: publication_host.failed minted by wire.ts engineFailure (wire reason body_cap)', async () => {
