@@ -37,7 +37,14 @@ const make_panel = (over = {}) =>
 			refused: null,
 			checked_at: AT,
 			rows: [
-				{ host: 'www', api: 'v2', engine: ENGINE, host_current: ENGINE, last_push: null, state: 'ok' },
+				{
+					host: 'www',
+					api: 'v2',
+					engine: ENGINE,
+					host_current: ENGINE,
+					last_push: null,
+					state: 'ok',
+				},
 				{
 					host: 'www',
 					api: 'v1',
@@ -46,7 +53,14 @@ const make_panel = (over = {}) =>
 					last_push: { state: 'failed', release: ENGINE, error: 'publication_host.failed', at: AT },
 					state: 'failed',
 				},
-				{ host: 'mirror', api: 'v2', engine: ENGINE, host_current: OLD, last_push: null, state: 'mismatch' },
+				{
+					host: 'mirror',
+					api: 'v2',
+					engine: ENGINE,
+					host_current: OLD,
+					last_push: null,
+					state: 'mismatch',
+				},
 			],
 		},
 		over,
@@ -142,7 +156,9 @@ describe('PUBLICATION HOSTS — API LOCKSTEP', function () {
 
 	it('names the refusal and disables the push', function () {
 		const refused = 'v1: drift: publication/server_api/v1/json/index.php (modified)';
-		const node = render_api_lockstep(make_panel({ engine_release: null, refused }), { is_root: true });
+		const node = render_api_lockstep(make_panel({ engine_release: null, refused }), {
+			is_root: true,
+		});
 		assert.include(node.querySelector('.dd_note.state_danger').textContent, refused);
 		assert.isTrue(node.querySelector('button.push_apis').disabled);
 	});
@@ -191,7 +207,10 @@ describe('PUBLICATION HOSTS — API LOCKSTEP', function () {
 		assert.strictEqual(self.confirms.length, 1, 'the operator was asked');
 		assert.include(self.confirms[0], ENGINE, 'the question names the release');
 		assert.deepEqual(self.calls, [{ action: 'push_apis', options: {} }]);
-		assert.include(content.querySelector('.body_response').textContent, `Release ${ENGINE} is current`);
+		assert.include(
+			content.querySelector('.body_response').textContent,
+			`Release ${ENGINE} is current`,
+		);
 		assert.strictEqual(self.reloads, 1, 'value reloaded once');
 	});
 

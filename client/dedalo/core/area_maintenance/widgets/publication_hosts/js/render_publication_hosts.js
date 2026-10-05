@@ -2,7 +2,11 @@
 /*global get_label */
 /*eslint no-undef: "error"*/
 
-import { request_failed, response_data, response_extension } from '../../../../common/js/api_error.js';
+import {
+	request_failed,
+	response_data,
+	response_extension,
+} from '../../../../common/js/api_error.js';
 import { handle_api_error } from '../../../../common/js/error_dispatch.js';
 import { error_text } from '../../../../common/js/render_api_error.js';
 // imports
