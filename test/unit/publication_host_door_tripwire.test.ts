@@ -648,9 +648,14 @@ describe('the operator is told how pairing and the panel really work', () => {
 	});
 
 	test('the panel rows name every strict-read refusal the code has (registry 0600+owner, secrets mode/owner, socket_perms)', async () => {
+		// The registry reads through the shared state-file kernel at its DEFAULT mode (0600);
+		// the kernel holds the refusals (atomic_json.ts, shared with runtime.ts).
 		const registry = await docsGateRead('src/core/publication_host/registry.ts');
-		expect(registry).toContain('must be owned by the engine user');
-		expect(registry).toContain('if (mode !== 0o600)');
+		expect(registry).toContain('readPrivateJsonTextSync(path, { maxBytes: REGISTRY_MAX_BYTES })');
+		const kernel = await docsGateRead('src/core/files/atomic_json.ts');
+		expect(kernel).toContain('must be owned by the engine user');
+		expect(kernel).toContain('options.mode ?? 0o600');
+		expect(kernel).toContain('if (found !== mode)');
 		const secrets = await docsGateRead('src/core/publication_host/secrets.ts');
 		expect(secrets).toContain("'bad_mode' | 'bad_owner'");
 		const transport = await docsGateRead('src/core/publication_host/transport.ts');

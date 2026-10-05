@@ -18,6 +18,8 @@
  *    partial one (Review Focus 2 — the panel shows `registry_invalid`).
  *  - The shape is STRICT: a missing key, an unknown key, a wrong type or a repeated name
  *    is invalid. A hand edit that adds a field is refused, not ignored.
+ *  - Reads, writes and the lock go ONLY through the atomic JSON state-file kernel
+ *    (`core/files/atomic_json.ts`, shared with runtime.ts — one implementation of these laws).
  *  - Writes are ATOMIC and DURABLE (temp 0600 → fsync → rename → fsync of the directory,
  *    `core/files/durable.ts`) and SERIALIZED across processes (the engine and the root
  *    pairing CLI) by `flock(2)` on `<private>/publication_hosts.json.lock`. The kernel
@@ -32,25 +34,17 @@
  *    which accepts only a temp directory that DECLARES itself one (marker file).
  */
 
-import { dlopen, FFIType } from 'bun:ffi';
-import {
-	chmodSync,
-	closeSync,
-	constants,
-	existsSync,
-	fstatSync,
-	fsyncSync,
-	lstatSync,
-	openSync,
-	renameSync,
-	rmSync,
-} from 'node:fs';
+import { existsSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve, sep } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { privateDir } from '../../config/env.ts';
-import { readBoundedSync } from '../files/bounded_read.ts';
-import { fsyncDirectory, writeAllSync } from '../files/durable.ts';
+import {
+	JsonFileError,
+	readPrivateJsonTextSync,
+	withJsonFileLock,
+	writeJsonFileAtomic,
+} from '../files/atomic_json.ts';
 
 /** Registry key of a host. */
 export const HOST_NAME = /^[a-z][a-z0-9_]{1,31}$/;
@@ -103,13 +97,6 @@ const HOST_KEYS = [
 	'probe',
 	'paired_at',
 ] as const;
-
-/** How long a writer waits for the lock before refusing. Holders hold it for one small file write. */
-const LOCK_WAIT_MS = 500;
-const LOCK_POLL_MS = 10;
-const LOCK_EX = 2;
-const LOCK_NB = 4;
-const LOCK_UN = 8;
 
 export type PublicationHostAddress =
 	| { kind: 'tls'; host: string; port: number }
@@ -185,10 +172,6 @@ export function publicationHostsBase(): string {
 /** `<private>/publication_hosts.json`. */
 export function registryPath(): string {
 	return join(publicationHostsBase(), REGISTRY_FILE);
-}
-
-function lockPath(): string {
-	return `${registryPath()}.lock`;
 }
 
 // ---------------------------------------------------------------------------
@@ -384,63 +367,26 @@ export function validateRegistry(value: unknown): RegistryFile {
 // Read
 // ---------------------------------------------------------------------------
 
-function errorCode(error: unknown): string {
-	const code = (error as { code?: unknown } | null)?.code;
-	return typeof code === 'string' ? code : 'unknown';
-}
-
-/** The capped read of an open registry file: a file past the cap is refused, never read. */
-function readOpenRegistry(fd: number, path: string): string {
-	const bytes = readBoundedSync(fd, REGISTRY_MAX_BYTES);
-	if (bytes === null) {
-		throw new RegistryError('unreadable', `${path} exceeds ${REGISTRY_MAX_BYTES} bytes`);
-	}
-	return bytes.toString('utf8');
+/** The kernel's refusals in this store's vocabulary (`too_large` reads as `tooLargeAs`). */
+function asRegistryError(error: unknown, tooLargeAs: RegistryErrorReason): unknown {
+	if (!(error instanceof JsonFileError)) return error;
+	const reason = error.reason === 'too_large' ? tooLargeAs : error.reason;
+	return new RegistryError(reason, error.message);
 }
 
 /**
  * The registry is the trust anchor for WHERE the engine dials, so it is read the way a
- * secret is (secrets.ts readSecretFile): no symlink (O_NOFOLLOW), never blocking on a FIFO
- * (O_NONBLOCK), and only a regular file of mode exactly 0600 owned by the engine user.
- * Anything else is `unreadable` — the panel shows registry_invalid, nothing is dialled.
+ * secret is (secrets.ts readSecretFile) — the kernel's private-file read: no symlink, never
+ * blocking on a FIFO, only a regular file of mode exactly 0600 owned by the engine user, at
+ * most REGISTRY_MAX_BYTES. Anything else is `unreadable` — the panel shows registry_invalid,
+ * nothing is dialled. Synchronous (bounded) because the interface is: the read also runs
+ * under the sync flock (updateRegistry).
  */
-const READ_FLAGS = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
-
-function assertPrivateFile(fd: number, path: string): void {
-	const stat = fstatSync(fd);
-	if (!stat.isFile()) throw new RegistryError('unreadable', `${path} must be a regular file`);
-	const mode = stat.mode & 0o777;
-	if (mode !== 0o600) {
-		throw new RegistryError('unreadable', `${path} must be mode 600, found ${mode.toString(8)}`);
-	}
-	if (stat.uid !== process.geteuid?.()) {
-		throw new RegistryError('unreadable', `${path} must be owned by the engine user`);
-	}
-}
-
-function openRefusal(path: string, error: unknown): RegistryError {
-	const code = errorCode(error);
-	return code === 'ELOOP'
-		? new RegistryError('unreadable', `${path} must be a regular file, not a symlink`)
-		: new RegistryError('unreadable', `${path} could not be read (${code})`);
-}
-
 function readRegistryText(path: string): string | null {
-	let fd: number;
 	try {
-		fd = openSync(path, READ_FLAGS);
+		return readPrivateJsonTextSync(path, { maxBytes: REGISTRY_MAX_BYTES });
 	} catch (error) {
-		if (errorCode(error) === 'ENOENT') return null;
-		throw openRefusal(path, error);
-	}
-	try {
-		assertPrivateFile(fd, path);
-		return readOpenRegistry(fd, path);
-	} catch (error) {
-		if (error instanceof RegistryError) throw error;
-		throw new RegistryError('unreadable', `${path} could not be read (${errorCode(error)})`);
-	} finally {
-		closeSync(fd);
+		throw asRegistryError(error, 'unreadable');
 	}
 }
 
@@ -466,113 +412,24 @@ export function getHost(name: string): PublicationHostRecord | null {
 }
 
 // ---------------------------------------------------------------------------
-// Write (atomic, durable, locked)
+// Write (atomic, durable, locked — the kernel)
 // ---------------------------------------------------------------------------
 
 function writeRegistryFile(next: RegistryFile): RegistryFile {
 	// Round-trip through JSON first: what is validated is exactly what is written.
 	const valid = validateRegistry(JSON.parse(JSON.stringify(next)));
-	const bytes = new TextEncoder().encode(`${JSON.stringify(valid, null, '\t')}\n`);
 	// The write is bounded like the read: a file every later read refuses would lock the
 	// registry out of its own repair (updateRegistry loads before it writes).
-	if (bytes.length > REGISTRY_MAX_BYTES) {
-		throw new RegistryError('invalid_shape', `registry would exceed ${REGISTRY_MAX_BYTES} bytes`);
-	}
-	const path = registryPath();
-	const temp = `${path}.tmp-${process.pid}`;
-	rmSync(temp, { force: true });
-	const fd = openSync(temp, 'wx', 0o600);
-	try {
-		writeAllSync(fd, bytes);
-		fsyncSync(fd);
-	} finally {
-		closeSync(fd);
-	}
-	try {
-		chmodSync(temp, 0o600); // the umask may have narrowed it; the mode is exact either way
-		renameSync(temp, path);
-	} finally {
-		rmSync(temp, { force: true });
-	}
-	fsyncDirectory(dirname(path));
+	writeJsonFileAtomic(registryPath(), valid, { maxBytes: REGISTRY_MAX_BYTES });
 	return valid;
 }
 
-type Flock = (fd: number, operation: number) => number;
-
-function loadLibc(): { flock: Flock; close: () => void } {
-	const path = process.platform === 'darwin' ? '/usr/lib/libSystem.B.dylib' : 'libc.so.6';
-	const lib = dlopen(path, { flock: { args: [FFIType.i32, FFIType.i32], returns: FFIType.i32 } });
-	return { flock: lib.symbols.flock, close: () => lib.close() };
-}
-
-/** Is `fd` still the file at `path`? (someone may have deleted and re-created the lock file) */
-function isCurrent(fd: number, path: string): boolean {
-	try {
-		const held = fstatSync(fd);
-		const current = lstatSync(path);
-		return held.ino === current.ino && held.dev === current.dev;
-	} catch {
-		return false;
-	}
-}
-
-/** 'a+' without following a symlink: a planted link never redirects the lock file. */
-const LOCK_FLAGS = constants.O_RDWR | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW;
-
-function openLockFile(path: string): number {
-	let fd: number;
-	try {
-		fd = openSync(path, LOCK_FLAGS, 0o600);
-	} catch (error) {
-		throw openRefusal(path, error);
-	}
-	if (!fstatSync(fd).isFile()) {
-		closeSync(fd);
-		throw new RegistryError('unreadable', `${path} must be a regular file`);
-	}
-	return fd;
-}
-
-/** One non-blocking attempt; the release function on success, null when held elsewhere. */
-function tryLock(path: string, flock: Flock): (() => void) | null {
-	const fd = openLockFile(path);
-	if (flock(fd, LOCK_EX | LOCK_NB) === 0 && isCurrent(fd, path)) {
-		return () => {
-			flock(fd, LOCK_UN);
-			closeSync(fd);
-		};
-	}
-	closeSync(fd); // closing the descriptor drops any lock it took
-	return null;
-}
-
-function acquireLock(path: string, flock: Flock): () => void {
-	const deadline = Date.now() + LOCK_WAIT_MS;
-	for (;;) {
-		const release = tryLock(path, flock);
-		if (release !== null) return release;
-		if (Date.now() > deadline) {
-			throw new RegistryError(
-				'locked',
-				`${path} is held by another writer (the pairing CLI or a panel action); retry when it finishes`,
-			);
-		}
-		Bun.sleepSync(LOCK_POLL_MS);
-	}
-}
-
+/** The kernel's sync flock: the registry's interface is synchronous (pairing CLI, rare edits). */
 function withRegistryLock<T>(body: () => T): T {
-	const libc = loadLibc();
 	try {
-		const release = acquireLock(lockPath(), libc.flock);
-		try {
-			return body();
-		} finally {
-			release();
-		}
-	} finally {
-		libc.close();
+		return withJsonFileLock(registryPath(), body);
+	} catch (error) {
+		throw asRegistryError(error, 'invalid_shape');
 	}
 }
 

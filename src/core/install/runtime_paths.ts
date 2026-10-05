@@ -52,6 +52,7 @@ import { privateDir, projectRoot, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { deriveProcessesDir } from '../media/processes_dir.ts';
 import { registryPath } from '../publication_host/registry.ts';
+import { runtimePath } from '../publication_host/runtime.ts';
 import { secretsRoot } from '../publication_host/secrets.ts';
 
 /** One runtime-writable path the engine (or its operator) can aim somewhere. */
@@ -257,6 +258,14 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 		// THE SAME FUNCTION the store uses (design rule: mirror the consumer exactly):
 		// <private>/publication_hosts.json, the non-secret host list (phase 3, E2).
 		resolve: () => registryPath(),
+	},
+	{
+		id: 'publication_hosts_runtime',
+		envKey: null,
+		consumer: 'src/core/publication_host/runtime.ts:runtimePath',
+		// THE SAME FUNCTION the store uses: beside the registry,
+		// <private>/publication_hosts_runtime.json, the observed per-host results (phases 4-6).
+		resolve: () => runtimePath(),
 	},
 	{
 		id: 'publication_hosts_secrets',
