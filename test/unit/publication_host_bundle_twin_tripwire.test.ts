@@ -40,6 +40,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gunzipSync } from 'node:zlib';
 import {
 	BundleRefused,
 	DEFAULT_MAX_PATH_LENGTH,
@@ -49,6 +50,7 @@ import {
 import {
 	BUNDLE_MAX_PATH_BYTES,
 	BUNDLE_MAX_SEGMENT_BYTES,
+	type BundleWriteError,
 	type BundleWriterEntry,
 	compareBundlePaths,
 	writeBundle,
@@ -240,6 +242,35 @@ describe('bundle twin — 3. a writer failure never lands', () => {
 				() => 'rejected',
 			),
 		).toBe('rejected');
+	});
+
+	test('a size without data never desyncs the frame: smuggled content headers never land', async () => {
+		// b's CONTENT is a real ustar header + body for an undeclared executable; were `a`'s
+		// header to claim 512 bytes it never carries, the reader would take b's header as a's
+		// body and extract `smuggled.sh` from b's content.
+		const inner = await writeBundle(
+			listOf([{ path: 'smuggled.sh', type: 'file', mode: 0o755, data: text('evil') }]),
+		);
+		const tar = gunzipSync(new Uint8Array(await new Response(inner.stream).arrayBuffer()));
+		const dest = join(scratch, 'smuggle');
+		mkdirSync(dest);
+		const out = await writeBundle(
+			listOf([
+				{ path: 'a', type: 'file', mode: 0o644, size: 512 },
+				{ path: 'b', type: 'file', mode: 0o644, data: tar.subarray(0, 1024) },
+			]),
+		);
+		const err = await extractBundle(out.stream, dest, LIMITS, []).then(
+			() => null,
+			(e: unknown) => e,
+		);
+		expect(err).not.toBeNull();
+		expect(existsSync(dest)).toBe(false);
+		const shaErr = await out.sha256.then(
+			() => null,
+			(e: unknown) => e,
+		);
+		expect((shaErr as BundleWriteError).reason).toBe('size_mismatch');
 	});
 });
 

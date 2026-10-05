@@ -183,7 +183,11 @@ function bytesSize(data: Uint8Array, size: number | undefined, path: string): nu
 function dataSize(entry: BundleWriterEntry): number {
 	const { data, size, path } = entry;
 	if (data instanceof Uint8Array) return bytesSize(data, size, path);
-	if (data === undefined) return size ?? 0;
+	if (data === undefined) {
+		// absent data = an empty file: a nonzero size here would frame bytes never written
+		if ((size ?? 0) !== 0) throw new BundleWriteError('size_mismatch', path);
+		return 0;
+	}
 	if (size === undefined) throw new BundleWriteError('size_missing', path);
 	return size;
 }
@@ -279,9 +283,11 @@ async function* dataBlocks(entry: BundleWriterEntry, size: number): AsyncGenerat
 	if (pad) yield pad;
 }
 
-async function* entryBlocks(entry: BundleWriterEntry): AsyncGenerator<Uint8Array> {
-	const path = headerPathBytes(entry);
-	const size = entrySize(entry);
+async function* entryBlocks(
+	entry: BundleWriterEntry,
+	path: Uint8Array,
+	size: number,
+): AsyncGenerator<Uint8Array> {
 	const long = path.length > NAME_BYTES;
 	if (long) yield* paxBlocks(path);
 	const typeflag = entry.type === 'dir' ? TYPE_DIR : TYPE_FILE;
@@ -293,8 +299,11 @@ async function* entryBlocks(entry: BundleWriterEntry): AsyncGenerator<Uint8Array
 async function* tarBlocks(entries: AsyncIterable<BundleWriterEntry>): AsyncGenerator<Uint8Array> {
 	const order = new OrderGuard();
 	for await (const entry of entries) {
+		// validate the entry itself first, so a hostile path is refused under its own reason
+		const path = headerPathBytes(entry);
+		const size = entrySize(entry);
 		order.admit(entry);
-		yield* entryBlocks(entry);
+		yield* entryBlocks(entry, path, size);
 	}
 	yield new Uint8Array(BLOCK * 2);
 }

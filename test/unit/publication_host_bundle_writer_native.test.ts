@@ -292,6 +292,16 @@ describe('bundle writer — refusals surface on the stream AND on sha256', () =>
 		['dir with a size', [{ path: 'd', type: 'dir', mode: 0o755, size: 1 }], 'dir_with_data'],
 		['stream without size', [{ ...ok, data: chunked(text('x'), 1) }], 'size_missing'],
 		['bytes and a different size', [{ ...ok, size: 3 }], 'size_mismatch'],
+		[
+			'size without data (header would frame bytes never written)',
+			[{ path: 'ok', type: 'file', mode: 0o644, size: 3 }],
+			'size_mismatch',
+		],
+		[
+			'hostile path after a valid entry → its own reason, not order',
+			[ok, { ...ok, path: '../x' }],
+			'dot_segment',
+		],
 		['negative size', [{ ...ok, data: chunked(text(''), 1), size: -1 }], 'size_mismatch'],
 		[
 			'stream shorter than size',

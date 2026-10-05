@@ -60,8 +60,8 @@ export interface BundleSourceEntry {
 /**
  * The D7 bundle, written by THE engine writer (src/core/publication_host/bundle_writer.ts —
  * one writer, never two; held by test/unit/publication_host_bundle_twin_tripwire.test.ts).
- * The writer refuses entries out of tree order, so they are sorted here; the drill appends
- * its DRILL_RELEASE marker after the walked tree.
+ * Callers may pass entries in any order (the drill appends its DRILL_RELEASE marker last);
+ * they are sorted into tree order here because the writer refuses anything else.
  */
 export async function bundleBytes(
 	entries: readonly BundleSourceEntry[],
