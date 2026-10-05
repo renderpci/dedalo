@@ -108,6 +108,7 @@ import {
 	TOKEN_PLACEHOLDER,
 } from '../publication/host_agent/src/provision/render/engine_fragment.ts';
 import { publicationHostFingerprint } from '../src/core/publication_host/pairing.ts';
+import { declareScratchPublicationHostsDir } from '../src/core/publication_host/test_marker.ts';
 import { markProcessesDir } from '../test/helpers/test_media_root.ts';
 import {
 	assertServedDatabase,
@@ -1678,6 +1679,7 @@ async function main(servers: readonly Server[]): Promise<number> {
 	const root = realpathSync(mkdtempSync(join(tmpdir(), 'dd_pubhost_engine_')));
 	const privateDir = join(root, 'private');
 	mkdirSync(privateDir, { mode: 0o700 });
+	declareScratchPublicationHostsDir(privateDir, 'publication_host_engine_drill');
 	const cleanups: (() => Promise<unknown>)[] = [];
 	try {
 		await run(book, servers, suiteDb, root, privateDir, cleanups);

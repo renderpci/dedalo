@@ -69,6 +69,7 @@ import {
 	saveRegistry,
 } from '../../src/core/publication_host/registry.ts';
 import { splitEngineBundle, writeHostSecrets } from '../../src/core/publication_host/secrets.ts';
+import { declareScratchPublicationHostsDir } from '../../src/core/publication_host/test_marker.ts';
 import {
 	mintTestPki,
 	type TestPki,
@@ -571,6 +572,9 @@ describe('live proof before write (child process, scratch private dir, loopback 
 
 	beforeEach(() => {
 		privateRoot = mkdtempSync(join(work, 'private-'));
+		// The child is a test process (NODE_ENV=test): its agent door dials only from a
+		// DECLARED scratch store (registry.ts publicationHostsTestRefusal).
+		declareScratchPublicationHostsDir(privateRoot, 'publication_host_pair_cli_native');
 		tlsAgent.reset(fp(TOKEN));
 		unixAgent.reset(fp(TOKEN));
 	});

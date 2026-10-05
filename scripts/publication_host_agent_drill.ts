@@ -104,6 +104,7 @@ import {
 	publicationHostFingerprintMatches,
 } from '../src/core/publication_host/pairing.ts';
 import type { HostRuntime } from '../src/core/publication_host/runtime.ts';
+import { declareScratchPublicationHostsDir } from '../src/core/publication_host/test_marker.ts';
 import {
 	ensureSuiteMariadb,
 	stopSuiteMariadb,
@@ -613,6 +614,7 @@ function prepareCopy(scene: Scene): CopyScene {
 	}
 	const enginePrivate = join(scene.dir, 'engine_private');
 	mkdirSync(enginePrivate, { recursive: true, mode: 0o700 });
+	declareScratchPublicationHostsDir(enginePrivate, 'publication_host_agent_drill (copy pass)');
 	writeFileSync(
 		join(enginePrivate, COPY_DRILL_PRIVATE_MARKER),
 		'publication-host copy drill: the scratch engine private dir\n',

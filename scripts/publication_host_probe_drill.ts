@@ -26,6 +26,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { declareScratchPublicationHostsDir } from '../src/core/publication_host/test_marker.ts';
 import { operatorConfig } from './lib/operator_config.ts';
 import {
 	type DrillServer,
@@ -65,6 +66,7 @@ async function main(): Promise<number> {
 	const scratch = mkdtempSync(join(tmpdir(), 'dd_pubhost_probe_'));
 	try {
 		mkdirSync(join(scratch, 'private'));
+		declareScratchPublicationHostsDir(join(scratch, 'private'), 'publication_host_probe_drill');
 		mkdirSync(join(scratch, 'media'));
 		const child = Bun.spawn(
 			[process.execPath, 'run', CHILD, '--scratch', scratch, '--servers', selected.join(',')],

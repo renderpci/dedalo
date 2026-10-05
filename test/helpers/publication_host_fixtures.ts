@@ -22,18 +22,13 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-	overridePublicationHostsBaseForTests,
-	PUBLICATION_HOSTS_TEST_MARKER,
-} from '../../src/core/publication_host/registry.ts';
+import { overridePublicationHostsBaseForTests } from '../../src/core/publication_host/registry.ts';
+import { declareScratchPublicationHostsDir } from '../../src/core/publication_host/test_marker.ts';
 
 /** A fresh declared scratch base, already installed as the stores' base. dispose() restores. */
 export function useScratchPublicationHostsBase(): { base: string; dispose: () => void } {
 	const base = mkdtempSync(join(tmpdir(), 'dedalo_pubhosts_'));
-	writeFileSync(
-		join(base, PUBLICATION_HOSTS_TEST_MARKER),
-		'scratch publication-hosts base — a test created this\n',
-	);
+	declareScratchPublicationHostsDir(base, 'useScratchPublicationHostsBase');
 	overridePublicationHostsBaseForTests(base);
 	return {
 		base,
