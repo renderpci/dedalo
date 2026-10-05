@@ -278,7 +278,13 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 				pid = job.runner.pid;
 				break;
 			}
-			if (Date.now() - started > 15000) throw new Error('runner never registered a pid');
+			if (Date.now() - started > 15000) {
+				// Name the state: 'queued' = never claimed (scheduler kick / runner budget),
+				// 'running' without pid/progress = a slow or dead runner spawn.
+				throw new Error(
+					`runner never registered a pid (job ${job === null ? 'absent' : `state=${job.state} pid=${job.runner.pid ?? 'none'} counter=${job.totals.counter ?? 0}`})`,
+				);
+			}
 			await Bun.sleep(100);
 		}
 		createdJobIds.push(jobId);

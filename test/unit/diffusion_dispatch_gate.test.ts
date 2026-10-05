@@ -29,6 +29,7 @@ import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/r
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import {
+	coalescingKick,
 	isDispatchEnabled,
 	isSchedulerPaused,
 	resumeScheduler,
@@ -207,5 +208,64 @@ describe('diffusion dispatch verbs', () => {
 		expect(widget).toContain(
 			"if (action !== 'pause' && action !== 'resume' && action !== 'drain_resume')",
 		);
+	});
+});
+
+/**
+ * The tick's single-flight latch, BEHAVIOURALLY (pure — no DB, no queue mock).
+ *
+ * The old latch DROPPED a kick that met a running pass. A pass that had already
+ * read an empty queue then ended, and the kicker's freshly enqueued job sat
+ * queued until the 2 s interval — or forever in a process without one: the
+ * diffusion_actions crash leg failed "runner never registered a pid" under load.
+ */
+describe('coalescingKick: a kick during a pass is never dropped', () => {
+	function deferred(): { promise: Promise<void>; resolve: () => void } {
+		let resolve!: () => void;
+		const promise = new Promise<void>((r) => {
+			resolve = r;
+		});
+		return { promise, resolve };
+	}
+
+	test('a kick landing mid-pass buys exactly one more pass', async () => {
+		const gates = [deferred(), deferred()];
+		let passes = 0;
+		const kick = coalescingKick(async () => {
+			const gate = gates[passes++];
+			if (gate) await gate.promise;
+		});
+		const first = kick();
+		await kick(); // meets the running pass: must be remembered, not dropped
+		await kick(); // ... and coalesced with the one above
+		expect(passes).toBe(1);
+		gates[0]?.resolve();
+		await Bun.sleep(0);
+		expect(passes, 'the remembered kick re-ran the pass').toBe(2);
+		gates[1]?.resolve();
+		await first;
+		expect(passes, 'two mid-pass kicks coalesce into ONE extra pass').toBe(2);
+	});
+
+	test('without a mid-pass kick there is no extra pass; a later kick starts afresh', async () => {
+		let passes = 0;
+		const kick = coalescingKick(async () => {
+			passes++;
+		});
+		await kick();
+		expect(passes).toBe(1);
+		await kick();
+		expect(passes).toBe(2);
+	});
+
+	test('a throwing pass releases the latch', async () => {
+		let passes = 0;
+		const kick = coalescingKick(async () => {
+			passes++;
+			if (passes === 1) throw new Error('boom');
+		});
+		await expect(kick()).rejects.toThrow('boom');
+		await kick();
+		expect(passes, 'the latch did not stay held after a throw').toBe(2);
 	});
 });

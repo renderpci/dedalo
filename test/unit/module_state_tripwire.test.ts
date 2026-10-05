@@ -235,12 +235,12 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/geoip/reader.ts:reader',
 	// Diffusion job service (DIFFUSION_SPEC §4.2) — all request-INDEPENDENT
 	// process state: a table-bootstrap memo plus the scheduler's process-wide
-	// timers/latch. No request identity (user/session/lang) ever lands here;
-	// per-run state lives in the durable dedalo_ts_diffusion_jobs rows.
+	// timers (the tick's single-flight latch lives in a closure: coalescingKick).
+	// No request identity (user/session/lang) ever lands here; per-run state
+	// lives in the durable dedalo_ts_diffusion_jobs rows.
 	'diffusion/jobs/schema.ts:ensured',
 	'diffusion/jobs/scheduler.ts:schedulerTimer',
 	'diffusion/jobs/scheduler.ts:sweeperTimer',
-	'diffusion/jobs/scheduler.ts:ticking',
 	// Diffusion plan compiler (DIFFUSION_SPEC §4.1): a lazily-imported parser
 	// classifier memo and the ontology-revision counter that keys the plan
 	// cache — both request-INDEPENDENT (ontology/install-stable, bumped only
