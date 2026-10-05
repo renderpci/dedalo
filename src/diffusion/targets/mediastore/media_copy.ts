@@ -1,7 +1,9 @@
 /**
  * MEDIA_COPY — the publication-host `copy` target (engineering/PUBLICATION_HOST_SPEC.md
- * §5.2). This file holds the desired set, the local sha cache and the planner. The
- * apply, the per-host worker and the pub/ transition hook live beside this code.
+ * §5.2). This file holds the desired set, the local sha cache, the planner and the REAL
+ * bindings of a copy round (realCopyDeps / applyCopy / syncHost). The apply itself
+ * (media_copy_apply.ts), the per-host worker (media_copy_worker.ts) and the pub/
+ * transition seam (pub_transitions.ts) live beside this code.
  *
  * THE DESIRED SET IS RULE B'S OWN DECISION, not a second definition of "public": a file
  * under a public quality folder (filterPublicQualities — never a master tier) whose path
@@ -44,6 +46,10 @@
 import { type Dirent, promises as fs, type Stats } from 'node:fs';
 import path from 'node:path';
 import { privateDir } from '../../../config/env.ts';
+import {
+	mediaCopyTargetLockKey,
+	withTargetLock,
+} from '../../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
 import {
 	escapeRegexLiteral,
@@ -57,12 +63,28 @@ import {
 } from '../../../core/media/protection.ts';
 import { MEDIA_ACTIVE_DOCUMENT_EXTENSIONS } from '../../../core/media/svg_safety.ts';
 import {
+	hostMediaDelete,
 	hostMediaManifest,
+	hostMediaMark,
+	hostMediaPut,
 	type MediaManifest,
 } from '../../../core/publication_host/agent_client.ts';
 import { getHost, RegistryError } from '../../../core/publication_host/registry.ts';
+import { updateHostRuntime } from '../../../core/publication_host/runtime.ts';
 import { engineFailure, hostError, registryError } from '../../../core/publication_host/wire.ts';
-import { makeMarkerKey, markerStoreBase } from './media_index.ts';
+import {
+	type ApplyPlan,
+	applyCopyWith,
+	type CopyApplyReport,
+	type CopyDeps,
+	hostTakesCopy,
+	MEDIA_COPY_LOCK_BOUND_MS,
+	openLocalMediaFile,
+	recordRoundFailure,
+	syncHostWith,
+} from './media_copy_apply.ts';
+import { hasPubMarker, makeMarkerKey, markerStoreBase } from './media_index.ts';
+import { type PubTransitionSink, registerPubTransitionSink } from './pub_transitions.ts';
 
 export interface DesiredFile {
 	/** Media-root-relative, '/'-separated — the agent's path and the URL tail after /dedalo/<mediaDir>/. */
@@ -601,4 +623,78 @@ export async function planCopy(
 	);
 	await cache.maybeCompact();
 	return plan;
+}
+
+// ---------------------------------------------------------------------------
+// The real bindings of a copy round (media_copy_apply.ts runs it)
+// ---------------------------------------------------------------------------
+
+/** The pub/ transition hook seam (decision M3): the copy worker registers here at boot. */
+export function registerMediaCopySink(sink: PubTransitionSink): () => void {
+	return registerPubTransitionSink(sink);
+}
+
+/** The agent manifest, semantically validated (toManifestView) before a round trusts it. */
+async function validatedManifest(host: string): Promise<MediaManifest> {
+	const raw = await hostMediaManifest(host);
+	toManifestView(raw, host);
+	return raw;
+}
+
+/**
+ * The real dependencies of ONE copy round: the paired agent client, the marker store,
+ * this host's Rule B (the same classifier and quality override the planner uses), a
+ * per-round sha cache (opened lazily and asynchronously: it needs the media root), the
+ * lock, the runtime file. Build it per round — never share it across rounds.
+ */
+export function realCopyDeps(): CopyDeps {
+	let cache: Promise<ShaCache> | null = null;
+	return {
+		put: hostMediaPut,
+		del: hostMediaDelete,
+		mark: hostMediaMark,
+		manifest: validatedManifest,
+		isPublished: hasPubMarker,
+		classifier: (host) => publicFileClassifier(hostQualities(host)),
+		sha256: async (file) => {
+			cache ??= openShaCache();
+			return (await cache).sha256(file);
+		},
+		open: (relpath) => openLocalMediaFile(relpath),
+		lock: (host, work) =>
+			withTargetLock(mediaCopyTargetLockKey(host), work, {
+				mode: { boundMs: MEDIA_COPY_LOCK_BOUND_MS },
+			}),
+		updateRuntime: async (host, fn) =>
+			(await updateHostRuntime(host, (cur) => ({ ...cur, media_copy: fn(cur.media_copy) })))
+				.media_copy,
+		now: () => new Date(),
+	};
+}
+
+/**
+ * Apply one plan to one host (media_copy_apply.ts). RAW: the worker calls it from inside
+ * the host lane; any other caller wraps plan + apply in inMediaCopyLane
+ * (media_copy_worker.ts), so it never applies a stale plan beside a hook run.
+ */
+export function applyCopy(host: string, plan: ApplyPlan): Promise<CopyApplyReport> {
+	return applyCopyWith(realCopyDeps(), host, plan);
+}
+
+/** One worker run for one host: withdraw the hook's keys first, then plan + apply. */
+export function syncHost(
+	host: string,
+	withdrawnKeys: readonly string[],
+): Promise<CopyApplyReport | null> {
+	const deps = realCopyDeps();
+	return syncHostWith(
+		{
+			takesCopy: (name) => hostTakesCopy(name),
+			plan: (name) => planCopy(name),
+			apply: (name, plan) => applyCopyWith(deps, name, plan),
+			recordFailure: (name, error) => recordRoundFailure(deps, name, error),
+		},
+		host,
+		withdrawnKeys,
+	);
 }
