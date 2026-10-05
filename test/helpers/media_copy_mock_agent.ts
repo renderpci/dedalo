@@ -30,6 +30,7 @@ import { join } from 'node:path';
 import { forgetPairing } from '../../src/core/publication_host/agent_client.ts';
 import {
 	type PublicationHostRecord,
+	publicationHostsTestRefusal,
 	updateRegistry,
 } from '../../src/core/publication_host/registry.ts';
 import { removeHostRuntime } from '../../src/core/publication_host/runtime.ts';
@@ -233,7 +234,23 @@ async function handle(state: State, req: Request): Promise<Response> {
 	return mediaRoute(state, route, url, req);
 }
 
+/**
+ * Refuse BEFORE any store write unless the publication-host stores resolve under the OS temp
+ * dir (useScratchMediaCopyStores armed) — makes the EXEMPT_WRITERS "scratch only" claim
+ * (test_db_marker_tripwire) mechanically true: a gate that forgot to arm, or ran after
+ * dispose, can never plant a zzmc host + bearer in the installation's live <private>.
+ */
+export function assertScratchCopyStores(door: string): void {
+	const refusal = publicationHostsTestRefusal(true);
+	if (refusal !== null) {
+		throw new Error(
+			`media_copy_mock_agent.${door} refused: ${refusal} (call useScratchMediaCopyStores first)`,
+		);
+	}
+}
+
 function registerCopyMockHost(name: string, socket: string): void {
+	assertScratchCopyStores('registerCopyMockHost');
 	const record: PublicationHostRecord = {
 		name,
 		instance: COPY_MOCK_INSTANCE,
@@ -253,6 +270,7 @@ function registerCopyMockHost(name: string, socket: string): void {
 
 /** Drop `name` from the scratch registry, its secrets, its runtime row and its pairing proof. */
 export async function unregisterCopyMockHost(name: string): Promise<void> {
+	assertScratchCopyStores('unregisterCopyMockHost');
 	updateRegistry((cur) => ({ version: 1, hosts: cur.hosts.filter((host) => host.name !== name) }));
 	removeHostSecrets(name);
 	await removeHostRuntime(name);
@@ -269,6 +287,7 @@ export async function startCopyMockAgent(
 	mode: MockMode,
 	seed: MockSeed = {},
 ): Promise<CopyMockAgent> {
+	assertScratchCopyStores('startCopyMockAgent');
 	const dir = mkdtempSync('/tmp/zzmc-');
 	const socket = join(dir, 'agent.sock');
 	const state: State = {
