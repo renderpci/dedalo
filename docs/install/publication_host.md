@@ -257,8 +257,8 @@ system send its credentials somewhere else.
    the socket instead. Make your copies owned by the Dédalo user and readable by it alone
    (`chown <engine user> <file>`, then `chmod 600 <file>`). A copy you carried as root or as
    another administrator is owned by that account, and the Dédalo user cannot read it. The
-   command refuses a token or bundle file that group or others can read: change its owner,
-   never its mode.
+   command refuses a token or bundle file that group or others can read. When the Dédalo
+   user cannot read a copy, fix its owner; never loosen its mode to make it readable.
 2. **Give the command the token.** The fragment names the bearer token but never holds it.
    On the publication host, as root, read the token from the credential file the fragment's
    comment names. Then do one of these:
