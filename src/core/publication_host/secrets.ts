@@ -37,13 +37,13 @@ import {
 	fsyncSync,
 	mkdirSync,
 	openSync,
-	readFileSync,
 	renameSync,
 	rmSync,
 	type Stats,
 	statSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { readBoundedSync } from '../files/bounded_read.ts';
 import { fsyncDirectory, writeAllSync } from '../files/durable.ts';
 import { HOST_NAME, publicationHostsBase } from './registry.ts';
 
@@ -58,6 +58,12 @@ const FILE_MODE = 0o600;
  * refused by the door (the agent's own SERVICE_TOKEN bound is ≥ 32, no maximum).
  */
 export const TOKEN_SHAPE = /^[\x21-\x7e]{32,1024}$/;
+/**
+ * The most bytes one secret read takes. Reads are synchronous on the panel's request path,
+ * so they are CAPPED rather than sized by the file: a token is ≤ 1025 bytes and an engine
+ * bundle (cert + PKCS#8 key + CA) a few KiB, so a file past this is refused, never read.
+ */
+export const SECRET_MAX_BYTES = 64 * 1024;
 const PEM_BLOCK =
 	/-----BEGIN ([A-Z0-9 ]+)-----\r?\n[A-Za-z0-9+/=\r\n]+?-----END \1-----(?:\r?\n|$)/g;
 const BUNDLE_LAYOUT = 'CERTIFICATE|PRIVATE KEY|CERTIFICATE';
@@ -154,8 +160,11 @@ function openIfPresent(path: string): number | null {
 	}
 }
 
-/** The checked text of a secret file, or null when it (or its directory) is absent. */
-function readSecretFile(path: string): string | null {
+/**
+ * The checked text of a secret file, or null when it (or its directory) is absent. The
+ * read is CAPPED at SECRET_MAX_BYTES: a larger file is refused as `oversize`, unread.
+ */
+function readSecretFile(path: string, oversize: SecretErrorReason): string | null {
 	const fd = openIfPresent(path);
 	if (fd === null) return null;
 	try {
@@ -163,7 +172,10 @@ function readSecretFile(path: string): string | null {
 		if (!stat.isFile()) throw new SecretError('bad_mode', `${path} must be a regular file`);
 		assertPrivate(dirname(path), statSync(dirname(path)), DIR_MODE);
 		assertPrivate(path, stat, FILE_MODE);
-		return readFileSync(fd, 'utf8');
+		const bytes = readBoundedSync(fd, SECRET_MAX_BYTES);
+		if (bytes === null)
+			throw new SecretError(oversize, `${path} exceeds ${SECRET_MAX_BYTES} bytes`);
+		return bytes.toString('utf8');
 	} finally {
 		closeSync(fd);
 	}
@@ -228,7 +240,7 @@ export function splitEngineBundle(pem: string, source: string): HostTls {
 /** The bearer, or null when absent. Throws SecretError on a bad mode/owner or shape. */
 export function readHostToken(name: string): string | null {
 	const path = join(hostSecretDir(name), TOKEN_FILE);
-	const text = readSecretFile(path);
+	const text = readSecretFile(path, 'bad_token');
 	if (text === null) return null;
 	return assertToken(text.endsWith('\n') ? text.slice(0, -1) : text, path);
 }
@@ -236,7 +248,7 @@ export function readHostToken(name: string): string | null {
 /** The engine's TLS material for `name`, or null when absent. Throws SecretError. */
 export function readHostTls(name: string): HostTls | null {
 	const path = join(hostSecretDir(name), BUNDLE_FILE);
-	const text = readSecretFile(path);
+	const text = readSecretFile(path, 'bad_bundle');
 	return text === null ? null : splitEngineBundle(text, path);
 }
 

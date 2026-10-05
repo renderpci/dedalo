@@ -33,11 +33,6 @@ import {
 } from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
 import type { TlsMaterial } from './publication_host_agent_drill_kit.ts';
 
-export {
-	BUNDLE_PLACEHOLDER,
-	TOKEN_PLACEHOLDER,
-} from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
-
 // ── where the engine keeps hosts (E2/E3) ─────────────────────────────────────
 
 export const REGISTRY = {

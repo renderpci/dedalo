@@ -38,10 +38,11 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
 import { parse } from '@babel/parser';
+import { shippedTextFiles } from '../helpers/shipped_text_corpus.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 import { writePathSourceFiles } from '../helpers/write_path_corpus.ts';
 
@@ -513,7 +514,8 @@ describe('the operator is told how pairing and the panel really work', () => {
 			if (!line.includes(PAIR_INVOCATION))
 				unknown.push(`not run as the engine user: ${line.trim()}`);
 			const verb =
-				/(?:publication_host_pair\.ts|dedalo:pair-publication-host) ([a-z]+|…)/.exec(line)?.[1] ?? '';
+				/(?:publication_host_pair\.ts|dedalo:pair-publication-host) ([a-z]+|…)/.exec(line)?.[1] ??
+				'';
 			if (verb !== '…' && !cli.includes(`'${verb}'`)) unknown.push(`verb ${verb}`);
 			for (const m of line.matchAll(/ (--[a-z][a-z-]*)/g)) {
 				const flag = m[1] ?? '';
@@ -533,8 +535,9 @@ describe('the operator is told how pairing and the panel really work', () => {
 
 	test('in-product text points at the documented pair command, as the engine user', async () => {
 		const documented = 'sudo -u <engine user> bun run dedalo:pair-publication-host';
-		const catalogs = readdirSync(`${DOCS_GATE_ROOT}/src/core/labels/catalog`).map(
-			(name) => `src/core/labels/catalog/${name}`,
+		// the translated catalogs, from the registered shipped-text lister (no private walk)
+		const catalogs = shippedTextFiles().filter((file) =>
+			/^src\/core\/labels\/catalog\/lg-[^/]+\.json$/.test(file),
 		);
 		const sources = [
 			'src/core/labels/master.json',

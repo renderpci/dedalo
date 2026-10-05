@@ -24,12 +24,13 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import {
 	getHost,
 	loadRegistry,
 	overridePublicationHostsBaseForTests,
 	type PublicationHostRecord,
+	REGISTRY_MAX_BYTES,
 	RegistryError,
 	type RegistryErrorReason,
 	type RegistryFile,
@@ -98,6 +99,16 @@ describe('read', () => {
 		writeFileSync(registryPath(), text, { mode: 0o600 });
 		expect(reasonOf(() => loadRegistry())).toBe(reason);
 		expect(reasonOf(() => getHost('pub_main'))).toBe(reason);
+	});
+
+	test('the read is BOUNDED: over REGISTRY_MAX_BYTES is unreadable, at the cap it loads', () => {
+		// a sync read on the request path must not scale with a hand-edited file
+		// (sync_io_on_request_path_tripwire): padding a valid file past the cap refuses it
+		const body = JSON.stringify(file(host()));
+		writeFileSync(registryPath(), body.padEnd(REGISTRY_MAX_BYTES, ' '), { mode: 0o600 });
+		expect(loadRegistry()).toEqual(file(host()));
+		writeFileSync(registryPath(), body.padEnd(REGISTRY_MAX_BYTES + 1, ' '), { mode: 0o600 });
+		expect(reasonOf(() => loadRegistry())).toBe('unreadable');
 	});
 
 	test('a registry path that cannot be read is unreadable, not empty', () => {
@@ -398,7 +409,11 @@ describe('write', () => {
 		expect(loadRegistry()).toEqual(file(host()));
 		expect(statSync(registryPath()).mode & 0o777).toBe(0o600);
 		expect(readFileSync(registryPath(), 'utf8').endsWith('}\n')).toBe(true);
-		expect(readdirSync(scratch.base).filter((name) => name.includes('.tmp-'))).toEqual([]);
+		// floor: the listing saw the saved registry, so an empty temp filter is a real verdict
+		const listing = readdirSync(scratch.base);
+		expect(listing.length).toBeGreaterThanOrEqual(1);
+		expect(listing).toContain(basename(registryPath()));
+		expect(listing.filter((name) => name.includes('.tmp-'))).toEqual([]);
 	});
 
 	test('saving an invalid registry throws and writes nothing', () => {

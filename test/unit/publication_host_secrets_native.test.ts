@@ -34,6 +34,7 @@ import {
 	readHostTls,
 	readHostToken,
 	removeHostSecrets,
+	SECRET_MAX_BYTES,
 	SecretError,
 	type SecretErrorReason,
 	secretPresence,
@@ -233,6 +234,24 @@ describe('stored secrets are checked on every read', () => {
 		rmSync(tokenPath);
 		symlinkSync(outside, tokenPath);
 		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_mode');
+	});
+
+	test('the read is BOUNDED: a bundle padded past SECRET_MAX_BYTES is bad_bundle, at the cap it reads', () => {
+		// trailing whitespace is otherwise accepted (trimmed outside the blocks), so only the cap refuses it
+		writeHostSecrets('pub_main', TOKEN, pki.bundlePem);
+		const path = join(hostSecretDir('pub_main'), BUNDLE_FILE);
+		writeFileSync(path, pki.bundlePem.padEnd(SECRET_MAX_BYTES, '\n'), { mode: 0o600 });
+		expect(readHostTls('pub_main')?.ca).toBe(pki.caPem);
+		writeFileSync(path, pki.bundlePem.padEnd(SECRET_MAX_BYTES + 1, '\n'), { mode: 0o600 });
+		expect(failure(() => readHostTls('pub_main')).reason).toBe('bad_bundle');
+		writeFileSync(
+			join(hostSecretDir('pub_main'), TOKEN_FILE),
+			TOKEN.padEnd(SECRET_MAX_BYTES + 1, '\n'),
+			{
+				mode: 0o600,
+			},
+		);
+		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_token');
 	});
 
 	test('a hand-edited token file with CRLF is bad_token', () => {

@@ -84,6 +84,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { SUDO, SYSTEMCTL } from '../publication/host_agent/src/exec.ts';
+import {
+	BUNDLE_PLACEHOLDER,
+	TOKEN_PLACEHOLDER,
+} from '../publication/host_agent/src/provision/render/engine_fragment.ts';
 import { publicationHostFingerprint } from '../src/core/publication_host/pairing.ts';
 import { markProcessesDir } from '../test/helpers/test_media_root.ts';
 import {
@@ -135,7 +139,6 @@ import {
 import {
 	ACTIONS,
 	assertSecretFree,
-	BUNDLE_PLACEHOLDER,
 	bearerSentProblem,
 	bundleKeySecrets,
 	checkState,
@@ -154,7 +157,6 @@ import {
 	type Secret,
 	secretLeaks,
 	stagingLeftovers,
-	TOKEN_PLACEHOLDER,
 	writeEngineBundle,
 } from './lib/publication_host_engine_drill_kit.ts';
 

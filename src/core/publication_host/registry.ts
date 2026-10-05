@@ -36,7 +36,6 @@ import {
 	fstatSync,
 	fsyncSync,
 	openSync,
-	readFileSync,
 	renameSync,
 	rmSync,
 	statSync,
@@ -45,6 +44,7 @@ import { isIP } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { privateDir } from '../../config/env.ts';
+import { readBoundedSync } from '../files/bounded_read.ts';
 import { fsyncDirectory, writeAllSync } from '../files/durable.ts';
 
 /** Registry key of a host. */
@@ -79,6 +79,12 @@ const PROBE_PATH = /^[A-Za-z0-9_][A-Za-z0-9._/-]{0,511}$/;
 
 export const REGISTRY_VERSION = 1;
 export const REGISTRY_FILE = 'publication_hosts.json';
+/**
+ * The most bytes a registry read takes. The read is synchronous (it also runs under the
+ * flock, see updateRegistry), so it is CAPPED rather than sized by the file: ~1 KiB per
+ * host leaves room for a thousand, and a file past it is `unreadable`, never parsed.
+ */
+export const REGISTRY_MAX_BYTES = 1024 * 1024;
 /** The marker a temp directory must carry before the test seam will point the stores at it. */
 export const PUBLICATION_HOSTS_TEST_MARKER = '.dedalo_test_publication_hosts';
 
@@ -378,12 +384,30 @@ function errorCode(error: unknown): string {
 	return typeof code === 'string' ? code : 'unknown';
 }
 
+/** The capped read of an open registry file: a file past the cap is refused, never read. */
+function readOpenRegistry(fd: number, path: string): string {
+	const bytes = readBoundedSync(fd, REGISTRY_MAX_BYTES);
+	if (bytes === null) {
+		throw new RegistryError('unreadable', `${path} exceeds ${REGISTRY_MAX_BYTES} bytes`);
+	}
+	return bytes.toString('utf8');
+}
+
 function readRegistryText(path: string): string | null {
+	let fd: number;
 	try {
-		return readFileSync(path, 'utf8');
+		fd = openSync(path, 'r');
 	} catch (error) {
 		if (errorCode(error) === 'ENOENT') return null;
 		throw new RegistryError('unreadable', `${path} could not be read (${errorCode(error)})`);
+	}
+	try {
+		return readOpenRegistry(fd, path);
+	} catch (error) {
+		if (error instanceof RegistryError) throw error;
+		throw new RegistryError('unreadable', `${path} could not be read (${errorCode(error)})`);
+	} finally {
+		closeSync(fd);
 	}
 }
 

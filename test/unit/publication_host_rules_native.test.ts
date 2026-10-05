@@ -79,6 +79,9 @@ describe('expectedRulesForHost', () => {
 		expect(rules.hash).toBe(hash);
 		expect(rules.text).toBe(buildPublicationHostApacheConf({ root: ROOT, qualities: QUALITIES }));
 		expect(rules.text).toContain(`# config-hash: ${hash}`);
+		// an empty `dropped` means every fed quality was KEPT, never that none were read:
+		// floor the feed, and the master-tier test below is the planted positive control
+		expect(RECORD.qualities?.length).toBeGreaterThanOrEqual(2);
 		expect(rules.dropped).toEqual([]);
 	});
 

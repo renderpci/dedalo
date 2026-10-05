@@ -1443,9 +1443,11 @@ else {
 		},
 		{
 			id: 'host-agent-package',
-			matches: (target) => target === 'publication/host_agent/src/exec.ts',
+			matches: (target) =>
+				target === 'publication/host_agent/src/exec.ts' ||
+				target === 'publication/host_agent/src/provision/render/engine_fragment.ts',
 			reason:
-				'the publication agent exec module — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential), imported only by the agent live drill for its argv/seam constants: it cannot reach the matrix, so no tool write-back lies behind it. Exactly this one file.',
+				'the publication agent package — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential). Exactly two files: exec.ts, imported only by the agent live drill for its argv/seam constants; and provision/render/engine_fragment.ts, the engine-fragment renderer (pure: its imports stay inside the agent package — security/pairing, provision/layout, render/types), imported only by the engine drill and its kit for ENGINE_KEYS/agentUrl and the two placeholders, to render the fragment an operator pastes. Neither can reach the matrix, so no tool write-back lies behind them.',
 		},
 		{
 			id: 'client-js-leaf',
@@ -3644,9 +3646,14 @@ else {
 				'host-agent-package',
 				'client-js-leaf',
 			]);
-			// the agent class admits exactly the one module the drill reads constants from
+			// the agent class admits exactly the two modules the drills read constants from
 			expect(admittedBy('publication/host_agent/src/exec.ts')).toEqual(['host-agent-package']);
+			expect(admittedBy('publication/host_agent/src/provision/render/engine_fragment.ts')).toEqual([
+				'host-agent-package',
+			]);
 			expect(admittedBy('publication/host_agent/src/config.ts')).toEqual([]);
+			expect(admittedBy('publication/host_agent/src/provision/render/types.ts')).toEqual([]);
+			expect(admittedBy('publication/host_agent/src/security/pairing.ts')).toEqual([]);
 		});
 	});
 }

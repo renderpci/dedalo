@@ -189,7 +189,11 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 
 			const note = content.querySelector('.no_hosts');
 			assert.ok(note, 'the no-host note renders');
-			assert.include(note.textContent, 'dedalo:pair-publication-host', 'it names the documented pair command');
+			assert.include(
+				note.textContent,
+				'dedalo:pair-publication-host',
+				'it names the documented pair command',
+			);
 			assert.include(note.textContent, 'sudo -u', 'run as the engine user, never root');
 			assert.strictEqual(content.querySelectorAll('.publication_host').length, 0);
 		});
