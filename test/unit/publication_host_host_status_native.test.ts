@@ -326,11 +326,17 @@ describe('media', () => {
 		);
 	});
 
-	test('copy mode warns until the engine has a copy target (phase 5 flips this)', () => {
+	test('copy mode is a served mode (phase 5): ok, and its gate is checked like a shared one', () => {
 		const input = withStatus({ media: { mode: 'copy', read_only: false, pub_readable: null } });
-		expect(checkOf(input, 'media_mode')).toEqual({ state: 'warn', detail: 'copy' });
+		expect(checkOf(input, 'media_mode')).toEqual({ state: 'ok', detail: 'copy' });
 		expect(checkOf(input, 'media_mount')).toEqual({ state: 'ok', detail: 'present' });
-		expect(checkOf(input, 'rules_hash')).toEqual({ state: 'ok', detail: 'not_applicable' });
+		// the copy root's gate is the publication_host profile (rules.ts rulesRootFor):
+		// never not_applicable — a copy host without it serves an unpublished file
+		expect(checkOf(input, 'rules_hash')).not.toEqual({ state: 'ok', detail: 'not_applicable' });
+		expect(checkOf({ ...input, expected: { ok: false, reason: 'root' } }, 'rules_hash')).toEqual({
+			state: 'blocked',
+			detail: 'root',
+		});
 	});
 
 	test('an unmeasured read-only state is unknown, never assumed', () => {

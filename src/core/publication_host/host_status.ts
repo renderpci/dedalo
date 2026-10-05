@@ -251,12 +251,12 @@ function agentVersionCheck(status: AgentStatus | null): HostCheck {
 			: check('agent_version', 'warn', MALFORMED);
 }
 
-/** `copy` is a warning until the engine's copy target exists (spec §8 phase 5, which
- * flips this line and its test): a copy host receives no media from this engine yet. */
+/** `shared` and `copy` both serve media (phase 5 built the copy target: the media_copy
+ * reconcile keeps a copy host converged); `none` serves none — a warning. */
 function mediaModeCheck(status: AgentStatus | null): HostCheck {
 	if (status === null) return unavailable('media_mode');
 	const { mode } = status.media;
-	return check('media_mode', mode === 'shared' ? 'ok' : 'warn', mode);
+	return check('media_mode', mode === 'none' ? 'warn' : 'ok', mode);
 }
 
 function publishedMarkersCheck(media: MediaProbe): HostCheck {
@@ -301,7 +301,9 @@ function rulesHashCheck(
 	expected: ExpectedRulesOutcome | null,
 ): HostCheck {
 	if (status === null) return unavailable('rules_hash');
-	if (status.media.mode !== 'shared') return check('rules_hash', 'ok', 'not_applicable');
+	// ONE gate profile for shared AND copy (rules.ts rulesRootFor): a copy host's markers
+	// are what make an unpublish a 404 before its files are deleted — never not_applicable.
+	if (status.media.mode === 'none') return check('rules_hash', 'ok', 'not_applicable');
 	if (expected === null || !expected.ok) {
 		return check('rules_hash', 'blocked', expected?.reason ?? 'not_computed');
 	}

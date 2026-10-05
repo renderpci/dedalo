@@ -395,10 +395,10 @@ describe('get_value (panel)', () => {
 		expect(row?.apis).toEqual(NO_APIS);
 	});
 
-	test('a copy-mode host: the refusal outcome reaches Task 6, no expected hash, rules not applicable', async () => {
+	test('a host with no media (mode none): the refusal outcome reaches Task 6, no expected hash, rules not applicable', async () => {
 		const h = harness([record('pub_a')], {
 			hostStatus: async () =>
-				agentStatus({ media: mediaProbe({ mode: 'copy', root: null, read_only: false }) }),
+				agentStatus({ media: mediaProbe({ mode: 'none', root: null, read_only: null }) }),
 			expectedRulesOutcome: () => ({ ok: false, reason: 'mode' }),
 		});
 		const [row] = rows(await panel(h));
@@ -670,6 +670,15 @@ describe('apply_rules', () => {
 		);
 	});
 
+	test('a copy-mode host gets the same profile applied (phase 5: its copy root is gated)', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () =>
+				agentStatus({ media: mediaProbe({ mode: 'copy', root: '/srv/copy', read_only: false }) }),
+		});
+		await run(h, 'apply_rules', { name: 'pub_a' });
+		expect(h.calls.some((c) => c.startsWith('hostApplyRules:pub_a:'))).toBe(true);
+	});
+
 	test('pairing mismatch: the typed code, nothing applied', async () => {
 		const h = harness([record('pub_a')], {
 			hostStatus: async () => {
@@ -682,9 +691,9 @@ describe('apply_rules', () => {
 		expect(h.calls.some((c) => c.startsWith('hostApplyRules'))).toBe(false);
 	});
 
-	test('a copy-mode host is refused before anything is sent', async () => {
+	test('a host with no media (mode none) is refused before anything is sent', async () => {
 		const h = harness([record('pub_a')], {
-			hostStatus: async () => agentStatus({ media: mediaProbe({ mode: 'copy', root: null }) }),
+			hostStatus: async () => agentStatus({ media: mediaProbe({ mode: 'none', root: null }) }),
 		});
 		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe(
 			'maintenance.action_refused',

@@ -127,7 +127,6 @@ describe('expectedRulesForHost', () => {
 	});
 
 	test.each([
-		['a copy host', agentStatus('apache', { mode: 'copy' })],
 		['a host without media', agentStatus('apache', { mode: 'none', root: null })],
 		['an unknown web server', agentStatus('caddy')],
 		['no reported root', agentStatus('apache', { root: null })],
@@ -147,7 +146,7 @@ describe('expectedRulesOutcome', () => {
 	});
 
 	test.each([
-		['mode', agentStatus('apache', { mode: 'copy' })],
+		['mode', agentStatus('apache', { mode: 'none', root: null })],
 		['server', agentStatus('lighttpd')],
 		['root', agentStatus('apache', { root: null })],
 		['input', agentStatus('apache', { root: '/srv/../etc' })],

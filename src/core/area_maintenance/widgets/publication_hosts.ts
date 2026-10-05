@@ -600,7 +600,8 @@ function rulesAppliedMsg(
 
 /**
  * apply_rules: status (pairing proved first) → expected rules from THAT status → rules.apply.
- * A host that is not `shared` is refused before anything is sent. A reported hash other
+ * A `none` host (no media) is refused before anything is sent; `shared` and `copy` get the
+ * same profile over their media root (rules.ts rulesRootFor). A reported hash other
  * than the one sent is a failure, never an OK.
  */
 const applyRulesAction: BoundAction = async (options, principal, loadDeps) => {
@@ -609,9 +610,9 @@ const applyRulesAction: BoundAction = async (options, principal, loadDeps) => {
 	const deps = await loadDeps();
 	const record = requireHost(deps, name);
 	const status = await deps.hostStatus(name);
-	if (status.media.mode !== 'shared') {
+	if (status.media.mode === 'none') {
 		refuseAction(
-			`Error. Host '${name}' reports media mode '${status.media.mode}': media rules apply only to a 'shared' host.`,
+			`Error. Host '${name}' reports media mode 'none': it serves no media, so there are no media rules to apply.`,
 			{ host: name },
 		);
 	}

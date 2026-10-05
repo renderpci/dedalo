@@ -12,8 +12,12 @@
  * phase-1 builder's, which embeds that same hash in its `# config-hash:` header, so the
  * hash the panel compares and the hash `rules.apply` installs cannot disagree.
  *
- * SHARED HOSTS ONLY. A `copy` host holds only public bytes and needs no gate (§5); a
- * `none` host serves no media. Asking for rules there is a refusal, not an empty file.
+ * ONE PROFILE FOR BOTH MEDIA MODES (phase 5, plan M2). A `shared` host is gated over its
+ * read-only mount; a `copy` host over the agent's copy root, whose `.publication/pub/<key>`
+ * markers the agent mirrors (media.mark) — an unpublish is a 404 at the gate before its
+ * files are deleted. The mode is NOT a rule input: the same root gives the same bytes and
+ * the same hash (rulesRootFor). A `none` host serves no media: asking for rules there is a
+ * refusal, not an empty file.
  *
  * Reads config (getPublicQualities, mediaDir inside the builders); no I/O of its own.
  */
@@ -39,7 +43,7 @@ export interface ExpectedRules {
 	dropped: string[];
 }
 
-/** Why no expected rules exist: `mode` (not a shared host), `server` (the agent reports
+/** Why no expected rules exist: `mode` (a `none` host: no media), `server` (the agent reports
  * a web server the profile has no builder for), `root` (no media root reported),
  * `input` (the phase-1 normalizer refused the root or left no public quality). */
 export type ExpectedRulesRefusal = 'mode' | 'server' | 'root' | 'input';
@@ -67,9 +71,27 @@ function isRulesServer(value: string): value is PublicationHostServer {
 function renderTarget(status: AgentStatus): RenderTarget | ExpectedRulesRefusal {
 	const { server } = status.rules;
 	const { mode, root } = status.media;
-	if (mode !== 'shared') return 'mode';
+	if (mode === 'none') return 'mode';
 	if (!isRulesServer(server)) return 'server';
-	return root === null ? 'root' : { server, root };
+	return root === null ? 'root' : { server, root: rulesRootFor(status) };
+}
+
+/**
+ * The root the publication_host profile gates on THIS host: the agent's own MEDIA_ROOT,
+ * for `shared` (the read-only mount) and `copy` (the copy root) alike — the mode is
+ * deliberately not a rule input. A host with no media root (`none`, or a status that
+ * reports none) has nothing to gate: request.invalid_options.
+ */
+export function rulesRootFor(status: AgentStatus): string {
+	const { mode, root } = status.media;
+	if (mode === 'none' || root === null) {
+		throw new DedaloError('request.invalid_options', {
+			message: `publication host media mode '${mode}' has no media root to gate`,
+			publicMessage:
+				'This publication host serves no media (no media root): there are no media rules to apply',
+		});
+	}
+	return root;
 }
 
 /** The include `apply_rules` sends. Throws request.invalid_options when there is none. */
