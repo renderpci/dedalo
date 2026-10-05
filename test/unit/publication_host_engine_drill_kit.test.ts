@@ -320,6 +320,22 @@ describe('the closed exec set', () => {
 		}
 		expect(inClosedSet(scene, configtestCall('apache'))).toBe(false);
 	});
+	test('php -l is in only on a release pass with a lint root, only for a .php under that root', () => {
+		const root = '/s/publication_api/v1';
+		const lint = `php -l ${root}/staging/a/json/index.php`;
+		expect(inClosedSet(scene, lint)).toBe(false);
+		expect(inClosedSet(scene, lint, { phpLintRoot: root })).toBe(true);
+		expect(inClosedSet(scene, lint, { releases: false, phpLintRoot: root })).toBe(false);
+		for (const line of [
+			'php -l /etc/x.php',
+			`php -l ${root}x/a.php`,
+			`php -l ${root}/../x.php`,
+			`php -l ${root}/a.txt`,
+			`php -r ${root}/a.php`,
+			`php -l ${root}/a.php extra`,
+		])
+			expect(inClosedSet(scene, line, { phpLintRoot: root })).toBe(false);
+	});
 });
 
 describe('the shared row book', () => {
@@ -356,14 +372,16 @@ describe('test:pubhost:engine — binaries missing = RED', () => {
 	test('PATH without the tools → exit 1, each one named, no green', () => {
 		const r = run();
 		expect(r.code).toBe(1);
-		expect(r.out).toContain('missing on PATH: openssl, git, bash, apache: apxs, nginx: nginx.');
+		expect(r.out).toContain(
+			'missing on PATH: openssl, git, bash, php, apache: apxs, nginx: nginx.',
+		);
 		expect(r.out).not.toContain('ALL GREEN');
 	});
 
 	test('--only narrows the web-server requirement', () => {
 		const r = run('--only', 'apache');
 		expect(r.code).toBe(1);
-		expect(r.out).toContain('missing on PATH: openssl, git, bash, apache: apxs.');
+		expect(r.out).toContain('missing on PATH: openssl, git, bash, php, apache: apxs.');
 		expect(r.out).not.toContain('nginx: nginx');
 	});
 });

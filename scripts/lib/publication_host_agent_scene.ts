@@ -1,8 +1,9 @@
 /**
  * THE PUBLICATION-HOST AGENT SCENE — one REAL agent (publication/host_agent, exec module
  * unmodified) with everything it drives: a user-mode Apache or nginx, the sudo/systemctl
- * stand-ins AT the agent's absolute binaries (the CI image's exec seam), a refusing php
- * stand-in, and the v2 releases built from publication/server_api/v2. Shared by the two
+ * stand-ins AT the agent's absolute binaries (the CI image's exec seam), a php stand-in
+ * (refusing, or — SceneOptions.phpLint — linting for real under the v1 API root), and the
+ * v2 releases built from publication/server_api/v2. Shared by the two
  * drills that boot the real agent:
  *   - scripts/publication_host_agent_drill.ts  — phase 2: the agent's own wire;
  *   - scripts/publication_host_engine_drill.ts — phase 3: the ENGINE's door, client, pair
@@ -137,6 +138,12 @@ export interface SceneOptions {
 	readonly listen: Listen;
 	/** buildNginxMap() — passed in so this module never imports config. */
 	readonly nginxMap: string;
+	/**
+	 * The REAL php binary: the stand-in then lints `.php` files under the v1 API root
+	 * (v1RootOf) with it — the engine drill's lockstep rows push real v1 releases. Absent:
+	 * php refuses everything.
+	 */
+	readonly phpLint?: string;
 }
 
 export interface Scene {
@@ -165,7 +172,7 @@ export interface Scene {
 /** GET /v1/status, structurally (the agent's AgentStatus): only what the rows read. */
 export interface StatusBody {
 	instance_fingerprint?: unknown;
-	apis?: { v2?: { current?: string | null; previous?: string | null } };
+	apis?: Partial<Record<'v1' | 'v2', { current?: string | null; previous?: string | null }>>;
 	rules?: { server?: string; hash?: string | null };
 	media?: { present?: boolean; pub_markers?: number | null };
 }
@@ -277,15 +284,32 @@ export const scratchCalls = (dir: string): (string | RegExp)[] => [
 	scratchCall('stop'),
 ];
 
+/** `<STATE_ROOT>/publication_api/v1`, real (the agent lints realpaths): the php stand-in's root. */
+export const v1RootOf = (state: string): string =>
+	realpathSync(join(state, 'publication_api', 'v1'));
+
+/** `php -l <one .php under root>`, no `.`/`..` segment — what the lint stand-in execs. */
+export function isLintCall(line: string, root: string): boolean {
+	const prefix = `php -l ${root}/`;
+	if (!line.startsWith(prefix)) return false;
+	const rel = line.slice(prefix.length);
+	return (
+		/\.php$/i.test(rel) &&
+		!/\s/.test(rel) &&
+		!rel.split('/').some((seg) => seg === '.' || seg === '..')
+	);
+}
+
 /**
  * Every line the closed exec set may log (the [exec] rows): the fixed calls + the run-time ones.
  * `releases: false` — a pass that installs no release — closes the set further: no scratch
- * boot, no v2 start/restart may appear.
+ * boot, no v2 start/restart, no php lint may appear. `phpLintRoot` — a pass whose php
+ * stand-in lints for real (SceneOptions.phpLint) — admits `php -l` under that root only.
  */
 export function inClosedSet(
 	scene: Pick<Scene, 'server'>,
 	line: string,
-	{ releases = true }: { releases?: boolean } = {},
+	{ releases = true, phpLintRoot }: { releases?: boolean; phpLintRoot?: string } = {},
 ): boolean {
 	if (line === configtestCall(scene.server) || line === reloadCall(scene.server)) return true;
 	return (
@@ -294,7 +318,8 @@ export function inClosedSet(
 			line.startsWith('v2 started in ') ||
 			line.startsWith('scratch started in ') ||
 			scratchCall('start').test(line) ||
-			scratchCall('stop').test(line))
+			scratchCall('stop').test(line) ||
+			(phpLintRoot !== undefined && isLintCall(line, phpLintRoot)))
 	);
 }
 
@@ -548,6 +573,9 @@ export async function setupScene(
 		v2PidFile: scene.v2Pid,
 		v2Output: join(dir, 'v2.log'),
 		bun: process.execPath,
+		...(options.phpLint === undefined
+			? {}
+			: { phpLint: { binary: options.phpLint, root: v1RootOf(scene.state) } }),
 		log: scene.log,
 	});
 	// sudo + systemctl AT the agent's absolute binaries (the image's dispatchers run these);
@@ -704,9 +732,15 @@ export async function v2Health(
 export const releaseDir = (scene: Scene, id: string): string =>
 	join(realpathSync(join(scene.state, 'publication_api', 'v2', 'releases')), id);
 
-/** The binaries PATH lacks (asked, not spawned: no ENOENT stack). MariaDB names its own. */
-export function missingBinaries(servers: readonly Server[]): string[] {
-	const common = ['openssl', 'git', 'bash'].filter((bin) => Bun.which(bin) === null);
+/**
+ * The binaries PATH lacks (asked, not spawned: no ENOENT stack). MariaDB names its own.
+ * `extra`: what one drill needs beyond the scene (the engine drill: php, for real v1 lints).
+ */
+export function missingBinaries(
+	servers: readonly Server[],
+	extra: readonly string[] = [],
+): string[] {
+	const common = ['openssl', 'git', 'bash', ...extra].filter((bin) => Bun.which(bin) === null);
 	const web = servers.flatMap((s) =>
 		(s === 'apache' ? ['apxs'] : ['nginx'])
 			.filter((bin) => Bun.which(bin) === null)

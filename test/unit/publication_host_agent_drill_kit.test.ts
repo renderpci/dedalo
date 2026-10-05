@@ -236,6 +236,61 @@ describe('drill kit — the exec stand-ins', () => {
 	});
 });
 
+describe('drill kit — the php lint stand-in (phase 4: real v1 pushes)', () => {
+	const dir = join(scratch, 'standins_php');
+	const log = join(dir, 'calls.log');
+	const root = '/drill/state/publication_api/v1';
+	const run = (...argv: string[]) => {
+		const r = Bun.spawnSync([join(dir, 'bin', 'php'), ...argv], { stdout: 'pipe', stderr: 'pipe' });
+		return { code: r.exitCode, out: r.stdout.toString().trim() };
+	};
+
+	test('accepts only -l <file under the v1 API root> and execs the real binary on it; logs every call', () => {
+		mkdirSync(dir, { recursive: true });
+		writeStandIns(
+			join(dir, 'bin'),
+			renderStandIns({
+				server: 'nginx',
+				webBinary: '/bin/echo',
+				webMain: '/drill/main.nginx.conf',
+				webDir: '/drill',
+				webErrorLog: '/drill/error.log',
+				webUnit: 'nginx',
+				v2Unit: 'dedalo-publication-api-v2',
+				v2Current: join(dir, 'no_current'),
+				v2Scratch: join(dir, 'no_scratch'),
+				v2EnvFile: join(dir, 'v2.env'),
+				v2PidFile: join(dir, 'v2.pid'),
+				v2Output: join(dir, 'v2.log'),
+				bun: process.execPath,
+				phpLint: { binary: '/bin/echo', root },
+				log,
+			}),
+		);
+		const inside = `${root}/staging/x/json/index.php`;
+		expect(run('-l', inside)).toEqual({ code: 0, out: `-l ${inside}` });
+		expect(run('-l', '/etc/passwd').code).toBe(64);
+		expect(run('-l', `${root}/../../../../tmp/evil.php`).code).toBe(64);
+		expect(run('-l', `${root}/./a.php`).code).toBe(64);
+		expect(run('-l', `${root}x/a.php`).code).toBe(64);
+		expect(run('-l', `${root}/`).code).toBe(64);
+		expect(run('-r', 'phpinfo();').code).toBe(64);
+		expect(run('-l').code).toBe(64);
+		expect(run('-l', inside, 'extra').code).toBe(64);
+		expect(readFileSync(log, 'utf8').split('\n').filter(Boolean)).toEqual([
+			`php -l ${inside}`,
+			'php -l /etc/passwd',
+			`php -l ${root}/../../../../tmp/evil.php`,
+			`php -l ${root}/./a.php`,
+			`php -l ${root}x/a.php`,
+			`php -l ${root}/`,
+			'php -r phpinfo();',
+			'php -l',
+			`php -l ${inside} extra`,
+		]);
+	});
+});
+
 describe('drill kit — the wire', () => {
 	test("AGENT_ACTOR_HEADER is auth.ts's ACTOR_HEADER (read as text: auth.ts loads the agent config)", () => {
 		const auth = readFileSync(join(REPO, 'publication/host_agent/src/security/auth.ts'), 'utf8');

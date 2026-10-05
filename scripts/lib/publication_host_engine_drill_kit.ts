@@ -142,6 +142,7 @@ export const ACTIONS = {
 	rollbackApi: 'rollback_api',
 	setHostFields: 'set_host_fields',
 	removeHost: 'remove_host',
+	pushApis: 'push_apis',
 } as const;
 
 export type CheckState = 'ok' | 'warn' | 'blocked' | 'unknown';

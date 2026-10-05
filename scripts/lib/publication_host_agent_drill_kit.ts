@@ -11,7 +11,8 @@
  *   - renderStandIns: the drill's `sudo` / `systemctl` / `php` stand-ins (why: the drill's
  *     header, THE EXEC SEAM). The argv they accept is spelled by the AGENT's own constants
  *     (publication/host_agent/src/exec.ts SUDO, SYSTEMCTL, WEB_CONFIGTEST_BINARY — the one
- *     definition), never respelled here.
+ *     definition), never respelled here. `php` lints for real under the v1 API root when
+ *     asked (phase 4: the engine drill's lockstep rows push real v1 releases).
  *   - EXEC_SEAM_DIR / EXEC_SEAM_MARKER / execSeamProblem: the CI image's seam (ci/Dockerfile,
  *     "exec seam"): a dispatcher at each of exec.ts's absolute binaries that runs the stand-in
  *     the drill writes into EXEC_SEAM_DIR.
@@ -207,6 +208,13 @@ export interface StandInInput {
 	readonly v2PidFile: string;
 	readonly v2Output: string;
 	readonly bun: string;
+	/**
+	 * `php -l <file>` with <file> a `.php` under `root` (`<STATE_ROOT>/publication_api/v1`,
+	 * real path: the agent lints the realpath) execs the REAL `binary` — the engine drill's
+	 * lockstep rows push a real v1 release and the agent lints each file before promoting
+	 * it. Absent: php refuses everything.
+	 */
+	readonly phpLint?: { readonly binary: string; readonly root: string };
 	/** Every invocation is appended here, one line: `<binary> <argv>`. */
 	readonly log: string;
 }
@@ -295,9 +303,22 @@ export function renderStandIns(input: StandInInput): StandIns {
 		'esac',
 		...refuse(SYSTEMCTL),
 	].join('\n');
-	// v1 is not driven by this drill (Task 7's hermetic gates own it): PHP_BIN must name an
-	// executable, and any call to it is a logged refusal the drill reports as RED.
-	const php = [...header('php'), ...refuse('php')].join('\n');
+	// php: without `phpLint`, every call is a logged refusal the drill reports as RED (PHP_BIN
+	// must still name an executable). With it, exactly `-l <*.php under root>` reaches the
+	// real binary; a `.`/`..` segment never does, so the prefix test cannot be walked out of.
+	const php =
+		input.phpLint === undefined
+			? [...header('php'), ...refuse('php')].join('\n')
+			: [
+					...header('php'),
+					'if [ "$#" -eq 2 ] && [ "$1" = -l ]; then',
+					'\tcase "$2" in',
+					'\t\t*/..|*/.|*/../*|*/./*) ;;',
+					`\t\t${q(`${input.phpLint.root}/`)}*.[pP][hH][pP]) exec ${q(input.phpLint.binary)} -l "$2" ;;`,
+					'\tesac',
+					'fi',
+					...refuse('php'),
+				].join('\n');
 	return { sudo, systemctl, php };
 }
 
