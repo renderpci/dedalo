@@ -30,15 +30,18 @@
  *     keys withdrawn since it began (ApplyOptions.takeWithdrawn — the worker's per-host
  *     set): recorded pending, then `media.mark false` in their own lock unit. A record
  *     unpublished during a long round stops being served at the next unit boundary,
- *     never only after the round (M2). Its files are deleted by the queued run's plan.
+ *     never only after the round (M2). Its files are deleted by the queued run's plan;
+ *     its marker deletion is verified again at the round's end (as after a compensation).
  *
  * Before any call the plan is checked against this host's OWN Rule B (the injected
  * classifier = media_copy.ts publicFileClassifier over the host's qualities): a put
  * entry that is not a plain relative path classifying to its own key is an internal
  * invariant failure — never copied.
  *
- * A transport failure (unreachable / timeout / busy) stops the round as `pending`, any
- * other as `failed`; the CODE (never agent prose) goes to the runtime file and the
+ * A put that times out is DEFERRED (one file the link cannot push in time never starves
+ * the files after it). Withdrawals are per key best-effort: a refused key never shields
+ * the keys after it (a transient failure stops at once). Any other transport failure
+ * (unreachable / timeout / busy) stops the round as `pending`, any other as `failed`; the CODE (never agent prose) goes to the runtime file and the
  * recorded deletions stay for the next round (Review Focus 3). A deletion still listed
  * after a round that deferred nothing is `failed` / `deletion_unverified`.
  *
@@ -131,7 +134,7 @@ export interface CopyApplyReport {
 	error: string | null;
 }
 
-type PutOutcome = 'put' | 'unpublished' | 'changed' | 'compensated';
+type PutOutcome = 'put' | 'unpublished' | 'changed' | 'timed_out' | 'compensated';
 
 interface RoundOutcome {
 	state: CopyApplyReport['state'];
@@ -146,6 +149,8 @@ interface Round {
 	known: Set<string>;
 	landed: Map<string, string[]>;
 	takeWithdrawn: () => readonly string[];
+	/** A deletion was recorded after the round's verify (pre-empt, compensation): verify again. */
+	reverify: boolean;
 }
 
 export interface ApplyOptions {
@@ -212,6 +217,35 @@ async function recordPending(
 	});
 }
 
+function isTransient(error: unknown): boolean {
+	return error instanceof DedaloError && TRANSIENT_CODES.has(error.code);
+}
+
+/**
+ * `media.mark false` for every key, BEST-EFFORT: a key the agent (or the client) refuses
+ * never shields the keys after it from their withdrawal. A transient failure (the agent
+ * is down) stops at once — the rest would fail the same way. Answers the keys withdrawn
+ * and the first failure (null when none).
+ */
+async function unmarkEach(
+	deps: CopyDeps,
+	host: string,
+	keys: readonly string[],
+): Promise<{ done: string[]; failure: unknown }> {
+	const done: string[] = [];
+	let failure: unknown = null;
+	for (const key of keys) {
+		try {
+			await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
+			done.push(key);
+		} catch (error) {
+			failure ??= error;
+			if (isTransient(error)) break;
+		}
+	}
+	return { done, failure };
+}
+
 async function withdraw(
 	deps: CopyDeps,
 	host: string,
@@ -221,15 +255,14 @@ async function withdraw(
 ): Promise<void> {
 	if (keys.length === 0 && paths.length === 0) return;
 	const held = await deps.lock(host, async () => {
-		for (const key of keys) await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
+		const unmarked = await unmarkEach(deps, host, keys);
+		report.withdrawn += unmarked.done.length;
+		if (unmarked.failure !== null && isTransient(unmarked.failure)) throw unmarked.failure;
 		await deps.del(host, paths, MEDIA_COPY_ACTOR);
+		report.deleted += paths.length;
+		if (unmarked.failure !== null) throw unmarked.failure;
 	});
-	if (!held.acquired) {
-		report.deferred += 1;
-		return;
-	}
-	report.withdrawn += keys.length;
-	report.deleted += paths.length;
+	if (!held.acquired) report.deferred += 1;
 }
 
 /**
@@ -243,14 +276,13 @@ async function preempt(round: Round): Promise<void> {
 	const { deps, host, report } = round;
 	await recordPending(deps, host, keys.map(agentMarkerPath));
 	const held = await deps.lock(host, async () => {
-		for (const key of keys) await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
+		const unmarked = await unmarkEach(deps, host, keys);
+		for (const key of unmarked.done) round.known.delete(key);
+		report.withdrawn += unmarked.done.length;
+		if (unmarked.done.length > 0) round.reverify = true;
+		if (unmarked.failure !== null) throw unmarked.failure;
 	});
-	if (!held.acquired) {
-		report.deferred += 1;
-		return;
-	}
-	for (const key of keys) round.known.delete(key);
-	report.withdrawn += keys.length;
+	if (!held.acquired) report.deferred += 1;
 }
 
 /** Clears verified deletions; answers the marker keys the agent holds now. */
@@ -293,6 +325,7 @@ async function compensate(round: Round, key: string): Promise<PutOutcome> {
 	const { deps, host, report } = round;
 	const paths = round.landed.get(key) ?? [];
 	await recordPending(deps, host, [agentMarkerPath(key), ...paths]);
+	round.reverify = true;
 	await deps.mark(host, key, false, MEDIA_COPY_ACTOR);
 	round.known.delete(key);
 	report.withdrawn += 1;
@@ -331,6 +364,29 @@ async function sendFile(
 	round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
 }
 
+/**
+ * A put that TIMED OUT is deferred, never the end of the round: one file the link cannot
+ * push in time must not starve every file sorted after it, round after round. Its bytes
+ * may have landed all the same, so it counts as landed for a compensation, and a record
+ * unpublished meanwhile is compensated exactly as after a put that answered.
+ */
+async function sendOrDefer(
+	round: Round,
+	file: DesiredFile,
+	local: LocalFile,
+	sha256: string,
+): Promise<'sent' | 'timed_out'> {
+	try {
+		await sendFile(round, file, local, sha256);
+		return 'sent';
+	} catch (error) {
+		if (!(error instanceof DedaloError) || error.code !== 'publication_host.timeout') throw error;
+		console.error(`[media_copy] ${round.host}: put ${file.path} timed out (deferred):`, error);
+		round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
+		return 'timed_out';
+	}
+}
+
 async function putUnderLock(round: Round, file: DesiredFile): Promise<PutOutcome> {
 	const { deps } = round;
 	if (!(await deps.isPublished(file.key))) return 'unpublished';
@@ -338,14 +394,16 @@ async function putUnderLock(round: Round, file: DesiredFile): Promise<PutOutcome
 	if (sha256 === null) return 'changed';
 	const local = await openUnchanged(deps, file);
 	if (local === null) return 'changed';
-	await sendFile(round, file, local, sha256);
-	return (await deps.isPublished(file.key)) ? 'put' : compensate(round, file.key);
+	const sent = await sendOrDefer(round, file, local, sha256);
+	if (!(await deps.isPublished(file.key))) return compensate(round, file.key);
+	return sent === 'sent' ? 'put' : 'timed_out';
 }
 
 const PUT_FIELD = {
 	put: 'put',
 	unpublished: 'skipped_unpublished',
 	changed: 'deferred',
+	timed_out: 'deferred',
 	compensated: 'compensated',
 } as const satisfies Record<PutOutcome, keyof CopyApplyReport>;
 
@@ -368,7 +426,15 @@ async function runRound(
 ): Promise<void> {
 	await withdraw(deps, host, withdrawn, plan.del, report);
 	const known = await verifyDeletions(deps, host);
-	const round: Round = { deps, host, report, known, landed: new Map(), takeWithdrawn };
+	const round: Round = {
+		deps,
+		host,
+		report,
+		known,
+		landed: new Map(),
+		takeWithdrawn,
+		reverify: false,
+	};
 	await preempt(round);
 	await grantMarks(
 		round,
@@ -378,7 +444,7 @@ async function runRound(
 		await preempt(round);
 		await putOne(round, file);
 	}
-	if (report.compensated > 0) await verifyDeletions(deps, host);
+	if (round.reverify) await verifyDeletions(deps, host);
 }
 
 function noteFailure(report: CopyApplyReport, error: unknown): void {

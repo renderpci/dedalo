@@ -198,6 +198,37 @@ describe('withdraw → delete → verify (unpublish is a verified deletion)', ()
 		expect(world.agentIrregular.size).toBe(0);
 	});
 
+	test('withdrawal is per key best-effort: a refused key never shields the keys after it', async () => {
+		const world = newWorld();
+		world.agentMarkers.add(K1);
+		world.agentMarkers.add(K2);
+		const d = worldDeps(world);
+		const refusing: CopyDeps = {
+			...d,
+			mark: async (host, key, published, actor) => {
+				if (key === K1)
+					throw new DedaloError('publication_host.rejected', { message: 'key_invalid (test)' });
+				return d.mark(host, key, published, actor);
+			},
+		};
+		const plan: ApplyPlan = {
+			put: [],
+			del: [],
+			mark: [
+				{ key: K1, published: false },
+				{ key: K2, published: false },
+			],
+		};
+		const report = await applyCopyWith(refusing, 'pub1', plan);
+		expect(world.calls).toEqual(['mark test3_2 false']);
+		expect(world.agentMarkers.has(K2)).toBe(false);
+		expect(report).toMatchObject({
+			state: 'failed',
+			error: 'publication_host.rejected',
+			withdrawn: 1,
+		});
+	});
+
 	test('a held lock (fake) defers the unit: nothing is sent, the deletion stays pending', async () => {
 		const world = newWorld();
 		world.agentFiles.set(P1, 'jpeg');
@@ -320,6 +351,52 @@ describe('marks and puts (a put lands only while pub/<key> exists on the agent; 
 		]);
 		expect(world.agentFiles.size).toBe(0);
 		expect(report).toMatchObject({ state: 'ok', put: 1, compensated: 1, pending_deletions: 0 });
+	});
+
+	test('a put that times out is DEFERRED: the files after it still land, the host stays pending', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.local.set(P2, { bytes: 'png!', mtimeMs: 1 });
+		world.published.add(K1);
+		world.published.add(K2);
+		const d = worldDeps(world);
+		const slow: CopyDeps = {
+			...d,
+			put: async (host, file, actor) => {
+				if (file.path !== P1) return d.put(host, file, actor);
+				await file.body.cancel();
+				throw new DedaloError('publication_host.timeout', { message: 'slow link (test)' });
+			},
+		};
+		const report = await applyCopyWith(slow, 'pub1', planFrom(world));
+		expect(world.agentFiles.get(P2)).toBe('png!');
+		expect(world.agentFiles.has(P1)).toBe(false);
+		expect(report).toMatchObject({ state: 'pending', error: null, put: 1, deferred: 1 });
+		expect(world.runtime.get('pub1')).toMatchObject({ state: 'pending', pending_puts: 1 });
+	});
+
+	test('a put that times out while its record is unpublished is compensated (its bytes may have landed)', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d = worldDeps(world);
+		const slow: CopyDeps = {
+			...d,
+			put: async (host, file, actor) => {
+				await d.put(host, file, actor); // landed…
+				world.published.delete(K1);
+				throw new DedaloError('publication_host.timeout', { message: 'answer lost (test)' });
+			},
+		};
+		const report = await applyCopyWith(slow, 'pub1', planFrom(world));
+		expect(world.calls).toEqual([
+			'mark test3_1 true',
+			`put ${P1}`,
+			'mark test3_1 false',
+			`del ${P1}`,
+		]);
+		expect(world.agentFiles.size).toBe(0);
+		expect(report).toMatchObject({ state: 'ok', compensated: 1, pending_deletions: 0 });
 	});
 
 	test('a file changed since the plan is deferred, never marked nor sent', async () => {
@@ -565,11 +642,22 @@ describe('syncHostWith', () => {
 			`put ${P1B}`,
 		]);
 		expect(recordedBeforeMark).toEqual([true]);
-		expect(report).toMatchObject({ withdrawn: 1, put: 2 });
-		// The marker is verified gone; its files are the queued run's plan to delete.
-		expect(world.runtime.get('pub1')?.pending_deletions.map((p) => p.path)).toEqual([
-			'.publication/pub/test3_2',
-		]);
+		// The pre-empted marker is VERIFIED gone at the round's end (never a false
+		// deletion_unverified); its files are the queued run's plan to delete.
+		expect(world.agentMarkers.has(K2)).toBe(false);
+		expect(report).toMatchObject({
+			state: 'ok',
+			error: null,
+			withdrawn: 1,
+			put: 2,
+			deferred: 0,
+			pending_deletions: 0,
+		});
+		expect(world.runtime.get('pub1')).toMatchObject({
+			state: 'ok',
+			error: null,
+			pending_deletions: [],
+		});
 	});
 
 	test('a planning failure is recorded as a code in the runtime file (typed → its code, untyped → internal.unexpected)', async () => {
