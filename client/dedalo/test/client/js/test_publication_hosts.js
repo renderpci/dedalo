@@ -203,7 +203,11 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 
 			const note = content.querySelector('.registry_busy');
 			assert.ok(note, 'the busy note renders');
-			assert.strictEqual(content.querySelector('.registry_invalid'), null, 'never the invalid note');
+			assert.strictEqual(
+				content.querySelector('.registry_invalid'),
+				null,
+				'never the invalid note',
+			);
 			assert.include(
 				note.textContent,
 				labels().publication_hosts_registry_busy || 'busy',
@@ -247,7 +251,7 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 
 		it('get_value keeps the failed read: data_manager error → value null + read_error', async function () {
 			const self = build_widget(null);
-			delete self.read_error;
+			Reflect.deleteProperty(self, 'read_error');
 			const error = new ApiError({
 				code: 'publication_host.busy',
 				status: 409,
@@ -268,7 +272,7 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 
 		it('a non-root row (address withheld by the server) shows no Address fact', async function () {
 			const host = build_host();
-			delete host.address_label;
+			Reflect.deleteProperty(host, 'address_label');
 			const self = build_widget(ok_value([host], false));
 			const content = await mount(self);
 
@@ -428,12 +432,17 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 
 		it('after a success the REAL reload repaints the FRESH state and keeps the outcome on screen', async function () {
 			const self = build_widget(ok_value([build_host()]));
-			delete self.reload; // the prototype's: get_value → refresh({destroy:true})
+			Reflect.deleteProperty(self, 'reload'); // the prototype's: get_value → refresh({destroy:true})
 			self.get_value = async () =>
 				ok_value([build_host({ rules: { expected: 'c'.repeat(64), reported: 'c'.repeat(64) } })]);
 			self.next_response = {
 				ok: true,
-				data: { host: 'www', server: 'apache', hash: 'c'.repeat(64), dropped: ['Header set X-Dropped'] },
+				data: {
+					host: 'www',
+					server: 'apache',
+					hash: 'c'.repeat(64),
+					dropped: ['Header set X-Dropped'],
+				},
 			};
 			await self.build(false);
 			const wrapper = await self.render();
@@ -634,7 +643,8 @@ describe('SYSTEM MAP receives OPEN_WIDGET_EVENT', function () {
 		{ id: 'publication_hosts', label: 'Publication hosts', category: 'publication' },
 	];
 
-	const build = (show_map) => build_map_view({ id: 'area_maintenance_test' }, WIDGETS, { show_map });
+	const build = (show_map) =>
+		build_map_view({ id: 'area_maintenance_test' }, WIDGETS, { show_map });
 
 	const selected_chip = (root) => root.querySelector('.tool_chip.sel');
 
@@ -645,11 +655,17 @@ describe('SYSTEM MAP receives OPEN_WIDGET_EVENT', function () {
 		});
 		container.appendChild(map.node);
 		try {
-			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }));
+			document.dispatchEvent(
+				new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }),
+			);
 			assert.strictEqual(shown, 1, 'the map view is shown first');
 			const chip = selected_chip(map.node);
 			assert.ok(chip, 'a tool chip is selected');
-			assert.strictEqual(chip.dataset.id, 'publication_hosts', 'the asked widget is the one opened');
+			assert.strictEqual(
+				chip.dataset.id,
+				'publication_hosts',
+				'the asked widget is the one opened',
+			);
 		} finally {
 			map.destroy();
 			map.node.remove();
@@ -664,7 +680,9 @@ describe('SYSTEM MAP receives OPEN_WIDGET_EVENT', function () {
 		container.appendChild(map.node);
 		try {
 			const before = selected_chip(map.node);
-			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'no_such_widget' } }));
+			document.dispatchEvent(
+				new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'no_such_widget' } }),
+			);
 			assert.strictEqual(shown, 0, 'the view is not switched');
 			assert.strictEqual(selected_chip(map.node), before, 'the selection is unchanged');
 		} finally {
@@ -679,7 +697,9 @@ describe('SYSTEM MAP receives OPEN_WIDGET_EVENT', function () {
 			shown++;
 		});
 		try {
-			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }));
+			document.dispatchEvent(
+				new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }),
+			);
 			assert.strictEqual(shown, 0, 'a stale (detached) map ignores the event');
 		} finally {
 			detached.destroy();
@@ -690,7 +710,9 @@ describe('SYSTEM MAP receives OPEN_WIDGET_EVENT', function () {
 		container.appendChild(live.node);
 		live.destroy();
 		try {
-			document.dispatchEvent(new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }));
+			document.dispatchEvent(
+				new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }),
+			);
 			assert.strictEqual(shown, 0, 'destroy() removed the listener');
 		} finally {
 			live.node.remove();
