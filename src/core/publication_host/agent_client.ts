@@ -156,11 +156,17 @@ function command(
 
 // ── input refusals (engine-authored, before any dial) ────────────────────────────────
 
-/** wire.ts's engine refusal (`rejected`, reason input_invalid): the WHY is log-only. */
+/**
+ * wire.ts's engine refusal (`rejected`, reason input_invalid): the WHY is log-only. The
+ * name is shown only once it matches HOST_NAME (the input checks may run before
+ * requireHost), and the refusal is LOCAL_STAGE: minted before any dial, it is never an
+ * agent answer (host_status must not read it as reachable ok).
+ */
 function refuse(name: string, commandName: string, why: string): DedaloError {
-	return engineRefusal(name, 'input_invalid', {
-		message: `publication host '${name}': ${commandName} refused before dialling: ${why}`,
-		coordinates: { command: commandName },
+	const shown = vettedName(name);
+	return engineRefusal(shown, 'input_invalid', {
+		message: `publication host '${shown}': ${commandName} refused before dialling: ${why}`,
+		coordinates: { command: commandName, stage: LOCAL_STAGE },
 	});
 }
 
@@ -214,6 +220,10 @@ function loadHost(name: string): PublicationHostRecord | null {
 /** What a caller-supplied name that fails HOST_NAME is logged and coordinated as: never the raw text. */
 const UNVETTED_NAME = '<invalid host name>';
 
+function vettedName(name: string): string {
+	return HOST_NAME.test(name) ? name : UNVETTED_NAME;
+}
+
 /**
  * The host the registry vouches for. A caller-supplied name is checked against the
  * registry's own grammar FIRST: one outside it is refused input_invalid and never echoed
@@ -224,6 +234,7 @@ function requireHost(name: string): PublicationHostRecord {
 		console.error(`[publication_host] refused a host name outside the registry grammar`);
 		throw engineRefusal(UNVETTED_NAME, 'input_invalid', {
 			message: `publication host name refused before any lookup: it must match ${HOST_NAME.source}`,
+			coordinates: { stage: LOCAL_STAGE },
 		});
 	}
 	const host = loadHost(name);

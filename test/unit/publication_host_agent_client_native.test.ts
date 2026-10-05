@@ -231,6 +231,44 @@ describe('pairing before the bearer', () => {
 		expect(mock.requests).toEqual([]);
 	});
 
+	test('an unvetted name refused by an EARLIER input check (bad api/actor/hash) is never echoed either, and reads local', async () => {
+		const forged = 'x\r\n[publication_host] PAIRING REFUSED for host museum_pub: FORGED';
+		const attempts: Array<Promise<unknown>> = [
+			hostRollbackRelease(forged, 'v9' as never, 'ops'),
+			hostRollbackRelease(forged, 'v1', '\n'),
+			hostApplyRules(forged, { server: 'nginx', text: 'x', hash: 'nothex' }, 'ops'),
+			hostInstallRelease(forged, 'v1', 'bad', 'nothex', new Blob([]).stream(), 'ops'),
+			hostStatus(forged),
+		];
+		for (const attempt of attempts) {
+			const error = await expectCode(attempt, 'publication_host.rejected');
+			const errorText = JSON.stringify({
+				message: error.message,
+				coordinates: error.coordinates,
+				wire: wireText(error),
+			});
+			expect(errorText.includes('FORGED')).toBe(false);
+			expect(error.message.includes('\n')).toBe(false);
+			// an engine-side refusal is never an agent answer: the panel must not read reachable ok
+			expect(statusOutcomeFromError(error)).toEqual({
+				ok: false,
+				code: 'publication_host.rejected',
+				local: true,
+			});
+		}
+		expect(mock.requests).toEqual([]);
+	});
+
+	test('a vetted name refused by an input check reads local too (no reachable ok)', async () => {
+		const error = await expectCode(
+			hostRollbackRelease('museum_pub', 'v1', '\n'),
+			'publication_host.rejected',
+		);
+		expect(error.coordinates?.publication_host).toBe('museum_pub');
+		expect(statusOutcomeFromError(error)).toMatchObject({ local: true });
+		expect(mock.requests).toEqual([]);
+	});
+
 	test('a token file that does not imply the registry fingerprint is a mismatch, nothing dialled', async () => {
 		const error = await expectCode(hostStatus('drifted_pub'), 'publication_host.pairing_mismatch');
 		expect(mock.requests).toEqual([]);
