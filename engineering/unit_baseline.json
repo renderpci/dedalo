@@ -276,6 +276,11 @@
 			"skipped": 0,
 			"assertions": 16
 		},
+		"test/unit/atomic_json_native.test.ts": {
+			"tests": 29,
+			"skipped": 0,
+			"assertions": 52
+		},
 		"test/unit/audit_trigger_closure_native.test.ts": {
 			"tests": 7,
 			"skipped": 0,
@@ -330,6 +335,11 @@
 			"tests": 5,
 			"skipped": 0,
 			"assertions": 18
+		},
+		"test/unit/boot_confirm_after_hook.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 17
 		},
 		"test/unit/boundary_seam_tripwire.test.ts": {
 			"tests": 4,
@@ -2391,6 +2401,36 @@
 			"skipped": 0,
 			"assertions": 109
 		},
+		"test/unit/media_copy_apply_native.test.ts": {
+			"tests": 51,
+			"skipped": 0,
+			"assertions": 190
+		},
+		"test/unit/media_copy_mock_agent_guard.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 5
+		},
+		"test/unit/media_copy_native.test.ts": {
+			"tests": 26,
+			"skipped": 0,
+			"assertions": 101
+		},
+		"test/unit/media_copy_reconcile_native.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 76
+		},
+		"test/unit/media_copy_target_lock_native.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 19
+		},
+		"test/unit/media_copy_worker_native.test.ts": {
+			"tests": 22,
+			"skipped": 0,
+			"assertions": 65
+		},
 		"test/unit/media_counter_reconcile_native.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -2440,6 +2480,11 @@
 			"tests": 11,
 			"skipped": 0,
 			"assertions": 51
+		},
+		"test/unit/media_index_pub_transition_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 18
 		},
 		"test/unit/media_index_reconcile_fence_native.test.ts": {
 			"tests": 6,
@@ -3081,6 +3126,41 @@
 			"skipped": 0,
 			"assertions": 46
 		},
+		"test/unit/publication_host_api_bundles_native.test.ts": {
+			"tests": 29,
+			"skipped": 0,
+			"assertions": 108
+		},
+		"test/unit/publication_host_api_reconcile.test.ts": {
+			"tests": 34,
+			"skipped": 0,
+			"assertions": 98
+		},
+		"test/unit/publication_host_bundle_twin_tripwire.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 39
+		},
+		"test/unit/publication_host_bundle_writer_native.test.ts": {
+			"tests": 35,
+			"skipped": 0,
+			"assertions": 143
+		},
+		"test/unit/publication_host_copy_drill_kit.test.ts": {
+			"tests": 13,
+			"skipped": 0,
+			"assertions": 48
+		},
+		"test/unit/publication_host_copy_rules.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 23
+		},
+		"test/unit/publication_host_copy_wire_native.test.ts": {
+			"tests": 28,
+			"skipped": 0,
+			"assertions": 130
+		},
 		"test/unit/publication_host_door_tripwire.test.ts": {
 			"tests": 37,
 			"skipped": 0,
@@ -3095,6 +3175,31 @@
 			"tests": 46,
 			"skipped": 0,
 			"assertions": 104
+		},
+		"test/unit/publication_host_lockstep_kit.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 24
+		},
+		"test/unit/publication_host_media_copy_client.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 17
+		},
+		"test/unit/publication_host_media_copy_status.test.ts": {
+			"tests": 19,
+			"skipped": 0,
+			"assertions": 52
+		},
+		"test/unit/publication_host_media_copy_widget_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 13
+		},
+		"test/unit/publication_host_media_manifest_native.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 20
 		},
 		"test/unit/publication_host_operator_doc.test.ts": {
 			"tests": 6,
@@ -3111,6 +3216,26 @@
 			"skipped": 0,
 			"assertions": 102
 		},
+		"test/unit/publication_host_probe_client.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 15
+		},
+		"test/unit/publication_host_probe_drill_kit.test.ts": {
+			"tests": 10,
+			"skipped": 0,
+			"assertions": 25
+		},
+		"test/unit/publication_host_probe_native.test.ts": {
+			"tests": 38,
+			"skipped": 0,
+			"assertions": 135
+		},
+		"test/unit/publication_host_push_apis_widget.test.ts": {
+			"tests": 15,
+			"skipped": 0,
+			"assertions": 64
+		},
 		"test/unit/publication_host_registry_native.test.ts": {
 			"tests": 70,
 			"skipped": 0,
@@ -3126,10 +3251,20 @@
 			"skipped": 0,
 			"assertions": 25
 		},
+		"test/unit/publication_host_runtime_native.test.ts": {
+			"tests": 19,
+			"skipped": 0,
+			"assertions": 61
+		},
 		"test/unit/publication_host_secrets_native.test.ts": {
 			"tests": 42,
 			"skipped": 0,
 			"assertions": 113
+		},
+		"test/unit/publication_host_spec_refs_tripwire.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 9
 		},
 		"test/unit/publication_host_transport_native.test.ts": {
 			"tests": 47,
@@ -4945,6 +5080,11 @@
 			"tests": 16,
 			"skipped": 0,
 			"assertions": 35
+		},
+		"test/unit/update_publication_manifest.test.ts": {
+			"tests": 37,
+			"skipped": 0,
+			"assertions": 79
 		},
 		"test/unit/update_restore_native.test.ts": {
 			"tests": 19,
