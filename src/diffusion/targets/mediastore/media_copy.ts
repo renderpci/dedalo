@@ -75,8 +75,8 @@ import {
 	hostMediaManifest,
 	hostMediaMark,
 	hostMediaMarkers,
-	isAgentMarkerKey,
 	hostMediaPut,
+	isAgentMarkerKey,
 	type MediaManifest,
 } from '../../../core/publication_host/agent_client.ts';
 import { getHost, RegistryError } from '../../../core/publication_host/registry.ts';

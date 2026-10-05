@@ -42,6 +42,7 @@ import {
 	activeMediaCopyWorker,
 	startMediaCopyWorker,
 } from '../../src/diffusion/targets/mediastore/media_copy_worker.ts';
+import { childDriver, repoModule } from '../helpers/child_driver.ts';
 import {
 	type CopyMockAgent,
 	type MockMode,
@@ -51,7 +52,6 @@ import {
 	unregisterCopyMockHost,
 	useScratchMediaCopyStores,
 } from '../helpers/media_copy_mock_agent.ts';
-import { childDriver, repoModule } from '../helpers/child_driver.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO = join(import.meta.dir, '..', '..');
