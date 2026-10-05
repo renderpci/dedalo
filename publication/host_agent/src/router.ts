@@ -4,19 +4,22 @@
  * Gate order copied from publication/site_builder/src/router.ts: the bearer is checked
  * BEFORE the table is consulted, so every unauthenticated request that is not the public
  * route gets the same 401 — an unknown path, a known path and a wrong verb cannot be told
- * apart. Changes from the copy: no `:param` segments (every path is a literal, so no route
- * can take a filesystem path or any other free value); BASE_PATH is a constant and is
+ * apart. Changes from the copy: no `:param` segments (every path is a literal; the ONE free
+ * value any route takes is the copy-mode media path in the QUERY of PUT /v1/media/file,
+ * confined under MEDIA_ROOT by src/media/grammar.ts + src/media/copy.ts); BASE_PATH is a constant and is
  * REQUIRED (a path outside it is unknown, never re-tried as a bare path); each route names
  * its §6 command; there is NO `register()` — the table is one frozen literal.
  *
  * EVERY ROW HAS ITS REAL HANDLER (shape `(req, url)`); the ROWS are what
  * tests/router.test.ts pins — a change adds, removes or reorders none of them silently.
+ * Phase 5 added the four copy-mode media rows (tests/router.test.ts and the spec §6 gate pin them).
  */
 
 import { MethodNotAllowedError, NotFoundError } from './errors';
 import { handleHealth } from './routes/health';
 import { handleMediaProbe } from './routes/media_probe';
 import { releaseInstallRoute, releaseRollbackRoute } from './routes/releases';
+import { mediaDeleteRoute, mediaManifestRoute, mediaMarkRoute, mediaPutRoute } from './routes/media';
 import { handleRulesApply } from './routes/rules_apply';
 import { handleStatus } from './routes/status';
 import { requireBearer } from './security/auth';
@@ -26,10 +29,20 @@ export const BASE_PATH = '/publication/host_agent';
 
 export type RouteHandler = (req: Request, url: URL) => Promise<Response> | Response;
 
-export type AgentCommand = 'health' | 'status' | 'media.probe' | 'rules.apply' | 'release.install' | 'release.rollback';
+export type AgentCommand =
+  | 'health'
+  | 'status'
+  | 'media.probe'
+  | 'rules.apply'
+  | 'release.install'
+  | 'release.rollback'
+  | 'media.put'
+  | 'media.delete'
+  | 'media.mark'
+  | 'media.manifest';
 
 export interface Route {
-  readonly method: 'GET' | 'POST';
+  readonly method: 'GET' | 'POST' | 'PUT';
   /** A literal path below BASE_PATH. Matched by string equality, nothing else. */
   readonly path: string;
   readonly command: AgentCommand;
@@ -57,6 +70,10 @@ export const ROUTES: readonly Route[] = Object.freeze([
   route('POST', '/v1/releases/v2', 'release.install', releaseInstallRoute('v2')),
   route('POST', '/v1/releases/v1/rollback', 'release.rollback', releaseRollbackRoute('v1')),
   route('POST', '/v1/releases/v2/rollback', 'release.rollback', releaseRollbackRoute('v2')),
+  route('PUT', '/v1/media/file', 'media.put', mediaPutRoute()),
+  route('POST', '/v1/media/delete', 'media.delete', mediaDeleteRoute()),
+  route('POST', '/v1/media/mark', 'media.mark', mediaMarkRoute()),
+  route('GET', '/v1/media/manifest', 'media.manifest', mediaManifestRoute()),
 ]);
 
 /** The path below BASE_PATH, or null when the request is not under it at all. */

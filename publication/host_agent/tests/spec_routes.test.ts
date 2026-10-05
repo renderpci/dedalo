@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import { BASE_PATH, ROUTES } from '../src/router';
 
 const SPEC_FILE = join(import.meta.dir, '..', '..', '..', 'engineering', 'PUBLICATION_HOST_SPEC.md');
-const SPEC_ROUTE = /`(GET|POST) (\/[^`\s]*)`/g;
+const SPEC_ROUTE = /`(GET|POST|PUT) (\/[^`\s]*)`/g;
 
 function normalize(method: string, path: string): string {
   const relative = path.startsWith(`${BASE_PATH}/`) ? path.slice(BASE_PATH.length) : path;
@@ -49,12 +49,13 @@ function routerRoutes(): string[] {
 describe('spec §6 ↔ src/router.ts route table', () => {
   test('normalization peels BASE_PATH and the method case, nothing else (anti-vacuity)', () => {
     expect(normalize('post', `${BASE_PATH}/v1/releases/v2/rollback`)).toBe('POST /v1/releases/v2/rollback');
+    expect(normalize('put', '/v1/media/file')).toBe('PUT /v1/media/file');
     expect(normalize('GET', '/v1/status')).not.toBe(normalize('GET', '/v1/statuses'));
     expect(normalize('POST', '/v1/releases/v1')).not.toBe(normalize('POST', '/v1/releases/v2'));
   });
 
   test('the spec states a route column (one literal row per router route)', () => {
-    expect(specRoutes().length).toBeGreaterThanOrEqual(8);
+    expect(specRoutes().length).toBeGreaterThanOrEqual(12);
   });
 
   test('the spec and the router name exactly the same routes', () => {

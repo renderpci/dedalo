@@ -94,7 +94,12 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    sides mean the SAME host, so a mis-pasted env file names the mismatch instead of
    silently driving another institution's host.
 4. **Closed command set.** The agent executes ONLY the commands in §6. There is no
-   "run script", no shell, and no route that takes a filesystem path. Every child process
+   "run script", no shell, and no route that takes a filesystem path outside the agent's own
+   roots: the copy-mode media commands (§6) take a path RELATIVE to `MEDIA_ROOT`, refused
+   unless it stays there (no absolute, `.`/`..` or empty segment; a put also no hidden
+   segment; nothing under the agent's own top-level `.publication/` or instance marker; no
+   symlinked directory leading out — the real path is checked before anything is created
+   or removed). Every child process
    goes through `publication/host_agent/src/exec.ts`, whose public API is a closed set of
    named commands with no free argv. A package test fails if any other module spawns.
 5. **Least privilege, no root at runtime.** The agent runs as its own user and writes
@@ -341,8 +346,9 @@ A diffusion target beside MariaDB, driven by the same publish/unpublish events a
 ## 6. Agent command set (closed)
 
 Every route is under `BASE_PATH` `/publication/host_agent`. Only `/health` is public.
-Every route is a literal path: no route takes a parameter, so the per-API release routes
-are spelled out one per API. The route column is gated against
+Every route is a literal path: no path carries a parameter, so the per-API release routes
+are spelled out one per API (the copy-mode media path travels in the query of
+`media.put`, never as a path segment). The route column is gated against
 `publication/host_agent/src/router.ts` in both directions
 (`publication/host_agent/tests/spec_routes.test.ts`).
 
@@ -356,11 +362,28 @@ are spelled out one per API. The route column is gated against
 | `release.install {api: v2, release, sha256, bundle}` | `POST /v1/releases/v2` | §3 install of a v2 release, auto-rollback on failed health; the bundle is the request body |
 | `release.rollback {api: v1}` | `POST /v1/releases/v1/rollback` | swap v1 `current` back to the previous release |
 | `release.rollback {api: v2}` | `POST /v1/releases/v2/rollback` | swap v2 `current` back to the previous release, restart, health |
-| `media.put` / `media.delete` / `media.manifest` | (phase 5) | `copy` mode only |
+| `media.put {path, sha256, size}` | `PUT /v1/media/file` | `copy` mode only. `?path=` relative to `MEDIA_ROOT`; headers `X-Sha256`, `X-Size`, `X-Dedalo-Actor`; the raw file is the body. Shape-checked (≥ type/quality/file, no hidden segment, grammar-valid name, no working file, never under `original`/`modified`, confined); streamed to `.publication/copy/incoming/`, size + sha256 verified, then an atomic rename that happens ONLY while `pub/<key>` exists (re-checked under the key lock `media.mark` takes). The same bytes already present answer `unchanged`, body unread |
+| `media.delete {paths}` | `POST /v1/media/delete` | `copy` mode only. 1–1000 relative paths, shape only: a stray, a master, a hidden entry or a symlink that landed must stay removable (a link is unlinked as itself, its target never touched); only the agent's top-level `.publication/` and instance marker are refused, and one refused path refuses the request. Answers `deleted` / `absent` / `failed` per path; verification is the next `media.manifest` |
+| `media.mark {key, published}` | `POST /v1/media/mark` | `copy` mode only. Writes / removes `MEDIA_ROOT/.publication/pub/<key>` (`^[a-z0-9]+_[0-9]+$`), the marker the gate stats. Once `published:false` has answered, no put for that key can land |
+| `media.manifest {cursor, limit}` | `GET /v1/media/manifest` | `copy` mode only. One path-ordered walk of `MEDIA_ROOT` minus the agent's top-level `.publication/` and instance marker: regular files with no hidden segment as `entries` `{path, size, sha256}`; EVERY other non-directory entry (symlinks, never followed; fifos, sockets, devices; hidden files; files under hidden directories) as `irregular` paths, on the page where they fall. `limit` 1–5000 (default 1000) counts both; opaque `next`; `markers` (every `pub/` key) on the first page only. The disk is the truth: a sha comes from the agent's index (`.publication/copy/sha_index.ndjson`) only while size and mtime match, else it is re-hashed. An unreadable directory fails the call, never hides files |
 
 Errors are `application/problem+json` (RFC 9457, type base
 `https://dedalo.dev/publication-host/problems/`, `Cache-Control: no-store`). Every
 mutating call names its actor in the `X-Dedalo-Actor` header and is audited.
+
+**Copy mode, agent side (phase 5).** A host whose `MEDIA_MODE` is not `copy` answers every
+media route 409 `media_mode`. On a copy host a file lands only while its record's marker
+exists, and the marker check and the rename share the per-key lock of `media.mark`, so an
+unpublish that has answered can never be overtaken by a put that was still streaming. The
+engine therefore publishes as `mark(true)` → puts and unpublishes as `mark(false)` →
+`delete` → `manifest` (verified absence, §5.2). Nothing under the copy root is invisible
+to that verification except the agent's own top-level entries: anything that is not a
+plain regular file is reported as `irregular`, and the engine deletes it as drift. A link
+or dotfile planted at a public path can therefore never outlive an unpublish unseen. The
+copy root is served by the §5.1 `publication_host` profile rendered over it: Rule B gates
+on the same markers, and rule 0 keeps `.publication/` (markers, incoming files, the sha
+index) unserved. A copy host's request-body cap is the larger of `MAX_BUNDLE_BYTES` and the
+64 GiB media-file cap.
 
 ## 7. Verification — the public-URL probe
 

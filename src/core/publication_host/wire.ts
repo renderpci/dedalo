@@ -160,6 +160,17 @@ export const AGENT_REASON_SENTENCES: Readonly<Record<string, string>> = Object.f
 		'The publication host could not start the new release on the side for its health check. An operator must inspect the service manager on that host; the previous release still serves.',
 	scratch_stop_failed:
 		'The publication host could not stop the side copy of the new release after its health check. An operator must inspect the service manager on that host.',
+	// copy-mode media commands (publication/host_agent/src/media/copy.ts)
+	media_mode:
+		'This publication host is not in copy mode: it takes no media copy. Nothing was changed.',
+	media_path_refused:
+		'The publication host refused a media path (outside its copy root, or not a public media file). Nothing was changed.',
+	size_mismatch:
+		'The publication host received a different number of bytes than announced. Nothing was replaced.',
+	key_unpublished:
+		'The publication host refused a media file whose record is not marked published there. Nothing was changed.',
+	key_invalid:
+		'The publication host refused a publication marker key outside the media grammar. Nothing was changed.',
 });
 
 /**

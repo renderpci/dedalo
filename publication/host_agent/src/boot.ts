@@ -19,6 +19,7 @@
 
 import { chmodSync, lstatSync, readFileSync, statSync, unlinkSync } from 'node:fs';
 import type { AgentConfig } from './config';
+import { MAX_MEDIA_FILE_BYTES } from './media/grammar';
 
 export class BootRefused extends Error {
   constructor(door: string, message: string) {
@@ -43,7 +44,18 @@ export async function bootSequence(steps: BootSteps): Promise<void> {
 export type ListenConfig = Pick<
   AgentConfig,
   'LISTEN_KIND' | 'SOCKET_PATH' | 'TLS_HOST' | 'TLS_PORT' | 'TLS_CERT_FILE' | 'TLS_KEY_FILE' | 'TLS_CLIENT_CA_FILE' | 'MAX_BUNDLE_BYTES'
->;
+> &
+  Partial<Pick<AgentConfig, 'MEDIA_MODE'>>;
+
+/**
+ * THE Bun.serve BODY CAP. A copy host receives public media files (an AV delivery file
+ * outgrows a release bundle), so its cap is the larger of the two. Each route still
+ * enforces its own: a put its X-Size (src/media/copy.ts), the JSON routes their
+ * readJsonObject cap, a bundle extractBundle's limits.
+ */
+export function requestBodyCap(cfg: Pick<AgentConfig, 'MAX_BUNDLE_BYTES'> & Partial<Pick<AgentConfig, 'MEDIA_MODE'>>): number {
+  return cfg.MEDIA_MODE === 'copy' ? Math.max(cfg.MAX_BUNDLE_BYTES, MAX_MEDIA_FILE_BYTES) : cfg.MAX_BUNDLE_BYTES;
+}
 
 export type ListenTarget =
   | { readonly kind: 'unix'; readonly path: string }
@@ -154,7 +166,7 @@ export type AgentServer = ReturnType<typeof Bun.serve>;
  */
 export function serveOptions(cfg: ListenConfig, fetch: FetchHandler): ServeOptions {
   const target = listenTarget(cfg);
-  const common = { maxRequestBodySize: cfg.MAX_BUNDLE_BYTES, idleTimeout: 0, fetch };
+  const common = { maxRequestBodySize: requestBodyCap(cfg), idleTimeout: 0, fetch };
   if (target.kind === 'unix') {
     return { ...common, unix: target.path } as unknown as ServeOptions;
   }

@@ -51,7 +51,7 @@ export const REASON_CODES = Object.freeze([
   // refused to start or stop `<V2_UNIT>-scratch@<port>`, a host fault, not the release's.
   'scratch_start_failed',
   'scratch_stop_failed',
-  // copy-mode media commands (phase-5 Task 7). media_mode / key_unpublished are 409
+  // copy-mode media commands (src/media/copy.ts). media_mode / key_unpublished are 409
   // ConflictError; media_path_refused / size_mismatch / key_invalid are 422 RefusedError.
   // A body that does not hash to X-Sha256 reuses 'hash_mismatch' (same meaning: the bytes
   // do not hash to what the request declared).

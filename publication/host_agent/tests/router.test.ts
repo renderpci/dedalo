@@ -21,6 +21,10 @@ describe('the closed route table', () => {
       'POST /v1/releases/v2 release.install',
       'POST /v1/releases/v1/rollback release.rollback',
       'POST /v1/releases/v2/rollback release.rollback',
+      'PUT /v1/media/file media.put',
+      'POST /v1/media/delete media.delete',
+      'POST /v1/media/mark media.mark',
+      'GET /v1/media/manifest media.manifest',
     ]);
     expect(Object.isFrozen(ROUTES)).toBe(true);
   });
@@ -53,6 +57,7 @@ describe('the gate runs before the matcher', () => {
       ['POST', `${BASE_PATH}/health`],
       ['GET', '/health'],
       ['GET', `${BASE_PATH}/v1/releases/v3`],
+      ['PUT', `${BASE_PATH}/v1/media/file`],
     ] as const;
     const answers = await Promise.all(
       probes.map(async ([method, path]) => {
