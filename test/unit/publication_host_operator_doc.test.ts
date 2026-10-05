@@ -54,4 +54,32 @@ describe('publication host operator page', () => {
 	test('step 3 does not claim the agent calls Bun (no named command runs BUN_BIN)', () => {
 		expect(page).not.toMatch(/runtimes the agent calls/);
 	});
+
+	test('an unreachable agent is never told its withdrawn files already 404 (marker may remain)', () => {
+		// media_copy_apply.ts records the pending marker BEFORE `media.mark false`; an
+		// unreachable agent keeps its marker, so its gate still serves the files.
+		const rows = page
+			.split('\n')
+			.filter((line) => line.startsWith('| a pending deletion turns red'));
+		const unreachable = rows.find((line) => /could not be reached/.test(line));
+		expect(unreachable).toBeDefined();
+		expect(unreachable).toMatch(/STILL BE PUBLIC/);
+		expect(unreachable).not.toMatch(/already answers "not found"/);
+		expect(page).toMatch(
+			/cannot be reached the marker stays, and the files are \*\*still public\*\*/,
+		);
+		const fragment = readFileSync(
+			join(repoRoot, 'changes/unreleased/publication-host-lockstep-copy-probe.md'),
+			'utf8',
+		);
+		expect(fragment).not.toMatch(/"not found" at once/);
+	});
+
+	test('the public check states the probe.ts verdict order: failure beats unknown', () => {
+		expect(page).toMatch(/even when the other file could not be checked/);
+		const spec = readFileSync(join(repoRoot, 'engineering/PUBLICATION_HOST_SPEC.md'), 'utf8');
+		expect(spec).toMatch(
+			/is `failed` \(red\), with both statuses recorded,\s+even when the other side is `unknown`/,
+		);
+	});
 });

@@ -429,7 +429,8 @@ cannot mount the work system's media storage. The agent then keeps its own copy:
   replaces anything.
 - **Unpublishing removes the bytes, and proves it:**
   1. The record's marker is removed first, so its files answer "not found" on the very
-     next request.
+     next request, as soon as the publication server accepts the removal. While its agent
+     cannot be reached the marker stays, and the files are **still public**.
   2. The files are deleted.
   3. The deletion is confirmed against the host's file list.
 
@@ -456,7 +457,9 @@ checks this through the public address, exactly as a visitor would.
    quality. If they no longer do, the check says **unknown** and names the reason, and no
    request is sent. Choose new files.
 3. The check passes only when the published file loads and the unpublished one answers
-   404. Any other pair of answers is a **failure** (red), with both answers shown.
+   404. A definite wrong answer from either file is a **failure** (red), with both answers
+   shown, even when the other file could not be checked. Otherwise, a file that could not
+   be reached or validated makes the check **unknown**, never a pass.
 
 The check runs after every rules apply, after every batch of copy-mode changes, on demand
 (**Probe public gate**), and on a schedule (every fifteen minutes, while the reconcile
@@ -495,7 +498,8 @@ taken.
 | an API push is refused, naming a file | a Publication API file changed on disk after the update was verified | reinstall the release with the code updater; never edit the API files in place |
 | an API push is refused: no verified release | the work system runs from a development checkout, or was installed before this feature | install a release with the code updater |
 | one API is up to date, the other is red | each API installs independently | read the error in the panel, fix it, push again |
-| a pending deletion turns red | the agent could not be reached, or the deletion was not confirmed | the file already answers "not found" (its marker is gone); bring the host back and the next check completes the deletion |
+| a pending deletion turns red: the agent could not be reached | the publication server's agent was down or unreachable when the record was unpublished | the marker may still be there, so the files may **STILL BE PUBLIC**; bring the host back and run **Reconcile media copy** in the panel. Until then, if consent was withdrawn, take the host or its media offline |
+| a pending deletion turns red: the deletion was not confirmed | the marker was removed but the host's file list still lists the files | the files already answer "not found" (the marker is gone); bring the host back and the next check completes the deletion |
 | the public check says **unknown**, naming a path | one of the two chosen files changed publication state, or is not in a public quality | choose two new files in the panel |
 | the public check says **unknown**: *not a public host* | the public address resolves to an internal address from the work system, or does not resolve | use the address visitors use, resolvable from outside; the check never accepts an internal one |
 | the public check fails: the unpublished file is publicly served | the gate is not active on the public site: rules not applied, the media folder under a document root, or another virtual host serving it | apply the rules from the panel, check the virtual host, and run the check again |

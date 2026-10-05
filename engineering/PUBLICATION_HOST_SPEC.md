@@ -508,9 +508,10 @@ one (must answer 404): `src/core/publication_host/probe.ts` (`validateProbePaths
   private address*), never a pass. The guard is not relaxed for the institution's own
   site: a probe that reached an internal address would prove what an insider sees, not
   what the public sees.
-- **Verdict:** `ok` only when the published file answers 2xx AND the unpublished one
-  answers 404. Any other pair of answers is `failed` (red), with both statuses recorded. A
-  transport failure is `unknown`, never `ok`.
+- **Verdict** (`probe.ts` `verdict()`, in this order): a definite bad answer on either side
+  (published not 2xx, unpublished not 404) is `failed` (red), with both statuses recorded,
+  even when the other side is `unknown`; otherwise any transport or validation failure is
+  `unknown`, never `ok`; otherwise (published 2xx AND unpublished 404) `ok`.
 - **When it runs:** after every successful `apply_rules`, after every copy-mode
   publish/unpublish batch, on demand (the root-only `probe_public` action), and on a
   schedule (`PUBLICATION_PROBE_RECONCILE`, report-only: it records the observation and
