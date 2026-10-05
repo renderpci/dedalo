@@ -18,6 +18,7 @@
  */
 
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { createPrivateKey, X509Certificate } from 'node:crypto';
 import {
 	chmodSync,
 	existsSync,
@@ -46,6 +47,7 @@ import {
 	writeHostSecrets,
 } from '../../src/core/publication_host/secrets.ts';
 import {
+	mintSelfSignedLeaf,
 	mintTestPki,
 	type TestPki,
 	useScratchPublicationHostsBase,
@@ -193,6 +195,19 @@ describe('validation before any write', () => {
 		);
 		expect(readHostToken('pub_main')).toBe(TOKEN);
 		expect(readHostTls('pub_main')?.ca).toBe(pki.caPem);
+	});
+
+	test('the third block must be a CA: a non-CA issuer that DOES verify the cert → bad_bundle', () => {
+		const leaf = mintSelfSignedLeaf();
+		// control: everything but `ca.ca` holds, so only that check can refuse it
+		const cert = new X509Certificate(leaf.certPem);
+		expect(cert.ca).toBe(false);
+		expect(cert.verify(cert.publicKey)).toBe(true);
+		expect(cert.checkPrivateKey(createPrivateKey(leaf.keyPem))).toBe(true);
+		const bundle = leaf.certPem + leaf.keyPem + leaf.certPem;
+		expect(failure(() => splitEngineBundle(bundle, 'x')).reason).toBe('bad_bundle');
+		expect(failure(() => writeHostSecrets('pub_main', TOKEN, bundle)).reason).toBe('bad_bundle');
+		expect(existsSync(secretsRoot())).toBe(false);
 	});
 
 	test('splitEngineBundle is the same check, pure', () => {

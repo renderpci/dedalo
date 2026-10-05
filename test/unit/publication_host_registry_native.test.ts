@@ -26,11 +26,12 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, join, resolve, sep } from 'node:path';
 import {
 	getHost,
 	loadRegistry,
 	overridePublicationHostsBaseForTests,
+	PUBLICATION_HOSTS_TEST_MARKER,
 	type PublicationHostRecord,
 	REGISTRY_MAX_BYTES,
 	RegistryError,
@@ -548,6 +549,26 @@ describe('the test seam', () => {
 		expect(() => overridePublicationHostsBaseForTests('/var/lib/dedalo/private')).toThrow(
 			RangeError,
 		);
+	});
+
+	test('refuses a DECLARED dir outside os.tmpdir() (the marker alone is not enough)', () => {
+		// gitignored repo-root scratch (`.scratch_*/`): carries the marker, lives outside tmpdir —
+		// the only thing that can refuse it is the under-tmpdir leg.
+		const outside = resolve(
+			import.meta.dir,
+			'..',
+			'..',
+			`.scratch_pubhosts_outside_${process.pid}`,
+		);
+		expect(outside.startsWith(resolve(tmpdir()) + sep)).toBe(false); // precondition: really outside
+		mkdirSync(outside, { recursive: true });
+		try {
+			writeFileSync(join(outside, PUBLICATION_HOSTS_TEST_MARKER), '');
+			expect(() => overridePublicationHostsBaseForTests(outside)).toThrow(RangeError);
+			expect(registryPath()).toBe(join(scratch.base, 'publication_hosts.json')); // unchanged
+		} finally {
+			rmSync(outside, { recursive: true, force: true });
+		}
 	});
 
 	test('refuses a temp dir that does not declare itself', () => {

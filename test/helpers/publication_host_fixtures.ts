@@ -172,3 +172,35 @@ export function mintTestPki(
 		rmSync(dir, { recursive: true, force: true });
 	}
 }
+
+/**
+ * A self-signed LEAF (basicConstraints CA:FALSE) and its PKCS#8 key. It verifies its own
+ * signature and matches its key, so `cert + key + cert` passes every bundle check EXCEPT
+ * "the third block is a CA" — the one case that isolates that check. The extensions come
+ * from a config written here, never openssl's default (which may add CA:TRUE to -x509).
+ */
+export function mintSelfSignedLeaf(cn = 'dedalo-test-leaf'): { certPem: string; keyPem: string } {
+	const dir = mkdtempSync(join(tmpdir(), 'dedalo_pubhost_leaf_'));
+	try {
+		writeFileSync(
+			join(dir, 'leaf.cnf'),
+			`[req]\ndistinguished_name=dn\nx509_extensions=leaf\nprompt=no\n[dn]\nCN=${cn}\n[leaf]\nbasicConstraints=critical,CA:FALSE\n`,
+		);
+		openssl(dir, [
+			'req',
+			'-x509',
+			...EC_KEY,
+			'-config',
+			'leaf.cnf',
+			'-keyout',
+			'leaf.key',
+			'-out',
+			'leaf.pem',
+			'-days',
+			'2',
+		]);
+		return { certPem: readFileSync(join(dir, 'leaf.pem'), 'utf8'), keyPem: pkcs8(dir, 'leaf.key') };
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
