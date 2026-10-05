@@ -427,7 +427,11 @@ truth, the `media_index` law.
   is one main-pool transaction per unit, and a unit spans only agent CONTROL calls — a
   put's unit is the `pub/<key>` re-check plus at most two `media.mark` calls (60 s agent
   timeout each); the hash, the re-stat and the transfer run outside it, whatever the file
-  size. A host's units are serialized in one in-process lane, so copy costs at most one
+  size. A grant, withdraw or pre-empt unit spans at most `MEDIA_COPY_UNIT_KEYS` (50) keys
+  — at most two live-proved `media.mark` calls each — and a delete unit one
+  `media.delete` batch (`MEDIA_DELETE_BATCH` paths, one request); the lock is released
+  between units and the round pre-empts between grant units, so a first sync or a mass
+  unpublish never holds a connection for the whole plan. A host's units are serialized in one in-process lane, so copy costs at most one
   main-pool connection per copy host, never for a transfer's duration; a busy lock is
   waited for holding no connection. A withdrawal (`mark false`) is sent at once, outside
   every lane and lock — the agent's per-key lock and the grant's post-`mark` re-check make

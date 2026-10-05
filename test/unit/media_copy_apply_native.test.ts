@@ -22,6 +22,7 @@ import {
 	withTargetLock,
 } from '../../src/core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
+import { MEDIA_DELETE_BATCH } from '../../src/core/publication_host/agent_client.ts';
 import {
 	COPY_MODE_WITHDRAWN,
 	nonCopyRuntime,
@@ -37,6 +38,7 @@ import {
 	hostTakesCopy,
 	LINKED_QUALITY,
 	MEDIA_COPY_ACTOR,
+	MEDIA_COPY_UNIT_KEYS,
 	type MediaCopyRuntime,
 	openLocalMediaFile,
 	recordRoundFailure,
@@ -214,6 +216,64 @@ describe('withdraw → delete → verify (unpublish is a verified deletion)', ()
 		world.undeletable.clear();
 		const next = await applyCopyWith(worldDeps(world), 'pub1', planFrom(world));
 		expect(next).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+	});
+
+	test('THE UNIT BOUND: grant, withdraw and pre-empt hold the lock for at most MEDIA_COPY_UNIT_KEYS keys, a delete unit for one batch; the round pre-empts between grant units', async () => {
+		const world = newWorld();
+		const n = 3 * MEDIA_COPY_UNIT_KEYS + 1;
+		const granted = Array.from({ length: n }, (_, i) => `test3_${1000 + i}`);
+		const withdrawnKeys = Array.from({ length: n }, (_, i) => `test3_${5000 + i}`);
+		const stale = Array.from({ length: MEDIA_DELETE_BATCH + 1 }, (_, i) =>
+			mediaPath(`test3_${9000 + i}`),
+		);
+		for (const key of granted) world.published.add(key);
+		for (const key of withdrawnKeys) world.agentMarkers.add(key);
+		for (const path of stale) world.agentFiles.set(path, 'old');
+		const base = worldDeps(world);
+		const units: string[][] = [];
+		const counted: CopyDeps = {
+			...base,
+			async lock(host, work) {
+				const from = world.calls.length;
+				const outcome = await base.lock(host, work);
+				units.push(world.calls.slice(from));
+				return outcome;
+			},
+		};
+		let drains = 0;
+		const late = 'test3_7777';
+		world.agentMarkers.add(late);
+		const report = await applyCopyWith(
+			counted,
+			'pub1',
+			{
+				put: [],
+				del: stale,
+				mark: [
+					...withdrawnKeys.map((key) => ({ key, published: false })),
+					...granted.map((key) => ({ key, published: true })),
+				],
+			},
+			{ takeWithdrawn: () => (++drains === 3 ? [late] : []) },
+		);
+		expect(report).toMatchObject({ state: 'ok', error: null, pending_deletions: 0 });
+		expect(report.published).toBe(n);
+		expect(report.withdrawn).toBe(n + 1);
+		for (const unit of units) {
+			const marks = unit.filter((call) => call.startsWith('mark ')).length;
+			const dels = unit.filter((call) => call.startsWith('del ')).length;
+			expect(marks).toBeLessThanOrEqual(2 * MEDIA_COPY_UNIT_KEYS);
+			expect(dels).toBeLessThanOrEqual(1);
+			expect(marks === 0 || dels === 0).toBe(true);
+		}
+		// n keys each way + 2 delete batches + the pre-empt: many units, never one
+		expect(units.length).toBeGreaterThanOrEqual(2 * 4 + 2 + 1);
+		// the pre-empt drained between grant units ran before the last grant unit
+		const lateUnmark = world.calls.indexOf(`mark ${late} false`);
+		const lastGrant = world.calls.lastIndexOf(`mark ${granted[n - 1]} true`);
+		expect(lateUnmark).toBeGreaterThanOrEqual(0);
+		expect(lateUnmark).toBeLessThan(lastGrant);
+		expect(world.agentMarkers.has(late)).toBe(false);
 	});
 
 	test('an IRREGULAR agent path (a link) is deleted and verified against the irregular list, never cleared while listed', async () => {

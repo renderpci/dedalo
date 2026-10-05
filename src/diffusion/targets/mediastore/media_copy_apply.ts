@@ -12,7 +12,8 @@
  *     pending keeps its first `since`; a NEW unpublish — withdrawNowWith, a pre-empt,
  *     a compensation — renews it). A runtime file that refuses the record
  *     stops the round before anything is sent.
- *  2. WITHDRAW, one target-lock unit: `media.mark false` per key — the gate 404s
+ *  2. WITHDRAW, in bounded target-lock units (MEDIA_COPY_UNIT_KEYS keys, then one
+ *     MEDIA_DELETE_BATCH per unit): `media.mark false` for every key — the gate 404s
  *     from that instant — then `media.delete`.
  *  3. VERIFY. The agent manifest is read back: a pending path it no longer lists
  *     (as a file, an irregular path or a marker) is cleared, every other stays
@@ -25,8 +26,9 @@
  *     does not delete; a `mark true` clears the key's pending
  *     marker, a landed put its own path. Only entries recorded no later than the instant
  *     before the deciding `pub/` check — a withdrawal recorded after it is a newer unpublish.
- *  4. GRANT, one target-lock unit: `media.mark true` for each plan grant whose key
- *     is still published locally and not yet known. A marker with no file serves
+ *  4. GRANT, in units of MEDIA_COPY_UNIT_KEYS keys (pre-empting between them):
+ *     `media.mark true` for each plan grant whose key is still published locally and not
+ *     yet known. A marker with no file serves
  *     nothing (Rule B also needs the file), so granting first is gate-safe.
  *  5. PUT, per file, with the target lock held ONLY around its grant step:
  *     BEFORE the lock — check `pub/<key>` (gone → skipped), sha256 from the round's cache
@@ -39,8 +41,9 @@
  *     Focus 2).
  *  THE POOL BOUND. A lock unit is one main-pool transaction. A put's unit spans two
  *     local `pub/` checks and at most two `media.mark` calls (AGENT_TIMEOUTS_MS.media
- *     each) — never the hash nor the transfer, whatever the file size; a withdraw unit
- *     spans its marks and deletes. Units of one host are serialized (one lane per host
+ *     each) — never the hash nor the transfer, whatever the file size; a mark unit
+ *     (grant / withdraw / pre-empt) spans at most MEDIA_COPY_UNIT_KEYS keys, a delete unit
+ *     one media.delete batch — never the whole plan. Units of one host are serialized (one lane per host
  *     per process), so a copy round costs at most ONE main-pool connection per host, for
  *     control calls only; waiting for a busy lock holds none.
  *  WITHDRAWN CONSENT NEVER WAITS FOR A PUT. The worker sends a hook unpublish's
@@ -87,6 +90,7 @@ import { DedaloError } from '../../../core/errors/index.ts';
 import { absoluteFromRelative, requireMediaRoot } from '../../../core/media/path.ts';
 import {
 	hostStatus,
+	MEDIA_DELETE_BATCH,
 	type MediaDeleteResult,
 	type MediaManifest,
 	type MediaPutFile,
@@ -121,6 +125,23 @@ export const LINKED_QUALITY = 'linked_quality';
  * paths stay pending; every other batch, the grants and the puts still ran.
  */
 export const DELETE_FAILED = 'delete_failed';
+
+/**
+ * THE UNIT BOUND of a mark unit: at most this many keys per target-lock unit (grant,
+ * withdraw, pre-empt) — 2 × this many `media.mark` calls at most (a grant may undo itself),
+ * each a live-proved mutation. A delete unit is ONE media.delete batch (MEDIA_DELETE_BATCH
+ * paths, one request). The lock is released between units, and the round pre-empts
+ * between grant units, so a first sync of tens of thousands of records, or a mass
+ * unpublish, never pins a main-pool connection for the whole plan.
+ */
+export const MEDIA_COPY_UNIT_KEYS = 50;
+
+function chunked<T>(items: readonly T[], size: number): T[][] {
+	const out: T[][] = [];
+	for (let start = 0; start < items.length; start += size)
+		out.push(items.slice(start, start + size));
+	return out;
+}
 
 const TRANSIENT_CODES: ReadonlySet<string> = new Set([
 	'publication_host.unreachable',
@@ -359,6 +380,54 @@ async function deleteCounted(
 	}
 }
 
+/**
+ * `media.mark false` for `keys`, MEDIA_COPY_UNIT_KEYS per lock unit. Best-effort across
+ * units (a refused key never shields later units); a transient failure stops at once.
+ * Answers false when a unit could not take the lock (counted deferred: the keys stay
+ * recorded and the next run withdraws them), and the first non-transient failure.
+ */
+async function unmarkUnits(
+	deps: CopyDeps,
+	host: string,
+	keys: readonly string[],
+	report: CopyApplyReport,
+	onDone: (done: readonly string[]) => void = () => {},
+): Promise<{ acquired: boolean; failure: unknown }> {
+	let failure: unknown = null;
+	for (const unit of chunked(keys, MEDIA_COPY_UNIT_KEYS)) {
+		const held = await deps.lock(host, async () => {
+			const unmarked = await unmarkEach(deps, host, unit);
+			report.withdrawn += unmarked.done.length;
+			onDone(unmarked.done);
+			if (unmarked.failure !== null && isTransient(unmarked.failure)) throw unmarked.failure;
+			return unmarked.failure;
+		});
+		if (!held.acquired) {
+			report.deferred += 1;
+			return { acquired: false, failure };
+		}
+		failure ??= held.value;
+	}
+	return { acquired: true, failure };
+}
+
+/** media.delete `paths`, one MEDIA_DELETE_BATCH per lock unit. False = a unit was deferred. */
+async function deleteUnits(
+	deps: CopyDeps,
+	host: string,
+	paths: readonly string[],
+	report: CopyApplyReport,
+): Promise<boolean> {
+	for (const unit of chunked(paths, MEDIA_DELETE_BATCH)) {
+		const held = await deps.lock(host, () => deleteCounted(deps, host, unit, report));
+		if (!held.acquired) {
+			report.deferred += 1;
+			return false;
+		}
+	}
+	return true;
+}
+
 async function withdraw(
 	deps: CopyDeps,
 	host: string,
@@ -366,15 +435,9 @@ async function withdraw(
 	paths: readonly string[],
 	report: CopyApplyReport,
 ): Promise<void> {
-	if (keys.length === 0 && paths.length === 0) return;
-	const held = await deps.lock(host, async () => {
-		const unmarked = await unmarkEach(deps, host, keys);
-		report.withdrawn += unmarked.done.length;
-		if (unmarked.failure !== null && isTransient(unmarked.failure)) throw unmarked.failure;
-		await deleteCounted(deps, host, paths, report);
-		if (unmarked.failure !== null) throw unmarked.failure;
-	});
-	if (!held.acquired) report.deferred += 1;
+	const unmarked = await unmarkUnits(deps, host, keys, report);
+	if (unmarked.acquired) await deleteUnits(deps, host, paths, report);
+	if (unmarked.failure !== null) throw unmarked.failure;
 }
 
 /**
@@ -387,14 +450,11 @@ async function preempt(round: Round): Promise<void> {
 	if (keys.length === 0) return;
 	const { deps, host, report } = round;
 	await recordPending(deps, host, keys.map(agentMarkerPath), true);
-	const held = await deps.lock(host, async () => {
-		const unmarked = await unmarkEach(deps, host, keys);
-		for (const key of unmarked.done) round.known.delete(key);
-		report.withdrawn += unmarked.done.length;
-		if (unmarked.done.length > 0) round.reverify = true;
-		if (unmarked.failure !== null) throw unmarked.failure;
+	const { failure } = await unmarkUnits(deps, host, keys, report, (done) => {
+		for (const key of done) round.known.delete(key);
+		if (done.length > 0) round.reverify = true;
 	});
-	if (!held.acquired) report.deferred += 1;
+	if (failure !== null) throw failure;
 }
 
 const MARKER_PREFIX = agentMarkerPath('');
@@ -508,14 +568,20 @@ async function ensureMarker(round: Round, key: string): Promise<boolean> {
 	return true;
 }
 
+/** MEDIA_COPY_UNIT_KEYS keys per lock unit, pre-empting between units. */
 async function grantMarks(round: Round, keys: readonly string[]): Promise<void> {
-	if (keys.length === 0) return;
-	const held = await round.deps.lock(round.host, async () => {
-		for (const key of keys) {
-			if (await round.deps.isPublished(key)) await ensureMarker(round, key);
+	for (const unit of chunked(keys, MEDIA_COPY_UNIT_KEYS)) {
+		await preempt(round);
+		const held = await round.deps.lock(round.host, async () => {
+			for (const key of unit) {
+				if (await round.deps.isPublished(key)) await ensureMarker(round, key);
+			}
+		});
+		if (!held.acquired) {
+			round.report.deferred += 1;
+			return;
 		}
-	});
-	if (!held.acquired) round.report.deferred += 1;
+	}
 }
 
 /** Record first, withdraw the marker, delete every file of the key this round landed. */
