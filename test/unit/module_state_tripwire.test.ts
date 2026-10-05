@@ -267,6 +267,15 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// identity (a run is keyed by reconcile NAME, actor-less by design).
 	'core/reconcile/registry.ts:gaugeRegistered',
 	'core/reconcile/scheduler.ts:started',
+	// Publication API push single-flight latch (publication host phase 4): set
+	// synchronously before the first await of an APPLY round, cleared in finally.
+	// Process-wide operational state like the reconcile scheduler's latch above —
+	// it says only "a push is running", never who asked (the actor rides the call).
+	'core/publication_host/api_reconcile.ts:applyRunning',
+	// The last Publication API round's verdict (phase 4): the panel shows it instead
+	// of hashing two API trees on every get_value. Install-static facts (the running
+	// tree's release or refusal + a time), overwritten by every round, never identity.
+	'core/publication_host/api_reconcile.ts:lastVerdict',
 	// Retention scheduler (audit 2026-08-26 P2-9): the armed latch and the daily
 	// interval handle. Same class as the reconcile scheduler above — process-wide
 	// wiring, no request identity (a retention pass is keyed by STORE name and has
