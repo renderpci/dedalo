@@ -729,6 +729,17 @@ function unprivileged(body: string, http: number, https: number, ipv6: boolean):
     : v4.replaceAll('    listen [::]:80;\n', '').replaceAll('    listen [::]:443 ssl;\n', '');
 }
 
+// THE TEMP DIRS ARE THIS RUN'S OWN too. nginx (even `-t`) mkdir()s every *_temp_path at
+// its COMPILED-IN default — `/var/lib/nginx/body` on a Debian package, root-owned — so an
+// unprivileged runner fails with `mkdir() "/var/lib/nginx/body" failed (13: Permission
+// denied)`, reported as a config failure. Homebrew's default is user-writable, which is
+// why a desk never saw it.
+function ownTempPaths(dir: string): string {
+  return ['client_body', 'proxy', 'fastcgi', 'uwsgi', 'scgi']
+    .map((k) => `  ${k}_temp_path ${join(dir, `${k}_temp`)};\n`)
+    .join('');
+}
+
 describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered vhosts', () => {
   test('nginx -t is successful for every TLS mode', () => {
     const dir = mkdtempSync(join(tmpdir(), 'dedalo-nginx-'));
@@ -789,7 +800,7 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
         // block that was missed.
         writeFileSync(
           main,
-          `events {}\npid ${join(dir, `${name}.pid`)};\nhttp {\n  access_log off;\n  include ${confDir}/*.conf;\n}\n`,
+          `events {}\npid ${join(dir, `${name}.pid`)};\nhttp {\n  access_log off;\n${ownTempPaths(join(dir, name))}  include ${confDir}/*.conf;\n}\n`,
         );
         // Throws on a non-zero exit, which is the assertion: nginx -t fails the whole
         // reload, and one bad vhost takes down every site on the host.
@@ -871,7 +882,7 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
       // pid inside the temporary directory cannot be shared with anything.
       writeFileSync(
         main,
-        `events {}\npid ${join(dir, 'nginx.pid')};\nhttp {\n  access_log off;\n  include ${join(dir, 'conf')}/*.conf;\n}\n`,
+        `events {}\npid ${join(dir, 'nginx.pid')};\nhttp {\n  access_log off;\n${ownTempPaths(dir)}  include ${join(dir, 'conf')}/*.conf;\n}\n`,
       );
       execFileSync(NGINX as string, ['-c', main, '-p', dir, '-e', join(dir, 'error.log')], { stdio: 'pipe' });
       started = true;
