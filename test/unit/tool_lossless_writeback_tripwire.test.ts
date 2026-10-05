@@ -172,7 +172,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { replaceTimecodes } from '../../src/core/media/tools/timecode.ts';
 import {
 	parse_transcript,
@@ -1444,10 +1444,11 @@ else {
 		{
 			id: 'host-agent-package',
 			matches: (target) =>
-				target === 'publication/host_agent/src/exec.ts' ||
-				target === 'publication/host_agent/src/provision/render/engine_fragment.ts',
+				(target === 'publication/host_agent/src/exec.ts' ||
+					target === 'publication/host_agent/src/provision/render/engine_fragment.ts') &&
+				agentPackageClosure(target).escapes.length === 0,
 			reason:
-				'the publication agent package — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential). Exactly two files: exec.ts, imported only by the agent live drill for its argv/seam constants; and provision/render/engine_fragment.ts, the engine-fragment renderer (pure: its imports stay inside the agent package — security/pairing, provision/layout, render/types), imported only by the engine drill and its kit for ENGINE_KEYS/agentUrl and the two placeholders, to render the fragment an operator pastes. Neither can reach the matrix, so no tool write-back lies behind them.',
+				"the publication agent package — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential). Exactly two files: exec.ts, imported only by the agent live drill for its argv/seam constants; and provision/render/engine_fragment.ts, the engine-fragment renderer (pure: its imports stay inside the agent package — security/pairing, provision/layout, render/types), imported only by the engine drill and its kit for ENGINE_KEYS/agentUrl and the two placeholders, to render the fragment an operator pastes. Neither can reach the matrix, so no tool write-back lies behind them. The 'stays inside' claim is CHECKED, not assumed: each is admitted only while its transitive import closure (agentPackageClosure: static, re-export, dynamic and require, read by Bun's parser) stays under publication/host_agent/src/ and names no bare package but node:/bun builtins and the agent's own package.json dependencies.",
 		},
 		{
 			id: 'client-js-leaf',
@@ -1464,6 +1465,75 @@ else {
 	 */
 	function admittedBy(target: string): string[] {
 		return OUT_OF_CORPUS_TARGETS.filter((entry) => entry.matches(target)).map((entry) => entry.id);
+	}
+
+	const AGENT_SRC = 'publication/host_agent/src/';
+	const AGENT_DEPENDENCIES = new Set(
+		Object.keys(
+			(
+				JSON.parse(readFileSync(join(ROOT, 'publication/host_agent/package.json'), 'utf8')) as {
+					dependencies?: Record<string, string>;
+				}
+			).dependencies ?? {},
+		),
+	);
+	const AGENT_SCANNER = new Bun.Transpiler({ loader: 'ts' });
+
+	/**
+	 * One agent file's import edges: `next` (relative targets inside the agent package, to
+	 * follow) and `escapes` (a relative target outside it, a bare package that is neither a
+	 * node:/bun builtin nor an agent dependency, or a require(/import( whose specifier is not
+	 * a literal). Bun's scan erases type-only imports (they execute nothing) but misses
+	 * require(, so that is read from the comment-stripped code.
+	 */
+	function agentImportEdges(rel: string, text: string): { next: string[]; escapes: string[] } {
+		const specifiers = AGENT_SCANNER.scan(text).imports.map((entry) => entry.path);
+		const escapes: string[] = [];
+		const code = stripComments(text);
+		for (const match of code.matchAll(/(?<![\w$.])(require|import)\s*\(\s*([^)]*)\)/g)) {
+			const literal = /^(['"])([^'"`]+)\1$/.exec((match[2] ?? '').trim());
+			if (literal) specifiers.push(literal[2] as string);
+			else
+				escapes.push(`${rel}: ${match[1]}(${(match[2] ?? '').trim()}) — not a literal specifier`);
+		}
+		const next: string[] = [];
+		for (const spec of new Set(specifiers)) {
+			if (!spec.startsWith('.')) {
+				const pkg = spec.startsWith('@')
+					? spec.split('/').slice(0, 2).join('/')
+					: spec.split('/')[0];
+				if (!/^(?:node:|bun(?::|$))/.test(spec) && !AGENT_DEPENDENCIES.has(pkg as string)) {
+					escapes.push(`${rel} → '${spec}': a bare package the agent does not declare`);
+				}
+				continue;
+			}
+			let target: string;
+			try {
+				target = relative(ROOT, Bun.resolveSync(spec, dirname(join(ROOT, rel))));
+			} catch {
+				escapes.push(`${rel} → '${spec}': does not resolve`);
+				continue;
+			}
+			if (target.startsWith(AGENT_SRC)) next.push(target);
+			else escapes.push(`${rel} → ${target}: outside ${AGENT_SRC}`);
+		}
+		return { next, escapes };
+	}
+
+	/** The transitive agent-package closure of `entry` and every edge that leaves it. */
+	function agentPackageClosure(entry: string): { files: string[]; escapes: string[] } {
+		const seen = new Set<string>();
+		const escapes: string[] = [];
+		const queue = [entry];
+		while (queue.length > 0) {
+			const rel = queue.pop() as string;
+			if (seen.has(rel)) continue;
+			seen.add(rel);
+			const edges = agentImportEdges(rel, readFileSync(join(ROOT, rel), 'utf8'));
+			escapes.push(...edges.escapes);
+			queue.push(...edges.next);
+		}
+		return { files: [...seen].sort(), escapes };
 	}
 
 	/**
@@ -3650,6 +3720,32 @@ else {
 			expect(admittedBy('publication/host_agent/src/exec.ts')).toEqual(['host-agent-package']);
 			expect(admittedBy('publication/host_agent/src/provision/render/engine_fragment.ts')).toEqual([
 				'host-agent-package',
+			]);
+			// …and only while their import closure stays inside the agent package (checked, not claimed)
+			for (const entry of [
+				'publication/host_agent/src/exec.ts',
+				'publication/host_agent/src/provision/render/engine_fragment.ts',
+			]) {
+				const closure = agentPackageClosure(entry);
+				expect(closure.escapes, entry).toEqual([]);
+				expect(closure.files.length, entry).toBeGreaterThan(2); // anti-vacuity: edges followed
+			}
+			// exec.ts reaches config.ts only through require( — the parser scan alone misses it
+			expect(agentPackageClosure('publication/host_agent/src/exec.ts').files).toContain(
+				'publication/host_agent/src/config.ts',
+			);
+			// constructed reds: an engine import, an undeclared package, a computed require
+			const fragment = 'publication/host_agent/src/provision/render/engine_fragment.ts';
+			expect(
+				agentImportEdges(fragment, "import { sql } from '../../../../../src/core/db/postgres.ts';")
+					.escapes,
+			).toEqual([`${fragment} → src/core/db/postgres.ts: outside ${AGENT_SRC}`]);
+			expect(agentImportEdges(fragment, "import pg from 'postgres';").escapes).toHaveLength(1);
+			expect(agentImportEdges(fragment, "import { z } from 'zod';").escapes).toEqual([]);
+			expect(agentImportEdges(fragment, "import { x } from 'node:fs';").escapes).toEqual([]);
+			expect(agentImportEdges(fragment, 'const m = require(name);').escapes).toHaveLength(1);
+			expect(agentImportEdges(fragment, "const m = require('../layout');").next).toEqual([
+				'publication/host_agent/src/provision/layout.ts',
 			]);
 			expect(admittedBy('publication/host_agent/src/config.ts')).toEqual([]);
 			expect(admittedBy('publication/host_agent/src/provision/render/types.ts')).toEqual([]);
