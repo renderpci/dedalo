@@ -148,7 +148,10 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   secret. It is written tmp → fsync → rename under a lock
   (`src/core/publication_host/registry.ts`). An absent file means no host. A file that is
   unreadable, malformed or carries a duplicate name makes the panel show `registry_invalid`;
-  it is never treated as empty and never as a partial list. It is not `ts_state.json`,
+  it is never treated as empty and never as a partial list. The registry decides where the
+  engine dials, so it is read only as a regular file (opened `O_NOFOLLOW|O_NONBLOCK`: no
+  symlink, no FIFO) of mode exactly 0600 owned by the engine user; anything else is
+  `unreadable`. The lock file is opened `O_NOFOLLOW` too. It is not `ts_state.json`,
   whose writer is not atomic and resets to defaults when the file is corrupt.
 - **Secrets.** Each host has `<private>/publication_hosts/<name>/` (0700) holding `token` and
   `engine_bundle.pem`, both 0600 and owned by the engine user

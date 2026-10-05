@@ -14,6 +14,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
+	chmodSync,
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
@@ -21,6 +22,7 @@ import {
 	readFileSync,
 	rmSync,
 	statSync,
+	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -114,6 +116,40 @@ describe('read', () => {
 	test('a registry path that cannot be read is unreadable, not empty', () => {
 		mkdirSync(registryPath());
 		expect(reasonOf(() => loadRegistry())).toBe('unreadable');
+	});
+
+	// The registry is the trust anchor for WHERE the engine dials (a unix host's socket):
+	// a file another local user can write, or a link to one, is refused, never read.
+	test('a registry that is not 0600 is unreadable, never loaded', () => {
+		writeFileSync(registryPath(), JSON.stringify(file(host())), { mode: 0o600 });
+		chmodSync(registryPath(), 0o644);
+		expect(reasonOf(() => loadRegistry())).toBe('unreadable');
+		chmodSync(registryPath(), 0o660);
+		expect(reasonOf(() => loadRegistry())).toBe('unreadable');
+		chmodSync(registryPath(), 0o600);
+		expect(loadRegistry()).toEqual(file(host()));
+	});
+
+	test('a symlinked registry is unreadable even when its target is a valid 0600 file', () => {
+		const target = join(scratch.base, 'elsewhere.json');
+		writeFileSync(target, JSON.stringify(file(host())), { mode: 0o600 });
+		symlinkSync(target, registryPath());
+		expect(reasonOf(() => loadRegistry())).toBe('unreadable');
+		expect(reasonOf(() => getHost('pub_main'))).toBe('unreadable');
+	});
+
+	test('a FIFO at the registry path is unreadable and never blocks the read', () => {
+		const made = Bun.spawnSync(['mkfifo', '-m', '600', registryPath()]);
+		expect(made.exitCode).toBe(0);
+		expect(reasonOf(() => loadRegistry())).toBe('unreadable');
+	});
+
+	test('a symlinked lock file is refused as unreadable and the write writes nothing', () => {
+		const target = join(scratch.base, 'lock_target');
+		writeFileSync(target, '', { mode: 0o600 });
+		symlinkSync(target, `${registryPath()}.lock`);
+		expect(reasonOf(() => saveRegistry(file(host())))).toBe('unreadable');
+		expect(existsSync(registryPath())).toBe(false);
 	});
 
 	test('one invalid host invalidates the WHOLE file (never a partial list)', () => {

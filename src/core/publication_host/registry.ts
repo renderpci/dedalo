@@ -9,6 +9,10 @@
  * cannot inherit that.
  *
  * LAWS
+ *  - The registry is the trust anchor for WHERE the engine dials: it is read only when it
+ *    is a regular file (no symlink, no FIFO), mode exactly 0600, owned by the engine user;
+ *    anything else is `unreadable` (shown as registry_invalid). The lock file is opened
+ *    without following a symlink.
  *  - An ABSENT file is the empty registry. Any other file that cannot be read, parsed or
  *    validated THROWS a `RegistryError` naming its reason: never an empty list, never a
  *    partial one (Review Focus 2 — the panel shows `registry_invalid`).
@@ -32,13 +36,14 @@ import { dlopen, FFIType } from 'bun:ffi';
 import {
 	chmodSync,
 	closeSync,
+	constants,
 	existsSync,
 	fstatSync,
 	fsyncSync,
+	lstatSync,
 	openSync,
 	renameSync,
 	rmSync,
-	statSync,
 } from 'node:fs';
 import { isIP } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -393,15 +398,43 @@ function readOpenRegistry(fd: number, path: string): string {
 	return bytes.toString('utf8');
 }
 
+/**
+ * The registry is the trust anchor for WHERE the engine dials, so it is read the way a
+ * secret is (secrets.ts readSecretFile): no symlink (O_NOFOLLOW), never blocking on a FIFO
+ * (O_NONBLOCK), and only a regular file of mode exactly 0600 owned by the engine user.
+ * Anything else is `unreadable` — the panel shows registry_invalid, nothing is dialled.
+ */
+const READ_FLAGS = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
+
+function assertPrivateFile(fd: number, path: string): void {
+	const stat = fstatSync(fd);
+	if (!stat.isFile()) throw new RegistryError('unreadable', `${path} must be a regular file`);
+	const mode = stat.mode & 0o777;
+	if (mode !== 0o600) {
+		throw new RegistryError('unreadable', `${path} must be mode 600, found ${mode.toString(8)}`);
+	}
+	if (stat.uid !== process.geteuid?.()) {
+		throw new RegistryError('unreadable', `${path} must be owned by the engine user`);
+	}
+}
+
+function openRefusal(path: string, error: unknown): RegistryError {
+	const code = errorCode(error);
+	return code === 'ELOOP'
+		? new RegistryError('unreadable', `${path} must be a regular file, not a symlink`)
+		: new RegistryError('unreadable', `${path} could not be read (${code})`);
+}
+
 function readRegistryText(path: string): string | null {
 	let fd: number;
 	try {
-		fd = openSync(path, 'r');
+		fd = openSync(path, READ_FLAGS);
 	} catch (error) {
 		if (errorCode(error) === 'ENOENT') return null;
-		throw new RegistryError('unreadable', `${path} could not be read (${errorCode(error)})`);
+		throw openRefusal(path, error);
 	}
 	try {
+		assertPrivateFile(fd, path);
 		return readOpenRegistry(fd, path);
 	} catch (error) {
 		if (error instanceof RegistryError) throw error;
@@ -471,16 +504,33 @@ function loadLibc(): { flock: Flock; close: () => void } {
 function isCurrent(fd: number, path: string): boolean {
 	try {
 		const held = fstatSync(fd);
-		const current = statSync(path);
+		const current = lstatSync(path);
 		return held.ino === current.ino && held.dev === current.dev;
 	} catch {
 		return false;
 	}
 }
 
+/** 'a+' without following a symlink: a planted link never redirects the lock file. */
+const LOCK_FLAGS = constants.O_RDWR | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW;
+
+function openLockFile(path: string): number {
+	let fd: number;
+	try {
+		fd = openSync(path, LOCK_FLAGS, 0o600);
+	} catch (error) {
+		throw openRefusal(path, error);
+	}
+	if (!fstatSync(fd).isFile()) {
+		closeSync(fd);
+		throw new RegistryError('unreadable', `${path} must be a regular file`);
+	}
+	return fd;
+}
+
 /** One non-blocking attempt; the release function on success, null when held elsewhere. */
 function tryLock(path: string, flock: Flock): (() => void) | null {
-	const fd = openSync(path, 'a+', 0o600);
+	const fd = openLockFile(path);
 	if (flock(fd, LOCK_EX | LOCK_NB) === 0 && isCurrent(fd, path)) {
 		return () => {
 			flock(fd, LOCK_UN);
