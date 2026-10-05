@@ -236,8 +236,8 @@ function harness(
 			throw new DedaloError('internal.unexpected', { message: 'push_apis is gated elsewhere' });
 		},
 		pushAnswerWithinMs: () => 5_000,
-		reconcileMediaCopy: async (name) => {
-			calls.push(`reconcileMediaCopy:${name}`);
+		mediaCopyRound: async (name) => {
+			calls.push(`mediaCopyRound:${name}`);
 			return { drift: 0, applied: 0, detail: { hosts: {} } };
 		},
 		now: () => Date.parse('2026-10-03T12:00:00.000Z'),
@@ -679,13 +679,13 @@ describe('reconcile_media_copy (phase 5)', () => {
 
 	test('runs the media_copy reconcile for THAT host only, answers the report', async () => {
 		const h = harness([record('pub_a'), record('pub_b')], {
-			reconcileMediaCopy: async (name) => {
-				h.calls.push(`reconcileMediaCopy:${name}`);
+			mediaCopyRound: async (name) => {
+				h.calls.push(`mediaCopyRound:${name}`);
 				return report({ [name]: { takes_copy: true, error: null } });
 			},
 		});
 		const response = await run(h, 'reconcile_media_copy', { name: 'pub_a' });
-		expect(h.calls).toEqual(['loadRegistry', 'reconcileMediaCopy:pub_a']);
+		expect(h.calls).toEqual(['loadRegistry', 'mediaCopyRound:pub_a']);
 		expect(response.data).toBe(true);
 		expect(response.msg).toBe(
 			"'pub_a': drift 3, applied 3. The panel shows what is still pending.",
@@ -695,7 +695,7 @@ describe('reconcile_media_copy (phase 5)', () => {
 
 	test('a host that is not a copy host is an OK with its own sentence', async () => {
 		const h = harness([record('pub_a')], {
-			reconcileMediaCopy: async () => report({ pub_a: { takes_copy: false, error: null } }, 0, 0),
+			mediaCopyRound: async () => report({ pub_a: { takes_copy: false, error: null } }, 0, 0),
 		});
 		const response = await run(h, 'reconcile_media_copy', { name: 'pub_a' });
 		expect(response.data).toBe(true);
@@ -704,7 +704,7 @@ describe('reconcile_media_copy (phase 5)', () => {
 
 	test("the host's round failed → maintenance.action_failed naming the code, never an OK", async () => {
 		const h = harness([record('pub_a')], {
-			reconcileMediaCopy: async () =>
+			mediaCopyRound: async () =>
 				report({ pub_a: { takes_copy: true, error: 'publication_host.unreachable' } }, 1, 0),
 		});
 		const thrown = await run(h, 'reconcile_media_copy', { name: 'pub_a' }).catch((e) => e);
@@ -716,7 +716,7 @@ describe('reconcile_media_copy (phase 5)', () => {
 	test('a round still going past the bounded wait answers running (data null), never a cut connection', async () => {
 		const h = harness([record('pub_a')], {
 			pushAnswerWithinMs: () => 20,
-			reconcileMediaCopy: () => new Promise(() => {}),
+			mediaCopyRound: () => new Promise(() => {}),
 		});
 		const response = await run(h, 'reconcile_media_copy', { name: 'pub_a' });
 		expect(response.data).toBeNull();

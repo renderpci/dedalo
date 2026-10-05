@@ -167,7 +167,7 @@ export interface PublicationHostsDeps {
 	 * THE registered `media_copy` reconcile, APPLY, scoped to ONE host, through the registry
 	 * door (runReconcile: the run is recorded in the gauge). Phase 5.
 	 */
-	reconcileMediaCopy(name: string): Promise<ReconcileReport>;
+	mediaCopyRound(name: string): Promise<ReconcileReport>;
 	/** The panel clock (epoch ms) the media_copy check ages pending deletions against. */
 	now(): number;
 }
@@ -214,7 +214,7 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 		buildApiLockstepPanel: lockstep.buildApiLockstepPanel,
 		reconcilePublicationApis: (opts) => lockstep.reconcilePublicationApis(opts),
 		pushAnswerWithinMs: () => pushAnswerWithinMs(config.ops.idleTimeoutSeconds),
-		reconcileMediaCopy,
+		mediaCopyRound: runMediaCopyReconcileFor,
 		now: () => Date.now(),
 	};
 }
@@ -224,7 +224,7 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
  * imported lazily (it reaches the diffusion facade by its own dynamic import — core never
  * imports src/diffusion statically).
  */
-async function reconcileMediaCopy(name: string): Promise<ReconcileReport> {
+async function runMediaCopyReconcileFor(name: string): Promise<ReconcileReport> {
 	const { registerAllReconciles } = await import('../../reconcile/catalog.ts');
 	const { runReconcile } = await import('../../reconcile/registry.ts');
 	await registerAllReconciles();
@@ -878,7 +878,7 @@ const reconcileMediaCopyAction: BoundAction = async (options, principal, loadDep
 	const name = hostName(options);
 	const deps = await loadDeps();
 	requireHost(deps, name);
-	const round = deps.reconcileMediaCopy(name);
+	const round = deps.mediaCopyRound(name);
 	const waitMs = deps.pushAnswerWithinMs();
 	const report = await settledWithin(round, waitMs);
 	if (report === STILL_RUNNING) {
