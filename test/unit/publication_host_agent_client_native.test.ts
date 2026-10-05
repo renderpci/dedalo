@@ -757,7 +757,7 @@ describe('copy-mode media commands (phase 5): mutations, re-proved live, through
 		expect(sent.actor).toBe(ACTOR);
 		expect(sent.contentType).toBe('application/octet-stream');
 		expect(Buffer.from(sent.body).equals(Buffer.from(body))).toBe(true);
-		expect(MEDIA_PUT_TIMEOUT_MS).toBe(30 * 60_000);
+		expect(MEDIA_PUT_TIMEOUT_MS).toBeGreaterThan(30 * 60_000); // the PUT ceiling, sized to the largest file
 	});
 
 	test('media.delete posts JSON in batches, each re-proved; an empty list dials nothing', async () => {

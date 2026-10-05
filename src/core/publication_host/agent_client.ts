@@ -52,7 +52,8 @@ import {
 	type AgentRequest,
 	type AgentResponse,
 	agentRequest,
-	MAX_TIMEOUT_MS,
+	MAX_PUT_TIMEOUT_MS,
+	mediaPutDeadlineMs,
 } from './transport.ts';
 import {
 	agentResponseError,
@@ -78,11 +79,12 @@ export const AGENT_TIMEOUTS_MS = Object.freeze({
 });
 
 /**
- * A put streams one public derivative (an AV file may be gigabytes): the door's own
- * ceiling. A slower link defers nothing — the put fails `timeout` (transient) and the
- * next round retries it.
+ * A put streams one public derivative (an AV file may be gigabytes): its deadline is sized
+ * to the file (transport.ts mediaPutDeadlineMs — 30 min of slack plus the file at the
+ * slowest sized link), up to the door's PUT ceiling. A put that still times out is
+ * deferred by the copy round (media_copy_apply.ts), never the end of it.
  */
-export const MEDIA_PUT_TIMEOUT_MS = MAX_TIMEOUT_MS;
+export const MEDIA_PUT_TIMEOUT_MS = MAX_PUT_TIMEOUT_MS;
 /** Paths per media.delete request (the agent takes at most 1000). */
 export const MEDIA_DELETE_BATCH = 500;
 const HEALTH_MAX_BYTES = 4_096;
@@ -663,6 +665,11 @@ const MEDIA_PATH_SHAPE = AGENT_QUERY_GRAMMAR[MEDIA_FILE_PATH]?.path;
 /** The agent's MARKER_KEY (its grammar.ts): what media.mark takes. */
 const MEDIA_MARKER_KEY = /^[a-z0-9]+_[0-9]+$/;
 
+/** A key the agent can hold a `pub/<key>` marker for (media.mark refuses any other). */
+export function isAgentMarkerKey(key: string): boolean {
+	return MEDIA_MARKER_KEY.test(key);
+}
+
 function isMediaPath(path: unknown): path is string {
 	return typeof path === 'string' && MEDIA_PATH_SHAPE?.test(path) === true;
 }
@@ -725,7 +732,7 @@ export async function hostMediaPut(name: string, file: MediaPutFile, actor: stri
 				[AGENT_ACTOR_HEADER]: actor,
 			},
 			body: file.body,
-			timeoutMs: MEDIA_PUT_TIMEOUT_MS,
+			timeoutMs: mediaPutDeadlineMs(file.size),
 		}),
 	).catch(async (error: unknown) => {
 		await file.body.cancel().catch(() => undefined);

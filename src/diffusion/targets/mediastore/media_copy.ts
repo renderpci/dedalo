@@ -106,8 +106,6 @@ const HARDENING_DENIED = new RegExp(
 	'i',
 );
 
-/** The agent's MAX_MEDIA_PATH_BYTES (publication/host_agent/src/media/grammar.ts). */
-const MAX_RELPATH_BYTES = 1024;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 /** The agent's RESERVED_TOP_LEVEL (grammar.ts): never a media path, never in a manifest. */
 const AGENT_RESERVED_TOP_LEVEL: ReadonlySet<string> = new Set([
@@ -117,11 +115,11 @@ const AGENT_RESERVED_TOP_LEVEL: ReadonlySet<string> = new Set([
 
 /**
  * Paths this module accepts: EXACTLY the door's grammar (transport.ts isAgentMediaRelpath —
- * relative, no empty/./.. segment, no backslash, no C0/DEL), within the agent's byte bound.
+ * relative, no empty/./.. segment, no backslash, no C0/DEL, ≤ the agent's 1024 BYTES).
  * One grammar: a path planned here is never refused by the door it is sent through.
  */
 function isSafeRelpath(relpath: string): boolean {
-	return Buffer.byteLength(relpath, 'utf8') <= MAX_RELPATH_BYTES && isAgentMediaRelpath(relpath);
+	return isAgentMediaRelpath(relpath);
 }
 
 function isReservedRelpath(relpath: string): boolean {

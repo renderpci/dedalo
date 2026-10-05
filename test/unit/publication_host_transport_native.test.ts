@@ -38,6 +38,9 @@ import {
 	agentRequest,
 	dialAgent,
 	isAgentMediaRelpath,
+	MAX_PUT_TIMEOUT_MS,
+	MAX_TIMEOUT_MS,
+	mediaPutDeadlineMs,
 } from '../../src/core/publication_host/transport.ts';
 import { childDriver, driverResult, repoModule } from '../helpers/child_driver.ts';
 import {
@@ -596,6 +599,16 @@ describe('the door contract: closed routes, the transport’s own headers', () =
 			{ ...PUT_FILE, query: { path: `image/${'a'.repeat(1020)}.jpg` } },
 			null,
 		],
+		[
+			'a multibyte put path under 1025 characters but past the agent 1024 bytes',
+			{ ...PUT_FILE, query: { path: `image/${'é'.repeat(600)}_test3_1.jpg` } },
+			null,
+		],
+		[
+			'a put deadline past the PUT ceiling',
+			{ ...PUT_FILE, query: { path: PUT_PATH }, timeoutMs: MAX_PUT_TIMEOUT_MS + 1 },
+			null,
+		],
 		['a GET with a body', { method: 'GET', path: '/v1/status', body: 'x' }, null],
 		[
 			'a caller-set Authorization',
@@ -676,6 +689,45 @@ describe('the media path grammar is the agent’s own, character for character',
 		expect(disagree).toEqual([]);
 		expect(isAgentMediaRelpath('image/1.5MB/0/x\u0085y_test3_1.jpg')).toBe(true);
 		expect(isAgentMediaRelpath('image/1.5MB/0/x\u007fy_test3_1.jpg')).toBe(false);
+	});
+
+	test('the length bound is the agent’s: 1024 UTF-8 BYTES, not characters (multibyte boundary)', () => {
+		const prefix = 'image/1.5MB/0/';
+		const tail = '_test3_1.jpg';
+		const fill = (bytes: number) => 'é'.repeat(bytes / 2); // é = 2 bytes
+		const at = `${prefix}${fill(1024 - prefix.length - tail.length)}${tail}`;
+		const over = `${prefix}${fill(1024 - prefix.length - tail.length)}x${tail}`;
+		expect(Buffer.byteLength(at)).toBe(1024);
+		expect(Buffer.byteLength(over)).toBe(1025);
+		expect(over.length).toBeLessThan(1025);
+		expect([isAgentMediaRelpath(at), classifyMediaPath(at, 'delete').ok]).toEqual([true, true]);
+		expect([isAgentMediaRelpath(over), classifyMediaPath(over, 'delete').ok]).toEqual([
+			false,
+			false,
+		]);
+	});
+
+	test('a PUT route takes a deadline past 30 min, up to the size-sized PUT ceiling (only it does)', async () => {
+		const fiveGb = 5 * 1024 ** 3;
+		expect(mediaPutDeadlineMs(fiveGb)).toBeGreaterThan(MAX_TIMEOUT_MS + 2 * 3_600_000);
+		expect(mediaPutDeadlineMs(0)).toBe(MAX_TIMEOUT_MS);
+		expect(mediaPutDeadlineMs(Number.MAX_SAFE_INTEGER)).toBe(MAX_PUT_TIMEOUT_MS);
+		const res = await dialAgent(
+			tlsHost(agent.port),
+			clientTls,
+			{ ...PUT_FILE, query: { path: PUT_PATH }, timeoutMs: mediaPutDeadlineMs(fiveGb) },
+			BEARER,
+		);
+		expect(res.status).toBe(200);
+		const error = await rejection(
+			dialAgent(
+				tlsHost(agent.port),
+				clientTls,
+				{ ...GET_STATUS, timeoutMs: mediaPutDeadlineMs(fiveGb) },
+				BEARER,
+			),
+		);
+		expect(error.code).toBe('internal.unexpected');
 	});
 
 	test('a C1-named path reaches the agent through the door (a delete of mojibake is never refused)', async () => {

@@ -104,12 +104,15 @@ policy, in this order:
    method GET or POST — PUT on exactly the routes `AGENT_PUT_PATHS` names (today
    copy mode's `/v1/media/file`), which take nothing else — the bounds inside
    their ceilings (1 MiB default / 16 MiB response, 10 s default / 30 min
-   deadline), the bearer one token of the secrets store's own grammar, and the
+   deadline — a PUT route's ceiling is `MAX_PUT_TIMEOUT_MS`, the agent's largest
+   media file at the slowest sized link; a put's own deadline is
+   `mediaPutDeadlineMs(size)`), the bearer one token of the secrets store's own grammar, and the
    caller sets none of the transport's headers. A query is never part of the
    path: a route that takes one declares its keys in `AGENT_QUERY_GRAMMAR`
    (`/v1/media/manifest`: `cursor`, the agent's own base64url, and `limit`, a
    plain decimal; `/v1/media/file`: `path`, REQUIRED, a relative media path with
-   no control character, backslash, or empty / `.` / `..` segment), every value
+   no control character, backslash, or empty / `.` / `..` segment, at most 1024
+   UTF-8 bytes — the agent's bound), every value
    must match its closed grammar, and the door encodes it, so no value changes
    the URL's structure. A breach is a programming error (`internal.unexpected`),
    refused before any socket opens.

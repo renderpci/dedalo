@@ -39,7 +39,9 @@
  *   4. BOUNDED. One total deadline from connect to the last body byte, an idle bound on the
  *      body (default min(deadline, 30 s); a caller may only lower it — an idle body is a
  *      timeout even with the deadline far off), and the body read through the shared capped reader (`readBytesCapped`), which
- *      cancels it over the ceiling. A request body may be a stream (release bundles).
+ *      cancels it over the ceiling. A request body may be a stream (release bundles). The
+ *      deadline ceiling is MAX_TIMEOUT_MS, except on a PUT route: MAX_PUT_TIMEOUT_MS, the
+ *      agent's largest media file at the slowest sized link (mediaPutDeadlineMs).
  *
  * THE BEARER IS THE CALLER'S DECISION. It is attached only when passed, and the one
  * production caller (the publication-host client) passes it only after the pairing is proved
@@ -94,7 +96,7 @@ const MEDIA_SEGMENT = `[^/\\\\${AGENT_CONTROL_RANGE}]+`;
 
 /**
  * The copy-mode media path (PUT /v1/media/file?path=, and every media.delete path):
- * media-root relative, 1–1024 characters, no backslash, no empty / `.` / `..` segment, no
+ * media-root relative, 1–1024 characters (and ≤ 1024 UTF-8 bytes: isAgentMediaRelpath), no backslash, no empty / `.` / `..` segment, no
  * leading `/`, and no C0 control character or DEL — EXACTLY the agent's CONTROL_CHAR
  * (publication/host_agent/src/media/grammar.ts), never wider: a path the agent lists in its
  * manifest but this door refused (a C1 character, e.g. mojibake) could never be deleted,
@@ -107,10 +109,25 @@ const MEDIA_PUT_PATH = new RegExp(
 	'su',
 );
 
-/** THE agent media relpath grammar (the door's, see MEDIA_PUT_PATH) — the planner's too. */
+/** The agent's MAX_MEDIA_PATH_BYTES (publication/host_agent/src/media/grammar.ts): UTF-8 BYTES. */
+export const AGENT_MEDIA_PATH_MAX_BYTES = 1024;
+
+/**
+ * THE agent media relpath grammar (the door's, see MEDIA_PUT_PATH) — the planner's too.
+ * The regex caps CHARACTERS; the agent caps UTF-8 BYTES, so the byte bound is checked here
+ * too (a multibyte path under 1025 characters but over 1024 bytes would pass the door and
+ * be refused by the agent on every round).
+ */
 export function isAgentMediaRelpath(path: string): boolean {
-	return MEDIA_PUT_PATH.test(path);
+	return MEDIA_PUT_PATH.test(path) && Buffer.byteLength(path, 'utf8') <= AGENT_MEDIA_PATH_MAX_BYTES;
 }
+
+/** A query value rule: a RegExp, or a predicate with the same shape. */
+export interface QueryValueRule {
+	test(value: string): boolean;
+}
+
+const MEDIA_PATH_RULE: QueryValueRule = Object.freeze({ test: isAgentMediaRelpath });
 
 /**
  * THE ONLY QUERY KEYS ANY ROUTE TAKES, each with its value grammar (anchored, no flags).
@@ -118,14 +135,15 @@ export function isAgentMediaRelpath(path: string): boolean {
  * base64url (publication/host_agent/src/media/copy.ts CURSOR, same bound); the limit is
  * a plain decimal (the agent bounds it 1–5000).
  */
-export const AGENT_QUERY_GRAMMAR: Readonly<Record<string, Readonly<Record<string, RegExp>>>> =
-	Object.freeze({
-		'/v1/media/manifest': Object.freeze({
-			cursor: /^[A-Za-z0-9_-]{1,2000}$/,
-			limit: /^[1-9][0-9]{0,3}$/,
-		}),
-		'/v1/media/file': Object.freeze({ path: MEDIA_PUT_PATH }),
-	});
+export const AGENT_QUERY_GRAMMAR: Readonly<
+	Record<string, Readonly<Record<string, QueryValueRule>>>
+> = Object.freeze({
+	'/v1/media/manifest': Object.freeze({
+		cursor: /^[A-Za-z0-9_-]{1,2000}$/,
+		limit: /^[1-9][0-9]{0,3}$/,
+	}),
+	'/v1/media/file': Object.freeze({ path: MEDIA_PATH_RULE }),
+});
 
 /** Query keys a route cannot be called without. */
 const REQUIRED_QUERY: Readonly<Record<string, readonly string[]>> = Object.freeze({
@@ -137,6 +155,23 @@ export const MAX_RESPONSE_BYTES_CEILING = 16 * 1024 * 1024;
 export const DEFAULT_TIMEOUT_MS = 10_000;
 /** A release install answers only after the agent's health checks: generous, still finite. */
 export const MAX_TIMEOUT_MS = 30 * 60_000;
+/** The agent's MAX_MEDIA_FILE_BYTES (publication/host_agent/src/media/grammar.ts). */
+export const AGENT_MEDIA_FILE_MAX_BYTES = 64 * 1024 ** 3;
+/** The slowest uplink a media put is sized for (≈ 4 Mbit/s). */
+export const MEDIA_PUT_MIN_BYTES_PER_S = 512 * 1024;
+
+/**
+ * The deadline of a media put of `size` bytes: MAX_TIMEOUT_MS of slack plus the time the
+ * file takes at MEDIA_PUT_MIN_BYTES_PER_S. A fixed 30 min would fail every round on a file
+ * the link cannot push in that time (a multi-GB AV derivative), forever.
+ */
+export function mediaPutDeadlineMs(size: number): number {
+	const bytes = Math.min(Math.max(0, size), AGENT_MEDIA_FILE_MAX_BYTES);
+	return MAX_TIMEOUT_MS + Math.ceil((bytes / MEDIA_PUT_MIN_BYTES_PER_S) * 1000);
+}
+
+/** The deadline ceiling of a PUT route: the largest file the agent takes, at the slowest rate. */
+export const MAX_PUT_TIMEOUT_MS = mediaPutDeadlineMs(AGENT_MEDIA_FILE_MAX_BYTES);
 /** The longest the body may stay silent once the headers arrived. */
 const IDLE_CEILING_MS = 30_000;
 
@@ -160,7 +195,7 @@ export interface AgentRequest {
 	body?: string | ReadableStream<Uint8Array>;
 	/** Default 1 MiB, ceiling 16 MiB. */
 	maxResponseBytes?: number;
-	/** Total deadline, connect to last body byte. Default 10 s, ceiling 30 min. */
+	/** Total deadline, connect to last body byte. Default 10 s, ceiling 30 min (a PUT route: MAX_PUT_TIMEOUT_MS). */
 	timeoutMs?: number;
 	/**
 	 * Longest silence between two body chunks. Default min(timeoutMs, 30 s); never above
@@ -226,7 +261,7 @@ function assertRoute(req: AgentRequest): void {
 }
 
 /** The grammar `path` declares for `key`, or undefined (own properties only: never a prototype key). */
-function queryRule(path: string, key: string): RegExp | undefined {
+function queryRule(path: string, key: string): QueryValueRule | undefined {
 	const grammar = Object.hasOwn(AGENT_QUERY_GRAMMAR, path) ? AGENT_QUERY_GRAMMAR[path] : undefined;
 	return grammar !== undefined && Object.hasOwn(grammar, key) ? grammar[key] : undefined;
 }
@@ -292,7 +327,8 @@ function boundsOf(req: AgentRequest): Bounds {
 		MAX_RESPONSE_BYTES_CEILING,
 		'maxResponseBytes',
 	);
-	const timeoutMs = bounded(req.timeoutMs, DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, 'timeoutMs');
+	const ceiling = AGENT_PUT_PATHS.includes(req.path) ? MAX_PUT_TIMEOUT_MS : MAX_TIMEOUT_MS;
+	const timeoutMs = bounded(req.timeoutMs, DEFAULT_TIMEOUT_MS, ceiling, 'timeoutMs');
 	const idleCeiling = Math.min(timeoutMs, IDLE_CEILING_MS);
 	const idleMs = bounded(req.idleTimeoutMs, idleCeiling, idleCeiling, 'idleTimeoutMs');
 	return { maxBytes, timeoutMs, idleMs };
