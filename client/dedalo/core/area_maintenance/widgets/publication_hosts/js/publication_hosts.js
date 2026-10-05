@@ -48,16 +48,19 @@ export const PUBLICATION_HOST_ACTIONS = Object.freeze([
 	'set_host_fields',
 	'remove_host',
 	'push_apis',
+	'reconcile_media_copy',
 ]);
 
 /**
  * ACTION_TIMEOUT_MS
- * The client deadline for every action, push_apis included. A first push of a
+ * The client deadline for every action, push_apis and reconcile_media_copy
+ * included. A first push of a
  * release can run far longer (v2 deps build, up to 15 min per agent install),
  * but the server never holds the request that long: Bun cuts a silent
  * connection at SERVER_IDLE_TIMEOUT_S (at most 255 s), so push_apis answers
  * within min(60 s, half that) — `running: true` when the round goes on
- * detached (widgets/publication_hosts.ts pushAnswerWithinMs). A longer client
+ * detached (widgets/publication_hosts.ts pushAnswerWithinMs; a first media copy
+ * of large AV files answers the same way). A longer client
  * deadline here would buy nothing.
  */
 const ACTION_TIMEOUT_MS = 120 * 1000;

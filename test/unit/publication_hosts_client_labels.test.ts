@@ -2,7 +2,8 @@
  * publication_hosts CLIENT LABELS: the keys the publication_hosts widget resolves
  * DYNAMICALLY. labels_tripwire scans only static `get_label.x` /
  * `get_label['x']` references, so these keys are invisible to it:
- *   - `publication_hosts_check_<id>` through check_row(…, 'publication_hosts');
+ *   - `publication_hosts_check_<id>` through check_row(…, 'publication_hosts') — for every
+ *     fixed check id AND every decorator check id (phase 5: media_copy);
  *   - `publication_hosts_lead` through the System Map's MAP_TOOL_DESC_LABEL.
  * Each key must be defined in master.json and translated in every catalog except
  * the master-source lang. CHECK_IDS IS host_status.ts HOST_CHECK_IDS (imported, never
@@ -12,12 +13,15 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { MASTER_SOURCE_LANG } from '../../src/core/labels/catalog.ts';
-import { HOST_CHECK_IDS } from '../../src/core/publication_host/host_status.ts';
+import {
+	DECORATOR_CHECK_IDS,
+	HOST_CHECK_IDS,
+} from '../../src/core/publication_host/host_status.ts';
 
 const LABELS_DIR = resolve(import.meta.dir, '../../src/core/labels');
 
-// THE engine's list, imported: a new HostCheck id without its label reds this gate.
-const CHECK_IDS = HOST_CHECK_IDS;
+// THE engine's lists, imported: a new HostCheck id without its label reds this gate.
+const CHECK_IDS = [...HOST_CHECK_IDS, ...DECORATOR_CHECK_IDS];
 const DYNAMIC_KEYS = [
 	...CHECK_IDS.map((id) => `publication_hosts_check_${id}`),
 	'publication_hosts_lead',
@@ -30,8 +34,9 @@ describe('publication_hosts client labels', () => {
 	const master = readJson(join(LABELS_DIR, 'master.json'));
 
 	test('every dynamically resolved key is defined in the master', () => {
-		// corpus floor: at least the 11 phase-3 check ids + the lead, so an emptied list cannot pass vacuously
-		expect(CHECK_IDS.length).toBeGreaterThanOrEqual(11);
+		// corpus floor: at least the 11 phase-3 check ids + media_copy + the lead, so an emptied list cannot pass vacuously
+		expect(CHECK_IDS.length).toBeGreaterThanOrEqual(12);
+		expect(CHECK_IDS).toContain('media_copy');
 		expect(DYNAMIC_KEYS).toHaveLength(CHECK_IDS.length + 1);
 		expect(DYNAMIC_KEYS.filter((key) => master[key] === undefined)).toEqual([]);
 	});

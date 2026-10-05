@@ -12,6 +12,7 @@ import { error_text } from '../../../../common/js/render_api_error.js';
 // imports
 import { ui } from '../../../../common/js/ui.js';
 import { check_row, fact_row, section } from '../../update_code/js/render_update_status.js';
+import { has_media_copy } from './media_copy_view.js';
 import { render_api_lockstep, render_runtime_invalid } from './render_api_lockstep.js';
 
 /**
@@ -350,7 +351,8 @@ const confirm_text = function (action_label, target) {
 
 /**
  * RENDER_ACTIONS
- * Apply media rules · Probe media · Roll back API · Remove host.
+ * Apply media rules · Probe media · Roll back API · Reconcile media copy
+ * (copy-mode rows only) · Remove host.
  */
 const render_actions = function (self, host, card, body_response) {
 	const actions = ui.create_dom_element({
@@ -394,6 +396,10 @@ const render_actions = function (self, host, card, body_response) {
 
 	render_rollback(self, host, actions, body_response, agent_blocked);
 
+	if (has_media_copy(host)) {
+		render_media_copy(self, host, actions, body_response, agent_blocked);
+	}
+
 	const remove_label = get_label.publication_hosts_remove_host || 'Remove host';
 	const button_remove = action_button(actions, 'danger button_remove_host', remove_label, false);
 	button_remove.addEventListener('click', async (e) => {
@@ -410,6 +416,36 @@ const render_actions = function (self, host, card, body_response) {
 
 	return actions;
 }; //end render_actions
+
+/**
+ * RENDER_MEDIA_COPY
+ * Root: run the media_copy reconcile (APPLY) for this copy-mode host — the
+ * same pure derivation the engine applies every 10 min: copy what is missing,
+ * unmark then delete what is no longer published, verify. Only on a row that
+ * carries a `media_copy` check (has_media_copy); confirm-gated (it puts and
+ * deletes files on a public machine); the server's sentence is shown as TEXT;
+ * a round that outlives the server's bounded wait answers `running` and
+ * finishes detached (a later reload shows the Media copy row).
+ * @returns {HTMLButtonElement}
+ */
+const render_media_copy = function (self, host, parent, body_response, agent_blocked) {
+	const label = get_label.publication_hosts_reconcile_media_copy || 'Reconcile media copy';
+	const button = action_button(parent, 'button_reconcile_media_copy', label, agent_blocked);
+	button.addEventListener('click', async (e) => {
+		e.stopPropagation();
+		await run_action(self, {
+			button: button,
+			body_response: body_response,
+			action: 'reconcile_media_copy',
+			options: { name: host.name },
+			result_text: (api_response) => String(response_extension(api_response, 'msg') || ''),
+			confirm_text: confirm_text(label, host.name),
+			reload: true,
+		});
+	});
+
+	return button;
+}; //end render_media_copy
 
 /**
  * RENDER_ROLLBACK

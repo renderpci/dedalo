@@ -565,6 +565,48 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			assert.strictEqual(self.reloads, 1);
 		});
 
+		it('reconcile_media_copy: only on a row carrying a media_copy check (phase 5)', async function () {
+			const self = build_widget(ok_value([build_host()]));
+			const content = await mount(self);
+			assert.isNull(
+				content.querySelector('.button_reconcile_media_copy'),
+				'a row without a media_copy check offers no media-copy button',
+			);
+		});
+
+		it('reconcile_media_copy is confirm-gated, sends {name}, shows the server sentence as TEXT and reloads', async function () {
+			const host = build_host({
+				checks: [...build_host().checks, { id: 'media_copy', state: 'blocked', detail: 'unverified_deletions:1' }],
+			});
+			const self = build_widget(ok_value([host]));
+			self.next_response = {
+				ok: true,
+				data: true,
+				msg: "<b>'www'</b>: drift 2, applied 2.",
+				report: { drift: 2, applied: 2, detail: { hosts: {} } },
+				running: false,
+			};
+			const content = await mount(self);
+			const button = content.querySelector('.button_reconcile_media_copy');
+			assert.isNotNull(button, 'the copy-mode row offers the button');
+
+			self.confirm_answer = false;
+			button.click();
+			await settle();
+			assert.strictEqual(self.confirms.length, 1, 'the operator was asked');
+			assert.include(self.confirms[0], 'www');
+			assert.deepEqual(self.calls, [], 'a declined confirm sends nothing');
+
+			self.confirm_answer = true;
+			button.click();
+			await settle();
+			assert.deepEqual(self.calls, [{ action: 'reconcile_media_copy', options: { name: 'www' } }]);
+			assert.strictEqual(self.reloads, 1);
+			const response = content.querySelector('.body_response');
+			assert.include(response.textContent, "<b>'www'</b>: drift 2", 'the server sentence, as text');
+			assert.isNull(response.querySelector('b'), 'never parsed as HTML');
+		});
+
 		it('set_host_fields sends the edited fields; a blank field is null', async function () {
 			const self = build_widget(ok_value([build_host()]));
 			self.next_response = {
