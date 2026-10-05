@@ -7,7 +7,10 @@
  *   1. PURE — fragment grammar, address policy, token/bundle resolution, the fingerprint check
  *      and the owner rule, driven in-process (none of them touches a file or the network).
  *   2. ONE SPELLING — the fragment vocabulary is spelled in the CLI and in the agent's renderer
- *      (separate deployables); this gate reads the renderer's source and holds them equal.
+ *      (separate deployables); this gate reads the renderer's source and holds them equal,
+ *      and parses the PROVISIONER'S OWN output — the committed deploy/examples fragments, a
+ *      fresh render, the ensureTls engine_bundle.pem, and a live add on that PKI — never only
+ *      a hand-written twin.
  *   3. LIVE — the real CLI in a CHILD process whose DEDALO_PRIVATE_DIR is a scratch dir owned
  *      by this test's uid (the live ../private is never touched), against loopback mock agents:
  *      one mTLS listener on the shared phase-3 PKI fixture (test/helpers/publication_host_fixtures.ts
@@ -35,6 +38,12 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { derive, type HostDeclaration } from '../../publication/host_agent/src/provision/layout.ts';
+import {
+	engineFragmentRenderer,
+	renderFacts,
+} from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
+import { ensureTls, type TlsIo } from '../../publication/host_agent/src/provision/tls.ts';
 import {
 	AGENT_BASE_PATH,
 	assertFragmentFingerprint,
@@ -59,7 +68,7 @@ import {
 	type PublicationHostRecord,
 	saveRegistry,
 } from '../../src/core/publication_host/registry.ts';
-import { writeHostSecrets } from '../../src/core/publication_host/secrets.ts';
+import { splitEngineBundle, writeHostSecrets } from '../../src/core/publication_host/secrets.ts';
 import {
 	mintTestPki,
 	type TestPki,
@@ -69,6 +78,7 @@ import {
 const ROOT = resolve(import.meta.dir, '../..');
 const CLI = join(ROOT, 'scripts/publication_host_pair.ts');
 const RENDERER = join(ROOT, 'publication/host_agent/src/provision/render/engine_fragment.ts');
+const AGENT_EXAMPLES = join(ROOT, 'publication/host_agent/deploy/examples');
 const INSTANCE = 'test';
 const TOKEN = 'pair-cli-test-token-not-a-secret-0123456789abcdef';
 const OTHER_TOKEN = 'pair-cli-other-token-not-a-secret-0123456789abcdef';
@@ -182,6 +192,13 @@ describe('fragment grammar and pairing inputs (pure)', () => {
 		expect(pairRefusalOf(() => resolveToken(null, null)).message).toContain('--token-file');
 		expect(pairRefusalOf(() => resolveToken(TOKEN, OTHER_TOKEN)).message).toContain('different');
 		expect(pairRefusalOf(() => resolveToken(null, 'short')).message).toContain('32');
+		// long enough, but not the shape the secrets store keeps (TOKEN_SHAPE): refused HERE,
+		// before any connection — not later as a bad_token after the live proof
+		for (const misshaped of [`${'x'.repeat(20)} ${'x'.repeat(20)}`, `${'x'.repeat(39)}é`]) {
+			expect(pairRefusalOf(() => resolveToken(null, misshaped)).message).toContain(
+				'printable ASCII',
+			);
+		}
 		expect(resolveToken(TOKEN, null)).toBe(TOKEN);
 		expect(resolveToken(null, TOKEN)).toBe(TOKEN);
 		expect(resolveToken(TOKEN, TOKEN)).toBe(TOKEN);
@@ -268,6 +285,94 @@ describe('the fragment vocabulary has ONE spelling across the agent renderer and
 			]),
 		);
 		expect(keys).toEqual({ ...FRAGMENT_KEYS });
+	});
+});
+
+/** The agent provisioner, driven in memory: its real derive → ensureTls → renderer. */
+function provisionerOutput(
+	declaration: HostDeclaration,
+	token: string,
+	files: Map<string, string> = new Map(),
+): {
+	fragment: string;
+	files: Map<string, string>;
+	bundlePath: string;
+	layout: ReturnType<typeof derive>;
+} {
+	const layout = derive(declaration);
+	const io: TlsIo = {
+		readFile: (path) => files.get(path) ?? null,
+		writeFile: (path, body) => {
+			files.set(path, body);
+		},
+	};
+	ensureTls(layout, io, new Date());
+	const [fragment] = engineFragmentRenderer.render(
+		layout,
+		renderFacts(layout, () => token),
+	);
+	if (fragment === undefined) throw new Error('the renderer produced no engine fragment');
+	return { fragment: fragment.body, files, bundlePath: layout.engineBundlePath, layout };
+}
+const exampleDeclaration = (file: string): HostDeclaration =>
+	JSON.parse(readFileSync(join(AGENT_EXAMPLES, file), 'utf8')) as HostDeclaration;
+
+describe('the COMMITTED provisioner output parses through this CLI (never a hand-written twin)', () => {
+	// the agent's own example token (publication/host_agent/tests/provision_examples.test.ts),
+	// whose fingerprint the committed examples carry — byte-equal to a fresh renderAll there
+	const EXAMPLE_TOKEN = `example-service-token-not-a-secret-${'0'.repeat(10)}`;
+	const committedFragment = (variant: string): string =>
+		readFileSync(
+			join(
+				AGENT_EXAMPLES,
+				'rendered',
+				variant,
+				'etc/dedalo_publication_host/example/engine.env.fragment',
+			),
+			'utf8',
+		);
+
+	test.each([
+		[
+			'tls-nginx',
+			'instance.example.json',
+			{ url: `https://10.20.0.2:8471${AGENT_BASE_PATH}`, socket: null },
+			{ kind: 'tls', host: '10.20.0.2', port: 8471 },
+		],
+		[
+			'unix-apache',
+			'instance.single_machine.example.json',
+			{ url: null, socket: '/run/dedalo_publication_host/example/agent.sock' },
+			{ kind: 'unix', socket: '/run/dedalo_publication_host/example/agent.sock' },
+		],
+	])(
+		'%s: the committed engine.env.fragment and a fresh render parse alike, to the declared address',
+		(variant, declarationFile, where, address) => {
+			const committed = parseFragment(committedFragment(variant));
+			expect(committed).toEqual({
+				instance: 'example',
+				fingerprint: fp(EXAMPLE_TOKEN, 'example'),
+				...where,
+				tlsBundle: null, // the placeholder reads as absent
+				token: null,
+			});
+			expect(parseAgentAddress(committed)).toEqual(address);
+			// the engine's fingerprint recipe accepts the agent's rendered fingerprint
+			expect(assertFragmentFingerprint(committed, EXAMPLE_TOKEN)).toBe(committed.fingerprint);
+			const fresh = provisionerOutput(exampleDeclaration(declarationFile), EXAMPLE_TOKEN);
+			expect(parseFragment(fresh.fragment)).toEqual(committed);
+		},
+	);
+
+	test("ensureTls's engine_bundle.pem splits through the engine's bundle check", () => {
+		const { files, bundlePath } = provisionerOutput(
+			exampleDeclaration('instance.example.json'),
+			EXAMPLE_TOKEN,
+		);
+		const bundle = files.get(bundlePath);
+		expect(bundle).toBeDefined();
+		const tls = splitEngineBundle(bundle ?? '', 'engine_bundle.pem');
+		expect(`${tls.cert}${tls.key}${tls.ca}`).toBe(bundle ?? '');
 	});
 });
 
@@ -496,6 +601,63 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		expect(statSync(join(secretDir(NAME), 'engine_bundle.pem')).mode & 0o777).toBe(0o600);
 		expect(readFileSync(join(secretDir(NAME), 'token'), 'utf8').trim()).toBe(TOKEN);
 		expect(secretEntries()).toEqual([NAME]); // the pairing_<hex> staging is gone
+	});
+
+	test("the PROVISIONER's own output pairs end to end: its rendered fragment, its ensureTls bundle, an agent on its server cert", async () => {
+		const declaration = (port: number): HostDeclaration => ({
+			...exampleDeclaration('instance.example.json'),
+			listen: { kind: 'tls', host: '127.0.0.1', port },
+		});
+		const issued = provisionerOutput(declaration(8471), TOKEN);
+		const paths = issued.layout.tls;
+		if (paths === null) throw new Error('the tls example declared no TLS paths');
+		const pem = (path: string): string => {
+			const body = issued.files.get(path);
+			if (body === undefined) throw new Error(`ensureTls wrote no ${path}`);
+			return body;
+		};
+		const agent = startAgent(
+			{
+				tls: {
+					caPem: pem(paths.caCert),
+					serverCertPem: pem(paths.serverCert),
+					serverKeyPem: pem(paths.serverKey),
+					clientCertPem: '',
+					clientKeyPem: '',
+					bundlePem: '',
+				},
+			},
+			fp(TOKEN, 'example'),
+		);
+		try {
+			// re-rendered for the port the agent got; the same PKI (nothing re-issued)
+			const live = provisionerOutput(declaration(agent.port), TOKEN, issued.files);
+			expect(live.files.get(live.bundlePath)).toBe(pem(issued.bundlePath));
+			const fragment = join(work, 'provisioned.engine.env.fragment');
+			writeFileSync(fragment, live.fragment, { mode: 0o644 });
+			const bundle = writePrivate(join(work, 'provisioned_bundle.pem'), pem(issued.bundlePath));
+			const r = await runCli([
+				'add',
+				NAME,
+				'--fragment',
+				fragment,
+				'--bundle',
+				bundle,
+				'--token-file',
+				tokenFile,
+			]);
+			expect(r.code, r.out).toBe(EXIT.ok);
+			expectNoSecret(r.out);
+			expect(agent.requests).toEqual([HEALTH_ONLY]);
+			expect(registryHosts()[0]).toMatchObject({
+				name: NAME,
+				instance: 'example',
+				fingerprint: fp(TOKEN, 'example'),
+				address: { kind: 'tls', host: '127.0.0.1', port: agent.port },
+			});
+		} finally {
+			agent.stop();
+		}
 	});
 
 	test('--dry-run proves the pairing and writes nothing', async () => {
@@ -824,6 +986,37 @@ describe('commit: the slot is re-checked under the registry lock BEFORE any secr
 		expect(refusal.message).toContain('Use `add`');
 		expect(existsSync(join(scratch.base, 'publication_hosts', 'pub_a'))).toBe(false);
 		expect(loadRegistry().hosts).toEqual([]);
+	});
+
+	test('the same agent (same fingerprint) at ANOTHER address is a twin: refused naming the first host, nothing written', () => {
+		saveRegistry({ version: 1, hosts: [record('pub_a', TOKEN, 7001)] });
+		writeHostSecrets('pub_a', TOKEN, null);
+		const refusal = pairRefusalOf(() => commit('add', record('pub_b', TOKEN, 7002), TOKEN, null));
+		expect(refusal.message).toContain("'pub_a'");
+		expect(existsSync(join(scratch.base, 'publication_hosts', 'pub_b'))).toBe(false);
+		expect(loadRegistry().hosts).toEqual([record('pub_a', TOKEN, 7001)]);
+	});
+
+	test('add: the registry write fails AFTER the secrets landed → the run removes its own secrets', () => {
+		mkdirSync(join(scratch.base, 'publication_hosts'), { mode: 0o700 });
+		// the lock file exists (it is opened, never created), so the lock is taken; then base/ is
+		// unwritable for the registry's temp file, while the secrets root below it is not
+		writeFileSync(join(scratch.base, 'publication_hosts.json.lock'), '', { mode: 0o600 });
+		chmodSync(scratch.base, 0o500);
+		let error: unknown = null;
+		try {
+			commit('add', record('pub_a', TOKEN, 7001), TOKEN, null);
+		} catch (caught) {
+			error = caught;
+		} finally {
+			chmodSync(scratch.base, 0o700);
+		}
+		// the failure is the REGISTRY write, after the slot passed (never the lock, never a refusal)
+		expect(error).not.toBeNull();
+		expect(error).not.toBeInstanceOf(PairRefusal);
+		expect(String((error as { code?: unknown }).code ?? error)).toContain('EACCES');
+		expect(existsSync(join(scratch.base, 'publication_hosts', 'pub_a'))).toBe(false);
+		expect(existsSync(join(scratch.base, 'publication_hosts.json'))).toBe(false);
 	});
 
 	test('a free slot: secrets and entry land together', () => {
