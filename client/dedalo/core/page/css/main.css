@@ -19482,6 +19482,27 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   width: 100%;
   min-width: 0;
 }
+.wrapper_widget.publication_hosts .api_lockstep {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  padding: 0.75rem 0.9rem;
+}
+.wrapper_widget.publication_hosts .api_lockstep .engine_release {
+  margin: 0.35rem 0 0.75rem;
+}
+.wrapper_widget.publication_hosts .api_lockstep .lockstep_refused {
+  margin-bottom: 0.75rem;
+}
+.wrapper_widget.publication_hosts .api_lockstep .lockstep_table {
+  grid-template-columns: minmax(7rem, 1fr) 3.5rem minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(10rem, 1.6fr) 9rem;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.wrapper_widget.publication_hosts .api_lockstep .push_apis {
+  margin-top: 0.75rem;
+}
 .wrapper_widget.publication_hosts .body_response {
   padding: 0.7rem 0.85rem;
   font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;

@@ -2,12 +2,13 @@
 /*global get_label */
 /*eslint no-undef: "error"*/
 
-import { request_failed, response_data } from '../../../../common/js/api_error.js';
+import { request_failed, response_data, response_extension } from '../../../../common/js/api_error.js';
 import { handle_api_error } from '../../../../common/js/error_dispatch.js';
 import { error_text } from '../../../../common/js/render_api_error.js';
 // imports
 import { ui } from '../../../../common/js/ui.js';
 import { check_row, fact_row, section } from '../../update_code/js/render_update_status.js';
+import { render_api_lockstep, render_runtime_invalid } from './render_api_lockstep.js';
 
 /**
  * RENDER_PUBLICATION_HOSTS
@@ -21,7 +22,9 @@ import { check_row, fact_row, section } from '../../update_code/js/render_update
  *     registry_path    : string,
  *     engine_qualities : string[],
  *     is_root          : boolean,
- *     hosts            : Array<HostPanelRow> | null   // null whenever state !== 'ok'
+ *     hosts            : Array<HostPanelRow> | null,  // null whenever state !== 'ok'
+ *     runtime_invalid  : string | null,   // phase 4: the runtime results file is unreadable
+ *     api_lockstep     : {engine_release, refused, checked_at, rows} // phase 4 (render_api_lockstep.js)
  *   }
  *   HostPanelRow carries `qualities` and `probe` (non-secret registry fields)
  *   for the edit form.
@@ -99,6 +102,11 @@ const get_content_data = function (self) {
 		return content_data;
 	}
 
+	// the runtime results file is unreadable (get_value degrades, never 500s)
+	if (value.runtime_invalid) {
+		content_data.appendChild(render_runtime_invalid(value.runtime_invalid));
+	}
+
 	// any other state but 'ok' (registry_invalid, or no block) is loud;
 	// hosts is null then, and is never read
 	if (registry.state !== 'ok') {
@@ -141,6 +149,16 @@ const get_content_data = function (self) {
 
 	for (const host of hosts) {
 		render_host(self, host, is_root, body_response, content_data);
+	}
+
+	// Publication API lockstep (phase 4): engine release vs each host's v2/v1
+	if (value.api_lockstep && hosts.length > 0) {
+		content_data.appendChild(
+			render_api_lockstep(value.api_lockstep, {
+				is_root: is_root,
+				on_push: (button) => push_apis(self, value.api_lockstep, button, body_response),
+			}),
+		);
 	}
 
 	content_data.appendChild(body_response);
@@ -569,12 +587,36 @@ export const read_host_fields = function (name, inputs) {
 }; //end read_host_fields
 
 /**
+ * PUSH_APIS
+ * Root: push the installed tree's verified Publication API releases (v2, then v1)
+ * to every paired host — confirm-gated (it installs code on public machines), one
+ * request, the server's sentence shown (it names a refusal or each failed host and
+ * API), then the value reloads so every row shows its new last push.
+ * @returns {Promise<boolean>}
+ */
+const push_apis = function (self, panel, button, body_response) {
+	const release = panel.engine_release || 'the verified release of this tree';
+	return run_action(self, {
+		button: button,
+		body_response: body_response,
+		action: 'push_apis',
+		options: {},
+		heading: 'Publication APIs · push_apis\n',
+		result_text: (api_response) => String(response_extension(api_response, 'msg') || ''),
+		confirm_text: `${get_label.sure || 'Are you sure?'}\nPush Publication API ${release} (v2, then v1) to every paired host`,
+		reload: true,
+	});
+}; //end push_apis
+
+/**
  * RUN_ACTION
  * The ONE action path: confirm (when asked) → spinner → request → outcome
  * shown in body_response (as TEXT) → reload only on success. A failure goes
  * through handle_api_error (the one client error model) and is never silent.
  * @param {Object} self - the widget instance
- * @param {{button, body_response, action, options, confirm_text, reload}} spec
+ * `spec.heading` / `spec.result_text(api_response)` override the outcome's
+ * first line and body (push_apis has no host name and shows the server sentence).
+ * @param {{button, body_response, action, options, confirm_text, reload, heading?, result_text?}} spec
  * @returns {Promise<boolean>} true on success
  */
 export const run_action = async function (self, spec) {
@@ -582,7 +624,7 @@ export const run_action = async function (self, spec) {
 		return false;
 	}
 
-	const heading = `${spec.options.name} · ${spec.action}\n`;
+	const heading = spec.heading || `${spec.options.name} · ${spec.action}\n`;
 	// shown now AND kept on the instance: the reload rebuilds content_data, and
 	// its new body_response repaints this text (get_content_data)
 	const show = (text) => {
@@ -597,7 +639,11 @@ export const run_action = async function (self, spec) {
 			await handle_api_error(api_response.error, { wrapper: spec.body_response });
 			return false;
 		}
-		show(JSON.stringify(response_data(api_response) ?? null, null, 2));
+		show(
+			typeof spec.result_text === 'function'
+				? spec.result_text(api_response)
+				: JSON.stringify(response_data(api_response) ?? null, null, 2),
+		);
 		if (spec.reload === true) {
 			await self.reload();
 		}

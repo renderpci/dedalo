@@ -15,7 +15,9 @@
  *         hosts:[HostPanelRow…] | null }
  *   Actions → widget_request(action, options)
  *     → dd_area_maintenance_api::widget_request → publication_hosts apiActions
- *     (apply_rules | probe | rollback_api | set_host_fields | remove_host),
+ *     (apply_rules | probe | rollback_api | set_host_fields | remove_host |
+ *      push_apis — phase 4: the installed tree's Publication API releases to
+ *      every paired host; get_value then carries api_lockstep + runtime_invalid),
  *     ALL root-only on the server; the server dials the agent through its one
  *     door (src/core/publication_host/transport.ts), never the browser.
  *
@@ -45,7 +47,18 @@ export const PUBLICATION_HOST_ACTIONS = Object.freeze([
 	'rollback_api',
 	'set_host_fields',
 	'remove_host',
+	'push_apis',
 ]);
+
+/**
+ * ACTION_TIMEOUT_MS
+ * The client deadline per action (default 120 s). push_apis can build the v2
+ * node_modules for a new release and stream both bundles to every host — each
+ * agent install alone may take up to 15 min (agent_client AGENT_TIMEOUTS_MS).
+ */
+const ACTION_TIMEOUT_MS = Object.freeze({
+	push_apis: 3600 * 1000,
+});
 
 /**
  * PUBLICATION_HOSTS
@@ -114,7 +127,8 @@ publication_hosts.prototype.widget_request = async function (action, options) {
 			options: options,
 		},
 		retries: 1, // one try only
-		timeout: 120 * 1000, // the agent's own deadlines are shorter; covers a web-server reload
+		// the agent's own deadlines are shorter; covers a web-server reload (push_apis: above)
+		timeout: ACTION_TIMEOUT_MS[action] || 120 * 1000,
 	});
 	if (SHOW_DEBUG === true) {
 		console.log(`publication_hosts ${action} api_response:`, api_response);
