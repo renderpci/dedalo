@@ -9,7 +9,9 @@
  *   sudo cat <agent credential> | sudo -u <engine user> bun run dedalo:pair-publication-host add <name> --fragment <f> --token-stdin
  *   sudo -u <engine user> bun run dedalo:pair-publication-host replace <name> --fragment <f> [--bundle <p>] [--token-file <p>]
  *   sudo -u <engine user> bun run dedalo:pair-publication-host remove <name>
- *   add|replace|remove … --dry-run        prove (add/replace) or describe (remove); write nothing
+ *   add|replace|remove … --dry-run        prove (add/replace) or describe (remove); keep nothing
+ *                                         (no sweep, no registry, no secret; the proof's
+ *                                         transient staging copy is removed, see step 5)
  *
  * WHY THIS IS THE ONLY WAY IN. An agent address typed into a web form is an SSRF and a
  * credential-exfiltration surface, and the pairing ceremony already happens on a command line
@@ -53,7 +55,7 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, rmdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { parseEnvFile, privateDir } from '../src/config/env.ts';
@@ -115,7 +117,7 @@ const USAGE = [
 	'  --bundle <file>        engine_bundle.pem carried from the publication host (mTLS; 0600)',
 	'  --token-file <file>    a 0600 copy of the agent SERVICE_TOKEN',
 	'  --token-stdin          read the token from stdin instead',
-	'  --dry-run              prove the pairing (or describe the removal); write nothing',
+	'  --dry-run              prove the pairing (or describe the removal); keep nothing, sweep nothing',
 	'',
 ].join('\n');
 
@@ -464,15 +466,30 @@ function buildRecord(
 function sweepStaleStaging(now: number, out: string[]): void {
 	const root = secretsRoot();
 	if (!existsSync(root)) return;
+	const skip = (entry: string): void => {
+		out.push(
+			`${TAG} skipped '${entry}' under ${root}: not a staging dir this command writes. Remove it by hand.`,
+		);
+	};
 	for (const entry of readdirSync(root)) {
 		if (!entry.startsWith(STAGING_PREFIX)) continue;
 		if (!HOST_NAME.test(entry)) {
-			out.push(
-				`${TAG} skipped '${entry}' under ${root}: not a staging dir this command writes. Remove it by hand.`,
-			);
+			skip(entry);
 			continue;
 		}
-		if (now - statSync(join(root, entry)).mtimeMs > STAGING_STALE_MS) removeHostSecrets(entry);
+		// lstat, never stat: a (dangling) symlink is not a staging dir and is never followed
+		let st: ReturnType<typeof lstatSync>;
+		try {
+			st = lstatSync(join(root, entry));
+		} catch {
+			skip(entry);
+			continue;
+		}
+		if (!st.isDirectory()) {
+			skip(entry);
+			continue;
+		}
+		if (now - st.mtimeMs > STAGING_STALE_MS) removeHostSecrets(entry);
 	}
 }
 
@@ -492,18 +509,27 @@ function assertBundleSplits(staging: string, kind: Address['kind']): void {
 	}
 }
 
+/**
+ * The live proof over the very channel the engine will use. The door takes TLS material
+ * only from the secrets store (transport.ts agentRequest — the one-door law), so the proof
+ * needs a transient 0600 staging copy; it is removed whatever happens. `dryRun` also
+ * removes the secrets root when this proof created it: a dry run leaves no trace.
+ */
 async function proveStaged(
 	record: PublicationHostRecord,
 	token: string,
 	bundlePem: string | null,
+	dryRun: boolean,
 ): Promise<void> {
 	const staging = `${STAGING_PREFIX}${randomBytes(4).toString('hex')}`;
+	const createdRoot = !existsSync(secretsRoot());
 	try {
 		writeHostSecrets(staging, token, bundlePem);
 		assertBundleSplits(staging, record.address.kind);
 		await proveHostPairing({ ...record, name: staging });
 	} finally {
 		removeHostSecrets(staging);
+		if (dryRun && createdRoot) rmdirSync(secretsRoot()); // empty: only the staging was in it
 	}
 }
 
@@ -576,12 +602,12 @@ async function pair(
 	const fingerprint = assertFragmentFingerprint(fields, token);
 	const existing = assertSlot(loadRegistry(), command, opts.name, address, fingerprint);
 	const record = buildRecord(opts.name, fields.instance, address, fingerprint, existing);
-	await proveStaged(record, token, bundlePem);
+	await proveStaged(record, token, bundlePem, opts.dryRun);
 	out.push(
 		`${TAG} pairing proved: '${opts.name}' → ${addressLabel(address)} (the agent published the expected fingerprint on this channel; no bearer was sent).`,
 	);
 	if (opts.dryRun) {
-		out.push(`${TAG} --dry-run: nothing was written.`);
+		out.push(`${TAG} --dry-run: nothing was kept (the proof's transient staging was removed).`);
 		return;
 	}
 	commit(command, record, token, bundlePem);
@@ -623,19 +649,30 @@ function remove(name: string, dryRun: boolean, out: string[]): void {
 
 // ---------------------------------------------------------------------------------- runner
 
+/** parseArgs' own messages repeat the offending argument verbatim: never shown (a pasted token). */
+function parseArgv(argv: readonly string[]) {
+	try {
+		return parseArgs({
+			args: [...argv],
+			allowPositionals: true,
+			strict: true,
+			options: {
+				fragment: { type: 'string' },
+				bundle: { type: 'string' },
+				'token-file': { type: 'string' },
+				'token-stdin': { type: 'boolean', default: false },
+				'dry-run': { type: 'boolean', default: false },
+			},
+		});
+	} catch {
+		throw new Error(
+			'an option is unknown, misspelled, given a value it does not take, or missing its value (not shown: it may be a pasted token).',
+		);
+	}
+}
+
 function parseCliArgs(argv: readonly string[]): CliOptions {
-	const { values, positionals } = parseArgs({
-		args: [...argv],
-		allowPositionals: true,
-		strict: true,
-		options: {
-			fragment: { type: 'string' },
-			bundle: { type: 'string' },
-			'token-file': { type: 'string' },
-			'token-stdin': { type: 'boolean', default: false },
-			'dry-run': { type: 'boolean', default: false },
-		},
-	});
+	const { values, positionals } = parseArgv(argv);
 	const [command, name, ...rest] = positionals;
 	// Never echo a stray positional: it is exactly where a pasted token would land.
 	if (rest.length > 0)
@@ -747,7 +784,7 @@ export async function runPublicationHostPairCli(
 	const out: string[] = [];
 	try {
 		assertOwner();
-		sweepStaleStaging(Date.now(), out);
+		if (!opts.dryRun) sweepStaleStaging(Date.now(), out); // a dry run deletes nothing
 		if (opts.command === 'remove') remove(opts.name, opts.dryRun, out);
 		else await pair(opts, readStdin, out);
 		return { code: EXIT.ok, stdout: text(out), stderr: '' };

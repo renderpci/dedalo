@@ -29,6 +29,7 @@ import {
 	readFileSync,
 	rmSync,
 	statSync,
+	symlinkSync,
 	utimesSync,
 	writeFileSync,
 } from 'node:fs';
@@ -230,6 +231,19 @@ describe('fragment grammar and pairing inputs (pure)', () => {
 		const r = await runPublicationHostPairCli(['add', NAME, '--fragment', '/nonexistent', stray]);
 		expect(r.code).toBe(EXIT.usage);
 		expect(r.stderr).not.toContain(stray);
+		// parseArgs' own message repeats an unknown option or a missing value verbatim: a token
+		// pasted as `--<token>` or after `-` must not come back on stderr
+		for (const args of [
+			['add', NAME, `--${stray}`],
+			['add', NAME, `--token=${stray}`],
+			['add', NAME, `-${stray}`],
+			['add', NAME, `--dry-run=${stray}`],
+		]) {
+			const pasted = await runPublicationHostPairCli(args);
+			expect(pasted.code).toBe(EXIT.usage);
+			expect(pasted.stderr).not.toContain(stray);
+			expect(pasted.stderr).not.toContain(stray.slice(1));
+		}
 		const reserved = await runPublicationHostPairCli(['remove', 'pairing_0a1b2c3d']);
 		expect(reserved.code).toBe(EXIT.usage);
 		expect(reserved.stderr).toContain('pairing_');
@@ -480,6 +494,31 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		expect(r.out).toContain('--dry-run');
 		expect(tlsAgent.requests).toEqual([HEALTH_ONLY]);
 		expectNothingWritten();
+		// not even the secrets root the proof's transient staging needed
+		expect(existsSync(join(privateRoot, 'publication_hosts'))).toBe(false);
+	});
+
+	test('--dry-run never sweeps: a stale staging dir survives a dry add and a dry remove', async () => {
+		const stale = join(privateRoot, 'publication_hosts', 'pairing_0a1b2c3d');
+		mkdirSync(stale, { recursive: true, mode: 0o700 });
+		const old = new Date(Date.now() - 2 * 60 * 60 * 1000);
+		utimesSync(stale, old, old);
+		const dryAdd = await runCli(['add', ...addTlsArgs(), '--dry-run']);
+		expect(dryAdd.code, dryAdd.out).toBe(EXIT.ok);
+		const dryRemove = await runCli(['remove', NAME, '--dry-run']);
+		expect(dryRemove.code, dryRemove.out).toBe(EXIT.refused); // nothing to remove
+		expect(secretEntries()).toEqual(['pairing_0a1b2c3d']);
+		expect(existsSync(registryFile())).toBe(false);
+	});
+
+	test('a dangling pairing_<hex> symlink is skipped by the sweep, never fatal, never followed', async () => {
+		const root = join(privateRoot, 'publication_hosts');
+		mkdirSync(root, { recursive: true, mode: 0o700 });
+		symlinkSync(join(work, 'does-not-exist'), join(root, 'pairing_0a1b2c3d'));
+		const r = await runCli(['add', ...addTlsArgs()]);
+		expect(r.code, r.out).toBe(EXIT.ok);
+		expect(r.out).toContain("skipped 'pairing_0a1b2c3d'");
+		expect(secretEntries()).toEqual(['pairing_0a1b2c3d', NAME].sort());
 	});
 
 	test('the placeholder token without --token-file is refused before any connection', async () => {

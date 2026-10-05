@@ -289,8 +289,9 @@ system send its credentials somewhere else.
     that the agent publishes that same fingerprint, without sending the token. Only when
     everything matches does it record the host and store the token and the bundle in the
     work system's private directory, readable by the work system alone. On any mismatch
-    the command names it and writes nothing. `--dry-run` runs every check and writes
-    nothing.
+    the command names it and keeps nothing. `--dry-run` runs every check, including the
+    live connection, and keeps nothing: the temporary copy the connection check needs is
+    removed, and no leftover from an earlier run is cleaned up either.
 4. **Delete every copy you carried.** The work system keeps its own.
 
 If the work system uses an outbound proxy (`HTTPS_PROXY`), list each publication host's
