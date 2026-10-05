@@ -450,3 +450,74 @@ describe('the agent channel door is documented once, where it is read', () => {
 		expect(missing).toEqual([]);
 	});
 });
+
+/**
+ * The invocation the CLI's own usage and owner rule name (Task 5: invocationOwnerProblem):
+ * the package script, run as the engine user. The page uses it verbatim.
+ */
+const PAIR_INVOCATION = 'sudo -u <engine user> bun run dedalo:pair-publication-host ';
+const PAIR_SCRIPT = 'dedalo:pair-publication-host';
+const PAIR_LINE = /publication_host_pair\.ts |dedalo:pair-publication-host /;
+
+describe('the operator is told how pairing and the panel really work', () => {
+	test('the operator page pairs through the real CLI: its verbs, its flags, its invoking user', async () => {
+		const page = await docsGateRead('docs/install/publication_host.md');
+		const cli = await docsGateRead('scripts/publication_host_pair.ts');
+		expect(
+			cli,
+			'the CLI no longer names the engine-user invocation: re-read its owner rule',
+		).toContain(PAIR_INVOCATION.trim());
+		const scripts = JSON.parse(await docsGateRead('package.json')).scripts as Record<
+			string,
+			string
+		>;
+		expect(scripts[PAIR_SCRIPT]).toBe('bun run scripts/publication_host_pair.ts');
+		// The flags are the keys of the CLI's parseArgs `options` block — nothing else.
+		const optionsBlock = /\boptions: \{\n([\s\S]*?)\n\t*\},/.exec(cli)?.[1] ?? '';
+		const cliFlags = new Set(
+			[...optionsBlock.matchAll(/^\s*'?([a-z][a-z-]*)'?: \{/gm)].map((m) => m[1] ?? ''),
+		);
+		expect([...cliFlags].sort()).toEqual([
+			'bundle',
+			'dry-run',
+			'fragment',
+			'token-file',
+			'token-stdin',
+		]);
+		const lines = page.split('\n').filter((l) => PAIR_LINE.test(l));
+		expect(lines.length).toBeGreaterThanOrEqual(4);
+		const unknown: string[] = [];
+		for (const line of lines) {
+			if (!line.includes(PAIR_INVOCATION))
+				unknown.push(`not run as the engine user: ${line.trim()}`);
+			const verb =
+				/(?:publication_host_pair\.ts|dedalo:pair-publication-host) ([a-z]+|…)/.exec(line)?.[1] ?? '';
+			if (verb !== '…' && !cli.includes(`'${verb}'`)) unknown.push(`verb ${verb}`);
+			for (const m of line.matchAll(/ (--[a-z][a-z-]*)/g)) {
+				const flag = m[1] ?? '';
+				if (!cliFlags.has(flag.slice(2))) unknown.push(`flag ${flag}`);
+			}
+		}
+		expect(unknown).toEqual([]);
+	});
+
+	test('no reader is told to pair as root (the CLI refuses any uid that does not own <private>)', async () => {
+		const asRoot = /\*\*Pair\*\*,? as root|pair[^.\n]{0,60}\bas root\b/i;
+		const page = await docsGateRead('docs/install/publication_host.md');
+		expect(asRoot.test(docsGateSection(page, 'Pair it with the work system'))).toBe(false);
+		expect(asRoot.test(await docsGateRead('docs/change_log.md'))).toBe(false);
+		expect(await docsGateRead('publication/host_agent/README.md')).not.toContain('root-run');
+	});
+
+	test('no reader is still told the panel comes later', async () => {
+		const stale =
+			/panel learns to[\s\S]{0,80}?later\s+release|the panel are phase 3|later pairing settings/;
+		for (const rel of [
+			'docs/install/publication_host.md',
+			'publication/host_agent/README.md',
+			'docs/change_log.md',
+		]) {
+			expect(stale.test(await docsGateRead(rel)), rel).toBe(false);
+		}
+	});
+});

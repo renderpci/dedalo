@@ -7,11 +7,11 @@ server, away from the work system. This page installs the **publication host age
 the small service on that server that the work system controls. It explains what the
 agent may and may not do, how it is provisioned and paired, and how to check the pairing.
 
-!!! note "Driven by the panel in a later release"
-    This release ships the agent, its provisioner and the pairing check. The work
-    system's maintenance panel learns to list publication hosts and drive them in a later
-    release. Until then you can provision the host, check the pairing, and install the
-    media rules by hand as described in [media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage).
+!!! note "Driven from the maintenance panel"
+    Once the agent is provisioned, [pair it with the work system](#pair-it-with-the-work-system).
+    The work system's **Publication hosts** panel then shows its state and applies its
+    media rules. You can still install the media rules by hand, as described in
+    [media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage).
 
 ## When you need it
 
@@ -239,8 +239,119 @@ printf 'dedalo-publication-host:%s\n%s' <instance> "$(cat <credential file>)" | 
 The `instance_fingerprint` in the health answer must equal that value. The same value is
 also written, as `DEDALO_PUBLICATION_HOST_FINGERPRINT`, in
 `/etc/dedalo_publication_host/<instance>/engine.env.fragment`, a file `apply` generates
-for the work system's later pairing settings. A request without
+for the work system's [pairing](#pair-it-with-the-work-system). A request without
 the client certificate must fail at the TLS handshake.
+
+## Pair it with the work system
+
+Pairing records the host in the work system once, from files the provisioner wrote. You
+need root on the work host, but you run the pairing command as the user that runs Dédalo,
+the owner of its private directory. The command refuses any other user, root included,
+because the work system could not read credentials stored by root. The panel deliberately
+has no form for pairing: an address typed into a web page would be a way to make the work
+system send its credentials somewhere else.
+
+1. **Carry the files to the work host**, over a channel you trust:
+   `/etc/dedalo_publication_host/<instance>/engine.env.fragment` and, on two machines, the
+   engine bundle from step 6 above. On one machine there is no bundle: the fragment names
+   the socket instead. Make your copies readable by the Dédalo user alone (`chmod 600`):
+   the command refuses a token or bundle file that group or others can read.
+2. **Give the command the token.** The fragment names the bearer token but never holds it.
+   On the publication host, as root, read the token from the credential file the fragment's
+   comment names. Then do one of these:
+   - put it in place of `PASTE_THE_SERVICE_TOKEN_VALUE_HERE` on the
+     `DEDALO_PUBLICATION_HOST_TOKEN` line of your copy of the fragment;
+   - save it alone in a `0600` file and pass `--token-file <file>`;
+   - pipe it in with `--token-stdin`.
+
+   The token is never accepted as a command-line argument. If the fragment carries one
+   token and you pass a different one, the command refuses.
+3. **Pair**, from the work system's Dédalo directory. The host's name is yours to
+   choose: lowercase letters, digits and `_`, starting with a letter, 2 to 32 characters.
+
+    ```bash
+    sudo -u <engine user> bun run dedalo:pair-publication-host add museum_pub --fragment ./engine.env.fragment --bundle ./engine_bundle.pem
+    ```
+
+    With the token in a file instead of the fragment:
+
+    ```bash
+    sudo -u <engine user> bun run dedalo:pair-publication-host add museum_pub --fragment ./engine.env.fragment --bundle ./engine_bundle.pem --token-file ./token
+    ```
+
+    On one machine, leave out `--bundle` (the command refuses it for a socket pairing),
+    and you can pipe the token straight from the credential file:
+    `sudo cat <credential file> | sudo -u <engine user> bun run dedalo:pair-publication-host add museum_pub --fragment ./engine.env.fragment --token-stdin`.
+
+    Before writing anything, the command checks that no placeholder is left in the
+    fragment and that the fingerprint the fragment carries matches its instance and the
+    token, so a mis-pasted token is named here. It then connects to the agent and checks
+    that the agent publishes that same fingerprint, without sending the token. Only when
+    everything matches does it record the host and store the token and the bundle in the
+    work system's private directory, readable by the work system alone. On any mismatch
+    the command names it and writes nothing. `--dry-run` runs every check and writes
+    nothing.
+4. **Delete every copy you carried.** The work system keeps its own.
+
+If the work system uses an outbound proxy (`HTTPS_PROXY`), list each publication host's
+address in `NO_PROXY` for the Dédalo service. Otherwise the connection to the agent goes
+through the proxy. It stays encrypted, but it is no longer private.
+
+After the publication host has been re-provisioned with a new token or new certificates,
+pair it again under the same name:
+
+```bash
+sudo -u <engine user> bun run dedalo:pair-publication-host replace museum_pub --fragment ./engine.env.fragment --bundle ./engine_bundle.pem
+```
+
+To forget a host, use **Remove host** in the panel, or:
+
+```bash
+sudo -u <engine user> bun run dedalo:pair-publication-host remove museum_pub
+```
+
+The token, the private key and the certificates are never shown in the panel, never
+written to the activity log, and never sent to the browser.
+
+## The Publication hosts panel
+
+In **Maintenance**, the **Publication hosts** panel (group *Publication*) lists every
+paired host. The **Media access control** panel links to it. For each host it shows:
+
+| Check | What it tells you |
+| --- | --- |
+| Registry entry | the host's record in the work system is readable |
+| Credentials | the token and the engine bundle are present (their values are never shown) |
+| Reachable | the agent answered |
+| Pairing | the agent still publishes the expected fingerprint; when it does not, the work system stops before sending its token |
+| Agent version | which agent release runs there |
+| Media mode | `shared`, `copy` or `none`, as declared on the publication host |
+| Media mount, Media read-only | the shared media mount is present and read-only |
+| Media rules | the media rules installed there are the ones the work system would generate now (expected and reported hash side by side) |
+| API v1, API v2 | the current and the previous release of each Publication API |
+
+Only the Dédalo **root** user can act. Other administrators see the checks read-only,
+without the hosts' network addresses.
+
+- **Apply media rules** renders the publication-host media rules for that host's web server
+  and mount (as the host reports them) and its public quality folders (the host's own list,
+  or the work system's), then sends them. The host runs its web server's configuration test
+  before reloading, and keeps the previous rules if the test fails.
+- **Probe media** checks that the media mount is present, read-only and readable.
+- **Roll back API** switches a Publication API (v1 or v2) back to its previous release.
+- **Edit settings** changes the host's public website address, its public quality folders
+  and the two probe files reserved for the public-address check. It never changes the
+  address the work system connects to: that only changes by pairing again.
+- **Remove host** forgets the host.
+
+| The panel says | Cause | Fix |
+| --- | --- | --- |
+| the registry is invalid | the `publication_hosts.json` file in the work system's private directory is unreadable or was edited by hand | restore it from a backup, or remove it and pair each host again; the panel never treats a broken file as "no hosts" |
+| pairing mismatch | the publication host was re-provisioned (new token), or another host answers at that address | `replace` the host with its current fragment and bundle |
+| rejected credentials | the agent refused the token | `replace` the host |
+| unreachable, or did not answer in time | the agent is down, the firewall blocks the port, the address changed, or a proxy is in the way | check the agent's service, the firewall and `NO_PROXY`; nothing was applied |
+| busy | another change is running on that host | try again when it finishes |
+| refused | the host refused the request, for example a failed configuration test | the message names the reason; the previous state is still active |
 
 ## Publication API releases
 
@@ -280,3 +391,7 @@ Each API keeps its releases side by side, with its configuration outside them:
 | applying media rules fails | the web server's configuration test rejected the new include | the previous include is still active and nothing was reloaded; read the error and re-render the rules |
 | an API install is refused: `shared_config_missing` | the API's configuration file in `shared/` does not exist yet | create it as root (step 5), then install again |
 | an API install fails its health check | the new release did not answer healthy | the previous release is still `current` and serving; the audit log names both releases |
+| `dedalo:pair-publication-host` says to run it as the owner of the private directory | it was run as root or as another user, or the private directory is owned by root | run it as the Dédalo user, who must own the private directory: `sudo -u <engine user> bun run dedalo:pair-publication-host …` |
+| `dedalo:pair-publication-host` refuses a placeholder | no token was given: the fragment line still holds the placeholder and no `--token-file` / `--token-stdin` was passed | give the token as in *Pair it with the work system*, step 2 |
+| `dedalo:pair-publication-host` says a file is readable by group or others | the token file, the fragment holding the token, or the bundle copy is not `0600` | `chmod 600` it and run the command again |
+| `dedalo:pair-publication-host` names a fingerprint mismatch | the token or instance you gave is not this host's | copy the fragment and the token again from the publication host |

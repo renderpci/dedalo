@@ -143,8 +143,8 @@ gated (`tests/provision_examples.test.ts`). Re-render them with
 `UPDATE_EXAMPLES=1 bun test tests/provision_examples.test.ts`, never by hand.
 
 Besides the host artifacts, `apply` writes `/etc/dedalo_publication_host/<instance>/engine.env.fragment`
-(secret-free): the engine-side keys the phase 3 client is expected to read (proposed names;
-no engine release reads them yet), with the expected pairing fingerprint rendered in.
+(secret-free): the keys the work host's pairing command reads (see *Pairing*), with the
+expected pairing fingerprint rendered in. It is never appended to the engine's `.env`.
 
 **Install the code without registry egress:** run `bun run hostagent:install` on the
 work host, then copy `publication/host_agent/` (with its `node_modules/`) to the
@@ -178,6 +178,10 @@ publication host.
    `DEDALO_PUBLICATION_HOST_FINGERPRINT` in `engine.env.fragment`. A wrong instance and a
    wrong token give the same mismatch.
 
-The engine-side client, the publication-host registry and the panel are phase 3. Until
-then, the engine-side recipe `src/core/publication_host/pairing.ts` exists and is held
-equal to `src/security/pairing.ts` by `test/unit/publication_host_pairing_tripwire.test.ts`.
+On the work host, `scripts/publication_host_pair.ts`, run as the user that runs Dédalo
+(`sudo -u <engine user> bun run dedalo:pair-publication-host …`), adds the host from the
+fragment and this bundle after proving the pairing live. The token comes from the pasted
+fragment line, `--token-file` or `--token-stdin`. The engine's channel, client and panel
+are `src/core/publication_host/` and the `publication_hosts` maintenance widget (spec
+§2.1). The engine-side recipe `src/core/publication_host/pairing.ts` is held equal to
+`src/security/pairing.ts` by `test/unit/publication_host_pairing_tripwire.test.ts`.

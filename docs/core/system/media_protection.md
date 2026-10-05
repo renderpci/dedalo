@@ -159,6 +159,12 @@ work system's login cookie.
 Media keeps the same URL (`/dedalo/media/…`) on both servers, so published records and the
 Publication APIs need no change. Re-render and reinstall when the public quality folders change.
 
+With a paired [publication host agent](../../install/publication_host.md#the-publication-hosts-panel),
+the **Publication hosts** panel does steps 3 and 4 for you: it renders the rules for the
+host's own web server and mount, sends them, and shows whether the installed rules are still
+the ones the work system would generate. On nginx, the one-time `http{}` map include of
+step 4 stays manual. Step 5 stays a manual check.
+
 ## Related
 
 * [Media protection (configuration)](../../config/media_protection.md) — the operator's page:

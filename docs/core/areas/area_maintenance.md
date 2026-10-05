@@ -182,6 +182,7 @@ Every widget carries a `category`; the client groups and filters by it.
 | `integrity` | `lock_components`, `sequences_status`, `media_control`, `counters_status`, `reconcile_status`, `dataframe_control`. |
 | `system` | Environment, database info, system info, the runtime panel, error reports. |
 | `diffusion` | `publication_api`, `diffusion_server_control`. |
+| `publication` | `site_builder_status`, `publication_hosts` — the site builder and the separate publication servers. |
 | `dev` | The API and SQO test consoles, the unit-test runner. |
 
 ## The widgets
@@ -216,6 +217,7 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `error_reports` | system | `get_reports` |
 | `publication_api` | diffusion | *(read-only panel)* |
 | `diffusion_server_control` | diffusion | `cancel_process`, `requeue_job`, `purge_jobs`, `set_scheduler`, `retry_pending_deletions` |
+| `publication_hosts` | publication | `apply_rules`, `probe`, `rollback_api`, `set_host_fields`, `remove_host` — all root-only; `getValue` reports whether each host's secrets are present, never their values; hosts are added only by the pairing command on the work host ([operator page](../../install/publication_host.md#pair-it-with-the-work-system)) |
 | `dedalo_api_test_environment`, `sqo_test_environment` | dev | *(interactive consoles)* |
 | `unit_test` | dev | `create_test_record` (development servers only: refused unless `DEDALO_DEV_MODE` is on), `long_process_stream` |
 
