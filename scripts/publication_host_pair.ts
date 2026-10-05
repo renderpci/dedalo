@@ -39,9 +39,9 @@
  *      (src/core/publication_host/agent_client.ts proveHostPairing: mTLS with this bundle, or
  *      the socket). No bearer is sent. The staging is removed whatever happens; a crash leaves
  *      it 0600 and the next run sweeps it after an hour.
- *   6. Only then: the secrets under the real name, then the registry entry, its slot
- *      re-checked under the registry lock. An add whose registry write fails removes the
- *      secrets it just wrote.
+ *   6. Only then, ALL under the registry lock: the slot re-checked, then the secrets under the
+ *      real name, then the registry entry. A refused re-check writes nothing; an add whose
+ *      registry write fails removes only the secrets it just wrote.
  *
  * Exit codes: 0 ok · 2 usage · 3 refused (input, owner, pairing, registry state) · 4 failed
  * (I/O, agent unreachable, lock). Nothing printed on any path carries the token, the key, a PEM
@@ -351,6 +351,15 @@ function sameAddress(a: Address, b: Address): boolean {
 
 // ------------------------------------------------------------------------------ file reads
 
+/**
+ * Why a path could not be read — the errno CODE only. Never the path, never the errno message
+ * (which repeats the path): a token pasted where a path belongs would be echoed otherwise.
+ */
+function readFailure(error: unknown): string {
+	const code = (error as NodeJS.ErrnoException | null)?.code;
+	return typeof code === 'string' && /^E[A-Z]+$/.test(code) ? code : 'not a readable regular file';
+}
+
 /** A credential at rest: a regular file, not group/other-readable. Its CONTENT never reaches a message. */
 function assertPrivateMode(path: string, what: string): void {
 	let mode: number;
@@ -359,11 +368,11 @@ function assertPrivateMode(path: string, what: string): void {
 		if (!st.isFile()) throw new Error('not a regular file');
 		mode = st.mode & 0o777;
 	} catch (error) {
-		throw new PairRefusal(`${what} '${path}' could not be read (${(error as Error).message}).`);
+		throw new PairRefusal(`${what} could not be read (${readFailure(error)}).`);
 	}
 	if ((mode & 0o077) !== 0) {
 		throw new PairRefusal(
-			`${what} '${path}' is readable by group or others (mode ${mode.toString(8)}). It is a credential: chmod 600 it, then re-run.`,
+			`${what} is readable by group or others (mode ${mode.toString(8)}). It is a credential: chmod 600 it, then re-run.`,
 		);
 	}
 }
@@ -379,9 +388,7 @@ function readFragmentFields(path: string): FragmentFields {
 	try {
 		text = readFileSync(path, 'utf8');
 	} catch (error) {
-		throw new PairRefusal(
-			`the fragment '${path}' could not be read (${(error as Error).message}).`,
-		);
+		throw new PairRefusal(`the fragment could not be read (${readFailure(error)}).`);
 	}
 	const fields = parseFragment(text);
 	if (fields.token !== null) assertPrivateMode(path, 'the fragment (it carries the token)');
@@ -502,13 +509,19 @@ async function proveStaged(
 
 // ------------------------------------------------------------------------------- commands
 
-function commit(
+/**
+ * The real write, ALL under the registry lock: the slot is re-checked first, and only a slot
+ * that passes gets the secrets — so a refused slot (a concurrent `add` won the name, root
+ * removed the host being replaced) writes nothing, never touches another host's credentials,
+ * and never leaves a credential no panel lists. Exported for the in-process race gate.
+ */
+export function commit(
 	command: 'add' | 'replace',
 	proved: PublicationHostRecord,
 	token: string,
 	bundlePem: string | null,
 ): void {
-	writeHostSecrets(proved.name, token, bundlePem);
+	let wroteSecrets = false;
 	try {
 		updateRegistry((current) => {
 			const existing = assertSlot(
@@ -525,12 +538,17 @@ function commit(
 				proved.fingerprint,
 				existing,
 			);
+			wroteSecrets = true;
+			writeHostSecrets(proved.name, token, bundlePem);
 			return {
 				version: 1,
 				hosts: [...current.hosts.filter((host) => host.name !== proved.name), record],
 			};
 		});
 	} catch (error) {
+		if (!wroteSecrets) throw error;
+		// The locked check found the slot as this run needs it, so on add the name was free:
+		// the secrets under it are this run's own and may go.
 		if (command === 'add') {
 			removeHostSecrets(proved.name);
 			throw error;
@@ -590,13 +608,16 @@ function remove(name: string, dryRun: boolean, out: string[]): void {
 		out.push(`${TAG} --dry-run: would remove '${name}': ${what}. Nothing was written.`);
 		return;
 	}
+	// The widget's order: the secrets go INSIDE the lock, before the entry is dropped, so a
+	// failed delete leaves the host listed (and removable) rather than an invisible credential.
 	if (existing !== null) {
-		updateRegistry((current) => ({
-			version: 1,
-			hosts: current.hosts.filter((host) => host.name !== name),
-		}));
+		updateRegistry((current) => {
+			removeHostSecrets(name);
+			return { version: 1, hosts: current.hosts.filter((host) => host.name !== name) };
+		});
+	} else {
+		removeHostSecrets(name);
 	}
-	removeHostSecrets(name);
 	out.push(`${TAG} removed '${name}': ${what}. The agent itself is untouched.`);
 }
 

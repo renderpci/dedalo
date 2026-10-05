@@ -19,7 +19,7 @@
  * Every output and the registry text are scanned for the token, any PEM and the fingerprint.
  */
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import {
 	chmodSync,
 	existsSync,
@@ -38,6 +38,7 @@ import {
 	AGENT_BASE_PATH,
 	assertFragmentFingerprint,
 	BUNDLE_PLACEHOLDER,
+	commit,
 	EXIT,
 	FINGERPRINT_PENDING,
 	FRAGMENT_KEYS,
@@ -52,7 +53,17 @@ import {
 } from '../../scripts/publication_host_pair.ts';
 import { envSnapshot } from '../../src/config/env.ts';
 import { publicationHostFingerprint } from '../../src/core/publication_host/pairing.ts';
-import { mintTestPki, type TestPki } from '../helpers/publication_host_fixtures.ts';
+import {
+	loadRegistry,
+	type PublicationHostRecord,
+	saveRegistry,
+} from '../../src/core/publication_host/registry.ts';
+import { writeHostSecrets } from '../../src/core/publication_host/secrets.ts';
+import {
+	mintTestPki,
+	type TestPki,
+	useScratchPublicationHostsBase,
+} from '../helpers/publication_host_fixtures.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const CLI = join(ROOT, 'scripts/publication_host_pair.ts');
@@ -653,6 +664,23 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		expect(secretEntries()).toEqual(['pairing_99999999', 'pairing_ABC']);
 	});
 
+	test('a token pasted where a PATH belongs (--token-file, --bundle, --fragment) is never echoed', async () => {
+		const tlsFragment = writeFragment(tlsFields());
+		const runs = [
+			['add', NAME, '--fragment', tlsFragment, '--bundle', bundleFile, '--token-file', TOKEN],
+			['add', NAME, '--fragment', tlsFragment, '--bundle', TOKEN, '--token-file', tokenFile],
+			['add', NAME, '--fragment', TOKEN, '--bundle', bundleFile, '--token-file', tokenFile],
+		];
+		for (const args of runs) {
+			const r = await runCli(args);
+			expect(r.code, r.out).toBe(EXIT.refused);
+			expect(r.out).toContain('could not be read (ENOENT)');
+			expect(r.out).not.toContain(TOKEN);
+		}
+		expect(tlsAgent.requests).toEqual([]);
+		expectNothingWritten();
+	});
+
 	test('same machine: a socket pairing with the token on stdin; no bundle stored; a --bundle is refused', async () => {
 		const refused = await runCli(
 			[
@@ -683,5 +711,55 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		});
 		expect(existsSync(join(secretDir('pubsock'), 'token'))).toBe(true);
 		expect(existsSync(join(secretDir('pubsock'), 'engine_bundle.pem'))).toBe(false);
+	});
+});
+
+// --------------------------------------------------------------- 4. the locked commit (race)
+
+describe('commit: the slot is re-checked under the registry lock BEFORE any secret is written', () => {
+	let scratch: ReturnType<typeof useScratchPublicationHostsBase>;
+	beforeEach(() => {
+		scratch = useScratchPublicationHostsBase();
+	});
+	afterEach(() => scratch.dispose());
+
+	const record = (name: string, token: string, port: number): PublicationHostRecord => ({
+		name,
+		instance: INSTANCE,
+		fingerprint: fp(token),
+		address: { kind: 'tls', host: '127.0.0.1', port },
+		public_url: null,
+		qualities: null,
+		probe: { published: null, unpublished: null },
+		paired_at: '2026-10-05T00:00:00.000Z',
+	});
+	const tokenOf = (name: string): string =>
+		readFileSync(join(scratch.base, 'publication_hosts', name, 'token'), 'utf8').trim();
+
+	test('a concurrent add won the name: refused, and the registered host keeps its token', () => {
+		saveRegistry({ version: 1, hosts: [record('pub_a', TOKEN, 7001)] });
+		writeHostSecrets('pub_a', TOKEN, null);
+		const refusal = pairRefusalOf(() =>
+			commit('add', record('pub_a', OTHER_TOKEN, 7002), OTHER_TOKEN, null),
+		);
+		expect(refusal.message).toContain('already registered');
+		expect(tokenOf('pub_a')).toBe(TOKEN);
+		expect(loadRegistry().hosts).toEqual([record('pub_a', TOKEN, 7001)]);
+	});
+
+	test('the host being replaced was removed meanwhile: refused, and no credential is left unlisted', () => {
+		saveRegistry({ version: 1, hosts: [] });
+		const refusal = pairRefusalOf(() =>
+			commit('replace', record('pub_a', OTHER_TOKEN, 7002), OTHER_TOKEN, null),
+		);
+		expect(refusal.message).toContain('Use `add`');
+		expect(existsSync(join(scratch.base, 'publication_hosts', 'pub_a'))).toBe(false);
+		expect(loadRegistry().hosts).toEqual([]);
+	});
+
+	test('a free slot: secrets and entry land together', () => {
+		commit('add', record('pub_a', TOKEN, 7001), TOKEN, null);
+		expect(tokenOf('pub_a')).toBe(TOKEN);
+		expect(loadRegistry().hosts.map((h) => h.name)).toEqual(['pub_a']);
 	});
 });
