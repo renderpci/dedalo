@@ -80,6 +80,7 @@ const ACTIONS = [
 	'remove_host',
 	'push_apis', // phase 4 (publication_host_push_apis_widget.test.ts gates its behaviour)
 	'reconcile_media_copy', // phase 5 (publication_host_media_copy_widget_native.test.ts too)
+	'probe_public', // phase 6 (publication_host_probe_native.test.ts gates it against the real stores)
 ] as const;
 
 /** The served row keys, pinned: root gets the edit-form fields, a non-root admin no topology. */
@@ -91,6 +92,7 @@ const ROOT_ROW_KEYS = [
 	'name',
 	'pairing_proved',
 	'probe',
+	'public_probe',
 	'public_url',
 	'qualities',
 	'rules',
@@ -102,6 +104,7 @@ const ADMIN_ROW_KEYS = [
 	'checks',
 	'name',
 	'pairing_proved',
+	'public_probe',
 	'public_url',
 	'rules',
 	'token_present',
@@ -159,6 +162,15 @@ const EXPECTED = {
 };
 /** secretPresenceOutcome for a fully provisioned host. */
 const PRESENT: SecretPresenceOutcome = { token_present: true, bundle_present: true, refused: null };
+
+/** A recorded public-URL probe verdict (phase 6). */
+const PROBED = {
+	state: 'ok' as const,
+	at: '2026-10-03T11:58:00.000Z',
+	published_status: 200,
+	unpublished_status: 404,
+	detail: null,
+};
 
 const EXPECTED_OUTCOME: ExpectedRulesOutcome = { ok: true, hash: 'c'.repeat(64), dropped: [] };
 
@@ -241,6 +253,14 @@ function harness(
 			return { drift: 0, applied: 0, detail: { hosts: {} } };
 		},
 		now: () => Date.parse('2026-10-03T12:00:00.000Z'),
+		probePublicGate: async (name) => {
+			calls.push(`probePublicGate:${name}`);
+			return { ...PROBED };
+		},
+		probeAfterRulesApplied: async (name) => {
+			calls.push(`probeAfterRulesApplied:${name}`);
+			return { ...PROBED };
+		},
 		...over,
 	};
 	const module = createPublicationHostsWidget(async () => {
@@ -361,8 +381,18 @@ describe('get_value (panel)', () => {
 			probe: { published: null, unpublished: null },
 		});
 		// the fixed list; the phase-5 decorator adds NO media_copy check: the agent says
-		// `shared` and the host holds nothing (media_copy_status.ts liveMediaMode)
-		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([...HOST_CHECK_IDS]);
+		// `shared` and the host holds nothing (media_copy_status.ts liveMediaMode); the
+		// phase-6 decorator adds public_gate LAST on every row (never probed here)
+		expect(((row?.checks ?? []) as { id: string }[]).map((c) => c.id)).toEqual([
+			...HOST_CHECK_IDS,
+			'public_gate',
+		]);
+		expect(checkOf(row ?? {}, 'public_gate')).toEqual({
+			id: 'public_gate',
+			state: 'unknown',
+			detail: 'never_probed',
+		});
+		expect(row?.public_probe).toMatchObject({ state: 'unknown', at: null });
 		// a COPY-mode agent with no runtime row yet → media_copy unknown
 		const copyHarness = harness([record('pub_a')], {
 			hostStatus: async () =>
@@ -632,6 +662,7 @@ describe('root-only actions', () => {
 			'rollback_api',
 			'remove_host',
 			'reconcile_media_copy',
+			'probe_public',
 		] as const) {
 			const h = harness([record('pub_a')]);
 			const code = await codeOf(run(h, action, { name: 'pub_z', api: 'v1' }));
@@ -761,6 +792,7 @@ describe('apply_rules', () => {
 			'loadRegistry',
 			'hostStatus:pub_a',
 			`hostApplyRules:pub_a:apache:${'c'.repeat(64)}:dedalo_user:-1`,
+			'probeAfterRulesApplied:pub_a',
 		]);
 		expect(response.data).toEqual({
 			host: 'pub_a',
@@ -771,6 +803,8 @@ describe('apply_rules', () => {
 		expect(response.msg).toBe(
 			`OK. Media rules applied on 'pub_a' (apache, ${'c'.repeat(12)}). Not public, left out: image/original.`,
 		);
+		// phase 6: the gate is proven through the public URL right after the apply
+		expect(response.extend).toEqual({ probe: PROBED });
 	});
 
 	test('a copy-mode host gets the same profile applied (phase 5: its copy root is gated)', async () => {

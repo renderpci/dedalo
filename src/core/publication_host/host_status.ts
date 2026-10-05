@@ -432,13 +432,21 @@ export function publicGateCheck(probe: GateProbe, nowMs: number, maxAgeMs: numbe
 	return { id: PUBLIC_GATE_CHECK_ID, state: 'ok', detail: answersFact(probe) };
 }
 
-/** The row plus its probe and ONE public_gate check (a previous one is replaced). Pure. */
+/**
+ * The row plus its last probe verdict as `public_probe` and ONE public_gate check (a
+ * previous one is replaced). Pure. NOT `probe`: on a root row that key already carries
+ * the registry's probe PATHS for the edit form.
+ */
 export function attachProbe<R extends Pick<HostPanelRow, 'checks'>>(
 	row: R,
 	probe: GateProbe,
 	nowMs: number,
 	maxAgeMs: number,
-): R & { probe: GateProbe } {
+): R & { public_probe: GateProbe } {
 	const checks = row.checks.filter((check) => check.id !== PUBLIC_GATE_CHECK_ID);
-	return { ...row, probe, checks: [...checks, publicGateCheck(probe, nowMs, maxAgeMs)] };
+	return {
+		...row,
+		public_probe: probe,
+		checks: [...checks, publicGateCheck(probe, nowMs, maxAgeMs)],
+	};
 }

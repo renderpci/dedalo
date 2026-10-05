@@ -53,6 +53,11 @@
  * past one period or a failed round, n/a hosts holding nothing carry none);
  * `reconcile_media_copy` (root) applies the registered `media_copy` reconcile to one host.
  *
+ * PUBLIC-URL PROBE (phase 6). `get_value` attaches each row's last `probe` and ONE
+ * `public_gate` check (host_status.ts attachProbe) from the SAME runtime map;
+ * `probe_public` (root) probes one host now; `apply_rules` probes right after a
+ * successful apply and answers the verdict as the extension key `probe`.
+ *
  * Hosts are ADDED only by `scripts/publication_host_pair.ts` on the work host. The panel
  * edits `public_url` / `qualities` / `probe` and removes a host; it never takes an
  * address or a credential.
@@ -75,6 +80,7 @@ import type {
 	ReconcileApisFn,
 } from '../../publication_host/api_reconcile.ts';
 import {
+	attachProbe,
 	type HostPanelRow,
 	type HostStatusInput,
 	registryInvalidCheck,
@@ -82,6 +88,13 @@ import {
 } from '../../publication_host/host_status.ts';
 import { withMediaCopyCheck } from '../../publication_host/media_copy_status.ts';
 import type { PanelRuntime } from '../../publication_host/panel_runtime.ts';
+import {
+	type GateProbe,
+	NEVER_PROBED,
+	PROBE_MAX_AGE_MS,
+	probeAfterRulesApplied,
+	probePublicGate,
+} from '../../publication_host/probe.ts';
 import {
 	HOST_NAME,
 	loadRegistry,
@@ -170,6 +183,10 @@ export interface PublicationHostsDeps {
 	mediaCopyRound(name: string): Promise<ReconcileReport>;
 	/** The panel clock (epoch ms) the media_copy check ages pending deletions against. */
 	now(): number;
+	/** Phase 6: probe ONE host's gate through its PUBLIC URL now and record runtime.probe. */
+	probePublicGate(name: string): Promise<GateProbe>;
+	/** Phase 6: the same, after apply_rules — never throws (an `unknown` verdict instead). */
+	probeAfterRulesApplied(name: string): Promise<GateProbe>;
 }
 
 export type DepsLoader = () => Promise<PublicationHostsDeps>;
@@ -216,6 +233,8 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 		pushAnswerWithinMs: () => pushAnswerWithinMs(config.ops.idleTimeoutSeconds),
 		mediaCopyRound: runMediaCopyReconcileFor,
 		now: () => Date.now(),
+		probePublicGate: (name) => probePublicGate(name),
+		probeAfterRulesApplied: (name) => probeAfterRulesApplied(name),
 	};
 }
 
@@ -413,6 +432,11 @@ async function hostRow(
 	return servedRow(row, record, isRoot);
 }
 
+/** The host's last public-URL probe from the panel's ONE runtime read, or never probed. */
+function rowProbe(panelRuntime: PanelRuntime, name: string): GateProbe {
+	return panelRuntime.runtime[name]?.probe ?? { ...NEVER_PROBED };
+}
+
 export async function publicationHostsValue(
 	deps: PublicationHostsDeps,
 	principal: Principal,
@@ -445,9 +469,9 @@ export async function publicationHostsValue(
 		};
 	}
 	const now = deps.now();
-	const hosts = (
-		await Promise.all(read.file.hosts.map((record) => hostRow(record, deps, isRoot)))
-	).map((row) => withMediaCopyCheck(row, panelRuntime.runtime, now));
+	const hosts = (await Promise.all(read.file.hosts.map((record) => hostRow(record, deps, isRoot))))
+		.map((row) => withMediaCopyCheck(row, panelRuntime.runtime, now))
+		.map((row) => attachProbe(row, rowProbe(panelRuntime, row.name), now, PROBE_MAX_AGE_MS));
 	return {
 		data: {
 			...common,
@@ -660,10 +684,38 @@ const applyRulesAction: BoundAction = async (options, principal, loadDeps) => {
 		);
 	}
 	logMutation('apply_rules', name, principal, `hash=${rules.hash}`);
+	// Phase 6 (P3): a rule change is proven through the public URL at once. Never fails
+	// the apply (the rules ARE applied): a probe that cannot run reads `unknown`.
+	const probe = await deps.probeAfterRulesApplied(name);
 	return {
 		data: { host: name, server: rules.server, hash: rules.hash, dropped: rules.dropped },
 		msg: rulesAppliedMsg(name, rules.server, rules.hash, rules.dropped),
+		extend: { probe },
 	};
+};
+
+function probeSentence(name: string, probe: GateProbe): string {
+	if (probe.state === 'ok') {
+		return `OK. '${name}': the public gate serves published media and refuses unpublished media.`;
+	}
+	const level = probe.state === 'failed' ? 'Error' : 'Warning';
+	return `${level}. '${name}': ${probe.detail ?? probe.state}`;
+}
+
+/**
+ * probe_public (phase 6, P3 on demand): prove the host's media gate through its PUBLIC
+ * URL now — the published probe file must answer 2xx, the unpublished one 404 — and
+ * record the verdict in runtime.probe. ROOT ONLY (E10: one rule for every action). It
+ * dials no agent: two bounded GETs through the public door (probe.ts).
+ */
+const probePublicAction: BoundAction = async (options, principal, loadDeps) => {
+	requireRoot(principal, 'probe_public');
+	const name = hostName(options);
+	const deps = await loadDeps();
+	requireHost(deps, name);
+	const probe = await deps.probePublicGate(name);
+	logMutation('probe_public', name, principal, `state=${probe.state}`);
+	return { data: probe, msg: probeSentence(name, probe) };
 };
 
 /** The most agent problem lines one probe answer carries to the wire (then '… N more'). */
@@ -991,6 +1043,7 @@ export function createPublicationHostsWidget(loadDeps: DepsLoader): WidgetModule
 			remove_host: bind(removeHostAction),
 			push_apis: bind(pushApisAction),
 			reconcile_media_copy: bind(reconcileMediaCopyAction),
+			probe_public: bind(probePublicAction),
 		},
 		getValue: async (_options, principal) => publicationHostsValue(await loadDeps(), principal),
 	};

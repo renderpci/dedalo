@@ -661,7 +661,7 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	// read (status, media.probe), live on EVERY mutation (agent_client.ts mutateCall). A bearer
 	// call answered 401 costs one more /health (bearerRefused re-proves before naming auth).
 	'publication_hosts.apply_rules':
-		'reads the registry file, then up to five bounded round trips to a paired agent (health unless cached + status, health + rules.apply, one more health on a 401); no statement',
+		'reads the registry file, then up to five bounded round trips to a paired agent (health unless cached + status, health + rules.apply, one more health on a 401), then the phase-6 public-URL probe (two bounded GETs through the public door, 10 s deadline and 1 KiB cap each, + one runtime-file write); no statement',
 	'publication_hosts.probe':
 		'up to three bounded round trips to a paired agent (health unless cached + media.probe, one more health on a 401); no statement',
 	'publication_hosts.rollback_api':
@@ -678,6 +678,9 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	// public qualities and agent calls, none of it a data-sized statement.
 	'publication_hosts.reconcile_media_copy':
 		'walks the public-quality media folders, then per paired copy agent: health unless cached + status, health + media.manifest, per unit a short advisory try-lock transaction around media.mark/delete (one more health on a 401) and puts outside it; no data-sized statement. The REQUEST waits at most pushAnswerWithinMs (like push_apis): a longer round answers running and finishes detached in the copy lane',
+	// Phase 6: the public-URL probe of one host.
+	'publication_hosts.probe_public':
+		'two bounded GETs through the public door (10 s deadline, 1 KiB cap each) + one runtime-file write; no database statement',
 	'error_reports.get_reports': 'one LIMITed page + one count of the error-report table',
 };
 

@@ -118,6 +118,8 @@ function harness(options: HarnessOptions = {}) {
 		pushAnswerWithinMs: () => options.waitMs ?? 5_000,
 		mediaCopyRound: unused('mediaCopyRound'),
 		now: () => Date.now(),
+		probePublicGate: unused('probePublicGate'),
+		probeAfterRulesApplied: unused('probeAfterRulesApplied'),
 	};
 	const module = createPublicationHostsWidget(async () => {
 		counts.loads += 1;

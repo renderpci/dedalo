@@ -117,6 +117,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 		"root-only push of the installed tree's verified Publication API releases to paired publication hosts through the TS-owned registry + agent channel (phase 4) — no PHP-tree surface",
 	'publication_hosts.reconcile_media_copy':
 		'root-only door onto the registered media_copy reconcile (core/reconcile): copies/unmarks/deletes published public-quality media on ONE copy-mode publication host through the copy worker lane and the paired agent channel (phase 5) — no PHP-tree surface',
+	'publication_hosts.probe_public':
+		'TS-native publication-host public-URL probe (phase 6): two bounded GETs through the public door (fetchGuardedText) + the runtime observation file — root-only, writes no gate, media or registry',
 };
 
 /**

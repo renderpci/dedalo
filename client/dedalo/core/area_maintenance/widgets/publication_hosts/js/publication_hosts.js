@@ -49,6 +49,7 @@ export const PUBLICATION_HOST_ACTIONS = Object.freeze([
 	'remove_host',
 	'push_apis',
 	'reconcile_media_copy',
+	'probe_public',
 ]);
 
 /**

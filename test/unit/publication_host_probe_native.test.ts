@@ -18,6 +18,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
+import { widget } from '../../src/core/area_maintenance/widgets/publication_hosts.ts';
 import { overrideMediaProtectionPathsForTests } from '../../src/core/media/protection.ts';
 import {
 	attachProbe,
@@ -47,9 +48,11 @@ import {
 	saveRegistry,
 } from '../../src/core/publication_host/registry.ts';
 import { loadRuntime } from '../../src/core/publication_host/runtime.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
 import type { PinnedFetchInit } from '../../src/core/security/ssrf_guard.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 const QUALITY = 'image/1.5MB';
 const PUB_FILE = 'test99_test3_1.jpg';
@@ -575,7 +578,7 @@ describe('publicGateCheck / attachProbe (pure panel rows; detail is a FACT, neve
 			],
 		} as unknown as HostPanelRow;
 		const out = attachProbe(row, fresh, NOW, PROBE_MAX_AGE_MS);
-		expect(out.probe).toEqual(fresh);
+		expect(out.public_probe).toEqual(fresh);
 		expect(out.checks.map((c) => c.id)).toEqual(['reachable', PUBLIC_GATE_CHECK_ID]);
 		expect(out.checks[1]?.state).toBe('ok');
 		expect(row.checks).toHaveLength(2);
@@ -589,5 +592,86 @@ describe('the source pins the module-state reason (module_state_tripwire)', () =
 			'utf8',
 		);
 		expect(source.match(/^const \w+ = new Map/gm)).toEqual(['const probeLanes = new Map']);
+	});
+});
+
+const ROOT: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+/** A profile admin: passes the dispatch gate, must NOT pass this one. */
+const ADMIN: Principal = { userId: 5, isGlobalAdmin: true, isDeveloper: false };
+const REPO = join(import.meta.dir, '..', '..');
+const source = (rel: string) => stripComments(readFileSync(join(REPO, rel), 'utf8'));
+
+describe('publication_hosts widget: probe_public (root-only) and the triggers', () => {
+	const probePublic = (() => {
+		const action = widget.apiActions?.probe_public;
+		if (action === undefined) throw new Error('publication_hosts no longer registers probe_public');
+		return action;
+	})();
+
+	test('a global admin who is not root → perm.denied, no probe, no runtime write', async () => {
+		saveRegistry({ version: 1, hosts: [record({ public_url: null })] });
+		await expect(probePublic({ name: 'probe_host' }, ADMIN)).rejects.toMatchObject({
+			code: 'perm.denied',
+		});
+		expect((await loadRuntime()).probe_host).toBeUndefined();
+	});
+
+	test('root + an unknown host → maintenance.action_refused, no runtime write', async () => {
+		saveRegistry({ version: 1, hosts: [] });
+		await expect(probePublic({ name: 'nope_host' }, ROOT)).rejects.toMatchObject({
+			code: 'maintenance.action_refused',
+		});
+		expect(await loadRuntime()).toEqual({});
+	});
+
+	test('root → the verdict is the payload and the runtime record', async () => {
+		saveRegistry({ version: 1, hosts: [record({ public_url: null })] });
+		const response = await probePublic({ name: 'probe_host' }, ROOT);
+		expect(response.data).toMatchObject({ state: 'unknown', detail: 'the public URL is not set' });
+		expect((await loadRuntime()).probe_host?.probe).toEqual(response.data as never);
+		expect(response.msg).toContain('probe_host');
+	});
+
+	test("get_value attaches every row's probe + public_gate check from the runtime file", async () => {
+		saveRegistry({ version: 1, hosts: [record({ public_url: null })] });
+		await probePublic({ name: 'probe_host' }, ROOT);
+		const value = await widget.getValue?.({}, ROOT);
+		const rows = (
+			value?.data as {
+				hosts: {
+					name: string;
+					public_probe: unknown;
+					checks: { id: string; state: string; detail?: string }[];
+				}[];
+			}
+		).hosts;
+		expect(rows.map((row) => row.name)).toEqual(['probe_host']);
+		expect(rows[0]?.public_probe).toMatchObject({
+			state: 'unknown',
+			detail: 'the public URL is not set',
+		});
+		expect(rows[0]?.checks.at(-1)).toEqual({
+			id: 'public_gate',
+			state: 'unknown',
+			detail: 'unproven',
+		});
+	});
+
+	test('ONE copy trigger: the worker afterSync (server.ts) and the reconcile apply call it; applyCopy never does', () => {
+		const server = source('src/server.ts');
+		expect(server).toContain('afterSync: (host, report) =>');
+		expect(server).toContain('scheduleProbeAfterCopyBatch(host, report)');
+		expect(source('src/diffusion/api/media_copy_reconcile.ts')).toContain(
+			'scheduleProbeAfterCopyBatch(name, report)',
+		);
+		for (const rel of [
+			'src/diffusion/targets/mediastore/media_copy.ts',
+			'src/diffusion/targets/mediastore/media_copy_apply.ts',
+			'src/diffusion/targets/mediastore/media_copy_worker.ts',
+		]) {
+			expect(source(rel), `${rel} must not schedule a probe (one trigger per sync)`).not.toContain(
+				'scheduleProbe',
+			);
+		}
 	});
 });

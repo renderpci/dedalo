@@ -29,6 +29,7 @@
  */
 
 import { DedaloError } from '../../core/errors/dedalo_error.ts';
+import { scheduleProbeAfterCopyBatch } from '../../core/publication_host/probe.ts';
 import { loadRegistry, type PublicationHostRecord } from '../../core/publication_host/registry.ts';
 import { loadRuntime, updateHostRuntime } from '../../core/publication_host/runtime.ts';
 import type {
@@ -198,6 +199,9 @@ async function applyInLane(name: string, sync: LaneSync): Promise<MediaCopyHostO
 		return laneThrew(name, error, planned);
 	}
 	if (report === null) return notCopyOutcome(name);
+	// Phase 6 (P3): a reconcile apply is the other copy-apply driver (its round runs as a
+	// lane unit, so the worker's afterSync never sees it); same trigger, same coalesced lane.
+	void scheduleProbeAfterCopyBatch(name, report);
 	return sentOutcome(name, planned, report);
 }
 

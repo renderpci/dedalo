@@ -2034,7 +2034,19 @@ export async function startServer() {
 				// scheduler (an ephemeral/smoke instance must not drive a public host);
 				// stopped by the shutdown drain.
 				const { startMediaCopy } = await import('./diffusion/api/media_copy.ts');
-				shutdownStops.push(startMediaCopy());
+				// PUBLIC-URL PROBE (PUBLICATION_HOST_SPEC §7, phase 6): a worker run that
+				// changed a copy host proves its gate through the public URL — detached,
+				// coalesced per host. The ONE copy trigger of a worker run (applyCopy
+				// itself never schedules). Dynamic like the line above (CONVENTIONS §2
+				// rationale 3: a cold path, once per boot).
+				const { scheduleProbeAfterCopyBatch } = await import('./core/publication_host/probe.ts');
+				shutdownStops.push(
+					startMediaCopy({
+						afterSync: (host, report) => {
+							void scheduleProbeAfterCopyBatch(host, report);
+						},
+					}),
+				);
 			} else {
 				console.warn(
 					'[reconcile] scheduler disabled (DEDALO_RECONCILE_SCHEDULER_ENABLED=false) — boot/interval reconciles will not run, and no pub/ flip reaches a copy-mode publication host',

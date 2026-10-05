@@ -190,3 +190,29 @@
   `test/unit/publication_host_widget_native.test.ts`,
   `test/unit/publication_host_media_copy_status.test.ts`; client:
   `test/unit/publication_host_media_copy_client.test.ts`. No fixture interaction.
+
+## Addendum 2026-10-05 — phase 6 (public-URL probe)
+
+- New ROOT-ONLY action `probe_public {name}` → `data` = the probe verdict
+  `{state: ok|failed|unknown, at, published_status, unpublished_status, detail}` (also
+  recorded in the runtime file as `runtime.probe`), `msg` = an operator sentence naming the
+  host. Non-root → `perm.denied` (nothing loaded); invalid, unknown or missing host →
+  `maintenance.action_refused`. It dials no agent: two bounded GETs through the public door
+  (`fetchGuardedText`, `Range: bytes=0-0`, 1 KiB cap, redirects refused). A `public_url` that
+  is not a bare http(s) origin, or probe paths that do not mean what they claim (not a
+  public quality, not the grammar, a working file, absent from the work media tree, or a
+  `pub/` marker that contradicts the claim), answer `state: unknown` with `detail` naming
+  why, and NOTHING is sent; a non-public address is `unknown` too, never `ok`. `failed` when
+  either side is definitely wrong (the unpublished file served: the gate is OPEN), even if
+  the other side is unknown. Request-bounded.
+- `apply_rules` answers the extension key `probe` (same shape), measured right after the
+  apply; a probe that cannot run is `unknown`, never a failed apply.
+- `get_value` host rows (root and non-root) gain `public_probe` (same shape; never probed →
+  `state: unknown, at: null, detail: 'never probed'`) — NOT `probe`, which on a root row
+  stays the registry's probe PATHS for the edit form — and one decorator check
+  `public_gate`, LAST: `ok` `published:<n> unpublished:<n>`; `warn` `stale:<at>` (an ok proof
+  older than two probe periods, 30 min); `blocked` `published:<n|none> unpublished:<n|none>`
+  (failed); `unknown` `never_probed` | `unproven`. Details are facts; the sentence is
+  `public_probe.detail`, rendered as text.
+- TS ground truth: `test/unit/publication_host_probe_native.test.ts`,
+  `test/unit/publication_host_widget_native.test.ts`. No fixture interaction.

@@ -602,7 +602,7 @@ describe('boot wiring', () => {
 
 	test('server.ts starts it only in a real boot (not install, not smoke), behind the reconcile scheduler gate, stopped by the drain', () => {
 		const text = readFileSync(join(import.meta.dir, '..', '..', 'src', 'server.ts'), 'utf8');
-		const at = text.indexOf('shutdownStops.push(startMediaCopy())');
+		const at = text.indexOf('startMediaCopy({');
 		expect(at).toBeGreaterThan(0);
 		const guard = text.lastIndexOf('if (!config.installMode && !smokeBoot) {', at);
 		expect(guard).toBeGreaterThan(text.indexOf('const shutdownStops'));
