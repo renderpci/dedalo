@@ -21,6 +21,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:te
 import {
 	chmodSync,
 	existsSync,
+	mkdirSync,
 	readFileSync,
 	rmSync,
 	statSync,
@@ -233,6 +234,51 @@ describe('stored secrets are checked on every read', () => {
 		const tokenPath = join(hostSecretDir('pub_main'), TOKEN_FILE);
 		rmSync(tokenPath);
 		symlinkSync(outside, tokenPath);
+		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_mode');
+	});
+
+	test('a symlinked host dir is refused, even onto a private dir holding a valid token', () => {
+		const outside = join(scratch.base, 'other_private');
+		mkdirSync(outside, { mode: 0o700 });
+		writeFileSync(join(outside, TOKEN_FILE), `${TOKEN}\n`, { mode: 0o600 });
+		mkdirSync(secretsRoot(), { mode: 0o700 });
+		symlinkSync(outside, hostSecretDir('pub_main'));
+		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_mode');
+		expect(secretPresenceOutcome('pub_main').refused).toBe('bad_mode');
+	});
+
+	test('a regular file where the host dir belongs is bad_mode, never absence', () => {
+		mkdirSync(secretsRoot(), { mode: 0o700 });
+		writeFileSync(hostSecretDir('pub_main'), 'not a dir', { mode: 0o600 });
+		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_mode');
+		expect(secretPresenceOutcome('pub_main')).toEqual({
+			token_present: false,
+			bundle_present: false,
+			refused: 'bad_mode',
+		});
+	});
+
+	test('a secrets root widened to 0777 is refused on read', () => {
+		writeHostSecrets('pub_main', TOKEN, pki.bundlePem);
+		chmodSync(secretsRoot(), 0o777);
+		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_mode');
+		expect(failure(() => readHostTls('pub_main')).reason).toBe('bad_mode');
+	});
+
+	test('a symlinked secrets root is refused on read and on write', () => {
+		const outside = join(scratch.base, 'other_root');
+		mkdirSync(outside, { mode: 0o700 });
+		symlinkSync(outside, secretsRoot());
+		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_mode');
+		expect(failure(() => writeHostSecrets('pub_main', TOKEN, null)).reason).toBe('bad_mode');
+		expect(existsSync(join(outside, 'pub_main'))).toBe(false);
+	});
+
+	test('a FIFO at the token path is bad_mode and never blocks the read', () => {
+		writeHostSecrets('pub_main', TOKEN, pki.bundlePem);
+		const tokenPath = join(hostSecretDir('pub_main'), TOKEN_FILE);
+		rmSync(tokenPath);
+		expect(Bun.spawnSync(['mkfifo', '-m', '600', tokenPath]).exitCode).toBe(0);
 		expect(failure(() => readHostToken('pub_main')).reason).toBe('bad_mode');
 	});
 

@@ -155,7 +155,9 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   whose writer is not atomic and resets to defaults when the file is corrupt.
 - **Secrets.** Each host has `<private>/publication_hosts/<name>/` (0700) holding `token` and
   `engine_bundle.pem`, both 0600 and owned by the engine user
-  (`src/core/publication_host/secrets.ts`). They never appear in the registry,
+  (`src/core/publication_host/secrets.ts`). Every read `lstat`s the root and the host dir
+  first (a symlink, a non-directory or a mode other than 0700 is refused, never read as
+  absence) and opens the file `O_NOFOLLOW|O_NONBLOCK`. They never appear in the registry,
   `ts_state.json`, a panel payload, a log, the activity audit or an error detail. The panel
   reports only their presence. They are not in `.env` because that file is append-only and
   frozen at boot (a rotated token would need a restart), and its fixed key names cannot

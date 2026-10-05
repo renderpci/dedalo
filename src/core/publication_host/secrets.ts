@@ -16,7 +16,11 @@
  *    file and what is wrong with it, nothing else.
  *  - A secret whose file or directory is not owned by the engine user with the exact
  *    mode above, or that the engine user cannot open, is REFUSED, not used (`bad_mode` /
- *    `bad_owner`); a symlink is refused. Absence is not an error: `null` / `*_present: false`.
+ *    `bad_owner`); a symlink is refused. On every read the secrets root AND the host dir
+ *    are lstat'ed (a symlinked, non-directory or widened one is bad_mode/bad_owner) before
+ *    the file is opened O_NOFOLLOW|O_NONBLOCK (a FIFO never blocks the loop). A
+ *    non-directory where a directory belongs (ENOTDIR) is a refusal, never absence.
+ *    Absence is not an error: `null` / `*_present: false`.
  *  - A bundle is checked for coherence before it is used or stored: the key matches the
  *    client certificate and the CA signed it (a mixed-up bundle names itself here, not
  *    as an opaque TLS failure on the first call).
@@ -35,12 +39,12 @@ import {
 	existsSync,
 	fstatSync,
 	fsyncSync,
+	lstatSync,
 	mkdirSync,
 	openSync,
 	renameSync,
 	rmSync,
 	type Stats,
-	statSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readBoundedSync } from '../files/bounded_read.ts';
@@ -133,7 +137,7 @@ function assertPrivate(path: string, stat: Stats, mode: number): void {
 			`${path} must be mode ${mode.toString(8)}, found ${actual.toString(8)}`,
 		);
 	}
-	if (stat.uid !== process.getuid?.()) {
+	if (stat.uid !== process.geteuid?.()) {
 		throw new SecretError('bad_owner', `${path} must be owned by the engine user`);
 	}
 }
@@ -149,15 +153,48 @@ function openRefusal(path: string, code: string): SecretError | null {
 	return null;
 }
 
-/** Open for reading without following a symlink; null when absent. */
+/**
+ * Open for reading without following a symlink and without blocking (a FIFO opens, then
+ * fails the regular-file check); null when absent. ENOTDIR means a path component is not
+ * a directory — a broken store, refused as bad_mode, never reported as absence.
+ */
 function openIfPresent(path: string): number | null {
 	try {
-		return openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+		return openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
 	} catch (error) {
 		const code = errorCode(error);
-		if (code === 'ENOENT' || code === 'ENOTDIR') return null;
+		if (code === 'ENOENT') return null;
+		if (code === 'ENOTDIR') {
+			return throwBadMode(`${dirname(path)} must be a directory`);
+		}
 		throw openRefusal(path, code) ?? error;
 	}
+}
+
+function throwBadMode(detail: string): never {
+	throw new SecretError('bad_mode', detail);
+}
+
+/**
+ * A 0700 directory of the store, judged WITHOUT following a symlink (lstat): absent →
+ * false; a symlink, a regular file or any other node → bad_mode; a real directory with
+ * another mode or owner → bad_mode / bad_owner.
+ */
+function privateDirPresent(path: string): boolean {
+	let stat: Stats;
+	try {
+		stat = lstatSync(path);
+	} catch (error) {
+		const code = errorCode(error);
+		if (code === 'ENOENT') return false;
+		if (code === 'ENOTDIR') return throwBadMode(`${dirname(path)} must be a directory`);
+		throw openRefusal(path, code) ?? error;
+	}
+	if (!stat.isDirectory()) {
+		throwBadMode(`${path} must be a real directory (not a symlink or a file)`);
+	}
+	assertPrivate(path, stat, DIR_MODE);
+	return true;
 }
 
 /**
@@ -165,12 +202,16 @@ function openIfPresent(path: string): number | null {
  * read is CAPPED at SECRET_MAX_BYTES: a larger file is refused as `oversize`, unread.
  */
 function readSecretFile(path: string, oversize: SecretErrorReason): string | null {
+	// the root and the host dir are lstat'ed first: a symlinked or widened directory is
+	// refused before anything under it is opened. Both are engine-owned 0700, so no other
+	// uid can swap them between this check and the O_NOFOLLOW open below.
+	if (!privateDirPresent(secretsRoot())) return null;
+	if (!privateDirPresent(dirname(path))) return null;
 	const fd = openIfPresent(path);
 	if (fd === null) return null;
 	try {
 		const stat = fstatSync(fd);
 		if (!stat.isFile()) throw new SecretError('bad_mode', `${path} must be a regular file`);
-		assertPrivate(dirname(path), statSync(dirname(path)), DIR_MODE);
 		assertPrivate(path, stat, FILE_MODE);
 		const bytes = readBoundedSync(fd, SECRET_MAX_BYTES);
 		if (bytes === null)
@@ -294,6 +335,10 @@ export function secretPresenceOutcome(name: string): SecretPresenceOutcome {
 
 function ensurePrivateDir(dir: string): void {
 	mkdirSync(dir, { recursive: true, mode: DIR_MODE });
+	// refuse a symlink BEFORE chmod (chmod follows one): a planted link is never written through
+	if (!lstatSync(dir).isDirectory()) {
+		throwBadMode(`${dir} must be a real directory (not a symlink or a file)`);
+	}
 	chmodSync(dir, DIR_MODE); // exact, whatever the umask or an older mode was
 	fsyncDirectory(dirname(dir));
 }
