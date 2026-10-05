@@ -37,9 +37,10 @@
  *   3. THE WRITE LANGUAGE IS THE REQUEST'S. It comes from the request-language
  *      ALS (`currentDataLang()`), never from the static DEDALO_DATA_LANG: the
  *      write is lang-sliced, so the install default REPLACED the operator's
- *      actual working language and an empty cell CLEARED it. The ALS survives
- *      into the background job the import runs in (mediaJobs.submit exits only
- *      the transaction stores), so a backgrounded run keeps the session's lang.
+ *      actual working language and an empty cell CLEARED it. A backgrounded run
+ *      keeps the session's lang because the job manager PINS the submit-time
+ *      langs around the worker (media/jobs.ts JobRunScope) — a pin, not an
+ *      accident of ALS inheritance.
  *   5. A DERIVED FIELD REFUSES THE RUN, before the dd800 mint and any write
  *      (assertNoDerivedField — the CSV door's posture).
  */

@@ -39,7 +39,6 @@ const contextOf = (
 		userId: principal.userId,
 		options,
 		background: false,
-		applicationLang: 'lg-spa',
 	}) as ToolActionContext;
 
 const baseOptions = (sqo: Record<string, unknown> | undefined): Record<string, unknown> => ({

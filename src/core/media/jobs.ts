@@ -64,6 +64,17 @@ import { runDetachedFromTransaction } from '../db/postgres.ts';
 import { toDedaloError, toStructuredErr, wireMessage } from '../errors/convert.ts';
 import { DedaloError, isDedaloError } from '../errors/dedalo_error.ts';
 import type { ApiErrorBody } from '../errors/schema.ts';
+import {
+	currentApplicationLang,
+	currentDataLang,
+	type RequestLangs,
+	runWithRequestLangs,
+} from '../resolve/request_lang.ts';
+import {
+	currentRequestContext,
+	type RequestContext,
+	runWithRequestContext,
+} from '../security/request_context.ts';
 import { runWithJobSignal } from './job_scope.ts';
 import {
 	resolveProcessesDir,
@@ -451,6 +462,56 @@ export type JobWorker = (ctx: {
 	/** This job's own id — so the work can record which job produced it. */
 	jobId: string;
 }) => Promise<unknown>;
+
+/**
+ * THE IDENTITY A JOB'S WORKER RUNS UNDER — captured by `submit()` in the
+ * submitter's synchronous flow, entered by `runWorker` around the worker. Plain
+ * values, never the submitter's live scope objects, and NEVER served: it rides
+ * the run closure only (not the JobRecord the frames/pfile publish).
+ *
+ * WHY A PIN, NOT INHERITANCE. Bun restores the submitter's AsyncLocalStorage
+ * scope after every await, so today a job would INHERIT the request's langs and
+ * its RequestContext OBJECT by accident of the runtime — and only as long as the
+ * manager's internals keep that true (a queued job's worker starts from another
+ * job's release; a dispatcher / worker-pool refactor would hand it whichever
+ * scope that code runs in). Inheriting the OBJECT was itself a bug: the one
+ * mutable field, `frontierRefusals`, is appended by noteFrontierRefusal, so a
+ * job's refusals landed on a request whose envelope was answered long ago. The
+ * job therefore owns its context:
+ *   - `langs`: the submitter's two effective langs (install defaults when the
+ *     submit ran outside any scope — a boot task, a CLI);
+ *   - `context.principal`: the SAME Principal snapshot `currentPrincipal()`
+ *     returned at submit — authorization is unchanged vs inheritance. A
+ *     snapshot: a long job does not re-resolve it (a handler that must, does so
+ *     itself — tool_export's currentExportPrincipal);
+ *   - `context.session`: null — the job has no live session (no session SQO
+ *     read-back / write-back, no "acting session" for revocation);
+ *   - `context.requestId`: the job's own (`job:<id>`), so leaf envelopes and log
+ *     lines correlate to the job, not to a request that has ended;
+ *   - `context.clientIp`: the submitter's (audit rows a job writes keep their
+ *     origin host); `frontierRefusals`: the job's own, absent until noted.
+ * Gate: test/unit/media_jobs_reconcile.test.ts ("a job runs under its OWN
+ * pinned identity"). Canon: engineering/REQUEST_ISOLATION.md rule 3.
+ */
+export interface JobRunScope {
+	readonly langs: RequestLangs;
+	readonly context: RequestContext;
+}
+
+/** Capture a job's run scope NOW — called only from submit()'s synchronous flow. */
+function captureJobRunScope(jobId: string): JobRunScope {
+	const submitter = currentRequestContext();
+	const principal = submitter?.principal;
+	return {
+		langs: { applicationLang: currentApplicationLang(), dataLang: currentDataLang() },
+		context: {
+			...(principal !== undefined ? { principal } : {}),
+			session: null,
+			requestId: `job:${jobId}`,
+			clientIp: submitter?.clientIp ?? '',
+		},
+	};
+}
 
 /**
  * Directory holding the TS process files (its own private tree, not PHP's).
@@ -1015,6 +1076,9 @@ export class MediaJobManager {
 	 */
 	submit(kind: string, worker: JobWorker, meta: JobSubmitMeta): JobRecord {
 		const id = this.nextId(kind);
+		// The worker's identity, read NOW — the request's synchronous flow is the
+		// only moment it is the submitter's (JobRunScope).
+		const scope = captureJobRunScope(id);
 		const now = this.clock();
 		const record: JobRecord = {
 			id,
@@ -1058,7 +1122,9 @@ export class MediaJobManager {
 		// including a `withTransaction` handle the request expires (S2-14) long
 		// before a transcode ends. A job outlives its submitter, so it must own no
 		// part of the submitter's connection state; its queries go to the pool.
-		void runDetachedFromTransaction(() => this.run(record, worker, controller));
+		// Its request identity is not inherited either: runWorker enters the
+		// job-owned `scope` captured above.
+		void runDetachedFromTransaction(() => this.run(record, worker, controller, scope));
 		return record;
 	}
 
@@ -1066,6 +1132,7 @@ export class MediaJobManager {
 		record: JobRecord,
 		worker: JobWorker,
 		controller: AbortController,
+		scope: JobRunScope,
 	): Promise<void> {
 		const acquired = await this.acquire(record.lane, controller.signal);
 		if (!acquired || controller.signal.aborted) {
@@ -1079,20 +1146,26 @@ export class MediaJobManager {
 		// lane must not be killed for having waited (the clock decision, header).
 		this.armDeadline(record, controller);
 		try {
-			const result = await this.runWorker(record, controller, worker, {
-				onProgress: (percent: number) => {
-					record.progress = Math.max(0, Math.min(100, Math.round(percent)));
-					record.updatedAt = this.clock();
-					this.commit(record);
+			const result = await this.runWorker(
+				record,
+				controller,
+				worker,
+				{
+					onProgress: (percent: number) => {
+						record.progress = Math.max(0, Math.min(100, Math.round(percent)));
+						record.updatedAt = this.clock();
+						this.commit(record);
+					},
+					onData: (data: unknown) => {
+						record.data = data;
+						record.updatedAt = this.clock();
+						this.commit(record);
+					},
+					signal: controller.signal,
+					jobId: record.id,
 				},
-				onData: (data: unknown) => {
-					record.data = data;
-					record.updatedAt = this.clock();
-					this.commit(record);
-				},
-				signal: controller.signal,
-				jobId: record.id,
-			});
+				scope,
+			);
 			record.data = result;
 			this.finish(record, controller.signal.aborted ? 'stopped' : 'done');
 		} catch (error) {
@@ -1139,18 +1212,34 @@ export class MediaJobManager {
 	}
 
 	/**
-	 * Run the worker INSIDE the job's cancellation scope (media/job_scope.ts), so
-	 * an awaited outbound call three frames down aborts with the job instead of
-	 * outliving it holding a socket. The scope is opened here, once, rather than
-	 * threaded through every provider signature.
+	 * Run the worker INSIDE the job's own scopes, opened here, once, rather than
+	 * threaded through every provider signature:
+	 *   - its REQUEST IDENTITY (`scope`, captured at submit — JobRunScope): the
+	 *     request context and the two langs are ENTERED here, whatever scope the
+	 *     caller of this method happens to run in, so the worker reads the
+	 *     submitter's langs and principal and its own request id / refusal log
+	 *     however the manager comes to schedule it;
+	 *   - its CANCELLATION scope (media/job_scope.ts), so an awaited outbound call
+	 *     three frames down aborts with the job instead of outliving it holding a
+	 *     socket.
+	 *
+	 * PROTECTED, not private, as a TEST SEAM: the gate subclasses the manager and
+	 * calls `super.runWorker` from inside a FOREIGN scope — the shape of a future
+	 * dispatcher / pool refactor — and the worker must still see its own pin
+	 * (test/unit/media_jobs_reconcile.test.ts).
 	 */
-	private runWorker(
+	protected runWorker(
 		_record: JobRecord,
 		controller: AbortController,
 		worker: JobWorker,
 		ctx: Parameters<JobWorker>[0],
+		scope: JobRunScope,
 	): Promise<unknown> {
-		return runWithJobSignal(controller.signal, () => worker(ctx));
+		return runWithRequestContext(scope.context, () =>
+			runWithRequestLangs(scope.langs, () =>
+				runWithJobSignal(controller.signal, () => worker(ctx)),
+			),
+		);
 	}
 
 	/**

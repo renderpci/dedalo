@@ -573,9 +573,9 @@ async function resolveMappedColumns(
 			// THE REQUEST's data language (audit DATA-01), never the static
 			// DEDALO_DATA_LANG: the write is lang-sliced, so the install default
 			// REPLACED the operator's actual working language and an empty cell
-			// CLEARED it. currentDataLang() survives into the background job this
-			// import runs in — mediaJobs.submit exits only the transaction stores,
-			// so the request-language ALS is still in scope on the worker.
+			// CLEARED it. currentDataLang() is the SUBMITTER's inside the background
+			// job this import runs in: the job manager pins the submit-time langs
+			// around the worker (media/jobs.ts JobRunScope).
 			lang: translatable ? currentDataLang() : 'lg-nolan',
 			decimal: typeof entry.decimal === 'string' ? entry.decimal : undefined,
 			mode,

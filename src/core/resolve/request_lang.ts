@@ -10,9 +10,10 @@
  * an AsyncLocalStorage scope opened once per RQO at the dispatch chokepoint
  * (dispatchRqo) from the caller's session. Leaf resolvers (label lookup, data
  * reads, page_globals) read them through the accessors below; outside any scope
- * (unit tests calling resolvers directly, background jobs) they fall back to the
- * installation defaults, so behavior is identical to before whenever no user
- * override is in effect.
+ * (unit tests calling resolvers directly, timer/scheduler work, a job submitted
+ * with no scope) they fall back to the installation defaults, so behavior is
+ * identical to before whenever no user override is in effect. A job-manager job
+ * runs under its SUBMITTER's langs, pinned at submit (media/jobs.ts JobRunScope).
  *
  * This is the same AsyncLocalStorage pattern already used for the transaction
  * handle in core/db/postgres.ts — the boring, consistent choice (§2b).
@@ -66,7 +67,7 @@ export function currentApplicationLang(): string {
  *
  * WHY THE DEFAULT IS `lang.dataLangDefault` AND NOT `menu.dataLang` (DATA-01,
  * 2026-08-27). Outside a request there is no operator and no session — a
- * background job, a boot task, a CLI script — so this value is not "the language
+ * scope-less job, a boot task, a CLI script — so this value is not "the language
  * someone chose", it is the language the ENGINE writes and reads in on its own
  * behalf. `DEDALO_DATA_LANG` is the MENU's current selection, a per-user thing
  * whose configured value is only a starting point, and it is NOT in the data

@@ -271,8 +271,10 @@ shared component contract (the `dedalo_data` wrapper, atoms, NDJSON flat-table p
   emission (`src/core/section/read.ts`, `emitDdoData`). The full-section read and the
   component-level `get_data` therefore serve the *same* key: `edit`/`search` carry the
   authorized-sections list, `list`/`tm` carry no `datalist` key. Identity comes from the
-  request-scoped principal; a call with no principal (a background job) gets an empty array
-  rather than somebody else's sections.
+  request-scoped principal; a call with no principal (no request scope — timer/scheduler
+  work, a unit harness) gets an empty array rather than somebody else's sections. A
+  background job is not that case: it runs under its submitter's principal, snapshotted at
+  submit, so it serves the submitter's list.
 - **Search-panel instances.** A filter row in the search panel addresses no record (its
   `section_id` is a client-minted `search_<n>` sentinel). The component still answers with its
   own item — empty `entries`, full `datalist`, the sentinel id echoed verbatim — because the

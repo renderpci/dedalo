@@ -218,8 +218,10 @@ export function revokeAccountAccess(
  * the acting session while the request scope is live and hands the answer down, because
  * by the time the commit queue drains the scope may be gone. Otherwise the acting
  * session is read from the request scope, and kept ONLY when it belongs to the account
- * being revoked — `currentSession()` is undefined outside a request scope (a background
- * job, a CLI, an import), and then nothing is kept, which is the safe answer.
+ * being revoked — `currentSession()` is undefined outside a request scope (a CLI, timer
+ * work) and null inside a job-manager job (its pinned context carries no session,
+ * media/jobs.ts JobRunScope — a background import included), and then nothing is kept,
+ * which is the safe answer.
  */
 function resolveKeptTokenHash(
 	userId: number,
@@ -234,8 +236,8 @@ function resolveKeptTokenHash(
  * The CURRENT request's session token hash, but only when that session belongs to
  * `userId` — the one place "is the actor the account being revoked?" is decided.
  *
- * Undefined outside a request scope (a background job, a CLI, an import) and undefined
- * for anybody else's account: an ADMIN changing someone else's password keeps nothing.
+ * Undefined outside a request scope (a CLI, timer work), inside a background job (its
+ * pinned context's session is null) and for anybody else's account: an ADMIN changing someone else's password keeps nothing.
  */
 function actingSessionHashFor(userId: number): string | undefined {
 	const acting = currentSession();

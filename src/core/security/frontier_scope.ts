@@ -465,8 +465,10 @@ export interface FrontierRefusal {
  *     — one object per request, so it is bleed-safe by construction and needs
  *     no module state.
  *
- * Outside a request scope (a unit harness, a background job) only the log line
- * fires, exactly as `currentRequestId()` degrades to ''.
+ * Outside a request scope (a unit harness, timer work) only the log line fires,
+ * exactly as `currentRequestId()` degrades to ''. A job-manager job records onto
+ * its OWN job context (media/jobs.ts JobRunScope), never onto the request that
+ * submitted it — that request's envelope was answered long ago.
  */
 export function noteFrontierRefusal(scope: FrontierScope, refusal: FrontierRefusal): void {
 	const where = `${refusal.sectionTipo}${refusal.componentTipo === undefined ? '' : `.${refusal.componentTipo}`}${refusal.sectionId === undefined ? '' : `#${refusal.sectionId}`}`;

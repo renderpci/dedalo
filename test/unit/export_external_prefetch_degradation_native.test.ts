@@ -774,7 +774,6 @@ describe('J. tool_export records, serves and re-runs it', () => {
 				background: true,
 				options: { ...options, background_running: true },
 				signal: new AbortController().signal,
-				applicationLang: config.menu.applicationLang,
 			} as ToolActionContext)) as unknown as {
 				ok: boolean;
 				data: { job_id: string; external_degraded: ExportExternalDegradation | null };

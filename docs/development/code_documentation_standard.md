@@ -68,7 +68,7 @@ A longer engine module states the invariant it upholds and how it relates to its
  * live in an AsyncLocalStorage scope opened once per RQO at the dispatch
  * chokepoint (dispatchRqo) from the caller's session. Leaf resolvers read them
  * through the accessors below; outside any scope (unit tests calling resolvers
- * directly, background jobs) they fall back to the installation defaults. …
+ * directly, timer/scheduler work) they fall back to the installation defaults. …
  */
 ```
 

@@ -17,7 +17,8 @@
  * may grant, not what the edited user already holds. Identity therefore comes
  * from the request-scoped ALS (security/request_context.ts) — the backstop role
  * that module documents for leaf-position reads. FAIL-CLOSED: no principal
- * (unit tests, background jobs) serves the empty array, never another user's
+ * (no request scope: unit tests, timer/scheduler work — NOT a job-manager job,
+ * which carries its submitter's principal snapshot) serves the empty array, never another user's
  * authorized sections.
  */
 

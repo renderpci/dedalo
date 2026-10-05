@@ -255,8 +255,10 @@ mapping, same `csrf_token`. The tool dispatcher's own gates throw registered cod
 `tool.method_not_allowed`).
 
 **Pitfalls.** Read the request id through **`toolRequestId(context)`**, never
-`context.requestId` directly: a background job outlives the request that started it and
-has none, so the helper degrades to `''` instead of crashing. `tools/` is a zero-tier
+`context.requestId` directly: a background job outlives the request that started it, so
+under the background executor the helper answers the job's OWN id (`job:<id>`, from the
+job-owned context the job manager pins at submit), and `''` only for a direct call outside
+any scope — never a crash, never the dead request's id. `tools/` is a zero-tier
 directory — an untyped throw there fails the ratchet outright.
 
 ### Recipe: refuse an MCP tool with a model-facing hint

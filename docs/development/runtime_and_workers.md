@@ -171,9 +171,19 @@ result = await runWithRequestContext(
     single seed-source and as a backstop for leaf code that has no parameter to
     reach for — it is not a licence to stop threading arguments.
 
-Outside any scope — a unit test calling a resolver directly, a background job —
-the language accessors fall back to the installation defaults from `config`, and
-`currentPrincipal()` returns `undefined`. See
+Outside any scope — a unit test calling a resolver directly, timer/scheduler
+work, a job submitted with no scope — the language accessors fall back to the
+installation defaults from `config`, and `currentPrincipal()` returns `undefined`.
+
+A job submitted to the job manager (`mediaJobs.submit`, which every background
+tool action goes through) is **not** outside a scope: the manager captures, at
+submit, the submitter's two languages and a job-owned request context — the
+submitter's principal as a snapshot, a `null` session, the job's own request id
+(`job:<id>`) and its own refusal log — and pins them around the worker
+(`JobRunScope`, `src/core/media/jobs.ts`). They are pinned, not inherited, so a
+dispatcher or pool that calls the worker from another scope cannot change them.
+The principal is the submit-time snapshot; a long job does not re-resolve it.
+Rule 3 of `engineering/REQUEST_ISOLATION.md` is the definition of record. See
 [Internationalization](internationalization.md#request-scoped-language-resolution)
 for the language scope in full.
 

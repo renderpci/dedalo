@@ -571,10 +571,12 @@ export interface SetComponentsDataOptions {
 	principal: Principal;
 	/**
 	 * The request data language for translatable role writes (PHP DEDALO_DATA_LANG).
-	 * Threaded EXPLICITLY (captured by importFiles while in request scope) rather
-	 * than read from currentDataLang() here: this is the import background-runnable
-	 * path, and a leaf ALS read would silently backstop to the installation default
-	 * once a detached executor (the ledgered Bun-Worker) drains the job (Rule 6).
+	 * Threaded EXPLICITLY (captured by importFiles at its entry) rather than read
+	 * from currentDataLang() at each leaf: explicit is the testable form. Under the
+	 * background executor the ambient value importFiles reads IS the submitter's —
+	 * the job manager pins the submit-time langs around the worker (media/jobs.ts
+	 * JobRunScope; engineering/REQUEST_ISOLATION.md rule 3) — but a leaf read
+	 * would still backstop to the installation default in any scope-less caller.
 	 */
 	dataLang: string;
 }

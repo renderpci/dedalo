@@ -66,9 +66,10 @@ export interface ToolActionContext {
 	clientIp?: string;
 	/**
 	 * The request id the tool's envelope carries (`ok(data, {requestId})`).
-	 * OPTIONAL because a background job outlives the request that started it —
-	 * read it through `toolRequestId(context)`, never directly, so a handler
-	 * running under the executor degrades to '' instead of crashing.
+	 * OPTIONAL because a background job outlives the request that started it (the
+	 * executor threads none) — read it through `toolRequestId(context)`, never
+	 * directly, so a handler running under the executor answers the job's own id
+	 * from its job-owned context instead of crashing.
 	 */
 	requestId?: string;
 	/**
@@ -79,23 +80,15 @@ export interface ToolActionContext {
 	 * the product to the job that is writing it without guessing.
 	 */
 	backgroundJobId?: string;
-	/**
-	 * The submitter's INTERFACE lang, captured at SUBMIT time by the background
-	 * executor (scheduleBackground runs in the request's synchronous flow) and
-	 * present ONLY under it. A handler whose output carries the interface lang
-	 * (tool_export's manifest + period labels) reads THIS, never the ambient
-	 * currentApplicationLang(): a queued job starts when another job's release
-	 * grants its lane slot, and which request-lang scope that continuation runs
-	 * in is the job manager's implementation detail, not a contract.
-	 */
-	applicationLang?: string;
 }
 
 /**
  * The request id for a tool handler's envelope: the explicitly threaded one,
- * else the request-scoped identity context (foreground calls run inside
- * dispatchRqo's `runWithRequestContext`), else '' (background executor — the
- * job has no live request).
+ * else the request-scoped identity context — a foreground call runs inside
+ * dispatchRqo's `runWithRequestContext` (the request's id); a background handler
+ * runs inside the job manager's job-owned context (media/jobs.ts JobRunScope:
+ * `job:<job id>`, never the long-answered submitting request's) — else '' (a
+ * direct call outside any scope, e.g. a unit harness).
  */
 export function toolRequestId(context: ToolActionContext): string {
 	return context.requestId ?? currentRequestContext()?.requestId ?? '';
