@@ -498,6 +498,11 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// in the finally of the very chain it serializes (self-draining); keys are
 	// marker names, never request identity.
 	'diffusion/targets/mediastore/media_index.ts:keyLocks',
+	// The pub/ transition seam's sinks (PUBLICATION_HOST_SPEC §5.2, M3): boot
+	// wiring — the media-copy worker registers ONE sink at boot and removes it on
+	// shutdown (the returned unregister); gates add/remove their own around each
+	// case. Functions, never request identity; not a cache.
+	'diffusion/targets/mediastore/pub_transitions.ts:sinks',
 	// --- content caches with a NON-hub invalidation contract (lifecycle
 	// documented at the declaration site) -------------------------------------
 	// Install-static media type specs (concepts/media.ts): derived from code

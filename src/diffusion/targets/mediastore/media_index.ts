@@ -45,6 +45,7 @@ import { DedaloError } from '../../../core/errors/index.ts';
 import { assertTestMediaRoot } from '../../../core/media/test_media_root.ts';
 import { escapeSqlIdentifier } from '../../plan/identifier.ts';
 import { getTargetPool, isMissingDatabaseError, isMissingTableError } from '../mariadb/db.ts';
+import { emitPubTransition } from './pub_transitions.ts';
 
 // {section_tipo}_{section_id} — tipos are strictly alphanumeric (rsc167, oh21…)
 const KEY_REGEX = /^[a-z0-9]+_[0-9]+$/i;
@@ -97,6 +98,17 @@ export function markerStoreBase(): string | null {
 export function makeMarkerKey(sectionTipo: string, sectionId: string | number): string | null {
 	const key = `${sectionTipo}_${sectionId}`;
 	return KEY_REGEX.test(key) ? key : null;
+}
+
+/**
+ * Whether `pub/<key>` exists NOW — the gate's own decision, read at the instant a
+ * copy unit is about to put (media_copy_apply.ts, decision M4). False when the
+ * store is off or the key is outside the grammar.
+ */
+export async function hasPubMarker(key: string): Promise<boolean> {
+	const base = markerStoreBase();
+	if (base === null || !KEY_REGEX.test(key)) return false;
+	return fileExists(path.join(base, 'pub', key));
 }
 
 /** Chains fn onto the per-key mutation queue (oracle with_key_lock). */
@@ -165,11 +177,15 @@ async function recomputeUnion(base: string, key: string): Promise<void> {
 	}
 
 	const pubMarker = path.join(base, 'pub', key);
+	const wasPublished = await fileExists(pubMarker);
 	if (published) {
 		await touch(pubMarker);
 	} else {
 		await unlinkQuiet(pubMarker);
 	}
+	// The gate's decision flipped: tell the copy worker (best-effort seam,
+	// pub_transitions.ts). A write that leaves the decision unchanged is silent.
+	if (wasPublished !== published) emitPubTransition(key, published);
 }
 
 /**
@@ -391,8 +407,14 @@ export async function reconcileMediaIndex(
 				// pair — apply NOTHING of it.
 				if (grown.length > 0) return { grown };
 				const pubDir = path.join(base, 'pub');
-				for (const key of diff.toAdd) await touch(path.join(pubDir, key));
-				for (const key of diff.toRemove) await unlinkQuiet(path.join(pubDir, key));
+				for (const key of diff.toAdd) {
+					await touch(path.join(pubDir, key));
+					emitPubTransition(key, true);
+				}
+				for (const key of diff.toRemove) {
+					await unlinkQuiet(path.join(pubDir, key));
+					emitPubTransition(key, false);
+				}
 				return { healed: { added: diff.toAdd.length, removed: diff.toRemove.length } };
 			},
 			{ mode: remainingFence(deadline) },
