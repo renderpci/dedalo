@@ -15,11 +15,11 @@
  * THE LOCK: `pg_try_advisory_xact_lock(DIFFUSION_TARGET_LOCK_CLASS,
  * hashtext(<key>))` held by ONE Postgres transaction for the target I/O, the
  * key naming the target the same way at every door — `sql:<database>`,
- * `files:<format>/<dir label>` (logical names, never absolute paths). Taken
- * with a TRY in a loop that holds no connection while the target is busy
- * (250 ms doubling to 2 s). The DELETE-ONLY doors (record delete, ghost
- * unpublish — sql AND files) take it SHARED: unpublishers never exclude each
- * other, only the exclusive writers. The two-int key space (class, hashtext)
+ * `files:<format>/<dir label>`, `media:<publication host>` (logical names, never
+ * absolute paths). Taken with a TRY in a loop that holds no connection while
+ * the target is busy (250 ms doubling to 2 s). The DELETE-ONLY doors (record
+ * delete, ghost unpublish — sql AND files) take it SHARED: unpublishers never
+ * exclude each other, only the exclusive writers. The two-int key space (class, hashtext)
  * cannot collide with the engine's single-bigint advisory locks (node locks,
  * 17581758 pending-retry drain, 918273645 RAG queue).
  *
@@ -43,6 +43,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { isInTransaction, sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
+import { HOST_NAME } from '../publication_host/registry.ts';
 
 /** The fence's advisory-lock class (int4): the key is (class, hashtext(target key)). */
 export const DIFFUSION_TARGET_LOCK_CLASS = 17580002;
@@ -72,6 +73,22 @@ export function sqlTargetLockKey(database: string): string {
 /** The lock key of a files target directory (`<root>/<format>/<label>`). */
 export function fileTargetLockKey(format: string, label: string): string {
 	return `files:${format}/${label}`;
+}
+
+/**
+ * The lock key of a publication host's media COPY (copy mode, PUBLICATION_HOST_SPEC
+ * §5.2): every put / mark / delete unit for that host holds it, so two processes
+ * (the server's worker, a CLI reconcile) never interleave on one host — an unpublish
+ * waits for an in-flight put of the same host, then withdraws it. The host NAME is the
+ * registry key (never an address), validated with the registry's own grammar.
+ */
+export function mediaCopyTargetLockKey(host: string): string {
+	if (!HOST_NAME.test(host)) {
+		throw new DedaloError('internal.invariant', {
+			message: 'media copy lock: not a publication host name',
+		});
+	}
+	return `media:${host}`;
 }
 
 /** How long a door waits for a busy target: forever, a bound, or not at all. */
