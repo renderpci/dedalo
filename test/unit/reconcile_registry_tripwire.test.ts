@@ -251,6 +251,18 @@ describe('reconcile registry completeness (S-10)', () => {
 		const lockstep = REGISTERED.find((d) => d.name === 'publication_apis') as ReconcileDefinition;
 		expect(typeof lockstep.schedule).toBe('object');
 		expect(lockstep.autoApply).toBeUndefined();
+		// An operator APPLY that touches a public machine is root-only at the widget door
+		// (E10): media_copy alone declares it, with a reason; reconcile_status enforces it.
+		const rootOnly = REGISTERED.filter((d) => d.applyRootOnly !== undefined);
+		expect(rootOnly.map((d) => d.name)).toEqual(['media_copy']);
+		for (const definition of rootOnly) {
+			expect((definition.applyRootOnly as { reason: string }).reason.length).toBeGreaterThan(40);
+		}
+		const widgetSource = readFileSync(
+			join(ROOT, 'src/core/area_maintenance/widgets/reconcile_status.ts'),
+			'utf8',
+		);
+		expect(widgetSource).toContain('requireApplyPrincipal(name, apply, principal)');
 	});
 
 	test('the gauge publishes every registered name with the wire keys the ops doc names', () => {

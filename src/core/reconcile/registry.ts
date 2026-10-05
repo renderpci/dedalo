@@ -76,6 +76,12 @@ export interface ReconcileDefinition {
 	 * pure hygiene (idempotent, non-destructive) — say why.
 	 */
 	autoApply?: { reason: string };
+	/**
+	 * An OPERATOR apply through the maintenance door (reconcile_status.run_reconcile) is
+	 * root-only, not merely global admin — say why. Scheduled / post-restore runs carry no
+	 * principal and are unaffected; the owner's own root door may still apply.
+	 */
+	applyRootOnly?: { reason: string };
 	/** The repo-relative modules this definition wraps (owner + shells) — the census maps hits through it. */
 	sources: readonly string[];
 	run(options: ReconcileRunOptions): Promise<ReconcileReport>;
@@ -157,6 +163,9 @@ export function validateDefinition(definition: ReconcileDefinition): void {
 	}
 	if (definition.autoApply !== undefined && definition.autoApply.reason.trim() === '') {
 		problems.push('autoApply needs a reason');
+	}
+	if (definition.applyRootOnly !== undefined && definition.applyRootOnly.reason.trim() === '') {
+		problems.push('applyRootOnly needs a reason');
 	}
 	if (problems.length > 0) {
 		throw new DedaloError('internal.invariant', {

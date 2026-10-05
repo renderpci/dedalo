@@ -60,13 +60,15 @@ import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { registryPath, updateRegistry } from '../../src/core/publication_host/registry.ts';
 import { registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
 import {
+	lastReconcileRun,
+	listReconciles,
 	REGISTERED_NAMES,
 	type ReconcileReport,
 	reconcileGauge,
 	runReconcile,
 } from '../../src/core/reconcile/registry.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
-import type { Principal } from '../../src/core/security/permissions.ts';
+import { type Principal, SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import {
 	type CopyMockAgent,
@@ -698,6 +700,39 @@ describe('reconcile registry — every definition measures its pair (S-10)', () 
 			{ isGlobalAdmin: true } as unknown as Principal,
 		);
 		expect(unknown?.data).toBe(false);
+	});
+
+	test('applyRootOnly (media_copy, E10): the widget door refuses a non-root APPLY before running; dry stays admin-level', async () => {
+		const admin = { isGlobalAdmin: true, userId: 7 } as unknown as Principal;
+		const before = lastReconcileRun('media_copy');
+		await expect(
+			reconcileStatusWidget.apiActions?.run_reconcile?.(
+				{ name: 'media_copy', apply: true, scope: ['zz_root_only_nohost'] },
+				admin,
+			) as Promise<unknown>,
+		).rejects.toMatchObject({ code: 'perm.denied' });
+		expect(lastReconcileRun('media_copy')).toBe(before); // never reached the registry
+		// a DRY run by the same admin passes the gate (it reaches the registry)
+		await reconcileStatusWidget.apiActions?.run_reconcile?.(
+			{ name: 'media_copy', scope: ['zz_root_only_nohost'] },
+			admin,
+		);
+		expect(lastReconcileRun('media_copy')).toMatchObject({ apply: false });
+		// root passes the gate: the run reaches the registry (the unknown scoped host is then
+		// the definition's own refusal, recorded as the run's error)
+		await reconcileStatusWidget.apiActions?.run_reconcile?.(
+			{ name: 'media_copy', apply: true, scope: ['zz_root_only_nohost'] },
+			{ isGlobalAdmin: true, userId: SUPERUSER_ID } as unknown as Principal,
+		);
+		expect(lastReconcileRun('media_copy')).toMatchObject({
+			apply: true,
+			error: 'resource.not_found',
+		});
+		// the facet is declared exactly where the apply touches a public machine
+		const rootOnly = listReconciles()
+			.filter((definition) => definition.applyRootOnly !== undefined)
+			.map((definition) => definition.name);
+		expect(rootOnly).toEqual(['media_copy']);
 	});
 
 	test('the widget door is DRY unless apply is the boolean true: a planted drift is reported, not repaired', async () => {

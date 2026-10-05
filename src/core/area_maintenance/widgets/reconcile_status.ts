@@ -13,11 +13,13 @@
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { registerAllReconciles } from '../../reconcile/catalog.ts';
 import {
+	getReconcile,
 	lastReconcileRun,
 	type ReconcileDefinition,
 	type ReconcileScope,
 	runReconcile,
 } from '../../reconcile/registry.ts';
+import { type Principal, SUPERUSER_ID } from '../../security/permissions.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /** One listing row — the wire shape the client renders. */
@@ -49,15 +51,30 @@ async function reconcileStatusGetValue(): Promise<WidgetResponse> {
 }
 
 /**
+ * A definition declaring `applyRootOnly` (e.g. media_copy: it puts and deletes files on a
+ * public machine, E10) refuses an APPLY from any principal but root, before it runs. A dry
+ * run stays admin-level.
+ */
+function requireApplyPrincipal(name: string, apply: boolean, principal: Principal): void {
+	if (!apply || getReconcile(name)?.applyRootOnly === undefined) return;
+	if (principal.userId === SUPERUSER_ID) return;
+	throw new DedaloError('perm.denied', {
+		message: `only the root user can apply the '${name}' reconcile`,
+	});
+}
+
+/**
  * reconcile_status.run_reconcile — run ONE registered reconcile.
  * options: { name, apply?: boolean (default false), scope?: string[] }.
  */
 async function reconcileStatusRunReconcile(
 	options: Record<string, unknown>,
+	principal: Principal,
 ): Promise<WidgetResponse> {
 	await registerAllReconciles();
 	const name = typeof options.name === 'string' ? options.name : '';
 	const apply = options.apply === true;
+	requireApplyPrincipal(name, apply, principal);
 	let scope: ReconcileScope | undefined;
 	if (options.scope !== undefined && options.scope !== null) {
 		if (!Array.isArray(options.scope) || !options.scope.every((v) => typeof v === 'string')) {

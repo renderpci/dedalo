@@ -122,6 +122,10 @@ export const MEDIA_COPY_RECONCILE: ReconcileDefinition = {
 		reason:
 			'pure derivation of pub/ ∩ public files: an apply can only copy a file the work host already publishes or remove one it no longer does — withdrawn consent must not wait for an operator',
 	},
+	applyRootOnly: {
+		reason:
+			'an operator apply puts and deletes files on a public machine (E10): root only, as publication_hosts.reconcile_media_copy',
+	},
 	sources: [
 		'src/diffusion/targets/mediastore/media_copy.ts',
 		'src/diffusion/api/media_copy.ts',
