@@ -74,6 +74,8 @@ import {
 	hostMediaDelete,
 	hostMediaManifest,
 	hostMediaMark,
+	hostMediaMarkers,
+	isAgentMarkerKey,
 	hostMediaPut,
 	type MediaManifest,
 } from '../../../core/publication_host/agent_client.ts';
@@ -742,6 +744,25 @@ export function applyCopy(
 export function withdrawNow(host: string, keys: readonly string[]): Promise<void> {
 	const deps = realCopyDeps();
 	return withdrawNowWith({ ...deps, takesCopy: (name) => hostTakesCopy(name) }, host, keys);
+}
+
+/**
+ * WITHDRAW WHAT NO FLIP REACHED, OUTSIDE THE LANE: every marker the agent holds whose key
+ * has no `pub/` marker here gets `mark false` at once (withdrawNow: recorded pending, no
+ * lane, no lock — order-safe per withdrawNowWith). The pub/ seam only reaches sinks in
+ * its own process, so a flip made elsewhere (a crashed runner, an out-of-machine runner,
+ * a relay that ran out of time) is caught by the media_copy reconcile's apply, which
+ * calls this BEFORE queueing behind a running lane unit (a long first copy or AV round),
+ * never after it. Reads ONE manifest page (hostMediaMarkers). Not a copy host → 0.
+ */
+export async function withdrawStrayMarkers(host: string): Promise<number> {
+	if (!(await hostTakesCopy(host))) return 0;
+	const stray: string[] = [];
+	for (const key of await hostMediaMarkers(host)) {
+		if (isAgentMarkerKey(key) && !(await hasPubMarker(key))) stray.push(key);
+	}
+	if (stray.length > 0) await withdrawNow(host, stray);
+	return stray.length;
 }
 
 /** One worker run for one host: withdraw the hook's keys first, then plan + apply. */

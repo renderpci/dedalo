@@ -19,7 +19,8 @@
  * keys and host names, planted files removed by path.
  */
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { getPublicQualities } from '../../src/core/media/protection.ts';
@@ -50,6 +51,7 @@ import {
 	unregisterCopyMockHost,
 	useScratchMediaCopyStores,
 } from '../helpers/media_copy_mock_agent.ts';
+import { childDriver, repoModule } from '../helpers/child_driver.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO = join(import.meta.dir, '..', '..');
@@ -66,6 +68,17 @@ const PUBLISHED = {
 	bytes: 'zzmc media copy — published bytes',
 };
 const UNPUBLISHED = { key: 'zzmc1_990002', rel: `${QUALITY}/0/zzmc2_zzmc1_990002.jpg` };
+const RELAY = { key: 'zzmc1_990009', id: 990009 };
+
+function gatedLane(): { gate: Promise<void>; release: () => void } {
+	let release = () => {};
+	const gate = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	return { gate, release };
+}
+
+const children = childDriver('zzmc-relay');
 const STRAY_SEED: MockSeed = {
 	entries: { [UNPUBLISHED.rel]: { size: 3, sha256: 'a'.repeat(64) } },
 	markers: [UNPUBLISHED.key],
@@ -131,7 +144,10 @@ afterEach(async () => {
 	unplantPublished();
 });
 
-afterAll(() => stores?.dispose());
+afterAll(() => {
+	children.dispose();
+	stores?.dispose();
+});
 
 describe('media_copy definition', () => {
 	test('name, two stores, interval = MEDIA_COPY_PERIOD_MS, auto-applied with a reason, scoped by host', () => {
@@ -349,6 +365,12 @@ describe('media_copy run', () => {
 			const firstHook = worker.sync('zzmc_lane');
 			await Bun.sleep(1);
 			const run = runMediaCopyReconcile({ apply: true, scope: ['zzmc_lane'] });
+			// the pre-lane withdrawal (one marker read, outside the lane) runs first; only
+			// then does the reconcile queue its unit — queue the second hook after it
+			for (let i = 0; i < 500 && !copy.calls.includes('GET /v1/media/manifest'); i++) {
+				await Bun.sleep(2);
+			}
+			await Bun.sleep(20);
 			const secondHook = worker.sync('zzmc_lane');
 			await Bun.sleep(20);
 			// the reconcile waits behind the held hook run: nothing sent yet
@@ -367,6 +389,83 @@ describe('media_copy run', () => {
 			stop();
 		}
 	}, 60_000);
+
+	test('a marker the agent holds with no local pub/ (an unpublish made in ANOTHER process) is withdrawn BEFORE the reconcile queues behind a running lane unit', async () => {
+		const copy = await agent('zzmc_prelane', 'copy', { markers: [UNPUBLISHED.key] });
+		const held = gatedLane();
+		const stop = startMediaCopyWorker({
+			listHosts: () => ['zzmc_prelane'],
+			publishDebounceMs: 60_000,
+			syncHost: async () => {
+				await held.gate;
+				return null;
+			},
+		});
+		try {
+			const worker = activeMediaCopyWorker();
+			if (worker === null) throw new Error('worker not started');
+			const longRound = worker.sync('zzmc_prelane');
+			await Bun.sleep(1);
+			const run = runMediaCopyReconcile({ apply: true, scope: ['zzmc_prelane'] });
+			for (let i = 0; i < 500 && copy.markers.has(UNPUBLISHED.key); i++) await Bun.sleep(2);
+			// the lane is still held by the long round, yet the withdrawal reached the agent
+			expect(copy.markers.has(UNPUBLISHED.key)).toBe(false);
+			expect(copy.events).toEqual([`mark ${UNPUBLISHED.key} false`]);
+			held.release();
+			await longRound;
+			await run;
+		} finally {
+			held.release();
+			stop();
+		}
+	}, 60_000);
+
+	test('CROSS-PROCESS: an unpublish flipped by applyTableState in a RUNNER-shaped child process reaches the agent (mark false) through the runner relay', async () => {
+		const copy = await agent('zzmc_relay', 'copy', { markers: [RELAY.key] });
+		const markerBase = mkdtempSync(join(tmpdir(), 'zzmc-relay-idx-'));
+		for (const rel of ['dbs/zzmc_db/zzmc_table', 'pub']) {
+			mkdirSync(join(markerBase, rel), { recursive: true });
+		}
+		writeFileSync(join(markerBase, 'dbs/zzmc_db/zzmc_table', RELAY.key), '');
+		writeFileSync(join(markerBase, 'pub', RELAY.key), '');
+		try {
+			const result = await children.run(
+				'relay_child.ts',
+				`import { overridePublicationHostsBaseForTests } from ${repoModule('src/core/publication_host/registry.ts')};
+import { startRunnerMediaCopyRelay } from ${repoModule('src/diffusion/api/media_copy.ts')};
+import { applyTableState, overrideMediaIndexBaseForTests } from ${repoModule('src/diffusion/targets/mediastore/media_index.ts')};
+overridePublicationHostsBaseForTests(${JSON.stringify(stores?.base)});
+overrideMediaIndexBaseForTests(${JSON.stringify(markerBase)});
+const relay = startRunnerMediaCopyRelay();
+await applyTableState('zzmc_db', 'zzmc_table', 'zzmc1', [], [${RELAY.id}]);
+console.log(JSON.stringify({ drained: await relay.stop(30_000) }));
+process.exit(0);
+`,
+				{},
+			);
+			expect(result.exitCode, result.stderr).toBe(0);
+			expect(result.stdout).toContain('{"drained":true}');
+			expect(copy.markers.has(RELAY.key)).toBe(false);
+			expect(copy.events).toEqual([`mark ${RELAY.key} false`]);
+			// recorded pending first, in the shared runtime file (verified by the next round)
+			const pending = (await loadRuntime()).zzmc_relay?.media_copy.pending_deletions ?? [];
+			expect(pending.map((entry) => entry.path)).toEqual([`.publication/pub/${RELAY.key}`]);
+		} finally {
+			rmSync(markerBase, { recursive: true, force: true });
+		}
+	}, 60_000);
+
+	test('runner.ts starts the relay before the job and drains it before closing the pool', () => {
+		const source = stripComments(readFileSync(join(REPO, 'src/diffusion/runner.ts'), 'utf8'));
+		const start = source.indexOf('const relay = startRunnerMediaCopyRelay();');
+		const job = source.indexOf('await runJob(jobId, epoch);');
+		const drain = source.indexOf('await relay.stop();');
+		const close = source.indexOf('await closeDatabasePool();', job);
+		expect(start).toBeGreaterThan(0);
+		expect(start).toBeLessThan(job);
+		expect(drain).toBeGreaterThan(job);
+		expect(drain).toBeLessThan(close);
+	});
 
 	test('an unknown scoped host is a typed resource.not_found (never an empty success)', async () => {
 		await expect(

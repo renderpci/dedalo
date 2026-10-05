@@ -922,8 +922,8 @@ export async function collectMediaManifest(
 	return { entries, irregular, markers: first.markers };
 }
 
-function manifestCommand(cursor: string | null): Command {
-	const query: Record<string, string> = { limit: String(MEDIA_MANIFEST_PAGE_LIMIT) };
+function manifestCommand(cursor: string | null, limit = MEDIA_MANIFEST_PAGE_LIMIT): Command {
+	const query: Record<string, string> = { limit: String(limit) };
 	if (cursor !== null) query.cursor = cursor;
 	return command('media.manifest', 'GET', MANIFEST_PATH, {
 		query,
@@ -935,6 +935,16 @@ function manifestCommand(cursor: string | null): Command {
  * The agent's full media manifest (copy mode only — the agent refuses otherwise). A READ:
  * it rides the cached pairing proof like status (E6), every page through the one door.
  */
+/**
+ * The agent's mirrored `pub/` markers ONLY: one first manifest page of ONE entry (the first
+ * page carries every marker), never the whole file list. A READ, like hostMediaManifest.
+ */
+export async function hostMediaMarkers(name: string): Promise<string[]> {
+	const host = requireHost(name);
+	const answer = await readCall(host, manifestCommand(null, 1));
+	return parseMediaManifestPage(answer.body, true, host.name).markers;
+}
+
 export async function hostMediaManifest(name: string): Promise<MediaManifest> {
 	const host = requireHost(name);
 	return collectMediaManifest(async (cursor) => {

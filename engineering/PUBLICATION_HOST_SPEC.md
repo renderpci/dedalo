@@ -403,6 +403,15 @@ truth, the `media_index` law.
     (`src/diffusion/targets/mediastore/media_copy_worker.ts`).
   - The worker runs in-process, not as a diffusion runner, so long AV transfers never hold
     the runner slots that publishing uses.
+  - The hook reaches only sinks of its OWN process, and a diffusion job runs in a spawned
+    runner (`src/diffusion/runner.ts`). So the runner starts a relay
+    (`MediaCopyRelay`, `startRunnerMediaCopyRelay` in `src/diffusion/api/media_copy.ts`):
+    an unpublish it flips is sent as `mark false` to every copy host at once (no lane, no
+    round, no transfer in the runner), drained before exit (bounded,
+    `MEDIA_COPY_RELAY_DRAIN_MS`). Whatever a relay misses (killed, out of time, an
+    out-of-machine runner) the reconcile's apply withdraws FIRST, outside the lane
+    (`withdrawStrayMarkers`: every agent marker with no local `pub/`, one manifest page),
+    so it never waits behind a running first-copy or AV round.
   - Cross-process ordering uses the advisory target lock (`mediaCopyTargetLockKey(host)`,
     `src/core/diffusion_bridge/target_lock.ts`).
   - `pub/<key>` is re-checked immediately before each put, so a put never lands after its

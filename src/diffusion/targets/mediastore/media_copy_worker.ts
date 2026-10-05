@@ -28,6 +28,13 @@
  *    Cross-process ordering is the advisory target lock each unit takes
  *    (media_copy_apply.ts, `media:<host>`; held for control calls only, never a
  *    transfer); an immediate withdrawal takes none (see withdrawNowWith).
+ *  - OTHER PROCESSES FLIP pub/ TOO. The seam (pub_transitions.ts) reaches only sinks of
+ *    its own process, and a diffusion job runs in a SPAWNED runner. So the runner starts
+ *    a MediaCopyRelay (below; runner.ts main): path (1) only — `mark false` at once, no
+ *    lane, no round — drained (bounded) before the runner exits. Whatever a relay misses
+ *    (killed, out of time, an out-of-machine runner) the media_copy reconcile's apply
+ *    withdraws BEFORE it queues behind a running unit (media_copy.ts
+ *    withdrawStrayMarkers), never after the round.
  *  - DETACHED FROM THE WRITER'S TRANSACTION. A flip is emitted from inside a marker
  *    writer's transaction (a runner batch's fenced unit, the fenced media_index
  *    reconcile), and a timer or microtask scheduled there inherits its async context.
@@ -283,6 +290,108 @@ export class MediaCopyWorker {
 			console.error(`[media_copy] ${host}: afterSync listener failed:`, error);
 		}
 	}
+}
+
+/** How long a runner waits, at exit, for its relay's withdrawals (the reconcile catches the rest). */
+export const MEDIA_COPY_RELAY_DRAIN_MS = 60_000;
+
+export interface MediaCopyRelayDeps {
+	listHosts(): string[];
+	withdrawNow(host: string, keys: readonly string[]): Promise<void>;
+}
+
+/**
+ * THE RUNNER'S RELAY: the worker's path (1) and nothing else. An unpublished key is
+ * withdrawn on every registry host at once (deps.withdrawNow — detached from the writer's
+ * transaction, logged, never thrown); a publish is ignored (the server's reconcile plans
+ * the copy: a runner never streams a transfer). `drain` waits for what is in flight.
+ */
+export class MediaCopyRelay {
+	private readonly keys = new Set<string>();
+	private readonly inFlight = new Set<Promise<void>>();
+	private flushScheduled = false;
+	private readonly deps: MediaCopyRelayDeps;
+	private unregister: (() => void) | null = null;
+
+	constructor(deps: MediaCopyRelayDeps) {
+		this.deps = deps;
+	}
+
+	notify(key: string, published: boolean): void {
+		if (published || this.unregister === null) return;
+		if (!isAgentMarkerKey(key)) {
+			console.error(
+				`[media_copy] relay: unpublished key ${JSON.stringify(key)} is outside the agent marker grammar (dropped)`,
+			);
+			return;
+		}
+		this.keys.add(key);
+		if (this.flushScheduled) return;
+		this.flushScheduled = true;
+		queueMicrotask(() => this.flush());
+	}
+
+	/** Hook the relay to this process's pub/ seam. */
+	start(): this {
+		this.unregister = registerMediaCopySink((key, published) =>
+			runDetachedFromTransaction(() => this.notify(key, published)),
+		);
+		return this;
+	}
+
+	/** Unhook, then wait up to `boundMs` for the withdrawals in flight. True = all settled. */
+	async stop(boundMs: number = MEDIA_COPY_RELAY_DRAIN_MS): Promise<boolean> {
+		await Promise.resolve(); // a flush scheduled by the last flip runs first
+		this.unregister?.();
+		this.unregister = null;
+		const settled = Promise.all([...this.inFlight]).then(() => true);
+		const timeout = new Promise<false>((resolve) =>
+			setTimeout(() => resolve(false), boundMs).unref?.(),
+		);
+		const drained = await Promise.race([settled, timeout]);
+		if (!drained) {
+			console.error(
+				`[media_copy] relay: ${this.inFlight.size} withdrawal(s) still in flight after ${boundMs} ms (the media_copy reconcile withdraws them)`,
+			);
+		}
+		return drained;
+	}
+
+	private flush(): void {
+		this.flushScheduled = false;
+		const keys = [...this.keys];
+		this.keys.clear();
+		for (const host of this.hostsOrNone()) {
+			const sent: Promise<void> = runDetachedFromTransaction(() =>
+				this.deps.withdrawNow(host, keys),
+			)
+				.catch((error: unknown) => {
+					console.error(
+						`[media_copy] relay: ${host}: withdrawal failed (the media_copy reconcile withdraws again):`,
+						error,
+					);
+				})
+				.finally(() => this.inFlight.delete(sent));
+			this.inFlight.add(sent);
+		}
+	}
+
+	private hostsOrNone(): string[] {
+		try {
+			return this.deps.listHosts();
+		} catch (error) {
+			console.error(
+				'[media_copy] relay: publication host registry unreadable (not forwarded):',
+				error,
+			);
+			return [];
+		}
+	}
+}
+
+/** Start a relay (a runner process). Its stop drains the withdrawals in flight, bounded. */
+export function startMediaCopyRelay(deps: MediaCopyRelayDeps): MediaCopyRelay {
+	return new MediaCopyRelay(deps).start();
 }
 
 // The one started worker (module_state_tripwire LET row): boot wiring set by

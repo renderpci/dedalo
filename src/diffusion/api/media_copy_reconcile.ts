@@ -10,7 +10,9 @@
  * (src/diffusion/api/media_copy.ts):
  *   - DRY: planMediaCopyHost — Task 9's hostTakesCopy with no n/a write, then planCopy.
  *     Writes NOTHING but the local sha cache (no runtime, no agent mutation).
- *   - APPLY: inMediaCopyHostLane — ONE unit of the started worker's per-host serialized
+ *   - APPLY: first, OUTSIDE the lane, withdrawStrayMarkers (a marker the agent holds with
+ *     no local pub/: an unpublish made in another process — a runner — must not queue
+ *     behind a running round); then inMediaCopyHostLane — ONE unit of the started worker's per-host serialized
  *     lane (direct in a CLI process; the advisory target lock orders it across processes)
  *     holds the pre-plan, the round and the re-plan, so a scheduled run never interleaves
  *     with a pub/ hook run and `applied` never counts a hook run's work. Mode detection, the non-copy verdict (debt
@@ -39,7 +41,12 @@ import type {
 } from '../../core/reconcile/registry.ts';
 import { type CopyPlan, planCopy } from '../targets/mediastore/media_copy.ts';
 import type { CopyApplyReport } from '../targets/mediastore/media_copy_apply.ts';
-import { inMediaCopyHostLane, type LaneSync, planMediaCopyHost } from './media_copy.ts';
+import {
+	inMediaCopyHostLane,
+	type LaneSync,
+	planMediaCopyHost,
+	withdrawStrayMarkers,
+} from './media_copy.ts';
 
 export interface MediaCopyHostOutcome {
 	/** Task 9's copy-mode verdict; null when it could not be decided (the run failed first). */
@@ -205,8 +212,35 @@ async function applyInLane(name: string, sync: LaneSync): Promise<MediaCopyHostO
 	return sentOutcome(name, planned, report);
 }
 
-function applyOutcome(name: string): Promise<MediaCopyHostOutcome> {
-	return inMediaCopyHostLane(name, (sync) => applyInLane(name, sync));
+/**
+ * BEFORE the lane: withdraw every marker the agent holds that no local `pub/` backs
+ * (withdrawStrayMarkers — no lane, no lock). The lane may be busy with a long first copy
+ * or AV round; an unpublish no in-process flip reached (made by a runner) must not wait
+ * for it. Best-effort: a failure is logged (0) and the lane round withdraws again.
+ */
+async function withdrawBeforeLane(name: string): Promise<number> {
+	try {
+		return await withdrawStrayMarkers(name);
+	} catch (error) {
+		loggedCode(name, 'pre-lane withdrawal', error);
+		return 0;
+	}
+}
+
+/** The pre-lane withdrawals are planned mark changes, sent: measured like the lane's own. */
+function withEarlyMarks(outcome: MediaCopyHostOutcome, early: number): MediaCopyHostOutcome {
+	if (early === 0 || outcome.planned === null) return outcome;
+	return {
+		...outcome,
+		planned: { ...outcome.planned, mark: outcome.planned.mark + early },
+		sent: outcome.sent === null ? null : { ...outcome.sent, marked: outcome.sent.marked + early },
+	};
+}
+
+async function applyOutcome(name: string): Promise<MediaCopyHostOutcome> {
+	const early = await withdrawBeforeLane(name);
+	const outcome = await inMediaCopyHostLane(name, (sync) => applyInLane(name, sync));
+	return withEarlyMarks(outcome, early);
 }
 
 /** A failed host's drift is its known debt (at least 1: its state is unknown). */

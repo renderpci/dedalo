@@ -26,6 +26,7 @@ import {
 	activeMediaCopyWorker,
 	inMediaCopyLane,
 	MediaCopyWorker,
+	startMediaCopyRelay,
 	startMediaCopyWorker,
 } from '../../src/diffusion/targets/mediastore/media_copy_worker.ts';
 import { emitPubTransition } from '../../src/diffusion/targets/mediastore/pub_transitions.ts';
@@ -400,6 +401,35 @@ describe('MediaCopyWorker', () => {
 		expect(drained).toEqual([[]]);
 		const work2 = w.exclusive('pub1', async (take) => [...take()]);
 		expect(await work2).toEqual([]);
+	});
+});
+
+describe('the runner relay (cross-process M2)', () => {
+	test('an unpublish is withdrawn on every host at once; a publish is ignored (a runner never copies); stop drains, bounded', async () => {
+		const sent: string[] = [];
+		const relay = startMediaCopyRelay({
+			listHosts: () => ['pub1', 'pub2'],
+			withdrawNow: async (host, keys) => {
+				sent.push(`${host}:${keys.join(',')}`);
+			},
+		});
+		emitPubTransition('test3_1', true);
+		emitPubTransition('test3_2', false);
+		emitPubTransition('test3_3', false);
+		expect(await relay.stop(5_000)).toBe(true);
+		expect(sent).toEqual(['pub1:test3_2,test3_3', 'pub2:test3_2,test3_3']);
+		// stopped: no longer hears the seam
+		emitPubTransition('test3_4', false);
+		await Bun.sleep(1);
+		expect(sent).toHaveLength(2);
+		const stuck = startMediaCopyRelay({
+			listHosts: () => ['pub1'],
+			withdrawNow: async () => {
+				await new Promise(() => {});
+			},
+		});
+		emitPubTransition('test3_5', false);
+		expect(await stuck.stop(20)).toBe(false);
 	});
 });
 

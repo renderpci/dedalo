@@ -13,6 +13,7 @@ import {
 	planCopy,
 	syncHost,
 	withdrawNow,
+	withdrawStrayMarkers,
 } from '../targets/mediastore/media_copy.ts';
 import {
 	type CopyApplyReport,
@@ -22,12 +23,26 @@ import {
 } from '../targets/mediastore/media_copy_apply.ts';
 import {
 	inMediaCopyLane,
+	type MediaCopyRelay,
 	PUBLISH_DEBOUNCE_MS,
+	startMediaCopyRelay,
 	startMediaCopyWorker,
 } from '../targets/mediastore/media_copy_worker.ts';
 
-export type { CopyApplyReport };
-export { inMediaCopyLane };
+export type { CopyApplyReport, MediaCopyRelay };
+export { inMediaCopyLane, withdrawStrayMarkers };
+
+/**
+ * A DIFFUSION RUNNER's relay (its own process, spawned per job): an unpublish flipped
+ * there reaches every copy host's agent at once (`mark false`), exactly as the server
+ * worker's immediate withdrawal does. The runner never runs a copy round.
+ */
+export function startRunnerMediaCopyRelay(): MediaCopyRelay {
+	return startMediaCopyRelay({
+		listHosts: () => loadRegistry().hosts.map((host) => host.name),
+		withdrawNow,
+	});
+}
 
 /** Boot: start the worker on the registry's hosts. Returns its stop (shutdown drain). */
 export function startMediaCopy(
