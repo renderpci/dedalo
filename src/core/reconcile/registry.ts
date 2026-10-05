@@ -112,6 +112,7 @@ export const REGISTERED_NAMES: readonly string[] = [
 	'ontology_identifiers',
 	'hierarchy',
 	'public_tier',
+	'publication_apis',
 ];
 
 // Process-lifetime registry state (module_state_tripwire allowlisted): the

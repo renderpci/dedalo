@@ -91,6 +91,11 @@ export const POST_RESTORE_PLAN: readonly PostRestoreStep[] = [
 		apply: false,
 		why: 'a restore makes every record published after the backup a public-tier GHOST; apply UNPUBLISHES them from a museum site, which the operator confirms against the dry list rather than a door doing it unasked',
 	},
+	{
+		name: 'publication_apis',
+		apply: false,
+		why: 'a DATA restore does not change the code tree, and pushing Publication API code to a public host is root-only (publication_hosts push_apis) or done by a confirmed CODE restore boot; the dry verdict names the hosts that lag',
+	},
 ];
 
 export interface PostRestoreStepResult {

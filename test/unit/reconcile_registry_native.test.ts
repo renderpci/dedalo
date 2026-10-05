@@ -39,6 +39,7 @@ import {
 	upsertEmbeddingRows,
 } from '../../src/ai/rag/vector_store.ts';
 import { config } from '../../src/config/config.ts';
+import { privateDir } from '../../src/config/env.ts';
 import { widget as reconcileStatusWidget } from '../../src/core/area_maintenance/widgets/reconcile_status.ts';
 import {
 	ddOntologyConstraintStates,
@@ -55,6 +56,7 @@ import { ensureHierarchy } from '../../src/core/ontology/hierarchy_state.ts';
 import { deleteOntologyByTld } from '../../src/core/ontology/ontology_delete.ts';
 import { rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { registryPath, updateRegistry } from '../../src/core/publication_host/registry.ts';
 import { registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
 import {
 	REGISTERED_NAMES,
@@ -73,6 +75,7 @@ import {
 	SEED_TERM,
 	TERM_SECTION,
 } from '../helpers/observer_term_seed.ts';
+import { useScratchPublicationHostsBase } from '../helpers/publication_host_fixtures.ts';
 import { cleanScratchTipo } from '../helpers/test_data.ts';
 
 /* ------------------------------------------------------------ situations */
@@ -101,6 +104,14 @@ const HIER_ID = 900031;
 const USER_ID = -1;
 
 const RAG_MODEL = `zzrcmodel${process.pid}`;
+/** The scratch publication host the publication_apis planter pairs (never dialled). */
+const PUBHOST = 'zzrc_pubhost';
+/**
+ * The publication-host registry this file reads and writes: a declared scratch base for
+ * the WHOLE file (armed in beforeAll), so the clean publication_apis dry run never reads —
+ * nor dials — the installation's paired hosts in `<private>/publication_hosts.json`.
+ */
+let pubhostBase: { base: string; dispose: () => void } | null = null;
 
 /** Scratch files planted in the SUITE media root, removed by path. */
 const planted: string[] = [];
@@ -205,6 +216,7 @@ async function sweepObserverScratch(): Promise<void> {
 }
 
 beforeAll(async () => {
+	pubhostBase = useScratchPublicationHostsBase();
 	await registerAllReconciles();
 	// The situation is BUILT, not inherited: a freshly rebuilt suite media root
 	// (`bun run test:db:setup`) holds only its marker, and files_info's sweep
@@ -282,6 +294,8 @@ beforeAll(async () => {
 }, 120000);
 
 afterAll(async () => {
+	pubhostBase?.dispose();
+	pubhostBase = null;
 	await sweepObserverScratch();
 	await dropObserverTerm();
 	await deleteRagRecord({ sectionTipo: RAG_SECTION, sectionId: 7 }).catch(() => {});
@@ -519,6 +533,40 @@ const PLANTERS: Record<string, Planter> = {
 				recursive: true,
 				force: true,
 			});
+		},
+	},
+	publication_apis: {
+		async plant() {
+			// A paired host whose lockstep the running tree cannot prove. The suite runs a
+			// dev checkout (no install stamp → no verified release, refused before any hash),
+			// so both APIs count as drift WITHOUT dialling the socket; an installed tree
+			// would instead fail both on the unreachable socket — 2 either way. The
+			// registry must be the test-isolated one, never the installation's.
+			expect(registryPath()).not.toBe(join(privateDir, 'publication_hosts.json'));
+			expect(registryPath().startsWith(pubhostBase?.base ?? '<unarmed>')).toBe(true);
+			updateRegistry((current) => ({
+				...current,
+				hosts: [
+					...current.hosts,
+					{
+						name: PUBHOST,
+						instance: 'test',
+						fingerprint: '0'.repeat(64),
+						address: { kind: 'unix', socket: `/nonexistent/${PUBHOST}.sock` },
+						public_url: null,
+						qualities: null,
+						probe: { published: null, unpublished: null },
+						paired_at: '2026-10-03T00:00:00.000Z',
+					},
+				],
+			}));
+			return 2;
+		},
+		async unplant() {
+			updateRegistry((current) => ({
+				...current,
+				hosts: current.hosts.filter((host) => host.name !== PUBHOST),
+			}));
 		},
 	},
 	hierarchy: {

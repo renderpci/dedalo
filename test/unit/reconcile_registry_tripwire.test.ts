@@ -210,6 +210,7 @@ describe('reconcile registry completeness (S-10)', () => {
 			ontology_identifiers: 'src/core/ontology/identifier_grammar.ts',
 			hierarchy: 'src/core/ontology/hierarchy_state.ts',
 			public_tier: 'src/diffusion/api/reconcile.ts',
+			publication_apis: 'src/core/publication_host/api_reconcile.ts',
 		};
 		for (const definition of REGISTERED) {
 			const owner = owners[definition.name];
@@ -240,6 +241,11 @@ describe('reconcile registry completeness (S-10)', () => {
 				'operator',
 			);
 		}
+		// Publication API lockstep (phase 4): an INTERVAL dry check — code is never
+		// pushed by a timer (its apply is refused at the registry, perm.denied).
+		const lockstep = REGISTERED.find((d) => d.name === 'publication_apis') as ReconcileDefinition;
+		expect(typeof lockstep.schedule).toBe('object');
+		expect(lockstep.autoApply).toBeUndefined();
 	});
 
 	test('the gauge publishes every registered name with the wire keys the ops doc names', () => {
