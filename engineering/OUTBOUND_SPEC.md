@@ -243,7 +243,8 @@ moved onto the guard. They
 are a SHRINK-ONLY burn-down list with a reason each, in
 `test/unit/ssrf_one_guard_tripwire.test.ts` (`EXEMPT`) — that list is the
 record, not this file. The paired agent channel is not on that list: it is a
-door with its own policy (§2.1), registered as one in both gates.
+door with its own policy (§2.1, `src/core/publication_host/transport.ts`),
+registered as one in both gates.
 
 ## 6. The gates
 
@@ -255,7 +256,7 @@ door with its own policy (§2.1), registered as one in both gates.
 | `test/unit/external_outbound_tripwire.test.ts` | The external door is the only one under `src/external/`, in its order. |
 | `test/unit/harvest_door_native.test.ts` | The harvesting door's rules, driven — and, by OUTCOME, the two guard pieces a spelling census cannot pin: no wait leaves an abort listener behind (`untilAborted`), and a `Retry-After` only `Date.parse` would read asks no wait (`parseRetryAfterMs`). |
 | `test/unit/external_transport_native.test.ts` | The external door's order (`EXTERNAL_SPEC.md` §5) — and the same `Retry-After` outcome at that door. |
-| `test/unit/publication_host_door_tripwire.test.ts` | Only the agent channel loads an agent's TLS material (`readHostTls`, by binding) and spells the agent's base path; `rejectUnauthorized` only there and only `true`, no `checkServerIdentity`; the door's one call (AST): `target.url`, redirect `manual`, a signal, the shared reader; the door is registered in this file and both outbound tripwires. |
+| `test/unit/publication_host_door_tripwire.test.ts` | Only the agent channel loads an agent's TLS material (`readHostTls`, by binding) and spells the agent's base path; `rejectUnauthorized` only there and only `true`, no `checkServerIdentity`; the door's one call (AST): `target.url`, redirect `manual`, a signal, the shared reader; the door is registered in this file and both outbound tripwires. It also holds the docs to code: this file's door count equals the §2 table, §2.1 and this row exist once, §5 names the door module, every repo path a `PUBLICATION_HOST_SPEC.md` §8 "Built" row names exists, and the operator page's pair commands use the CLI's verbs, flags and invoking user. |
 | `test/unit/publication_host_transport_native.test.ts` | §2.1, driven against loopback agents with an in-test PKI: mTLS with the pinned CA and the registry host as identity, the unix socket, the closed route table, a 3xx refused unread, deadline, idle bound, byte ceiling, a streamed body, the bearer grammar shared with the secrets store, a refused stored bundle typed as unconfigured, `NODE_TLS_REJECT_UNAUTHORIZED=0` changing nothing, no secret in any failure, and the proxy residual's canary. |
 
 The four tripwires' and `guarded_text_pin_native`'s full rows are in

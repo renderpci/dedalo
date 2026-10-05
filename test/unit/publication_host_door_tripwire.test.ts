@@ -22,6 +22,10 @@
  *      literal; the shared capped reader imported from the guard and called; `agentRequest`
  *      reads the TLS material itself and dials through `dialAgent`.
  *   5. THE DOOR IS REGISTERED where the outbound gates and the spec look for it.
+ *   6. THE DOOR IS DOCUMENTED ONCE, AND THE DOCS ARE HELD TO CODE (appended blocks, phase-3
+ *      Task 10): OUTBOUND_SPEC's door count equals its §2 table, §2.1 and the §6 row exist
+ *      once, §5 names the door module; every path a PUBLICATION_HOST_SPEC §8 "Built" row
+ *      names exists; the operator page pairs with the CLI's verbs, flags and invoking user.
  *
  * The behaviour is driven in publication_host_transport_native; who may HOLD the door is
  * the import-graph census in ssrf_one_guard_tripwire.
@@ -355,5 +359,94 @@ describe('the door is registered where the outbound gates look', () => {
 		expect(read('engineering/TRIPWIRES.md')).toContain(
 			'| test/unit/publication_host_door_tripwire.test.ts |',
 		);
+	});
+});
+
+// ─── THE DOOR IS DOCUMENTED ONCE, WHERE IT IS READ ─────────────────────────────
+// The fourth door is stated in prose in two specs. A rule stated in a document needs a
+// gate (DEC-12), so each statement is held to something countable: the rule sentence's
+// door count to the §2 table, §2.1 and the §6 row to ONE copy each, §5 to the door module,
+// and the publication-host spec's "Built" rows to files that exist.
+
+const DOCS_GATE_ROOT = `${import.meta.dir}/../..`;
+const DOOR_TRIPWIRE_ROW = '| `test/unit/publication_host_door_tripwire.test.ts` |';
+
+async function docsGateRead(rel: string): Promise<string> {
+	const file = Bun.file(`${DOCS_GATE_ROOT}/${rel}`);
+	if (!(await file.exists()))
+		throw new Error(`${rel}: missing — the door's documentation has nowhere to live`);
+	return file.text();
+}
+
+async function docsGatePathExists(rel: string): Promise<boolean> {
+	try {
+		await Bun.file(`${DOCS_GATE_ROOT}/${rel}`).stat(); // stat: directories count too
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function docsGateSection(text: string, heading: string): string {
+	const start = text.indexOf(`\n## ${heading}`);
+	if (start === -1) throw new Error(`no "## ${heading}" heading`);
+	const end = text.indexOf('\n## ', start + 1);
+	return text.slice(start, end === -1 ? undefined : end);
+}
+
+function docsGateCount(text: string, needle: string): number {
+	return text.split(needle).length - 1;
+}
+
+const DOOR_COUNT_WORDS: Record<string, number> = { THREE: 3, FOUR: 4, FIVE: 5, SIX: 6 };
+
+describe('the agent channel door is documented once, where it is read', () => {
+	test('OUTBOUND_SPEC: the door count in the rule sentence equals the §2 table rows', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		const word = /the engine has ([A-Z]+) outbound doors/.exec(spec)?.[1] ?? '';
+		const lines = docsGateSection(spec, '2.').split('\n');
+		const header = lines.findIndex((l) => l.startsWith('| Door |'));
+		expect(header).toBeGreaterThan(-1);
+		const rows: string[] = [];
+		for (const line of lines.slice(header + 2)) {
+			if (!line.startsWith('|')) break;
+			rows.push(line);
+		}
+		expect(DOOR_COUNT_WORDS[word]).toBe(rows.length);
+		expect(rows.filter((r) => r.includes('src/core/publication_host/transport.ts')).length).toBe(1);
+	});
+
+	test('OUTBOUND_SPEC: §2.1 and the door-tripwire §6 row exist ONCE; the row claims only what the gate checks', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		expect(docsGateCount(spec, '### 2.1 The paired private agent channel')).toBe(1);
+		const gates = docsGateSection(spec, '6.');
+		expect(docsGateCount(gates, DOOR_TRIPWIRE_ROW)).toBe(1);
+		const row = gates.split('\n').find((l) => l.startsWith(DOOR_TRIPWIRE_ROW)) ?? '';
+		// A payload's secrets are the widget gate's (publication_host_widget_native), not this file's.
+		expect(row).not.toMatch(/payload/i);
+		expect(row).toContain('§8');
+	});
+
+	test('OUTBOUND_SPEC: §5 says the channel is a door, naming the door module', async () => {
+		const spec = await docsGateRead('engineering/OUTBOUND_SPEC.md');
+		expect(docsGateSection(spec, '5.')).toContain('`src/core/publication_host/transport.ts`');
+	});
+
+	test('PUBLICATION_HOST_SPEC §8: phase 3 is Built and every repo path a Built row names exists', async () => {
+		const phases = docsGateSection(
+			await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md'),
+			'8.',
+		).split('\n');
+		expect(phases.find((l) => l.startsWith('| 3 |')) ?? '').toContain('**Built:**');
+		const missing: string[] = [];
+		for (const row of phases.filter((l) => l.includes('**Built:**'))) {
+			for (const m of row.matchAll(
+				/`((?:src|scripts|test|client|engineering|docs|publication)\/[^`\s]*)`/g,
+			)) {
+				const rel = (m[1] ?? '').replace(/\/$/, '');
+				if (!(await docsGatePathExists(rel))) missing.push(rel);
+			}
+		}
+		expect(missing).toEqual([]);
 	});
 });

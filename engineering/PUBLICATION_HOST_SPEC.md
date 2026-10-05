@@ -1,6 +1,6 @@
 # PUBLICATION HOST — a separate publication machine, controlled from the work system
 
-> **Status 2026-10-03: DESIGN; phase 1 (the `publication_host` rule profile) and phase 2 (the publication agent) BUILT.** Nothing below is built yet except where a phase in §8
+> **Status 2026-10-03: DESIGN; phase 1 (the `publication_host` rule profile), phase 2 (the publication agent) and phase 3 (the engine side: registry, agent channel, panel) BUILT.** Nothing below is built yet except where a phase in §8
 > says so. Each phase gets its own implementation plan (internal process); this file is
 > the definition they implement. Media-access details extend `engineering/MEDIA_PROTECTION.md`.
 
@@ -138,6 +138,60 @@ publication-host pull (reverses the firewall direction).
 Rejected for the transport (phase 2): bearer over WireGuard alone. A leaked bearer would
 then be enough to drive the host. With mTLS it is useless without the engine's client key.
 
+### 2.1 The engine side (phase 3)
+
+- **Registry.** `<private>/publication_hosts.json` (0600), `{"version":1,"hosts":[…]}`,
+  one record per host keyed by `name` (`^[a-z][a-z0-9_]{1,31}$`). A record holds the
+  agent's instance, the expected pairing fingerprint, the address (`tls` host + port, or
+  `unix` socket), and the three panel-editable fields: `public_url`, `qualities`
+  (null = the engine's public qualities) and the `probe` paths (phase 6). It holds no
+  secret. It is written tmp → fsync → rename under a lock
+  (`src/core/publication_host/registry.ts`). An absent file means no host. A file that is
+  unreadable, malformed or carries a duplicate name makes the panel show `registry_invalid`;
+  it is never treated as empty and never as a partial list. It is not `ts_state.json`,
+  whose writer is not atomic and resets to defaults when the file is corrupt.
+- **Secrets.** Each host has `<private>/publication_hosts/<name>/` (0700) holding `token` and
+  `engine_bundle.pem`, both 0600 and owned by the engine user
+  (`src/core/publication_host/secrets.ts`). They never appear in the registry,
+  `ts_state.json`, a panel payload, a log, the activity audit or an error detail. The panel
+  reports only their presence. They are not in `.env` because that file is append-only and
+  frozen at boot (a rotated token would need a restart), and its fixed key names cannot
+  express N hosts.
+- **Adding a host is an operator ceremony on the work host, never a form.**
+  `scripts/publication_host_pair.ts` runs as the user that runs Dédalo, the owner of
+  `<private>` (`sudo -u <engine user> …`). It refuses any other uid, root included,
+  because root-owned 0600 secrets would be unreadable by the engine. It reads the agent's
+  `engine.env.fragment` and `engine_bundle.pem`. The token comes from the pasted fragment
+  line, a 0600 `--token-file` or `--token-stdin`, and never from argv. The CLI refuses
+  placeholders, contradictions and credential files readable by others, proves the pairing
+  live (the `/health` fingerprint, no bearer), and only then writes the secrets and the
+  registry record. An address typed into a web form would be an SSRF and
+  credential-exfiltration surface. The panel edits only `public_url`, `qualities` and the
+  probe paths, and it can remove a host.
+- **One door.** `src/core/publication_host/transport.ts` is the only engine code that
+  dials an agent. It is the fourth outbound door (`engineering/OUTBOUND_SPEC.md` §2.1):
+  exact address, mTLS or unix, bounded, redirects refused.
+- **Pairing before the bearer** (`src/core/publication_host/agent_client.ts`, the
+  `tools/tool_sitebuilder/server/daemon_client.ts` order): an unauthenticated `GET /health`,
+  the fingerprint compared, and only then the bearer request. A mismatch (for example, the
+  agent re-provisioned with a new token) is `publication_host.pairing_mismatch`. The
+  bearer is never sent and nothing is applied.
+- **Errors** are the `publication_host.*` family: `unconfigured`, `registry_invalid`,
+  `unreachable`, `pairing_mismatch`, `auth`, `rejected` (an agent 4xx refusal), `failed`
+  (an agent 5xx), `busy` (409) and `timeout`. The agent's problem `reason` maps to a public
+  sentence (`src/core/publication_host/wire.ts`). The agent's prose is logged, never shown.
+- **The panel** is the `publication_hosts` maintenance widget (category `publication`,
+  `src/core/area_maintenance/widgets/publication_hosts.ts`, wire entry
+  `engineering/wire_contract/WC-2026-10-03-publication-hosts-widget.md`). For each host it
+  shows the checks `registry`, `secrets`, `reachable`, `pairing`, `agent_version`,
+  `media_mode`, `media_mount`, `media_read_only`, `rules_hash`, `api_v1` and `api_v2`, the
+  expected vs reported rule hash (§5.1), and each API's current/previous release. The
+  actions `apply_rules`, `probe`, `rollback_api`, `set_host_fields` and `remove_host` are
+  ROOT-ONLY: the Dédalo root user, as in the `media_control` precedent. A global admin
+  who is not root gets `perm.denied`, and no agent call is made; it reads the checks
+  without the host's network address. `media_control` carries one read-only line
+  linking to the panel.
+
 ## 3. Publication API deployment
 
 Each API is its own deployable on the publication host, code from the engine's verified
@@ -193,12 +247,17 @@ Published records and the APIs (`MEDIA_BASE_URL`, default `/dedalo/media`) alrea
 No rewriting of published data, and the MEDIA-03 envelope pattern
 (`imageEnvelopePcre`, URL-derived) holds unchanged on both hosts.
 
-## 5. Media modes (per publication host, chosen in the panel)
+## 5. Media modes (per publication host, declared on the host, shown in the panel)
 
 | mode | who holds the bytes | gate on the publication host |
 |---|---|---|
 | `copy` | the agent, a copy of the published files only | none needed — everything present is public |
 | `shared` | shared storage: work host RW, publication host RO | Rule B only, rendered for the host's mount root |
+| `none` | nobody — the host serves no published media | — |
+
+The mode is declared on the publication host (the agent's `MEDIA_MODE`, written by its
+provisioner) and reported by `status`. The panel shows it and never sets it: changing
+what a public machine mounts is a root operation on that machine.
 
 The work host's own mode (`MEDIA_PROTECTION.md` §6) is independent. With a separate
 publication host, `private` (Rule A only) is the recommended work-host mode: the work
@@ -232,7 +291,12 @@ from the same templates:
 - **Hash:** its own `# config-hash:` over `{TEMPLATE_VERSION, profile, server, root,
   qualities, mediaDir}` (`getPublicationHostConfigHash` — call it, never re-derive it) —
   what the agent reports and the panel compares. `server` is in it: the Apache and nginx
-  includes of the same inputs carry different hashes.
+  includes of the same inputs carry different hashes. The panel's EXPECTED hash calls it
+  with `server` and `root` taken from the agent's `status`, and `qualities` taken from the
+  host's registry record (null = the engine's `getPublicQualities()`). `apply_rules` renders
+  the include from the same inputs with `buildPublicationHostApacheConf` /
+  `buildPublicationHostNginxConf` and sends `rules.apply`
+  (`src/core/publication_host/rules.ts`).
 
 **Exports.** Export to the publication host, read-only with `root_squash`, ONLY the public
 quality folders and `.publication/pub/`, mounted under one root with the same relative
@@ -292,11 +356,11 @@ probe is red in the panel. The two probe records are scratch records the engine 
 |---|---|---|
 | 1 | `publication_host` rule profile (Apache + nginx), a CLI rendering it, the lockstep tripwire extended, a real-engine drill. Usable by hand before any agent exists. **Built:** `src/core/media/publication_host_rules.ts`, `bun run media:publication-host-rules`, `bun run test:media:pubhost`. | — |
 | 2 | The agent: pairing, `status`, `rules.apply`, `media.probe`, `release.install/rollback`. **Built:** `publication/host_agent/` (daemon + root-run provisioner: mTLS material, units, sudoers, polkit, engine bundle), `src/core/publication_host/pairing.ts` + its twin tripwire, `bun run hostagent:test`, `bun run test:pubhost:agent`. Operator page: `docs/install/publication_host.md`. | 1 |
-| 3 | Engine side: publication-host registry, client, `media_control` per-host mode + status. | 2 |
+| 3 | Engine side: publication-host registry, the paired agent channel (the fourth outbound door), client, and the `publication_hosts` maintenance panel (`media_control` links to it; the media mode is declared on the host, §5). **Built:** `src/core/publication_host/` (registry, secrets, door, agent client, host status, expected rules), `scripts/publication_host_pair.ts`, `src/core/area_maintenance/widgets/publication_hosts.ts` + `client/dedalo/core/area_maintenance/widgets/publication_hosts/`, `test/unit/publication_host_door_tripwire.test.ts`, `engineering/wire_contract/WC-2026-10-03-publication-hosts-widget.md`. Operator page: `docs/install/publication_host.md` (*Pair it with the work system*, *The Publication hosts panel*). | 2 |
 | 4 | Updater pushes the API bundles after an engine update. | 2, 3 |
 | 5 | `copy` mode: the diffusion media-copy target + reconcile. | 2, 3 |
 | 6 | Public-URL probe, on change and scheduled. | 3 |
 
-Decided per phase, in its own plan: host registry storage (phase 3), transport
-(decided in phase 2: mTLS + bearer + pairing fingerprint, §2), probe record provisioning
-(phase 6).
+Decided per phase, in its own plan: host registry storage (decided in phase 3: a
+dedicated atomic registry file + per-host secret files, §2.1), transport (decided in
+phase 2: mTLS + bearer + pairing fingerprint, §2), probe record provisioning (phase 6).
