@@ -109,3 +109,31 @@
 - **Gate:** `test/unit/publication_host_door_tripwire.test.ts` (*the operator is told how
   pairing and the panel really work*) holds this addendum, the operator page and the spec
   to the code. No fixture interaction.
+
+## Addendum 2026-10-05 — phase 4 (Publication API lockstep)
+
+- `get_value` `data` gains `runtime_invalid: string|null`: the runtime results file
+  (`<private>/publication_hosts_runtime.json`) is read ONCE per call; a corrupt/locked file
+  degrades to its reason (the panel still renders, results empty) instead of failing the call.
+  Present on the `registry_invalid` branch too.
+- `get_value` `data` gains `api_lockstep: {engine_release: string|null, refused: string|null,
+  checked_at: string|null, rows: {host, api: 'v2'|'v1', engine, host_current,
+  last_push: {state, release, error, at}|null, state: 'ok'|'mismatch'|'failed'|'unknown'}[]}`
+  — the verdict of the last Publication API round in this server process (push, confirm
+  hook, or the hourly dry check) with its time; `checked_at: null` = not verified since boot
+  (no release, no refusal). get_value never hashes the tree. v2 row first per host; `error`
+  is a CODE (`bundle_refused:<reason>`, `bundle_write:<reason>`, `runtime_invalid`, a
+  `publication_host.*` code, `internal.*`), never agent prose; no secret field. `rows` is
+  `[]` when the registry is invalid.
+- New ROOT-ONLY action `push_apis` (`options.hosts?: string[]`, each `HOST_NAME`): answers
+  `data: true` only when nothing was refused and nothing failed; `msg` is the operator
+  sentence naming the refusal or each failed host×API with its code and named paths (and
+  notes an unrecorded runtime); `report` is the `ApiReconcileReport` (actions may carry
+  `detail`, the report may carry `runtime_error`). The agent audits it as actor
+  `dedalo_user:<id>` (the other actions' actor). Non-root → `perm.denied` (before anything
+  loads), malformed hosts → `maintenance.action_refused` (the widget's own refusal family,
+  like a bad `name`), an unregistered host → `resource.not_found`, a concurrent push →
+  `resource.conflict`.
+- TS ground truth: `test/unit/publication_host_push_apis_widget.test.ts`,
+  `test/unit/publication_host_api_reconcile.test.ts`; client:
+  `client/dedalo/test/client/js/test_publication_api_lockstep.js`. No fixture interaction.

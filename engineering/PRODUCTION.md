@@ -974,6 +974,7 @@ and demands it be here):
 | `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
 | `ontology_identifiers` | `dd_ontology` identifier columns ↔ the identifier grammar (six CHECKs) | boot (dry) | re-derive each violator's tld from source, delete the unaddressable rest (returned whole), VALIDATE the clean CHECKs |
 | `hierarchy` | `hierarchy1` active rows ↔ their provisioning | operator | `ensure` per broken hierarchy |
+| `publication_apis` | installed tree's verified Publication API release (`publication/server_api` + its extract-time manifest) ↔ each publication host's current v1/v2 | every 1 h (dry; hashes nothing when no publication host is paired) | **refused here** (`perm.denied`): root pushes from the `publication_hosts` widget (**Push API releases**), and a confirmed code update/restore boot pushes by itself (`src/core/publication_host/api_reconcile.ts`) |
 
 **After a data restore** the door runs the registry through
 `POST_RESTORE_PLAN` (`src/core/reconcile/post_restore.ts`): EVERY registered
@@ -984,7 +985,7 @@ idempotent — only the disk remembers the ids minted after the backup) and
 `media_index` (a pure derivation). The rest run DRY and their drift is
 reported as `held` in the journal and the CLI's exit 2: `files_info`,
 `observer_mirrors`, `rag_index`, `ontology`, `ontology_identifiers`, `hierarchy`,
-`public_tier` — each a decision (a shrink, a budgeted recompute, a re-embed, a
+`public_tier`, `publication_apis` — each a decision (a shrink, a budgeted recompute, a re-embed, a code push to a public host, a
 destructive re-projection or row delete, an unpublish from a museum site) the operator takes with the dry
 list in view, through the three doors above. A step that throws is recorded by
 its error code and the plan continues.
