@@ -946,6 +946,12 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 		kind: 'not_media',
 		reason: 'session SQLite dir — session ids are bearer credentials; owner-only by design',
 	},
+	'src/diffusion/targets/mediastore/media_copy.ts': {
+		modes: ['0o700'],
+		kind: 'not_media',
+		reason:
+			'publication-host copy: the <private>/media_copy sha-cache dir (paths of published media + digests), engine-only state outside the served tree, owner-only by design',
+	},
 	'src/core/area_maintenance/backup.ts': {
 		modes: ['0o700'],
 		kind: 'not_media',

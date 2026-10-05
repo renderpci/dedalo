@@ -11,8 +11,10 @@
  *      (`AGENT_PATHS`; the door prefixes `AGENT_BASE_PATH` itself, so callers never spell
  *      it), the method GET or POST (a GET carries no body), the bounds inside their ceilings,
  *      the bearer one token of the secrets store's own grammar (`TOKEN_SHAPE`), and the
- *      caller sets none of the transport's own headers. A breach is a programming error,
- *      refused before any socket.
+ *      caller sets none of the transport's own headers. A query string is never part of
+ *      `path`: a route that takes one declares its keys in `AGENT_QUERY_GRAMMAR`, each value
+ *      must match its own closed grammar (no `/`, `%`, space or line break can pass), and the
+ *      door encodes it. A breach is a programming error, refused before any socket.
  *   2. THE TARGET IS THE REGISTRY ENTRY, EXACTLY (`agentTarget`). TCP is
  *      `https://<host>:<port>` + `AGENT_BASE_PATH` with mTLS from the host's engine bundle:
  *      the client certificate and key, the CA PINNED as the only trust root,
@@ -74,7 +76,22 @@ export const AGENT_PATHS: readonly string[] = Object.freeze([
 	'/v1/releases/v2',
 	'/v1/releases/v1/rollback',
 	'/v1/releases/v2/rollback',
+	'/v1/media/manifest',
 ]);
+
+/**
+ * THE ONLY QUERY KEYS ANY ROUTE TAKES, each with its value grammar (anchored, no flags).
+ * A route absent here takes no query. The manifest cursor is the agent's own opaque
+ * base64url (publication/host_agent/src/media/copy.ts CURSOR, same bound); the limit is
+ * a plain decimal (the agent bounds it 1–5000).
+ */
+export const AGENT_QUERY_GRAMMAR: Readonly<Record<string, Readonly<Record<string, RegExp>>>> =
+	Object.freeze({
+		'/v1/media/manifest': Object.freeze({
+			cursor: /^[A-Za-z0-9_-]{1,2000}$/,
+			limit: /^[1-9][0-9]{0,3}$/,
+		}),
+	});
 
 export const DEFAULT_MAX_RESPONSE_BYTES = 1024 * 1024;
 export const MAX_RESPONSE_BYTES_CEILING = 16 * 1024 * 1024;
@@ -97,6 +114,8 @@ export interface AgentRequest {
 	method: 'GET' | 'POST';
 	/** One of AGENT_PATHS — below the base path; the door prefixes it. */
 	path: string;
+	/** Only keys AGENT_QUERY_GRAMMAR declares for `path`, each matching its grammar; the door encodes. */
+	query?: Readonly<Record<string, string>>;
 	headers?: Record<string, string>;
 	body?: string | ReadableStream<Uint8Array>;
 	/** Default 1 MiB, ceiling 16 MiB. */
@@ -157,6 +176,28 @@ function assertRoute(req: AgentRequest): void {
 	if (req.method !== 'GET' && req.method !== 'POST') throw misuse('method outside GET/POST');
 	if (!AGENT_PATHS.includes(req.path)) throw misuse('path outside the agent route table');
 	if (req.method === 'GET' && req.body !== undefined) throw misuse('a GET carries no body');
+}
+
+/** The grammar `path` declares for `key`, or undefined (own properties only: never a prototype key). */
+function queryRule(path: string, key: string): RegExp | undefined {
+	const grammar = Object.hasOwn(AGENT_QUERY_GRAMMAR, path) ? AGENT_QUERY_GRAMMAR[path] : undefined;
+	return grammar !== undefined && Object.hasOwn(grammar, key) ? grammar[key] : undefined;
+}
+
+function assertQuery(req: AgentRequest): void {
+	for (const [key, value] of Object.entries(req.query ?? {})) {
+		const rule = queryRule(req.path, key);
+		if (rule === undefined)
+			throw misuse(`query key ${JSON.stringify(key)} is not declared for this route`);
+		if (typeof value !== 'string' || !rule.test(value))
+			throw misuse(`query ${key} outside its grammar`);
+	}
+}
+
+/** The route plus its (already asserted) query — the only text appended to the base path. */
+function routeWithQuery(req: AgentRequest): string {
+	const query = new URLSearchParams(Object.entries(req.query ?? {})).toString();
+	return query === '' ? req.path : `${req.path}?${query}`;
 }
 
 function assertHeaders(headers: Record<string, string> | undefined): void {
@@ -443,10 +484,11 @@ export async function dialAgent(
 	withBearer: string | null,
 ): Promise<AgentResponse> {
 	assertRoute(req);
+	assertQuery(req);
 	assertHeaders(req.headers);
 	assertBearer(withBearer);
 	const bounds = boundsOf(req);
-	const target = agentTarget(host, tls, req.path);
+	const target = agentTarget(host, tls, routeWithQuery(req));
 	const deadline = AbortSignal.timeout(bounds.timeoutMs);
 	const response = await connect(host, target, req, outgoingHeaders(req, withBearer), deadline);
 	await refuseRedirect(host, response);

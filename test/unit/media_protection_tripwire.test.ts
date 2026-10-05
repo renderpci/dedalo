@@ -1,11 +1,13 @@
 /**
  * MEDIA-PROTECTION LOCKSTEP TRIPWIRE (DEC-12).
  *
- * Media access control is enforced by THREE surfaces that must agree, forever:
+ * Media access control is enforced by surfaces that must agree, forever:
  *
  *   1. the generated Apache rules   (buildHtaccess)
  *   2. the generated nginx rules    (buildNginxConf)
  *   3. the marker WRITER            (diffusion/targets/mediastore/media_index.ts)
+ *   4. the COPY classifier          (diffusion/targets/mediastore/media_copy.ts publicFileKey —
+ *                                    what a publication host in `copy` mode receives)
  *
  * Surfaces 1 and 2 decide, from a media FILE NAME, which record marker to stat().
  * Surface 3 decides, from a record, which marker to create. If they ever disagree, the
@@ -59,6 +61,7 @@ import {
 	SVG_QUARANTINE_CSP,
 	SVG_QUARANTINE_DISPOSITION,
 } from '../../src/core/media/svg_safety.ts';
+import { publicFileKey } from '../../src/diffusion/targets/mediastore/media_copy.ts';
 import { makeMarkerKey } from '../../src/diffusion/targets/mediastore/media_index.ts';
 import { mediaSvgSafetyHeaders } from '../../src/server.ts';
 
@@ -220,6 +223,35 @@ describe('media protection: the three enforcement surfaces stay in lockstep', ()
 			if (testCase.key === null) continue;
 			const [sectionTipo, sectionId] = testCase.key.split('_');
 			expect(makeMarkerKey(sectionTipo as string, sectionId as string)).toBe(testCase.key);
+		}
+	});
+
+	test('the COPY desired-set classifier (media_copy.ts) agrees with Rule B on every filename', () => {
+		// Publication-host `copy` mode ships exactly what Rule B would serve. If the
+		// classifier drifted from the generated pattern, a copy host would hold (and serve)
+		// files the shared/work gate refuses — or silently miss published ones.
+		for (const testCase of CASES) {
+			expect(
+				publicFileKey(testCase.path, QUALITIES),
+				`media_copy disagrees on ${testCase.path} (${testCase.why})`,
+			).toBe(testCase.key);
+		}
+	});
+
+	test('the COPY classifier also refuses everything the hardening 404s, in any letter case', () => {
+		const denied = [
+			...MEDIA_WORKING_FILE_EXTENSIONS,
+			...MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
+			...MEDIA_SCRIPT_DENY_PATTERN.replace('phps?', 'php|phps').split('|'),
+		];
+		expect(denied.length).toBeGreaterThan(15); // anti-vacuity: all three lists were read
+		for (const ext of denied) {
+			for (const spelled of [ext, ext.toUpperCase()]) {
+				expect(
+					publicFileKey(`image/1.5MB/0/rsc29_rsc170_770.${spelled}`, QUALITIES),
+					spelled,
+				).toBeNull();
+			}
 		}
 	});
 });

@@ -110,8 +110,9 @@ function answer(req: Request, path: string): Response | Promise<Response> {
 }
 
 async function agentHandler(req: Request): Promise<Response> {
-	const path = new URL(req.url).pathname;
-	state.hits.push(`${req.method} ${path}`);
+	const url = new URL(req.url);
+	const path = url.pathname;
+	state.hits.push(`${req.method} ${path}${url.search}`);
 	state.authorizations.push(req.headers.get('authorization'));
 	if (path === `${AGENT_BASE_PATH}/v1/rules/apply`) {
 		return new Response(String((await req.arrayBuffer()).byteLength));
@@ -142,6 +143,7 @@ const tlsHost = (port: number | undefined, host = '127.0.0.1') =>
 	record({ kind: 'tls', host, port: portOf(port) });
 const GET_HEALTH: AgentRequest = { method: 'GET', path: '/health' };
 const GET_STATUS: AgentRequest = { method: 'GET', path: '/v1/status' };
+const GET_MANIFEST: AgentRequest = { method: 'GET', path: '/v1/media/manifest' };
 
 /** The error a promise rejects with (fails the test when it resolves). */
 async function rejection(promise: Promise<unknown>): Promise<DedaloError> {
@@ -569,6 +571,13 @@ describe('the door contract: closed routes, the transport’s own headers', () =
 		['a ceiling past 16 MiB', { ...GET_STATUS, maxResponseBytes: 16 * 1024 * 1024 + 1 }, null],
 		['a deadline past 30 min', { ...GET_STATUS, timeoutMs: 30 * 60_000 + 1 }, null],
 		['a fractional deadline', { ...GET_STATUS, timeoutMs: 1.5 }, null],
+		['a query on a route that takes none', { ...GET_STATUS, query: { limit: '1' } }, null],
+		['an undeclared query key', { ...GET_MANIFEST, query: { path: 'x' } }, null],
+		['a cursor outside its grammar', { ...GET_MANIFEST, query: { cursor: 'a/b' } }, null],
+		['a cursor with a line break', { ...GET_MANIFEST, query: { cursor: 'ab\r\nX: 1' } }, null],
+		['an empty cursor', { ...GET_MANIFEST, query: { cursor: '' } }, null],
+		['a non-decimal limit', { ...GET_MANIFEST, query: { limit: '1e3' } }, null],
+		['a zero limit', { ...GET_MANIFEST, query: { limit: '0' } }, null],
 	];
 
 	for (const [what, req, bearer] of misuses) {
@@ -579,6 +588,22 @@ describe('the door contract: closed routes, the transport’s own headers', () =
 			expect(state.hits.length).toBe(before);
 		});
 	}
+});
+
+describe('the door query: closed per route, each value its grammar, encoded by the door', () => {
+	test('a declared query reaches the agent exactly, in the door’s own encoding', async () => {
+		const before = state.hits.length;
+		const res = await dialAgent(
+			tlsHost(agent.port),
+			clientTls,
+			{ ...GET_MANIFEST, query: { cursor: 'aW1hZ2UvYQ', limit: '1000' } },
+			BEARER,
+		);
+		expect(res.status).toBe(200);
+		expect(state.hits.slice(before)).toEqual([
+			`GET ${AGENT_BASE_PATH}/v1/media/manifest?cursor=aW1hZ2UvYQ&limit=1000`,
+		]);
+	});
 });
 
 describe('no secret reaches a failure (review focus 5)', () => {

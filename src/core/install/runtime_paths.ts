@@ -175,6 +175,15 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 			optional('DEDALO_SESSION_DB_PATH') ?? join(privateDir, 'dedalo_ts_sessions.sqlite'),
 	},
 	{
+		// Core never imports diffusion: the path is spelled here and pinned equal to
+		// mediaCopyStateDir() by test/unit/media_copy_native.test.ts.
+		id: 'media_copy_state_dir',
+		envKey: null,
+		consumer:
+			'src/diffusion/targets/mediastore/media_copy.ts:mediaCopyStateDir (publication-host copy: local sha cache)',
+		resolve: () => join(privateDir, 'media_copy'),
+	},
+	{
 		id: 'backup_dir',
 		envKey: 'DEDALO_BACKUP_DIR',
 		consumer: 'src/config/config.ts:buildConfig (ops.backupDir)',

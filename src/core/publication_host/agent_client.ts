@@ -14,7 +14,7 @@
  *  3. MUTATIONS (rules.apply, release.install, release.rollback) prove LIVE on EVERY call:
  *     a re-provisioned agent receives the anonymous /health and nothing else — no bearer,
  *     no actor, no body (Review Focus 1).
- *  4. READS (status, media.probe) may ride a cached proof (E6). The cache key is host name
+ *  4. READS (status, media.probe, media.manifest) may ride a cached proof (E6). The cache key is host name
  *     → registry fingerprint + registry address, so a re-pair from ANOTHER process (the pair
  *     CLI) changes the key and the next read re-proves; a removed host is `unconfigured`.
  *     ONLY SUCCESS is cached; it is dropped on any transport failure, on a 401 (followed by
@@ -46,7 +46,12 @@ import type { PublicationHostServer } from '../media/publication_host_rules.ts';
 import { publicationHostFingerprint, publicationHostFingerprintMatches } from './pairing.ts';
 import { getHost, HOST_NAME, type PublicationHostRecord, RegistryError } from './registry.ts';
 import { readHostToken, SecretError } from './secrets.ts';
-import { type AgentRequest, type AgentResponse, agentRequest } from './transport.ts';
+import {
+	AGENT_QUERY_GRAMMAR,
+	type AgentRequest,
+	type AgentResponse,
+	agentRequest,
+} from './transport.ts';
 import {
 	agentResponseError,
 	engineFailure,
@@ -626,4 +631,128 @@ export async function hostRollbackRelease(
 	);
 	const swap = expectShape(host, 'release.rollback', answer, isSwap);
 	return { from: swap.from, to: swap.to };
+}
+
+// ── media.manifest (copy mode): GET /v1/media/manifest?cursor=<c>&limit=<n> ─────────────
+// → {entries:{path,size,sha256}[], irregular:string[] (every page), markers:string[] (first
+// page only), next}. SHAPE validation here; the semantic checks (safe relpaths, sha256 hex,
+// marker grammar, irregular disjoint from entries) live in media_copy.ts toManifestView,
+// beside the grammar. `irregular` is REQUIRED on every page: a parser that dropped it would
+// hide a planted link or dotfile from reconcile and from deletion verification.
+
+export interface MediaManifestEntry {
+	path: string;
+	size: number;
+	sha256: string;
+}
+export interface MediaManifestPage {
+	entries: MediaManifestEntry[];
+	irregular: string[];
+	markers: string[];
+	next: string | null;
+}
+export interface MediaManifest {
+	entries: MediaManifestEntry[];
+	irregular: string[];
+	markers: string[];
+}
+
+export const MEDIA_MANIFEST_PAGE_LIMIT = 1000;
+/** A first page also carries every marker (one short line per published record). */
+const MEDIA_MANIFEST_MAX_BYTES = 16 * 1024 * 1024;
+const MANIFEST_PATH = '/v1/media/manifest';
+const MANIFEST_CURSOR = AGENT_QUERY_GRAMMAR[MANIFEST_PATH]?.cursor;
+/** What a pure parse (no host in hand: a test, the collector) names in the log coordinates. */
+const UNNAMED_HOST = '<media.manifest>';
+
+function manifestFailure(hostName: string, detail: string): DedaloError {
+	return engineFailure(hostName, 'unreadable_body', {
+		message: `publication host '${hostName}': media.manifest: ${detail}`,
+		coordinates: { command: 'media.manifest' },
+	});
+}
+
+function isManifestEntry(value: unknown): value is MediaManifestEntry {
+	return (
+		isRecord(value) &&
+		typeof value.path === 'string' &&
+		typeof value.size === 'number' &&
+		typeof value.sha256 === 'string'
+	);
+}
+
+/** null = the last page; undefined = not a cursor this door can send back (a missing key included). */
+function manifestNext(next: unknown): string | null | undefined {
+	if (next === null) return null;
+	return typeof next === 'string' && MANIFEST_CURSOR?.test(next) === true ? next : undefined;
+}
+
+function manifestShapeOk(page: Record<string, unknown>): boolean {
+	return (
+		Array.isArray(page.entries) &&
+		page.entries.every(isManifestEntry) &&
+		isStringList(page.irregular) &&
+		isStringList(page.markers)
+	);
+}
+
+/** One wire page → typed page. Markers are read from the FIRST page only. */
+export function parseMediaManifestPage(
+	body: unknown,
+	first: boolean,
+	hostName: string = UNNAMED_HOST,
+): MediaManifestPage {
+	const page = isRecord(body) && manifestShapeOk(body) ? body : null;
+	const next = manifestNext(page?.next);
+	if (page === null || next === undefined) {
+		throw manifestFailure(hostName, 'the page is not {entries, irregular, markers, next}');
+	}
+	return {
+		entries: page.entries as MediaManifestEntry[],
+		irregular: page.irregular as string[],
+		markers: first ? (page.markers as string[]) : [],
+		next,
+	};
+}
+
+/** Follows `next` to the end. A repeated cursor is refused: a looping agent never hangs a reconcile. */
+export async function collectMediaManifest(
+	fetchPage: (cursor: string | null) => Promise<MediaManifestPage>,
+	hostName: string = UNNAMED_HOST,
+): Promise<MediaManifest> {
+	const first = await fetchPage(null);
+	const entries = [...first.entries];
+	const irregular = [...first.irregular];
+	const seen = new Set<string>();
+	let next = first.next;
+	while (next !== null) {
+		if (seen.has(next)) throw manifestFailure(hostName, `cursor ${JSON.stringify(next)} repeated`);
+		seen.add(next);
+		const page = await fetchPage(next);
+		entries.push(...page.entries);
+		irregular.push(...page.irregular);
+		next = page.next;
+	}
+	return { entries, irregular, markers: first.markers };
+}
+
+function manifestCommand(cursor: string | null): Command {
+	const query: Record<string, string> = { limit: String(MEDIA_MANIFEST_PAGE_LIMIT) };
+	if (cursor !== null) query.cursor = cursor;
+	return command('media.manifest', 'GET', MANIFEST_PATH, {
+		query,
+		maxResponseBytes: MEDIA_MANIFEST_MAX_BYTES,
+	});
+}
+
+/**
+ * The agent's full media manifest (copy mode only — the agent refuses otherwise). A READ:
+ * it rides the cached pairing proof like status (E6), every page through the one door.
+ */
+export async function hostMediaManifest(name: string): Promise<MediaManifest> {
+	const host = requireHost(name);
+	return collectMediaManifest(async (cursor) => {
+		const answer = await readCall(host, manifestCommand(cursor));
+		return parseMediaManifestPage(answer.body, cursor === null, host.name);
+	}, host.name);
 }
