@@ -565,7 +565,7 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			assert.strictEqual(self.reloads, 1);
 		});
 
-		it('reconcile_media_copy: only on a row carrying a media_copy check (phase 5)', async function () {
+		it('reconcile_media_copy: only on a row carrying a media_copy check (phase 5)', async () => {
 			const self = build_widget(ok_value([build_host()]));
 			const content = await mount(self);
 			assert.isNull(
@@ -574,9 +574,12 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			);
 		});
 
-		it('reconcile_media_copy is confirm-gated, sends {name}, shows the server sentence as TEXT and reloads', async function () {
+		it('reconcile_media_copy is confirm-gated, sends {name}, shows the server sentence as TEXT and reloads', async () => {
 			const host = build_host({
-				checks: [...build_host().checks, { id: 'media_copy', state: 'blocked', detail: 'unverified_deletions:1' }],
+				checks: [
+					...build_host().checks,
+					{ id: 'media_copy', state: 'blocked', detail: 'unverified_deletions:1' },
+				],
 			});
 			const self = build_widget(ok_value([host]));
 			self.next_response = {

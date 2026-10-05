@@ -428,7 +428,7 @@ const render_actions = function (self, host, card, body_response) {
  * finishes detached (a later reload shows the Media copy row).
  * @returns {HTMLButtonElement}
  */
-const render_media_copy = function (self, host, parent, body_response, agent_blocked) {
+const render_media_copy = (self, host, parent, body_response, agent_blocked) => {
 	const label = get_label.publication_hosts_reconcile_media_copy || 'Reconcile media copy';
 	const button = action_button(parent, 'button_reconcile_media_copy', label, agent_blocked);
 	button.addEventListener('click', async (e) => {

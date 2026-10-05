@@ -11,9 +11,11 @@
  * @param {Object|null} row - one host row from get_value
  * @returns {boolean}
  */
-export const has_media_copy = function (row) {
+export const has_media_copy = (row) => {
 	const checks = row && Array.isArray(row.checks) ? row.checks : [];
-	return checks.some((check) => check !== null && typeof check === 'object' && check.id === 'media_copy');
+	return checks.some(
+		(check) => check !== null && typeof check === 'object' && check.id === 'media_copy',
+	);
 }; //end has_media_copy
 
 // @license-end
