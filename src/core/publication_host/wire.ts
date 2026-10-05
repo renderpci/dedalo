@@ -113,7 +113,7 @@ export const AGENT_REASON_SENTENCES: Readonly<Record<string, string>> = Object.f
 	bundle_refused:
 		'The publication host refused the release bundle: its contents failed the shape check. The previous release still serves.',
 	hash_mismatch:
-		'The media rules sent to the publication host do not match their own hash stamp. Nothing was changed.',
+		'The publication host received content that does not match its checksum (the media rules against their hash stamp, or a media file against its sha256). Nothing was changed.',
 	release_id_invalid:
 		'The publication host refused the release name it was sent. Nothing was changed.',
 	no_previous_release: 'There is no previous release on the publication host to return to.',
@@ -203,6 +203,22 @@ const STATUS_CODES: Readonly<Record<number, PublicationHostCode>> = Object.freez
 	405: 'publication_host.failed',
 });
 
+/**
+ * REASON BEFORE STATUS: the reasons whose code does not depend on the status that carried
+ * them. `busy` is retryable; the copy-mode refusals (publication/host_agent/src/media/copy.ts)
+ * are refusals a retry cannot fix — a 409 `key_unpublished` / `media_mode` is never the
+ * transient `busy`, and no status turns one into `failed`.
+ */
+const REASON_CODES: Readonly<Record<string, PublicationHostCode>> = Object.freeze({
+	busy: 'publication_host.busy',
+	media_mode: 'publication_host.rejected',
+	media_path_refused: 'publication_host.rejected',
+	size_mismatch: 'publication_host.rejected',
+	hash_mismatch: 'publication_host.rejected',
+	key_unpublished: 'publication_host.rejected',
+	key_invalid: 'publication_host.rejected',
+});
+
 /** Agent-supplied text for a LOG line: control characters flattened, capped. Never for the wire. */
 export function capLogText(text: string | undefined): string {
 	const flat = (text ?? '').replace(/\p{Cc}+/gu, ' ').trim();
@@ -253,14 +269,18 @@ function codeForStatus(status: number): PublicationHostCode {
 }
 
 /**
- * A non-2xx agent answer → its code. `busy` wins on its reason (a 409 ConflictError); 401/403
- * are credentials; 404/405 behind a valid bearer are version skew (`failed`); any other 4xx
- * is a refusal of the request's content (`rejected`); the rest is `failed`. MODULE-PRIVATE:
+ * A non-2xx agent answer → its code. A REASON_CODES reason wins over the status (`busy`, the
+ * copy-mode refusals); otherwise 401/403 are credentials; 404/405 behind a valid bearer are
+ * version skew (`failed`); any other 4xx is a refusal of the request's content (`rejected`);
+ * the rest is `failed`. MODULE-PRIVATE:
  * its value can be an answer code, and only agentResponseError may pair it with a reason
  * (publication_host_wire_native source law).
  */
 function codeForAgentResponse(status: number, problem: AgentProblem): PublicationHostCode {
-	return problem.reason === 'busy' ? 'publication_host.busy' : codeForStatus(status);
+	const reason = problem.reason;
+	if (typeof reason === 'string' && Object.hasOwn(REASON_CODES, reason))
+		return REASON_CODES[reason] as PublicationHostCode;
+	return codeForStatus(status);
 }
 
 function publicSentence(code: PublicationHostCode, reason: string): string | undefined {
