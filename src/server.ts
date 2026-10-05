@@ -2028,9 +2028,16 @@ export async function startServer() {
 			if (readString('DEDALO_RECONCILE_SCHEDULER_ENABLED') !== 'false') {
 				const { startReconcileScheduler } = await import('./core/reconcile/scheduler.ts');
 				startReconcileScheduler();
+				// MEDIA COPY WORKER (PUBLICATION_HOST_SPEC §5.2, M3/M4): forwards every
+				// pub/ flip to the copy-mode publication hosts, serialized per host —
+				// unpublish at once, publish debounced. Same gate as the reconcile
+				// scheduler (an ephemeral/smoke instance must not drive a public host);
+				// stopped by the shutdown drain.
+				const { startMediaCopy } = await import('./diffusion/api/media_copy.ts');
+				shutdownStops.push(startMediaCopy());
 			} else {
 				console.warn(
-					'[reconcile] scheduler disabled (DEDALO_RECONCILE_SCHEDULER_ENABLED=false) — boot/interval reconciles will not run',
+					'[reconcile] scheduler disabled (DEDALO_RECONCILE_SCHEDULER_ENABLED=false) — boot/interval reconciles will not run, and no pub/ flip reaches a copy-mode publication host',
 				);
 			}
 		} catch (error) {

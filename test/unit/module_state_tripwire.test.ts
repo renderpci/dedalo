@@ -291,6 +291,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// set/cleared by the marker-store tests around each case — never request
 	// identity (the production base is install-static config.media.rootPath).
 	'diffusion/targets/mediastore/media_index.ts:baseOverrideForTests',
+	// The started media-copy worker (PUBLICATION_HOST_SPEC §5.2, M3/M4): set once by
+	// startMediaCopyWorker at boot, cleared by its stop (shutdown drain, gates). It
+	// holds per-HOST lanes (registry names) and marker keys, never a user, session
+	// or language; a second start is refused.
+	'diffusion/targets/mediastore/media_copy_worker.ts:activeWorker',
 	// Media-copy test seam (publication-host copy mode): the same guarded temp-dir-only
 	// shape as the marker-store seam above — it refuses any non-temp path, so a test can
 	// never point the sha-cache writer at the real <private>/media_copy. Set and cleared
@@ -821,6 +826,12 @@ describe('runDetachedFromTransaction — frozen caller set', () => {
 	const ALLOWED_IMPORTERS = new Set([
 		// The job manager: submit() runs inside a request, the worker must not.
 		'src/core/media/jobs.ts',
+		// The media-copy worker (PUBLICATION_HOST_SPEC §5.2): a pub/ flip is emitted
+		// INSIDE a marker writer's transaction (a runner batch, the fenced media_index
+		// reconcile); the copy run it schedules is background work that outlives that
+		// writer and must never join its (expiring) handle — media_copy_worker_native
+		// drives a flip from inside withTransaction and pins the run detached.
+		'src/diffusion/targets/mediastore/media_copy_worker.ts',
 	]);
 
 	test('only the job manager imports the transaction-ALS escape hatch', () => {
