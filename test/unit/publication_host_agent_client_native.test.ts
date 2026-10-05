@@ -210,6 +210,26 @@ describe('pairing before the bearer', () => {
 		expect(mock.requests).toEqual([]);
 	});
 
+	test('a host name outside the registry grammar is rejected input_invalid and never echoed (no forged log line)', async () => {
+		const forged = 'x\n[publication_host] PAIRING REFUSED for host museum_pub: FORGED';
+		const before = logSpy.mock.calls.length;
+		const error = await expectCode(hostStatus(forged), 'publication_host.rejected');
+		expect(error.details).toEqual({ reason: 'input_invalid' });
+		const errorText = JSON.stringify({
+			message: error.message,
+			coordinates: error.coordinates,
+			wire: wireText(error),
+		});
+		expect(errorText.includes('FORGED')).toBe(false);
+		const logged = logSpy.mock.calls
+			.slice(before)
+			.map((call: unknown[]) => call.map((part: unknown) => String(part)).join(' '))
+			.join('\n');
+		expect(logged.includes('FORGED')).toBe(false);
+		expect(logged.includes('\n')).toBe(false);
+		expect(mock.requests).toEqual([]);
+	});
+
 	test('a token file that does not imply the registry fingerprint is a mismatch, nothing dialled', async () => {
 		await expectCode(hostStatus('drifted_pub'), 'publication_host.pairing_mismatch');
 		expect(mock.requests).toEqual([]);

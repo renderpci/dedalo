@@ -44,7 +44,7 @@
 import type { DedaloError } from '../errors/index.ts';
 import type { PublicationHostServer } from '../media/publication_host_rules.ts';
 import { publicationHostFingerprint, publicationHostFingerprintMatches } from './pairing.ts';
-import { getHost, type PublicationHostRecord, RegistryError } from './registry.ts';
+import { getHost, HOST_NAME, type PublicationHostRecord, RegistryError } from './registry.ts';
 import { readHostToken, SecretError } from './secrets.ts';
 import { type AgentRequest, type AgentResponse, agentRequest } from './transport.ts';
 import {
@@ -210,7 +210,21 @@ function loadHost(name: string): PublicationHostRecord | null {
 	}
 }
 
+/** What a caller-supplied name that fails HOST_NAME is logged and coordinated as: never the raw text. */
+const UNVETTED_NAME = '<invalid host name>';
+
+/**
+ * The host the registry vouches for. A caller-supplied name is checked against the
+ * registry's own grammar FIRST: one outside it is refused input_invalid and never echoed
+ * (a CR/LF in it would forge `[publication_host]` log lines operators act on).
+ */
 function requireHost(name: string): PublicationHostRecord {
+	if (!HOST_NAME.test(name)) {
+		console.error(`[publication_host] refused a host name outside the registry grammar`);
+		throw engineRefusal(UNVETTED_NAME, 'input_invalid', {
+			message: `publication host name refused before any lookup: it must match ${HOST_NAME.source}`,
+		});
+	}
 	const host = loadHost(name);
 	if (host === null) {
 		console.error(`[publication_host] no publication host named '${name}' in the registry`);
