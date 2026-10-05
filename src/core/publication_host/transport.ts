@@ -173,14 +173,28 @@ function inRange(value: number, ceiling: number): boolean {
 	return Number.isSafeInteger(value) && value > 0 && value <= ceiling;
 }
 
+/** `value` (or its default) in (0, ceiling], else the caller's contract is broken. */
+function bounded(
+	value: number | undefined,
+	fallback: number,
+	ceiling: number,
+	what: string,
+): number {
+	const chosen = value ?? fallback;
+	if (!inRange(chosen, ceiling)) throw misuse(`${what} out of range`);
+	return chosen;
+}
+
 function boundsOf(req: AgentRequest): Bounds {
-	const maxBytes = req.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
-	const timeoutMs = req.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-	if (!inRange(maxBytes, MAX_RESPONSE_BYTES_CEILING)) throw misuse('maxResponseBytes out of range');
-	if (!inRange(timeoutMs, MAX_TIMEOUT_MS)) throw misuse('timeoutMs out of range');
+	const maxBytes = bounded(
+		req.maxResponseBytes,
+		DEFAULT_MAX_RESPONSE_BYTES,
+		MAX_RESPONSE_BYTES_CEILING,
+		'maxResponseBytes',
+	);
+	const timeoutMs = bounded(req.timeoutMs, DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, 'timeoutMs');
 	const idleCeiling = Math.min(timeoutMs, IDLE_CEILING_MS);
-	const idleMs = req.idleTimeoutMs ?? idleCeiling;
-	if (!inRange(idleMs, idleCeiling)) throw misuse('idleTimeoutMs out of range');
+	const idleMs = bounded(req.idleTimeoutMs, idleCeiling, idleCeiling, 'idleTimeoutMs');
 	return { maxBytes, timeoutMs, idleMs };
 }
 
@@ -228,15 +242,33 @@ function ancestorsSafe(
 	trusted: (uid: number) => boolean,
 	creator: (uid: number) => boolean,
 ): boolean {
-	for (const [path, child] of prefixes(dirname(parentPath))) {
-		const dir = statOrNull(path, true);
-		if (dir === null || !dir.isDirectory() || !trusted(dir.uid)) return false;
-		if (!loose(dir)) continue;
-		const next = child === null ? parentPath : `${path === '/' ? '' : path}/${child}`;
-		const entry = statOrNull(next, false);
-		if ((dir.mode & STICKY) === 0 || entry === null || !creator(entry.uid)) return false;
-	}
-	return true;
+	return prefixes(dirname(parentPath)).every(([path, child]) =>
+		ancestorSafe(path, child === null ? parentPath : joinBelow(path, child), trusted, creator),
+	);
+}
+
+/** `path/child`, without a doubled slash below '/'. */
+function joinBelow(path: string, child: string): string {
+	return `${path === '/' ? '' : path}/${child}`;
+}
+
+/** One ancestor: a trusted real directory, and if loose, sticky with `next` made by a creator. */
+function ancestorSafe(
+	path: string,
+	next: string,
+	trusted: (uid: number) => boolean,
+	creator: (uid: number) => boolean,
+): boolean {
+	const dir = statOrNull(path, true);
+	if (dir === null || !dir.isDirectory() || !trusted(dir.uid)) return false;
+	return !loose(dir) || stickyEntrySafe(dir, next, creator);
+}
+
+/** Below a loose ancestor only a sticky dir passes, and only for an entry root/the engine made. */
+function stickyEntrySafe(dir: Stats, next: string, creator: (uid: number) => boolean): boolean {
+	if ((dir.mode & STICKY) === 0) return false;
+	const entry = statOrNull(next, false);
+	return entry !== null && creator(entry.uid);
 }
 
 /**
@@ -258,19 +290,31 @@ function socketSafe(socket: string): boolean {
 	const node = statOrNull(socket, false);
 	const parentPath = dirname(socket);
 	const parent = statOrNull(parentPath, true);
-	if (node === null || !node.isSocket() || parent === null || !parent.isDirectory()) return false;
-	if (loose(parent)) return false;
+	if (!socketInTightDir(node, parent)) return false;
 	const engine = process.geteuid?.();
 	const creator = (uid: number): boolean => uid === 0 || uid === engine;
-	const trusted = (uid: number): boolean => creator(uid) || uid === parent.uid;
-	if (!trusted(node.uid)) return false;
-	let real: string;
+	const trusted = (uid: number): boolean => creator(uid) || uid === parent?.uid;
+	if (node === null || !trusted(node.uid)) return false;
+	const real = realpathOrNull(parentPath);
+	return (
+		real !== null &&
+		ancestorsSafe(parentPath, trusted, creator) &&
+		ancestorsSafe(real, trusted, creator)
+	);
+}
+
+/** The node is a socket (lstat) in a real directory with no group/other write bit. */
+function socketInTightDir(node: Stats | null, parent: Stats | null): boolean {
+	if (!node?.isSocket() || !parent?.isDirectory()) return false;
+	return !loose(parent);
+}
+
+function realpathOrNull(path: string): string | null {
 	try {
-		real = realpathSync(parentPath);
+		return realpathSync(path);
 	} catch {
-		return false;
+		return null;
 	}
-	return ancestorsSafe(parentPath, trusted, creator) && ancestorsSafe(real, trusted, creator);
 }
 
 function assertSocketSafe(host: PublicationHostRecord, socket: string): void {

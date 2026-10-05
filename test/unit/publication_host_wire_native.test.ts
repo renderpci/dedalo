@@ -279,6 +279,8 @@ describe('agent answer → code', () => {
 			const error = agentResponseError('museum_a', status, body);
 			expect(error.code, label).toBe(code);
 			expect(DETAIL_REASONS.has(String(error.details?.reason)), label).toBe(true);
+			// the wire reason is the agent's classified one, never re-derived elsewhere
+			expect(error.details?.reason, label).toBe(agentReason(parseAgentProblem(body)));
 			const wire = JSON.stringify(wireOf(error));
 			expect(wire, label).not.toContain('AGENT-PROSE-MARKER');
 			expect(wire, label).not.toContain('museum_a');

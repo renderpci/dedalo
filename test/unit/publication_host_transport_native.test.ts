@@ -20,8 +20,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { createServer } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { homedir, tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { type DedaloError, isDedaloError, toErrorBody } from '../../src/core/errors/index.ts';
 import type { PublicationHostRecord } from '../../src/core/publication_host/registry.ts';
 import {
@@ -446,16 +446,33 @@ describe('the unix socket on this machine', () => {
 	});
 
 	test('the parent owner stays trusted on a non-sticky path (foreign engine uid)', async () => {
+		// NOT under os.tmpdir(): on Linux that is /tmp (sticky), where the foreign-engine rule
+		// rightly refuses a test-owned entry — this case needs a path with NO sticky ancestor.
+		// The home dir is that on macOS and in the CI image; asserted, never assumed.
+		const home = mkdtempSync(join(homedir(), '.dd_ph_'));
+		let ancestor = home;
+		for (;;) {
+			expect(statSync(ancestor).mode & 0o1000, `${ancestor} is sticky: pick another root`).toBe(0);
+			if (ancestor === '/') break;
+			ancestor = dirname(ancestor);
+		}
+		const path = join(home, 'agent.sock');
+		const local = Bun.serve({ unix: path, fetch: agentHandler });
 		state.mode = 'ok';
-		await asForeignEngine(async () => {
-			const res = await dialAgent(
-				record({ kind: 'unix', socket: socketPath }),
-				null,
-				GET_STATUS,
-				BEARER,
-			);
-			expect(res.status).toBe(200);
-		});
+		try {
+			await asForeignEngine(async () => {
+				const res = await dialAgent(
+					record({ kind: 'unix', socket: path }),
+					null,
+					GET_STATUS,
+					BEARER,
+				);
+				expect(res.status).toBe(200);
+			});
+		} finally {
+			local.stop(true);
+			rmSync(home, { recursive: true, force: true });
+		}
 	});
 
 	test('an ancestor writable by others refuses the socket (its child dir could be swapped)', async () => {
