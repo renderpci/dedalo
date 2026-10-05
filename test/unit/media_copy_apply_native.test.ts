@@ -15,7 +15,7 @@ import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import { isInTransaction, sql } from '../../src/core/db/postgres.ts';
 import {
 	DIFFUSION_TARGET_LOCK_CLASS,
 	mediaCopyTargetLockKey,
@@ -586,6 +586,68 @@ describe('withdrawn consent never waits for a put (the grant race closed)', () =
 	});
 });
 
+describe('a put never holds the target lock (nor a main-pool transaction) for its hash or its transfer', () => {
+	test('hash + re-stat before the lock; the lock only around the pub/ re-check + marker; the transfer outside it', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d = worldDeps(world);
+		const seen: string[] = [];
+		world.duringPut = async () => {
+			seen.push(`put depth=${world.lockDepth}`);
+		};
+		const spied: CopyDeps = {
+			...d,
+			sha256: async (file) => {
+				seen.push(`sha depth=${world.lockDepth}`);
+				return d.sha256(file);
+			},
+			open: async (path) => {
+				seen.push(`open depth=${world.lockDepth}`);
+				return d.open(path);
+			},
+			mark: async (host, key, published, actor) => {
+				seen.push(`mark ${published} depth=${world.lockDepth}`);
+				return d.mark(host, key, published, actor);
+			},
+		};
+		const plan: ApplyPlan = { put: [desired(world, P1)], del: [], mark: [] };
+		const report = await applyCopyWith(spied, 'pub1', plan);
+		expect(report).toMatchObject({ state: 'ok', put: 1, published: 1 });
+		expect(seen).toEqual(['sha depth=0', 'open depth=0', 'mark true depth=1', 'put depth=0']);
+	});
+
+	test('a held lock defers the put after its hash: the opened file is closed, nothing is sent', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		world.lockBusy = true;
+		const d = worldDeps(world);
+		let cancelled = false;
+		const spied: CopyDeps = {
+			...d,
+			open: async (path) => {
+				const local = await d.open(path);
+				if (local === null) return null;
+				const body = new ReadableStream<Uint8Array>({
+					cancel() {
+						cancelled = true;
+					},
+				});
+				return { ...local, body };
+			},
+		};
+		const report = await applyCopyWith(spied, 'pub1', {
+			put: [desired(world, P1)],
+			del: [],
+			mark: [],
+		});
+		expect(world.calls).toEqual([]);
+		expect(cancelled).toBe(true);
+		expect(report).toMatchObject({ state: 'pending', put: 0, deferred: 1 });
+	});
+});
+
 describe('the real publication-target lock', () => {
 	test('another session holding media:<host> defers every unit; released, the round completes', async () => {
 		const world = newWorld();
@@ -608,6 +670,38 @@ describe('the real publication-target lock', () => {
 		expect(done.state).toBe('ok');
 		expect(world.agentFiles.size).toBe(0);
 		expect(world.agentMarkers.size).toBe(0);
+	});
+
+	test('the bound: while a put streams, no transaction is open and another session can take media:<host>', async () => {
+		const world = newWorld();
+		world.local.set(P1, { bytes: 'jpeg', mtimeMs: 1 });
+		world.published.add(K1);
+		const d: CopyDeps = {
+			...worldDeps(world),
+			lock: (host, work) => withTargetLock(mediaCopyTargetLockKey(host), work, { mode: 'try' }),
+		};
+		const during: { inTransaction: boolean; otherSessionGotLock: boolean }[] = [];
+		world.duringPut = async () => {
+			const connection = await sql.reserve();
+			try {
+				const rows = (await connection.unsafe(
+					'SELECT pg_try_advisory_lock($1::int, hashtext($2)) AS got',
+					[DIFFUSION_TARGET_LOCK_CLASS, mediaCopyTargetLockKey('pubtest')],
+				)) as { got: boolean }[];
+				const got = rows[0]?.got === true;
+				if (got)
+					await connection.unsafe('SELECT pg_advisory_unlock($1::int, hashtext($2))', [
+						DIFFUSION_TARGET_LOCK_CLASS,
+						mediaCopyTargetLockKey('pubtest'),
+					]);
+				during.push({ inTransaction: isInTransaction(), otherSessionGotLock: got });
+			} finally {
+				connection.release();
+			}
+		};
+		const report = await applyCopyWith(d, 'pubtest', planFrom(world));
+		expect(report).toMatchObject({ state: 'ok', put: 1 });
+		expect(during).toEqual([{ inTransaction: false, otherSessionGotLock: true }]);
 	});
 });
 

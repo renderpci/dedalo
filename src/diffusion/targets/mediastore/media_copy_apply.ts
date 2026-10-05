@@ -26,13 +26,21 @@
  *  4. GRANT, one target-lock unit: `media.mark true` for each plan grant whose key
  *     is still published locally and not yet known. A marker with no file serves
  *     nothing (Rule B also needs the file), so granting first is gate-safe.
- *  5. PUT, one target-lock unit per file: re-check `pub/<key>` (gone → skipped);
- *     sha256 from the round's cache (null = unstable → deferred); re-open with no
- *     link followed and re-stat (changed → deferred); ENSURE the agent marker (covers
- *     a deferred grant unit); stream; re-check `pub/<key>` — a record unpublished
- *     while its bytes were in flight is COMPENSATED at once (recorded pending first,
- *     marker withdrawn, every file of that key landed this round deleted) and the
- *     round verifies again. No put outlives an unpublish (Review Focus 2).
+ *  5. PUT, per file, with the target lock held ONLY around its grant step:
+ *     BEFORE the lock — check `pub/<key>` (gone → skipped), sha256 from the round's cache
+ *     (a miss hashes the file; null = unstable → deferred), re-open with no link followed
+ *     and re-stat (changed → deferred); UNDER the lock — re-check `pub/<key>` and ENSURE
+ *     the agent marker (covers a deferred grant unit); AFTER it — stream, then re-check
+ *     `pub/<key>`: a record unpublished while its bytes were in flight is COMPENSATED at
+ *     once (recorded pending first, marker withdrawn, every file of that key landed this
+ *     round deleted) and the round verifies again. No put outlives an unpublish (Review
+ *     Focus 2).
+ *  THE POOL BOUND. A lock unit is one main-pool transaction. A put's unit spans two
+ *     local `pub/` checks and at most two `media.mark` calls (AGENT_TIMEOUTS_MS.media
+ *     each) — never the hash nor the transfer, whatever the file size; a withdraw unit
+ *     spans its marks and deletes. Units of one host are serialized (one lane per host
+ *     per process), so a copy round costs at most ONE main-pool connection per host, for
+ *     control calls only; waiting for a busy lock holds none.
  *  WITHDRAWN CONSENT NEVER WAITS FOR A PUT. The worker sends a hook unpublish's
  *     `mark false` at once, outside the lane and every lock (withdrawNowWith) — never
  *     behind a streaming put. The agent re-checks the marker under its key lock before a
@@ -439,33 +447,16 @@ async function openUnchanged(deps: CopyDeps, file: DesiredFile): Promise<LocalFi
 	return null;
 }
 
-async function sendFile(
-	round: Round,
-	file: DesiredFile,
-	local: LocalFile,
-	sha256: string,
-): Promise<'sent' | 'ungranted'> {
-	let granted: boolean;
-	try {
-		granted = await ensureMarker(round, file.key);
-	} catch (error) {
-		await local.body.cancel();
-		throw error;
-	}
-	if (!granted) {
-		await local.body.cancel();
-		return 'ungranted';
-	}
-	const body = local.body;
+/** Stream one prepared file (its marker already ensured under the lock), outside every lock. */
+async function sendFile(round: Round, file: DesiredFile, prepared: PreparedFile): Promise<void> {
 	const decidedAt = round.deps.now().getTime();
 	await round.deps.put(
 		round.host,
-		{ path: file.path, sha256, size: file.size, body },
+		{ path: file.path, sha256: prepared.sha256, size: file.size, body: prepared.local.body },
 		MEDIA_COPY_ACTOR,
 	);
 	round.landed.set(file.key, [...(round.landed.get(file.key) ?? []), file.path]);
 	await dropPending(round.deps, round.host, new Set([file.path]), decidedAt);
-	return 'sent';
 }
 
 /** The agent refused the put because the key's marker is gone (a withdrawal landed first). */
@@ -477,7 +468,7 @@ function isKeyUnpublishedRefusal(error: unknown): boolean {
 	);
 }
 
-type SendOutcome = 'sent' | 'timed_out' | 'refused' | 'ungranted';
+type SendOutcome = 'sent' | 'timed_out' | 'refused';
 
 /**
  * A put that TIMED OUT is deferred, never the end of the round: one file the link cannot
@@ -490,11 +481,11 @@ type SendOutcome = 'sent' | 'timed_out' | 'refused' | 'ungranted';
 async function sendOrDefer(
 	round: Round,
 	file: DesiredFile,
-	local: LocalFile,
-	sha256: string,
+	prepared: PreparedFile,
 ): Promise<SendOutcome> {
 	try {
-		return await sendFile(round, file, local, sha256);
+		await sendFile(round, file, prepared);
+		return 'sent';
 	} catch (error) {
 		if (isKeyUnpublishedRefusal(error)) {
 			round.known.delete(file.key);
@@ -511,19 +502,81 @@ const SENT_OUTCOME = {
 	sent: 'put',
 	timed_out: 'timed_out',
 	refused: 'refused',
-} as const satisfies Record<Exclude<SendOutcome, 'ungranted'>, PutOutcome>;
+} as const satisfies Record<SendOutcome, PutOutcome>;
 
-async function putUnderLock(round: Round, file: DesiredFile): Promise<PutOutcome> {
-	const { deps } = round;
+interface PreparedFile {
+	local: LocalFile;
+	sha256: string;
+}
+
+/**
+ * Everything a put needs BEFORE the target lock: the local `pub/` check, the sha (a cache
+ * miss hashes the whole file — gigabytes for AV), the re-open + re-stat. Nothing here
+ * holds a connection.
+ */
+async function prepareFile(
+	deps: CopyDeps,
+	file: DesiredFile,
+): Promise<PreparedFile | 'unpublished' | 'changed'> {
 	if (!(await deps.isPublished(file.key))) return 'unpublished';
 	const sha256 = await deps.sha256(file);
 	if (sha256 === null) return 'changed';
 	const local = await openUnchanged(deps, file);
-	if (local === null) return 'changed';
-	const sent = await sendOrDefer(round, file, local, sha256);
-	if (sent === 'ungranted') return 'unpublished';
-	if (!(await deps.isPublished(file.key))) return compensate(round, file.key);
+	return local === null ? 'changed' : { local, sha256 };
+}
+
+/**
+ * THE ONLY STEP OF A PUT UNDER THE TARGET LOCK: re-check `pub/<key>` and ensure the agent
+ * marker (ensureMarker re-checks after its `mark true`). Bound of that main-pool
+ * transaction: two local `pub/` checks and at most two `media.mark` calls
+ * (AGENT_TIMEOUTS_MS.media each), whatever the file size. Answers whether to send.
+ */
+async function grantForPut(
+	round: Round,
+	file: DesiredFile,
+): Promise<'granted' | 'unpublished' | 'busy'> {
+	const held = await round.deps.lock(round.host, async () => {
+		if (!(await round.deps.isPublished(file.key))) return false;
+		return ensureMarker(round, file.key);
+	});
+	if (!held.acquired) return 'busy';
+	return held.value ? 'granted' : 'unpublished';
+}
+
+/** The transfer, outside every lock; then the `pub/` re-check (compensate when unpublished). */
+async function transfer(
+	round: Round,
+	file: DesiredFile,
+	prepared: PreparedFile,
+): Promise<PutOutcome> {
+	const sent = await sendOrDefer(round, file, prepared);
+	if (!(await round.deps.isPublished(file.key))) return compensate(round, file.key);
 	return SENT_OUTCOME[sent];
+}
+
+async function grantOrClose(
+	round: Round,
+	file: DesiredFile,
+	prepared: PreparedFile,
+): Promise<'granted' | 'unpublished' | 'busy'> {
+	try {
+		const granted = await grantForPut(round, file);
+		if (granted !== 'granted') await prepared.local.body.cancel();
+		return granted;
+	} catch (error) {
+		await prepared.local.body.cancel();
+		throw error;
+	}
+}
+
+const GRANT_REFUSAL = { unpublished: 'unpublished', busy: 'changed' } as const;
+
+async function putUnit(round: Round, file: DesiredFile): Promise<PutOutcome> {
+	const prepared = await prepareFile(round.deps, file);
+	if (typeof prepared === 'string') return prepared;
+	const granted = await grantOrClose(round, file, prepared);
+	if (granted !== 'granted') return GRANT_REFUSAL[granted];
+	return transfer(round, file, prepared);
 }
 
 const PUT_FIELD = {
@@ -536,12 +589,7 @@ const PUT_FIELD = {
 } as const satisfies Record<PutOutcome, keyof CopyApplyReport>;
 
 async function putOne(round: Round, file: DesiredFile): Promise<void> {
-	const held = await round.deps.lock(round.host, () => putUnderLock(round, file));
-	if (!held.acquired) {
-		round.report.deferred += 1;
-		return;
-	}
-	round.report[PUT_FIELD[held.value]] += 1;
+	round.report[PUT_FIELD[await putUnit(round, file)]] += 1;
 }
 
 async function runRound(

@@ -342,6 +342,15 @@ A diffusion target beside MariaDB, driven by the same publish/unpublish events a
   the same "recompute from ground truth" law as `media_index`.
 - **Unpublish is a verified deletion**: logged, then confirmed against the manifest.
   Withdrawn consent must remove bytes from the public host, not an index entry.
+- **Database pool cost** (built, phase 5): the cross-process `media:<host>` target lock
+  is one main-pool transaction per unit, and a unit spans only agent CONTROL calls — a
+  put's unit is the `pub/<key>` re-check plus at most two `media.mark` calls (60 s agent
+  timeout each); the hash, the re-stat and the transfer run outside it, whatever the file
+  size. A host's units are serialized in one in-process lane, so copy costs at most one
+  main-pool connection per copy host, never for a transfer's duration; a busy lock is
+  waited for holding no connection. A withdrawal (`mark false`) is sent at once, outside
+  every lane and lock — the agent's per-key lock and the grant's post-`mark` re-check make
+  that order-safe (`media_copy_apply.ts` header).
 
 ## 6. Agent command set (closed)
 

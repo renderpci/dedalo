@@ -39,6 +39,8 @@ export interface World {
 	runtime: Map<string, MediaCopyRuntime>;
 	down: boolean;
 	lockBusy: boolean;
+	/** Units holding the (fake) target lock right now. */
+	lockDepth: number;
 	duringPut: ((path: string) => Promise<void>) | null;
 	clock: { t: number };
 }
@@ -58,6 +60,7 @@ export function newWorld(): World {
 		runtime: new Map(),
 		down: false,
 		lockBusy: false,
+		lockDepth: 0,
 		duringPut: null,
 		clock: { t: T0 },
 	};
@@ -195,7 +198,12 @@ export function worldDeps(world: World): CopyDeps {
 		},
 		async lock(_host, work) {
 			if (world.lockBusy) return { acquired: false, reason: 'busy', busyKey: 'media:pub1' };
-			return { acquired: true, value: await work() };
+			world.lockDepth += 1;
+			try {
+				return { acquired: true, value: await work() };
+			} finally {
+				world.lockDepth -= 1;
+			}
 		},
 		async updateRuntime(host, fn) {
 			const next = fn(world.runtime.get(host) ?? emptyRuntime());
