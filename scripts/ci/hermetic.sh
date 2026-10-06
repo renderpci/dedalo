@@ -403,6 +403,9 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-03 (publication host phases 4–6): the spec's path/script references exist.
 	#     DB-free: reads the spec and two package.json files, existsSync only; no network.
 	test/unit/publication_host_spec_refs_tripwire.test.ts
+	# --- 2026-10-04 (#125): the onnxruntime alignment gate. DB-free: reads the vendored
+	#     transformers bundle, package.json and bun.lock; compares three version strings.
+	test/unit/onnxruntime_alignment_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

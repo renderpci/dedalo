@@ -349,6 +349,8 @@ const TRIPWIRES = [
 	'test/unit/publication_host_bundle_twin_tripwire.test.ts',
 	// Publication host phases 4–6 — the spec names only paths and scripts that exist (2026-10-03).
 	'test/unit/publication_host_spec_refs_tripwire.test.ts',
+	// #125 — the vendored transformers.js core and the onnxruntime-web pin are one build (2026-10-04).
+	'test/unit/onnxruntime_alignment_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
