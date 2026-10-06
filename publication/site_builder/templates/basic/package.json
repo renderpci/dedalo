@@ -16,5 +16,8 @@
   "dependencies": {
     "chart.js": "^4.5.1",
     "leaflet": "^1.9.4"
+  },
+  "overrides": {
+    "source-map-js": "^1.2.2"
   }
 }
