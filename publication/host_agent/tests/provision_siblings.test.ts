@@ -22,7 +22,7 @@ function separated(base: HostDeclaration, patch: Partial<HostDeclaration> = {}):
       user: 'api-v2-other',
       group: 'api-v2-other',
       port: 3999,
-      health_url: 'http://127.0.0.1:3999/dedalo/publication/server_api/v2/health',
+      health_url: 'http://127.0.0.1:3999/health',
     },
     ...patch,
   };

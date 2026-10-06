@@ -137,7 +137,7 @@ describe('declaration → REFUSED (3)', () => {
       agent_user: 'dedalo-pubhost-other',
       state_root: '/srv/dedalo_publication_other',
       v1: { user: 'dedalo-api-v1-other' },
-      v2: { unit: 'dedalo-publication-api-v2-other', user: 'dedalo-api-v2-other', group: 'dedalo-api-v2-other', port: 3101, health_url: 'http://127.0.0.1:3101/dedalo/publication/server_api/v2/health' },
+      v2: { unit: 'dedalo-publication-api-v2-other', user: 'dedalo-api-v2-other', group: 'dedalo-api-v2-other', port: 3101, health_url: 'http://127.0.0.1:3101/health' },
     });
     expect(exec(separated, ['check', 'test'])).toBe(EXIT.DRIFT);
     expect(separated.err).toEqual([]);

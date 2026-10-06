@@ -162,7 +162,7 @@ describe('derive — unix instance', () => {
       MEDIA_ROOT: '/mnt/dedalo_media',
       PHP_BIN: '/usr/bin/php',
       V2_UNIT: 'dedalo-publication-api-v2',
-      V2_HEALTH_URL: 'http://127.0.0.1:3100/dedalo/publication/server_api/v2/health',
+      V2_HEALTH_URL: 'http://127.0.0.1:3100/health',
       RELEASES_RETAINED: '3',
     });
     for (const key of Object.keys(layout.envVars)) expect(SECRET_LOOKING_KEY.test(key)).toBe(false);

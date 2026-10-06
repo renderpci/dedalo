@@ -24,7 +24,7 @@ export function unixDeclaration(): HostDeclaration {
       user: 'dedalo-api-v2',
       group: 'dedalo-api-v2',
       port: 3100,
-      health_url: 'http://127.0.0.1:3100/dedalo/publication/server_api/v2/health',
+      health_url: 'http://127.0.0.1:3100/health',
     },
   };
 }

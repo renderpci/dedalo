@@ -14,6 +14,18 @@ the real path to declare. The new section
 [Several instances on one server](./install/publication_host.md#several-instances-on-one-server)
 lists what each instance needs of its own.
 
+The installation page now declares the instance before creating its accounts, and gives the
+exact commands. `provision check` names each missing account with its declaration field and
+the command, in the order to run them. The new section
+[Lay out each site in its home directory](./install/publication_host.md#lay-out-each-site-in-its-home-directory)
+puts each site's state root beside its document root (`/home/<site>/dedalo`, with the home
+owned by root) and shows the virtual host that maps the APIs into the site.
+
+The examples' `v2.health_url` was `…/dedalo/publication/server_api/v2/health`, which answers
+404 under the v2 API's default `BASE_PATH`, so every v2 release would fail its health check.
+It is now `http://127.0.0.1:<port>/health`, which answers whatever prefix the API is published
+under; use that form in your declaration.
+
 **Action needed:** the declaration's `web.group` is replaced by `v1.user`, the user the
 Publication API v1 runs as: with one process pool per site, that site's pool user (the pools may
 share the web server's group). Write `"web": {"server": …, "unit": …}` and

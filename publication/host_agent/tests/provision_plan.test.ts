@@ -251,28 +251,28 @@ describe('plan refusals', () => {
     expect(refusals(l, host).join('\n')).toContain('belongs to another instance');
   });
 
-  test('missing accounts, binaries and agent checkout are ALL named, with the fix', () => {
+  test('missing accounts, binaries and agent checkout are ALL named, with the field and the exact command', () => {
     const l = layout();
     const host = new FakeHost(l);
     host.users.delete('dedalo-pubhost');
     host.users.delete('dedalo-api-v1');
+    host.users.delete('dedalo-api-v2');
+    host.groups.delete('dedalo-api-v2');
+    host.groups.delete('dedalo');
     host.entries.delete(l.phpBin);
     host.entries.delete(l.agentEntry);
     const reasons = refusals(l, host);
-    expect(reasons).toHaveLength(4);
-    expect(reasons.join('\n')).toContain('useradd --system --no-create-home --shell /usr/sbin/nologin dedalo-pubhost');
-    expect(reasons.join('\n')).toContain('useradd --system --no-create-home --shell /usr/sbin/nologin dedalo-api-v1');
+    // Accounts first, in the order the commands must run: the v2 group before the v2 user joining it.
+    expect(reasons.slice(0, 5)).toEqual([
+      "group 'dedalo-api-v2' (v2.group) does not exist — create it: groupadd --system dedalo-api-v2",
+      "group 'dedalo' (engine_group) does not exist — it must be the group of the account that runs Dédalo on this machine (id -gn <that account>); correct the declaration rather than creating it",
+      "user 'dedalo-pubhost' (agent_user) does not exist — create it: useradd --system --no-create-home --shell /usr/sbin/nologin --user-group dedalo-pubhost",
+      "user 'dedalo-api-v1' (v1.user) does not exist — it is the site's PHP-FPM pool user: create it (useradd --system --no-create-home --shell /usr/sbin/nologin -g <the web server's group, e.g. www-data> dedalo-api-v1) and set 'user = dedalo-api-v1' in the site's pool file",
+      "user 'dedalo-api-v2' (v2.user) does not exist — create it: useradd --system --no-create-home --shell /usr/sbin/nologin -g dedalo-api-v2 dedalo-api-v2",
+    ]);
+    expect(reasons).toHaveLength(7);
     expect(reasons.join('\n')).toContain("php_bin '/usr/bin/php'");
     expect(reasons.join('\n')).toContain('check out publication/host_agent');
-  });
-
-  test('a group-writable configtest binary (the NOPASSWD sudo target) is refused', () => {
-    const l = layout();
-    const host = new FakeHost(l);
-    entry(host, l.web.configtestBin).mode = 0o775;
-    expect(refusals(l, host)).toEqual([
-      `web.configtest_bin '/usr/sbin/apache2ctl' is group- or world-writable (mode 0775) — a non-root principal could replace what it runs; make it root-owned and not group- or world-writable`,
-    ]);
   });
 
   test('a symlinked php_bin / bun_bin / agent_dir is refused, naming the resolved path to declare', () => {

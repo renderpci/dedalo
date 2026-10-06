@@ -54,7 +54,7 @@ function unixEnv(overrides: Record<string, string> = {}): Record<string, string>
     MEDIA_ROOT: './media',
     PHP_BIN: '/usr/bin/php',
     V2_UNIT: 'dedalo-publication-v2-gate',
-    V2_HEALTH_URL: 'http://127.0.0.1:3100/dedalo/publication/server_api/v2/health',
+    V2_HEALTH_URL: 'http://127.0.0.1:3100/health',
     ...overrides,
   };
 }

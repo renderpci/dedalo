@@ -266,20 +266,32 @@ export function plan(
   const refusals: string[] = [];
   const artifacts = renderAll(layout, facts, renderers);
 
-  // 1. What the provisioner never creates: accounts.
-  const users = ['root', layout.identity.agentUser, layout.identity.v1User, layout.identity.v2User];
-  const groups = ['root', layout.identity.v2Group];
-  if (layout.identity.engineGroup !== null) groups.push(layout.identity.engineGroup);
-  for (const name of users) {
-    if (!host.users.has(name)) {
-      refusals.push(
-        `user '${name}' does not exist — create it first ` +
-          `(useradd --system --no-create-home --shell /usr/sbin/nologin ${name})`,
-      );
-    }
+  // 1. What the provisioner never creates: accounts. Each refusal names the declaration field
+  //    and the exact command, in the order they must run (a group before the user joining it).
+  const nologin = 'useradd --system --no-create-home --shell /usr/sbin/nologin';
+  const { agentUser, v1User, v2User, v2Group, engineGroup } = layout.identity;
+  if (!host.groups.has('root')) refusals.push(`group 'root' does not exist — this is not a usable host`);
+  if (!host.users.has('root')) refusals.push(`user 'root' does not exist — this is not a usable host`);
+  if (!host.groups.has(v2Group)) {
+    refusals.push(`group '${v2Group}' (v2.group) does not exist — create it: groupadd --system ${v2Group}`);
   }
-  for (const name of groups) {
-    if (!host.groups.has(name)) refusals.push(`group '${name}' does not exist — create it first (groupadd --system ${name})`);
+  if (engineGroup !== null && !host.groups.has(engineGroup)) {
+    refusals.push(
+      `group '${engineGroup}' (engine_group) does not exist — it must be the group of the account that runs ` +
+        `Dédalo on this machine (id -gn <that account>); correct the declaration rather than creating it`,
+    );
+  }
+  if (!host.users.has(agentUser)) {
+    refusals.push(`user '${agentUser}' (agent_user) does not exist — create it: ${nologin} --user-group ${agentUser}`);
+  }
+  if (!host.users.has(v1User)) {
+    refusals.push(
+      `user '${v1User}' (v1.user) does not exist — it is the site's PHP-FPM pool user: create it ` +
+        `(${nologin} -g <the web server's group, e.g. www-data> ${v1User}) and set 'user = ${v1User}' in the site's pool file`,
+    );
+  }
+  if (!host.users.has(v2User)) {
+    refusals.push(`user '${v2User}' (v2.user) does not exist — create it: ${nologin} -g ${v2Group} ${v2User}`);
   }
 
   // 2. What the provisioner never creates either, and what root runs or grants: the pinned
