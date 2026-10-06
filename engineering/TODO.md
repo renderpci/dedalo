@@ -41,10 +41,11 @@
 ## Deploy & Migration
 
 - [x] Documentation: Build entire flow to publish v7 doc + v6 doc. (2026-09-21: one permanent prefix per major — dedalo.dev/docs/v7/ and /docs/v6/ — with /docs/ redirecting to the latest and legacy flat URLs 301'd to v7, which is a path-compatible superset of v6 (46 of its 52 pages exist at the identical path; the 3 that do not are a closed exception list). `bun run docs:publish` IS the gate: content tripwires + `mkdocs build --strict`, then a --delete rsync scoped inside the version prefix; hard refusal, no --force, no CI and no vendor in the path (.github/workflows/docs.yml is advisory only). v6 is off the shared site_dir symlink, wears slate blue-grey instead of the Dédalo orange so readers can tell the manuals apart, and carries the version switcher plus an 'older version' banner. v8 = build into /docs/v8/, add a versions.json row, flip one redirect. Gate test/unit/docs_versioning_tripwire.test.ts, including the rename gate that refuses to publish a page deleted without a redirect_maps entry; routing in deploy/docs/htaccess.)
-- [ ] Master: Ontology and Code client update v6 compatibility from v7 (paths, etc.)
-- [ ] MHT: Deploy and migrate to v7
+- [x] Master: Ontology and Code client update v6 compatibility from v7 (paths, etc.)
+- [x] MHT: Deploy and migrate to v7
 - [ ] mdcat DB (dedalo7_mdcat) lacks migration 0009 (`f_regex_literal` / `f_like_literal`): every text search fails there. Apply the migration before using it as a perf/validation DB (schema change — needs authorisation).
 - [ ] area_maintenance widget 'unit_test' make sense in production mode?
+- [ ] Verify this bug: in copy mode, the agent creates folders and markers that its own service settings make unreadable to nginx (0750/0640). Every published file then answers 404 on a real host.
 
 ## Messaging
 
@@ -63,7 +64,7 @@
 - [x] Review all tools labels (get_tool_label) and translations. (2026-07-27: 63 undefined keys defined + 1241 translation entries → 309 keys × 10 app langs at 100%; fixed tool_assistant/tool_sitebuilder reaching for the wrong resolver and the `Columns`/`columns` case mismatch; deleted get_tool_label's unreachable 3-tier lang chain and gated the single-lang serving contract — engineering/TOOLS_SPEC.md § Tool labels.)
 - [x] Review tool_import_dedalo_csv importing from v6 raw data (v7_php_frozen it works, but v7 not)
 - [ ] Processes sections (e.g. oh81) tools are not working correctly. Consider removing the section tools from these types of sections.
-- [ ] Time machine section (dd15), as Activiti section (dd542) must not have tools.
+- [ ] Time machine section (dd15), as Activity section (dd542) must not have tools.
 
 ## General
 - [ ] Evaluate the change of client path to /public/ instead of /dedalo/client/.
