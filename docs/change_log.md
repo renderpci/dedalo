@@ -997,6 +997,26 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Publishing no longer fails creating a MariaDB integer column sized by `varchar`.**
+
+    A `field_int` diffusion node whose properties carried `varchar` (for example
+    `"varchar": 1024`) was created as `INT(1024)`, which MariaDB refuses, and the
+    whole publication run stopped with "An unexpected error stopped the diffusion
+    run". The two sizing properties are separate again: `varchar` sizes text
+    columns only and `length` sizes integer columns only. The integer column is
+    now created as `INT(8)` unless `length` says otherwise.
+
+- **A publication table too wide for MariaDB is refused by name before publishing starts.**
+
+    MariaDB limits a table row to 65,535 bytes, and every `VARCHAR(n)` column
+    reserves 4 × n bytes of it whatever it holds. A table with many wide `varchar`
+    fields could not be created, and the publication stopped with "An unexpected
+    error stopped the diffusion run", for every table of the element and not just
+    the wide one. The element's plan now refuses such a table before anything is
+    published, naming the table, its width and its widest columns. To fix it,
+    change those fields to `field_text` (add `"index": "BTREE"` to keep the same
+    index) or reduce their `varchar`.
+
 - **The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box.**
 
     The Docker image's ImageMagick could read AVIF but not write it: the Debian package it is built on ships the AVIF decoder only. An installation that lists `avif` in `DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS` therefore had those alternative versions refused on every upload. The image now includes the AVIF encoder (`libheif-plugin-aomenc`). Docker installations get it with the next image build; on a host install, add the same package to have AVIF versions written.

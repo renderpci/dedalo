@@ -180,6 +180,16 @@ Depending on the selected field model, you must set different properties. Some e
 | --- | --- |
 | field_enum | {"enum": {"1": "yes","2": "no"}} |
 | field_varchar | {"varchar":160} |
+| field_int | {"length":11} |
+| field_text | {"index":"BTREE"} (optional: a prefix key instead of the default FULLTEXT index) |
+
+`varchar` sizes `field_varchar` columns only and `length` sizes `field_int`
+columns only; neither is read for any other model. Size `varchar` with care:
+MariaDB limits a table row to 65,535 bytes, and each `VARCHAR(n)` column
+reserves 4 × n bytes of it (utf8mb4) whatever it holds, while a `field_text`
+column takes about 10. A table whose columns add up past the limit is refused
+when the publication plan is built, naming its widest columns — move long
+values to `field_text`.
 
 Sometimes the source data must be processed before it is published. Field
 processing is configured under the field node's `properties->process`: the

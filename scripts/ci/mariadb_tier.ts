@@ -174,6 +174,12 @@ export const ROW_CONTRACT: ReadonlyMap<string, RowContract> = new Map<string, Ro
 	['test/unit/diffusion_target_fence_native.test.ts', { rises: ['rows_inserted', 'rows_deleted'] }],
 	[MEASURE_SELF_GATE, { rises: ['rows_inserted', 'rows_deleted'] }],
 	[
+		'test/unit/diffusion_row_size_native.test.ts',
+		{
+			none: "Its live legs calibrate the plan compile's row-width formula against the server: CREATE TABLE at the 65535-byte boundary (one accepted, one refused 1118) and DROP of those scratch tables — DDL only, no row is written",
+		},
+	],
+	[
 		'test/unit/diffusion_native_delete.test.ts',
 		{
 			none: "Every real-executor leg targets a table or database that does not exist (errno 1146 / 1049 are its idempotent successes) — the gate proves the errno posture, not a row delete; the executor deleting a live row is unpublish_debt_native's ROW leg, whose contract declares rows_deleted",
