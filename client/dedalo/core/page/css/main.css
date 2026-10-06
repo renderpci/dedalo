@@ -15751,6 +15751,18 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   font-weight: 700;
   color: var(--fg_default);
 }
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_widget_id {
+  padding: 0.08rem 0.42rem;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--fg_muted);
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_widget_id:empty {
+  display: none;
+}
 .area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_state {
   display: inline-flex;
   align-items: center;

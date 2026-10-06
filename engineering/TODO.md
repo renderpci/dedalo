@@ -16,7 +16,7 @@
 - [ ] Deep reversed shape: an intermediate hop's source is constrained to neither the declared step table nor its section_tipo when that hop has no ACL; and the index skips non-int4 locator ids that the correlated form still casts. Both pre-existing; decide whether the reversed shape should match the correlated one exactly.
 - [ ] Search: verify multiple left join issues (MDCAT case)
 - [ ] Search presets: clean up all presets to prevent issues. Important.
-- [ ] Search: improve search panel design (see 'CSS search panel design' session)
+- [x] Search: improve search panel design (see 'CSS search panel design' session)
 
 ## UI & Responsive
 
@@ -28,12 +28,15 @@
 - [ ] Responsive CSS. Improve the current mobile view: buttons, layout, list, etc.
 - [ ] Responsive design: ensure all main tools are responsive
 - [x] Messages from request when the server takes more time than expected: valorate the improve the messges manager policy to be less intrusive. (2026-10-01: the per-request "Awaiting for busy server.." bubble (raised by the /health probe at timeout/2, one per request, lingering on its own timer) is replaced by ONE page state — common/js/request_activity.js, painted by page/js/request_activity_indicator.js: nothing <1.5 s, a thin top bar after, + one sentence (label server_slow_response) after 8 s, gone when the last request settles; background polls (lock heartbeat/status, job tray) and declared long operations (timeout > 60 s) excluded by default, busy_notice opts in/out; a CSRF resend keeps the same wait; the status text is an always-present live region. Identical page bubbles merge into one ×N (prepend_bubble). Gates test/unit/request_activity_native + client suite test_request_activity. Left: label awaiting_busy_server now unreferenced — removal is a WC-034-class edit.)
+- [x] area maintenance: when a widget is selected, display the widget name in a non-intrusive place (e.g. 'update_ontology'). (2026-10-06: the System Map context header carries the selected widget's module id in a muted monospace badge — render_area_maintenance.js `select_tool` sets `.ctx_widget_id` (textContent, `title`=module name; covers chip click, restore and ⌘K) + css/area_maintenance.less; client assertion in test_publication_hosts.js.)
 
 ## Ontology
 
 - [x] Overwrite ontology nodes (with local ontology definitions, e.g. localontlogy0) (see https://github.com/renderpci/dedalo/blob/v7_php_frozen/docs/core/ontology/ontology_class.md). Ensure that this functionality is implemented in v7 TS. Note that the overwrite occurs when parsing the ontology (creating dd_ontology resolved records), and will not be recalculated until a new parse. (2026-10-01: implemented in `src/core/ontology/parser.ts` — link = ontology42 only; tld/translatable/order/is_model canonical-only; term merged per lang; properties per top-level key, `null` removes; override records never parsed as nodes. WC-2026-10-01-ontology-overwrite-scoped; gate test/unit/ontology_overwrite_native.test.ts; admin guide docs/core/ontology/local_ontology_overrides.md.)
 - [ ] Ontology: Default lang will be english. Review the entire workflow to ensure it works correctly, especially publication (current definition is only in spanish).
 - [ ] Non root users can't access to the Ontology tree. Check why. (2026-10-01 diagnosis: DELIBERATE, not a bug — engineering/AREA_SPEC.md §9 made area_ontology (dd5) superuser-only, read AND menu, by user direction 2026-07-03. Gates: src/core/area/read.ts dispatchAreaRead (`principal.userId !== SUPERUSER_ID` → perm.denied, global admins included) + src/core/api/handlers/menu.ts (dd5 filtered for non-superusers). PHP had no hard gate: ordinary ACL + global-admin bypass, dd774 self-keyed profile could open it. Decide the rule: (a) global admin + root (`isGlobalAdmin`), or (b) PHP rule (global admin OR profile granted dd5 via getAuthorizedAreaTipos). Same change: AREA_SPEC §9 row, the differential pinning the divergence, a WC entry.)
+- [ ] Ontology menu access currently is only for root user. It should be for global admins with specific permissions (in the same way another sections have). This allows to give access to ontology menu to other users than root, and for specific fields.
+
 
 ## Deploy & Migration
 
@@ -59,3 +62,8 @@
 
 - [x] Review all tools labels (get_tool_label) and translations. (2026-07-27: 63 undefined keys defined + 1241 translation entries → 309 keys × 10 app langs at 100%; fixed tool_assistant/tool_sitebuilder reaching for the wrong resolver and the `Columns`/`columns` case mismatch; deleted get_tool_label's unreachable 3-tier lang chain and gated the single-lang serving contract — engineering/TOOLS_SPEC.md § Tool labels.)
 - [x] Review tool_import_dedalo_csv importing from v6 raw data (v7_php_frozen it works, but v7 not)
+- [ ] Processes sections (e.g. oh81) tools are not working correctly. Consider removing the section tools from these types of sections.
+- [ ] Time machine section (dd15), as Activiti section (dd542) must not have tools.
+
+## General
+- [ ] Evaluate the change of client path to /public/ instead of /dedalo/client/.

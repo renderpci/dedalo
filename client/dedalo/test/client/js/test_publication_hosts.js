@@ -823,6 +823,26 @@ describe('SYSTEM MAP receives OPEN_WIDGET_EVENT', function () {
 			live.node.remove();
 		}
 	});
+
+	it('shows the selected widget module id in the context header', function () {
+		const map = build(() => {});
+		container.appendChild(map.node);
+		try {
+			document.dispatchEvent(
+				new CustomEvent(OPEN_WIDGET_EVENT, { detail: { id: 'publication_hosts' } }),
+			);
+			const id_el = map.node.querySelector('.ctx_head .ctx_widget_id');
+			assert.ok(id_el, 'the context header carries a widget-id node');
+			assert.strictEqual(
+				id_el.textContent,
+				'publication_hosts',
+				'the selected widget module id is shown (non-intrusive header badge)',
+			);
+		} finally {
+			map.destroy();
+			map.node.remove();
+		}
+	});
 });
 
 describe('MEDIA_CONTROL link line', function () {
