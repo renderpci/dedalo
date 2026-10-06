@@ -9,11 +9,10 @@
  * owned by its agent user, so two instances sharing an agent user can each write the other's
  * media include (parsed by root at configtest) and API releases — one compromise is both.
  *
- * The SECRET-READING groups are the same law as the users: v1.group reads v1/shared (the v1
- * API's configuration, DB credentials included) and v2.group reads v2/shared/v2.env. Behind one
- * web server the v1 group is the site's PHP-FPM pool group (the v6 practice) — never the web
- * server's own group shared by every site, which would let every instance read every v1
- * configuration.
+ * The v1 configuration (DB credentials included) is guarded by its OWNER, the v1 user (the
+ * site's PHP-FPM pool user): behind one web server every pool shares the web server's group,
+ * so the v1 user is a principal like the others — disjoint across instances. v2.group reads
+ * v2/shared/v2.env: disjoint too.
  *
  * Pure, ZERO-DEPENDENCY (tests/provision_zero_dep.test.ts): the CLI reads and parses the
  * sibling declarations (schema.ts), this module only judges the derived layouts.
@@ -34,16 +33,14 @@ const overlap = pathsOverlap;
 function principals(layout: AgentLayout): ReadonlyMap<string, string> {
   return new Map([
     [layout.identity.agentUser, 'agent_user'],
+    [layout.identity.v1User, 'v1.user'],
     [layout.identity.v2User, 'v2.user'],
   ]);
 }
 
 /** The groups that read an instance's API configuration (its credentials). Disjoint across instances. */
 function secretGroups(layout: AgentLayout): ReadonlyMap<string, string> {
-  // v1 first: when one group is both (allowed within one instance), the v1 name reports it.
-  const groups = new Map([[layout.identity.v2Group, 'v2.group']]);
-  groups.set(layout.identity.v1Group, 'v1.group');
-  return groups;
+  return new Map([[layout.identity.v2Group, 'v2.group']]);
 }
 
 /** The directories an instance WRITES (its state root; a copy-mode media root). */
@@ -70,7 +67,9 @@ export function siblingRefusals(own: AgentLayout, siblings: readonly Sibling[]):
       if (theirs !== undefined) {
         clash(
           `${field} '${user}' is that instance's ${theirs}`,
-          'give each instance its own users (one compromised instance must not reach the other)',
+          field === 'v1.user' || theirs === 'v1.user'
+            ? "run each site's v1 API in its own PHP-FPM pool, under its own user, and declare that user as v1.user"
+            : 'give each instance its own users (one compromised instance must not reach the other)',
         );
       }
     }
@@ -80,9 +79,7 @@ export function siblingRefusals(own: AgentLayout, siblings: readonly Sibling[]):
       if (theirs === undefined) continue;
       clash(
         `${field} '${group}' is that instance's ${theirs}`,
-        field === 'v1.group' || theirs === 'v1.group'
-          ? "run each site's v1 API in its own PHP-FPM pool and declare that pool's group as v1.group"
-          : 'give each instance its own v2 group',
+        'give each instance its own v2 group',
       );
     }
     // Our v2 unit file is written to the unit dir and its restart granted to our agent by polkit:

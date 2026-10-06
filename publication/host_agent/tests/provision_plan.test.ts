@@ -105,7 +105,7 @@ describe('plan on a fresh host', () => {
     expect(mkdirs.find(a => a.path === l.state.audit)).toMatchObject({ owner: 'root', uid: 0, mode: 0o755 });
     expect(mkdirs.find(a => a.path === l.state.rules)).toMatchObject({ owner: 'dedalo-pubhost', uid: 990, mode: 0o755 });
     expect(mkdirs.find(a => a.path === l.state.apis.v2.staging)).toMatchObject({ owner: 'dedalo-pubhost', uid: 990, mode: 0o700 });
-    expect(mkdirs.find(a => a.path === l.state.apis.v1.shared)).toMatchObject({ group: 'www-data', gid: 33, mode: 0o750 });
+    expect(mkdirs.find(a => a.path === l.state.apis.v1.shared)).toMatchObject({ group: 'root', gid: 0, mode: 0o711 });
   });
 
   test('writes the marker, mints the token, creates the audit log, then every artifact — in that order', () => {
@@ -255,13 +255,13 @@ describe('plan refusals', () => {
     const l = layout();
     const host = new FakeHost(l);
     host.users.delete('dedalo-pubhost');
-    host.groups.delete('www-data');
+    host.users.delete('dedalo-api-v1');
     host.entries.delete(l.phpBin);
     host.entries.delete(l.agentEntry);
     const reasons = refusals(l, host);
     expect(reasons).toHaveLength(4);
     expect(reasons.join('\n')).toContain('useradd --system --no-create-home --shell /usr/sbin/nologin dedalo-pubhost');
-    expect(reasons.join('\n')).toContain('groupadd --system www-data');
+    expect(reasons.join('\n')).toContain('useradd --system --no-create-home --shell /usr/sbin/nologin dedalo-api-v1');
     expect(reasons.join('\n')).toContain("php_bin '/usr/bin/php'");
     expect(reasons.join('\n')).toContain('check out publication/host_agent');
   });

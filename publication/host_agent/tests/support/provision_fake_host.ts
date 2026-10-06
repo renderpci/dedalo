@@ -31,6 +31,7 @@ export class FakeHost implements ProvisionIo {
   readonly users = new Map<string, number>([
     ['root', 0],
     ['dedalo-pubhost', 990],
+    ['dedalo-api-v1', 992],
     ['dedalo-api-v2', 991],
   ]);
   readonly groups = new Map<string, number>([

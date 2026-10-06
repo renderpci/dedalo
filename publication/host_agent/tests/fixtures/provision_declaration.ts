@@ -14,7 +14,7 @@ export function unixDeclaration(): HostDeclaration {
     engine_group: 'dedalo',
     agent_dir: '/opt/dedalo/publication/host_agent',
     web: { server: 'apache', unit: 'apache2' },
-    v1: { group: 'www-data' },
+    v1: { user: 'dedalo-api-v1' },
     state_root: '/srv/dedalo_publication',
     media: { mode: 'shared', root: '/mnt/dedalo_media' },
     php_bin: '/usr/bin/php',

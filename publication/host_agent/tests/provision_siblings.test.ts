@@ -16,7 +16,7 @@ function separated(base: HostDeclaration, patch: Partial<HostDeclaration> = {}):
     agent_user: 'pubhost-other',
     state_root: '/srv/pub_other',
     media: { mode: 'shared', root: '/mnt/media_other' },
-    v1: { group: 'pool-other' },
+    v1: { user: 'pool-other' },
     v2: {
       unit: 'api-v2-other',
       user: 'api-v2-other',
@@ -97,18 +97,17 @@ describe('siblingRefusals', () => {
     expect(judge(own, separated(own, { state_root: `${own.state_root}x` }))).toEqual([]);
   });
 
-  test('one PHP-FPM pool group for two sites (or mod_php behind one web server) is refused: v1 credentials leak', () => {
+  test('one pool user for two sites (or mod_php) is refused: it owns, and reads, both v1 configurations', () => {
     const own = unixDeclaration();
     expect(judge(own, separated(own, { v1: own.v1 }))).toEqual([
-      `v1.group '${own.v1.group}' is that instance's v1.group — also used by instance 'other' (/etc/dedalo_publication_host/other.json); run each site's v1 API in its own PHP-FPM pool and declare that pool's group as v1.group`,
+      `v1.user '${own.v1.user}' is that instance's v1.user — also used by instance 'other' (/etc/dedalo_publication_host/other.json); run each site's v1 API in its own PHP-FPM pool, under its own user, and declare that user as v1.user`,
     ]);
   });
 
-  test('our v1 group as their v2 group is refused', () => {
+  test('our v1 user as their agent user is refused', () => {
     const own = unixDeclaration();
-    const other = separated(own);
-    expect(judge(own, { ...other, v2: { ...other.v2, group: own.v1.group } }).join('\n')).toContain(
-      `v1.group '${own.v1.group}' is that instance's v2.group`,
+    expect(judge(own, separated(own, { agent_user: own.v1.user })).join('\n')).toContain(
+      `v1.user '${own.v1.user}' is that instance's agent_user`,
     );
   });
 
@@ -118,10 +117,8 @@ describe('siblingRefusals', () => {
     expect(judge(own, other).join('\n')).toContain(`media.root '${own.media.root}' overlaps that instance's state_root '/mnt'`);
   });
 
-  test('our v2 group as their v1 group is refused (our v2 service would read their v1 config)', () => {
+  test("the web server's group shared by every site's pool is NOT a refusal: the v1 user guards the configuration", () => {
     const own = unixDeclaration();
-    expect(judge(own, separated(own, { v1: { group: own.v2.group } })).join('\n')).toContain(
-      `v2.group '${own.v2.group}' is that instance's v1.group`,
-    );
+    expect(judge(own, separated(own, { web: own.web }))).toEqual([]);
   });
 });

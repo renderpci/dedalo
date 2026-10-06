@@ -182,7 +182,7 @@ describe('hostIo + observeHost on a real tree', () => {
     expect(statSync(layout.credentialsDir).mode & 0o7777).toBe(0o700);
     expect(statSync(layout.serviceTokenPath).mode & 0o7777).toBe(0o600);
     expect(statSync(layout.envFile).mode & 0o7777).toBe(0o644);
-    expect(statSync(layout.state.apis.v1.shared).mode & 0o7777).toBe(0o750);
+    expect(statSync(layout.state.apis.v1.shared).mode & 0o7777).toBe(0o711);
     expect(statSync(layout.state.audit).mode & 0o7777).toBe(0o755);
     expect(statSync(layout.state.auditFile).mode & 0o7777).toBe(0o600);
     expect([...sealed]).toEqual([layout.state.auditFile]);

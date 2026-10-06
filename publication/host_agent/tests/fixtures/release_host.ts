@@ -77,7 +77,8 @@ export async function prepareReleaseRoots(): Promise<void> {
     await mkdir(layout.shared, { recursive: true });
     await mkdir(layout.staging, { recursive: true });
   }
-  await writeFile(join(apiLayout('v1').shared, 'server_config_api.php'), '<?php // shared test config');
+  // Private to its owner (the v1 pool user): releases/install.ts refuses it readable by group or others.
+  await writeFile(join(apiLayout('v1').shared, 'server_config_api.php'), '<?php // shared test config', { mode: 0o600 });
   await writeFile(join(apiLayout('v2').shared, 'v2.env'), 'DB_NAME=test\n');
 }
 

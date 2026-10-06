@@ -145,6 +145,8 @@ export const AGENT_REASON_SENTENCES: Readonly<Record<string, string>> = Object.f
 		'The publication host cannot verify the release involved, so it refused to switch to it. The current release still serves.',
 	shared_config_missing:
 		"The publication host is missing the publication API's shared configuration. An operator must create it on that host; the previous release still serves.",
+	shared_config_exposed:
+		"The publication API's shared configuration on the publication host is readable by other accounts, so the host refused the release. An operator must restrict it to its owner on that host; the previous release still serves.",
 	php_lint_failed:
 		'A PHP file in the release failed the syntax check on the publication host. The previous release still serves.',
 	node_modules_missing:

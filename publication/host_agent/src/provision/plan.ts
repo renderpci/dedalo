@@ -267,8 +267,8 @@ export function plan(
   const artifacts = renderAll(layout, facts, renderers);
 
   // 1. What the provisioner never creates: accounts.
-  const users = ['root', layout.identity.agentUser, layout.identity.v2User];
-  const groups = ['root', layout.identity.v1Group, layout.identity.v2Group];
+  const users = ['root', layout.identity.agentUser, layout.identity.v1User, layout.identity.v2User];
+  const groups = ['root', layout.identity.v2Group];
   if (layout.identity.engineGroup !== null) groups.push(layout.identity.engineGroup);
   for (const name of users) {
     if (!host.users.has(name)) {

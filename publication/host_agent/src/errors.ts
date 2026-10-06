@@ -41,6 +41,7 @@ export const REASON_CODES = Object.freeze([
   'sha_mismatch',
   'release_unverified',
   'shared_config_missing',
+  'shared_config_exposed',
   'php_lint_failed',
   'node_modules_missing',
   'scratch_health_failed',
@@ -175,6 +176,8 @@ export const RELEASE_REFUSAL_REASONS = Object.freeze([
   'release_unverified',
   /** shared/server_config_api.php or a headers file (v1), or shared/v2.env (v2), is missing. */
   'shared_config_missing',
+  /** shared/server_config_api.php (v1) is not a regular file private to its owner (the v1 pool user). */
+  'shared_config_exposed',
   /** `php -l` rejected a file of a v1 bundle. */
   'php_lint_failed',
   /** A v2 bundle without node_modules/: the host never runs `bun install`. */

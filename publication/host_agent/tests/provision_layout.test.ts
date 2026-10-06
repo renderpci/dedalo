@@ -168,16 +168,22 @@ describe('derive — unix instance', () => {
     for (const key of Object.keys(layout.envVars)) expect(SECRET_LOOKING_KEY.test(key)).toBe(false);
   });
 
-  test('owners and groups resolve from the declaration; the agent joins both shared groups', () => {
+  test('owners and groups resolve from the declaration; the agent joins the v2 group only', () => {
     expect(ownerName(layout, 'agent')).toBe('dedalo-pubhost');
-    expect(groupName(layout, 'v1Group')).toBe('www-data');
     expect(groupName(layout, 'v2Group')).toBe('dedalo-api-v2');
     expect(groupName(layout, 'engineGroup')).toBe('dedalo');
-    expect(layout.identity.agentSupplementaryGroups).toEqual(['www-data', 'dedalo-api-v2']);
-    const same = unixDeclaration();
-    expect(
-      derive({ ...same, v2: { ...same.v2, group: 'www-data' } }).identity.agentSupplementaryGroups,
-    ).toEqual(['www-data']);
+    expect(layout.identity.v1User).toBe('dedalo-api-v1');
+    // No web/v1 group: the agent never reads the v1 configuration (v1/shared is root:root 0711).
+    expect(layout.identity.agentSupplementaryGroups).toEqual(['dedalo-api-v2']);
+    expect(MODES.v1Shared).toEqual({ owner: 'root', group: 'root', mode: 0o711 });
+  });
+
+  test('agent, v1 and v2 are three distinct users, none of them root', () => {
+    const d = unixDeclaration();
+    expect(() => derive({ ...d, v1: { user: d.agent_user } })).toThrow(/v1\.user: must differ from agent_user/);
+    expect(() => derive({ ...d, v2: { ...d.v2, user: d.v1.user } })).toThrow(/v2\.user: must differ from v1\.user/);
+    expect(() => derive({ ...d, v2: { ...d.v2, user: d.agent_user } })).toThrow(/v2\.user: must differ from agent_user/);
+    expect(() => derive({ ...d, v1: { user: 'root' } })).toThrow(/v1\.user: must not be root/);
   });
 });
 

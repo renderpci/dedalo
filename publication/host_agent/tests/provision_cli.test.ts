@@ -123,7 +123,7 @@ describe('declaration → REFUSED (3)', () => {
     for (const clash of [
       "agent_user 'dedalo-pubhost' is that instance's agent_user",
       "v2.user 'dedalo-api-v2' is that instance's v2.user",
-      "v1.group 'www-data' is that instance's v1.group",
+      "v1.user 'dedalo-api-v1' is that instance's v1.user",
       "v2.group 'dedalo-api-v2'",
       "v2.unit 'dedalo-publication-api-v2'",
       'v2.port 3100',
@@ -136,7 +136,7 @@ describe('declaration → REFUSED (3)', () => {
     const separated = sibling({
       agent_user: 'dedalo-pubhost-other',
       state_root: '/srv/dedalo_publication_other',
-      v1: { group: 'pool-other' },
+      v1: { user: 'dedalo-api-v1-other' },
       v2: { unit: 'dedalo-publication-api-v2-other', user: 'dedalo-api-v2-other', group: 'dedalo-api-v2-other', port: 3101, health_url: 'http://127.0.0.1:3101/dedalo/publication/server_api/v2/health' },
     });
     expect(exec(separated, ['check', 'test'])).toBe(EXIT.DRIFT);

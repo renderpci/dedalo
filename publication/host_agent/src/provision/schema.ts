@@ -47,7 +47,7 @@ export const declarationSchema = z.strictObject({
     unit: unitName,
   }),
   v1: z.strictObject({
-    group: unixName,
+    user: unixName,
   }),
   state_root: absolutePath,
   media: z.strictObject({

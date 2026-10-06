@@ -128,6 +128,8 @@ The provisioner never creates users or groups. Create, as system accounts withou
 shell:
 
 - the agent's own user;
+- the user the Publication API v1 runs as. With one PHP-FPM pool per site, this is that
+  site's pool user, which you have usually created already for the site;
 - the user and group of the Publication API v2 service;
 - on one machine, make sure the work system's group exists (the agent's socket belongs to it).
 
@@ -151,10 +153,12 @@ states:
 - the **web server** (`apache` or `nginx`) and its systemd unit. You do not declare the configuration-test command: the provisioner picks it on the host.
   For Apache that is `/usr/sbin/apache2ctl` on Debian and Ubuntu (where `apachectl` is only
   a link to it) or `/usr/sbin/apachectl` on RHEL; for nginx, `/usr/sbin/nginx`;
-- the **group the Publication API v1 runs as** (`v1.group`), the only group that may read the
-  v1 configuration. With one PHP-FPM pool per site, it is that site's pool group (the pool's
-  `group =` setting). With Apache's `mod_php`, it is the web server's group (`www-data` on
-  Debian and Ubuntu). Use a pool per site whenever the server hosts more than one site (see
+- the **user the Publication API v1 runs as** (`v1.user`). It owns the v1 configuration,
+  and nobody else may read that file. With one PHP-FPM pool per site, it is that site's pool
+  user (the pool's `user =` setting); the pools may all share the web server's group. With
+  Apache's `mod_php`, it is the web server's user (`www-data` on Debian and Ubuntu). It must
+  differ from the agent's user and from the v2 user. Use a pool per site whenever the server
+  hosts more than one site (see
   [Several instances on one server](#several-instances-on-one-server));
 - the **state root**, the directory the agent owns;
 - the **media mode** (`shared`, `copy` or `none`) and, unless `none`, the media root;
@@ -218,8 +222,18 @@ install:
   `root:<v2 group>`, mode `0640`).
 - **v1**: the v1 API configuration file in `<state root>/publication_api/v1/shared/`
   (the refusal names it). Start from the sample in the v1 release's `config_api/`
-  directory. Owned by root, readable by the v1 group, not by others
-  (`root:<v1.group>`, mode `0640`).
+  directory. Owned by the v1 user and readable by it alone:
+
+    ```bash
+    chown <v1.user> server_config_api.php
+    chmod 0400 server_config_api.php
+    ```
+
+  The file holds the site's database credentials, and the pools usually share the web
+  server's group, so a group permission would let every site read it. Installing a v1
+  release is refused with `shared_config_exposed` while the file is readable by its group
+  or by others, or still owned by root. The agent never reads the file: it only checks it and links it into each
+  release.
 
 ### 6. Carry the engine bundle to the work system (two machines only)
 
@@ -291,24 +305,25 @@ You choose the rest, and each instance needs its own:
 
 | Field | Why it cannot be shared |
 | --- | --- |
-| `agent_user`, `v2.user` | permissions are granted by user. Two instances sharing a user could each change the other's media rules and API releases, so a flaw in one would reach the other |
-| `v1.group` | it reads the v1 API configuration, which holds that site's database credentials. Give each site its own PHP-FPM pool and declare the pool's group |
+| `agent_user`, `v1.user`, `v2.user` | permissions are granted by user, and the v1 user is the only one that can read its site's v1 configuration (database credentials included). Two instances sharing a user could each change the other's media rules and API releases, so a flaw in one would reach the other |
 | `v2.group` | it reads the v2 API configuration, which holds that API's settings |
 | `v2.unit`, `v2.port` and its `health_url` | two v2 services cannot have one name or listen on one port. The v2 unit name must not be another instance's web-server or agent unit name either: the instance's v2 unit file would replace that unit |
 | `listen` port (two machines) | two agents cannot listen on one address and port |
 | `state_root`, and a `copy` media root | each instance writes only its own directories |
 
-These can be shared: the web server itself, the Bun and PHP paths, the work system's group
-(`engine_group`, as long as it is not another instance's v1 or v2 group), a `shared` media
+These can be shared: the web server and its group (every site's pool may run under it), the
+Bun and PHP paths, the work system's group (`engine_group`, as long as it is not another
+instance's v2 group), a `shared` media
 root (it is mounted read-only), and the agent's code directory. If the agent's code is
 shared, every instance is updated together.
 
 !!! note "One web server, one PHP-FPM pool per site"
     The web server is shared, but the v1 API of each site runs in its own PHP-FPM pool, under
-    its own user and group. That pool group is the instance's `v1.group`. With `mod_php`
-    instead, every site's v1 API runs as the web server's group, so every site could read
-    every other site's database credentials. `check` therefore refuses two instances with the
-    same `v1.group`. A server with a single instance may use `mod_php`.
+    its own user. The pools may share the web server's group (`www-data`). That pool user is
+    the instance's `v1.user`, and it alone can read the site's v1 configuration. With
+    `mod_php` instead, every site's v1 API runs as the web server's user, so every site could
+    read every other site's database credentials. `check` therefore refuses two instances with
+    the same `v1.user`. A server with a single instance may use `mod_php`.
 
 `check` and `apply` read every other declaration in `/etc/dedalo_publication_host/` and refuse
 any field above that two instances share, naming the other instance and its file. A
@@ -571,6 +586,7 @@ taken.
 | the fingerprints differ | wrong instance name or wrong token; the two are indistinguishable by design | check both against the declaration and the credential file |
 | applying media rules fails | the web server's configuration test rejected the new include | the previous include is still active and nothing was reloaded; read the error and re-render the rules |
 | an API install is refused: `shared_config_missing` | the API's configuration file in `shared/` does not exist yet | create it as root (step 5), then install again |
+| a v1 install is refused: `shared_config_exposed` | the v1 configuration file is readable by its group or by others, is owned by root (created as root and never given to the v1 user), or is not a regular file | `chown <v1.user>` it and `chmod 0400` it (step 5), then install again |
 | an API install fails its health check | the new release did not answer healthy | the previous release is still `current` and serving; the audit log names both releases |
 | `dedalo:pair-publication-host` says to run it as the owner of the private directory | it was run as root or as another user, or the private directory is owned by root | run it as the Dédalo user, who must own the private directory: `sudo -u <engine user> bun run dedalo:pair-publication-host …` |
 | `dedalo:pair-publication-host` refuses a placeholder | no token was given: the fragment line still holds the placeholder and no `--token-file` / `--token-stdin` was passed | give the token as in *Pair it with the work system*, step 2 |

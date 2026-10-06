@@ -1091,6 +1091,8 @@ function lockstepSetup(ctx: Ctx, scene: Scene): Lockstep {
 	writeFileSync(
 		join(scene.state, 'publication_api', 'v1', 'shared', 'server_config_api.php'),
 		'<?php\n// drill: the Publication API v1 shared configuration\n',
+		// Private to its owner: the agent refuses a v1 config readable by group or others.
+		{ mode: 0o600 },
 	);
 	const env: Record<string, string> = {
 		...ctx.engineEnv,

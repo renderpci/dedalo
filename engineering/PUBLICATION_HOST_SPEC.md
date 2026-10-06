@@ -253,6 +253,13 @@ release, state outside the code:
   `releases/<r>/config_api/server_config_api.php` (and `server_config_headers.php` when
   `shared/` has one) → `shared/`. A v1 bundle that carries either file is refused
   (`reserved_path`).
+- **v1 config is private to its owner.** `server_config_api.php` holds the site's database
+  credentials and every site's PHP-FPM pool may share the web server's group, so the
+  declaration names the pool USER (`v1.user`), the file is `<v1.user>` mode 0400/0600, and an
+  install with the file readable by group or others, or root-owned (the pool is never root), is
+  refused (`shared_config_exposed`; `isPrivateV1Config`).
+  `v1/shared/` is `root:root 0711`: the agent only stats and links there, joins no v1 group,
+  never reads the file. Agent, v1 and v2 are three distinct non-root users (derive).
 - **Install** = stream into staging with the stamp verified → (v1) `php -l` lint →
   (v2) boot the release on a scratch port and probe its health → atomic `current` swap
   (temporary symlink + `rename`) → (v2) restart the unit, then health. A failure before

@@ -12,11 +12,12 @@
  * IDENTITY. On a unix listener Group= is the ENGINE's group: the agent chmods its socket 0660
  * after the bind (src/boot.ts) and the socket's group is the process's, so this line is what
  * lets the engine — and nobody else — connect (spec §1.1). SupplementaryGroups= carries the
- * two shared-state groups: v1/shared is root:<v1 group> 0750 and v2/shared is root:<v2 group>
- * 0750 (layout.ts MODES). The agent stats and links the v1 config (src/releases/install.ts)
- * and checks v2/shared/v2.env exists (src/exec.ts v2ScratchBoot; systemd reads it for the
- * scratch template unit, never the agent's child); without these groups every install
- * dies EACCES on a provisioned host and on no test host.
+ * v2 group: v2/shared is root:<v2 group> 0750 (layout.ts MODES) and the agent checks
+ * v2/shared/v2.env exists (src/exec.ts v2ScratchBoot; systemd reads it for the scratch
+ * template unit, never the agent's child); without it every v2 install dies EACCES on a
+ * provisioned host and on no test host. v1/shared needs no group: it is root:root 0711, the
+ * agent only stats and links there (src/releases/install.ts), and the v1 config is private to
+ * the v1 pool user.
  *
  * CONFIGURATION. src/config.ts parses the env file itself; this unit only NAMES it
  * (Environment=DEDALO_HOST_AGENT_ENV_FILE=…, src/config.ts ENV_FILE_VAR) and never loads it with
@@ -75,7 +76,7 @@ export const RUNTIME_DIRECTORY_PATTERN = /^[a-z][a-z0-9_-]*(\/[a-z0-9][a-z0-9_-]
 const HOME_TREES = /^\/(home|root|run\/user)(\/|$)/;
 
 /**
- * layout.identity.agentSupplementaryGroups (the web and v2 groups — layout.ts owns the list),
+ * layout.identity.agentSupplementaryGroups (the v2 group — layout.ts owns the list),
  * without the one Group= already gives (unix: the engine group).
  */
 export function agentSupplementaryGroups(layout: AgentLayout): string[] {
@@ -138,7 +139,7 @@ export const agentUnitRenderer: Renderer = {
     }
     if (supplementary.length > 0) {
       lines.push(
-        `# v1/shared (v1 group) and v2/shared (v2 group) are 0750: the agent links into one, reads v2.env from the other.`,
+        `# v2/shared is root:<v2 group> 0750: the agent checks v2.env there. v1/shared needs no group (0711).`,
         `SupplementaryGroups=${supplementary.join(' ')}`,
       );
     }

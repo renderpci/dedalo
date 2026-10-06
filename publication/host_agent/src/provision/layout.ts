@@ -132,14 +132,15 @@ export interface HostDeclaration {
     readonly unit: string;
   };
   /**
-   * The group the Publication API v1 RUNS AS — the one that must read its configuration
-   * (v1/shared, root:<v1 group> 0750). With one PHP-FPM pool per site (the v6 practice) it is
-   * that site's pool group; with mod_php, the web server's group. Never "the web server's
-   * group" by definition: several instances behind one web server keep their v1 credentials
-   * apart only through it (siblings.ts refuses it shared).
+   * The USER the Publication API v1 runs as — the site's PHP-FPM pool user (the v6 practice:
+   * one pool per site, a user per site, the web server's group shared by all of them). It
+   * OWNS the v1 configuration (shared/server_config_api.php, mode 0400/0600): the group
+   * cannot separate sites that share it, the owner can. The agent never reads that file — it
+   * stats and links it — so v1/shared is root:root 0711 and the agent joins no v1 group.
+   * releases/install.ts refuses a configuration readable by group or others.
    */
   readonly v1: {
-    readonly group: string;
+    readonly user: string;
   };
   readonly state_root: string;
   readonly media: { readonly mode: MediaMode; readonly root?: string };
@@ -165,7 +166,7 @@ export interface HostDeclaration {
 /* ── the modes matrix: a renderer or the plan names a ROW, never an owner or a number ── */
 
 export type ModeOwner = 'root' | 'agent';
-export type ModeGroup = 'root' | 'v1Group' | 'v2Group' | 'engineGroup';
+export type ModeGroup = 'root' | 'v2Group' | 'engineGroup';
 
 export interface ArtifactMode {
   readonly owner: ModeOwner;
@@ -204,7 +205,8 @@ export const MODES = Object.freeze({
   apiRoot: row('agent', 'root', 0o755),
   releases: row('agent', 'root', 0o755),
   staging: row('agent', 'root', 0o700),
-  v1Shared: row('root', 'v1Group', 0o750),
+  // Traverse only: the agent stats and links its files, the v1 pool user reads the one it owns.
+  v1Shared: row('root', 'root', 0o711),
   v2Shared: row('root', 'v2Group', 0o750),
   rules: row(STATE_TREE_OWNERSHIP.rules, 'root', 0o755),
   audit: row(STATE_TREE_OWNERSHIP.audit, 'root', 0o755),
@@ -267,14 +269,14 @@ export interface AgentLayout {
   readonly identity: {
     readonly agentUser: string;
     readonly engineGroup: string | null;
-    /** The group the v1 API runs as (HostDeclaration.v1.group). */
-    readonly v1Group: string;
+    /** The user the v1 API runs as (HostDeclaration.v1.user): owns the v1 configuration. */
+    readonly v1User: string;
     readonly v2User: string;
     readonly v2Group: string;
     /**
-     * The agent unit's SupplementaryGroups= (render/unit_agent.ts renders exactly this): the agent reads
-     * v1/shared (root:v1Group 0750) and v2/shared (root:v2Group 0750) — releases/install.ts checks and
-     * links the v1 config there, exec.ts's scratch boot reads v2.env.
+     * The agent unit's SupplementaryGroups= (render/unit_agent.ts renders exactly this): the agent
+     * reads v2/shared (root:v2Group 0750) — exec.ts's scratch boot checks v2.env. v1/shared needs
+     * no group (root:root 0711: the agent only stats and links there).
      */
     readonly agentSupplementaryGroups: readonly string[];
   };
@@ -416,8 +418,6 @@ export function groupName(layout: AgentLayout, group: ModeGroup): string {
   switch (group) {
     case 'root':
       return 'root';
-    case 'v1Group':
-      return layout.identity.v1Group;
     case 'v2Group':
       return layout.identity.v2Group;
     case 'engineGroup':
@@ -443,9 +443,19 @@ export interface DeriveHost {
 export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayout {
   const instance = matches(INSTANCE_PATTERN, 'instance', decl.instance);
   const agentUser = matches(UNIX_NAME_PATTERN, 'agent_user', decl.agent_user);
-  const v1Group = matches(UNIX_NAME_PATTERN, 'v1.group', decl.v1.group);
+  const v1User = matches(UNIX_NAME_PATTERN, 'v1.user', decl.v1.user);
   const v2User = matches(UNIX_NAME_PATTERN, 'v2.user', decl.v2.user);
   const v2Group = matches(UNIX_NAME_PATTERN, 'v2.group', decl.v2.group);
+  // Three principals, three users: the agent holds the sudo/polkit grants, the TLS key and the
+  // token; v1 (the site's pool) and v2 run code the work system pushed. One shared user would
+  // hand the pushed code what the agent holds (spec §2.5), and root would hand it everything.
+  const principals: [string, string][] = [['agent_user', agentUser], ['v1.user', v1User], ['v2.user', v2User]];
+  for (const [index, [field, user]] of principals.entries()) {
+    if (user === 'root') throw new LayoutError(field, 'must not be root');
+    for (const [otherField, other] of principals.slice(index + 1)) {
+      if (user === other) throw new LayoutError(otherField, `must differ from ${field} ('${user}')`);
+    }
+  }
 
   const server = decl.web.server;
   if (server !== 'apache' && server !== 'nginx') {
@@ -636,10 +646,10 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     identity: Object.freeze({
       agentUser,
       engineGroup,
-      v1Group,
+      v1User,
       v2User,
       v2Group,
-      agentSupplementaryGroups: Object.freeze([...new Set([v1Group, v2Group])]),
+      agentSupplementaryGroups: Object.freeze([v2Group]),
     }),
     web: Object.freeze({ server, unit: webUnit, configtestBin }),
     agentDir,
