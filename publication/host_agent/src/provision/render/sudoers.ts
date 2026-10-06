@@ -4,9 +4,10 @@
  * only those arguments, so `nginx -t` does not admit `nginx -s stop` or `nginx -c x -t`.
  * Pure, zero-dep, stamped.
  *
- * src/exec.ts runs `sudo -n <WEB_CONFIGTEST_BINARY[server]> -t`; this rule must name that
- * path (held by tests/provision_render_grants.test.ts). layout.ts DERIVES the binary from
- * WEB_CONFIGTEST_BINARY (never declared); the check below is the renderer's own.
+ * src/exec.ts runs `sudo -n <WEB_CONFIGTEST_BIN> -t`; this rule must name that path (held by
+ * tests/provision_render_grants.test.ts). layout.ts DERIVES the binary — the host's pick from the
+ * closed WEB_CONFIGTEST_CANDIDATES (never declared) — and renders the same value into the agent
+ * env; the check below is the renderer's own.
  *
  * The file name has no '.' and no trailing '~': sudo's #includedir silently skips such names,
  * and the grant would vanish while the file looks installed. apply.ts installs it with
@@ -16,7 +17,7 @@
 
 import { basename } from 'node:path';
 import type { AgentLayout } from '../layout';
-import { WEB_CONFIGTEST_BINARY } from '../layout';
+import { WEB_CONFIGTEST_CANDIDATES, isConfigtestBinary } from '../layout';
 import type { Artifact, RenderFacts, Renderer } from './types';
 import { artifact } from './types';
 
@@ -30,11 +31,11 @@ export const sudoersRenderer: Renderer = {
     const bin = layout.web.configtestBin;
     // The EXACT path: a root NOPASSWD grant must name what src/exec.ts runs, never a look-alike
     // elsewhere (a scratch-root gate substitutes this renderer, it does not loosen it).
-    const expected = WEB_CONFIGTEST_BINARY[layout.web.server];
-    if (bin !== expected) {
+    if (!isConfigtestBinary(layout.web.server, bin) || layout.envVars.WEB_CONFIGTEST_BIN !== bin) {
       throw new Error(
-        `render(sudoers): web.configtestBin '${bin}' is not '${expected}', the binary the agent runs for ` +
-          `web.server '${layout.web.server}'. Nothing was rendered.`,
+        `render(sudoers): web.configtestBin '${bin}' is not one of ` +
+          `${WEB_CONFIGTEST_CANDIDATES[layout.web.server].join(', ')} for web.server '${layout.web.server}', ` +
+          `or not the binary the agent env names. Nothing was rendered.`,
       );
     }
     const name = basename(layout.sudoersPath);

@@ -33,7 +33,7 @@ const AGENT_CONFIG_FIELDS = [
   'INSTANCE', 'LISTEN_KIND', 'LOG_LEVEL', 'MAX_BUNDLE_BYTES', 'MAX_BUNDLE_ENTRIES',
   'MEDIA_MODE', 'MEDIA_ROOT', 'NODE_ENV', 'PHP_BIN', 'RELEASES_RETAINED', 'SERVICE_TOKEN',
   'SOCKET_PATH', 'STATE_ROOT', 'TLS_CERT_FILE', 'TLS_CLIENT_CA_FILE', 'TLS_HOST', 'TLS_KEY_FILE',
-  'TLS_PORT', 'V2_HEALTH_URL', 'V2_UNIT', 'WEB_SERVER', 'WEB_UNIT',
+  'TLS_PORT', 'V2_HEALTH_URL', 'V2_UNIT', 'WEB_CONFIGTEST_BIN', 'WEB_SERVER', 'WEB_UNIT',
 ];
 
 afterEach(() => rmSync(GATE_DIR, { recursive: true, force: true }));
@@ -49,6 +49,7 @@ function unixEnv(overrides: Record<string, string> = {}): Record<string, string>
     STATE_ROOT: './state',
     WEB_SERVER: 'nginx',
     WEB_UNIT: 'nginx',
+    WEB_CONFIGTEST_BIN: '/usr/sbin/nginx',
     MEDIA_MODE: 'shared',
     MEDIA_ROOT: './media',
     PHP_BIN: '/usr/bin/php',
@@ -303,6 +304,11 @@ describe('the grammar', () => {
   test('a unit name with a slash or a space is refused', () => {
     writeEnvFile(unixEnv({ WEB_UNIT: 'apache2; rm' }));
     expect(refusal()).toContain('WEB_UNIT must match');
+    // The configtest binary is one of the server's closed candidates, never a free path.
+    writeEnvFile(unixEnv({ WEB_CONFIGTEST_BIN: '/opt/evil/nginx' }));
+    expect(refusal()).toContain('WEB_CONFIGTEST_BIN must be one of /usr/sbin/nginx for WEB_SERVER=nginx');
+    writeEnvFile(unixEnv({ WEB_SERVER: 'apache', WEB_CONFIGTEST_BIN: '/usr/sbin/nginx' }));
+    expect(refusal()).toContain('WEB_CONFIGTEST_BIN must be one of /usr/sbin/apache2ctl, /usr/sbin/apachectl');
   });
 
   test.each(['https://127.0.0.1:3100/health', 'http://10.0.0.5:3100/health', 'not a url'])(

@@ -78,7 +78,7 @@ grants it exactly two things:
 
 | Grant | Allows | Why |
 | --- | --- | --- |
-| a sudo rule | the web server's configuration test (`apachectl -t` or `nginx -t`), nothing else | the test must read TLS keys only root can read |
+| a sudo rule | the web server's configuration test (`apache2ctl -t`, `apachectl -t` or `nginx -t`), nothing else | the test must read TLS keys only root can read |
 | a polkit rule | reloading the web server's unit, restarting the Publication API v2 unit, starting and stopping a scratch copy of the v2 unit on a high local port | applying rules, testing and switching v2 releases need them |
 
 Neither grant lets the work system reach root through the agent:
@@ -148,15 +148,43 @@ states:
   connects to that address;
 - the agent's user, and on one machine the work system's group;
 - where the agent's code was copied (step 1);
-- the **web server** (`apache` or `nginx`), its systemd unit, and the group it runs as
-  (the configuration-test command, `apachectl -t` or `nginx -t`, follows from the server);
+- the **web server** (`apache` or `nginx`) and its systemd unit. You do not declare the configuration-test command: the provisioner picks it on the host.
+  For Apache that is `/usr/sbin/apache2ctl` on Debian and Ubuntu (where `apachectl` is only
+  a link to it) or `/usr/sbin/apachectl` on RHEL; for nginx, `/usr/sbin/nginx`;
+- the **group the Publication API v1 runs as** (`v1.group`), the only group that may read the
+  v1 configuration. With one PHP-FPM pool per site, it is that site's pool group (the pool's
+  `group =` setting). With Apache's `mod_php`, it is the web server's group (`www-data` on
+  Debian and Ubuntu). Use a pool per site whenever the server hosts more than one site (see
+  [Several instances on one server](#several-instances-on-one-server));
 - the **state root**, the directory the agent owns;
 - the **media mode** (`shared`, `copy` or `none`) and, unless `none`, the media root;
 - the absolute paths of two runtimes: Bun, which runs the agent and the Publication API v2
   units, and the language runtime of the Publication API v1, which the agent calls only
-  for its syntax check;
+  for its syntax check. Declare each **real file**, never a link (see below);
 - the Publication API v2 unit, its user and group, its local port, and its health URL on
   `127.0.0.1` at that port.
+
+**The two runtimes.** `check` refuses a runtime path that is a symbolic link, because a link
+can be repointed after the check. When it refuses one, it prints the real path to declare.
+You can also find it yourself:
+
+```bash
+realpath /usr/bin/php     # on Ubuntu, for example /usr/bin/php8.3
+```
+
+Declare the version-named file (`/usr/bin/php8.3`) on purpose: it is the version that checks
+your v1 releases, so it should be the version your web server runs the v1 API with. A later
+`update-alternatives` switch then cannot change it silently.
+
+Bun's own installer puts Bun in a home directory (`~/.bun/bin/bun`). That copy fails the
+check, because the file and every directory above it must belong to root and be writable by
+no one else. Install a system copy and declare it:
+
+```bash
+install -o root -g root -m 0755 ~/.bun/bin/bun /usr/local/bin/bun
+```
+
+After each Bun update, copy it again the same way.
 
 Unknown keys are refused, and every mistake is named with its field. The complete list
 of fields, with their rules, is in the agent's source: `src/provision/schema.ts`. Two
@@ -190,8 +218,8 @@ install:
   `root:<v2 group>`, mode `0640`).
 - **v1**: the v1 API configuration file in `<state root>/publication_api/v1/shared/`
   (the refusal names it). Start from the sample in the v1 release's `config_api/`
-  directory. Owned by root, readable by the web server's group, not by others
-  (`root:<web group>`, mode `0640`).
+  directory. Owned by root, readable by the v1 group, not by others
+  (`root:<v1.group>`, mode `0640`).
 
 ### 6. Carry the engine bundle to the work system (two machines only)
 
@@ -241,6 +269,51 @@ also written, as `DEDALO_PUBLICATION_HOST_FINGERPRINT`, in
 `/etc/dedalo_publication_host/<instance>/engine.env.fragment`, a file `apply` generates
 for the work system's [pairing](#pair-it-with-the-work-system). A request without
 the client certificate must fail at the TLS handshake.
+
+## Several instances on one server
+
+One server can host several publication hosts, for example one per website, each paired
+with the work system under its own name. Each instance is a declaration of its own,
+`/etc/dedalo_publication_host/<instance>.json`, provisioned on its own
+(`bun run provision apply <instance>`).
+
+The provisioner names these after the instance, so two instances never share them:
+
+| Separate per instance | Where |
+| --- | --- |
+| the declaration | `/etc/dedalo_publication_host/<instance>.json` |
+| the token, the TLS files, the agent's settings | `/etc/dedalo_publication_host/<instance>/` |
+| the agent's service | `dedalo-publication-host-<instance>` |
+| the local socket (one machine) | `/run/dedalo_publication_host/<instance>/` |
+| the sudo rule and the polkit rule | one file each, named after the instance |
+
+You choose the rest, and each instance needs its own:
+
+| Field | Why it cannot be shared |
+| --- | --- |
+| `agent_user`, `v2.user` | permissions are granted by user. Two instances sharing a user could each change the other's media rules and API releases, so a flaw in one would reach the other |
+| `v1.group` | it reads the v1 API configuration, which holds that site's database credentials. Give each site its own PHP-FPM pool and declare the pool's group |
+| `v2.group` | it reads the v2 API configuration, which holds that API's settings |
+| `v2.unit`, `v2.port` and its `health_url` | two v2 services cannot have one name or listen on one port. The v2 unit name must not be another instance's web-server or agent unit name either: the instance's v2 unit file would replace that unit |
+| `listen` port (two machines) | two agents cannot listen on one address and port |
+| `state_root`, and a `copy` media root | each instance writes only its own directories |
+
+These can be shared: the web server itself, the Bun and PHP paths, the work system's group
+(`engine_group`, as long as it is not another instance's v1 or v2 group), a `shared` media
+root (it is mounted read-only), and the agent's code directory. If the agent's code is
+shared, every instance is updated together.
+
+!!! note "One web server, one PHP-FPM pool per site"
+    The web server is shared, but the v1 API of each site runs in its own PHP-FPM pool, under
+    its own user and group. That pool group is the instance's `v1.group`. With `mod_php`
+    instead, every site's v1 API runs as the web server's group, so every site could read
+    every other site's database credentials. `check` therefore refuses two instances with the
+    same `v1.group`. A server with a single instance may use `mod_php`.
+
+`check` and `apply` read every other declaration in `/etc/dedalo_publication_host/` and refuse
+any field above that two instances share, naming the other instance and its file. A
+declaration there that cannot be read is also refused, because isolation that cannot be
+checked is not assumed: fix it, or move it out of that directory.
 
 ## Pair it with the work system
 
@@ -484,7 +557,11 @@ taken.
 | --- | --- | --- |
 | `provision check` stops, naming a user or group | the provisioner never creates accounts | run the `useradd` / `groupadd` line it prints, then `check` again |
 | `provision check` refuses `agent_dir` or `agent entry`, or a directory above them, as not root-owned or writable | the code was copied as a normal user, or a parent directory is group- or world-writable | `chown -R root:root` the copy, `chmod go-w` it and every parent (step 1) |
-| `provision check` refuses `agent_dir` as a symlink | the declaration names a link | declare the real path (`realpath <dir>`) |
+| `provision check` refuses `agent_dir`, `php_bin` or `bun_bin` as a symlink | the declaration names a link | declare the path the refusal prints in brackets (the same as `realpath <path>`). For Bun installed in a home directory, install a system copy (step 3) |
+| `provision check` says a field is "also used by instance …" | another declaration in `/etc/dedalo_publication_host/` uses the same user, group, unit, port or directory | give this instance its own (see [Several instances on one server](#several-instances-on-one-server)) |
+| `provision check` says "cannot check isolation against …" | another declaration in `/etc/dedalo_publication_host/` is not valid JSON, is not a valid declaration, or is a symbolic link | fix that file (replace a link with the file itself), or move it out of the directory |
+| `provision check` says another file "declares instance … too" | two declarations name the same instance, for example a copy kept as `<instance>.old.json` | remove one, or move the copy out of `/etc/dedalo_publication_host/` |
+| `provision check` says none of the `web.configtest_bin` candidates is a real file | the web server is not installed, or installed outside the standard `/usr/sbin` paths | install the distribution's `apache2` / `httpd` / `nginx` package, then `check` again |
 | `provision check` refuses "a test scratch tree" `.test-tmp` | the copy came from a checkout where the agent suite ran | delete `.test-tmp/` from the copy on the publication host |
 | `provision check` refuses `listen.host` | the host is a hostname, a wildcard or not a canonical IPv4 address | declare the private IPv4 address literal the agent binds (step 3) |
 | `provision check` refuses a file "edited by hand" | a generated file no longer matches its own hash | move it aside or restore it; change the declaration instead and re-run `apply` |

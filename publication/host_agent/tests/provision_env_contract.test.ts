@@ -52,6 +52,7 @@ test('unix: the rendered env + the SERVICE_TOKEN credential resolve through reso
     STATE_ROOT: '/srv/dedalo_publication',
     WEB_SERVER: 'apache',
     WEB_UNIT: 'apache2',
+    WEB_CONFIGTEST_BIN: '/usr/sbin/apache2ctl',
     MEDIA_MODE: 'shared',
     MEDIA_ROOT: '/mnt/dedalo_media',
     PHP_BIN: '/usr/bin/php',

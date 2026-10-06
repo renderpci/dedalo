@@ -69,6 +69,7 @@ describe('envRenderer', () => {
           STATE_ROOT: layout.state.root,
           WEB_SERVER: layout.web.server,
           WEB_UNIT: layout.web.unit,
+          WEB_CONFIGTEST_BIN: layout.web.configtestBin,
           MEDIA_MODE: layout.media.mode,
           MEDIA_ROOT: layout.media.root ?? undefined,
           PHP_BIN: layout.phpBin,

@@ -55,6 +55,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
 import { parseEnvFile } from './env_file';
 import { INSTANCE_MARKER } from './instance/roots';
+import { WEB_CONFIGTEST_CANDIDATES, isConfigtestBinary } from './provision/layout';
 
 const PACKAGE_DIR = resolve(import.meta.dir, '..');
 
@@ -97,6 +98,8 @@ export interface AgentConfig {
   STATE_ROOT: string;
   WEB_SERVER: 'apache' | 'nginx';
   WEB_UNIT: string;
+  /** The provisioner's pick from WEB_CONFIGTEST_CANDIDATES[WEB_SERVER]; the sudoers rule names the same path. */
+  WEB_CONFIGTEST_BIN: string;
   MEDIA_MODE: 'shared' | 'copy' | 'none';
   MEDIA_ROOT?: string;
   PHP_BIN: string;
@@ -221,6 +224,7 @@ function envObject(baseDir: string) {
     STATE_ROOT: path,
     WEB_SERVER: z.enum(['apache', 'nginx']),
     WEB_UNIT: unit('WEB_UNIT'),
+    WEB_CONFIGTEST_BIN: z.string(),
     MEDIA_MODE: z.enum(['shared', 'copy', 'none']),
     MEDIA_ROOT: path.optional(),
     PHP_BIN: bin('PHP_BIN'),
@@ -255,6 +259,12 @@ function envSchema(baseDir: string) {
       for (const key of TLS_KEYS) {
         if (v[key] !== undefined) issue(key, `${key} is set but LISTEN_KIND=unix`);
       }
+    }
+    if (!isConfigtestBinary(v.WEB_SERVER, v.WEB_CONFIGTEST_BIN)) {
+      issue(
+        'WEB_CONFIGTEST_BIN',
+        `WEB_CONFIGTEST_BIN must be one of ${WEB_CONFIGTEST_CANDIDATES[v.WEB_SERVER].join(', ')} for WEB_SERVER=${v.WEB_SERVER}`,
+      );
     }
     if (v.MEDIA_MODE === 'none') {
       if (v.MEDIA_ROOT !== undefined) issue('MEDIA_ROOT', 'MEDIA_ROOT is set but MEDIA_MODE=none');

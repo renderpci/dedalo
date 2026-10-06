@@ -26,8 +26,8 @@
  * (the process environment is src/config.ts's alone). The host doors are used with their
  * production trust root ('/').
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { ProvisionIo } from './apply';
 import { apply, hostIo, observeHost, writeAtomic } from './apply';
 import type { AgentLayout } from './layout';
@@ -36,6 +36,8 @@ import type { Action, HostState } from './plan';
 import { PlanRefused, describe, plan, renderAll } from './plan';
 import { renderFacts, TOKEN_PLACEHOLDER } from './render/engine_fragment';
 import { DeclarationError, parseDeclaration } from './schema';
+import type { Sibling } from './siblings';
+import { siblingRefusals } from './siblings';
 import type { TlsIo } from './tls';
 import { ensureTls } from './tls';
 
@@ -144,6 +146,14 @@ export function parseArgs(argv: readonly string[]): ProvisionArgs | { readonly e
 
 export interface ProvisionDeps {
   readDeclaration(path: string): string | null;
+  /** The `*.json` regular files and symlinks directly in a directory (the other declarations), sorted. */
+  listDeclarations(dir: string): string[];
+  /** The canonical path (realpath), or the path itself when it does not resolve. */
+  canonical(path: string): string;
+  /** lstat: is this path a symbolic link? */
+  isSymlink(path: string): boolean;
+  /** lstat regular file, never following a link: picks the web server's configtest binary. */
+  isRealFile(path: string): boolean;
   isRoot(): boolean;
   observeHost(layout: AgentLayout): HostState;
   io(): ProvisionIo;
@@ -163,12 +173,76 @@ function readOrNull(path: string): string | null {
 export function hostDeps(): ProvisionDeps {
   return {
     readDeclaration: readOrNull,
+    listDeclarations: dir => {
+      try {
+        return readdirSync(dir, { withFileTypes: true })
+          // Symlinks too: siblingProblems refuses them (a link is a declaration we will not follow).
+          .filter(entry => (entry.isFile() || entry.isSymbolicLink()) && entry.name.endsWith('.json'))
+          .map(entry => join(dir, entry.name))
+          .sort();
+      } catch {
+        return [];
+      }
+    },
+    canonical: path => {
+      try {
+        return realpathSync(path);
+      } catch {
+        return resolve(path);
+      }
+    },
+    isSymlink: path => {
+      try {
+        return lstatSync(path).isSymbolicLink();
+      } catch {
+        return false;
+      }
+    },
+    isRealFile: path => {
+      try {
+        return lstatSync(path).isFile();
+      } catch {
+        return false;
+      }
+    },
     isRoot: () => process.geteuid?.() === 0,
     observeHost: layout => observeHost(layout),
     io: () => hostIo(),
     readRootFile: readOrNull,
     now: () => new Date(),
   };
+}
+
+/**
+ * Every other declaration in the config base, judged against this one. A sibling that does
+ * not parse is a refusal too: isolation that cannot be checked is not assumed.
+ */
+function siblingProblems(layout: AgentLayout, source: string, deps: ProvisionDeps): string[] {
+  // Compared canonically: `--declaration ./x.json`, a doubled '/' or a symlinked config base
+  // still names this instance's own file, never a sibling.
+  const own = new Set([source, join(layout.configBase, `${layout.instance}.json`)].map(path => deps.canonical(path)));
+  const problems: string[] = [];
+  const siblings: Sibling[] = [];
+  for (const path of deps.listDeclarations(layout.configBase)) {
+    if (own.has(deps.canonical(path))) continue;
+    if (deps.isSymlink(path)) {
+      problems.push(
+        `cannot check isolation against '${path}' (a symlink: replace it with the file, or move it out of ${layout.configBase})`,
+      );
+      continue;
+    }
+    const text = deps.readDeclaration(path);
+    try {
+      if (text === null) throw new Error('unreadable');
+      siblings.push({ source: path, layout: parseDeclaration(JSON.parse(text), path).layout });
+    } catch (error) {
+      const why = error instanceof SyntaxError ? 'not JSON' : error instanceof Error ? error.message : String(error);
+      problems.push(
+        `cannot check isolation against '${path}' (${why.split('\n')[0]}) — fix it, or move it out of ${layout.configBase}`,
+      );
+    }
+  }
+  return [...problems, ...siblingRefusals(layout, siblings)];
 }
 
 export interface RunOptions {
@@ -263,7 +337,7 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       err(`provision: '${source}' is not JSON`);
       return EXIT.REFUSED;
     }
-    const { layout } = parseDeclaration(raw, source);
+    const { layout } = parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path) });
     if (layout.instance !== args.instance) {
       err(`provision: '${source}' declares instance '${layout.instance}', not '${args.instance}'`);
       return EXIT.REFUSED;
@@ -283,6 +357,10 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       err(`provision: '${args.verb}' reads root-only files and must run as root`);
       return EXIT.REFUSED;
     }
+
+    // Several instances on one host: what this one may not share with the others (siblings.ts).
+    const isolation = siblingProblems(layout, source, deps);
+    if (isolation.length > 0) throw new PlanRefused(layout.instance, isolation);
 
     const host = deps.observeHost(layout);
     const actions = plan(layout, host, facts);

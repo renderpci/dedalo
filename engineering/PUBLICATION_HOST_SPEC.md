@@ -105,8 +105,11 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
 5. **Least privilege, no root at runtime.** The agent runs as its own user and writes
    only under its state root (`publication_api/`, `rules/`, `audit/`). It holds exactly
    two grants, both rendered and hash-stamped by the provisioner: a **sudoers** rule for
-   the web server's configtest argv only (`apachectl -t` / `nginx -t`, because a
-   configtest must read root-only TLS keys), and a **polkit** rule allowing `reload` of the
+   the web server's configtest argv only (`<bin> -t`, because a configtest must read
+   root-only TLS keys; `<bin>` is the first real file in the closed per-server list
+   `WEB_CONFIGTEST_CANDIDATES` — apache: `/usr/sbin/apache2ctl` (Debian/Ubuntu, where
+   `apachectl` is a symlink), `/usr/sbin/apachectl` (RHEL); nginx: `/usr/sbin/nginx` —
+   rendered into both the sudoers rule and the agent env `WEB_CONFIGTEST_BIN`), and a **polkit** rule allowing `reload` of the
    observed web unit, `restart` of the v2 unit, and `start`/`stop` of the v2 scratch
    template unit `<v2 unit>-scratch@<port>` (port 1024–65535; the `publication/site_builder`
    precedent). There is no shell and no free argv. The media include the agent installs

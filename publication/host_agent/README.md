@@ -52,7 +52,7 @@ provisioner:
 
 | Grant | Allows | Why it cannot be narrower |
 |---|---|---|
-| sudoers | `apachectl -t` or `nginx -t`, exactly that argv | a configtest must read root-only TLS keys |
+| sudoers | `<configtest> -t`, exactly that argv: `apache2ctl` (Debian/Ubuntu) or `apachectl` (RHEL), or `nginx`; the provisioner picks the real file present from a closed list | a configtest must read root-only TLS keys |
 | polkit | `reload` of `WEB_UNIT`, `restart` of `V2_UNIT`, `start`/`stop` of the `<V2_UNIT>-scratch@<port>` template | the same unit-scoped rule the site builder uses |
 
 Every child process goes through `src/exec.ts`, a closed set of named commands

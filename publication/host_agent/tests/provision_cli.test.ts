@@ -27,7 +27,17 @@ interface Harness {
 }
 
 function harness(
-  options: { root?: boolean; text?: string | null; declaration?: HostDeclaration; clock?: { now: Date } } = {},
+  options: {
+    root?: boolean;
+    text?: string | null;
+    declaration?: HostDeclaration;
+    clock?: { now: Date };
+    realFiles?: readonly string[];
+    /** Other declarations in the config base: path → text. */
+    siblings?: Readonly<Record<string, string>>;
+    /** Paths in the config base that are symlinks. */
+    symlinks?: readonly string[];
+  } = {},
 ): Harness {
   const clock = options.clock ?? { now: new Date('2026-10-03T12:00:00Z') };
   const declaration = options.declaration ?? unixDeclaration();
@@ -42,8 +52,15 @@ function harness(
     deps: {
       readDeclaration: path => {
         reads.push(path);
-        return text;
+        return options.siblings?.[path] ?? text;
       },
+      listDeclarations: dir =>
+        Object.keys(options.siblings ?? {})
+          .filter(path => path.startsWith(`${dir}/`) && !path.slice(dir.length + 1).includes('/'))
+          .sort(),
+      canonical: path => path.replace(/\/+/g, '/'),
+      isSymlink: path => (options.symlinks ?? []).includes(path),
+      isRealFile: path => (options.realFiles ?? []).includes(path),
       isRoot: () => options.root ?? true,
       observeHost: () => host.state(),
       io: () => host,
@@ -95,6 +112,60 @@ describe('declaration → REFUSED (3)', () => {
     expect(other.err.join('\n')).toContain("declares instance 'other'");
   });
 
+  test('several instances: a sibling sharing a principal, the v2 unit or port, or a state root is REFUSED, named', () => {
+    const own = unixDeclaration();
+    const sibling = (patch: Partial<HostDeclaration>) =>
+      harness({ siblings: { '/etc/dedalo_publication_host/other.json': JSON.stringify({ ...own, instance: 'other', ...patch }) } });
+    // Everything shared (a copy of the declaration under another name): every clash is named, nothing observed.
+    const h = sibling({});
+    expect(exec(h, ['check', 'test'])).toBe(EXIT.REFUSED);
+    const said = h.err.join('\n');
+    for (const clash of [
+      "agent_user 'dedalo-pubhost' is that instance's agent_user",
+      "v2.user 'dedalo-api-v2' is that instance's v2.user",
+      "v1.group 'www-data' is that instance's v1.group",
+      "v2.group 'dedalo-api-v2'",
+      "v2.unit 'dedalo-publication-api-v2'",
+      'v2.port 3100',
+      "state_root '/srv/dedalo_publication' overlaps that instance's state_root",
+    ]) {
+      expect(said).toContain(`${clash}`);
+    }
+    expect(said).toContain("also used by instance 'other' (/etc/dedalo_publication_host/other.json)");
+    // A fully separated sibling passes the check (drift on a fresh host, not a refusal).
+    const separated = sibling({
+      agent_user: 'dedalo-pubhost-other',
+      state_root: '/srv/dedalo_publication_other',
+      v1: { group: 'pool-other' },
+      v2: { unit: 'dedalo-publication-api-v2-other', user: 'dedalo-api-v2-other', group: 'dedalo-api-v2-other', port: 3101, health_url: 'http://127.0.0.1:3101/dedalo/publication/server_api/v2/health' },
+    });
+    expect(exec(separated, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(separated.err).toEqual([]);
+  });
+
+  test('several instances: an unparsable sibling or a second declaration of this instance is REFUSED', () => {
+    const broken = harness({ siblings: { '/etc/dedalo_publication_host/other.json': '{' } });
+    expect(exec(broken, ['apply', 'test'])).toBe(EXIT.REFUSED);
+    expect(broken.err.join('\n')).toContain("cannot check isolation against '/etc/dedalo_publication_host/other.json' (not JSON)");
+    const twice = harness({ siblings: { '/etc/dedalo_publication_host/copy.json': JSON.stringify(unixDeclaration()) } });
+    expect(exec(twice, ['check', 'test'])).toBe(EXIT.REFUSED);
+    expect(twice.err.join('\n')).toContain("/etc/dedalo_publication_host/copy.json declares instance 'test' too");
+    // The instance's own declaration in the config base is never its own sibling — also when
+    // named another way (compared canonically).
+    const self = harness({ siblings: { [DEFAULT_SOURCE]: JSON.stringify(unixDeclaration()) } });
+    expect(exec(self, ['check', 'test'])).toBe(EXIT.DRIFT);
+    const spelled = harness({ siblings: { [DEFAULT_SOURCE]: JSON.stringify(unixDeclaration()) } });
+    expect(exec(spelled, ['check', 'test', '--declaration', '/etc/dedalo_publication_host//test.json'])).toBe(EXIT.DRIFT);
+    expect(spelled.err).toEqual([]);
+    // A symlinked sibling is never followed and never skipped: refused, named.
+    const linked = harness({
+      siblings: { '/etc/dedalo_publication_host/other.json': '{}' },
+      symlinks: ['/etc/dedalo_publication_host/other.json'],
+    });
+    expect(exec(linked, ['check', 'test'])).toBe(EXIT.REFUSED);
+    expect(linked.err.join('\n')).toContain("cannot check isolation against '/etc/dedalo_publication_host/other.json' (a symlink");
+  });
+
   test('check and apply refuse without root; render does not need it', () => {
     expect(exec(harness({ root: false }), ['check', 'test'])).toBe(EXIT.REFUSED);
     expect(exec(harness({ root: false }), ['apply', 'test'])).toBe(EXIT.REFUSED);
@@ -114,6 +185,15 @@ describe('declaration → REFUSED (3)', () => {
 });
 
 describe('render / check / apply', () => {
+  test("the host probe reaches derive(): a RHEL host (real apachectl only) renders apachectl, Ubuntu's apache2ctl", () => {
+    for (const bin of ['/usr/sbin/apachectl', '/usr/sbin/apache2ctl']) {
+      const h = harness({ realFiles: [bin] });
+      expect(exec(h, ['render', 'test'])).toBe(EXIT.OK);
+      expect(h.out).toContain(`WEB_CONFIGTEST_BIN="${bin}"`);
+      expect(h.out.some(line => line.endsWith(`= ${bin} -t`))).toBe(true);
+    }
+  });
+
   test('render prints every artifact with its stamp and passes the secret guard', () => {
     const h = harness();
     expect(exec(h, ['render', 'test'])).toBe(EXIT.OK);

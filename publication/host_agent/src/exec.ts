@@ -6,7 +6,8 @@
  *
  * - ABSOLUTE BINARIES, NEVER A PATH LOOKUP: sudo, systemctl and the configtest binary are
  *   the constants below; PHP_BIN is absolute by config law. The sudoers rule
- *   (src/provision/render/) names exactly `SUDO -n WEB_CONFIGTEST_BINARY[server] -t` — the one spelling.
+ *   (src/provision/render/) names exactly `SUDO -n <WEB_CONFIGTEST_BIN> -t` — the one spelling; the
+ *   binary is the provisioner's pick from the closed WEB_CONFIGTEST_CANDIDATES[server], rechecked here.
  *   A drill that wants stand-ins puts them AT these paths (the live drill: inside the CI-image
  *   container or a private mount namespace), never earlier on PATH: PATH is not consulted.
  * - A FIXED child environment: nothing of the agent's own environment (its token
@@ -40,7 +41,8 @@ import {
   UNIT_NAME_PATTERN,
   UNIX_NAME_PATTERN,
   V2_SCRATCH_TEMPLATE_SUFFIX,
-  WEB_CONFIGTEST_BINARY,
+  WEB_CONFIGTEST_CANDIDATES,
+  isConfigtestBinary,
 } from './provision/layout';
 
 export type ExecResult = { code: number; stdout: string; stderr: string };
@@ -62,7 +64,7 @@ export interface Exec {
 export const SUDO = '/usr/bin/sudo';
 export const SYSTEMCTL = '/usr/bin/systemctl';
 /** THE one definition lives in src/provision/layout.ts (the provisioner's trust check and sudoers rule name it). */
-export { V2_SCRATCH_TEMPLATE_SUFFIX, WEB_CONFIGTEST_BINARY };
+export { V2_SCRATCH_TEMPLATE_SUFFIX, WEB_CONFIGTEST_CANDIDATES, isConfigtestBinary };
 
 export const CHILD_PATH = '/usr/local/bin:/usr/bin:/bin';
 export const COMMAND_TIMEOUT_MS = 60_000;
@@ -128,7 +130,13 @@ function realOrRefuse(path: string, what: string): string {
 export function createExec(cfg: AgentConfig, spawner: Spawner = bunSpawner): Exec {
   const env = (): Record<string, string> => ({ PATH: CHILD_PATH, LANG: 'C' });
   return {
-    webConfigtest: () => spawner.run([SUDO, '-n', WEB_CONFIGTEST_BINARY[cfg.WEB_SERVER], '-t'], { env: env() }),
+    webConfigtest: () => {
+      // config.ts already refuses a binary outside the list; rechecked at the one spawn site.
+      if (!isConfigtestBinary(cfg.WEB_SERVER, cfg.WEB_CONFIGTEST_BIN)) {
+        throw new Error(`exec: '${cfg.WEB_CONFIGTEST_BIN}' is not a ${cfg.WEB_SERVER} configtest binary`);
+      }
+      return spawner.run([SUDO, '-n', cfg.WEB_CONFIGTEST_BIN, '-t'], { env: env() });
+    },
     webReload: () => spawner.run([SYSTEMCTL, 'reload', cfg.WEB_UNIT], { env: env() }),
     v2Restart: () => spawner.run([SYSTEMCTL, 'restart', cfg.V2_UNIT], { env: env() }),
     phpLint: async file => {
@@ -244,7 +252,7 @@ export interface ProvisionExec {
   startUnit(unit: string): ExecResult; //                ['systemctl','start',<unit>.service]
   restartUnit(unit: string): ExecResult; //              ['systemctl','restart',<unit>.service]
   reloadUnit(unit: string): ExecResult; //               ['systemctl','reload',<unit>.service]
-  webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult; // [WEB_CONFIGTEST_BINARY[server],'-t']
+  webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult; // [<a WEB_CONFIGTEST_CANDIDATES[server] entry>,'-t']
   visudoCheck(file: string): ExecResult; //              ['visudo','-cf',file]
   visudoCheckPolicy(): ExecResult; //                    ['visudo','-c'] — the whole policy, includes and all
   /** The audit contract (src/instance/roots.ts): the trail is append-only by the kernel (FS_APPEND_FL). */
@@ -310,11 +318,12 @@ export function provisionExec(): ProvisionExec {
     restartUnit: (unit: string) => provisionRun(['systemctl', 'restart', provisionUnit(unit)]),
     reloadUnit: (unit: string) => provisionRun(['systemctl', 'reload', provisionUnit(unit)]),
     webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult {
-      const expected = WEB_CONFIGTEST_BINARY[server];
-      if (bin !== expected) {
-        throw new Error(`exec: '${bin}' is not the ${server} configtest binary '${expected}'`);
+      if (!isConfigtestBinary(server, bin)) {
+        throw new Error(
+          `exec: '${bin}' is not a ${server} configtest binary (${WEB_CONFIGTEST_CANDIDATES[server].join(', ')})`,
+        );
       }
-      return provisionRun([expected, '-t']);
+      return provisionRun([bin, '-t']);
     },
     visudoCheck: (file: string) => provisionRun(['visudo', '-cf', provisionAbsolute('sudoers candidate', file)]),
     visudoCheckPolicy: () => provisionRun(['visudo', '-c']),

@@ -271,7 +271,40 @@ describe('plan refusals', () => {
     const host = new FakeHost(l);
     entry(host, l.web.configtestBin).mode = 0o775;
     expect(refusals(l, host)).toEqual([
-      `web.configtest_bin '/usr/sbin/apachectl' is group- or world-writable (mode 0775) — a non-root principal could replace what it runs; make it root-owned and not group- or world-writable`,
+      `web.configtest_bin '/usr/sbin/apache2ctl' is group- or world-writable (mode 0775) — a non-root principal could replace what it runs; make it root-owned and not group- or world-writable`,
+    ]);
+  });
+
+  test('a symlinked php_bin / bun_bin / agent_dir is refused, naming the resolved path to declare', () => {
+    const l = layout();
+    const host = new FakeHost(l);
+    Object.assign(entry(host, l.phpBin), { type: 'symlink', mode: 0o777, target: '/usr/bin/php8.3' });
+    Object.assign(entry(host, l.bunBin), { type: 'symlink', mode: 0o777 });
+    Object.assign(entry(host, l.agentDir), { type: 'symlink', mode: 0o777, target: '/opt/real/host_agent' });
+    expect(refusals(l, host)).toEqual([
+      `php_bin '${l.phpBin}' is a symlink — declare the real path ('/usr/bin/php8.3') (a link can be repointed after this check)`,
+      `bun_bin '${l.bunBin}' is a symlink — declare the real path (it does not resolve) (a link can be repointed after this check)`,
+      `agent_dir '${l.agentDir}' is a symlink — declare the real path ('/opt/real/host_agent') (a link can be repointed after this check)`,
+      // …and the entry beneath it is refused through its ancestry, independently.
+      `'${l.agentDir}' (above agent entry '${l.agentEntry}') is a symlink, not a real directory — declare the canonical path`,
+    ]);
+  });
+
+  test('a symlinked configtest binary never asks to "declare" it: it is not a declared field', () => {
+    const l = layout();
+    const host = new FakeHost(l);
+    Object.assign(entry(host, l.web.configtestBin), { type: 'symlink', mode: 0o777, target: '/usr/sbin/elsewhere' });
+    expect(refusals(l, host)).toEqual([
+      `web.configtest_bin: none of /usr/sbin/apache2ctl, /usr/sbin/apachectl is a real executable file on this host ('/usr/sbin/apache2ctl' is a symlink) — install apache from the distribution's package`,
+    ]);
+  });
+
+  test('no configtest candidate on the host: refused once, naming every candidate', () => {
+    const l = layout();
+    const host = new FakeHost(l);
+    host.entries.delete(l.web.configtestBin);
+    expect(refusals(l, host)).toEqual([
+      'web.configtest_bin: none of /usr/sbin/apache2ctl, /usr/sbin/apachectl is a real executable file on this host — install apache first',
     ]);
   });
 
@@ -324,7 +357,7 @@ describe('assertPlanIsCoherent', () => {
     expect(() =>
       assertPlanIsCoherent(
         [
-          { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apachectl' },
+          { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apache2ctl' },
           { op: 'web-reload', unit: 'apache2' },
         ],
         host,
@@ -394,7 +427,7 @@ describe('the tail, through a renderer with effects', () => {
     const tail = plan(l, new FakeHost(l).state(), PENDING_FACTS, [probe]).filter(a => !['mkdir', 'write', 'append-only'].includes(a.op));
     expect(tail).toEqual([
       { op: 'daemon-reload' },
-      { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apachectl' },
+      { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apache2ctl' },
       { op: 'web-reload', unit: 'apache2' },
       { op: 'enable', unit: 'dedalo-publication-host-test' },
       { op: 'start', unit: 'dedalo-publication-host-test' },

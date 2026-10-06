@@ -33,7 +33,7 @@
  *
  * THE EXEC SEAM — STAND-INS AT THE AGENT'S ABSOLUTE BINARIES, INSIDE THE CI IMAGE.
  * The agent's publication/host_agent/src/exec.ts is a closed set of named commands, and its argv[0] is ABSOLUTE:
- * `SUDO -n WEB_CONFIGTEST_BINARY[server] -t`, `SYSTEMCTL reload <WEB_UNIT>`, `SYSTEMCTL
+ * `SUDO -n <WEB_CONFIGTEST_BIN> -t`, `SYSTEMCTL reload <WEB_UNIT>`, `SYSTEMCTL
  * restart <V2_UNIT>`, `SYSTEMCTL start|stop <V2_UNIT>-scratch@<port>.service` (the release
  * under test runs in the v2 user's template unit, never as the agent), `<PHP_BIN> -l`, every child with the
  * fixed CHILD_PATH (plan Task 1 DEVIATION 7: no ambient input chooses which binary runs as

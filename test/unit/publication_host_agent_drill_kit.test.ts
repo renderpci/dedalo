@@ -10,7 +10,7 @@
  *   - the tree walk refuses a symlink it cannot carry and drops only node_modules/.bin;
  *   - the release id is D9's grammar;
  *   - the stand-ins accept exactly the agent's closed argv — spelled by the agent's OWN
- *     constants (src/exec.ts SUDO / SYSTEMCTL / WEB_CONFIGTEST_BINARY), never respelled —
+ *     constants (src/exec.ts SUDO / SYSTEMCTL, layout.ts pickConfigtestBinary), never respelled —
  *     and refuse (64) anything else, logging every call;
  *   - THE EXEC SEAM: the CI image's dispatchers sit at exactly those absolute paths
  *     (ci/Dockerfile), and the drill tells an armed seam from a plain binary;
@@ -34,8 +34,8 @@ import {
 	SUDO,
 	SYSTEMCTL,
 	V2_SCRATCH_TEMPLATE_SUFFIX,
-	WEB_CONFIGTEST_BINARY,
 } from '../../publication/host_agent/src/exec.ts';
+import { pickConfigtestBinary } from '../../publication/host_agent/src/provision/layout.ts';
 import { extractBundle } from '../../publication/host_agent/src/releases/ustar.ts';
 import {
 	AGENT_ACTOR_HEADER,
@@ -136,7 +136,7 @@ describe('drill kit — the exec stand-ins', () => {
 				log,
 			}),
 		);
-		expect(run('sudo', '-n', WEB_CONFIGTEST_BINARY.apache, '-t')).toMatchObject({
+		expect(run('sudo', '-n', pickConfigtestBinary('apache'), '-t')).toMatchObject({
 			code: 0,
 			out: '-t -f /drill/main.apache.conf',
 		});
@@ -145,16 +145,16 @@ describe('drill kit — the exec stand-ins', () => {
 			out: '-k graceful -f /drill/main.apache.conf',
 		});
 		expect(run('sudo', '-n', 'apachectl', '-t').code).toBe(64); // a bare name: not exec.ts's argv
-		expect(run('sudo', '-n', WEB_CONFIGTEST_BINARY.nginx, '-t').code).toBe(64); // the other server
+		expect(run('sudo', '-n', pickConfigtestBinary('nginx'), '-t').code).toBe(64); // the other server
 		expect(run('sudo', 'rm', '-rf', '/').code).toBe(64);
 		expect(run('systemctl', 'stop', 'apache2').code).toBe(64);
 		expect(run('systemctl', 'reload', 'nginx').code).toBe(64);
 		expect(run('php', '-l', '/etc/passwd').code).toBe(64);
 		expect(readFileSync(log, 'utf8').split('\n').filter(Boolean)).toEqual([
-			`${SUDO} -n ${WEB_CONFIGTEST_BINARY.apache} -t`,
+			`${SUDO} -n ${pickConfigtestBinary('apache')} -t`,
 			`${SYSTEMCTL} reload apache2`,
 			`${SUDO} -n apachectl -t`,
-			`${SUDO} -n ${WEB_CONFIGTEST_BINARY.nginx} -t`,
+			`${SUDO} -n ${pickConfigtestBinary('nginx')} -t`,
 			`${SUDO} rm -rf /`,
 			`${SYSTEMCTL} stop apache2`,
 			`${SYSTEMCTL} reload nginx`,

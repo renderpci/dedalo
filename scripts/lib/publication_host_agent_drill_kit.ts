@@ -10,7 +10,8 @@
  *     collectTree and releaseIdFor stay until the phase-4 API bundle builder replaces them.
  *   - renderStandIns: the drill's `sudo` / `systemctl` / `php` stand-ins (why: the drill's
  *     header, THE EXEC SEAM). The argv they accept is spelled by the AGENT's own constants
- *     (publication/host_agent/src/exec.ts SUDO, SYSTEMCTL, WEB_CONFIGTEST_BINARY — the one
+ *     (publication/host_agent/src/exec.ts SUDO, SYSTEMCTL; the configtest binary is
+ *     layout.ts pickConfigtestBinary, the one
  *     definition), never respelled here. `php` lints for real under the v1 API root when
  *     asked (phase 4: the engine drill's lockstep rows push real v1 releases).
  *   - EXEC_SEAM_DIR / EXEC_SEAM_MARKER / execSeamProblem: the CI image's seam (ci/Dockerfile,
@@ -44,8 +45,8 @@ import {
 	SUDO,
 	SYSTEMCTL,
 	V2_SCRATCH_TEMPLATE_SUFFIX,
-	WEB_CONFIGTEST_BINARY,
 } from '../../publication/host_agent/src/exec.ts';
+import { pickConfigtestBinary } from '../../publication/host_agent/src/provision/layout.ts';
 import { compareBundlePaths, writeBundle } from '../../src/core/publication_host/bundle_writer.ts';
 
 // ── the bundle ───────────────────────────────────────────────────────────────
@@ -245,7 +246,7 @@ export function renderStandIns(input: StandInInput): StandIns {
 		"# Accepts only the publication agent's closed argv; logs every call; refuses the rest.",
 		log(label),
 	];
-	const configtestArgv = `-n ${WEB_CONFIGTEST_BINARY[input.server]} -t`;
+	const configtestArgv = `-n ${pickConfigtestBinary(input.server)} -t`;
 	const configtest =
 		input.server === 'apache'
 			? `exec ${q(input.webBinary)} -t -f ${q(input.webMain)}`

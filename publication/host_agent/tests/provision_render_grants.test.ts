@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { WEB_CONFIGTEST_BINARY } from '../src/exec';
 import type { AgentLayout } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
 import { polkitRenderer } from '../src/provision/render/polkit';
@@ -24,7 +23,8 @@ describe('sudoers', () => {
 
   test('the rule names exactly the argv src/exec.ts runs (no drift between the grant and the caller)', () => {
     for (const layout of [UNIX, TLS]) {
-      expect(sudoers(layout).body).toContain(`= ${WEB_CONFIGTEST_BINARY[layout.web.server]} -t\n`);
+      expect(sudoers(layout).body).toContain(`= ${layout.envVars.WEB_CONFIGTEST_BIN} -t\n`);
+      expect(layout.envVars.WEB_CONFIGTEST_BIN).toBe(layout.web.configtestBin);
     }
   });
 
@@ -47,11 +47,17 @@ describe('sudoers', () => {
     expect(check('dedalo-pubhost ALL=(root) NOPASSWD /usr/sbin/nginx -t\n')).not.toBe(0);
   });
 
-  test('the configtest binary must be EXACTLY the canonical path — a same-named binary elsewhere is refused', () => {
+  test('the configtest binary must be EXACTLY a listed candidate — a same-named binary elsewhere is refused', () => {
     for (const bin of ['/opt/evil/apachectl', '/usr/local/sbin/apachectl', '/usr/sbin/nginx', '/usr/sbin/apachectl ']) {
       const moved: AgentLayout = { ...UNIX, web: { ...UNIX.web, configtestBin: bin } };
-      expect(() => sudoersRenderer.render(moved, FIXTURE_FACTS)).toThrow(/is not '\/usr\/sbin\/apachectl'/);
+      expect(() => sudoersRenderer.render(moved, FIXTURE_FACTS)).toThrow(/is not one of \/usr\/sbin\/apache2ctl, \/usr\/sbin\/apachectl/);
     }
+  });
+
+  test('the grant and the agent env name the SAME candidate — a listed binary the env does not name is refused', () => {
+    const split: AgentLayout = { ...UNIX, web: { ...UNIX.web, configtestBin: '/usr/sbin/apachectl' } };
+    expect(UNIX.envVars.WEB_CONFIGTEST_BIN).toBe('/usr/sbin/apache2ctl');
+    expect(() => sudoersRenderer.render(split, FIXTURE_FACTS)).toThrow(/not the binary the agent env names/);
   });
 
   test('a file name #includedir would skip is refused', () => {
