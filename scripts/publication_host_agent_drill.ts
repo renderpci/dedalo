@@ -174,6 +174,7 @@ import {
 	type UnpublishView,
 } from './lib/publication_host_copy_drill_kit.ts';
 import { writeEngineBundle } from './lib/publication_host_engine_drill_kit.ts';
+import { declareScratchPublicationHostsDir } from './lib/publication_host_scratch.ts';
 
 export { missingBinaries };
 
@@ -613,6 +614,7 @@ function prepareCopy(scene: Scene): CopyScene {
 	}
 	const enginePrivate = join(scene.dir, 'engine_private');
 	mkdirSync(enginePrivate, { recursive: true, mode: 0o700 });
+	declareScratchPublicationHostsDir(enginePrivate, 'publication_host_agent_drill (copy pass)');
 	writeFileSync(
 		join(enginePrivate, COPY_DRILL_PRIVATE_MARKER),
 		'publication-host copy drill: the scratch engine private dir\n',

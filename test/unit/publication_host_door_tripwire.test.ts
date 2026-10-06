@@ -49,10 +49,12 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
 import { parse } from '@babel/parser';
+import { declareScratchPublicationHostsDir } from '../../scripts/lib/publication_host_scratch.ts';
 import { isTestProcess } from '../../src/config/suite_database.ts';
 import {
 	type PublicationHostRecord,
@@ -393,6 +395,21 @@ describe('rule 7: in a TEST process the door dials only from a scratch store', (
 			code: 'internal.unexpected',
 			message: expect.stringContaining('scratch publication-hosts store'),
 		});
+	});
+
+	test('LOCATION is not the declaration: an undeclared temp dir is refused, the same dir declared passes', () => {
+		// The situation GitLab's hermetic job hit by construction: it runs the checkout from
+		// /tmp/dedalo-src, so the installation's <private> is /tmp/private — under the temp
+		// dir, never declared. A location rule accepted it and this gate went red there only.
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_undeclared_private_'));
+		try {
+			expect(publicationHostsTestRefusal(true, dir)).toContain('not a declared scratch dir');
+			declareScratchPublicationHostsDir(dir, 'publication_host_door_tripwire rule 7');
+			expect(publicationHostsTestRefusal(true, dir)).toBeNull();
+			expect(publicationHostsTestRefusal(false, dir)).toBeNull();
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	test('a declared scratch store passes the guard (the refusal is not blanket)', async () => {

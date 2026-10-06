@@ -70,9 +70,11 @@ afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 const pem = (label: string, body: string) =>
 	`-----BEGIN ${label}-----\n${body}\n-----END ${label}-----\n`;
-const CERT = pem('CERTIFICATE', 'Q0xJRU5UX0NFUlQ'.repeat(5));
-const KEY = pem('PRIVATE KEY', 'S0VZX0JPRFlfTElORQ'.repeat(4));
-const CA = pem('CERTIFICATE', 'QVVUSE9SSVRZ'.repeat(6));
+/** Low-entropy and built at runtime: a fixture, never a key-shaped literal (.gitleaks.toml). */
+const b64 = (text: string) => Buffer.from(text).toString('base64').replace(/=+$/, '');
+const CERT = pem('CERTIFICATE', b64('CLIENT_CERT').repeat(5));
+const KEY = pem('PRIVATE KEY', b64('KEY_BODY_LINE').repeat(4));
+const CA = pem('CERTIFICATE', b64('AUTHORITY').repeat(6));
 const FP = 'a'.repeat(64);
 const TOKEN = 't'.repeat(48);
 const TLS = {
@@ -135,7 +137,7 @@ describe('engine drill kit — the operator artifacts', () => {
 	test('the bundle is client cert, PKCS#8 key, CA — in that order, one block each', () => {
 		expect(engineBundlePem({ cert: CERT, key: KEY, ca: CA })).toBe(`${CERT}${KEY}${CA}`);
 		expect(() =>
-			engineBundlePem({ cert: CERT, key: pem('EC PRIVATE KEY', 'U0VDMV9LRVlfQk9EWQ'), ca: CA }),
+			engineBundlePem({ cert: CERT, key: pem('EC PRIVATE KEY', b64('SEC1_KEY_BODY')), ca: CA }),
 		).toThrow("the key must be exactly one 'PRIVATE KEY' block (PKCS#8");
 		expect(() => engineBundlePem({ cert: KEY, key: CERT, ca: CA })).toThrow(
 			"the cert must be exactly one 'CERTIFICATE' block",

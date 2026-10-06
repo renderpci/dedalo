@@ -190,6 +190,7 @@ import {
 	sentinelStatus,
 	writeScratchStamp,
 } from './lib/publication_host_lockstep.ts';
+import { declareScratchPublicationHostsDir } from './lib/publication_host_scratch.ts';
 
 const LISTEN_OF: Readonly<Record<Server, Listen>> = { apache: 'tls', nginx: 'unix' };
 const API_PATH = '/api/v1/json';
@@ -1678,6 +1679,7 @@ async function main(servers: readonly Server[]): Promise<number> {
 	const root = realpathSync(mkdtempSync(join(tmpdir(), 'dd_pubhost_engine_')));
 	const privateDir = join(root, 'private');
 	mkdirSync(privateDir, { mode: 0o700 });
+	declareScratchPublicationHostsDir(privateDir, 'publication_host_engine_drill');
 	const cleanups: (() => Promise<unknown>)[] = [];
 	try {
 		await run(book, servers, suiteDb, root, privateDir, cleanups);

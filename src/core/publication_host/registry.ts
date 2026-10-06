@@ -46,6 +46,7 @@ import {
 	withJsonFileLock,
 	writeJsonFileAtomic,
 } from '../files/atomic_json.ts';
+import { PUBLICATION_HOSTS_TEST_MARKER } from './test_marker.ts';
 
 /** Registry key of a host. */
 export const HOST_NAME = /^[a-z][a-z0-9_]{1,31}$/;
@@ -85,8 +86,7 @@ export const REGISTRY_FILE = 'publication_hosts.json';
  * host leaves room for a thousand, and a file past it is `unreadable`, never parsed.
  */
 export const REGISTRY_MAX_BYTES = 1024 * 1024;
-/** The marker a temp directory must carry before the test seam will point the stores at it. */
-export const PUBLICATION_HOSTS_TEST_MARKER = '.dedalo_test_publication_hosts';
+export { PUBLICATION_HOSTS_TEST_MARKER };
 
 const HOST_KEYS = [
 	'name',
@@ -172,21 +172,28 @@ export function publicationHostsBase(): string {
 
 /**
  * Why the agent door (transport.ts `agentRequest`) may NOT dial from this process, or null
- * (2026-10-05, phase-4 review). In a TEST process the stores must resolve under the OS temp
- * dir — the declared scratch seam above, or a child whose `DEDALO_PRIVATE_DIR` is a scratch
- * dir (the pair-CLI gate) — so no test, however it reaches the door (a whole reconcile
- * plan, a whole catalog), sends the installation's bearer to a real paired agent. Outside
- * a test process it is always null: the guard can never stop an installation.
+ * (2026-10-05, phase-4 review). In a TEST process the stores must resolve to a DECLARED
+ * scratch dir — under the OS temp dir AND carrying PUBLICATION_HOSTS_TEST_MARKER: the
+ * in-process seam above, or a child whose `DEDALO_PRIVATE_DIR` was declared with
+ * `declareScratchPublicationHostsDir` (scripts/lib/publication_host_scratch.ts: the
+ * pair-CLI gate, the drills) — so no test, however it reaches the door (a whole reconcile plan, a whole catalog), sends
+ * the installation's bearer to a real paired agent. The marker, not the location, is the
+ * guarantee: an installation whose private dir sits under the temp dir (a CI job that runs
+ * the checkout from /tmp, so `<private>` = /tmp/private) is still an installation.
+ * Outside a test process it is always null: the guard can never stop an installation.
+ * `base` is a parameter so the gate builds both situations itself, wherever it runs.
  * Gate: publication_host_door_tripwire rule 7.
  */
-export function publicationHostsTestRefusal(isTest: boolean = isTestProcess()): string | null {
+export function publicationHostsTestRefusal(
+	isTest: boolean = isTestProcess(),
+	base: string = publicationHostsBase(),
+): string | null {
 	if (!isTest) return null;
-	const base = resolve(publicationHostsBase());
-	if (base.startsWith(resolve(tmpdir()) + sep)) return null;
+	if (isDeclaredScratch(base)) return null;
 	return (
 		'a test process may dial a publication agent only through a scratch publication-hosts ' +
 		'store (useScratchPublicationHostsBase, or a child DEDALO_PRIVATE_DIR under the OS temp ' +
-		"dir) — this one resolves to the installation's private dir"
+		`dir carrying ${PUBLICATION_HOSTS_TEST_MARKER}) — this one is not a declared scratch dir`
 	);
 }
 

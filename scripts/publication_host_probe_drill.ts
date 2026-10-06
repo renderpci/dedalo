@@ -33,6 +33,7 @@ import {
 	probeChildEnv,
 	selectServers,
 } from './lib/publication_host_probe_drill_kit.ts';
+import { declareScratchPublicationHostsDir } from './lib/publication_host_scratch.ts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..');
 const CHILD = join(import.meta.dir, 'lib', 'publication_host_probe_drill_child.ts');
@@ -65,6 +66,7 @@ async function main(): Promise<number> {
 	const scratch = mkdtempSync(join(tmpdir(), 'dd_pubhost_probe_'));
 	try {
 		mkdirSync(join(scratch, 'private'));
+		declareScratchPublicationHostsDir(join(scratch, 'private'), 'publication_host_probe_drill');
 		mkdirSync(join(scratch, 'media'));
 		const child = Bun.spawn(
 			[process.execPath, 'run', CHILD, '--scratch', scratch, '--servers', selected.join(',')],

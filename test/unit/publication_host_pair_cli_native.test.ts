@@ -44,6 +44,7 @@ import {
 	renderFacts,
 } from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
 import { ensureTls, type TlsIo } from '../../publication/host_agent/src/provision/tls.ts';
+import { declareScratchPublicationHostsDir } from '../../scripts/lib/publication_host_scratch.ts';
 import {
 	AGENT_BASE_PATH,
 	assertFragmentFingerprint,
@@ -571,6 +572,9 @@ describe('live proof before write (child process, scratch private dir, loopback 
 
 	beforeEach(() => {
 		privateRoot = mkdtempSync(join(work, 'private-'));
+		// The child is a test process (NODE_ENV=test): its agent door dials only from a
+		// DECLARED scratch store (registry.ts publicationHostsTestRefusal).
+		declareScratchPublicationHostsDir(privateRoot, 'publication_host_pair_cli_native');
 		tlsAgent.reset(fp(TOKEN));
 		unixAgent.reset(fp(TOKEN));
 	});

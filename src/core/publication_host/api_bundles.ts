@@ -624,28 +624,50 @@ async function walkDeps(depsDir: string): Promise<PlannedEntry[]> {
 			'Publication API bundle refused (deps_install_failed): bun install produced no node_modules directory',
 		);
 	}
-	const out: PlannedEntry[] = [{ path: 'node_modules', type: 'dir' }];
-	await walkDir(depsDir, 'node_modules', out);
-	return out;
+	const walk: DepsWalk = { out: [{ path: 'node_modules', type: 'dir' }], links: [], irregular: [] };
+	await walkDir(depsDir, 'node_modules', walk);
+	// The WHOLE tree is walked before refusing, and the refusal names every offender in
+	// the writer's one order: `readdir` order is the filesystem's (APFS sorts, ext4 and
+	// overlayfs hash), so refusing at the first hit named a different file per machine.
+	if (walk.links.length > 0)
+		throw bundleRefusal('deps_symlink', walk.links.sort(compareBundlePaths));
+	if (walk.irregular.length > 0) {
+		throw bundleRefusal('not_regular_file', walk.irregular.sort(compareBundlePaths));
+	}
+	return walk.out;
 }
 
-async function walkDir(base: string, rel: string, out: PlannedEntry[]): Promise<void> {
-	for (const name of await readdir(join(base, rel))) {
+/** What one walk of node_modules found: the entries to pack, and every path it must refuse. */
+interface DepsWalk {
+	out: PlannedEntry[];
+	links: string[];
+	irregular: string[];
+}
+
+async function walkDir(base: string, rel: string, walk: DepsWalk): Promise<void> {
+	// Sorted so the traversal (and so `out`) is the same on every filesystem.
+	for (const name of (await readdir(join(base, rel))).sort()) {
 		const path = `${rel}/${name}`;
 		if (BIN_DIR.test(path)) continue;
-		await visit(base, path, out);
+		await visit(base, path, walk);
 	}
 }
 
-async function visit(base: string, path: string, out: PlannedEntry[]): Promise<void> {
+async function visit(base: string, path: string, walk: DepsWalk): Promise<void> {
 	const info = await lstat(join(base, path));
-	if (info.isSymbolicLink()) throw bundleRefusal('deps_symlink', [path]);
-	if (info.isDirectory()) {
-		out.push({ path, type: 'dir' });
-		return walkDir(base, path, out);
+	if (info.isSymbolicLink()) {
+		walk.links.push(path);
+		return;
 	}
-	if (!info.isFile()) throw bundleRefusal('not_regular_file', [path]);
-	out.push({ path, type: 'file', load: () => readDepFile(base, path) });
+	if (info.isDirectory()) {
+		walk.out.push({ path, type: 'dir' });
+		return walkDir(base, path, walk);
+	}
+	if (!info.isFile()) {
+		walk.irregular.push(path);
+		return;
+	}
+	walk.out.push({ path, type: 'file', load: () => readDepFile(base, path) });
 }
 
 /** The PINNED bun, frozen, in the build dir, minimal env; bounded by V2_DEPS_INSTALL_TIMEOUT_MS. */
