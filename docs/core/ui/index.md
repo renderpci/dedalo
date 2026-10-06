@@ -6,7 +6,7 @@
 
 > See also: [Architecture overview](../architecture_overview.md) ·
 > [Components](../components/index.md) · [Sections](../sections/index.md) ·
-> [CSS / LESS architecture](../../css-architecture.md)
+> [CSS / LESS architecture](css_architecture.md)
 
 ## The client UI architecture in one paragraph
 
@@ -66,6 +66,6 @@ already resolved server-side, render it, and re-publish user intent as
   renders; their `context.tools` flow into the inspector (`show_in_inspector`),
   their `context.css` flows through `page`'s dynamic CSS registry, and
   `component_info` is the host that runs `widgets`.
-- **[CSS / LESS architecture](../../css-architecture.md)** — the companion to
+- **[CSS / LESS architecture](css_architecture.md)** — the companion to
   [themes.md](themes.md): the `main.less` import layering, the design tokens and
   mixins, and the per-component LESS contract every UI surface is built on.

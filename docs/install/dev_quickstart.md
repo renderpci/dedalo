@@ -98,7 +98,7 @@ The other keys:
 bun run dev          # watch mode; `bun run start` for a plain run
 ```
 
-`bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if the install wizard asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../css-architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
+`bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if the install wizard asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../core/ui/css_architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
 
 ```text
 Dédalo TS server listening on unix socket /tmp/dedalo_ts.sock (entity: dev)

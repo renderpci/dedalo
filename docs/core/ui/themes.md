@@ -6,7 +6,7 @@
 > `themes/default/` asset bundle (icons, fonts, logos) that the LESS references.
 
 > See also: [Architecture overview](../architecture_overview.md) ·
-> [CSS / LESS architecture](../../css-architecture.md) ·
+> [CSS / LESS architecture](css_architecture.md) ·
 > [menu](menu.md) · [Components](../components/index.md)
 
 This page is the developer reference for the **themes** subsystem. "Themes" in
@@ -301,7 +301,7 @@ guarantees tokens and mixins exist before any consumer uses them:
     `client/dedalo/` tree (including `page/css/main.css` and
     `themes/default/`) as plain static files under `/dedalo/*` — there is no
     bundling step, so `themes/` assets stay URL-referenced rather than
-    inlined into `main.css`. See [CSS / LESS architecture](../../css-architecture.md).
+    inlined into `main.css`. See [CSS / LESS architecture](css_architecture.md).
 
 ### `main.css` is the compiled output
 
@@ -387,7 +387,7 @@ not LESS variables — they must be overridable at runtime.
   the front-end half of the work system's "server describes, client draws" split:
   the server ships context (incl. per-node css), the theme provides the visual
   language the client renders into.
-- **[CSS / LESS architecture](../../css-architecture.md)** — the companion
+- **[CSS / LESS architecture](css_architecture.md)** — the companion
   document on the import layering, the component-CSS contract and the conventions
   for adding new component/widget LESS.
 - **Asset bundling** — `src/server.ts` serves the whole `client/dedalo/` tree
@@ -458,7 +458,7 @@ toggle_theme()         // flips light <-> dark
 
 ## Related
 
-- [CSS / LESS architecture](../../css-architecture.md) — import layering, the
+- [CSS / LESS architecture](css_architecture.md) — import layering, the
   component-CSS contract, conventions for new LESS.
 - [menu](menu.md) — the theme-toggle button and the top utility bar.
 - [Components](../components/index.md) — the `.component_<name>` LESS bundles and

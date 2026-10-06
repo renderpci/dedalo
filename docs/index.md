@@ -1,3 +1,7 @@
+---
+title: Home
+---
+
 # Dédalo v7 Documentation
 
 !!! info "This is the manual for Dédalo v7"
@@ -150,7 +154,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 | Runtime | One long-lived process, per-request isolation, and the operational consequences | [development/runtime_and_workers.md](development/runtime_and_workers.md) |
 | Metrics | The performance metrics subsystem and per-request monitor | [development/metrics.md](development/metrics.md) |
 | Media components | Embedding Dédalo media components in third-party code | [development/using_media_components.md](development/using_media_components.md) |
-| CSS architecture | The LESS-based design system and styling structure | [css-architecture.md](css-architecture.md) |
+| CSS architecture | The LESS-based design system and styling structure | [core/ui/css_architecture.md](core/ui/css_architecture.md) |
 | Installation | Server sizing, the production guide, Docker, the dev quickstart, the reverse proxy, upgrading and troubleshooting | [install/index.md](install/index.md) |
 | Configuration | The one config file (`../private/.env`): settings, database, areas, media/search tuning | [config/index.md](config/index.md) |
 | Management | Environments, root user, maintenance status, recovery, hierarchies, updates | [management/index.md](management/index.md) |
