@@ -176,7 +176,7 @@ export const ROW_CONTRACT: ReadonlyMap<string, RowContract> = new Map<string, Ro
 	[
 		'test/unit/diffusion_row_size_native.test.ts',
 		{
-			none: "Its live legs calibrate the plan compile's row-width formula against the server: CREATE TABLE at the 65535-byte boundary (one accepted, one refused 1118) and DROP of those scratch tables — DDL only, no row is written",
+			none: "Its live legs calibrate the plan compile's row-width rule against the server: CREATE TABLE at the 65535-byte boundary (one accepted, one refused 1118) and DROP of those scratch tables — DDL only, no row is written",
 		},
 	],
 	[

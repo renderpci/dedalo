@@ -40,7 +40,6 @@
 #     build). Never read by the engine at runtime.
 #   .gitlab — CI templates — never read at runtime.
 #   .gitlab-ci.yml — CI pipeline definition — never read at runtime.
-#   .vscode — Editor settings — a developer-machine artifact.
 #   .claude — Committed SYMLINK alias of .agents/. A COPY whose SOURCE is a symlink
 #     dereferences it, so the alias would land as a second full copy of the tree;
 #     `.gitattributes` export-ignores it from release archives for the neighbouring
@@ -172,6 +171,8 @@ src/core/update/install_stamp.json
 src/core/update/publication_manifest.json
 .scratch_*
 **/*/.scratch_*
+.vscode
+**/*/.vscode
 dev
 **/*/dev
 dev_tools
