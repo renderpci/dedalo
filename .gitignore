@@ -111,6 +111,7 @@ src/core/update/publication_manifest.json
 .scratch_*/
 
 # Development tools
+.vscode/
 dev/
 dev_tools/
 
