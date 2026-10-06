@@ -5,11 +5,11 @@
  *
  * Mirrors publication/site_builder/src/provision/schema.ts (strictObject everywhere,
  * collect-all issues) for one agent. Not zero-dependency (zod): no root-repo test imports it.
- * The configtest binary is not a field: it is derived (layout.ts WEB_CONFIGTEST_BINARY), so a
- * declared one is an unknown key.
+ * The configtest binary is not a field: it is derived (layout.ts WEB_CONFIGTEST_CANDIDATES,
+ * picked by the host probe passed through), so a declared one is an unknown key.
  */
 import { z } from 'zod';
-import type { AgentLayout, HostDeclaration } from './layout';
+import type { AgentLayout, DeriveHost, HostDeclaration } from './layout';
 import {
   ABSOLUTE_PATH_PATTERN,
   INSTANCE_PATTERN,
@@ -45,7 +45,9 @@ export const declarationSchema = z.strictObject({
   web: z.strictObject({
     server: z.enum(['apache', 'nginx']),
     unit: unitName,
-    group: unixName,
+  }),
+  v1: z.strictObject({
+    user: unixName,
   }),
   state_root: absolutePath,
   media: z.strictObject({
@@ -92,6 +94,7 @@ export class DeclarationError extends Error {
 export function parseDeclaration(
   raw: unknown,
   source: string,
+  host: DeriveHost = {},
 ): { declaration: HostDeclaration; layout: AgentLayout } {
   const parsed = declarationSchema.safeParse(raw);
   if (!parsed.success) {
@@ -105,7 +108,7 @@ export function parseDeclaration(
   }
   const declaration: HostDeclaration = parsed.data;
   try {
-    return { declaration, layout: derive(declaration) };
+    return { declaration, layout: derive(declaration, host) };
   } catch (error) {
     if (error instanceof LayoutError) {
       throw new DeclarationError(source, [{ path: error.field, message: error.message }]);

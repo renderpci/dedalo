@@ -71,14 +71,14 @@ describe('apply halts on the first failure', () => {
     const host = new FakeHost(l);
     host.failOn = 'configtest apache';
     const actions: Action[] = [
-      { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apachectl' },
+      { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apache2ctl' },
       { op: 'web-reload', unit: 'apache2' },
       { op: 'restart', unit: 'dedalo-publication-host-test' },
     ];
     const report = apply(actions, host);
     expect(report.ok).toBe(false);
     expect(report.outcomes.map(o => o.status)).toEqual(['failed', 'skipped', 'skipped']);
-    expect(report.failure?.detail).toContain('/usr/sbin/apachectl -t exited 1');
+    expect(report.failure?.detail).toContain('/usr/sbin/apache2ctl -t exited 1');
     expect(host.calls).toEqual(['configtest apache']);
   });
 
@@ -167,7 +167,7 @@ describe('unit actions go through the closed exec', () => {
     const report = apply(
       [
         { op: 'daemon-reload' },
-        { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apachectl' },
+        { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apache2ctl' },
         { op: 'web-reload', unit: 'apache2' },
         { op: 'enable', unit: 'u' },
         { op: 'start', unit: 'u' },

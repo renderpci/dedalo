@@ -17,7 +17,6 @@
 
 import { DedaloError, ok, toDedaloError, wireMessage } from '../errors/index.ts';
 import { type JobRecord, jobAbortInfo, mediaJobs } from '../media/jobs.ts';
-import { currentApplicationLang } from '../resolve/request_lang.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import type { LoadedTool } from './loader.ts';
@@ -246,11 +245,12 @@ export function scheduleBackground(
 	// one user cannot both pass a per-user cap (check-then-act, closed).
 	runAdmission(spec, principal, userId, options, { tool: loaded.module.name, method });
 
-	// The submitter's interface lang, read NOW — still the request's synchronous
-	// flow — and handed to the handler explicitly (ToolActionContext.applicationLang):
-	// a QUEUED job's handler runs from another job's release, never trusted to
-	// inherit this request's lang scope.
-	const applicationLang = currentApplicationLang();
+	// NO lang is captured here: the job manager pins the submitter's langs (and a
+	// job-owned request context — the principal snapshot, a null session, the
+	// job's own request id and refusal log) at submit, in this same synchronous
+	// flow, and enters them around the handler (media/jobs.ts JobRunScope). A
+	// handler reads the ambient currentApplicationLang()/currentDataLang() — the
+	// submitter's, however late its queued turn comes.
 
 	const job: BackgroundJob = {
 		id: '',
@@ -304,7 +304,6 @@ export function scheduleBackground(
 					// The lane job's own id, so work that outlives the request can
 					// record which job produced it (tool_export's manifest).
 					backgroundJobId: jobId,
-					applicationLang,
 				});
 				job.status = 'done';
 				job.result = result;

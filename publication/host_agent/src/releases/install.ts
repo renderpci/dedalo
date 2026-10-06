@@ -207,6 +207,14 @@ async function installLocked(req: InstallRequest): Promise<InstallResult> {
   return { api, from: swap.from, to: swap.to, reused: !fresh, health: 'ok' };
 }
 
+/**
+ * The v1 configuration's one law: a regular file, private to an owner that is not root (lstat
+ * facts — the file is never opened). Pure, so the root-owned case is testable without root.
+ */
+export function isPrivateV1Config(facts: { isFile(): boolean; readonly mode: number; readonly uid: number }): boolean {
+  return facts.isFile() && (facts.mode & 0o077) === 0 && facts.uid !== 0;
+}
+
 /** The operator's config each API needs before anything is staged. Refused with the file to create. */
 function sharedPreflight(api: ApiName): void {
   const layout = apiLayout(api);
@@ -216,6 +224,18 @@ function sharedPreflight(api: ApiName): void {
       throw new ReleaseRefusedError(
         'shared_config_missing',
         `v1 has no ${configFile}. Create it (the Publication API v1 configuration, kept outside every release; start from config_api/sample.server_config_api.php) and install again.`,
+      );
+    }
+    // It holds the site's database credentials, and every site's pool shares the web server's
+    // group: only its OWNER (the v1 pool user) may read it. Never read here — stat only. The
+    // agent cannot know v1.user's uid, but the pool is never root (derive refuses it): a root-
+    // owned file is the "created as root, forgot the chown" mistake — v1 has no post-swap
+    // health probe, so it would install ok on a site that cannot read its configuration.
+    if (!isPrivateV1Config(lstatSync(configFile))) {
+      throw new ReleaseRefusedError(
+        'shared_config_exposed',
+        `v1's ${configFile} must be a regular file owned by the v1 user and readable by it only (it holds the site's database credentials). ` +
+          `As root: chown <v1.user> ${configFile} && chmod 0400 ${configFile}, then install again.`,
       );
     }
     return;

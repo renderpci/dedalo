@@ -12,7 +12,7 @@ import {
   SCRATCH_LINK,
   SUDO,
   SYSTEMCTL,
-  WEB_CONFIGTEST_BINARY,
+  WEB_CONFIGTEST_CANDIDATES,
   createExec,
   exec,
   execOverrideAllowed,
@@ -181,14 +181,14 @@ describe('the named commands', () => {
     const root = await stateTree('ex_argv');
     const php = join(root, 'publication_api', 'v1', 'index.php');
     writeFileSync(php, '<?php\n');
-    const cfg = { ...config, STATE_ROOT: root, WEB_SERVER: 'nginx' as const, WEB_UNIT: 'nginx', V2_UNIT: 'dedalo-v2-test', PHP_BIN: '/usr/bin/php' };
+    const cfg = { ...config, STATE_ROOT: root, WEB_SERVER: 'nginx' as const, WEB_UNIT: 'nginx', WEB_CONFIGTEST_BIN: '/usr/sbin/nginx', V2_UNIT: 'dedalo-v2-test', PHP_BIN: '/usr/bin/php' };
     const x = createExec(cfg, spawner);
     await x.webConfigtest();
     await x.webReload();
     await x.v2Restart();
     await x.phpLint(php);
     expect(calls.map(c => c.argv)).toEqual([
-      [SUDO, '-n', WEB_CONFIGTEST_BINARY.nginx, '-t'],
+      [SUDO, '-n', '/usr/sbin/nginx', '-t'],
       [SYSTEMCTL, 'reload', 'nginx'],
       [SYSTEMCTL, 'restart', 'dedalo-v2-test'],
       ['/usr/bin/php', '-l', realpathSync(php)],
@@ -197,17 +197,29 @@ describe('the named commands', () => {
     // Task 11's container stand-ins depend on exactly these paths).
     for (const c of calls) expect(isAbsolute(c.argv[0] as string)).toBe(true);
     for (const c of calls) expect(c.options.env).toEqual({ PATH: CHILD_PATH, LANG: 'C' });
-    expect([SUDO, SYSTEMCTL, WEB_CONFIGTEST_BINARY]).toEqual([
+    expect([SUDO, SYSTEMCTL, WEB_CONFIGTEST_CANDIDATES]).toEqual([
       '/usr/bin/sudo',
       '/usr/bin/systemctl',
-      { apache: '/usr/sbin/apachectl', nginx: '/usr/sbin/nginx' },
+      { apache: ['/usr/sbin/apache2ctl', '/usr/sbin/apachectl'], nginx: ['/usr/sbin/nginx'] },
     ]);
   });
 
-  test('apache configtest names apachectl', async () => {
-    const { spawner, calls } = recordingSpawner();
-    await createExec({ ...config, WEB_SERVER: 'apache' }, spawner).webConfigtest();
-    expect(calls[0]!.argv).toEqual([SUDO, '-n', '/usr/sbin/apachectl', '-t']);
+  test('apache configtest runs the configured candidate: apache2ctl (Debian/Ubuntu) or apachectl (RHEL)', async () => {
+    for (const bin of ['/usr/sbin/apache2ctl', '/usr/sbin/apachectl']) {
+      const { spawner, calls } = recordingSpawner();
+      await createExec({ ...config, WEB_SERVER: 'apache', WEB_CONFIGTEST_BIN: bin }, spawner).webConfigtest();
+      expect(calls[0]!.argv).toEqual([SUDO, '-n', bin, '-t']);
+    }
+  });
+
+  test('a configtest binary outside the closed list is refused before spawning', () => {
+    for (const [server, bin] of [['apache', '/usr/sbin/nginx'], ['nginx', '/usr/sbin/apache2ctl'], ['apache', '/opt/evil/apachectl']] as const) {
+      const { spawner, calls } = recordingSpawner();
+      expect(() => createExec({ ...config, WEB_SERVER: server, WEB_CONFIGTEST_BIN: bin }, spawner).webConfigtest()).toThrow(
+        /is not a (apache|nginx) configtest binary/,
+      );
+      expect(calls).toEqual([]);
+    }
   });
 
   test('phpLint refuses a file outside STATE_ROOT, or a missing one, before spawning', async () => {

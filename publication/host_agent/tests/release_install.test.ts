@@ -8,13 +8,19 @@
 
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, lstatSync } from 'node:fs';
-import { mkdir, readdir, readFile, readlink, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readdir, readFile, readlink, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readAudit } from '../src/audit';
 import { config } from '../src/config';
 import { type ApiError, ValidationError } from '../src/errors';
 import { createExec, setExecForTests } from '../src/exec';
-import { BUNDLE_SHA_FILE, installRelease, rollbackRelease, setInstallSeamsForTests } from '../src/releases/install';
+import {
+  BUNDLE_SHA_FILE,
+  installRelease,
+  isPrivateV1Config,
+  rollbackRelease,
+  setInstallSeamsForTests,
+} from '../src/releases/install';
 import { apiLayout, createStaging, currentRelease } from '../src/releases/store';
 import type { ApiName } from '../src/releases/ustar';
 import {
@@ -106,6 +112,34 @@ describe('v1 install', () => {
     expect(r.reason).toBe('shared_config_missing');
     expect(await releaseIds('v1')).toEqual([]);
     expect(currentRelease('v1')).toBeNull();
+  });
+
+  test('a v1 config readable by group or others, or not a regular file, is refused before the body is read', async () => {
+    const configFile = join(apiLayout('v1').shared, 'server_config_api.php');
+    // Every site's pool shares the web server's group: a group bit alone already leaks the credentials.
+    for (const mode of [0o640, 0o604, 0o644]) {
+      await chmod(configFile, mode);
+      const r = await refusal(install('v1', A, V1_TREE));
+      expect(r.status).toBe(422);
+      expect(r.reason).toBe('shared_config_exposed');
+      expect(await releaseIds('v1')).toEqual([]);
+    }
+    await rm(configFile);
+    await mkdir(configFile);
+    expect((await refusal(install('v1', A, V1_TREE))).reason).toBe('shared_config_exposed');
+    await rm(configFile, { recursive: true });
+    await writeFile(configFile, '<?php // shared test config', { mode: 0o400 });
+    expect((await install('v1', A, V1_TREE)).to).toBe(A);
+  });
+
+  test('the v1 config law: regular file, owner-only, owner not root (root-owned 0400 = a site that cannot read it)', () => {
+    const file = (mode: number, uid: number) => ({ isFile: () => true, mode, uid });
+    expect(isPrivateV1Config(file(0o400, 1001))).toBe(true);
+    expect(isPrivateV1Config(file(0o600, 1001))).toBe(true);
+    expect(isPrivateV1Config(file(0o400, 0))).toBe(false);
+    expect(isPrivateV1Config(file(0o440, 1001))).toBe(false);
+    expect(isPrivateV1Config(file(0o404, 1001))).toBe(false);
+    expect(isPrivateV1Config({ isFile: () => false, mode: 0o400, uid: 1001 })).toBe(false);
   });
 
   test('a php -l failure refuses and leaves the previous release serving', async () => {

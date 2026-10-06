@@ -398,3 +398,19 @@ Gated by the P0-7 census in `test/unit/module_state_tripwire.test.ts`, which now
 pins BOTH directions — `config.menu.dataLang` may not come back, AND each door
 must still read `currentDataLang()` (a rewrite to `config.lang.dataLangDefault`
 reddens it).
+
+## Addendum, 2026-10-05 — the background lang is a PIN, not ALS survival
+
+The original entry credits ALS inheritance for a backgrounded import keeping the
+session's language ("`currentDataLang()` survives into the background job …
+`mediaJobs.submit` exits only the transaction stores"). The OUTCOME is unchanged;
+the MECHANISM is not: inheriting the submitter's scope was an accident of the
+runtime (it also handed the job the answered request's context and refusal log).
+Since this date the job manager captures the submitter's langs at `submit()` and
+pins them, with a job-owned request context (principal snapshot, `null` session,
+request id `job:<id>`, own refusal log), around the worker — `JobRunScope` in
+`src/core/media/jobs.ts`; rule 3 of `engineering/REQUEST_ISOLATION.md`. A
+dispatcher or pool that calls the worker from a foreign scope no longer changes
+the write language. Gated by `test/unit/media_jobs_reconcile.test.ts` ("a job
+runs under its OWN pinned identity, whatever scope calls its worker" — red with
+the pin removed). Wire-visible: none.

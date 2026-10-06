@@ -32,7 +32,7 @@ import { bootPreflight } from '../src/instance/roots';
 import { apply, hostIo, observeHost } from '../src/provision/apply';
 import { parseStamp } from '../src/provision/hash';
 import type { AgentLayout } from '../src/provision/layout';
-import { INSTANCE_MARKER, WEB_CONFIGTEST_BINARY, derive } from '../src/provision/layout';
+import { INSTANCE_MARKER, WEB_CONFIGTEST_CANDIDATES, derive } from '../src/provision/layout';
 import type { Action } from '../src/provision/plan';
 import { RENDERERS, plan as planWith } from '../src/provision/plan';
 import type { Renderer } from '../src/provision/render/types';
@@ -97,7 +97,7 @@ const SCRATCH_RENDERERS: readonly Renderer[] = RENDERERS.map(renderer =>
     : {
         kind: 'sudoers',
         render: (l, facts) =>
-          sudoersRenderer.render({ ...l, web: { ...l.web, configtestBin: WEB_CONFIGTEST_BINARY[l.web.server] } }, facts),
+          sudoersRenderer.render({ ...l, web: { ...l.web, configtestBin: l.envVars.WEB_CONFIGTEST_BIN ?? '' } }, facts),
       },
 );
 const plan = (l: AgentLayout, host: ReturnType<typeof observeHost>): Action[] => planWith(l, host, PENDING_FACTS, SCRATCH_RENDERERS);
@@ -138,7 +138,8 @@ beforeAll(() => {
   // own; it alone is pointed into the scratch tree.
   layout = { ...derived, web: { ...derived.web, configtestBin: join(SCRATCH, 'bin/apachectl') } };
   // …which the real sudoers renderer refuses: the scratch gate's renderers stand in (above).
-  expect(() => sudoersRenderer.render(layout, PENDING_FACTS)).toThrow(/is not '\/usr\/sbin\/apachectl'/);
+  expect(() => sudoersRenderer.render(layout, PENDING_FACTS)).toThrow(/is not one of \/usr\/sbin\/apache2ctl, \/usr\/sbin\/apachectl/);
+  expect(WEB_CONFIGTEST_CANDIDATES.apache).toContain(derived.web.configtestBin);
 });
 
 afterAll(() => {
@@ -146,6 +147,28 @@ afterAll(() => {
 });
 
 describe('hostIo + observeHost on a real tree', () => {
+  test('a symlinked runtime is observed with its resolved target (the refusal names what to declare)', () => {
+    const real = join(SCRATCH, 'bin/php');
+    const link = join(SCRATCH, 'bin/php-link');
+    const dangling = join(SCRATCH, 'bin/bun-dangling');
+    symlinkSync(real, link);
+    symlinkSync(join(SCRATCH, 'bin/absent'), dangling);
+    try {
+      const state = observeHost({ ...layout, phpBin: link, bunBin: dangling }, stubExec, {
+        trustRoot: SCRATCH,
+        appendOnlyProbe,
+        renderers: SCRATCH_RENDERERS,
+      });
+      expect(state.paths.get(link)).toMatchObject({ type: 'symlink', target: realpathSync(real) });
+      expect(state.paths.get(dangling)?.type).toBe('symlink');
+      expect(state.paths.get(dangling)?.target).toBeUndefined();
+      expect(state.paths.get(real)?.target).toBeUndefined();
+    } finally {
+      rmSync(link);
+      rmSync(dangling);
+    }
+  });
+
   test('converges, then observes itself as converged', () => {
     expect(readFileSync(join(SCRATCH, INSTANCE_MARKER), 'utf8')).toBe('test\n');
     const first = plan(layout, observe());
@@ -159,7 +182,7 @@ describe('hostIo + observeHost on a real tree', () => {
     expect(statSync(layout.credentialsDir).mode & 0o7777).toBe(0o700);
     expect(statSync(layout.serviceTokenPath).mode & 0o7777).toBe(0o600);
     expect(statSync(layout.envFile).mode & 0o7777).toBe(0o644);
-    expect(statSync(layout.state.apis.v1.shared).mode & 0o7777).toBe(0o750);
+    expect(statSync(layout.state.apis.v1.shared).mode & 0o7777).toBe(0o711);
     expect(statSync(layout.state.audit).mode & 0o7777).toBe(0o755);
     expect(statSync(layout.state.auditFile).mode & 0o7777).toBe(0o600);
     expect([...sealed]).toEqual([layout.state.auditFile]);

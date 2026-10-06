@@ -28,7 +28,9 @@ process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratchDir);
 const { getBackgroundJob, getBackgroundJobStats, listBackgroundJobs, scheduleBackground } =
 	await import('../../src/core/tools/background.ts');
 const { mediaJobs } = await import('../../src/core/media/jobs.ts');
-const { runWithRequestLangs } = await import('../../src/core/resolve/request_lang.ts');
+const { currentApplicationLang, currentDataLang, runWithRequestLangs } = await import(
+	'../../src/core/resolve/request_lang.ts'
+);
 
 afterAll(() => {
 	if (previousProcessesDir === undefined) {
@@ -275,28 +277,46 @@ describe('background executor', () => {
 		expect(mediaJobs.laneDepths()[lane].active).toBe(0);
 	});
 
-	test('a QUEUED job receives the interface lang captured at SUBMIT (ToolActionContext.applicationLang)', async () => {
+	/**
+	 * DESCRIBES the executor's behaviour end to end; it is NOT the mutation-bearing
+	 * gate. Today Bun restores the submitter's ALS scope after an await, so this
+	 * leg would pass on inheritance alone; the pin is proven by
+	 * media_jobs_reconcile.test.ts ("a job runs under its OWN pinned identity"),
+	 * which calls the worker from a FOREIGN scope. What this leg pins is the
+	 * handler-side contract through the real scheduleBackground + real manager:
+	 * a QUEUED handler reads the SUBMITTER's langs ambiently — not the blockers'
+	 * (submitted under a third pair) whose release starts it.
+	 */
+	test("a QUEUED job's handler reads the SUBMITTER's langs ambiently, not the releasing blockers'", async () => {
 		const lane = 'export' as const;
-		const SUBMIT_LANG = 'lg-zzsubmit';
+		const SUBMIT_LANGS = { applicationLang: 'lg-zzsubmit', dataLang: 'lg-zzsubdata' };
+		const BLOCKER_LANGS = { applicationLang: 'lg-zzblocker', dataLang: 'lg-zzblockdata' };
 		let release!: () => void;
 		const held = new Promise<void>((resolve) => {
 			release = resolve;
 		});
+		// What each blocker's handler read: proves the third pair really was in
+		// force for the jobs whose release starts the victim — without it the
+		// "not the blockers'" half of this leg would be vacuous.
+		const blockerSaw: Array<{ applicationLang: string; dataLang: string }> = [];
 		const blockerSpec: ToolActionSpec = {
 			permission: null,
 			gatedInHandler: 'test fixture — the background executor is under test, not any gate',
 			handler: async () => {
+				blockerSaw.push({ applicationLang: currentApplicationLang(), dataLang: currentDataLang() });
 				await held;
 				return ok(true, { requestId: 'tools-background-test' });
 			},
 		};
-		const seen: { lang?: string; ran: boolean } = { ran: false };
+		let seen!: (langs: { applicationLang: string; dataLang: string }) => void;
+		const seenLangs = new Promise<{ applicationLang: string; dataLang: string }>((resolve) => {
+			seen = resolve;
+		});
 		const victimSpec: ToolActionSpec = {
 			permission: null,
 			gatedInHandler: 'test fixture — the background executor is under test, not any gate',
-			handler: async (context) => {
-				seen.ran = true;
-				seen.lang = context.applicationLang;
+			handler: async () => {
+				seen({ applicationLang: currentApplicationLang(), dataLang: currentDataLang() });
 				return ok(true, { requestId: 'tools-background-test' });
 			},
 		};
@@ -310,13 +330,14 @@ describe('background executor', () => {
 		const blockers: string[] = [];
 		try {
 			const free = mediaJobs.laneDepths()[lane].max - mediaJobs.laneDepths()[lane].active;
-			for (let i = 0; i < free; i++) {
-				const response = scheduleBackground(loaded, 'hold', blockerSpec, {}, PRINCIPAL, -7);
-				blockers.push(response.background_job_id as string);
-			}
-			const response = runWithRequestLangs(
-				{ applicationLang: SUBMIT_LANG, dataLang: 'lg-spa' },
-				() => scheduleBackground(loaded, 'victim', victimSpec, {}, PRINCIPAL, 4243),
+			runWithRequestLangs(BLOCKER_LANGS, () => {
+				for (let i = 0; i < free; i++) {
+					const response = scheduleBackground(loaded, 'hold', blockerSpec, {}, PRINCIPAL, -7);
+					blockers.push(response.background_job_id as string);
+				}
+			});
+			const response = runWithRequestLangs(SUBMIT_LANGS, () =>
+				scheduleBackground(loaded, 'victim', victimSpec, {}, PRINCIPAL, 4243),
 			);
 			const victimId = response.background_job_id as string;
 			await new Promise((r) => setTimeout(r, 10));
@@ -325,10 +346,24 @@ describe('background executor', () => {
 		} finally {
 			release();
 		}
-		for (let i = 0; i < 100 && !seen.ran; i++) await new Promise((r) => setTimeout(r, 10));
-		expect(seen.ran).toBe(true);
-		expect(seen.lang).toBe(SUBMIT_LANG);
+		// A deferred raced against a loud timeout: a handler that never runs fails
+		// here, it does not pass by polling out.
+		const langs = await Promise.race([
+			seenLangs,
+			new Promise<never>((_, reject) =>
+				setTimeout(() => reject(new Error('the queued handler never ran')), 2000),
+			),
+		]);
+		expect(langs).toEqual(SUBMIT_LANGS);
+		for (
+			let i = 0;
+			i < 100 && blockers.some((id) => getBackgroundJob(id)?.status === 'running');
+			i++
+		) {
+			await new Promise((r) => setTimeout(r, 10));
+		}
 		for (const id of blockers) expect(getBackgroundJob(id)?.status).toBe('done');
+		expect(blockerSaw).toEqual(blockers.map(() => BLOCKER_LANGS));
 	});
 
 	test('the handler receives its lane job id (ToolActionContext.backgroundJobId)', async () => {

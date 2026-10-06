@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { INSTANCE_PATTERN as CONFIG_INSTANCE_PATTERN, UNIT_PATTERN as CONFIG_UNIT_PATTERN } from '../src/config';
-import { WEB_CONFIGTEST_BINARY as EXEC_CONFIGTEST_BINARY } from '../src/exec';
+import { WEB_CONFIGTEST_CANDIDATES as EXEC_CONFIGTEST_CANDIDATES } from '../src/exec';
 import {
   INSTANCE_MARKER as ROOTS_MARKER,
   STATE_TREE_OWNERSHIP,
@@ -18,11 +18,12 @@ import {
   MODES,
   SECRET_LOOKING_KEY,
   UNIT_NAME_PATTERN,
-  WEB_CONFIGTEST_BINARY,
+  WEB_CONFIGTEST_CANDIDATES,
   derive,
   groupName,
   markerContent,
   ownerName,
+  pickConfigtestBinary,
   pathsOverlap,
 } from '../src/provision/layout';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
@@ -57,9 +58,26 @@ describe('one definition of every shared name', () => {
     expect(markerContent).toBe(rootsMarkerContent);
   });
 
-  test('the configtest binary is the one exec.ts sudo-runs', () => {
-    expect(WEB_CONFIGTEST_BINARY).toBe(EXEC_CONFIGTEST_BINARY);
-    expect(WEB_CONFIGTEST_BINARY).toEqual({ apache: '/usr/sbin/apachectl', nginx: '/usr/sbin/nginx' });
+  test('the configtest candidates are the list exec.ts checks against', () => {
+    expect(WEB_CONFIGTEST_CANDIDATES).toBe(EXEC_CONFIGTEST_CANDIDATES);
+    expect(WEB_CONFIGTEST_CANDIDATES).toEqual({
+      apache: ['/usr/sbin/apache2ctl', '/usr/sbin/apachectl'],
+      nginx: ['/usr/sbin/nginx'],
+    });
+  });
+
+  test('the pick is the first candidate that is a real file on the host (Ubuntu: apachectl is a symlink)', () => {
+    const real = (...files: string[]) => (path: string) => files.includes(path);
+    // Debian/Ubuntu: apache2ctl real, apachectl -> apache2ctl (lstat: not a regular file).
+    expect(derive(unixDeclaration(), { isRealFile: real('/usr/sbin/apache2ctl') }).web.configtestBin).toBe('/usr/sbin/apache2ctl');
+    // RHEL/upstream: only apachectl, real.
+    const rhel = derive(unixDeclaration(), { isRealFile: real('/usr/sbin/apachectl') });
+    expect(rhel.web.configtestBin).toBe('/usr/sbin/apachectl');
+    expect(rhel.envVars.WEB_CONFIGTEST_BIN).toBe('/usr/sbin/apachectl');
+    // Neither: the first candidate stands, for the plan to refuse by name.
+    expect(derive(unixDeclaration(), { isRealFile: real() }).web.configtestBin).toBe('/usr/sbin/apache2ctl');
+    // A real file OUTSIDE the list never wins.
+    expect(pickConfigtestBinary('apache', real('/opt/evil/apachectl'))).toBe('/usr/sbin/apache2ctl');
   });
 
   test('MODES owns the state tree exactly as STATE_TREE_OWNERSHIP says', () => {
@@ -87,7 +105,7 @@ describe('derive — unix instance', () => {
     expect(layout.sudoersPath).toBe('/etc/sudoers.d/dedalo_publication_host_test');
     expect(layout.polkitPath).toBe('/etc/polkit-1/rules.d/60-dedalo-publication-host-test.rules');
     expect(layout.agentEntry).toBe('/opt/dedalo/publication/host_agent/src/index.ts');
-    expect(layout.web.configtestBin).toBe('/usr/sbin/apachectl');
+    expect(layout.web.configtestBin).toBe('/usr/sbin/apache2ctl');
     expect(layout.tls).toBeNull();
   });
 
@@ -139,26 +157,33 @@ describe('derive — unix instance', () => {
       STATE_ROOT: '/srv/dedalo_publication',
       WEB_SERVER: 'apache',
       WEB_UNIT: 'apache2',
+      WEB_CONFIGTEST_BIN: '/usr/sbin/apache2ctl',
       MEDIA_MODE: 'shared',
       MEDIA_ROOT: '/mnt/dedalo_media',
       PHP_BIN: '/usr/bin/php',
       V2_UNIT: 'dedalo-publication-api-v2',
-      V2_HEALTH_URL: 'http://127.0.0.1:3100/dedalo/publication/server_api/v2/health',
+      V2_HEALTH_URL: 'http://127.0.0.1:3100/health',
       RELEASES_RETAINED: '3',
     });
     for (const key of Object.keys(layout.envVars)) expect(SECRET_LOOKING_KEY.test(key)).toBe(false);
   });
 
-  test('owners and groups resolve from the declaration; the agent joins both shared groups', () => {
+  test('owners and groups resolve from the declaration; the agent joins the v2 group only', () => {
     expect(ownerName(layout, 'agent')).toBe('dedalo-pubhost');
-    expect(groupName(layout, 'webGroup')).toBe('www-data');
     expect(groupName(layout, 'v2Group')).toBe('dedalo-api-v2');
     expect(groupName(layout, 'engineGroup')).toBe('dedalo');
-    expect(layout.identity.agentSupplementaryGroups).toEqual(['www-data', 'dedalo-api-v2']);
-    const same = unixDeclaration();
-    expect(
-      derive({ ...same, v2: { ...same.v2, group: 'www-data' } }).identity.agentSupplementaryGroups,
-    ).toEqual(['www-data']);
+    expect(layout.identity.v1User).toBe('dedalo-api-v1');
+    // No web/v1 group: the agent never reads the v1 configuration (v1/shared is root:root 0711).
+    expect(layout.identity.agentSupplementaryGroups).toEqual(['dedalo-api-v2']);
+    expect(MODES.v1Shared).toEqual({ owner: 'root', group: 'root', mode: 0o711 });
+  });
+
+  test('agent, v1 and v2 are three distinct users, none of them root', () => {
+    const d = unixDeclaration();
+    expect(() => derive({ ...d, v1: { user: d.agent_user } })).toThrow(/v1\.user: must differ from agent_user/);
+    expect(() => derive({ ...d, v2: { ...d.v2, user: d.v1.user } })).toThrow(/v2\.user: must differ from v1\.user/);
+    expect(() => derive({ ...d, v2: { ...d.v2, user: d.agent_user } })).toThrow(/v2\.user: must differ from agent_user/);
+    expect(() => derive({ ...d, v1: { user: 'root' } })).toThrow(/v1\.user: must not be root/);
   });
 });
 

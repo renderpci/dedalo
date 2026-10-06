@@ -147,9 +147,18 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		// holds — pinned explicitly because the registry only serves what the
 		// lockfile names, and because the WASM build must match the runtime that
 		// loads it (wasmPaths → /dedalo/lib/onnxruntime/dist/).
+		//
+		// PINNED TO A -dev BUILD ON PURPOSE (the stated reason the latest-stable
+		// policy asks for): the vendored bundle compiles in onnxruntime-web's JS
+		// core, so this pin is EXACTLY the version that transformers.js release
+		// declares — the pair upstream built and tested, rather than a newer
+		// "stable" glue under an older core that nobody tested together.
+		// onnxruntime_alignment_tripwire holds bundle = package.json = bun.lock, so
+		// a lone Dependabot bump of this package is red: it moves with a re-vendor.
 		base: 'node_modules/onnxruntime-web',
 		source: 'npm',
-		probe: 'dist/ort-wasm-simd-threaded.jsep.wasm',
+		// The glue the bundle actually loads (its loader names .asyncify, never .jsep).
+		probe: 'dist/ort-wasm-simd-threaded.asyncify.wasm',
 		note: "Transformers.js's WASM runtime; the only `onnxruntime-web` the lockfile holds.",
 	},
 	qrcode: {

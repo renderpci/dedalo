@@ -35,6 +35,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeSync,
@@ -381,7 +382,13 @@ function entryType(stats: Stats): EntryType {
 function facts(path: string): PathFacts | null {
   try {
     const stats = lstatSync(path);
-    return { type: entryType(stats), uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777 };
+    const found: PathFacts = { type: entryType(stats), uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777 };
+    if (!stats.isSymbolicLink()) return found;
+    try {
+      return { ...found, target: realpathSync(path) };
+    } catch {
+      return found; // dangling: the refusal says it does not resolve
+    }
   } catch {
     return null;
   }
@@ -431,12 +438,12 @@ export function observeHost(
     if (paths.get(path)?.type === 'file') contents.set(path, readOrNull(path));
   }
   const users = new Map<string, number>();
-  for (const name of ['root', layout.identity.agentUser, layout.identity.v2User]) {
+  for (const name of ['root', layout.identity.agentUser, layout.identity.v1User, layout.identity.v2User]) {
     const id = exec.userId(name);
     if (id !== null) users.set(name, id);
   }
   const groups = new Map<string, number>();
-  const groupNames = ['root', layout.identity.webGroup, layout.identity.v2Group];
+  const groupNames = ['root', layout.identity.v2Group];
   if (layout.identity.engineGroup !== null) groupNames.push(layout.identity.engineGroup);
   for (const name of groupNames) {
     const id = exec.groupId(name);

@@ -105,7 +105,7 @@ describe('plan on a fresh host', () => {
     expect(mkdirs.find(a => a.path === l.state.audit)).toMatchObject({ owner: 'root', uid: 0, mode: 0o755 });
     expect(mkdirs.find(a => a.path === l.state.rules)).toMatchObject({ owner: 'dedalo-pubhost', uid: 990, mode: 0o755 });
     expect(mkdirs.find(a => a.path === l.state.apis.v2.staging)).toMatchObject({ owner: 'dedalo-pubhost', uid: 990, mode: 0o700 });
-    expect(mkdirs.find(a => a.path === l.state.apis.v1.shared)).toMatchObject({ group: 'www-data', gid: 33, mode: 0o750 });
+    expect(mkdirs.find(a => a.path === l.state.apis.v1.shared)).toMatchObject({ group: 'root', gid: 0, mode: 0o711 });
   });
 
   test('writes the marker, mints the token, creates the audit log, then every artifact — in that order', () => {
@@ -251,27 +251,60 @@ describe('plan refusals', () => {
     expect(refusals(l, host).join('\n')).toContain('belongs to another instance');
   });
 
-  test('missing accounts, binaries and agent checkout are ALL named, with the fix', () => {
+  test('missing accounts, binaries and agent checkout are ALL named, with the field and the exact command', () => {
     const l = layout();
     const host = new FakeHost(l);
     host.users.delete('dedalo-pubhost');
-    host.groups.delete('www-data');
+    host.users.delete('dedalo-api-v1');
+    host.users.delete('dedalo-api-v2');
+    host.groups.delete('dedalo-api-v2');
+    host.groups.delete('dedalo');
     host.entries.delete(l.phpBin);
     host.entries.delete(l.agentEntry);
     const reasons = refusals(l, host);
-    expect(reasons).toHaveLength(4);
-    expect(reasons.join('\n')).toContain('useradd --system --no-create-home --shell /usr/sbin/nologin dedalo-pubhost');
-    expect(reasons.join('\n')).toContain('groupadd --system www-data');
+    // Accounts first, in the order the commands must run: the v2 group before the v2 user joining it.
+    expect(reasons.slice(0, 5)).toEqual([
+      "group 'dedalo-api-v2' (v2.group) does not exist — create it: groupadd --system dedalo-api-v2",
+      "group 'dedalo' (engine_group) does not exist — it must be the group of the account that runs Dédalo on this machine (id -gn <that account>); correct the declaration rather than creating it",
+      "user 'dedalo-pubhost' (agent_user) does not exist — create it: useradd --system --no-create-home --shell /usr/sbin/nologin --user-group dedalo-pubhost",
+      "user 'dedalo-api-v1' (v1.user) does not exist — it is the site's PHP-FPM pool user: create it (useradd --system --no-create-home --shell /usr/sbin/nologin -g <the web server's group, e.g. www-data> dedalo-api-v1) and set 'user = dedalo-api-v1' in the site's pool file",
+      "user 'dedalo-api-v2' (v2.user) does not exist — create it: useradd --system --no-create-home --shell /usr/sbin/nologin -g dedalo-api-v2 dedalo-api-v2",
+    ]);
+    expect(reasons).toHaveLength(7);
     expect(reasons.join('\n')).toContain("php_bin '/usr/bin/php'");
     expect(reasons.join('\n')).toContain('check out publication/host_agent');
   });
 
-  test('a group-writable configtest binary (the NOPASSWD sudo target) is refused', () => {
+  test('a symlinked php_bin / bun_bin / agent_dir is refused, naming the resolved path to declare', () => {
     const l = layout();
     const host = new FakeHost(l);
-    entry(host, l.web.configtestBin).mode = 0o775;
+    Object.assign(entry(host, l.phpBin), { type: 'symlink', mode: 0o777, target: '/usr/bin/php8.3' });
+    Object.assign(entry(host, l.bunBin), { type: 'symlink', mode: 0o777 });
+    Object.assign(entry(host, l.agentDir), { type: 'symlink', mode: 0o777, target: '/opt/real/host_agent' });
     expect(refusals(l, host)).toEqual([
-      `web.configtest_bin '/usr/sbin/apachectl' is group- or world-writable (mode 0775) — a non-root principal could replace what it runs; make it root-owned and not group- or world-writable`,
+      `php_bin '${l.phpBin}' is a symlink — declare the real path ('/usr/bin/php8.3') (a link can be repointed after this check)`,
+      `bun_bin '${l.bunBin}' is a symlink — declare the real path (it does not resolve) (a link can be repointed after this check)`,
+      `agent_dir '${l.agentDir}' is a symlink — declare the real path ('/opt/real/host_agent') (a link can be repointed after this check)`,
+      // …and the entry beneath it is refused through its ancestry, independently.
+      `'${l.agentDir}' (above agent entry '${l.agentEntry}') is a symlink, not a real directory — declare the canonical path`,
+    ]);
+  });
+
+  test('a symlinked configtest binary never asks to "declare" it: it is not a declared field', () => {
+    const l = layout();
+    const host = new FakeHost(l);
+    Object.assign(entry(host, l.web.configtestBin), { type: 'symlink', mode: 0o777, target: '/usr/sbin/elsewhere' });
+    expect(refusals(l, host)).toEqual([
+      `web.configtest_bin: none of /usr/sbin/apache2ctl, /usr/sbin/apachectl is a real executable file on this host ('/usr/sbin/apache2ctl' is a symlink) — install apache from the distribution's package`,
+    ]);
+  });
+
+  test('no configtest candidate on the host: refused once, naming every candidate', () => {
+    const l = layout();
+    const host = new FakeHost(l);
+    host.entries.delete(l.web.configtestBin);
+    expect(refusals(l, host)).toEqual([
+      'web.configtest_bin: none of /usr/sbin/apache2ctl, /usr/sbin/apachectl is a real executable file on this host — install apache first',
     ]);
   });
 
@@ -324,7 +357,7 @@ describe('assertPlanIsCoherent', () => {
     expect(() =>
       assertPlanIsCoherent(
         [
-          { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apachectl' },
+          { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apache2ctl' },
           { op: 'web-reload', unit: 'apache2' },
         ],
         host,
@@ -394,7 +427,7 @@ describe('the tail, through a renderer with effects', () => {
     const tail = plan(l, new FakeHost(l).state(), PENDING_FACTS, [probe]).filter(a => !['mkdir', 'write', 'append-only'].includes(a.op));
     expect(tail).toEqual([
       { op: 'daemon-reload' },
-      { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apachectl' },
+      { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apache2ctl' },
       { op: 'web-reload', unit: 'apache2' },
       { op: 'enable', unit: 'dedalo-publication-host-test' },
       { op: 'start', unit: 'dedalo-publication-host-test' },

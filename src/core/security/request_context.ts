@@ -20,8 +20,11 @@
  * which is testable and clear. This scope is the single seed-source and a
  * BACKSTOP for leaf/future code that has no parameter to reach for — NOT a
  * mandate to remove parameter threading. Outside any scope (unit tests calling
- * resolvers directly, background jobs) the accessors return undefined, exactly
- * as the language accessors fall back to defaults.
+ * resolvers directly, timer/scheduler work) the accessors return undefined,
+ * exactly as the language accessors fall back to defaults. A background job of
+ * the job manager is NOT outside a scope: it runs under a job-owned context
+ * pinned at submit (media/jobs.ts JobRunScope — the submitter's principal
+ * snapshot, a null session, its own request id and refusal log).
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';

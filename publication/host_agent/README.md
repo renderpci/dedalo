@@ -52,7 +52,7 @@ provisioner:
 
 | Grant | Allows | Why it cannot be narrower |
 |---|---|---|
-| sudoers | `apachectl -t` or `nginx -t`, exactly that argv | a configtest must read root-only TLS keys |
+| sudoers | `<configtest> -t`, exactly that argv: `apache2ctl` (Debian/Ubuntu) or `apachectl` (RHEL), or `nginx`; the provisioner picks the real file present from a closed list | a configtest must read root-only TLS keys |
 | polkit | `reload` of `WEB_UNIT`, `restart` of `V2_UNIT`, `start`/`stop` of the `<V2_UNIT>-scratch@<port>` template | the same unit-scoped rule the site builder uses |
 
 Every child process goes through `src/exec.ts`, a closed set of named commands
@@ -82,8 +82,9 @@ Neither grant opens a path to root:
 
 The state root carries a `.dedalo_host_agent_instance` marker naming the instance, and
 the daemon refuses to boot against an unmarked root. A release id is `<version>_<digest7>`.
-The v1 config files live in `v1/shared/` and are linked into each release after
-extraction (spec §3). The agent never runs `bun install`: a v2 bundle carries its
+The v1 config files live in `v1/shared/` (`root:root 0711`) and are linked into each release
+after extraction (spec §3). `server_config_api.php` must be owned by the declared `v1.user` (the
+site's PHP-FPM pool user) and private to it, or the install is refused (`shared_config_exposed`). The agent never runs `bun install`: a v2 bundle carries its
 production `node_modules`.
 
 ## Configuration

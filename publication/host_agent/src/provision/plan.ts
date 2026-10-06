@@ -35,7 +35,7 @@
 import { dirname, join } from 'node:path';
 import { hasDrifted, parseStamp } from './hash';
 import type { AgentLayout, WebServer } from './layout';
-import { MODES, SERVICE_TOKEN_BYTES, groupName, markerContent, ownerName } from './layout';
+import { MODES, SERVICE_TOKEN_BYTES, WEB_CONFIGTEST_CANDIDATES, groupName, markerContent, ownerName } from './layout';
 import { engineFragmentRenderer } from './render/engine_fragment';
 import { envRenderer } from './render/env';
 import { polkitRenderer } from './render/polkit';
@@ -122,6 +122,8 @@ export interface PathFacts {
   readonly gid: number;
   /** Permission bits only (`& 0o7777`). */
   readonly mode: number;
+  /** A symlink's fully resolved path (realpath), when it resolves: the refusal names what to declare. */
+  readonly target?: string;
 }
 
 export interface UnitFacts {
@@ -264,20 +266,32 @@ export function plan(
   const refusals: string[] = [];
   const artifacts = renderAll(layout, facts, renderers);
 
-  // 1. What the provisioner never creates: accounts.
-  const users = ['root', layout.identity.agentUser, layout.identity.v2User];
-  const groups = ['root', layout.identity.webGroup, layout.identity.v2Group];
-  if (layout.identity.engineGroup !== null) groups.push(layout.identity.engineGroup);
-  for (const name of users) {
-    if (!host.users.has(name)) {
-      refusals.push(
-        `user '${name}' does not exist — create it first ` +
-          `(useradd --system --no-create-home --shell /usr/sbin/nologin ${name})`,
-      );
-    }
+  // 1. What the provisioner never creates: accounts. Each refusal names the declaration field
+  //    and the exact command, in the order they must run (a group before the user joining it).
+  const nologin = 'useradd --system --no-create-home --shell /usr/sbin/nologin';
+  const { agentUser, v1User, v2User, v2Group, engineGroup } = layout.identity;
+  if (!host.groups.has('root')) refusals.push(`group 'root' does not exist — this is not a usable host`);
+  if (!host.users.has('root')) refusals.push(`user 'root' does not exist — this is not a usable host`);
+  if (!host.groups.has(v2Group)) {
+    refusals.push(`group '${v2Group}' (v2.group) does not exist — create it: groupadd --system ${v2Group}`);
   }
-  for (const name of groups) {
-    if (!host.groups.has(name)) refusals.push(`group '${name}' does not exist — create it first (groupadd --system ${name})`);
+  if (engineGroup !== null && !host.groups.has(engineGroup)) {
+    refusals.push(
+      `group '${engineGroup}' (engine_group) does not exist — it must be the group of the account that runs ` +
+        `Dédalo on this machine (id -gn <that account>); correct the declaration rather than creating it`,
+    );
+  }
+  if (!host.users.has(agentUser)) {
+    refusals.push(`user '${agentUser}' (agent_user) does not exist — create it: ${nologin} --user-group ${agentUser}`);
+  }
+  if (!host.users.has(v1User)) {
+    refusals.push(
+      `user '${v1User}' (v1.user) does not exist — it is the site's PHP-FPM pool user: create it ` +
+        `(${nologin} -g <the web server's group, e.g. www-data> ${v1User}) and set 'user = ${v1User}' in the site's pool file`,
+    );
+  }
+  if (!host.users.has(v2User)) {
+    refusals.push(`user '${v2User}' (v2.user) does not exist — create it: ${nologin} -g ${v2Group} ${v2User}`);
   }
 
   // 2. What the provisioner never creates either, and what root runs or grants: the pinned
@@ -307,6 +321,13 @@ export function plan(
   ] as const;
   for (const [field, path, kind, executable] of PINNED) {
     const facts = host.paths.get(path);
+    if (!facts && path === layout.web.configtestBin) {
+      refusals.push(
+        `${field}: none of ${WEB_CONFIGTEST_CANDIDATES[layout.web.server].join(', ')} is a real executable ` +
+          `file on this host — install ${layout.web.server} first`,
+      );
+      continue;
+    }
     if (!facts) {
       refusals.push(
         path === layout.agentEntry
@@ -317,8 +338,20 @@ export function plan(
       );
       continue;
     }
+    if (facts.type === 'symlink' && path === layout.web.configtestBin) {
+      // Not a declared field: the operator cannot "declare the real path".
+      refusals.push(
+        `${field}: none of ${WEB_CONFIGTEST_CANDIDATES[layout.web.server].join(', ')} is a real executable ` +
+          `file on this host ('${path}' is a symlink) — install ${layout.web.server} from the distribution's package`,
+      );
+      continue;
+    }
     if (facts.type === 'symlink') {
-      refusals.push(`${field} '${path}' is a symlink — declare the real path (a link can be repointed after this check)`);
+      refusals.push(
+        `${field} '${path}' is a symlink — declare the real path` +
+          (facts.target ? ` ('${facts.target}')` : ' (it does not resolve)') +
+          ' (a link can be repointed after this check)',
+      );
       continue;
     }
     if (facts.type !== kind || (executable && (facts.mode & 0o111) === 0)) {

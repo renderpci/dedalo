@@ -78,7 +78,7 @@ grants it exactly two things:
 
 | Grant | Allows | Why |
 | --- | --- | --- |
-| a sudo rule | the web server's configuration test (`apachectl -t` or `nginx -t`), nothing else | the test must read TLS keys only root can read |
+| a sudo rule | the web server's configuration test (`apache2ctl -t`, `apachectl -t` or `nginx -t`), nothing else | the test must read TLS keys only root can read |
 | a polkit rule | reloading the web server's unit, restarting the Publication API v2 unit, starting and stopping a scratch copy of the v2 unit on a high local port | applying rules, testing and switching v2 releases need them |
 
 Neither grant lets the work system reach root through the agent:
@@ -122,47 +122,118 @@ from it, so step 4's `check` refuses a copy that anyone but root could change:
   ran (`bun run hostagent:test`). Copy from a checkout where it did not, or delete it on
   the publication host.
 
-### 2. Create the accounts
+### 2. Declare the instance
 
-The provisioner never creates users or groups. Create, as system accounts without a login
-shell:
+The declaration is one JSON file, `/etc/dedalo_publication_host/<instance>.json`. Write it
+first: it names the accounts that step 3 creates. A complete declaration for **one machine**
+(the work system and the website on the same server):
 
-- the agent's own user;
-- the user and group of the Publication API v2 service;
-- on one machine, make sure the work system's group exists (the agent's socket belongs to it).
+```json
+{
+  "instance": "museum",
+  "listen": { "kind": "unix" },
+  "agent_user": "dedalo-pubhost",
+  "engine_group": "dedalo",
+  "agent_dir": "/opt/dedalo/publication/host_agent",
+  "web": { "server": "apache", "unit": "apache2" },
+  "v1": { "user": "museum_site" },
+  "state_root": "/home/museum.org/dedalo",
+  "media": { "mode": "shared", "root": "/mnt/dedalo_media" },
+  "php_bin": "/usr/bin/php8.3",
+  "bun_bin": "/usr/local/bin/bun",
+  "v2": {
+    "unit": "dedalo-publication-api-v2",
+    "user": "dedalo-api-v2",
+    "group": "dedalo-api-v2",
+    "port": 3100,
+    "health_url": "http://127.0.0.1:3100/health"
+  }
+}
+```
 
-If one is missing, step 4's `check` stops and prints the exact `useradd` or `groupadd`
-command to run.
+On **two machines**, the listener is the private address the agent binds, and there is no
+`engine_group`:
 
-### 3. Declare the instance
+```json
+  "listen": { "kind": "tls", "host": "10.20.0.2", "port": 8471 },
+```
 
-The declaration is one JSON file, `/etc/dedalo_publication_host/<instance>.json`. It
-states:
+| Field | What to put |
+| --- | --- |
+| `instance` | a name for this publication host: lowercase letters, digits and `_`, starting with a letter, 2 to 32 characters. The file is named after it |
+| `listen` | `{"kind": "unix"}` on one machine (the socket path is derived). On two machines `{"kind": "tls", "host": …, "port": …}`: the host is the **private IPv4 address** the agent binds, written as a literal such as `10.20.0.2`: no hostname, no wildcard (`0.0.0.0`). It also becomes the server certificate's name, so the work system connects to that address |
+| `agent_user` | a new account for the agent alone (step 3 creates it) |
+| `engine_group` | one machine only: the group of the account that runs Dédalo (`id -gn <that account>`). The agent's socket belongs to it, so only the work system can connect |
+| `agent_dir` | where you copied the agent's code in step 1 |
+| `web` | the web server (`apache` or `nginx`) and its systemd unit (`apache2` on Debian and Ubuntu, `httpd` on RHEL, `nginx`). You do not declare the configuration-test command: the provisioner picks it on the host, `/usr/sbin/apache2ctl` on Debian and Ubuntu (where `apachectl` is only a link to it), `/usr/sbin/apachectl` on RHEL, `/usr/sbin/nginx` for nginx |
+| `v1.user` | the account the Publication API v1 runs as. With one PHP-FPM pool per site, the site's pool user (the pool file's `user =`); the pools may all share the web server's group. With Apache's `mod_php`, the web server's user (`www-data` on Debian and Ubuntu). It owns the v1 configuration, and nobody else may read that file. Use a pool per site whenever the server hosts more than one site (see [Several instances on one server](#several-instances-on-one-server)) |
+| `state_root` | a new directory for the agent: the API releases, the media rules, the audit log. It and **every directory above it** must be owned by root and writable by no one else, because whoever owns a parent directory can replace what is inside it. So it can never be inside a directory the site's user owns. With one site per home directory, use `/home/<site>/dedalo` (see [Lay out each site in its home directory](#lay-out-each-site-in-its-home-directory)) |
+| `media` | `shared` (the publication host mounts the work system's media read-only), `copy` (the agent keeps its own copy of the published files) or `none`; unless `none`, the media `root` |
+| `php_bin` | the real PHP binary that checks v1 releases, never a link (see below) |
+| `bun_bin` | the real Bun binary that runs the agent and the v2 API, never a link (see below) |
+| `v2` | the v2 API's systemd unit name, its own new user and group (step 3 creates them), its local port, and its health URL: `http://127.0.0.1:<port>/health`. The v2 API answers `/health` whatever URL prefix it is published under, so keep that form |
 
-- the **instance** name: lowercase letters, digits and `_`, starting with a letter, 2 to
-  32 characters;
-- the **listener**: `{"kind": "unix"}` on one machine (the socket path is derived), or
-  `{"kind": "tls", "host": …, "port": …}` on two machines. The host is the **private IPv4
-  address** the agent binds, written as a literal such as `10.20.0.2`: no hostname, no
-  wildcard (`0.0.0.0`). It also becomes the server certificate's name, so the work system
-  connects to that address;
-- the agent's user, and on one machine the work system's group;
-- where the agent's code was copied (step 1);
-- the **web server** (`apache` or `nginx`), its systemd unit, and the group it runs as
-  (the configuration-test command, `apachectl -t` or `nginx -t`, follows from the server);
-- the **state root**, the directory the agent owns;
-- the **media mode** (`shared`, `copy` or `none`) and, unless `none`, the media root;
-- the absolute paths of two runtimes: Bun, which runs the agent and the Publication API v2
-  units, and the language runtime of the Publication API v1, which the agent calls only
-  for its syntax check;
-- the Publication API v2 unit, its user and group, its local port, and its health URL on
-  `127.0.0.1` at that port.
+The agent, v1 and v2 accounts must be three different accounts, none of them `root`.
+Unknown keys are refused, and every mistake is named with its field. The complete rules are
+in the agent's source, `src/provision/schema.ts`. The same two examples are in
+`publication/host_agent/deploy/examples/`.
 
-Unknown keys are refused, and every mistake is named with its field. The complete list
-of fields, with their rules, is in the agent's source: `src/provision/schema.ts`. Two
-filled-in examples are `deploy/examples/instance.example.json` (two machines) and
-`deploy/examples/instance.single_machine.example.json` (one machine), all under
-`publication/host_agent/`.
+**The two runtimes.** `check` refuses a runtime path that is a symbolic link, because a link
+can be repointed after the check. When it refuses one, it prints the real path to declare.
+You can also find it yourself:
+
+```bash
+realpath /usr/bin/php     # on Ubuntu, for example /usr/bin/php8.3
+```
+
+Declare the version-named file (`/usr/bin/php8.3`) on purpose: it is the version that checks
+your v1 releases, so it should be the version your web server runs the v1 API with. A later
+`update-alternatives` switch then cannot change it silently.
+
+Bun's own installer puts Bun in a home directory (`~/.bun/bin/bun`). That copy fails the
+check, because the file and every directory above it must belong to root and be writable by
+no one else. Install a system copy and declare it:
+
+```bash
+install -o root -g root -m 0755 ~/.bun/bin/bun /usr/local/bin/bun
+```
+
+After each Bun update, copy it again the same way.
+
+### 3. Create the accounts
+
+The provisioner never creates accounts. Create the ones your declaration names, as root.
+With the example above:
+
+```bash
+# agent_user: the agent's own account (its group is created with it)
+useradd --system --no-create-home --shell /usr/sbin/nologin --user-group dedalo-pubhost
+
+# v2.group, then v2.user in it
+groupadd --system dedalo-api-v2
+useradd --system --no-create-home --shell /usr/sbin/nologin -g dedalo-api-v2 dedalo-api-v2
+```
+
+The other two usually exist already:
+
+- **`v1.user`** is the site's PHP-FPM pool user. To list the pool users on the server:
+
+    ```bash
+    grep -H '^user *=' /etc/php/*/fpm/pool.d/*.conf
+    ```
+
+    If the site has no pool of its own yet, create its user in the web server's group and
+    set `user = museum_site` and `group = www-data` in the site's pool file:
+
+    ```bash
+    useradd --system --no-create-home --shell /usr/sbin/nologin -g www-data museum_site
+    ```
+
+- **`engine_group`** (one machine) is the group of the account that runs Dédalo. Do not
+  create it: if `check` says it does not exist, the declaration names the wrong group.
+
+If any account is missing, step 4's `check` stops and names each one with its field and the
+exact command, in the order to run them.
 
 ### 4. Provision
 
@@ -190,8 +261,18 @@ install:
   `root:<v2 group>`, mode `0640`).
 - **v1**: the v1 API configuration file in `<state root>/publication_api/v1/shared/`
   (the refusal names it). Start from the sample in the v1 release's `config_api/`
-  directory. Owned by root, readable by the web server's group, not by others
-  (`root:<web group>`, mode `0640`).
+  directory. Owned by the v1 user and readable by it alone:
+
+    ```bash
+    chown <v1.user> server_config_api.php
+    chmod 0400 server_config_api.php
+    ```
+
+  The file holds the site's database credentials, and the pools usually share the web
+  server's group, so a group permission would let every site read it. Installing a v1
+  release is refused with `shared_config_exposed` while the file is readable by its group
+  or by others, or still owned by root. The agent never reads the file: it only checks it and links it into each
+  release.
 
 ### 6. Carry the engine bundle to the work system (two machines only)
 
@@ -211,7 +292,7 @@ root-only credential file on the publication host.
 ### 7. Check the pairing
 
 From the work host (two machines), split the bundle once and ask for the health answer.
-Use the listener's IPv4 address exactly as declared in step 3 (here the example's
+Use the listener's IPv4 address exactly as declared in step 2 (here the example's
 `10.20.0.2`, port `8471`): the certificate names that address, not a hostname.
 
 ```bash
@@ -241,6 +322,139 @@ also written, as `DEDALO_PUBLICATION_HOST_FINGERPRINT`, in
 `/etc/dedalo_publication_host/<instance>/engine.env.fragment`, a file `apply` generates
 for the work system's [pairing](#pair-it-with-the-work-system). A request without
 the client certificate must fail at the TLS handshake.
+
+## Lay out each site in its home directory
+
+When each website lives in its own home directory, put the site's Dédalo state root beside
+its document root, in the same home:
+
+```
+/home/museum.org/              root:root 0755   owned by root, not by the site's user
+/home/museum.org/httpdocs/     museum_site      the website: the site user's home and DocumentRoot
+/home/museum.org/dedalo/       state_root       created by provision apply
+    publication_api/v1/current -> releases/…        the Publication API v1
+    publication_api/v1/shared/server_config_api.php  museum_site, 0400
+    publication_api/v2/current -> releases/…        the Publication API v2
+```
+
+Everything that belongs to one site is in one directory, and two sites never share one.
+
+**1. Give the home to root, and the site user its document root.** The state root's parent
+must be owned by root, so the site user's home moves one level down:
+
+```bash
+chown root:root /home/museum.org
+chmod 0755 /home/museum.org
+usermod -d /home/museum.org/httpdocs museum_site
+```
+
+The site user still owns `httpdocs/` and can change the website as before. It can read
+`dedalo/` but not change it. If you give the site user SFTP access with `ChrootDirectory`,
+`sshd` already requires that directory to be owned by root, so the same layout serves both. If
+a hosting panel or script later gives `/home/museum.org` back to the site user, the agent
+refuses to start and `check` names the directory; give it back to root.
+
+**2. Declare it.** `"state_root": "/home/museum.org/dedalo"` and
+`"v1": { "user": "museum_site" }`, the user of the site's PHP-FPM pool.
+
+**3. Let the site's pool read it.** If the pool limits PHP with `open_basedir` to the home
+directory, the limit already covers `dedalo/`:
+
+```ini
+; /etc/php/8.3/fpm/pool.d/museum.org.conf
+user = museum_site
+group = www-data
+php_admin_value[open_basedir] = /home/museum.org/:/tmp/
+```
+
+A limit to `httpdocs/` alone would stop the v1 API from reading its own code: widen it to the
+home directory.
+
+**4. Map the APIs into the site's virtual host.** The document root stays the website. The v1
+API is mapped with an `Alias` to its `current` release, and runs in the site's pool:
+
+```apache
+<VirtualHost *:443>
+    ServerName museum.org
+    DocumentRoot /home/museum.org/httpdocs
+
+    Alias /dedalo/publication/server_api/v1 /home/museum.org/dedalo/publication_api/v1/current
+    <Directory /home/museum.org/dedalo/publication_api/v1>
+        Options FollowSymLinks
+        Require all granted
+        <FilesMatch "\.php$">
+            SetHandler "proxy:unix:/run/php/php8.3-fpm-museum.org.sock|fcgi://localhost"
+        </FilesMatch>
+    </Directory>
+</VirtualHost>
+```
+
+The `<Directory>` names the `v1` directory, not `current`: `current` is a link that moves to
+each new release. Use the URL path your website already calls, and the socket your pool
+listens on (the pool file's `listen =`).
+
+The v2 API is a service on `127.0.0.1` at the declaration's `v2.port`, reached through a
+reverse proxy in the same virtual host. The simplest proxy removes the public prefix before
+passing the request on, and the v2 API then serves it whatever its `BASE_PATH` is:
+
+```apache
+    <Location /dedalo/publication/server_api/v2/>
+        ProxyPass        http://127.0.0.1:3100/
+        ProxyPassReverse http://127.0.0.1:3100/
+    </Location>
+```
+
+The [Publication API v2 deployment](../diffusion/publication_api/v2/deployment.md) page
+covers the rest of the proxy (the MCP endpoint, headers, timeouts).
+
+**5. One instance per site.** Each site is its own instance: its own declaration, users,
+v2 unit and port, and state root, as listed in the next section.
+
+## Several instances on one server
+
+One server can host several publication hosts, for example one per website, each paired
+with the work system under its own name. Each instance is a declaration of its own,
+`/etc/dedalo_publication_host/<instance>.json`, provisioned on its own
+(`bun run provision apply <instance>`).
+
+The provisioner names these after the instance, so two instances never share them:
+
+| Separate per instance | Where |
+| --- | --- |
+| the declaration | `/etc/dedalo_publication_host/<instance>.json` |
+| the token, the TLS files, the agent's settings | `/etc/dedalo_publication_host/<instance>/` |
+| the agent's service | `dedalo-publication-host-<instance>` |
+| the local socket (one machine) | `/run/dedalo_publication_host/<instance>/` |
+| the sudo rule and the polkit rule | one file each, named after the instance |
+
+You choose the rest, and each instance needs its own:
+
+| Field | Why it cannot be shared |
+| --- | --- |
+| `agent_user`, `v1.user`, `v2.user` | permissions are granted by user, and the v1 user is the only one that can read its site's v1 configuration (database credentials included). Two instances sharing a user could each change the other's media rules and API releases, so a flaw in one would reach the other |
+| `v2.group` | it reads the v2 API configuration, which holds that API's settings |
+| `v2.unit`, `v2.port` and its `health_url` | two v2 services cannot have one name or listen on one port. The v2 unit name must not be another instance's web-server or agent unit name either: the instance's v2 unit file would replace that unit |
+| `listen` port (two machines) | two agents cannot listen on one address and port |
+| `state_root`, and a `copy` media root | each instance writes only its own directories |
+
+These can be shared: the web server and its group (every site's pool may run under it), the
+Bun and PHP paths, the work system's group (`engine_group`, as long as it is not another
+instance's v2 group), a `shared` media
+root (it is mounted read-only), and the agent's code directory. If the agent's code is
+shared, every instance is updated together.
+
+!!! note "One web server, one PHP-FPM pool per site"
+    The web server is shared, but the v1 API of each site runs in its own PHP-FPM pool, under
+    its own user. The pools may share the web server's group (`www-data`). That pool user is
+    the instance's `v1.user`, and it alone can read the site's v1 configuration. With
+    `mod_php` instead, every site's v1 API runs as the web server's user, so every site could
+    read every other site's database credentials. `check` therefore refuses two instances with
+    the same `v1.user`. A server with a single instance may use `mod_php`.
+
+`check` and `apply` read every other declaration in `/etc/dedalo_publication_host/` and refuse
+any field above that two instances share, naming the other instance and its file. A
+declaration there that cannot be read is also refused, because isolation that cannot be
+checked is not assumed: fix it, or move it out of that directory.
 
 ## Pair it with the work system
 
@@ -482,11 +696,15 @@ taken.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `provision check` stops, naming a user or group | the provisioner never creates accounts | run the `useradd` / `groupadd` line it prints, then `check` again |
+| `provision check` stops, naming a user or group | the provisioner never creates accounts | run the command it prints for each, in the order printed (step 3), then `check` again. For `engine_group`, correct the declaration instead |
 | `provision check` refuses `agent_dir` or `agent entry`, or a directory above them, as not root-owned or writable | the code was copied as a normal user, or a parent directory is group- or world-writable | `chown -R root:root` the copy, `chmod go-w` it and every parent (step 1) |
-| `provision check` refuses `agent_dir` as a symlink | the declaration names a link | declare the real path (`realpath <dir>`) |
+| `provision check` refuses `agent_dir`, `php_bin` or `bun_bin` as a symlink | the declaration names a link | declare the path the refusal prints in brackets (the same as `realpath <path>`). For Bun installed in a home directory, install a system copy (step 2) |
+| `provision check` says a field is "also used by instance …" | another declaration in `/etc/dedalo_publication_host/` uses the same user, group, unit, port or directory | give this instance its own (see [Several instances on one server](#several-instances-on-one-server)) |
+| `provision check` says "cannot check isolation against …" | another declaration in `/etc/dedalo_publication_host/` is not valid JSON, is not a valid declaration, or is a symbolic link | fix that file (replace a link with the file itself), or move it out of the directory |
+| `provision check` says another file "declares instance … too" | two declarations name the same instance, for example a copy kept as `<instance>.old.json` | remove one, or move the copy out of `/etc/dedalo_publication_host/` |
+| `provision check` says none of the `web.configtest_bin` candidates is a real file | the web server is not installed, or installed outside the standard `/usr/sbin` paths | install the distribution's `apache2` / `httpd` / `nginx` package, then `check` again |
 | `provision check` refuses "a test scratch tree" `.test-tmp` | the copy came from a checkout where the agent suite ran | delete `.test-tmp/` from the copy on the publication host |
-| `provision check` refuses `listen.host` | the host is a hostname, a wildcard or not a canonical IPv4 address | declare the private IPv4 address literal the agent binds (step 3) |
+| `provision check` refuses `listen.host` | the host is a hostname, a wildcard or not a canonical IPv4 address | declare the private IPv4 address literal the agent binds (step 2) |
 | `provision check` refuses a file "edited by hand" | a generated file no longer matches its own hash | move it aside or restore it; change the declaration instead and re-run `apply` |
 | the agent does not start, naming the client certificate authority | the certificate, key or authority file is missing or unreadable | re-run `bun run provision apply <instance>`; never disable client verification |
 | `curl` fails at the TLS handshake | the client certificate is missing, from another host's authority, or the server name does not match the certificate | use the bundle this host issued, split as in step 7, and the exact IPv4 address declared in the instance |
@@ -494,6 +712,7 @@ taken.
 | the fingerprints differ | wrong instance name or wrong token; the two are indistinguishable by design | check both against the declaration and the credential file |
 | applying media rules fails | the web server's configuration test rejected the new include | the previous include is still active and nothing was reloaded; read the error and re-render the rules |
 | an API install is refused: `shared_config_missing` | the API's configuration file in `shared/` does not exist yet | create it as root (step 5), then install again |
+| a v1 install is refused: `shared_config_exposed` | the v1 configuration file is readable by its group or by others, is owned by root (created as root and never given to the v1 user), or is not a regular file | `chown <v1.user>` it and `chmod 0400` it (step 5), then install again |
 | an API install fails its health check | the new release did not answer healthy | the previous release is still `current` and serving; the audit log names both releases |
 | `dedalo:pair-publication-host` says to run it as the owner of the private directory | it was run as root or as another user, or the private directory is owned by root | run it as the Dédalo user, who must own the private directory: `sudo -u <engine user> bun run dedalo:pair-publication-host …` |
 | `dedalo:pair-publication-host` refuses a placeholder | no token was given: the fragment line still holds the placeholder and no `--token-file` / `--token-stdin` was passed | give the token as in *Pair it with the work system*, step 2 |

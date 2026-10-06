@@ -1118,7 +1118,8 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// Identity comes from the request-scoped ALS rather than a threaded parameter:
 	// readComponentData is reached from several doors and this is a leaf-position
 	// read, which is the backstop role request_context.ts documents. FAIL-CLOSED —
-	// no principal (unit tests, background jobs) means no graft and today's
+	// no principal (unit tests, timer/scheduler work — a job-manager job carries
+	// its submitter's principal snapshot) means no graft and today's
 	// behaviour, never another user's row.
 	let scratchEntries: unknown[] | null = null;
 	{

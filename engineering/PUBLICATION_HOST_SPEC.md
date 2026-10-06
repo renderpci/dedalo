@@ -105,8 +105,11 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
 5. **Least privilege, no root at runtime.** The agent runs as its own user and writes
    only under its state root (`publication_api/`, `rules/`, `audit/`). It holds exactly
    two grants, both rendered and hash-stamped by the provisioner: a **sudoers** rule for
-   the web server's configtest argv only (`apachectl -t` / `nginx -t`, because a
-   configtest must read root-only TLS keys), and a **polkit** rule allowing `reload` of the
+   the web server's configtest argv only (`<bin> -t`, because a configtest must read
+   root-only TLS keys; `<bin>` is the first real file in the closed per-server list
+   `WEB_CONFIGTEST_CANDIDATES` — apache: `/usr/sbin/apache2ctl` (Debian/Ubuntu, where
+   `apachectl` is a symlink), `/usr/sbin/apachectl` (RHEL); nginx: `/usr/sbin/nginx` —
+   rendered into both the sudoers rule and the agent env `WEB_CONFIGTEST_BIN`), and a **polkit** rule allowing `reload` of the
    observed web unit, `restart` of the v2 unit, and `start`/`stop` of the v2 scratch
    template unit `<v2 unit>-scratch@<port>` (port 1024–65535; the `publication/site_builder`
    precedent). There is no shell and no free argv. The media include the agent installs
@@ -250,6 +253,13 @@ release, state outside the code:
   `releases/<r>/config_api/server_config_api.php` (and `server_config_headers.php` when
   `shared/` has one) → `shared/`. A v1 bundle that carries either file is refused
   (`reserved_path`).
+- **v1 config is private to its owner.** `server_config_api.php` holds the site's database
+  credentials and every site's PHP-FPM pool may share the web server's group, so the
+  declaration names the pool USER (`v1.user`), the file is `<v1.user>` mode 0400/0600, and an
+  install with the file readable by group or others, or root-owned (the pool is never root), is
+  refused (`shared_config_exposed`; `isPrivateV1Config`).
+  `v1/shared/` is `root:root 0711`: the agent only stats and links there, joins no v1 group,
+  never reads the file. Agent, v1 and v2 are three distinct non-root users (derive).
 - **Install** = stream into staging with the stamp verified → (v1) `php -l` lint →
   (v2) boot the release on a scratch port and probe its health → atomic `current` swap
   (temporary symlink + `rename`) → (v2) restart the unit, then health. A failure before

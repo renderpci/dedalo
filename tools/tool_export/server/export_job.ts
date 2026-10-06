@@ -25,9 +25,10 @@
  * `openExportGrid` EXPLICITLY — the principal (RE-RESOLVED when the handler
  * starts, never the submit-time one a queued job may have carried for hours:
  * currentExportPrincipal), the
- * export options (their `lang` is the data lang) and the interface lang
- * (ToolActionContext.applicationLang — captured by the executor at SUBMIT,
- * since a queued job's handler starts from another job's release). The producer builds its own identity scope
+ * export options (their `lang` is the data lang) and the interface lang (the
+ * ambient currentApplicationLang() read at handler entry — the SUBMITTER's: the
+ * job manager pins the submit-time langs around every job's worker, however
+ * late a queued job's turn comes, media/jobs.ts JobRunScope). The producer builds its own identity scope
  * from those, so the spool is the same bytes in a request and in a detached
  * job (gate: tool_export_job_native.test.ts).
  *
@@ -68,6 +69,7 @@ import {
 } from '../../../src/core/errors/index.ts';
 import { jobAbortInfo, mediaJobs } from '../../../src/core/media/jobs.ts';
 import { getModelByTipo } from '../../../src/core/ontology/resolver.ts';
+import { currentApplicationLang } from '../../../src/core/resolve/request_lang.ts';
 import {
 	getPermissions,
 	type Principal,
@@ -795,17 +797,6 @@ async function failJob(
 	}
 }
 
-/** The submit-time interface lang the executor threads; its absence is a wiring bug, not a default. */
-function submitLang(context: ToolActionContext): string {
-	const lang = context.applicationLang;
-	if (typeof lang !== 'string' || lang === '') {
-		throw new DedaloError('internal.invariant', {
-			message: 'build_export_artifact: no submit-time applicationLang on the background context',
-		});
-	}
-	return lang;
-}
-
 /**
  * THE PRINCIPAL AS OF NOW, for a background export handler. The executor hands
  * the handler the Principal resolved at SUBMIT; the export lanes queue FIFO
@@ -837,6 +828,10 @@ export async function currentExportPrincipal(context: ToolActionContext): Promis
 /** tool_export.build_export_artifact — background (lane 'export'). */
 export async function toolExportBuildArtifact(context: ToolActionContext): Promise<ToolResponse> {
 	assertBackground(context, 'build_export_artifact');
+	// The interface lang, read at ENTRY (before any await) from the ambient scope
+	// — the submitter's, pinned by the job manager at submit (media/jobs.ts
+	// JobRunScope) — and handed to the run EXPLICITLY from here on.
+	const applicationLang = currentApplicationLang();
 	const store = openArtifactStore();
 	// as of NOW, not of submit (currentExportPrincipal)
 	const principal = await currentExportPrincipal(context);
@@ -845,10 +840,8 @@ export async function toolExportBuildArtifact(context: ToolActionContext): Promi
 		principal,
 		userId: context.userId,
 		options: await buildOptionsOf(store, principal, context),
-		// Captured at SUBMIT by the executor (ToolActionContext.applicationLang),
-		// never read from the ambient scope here: a queued job's handler starts
-		// from another job's release.
-		applicationLang: submitLang(context),
+		// Read at handler entry (above): the submit-time lang the job manager pins.
+		applicationLang,
 		signal: context.signal,
 		publishProgress: context.publishProgress,
 		// The lane job writing this export: recorded in the manifest and served

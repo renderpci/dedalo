@@ -520,14 +520,21 @@ describe('A. the spool is the get_export_grid stream, byte for byte', () => {
 		expect(baseline).not.toContain('Source 0');
 	});
 
-	test('the background handler takes the SUBMIT-time lang from its context, never the ambient scope, and writes the same spool', async () => {
+	test("the background handler records the interface lang of the scope it runs in (the job manager pins the SUBMITTER's there)", async () => {
 		const frames: object[] = [];
-		// A CONTRARY ambient interface lang: the handler must not read it (a queued
-		// job's handler runs from another job's release — its ambient scope is not
-		// the submitter's; the executor threads context.applicationLang instead).
-		const decoyLang = APP_LANG === 'lg-eng' ? 'lg-spa' : 'lg-eng';
+		// THE CONTRACT (media/jobs.ts JobRunScope): the handler reads the AMBIENT
+		// interface lang at entry; the job manager guarantees that ambient value
+		// is the submitter's, pinned at submit (gate: media_jobs_reconcile's
+		// pinned-identity leg; the end-to-end submit leg is "G.
+		// build_export_artifact through the background executor" below). Here the handler runs under scope X — a lang
+		// that is NOT the installation default — and the manifest must record X:
+		// a handler that ignored the ambient scope (the old threaded field) or
+		// re-read the install default would record something else.
+		const scopeLang =
+			Object.keys(config.lang.applicationLangs).find((lang) => lang !== APP_LANG) ?? APP_LANG;
+		expect(scopeLang).not.toBe(APP_LANG); // non-vacuous: X is not the install default
 		const response = (await runWithRequestLangs(
-			{ applicationLang: decoyLang, dataLang: DATA_LANG },
+			{ applicationLang: scopeLang, dataLang: DATA_LANG },
 			() =>
 				toolExportBuildArtifact({
 					principal: reader,
@@ -536,15 +543,13 @@ describe('A. the spool is the get_export_grid stream, byte for byte', () => {
 					options: { ...exportOptions(), background_running: true },
 					publishProgress: (data) => frames.push(data),
 					signal: new AbortController().signal,
-					applicationLang: APP_LANG,
 				}),
 		)) as unknown as { ok: boolean; data: { job_id: string } };
 		expect(response.ok).toBe(true);
 		defaultRootJobs.push({ userId: USER_ID, jobId: response.data.job_id });
 		const store = openArtifactStore();
-		expect(spoolText(store, response.data.job_id, SPOOL_FILES.grid)).toBe(baseline);
 		const manifest = await store.readManifest(store.jobRef(USER_ID, response.data.job_id));
-		expect(manifest.application_lang).toBe(APP_LANG);
+		expect(manifest.application_lang).toBe(scopeLang);
 		expect(frames.length).toBeGreaterThan(0);
 	});
 });
@@ -561,7 +566,6 @@ describe('A3. a queued handler runs on the principal AS OF NOW, not of submit', 
 			background: true,
 			options: { ...exportOptions(), background_running: true },
 			signal: new AbortController().signal,
-			applicationLang: APP_LANG,
 		})) as unknown as { ok: boolean; data: { job_id: string } };
 		expect(response.ok).toBe(true);
 		defaultRootJobs.push({ userId: USER_ID, jobId: response.data.job_id });
@@ -591,7 +595,6 @@ describe('A3. a queued handler runs on the principal AS OF NOW, not of submit', 
 					background: true,
 					options: { ...exportOptions(), background_running: true },
 					signal: new AbortController().signal,
-					applicationLang: APP_LANG,
 				}),
 				'perm.denied',
 			);

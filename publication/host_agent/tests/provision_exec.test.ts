@@ -4,8 +4,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { WEB_CONFIGTEST_BINARY, provisionExec } from '../src/exec';
-import { WEB_CONFIGTEST_BINARY as LAYOUT_CONFIGTEST_BINARY } from '../src/provision/layout';
+import { WEB_CONFIGTEST_CANDIDATES, provisionExec } from '../src/exec';
+import { WEB_CONFIGTEST_CANDIDATES as LAYOUT_CONFIGTEST_CANDIDATES } from '../src/provision/layout';
 
 const PACKAGE_ROOT = join(import.meta.dir, '..');
 
@@ -23,8 +23,8 @@ describe('provisionExec', () => {
     expect(proc.exitCode).toBe(0);
   });
 
-  test("exec.ts's WEB_CONFIGTEST_BINARY IS layout.ts's (one object, not two equal ones)", () => {
-    expect(WEB_CONFIGTEST_BINARY).toBe(LAYOUT_CONFIGTEST_BINARY);
+  test("exec.ts's WEB_CONFIGTEST_CANDIDATES IS layout.ts's (one object, not two equal ones)", () => {
+    expect(WEB_CONFIGTEST_CANDIDATES).toBe(LAYOUT_CONFIGTEST_CANDIDATES);
   });
 
   test('unit names are bare and grammatical', () => {
@@ -38,9 +38,11 @@ describe('provisionExec', () => {
 
   test('the configtest binary is exactly the one for its server', () => {
     const exec = provisionExec();
-    expect(() => exec.webConfigtest('apachectl', 'apache')).toThrow(/not the apache configtest binary '\/usr\/sbin\/apachectl'/);
-    expect(() => exec.webConfigtest('/usr/sbin/nginx', 'apache')).toThrow(/not the apache configtest binary/);
-    expect(() => exec.webConfigtest('/usr/local/sbin/nginx', 'nginx')).toThrow(/not the nginx configtest binary '\/usr\/sbin\/nginx'/);
+    expect(() => exec.webConfigtest('apachectl', 'apache')).toThrow(
+      /not a apache configtest binary \(\/usr\/sbin\/apache2ctl, \/usr\/sbin\/apachectl\)/,
+    );
+    expect(() => exec.webConfigtest('/usr/sbin/nginx', 'apache')).toThrow(/not a apache configtest binary/);
+    expect(() => exec.webConfigtest('/usr/local/sbin/nginx', 'nginx')).toThrow(/not a nginx configtest binary \(\/usr\/sbin\/nginx\)/);
   });
 
   test('account names and the visudo candidate are validated', () => {

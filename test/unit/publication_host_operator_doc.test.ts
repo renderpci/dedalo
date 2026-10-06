@@ -6,7 +6,8 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { LISTEN_HOST_PATTERN } from '../../publication/host_agent/src/provision/layout';
+import type { HostDeclaration } from '../../publication/host_agent/src/provision/layout';
+import { derive, LISTEN_HOST_PATTERN } from '../../publication/host_agent/src/provision/layout';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const page = readFileSync(join(repoRoot, 'docs/install/publication_host.md'), 'utf8');
@@ -37,6 +38,35 @@ describe('publication host operator page', () => {
 		expect(page).toMatch(/not a symbolic link/);
 		expect(page).toContain('.test-tmp/');
 		expect(page).toMatch(/a test scratch tree/);
+	});
+
+	test('step 2 declares BEFORE step 3 creates the accounts, and its declaration derives (one and two machines)', () => {
+		expect(page.indexOf('### 2. Declare the instance')).toBeGreaterThan(0);
+		expect(page.indexOf('### 3. Create the accounts')).toBeGreaterThan(
+			page.indexOf('### 2. Declare the instance'),
+		);
+		const block = page.match(/### 2\. Declare the instance[\s\S]*?```json\n([\s\S]*?)\n```/);
+		if (!block?.[1]) throw new Error('step 2 has no json declaration');
+		const declared = JSON.parse(block[1]) as HostDeclaration;
+		// Same keys as the committed one-machine example (derive() reads, the schema refuses unknown keys).
+		const committed = JSON.parse(
+			readFileSync(
+				join(
+					repoRoot,
+					'publication/host_agent/deploy/examples/instance.single_machine.example.json',
+				),
+				'utf8',
+			),
+		) as Record<string, unknown>;
+		expect(Object.keys(declared).sort()).toEqual(Object.keys(committed).sort());
+		const one = derive(declared);
+		const { engine_group: _socketOnly, ...rest } = declared;
+		derive({ ...rest, listen: { kind: 'tls', host: '10.20.0.2', port: 8471 } });
+		// Step 3's commands name exactly the accounts the declaration does.
+		expect(page).toContain(`--user-group ${one.identity.agentUser}`);
+		expect(page).toContain(`groupadd --system ${one.identity.v2Group}`);
+		expect(page).toContain(`-g ${one.identity.v2Group} ${one.identity.v2User}`);
+		expect(page).toContain(`-g www-data ${one.identity.v1User}`);
 	});
 
 	test('the shared API configuration step exists, with its refusal in troubleshooting', () => {

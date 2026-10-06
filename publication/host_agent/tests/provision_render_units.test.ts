@@ -69,10 +69,10 @@ describe('agent unit', () => {
   test('groups: unix → Group= the engine group; the web and v2 groups are supplementary on both', () => {
     const unix = directives(agentUnit(UNIX).body);
     expect(unix).toContain('Group=dedalo');
-    expect(unix).toContain('SupplementaryGroups=www-data dedalo-api-v2');
+    expect(unix).toContain('SupplementaryGroups=dedalo-api-v2');
     const tls = directives(agentUnit(TLS).body);
     expect(tls.filter(line => line.startsWith('Group='))).toEqual([]);
-    expect(tls).toContain('SupplementaryGroups=www-data dedalo-api-v2');
+    expect(tls).toContain('SupplementaryGroups=dedalo-api-v2');
   });
 
   test('nginx gets its configtest write paths; apache does not', () => {
@@ -150,8 +150,12 @@ describe('v2 unit', () => {
   });
 
   test('v2 sharing the agent user is refused', () => {
+    // derive() already refuses it (layout.ts: three distinct users); the renderer's own guard
+    // still holds for a layout built any other way.
     const decl = unixDeclaration();
-    const shared = derive({ ...decl, v2: { ...decl.v2, user: decl.agent_user } });
+    expect(() => derive({ ...decl, v2: { ...decl.v2, user: decl.agent_user } })).toThrow(/must differ from agent_user/);
+    const base = derive(decl);
+    const shared: AgentLayout = { ...base, identity: { ...base.identity, v2User: base.identity.agentUser } };
     expect(() => v2UnitRenderer.render(shared, FIXTURE_FACTS)).toThrow(/its own user/);
   });
 });
@@ -196,8 +200,12 @@ describe('v2 scratch template unit (the scratch boot runs as v2, never as the ag
   });
 
   test('v2 sharing the agent user is refused', () => {
+    // derive() already refuses it (layout.ts: three distinct users); the renderer's own guard
+    // still holds for a layout built any other way.
     const decl = unixDeclaration();
-    const shared = derive({ ...decl, v2: { ...decl.v2, user: decl.agent_user } });
+    expect(() => derive({ ...decl, v2: { ...decl.v2, user: decl.agent_user } })).toThrow(/must differ from agent_user/);
+    const base = derive(decl);
+    const shared: AgentLayout = { ...base, identity: { ...base.identity, v2User: base.identity.agentUser } };
     expect(() => v2ScratchUnitRenderer.render(shared, FIXTURE_FACTS)).toThrow(/its own user/);
   });
 });

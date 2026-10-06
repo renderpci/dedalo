@@ -14,11 +14,13 @@ import type { AgentLayout } from '../../src/provision/layout';
 import type { HostState, PathFacts, UnitFacts } from '../../src/provision/plan';
 
 interface Entry {
-  type: 'dir' | 'file';
+  type: 'dir' | 'file' | 'symlink';
   uid: number;
   gid: number;
   mode: number;
   body: string;
+  /** A symlink's resolved path (observeHost's realpath); absent = dangling. */
+  target?: string;
 }
 
 export const FAKE_TOKEN = 'T'.repeat(43);
@@ -29,6 +31,7 @@ export class FakeHost implements ProvisionIo {
   readonly users = new Map<string, number>([
     ['root', 0],
     ['dedalo-pubhost', 990],
+    ['dedalo-api-v1', 992],
     ['dedalo-api-v2', 991],
   ]);
   readonly groups = new Map<string, number>([
@@ -170,7 +173,13 @@ export class FakeHost implements ProvisionIo {
     const paths = new Map<string, PathFacts>();
     const contents = new Map<string, string | null>();
     for (const [path, entry] of this.entries) {
-      paths.set(path, { type: entry.type, uid: entry.uid, gid: entry.gid, mode: entry.mode });
+      paths.set(path, {
+        type: entry.type,
+        uid: entry.uid,
+        gid: entry.gid,
+        mode: entry.mode,
+        ...(entry.target === undefined ? {} : { target: entry.target }),
+      });
       if (entry.type === 'file') contents.set(path, entry.body);
     }
     return {

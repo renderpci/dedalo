@@ -9,8 +9,9 @@
  *
  * The state-root marker, the state tree's role names and WHO OWNS EACH PART of it are
  * src/instance/roots.ts's (the agent's boot preflight reads the same exports): imported
- * here, never restated. The configtest binary is defined HERE, once; src/exec.ts re-exports
- * it, so the agent's sudo argv, the plan's trust check and the sudoers rule name one path.
+ * here, never restated. The configtest binaries are defined HERE, once (a closed list per
+ * server); src/exec.ts re-exports it, so the agent's sudo argv, the plan's trust check and the
+ * sudoers rule all name one path from that list — the one derive() picked for this host.
  *
  * ZERO-DEPENDENCY (Global Constraints): root-repo tests import this module. node: builtins
  * and ../instance/roots only (itself builtins + one type-only import);
@@ -65,15 +66,37 @@ export type MediaMode = 'shared' | 'copy' | 'none';
 export type ProvisionApi = 'v1' | 'v2';
 
 /**
- * THE configtest binary per server — the one definition. The agent runs
- * `sudo -n <this> -t` (src/exec.ts re-exports it), the plan requires it root-owned with a
- * root-owned, non-writable ancestry, and the sudoers rule (render/) grants exactly it. It is
- * DERIVED, never declared: a declared path could only disagree with the argv sudo sees.
+ * THE configtest binaries per server — the one definition, a CLOSED list in preference
+ * order. The agent runs `sudo -n <bin> -t` (src/exec.ts re-exports it), the plan requires
+ * it root-owned with a root-owned, non-writable ancestry, and the sudoers rule (render/)
+ * grants exactly it. One path cannot serve every distribution: Debian/Ubuntu ship the real
+ * `apache2ctl` (it sources /etc/apache2/envvars; `apachectl` is only a symlink to it), RHEL
+ * and upstream ship a real `apachectl`. derive() picks the first candidate that is a real
+ * file on the host (pickConfigtestBinary) and renders it into BOTH the sudoers rule and the
+ * agent env (WEB_CONFIGTEST_BIN), so the two can never disagree. It is never declared: a
+ * free path would widen what root runs; the list is the whole universe.
  */
-export const WEB_CONFIGTEST_BINARY = Object.freeze({
-  apache: '/usr/sbin/apachectl',
-  nginx: '/usr/sbin/nginx',
-} as const);
+export const WEB_CONFIGTEST_CANDIDATES: Readonly<Record<WebServer, readonly string[]>> = Object.freeze({
+  apache: Object.freeze(['/usr/sbin/apache2ctl', '/usr/sbin/apachectl']),
+  nginx: Object.freeze(['/usr/sbin/nginx']),
+});
+
+export function isConfigtestBinary(server: WebServer, bin: string): boolean {
+  return WEB_CONFIGTEST_CANDIDATES[server].includes(bin);
+}
+
+/**
+ * The first candidate `isRealFile` accepts (an lstat regular file, never a symlink), else the
+ * first candidate: the plan then refuses it by name, listing every candidate. Without a probe
+ * (render, examples, tests) the first candidate stands.
+ */
+export function pickConfigtestBinary(server: WebServer, isRealFile?: (path: string) => boolean): string {
+  const candidates = WEB_CONFIGTEST_CANDIDATES[server];
+  const found = isRealFile ? candidates.find(path => isRealFile(path)) : undefined;
+  const picked = found ?? candidates[0];
+  if (picked === undefined) throw new Error(`layout: no configtest candidate for '${server}'`);
+  return picked;
+}
 
 export const DEFAULT_PATHS = Object.freeze({
   configBase: '/etc/dedalo_publication_host',
@@ -107,7 +130,17 @@ export interface HostDeclaration {
   readonly web: {
     readonly server: WebServer;
     readonly unit: string;
-    readonly group: string;
+  };
+  /**
+   * The USER the Publication API v1 runs as — the site's PHP-FPM pool user (the v6 practice:
+   * one pool per site, a user per site, the web server's group shared by all of them). It
+   * OWNS the v1 configuration (shared/server_config_api.php, mode 0400/0600): the group
+   * cannot separate sites that share it, the owner can. The agent never reads that file — it
+   * stats and links it — so v1/shared is root:root 0711 and the agent joins no v1 group.
+   * releases/install.ts refuses a configuration readable by group or others.
+   */
+  readonly v1: {
+    readonly user: string;
   };
   readonly state_root: string;
   readonly media: { readonly mode: MediaMode; readonly root?: string };
@@ -133,7 +166,7 @@ export interface HostDeclaration {
 /* ── the modes matrix: a renderer or the plan names a ROW, never an owner or a number ── */
 
 export type ModeOwner = 'root' | 'agent';
-export type ModeGroup = 'root' | 'webGroup' | 'v2Group' | 'engineGroup';
+export type ModeGroup = 'root' | 'v2Group' | 'engineGroup';
 
 export interface ArtifactMode {
   readonly owner: ModeOwner;
@@ -172,7 +205,8 @@ export const MODES = Object.freeze({
   apiRoot: row('agent', 'root', 0o755),
   releases: row('agent', 'root', 0o755),
   staging: row('agent', 'root', 0o700),
-  v1Shared: row('root', 'webGroup', 0o750),
+  // Traverse only: the agent stats and links its files, the v1 pool user reads the one it owns.
+  v1Shared: row('root', 'root', 0o711),
   v2Shared: row('root', 'v2Group', 0o750),
   rules: row(STATE_TREE_OWNERSHIP.rules, 'root', 0o755),
   audit: row(STATE_TREE_OWNERSHIP.audit, 'root', 0o755),
@@ -235,13 +269,14 @@ export interface AgentLayout {
   readonly identity: {
     readonly agentUser: string;
     readonly engineGroup: string | null;
-    readonly webGroup: string;
+    /** The user the v1 API runs as (HostDeclaration.v1.user): owns the v1 configuration. */
+    readonly v1User: string;
     readonly v2User: string;
     readonly v2Group: string;
     /**
-     * The agent unit's SupplementaryGroups= (render/unit_agent.ts renders exactly this): the agent reads
-     * v1/shared (root:webGroup 0750) and v2/shared (root:v2Group 0750) — releases/install.ts checks and
-     * links the v1 config there, exec.ts's scratch boot reads v2.env.
+     * The agent unit's SupplementaryGroups= (render/unit_agent.ts renders exactly this): the agent
+     * reads v2/shared (root:v2Group 0750) — exec.ts's scratch boot checks v2.env. v1/shared needs
+     * no group (root:root 0711: the agent only stats and links there).
      */
     readonly agentSupplementaryGroups: readonly string[];
   };
@@ -383,8 +418,6 @@ export function groupName(layout: AgentLayout, group: ModeGroup): string {
   switch (group) {
     case 'root':
       return 'root';
-    case 'webGroup':
-      return layout.identity.webGroup;
     case 'v2Group':
       return layout.identity.v2Group;
     case 'engineGroup':
@@ -401,19 +434,35 @@ export function groupName(layout: AgentLayout, group: ModeGroup): string {
 
 /* ── derive ───────────────────────────────────────────────────────────────────────── */
 
-export function derive(decl: HostDeclaration): AgentLayout {
+/** Host facts derive() may consult. Only the configtest pick depends on the host. */
+export interface DeriveHost {
+  /** lstat regular file (never a symlink) — chooses among WEB_CONFIGTEST_CANDIDATES. */
+  readonly isRealFile?: (path: string) => boolean;
+}
+
+export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayout {
   const instance = matches(INSTANCE_PATTERN, 'instance', decl.instance);
   const agentUser = matches(UNIX_NAME_PATTERN, 'agent_user', decl.agent_user);
-  const webGroup = matches(UNIX_NAME_PATTERN, 'web.group', decl.web.group);
+  const v1User = matches(UNIX_NAME_PATTERN, 'v1.user', decl.v1.user);
   const v2User = matches(UNIX_NAME_PATTERN, 'v2.user', decl.v2.user);
   const v2Group = matches(UNIX_NAME_PATTERN, 'v2.group', decl.v2.group);
+  // Three principals, three users: the agent holds the sudo/polkit grants, the TLS key and the
+  // token; v1 (the site's pool) and v2 run code the work system pushed. One shared user would
+  // hand the pushed code what the agent holds (spec §2.5), and root would hand it everything.
+  const principals: [string, string][] = [['agent_user', agentUser], ['v1.user', v1User], ['v2.user', v2User]];
+  for (const [index, [field, user]] of principals.entries()) {
+    if (user === 'root') throw new LayoutError(field, 'must not be root');
+    for (const [otherField, other] of principals.slice(index + 1)) {
+      if (user === other) throw new LayoutError(otherField, `must differ from ${field} ('${user}')`);
+    }
+  }
 
   const server = decl.web.server;
   if (server !== 'apache' && server !== 'nginx') {
     throw new LayoutError('web.server', `'${String(server)}' must be apache or nginx`);
   }
   const webUnit = unitName('web.unit', decl.web.unit);
-  const configtestBin: string = WEB_CONFIGTEST_BINARY[server];
+  const configtestBin = pickConfigtestBinary(server, host.isRealFile);
 
   const agentDir = cleanAbsolute('agent_dir', decl.agent_dir);
   const phpBin = cleanAbsolute('php_bin', decl.php_bin);
@@ -566,6 +615,7 @@ export function derive(decl: HostDeclaration): AgentLayout {
     STATE_ROOT: stateRoot,
     WEB_SERVER: server,
     WEB_UNIT: webUnit,
+    WEB_CONFIGTEST_BIN: configtestBin,
     MEDIA_MODE: mediaMode,
     PHP_BIN: phpBin,
     V2_UNIT: v2Unit,
@@ -596,10 +646,10 @@ export function derive(decl: HostDeclaration): AgentLayout {
     identity: Object.freeze({
       agentUser,
       engineGroup,
-      webGroup,
+      v1User,
       v2User,
       v2Group,
-      agentSupplementaryGroups: Object.freeze([...new Set([webGroup, v2Group])]),
+      agentSupplementaryGroups: Object.freeze([v2Group]),
     }),
     web: Object.freeze({ server, unit: webUnit, configtestBin }),
     agentDir,

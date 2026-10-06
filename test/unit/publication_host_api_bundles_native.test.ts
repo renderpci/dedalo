@@ -396,6 +396,26 @@ describe('v2 bundle (L3)', () => {
 		expect(err.paths).toEqual(['node_modules/zod/evil']);
 		expect(existsSync(apiBuildPaths(backupOf(s), RELEASE, 'v2').bundle)).toBe(false);
 	});
+
+	test('several dependency symlinks refuse ONCE, naming every one in bundle order (not readdir order)', async () => {
+		// Planted in reverse order, in two directories: the walk finishes before it refuses,
+		// so the answer is the same set and the same order on every filesystem.
+		const deps = fakeDeps((dir) => {
+			symlinkSync('/etc/hosts', join(dir, 'node_modules/zod/zz_link'));
+			symlinkSync('/etc/hosts', join(dir, 'node_modules/zod/aa_link'));
+			symlinkSync('/etc/hosts', join(dir, 'node_modules/aa_top_link'));
+		});
+		const s = seams(await makeTree(), { installDeps: deps.install });
+		const err = await refusal(buildApiBundle('v2', s));
+		expect(err.reason).toBe('deps_symlink');
+		expect(err.paths).toEqual([
+			'node_modules/aa_top_link',
+			'node_modules/zod/aa_link',
+			'node_modules/zod/zz_link',
+		]);
+		expect(err.message).toContain('node_modules/zod/zz_link');
+		expect(existsSync(apiBuildPaths(backupOf(s), RELEASE, 'v2').bundle)).toBe(false);
+	});
 });
 
 describe('readBundleFile — never follows a link, never blocks', () => {
@@ -564,7 +584,9 @@ describe('the real installer (pinned Bun, frozen, hoisted, minimal env)', () => 
 		const s = await fileDepTree(false);
 		const err = await refusal(buildApiBundle('v2', s));
 		expect(err.reason).toBe('deps_symlink');
-		expect(err.paths).toEqual(['node_modules/dep/index.js']);
+		// Bun links EVERY file of a file: dependency; the refusal names them all, in bundle
+		// order — not whichever one this filesystem's readdir happened to return first.
+		expect(err.paths).toEqual(['node_modules/dep/index.js', 'node_modules/dep/package.json']);
 	});
 
 	test('a package.json the lockfile does not cover fails frozen', async () => {

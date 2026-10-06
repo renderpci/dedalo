@@ -4,7 +4,8 @@
   "agent_user": "dedalo-pubhost",
   "engine_group": "dedalo",
   "agent_dir": "/opt/dedalo/publication/host_agent",
-  "web": { "server": "apache", "unit": "apache2", "group": "www-data" },
+  "web": { "server": "apache", "unit": "apache2" },
+  "v1": { "user": "dedalo-site-v1" },
   "state_root": "/srv/dedalo_publication",
   "media": { "mode": "shared", "root": "/mnt/dedalo_media" },
   "php_bin": "/usr/bin/php",
@@ -14,6 +15,6 @@
     "user": "dedalo-api-v2",
     "group": "dedalo-api-v2",
     "port": 3100,
-    "health_url": "http://127.0.0.1:3100/dedalo/publication/server_api/v2/health"
+    "health_url": "http://127.0.0.1:3100/health"
   }
 }

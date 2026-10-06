@@ -41,8 +41,8 @@ import {
 	SUDO,
 	SYSTEMCTL,
 	V2_SCRATCH_TEMPLATE_SUFFIX,
-	WEB_CONFIGTEST_BINARY,
 } from '../../publication/host_agent/src/exec.ts';
+import { pickConfigtestBinary } from '../../publication/host_agent/src/provision/layout.ts';
 import {
 	AGENT_ACTOR_HEADER,
 	type BundleSourceEntry,
@@ -275,7 +275,9 @@ export function callsSince(scene: Scene, since: number, want: (string | RegExp)[
 	return `stand-in calls ${JSON.stringify(got)}, expected ${JSON.stringify(want.map(String))}${hint}`;
 }
 
-export const configtestCall = (server: Server) => `${SUDO} -n ${WEB_CONFIGTEST_BINARY[server]} -t`;
+/** The configtest binary the drill's agent env names: derive()'s pick with no host probe. */
+export const configtestBin = (server: Server) => pickConfigtestBinary(server);
+export const configtestCall = (server: Server) => `${SUDO} -n ${configtestBin(server)} -t`;
 export const reloadCall = (server: Server) => `${SYSTEMCTL} reload ${WEB_UNIT[server]}`;
 export const restartCall = `${SYSTEMCTL} restart ${V2_UNIT}`;
 const reEscape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -402,6 +404,7 @@ export function writeAgentEnv(
 			STATE_ROOT: scene.state,
 			WEB_SERVER: scene.server,
 			WEB_UNIT: WEB_UNIT[scene.server],
+			WEB_CONFIGTEST_BIN: configtestBin(scene.server),
 			MEDIA_MODE: 'shared',
 			MEDIA_ROOT: scene.media,
 			PHP_BIN: join(scene.shims, 'php'),

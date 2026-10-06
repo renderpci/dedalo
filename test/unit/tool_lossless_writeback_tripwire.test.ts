@@ -1445,10 +1445,11 @@ else {
 			id: 'host-agent-package',
 			matches: (target) =>
 				(target === 'publication/host_agent/src/exec.ts' ||
-					target === 'publication/host_agent/src/provision/render/engine_fragment.ts') &&
+					target === 'publication/host_agent/src/provision/render/engine_fragment.ts' ||
+					target === 'publication/host_agent/src/provision/layout.ts') &&
 				agentPackageClosure(target).escapes.length === 0,
 			reason:
-				"the publication agent package — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential). Exactly two files: exec.ts, imported only by the agent live drill for its argv/seam constants; and provision/render/engine_fragment.ts, the engine-fragment renderer (pure: its imports stay inside the agent package — security/pairing, provision/layout, render/types), imported only by the engine drill and its kit for ENGINE_KEYS/agentUrl and the two placeholders, to render the fragment an operator pastes. Neither can reach the matrix, so no tool write-back lies behind them. The 'stays inside' claim is CHECKED, not assumed: each is admitted only while its transitive import closure (agentPackageClosure: static, re-export, dynamic and require, read by Bun's parser) stays under publication/host_agent/src/ and names no bare package but node:/bun builtins and the agent's own package.json dependencies.",
+				"the publication agent package — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential). Exactly three files: exec.ts, imported only by the agent live drill for its argv/seam constants; and provision/render/engine_fragment.ts, the engine-fragment renderer (pure: its imports stay inside the agent package — security/pairing, provision/layout, render/types), imported only by the engine drill and its kit for ENGINE_KEYS/agentUrl and the two placeholders, to render the fragment an operator pastes; and provision/layout.ts, the host-layout derivation (its imports stay inside the agent package — node:path, instance/roots), imported only by the agent drill and its scene for pickConfigtestBinary, so the drill picks the configtest binary the provisioner itself would. None can reach the matrix, so no tool write-back lies behind them. The 'stays inside' claim is CHECKED, not assumed: each is admitted only while its transitive import closure (agentPackageClosure: static, re-export, dynamic and require, read by Bun's parser) stays under publication/host_agent/src/ and names no bare package but node:/bun builtins and the agent's own package.json dependencies.",
 		},
 		{
 			id: 'client-js-leaf',
@@ -3716,9 +3717,12 @@ else {
 				'host-agent-package',
 				'client-js-leaf',
 			]);
-			// the agent class admits exactly the two modules the drills read constants from
+			// the agent class admits exactly the three modules the drills read from
 			expect(admittedBy('publication/host_agent/src/exec.ts')).toEqual(['host-agent-package']);
 			expect(admittedBy('publication/host_agent/src/provision/render/engine_fragment.ts')).toEqual([
+				'host-agent-package',
+			]);
+			expect(admittedBy('publication/host_agent/src/provision/layout.ts')).toEqual([
 				'host-agent-package',
 			]);
 			// …and only while their import closure stays inside the agent package (checked, not claimed)
@@ -3730,6 +3734,10 @@ else {
 				expect(closure.escapes, entry).toEqual([]);
 				expect(closure.files.length, entry).toBeGreaterThan(2); // anti-vacuity: edges followed
 			}
+			// layout.ts has ONE in-package edge (instance/roots): its anti-vacuity is that exact edge
+			const layoutClosure = agentPackageClosure('publication/host_agent/src/provision/layout.ts');
+			expect(layoutClosure.escapes).toEqual([]);
+			expect(layoutClosure.files).toContain('publication/host_agent/src/instance/roots.ts');
 			// exec.ts reaches config.ts only through require( — the parser scan alone misses it
 			expect(agentPackageClosure('publication/host_agent/src/exec.ts').files).toContain(
 				'publication/host_agent/src/config.ts',

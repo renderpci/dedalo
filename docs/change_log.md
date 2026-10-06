@@ -17,6 +17,8 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Publication host provisioning works with Apache on Debian and Ubuntu.
+    - Several publication hosts on one server are checked for isolation.
     - Every AI request now counts against a daily budget per user, and generated answers need their own permission.
     - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
     - The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.
@@ -935,6 +937,17 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The in-browser AI runtime is updated to transformers.js 4.3.0, running on the exact ONNX Runtime build it was made for.**
+
+    Browser-side transcription, translation and background removal run on transformers.js,
+    which is now 4.3.0 (WebGPU on Safari 26 and later, plus fixes to Whisper's progress
+    reporting). Its ONNX Runtime is now exactly the build that release was made and tested
+    with (`onnxruntime-web` 1.31.0-dev.20260914). Before, the installed ONNX Runtime was a
+    different version from the one the bundle was built against. That combination worked,
+    but nobody had tested it. The two versions are now checked against each other on every
+    build and always update together. Nothing to do on update. Models you already
+    downloaded keep working.
+
 - **The code-update panel now leads with its verdict and the update button; the reference facts fold away.**
 
     The *Update code* maintenance panel used to list every fact at once: installation details, all eleven readiness checks, the last update and every restore point. It now shows the readiness verdict and only the checks that need attention (refusals, warnings, a pending backup waiver), followed by the server picker and the update button. *This installation*, *All checks*, *Last code update* and *Restore points* are folded on a one-line summary (version and build type, per-state counts, the last update's outcome, the number and date of restore points) and open with a click; each fold remembers whether you left it open in this browser. A last update that is still pending or was rolled back opens by itself. The developer-builds warning is shown once that option is ticked.
@@ -988,6 +1001,36 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **Several publication hosts on one server are checked for isolation.** *(action needed)*
+
+    `provision check` and `provision apply` now read the other publication-host declarations on the
+    server. They refuse an instance that shares a user (agent, v1 or v2), the v2 group, unit or
+    port, a listening port, or a directory with another. Before, a shared user let one instance change the other's
+    media rules and API releases, and a shared port only failed when the service started. When a
+    runtime path (Bun, the v1 API's runtime) or the agent's directory is a link, the refusal now prints
+    the real path to declare. The new section
+    [Several instances on one server](./install/publication_host.md#several-instances-on-one-server)
+    lists what each instance needs of its own.
+
+    The installation page now declares the instance before creating its accounts, and gives the
+    exact commands. `provision check` names each missing account with its declaration field and
+    the command, in the order to run them. The new section
+    [Lay out each site in its home directory](./install/publication_host.md#lay-out-each-site-in-its-home-directory)
+    puts each site's state root beside its document root (`/home/<site>/dedalo`, with the home
+    owned by root) and shows the virtual host that maps the APIs into the site.
+
+    The examples' `v2.health_url` was `…/dedalo/publication/server_api/v2/health`, which answers
+    404 under the v2 API's default `BASE_PATH`, so every v2 release would fail its health check.
+    It is now `http://127.0.0.1:<port>/health`, which answers whatever prefix the API is published
+    under; use that form in your declaration.
+
+    **Action needed:** the declaration's `web.group` is replaced by `v1.user`, the user the
+    Publication API v1 runs as: with one process pool per site, that site's pool user (the pools may
+    share the web server's group). Write `"web": {"server": …, "unit": …}` and
+    `"v1": {"user": …}`. The v1 configuration file in `shared/` must now be owned by that user and
+    readable by it alone (`chmod 0400`): installing a v1 release is refused with
+    `shared_config_exposed` otherwise. The agent, v1 and v2 users must be three different accounts.
+
 - **A paired publication server now gets the Publication APIs matching the work system's version, can keep a verified copy of the published media, and is checked from the public side.**
 
     After every confirmed code update or code restore (a rollback to an earlier version), the work system sends the matching Publication API releases to each paired publication server, exactly as the update verified them. A database restore does not change the code and sends nothing; the panel shows any lag and **Push API releases** realigns it. A file changed on disk since then stops the push and is named in the panel. In **copy** mode the publication server keeps its own copy of the published media, only public qualities of published records. Unpublishing makes the files answer "not found" as soon as the publication server accepts the unmark (until it does, for example while it cannot be reached, the panel shows the deletion as pending and the files stay public), then deletes them, and the deletion counts as done only once the server's file list confirms it. The maintenance panel can also check each publication server through its public address: a published file must load and an unpublished one must not, after every rules change and on a schedule. On a copy server, where the unpublished file is normally absent, a "not found" proves nothing and the check says unknown, never a pass. See [Publication host agent](./install/publication_host.md).
@@ -1033,6 +1076,18 @@ Merged since the last release; these ship with the next one.
     published, naming the table, its width and its widest columns. To fix it,
     change those fields to `field_text` (add `"index": "BTREE"` to keep the same
     index) or reduce their `varchar`.
+
+- **Publication host provisioning works with Apache on Debian and Ubuntu.** *(action needed)*
+
+    `provision check` refused every Debian or Ubuntu Apache host with *web.configtest_bin
+    '/usr/sbin/apachectl' is a symlink*, because the provisioner used one fixed path for every
+    system. It now picks the configuration-test command found on the host: `apache2ctl` on Debian
+    and Ubuntu, `apachectl` on RHEL, `nginx` for nginx. The agent's settings file now names that
+    command. **Action needed** for an agent provisioned before this change: after copying the new
+    agent code, run `bun run provision apply <instance>` again. Until you do, the agent refuses to
+    start because the setting is missing. If the agent restarted repeatedly before you ran it,
+    systemd may have stopped retrying: run `systemctl reset-failed dedalo-publication-host-<instance>`
+    and `apply` again. See [Publication host agent](./install/publication_host.md).
 
 - **The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box.**
 

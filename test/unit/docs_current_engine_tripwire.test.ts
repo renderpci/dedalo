@@ -69,6 +69,11 @@ const PHP_ALLOWLIST: Record<string, string> = {
 		'legacy v1 publication API (supported, quarantined)',
 	'docs/diffusion/publication_api/public_api_configuration.md':
 		'legacy v1 publication API (supported, quarantined)',
+	// The publication host INSTALLS that supported v1 API: its declaration has a `php_bin` field
+	// (the v1 syntax check's runtime) the operator must type, and choosing it well (the
+	// version-named file, not the alternatives link) is the instruction. Unnamed, the page hid it.
+	'docs/install/publication_host.md':
+		'installs the supported v1 publication API — its php_bin declaration field must be named',
 
 	// NOT about the engine at all: `matomo.php` is the analytics vendor's own tracker
 	// endpoint (a third-party URL, not a Dédalo path). Renaming it breaks analytics, and
@@ -198,6 +203,7 @@ describe('docs current-engine tripwire', () => {
 			'docs/diffusion/publication_api/publication_api.md',
 			'docs/diffusion/publication_api/server_config_api.md',
 			'docs/install/migrating_from_v6.md',
+			'docs/install/publication_host.md',
 			'docs/rewrite.md',
 		];
 		expect(Object.keys(PHP_ALLOWLIST).sort()).toEqual(expected);
