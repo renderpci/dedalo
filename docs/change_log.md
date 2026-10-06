@@ -920,6 +920,17 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The in-browser AI runtime is updated to transformers.js 4.3.0, running on the exact ONNX Runtime build it was made for.**
+
+    Browser-side transcription, translation and background removal run on transformers.js,
+    which is now 4.3.0 (WebGPU on Safari 26 and later, plus fixes to Whisper's progress
+    reporting). Its ONNX Runtime is now exactly the build that release was made and tested
+    with (`onnxruntime-web` 1.31.0-dev.20260914). Before, the installed ONNX Runtime was a
+    different version from the one the bundle was built against. That combination worked,
+    but nobody had tested it. The two versions are now checked against each other on every
+    build and always update together. Nothing to do on update. Models you already
+    downloaded keep working.
+
 - **The code-update panel now leads with its verdict and the update button; the reference facts fold away.**
 
     The *Update code* maintenance panel used to list every fact at once: installation details, all eleven readiness checks, the last update and every restore point. It now shows the readiness verdict and only the checks that need attention (refusals, warnings, a pending backup waiver), followed by the server picker and the update button. *This installation*, *All checks*, *Last code update* and *Restore points* are folded on a one-line summary (version and build type, per-state counts, the last update's outcome, the number and date of restore points) and open with a click; each fold remembers whether you left it open in this browser. A last update that is still pending or was rolled back opens by itself. The developer-builds warning is shown once that option is ticked.

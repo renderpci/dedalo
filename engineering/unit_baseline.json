@@ -2786,6 +2786,11 @@
 			"skipped": 0,
 			"assertions": 127
 		},
+		"test/unit/onnxruntime_alignment_tripwire.test.ts": {
+			"tests": 10,
+			"skipped": 0,
+			"assertions": 21
+		},
 		"test/unit/ontology_cache_hub_completion.test.ts": {
 			"tests": 39,
 			"skipped": 0,

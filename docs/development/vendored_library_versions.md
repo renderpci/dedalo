@@ -88,7 +88,7 @@ they were prose (eight found 2026-08-28, five more 2026-10-02).
 | iro | `@jaames/iro` | 5.5.2 | dependency |  |
 | codex-tooltip | `codex-tooltip` | 1.0.6 | dependency |  |
 | highlightjs | `@highlightjs/cdn-assets` | 11.12.0 | dependency | Not `highlight.js` — see below. |
-| onnxruntime | `onnxruntime-web` | 1.29.0 | dependency | Transformers.js's WASM runtime; the only `onnxruntime-web` the lockfile holds. |
+| onnxruntime | `onnxruntime-web` | 1.31.0-dev.20260914-8d85527a0 | dependency | Transformers.js's WASM runtime; the only `onnxruntime-web` the lockfile holds. |
 | qrcode | `easyqrcodejs` | 4.6.2 | dependency | The QR tool. Was a copy committed under its own `lib/` directory with no digest. |
 | svgedit | `@svgedit/svgcanvas` | 7.4.2 | dependency | Replaced a vendored ~7.2.x build. See below. |
 | mocha | `mocha` | 12.0.3 | **devDependency** | Client test harness. |
@@ -106,7 +106,7 @@ bound to the bytes. A bump updates the manifest row and this table together.
 |---|---|---|---|
 | pdfjs | *(vendor)* | 6.2.108 | Committed, minus 4 sourcemaps + the demo PDF. **Bumped 2026-08-28** for CVE-2026-16633. See below. |
 | ckeditor | *(vendor)* | CKEditor 5 42.0.1 | Custom build. See below. |
-| transformers | *(vendor)* | 4.2.0 | The in-browser AI runtime (`tool_transcription`, `tool_lang`, the remove-background processor). **Vendored 2026-09-04** — was the `@huggingface/transformers` npm pin, which no engine module imported and which shipped 567 MB of native Node code to every install. See below. |
+| transformers | *(vendor)* | 4.3.0 | The in-browser AI runtime (`tool_transcription`, `tool_lang`, the remove-background processor). **Vendored 2026-09-04** — was the `@huggingface/transformers` npm pin, which no engine module imported and which shipped 567 MB of native Node code to every install. Moves together with the `onnxruntime` pin. See below. |
 | lz-string | *(vendor)* | 1.5.0 | URL-state compression (`tool_common`, `component_text_area`). UMD-only upstream; committed with one declared patch. See below. |
 | json-view | *(vendor)* | — | The bundle carries no version string at all. See below. |
 | swagger-ui | *(vendor)* | 5.32.14 | Not a client lib: the v1 publication API's Swagger page, rooted inside that folder. **Bumped 2026-09-04** from 4.5.2. See below. |
@@ -248,7 +248,20 @@ Each carries its `reason` in the registry, next to the code, not only here.
   registry's published `integrity`), byte-identical to the lockfile install it
   replaces, trimmed to `dist/transformers.js` + the Apache-2.0 LICENSE.
   `test/unit/production_import_tripwire.test.ts` is what keeps a never-imported
-  production dependency from coming back.
+  production dependency from coming back. Re-vendored 2026-10-04 at 4.3.0.
+
+  **The bundle and the `onnxruntime` row are one dependency.** The bundle compiles
+  in onnxruntime-web's JavaScript core; the `.mjs` + `.wasm` it loads through
+  `wasmPaths` must be the same onnxruntime build. So the `onnxruntime-web` pin is
+  exactly the version the vendored release declares (4.3.0 →
+  `1.31.0-dev.20260914-8d85527a0`), even when that is a `-dev` build: what is served
+  is the pair upstream built and tested together, not a combination nobody tested.
+  (Mismatched pairs have run — the 4.2.0 core over 1.29.0 and 1.30.0 glue gave
+  identical outputs in 2026-10-04 measurements — but that is no promise for the
+  next one.) `test/unit/onnxruntime_alignment_tripwire.test.ts` holds bundle,
+  `package.json` and `bun.lock` equal, so a lone `onnxruntime-web` bump is red until
+  it arrives with a re-vendor of this tree; the client suite `test_ort_smoke` runs one
+  real session through the pair in the browser.
 
 - **xlsx** and **client-zip** — both **removed 2026-09-24**. `tool_export` now builds
   every file (CSV, XLSX, ODS, HTML, the media ZIP) on the server
