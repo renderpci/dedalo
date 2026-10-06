@@ -12,7 +12,7 @@
 	import {a11y} from '../../common/js/a11y.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {no_records_node} from './render_common_section.js'
+	import {no_records_node, NON_EDITABLE_SECTION_TIPOS} from './render_common_section.js'
 	import {
 		build_semantic_quick_input,
 		build_pinned_chip
@@ -471,9 +471,9 @@ view_default_list_section.rebuild_columns_map = async function(self) {
 *                               prefer this over button_import for new ontology items).
 *   default                   – publishes 'click_{model}' for custom event listeners.
 *
-* Certain section tipos are considered non-editable (dd542 = Activity, dd1324 =
-* Registered tools) and receive only the search buttons; the other_buttons_block
-* is not added for them.
+* Certain section tipos are considered non-editable (dd542 = Activity, dd15 =
+* Time Machine, dd1324 = Registered tools) and receive only the search buttons;
+* the other_buttons_block is not added for them.
 *
 * Returns null (not a fragment) when self.context.buttons is absent, so the caller
 * must guard against a falsy return value.
@@ -562,12 +562,13 @@ const get_buttons = function(self) {
 			buttons_container.appendChild(pinned_chip)
 		}
 
-	// non_editable_sections. Activity section 'dd542'
-		const non_editable_sections = [
-			'dd542', // activity
-			'dd1324' // registered tools
-		]
-		if (non_editable_sections.includes(self.tipo)) {
+	// non_editable_sections. Read-only log sections + registered tools: they
+	// carry no action buttons and no section tools (consultation-only, WC-010 +
+	// WC-2026-10-06-consultation-only-no-section-tools), so the other-buttons
+	// drawer and its toggle are omitted — only the search controls remain.
+	// Activity (dd542) and Time machine (dd15) MUST behave identically; the list
+	// is shared with view_graph_list_section (render_common_section).
+		if (NON_EDITABLE_SECTION_TIPOS.includes(self.tipo)) {
 			return fragment
 		}
 

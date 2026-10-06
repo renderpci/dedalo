@@ -27,6 +27,8 @@
 *   - render_relation_list           – standalone helper that builds the collapsed relation-
 *       list panel; also used by the inspector panel outside of delete dialogs.
 *   - no_records_node                – creates the "No records found" placeholder element.
+*   - NON_EDITABLE_SECTION_TIPOS     – the read-only section tipos whose list toolbar
+*       carries only the search controls (no other-buttons drawer/toggle).
 *
 * All three exported helpers depend on the global `get_label` object for localised strings
 * and on `ui` (core/common/js/ui.js) for DOM construction.
@@ -35,6 +37,29 @@ export const render_common_section = function() {
 
 	return true
 }//end render_common_section
+
+
+
+/**
+* NON_EDITABLE_SECTION_TIPOS
+* Section tipos whose list toolbar carries ONLY the search controls: no
+* "other buttons" drawer and no show_other_buttons_button toggle.
+*
+* They are the read-only system surfaces — the consultation-only logs Activity
+* (dd542) and Time machine (dd15) (WC-010 + WC-2026-10-06-consultation-only-no-section-tools)
+* plus the registered-tools section (dd1324) — which carry no action buttons and
+* no section tools, so the drawer would only ever be an empty, dead affordance.
+*
+* ONE list for every section list view (view_default_list_section,
+* view_graph_list_section): while it lived as two separate literals, dd15 was
+* present in neither drawer list and kept a toggle on the Time machine list
+* while Activity correctly had none. Keep it here — do not re-inline it.
+*/
+export const NON_EDITABLE_SECTION_TIPOS = [
+	'dd542',  // activity
+	'dd15',   // time machine
+	'dd1324'  // registered tools
+]
 
 
 

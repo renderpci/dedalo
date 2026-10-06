@@ -47,6 +47,23 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-29-search-where-parts-parenthesized`.
 
+#### Removed
+
+- **Activity and Time-machine sections no longer offer a section toolbar**
+
+    The **Activity** and **Time machine** sections are read-only system logs: every
+    record is written by the engine and never edited by hand. They nevertheless used
+    to show a section toolbar (export, import, print, update cache, …) whose buttons
+    all act on records the engine refuses to modify.
+
+    Both sections now ship an empty section toolbar, so the dead buttons are gone.
+    The **Time machine** list also stops showing the collapse/expand buttons toggle
+    that Activity had already dropped — the two now render the same search-only
+    toolbar. Components *inside* these sections (for example the time-machine button
+    on a historical value) are unaffected.
+
+    Wire contract: `WC-2026-10-06-consultation-only-no-section-tools`.
+
 #### Changed
 
 - **The audio/video viewer window now fits the media: no size jump on play, no black bars.**
@@ -1433,7 +1450,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 97 entries"
+??? note "Wire contract — 98 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1532,6 +1549,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-02-select-lang-missing-entry`
     - `WC-2026-10-03-publication-hosts-widget`
     - `WC-2026-10-03-save-refuses-malformed-value-shape`
+    - `WC-2026-10-06-consultation-only-no-section-tools`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

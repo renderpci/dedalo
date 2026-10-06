@@ -18,6 +18,12 @@
  *      a write to these sections BEFORE touching the DB — the belt covering the
  *      MCP tools, the agent, and any future caller that reaches the engine
  *      directly.
+ *   3. getSectionTools returns [] for a consultation-only section (TODO-042):
+ *      a read-only log carries no section toolbar, since every tool it would
+ *      offer acts on records the user can never modify.
+ *   4. the CLIENT list views mount no other-buttons drawer/toggle for these
+ *      sections — both read ONE shared NON_EDITABLE_SECTION_TIPOS list, so a
+ *      tipo cannot be suppressed in one view and shown in the other.
  *
  * These assertions are pure (no DB, no PHP oracle): the superuser permission
  * path and every engine guard resolve before any I/O.
@@ -25,6 +31,8 @@
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the NON-consultation control section is the phase-2 `test` clone (src/core/test_data/test_tld_tipo_map.json); the registry itself is seed-shipped dd.
 
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 // Preload the component-model registry so buildStructureContext can resolve
 // component models (the resolver requires it; server/test-preload entrypoints do).
 import '../../src/core/components/registry.ts';
@@ -46,6 +54,7 @@ import {
 	getSectionPermissions,
 	type Principal,
 } from '../../src/core/security/permissions.ts';
+import { getSectionTools } from '../../src/core/tools/registry.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 // The superuser (user_id -1) resolves to level 3 WITHOUT any DB read — the ideal
@@ -59,6 +68,26 @@ describe('consultation-only sections are read-only for every door', () => {
 		expect(isConsultationOnlySection('dd542')).toBe(true);
 		expect(isConsultationOnlySection('dd15')).toBe(true);
 		expect(isConsultationOnlySection('test6813')).toBe(false);
+	});
+
+	test('a consultation-only section offers NO section toolbar (TODO-042)', async () => {
+		// Activity (dd542) + Time Machine (dd15) are strictly read-only system
+		// logs (WC-010); their section toolbar would act on records no user may
+		// modify, so getSectionTools returns [] before touching the registry or
+		// the DB. Keyed on the same single source as the permission cap.
+		// WC-2026-10-06-consultation-only-no-section-tools.
+		for (const sectionTipo of CONSULTATION_ONLY_SECTIONS) {
+			const { tools, ledgered } = await getSectionTools(sectionTipo);
+			expect(tools).toEqual([]);
+			expect(ledgered).toEqual([]);
+		}
+	});
+
+	test('the no-toolbar rule is scoped to consultation-only sections', async () => {
+		// Control: an ordinary section still resolves its section toolbar — a
+		// blanket [] would pass the test above while breaking every other section.
+		const normal = await getSectionTools('dd128'); // Users — a normal section
+		expect(normal.tools.length).toBeGreaterThan(0);
 	});
 
 	test('getSectionPermissions caps every consultation-only section at read (1), even for the superuser', async () => {
@@ -172,6 +201,51 @@ describe('consultation-only sections are read-only for every door', () => {
 			});
 			expect(result.ok).toBe(false);
 			expect(result.message).toMatch(/read-only/);
+		}
+	});
+});
+
+/**
+ * THE CLIENT HALF (layer 4) — the same policy in the section list views. The
+ * other-buttons drawer and its `show_other_buttons_button` toggle must be absent
+ * for a consultation-only section. Both list views read ONE shared list
+ * (`NON_EDITABLE_SECTION_TIPOS`, render_common_section.js), so a tipo added in
+ * one place can never drift out of the other — the dd15 defect: dd542 was listed
+ * in both views, dd15 in neither, so the Time Machine list kept a dead toggle
+ * while Activity correctly had none.
+ *
+ * SOURCE SCAN, hermetic: these are browser modules (`window`/`get_label`
+ * globals), so the assertion is on the served source, not an import.
+ */
+describe('consultation-only sections carry no other-buttons toggle (client list views)', () => {
+	const sectionJs = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'section', 'js');
+	const read = (name: string): string => readFileSync(join(sectionJs, name), 'utf8');
+
+	test('the shared list names Activity and Time Machine', () => {
+		const src = read('render_common_section.js');
+		const block = src.slice(src.indexOf('export const NON_EDITABLE_SECTION_TIPOS'));
+		const list = block.slice(0, block.indexOf(']'));
+		for (const tipo of ['dd542', 'dd15']) {
+			expect(list, `${tipo} must be in NON_EDITABLE_SECTION_TIPOS`).toContain(`'${tipo}'`);
+		}
+	});
+
+	test('both list views read the shared list and never re-inline one', () => {
+		// The toggle creation site (the class string appears only there, never in
+		// the surrounding prose), and the guard that must run before it.
+		const TOGGLE = 'icon_arrow show_other_buttons_button';
+		const GUARD = 'NON_EDITABLE_SECTION_TIPOS.includes(self.tipo)';
+		for (const name of ['view_default_list_section.js', 'view_graph_list_section.js']) {
+			const src = read(name);
+			expect(src, `${name} must import the shared list`).toContain('NON_EDITABLE_SECTION_TIPOS');
+			expect(src, `${name} must not re-inline the list`).not.toContain(
+				'const non_editable_sections',
+			);
+			const guard = src.indexOf(GUARD);
+			const toggle = src.indexOf(TOGGLE);
+			expect(guard, `${name}: guard missing`).toBeGreaterThan(-1);
+			expect(toggle, `${name}: toggle missing`).toBeGreaterThan(-1);
+			expect(guard, `${name}: guard must precede the toggle`).toBeLessThan(toggle);
 		}
 	});
 });
