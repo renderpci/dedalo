@@ -20,15 +20,15 @@
  * door + get_csv_files on the suite server and renders the server's own answer.
  */
 
+import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
+import {create_transfer} from '../../../core/services/service_upload/js/upload_transport.js'
 import * as render_module from '../../../tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js'
 import {
 	import_mode_allowed,
 	render_columns_mapper
 } from '../../../tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js'
 import {tool_import_dedalo_csv} from '../../../tools/tool_import_dedalo_csv/js/tool_import_dedalo_csv.js'
-import {data_manager} from '../../../core/common/js/data_manager.js'
-import {request_failed, response_data} from '../../../core/common/js/api_error.js'
-import {create_transfer} from '../../../core/services/service_upload/js/upload_transport.js'
 
 
 
@@ -302,7 +302,7 @@ describe('TOOL_IMPORT_DEDALO_CSV SAMPLE DATA (real server answer)', function() {
 			key_dir			: 'csv',
 			chunk_size_mb	: 0
 		}).start()
-		assert.ok(upload && !request_failed(upload) && upload.file_data, 'upload staged the CSV: ' + JSON.stringify(upload?.error || upload))
+		assert.ok(upload && !request_failed(upload) && upload.file_data, `upload staged the CSV: ${JSON.stringify(upload?.error || upload)}`)
 		const processed = await tool_api('process_uploaded_file', {file_data: upload.file_data})
 		assert.equal(processed.file_name, file_name)
 		const listed = await tool_api('get_csv_files', {})
