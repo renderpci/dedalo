@@ -2801,6 +2801,11 @@
 			"skipped": 0,
 			"assertions": 21
 		},
+		"test/unit/ontology_area_access_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 20
+		},
 		"test/unit/ontology_cache_hub_completion.test.ts": {
 			"tests": 39,
 			"skipped": 0,
@@ -3625,6 +3630,11 @@
 			"tests": 2,
 			"skipped": 0,
 			"assertions": 6
+		},
+		"test/unit/release_root_entries_tripwire.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 9
 		},
 		"test/unit/relogin_identity_tripwire.test.ts": {
 			"tests": 5,

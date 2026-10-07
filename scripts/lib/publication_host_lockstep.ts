@@ -109,6 +109,7 @@ export function writeScratchStamp(tree: string, digest: string): void {
 		channel: 'master',
 		source_url: 'drill:publication-host-lockstep',
 		installed_at: new Date().toISOString(),
+		root_entries: readdirSync(tree).sort(),
 	};
 	writeFileSync(path, `${JSON.stringify(stamp, null, '\t')}\n`);
 }

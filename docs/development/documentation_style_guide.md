@@ -60,7 +60,7 @@ argument and fails:
 
 ```bash
 DEDALO_DOCS_RSYNC_TARGET="user@host:/home/www/vhosts/dedalo.dev/httpdocs/docs"
-DEDALO_DOCS_SSH_PORT=22572
+DEDALO_DOCS_SSH_PORT=22
 ```
 
 Use key authentication (`ssh-copy-id -p <port> user@host`) rather than a password, so a

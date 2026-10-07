@@ -24,6 +24,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import {
 	chmodSync,
 	existsSync,
+	mkdirSync,
 	mkdtempSync,
 	readFileSync,
 	rmSync,
@@ -31,12 +32,13 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { projectRoot } from '../../src/config/env.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { detectDeploymentChannel } from '../../src/core/update/channel.ts';
 import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
 import { backupRootIsInsideTree, isSupervised } from '../../src/core/update/code_update.ts';
+import { INSTALL_STAMP_PATH } from '../../src/core/update/install_stamp.ts';
 import { backupFreshness } from '../../src/core/update/preconditions.ts';
 import {
 	advertisedUrlReachableCheck,
@@ -44,6 +46,7 @@ import {
 	codeServerStatus,
 	consumerStatus,
 	enginePosture,
+	rootEntriesCheck,
 	type StatusCheck,
 } from '../../src/core/update/status.ts';
 
@@ -211,6 +214,38 @@ describe('consumer status', () => {
 		// runs against the extracted archive), so this check must never claim one.
 		expect(byId(status.checks, 'root_entries').state).toBe('unknown');
 		expect(Array.isArray(status.tree.unaccounted_root_entries)).toBe(true);
+	});
+
+	test('a tree whose stamp records its release root reports a VERDICT — the same one the swap reaches', () => {
+		// The stamp is the swap's retired-entry evidence (refuseUnaccountedLiveEntries);
+		// the panel subtracting the same list is what keeps report and verdict agreeing.
+		const tree = mkdtempSync(join(tmpdir(), 'dedalo_status_root_entries_'));
+		try {
+			writeFileSync(join(tree, 'README.md'), '');
+			mkdirSync(join(tree, '.vscode'));
+			const stampPath = join(tree, INSTALL_STAMP_PATH);
+			mkdirSync(dirname(stampPath), { recursive: true });
+			writeFileSync(
+				stampPath,
+				JSON.stringify({
+					digest: 'e'.repeat(64),
+					channel: 'master',
+					root_entries: ['.vscode', 'README.md', 'src'],
+				}),
+			);
+			expect(rootEntriesCheck(tree)).toEqual({
+				entries: [],
+				check: { id: 'root_entries', state: 'ok' },
+			});
+
+			writeFileSync(join(tree, 'my_notes.txt'), '');
+			expect(rootEntriesCheck(tree)).toEqual({
+				entries: ['my_notes.txt'],
+				check: { id: 'root_entries', state: 'warn', detail: 'my_notes.txt' },
+			});
+		} finally {
+			rmSync(tree, { recursive: true, force: true });
+		}
 	});
 
 	test('restore points report the rollback-bootability contract', async () => {

@@ -311,6 +311,13 @@ export const REGISTRY: readonly RatchetEntry[] = [
 		reason:
 			'a CEILING for an ops sweep over an INSTALLATION’s relation data (scripts/observer_reconcile.ts --budget), not a measure of this tree; raised only with a --json census proving every drop genuine',
 	},
+	{
+		id: 'release_root_entries',
+		artifacts: ['engineering/release_root_entries.json'],
+		tier: 'manual',
+		reason:
+			'a DECISION list, not a measure: which top-level entries a release ships to every install (test/unit/release_root_entries_tripwire.test.ts). Regenerating it from the tree would bank exactly the accident it exists to stop (an editor config committed at the root), so every add or removal is a hand edit in review',
+	},
 ];
 
 // ── execution ────────────────────────────────────────────────────────────────

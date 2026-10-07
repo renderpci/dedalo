@@ -74,7 +74,7 @@ const VERSION = 'v7';
 const TARGET_KEY = 'DEDALO_DOCS_RSYNC_TARGET';
 
 /**
- * Optional non-default SSH port, as a number ALONE (`22572`).
+ * Optional non-default SSH port, as a number ALONE (`22`).
  *
  * Separate from the target on purpose. Bun's `$` escapes every interpolation as
  * a single argument, so flags folded into the target arrive as one unusable
@@ -122,7 +122,7 @@ if (!target) {
 			`  # version's tree.\n` +
 			`  ${TARGET_KEY}="dedalo_dev@dedalo.dev:/home/www/vhosts/dedalo.dev/httpdocs/docs"\n\n` +
 			`A non-default SSH port goes in its OWN key — never inside the target:\n\n` +
-			`  ${PORT_KEY}=22572`,
+			`  ${PORT_KEY}=22`,
 	);
 }
 
@@ -253,7 +253,7 @@ console.log(`[3/4] Uploading to ${DEST}/${VERSION}/ …`);
 
 // A non-default SSH port travels as `-e "ssh -p N"`. It CANNOT ride inside the
 // target string: Bun's $ escapes each interpolation as ONE argument, so a target
-// of `-p 22572 user@host:/path` reaches rsync as a single token and it reports
+// of `-p 22 user@host:/path` reaches rsync as a single token and it reports
 // `invalid option`. (rsync's own -p means "preserve permissions" — nothing to do
 // with ports — so even unquoted it would be wrong.)
 const sshTransport = port ? ['-e', `ssh -p ${port}`] : [];

@@ -126,6 +126,7 @@ const TRIPWIRES = [
 	'test/unit/test3_canonical_fixture.test.ts',
 	'test/unit/update_ownership_tripwire.test.ts',
 	'test/unit/release_archive_tripwire.test.ts',
+	'test/unit/release_root_entries_tripwire.test.ts',
 	'test/unit/info_widget_registry_tripwire.test.ts',
 	'test/unit/maintenance_widget_get_value_tripwire.test.ts',
 	'test/unit/install_restart_supervisor_tripwire.test.ts',

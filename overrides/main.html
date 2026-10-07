@@ -28,3 +28,21 @@
     <strong>Go to the latest version</strong>
   </a>
 {% endblock %}
+
+{#
+  THE BUILD STAMP — the home page says when this copy of the manual was built.
+
+  `build_date_utc` is MkDocs' own template global: the moment `mkdocs build` ran
+  (or SOURCE_DATE_EPOCH, when set, for reproducible builds). Nothing to edit by
+  hand, so it cannot go stale — every `bun run docs:publish` re-stamps it.
+  Home page only: one place to look, no noise on every page.
+#}
+{% block content %}
+  {% if page and page.is_homepage %}
+    <p class="doc_build_info">
+      Documentation built
+      <time datetime="{{ build_date_utc.isoformat() }}">{{ build_date_utc.strftime('%Y-%m-%d %H:%M') }} UTC</time>
+    </p>
+  {% endif %}
+  {{ super() }}
+{% endblock %}

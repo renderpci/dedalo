@@ -21,6 +21,7 @@
  */
 
 import { readString } from '../../config/readers.ts';
+import { AREA_ONTOLOGY_TIPO } from '../concepts/area.ts';
 import {
 	AUDIT_TIPOS,
 	isConsultationOnlySection,
@@ -400,6 +401,19 @@ export async function getAuthorizedAreaTipos(userId: number): Promise<Set<string
 		if (key.slice(separator + 1) === sectionTipo) areas.add(sectionTipo);
 	}
 	return areas;
+}
+
+/**
+ * Who may open area_ontology (dd5) — read AND menu, ONE rule (engineering/AREA_SPEC.md §9,
+ * WC-2026-10-07-ontology-area-admin-grant): the superuser, or a GLOBAL ADMIN
+ * whose profile grants dd5 (level >= 1). Global-admin status alone is not
+ * enough and a grant alone is not enough. Inside the area every ontology
+ * section and field answers the ordinary ACL — no admin bypass.
+ */
+export async function canAccessOntologyArea(principal: Principal): Promise<boolean> {
+	if (principal.userId === SUPERUSER_ID) return true;
+	if (!principal.isGlobalAdmin) return false;
+	return (await getPermissions(principal, AREA_ONTOLOGY_TIPO, AREA_ONTOLOGY_TIPO)) >= 1;
 }
 
 /**

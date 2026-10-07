@@ -40,10 +40,10 @@ import {
 } from '../relations/picker_constraint.ts';
 import { buildStructureContext } from '../resolve/structure_context.ts';
 import {
+	canAccessOntologyArea,
 	getPermissionGrant,
 	getPermissions,
 	type Principal,
-	SUPERUSER_ID,
 } from '../security/permissions.ts';
 import { currentRequestId } from '../security/request_context.ts';
 import { readAreaHierarchyData } from './tree.ts';
@@ -318,11 +318,11 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 		}
 	}
 
-	// area_ontology is SUPERUSER-ONLY (engineering/AREA_SPEC.md §9 — a deliberate
-	// strengthening; PHP has no hard gate, only a positive global-admin bypass).
-	// Fail-closed: reject any non-superuser before touching the ontology.
+	// area_ontology: superuser, or a global admin whose profile grants dd5
+	// (engineering/AREA_SPEC.md §9 — canAccessOntologyArea is the one rule, shared
+	// with the menu). Fail-closed: refuse before touching the ontology.
 	if (model === 'area_ontology' || areaTipo === AREA_ONTOLOGY_TIPO) {
-		if (principal.userId !== SUPERUSER_ID) {
+		if (!(await canAccessOntologyArea(principal))) {
 			throw new DedaloError('perm.denied', { coordinates: { area_tipo: areaTipo ?? model } });
 		}
 	}
@@ -449,8 +449,9 @@ interface PrunedHierarchies {
 
 /**
  * Per-hierarchy read-permission filter (PHP area_thesaurus_json loop):
- * ontology-area global admins bypass; everyone else must hold read on each
- * hierarchy's target section AND on each root term's section.
+ * ontology area → read on each hierarchy's TLD section only (the superuser
+ * holds every grant); thesaurus → read on each hierarchy's target section AND
+ * on each root term's section.
  *
  * THE TWO EMPTY CASES ARE DIFFERENT FACTS (engineering/AREA_SPEC.md §5) and are
  * counted SEPARATELY as the loop drops each candidate — "nothing survived"
@@ -465,7 +466,20 @@ async function filterHierarchiesByGrant(
 ): Promise<PrunedHierarchies> {
 	const pruned: PrunedHierarchies = { kept: [], refusedByAcl: 0, droppedByConfig: 0 };
 	for (const hierarchy of hierarchies) {
-		if (isOntologyArea && principal.isGlobalAdmin) {
+		if (isOntologyArea) {
+			// Ontology: read on the TLD section is the only gate — no admin bypass
+			// (the area gate already required superuser or admin + dd5 grant).
+			// Inactive and rootless entries stay, as PHP kept them for ontology.
+			if (
+				(await getPermissions(
+					principal,
+					hierarchy.target_section_tipo,
+					hierarchy.target_section_tipo,
+				)) < 1
+			) {
+				pruned.refusedByAcl++;
+				continue;
+			}
 			pruned.kept.push(hierarchy);
 			continue;
 		}
@@ -542,8 +556,8 @@ function emptyPickerRefusal(pruned: PrunedHierarchies, areaTipo: string): Dedalo
  * Thesaurus / ontology tree-area boot data (PHP area_thesaurus_json): the
  * active-hierarchies projection + typologies, per-hierarchy read-permission
  * filtered, with the optional pre-executed thesaurus search (ts_search).
- * Gate: read on the area tipo (the ontology area applies its global-admin
- * bypass — the PHP controller grants admins everything).
+ * Gate: read on the area tipo (the ontology area is gated before this by
+ * canAccessOntologyArea; its hierarchies by plain ACL, no admin bypass).
  *
  * PICKER READS (engineering/AREA_SPEC.md §5): a read that declares `source.caller` is opening the
  * tree FOR a component instance. It gets, derived from that caller and from

@@ -517,6 +517,20 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).removeHierarchyPruningFixture(),
 	},
 	{
+		name: 'installOntologyAreaAccessFixture',
+		run: async () =>
+			(
+				await import('../helpers/ontology_area_access_fixture.ts')
+			).installOntologyAreaAccessFixture(),
+	},
+	{
+		name: 'removeOntologyAreaAccessFixture',
+		run: async () =>
+			(
+				await import('../helpers/ontology_area_access_fixture.ts')
+			).removeOntologyAreaAccessFixture(),
+	},
+	{
 		name: 'ensureZzarc',
 		run: async () => {
 			const module = await import('../helpers/zzarc_archive_situation.ts');

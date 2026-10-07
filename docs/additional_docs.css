@@ -37,3 +37,10 @@ img.small {
 	width: 20em;
 	max-width: 200px;
 }
+/* Home page build stamp (overrides/main.html) */
+.doc_build_info {
+	float: right;
+	margin: 0 0 0.5em 1em;
+	font-size: 0.7rem;
+	color: var(--md-default-fg-color--light);
+}
