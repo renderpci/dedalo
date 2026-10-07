@@ -891,6 +891,206 @@ else {
 				},
 			},
 		},
+		// --- ACQUISITION TOOLS (harvested source → records born in the same call) ---
+		'tools/tool_numisdata_acquisition/server/index.ts :: commitOneLot': {
+			doors: {
+				createSectionRecord: {
+					verdict: 'new-record',
+					reason:
+						'births the numisdata4 lot record — only after findExistingLot (Auction relation + Inventory number) and findExistingLotByUrl (normalised numisdata275 source URL), principal-scoped search-layer lookups RE-RUN under the per-key advisory locks (fixed order: lot key, then URL key) in the same transaction, both miss. A match returns `skipped` and writes NOTHING to the pre-existing record.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: writeField': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'a single set_data of a harvested auction value (weight, diameter, lot number, date, obverse/reverse design or the remark fallback; the Auction’s number&title and code; the Entity’s name). Every caller hands it a section_id createSectionRecord returned in the SAME transaction (commitOneLot’s lot, findOrCreateAuction’s Auction, resolveCompanyEntityId’s Entity) — a found record is never written, so no stored value is replaced.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: writeIriField': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'writes the normalised lot source URL (numisdata275, the URL dedup key) onto the lot record commitOneLot created in the same transaction; never onto a found lot.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: findOrCreateAuction': {
+			doors: {
+				createSectionRecord: {
+					verdict: 'new-record',
+					reason:
+						'births the numisdata224 Auction only when findExistingAuction (the (Entity, Code) relation+text SQO, principal-scoped) misses RE-RUN under the advisory lock on (entity, number) inside one transaction; a found Auction is returned and linked, never written.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: resolveCompanyEntityId': {
+			doors: {
+				createSectionRecord: {
+					verdict: 'new-record',
+					reason:
+						'births the rsc106 Entity only for an explicit “create” selection, and only when findEntityByExactName (principal-scoped `==` search) misses RE-RUN under the advisory lock on the folded name (foldNameForLock, coarser than the search equality); an existing Entity — picked, or matched — is only ever a locator target, never written.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: linkCompany': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'set_data of the Company locator (numisdata228 → rsc106) on the Auction findOrCreateAuction created in the same transaction — its only caller, on the create branch. A found Auction’s company is never touched.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: linkAuction': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'set_data of the Auction locator (numisdata147) on the lot commitOneLot created in this call — reached only past the `skipped` return, so a pre-existing lot is never re-linked. HONEST LIMIT: it runs after the lot’s own transaction has committed, so a curator edit to numisdata147 in that window would be replaced.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: linkType': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'set_data of the Type locator (numisdata161) to an EXISTING numisdata3 record matched read-only (findExistingType — a Type is never created), on the lot commitOneLot created in this call, past the `skipped` return. Same post-commit window as linkAuction.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: importImagePair': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'add_new_element on the numisdata164/165 obverse/reverse portals of the lot commitOneLot created in this call: births one rsc170 image record per face and appends its locator. Nothing stored is read or replaced.',
+				},
+				processUploadedFile: {
+					verdict: 'new-record',
+					bypass_reason: BYPASS.filesInfo,
+					reason:
+						'ingests one cropCoinPair face (the harvested lot image, split by crop_50) into rsc29 of the rsc170 record the portal add_new_element just created; transcodes start only once both faces are in.',
+				},
+				persistUploadedMedia: {
+					verdict: 'new-record',
+					bypass_reason: BYPASS.filesInfo,
+					reason:
+						'records that face’s files_info and name keys on rsc29 of the rsc170 record born in this call (stored items re-read under the row lock); the record held no media before.',
+				},
+			},
+		},
+		'tools/tool_numisdata_acquisition/server/index.ts :: removeCreatedImageRecords': {
+			doors: {
+				deleteSectionRecord: {
+					verdict: 'new-record',
+					reason:
+						'the all-or-nothing undo of a failed face pair: deletes ONLY the rsc170 records this same importImagePair call created (ids pushed from its own add_new_element created_section_id, never a lookup or the payload); the delete door also strips their locators from the lot born in this call. A failed delete is logged and reported as images_orphaned. HONEST LIMIT: no holdsForeignValue-style precondition — a locator a curator added to the fresh rsc170 record in the seconds since its birth would be stripped with it.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: commitOnePublication': {
+			doors: {
+				createSectionRecord: {
+					verdict: 'new-record',
+					reason:
+						'births the rsc205 publication only when findExistingPublication (the rsc137 Code, principal-scoped `==` SQO) misses — checked once, then RE-CHECKED under the advisory lock on the code in the same transaction. A match returns `skipped` and writes NOTHING to the pre-existing record (“rather than risk clobbering a cataloger’s later edits”).',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: writeField': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'a single set_data of a harvested OAI-PMH value (code, title, pages, abstract per planned lang, publisher, series number, personal-name text, ISSN; the Series name; the Person surname/given name). Every caller hands it a section_id createSectionRecord returned in the SAME transaction (commitOnePublication, findOrCreateSeries, findOrCreatePerson) — a found record is never written.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: writeIriField': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'set_data of the landing-page URL (rsc217, inside the publication’s birth transaction) and of the resolved PDF URL (rsc668, after it) — both onto the rsc205 record commitOnePublication created in this call, past its `skipped` returns. Same post-commit window as linkSeries for rsc668.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: writeDateField': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'set_data of the parsed dc:date `start` (rsc224) onto the rsc205 record created in the same transaction.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: linkFixedTerm': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'set_data of a FIXED thesaurus locator (rsc138 → dd810/8 “journal article”, rsc249 → dd292/2 “ISSN”) onto the rsc205 record created in the same transaction; the terms themselves are never written.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: findOrCreateSeries': {
+			doors: {
+				createSectionRecord: {
+					verdict: 'new-record',
+					reason:
+						'births the rsc212 Series only when findExistingSeries (principal-scoped `==` narrowing + byte-exact compare over every stored item) misses RE-RUN under the advisory lock on the folded name; a found Series is only a locator target, never written.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: findOrCreatePerson': {
+			doors: {
+				createSectionRecord: {
+					verdict: 'new-record',
+					reason:
+						'births the rsc197 Person only when findExistingPerson ((surname, given name) `==` narrowing + byte-exact compare of both over every stored item) misses RE-RUN under the advisory lock on the folded pair; a found Person is only a locator target, never written.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: linkSeries': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'set_data of the Series locator (rsc211) on the rsc205 record commitOnePublication created in this call, past its `skipped` returns; an existing Series is the locator TARGET, never written. HONEST LIMIT: it runs after the publication’s own transaction has committed, so a curator edit to rsc211 in that window would be replaced.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: linkAuthors': {
+			doors: {
+				saveComponentData: {
+					verdict: 'new-record',
+					reason:
+						'ONE set_data of every resolved Person locator (rsc139) on the rsc205 record created in this call, past its `skipped` returns; existing People are locator TARGETS, never written. Same post-commit window as linkSeries.',
+				},
+			},
+		},
+		'tools/tool_bibliography_acquisition/server/index.ts :: importDocumentForPublication': {
+			doors: {
+				processUploadedFile: {
+					verdict: 'new-record',
+					bypass_reason: BYPASS.filesInfo,
+					reason:
+						'ingests the harvested PDF (harvestFetch, application/pdf, ≤50 MB) into rsc209 of the rsc205 record commitOnePublication created in this call; the record held no document before.',
+				},
+				persistUploadedMedia: {
+					verdict: 'new-record',
+					bypass_reason: BYPASS.filesInfo,
+					reason:
+						'records the PDF’s files_info and name keys on rsc209 of the rsc205 record born in this call (stored items re-read under the row lock).',
+				},
+			},
+		},
 		'tools/tool_upload/server/index.ts :: processUploaded': {
 			doors: {
 				processUploadedFile: {
@@ -1326,8 +1526,12 @@ else {
 	 * of its own and its drain lands each mirror through persistObserverMirrorKeys — so the
 	 * restores that call it are not bypasses; nor are the component restores, whose
 	 * persistRestoredKeys entry queues it for a restored mirror.)
+	 * 17 → 21 (2026-10-07, PR #114): the two acquisition tools' media ingest — numisdata
+	 * importImagePair and bibliography importDocumentForPublication, each × processUploadedFile
+	 * and × persistUploadedMedia — the same files_info writers as tool_upload / tool_import_files,
+	 * each reasoned with BYPASS.filesInfo. New doors, not backlog.
 	 */
-	const BYPASS_TOOL_CELLS = 17;
+	const BYPASS_TOOL_CELLS = 21;
 
 	/**
 	 * The tether of every SERVER PENDING cell: what turns red when the defect is fixed

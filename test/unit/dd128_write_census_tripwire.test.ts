@@ -379,6 +379,16 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'its OWN writes are the hard-bound dd800 run record (createSectionRecord + its label save); every data row is written by executeCsvImport (import_csv_execute.ts — `delegates`, the write door per row and column, req 10), handed the request principal.',
 	},
+	'tools/tool_numisdata_acquisition/server/index.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'commit_lots writes only HARD-BOUND sections and components named by module constants, never by the payload: numisdata4 (the lot), numisdata224 (the Auction), rsc106 (the Entity), rsc170 (the coin-face image records, born by the numisdata164/165 portal add_new_element). Each is declared in its `targets` list — the section AND every (section, component) pair it writes — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. The payload supplies only VALUES and an rsc106 entity id (isRecordInScope-checked for a non-admin, an out-of-scope id is dropped for the name-based selection; written as a LOCATOR into numisdata228, never addressed as a write target).',
+	},
+	'tools/tool_bibliography_acquisition/server/index.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'commit_publications writes only HARD-BOUND sections and components named by module constants, never by the payload: rsc205 (the publication), rsc197 (People), rsc212 (Series). Each is declared in its `targets` list — the section AND every (section, component) pair it writes, rsc209 (the PDF) included — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. Existing People/Series and the fixed dd810/dd292 terms are only LOCATOR targets, never written.',
+	},
 	'tools/tool_posterframe/server/index.ts': {
 		verdict: 'delegates',
 		reason:
@@ -793,6 +803,8 @@ const REACH_EXEMPT: Record<string, string> = {
 		'a repo-owned test fixture builder that deletes its own scratch hierarchy records under the test-database marker guard; it names no users section.',
 	'tools/tool_hierarchy/server/tool_hierarchy.ts':
 		'hierarchy provisioning behind permission:’section’ — it deletes hierarchy section records, never a dd128 one.',
+	'tools/tool_numisdata_acquisition/server/index.ts':
+		'its only caller-owned delete is removeCreatedImageRecords: deleteSectionRecord on the HARD-BOUND rsc170 image section (IMAGE_SECTION_TIPO, never the users section), the all-or-nothing cleanup of a failed coin-face pair. The ids come ONLY from the created_section_id of this same importImagePair call’s own portal add_new_element saves — never the payload, never a lookup — and rsc170 is a declared commit_lots target (section level 2).',
 };
 
 /**
