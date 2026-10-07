@@ -1096,6 +1096,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Ontologies re-installed by an ontology update keep their typology and name instead of moving to "Others".**
+
+    After an ontology update, ontologies such as `dd` or `tch` appeared in the profile permissions tree under the **Others** typology with only their bare tld as name (`dd`), although their registry record says otherwise (for `dd`: **Core**, "Dédalo | dd"). An update now keeps the typology and name from the ontology's registry record. To repair an installation already affected, rebuild the ontology's main node from the Ontology tool (the registry records themselves were always correct).
+
 - **Code updates no longer refuse over a file an older release shipped and a newer one removed.**
 
     An update from the *Update code* panel refused with "Unknown entries at the code-tree root … `.vscode`" on installs that had taken an older release: the file was shipped by Dédalo itself, then removed from later releases, and the updater could not tell it from a file the administrator had added — nor could it be cleared without shell access. Each update now records the top-level entries of the release it installs, so the next update moves a retired release file into the backup instead of refusing, and the panel's *Code-tree root entries* check reports only files nobody shipped. An install updated before this release still refuses once over such a file: remove it by hand that one time ([what makes an update refuse](./management/updates/updating_code_options.md#what-else-makes-the-update-refuse)).

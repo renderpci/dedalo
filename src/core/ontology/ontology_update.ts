@@ -405,9 +405,12 @@ export async function updateOntology(
 				userId,
 			);
 			await createDdOntologyRootNode(
-				{ tld: file.tld, section_tipo: file.sectionTipo } as Parameters<
-					typeof createDdOntologyRootNode
-				>[0],
+				{
+					tld: file.tld,
+					section_tipo: file.sectionTipo,
+					typology_id: file.typologyId ?? undefined,
+					name_data: file.nameData,
+				} as Parameters<typeof createDdOntologyRootNode>[0],
 				userId,
 			);
 			provisioned.push(file.tld);
