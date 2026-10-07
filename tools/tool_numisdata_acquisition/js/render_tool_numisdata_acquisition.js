@@ -750,6 +750,15 @@ const get_content_data = function(self) {
 						class_name		: 'success_message'
 					})
 					const results = Array.isArray(data.results) ? data.results : []
+					if (data.stopped) {
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error_message',
+							text_content	: (self.get_tool_label('commit_stopped') || 'Stopped after {done} of {total} lots — the rest were not imported.')
+								.replace('{done}', results.length).replace('{total}', data.lots_total || results.length),
+							parent			: summary
+						})
+					}
 					results.forEach(function(result) {
 						// section_id is null only when the whole lot failed before anything
 						// was created (its own transaction rolled back) - review item C1.
@@ -760,7 +769,8 @@ const get_content_data = function(self) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error_message',
-								text_content	: 'Lot ' + (result.lot_identifier || '?') + ' NOT imported: ' + result.error.message,
+								text_content	: (self.get_tool_label('lot_not_imported') || 'Lot {lot} NOT imported: {reason}')
+									.replace('{lot}', result.lot_identifier || '?').replace('{reason}', result.error.message),
 								parent			: summary
 							})
 							return
@@ -768,30 +778,36 @@ const get_content_data = function(self) {
 						if (result.skipped) {
 							ui.create_dom_element({
 								element_type	: 'div',
-								text_content	: 'Lot #' + result.section_id + ' — already imported, skipped',
+								text_content	: (self.get_tool_label('lot_skipped') || 'Lot #{id} — already imported, skipped')
+									.replace('{id}', result.section_id),
 								parent			: summary
 							})
 							return
 						}
 						const auction_bit = result.auction_section_id
-							? ' — auction #' + result.auction_section_id +
-								(result.auction_created ? ' (created)' : ' (reused)')
+							? (self.get_tool_label('lot_auction_linked') || ' — auction #{id} ({status})')
+								.replace('{id}', result.auction_section_id)
+								.replace('{status}', result.auction_created
+									? (self.get_tool_label('created') || 'created')
+									: (self.get_tool_label('reused') || 'reused'))
 							: result.auction_error
-								? ' — auction NOT linked: ' + result.auction_error.message
+								? (self.get_tool_label('lot_auction_not_linked') || ' — auction NOT linked: {reason}').replace('{reason}', result.auction_error.message)
 								: ''
 						const type_bit = result.type_section_id
-							? ' — type #' + result.type_section_id + ' (' + result.type_citation + ')'
+							? (self.get_tool_label('lot_type_linked') || ' — type #{id} ({citation})')
+								.replace('{id}', result.type_section_id).replace('{citation}', result.type_citation)
 							: result.type_citation
-								? ' — type "' + result.type_citation + '" not found in catalog'
+								? (self.get_tool_label('lot_type_not_found') || ' — type "{citation}" not found in catalog').replace('{citation}', result.type_citation)
 								: result.type_error
-									? ' — type NOT linked: ' + result.type_error.message
+									? (self.get_tool_label('lot_type_not_linked') || ' — type NOT linked: {reason}').replace('{reason}', result.type_error.message)
 									: ''
-						const line = 'Lot #' + result.section_id +
-							' (fields: ' + result.fields_written.join(', ') + ')' + auction_bit + type_bit +
+						const line = (self.get_tool_label('lot_imported') || 'Lot #{id} (fields: {fields})')
+							.replace('{id}', result.section_id).replace('{fields}', result.fields_written.join(', ')) +
+							auction_bit + type_bit +
 							(result.images_created
-								? ' — images: ' + result.images_created.join(', ')
+								? (self.get_tool_label('lot_images_created') || ' — images: {images}').replace('{images}', result.images_created.join(', '))
 								: result.images_error
-									? ' — images NOT imported: ' + result.images_error.message
+									? (self.get_tool_label('lot_images_not_imported') || ' — images NOT imported: {reason}').replace('{reason}', result.images_error.message)
 									: '')
 						ui.create_dom_element({
 							element_type	: 'div',

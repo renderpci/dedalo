@@ -40,7 +40,20 @@
 		{ "lang": "lg-eng", "name": "lots_truncated", "value": "Only the first {count} lots are shown ({more} more were found and left out)." },
 		{ "lang": "lg-eng", "name": "confirm_import", "value": "Confirm import" },
 		{ "lang": "lg-eng", "name": "nothing_kept", "value": "Every lot is excluded — nothing to import." },
+		{ "lang": "lg-eng", "name": "commit_stopped", "value": "Stopped after {done} of {total} lots — the rest were not imported." },
 		{ "lang": "lg-eng", "name": "url_not_detected", "value": "Could not detect this page's URL from the saved file — paste it above manually." },
-		{ "lang": "lg-eng", "name": "url_missing", "value": "Paste a URL first." }
+		{ "lang": "lg-eng", "name": "url_missing", "value": "Paste a URL first." },
+		{ "lang": "lg-eng", "name": "lot_not_imported", "value": "Lot {lot} NOT imported: {reason}" },
+		{ "lang": "lg-eng", "name": "lot_skipped", "value": "Lot #{id} — already imported, skipped" },
+		{ "lang": "lg-eng", "name": "lot_auction_linked", "value": " — auction #{id} ({status})" },
+		{ "lang": "lg-eng", "name": "created", "value": "created" },
+		{ "lang": "lg-eng", "name": "reused", "value": "reused" },
+		{ "lang": "lg-eng", "name": "lot_auction_not_linked", "value": " — auction NOT linked: {reason}" },
+		{ "lang": "lg-eng", "name": "lot_type_linked", "value": " — type #{id} ({citation})" },
+		{ "lang": "lg-eng", "name": "lot_type_not_found", "value": " — type \"{citation}\" not found in catalog" },
+		{ "lang": "lg-eng", "name": "lot_type_not_linked", "value": " — type NOT linked: {reason}" },
+		{ "lang": "lg-eng", "name": "lot_imported", "value": "Lot #{id} (fields: {fields})" },
+		{ "lang": "lg-eng", "name": "lot_images_created", "value": " — images: {images}" },
+		{ "lang": "lg-eng", "name": "lot_images_not_imported", "value": " — images NOT imported: {reason}" }
 	]
 }
