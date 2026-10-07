@@ -27,10 +27,12 @@ import {
 	nameKeysForQuality,
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
+import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import { textAsParagraph } from '../../../src/core/tools/import_code_lookup.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -100,7 +102,7 @@ const MAX_PUBLICATIONS = 200;
 function assertUrlOption(options: Record<string, unknown>): string {
 	const url = options.url;
 	if (typeof url !== 'string' || url.trim() === '') {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: 'preview_url requires a non-empty "url" string option.',
 			publicMessage: 'Paste a journal URL first.',
 		});
@@ -111,7 +113,7 @@ function assertUrlOption(options: Record<string, unknown>): string {
 function findAdapterOrThrow(url: string) {
 	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(url));
 	if (!adapter) {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: `No supported source adapter matches this URL: ${url}`,
 			publicMessage: 'Only OAI-PMH journal/repository URLs are supported right now.',
 		});
@@ -175,7 +177,7 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	const url = assertUrlOption(context.options);
 	const html = context.options.html;
 	if (typeof html !== 'string' || html.trim() === '') {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: 'preview_html requires a non-empty "html" string option.',
 			publicMessage: "Paste or upload the saved page's content first.",
 		});
@@ -186,7 +188,7 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	// for the harvesting door to guard - just the same https-only shape check previewUrl's real
 	// fetch would also enforce.
 	if (new URL(url).protocol !== 'https:') {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: `preview_html: only https:// URLs are supported, got ${url}.`,
 			publicMessage: 'Only https:// URLs are supported.',
 		});
@@ -211,6 +213,37 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 		},
 		{ requestId: toolRequestId(context) },
 	);
+}
+
+/** ISO 639-1 (the `xml:lang` OAI-PMH/Dublin Core carries, e.g. "en") to this engine's own "lg-"
+ * + ISO 639-2/T code (confirmed against register.json labels already shipped for tool_identify:
+ * lg-eng/spa/cat/fra/deu/ita/por) - deliberately only the languages this PR's own sources (Spanish/
+ * Catalan academic journals) actually carry, not a guessed universal table. An install that has NOT
+ * declared one of these as a data language refuses the write (save_component.ts's own chokepoint,
+ * per src/config/data_langs.ts), so a wrong/unconfigured guess fails loudly and per-variant, never
+ * silently - it does not risk the "write language no read reaches" class that file warns about. */
+const ISO_639_1_TO_LANG: Readonly<Record<string, string>> = {
+	en: 'lg-eng',
+	es: 'lg-spa',
+	ca: 'lg-cat',
+	fr: 'lg-fra',
+	de: 'lg-deu',
+	it: 'lg-ita',
+	pt: 'lg-por',
+};
+
+/** The parsed `abstractVariants` from one previewed publication (plain JSON off the wire, so every
+ * shape is checked at runtime) - each pairs an `xml:lang` with its own abstract text. */
+function readAbstractVariants(p: Record<string, unknown>): { lang: string | null; text: string }[] {
+	if (!Array.isArray(p.abstractVariants)) return [];
+	const out: { lang: string | null; text: string }[] = [];
+	for (const entry of p.abstractVariants) {
+		if (entry === null || typeof entry !== 'object') continue;
+		const e = entry as Record<string, unknown>;
+		if (typeof e.text !== 'string' || e.text.trim() === '') continue;
+		out.push({ lang: typeof e.lang === 'string' ? e.lang : null, text: e.text });
+	}
+	return out;
 }
 
 /** Writes one field as a fresh 'set_data' (a bare {id, value} item). saveComponentData does not
@@ -239,8 +272,18 @@ async function writeField(
 		changedData: [{ action: 'set_data', value: [{ id: 1, value }] }],
 	});
 	if (!save.ok) {
+		// The refusal reason rides `cause` (log-only, never the wire), and WHICH write failed rides
+		// `coordinates` (also log-only) — never a template string: a tool holding an outbound door
+		// (harvestFetch) must never carry a literal property read off an error/result object in its
+		// own source (ssrf_one_guard_tripwire). The console's own Error-printing walks `cause`
+		// automatically, so the refusal reason still reaches the log.
 		throw new DedaloError('record.save_failed', {
-			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+			coordinates: {
+				component_tipo: componentTipo,
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+			},
+			cause: save,
 		});
 	}
 }
@@ -266,7 +309,12 @@ async function writeIriField(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+			coordinates: {
+				component_tipo: componentTipo,
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+			},
+			cause: save,
 		});
 	}
 }
@@ -297,7 +345,12 @@ async function writeDateField(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+			coordinates: {
+				component_tipo: componentTipo,
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+			},
+			cause: save,
 		});
 	}
 }
@@ -365,6 +418,28 @@ async function acquireDedupLock(key: string): Promise<void> {
 	await sql.unsafe('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
 }
 
+/** Folds a free-text name into the SAME equivalence class the engine's own `==` search operator
+ * uses (Postgres `f_unaccent`, confirmed in import_code_lookup.ts): lowercased AND stripped of
+ * diacritics. A dedup lock keyed on case alone let "Martín" and "Martin" take DIFFERENT locks
+ * while the search still matches them to the SAME record - two concurrent commits of either
+ * spelling could both miss the lookup and both create (review item: "Entity lock key vs search",
+ * same bug class as numisdata's Entity lock). JS's NFD decomposition is not byte-identical to
+ * Postgres's unaccent dictionary for every exotic script, but the lock only needs the two calls
+ * to COLLIDE on the SAME key - the real correctness guarantee is still the re-check under the
+ * lock, through the actual (accent-insensitive) search. */
+function foldNameForLock(name: string): string {
+	const decomposed = name.trim().toLowerCase().normalize('NFD');
+	// Drop the Unicode "Combining Diacritical Marks" block (U+0300-U+036F) that NFD split the
+	// accented letters into, by code point rather than a literal-character regex (keeps this file's
+	// source free of non-ASCII combining marks, which render invisibly and are easy to corrupt).
+	let out = '';
+	for (const ch of decomposed) {
+		const code = ch.codePointAt(0) ?? 0;
+		if (code < 0x0300 || code > 0x036f) out += ch;
+	}
+	return out;
+}
+
 /** Finds an existing rsc212 Series record, or creates one when none matches. Locked and
  * RE-CHECKED under the lock before creating, inside one transaction: the first check ran before
  * any lock was held, so two concurrent commits for the same new series name used to both miss it
@@ -377,7 +452,7 @@ async function findOrCreateSeries(
 	if (found !== null) return { sectionId: found, created: false };
 
 	return withTransaction(async () => {
-		await acquireDedupLock(`rsc212:name:${name.trim().toLowerCase()}`);
+		await acquireDedupLock(`rsc212:name:${foldNameForLock(name)}`);
 		const existing = await findExistingSeries(name, context);
 		if (existing !== null) return { sectionId: existing, created: false };
 		const sectionId = await createSectionRecord(SERIES_SECTION_TIPO, context.userId);
@@ -415,7 +490,8 @@ async function linkSeries(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not link the Series relation: ${save.message}`,
+			coordinates: { component_tipo: SERIES_RELATION_TIPO, section_id: publicationSectionId },
+			cause: save,
 		});
 	}
 }
@@ -453,15 +529,40 @@ async function linkFixedTerm(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not link ${componentTipo}: ${save.message}`,
+			coordinates: { component_tipo: componentTipo, section_id: publicationSectionId },
+			cause: save,
 		});
 	}
+}
+
+/** The first stored item's text value for one component, read straight off a search result row's
+ * own data column (same extraction tool_import_files' matchFreeName uses) - no separate per-row
+ * read. */
+function firstItemText(row: Record<string, unknown>, column: string, tipo: string): string | null {
+	const payload = row[column] as Record<string, unknown> | null | undefined;
+	const rawItems = payload?.[tipo];
+	const items = (Array.isArray(rawItems) ? rawItems : rawItems == null ? [] : [rawItems]).filter(
+		(item) => item !== null && item !== '',
+	);
+	const first = items[0];
+	if (first === null || first === undefined) return null;
+	return typeof first === 'object'
+		? String((first as { value?: unknown }).value ?? '')
+		: String(first);
 }
 
 /** Exact (Surname, Given name) match - used by findOrCreatePerson. An SQO run WITH the caller's
  * principal, not a hand-written SQL WHERE (review item B3, same reasoning as
  * findExistingPublication above). A null givenName matches an EMPTY given name ('!*'), the SQO
- * equivalent of the original SQL's `IS NOT DISTINCT FROM NULL`. */
+ * equivalent of the original SQL's `IS NOT DISTINCT FROM NULL`.
+ *
+ * The `==` operator NARROWS through Postgres's `f_unaccent`, so "Martín, J." and "Martin, J."
+ * are one candidate set (confirmed in import_code_lookup.ts) - trusting the first row blindly
+ * would silently merge two possibly-DIFFERENT real people (review item: "accent-insensitive
+ * author dedup"). `limit` is raised past 1 (import_code_lookup.ts's own reasoning: a real
+ * look-alike cluster must fit inside the window, or the byte-exact row could be evicted before
+ * it is even read) and each candidate's OWN stored text is read back and compared BYTE-EXACT
+ * (trimmed); only that - never the loose search alone - decides "this is the same person". */
 async function findExistingPerson(
 	surname: string,
 	givenName: string | null,
@@ -469,7 +570,7 @@ async function findExistingPerson(
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
 		section_tipo: [PEOPLE_SECTION_TIPO],
-		limit: 1,
+		limit: 10,
 		filter: {
 			$and: [
 				{
@@ -484,10 +585,24 @@ async function findExistingPerson(
 		},
 	});
 	const built = await buildSearchSql(sqo, { principal: context.principal });
-	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as ({
 		section_id: number;
-	}[];
-	return rows[0]?.section_id ?? null;
+	} & Record<string, unknown>)[];
+
+	const model = await getModelByTipo(PERSON_SURNAME_TIPO);
+	const column = model !== null ? getColumnNameByModel(model) : null;
+	if (column === null) return rows[0]?.section_id ?? null;
+
+	const wantedSurname = surname.trim();
+	const wantedGivenName = (givenName ?? '').trim();
+	for (const row of rows) {
+		const storedSurname = (firstItemText(row, column, PERSON_SURNAME_TIPO) ?? '').trim();
+		const storedGivenName = (firstItemText(row, column, PERSON_GIVEN_NAME_TIPO) ?? '').trim();
+		if (storedSurname === wantedSurname && storedGivenName === wantedGivenName) {
+			return row.section_id;
+		}
+	}
+	return null;
 }
 
 /** Finds an existing rsc197 Person record, or creates one when none matches. Locked and
@@ -504,7 +619,7 @@ async function findOrCreatePerson(
 
 	return withTransaction(async () => {
 		await acquireDedupLock(
-			`rsc197:name:${surname.trim().toLowerCase()}|${(givenName ?? '').trim().toLowerCase()}`,
+			`rsc197:name:${foldNameForLock(surname)}|${foldNameForLock(givenName ?? '')}`,
 		);
 		const existing = await findExistingPerson(surname, givenName, context);
 		if (existing !== null) return { sectionId: existing, created: false };
@@ -552,7 +667,8 @@ async function linkAuthors(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not link the Authorship relation: ${save.message}`,
+			coordinates: { component_tipo: AUTHORSHIP_RELATION_TIPO, section_id: publicationSectionId },
+			cause: save,
 		});
 	}
 }
@@ -565,17 +681,22 @@ async function linkAuthors(
  */
 async function resolvePublicationPdfUrl(
 	publication: Record<string, unknown>,
-): Promise<string | null> {
+): Promise<{ url: string | null; error: ApiErrorBody | null }> {
 	const landingPageUrl = publication.landingPageUrl;
-	if (typeof landingPageUrl !== 'string' || landingPageUrl === '') return null;
+	if (typeof landingPageUrl !== 'string' || landingPageUrl === '')
+		return { url: null, error: null };
 
 	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(landingPageUrl));
-	if (!adapter?.resolvePdfUrl) return null;
+	if (!adapter?.resolvePdfUrl) return { url: null, error: null };
 
 	try {
-		return await adapter.resolvePdfUrl(landingPageUrl);
-	} catch {
-		return null;
+		return { url: await adapter.resolvePdfUrl(landingPageUrl), error: null };
+	} catch (error) {
+		// Previously `catch { return null }` - a robots/SSRF/blocked refusal looked IDENTICAL to
+		// "this publication simply has no PDF link" (review item: "swallowed PDF refusals"), so the
+		// cataloguer could never tell the two apart. Reported structurally now, same as every other
+		// per-item error in this file.
+		return { url: null, error: toErrorBody(toDedaloError(error)) };
 	}
 }
 
@@ -595,12 +716,17 @@ async function importDocumentForPublication(
 	documentError: ApiErrorBody | null;
 }> {
 	const existingPdfUrl = publication.pdfUrl;
-	const pdfUrl =
-		typeof existingPdfUrl === 'string' && existingPdfUrl !== ''
-			? existingPdfUrl
-			: await resolvePublicationPdfUrl(publication);
+	let pdfUrl: string | null;
+	let resolveError: ApiErrorBody | null = null;
+	if (typeof existingPdfUrl === 'string' && existingPdfUrl !== '') {
+		pdfUrl = existingPdfUrl;
+	} else {
+		const resolved = await resolvePublicationPdfUrl(publication);
+		pdfUrl = resolved.url;
+		resolveError = resolved.error;
+	}
 	if (pdfUrl === null) {
-		return { pdfUrl: null, documentImported: false, documentError: null };
+		return { pdfUrl: null, documentImported: false, documentError: resolveError };
 	}
 
 	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(pdfUrl));
@@ -746,8 +872,8 @@ function shortPublicationCode(identifier: string, landingPageUrl: string | null)
 }
 
 /** One publication's outcome from commitPublications. Every `*_error` is the error system's wire
- * body (toErrorBody(toDedaloError(...))), never a raw `(error as Error).message` - review item E2:
- * that raw text can carry tipos, ids and SQL driver text to the client. */
+ * body (toErrorBody(toDedaloError(...))), never a raw exception's own text property - review item
+ * E2: that raw text can carry tipos, ids and SQL driver text to the client. */
 interface CommitOnePublicationResult {
 	publication_identifier: unknown;
 	section_tipo: string;
@@ -853,17 +979,38 @@ async function commitOnePublication(
 			await writeField(newSectionId, PUBLICATION_TIPO, PAGES_TIPO, p.pages, context.userId);
 			written.push(PAGES_TIPO);
 		}
-		if (typeof p.abstract === 'string' && p.abstract.trim() !== '') {
+		// rsc221 is a component_text_area (stores HTML) - Cheerio's own .text() decodes entities, so
+		// writing the plain text straight in makes e.g. "p < 0.05 &" invalid markup the moment the
+		// record is opened (review item: "Abstract written as plain text into an HTML component").
+		// textAsParagraph is the same escape+wrap every other HTML-component writer in this codebase
+		// uses (import_code_lookup.ts), so a later lookup narrows against identical bytes.
+		//
+		// Each language variant goes into ITS OWN data-lang slot instead of merging every variant
+		// into whichever one happened to be English-preferred (review item: "Abstract language") -
+		// a variant with no xml:lang, or one this PR's own lang table doesn't map, falls back to the
+		// session's currentDataLang() (the previous behaviour for every variant).
+		const abstractVariants = readAbstractVariants(p);
+		const effectiveVariants =
+			abstractVariants.length > 0
+				? abstractVariants
+				: typeof p.abstract === 'string' && p.abstract.trim() !== ''
+					? [{ lang: null, text: p.abstract }]
+					: [];
+		let abstractWritten = false;
+		for (const variant of effectiveVariants) {
+			const lang =
+				(variant.lang && ISO_639_1_TO_LANG[variant.lang.toLowerCase()]) || currentDataLang();
 			await writeField(
 				newSectionId,
 				PUBLICATION_TIPO,
 				ABSTRACT_TIPO,
-				p.abstract,
+				textAsParagraph(variant.text),
 				context.userId,
-				currentDataLang(),
+				lang,
 			);
-			written.push(ABSTRACT_TIPO);
+			abstractWritten = true;
 		}
+		if (abstractWritten) written.push(ABSTRACT_TIPO);
 		if (typeof p.publisher === 'string' && p.publisher.trim() !== '') {
 			await writeField(newSectionId, PUBLICATION_TIPO, PUBLISHER_TIPO, p.publisher, context.userId);
 			written.push(PUBLISHER_TIPO);
@@ -1046,14 +1193,14 @@ async function commitOnePublication(
 async function commitPublications(context: ToolActionContext): Promise<ToolResponse> {
 	const publications = context.options.publications;
 	if (!Array.isArray(publications) || publications.length === 0) {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message:
 				'commit_publications requires a non-empty "publications" array (from preview_url, minus any excluded).',
 			publicMessage: 'No publications to import — run Preview first, then keep at least one.',
 		});
 	}
 	if (publications.length > MAX_PUBLICATIONS) {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: `commit_publications received ${publications.length} publications, over the ${MAX_PUBLICATIONS} cap.`,
 			publicMessage: `Too many publications in one batch (${publications.length} > ${MAX_PUBLICATIONS}). Split the import into smaller batches.`,
 		});
@@ -1063,7 +1210,16 @@ async function commitPublications(context: ToolActionContext): Promise<ToolRespo
 	const personCache = new Map<string, ResolvedPerson>();
 	const results: CommitOnePublicationResult[] = [];
 	let counter = 0;
+	let stopped = false;
 	for (const publication of publications) {
+		// Checked at the loop boundary, same idiom as tool_import_files: a publication is committed
+		// whole or not at all (C1's own transaction already guarantees that per record), so stopping
+		// HERE never leaves a half-written record - it just leaves the REST of the batch uncommitted,
+		// reported back as a partial summary rather than running to completion regardless of Stop.
+		if (context.signal?.aborted) {
+			stopped = true;
+			break;
+		}
 		if (publication === null || typeof publication !== 'object') continue;
 		counter += 1;
 		const p = publication as Record<string, unknown>;
@@ -1097,20 +1253,32 @@ async function commitPublications(context: ToolActionContext): Promise<ToolRespo
 		}
 	}
 
-	return ok({ results }, { requestId: toolRequestId(context) });
+	return ok(
+		{ results, stopped, publications_total: publications.length },
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 export const tool: ToolServerModule = {
 	name: 'tool_bibliography_acquisition',
 	apiActions: {
+		// 'targets' (not 'section'): previewUrl's own `options.section_tipo`, if the client sends
+		// one at all, is NEVER what actually gets touched - the handler always fetches/parses
+		// against rsc205. A 'section' gate reading the client's OWN field let any user who can read
+		// ANY section start a live outbound fetch (review item: "preview actions are gated on any
+		// section"), since nothing stopped them sending an unrelated but readable section_tipo.
 		preview_url: {
-			permission: 'section',
+			permission: 'targets',
 			minLevel: 1,
+			targets: () => [{ section_tipo: PUBLICATION_TIPO }],
 			handler: previewUrl,
 		},
+		// Same gate - no network request (parses HTML/XML the operator already fetched), but still
+		// never gated on a client-sent section_tipo for the same reason as preview_url.
 		preview_html: {
-			permission: 'section',
+			permission: 'targets',
 			minLevel: 1,
+			targets: () => [{ section_tipo: PUBLICATION_TIPO }],
 			handler: previewHtml,
 		},
 		// 'targets' (not 'section'): the handler always writes rsc205/rsc197/

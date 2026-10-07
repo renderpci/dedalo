@@ -8,6 +8,7 @@ interface OaiRecord {
 	title: string | null;
 	creators: string[];
 	abstract: string | null;
+	abstractVariants: { lang: string | null; text: string }[];
 	publisher: string | null;
 	date: string | null;
 	types: string[];
@@ -41,6 +42,22 @@ function collectText($: cheerio.CheerioAPI, els: ReturnType<cheerio.CheerioAPI>)
 	return values;
 }
 
+/** Every element's text, paired with its own `xml:lang` (or plain `lang`) attribute - the per-
+ * variant counterpart of pickPreferredText, which only keeps the one it prefers. */
+function collectTextWithLang(
+	$: cheerio.CheerioAPI,
+	els: ReturnType<cheerio.CheerioAPI>,
+): { lang: string | null; text: string }[] {
+	const values: { lang: string | null; text: string }[] = [];
+	els.each((_, el) => {
+		const text = cleanText($(el).text());
+		if (!text) return;
+		const lang = $(el).attr('xml:lang') ?? $(el).attr('lang') ?? null;
+		values.push({ lang, text });
+	});
+	return values;
+}
+
 function parseOaiRecords(xml: string): OaiRecord[] {
 	const $ = cheerio.load(xml, { xmlMode: true });
 	const records: OaiRecord[] = [];
@@ -56,7 +73,9 @@ function parseOaiRecords(xml: string): OaiRecord[] {
 		const metadata = record.find('metadata').first();
 		const title = pickPreferredText($, metadata.find('dc\\:title'));
 		const creators = collectText($, metadata.find('dc\\:creator'));
-		const abstract = pickPreferredText($, metadata.find('dc\\:description'));
+		const abstractEls = metadata.find('dc\\:description');
+		const abstract = pickPreferredText($, abstractEls);
+		const abstractVariants = collectTextWithLang($, abstractEls);
 		const publisher = cleanText(metadata.find('dc\\:publisher').first().text());
 		const date = cleanText(metadata.find('dc\\:date').first().text());
 		const types = collectText($, metadata.find('dc\\:type'));
@@ -69,6 +88,7 @@ function parseOaiRecords(xml: string): OaiRecord[] {
 			title,
 			creators,
 			abstract,
+			abstractVariants,
 			publisher,
 			date,
 			types,
@@ -159,6 +179,7 @@ export function parseOaiPublications(xml: string): ExtractedPublication[] {
 			title: record.title,
 			authors: record.creators,
 			abstract: record.abstract,
+			abstractVariants: record.abstractVariants,
 			publisher: record.publisher,
 			types: record.types,
 			issn: record.sourceValues.find((v) => isIssn(v)) ?? null,
