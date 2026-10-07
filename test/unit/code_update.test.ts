@@ -34,7 +34,7 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
 import { resolvePgRestore } from '../../src/core/area_maintenance/backup.ts';
@@ -54,6 +54,7 @@ import {
 	type UpdatePhaseFrame,
 	updateCode,
 } from '../../src/core/update/code_update.ts';
+import { INSTALL_STAMP_PATH } from '../../src/core/update/install_stamp.ts';
 import * as realOwnershipModule from '../../src/core/update/ownership.ts';
 import {
 	PUBLICATION_MANIFEST_PATH,
@@ -451,6 +452,13 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 				readFileSync(join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
 			) as Record<string, unknown>;
 			expect(installStamp).toMatchObject({ digest: sha, channel: 'master' });
+			// …and records the ARCHIVE's root (the next update's retired-entry
+			// evidence): what landed, minus what the swap added (deps) or carried.
+			expect(installStamp.root_entries).toEqual(
+				readdirSync(targetRoot)
+					.filter((name) => name !== 'node_modules' && name !== '.git')
+					.sort(),
+			);
 			expect(existsSync(sentinel.backupDir as string)).toBe(true);
 			// phase frames: the last one before the restart carries expected_version
 			const last = frames.at(-1) as UpdatePhaseFrame;
@@ -1522,6 +1530,57 @@ describe('the root whitelist', () => {
 		// it blocked real updates for a file with no content (2026-08-28).
 		const [codeRoot, targetRoot] = trees(['README.md', '.DS_Store'], ['README.md']);
 		expect(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot)).not.toThrow();
+	});
+
+	/** Stamp the LIVE tree as installed from a release whose root was `rootEntries`. */
+	function stampLive(targetRoot: string, rootEntries: string[]): void {
+		const path = join(targetRoot, INSTALL_STAMP_PATH);
+		mkdirSync(dirname(path), { recursive: true });
+		writeFileSync(
+			path,
+			JSON.stringify({ digest: 'd'.repeat(64), channel: 'master', root_entries: rootEntries }),
+		);
+	}
+
+	test('a RETIRED entry — shipped by the installed release, dropped by this one — does NOT refuse', () => {
+		// `.vscode` shipped until 0ebc82b616; every later release refused on it,
+		// and an install without shell access could not clear it (2026-10-07).
+		const [codeRoot, targetRoot] = trees(['README.md', '.vscode'], ['README.md']);
+		stampLive(targetRoot, ['.vscode', 'README.md', 'src']);
+		expect(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot)).not.toThrow();
+	});
+
+	test('a drop-in the installed release did NOT ship still refuses, with the unchanged sentence', () => {
+		const [codeRoot, targetRoot] = trees(['README.md', '.vscode', 'my_notes.txt'], ['README.md']);
+		stampLive(targetRoot, ['.vscode', 'README.md', 'src']);
+		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
+		expect(refusal.message).toBe(
+			'Error. Unknown entries at the code-tree root would be moved into the backup by the swap: my_notes.txt — move them out of the tree (or delete them) before updating.',
+		);
+	});
+
+	test('an UNSTAMPED live tree proves no retirement — the entry refuses as before', () => {
+		const [codeRoot, targetRoot] = trees(['README.md', '.vscode'], ['README.md']);
+		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
+		expect(refusal.message).toContain('.vscode');
+	});
+
+	test('a stamp WITHOUT a root list (pre-2026-10-07) proves no retirement either', () => {
+		const [codeRoot, targetRoot] = trees(['README.md', '.vscode'], ['README.md']);
+		const path = join(targetRoot, INSTALL_STAMP_PATH);
+		mkdirSync(dirname(path), { recursive: true });
+		writeFileSync(path, JSON.stringify({ digest: 'd'.repeat(64), channel: 'master' }));
+		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
+		expect(refusal.message).toContain('.vscode');
+	});
+
+	test('a secret inside a RETIRED dir still refuses — retirement waives the root check, never the secret walk', () => {
+		const [codeRoot, targetRoot] = trees(['README.md'], ['README.md']);
+		mkdirSync(join(targetRoot, '.vscode'));
+		writeFileSync(join(targetRoot, '.vscode', 'server.key'), '');
+		stampLive(targetRoot, ['.vscode', 'README.md', 'src']);
+		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
+		expect(refusal.message).toContain('.vscode/server.key');
 	});
 });
 

@@ -17,6 +17,14 @@
  *    as the published release in `/health`, `page_globals.dedalo_version` and
  *    the maintenance panel. The channel recorded here restores the `.dev` tag.
  *
+ *  - WHAT THE RELEASE SHIPPED AT ITS ROOT (2026-10-07). The swap's root
+ *    whitelist (code_update.ts refuseUnaccountedLiveEntries) compares the live
+ *    root with the incoming release only, so a root entry a LATER release
+ *    dropped (`.vscode`, shipped until 0ebc82b616) read as an operator drop-in
+ *    and refused the update — unclearable without shell access. The recorded
+ *    `root_entries` is the evidence that tells "an older release shipped it"
+ *    from "nobody shipped it".
+ *
  * A tree with no stamp is a DEV CHECKOUT or a pre-2026-08-24 install: both
  * degrade to nulls, never to a throw — a broken stamp must not take the server
  * down. Leaf module: node builtins only.
@@ -36,6 +44,12 @@ export interface InstallStamp {
 	source_url?: string;
 	/** ISO instant of the swap (operator forensics; optional). */
 	installed_at?: string;
+	/**
+	 * The top-level entry names of the archive this tree was installed from,
+	 * sorted (2026-10-07). Absent on stamps written before then: such a tree
+	 * cannot prove which root entries are release-shipped.
+	 */
+	root_entries?: readonly string[];
 }
 
 /** The stamp file's name inside any Dédalo tree, relative to the repo root. */
@@ -62,6 +76,7 @@ export function parseInstallStamp(content: string): InstallStamp | null {
 		...required,
 		...optionalText('source_url', fields.source_url),
 		...optionalText('installed_at', fields.installed_at),
+		...optionalRootEntries(fields.root_entries),
 	});
 }
 
@@ -84,15 +99,51 @@ function optionalText(key: string, value: unknown): Record<string, string> {
 	return typeof value === 'string' ? { [key]: value } : {};
 }
 
-function readInstallStamp(): InstallStamp | null {
+/**
+ * The optional root-entry list: present only when EVERY item is a plain entry
+ * name. A malformed list drops this field alone — digest and channel stay
+ * trusted, the tree just loses its retired-entry evidence (the whitelist then
+ * refuses as it did before the field existed, which is the safe direction).
+ */
+function optionalRootEntries(value: unknown): { root_entries?: readonly string[] } {
+	if (!Array.isArray(value) || !value.every(isPlainEntryName)) return {};
+	return { root_entries: Object.freeze([...value]) };
+}
+
+/** Names that are not an entry of the directory itself. */
+const NOT_AN_ENTRY: ReadonlySet<string> = new Set(['', '.', '..']);
+
+/** A single path segment: no separator of either platform, no NUL. */
+function isPlainEntryName(name: unknown): name is string {
+	return typeof name === 'string' && !NOT_AN_ENTRY.has(name) && !/[/\\\0]/.test(name);
+}
+
+/**
+ * The root entries recorded by the stamp of the tree at `treeRoot`, read from
+ * THAT tree's own stamp (never this module's constant — the swap and the tests
+ * target trees that are not this process's). Null when the tree has no stamp,
+ * or a stamp written before the field existed.
+ */
+export function installedRootEntriesOf(treeRoot: string): ReadonlySet<string> | null {
+	const entries = readInstallStampOf(treeRoot)?.root_entries;
+	return entries === undefined ? null : new Set(entries);
+}
+
+/**
+ * The stamp of the tree at `treeRoot`, read from THAT tree (null when absent
+ * or malformed). The one read of a stamp file: this module's own constant and
+ * every other-tree reader (code_update.ts, status.ts) go through it.
+ */
+export function readInstallStampOf(treeRoot: string): InstallStamp | null {
 	try {
-		return parseInstallStamp(readFileSync(join(import.meta.dir, 'install_stamp.json'), 'utf8'));
+		return parseInstallStamp(readFileSync(join(treeRoot, INSTALL_STAMP_PATH), 'utf8'));
 	} catch {
 		return null;
 	}
 }
 
-const STAMP = readInstallStamp();
+// This file sits at INSTALL_STAMP_PATH's dir, so the tree root is three up.
+const STAMP = readInstallStampOf(join(import.meta.dir, '..', '..', '..'));
 
 /** sha256 of the archive this tree was installed from — null on a dev checkout. */
 export const INSTALLED_DIGEST: string | null = STAMP?.digest ?? null;

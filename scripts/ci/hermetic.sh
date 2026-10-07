@@ -288,6 +288,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/install_ip_gate_tripwire.test.ts
 	test/unit/migration_shared_row_tripwire.test.ts
 	test/unit/release_archive_tripwire.test.ts
+	test/unit/release_root_entries_tripwire.test.ts
 	test/unit/thesaurus_picker_tripwire.test.ts
 	test/unit/config_declaration_tripwire.test.ts
 	test/unit/engine_install_tld_tripwire.test.ts

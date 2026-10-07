@@ -32,9 +32,12 @@
  *    carry live runtime data (media, state, sessions…) into the backup.
  *  - A `backupRoot` inside `targetRoot` → refuse (its own swap would move it).
  *  - ROOT WHITELIST: any top-level entry of `targetRoot` that is neither
- *    shipped by the release, nor preserved/census-registered, refuses the
- *    swap — this is what catches `.dedalo.env`, `acc/`, stray `*.log` files
- *    before they vanish into a backup dir. NESTED entries under a shipped
+ *    shipped by the release, nor preserved/census-registered, nor RETIRED
+ *    (recorded in the live tree's own install stamp as shipped by the release
+ *    it was installed from, 2026-10-07), refuses the swap — this is what
+ *    catches `.dedalo.env`, `acc/`, stray `*.log` files before they vanish
+ *    into a backup dir. A tree without a recorded root list cannot prove a
+ *    retirement, so there every unshipped entry still refuses. NESTED entries under a shipped
  *    dir (e.g. `deploy/certs/*`) are covered by a SECRET-PATTERN walk
  *    (`certs/` dirs, `*.pem|key|crt|cer|p12|pfx`, `.env*`): a full nested
  *    diff is impossible without the OLD release's manifest — a file the new
@@ -114,7 +117,12 @@ import {
 	looksLikeNoSpace,
 	type SpaceSeams,
 } from './disk_space.ts';
-import { INSTALL_STAMP_PATH, type InstallChannel, parseInstallStamp } from './install_stamp.ts';
+import {
+	INSTALL_STAMP_PATH,
+	type InstallChannel,
+	installedRootEntriesOf,
+	readInstallStampOf,
+} from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
 import {
 	type BackupVerifyOptions,
@@ -762,7 +770,9 @@ function refuseAfterDoubleFailure(
  * impersonating the published release.
  *
  * Written BEFORE the smoke boot on purpose: the tree that is validated is then
- * byte-for-byte the tree that lands.
+ * byte-for-byte the tree that lands. It also records the archive's root
+ * entries, which the NEXT update reads to tell a root entry this release
+ * shipped (and a later one dropped) from an operator drop-in.
  */
 function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
 	const stamp = {
@@ -770,6 +780,9 @@ function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
 		channel: request.channel,
 		source_url: request.url,
 		installed_at: new Date().toISOString(),
+		// The archive's root, read before `installDeps` adds node_modules: the
+		// NEXT update's evidence for which live root entries a release shipped.
+		root_entries: readdirSync(codeRoot).sort(),
 	};
 	const path = join(codeRoot, INSTALL_STAMP_PATH);
 	mkdirSync(dirname(path), { recursive: true });
@@ -783,13 +796,7 @@ function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
  * existed, or a dev checkout.
  */
 export function installedDigestOf(targetRoot: string): string | null {
-	try {
-		return (
-			parseInstallStamp(readFileSync(join(targetRoot, INSTALL_STAMP_PATH), 'utf8'))?.digest ?? null
-		);
-	} catch {
-		return null;
-	}
+	return readInstallStampOf(targetRoot)?.digest ?? null;
 }
 
 /**
@@ -1282,22 +1289,40 @@ export function refuseUntrackedSecrets(codeRoot: string, targetRoot: string): vo
  * So the restore path calls `refuseUntrackedSecrets` alone. What it gives up is
  * the non-secret-shaped operator drop-in, which on a restore is indistinguishable
  * from ordinary release drift; what it keeps is the hazard that actually loses
- * data. */
+ * data.
+ *
+ * RETIRED entries (2026-10-07). The shipped set covers growth, not removal: a
+ * root entry the NEXT release drops (`.vscode`, shipped until 0ebc82b616) is
+ * missing from `codeRoot` exactly like an operator drop-in, and refusing it
+ * left an install without shell access unable to update at all. The live
+ * tree's OWN stamp records the root of the archive it was installed from
+ * (install_stamp.ts), so an entry listed there is release-shipped and rides the
+ * old tree into the backup — where retired release files belong. A tree with
+ * no recorded list proves nothing and refuses as before. The secret walk below
+ * still covers retired dirs: it walks the whole live tree. */
 export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
 	const shipped = new Set(readdirSync(codeRoot));
-	const unknown = readdirSync(targetRoot).filter(
+	const previouslyShipped = installedRootEntriesOf(targetRoot);
+	const unaccounted = readdirSync(targetRoot).filter(
 		(name) =>
 			!shipped.has(name) &&
 			!PRESERVE_ROOT_ENTRIES.has(name) &&
 			!IGNORED_ROOT_ENTRIES.has(name) &&
 			name !== 'node_modules',
 	);
+	const retired = unaccounted.filter((name) => previouslyShipped?.has(name) === true);
+	const unknown = unaccounted.filter((name) => previouslyShipped?.has(name) !== true);
 	if (unknown.length > 0) {
 		refuseArchive(
 			`Error. Unknown entries at the code-tree root would be moved into the backup by the swap: ${unknown.join(', ')} — move them out of the tree (or delete them) before updating.`,
 		);
 	}
 	refuseUntrackedSecrets(codeRoot, targetRoot);
+	if (retired.length > 0) {
+		console.warn(
+			`[code update] retired root entries (shipped by the installed release, dropped by this one) move into the backup: ${retired.join(', ')}`,
+		);
+	}
 }
 
 async function prepareQuarantine(

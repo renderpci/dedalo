@@ -72,7 +72,12 @@ import {
 	stagingHoldsParkedTree,
 } from './code_update.ts';
 import { availableBytesAt } from './disk_space.ts';
-import { INSTALLED_CHANNEL, INSTALLED_DIGEST, type InstallChannel } from './install_stamp.ts';
+import {
+	INSTALLED_CHANNEL,
+	INSTALLED_DIGEST,
+	type InstallChannel,
+	installedRootEntriesOf,
+} from './install_stamp.ts';
 import { type BackupVerifyOptions, backupFreshnessWithin, PANEL_WAIT_MS } from './preconditions.ts';
 import { type DeleteBlockReason, deletabilityOf, RESTORE_POINT_PREFIX } from './restore_points.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
@@ -215,7 +220,9 @@ export interface ConsumerStatus {
 		backup_root: string;
 		staging_leftover: boolean;
 		/** Root entries the release must ship, or the swap refuses them (the
-		 * INPUT to `refuseUnaccountedLiveEntries`, not its verdict). */
+		 * INPUT to `refuseUnaccountedLiveEntries`, not its verdict). On a tree
+		 * whose stamp records its release's root, the entries that release
+		 * shipped are subtracted: what remains is operator-added. */
 		unaccounted_root_entries: string[];
 	};
 }
@@ -407,23 +414,45 @@ function diskSpaceCheck(backupRoot: string): StatusCheck {
  * The root-whitelist INPUT: live root entries that a release would have to
  * ship, or `refuseUnaccountedLiveEntries` moves them into the backup and
  * refuses. Derived from the pipeline's own PRESERVE_ROOT_ENTRIES + the census,
- * never a second copy of the rule. The VERDICT needs the release's file list,
- * so the check stays `unknown` when there are entries to report.
+ * never a second copy of the rule.
+ *
+ * A tree whose install stamp records its release's root (install_stamp.ts,
+ * 2026-10-07) subtracts those entries — the swap treats them as release-owned
+ * too, retired or not — so the remainder is operator-added: `ok` when empty,
+ * `warn` otherwise (no release ships an entry nobody committed). Without that
+ * record the verdict needs the incoming release's file list, so the check
+ * stays `unknown`. `treeRoot` is a seam for the unit gate; the panel reads the
+ * live tree.
  */
-function rootEntriesCheck(): { entries: string[]; check: StatusCheck } {
+export function rootEntriesCheck(treeRoot: string = projectRoot): {
+	entries: string[];
+	check: StatusCheck;
+} {
 	try {
 		const censusInside = new Set(
-			runtimePathsInsideTree(projectRoot).map((entry) => entry.path.split('/').pop() ?? ''),
+			runtimePathsInsideTree(treeRoot).map((entry) => entry.path.split('/').pop() ?? ''),
 		);
-		const entries = readdirSync(projectRoot).filter(
+		const releaseShipped = installedRootEntriesOf(treeRoot);
+		const entries = readdirSync(treeRoot).filter(
 			(name) =>
 				!PRESERVE_ROOT_ENTRIES.has(name) &&
 				!IGNORED_ROOT_ENTRIES.has(name) &&
 				name !== 'node_modules' &&
-				!censusInside.has(name),
+				!censusInside.has(name) &&
+				releaseShipped?.has(name) !== true,
 		);
-		// A release ships most of these; only the operator knows which are theirs.
-		return { entries, check: check('root_entries', 'unknown', String(entries.length)) };
+		if (releaseShipped === null) {
+			// A release ships most of these; only the operator knows which are theirs.
+			return { entries, check: check('root_entries', 'unknown', String(entries.length)) };
+		}
+		return {
+			entries,
+			check: check(
+				'root_entries',
+				entries.length === 0 ? 'ok' : 'warn',
+				entries.length === 0 ? undefined : entries.join(', '),
+			),
+		};
 	} catch (error) {
 		return {
 			entries: [],

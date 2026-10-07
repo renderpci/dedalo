@@ -1057,6 +1057,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Code updates no longer refuse over a file an older release shipped and a newer one removed.**
+
+    An update from the *Update code* panel refused with "Unknown entries at the code-tree root … `.vscode`" on installs that had taken an older release: the file was shipped by Dédalo itself, then removed from later releases, and the updater could not tell it from a file the administrator had added — nor could it be cleared without shell access. Each update now records the top-level entries of the release it installs, so the next update moves a retired release file into the backup instead of refusing, and the panel's *Code-tree root entries* check reports only files nobody shipped. An install updated before this release still refuses once over such a file: remove it by hand that one time ([what makes an update refuse](./management/updates/updating_code_options.md#what-else-makes-the-update-refuse)).
+
+    Wire contract: `WC-2026-10-07-update-code-root-entries-stamp`.
+
 - **Publishing no longer fails creating a MariaDB integer column sized by `varchar`.**
 
     A `field_int` diffusion node whose properties carried `varchar` (for example
@@ -1505,7 +1511,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 98 entries"
+??? note "Wire contract — 99 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1605,6 +1611,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-03-publication-hosts-widget`
     - `WC-2026-10-03-save-refuses-malformed-value-shape`
     - `WC-2026-10-06-consultation-only-no-section-tools`
+    - `WC-2026-10-07-update-code-root-entries-stamp`
 
 ## 7.0.0-beta.4 — 2026-08-24
 
