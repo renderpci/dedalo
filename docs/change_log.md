@@ -1096,6 +1096,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The auction-URL and journal-URL import tools now declare the sections they belong to.**
+
+    The two import tools are registered for their own sections only (`numisdata4` for auction URLs; `rsc205` and `rsc3` for journal URLs), so the restriction no longer depends on their server code loading. Run *Register tools* after the update to apply it.
+
 - **Ontologies re-installed by an ontology update keep their typology and name instead of moving to "Others".**
 
     After an ontology update, ontologies such as `dd` or `tch` appeared in the profile permissions tree under the **Others** typology with only their bare tld as name (`dd`), although their registry record says otherwise (for `dd`: **Core**, "Dédalo | dd"). An update now keeps the typology and name from the ontology's registry record. To repair an installation already affected, rebuild the ontology's main node from the Ontology tool (the registry records themselves were always correct).
