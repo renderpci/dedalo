@@ -220,16 +220,25 @@ view_default_edit_menu.render = async function(self, options) {
 		// _compact_edge records the viewport width at which compaction was triggered
 		// so we can un-compact only when the viewport grows back past that threshold,
 		// preventing oscillation at boundary widths.
-		const resize_observer = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				const height = entry.contentRect.height;
-				const win_width = window.innerWidth;
-				if (height > 50) {
-					content_data.classList.add('compact');
-					content_data._compact_edge = win_width;
-				} else if (content_data._compact_edge && win_width > content_data._compact_edge) {
-					content_data.classList.remove('compact');
-				}
+		// (!) Never toggle 'compact' inside the observer callback: it resizes the
+		// observed node in the same observation cycle ("ResizeObserver loop
+		// completed with undelivered notifications", e.g. reload at phone width).
+		// The callback only schedules; one frame-coalesced pass measures + writes.
+		let frame_id = 0
+		const update_compact = () => {
+			frame_id = 0
+			const height = content_data.getBoundingClientRect().height;
+			const win_width = window.innerWidth;
+			if (height > 50) {
+				content_data.classList.add('compact');
+				content_data._compact_edge = win_width;
+			} else if (content_data._compact_edge && win_width > content_data._compact_edge) {
+				content_data.classList.remove('compact');
+			}
+		}
+		const resize_observer = new ResizeObserver(() => {
+			if (!frame_id) {
+				frame_id = requestAnimationFrame(update_compact)
 			}
 		});
 
