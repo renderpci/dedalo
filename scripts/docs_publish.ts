@@ -122,7 +122,7 @@ if (!target) {
 			`  # version's tree.\n` +
 			`  ${TARGET_KEY}="dedalo_dev@dedalo.dev:/home/www/vhosts/dedalo.dev/httpdocs/docs"\n\n` +
 			`A non-default SSH port goes in its OWN key — never inside the target:\n\n` +
-		`  ${PORT_KEY}=22`,
+			`  ${PORT_KEY}=22`,
 	);
 }
 
