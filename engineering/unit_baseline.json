@@ -3626,6 +3626,11 @@
 			"skipped": 0,
 			"assertions": 6
 		},
+		"test/unit/release_root_entries_tripwire.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 9
+		},
 		"test/unit/relogin_identity_tripwire.test.ts": {
 			"tests": 5,
 			"skipped": 0,
