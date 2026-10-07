@@ -261,6 +261,13 @@ export interface CsvAnalysis {
  * + counts + a bounded preview + the malformed-JSON-cell rows, NOT the full row set,
  * so the worker→main structured clone stays tiny even for a 200MB file. Returns null
  * for an empty/headerless file (caller ledgers the read error).
+ *
+ * `sample_data` and `sample_data_errors` cover DATA rows only — never the header
+ * (row 0, which travels as `header`). The mapper's "Sample data" cell shows the
+ * first non-empty value per column from `sample_data`, so a preview that began
+ * with the header showed every column's own name as its sample (PHP skipped
+ * row 0 too). A header cell is a column name, not a value: it is never
+ * JSON-checked either.
  */
 export function analyzeCsv(text: string, delimiter?: string): CsvAnalysis | null {
 	// DOS-04 (2026-07-28 audit): parseCsv materializes every cell as a separate
@@ -279,13 +286,15 @@ export function analyzeCsv(text: string, delimiter?: string): CsvAnalysis | null
 	const rows = parseCsv(text, delimiter);
 	const header = rows[0];
 	if (header === undefined || header.length === 0) return null;
-	const sample_data = rows.slice(0, 10).map((row) => row.map(unescapeCell));
+	// Up to 10 DATA rows (row 0 is the header — see the docblock).
+	const dataRows = rows.slice(1);
+	const sample_data = dataRows.slice(0, 10).map((row) => row.map(unescapeCell));
 	// The preview of malformed-JSON rows is a SAMPLE, not the full set — cap it
 	// (the docblock promised "bounded" but it collected EVERY bad row, so a file
 	// of all-malformed rows returned the whole file to the client, DOS-04).
 	const SAMPLE_ERROR_CAP = 100;
 	const sample_data_errors: string[][] = [];
-	for (const line of rows) {
+	for (const line of dataRows) {
 		if (sample_data_errors.length >= SAMPLE_ERROR_CAP) break;
 		let bad = false;
 		for (const raw of line) {

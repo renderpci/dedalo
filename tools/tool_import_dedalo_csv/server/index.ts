@@ -33,8 +33,10 @@ import { resolveDataTipo } from '../../../src/core/ontology/alias.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
+import { sectionInfoComponents } from '../../../src/core/resolve/section_elements_context.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import type { Principal } from '../../../src/core/security/permissions.ts';
 import { withLiveBulkRun } from '../../../src/core/tools/bulk_run_registry.ts';
 import {
 	assertCsvStructure,
@@ -164,7 +166,9 @@ function safeImportFile(dir: string, fileName: string): string {
 
 /**
  * All component tipos of a section (PHP get_ar_children_tipo_by_model_name_in_section
- * with recursive=true and **resolve_virtual=true**), not crossing child sections.
+ * with recursive=true and **resolve_virtual=true**), not crossing child sections,
+ * PLUS the common section-info components (dd196's children — PHP
+ * get_section_components_list appended get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP)).
  *
  * (!) VIRTUAL SECTIONS. A virtual section has NO components of its own: its node's
  * relations[0].tipo points at the REAL section that owns them, minus the tipos its
@@ -173,9 +177,19 @@ function safeImportFile(dir: string, fileName: string): string {
  * simply auto-detects nothing (an empty array is truthy, so its `!ar_components`
  * error branch never fires). resolveVirtualEditScope is the canonical resolver the
  * rest of the engine already uses for exactly this (relations/request_config).
+ *
+ * SECTION INFO (dd199/dd200/dd197/dd201 audit stamps, dd271, dd1223-5, dd1596).
+ * Appended only when the section has components of its own and does not
+ * suppress the group (dd542, dd15) — the buildSectionElementsContext rule, from
+ * the same source (sectionInfoComponents). And only for a GLOBAL ADMIN: PHP
+ * forces their permission for admins only, so every other principal's column on
+ * them is refused per row at the write door (componentRefusal: IGNORED). This
+ * list feeds the mapper AND the preflight, so a non-admin is never offered — nor
+ * validated clean on — a column the door would then drop.
  */
 async function sectionComponentTipos(
 	sectionTipo: string,
+	principal: Principal,
 ): Promise<{ tipo: string; model: string }[]> {
 	const { getOrderedSubtree } = await import('../../../src/core/ontology/resolver.ts');
 	const { resolveVirtualEditScope } = await import(
@@ -183,10 +197,15 @@ async function sectionComponentTipos(
 	);
 	const { realTipo, excludeSet } = await resolveVirtualEditScope(sectionTipo);
 	const nodes = await getOrderedSubtree(realTipo);
-	return nodes
+	const own = nodes
 		.filter((node) => node.model?.startsWith('component_') === true)
 		.filter((node) => !excludeSet.has(node.tipo))
 		.map((node) => ({ tipo: node.tipo, model: node.model as string }));
+	if (own.length === 0 || !principal.isGlobalAdmin) return own;
+	// No de-duplication against `own`: a tipo has ONE parent, dd196's children
+	// hang under dd196 (parent dd193, a `tools` node, never inside a section),
+	// so no section subtree can contain them.
+	return [...own, ...(await sectionInfoComponents(sectionTipo))];
 }
 
 /**
@@ -238,6 +257,16 @@ function derivedRefusal(model: string): string {
 }
 
 /**
+ * The model the import door judges a column on `tipo` by: getModelByTipo,
+ * which hops a component_alias to its TARGET's model (resolveMappedColumns
+ * reads exactly this). `listedModel` (the subtree node's own model) is the
+ * fallback only when the resolver knows no model.
+ */
+async function doorModel(tipo: string, listedModel: string): Promise<string> {
+	return (await getModelByTipo(tipo)) ?? listedModel;
+}
+
+/**
  * The component-list `import_append` field: the model's append policy
  * ('items' | 'geo_layer' | 'text_paragraphs'), or null when append is refused
  * for this component (the same verdict appendRefusal gives the import door,
@@ -250,7 +279,7 @@ async function wireAppendPolicy(
 	// An alias is listed under its own model; the door judges the TARGET's
 	// model and data tipo (resolveMappedColumns), so the offer must too.
 	const dataTipo = await resolveDataTipo(tipo);
-	const model = dataTipo === tipo ? listedModel : ((await getModelByTipo(tipo)) ?? listedModel);
+	const model = await doorModel(tipo, listedModel);
 	if (appendRefusal(tipo, model, dataTipo) !== null) return null;
 	return getImportAppendPolicy(model);
 }
@@ -260,11 +289,23 @@ async function wireAppendPolicy(
  * {label,value,model,import_append} for the CSV column-mapper dropdown, PLUS a
  * top-level `label` (the section term). `import_append` is the model's append
  * policy, or null when an append-mode column on it would be refused.
+ *
+ * DERIVED models (registry isDerivedModel: component_inverse, _relation_children,
+ * _relation_index, _external — and an alias whose TARGET is one) are NOT
+ * offered: the door refuses a column on them in EVERY mode (resolveMappedColumns
+ * derivedRefusal), and the mapper never offers a column the door refuses
+ * (user decision 2026-10-07). Membership (sectionComponentTipos) still holds
+ * them, so a hand-crafted map onto one gets the precise derived refusal, not
+ * "not a component of section".
  */
 async function getSectionComponentsList(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sectionTipo = String(ctx.options.section_tipo ?? '');
 	if (sectionTipo === '') throw invalidRequest('Missing section_tipo');
-	const tipos = await sectionComponentTipos(sectionTipo);
+	const members = await sectionComponentTipos(sectionTipo, ctx.principal);
+	const derived = await Promise.all(
+		members.map(async (t) => isDerivedModel(await doorModel(t.tipo, t.model))),
+	);
+	const tipos = members.filter((_, index) => !derived[index]);
 	const components = await Promise.all(
 		tipos.map(async (t) => ({
 			label: await termByTipo(t.tipo, config.menu.applicationLang),
@@ -296,7 +337,7 @@ async function resolveColumnMap(
 /**
  * get_csv_files: list the user's CSVs, each with the column analysis the client
  * renders (PHP get_csv_files): name/dir, n_records/n_columns, file_info (header),
- * ar_columns_map (per-column {tipo,label,model}), sample_data (first rows) and
+ * ar_columns_map (per-column {tipo,label,model}), sample_data (first DATA rows, no header) and
  * sample_data_errors (rows with malformed JSON cells). The parse + per-row scan
  * runs off the serving event loop (audit S3-42) and returns only the bounded
  * summary; only the ontology column-map lookup (header-sized) stays on-thread.
@@ -710,7 +751,9 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 			errors.push(...refusals);
 
 			// Every mapped target must be a component of THIS section (PHP verify_csv_map).
-			const sectionTipos = new Set((await sectionComponentTipos(sectionTipo)).map((c) => c.tipo));
+			const sectionTipos = new Set(
+				(await sectionComponentTipos(sectionTipo, ctx.principal)).map((c) => c.tipo),
+			);
 			for (const column of columns) {
 				if (column === null || column.model === 'component_section_id') continue;
 				if (!sectionTipos.has(column.tipo)) {

@@ -46,6 +46,7 @@ const APPEND_FRAME_ID = 914110; // the append frame-remap gate's own scratch rec
 const MIXED_ID = 914120; // the mixed-mode envelope gate's own scratch record
 const STAMP_ID = 914200; // the envelope-frames-keep-the-stamp gate's own scratch record
 const BAD_SLOT_ID = 914210; // the non-dataframe-slot warning gate's own scratch record
+const STAMPS_ID = 914220; // the four-stamp round-trip gate's own scratch record
 /** A component_portal of test3 (→ test3): an APPEND main distinct from TEXT. */
 const PORTAL = 'test80';
 /** A component_dataframe of the test3 family (parent test45). */
@@ -56,6 +57,8 @@ const dir = resolve(config.media.rootPath ?? '', 'import/files', String(USER));
 /** Audit tipos (concepts/section.ts AUDIT_TIPOS). */
 const CREATED_DATE = 'dd199';
 const MODIFIED_DATE = 'dd201';
+const CREATED_BY = 'dd200';
+const MODIFIED_BY = 'dd197';
 const SELECT_LANG = 'test89';
 const TEXT = 'test52';
 
@@ -67,7 +70,16 @@ beforeAll(() => {
 
 afterAll(async () => {
 	rmSync(dir, { recursive: true, force: true });
-	for (const id of [ID, DF_ID, APPEND_ID, APPEND_FRAME_ID, MIXED_ID, STAMP_ID, BAD_SLOT_ID]) {
+	for (const id of [
+		ID,
+		DF_ID,
+		APPEND_ID,
+		APPEND_FRAME_ID,
+		MIXED_ID,
+		STAMP_ID,
+		BAD_SLOT_ID,
+		STAMPS_ID,
+	]) {
 		await sql.unsafe('DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2', [
 			SECTION,
 			id,
@@ -182,6 +194,80 @@ describe('metadata columns get the dual write, with the modified stamp suppresse
 			year: 2001,
 			time: ddDateToSeconds({ day: 3, month: 4, year: 2001 }),
 		});
+	});
+});
+
+describe('the FOUR audit stamps round-trip (export → re-import restores who AND when)', () => {
+	test('dd199/dd200/dd197/dd201 land in the components + the record metadata; nothing re-stamps them', async () => {
+		// The import ACTS as -1 (importCsv's principal: executeCsvImport stamps
+		// createSectionRecord + every save with principal.userId; ctx.userId=USER
+		// only names the staging dir). The file says the record was created AND
+		// modified by STAMPED_USER, a different dd128 id, so every WHO assertion
+		// below tells an imported stamp from the importer's own (-1): a dropped
+		// dual write or a re-stamp would leave -1 and go red.
+		const STAMPED_USER = USER;
+		expect(STAMPED_USER).not.toBe((await resolvePrincipal(-1)).userId);
+		const locator = (tipo: string): string =>
+			`"[{""type"":""dd151"",""section_id"":${STAMPED_USER},""section_tipo"":""dd128"",""from_component_tipo"":""${tipo}""}]"`;
+		const report = await importCsv(
+			`section_id;${CREATED_DATE}_dmy;${CREATED_BY};${MODIFIED_BY};${MODIFIED_DATE}_dmy;${TEXT}\n` +
+				`${STAMPS_ID};21-05-1998;${locator(CREATED_BY)};${locator(MODIFIED_BY)};03-04-2001;stamped\n`,
+			[
+				KEY_COLUMN,
+				{
+					tipo: `${CREATED_DATE}_dmy`,
+					model: 'component_date',
+					checked: true,
+					map_to: CREATED_DATE,
+				},
+				{ tipo: CREATED_BY, model: 'component_select', checked: true, map_to: CREATED_BY },
+				{ tipo: MODIFIED_BY, model: 'component_select', checked: true, map_to: MODIFIED_BY },
+				{
+					tipo: `${MODIFIED_DATE}_dmy`,
+					model: 'component_date',
+					checked: true,
+					map_to: MODIFIED_DATE,
+				},
+				// A column saved AFTER the modified pair: without the suppression it
+				// re-stamps dd197/dd201 with "now, by USER".
+				{ tipo: TEXT, model: 'component_input_text', checked: true, map_to: TEXT },
+			],
+		);
+		expect(report.failed).toEqual([]);
+		expect(report.created).toEqual([STAMPS_ID]);
+
+		const rows = (await sql.unsafe(
+			`SELECT relation -> '${CREATED_BY}' AS created_by,
+			        relation -> '${MODIFIED_BY}' AS modified_by,
+			        date -> '${CREATED_DATE}' AS created_date,
+			        date -> '${MODIFIED_DATE}' AS modified_date,
+			        (data ->> 'created_by_user_id')::int AS created_by_metadata,
+			        data ->> 'created_date' AS created_date_metadata
+			   FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, STAMPS_ID],
+		)) as {
+			created_by: { section_id?: number | string; section_tipo?: string }[] | null;
+			modified_by: { section_id?: number | string; section_tipo?: string }[] | null;
+			created_date: { start?: Record<string, number> }[] | null;
+			modified_date: { start?: Record<string, number> }[] | null;
+			created_by_metadata: number | null;
+			created_date_metadata: string | null;
+		}[];
+		const row = rows[0];
+		const userOf = (items: { section_id?: number | string }[] | null | undefined): number[] =>
+			(items ?? []).map((item) => Number(item.section_id));
+
+		// WHO: both user components hold exactly the imported user, never the importer.
+		expect(userOf(row?.created_by)).toEqual([STAMPED_USER]);
+		expect(userOf(row?.modified_by)).toEqual([STAMPED_USER]);
+		// The created_by `data` twin (list views read it) follows the component.
+		// (The modified pair has NO `data` twin — record_metadata.ts: the modified
+		// stamps live only in the relation/date columns asserted here.)
+		expect(row?.created_by_metadata).toBe(STAMPED_USER);
+		// WHEN: both dates are the imported ones.
+		expect(row?.created_date?.[0]?.start).toMatchObject({ day: 21, month: 5, year: 1998 });
+		expect(row?.created_date_metadata).toContain('1998-05-21');
+		expect(row?.modified_date?.[0]?.start).toMatchObject({ day: 3, month: 4, year: 2001 });
 	});
 });
 

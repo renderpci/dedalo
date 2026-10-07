@@ -185,3 +185,43 @@ envelope or append-mode frame writes a row under the slot tipo any more. Each is
 the composed row (in a run, the composed pair) of the main its frames belong to — the main's
 data followed by all its slots' frames — also when the main item was a duplicate and the
 main's own save wrote nothing.
+
+## Addendum 2026-10-07 — section-info columns in the component list
+
+Correction to "Shape before": PHP `get_section_components_list` ALSO appended
+every child of `dd196` (DEDALO_SECTION_INFO_SECTION_GROUP: `dd200`, `dd199`,
+`dd197`, `dd201`, `dd271`, `dd1223`, `dd1224`, `dd1225`, `dd1596`) to every
+section's list, for every caller. TS until 2026-10-07 omitted them (own subtree
+only, never ledgered), so an exported CSV's audit columns came up unmapped in
+the mapper and "not a component of section" in `validate_import`.
+
+Now (TS): `components` gains those `dd196` component children, in ontology
+order, after the section's own components — only when (a) the principal is a
+GLOBAL ADMIN (the write door ignores a non-admin's column on them,
+`componentRefusal`; the list must never offer a column the door drops), (b) the
+section (virtual → real) has components of its own, (c) the section does not
+suppress section-info (`dd542`, `dd15` — the WC-045 rule,
+`logSectionSuppressesSectionInfo`). Single source:
+`sectionInfoComponents()` in `src/core/resolve/section_elements_context.ts`.
+Item shape unchanged (`{label, value, model, import_append}`; `import_append`
+is `null` for the audit tipos). No fixture covers this action — no
+re-harvest. Gate: `test/unit/tool_import_dedalo_csv.test.ts` (describe
+"section-info columns (dd196 children) are offered and validate").
+
+**Derived models are not offered** (user decision 2026-10-07, same day): the
+list drops every item whose DOOR model — `getModelByTipo`, which hops a
+`component_alias` to its target — is derived (registry `isDerivedModel`:
+`component_inverse`, `component_relation_children`, `component_relation_index`,
+`component_external`), own components and section-info alike. So `dd1596`
+(`component_inverse`) is NO LONGER an item, and neither is a section's own
+`component_relation_children` nor an alias of one. Divergence from PHP (which
+listed them): the door refuses a column on a derived model in EVERY mode
+(`derivedRefusal`), and the mapper never offers a column the door refuses.
+The `validate_import` "not a component of section" MEMBERSHIP check is
+unchanged — it still holds the derived tipos — so a hand-made map onto one
+gets the precise derived refusal (`refused — derived …`), never "not a
+component of section". Gates: same describe ("no listed item has a DERIVED
+model", the built `zzcsvd` situation, "dd1596 … not listed, refused as derived
+if hand-mapped") — server-side only: the client case feeds a stubbed list, so
+it pins only client behaviour (an unlisted header stays unmapped), never the
+server's offer.

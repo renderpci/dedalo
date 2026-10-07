@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global it, describe, assert */
+/*global it, describe, assert, before, after */
 /*eslint no-undef: "error"*/
 'use strict';
 
@@ -16,8 +16,13 @@
  *   - the prototype is wired with the common + tool-specific lifecycle methods.
  *
  * This is the locked client template (layer 1: module-load + construct + wiring).
+ * The SAMPLE DATA suite at the end is the exception: it drives the real upload
+ * door + get_csv_files on the suite server and renders the server's own answer.
  */
 
+import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
+import {create_transfer} from '../../../core/services/service_upload/js/upload_transport.js'
 import * as render_module from '../../../tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js'
 import {
 	import_mode_allowed,
@@ -178,6 +183,174 @@ describe('TOOL_IMPORT_DEDALO_CSV APPEND MODE SELECTOR', function() {
 		self.get_section_components_list = async () => ({label: 'Test', list: components})
 		await render_columns_mapper(self, item)
 		assert.equal(item.ar_columns_map[1].import_mode, 'append')
+	})
+
+})
+
+describe('TOOL_IMPORT_DEDALO_CSV SECTION-INFO COLUMNS', function() {
+
+	this.timeout(10000)
+
+	// get_section_components_list now appends dd196's children (the common
+	// section-info components) after the section's own — for a global admin.
+	// An exported CSV carries them as plain tipo headers (dd200) or suffixed
+	// ones (dd199_dmy); both must be AUTO-checked and mapped, or the operator
+	// re-maps every audit column by hand (the reported bug). A DERIVED dd196
+	// child (dd1596, component_inverse) is NOT in the server's list (the door
+	// refuses it in every mode), so its header stays unchecked and unmapped.
+	const components = [
+		{label: 'Id', value: 'test102', model: 'component_section_id', import_append: null},
+		{label: 'Text', value: 'test52', model: 'component_input_text', import_append: 'items'},
+		{label: 'Created by', value: 'dd200', model: 'component_select', import_append: null},
+		{label: 'Created', value: 'dd199', model: 'component_date', import_append: null}
+	]
+
+	const build = async function(list) {
+		const self = {
+			get_section_components_list	: async () => ({label: 'Test', list}),
+			get_tool_label				: () => null,
+			csv_files_list				: []
+		}
+		const item = {
+			file_info		: ['section_id', 'test52', 'dd200', 'dd199_dmy', 'dd1596'],
+			section_tipo	: 'test3',
+			ar_columns_map	: [],
+			sample_data		: []
+		}
+		self.csv_files_list.push({checked: true, ar_columns_map: item.ar_columns_map})
+		const container = document.createElement('div')
+		container.appendChild(await render_columns_mapper(self, item))
+		const lines = [...container.querySelectorAll('.columns_mapper_line:not(.names)')]
+		return {item, lines}
+	}
+	const checkbox = (line) => line.querySelector('input[type="checkbox"]')
+	const target = (line) => line.querySelector('select.column_select')
+
+	it('a dd200 header and a dd199_dmy header are auto-checked and mapped', async function() {
+		const {item, lines} = await build(components)
+		assert.equal(lines.length, 5)
+		assert.equal(checkbox(lines[2]).checked, true, 'dd200: checked')
+		assert.equal(target(lines[2]).value, 'dd200', 'dd200: selected in the dropdown')
+		assert.equal(item.ar_columns_map[2].checked, true)
+		assert.equal(item.ar_columns_map[2].map_to, 'dd200')
+		assert.equal(item.ar_columns_map[2].model, 'component_select')
+		assert.equal(checkbox(lines[3]).checked, true, 'dd199_dmy: checked')
+		assert.equal(item.ar_columns_map[3].map_to, 'dd199')
+	})
+
+	// CLIENT behaviour only: the list here is a stub, so this case cannot prove the
+	// server stops offering derived models (that is the server unit gate
+	// "no listed item has a DERIVED model"). It pins that a header absent from
+	// the list the client receives is never auto-checked or mapped.
+	it('a header absent from the received list (dd1596) stays unchecked and unmapped', async function() {
+		const {item, lines} = await build(components)
+		assert.equal(checkbox(lines[4]).checked, false, 'dd1596: unchecked')
+		assert.notEqual(item.ar_columns_map[4]?.checked, true)
+		assert.equal(item.ar_columns_map[4]?.map_to, undefined)
+	})
+
+	it('without them in the list (the old server answer) the same headers stay unmapped', async function() {
+		// the control: proves the assertions above are about the list, not the header
+		const {item, lines} = await build(components.filter(c => !c.value.startsWith('dd')))
+		assert.equal(checkbox(lines[2]).checked, false, 'dd200: unchecked')
+		assert.notEqual(item.ar_columns_map[2].checked, true)
+		assert.equal(item.ar_columns_map[2].map_to, undefined)
+		assert.equal(checkbox(lines[3]).checked, false, 'dd199_dmy: unchecked')
+	})
+
+})
+
+
+describe('TOOL_IMPORT_DEDALO_CSV SAMPLE DATA (real server answer)', function() {
+
+	this.timeout(30000)
+
+	// The mapper's "Sample data" cell is the first non-empty value of a column
+	// across `sample_data`. The server used to ship the HEADER as sample row 0, so
+	// every column showed its own name (= the Name cell) as its sample. This case
+	// uses NO stubbed payload for the item: the CSV goes through the real upload
+	// door, the tool's own process_uploaded_file, and get_csv_files, and the item
+	// rendered is exactly what the server answered. Only the target-component list
+	// is stubbed — it is not what is under test.
+	// Row 2 (the first data row) has an EMPTY third cell, so that column must fall
+	// through to row 3.
+	const file_name	= `sample_preview_${Date.now()}.csv`
+	const csv		= 'section_id;test52;test88\n101;first_value;\n102;second_value;row3_value\n'
+	let item		= null
+
+	const tool_api = async function(action, options) {
+		const api_response = await data_manager.request({body: {
+			dd_api			: 'dd_tools_api',
+			action			: 'tool_request',
+			prevent_lock	: true,
+			source			: {model: 'tool_import_dedalo_csv', action},
+			options
+		}})
+		if (request_failed(api_response)) {
+			const error = new Error(`${action} refused: ${api_response.error.code} ${api_response.error.message}`)
+			error.code = api_response.error.code
+			throw error
+		}
+		return response_data(api_response)
+	}
+
+	before(async function() {
+		// the situation: a CSV staged through the real upload door
+		const upload = await create_transfer({
+			file			: new File([csv], file_name, {type: 'text/csv'}),
+			name			: file_name,
+			key_dir			: 'csv',
+			chunk_size_mb	: 0
+		}).start()
+		assert.ok(upload && !request_failed(upload) && upload.file_data, `upload staged the CSV: ${JSON.stringify(upload?.error || upload)}`)
+		const processed = await tool_api('process_uploaded_file', {file_data: upload.file_data})
+		assert.equal(processed.file_name, file_name)
+		const listed = await tool_api('get_csv_files', {})
+		item = (listed.files || []).find(file => file.name===file_name) || null
+		assert.ok(item, 'get_csv_files lists the staged CSV')
+	})
+
+	after(async function() {
+		// the tool's own door: a SOFT delete (renames it into the user's deleted/ dir
+		// inside the marked suite media root, which `bun run test:db:setup` sweeps;
+		// get_csv_files never lists deleted/). Only one refusal is tolerated: not
+		// found when before() never got the file listed — anything else fails loudly.
+		try {
+			await tool_api('delete_csv_file', {file_name})
+		} catch (error) {
+			if (!(item===null && error.code==='tool.target_not_found')) throw error
+		}
+		// zero residue in the live list
+		const listed = await tool_api('get_csv_files', {})
+		assert.equal((listed.files || []).some(file => file.name===file_name), false, 'staged CSV still listed after cleanup')
+	})
+
+	it('the server preview carries data rows only', function() {
+		assert.deepEqual(item.file_info, ['section_id', 'test52', 'test88'])
+		assert.deepEqual(item.sample_data, [
+			['101', 'first_value', ''],
+			['102', 'second_value', 'row3_value']
+		])
+		assert.equal(item.n_records, 2)
+	})
+
+	it('each Sample data cell shows the row-2 value; an empty row-2 cell falls through to row 3', async function() {
+		const self = {
+			get_section_components_list	: async () => ({label: 'Test', list: [
+				{label: 'Id', value: 'test102', model: 'component_section_id', import_append: null},
+				{label: 'Text', value: 'test52', model: 'component_input_text', import_append: 'items'}
+			]}),
+			get_tool_label				: () => null,
+			csv_files_list				: []
+		}
+		const rendered = Object.assign({}, item, {section_tipo: 'test3', ar_columns_map: []})
+		self.csv_files_list.push({checked: true, ar_columns_map: rendered.ar_columns_map})
+		const container = document.createElement('div')
+		container.appendChild(await render_columns_mapper(self, rendered))
+		const lines = [...container.querySelectorAll('.columns_mapper_line:not(.names)')]
+		assert.equal(lines.length, 3)
+		const samples = lines.map(line => line.querySelector('.sample_data').textContent)
+		assert.deepEqual(samples, ['101', 'first_value', 'row3_value'])
 	})
 
 })
