@@ -27,6 +27,8 @@ const NUMISBIDS_HOST_PATTERN = /(^|\.)numisbids\.com$/i;
 export const numisbidsAdapter: SourceAdapter = {
 	id: 'numisbids',
 	sourceDomain: 'numisbids.com',
+	// Listing cards link each lot's own page; a single-lot URL is that lot's page.
+	lotSourceUrlIdentifiesLot: true,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

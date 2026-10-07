@@ -58,10 +58,11 @@ render_tool_numisdata_acquisition.prototype.edit = async function(options) {
 * One review-list row: an include checkbox (checked by default) plus a short
 * label. Returns the row with `.checkbox`/`.lot` attached so the Confirm
 * handler can read back the kept lots directly.
+* @param {Object} self - tool instance (labels)
 * @param {Object} lot - one ExtractedLot
 * @returns {HTMLElement}
 */
-const build_lot_row = function(lot) {
+const build_lot_row = function(self, lot) {
 
 	const row = ui.create_dom_element({
 		element_type	: 'div',
@@ -76,7 +77,7 @@ const build_lot_row = function(lot) {
 	checkbox.checked = true
 
 	const snippet = (lot.description || lot.title || '').slice(0, 90)
-	const label_text = 'Lot ' + (lot.lotNumber || '?') +
+	const label_text = (self.get_tool_label('lot_row') || 'Lot {lot}').replace('{lot}', lot.lotNumber || '?') +
 		(lot.weight ? ' — ' + lot.weight : '') +
 		(lot.diameter ? ' / ' + lot.diameter : '') +
 		(snippet ? ' — ' + snippet : '')
@@ -375,7 +376,10 @@ const get_content_data = function(self) {
 							})
 						}
 						info_node.msg_node.textContent = (typeof frame_msg==='string' && frame_msg)
-							? frame_msg + (sse_response.data.total ? ' (' + sse_response.data.counter + ' of ' + sse_response.data.total + ')' : '')
+							? frame_msg + (sse_response.data.total
+								? (self.get_tool_label('progress_counter') || ' ({counter} of {total})')
+									.replace('{counter}', sse_response.data.counter).replace('{total}', sse_response.data.total)
+								: '')
 							: (self.get_tool_label('job_working') || 'Working…')
 					})
 				}
@@ -509,9 +513,10 @@ const get_content_data = function(self) {
 
 					// Renders one radio per candidate Entity plus an always-present
 					// "create new" option — never auto-picks a candidate unless its
-					// name matches exactly (case/accent-loose), matching the
-					// server's own exact-match dedup so the preselection and the
-					// eventual write agree.
+					// name matches exactly (case-insensitive here; the server's
+					// '==' is accent-insensitive but case-sensitive). The pick is
+					// sent as a section_id, so the write links exactly the
+					// preselected Entity either way.
 					const render_company_options = function(name, candidates) {
 						while (company_results.firstChild) {
 							company_results.removeChild(company_results.firstChild)
@@ -523,7 +528,8 @@ const get_content_data = function(self) {
 						candidates.forEach(function(candidate) {
 							add_company_option(
 								radio_name,
-								candidate.name + ' (Entity #' + candidate.section_id + ')',
+								(self.get_tool_label('company_candidate') || '{name} (Entity #{id})')
+									.replace('{name}', candidate.name).replace('{id}', candidate.section_id),
 								exact_match!==undefined && candidate.section_id===exact_match.section_id,
 								function() { current_company_selection = { section_id: candidate.section_id } }
 							)
@@ -650,14 +656,15 @@ const get_content_data = function(self) {
 					})
 				}
 				const rows = lots.map(function(lot) {
-					const row = build_lot_row(lot)
+					const row = build_lot_row(self, lot)
 					lot_list.appendChild(row)
 					return row
 				})
 
 				const update_selection_count = function() {
 					const kept_count = rows.filter((row) => row.checkbox.checked).length
-					selection_count_node.textContent = kept_count + ' of ' + rows.length + ' selected'
+					selection_count_node.textContent = (self.get_tool_label('selection_count') || '{kept} of {total} selected')
+						.replace('{kept}', kept_count).replace('{total}', rows.length)
 				}
 				rows.forEach(function(row) {
 					row.checkbox.addEventListener('change', update_selection_count)
@@ -808,7 +815,13 @@ const get_content_data = function(self) {
 								? (self.get_tool_label('lot_images_created') || ' — images: {images}').replace('{images}', result.images_created.join(', '))
 								: result.images_error
 									? (self.get_tool_label('lot_images_not_imported') || ' — images NOT imported: {reason}').replace('{reason}', result.images_error.message)
-									: '')
+									: '') +
+							// A failed pair is rolled back whole; only a record whose own cleanup
+							// ALSO failed is listed here (server-logged) for manual removal.
+							(Array.isArray(result.images_orphaned) && result.images_orphaned.length > 0
+								? (self.get_tool_label('lot_images_orphaned') || ' — image record(s) #{ids} may remain without media; delete them by hand')
+									.replace('{ids}', result.images_orphaned.join(', #'))
+								: '')
 						ui.create_dom_element({
 							element_type	: 'div',
 							text_content	: line,

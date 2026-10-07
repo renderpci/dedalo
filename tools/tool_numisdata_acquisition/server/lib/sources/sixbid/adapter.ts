@@ -27,6 +27,8 @@ const SIXBID_HOST_PATTERN = /(^|\.)sixbid\.com$/i;
 export const sixbidAdapter: SourceAdapter = {
 	id: 'sixbid',
 	sourceDomain: 'sixbid.com',
+	// Built from each item's own lotId/lotSlug (parser.ts), or null when the API omits them.
+	lotSourceUrlIdentifiesLot: true,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

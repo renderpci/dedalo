@@ -20,6 +20,8 @@ const JESUSVICO_HOST_PATTERN = /(^|\.)jesusvico\.com$/i;
 export const jesusvicoAdapter: SourceAdapter = {
 	id: 'jesusvico',
 	sourceDomain: 'jesusvico.com',
+	// Listing cards link each lot's own page; a single-lot URL is that lot's page.
+	lotSourceUrlIdentifiesLot: true,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

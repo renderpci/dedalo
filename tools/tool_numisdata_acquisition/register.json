@@ -54,6 +54,11 @@
 		{ "lang": "lg-eng", "name": "lot_type_not_linked", "value": " — type NOT linked: {reason}" },
 		{ "lang": "lg-eng", "name": "lot_imported", "value": "Lot #{id} (fields: {fields})" },
 		{ "lang": "lg-eng", "name": "lot_images_created", "value": " — images: {images}" },
-		{ "lang": "lg-eng", "name": "lot_images_not_imported", "value": " — images NOT imported: {reason}" }
+		{ "lang": "lg-eng", "name": "lot_images_not_imported", "value": " — images NOT imported: {reason}" },
+		{ "lang": "lg-eng", "name": "lot_images_orphaned", "value": " — image record(s) #{ids} may remain without media; delete them by hand" },
+		{ "lang": "lg-eng", "name": "lot_row", "value": "Lot {lot}" },
+		{ "lang": "lg-eng", "name": "progress_counter", "value": " ({counter} of {total})" },
+		{ "lang": "lg-eng", "name": "company_candidate", "value": "{name} (Entity #{id})" },
+		{ "lang": "lg-eng", "name": "selection_count", "value": "{kept} of {total} selected" }
 	]
 }

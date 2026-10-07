@@ -39,6 +39,12 @@ export interface SourceAdapter {
 	id: string;
 	/** Matches the DB's `auctions.source_domain` column for this source. */
 	sourceDomain: string;
+	/**
+	 * True only when every ExtractedLot.sourceUrl this adapter produces names THAT lot's own page
+	 * (not the auction's, not a listing page) - commit_lots then uses the normalised URL as a dedup
+	 * key that needs no resolved Auction. False for a source whose lots only carry a shared URL.
+	 */
+	lotSourceUrlIdentifiesLot: boolean;
 	matchesUrl(rawUrl: string): boolean;
 	/** Extracted synchronously from the URL alone (no network) - used for the dedupe fast path. */
 	parseAuctionIdentifier(rawUrl: string): string | null;

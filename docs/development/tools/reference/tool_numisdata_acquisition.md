@@ -23,9 +23,11 @@ Key behaviours to know:
 - **Nothing is written until Confirm.** `preview_url`/`preview_html` only fetch and parse; the
   operator curates the checklist client-side, and only `commit_lots` creates records.
 - **A lot already imported is skipped, not duplicated.** `commit_lots` matches each lot by
-  (Auction, Inventory number) under a per-key advisory lock before creating it; re-committing the
-  same batch reports the pre-existing `section_id` with `skipped: true` and attempts nothing else
-  for it.
+  (Auction, Inventory number) where it has both, and by its normalised source URL (stored in the
+  `numisdata275` URI field) where its source gives every lot its own page — each under its own
+  advisory lock before creating it. The URL key covers the lots the first one cannot: search-batch
+  lots, a lot whose auction did not resolve, a lot with no number. Re-committing the same batch
+  reports the pre-existing `section_id` with `skipped: true` and attempts nothing else for it.
 - **The Type link only ever points to an EXISTING `numisdata3` record** — a shared scholarly
   classification (Mint/Denomination cross-links, weight/diameter averages computed across every
   linked object). A catalog citation parsed from the description is matched against the Catalogues
@@ -81,13 +83,20 @@ Key behaviours to know:
      one transaction per new Auction, locked on `numisdata224:<entityId>:<number>` (advisory lock,
      accent-folded — see below) and re-checked under the lock before creating, so two concurrent
      commits of the same sale can't both miss the lookup and both create it;
-   - under one transaction, acquires a lock on `numisdata4:lot:<auctionSectionId>:<lotNumber>`,
-     re-checks `findExistingLot` (exact match on the Auction relation + the Inventory number
-     component), and either returns the pre-existing record (`skipped: true`) or creates the new
-     `numisdata4` record and writes its scalar fields (weight/diameter parsed from `"6.75g"`-style
-     strings, inventory number, date text, obverse/reverse design split from a jesusvico-style
+   - under one transaction, acquires the lock on `numisdata4:lot:<auctionSectionId>:<lotNumber>`
+     (when the lot has a resolved Auction and a lot number) and then the lock on
+     `numisdata4:url:<normalised lot URL>` (when it has a URL key) — always in that order, so two
+     commits never deadlock — re-checks `findExistingLot` (exact match on the Auction relation + the
+     Inventory number component) and `findExistingLotByUrl` (exact `==` match on `numisdata275`),
+     and either returns the pre-existing record (`skipped: true`) or creates the new `numisdata4`
+     record and writes its scalar fields (weight/diameter parsed from `"6.75g"`-style strings,
+     inventory number, date text, obverse/reverse design split from a jesusvico-style
      `"A/... R/..."` description, falling back to a general Public remark field when no such split is
-     found);
+     found) plus the URL key itself into `numisdata275`, in the same normalised form the lookup
+     matches. The URL key (`normalizeLotUrl`: trimmed, scheme and host lowercased, default port and
+     fragment dropped, path and query verbatim) is used only when the lot's source declares
+     `lotSourceUrlIdentifiesLot` — aureo does not (its lots all carry their auction's page URL) —
+     and never for a URL two different lots of the same batch share;
    - links the Auction relation (outside the transaction, best-effort — the record is already real
      by this point);
    - best-effort matches a catalog citation from the description against the Catalogues this
@@ -100,15 +109,20 @@ Key behaviours to know:
      it with the shared `crop_50` processor (`cropCoinPair`, called directly as trusted server code,
      not through an untrusted client-named processor allowlist) into obverse/reverse halves wired to
      the `numisdata164`/`numisdata165` portals, and persists each half as its own `rsc170` image
-     record. **If processing/persisting a half fails after its `rsc170` record was already created**
-     by the portal link, the handler does a best-effort cleanup delete of that orphaned record before
-     re-throwing the original error — a failed cleanup is swallowed so it never masks the real
-     failure.
+     record. **The pair is all-or-nothing:** if either half fails after an `rsc170` record was
+     already created by the portal link, every `rsc170` record this call created (ids taken only from
+     its own save results) is deleted again through `deleteSectionRecord`, which also strips the
+     portal locators, and transcodes start only once both halves are in. A cleanup deletion that
+     itself fails is logged (`[tool_numisdata_acquisition] image record cleanup failed`, with
+     `section_tipo`/`section_id`) and its id is reported in the lot's `images_orphaned`, so the
+     summary says which record may remain without media.
 
    Every step past the record's own creation (Auction, Type, image) is independently best-effort:
    its own error is captured into the per-lot result (`auction_error`/`type_error`/`images_error`,
    each the error system's wire body, `toErrorBody(toDedaloError(error))`, never a raw exception's
-   text) rather than rolling back fields already written. The per-lot loop itself checks
+   text) rather than rolling back fields already written. `fields_written` and `images_created`
+   carry display labels (the ontology term in the request's application language, `labelByTipo`),
+   never raw tipos. The per-lot loop itself checks
    `context.signal?.aborted` at its top and breaks (setting `stopped: true`) rather than throwing, so
    a cancelled batch reports a partial summary instead of running to completion. Returns
    `{results, stopped, lots_total}`.
@@ -120,11 +134,13 @@ silently discarding a refusal) when the save itself fails; a handful of translat
 the default `NO_LANG`. `acquireDedupLock(key)` is a transaction-scoped
 `pg_advisory_xact_lock(hashtext(key))` — the same primitive as the engine's own node lock, just keyed
 on a find-or-create dedup key since the record doesn't exist yet when the race happens; it must run
-inside `withTransaction`, releasing at commit/rollback. `foldNameForLock(name)` NFD-decomposes a
-name, lowercases it, and strips the Unicode combining-diacritical-marks block (U+0300–U+036F) by
-code point — the SAME equivalence class Postgres's own `f_unaccent` gives the engine's `==` search
-operator — so e.g. "Jesús Vico" and "Jesus Vico" take the SAME lock instead of two different ones
-that would otherwise both miss the lookup and both create an Entity. Every dedup/existence lookup
+inside `withTransaction`, releasing at commit/rollback. `foldNameForLock(name)`
+(`server/lib/acquisition/keys.ts`) builds the Entity name lock key deliberately COARSER than the
+engine's `==` search, which compares `f_unaccent` values and is case-sensitive: it lowercases, maps
+the letters `unaccent` rewrites that are not a base letter plus a mark (ø→o, ł→l, đ→d, æ→ae, œ→oe,
+ß→ss, þ→th…), applies NFKD and drops every combining mark. Two spellings the search treats as the
+same Entity ("Jesús Vico" / "Jesus Vico") therefore always take the SAME lock; a coarser key only
+ever serialises two unrelated names, which is safe. Every dedup/existence lookup
 (`findEntityByExactName`, `findExistingAuction`, `findExistingLot`, `findExistingType`,
 `loadCatalogueIndex`) runs through `buildSearchSql` with `{principal: context.principal}` — never a
 hand-written SQL `WHERE` — so it only ever sees records the caller can actually read.

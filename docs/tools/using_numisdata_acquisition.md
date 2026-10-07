@@ -84,9 +84,17 @@ it, its button opens in a **modal** (not a separate window).
 ## Tips and gotchas
 
 !!! note "Re-importing the same batch does not duplicate it"
-    Each lot is matched by its Auction plus its own lot/inventory number before anything is
-    created; a lot already imported is reported as skipped, not duplicated. Re-running Confirm
-    import — including after stopping a batch partway — picks up only what is left.
+    Each lot is matched by its Auction plus its own lot/inventory number, and — for every source
+    except aureo.com, whose lots have no page of their own — by the lot's own page address, which
+    the tool stores in the record's URI field. A lot already imported is reported as skipped, not
+    duplicated, even from a search-results page or when its auction could not be identified.
+    Re-running Confirm import — including after stopping a batch partway — picks up only what is
+    left.
+
+!!! note "A coin's two images are imported together or not at all"
+    If the obverse or reverse half fails, neither is kept and the summary says images were not
+    imported. In the rare case an unfinished image record cannot be removed, the summary names it
+    so you can delete it by hand.
 
 !!! warning "Only jesusvico.com and biddr.com are verified against real auction data"
     All five source adapters are wired up, but aureo.com, numisbids.com and sixbid.com have only

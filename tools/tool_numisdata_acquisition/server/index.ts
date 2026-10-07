@@ -32,6 +32,7 @@ import {
 	nameKeysForQuality,
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
+import { labelByTipo } from '../../../src/core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
@@ -45,6 +46,7 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
+import { foldNameForLock, normalizeLotUrl } from './lib/acquisition/keys.ts';
 import { aureoAdapter } from './lib/sources/aureo/adapter.ts';
 import { biddrAdapter } from './lib/sources/biddr/adapter.ts';
 import { jesusvicoAdapter } from './lib/sources/jesusvico/adapter.ts';
@@ -53,8 +55,7 @@ import { sixbidAdapter } from './lib/sources/sixbid/adapter.ts';
 import type { RawSource } from './lib/sources/types.ts';
 
 const NUMISDATA_OBJECT_TIPO = 'numisdata4';
-// material/mint/ruler/denomination/condition (thesaurus-linked) and sourceUrl
-// (component_iri, value shape unverified) are still deliberately deferred.
+// material/mint/ruler/denomination/condition (thesaurus-linked) are still deliberately deferred.
 const WEIGHT_TIPO = 'numisdata133'; // component_number
 const DIAMETER_TIPO = 'numisdata135'; // component_number
 const INVENTORY_NUMBER_TIPO = 'numisdata151'; // component_input_text, "Inventory number"
@@ -65,6 +66,11 @@ const REVERSE_DESIGN_TIPO = 'numisdata1029'; // component_text_area, "Specific r
 // Fallback ONLY, when a description doesn't follow jesusvico's "A/...R/..."
 // split: component_text_area, "Public remark".
 const PUBLIC_REMARK_TIPO = 'numisdata150';
+// component_iri "URI" (Documentation group), non-translatable. Real numisdata4 rows store it as
+// [{id, iri, lang:'lg-nolan'}] (an external object page, e.g. a museum collection URL). Holds the
+// lot's normalised source URL - only for a source whose lot URL names THAT lot
+// (SourceAdapter.lotSourceUrlIdentifiesLot) - and is the auction-independent dedup key.
+const SOURCE_URI_TIPO = 'numisdata275';
 
 // numisdata224's own fields (confirmed via dd_ontology this session).
 const AUCTION_SECTION_TIPO = 'numisdata224';
@@ -375,17 +381,117 @@ async function writeField(
 	}
 }
 
+/** Writes one component_iri value as a fresh 'set_data' ({id, iri} - the shape real numisdata275
+ * rows carry; non-translatable, so NO_LANG). Same refusal handling as writeField. */
+async function writeIriField(
+	sectionId: number,
+	sectionTipo: string,
+	componentTipo: string,
+	iri: string,
+	userId: number,
+): Promise<void> {
+	const save = await saveComponentData({
+		componentTipo,
+		sectionTipo,
+		sectionId,
+		lang: NO_LANG,
+		userId,
+		changedData: [{ action: 'set_data', value: [{ id: 1, iri }] }],
+	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			coordinates: {
+				component_tipo: componentTipo,
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+			},
+			cause: save,
+		});
+	}
+}
+
+/** One coin face linked by importImagesForLot: the portal it hangs from + the rsc170 record. */
+interface CreatedImage {
+	portalTipo: string;
+	sectionId: number;
+}
+
+/** importImagesForLot's outcome. The pair is all-or-nothing: on failure every rsc170 record THIS
+ * call created has been deleted again, except the ids in `orphaned` - those whose own deletion
+ * failed (logged), which the operator must remove by hand. */
+type ImageImportResult =
+	| { ok: true; created: CreatedImage[] }
+	| { ok: false; error: unknown; orphaned: number[] };
+
+/**
+ * Deletes the rsc170 records one importImagesForLot call created (ids taken only from that call's
+ * own save results - never a lookup), through the engine's delete door, which also strips the
+ * portal locators pointing at them from the lot. Returns the ids whose deletion failed or was
+ * refused. Best-effort by design (the face failure is what the caller reports), but never silent:
+ * each failure is logged with its coordinates for the operator, and the id reaches the summary.
+ */
+async function removeCreatedImageRecords(
+	context: ToolActionContext,
+	sectionIds: readonly number[],
+): Promise<number[]> {
+	const orphaned: number[] = [];
+	for (const imageSectionId of sectionIds) {
+		try {
+			const deleted = await deleteSectionRecord(IMAGE_SECTION_TIPO, imageSectionId, context.userId);
+			if (deleted.refused !== undefined) {
+				console.error('[tool_numisdata_acquisition] image record cleanup refused', {
+					section_tipo: IMAGE_SECTION_TIPO,
+					section_id: imageSectionId,
+					request_id: toolRequestId(context),
+				});
+				orphaned.push(imageSectionId);
+			}
+		} catch (cleanupError) {
+			console.error(
+				'[tool_numisdata_acquisition] image record cleanup failed',
+				{
+					section_tipo: IMAGE_SECTION_TIPO,
+					section_id: imageSectionId,
+					request_id: toolRequestId(context),
+				},
+				cleanupError,
+			);
+			orphaned.push(imageSectionId);
+		}
+	}
+	return orphaned;
+}
+
 /**
  * Downloads the lot's first image, stages it through Dédalo's upload
  * pipeline, splits it with `crop_50` (called directly — trusted server code,
  * not an untrusted client-named processor), then links each half through its
- * portal the same way tool_import_files' importIntoPortal does.
+ * portal the same way tool_import_files' importIntoPortal does. The obverse/
+ * reverse pair is all-or-nothing (see ImageImportResult): a half-imported coin
+ * (obverse linked, reverse missing) is never left behind.
  */
 async function importImagesForLot(
 	context: ToolActionContext,
 	lot: Record<string, unknown>,
 	sectionId: number,
-): Promise<string[]> {
+): Promise<ImageImportResult> {
+	const createdIds: number[] = [];
+	try {
+		return { ok: true, created: await importImagePair(context, lot, sectionId, createdIds) };
+	} catch (error) {
+		const orphaned = await removeCreatedImageRecords(context, createdIds);
+		return { ok: false, error, orphaned };
+	}
+}
+
+/** importImagesForLot's body. Pushes each rsc170 id into `createdIds` the moment its record exists,
+ * so the caller can undo exactly what this call made when a later face fails. */
+async function importImagePair(
+	context: ToolActionContext,
+	lot: Record<string, unknown>,
+	sectionId: number,
+	createdIds: number[],
+): Promise<CreatedImage[]> {
 	const images = lot.images;
 	const first = Array.isArray(images) ? images[0] : undefined;
 	const sourceUrl =
@@ -467,7 +573,10 @@ async function importImagesForLot(
 	}
 
 	const spec = requireMediaSpec('component_image');
-	const created: string[] = [];
+	const created: CreatedImage[] = [];
+	// Transcodes start only once EVERY face is in: a face started and then rolled back (its
+	// record deleted because the other face failed) would transcode a file for a gone record.
+	const startTranscodes: (() => unknown)[] = [];
 	for (const output of outcome.outputs) {
 		if (output.portalComponentTipo === undefined) continue;
 		const save = await saveComponentData({
@@ -486,47 +595,39 @@ async function importImagesForLot(
 				cause: save,
 			});
 		}
-		try {
-			const { identity, pathOpts } = await resolveMediaToolContext({
-				component_tipo: IMAGE_COMPONENT_TIPO,
-				section_tipo: IMAGE_SECTION_TIPO,
-				section_id: createdSectionId,
-			});
-			const result = await processUploadedFile({
-				spec,
-				identity,
-				pathOpts,
-				userId: context.userId,
-				keyDir: IMPORT_KEY_DIR,
-				tmpName: output.tmpName,
-				extension,
-			});
-			await persistUploadedMedia({
-				sectionTipo: identity.sectionTipo,
-				sectionId: identity.sectionId,
-				componentTipo: identity.componentTipo,
-				lang: identity.lang,
-				filesInfo: result.filesInfo,
-				originalFileName: output.fileName,
-				originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
-				nameKeys: nameKeysForQuality(spec, undefined),
-			});
-			result.startTranscode?.();
-		} catch (error) {
-			// The portal add_new_element above already created+linked the rsc170 record - a failure
-			// in processing/persisting its file left that record behind with no actual media on it
-			// (review item: "image record left behind"). Best-effort cleanup: the ORIGINAL error is
-			// what the caller needs to see, so a failed deletion here is swallowed, never masking it.
-			try {
-				await deleteSectionRecord(IMAGE_SECTION_TIPO, createdSectionId, context.userId);
-			} catch {
-				/* best-effort - the original error below still reports the real failure */
-			}
-			throw error;
-		}
-		created.push(`${output.portalComponentTipo}→${IMAGE_SECTION_TIPO}#${createdSectionId}`);
+		// Tracked BEFORE its file is processed: the portal add_new_element above already created
+		// and linked this rsc170 record, so from here on a failure of THIS face or of a later one
+		// must delete it again (importImagesForLot's all-or-nothing cleanup).
+		createdIds.push(createdSectionId);
+		const { identity, pathOpts } = await resolveMediaToolContext({
+			component_tipo: IMAGE_COMPONENT_TIPO,
+			section_tipo: IMAGE_SECTION_TIPO,
+			section_id: createdSectionId,
+		});
+		const result = await processUploadedFile({
+			spec,
+			identity,
+			pathOpts,
+			userId: context.userId,
+			keyDir: IMPORT_KEY_DIR,
+			tmpName: output.tmpName,
+			extension,
+		});
+		await persistUploadedMedia({
+			sectionTipo: identity.sectionTipo,
+			sectionId: identity.sectionId,
+			componentTipo: identity.componentTipo,
+			lang: identity.lang,
+			filesInfo: result.filesInfo,
+			originalFileName: output.fileName,
+			originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
+			nameKeys: nameKeysForQuality(spec, undefined),
+		});
+		if (result.startTranscode) startTranscodes.push(result.startTranscode);
+		created.push({ portalTipo: output.portalComponentTipo, sectionId: createdSectionId });
 	}
 
+	for (const startTranscode of startTranscodes) startTranscode();
 	return created;
 }
 
@@ -536,8 +637,10 @@ async function importImagesForLot(
 type CompanySelection = { sectionId: number } | { create: true; name: string };
 
 /**
- * Exact-name (case/accent-insensitive, via the engine's '==' operator) lookup
- * of an rsc106 Entity. Runs WITH the caller's principal (buildSearchSql's
+ * Exact-name lookup of an rsc106 Entity through the engine's '==' operator:
+ * accent-insensitive (both sides through Postgres `f_unaccent`) but
+ * CASE-SENSITIVE (builder_string.ts 'exact') - "jesus vico" does not match
+ * "Jesus Vico". Runs WITH the caller's principal (buildSearchSql's
  * `{principal}` option), so it only sees Entities the caller can read — never
  * a hand-written SQL WHERE that bypasses the projects filter.
  */
@@ -587,26 +690,9 @@ async function acquireDedupLock(key: string): Promise<void> {
 	await sql.unsafe('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
 }
 
-/** Folds a free-text name into the SAME equivalence class the engine's own `==` search operator
- * uses (Postgres `f_unaccent`, confirmed in import_code_lookup.ts): lowercased AND stripped of
- * diacritics. A dedup lock keyed on case alone let "Jesús Vico" and "Jesus Vico" take DIFFERENT
- * locks while the search still matches them to the SAME Entity - two concurrent commits of either
- * spelling could both miss the lookup and both create (review item: "Entity lock key vs search").
- * JS's NFD decomposition is not byte-identical to Postgres's unaccent dictionary for every exotic
- * script, but the lock only needs the two calls to COLLIDE on the SAME key - the real correctness
- * guarantee is still the re-check under the lock, through the actual (accent-insensitive) search. */
-function foldNameForLock(name: string): string {
-	const decomposed = name.trim().toLowerCase().normalize('NFD');
-	// Drop the Unicode "Combining Diacritical Marks" block (U+0300-U+036F) that NFD split the
-	// accented letters into, by code point rather than a literal-character regex (keeps this file's
-	// source free of non-ASCII combining marks, which render invisibly and are easy to corrupt).
-	let out = '';
-	for (const ch of decomposed) {
-		const code = ch.codePointAt(0) ?? 0;
-		if (code < 0x0300 || code > 0x036f) out += ch;
-	}
-	return out;
-}
+// foldNameForLock (the rsc106 name lock key) lives in lib/acquisition/keys.ts: a pure fold that
+// is deliberately COARSER than the '==' search equality (case-folded, not only accent-folded), so
+// two spellings the search treats as one Entity can never take different locks.
 
 /** Resolves a CompanySelection to a real rsc106 section_id, creating one
  * (Name only — the one field every real Entity record carries) when the
@@ -721,10 +807,9 @@ async function findExistingAuction(
 
 /**
  * Exact match on (Auction, Inventory number) — the dedup key a re-committed batch is checked
- * against (review item G: "re-committing the same lots duplicates them"). Not the lot's own
- * source URL: no field for that exists on numisdata4 yet (deferred - "component_iri, value shape
- * unverified" - writing to an unconfirmed field shape risked a silent write failure worse than the
- * duplicate this is meant to prevent). The Auction relation + the Inventory number
+ * against (review item G: "re-committing the same lots duplicates them"), whenever the lot HAS a
+ * resolved Auction and a lot number; findExistingLotByUrl covers the lots that don't. The Auction
+ * relation + the Inventory number
  * (INVENTORY_NUMBER_TIPO, already written on every lot from `l.lotNumber`) together are already a
  * real, confirmed-working stand-in for "this exact lot": two DIFFERENT lots sharing the same number
  * under the SAME auction never happens in a real catalogue. Same `format:'relation'` SQO pattern as
@@ -754,6 +839,37 @@ async function findExistingLot(
 				{
 					q: `==${lotNumber}`,
 					path: [{ section_tipo: NUMISDATA_OBJECT_TIPO, component_tipo: INVENTORY_NUMBER_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
+}
+
+/**
+ * Exact match on the lot's normalised source URL (SOURCE_URI_TIPO) - the dedup key that needs no
+ * Auction: a search-batch lot, a lot whose auction failed to resolve, or one with no lot number
+ * (review item: "dedup gaps"). The stored value is written by this tool already normalised
+ * (normalizeLotUrl), so the '==' leaf (builder_iri 'exact': f_unaccent(iri) = f_unaccent(q)) is an
+ * exact URL match. Same principal-scoped SQO pattern as findExistingLot - never a hand-written
+ * SQL WHERE.
+ */
+async function findExistingLotByUrl(
+	lotUrl: string,
+	context: ToolActionContext,
+): Promise<number | null> {
+	const sqo = sanitizeClientSqo({
+		section_tipo: [NUMISDATA_OBJECT_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: `==${lotUrl}`,
+					path: [{ section_tipo: NUMISDATA_OBJECT_TIPO, component_tipo: SOURCE_URI_TIPO }],
 				},
 			],
 		},
@@ -1022,10 +1138,12 @@ interface CommitOneLotResult {
 	// partial record is never left behind: review item C1.
 	section_id: number | null;
 	error: ApiErrorBody | null;
-	/** True when a numisdata4 record with this (Auction, Inventory number) already existed -
-	 * nothing else in this result was attempted, section_id names the pre-existing record. Closes
-	 * review item G: re-committing the same batch no longer duplicates every lot in it. */
+	/** True when a numisdata4 record for this lot already existed - matched on (Auction, Inventory
+	 * number) or on the lot's normalised source URL. Nothing else in this result was attempted;
+	 * section_id names the pre-existing record. Closes review item G: re-committing the same batch
+	 * no longer duplicates every lot in it. */
 	skipped: boolean;
+	/** The written fields' display labels (ontology term, request application lang) - never tipos. */
 	fields_written: string[];
 	auction_section_id: number | null;
 	auction_created: boolean | null;
@@ -1035,8 +1153,20 @@ interface CommitOneLotResult {
 	type_section_id: number | null;
 	type_citation: string | null;
 	type_error: ApiErrorBody | null;
+	/** One display entry per linked face ("<portal label> #<rsc170 id>"); null when no pair was
+	 * imported - the pair is all-or-nothing, so never just one face. */
 	images_created: string[] | null;
 	images_error: ApiErrorBody | null;
+	/** rsc170 ids created by a FAILED image import whose cleanup deletion also failed (logged with
+	 * coordinates): records that may remain without media and need removing by hand. */
+	images_orphaned: number[];
+}
+
+/** Display labels for written component tipos, in the request's application language (the job
+ * manager pins the submitter's langs into a background job). Falls back to the tipo only when the
+ * ontology has no term at all for it. */
+async function fieldLabels(tipos: readonly string[]): Promise<string[]> {
+	return Promise.all(tipos.map(async (tipo) => (await labelByTipo(tipo)) ?? tipo));
 }
 
 /** One resolved Auction, cached within a commitLots batch. */
@@ -1105,6 +1235,9 @@ async function commitOneLot(
 	batchCompanySelection: CompanySelection,
 	auctionCache: Map<string, ResolvedAuction>,
 	catalogueIndex: CatalogueIndex,
+	// The lot's normalised source URL when it identifies THIS lot (commitLots: lotUrlKeyFor), else
+	// null. Stored in SOURCE_URI_TIPO and used as the auction-independent dedup key.
+	lotUrlKey: string | null,
 ): Promise<CommitOneLotResult> {
 	const l = lot;
 	// Hoisted out of the transaction below - extractCatalogueCitation (Type
@@ -1181,13 +1314,31 @@ async function commitOneLot(
 	// best-effort against a record that, past this point, is real and complete. Locked and
 	// RE-CHECKED under the lock (review item G/C4): findExistingLot below ran with no lock, so two
 	// concurrent commits of the SAME lot would otherwise both miss it and both create one.
+	//
+	// Two dedup keys, each with its own lock, checked under BOTH locks before anything is created:
+	// (Auction, lot number) where the lot has both, and the normalised source URL where the source
+	// gives a per-lot URL (review item: "dedup gaps" - a search-batch lot, an unresolved auction or
+	// an empty lot number used to skip dedup entirely). Either match means "already imported".
+	// Lock ORDER is fixed (lot key, then URL key) in every transaction that takes both, and a
+	// transaction taking only one cannot close a cycle - so two commits never deadlock on them.
+	const lotKeyAvailable = auctionSectionId !== null && lotNumber !== '';
 	const { sectionId, fieldsWritten, skipped } = await withTransaction(async () => {
-		if (auctionSectionId !== null && lotNumber !== '') {
+		if (lotKeyAvailable) {
 			await acquireDedupLock(`numisdata4:lot:${auctionSectionId}:${lotNumber}`);
-			const existingLotSectionId = await findExistingLot(auctionSectionId, lotNumber, context);
-			if (existingLotSectionId !== null) {
-				return { sectionId: existingLotSectionId, fieldsWritten: [], skipped: true as const };
-			}
+		}
+		if (lotUrlKey !== null) {
+			await acquireDedupLock(`numisdata4:url:${lotUrlKey}`);
+		}
+		const existingLotSectionId =
+			(lotKeyAvailable && auctionSectionId !== null
+				? await findExistingLot(auctionSectionId, lotNumber, context)
+				: null) ?? (lotUrlKey !== null ? await findExistingLotByUrl(lotUrlKey, context) : null);
+		if (existingLotSectionId !== null) {
+			return {
+				sectionId: existingLotSectionId,
+				fieldsWritten: [] as string[],
+				skipped: true as const,
+			};
 		}
 		const newSectionId = await createSectionRecord(NUMISDATA_OBJECT_TIPO, context.userId);
 
@@ -1272,6 +1423,18 @@ async function commitOneLot(
 			);
 			written.push(PUBLIC_REMARK_TIPO);
 		}
+		if (lotUrlKey !== null) {
+			// Written in the SAME normalised form findExistingLotByUrl matches on, inside the same
+			// transaction as the record: a lot is never committed without the key that dedups it.
+			await writeIriField(
+				newSectionId,
+				NUMISDATA_OBJECT_TIPO,
+				SOURCE_URI_TIPO,
+				lotUrlKey,
+				context.userId,
+			);
+			written.push(SOURCE_URI_TIPO);
+		}
 		return { sectionId: newSectionId, fieldsWritten: written, skipped: false as const };
 	});
 
@@ -1291,6 +1454,7 @@ async function commitOneLot(
 			type_error: null,
 			images_created: null,
 			images_error: null,
+			images_orphaned: [],
 		};
 	}
 
@@ -1324,10 +1488,16 @@ async function commitOneLot(
 
 	let imagesCreated: string[] | null = null;
 	let imagesError: ApiErrorBody | null = null;
-	try {
-		imagesCreated = await importImagesForLot(context, l, sectionId);
-	} catch (error) {
-		imagesError = toErrorBody(toDedaloError(error));
+	let imagesOrphaned: number[] = [];
+	const imageImport = await importImagesForLot(context, l, sectionId);
+	if (imageImport.ok) {
+		const portalLabels = await fieldLabels(imageImport.created.map((image) => image.portalTipo));
+		imagesCreated = imageImport.created.map(
+			(image, index) => `${portalLabels[index]} #${image.sectionId}`,
+		);
+	} else {
+		imagesError = toErrorBody(toDedaloError(imageImport.error));
+		imagesOrphaned = imageImport.orphaned;
 	}
 
 	return {
@@ -1336,7 +1506,7 @@ async function commitOneLot(
 		section_id: sectionId,
 		error: null,
 		skipped: false,
-		fields_written: fieldsWritten,
+		fields_written: await fieldLabels(fieldsWritten),
 		auction_section_id: auctionSectionId,
 		auction_created: auctionCreated,
 		auction_error: auctionError,
@@ -1345,7 +1515,42 @@ async function commitOneLot(
 		type_error: typeError,
 		images_created: imagesCreated,
 		images_error: imagesError,
+		images_orphaned: imagesOrphaned,
 	};
+}
+
+/**
+ * The lot's source URL, normalised, IF its source gives each lot its own page URL
+ * (SourceAdapter.lotSourceUrlIdentifiesLot - false for aureo, whose lots all carry their auction's
+ * page). The adapter is re-derived from the URL itself, server-side, never from a client flag.
+ */
+function candidateLotUrlKey(lot: Record<string, unknown>): string | null {
+	const key = normalizeLotUrl(lot.sourceUrl);
+	if (key === null) return null;
+	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(key));
+	return adapter?.lotSourceUrlIdentifiesLot === true ? key : null;
+}
+
+/**
+ * The URL keys that are AMBIGUOUS within this batch: one URL carried by two or more different
+ * lots (by lotIdentifier). A per-lot source should never do that; if a page ever links every card
+ * to the same URL (a "#" anchor resolves to the listing page itself), deduplicating on it would
+ * collapse distinct lots into the first one - so such a URL is no key at all for this batch.
+ */
+function ambiguousLotUrlKeys(lots: readonly unknown[]): Set<string> {
+	const lotIdsByUrl = new Map<string, Set<string>>();
+	for (const lot of lots) {
+		if (lot === null || typeof lot !== 'object') continue;
+		const record = lot as Record<string, unknown>;
+		const key = candidateLotUrlKey(record);
+		if (key === null) continue;
+		const ids = lotIdsByUrl.get(key) ?? new Set<string>();
+		ids.add(String(record.lotIdentifier ?? ''));
+		lotIdsByUrl.set(key, ids);
+	}
+	const ambiguous = new Set<string>();
+	for (const [key, ids] of lotIdsByUrl) if (ids.size > 1) ambiguous.add(key);
+	return ambiguous;
 }
 
 /**
@@ -1436,6 +1641,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 
 	const auctionCache = new Map<string, ResolvedAuction>();
 	const catalogueIndex = await loadCatalogueIndex(context);
+	const ambiguousUrlKeys = ambiguousLotUrlKeys(lots);
 	const results: CommitOneLotResult[] = [];
 	let counter = 0;
 	let stopped = false;
@@ -1453,6 +1659,9 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 		if (lot === null || typeof lot !== 'object') continue;
 		counter += 1;
 		const l = lot as Record<string, unknown>;
+		const candidateUrlKey = candidateLotUrlKey(l);
+		const lotUrlKey =
+			candidateUrlKey !== null && !ambiguousUrlKeys.has(candidateUrlKey) ? candidateUrlKey : null;
 		context.publishProgress?.({
 			msg: `Creating record for lot ${typeof l.lotNumber === 'string' ? l.lotNumber : counter}`,
 			counter,
@@ -1474,6 +1683,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 					companySelection,
 					auctionCache,
 					catalogueIndex,
+					lotUrlKey,
 				),
 			);
 		} catch (error) {
@@ -1492,6 +1702,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 				type_error: null,
 				images_created: null,
 				images_error: null,
+				images_orphaned: [],
 			});
 		}
 	}
@@ -1543,6 +1754,7 @@ export const tool: ToolServerModule = {
 				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: OBVERSE_DESIGN_TIPO },
 				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: REVERSE_DESIGN_TIPO },
 				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: PUBLIC_REMARK_TIPO },
+				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: SOURCE_URI_TIPO },
 				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: AUCTION_RELATION_TIPO },
 				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: TYPE_RELATION_TIPO },
 				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: OBVERSE_PORTAL_TIPO },

@@ -18,6 +18,8 @@ const BIDDR_HOST_PATTERN = /(^|\.)biddr\.com$/i;
 export const biddrAdapter: SourceAdapter = {
 	id: 'biddr',
 	sourceDomain: 'biddr.com',
+	// Listing/search cards link each lot's own page; a single-lot URL (`l=`) is that lot's page.
+	lotSourceUrlIdentifiesLot: true,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

@@ -14,6 +14,9 @@ const AUREO_HOST_PATTERN = /(^|\.)aureo\.com$/i;
 export const aureoAdapter: SourceAdapter = {
 	id: 'aureo',
 	sourceDomain: 'aureo.com',
+	// NOT per-lot: aureo has no bookmarkable lot URL, so every lot carries its AUCTION's page URL
+	// (parser.ts) - deduplicating on it would collapse a whole sale into its first lot.
+	lotSourceUrlIdentifiesLot: false,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);
