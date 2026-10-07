@@ -48,13 +48,18 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FileProcessor, FileProcessorOutput } from '../../tools/import_files_match.ts';
+import { tempSibling } from '../atomic.ts';
 import {
 	buildBilevelMask,
 	cropAndPadImage,
 	runConnectedComponents,
 } from '../engine/imagemagick.ts';
 import { sanitizeSegment, stagingDir } from '../ingest/add_file.ts';
-import { assertPlausibleObjectPair, parseConnectedComponentsReport } from '../region_split.ts';
+import {
+	assertPlausibleObjectPair,
+	parseConnectedComponentsReport,
+	type Region,
+} from '../region_split.ts';
 
 /** ImageMagick connected-components noise floor (pixels) — same default the PHP original used. */
 const DEFAULT_AREA_THRESHOLD = 30000;
@@ -87,11 +92,55 @@ export function destinationPortalTipos(rawProperties: unknown): string[] {
 	);
 }
 
-export const cropCoinPair: FileProcessor = async (input) => {
-	const sourcePath = typeof input.file_path === 'string' ? input.file_path : '';
-	const fileName = typeof input.file_name === 'string' ? input.file_name : '';
+/** Server-side names derived from the client's file name (never the raw name on disk). */
+interface CropNames {
+	/** The client name minus its extension — used only for the display names. */
+	stem: string;
+	/** Lower-cased extension, `png` when the name has none. */
+	extension: string;
+	/** `stem` reduced to `[A-Za-z0-9_-]` — the base of every on-disk name. */
+	safeStem: string;
+}
+
+/** A validated crop request: everything `cropCoinPair` needs past its input checks. */
+interface CropRequest {
+	sourcePath: string;
+	fileName: string;
+	/** Staging directory of the source; the mask and both crops are written here. */
+	dir: string;
+	/** The two destination portal tipos, Obverse first. */
+	destinations: string[];
+	names: CropNames;
+}
+
+type ParsedCropRequest = { ok: true; request: CropRequest } | { ok: false; message: string };
+
+/** A string input field, or '' for anything else (missing, wrong type). */
+function stringField(value: unknown): string {
+	return typeof value === 'string' ? value : '';
+}
+
+function deriveCropNames(fileName: string): CropNames {
+	const dot = fileName.lastIndexOf('.');
+	const stem = dot > 0 ? fileName.slice(0, dot) : fileName;
+	const extension = dot > 0 ? fileName.slice(dot + 1).toLowerCase() : 'png';
+	// The mask/output filenames are SERVER-GENERATED from a sanitized stem, never
+	// the raw client name — sanitizeSegment at each use is the actual gate; this
+	// is just keeping the staged files readable in a listing.
+	const safeStem = stem.replace(/[^A-Za-z0-9_-]/g, '_') || 'crop';
+	return { stem, extension, safeStem };
+}
+
+/**
+ * Validate the processor input: the four required fields, then exactly the two
+ * destination portal tipos a coin split needs. Fails with the operator-facing
+ * message; never guesses a destination.
+ */
+function parseCropRequest(input: Record<string, unknown>): ParsedCropRequest {
+	const sourcePath = stringField(input.file_path);
+	const fileName = stringField(input.file_name);
 	const userId = Number(input.user_id);
-	const keyDir = typeof input.key_dir === 'string' ? input.key_dir : '';
+	const keyDir = stringField(input.key_dir);
 	if (sourcePath === '' || fileName === '' || !Number.isInteger(userId) || keyDir === '') {
 		return { ok: false, message: 'crop_50: missing file_path/file_name/user_id/key_dir' };
 	}
@@ -108,44 +157,72 @@ export const cropCoinPair: FileProcessor = async (input) => {
 	}
 
 	const dir = stagingDir(userId, keyDir);
-	const dot = fileName.lastIndexOf('.');
-	const stem = dot > 0 ? fileName.slice(0, dot) : fileName;
-	const extension = dot > 0 ? fileName.slice(dot + 1).toLowerCase() : 'png';
-	// The mask/output filenames are SERVER-GENERATED from a sanitized stem, never
-	// the raw client name — sanitizeSegment below is the actual gate; this is just
-	// keeping the temp mask readable in a listing.
-	const safeStem = stem.replace(/[^A-Za-z0-9_-]/g, '_') || 'crop';
+	return {
+		ok: true,
+		request: { sourcePath, fileName, dir, destinations, names: deriveCropNames(fileName) },
+	};
+}
 
-	const maskPath = join(dir, sanitizeSegment(`${safeStem}_mask_${Date.now()}.png`));
+/**
+ * Detect the two coin faces: bilevel mask -> connected components -> the
+ * plausible left/right pair. The mask is scratch and is removed whatever the
+ * connected-components step does.
+ */
+async function detectFacePair(sourcePath: string, maskPath: string): Promise<[Region, Region]> {
+	await buildBilevelMask(sourcePath, maskPath);
+	let report: string;
 	try {
-		await buildBilevelMask(sourcePath, maskPath);
-		let report: string;
-		try {
-			report = await runConnectedComponents(maskPath, DEFAULT_AREA_THRESHOLD);
-		} finally {
-			rmSync(maskPath, { force: true });
-		}
+		report = await runConnectedComponents(maskPath, DEFAULT_AREA_THRESHOLD);
+	} finally {
+		rmSync(maskPath, { force: true });
+	}
+	const regions = parseConnectedComponentsReport(report, DEFAULT_MIN_DIMENSION);
+	return assertPlausibleObjectPair(regions, DEFAULT_MIN_SIMILARITY);
+}
 
-		const regions = parseConnectedComponentsReport(report, DEFAULT_MIN_DIMENSION);
-		const [left, right] = assertPlausibleObjectPair(regions, DEFAULT_MIN_SIMILARITY);
-		const maxHeight = Math.max(left.height, right.height);
+/** Crop each face into the staging dir and report it against its destination portal. */
+async function cropFaces(
+	request: CropRequest,
+	faces: [Region, Region],
+): Promise<FileProcessorOutput[]> {
+	const { sourcePath, dir, destinations, names } = request;
+	const maxHeight = Math.max(faces[0].height, faces[1].height);
+	const outputs: FileProcessorOutput[] = [];
+	for (const [index, region] of faces.entries()) {
+		// The STAGED name is unique per call (tempSibling: pid + uuid, extension kept
+		// last for magick): every lot of an acquisition batch stages under ONE
+		// key_dir, so two faces of two lots whose images share a file name would
+		// otherwise overwrite each other. The PHP-parity name is `fileName` below.
+		const stagedPath = tempSibling(join(dir, `${names.safeStem}_face${index}.${names.extension}`));
+		const tmpName = sanitizeSegment(stagedPath.slice(stagedPath.lastIndexOf('/') + 1));
+		const outPath = join(dir, tmpName);
+		// Pad only vertically (own width kept, height brought up to the taller
+		// region's) — matches the PHP recipe (:101-115) exactly.
+		await cropAndPadImage(sourcePath, outPath, region, region.width, maxHeight);
+		outputs.push({
+			tmpName,
+			fileName: `${names.stem}_crop-${index}.${names.extension}`,
+			// left (index 0) -> destinations[0] (Obverse), right (index 1) -> destinations[1]
+			// (Reverse) — same order `assertPlausibleObjectPair` already returns them in.
+			portalComponentTipo: destinations[index],
+		});
+	}
+	return outputs;
+}
 
-		const outputs: FileProcessorOutput[] = [];
-		for (const [index, region] of [left, right].entries()) {
-			const tmpName = sanitizeSegment(`${safeStem}_crop-${index}.${extension}`);
-			const outPath = join(dir, tmpName);
-			// Pad only vertically (own width kept, height brought up to the taller
-			// region's) — matches the PHP recipe (:101-115) exactly.
-			await cropAndPadImage(sourcePath, outPath, region, region.width, maxHeight);
-			outputs.push({
-				tmpName,
-				fileName: `${stem}_crop-${index}.${extension}`,
-				// left (index 0) -> destinations[0] (Obverse), right (index 1) -> destinations[1]
-				// (Reverse) — same order `assertPlausibleObjectPair` already returns them in.
-				portalComponentTipo: destinations[index],
-			});
-		}
+export const cropCoinPair: FileProcessor = async (input) => {
+	const parsed = parseCropRequest(input);
+	if (!parsed.ok) return { ok: false, message: parsed.message };
+	const { request } = parsed;
+	const { fileName } = request;
 
+	// The scratch mask's unique token (pid + uuid) comes from tempSibling, BEFORE
+	// the `.png` that tells ImageMagick the output format.
+	const maskPath = tempSibling(
+		join(request.dir, sanitizeSegment(`${request.names.safeStem}_mask.png`)),
+	);
+	try {
+		const outputs = await cropFaces(request, await detectFacePair(request.sourcePath, maskPath));
 		return { ok: true, message: `Split '${fileName}' into ${outputs.length} faces`, outputs };
 	} catch (error) {
 		rmSync(maskPath, { force: true });

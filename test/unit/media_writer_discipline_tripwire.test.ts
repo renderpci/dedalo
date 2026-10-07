@@ -314,6 +314,8 @@ const AD_HOC_TEMP =
  * cannot express — the parts must be findable and ordered by a resumed upload.
  */
 const AD_HOC_TEMP_EXEMPT: Record<string, string> = {
+	'src/core/media/tools/crop_coin_pair.ts':
+		'the `${stem}_crop-${index}.${ext}` spelling is the PHP-parity DISPLAY name of each coin face (`fileName`, shown to the cataloguer and stored as the original name), never a path: the STAGED file is named through tempSibling (pid + uuid, extension last) and so is the bilevel mask, because every lot of an acquisition batch stages under one key_dir',
 	'src/core/media/ingest/upload.ts':
 		'RECEIVE-side scratch, not a derivative: `${chunkIndex}.part` names the pieces of a resumable upload, which must be addressable by index across requests, and the `.tmp` is the meta.json publish. Nothing here is produced by a media binary, so there is no output contract and no sequence split to sweep',
 };

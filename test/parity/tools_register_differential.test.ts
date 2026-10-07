@@ -25,6 +25,8 @@ import { importTools } from '../../src/core/tools/register.ts';
 const TS_ONLY_TOOLS: ReadonlySet<string> = new Set([
 	'tool_error_report', // WC-019
 	'tool_sitebuilder', // WC-035— TS-native: proxies the standalone Site Builder daemon; no PHP oracle
+	'tool_numisdata_acquisition', // WC-2026-10-07-acquisition-tools-ts-only — TS-native, no PHP twin
+	'tool_bibliography_acquisition', // WC-2026-10-07-acquisition-tools-ts-only — TS-native, no PHP twin
 ]);
 
 describe('tools_register dry-run parity (no-op vs the PHP-imported dd1324)', () => {
