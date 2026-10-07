@@ -374,7 +374,7 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 		{
 			lang: 'request+nolan',
 			reason:
-				'writeField defaults to lg-nolan (WEIGHT_TIPO/135/151/230, ENTITY_NAME_TIPO); the translatable fields (DATE_TEXT_TIPO/763/1029/150/231) are passed currentDataLang() explicitly — the job manager pins the submitter’s langs into the background job. writeIriField (SOURCE_URI_TIPO), the link* relation saves and the image portal add_new_element are lg-nolan.',
+				'writeField defaults to lg-nolan (WEIGHT_TIPO, DIAMETER_TIPO, INVENTORY_NUMBER_TIPO, AUCTION_NUMBER_TITLE_TIPO, ENTITY_NAME_TIPO); the translatable fields (DATE_TEXT_TIPO, OBVERSE_DESIGN_TIPO, REVERSE_DESIGN_TIPO, PUBLIC_REMARK_TIPO, AUCTION_CODE_TIPO) are passed currentDataLang() explicitly — the job manager pins the submitter’s langs into the background job. writeIriField (SOURCE_URI_TIPO), the link* relation saves and the image portal add_new_element are lg-nolan.',
 		},
 	],
 	[

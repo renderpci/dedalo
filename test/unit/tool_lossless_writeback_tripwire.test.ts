@@ -951,7 +951,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the Auction locator (AUCTION_RELATION_TIPO) on the lot commitOneLot created in this call — reached only past the `skipped` return, so a pre-existing lot is never re-linked. HONEST LIMIT: it runs after the lot’s own transaction has committed, so a curator edit to AUCTION_RELATION_TIPO in that window would be replaced.',
+						'set_data of the Auction locator (AUCTION_RELATION_TIPO) on the lot commitOneLot created in this call — reached only past the `skipped` return, so a pre-existing lot is never re-linked. It runs INSIDE the lot’s birth transaction (the same withTransaction that creates it), so no committed state of the new lot exists that it could replace; a failed link rolls the whole lot back.',
 				},
 			},
 		},
@@ -960,7 +960,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the Type locator (TYPE_RELATION_TIPO) to an EXISTING TYPE_SECTION_TIPO record matched read-only (findExistingType — a Type is never created), on the lot commitOneLot created in this call, past the `skipped` return. Same post-commit window as linkAuction.',
+						'set_data of the Type locator (TYPE_RELATION_TIPO) to an EXISTING TYPE_SECTION_TIPO record matched read-only (findExistingType — a Type is never created), on the lot commitOneLot created in this call, past the `skipped` return. The Type is matched read-only BEFORE the transaction (matchLotType); the link runs INSIDE the lot’s birth transaction, like linkAuction.',
 				},
 			},
 		},
@@ -969,7 +969,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'add_new_element on the OBVERSE_PORTAL_TIPO/165 obverse/reverse portals of the lot commitOneLot created in this call: births one IMAGE_SECTION_TIPO image record per face and appends its locator. Nothing stored is read or replaced.',
+						'add_new_element on the OBVERSE_PORTAL_TIPO / REVERSE_PORTAL_TIPO obverse/reverse portals of the lot commitOneLot created in this call: births one IMAGE_SECTION_TIPO image record per face and appends its locator. Nothing stored is read or replaced.',
 				},
 				processUploadedFile: {
 					verdict: 'new-record',
@@ -1017,7 +1017,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the landing-page URL (URL_TIPO, inside the publication’s birth transaction) and of the resolved PDF URL (PDF_URI_TIPO, after it) — both onto the PUBLICATION_TIPO record commitOnePublication created in this call, past its `skipped` returns. Same post-commit window as linkSeries for PDF_URI_TIPO.',
+						'set_data of the landing-page URL (URL_TIPO) and of the PDF URL (PDF_URI_TIPO, resolved BEFORE the transaction) — both INSIDE the publication’s birth transaction, onto the PUBLICATION_TIPO record commitOnePublication creates there, past its `skipped` returns. Only the PDF bytes’ media ingest runs after commit.',
 				},
 			},
 		},
@@ -1062,7 +1062,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the Series locator (SERIES_RELATION_TIPO) on the PUBLICATION_TIPO record commitOnePublication created in this call, past its `skipped` returns; an existing Series is the locator TARGET, never written. HONEST LIMIT: it runs after the publication’s own transaction has committed, so a curator edit to SERIES_RELATION_TIPO in that window would be replaced.',
+						'set_data of the Series locator (SERIES_RELATION_TIPO) on the PUBLICATION_TIPO record commitOnePublication created in this call, past its `skipped` returns; an existing Series is the locator TARGET, never written. The Series is found or created in its own locked transaction BEFORE the birth transaction; the link runs INSIDE the birth transaction, so no committed state of the new publication exists that it could replace.',
 				},
 			},
 		},
@@ -1071,7 +1071,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'ONE set_data of every resolved Person locator (AUTHORSHIP_RELATION_TIPO) on the PUBLICATION_TIPO record created in this call, past its `skipped` returns; existing People are locator TARGETS, never written. Same post-commit window as linkSeries.',
+						'ONE set_data of every resolved Person locator (AUTHORSHIP_RELATION_TIPO) on the PUBLICATION_TIPO record created in this call, past its `skipped` returns; existing People are locator TARGETS, never written. People are resolved before the birth transaction; the link runs INSIDE it, like linkSeries.',
 				},
 			},
 		},

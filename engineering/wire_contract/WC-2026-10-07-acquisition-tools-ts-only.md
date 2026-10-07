@@ -26,11 +26,16 @@
   exist on disk). The client idempotency census
   (`test/unit/client_idempotency_tripwire.test.ts`) counts their two
   `request_stream` job followers (17 → 19 streaming sites, same day).
-  `test/parity/dedalo_files_differential.test.ts` must filter the two client
+  `test/parity/dedalo_files_differential.test.ts` filters the two client
   prefixes (`/dedalo/tools/tool_numisdata_acquisition/`,
   `/dedalo/tools/tool_bibliography_acquisition/`) from BOTH sides via
   `isTsOnlyEntry`, exactly as WC-062 does for `tool_identify` — their eight
   `js`/`css` files are in the TS census and in no harvest.
+  `test/parity/user_tools_differential.test.ts` lists both in
+  `POST_HARVEST_TS_TOOLS` (each citing this id): the frozen 35-tool list can
+  never carry them, so they are filtered from the TS side and POSITIVELY
+  asserted present there, so the filter cannot hide a tool that fell out of the
+  registry.
 - **Fixture interaction (DEC-14b):** NO fixture edit, NO re-harvest. The frozen
   store stays the record of what PHP registered and served; the carve-out lives in
   the gate's TS-only set, never in the fixture.

@@ -2476,6 +2476,13 @@ async function deriveCensus(): Promise<Census> {
 describe.if(DB_READY)('Step 3 — the authorization-door matrix', () => {
 	let census: Census;
 	let provider: ReturnType<typeof Bun.serve> | null = null;
+	/**
+	 * True only once installAcquisitionIdentities RETURNED. A beforeAll that failed
+	 * before or partway through the install leaves some identities absent, so the
+	 * teardown sweep is strict (every row must be there) only when this is set —
+	 * a strict throw there would mask the real beforeAll failure.
+	 */
+	let acquisitionInstalled = false;
 	const savedEnv: Record<string, string | undefined> = {};
 	const ENV_KEYS = [
 		'DEDALO_AGENT_HTTP_ENABLED',
@@ -2511,19 +2518,28 @@ describe.if(DB_READY)('Step 3 — the authorization-door matrix', () => {
 		ids = await resolveAuthzIdentities();
 		superuser = await resolvePrincipal(-1);
 		await installAcquisitionIdentities();
+		acquisitionInstalled = true;
 		census = await deriveCensus();
 	});
 
 	afterAll(async () => {
-		await sweepDisposable();
-		provider?.stop(true);
-		for (const key of ENV_KEYS) {
-			if (savedEnv[key] === undefined) delete process.env[key];
-			else process.env[key] = savedEnv[key];
+		// The shared teardown (authz fixture + companion situation) runs in a
+		// `finally`: a throw from any sweep above it must not leak the fixture.
+		try {
+			await sweepDisposable();
+			provider?.stop(true);
+			for (const key of ENV_KEYS) {
+				if (savedEnv[key] === undefined) delete process.env[key];
+				else process.env[key] = savedEnv[key];
+			}
+			await sweepAcquisitionIdentities(acquisitionInstalled);
+		} finally {
+			try {
+				await removeAuthzDoorFixture();
+			} finally {
+				expect(await dropSituation(COMPANION_SITUATION)).toBe(0);
+			}
 		}
-		await sweepAcquisitionIdentities(true);
-		await removeAuthzDoorFixture();
-		expect(await dropSituation(COMPANION_SITUATION)).toBe(0);
 	});
 
 	test('the contrast is live (guards every cell)', async () => {

@@ -198,6 +198,8 @@ Merged since the last release; these ship with the next one.
     imported up to that point is kept, and the summary tells you how much of the batch
     landed.
 
+    Wire contract: `WC-2026-10-07-acquisition-tools-ts-only`.
+
 - **A new tool imports coin-auction lots (jesusvico.com, biddr.com, aureo.com, numisbids.com, sixbid.com) directly into Numismatic Data records.**
 
     Paste an auction or single-lot URL from one of five supported houses and the tool
