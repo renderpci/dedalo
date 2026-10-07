@@ -563,6 +563,7 @@
 	"tool_subtitles": "उपशीर्षक",
 	"tool_transcription": "प्रतिलेखन",
 	"tool_translation": "अनुवाद",
+	"tools": "उपकरण",
 	"tools_missing_count": "${count} डिस्क पर फ़ाइलों के बिना",
 	"tools_not_registered_count": "${count} अपंजीकृत",
 	"tools_not_registered_notice": "डिस्क पर मिले लेकिन अभी तक पंजीकृत नहीं हुए टूल: ${names}. जब तक आप '${button}' नहीं दबाते, ये उपयोगकर्ताओं के लिए अदृश्य रहते हैं।",

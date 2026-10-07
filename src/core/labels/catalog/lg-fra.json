@@ -563,6 +563,7 @@
 	"tool_subtitles": "Sous-titres",
 	"tool_transcription": "Transcription",
 	"tool_translation": "Traduction",
+	"tools": "Outils",
 	"tools_missing_count": "${count} sans fichiers sur le disque",
 	"tools_not_registered_count": "${count} non enregistré(s)",
 	"tools_not_registered_notice": "Outils trouvés sur le disque mais pas encore enregistrés : ${names}. Ils restent invisibles pour les utilisateurs jusqu'à ce que vous appuyiez sur '${button}'.",

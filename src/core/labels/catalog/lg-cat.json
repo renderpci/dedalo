@@ -572,6 +572,7 @@
 	"tool_subtitles": "Subtítols",
 	"tool_transcription": "Transcripció",
 	"tool_translation": "Traducció",
+	"tools": "Eines",
 	"tools_missing_count": "${count} sense fitxers al disc",
 	"tools_not_registered_count": "${count} sense registrar",
 	"tools_not_registered_notice": "Eines trobades al disc però encara no registrades: ${names}. Romanen invisibles per als usuaris fins que premis '${button}'.",

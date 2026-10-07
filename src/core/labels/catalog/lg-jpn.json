@@ -563,6 +563,7 @@
 	"tool_subtitles": "字幕",
 	"tool_transcription": "文字起こし",
 	"tool_translation": "翻訳",
+	"tools": "ツール",
 	"tools_missing_count": "${count} 件はディスクにファイルなし",
 	"tools_not_registered_count": "${count} 件が未登録",
 	"tools_not_registered_notice": "ディスク上にありますが、まだ登録されていないツール: ${names}。「${button}」を押すまで、ユーザーには表示されません。",

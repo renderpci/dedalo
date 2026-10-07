@@ -68,6 +68,10 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The tools of a section list are now grouped in one Tools menu.**
+
+    In list mode the header used to show one labelled button per tool (QR, Export, Import, Time machine, Print layout…), and the row wrapped as more tools were registered. **New** and **Delete** stay where they were; every tool now sits in a single **Tools** menu, sorted by name, that can be opened with the mouse or keyboard (arrow keys to move, Enter to open a tool, Esc to close). A tool can keep its own button next to the menu by setting `"pinned_in_list": true` in its `properties`.
+
 - **The audio/video viewer window now fits the media: no size jump on play, no black bars.**
 
     Opening a video from a list used to show the poster at one size and then shrink the player to the stream's size when playback started, pinned to the left with black space around it. The viewer now fills its window: poster and playback share the same box, the popup resizes itself to the media's aspect ratio, and the download button no longer covers the player controls.

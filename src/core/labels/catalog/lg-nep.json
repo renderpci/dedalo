@@ -563,6 +563,7 @@
 	"tool_subtitles": "उपशीर्षकहरू",
 	"tool_transcription": "ट्रान्सक्रिप्शन",
 	"tool_translation": "अनुवाद",
+	"tools": "उपकरणहरू",
 	"tools_missing_count": "${count} डिस्कमा फाइल नभएका",
 	"tools_not_registered_count": "${count} दर्ता नभएका",
 	"tools_not_registered_notice": "डिस्कमा भेटिएका तर अझै दर्ता नभएका उपकरणहरू: ${names}। तपाईंले '${button}' थिच्नुभएसम्म ती प्रयोगकर्ताहरूका लागि अदृश्य रहन्छन्।",

@@ -458,7 +458,7 @@ view_default_list_section.rebuild_columns_map = async function(self) {
 *     │    └─ show_all_button       (resets filters by calling self.filter.show_all)
 *     ├─ other_buttons_block        (hidden by default; toggled by show_other_buttons_button)
 *     │    ├─ <dynamic action buttons from self.context.buttons>
-*     │    └─ <tool buttons via ui.add_tools>
+*     │    └─ <tool buttons via ui.add_tools_menu: pinned + one Tools popover>
 *     └─ show_other_buttons_button  (collapse/expand toggle with persistent state)
 *
 * Button models handled in the action button loop:
@@ -662,7 +662,7 @@ const get_buttons = function(self) {
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
 	// tools buttons
-		ui.add_tools(self, other_buttons_block)
+		ui.add_tools_menu(self, other_buttons_block)
 
 	// show_other_buttons_button
 		const show_other_buttons_label	= get_label.show_buttons || 'Show buttons'

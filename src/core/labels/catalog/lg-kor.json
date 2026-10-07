@@ -563,6 +563,7 @@
 	"tool_subtitles": "자막",
 	"tool_transcription": "전사",
 	"tool_translation": "번역",
+	"tools": "도구",
 	"tools_missing_count": "${count}개는 디스크에 파일 없음",
 	"tools_not_registered_count": "${count}개 미등록",
 	"tools_not_registered_notice": "디스크에 있지만 아직 등록되지 않은 도구: ${names}. '${button}'을(를) 누를 때까지 사용자에게 보이지 않습니다.",

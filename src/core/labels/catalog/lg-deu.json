@@ -563,6 +563,7 @@
 	"tool_subtitles": "Untertitel",
 	"tool_transcription": "Transkription",
 	"tool_translation": "Übersetzung",
+	"tools": "Werkzeuge",
 	"tools_missing_count": "${count} ohne Dateien auf der Festplatte",
 	"tools_not_registered_count": "${count} nicht registriert",
 	"tools_not_registered_notice": "Auf der Festplatte gefundene, aber noch nicht registrierte Werkzeuge: ${names}. Sie bleiben für Benutzer unsichtbar, bis Sie '${button}' drücken.",

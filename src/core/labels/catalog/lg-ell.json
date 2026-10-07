@@ -563,6 +563,7 @@
 	"tool_subtitles": "Υπότιτλοι",
 	"tool_transcription": "μεταγραφή",
 	"tool_translation": "Μετάφραση",
+	"tools": "Εργαλεία",
 	"tools_missing_count": "${count} χωρίς αρχεία στον δίσκο",
 	"tools_not_registered_count": "${count} χωρίς καταχώριση",
 	"tools_not_registered_notice": "Εργαλεία που βρέθηκαν στον δίσκο αλλά δεν έχουν καταχωρηθεί ακόμη: ${names}. Παραμένουν αόρατα στους χρήστες μέχρι να πατήσετε '${button}'.",

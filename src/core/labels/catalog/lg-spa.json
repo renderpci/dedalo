@@ -573,6 +573,7 @@
 	"tool_subtitles": "Subtítulos",
 	"tool_transcription": "Transcripción",
 	"tool_translation": "Traducción",
+	"tools": "Herramientas",
 	"tools_missing_count": "${count} sin ficheros en disco",
 	"tools_not_registered_count": "${count} sin registrar",
 	"tools_not_registered_notice": "Herramientas encontradas en disco pero aún no registradas: ${names}. Permanecen invisibles para los usuarios hasta que pulses '${button}'.",

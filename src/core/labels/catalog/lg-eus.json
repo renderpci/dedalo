@@ -563,6 +563,7 @@
 	"tool_subtitles": "Azpitituluak",
 	"tool_transcription": "Transkripzioa",
 	"tool_translation": "Itzulpena",
+	"tools": "Tresnak",
 	"tools_missing_count": "${count} fitxategirik gabe diskoan",
 	"tools_not_registered_count": "${count} erregistratu gabe",
 	"tools_not_registered_notice": "Diskoan aurkitutako baina oraindik erregistratu gabeko tresnak: ${names}. Erabiltzaileentzat ikusezin jarraituko dute '${button}' sakatu arte.",

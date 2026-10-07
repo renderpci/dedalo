@@ -563,6 +563,7 @@
 	"tool_subtitles": "字幕",
 	"tool_transcription": "转录",
 	"tool_translation": "翻译",
+	"tools": "工具",
 	"tools_missing_count": "${count} 个磁盘上无文件",
 	"tools_not_registered_count": "${count} 个未注册",
 	"tools_not_registered_notice": "在磁盘上找到但尚未注册的工具：${names}。在您按下“${button}”之前，用户看不到它们。",

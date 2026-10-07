@@ -563,6 +563,7 @@
 	"tool_subtitles": "Субтитры",
 	"tool_transcription": "Транскрипция",
 	"tool_translation": "Перевод",
+	"tools": "Инструменты",
 	"tools_missing_count": "${count} без файлов на диске",
 	"tools_not_registered_count": "${count} не зарегистрировано",
 	"tools_not_registered_notice": "Инструменты найдены на диске, но ещё не зарегистрированы: ${names}. Они остаются невидимыми для пользователей, пока вы не нажмёте «${button}».",

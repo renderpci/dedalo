@@ -563,6 +563,7 @@
 	"tool_subtitles": "Legendas",
 	"tool_transcription": "Transcrição",
 	"tool_translation": "Tradução",
+	"tools": "Ferramentas",
 	"tools_missing_count": "${count} sem ficheiros no disco",
 	"tools_not_registered_count": "${count} por registar",
 	"tools_not_registered_notice": "Ferramentas encontradas no disco mas ainda não registadas: ${names}. Permanecem invisíveis para os utilizadores até premir '${button}'.",

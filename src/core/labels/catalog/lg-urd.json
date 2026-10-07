@@ -563,6 +563,7 @@
 	"tool_subtitles": "سب ٹائٹلز",
 	"tool_transcription": "نقل",
 	"tool_translation": "ترجمہ",
+	"tools": "ٹولز",
 	"tools_missing_count": "${count} ڈسک پر فائلوں کے بغیر",
 	"tools_not_registered_count": "${count} غیر رجسٹرڈ",
 	"tools_not_registered_notice": "ڈسک پر ملنے والے مگر ابھی تک غیر رجسٹرڈ ٹولز: ${names}۔ جب تک آپ '${button}' نہیں دباتے، یہ صارفین کے لیے پوشیدہ رہتے ہیں۔",

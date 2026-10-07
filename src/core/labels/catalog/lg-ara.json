@@ -563,6 +563,7 @@
 	"tool_subtitles": "الترجمات",
 	"tool_transcription": "النسخ",
 	"tool_translation": "الترجمة",
+	"tools": "أدوات",
 	"tools_missing_count": "${count} بلا ملفات على القرص",
 	"tools_not_registered_count": "${count} غير مسجَّلة",
 	"tools_not_registered_notice": "أدوات موجودة على القرص ولكن لم تُسجَّل بعد: ${names}. تبقى غير مرئية للمستخدمين حتى تضغط '${button}'.",

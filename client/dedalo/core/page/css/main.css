@@ -20200,6 +20200,42 @@ body.inspector_resizing {
   width: 100%;
   padding: 0px;
 }
+.section.list > .buttons_container .tools_menu_button:after {
+  content: '';
+  display: inline-block;
+  margin-left: 0.4rem;
+  border: 0.3rem solid transparent;
+  border-top-color: currentColor;
+  border-bottom-width: 0;
+  vertical-align: middle;
+}
+.section.list > .buttons_container .tools_menu_button.open:after {
+  transform: rotate(180deg);
+}
+.section.list > .buttons_container .tools_menu_panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0.25rem;
+  max-height: 70vh;
+  max-width: calc(100vw - 16px);
+  overflow-y: auto;
+  border: 1px solid var(--border_strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg_elevated);
+  box-shadow: var(--shadow-3);
+}
+.section.list > .buttons_container .tools_menu_panel:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+.section.list > .buttons_container .tools_menu_panel > button {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  margin: 0;
+  border-color: transparent;
+}
 .section.list > .buttons_container > .show_other_buttons_button {
   height: 2.2rem;
   transform: rotate(90deg);
