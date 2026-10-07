@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { AuctionStatus, ExtractedAuction } from '../../domain/auction.ts';
 import { cleanText, getQueryParam, parseBiddrDateText } from '../../extraction/parser-utils.ts';
-import { biddrSearchIdentifier, biddrSingleLotIdentifier } from './acquisition.ts';
+import { biddrSearchIdentifier, biddrSingleLotIdentifier } from './identifiers.ts';
 
 export interface AuctionParseInput {
 	html: string;

@@ -1,6 +1,22 @@
 import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
+import { looksBlocked } from '../../acquisition/block-signals.ts';
 import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
+
+/** A Cloudflare/CAPTCHA interstitial is commonly served as a plain 2xx, so response.ok alone does
+ * not mean "this is the real page" (review item: "block-signals.ts is never imported"). */
+function assertNotBlocked(
+	source: string,
+	url: string,
+	response: { headers: Readonly<Record<string, string>> },
+	html: string,
+): void {
+	if (response.headers['cf-mitigated'] || looksBlocked(html)) {
+		throw new DedaloError('external.protocol', {
+			coordinates: { source, url, cf_mitigated: response.headers['cf-mitigated'] ?? '' },
+		});
+	}
+}
 
 /** Thrown when a page fetched fine (2xx) but its HTML has none of the markers this adapter relies
  * on for extraction - a URL that resolves to something other than an auction/search catalogue. */
@@ -47,8 +63,10 @@ async function fetchAureoPage(
 			coordinates: { source: 'aureo', url, status: response.status },
 		});
 	}
+	const html = response.text();
+	assertNotBlocked('aureo', url, response, html);
 	return {
-		html: response.text(),
+		html,
 		finalUrl: response.url,
 		httpStatus: response.status,
 		contentType: response.contentType,
@@ -79,8 +97,10 @@ async function postAureoItems(
 			coordinates: { source: 'aureo', url: 'loaditems.php', status: response.status },
 		});
 	}
+	const html = response.text();
+	assertNotBlocked('aureo', 'loaditems.php', response, html);
 	return {
-		html: response.text(),
+		html,
 		finalUrl: response.url,
 		httpStatus: response.status,
 		contentType: response.contentType,

@@ -1,14 +1,9 @@
 import { getQueryParam } from '../../extraction/parser-utils.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
-import {
-	acquireAuction,
-	acquireBiddrSearch,
-	acquireBiddrSingleLot,
-	biddrSearchIdentifier,
-	biddrSingleLotIdentifier,
-} from './acquisition.ts';
+import { acquireAuction, acquireBiddrSearch, acquireBiddrSingleLot } from './acquisition.ts';
 import { parseAuction, parseSearchAuction, parseSingleLotAuction } from './auction-parser.ts';
+import { biddrSearchIdentifier, biddrSingleLotIdentifier } from './identifiers.ts';
 import { parseLotDetail, parseLotListing, parseSearchResultLots } from './lot-parser.ts';
 
 const BIDDR_HOST_PATTERN = /(^|\.)biddr\.com$/i;

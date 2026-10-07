@@ -1,9 +1,10 @@
-import { createHash } from 'node:crypto';
 import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
+import { looksBlocked } from '../../acquisition/block-signals.ts';
 import { getQueryParam } from '../../extraction/parser-utils.ts';
 import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 import { parseTotalPages } from './auction-parser.ts';
+import { biddrSearchIdentifier, biddrSingleLotIdentifier } from './identifiers.ts';
 
 /** Thrown when a page fetched fine (2xx) but its HTML has none of the markers this adapter relies
  * on for extraction - a URL that resolves to something other than an auction/search catalogue. */
@@ -32,8 +33,18 @@ async function fetchBiddrPage(
 			coordinates: { source: 'biddr', url, status: response.status },
 		});
 	}
+	const html = response.text();
+	// A Cloudflare/CAPTCHA interstitial is commonly served as a plain 2xx, so response.ok alone
+	// does not mean "this is the real page" - without this check it instead failed
+	// looksLikeAuctionPage below with the misleading "not an auction catalogue" message (review
+	// item: "block-signals.ts is never imported").
+	if (response.headers['cf-mitigated'] || looksBlocked(html)) {
+		throw new DedaloError('external.protocol', {
+			coordinates: { source: 'biddr', url, cf_mitigated: response.headers['cf-mitigated'] ?? '' },
+		});
+	}
 	return {
-		html: response.text(),
+		html,
 		finalUrl: response.url,
 		httpStatus: response.status,
 		contentType: response.contentType,
@@ -89,36 +100,6 @@ export async function acquireAuction(
 	return { auctionIdentifier, pages, method: 'http' };
 }
 
-/**
- * Validates a Biddr single-lot URL (`biddr.com/{house}/auction?a=...&l=...`). Requires BOTH `a`
- * and `l` - a plain `?a=...` with no `l` is a full auction listing, not this.
- */
-export function parseBiddrSingleLotUrl(
-	rawUrl: string,
-): { auctionId: string; lotId: string } | null {
-	let url: URL;
-	try {
-		url = new URL(rawUrl);
-	} catch {
-		return null;
-	}
-	if (!/biddr\.com$/i.test(url.hostname)) return null;
-	const auctionId = url.searchParams.get('a');
-	const lotId = url.searchParams.get('l');
-	if (!auctionId || !lotId) return null;
-	return { auctionId, lotId };
-}
-
-/**
- * A stable identifier for a single-lot retrieval, distinct from the full auction's own numeric id
- * - otherwise pasting a single-lot URL would make a later full-auction retrieval look like it
- * already exists.
- */
-export function biddrSingleLotIdentifier(rawUrl: string): string | null {
-	const parsed = parseBiddrSingleLotUrl(rawUrl);
-	return parsed ? `lot-${parsed.lotId}` : null;
-}
-
 /** Acquires a single Biddr lot page - one request, no pagination. */
 export async function acquireBiddrSingleLot(
 	rawUrl: string,
@@ -137,36 +118,6 @@ export async function acquireBiddrSingleLot(
 	onProgress?.(1, 1);
 
 	return { auctionIdentifier, pages: [page], method: 'http' };
-}
-
-/**
- * Validates a Biddr search-results URL (`biddr.com/search?s=...&c=...&pf=...&pt=...&pc=...`) and
- * returns its query params, or null if this isn't a search URL. The unit of retrieval here is a
- * search spanning however many auctions matched, not one complete auction.
- */
-export function parseBiddrSearchUrl(rawUrl: string): URLSearchParams | null {
-	let url: URL;
-	try {
-		url = new URL(rawUrl);
-	} catch {
-		return null;
-	}
-	if (!/biddr\.com$/i.test(url.hostname)) return null;
-	if (url.pathname !== '/search') return null;
-	return url.searchParams;
-}
-
-/**
- * A stable, deterministic identifier for a search (dedupe + on-disk storage key) - a hash of the
- * normalized, sorted query string, since search terms can contain unicode unsafe for a directory
- * name.
- */
-export function biddrSearchIdentifier(rawUrl: string): string | null {
-	const params = parseBiddrSearchUrl(rawUrl);
-	if (!params) return null;
-	const sorted = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
-	const normalized = new URLSearchParams(sorted).toString();
-	return createHash('sha256').update(normalized, 'utf-8').digest('hex').slice(0, 16);
 }
 
 /**

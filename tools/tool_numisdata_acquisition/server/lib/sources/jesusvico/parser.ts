@@ -13,7 +13,7 @@ import {
 	jesusvicoLotIdentifier,
 	parseJesusvicoAuctionNumber,
 	parseJesusvicoLotNumber,
-} from './acquisition.ts';
+} from './identifiers.ts';
 
 function absoluteUrl(href: string | undefined | null, base: string): string | null {
 	if (!href) return null;

@@ -1,11 +1,7 @@
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
-import {
-	acquireJesusvicoAuction,
-	acquireJesusvicoLot,
-	jesusvicoLotIdentifier,
-	parseJesusvicoAuctionNumber,
-} from './acquisition.ts';
+import { acquireJesusvicoAuction, acquireJesusvicoLot } from './acquisition.ts';
+import { jesusvicoLotIdentifier, parseJesusvicoAuctionNumber } from './identifiers.ts';
 import {
 	parseJesusvicoAuction,
 	parseJesusvicoLotDetail,
