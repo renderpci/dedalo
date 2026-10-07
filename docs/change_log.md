@@ -937,6 +937,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The Ontology area can now be opened by global administrators whose profile grants it, not only by root.**
+
+    Until now only the root account could see the Ontology area in the menu or open it. It now also opens for a global administrator whose profile grants the Ontology area. Both are needed: a global administrator without that permission does not see it, and neither does a user who has the permission but is not a global administrator. Inside the area, the profile decides what the administrator sees: each ontology (for example `dd`, `rsc` or a local one) appears only if the profile grants read access to it, and its records and fields follow the usual read and edit permissions. Root still sees and edits everything. To give someone access, grant the Ontology area and the ontologies they should work on in their profile.
+
+    Wire contract: `WC-2026-10-07-ontology-area-admin-grant`.
+
 - **The in-browser AI runtime is updated to transformers.js 4.3.0, running on the exact ONNX Runtime build it was made for.**
 
     Browser-side transcription, translation and background removal run on transformers.js,
@@ -1511,7 +1517,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 99 entries"
+??? note "Wire contract — 100 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1611,6 +1617,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-03-publication-hosts-widget`
     - `WC-2026-10-03-save-refuses-malformed-value-shape`
     - `WC-2026-10-06-consultation-only-no-section-tools`
+    - `WC-2026-10-07-ontology-area-admin-grant`
     - `WC-2026-10-07-update-code-root-entries-stamp`
 
 ## 7.0.0-beta.4 — 2026-08-24

@@ -2,7 +2,7 @@
 
 > The back-office area that edits **Dédalo's own ontology tree** — the same
 > tree-editing machinery as `area_thesaurus`, retargeted at the ontology
-> hierarchy. Superuser-only.
+> hierarchy. Superuser, or a global admin granted it in their profile.
 
 > See also: [area_thesaurus](area_thesaurus.md) · [area](area.md) ·
 > [Ontology](../ontology/index.md) · [TS tree / ts_object](../ontology/ts_object.md) ·
@@ -13,20 +13,25 @@ This page assumes you have read [area_thesaurus](area_thesaurus.md):
 two share one implementation. For the conceptual model of *what an area is*, read
 [area](area.md) first.
 
-!!! danger "Superuser-only, fail-closed"
-    `area_ontology` is reserved for the **superuser** (`DEDALO_SUPERUSER`). The
-    gate runs *before* any ontology read:
+!!! danger "Superuser or granted global admin, fail-closed"
+    `area_ontology` opens for the **superuser** (`DEDALO_SUPERUSER`), or for a
+    **global admin whose profile grants the area** (`dd5`, read or higher). Both
+    conditions are needed: a global admin without the grant is refused, and so
+    is a non-admin with it. One rule, `canAccessOntologyArea`
+    (`src/core/security/permissions.ts`), serves both doors, and it runs
+    *before* any ontology read:
 
-    - `dispatchAreaRead` (`src/core/area/read.ts`) refuses with `403` unless
-      `principal.userId === SUPERUSER_ID` — checked both when the request
-      declares the `area_ontology` model and when its `source.tipo` is the
-      ontology area tipo (`dd5`).
-    - The menu walk (`src/core/api/handlers/menu.ts`) filters the `dd5` node out
-      of every non-superuser menu.
+    - `dispatchAreaRead` (`src/core/area/read.ts`) refuses with `403` — checked
+      both when the request declares the `area_ontology` model and when its
+      `source.tipo` is the ontology area tipo (`dd5`).
+    - The menu walk (`src/core/api/handlers/menu.ts`) leaves the `dd5` node out
+      of the menu of anyone the rule refuses.
 
-    A global admin who is not the superuser gets nothing. Editing the ontology
-    rewrites the active schema of the whole installation, so this area fails
-    closed by design.
+    Inside the area there is **no admin bypass**: each ontology hierarchy (the
+    TLD section, e.g. `dd0`, `rsc0`) is served only when the profile grants read
+    on it, and every section and field answers the ordinary profile
+    permissions. Editing the ontology rewrites the active schema of the whole
+    installation — grant it per TLD, deliberately.
 
 ## Role
 
@@ -56,6 +61,7 @@ area model as its first argument and branches on it. There is no
 | main table | `matrix_ontology_main` | `matrix_hierarchy_main` |
 | children component tipo | fixed `ontology14` | resolved per target section (its `component_relation_children`) |
 | typology section id | fixed `14` | resolved per hierarchy record |
+| per-hierarchy permission | read on the TLD section (`target_section_tipo`) | read on the target section **and** on each root term's section |
 | `active_in_thesaurus` skip | **not applied** — inactive hierarchies are kept | applied |
 | "no root terms" skip | **not applied** — rootless hierarchies are kept | applied |
 
@@ -95,11 +101,11 @@ area_thesaurus, where hierarchy lines carry the typology instead.
 ## Reading the area
 
 There is nothing to instantiate. A read is dispatched off `(model, tipo)`, the
-superuser gate runs, and the shared resolver builds the payload:
+access gate runs, and the shared resolver builds the payload:
 
 ```ts
 // src/core/area/read.ts — dispatchAreaRead refuses with 403 here unless
-// principal.userId === SUPERUSER_ID, before any ontology read happens.
+// canAccessOntologyArea(principal), before any ontology read happens.
 const item = await readAreaHierarchyData('area_ontology', 'dd5', 'lg-spa', termsAreModel);
 ```
 
@@ -125,8 +131,8 @@ carries the active hierarchies, their root terms and the typologies. See
   — the record-bearing leaves the ontology *defines*. Editing an ontology node in
   this area changes how those sections and components behave at runtime, with no
   code change.
-- **[Menu](../ui/menu.md)** — `area_ontology` is a root menu area, hidden from
-  every non-superuser.
+- **[Menu](../ui/menu.md)** — `area_ontology` is a root menu area, shown only to
+  the superuser and to global admins whose profile grants it.
 
 !!! warning "Extend the shared machine, not this area"
     `area_ontology` deliberately carries no logic of its own. Before adding

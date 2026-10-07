@@ -1,6 +1,6 @@
 /**
  * Phase D fail-closed security gates (engineering/AREA_SPEC.md §9), TS-side (DB-derived,
- * no PHP). Covers: area_ontology superuser-only read + menu hiding; model-vs-tipo
+ * no PHP). Covers: area_ontology refused to a non-admin (read + menu — the full rule is ontology_area_access_native); model-vs-tipo
  * validation on area reads; area-write refusal (save/create/delete/duplicate).
  * The PHP divergence for the dd917 quirk is pinned in
  * area_security_differential.test.ts (PHP accepts, TS refuses).
@@ -43,7 +43,7 @@ function readRqo(model: string, tipo: string, extra: Record<string, unknown> = {
 	};
 }
 
-describe('area_ontology is superuser-only', () => {
+describe('area_ontology: superuser in, non-admin out', () => {
 	test('superuser reads area_ontology (dd5)', async () => {
 		const principal = await resolvePrincipal(-1);
 		const context = contextFor(-1, 'root', true, principal);
@@ -55,7 +55,7 @@ describe('area_ontology is superuser-only', () => {
 		expect((result.body.data as { data?: unknown[] }).data).toBeDefined();
 	});
 
-	test('a non-superuser is refused area_ontology (403)', async () => {
+	test('a non-admin is refused area_ontology (403)', async () => {
 		const principal = await resolvePrincipal(NON_ADMIN_USER);
 		const context = contextFor(NON_ADMIN_USER, 'josep', false, principal);
 		const result = await dispatchRqo(
@@ -132,7 +132,7 @@ describe('area-write refusal (areas hold no data)', () => {
 	});
 });
 
-describe('menu hides area_ontology from non-superusers', () => {
+describe('menu hides area_ontology from non-admins', () => {
 	test('superuser menu contains dd5; non-admin menu does not', async () => {
 		const superuserMenu = await getMenuTreeDatalist();
 		const nonAdminMenu = await getMenuTreeDatalist({

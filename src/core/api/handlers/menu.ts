@@ -56,7 +56,7 @@ import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
 import { resolveLabel } from '../../ontology/term_label.ts';
-import { SUPERUSER_ID } from '../../security/permissions.ts';
+import { canAccessOntologyArea } from '../../security/permissions.ts';
 import { buildSectionToolContext } from '../../tools/section_tool_context.ts';
 
 /** One navigation node (PHP tree_datalist item). */
@@ -299,11 +299,11 @@ export async function getMenuTreeDatalist(viewer?: {
 		});
 	}
 
-	// area_ontology (dd5) is SUPERUSER-ONLY (engineering/AREA_SPEC.md §9). Hide it from
-	// every non-superuser, INCLUDING non-superuser global admins — the
-	// admin+developer path above skips the filter, so this runs independently.
+	// area_ontology (dd5): the SAME rule as the area read (engineering/AREA_SPEC.md §9,
+	// canAccessOntologyArea) — superuser, or global admin whose profile grants
+	// dd5. Runs independently: the admin+developer path above skips the filter.
 	// An undefined viewer is the internal/superuser tree.
-	if (viewer !== undefined && viewer.userId !== SUPERUSER_ID) {
+	if (viewer !== undefined && !(await canAccessOntologyArea(viewer))) {
 		areas = areas.filter((area) => area.tipo !== AREA_ONTOLOGY_TIPO);
 	}
 
