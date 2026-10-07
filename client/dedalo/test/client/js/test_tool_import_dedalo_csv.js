@@ -182,4 +182,64 @@ describe('TOOL_IMPORT_DEDALO_CSV APPEND MODE SELECTOR', function() {
 
 })
 
+describe('TOOL_IMPORT_DEDALO_CSV SECTION-INFO COLUMNS', function() {
+
+	this.timeout(10000)
+
+	// get_section_components_list now appends dd196's children (the common
+	// section-info components) after the section's own — for a global admin.
+	// An exported CSV carries them as plain tipo headers (dd200) or suffixed
+	// ones (dd199_dmy); both must be AUTO-checked and mapped, or the operator
+	// re-maps every audit column by hand (the reported bug).
+	const components = [
+		{label: 'Id', value: 'test102', model: 'component_section_id', import_append: null},
+		{label: 'Text', value: 'test52', model: 'component_input_text', import_append: 'items'},
+		{label: 'Created by', value: 'dd200', model: 'component_select', import_append: null},
+		{label: 'Created', value: 'dd199', model: 'component_date', import_append: null}
+	]
+
+	const build = async function(list) {
+		const self = {
+			get_section_components_list	: async () => ({label: 'Test', list}),
+			get_tool_label				: () => null,
+			csv_files_list				: []
+		}
+		const item = {
+			file_info		: ['section_id', 'test52', 'dd200', 'dd199_dmy'],
+			section_tipo	: 'test3',
+			ar_columns_map	: [],
+			sample_data		: []
+		}
+		self.csv_files_list.push({checked: true, ar_columns_map: item.ar_columns_map})
+		const container = document.createElement('div')
+		container.appendChild(await render_columns_mapper(self, item))
+		const lines = [...container.querySelectorAll('.columns_mapper_line:not(.names)')]
+		return {item, lines}
+	}
+	const checkbox = (line) => line.querySelector('input[type="checkbox"]')
+	const target = (line) => line.querySelector('select.column_select')
+
+	it('a dd200 header and a dd199_dmy header are auto-checked and mapped', async function() {
+		const {item, lines} = await build(components)
+		assert.equal(lines.length, 4)
+		assert.equal(checkbox(lines[2]).checked, true, 'dd200: checked')
+		assert.equal(target(lines[2]).value, 'dd200', 'dd200: selected in the dropdown')
+		assert.equal(item.ar_columns_map[2].checked, true)
+		assert.equal(item.ar_columns_map[2].map_to, 'dd200')
+		assert.equal(item.ar_columns_map[2].model, 'component_select')
+		assert.equal(checkbox(lines[3]).checked, true, 'dd199_dmy: checked')
+		assert.equal(item.ar_columns_map[3].map_to, 'dd199')
+	})
+
+	it('without them in the list (the old server answer) the same headers stay unmapped', async function() {
+		// the control: proves the assertions above are about the list, not the header
+		const {item, lines} = await build(components.filter(c => !c.value.startsWith('dd')))
+		assert.equal(checkbox(lines[2]).checked, false, 'dd200: unchecked')
+		assert.notEqual(item.ar_columns_map[2].checked, true)
+		assert.equal(item.ar_columns_map[2].map_to, undefined)
+		assert.equal(checkbox(lines[3]).checked, false, 'dd199_dmy: unchecked')
+	})
+
+})
+
 // @license-end

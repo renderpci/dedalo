@@ -185,3 +185,26 @@ envelope or append-mode frame writes a row under the slot tipo any more. Each is
 the composed row (in a run, the composed pair) of the main its frames belong to — the main's
 data followed by all its slots' frames — also when the main item was a duplicate and the
 main's own save wrote nothing.
+
+## Addendum 2026-10-07 — section-info columns in the component list
+
+Correction to "Shape before": PHP `get_section_components_list` ALSO appended
+every child of `dd196` (DEDALO_SECTION_INFO_SECTION_GROUP: `dd200`, `dd199`,
+`dd197`, `dd201`, `dd271`, `dd1223`, `dd1224`, `dd1225`, `dd1596`) to every
+section's list, for every caller. TS until 2026-10-07 omitted them (own subtree
+only, never ledgered), so an exported CSV's audit columns came up unmapped in
+the mapper and "not a component of section" in `validate_import`.
+
+Now (TS): `components` gains those `dd196` component children, in ontology
+order, after the section's own components — only when (a) the principal is a
+GLOBAL ADMIN (the write door ignores a non-admin's column on them,
+`componentRefusal`; the list must never offer a column the door drops), (b) the
+section (virtual → real) has components of its own, (c) the section does not
+suppress section-info (`dd542`, `dd15` — the WC-045 rule,
+`logSectionSuppressesSectionInfo`). Single source:
+`sectionInfoComponents()` in `src/core/resolve/section_elements_context.ts`.
+The `validate_import` "not a component of section" check uses the same list.
+Item shape unchanged (`{label, value, model, import_append}`; `import_append`
+is `null` for the audit tipos and `dd1596`). No fixture covers this action — no
+re-harvest. Gate: `test/unit/tool_import_dedalo_csv.test.ts` (describe
+"section-info columns (dd196 children) are offered and validate").

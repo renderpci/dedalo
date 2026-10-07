@@ -16,6 +16,11 @@ import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { ddDateToSeconds } from '../../src/core/media/file_date.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import type { ImportFileReport, ImportProgressFrame } from '../../src/core/tools/import_wire.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
@@ -579,5 +584,243 @@ describe('path traversal is REFUSED (fail-closed, canary-verified)', () => {
 		).rejects.toThrow();
 		expect(existsSync(staged)).toBe(true); // the source was NOT moved
 		expect(existsSync(escaped)).toBe(false); // nothing landed outside the import dir
+	});
+});
+
+/**
+ * THE SECTION-INFO COLUMNS (dd196's component children). PHP
+ * get_section_components_list appended them to every section's list; the port
+ * walked only the section's own subtree, so an exported CSV's dd199/dd200/…
+ * columns came up UNMAPPED in the mapper and "not a component of section" in
+ * the preflight — while the write door (import_csv_execute's dual write)
+ * already handled them. Offered to GLOBAL ADMINS only: the write door IGNORES
+ * them for everyone else (componentRefusal), and the mapper must never offer a
+ * column the door then drops. Read-only gate: validate_import writes nothing;
+ * the scratch import dir is removed in afterAll.
+ */
+describe('section-info columns (dd196 children) are offered and validate', () => {
+	/** dd196's component children, in ontology order (the PHP list). */
+	const SECTION_INFO = [
+		'dd200',
+		'dd199',
+		'dd197',
+		'dd201',
+		'dd271',
+		'dd1223',
+		'dd1224',
+		'dd1225',
+		'dd1596',
+	];
+	const SCRATCH_USER = 987678;
+	const root = config.media.rootPath ?? '';
+	const userDir = resolve(root, 'import/files', String(SCRATCH_USER));
+	const CSV = 'section_info_validate.csv';
+	/** A principal the resolver would build for a non-admin account. */
+	const NON_ADMIN = Object.freeze({
+		userId: SCRATCH_USER,
+		isGlobalAdmin: false,
+		isDeveloper: false,
+	});
+
+	beforeAll(() => mkdirSync(userDir, { recursive: true }));
+	afterAll(() => rmSync(userDir, { recursive: true, force: true }));
+
+	/** A section with no component children (only a grouper) … */
+	const EMPTY = 'zzcsvi1';
+	/** … and a sibling with one, the control. */
+	const WITH_OWN = 'zzcsvi3';
+	const WITH_OWN_COMPONENT = 'zzcsvi4';
+	const EMPTY_SITUATION = situation({
+		name: 'import csv section-info own-components rule',
+		tld: 'zzcsvi',
+		nodes: [
+			{
+				tipo: EMPTY,
+				parent: 'test1',
+				model: 'section',
+				order_number: 91,
+				term: { 'lg-eng': 'Empty' },
+			},
+			{
+				tipo: 'zzcsvi2',
+				parent: EMPTY,
+				model: 'section_group',
+				order_number: 1,
+				term: { 'lg-eng': 'Group' },
+			},
+			{
+				tipo: WITH_OWN,
+				parent: 'test1',
+				model: 'section',
+				order_number: 92,
+				term: { 'lg-eng': 'With own' },
+			},
+			{
+				tipo: WITH_OWN_COMPONENT,
+				parent: WITH_OWN,
+				model: 'component_input_text',
+				order_number: 1,
+				term: { 'lg-eng': 'Text' },
+			},
+		],
+	});
+
+	async function listFor(
+		sectionTipo: string,
+		principal: { userId: number; isGlobalAdmin: boolean; isDeveloper: boolean },
+	): Promise<{ value: string; model: string; import_append: unknown }[]> {
+		const loaded = await getLoadedTool('tool_import_dedalo_csv');
+		const res = await mustGet(
+			loaded!.module.apiActions.get_section_components_list,
+			'get_section_components_list',
+		).handler({
+			principal,
+			userId: principal.userId,
+			background: false,
+			options: { section_tipo: sectionTipo },
+		});
+		return (res.data as { components: { value: string; model: string; import_append: unknown }[] })
+			.components;
+	}
+
+	async function validate(
+		csv: string,
+		columnsMap: Record<string, unknown>[],
+		principal: { userId: number; isGlobalAdmin: boolean; isDeveloper: boolean },
+	): Promise<{ ok: boolean; errors: string[]; failed: unknown[] }> {
+		writeFileSync(resolve(userDir, CSV), csv);
+		const loaded = await getLoadedTool('tool_import_dedalo_csv');
+		const res = await mustGet(loaded!.module.apiActions.validate_import, 'validate_import').handler(
+			{
+				principal,
+				userId: SCRATCH_USER,
+				background: false,
+				options: { files: [{ file: CSV, section_tipo: SECTION, ar_columns_map: columnsMap }] },
+			},
+		);
+		return (res.data as { files: { ok: boolean; errors: string[]; failed: unknown[] }[] })
+			.files[0] as { ok: boolean; errors: string[]; failed: unknown[] };
+	}
+
+	test('a REAL section lists every dd196 child for an admin, after its own components, in ontology order', async () => {
+		const list = await listFor(SECTION, await resolvePrincipal(-1));
+		const values = list.map((el) => el.value);
+		const infoValues = values.filter((value) => SECTION_INFO.includes(value));
+		expect(infoValues).toEqual(SECTION_INFO);
+		// Appended AFTER the section's own components (PHP order), each once.
+		const firstInfo = values.indexOf('dd200');
+		expect(values.indexOf('test52')).toBeGreaterThanOrEqual(0);
+		expect(values.indexOf('test52')).toBeLessThan(firstInfo);
+		expect(new Set(values).size).toBe(values.length);
+		// The append offer: the audit stamps and the derived inverse never offer it.
+		for (const tipo of ['dd199', 'dd200', 'dd197', 'dd201', 'dd1596']) {
+			expect(list.find((el) => el.value === tipo)?.import_append, tipo).toBeNull();
+		}
+	});
+
+	test('a VIRTUAL section (test0 → ontology1) lists them too', async () => {
+		const values = (await listFor('test0', await resolvePrincipal(-1))).map((el) => el.value);
+		expect(values).toContain('ontology3'); // its real section's own components
+		expect(values.filter((value) => SECTION_INFO.includes(value))).toEqual(SECTION_INFO);
+	});
+
+	test('a NON-ADMIN is offered none of them (the door would ignore the column)', async () => {
+		const values = (await listFor(SECTION, NON_ADMIN)).map((el) => el.value);
+		expect(values).toContain('test52'); // the own components are still there
+		expect(values.filter((value) => SECTION_INFO.includes(value))).toEqual([]);
+	});
+
+	test('a section with NO components of its own lists no section-info (built zz situation)', async () => {
+		const admin = await resolvePrincipal(-1);
+		await dropSituation(EMPTY_SITUATION);
+		try {
+			await ensureSituation(EMPTY_SITUATION);
+			// Control: the sibling WITH an own component gets the section-info
+			// columns, so the empty one's [] is the own-components rule, not a
+			// scratch section the walk cannot see.
+			const withOwn = (await listFor(WITH_OWN, admin)).map((el) => el.value);
+			expect(withOwn).toContain(WITH_OWN_COMPONENT);
+			expect(withOwn.filter((value) => SECTION_INFO.includes(value))).toEqual(SECTION_INFO);
+			expect(await listFor(EMPTY, admin)).toEqual([]);
+		} finally {
+			expect(await dropSituation(EMPTY_SITUATION)).toBe(0);
+		}
+	});
+
+	test('the log sections that suppress section-info (dd542, dd15) list none of them', async () => {
+		const admin = await resolvePrincipal(-1);
+		for (const sectionTipo of ['dd542', 'dd15']) {
+			const values = (await listFor(sectionTipo, admin)).map((el) => el.value);
+			expect(values.length, `${sectionTipo} has own components`).toBeGreaterThan(0);
+			expect(
+				values.filter((value) => SECTION_INFO.includes(value)),
+				sectionTipo,
+			).toEqual([]);
+		}
+	});
+
+	const KEY = { tipo: 'section_id', model: 'section_id' };
+	const CREATED_DATE_COLUMN = {
+		tipo: 'dd199_dmy',
+		model: 'component_date',
+		checked: true,
+		map_to: 'dd199',
+	};
+	const CREATED_BY_COLUMN = {
+		tipo: 'dd200',
+		model: 'component_select',
+		checked: true,
+		map_to: 'dd200',
+	};
+	const INFO_CSV = 'section_id;dd199_dmy;dd200\n900800;21-05-1998;-1\n';
+
+	test('validate_import ACCEPTS dd199/dd200 columns for an admin', async () => {
+		const report = await validate(
+			INFO_CSV,
+			[KEY, CREATED_DATE_COLUMN, CREATED_BY_COLUMN],
+			await resolvePrincipal(-1),
+		);
+		expect(report.errors).toEqual([]);
+		expect(report.failed).toEqual([]);
+		expect(report.ok).toBe(true);
+	});
+
+	test('validate_import REFUSES them for a non-admin (never "validated clean, then ignored")', async () => {
+		const report = await validate(
+			INFO_CSV,
+			[KEY, CREATED_DATE_COLUMN, CREATED_BY_COLUMN],
+			NON_ADMIN,
+		);
+		expect(report.ok).toBe(false);
+		const joined = report.errors.join(' ');
+		expect(joined).toContain("maps to 'dd199', which is not a component of section");
+		expect(joined).toContain("maps to 'dd200', which is not a component of section");
+	});
+
+	test('an APPEND on dd200 is refused (a record has one creator)', async () => {
+		const report = await validate(
+			INFO_CSV,
+			[KEY, CREATED_DATE_COLUMN, { ...CREATED_BY_COLUMN, import_mode: 'append' }],
+			await resolvePrincipal(-1),
+		);
+		expect(report.ok).toBe(false);
+		const joined = report.errors.join(' ');
+		expect(joined).toContain("'dd200' is a record audit field");
+		// Refused as an AUDIT field — not because dd200 is missing from the list
+		// (that would make ok=false for the wrong reason).
+		expect(joined).not.toContain('not a component of section');
+	});
+
+	test('dd1596 (component_inverse) is listed but refused as derived', async () => {
+		const report = await validate(
+			'section_id;dd1596\n900800;x\n',
+			[KEY, { tipo: 'dd1596', model: 'component_inverse', checked: true, map_to: 'dd1596' }],
+			await resolvePrincipal(-1),
+		);
+		expect(report.ok).toBe(false);
+		const joined = report.errors.join(' ');
+		expect(joined).toContain('dd1596, component_inverse): refused — derived');
+		// Refused as DERIVED — not as "not a component of section" (it IS listed).
+		expect(joined).not.toContain('not a component of section');
 	});
 });

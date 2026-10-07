@@ -33,8 +33,10 @@ import { resolveDataTipo } from '../../../src/core/ontology/alias.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
+import { sectionInfoComponents } from '../../../src/core/resolve/section_elements_context.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import type { Principal } from '../../../src/core/security/permissions.ts';
 import { withLiveBulkRun } from '../../../src/core/tools/bulk_run_registry.ts';
 import {
 	assertCsvStructure,
@@ -164,7 +166,9 @@ function safeImportFile(dir: string, fileName: string): string {
 
 /**
  * All component tipos of a section (PHP get_ar_children_tipo_by_model_name_in_section
- * with recursive=true and **resolve_virtual=true**), not crossing child sections.
+ * with recursive=true and **resolve_virtual=true**), not crossing child sections,
+ * PLUS the common section-info components (dd196's children — PHP
+ * get_section_components_list appended get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP)).
  *
  * (!) VIRTUAL SECTIONS. A virtual section has NO components of its own: its node's
  * relations[0].tipo points at the REAL section that owns them, minus the tipos its
@@ -173,9 +177,19 @@ function safeImportFile(dir: string, fileName: string): string {
  * simply auto-detects nothing (an empty array is truthy, so its `!ar_components`
  * error branch never fires). resolveVirtualEditScope is the canonical resolver the
  * rest of the engine already uses for exactly this (relations/request_config).
+ *
+ * SECTION INFO (dd199/dd200/dd197/dd201 audit stamps, dd271, dd1223-5, dd1596).
+ * Appended only when the section has components of its own and does not
+ * suppress the group (dd542, dd15) — the buildSectionElementsContext rule, from
+ * the same source (sectionInfoComponents). And only for a GLOBAL ADMIN: PHP
+ * forces their permission for admins only, so every other principal's column on
+ * them is refused per row at the write door (componentRefusal: IGNORED). This
+ * list feeds the mapper AND the preflight, so a non-admin is never offered — nor
+ * validated clean on — a column the door would then drop.
  */
 async function sectionComponentTipos(
 	sectionTipo: string,
+	principal: Principal,
 ): Promise<{ tipo: string; model: string }[]> {
 	const { getOrderedSubtree } = await import('../../../src/core/ontology/resolver.ts');
 	const { resolveVirtualEditScope } = await import(
@@ -183,10 +197,15 @@ async function sectionComponentTipos(
 	);
 	const { realTipo, excludeSet } = await resolveVirtualEditScope(sectionTipo);
 	const nodes = await getOrderedSubtree(realTipo);
-	return nodes
+	const own = nodes
 		.filter((node) => node.model?.startsWith('component_') === true)
 		.filter((node) => !excludeSet.has(node.tipo))
 		.map((node) => ({ tipo: node.tipo, model: node.model as string }));
+	if (own.length === 0 || !principal.isGlobalAdmin) return own;
+	// No de-duplication against `own`: a tipo has ONE parent, dd196's children
+	// hang under dd196 (parent dd193, a `tools` node, never inside a section),
+	// so no section subtree can contain them.
+	return [...own, ...(await sectionInfoComponents(sectionTipo))];
 }
 
 /**
@@ -264,7 +283,7 @@ async function wireAppendPolicy(
 async function getSectionComponentsList(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sectionTipo = String(ctx.options.section_tipo ?? '');
 	if (sectionTipo === '') throw invalidRequest('Missing section_tipo');
-	const tipos = await sectionComponentTipos(sectionTipo);
+	const tipos = await sectionComponentTipos(sectionTipo, ctx.principal);
 	const components = await Promise.all(
 		tipos.map(async (t) => ({
 			label: await termByTipo(t.tipo, config.menu.applicationLang),
@@ -710,7 +729,9 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 			errors.push(...refusals);
 
 			// Every mapped target must be a component of THIS section (PHP verify_csv_map).
-			const sectionTipos = new Set((await sectionComponentTipos(sectionTipo)).map((c) => c.tipo));
+			const sectionTipos = new Set(
+				(await sectionComponentTipos(sectionTipo, ctx.principal)).map((c) => c.tipo),
+			);
 			for (const column of columns) {
 				if (column === null || column.model === 'component_section_id') continue;
 				if (!sectionTipos.has(column.tipo)) {

@@ -138,6 +138,27 @@ async function sectionInfoElements(): Promise<{ tipo: string; model: string }[]>
 	return elements;
 }
 
+/**
+ * The common section-info COMPONENTS a section carries (dd196's component
+ * children, ontology order, the dd196 grouper itself NOT included), or [] for a
+ * section that suppresses the group (logSectionSuppressesSectionInfo: dd542,
+ * dd15). THE one source for every consumer that lists a section's columns
+ * beside its own components (tool_import_dedalo_csv's mapper + preflight) —
+ * the same set buildSectionElementsContext appends, so the two cannot drift.
+ *
+ * It does NOT apply the "only when the section has own elements" rule nor any
+ * permission: both are the caller's (see buildSectionElementsContext), because
+ * what "own elements" means differs per caller.
+ */
+export async function sectionInfoComponents(
+	sectionTipo: string,
+): Promise<{ tipo: string; model: string }[]> {
+	if (logSectionSuppressesSectionInfo(sectionTipo)) return [];
+	return (await sectionInfoElements()).filter(
+		(element) => element.tipo !== SECTION_INFO_GROUP_TIPO,
+	);
+}
+
 /** Strip the fields PHP omits from a simple context (tools, buttons). */
 function toSimple(entry: StructureContextEntry): Record<string, unknown> {
 	const { tools, buttons, ...rest } = entry as StructureContextEntry & {
