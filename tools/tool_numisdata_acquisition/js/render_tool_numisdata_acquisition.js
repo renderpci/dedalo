@@ -17,7 +17,9 @@ import { escape_html } from '../../../core/common/js/utils/render_escape.js';
  * runs commit_lots and shows the per-lot result.
  * @module render_tool_numisdata_acquisition
  */
-export const render_tool_numisdata_acquisition = () => true; //end render_tool_numisdata_acquisition
+export const render_tool_numisdata_acquisition = function () {
+	return true;
+}; //end render_tool_numisdata_acquisition
 
 /**
  * EDIT
@@ -25,14 +27,16 @@ export const render_tool_numisdata_acquisition = () => true; //end render_tool_n
  * @returns {Promise<HTMLElement>}
  */
 render_tool_numisdata_acquisition.prototype.edit = async function (options) {
+	const self = this;
+
 	const render_level = options.render_level || 'full';
 
-	const content_data = get_content_data(this);
+	const content_data = get_content_data(self);
 	if (render_level === 'content') {
 		return content_data;
 	}
 
-	const wrapper = ui.tool.build_wrapper_edit(this, {
+	const wrapper = ui.tool.build_wrapper_edit(self, {
 		content_data: content_data,
 	});
 
@@ -48,7 +52,7 @@ render_tool_numisdata_acquisition.prototype.edit = async function (options) {
  * @param {Object} lot - one ExtractedLot
  * @returns {HTMLElement}
  */
-const build_lot_row = (self, lot) => {
+const build_lot_row = function (self, lot) {
 	const row = ui.create_dom_element({
 		element_type: 'div',
 		class_name: 'lot_row',
@@ -90,7 +94,7 @@ const build_lot_row = (self, lot) => {
  * @param {string} html
  * @returns {string|null}
  */
-const detect_url_from_html = (html) => {
+const detect_url_from_html = function (html) {
 	let doc;
 	try {
 		doc = new DOMParser().parseFromString(html, 'text/html');
@@ -125,7 +129,7 @@ const detect_url_from_html = (html) => {
  * @param {string} name - the name to search for (contains-match)
  * @returns {Promise<Array<{section_id:number, name:string}>>}
  */
-const search_companies = async (name) => {
+const search_companies = async function (name) {
 	const rqo = {
 		dd_api: 'dd_core_api',
 		action: 'read',
@@ -178,7 +182,7 @@ const search_companies = async (name) => {
 			: [];
 
 	const name_by_row_id = new Map();
-	rows.forEach((item) => {
+	rows.forEach(function (item) {
 		if (!item || item.tipo !== 'rsc116' || item.row_section_id === undefined) return;
 		const first = Array.isArray(item.entries) ? item.entries[0] : null;
 		if (first && typeof first.value === 'string' && first.value !== '') {
@@ -198,7 +202,7 @@ const search_companies = async (name) => {
  * @param {Object} self - the tool_numisdata_acquisition instance
  * @returns {HTMLElement}
  */
-const get_content_data = (self) => {
+const get_content_data = function (self) {
 	const fragment = new DocumentFragment();
 
 	const url_row = ui.create_dom_element({
@@ -247,7 +251,7 @@ const get_content_data = (self) => {
 		parent: html_upload_row,
 	});
 	let selected_html = null;
-	html_file_input.addEventListener('change', () => {
+	html_file_input.addEventListener('change', function () {
 		const file = html_file_input.files && html_file_input.files[0];
 		if (!file) {
 			selected_html = null;
@@ -277,26 +281,27 @@ const get_content_data = (self) => {
 		parent: fragment,
 	});
 
-	const render_error = (response, fallback_message) =>
-		ui.create_dom_element({
+	const render_error = function (response, fallback_message) {
+		return ui.create_dom_element({
 			element_type: 'div',
 			class_name: 'error_message',
 			text_content: response.error.message || fallback_message,
 		});
+	};
 
 	// Drives ONE background job (preview_url or commit_lots) from its initial
 	// {pid, pfile} dispatch to its terminal frame, rendering live progress via
 	// render_stream in between. on_success(data) gets the unwrapped terminal
 	// payload and appends into `container` itself; on_settle() always fires
 	// exactly once regardless of outcome.
-	const stream_background_job = (options) => {
+	const stream_background_job = function (options) {
 		const dispatch_promise = options.dispatch_promise;
 		const container = options.container;
 		const stream_id = options.stream_id;
 		const on_success = options.on_success;
 		const on_settle = options.on_settle;
 
-		dispatch_promise.then((response) => {
+		dispatch_promise.then(function (response) {
 			if (request_failed(response) || typeof response.pid === 'undefined') {
 				while (container.firstChild) {
 					container.removeChild(container.firstChild);
@@ -390,10 +395,10 @@ const get_content_data = (self) => {
 						},
 					},
 				})
-				.then((stream) => {
+				.then(function (stream) {
 					data_manager.read_stream(stream, on_read, on_done);
 				})
-				.catch((error) => {
+				.catch(function (error) {
 					if (on_settle) on_settle();
 					console.error('[tool_numisdata_acquisition] could not open the status stream:', error);
 				});
@@ -402,7 +407,7 @@ const get_content_data = (self) => {
 
 	// Builds the auction status line, lot checklist, and Confirm button from
 	// one successful preview response.
-	const build_review = (auction, auction_status, lots, truncated_by) => {
+	const build_review = function (auction, auction_status, lots, truncated_by) {
 		const review_container = ui.create_dom_element({
 			element_type: 'div',
 			class_name: 'review_container',
@@ -483,7 +488,7 @@ const get_content_data = (self) => {
 			// preselection. Shared by both the candidate loop and the
 			// "create new" row below, which otherwise built the identical
 			// row/radio/label structure twice.
-			const add_company_option = (radio_name, label_text, preselected, on_select) => {
+			const add_company_option = function (radio_name, label_text, preselected, on_select) {
 				const option_row = ui.create_dom_element({
 					element_type: 'div',
 					class_name: 'company_option',
@@ -500,7 +505,7 @@ const get_content_data = (self) => {
 					text_content: label_text,
 					parent: option_row,
 				});
-				radio.addEventListener('change', () => {
+				radio.addEventListener('change', function () {
 					if (radio.checked) on_select();
 				});
 				if (preselected) {
@@ -515,7 +520,7 @@ const get_content_data = (self) => {
 			// '==' is accent-insensitive but case-sensitive). The pick is
 			// sent as a section_id, so the write links exactly the
 			// preselected Entity either way.
-			const render_company_options = (name, candidates) => {
+			const render_company_options = function (name, candidates) {
 				while (company_results.firstChild) {
 					company_results.removeChild(company_results.firstChild);
 				}
@@ -523,14 +528,14 @@ const get_content_data = (self) => {
 				const normalized = name.trim().toLowerCase();
 				const exact_match = candidates.find((c) => c.name.trim().toLowerCase() === normalized);
 
-				candidates.forEach((candidate) => {
+				candidates.forEach(function (candidate) {
 					add_company_option(
 						radio_name,
 						(self.get_tool_label('company_candidate') || '{name} (Entity #{id})')
 							.replace('{name}', candidate.name)
 							.replace('{id}', candidate.section_id),
 						exact_match !== undefined && candidate.section_id === exact_match.section_id,
-						() => {
+						function () {
 							current_company_selection = { section_id: candidate.section_id };
 						},
 					);
@@ -540,23 +545,23 @@ const get_content_data = (self) => {
 					radio_name,
 					(self.get_tool_label('company_create') || 'Create new Entity') + ' "' + name + '"',
 					exact_match === undefined,
-					() => {
+					function () {
 						current_company_selection = { create: true, name: name };
 					},
 				);
 			};
 
-			const run_company_search = () => {
+			const run_company_search = function () {
 				const name = company_name_input.value.trim();
 				if (!name) return;
 				company_search_button.classList.add('loading');
-				search_companies(name).then((candidates) => {
+				search_companies(name).then(function (candidates) {
 					company_search_button.classList.remove('loading');
 					render_company_options(name, candidates);
 				});
 			};
 
-			company_search_button.addEventListener('click', (e) => {
+			company_search_button.addEventListener('click', function (e) {
 				e.stopPropagation();
 				run_company_search();
 			});
@@ -658,13 +663,13 @@ const get_content_data = (self) => {
 				parent: lot_list,
 			});
 		}
-		const rows = lots.map((lot) => {
+		const rows = lots.map(function (lot) {
 			const row = build_lot_row(self, lot);
 			lot_list.appendChild(row);
 			return row;
 		});
 
-		const update_selection_count = () => {
+		const update_selection_count = function () {
 			const kept_count = rows.filter((row) => row.checkbox.checked).length;
 			selection_count_node.textContent = (
 				self.get_tool_label('selection_count') || '{kept} of {total} selected'
@@ -672,19 +677,19 @@ const get_content_data = (self) => {
 				.replace('{kept}', kept_count)
 				.replace('{total}', rows.length);
 		};
-		rows.forEach((row) => {
+		rows.forEach(function (row) {
 			row.checkbox.addEventListener('change', update_selection_count);
 		});
 		update_selection_count();
 
-		select_all_button.addEventListener('click', (e) => {
+		select_all_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			rows.forEach((row) => {
 				row.checkbox.checked = true;
 			});
 			update_selection_count();
 		});
-		deselect_all_button.addEventListener('click', (e) => {
+		deselect_all_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			rows.forEach((row) => {
 				row.checkbox.checked = false;
@@ -692,11 +697,11 @@ const get_content_data = (self) => {
 			update_selection_count();
 		});
 
-		const keyword_matches = (row, keyword) => {
+		const keyword_matches = function (row, keyword) {
 			const haystack = ((row.lot.description || '') + ' ' + (row.lot.title || '')).toLowerCase();
 			return haystack.includes(keyword);
 		};
-		include_keyword_button.addEventListener('click', (e) => {
+		include_keyword_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const keyword = keyword_input.value.trim().toLowerCase();
 			if (!keyword) return;
@@ -705,7 +710,7 @@ const get_content_data = (self) => {
 			});
 			update_selection_count();
 		});
-		exclude_keyword_button.addEventListener('click', (e) => {
+		exclude_keyword_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const keyword = keyword_input.value.trim().toLowerCase();
 			if (!keyword) return;
@@ -715,15 +720,15 @@ const get_content_data = (self) => {
 			update_selection_count();
 		});
 
-		const lot_number_of = (row) => {
+		const lot_number_of = function (row) {
 			const n = Number(row.lot.lotNumber);
 			return Number.isFinite(n) ? n : null;
 		};
-		const in_range = (row, from, to) => {
+		const in_range = function (row, from, to) {
 			const n = lot_number_of(row);
 			return n !== null && n >= from && n < to;
 		};
-		include_range_button.addEventListener('click', (e) => {
+		include_range_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const from = Number(range_from_input.value);
 			const to = Number(range_to_input.value);
@@ -733,7 +738,7 @@ const get_content_data = (self) => {
 			});
 			update_selection_count();
 		});
-		exclude_range_button.addEventListener('click', (e) => {
+		exclude_range_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const from = Number(range_from_input.value);
 			const to = Number(range_to_input.value);
@@ -761,7 +766,7 @@ const get_content_data = (self) => {
 		// numisdata3 record (server/index.ts findExistingType never creates
 		// one) — a citation found but unmatched is still surfaced so the
 		// operator can add it manually if it's worth it.
-		const build_commit_summary = (data) => {
+		const build_commit_summary = function (data) {
 			const summary = ui.create_dom_element({
 				element_type: 'div',
 				class_name: 'success_message',
@@ -780,7 +785,7 @@ const get_content_data = (self) => {
 					parent: summary,
 				});
 			}
-			results.forEach((result) => {
+			results.forEach(function (result) {
 				// section_id is null only when the whole lot failed before anything
 				// was created (its own transaction rolled back) - review item C1.
 				// Each *_error is the error system's wire body ({code, message, ...} — see
@@ -871,7 +876,7 @@ const get_content_data = (self) => {
 			return summary;
 		};
 
-		confirm_button.addEventListener('click', (e) => {
+		confirm_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 
 			const kept = rows.filter((row) => row.checkbox.checked).map((row) => row.lot);
@@ -905,7 +910,7 @@ const get_content_data = (self) => {
 		return review_container;
 	}; //end build_review
 
-	preview_button.addEventListener('click', (e) => {
+	preview_button.addEventListener('click', function (e) {
 		e.stopPropagation();
 
 		const url = url_input.value.trim();
@@ -931,7 +936,7 @@ const get_content_data = (self) => {
 		if (selected_html) {
 			self
 				.preview_html(url, selected_html)
-				.then((response) => {
+				.then(function (response) {
 					preview_button.classList.remove('loading');
 					while (result_container.firstChild) {
 						result_container.removeChild(result_container.firstChild);
@@ -956,7 +961,7 @@ const get_content_data = (self) => {
 						),
 					);
 				})
-				.catch((error) => {
+				.catch(function (error) {
 					preview_button.classList.remove('loading');
 					console.error('[tool_numisdata_acquisition] preview_html failed:', error);
 				});

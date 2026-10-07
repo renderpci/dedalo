@@ -533,9 +533,9 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 	test('the call-site matcher reads a formatter-split chain (positive control)', () => {
 		const split = 'data_manager\n\t\t\t\t.request_stream({ body: {} })';
 		const flat = 'data_manager.request({ body: {} })';
-		expect([...split.matchAll(new RegExp(CALL_SITE_PATTERN.source, 'g'))].map((m) => m[1])).toEqual([
-			'request_stream',
-		]);
+		expect([...split.matchAll(new RegExp(CALL_SITE_PATTERN.source, 'g'))].map((m) => m[1])).toEqual(
+			['request_stream'],
+		);
 		expect([...flat.matchAll(new RegExp(CALL_SITE_PATTERN.source, 'g'))].map((m) => m[1])).toEqual([
 			'request',
 		]);

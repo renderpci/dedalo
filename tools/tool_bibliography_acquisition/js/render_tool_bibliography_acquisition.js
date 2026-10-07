@@ -18,7 +18,9 @@ import { escape_html } from '../../../core/common/js/utils/render_escape.js';
  * import runs commit_publications and shows the per-record result.
  * @module render_tool_bibliography_acquisition
  */
-export const render_tool_bibliography_acquisition = () => true; //end render_tool_bibliography_acquisition
+export const render_tool_bibliography_acquisition = function () {
+	return true;
+}; //end render_tool_bibliography_acquisition
 
 /**
  * EDIT
@@ -26,14 +28,16 @@ export const render_tool_bibliography_acquisition = () => true; //end render_too
  * @returns {Promise<HTMLElement>}
  */
 render_tool_bibliography_acquisition.prototype.edit = async function (options) {
+	const self = this;
+
 	const render_level = options.render_level || 'full';
 
-	const content_data = get_content_data(this);
+	const content_data = get_content_data(self);
 	if (render_level === 'content') {
 		return content_data;
 	}
 
-	const wrapper = ui.tool.build_wrapper_edit(this, {
+	const wrapper = ui.tool.build_wrapper_edit(self, {
 		content_data: content_data,
 	});
 
@@ -48,7 +52,7 @@ render_tool_bibliography_acquisition.prototype.edit = async function (options) {
  * @param {Object} publication - one ExtractedPublication
  * @returns {HTMLElement}
  */
-const build_publication_row = (publication) => {
+const build_publication_row = function (publication) {
 	const row = ui.create_dom_element({
 		element_type: 'div',
 		class_name: 'lot_row',
@@ -87,7 +91,7 @@ const build_publication_row = (publication) => {
  * @param {Object} self - the tool_bibliography_acquisition instance
  * @returns {HTMLElement}
  */
-const get_content_data = (self) => {
+const get_content_data = function (self) {
 	const fragment = new DocumentFragment();
 
 	const url_row = ui.create_dom_element({
@@ -137,7 +141,7 @@ const get_content_data = (self) => {
 		parent: html_upload_row,
 	});
 	let selected_html = null;
-	html_file_input.addEventListener('change', () => {
+	html_file_input.addEventListener('change', function () {
 		const file = html_file_input.files && html_file_input.files[0];
 		if (!file) {
 			selected_html = null;
@@ -164,7 +168,7 @@ const get_content_data = (self) => {
 	// the translated label via error_text, plus the server's own message when it says
 	// more (e.g. the real OAI-PMH reason behind a generic 'not found' label). Always
 	// rendered as text_content, never markup.
-	const error_body_text = (body) => {
+	const error_body_text = function (body) {
 		if (!body || typeof body !== 'object') {
 			return String(body ?? '');
 		}
@@ -174,26 +178,27 @@ const get_content_data = (self) => {
 			: label;
 	};
 
-	const render_error = (response, fallback_message) =>
-		ui.create_dom_element({
+	const render_error = function (response, fallback_message) {
+		return ui.create_dom_element({
 			element_type: 'div',
 			class_name: 'error_message',
 			text_content: response.error.message || fallback_message,
 		});
+	};
 
 	// Drives ONE background job (preview_url or commit_publications) from its
 	// initial {pid, pfile} dispatch to its terminal frame, rendering live
 	// progress via render_stream in between. on_success(data) gets the
 	// unwrapped terminal payload and appends into `container` itself;
 	// on_settle() always fires exactly once regardless of outcome.
-	const stream_background_job = (options) => {
+	const stream_background_job = function (options) {
 		const dispatch_promise = options.dispatch_promise;
 		const container = options.container;
 		const stream_id = options.stream_id;
 		const on_success = options.on_success;
 		const on_settle = options.on_settle;
 
-		dispatch_promise.then((response) => {
+		dispatch_promise.then(function (response) {
 			if (request_failed(response) || typeof response.pid === 'undefined') {
 				while (container.firstChild) {
 					container.removeChild(container.firstChild);
@@ -285,10 +290,10 @@ const get_content_data = (self) => {
 						},
 					},
 				})
-				.then((stream) => {
+				.then(function (stream) {
 					data_manager.read_stream(stream, on_read, on_done);
 				})
-				.catch((error) => {
+				.catch(function (error) {
 					if (on_settle) on_settle();
 					console.error('[tool_bibliography_acquisition] could not open the status stream:', error);
 				});
@@ -297,7 +302,13 @@ const get_content_data = (self) => {
 
 	// Builds the series status line, publication checklist, and Confirm button
 	// from one successful preview response.
-	const build_review = (series, series_status, publications, article_failures, truncated_by) => {
+	const build_review = function (
+		series,
+		series_status,
+		publications,
+		article_failures,
+		truncated_by,
+	) {
 		const review_container = ui.create_dom_element({
 			element_type: 'div',
 			class_name: 'review_container',
@@ -331,7 +342,7 @@ const get_content_data = (self) => {
 					.replace('{count}', publications.length),
 				parent: review_container,
 			});
-			article_failures.forEach((failure) => {
+			article_failures.forEach(function (failure) {
 				ui.create_dom_element({
 					element_type: 'div',
 					text_content: (self.get_tool_label('article_failure') || 'Article {id}: {reason}')
@@ -453,29 +464,29 @@ const get_content_data = (self) => {
 				parent: lot_list,
 			});
 		}
-		const rows = publications.map((publication) => {
+		const rows = publications.map(function (publication) {
 			const row = build_publication_row(publication);
 			lot_list.appendChild(row);
 			return row;
 		});
 
-		const update_selection_count = () => {
+		const update_selection_count = function () {
 			const kept_count = rows.filter((row) => row.checkbox.checked).length;
 			selection_count_node.textContent = kept_count + ' of ' + rows.length + ' selected';
 		};
-		rows.forEach((row) => {
+		rows.forEach(function (row) {
 			row.checkbox.addEventListener('change', update_selection_count);
 		});
 		update_selection_count();
 
-		select_all_button.addEventListener('click', (e) => {
+		select_all_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			rows.forEach((row) => {
 				row.checkbox.checked = true;
 			});
 			update_selection_count();
 		});
-		deselect_all_button.addEventListener('click', (e) => {
+		deselect_all_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			rows.forEach((row) => {
 				row.checkbox.checked = false;
@@ -483,14 +494,14 @@ const get_content_data = (self) => {
 			update_selection_count();
 		});
 
-		const keyword_matches = (row, keyword) => {
+		const keyword_matches = function (row, keyword) {
 			const authors = Array.isArray(row.publication.authors)
 				? row.publication.authors.join(' ')
 				: '';
 			const haystack = ((row.publication.title || '') + ' ' + authors).toLowerCase();
 			return haystack.includes(keyword);
 		};
-		include_keyword_button.addEventListener('click', (e) => {
+		include_keyword_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const keyword = keyword_input.value.trim().toLowerCase();
 			if (!keyword) return;
@@ -499,7 +510,7 @@ const get_content_data = (self) => {
 			});
 			update_selection_count();
 		});
-		exclude_keyword_button.addEventListener('click', (e) => {
+		exclude_keyword_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const keyword = keyword_input.value.trim().toLowerCase();
 			if (!keyword) return;
@@ -509,15 +520,15 @@ const get_content_data = (self) => {
 			update_selection_count();
 		});
 
-		const year_of = (row) => {
+		const year_of = function (row) {
 			const match = (row.publication.publicationDate || '').match(/^\d{4}/);
 			return match ? Number(match[0]) : null;
 		};
-		const in_range = (row, from, to) => {
+		const in_range = function (row, from, to) {
 			const year = year_of(row);
 			return year !== null && year >= from && year <= to;
 		};
-		include_range_button.addEventListener('click', (e) => {
+		include_range_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const from = Number(range_from_input.value);
 			const to = Number(range_to_input.value);
@@ -527,7 +538,7 @@ const get_content_data = (self) => {
 			});
 			update_selection_count();
 		});
-		exclude_range_button.addEventListener('click', (e) => {
+		exclude_range_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 			const from = Number(range_from_input.value);
 			const to = Number(range_to_input.value);
@@ -554,7 +565,7 @@ const get_content_data = (self) => {
 		// One summary line per publication result. Series/Author resolution and
 		// PDF import are all best-effort (server/index.ts) — a failure there is
 		// surfaced here rather than rolling back the record itself.
-		const build_commit_summary = (data) => {
+		const build_commit_summary = function (data) {
 			const summary = ui.create_dom_element({
 				element_type: 'div',
 				class_name: 'success_message',
@@ -573,7 +584,7 @@ const get_content_data = (self) => {
 					parent: summary,
 				});
 			}
-			results.forEach((result) => {
+			results.forEach(function (result) {
 				// section_id is null only when the whole publication failed before
 				// anything was created (its own transaction rolled back) - review item C1.
 				// Each *_error is the error system's wire body ({code, message, ...} — see
@@ -646,7 +657,7 @@ const get_content_data = (self) => {
 						).replace(
 							'{langs}',
 							abstract_skipped
-								.map((item) => {
+								.map(function (item) {
 									const reason =
 										item.reason === 'duplicate_language'
 											? self.get_tool_label('abstract_duplicate_language') ||
@@ -680,7 +691,7 @@ const get_content_data = (self) => {
 			return summary;
 		};
 
-		confirm_button.addEventListener('click', (e) => {
+		confirm_button.addEventListener('click', function (e) {
 			e.stopPropagation();
 
 			const kept = rows.filter((row) => row.checkbox.checked).map((row) => row.publication);
@@ -715,7 +726,7 @@ const get_content_data = (self) => {
 		return review_container;
 	}; //end build_review
 
-	preview_button.addEventListener('click', (e) => {
+	preview_button.addEventListener('click', function (e) {
 		e.stopPropagation();
 
 		const url = url_input.value.trim();
@@ -736,7 +747,7 @@ const get_content_data = (self) => {
 		if (selected_html) {
 			self
 				.preview_html(url, selected_html)
-				.then((response) => {
+				.then(function (response) {
 					preview_button.classList.remove('loading');
 					while (result_container.firstChild) {
 						result_container.removeChild(result_container.firstChild);
@@ -762,7 +773,7 @@ const get_content_data = (self) => {
 						),
 					);
 				})
-				.catch((error) => {
+				.catch(function (error) {
 					preview_button.classList.remove('loading');
 					console.error('[tool_bibliography_acquisition] preview_html failed:', error);
 				});

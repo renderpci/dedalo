@@ -42,13 +42,15 @@ wire_tool(tool_bibliography_acquisition, render_tool_bibliography_acquisition);
  * @returns {Promise<boolean>}
  */
 tool_bibliography_acquisition.prototype.init = async function (options) {
+	const self = this;
+
 	const common_init = await tool_common.prototype.init.call(this, options);
 
 	try {
-		this.lang = options.lang;
-		this.langs = page_globals.dedalo_projects_default_langs;
+		self.lang = options.lang;
+		self.langs = page_globals.dedalo_projects_default_langs;
 	} catch (error) {
-		this.error = error;
+		self.error = error;
 		console.error(error);
 	}
 
@@ -78,12 +80,14 @@ tool_bibliography_acquisition.prototype.build = async function (autoload = false
  *   pid/pfile as extension keys (NOT under .data) for the caller to stream.
  */
 tool_bibliography_acquisition.prototype.preview_url = async function (url) {
-	const response = await this.tool_request({
+	const self = this;
+
+	const response = await self.tool_request({
 		action: 'preview_url',
 		background: true,
 		options: {
 			url: url,
-			section_tipo: this.section_tipo,
+			section_tipo: self.section_tipo,
 		},
 	});
 
@@ -109,12 +113,14 @@ tool_bibliography_acquisition.prototype.preview_url = async function (url) {
  *   preview_url's, just not backgrounded.
  */
 tool_bibliography_acquisition.prototype.preview_html = async function (url, html) {
-	const response = await this.tool_request({
+	const self = this;
+
+	const response = await self.tool_request({
 		action: 'preview_html',
 		options: {
 			url: url,
 			html: html,
-			section_tipo: this.section_tipo,
+			section_tipo: self.section_tipo,
 		},
 	});
 
@@ -142,12 +148,14 @@ tool_bibliography_acquisition.prototype.preview_html = async function (url, html
  *   failed without rolling back what already succeeded.
  */
 tool_bibliography_acquisition.prototype.commit_publications = async function (publications) {
-	const response = await this.tool_request({
+	const self = this;
+
+	const response = await self.tool_request({
 		action: 'commit_publications',
 		background: true,
 		options: {
 			publications: publications,
-			section_tipo: this.section_tipo,
+			section_tipo: self.section_tipo,
 		},
 	});
 

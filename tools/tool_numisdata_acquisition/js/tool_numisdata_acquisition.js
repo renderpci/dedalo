@@ -45,13 +45,15 @@ wire_tool(tool_numisdata_acquisition, render_tool_numisdata_acquisition);
  * @returns {Promise<boolean>}
  */
 tool_numisdata_acquisition.prototype.init = async function (options) {
+	const self = this;
+
 	const common_init = await tool_common.prototype.init.call(this, options);
 
 	try {
-		this.lang = options.lang;
-		this.langs = page_globals.dedalo_projects_default_langs;
+		self.lang = options.lang;
+		self.langs = page_globals.dedalo_projects_default_langs;
 	} catch (error) {
-		this.error = error;
+		self.error = error;
 		console.error(error);
 	}
 
@@ -81,12 +83,14 @@ tool_numisdata_acquisition.prototype.build = async function (autoload = false) {
  *   pid/pfile as extension keys (NOT under .data) for the caller to stream.
  */
 tool_numisdata_acquisition.prototype.preview_url = async function (url) {
-	const response = await this.tool_request({
+	const self = this;
+
+	const response = await self.tool_request({
 		action: 'preview_url',
 		background: true,
 		options: {
 			url: url,
-			section_tipo: this.section_tipo,
+			section_tipo: self.section_tipo,
 		},
 	});
 
@@ -112,12 +116,14 @@ tool_numisdata_acquisition.prototype.preview_url = async function (url) {
  *   preview_url's, just not backgrounded.
  */
 tool_numisdata_acquisition.prototype.preview_html = async function (url, html) {
-	const response = await this.tool_request({
+	const self = this;
+
+	const response = await self.tool_request({
 		action: 'preview_html',
 		options: {
 			url: url,
 			html: html,
-			section_tipo: this.section_tipo,
+			section_tipo: self.section_tipo,
 		},
 	});
 
@@ -156,14 +162,16 @@ tool_numisdata_acquisition.prototype.commit_lots = async function (
 	auction,
 	company_selection,
 ) {
-	const response = await this.tool_request({
+	const self = this;
+
+	const response = await self.tool_request({
 		action: 'commit_lots',
 		background: true,
 		options: {
 			lots: lots,
 			auction: auction,
 			company_selection: company_selection || null,
-			section_tipo: this.section_tipo,
+			section_tipo: self.section_tipo,
 		},
 	});
 
