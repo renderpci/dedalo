@@ -251,6 +251,10 @@ Merged since the last release; these ship with the next one.
 
     A CSV exported from Dédalo carries the record information every section shares — who created and last modified the record and when, and the other fields of the *Record information* group. On import, those columns came up unchecked and could not be chosen in the column mapper, and the preflight check reported them as "not a component of section", so a re-import could not restore a record's history. They are listed again after the section's own fields, matched automatically by their column name, and imported with the dates and users the file carries (the record's "modified" stamp is not overwritten by the import itself). As before, these columns are offered to global administrators only, can only replace a value (never append to it). Computed fields, which store nothing of their own (the group's inverse references, a thesaurus's children list, indexations, external-service fields), are no longer offered in the column mapper at all; a column map that names one anyway is refused with an explanation. The Activity and Time machine sections, which have no record information, do not list them.
 
+- **The "Show buttons" label no longer covers the search buttons on a phone.**
+
+    On narrow screens the vertical **Show buttons** label of a section list (and of the thesaurus/ontology toolbar) printed over **Search** and **Show all**. Below phone width only the arrow toggle is shown; its name is still read on hover and by screen readers.
+
 - **The MARC21 and Zotero imports refuse a computed field, and an AI agent can remove one child of a thesaurus term.**
 
     A field whose value is computed and never stored (a term's children, an inverse or index list, an external record) can no longer be the target of a MARC21 or Zotero import map. Before, an import mapped onto a term's children could quietly move records under another parent in the thesaurus. Now the whole import is refused before anything is written, and the message names the field and tells you what to import instead (for children: the parent, on the child records). The CSV import already worked this way.

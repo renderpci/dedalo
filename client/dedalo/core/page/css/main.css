@@ -19693,6 +19693,12 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_ontology > .buttons_container > .show_other_buttons_button:focus {
   outline: none;
 }
+@media screen and (max-width: 600px) {
+  .area_thesaurus > .buttons_container > .show_other_buttons_button:before,
+  .area_ontology > .buttons_container > .show_other_buttons_button:before {
+    display: none;
+  }
+}
 .area_thesaurus > .search_container,
 .area_ontology > .search_container {
   position: relative;
@@ -20255,6 +20261,11 @@ body.inspector_resizing {
 }
 .section.list > .buttons_container > .show_other_buttons_button.up:before {
   display: none;
+}
+@media screen and (max-width: 600px) {
+  .section.list > .buttons_container > .show_other_buttons_button:before {
+    display: none;
+  }
 }
 .section.list > .paginator_container {
   height: 39px;

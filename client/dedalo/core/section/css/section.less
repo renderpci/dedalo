@@ -399,6 +399,15 @@ body.inspector_resizing {
 						display: none;
 					}
 				}
+
+				// phone: the rotated label spills ~9rem left of this 1rem
+				// button and overprints the search buttons. Arrow only — the
+				// a11y name (a11y.set_label) and title still carry the label.
+				@media screen and (max-width: @width_break_point_phone) {
+					&:before {
+						display: none;
+					}
+				}
 			}
 		}
 

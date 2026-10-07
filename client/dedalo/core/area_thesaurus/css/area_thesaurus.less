@@ -55,6 +55,14 @@
 			&:focus {
 				outline: none;
 			}
+
+			// phone: the rotated label overprints the search buttons (see
+			// section.less). Arrow only; title + a11y name keep the label.
+			@media screen and (max-width: @width_break_point_phone) {
+				&:before {
+					display: none;
+				}
+			}
 		}
 	}
 
