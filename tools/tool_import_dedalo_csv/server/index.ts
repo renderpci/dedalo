@@ -337,7 +337,7 @@ async function resolveColumnMap(
 /**
  * get_csv_files: list the user's CSVs, each with the column analysis the client
  * renders (PHP get_csv_files): name/dir, n_records/n_columns, file_info (header),
- * ar_columns_map (per-column {tipo,label,model}), sample_data (first rows) and
+ * ar_columns_map (per-column {tipo,label,model}), sample_data (first DATA rows, no header) and
  * sample_data_errors (rows with malformed JSON cells). The parse + per-row scan
  * runs off the serving event loop (audit S3-42) and returns only the bounded
  * summary; only the ontology column-map lookup (header-sized) stays on-thread.

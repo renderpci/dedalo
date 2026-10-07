@@ -189,6 +189,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The CSV import's column mapper shows a real value from the file as each column's *Sample data*, not the column's own name.**
+
+    When a CSV file was staged in **Import CSV**, the *Sample data* cell of every row in the columns mapper repeated the column's name (the same text as the *Name* cell), because the preview was taken from the file's header line. It now shows the first non-empty value of that column in the data rows — the second line of the file, or a later line when that cell is empty — so you can check that each column is mapped to the right component before importing. Nothing was imported differently: the preview was the only thing affected.
+
 - **The CSV importer recognises the common record columns again (created and modified by/date, and the rest of the record information).**
 
     A CSV exported from Dédalo carries the record information every section shares — who created and last modified the record and when, and the other fields of the *Record information* group. On import, those columns came up unchecked and could not be chosen in the column mapper, and the preflight check reported them as "not a component of section", so a re-import could not restore a record's history. They are listed again after the section's own fields, matched automatically by their column name, and imported with the dates and users the file carries (the record's "modified" stamp is not overwritten by the import itself). As before, these columns are offered to global administrators only, can only replace a value (never append to it). Computed fields, which store nothing of their own (the group's inverse references, a thesaurus's children list, indexations, external-service fields), are no longer offered in the column mapper at all; a column map that names one anyway is refused with an explanation. The Activity and Time machine sections, which have no record information, do not list them.

@@ -47,7 +47,7 @@
 *   n_records         : number   – number of data rows (excluding header)
 *   n_columns         : number   – number of columns
 *   file_info         : string[] – column names (first row of the CSV)
-*   sample_data       : Array[]  – a few parsed rows for preview (each an array of cell values)
+*   sample_data       : Array[]  – up to 10 parsed DATA rows for preview, never the header (each an array of cell values)
 *   sample_data_errors: Object[] – JSON parse errors found in sample rows (empty if OK)
 *   ar_columns_map    : Object[] – per-column map: { tipo, model, label, checked, map_to, decimal?, import_mode? }
 *   section_tipo      : string   – auto-detected or user-supplied target section tipo (e.g. 'oh1')
