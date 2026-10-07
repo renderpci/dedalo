@@ -970,6 +970,12 @@
 			padding-bottom: 1.25rem;
 			>button {
 				margin: 0;
+				// keep the desktop icon→label gap on phones: fn_append_icon's
+				// breakpoint squeeze (2px) is for cramped toolbars, and a lone
+				// dialog button reads as '⊕Continue' with it
+				&::before {
+					margin-right: 0.25rem;
+				}
 			}
 		}
 	}//end dd-modal.dd_confirm

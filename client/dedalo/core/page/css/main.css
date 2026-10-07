@@ -5693,6 +5693,9 @@ dd-modal.dd_confirm .footer.content {
 dd-modal.dd_confirm .footer.content > button {
   margin: 0;
 }
+dd-modal.dd_confirm .footer.content > button::before {
+  margin-right: 0.25rem;
+}
 .disabled_component .content_data.component,
 .disabled_component .buttons_container,
 .disabled_component input,
