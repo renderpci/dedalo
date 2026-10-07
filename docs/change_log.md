@@ -181,6 +181,35 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **A new tool imports journal articles from any OAI-PMH/OJS source directly into Publication records.**
+
+    Paste a journal's OAI-PMH URL (or a normal OJS article/journal URL) and the tool lists
+    every publication it found — title, authors, series, year and page range — so you can
+    narrow the list before committing. Kept publications become real records: the series
+    is found or created and linked, each author is found or created and linked by name,
+    the article's abstract is written in each language the source carries that your installation
+    uses (a variant in any other language, or a second one for a language already written, is left out
+    and named in the summary rather than stopping the import), and the PDF is
+    fetched and attached when the source links to one. A publication already imported
+    before is skipped rather than duplicated. For a journal that blocks automated
+    fetching, you can instead save its OAI-PMH response from your browser and upload the
+    file. An article whose metadata cannot be fetched is listed with the reason, and the rest are still
+    shown. A commit running in the background can be stopped partway through — everything
+    imported up to that point is kept, and the summary tells you how much of the batch
+    landed.
+
+- **A new tool imports coin-auction lots (jesusvico.com, biddr.com, aureo.com, numisbids.com, sixbid.com) directly into Numismatic Data records.**
+
+    Paste an auction or single-lot URL from one of five supported houses and the tool
+    fetches the page, shows every lot it found (weight, diameter, grade, images and all),
+    and lets you narrow the list before committing. Kept lots become real records: the
+    auction and coin type are found or created and linked, images are cropped and
+    uploaded, and a lot already imported before is skipped rather than duplicated. For a
+    page the house blocks from automated fetching, you can instead save it from your
+    browser and upload the file. A commit running in the background can be stopped partway
+    through — everything imported up to that point is kept, and the summary tells you how
+    much of the batch landed.
+
 - **The RDF import fills the record again, and links or creates its related records.**
 
     The RDF import only fetched and showed a resource's RDF; nothing reached the record. It now imports as it did in Dédalo 6: the resource is mapped through the External Ontology an administrator described, and its labels (in every language the source gives), descriptions, dates and places are written into the record. Related authorities (a mint, a material, a person) are linked: an authority some record already carries is linked without being fetched; a new one is fetched from its own site, created and linked. The import only fills: a field that already has a value is never overwritten, and running it twice changes nothing. Each run that changes something is one bulk process, so it can be reverted; a run that changes nothing leaves no bulk process behind. One refused value never costs the rest: a link or a field the engine refuses is listed as skipped, with the reason, and everything else of the resource is still written. A link the External Ontology maps to a section the field does not accept is skipped before anything is fetched or created, and the reason names the ontology node to fix. The result now lists what was created, what was written and what was skipped, and why. An authority that does not fit in the 15-second budget is reported *not fetched — run again*: the next run completes it. Only web (`http`/`https`) addresses from the source are written or linked. An authority is looked for in every project, so one another project already holds is linked, never duplicated. A new authority is also looked for by its equivalent addresses (the same concept on Getty, Wikidata…): when exactly one record already has one, that record is linked and given the authority's address, instead of a duplicate; when several do, nothing is linked and the result names them. The same address under `http://` and `https://` counts as one. A creator (or any record between this one and an authority) is only created together with its link to that authority, and a source text carrying Dédalo tag syntax is never written. A record is never created without the identifier that finds it again: when that value cannot be written, nothing of the record is created and the line says why — nor of a chain of records leading to it (a creator and the person under it): when one of them cannot be created, none is. An authority the import created stays when its link is refused for another reason than the External Ontology (the field is full, the term is not selectable): it is a complete record, linked by the next run that may. See [RDF import](./tools/using_import_rdf.md).
@@ -1505,7 +1534,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 98 entries"
+??? note "Wire contract — 99 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1605,6 +1634,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-03-publication-hosts-widget`
     - `WC-2026-10-03-save-refuses-malformed-value-shape`
     - `WC-2026-10-06-consultation-only-no-section-tools`
+    - `WC-2026-10-07-acquisition-tools-ts-only`
 
 ## 7.0.0-beta.4 — 2026-08-24
 
