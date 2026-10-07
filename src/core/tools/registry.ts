@@ -395,14 +395,18 @@ function tipoInArray(tipo: string, values: string[]): boolean {
  * fall back to the core rules below. Returns null when the decision is ledgered
  * (caller omits + reports the tool).
  */
-async function toolIsAvailable(
+export async function toolIsAvailable(
 	name: string,
 	context: { calledClass: string; tipo: string; isComponent: boolean },
 ): Promise<boolean | null> {
 	if (AVAILABILITY_LEDGERED_TOOLS.has(name)) return null;
 
 	// Prefer the tool's own server-module hook (PHP is_available).
-	const { getLoadedTool } = await import('./loader.ts');
+	const { getLoadedTool, toolModuleFailedToLoad } = await import('./loader.ts');
+	// A tool whose server module exists but failed to load has an unreachable
+	// isAvailable hook: fail CLOSED, never fall through to "always available"
+	// (a missing dependency used to surface a section-scoped tool everywhere).
+	if (await toolModuleFailedToLoad(name)) return false;
 	const loaded = await getLoadedTool(name);
 	if (loaded?.module.isAvailable !== undefined) {
 		return loaded.module.isAvailable({

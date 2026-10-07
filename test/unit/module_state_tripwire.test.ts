@@ -170,6 +170,10 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/area_maintenance/backup.ts:deepReadTail',
 	'core/tools/loader.ts:loadedTools',
 	'core/tools/loader.ts:collisions',
+	// Names whose server module failed to load on the last scan (fail-closed
+	// availability): boot/install-stable, same lifecycle as `collisions` —
+	// rebuilt per scan, cleared by resetLoadedTools. No request identity.
+	'core/tools/loader.ts:failedLoads',
 	'core/tools/loader.ts:loadingPromise',
 	// Lang-INDEPENDENT registry row data only (S1-13): the per-request label is
 	// resolved per call in getElementTools, which also builds a fresh
