@@ -1,0 +1,60 @@
+{
+	"$schema": "../../src/core/tools/register.schema.json",
+	"name": "tool_bibliography_acquisition",
+	"version": "1.0.0",
+	"label": {
+		"lg-eng": "Import from journal URL"
+	},
+	"affected_models": [
+		"section"
+	],
+	"show_in_component": true,
+	"active": true,
+	"properties": {
+		"open_as": "modal"
+	},
+	"labels": [
+		{ "lang": "lg-eng", "name": "url_placeholder", "value": "Paste a journal's OAI-PMH URL (or a normal OJS article/journal URL)" },
+		{ "lang": "lg-eng", "name": "preview", "value": "Preview" },
+		{ "lang": "lg-eng", "name": "html_file_label", "value": "Or upload a saved OAI-PMH response (for sources that block automated fetching) — URL above still required:" },
+		{ "lang": "lg-eng", "name": "request_failed", "value": "The request failed." },
+		{ "lang": "lg-eng", "name": "job_done", "value": "Done." },
+		{ "lang": "lg-eng", "name": "job_working", "value": "Working…" },
+		{ "lang": "lg-eng", "name": "article_failures", "value": "{failed} article(s) could not be fetched — showing the {count} publications that were." },
+		{ "lang": "lg-eng", "name": "article_failure", "value": "Article {id}: {reason}" },
+		{ "lang": "lg-eng", "name": "publications_truncated", "value": "Only the first {count} articles are shown ({more} more were found and left out)." },
+		{ "lang": "lg-eng", "name": "series_prefix", "value": "Series: " },
+		{ "lang": "lg-eng", "name": "series_existing", "value": " (existing record #{id}, will link to it)" },
+		{ "lang": "lg-eng", "name": "series_new", "value": " (new — will be created)" },
+		{ "lang": "lg-eng", "name": "series_none", "value": "No series info found for this URL." },
+		{ "lang": "lg-eng", "name": "select_all", "value": "Select all" },
+		{ "lang": "lg-eng", "name": "deselect_all", "value": "Deselect all" },
+		{ "lang": "lg-eng", "name": "keyword_placeholder", "value": "Keyword…" },
+		{ "lang": "lg-eng", "name": "include_matching", "value": "Include matching" },
+		{ "lang": "lg-eng", "name": "exclude_matching", "value": "Exclude matching" },
+		{ "lang": "lg-eng", "name": "year_from", "value": "Year from" },
+		{ "lang": "lg-eng", "name": "year_to", "value": "to (included)" },
+		{ "lang": "lg-eng", "name": "include_range", "value": "Include range" },
+		{ "lang": "lg-eng", "name": "exclude_range", "value": "Exclude range" },
+		{ "lang": "lg-eng", "name": "no_publications_found", "value": "No publications found at this URL." },
+		{ "lang": "lg-eng", "name": "confirm_import", "value": "Confirm import" },
+		{ "lang": "lg-eng", "name": "nothing_kept", "value": "Every publication is excluded — nothing to import." },
+		{ "lang": "lg-eng", "name": "commit_stopped", "value": "Stopped after {done} of {total} publications — the rest were not imported." },
+		{ "lang": "lg-eng", "name": "url_missing", "value": "Paste a URL first." },
+		{ "lang": "lg-eng", "name": "pub_not_imported", "value": "Publication {pub} NOT imported: {reason}" },
+		{ "lang": "lg-eng", "name": "pub_skipped", "value": "Publication #{id} — already imported, skipped" },
+		{ "lang": "lg-eng", "name": "pub_series_linked", "value": " — series #{id} ({status})" },
+		{ "lang": "lg-eng", "name": "created", "value": "created" },
+		{ "lang": "lg-eng", "name": "reused", "value": "reused" },
+		{ "lang": "lg-eng", "name": "pub_series_not_linked", "value": " — series NOT linked: {reason}" },
+		{ "lang": "lg-eng", "name": "pub_authors_linked", "value": " — authors #{ids}" },
+		{ "lang": "lg-eng", "name": "pub_authors_not_linked", "value": " — authors NOT linked: {reasons}" },
+		{ "lang": "lg-eng", "name": "pub_pdf_imported", "value": " — PDF imported" },
+		{ "lang": "lg-eng", "name": "pub_pdf_not_imported", "value": " — PDF NOT imported: {reason}" },
+		{ "lang": "lg-eng", "name": "pub_imported", "value": "Publication #{id} (fields: {fields})" },
+		{ "lang": "lg-eng", "name": "pub_abstract_skipped", "value": " — abstract NOT written in: {langs}" },
+		{ "lang": "lg-eng", "name": "abstract_language_not_installed", "value": "language not installed" },
+		{ "lang": "lg-eng", "name": "abstract_duplicate_language", "value": "language already written" },
+		{ "lang": "lg-eng", "name": "abstract_untagged", "value": "untagged" }
+	]
+}

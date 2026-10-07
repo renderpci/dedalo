@@ -307,6 +307,18 @@ export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
 		pattern: literal('reader.result'),
 		reason: 'FileReader.result — a browser API member',
 	},
+	{
+		file: 'tools/tool_bibliography_acquisition/js/render_tool_bibliography_acquisition.js',
+		pattern: literal('reader.result'),
+		reason:
+			'FileReader.result — a browser API member (the saved page the operator picked for preview_html)',
+	},
+	{
+		file: 'tools/tool_numisdata_acquisition/js/render_tool_numisdata_acquisition.js',
+		pattern: literal('reader.result'),
+		reason:
+			'FileReader.result — a browser API member (the saved page the operator picked for preview_html)',
+	},
 	// ── the browser's own captured-error buffer (a REQUEST field, never a response) ──
 	{
 		file: 'tools/tool_error_report/js/render_tool_error_report.js',
@@ -352,6 +364,16 @@ export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
 		file: 'tools/tool_diffusion/js/render_tool_diffusion.js',
 		pattern: literal('sse_response?.data?.msg'),
 		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_bibliography_acquisition/js/render_tool_bibliography_acquisition.js',
+		pattern: literal('sse_response?.data?.msg'),
+		reason: `${FRAME_REASON} — a NON-terminal progress frame, data = the handler's publishProgress {msg, counter, total}; the terminal frame's envelope is read through request_failed / response_data`,
+	},
+	{
+		file: 'tools/tool_numisdata_acquisition/js/render_tool_numisdata_acquisition.js',
+		pattern: literal('sse_response?.data?.msg'),
+		reason: `${FRAME_REASON} — a NON-terminal progress frame, data = the handler's publishProgress {msg, counter, total}; the terminal frame's envelope is read through request_failed / response_data`,
 	},
 	// ── media / background job frames ─────────────────────────────────────────
 	{
