@@ -122,7 +122,10 @@ Then copy the `publication/host_agent/` directory, including `node_modules/`, to
 publication host. Root runs the provisioner from this copy and systemd starts the agent
 from it, so step 4's `check` refuses a copy that anyone but root could change:
 
-- **place it as root**, for example under `/opt/dedalo/publication/host_agent`. The
+- **place it as root**, in the site's own directory, for example
+  `/home/museum.org/host_agent` (see
+  [Lay out each site in its home directory](#lay-out-each-site-in-its-home-directory)):
+  each site then has its own copy and is upgraded on its own. The
   directory, its entry point and **every parent directory** must be owned by root and not
   writable by group or others. A copy made by `scp` or `rsync` as a normal user is owned
   by that user; fix it with `chown -R root:root` and `chmod -R go-w`;
@@ -148,7 +151,7 @@ first: it names the accounts that step 3 creates. A complete declaration for **o
   "listen": { "kind": "unix" },
   "agent_user": "dedalo-pubhost",
   "engine_group": "dedalo",
-  "agent_dir": "/opt/dedalo/publication/host_agent",
+  "agent_dir": "/home/museum.org/host_agent",
   "web": { "server": "apache", "unit": "apache2" },
   "v1": { "user": "museum_site" },
   "state_root": "/home/museum.org/dedalo",
@@ -178,7 +181,7 @@ On **two machines**, the listener is the private address the agent binds, and th
 | `listen` | `{"kind": "unix"}` on one machine (the socket path is derived). On two machines `{"kind": "tls", "host": …, "port": …}`: the host is the **private IPv4 address** the agent binds, written as a literal such as `10.20.0.2`: no hostname, no wildcard (`0.0.0.0`). It also becomes the server certificate's name, so the work system connects to that address |
 | `agent_user` | a new account for the agent alone (step 3 creates it) |
 | `engine_group` | one machine only: the group of the account that runs Dédalo (`id -gn <that account>`). The agent's socket belongs to it, so only the work system can connect |
-| `agent_dir` | where you copied the agent's code in step 1 |
+| `agent_dir` | where you copied the agent's code in step 1, for example `/home/museum.org/host_agent`. Beside the state root, never inside it: the two may not contain each other |
 | `web` | the web server (`apache` or `nginx`) and its systemd unit (`apache2` on Debian and Ubuntu, `httpd` on RHEL, `nginx`). You do not declare the configuration-test command: the provisioner picks it on the host, `/usr/sbin/apache2ctl` on Debian and Ubuntu (where `apachectl` is only a link to it), `/usr/sbin/apachectl` on RHEL, `/usr/sbin/nginx` for nginx |
 | `v1.user` | the account the Publication API v1 runs as. With one PHP-FPM pool per site, the site's pool user (the pool file's `user =`); the pools may all share the web server's group. With Apache's `mod_php`, the web server's user (`www-data` on Debian and Ubuntu). It owns the v1 configuration, and nobody else may read that file. Use a pool per site whenever the server hosts more than one site (see [Several instances on one server](#several-instances-on-one-server)) |
 | `state_root` | a new directory for the agent: the API releases, the media rules, the audit log. It and **every directory above it** must be owned by root and writable by no one else, because whoever owns a parent directory can replace what is inside it. So it can never be inside a directory the site's user owns. With one site per home directory, use `/home/<site>/dedalo` (see [Lay out each site in its home directory](#lay-out-each-site-in-its-home-directory)) |
@@ -419,6 +422,7 @@ its document root, in the same home:
 /home/museum.org/              root:root 0755   owned by root, not by the site's user
 /home/museum.org/httpdocs/     museum_site      the website: the site user's home and DocumentRoot
 /home/museum.org/.bun/bin/bun  root:root 0755   the site's own Bun, at the work system's pinned version (bun_bin)
+/home/museum.org/host_agent/   root, go-w       the site's own copy of the agent's code (agent_dir)
 /home/museum.org/dedalo/       state_root       created by provision apply
     publication_api/v1/current -> releases/…        the Publication API v1
     publication_api/v1/shared/server_config_api.php  museum_site, 0400
@@ -446,7 +450,7 @@ useradd --system --no-create-home --shell /usr/sbin/nologin -g www-data -d /home
 ```
 
 The site user still owns `httpdocs/` and can change the website as before. It can read
-`dedalo/` and `.bun/` but not change them. If a hosting panel or script later gives
+`dedalo/`, `.bun/` and `host_agent/` but not change them. If a hosting panel or script later gives
 `/home/museum.org` back to the site user, the agent refuses to start and `check` names the
 directory; give it back to root.
 
@@ -466,7 +470,8 @@ The user lands in `httpdocs/`, sees `dedalo/` read-only, and can read only its o
 configuration.
 
 **2. Declare it.** `"instance": "museum_org"`, `"state_root": "/home/museum.org/dedalo"`,
-`"bun_bin": "/home/museum.org/.bun/bin/bun"` (installed as in [step 2](#2-declare-the-instance))
+`"bun_bin": "/home/museum.org/.bun/bin/bun"` (installed as in [step 2](#2-declare-the-instance)),
+`"agent_dir": "/home/museum.org/host_agent"` (copied as in [step 1](#1-prepare-the-code))
 and `"v1": { "user": "museum_site" }`, the user of the site's PHP-FPM pool.
 
 **3. Let the site's pool read it.** If the pool limits PHP with `open_basedir` to the home
