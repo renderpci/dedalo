@@ -36,6 +36,7 @@ import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
+import { deleteSectionRecord } from '../../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import { isRecordInScope } from '../../../src/core/security/record_scope.ts';
 import {
@@ -161,7 +162,7 @@ function extensionFromUrl(url: string, contentType: string): string {
 function assertUrlOption(options: Record<string, unknown>): string {
 	const url = options.url;
 	if (typeof url !== 'string' || url.trim() === '') {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: 'preview_url requires a non-empty "url" string option.',
 			publicMessage: 'Paste an auction URL first.',
 		});
@@ -172,7 +173,7 @@ function assertUrlOption(options: Record<string, unknown>): string {
 function findAdapterOrThrow(url: string) {
 	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(url));
 	if (!adapter) {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: `No supported source adapter matches this URL: ${url}`,
 			publicMessage:
 				'Only jesusvico.com, biddr.com, aureo.com, numisbids.com, and sixbid.com URLs are supported.',
@@ -243,7 +244,7 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	const url = assertUrlOption(context.options);
 	const html = context.options.html;
 	if (typeof html !== 'string' || html.trim() === '') {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: 'preview_html requires a non-empty "html" string option.',
 			publicMessage: "Paste or upload the saved page's HTML first.",
 		});
@@ -255,7 +256,7 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	// nothing here for the harvesting door to guard beyond that - just the same https-only shape
 	// check a real fetch would also enforce.
 	if (new URL(url).protocol !== 'https:') {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: `preview_html: only https:// URLs are supported, got ${url}.`,
 			publicMessage: 'Only https:// URLs are supported.',
 		});
@@ -358,8 +359,18 @@ async function writeField(
 		changedData: [{ action: 'set_data', value: [{ id: 1, value }] }],
 	});
 	if (!save.ok) {
+		// The refusal reason rides `cause` (log-only, never the wire), and WHICH write failed rides
+		// `coordinates` (also log-only) — never a template string: a tool holding an outbound door
+		// (harvestFetch) must never carry a literal property read off an error/result object in its
+		// own source (ssrf_one_guard_tripwire). The console's own Error-printing walks `cause`
+		// automatically, so the refusal reason still reaches the log.
 		throw new DedaloError('record.save_failed', {
-			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+			coordinates: {
+				component_tipo: componentTipo,
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+			},
+			cause: save,
 		});
 	}
 }
@@ -382,8 +393,7 @@ async function importImagesForLot(
 			? (first as { sourceUrl?: unknown }).sourceUrl
 			: null;
 	if (typeof sourceUrl !== 'string' || sourceUrl === '') {
-		throw new DedaloError('tool.action_failed', {
-			message: 'This lot has no image to import.',
+		throw new DedaloError('resource.not_found', {
 			publicMessage: 'This lot has no image to import.',
 		});
 	}
@@ -394,7 +404,7 @@ async function importImagesForLot(
 	// domain entry also admits its subdomains (harvestFetch's own host rule).
 	const imageAdapter = ADAPTERS.find((candidate) => candidate.matchesUrl(sourceUrl));
 	if (!imageAdapter) {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('tool.unsupported_target', {
 			message: `No source adapter recognizes this image's host: ${sourceUrl}`,
 			publicMessage: 'This image is hosted somewhere this tool does not recognize.',
 		});
@@ -449,10 +459,11 @@ async function importImagesForLot(
 		],
 	});
 	if (!outcome.ok || outcome.outputs === undefined) {
-		throw new DedaloError('tool.action_failed', {
-			message: outcome.message,
-			publicMessage: outcome.message,
-		});
+		// cropCoinPair's own `message` is already a vetted, operator-safe diagnostic (see its SEC-18
+		// comment) - but `tool.action_failed` is an operator-disclosure code, so publicMessage was
+		// never actually reaching the wire here either way. `cause` carries it to the log without a
+		// literal property read off a result object in this door-holding file (ssrf_one_guard_tripwire).
+		throw new DedaloError('tool.action_failed', { cause: outcome });
 	}
 
 	const spec = requireMediaSpec('component_image');
@@ -471,34 +482,48 @@ async function importImagesForLot(
 			.created_section_id;
 		if (!save.ok || createdSectionId === undefined) {
 			throw new DedaloError('record.save_failed', {
-				message: `Could not link the ${output.portalComponentTipo} image: ${save.message}`,
+				coordinates: { component_tipo: output.portalComponentTipo, section_id: sectionId },
+				cause: save,
 			});
 		}
-		const { identity, pathOpts } = await resolveMediaToolContext({
-			component_tipo: IMAGE_COMPONENT_TIPO,
-			section_tipo: IMAGE_SECTION_TIPO,
-			section_id: createdSectionId,
-		});
-		const result = await processUploadedFile({
-			spec,
-			identity,
-			pathOpts,
-			userId: context.userId,
-			keyDir: IMPORT_KEY_DIR,
-			tmpName: output.tmpName,
-			extension,
-		});
-		await persistUploadedMedia({
-			sectionTipo: identity.sectionTipo,
-			sectionId: identity.sectionId,
-			componentTipo: identity.componentTipo,
-			lang: identity.lang,
-			filesInfo: result.filesInfo,
-			originalFileName: output.fileName,
-			originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
-			nameKeys: nameKeysForQuality(spec, undefined),
-		});
-		result.startTranscode?.();
+		try {
+			const { identity, pathOpts } = await resolveMediaToolContext({
+				component_tipo: IMAGE_COMPONENT_TIPO,
+				section_tipo: IMAGE_SECTION_TIPO,
+				section_id: createdSectionId,
+			});
+			const result = await processUploadedFile({
+				spec,
+				identity,
+				pathOpts,
+				userId: context.userId,
+				keyDir: IMPORT_KEY_DIR,
+				tmpName: output.tmpName,
+				extension,
+			});
+			await persistUploadedMedia({
+				sectionTipo: identity.sectionTipo,
+				sectionId: identity.sectionId,
+				componentTipo: identity.componentTipo,
+				lang: identity.lang,
+				filesInfo: result.filesInfo,
+				originalFileName: output.fileName,
+				originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
+				nameKeys: nameKeysForQuality(spec, undefined),
+			});
+			result.startTranscode?.();
+		} catch (error) {
+			// The portal add_new_element above already created+linked the rsc170 record - a failure
+			// in processing/persisting its file left that record behind with no actual media on it
+			// (review item: "image record left behind"). Best-effort cleanup: the ORIGINAL error is
+			// what the caller needs to see, so a failed deletion here is swallowed, never masking it.
+			try {
+				await deleteSectionRecord(IMAGE_SECTION_TIPO, createdSectionId, context.userId);
+			} catch {
+				/* best-effort - the original error below still reports the real failure */
+			}
+			throw error;
+		}
 		created.push(`${output.portalComponentTipo}→${IMAGE_SECTION_TIPO}#${createdSectionId}`);
 	}
 
@@ -562,6 +587,27 @@ async function acquireDedupLock(key: string): Promise<void> {
 	await sql.unsafe('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
 }
 
+/** Folds a free-text name into the SAME equivalence class the engine's own `==` search operator
+ * uses (Postgres `f_unaccent`, confirmed in import_code_lookup.ts): lowercased AND stripped of
+ * diacritics. A dedup lock keyed on case alone let "Jesús Vico" and "Jesus Vico" take DIFFERENT
+ * locks while the search still matches them to the SAME Entity - two concurrent commits of either
+ * spelling could both miss the lookup and both create (review item: "Entity lock key vs search").
+ * JS's NFD decomposition is not byte-identical to Postgres's unaccent dictionary for every exotic
+ * script, but the lock only needs the two calls to COLLIDE on the SAME key - the real correctness
+ * guarantee is still the re-check under the lock, through the actual (accent-insensitive) search. */
+function foldNameForLock(name: string): string {
+	const decomposed = name.trim().toLowerCase().normalize('NFD');
+	// Drop the Unicode "Combining Diacritical Marks" block (U+0300-U+036F) that NFD split the
+	// accented letters into, by code point rather than a literal-character regex (keeps this file's
+	// source free of non-ASCII combining marks, which render invisibly and are easy to corrupt).
+	let out = '';
+	for (const ch of decomposed) {
+		const code = ch.codePointAt(0) ?? 0;
+		if (code < 0x0300 || code > 0x036f) out += ch;
+	}
+	return out;
+}
+
 /** Resolves a CompanySelection to a real rsc106 section_id, creating one
  * (Name only — the one field every real Entity record carries) when the
  * selection says to. The create path is its own transaction (joins an
@@ -577,7 +623,7 @@ async function resolveCompanyEntityId(
 ): Promise<number> {
 	if ('sectionId' in selection) return selection.sectionId;
 	return withTransaction(async () => {
-		await acquireDedupLock(`rsc106:name:${selection.name.trim().toLowerCase()}`);
+		await acquireDedupLock(`rsc106:name:${foldNameForLock(selection.name)}`);
 		const existing = await findEntityByExactName(selection.name, context);
 		if (existing !== null) return existing;
 		const sectionId = await createSectionRecord(ENTITY_SECTION_TIPO, context.userId);
@@ -623,7 +669,8 @@ async function linkCompany(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not link the Company relation: ${save.message}`,
+			coordinates: { component_tipo: AUCTION_COMPANY_TIPO, section_id: auctionSectionId },
+			cause: save,
 		});
 	}
 }
@@ -808,7 +855,8 @@ async function linkAuction(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not link the Auction relation: ${save.message}`,
+			coordinates: { component_tipo: AUCTION_RELATION_TIPO, section_id: lotSectionId },
+			cause: save,
 		});
 	}
 }
@@ -957,13 +1005,14 @@ async function linkType(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			message: `Could not link the Type relation: ${save.message}`,
+			coordinates: { component_tipo: TYPE_RELATION_TIPO, section_id: lotSectionId },
+			cause: save,
 		});
 	}
 }
 
 /** One lot's outcome from commitLots. Every `*_error` is the error system's wire body
- * (toErrorBody(toDedaloError(...))), never a raw `(error as Error).message` - review item E2:
+ * (toErrorBody(toDedaloError(...))), never a raw exception's own text property - review item E2:
  * that raw text can carry tipos, ids and SQL driver text to the client. */
 interface CommitOneLotResult {
 	lot_identifier: unknown;
@@ -1080,13 +1129,20 @@ async function commitOneLot(
 	const isSearchCategorySource =
 		(auctionSourceDomain === 'biddr.com' || auctionSourceDomain === 'sixbid.com') &&
 		auctionHouse === 'Multiple auction houses';
-	if (isSearchCategorySource && typeof l.category === 'string' && l.category !== '') {
-		const split = splitSearchAuctionCategory(l.category);
-		if (split !== null) {
-			effectiveAuctionHouse = split.house;
-			effectiveAuctionNumber = split.label;
-			effectiveAuctionTitle = split.label;
-		}
+	if (isSearchCategorySource) {
+		// A search batch has no single real auction at all - 'Multiple auction houses' and the
+		// search hash (auctionNumber) are SENTINELS, not a real auction, so this lot's own category
+		// is the ONLY source of truth for it. A lot whose category doesn't split into a real (house,
+		// number) pair gets NO auction here, rather than falling through to the sentinels and
+		// inventing an Entity literally named "Multiple auction houses" and an Auction titled with
+		// the search hash (review item: "search batches create junk records").
+		const split =
+			typeof l.category === 'string' && l.category !== ''
+				? splitSearchAuctionCategory(l.category)
+				: null;
+		effectiveAuctionHouse = split?.house ?? '';
+		effectiveAuctionNumber = split?.label ?? '';
+		effectiveAuctionTitle = split?.label ?? null;
 	}
 
 	// Resolved BEFORE the lot record (review item G: "re-committing the same lots duplicates
@@ -1152,12 +1208,16 @@ async function commitOneLot(
 			);
 			written.push(DIAMETER_TIPO);
 		}
-		if (typeof l.lotNumber === 'string' && l.lotNumber.trim() !== '') {
+		if (lotNumber !== '') {
+			// Writes the SAME trimmed value findExistingLot's dedup lookup matches on - writing the
+			// untrimmed l.lotNumber here (while the lookup compared against the trimmed one) meant a
+			// lot number with incidental whitespace never matched its own stored value on a
+			// re-commit's exact '==' search, duplicating the lot (review item: dedup gaps).
 			await writeField(
 				newSectionId,
 				NUMISDATA_OBJECT_TIPO,
 				INVENTORY_NUMBER_TIPO,
-				l.lotNumber,
+				lotNumber,
 				context.userId,
 			);
 			written.push(INVENTORY_NUMBER_TIPO);
@@ -1298,7 +1358,7 @@ async function commitOneLot(
 async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	const lots = context.options.lots;
 	if (!Array.isArray(lots) || lots.length === 0) {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message:
 				'commit_lots requires a non-empty "lots" array (from preview_url, minus any excluded).',
 			publicMessage: 'No lots to import — run Preview first, then keep at least one lot.',
@@ -1309,7 +1369,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	// truncate, since this is a WRITE action — truncating would commit a batch the operator never
 	// reviewed as "the whole thing".
 	if (lots.length > MAX_LOTS) {
-		throw new DedaloError('tool.action_failed', {
+		throw new DedaloError('request.invalid_options', {
 			message: `commit_lots received ${lots.length} lots, over the ${MAX_LOTS} cap.`,
 			publicMessage: `Too many lots in one batch (${lots.length} > ${MAX_LOTS}). Split the import into smaller batches.`,
 		});
@@ -1378,7 +1438,18 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	const catalogueIndex = await loadCatalogueIndex(context);
 	const results: CommitOneLotResult[] = [];
 	let counter = 0;
+	let stopped = false;
 	for (const lot of lots) {
+		// Checked at the loop boundary, same idiom as tool_import_files: a lot is committed whole or
+		// not at all (C1's own transaction already guarantees that per lot), so stopping HERE never
+		// leaves a half-written record - it just leaves the REST of the batch uncommitted, reported
+		// back as a partial summary rather than running to completion regardless of Stop (review item:
+		// "the cancel signal is never read" - a 3000-lot import at >=3s/request otherwise runs 2.5h+
+		// and holds its media lane slot the whole time, impossible to end).
+		if (context.signal?.aborted) {
+			stopped = true;
+			break;
+		}
 		if (lot === null || typeof lot !== 'object') continue;
 		counter += 1;
 		const l = lot as Record<string, unknown>;
@@ -1425,22 +1496,30 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 		}
 	}
 
-	return ok({ results }, { requestId: toolRequestId(context) });
+	return ok({ results, stopped, lots_total: lots.length }, { requestId: toolRequestId(context) });
 }
 
 export const tool: ToolServerModule = {
 	name: 'tool_numisdata_acquisition',
 	apiActions: {
 		// Read-only: fetches external data + a read-only Auction check, writes nothing.
+		// 'targets' (not 'section'): previewUrl's own `options.section_tipo`, if the client sends
+		// one at all, is NEVER what actually gets touched - the handler always fetches/parses
+		// against numisdata4. A 'section' gate reading the client's OWN field let any user who can
+		// read ANY section start a live outbound fetch (review item: "preview actions are gated on
+		// any section"), since nothing stopped them sending an unrelated but readable section_tipo.
 		preview_url: {
-			permission: 'section',
+			permission: 'targets',
 			minLevel: 1,
+			targets: () => [{ section_tipo: NUMISDATA_OBJECT_TIPO }],
 			handler: previewUrl,
 		},
-		// Same read gate — parses HTML the operator already fetched, no network request.
+		// Same gate - no network request (parses HTML the operator already fetched), but still
+		// never gated on a client-sent section_tipo for the same reason as preview_url.
 		preview_html: {
-			permission: 'section',
+			permission: 'targets',
 			minLevel: 1,
+			targets: () => [{ section_tipo: NUMISDATA_OBJECT_TIPO }],
 			handler: previewHtml,
 		},
 		// Write: resolves Auction/Type, creates one record per kept lot, imports images.
