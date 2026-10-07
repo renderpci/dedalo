@@ -21,7 +21,7 @@ from that page, fetches each one's OAI-PMH record, and the review screen shows a
 each article's title, authors, date and page range. The librarian keeps the relevant ones and clicks
 **Confirm import**. The tool creates one Publication record per kept article, resolves (or creates)
 the journal's Series record and each author's Person record and links them, writes the abstract in
-every language the source actually carries, and — when a downloadable copy can be found — imports
+every language the source carries that your installation uses, and — when a downloadable copy can be found — imports
 the PDF directly onto the record.
 
 ## When to use it
@@ -65,8 +65,8 @@ its button opens in a **modal** (not a separate window).
      record or a **new** one will be created;
    - a checklist of every article found, checked by default, each with its title, authors,
      publication date and page range.
-   - if the journal stopped responding partway through fetching the set, a notice naming how many
-     articles were recovered before that happened.
+   - if some articles could not be fetched, a notice listing each one and why, above the
+     articles that were.
 5. **Curate the list.** Use *Select all* / *Deselect all*, an include/exclude keyword filter against
    the title and authors, or an include/exclude **year range** (parsed from each article's
    publication date).
@@ -82,10 +82,12 @@ its button opens in a **modal** (not a separate window).
     already imported is reported as skipped, not duplicated. Re-running Confirm import — including
     after stopping a batch partway — picks up only what is left.
 
-!!! note "The abstract is written once per language the source actually carries"
+!!! note "The abstract is written once per language the source carries and your installation uses"
     When a source provides the abstract in more than one language, each variant is written into its
     own language slot on the record rather than merged into a single one — open the record's
-    language switcher to see all of them.
+    language switcher to see all of them. A variant in a language your installation does not use,
+    or a second variant for a language already written, is left out, and the result line names it;
+    the publication itself is still imported.
 
 !!! note "A PDF is imported best-effort, separately from the record itself"
     OAI-PMH metadata never carries a direct PDF link, so the tool follows the article's landing page

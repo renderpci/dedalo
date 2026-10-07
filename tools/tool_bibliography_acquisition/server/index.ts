@@ -28,10 +28,14 @@ import {
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
+import { getAlpha2FromCode } from '../../../src/core/resolve/lang_names.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
-import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import {
+	installedDataLangs,
+	saveComponentData,
+} from '../../../src/core/section/record/save_component.ts';
 import { textAsParagraph } from '../../../src/core/tools/import_code_lookup.ts';
 import {
 	type ToolActionContext,
@@ -39,6 +43,11 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
+import {
+	type AbstractLangs,
+	type AbstractSkip,
+	planAbstractLangs,
+} from './lib/domain/abstract_langs.ts';
 import { parseDcDate, splitAuthorName } from './lib/extraction/parser-utils.ts';
 import { ojsOaiAdapter } from './lib/sources/ojs_oai/adapter.ts';
 import type { RawSource } from './lib/sources/types.ts';
@@ -98,6 +107,11 @@ const ADAPTERS = [ojsOaiAdapter];
 // malformed/adversarial commit_publications payload, same reasoning as commit_lots's own cap in
 // tool_numisdata_acquisition.
 const MAX_PUBLICATIONS = 200;
+
+/** How many look-alike candidates a find-by-name reads back for the byte-exact compare
+ * (import_code_lookup.ts's reasoning: a real look-alike cluster must fit inside the window, or the
+ * byte-exact row could be evicted before it is even read). */
+const LOOKALIKE_WINDOW = 10;
 
 function assertUrlOption(options: Record<string, unknown>): string {
 	const url = options.url;
@@ -160,7 +174,9 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 				exists: existingSeriesSectionId !== null,
 				section_id: existingSeriesSectionId,
 			},
-			partial_error: acquisition.partialError ?? null,
+			// One {article_id, error} per article whose metadata could not be fetched; `error` is the
+			// whole error wire body (the client renders its label/message).
+			article_failures: acquisition.failures ?? [],
 			publications_truncated_by: acquisition.truncatedBy ?? 0,
 		},
 		{ requestId: toolRequestId(context) },
@@ -215,22 +231,17 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	);
 }
 
-/** ISO 639-1 (the `xml:lang` OAI-PMH/Dublin Core carries, e.g. "en") to this engine's own "lg-"
- * + ISO 639-2/T code (confirmed against register.json labels already shipped for tool_identify:
- * lg-eng/spa/cat/fra/deu/ita/por) - deliberately only the languages this PR's own sources (Spanish/
- * Catalan academic journals) actually carry, not a guessed universal table. An install that has NOT
- * declared one of these as a data language refuses the write (save_component.ts's own chokepoint,
- * per src/config/data_langs.ts), so a wrong/unconfigured guess fails loudly and per-variant, never
- * silently - it does not risk the "write language no read reaches" class that file warns about. */
-const ISO_639_1_TO_LANG: Readonly<Record<string, string>> = {
-	en: 'lg-eng',
-	es: 'lg-spa',
-	ca: 'lg-cat',
-	fr: 'lg-fra',
-	de: 'lg-deu',
-	it: 'lg-ita',
-	pt: 'lg-por',
-};
+/** The install's data languages for abstract planning: every installed data lang that has an ISO
+ * 639-1 code through the engine's own map, plus the request data lang - the same `{data, current}`
+ * tool_import_rdf's engineRdfPlanLangs builds (rdf_import_plan.ts). Never a private code table: a
+ * write in a language the install does not declare is refused by save_component.ts, which would
+ * roll the whole publication's transaction back. */
+function abstractLangs(): AbstractLangs {
+	const data = installedDataLangs()
+		.map((code) => ({ code, alpha2: getAlpha2FromCode(code) }))
+		.filter((lang): lang is { code: string; alpha2: string } => lang.alpha2 !== null);
+	return { data, current: currentDataLang() };
+}
 
 /** The parsed `abstractVariants` from one previewed publication (plain JSON off the wire, so every
  * shape is checked at runtime) - each pairs an `xml:lang` with its own abstract text. */
@@ -257,10 +268,9 @@ async function writeField(
 	value: string | number,
 	userId: number,
 	// Defaults to NO_LANG for the (majority) non-translatable call sites; the
-	// one translatable field here (rsc221, Abstract - review item C5) must
-	// instead pass currentDataLang(), or the write lands in a slot the edit
-	// form never shows, and the operator's first real edit creates a SECOND
-	// value instead of replacing it.
+	// one translatable field here (rsc221, Abstract - review item C5) passes
+	// the installed data lang planAbstractLangs chose for each variant, or the
+	// write lands in a slot the edit form never shows.
 	lang: string = NO_LANG,
 ): Promise<void> {
 	const save = await saveComponentData({
@@ -385,14 +395,16 @@ async function findExistingPublication(
 
 /** Exact name match - used by previewUrl (check only) and findOrCreateSeries. An SQO run WITH the
  * caller's principal, not a hand-written SQL WHERE (review item B3, same reasoning as
- * findExistingPublication above). */
+ * findExistingPublication above). Same search-then-exact-compare as findExistingPerson: the `==`
+ * operator only NARROWS (accent/case-insensitive, f_unaccent), so "Saguntum" and "SAGUNTUM" would
+ * otherwise be one series; each candidate's own stored name is compared byte-exact (trimmed). */
 async function findExistingSeries(
 	name: string,
 	context: ToolActionContext,
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
 		section_tipo: [SERIES_SECTION_TIPO],
-		limit: 1,
+		limit: LOOKALIKE_WINDOW,
 		filter: {
 			$and: [
 				{
@@ -403,10 +415,17 @@ async function findExistingSeries(
 		},
 	});
 	const built = await buildSearchSql(sqo, { principal: context.principal });
-	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as ({
 		section_id: number;
-	}[];
-	return rows[0]?.section_id ?? null;
+	} & Record<string, unknown>)[];
+
+	const column = await dataColumnOf(SERIES_NAME_TIPO);
+	if (column === null) return null;
+	const wanted = name.trim();
+	for (const row of rows) {
+		if (storedTextMatches(row, column, SERIES_NAME_TIPO, wanted)) return row.section_id;
+	}
+	return null;
 }
 
 /** A transaction-scoped advisory lock on an arbitrary dedup key - same primitive as
@@ -535,20 +554,41 @@ async function linkFixedTerm(
 	}
 }
 
-/** The first stored item's text value for one component, read straight off a search result row's
- * own data column (same extraction tool_import_files' matchFreeName uses) - no separate per-row
- * read. */
-function firstItemText(row: Record<string, unknown>, column: string, tipo: string): string | null {
+/** The search row's data column holding `tipo`, or null when the model/column cannot be resolved -
+ * the caller then treats the lookup as NO match, never trusts an uncompared row. */
+async function dataColumnOf(tipo: string): Promise<string | null> {
+	const model = await getModelByTipo(tipo);
+	return model !== null ? getColumnNameByModel(model) : null;
+}
+
+/** Every stored item's text value (trimmed) for one component, read straight off a search result
+ * row's own data column (same extraction tool_import_files' matchFreeName uses) - no separate
+ * per-row read. Every item, not only the first: a multi-item/multi-lang value can carry the
+ * matching text in any of them. */
+function storedItemTexts(row: Record<string, unknown>, column: string, tipo: string): string[] {
 	const payload = row[column] as Record<string, unknown> | null | undefined;
 	const rawItems = payload?.[tipo];
-	const items = (Array.isArray(rawItems) ? rawItems : rawItems == null ? [] : [rawItems]).filter(
-		(item) => item !== null && item !== '',
-	);
-	const first = items[0];
-	if (first === null || first === undefined) return null;
-	return typeof first === 'object'
-		? String((first as { value?: unknown }).value ?? '')
-		: String(first);
+	const items = Array.isArray(rawItems) ? rawItems : rawItems == null ? [] : [rawItems];
+	const texts: string[] = [];
+	for (const item of items) {
+		if (item === null || item === '') continue;
+		const text =
+			typeof item === 'object' ? String((item as { value?: unknown }).value ?? '') : String(item);
+		texts.push(text.trim());
+	}
+	return texts;
+}
+
+/** Byte-exact (trimmed) compare against EVERY stored item. An empty `wanted` matches a component
+ * with no stored text at all. */
+function storedTextMatches(
+	row: Record<string, unknown>,
+	column: string,
+	tipo: string,
+	wanted: string,
+): boolean {
+	const texts = storedItemTexts(row, column, tipo).filter((text) => text !== '');
+	return wanted === '' ? texts.length === 0 : texts.includes(wanted);
 }
 
 /** Exact (Surname, Given name) match - used by findOrCreatePerson. An SQO run WITH the caller's
@@ -570,7 +610,7 @@ async function findExistingPerson(
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
 		section_tipo: [PEOPLE_SECTION_TIPO],
-		limit: 10,
+		limit: LOOKALIKE_WINDOW,
 		filter: {
 			$and: [
 				{
@@ -589,16 +629,17 @@ async function findExistingPerson(
 		section_id: number;
 	} & Record<string, unknown>)[];
 
-	const model = await getModelByTipo(PERSON_SURNAME_TIPO);
-	const column = model !== null ? getColumnNameByModel(model) : null;
-	if (column === null) return rows[0]?.section_id ?? null;
+	const surnameColumn = await dataColumnOf(PERSON_SURNAME_TIPO);
+	const givenNameColumn = await dataColumnOf(PERSON_GIVEN_NAME_TIPO);
+	if (surnameColumn === null || givenNameColumn === null) return null;
 
 	const wantedSurname = surname.trim();
 	const wantedGivenName = (givenName ?? '').trim();
 	for (const row of rows) {
-		const storedSurname = (firstItemText(row, column, PERSON_SURNAME_TIPO) ?? '').trim();
-		const storedGivenName = (firstItemText(row, column, PERSON_GIVEN_NAME_TIPO) ?? '').trim();
-		if (storedSurname === wantedSurname && storedGivenName === wantedGivenName) {
+		if (
+			storedTextMatches(row, surnameColumn, PERSON_SURNAME_TIPO, wantedSurname) &&
+			storedTextMatches(row, givenNameColumn, PERSON_GIVEN_NAME_TIPO, wantedGivenName)
+		) {
 			return row.section_id;
 		}
 	}
@@ -886,6 +927,10 @@ interface CommitOnePublicationResult {
 	 * attempted, section_id names the pre-existing record. */
 	skipped: boolean;
 	fields_written: string[];
+	/** Abstract variants NOT written, each with its source `xml:lang` and why: the install does not
+	 * declare that language (`language_not_installed`) or an earlier variant already took the slot
+	 * (`duplicate_language`). The publication itself is still committed. */
+	abstract_skipped: AbstractSkip[];
 	series_section_id: number | null;
 	series_created: boolean | null;
 	series_error: ApiErrorBody | null;
@@ -927,6 +972,7 @@ async function commitOnePublication(
 				error: null,
 				skipped: true,
 				fields_written: [],
+				abstract_skipped: [],
 				series_section_id: null,
 				series_created: null,
 				series_error: null,
@@ -985,10 +1031,11 @@ async function commitOnePublication(
 		// textAsParagraph is the same escape+wrap every other HTML-component writer in this codebase
 		// uses (import_code_lookup.ts), so a later lookup narrows against identical bytes.
 		//
-		// Each language variant goes into ITS OWN data-lang slot instead of merging every variant
-		// into whichever one happened to be English-preferred (review item: "Abstract language") -
-		// a variant with no xml:lang, or one this PR's own lang table doesn't map, falls back to the
-		// session's currentDataLang() (the previous behaviour for every variant).
+		// Each language variant goes into ITS OWN data-lang slot (review item: "Abstract language"),
+		// planned against the install's declared data languages (planAbstractLangs): a variant in a
+		// language the install lacks, or a second variant for an already-taken slot, is SKIPPED and
+		// reported in `abstract_skipped` - never written (save_component would refuse it and roll
+		// this whole publication back), never a silent last-wins overwrite.
 		const abstractVariants = readAbstractVariants(p);
 		const effectiveVariants =
 			abstractVariants.length > 0
@@ -996,17 +1043,16 @@ async function commitOnePublication(
 				: typeof p.abstract === 'string' && p.abstract.trim() !== ''
 					? [{ lang: null, text: p.abstract }]
 					: [];
+		const abstractPlan = planAbstractLangs(effectiveVariants, abstractLangs());
 		let abstractWritten = false;
-		for (const variant of effectiveVariants) {
-			const lang =
-				(variant.lang && ISO_639_1_TO_LANG[variant.lang.toLowerCase()]) || currentDataLang();
+		for (const variant of abstractPlan.writes) {
 			await writeField(
 				newSectionId,
 				PUBLICATION_TIPO,
 				ABSTRACT_TIPO,
 				textAsParagraph(variant.text),
 				context.userId,
-				lang,
+				variant.lang,
 			);
 			abstractWritten = true;
 		}
@@ -1089,7 +1135,12 @@ async function commitOnePublication(
 			);
 			written.push(STANDARD_NUMBER_TYPE_RELATION_TIPO);
 		}
-		return { created: true as const, sectionId: newSectionId, fieldsWritten: written };
+		return {
+			created: true as const,
+			sectionId: newSectionId,
+			fieldsWritten: written,
+			abstractSkipped: abstractPlan.skipped,
+		};
 	});
 
 	if (!coreResult.created) {
@@ -1100,6 +1151,7 @@ async function commitOnePublication(
 			error: null,
 			skipped: true,
 			fields_written: [],
+			abstract_skipped: [],
 			series_section_id: null,
 			series_created: null,
 			series_error: null,
@@ -1109,7 +1161,7 @@ async function commitOnePublication(
 			document_error: null,
 		};
 	}
-	const { sectionId, fieldsWritten } = coreResult;
+	const { sectionId, fieldsWritten, abstractSkipped } = coreResult;
 
 	let seriesSectionId: number | null = null;
 	let seriesCreated: boolean | null = null;
@@ -1175,6 +1227,7 @@ async function commitOnePublication(
 		error: null,
 		skipped: false,
 		fields_written: fieldsWritten,
+		abstract_skipped: [...abstractSkipped],
 		series_section_id: seriesSectionId,
 		series_created: seriesCreated,
 		series_error: seriesError,
@@ -1242,6 +1295,7 @@ async function commitPublications(context: ToolActionContext): Promise<ToolRespo
 				error: toErrorBody(toDedaloError(error)),
 				skipped: false,
 				fields_written: [],
+				abstract_skipped: [],
 				series_section_id: null,
 				series_created: null,
 				series_error: null,

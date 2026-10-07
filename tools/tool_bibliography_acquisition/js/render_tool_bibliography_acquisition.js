@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {escape_html} from '../../../core/common/js/utils/render_escape.js'
@@ -173,6 +174,20 @@ const get_content_data = function(self) {
 			parent			: fragment
 		})
 
+	// One readable sentence from an error wire body ({code, message, label_key, ...}):
+	// the translated label via error_text, plus the server's own message when it says
+	// more (e.g. the real OAI-PMH reason behind a generic 'not found' label). Always
+	// rendered as text_content, never markup.
+		const error_body_text = function(body) {
+			if (!body || typeof body!=='object') {
+				return String(body ?? '')
+			}
+			const label = error_text(body)
+			return (typeof body.message==='string' && body.message.length && body.message!==label)
+				? label + ': ' + body.message
+				: label
+		}
+
 		const render_error = function(response, fallback_message) {
 			return ui.create_dom_element({
 				element_type	: 'div',
@@ -288,7 +303,7 @@ const get_content_data = function(self) {
 
 	// Builds the series status line, publication checklist, and Confirm button
 	// from one successful preview response.
-		const build_review = function(series, series_status, publications, partial_error, truncated_by) {
+		const build_review = function(series, series_status, publications, article_failures, truncated_by) {
 
 			const review_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -305,12 +320,24 @@ const get_content_data = function(self) {
 					})
 				}
 
-				if (partial_error) {
-					ui.create_dom_element({
+				// One {article_id, error} per article whose metadata could not be fetched;
+				// error is the whole wire body (server: ojs_oai/error_summary.ts).
+				if (Array.isArray(article_failures) && article_failures.length) {
+					const failures_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'error_message',
-						text_content	: (self.get_tool_label('partial_error') || 'The journal stopped responding partway through ({reason}) — showing the {count} publications fetched before that happened.').replace('{reason}', partial_error).replace('{count}', publications.length),
+						text_content	: (self.get_tool_label('article_failures') || '{failed} article(s) could not be fetched — showing the {count} publications that were.')
+							.replace('{failed}', article_failures.length).replace('{count}', publications.length),
 						parent			: review_container
+					})
+					article_failures.forEach(function(failure) {
+						ui.create_dom_element({
+							element_type	: 'div',
+							text_content	: (self.get_tool_label('article_failure') || 'Article {id}: {reason}')
+								.replace('{id}', failure && failure.article_id ? failure.article_id : '?')
+								.replace('{reason}', error_body_text(failure ? failure.error : null)),
+							parent			: failures_node
+						})
 					})
 				}
 
@@ -534,13 +561,13 @@ const get_content_data = function(self) {
 						// anything was created (its own transaction rolled back) - review item C1.
 						// Each *_error is the error system's wire body ({code, message, ...} — see
 						// server/index.ts's toErrorBody(toDedaloError(...)), review item E2), never a
-						// bare string, so every read below is `.message`.
+						// bare string, so every read below goes through error_body_text.
 						if (result.section_id===null) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error_message',
 								text_content	: (self.get_tool_label('pub_not_imported') || 'Publication {pub} NOT imported: {reason}')
-									.replace('{pub}', result.publication_identifier || '?').replace('{reason}', result.error.message),
+									.replace('{pub}', result.publication_identifier || '?').replace('{reason}', error_body_text(result.error)),
 								parent			: summary
 							})
 							return
@@ -561,21 +588,33 @@ const get_content_data = function(self) {
 									? (self.get_tool_label('created') || 'created')
 									: (self.get_tool_label('reused') || 'reused'))
 							: result.series_error
-								? (self.get_tool_label('pub_series_not_linked') || ' — series NOT linked: {reason}').replace('{reason}', result.series_error.message)
+								? (self.get_tool_label('pub_series_not_linked') || ' — series NOT linked: {reason}').replace('{reason}', error_body_text(result.series_error))
 								: ''
 						const authors_bit = result.author_section_ids && result.author_section_ids.length
 							? (self.get_tool_label('pub_authors_linked') || ' — authors #{ids}').replace('{ids}', result.author_section_ids.join(', #'))
 							: result.author_errors && result.author_errors.length
-								? (self.get_tool_label('pub_authors_not_linked') || ' — authors NOT linked: {reasons}').replace('{reasons}', result.author_errors.map((e) => e.message).join('; '))
+								? (self.get_tool_label('pub_authors_not_linked') || ' — authors NOT linked: {reasons}').replace('{reasons}', result.author_errors.map(error_body_text).join('; '))
 								: ''
 						const document_bit = result.document_imported
 							? (self.get_tool_label('pub_pdf_imported') || ' — PDF imported')
 							: result.document_error
-								? (self.get_tool_label('pub_pdf_not_imported') || ' — PDF NOT imported: {reason}').replace('{reason}', result.document_error.message)
+								? (self.get_tool_label('pub_pdf_not_imported') || ' — PDF NOT imported: {reason}').replace('{reason}', error_body_text(result.document_error))
 								: ''
+					// Abstract variants the server did NOT write (abstract_skipped): a language the
+					// install does not declare, or a second variant for an already-taken slot.
+						const abstract_skipped = Array.isArray(result.abstract_skipped) ? result.abstract_skipped : []
+						const abstract_bit = abstract_skipped.length
+							? (self.get_tool_label('pub_abstract_skipped') || ' — abstract NOT written in: {langs}')
+								.replace('{langs}', abstract_skipped.map(function(item) {
+									const reason = item.reason==='duplicate_language'
+										? (self.get_tool_label('abstract_duplicate_language') || 'language already written')
+										: (self.get_tool_label('abstract_language_not_installed') || 'language not installed')
+									return (item.lang || (self.get_tool_label('abstract_untagged') || 'untagged')) + ' (' + reason + ')'
+								}).join(', '))
+							: ''
 						const line = (self.get_tool_label('pub_imported') || 'Publication #{id} (fields: {fields})')
 							.replace('{id}', result.section_id).replace('{fields}', result.fields_written.join(', ')) +
-							series_bit + authors_bit + document_bit
+							series_bit + authors_bit + document_bit + abstract_bit
 						ui.create_dom_element({
 							element_type	: 'div',
 							text_content	: line,
@@ -647,7 +686,7 @@ const get_content_data = function(self) {
 					}
 					const data = response_data(response)
 					const publications = Array.isArray(data.publications) ? data.publications : []
-					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null, data.publications_truncated_by || 0))
+					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, Array.isArray(data.article_failures) ? data.article_failures : [], data.publications_truncated_by || 0))
 				}).catch(function(error) {
 					preview_button.classList.remove('loading')
 					console.error('[tool_bibliography_acquisition] preview_html failed:', error)
@@ -661,7 +700,7 @@ const get_content_data = function(self) {
 				stream_id			: 'tool_bibliography_acquisition_preview',
 				on_success			: (data) => {
 					const publications = Array.isArray(data.publications) ? data.publications : []
-					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null, data.publications_truncated_by || 0))
+					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, Array.isArray(data.article_failures) ? data.article_failures : [], data.publications_truncated_by || 0))
 				},
 				on_settle			: () => {
 					preview_button.classList.remove('loading')

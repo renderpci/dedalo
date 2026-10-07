@@ -1,3 +1,4 @@
+import type { ApiErrorBody } from '../../../../../src/core/errors/index.ts';
 import type { ExtractedPublication } from '../domain/publication.ts';
 import type { ExtractedSeries } from '../domain/series.ts';
 
@@ -14,15 +15,22 @@ export interface RawSource {
 	contentType: string | null;
 }
 
+/** One article the acquisition could not resolve, and why. */
+export interface ArticleFailure {
+	article_id: string;
+	error: ApiErrorBody;
+}
+
 export interface MultiPageAcquisition {
 	seriesIdentifier: string;
 	pages: RawSource[];
-	/** Set when a page fetch failed part-way through (real, observed flakiness on some OAI-PMH
-	 * hosts near the tail of their record set) - pages gathered before the failure are still
-	 * returned rather than discarded. */
-	partialError?: string;
+	/** One entry per article whose metadata could not be fetched (real, observed flakiness on some
+	 * OAI-PMH hosts near the tail of their record set) - pages gathered for the others are still
+	 * returned rather than discarded. `error` is the error system's whole wire body, never a
+	 * flattened message: the client renders its label/message. */
+	failures?: ArticleFailure[];
 	/** How many article links beyond MAX_ARTICLES were found and NOT fetched (review item G) -
-	 * distinct from partialError: this is a deliberate cap, not a failure. */
+	 * distinct from failures: this is a deliberate cap, not a failure. */
 	truncatedBy?: number;
 }
 

@@ -51,12 +51,13 @@ Key behaviours to know:
    `adapter.acquire(url, onProgress)` — `acquireArticleSet` either resolves a single article
    directly or scans a listing page for real `article/view/<id>` links (capped at `MAX_ARTICLES`,
    200, reporting the rest as `truncatedBy`), then fetches each article's own OAI-PMH `GetRecord`
-   individually (reporting one failure per article into `partialError` rather than sinking the whole
-   batch — one flaky host response does not cost the articles already resolved). The first page's
+   individually (reporting one `{article_id, error}` per failed article into `failures` — `error` is
+   the whole error wire body, never a flattened message — rather than sinking the whole batch: one
+   flaky host response does not cost the articles already resolved). The first page's
    series info is parsed with `adapter.parseSeries`; every page's publications are parsed with
-   `adapter.parsePublications`. A read-only `findExistingSeries` lookup (exact name match) lets the
+   `adapter.parsePublications`. A read-only `findExistingSeries` lookup (byte-exact name match) lets the
    review screen show "will link" vs "will create" before the operator commits to anything. Returns
-   `{series, publications, series_status, partial_error, publications_truncated_by}`.
+   `{series, publications, series_status, article_failures, publications_truncated_by}`.
 2. **`preview_html(context)`.** The fallback for a source that blocks automated retrieval (confirmed
    live: some OJS journal landing pages sit behind a Cloudflare challenge that returns a plain HTTP
    200, not a status code this tool's own fetch logic can key off). Takes `options.url` **and**
@@ -103,12 +104,17 @@ abstract write goes through `textAsParagraph` (`src/core/tools/import_code_looku
 escape-and-wrap helper every other HTML-component writer in this codebase uses). Each language
 variant the source carries (`abstractVariants`, one `{lang, text}` per `xml:lang`-tagged
 `dc:description`) is written into **its own** data-lang slot rather than merged into whichever
-variant happened to be English-preferred: a small table (`ISO_639_1_TO_LANG`) maps the raw ISO 639-1
-tag (`en`/`es`/`ca`/`fr`/`de`/`it`/`pt` — deliberately only the languages this tool's own sources, so
-far, actually carry) to this engine's `lg-` + ISO 639-2/T code; an untagged or unrecognized variant
-falls back to `currentDataLang()`. An install that has not declared one of those as a data language
-refuses the write (`saveComponentData`'s own chokepoint, per `src/config/data_langs.ts`) — loudly,
-per variant, never silently.
+variant happened to be English-preferred. `planAbstractLangs`
+(`server/lib/domain/abstract_langs.ts`, pure) plans the slots against the install's own data
+languages — `installedDataLangs()` paired with the engine's ISO 639-1 map (`getAlpha2FromCode`,
+`src/core/resolve/lang_names.ts`), the same `{data, current}` shape `tool_import_rdf` plans with. A
+region tag (`es-ES`, `en_US`) is normalised to its primary subtag; a 3-letter ISO 639-2/T code
+(`spa`) matches the installed `lg-<code>` directly. A variant whose language is unmappable or not
+installed is **skipped** (`language_not_installed`), and a second variant for an already-taken slot
+is skipped too (`duplicate_language`, the first wins); an untagged variant goes to the request data
+lang only when no tagged variant took it. Skips are reported per publication in `abstract_skipped`
+— the publication itself is still committed (a write in an undeclared language would be refused by
+`saveComponentData` and roll the whole publication's transaction back).
 
 **The PDF step (`importDocumentForPublication`).** OAI-PMH's `oai_dc` metadata prefix never carries
 a direct PDF link, so when the publication doesn't already have one, `resolvePublicationPdfUrl`
@@ -130,10 +136,12 @@ commit/rollback. `foldNameForLock(name)` NFD-decomposes a name, lowercases it, a
 combining-diacritical-marks block (U+0300–U+036F) by code point — the SAME equivalence class
 Postgres's own `f_unaccent` gives the engine's `==` search operator — so e.g. "Martín" and "Martin"
 take the SAME lock instead of two different ones that would otherwise both miss the lookup and both
-create a Person. `findExistingPerson` additionally never trusts the loose accent-insensitive search
-alone: it widens the candidate window past 1 (to 10) and compares each candidate's own stored
-surname/given-name **byte-exact** (trimmed) before accepting a match, so two genuinely different
-people who happen to share an accent-folded name are never silently merged. Every dedup/existence
+create a Person. `findExistingSeries` and `findExistingPerson` additionally never trust the loose accent-insensitive
+search alone: they widen the candidate window past 1 (`LOOKALIKE_WINDOW`, 10) and compare every
+stored item of each candidate's name (surname/given name) **byte-exact** (trimmed) before accepting a
+match, so two genuinely different series or people who happen to share an accent-folded name are
+never silently merged. When the name component's data column cannot be resolved the lookup is
+treated as no match — an uncompared row is never trusted. Every dedup/existence
 lookup (`findExistingPublication`, `findExistingSeries`, `findExistingPerson`) runs through
 `buildSearchSql` with `{principal: context.principal}` — never a hand-written SQL `WHERE` — so it
 only ever sees records the caller can actually read.
@@ -156,7 +164,8 @@ result container. Clicking **Preview**:
   nothing is fetched over the network, so there's no job to stream.
 
 A successful preview renders `build_review`: a truncation notice (when more articles were found than
-the 200 cap kept), a partial-error notice (when the journal stopped responding partway through), the
+the 200 cap kept), a per-article failure list (one line per article whose metadata could not be
+fetched, rendering each error body's label/message), the
 Series status line ("will link"/"will create" — no client-side picker here, unlike the numismatic
 tool's Company resolution; Series/Author resolution is fully automatic server-side). Below that, a
 checklist (`build_publication_row` per publication, checked by default, labeled with title, authors,
@@ -190,6 +199,7 @@ possibly-resolved real tipo).
 | `section_id` | `null` only when the whole publication failed before anything was created (its transaction rolled back); `error` names why. |
 | `skipped` | `true` when an `rsc205` record with this Code already existed — nothing else was attempted. |
 | `fields_written` | Component tipos actually written on the record. |
+| `abstract_skipped` | Abstract variants NOT written, each `{lang, reason}`: `language_not_installed` (unmappable or not a declared data language) or `duplicate_language` (an earlier variant already took the slot). |
 | `series_section_id` / `series_created` / `series_error` | The resolved Series, whether it was newly created, or why linking it failed. |
 | `author_section_ids` / `author_errors` | The resolved Person records linked as authors, and any per-author resolution failures. |
 | `document_imported` / `document_error` | Whether the PDF was imported, or why it wasn't. |
@@ -230,11 +240,13 @@ journal-routing URL and derives the real OAI base from it), `acquire`
 `resolvePdfUrl` (best-effort; some hosts, e.g. some Saguntum-hosted journals, block the landing-page
 fetch it needs).
 
-Every page-fetch function (`fetchOaiPage`) routes through `looksBlocked`
+Every page-fetch function (`fetchOaiPage`) checks the harvesting door's own `cf-mitigated` response
+header and, on a response that is NOT a well-formed OAI-PMH document (`isOaiPmhDocument`: an HTML
+content type, or a body without an `<OAI-PMH` root), routes the body through `looksBlocked`
 (`server/lib/acquisition/block-signals.ts` — the same helper and signal set the numismatic tool
-uses) on the fetched HTML, and additionally checks the harvesting door's own `cf-mitigated` response
-header: either one throws `external.protocol`, surfacing the same "use `preview_html` instead"
-guidance.
+uses): either one throws `external.protocol`, surfacing the same "use `preview_html` instead"
+guidance. Real OAI-PMH XML is never treated as a bot wall — its article text ("The Forbidden City")
+would otherwise trip the weak patterns.
 
 ## Examples
 
@@ -267,7 +279,7 @@ The terminal frame's unwrapped `data`, as `build_review` consumes it:
       "landingPageUrl": "https://revistas.usal.es/myjournal/article/view/123"
     }
   ],
-  "partial_error": null,
+  "article_failures": [],
   "publications_truncated_by": 0
 }
 ```
@@ -282,6 +294,7 @@ The terminal frame's unwrapped `data`, as `build_review` consumes it:
   "error": null,
   "skipped": false,
   "fields_written": ["rsc137", "rsc140", "rsc223", "rsc221", "rsc217", "rsc224", "rsc211", "rsc139"],
+  "abstract_skipped": [{ "lang": "eu", "reason": "language_not_installed" }],
   "series_section_id": 70,
   "series_created": true,
   "series_error": null,

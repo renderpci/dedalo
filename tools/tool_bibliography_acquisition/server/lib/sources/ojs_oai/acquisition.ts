@@ -1,8 +1,13 @@
 import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
 import { looksBlocked } from '../../acquisition/block-signals.ts';
-import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
-import { describeFailure } from './error_summary.ts';
+import type {
+	AcquisitionProgress,
+	ArticleFailure,
+	MultiPageAcquisition,
+	RawSource,
+} from '../types.ts';
+import { failureBody } from './error_summary.ts';
 import { extractArticleIds, extractDownloadUrl, extractGalleyViewUrl } from './parser.ts';
 
 const METADATA_PREFIX = 'oai_dc';
@@ -12,6 +17,22 @@ const ARTICLE_URL_PATTERN = /\/article\/view\/(\d+)(?:\/\d+)?(?:[/?#].*)?$/i;
 // article a journal ever published, rather than one issue) would otherwise turn one preview into
 // an hours-long job. Real issues run to a few dozen articles; this leaves wide headroom.
 const MAX_ARTICLES = 200;
+
+/** The root of a well-formed OAI-PMH response: only an XML declaration, processing instructions
+ * (OJS sends an `<?xml-stylesheet?>`), comments and whitespace may precede `<OAI-PMH`. */
+const OAI_PMH_ROOT =
+	/^\uFEFF?\s*(?:<\?[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*)*<(?:[A-Za-z_][\w.-]*:)?OAI-PMH[\s>/]/;
+
+/**
+ * True when a response IS an OAI-PMH document: a non-HTML content type and an `<OAI-PMH` root.
+ * Such a body is never a bot wall - its text is the journal's own metadata, where the weak
+ * block words ("forbidden", "access denied", "captcha") are ordinary article vocabulary
+ * ("The Forbidden City").
+ */
+export function isOaiPmhDocument(body: string, contentType: string | null): boolean {
+	if (contentType !== null && /html/i.test(contentType)) return false;
+	return OAI_PMH_ROOT.test(body);
+}
 
 /**
  * One GET through the harvesting door - OAI-PMH is spoken by many independent
@@ -38,10 +59,15 @@ async function fetchOaiPage(
 	}
 	const html = response.text();
 	// A Cloudflare/CAPTCHA interstitial is commonly served as a plain 2xx - mainly a landing-page
-	// risk here (confirmed live: some OJS hosts block it), not the OAI-PMH XML endpoints themselves,
-	// but response.ok alone still does not mean "this is the real page" either way (review item:
-	// "block-signals.ts is never imported").
-	if (response.headers['cf-mitigated'] || looksBlocked(html)) {
+	// risk here (confirmed live: some OJS hosts block it), so response.ok alone does not mean "this
+	// is the real page" (review item: "block-signals.ts is never imported"). The cf-mitigated header
+	// is a challenge on any response; the body heuristic runs only on a response that is NOT a
+	// well-formed OAI-PMH document - real OAI XML is never a bot wall, and its article text would
+	// trip the weak patterns.
+	const blocked =
+		Boolean(response.headers['cf-mitigated']) ||
+		(!isOaiPmhDocument(html, response.contentType) && looksBlocked(html));
+	if (blocked) {
 		throw new DedaloError('external.protocol', {
 			coordinates: { source: 'ojs_oai', url, cf_mitigated: response.headers['cf-mitigated'] ?? '' },
 		});
@@ -152,10 +178,10 @@ export async function acquireArticleSet(
 	const pages: RawSource[] = [];
 	// One article's metadata failing to resolve doesn't sink the whole bounded batch - same
 	// reasoning as the coin tool's per-lot best-effort steps. But the reason is kept (never a
-	// silent count): each failure is classified through toDedaloError/toErrorBody, same as a
-	// per-item result elsewhere, so the operator can tell a transient refusal from a real
-	// idDoesNotExist for a SPECIFIC article instead of just seeing "3 failed".
-	const failureDetails: string[] = [];
+	// silent count): each failure carries its whole error wire body (toDedaloError/toErrorBody),
+	// same as a per-item result elsewhere, so the operator can tell a transient refusal from a
+	// real idDoesNotExist for a SPECIFIC article instead of just seeing "3 failed".
+	const failures: ArticleFailure[] = [];
 	for (let i = 0; i < articleIds.length; i++) {
 		const identifier = `oai:${repoId}:article/${articleIds[i]}`;
 		const requestUrl = `${baseUrl}?verb=GetRecord&identifier=${encodeURIComponent(identifier)}&metadataPrefix=${METADATA_PREFIX}`;
@@ -166,7 +192,7 @@ export async function acquireArticleSet(
 			const oaiError = extractOaiErrorMessage(raw.html);
 			if (oaiError) {
 				// `resource.not_found` (public disclosure), not `external.protocol`: this failure is
-				// reported per-article into `partialError` (an ok:true result field a cataloguer
+				// reported per-article into `failures` (an ok:true result field a cataloguer
 				// reads), so the REAL OAI-PMH reason must reach it - an operator-disclosure code would
 				// have the converter replace it with a generic sentence before it got that far.
 				throw new DedaloError('resource.not_found', {
@@ -176,7 +202,7 @@ export async function acquireArticleSet(
 			}
 			pages.push(raw);
 		} catch (error) {
-			failureDetails.push(`${articleIds[i]}: ${describeFailure(error)}`);
+			failures.push({ article_id: articleIds[i] ?? '', error: failureBody(error) });
 		}
 		onProgress?.(i + 1, articleIds.length);
 	}
@@ -192,10 +218,7 @@ export async function acquireArticleSet(
 		seriesIdentifier: baseUrl,
 		pages,
 		truncatedBy: truncatedCount > 0 ? truncatedCount : undefined,
-		partialError:
-			failureDetails.length > 0
-				? `${failureDetails.length} of ${articleIds.length} article(s) could not be resolved: ${failureDetails.join('; ')}`
-				: undefined,
+		failures: failures.length > 0 ? failures : undefined,
 	};
 }
 

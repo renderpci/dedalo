@@ -20,7 +20,8 @@
 		{ "lang": "lg-eng", "name": "request_failed", "value": "The request failed." },
 		{ "lang": "lg-eng", "name": "job_done", "value": "Done." },
 		{ "lang": "lg-eng", "name": "job_working", "value": "Working…" },
-		{ "lang": "lg-eng", "name": "partial_error", "value": "The journal stopped responding partway through ({reason}) — showing the {count} publications fetched before that happened." },
+		{ "lang": "lg-eng", "name": "article_failures", "value": "{failed} article(s) could not be fetched — showing the {count} publications that were." },
+		{ "lang": "lg-eng", "name": "article_failure", "value": "Article {id}: {reason}" },
 		{ "lang": "lg-eng", "name": "publications_truncated", "value": "Only the first {count} articles are shown ({more} more were found and left out)." },
 		{ "lang": "lg-eng", "name": "series_prefix", "value": "Series: " },
 		{ "lang": "lg-eng", "name": "series_existing", "value": " (existing record #{id}, will link to it)" },
@@ -50,6 +51,10 @@
 		{ "lang": "lg-eng", "name": "pub_authors_not_linked", "value": " — authors NOT linked: {reasons}" },
 		{ "lang": "lg-eng", "name": "pub_pdf_imported", "value": " — PDF imported" },
 		{ "lang": "lg-eng", "name": "pub_pdf_not_imported", "value": " — PDF NOT imported: {reason}" },
-		{ "lang": "lg-eng", "name": "pub_imported", "value": "Publication #{id} (fields: {fields})" }
+		{ "lang": "lg-eng", "name": "pub_imported", "value": "Publication #{id} (fields: {fields})" },
+		{ "lang": "lg-eng", "name": "pub_abstract_skipped", "value": " — abstract NOT written in: {langs}" },
+		{ "lang": "lg-eng", "name": "abstract_language_not_installed", "value": "language not installed" },
+		{ "lang": "lg-eng", "name": "abstract_duplicate_language", "value": "language already written" },
+		{ "lang": "lg-eng", "name": "abstract_untagged", "value": "untagged" }
 	]
 }
