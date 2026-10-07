@@ -257,6 +257,16 @@ function derivedRefusal(model: string): string {
 }
 
 /**
+ * The model the import door judges a column on `tipo` by: getModelByTipo,
+ * which hops a component_alias to its TARGET's model (resolveMappedColumns
+ * reads exactly this). `listedModel` (the subtree node's own model) is the
+ * fallback only when the resolver knows no model.
+ */
+async function doorModel(tipo: string, listedModel: string): Promise<string> {
+	return (await getModelByTipo(tipo)) ?? listedModel;
+}
+
+/**
  * The component-list `import_append` field: the model's append policy
  * ('items' | 'geo_layer' | 'text_paragraphs'), or null when append is refused
  * for this component (the same verdict appendRefusal gives the import door,
@@ -269,7 +279,7 @@ async function wireAppendPolicy(
 	// An alias is listed under its own model; the door judges the TARGET's
 	// model and data tipo (resolveMappedColumns), so the offer must too.
 	const dataTipo = await resolveDataTipo(tipo);
-	const model = dataTipo === tipo ? listedModel : ((await getModelByTipo(tipo)) ?? listedModel);
+	const model = await doorModel(tipo, listedModel);
 	if (appendRefusal(tipo, model, dataTipo) !== null) return null;
 	return getImportAppendPolicy(model);
 }
@@ -279,11 +289,23 @@ async function wireAppendPolicy(
  * {label,value,model,import_append} for the CSV column-mapper dropdown, PLUS a
  * top-level `label` (the section term). `import_append` is the model's append
  * policy, or null when an append-mode column on it would be refused.
+ *
+ * DERIVED models (registry isDerivedModel: component_inverse, _relation_children,
+ * _relation_index, _external — and an alias whose TARGET is one) are NOT
+ * offered: the door refuses a column on them in EVERY mode (resolveMappedColumns
+ * derivedRefusal), and the mapper never offers a column the door refuses
+ * (user decision 2026-10-07). Membership (sectionComponentTipos) still holds
+ * them, so a hand-crafted map onto one gets the precise derived refusal, not
+ * "not a component of section".
  */
 async function getSectionComponentsList(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sectionTipo = String(ctx.options.section_tipo ?? '');
 	if (sectionTipo === '') throw invalidRequest('Missing section_tipo');
-	const tipos = await sectionComponentTipos(sectionTipo, ctx.principal);
+	const members = await sectionComponentTipos(sectionTipo, ctx.principal);
+	const derived = await Promise.all(
+		members.map(async (t) => isDerivedModel(await doorModel(t.tipo, t.model))),
+	);
+	const tipos = members.filter((_, index) => !derived[index]);
 	const components = await Promise.all(
 		tipos.map(async (t) => ({
 			label: await termByTipo(t.tipo, config.menu.applicationLang),

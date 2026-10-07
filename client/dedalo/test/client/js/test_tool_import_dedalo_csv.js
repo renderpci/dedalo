@@ -190,7 +190,9 @@ describe('TOOL_IMPORT_DEDALO_CSV SECTION-INFO COLUMNS', function() {
 	// section-info components) after the section's own — for a global admin.
 	// An exported CSV carries them as plain tipo headers (dd200) or suffixed
 	// ones (dd199_dmy); both must be AUTO-checked and mapped, or the operator
-	// re-maps every audit column by hand (the reported bug).
+	// re-maps every audit column by hand (the reported bug). A DERIVED dd196
+	// child (dd1596, component_inverse) is NOT in the server's list (the door
+	// refuses it in every mode), so its header stays unchecked and unmapped.
 	const components = [
 		{label: 'Id', value: 'test102', model: 'component_section_id', import_append: null},
 		{label: 'Text', value: 'test52', model: 'component_input_text', import_append: 'items'},
@@ -205,7 +207,7 @@ describe('TOOL_IMPORT_DEDALO_CSV SECTION-INFO COLUMNS', function() {
 			csv_files_list				: []
 		}
 		const item = {
-			file_info		: ['section_id', 'test52', 'dd200', 'dd199_dmy'],
+			file_info		: ['section_id', 'test52', 'dd200', 'dd199_dmy', 'dd1596'],
 			section_tipo	: 'test3',
 			ar_columns_map	: [],
 			sample_data		: []
@@ -221,7 +223,7 @@ describe('TOOL_IMPORT_DEDALO_CSV SECTION-INFO COLUMNS', function() {
 
 	it('a dd200 header and a dd199_dmy header are auto-checked and mapped', async function() {
 		const {item, lines} = await build(components)
-		assert.equal(lines.length, 4)
+		assert.equal(lines.length, 5)
 		assert.equal(checkbox(lines[2]).checked, true, 'dd200: checked')
 		assert.equal(target(lines[2]).value, 'dd200', 'dd200: selected in the dropdown')
 		assert.equal(item.ar_columns_map[2].checked, true)
@@ -229,6 +231,17 @@ describe('TOOL_IMPORT_DEDALO_CSV SECTION-INFO COLUMNS', function() {
 		assert.equal(item.ar_columns_map[2].model, 'component_select')
 		assert.equal(checkbox(lines[3]).checked, true, 'dd199_dmy: checked')
 		assert.equal(item.ar_columns_map[3].map_to, 'dd199')
+	})
+
+	// CLIENT behaviour only: the list here is a stub, so this case cannot prove the
+	// server stops offering derived models (that is the server unit gate
+	// "no listed item has a DERIVED model"). It pins that a header absent from
+	// the list the client receives is never auto-checked or mapped.
+	it('a header absent from the received list (dd1596) stays unchecked and unmapped', async function() {
+		const {item, lines} = await build(components)
+		assert.equal(checkbox(lines[4]).checked, false, 'dd1596: unchecked')
+		assert.notEqual(item.ar_columns_map[4]?.checked, true)
+		assert.equal(item.ar_columns_map[4]?.map_to, undefined)
 	})
 
 	it('without them in the list (the old server answer) the same headers stay unmapped', async function() {
