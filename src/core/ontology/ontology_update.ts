@@ -395,24 +395,15 @@ export async function updateOntology(
 				continue;
 			}
 			// PHP order: registry record + root node BEFORE the row import.
-			await addMainSection(
-				{
-					tld: file.tld,
-					section_tipo: file.sectionTipo,
-					typology_id: file.typologyId ?? undefined,
-					name_data: file.nameData,
-				} as Parameters<typeof addMainSection>[0],
-				userId,
-			);
-			await createDdOntologyRootNode(
-				{
-					tld: file.tld,
-					section_tipo: file.sectionTipo,
-					typology_id: file.typologyId ?? undefined,
-					name_data: file.nameData,
-				} as Parameters<typeof createDdOntologyRootNode>[0],
-				userId,
-			);
+			// absent typology (null) → both read the registry / default themselves
+			const fileItem = {
+				tld: file.tld,
+				section_tipo: file.sectionTipo,
+				typology_id: file.typologyId,
+				name_data: file.nameData,
+			} as Parameters<typeof addMainSection>[0];
+			await addMainSection(fileItem, userId);
+			await createDdOntologyRootNode(fileItem, userId);
 			provisioned.push(file.tld);
 			const imported = await importFromCopyFile({
 				sectionTipo: file.sectionTipo,

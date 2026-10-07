@@ -2356,9 +2356,11 @@ export const ui = {
 				item.tool_button.setAttribute('role', 'menuitem')
 				panel.appendChild(item.tool_button)
 			}
-			// Tool buttons open on mousedown and stop its propagation, so close
-			// in the CAPTURE phase, before the button handles it.
-			panel.addEventListener('mousedown', () => panel.hidePopover(), true)
+			// Dismissal, not activation: any pointer press on a row closes the
+			// menu. Tool buttons open on mousedown and stop its propagation, so
+			// close on the earlier pointerdown, in the CAPTURE phase (the row
+			// still receives its mousedown). The keyboard path closes itself below.
+			panel.addEventListener('pointerdown', () => panel.hidePopover(), true)
 			// Keyboard: section tool buttons open on mousedown only, which Enter /
 			// Space never fire — route them to the same mousedown so a menu row
 			// is operable from the keyboard. Arrow keys move between rows. Handled
@@ -2370,6 +2372,7 @@ export const ui = {
 				if ((e.key==='Enter' || e.key===' ') && index!==-1) {
 					e.preventDefault()
 					e.stopPropagation()
+					panel.hidePopover()
 					rows[index].dispatchEvent(new MouseEvent('mousedown', { bubbles : true }))
 				} else if (e.key==='ArrowDown' || e.key==='ArrowUp') {
 					e.preventDefault()
