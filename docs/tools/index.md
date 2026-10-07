@@ -26,8 +26,10 @@ level or an administrator/developer role — the page notes when that is the cas
 
 Bring data into Dédalo from outside files and other installations.
 
+- **[Auction import](using_numisdata_acquisition.md)** — paste a public coin-auction URL (jesusvico.com, biddr.com, aureo.com, numisbids.com, sixbid.com), review every lot found, then import it into a Numismatic Object section.
 - **[CSV import](using_import_dedalo_csv.md)** — import a CSV (notably a `tool_export` **Dédalo Raw** export, edited in a spreadsheet) back into a section, cell by cell, with languages preserved.
 - **[File import](using_import_files.md)** — ingest a batch of uploaded media files into a media section, reading metadata and matching or creating records.
+- **[Journal article import](using_bibliography_acquisition.md)** — paste a journal's OAI-PMH/OJS URL, review every article found, then import it into the Publications section.
 - **[MARC21 import](using_import_marc21.md)** — load a `.mrc` bibliographic catalogue and map its fields to components.
 - **[RDF import](using_import_rdf.md)** — import an RDF/OWL graph, mapping classes and properties to components.
 - **[Zotero import](using_import_zotero.md)** — import a Zotero bibliography export into the Publications section.

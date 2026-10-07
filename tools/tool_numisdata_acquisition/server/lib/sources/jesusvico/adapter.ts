@@ -1,0 +1,57 @@
+import { jesusvicoCanonicalLotUrl } from '../../acquisition/keys.ts';
+import type { SourceAdapter } from '../types.ts';
+import { urlHostname } from '../types.ts';
+import { acquireJesusvicoAuction, acquireJesusvicoLot } from './acquisition.ts';
+import { jesusvicoLotIdentifier, parseJesusvicoAuctionNumber } from './identifiers.ts';
+import {
+	parseJesusvicoAuction,
+	parseJesusvicoLotDetail,
+	parseJesusvicoLots,
+	parseJesusvicoSingleLotAuction,
+} from './parser.ts';
+
+const JESUSVICO_HOST_PATTERN = /(^|\.)jesusvico\.com$/i;
+
+/**
+ * Adapter for jesusvico.com - server-rendered listing + lazy per-lot detail fetch, the same
+ * two-tier shape as Biddr. Fully respects robots.txt, unlike sixbid. Also handles a single-lot
+ * URL (`/lot/` or Spanish `/lote/`) as its own lightweight retrieval, unambiguous since a normal
+ * `/subasta/...` listing URL never has a lot-number segment.
+ */
+export const jesusvicoAdapter: SourceAdapter = {
+	id: 'jesusvico',
+	sourceDomain: 'jesusvico.com',
+	// (auction, lot number) from the parsed lotIdentifier - never the card's href (keys.ts).
+	canonicalLotUrl: jesusvicoCanonicalLotUrl,
+
+	matchesUrl(rawUrl) {
+		const hostname = urlHostname(rawUrl);
+		return hostname !== null && JESUSVICO_HOST_PATTERN.test(hostname);
+	},
+
+	parseAuctionIdentifier(rawUrl) {
+		return jesusvicoLotIdentifier(rawUrl) ?? parseJesusvicoAuctionNumber(rawUrl);
+	},
+
+	acquire: (rawUrl, onProgress) =>
+		jesusvicoLotIdentifier(rawUrl)
+			? acquireJesusvicoLot(rawUrl, onProgress)
+			: acquireJesusvicoAuction(rawUrl, onProgress),
+
+	parseAuction: (firstPage, sourceUrl) =>
+		jesusvicoLotIdentifier(sourceUrl)
+			? parseJesusvicoSingleLotAuction(firstPage.html, sourceUrl)
+			: parseJesusvicoAuction(firstPage.html, sourceUrl),
+
+	parseLots: (page, sourceUrl) => {
+		if (jesusvicoLotIdentifier(sourceUrl)) {
+			const lot = parseJesusvicoLotDetail(page.html, sourceUrl);
+			return lot ? [lot] : [];
+		}
+		return parseJesusvicoLots(page.html, sourceUrl);
+	},
+
+	// Prefixed so jesusvico's auction numbers can't collide with another source's under
+	// data/sources/auctions/<key>/.
+	storageKey: (auctionIdentifier) => `jesusvico-${auctionIdentifier}`,
+};

@@ -51,6 +51,7 @@ import {
 } from '../../../src/core/media/ingest/process_uploaded_file.ts';
 import { resolveStagedName } from '../../../src/core/media/ingest/staged_files.ts';
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
+import { cropCoinPair } from '../../../src/core/media/tools/crop_coin_pair.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -89,7 +90,6 @@ import {
 	type WriteTarget,
 } from '../../../src/core/tools/module.ts';
 import { parseFilename } from './filename_grammar.ts';
-import { cropCoinPair } from './script_files/numisdata/crop_50.ts';
 
 // Registered at module load — the tool loader imports this module once, so
 // this runs exactly once per process. Keeps the SEC-053 allowlist model

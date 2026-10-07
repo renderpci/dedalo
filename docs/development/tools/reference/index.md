@@ -38,11 +38,13 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 
 | Tool | Purpose | Reference |
 | --- | --- | --- |
+| `tool_bibliography_acquisition` | Harvests journal article metadata from any OAI-PMH/OJS source via a pasted URL, with operator review before creating Publication (rsc205) records — Series/Author resolution, per-language abstract, best-effort PDF import | [reference](tool_bibliography_acquisition.md) |
 | `tool_import_dedalo_csv` | Imports CSV (notably tool_export `dedalo_raw` round-trips) into Dédalo, conforming each cell per-component with multi-language support and time-machine tracking | [reference](tool_import_dedalo_csv.md) |
 | `tool_import_files` | Ingests uploaded media files into media sections (EXIF/metadata extraction, multiple naming/match modes, custom processors) via ImageMagick/FFmpeg | [reference](tool_import_files.md) |
 | `tool_import_marc21` | Parses MARC21 binary (`.mrc`) files and maps fields/subfields to Dédalo components per ontology config, matching or creating records | [reference](tool_import_marc21.md) |
 | `tool_import_rdf` | Imports RDF/OWL graphs, mapping classes/properties to Dédalo components with resource matching/creation and special handling for iri/geolocation/date | [reference](tool_import_rdf.md) |
 | `tool_import_zotero` | Imports a Zotero RDF/XML bibliographic export into Publications (rsc205), mapping predicates to components | [reference](tool_import_zotero.md) |
+| `tool_numisdata_acquisition` | Imports coin-auction lots from a pasted URL (jesusvico.com, biddr.com, aureo.com, numisbids.com, sixbid.com) into Numismatic Object (numisdata4) records, with operator review, Auction/Type resolution and obverse/reverse image import | [reference](tool_numisdata_acquisition.md) |
 
 ### Export & publishing
 

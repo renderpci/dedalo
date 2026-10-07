@@ -45,7 +45,9 @@ const TS_ONLY_TOOLS: ReadonlySet<string> = new Set(['tool_error_report']);
  * silently fell out of the registry. Grow-only, one WC citation each.
  */
 const POST_HARVEST_TS_TOOLS: ReadonlyMap<string, string> = new Map([
+	['tool_bibliography_acquisition', 'WC-2026-10-07-acquisition-tools-ts-only'],
 	['tool_identify', 'WC-062'],
+	['tool_numisdata_acquisition', 'WC-2026-10-07-acquisition-tools-ts-only'],
 	['tool_rag', 'WC-2026-10-01-ai-spend-budget'],
 	['tool_sitebuilder', 'WC-035'],
 ]);

@@ -4626,6 +4626,11 @@
 			"skipped": 0,
 			"assertions": 21
 		},
+		"test/unit/tool_bibliography_acquisition_langs.test.ts": {
+			"tests": 14,
+			"skipped": 0,
+			"assertions": 39
+		},
 		"test/unit/tool_color_contrast_tripwire.test.ts": {
 			"tests": 7,
 			"skipped": 0,
@@ -4770,6 +4775,11 @@
 			"tests": 84,
 			"skipped": 0,
 			"assertions": 453
+		},
+		"test/unit/tool_numisdata_acquisition_keys.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 44
 		},
 		"test/unit/tool_ontology.test.ts": {
 			"tests": 4,

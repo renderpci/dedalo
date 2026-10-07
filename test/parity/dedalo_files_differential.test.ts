@@ -108,7 +108,10 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_ontology/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_code/') ||
 		// WC-2026-10-03-publication-hosts-widget (TS-only publication-host panel)
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/publication_hosts/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/publication_hosts/') ||
+		// WC-2026-10-07-acquisition-tools-ts-only (TS-native acquisition tools, no PHP twin)
+		entry.url.startsWith('/dedalo/tools/tool_numisdata_acquisition/') ||
+		entry.url.startsWith('/dedalo/tools/tool_bibliography_acquisition/')
 	);
 }
 
