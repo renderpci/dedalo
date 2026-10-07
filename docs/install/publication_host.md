@@ -305,14 +305,14 @@ bun run provision apply <instance>    # directories, units, rules, certificates,
 ```
 
 On a fresh host, `check` lists one `would: …` line per change and ends with *N action(s)
-would change instance …*. It then exits with code 1, which `bun run` reports as *script
-"provision" exited with code 1*: that is the expected first result, not a failure. Run
-`apply`, then `check` again: it ends with *matches its declaration* and exits 0.
+would change instance … — run 'apply' to make them*. That is its normal answer, not a
+failure, and it exits 0. Run `apply`, then `check` again: it ends with *matches its
+declaration*.
 
 | Exit code | Meaning |
 | --- | --- |
-| 0 | nothing to do, or `apply` finished |
-| 1 | `check` only: the host does not match the declaration yet; nothing was written |
+| 0 | `check`: the report is printed (with or without changes to make); `apply`: finished |
+| 1 | `check --exit-code` only: the host does not match the declaration yet, for scripts that need to tell; nothing was written |
 | 2 | the command line is wrong; the usage is printed |
 | 3 | refused: each problem is listed after *plan refused for instance …*, with its fix |
 | 4 | `apply` failed partway; the failed action is named, and later actions were not run |

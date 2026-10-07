@@ -46,7 +46,12 @@ import { ensureTls } from './tls';
 export const EXIT = Object.freeze({
   /** Did what was asked, or there was nothing to do. */
   OK: 0,
-  /** `check` only: the host does not match its declaration. Nothing was written. */
+  /**
+   * `check --exit-code` only: the host does not match its declaration. Nothing was written.
+   * A plain `check` reports drift with 0 (like `git diff` / `terraform plan`): changes to
+   * make are its normal answer, and `bun run` prints "error: … exited with code 1" for any
+   * non-zero exit — an operator's first check must not read as a failure.
+   */
   DRIFT: 1,
   /** The command line is not a command. */
   USAGE: 2,
@@ -109,21 +114,29 @@ export interface ProvisionArgs {
   readonly verb: Verb;
   readonly instance: string;
   readonly declaration: string | null;
+  /** `check --exit-code`: answer drift with EXIT.DRIFT instead of OK (for scripts). */
+  readonly exitCode: boolean;
 }
 
 export function usageLines(): string[] {
   return [
-    'usage: bun run src/provision/cli.ts <render|check|apply> <instance> [--declaration <file>]',
+    'usage: bun run src/provision/cli.ts <render|check|apply> <instance> [--declaration <file>] [--exit-code]',
     `  the declaration defaults to ${DEFAULT_PATHS.configBase}/<instance>.json`,
-    '  exit: 0 ok · 1 drift (check) · 2 usage · 3 refused · 4 failed',
+    '  exit: 0 ok (check: also when it lists changes) · 1 drift (check --exit-code) · 2 usage · 3 refused · 4 failed',
   ];
 }
 
 export function parseArgs(argv: readonly string[]): ProvisionArgs | { readonly error: string } {
   const positional: string[] = [];
   let declaration: string | null = null;
+  let exitCode = false;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index] ?? '';
+    if (arg === '--exit-code') {
+      if (exitCode) return { error: '--exit-code given twice' };
+      exitCode = true;
+      continue;
+    }
     if (arg === '--declaration') {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith('--')) return { error: '--declaration needs a file path' };
@@ -141,7 +154,8 @@ export function parseArgs(argv: readonly string[]): ProvisionArgs | { readonly e
   if (instance === undefined) return { error: 'no instance' };
   if (!INSTANCE_PATTERN.test(instance)) return { error: `instance '${instance}' must match ${INSTANCE_PATTERN.source}` };
   if (rest.length > 0) return { error: `unexpected argument '${rest[0]}'` };
-  return { verb: verb as Verb, instance, declaration };
+  if (exitCode && verb !== 'check') return { error: '--exit-code applies to check only' };
+  return { verb: verb as Verb, instance, declaration, exitCode };
 }
 
 /* ── the injected world ───────────────────────────────────────────────────────────── */
@@ -501,8 +515,11 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
         return EXIT.OK;
       }
       for (const line of would) out(line);
-      out(`provision: ${would.length} action(s) would change instance '${layout.instance}'`);
-      return EXIT.DRIFT;
+      out(
+        `provision: ${would.length} action(s) would change instance '${layout.instance}' — ` +
+          `run 'apply' to make them`,
+      );
+      return args.exitCode ? EXIT.DRIFT : EXIT.OK;
     }
 
     const io = deps.io();

@@ -95,12 +95,21 @@ describe('arguments → USAGE (2)', () => {
   }
 
   test('parseArgs: default and explicit declaration', () => {
-    expect(parseArgs(['check', 'test'])).toEqual({ verb: 'check', instance: 'test', declaration: null });
+    expect(parseArgs(['check', 'test'])).toEqual({ verb: 'check', instance: 'test', declaration: null, exitCode: false });
     expect(parseArgs(['apply', 'test', '--declaration', '/tmp/d.json'])).toEqual({
       verb: 'apply',
       instance: 'test',
       declaration: '/tmp/d.json',
+      exitCode: false,
     });
+    expect(parseArgs(['check', 'test', '--exit-code'])).toEqual({
+      verb: 'check',
+      instance: 'test',
+      declaration: null,
+      exitCode: true,
+    });
+    expect(parseArgs(['apply', 'test', '--exit-code'])).toEqual({ error: '--exit-code applies to check only' });
+    expect(parseArgs(['check', 'test', '--exit-code', '--exit-code'])).toEqual({ error: '--exit-code given twice' });
   });
 });
 
@@ -149,7 +158,7 @@ describe('declaration → REFUSED (3)', () => {
       v1: { user: 'dedalo-api-v1-other' },
       v2: { unit: 'dedalo-publication-api-v2-other', user: 'dedalo-api-v2-other', group: 'dedalo-api-v2-other', port: 3101, health_url: 'http://127.0.0.1:3101/health' },
     });
-    expect(exec(separated, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(separated, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(separated.err).toEqual([]);
   });
 
@@ -163,9 +172,9 @@ describe('declaration → REFUSED (3)', () => {
     // The instance's own declaration in the config base is never its own sibling — also when
     // named another way (compared canonically).
     const self = harness({ siblings: { [DEFAULT_SOURCE]: JSON.stringify(unixDeclaration()) } });
-    expect(exec(self, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(self, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     const spelled = harness({ siblings: { [DEFAULT_SOURCE]: JSON.stringify(unixDeclaration()) } });
-    expect(exec(spelled, ['check', 'test', '--declaration', '/etc/dedalo_publication_host//test.json'])).toBe(EXIT.DRIFT);
+    expect(exec(spelled, ['check', 'test', '--declaration', '/etc/dedalo_publication_host//test.json', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(spelled.err).toEqual([]);
     // A symlinked sibling is never followed and never skipped: refused, named.
     const linked = harness({
@@ -215,7 +224,7 @@ describe('declaration → REFUSED (3)', () => {
 
     test('accepted when the file and every directory up to / are root-owned and not group/world-writable', () => {
       const h = harness({ facts: { [DEFAULT_SOURCE]: { ...ROOT_FILE, mode: 0o600 }, [DIR]: { ...ROOT_DIR, mode: 0o700 } } });
-      expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+      expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
       expect(h.err).toEqual([]);
       expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
     });
@@ -240,7 +249,7 @@ describe('declaration → REFUSED (3)', () => {
       expect(bad.reads).toEqual([]);
       // A trusted relative chain is accepted (the walk ends at '/', not at '.').
       const good = harness();
-      expect(exec(good, ['check', 'test', '--declaration', './zz_relative_drafts/test.json'])).toBe(EXIT.DRIFT);
+      expect(exec(good, ['check', 'test', '--declaration', './zz_relative_drafts/test.json', '--exit-code'])).toBe(EXIT.DRIFT);
       expect(good.err).toEqual([]);
     });
 
@@ -309,8 +318,17 @@ describe('render / check / apply', () => {
 
   test('check on a fresh host → DRIFT (1), writes nothing', () => {
     const h = harness();
-    expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(h.out.at(-1)).toMatch(/action\(s\) would change instance 'test'/);
+    expect(h.host.mutations).toBe(0);
+  });
+
+  test('a plain check that lists changes exits 0 (bun run prints "error: … exited" for any non-zero), writes nothing', () => {
+    const h = harness();
+    expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
+    expect(h.out.some(line => line.startsWith('would: '))).toBe(true);
+    expect(h.out.at(-1)).toBe("provision: " + h.out.filter(line => line.startsWith('would: ')).length + " action(s) would change instance 'test' — run 'apply' to make them");
+    expect(h.err).toEqual([]);
     expect(h.host.mutations).toBe(0);
   });
 
@@ -399,7 +417,7 @@ describe('apply converges in one run', () => {
   test('tls: check names what it would issue; apply issues before any unit starts; a second apply writes nothing', () => {
     const h = harness({ declaration: tlsDeclaration() });
     const l = derive(tlsDeclaration());
-    expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(h.out).toContain('would: issue the ca certificate (tls)');
     expect(h.host.mutations).toBe(0);
 
@@ -437,7 +455,7 @@ describe('apply converges in one run', () => {
       const { h, clock } = converged();
       clock.now = new Date(clock.now.getTime() + (TLS_VALIDITY.leafDays - TLS_VALIDITY.leafRenewDays + 1) * DAY);
       h.out.length = 0;
-      expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+      expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
       expect(h.out).toContain(`would: systemctl restart ${AGENT} (the reissued tls material)`);
       expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
       expect(restarts(h)).toBe(1);
