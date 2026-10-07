@@ -304,6 +304,19 @@ bun run provision check <instance>    # what would change; writes nothing
 bun run provision apply <instance>    # directories, units, rules, certificates, the token
 ```
 
+On a fresh host, `check` lists one `would: …` line per change and ends with *N action(s)
+would change instance …*. It then exits with code 1, which `bun run` reports as *script
+"provision" exited with code 1*: that is the expected first result, not a failure. Run
+`apply`, then `check` again: it ends with *matches its declaration* and exits 0.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | nothing to do, or `apply` finished |
+| 1 | `check` only: the host does not match the declaration yet; nothing was written |
+| 2 | the command line is wrong; the usage is printed |
+| 3 | refused: each problem is listed after *plan refused for instance …*, with its fix |
+| 4 | `apply` failed partway; the failed action is named, and later actions were not run |
+
 Root has no `bun` of its own when each site has its own Bun: run the commands with the
 site's, for example `/home/museum.org/.bun/bin/bun run provision check museum_org`. The
 same applies to every `bun run provision …` command on this page.
