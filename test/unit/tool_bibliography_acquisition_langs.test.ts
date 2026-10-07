@@ -60,11 +60,14 @@ describe('planAbstractLangs', () => {
 			],
 			LANGS,
 		);
-		expect(plan.writes).toEqual([
-			{ lang: 'lg-spa', text: 'resumen' },
-			{ lang: 'lg-eng', text: 'abstract' },
-		]);
-		expect(plan.skipped).toEqual([]);
+		// the WHOLE plan, exactly: two writes and no skip (an empty plan cannot pass)
+		expect(plan).toEqual({
+			writes: [
+				{ lang: 'lg-spa', text: 'resumen' },
+				{ lang: 'lg-eng', text: 'abstract' },
+			],
+			skipped: [],
+		});
 	});
 
 	test('a language not installed is skipped and reported, the rest still written', () => {
@@ -99,11 +102,13 @@ describe('planAbstractLangs', () => {
 			],
 			LANGS,
 		);
-		expect(free.writes).toEqual([
-			{ lang: 'lg-eng', text: 'abstract' },
-			{ lang: 'lg-spa', text: 'sin idioma' },
-		]);
-		expect(free.skipped).toEqual([]);
+		expect(free).toEqual({
+			writes: [
+				{ lang: 'lg-eng', text: 'abstract' },
+				{ lang: 'lg-spa', text: 'sin idioma' },
+			],
+			skipped: [],
+		});
 
 		// A LATER tagged variant still wins the slot over an earlier untagged one.
 		const taken = planAbstractLangs(
@@ -126,8 +131,10 @@ describe('planAbstractLangs', () => {
 			data: [],
 			current: 'lg-spa',
 		});
-		expect(plan.writes).toEqual([]);
-		expect(plan.skipped).toEqual([{ lang: 'en', reason: 'language_not_installed' }]);
+		expect(plan).toEqual({
+			writes: [],
+			skipped: [{ lang: 'en', reason: 'language_not_installed' }],
+		});
 	});
 });
 

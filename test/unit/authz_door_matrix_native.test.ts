@@ -98,7 +98,11 @@ import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { writeMediaCompanions } from '../../src/core/media/ingest/companion_writes.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
-import { type Principal, resolvePrincipal } from '../../src/core/security/permissions.ts';
+import {
+	getPermissionGrant,
+	type Principal,
+	resolvePrincipal,
+} from '../../src/core/security/permissions.ts';
 import { READ_DOOR_GATE, READ_DOOR_POSTURE } from '../../src/core/security/read_door.ts';
 import { createSession, getSession, type Session } from '../../src/core/security/session_store.ts';
 import {
@@ -137,6 +141,7 @@ import {
 	assertAuthzDoorContrast,
 	authzProjectLocator,
 	authzStubAgentModels,
+	clearAuthzDoorCaches,
 	createDoorRecord,
 	installAuthzDoorFixture,
 	removeAuthzDoorFixture,
@@ -1142,6 +1147,535 @@ function bulkRevertProbe(): Probe {
 	};
 }
 
+/**
+ * THE ACQUISITION TOOLS' FIXED-TARGET DOORS (PR #114 — tool_numisdata_acquisition,
+ * tool_bibliography_acquisition). Each action declares `targets` with a CONSTANT
+ * extractor: the previews name the tool's object section at READ (1), the
+ * commits that section plus every (section, component) PAIR the handler writes
+ * across its object, authority, entity and image sections at WRITE (2). The
+ * client's own `section_tipo` is never consulted — the gate is input-blind.
+ *
+ * WHY OWN IDENTITIES. The shared fixture's identities hold their grants on the
+ * playground section; none holds anything on a tool's fixed sections, so every
+ * one of them is refused trivially and none could be the CONTROL. The
+ * acquisition identities ({@link ACQ_IDENTITIES}) are DERIVED from the loaded
+ * specs' own target lists (never typed here: the install TLDs stay out of this
+ * file's source), minted in this file's band and verified through the resolver
+ * before any cell runs:
+ *
+ *   ACQ_CONTROL     → CONTROL        every target at 2
+ *   ACQ_READ_ONLY   → READ_ONLY      every target at 1 — may preview, may not commit
+ *   ACQ_PAIR_SHORT  → READ_COMPONENT every target at 2 but the commit list's LAST
+ *                                    component pair, explicitly at 1 — the gate must
+ *                                    walk the whole list to refuse it; the refusal is
+ *                                    PINNED there (the same principal is admitted the
+ *                                    moment that one pair is dropped from the list)
+ *   ACQ_NO_SECTION  → NO_SECTION     the target SECTIONS at an explicit 0, every pair at 2
+ *
+ * THE CELL'S VERDICT IS THE GATE'S (`assertActionPermission`, dispatch gate 7 —
+ * src/core/tools/dispatch.ts runs it before the handler and before any
+ * background fork). The handler is entered ONLY on a cell the design expects
+ * SERVED, with an inert CONTROL payload; a refusal cell's payload is the
+ * dangerous one (a URL the handler would FETCH, a lot it would WRITE), so a
+ * regressed gate shows up as `served` — and is not then run. EVERY cell runs
+ * under two guards that throw (red, never a verdict): any `fetch` reached
+ * (globalThis.fetch is swapped for a refusing spy for the cell), and any row
+ * written on the tool's target sections (matrix rows + TM rows, counted before
+ * and after).
+ *
+ * The CONTROL payloads, each stopping before a network or a write by design:
+ *   preview_url  numisdata: a numisbids sale URL — that adapter refuses to fetch
+ *                (`tool.unsupported_target`, robots.txt) before any request;
+ *                bibliography: an http:// OAI URL — the harvesting door's step 1
+ *                refuses it (`harvest.refused`, https required) before DNS or a socket;
+ *   preview_html a minimal saved page (one numisbids lot card / one OAI-PMH
+ *                record) the parser must turn into exactly ONE lot / publication;
+ *   commit_*     a one-entry batch whose entry is not an object — skipped by the
+ *                loop, so the handler runs to its summary and writes NOTHING. A real
+ *                write is not possible here: the commits write only the tools' FIXED
+ *                install sections (no scratch section can be substituted), which the
+ *                generic-TLD law keeps out of the suite database's records — and the
+ *                numisdata sections are absent from the suite ontology altogether.
+ */
+const ACQ_BAND_LOW = 944100;
+const ACQ_BAND_HIGH = 944199;
+type AcqIdentity = 'ACQ_CONTROL' | 'ACQ_READ_ONLY' | 'ACQ_PAIR_SHORT' | 'ACQ_NO_SECTION';
+const ACQ_IDENTITIES: Readonly<Record<AcqIdentity, { userId: number; column: IdentityKey }>> = {
+	ACQ_CONTROL: { userId: 944101, column: 'CONTROL' },
+	ACQ_READ_ONLY: { userId: 944102, column: 'READ_ONLY' },
+	ACQ_PAIR_SHORT: { userId: 944103, column: 'READ_COMPONENT' },
+	ACQ_NO_SECTION: { userId: 944104, column: 'NO_SECTION' },
+};
+const acqProfileOf = (userId: number) => userId + 10;
+
+const ACQ_NUMISDATA = 'tool_numisdata_acquisition';
+const ACQ_BIBLIOGRAPHY = 'tool_bibliography_acquisition';
+/** The commit action of each acquisition tool — whose LAST pair ACQ_PAIR_SHORT holds at 1. */
+const ACQ_COMMIT: Readonly<Record<string, string>> = {
+	[ACQ_NUMISDATA]: 'commit_lots',
+	[ACQ_BIBLIOGRAPHY]: 'commit_publications',
+};
+
+/** A minimal numisbids sale page: one `.browse` lot card, no sale header (no auction search). */
+const NUMISBIDS_SAVED_PAGE =
+	'<html><body><div class="browse"><div class="browsetext-top"><div class="left">' +
+	'<span class="lot"><a href="/sale/1/lot/7">Lot 7</a></span></div></div>' +
+	'<a class="watchlot" data-lotid="7"></a><div class="browsetext">' +
+	'<div class="summary"><a>zzauthz coin</a></div></div></div></body></html>';
+/** A minimal OAI-PMH response: one record, no dc:source (no series search). */
+const OAI_SAVED_PAGE =
+	'<?xml version="1.0" encoding="UTF-8"?><OAI-PMH><ListRecords><record><header>' +
+	'<identifier>oai:zzauthz:article/1</identifier></header><metadata><oai_dc:dc>' +
+	'<dc:title>zzauthz article</dc:title></oai_dc:dc></metadata></record></ListRecords></OAI-PMH>';
+
+interface AcquisitionCase {
+	/** The payload a REFUSED cell sends: one the handler would fetch or write with. */
+	refused: Record<string, unknown>;
+	/** The CONTROL payload: stops before any network or write (see the block above). */
+	control: Record<string, unknown>;
+	/** THROWS unless the handler's answer is the one the control payload must produce. */
+	accept: (result: {
+		value?: unknown;
+		error?: unknown;
+		/** False when the tool's OBJECT section has no matrix table in this database. */
+		ontologyPresent: boolean;
+	}) => void;
+}
+
+const dataOf = (value: unknown) =>
+	(value as { data?: Record<string, unknown> } | undefined)?.data ?? {};
+function acceptCode(code: string): AcquisitionCase['accept'] {
+	return ({ error }) => {
+		if (!(error instanceof DedaloError) || error.code !== code) {
+			throw new Error(
+				`acquisition control: expected the handler to stop on ${code}, got ${String(error)}`,
+			);
+		}
+	};
+}
+function acceptParsed(key: 'lots' | 'publications'): AcquisitionCase['accept'] {
+	return ({ value, error }) => {
+		const parsed = dataOf(value)[key];
+		if (error !== undefined || !Array.isArray(parsed) || parsed.length !== 1) {
+			throw new Error(
+				`acquisition control: expected ONE parsed entry in ${key}, got ${String(error ?? JSON.stringify(parsed))}`,
+			);
+		}
+	};
+}
+/**
+ * A commit's CONTROL: the one non-object entry is skipped, so the summary counts
+ * it and holds no result. ONE derived exception: where the tool's install
+ * ontology is ABSENT from this database (the suite database carries no
+ * numisdata TLD), the handler's first act — a READ of its fixed authority list
+ * (the catalogue index) — stops on `request.invalid_tipo` after the gate, before
+ * any write. Accepted only then: on a database holding the ontology the empty
+ * summary is required.
+ */
+function acceptEmptyCommit(total: 'lots_total' | 'publications_total'): AcquisitionCase['accept'] {
+	return ({ value, error, ontologyPresent }) => {
+		if (!ontologyPresent && error instanceof DedaloError && error.code === 'request.invalid_tipo') {
+			return;
+		}
+		const data = dataOf(value);
+		if (
+			error !== undefined ||
+			data[total] !== 1 ||
+			!Array.isArray(data.results) ||
+			data.results.length !== 0
+		) {
+			throw new Error(
+				`acquisition control: expected an empty commit summary, got ${String(error ?? JSON.stringify(data))}`,
+			);
+		}
+	};
+}
+
+const ACQUISITION_CASES: Readonly<Record<string, AcquisitionCase>> = {
+	[`tool:${ACQ_NUMISDATA}:preview_url`]: {
+		refused: { url: 'https://www.jesusvico.com/es/subasta-1-zzauthz_I1-001' },
+		control: { url: 'https://www.numisbids.com/sale/1' },
+		accept: acceptCode('tool.unsupported_target'),
+	},
+	[`tool:${ACQ_NUMISDATA}:preview_html`]: {
+		refused: { url: 'https://www.numisbids.com/sale/1', html: NUMISBIDS_SAVED_PAGE },
+		control: { url: 'https://www.numisbids.com/sale/1', html: NUMISBIDS_SAVED_PAGE },
+		accept: acceptParsed('lots'),
+	},
+	[`tool:${ACQ_NUMISDATA}:commit_lots`]: {
+		refused: {
+			auction: { auctionHouse: 'zzauthz house', auctionNumber: '1' },
+			lots: [
+				{
+					lotNumber: '1',
+					title: 'zzauthz',
+					images: [{ sourceUrl: 'https://zzauthz.invalid/a.jpg' }],
+				},
+			],
+		},
+		control: { lots: ['zzauthz: not a lot'] },
+		accept: acceptEmptyCommit('lots_total'),
+	},
+	[`tool:${ACQ_BIBLIOGRAPHY}:preview_url`]: {
+		refused: { url: 'https://zzauthz.invalid/index.php/zz/oai' },
+		control: { url: 'http://zzauthz.invalid/index.php/zz/oai' },
+		accept: acceptCode('harvest.refused'),
+	},
+	[`tool:${ACQ_BIBLIOGRAPHY}:preview_html`]: {
+		refused: { url: 'https://zzauthz.invalid/index.php/zz/oai', html: OAI_SAVED_PAGE },
+		control: { url: 'https://zzauthz.invalid/index.php/zz/oai', html: OAI_SAVED_PAGE },
+		accept: acceptParsed('publications'),
+	},
+	[`tool:${ACQ_BIBLIOGRAPHY}:commit_publications`]: {
+		refused: {
+			publications: [{ publicationIdentifier: 'oai:zzauthz:article/1', title: 'zzauthz' }],
+		},
+		control: { publications: ['zzauthz: not a publication'] },
+		accept: acceptEmptyCommit('publications_total'),
+	},
+};
+
+/** A spec's constant target list, read through its own extractor (the gate's input). */
+function specTargets(spec: GatedToolActionSpec): { section_tipo: string; tipo?: string }[] {
+	const targets = spec.targets?.({}) ?? [];
+	if (targets.length === 0) throw new Error('acquisition spec names no targets');
+	return targets as { section_tipo: string; tipo?: string }[];
+}
+
+/** The LAST component pair of a tool's commit list — what ACQ_PAIR_SHORT holds at 1. */
+function shortPairOf(commit: GatedToolActionSpec): { section_tipo: string; tipo: string } {
+	const pairs = specTargets(commit).filter((target) => target.tipo !== undefined);
+	const last = pairs[pairs.length - 1];
+	if (last === undefined) throw new Error('acquisition commit names no component pair');
+	return last as { section_tipo: string; tipo: string };
+}
+
+/** Every acquisition spec, by tool — THROWS when a tool or its commit is not loaded. */
+async function acquisitionSpecs(): Promise<Map<string, Record<string, GatedToolActionSpec>>> {
+	const modules = await loadToolModules();
+	const out = new Map<string, Record<string, GatedToolActionSpec>>();
+	for (const [toolName, commit] of Object.entries(ACQ_COMMIT)) {
+		const actions = modules.get(toolName)?.module.apiActions as
+			| Record<string, GatedToolActionSpec>
+			| undefined;
+		if (actions?.[commit] === undefined) throw new Error(`${toolName}.${commit} is not loaded`);
+		out.set(toolName, actions);
+	}
+	return out;
+}
+
+/** Each identity's dd774 grants, derived from the specs' own target lists. */
+async function acquisitionGrants(): Promise<Record<AcqIdentity, [string, string, number][]>> {
+	const grants: Record<AcqIdentity, Map<string, [string, string, number]>> = {
+		ACQ_CONTROL: new Map(),
+		ACQ_READ_ONLY: new Map(),
+		ACQ_PAIR_SHORT: new Map(),
+		ACQ_NO_SECTION: new Map(),
+	};
+	for (const [toolName, actions] of await acquisitionSpecs()) {
+		const short = shortPairOf(actions[ACQ_COMMIT[toolName] as string] as GatedToolActionSpec);
+		for (const spec of Object.values(actions)) {
+			if (spec.permission !== 'targets') continue;
+			for (const target of specTargets(spec)) {
+				const tipo = target.tipo ?? target.section_tipo;
+				const key = `${target.section_tipo}_${tipo}`;
+				const isSection = target.tipo === undefined;
+				const isShort = target.section_tipo === short.section_tipo && tipo === short.tipo;
+				grants.ACQ_CONTROL.set(key, [target.section_tipo, tipo, 2]);
+				grants.ACQ_READ_ONLY.set(key, [target.section_tipo, tipo, 1]);
+				grants.ACQ_PAIR_SHORT.set(key, [target.section_tipo, tipo, isShort ? 1 : 2]);
+				grants.ACQ_NO_SECTION.set(key, [target.section_tipo, tipo, isSection ? 0 : 2]);
+			}
+		}
+	}
+	return Object.fromEntries(
+		Object.entries(grants).map(([identity, map]) => [identity, [...map.values()]]),
+	) as Record<AcqIdentity, [string, string, number][]>;
+}
+
+async function insertAcqRow(
+	table: string,
+	sectionTipo: string,
+	sectionId: number,
+	columns: Record<string, unknown>,
+) {
+	const { encodeForJsonb } = await import('../../src/core/db/json_codec.ts');
+	const { sql } = await import('../../src/core/db/postgres.ts');
+	const names = ['"section_tipo"', '"section_id"'];
+	const placeholders = ['$1', '$2'];
+	const params: (string | number)[] = [sectionTipo, sectionId];
+	for (const [column, value] of Object.entries(columns)) {
+		names.push(`"${column}"`);
+		placeholders.push(`$${params.length + 1}::text::jsonb`);
+		params.push(encodeForJsonb(value));
+	}
+	await sql.unsafe(
+		`INSERT INTO "${table}" (${names.join(', ')}) VALUES (${placeholders.join(', ')})`,
+		params,
+	);
+}
+
+/** Sweep the acquisition identities (tolerant before install, strict after). */
+async function sweepAcquisitionIdentities(strict: boolean): Promise<void> {
+	await assertTestDatabase('authz_door_matrix_native: acquisition identities sweep');
+	const { deleteMatrixRecord } = await import('../../src/core/db/matrix_write.ts');
+	const { sql } = await import('../../src/core/db/postgres.ts');
+	const missing: string[] = [];
+	for (const { userId } of Object.values(ACQ_IDENTITIES)) {
+		for (const [table, sectionTipo, sectionId] of [
+			['matrix_users', USERS, userId],
+			['matrix_profiles', 'dd234', acqProfileOf(userId)],
+		] as const) {
+			if (sectionId < ACQ_BAND_LOW || sectionId > ACQ_BAND_HIGH) {
+				throw new Error(
+					`acquisition identity id ${sectionId} is outside ${ACQ_BAND_LOW}-${ACQ_BAND_HIGH}`,
+				);
+			}
+			if ((await deleteMatrixRecord(table, sectionTipo, sectionId)) === 0) {
+				missing.push(`${table}/${sectionId}`);
+			}
+			await sql.unsafe(
+				'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+				[sectionTipo, sectionId],
+			);
+		}
+	}
+	if (strict && missing.length > 0) {
+		throw new Error(`acquisition identities sweep removed 0 rows for: ${missing.join(', ')}`);
+	}
+	clearAuthzDoorCaches();
+}
+
+const acqPrincipals = new Map<AcqIdentity, Principal>();
+
+/** Mint the acquisition identities (dd234 profile + dd128 user each, project P). */
+async function installAcquisitionIdentities(): Promise<void> {
+	await assertTestDatabase('authz_door_matrix_native: acquisition identities');
+	await sweepAcquisitionIdentities(false);
+	const grants = await acquisitionGrants();
+	const loc = (from: string, sectionTipo: string, sectionId: number) => ({
+		id: 1,
+		type: 'dd151',
+		section_id: sectionId,
+		section_tipo: sectionTipo,
+		from_component_tipo: from,
+	});
+	for (const [identity, { userId }] of Object.entries(ACQ_IDENTITIES) as [
+		AcqIdentity,
+		{ userId: number },
+	][]) {
+		await insertAcqRow('matrix_profiles', 'dd234', acqProfileOf(userId), {
+			string: { dd237: [{ id: 1, lang: 'lg-eng', value: `zzauthz ${identity} profile` }] },
+			misc: {
+				dd774: grants[identity].map(([section_tipo, tipo, value], index) => ({
+					id: index + 1,
+					tipo,
+					section_tipo,
+					value,
+				})),
+			},
+		});
+		await insertAcqRow('matrix_users', USERS, userId, {
+			string: { dd132: [{ id: 1, lang: 'lg-nolan', value: `zzauthz_${identity.toLowerCase()}` }] },
+			relation: {
+				dd131: [loc('dd131', 'dd64', 1)],
+				dd244: [loc('dd244', 'dd64', 2)],
+				dd515: [loc('dd515', 'dd64', 2)],
+				dd1725: [loc('dd1725', 'dd234', acqProfileOf(userId))],
+				dd170: [loc('dd170', 'dd153', AUTHZ_PROJECT_P)],
+			},
+		});
+	}
+	clearAuthzDoorCaches();
+	for (const [identity, { userId }] of Object.entries(ACQ_IDENTITIES) as [
+		AcqIdentity,
+		{ userId: number },
+	][]) {
+		acqPrincipals.set(identity, await resolvePrincipal(userId));
+	}
+}
+
+/**
+ * THROWS unless every acquisition identity confers what its row claims, through
+ * the REAL resolver — and the claims contrast (no zero-versus-zero column).
+ */
+async function assertAcquisitionContrast(): Promise<number> {
+	const grants = await acquisitionGrants();
+	const previewSections = new Set<string>();
+	for (const actions of (await acquisitionSpecs()).values()) {
+		for (const spec of Object.values(actions)) {
+			if (spec.permission === 'targets' && (spec.minLevel ?? 2) < 2) {
+				for (const target of specTargets(spec)) previewSections.add(target.section_tipo);
+			}
+		}
+	}
+	if (previewSections.size === 0) throw new Error('no acquisition preview names a target');
+	let checked = 0;
+	for (const identity of Object.keys(ACQ_IDENTITIES) as AcqIdentity[]) {
+		const principal = acqPrincipals.get(identity) as Principal;
+		if (principal.isGlobalAdmin || principal.isDeveloper) {
+			throw new Error(`${identity} resolved as an admin/developer — the contrast is void`);
+		}
+		for (const [sectionTipo, tipo, level] of grants[identity]) {
+			const grant = await getPermissionGrant(principal, sectionTipo, tipo);
+			const resolved = grant.level;
+			// The ONE tolerated difference: an explicit 0 on a section stored in a
+			// public-list table answers READ by RULE (getPermissionGrant's list
+			// fallback) — still below every commit's 2, and never a preview's own
+			// target (asserted: a preview section must resolve the claimed 0).
+			const publicListRead =
+				level === 0 &&
+				resolved === 1 &&
+				grant.basis === 'rule' &&
+				!previewSections.has(sectionTipo);
+			if (resolved !== level && !publicListRead) {
+				throw new Error(
+					`${identity}: (${sectionTipo}, ${tipo}) resolves ${resolved}, claimed ${level}`,
+				);
+			}
+			checked++;
+		}
+	}
+	return checked;
+}
+
+/** Matrix + TM rows on the tool's target sections — the zero-write census of a cell. */
+async function rowsOnTargets(sectionTipos: readonly string[]): Promise<number> {
+	const { sql } = await import('../../src/core/db/postgres.ts');
+	const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+	let total = 0;
+	for (const sectionTipo of sectionTipos) {
+		const table = await getMatrixTableFromTipo(sectionTipo).catch(() => null);
+		if (table === null) continue;
+		const rows = (await sql.unsafe(
+			`SELECT count(*)::int AS n FROM "${table}" WHERE section_tipo = $1`,
+			[sectionTipo],
+		)) as { n: number }[];
+		total += rows[0]?.n ?? 0;
+	}
+	const tm = (await sql.unsafe(
+		"SELECT count(*)::int AS n FROM matrix_time_machine WHERE section_tipo = ANY(string_to_array($1, ','))",
+		[sectionTipos.join(',')],
+	)) as { n: number }[];
+	return total + (tm[0]?.n ?? 0);
+}
+
+/**
+ * Run one cell with the network REFUSED (every fetch recorded and thrown) and
+ * the target sections' row count pinned: either one moving THROWS — a cell
+ * that reached a socket or wrote a row is a defect, never a verdict.
+ */
+async function guardedCell(
+	key: string,
+	sectionTipos: readonly string[],
+	run: () => Promise<Outcome>,
+): Promise<Outcome> {
+	const before = await rowsOnTargets(sectionTipos);
+	const original = globalThis.fetch;
+	const reached: string[] = [];
+	globalThis.fetch = (async (input: unknown) => {
+		reached.push(input instanceof Request ? input.url : String(input));
+		throw new Error('authz matrix: the acquisition cell reached the network');
+	}) as unknown as typeof fetch;
+	let outcome: Outcome | undefined;
+	let failure: unknown;
+	try {
+		outcome = await run();
+	} catch (error) {
+		failure = error;
+	} finally {
+		globalThis.fetch = original;
+	}
+	if (reached.length > 0) throw new Error(`${key}: reached the network: ${reached.join(', ')}`);
+	const after = await rowsOnTargets(sectionTipos);
+	if (after !== before) throw new Error(`${key}: wrote ${after - before} row(s) on its targets`);
+	if (failure !== undefined) throw failure;
+	return outcome as Outcome;
+}
+
+function acquisitionProbe(
+	key: string,
+	toolName: string,
+	action: string,
+	spec: GatedToolActionSpec,
+	commit: GatedToolActionSpec,
+	acase: AcquisitionCase,
+): Probe {
+	const writes = (spec.minLevel ?? 2) >= 2;
+	const short = shortPairOf(commit);
+	const sectionTipos = [...new Set(specTargets(spec).map((target) => target.section_tipo))];
+	const expectations: Partial<Record<IdentityKey, Verdict>> = {
+		NO_SECTION: 'refused',
+		READ_ONLY: writes ? 'refused' : 'served',
+		READ_COMPONENT: writes ? 'refused' : 'served',
+		CONTROL: 'served',
+	};
+	const identityOf = (column: IdentityKey): AcqIdentity => {
+		const found = (Object.entries(ACQ_IDENTITIES) as [AcqIdentity, { column: IdentityKey }][]).find(
+			([, row]) => row.column === column,
+		);
+		if (found === undefined) throw new Error(`${key}: no acquisition identity for ${column}`);
+		return found[0];
+	};
+	return {
+		expect: expectations,
+		// The commit's pair half, isolated: refused ON the last pair (verified below).
+		...(writes ? { refusalTipo: { READ_COMPONENT: short.tipo } } : {}),
+		run: (column) =>
+			guardedCell(`${key} × ${column}`, sectionTipos, async () => {
+				const principal = acqPrincipals.get(identityOf(column)) as Principal;
+				const served = expectations[column] === 'served';
+				const options = served ? acase.control : acase.refused;
+				const check = await assertActionPermission(spec as ToolActionSpec, options, principal);
+				if (!check.ok) {
+					const outcome = checkOutcome(check);
+					if (column === 'READ_COMPONENT' && writes) {
+						// PIN: drop the short pair and the same principal must be ADMITTED —
+						// else the refusal came from another target and the cell is wrong.
+						const without = await assertActionPermission(
+							{
+								...spec,
+								targets: (o: Record<string, unknown>) =>
+									(spec.targets?.(o) ?? []).filter(
+										(t) => !(t.section_tipo === short.section_tipo && t.tipo === short.tipo),
+									),
+							} as ToolActionSpec,
+							options,
+							principal,
+						);
+						if (!without.ok) {
+							return { ...outcome, code: `${outcome.code} (not on ${short.tipo})` };
+						}
+					}
+					return outcome;
+				}
+				// A regressed refusal: report it, never run the dangerous payload.
+				if (!served) return { verdict: 'served', detail: 'the gate admitted it (handler NOT run)' };
+				let value: unknown;
+				let error: unknown;
+				try {
+					value = await spec.handler({
+						principal,
+						userId: principal.userId,
+						options: structuredClone(options),
+						background: false,
+					} as ToolActionContext);
+				} catch (caught) {
+					error = caught;
+				}
+				const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+				const objectSection = sectionTipos[0] as string;
+				const ontologyPresent =
+					(await getMatrixTableFromTipo(objectSection).catch(() => null)) !== null;
+				acase.accept({ value, error, ontologyPresent });
+				return {
+					verdict: 'served',
+					detail: `${toolName}.${action} past the gate (${error instanceof DedaloError ? error.code : 'ok'})`,
+				};
+			}),
+	};
+}
+
 function mcpSearchProbe(run: (principal: Principal) => Promise<unknown>): Probe {
 	return {
 		expect: { NO_SECTION: 'refused', CONTROL: 'served' },
@@ -1450,6 +1984,29 @@ async function deriveCensus(): Promise<Census> {
 				);
 			}
 		}
+	}
+	// The acquisition tools' fixed-target doors (PR #114) — probed with their own
+	// identities (acquisitionProbe). No stale case: every ACQUISITION_CASES key is a
+	// live `targets` action.
+	const acquisition = await acquisitionSpecs();
+	for (const key of Object.keys(ACQUISITION_CASES)) {
+		const [, toolName, action] = key.split(':') as [string, string, string];
+		const actions = acquisition.get(toolName);
+		const spec = actions?.[action];
+		if (spec === undefined || spec.permission !== 'targets') {
+			throw new Error(`ACQUISITION_CASES names no live 'targets' action: ${key}`);
+		}
+		probes.set(
+			key,
+			acquisitionProbe(
+				key,
+				toolName,
+				action,
+				spec,
+				actions?.[ACQ_COMMIT[toolName] as string] as GatedToolActionSpec,
+				ACQUISITION_CASES[key] as AcquisitionCase,
+			),
+		);
 	}
 	// The posterframe HOST door — an in-handler write door behind the AV gate,
 	// probed under its own key (it is not a separate action: the declarative
@@ -1953,6 +2510,7 @@ describe.if(DB_READY)('Step 3 — the authorization-door matrix', () => {
 		]);
 		ids = await resolveAuthzIdentities();
 		superuser = await resolvePrincipal(-1);
+		await installAcquisitionIdentities();
 		census = await deriveCensus();
 	});
 
@@ -1963,12 +2521,18 @@ describe.if(DB_READY)('Step 3 — the authorization-door matrix', () => {
 			if (savedEnv[key] === undefined) delete process.env[key];
 			else process.env[key] = savedEnv[key];
 		}
+		await sweepAcquisitionIdentities(true);
 		await removeAuthzDoorFixture();
 		expect(await dropSituation(COMPANION_SITUATION)).toBe(0);
 	});
 
 	test('the contrast is live (guards every cell)', async () => {
 		await assertAuthzDoorContrast(ids);
+	});
+
+	test('the acquisition contrast is live: every derived grant resolves as claimed (guards the acquisition cells)', async () => {
+		// FLOOR: 4 identities over both tools' derived target lists.
+		expect(await assertAcquisitionContrast()).toBeGreaterThan(4 * 20);
 	});
 
 	test('the census is TOTAL: every derived door is probed, delegated, or NOT_YET_PROBED', () => {
