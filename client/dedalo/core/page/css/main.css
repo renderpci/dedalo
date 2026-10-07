@@ -12009,6 +12009,19 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   --tool_fill_hover: #5352db;
   --tool_on_fill: #ffffff;
 }
+.tool_header.tool_bibliography_acquisition,
+.wrapper_tool.tool_bibliography_acquisition {
+  --tool_edge: var(--tool_bibliography_acquisition, #f78a1c);
+  --tool_fill: #f78a1c;
+  --tool_fill_hover: #ffa55d;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_bibliography_acquisition, .wrapper_tool.tool_bibliography_acquisition) {
+  --tool_edge: var(--tool_bibliography_acquisition, #ffa040);
+  --tool_fill: #ffa040;
+  --tool_fill_hover: #ffbd84;
+  --tool_on_fill: #16181b;
+}
 .tool_header.tool_cataloging,
 .wrapper_tool.tool_cataloging {
   --tool_edge: var(--tool_cataloging, #f78a1c);
@@ -12241,6 +12254,19 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   --tool_edge: var(--tool_media_versions, #c06060);
   --tool_fill: #c46463;
   --tool_fill_hover: #d87675;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_numisdata_acquisition,
+.wrapper_tool.tool_numisdata_acquisition {
+  --tool_edge: var(--tool_numisdata_acquisition, #f78a1c);
+  --tool_fill: #f78a1c;
+  --tool_fill_hover: #ffa55d;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_numisdata_acquisition, .wrapper_tool.tool_numisdata_acquisition) {
+  --tool_edge: var(--tool_numisdata_acquisition, #ffa040);
+  --tool_fill: #ffa040;
+  --tool_fill_hover: #ffbd84;
   --tool_on_fill: #16181b;
 }
 .tool_header.tool_numisdata_epigraphy,
@@ -15750,6 +15776,18 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   font-size: 17px;
   font-weight: 700;
   color: var(--fg_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_widget_id {
+  padding: 0.08rem 0.42rem;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--fg_muted);
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_widget_id:empty {
+  display: none;
 }
 .area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_state {
   display: inline-flex;

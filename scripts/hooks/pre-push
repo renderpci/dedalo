@@ -116,7 +116,7 @@ ZERO_SHA_RE='^0*$'
 # glob-expanded by the shell. An entry must also be PUSHABLE — a gitignored
 # path never appears in a pushed range, so it would be inert (CHANGELOG.md was,
 # until 2026-09-26); the test refuses one with `git check-ignore`.
-HERMETIC_ONLY_PATHS='presentation/ overrides/ .vscode/ License.md'
+HERMETIC_ONLY_PATHS='presentation/ overrides/ License.md'
 
 say() { printf '%s\n' "pre-push: $*" >&2; }
 rule() { printf '%s\n' '────────────────────────────────────────────────────────────────────' >&2; }

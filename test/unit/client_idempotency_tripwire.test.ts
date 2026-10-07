@@ -362,12 +362,20 @@ interface CallSite {
 	setsKey: boolean;
 }
 
+/**
+ * A call site, whatever the line breaks: a formatter splits a long call into
+ * `data_manager` / `.request_stream({` on two lines (biome does, 2026-10-07 on
+ * the acquisition tools), and a dot-adjacent pattern then reads NOTHING there —
+ * the site leaves the census silently. Whitespace is allowed around the dot.
+ */
+const CALL_SITE_PATTERN = /data_manager\s*\.\s*(request|request_stream|request_fetch_stream)\s*\(/g;
+
 function censusCallSites(): CallSite[] {
-	const pattern = /data_manager\.(request|request_stream|request_fetch_stream)\s*\(/g;
+	const pattern = new RegExp(CALL_SITE_PATTERN.source, 'g');
 	const sites: CallSite[] = [];
 	for (const file of clientJsFiles()) {
 		const raw = readFileSync(join(REPO_ROOT, file), 'utf8');
-		if (!raw.includes('data_manager.')) continue;
+		if (!raw.includes('data_manager')) continue;
 		const source = stripComments(raw);
 		pattern.lastIndex = 0;
 		let match: RegExpExecArray | null = pattern.exec(source);
@@ -522,6 +530,17 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 	const sites = censusCallSites();
 	const requests = sites.filter((site) => site.call === 'request');
 
+	test('the call-site matcher reads a formatter-split chain (positive control)', () => {
+		const split = 'data_manager\n\t\t\t\t.request_stream({ body: {} })';
+		const flat = 'data_manager.request({ body: {} })';
+		expect([...split.matchAll(new RegExp(CALL_SITE_PATTERN.source, 'g'))].map((m) => m[1])).toEqual(
+			['request_stream'],
+		);
+		expect([...flat.matchAll(new RegExp(CALL_SITE_PATTERN.source, 'g'))].map((m) => m[1])).toEqual([
+			'request',
+		]);
+	});
+
 	test('anti-vacuity: the census actually found the population', () => {
 		// Measured 2026-08-28 on branch v7: 246 call sites, 228 through the
 		// RETRYING transport and 18 through the two streaming doors (raw fetch, no
@@ -532,9 +551,16 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 		// a background job followed through job_follow's request_stream, which
 		// was already counted), so the population genuinely shrank — the tool's
 		// remaining calls are data_manager.request sites with LITERAL retries.
+		// 2026-10-07: 17 → 19 streaming sites. The TWO that arrived are the two
+		// TS-native acquisition tools' job followers —
+		// render_tool_numisdata_acquisition.js and
+		// render_tool_bibliography_acquisition.js, each a `request_stream` on
+		// dd_utils_api get_process_status for its own background job (the same
+		// read-only follow shape as tool_import_files / tool_update_cache), so the
+		// population genuinely grew.
 		expect(sites.length).toBeGreaterThanOrEqual(240);
 		expect(requests.length).toBeGreaterThanOrEqual(220);
-		expect(sites.length - requests.length).toBe(17);
+		expect(sites.length - requests.length).toBe(19);
 		// the finding's own headline sites are in the corpus, at the default
 		expect(
 			requests.some((s) => s.file.endsWith('section/js/section.js') && s.retries === null),

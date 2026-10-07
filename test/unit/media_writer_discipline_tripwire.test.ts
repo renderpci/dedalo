@@ -312,11 +312,63 @@ const AD_HOC_TEMP =
  * Scratch naming that is NOT derivative staging. The chunked-upload assembler
  * names its pieces by CHUNK INDEX, which is the one thing `tempSibling`'s uuid
  * cannot express — the parts must be findable and ordered by a resumed upload.
+ *
+ * Each entry exempts EXACT SPELLINGS, never a whole file: `spellings` is the
+ * multiset of AD_HOC_TEMP's global matches in that file's comment-stripped code,
+ * and the gate asserts equality both ways. A NEW scratch spelling (or one more
+ * occurrence of an exempt one) in an exempt file is red, and so is a spelling
+ * that no longer occurs (stale). A whole-file exemption would let a real ad-hoc
+ * derivative temp land in `upload.ts` and pass silently.
  */
-const AD_HOC_TEMP_EXEMPT: Record<string, string> = {
-	'src/core/media/ingest/upload.ts':
-		'RECEIVE-side scratch, not a derivative: `${chunkIndex}.part` names the pieces of a resumable upload, which must be addressable by index across requests, and the `.tmp` is the meta.json publish. Nothing here is produced by a media binary, so there is no output contract and no sequence split to sweep',
+interface AdHocTempExemption {
+	readonly reason: string;
+	readonly spellings: readonly string[];
+}
+
+const AD_HOC_TEMP_EXEMPT: Record<string, AdHocTempExemption> = {
+	'src/core/media/tools/crop_coin_pair.ts': {
+		reason:
+			'the `${stem}_crop-${index}.${ext}` spelling is the PHP-parity DISPLAY name of each coin face (`fileName`, shown to the cataloguer and stored as the original name), never a path: the STAGED file is named through tempSibling (pid + uuid, extension last) and so is the bilevel mask, because every lot of an acquisition batch stages under one key_dir',
+		spellings: ['${names.stem}_crop'],
+	},
+	'src/core/media/ingest/upload.ts': {
+		reason:
+			'RECEIVE-side scratch, not a derivative: `${chunkIndex}.part` names the pieces of a resumable upload, which must be addressable by index across requests, and the `.tmp` is the meta.json publish. Nothing here is produced by a media binary, so there is no output contract and no sequence split to sweep',
+		spellings: [
+			'${Math.random().toString(16).slice(2, 10)}.tmp',
+			'${parsed.chunkIndex}.part',
+			'${i}.part',
+			'${i}.part',
+			'${i}.part',
+			'${i}.part',
+		],
+	},
 };
+
+/** Every AD_HOC_TEMP match in `code`, sorted (a multiset — repeats count). */
+function adHocTempSpellings(code: string): string[] {
+	const global = new RegExp(AD_HOC_TEMP.source, `${AD_HOC_TEMP.flags.replace('g', '')}g`);
+	return (code.match(global) ?? []).slice().sort();
+}
+
+/**
+ * The exempt spellings of one file must EQUAL its actual matches. Returns the
+ * drift (unexempted extras, stale spellings) so the planted control can probe
+ * the very function the real test uses.
+ */
+function exemptSpellingDrift(
+	code: string,
+	exemption: AdHocTempExemption,
+): { extra: string[]; stale: string[] } {
+	const remaining = [...exemption.spellings];
+	const extra: string[] = [];
+	for (const found of adHocTempSpellings(code)) {
+		const at = remaining.indexOf(found);
+		if (at === -1) extra.push(found);
+		else remaining.splice(at, 1);
+	}
+	return { extra, stale: remaining };
+}
 
 /**
  * Empty since 2026-08-09, and it stays that way: `av_versions.ts` was the last
@@ -370,8 +422,58 @@ describe('media writer discipline: temp names come from tempSibling', () => {
 
 	test('every ad-hoc-temp exemption and ratchet entry is named, reasoned and still true', () => {
 		const matching = filesMatching(AD_HOC_TEMP);
-		assertMapHonest('AD_HOC_TEMP_EXEMPT', AD_HOC_TEMP_EXEMPT, matching);
+		assertMapHonest(
+			'AD_HOC_TEMP_EXEMPT',
+			Object.fromEntries(Object.entries(AD_HOC_TEMP_EXEMPT).map(([f, e]) => [f, e.reason])),
+			matching,
+		);
 		assertMapHonest('AD_HOC_TEMP_RATCHET', AD_HOC_TEMP_RATCHET, matching);
+	});
+
+	test('an exempt file admits EXACTLY its listed spellings — no more, no fewer', () => {
+		for (const [file, exemption] of Object.entries(AD_HOC_TEMP_EXEMPT)) {
+			expect(
+				exemption.spellings.length,
+				`${file}: an exemption must list its spellings`,
+			).toBeGreaterThan(0);
+			const { extra, stale } = exemptSpellingDrift(readCode(file), exemption);
+			expect(
+				extra,
+				`${file}: ad-hoc temp spelling(s) NOT covered by its exemption — a new scratch name in an exempt file is still an offender (use writeAtomically / tempSibling, or exempt the exact spelling with a reason): ${extra.join(' | ')}`,
+			).toEqual([]);
+			expect(
+				stale,
+				`${file}: stale exempt spelling(s) — no longer present, delete them: ${stale.join(' | ')}`,
+			).toEqual([]);
+		}
+	});
+
+	test('planted offender: an extra spelling in an exempt file is caught (positive control)', () => {
+		const file = 'src/core/media/ingest/upload.ts';
+		const exemption = AD_HOC_TEMP_EXEMPT[file];
+		expect(exemption).toBeDefined();
+		const real = readCode(file);
+		// Sanity: the real file is clean, so the planted line is the only cause.
+		expect(exemptSpellingDrift(real, exemption as AdHocTempExemption)).toEqual({
+			extra: [],
+			stale: [],
+		});
+		const planted = `${real}\nconst scratch = \`\${derivative}.tmp\${extname(derivative)}\`;\n`;
+		expect(exemptSpellingDrift(planted, exemption as AdHocTempExemption)).toEqual({
+			extra: ['${derivative}.tmp'],
+			stale: [],
+		});
+		// …and one MORE occurrence of an already-exempt spelling is caught too.
+		const repeated = `${real}\nconst more = join(dir, \`\${i}.part\`);\n`;
+		expect(exemptSpellingDrift(repeated, exemption as AdHocTempExemption).extra).toEqual([
+			'${i}.part',
+		]);
+		// …and a vanished spelling reads stale.
+		const shrunk = {
+			...(exemption as AdHocTempExemption),
+			spellings: [...(exemption as AdHocTempExemption).spellings, '${gone}.part'],
+		};
+		expect(exemptSpellingDrift(real, shrunk).stale).toEqual(['${gone}.part']);
 	});
 });
 

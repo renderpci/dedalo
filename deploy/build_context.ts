@@ -115,7 +115,6 @@ export const IMAGE_EXCLUSIONS: readonly ImageExclusion[] = [
 	},
 	{ entry: '.gitlab', reason: 'CI templates — never read at runtime.' },
 	{ entry: '.gitlab-ci.yml', reason: 'CI pipeline definition — never read at runtime.' },
-	{ entry: '.vscode', reason: 'Editor settings — a developer-machine artifact.' },
 	{
 		entry: '.claude',
 		reason:

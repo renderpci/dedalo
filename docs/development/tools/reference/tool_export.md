@@ -145,7 +145,7 @@ The owner can free that space before the TTL with `delete_export_job` (the tool'
 - `dd1335` properties = `{ "open_as": "window", "windowFeatures": null }` → opens in its own window.
 - `dd1372` labels supply the localized UI strings for the `fill_the_gaps`, `show_tipo_in_label` and `value_with_parents` options across project languages, plus `parents_not_in_raw` / `parents_not_in_raw_short` (the tooltip and the *(not in Raw)* note of a parents checkbox disabled in the `dedalo_raw` format).
 
-Surfacing (in `getElementTools`, `src/core/tools/registry.ts`): because `affected_models` is `["section"]`, the **Export** button appears on sections in **list** mode. There is no rule restricting the time-machine section (dd15) to `tool_export` alone: `registry.ts`'s hardcoded `NO_TOOLS_MODELS` set only covers `component_section_id`/`component_info`, and no dd15-specific rule exists anywhere in the section/tool-filter path. On a TS-served install, dd15 shows whatever tools its `affected_models`/`affected_tipos` normally match, the same as any other section.
+Surfacing (in `getElementTools`, `src/core/tools/registry.ts`): because `affected_models` is `["section"]`, the **Export** button appears on sections in **list** mode — EXCEPT the consultation-only sections: `getSectionTools` returns `[]` for Activity (dd542) and Time Machine (dd15), so neither carries any section toolbar (this supersedes the earlier note that no dd15 rule existed; `NO_TOOLS_MODELS` remains only about the `component_section_id`/`component_info` component models). Every other section shows whatever tools its `affected_models`/`affected_tipos` normally match. `WC-2026-10-06-consultation-only-no-section-tools`.
 
 ## Examples
 

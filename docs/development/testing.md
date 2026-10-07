@@ -278,7 +278,7 @@ mechanical instead of aspirational. A representative sample:
 | `test/unit/import_scc_tripwire.test.ts` | No static value-import cycle of size > 1. |
 | `test/unit/descriptor_completeness_tripwire.test.ts` | Component descriptors declare their required facets. |
 | `test/unit/client_serving.test.ts` | The client serving contract: assets serve byte-identical to the `client/` tree on disk. |
-| `test/unit/css_build_tripwire.test.ts` | The committed CSS still matches the LESS it came from. The compiled CSS *is* the shipped artifact (deploy is a checkout), so a stale `.css` means the browser gets bytes no source produces. See [CSS architecture](../css-architecture.md#building-the-css). |
+| `test/unit/css_build_tripwire.test.ts` | The committed CSS still matches the LESS it came from. The compiled CSS *is* the shipped artifact (deploy is a checkout), so a stale `.css` means the browser gets bytes no source produces. See [CSS architecture](../core/ui/css_architecture.md#building-the-css). |
 | `test/unit/ci_workflow_tripwire.test.ts` | The CI wiring itself, including the two rules below. |
 | `test/parity/oracle_canary.test.ts` | Oracle absence is loud, never a silent green. |
 

@@ -6,7 +6,7 @@
  *
  * WHAT WAS WRONG. The responsive scale was never a record. Four aliases sat in
  * `layout/vars.less` with no statement of what any tier was FOR, no gate, and a
- * docs line (`css-architecture.md:126`, `:350`) that said "do not re-declare
+ * docs line (`css-architecture.md:126`, `:350` — now `docs/core/ui/css_architecture.md`) that said "do not re-declare
  * breakpoints in component files" and enforced nothing. The two costs an unstated
  * record always charges both landed:
  *

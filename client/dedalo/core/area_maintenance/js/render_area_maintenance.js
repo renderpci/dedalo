@@ -995,6 +995,7 @@ export const build_map_view = function(self, widgets, opts={}) {
 				'<div class="ctx_head">' +
 					'<span class="map_dot ' + (status_by_id[id]==='idle' ? '' : status_by_id[id]) + '"></span>' +
 					'<span class="ctx_title"></span>' +
+					'<span class="ctx_widget_id"></span>' +
 					'<span class="ctx_state"></span>' +
 					'<span class="ctx_sub"></span>' +
 				'</div>' +
@@ -1038,6 +1039,15 @@ export const build_map_view = function(self, widgets, opts={}) {
 			if (!body) { return }
 			context.querySelectorAll('.tool_chip').forEach(c => { c.classList.toggle('sel', c.dataset.id===tid) })
 			persist_sel(node_id, tid)
+
+			// widget name — the module id (e.g. 'update_ontology'), non-intrusive in
+			// the header so the operator can cite the exact tool. Text only: the id
+			// is served data, never an HTML sink.
+			const id_el = context.querySelector('.ctx_widget_id')
+			if (id_el) {
+				id_el.textContent	= tid
+				id_el.title			= 'Widget module: ' + tid
+			}
 
 			// (!) Destroy the outgoing tool BEFORE wiping its DOM. `innerHTML=''`
 			// detaches nodes without running any teardown, so every instance

@@ -1,5 +1,5 @@
 /**
- * Pure-logic gate for `tools/tool_import_files/server/script_files/numisdata/crop_50.ts`'s
+ * Pure-logic gate for `src/core/media/tools/crop_coin_pair.ts`'s
  * `custom_arguments` extraction — the piece that maps a crop's left/right
  * output to the Obverse/Reverse PORTAL tipos declared on the ontology's
  * `button_import` node. No ImageMagick spawn, no DB, credless.
@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { destinationPortalTipos } from '../../tools/tool_import_files/server/script_files/numisdata/crop_50.ts';
+import { destinationPortalTipos } from '../../src/core/media/tools/crop_coin_pair.ts';
 
 describe('destinationPortalTipos', () => {
 	test('the real production shape: two destinations, insertion order preserved', () => {

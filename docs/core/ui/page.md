@@ -2,7 +2,7 @@
 
 > The client-side **page shell** — the top-level JavaScript instance that boots Dédalo's back-office UI, requests its context from the server `start` action, mounts the menu plus the active section/area/tool, and owns the global page chrome (navigation, theme, notifications, dynamic CSS).
 
-> See also: [Architecture overview](../architecture_overview.md) · [CSS / LESS architecture](../../css-architecture.md) · [Sections](../sections/index.md) · [Components](../components/index.md)
+> See also: [Architecture overview](../architecture_overview.md) · [CSS / LESS architecture](css_architecture.md) · [Sections](../sections/index.md) · [Components](../components/index.md)
 
 This page is the **developer reference** for the `page` subsystem under
 `client/dedalo/core/page/`. Unlike `section` or a component, **`page` has no
@@ -185,7 +185,7 @@ Each component ships its style as `component_xxx/css/component_xxx.less` and is
 **not** compiled by itself — it is folded into `main.css` through this list (see
 [Components › File nomenclature](../components/index.md#file-nomenclature)).
 The full layering rules, tokens and the per-component LESS contract live in
-[CSS / LESS architecture](../../css-architecture.md).
+[CSS / LESS architecture](css_architecture.md).
 
 ### Themes (light / dark)
 
@@ -416,7 +416,7 @@ prompt.
   [Components](../components/index.md).
 - **CSS / LESS bundle** — every component, area and widget stylesheet is
   aggregated by `css/main.less`; the layering contract is documented in
-  [CSS / LESS architecture](../../css-architecture.md).
+  [CSS / LESS architecture](css_architecture.md).
 - **request_config** — restored navigation SQOs and `section_id` filters ride in
   on the context element's `request_config`; see [request_config](../request_config.md).
 
@@ -482,7 +482,7 @@ get_theme()           // 'light' | 'dark'
 
 - [Architecture overview](../architecture_overview.md) — server-build vs
   client-render, the request lifecycle, the `{context,data}` datum.
-- [CSS / LESS architecture](../../css-architecture.md) — the `main.less`
+- [CSS / LESS architecture](css_architecture.md) — the `main.less`
   layering, tokens, mixins and the per-component LESS contract.
 - [Sections](../sections/index.md) · [Components](../components/index.md) —
   the elements `page` builds inside itself.

@@ -60,6 +60,7 @@
 	import {
 		render_column_id
 	} from './render_list_section.js'
+	import {NON_EDITABLE_SECTION_TIPOS} from './render_common_section.js'
 
 
 
@@ -395,6 +396,7 @@ const rebuild_columns_map = async function(self) {
 *
 * Non-editable section tipos that stop processing after the search button:
 *   'dd542'  – activity section
+*   'dd15'   – time machine section
 *   'dd1324' – registered tools section
 *
 * @param {Object} self - Section instance.  Reads self.context.buttons, self.tipo,
@@ -433,12 +435,13 @@ const get_buttons = function(self) {
 			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
-	// non_editable_sections. Activity section 'dd542'
-		const non_editable_sections = [
-			'dd542', // activity
-			'dd1324' // registered tools
-		]
-		if (non_editable_sections.includes(self.tipo)) {
+	// non_editable_sections. Read-only log sections + registered tools: they
+	// carry no action buttons and no section tools (consultation-only, WC-010 +
+	// WC-2026-10-06-consultation-only-no-section-tools), so only the search
+	// controls render — no other-buttons drawer, no toggle. Activity (dd542) and
+	// Time machine (dd15) MUST behave identically; the list is shared with
+	// view_default_list_section (render_common_section).
+		if (NON_EDITABLE_SECTION_TIPOS.includes(self.tipo)) {
 			return fragment
 		}
 

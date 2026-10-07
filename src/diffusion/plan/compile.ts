@@ -75,6 +75,7 @@ import { getPopulatedTlds } from '../../core/db/dd_ontology.ts';
 import { DedaloError } from '../../core/errors/dedalo_error.ts';
 import { getModelByTipo } from '../../core/ontology/resolver.ts';
 import { getTldFromTipo } from '../../core/ontology/tld.ts';
+import { tableRowSizeViolation } from '../targets/mariadb/sql_generator.ts';
 import { currentOntologyRevision } from './cache.ts';
 import { KNOWN_FORMATS, TABLE_FORMATS } from './formats.ts';
 import { requireSqlIdentifier } from './identifier.ts';
@@ -652,11 +653,13 @@ async function compileFieldPlan(
 	if (properties?.is_publishable === true) policy.publishableOverride = true;
 	if (process?.filter_unpublishable === true) policy.filterUnpublishable = true;
 
-	// SQL schema hints (:1342-1352). 'varchar' and 'length' both size the
-	// column in the old sql_generator; varchar wins when both are present.
+	// SQL schema hints (:1342-1352). Two SEPARATE keys, as the old
+	// sql_generator read them: `varchar` sizes VARCHAR(n), `length` sizes
+	// INT(n). Never conflate — a field_int carrying `varchar: 1024` became
+	// INT(1024) and MariaDB refused the CREATE (errno 1439, max 255).
 	const column: ColumnDef = { fieldModel: node.model };
-	const varcharLength = properties?.varchar ?? properties?.length;
-	if (typeof varcharLength === 'number') column.varcharLength = varcharLength;
+	if (typeof properties?.varchar === 'number') column.varcharLength = properties.varchar;
+	if (typeof properties?.length === 'number') column.intLength = properties.length;
 	if (properties?.index !== undefined) column.index = properties.index;
 
 	// output_format two-stage resolution (build_datum_context :1311-1338).
@@ -936,6 +939,17 @@ export async function compileElementPlan(
 			diagnostics,
 		);
 		if (sectionPlan !== null) sections.push(sectionPlan);
+	}
+
+	// A MariaDB table wider than the server's row ceiling cannot be created;
+	// left to the run, errno 1118 surfaced as an untyped `diffusion.run_failed`
+	// AND blocked every other table of the element (ensureSchema covers all).
+	// Refused here, named, before any DDL — the fix is the ontology's.
+	if (sqlTarget) {
+		for (const sectionPlan of sections) {
+			const violation = tableRowSizeViolation(sectionPlan);
+			if (violation !== null) diagnostics.errors.push(violation);
+		}
 	}
 
 	if (diagnostics.errors.length > 0 || target === null) {

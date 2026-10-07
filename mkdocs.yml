@@ -173,6 +173,8 @@ plugins:
         development/OpcacheObjectManager.md: development/runtime_and_workers.md
         development/naming_convention_json_php.md: development/extending/add_a_component.md
         development/tools/architecture_audit.md: development/tools/creating_tools.md
+        # Moved out of the manual root into the UI chapter it belongs to (2026-10-06).
+        css-architecture.md: core/ui/css_architecture.md
 
 copyright: DÉDALO. MANAGING CULTURAL HERITAGE ARCHIVES - <a href="https://dedalo.dev">dedalo.dev</a>
 

@@ -152,7 +152,10 @@ export interface FieldPolicy {
 export interface ColumnDef {
 	/** Diffusion field model — drives the SQL type (field_text, field_int...). */
 	fieldModel: string;
+	/** Ontology `varchar` — sizes VARCHAR(n) and the text index prefix only. */
 	varcharLength?: number;
+	/** Ontology `length` — sizes INT(n) only (never `varchar`: INT width caps at 255). */
+	intLength?: number;
 	/** Ontology `index` override; absent = model-default indexing. */
 	index?: unknown;
 }

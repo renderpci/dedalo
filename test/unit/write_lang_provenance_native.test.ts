@@ -362,6 +362,22 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 		},
 	],
 	[
+		'tools/tool_bibliography_acquisition/server/index.ts',
+		{
+			lang: 'request+items+nolan',
+			reason:
+				'Every save is lg-nolan (writeField default, writeIriField, writeDateField, the link* relation saves) EXCEPT the one translatable field, ABSTRACT_TIPO Abstract: planAbstractLangs (lib/domain/abstract_langs.ts) maps each harvested variant’s own xml:lang onto an installed data lang (installedDataLangs + getAlpha2FromCode — items), an untagged variant takes currentDataLang() (request); an unmappable or already-taken slot is skipped and reported, never written.',
+		},
+	],
+	[
+		'tools/tool_numisdata_acquisition/server/index.ts',
+		{
+			lang: 'request+nolan',
+			reason:
+				'writeField defaults to lg-nolan (WEIGHT_TIPO, DIAMETER_TIPO, INVENTORY_NUMBER_TIPO, AUCTION_NUMBER_TITLE_TIPO, ENTITY_NAME_TIPO); the translatable fields (DATE_TEXT_TIPO, OBVERSE_DESIGN_TIPO, REVERSE_DESIGN_TIPO, PUBLIC_REMARK_TIPO, AUCTION_CODE_TIPO) are passed currentDataLang() explicitly — the job manager pins the submitter’s langs into the background job. writeIriField (SOURCE_URI_TIPO), the link* relation saves and the image portal add_new_element are lg-nolan.',
+		},
+	],
+	[
 		'tools/tool_posterframe/server/index.ts',
 		{ lang: 'nolan', reason: 'add_new_element on a portal — a locator write, no language.' },
 	],

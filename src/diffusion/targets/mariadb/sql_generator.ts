@@ -27,6 +27,7 @@
  * depth, exactly like the oracle.
  */
 
+import { DedaloError } from '../../../core/errors/dedalo_error.ts';
 import { escapeSqlIdentifier } from '../../plan/identifier.ts';
 import type { ColumnDef, FieldPlan, SectionPlan } from '../../plan/types.ts';
 import type { ProjectedRow } from '../../project/lang_ladder.ts';
@@ -56,8 +57,8 @@ export function tableColumnFields(section: SectionPlan): FieldPlan[] {
 
 /**
  * Model→SQL type map (oracle get_column_definition:195-230, verbatim types).
- * `varcharLength` carries the ontology `varchar`/`length` value, so it sizes
- * both VARCHAR(n) and INT(n) exactly as the old engine's ctx did.
+ * `varcharLength` (ontology `varchar`) sizes VARCHAR(n); `intLength` (ontology
+ * `length`) sizes INT(n) — two keys, exactly as the old engine's ctx read them.
  * Fallback: a model outside the map emits TEXT — unless the field's plan
  * outputFormat says 'int' (the model didn't decide, the format hint does).
  */
@@ -68,7 +69,7 @@ function sqlTypeFor(column: ColumnDef, outputFormat: string | undefined): string
 		case 'field_datetime':
 			return 'DATETIME';
 		case 'field_int':
-			return `INT(${column.varcharLength ?? 8})`;
+			return `INT(${column.intLength ?? 8})`;
 		case 'field_varchar':
 			return `VARCHAR(${column.varcharLength ?? 255})`;
 		case 'field_text':
@@ -88,6 +89,103 @@ function sqlTypeFor(column: ColumnDef, outputFormat: string | undefined): string
 		default:
 			return outputFormat === 'int' ? 'INT(8)' : 'TEXT';
 	}
+}
+
+/**
+ * MariaDB's server-level row ceiling: the summed in-row width of every column
+ * may not exceed 65535 bytes, whatever the engine (errno 1118 at CREATE/ALTER).
+ */
+export const MARIADB_MAX_ROW_BYTES = 65535;
+
+/** utf8mb4: every declared character reserves 4 bytes of row width. */
+const UTF8MB4_BYTES_PER_CHAR = 4;
+
+/**
+ * In-row width of one column as MariaDB counts it toward MARIADB_MAX_ROW_BYTES
+ * (the field's pack length): a VARCHAR reserves its FULL declared width plus a
+ * 1-or-2-byte length prefix, while TEXT/BLOB-family types (POINT is one)
+ * contribute only their length prefix + 8-byte pointer — the content lives
+ * off-row. Calibrated against a live server (diffusion_row_size_mariadb gate).
+ */
+function columnRowBytes(sqlType: string): number {
+	const varchar = /^VARCHAR\((\d+)\)$/.exec(sqlType);
+	if (varchar !== null) {
+		const bytes = Number(varchar[1]) * UTF8MB4_BYTES_PER_CHAR;
+		return bytes + (bytes > 255 ? 2 : 1);
+	}
+	if (sqlType.startsWith('INT(')) return 4;
+	switch (sqlType) {
+		case 'TEXT':
+			return 10;
+		case 'MEDIUMTEXT':
+			return 11;
+		case 'POINT':
+			return 12;
+		case 'DATE':
+			return 3;
+		case 'DATETIME':
+			return 5;
+		case 'YEAR':
+		case 'TINYINT(1)':
+			return 1;
+		case 'DECIMAL(19,4)':
+			return 9;
+		default:
+			// A type added to sqlTypeFor without its width here must not be
+			// guessed: the row check would silently under-count.
+			throw new DedaloError('internal.invariant', {
+				message: `columnRowBytes: no row width for SQL type '${sqlType}'`,
+				coordinates: { sql_type: sqlType },
+			});
+	}
+}
+
+/** One plan column's SQL type + its in-row width. */
+export interface ColumnRowWidth {
+	columnName: string;
+	sqlType: string;
+	bytes: number;
+}
+
+/**
+ * The row width the CREATE TABLE for this section would declare: the fixed
+ * anatomy (section_id INT NOT NULL + lang VARCHAR(16)), every plan column, and
+ * the NULL bitmap — one bit per PLAN column only: `lang` is declared
+ * DEFAULT NULL but sits in the PRIMARY KEY, which MariaDB forces NOT NULL.
+ */
+export function tableRowBytes(section: SectionPlan): { total: number; columns: ColumnRowWidth[] } {
+	const columns = tableColumnFields(section).map((field) => {
+		const sqlType = sqlTypeFor(field.column, field.outputFormat);
+		return { columnName: field.columnName, sqlType, bytes: columnRowBytes(sqlType) };
+	});
+	const nullableCount = columns.length;
+	const total =
+		columnRowBytes('INT(12)') +
+		columnRowBytes('VARCHAR(16)') +
+		columns.reduce((sum, column) => sum + column.bytes, 0) +
+		Math.ceil(nullableCount / 8);
+	return { total, columns };
+}
+
+/**
+ * The operator-facing violation when a section's table cannot be created
+ * (row wider than MARIADB_MAX_ROW_BYTES), or null when it fits. Names the
+ * widest columns: shrinking a `varchar` or moving a field to field_text is
+ * the fix, and it is an ONTOLOGY decision — the engine never retypes.
+ */
+export function tableRowSizeViolation(section: SectionPlan): string | null {
+	const { total, columns } = tableRowBytes(section);
+	if (total <= MARIADB_MAX_ROW_BYTES) return null;
+	const widest = columns
+		.filter((column) => column.sqlType.startsWith('VARCHAR('))
+		.sort((a, b) => b.bytes - a.bytes)
+		.slice(0, 8)
+		.map((column) => `${column.columnName} ${column.sqlType}`);
+	return (
+		`table '${section.tableName}' (${section.tableTipo}): row width ${total} bytes exceeds ` +
+		`MariaDB's ${MARIADB_MAX_ROW_BYTES} (each VARCHAR(n) reserves 4n bytes in utf8mb4; TEXT ~10) — ` +
+		`reduce 'varchar' or use field_text on: ${widest.join(', ')}`
+	);
 }
 
 /**

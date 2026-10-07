@@ -49,6 +49,23 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-29-search-where-parts-parenthesized`.
 
+#### Removed
+
+- **Activity and Time-machine sections no longer offer a section toolbar**
+
+    The **Activity** and **Time machine** sections are read-only system logs: every
+    record is written by the engine and never edited by hand. They nevertheless used
+    to show a section toolbar (export, import, print, update cache, …) whose buttons
+    all act on records the engine refuses to modify.
+
+    Both sections now ship an empty section toolbar, so the dead buttons are gone.
+    The **Time machine** list also stops showing the collapse/expand buttons toggle
+    that Activity had already dropped — the two now render the same search-only
+    toolbar. Components *inside* these sections (for example the time-machine button
+    on a historical value) are unaffected.
+
+    Wire contract: `WC-2026-10-06-consultation-only-no-section-tools`.
+
 #### Changed
 
 - **The audio/video viewer window now fits the media: no size jump on play, no black bars.**
@@ -163,6 +180,39 @@ Merged since the last release; these ship with the next one.
       visible outline when reached with the keyboard.
 
 #### Added
+
+- **A new tool imports journal articles from any OAI-PMH/OJS source directly into Publication records.**
+
+    Paste a journal's OAI-PMH URL (or a normal OJS article/journal URL) and the tool lists
+    every publication it found — title, authors, series, year and page range — so you can
+    narrow the list before committing. Kept publications become real records: the series
+    is found or created and linked, each author is found or created and linked by name,
+    the article's abstract is written in each language the source carries that your installation
+    uses (a variant in any other language, or a second one for a language already written, is left out
+    and named in the summary rather than stopping the import), and the PDF is
+    fetched and attached when the source links to one. A publication already imported
+    before is skipped rather than duplicated. For a journal that blocks automated
+    fetching, you can instead save its OAI-PMH response from your browser and upload the
+    file. An article whose metadata cannot be fetched is listed with the reason, and the rest are still
+    shown. A commit running in the background can be stopped partway through — everything
+    imported up to that point is kept, and the summary tells you how much of the batch
+    landed.
+
+    Wire contract: `WC-2026-10-07-acquisition-tools-ts-only`.
+
+- **A new tool imports coin-auction lots (jesusvico.com, biddr.com, aureo.com, numisbids.com, sixbid.com) directly into Numismatic Data records.**
+
+    Paste an auction or single-lot URL from one of five supported houses and the tool
+    fetches the page, shows every lot it found (weight, diameter, grade, images and all),
+    and lets you narrow the list before committing. Kept lots become real records: the
+    auction and coin type are found or created and linked, images are cropped and
+    uploaded, and a lot already imported before is skipped rather than duplicated. For a
+    page the house blocks from automated fetching, you can instead save it from your
+    browser and upload the file. A commit running in the background can be stopped partway
+    through — everything imported up to that point is kept, and the summary tells you how
+    much of the batch landed.
+
+    Wire contract: `WC-2026-10-07-acquisition-tools-ts-only`.
 
 - **The RDF import fills the record again, and links or creates its related records.**
 
@@ -1048,6 +1098,26 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Publishing no longer fails creating a MariaDB integer column sized by `varchar`.**
+
+    A `field_int` diffusion node whose properties carried `varchar` (for example
+    `"varchar": 1024`) was created as `INT(1024)`, which MariaDB refuses, and the
+    whole publication run stopped with "An unexpected error stopped the diffusion
+    run". The two sizing properties are separate again: `varchar` sizes text
+    columns only and `length` sizes integer columns only. The integer column is
+    now created as `INT(8)` unless `length` says otherwise.
+
+- **A publication table too wide for MariaDB is refused by name before publishing starts.**
+
+    MariaDB limits a table row to 65,535 bytes, and every `VARCHAR(n)` column
+    reserves 4 × n bytes of it whatever it holds. A table with many wide `varchar`
+    fields could not be created, and the publication stopped with "An unexpected
+    error stopped the diffusion run", for every table of the element and not just
+    the wide one. The element's plan now refuses such a table before anything is
+    published, naming the table, its width and its widest columns. To fix it,
+    change those fields to `field_text` (add `"index": "BTREE"` to keep the same
+    index) or reduce their `varchar`.
+
 - **Publication host provisioning works with Apache on Debian and Ubuntu.** *(action needed)*
 
     `provision check` refused every Debian or Ubuntu Apache host with *web.configtest_bin
@@ -1476,7 +1546,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 97 entries"
+??? note "Wire contract — 99 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1575,6 +1645,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-02-select-lang-missing-entry`
     - `WC-2026-10-03-publication-hosts-widget`
     - `WC-2026-10-03-save-refuses-malformed-value-shape`
+    - `WC-2026-10-06-consultation-only-no-section-tools`
+    - `WC-2026-10-07-acquisition-tools-ts-only`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

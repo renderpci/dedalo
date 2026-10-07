@@ -90,6 +90,15 @@ DOM:  wrapper_section > list_body > [ header_wrapper_list | content_data > rows 
   "semantic unavailable") with a ✕ that clears the pin. The chip derives from
   the SQO, not client memory, because pins persist in the server session
   across reloads.
+- **Render the toolbar — unless the section is non-editable.** The other-buttons
+  drawer and its `show_other_buttons_button` toggle are mounted from
+  `self.context.buttons` plus the section's tools. Three section tipos skip them
+  and keep only the search controls: Activity (`dd542`) and Time Machine (`dd15`)
+  — strictly read-only logs, so they carry no action buttons and no section tools
+  — and the registered-tools section (`dd1324`). Both list views
+  (`view_default_list_section`, `view_graph_list_section`) read the ONE list
+  `NON_EDITABLE_SECTION_TIPOS` (`render_common_section.js`), so a tipo cannot be
+  suppressed in one view and shown in the other.
 - **Record actions.** Wire *new* / *duplicate* / *delete* through the
   `new_section_` / `duplicate_section_` / `delete_section_` events and the
   `create` / `duplicate` / `delete` API actions — see
