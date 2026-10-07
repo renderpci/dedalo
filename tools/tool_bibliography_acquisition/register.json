@@ -38,6 +38,18 @@
 		{ "lang": "lg-eng", "name": "no_publications_found", "value": "No publications found at this URL." },
 		{ "lang": "lg-eng", "name": "confirm_import", "value": "Confirm import" },
 		{ "lang": "lg-eng", "name": "nothing_kept", "value": "Every publication is excluded — nothing to import." },
-		{ "lang": "lg-eng", "name": "url_missing", "value": "Paste a URL first." }
+		{ "lang": "lg-eng", "name": "commit_stopped", "value": "Stopped after {done} of {total} publications — the rest were not imported." },
+		{ "lang": "lg-eng", "name": "url_missing", "value": "Paste a URL first." },
+		{ "lang": "lg-eng", "name": "pub_not_imported", "value": "Publication {pub} NOT imported: {reason}" },
+		{ "lang": "lg-eng", "name": "pub_skipped", "value": "Publication #{id} — already imported, skipped" },
+		{ "lang": "lg-eng", "name": "pub_series_linked", "value": " — series #{id} ({status})" },
+		{ "lang": "lg-eng", "name": "created", "value": "created" },
+		{ "lang": "lg-eng", "name": "reused", "value": "reused" },
+		{ "lang": "lg-eng", "name": "pub_series_not_linked", "value": " — series NOT linked: {reason}" },
+		{ "lang": "lg-eng", "name": "pub_authors_linked", "value": " — authors #{ids}" },
+		{ "lang": "lg-eng", "name": "pub_authors_not_linked", "value": " — authors NOT linked: {reasons}" },
+		{ "lang": "lg-eng", "name": "pub_pdf_imported", "value": " — PDF imported" },
+		{ "lang": "lg-eng", "name": "pub_pdf_not_imported", "value": " — PDF NOT imported: {reason}" },
+		{ "lang": "lg-eng", "name": "pub_imported", "value": "Publication #{id} (fields: {fields})" }
 	]
 }

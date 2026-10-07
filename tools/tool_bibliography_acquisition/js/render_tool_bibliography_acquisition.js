@@ -520,6 +520,15 @@ const get_content_data = function(self) {
 						class_name		: 'success_message'
 					})
 					const results = Array.isArray(data.results) ? data.results : []
+					if (data.stopped) {
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error_message',
+							text_content	: (self.get_tool_label('commit_stopped') || 'Stopped after {done} of {total} publications — the rest were not imported.')
+								.replace('{done}', results.length).replace('{total}', data.publications_total || results.length),
+							parent			: summary
+						})
+					}
 					results.forEach(function(result) {
 						// section_id is null only when the whole publication failed before
 						// anything was created (its own transaction rolled back) - review item C1.
@@ -530,7 +539,8 @@ const get_content_data = function(self) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error_message',
-								text_content	: 'Publication ' + (result.publication_identifier || '?') + ' NOT imported: ' + result.error.message,
+								text_content	: (self.get_tool_label('pub_not_imported') || 'Publication {pub} NOT imported: {reason}')
+									.replace('{pub}', result.publication_identifier || '?').replace('{reason}', result.error.message),
 								parent			: summary
 							})
 							return
@@ -538,29 +548,33 @@ const get_content_data = function(self) {
 						if (result.skipped) {
 							ui.create_dom_element({
 								element_type	: 'div',
-								text_content	: 'Publication #' + result.section_id + ' — already imported, skipped',
+								text_content	: (self.get_tool_label('pub_skipped') || 'Publication #{id} — already imported, skipped')
+									.replace('{id}', result.section_id),
 								parent			: summary
 							})
 							return
 						}
 						const series_bit = result.series_section_id
-							? ' — series #' + result.series_section_id +
-								(result.series_created ? ' (created)' : ' (reused)')
+							? (self.get_tool_label('pub_series_linked') || ' — series #{id} ({status})')
+								.replace('{id}', result.series_section_id)
+								.replace('{status}', result.series_created
+									? (self.get_tool_label('created') || 'created')
+									: (self.get_tool_label('reused') || 'reused'))
 							: result.series_error
-								? ' — series NOT linked: ' + result.series_error.message
+								? (self.get_tool_label('pub_series_not_linked') || ' — series NOT linked: {reason}').replace('{reason}', result.series_error.message)
 								: ''
 						const authors_bit = result.author_section_ids && result.author_section_ids.length
-							? ' — authors #' + result.author_section_ids.join(', #')
+							? (self.get_tool_label('pub_authors_linked') || ' — authors #{ids}').replace('{ids}', result.author_section_ids.join(', #'))
 							: result.author_errors && result.author_errors.length
-								? ' — authors NOT linked: ' + result.author_errors.map((e) => e.message).join('; ')
+								? (self.get_tool_label('pub_authors_not_linked') || ' — authors NOT linked: {reasons}').replace('{reasons}', result.author_errors.map((e) => e.message).join('; '))
 								: ''
 						const document_bit = result.document_imported
-							? ' — PDF imported'
+							? (self.get_tool_label('pub_pdf_imported') || ' — PDF imported')
 							: result.document_error
-								? ' — PDF NOT imported: ' + result.document_error.message
+								? (self.get_tool_label('pub_pdf_not_imported') || ' — PDF NOT imported: {reason}').replace('{reason}', result.document_error.message)
 								: ''
-						const line = 'Publication #' + result.section_id +
-							' (fields: ' + result.fields_written.join(', ') + ')' +
+						const line = (self.get_tool_label('pub_imported') || 'Publication #{id} (fields: {fields})')
+							.replace('{id}', result.section_id).replace('{fields}', result.fields_written.join(', ')) +
 							series_bit + authors_bit + document_bit
 						ui.create_dom_element({
 							element_type	: 'div',
