@@ -2,6 +2,7 @@
 title: A new tool imports coin-auction lots (jesusvico.com, biddr.com, aureo.com, numisbids.com, sixbid.com) directly into Numismatic Data records.
 type: added
 audience: user
+wc: WC-2026-10-07-acquisition-tools-ts-only
 date: 2026-10-07
 ---
 Paste an auction or single-lot URL from one of five supported houses and the tool

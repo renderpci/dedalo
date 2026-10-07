@@ -366,7 +366,7 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 		{
 			lang: 'request+items+nolan',
 			reason:
-				'Every save is lg-nolan (writeField default, writeIriField, writeDateField, the link* relation saves) EXCEPT the one translatable field, rsc221 Abstract: planAbstractLangs (lib/domain/abstract_langs.ts) maps each harvested variant’s own xml:lang onto an installed data lang (installedDataLangs + getAlpha2FromCode — items), an untagged variant takes currentDataLang() (request); an unmappable or already-taken slot is skipped and reported, never written.',
+				'Every save is lg-nolan (writeField default, writeIriField, writeDateField, the link* relation saves) EXCEPT the one translatable field, ABSTRACT_TIPO Abstract: planAbstractLangs (lib/domain/abstract_langs.ts) maps each harvested variant’s own xml:lang onto an installed data lang (installedDataLangs + getAlpha2FromCode — items), an untagged variant takes currentDataLang() (request); an unmappable or already-taken slot is skipped and reported, never written.',
 		},
 	],
 	[
@@ -374,7 +374,7 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 		{
 			lang: 'request+nolan',
 			reason:
-				'writeField defaults to lg-nolan (numisdata133/135/151/230, rsc116); the translatable fields (numisdata1372/763/1029/150/231) are passed currentDataLang() explicitly — the job manager pins the submitter’s langs into the background job. writeIriField (numisdata275), the link* relation saves and the image portal add_new_element are lg-nolan.',
+				'writeField defaults to lg-nolan (WEIGHT_TIPO/135/151/230, ENTITY_NAME_TIPO); the translatable fields (DATE_TEXT_TIPO/763/1029/150/231) are passed currentDataLang() explicitly — the job manager pins the submitter’s langs into the background job. writeIriField (SOURCE_URI_TIPO), the link* relation saves and the image portal add_new_element are lg-nolan.',
 		},
 	],
 	[

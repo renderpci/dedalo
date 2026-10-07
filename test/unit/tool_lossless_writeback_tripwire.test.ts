@@ -897,7 +897,7 @@ else {
 				createSectionRecord: {
 					verdict: 'new-record',
 					reason:
-						'births the numisdata4 lot record — only after findExistingLot (Auction relation + Inventory number) and findExistingLotByUrl (normalised numisdata275 source URL), principal-scoped search-layer lookups RE-RUN under the per-key advisory locks (fixed order: lot key, then URL key) in the same transaction, both miss. A match returns `skipped` and writes NOTHING to the pre-existing record.',
+						'births the NUMISDATA_OBJECT_TIPO lot record — only after findExistingLot (Auction relation + Inventory number) and findExistingLotByUrl (normalised SOURCE_URI_TIPO source URL), principal-scoped search-layer lookups RE-RUN under the per-key advisory locks (fixed order: lot key, then URL key) in the same transaction, both miss. A match returns `skipped` and writes NOTHING to the pre-existing record.',
 				},
 			},
 		},
@@ -915,7 +915,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'writes the normalised lot source URL (numisdata275, the URL dedup key) onto the lot record commitOneLot created in the same transaction; never onto a found lot.',
+						'writes the normalised lot source URL (SOURCE_URI_TIPO, the URL dedup key) onto the lot record commitOneLot created in the same transaction; never onto a found lot.',
 				},
 			},
 		},
@@ -924,7 +924,7 @@ else {
 				createSectionRecord: {
 					verdict: 'new-record',
 					reason:
-						'births the numisdata224 Auction only when findExistingAuction (the (Entity, Code) relation+text SQO, principal-scoped) misses RE-RUN under the advisory lock on (entity, number) inside one transaction; a found Auction is returned and linked, never written.',
+						'births the AUCTION_SECTION_TIPO Auction only when findExistingAuction (the (Entity, Code) relation+text SQO, principal-scoped) misses RE-RUN under the advisory lock on (entity, number) inside one transaction; a found Auction is returned and linked, never written.',
 				},
 			},
 		},
@@ -933,7 +933,7 @@ else {
 				createSectionRecord: {
 					verdict: 'new-record',
 					reason:
-						'births the rsc106 Entity only for an explicit “create” selection, and only when findEntityByExactName (principal-scoped `==` search) misses RE-RUN under the advisory lock on the folded name (foldNameForLock, coarser than the search equality); an existing Entity — picked, or matched — is only ever a locator target, never written.',
+						'births the ENTITY_SECTION_TIPO Entity only for an explicit “create” selection, and only when findEntityByExactName (principal-scoped `==` search) misses RE-RUN under the advisory lock on the folded name (foldNameForLock, coarser than the search equality); an existing Entity — picked, or matched — is only ever a locator target, never written.',
 				},
 			},
 		},
@@ -942,7 +942,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the Company locator (numisdata228 → rsc106) on the Auction findOrCreateAuction created in the same transaction — its only caller, on the create branch. A found Auction’s company is never touched.',
+						'set_data of the Company locator (AUCTION_COMPANY_TIPO → ENTITY_SECTION_TIPO) on the Auction findOrCreateAuction created in the same transaction — its only caller, on the create branch. A found Auction’s company is never touched.',
 				},
 			},
 		},
@@ -951,7 +951,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the Auction locator (numisdata147) on the lot commitOneLot created in this call — reached only past the `skipped` return, so a pre-existing lot is never re-linked. HONEST LIMIT: it runs after the lot’s own transaction has committed, so a curator edit to numisdata147 in that window would be replaced.',
+						'set_data of the Auction locator (AUCTION_RELATION_TIPO) on the lot commitOneLot created in this call — reached only past the `skipped` return, so a pre-existing lot is never re-linked. HONEST LIMIT: it runs after the lot’s own transaction has committed, so a curator edit to AUCTION_RELATION_TIPO in that window would be replaced.',
 				},
 			},
 		},
@@ -960,7 +960,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the Type locator (numisdata161) to an EXISTING numisdata3 record matched read-only (findExistingType — a Type is never created), on the lot commitOneLot created in this call, past the `skipped` return. Same post-commit window as linkAuction.',
+						'set_data of the Type locator (TYPE_RELATION_TIPO) to an EXISTING TYPE_SECTION_TIPO record matched read-only (findExistingType — a Type is never created), on the lot commitOneLot created in this call, past the `skipped` return. Same post-commit window as linkAuction.',
 				},
 			},
 		},
@@ -969,19 +969,19 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'add_new_element on the numisdata164/165 obverse/reverse portals of the lot commitOneLot created in this call: births one rsc170 image record per face and appends its locator. Nothing stored is read or replaced.',
+						'add_new_element on the OBVERSE_PORTAL_TIPO/165 obverse/reverse portals of the lot commitOneLot created in this call: births one IMAGE_SECTION_TIPO image record per face and appends its locator. Nothing stored is read or replaced.',
 				},
 				processUploadedFile: {
 					verdict: 'new-record',
 					bypass_reason: BYPASS.filesInfo,
 					reason:
-						'ingests one cropCoinPair face (the harvested lot image, split by crop_50) into rsc29 of the rsc170 record the portal add_new_element just created; transcodes start only once both faces are in.',
+						'ingests one cropCoinPair face (the harvested lot image, split by crop_50) into IMAGE_COMPONENT_TIPO of the IMAGE_SECTION_TIPO record the portal add_new_element just created; transcodes start only once both faces are in.',
 				},
 				persistUploadedMedia: {
 					verdict: 'new-record',
 					bypass_reason: BYPASS.filesInfo,
 					reason:
-						'records that face’s files_info and name keys on rsc29 of the rsc170 record born in this call (stored items re-read under the row lock); the record held no media before.',
+						'records that face’s files_info and name keys on IMAGE_COMPONENT_TIPO of the IMAGE_SECTION_TIPO record born in this call (stored items re-read under the row lock); the record held no media before.',
 				},
 			},
 		},
@@ -990,7 +990,7 @@ else {
 				deleteSectionRecord: {
 					verdict: 'new-record',
 					reason:
-						'the all-or-nothing undo of a failed face pair: deletes ONLY the rsc170 records this same importImagePair call created (ids pushed from its own add_new_element created_section_id, never a lookup or the payload); the delete door also strips their locators from the lot born in this call. A failed delete is logged and reported as images_orphaned. HONEST LIMIT: no holdsForeignValue-style precondition — a locator a curator added to the fresh rsc170 record in the seconds since its birth would be stripped with it.',
+						'the all-or-nothing undo of a failed face pair: deletes ONLY the IMAGE_SECTION_TIPO records this same importImagePair call created (ids pushed from its own add_new_element created_section_id, never a lookup or the payload); the delete door also strips their locators from the lot born in this call. A failed delete is logged and reported as images_orphaned. HONEST LIMIT: no holdsForeignValue-style precondition — a locator a curator added to the fresh IMAGE_SECTION_TIPO record in the seconds since its birth would be stripped with it.',
 				},
 			},
 		},
@@ -999,7 +999,7 @@ else {
 				createSectionRecord: {
 					verdict: 'new-record',
 					reason:
-						'births the rsc205 publication only when findExistingPublication (the rsc137 Code, principal-scoped `==` SQO) misses — checked once, then RE-CHECKED under the advisory lock on the code in the same transaction. A match returns `skipped` and writes NOTHING to the pre-existing record (“rather than risk clobbering a cataloger’s later edits”).',
+						'births the PUBLICATION_TIPO publication only when findExistingPublication (the CODE_TIPO Code, principal-scoped `==` SQO) misses — checked once, then RE-CHECKED under the advisory lock on the code in the same transaction. A match returns `skipped` and writes NOTHING to the pre-existing record (“rather than risk clobbering a cataloger’s later edits”).',
 				},
 			},
 		},
@@ -1017,7 +1017,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the landing-page URL (rsc217, inside the publication’s birth transaction) and of the resolved PDF URL (rsc668, after it) — both onto the rsc205 record commitOnePublication created in this call, past its `skipped` returns. Same post-commit window as linkSeries for rsc668.',
+						'set_data of the landing-page URL (URL_TIPO, inside the publication’s birth transaction) and of the resolved PDF URL (PDF_URI_TIPO, after it) — both onto the PUBLICATION_TIPO record commitOnePublication created in this call, past its `skipped` returns. Same post-commit window as linkSeries for PDF_URI_TIPO.',
 				},
 			},
 		},
@@ -1026,7 +1026,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the parsed dc:date `start` (rsc224) onto the rsc205 record created in the same transaction.',
+						'set_data of the parsed dc:date `start` (PUBLICATION_DATE_TIPO) onto the PUBLICATION_TIPO record created in the same transaction.',
 				},
 			},
 		},
@@ -1035,7 +1035,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of a FIXED thesaurus locator (rsc138 → dd810/8 “journal article”, rsc249 → dd292/2 “ISSN”) onto the rsc205 record created in the same transaction; the terms themselves are never written.',
+						'set_data of a FIXED thesaurus locator (TYPOLOGY_RELATION_TIPO → dd810/8 “journal article”, STANDARD_NUMBER_TYPE_RELATION_TIPO → dd292/2 “ISSN”) onto the PUBLICATION_TIPO record created in the same transaction; the terms themselves are never written.',
 				},
 			},
 		},
@@ -1044,7 +1044,7 @@ else {
 				createSectionRecord: {
 					verdict: 'new-record',
 					reason:
-						'births the rsc212 Series only when findExistingSeries (principal-scoped `==` narrowing + byte-exact compare over every stored item) misses RE-RUN under the advisory lock on the folded name; a found Series is only a locator target, never written.',
+						'births the SERIES_SECTION_TIPO Series only when findExistingSeries (principal-scoped `==` narrowing + byte-exact compare over every stored item) misses RE-RUN under the advisory lock on the folded name; a found Series is only a locator target, never written.',
 				},
 			},
 		},
@@ -1053,7 +1053,7 @@ else {
 				createSectionRecord: {
 					verdict: 'new-record',
 					reason:
-						'births the rsc197 Person only when findExistingPerson ((surname, given name) `==` narrowing + byte-exact compare of both over every stored item) misses RE-RUN under the advisory lock on the folded pair; a found Person is only a locator target, never written.',
+						'births the PEOPLE_SECTION_TIPO Person only when findExistingPerson ((surname, given name) `==` narrowing + byte-exact compare of both over every stored item) misses RE-RUN under the advisory lock on the folded pair; a found Person is only a locator target, never written.',
 				},
 			},
 		},
@@ -1062,7 +1062,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'set_data of the Series locator (rsc211) on the rsc205 record commitOnePublication created in this call, past its `skipped` returns; an existing Series is the locator TARGET, never written. HONEST LIMIT: it runs after the publication’s own transaction has committed, so a curator edit to rsc211 in that window would be replaced.',
+						'set_data of the Series locator (SERIES_RELATION_TIPO) on the PUBLICATION_TIPO record commitOnePublication created in this call, past its `skipped` returns; an existing Series is the locator TARGET, never written. HONEST LIMIT: it runs after the publication’s own transaction has committed, so a curator edit to SERIES_RELATION_TIPO in that window would be replaced.',
 				},
 			},
 		},
@@ -1071,7 +1071,7 @@ else {
 				saveComponentData: {
 					verdict: 'new-record',
 					reason:
-						'ONE set_data of every resolved Person locator (rsc139) on the rsc205 record created in this call, past its `skipped` returns; existing People are locator TARGETS, never written. Same post-commit window as linkSeries.',
+						'ONE set_data of every resolved Person locator (AUTHORSHIP_RELATION_TIPO) on the PUBLICATION_TIPO record created in this call, past its `skipped` returns; existing People are locator TARGETS, never written. Same post-commit window as linkSeries.',
 				},
 			},
 		},
@@ -1081,13 +1081,13 @@ else {
 					verdict: 'new-record',
 					bypass_reason: BYPASS.filesInfo,
 					reason:
-						'ingests the harvested PDF (harvestFetch, application/pdf, ≤50 MB) into rsc209 of the rsc205 record commitOnePublication created in this call; the record held no document before.',
+						'ingests the harvested PDF (harvestFetch, application/pdf, ≤50 MB) into DOCUMENT_TIPO of the PUBLICATION_TIPO record commitOnePublication created in this call; the record held no document before.',
 				},
 				persistUploadedMedia: {
 					verdict: 'new-record',
 					bypass_reason: BYPASS.filesInfo,
 					reason:
-						'records the PDF’s files_info and name keys on rsc209 of the rsc205 record born in this call (stored items re-read under the row lock).',
+						'records the PDF’s files_info and name keys on DOCUMENT_TIPO of the PUBLICATION_TIPO record born in this call (stored items re-read under the row lock).',
 				},
 			},
 		},

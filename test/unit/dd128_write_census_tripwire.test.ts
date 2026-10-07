@@ -382,12 +382,12 @@ const CENSUS: Record<string, CensusRow> = {
 	'tools/tool_numisdata_acquisition/server/index.ts': {
 		verdict: 'not-dd128',
 		reason:
-			'commit_lots writes only HARD-BOUND sections and components named by module constants, never by the payload: numisdata4 (the lot), numisdata224 (the Auction), rsc106 (the Entity), rsc170 (the coin-face image records, born by the numisdata164/165 portal add_new_element). Each is declared in its `targets` list — the section AND every (section, component) pair it writes — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. The payload supplies only VALUES and an rsc106 entity id (isRecordInScope-checked for a non-admin, an out-of-scope id is dropped for the name-based selection; written as a LOCATOR into numisdata228, never addressed as a write target).',
+			'commit_lots writes only HARD-BOUND sections and components named by module constants, never by the payload: NUMISDATA_OBJECT_TIPO (the lot), AUCTION_SECTION_TIPO (the Auction), ENTITY_SECTION_TIPO (the Entity), IMAGE_SECTION_TIPO (the coin-face image records, born by the OBVERSE_PORTAL_TIPO/165 portal add_new_element). Each is declared in its `targets` list — the section AND every (section, component) pair it writes — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. The payload supplies only VALUES and an ENTITY_SECTION_TIPO entity id (isRecordInScope-checked for a non-admin, an out-of-scope id is dropped for the name-based selection; written as a LOCATOR into AUCTION_COMPANY_TIPO, never addressed as a write target).',
 	},
 	'tools/tool_bibliography_acquisition/server/index.ts': {
 		verdict: 'not-dd128',
 		reason:
-			'commit_publications writes only HARD-BOUND sections and components named by module constants, never by the payload: rsc205 (the publication), rsc197 (People), rsc212 (Series). Each is declared in its `targets` list — the section AND every (section, component) pair it writes, rsc209 (the PDF) included — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. Existing People/Series and the fixed dd810/dd292 terms are only LOCATOR targets, never written.',
+			'commit_publications writes only HARD-BOUND sections and components named by module constants, never by the payload: PUBLICATION_TIPO (the publication), PEOPLE_SECTION_TIPO (People), SERIES_SECTION_TIPO (Series). Each is declared in its `targets` list — the section AND every (section, component) pair it writes, DOCUMENT_TIPO (the PDF) included — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. Existing People/Series and the fixed dd810/dd292 terms are only LOCATOR targets, never written.',
 	},
 	'tools/tool_posterframe/server/index.ts': {
 		verdict: 'delegates',
@@ -804,7 +804,7 @@ const REACH_EXEMPT: Record<string, string> = {
 	'tools/tool_hierarchy/server/tool_hierarchy.ts':
 		'hierarchy provisioning behind permission:’section’ — it deletes hierarchy section records, never a dd128 one.',
 	'tools/tool_numisdata_acquisition/server/index.ts':
-		'its only caller-owned delete is removeCreatedImageRecords: deleteSectionRecord on the HARD-BOUND rsc170 image section (IMAGE_SECTION_TIPO, never the users section), the all-or-nothing cleanup of a failed coin-face pair. The ids come ONLY from the created_section_id of this same importImagePair call’s own portal add_new_element saves — never the payload, never a lookup — and rsc170 is a declared commit_lots target (section level 2).',
+		'its only caller-owned delete is removeCreatedImageRecords: deleteSectionRecord on the HARD-BOUND IMAGE_SECTION_TIPO image section (IMAGE_SECTION_TIPO, never the users section), the all-or-nothing cleanup of a failed coin-face pair. The ids come ONLY from the created_section_id of this same importImagePair call’s own portal add_new_element saves — never the payload, never a lookup — and IMAGE_SECTION_TIPO is a declared commit_lots target (section level 2).',
 };
 
 /**

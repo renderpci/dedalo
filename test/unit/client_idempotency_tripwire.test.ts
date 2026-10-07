@@ -362,12 +362,20 @@ interface CallSite {
 	setsKey: boolean;
 }
 
+/**
+ * A call site, whatever the line breaks: a formatter splits a long call into
+ * `data_manager` / `.request_stream({` on two lines (biome does, 2026-10-07 on
+ * the acquisition tools), and a dot-adjacent pattern then reads NOTHING there —
+ * the site leaves the census silently. Whitespace is allowed around the dot.
+ */
+const CALL_SITE_PATTERN = /data_manager\s*\.\s*(request|request_stream|request_fetch_stream)\s*\(/g;
+
 function censusCallSites(): CallSite[] {
-	const pattern = /data_manager\.(request|request_stream|request_fetch_stream)\s*\(/g;
+	const pattern = new RegExp(CALL_SITE_PATTERN.source, 'g');
 	const sites: CallSite[] = [];
 	for (const file of clientJsFiles()) {
 		const raw = readFileSync(join(REPO_ROOT, file), 'utf8');
-		if (!raw.includes('data_manager.')) continue;
+		if (!raw.includes('data_manager')) continue;
 		const source = stripComments(raw);
 		pattern.lastIndex = 0;
 		let match: RegExpExecArray | null = pattern.exec(source);
@@ -521,6 +529,17 @@ function apiBypassingFiles(): string[] {
 describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 	const sites = censusCallSites();
 	const requests = sites.filter((site) => site.call === 'request');
+
+	test('the call-site matcher reads a formatter-split chain (positive control)', () => {
+		const split = 'data_manager\n\t\t\t\t.request_stream({ body: {} })';
+		const flat = 'data_manager.request({ body: {} })';
+		expect([...split.matchAll(new RegExp(CALL_SITE_PATTERN.source, 'g'))].map((m) => m[1])).toEqual([
+			'request_stream',
+		]);
+		expect([...flat.matchAll(new RegExp(CALL_SITE_PATTERN.source, 'g'))].map((m) => m[1])).toEqual([
+			'request',
+		]);
+	});
 
 	test('anti-vacuity: the census actually found the population', () => {
 		// Measured 2026-08-28 on branch v7: 246 call sites, 228 through the

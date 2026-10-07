@@ -420,8 +420,8 @@ interface CreatedImage {
  * call created has been deleted again, except the ids in `orphaned` - those whose own deletion
  * failed (logged), which the operator must remove by hand. */
 type ImageImportResult =
-	| { ok: true; created: CreatedImage[] }
-	| { ok: false; error: unknown; orphaned: number[] };
+	| { imported: true; created: CreatedImage[] }
+	| { imported: false; cause: unknown; orphaned: number[] };
 
 /**
  * Deletes the rsc170 records one importImagesForLot call created (ids taken only from that call's
@@ -477,10 +477,10 @@ async function importImagesForLot(
 ): Promise<ImageImportResult> {
 	const createdIds: number[] = [];
 	try {
-		return { ok: true, created: await importImagePair(context, lot, sectionId, createdIds) };
+		return { imported: true, created: await importImagePair(context, lot, sectionId, createdIds) };
 	} catch (error) {
 		const orphaned = await removeCreatedImageRecords(context, createdIds);
-		return { ok: false, error, orphaned };
+		return { imported: false, cause: error, orphaned };
 	}
 }
 
@@ -1490,13 +1490,13 @@ async function commitOneLot(
 	let imagesError: ApiErrorBody | null = null;
 	let imagesOrphaned: number[] = [];
 	const imageImport = await importImagesForLot(context, l, sectionId);
-	if (imageImport.ok) {
+	if (imageImport.imported) {
 		const portalLabels = await fieldLabels(imageImport.created.map((image) => image.portalTipo));
 		imagesCreated = imageImport.created.map(
 			(image, index) => `${portalLabels[index]} #${image.sectionId}`,
 		);
 	} else {
-		imagesError = toErrorBody(toDedaloError(imageImport.error));
+		imagesError = toErrorBody(toDedaloError(imageImport.cause));
 		imagesOrphaned = imageImport.orphaned;
 	}
 
