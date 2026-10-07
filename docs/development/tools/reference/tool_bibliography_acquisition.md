@@ -83,18 +83,27 @@ Key behaviours to know:
      (never a dynamic lookup — "journal article" and "ISSN" are the only ones this tool ever
      recognizes) when the source's `dc:type`/ISSN values match, and writes the **Abstract** once per
      language variant the source actually carries (see below);
-   - outside that transaction, best-effort resolves/links the Series (`findOrCreateSeries`, cached
-     per batch by name, same locked-and-rechecked create pattern as the Auction/Entity case in the
-     numismatic tool) and best-effort resolves/links each Author as a Person (`findOrCreatePerson`,
-     cached per batch by `(surname, given name)`);
-   - best-effort imports the PDF (`importDocumentForPublication` — see below) and, when a URL was
-     resolved (even if the byte-download itself failed or was skipped), writes it into the PDF-URI
-     field regardless.
+   - **before** that transaction, resolves what the links need: the Series (`findOrCreateSeries`,
+     cached per batch by name, same locked-and-rechecked create pattern as the Auction/Entity case
+     in the numismatic tool), each Author as a Person (`findOrCreatePerson`, cached per batch by
+     `(surname, given name)`) — each find-or-create in its own locked transaction, returning ids —
+     and the PDF URL (`pdfUrlForPublication`, which may fetch the landing page; a network fetch
+     never holds a transaction open);
+   - **inside** the birth transaction, after the scalar fields, links the Series and the Authors
+     and writes the resolved PDF URL into the PDF-URI field (even if the byte download later
+     fails). Nothing is written to the new record after that transaction commits, so a curator's
+     edit can never be replaced by a late link write; a failed link write rolls the whole
+     publication back and is reported as the item's `error`;
+   - after commit, the only remaining step: best-effort imports the PDF bytes
+     (`importDocumentForPublication` — see below), a media ingest that writes files a rollback
+     could not undo.
 
-   Every step past the record's own creation (Series, Authors, PDF) is independently best-effort:
-   its own error is captured into the per-publication result (`series_error`/`author_errors`/
-   `document_error`, each the error system's wire body, `toErrorBody(toDedaloError(error))`, never a
-   raw exception's text) rather than rolling back fields already written. The per-publication loop
+   The Series/Author resolution and the PDF steps are independently best-effort: each error is
+   captured into the per-publication result (`series_error`/`author_errors`/`document_error`, each
+   the error system's wire body, `toErrorBody(toDedaloError(error))`, never a raw exception's text)
+   and the record is born without that link. A Series or Person created for a publication whose
+   birth transaction then rolls back stays — a complete find-or-create record the next import
+   reuses. The per-publication loop
    checks `context.signal?.aborted` at its top and breaks (setting `stopped: true`) rather than
    throwing. Returns `{results, stopped, publications_total}`.
 
@@ -246,7 +255,10 @@ content type, or a body without an `<OAI-PMH` root), routes the body through `lo
 (`server/lib/acquisition/block-signals.ts` — the same helper and signal set the numismatic tool
 uses): either one throws `external.protocol`, surfacing the same "use `preview_html` instead"
 guidance. Real OAI-PMH XML is never treated as a bot wall — its article text ("The Forbidden City")
-would otherwise trip the weak patterns.
+would otherwise trip the weak patterns. The root check is a single linear scan (skipping a BOM,
+whitespace, processing instructions and comments, each up to its FIRST terminator), never a regex
+over the prolog: a backtracking pattern there is a denial of service any public OAI host could
+trigger with one response.
 
 ## Examples
 

@@ -3,6 +3,7 @@ title: A new tool imports journal articles from any OAI-PMH/OJS source directly 
 type: added
 audience: user
 date: 2026-10-07
+wc: WC-2026-10-07-acquisition-tools-ts-only
 ---
 Paste a journal's OAI-PMH URL (or a normal OJS article/journal URL) and the tool lists
 every publication it found — title, authors, series, year and page range — so you can

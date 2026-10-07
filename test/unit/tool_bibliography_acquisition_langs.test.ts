@@ -157,4 +157,34 @@ describe('isOaiPmhDocument', () => {
 		expect(isOaiPmhDocument('<html><body>Access denied</body></html>', 'text/xml')).toBe(false);
 		expect(isOaiPmhDocument('<p>x</p><OAI-PMH>', 'text/xml')).toBe(false);
 	});
+
+	test('prolog forms the former regex accepted are still accepted', () => {
+		expect(isOaiPmhDocument('\uFEFF  <!-- c --> <?pi x?>\n<OAI-PMH/>', 'text/xml')).toBe(true);
+		expect(isOaiPmhDocument('<oai:OAI-PMH xmlns:oai="x">', null)).toBe(true);
+		expect(isOaiPmhDocument('<OAI-PMHX>', null)).toBe(false);
+		expect(isOaiPmhDocument('<?unterminated <OAI-PMH>', null)).toBe(false);
+		expect(isOaiPmhDocument('<!-- unterminated <OAI-PMH>', null)).toBe(false);
+	});
+
+	// ReDoS regression: the former prolog regex backtracked exponentially on an unterminated run
+	// ('<?a?>'.repeat(24) + 'X' took 45ms, x4 per +2), and the body comes from any public OAI host.
+	// The scan is linear, so 5000-token runs must finish far under the budget.
+	test('pathological prologs are rejected in linear time', () => {
+		const pathological = [
+			`${'<?a?>'.repeat(5000)}X`,
+			`${'<!--a-->'.repeat(5000)}X`,
+			'<?'.repeat(5000),
+			'<!--'.repeat(5000),
+		];
+		const started = performance.now();
+		for (const body of pathological) expect(isOaiPmhDocument(body, 'text/xml')).toBe(false);
+		expect(performance.now() - started).toBeLessThan(50);
+	});
+
+	test('positive control: a valid document behind many PIs and comments is recognised', () => {
+		const body = `${'<?a?>\n<!--c-->'.repeat(5000)}${oai.slice(oai.indexOf('<OAI-PMH'))}`;
+		const started = performance.now();
+		expect(isOaiPmhDocument(body, 'text/xml')).toBe(true);
+		expect(performance.now() - started).toBeLessThan(50);
+	});
 });

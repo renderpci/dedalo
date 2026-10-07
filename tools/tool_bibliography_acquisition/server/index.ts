@@ -742,38 +742,39 @@ async function resolvePublicationPdfUrl(
 }
 
 /**
- * Downloads the publication's PDF (resolving one first when not already known) and stores it
- * directly on the Publication record's own rsc209 field - no separate resource record or crop step
- * needed, unlike the numismatic tool's obverse/reverse image split. Also returns the resolved URL
- * so the caller can write it into rsc668 (PDF URI) even when the byte-download itself is skipped.
+ * The publication's PDF URL: its own `pdfUrl` when the source carried one, else resolved from the
+ * landing page (best-effort, see resolvePublicationPdfUrl). Runs BEFORE the publication's birth
+ * transaction - it may fetch over the network, which must never hold a transaction open - so the
+ * URL is known by the time the record is born and rsc668 (PDF URI) is written INSIDE that same
+ * transaction, never in a post-commit window where it could replace a curator's value.
+ */
+async function pdfUrlForPublication(
+	publication: Record<string, unknown>,
+): Promise<{ url: string | null; error: ApiErrorBody | null }> {
+	const existingPdfUrl = publication.pdfUrl;
+	if (typeof existingPdfUrl === 'string' && existingPdfUrl !== '') {
+		return { url: existingPdfUrl, error: null };
+	}
+	return resolvePublicationPdfUrl(publication);
+}
+
+/**
+ * Downloads the publication's PDF from the already-resolved `pdfUrl` and stores it directly on the
+ * Publication record's own rsc209 field - no separate resource record or crop step needed, unlike
+ * the numismatic tool's obverse/reverse image split. The ONLY step that runs after the birth
+ * transaction commits: the media ingest writes files, which a rollback could not undo.
  */
 async function importDocumentForPublication(
 	context: ToolActionContext,
-	publication: Record<string, unknown>,
+	pdfUrl: string,
 	sectionId: number,
 ): Promise<{
-	pdfUrl: string | null;
 	documentImported: boolean;
 	documentError: ApiErrorBody | null;
 }> {
-	const existingPdfUrl = publication.pdfUrl;
-	let pdfUrl: string | null;
-	let resolveError: ApiErrorBody | null = null;
-	if (typeof existingPdfUrl === 'string' && existingPdfUrl !== '') {
-		pdfUrl = existingPdfUrl;
-	} else {
-		const resolved = await resolvePublicationPdfUrl(publication);
-		pdfUrl = resolved.url;
-		resolveError = resolved.error;
-	}
-	if (pdfUrl === null) {
-		return { pdfUrl: null, documentImported: false, documentError: resolveError };
-	}
-
 	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(pdfUrl));
 	if (!adapter) {
 		return {
-			pdfUrl,
 			documentImported: false,
 			documentError: toErrorBody(
 				new DedaloError('external.not_registered', { coordinates: { pdfUrl } }),
@@ -790,7 +791,6 @@ async function importDocumentForPublication(
 	});
 	if (!pdfResponse.ok) {
 		return {
-			pdfUrl,
 			documentImported: false,
 			documentError: toErrorBody(
 				new DedaloError('external.http_status', {
@@ -817,7 +817,6 @@ async function importDocumentForPublication(
 	);
 	if (staged.tmpName === undefined) {
 		return {
-			pdfUrl,
 			documentImported: false,
 			documentError: toErrorBody(
 				new DedaloError('tool.action_failed', { message: 'PDF upload did not stage a file.' }),
@@ -851,7 +850,7 @@ async function importDocumentForPublication(
 		nameKeys: nameKeysForQuality(spec, undefined),
 	});
 	result.startTranscode?.();
-	return { pdfUrl, documentImported: true, documentError: null };
+	return { documentImported: true, documentError: null };
 }
 
 /** One resolved Series, cached within a commit batch. */
@@ -940,12 +939,55 @@ interface CommitOnePublicationResult {
 	document_error: ApiErrorBody | null;
 }
 
+/** The publication's Series, found or created BEFORE its birth transaction (its own locked
+ * transaction, findOrCreateSeries). Best-effort: a failure is reported, and the publication is
+ * born without the link. */
+async function resolveSeriesForPublication(
+	context: ToolActionContext,
+	publication: Record<string, unknown>,
+	seriesCache: Map<string, ResolvedSeries>,
+): Promise<{ series: ResolvedSeries | null; error: ApiErrorBody | null }> {
+	const name = publication.seriesName;
+	if (typeof name !== 'string' || name.trim() === '') return { series: null, error: null };
+	try {
+		return { series: await resolveSeriesCached(context, seriesCache, name.trim()), error: null };
+	} catch (error) {
+		return { series: null, error: toErrorBody(toDedaloError(error)) };
+	}
+}
+
+/** Each author's Person, found or created BEFORE the publication's birth transaction (each in its
+ * own locked transaction, findOrCreatePerson). Best-effort per author: a failure is reported and
+ * that author is left out of the link. */
+async function resolveAuthorsForPublication(
+	context: ToolActionContext,
+	authors: string[],
+	personCache: Map<string, ResolvedPerson>,
+): Promise<{ sectionIds: number[]; errors: ApiErrorBody[] }> {
+	const sectionIds: number[] = [];
+	const errors: ApiErrorBody[] = [];
+	for (const author of authors) {
+		try {
+			const { surname, givenName } = splitAuthorName(author);
+			if (surname === '') continue;
+			const resolved = await resolvePersonCached(context, personCache, surname, givenName);
+			sectionIds.push(resolved.sectionId);
+		} catch (error) {
+			errors.push(toErrorBody(toDedaloError(error)));
+		}
+	}
+	return { sectionIds, errors };
+}
+
 /**
- * Creates an rsc205 record from one previewed publication, writes its fields, and resolves/links
- * Series, Authors, and the PDF document. The Series/author/document steps are best-effort - a
- * failure there is surfaced in the result, not thrown, since the record itself already exists with
- * real fields on it by that point. Skips entirely (no create, no field writes) when a record with
- * the same Code was already imported, rather than risk clobbering a cataloger's later edits.
+ * Creates an rsc205 record from one previewed publication, writes its fields, links its Series,
+ * Authors and PDF URL, and imports the PDF document. Every write to the new record happens in ONE
+ * birth transaction - nothing is written to it after that commits except the PDF media ingest -
+ * so no curator edit can land in between and be replaced. The Series/Person find-or-create and the
+ * PDF URL resolution (network) run BEFORE that transaction and are best-effort: a failure there is
+ * reported in the result and the record is born without that link. Skips entirely (no create, no
+ * field writes) when a record with the same Code was already imported, rather than risk
+ * clobbering a cataloger's later edits.
  */
 async function commitOnePublication(
 	context: ToolActionContext,
@@ -984,20 +1026,30 @@ async function commitOnePublication(
 		}
 	}
 
-	// Hoisted out of the transaction below - the document-import/author-resolution
-	// steps (outside it) need them too.
 	const publicationTitle = typeof p.title === 'string' ? p.title : null;
 	const authors = Array.isArray(p.authors)
 		? p.authors.filter((a): a is string => typeof a === 'string')
 		: [];
 
+	// Everything the links need is resolved BEFORE the birth transaction: the Series and Person
+	// find-or-create run in their own locked transactions and return ids, and the PDF URL may need
+	// a network fetch, which must never hold a transaction open. The links themselves are then
+	// written INSIDE the birth transaction. They used to be written after it committed, a window in
+	// which a curator's edit to SERIES_RELATION_TIPO / AUTHORSHIP_RELATION_TIPO / PDF_URI_TIPO on
+	// the fresh record would have been replaced. HONEST LIMIT: a Series/Person created here stays
+	// when the birth transaction then rolls back or finds a concurrent duplicate - a well-formed
+	// find-or-create record the next import reuses, never a half-written one.
+	const seriesResolution = await resolveSeriesForPublication(context, p, seriesCache);
+	const authorResolution = await resolveAuthorsForPublication(context, authors, personCache);
+	const pdfResolution = await pdfUrlForPublication(p);
+
 	// One transaction for the record + its own fields and relations: a
 	// writeField throw used to escape uncaught, and since the Code (the dedup
 	// key) was written FIRST, the orphan it left behind made every later
 	// re-import see "already imported" and skip a record with no title
-	// forever (review item C1). Series/author/document stay OUTSIDE it,
-	// unchanged — they are already individually best-effort against a record
-	// that, past this point, is real and complete. Locked and RE-CHECKED under
+	// forever (review item C1). A failed link write throws and rolls the
+	// whole publication back (reported as the item's `error`), never a
+	// half-linked record. Locked and RE-CHECKED under
 	// the lock before creating: the FIRST check (above) ran before any lock was
 	// held, so two concurrent commits of the same publication used to both
 	// miss it and both create one (review item C4).
@@ -1135,6 +1187,26 @@ async function commitOnePublication(
 			);
 			written.push(STANDARD_NUMBER_TYPE_RELATION_TIPO);
 		}
+		if (seriesResolution.series !== null) {
+			await linkSeries(context, newSectionId, seriesResolution.series.sectionId);
+			written.push(SERIES_RELATION_TIPO);
+		}
+		if (authorResolution.sectionIds.length > 0) {
+			await linkAuthors(context, newSectionId, authorResolution.sectionIds);
+			written.push(AUTHORSHIP_RELATION_TIPO);
+		}
+		if (pdfResolution.url !== null) {
+			// Written even when the byte download later fails: the URL is what the source states.
+			await writeIriField(
+				newSectionId,
+				PUBLICATION_TIPO,
+				PDF_URI_TIPO,
+				pdfResolution.url,
+				publicationTitle,
+				context.userId,
+			);
+			written.push(PDF_URI_TIPO);
+		}
 		return {
 			created: true as const,
 			sectionId: newSectionId,
@@ -1163,61 +1235,17 @@ async function commitOnePublication(
 	}
 	const { sectionId, fieldsWritten, abstractSkipped } = coreResult;
 
-	let seriesSectionId: number | null = null;
-	let seriesCreated: boolean | null = null;
-	let seriesError: ApiErrorBody | null = null;
-	if (typeof p.seriesName === 'string' && p.seriesName.trim() !== '') {
-		try {
-			const resolved = await resolveSeriesCached(context, seriesCache, p.seriesName.trim());
-			seriesSectionId = resolved.sectionId;
-			seriesCreated = resolved.created;
-			await linkSeries(context, sectionId, seriesSectionId);
-			fieldsWritten.push(SERIES_RELATION_TIPO);
-		} catch (error) {
-			seriesError = toErrorBody(toDedaloError(error));
-		}
-	}
-
-	const authorSectionIds: number[] = [];
-	const authorErrors: ApiErrorBody[] = [];
-	for (const author of authors) {
-		try {
-			const { surname, givenName } = splitAuthorName(author);
-			if (surname === '') continue;
-			const resolved = await resolvePersonCached(context, personCache, surname, givenName);
-			authorSectionIds.push(resolved.sectionId);
-		} catch (error) {
-			authorErrors.push(toErrorBody(toDedaloError(error)));
-		}
-	}
-	if (authorSectionIds.length > 0) {
-		try {
-			await linkAuthors(context, sectionId, authorSectionIds);
-			fieldsWritten.push(AUTHORSHIP_RELATION_TIPO);
-		} catch (error) {
-			authorErrors.push(toErrorBody(toDedaloError(error)));
-		}
-	}
-
+	// The ONLY post-commit step: the PDF media ingest writes files a rollback could not undo.
 	let documentImported = false;
-	let documentError: ApiErrorBody | null = null;
-	try {
-		const outcome = await importDocumentForPublication(context, p, sectionId);
-		documentImported = outcome.documentImported;
-		documentError = outcome.documentError;
-		if (outcome.pdfUrl !== null) {
-			await writeIriField(
-				sectionId,
-				PUBLICATION_TIPO,
-				PDF_URI_TIPO,
-				outcome.pdfUrl,
-				publicationTitle,
-				context.userId,
-			);
-			fieldsWritten.push(PDF_URI_TIPO);
+	let documentError: ApiErrorBody | null = pdfResolution.error;
+	if (pdfResolution.url !== null) {
+		try {
+			const outcome = await importDocumentForPublication(context, pdfResolution.url, sectionId);
+			documentImported = outcome.documentImported;
+			documentError = outcome.documentError;
+		} catch (error) {
+			documentError = toErrorBody(toDedaloError(error));
 		}
-	} catch (error) {
-		documentError = toErrorBody(toDedaloError(error));
 	}
 
 	return {
@@ -1228,11 +1256,11 @@ async function commitOnePublication(
 		skipped: false,
 		fields_written: fieldsWritten,
 		abstract_skipped: [...abstractSkipped],
-		series_section_id: seriesSectionId,
-		series_created: seriesCreated,
-		series_error: seriesError,
-		author_section_ids: authorSectionIds,
-		author_errors: authorErrors,
+		series_section_id: seriesResolution.series?.sectionId ?? null,
+		series_created: seriesResolution.series?.created ?? null,
+		series_error: seriesResolution.error,
+		author_section_ids: authorResolution.sectionIds,
+		author_errors: authorResolution.errors,
 		document_imported: documentImported,
 		document_error: documentError,
 	};

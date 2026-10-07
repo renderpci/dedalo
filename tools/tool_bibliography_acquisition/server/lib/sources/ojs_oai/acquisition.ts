@@ -18,10 +18,44 @@ const ARTICLE_URL_PATTERN = /\/article\/view\/(\d+)(?:\/\d+)?(?:[/?#].*)?$/i;
 // an hours-long job. Real issues run to a few dozen articles; this leaves wide headroom.
 const MAX_ARTICLES = 200;
 
-/** The root of a well-formed OAI-PMH response: only an XML declaration, processing instructions
- * (OJS sends an `<?xml-stylesheet?>`), comments and whitespace may precede `<OAI-PMH`. */
-const OAI_PMH_ROOT =
-	/^\uFEFF?\s*(?:<\?[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*)*<(?:[A-Za-z_][\w.-]*:)?OAI-PMH[\s>/]/;
+/** Whitespace the root check skips: the same class the former `\s` regex skipped, tested per char. */
+const PROLOG_WHITESPACE = /\s/;
+/** The root element name after `<`: an optional namespace prefix (`oai:OAI-PMH` - the former
+ * regex accepted it, and a prefixed root is still the OAI-PMH root), then `OAI-PMH`, then a char
+ * that ends the name. Anchored with the sticky flag at one index; no repetition can backtrack. */
+const OAI_PMH_ROOT_NAME = /(?:[A-Za-z_][\w.-]*:)?OAI-PMH[\s>/]/y;
+
+/**
+ * True when `body` starts with an `<OAI-PMH` root: only a BOM, whitespace, an XML declaration or
+ * processing instructions (OJS sends an `<?xml-stylesheet?>`) and comments may precede it.
+ *
+ * A LINEAR scan (one forward pass, each `indexOf` starting past the previous token), never a
+ * regex over the prolog: the former `(?:<\?[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*)*` backtracked
+ * exponentially on an unterminated run (`'<?a?>'.repeat(24) + 'X'` took 45ms and doubled per two
+ * more), and the body comes from ANY public OAI host - one response could stall the single Bun
+ * process. A DOCTYPE is not admitted (the former regex did not admit one either).
+ */
+function startsWithOaiPmhRoot(body: string): boolean {
+	let index = body.charCodeAt(0) === 0xfeff ? 1 : 0;
+	for (;;) {
+		while (index < body.length && PROLOG_WHITESPACE.test(body.charAt(index))) index += 1;
+		if (body.startsWith('<?', index)) {
+			const end = body.indexOf('?>', index + 2);
+			if (end === -1) return false;
+			index = end + 2;
+			continue;
+		}
+		if (body.startsWith('<!--', index)) {
+			const end = body.indexOf('-->', index + 4);
+			if (end === -1) return false;
+			index = end + 3;
+			continue;
+		}
+		if (body.charAt(index) !== '<') return false;
+		OAI_PMH_ROOT_NAME.lastIndex = index + 1;
+		return OAI_PMH_ROOT_NAME.test(body);
+	}
+}
 
 /**
  * True when a response IS an OAI-PMH document: a non-HTML content type and an `<OAI-PMH` root.
@@ -31,7 +65,7 @@ const OAI_PMH_ROOT =
  */
 export function isOaiPmhDocument(body: string, contentType: string | null): boolean {
 	if (contentType !== null && /html/i.test(contentType)) return false;
-	return OAI_PMH_ROOT.test(body);
+	return startsWithOaiPmhRoot(body);
 }
 
 /**
