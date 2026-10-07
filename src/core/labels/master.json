@@ -635,6 +635,7 @@
 	"rebuild_user_stats_info": "Re-create the user activity stats, calculated from table matrix_activity and saved in section dd1521 as daily summaries.",
 	"record": "record",
 	"records_displayed": "Displayed records from X to Y of Z",
+	"records_pinned": "records pinned",
 	"recover_password": "Forgot your password?",
 	"recover_password_help": "Enter your username or email address and we will send you an 8-digit recovery code.",
 	"recover_password_title": "Recover your password",

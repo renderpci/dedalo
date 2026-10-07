@@ -251,6 +251,10 @@ Merged since the last release; these ship with the next one.
 
     A CSV exported from Dédalo carries the record information every section shares — who created and last modified the record and when, and the other fields of the *Record information* group. On import, those columns came up unchecked and could not be chosen in the column mapper, and the preflight check reported them as "not a component of section", so a re-import could not restore a record's history. They are listed again after the section's own fields, matched automatically by their column name, and imported with the dates and users the file carries (the record's "modified" stamp is not overwritten by the import itself). As before, these columns are offered to global administrators only, can only replace a value (never append to it). Computed fields, which store nothing of their own (the group's inverse references, a thesaurus's children list, indexations, external-service fields), are no longer offered in the column mapper at all; a column map that names one anyway is refused with an explanation. The Activity and Time machine sections, which have no record information, do not list them.
 
+- **The pinned-records chip of a section list tells where the pins come from and disappears when they are cleared.**
+
+    Going back to the list after creating a record showed "1 results pinned by meaning search" although no meaning search was run. The chip now reads **N records pinned** unless a meaning search really pinned the list, and its text stays on one line. Clearing the pins with its ✕ or **Show all** now removes the chip at once instead of leaving it over the unfiltered list.
+
 - **The "Show buttons" label no longer covers the search buttons on a phone.**
 
     On narrow screens the vertical **Show buttons** label of a section list (and of the thesaurus/ontology toolbar) printed over **Search** and **Show all**. Below phone width only the arrow toggle is shown; its name is still read on hover and by screen readers.

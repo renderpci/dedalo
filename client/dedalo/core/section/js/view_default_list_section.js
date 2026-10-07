@@ -113,6 +113,11 @@ view_default_list_section.render = async function(self, options) {
 		const content_data = await this.get_content_data(self, rows)
 		if (render_level==='content') {
 
+			// pinned chip. A content refresh (show_all, the chip's own ✕, a
+			// semantic search) keeps the header, so the SQO-derived chip must be
+			// re-synced here or it outlives the pins it reports.
+				sync_pinned_chip(self)
+
 			// list_header_node. Remove possible style 'hide' if not empty
 				if (rows.length>0) {
 					const wrapper = self.node
@@ -443,6 +448,37 @@ view_default_list_section.rebuild_columns_map = async function(self) {
 
 	return columns_map
 }//end rebuild_columns_map
+
+
+
+/**
+* SYNC_PINNED_CHIP
+* Re-derives the pinned-state chip from the current SQO on a 'content'
+* re-render, where get_buttons does not run: drops the old chip and places the
+* new one (if any) where get_buttons puts it, right after the search buttons.
+* @param {Object} self - The section instance (list view).
+* @returns {void}
+*/
+const sync_pinned_chip = function(self) {
+
+	const buttons_container = self.node?.querySelector(':scope > .buttons_container')
+	if (!buttons_container) {
+		return
+	}
+
+	buttons_container.querySelector(':scope > .semantic_pinned_chip')?.remove()
+
+	const pinned_chip = build_pinned_chip(self)
+	if (!pinned_chip) {
+		return
+	}
+	const search_buttons_container = buttons_container.querySelector(':scope > .search_buttons_container')
+	if (search_buttons_container) {
+		search_buttons_container.after(pinned_chip)
+	}else{
+		buttons_container.prepend(pinned_chip)
+	}
+}//end sync_pinned_chip
 
 
 

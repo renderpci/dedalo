@@ -411,6 +411,7 @@
 	"rebuild_user_stats_info": "重新创建用户活动统计，根据 matrix_activity 表计算并作为每日汇总保存在 dd1521 部分中。",
 	"record": "记录",
 	"records_displayed": "显示记录从 X 到 Y，共 Z 条",
+	"records_pinned": "条记录已固定",
 	"recover_password": "忘记密码？",
 	"recover_password_help": "输入您的用户名或电子邮件地址，我们将向您发送8位恢复代码。",
 	"recover_password_title": "恢复密码",

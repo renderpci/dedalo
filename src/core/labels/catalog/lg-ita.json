@@ -411,6 +411,7 @@
 	"rebuild_user_stats_info": "Ricrea le statistiche di attività utente, calcolate dalla tabella matrix_activity e salvate nella sezione dd1521 come riepiloghi giornalieri.",
 	"record": "registro",
 	"records_displayed": "Registri mostrati da X a Y di Z",
+	"records_pinned": "record fissati",
 	"recover_password": "Password dimenticata?",
 	"recover_password_help": "Inserisci il tuo nome utente o indirizzo email e ti invieremo un codice di recupero di 8 cifre.",
 	"recover_password_title": "Recupera la tua password",

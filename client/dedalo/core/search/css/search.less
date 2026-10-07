@@ -1080,7 +1080,13 @@
 	font-size: 0.85em;
 	font-weight: 500;
 
+	// one line, never cut: the label neither wraps nor ellipsizes
+	.chip_label {
+		white-space: nowrap;
+	}
+
 	.chip_clear {
+		flex-shrink: 0;
 		cursor: pointer;
 		font-weight: bold;
 		transition: color var(--transition-fast);

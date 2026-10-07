@@ -411,6 +411,7 @@
 	"rebuild_user_stats_info": "يعيد إنشاء إحصاءات نشاط المستخدم، المحسوبة من جدول matrix_activity والمحفوظة في القسم dd1521 كملخصات يومية.",
 	"record": "سجل",
 	"records_displayed": "السجلات المعروضة من X إلى Y من Z",
+	"records_pinned": "سجل مثبّت",
 	"recover_password": "هل نسيت كلمة مرورك؟",
 	"recover_password_help": "أدخل اسم المستخدم أو عنوان بريدك الإلكتروني وسنرسل إليك رمز استرداد مكوّنًا من 8 أرقام.",
 	"recover_password_title": "استرداد كلمة مرورك",

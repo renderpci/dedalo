@@ -411,6 +411,7 @@
 	"rebuild_user_stats_info": "Erabiltzailearen jarduera-estatistikak birsortzen ditu, matrix_activity taulatik kalkulatuta eta dd1521 atalean eguneko laburpen gisa gordeta.",
 	"record": "Erregistroa",
 	"records_displayed": "Z-ren X-tik Y-ra erakutsitako erregistroak.",
+	"records_pinned": "erregistro finkatuta",
 	"recover_password": "Pasahitza ahaztu duzu?",
 	"recover_password_help": "Sartu zure erabiltzaile-izena edo helbide elektronikoa eta 8 digituko berreskuratze-kode bat bidaliko dizugu.",
 	"recover_password_title": "Berreskuratu zure pasahitza",

@@ -10076,7 +10076,11 @@ body:has(.component_av.view_viewer) {
   font-size: 0.85em;
   font-weight: 500;
 }
+.semantic_pinned_chip .chip_label {
+  white-space: nowrap;
+}
 .semantic_pinned_chip .chip_clear {
+  flex-shrink: 0;
   cursor: pointer;
   font-weight: bold;
   transition: color var(--transition-fast);
