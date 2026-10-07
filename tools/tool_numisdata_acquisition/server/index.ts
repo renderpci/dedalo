@@ -46,13 +46,13 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { foldNameForLock, normalizeLotUrl } from './lib/acquisition/keys.ts';
+import { acquireDedupLock } from './lib/acquisition/lock.ts';
 import { aureoAdapter } from './lib/sources/aureo/adapter.ts';
 import { biddrAdapter } from './lib/sources/biddr/adapter.ts';
 import { jesusvicoAdapter } from './lib/sources/jesusvico/adapter.ts';
 import { numisbidsAdapter } from './lib/sources/numisbids/adapter.ts';
 import { sixbidAdapter } from './lib/sources/sixbid/adapter.ts';
-import type { RawSource } from './lib/sources/types.ts';
+import type { RawSource, SourceAdapter } from './lib/sources/types.ts';
 
 const NUMISDATA_OBJECT_TIPO = 'numisdata4';
 // material/mint/ruler/denomination/condition (thesaurus-linked) are still deliberately deferred.
@@ -68,8 +68,9 @@ const REVERSE_DESIGN_TIPO = 'numisdata1029'; // component_text_area, "Specific r
 const PUBLIC_REMARK_TIPO = 'numisdata150';
 // component_iri "URI" (Documentation group), non-translatable. Real numisdata4 rows store it as
 // [{id, iri, lang:'lg-nolan'}] (an external object page, e.g. a museum collection URL). Holds the
-// lot's normalised source URL - only for a source whose lot URL names THAT lot
-// (SourceAdapter.lotSourceUrlIdentifiesLot) - and is the auction-independent dedup key.
+// lot's CANONICAL URL - rebuilt by its source adapter from the lot's own identity
+// (SourceAdapter.canonicalLotUrl), only when that identity is known - and is the
+// auction-independent dedup key.
 const SOURCE_URI_TIPO = 'numisdata275';
 
 // numisdata224's own fields (confirmed via dd_ontology this session).
@@ -681,18 +682,8 @@ async function resolveCompanySelectionByName(
 	return existing !== null ? { sectionId: existing } : { create: true, name };
 }
 
-/** A transaction-scoped advisory lock on an arbitrary dedup key - same primitive as
- * acquireNodeLock (src/core/db/postgres.ts) for an existing node, just keyed on a find-or-create
- * dedup key instead of a section_id, since the record doesn't exist yet when the race happens.
- * Serializes two concurrent commits that would otherwise both miss the lookup and both create
- * (review item C4). Must be called inside withTransaction - the lock releases at commit/rollback. */
-async function acquireDedupLock(key: string): Promise<void> {
-	await sql.unsafe('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
-}
-
-// foldNameForLock (the rsc106 name lock key) lives in lib/acquisition/keys.ts: a pure fold that
-// is deliberately COARSER than the '==' search equality (case-folded, not only accent-folded), so
-// two spellings the search treats as one Entity can never take different locks.
+// acquireDedupLock (lib/acquisition/lock.ts) folds the term IN SQL by the '==' search's own
+// f_unaccent (+ lower), so a lock key is never finer than the equality it guards.
 
 /** Resolves a CompanySelection to a real rsc106 section_id, creating one
  * (Name only — the one field every real Entity record carries) when the
@@ -709,7 +700,7 @@ async function resolveCompanyEntityId(
 ): Promise<number> {
 	if ('sectionId' in selection) return selection.sectionId;
 	return withTransaction(async () => {
-		await acquireDedupLock(`rsc106:name:${foldNameForLock(selection.name)}`);
+		await acquireDedupLock('rsc106:name:', selection.name);
 		const existing = await findEntityByExactName(selection.name, context);
 		if (existing !== null) return existing;
 		const sectionId = await createSectionRecord(ENTITY_SECTION_TIPO, context.userId);
@@ -851,11 +842,11 @@ async function findExistingLot(
 }
 
 /**
- * Exact match on the lot's normalised source URL (SOURCE_URI_TIPO) - the dedup key that needs no
- * Auction: a search-batch lot, a lot whose auction failed to resolve, or one with no lot number
- * (review item: "dedup gaps"). The stored value is written by this tool already normalised
- * (normalizeLotUrl), so the '==' leaf (builder_iri 'exact': f_unaccent(iri) = f_unaccent(q)) is an
- * exact URL match. Same principal-scoped SQO pattern as findExistingLot - never a hand-written
+ * Exact match on the lot's canonical URL (SOURCE_URI_TIPO) - the dedup key that needs no Auction:
+ * a search-batch lot, a lot whose auction failed to resolve, or one with no lot number (review
+ * item: "dedup gaps"). The stored value is written by this tool already canonical
+ * (SourceAdapter.canonicalLotUrl - one spelling per lot), so the '==' leaf (builder_iri 'exact':
+ * f_unaccent(iri) = f_unaccent(q)) is an exact URL match. Same principal-scoped SQO pattern as findExistingLot - never a hand-written
  * SQL WHERE.
  */
 async function findExistingLotByUrl(
@@ -914,7 +905,7 @@ async function findOrCreateAuction(
 ): Promise<{ sectionId: number; created: boolean }> {
 	return withTransaction(async () => {
 		const entityId = await resolveCompanyEntityId(context, companySelection);
-		await acquireDedupLock(`numisdata224:${entityId}:${auctionNumber}`);
+		await acquireDedupLock(`numisdata224:${entityId}:`, auctionNumber);
 
 		const found = await findExistingAuction(entityId, auctionNumber, context);
 		if (found !== null) return { sectionId: found, created: false };
@@ -1139,7 +1130,7 @@ interface CommitOneLotResult {
 	section_id: number | null;
 	error: ApiErrorBody | null;
 	/** True when a numisdata4 record for this lot already existed - matched on (Auction, Inventory
-	 * number) or on the lot's normalised source URL. Nothing else in this result was attempted;
+	 * number) or on the lot's canonical URL. Nothing else in this result was attempted;
 	 * section_id names the pre-existing record. Closes review item G: re-committing the same batch
 	 * no longer duplicates every lot in it. */
 	skipped: boolean;
@@ -1211,11 +1202,41 @@ function splitSearchAuctionCategory(category: string): { house: string; label: s
 	return { house, label };
 }
 
+/** The Type a lot's description cites, looked up (never linked) - read-only, so commitOneLot runs
+ * it BEFORE the lot's birth transaction and links the result inside it. Best-effort: a failed
+ * lookup is reported in `typeError` and leaves the lot unlinked, never fails it. */
+async function matchLotType(
+	context: ToolActionContext,
+	description: string | null,
+	catalogueIndex: CatalogueIndex,
+): Promise<{
+	typeSectionId: number | null;
+	typeCitation: string | null;
+	typeError: ApiErrorBody | null;
+}> {
+	let typeCitation: string | null = null;
+	try {
+		const citation = extractCatalogueCitation(description, catalogueIndex);
+		if (citation === null) return { typeSectionId: null, typeCitation, typeError: null };
+		typeCitation = `${citation.catalogueName}-${citation.code}`;
+		const typeSectionId = await findExistingType(
+			citation.catalogueSectionId,
+			citation.code,
+			context,
+		);
+		return { typeSectionId, typeCitation, typeError: null };
+	} catch (error) {
+		return { typeSectionId: null, typeCitation, typeError: toErrorBody(toDedaloError(error)) };
+	}
+}
+
 /**
  * Creates a numisdata4 record from one previewed lot, writes its fields, and
- * resolves/links Auction, Type, and image. The Auction/Type/image steps are
- * best-effort — a failure there is surfaced in the result, not thrown, since
- * the record itself already exists with real fields on it.
+ * resolves/links Auction, Type, and image. Auction RESOLUTION and Type LOOKUP
+ * are best-effort and run before the record exists (a failure is surfaced in
+ * the result and the lot is created unlinked); the LINKS are written in the
+ * record's own birth transaction. The image import runs after it, best-effort
+ * against a record that already exists with real fields on it.
  *
  * For most batches every lot shares the same batch-level auction info; for a
  * Biddr/sixbid search batch, each lot's own `category` overrides it (see
@@ -1235,8 +1256,9 @@ async function commitOneLot(
 	batchCompanySelection: CompanySelection,
 	auctionCache: Map<string, ResolvedAuction>,
 	catalogueIndex: CatalogueIndex,
-	// The lot's normalised source URL when it identifies THIS lot (commitLots: lotUrlKeyFor), else
-	// null. Stored in SOURCE_URI_TIPO and used as the auction-independent dedup key.
+	// The lot's canonical URL (commitLots: canonicalLotUrlKey) when its source can rebuild one
+	// from the lot's own identity, else null. Stored in SOURCE_URI_TIPO and used as the
+	// auction-independent dedup key.
 	lotUrlKey: string | null,
 ): Promise<CommitOneLotResult> {
 	const l = lot;
@@ -1308,26 +1330,35 @@ async function commitOneLot(
 		}
 	}
 
-	// One transaction for the dedup check + the record + its own core fields: a writeField throw
-	// used to escape uncaught, leaving a half-written record behind with no way to report it
-	// (review item C1). Type/image stay OUTSIDE it, unchanged — they are already individually
-	// best-effort against a record that, past this point, is real and complete. Locked and
+	// The Type is LOOKED UP here, before the transaction (read-only, best-effort: a failed lookup
+	// leaves the lot unlinked and reports why) - and LINKED inside it, below.
+	const typeMatch = await matchLotType(context, description, catalogueIndex);
+	const typeSectionId = typeMatch.typeSectionId;
+
+	// One transaction for the dedup check + the record + its own core fields + its Auction and
+	// Type links (the record's whole birth): a writeField throw used to escape uncaught, leaving a
+	// half-written record behind with no way to report it (review item C1), and links written
+	// after the commit left a window in which a curator's edit of the just-born record could be
+	// replaced by them. A link that fails now rolls the whole lot back (reported in `error`,
+	// retried on the next commit) - there is no savepoint to keep the record without it. Only
+	// the image import stays OUTSIDE: it runs the media pipeline (files on disk, its own
+	// all-or-nothing cleanup) against a record that, past this point, is real and complete. Locked and
 	// RE-CHECKED under the lock (review item G/C4): findExistingLot below ran with no lock, so two
 	// concurrent commits of the SAME lot would otherwise both miss it and both create one.
 	//
 	// Two dedup keys, each with its own lock, checked under BOTH locks before anything is created:
-	// (Auction, lot number) where the lot has both, and the normalised source URL where the source
-	// gives a per-lot URL (review item: "dedup gaps" - a search-batch lot, an unresolved auction or
+	// (Auction, lot number) where the lot has both, and the canonical lot URL where its source
+	// can rebuild one from the lot's own identity (review item: "dedup gaps" - a search-batch lot, an unresolved auction or
 	// an empty lot number used to skip dedup entirely). Either match means "already imported".
 	// Lock ORDER is fixed (lot key, then URL key) in every transaction that takes both, and a
 	// transaction taking only one cannot close a cycle - so two commits never deadlock on them.
 	const lotKeyAvailable = auctionSectionId !== null && lotNumber !== '';
 	const { sectionId, fieldsWritten, skipped } = await withTransaction(async () => {
 		if (lotKeyAvailable) {
-			await acquireDedupLock(`numisdata4:lot:${auctionSectionId}:${lotNumber}`);
+			await acquireDedupLock(`numisdata4:lot:${auctionSectionId}:`, lotNumber);
 		}
 		if (lotUrlKey !== null) {
-			await acquireDedupLock(`numisdata4:url:${lotUrlKey}`);
+			await acquireDedupLock('numisdata4:url:', lotUrlKey);
 		}
 		const existingLotSectionId =
 			(lotKeyAvailable && auctionSectionId !== null
@@ -1424,7 +1455,7 @@ async function commitOneLot(
 			written.push(PUBLIC_REMARK_TIPO);
 		}
 		if (lotUrlKey !== null) {
-			// Written in the SAME normalised form findExistingLotByUrl matches on, inside the same
+			// Written in the SAME canonical form findExistingLotByUrl matches on, inside the same
 			// transaction as the record: a lot is never committed without the key that dedups it.
 			await writeIriField(
 				newSectionId,
@@ -1434,6 +1465,16 @@ async function commitOneLot(
 				context.userId,
 			);
 			written.push(SOURCE_URI_TIPO);
+		}
+		// The links, in the birth transaction (see above). The Auction was resolved before it
+		// (auctionSectionId is null when it failed - auction_error says why).
+		if (auctionSectionId !== null) {
+			await linkAuction(context, newSectionId, auctionSectionId);
+			written.push(AUCTION_RELATION_TIPO);
+		}
+		if (typeSectionId !== null) {
+			await linkType(context, newSectionId, typeSectionId);
+			written.push(TYPE_RELATION_TIPO);
 		}
 		return { sectionId: newSectionId, fieldsWritten: written, skipped: false as const };
 	});
@@ -1456,34 +1497,6 @@ async function commitOneLot(
 			images_error: null,
 			images_orphaned: [],
 		};
-	}
-
-	// The Auction was already resolved (or failed to resolve) above, before the dedup check - link
-	// it now that the record is real, without resolving it a second time.
-	if (auctionSectionId !== null && auctionError === null) {
-		try {
-			await linkAuction(context, sectionId, auctionSectionId);
-			fieldsWritten.push(AUCTION_RELATION_TIPO);
-		} catch (error) {
-			auctionError = toErrorBody(toDedaloError(error));
-		}
-	}
-
-	let typeSectionId: number | null = null;
-	let typeCitation: string | null = null;
-	let typeError: ApiErrorBody | null = null;
-	try {
-		const citation = extractCatalogueCitation(description, catalogueIndex);
-		if (citation !== null) {
-			typeCitation = `${citation.catalogueName}-${citation.code}`;
-			typeSectionId = await findExistingType(citation.catalogueSectionId, citation.code, context);
-			if (typeSectionId !== null) {
-				await linkType(context, sectionId, typeSectionId);
-				fieldsWritten.push(TYPE_RELATION_TIPO);
-			}
-		}
-	} catch (error) {
-		typeError = toErrorBody(toDedaloError(error));
 	}
 
 	let imagesCreated: string[] | null = null;
@@ -1511,8 +1524,8 @@ async function commitOneLot(
 		auction_created: auctionCreated,
 		auction_error: auctionError,
 		type_section_id: typeSectionId,
-		type_citation: typeCitation,
-		type_error: typeError,
+		type_citation: typeMatch.typeCitation,
+		type_error: typeMatch.typeError,
 		images_created: imagesCreated,
 		images_error: imagesError,
 		images_orphaned: imagesOrphaned,
@@ -1520,37 +1533,64 @@ async function commitOneLot(
 }
 
 /**
- * The lot's source URL, normalised, IF its source gives each lot its own page URL
- * (SourceAdapter.lotSourceUrlIdentifiesLot - false for aureo, whose lots all carry their auction's
- * page). The adapter is re-derived from the URL itself, server-side, never from a client flag.
+ * The lot's canonical URL key, rebuilt by the BATCH's source adapter from the lot's own identity
+ * (SourceAdapter.canonicalLotUrl), or null when that source has none (aureo) or the lot's identity
+ * cannot be established - then the lot dedups on (Auction, lot number) only. The adapter is picked
+ * server-side by the batch's source domain, and the builder re-validates every client-sent field.
  */
-function candidateLotUrlKey(lot: Record<string, unknown>): string | null {
-	const key = normalizeLotUrl(lot.sourceUrl);
-	if (key === null) return null;
-	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(key));
-	return adapter?.lotSourceUrlIdentifiesLot === true ? key : null;
+function canonicalLotUrlKey(
+	adapter: SourceAdapter | undefined,
+	lot: Record<string, unknown>,
+): string | null {
+	return (
+		adapter?.canonicalLotUrl?.({
+			lotIdentifier: lot.lotIdentifier,
+			lotNumber: lot.lotNumber,
+			sourceUrl: lot.sourceUrl,
+		}) ?? null
+	);
 }
 
 /**
- * The URL keys that are AMBIGUOUS within this batch: one URL carried by two or more different
- * lots (by lotIdentifier). A per-lot source should never do that; if a page ever links every card
- * to the same URL (a "#" anchor resolves to the listing page itself), deduplicating on it would
- * collapse distinct lots into the first one - so such a URL is no key at all for this batch.
+ * The canonical URL keys that are AMBIGUOUS within this batch: one key carried by two or more
+ * DIFFERENT lots (by lotIdentifier). A key is rebuilt from the lot's identity, so this should
+ * never happen; if it ever does (a parser defect, a tampered payload), deduplicating on it would
+ * collapse distinct lots into the first one - so such a key is no key at all for this batch. A lot
+ * with no identifier never reaches here: canonicalLotUrl gives it no key in the first place.
  */
-function ambiguousLotUrlKeys(lots: readonly unknown[]): Set<string> {
-	const lotIdsByUrl = new Map<string, Set<string>>();
-	for (const lot of lots) {
-		if (lot === null || typeof lot !== 'object') continue;
-		const record = lot as Record<string, unknown>;
-		const key = candidateLotUrlKey(record);
-		if (key === null) continue;
-		const ids = lotIdsByUrl.get(key) ?? new Set<string>();
-		ids.add(String(record.lotIdentifier ?? ''));
-		lotIdsByUrl.set(key, ids);
+function ambiguousLotUrlKeys(
+	keyedLots: readonly { key: string; lotIdentifier: string }[],
+): Set<string> {
+	const lotIdsByKey = new Map<string, Set<string>>();
+	for (const { key, lotIdentifier } of keyedLots) {
+		const ids = lotIdsByKey.get(key) ?? new Set<string>();
+		ids.add(lotIdentifier);
+		lotIdsByKey.set(key, ids);
 	}
 	const ambiguous = new Set<string>();
-	for (const [key, ids] of lotIdsByUrl) if (ids.size > 1) ambiguous.add(key);
+	for (const [key, ids] of lotIdsByKey) if (ids.size > 1) ambiguous.add(key);
 	return ambiguous;
+}
+
+/** Each lot's canonical URL key for this batch (index-aligned with `lots`; null = no URL key):
+ * canonicalLotUrlKey, minus the keys ambiguousLotUrlKeys finds. */
+function batchLotUrlKeys(lots: readonly unknown[], sourceDomain: string): (string | null)[] {
+	const adapter = ADAPTERS.find((candidate) => candidate.sourceDomain === sourceDomain);
+	const keys = lots.map((lot) =>
+		lot !== null && typeof lot === 'object'
+			? canonicalLotUrlKey(adapter, lot as Record<string, unknown>)
+			: null,
+	);
+	const keyed: { key: string; lotIdentifier: string }[] = [];
+	keys.forEach((key, index) => {
+		const lotIdentifier = (lots[index] as Record<string, unknown> | null)?.lotIdentifier;
+		// canonicalLotUrl only ever keys a lot with a non-empty string identifier.
+		if (key !== null && typeof lotIdentifier === 'string') {
+			keyed.push({ key, lotIdentifier: lotIdentifier.trim() });
+		}
+	});
+	const ambiguous = ambiguousLotUrlKeys(keyed);
+	return keys.map((key) => (key !== null && !ambiguous.has(key) ? key : null));
 }
 
 /**
@@ -1641,11 +1681,11 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 
 	const auctionCache = new Map<string, ResolvedAuction>();
 	const catalogueIndex = await loadCatalogueIndex(context);
-	const ambiguousUrlKeys = ambiguousLotUrlKeys(lots);
+	const lotUrlKeys = batchLotUrlKeys(lots, auctionSourceDomain);
 	const results: CommitOneLotResult[] = [];
 	let counter = 0;
 	let stopped = false;
-	for (const lot of lots) {
+	for (const [lotIndex, lot] of lots.entries()) {
 		// Checked at the loop boundary, same idiom as tool_import_files: a lot is committed whole or
 		// not at all (C1's own transaction already guarantees that per lot), so stopping HERE never
 		// leaves a half-written record - it just leaves the REST of the batch uncommitted, reported
@@ -1659,9 +1699,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 		if (lot === null || typeof lot !== 'object') continue;
 		counter += 1;
 		const l = lot as Record<string, unknown>;
-		const candidateUrlKey = candidateLotUrlKey(l);
-		const lotUrlKey =
-			candidateUrlKey !== null && !ambiguousUrlKeys.has(candidateUrlKey) ? candidateUrlKey : null;
+		const lotUrlKey = lotUrlKeys[lotIndex] ?? null;
 		context.publishProgress?.({
 			msg: `Creating record for lot ${typeof l.lotNumber === 'string' ? l.lotNumber : counter}`,
 			counter,

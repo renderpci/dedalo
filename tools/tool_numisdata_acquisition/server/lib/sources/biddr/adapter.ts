@@ -1,3 +1,4 @@
+import { biddrCanonicalLotUrl } from '../../acquisition/keys.ts';
 import { getQueryParam } from '../../extraction/parser-utils.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
@@ -18,8 +19,8 @@ const BIDDR_HOST_PATTERN = /(^|\.)biddr\.com$/i;
 export const biddrAdapter: SourceAdapter = {
 	id: 'biddr',
 	sourceDomain: 'biddr.com',
-	// Listing/search cards link each lot's own page; a single-lot URL (`l=`) is that lot's page.
-	lotSourceUrlIdentifiesLot: true,
+	// (a, l) from the lot's own `?a=&l=` URL, only when its `l` is the parsed lot id (keys.ts).
+	canonicalLotUrl: biddrCanonicalLotUrl,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

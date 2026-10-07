@@ -1,4 +1,5 @@
 import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
+import { sixbidCanonicalLotUrl } from '../../acquisition/keys.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
 import { parseSixbidUrl, sixbidLotIdentifier, sixbidSearchIdentifier } from './api.ts';
@@ -27,8 +28,8 @@ const SIXBID_HOST_PATTERN = /(^|\.)sixbid\.com$/i;
 export const sixbidAdapter: SourceAdapter = {
 	id: 'sixbid',
 	sourceDomain: 'sixbid.com',
-	// Built from each item's own lotId/lotSlug (parser.ts), or null when the API omits them.
-	lotSourceUrlIdentifiesLot: true,
+	// The API's global lotId under its company/auction, slugs dropped (keys.ts).
+	canonicalLotUrl: sixbidCanonicalLotUrl,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

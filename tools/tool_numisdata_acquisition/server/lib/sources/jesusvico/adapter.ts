@@ -1,3 +1,4 @@
+import { jesusvicoCanonicalLotUrl } from '../../acquisition/keys.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
 import { acquireJesusvicoAuction, acquireJesusvicoLot } from './acquisition.ts';
@@ -20,8 +21,8 @@ const JESUSVICO_HOST_PATTERN = /(^|\.)jesusvico\.com$/i;
 export const jesusvicoAdapter: SourceAdapter = {
 	id: 'jesusvico',
 	sourceDomain: 'jesusvico.com',
-	// Listing cards link each lot's own page; a single-lot URL is that lot's page.
-	lotSourceUrlIdentifiesLot: true,
+	// (auction, lot number) from the parsed lotIdentifier - never the card's href (keys.ts).
+	canonicalLotUrl: jesusvicoCanonicalLotUrl,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

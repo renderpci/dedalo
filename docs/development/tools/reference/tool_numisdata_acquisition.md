@@ -23,9 +23,9 @@ Key behaviours to know:
 - **Nothing is written until Confirm.** `preview_url`/`preview_html` only fetch and parse; the
   operator curates the checklist client-side, and only `commit_lots` creates records.
 - **A lot already imported is skipped, not duplicated.** `commit_lots` matches each lot by
-  (Auction, Inventory number) where it has both, and by its normalised source URL (stored in the
-  `numisdata275` URI field) where its source gives every lot its own page — each under its own
-  advisory lock before creating it. The URL key covers the lots the first one cannot: search-batch
+  (Auction, Inventory number) where it has both, and by its CANONICAL lot URL (stored in the
+  `numisdata275` URI field) where its source adapter can rebuild one from the lot's own identity —
+  each under its own advisory lock before creating it. The URL key covers the lots the first one cannot: search-batch
   lots, a lot whose auction did not resolve, a lot with no number. Re-committing the same batch
   reports the pre-existing `section_id` with `skipped: true` and attempts nothing else for it.
 - **The Type link only ever points to an EXISTING `numisdata3` record** — a shared scholarly
@@ -80,28 +80,40 @@ Key behaviours to know:
      parsers stamp) — in which case the lot resolves against **its own** auction instead, since a
      search batch has no single real auction at all;
    - resolves/creates the Auction (`findOrCreateAuction`, cached per batch by `(house, number)`) —
-     one transaction per new Auction, locked on `numisdata224:<entityId>:<number>` (advisory lock,
-     accent-folded — see below) and re-checked under the lock before creating, so two concurrent
+     one transaction per new Auction, locked on `numisdata224:<entityId>:` + the number (advisory
+     lock, folded in SQL — see below) and re-checked under the lock before creating, so two concurrent
      commits of the same sale can't both miss the lookup and both create it;
-   - under one transaction, acquires the lock on `numisdata4:lot:<auctionSectionId>:<lotNumber>`
-     (when the lot has a resolved Auction and a lot number) and then the lock on
-     `numisdata4:url:<normalised lot URL>` (when it has a URL key) — always in that order, so two
+   - looks up (read-only, best-effort) the EXISTING Type its description cites: a catalog citation
+     matched against the Catalogues this instance curates (`extractCatalogueCitation`, longest name
+     first), then `findExistingType` (`matchLotType`);
+   - under one transaction — the record's whole BIRTH — acquires the lock on
+     `numisdata4:lot:<auctionSectionId>:` + the lot number (when the lot has a resolved Auction and a
+     lot number) and then the lock on `numisdata4:url:` + the canonical lot URL (when it has a URL
+     key) — always in that order, so two
      commits never deadlock — re-checks `findExistingLot` (exact match on the Auction relation + the
      Inventory number component) and `findExistingLotByUrl` (exact `==` match on `numisdata275`),
      and either returns the pre-existing record (`skipped: true`) or creates the new `numisdata4`
      record and writes its scalar fields (weight/diameter parsed from `"6.75g"`-style strings,
      inventory number, date text, obverse/reverse design split from a jesusvico-style
      `"A/... R/..."` description, falling back to a general Public remark field when no such split is
-     found) plus the URL key itself into `numisdata275`, in the same normalised form the lookup
-     matches. The URL key (`normalizeLotUrl`: trimmed, scheme and host lowercased, default port and
-     fragment dropped, path and query verbatim) is used only when the lot's source declares
-     `lotSourceUrlIdentifiesLot` — aureo does not (its lots all carry their auction's page URL) —
-     and never for a URL two different lots of the same batch share;
-   - links the Auction relation (outside the transaction, best-effort — the record is already real
-     by this point);
-   - best-effort matches a catalog citation from the description against the Catalogues this
-     instance curates (`extractCatalogueCitation`, longest name first) and links an EXISTING Type if
-     one matches;
+     found) plus the URL key itself into `numisdata275`, then links the resolved Auction
+     (`linkAuction`, `numisdata147`) and the matched Type (`linkType`, `numisdata161`) — all in that
+     same transaction, so there is no post-commit window in which a link write could replace a
+     curator's edit of the just-born record. A link failure rolls the whole lot back (reported in the
+     lot's `error`; the next commit retries it) — there is no savepoint to keep the record without
+     it. The URL key is `SourceAdapter.canonicalLotUrl` (`server/lib/acquisition/keys.ts`), picked
+     by the batch's source domain: ONE https URL per lot, rebuilt from the lot's identity in the
+     source's own single-lot grammar (the adapter's `parseAuctionIdentifier` reads it back as that
+     lot) — jesusvico from the parsed `lotIdentifier` (auction + lot number); biddr from the lot
+     id `l` + auction `a` of the lot's own URL, only when that `l` IS the parsed lot id; numisbids
+     from the `/sale/{id}/lot/{n}` lot URL, only for an id-carrying lot whose parsed number agrees;
+     sixbid from the global `lotId` under its company/auction, slugs dropped. Never the scraped
+     href as-is: a pasted URL, a card href, tracking params, `www.` or http/https give the same key,
+     and a broken card href resolving to the listing page gives NO key (never one every lot of the
+     listing would share, across batches). Every builder fails closed (`null` — dedup on Auction +
+     number only) on a missing, malformed or contradicting field; aureo has no builder (its lots all
+     carry their auction's page URL); and a key two different `lotIdentifier`s of one batch share is
+     dropped for that batch;
    - best-effort imports the lot's first image (`importImagesForLot`): downloads it through
      `harvestFetch` with a per-source host allowlist (the image's own host, resolved from the image
      URL itself since it isn't always the listing page's host — sixbid's `image-cdn.sixbid.com`,
@@ -117,10 +129,10 @@ Key behaviours to know:
      `section_tipo`/`section_id`) and its id is reported in the lot's `images_orphaned`, so the
      summary says which record may remain without media.
 
-   Every step past the record's own creation (Auction, Type, image) is independently best-effort:
-   its own error is captured into the per-lot result (`auction_error`/`type_error`/`images_error`,
-   each the error system's wire body, `toErrorBody(toDedaloError(error))`, never a raw exception's
-   text) rather than rolling back fields already written. `fields_written` and `images_created`
+   Auction resolution, the Type lookup and the image import are each best-effort: their own error
+   is captured into the per-lot result (`auction_error`/`type_error`/`images_error`, each the error
+   system's wire body, `toErrorBody(toDedaloError(error))`, never a raw exception's text) and the
+   lot is created without that link (or without images) rather than failed. `fields_written` and `images_created`
    carry display labels (the ontology term in the request's application language, `labelByTipo`),
    never raw tipos. The per-lot loop itself checks
    `context.signal?.aborted` at its top and breaks (setting `stopped: true`) rather than throwing, so
@@ -131,16 +143,18 @@ Shared helpers worth knowing: `writeField`/`writeField(..., lang)` is a thin wra
 `saveComponentData` for a bare `{id, value}` scalar write, throwing `record.save_failed` (never
 silently discarding a refusal) when the save itself fails; a handful of translatable fields
 (date text, obverse/reverse design, public remark) pass `currentDataLang()` explicitly rather than
-the default `NO_LANG`. `acquireDedupLock(key)` is a transaction-scoped
-`pg_advisory_xact_lock(hashtext(key))` — the same primitive as the engine's own node lock, just keyed
-on a find-or-create dedup key since the record doesn't exist yet when the race happens; it must run
-inside `withTransaction`, releasing at commit/rollback. `foldNameForLock(name)`
-(`server/lib/acquisition/keys.ts`) builds the Entity name lock key deliberately COARSER than the
-engine's `==` search, which compares `f_unaccent` values and is case-sensitive: it lowercases, maps
-the letters `unaccent` rewrites that are not a base letter plus a mark (ø→o, ł→l, đ→d, æ→ae, œ→oe,
-ß→ss, þ→th…), applies NFKD and drops every combining mark. Two spellings the search treats as the
-same Entity ("Jesús Vico" / "Jesus Vico") therefore always take the SAME lock; a coarser key only
-ever serialises two unrelated names, which is safe. Every dedup/existence lookup
+the default `NO_LANG`. `acquireDedupLock(scope, term)` (`server/lib/acquisition/lock.ts`) is a
+transaction-scoped `pg_advisory_xact_lock(hashtext(scope || lower(f_unaccent(term))))`, both values
+bound — the same primitive as the engine's own node lock, just keyed on a find-or-create dedup key
+since the record doesn't exist yet when the race happens; it must run inside `withTransaction`,
+releasing at commit/rollback. A lock key must never be FINER than the `==` equality it guards
+(`f_unaccent(a) = f_unaccent(b)`, case-sensitive), so the term is folded IN SQL by that same
+`f_unaccent` — every rule of Postgres's `unaccent` dictionary (typographic quotes, dashes,
+guillemets, accents…) applies to the lock exactly as to the search — and `lower()` on top only makes
+it coarser, which is safe (two unrelated terms may serialise on one lock; the re-check under the
+lock decides). Every lock (Entity name, Auction number, lot number, lot URL) uses it. Gate:
+`test/unit/tool_numisdata_acquisition_keys.test.ts` (a second transaction must time out on a
+spelling the search equates, and get in on an unrelated one). Every dedup/existence lookup
 (`findEntityByExactName`, `findExistingAuction`, `findExistingLot`, `findExistingType`,
 `loadCatalogueIndex`) runs through `buildSearchSql` with `{principal: context.principal}` — never a
 hand-written SQL `WHERE` — so it only ever sees records the caller can actually read.

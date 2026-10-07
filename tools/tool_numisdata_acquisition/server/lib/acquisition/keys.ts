@@ -1,97 +1,100 @@
 /**
- * Pure key derivations for commit_lots' find-or-create dedup: the advisory-lock key fold for a
- * free-text name, and the normalised per-lot source URL. No I/O, no engine imports - unit-tested
+ * Pure key derivations for commit_lots' URL dedup: each source's CANONICAL lot URL, rebuilt from
+ * the lot's own identity (SourceAdapter.canonicalLotUrl). No I/O, no engine imports - unit-tested
  * directly by test/unit/tool_numisdata_acquisition_keys.test.ts.
+ *
+ * Why rebuilt, never the scraped href: one lot used to reach the dedup under several spellings (a
+ * pasted URL vs the listing card's href, tracking params, `www.`, http vs https), each its own
+ * key - so a re-commit duplicated it; and a broken card href ("#") resolves to the LISTING page,
+ * which every lot of that listing then shared as its "own" URL - across batches, where no in-batch
+ * check sees it, so a different lot was silently skipped as "already imported". A key rebuilt from
+ * the lot's id fields has exactly one spelling, and a lot whose id cannot be established gets NO
+ * key (null), never a shared one.
+ *
+ * Every builder fails CLOSED: any field missing, malformed, or contradicting another (the lot
+ * URL's id segment against the parsed lotIdentifier) gives null, and the lot falls back to the
+ * (Auction, lot number) dedup alone. The canonical forms are each source's own single-lot URL
+ * grammar, so the adapter's parseAuctionIdentifier reads one back as that same lot.
+ *
+ * The Entity name lock is NOT here any more: its key is folded in SQL by the search's own
+ * function (index.ts acquireDedupLock), so it can never be finer than the '==' equality.
  */
 
-/**
- * Letters Postgres's `unaccent` dictionary rewrites that are NOT a base letter plus a combining
- * mark (so NFKD alone leaves them intact): stroke/bar letters, ligatures, sharp s, thorn, dotless i.
- * Lowercase only - the fold lowercases before mapping. Keyed by code point, not literal, so this
- * source stays ASCII (non-ASCII letters are easy to corrupt in transit and some render confusingly).
- */
-const UNACCENT_EXTRA: ReadonlyMap<number, string> = new Map([
-	[0x00f8, 'o'], // o with stroke
-	[0x0142, 'l'], // l with stroke
-	[0x0111, 'd'], // d with stroke
-	[0x00f0, 'd'], // eth
-	[0x00e6, 'ae'], // ae ligature
-	[0x0153, 'oe'], // oe ligature
-	[0x00df, 'ss'], // sharp s
-	[0x00fe, 'th'], // thorn
-	[0x0131, 'i'], // dotless i
-	[0x0127, 'h'], // h with stroke
-	[0x0140, 'l'], // l with middle dot
-	[0x0167, 't'], // t with stroke
-	[0x0138, 'q'], // kra
-	[0x014b, 'n'], // eng
-	[0x017f, 's'], // long s
-	[0x0133, 'ij'], // ij ligature
-	[0x0180, 'b'], // b with stroke
-	[0x0188, 'c'], // c with hook
-	[0x0192, 'f'], // f with hook
-	[0x0268, 'i'], // i with stroke
-	[0x0289, 'u'], // u bar
-]);
+import { parseBiddrSingleLotUrl } from '../sources/biddr/identifiers.ts';
+import { parseNumisbidsLotUrl } from '../sources/numisbids/acquisition.ts';
+import { parseSixbidLotUrl } from '../sources/sixbid/api.ts';
+import type { LotKeyFields } from '../sources/types.ts';
 
-/**
- * Folds a free-text name into an advisory-lock key that is COARSER than the equivalence the
- * engine's `==` search uses. That search compares `f_unaccent(a) = f_unaccent(b)` - accent-folded
- * through Postgres's unaccent dictionary, but CASE-SENSITIVE (builder_string.ts 'exact'). A lock
- * key must never be FINER than the search: two spellings the search treats as the same Entity must
- * take the same lock, or two concurrent commits both miss the lookup and both create. Coarser is
- * always safe (the worst case is two unrelated names serialising on one lock), so this folds case
- * too, maps the unaccent letters NFKD would leave alone or mis-split (UNACCENT_EXTRA), then
- * applies NFKD (compatibility forms: ligature code points, full-width letters) and drops every
- * combining mark. The real
- * correctness guarantee stays the re-check under the lock, through the actual search.
- */
-export function foldNameForLock(name: string): string {
-	// Map the unaccent letters FIRST, on the lowercased text: NFKD would otherwise split one of
-	// them into something unaccent never produces (U+0140 "l with middle dot" -> "l" + U+00B7,
-	// and the middle dot is not a combining mark, so it would survive into the key).
-	let mapped = '';
-	for (const ch of name.trim().toLowerCase()) {
-		mapped += UNACCENT_EXTRA.get(ch.codePointAt(0) ?? 0) ?? ch;
-	}
-	let out = '';
-	for (const ch of mapped.normalize('NFKD')) {
-		const code = ch.codePointAt(0) ?? 0;
-		// Combining Diacritical Marks (U+0300-U+036F) + their Supplement/Extended blocks and the
-		// half marks - every mark NFKD split an accented letter into.
-		if (
-			(code >= 0x0300 && code <= 0x036f) ||
-			(code >= 0x1ab0 && code <= 0x1aff) ||
-			(code >= 0x1dc0 && code <= 0x1dff) ||
-			(code >= 0xfe20 && code <= 0xfe2f)
-		) {
-			continue;
-		}
-		out += ch;
-	}
-	// NFKD can surface an uppercase letter from a compatibility form (e.g. a circled or
-	// full-width capital); a final lowercase keeps the key's one invariant: no uppercase survives.
-	return out.toLowerCase();
+const DIGITS = /^\d+$/;
+
+/** A non-empty trimmed string, or null for anything else (commit_lots' lots are client-sent). */
+function nonEmptyString(value: unknown): string | null {
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim();
+	return trimmed === '' ? null : trimmed;
+}
+
+/** The single capture of `pattern` against the lot's identifier, or null. */
+function identifierPart(lot: LotKeyFields, pattern: RegExp): RegExpMatchArray | null {
+	const identifier = nonEmptyString(lot.lotIdentifier);
+	return identifier === null ? null : identifier.match(pattern);
 }
 
 /**
- * The per-lot source URL in the one form it is stored and matched in (numisdata275, commit_lots'
- * URL dedup): trimmed, scheme and host lowercased (the URL parser does both, and drops a default
- * port), fragment removed. Path and query are kept verbatim - they are case-sensitive on the
- * source sites. Null when the value is not an absolute http(s) URL, so a malformed or relative
- * value can never become a dedup key.
+ * jesusvico: identity is (auction number, lot number), both carried by the parsed lotIdentifier
+ * `jesusvico:<auction>:<lot>` (the auction from the listing/lot page URL, the lot from the card's
+ * own "Lot N" text - never the card's href). An empty auction part (a listing URL with no
+ * `I<n>` segment) gives no key.
  */
-export function normalizeLotUrl(raw: unknown): string | null {
-	if (typeof raw !== 'string') return null;
-	const trimmed = raw.trim();
-	if (trimmed === '') return null;
-	let url: URL;
-	try {
-		url = new URL(trimmed);
-	} catch {
+export function jesusvicoCanonicalLotUrl(lot: LotKeyFields): string | null {
+	const match = identifierPart(lot, /^jesusvico:(\d+):(\d+[A-Za-z]*)$/);
+	if (match === null) return null;
+	return `https://www.jesusvico.com/lote/I${match[1]}/${match[2]}`;
+}
+
+/**
+ * biddr: identity is the lot id (`l`, which the parser stores as lotIdentifier) under its auction
+ * (`a`). The auction id is read from the lot's own URL, and only when that URL's `l` IS this lot's
+ * identifier - a listing/search URL (no `l`), or a URL naming another lot, gives no key.
+ */
+export function biddrCanonicalLotUrl(lot: LotKeyFields): string | null {
+	const lotId = identifierPart(lot, /^(\d+)$/)?.[1];
+	const sourceUrl = nonEmptyString(lot.sourceUrl);
+	if (lotId === undefined || sourceUrl === null) return null;
+	const parsed = parseBiddrSingleLotUrl(sourceUrl);
+	if (parsed === null || parsed.lotId !== lotId || !DIGITS.test(parsed.auctionId)) return null;
+	return `https://www.biddr.com/auction?a=${parsed.auctionId}&l=${lotId}`;
+}
+
+/**
+ * numisbids: identity is (sale, sale-scoped lot number) - the site's own `/sale/{id}/lot/{n}` lot
+ * page. Requires the parsed lot's internal id (`numisbids:<lid>`, so an id-less card never keys)
+ * and a lot URL in that grammar (a listing `/sale/{id}` never parses); when the lot carries its own
+ * parsed lot number it must agree with the URL's.
+ */
+export function numisbidsCanonicalLotUrl(lot: LotKeyFields): string | null {
+	if (identifierPart(lot, /^numisbids:(\d+)$/) === null) return null;
+	const sourceUrl = nonEmptyString(lot.sourceUrl);
+	if (sourceUrl === null) return null;
+	const parsed = parseNumisbidsLotUrl(sourceUrl);
+	if (parsed === null) return null;
+	const lotNumber = nonEmptyString(lot.lotNumber);
+	if (lotNumber !== null && lotNumber !== parsed.lotNumber) return null;
+	return `https://www.numisbids.com/sale/${parsed.saleId}/lot/${parsed.lotNumber}`;
+}
+
+/**
+ * sixbid: identity is the API's global lotId (`sixbid:<lotId>`), under its company/auction - read
+ * from the lot's URL only when that URL's lot segment IS this lotId. The category and lot slugs
+ * are display text, not identity, and are dropped.
+ */
+export function sixbidCanonicalLotUrl(lot: LotKeyFields): string | null {
+	const lotId = identifierPart(lot, /^sixbid:(\d+)$/)?.[1];
+	const sourceUrl = nonEmptyString(lot.sourceUrl);
+	if (lotId === undefined || sourceUrl === null) return null;
+	const parsed = parseSixbidLotUrl(sourceUrl);
+	if (parsed === null || parsed.lotId !== lotId || !/^[a-z0-9-]+$/i.test(parsed.companySlug)) {
 		return null;
 	}
-	if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-	url.hash = '';
-	return url.toString();
+	return `https://www.sixbid.com/en/${parsed.companySlug.toLowerCase()}/${parsed.auctionId}/${lotId}`;
 }

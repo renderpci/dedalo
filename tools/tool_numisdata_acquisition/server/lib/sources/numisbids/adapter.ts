@@ -1,4 +1,5 @@
 import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
+import { numisbidsCanonicalLotUrl } from '../../acquisition/keys.ts';
 import type { SourceAdapter } from '../types.ts';
 import { urlHostname } from '../types.ts';
 import { numisbidsLotIdentifier, parseNumisbidsSaleId } from './acquisition.ts';
@@ -27,8 +28,8 @@ const NUMISBIDS_HOST_PATTERN = /(^|\.)numisbids\.com$/i;
 export const numisbidsAdapter: SourceAdapter = {
 	id: 'numisbids',
 	sourceDomain: 'numisbids.com',
-	// Listing cards link each lot's own page; a single-lot URL is that lot's page.
-	lotSourceUrlIdentifiesLot: true,
+	// (sale, lot number) from the lot's own `/sale/{id}/lot/{n}` URL, id-carrying lots only (keys.ts).
+	canonicalLotUrl: numisbidsCanonicalLotUrl,
 
 	matchesUrl(rawUrl) {
 		const hostname = urlHostname(rawUrl);

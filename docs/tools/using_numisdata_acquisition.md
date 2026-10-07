@@ -85,9 +85,13 @@ it, its button opens in a **modal** (not a separate window).
 
 !!! note "Re-importing the same batch does not duplicate it"
     Each lot is matched by its Auction plus its own lot/inventory number, and — for every source
-    except aureo.com, whose lots have no page of their own — by the lot's own page address, which
-    the tool stores in the record's URI field. A lot already imported is reported as skipped, not
-    duplicated, even from a search-results page or when its auction could not be identified.
+    except aureo.com, whose lots have no page of their own — by a canonical address the tool builds
+    from the lot's own identifier on the auction site (the same address however the lot was
+    reached: a pasted link, the listing, with or without `www.` or tracking parameters), which it
+    stores in the record's URI field. A lot already imported is reported as skipped, not duplicated,
+    even from a search-results page or when its auction could not be identified. When the tool
+    cannot tell which lot a link names (for example a listing card whose link is broken), that lot
+    is matched by Auction and number only — it is never treated as a copy of another lot.
     Re-running Confirm import — including after stopping a batch partway — picks up only what is
     left.
 

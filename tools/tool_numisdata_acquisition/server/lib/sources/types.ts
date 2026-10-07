@@ -31,6 +31,17 @@ export type AcquisitionProgress = (
 ) => void;
 
 /**
+ * The lot fields a canonical lot URL is rebuilt from. `unknown`, not ExtractedLot's own types:
+ * commit_lots receives the lots back from the client, so every field is re-validated by the
+ * adapter rather than trusted to still have its parsed shape.
+ */
+export interface LotKeyFields {
+	lotIdentifier: unknown;
+	lotNumber: unknown;
+	sourceUrl: unknown;
+}
+
+/**
  * One implementation per acquisition source (Biddr, sixbid, ...). ingestion-service.ts picks the
  * matching adapter for a pasted URL and drives Retrieve/Refresh/Reimport through it generically
  * instead of hardcoding a single source.
@@ -40,11 +51,16 @@ export interface SourceAdapter {
 	/** Matches the DB's `auctions.source_domain` column for this source. */
 	sourceDomain: string;
 	/**
-	 * True only when every ExtractedLot.sourceUrl this adapter produces names THAT lot's own page
-	 * (not the auction's, not a listing page) - commit_lots then uses the normalised URL as a dedup
-	 * key that needs no resolved Auction. False for a source whose lots only carry a shared URL.
+	 * The lot's CANONICAL page URL - commit_lots' auction-independent dedup key, stored in
+	 * numisdata4's URI field and matched/locked on. Rebuilt from THIS source's own lot identity
+	 * (the parsed lot's id fields: lotIdentifier, lotNumber, the id segments of its own lot URL),
+	 * in one fixed https form - never the href as scraped, so a pasted URL, a card href, tracking
+	 * params, `www.` or http/https all give the SAME key for one lot. Null whenever the lot's own
+	 * id cannot be established (missing identifier, or a URL that does not name a lot - e.g. a
+	 * broken card href resolving to the listing page): such a lot gets no URL key at all, never a
+	 * shared one. Absent for a source with no per-lot identity URL (aureo).
 	 */
-	lotSourceUrlIdentifiesLot: boolean;
+	canonicalLotUrl?(lot: LotKeyFields): string | null;
 	matchesUrl(rawUrl: string): boolean;
 	/** Extracted synchronously from the URL alone (no network) - used for the dedupe fast path. */
 	parseAuctionIdentifier(rawUrl: string): string | null;
