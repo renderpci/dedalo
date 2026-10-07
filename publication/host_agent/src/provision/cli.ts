@@ -5,7 +5,9 @@
  *   bun run src/provision/cli.ts check  <instance> [--declaration <file>]   dry run (root)
  *   bun run src/provision/cli.ts apply  <instance> [--declaration <file>]   converge (root)
  *
- * The declaration defaults to /etc/dedalo_publication_host/<instance>.json. Exit codes and
+ * The declaration defaults to /etc/dedalo_publication_host/<instance>.json. `check` and `apply`
+ * refuse a declaration (and a sibling declaration) a non-root principal could edit or replace —
+ * see declarationTrustProblems. Exit codes and
  * the secret guard are copied from publication/site_builder/src/provision/cli.ts (EXIT,
  * secretShapedAssignment incl. its placeholder exemption, guarded sinks); the fleet, adopt
  * and remove verbs are not.
@@ -32,8 +34,8 @@ import type { ProvisionIo } from './apply';
 import { apply, hostIo, observeHost, writeAtomic } from './apply';
 import type { AgentLayout } from './layout';
 import { DEFAULT_PATHS, INSTANCE_PATTERN } from './layout';
-import type { Action, HostState } from './plan';
-import { PlanRefused, describe, plan, renderAll } from './plan';
+import type { Action, EntryType, HostState, PathFacts } from './plan';
+import { PlanRefused, ancestorsBelow, describe, plan, renderAll, trustProblem } from './plan';
 import { renderFacts, TOKEN_PLACEHOLDER } from './render/engine_fragment';
 import { DeclarationError, parseDeclaration } from './schema';
 import type { Sibling } from './siblings';
@@ -150,8 +152,11 @@ export interface ProvisionDeps {
   listDeclarations(dir: string): string[];
   /** The canonical path (realpath), or the path itself when it does not resolve. */
   canonical(path: string): string;
-  /** lstat: is this path a symbolic link? */
-  isSymlink(path: string): boolean;
+  /**
+   * lstat facts of one path, never following a link (null: absent or not inspectable). The
+   * declaration trust law walks a path and its ancestors through this door.
+   */
+  lstat(path: string): PathFacts | null;
   /** lstat regular file, never following a link: picks the web server's configtest binary. */
   isRealFile(path: string): boolean;
   isRoot(): boolean;
@@ -165,6 +170,22 @@ export interface ProvisionDeps {
 function readOrNull(path: string): string | null {
   try {
     return readFileSync(path, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function entryType(stats: { isDirectory(): boolean; isFile(): boolean; isSymbolicLink(): boolean }): EntryType {
+  if (stats.isSymbolicLink()) return 'symlink';
+  if (stats.isDirectory()) return 'dir';
+  if (stats.isFile()) return 'file';
+  return 'other';
+}
+
+function lstatFacts(path: string): PathFacts | null {
+  try {
+    const stats = lstatSync(path);
+    return { type: entryType(stats), uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777 };
   } catch {
     return null;
   }
@@ -191,13 +212,7 @@ export function hostDeps(): ProvisionDeps {
         return resolve(path);
       }
     },
-    isSymlink: path => {
-      try {
-        return lstatSync(path).isSymbolicLink();
-      } catch {
-        return false;
-      }
-    },
+    lstat: lstatFacts,
     isRealFile: path => {
       try {
         return lstatSync(path).isFile();
@@ -213,21 +228,122 @@ export function hostDeps(): ProvisionDeps {
   };
 }
 
+/* ── the declaration trust law ────────────────────────────────────────────────────── */
+
+/**
+ * Root ACTS on a declaration: it chooses the accounts the sudoers/polkit grants name, the units,
+ * the paths root writes. Whoever can edit it — or replace it, or a directory above it — can make
+ * the next `apply` grant root-reachable permissions to an account of their choice. So `check`
+ * and `apply` only read a declaration that is a REGULAR file (lstat: never a symlink, which can
+ * be repointed after this check), owned by uid 0 and not group/world-writable, under real
+ * directories with the same property up to and including '/'. The ownership/mode test is
+ * plan.ts's trustProblem and the walk is its ancestorsBelow — ONE trust law for the pinned code
+ * and the declaration. uid 0 only: the host's user table is not consulted before the
+ * declaration is trusted. `render` is exempt: it needs no root, writes nothing, grants nothing
+ * (an operator drafts and reviews a declaration from anywhere before installing it).
+ */
+export const DECLARATION_TRUST_ROOT = '/';
+
+/**
+ * Refusal lines for one declaration path (`what` names it in each line). `judged` carries the
+ * directories already judged, so several declarations under one config base name a bad
+ * directory once. An empty list: trusted.
+ */
+export function declarationTrustProblems(
+  path: string,
+  what: string,
+  lstat: (path: string) => PathFacts | null,
+  judged: Set<string> = new Set(),
+): string[] {
+  const fix = (target: string): string =>
+    `fix: chown root:root '${target}' && chmod go-w '${target}', and keep declarations in ${DEFAULT_PATHS.configBase}/`;
+  const problems: string[] = [];
+  const leaf = lstat(path);
+  if (leaf === null) return [`${what} '${path}' does not exist or cannot be inspected`];
+  if (leaf.type === 'symlink') {
+    problems.push(
+      `${what} '${path}' is a symlink — a link can be repointed after this check; replace it with the file itself ` +
+        `(owned by root, not group- or world-writable) in ${DEFAULT_PATHS.configBase}/`,
+    );
+  } else if (leaf.type !== 'file') {
+    problems.push(`${what} '${path}' is a ${leaf.type}, not a regular file`);
+  } else {
+    const problem = trustProblem(leaf, 0);
+    if (problem) {
+      problems.push(
+        `${what} '${path}' is ${problem} — whoever can edit it chooses whom the next apply grants root-reachable ` +
+          `permissions; ${fix(path)}`,
+      );
+    }
+  }
+  problems.push(...directoryTrustProblems(path, what, lstat, judged, false));
+  return problems;
+}
+
+/**
+ * The directories above `path` (and `path` itself when `inclusive`), '/' included: each a real
+ * directory owned by uid 0, not group/world-writable. An absent directory is skipped (its
+ * existing parent is judged); an absent ANCESTOR of an existing leaf cannot happen, so a leaf
+ * check always reaches here with every ancestor observable or refused.
+ */
+function directoryTrustProblems(
+  path: string,
+  what: string,
+  lstat: (path: string) => PathFacts | null,
+  judged: Set<string>,
+  inclusive: boolean,
+): string[] {
+  const problems: string[] = [];
+  const chain = [DECLARATION_TRUST_ROOT, ...ancestorsBelow(path, DECLARATION_TRUST_ROOT), ...(inclusive ? [path] : [])];
+  for (const dir of chain) {
+    if (judged.has(dir)) continue;
+    judged.add(dir);
+    const facts = lstat(dir);
+    if (facts === null) continue;
+    if (facts.type !== 'dir') {
+      problems.push(
+        `'${dir}' (above ${what} '${path}') is a ${facts.type}, not a real directory — keep declarations in ` +
+          `${DEFAULT_PATHS.configBase}/ under real, root-owned directories`,
+      );
+      continue;
+    }
+    const problem = trustProblem(facts, 0);
+    if (problem) {
+      problems.push(
+        `'${dir}' (above ${what} '${path}') is ${problem} — a non-root principal could replace or remove the ` +
+          `declarations below it; fix: chown root:root '${dir}' && chmod go-w '${dir}'`,
+      );
+    }
+  }
+  return problems;
+}
+
 /**
  * Every other declaration in the config base, judged against this one. A sibling that does
  * not parse is a refusal too: isolation that cannot be checked is not assumed.
  */
-function siblingProblems(layout: AgentLayout, source: string, deps: ProvisionDeps): string[] {
+function siblingProblems(layout: AgentLayout, source: string, deps: ProvisionDeps, judged: Set<string>): string[] {
   // Compared canonically: `--declaration ./x.json`, a doubled '/' or a symlinked config base
   // still names this instance's own file, never a sibling.
   const own = new Set([source, join(layout.configBase, `${layout.instance}.json`)].map(path => deps.canonical(path)));
-  const problems: string[] = [];
+  // The config base itself and every directory above it, also when it holds no sibling: whoever
+  // can write there can REMOVE a sibling and so hide the clash this check exists to find.
+  const problems: string[] = directoryTrustProblems(
+    layout.configBase,
+    'the config base',
+    path => deps.lstat(path),
+    judged,
+    true,
+  );
   const siblings: Sibling[] = [];
   for (const path of deps.listDeclarations(layout.configBase)) {
     if (own.has(deps.canonical(path))) continue;
-    if (deps.isSymlink(path)) {
+    // A sibling steers this isolation check: one a non-root principal can edit is untrusted input
+    // (it could hide a clash, or invent one). Same law as the own declaration; never followed.
+    const untrusted = declarationTrustProblems(path, 'sibling declaration', p => deps.lstat(p), judged);
+    if (untrusted.length > 0) {
       problems.push(
-        `cannot check isolation against '${path}' (a symlink: replace it with the file, or move it out of ${layout.configBase})`,
+        ...untrusted.map(line => `cannot check isolation against '${path}': ${line} — or move it out of ${layout.configBase}`),
       );
       continue;
     }
@@ -324,7 +440,19 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
   }
 
   try {
-    const source = args.declaration ?? join(DEFAULT_PATHS.configBase, `${args.instance}.json`);
+    // Resolved ONCE: the path judged below is the path read (a relative --declaration is the cwd's).
+    const source = resolve(args.declaration ?? join(DEFAULT_PATHS.configBase, `${args.instance}.json`));
+    // Directories judged by the declaration trust law, shared with the sibling pass below.
+    const judged = new Set<string>();
+    if (args.verb !== 'render') {
+      if (!deps.isRoot()) {
+        err(`provision: '${args.verb}' reads root-only files and must run as root`);
+        return EXIT.REFUSED;
+      }
+      // Judged BEFORE it is read: root never parses a declaration a non-root principal can steer.
+      const untrusted = declarationTrustProblems(source, 'the declaration', path => deps.lstat(path), judged);
+      if (untrusted.length > 0) throw new PlanRefused(args.instance, untrusted);
+    }
     const text = deps.readDeclaration(source);
     if (text === null) {
       err(`provision: no readable declaration at '${source}'`);
@@ -353,13 +481,8 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       return EXIT.OK;
     }
 
-    if (!deps.isRoot()) {
-      err(`provision: '${args.verb}' reads root-only files and must run as root`);
-      return EXIT.REFUSED;
-    }
-
     // Several instances on one host: what this one may not share with the others (siblings.ts).
-    const isolation = siblingProblems(layout, source, deps);
+    const isolation = siblingProblems(layout, source, deps, judged);
     if (isolation.length > 0) throw new PlanRefused(layout.instance, isolation);
 
     const host = deps.observeHost(layout);

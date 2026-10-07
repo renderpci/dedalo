@@ -823,3 +823,31 @@ describe('the operator is told how pairing and the panel really work', () => {
 		}
 	});
 });
+
+describe('the deployment install the operator page names is frozen and production-only', () => {
+	// The outcome on a host is gated by the agent's provisioner (plan.ts refuses a devDependency
+	// in agent_dir/node_modules); this pins the command operators are told to run, argv-wise.
+	test('hostagent:install = frozen-lockfile + production in the agent package; :dev keeps the lock', () => {
+		const repo = join(import.meta.dir, '..', '..');
+		const scripts = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8')).scripts as Record<
+			string,
+			string
+		>;
+		const argvOf = (name: string): string[] => {
+			const body = scripts[name] ?? '';
+			const [cd, install] = body.split('&&').map((part) => part.trim().split(/\s+/));
+			expect(cd, `${name}: runs in the agent package`).toEqual(['cd', 'publication/host_agent']);
+			expect(install?.slice(0, 2), `${name}: a bun install`).toEqual(['bun', 'install']);
+			return install ?? [];
+		};
+		const deploy = argvOf('hostagent:install');
+		expect(deploy).toContain('--frozen-lockfile');
+		expect(deploy).toContain('--production');
+		const dev = argvOf('hostagent:install:dev');
+		expect(dev).toContain('--frozen-lockfile');
+		expect(dev).not.toContain('--production');
+		expect(
+			readFileSync(join(repo, 'publication/host_agent/bun.lock'), 'utf8').length,
+		).toBeGreaterThan(0);
+	});
+});

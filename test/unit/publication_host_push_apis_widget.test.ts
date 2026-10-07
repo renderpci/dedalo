@@ -105,6 +105,7 @@ function harness(options: HarnessOptions = {}) {
 		engineQualities: () => ['image/1.5MB'],
 		filterPublicQualities: (configured) => [...configured],
 		engineVersion: () => '7.0.3',
+		bunPin: () => '1.4.2',
 		loadPanelRuntime: async () => {
 			counts.runtimeReads += 1;
 			return { runtime: {}, runtime_invalid: options.runtimeInvalid ?? null };

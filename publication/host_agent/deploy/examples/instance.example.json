@@ -5,10 +5,10 @@
   "agent_dir": "/opt/dedalo/publication/host_agent",
   "web": { "server": "nginx", "unit": "nginx" },
   "v1": { "user": "dedalo-site-v1" },
-  "state_root": "/srv/dedalo_publication",
+  "state_root": "/home/example.org/dedalo",
   "media": { "mode": "shared", "root": "/mnt/dedalo_media" },
   "php_bin": "/usr/bin/php",
-  "bun_bin": "/usr/local/bin/bun",
+  "bun_bin": "/home/example.org/.bun/bin/bun",
   "v2": {
     "unit": "dedalo-publication-api-v2",
     "user": "dedalo-api-v2",

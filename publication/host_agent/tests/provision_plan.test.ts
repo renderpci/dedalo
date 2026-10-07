@@ -8,10 +8,14 @@ import { stamp } from '../src/provision/hash';
 import type { AgentLayout } from '../src/provision/layout';
 import { derive, markerContent } from '../src/provision/layout';
 import type { Action } from '../src/provision/plan';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
+  AGENT_DEV_DEPENDENCIES,
   PlanRefused,
   RENDERERS,
   TEST_SCRATCH_DIR,
+  agentDevDependencyPaths,
   agentScratchPath,
   ancestorsBelow,
   assertPlanIsCoherent,
@@ -228,6 +232,30 @@ describe('plan refusals', () => {
       `agent_dir holds a test scratch tree '${l.agentDir}/.test-tmp' — the suite ran in this checkout; ` +
         'remove it (it is what lets a hand start fall back to the committed .env.test test mode)',
     ]);
+  });
+
+  test('a development dependency installed in agent_dir is refused (the deployment install is production-only)', () => {
+    const pkg = JSON.parse(readFileSync(join(import.meta.dir, '..', 'package.json'), 'utf8')) as {
+      devDependencies: Record<string, string>;
+    };
+    // The list IS the package's devDependencies, and it is not empty (never a vacuous gate).
+    expect(AGENT_DEV_DEPENDENCIES).toEqual(Object.keys(pkg.devDependencies).sort());
+    expect(AGENT_DEV_DEPENDENCIES).toContain('typescript');
+    const l = layout();
+    expect(() => plan(l, converged(l).state())).not.toThrow();
+    for (const path of agentDevDependencyPaths(l)) {
+      expect(path.startsWith(`${l.agentDir}/node_modules/`)).toBe(true);
+      const host = converged(l);
+      host.entries.set(path, { type: 'dir', uid: 0, gid: 0, mode: 0o755, body: '' });
+      expect(refusals(l, host)).toEqual([
+        `agent_dir holds development dependencies ('${path}') — it was prepared with hostagent:install:dev ` +
+          "or the suite ran in it; delete its node_modules/ (a production install over it keeps the development packages), run 'bun run hostagent:install' (frozen, production-only) and copy that tree",
+      ]);
+    }
+    // A runtime dependency is expected there.
+    const host = converged(l);
+    host.entries.set(`${l.agentDir}/node_modules/zod`, { type: 'dir', uid: 0, gid: 0, mode: 0o755, body: '' });
+    expect(() => plan(l, host.state())).not.toThrow();
   });
 
   test('a hand-edited artifact is refused, not overwritten', () => {

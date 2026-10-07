@@ -216,6 +216,25 @@ describe('hostIo + observeHost on a real tree', () => {
     }
     expect(plan(layout, observe())).toEqual([]);
   });
+
+  test('observeHost sees a development dependency in agent_dir/node_modules (scoped too), and plan refuses it', () => {
+    const modules = join(layout.agentDir, 'node_modules');
+    mkdirSync(join(modules, 'zod'), { recursive: true });
+    try {
+      expect(plan(layout, observe())).toEqual([]); // a runtime dependency is expected there
+      for (const name of ['typescript', '@types/bun']) {
+        mkdirSync(join(modules, name), { recursive: true });
+        try {
+          expect(() => plan(layout, observe())).toThrow(/development dependencies/);
+        } finally {
+          rmSync(join(modules, name), { recursive: true, force: true });
+        }
+      }
+    } finally {
+      rmSync(modules, { recursive: true, force: true });
+    }
+    expect(plan(layout, observe())).toEqual([]);
+  });
 });
 
 describe('root never follows a link planted between plan and apply', () => {

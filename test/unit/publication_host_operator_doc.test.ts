@@ -66,7 +66,9 @@ describe('publication host operator page', () => {
 		expect(page).toContain(`--user-group ${one.identity.agentUser}`);
 		expect(page).toContain(`groupadd --system ${one.identity.v2Group}`);
 		expect(page).toContain(`-g ${one.identity.v2Group} ${one.identity.v2User}`);
-		expect(page).toContain(`-g www-data ${one.identity.v1User}`);
+		expect(page).toMatch(
+			new RegExp(`-g www-data -d /home/\\S+/httpdocs ${one.identity.v1User}\\b`),
+		);
 	});
 
 	test('the shared API configuration step exists, with its refusal in troubleshooting', () => {

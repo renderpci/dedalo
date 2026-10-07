@@ -102,12 +102,21 @@ Neither grant lets the work system reach root through the agent:
 
 ### 1. Prepare the code
 
-The publication host never downloads packages. On the **work host**, in your Dédalo
-checkout:
+The publication host never downloads the agent's packages. On the **work host**, in your
+Dédalo checkout:
 
 ```bash
 bun run hostagent:install
 ```
+
+This runs `bun install --frozen-lockfile --production` in `publication/host_agent/`, the
+same locked install as the [work system's own](production.md#6-get-the-code):
+
+- it installs exactly the versions in the committed `publication/host_agent/bun.lock` and
+  never rewrites it. If `package.json` and the lock disagree, it stops with *lockfile had
+  changes, but lockfile is frozen*: fix the checkout, never install without the lock;
+- it installs the runtime dependencies only. The development tools (TypeScript and the
+  type definitions) never reach the publication host.
 
 Then copy the `publication/host_agent/` directory, including `node_modules/`, to the
 publication host. Root runs the provisioner from this copy and systemd starts the agent
@@ -120,17 +129,22 @@ from it, so step 4's `check` refuses a copy that anyone but root could change:
 - **declare the real path**, not a symbolic link (a link can be repointed after the check);
 - **leave out `.test-tmp/`**. It appears in a checkout where the agent's own test suite
   ran (`bun run hostagent:test`). Copy from a checkout where it did not, or delete it on
-  the publication host.
+  the publication host. A checkout where the suite ran also holds the development tools
+  in `node_modules/` (`bun run hostagent:install:dev`, which the suite needs). Copy from
+  a checkout prepared with `bun run hostagent:install` only: `check` refuses an
+  `agent_dir` whose `node_modules/` holds a development dependency. Running
+  `hostagent:install` over an existing development install does **not** remove those
+  packages: delete `publication/host_agent/node_modules/` first, then run it.
 
 ### 2. Declare the instance
 
 The declaration is one JSON file, `/etc/dedalo_publication_host/<instance>.json`. Write it
 first: it names the accounts that step 3 creates. A complete declaration for **one machine**
-(the work system and the website on the same server):
+(the work system and the website `museum.org` on the same server):
 
 ```json
 {
-  "instance": "museum",
+  "instance": "museum_org",
   "listen": { "kind": "unix" },
   "agent_user": "dedalo-pubhost",
   "engine_group": "dedalo",
@@ -140,7 +154,7 @@ first: it names the accounts that step 3 creates. A complete declaration for **o
   "state_root": "/home/museum.org/dedalo",
   "media": { "mode": "shared", "root": "/mnt/dedalo_media" },
   "php_bin": "/usr/bin/php8.3",
-  "bun_bin": "/usr/local/bin/bun",
+  "bun_bin": "/home/museum.org/.bun/bin/bun",
   "v2": {
     "unit": "dedalo-publication-api-v2",
     "user": "dedalo-api-v2",
@@ -160,7 +174,7 @@ On **two machines**, the listener is the private address the agent binds, and th
 
 | Field | What to put |
 | --- | --- |
-| `instance` | a name for this publication host: lowercase letters, digits and `_`, starting with a letter, 2 to 32 characters. The file is named after it |
+| `instance` | a name for this publication host: lowercase letters, digits and `_`, starting with a letter, 2 to 32 characters. The file is named after it. Name it after the site's domain, with each `.` and `-` replaced by `_`: the site `my-hosts.org` lives in `/home/my-hosts.org/`, its instance is `my_hosts_org`, its declaration `/etc/dedalo_publication_host/my_hosts_org.json` and its agent service `dedalo-publication-host-my_hosts_org`. Shorten a longer domain, and prefix one that starts with a digit |
 | `listen` | `{"kind": "unix"}` on one machine (the socket path is derived). On two machines `{"kind": "tls", "host": …, "port": …}`: the host is the **private IPv4 address** the agent binds, written as a literal such as `10.20.0.2`: no hostname, no wildcard (`0.0.0.0`). It also becomes the server certificate's name, so the work system connects to that address |
 | `agent_user` | a new account for the agent alone (step 3 creates it) |
 | `engine_group` | one machine only: the group of the account that runs Dédalo (`id -gn <that account>`). The agent's socket belongs to it, so only the work system can connect |
@@ -170,7 +184,7 @@ On **two machines**, the listener is the private address the agent binds, and th
 | `state_root` | a new directory for the agent: the API releases, the media rules, the audit log. It and **every directory above it** must be owned by root and writable by no one else, because whoever owns a parent directory can replace what is inside it. So it can never be inside a directory the site's user owns. With one site per home directory, use `/home/<site>/dedalo` (see [Lay out each site in its home directory](#lay-out-each-site-in-its-home-directory)) |
 | `media` | `shared` (the publication host mounts the work system's media read-only), `copy` (the agent keeps its own copy of the published files) or `none`; unless `none`, the media `root` |
 | `php_bin` | the real PHP binary that checks v1 releases, never a link (see below) |
-| `bun_bin` | the real Bun binary that runs the agent and the v2 API, never a link (see below) |
+| `bun_bin` | the real Bun binary that runs the agent and the v2 API, never a link: the site's own copy, `/home/<site>/.bun/bin/bun` (see below) |
 | `v2` | the v2 API's systemd unit name, its own new user and group (step 3 creates them), its local port, and its health URL: `http://127.0.0.1:<port>/health`. The v2 API answers `/health` whatever URL prefix it is published under, so keep that form |
 
 The agent, v1 and v2 accounts must be three different accounts, none of them `root`.
@@ -190,15 +204,58 @@ Declare the version-named file (`/usr/bin/php8.3`) on purpose: it is the version
 your v1 releases, so it should be the version your web server runs the v1 API with. A later
 `update-alternatives` switch then cannot change it silently.
 
-Bun's own installer puts Bun in a home directory (`~/.bun/bin/bun`). That copy fails the
-check, because the file and every directory above it must belong to root and be writable by
-no one else. Install a system copy and declare it:
+**One Bun per site.** Each instance runs its own copy of Bun, at exactly the version the work
+system pins (the `.bun-version` file at the root of its checkout), as each Dédalo instance
+does on the work system (see [Multiple instances on one server](multi_instance.md#layout-per-instance)).
+Install it as root, into the site's home directory. Download the release archive and Bun's
+checksum list, check the archive against the list, and only then install it. Never pipe a
+download into a root shell: nothing would check what runs.
 
 ```bash
-install -o root -g root -m 0755 ~/.bun/bin/bun /usr/local/bin/bun
+cat .bun-version          # on the work host, in the Dédalo checkout: for example 1.4.2
+
+# on the publication host, as root (aarch64 servers: bun-linux-aarch64)
+V=1.4.2; A=bun-linux-x64
+D=$(mktemp -d) && cd "$D"
+curl -fsSLO "https://github.com/oven-sh/bun/releases/download/bun-v$V/$A.zip"
+curl -fsSLO "https://github.com/oven-sh/bun/releases/download/bun-v$V/SHASUMS256.txt"
+sha256sum -c --ignore-missing SHASUMS256.txt     # must print "<A>.zip: OK"
+unzip -q "$A.zip"
+install -d -o root -g root -m 0755 /home/museum.org/.bun /home/museum.org/.bun/bin
+install -o root -g root -m 0755 "$A/bun" /home/museum.org/.bun/bin/bun
+cd / && rm -rf "$D"
+stat -c '%U:%G %a %n' /home/museum.org/.bun /home/museum.org/.bun/bin /home/museum.org/.bun/bin/bun
+/home/museum.org/.bun/bin/bun --version
 ```
 
-After each Bun update, copy it again the same way.
+`sha256sum -c` must answer `OK` for the archive; stop on anything else. Bun also publishes a
+signed `SHASUMS256.txt.asc` with each release: if your policy requires a signature and not
+only a checksum, verify it with `gpg --verify SHASUMS256.txt.asc SHASUMS256.txt` against
+Bun's release key, obtained through a channel you trust, before `sha256sum -c`.
+`stat` must show `root:root` and no group or other write bit on all three, and `--version`
+the pinned version. Then declare `"bun_bin": "/home/museum.org/.bun/bin/bun"`.
+
+A publication host without internet access: download and check the archive the same way
+on a machine that has it, copy the `.zip` **and** `SHASUMS256.txt` to the publication host,
+run `sha256sum -c --ignore-missing SHASUMS256.txt` there again, then unzip and `install` as
+above. Never copy an unpacked `.bun/` tree: nothing on the host could then check it.
+
+The panel's Bun version row compares the version the binary reports with the pin. It shows
+version drift, not integrity: the checksum step above is what checks the bytes.
+
+Unlike on the work system, this copy belongs to **root**, not to the site's user: this
+binary runs the agent, which holds the sudo and polkit grants, so whoever could replace it
+would inherit them. This is why the site's home directory itself belongs to root in
+[the per-site layout](#lay-out-each-site-in-its-home-directory). `check` refuses a Bun
+binary, or a directory above it, that anyone but root owns or can write.
+
+To upgrade one site, repeat the download, check and `install` for that site with the new
+version, then
+`bun run provision apply <instance>` and restart the site's two Bun services, which keep
+the old binary until then: `systemctl restart dedalo-publication-host-<instance> <v2.unit>`.
+The other sites keep their own Bun until you upgrade them. The **Publication hosts** panel
+shows a site whose Bun differs from the work system's pin in red
+([Bun version](#the-publication-hosts-panel)).
 
 ### 3. Create the accounts
 
@@ -226,7 +283,7 @@ The other two usually exist already:
     set `user = museum_site` and `group = www-data` in the site's pool file:
 
     ```bash
-    useradd --system --no-create-home --shell /usr/sbin/nologin -g www-data museum_site
+    useradd --system --no-create-home --shell /usr/sbin/nologin -g www-data -d /home/museum.org/httpdocs museum_site
     ```
 
 - **`engine_group`** (one machine) is the group of the account that runs Dédalo. Do not
@@ -243,6 +300,36 @@ As root, in the copied `publication/host_agent/` directory:
 bun run provision check <instance>    # what would change; writes nothing
 bun run provision apply <instance>    # directories, units, rules, certificates, the token
 ```
+
+Root has no `bun` of its own when each site has its own Bun: run the commands with the
+site's, for example `/home/museum.org/.bun/bin/bun run provision check museum_org`. The
+same applies to every `bun run provision …` command on this page.
+
+**Only a declaration that root alone can change is acted on.** Root grants permissions
+from the declaration (the sudo and polkit rules, the units, the accounts they name), so
+whoever could edit or replace it could make the next `apply` grant root-reachable
+permissions to an account of their choice. Before reading the declaration, `check` and
+`apply` refuse it unless:
+
+- it is a **regular file**, not a symbolic link (a link can be repointed after the check);
+- it is **owned by root** and **not writable by group or others** (`0644` or `0600`);
+- **every directory above it**, up to and including `/`, is a real directory owned by root
+  and not writable by group or others.
+
+Keep the declarations in `/etc/dedalo_publication_host/`: the check against the other
+instances (see [Several instances on one server](#several-instances-on-one-server)) reads only
+that directory, and the instance's token and certificates live there anyway. After writing a
+declaration as root:
+
+```bash
+chown root:root /etc/dedalo_publication_host/museum_org.json
+chmod 0644 /etc/dedalo_publication_host/museum_org.json
+```
+
+A draft kept in a home directory, such as `--declaration /home/alice/museum_org.json`, is
+refused: copy it into `/etc/dedalo_publication_host/` as root first. `render` has no such
+rule, because it needs no root and writes nothing: draft and review a declaration anywhere
+with it.
 
 `bun run provision render <instance>` prints every file it would write, without writing
 anything and without root. Every generated file carries a hash of its own content. If
@@ -331,10 +418,13 @@ its document root, in the same home:
 ```
 /home/museum.org/              root:root 0755   owned by root, not by the site's user
 /home/museum.org/httpdocs/     museum_site      the website: the site user's home and DocumentRoot
+/home/museum.org/.bun/bin/bun  root:root 0755   the site's own Bun, at the work system's pinned version (bun_bin)
 /home/museum.org/dedalo/       state_root       created by provision apply
     publication_api/v1/current -> releases/…        the Publication API v1
     publication_api/v1/shared/server_config_api.php  museum_site, 0400
     publication_api/v2/current -> releases/…        the Publication API v2
+/home/museum.org/logs/         root:root 0750   the web server's logs (root writes them)
+/home/museum.org/logs/php/     museum_site 0700 the site's PHP error log (the pool writes it)
 ```
 
 Everything that belongs to one site is in one directory, and two sites never share one.
@@ -348,14 +438,36 @@ chmod 0755 /home/museum.org
 usermod -d /home/museum.org/httpdocs museum_site
 ```
 
-The site user still owns `httpdocs/` and can change the website as before. It can read
-`dedalo/` but not change it. If you give the site user SFTP access with `ChrootDirectory`,
-`sshd` already requires that directory to be owned by root, so the same layout serves both. If
-a hosting panel or script later gives `/home/museum.org` back to the site user, the agent
-refuses to start and `check` names the directory; give it back to root.
+Never pass `-m` to `useradd` or `usermod` for the site user: it would create or move the home
+and give it to the user. When you create a new site user, name the home and nothing else:
 
-**2. Declare it.** `"state_root": "/home/museum.org/dedalo"` and
-`"v1": { "user": "museum_site" }`, the user of the site's PHP-FPM pool.
+```bash
+useradd --system --no-create-home --shell /usr/sbin/nologin -g www-data -d /home/museum.org/httpdocs museum_site
+```
+
+The site user still owns `httpdocs/` and can change the website as before. It can read
+`dedalo/` and `.bun/` but not change them. If a hosting panel or script later gives
+`/home/museum.org` back to the site user, the agent refuses to start and `check` names the
+directory; give it back to root.
+
+If the site user uploads the website over SFTP, `/home/museum.org` is its chroot. `sshd`
+already requires a chroot to be owned by root, so the same layout serves both:
+
+```
+# /etc/ssh/sshd_config
+Match User museum_site
+    ChrootDirectory /home/museum.org
+    ForceCommand internal-sftp -d /httpdocs
+    AllowTcpForwarding no
+    X11Forwarding no
+```
+
+The user lands in `httpdocs/`, sees `dedalo/` read-only, and can read only its own site's v1
+configuration.
+
+**2. Declare it.** `"instance": "museum_org"`, `"state_root": "/home/museum.org/dedalo"`,
+`"bun_bin": "/home/museum.org/.bun/bin/bun"` (installed as in [step 2](#2-declare-the-instance))
+and `"v1": { "user": "museum_site" }`, the user of the site's PHP-FPM pool.
 
 **3. Let the site's pool read it.** If the pool limits PHP with `open_basedir` to the home
 directory, the limit already covers `dedalo/`:
@@ -370,6 +482,29 @@ php_admin_value[open_basedir] = /home/museum.org/:/tmp/
 A limit to `httpdocs/` alone would stop the v1 API from reading its own code: widen it to the
 home directory.
 
+**Logs.** The web server and the pool write different logs, and they must not share a
+directory the site user can write. Apache opens its logs as root, so a user who can replace
+a log file with a link could make root write into any file on the system. Keep the web
+server's logs in a root-owned directory and the PHP error log in one the pool owns:
+
+```bash
+install -d -o root -g root -m 0750 /home/museum.org/logs
+install -d -o museum_site -m 0700 /home/museum.org/logs/php
+```
+
+```ini
+; the site's pool file
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = /home/museum.org/logs/php/error.log
+```
+
+The virtual host below writes `ErrorLog` and `CustomLog` into `/home/museum.org/logs/`. If the
+site user must read those, give that one user read access
+(`setfacl -m u:museum_site:rX /home/museum.org/logs` and
+`setfacl -d -m u:museum_site:r /home/museum.org/logs`), never the shared `www-data` group,
+which every site's pool runs in. The v2 API and the agent log to the systemd journal
+(`journalctl -u <unit>`); the agent's audit trail is in `dedalo/audit/`.
+
 **4. Map the APIs into the site's virtual host.** The document root stays the website. The v1
 API is mapped with an `Alias` to its `current` release, and runs in the site's pool:
 
@@ -377,6 +512,8 @@ API is mapped with an `Alias` to its `current` release, and runs in the site's p
 <VirtualHost *:443>
     ServerName museum.org
     DocumentRoot /home/museum.org/httpdocs
+    ErrorLog  /home/museum.org/logs/error.log
+    CustomLog /home/museum.org/logs/access.log combined
 
     Alias /dedalo/publication/server_api/v1 /home/museum.org/dedalo/publication_api/v1/current
     <Directory /home/museum.org/dedalo/publication_api/v1>
@@ -438,10 +575,11 @@ You choose the rest, and each instance needs its own:
 | `state_root`, and a `copy` media root | each instance writes only its own directories |
 
 These can be shared: the web server and its group (every site's pool may run under it), the
-Bun and PHP paths, the work system's group (`engine_group`, as long as it is not another
+PHP path, the work system's group (`engine_group`, as long as it is not another
 instance's v2 group), a `shared` media
 root (it is mounted read-only), and the agent's code directory. If the agent's code is
-shared, every instance is updated together.
+shared, every instance is updated together. The Bun path could be shared too, but give each
+site its own (`/home/<site>/.bun/bin/bun`, step 2) so that each site upgrades on its own.
 
 !!! note "One web server, one PHP-FPM pool per site"
     The web server is shared, but the v1 API of each site runs in its own PHP-FPM pool, under
@@ -454,7 +592,12 @@ shared, every instance is updated together.
 `check` and `apply` read every other declaration in `/etc/dedalo_publication_host/` and refuse
 any field above that two instances share, naming the other instance and its file. A
 declaration there that cannot be read is also refused, because isolation that cannot be
-checked is not assumed: fix it, or move it out of that directory.
+checked is not assumed: fix it, or move it out of that directory. The other declarations
+follow the same ownership rule as this one ([step 4](#4-provision)), and so do
+`/etc/dedalo_publication_host/` and every directory above it, even when this instance's
+declaration lives elsewhere: whoever could edit another declaration could hide a clash or
+invent one, and whoever could write to the directory could remove a declaration and hide
+a clash.
 
 ## Pair it with the work system
 
@@ -546,6 +689,7 @@ paired host. The **Media access control** panel links to it. For each host it sh
 | Reachable | the agent answered |
 | Pairing | the agent still publishes the expected fingerprint; when it does not, the work system stops before sending its token |
 | Agent version | which agent release runs there |
+| Bun version | the publication host runs exactly the Bun version the work system pins (its `.bun-version` file). Green when they are equal; red when they differ in any way, even a patch or a prerelease tail, with the two versions shown (for example `1.4.1 != 1.4.2`); unknown (with a dash) when the host cannot be reached or proved, reports no version, or the work system pins none. The panel shows the expected version (this work system) and the reported one (the host) beside the media rule hashes |
 | Media mode | `shared`, `copy` or `none`, as declared on the publication host |
 | Media mount, Media read-only | the shared media mount is present and read-only |
 | Media rules | the media rules installed there are the ones the work system would generate now (expected and reported hash side by side) |
@@ -572,6 +716,8 @@ without the hosts' network addresses.
 | --- | --- | --- |
 | the registry is invalid | the `publication_hosts.json` file in the work system's private directory is unreadable or was edited by hand, or it is not a regular file of mode `0600` owned by the Dédalo user (for example, a backup restored as root or with default permissions) | restore it from a backup, then `chown <engine user> publication_hosts.json` and `chmod 600 publication_hosts.json`; or remove it and pair each host again. The panel never treats a broken file as "no hosts" |
 | Credentials is blocked with `bad_mode` or `bad_owner` | the host's secrets are not private to the Dédalo user: the `publication_hosts/` directory and the host's directory under it must be real directories of mode `0700`, and `token` and `engine_bundle.pem` regular files of mode `0600`, all owned by the Dédalo user, with no symlinks. The pairing command refuses such a directory too (it never repairs it silently) | `chown -R <engine user>` the directory, then `chmod 700` the directories and `chmod 600` the files; or `replace` the host once the directories are fixed |
+| Bun version is red | the publication host's Bun differs from the version the work system pins. The engine and the agent rely on the same Bun behaviour, so only the exact version is supported (the work system itself warns at start on any drift from its own pin) | install the pinned version for that site (step 2, *One Bun per site*), run `bun run provision apply <instance>`, restart the agent and the v2 service (`systemctl restart dedalo-publication-host-<instance> <v2.unit>`), and reload the panel |
+| Bun version is red with `malformed` | the agent reported something that is not a Bun version | check that `bun_bin` in the declaration is a real Bun binary, then `apply` again |
 | pairing mismatch | the publication host was re-provisioned (new token), or another host answers at that address | `replace` the host with its current fragment and bundle |
 | rejected credentials | the agent refused the token | `replace` the host |
 | unreachable, or did not answer in time | the agent is down, the firewall blocks the port, the address changed, or a proxy is in the way | check the agent's service, the firewall and `NO_PROXY`; nothing was applied |
@@ -698,12 +844,16 @@ taken.
 | --- | --- | --- |
 | `provision check` stops, naming a user or group | the provisioner never creates accounts | run the command it prints for each, in the order printed (step 3), then `check` again. For `engine_group`, correct the declaration instead |
 | `provision check` refuses `agent_dir` or `agent entry`, or a directory above them, as not root-owned or writable | the code was copied as a normal user, or a parent directory is group- or world-writable | `chown -R root:root` the copy, `chmod go-w` it and every parent (step 1) |
-| `provision check` refuses `agent_dir`, `php_bin` or `bun_bin` as a symlink | the declaration names a link | declare the path the refusal prints in brackets (the same as `realpath <path>`). For Bun installed in a home directory, install a system copy (step 2) |
+| `provision check` refuses `agent_dir`, `php_bin` or `bun_bin` as a symlink | the declaration names a link | declare the path the refusal prints in brackets (the same as `realpath <path>`) |
+| `provision check` refuses `bun_bin`, or a directory above it, as not root-owned or writable | Bun was installed by the site's user or into a home directory that user owns | install the site's Bun as root, and give the home directory to root (step 2, *One Bun per site*, and [the per-site layout](#lay-out-each-site-in-its-home-directory)) |
+| `provision check` or `apply` stops with "plan refused" naming the declaration: owned by uid N, group- or world-writable, or a symlink | the declaration is not a root-owned regular file, or it was written outside `/etc/dedalo_publication_host/` | `chown root:root` and `chmod go-w` it, replace a link with the file itself, and keep it in `/etc/dedalo_publication_host/` (step 4) |
+| `provision check` names a directory "above the declaration" or "above the config base" | a directory above the declaration, or above `/etc/dedalo_publication_host/`, is not owned by root, is writable by others, or is a symbolic link | `chown root:root` and `chmod go-w` the directory it names (`0755`); keep declarations under real, root-owned directories |
 | `provision check` says a field is "also used by instance …" | another declaration in `/etc/dedalo_publication_host/` uses the same user, group, unit, port or directory | give this instance its own (see [Several instances on one server](#several-instances-on-one-server)) |
-| `provision check` says "cannot check isolation against …" | another declaration in `/etc/dedalo_publication_host/` is not valid JSON, is not a valid declaration, or is a symbolic link | fix that file (replace a link with the file itself), or move it out of the directory |
+| `provision check` says "cannot check isolation against …" | another declaration in `/etc/dedalo_publication_host/` is not valid JSON, is not a valid declaration, is a symbolic link, or is not owned by root or writable by others | fix that file (replace a link with the file itself, `chown root:root` and `chmod go-w` it), or move it out of the directory |
 | `provision check` says another file "declares instance … too" | two declarations name the same instance, for example a copy kept as `<instance>.old.json` | remove one, or move the copy out of `/etc/dedalo_publication_host/` |
 | `provision check` says none of the `web.configtest_bin` candidates is a real file | the web server is not installed, or installed outside the standard `/usr/sbin` paths | install the distribution's `apache2` / `httpd` / `nginx` package, then `check` again |
 | `provision check` refuses "a test scratch tree" `.test-tmp` | the copy came from a checkout where the agent suite ran | delete `.test-tmp/` from the copy on the publication host |
+| `provision check` refuses "agent_dir holds development dependencies" | the copy came from a checkout prepared with `hostagent:install:dev`, or where the agent suite ran | on the work host, delete `publication/host_agent/node_modules/`, run `bun run hostagent:install`, and copy that tree again |
 | `provision check` refuses `listen.host` | the host is a hostname, a wildcard or not a canonical IPv4 address | declare the private IPv4 address literal the agent binds (step 2) |
 | `provision check` refuses a file "edited by hand" | a generated file no longer matches its own hash | move it aside or restore it; change the declaration instead and re-run `apply` |
 | the agent does not start, naming the client certificate authority | the certificate, key or authority file is missing or unreadable | re-run `bun run provision apply <instance>`; never disable client verification |
