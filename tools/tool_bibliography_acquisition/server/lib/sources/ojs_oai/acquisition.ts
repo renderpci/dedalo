@@ -1,7 +1,8 @@
 import { DedaloError } from '../../../../../../src/core/errors/dedalo_error.ts';
-import { toDedaloError, toErrorBody } from '../../../../../../src/core/errors/index.ts';
 import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
+import { looksBlocked } from '../../acquisition/block-signals.ts';
 import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
+import { describeFailure } from './error_summary.ts';
 import { extractArticleIds, extractDownloadUrl, extractGalleyViewUrl } from './parser.ts';
 
 const METADATA_PREFIX = 'oai_dc';
@@ -35,8 +36,18 @@ async function fetchOaiPage(
 			coordinates: { source: 'ojs_oai', url, status: response.status },
 		});
 	}
+	const html = response.text();
+	// A Cloudflare/CAPTCHA interstitial is commonly served as a plain 2xx - mainly a landing-page
+	// risk here (confirmed live: some OJS hosts block it), not the OAI-PMH XML endpoints themselves,
+	// but response.ok alone still does not mean "this is the real page" either way (review item:
+	// "block-signals.ts is never imported").
+	if (response.headers['cf-mitigated'] || looksBlocked(html)) {
+		throw new DedaloError('external.protocol', {
+			coordinates: { source: 'ojs_oai', url, cf_mitigated: response.headers['cf-mitigated'] ?? '' },
+		});
+	}
 	return {
-		html: response.text(),
+		html,
 		finalUrl: response.url,
 		httpStatus: response.status,
 		contentType: response.contentType,
@@ -165,8 +176,7 @@ export async function acquireArticleSet(
 			}
 			pages.push(raw);
 		} catch (error) {
-			const body = toErrorBody(toDedaloError(error));
-			failureDetails.push(`${articleIds[i]}: ${body.message}`);
+			failureDetails.push(`${articleIds[i]}: ${describeFailure(error)}`);
 		}
 		onProgress?.(i + 1, articleIds.length);
 	}
