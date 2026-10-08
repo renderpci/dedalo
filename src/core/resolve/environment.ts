@@ -259,15 +259,27 @@ export async function buildPageGlobals(
 				: false,
 		recovery_mode: serverState.recovery_mode,
 		data_version: DEDALO_VERSION_TRIPLE,
-		// Reconnaissance-sensitive engine facts (DB name, exact PG/runtime version,
-		// process memory) — AUTHENTICATED callers only. An unauthenticated get_environment
-		// must not hand out the database name and precise version strings for targeted
-		// CVE selection. Null for the login form (parity with dedalo_version above).
-		dedalo_db_name: isLogged ? config.db.database : null,
-		pg_version: isLogged ? await getPgVersion() : null,
-		php_version: isLogged ? `Bun ${Bun.version}` : null,
-		php_memory: isLogged ? `${Math.round(process.memoryUsage().rss / (1024 * 1024))}M rss` : null,
+		...(await engineFacts(isLogged)),
 		dedalo_root_path: null,
+	};
+}
+
+/**
+ * Reconnaissance-sensitive engine facts (DB name, exact PG/runtime version,
+ * process memory) — AUTHENTICATED callers only. An unauthenticated get_environment
+ * must not hand out the database name and precise version strings for targeted
+ * CVE selection. Null for the login form (parity with dedalo_version above).
+ * Spread in place by buildPageGlobals, so the wire key order is unchanged.
+ */
+async function engineFacts(isLogged: boolean): Promise<Record<string, string | null>> {
+	if (!isLogged) {
+		return { dedalo_db_name: null, pg_version: null, php_version: null, php_memory: null };
+	}
+	return {
+		dedalo_db_name: config.db.database,
+		pg_version: await getPgVersion(),
+		php_version: `Bun ${Bun.version}`,
+		php_memory: `${Math.round(process.memoryUsage().rss / (1024 * 1024))}M rss`,
 	};
 }
 

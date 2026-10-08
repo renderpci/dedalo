@@ -1110,9 +1110,7 @@ describe('orphan markers are collected automatically, backlog included', () => {
 		// migrations and the schedulers already sit behind (databaseBoot also keeps a
 		// mid-wizard boot off the not-yet-seeded database — install_mode_boot.test.ts).
 		const call =
-			/if \(databaseBoot && !smokeBoot\)[\s\S]{0,3000}?startExpiredSessionSweeper\(\)/.exec(
-				server,
-			);
+			/if \(databaseBoot && !smokeBoot\)[\s\S]{0,3000}?startExpiredSessionSweeper\(\)/.exec(server);
 		expect(call, 'startExpiredSessionSweeper is not behind the smoke-boot guard').not.toBeNull();
 	});
 });
