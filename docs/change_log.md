@@ -1164,6 +1164,10 @@ Merged since the last release; these ship with the next one.
 
     On macOS, and on Docker Desktop under WSL or with a remote Docker host, `./install.sh` stopped silently right after its banner. Its free-disk check used a Linux-only option. The check is now portable. Where the free space cannot be measured from the host, the check is skipped and the install continues. See [Simple install](./install/quickstart.md).
 
+- **The browser install wizard's first screen no longer fails with "An unexpected error occurred" in containers.**
+
+    On a machine with no database yet, such as any container, the wizard's first call tried to read the database for the names of the configured languages and failed. The wizard now names them from the installer's own language list. See [Simple install](./install/quickstart.md#path-2-browser-wizard).
+
 - **The auction-URL and journal-URL import tools now declare the sections they belong to.**
 
     The two import tools are registered for their own sections only (`numisdata4` for auction URLs; `rsc205` and `rsc3` for journal URLs), so the restriction no longer depends on their server code loading. Run *Register tools* after the update to apply it.
