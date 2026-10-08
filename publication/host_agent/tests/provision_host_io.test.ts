@@ -15,6 +15,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
   chmodSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -39,10 +40,12 @@ import type { Renderer } from '../src/provision/render/types';
 import { PENDING_FACTS } from '../src/provision/render/types';
 import { sudoersRenderer } from '../src/provision/render/sudoers';
 import { unixDeclaration } from './fixtures/provision_declaration';
+import { FakeHost } from './support/provision_fake_host';
 
 const uid = process.getuid?.() ?? 0;
 const gid = process.getgid?.() ?? 0;
 const ok = { code: 0, stdout: '', stderr: '' };
+const OWN_PRIMARY_GID = 0x7ffffffe;
 /** What the stub's `chattr +a` sealed; the paired probe reports exactly these. */
 const sealed = new Set<string>();
 
@@ -53,6 +56,9 @@ const unitOf = (unit: string) => units.get(unit) ?? { enabled: false, active: fa
 const stubExec: ProvisionExec = {
   userId: () => uid,
   groupId: () => gid,
+  // Every group name resolves to this process's gid, so each account's OWN primary group must be
+  // another (unused) gid: one the engine group could equal is plan's engine_group refusal.
+  userGroups: () => ({ primary: OWN_PRIMARY_GID, all: [OWN_PRIMARY_GID] }),
   unitState: unit => unitOf(unit),
   daemonReload: () => ok,
   enableUnit: unit => {
@@ -234,6 +240,132 @@ describe('hostIo + observeHost on a real tree', () => {
       rmSync(modules, { recursive: true, force: true });
     }
     expect(plan(layout, observe())).toEqual([]);
+  });
+
+  test("observeHost walks agent_dir's whole tree, and plan refuses a file the agent cannot read (owner bits: every account is this uid)", () => {
+    const tree = observe().agentTree;
+    expect(tree.incomplete).toBeNull();
+    expect(tree.paths[0]).toBe(layout.agentDir);
+    expect(tree.paths).toContain(layout.agentEntry);
+    const deep = join(layout.agentDir, 'node_modules', 'zod', 'index.js');
+    mkdirSync(join(layout.agentDir, 'node_modules', 'zod'), { recursive: true });
+    chmodTree(join(layout.agentDir, 'node_modules'));
+    writeFileSync(deep, '');
+    chmodSync(deep, 0o044); // group/other may read; the OWNER — this uid, every account here — may not
+    try {
+      expect(() => plan(layout, observe())).toThrow(
+        `agent_dir '${layout.agentDir}' holds 1 entry not readable by dedalo-pubhost (the agent) ('${deep}')`,
+      );
+      chmodSync(deep, 0o444);
+      expect(plan(layout, observe())).toEqual([]);
+    } finally {
+      rmSync(join(layout.agentDir, 'node_modules'), { recursive: true, force: true });
+    }
+  });
+
+  test('the walk never leaves the tree through a symlink, and past its cap it REFUSES', () => {
+    const link = join(layout.agentDir, 'outside');
+    symlinkSync(join(SCRATCH, 'srv'), link);
+    try {
+      const state = observe();
+      expect(state.agentTree.paths).toContain(link);
+      expect(state.paths.get(link)?.type).toBe('symlink');
+      expect(state.agentTree.paths.some(path => path.startsWith(`${link}/`))).toBe(false);
+      expect(plan(layout, state)).toEqual([]);
+    } finally {
+      unlinkSync(link);
+    }
+    const capped = observeHost(layout, stubExec, { trustRoot: SCRATCH, appendOnlyProbe, renderers: SCRATCH_RENDERERS, agentTreeCap: 2 });
+    expect(capped.agentTree.incomplete).toBe('it holds more than 2 entries');
+    expect(() => plan(layout, capped)).toThrow(/could not be walked whole \(it holds more than 2 entries\)/);
+  });
+
+  // Root lists anything, so as uid 0 the directory below IS listable and the branch cannot be built.
+  test.if(uid !== 0)('a directory in agent_dir that readdir cannot list STOPS the walk and plan REFUSES (non-root only: root lists anything)', () => {
+    const locked = join(layout.agentDir, 'locked');
+    mkdirSync(join(locked, 'inner'), { recursive: true });
+    chmodSync(locked, 0o000);
+    try {
+      const state = observe();
+      expect(state.agentTree.incomplete).toBe(`'${locked}' could not be listed (EACCES)`);
+      expect(state.agentTree.paths).toContain(locked);
+      expect(() => plan(layout, state)).toThrow(
+        `agent_dir '${layout.agentDir}' could not be walked whole ('${locked}' could not be listed (EACCES))`,
+      );
+    } finally {
+      chmodSync(locked, 0o755);
+      rmSync(locked, { recursive: true, force: true });
+    }
+  });
+
+  test.if(uid !== 0)("FakeHost's walk (the plan gates' host) is EQUAL to walkAgentTree on the same real tree: order, links, cap, unlistable", () => {
+    // One tree built twice: on disk, and as FakeHost entries. Same answer at every cap.
+    const extra = join(layout.agentDir, 'node_modules');
+    const outside = join(SCRATCH, 'walk_link_target');
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(join(outside, 'behind_the_link.js'), '');
+    const spec: [string, 'dir' | 'file' | 'symlink'][] = [
+      ['node_modules', 'dir'],
+      ['node_modules/b', 'dir'],
+      ['node_modules/b/index.js', 'file'],
+      ['node_modules/a.js', 'file'],
+      ['node_modules/link', 'symlink'],
+      ['node_modules/c', 'dir'],
+      ['node_modules/c/d', 'dir'],
+      ['node_modules/c/d/e.js', 'file'],
+    ];
+    for (const [rel, type] of spec) {
+      const path = join(layout.agentDir, rel);
+      if (type === 'dir') mkdirSync(path, { recursive: true });
+      else if (type === 'file') writeFileSync(path, '');
+      else symlinkSync(outside, path);
+    }
+    chmodTree(extra);
+    try {
+      const fakeFor = () => {
+        const fake = new FakeHost(layout);
+        for (const path of [...fake.entries.keys()]) {
+          if (path === layout.agentDir || path.startsWith(`${layout.agentDir}/`)) fake.entries.delete(path);
+        }
+        // Everything the namespace shows below agent_dir, from disk — INCLUDING what is reachable
+        // through the link (as `<link>/<name>`), so a walk that entered links would list it.
+        const real = (path: string): void => {
+          const stats = lstatSync(path);
+          const type = stats.isSymbolicLink() ? 'symlink' : stats.isDirectory() ? 'dir' : 'file';
+          fake.entries.set(path, { type, uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777, body: '' });
+          if (type === 'dir' || (type === 'symlink' && statSync(path).isDirectory())) {
+            for (const name of readdirSync(path)) real(join(path, name));
+          }
+        };
+        real(layout.agentDir);
+        return fake;
+      };
+      const full = observe().agentTree;
+      for (const cap of [1, 2, 3, 5, 8, full.paths.length, full.paths.length + 1]) {
+        const fake = fakeFor();
+        fake.agentTreeCap = cap;
+        const viaReal = observeHost(layout, stubExec, { trustRoot: SCRATCH, appendOnlyProbe, renderers: SCRATCH_RENDERERS, agentTreeCap: cap });
+        expect(fake.state().agentTree).toEqual(viaReal.agentTree);
+      }
+      const fake = fakeFor();
+      const lockedDir = join(extra, 'c');
+      fake.unlistable.add(lockedDir);
+      chmodSync(lockedDir, 0o000);
+      try {
+        expect(fake.state().agentTree).toEqual(observe().agentTree);
+      } finally {
+        chmodSync(lockedDir, 0o755);
+      }
+    } finally {
+      rmSync(extra, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('observeHost asks the user database for each account (id -g / id -G)', () => {
+    const groups = observe().accountGroups;
+    expect([...groups.keys()].sort()).toEqual(['dedalo-api-v1', 'dedalo-api-v2', 'dedalo-pubhost']);
+    expect(groups.get('dedalo-pubhost')).toEqual({ primary: OWN_PRIMARY_GID, all: [OWN_PRIMARY_GID] });
   });
 });
 

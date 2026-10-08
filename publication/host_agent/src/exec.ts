@@ -246,6 +246,8 @@ const PROVISION_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:
 export interface ProvisionExec {
   userId(name: string): number | null; //               ['id','-u',name]
   groupId(name: string): number | null; //              ['getent','group',name]
+  /** The account's database groups: primary + all (primary included). null = unknown user. */
+  userGroups(name: string): { primary: number; all: number[] } | null; // ['id','-g',name] + ['id','-G',name]
   unitState(unit: string): { enabled: boolean; active: boolean }; // is-enabled / is-active --quiet
   daemonReload(): ExecResult; //                         ['systemctl','daemon-reload']
   enableUnit(unit: string): ExecResult; //               ['systemctl','enable',<unit>.service]
@@ -304,6 +306,17 @@ export function provisionExec(): ProvisionExec {
       const result = provisionRun(['getent', 'group', provisionName(name)]);
       const gid = result.stdout.split('\n')[0]?.split(':')[2] ?? '';
       return result.code === 0 && /^\d+$/.test(gid) ? Number(gid) : null;
+    },
+    userGroups(name: string): { primary: number; all: number[] } | null {
+      const account = provisionName(name);
+      const primary = provisionRun(['id', '-g', account]);
+      const all = provisionRun(['id', '-G', account]);
+      const primaryOut = primary.stdout.trim();
+      const allOut = all.stdout.trim().split(/\s+/);
+      if (primary.code !== 0 || all.code !== 0 || !/^\d+$/.test(primaryOut) || !allOut.every(gid => /^\d+$/.test(gid))) {
+        return null;
+      }
+      return { primary: Number(primaryOut), all: allOut.map(Number) };
     },
     unitState(unit: string): { enabled: boolean; active: boolean } {
       const name = provisionUnit(unit);

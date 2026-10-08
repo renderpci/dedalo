@@ -135,15 +135,30 @@ strictly by `src/provision/schema.ts`. Two complete, gated examples are
 agent user, the v2 user or a declared group is missing, `check` refuses and prints the
 `useradd` / `groupadd` line to run.
 
+`plan` also refuses what would make a unit fail with `EACCES` later
+(`accessRefusals`, `src/provision/access.ts`): each runner is judged with the credentials
+systemd gives its unit (the agent: `Group=` engine_group on unix, its primary group on tls,
+plus `SupplementaryGroups=`; v2: `v2.group` — `agentUnitGroups`/`v2UnitGroups`, the value the
+unit renderers emit those lines from; v1: its `id -G` groups), on the one mode class
+the kernel consults. The agent needs x above `agent_dir` and r (dirs r+x) over its whole
+tree (lstat walk, symlinks never followed, capped at `AGENT_TREE_WALK_CAP` entries, `plan.ts`: over the cap or an
+unlistable dir refuses); agent and v2 need r+x on `bun_bin`, the agent on `php_bin`; all
+three need x above the state root. Each line prints the narrowest `chmod`. Mode bits only:
+an ACL grant is still refused. On unix, `engineGroupRefusal` refuses an `engine_group` that
+is the primary group of `agent_user`, `v1.user` or `v2.user`, or is `v2.group`; that the
+work system's account is IN the group stays unprovable here (the operator page's step-7
+socket request proves it).
+
 ```bash
 bun run provision render <instance>    # print every artifact; writes nothing, no root needed
-bun run provision check  <instance>    # as root: plan only; exit 1 on drift, 3 when refused
+bun run provision check  <instance>    # as root: plan only; exit 0 (1 on drift with --exit-code), 3 when refused
 bun run provision apply  <instance>    # as root: converge; writes only what drifted
 ```
 
 The arguments are positional. The same command runs from the repo root as
-`bun run hostagent:provision <verb> <instance>`. Exit codes: 0 ok, 1 drift (`check`),
-2 usage, 3 refused, 4 failed.
+`bun run hostagent:provision <verb> <instance>`. Exit codes: 0 ok (`check` also when it lists changes), 1 drift (`check --exit-code`),
+2 usage, 3 refused, 4 failed. On a host, root has no `bun`: run them with the declared `bun_bin`
+from `agent_dir` (the operator page, step 4).
 
 The order is: schema → layout → pure stamped renderers → plan → dumb apply. Each rendered
 file carries a hash of its body, so a hand edit shows up as a refusal on the next `check`
@@ -198,7 +213,9 @@ difference from the pin (drift, not integrity). The operator page has the comman
    wrong token give the same mismatch.
 
 On the work host, `scripts/publication_host_pair.ts`, run as the user that runs Dédalo
-(`sudo -u <engine user> bun run dedalo:pair-publication-host …`), adds the host from the
+(`cd /opt/dedalo/master_dedalo && sudo -u dedalo /opt/dedalo/.bun/bin/bun run
+dedalo:pair-publication-host …` in the production layout: from the checkout, with the pinned
+Bun named in full, because `sudo` resets `PATH`), adds the host from the
 fragment and this bundle after proving the pairing live. The token comes from the pasted
 fragment line, `--token-file` or `--token-stdin`. The engine's channel, client and panel
 are `src/core/publication_host/` and the `publication_hosts` maintenance widget (spec

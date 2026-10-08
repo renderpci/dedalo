@@ -34,6 +34,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -41,12 +42,23 @@ import {
   writeSync,
 } from 'node:fs';
 import type { Stats } from 'node:fs';
+import { join } from 'node:path';
 import type { ExecResult, ProvisionExec } from '../exec';
 import { provisionExec } from '../exec';
 import { probeAppendOnly } from '../instance/roots';
 import type { AgentLayout } from './layout';
-import type { Action, EntryType, HostState, PathFacts, UnitFacts, WriteAction } from './plan';
-import { agentDevDependencyPaths, agentScratchPath, ancestorsBelow, describe, RENDERERS, renderAll, trustProblem } from './plan';
+import type { AccountGroups } from './access';
+import type { Action, AgentTree, EntryType, HostState, PathFacts, UnitFacts, WriteAction } from './plan';
+import {
+  AGENT_TREE_WALK_CAP,
+  agentDevDependencyPaths,
+  agentScratchPath,
+  ancestorsBelow,
+  describe,
+  RENDERERS,
+  renderAll,
+  trustProblem,
+} from './plan';
 import type { Renderer } from './render/types';
 import { PENDING_FACTS } from './render/types';
 
@@ -257,6 +269,8 @@ export interface HostDoorOptions {
    * real one refuses any configtest binary but the canonical path, which a scratch tree cannot own).
    */
   readonly renderers?: readonly Renderer[];
+  /** The most entries observeHost walks in agent_dir. Default: plan.ts AGENT_TREE_WALK_CAP; a gate lowers it. */
+  readonly agentTreeCap?: number;
 }
 
 function errno(error: unknown): string {
@@ -378,12 +392,12 @@ function entryType(stats: Stats): EntryType {
   return 'other';
 }
 
-/** lstat facts — never followed: a link is reported as a link. */
-function facts(path: string): PathFacts | null {
+/** lstat facts — never followed: a link is reported as a link (with its resolved target unless `bare`). */
+function facts(path: string, bare = false): PathFacts | null {
   try {
     const stats = lstatSync(path);
     const found: PathFacts = { type: entryType(stats), uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777 };
-    if (!stats.isSymbolicLink()) return found;
+    if (!stats.isSymbolicLink() || bare) return found;
     try {
       return { ...found, target: realpathSync(path) };
     } catch {
@@ -394,6 +408,38 @@ function facts(path: string): PathFacts | null {
   }
 }
 
+/**
+ * agent_dir's tree, lstat only: a symlink is recorded as an entry and never entered or
+ * resolved (the walk stays in the tree). Past `cap` entries, or at a directory it cannot
+ * list, the walk STOPS and says why — plan refuses an incomplete tree, never skips it.
+ */
+function walkAgentTree(root: string, cap: number, paths: Map<string, PathFacts>): AgentTree {
+  const rootFacts = facts(root, true);
+  if (!rootFacts || rootFacts.type !== 'dir') return { paths: [], incomplete: null }; // refused as pinned code
+  if (!paths.has(root)) paths.set(root, rootFacts);
+  const listed: string[] = [root];
+  const pending: string[] = [root];
+  while (pending.length > 0) {
+    const dir = pending.shift() as string;
+    let names: string[];
+    try {
+      names = readdirSync(dir).sort();
+    } catch (error) {
+      return { paths: listed, incomplete: `'${dir}' could not be listed (${errno(error)})` };
+    }
+    for (const name of names) {
+      if (listed.length >= cap) return { paths: listed, incomplete: `it holds more than ${cap} entries` };
+      const path = join(dir, name);
+      const found = facts(path, true);
+      if (!found) continue; // gone between readdir and lstat
+      if (!paths.has(path)) paths.set(path, found); // a watched path keeps its link target (refusal text)
+      listed.push(path);
+      if (found.type === 'dir') pending.push(path);
+    }
+  }
+  return { paths: listed, incomplete: null };
+}
+
 function readOrNull(path: string): string | null {
   try {
     return readFileSync(path, 'utf8');
@@ -402,6 +448,11 @@ function readOrNull(path: string): string | null {
   }
 }
 
+/**
+ * Every fact plan() judges: lstat facts of the watched paths and their ancestors, agent_dir's
+ * whole tree (walkAgentTree — capped, links not entered), the accounts' uids and database
+ * groups (`id -g` / `id -G`: the access rule's credentials), the groups, the units.
+ */
 export function observeHost(
   layout: AgentLayout,
   exec: ProvisionExec = provisionExec(),
@@ -434,6 +485,7 @@ export function observeHost(
     const found = facts(path);
     if (found) paths.set(path, found);
   }
+  const agentTree = walkAgentTree(layout.agentDir, options.agentTreeCap ?? AGENT_TREE_WALK_CAP, paths);
   // The marker and our artifacts only: never the credential, never the audit log.
   for (const path of [layout.state.marker, ...artifactPaths]) {
     if (paths.get(path)?.type === 'file') contents.set(path, readOrNull(path));
@@ -442,6 +494,11 @@ export function observeHost(
   for (const name of ['root', layout.identity.agentUser, layout.identity.v1User, layout.identity.v2User]) {
     const id = exec.userId(name);
     if (id !== null) users.set(name, id);
+  }
+  const accountGroups = new Map<string, AccountGroups>();
+  for (const name of [layout.identity.agentUser, layout.identity.v1User, layout.identity.v2User]) {
+    const found = users.has(name) ? exec.userGroups(name) : null;
+    if (found) accountGroups.set(name, Object.freeze({ primary: found.primary, all: Object.freeze([...found.all]) }));
   }
   const groups = new Map<string, number>();
   const groupNames = ['root', layout.identity.v2Group];
@@ -458,5 +515,5 @@ export function observeHost(
   if (paths.get(layout.state.auditFile)?.type === 'file' && probe(layout.state.auditFile) === 'append_only') {
     appendOnly.add(layout.state.auditFile);
   }
-  return { trustRoot, appendOnly, paths, contents, users, groups, units };
+  return { trustRoot, appendOnly, paths, contents, users, groups, units, accountGroups, agentTree };
 }

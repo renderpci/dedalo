@@ -1003,6 +1003,21 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **"`provision check` now refuses a publication host where a service could not read or run its own code, and an `engine_group` that is one of the instance's own groups."**
+
+    Until now, a home directory left at Ubuntu's `0750`, an agent copy that only root could read,
+    or a site Bun the v2 account could not execute passed `check` and `apply`, and the service
+    failed later with *Permission denied*. `check` now judges every path a service runs from
+    with that service's own user and groups: the agent's code and every directory above it,
+    the site's Bun for the agent and the v2 API, the binary that checks v1 releases, and the way down
+    to the state root for the agent, v2 and v1. Each refusal names the account, the path and the
+    `chmod` that fixes it. On one machine it also refuses an `engine_group` that is the agent's
+    own group, or the group of the v1 or v2 accounts: the agent's socket would then be closed
+    to the work system. Whether the work system's user is in the declared group is still proved
+    by the socket request of step 7. `check` reads only the mode bits, so a host that grants
+    access through an ACL alone is now refused: give the access with the mode instead. See
+    [Publication host agent](./install/publication_host.md#4-provision).
+
 - **The Ontology area can now be opened by global administrators whose profile grants it, not only by root.**
 
     Until now only the root account could see the Ontology area in the menu or open it. It now also opens for a global administrator whose profile grants the Ontology area. Both are needed: a global administrator without that permission does not see it, and neither does a user who has the permission but is not a global administrator. Inside the area, the profile decides what the administrator sees: each ontology (for example `dd`, `rsc` or a local one) appears only if the profile grants read access to it, and its records and fields follow the usual read and edit permissions. Root still sees and edits everything. To give someone access, grant the Ontology area and the ontologies they should work on in their profile.
@@ -1177,6 +1192,19 @@ Merged since the last release; these ship with the next one.
 - **The browser install wizard no longer fails at the database step with `function "f_unaccent" already exists`.**
 
     After *Save config*, the restarted engine ran its schema upgrades on the still-empty database, and the seed restore then collided with them, leaving a half-built database. This affected every browser-wizard install, on every platform. Those upgrades now wait until the install is sealed, as on the command-line installer. *Finish* restarts the engine once more, so the sealed instance starts with all of them applied; the page reloads by itself a few seconds later.
+
+- **"The publication-host pairing command now names a command you can run, and says why it cannot read a copied file."**
+
+    When the pairing command refused because of the user running it, its message suggested
+    `sudo -u <engine user> bun run …`. Pasted as is, the shell read `<engine user>` as a file
+    redirection, and with the user filled in, `sudo` could not find a bare `bun`. The message now
+    prints the full command: the checkout to run it from, the user (by its id), and the Bun that
+    ran it, by its full path. A token file or engine bundle copied as root, which the Dédalo user
+    cannot read, used to end in *unexpected failure (Error)*, exit 4. It is now named like the
+    fragment already was, *could not be read (EACCES)*, exit 3. The engine fragment that
+    `provision apply` writes no longer claims that no release reads its keys: the pairing command
+    reads exactly those keys. The next `provision check` lists the fragment as a change, and
+    `apply` rewrites it. See [Publication host agent](./install/publication_host.md#pair-it-with-the-work-system).
 
 - **The auction-URL and journal-URL import tools now declare the sections they belong to.**
 

@@ -49,6 +49,8 @@ describe('provisionExec', () => {
     const exec = provisionExec();
     expect(() => exec.userId('root;id')).toThrow(/unix account name/);
     expect(() => exec.groupId('-x')).toThrow(/unix account name/);
+    expect(() => exec.userGroups('-G')).toThrow(/unix account name/);
+    expect(() => exec.userGroups('a b')).toThrow(/unix account name/);
     expect(() => exec.visudoCheck('relative/file')).toThrow(/clean absolute path/);
     expect(() => exec.appendOnly('relative/audit.jsonl')).toThrow(/clean absolute path/);
     expect(() => exec.appendOnly('/srv/../etc/passwd')).toThrow(/clean absolute path/);
@@ -59,6 +61,28 @@ describe('provisionExec', () => {
     expect(exec.userId('root')).toBe(0);
     expect(exec.userId('dedalo-no-such-user')).toBeNull();
     expect(exec.groupId('dedalo-no-such-group')).toBeNull();
+    const rootGroups = exec.userGroups('root');
+    expect(rootGroups?.primary).toBe(0);
+    expect(rootGroups?.all).toContain(0);
+    expect(exec.userGroups('dedalo-no-such-user')).toBeNull();
     expect(exec.unitState('dedalo-no-such-unit')).toEqual({ enabled: false, active: false });
   });
+});
+
+test('the closed set: exactly these named commands, nothing else', () => {
+  expect(Object.keys(provisionExec()).sort()).toEqual([
+    'appendOnly',
+    'daemonReload',
+    'enableUnit',
+    'groupId',
+    'reloadUnit',
+    'restartUnit',
+    'startUnit',
+    'unitState',
+    'userGroups',
+    'userId',
+    'visudoCheck',
+    'visudoCheckPolicy',
+    'webConfigtest',
+  ]);
 });

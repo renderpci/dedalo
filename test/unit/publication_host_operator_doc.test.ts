@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HostDeclaration } from '../../publication/host_agent/src/provision/layout';
 import { derive, LISTEN_HOST_PATTERN } from '../../publication/host_agent/src/provision/layout';
+import { AGENT_TREE_WALK_CAP } from '../../publication/host_agent/src/provision/plan';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const page = readFileSync(join(repoRoot, 'docs/install/publication_host.md'), 'utf8');
@@ -127,5 +128,17 @@ describe('publication host operator page', () => {
 			expect(text).toMatch(/code update or code restore/);
 			expect(text).toMatch(/database restore does not change the code/i);
 		}
+	});
+
+	test('the agent_dir walk cap the page quotes IS plan.ts AGENT_TREE_WALK_CAP; the README names the constant', () => {
+		// The operator sizes agent_dir by this number: a cap change must move the page with it.
+		const quoted = [...page.matchAll(/(?:stops at|more than) (\d[\d,]*) entries/g)].map(([, n]) =>
+			Number(n!.replaceAll(',', '')),
+		);
+		expect(quoted.length).toBeGreaterThanOrEqual(2);
+		for (const n of quoted) expect(n).toBe(AGENT_TREE_WALK_CAP);
+		const readme = readFileSync(join(repoRoot, 'publication/host_agent/README.md'), 'utf8');
+		expect(readme).toContain('`AGENT_TREE_WALK_CAP`');
+		expect(readme).not.toMatch(/\d{4,} entries/);
 	});
 });

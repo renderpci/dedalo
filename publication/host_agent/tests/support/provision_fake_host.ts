@@ -4,14 +4,17 @@
  * so "a second plan after apply is empty" is proved by the same bytes, and "apply wrote
  * nothing" by counting calls. Never touches the real filesystem or spawns anything. Every
  * seeded directory and binary is root-owned 0755 (a trusted host); a gate edits an entry to
- * make it untrusted.
+ * make it untrusted. Every account has its own primary group and no other (`accountGroups`,
+ * what `id -g` / `id -G` would answer); a gate adds memberships to test group access.
  */
 import { dirname } from 'node:path';
 import type { ExecResult, ProvisionExec } from '../../src/exec';
 import type { ProvisionIo } from '../../src/provision/apply';
 import { TEMP_SUFFIX } from '../../src/provision/apply';
 import type { AgentLayout } from '../../src/provision/layout';
+import type { AccountGroups } from '../../src/provision/access';
 import type { HostState, PathFacts, UnitFacts } from '../../src/provision/plan';
+import { AGENT_TREE_WALK_CAP } from '../../src/provision/plan';
 
 interface Entry {
   type: 'dir' | 'file' | 'symlink';
@@ -39,7 +42,19 @@ export class FakeHost implements ProvisionIo {
     ['www-data', 33],
     ['dedalo-api-v2', 991],
     ['dedalo', 1000],
+    ['dedalo-pubhost', 990],
   ]);
+  /** Database groups per account: agent → its own group, v1 → www-data (a pool user), v2 → the v2 group. */
+  readonly accountGroups = new Map<string, AccountGroups>([
+    ['dedalo-pubhost', { primary: 990, all: [990] }],
+    ['dedalo-api-v1', { primary: 33, all: [33] }],
+    ['dedalo-api-v2', { primary: 991, all: [991] }],
+  ]);
+  /** observeHost's walk cap over agent_dir; a gate lowers it. */
+  agentTreeCap = AGENT_TREE_WALK_CAP;
+  /** Directories readdir cannot list (observeHost's walk stops there: `could not be listed (EACCES)`). */
+  readonly unlistable = new Set<string>();
+  private readonly agentDir: string;
   readonly units = new Map<string, UnitFacts>();
   /** Files carrying the append-only attribute (chown/chmod on them fail, like the kernel). */
   readonly appendOnlyPaths = new Set<string>();
@@ -48,6 +63,7 @@ export class FakeHost implements ProvisionIo {
   readonly exec: ProvisionExec;
 
   constructor(layout: AgentLayout) {
+    this.agentDir = layout.agentDir;
     for (const path of [
       dirname(layout.configBase),
       dirname(layout.state.root),
@@ -76,6 +92,10 @@ export class FakeHost implements ProvisionIo {
     this.exec = {
       userId: name => this.users.get(name) ?? null,
       groupId: name => this.groups.get(name) ?? null,
+      userGroups: name => {
+        const found = this.accountGroups.get(name);
+        return found ? { primary: found.primary, all: [...found.all] } : null;
+      },
       unitState: unitName => unit(unitName),
       daemonReload: () => command('daemon-reload'),
       enableUnit: unitName => {
@@ -182,6 +202,29 @@ export class FakeHost implements ProvisionIo {
       });
       if (entry.type === 'file') contents.set(path, entry.body);
     }
+    // agent_dir's tree as observeHost walks it: agent_dir first, links not entered, capped,
+    // stopped at an unlistable directory. tests/provision_host_io.test.ts holds this walk EQUAL
+    // to apply.ts walkAgentTree on the same real tree, so the copy cannot drift.
+    const tree: string[] = [];
+    let incomplete: string | null = null;
+    const pending = this.entries.get(this.agentDir)?.type === 'dir' ? [this.agentDir] : [];
+    if (pending.length > 0) tree.push(this.agentDir);
+    while (pending.length > 0 && incomplete === null) {
+      const dir = pending.shift() as string;
+      if (this.unlistable.has(dir)) {
+        incomplete = `'${dir}' could not be listed (EACCES)`;
+        break;
+      }
+      const children = [...this.entries.keys()].filter(path => path !== dir && dirname(path) === dir).sort();
+      for (const child of children) {
+        if (tree.length >= this.agentTreeCap) {
+          incomplete = `it holds more than ${this.agentTreeCap} entries`;
+          break;
+        }
+        tree.push(child);
+        if (this.entries.get(child)?.type === 'dir') pending.push(child);
+      }
+    }
     return {
       trustRoot: '/',
       appendOnly: new Set(this.appendOnlyPaths),
@@ -190,6 +233,8 @@ export class FakeHost implements ProvisionIo {
       users: new Map(this.users),
       groups: new Map(this.groups),
       units: new Map(this.units),
+      accountGroups: new Map(this.accountGroups),
+      agentTree: { paths: tree, incomplete },
     };
   }
 

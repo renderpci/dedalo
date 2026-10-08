@@ -19,6 +19,12 @@
  * tree, outside the trees themselves. Facts are lstat facts (observeHost); ancestors at or
  * above `host.trustRoot` ('/' in production) are not judged.
  *
+ * ACCESS (finding: a root-only agent_dir passed every trust check, then systemd failed
+ * "Changing to the requested working directory failed: Permission denied"). Trust is not
+ * reach: the account that RUNS the pinned code must be able to read and run it, judged like
+ * the kernel with the credentials its unit gives it (./access.ts; accessRefusals below). And
+ * on a unix listener engine_group must not be a group our own accounts own (engineGroupRefusal).
+ *
  * THE AUDIT TRAIL IS APPEND-ONLY BY THE KERNEL (the audit contract, instance/roots.ts): the
  * file is created empty, agent-owned 0600, then given FS_APPEND_FL (`chattr +a`, an
  * `append-only` action). Once it carries the attribute its owner and mode cannot change in
@@ -39,6 +45,8 @@
  * ZERO-DEPENDENCY.
  */
 import { dirname, join } from 'node:path';
+import type { AccountGroups, Credentials } from './access';
+import { EXECUTE, READ, accountCredentials, chmodFix, missingAccess, unitCredentials } from './access';
 import { hasDrifted, parseStamp } from './hash';
 import type { AgentLayout, WebServer } from './layout';
 import { MODES, SERVICE_TOKEN_BYTES, WEB_CONFIGTEST_CANDIDATES, groupName, markerContent, ownerName } from './layout';
@@ -46,8 +54,8 @@ import { engineFragmentRenderer } from './render/engine_fragment';
 import { envRenderer } from './render/env';
 import { polkitRenderer } from './render/polkit';
 import { sudoersRenderer } from './render/sudoers';
-import { agentUnitRenderer } from './render/unit_agent';
-import { v2ScratchUnitRenderer, v2UnitRenderer } from './render/unit_v2';
+import { agentUnitGroups, agentUnitRenderer } from './render/unit_agent';
+import { v2ScratchUnitRenderer, v2UnitGroups, v2UnitRenderer } from './render/unit_v2';
 import type {
   Artifact,
   ArtifactEffect,
@@ -56,6 +64,7 @@ import type {
   ArtifactValidator,
   RenderFacts,
   Renderer,
+  UnitGroups,
 } from './render/types';
 import { ARTIFACT_KINDS, PENDING_FACTS } from './render/types';
 
@@ -149,7 +158,24 @@ export interface HostState {
   readonly users: ReadonlyMap<string, number>;
   readonly groups: ReadonlyMap<string, number>;
   readonly units: ReadonlyMap<string, UnitFacts>;
+  /** Database groups (`id -g`, `id -G`) of agent_user, v1.user and v2.user; absent = unresolved. */
+  readonly accountGroups: ReadonlyMap<string, AccountGroups>;
+  /** agent_dir's whole tree as observeHost walked it (each path's lstat facts are in `paths`). */
+  readonly agentTree: AgentTree;
 }
+
+/**
+ * agent_dir's tree: agent_dir first, then every entry below it — lstat, never followed (a
+ * symlink is an entry, not a door out of the tree). `incomplete` says why the walk stopped
+ * short (past AGENT_TREE_WALK_CAP, an unlistable directory); plan REFUSES then, never skips.
+ */
+export interface AgentTree {
+  readonly paths: readonly string[];
+  readonly incomplete: string | null;
+}
+
+/** The most entries observeHost walks in agent_dir. A checkout (src/, node_modules/, package.json…) is a few hundred. */
+export const AGENT_TREE_WALK_CAP = 20_000;
 
 /** The suite's scratch tree inside a package checkout (tests/fixtures/instance.ts SCRATCH_DIR_NAME). */
 export const TEST_SCRATCH_DIR = '.test-tmp';
@@ -190,6 +216,179 @@ export function trustProblem(facts: { readonly uid: number; readonly mode: numbe
   if (facts.uid !== 0 && facts.uid !== rootUid) return `owned by uid ${facts.uid}, not root`;
   if ((facts.mode & 0o022) !== 0) return `group- or world-writable (mode ${octal(facts.mode & 0o777)})`;
   return null;
+}
+
+/* ── the account that runs it can read and run it ─────────────────────────────────── */
+
+/**
+ * Trust (above) proves no non-root principal can REPLACE the pinned code; this proves the
+ * accounts that RUN it can REACH it. Root walks and reads everything, so a tree only root can
+ * enter passes every trust check and then the unit dies at start ("Changing to the requested
+ * working directory failed: Permission denied"). Judged per account with the credentials its
+ * process gets (./access.ts), on lstat facts:
+ *   - the agent: x on every directory above agent_dir; r+x on every directory and r on every
+ *     file of agent_dir's tree (walked whole — symlinks in it are entries, not followed);
+ *     r+x on bun_bin and php_bin (it runs the v1 syntax check) and x above each;
+ *   - v2 (its unit and the scratch template): r+x on bun_bin, x above it;
+ *   - x above state_root for the agent, v2 and v1 (the site's PHP-FPM pool reads the v1
+ *     releases and config through it). state_root's own tree is the provisioner's (MODES):
+ *     not re-judged here.
+ */
+
+/** One account that runs something on the host, with what its process gets. */
+interface Runner {
+  readonly name: string;
+  /** `(the agent)`, `(v2)`, `(v1)`. */
+  readonly role: string;
+  readonly cred: Credentials;
+}
+
+/** The agent's, v2's and v1's credentials, from the units this provisioner renders (render/unit_*.ts). */
+function runners(layout: AgentLayout, host: HostState, refusals: string[]): { agent: Runner | null; v2: Runner | null; v1: Runner | null } {
+  const { agentUser, v1User, v2User } = layout.identity;
+  const database = (user: string, field: string): AccountGroups | null => {
+    if (!host.users.has(user)) return null; // refused where accounts are checked
+    const found = host.accountGroups.get(user);
+    if (!found) refusals.push(`the groups of user '${user}' (${field}) could not be read (id -G ${user}) — this host's user database does not answer`);
+    return found ?? null;
+  };
+  const gid = (group: string): number | null => host.groups.get(group) ?? null;
+
+  // The credentials a unit gives: exactly the Group=/SupplementaryGroups= its renderer emits
+  // (render/types.ts UnitGroups — the renderer writes its lines from the same value). A group
+  // that does not resolve is refused where groups are checked: no runner is judged then.
+  const fromUnit = (user: string, db: AccountGroups | null, groups: UnitGroups): Credentials | null => {
+    if (!db) return null;
+    const group = groups.group === null ? null : gid(groups.group);
+    if (groups.group !== null && group === null) return null;
+    const supplementary = groups.supplementary.map(gid);
+    if (!supplementary.every((value): value is number => value !== null)) return null;
+    return unitCredentials(host.users.get(user) as number, group, supplementary, db);
+  };
+
+  let agent: Runner | null = null;
+  const agentCred = fromUnit(agentUser, database(agentUser, 'agent_user'), agentUnitGroups(layout));
+  if (agentCred) agent = { name: agentUser, role: 'the agent', cred: agentCred };
+
+  let v2: Runner | null = null;
+  const v2Cred = fromUnit(v2User, database(v2User, 'v2.user'), v2UnitGroups(layout));
+  if (v2Cred) v2 = { name: v2User, role: 'v2', cred: v2Cred };
+
+  let v1: Runner | null = null;
+  const v1Db = database(v1User, 'v1.user');
+  if (v1Db) v1 = { name: v1User, role: 'v1', cred: accountCredentials(host.users.get(v1User) as number, v1Db) };
+  return { agent, v2, v1 };
+}
+
+/** "read", "executed", "read and executed" — what the missing bits deny, for a file. */
+function fileVerb(missing: number): string {
+  const verbs = [missing & READ ? 'readable' : '', missing & EXECUTE ? 'executable' : ''].filter(Boolean);
+  return verbs.join(' and ');
+}
+
+const TREE_FIX = (agentDir: string): string => `chmod -R u=rwX,go=rX ${agentDir}`;
+const TREE_EXAMPLES = 3;
+
+/** Every "cannot reach what it runs" problem, one line each: ACCOUNT, PATH and the exact fix. */
+export function accessRefusals(layout: AgentLayout, host: HostState): string[] {
+  const refusals: string[] = [];
+  const { agent, v2, v1 } = runners(layout, host, refusals);
+  const seen = new Set<string>();
+  const once = (key: string, line: string): void => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    refusals.push(line);
+  };
+  const who = (runner: Runner): string => `${runner.name} (${runner.role})`;
+
+  /** x on every directory strictly between the trust root and `target`. */
+  const traverse = (runner: Runner | null, target: string): void => {
+    if (!runner) return;
+    for (const dir of ancestorsBelow(target, host.trustRoot)) {
+      const facts = host.paths.get(dir);
+      if (!facts || facts.type !== 'dir') continue; // missing or not a directory: refused by the trust checks
+      const fix = chmodFix(dir, facts, runner.cred, EXECUTE);
+      if (fix) once(`x ${runner.name} ${dir}`, `'${dir}' cannot be traversed by ${who(runner)} — ${fix}`);
+    }
+  };
+  /** r+x on a pinned binary (and x above it). */
+  const runs = (runner: Runner | null, field: string, path: string): void => {
+    if (!runner) return;
+    traverse(runner, path);
+    const facts = host.paths.get(path);
+    if (!facts || facts.type !== 'file') return; // refused by the pinned-code checks
+    const fix = chmodFix(path, facts, runner.cred, READ | EXECUTE);
+    if (fix) {
+      const missing = missingAccess(facts, runner.cred, READ | EXECUTE);
+      once(`rx ${runner.name} ${path}`, `${field} '${path}' is not ${fileVerb(missing)} by ${who(runner)} — ${fix}`);
+    }
+  };
+
+  // The agent: its checkout, whole.
+  if (agent && host.paths.get(layout.agentDir)?.type === 'dir') {
+    traverse(agent, layout.agentDir);
+    const { paths, incomplete } = host.agentTree;
+    if (incomplete !== null) {
+      refusals.push(
+        `agent_dir '${layout.agentDir}' could not be walked whole (${incomplete}) — whether ${who(agent)} can read ` +
+          'every file of it is unproven; agent_dir must hold the agent checkout only (src/, node_modules/, package.json…)',
+      );
+    }
+    const unreadable: string[] = [];
+    for (const path of paths) {
+      const facts = host.paths.get(path);
+      if (!facts || (facts.type !== 'dir' && facts.type !== 'file')) continue; // a link is judged by what it names, never followed
+      const need = facts.type === 'dir' ? READ | EXECUTE : READ;
+      if (missingAccess(facts, agent.cred, need) === 0) continue;
+      if (path === layout.agentDir) {
+        const missing = missingAccess(facts, agent.cred, need);
+        refusals.push(
+          `'${path}' ${missing & READ ? 'is not readable' : 'cannot be traversed'} by ${who(agent)} — ${TREE_FIX(layout.agentDir)}`,
+        );
+      } else {
+        unreadable.push(path);
+      }
+    }
+    if (unreadable.length > 0) {
+      const examples = unreadable.slice(0, TREE_EXAMPLES).map(path => `'${path}'`).join(', ');
+      const more = unreadable.length > TREE_EXAMPLES ? ', …' : '';
+      refusals.push(
+        `agent_dir '${layout.agentDir}' holds ${unreadable.length} ${unreadable.length === 1 ? 'entry' : 'entries'} not readable by ` +
+          `${who(agent)} (${examples}${more}) — ${TREE_FIX(layout.agentDir)}`,
+      );
+    }
+  }
+  // The pinned runtimes, for whoever runs them.
+  runs(agent, 'bun_bin', layout.bunBin);
+  runs(v2, 'bun_bin', layout.bunBin);
+  runs(agent, 'php_bin', layout.phpBin);
+  // The way down to the state root (its own tree is MODES').
+  for (const runner of [agent, v2, v1]) traverse(runner, layout.state.root);
+  return refusals;
+}
+
+/**
+ * RULE: on a unix listener the socket is 0660 <agent>:<engine_group> (render/unit_agent.ts
+ * Group=), so engine_group must be the group of the account that runs Dédalo on this machine.
+ * A group one of OUR accounts already owns as its primary group (or the v2 group) is
+ * certainly wrong: pairing would only ever say "unreachable". What this cannot prove is that
+ * the work system's account IS in the group — that account is unknown to the declaration;
+ * the install guide's step-7 request through the socket is that proof.
+ */
+export function engineGroupRefusal(layout: AgentLayout, host: HostState): string | null {
+  const { agentUser, v1User, v2User, v2Group, engineGroup } = layout.identity;
+  if (layout.listen.kind !== 'unix' || engineGroup === null) return null;
+  const gid = host.groups.get(engineGroup);
+  if (gid === undefined) return null; // refused where groups are checked
+  const primaryOf = (user: string): number | undefined => host.accountGroups.get(user)?.primary;
+  let is: string | null = null;
+  if (primaryOf(agentUser) === gid) is = "the agent's own group";
+  else if (primaryOf(v1User) === gid) is = "the v1 user's group";
+  // By NAME: the declaration names both; the account primaries can only be compared by gid.
+  else if (engineGroup === v2Group) is = 'the v2 group';
+  else if (primaryOf(v2User) === gid) is = "the v2 user's group";
+  if (is === null) return null;
+  return `engine_group '${engineGroup}' is ${is} — it must be the work system's group: id -gn <the account that runs Dédalo>`;
 }
 
 /* ── actions ──────────────────────────────────────────────────────────────────────── */
@@ -409,6 +608,10 @@ export function plan(
         '(frozen, production-only) and copy that tree',
     );
   }
+  // 2b. …and the accounts that RUN it can reach it; the socket's group is the work system's.
+  refusals.push(...accessRefusals(layout, host));
+  const engineGroupProblem = engineGroupRefusal(layout, host);
+  if (engineGroupProblem) refusals.push(engineGroupProblem);
   if (refusals.length > 0) throw new PlanRefused(layout.instance, refusals);
 
   // 3. What lies ABOVE the managed trees: a non-root principal there could redirect root's writes.

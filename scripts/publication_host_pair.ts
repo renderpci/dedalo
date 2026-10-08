@@ -2,7 +2,8 @@
 /**
  * PAIR THIS ENGINE WITH A PUBLICATION-HOST AGENT — add, replace or remove one entry of the
  * publication-host registry (engineering/PUBLICATION_HOST_SPEC.md §2; phase-3 decision E4).
- * Run it AS THE ENGINE USER, never as root:
+ * Run it AS THE ENGINE USER, never as root, from the checkout, with the pinned Bun named in
+ * full where `bun` is written below (sudo resets PATH; pairInvocation() renders the real form):
  *
  *   sudo -u <engine user> bun run dedalo:pair-publication-host add <name> --fragment <engine.env.fragment> \
  *        --bundle <engine_bundle.pem> --token-file <0600 copy of the agent SERVICE_TOKEN>
@@ -56,7 +57,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync, rmdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { parseEnvFile, privateDir } from '../src/config/env.ts';
 import { isDedaloError } from '../src/core/errors/dedalo_error.ts';
@@ -112,8 +113,21 @@ const MIN_TOKEN_LENGTH = 32;
 const STAGING_STALE_MS = 60 * 60 * 1000;
 const KNOWN_KEYS: ReadonlySet<string> = new Set(Object.values(FRAGMENT_KEYS));
 
+/** The checkout this script runs from: `bun run` resolves the package script there. */
+const CHECKOUT_DIR = dirname(import.meta.dir);
+
+/**
+ * The pair command as an operator copies it out of a message: from the checkout, through
+ * sudo, with the RUNNING Bun named in full. sudo resets PATH, so a bare `bun` answers
+ * "command not found" (exit 127). `who` is sudo's target: `'#<uid>'` (sudo -u takes a uid
+ * that way, quoted so the shell does not read a comment) when the owner is known.
+ */
+export function pairInvocation(who = '<engine user>'): string {
+	return `cd ${CHECKOUT_DIR} && sudo -u ${who} ${process.execPath} run dedalo:pair-publication-host`;
+}
+
 const USAGE = [
-	'Usage (as the engine user): sudo -u <engine user> bun run dedalo:pair-publication-host <add|replace|remove> <name> [options]',
+	`Usage (as the engine user): ${pairInvocation()} <add|replace|remove> <name> [options]`,
 	'  --fragment <file>      the agent engine.env.fragment (add/replace; 0600 if it carries the token)',
 	'  --bundle <file>        engine_bundle.pem carried from the publication host (mTLS; 0600)',
 	'  --token-file <file>    a 0600 copy of the agent SERVICE_TOKEN',
@@ -331,13 +345,13 @@ export function invocationOwnerProblem(dirUid: number, euid: number): string | n
 		return (
 			'the private directory is owned by root (uid 0). The engine does not run as root, so secrets written ' +
 			'here would be unreadable to it. chown the private directory to the engine user, then run this as that ' +
-			'user: `sudo -u <engine user> bun run dedalo:pair-publication-host …`.'
+			`user: \`${pairInvocation()} …\`.`
 		);
 	}
 	if (dirUid === euid) return null;
 	return (
 		`run this as the owner of the private directory (uid ${dirUid}), not as uid ${euid}: the secrets are 0600 ` +
-		'and must be owned by the engine user. `sudo -u <engine user> bun run dedalo:pair-publication-host …`.'
+		`and must be owned by the engine user: \`${pairInvocation(`'#${dirUid}'`)} …\`.`
 	);
 }
 
@@ -382,7 +396,13 @@ function assertPrivateMode(path: string, what: string): void {
 
 function readPrivateFile(path: string, what: string): string {
 	assertPrivateMode(path, what);
-	return readFileSync(path, 'utf8');
+	// stat() succeeding proves nothing about READ access: a 0600 copy carried as root passes
+	// the mode check and then answers EACCES here. Named like every other unreadable file.
+	try {
+		return readFileSync(path, 'utf8');
+	} catch (error) {
+		throw new PairRefusal(`${what} could not be read (${readFailure(error)}).`);
+	}
 }
 
 /** The fragment. Placeholders only: any mode. Carrying a real token: held to the credential rule. */

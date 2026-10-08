@@ -560,10 +560,12 @@ describe('the agent channel door is documented once, where it is read', () => {
 });
 
 /**
- * The invocation the CLI's own usage and owner rule name (Task 5: invocationOwnerProblem):
- * the package script, run as the engine user. The page uses it verbatim.
+ * How the page runs the pair command: the package script, through sudo as the engine user,
+ * with Bun named by its FULL path. A placeholder user (`<engine user>`) is shell input
+ * redirection when pasted, and a bare `bun` is "command not found" after sudo resets PATH:
+ * neither may appear on a command line the operator copies.
  */
-const PAIR_INVOCATION = 'sudo -u <engine user> bun run dedalo:pair-publication-host ';
+const PAIR_INVOCATION = /\bsudo -u [a-z_][a-z0-9_-]* \/\S+\/bun run dedalo:pair-publication-host /;
 const PAIR_SCRIPT = 'dedalo:pair-publication-host';
 const PAIR_LINE = /publication_host_pair\.ts |dedalo:pair-publication-host /;
 
@@ -571,10 +573,13 @@ describe('the operator is told how pairing and the panel really work', () => {
 	test('the operator page pairs through the real CLI: its verbs, its flags, its invoking user', async () => {
 		const page = await docsGateRead('docs/install/publication_host.md');
 		const cli = await docsGateRead('scripts/publication_host_pair.ts');
+		// The CLI's own owner refusal names the command the same way: sudo to the owner, the
+		// RUNNING Bun in full (measured on the message, not on a spelling in the source).
+		const { invocationOwnerProblem } = await import('../../scripts/publication_host_pair.ts');
 		expect(
-			cli,
-			'the CLI no longer names the engine-user invocation: re-read its owner rule',
-		).toContain(PAIR_INVOCATION.trim());
+			invocationOwnerProblem(501, 502) ?? '',
+			'the CLI owner refusal no longer names a runnable engine-user invocation',
+		).toContain(`sudo -u '#501' ${process.execPath} run dedalo:pair-publication-host `);
 		const scripts = JSON.parse(await docsGateRead('package.json')).scripts as Record<
 			string,
 			string
@@ -612,8 +617,8 @@ describe('the operator is told how pairing and the panel really work', () => {
 		expect(lines.length).toBeGreaterThanOrEqual(4);
 		const unknown: string[] = [];
 		for (const line of lines) {
-			if (!line.includes(PAIR_INVOCATION))
-				unknown.push(`not run as the engine user: ${line.trim()}`);
+			if (!PAIR_INVOCATION.test(line))
+				unknown.push(`not run as the engine user with Bun in full: ${line.trim()}`);
 			const verb =
 				/(?:publication_host_pair\.ts|dedalo:pair-publication-host) ([a-z]+|…)/.exec(line)?.[1] ??
 				'';
