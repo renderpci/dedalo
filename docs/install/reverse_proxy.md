@@ -276,21 +276,20 @@ server {
 !!! note "Several domains on one box"
     This is a single-domain vhost. To serve more domains, add one `upstream` and one `server{}` per domain, each pointing at that instance's socket and `MEDIA_PATH` — see [Multiple instances on one server](multi_instance.md).
 
-!!! warning "Known defect: quote the rule-B location regex"
-    In `publication` mode the generated `dedalo_media_protection.nginx.conf` emits its rule-B location as an **unquoted** regex, and that regex contains `{2,12}`. nginx's configuration lexer treats `{` and `}` as block delimiters, so it truncates the token and refuses to start:
+!!! note "The rule-B location regex is double-quoted, and must stay so"
+    In `publication` mode the generated `dedalo_media_protection.nginx.conf` writes its rule-B location as a **quoted** regex, because the pattern contains `{2,12}` and nginx's configuration lexer treats `{` and `}` as block delimiters. Unquoted, nginx refuses to start:
 
     ```text
     nginx: [emerg] pcre2_compile() failed: missing closing parenthesis in "^/dedalo/media/(?:…"
     ```
 
-    Until the generator is fixed, wrap that one regex in double quotes:
+    Files generated before 2026-07-12 were written unquoted, and the file is only rewritten when its embedded `# config-hash:` line stops matching the current configuration. If you see this error, wrap that one regex in double quotes; quoting does not change the hash, so the edit survives:
 
     ```nginx title="fix"
     location ~ "^/dedalo/media/(?:av/404|…)…$" {
     ```
 
-    The edit survives: the file is only rewritten when the embedded
-    `# config-hash:` line stops matching the current configuration, and quoting does not change the hash. Re-apply it after any change to the media mode or the public quality list. `private` mode is unaffected — it generates no regex location.
+    If you copy the rules into a hand-written config, keep the quotes.
 
 ## Apache
 

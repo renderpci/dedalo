@@ -42,6 +42,32 @@ the directory that holds `docker-compose.yml`** — the `master_dedalo` checkout
 There is no build step and no dependency-fetch step for the client: a clone is
 self-contained, and the engine runs TypeScript directly.
 
+### Two places: your host and the containers
+
+Every path on this page lives in one of two places, and confusing them is the
+most common way a first install goes wrong.
+
+| Where | Paths | How you reach them |
+| --- | --- | --- |
+| **The host** — your checkout | `docker-compose.yml`, `deploy/nginx.conf`, `deploy/certs/` | an ordinary editor, from the checkout directory (`cd …/master_dedalo`) |
+| **Inside the containers** — Docker volumes | `/srv/dedalo/media`, `/private`, `/backups`, `/run/dedalo` | `docker compose exec <service> …` only |
+
+- `/srv/dedalo/` **does not exist on the host**, and it should not. When
+  `deploy/nginx.conf` says `include /srv/dedalo/media/…`, that is a path *inside
+  the nginx container*. You only edit the line on the host; nginx resolves it in
+  the container.
+- To look inside a volume, go through a container:
+  `docker compose exec nginx ls -l /srv/dedalo/media/`. The raw volume data sits
+  under `/var/lib/docker/volumes/dedalo_media/_data/` (root only) — never edit
+  it there.
+- **Every `nginx` command goes through the container**:
+  `docker compose exec nginx nginx -t`. A plain `nginx -t` tests the *host's*
+  nginx, if it has one — a different server with a different configuration.
+  `open() "/run/nginx.pid" failed (13: Permission denied)` is the tell: you are
+  talking to the host's nginx.
+- Not sure where the checkout is? `docker compose ls` prints the full path of
+  every running stack's compose file.
+
 ## The stack
 
 | Service | Image | Role |
@@ -91,6 +117,21 @@ docker run --rm hello-world      # end-to-end smoke test: pull + run
 - **The daemon must be running.** `docker info` failing with *cannot connect to
   the Docker daemon* means the service is stopped (`systemctl start docker`) or
   your user is not in the `docker` group.
+- **Run `docker` without `sudo`.** `sudo` starts the command with a clean
+  environment, so the variables you export in [step
+  2](#step-2-choose-the-database-credentials) never reach compose, and every
+  command fails with *required variable POSTGRES_PASSWORD is missing a value*.
+  Join the `docker` group once instead:
+
+    ```shell
+    sudo usermod -aG docker "$USER"
+    newgrp docker                    # or log out and back in
+    docker run --rm hello-world      # now works without sudo
+    ```
+
+    Membership of `docker` is root-equivalent — exactly what `sudo docker`
+    already was. If you must keep `sudo`, pass the variables through on **every**
+    command: `sudo --preserve-env=POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD docker compose …`.
 - **Docker Desktop (macOS/Windows):** the checkout must be inside a shared path,
   or the bind mounts of `deploy/nginx.conf` and `client/` arrive empty. Fine for
   evaluation; for production use Linux — see the note in the
@@ -99,14 +140,43 @@ docker run --rm hello-world      # end-to-end smoke test: pull + run
 ### Check the host
 
 ```shell
-ss -tlnp | grep -E ':(80|443)\b'    # both must be FREE — the proxy publishes them
-docker system df                    # room for the image and the volumes?
+sudo ss -tlnp | grep -E ':(80|443)\b'   # both must be FREE — the proxy publishes them
+docker system df                        # room for the image and the volumes?
 df -h /var/lib/docker
+hostname -I                             # this machine's address — note it for step 4
 ```
 
 - **Ports 80 and 443 must be free.** A host web server already listening there
-  is the single most common `docker compose up` failure. Stop it, or put Dédalo
-  behind it (see [reverse proxy](reverse_proxy.md)).
+  is the single most common `docker compose up` failure:
+  `failed to bind host port 0.0.0.0:80/tcp: address already in use`. The `ss`
+  line names the process (`sudo` is what makes it show the name); on Ubuntu it
+  is usually `apache2` or `nginx` installed with the system. Either:
+
+    1. **Stop it** — the right answer when nothing else on the machine needs it:
+
+        ```shell
+        sudo systemctl disable --now apache2     # or nginx
+        ```
+
+    2. **Or move the stack to other ports** with an override file next to
+       `docker-compose.yml` — compose reads `docker-compose.override.yml`
+       automatically, and you leave the shipped file untouched:
+
+        ```yaml title="docker-compose.override.yml"
+        services:
+          nginx:
+            ports: !override
+              - "8080:80"
+              - "8443:443"
+        ```
+
+        `!override` needs Compose 2.24.4 or newer; without it the ports are
+        *added* to the shipped ones and the bind still fails. Confirm with
+        `docker compose config nginx | grep -A8 ports`. Then browse to
+        `https://<address>:8443/dedalo/` directly: the plain-HTTP port only
+        redirects to `https://<address>/`, which drops the port. For a
+        production machine that must keep its own web server, put Dédalo behind
+        it instead (see [reverse proxy](reverse_proxy.md)).
 - **Size the disk for the media, not for the records.** The `media` volume holds
   the originals *and* every derivative, and it is the thing that grows. On a
   real deployment, back it with a volume driver or a bind mount on the large
@@ -245,6 +315,14 @@ export POSTGRES_USER=dedalo_user
 export POSTGRES_PASSWORD='a-long-random-password'
 ```
 
+An `export` lives only in **this** shell. A new terminal, an SSH reconnect or
+`sudo` (see [Check your Docker](#check-your-docker)) starts without them, and
+compose then refuses with *required variable POSTGRES_PASSWORD is missing a
+value*. Check before every session with `echo "$POSTGRES_PASSWORD"`.
+`POSTGRES_DB` and `POSTGRES_USER` are the dangerous pair: they have defaults,
+so when they go missing nothing fails — you silently get a database with a
+different name and owner from the ones the installer was told.
+
 !!! warning "Do not create a `.env` at the repo root"
     Compose would read it for variable substitution — but so would the engine's
     own configuration loader, from the container's working directory. Export the
@@ -276,7 +354,8 @@ overwrites the material you may still need.
 
 For a LAN or a trial, issue a local certificate authority. Use the name or IP
 staff will actually type in the browser — a certificate whose SAN does not match
-is rejected outright:
+is rejected outright. On a virtual machine that is the VM's own address
+(`hostname -I` inside it), not `localhost`:
 
 ```shell
 deploy/dedalo-tls-rotate.sh --mode local-ca --host dedalo.example.org --no-reload
@@ -381,10 +460,27 @@ What each part is doing:
 Every flag is in the [installer reference](installer_reference.md). The run ends
 by verifying an actual root login — if it prints success, the instance is real.
 
-!!! danger "This step is not repeatable"
-    The seed restore refuses a non-empty database. If the install fails halfway,
-    do not re-run it against the same volumes: destroy them
+The installer prints one `→` line per step. **Where it stopped decides what you
+do next:**
+
+- **Before `→ restore database from seed`** (pre-flight, database connection,
+  write `.env`, directories): nothing is in the database yet. Fix the cause and
+  run the same command again — the `.env` it already wrote is reused, and the
+  secrets it generated are kept.
+- **At or after `→ restore database from seed`:** see the danger box below.
+
+!!! danger "Past the seed restore, this step is not repeatable"
+    The seed restore refuses a non-empty database. If the install fails at or
+    after it, do not re-run it against the same volumes: destroy them
     (`docker compose down -v` — **this deletes the data**) and start from step 6.
+
+!!! note "`install failed` at `→ directories`, naming `/backups/db`"
+    The `backups` volume is owned by root, so the installer (user `bun`) cannot
+    write to it. Images built before 2026-10-08 created that volume root-owned.
+    Rebuild from a current checkout (`docker compose build`) and run step 7
+    again: Docker gives an empty volume the ownership of the image's directory,
+    so the rebuild heals it. Without a rebuild, one command does the same:
+    `docker compose run --rm --no-deps --user root dedalo chown -R bun:bun /backups`.
 
 ### Step 8 — Start the whole stack
 
@@ -394,7 +490,11 @@ docker compose ps
 ```
 
 `postgres` and `dedalo` should report *healthy*. `nginx` has no healthcheck —
-check it with `docker compose logs nginx`.
+check it with `docker compose logs nginx`, and read its **PORTS** column: it
+must show `0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp` (or your override's
+ports). An **empty** PORTS column means nothing is published and no browser can
+reach the stack — usually a broken `docker-compose.override.yml`. Fix it, then
+`docker compose up -d --force-recreate nginx`.
 
 **The engine's healthcheck also acts.** It is not a bare `curl` but
 `scripts/ops/container_watchdog.sh`, which probes `/health` over the socket,
@@ -420,41 +520,123 @@ A 502 here is almost always the socket permissions ([problem
 2](#2-the-socket-is-invisible-across-containers)); a connection refused is nginx
 crash-looping — read its log.
 
+**Then from the computer you will actually work on.** Open
+`https://<address>/dedalo/` — always `https://`, always the `/dedalo/` path.
+Plain HTTP only redirects, and a login over it cannot work ([TLS](#tls)). The
+address depends on where Docker runs:
+
+| Docker runs on | `<address>` is |
+| --- | --- |
+| a server, or a VM with a **bridged** network | the machine's own IP — `hostname -I` on it — or its DNS name |
+| a VM with a **NAT** network (the VirtualBox / UTM / Parallels default) | `localhost:<port>`, after you forward a host port to the VM's 443 in the hypervisor's network settings |
+| Docker Desktop on your own computer | `localhost` |
+
+`192.168.65.x` is Docker Desktop's **internal** network, not an address of your
+machine: a browser pointed at it is refused. If the curl above answers inside the
+machine but your browser cannot connect, the problem is the network path to the
+machine (or the PORTS column above), not Dédalo.
+
+With the local certificate authority from step 4, the browser warns until you
+install `dedalo-local-ca.pem` on that computer.
+
 ### Step 10 — Turn the media gate on
 
-The engine wrote the rule files on its first boot. Check, then wire them in:
+Until this step, **no media file is served**: the shipped `deploy/nginx.conf`
+has the gate's two `include` lines commented out, so every `/dedalo/media/…`
+request is a `404` — uploads work, the files are on disk, and the browser still
+shows nothing. That is the safe failure ([problem
+3](#3-the-engine-writes-the-media-rules-the-proxy-reads-them)); this step ends
+it.
+
+**1. Check that the engine wrote the rule files** on its first boot:
 
 ```shell
 docker compose exec dedalo ls -l /srv/dedalo/media/dedalo_media_protection.nginx.conf \
                                 /srv/dedalo/media/dedalo_media_protection_map.nginx.conf
 ```
 
-Both present? Uncomment **both** `include` lines in `deploy/nginx.conf` (the
-`map` one at `http{}` scope near the top, the media one inside the `server{}`),
-then reload:
+Both must be there. (These paths are inside the containers — see [two
+places](#two-places-your-host-and-the-containers). On the host you edit only
+`deploy/nginx.conf`.)
+
+**2. Uncomment both `include` lines** in `deploy/nginx.conf`, on the host, from
+the checkout directory. Both or neither — the server-scope file uses a variable
+the `map` file defines. One command does both (on macOS, write `sed -i ''`):
 
 ```shell
-docker compose exec nginx nginx -t          # syntax + the includes resolve
-docker compose exec nginx nginx -s reload
+sed -i -E 's|^([[:space:]]*)#[[:space:]]*(include /srv/dedalo/media/dedalo_media_protection(_map)?\.nginx\.conf;)|\1\2|' deploy/nginx.conf
 ```
 
-The file is bind-mounted, so the edit is visible to the container immediately —
-no rebuild.
+Or by hand (`nano deploy/nginx.conf`, search with `Ctrl+W` for
+`dedalo_media_protection`): delete the leading `# ` from the line near the top
+(`…_map.nginx.conf`, `http{}` scope) and from the one inside `server{}`. Leave
+the commented `# location /dedalo/media/ {` block alone — that is the
+*unprotected* alternative.
 
-!!! warning "Known defect: quote the rule-B location regex"
-    In `publication` mode the generated file emits one **unquoted** regex
-    containing `{2,12}`, which nginx's lexer truncates — `nginx -t` fails with
-    `pcre2_compile() failed`. It is one edit, documented in
-    [reverse proxy](reverse_proxy.md#nginx). The generated file is only rewritten
-    when its embedded `# config-hash:` line stops matching, and quoting does not
-    change the hash, so the fix survives.
+Check the result — both lines, no `#`:
+
+```shell
+grep -n 'include /srv/dedalo/media' deploy/nginx.conf
+```
+
+```text
+34:include /srv/dedalo/media/dedalo_media_protection_map.nginx.conf;
+103:	include /srv/dedalo/media/dedalo_media_protection.nginx.conf;
+```
+
+**3. Recreate the proxy** — recreate, not `reload`:
+
+```shell
+docker compose up -d --force-recreate nginx
+docker compose exec nginx nginx -t
+```
+
+!!! warning "Why `reload` is not enough after editing `deploy/nginx.conf`"
+    The file is bind-mounted as a **single file**, and Docker pins a single-file
+    mount to the file's inode. `nano`, `vim` and `sed -i` all save by writing a
+    new file and renaming it over the old one — a new inode — so the container
+    keeps the **old** text, and `nginx -s reload` re-reads the old text.
+    Recreating the container mounts the current file. This applies to **every**
+    later edit of `deploy/nginx.conf`, not only this one.
+
+**4. Confirm the running nginx has the gate:**
+
+```shell
+docker compose exec nginx nginx -T 2>/dev/null \
+  | grep -n -E 'dedalo_media_protection|location .*/dedalo/media'
+```
+
+The two `include` lines must appear **without** `#`, followed by several
+generated `location … /dedalo/media…` blocks. A `#` in front of them means the
+container is still serving the old file: go back to 3.
 
 ### Step 11 — Prove media is actually served
 
-Upload a file through the interface, then request it. A `404` on a file you can
-see in the record means the proxy `root` and `MEDIA_PATH` disagree — the root
-rule is documented at the top of `deploy/nginx.conf`, and the gate itself still
-looks healthy when this is wrong, which is what makes it confusing.
+Log in, upload a file to a record, and open it. A `404` has four possible
+causes, because the gate answers `404` both for a file that does not exist and
+for a request it refuses. Check them in this order:
+
+1. **The gate is not loaded** — step 10.4 shows commented `include` lines.
+2. **The file does not exist yet.** The upload stores the `original`; the
+   derivatives (`av/404/…`, the 404-pixel video the player asks for, and the
+   image thumbnails) are produced afterwards by a background job. Compare:
+
+    ```shell
+    docker compose exec nginx ls -l /srv/dedalo/media/av/original/ /srv/dedalo/media/av/404/
+    ```
+
+    The original present and the derivative missing is a transcoding problem —
+    read `docker compose logs dedalo`, not the proxy.
+3. **The browser has no media cookie.** Access is granted by the
+   `dedalo_media_auth` cookie, set at **login**, matching a file in
+   `/srv/dedalo/media/.publication/auth/`. A session opened before the gate was
+   on, or in another browser, does not carry it: log out and log in again.
+4. **The proxy `root` and `MEDIA_PATH` disagree** — the root rule documented at
+   the top of `deploy/nginx.conf`. The gate looks perfectly healthy when this is
+   wrong, which is what makes it confusing.
+
+A **403** is a different problem: nginx's workers are not in the engine's group
+([problem 3](#3-the-engine-writes-the-media-rules-the-proxy-reads-them)).
 
 ### Step 12 — Log in and seal the deployment
 
@@ -697,7 +879,9 @@ docker compose down -v               # remove the volumes too — DESTROYS the i
 
 A configuration change in `docker-compose.yml` needs `docker compose up -d`
 (recreate), not `restart` — `restart` reuses the existing container and its
-old environment.
+old environment. An edit of `deploy/nginx.conf` needs
+`docker compose up -d --force-recreate nginx`: a `reload` can keep serving the
+old file (see [step 10](#step-10-turn-the-media-gate-on)).
 
 ## Backups from a container
 
@@ -761,15 +945,21 @@ Container-specific symptoms; everything else is in
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `POSTGRES_PASSWORD` error before anything starts | the variable is not exported | [step 2](#step-2-choose-the-database-credentials) |
+| `required variable POSTGRES_PASSWORD is missing a value` | the variable is not exported in this shell — or you ran `sudo docker …`, which drops it | [step 2](#step-2-choose-the-database-credentials), [check your Docker](#check-your-docker) |
+| `failed to bind host port 0.0.0.0:80/tcp: address already in use` | a web server on the host already holds port 80 or 443 | [check the host](#check-the-host) |
+| `install failed` at `→ directories`, naming `/backups/db` | the `backups` volume is root-owned (images built before 2026-10-08) | [step 7](#step-7-run-the-installer-once) |
+| The browser cannot connect at all; `docker compose ps` shows an **empty** PORTS column for `nginx` | nothing is published — usually a broken `docker-compose.override.yml` | [step 8](#step-8-start-the-whole-stack) |
+| The browser cannot connect, PORTS look right | the wrong address (`192.168.65.x` is Docker Desktop's internal network), or a NAT VM without port forwarding | [step 9](#step-9-confirm-the-engine-answers) |
+| `nginx -t`: `open() "/run/nginx.pid" failed (13: Permission denied)` | you ran the **host's** nginx, not the container's | `docker compose exec nginx nginx -t` — [two places](#two-places-your-host-and-the-containers) |
+| Uploads work but every media file is a **404** | the gate is not on: the `include` lines are still commented — in the file, or only in the running container after a `reload` | [step 10](#step-10-turn-the-media-gate-on), then [step 11](#step-11-prove-media-is-actually-served) |
 | Every request is a **502** | the proxy cannot write to the socket | the socket volume must be shared, and the engine must grant the socket `0666` itself — [problem 2](#2-the-socket-is-invisible-across-containers) |
 | `nginx` restarts forever | missing certificate, or one `include` uncommented without the other | [step 4](#step-4-provide-a-tls-certificate), [step 10](#step-10-turn-the-media-gate-on) |
-| `nginx -t`: `pcre2_compile() failed` | the unquoted rule-B regex | quote it — [step 10](#step-10-turn-the-media-gate-on) |
+| `nginx -t`: `pcre2_compile() failed` | a rule file generated before 2026-07-12 left the rule-B regex unquoted | quote it — [reverse proxy](reverse_proxy.md#nginx) |
 | The wizard appears after a successful install | `/private` is not on a volume, so `.env` was lost | [problem 1](#1-private-has-no-parent-to-live-in) |
 | The wizard never appears — normal login instead | `/private/.env` already exists, so the engine is not in install mode | [B2](#b2-bring-the-stack-up-on-an-empty-private-volume) |
 | Newly uploaded media is a **403**, older media serves | nginx's workers are not in the engine's group | keep the `addgroup` calls in nginx's `command:` — [problem 3](#3-the-engine-writes-the-media-rules-the-proxy-reads-them) |
 | The install surface 403s from your browser | the key is unset (the default is the local machine only), your address is not in `DEDALO_INSTALL_ALLOWED_IPS`, or you named `loopback` behind the proxy. The refusal names the address the engine saw — add that one | [B1](#b1-name-the-address-you-will-install-from) |
 | The wizard hangs at *Save config*, engine down | no restart policy — the engine exits there by design | [B4](#b4-survive-the-restart-at-save-config) |
-| Every media file 404s, gate looks healthy | proxy `root` and `MEDIA_PATH` disagree | the root rule at the top of `deploy/nginx.conf` |
+| Every media file 404s, gate loaded | the derivative is not produced yet, the browser has no media cookie, or proxy `root` and `MEDIA_PATH` disagree | [step 11](#step-11-prove-media-is-actually-served) |
 | Uploads fail with **413** | `client_max_body_size` | already 300m in the shipped config — check you did not replace it |
 | Login "succeeds" but bounces back to the form | plain HTTP, and `SESSION_COOKIE_SECURE` is on | [TLS](#tls) |
