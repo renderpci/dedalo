@@ -53,6 +53,14 @@
 #   openssl — the publication-host agent's mTLS boot gate (publication/host_agent
 #             tests/boot_mtls.test.ts issues its scratch CA with the CLI) and the
 #             agent's live drill (instance tier).
+#   gpgv — the `.bun-sha256` census row (test/unit/ops_runtime_pin.test.ts) verifies
+#             Bun's clearsigned SHASUMS256.txt.asc (ci/bun/) against the pinned release
+#             key on every run: the hashes `provision init` trusts come only from that
+#             signed payload. gpgv only: it starts no agent and needs no keyring home.
+#   php-fpm — the guided install's v1 pool syntax gate (publication/host_agent
+#             tests/init_web_syntax.test.ts: `php-fpm<v> -t -y <rendered pool>`) and the
+#             Debian init drill's base (scripts/publication_host_init_drill.ts builds its
+#             privileged systemd container FROM this image). Never started here.
 #
 # BASE: debian:trixie-slim, DIGEST-pinned — the distro of the product image
 # (oven/bun:<v>-debian is trixie), so CI and production share a package set.
@@ -104,7 +112,7 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
       ca-certificates curl gnupg bash coreutils procps tzdata locales \
-      git rsync unzip zip xz-utils gzip file jq openssl; \
+      git rsync unzip zip xz-utils gzip file jq openssl gpgv; \
     for l in es_ES de_DE fr_FR; do \
       sed -i "s/^# *\($l\.UTF-8 UTF-8\)/\1/" /etc/locale.gen; \
       grep -q "^$l\.UTF-8 UTF-8" /etc/locale.gen; \
@@ -147,14 +155,18 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends apache2 apache2-dev nginx; \
     rm -rf /var/lib/apt/lists/*
 
-# --- PHP CLI (publication-host engine drill) -----------------------------------
+# --- PHP CLI + FPM (publication-host engine drill, provision init) --------------
 # scripts/publication_host_engine_drill.ts pushes a REAL Publication API v1 release through
 # the engine's lockstep reconciler; the agent runs `php -l` on every .php before it
-# promotes one. Lint only: no SAPI, no web-server module — the CLI binary is all the
-# drill's `php` stand-in execs.
+# promotes one — the CLI binary is all the drill's `php` stand-in execs. php-fpm: the
+# dedicated v1 pool provision init renders is syntax-checked with the real `php-fpm<v> -t`,
+# and the Debian init drill reloads it for real. No web-server module (no libapache2-mod-php).
+# Its postinst may try to start the service without an init system: harmless here, nothing
+# in this image runs it as a service.
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends php-cli; \
+    apt-get install -y --no-install-recommends php-cli php-fpm; \
+    test -x "$(ls /usr/sbin/php-fpm* | head -n1)"; \
     rm -rf /var/lib/apt/lists/*
 
 # --- sudo (sudo's parser: the publication-host agent's sudoers gate) -------------
@@ -266,6 +278,8 @@ RUN set -eu; \
       echo "$(apache2 -v | head -n1)"; \
       echo "$(nginx -v 2>&1)"; \
       echo "$(php -v | head -n1)"; \
+      echo "$("$(ls /usr/sbin/php-fpm* | head -n1)" -v | head -n1)"; \
+      echo "$(gpgv --version | head -n1)"; \
       echo "$(git --version)"; \
       echo "$(openssl version)"; \
       echo "$(cvtsudoers -V | head -n1)"; \

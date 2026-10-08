@@ -35,7 +35,8 @@ The whole page follows one example site. Replace these names with your own:
 | `dedalo.museum.org` | the work system |
 | `/home/museum.org` | the site's home directory on the publication host |
 | `museum_org` | the instance: the agent's name for this site, also used as the paired name |
-| `museum_site` | the site's PHP-FPM pool user, which runs the Publication API v1 |
+| `museum_site` | the website's own user (its files, its PHP-FPM pool, its SFTP login): Dédalo never runs as it |
+| `museum_org_v1` | the Publication API v1's user: it runs v1's own PHP-FPM pool, `dedalo_museum_org_v1` |
 | `museum_org_agent` | the agent's own user |
 | `museum_org_api` | the Publication API v2's user and group |
 | `dedalo-publication-api-v2-museum_org`, port `3100` | the v2 service and its local port |
@@ -52,9 +53,11 @@ every step still says which role the command plays.
 | --- | --- | --- | --- |
 | publication host | `root` | runs `provision`; owns the declarations, `/etc/dedalo_publication_host/`, `/home/museum.org`, `host_agent/`, `.bun/` and the state root | whoever could replace one of these would inherit the agent's sudo and polkit grants |
 | publication host | `museum_org_agent` | runs the agent service; holds the token, the TLS server key and the sudo and polkit grants | it never runs code the work system pushed. It only **reads** its own code, never owns it |
-| publication host | `museum_site` | runs the site's PHP-FPM pool, and so the v1 API (`v1.user`); owns `httpdocs/` and the v1 configuration | it is the only account that can read the v1 configuration, which holds the site's database credentials |
+| publication host | `museum_org_v1` | runs the v1 API in its own PHP-FPM pool (`v1.user`); owns the v1 configuration | it is the only account that can read the v1 configuration, which holds the site's database credentials. Never the web server's user, never the website's own pool: a flaw in the website's PHP cannot read it |
+| publication host | `museum_site` | the website: owns `httpdocs/` and runs the website's own pool, as before | Dédalo changes nothing about it |
 | publication host | `museum_org_api` (user and group) | runs the v2 service and the scratch copy that tests each new v2 release | pushed v2 code runs here, never as the agent. Its group reads `v2.env` |
-| publication host | `www-data` | the web server's group, shared by every site's pool | because every pool shares it, a group permission on a secret would let every site read it |
+| publication host | `www-data` | the web server's user and group, shared by every site's pool (`apache` or `nginx` on RHEL) | because every pool shares it, a group permission on a secret would let every site read it |
+| publication host | `dedalo_pubhost` (group) | every agent of the host, through its service | the host-wide locks and, on nginx, the shared media map's contributions: no account is ever added to it |
 | work host | `dedalo` | runs Dédalo, owns its private directory, runs the pairing command | the work system stores the host's token and certificates as its own private files |
 
 On one machine, the agent's service runs as `User=museum_org_agent` with `Group=dedalo`, the
@@ -68,7 +71,7 @@ also gets `museum_org_api` as a supplementary group, so that it can check that `
 exists.
 
 `check` (step 4) refuses an `engine_group` that is certainly wrong: the agent's own group,
-`museum_site`'s or `museum_org_api`'s primary group, or the v2 group itself. It cannot prove
+`museum_org_v1`'s or `museum_org_api`'s primary group, or the v2 group itself. It cannot prove
 the right one, because the declaration never names the work system's account: step 7's
 request through the socket, made as `dedalo`, is that proof.
 
@@ -92,10 +95,14 @@ fixes it, instead of letting a service fail later with *Permission denied*.
 | `/home/museum.org/.bun/bin/bun` | `root:root 0755` | you (step 1) | the site's own Bun: it runs the agent |
 | `/home/museum.org/host_agent/` | `root:root`, `u=rwX,go=rX` | you (step 1) | the agent's code: root runs `provision` from it |
 | `/home/museum.org/dedalo/` (the state root) | `root:root 0755` | `apply` | the API releases, the media rules and the audit log |
-| `…/dedalo/publication_api/v1/shared/` | `root:root 0711` | `apply` | `museum_site` reaches its file by name but cannot list or change the directory |
+| `…/dedalo/publication_api/v1/shared/` | `root:root 0711` | `apply` | `museum_org_v1` reaches its file by name but cannot list or change the directory |
+| `/var/lib/dedalo_publication_host/museum_org/v1/` | `root:root 0711`; its `tmp/` and `log/` `museum_org_v1 0700` | `apply` | the v1 pool's temporary files and error log, outside the state root |
+| `/etc/dedalo_publication_host/museum_org/web.apache.conf` | `root:root 0644` | `apply` | the site's Dédalo lines (media rules, v1, v2): the vhost includes it (step 9) |
+| `/etc/php/8.3/fpm/pool.d/dedalo_museum_org_v1.conf` | `root:root 0644` | `apply` | the v1 API's own PHP-FPM pool |
 | `…/dedalo/publication_api/v2/shared/` | `root:museum_org_api 0750` | `apply` | `v2.env` is readable by the v2 group only |
-| `/home/museum.org/logs/` | `root:root 0711` | you (step 0) | the web server's logs: root writes them. `museum_site` may pass through it to `logs/php/`, but cannot list it |
-| `/home/museum.org/logs/php/` | `museum_site 0700` | you (step 0) | the site's PHP error log: the pool writes it |
+| `/var/log/apache2/museum.org/` | `root:root 0755` | `apply` (home layout) | the site's web server logs, **outside the home**: the web server opens them as root. RHEL: `/var/log/httpd/museum.org/`; nginx: `/var/log/nginx/museum.org/` |
+| `/etc/logrotate.d/dedalo_museum_org_web` | `root:root 0644` | `apply` (home layout) | rotates that directory: the distribution's own logrotate files reach only `/var/log/apache2/*.log`, one level |
+| `/home/museum.org/logs/php/` | `museum_site 0700`, in a `root:root 0711` `logs/` | you (step 0), optional | the website's own PHP error log, if you keep it in the home: its own pool writes it. Nothing of Dédalo's logs here |
 | `/run/dedalo_publication_host/museum_org/` | `museum_org_agent:dedalo 0750`, `agent.sock` `0660` | systemd and the agent, at start | one machine: only the work system can connect |
 
 ## What it does, and what it never does
@@ -155,7 +162,7 @@ directories. The provisioner grants it exactly two things:
 | Grant | Allows | Why |
 | --- | --- | --- |
 | a sudo rule | the web server's configuration test (`apache2ctl -t`, `apachectl -t` or `nginx -t`), nothing else | the test must read TLS keys only root can read |
-| a polkit rule | reloading the web server's unit, restarting the Publication API v2 unit, starting and stopping a scratch copy of the v2 unit on a high local port | applying rules, testing and switching v2 releases need them |
+| a polkit rule | reloading the web server's unit, restarting the Publication API v2 unit, starting and stopping a scratch copy of the v2 unit on a high local port; on nginx with the shared media map (step 9), starting `dedalo-pubhost-map`, the root service that renders that map | applying rules, testing and switching v2 releases need them |
 
 Neither grant lets the work system reach root through the agent:
 
@@ -174,12 +181,409 @@ Neither grant lets the work system reach root through the agent:
     *meant* it. Protect the work system
     accordingly, and keep the publication host's port closed to everything else.
 
+## Guided install (`provision init`) {#guided-install}
+
+`provision init` does the [manual install](#install) for you, on Debian 12 and 13, Ubuntu
+24.04 and 26.04, and RHEL, Rocky and Alma 9 and 10. On RHEL, Rocky or Alma 8 (or any kernel older than
+Bun needs), `install.sh` refuses before it downloads Bun. On any other system (Ubuntu 22.04,
+CentOS Stream, Oracle Linux) init stops at `host.os` and the manual install applies. It
+looks at the host, compares it with what the instance needs, shows you **everything** it would
+change, and changes it only after you confirm. Every change it makes is a step of the manual install, which stays the reference.
+
+It never installs a package (it prints the `apt` or `dnf` command), and it never edits a file
+of yours, sets an SELinux boolean or types a password without your answer.
+
+!!! warning "Whoever can write the source can become root"
+    init runs, as root, the agent code you give it: the **source**. On one machine that is
+    the work system's checkout; on two machines, the entries you copied from it. Anyone who can
+    write the source before you run init chooses the code root runs. init shows the source's
+    digest (and its git commit and the number of uncommitted files) and asks you to confirm
+    it; give it only a source you trust.
+
+### Run it
+
+The source is a directory with exactly these entries: `.bun-version`, `.bun-sha256`,
+`publication/host_agent/` (with its production `node_modules/` from
+[step 1](#1-prepare-the-code), without `.test-tmp/`), `publication/server_api/v2/.env.example`
+and `publication/server_api/v1/config_api/sample.server_config_api.php`. On two machines,
+copy those five entries, keeping their paths, over a channel you trust.
+
+```bash
+# publication host, as root — the first run, from the source (one machine shown)
+sh /opt/dedalo/master_dedalo/publication/host_agent/deploy/install.sh museum_org \
+  --source /opt/dedalo/master_dedalo --draft /root/museum_org.draft.json
+```
+
+A later run (to repair drift, or after an upgrade of the source) needs neither: it runs the
+Bun and the agent code the first run installed.
+
+```bash
+# publication host, as root — a re-run
+sh /home/museum.org/host_agent/deploy/install.sh museum_org
+```
+
+| `install.sh` option | What it does |
+| --- | --- |
+| `--source <dir>` | the source (first run, or to install new code) |
+| `--draft <file>` | the draft declaration (below); required on the first run |
+| `--offline <bun zip> [<SHASUMS256.txt>]` | use a Bun archive you downloaded, instead of downloading it (a host without internet access) |
+| `--mirror <https base url>` | download Bun from a mirror (https only); the archive is still checked against the source's hash table |
+| `--source-digest <sha256>` | without a terminal: the source digest you accept (otherwise init asks) |
+| `-- <init flags>` | the flags below, passed to `provision init` |
+
+`install.sh` is the only way to start init. Before any of the agent's code runs it:
+
+- refuses to run as anything but root, on anything but Linux, on a musl system, or without
+  `curl`, `unzip`, `sha256sum`, `runuser` and `setsid` (it prints the `apt install` or
+  `dnf install` line). On an SELinux host it also refuses a root shell that is not
+  `unconfined_t` (`id -Z` shows it);
+- copies the source into a root-only directory,
+  `/var/lib/dedalo_publication_host_init/museum_org/stage/`, refusing any special file and any
+  symbolic link that leaves the tree, and shows its digest for you to confirm;
+- downloads the Bun archive for the CPU over https only, and checks it against the hash table
+  committed in the source (`.bun-sha256`, [below](#the-bun-hash-table)). Bun's own
+  `SHASUMS256.txt` is a cross-check that must agree. `bun --version` runs only after the hash
+  matched;
+- starts Bun from that root-only copy, with an empty environment and none of the files a
+  Bun process would otherwise read from its directory.
+
+### What it looks at
+
+init reads the host before it proposes anything, and writes nothing while it looks:
+
+- **the system**: the OS release and kernel, a hosting panel, SELinux and its tools,
+  `fapolicyd`, the mounts (`noexec`, network filesystems), systemd, polkit (installed and
+  startable: the system bus starts it on the first request, so an idle host shows it stopped),
+  sudo and the policy file the installed sudo reads (`/etc/sudoers`; with sudo-rs, Ubuntu 26.04's
+  `sudo`, `/etc/sudoers-rs` when it exists), `chattr`, the CPU (for the Bun archive), and how
+  accounts are resolved (`/etc/nsswitch.conf`);
+- **the web server**: Apache or nginx, its unit and version, its modules, the TLS virtual host
+  that serves the draft's domain, and on nginx whether `conf.d` is included inside `http{}`;
+- **PHP-FPM**: every install, its version and CLI, and the pool the vhost's handler names;
+- **the accounts and ports**: the accounts and groups the instance needs, the listening ports
+  (for a free v2 port), and the work system's service (`dedalo-ts` or `dedalo-ts@<site>`) and
+  its group;
+- **what is already there**: an earlier declaration, the agent code and its digest, the pinned
+  Bun, other instances sharing the same code, the state root, the API configuration files (their
+  owner and mode, never their content) and what `provision check` would report.
+
+Nothing it reads leaves the run: the vhost and pool files are reduced to the few facts it needs,
+and no password, token or configuration value is kept.
+
+### The draft
+
+The draft is the [declaration](#2-declare-the-instance) with the fields init can discover
+left out, plus one field of its own, `layout`. It must say what discovery cannot know: the
+instance, the media (mode and root) and, for a website, the site's domain:
+
+```json
+{
+  "instance": "museum_org",
+  "layout": "home",
+  "site": { "domain": "museum.org" },
+  "media": { "mode": "shared", "root": "/srv/dedalo/media" }
+}
+```
+
+Write it as root, `0600` or `0644`, in a directory only root can write (`/root/`). init fills
+every other field from the host or from its defaults, and lists each one with where its value
+came from, before it writes anything: the web server and its unit, the PHP-FPM install (`site.fpm`),
+the vhost, the work system's group (`engine_group`, from its service), a free v2 port, the
+systemd profile, the paths of the layout, and the accounts it proposes —
+`museum_org_agent`, `museum_org_v1` and `museum_org_v2`, with the v2 service
+`dedalo-publication-api-v2-museum_org` on port 3100 (or the next free one). Give a field in the
+draft to choose it yourself. (The manual install's example calls the v2 account `museum_org_api`:
+any name the declaration gives works, as long as the steps use the same one.)
+
+init writes the final declaration to `/etc/dedalo_publication_host/museum_org.json`. On a
+re-run that file is the draft; a `--draft` that differs from it is shown as a diff to accept.
+
+### The three lists
+
+Before it changes anything, init prints the whole report:
+
+1. **Already right**: nothing to do.
+2. **Will change**: each change with its exact command, and a diff for every file (secrets
+   removed from it). Then one question: `Apply these N changes? [y/N]`.
+3. **Needs your decision**: one question per item, with its options. The default is shown, but
+   you type it. An item that touches every site on the host (an SELinux boolean, fapolicyd), or
+   a file of yours (the vhost, a hand-written nginx map), is always a decision.
+
+Then, if they are missing, it asks for the two API configuration files' secrets: the database
+password and the v1 `API_WEB_USER_CODE`, typed without echo, twice. They are never printed,
+never written to the journal and never passed on a command line. A secret is 8 to 256
+printable ASCII characters with no space, `'`, `\` or `$` (Bun's environment-file loader expands
+`$` even inside quotes, so v2 would read another value); a refused one is named, never echoed,
+and its file stays under *still to do*.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | done: everything is right, the agent answers its health check, and it is paired or the pairing commands were printed. Optional items may remain under *still to do* |
+| 1 | a dry run (or no terminal without `--yes`) found something to change; nothing was written |
+| 2 | the command line is wrong |
+| 3 | refused: a decision is still open, you declined, a check failed, a secret was needed without a terminal, or another run holds the instance |
+| 4 | a change failed: what was rolled back, and how, is printed |
+| 5 | `provision check` only: init or `provision apply` is changing the instance; nothing was checked |
+
+| `provision init` flag | Meaning |
+| --- | --- |
+| `--draft <file>` | the draft (`install.sh` passes its root-only copy) |
+| `--source <dir>` | the staged source (`install.sh` passes it) |
+| `--source-digest-confirmed <sha256>` | the digest you confirmed (`install.sh` passes it) |
+| `--bun-archive <zip>` | the verified Bun archive (`install.sh` passes it) |
+| `--bun-sums <file>` | Bun's `SHASUMS256.txt`, a cross-check (`install.sh` passes it) |
+| `--yes` | apply every *will change* item without asking. It never answers a decision, never edits a file of yours, never sets an SELinux boolean and never types a secret |
+| `--decide <item-id>=<option>` | answer one decision, for example `--decide declaration.layout=system`. Repeat it for each |
+| `--resume` | continue a run that stopped halfway (the journal shows it); without it such a run is refused |
+| `--dry-run` | look and compare only; write nothing, not even the journal |
+| `--pair-name <name>` | the work system's name for this host (default: the instance) |
+| `--no-pair` | print the pairing commands instead of pairing |
+
+Pass them after `--`: `sh …/install.sh museum_org -- --dry-run`. `--declaration` is refused:
+init writes the declaration, you give it the draft.
+
+Without a terminal, init behaves as `--dry-run` unless `--yes` is given; with `--yes` the
+changes run, and every decision and secret it could not ask for stays open, so the run ends
+with exit 3 naming them. Answer them with `--decide`, or run init on a terminal.
+
+### The site's home, or the system directories
+
+By default (`"layout": "home"`) everything Dédalo installs for the site lives in its home
+directory, as in the [manual install](#lay-out-each-site-in-its-home-directory):
+
+| | `home` (the default) | `system` (the alternative) |
+| --- | --- | --- |
+| state root | `/home/museum.org/dedalo` | `/srv/dedalo_publication_host/museum_org` |
+| agent code | `/home/museum.org/host_agent` | `/opt/dedalo_publication_host/host_agent` |
+| the site's Bun | `/home/museum.org/.bun/bin/bun` | `/opt/dedalo_publication_host/bun/bin/bun` |
+| the site's web server logs | `/var/log/apache2/museum.org` (RHEL `/var/log/httpd/…`, nginx `/var/log/nginx/…`): never in the home | where your virtual host puts them |
+
+Root runs the Bun and the agent code from beneath the home, so the home must belong to root.
+init makes it so, as a *will change* item (`--yes` applies it):
+
+```bash
+chown root:root /home/museum.org && chmod 0755 /home/museum.org
+```
+
+What that changes, and init says it again when it proposes it:
+
+- the site's user keeps every file and directory it owns, but can no longer create new entries
+  directly in the home, **dotfiles included** (`.bash_history`, `.cache`, `.ssh`): existing ones
+  stay writable. `sshd` accepts a root-owned home, so logins still work;
+- **the mode widens** when the home was tighter (`useradd` creates homes `0700` on Debian 13,
+  RHEL, Rocky and Alma and `0750` on Ubuntu 24.04 and 26.04; on Debian 12 `adduser` creates them
+  `0700`, while its `useradd` gives `0755`): with `0755`, every local account, other sites' PHP-FPM users
+  included, can list the home and read any file in it that is itself world-readable. init
+  names the previous mode and the world-readable files it found;
+- an existing `.bun/` or `host_agent/` that root does not own is never taken over: the decision
+  is to use `.dedalo_bun/` and `dedalo_host_agent/` beside it, or to fix it by hand.
+
+The home cannot be given to root when it is a symbolic link, when `/home` (or a directory
+above it) is not root's or is writable by others, when it is on a network filesystem (`nfs`,
+`nfs4`, `cifs`, `smb3`, `autofs`, `fuse.*`) or mounted `noexec`, or when the web server's or
+PHP-FPM's service hides `/home` (`ProtectHome=`, `InaccessiblePaths=`, `TemporaryFileSystem=`).
+init then offers only `system`, naming the reason. On a host run by a hosting panel (Plesk,
+cPanel, ISPConfig, Virtualmin, HestiaCP and the like) init stops: the panel owns the vhosts and
+the pools, so follow the manual install with the panel's own tools.
+
+### nginx: one media map for the host
+
+On nginx the media rules need an `http{}` map, and nginx accepts only one per host. When
+`conf.d` is included inside `http{}` (Debian and RHEL both do), init declares
+`"nginx_map": "conf_d"`: `apply` writes the host-wide include
+`/etc/nginx/conf.d/dedalo_media_map.conf` and the root service `dedalo-pubhost-map`, and from then
+on the work system's **Apply media rules** pushes the map into it, for every instance on the host.
+On such a host the map must not be placed by hand. A map you placed earlier is found and offered
+as a decision (`web.nginx_manual_map.<id>`): init moves it into the host map in one configuration
+test and reload, with a backup, so the media rules never lose their variables. When `conf.d` is
+not inside `http{}`, init prints the one `include` line to add to `nginx.conf` (it never edits that
+file) and writes `"nginx_map": "none"`. After adding the line, set `"nginx_map": "conf_d"` under
+`web` in `/etc/dedalo_publication_host/museum_org.json` and re-run: a re-run keeps what the
+declaration says. Apache needs no map.
+
+### Pairing
+
+- **One machine.** When the agent listens on a socket and init finds exactly one running work
+  system service, it runs the work system's own pairing command (step 8) as the work system's
+  user, with the token on its standard input only: nothing to copy. Several work services are a
+  decision; a name already registered asks whether to replace it. `--pair-name` chooses the name,
+  `--no-pair` prints the commands instead.
+- **Two machines.** Pairing stays manual in this release: init prints the
+  [step 6](#6-carry-the-engine-bundle-to-the-work-system-two-machines-only) and
+  [step 8](#pair-it-with-the-work-system) commands with this instance's paths, to run on the
+  work host.
+
+### What init keeps, and what a hand-run `provision` sees
+
+- `/var/lib/dedalo_publication_host_init/museum_org/` (root, `0700`): the journal of every
+  change (`journal.jsonl`, no secret in it), the backups of every file of yours it edited
+  (`backup/`), root copies of the source's templates (`kept/`) and `rerun.env`, which names the
+  Bun and the agent code a re-run uses. The staged copy is removed after a successful run.
+- **A run that stopped halfway** (a power cut, `kill`) is continued with `--resume`. init
+  re-reads the host whatever the journal says, so a repeated run never repeats a change that
+  is already made.
+- **Locks.** init holds the instance for the whole run. A `provision apply` started by hand
+  meanwhile waits 5 seconds, then is refused naming the holder; a `provision check` waits 5
+  seconds, then ends with exit 5 (nothing checked: a monitor should read it as *unknown*, not
+  as drift). Several `check`s run together. Every configuration test and reload of the web
+  server or PHP-FPM, by init, by `provision apply` or by any instance's agent, takes one
+  host-wide lock, so two instances never reload the same server at once.
+
+### What init never does
+
+- install packages, start `setenforce`, write an SELinux policy module, or change `nginx.conf`
+  or `/etc/httpd/conf.modules.d/` (it prints the line to add);
+- edit an existing PHP-FPM pool (the v1 API gets [its own](#9-map-the-apis-into-the-sites-virtual-host)),
+  change a user's home (`usermod -d`), move a log destination, or create a vhost or a TLS
+  certificate (the vhost must exist; init adds two lines to it, after you confirm the diff);
+- modify an existing account (it creates the missing ones after you confirm, never changes one
+  that exists), or join anybody to a group;
+- run on Ubuntu 22.04 (its polkit 0.105 ignores the agent's rules file), on RHEL, Rocky or Alma 8
+  ([below](#rhel-rocky-and-alma)), on CentOS Stream or Oracle Linux (not supported: follow the
+  manual install), or with SELinux enforcing on Debian or Ubuntu;
+- pair two machines (it prints the commands, see [Pairing](#pairing)).
+
+### The Bun hash table {#the-bun-hash-table}
+
+`.bun-sha256`, at the root of the work system's checkout, names the pinned Bun version, the
+fingerprint of Bun's release key, and one sha256 per archive:
+
+```text
+# bun-v<pin>
+# signed-by: <the release key's fingerprint>
+<sha256>  bun-linux-aarch64.zip
+<sha256>  bun-linux-x64-baseline.zip
+<sha256>  bun-linux-x64.zip
+```
+
+Whoever bumps the pin generates it with `scripts/ci/bun_pin_hashes.ts`, which takes the hashes
+only from Bun's **signed** `SHASUMS256.txt.asc`, after verifying the signature against the
+release key's pinned fingerprint. The signed file is committed beside it, and CI verifies the
+signature again on every run. A mirror or a man in the middle therefore cannot substitute an
+archive. What remains trusted: the signed list does not name its Bun version, so the version is
+bound by the download address and by `bun --version`, which init checks after the hash.
+
+### RHEL, Rocky and Alma (9 and 10) {#rhel-rocky-and-alma}
+
+The same guided install, with the family's names and its SELinux policy.
+
+**Packages** (init prints the `dnf` line for what is missing, never runs it): `httpd` and
+`mod_ssl` (or `nginx`), `php-fpm` and `php-cli` of one version, `polkit`, `sudo`, `curl`,
+`unzip`, and with SELinux `policycoreutils-python-utils` (`semanage`) and
+`policycoreutils libselinux-utils` (`restorecon`, `getsebool`). Apache is `httpd`: its user is
+`apache`, its unit `httpd`, its configuration test `/usr/sbin/apachectl -t`, and its modules
+are loaded by `/etc/httpd/conf.modules.d/*.conf`. init checks the modules the instance needs
+with `httpd -M` and names the file whose `LoadModule` line is commented out (or `dnf install
+mod_ssl`); it never edits those files. nginx's user is `nginx`.
+
+**PHP-FPM.** The v1 API runs in its own pool. EL's AppStream ships one PHP version per host.
+EL 9 defaults to 8.0, below the v1 floor of 8.1, and offers newer ones as module streams:
+`dnf module reset php && dnf module enable php:8.2 && dnf install php-fpm php-cli`. EL 10 has no
+module streams and ships 8.3: `dnf install php-fpm php-cli`. Remi's `php<NN>` collections
+install side by side on both. The pool's files, by flavour:
+
+| | AppStream (`el`, 8.2) | Remi (`remi`, 8.3) |
+| --- | --- | --- |
+| pool file | `/etc/php-fpm.d/dedalo_museum_org_v1.conf` | `/etc/opt/remi/php83/php-fpm.d/dedalo_museum_org_v1.conf` |
+| service | `php-fpm` | `php83-php-fpm` |
+| socket | `/run/php-fpm/dedalo-museum_org-v1.sock` | `/var/opt/remi/php83/run/php-fpm/dedalo-museum_org-v1.sock` |
+
+EL's `/etc/httpd/conf.d/php.conf` sends every `.php` file to its own `www` pool, server-wide,
+from a `<FilesMatch>` section, and Apache merges `<FilesMatch>` after `<Directory>`: a handler set
+directly in the v1 `<Directory>` would lose to it. The v1 handler therefore sits inside an
+`<If>` ([step 9](#9-map-the-apis-into-the-sites-virtual-host)), and `<If>` sections are merged
+last of all: it wins in the v1 directory. EL 9 and 10 AppStream ship no `mod_php`; with Remi's
+`php<NN>-php` module under the prefork worker (no FPM handler at all), the same lines switch the
+module off in the v1 directory.
+
+**SELinux.** On a host where SELinux is enforcing or permissive (`getenforce`), `provision
+apply` registers the file contexts of the instance's own paths and the v2 port, then relabels
+them (`restorecon`), before any service starts. A permissive host is labelled too, so a later
+switch to enforcing breaks nothing. On a host where SELinux is disabled but its policy is
+installed, the rules are registered and nothing is relabelled. What gets which type
+(`httpd_t`, the domain httpd, nginx and PHP-FPM all run in, reads only what is labelled for it):
+
+| Path | `-f` | Type | Why |
+| --- | --- | --- | --- |
+| `/home/museum.org` | `d` | `home_root_t` | httpd may pass through the home: this one directory, never its contents (home layout) |
+| `/home/museum.org/dedalo` | `d` | `usr_t` | passed through only |
+| `/home/museum.org/dedalo/publication_api` | `d` | `usr_t` | passed through only |
+| `/home/museum.org/dedalo/publication_api/v1` | `a` | `httpd_sys_content_t` | httpd serves it, the v1 pool reads it |
+| `/home/museum.org/dedalo/rules` | `a` | `httpd_config_t` | the media rules, included by the web server |
+| `/home/museum.org/host_agent` | `a` | `usr_t` | the agent's code (no secret) |
+| `/home/museum.org/.bun/bin` | `a` | `usr_t` | the site's Bun directory |
+| `/home/museum.org/.bun/bin/bun` | `f` | `bin_t` | systemd may start it |
+| `/var/lib/dedalo_publication_host/museum_org/v1/tmp` | `a` | `httpd_sys_rw_content_t` | the v1 pool's temporary files |
+| `/var/lib/dedalo_publication_host/museum_org/v1/log` | `a` | `httpd_log_t` | the v1 pool's error log |
+| `/srv/dedalo/media` | `a` | `httpd_sys_content_t` | copy mode on a local filesystem; shared mode only when you answer `act` to `selinux.media_access`, which init records as `media.selinux_label: true` in the declaration (remove it and the next `apply` unregisters the rule) |
+| `/var/lib/dedalo_publication_host/_host/nginx_map` | `a` | `httpd_config_t` | nginx: the host-wide media map |
+| `/var/lib/dedalo_publication_host/_host/map_renderer` | `a` | `usr_t` | nginx: the root map renderer's code |
+| `/var/lib/dedalo_publication_host/_host/map_renderer/bun` | `f` | `bin_t` | nginx: its Bun |
+
+`-f d` is the directory alone; `a` a whole subtree. The site's web server logs need no rule of
+ours: `/var/log/httpd/museum.org` and `/var/log/nginx/museum.org` are `httpd_log_t` by the
+policy's own `/var/log/httpd(/.*)?` and `/var/log/nginx(/.*)?` rules. Everything else keeps a type `httpd_t`
+cannot read: the v2 configuration (`v2.env`), the v2 releases and the audit log above all. The
+v1 configuration is readable by `httpd_t` (the v1 pool must read it) and is protected by its
+owner and mode instead (`museum_org_v1`, `0400`). The v2 port gets `http_port_t`, so httpd may
+proxy to it; a port the policy already gives another type (3306, 8080) is refused, and init
+proposes another.
+
+The **booleans** widen httpd for every site on the host, so init only ever asks, never sets one
+with `--yes`, and offers the narrowest first. It records the previous value and prints the
+command that restores it if the run fails later:
+
+| Boolean | When init asks | What it lets httpd do |
+| --- | --- | --- |
+| `httpd_can_network_relay` | the v2 proxy (the default answer) | connect to the web ports, `http_port_t` included |
+| `httpd_can_network_connect` | the v2 proxy (second answer) | connect to **any** port |
+| `httpd_can_network_connect_db` | v1 reaches MariaDB over TCP, not its socket | connect to database ports |
+| `httpd_enable_homedirs` | the home cannot carry the one-directory rule above (second answer) | search every home directory on the host and read `httpd_user_content_t` in all of them |
+| `httpd_use_nfs`, `httpd_use_cifs`, `httpd_use_fusefs` | the media are on a network mount (second answer) | read every mount of that kind on the host |
+
+`httpd_graceful_shutdown` is read, never changed. For network media the default answer is the
+mount option instead: init prints the mount's `/etc/fstab` line with
+`context="system_u:object_r:httpd_sys_content_t:s0"` added, which labels that one mount only.
+
+To see what init registered, and why a request is denied:
+
+```bash
+# publication host, as root
+semanage fcontext -l -C            # the local file-context rules
+semanage port -l -C                # the local port labels
+restorecon -n -v -R /home/museum.org/dedalo   # prints nothing when the labels are right
+ausearch -m AVC,USER_AVC -ts recent
+```
+
+**Hardened hosts.** A filesystem mounted `noexec` under the home (CIS and STIG profiles often
+mount `/home` and `/var` so) excludes the home layout; under `/opt` it stops init, naming the
+mount. With `fapolicyd` active, systemd cannot start an untrusted Bun whatever its label: init
+stops until you trust the two binaries, and prints the lines:
+
+```bash
+# publication host, as root
+fapolicyd-cli --file add /home/museum.org/.bun/bin/bun --trust-file dedalo
+fapolicyd-cli --file add /var/lib/dedalo_publication_host/_host/map_renderer/bun --trust-file dedalo
+fapolicyd-cli --update
+```
+
+**EL 8 is not supported.** It ships systemd 239 and kernel 4.18: the units need systemd 247
+(`LoadCredential=` delivers the agent's token, `ProtectProc=` hides other processes), and Bun
+documents kernel 5.1 or newer. `install.sh` refuses EL 8 (and any kernel below 5.1) before it
+downloads Bun, and `provision apply` refuses its systemd. Upgrade the host to RHEL, Rocky or
+Alma 9 or 10.
+
 ## Install
 
+This is the manual install: every step by hand. The [guided install](#guided-install) does the
+same steps for you after you confirm them; when one of its items needs your hands, it names
+the step here.
+
 !!! note "Before you start"
-    - An Ubuntu 24.04 or newer, or Debian 12 or newer, publication host with `apache2` (or
-      `nginx`), `php8.3-fpm` **and** `php8.3-cli` of the same version, `sudo`, `curl` and
-      `unzip`.
+    - A Debian 12 or 13, or Ubuntu 24.04 or 26.04, publication host with `apache2` (or `nginx`),
+      `php8.3-fpm` **and** `php8.3-cli` of the same version, `sudo`, `curl` and `unzip`. On
+      RHEL, Rocky or Alma 9 and 10 the packages and the SELinux steps are in
+      [RHEL, Rocky and Alma](#rhel-rocky-and-alma).
     - `polkitd` (the `polkitd` package), version 0.106 or newer: the agent's right to reload
       the web server and restart the v2 service is a JavaScript rules file in
       `/etc/polkit-1/rules.d/`. Ubuntu 22.04 ships 0.105, which does not read such files, and
@@ -187,7 +591,9 @@ Neither grant lets the work system reach root through the agent:
       panel's actions fail later (see [In the panel](#in-the-panel)). `pkaction --version`
       prints the version.
     - A filesystem for the state root that supports the append-only attribute (ext4, xfs):
-      `apply` runs `chattr +a` on the agent's audit log.
+      `apply` runs `chattr +a` (the `e2fsprogs` package) on the agent's audit log.
+    - `logrotate`: in the home layout `apply` writes the rotation of the site's web log
+      directory to `/etc/logrotate.d/`.
     - A read-only MariaDB user for each site's Publication APIs.
     - For step 10, a work system installed through the code updater. A work system cloned
       from git can provision and pair a publication host, but it cannot push API releases
@@ -195,16 +601,16 @@ Neither grant lets the work system reach root through the agent:
 
 | Step | Machine | As | What it changes |
 | --- | --- | --- | --- |
-| 0. Prepare the site's home directory | publication host | `root` | `/home/museum.org`, the site user, the PHP-FPM pool, the log directories |
+| 0. Prepare the site's home directory | publication host | `root` | `/home/museum.org`, the site user, the log directories |
 | 1. Prepare the code and the site's Bun | work host, then publication host | `dedalo`, then `root` | `publication/host_agent/node_modules/`; `/home/museum.org/host_agent/`, `/home/museum.org/.bun/` |
 | 2. Declare the instance | publication host | `root` | `/etc/dedalo_publication_host/museum_org.json` |
-| 3. Create the accounts | publication host | `root` | `museum_org_agent`, `museum_org_api` |
-| 4. Provision | publication host | `root` | the state root, the units, the sudo and polkit rules, the token, the certificates |
+| 3. Create the accounts | publication host | `root` | `museum_org_agent`, `museum_org_v1`, `museum_org_api`, the `dedalo_pubhost` group |
+| 4. Provision | publication host | `root` | the state root, the units, the sudo and polkit rules, the token, the certificates, the v1 pool and the site's web include |
 | 5. Create the API configuration files | publication host | `root` | `v2.env`, `server_config_api.php` |
 | 6. Carry the engine bundle (two machines only) | publication host, then work host | `root` | a private copy of the bundle on the work host |
 | 7. Check the agent answers | work host (and publication host for the fingerprint) | `dedalo` (`root`) | nothing |
 | 8. Pair it with the work system | work host | `dedalo` | the work system's registry and private directory |
-| 9. Map the APIs into the site's virtual host | publication host | `root` | the site's virtual host |
+| 9. Map the APIs into the site's virtual host | publication host | `root` | two lines in the site's virtual host |
 | 10. First use | the work system's Maintenance panel | the Dédalo root user | media rules, API releases, the public check |
 
 **A work system with several instances.** The commands name the
@@ -223,8 +629,8 @@ work host and the publication host are the same server. If a step refuses, its g
 
 **On:** the publication host · **As:** `root`
 
-**Changes:** the owner of `/home/museum.org`, the site user's home, `httpdocs/`, `logs/`,
-the site's PHP-FPM pool file.
+**Changes:** the owner of `/home/museum.org`, the site user's home, `httpdocs/`, where the
+virtual host writes its logs.
 
 Everything that belongs to one site lives in its home directory, and two sites never share
 one. The state root (`/home/museum.org/dedalo`, created in step 4) and every directory above
@@ -246,7 +652,10 @@ per account, for example:
 '/home/museum.org' cannot be traversed by museum_org_agent (the agent) — chmod o+x /home/museum.org
 ```
 
-The `chmod` it prints is the narrowest fix; the `chmod 0755` above covers it.
+The `chmod` it prints is the narrowest fix; the `chmod 0755` above covers it. It also widens
+the home: a home that was `0700` or `0750` becomes listable by every local account, and every
+file in it that is itself world-readable becomes readable by them (the [guided
+install](#the-sites-home-or-the-system-directories) says the same, naming the files).
 
 If the site user already exists, give it its document root as its home. `usermod` refuses
 to change the home of a user that has running processes (*user museum_site is currently used
@@ -282,54 +691,49 @@ The site user still owns `httpdocs/` and can change the website as before. It ca
 gives `/home/museum.org` back to the site user, the agent refuses to start and `check` names
 the directory: give it back to root.
 
-**Logs.** The web server and the pool write different logs, and they must not share a
-directory the site user can write. Apache opens its logs as root, so a user who can replace
-a log file with a link could make root write into any file on the system. Keep the web
-server's logs in a root-owned directory and the PHP error log in one the pool owns:
+**Logs.** The web server's logs stay **outside the home**, in the distribution's log directory,
+one directory per site. Root opens them, and a log under `/home` breaks the server on a host
+whose web server unit is sandboxed: Ubuntu 26.04's `apache2.service` runs with
+`ProtectHome=read-only`, so an `ErrorLog` under `/home/museum.org` passes `apache2ctl -t` and the
+unit then fails to start. Point the virtual host at the site's directory (step 9 shows it):
+
+| Web server | The site's log directory |
+| --- | --- |
+| Apache, Debian and Ubuntu | `/var/log/apache2/museum.org/` |
+| Apache (`httpd`), RHEL, Rocky and Alma | `/var/log/httpd/museum.org/` |
+| nginx, every family | `/var/log/nginx/museum.org/` |
+
+`provision apply` (step 4) creates it, `root:root 0755`, and writes
+`/etc/logrotate.d/dedalo_museum_org_web`, which rotates its `*.log` files daily: the
+distribution's own `logrotate` files only reach the files directly in `/var/log/apache2/` (or
+`httpd/`, `nginx/`), never a directory below. On SELinux the directory is `httpd_log_t` by the
+policy's own rules. The v2 API and the agent log to the systemd journal (`journalctl -u <unit>`);
+the agent's audit trail is in `dedalo/audit/`; the v1 API's PHP errors go to
+`/var/lib/dedalo_publication_host/museum_org/v1/log/`.
+
+The website's own PHP pool keeps its error log where you had it. If that is in the home, give it a
+directory the pool owns, never one the web server writes: a user who can replace a file root opens
+with a link could make root write into any file on the system.
 
 ```bash
-# publication host, as root
+# publication host, as root (only if the website's PHP error log stays in the home)
 install -d -o root -g root -m 0711 /home/museum.org/logs
 install -d -o museum_site -m 0700 /home/museum.org/logs/php
 ```
 
-`logs/` is `0711`: the pool writes its error log as `museum_site`, so that user must be able
-to pass through `logs/` to reach `logs/php/`, but it cannot list `logs/` or change anything in
-it. With `0750`, PHP cannot open the pool's error log and the site's PHP errors go to the main
+`logs/` is `0711`: the pool writes its error log as `museum_site`, so that user must be able to
+pass through `logs/` to reach `logs/php/`, but it cannot list `logs/` or change anything in it.
+With `0750`, PHP cannot open the pool's error log and the site's PHP errors go to the main
 PHP-FPM log instead.
 
 If the site user must read the web server's logs, give that one user read access
-(`setfacl -m u:museum_site:rX /home/museum.org/logs` and
-`setfacl -d -m u:museum_site:r /home/museum.org/logs`), never the shared `www-data` group,
-which every site's pool runs in. The v2 API and the agent log to the systemd journal
-(`journalctl -u <unit>`); the agent's audit trail is in `dedalo/audit/`.
+(`setfacl -m u:museum_site:rX /var/log/apache2/museum.org` and
+`setfacl -d -m u:museum_site:r /var/log/apache2/museum.org`), never the shared `www-data` group,
+which every site's pool runs in.
 
-**The site's pool.** The v1 API runs in the site's own PHP-FPM pool, as `museum_site`. If the
-pool limits PHP with `open_basedir`, the limit must cover the whole home directory: a limit to
-`httpdocs/` alone would stop the v1 API from reading its own code.
-
-```ini
-; /etc/php/8.3/fpm/pool.d/museum.org.conf
-[museum.org]
-user = museum_site
-group = www-data
-listen = /run/php/php8.3-fpm-museum.org.sock
-listen.owner = www-data
-listen.group = www-data
-pm = ondemand
-pm.max_children = 5
-php_admin_value[open_basedir] = /home/museum.org/:/tmp/
-php_admin_flag[log_errors] = on
-php_admin_value[error_log] = /home/museum.org/logs/php/error.log
-```
-
-```bash
-# publication host, as root
-systemctl reload php8.3-fpm
-```
-
-Keep your own process settings (`pm…`) if the pool already exists. Note the `listen =`
-socket: the virtual host uses it in step 9.
+**The website's pool is not touched.** The v1 API does not run in it: it runs in a PHP-FPM pool
+of its own, `dedalo_museum_org_v1`, as its own user, which `apply` writes in step 4. Keep the
+website's pool exactly as it is.
 
 #### SFTP chroot
 
@@ -346,8 +750,8 @@ Match User museum_site
     X11Forwarding no
 ```
 
-The user lands in `httpdocs/`, sees `dedalo/` read-only, and can read only its own site's v1
-configuration.
+The user lands in `httpdocs/` and sees `dedalo/` read-only. It cannot read the v1
+configuration: that belongs to `museum_org_v1`.
 
 **SFTP keys.** `sshd` looks for the user's keys in its home, and the home is now `httpdocs/`,
 the public document root. The keys in `/home/museum.org/.ssh/` are no longer used, and a
@@ -361,10 +765,9 @@ install -o root -g root -m 0644 /home/museum.org/.ssh/authorized_keys /etc/ssh/a
 sshd -t && systemctl reload ssh
 ```
 
-**Success:** `stat -c '%U:%G %a %n' /home/museum.org /home/museum.org/httpdocs /home/museum.org/logs`
+**Success:** `stat -c '%U:%G %a %n' /home/museum.org /home/museum.org/httpdocs`
 prints `root:root 755 /home/museum.org`, `museum_site:www-data 750 /home/museum.org/httpdocs`
-(`755` on an existing site is fine too: the website is public anyway) and
-`root:root 711 /home/museum.org/logs`.
+(`755` on an existing site is fine too: the website is public anyway).
 
 ### 1. Prepare the code and the site's Bun {#1-prepare-the-code}
 
@@ -482,9 +885,14 @@ Pick `A` for the CPU:
 - `bun-linux-aarch64`: an ARM 64-bit CPU.
 
 `sha256sum -c` must answer `OK` for the archive; stop on anything else. Bun also publishes a
-signed `SHASUMS256.txt.asc` with each release: if your policy requires a signature and not
-only a checksum, verify it with `gpg --verify SHASUMS256.txt.asc SHASUMS256.txt` against
-Bun's release key, obtained through a channel you trust, before `sha256sum -c`.
+signed `SHASUMS256.txt.asc` with each release. It is a **clearsigned** file: the checksums are
+inside it, and `gpg --verify SHASUMS256.txt.asc` checks only that text (a second file named
+after it is ignored). If your policy requires a signature and not only a checksum, verify it
+against Bun's release key, obtained through a channel you trust, and take the archive's line
+from the verified file, not from a separately downloaded `SHASUMS256.txt`. The work system's
+checkout already carries the result: `.bun-sha256`, generated from that signed file and
+re-verified by CI ([the Bun hash table](#the-bun-hash-table)); its line for the archive must
+equal what `sha256sum` prints.
 
 A publication host without internet access: download and check the archive the same way
 on a machine that has it, copy the `.zip` **and** `SHASUMS256.txt` to the publication host,
@@ -538,7 +946,8 @@ the same server):
   "engine_group": "dedalo",
   "agent_dir": "/home/museum.org/host_agent",
   "web": { "server": "apache", "unit": "apache2" },
-  "v1": { "user": "museum_site" },
+  "site": { "domain": "museum.org", "fpm": { "flavor": "debian", "version": "8.3" } },
+  "v1": { "user": "museum_org_v1" },
   "state_root": "/home/museum.org/dedalo",
   "media": { "mode": "shared", "root": "/srv/dedalo/media" },
   "php_bin": "/usr/bin/php8.3",
@@ -578,13 +987,14 @@ On **two machines**, the listener is the private address the agent binds, and th
 | `instance` | a name for this publication host: lowercase letters, digits and `_`, starting with a letter, 2 to 32 characters. The file is named after it. Name it after the site's domain, with each `.` and `-` replaced by `_`: `museum.org` becomes `museum_org`, its declaration `/etc/dedalo_publication_host/museum_org.json` and its agent service `dedalo-publication-host-museum_org` (a hyphenated `my-hosts.org` becomes `my_hosts_org`). Shorten a longer domain, and prefix one that starts with a digit |
 | `listen` | `{"kind": "unix"}` on one machine (the socket path is derived). On two machines `{"kind": "tls", "host": …, "port": …}`: the host is the **private IPv4 address** the agent binds, written as a literal such as `10.20.0.2`: no hostname, no wildcard (`0.0.0.0`). It also becomes the server certificate's name, so the work system connects to that address. The provisioner does not check that the address is private: choosing a private interface and firewalling it is yours |
 | `agent_user` | a new account for the agent alone (step 3 creates it), named after the site |
-| `engine_group` | one machine only: the group the work system's **process** runs with, never the agent's. Find it with `systemctl show -p Group --value dedalo-ts` (on a work system with several instances, `dedalo-ts@<site>`); when that prints nothing, the service runs with its user's primary group, `id -gn dedalo`. The agent's service runs with this group (`Group=`), and every member of it can open the agent's socket, so it must hold the work system's user **alone**: never `www-data` or any PHP-FPM pool's group. On a host upgraded from an older install, the work system's user often has `www-data` as its primary group: give it a group of its own first (see the comment in `deploy/dedalo-ts.service`). Check with `getent group <group>`: it must list no members, and its third field is the group id; then `awk -F: '$4 == <group id> {print $1}' /etc/passwd` must print `dedalo` alone. `check` refuses a group that is certainly wrong: the primary group of `agent_user`, of `v1.user` (so `www-data` in this example) or of `v2.user`, or `v2.group` itself, with `engine_group '<group>' is the agent's own group — it must be the work system's group: id -gn <the account that runs Dédalo>` (or *the v1 user's group*, *the v2 group*, *the v2 user's group*). It cannot tell whether `dedalo` is in the group, or whether another account is: get it right here, and step 7 proves it |
+| `engine_group` | one machine only: the group the work system's **process** runs with, never the agent's. Find it with `systemctl show -p Group --value dedalo-ts` (on a work system with several instances, `dedalo-ts@<site>`); when that prints nothing, the service runs with its user's primary group, `id -gn dedalo`. The agent's service runs with this group (`Group=`), and every member of it can open the agent's socket, so it must hold the work system's user **alone**: never `www-data` or any PHP-FPM pool's group. On a host upgraded from an older install, the work system's user often has `www-data` as its primary group: give it a group of its own first (see the comment in `deploy/dedalo-ts.service`). Check with `getent group <group>`: it must list no members, and its third field is the group id; then `awk -F: '$4 == <group id> {print $1}' /etc/passwd` must print `dedalo` alone. `check` refuses a group that is certainly wrong: the primary group of `agent_user`, of `v1.user` or of `v2.user`, or `v2.group` itself, with `engine_group '<group>' is the agent's own group — it must be the work system's group: id -gn <the account that runs Dédalo>` (or *the v1 user's group*, *the v2 group*, *the v2 user's group*). It cannot tell whether `dedalo` is in the group, or whether another account is: get it right here, and step 7 proves it |
 | `agent_dir` | where you copied the agent's code in step 1: `/home/museum.org/host_agent`. Beside the state root, never inside it: the two may not contain each other |
-| `web` | the web server (`apache` or `nginx`) and its systemd unit (`apache2` on Debian and Ubuntu, `httpd` on RHEL, `nginx`). You do not declare the configuration-test command: the provisioner picks it on the host, `/usr/sbin/apache2ctl` on Debian and Ubuntu (where `apachectl` is only a link to it), `/usr/sbin/apachectl` on RHEL, `/usr/sbin/nginx` for nginx |
-| `v1.user` | the site's PHP-FPM pool user (step 0), which runs the Publication API v1 and alone can read its configuration ([why](#who-owns-and-runs-what)). With Apache's `mod_php` instead, the web server's user (`www-data` on Debian and Ubuntu), on a server with a single site only (see [Several instances on one server](#several-instances-on-one-server)) |
+| `web` | the web server (`apache` or `nginx`) and its systemd unit (`apache2` on Debian and Ubuntu, `httpd` on RHEL, `nginx`). You do not declare the configuration-test command: the provisioner picks it on the host, `/usr/sbin/apache2ctl` on Debian and Ubuntu (where `apachectl` is only a link to it), `/usr/sbin/apachectl` on RHEL, `/usr/sbin/nginx` for nginx. nginx only: `"nginx_map": "conf_d"` when `/etc/nginx/conf.d/*.conf` is included inside `http{}` (the Debian and RHEL default) — `apply` then provisions the host-wide media map include and the panel pushes the map into it (step 9); leave it out to keep placing the map by hand |
+| `site` | the website this instance serves: its `domain`, and the PHP-FPM install its v1 API runs in, `fpm` — `flavor` `debian` (`/etc/php/<version>/fpm`), `el` (RHEL AppStream) or `remi` (Remi's `php<NN>`), and its `version` (8.1 or newer). With it, `apply` writes the v1 API's own pool and the site's web include (step 9). Optional: `home` (default `/home/<domain>`) and `api_paths` (default `/dedalo/publication/server_api/v1` and `…/v2`) |
+| `v1.user` | a new account for the v1 API alone (step 3 creates it), named after the site: `museum_org_v1`. It runs the v1 API's own PHP-FPM pool and alone can read its configuration ([why](#who-owns-and-runs-what)). Never the web server's user or a catch-all account: `www-data`, `apache`, `nginx`, `www` and `nobody` are refused |
 | `state_root` | a new directory for the agent: the API releases, the media rules, the audit log. It and **every directory above it** must be owned by root and writable by no one else: `/home/museum.org/dedalo` ([why](#who-owns-and-runs-what)) |
-| `media` | `shared` (the publication host reads the work system's media), `copy` (the agent keeps its own copy of the published files) or `none`; unless `none`, the media `root`. One machine: `shared`, with the work system's media directory (`/srv/dedalo/media` in the production layout), or, stronger, a read-only bind mount of only the public quality folders and `.publication/pub`. Two machines, `shared`: a read-only mount of the work system's media (see [media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage)) |
-| `php_bin` | the PHP command-line binary of the same version the pool runs (`apt install php8.3-cli`), which checks v1 releases. Never `php-fpm8.3`, never a link (see below) |
+| `media` | `shared` (the publication host reads the work system's media), `copy` (the agent keeps its own copy of the published files) or `none`; unless `none`, the media `root`. One machine: `shared`, with the work system's media directory (`/srv/dedalo/media` in the production layout), or, stronger, a read-only bind mount of only the public quality folders and `.publication/pub`. Two machines, `shared`: a read-only mount of the work system's media (see [media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage)). Shared only: `selinux_label: true` lets `provision apply` label that directory for httpd on an SELinux host (init writes it when you answer `act` to `selinux.media_access`) |
+| `php_bin` | the PHP command-line binary of the same version as `site.fpm` (`apt install php8.3-cli`), which checks v1 releases. Never `php-fpm8.3`, never a link (see below) |
 | `bun_bin` | the site's own Bun from step 1, `/home/museum.org/.bun/bin/bun`, never a link |
 | `v2` | the v2 API's systemd unit name, its own new user and group (step 3 creates them), its local port, and its health URL: `http://127.0.0.1:<port>/health`. The v2 API answers `/health` whatever URL prefix it is published under, so keep that form. Name the unit after the site, so that a second site's never collides |
 | `releases_retained` | optional, an integer from 2 to 20, default 3: how many releases each API keeps |
@@ -622,31 +1032,34 @@ with no refusal.
 
 **On:** the publication host · **As:** `root`
 
-**Changes:** the users `museum_org_agent` and `museum_org_api`, and the group
-`museum_org_api`.
+**Changes:** the users `museum_org_agent`, `museum_org_v1` and `museum_org_api`, the group
+`museum_org_api`, and once per host the group `dedalo_pubhost`.
 
-The provisioner never creates accounts. Create the ones your declaration names. Name every
-per-instance account after the site, so that a second site never collides:
+`provision apply` never creates accounts (the [guided install](#guided-install) does, after you
+confirm). Create the ones your declaration names. Name every per-instance account after the
+site, so that a second site never collides:
 
 ```bash
 # publication host, as root
+# once per host: every agent's service gets this group (the host-wide locks); it has no member
+getent group dedalo_pubhost || groupadd --system dedalo_pubhost
+
 # agent_user: its own group (museum_org_agent) is not engine_group
 useradd --system --no-create-home --shell /usr/sbin/nologin --user-group museum_org_agent
+
+# v1.user: its own group; it runs only the v1 API's pool
+useradd --system --no-create-home --shell /usr/sbin/nologin --user-group museum_org_v1
 
 # v2.group, then v2.user in it
 groupadd --system museum_org_api
 useradd --system --no-create-home --shell /usr/sbin/nologin -g museum_org_api museum_org_api
 ```
 
-The other two exist already:
+On RHEL, Rocky and Alma the nologin shell is `/sbin/nologin`.
 
-- **`v1.user`** is the site's pool user from step 0 (created there if it was new). To list
-  the pool users on the server:
-
-    ```bash
-    # publication host
-    grep -H '^user *=' /etc/php/*/fpm/pool.d/*.conf
-    ```
+`dedalo_pubhost` is never anybody's group: the agent's service gets it through its unit
+(`SupplementaryGroups=`), so no existing account changes. Without it, `apply` refuses and prints
+the `groupadd` line above.
 
 - **`engine_group`** (one machine) is the work system's group (step 2 says how to find it and
   how to check that `dedalo` is alone in it). Never use the agent's group or a group the web
@@ -664,7 +1077,12 @@ exact command, in the order to run them.
 **On:** the publication host · **As:** `root`
 
 **Changes:** the state root, the agent's settings, the two services, the sudo and polkit
-rules, the token, the certificates (two machines), the engine fragment.
+rules, the token, the certificates (two machines), the engine fragment; with `site`, the v1
+API's own PHP-FPM pool and its directory under `/var/lib/dedalo_publication_host/`, the
+site's web include and, in the home layout, the site's log directory
+(`/var/log/apache2/museum.org/`, step 0) with its `/etc/logrotate.d/dedalo_museum_org_web`; on nginx with `"nginx_map": "conf_d"`, the host-wide media map include;
+on an SELinux host, the file contexts and the v2 port label
+([RHEL, Rocky and Alma](#rhel-rocky-and-alma)).
 
 Root has no `bun` of its own when each site has its own Bun: run every `provision` command
 with the site's Bun, from the site's copy of the code. The `cd` is part of the command.
@@ -708,7 +1126,14 @@ be read (id -G …)*.
 arrives (step 10). A later `apply` restarts the agent when its settings, its unit, the
 certificate authority or its server certificate change, and v2 when its unit changes; a
 panel action in progress is cut off. The sudo rule is validated with `visudo` before it is
-kept. `apply` never reloads the web server.
+kept. `apply` reloads the web server or PHP-FPM only after a passing configuration test of a
+file it wrote itself (the web include, the v1 pool, the nginx map include). A failing test puts
+the previous file back and reloads nothing; a server that dies on the reload gets its previous
+file back and is restarted. The reload of PHP-FPM restarts the workers of every pool of that
+PHP version. Without `site` and `nginx_map`, `apply` never reloads the web server.
+
+**A running `provision init`** holds the instance: `apply` waits 5 seconds, then is refused
+naming it, and `check` ends with exit 5 (busy, nothing checked).
 
 **Success:** `check` ends with *matches its declaration*, and
 `systemctl status dedalo-publication-host-museum_org` shows `active (running)`.
@@ -761,7 +1186,8 @@ only after `apply`)
 **Changes:** `/home/museum.org/dedalo/publication_api/v2/shared/v2.env` and
 `/home/museum.org/dedalo/publication_api/v1/shared/server_config_api.php`.
 
-The provisioner does not write the configuration of the Publication APIs, and the agent
+`provision apply` does not write the configuration of the Publication APIs (the
+[guided install](#guided-install) does, asking for the secrets on its terminal), and the agent
 cannot: the `shared/` directories belong to root. Until each file exists, installing a
 release of that API is refused with `shared_config_missing`. Create the file of each API you
 install. On two machines, copy the sample files from the work system's checkout first.
@@ -783,20 +1209,20 @@ user; the other keys are in the
 here are ignored. The agent only checks that the file exists, and a release may not ship its
 own `.env`.
 
-**v1.** `shared/` is `root:root 0711`: `museum_site` reaches its file by name but cannot list
+**v1.** `shared/` is `root:root 0711`: `museum_org_v1` reaches its file by name but cannot list
 or change the directory. The file holds the site's database credentials, and the pools share
-the web server's group, so it belongs to `museum_site` and is readable by it alone:
+the web server's group, so it belongs to `museum_org_v1` and is readable by it alone:
 
 ```bash
 # publication host, as root
-install -o museum_site -m 0400 \
+install -o museum_org_v1 -m 0400 \
   /opt/dedalo/master_dedalo/publication/server_api/v1/config_api/sample.server_config_api.php \
   /home/museum.org/dedalo/publication_api/v1/shared/server_config_api.php
 ```
 
 Then edit it as root with the site's read-only MariaDB credentials. An editor that saves by
 replacing the file gives it back to root: the `stat` below shows it, and the fix is the same
-`chown museum_site` and `chmod 0400`. Installing a v1 release is refused with
+`chown museum_org_v1` and `chmod 0400`. Installing a v1 release is refused with
 `shared_config_exposed` while the file is readable by its group or by others, or still owned
 by root. The agent never reads the file: it only checks it and links it into each release.
 
@@ -813,7 +1239,7 @@ neither, the install is refused with `shared_config_missing`.
 stat -c '%U:%G %a %n' /home/museum.org/dedalo/publication_api/v2/shared/v2.env \
   /home/museum.org/dedalo/publication_api/v1/shared/server_config_api.php
 # root:museum_org_api 640 …/v2.env
-# museum_site:root 400 …/server_config_api.php
+# museum_org_v1:root 400 …/server_config_api.php
 ```
 
 ### 6. Carry the engine bundle to the work system (two machines only)
@@ -1037,71 +1463,144 @@ the panel.
 
 **On:** the publication host · **As:** `root`
 
-**Changes:** the site's virtual host.
+**Changes:** two lines in the site's virtual host.
 
-The document root stays the website. The virtual host adds three things: the agent's media
-rules, the v1 API and the v2 API. Enable the modules it needs:
+The document root stays the website. Everything Dédalo adds to the site is in one file that
+step 4's `apply` wrote, `/etc/dedalo_publication_host/museum_org/web.apache.conf`: the agent's
+media rules, the v1 API and the v2 API. The virtual host only includes it. Enable the modules
+it needs (the media rules refuse to serve without `rewrite` and `headers`):
 
 ```bash
 # publication host, as root
-a2enmod ssl proxy proxy_http proxy_fcgi
+a2enmod ssl proxy proxy_http proxy_fcgi headers rewrite
 ```
+
+On RHEL, Rocky and Alma, `httpd -M` must list `ssl_module`, `proxy_module`,
+`proxy_http_module`, `proxy_fcgi_module`, `headers_module` and `rewrite_module`: `dnf install
+mod_ssl` for the first, and for the others the `LoadModule` line in
+`/etc/httpd/conf.modules.d/` that is commented out.
+
+Add the two lines right after the `<VirtualHost …>` line of the site's TLS virtual host:
 
 ```apache
 <VirtualHost *:443>
+    # dedalo-provision: museum_org vhost_reference — managed by `provision init`; delete both lines to detach
+    IncludeOptional /etc/dedalo_publication_host/museum_org/web.apache.conf
     ServerName  www.museum.org
     ServerAlias museum.org
     DocumentRoot /home/museum.org/httpdocs
-    ErrorLog  /home/museum.org/logs/error.log
-    CustomLog /home/museum.org/logs/access.log combined
-
-    # The agent's media rules: before any other /dedalo alias.
-    IncludeOptional /home/museum.org/dedalo/rules/dedalo_media_publication.apache.conf
-
-    # Publication API v1, in the site's pool (the pool's listen = socket, step 0).
-    Alias /dedalo/publication/server_api/v1 /home/museum.org/dedalo/publication_api/v1/current
-    <Directory /home/museum.org/dedalo/publication_api/v1>
-        Options FollowSymLinks
-        Require all granted
-        <FilesMatch "\.php$">
-            SetHandler "proxy:unix:/run/php/php8.3-fpm-museum.org.sock|fcgi://localhost"
-        </FilesMatch>
-    </Directory>
-
-    # Publication API v2, on 127.0.0.1 at v2.port.
-    <Location /dedalo/publication/server_api/v2/>
-        ProxyPass        http://127.0.0.1:3100/
-        ProxyPassReverse http://127.0.0.1:3100/
-    </Location>
+    ErrorLog  /var/log/apache2/museum.org/error.log
+    CustomLog /var/log/apache2/museum.org/access.log combined
+    # … the TLS directives (SSLEngine, the certificates) …
 </VirtualHost>
 ```
 
-The TLS directives (`SSLEngine`, the certificates) are left out of the excerpt.
+The logs go to the site's directory outside the home (step 0; RHEL `/var/log/httpd/museum.org/`,
+nginx `/var/log/nginx/museum.org/`), never under `/home/museum.org`.
 
-- **The media rules.** The agent writes them to that file when the panel applies them.
-  Without the `IncludeOptional` line, the panel shows the rules applied and green while
-  Apache never reads them. It is `IncludeOptional` because the file exists only after the
-  first **Apply media rules**. The line is yours to add, once. On nginx, the rules are
-  `/home/museum.org/dedalo/rules/dedalo_media_publication.nginx.conf`, included in the site's
-  `server{}`: nginx has no optional include, so add the line after the first **Apply media
-  rules** (step 10), then `nginx -t && systemctl reload nginx`. The one-time `http{}` map
-  include stays manual
-  ([media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage),
-  step 4).
+It is `IncludeOptional`, so removing the instance never breaks the web server. The
+[guided install](#guided-install) adds the same two lines, after showing you the diff, and
+`provision check` proves the web server really loads the file (`apache2ctl -t -D DUMP_INCLUDES`).
+A virtual host written from an earlier version of this page holds the media `IncludeOptional`,
+the v1 `Alias` and `<Directory>` and the v2 `<Location>` by hand: delete those lines when you add
+the two above, because the include carries them (the guided install proposes that removal as a
+decision).
+
+**What the include holds** (generated; never edit it, change the declaration and `apply`):
+
+```apache
+# GENERATED by publication/host_agent/src/provision/render/web_include.ts — do NOT edit.
+# Derived from /etc/dedalo_publication_host/museum_org.json; referenced once from the site's vhost (provision init).
+
+# The agent's media rules: before any other /dedalo alias. Absent until the first push.
+IncludeOptional /home/museum.org/dedalo/rules/dedalo_media_publication.apache.conf
+
+# Publication API v1, in its OWN PHP-FPM pool (never the site's).
+Alias /dedalo/publication/server_api/v1 /home/museum.org/dedalo/publication_api/v1/current
+<Directory /home/museum.org/dedalo/publication_api/v1>
+    Options FollowSymLinks
+    AllowOverride None
+    Require all granted
+    # mod_php (Debian, EL prefork) never runs a v1 file as the web user.
+    <IfModule php_module>
+        php_admin_flag engine off
+    </IfModule>
+    <IfModule php7_module>
+        php_admin_flag engine off
+    </IfModule>
+    # Inside <If>: <If> merges after the server-wide FilesMatch section of EL's php.conf, so ours wins here.
+    <FilesMatch "\.ph(?:ar|p|tml)$">
+        <If "-f %{REQUEST_FILENAME}">
+            SetHandler "proxy:unix:/run/php/dedalo-museum_org-v1.sock|fcgi://localhost"
+        </If>
+    </FilesMatch>
+</Directory>
+
+# Publication API v2, on 127.0.0.1:3100.
+<Location /dedalo/publication/server_api/v2/>
+    ProxyPass        http://127.0.0.1:3100/
+    ProxyPassReverse http://127.0.0.1:3100/
+</Location>
+```
+
+**The v1 pool** that `apply` wrote, `/etc/php/8.3/fpm/pool.d/dedalo_museum_org_v1.conf`, runs the
+v1 API alone, as `museum_org_v1`, with its temporary files and error log under
+`/var/lib/dedalo_publication_host/museum_org/v1/` (on RHEL the pool file and the socket follow
+the FPM install, see [RHEL, Rocky and Alma](#rhel-rocky-and-alma)):
+
+```ini
+; GENERATED by publication/host_agent/src/provision/render/fpm_pool.ts — do NOT edit.
+; Derived from /etc/dedalo_publication_host/museum_org.json. The v1 API of instance museum_org, never the site's pool.
+[dedalo_museum_org_v1]
+user = museum_org_v1
+; group: the user's primary group (FPM's default when unset).
+listen = /run/php/dedalo-museum_org-v1.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+pm = ondemand
+pm.max_children = 5
+chdir = /home/museum.org/dedalo/publication_api/v1
+security.limit_extensions = .php .phar .phtml
+php_admin_value[open_basedir] = /home/museum.org/dedalo/publication_api/v1/:/var/lib/dedalo_publication_host/museum_org/v1/tmp/
+php_admin_value[upload_tmp_dir] = /var/lib/dedalo_publication_host/museum_org/v1/tmp
+php_admin_value[session.save_path] = /var/lib/dedalo_publication_host/museum_org/v1/tmp
+php_admin_value[sys_temp_dir] = /var/lib/dedalo_publication_host/museum_org/v1/tmp
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = /var/lib/dedalo_publication_host/museum_org/v1/log/error.log
+```
+
+- **The media rules.** The agent writes them when the panel applies them; the include names
+  them, so the site reads them as soon as they exist.
 - **v1.** The `<Directory>` names the `v1` directory, not `current`: `current` is a link that
-  moves to each new release. Use the URL path your website already calls.
-- **v2.** The simplest proxy removes the public prefix before passing the request on, and the
-  v2 API then serves it whatever its `BASE_PATH` is. The
+  moves to each new release. `site.api_paths.v1` changes the URL path, if your website already
+  calls another one. The handler sits inside an `<If>` and covers `.php`, `.phar` and `.phtml`,
+  so no PHP file of the v1 tree reaches another handler (on RHEL, `conf.d/php.conf`'s
+  server-wide `<FilesMatch>` handler loses to it, because `<If>` merges last); with `mod_php` loaded, the module is switched off
+  there, so v1 never runs as the web server's user.
+- **v2.** The proxy removes the public prefix before passing the request on, and the v2 API
+  then serves it whatever its `BASE_PATH` is. The
   [Publication API v2 deployment](../diffusion/publication_api/v2/deployment.md) page covers
   the rest of the proxy (the MCP endpoint, headers, timeouts).
+- **nginx.** The include is `/etc/dedalo_publication_host/museum_org/web.nginx.conf`, and the
+  two lines go at the top of the site's `server {` block:
+  `include /etc/dedalo_publication_host/museum_org/web.nginx.con[f];` (a glob that matches
+  nothing is accepted where a missing file is not, so a removed instance never breaks nginx).
+  The media rules also need an `http{}` map, defined once per host. With
+  `"nginx_map": "conf_d"` in the declaration, `apply` wrote its include,
+  `/etc/nginx/conf.d/dedalo_media_map.conf`, and the panel's **Apply media rules** pushes the map
+  into it: on such a host never place the map by hand. Without it, place the map by hand as the
+  [media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage)
+  page shows (`scripts/media_publication_host_rules.ts --server nginx-map`, its step 4).
 
 ```bash
 # publication host, as root
-apache2ctl configtest && systemctl reload apache2
+apache2ctl configtest && systemctl reload apache2     # RHEL: apachectl configtest && systemctl reload httpd
 ```
 
-**Success:** `configtest` prints *Syntax OK*. The APIs answer only after step 10's first
-push: until then the v2 proxy answers 503 and `v1/current` does not exist.
+**Success:** `configtest` prints *Syntax OK*, and `provision check museum_org` reports no
+missing reference. The APIs answer only after step 10's first push: until then the v2 proxy
+answers 503 and `v1/current` does not exist.
 
 ### 10. First use: rules, releases, public check
 
@@ -1142,6 +1641,9 @@ The provisioner names these after the instance, so two instances never share the
 | the agent's service | `dedalo-publication-host-<instance>` |
 | the local socket (one machine) | `/run/dedalo_publication_host/<instance>/` |
 | the sudo rule and the polkit rule | one file each, named after the instance |
+| the v1 API's PHP-FPM pool, its socket and its `/var/lib/dedalo_publication_host/<instance>/v1/` | `dedalo_<instance>_v1`, `dedalo-<instance>-v1.sock` |
+| the site's web include | `/etc/dedalo_publication_host/<instance>/web.<server>.conf` |
+| the site's log rotation (home layout) | `/etc/logrotate.d/dedalo_<instance>_web`, for `/var/log/<server>/<domain>/` |
 
 You choose the rest, and each instance needs its own:
 
@@ -1152,6 +1654,7 @@ You choose the rest, and each instance needs its own:
 | `v2.unit`, `v2.port` and its `health_url` | two v2 services cannot have one name or listen on one port. The v2 unit name must not be another instance's web-server or agent unit name either: the instance's v2 unit file would replace that unit |
 | `listen` port (two machines) | two agents cannot listen on one address and port |
 | `state_root`, and a `copy` media root | each instance writes only its own directories |
+| `site.domain` | one site, one instance |
 
 These can be shared: the web server and its group (every site's pool may run under it), the
 PHP path, the work system's group (`engine_group`, as long as it is not another
@@ -1162,13 +1665,21 @@ each site upgrades on its own. Allowed: one shared copy outside every state root
 instance then upgrades together. The Bun path could be shared too, but give each site
 [its own](#one-bun-per-site) for the same reason.
 
-!!! note "One web server, one PHP-FPM pool per site"
-    The web server is shared, but the v1 API of each site runs in its own PHP-FPM pool, under
-    its own user. The pools may share the web server's group (`www-data`). That pool user is
-    the instance's `v1.user`, and it alone can read the site's v1 configuration. With
-    `mod_php` instead, every site's v1 API runs as the web server's user, so every site could
-    read every other site's database credentials. `check` therefore refuses two instances with
-    the same `v1.user`. A server with a single instance may use `mod_php`.
+!!! note "One web server, one v1 pool per instance"
+    The web server is shared, but the v1 API of each instance runs in its own PHP-FPM pool,
+    `dedalo_<instance>_v1`, under its own `v1.user`, never in a website's pool and never as the
+    web server's user. That user alone can read the site's v1 configuration. `check` therefore
+    refuses two instances with the same `v1.user`, `site.domain`, pool socket or pool file.
+    With `mod_php` loaded, the include switches it off in the v1 directory, so no site's v1
+    API ever runs as the web server's user.
+
+!!! note "Host-wide pieces"
+    Some things exist once per server, whatever the number of instances: the `dedalo_pubhost`
+    group, `/var/lib/dedalo_publication_host/_host/` (the locks and, on nginx, the shared media
+    map, its contributions and its root renderer), and on nginx
+    `/etc/nginx/conf.d/dedalo_media_map.conf`. When any instance's paths lie under `/home`,
+    every agent's service sees `/home` read-only instead of not at all, so the configuration
+    test it runs tests the configuration the web server really loads.
 
 `check` and `apply` read every other declaration in `/etc/dedalo_publication_host/` and refuse
 any field above that two instances share, naming the other instance and its file. A
@@ -1188,6 +1699,12 @@ Bun, as in step 4.
 
 ### Upgrading the agent's code
 
+**Guided:** on the work host, run step 1's `hostagent:install` again, then run `install.sh`
+with `--source` as on the first run (on two machines, copy the source's five entries again
+first). init shows the new code's digest, installs it beside the old one, swaps them, and
+restarts the agent (and every instance sharing that code, if you choose); the old code comes
+back if the restart fails. **By hand:**
+
 1. On the work host, run step 1's `hostagent:install` again (delete `node_modules/` first if a
    development install ever ran there).
 2. On the publication host, copy the tree again with the same `rsync`, `chown` and `chmod`
@@ -1198,7 +1715,9 @@ Bun, as in step 4.
 
 ### Upgrading a site's Bun
 
-Repeat the download, check and `install` of [the site's Bun](#one-bun-per-site) with the new
+**Guided:** when the work system's pin moves, run `install.sh` with `--source` again: it
+downloads and checks the new Bun against the new `.bun-sha256` and restarts the site's two Bun
+services. **By hand:** repeat the download, check and `install` of [the site's Bun](#one-bun-per-site) with the new
 version, run `provision apply museum_org`, then restart the site's two Bun services, which keep
 the old binary until then:
 
@@ -1262,6 +1781,7 @@ paired host. The **Media access control** panel links to it. For each host it sh
 | Media mode | `shared`, `copy` or `none`, as declared on the publication host |
 | Media mount, Media read-only | the shared media mount is present, and the agent cannot write to it. Read-only is measured by trying to write as the agent, whose sandbox alone forbids it in shared mode, so green does not prove the mount itself is read-only: check its `ro` flag with `findmnt` on the media root |
 | Media rules | the media rules installed there are the ones the work system would generate now (expected and reported hash side by side) |
+| Media map | nginx with a provisioned map only: the host-wide `http{}` map this work system would push, the one the host loads, and how many instances share it. A host map that differs only because another instance on the same host runs another Dédalo version is shared, not drift |
 | API v1, API v2 | the current and the previous release of each Publication API |
 
 Only the Dédalo **root** user can act. Other administrators see the checks read-only,
@@ -1271,10 +1791,15 @@ without the hosts' network addresses.
   and mount (as the host reports them) and its public quality folders (the host's own list,
   or the work system's), then sends them. The host runs its web server's configuration test
   before reloading, and keeps the previous rules if the test fails. The site's virtual host
-  must include the rules file (step 9). On nginx, the one-time `http{}` map include stays
-  manual: install it once as described in
+  must include the rules file (step 9). On nginx the media rules also need the host's
+  `http{}` map. On a host provisioned with `"nginx_map": "conf_d"` (the guided install sets it
+  when `conf.d` is included in `http{}`), **Apply media rules** pushes that map first, into the
+  host-wide include `apply` provisioned, and stops before the rules if the map is refused: one
+  map serves every instance on the host, and the root service that renders it keeps every
+  instance's part. On such a host never place the map by hand. Without it, install the map
+  once as described in
   [media protection](../core/system/media_protection.md#a-separate-publication-server-with-shared-media-storage),
-  step 4. Without it, `nginx -t` fails and the host keeps its previous rules.
+  step 4; until then `nginx -t` fails and the host keeps its previous rules.
 - **Probe media** checks that the media mount is present, readable, and not writable by the
   agent (see *Media read-only* above).
 - **Push API releases** sends the work system's Publication API releases to the host (see
@@ -1410,11 +1935,39 @@ taken.
 
 The commands below use the example names; `provision` runs as in step 4.
 
+### Guided install
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `install.sh` says to run it as root, or names a missing command | not root, or a tool it needs is not installed | run it with `sudo`; install what the printed `apt install` / `dnf install` line names |
+| `install.sh` says *run install.sh from an unconfined root shell* | SELinux: the root shell runs in a confined domain (`id -Z` shows `sysadm_t` or `staff_t`) | log in as root in `unconfined_t` (the default for root on RHEL), then run it again |
+| `install.sh` says the stage is on a `noexec` filesystem, or that fapolicyd denies Bun | `/var/lib` is mounted `noexec`, or fapolicyd does not trust the downloaded Bun | `findmnt -T /var/lib/dedalo_publication_host_init` shows the mount; trust the binary with `fapolicyd-cli` ([RHEL](#rhel-rocky-and-alma)) or remount |
+| init refuses with *start init through deploy/install.sh* | it was started by hand, with an environment, a working directory or flags `install.sh` never uses | start it through `install.sh`, never with `bun …/cli.ts init` |
+| init refuses: an unfinished run | the journal shows a change that began and did not end (a power cut, `kill`) | run it again with `-- --resume` |
+| init refuses, naming open decisions | `--yes` never answers a decision | answer each with `-- --decide <item-id>=<option>`, or run it on a terminal |
+| init says the instance *is locked by …* | another `init` or `provision apply` of the same instance is running | wait for it; the lock disappears with its process, there is nothing to clean up |
+| `provision check` ends with exit 5 | init or `apply` is changing the instance | check again later: nothing was checked, this is not drift |
+| `install.sh` says *EL 8.x … is not supported* (RHEL, Rocky or Alma 8) | EL 8's systemd 239 and kernel 4.18 are older than the units and Bun need; nothing was downloaded | upgrade the host to EL 9 or 10 |
+| `install.sh` says *kernel … is below Bun's floor* | the running kernel is older than Bun supports | boot a kernel 5.1 or newer (every supported release ships one) |
+| `install.sh` says *another install.sh (or its init) is running for this instance* | a second `install.sh` was started while the first is still at its prompt or inside init | wait for the first one to finish; the lock disappears with its process |
+| `host.polkit` says polkit *is masked*, or that *the system bus cannot start it* | polkit is D-Bus-activated (an idle host runs no `polkitd`, and that is fine); here nothing can start it: the unit is masked, or the package's activation file `/usr/share/dbus-1/system-services/org.freedesktop.PolicyKit1.service` is missing or names another unit | `systemctl unmask polkit.service`; or reinstall the package (`apt reinstall polkitd` / `dnf reinstall polkit`), then run init again |
+| `host.sudo` says *`/etc/sudoers-rs` (the policy sudo-rs reads) does not include /etc/sudoers.d* | the installed `sudo` is sudo-rs (Ubuntu 26.04's default), and an `/etc/sudoers-rs` exists: sudo-rs then reads that file, never `/etc/sudoers` | `visudo -f /etc/sudoers-rs` and add `@includedir /etc/sudoers.d`, or delete `/etc/sudoers-rs` if it is not yours |
+| `host.chattr` stops init | `chattr` (the `e2fsprogs` package) is missing, which minimal images leave out; `apply` makes the audit trail append-only with it | `apt install e2fsprogs` / `dnf install e2fsprogs` |
+| `web.logs` asks to move the logs, or blocks naming `ProtectHome=` | the virtual host logs under the home; with a sandboxed web server unit (Ubuntu 26.04's `apache2.service`) it cannot even start that way | point `ErrorLog`/`CustomLog` (nginx: `error_log`/`access_log`) at `/var/log/apache2/museum.org/` (RHEL `/var/log/httpd/…`, nginx `/var/log/nginx/…`), test, reload, run init again |
+| `apply` refuses: *the web server's log directory … does not exist*, or *… is logrotate installed?* | the web server package (its `/var/log/<server>/`) or `logrotate` (its `/etc/logrotate.d/`) is not installed | install it, then run init (or `apply`) again |
+| `host.os` stops init on Ubuntu 22.04 | its polkit 0.105 does not read the agent's JavaScript rules file | upgrade to Ubuntu 24.04 or 26.04, or Debian 12/13, or follow the manual install on a supported host |
+| init stops with *'<file>' changed since shown; re-run* | the file changed between the report and the change (by you, or by an earlier change of the same run to the same vhost file) | nothing was written to it; run init again, which reads the file afresh |
+| a typed secret is refused, and its file stays under *still to do* | it is shorter than 8 or longer than 256 characters, or holds a space, `'`, `\` or `$` | choose another value and run init again; the refused value is never printed |
+| `host.kernel` stops init | the running kernel is older than Bun's documented floor (5.1), usually a hand-booted old kernel | boot the distribution's own kernel |
+| `declaration.layout` offers only `system` | the home cannot be given to root (init names why: a link, a network or `noexec` filesystem, a service hiding `/home`) | accept `system`, or fix the reason and run init again |
+| a change ends *rolled back*: the configuration test failed | the web server or PHP-FPM refused the new file | the previous file is back and nothing was reloaded; the printed test output names the line |
+| a change ends *rolled back* after the reload | the server passed its test but stopped on the reload (on SELinux often a denial the test cannot see) | the previous file is back and the server restarted; read `ausearch -m AVC,USER_AVC -ts recent` and `journalctl -u <the server's unit>` |
+
 ### Home directory and code
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `provision check` says *'/home/museum.org' cannot be traversed by museum_org_agent (the agent)* (or by `museum_org_api` (v2), or `museum_site` (v1)) | the home directory is still Ubuntu's `0750`, or another directory above `agent_dir`, `bun_bin` or the state root lacks the execute bit for that account | run the `chmod` the line prints (for the home directory, `chmod 0755 /home/museum.org`, step 0), then `check` again |
+| `provision check` says *'/home/museum.org' cannot be traversed by museum_org_agent (the agent)* (or by `museum_org_api` (v2), or `museum_org_v1` (v1)) | the home directory is still Ubuntu's `0750`, or another directory above `agent_dir`, `bun_bin` or the state root lacks the execute bit for that account | run the `chmod` the line prints (for the home directory, `chmod 0755 /home/museum.org`, step 0), then `check` again |
 | `provision check` says *agent_dir … holds N entries not readable by museum_org_agent (the agent)*, or that `agent_dir` itself *is not readable* or *cannot be traversed* | the code was copied without the `chmod` of step 1, so some files or directories are readable by root alone | `chmod -R u=rwX,go=rX /home/museum.org/host_agent`, then `check` again |
 | `provision check` says *agent_dir … could not be walked whole* | `agent_dir` holds more than 20000 entries, or a directory in it that cannot be listed: it is not the agent's code alone | copy the agent's code alone again (step 1), into its own directory |
 | `provision check` says *bun_bin … is not readable*, *not executable* or *not readable and executable by …*, or the same for `php_bin` | the binary's mode does not let the account that runs it read and execute it | run the `chmod` the line prints; the site's Bun is installed `0755` (step 1) |
@@ -1443,7 +1996,8 @@ The commands below use the example names; `provision` runs as in step 4.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `provision check` stops, naming a user or group | the provisioner never creates accounts | run the command it prints for each, in the order printed (step 3), then `check` again. For `engine_group`, correct the declaration instead |
+| `provision check` stops, naming a user or group | `provision apply` never creates accounts (`provision init` does, after you confirm) | run the command it prints for each, in the order printed (step 3), then `check` again. For `engine_group`, correct the declaration instead |
+| `provision apply` refuses: the group `dedalo_pubhost` is missing | the host-wide group every agent's service runs with does not exist yet | `groupadd --system dedalo_pubhost` (step 3), then `apply` again |
 | `provision check` says *engine_group … is the agent's own group* (or *the v1 user's group*, *the v2 group*, *the v2 user's group*) | the declaration names one of this instance's own groups, not the work system's | declare the group the work system's process runs with (step 2: `systemctl show -p Group --value dedalo-ts`, or `id -gn dedalo`) |
 | `provision check` says *the groups of user … could not be read* | `id -G` did not answer for that account: the user database (for example a directory service) is unreachable | make `id -G <user>` answer on the host, then `check` again |
 
@@ -1465,7 +2019,7 @@ The commands below use the example names; `provision` runs as in step 4.
 | --- | --- | --- |
 | a v1 install is refused: `bundle_refused` (`reserved_path`), naming `config_api/server_config_headers.php` | a `server_config_headers.php` sits in `v1/shared/`, and the release ships its own | remove it from `/home/museum.org/dedalo/publication_api/v1/shared/` (step 5), then push again |
 | an API install is refused: `shared_config_missing` | the API's configuration file in `shared/` does not exist yet (for v1, also the headers file when the release ships none) | create it as root (step 5), then install again |
-| a v1 install is refused: `shared_config_exposed` | the v1 configuration file is readable by its group or by others, is owned by root (created as root and never given to the v1 user), or is not a regular file | `chown museum_site` it and `chmod 0400` it (step 5), then install again |
+| a v1 install is refused: `shared_config_exposed` | the v1 configuration file is readable by its group or by others, is owned by root (created as root and never given to the v1 user), or is not a regular file | `chown museum_org_v1` it and `chmod 0400` it (step 5), then install again |
 
 ### Health and fingerprint
 
@@ -1507,6 +2061,10 @@ The commands below use the example names; `provision` runs as in step 4.
 | busy | another change is running on that host, or, on the work system, the pairing command or another panel action is editing the host list | try again when it finishes |
 | refused | the host refused the request, for example a failed configuration test | the message names the reason; the previous state is still active |
 | applying media rules fails | the web server's configuration test rejected the new include | the previous include is still active and nothing was reloaded; read the error and re-render the rules |
+| the media map is *not managed* (`map_unmanaged`) | the nginx host's declaration has no `"nginx_map": "conf_d"`: the map is placed by hand there | expected on such a host; the rules are applied without the map step. To let the panel push it, re-run `provision init` (or set the field and `apply`) |
+| the media map is refused: *a newer contribution* (`map_contribution_newer`) | another instance on the same host runs a newer Dédalo, and the host's map renderer is older than its map | run `provision apply` of that newer instance on the host: it upgrades the shared renderer |
+| the media map is refused: *rebind* (`map_envelope_rebind`) | this work system's media folder changed since the host first accepted its map | run `provision apply` of this instance on the host, then apply the rules again |
+| the media map is refused: *renderer missing* (`map_renderer_missing`) | the host's map service is not installed | run `provision apply` of this instance on the host |
 
 ### API releases and push
 

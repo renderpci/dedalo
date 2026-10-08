@@ -1,0 +1,6 @@
+root:x:0:0:root:/root:/bin/bash
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+dedalo:x:1001:1001:Dédalo engine:/home/dedalo:/bin/bash
+museum:x:1002:1002::/home/museum.org:/bin/bash
+museum_org_agent:x:998:998::/nonexistent:/usr/sbin/nologin
+intruder:x:1003:1001::/home/intruder:/bin/bash

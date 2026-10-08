@@ -1,0 +1,11 @@
+LoadState=loaded
+ActiveState=active
+UnitFileState=enabled
+User=dedalo_site
+Group=
+WorkingDirectory=/srv/dedalo/site/master_dedalo
+ExecStart={ path=/usr/local/bin/bun ; argv[]=/usr/local/bin/bun run src/server.ts ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Environment=
+EnvironmentFiles=/srv/dedalo/site/private/.env (ignore_errors=no)
+FragmentPath=/etc/systemd/system/dedalo-ts@.service
+DropInPaths=/etc/systemd/system/dedalo-ts@site.service.d/user.conf

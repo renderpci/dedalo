@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "httpd(8) -S/-M/-t -D DUMP_INCLUDES output grammar (as in captured/*); vhost files for the matching rules: alias-only, duplicate ServerName (with :port, upper case), our stamped reference (CRLF), the install guide's step-9 hand lines, wildcard and continued ServerAlias; EL -M without mod_ssl; the <If> php.conf form the spec assumed; the debian_*/el_* site files are the exact vhost INPUTS the container captures were run with (their -S output is captured/debian12, captured/rocky9)",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

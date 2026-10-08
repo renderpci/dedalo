@@ -12,7 +12,8 @@
  *
  * EVERY ROW HAS ITS REAL HANDLER (shape `(req, url)`); the ROWS are what
  * tests/router.test.ts pins — a change adds, removes or reorders none of them silently.
- * Phase 5 added the four copy-mode media rows (tests/router.test.ts and the spec §6 gate pin them).
+ * Phase 5 added the four copy-mode media rows (tests/router.test.ts and the spec §6 gate pin them);
+ * provision init's host-wide nginx map added POST /v1/rules/map (spec §13.4).
  */
 
 import { MethodNotAllowedError, NotFoundError } from './errors';
@@ -21,6 +22,7 @@ import { handleMediaProbe } from './routes/media_probe';
 import { releaseInstallRoute, releaseRollbackRoute } from './routes/releases';
 import { mediaDeleteRoute, mediaManifestRoute, mediaMarkRoute, mediaPutRoute } from './routes/media';
 import { handleRulesApply } from './routes/rules_apply';
+import { handleRulesMap } from './routes/rules_map';
 import { handleStatus } from './routes/status';
 import { requireBearer } from './security/auth';
 import { problem } from './util/response';
@@ -34,6 +36,7 @@ export type AgentCommand =
   | 'status'
   | 'media.probe'
   | 'rules.apply'
+  | 'rules.map'
   | 'release.install'
   | 'release.rollback'
   | 'media.put'
@@ -66,6 +69,7 @@ export const ROUTES: readonly Route[] = Object.freeze([
   route('GET', '/v1/status', 'status', handleStatus),
   route('GET', '/v1/media/probe', 'media.probe', handleMediaProbe),
   route('POST', '/v1/rules/apply', 'rules.apply', handleRulesApply),
+  route('POST', '/v1/rules/map', 'rules.map', handleRulesMap),
   route('POST', '/v1/releases/v1', 'release.install', releaseInstallRoute('v1')),
   route('POST', '/v1/releases/v2', 'release.install', releaseInstallRoute('v2')),
   route('POST', '/v1/releases/v1/rollback', 'release.rollback', releaseRollbackRoute('v1')),

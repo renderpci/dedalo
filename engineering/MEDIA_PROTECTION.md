@@ -363,8 +363,24 @@ rendered from the same templates by `src/core/media/publication_host_rules.ts`:
   can take a media request) with the shared hardening (`nginxHardeningLocations`) and Rule B
   (aliasing into the root) nested, `return 404` default; the http{} map is `buildNginxMap()`
   unchanged. The mount must not sit under a document root.
+- **nginx http{} map on a PROVISIONED publication host** (`web.nginx_map: conf_d`,
+  `engineering/PUBLICATION_HOST_SPEC.md` §9.7): on a publication host provisioned with
+  `provision init`, the http{} map is pushed by apply_rules into the host-wide include and must
+  not be placed by hand; the manual path below still applies to work hosts and hand-provisioned
+  publication hosts. The engine sends `buildNginxMap()` with `nginxMapConfigHash()` as
+  `rules.map` BEFORE the server include (the include uses the map's variables; a map refusal
+  stops the include). The agent validates it against the closed map grammar
+  (`parseNginxMap`, `publication/host_agent/src/rules/directives.ts`), writes only its own
+  one-envelope contribution, and starts the ROOT map renderer
+  (`publication/host_agent/src/rules/host_map_main.ts`, the `dedalo-pubhost-map` oneshot), which
+  re-validates every contribution, merges them (`renderHostMap`,
+  `publication/host_agent/src/rules/host_map.ts`: distinct envelopes sorted, the newest admitted
+  pin set) and is the only writer of the file nginx loads, through the provisioned include
+  `/etc/nginx/conf.d/dedalo_media_map.conf`
+  (`publication/host_agent/src/provision/render/nginx_map_include.ts`). With every instance on
+  one engine version and one `mediaDir`, the host file is byte-identical to `buildNginxMap()`.
 
-Render: `bun run media:publication-host-rules --root <mount> [--server apache|nginx|nginx-map]`.
+Render (work hosts and hand-provisioned publication hosts): `bun run media:publication-host-rules --root <mount> [--server apache|nginx|nginx-map]`.
 Lockstep: `media_protection_tripwire.test.ts` (same filename verdicts, host-root markers, no
 Rule A). Engine proof: `bun run test:media:pubhost` (the §9 matrix for this profile on live
 Apache and nginx, in a HOSTILE harness — mount under the document root, an operator

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentLayout } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
-import { polkitRenderer } from '../src/provision/render/polkit';
+import { grantsHostMap, HOST_MAP_SERVICE, polkitRenderer } from '../src/provision/render/polkit';
 import { sudoersAlias, sudoersRenderer } from '../src/provision/render/sudoers';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
 import { FIXTURE_FACTS } from './fixtures/provision_facts';
@@ -145,5 +145,38 @@ describe('polkit', () => {
   test('a rules file name polkitd would not load is refused', () => {
     const bad: AgentLayout = { ...UNIX, polkitPath: '/etc/polkit-1/rules.d/dedalo.conf' };
     expect(() => polkitRenderer.render(bad, FIXTURE_FACTS)).toThrow(/NN-<name>\.rules/);
+  });
+});
+
+describe('polkit: the host-map pair (spec §13.5)', () => {
+  const M = 'org.freedesktop.systemd1.manage-units';
+  const U = 'dedalo-pubhost';
+  const MAP_HOST = derive({ ...tlsDeclaration(), web: { server: 'nginx', unit: 'nginx', nginx_map: 'conf_d' } });
+  const mapBody = polkitRenderer.render(MAP_HOST, FIXTURE_FACTS)[0]!.body;
+
+  test('on an nginx conf_d host: YES for exactly (dedalo-pubhost-map.service, start), as the agent user', () => {
+    expect(HOST_MAP_SERVICE).toBe('dedalo-pubhost-map.service');
+    expect(grantsHostMap(MAP_HOST)).toBe(true);
+    expect(decide(mapBody, U, M, 'dedalo-pubhost-map.service', 'start')).toBe('yes');
+    for (const verb of ['stop', 'restart', 'reload', 'enable', 'kill']) {
+      expect(decide(mapBody, U, M, 'dedalo-pubhost-map.service', verb)).toBe('not_handled');
+    }
+    expect(decide(mapBody, 'www-data', M, 'dedalo-pubhost-map.service', 'start')).toBe('not_handled');
+    expect(decide(mapBody, U, M, 'dedalo-pubhost-map@x.service', 'start')).toBe('not_handled');
+    expect(mapBody).toContain('; start dedalo-pubhost-map.service. Nothing else.');
+  });
+
+  test('the earlier grants are unchanged on that host', () => {
+    expect(decide(mapBody, U, M, 'nginx.service', 'reload')).toBe('yes');
+    expect(decide(mapBody, U, M, 'dedalo-publication-api-v2.service', 'restart')).toBe('yes');
+  });
+
+  test('no pair on apache, nor on an nginx host whose map is placed by hand (none)', () => {
+    for (const layout of [UNIX, TLS]) {
+      expect(grantsHostMap(layout)).toBe(false);
+      const body = polkitRenderer.render(layout, FIXTURE_FACTS)[0]!.body;
+      expect(body).not.toContain('dedalo-pubhost-map');
+      expect(decide(body, U, M, 'dedalo-pubhost-map.service', 'start')).toBe('not_handled');
+    }
   });
 });

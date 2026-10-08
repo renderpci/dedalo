@@ -1,0 +1,15 @@
+LoadState=loaded
+ActiveState=active
+FragmentPath=/usr/lib/systemd/system/apache2.service
+DropInPaths=
+UnitFileState=enabled
+ExecStart={ path=/usr/sbin/apachectl ; argv[]=/usr/sbin/apachectl start ; ignore_errors=no ; start_time=[Thu 2026-10-08 21:34:50 UTC] ; stop_time=[n/a] ; pid=59 ; code=(null) ; status=0/0 }
+Environment=APACHE_STARTED_BY_SYSTEMD=true
+WorkingDirectory=
+User=
+Group=
+ReadOnlyPaths=
+InaccessiblePaths=/boot /root -/etc/sudoers -/etc/sudoers.d -/etc/ssh -/etc/apt -/etc/.git -/etc/.svn
+ProtectHome=read-only
+ProtectSystem=full
+TemporaryFileSystem=

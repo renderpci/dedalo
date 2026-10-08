@@ -20,20 +20,45 @@
  *      (Apache LoadModule / Include / piped ErrorLog / +ExecCGI / proxy RewriteRule; nginx
  *      load_module / include / error_log / access_log) is refused, naming that line.
  *
+ *   4. THE HOST-WIDE NGINX MAP (provision init §13.3): the engine's buildNginxMap() passes the
+ *      agent's closed map grammar (parseNginxMap) — for this install's media dir, and for a
+ *      matrix of other media dirs / image folders (the envelope of each written with the
+ *      engine's own imageEnvelopePcre escaping); the NEWEST pin set (NGINX_MAP_PINS, last entry)
+ *      equals the engine's svg_safety constants, so an engine change to any of them is red HERE
+ *      until a new pin set is appended; and a real map plus one root door (include, load_module,
+ *      a piped or variable value, a fourth variable) is refused.
+ *
  * HERMETIC: no database, no network. The agent module imports nothing; the engine renderer
  * reads only config.mediaDir.
  */
 
 import { describe, expect, test } from 'bun:test';
 import {
+	envelopePcre,
+	isMapRefusal,
+	MAP_GRAMMAR,
+	NGINX_MAP_PINS,
+	parseNginxMap,
 	type RulesServer,
 	refuseDirectives,
 } from '../../publication/host_agent/src/rules/directives.ts';
-import { getPublicQualities } from '../../src/core/media/protection.ts';
+import { config } from '../../src/config/config.ts';
+import {
+	buildNginxMap,
+	getPublicQualities,
+	nginxMapConfigHash,
+} from '../../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
 	buildPublicationHostNginxConf,
 } from '../../src/core/media/publication_host_rules.ts';
+import {
+	imageEnvelopePcre,
+	SVG_ENVELOPE_CSP,
+	SVG_QUARANTINE_CSP,
+	SVG_QUARANTINE_DISPOSITION,
+	svgQuarantinePcre,
+} from '../../src/core/media/svg_safety.ts';
 
 const ROOT = '/srv/dedalo_publication_media';
 const SERVERS: readonly RulesServer[] = ['apache', 'nginx'];
@@ -101,5 +126,78 @@ describe('the root doors stay closed', () => {
 				expect(refused?.line).toBe(include.split('\n').length);
 			});
 		}
+	}
+});
+
+describe('the host-wide nginx map passes the agent map grammar', () => {
+	test('buildNginxMap() for this install parses: its hash, its one envelope, the newest pin set', () => {
+		const parsed = parseNginxMap(buildNginxMap());
+		if (isMapRefusal(parsed))
+			throw new Error(`line ${parsed.line} '${parsed.directive}': ${parsed.why}`);
+		expect(parsed).toEqual({
+			hash: nginxMapConfigHash(),
+			envelopes: [imageEnvelopePcre()],
+			pinsId: NGINX_MAP_PINS.at(-1)?.id as string,
+		});
+	});
+
+	test('the agent writes the envelope exactly as the engine does (this install)', () => {
+		const folder = config.media.image.folder.replace(/^\/+/, '').replace(/\/+$/, '');
+		expect(envelopePcre(config.mediaDir, folder)).toBe(imageEnvelopePcre());
+	});
+
+	const MATRIX: readonly (readonly [string, string])[] = [
+		['media', 'image'],
+		['dedalo_media', 'img'],
+		['media.v7', 'image-2'],
+		['m', 'x_y.z'],
+		['a'.repeat(64), 'b'.repeat(64)],
+	];
+	for (const [mediaDir, folder] of MATRIX) {
+		test(`a media dir '${mediaDir.slice(0, 12)}', image folder '${folder.slice(0, 12)}' passes`, () => {
+			const variant = buildNginxMap().replaceAll(
+				imageEnvelopePcre(),
+				envelopePcre(mediaDir, folder),
+			);
+			const parsed = parseNginxMap(variant);
+			expect(isMapRefusal(parsed) ? parsed.why : parsed.envelopes).toEqual([
+				envelopePcre(mediaDir, folder),
+			]);
+		});
+	}
+
+	test('the newest pin set IS the engine svg_safety constants (append a pin set when they change)', () => {
+		const newest = NGINX_MAP_PINS.at(-1);
+		expect(newest).toMatchObject({
+			quarantine: svgQuarantinePcre(),
+			disposition: SVG_QUARANTINE_DISPOSITION,
+			envelopeCsp: SVG_ENVELOPE_CSP,
+			quarantineCsp: SVG_QUARANTINE_CSP,
+		});
+		expect(newest?.grammar).toBe(MAP_GRAMMAR);
+		expect(new Set(NGINX_MAP_PINS.map((pins) => pins.id)).size).toBe(NGINX_MAP_PINS.length);
+	});
+
+	const DOORS: readonly (readonly [string, (map: string) => string])[] = [
+		['include', (map) => `${map}include /etc/nginx/evil.conf;\n`],
+		['load_module', (map) => `${map}load_module /tmp/evil.so;\n`],
+		['a piped value', (map) => map.replace(`"${SVG_QUARANTINE_DISPOSITION}"`, '"|/bin/sh -c id"')],
+		['a variable value', (map) => map.replace(`"${SVG_QUARANTINE_CSP}"`, '"$http_cookie"')],
+		['a fourth variable', (map) => `${map}map $uri $dedalo_extra {\n\tdefault "";\n}\n`],
+		[
+			'a second auth value',
+			(map) =>
+				map.replace(
+					'\tdefault                   "_invalid_";',
+					'\t"~.*"  $h;\n\tdefault "_invalid_";',
+				),
+		],
+	];
+	for (const [door, mutate] of DOORS) {
+		test(`a real map + ${door} is refused`, () => {
+			const hostile = mutate(buildNginxMap());
+			expect(hostile).not.toBe(buildNginxMap());
+			expect(isMapRefusal(parseNginxMap(hostile))).toBe(true);
+		});
 	}
 });

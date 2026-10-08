@@ -1,0 +1,76 @@
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+# configuration file /etc/nginx/nginx.conf:
+user nginx nginx;
+worker_processes auto;
+events { worker_connections 1024; }
+http {
+    include       mime.types;   # relative to the prefix
+    default_type  application/octet-stream;
+    upstream php-site {
+        server unix:/run/php-fpm/www.sock;
+    }
+    include /etc/nginx/conf.d/*.conf;
+}
+
+# configuration file /etc/nginx/mime.types:
+types {
+    text/html html;
+}
+
+# configuration file /etc/nginx/conf.d/dedalo_hand_map.conf:
+# the install guide's hand-placed map (media_publication_host_rules.ts --server nginx-map)
+map $cookie_dedalo_media_auth $dedalo_auth_key {
+    default "_invalid_";
+    "~^(?<h>[a-f0-9]{128})$" $h;
+}
+map $uri $dedalo_svg_disposition {
+    default "attachment";
+}
+map $uri $dedalo_svg_csp {
+    default "default-src 'none'; sandbox";
+}
+
+# configuration file /etc/nginx/conf.d/dedalo_media_map.conf:
+# dedalo-provision: _host nginx_map_include 0000000000000000000000000000000000000000000000000000000000000000
+include /var/lib/dedalo_publication_host/_host/nginx_map/dedalo_media_map.nginx.con[f];
+
+# configuration file /etc/nginx/conf.d/museum.org.conf:
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl;
+    server_name museum.org www.museum.org;
+    root /home/museum.org/httpdocs;
+    error_log /home/museum.org/logs/error.log;
+    access_log /home/museum.org/logs/access.log combined;
+    access_log off;
+    include /etc/dedalo_publication_host/museum_org/web.nginx.con[f];
+    include /home/museum.org/dedalo/rules/dedalo_media_publication.nginx.conf;
+    location ^~ /dedalo/publication/server_api/v1/ {
+        alias /home/museum.org/dedalo/publication_api/v1/current/;
+        location ~ \.php$ {
+            fastcgi_pass unix:/run/php/php8.3-fpm-museum.org.sock;
+        }
+    }
+    location /dedalo/publication/server_api/v2/ {
+        proxy_pass http://127.0.0.1:3100/;
+    }
+    location ~ \.php$ {
+        fastcgi_pass php-site;   # the site's own pool, via an upstream
+    }
+}
+server {
+    listen 80 default_server;
+    server_name _ ".museum.org" 'museum.*';
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 127.0.0.1:8080;
+    server_name ~^www\d+\.museum\.org$ "~^(unclosed";
+    location / { return 200 "a } brace ; and # hash in a string"; }
+}
+server {
+    server_name other.org;
+    ssl on;
+}
+

@@ -66,6 +66,9 @@ embedded in each file.
     start** (`unknown "dedalo_auth_key" variable`). That is deliberate: a
     half-wired gate must never boot half-open.
 
+    This page is the work host. On a publication host provisioned with `provision init`, the `http{}` map is pushed by **Apply media rules** into the host-wide include and must not be placed by hand; these includes still apply to work hosts and hand-provisioned publication hosts.
+    See [publication host agent](publication_host.md#9-map-the-apis-into-the-sites-virtual-host).
+
 !!! note "Reloads: what needs one and what does not"
     - **A mode change needs an nginx reload** (`nginx -t && nginx -s reload`).
       nginx reads its configuration at reload; Apache re-reads `.htaccess` on

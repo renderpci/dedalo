@@ -686,6 +686,14 @@ const LOCAL_ONLY_SCRIPTS: ReadonlyMap<string, string> = new Map([
 		'ci:local',
 		'IS the local reproduction of the CI tiers (scripts/ci_local.ts): it runs the tier scripts this gate holds; running it from CI would run CI inside CI.',
 	],
+	[
+		'test:pubhost:init',
+		'The Debian provision-init drill creates accounts, runs systemd as PID 1, polkit and a real web/FPM reload, and kill -9s a root process, so it needs a PRIVILEGED container with a writable cgroup2. Every hosted tier job already runs INSIDE the CI image as a `container:` with no Docker daemon and no privilege, and handing a pull request one would give it root on the runner (engineering/CI.md, Local-only drills of the guided install).',
+	],
+	[
+		'test:pubhost:init:el',
+		'The EL provision-init drill measures SELinux enforcement (labels, booleans, AVCs, the <If> handler under php.conf) on a Rocky/Alma VM it refuses to run without /etc/dedalo_init_drill_host; no hosted runner has an SELinux kernel and a container cannot enforce SELinux. Its record ratchet (the EL drill record under engineering/) turns every EL-relevant change red until it runs again.',
+	],
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────

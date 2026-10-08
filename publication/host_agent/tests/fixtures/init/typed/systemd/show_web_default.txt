@@ -1,0 +1,16 @@
+LoadState=loaded
+ActiveState=active
+UnitFileState=enabled
+User=
+Group=
+WorkingDirectory=
+ExecStart={ path=/usr/sbin/httpd ; argv[]=/usr/sbin/httpd $OPTIONS -DFOREGROUND ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Environment=LANG=C
+EnvironmentFiles=/etc/sysconfig/httpd (ignore_errors=yes)
+FragmentPath=/usr/lib/systemd/system/httpd.service
+DropInPaths=
+ProtectHome=no
+ProtectSystem=no
+InaccessiblePaths=
+ReadOnlyPaths=
+TemporaryFileSystem=

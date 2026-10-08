@@ -143,6 +143,9 @@ export function fakeReleaseHost(): FakeReleaseHost {
     webReload: async () => {
       throw new Error('release tests never reload the web server');
     },
+    startHostMap: async () => {
+      throw new Error('release tests never start the host map renderer');
+    },
     v2Restart: async () => {
       state.restarts++;
       state.live = currentRelease('v2');

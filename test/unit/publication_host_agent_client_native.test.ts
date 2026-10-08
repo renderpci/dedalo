@@ -33,6 +33,7 @@ import { DedaloError, toErrorBody } from '../../src/core/errors/index.ts';
 import {
 	forgetPairing,
 	hostApplyRules,
+	hostApplyRulesMap,
 	hostInstallRelease,
 	hostMediaDelete,
 	hostMediaMark,
@@ -61,9 +62,11 @@ import {
 	useScratchPublicationHostsBase,
 } from '../helpers/publication_host_fixtures.ts';
 import {
+	MOCK_MANAGED_MAP,
 	MOCK_PROBE,
 	type MockAgent,
 	mockFingerprint,
+	mockNginxStatus,
 	mockProblem,
 	startMockAgent,
 } from '../helpers/publication_host_mock_agent.ts';
@@ -513,8 +516,107 @@ describe('the §6 commands over the door', () => {
 		const status = await hostStatus('museum_pub');
 		expect(status.instance_fingerprint).toBe(mockFingerprint(INSTANCE, TOKEN_A));
 		expect(status.apis.v2).toEqual({ current: '7.0.2_aaaaaaa', previous: '7.0.1_bbbbbbb' });
-		expect(status.rules).toEqual({ server: 'apache', hash: null });
+		expect(status.rules).toEqual({ server: 'apache', hash: null, map: null });
 		expect(status.media).toEqual({ ...MOCK_PROBE, problems: [] });
+	});
+
+	test('status.rules.map: each shape the agent sends is accepted; an older agent omits it; a malformed one is unreadable', async () => {
+		const fp = mockFingerprint(INSTANCE, TOKEN_A);
+		for (const map of [MOCK_MANAGED_MAP, { managed: false }, null, 'absent'] as const) {
+			mock.reply('GET', '/v1/status', { status: 200, body: mockNginxStatus(fp, map) });
+			const status = await hostStatus('museum_pub');
+			expect(status.rules.server).toBe('nginx');
+			expect(status.rules.map).toEqual(map === 'absent' ? undefined : (map as never));
+		}
+		for (const bad of [
+			{ managed: 'yes' },
+			{ ...MOCK_MANAGED_MAP, contributions: '1' },
+			{ ...MOCK_MANAGED_MAP, hash: 7 },
+			'x',
+		]) {
+			mock.reply('GET', '/v1/status', {
+				status: 200,
+				body: mockNginxStatus(fp, bad as Record<string, unknown>),
+			});
+			const error = await expectCode(hostStatus('museum_pub'), 'publication_host.failed');
+			expect(error.details).toEqual({ reason: 'unreadable_body' });
+		}
+		mock.reset();
+	});
+
+	test('rules.map sends {text, hash} as JSON with the actor header, proved live; the answer names the hash', async () => {
+		const text = `# config-hash: ${RULES_HASH}\nmap\n`;
+		const applied = await hostApplyRulesMap('museum_pub', { text, hash: RULES_HASH }, ACTOR);
+		expect(applied).toEqual({
+			hash: RULES_HASH,
+			host_hash: RULES_HASH,
+			contributions: 1,
+			reloaded: true,
+		});
+		const sent = last(mock);
+		expect(sent.method).toBe('POST');
+		expect(sent.path).toBe(`${B}/v1/rules/map`);
+		expect(sent.actor).toBe(ACTOR);
+		expect(sent.contentType).toBe('application/json');
+		expect(JSON.parse(new TextDecoder().decode(sent.body))).toEqual({ text, hash: RULES_HASH });
+		expect(trail(mock).slice(-2)).toEqual([
+			`GET ${B}/health anon`,
+			`POST ${B}/v1/rules/map bearer`,
+		]);
+	});
+
+	test('rules.map: an answer for another hash, or a malformed one, is unreadable — never an OK', async () => {
+		const other = 'f'.repeat(64);
+		for (const body of [
+			{ hash: other, host_hash: other, contributions: 1, reloaded: true },
+			{ hash: RULES_HASH, host_hash: 'x', contributions: 1, reloaded: true },
+			{ hash: RULES_HASH, host_hash: RULES_HASH, contributions: 0, reloaded: true },
+			{ hash: RULES_HASH, host_hash: RULES_HASH, contributions: 1, reloaded: false },
+		]) {
+			mock.reply('POST', '/v1/rules/map', { status: 200, body });
+			const error = await expectCode(
+				hostApplyRulesMap('museum_pub', { text: '# x\n', hash: RULES_HASH }, ACTOR),
+				'publication_host.failed',
+			);
+			expect(error.details).toEqual({ reason: 'unreadable_body' });
+		}
+		mock.reset();
+	});
+
+	test('rules.map refusals map onto the family: map_unmanaged rejected, host_busy busy', async () => {
+		mock.reply(
+			'POST',
+			'/v1/rules/map',
+			mockProblem(409, 'conflict', 'Conflict', 'placed by hand', { reason: 'map_unmanaged' }),
+		);
+		const unmanaged = await expectCode(
+			hostApplyRulesMap('museum_pub', { text: '# x\n', hash: RULES_HASH }, ACTOR),
+			'publication_host.rejected',
+		);
+		expect(unmanaged.details).toEqual({ reason: 'map_unmanaged' });
+		mock.reply(
+			'POST',
+			'/v1/rules/map',
+			mockProblem(503, 'host-action-failed', 'Host Action Failed', 'held', { reason: 'host_busy' }),
+		);
+		await expectCode(
+			hostApplyRulesMap('museum_pub', { text: '# x\n', hash: RULES_HASH }, ACTOR),
+			'publication_host.busy',
+		);
+		mock.reset();
+	});
+
+	test('rules.map input is refused before dialling (actor, hash, empty text)', async () => {
+		const before = mock.requests.length;
+		for (const run of [
+			() => hostApplyRulesMap('museum_pub', { text: '# x\n', hash: RULES_HASH }, 'a\tb'),
+			() => hostApplyRulesMap('museum_pub', { text: '# x\n', hash: 'nothex' }, ACTOR),
+			() => hostApplyRulesMap('museum_pub', { text: '', hash: RULES_HASH }, ACTOR),
+		]) {
+			const error = await expectCode(run(), 'publication_host.rejected');
+			expect(error.details).toEqual({ reason: 'input_invalid' });
+		}
+		expect(mock.requests.length).toBe(before);
 	});
 
 	test('media.probe returns the probe', async () => {

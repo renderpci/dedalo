@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "passwd(5)/group(5) with supplementary members; sssd.conf(5) with and without a domain; an LDAP nsswitch.conf",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

@@ -1,0 +1,24 @@
+{
+  "instance": "example",
+  "listen": { "kind": "unix" },
+  "agent_user": "dedalo-pubhost",
+  "engine_group": "dedalo",
+  "agent_dir": "/home/example.org/host_agent",
+  "web": { "server": "nginx", "unit": "nginx", "nginx_map": "conf_d", "log_dirs": ["/var/log/nginx/example.org"] },
+  "site": {
+    "domain": "example.org",
+    "fpm": { "flavor": "debian", "version": "8.2" }
+  },
+  "v1": { "user": "example_v1" },
+  "state_root": "/home/example.org/dedalo",
+  "media": { "mode": "copy", "root": "/srv/dedalo_media/example" },
+  "php_bin": "/usr/bin/php8.2",
+  "bun_bin": "/home/example.org/.bun/bin/bun",
+  "v2": {
+    "unit": "dedalo-publication-api-v2",
+    "user": "dedalo-api-v2",
+    "group": "dedalo-api-v2",
+    "port": 3100,
+    "health_url": "http://127.0.0.1:3100/health"
+  }
+}

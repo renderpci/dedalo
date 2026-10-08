@@ -50,6 +50,14 @@ function writtenRoots(layout: AgentLayout): readonly [string, string][] {
   return roots;
 }
 
+/**
+ * The host-wide ProtectHome= fact (spec S10): true when any sibling is home-bound. The caller
+ * passes it to derive() (DeriveHost.anyHomeBound) so every agent unit renders the same value.
+ */
+export function anySiblingHomeBound(siblings: readonly Sibling[]): boolean {
+  return siblings.some(sibling => sibling.layout.homeBound);
+}
+
 /** Every reason `own` cannot coexist with the given siblings; empty = isolated. */
 export function siblingRefusals(own: AgentLayout, siblings: readonly Sibling[]): string[] {
   const refusals: string[] = [];
@@ -101,6 +109,21 @@ export function siblingRefusals(own: AgentLayout, siblings: readonly Sibling[]):
       );
     }
     if (own.v2.port === other.v2.port) clash(`v2.port ${own.v2.port}`, 'give each instance its own v2 port');
+    // One website, one instance (spec S6): two would fight over its vhost reference, its home and its pool.
+    if (own.site !== null && other.site !== null) {
+      if (own.site.domain === other.site.domain) {
+        clash(`site.domain '${own.site.domain}'`, 'one instance serves one site; declare the site once');
+      }
+      if (own.site.v1Var.root === other.site.v1Var.root) {
+        clash(`the v1 pool directory '${own.site.v1Var.root}'`, 'give each instance its own paths.v1_var_base');
+      }
+      if (own.site.fpm.listen === other.site.fpm.listen) {
+        clash(`the v1 pool socket '${own.site.fpm.listen}'`, 'each instance runs its own pool on its own socket');
+      }
+      if (own.site.fpm.poolFile === other.site.fpm.poolFile) {
+        clash(`the v1 pool file '${own.site.fpm.poolFile}'`, 'each instance renders its own pool file');
+      }
+    }
     if (own.listen.kind === 'tls' && other.listen.kind === 'tls') {
       if (own.listen.host === other.listen.host && own.listen.port === other.listen.port) {
         clash(`listen ${own.listen.host}:${own.listen.port}`, 'give each instance its own port (or address)');

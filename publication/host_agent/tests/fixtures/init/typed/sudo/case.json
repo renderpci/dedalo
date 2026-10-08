@@ -1,0 +1,4 @@
+{
+  "typed": true,
+  "source": "sudo-rs reads /etc/sudoers-rs instead of /etc/sudoers when it exists (the sudo-rs 0.2.13 binary on ubuntu:26.04 names both paths; no package ships the file, so an operator writes it). sudoers-rs: such a policy without the sudoers.d include; sudoers-rs_include: one that reaches it through a relative @include of sudoers-rs.local."
+}

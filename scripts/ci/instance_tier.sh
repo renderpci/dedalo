@@ -3,8 +3,9 @@
 # INSTANCE CI TIER — the gates that BOOT A REAL SERVER over the wire, on a HOSTED
 # runner: the browser client suite, the two code-update drills, the
 # publication-host media drill (live Apache + nginx), the publication-host
-# agent drill (the real agent over mTLS, live Apache + nginx, real v2 releases)
-# and the publication-host engine drill (engine ↔ real agent: pair CLI, panel, httpd).
+# agent drill (the real agent over mTLS, live Apache + nginx, real v2 releases),
+# the publication-host engine drill (engine ↔ real agent: pair CLI, panel, httpd),
+# the public-URL probe drill, and the Bun hash table's signature check.
 #
 # WHY THIS EXISTS. Three commands the repo relies on ran on NO executing CI:
 # scripts/ci/client_gate.sh (the 133-suite browser gate), `bun run test:update`
@@ -192,6 +193,23 @@ echo "== instance_tier: public-URL probe drill (bun run test:pubhost:probe)"
 probe_rc=0
 bun run test:pubhost:probe || probe_rc=$?
 [ "$probe_rc" -eq 0 ] || { echo "== instance_tier: RED in the public-URL probe drill (exit $probe_rc)"; tier_status=1; }
+
+# ── STAGE — THE BUN HASH TABLE'S SIGNATURE (provision init, Q3) ─────────────────
+#
+# scripts/ci/bun_pin_hashes.ts --verify re-verifies, OFFLINE, that the committed .bun-sha256
+# equals the signed payload of ci/bun/SHASUMS256.txt.asc under the pinned Bun release key
+# (gpgv with a key dearmored in TS: no agent, no keyring home, no network). The hashes
+# `provision init` and deploy/install.sh trust come only from that payload
+# (engineering/PUBLICATION_HOST_SPEC.md §9.10). The image carries gpgv; missing = RED (exit 2).
+#
+# NOT A STAGE HERE, by design: the guided install's own drills (bun run test:pubhost:init /
+# test:pubhost:init:el). They need a privileged systemd container and an SELinux VM, which no
+# job inside this image can start; their reasons are LOCAL_ONLY_SCRIPTS rows of
+# test/unit/tier_wiring_tripwire.test.ts (engineering/CI.md, Local-only drills).
+echo "== instance_tier: Bun hash table signature (bun run scripts/ci/bun_pin_hashes.ts --verify)"
+pin_rc=0
+bun run scripts/ci/bun_pin_hashes.ts --verify || pin_rc=$?
+[ "$pin_rc" -eq 0 ] || { echo "== instance_tier: RED in the Bun hash table signature (exit $pin_rc)"; tier_status=1; }
 
 [ "$tier_status" -eq 0 ] || { echo "== instance_tier: RED"; exit 1; }
 echo "== instance_tier: OK"

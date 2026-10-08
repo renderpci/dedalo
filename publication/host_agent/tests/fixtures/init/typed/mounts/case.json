@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "proc(5) /proc/self/mountinfo field grammar; RHEL 9 with network mounts, and a CIS-hardened layout (/home and /var nodev,nosuid,noexec)",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

@@ -1,7 +1,8 @@
 /**
  * GET /v1/status — what this publication host IS right now (spec §6 `status`): agent and
  * runtime versions, the pairing fingerprint, each API's current/previous release (from the
- * release store), the hash stamp of the LIVE media include (from rules/apply.ts), the media
+ * release store), the hash stamp of the LIVE media include (from rules/apply.ts), the
+ * host-wide nginx map's state for this instance (rules/map.ts hostMapStatus), the media
  * probe, and free disk under the state root.
  *
  * Everything is read at request time — no cached copy that can disagree with the disk.
@@ -17,6 +18,7 @@ import { probeMedia, type MediaProbe } from '../media/probe';
 import { currentRelease, previousRelease } from '../releases/store';
 import type { ApiName } from '../releases/ustar';
 import { appliedRulesHash } from '../rules/apply';
+import { hostMapStatus, type RulesMapStatus } from '../rules/map';
 import { instanceFingerprint } from '../security/pairing';
 import { json } from '../util/response';
 
@@ -26,7 +28,8 @@ export interface AgentStatus {
   platform: string;
   instance_fingerprint: string;
   apis: Record<ApiName, { current: string | null; previous: string | null }>;
-  rules: { server: string; hash: string | null };
+  /** `map`: the host-wide nginx map (spec §13.4) — null on apache, `{managed: false}` when placed by hand. */
+  rules: { server: string; hash: string | null; map: RulesMapStatus };
   media: MediaProbe;
   disk: { state_root_free_bytes: number };
 }
@@ -54,7 +57,7 @@ export async function buildStatus(): Promise<AgentStatus> {
     platform: `${process.platform}-${process.arch}`,
     instance_fingerprint: instanceFingerprint(config.INSTANCE, config.SERVICE_TOKEN),
     apis,
-    rules: { server: config.WEB_SERVER, hash: appliedRulesHash() },
+    rules: { server: config.WEB_SERVER, hash: appliedRulesHash(), map: hostMapStatus() },
     media,
     disk: { state_root_free_bytes: freeBytes },
   };

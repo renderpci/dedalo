@@ -1,0 +1,2 @@
+apache2.service      loaded    active   running The Apache HTTP Server
+nginx.service        loaded    active   running A high performance web server and a reverse proxy server

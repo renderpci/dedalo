@@ -1,0 +1,464 @@
+afs3_callback_port_t           tcp      7001
+afs3_callback_port_t           udp      7001
+afs_bos_port_t                 udp      7007
+afs_fs_port_t                  tcp      2040
+afs_fs_port_t                  udp      7000, 7005
+afs_ka_port_t                  udp      7004
+afs_pt_port_t                  tcp      7002
+afs_pt_port_t                  udp      7002
+afs_vl_port_t                  udp      7003
+agentx_port_t                  tcp      705
+agentx_port_t                  udp      705
+amanda_port_t                  tcp      10080-10083
+amanda_port_t                  udp      10080-10082
+amavisd_recv_port_t            tcp      10024
+amavisd_send_port_t            tcp      10025
+amqp_port_t                    tcp      15672, 5671-5672
+amqp_port_t                    udp      5671-5672
+aol_port_t                     tcp      5190-5193
+aol_port_t                     udp      5190-5193
+apc_port_t                     tcp      3052
+apc_port_t                     udp      3052
+apcupsd_port_t                 tcp      3551
+apcupsd_port_t                 udp      3551
+apertus_ldp_port_t             tcp      539
+apertus_ldp_port_t             udp      539
+appswitch_emp_port_t           tcp      2616
+appswitch_emp_port_t           udp      2616
+asterisk_port_t                tcp      1720
+asterisk_port_t                udp      2427, 2727, 4569
+audit_port_t                   tcp      60
+auth_port_t                    tcp      113
+babel_port_t                   udp      6696
+bacula_port_t                  tcp      9103
+bacula_port_t                  udp      9103
+bctp_port_t                    tcp      8999
+bctp_port_t                    udp      8999
+bfd_control_port_t             tcp      3784
+bfd_control_port_t             udp      3784
+bfd_echo_port_t                tcp      3785
+bfd_echo_port_t                udp      3785
+bfd_multi_port_t               tcp      4784
+bfd_multi_port_t               udp      4784
+bgp_port_t                     tcp      179, 2605
+bgp_port_t                     udp      179, 2605
+boinc_client_port_t            tcp      1043
+boinc_client_port_t            udp      1034
+boinc_port_t                   tcp      31416
+boothd_port_t                  tcp      9929
+boothd_port_t                  udp      9929
+brlp_port_t                    tcp      4101
+certmaster_port_t              tcp      51235
+chronyd_port_t                 udp      323
+clamd_port_t                   tcp      3310
+clockspeed_port_t              udp      4041
+cluster_port_t                 tcp      5149, 40040, 50006-50008
+cluster_port_t                 udp      5149, 50006-50008
+cma_port_t                     tcp      1050
+cma_port_t                     udp      1050
+cmadmin_port_t                 tcp      2617
+cmadmin_port_t                 udp      2617
+cobbler_port_t                 tcp      25151
+collectd_port_t                udp      25826
+commplex_link_port_t           tcp      4331, 5001
+commplex_link_port_t           udp      5001
+commplex_main_port_t           tcp      5000
+commplex_main_port_t           udp      5000
+comsat_port_t                  udp      512
+condor_port_t                  tcp      9618
+condor_port_t                  udp      9618
+conman_port_t                  tcp      7890
+conman_port_t                  udp      7890
+connlcli_port_t                tcp      1358
+connlcli_port_t                udp      1358
+conntrackd_port_t              udp      3780
+couchdb_port_t                 tcp      5984, 6984
+couchdb_port_t                 udp      5984, 6984
+ctdb_port_t                    tcp      4379
+ctdb_port_t                    udp      4379
+cvs_port_t                     tcp      2401
+cvs_port_t                     udp      2401
+cyphesis_port_t                tcp      6767, 6769, 6780-6799
+cyphesis_port_t                udp      32771
+cyrus_imapd_port_t             tcp      2005
+daap_port_t                    tcp      3689
+daap_port_t                    udp      3689
+dbskkd_port_t                  tcp      1178
+dcc_port_t                     udp      6276, 6277
+dccm_port_t                    tcp      5679
+dccm_port_t                    udp      5679
+dey_keyneg_port_t              tcp      8750
+dey_keyneg_port_t              udp      8750
+dey_sapi_port_t                tcp      4330
+dhcpc_port_t                   tcp      68, 546, 5546
+dhcpc_port_t                   udp      68, 546, 5546
+dhcpd_port_t                   tcp      547, 548, 647, 847, 7911
+dhcpd_port_t                   udp      67, 547, 548, 647, 847
+dict_port_t                    tcp      2628
+distccd_port_t                 tcp      3632
+dns_port_t                     tcp      53, 853
+dns_port_t                     udp      53, 853
+dnssec_port_t                  tcp      8955
+dogtag_port_t                  tcp      7390
+echo_port_t                    tcp      7
+echo_port_t                    udp      7
+efs_port_t                     tcp      520
+embrace_dp_c_port_t            tcp      3198
+embrace_dp_c_port_t            udp      3198
+ephemeral_port_t               tcp      32768-60999
+ephemeral_port_t               udp      32768-60999
+epmap_port_t                   tcp      135
+epmap_port_t                   udp      135
+epmd_port_t                    tcp      4369
+epmd_port_t                    udp      4369
+fac_restore_port_t             tcp      5582
+fac_restore_port_t             udp      5582
+fingerd_port_t                 tcp      79
+firepower_port_t               tcp      2615
+firepower_port_t               udp      2615
+flash_port_t                   tcp      843, 1935
+flash_port_t                   udp      1935
+fmpro_internal_port_t          tcp      5003
+fmpro_internal_port_t          udp      5003
+freeipmi_port_t                tcp      9225
+freeipmi_port_t                udp      9225
+ftp_data_port_t                tcp      20
+ftp_port_t                     tcp      21, 989, 990
+ftp_port_t                     udp      989, 990
+gatekeeper_port_t              tcp      1721, 7000
+gatekeeper_port_t              udp      1718, 1719
+gdomap_port_t                  tcp      538
+gdomap_port_t                  udp      538
+gds_db_port_t                  tcp      3050
+gds_db_port_t                  udp      3050
+gear_port_t                    tcp      43273
+gear_port_t                    udp      43273
+geneve_port_t                  tcp      6080
+giftd_port_t                   tcp      1213
+git_port_t                     tcp      9418
+git_port_t                     udp      9418
+glance_port_t                  tcp      9292
+glance_port_t                  udp      9292
+glance_registry_port_t         tcp      9191
+glance_registry_port_t         udp      9191
+gluster_port_t                 tcp      38465-38469, 24007-24027
+gnome_remote_desktop_port_t    tcp      3389-3399
+gopher_port_t                  tcp      70
+gopher_port_t                  udp      70
+gpsd_port_t                    tcp      2947
+hadoop_datanode_port_t         tcp      50010
+hadoop_namenode_port_t         tcp      8020
+hddtemp_port_t                 tcp      7634
+hi_reserved_port_t             sctp     512-1023
+hi_reserved_port_t             tcp      512-1023
+hi_reserved_port_t             udp      512-1023
+howl_port_t                    tcp      5335
+howl_port_t                    udp      5353
+hplip_port_t                   tcp      1782, 2207, 2208, 8290, 8292, 9100, 9101, 9102, 9220, 9221, 9222, 9280, 9281, 9282, 9290, 9291, 50000, 50002
+http_cache_port_t              tcp      8080, 8118, 8123, 10001-10010
+http_cache_port_t              udp      3130
+http_port_t                    tcp      80, 81, 443, 488, 8008, 8009, 8443, 9000
+http_port_t                    udp      80, 443
+ibm_dt_2_port_t                tcp      1792
+ibm_dt_2_port_t                udp      1792
+imaze_port_t                   tcp      5323
+imaze_port_t                   udp      5323
+inetd_child_port_t             tcp      1, 9, 13, 19, 512, 544, 891, 892, 5666
+inetd_child_port_t             udp      1, 9, 13, 19, 891, 892
+innd_port_t                    tcp      119
+intermapper_port_t             tcp      8181
+interwise_port_t               tcp      7778
+interwise_port_t               udp      7778
+ionixnetmon_port_t             tcp      7410
+ionixnetmon_port_t             udp      7410
+ipmi_port_t                    udp      623, 664
+ipp_port_t                     tcp      631, 8610-8614
+ipp_port_t                     udp      631, 8610-8614
+ipsecnat_port_t                tcp      4500
+ipsecnat_port_t                udp      4500
+ircd_port_t                    tcp      6667, 6697
+isakmp_port_t                  udp      500
+iscsi_port_t                   tcp      3260
+isns_port_t                    tcp      3205, 51954
+isns_port_t                    udp      3205
+jabber_client_port_t           tcp      5222, 5223
+jabber_interserver_port_t      tcp      5269, 5280
+jabber_router_port_t           tcp      5347
+jacorb_port_t                  tcp      3528, 3529
+jboss_debug_port_t             tcp      8787
+jboss_debug_port_t             udp      8787
+jboss_management_port_t        tcp      4447, 4712, 7600, 9123, 9990, 9999, 18001
+jboss_management_port_t        udp      4712, 9123
+jboss_messaging_port_t         tcp      5445, 5455
+journal_remote_port_t          tcp      19532
+kerberos_admin_port_t          tcp      749
+kerberos_password_port_t       tcp      464
+kerberos_password_port_t       udp      464
+kerberos_port_t                tcp      88, 750, 4444
+kerberos_port_t                udp      88, 750, 4444
+keylime_port_t                 tcp      8881, 8892, 9002
+keystone_port_t                tcp      35357
+keystone_port_t                udp      35357
+kprop_port_t                   tcp      754
+ktalkd_port_t                  udp      517, 518
+kubernetes_port_t              tcp      4001, 4194, 10250
+l2tp_port_t                    tcp      1701
+l2tp_port_t                    udp      1701
+ldap_port_t                    tcp      389, 636, 3268, 3269, 7389
+ldap_port_t                    udp      389, 636
+lirc_port_t                    tcp      8765
+llmnr_port_t                   tcp      5355
+llmnr_port_t                   udp      5355
+lltng_port_t                   tcp      5345
+lmtp_port_t                    tcp      24, 2003
+lmtp_port_t                    udp      24
+lsm_plugin_port_t              tcp      18700
+luci_port_t                    tcp      8084
+mail_port_t                    tcp      2000, 3905
+mailbox_port_t                 tcp      2004
+matahari_port_t                tcp      49000
+matahari_port_t                udp      49000
+memcache_port_t                tcp      11211
+memcache_port_t                udp      11211
+milter_port_t                  tcp      8890, 8891, 8893
+mmcc_port_t                    tcp      5050
+mmcc_port_t                    udp      5050
+mongod_port_t                  tcp      27017-27019, 28017-28019
+monopd_port_t                  tcp      1234
+mountd_port_t                  tcp      20048
+mountd_port_t                  udp      20048
+movaz_ssc_port_t               tcp      5252
+movaz_ssc_port_t               udp      5252
+mpd_port_t                     tcp      6600
+ms_streaming_port_t            tcp      1755
+ms_streaming_port_t            udp      1755
+msnp_port_t                    tcp      1863
+msnp_port_t                    udp      1863
+mssql_port_t                   tcp      1433-1434
+mssql_port_t                   udp      1433-1434
+munin_port_t                   tcp      4949
+munin_port_t                   udp      4949
+mxi_port_t                     tcp      8005
+mxi_port_t                     udp      8005
+mysqld_port_t                  tcp      1186, 3306, 63132-63164
+mysqlmanagerd_port_t           tcp      2273
+mythtv_port_t                  tcp      6543-6544
+nessus_port_t                  tcp      1241
+netport_port_t                 tcp      3129
+netport_port_t                 udp      3129
+netsupport_port_t              tcp      5404, 5405
+netsupport_port_t              udp      5404, 5405
+neutron_port_t                 tcp      8775, 9696, 9697
+nfs_port_t                     tcp      2049, 20048-20049
+nfs_port_t                     udp      2049, 20048-20049
+nmbd_port_t                    udp      137, 138
+nmea_port_t                    tcp      10110
+nmea_port_t                    udp      10110
+nodejs_debug_port_t            tcp      5858
+nodejs_debug_port_t            udp      5858
+nsca_port_t                    tcp      5667
+nsd_control_port_t             tcp      8952
+ntop_port_t                    tcp      3000-3001
+ntop_port_t                    udp      3000-3001
+ntp_port_t                     udp      123
+ntske_port_t                   tcp      4460
+oa_system_port_t               tcp      8022
+oa_system_port_t               udp      8022
+ocsp_port_t                    tcp      9080
+opendnssec_port_t              tcp      15354
+opendnssec_port_t              udp      15354
+openflow_port_t                tcp      6633, 6653
+openhpid_port_t                tcp      4743
+openhpid_port_t                udp      4743
+openqa_liveview_port_t         tcp      9528
+openqa_port_t                  tcp      9526
+openqa_websockets_port_t       tcp      9527
+openvpn_port_t                 tcp      1194
+openvpn_port_t                 udp      1194
+openvswitch_port_t             tcp      6634
+oracle_port_t                  tcp      1521, 2483, 2484
+oracle_port_t                  udp      1521, 2483, 2484
+osapi_compute_port_t           tcp      8774
+ovsdb_port_t                   tcp      6640
+pdps_port_t                    tcp      1314
+pdps_port_t                    udp      1314
+pegasus_http_port_t            tcp      5988
+pegasus_https_port_t           tcp      5989
+pgpkeyserver_port_t            tcp      11371
+pgpkeyserver_port_t            udp      11371
+pingd_port_t                   tcp      9125
+pki_ca_port_t                  tcp      829, 9180, 9701, 9443-9447
+pki_kra_port_t                 tcp      10180, 10701, 10443-10446
+pki_ocsp_port_t                tcp      11180, 11701, 11443-11446
+pki_ra_port_t                  tcp      12888-12889
+pki_tks_port_t                 tcp      13180, 13701, 13443-13446
+pki_tps_port_t                 tcp      7888-7889
+pktcable_cops_port_t           tcp      2126
+pktcable_cops_port_t           udp      2126
+pop_port_t                     tcp      106, 109, 110, 143, 220, 993, 995, 1109, 10993
+portmap_port_t                 tcp      111
+portmap_port_t                 udp      111
+postfix_policyd_port_t         tcp      10031
+postgresql_port_t              tcp      5432, 9898
+postgrey_port_t                tcp      60000
+pptp_port_t                    tcp      1723
+pptp_port_t                    udp      1723
+prelude_port_t                 tcp      4690
+prelude_port_t                 udp      4690
+presence_port_t                tcp      5298-5299
+presence_port_t                udp      5298-5299
+preupgrade_port_t              tcp      8099
+printer_port_t                 tcp      515
+priority_e_com_port_t          tcp      2618
+priority_e_com_port_t          udp      2618
+prosody_port_t                 tcp      5280-5281
+ptal_port_t                    tcp      5703
+ptp_event_port_t               udp      319
+pulp_port_t                    tcp      24816, 24817
+pulseaudio_port_t              tcp      4713
+pulseaudio_port_t              udp      4713
+puppet_port_t                  tcp      8140
+pxe_port_t                     udp      4011
+pyzor_port_t                   udp      24441
+qpasa_agent_port_t             tcp      2611, 2612
+qpasa_agent_port_t             udp      2611, 2612
+rabbitmq_port_t                tcp      25672
+radacct_port_t                 tcp      1646, 1813
+radacct_port_t                 udp      1646, 1813
+radius_port_t                  tcp      1645, 1812, 18120-18121
+radius_port_t                  udp      1645, 1812, 18120-18121
+radsec_port_t                  tcp      2083
+razor_port_t                   tcp      2703
+redis_port_t                   tcp      6379, 16379, 26379
+repository_port_t              tcp      6363
+reserved_port_t                sctp     1-511
+reserved_port_t                tcp      1-511
+reserved_port_t                udp      1-511
+ricci_modcluster_port_t        tcp      16851
+ricci_modcluster_port_t        udp      16851
+ricci_port_t                   tcp      11111
+ricci_port_t                   udp      11111
+rkt_port_t                     tcp      18112
+rlogin_port_t                  tcp      543, 2105
+rlogind_port_t                 tcp      513
+rndc_port_t                    tcp      953, 8953
+rndc_port_t                    udp      953
+router_port_t                  tcp      521
+router_port_t                  udp      520, 521
+rsh_port_t                     tcp      514
+rsync_port_t                   tcp      873
+rsync_port_t                   udp      873
+rtp_media_port_t               tcp      5004-5005
+rtp_media_port_t               udp      5004-5005
+rtsclient_port_t               tcp      2501
+rtsp_port_t                    tcp      554, 8554
+rtsp_port_t                    udp      554, 8554
+rwho_port_t                    udp      513
+salt_port_t                    tcp      4505, 4506
+sap_port_t                     tcp      9875
+sap_port_t                     udp      9875
+saphostctrl_port_t             tcp      1128, 1129
+servistaitsm_port_t            tcp      3636
+servistaitsm_port_t            udp      3636
+sge_port_t                     tcp      6444, 6445
+shellinaboxd_port_t            tcp      4200
+sieve_port_t                   tcp      4190
+sip_port_t                     tcp      5060, 5061
+sip_port_t                     udp      5060, 5061
+sixxsconfig_port_t             tcp      3874
+sixxsconfig_port_t             udp      3874
+smbd_port_t                    tcp      445, 137-139
+smntubootstrap_port_t          tcp      2613
+smntubootstrap_port_t          udp      2613
+smtp_port_t                    tcp      25, 465, 587
+snmp_port_t                    tcp      199, 1161, 161-162, 10161-10162
+snmp_port_t                    udp      161-162, 10161-10162
+soundd_port_t                  tcp      8000, 9433, 16001
+spamd_port_t                   tcp      783, 10026, 10027
+speech_port_t                  tcp      8036
+squid_port_t                   tcp      3128, 3401, 4827
+squid_port_t                   udp      3401, 4827
+ssdp_port_t                    tcp      1900
+ssdp_port_t                    udp      1900
+ssh_port_t                     tcp      22
+statsd_port_t                  udp      8125
+svn_port_t                     tcp      3690
+svn_port_t                     udp      3690
+svrloc_port_t                  tcp      427
+svrloc_port_t                  udp      427
+swat_port_t                    tcp      901
+swift_port_t                   tcp      6200-6203
+sype_transport_port_t          tcp      9911
+sype_transport_port_t          udp      9911
+syslog_tls_port_t              tcp      6514, 10514
+syslog_tls_port_t              udp      6514, 10514
+syslogd_port_t                 tcp      601, 20514
+syslogd_port_t                 udp      514, 601, 20514
+tangd_port_t                   tcp      7406
+tcs_port_t                     tcp      30003
+telnetd_port_t                 tcp      23
+tftp_port_t                    udp      69
+time_port_t                    tcp      37
+time_port_t                    udp      37
+tor_port_t                     tcp      6969, 9001, 9030, 9050, 9051, 9150
+traceroute_port_t              udp      64000-64010
+tram_port_t                    tcp      4567
+transproxy_port_t              tcp      8081
+trisoap_port_t                 tcp      10200
+trisoap_port_t                 udp      10200
+trivnet1_port_t                tcp      8200
+trivnet1_port_t                udp      8200
+unreserved_port_t              sctp     1024-65535
+unreserved_port_t              tcp      61000-65535, 1024-32767
+unreserved_port_t              udp      61000-65535, 1024-32767
+ups_port_t                     tcp      3493
+us_cli_port_t                  tcp      8082, 8083
+us_cli_port_t                  udp      8082, 8083
+uucpd_port_t                   tcp      540
+varnishd_port_t                tcp      6081-6082
+versa_tek_port_t               tcp      2610
+versa_tek_port_t               udp      2610
+virt_migration_port_t          tcp      49152-49216
+virt_port_t                    tcp      16509, 16514
+virt_port_t                    udp      16509, 16514
+virtual_places_port_t          tcp      1533
+virtual_places_port_t          udp      1533
+vnc_port_t                     tcp      5985-5999, 5900-5983
+vqp_port_t                     tcp      1589
+vqp_port_t                     udp      1589
+wap_wsp_port_t                 tcp      9200
+wap_wsp_port_t                 udp      9200
+wccp_port_t                    udp      2048
+websm_port_t                   tcp      9090
+websm_port_t                   udp      9090
+whois_port_t                   tcp      43, 4321
+whois_port_t                   udp      43, 4321
+winshadow_port_t               tcp      3161
+winshadow_port_t               udp      3261
+wsdapi_port_t                  tcp      5357
+wsdapi_port_t                  udp      5357
+wsicopy_port_t                 tcp      3378
+wsicopy_port_t                 udp      3378
+xdmcp_port_t                   tcp      177
+xdmcp_port_t                   udp      177
+xen_port_t                     tcp      8002
+xfs_port_t                     tcp      7100
+xinuexpansion3_port_t          tcp      2023
+xinuexpansion3_port_t          udp      2023
+xinuexpansion4_port_t          tcp      2024
+xinuexpansion4_port_t          udp      2024
+xmsg_port_t                    tcp      1716
+xmsg_port_t                    udp      1716
+xodbc_connect_port_t           tcp      6632
+xserver_port_t                 tcp      6000-6020
+zabbix_agent_port_t            tcp      10050
+zabbix_port_t                  tcp      10051
+zarafa_port_t                  tcp      236, 237
+zebra_port_t                   tcp      2606, 2608-2609, 2600-2604
+zebra_port_t                   udp      2606, 2608-2609, 2600-2604
+zented_port_t                  tcp      1229
+zented_port_t                  udp      1229
+zookeeper_client_port_t        tcp      2181
+zookeeper_election_port_t      tcp      3888
+zookeeper_leader_port_t        tcp      2888
+zope_port_t                    tcp      8021

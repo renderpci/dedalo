@@ -1,0 +1,7 @@
+Included configuration files:
+  (*) /etc/httpd/conf/httpd.conf
+    (47) /etc/httpd/conf.modules.d/00-base.conf
+    (357) /etc/httpd/conf.d/museum.org-le-ssl.conf
+      (4) /etc/dedalo_publication_host/museum_org/web.apache.conf
+        (1) /home/museum.org/dedalo/rules/dedalo_media_publication.apache.conf
+Syntax OK

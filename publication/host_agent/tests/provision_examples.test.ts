@@ -6,7 +6,10 @@
  * parseDeclaration. deploy/examples/rendered/<variant>/<host path> is byte-equal to a fresh
  * renderAll of it with a fixed fake token's facts. The set is closed in both directions, and
  * deploy/examples/rendered.index lists each artifact's mode and owner (a checkout cannot carry
- * them). TLS material is issued at apply time and never rendered. To change one: change the
+ * them). TLS material is issued at apply time and never rendered. The four `site` examples (spec
+ * §9: Apache home layout, nginx `conf_d`, EL 9 + Remi + SELinux, EL 10 AppStream PHP 8.3, system
+ * layout) each pin the derived FPM web user (decision A: listen.owner is derived, never discovered).
+ * To change one: change the
  * renderer or the declaration, then
  *     UPDATE_EXAMPLES=1 bun test ./tests/provision_examples.test.ts
  * which rewrites and then FAILS on purpose; re-run without it.
@@ -32,15 +35,34 @@ const EXAMPLE_FACTS = factsFor('example', EXAMPLE_TOKEN);
 const VARIANTS = Object.freeze({
   'tls-nginx': 'instance.example.json',
   'unix-apache': 'instance.single_machine.example.json',
+  'site-apache-home': 'instance.single_machine_site.example.json',
+  'site-nginx-home': 'instance.site_nginx.example.json',
+  'site-el9-selinux': 'instance.site_el9_selinux.example.json',
+  'site-el10': 'instance.site_el10.example.json',
 });
 type Variant = keyof typeof VARIANTS;
 
+/** EL ships a real `apachectl` and no `apache2ctl` (layout.ts WEB_CONFIGTEST_CANDIDATES): the EL examples render it. */
+const EL_VARIANTS: readonly Variant[] = ['site-el9-selinux', 'site-el10'];
+const realFileFor = (variant: Variant) =>
+  EL_VARIANTS.includes(variant) ? (path: string) => path === '/usr/sbin/apachectl' : undefined;
+
+/** decision A / spec S5: the pool's listen owner, derived per flavour and server — pinned per example. */
+const WEB_USERS: Readonly<Partial<Record<Variant, string>>> = {
+  'site-apache-home': 'www-data',
+  'site-nginx-home': 'www-data',
+  'site-el9-selinux': 'apache',
+  'site-el10': 'apache',
+};
+
+function layoutOf(variant: Variant) {
+  const source = join(EXAMPLES, VARIANTS[variant]);
+  const realFile = realFileFor(variant);
+  return parseDeclaration(JSON.parse(readFileSync(source, 'utf8')), source, realFile ? { isRealFile: realFile } : {}).layout;
+}
+
 const RENDERS: ReadonlyArray<{ variant: Variant; artifacts: Artifact[] }> = (Object.keys(VARIANTS) as Variant[]).map(
-  variant => {
-    const source = join(EXAMPLES, VARIANTS[variant]);
-    const { layout } = parseDeclaration(JSON.parse(readFileSync(source, 'utf8')), source);
-    return { variant, artifacts: renderAll(layout, EXAMPLE_FACTS) };
-  },
+  variant => ({ variant, artifacts: renderAll(layoutOf(variant), EXAMPLE_FACTS) }),
 );
 
 const committedPath = (variant: Variant, hostPath: string) => join(ROOT, variant, ...hostPath.split('/').filter(Boolean));
@@ -63,7 +85,7 @@ function formatIndex(): string {
   for (const { variant, artifacts } of RENDERS) {
     lines.push('', `[${variant}]  ${VARIANTS[variant]}`);
     for (const a of artifacts) {
-      lines.push(`${a.mode.toString(8).padStart(4, '0')}  ${`${a.owner}:${a.group}`.padEnd(12)}  ${a.kind.padEnd(16)}  ${a.path}`);
+      lines.push(`${a.mode.toString(8).padStart(4, '0')}  ${`${a.owner}:${a.group}`.padEnd(12)}  ${a.kind.padEnd(17)}  ${a.path}`);
     }
   }
   return `${lines.join('\n')}\n`;
@@ -102,8 +124,36 @@ if (UPDATE) {
 }
 
 describe('committed rendered examples', () => {
-  test('both declarations are instance `example` and parse through the real schema', () => {
-    expect(RENDERS.map(r => r.artifacts[0]?.body.split('\n')[0]?.split(' ')[2])).toEqual(['example', 'example']);
+  test('every declaration is instance `example` and parses through the real schema', () => {
+    for (const { artifacts } of RENDERS) {
+      const own = artifacts.filter(a => !a.hostWide);
+      expect(new Set(own.map(a => a.body.split('\n')[0]?.split(' ')[2]))).toEqual(new Set(['example']));
+    }
+  });
+
+  test('each site example pins its derived FPM web user; the old ones have no site', () => {
+    for (const variant of Object.keys(VARIANTS) as Variant[]) {
+      const layout = layoutOf(variant);
+      expect(layout.site?.fpm.webUser).toBe(WEB_USERS[variant]);
+    }
+  });
+
+  test('the site examples render the web include and the pool; nginx conf_d the host map include and unit; one systemd profile', () => {
+    const kinds = (variant: Variant) => RENDERS.find(r => r.variant === variant)?.artifacts.map(a => a.kind) ?? [];
+    for (const variant of ['site-apache-home', 'site-nginx-home', 'site-el9-selinux', 'site-el10'] as const) {
+      expect(kinds(variant)).toContain('web_include');
+      expect(kinds(variant)).toContain('fpm_pool');
+    }
+    expect(kinds('site-nginx-home')).toContain('nginx_map_include');
+    expect(kinds('site-nginx-home')).toContain('host_map_unit');
+    expect(kinds('unix-apache')).not.toContain('web_include');
+    for (const { artifacts } of RENDERS) for (const a of artifacts) expect(a.body).not.toContain('# omitted (systemd');
+    for (const variant of ['site-el9-selinux', 'site-el10'] as const) {
+      expect(RENDERS.find(r => r.variant === variant)?.artifacts.find(a => a.kind === 'unit_agent')?.body).toContain('\nLoadCredential=');
+      expect(RENDERS.find(r => r.variant === variant)?.artifacts.find(a => a.kind === 'sudoers')?.body).toContain('/usr/sbin/apachectl');
+    }
+    // EL 10 AppStream: the pool lives in /etc/php-fpm.d and listens in /run/php-fpm (fpmLayout 'el').
+    expect(RENDERS.find(r => r.variant === 'site-el10')?.artifacts.find(a => a.kind === 'fpm_pool')?.path).toBe('/etc/php-fpm.d/dedalo_example_v1.conf');
   });
 
   test('every artifact is committed byte-for-byte', () => {
@@ -126,9 +176,7 @@ describe('committed rendered examples', () => {
 
   test('a render is stable: same declaration, same bytes', () => {
     for (const { variant, artifacts } of RENDERS) {
-      const source = join(EXAMPLES, VARIANTS[variant]);
-      const { layout } = parseDeclaration(JSON.parse(readFileSync(source, 'utf8')), source);
-      expect(renderAll(layout, EXAMPLE_FACTS).map(a => a.body)).toEqual(artifacts.map(a => a.body));
+      expect(renderAll(layoutOf(variant), EXAMPLE_FACTS).map(a => a.body)).toEqual(artifacts.map(a => a.body));
     }
   });
 

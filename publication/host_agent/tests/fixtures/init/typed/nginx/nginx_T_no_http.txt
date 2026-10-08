@@ -1,0 +1,3 @@
+# configuration file /etc/nginx/nginx.conf:
+events { }
+stream { server { listen 12345; } }

@@ -162,3 +162,108 @@ describe('expectedRulesOutcome', () => {
 		});
 	});
 });
+
+/* ── the host-wide nginx map (provision init §13.4) ───────────────────────────────── */
+
+import { buildNginxMap, nginxMapConfigHash } from '../../src/core/media/protection.ts';
+import type { AgentRulesMap } from '../../src/core/publication_host/agent_client.ts';
+import { expectedNginxMap, nginxMapPanel } from '../../src/core/publication_host/rules.ts';
+
+const MANAGED: AgentRulesMap = {
+	managed: true,
+	hash: null,
+	host_hash: null,
+	contributions: 0,
+	invalid: 0,
+	refused: null,
+};
+
+function withMap(
+	server: string,
+	map: AgentRulesMap | undefined,
+	media: Partial<MediaProbe> = {},
+): AgentStatus {
+	const status = agentStatus(server, media);
+	return {
+		...status,
+		rules: map === undefined ? { server, hash: null } : { server, hash: null, map },
+	};
+}
+
+describe('expectedNginxMap', () => {
+	test('nginx + managed + media: the engine map and its hash, called, never re-derived', () => {
+		const map = expectedNginxMap(withMap('nginx', MANAGED));
+		expect(map).toEqual({ text: buildNginxMap(), hash: nginxMapConfigHash() });
+		expect(map?.text).toContain(`# config-hash: ${nginxMapConfigHash()}`);
+	});
+
+	test('null for apache, a `none` media host, a hand-placed map, an apache null map, an agent without rules.map', () => {
+		expect(expectedNginxMap(withMap('apache', null))).toBeNull();
+		expect(expectedNginxMap(withMap('nginx', MANAGED, { mode: 'none', root: null }))).toBeNull();
+		expect(expectedNginxMap(withMap('nginx', { managed: false }))).toBeNull();
+		expect(expectedNginxMap(withMap('nginx', null))).toBeNull();
+		expect(expectedNginxMap(withMap('nginx', undefined))).toBeNull();
+	});
+});
+
+describe('nginxMapPanel', () => {
+	const H = nginxMapConfigHash();
+
+	test("managed and loaded: no drift; another instance's host hash is not drift", () => {
+		const panel = nginxMapPanel(
+			withMap('nginx', { ...MANAGED, hash: H, host_hash: 'a'.repeat(64), contributions: 2 }),
+		);
+		expect(panel).toEqual({
+			managed: true,
+			expected: H,
+			applied: H,
+			host_hash: 'a'.repeat(64),
+			contributions: 2,
+			invalid: 0,
+			refused: null,
+			drift: false,
+			agent_outdated: false,
+		});
+	});
+
+	test('managed and not loaded (or a malformed agent hash) is drift; a refusal reason is shaped', () => {
+		expect(nginxMapPanel(withMap('nginx', MANAGED))?.drift).toBe(true);
+		const odd = nginxMapPanel(
+			withMap('nginx', {
+				...MANAGED,
+				hash: 'not-a-hash',
+				host_hash: '<b>',
+				refused: 'Evil Prose!',
+			}),
+		);
+		expect(odd).toMatchObject({
+			applied: null,
+			host_hash: null,
+			refused: 'malformed',
+			drift: true,
+		});
+		// shaped but outside the closed map_* vocabulary: still malformed, never served verbatim
+		expect(
+			nginxMapPanel(withMap('nginx', { ...MANAGED, refused: 'gate_open_ignore_me' }))?.refused,
+		).toBe('malformed');
+		expect(
+			nginxMapPanel(withMap('nginx', { ...MANAGED, refused: 'map_envelope_rebind' }))?.refused,
+		).toBe('map_envelope_rebind');
+	});
+
+	test('unmanaged: no drift; an outdated agent: drift + agent_outdated; apache / no media: null', () => {
+		expect(nginxMapPanel(withMap('nginx', { managed: false }))).toMatchObject({
+			managed: false,
+			drift: false,
+			agent_outdated: false,
+			expected: null,
+		});
+		expect(nginxMapPanel(withMap('nginx', undefined))).toMatchObject({
+			managed: false,
+			drift: true,
+			agent_outdated: true,
+		});
+		expect(nginxMapPanel(withMap('apache', null))).toBeNull();
+		expect(nginxMapPanel(withMap('nginx', MANAGED, { mode: 'none', root: null }))).toBeNull();
+	});
+});

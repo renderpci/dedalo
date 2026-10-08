@@ -1,0 +1,8 @@
+processor	: 0
+vendor_id	: GenuineIntel
+model name	: Intel(R) Xeon(R) Gold 6338 CPU @ 2.00GHz
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch fsgsbase bmi1 avx2 smep bmi2 erms invpcid avx512f
+
+processor	: 1
+vendor_id	: GenuineIntel
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc pni ssse3 fma cx16 sse4_1 sse4_2 popcnt aes xsave avx f16c rdrand hypervisor bmi1 avx2 smep bmi2

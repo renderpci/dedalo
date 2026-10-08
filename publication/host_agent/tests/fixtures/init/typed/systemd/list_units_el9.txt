@@ -1,0 +1,6 @@
+dedalo-ts@site.service   loaded    active   running Dédalo engine (site)
+httpd.service            loaded    active   running The Apache HTTP Server
+php-fpm.service          loaded    active   running The PHP FastCGI Process Manager
+php82-php-fpm.service    loaded    active   running The PHP FastCGI Process Manager
+php84-php-fpm.service    loaded    inactive dead    The PHP FastCGI Process Manager
+polkit.service           loaded    active   running Authorization Manager

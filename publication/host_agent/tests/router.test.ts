@@ -17,6 +17,7 @@ describe('the closed route table', () => {
       'GET /v1/status status',
       'GET /v1/media/probe media.probe',
       'POST /v1/rules/apply rules.apply',
+      'POST /v1/rules/map rules.map',
       'POST /v1/releases/v1 release.install',
       'POST /v1/releases/v2 release.install',
       'POST /v1/releases/v1/rollback release.rollback',

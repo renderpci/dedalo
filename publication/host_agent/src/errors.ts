@@ -61,6 +61,23 @@ export const REASON_CODES = Object.freeze([
   'size_mismatch',
   'key_unpublished',
   'key_invalid',
+  // The host web lock (src/rules/apply.ts withHostWebLock, spec S12) around every
+  // configtest+reload: host_busy = a holder past the 30 s wait, host_lock_missing = the
+  // root-created lock file is absent (run `provision apply`). Both 503 HostActionFailedError.
+  'host_busy',
+  'host_lock_missing',
+  // rules.map, the host-wide nginx map (src/rules/map.ts, spec §13.4). map_refused (the map
+  // grammar, src/rules/directives.ts parseNginxMap; `line`/`directive` extensions) is a 422
+  // RefusedError; map_unmanaged, map_contribution_foreign, map_contribution_newer,
+  // map_envelope_rebind and map_renderer_missing are 409 ConflictError. server_mismatch,
+  // hash_invalid, rules_too_large, rules_nul_byte, stamp_missing, hash_mismatch,
+  // configtest_failed, reload_failed and host_busy are reused with rules.apply's meaning.
+  'map_unmanaged',
+  'map_refused',
+  'map_contribution_foreign',
+  'map_contribution_newer',
+  'map_envelope_rebind',
+  'map_renderer_missing',
 ] as const);
 
 export type ReasonCode = (typeof REASON_CODES)[number];
@@ -122,8 +139,8 @@ export class MethodNotAllowedError extends ApiError {
 
 /** A real resource in a state that cannot accept the request (no previous release, busy). */
 export class ConflictError extends ApiError {
-  constructor(detail: string, reason: ReasonCode) {
-    super(409, `${PROBLEM_TYPE_BASE}conflict`, 'Conflict', detail, { reason });
+  constructor(detail: string, reason: ReasonCode, extensions: Record<string, unknown> = {}) {
+    super(409, `${PROBLEM_TYPE_BASE}conflict`, 'Conflict', detail, { reason, ...extensions });
     this.name = 'ConflictError';
   }
 }

@@ -144,6 +144,11 @@ work system's login cookie.
    # nginx: --server nginx, plus --server nginx-map for the http{} include
    ```
 
+   On a publication host provisioned with `provision init`, the `http{}` map is pushed by **Apply media rules** into the host-wide include and must not be placed by hand; the manual path below still applies to work hosts and hand-provisioned publication hosts. That one map serves every
+   instance on the host: each instance's agent hands in its part and a root service on the host
+   renders the shared file, so two instances never define the same variables twice
+   ([publication host agent](../../install/publication_host.md#9-map-the-apis-into-the-sites-virtual-host)).
+
    Any refused quality folder (an original or a bare type folder) is named on screen.
 4. **Install on the publication server.** For Apache, `Include` the file inside the
    website's virtual host, before any other `/dedalo` alias, then run
@@ -162,8 +167,10 @@ Publication APIs need no change. Re-render and reinstall when the public quality
 With a paired [publication host agent](../../install/publication_host.md#the-publication-hosts-panel),
 the **Publication hosts** panel does steps 3 and 4 for you: it renders the rules for the
 host's own web server and mount, sends them, and shows whether the installed rules are still
-the ones the work system would generate. On nginx, the one-time `http{}` map include of
-step 4 stays manual. Step 5 stays a manual check.
+the ones the work system would generate. On nginx, a host provisioned with `provision init`
+(or declared with `"nginx_map": "conf_d"`) gets the `http{}` map pushed the same way, before the
+rules; on any other publication host the map include of step 4 stays manual. Step 5 stays a
+manual check.
 
 ## Related
 

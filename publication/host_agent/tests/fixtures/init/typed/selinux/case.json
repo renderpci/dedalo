@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "getenforce(8), selinux_config(5), getsebool(8), semanage-fcontext(8)/semanage-port(8) -l -C -n, stat(1) %C, restorecon(8) -n -v (policycoreutils 2.9/3.x) as documented; enforcing hosts cannot run in a container",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

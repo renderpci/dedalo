@@ -1,0 +1,6 @@
+/opt/remi/php82/root = /
+/etc/opt/remi/php82 = /etc
+/var/opt/remi/php82 = /var
+/opt/remi/php84/root = /
+/etc/opt/remi/php84 = /etc
+/var/opt/remi/php84 = /var

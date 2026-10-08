@@ -2,19 +2,68 @@
 # mode  owner:group   kind              path on the host   (deploy/examples/rendered/<variant>/<path>)
 
 [tls-nginx]  instance.example.json
-0644  root:root     env               /etc/dedalo_publication_host/example/agent.env
-0644  root:root     engine_fragment   /etc/dedalo_publication_host/example/engine.env.fragment
-0644  root:root     polkit            /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
-0440  root:root     sudoers           /etc/sudoers.d/dedalo_publication_host_example
-0644  root:root     v2_scratch_unit   /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
-0644  root:root     unit_v2           /etc/systemd/system/dedalo-publication-api-v2.service
-0644  root:root     unit_agent        /etc/systemd/system/dedalo-publication-host-example.service
+0644  root:root     env                /etc/dedalo_publication_host/example/agent.env
+0644  root:root     engine_fragment    /etc/dedalo_publication_host/example/engine.env.fragment
+0644  root:root     polkit             /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
+0440  root:root     sudoers            /etc/sudoers.d/dedalo_publication_host_example
+0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
+0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
+0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service
 
 [unix-apache]  instance.single_machine.example.json
-0644  root:root     env               /etc/dedalo_publication_host/example/agent.env
-0644  root:root     engine_fragment   /etc/dedalo_publication_host/example/engine.env.fragment
-0644  root:root     polkit            /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
-0440  root:root     sudoers           /etc/sudoers.d/dedalo_publication_host_example
-0644  root:root     v2_scratch_unit   /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
-0644  root:root     unit_v2           /etc/systemd/system/dedalo-publication-api-v2.service
-0644  root:root     unit_agent        /etc/systemd/system/dedalo-publication-host-example.service
+0644  root:root     env                /etc/dedalo_publication_host/example/agent.env
+0644  root:root     engine_fragment    /etc/dedalo_publication_host/example/engine.env.fragment
+0644  root:root     polkit             /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
+0440  root:root     sudoers            /etc/sudoers.d/dedalo_publication_host_example
+0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
+0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
+0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service
+
+[site-apache-home]  instance.single_machine_site.example.json
+0644  root:root     env                /etc/dedalo_publication_host/example/agent.env
+0644  root:root     engine_fragment    /etc/dedalo_publication_host/example/engine.env.fragment
+0644  root:root     web_include        /etc/dedalo_publication_host/example/web.apache.conf
+0644  root:root     logrotate          /etc/logrotate.d/dedalo_example_web
+0644  root:root     fpm_pool           /etc/php/8.4/fpm/pool.d/dedalo_example_v1.conf
+0644  root:root     polkit             /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
+0440  root:root     sudoers            /etc/sudoers.d/dedalo_publication_host_example
+0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
+0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
+0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service
+
+[site-nginx-home]  instance.site_nginx.example.json
+0644  root:root     env                /etc/dedalo_publication_host/example/agent.env
+0644  root:root     engine_fragment    /etc/dedalo_publication_host/example/engine.env.fragment
+0644  root:root     web_include        /etc/dedalo_publication_host/example/web.nginx.conf
+0644  root:root     logrotate          /etc/logrotate.d/dedalo_example_web
+0644  root:root     nginx_map_include  /etc/nginx/conf.d/dedalo_media_map.conf
+0644  root:root     fpm_pool           /etc/php/8.2/fpm/pool.d/dedalo_example_v1.conf
+0644  root:root     polkit             /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
+0440  root:root     sudoers            /etc/sudoers.d/dedalo_publication_host_example
+0644  root:root     host_map_unit      /etc/systemd/system/dedalo-pubhost-map.service
+0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
+0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
+0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service
+
+[site-el9-selinux]  instance.site_el9_selinux.example.json
+0644  root:root     env                /etc/dedalo_publication_host/example/agent.env
+0644  root:root     engine_fragment    /etc/dedalo_publication_host/example/engine.env.fragment
+0644  root:root     web_include        /etc/dedalo_publication_host/example/web.apache.conf
+0644  root:root     logrotate          /etc/logrotate.d/dedalo_example_web
+0644  root:root     fpm_pool           /etc/opt/remi/php83/php-fpm.d/dedalo_example_v1.conf
+0644  root:root     polkit             /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
+0440  root:root     sudoers            /etc/sudoers.d/dedalo_publication_host_example
+0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
+0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
+0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service
+
+[site-el10]  instance.site_el10.example.json
+0644  root:root     env                /etc/dedalo_publication_host/example/agent.env
+0644  root:root     engine_fragment    /etc/dedalo_publication_host/example/engine.env.fragment
+0644  root:root     web_include        /etc/dedalo_publication_host/example/web.apache.conf
+0644  root:root     fpm_pool           /etc/php-fpm.d/dedalo_example_v1.conf
+0644  root:root     polkit             /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
+0440  root:root     sudoers            /etc/sudoers.d/dedalo_publication_host_example
+0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
+0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
+0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service

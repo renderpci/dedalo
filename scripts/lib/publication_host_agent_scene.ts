@@ -26,6 +26,7 @@
 
 import { randomBytes } from 'node:crypto';
 import {
+	chmodSync,
 	copyFileSync,
 	existsSync,
 	mkdirSync,
@@ -164,6 +165,13 @@ export interface Scene {
 	readonly include: string;
 	readonly credentials: string;
 	readonly v2Pid: string;
+	/**
+	 * The scene's host-wide base (the agent's HOST_BASE, provision layout `paths.host_base`):
+	 * `locks/web.lock`, the host web lock every rules.apply configtest+reload takes. Planted
+	 * here, as the drill's own uid (on a host root creates it; under NODE_ENV=test with a
+	 * scratch HOST_BASE the agent accepts its own uid as the lock's owner — src/rules/apply.ts).
+	 */
+	readonly hostBase: string;
 	/** The agent's SERVICE_TOKEN — mutable: restartAgent re-provisions it. */
 	token: string;
 	/** 0 when listen = unix. */
@@ -413,6 +421,7 @@ export function writeAgentEnv(
 			RELEASES_RETAINED: 3,
 			MAX_BUNDLE_BYTES,
 			MAX_BUNDLE_ENTRIES,
+			HOST_BASE: scene.hostBase,
 			...overrides,
 		}),
 		{ mode: 0o640 },
@@ -504,6 +513,16 @@ function plantStateRoot(state: string): void {
 	writeFileSync(join(state, '.dedalo_host_agent_instance'), `${INSTANCE}\n`);
 }
 
+/** `<hostBase>/locks/web.lock` (0750 dir, 0640 file: layout.ts MODES hostLocks / hostWebLock). */
+function plantHostLocks(hostBase: string): void {
+	const locks = join(hostBase, 'locks');
+	mkdirSync(locks, { recursive: true, mode: 0o750 });
+	chmodSync(locks, 0o750);
+	const lock = join(locks, 'web.lock');
+	writeFileSync(lock, '', { mode: 0o640 });
+	chmodSync(lock, 0o640);
+}
+
 /** Remove the drill's stand-ins from the seam: the dispatchers fail closed again. */
 export function disarmSeam(): void {
 	for (const name of ['sudo', 'systemctl']) rmSync(join(EXEC_SEAM_DIR, name), { force: true });
@@ -532,6 +551,7 @@ export async function setupScene(
 		include: join(dir, 'state', 'rules', `dedalo_media_publication.${server}.conf`),
 		credentials: join(dir, 'credentials'),
 		v2Pid: join(dir, 'v2.pid'),
+		hostBase: join(dir, '_host'),
 		token: randomBytes(24).toString('hex'),
 		agentPort: options.listen === 'tls' ? freePort() : 0,
 		agentSocket,
@@ -545,6 +565,7 @@ export async function setupScene(
 	if (copy) mkdirSync(scene.media, { recursive: true });
 	else plantFiles(scene.media, MEDIA_FILES);
 	plantStateRoot(scene.state);
+	plantHostLocks(scene.hostBase);
 	const v2Env = join(scene.state, 'publication_api', 'v2', 'shared', 'v2.env');
 	writeFileSync(
 		v2Env,

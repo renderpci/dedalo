@@ -1,0 +1,28 @@
+# dedalo-provision: _host host_map_unit 308255c8b93c2634cb38a0e6b1c7f842b574c02a5fa76413438317d3cfc4043d
+# Renders the host-wide nginx media map from every instance's contribution (root's copy in /var/lib/dedalo_publication_host/_host/map_renderer).
+# Started by an agent (polkit: start only); never enabled.
+[Unit]
+Description=Dédalo publication host: render the host-wide nginx media map
+After=nginx.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/var/lib/dedalo_publication_host/_host/map_renderer
+ExecStart=/var/lib/dedalo_publication_host/_host/map_renderer/bun --no-env-file --no-install --config=/var/lib/dedalo_publication_host/_host/map_renderer/empty.bunfig.toml /var/lib/dedalo_publication_host/_host/map_renderer/src/rules/host_map_main.ts
+Environment=
+UMask=0022
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dedalo-pubhost-map

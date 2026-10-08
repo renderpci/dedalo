@@ -53,10 +53,11 @@ provisioner:
 | Grant | Allows | Why it cannot be narrower |
 |---|---|---|
 | sudoers | `<configtest> -t`, exactly that argv: `apache2ctl` (Debian/Ubuntu) or `apachectl` (RHEL), or `nginx`; the provisioner picks the real file present from a closed list | a configtest must read root-only TLS keys |
-| polkit | `reload` of `WEB_UNIT`, `restart` of `V2_UNIT`, `start`/`stop` of the `<V2_UNIT>-scratch@<port>` template | the same unit-scoped rule the site builder uses |
+| polkit | `reload` of `WEB_UNIT`, `restart` of `V2_UNIT`, `start`/`stop` of the `<V2_UNIT>-scratch@<port>` template; on nginx with a provisioned map (`NGINX_MAP_MODE=conf_d`), `start` of `dedalo-pubhost-map.service` | the same unit-scoped rule the site builder uses |
 
 Every child process goes through `src/exec.ts`, a closed set of named commands
-(`webConfigtest`, `webReload`, `v2Restart`, `phpLint`, `v2ScratchBoot`). A package test
+(`webConfigtest`, `webReload`, `v2Restart`, `phpLint`, `v2ScratchBoot`, `startHostMap`; the
+provisioner, which root runs, has its own closed sets, `provisionExec()` and `initExec()`). A package test
 fails if any other `src/` module spawns. `process.env` is read only in `src/config.ts`,
 and that is gated too.
 
@@ -65,6 +66,13 @@ Neither grant opens a path to root:
 - `rules.apply` checks the media include against a closed directive allowlist
   (`src/rules/directives.ts`) before root parses it at configtest. It refuses module loads,
   includes, log or piped directives, and any path outside `MEDIA_ROOT`.
+- `rules.map` (nginx, spec §9.7) never writes the file root's nginx loads. The agent
+  validates the pushed http{} map against the closed map grammar (`parseNginxMap`, same
+  module), writes only its own one-envelope contribution into the host's sticky
+  `contrib/` store, and starts the root oneshot `dedalo-pubhost-map.service`
+  (`src/rules/host_map_main.ts`, a root-owned copy of the zero-dependency renderer installed by
+  `provision apply`), which re-validates every contribution against the declared agent uids,
+  merges them and is the only writer of the live map.
 - `v2ScratchBoot` never runs pushed release code as the agent user, which owns `rules/`
   and holds the sudo grant, the TLS key and the bearer. It repoints `v2/scratch` at the
   committed `releases/<id>` and starts `<V2_UNIT>-scratch@<port>`, so the release under
@@ -78,13 +86,18 @@ Neither grant opens a path to root:
   publication_api/v2/{releases/<id>/, shared/v2.env, current -> releases/<id>, staging/}
   rules/dedalo_media_publication.<apache|nginx>.conf    the include rules.apply writes
   audit/audit.jsonl                                     append-only NDJSON (chattr +a in production)
+
+/var/lib/dedalo_publication_host/_host/                 host-wide, shared by every instance
+  locks/{provision.lock,web.lock}                       flock(2): apply's host items; every configtest+reload
+  nginx_map/{dedalo_media_map.nginx.conf,result.json,bindings.json,contrib/<instance>.json}
+  map_renderer/                                         the root map renderer's code copy + its Bun
 ```
 
 The state root carries a `.dedalo_host_agent_instance` marker naming the instance, and
 the daemon refuses to boot against an unmarked root. A release id is `<version>_<digest7>`.
 The v1 config files live in `v1/shared/` (`root:root 0711`) and are linked into each release
 after extraction (spec §3). `server_config_api.php` must be owned by the declared `v1.user` (the
-site's PHP-FPM pool user) and private to it, or the install is refused (`shared_config_exposed`). The agent never runs `bun install`: a v2 bundle carries its
+user of v1's OWN PHP-FPM pool, never the website's pool or the web server's user) and private to it, or the install is refused (`shared_config_exposed`). The agent never runs `bun install`: a v2 bundle carries its
 production `node_modules`.
 
 ## Configuration
@@ -115,10 +128,27 @@ on the CI instance tier.
 
 ## Provisioning
 
-There is no installer script. One declaration states the deployment, and the provisioner
-derives every artifact from it: the agent's systemd unit, the v2 unit, the environment
-file, the sudoers rule, the polkit rule, the mTLS material (private CA, server
-certificate) and the engine bundle.
+One declaration states the deployment, and the provisioner derives every artifact from it:
+the agent's systemd unit, the v2 unit, the environment file, the sudoers rule, the polkit
+rule, the mTLS material (private CA, server certificate) and the engine bundle; with the
+optional `site` block also v1's own PHP-FPM pool (`render/fpm_pool.ts`) and the site's web
+include (`render/web_include.ts`); on nginx with `web.nginx_map: conf_d` the host-wide map
+include and the root map renderer's unit; on an SELinux host the file contexts and the v2
+port label (`src/provision/selinux.ts`).
+
+**The guided install** (spec §9) is `provision init`, started only through
+`deploy/install.sh` (it stages the source root-only, verifies Bun against `.bun-sha256`, then
+starts Bun with an empty environment). It discovers the host, compares it with the draft,
+prints *already right* / *will change* / *needs your decision*, and acts after confirmation:
+it creates the missing accounts, makes the site home root's, edits the operator's vhost (with
+backup, configtest and rollback), sets SELinux booleans only on a typed answer, writes the API
+configuration files, runs `provision apply` in-process, proves the agent (B4,
+`src/provision/init/verify.ts`) and pairs it on one machine (B5, `src/provision/init/pair.ts`).
+It runs on the `OS_SUPPORT` rows (`src/provision/init/parse/os.ts`): Debian 12/13, Ubuntu
+24.04/26.04, RHEL/Rocky/Alma 9 and 10; EL 8 and a kernel below Bun's floor are refused by
+`deploy/install.sh` before Bun is fetched; anything else (Ubuntu 22.04, CentOS Stream, Oracle
+Linux) is a blocking `host.os` that names the manual install. Two-machine pairing is printed,
+not run. The operator page's *Guided install* is its manual.
 
 The declaration is `/etc/dedalo_publication_host/<instance>.json`. `--declaration <file>`
 names another path. `check` and `apply` judge it before reading it
@@ -129,11 +159,15 @@ it, so whoever could edit or replace it would choose whom the next `apply` grant
 root-reachable permissions. The sibling declarations the isolation check reads, the config
 base and its ancestors are judged the same way, even when `--declaration` points
 elsewhere. `render` is exempt (no root, writes nothing). Its shape is `HostDeclaration` (`src/provision/layout.ts`), validated
-strictly by `src/provision/schema.ts`. Two complete, gated examples are
-`deploy/examples/instance.example.json` (two machines, TLS, nginx) and
-`deploy/examples/instance.single_machine.example.json` (one machine, unix socket, Apache). The provisioner never creates accounts: if the
-agent user, the v2 user or a declared group is missing, `check` refuses and prints the
-`useradd` / `groupadd` line to run.
+strictly by `src/provision/schema.ts`. The complete, gated examples are
+`deploy/examples/instance.example.json` (two machines, TLS, nginx),
+`deploy/examples/instance.single_machine.example.json` (one machine, unix socket, Apache) and
+the four `site` variants `instance.single_machine_site` (Debian Apache, home layout),
+`instance.site_nginx` (`nginx_map: conf_d`, copy media), `instance.site_el9_selinux` (httpd,
+Remi) and `instance.site_el10` (httpd, AppStream).
+`provision apply` never creates accounts (`provision init` does, after confirmation): if the
+agent user, the v1 or v2 user, a declared group or the host group `dedalo_pubhost` is
+missing, `check` refuses and prints the `useradd` / `groupadd` line to run.
 
 `plan` also refuses what would make a unit fail with `EACCES` later
 (`accessRefusals`, `src/provision/access.ts`): each runner is judged with the credentials
@@ -157,13 +191,16 @@ bun run provision apply  <instance>    # as root: converge; writes only what dri
 
 The arguments are positional. The same command runs from the repo root as
 `bun run hostagent:provision <verb> <instance>`. Exit codes: 0 ok (`check` also when it lists changes), 1 drift (`check --exit-code`),
-2 usage, 3 refused, 4 failed. On a host, root has no `bun`: run them with the declared `bun_bin`
+2 usage, 3 refused, 4 failed, 5 busy (`check` only: init or apply holds the instance lock;
+nothing was checked). `apply` takes the instance lock exclusive and `check` shared, before
+reading the declaration (`src/provision/lock.ts`). On a host, root has no `bun`: run them with the declared `bun_bin`
 from `agent_dir` (the operator page, step 4).
 
 The order is: schema → layout → pure stamped renderers → plan → dumb apply. Each rendered
 file carries a hash of its body, so a hand edit shows up as a refusal on the next `check`
-and is never overwritten. `deploy/examples/rendered/{tls-nginx,unix-apache}/` is the full
-output for two fixture layouts in a tree that mirrors the host, and
+and is never overwritten. `deploy/examples/rendered/<variant>/` (`tls-nginx`, `unix-apache`,
+`site-apache-home`, `site-nginx-home`, `site-el9-selinux`, `site-el10`) is the full output for
+each example in a tree that mirrors the host, and
 `deploy/examples/rendered.index` lists each file's mode and owner. Both are generated and
 gated (`tests/provision_examples.test.ts`). Re-render them with
 `UPDATE_EXAMPLES=1 bun test tests/provision_examples.test.ts`, never by hand.
@@ -180,8 +217,9 @@ work host (frozen, production-only), then copy `publication/host_agent/` (with i
 
 **Bun, one per site:** `bun_bin` is the site's own Bun at the work system's
 `.bun-version`, installed as root into `/home/<site>/.bun/` (root-owned, since it runs the
-agent and its grants) from the release archive checked against Bun's `SHASUMS256.txt` —
-never a download piped into a root shell. The panel's `bun_version` check reds on any
+agent and its grants) from the release archive checked against the committed
+`.bun-sha256` (generated from Bun's signed `SHASUMS256.txt.asc`, spec §9.10) — never a download
+piped into a root shell. The panel's `bun_version` check reds on any
 difference from the pin (drift, not integrity). The operator page has the commands.
 
 ## Pairing

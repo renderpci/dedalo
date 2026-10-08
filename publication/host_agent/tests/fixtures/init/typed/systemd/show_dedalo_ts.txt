@@ -1,0 +1,11 @@
+LoadState=loaded
+ActiveState=active
+UnitFileState=enabled
+User=dedalo
+Group=dedalo
+WorkingDirectory=/home/dedalo/v7/master_dedalo
+ExecStart={ path=/home/dedalo/.bun/bin/bun ; argv[]=/home/dedalo/.bun/bin/bun run src/server.ts ; ignore_errors=no ; start_time=[Wed 2026-10-07 09:12:01 CEST] ; stop_time=[n/a] ; pid=1234 ; code=(null) ; status=0/0 }
+Environment=NODE_ENV=production DEDALO_PRIVATE_DIR=/home/dedalo/v7/private DEDALO_DB_PASSWORD=hunter2hunter2 "DEDALO_SITE_TITLE=Museo de prueba"
+EnvironmentFiles=
+FragmentPath=/etc/systemd/system/dedalo-ts.service
+DropInPaths=

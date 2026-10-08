@@ -7,7 +7,9 @@
  * `instance_fingerprint`; the bearer checked BEFORE any other route (401 otherwise);
  * RFC 9457 problem bodies with a machine `reason`; `X-Dedalo-Actor` on mutations; the
  * release headers X-Release-Id / X-Bundle-Sha256 with a raw gzip body; copy mode's media
- * put (`?path=`, X-Sha256, X-Size, raw body), delete and mark. It is NOT the
+ * put (`?path=`, X-Sha256, X-Size, raw body), delete and mark; the host-wide nginx map's
+ * `POST /v1/rules/map` and `status.rules.map` (provision init §13.4: `null` by default, an
+ * Apache host — script GET /v1/status or use mockNginxStatus for an nginx one). It is NOT the
  * agent: it keeps no state on disk, answers what a test scripts into it, and RECORDS every
  * request so a gate can assert what crossed the wire — above all, whether a bearer did.
  *
@@ -107,11 +109,35 @@ export function mockStatus(fingerprint: string): Record<string, unknown> {
 			v1: { current: '7.0.2_aaaaaaa', previous: null },
 			v2: { current: '7.0.2_aaaaaaa', previous: '7.0.1_bbbbbbb' },
 		},
-		rules: { server: 'apache', hash: null },
+		rules: { server: 'apache', hash: null, map: null },
 		media: { ...MOCK_PROBE, problems: [] },
 		disk: { state_root_free_bytes: 1_073_741_824 },
 	};
 }
+
+/**
+ * An nginx host's status: `map` is the agent's `rules.map` — `'absent'` drops the key (an agent
+ * that predates the host map), `{managed:false}` a hand-placed map, else the managed shape.
+ */
+export function mockNginxStatus(
+	fingerprint: string,
+	map: Record<string, unknown> | null | 'absent' = MOCK_MANAGED_MAP,
+): Record<string, unknown> {
+	const status = mockStatus(fingerprint);
+	const rules: Record<string, unknown> = { server: 'nginx', hash: null };
+	if (map !== 'absent') rules.map = map;
+	return { ...status, rules };
+}
+
+/** A managed host map with nothing of this instance loaded yet. */
+export const MOCK_MANAGED_MAP = Object.freeze({
+	managed: true,
+	hash: null,
+	host_hash: null,
+	contributions: 0,
+	invalid: 0,
+	refused: null,
+});
 
 function respond(status: number, body: unknown): Response {
 	return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
@@ -168,6 +194,11 @@ function defaultAnswer(r: RecordedRequest, route: string, statusFingerprint: str
 				hash: (JSON.parse(new TextDecoder().decode(r.body)) as { hash: string }).hash,
 				reloaded: true,
 			});
+		case 'POST /v1/rules/map': {
+			// The agent answers from root's result.json: this mock's host file is this one contribution.
+			const { hash } = JSON.parse(new TextDecoder().decode(r.body)) as { hash: string };
+			return respond(200, { hash, host_hash: hash, contributions: 1, reloaded: true });
+		}
 		case 'POST /v1/releases/v1':
 		case 'POST /v1/releases/v2':
 			return respond(200, {

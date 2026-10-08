@@ -5,7 +5,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
-import { siblingRefusals } from '../src/provision/siblings';
+import { anySiblingHomeBound, siblingRefusals } from '../src/provision/siblings';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
 
 /** A sibling with every principal, unit, port and root of its own; `patch` re-shares one. */
@@ -120,5 +120,43 @@ describe('siblingRefusals', () => {
   test("the web server's group shared by every site's pool is NOT a refusal: the v1 user guards the configuration", () => {
     const own = unixDeclaration();
     expect(judge(own, separated(own, { web: own.web }))).toEqual([]);
+  });
+});
+
+describe('the site block across instances (spec S6)', () => {
+  const siteOf = (domain: string, flavor: 'debian' | 'el' | 'remi' = 'debian') => ({ domain, fpm: { flavor, version: '8.4' } });
+  const own: HostDeclaration = { ...unixDeclaration(), v1: { user: 'test_v1' }, site: siteOf('a.example.org') };
+
+  test('two sites on one host, each its own: coexist', () => {
+    expect(judge(own, separated(own, { site: siteOf('b.example.org') }))).toEqual([]);
+  });
+
+  test('the same domain is refused, named', () => {
+    const refusals = judge(own, separated(own, { site: siteOf('a.example.org') }));
+    expect(refusals.some(line => line.startsWith("site.domain 'a.example.org' — also used by instance 'other'"))).toBe(true);
+  });
+
+  test('the same v1Var, pool socket and pool file are refused (a shared paths.v1_var_base / fpm_pool_dir can collide)', () => {
+    // derive() names these paths by instance, so two parsed declarations cannot meet here; the rule
+    // still holds the line (a hand-edited override, a future flavour). Seam: a sibling layout forged to ours.
+    const shared = { paths: { fpm_pool_dir: '/scratch/pool.d', v1_var_base: '/scratch/var' } };
+    const a = derive({ ...own, ...shared });
+    const b = derive({ ...separated(own, { site: siteOf('b.example.org') }), ...shared });
+    const forged = { ...b, site: b.site === null ? null : { ...b.site, v1Var: a.site?.v1Var ?? b.site.v1Var, fpm: a.site?.fpm ?? b.site.fpm } };
+    const refusals = siblingRefusals(a, [{ source: '/etc/dedalo_publication_host/other.json', layout: forged }]);
+    expect(refusals.some(line => line.includes("the v1 pool directory '/scratch/var/test/v1'"))).toBe(true);
+    expect(refusals.some(line => line.includes("the v1 pool socket '/run/php/dedalo-test-v1.sock'"))).toBe(true);
+    expect(refusals.some(line => line.includes("the v1 pool file '/scratch/pool.d/dedalo_test_v1.conf'"))).toBe(true);
+  });
+
+  test('a sibling without a site never clashes on site fields', () => {
+    expect(judge(own, separated(own, { site: undefined }))).toEqual([]);
+  });
+
+  test('anySiblingHomeBound: the host-wide ProtectHome fact (spec S10)', () => {
+    const home = separated(unixDeclaration(), { state_root: '/home/b.example.org/dedalo' });
+    expect(anySiblingHomeBound([{ source: 'x', layout: derive(home) }])).toBe(true);
+    expect(anySiblingHomeBound([{ source: 'x', layout: derive(separated(unixDeclaration())) }])).toBe(false);
+    expect(anySiblingHomeBound([])).toBe(false);
   });
 });

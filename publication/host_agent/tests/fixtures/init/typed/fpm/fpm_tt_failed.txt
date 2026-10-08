@@ -1,0 +1,3 @@
+[08-Oct-2026 10:00:00] ERROR: [/etc/php-fpm.d/broken.conf:3] unknown entry 'usr'
+[08-Oct-2026 10:00:00] ERROR: failed to load configuration file '/etc/php-fpm.conf'
+[08-Oct-2026 10:00:00] ERROR: FPM initialization failed

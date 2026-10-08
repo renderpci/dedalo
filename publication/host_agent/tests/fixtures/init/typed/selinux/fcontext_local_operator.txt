@@ -1,0 +1,2 @@
+/home/museum\.org/dedalo/publication_api/v1(/.*)?  all files          system_u:object_r:public_content_t:s0
+/srv/media(/.*)?                                   all files          <<None>>

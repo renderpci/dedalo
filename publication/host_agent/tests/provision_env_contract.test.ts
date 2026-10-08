@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { CREDENTIAL_KEYS, KNOWN_KEYS, resolveConfig } from '../src/config';
 import type { HostDeclaration } from '../src/provision/layout';
 import { derive, SERVICE_TOKEN_CREDENTIAL } from '../src/provision/layout';
-import { envRenderer } from '../src/provision/render/env';
+import { agentEnvVars, envRenderer } from '../src/provision/render/env';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
 import { scratchPath } from './fixtures/instance';
 import { FIXTURE_FACTS, FIXTURE_TOKEN } from './fixtures/provision_facts';
@@ -34,9 +34,18 @@ function resolveRendered(name: string, declaration: HostDeclaration) {
   return { layout, cfg };
 }
 
+/** An nginx host whose http{} map is the provisioned host-wide include, with a scratch host base. */
+function nginxMapDeclaration(): HostDeclaration {
+  return {
+    ...tlsDeclaration(),
+    web: { server: 'nginx', unit: 'nginx', nginx_map: 'conf_d' },
+    paths: { host_base: '/srv/scratch/_host' },
+  };
+}
+
 test('every rendered key is one the config knows; the credential id is the config key', () => {
-  for (const declaration of [unixDeclaration(), tlsDeclaration()]) {
-    expect(Object.keys(derive(declaration).envVars).filter(key => !KNOWN_KEYS.includes(key))).toEqual([]);
+  for (const declaration of [unixDeclaration(), tlsDeclaration(), nginxMapDeclaration()]) {
+    expect(Object.keys(agentEnvVars(derive(declaration))).filter(key => !KNOWN_KEYS.includes(key))).toEqual([]);
   }
   expect([...CREDENTIAL_KEYS]).toEqual([SERVICE_TOKEN_CREDENTIAL]);
 });
@@ -60,6 +69,14 @@ test('unix: the rendered env + the SERVICE_TOKEN credential resolve through reso
     V2_HEALTH_URL: 'http://127.0.0.1:3100/health',
     RELEASES_RETAINED: 3,
   });
+});
+
+test('nginx conf_d: NGINX_MAP_MODE and HOST_BASE resolve through resolveConfig (spec §13.4)', () => {
+  const { layout, cfg } = resolveRendered('nginx_map', nginxMapDeclaration());
+  expect(cfg).toMatchObject({ WEB_SERVER: 'nginx', NGINX_MAP_MODE: 'conf_d', HOST_BASE: layout.host.base });
+  const { cfg: plain } = resolveRendered('tls_plain', tlsDeclaration());
+  expect(plain.NGINX_MAP_MODE).toBe('none');
+  expect(plain.HOST_BASE).toBeUndefined();
 });
 
 test('tls: every TLS_* key resolves to the layout paths', () => {

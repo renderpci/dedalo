@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "proc(5) /proc/sys/kernel/osrelease; RHEL 9.4 and Debian 12 release strings; EL 10's is the Rocky 10.2 kernel-core package's version-release (dnf repoquery, 2026-10-08)",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

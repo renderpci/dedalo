@@ -6,6 +6,10 @@
  * against the new file" and "a failed configtest never reloads" are observed, not inferred.
  * Includes are written in the syntax of this suite's web server (.env.test) and name
  * MEDIA_ROOT, so they pass the directive allowlist and reach the transaction.
+ *
+ * THE HOST WEB LOCK (spec S12) is a fake LockIo (seam: setRulesDepsForTests) that writes its
+ * acquire/release into the SAME call log, so "configtest and reload run inside the lock" is
+ * observed. The transaction's own branches are also held directly in tests/rules_txn.test.ts.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -17,7 +21,19 @@ import { ApiError } from '../src/errors';
 import { type Exec, type ExecResult, setExecForTests } from '../src/exec';
 import { routeRequest } from '../src/router';
 import { handleRulesApply } from '../src/routes/rules_apply';
-import { MAX_RULES_BYTES, appliedRulesHash, applyRules, rulesPaths, stampedHash } from '../src/rules/apply';
+import { join } from 'node:path';
+import { HOST_LOCKS_DIR, HOST_NGINX_MAP_DIR } from '../src/provision/layout';
+import type { LockIo } from '../src/provision/lock';
+import {
+  MAX_RULES_BYTES,
+  type RulesDeps,
+  appliedRulesHash,
+  applyRules,
+  rulesDeps,
+  rulesPaths,
+  setRulesDepsForTests,
+  stampedHash,
+} from '../src/rules/apply';
 import { ACTOR_HEADER } from '../src/security/auth';
 import { renderProblem } from '../src/util/response';
 import { resetInstance } from './fixtures/instance';
@@ -69,6 +85,54 @@ interface FakeExec {
 }
 
 let restoreExec: (() => void) | null = null;
+let restoreDeps: (() => void) | null = null;
+/** The one call log the fake exec AND the fake lock write to. */
+let callLog: string[] = [];
+
+/** A fake host web lock: `held` = another holder never lets go; `missing` = no lock file. */
+function installFakeLock(script: { held?: boolean; missing?: boolean } = {}): void {
+  let clock = 0;
+  const io: LockIo = {
+    openLockFile(path, spec) {
+      if (script.missing) throw new Error(`ENOENT: ${path}`);
+      callLog.push(`open:${path.split('/').pop()}:${spec.create ? 'create' : 'nocreate'}`);
+      return 9;
+    },
+    tryFlock(_fd, mode) {
+      if (script.held) return false;
+      callLog.push(`lock:${mode}`);
+      return true;
+    },
+    unlock() {
+      callLog.push('unlock');
+    },
+    readOwner: () => null,
+    writeOwner() {},
+    holderFromProcLocks: () => [4242],
+    lstat: () => null,
+    mkdir() {},
+    now: () => clock,
+    sleepSync(ms) {
+      clock += ms;
+    },
+    async sleep(ms) {
+      clock += ms;
+    },
+  };
+  const deps: RulesDeps = {
+    instance: config.INSTANCE,
+    webServer: SERVER,
+    nginxMapMode: 'none',
+    lockIo: io,
+    locksDir: '/nonexistent/locks',
+    lockUid: 0,
+    nginxMapDir: '/nonexistent/nginx_map',
+    uid: 0,
+    lstat: () => null,
+  };
+  restoreDeps?.();
+  restoreDeps = setRulesDepsForTests(deps);
+}
 
 /** Scripted exit codes, consumed in order; an exhausted script answers 0. */
 function installFakeExec(script: { configtest?: number[]; reload?: number[]; configtestThrows?: boolean } = {}): FakeExec {
@@ -78,6 +142,7 @@ function installFakeExec(script: { configtest?: number[]; reload?: number[]; con
   const fake: Exec = {
     async webConfigtest(): Promise<ExecResult> {
       state.calls.push('configtest');
+      callLog.push('configtest');
       const live = rulesPaths().live;
       state.seenAtConfigtest.push(existsSync(live) ? readFileSync(live, 'utf8') : null);
       if (script.configtestThrows) throw new Error('sudo: command not found');
@@ -86,6 +151,7 @@ function installFakeExec(script: { configtest?: number[]; reload?: number[]; con
     },
     async webReload(): Promise<ExecResult> {
       state.calls.push('reload');
+      callLog.push('reload');
       const code = reload.shift() ?? 0;
       return { code, stdout: '', stderr: code === 0 ? '' : `Job for ${config.WEB_UNIT}.service failed (/etc/secret.conf)` };
     },
@@ -97,6 +163,9 @@ function installFakeExec(script: { configtest?: number[]; reload?: number[]; con
     },
     v2ScratchBoot() {
       throw new Error('rules.apply must never boot a v2 scratch');
+    },
+    async startHostMap() {
+      throw new Error('rules.apply must never start the host map renderer');
     },
   };
   restoreExec?.();
@@ -130,10 +199,16 @@ function live(): string | null {
 const apply = (text: string, hash: string, server: 'apache' | 'nginx' = SERVER) =>
   applyRules({ server, text, hash, actor: ACTOR });
 
-beforeEach(resetInstance);
+beforeEach(async () => {
+  await resetInstance();
+  callLog = [];
+  installFakeLock();
+});
 afterEach(async () => {
   restoreExec?.();
   restoreExec = null;
+  restoreDeps?.();
+  restoreDeps = null;
   await resetInstance();
 });
 
@@ -320,6 +395,60 @@ describe('applyRules — refusals touch nothing', () => {
     expect(fake.calls).toEqual([]);
     expect(live()).toBeNull();
     expect(await outcomes()).toEqual(['refused:refused', 'refused:refused', 'refused:refused']);
+  });
+});
+
+describe('applyRules — the host web lock', () => {
+  test('configtest and reload run inside the web lock, opened without creating it, released after', async () => {
+    installFakeExec();
+    await apply(rulesText(H1), H1);
+    expect(callLog).toEqual(['open:web.lock:nocreate', 'lock:ex', 'configtest', 'reload', 'unlock']);
+  });
+
+  test('a failed configtest still releases the lock after the restore configtest', async () => {
+    installFakeExec({ configtest: [1, 0] });
+    await caught(apply(rulesText(H1), H1));
+    expect(callLog).toEqual(['open:web.lock:nocreate', 'lock:ex', 'configtest', 'configtest', 'unlock']);
+  });
+
+  test('a holder past the wait is host_busy (503): nothing written, nothing run, audited', async () => {
+    const fake = installFakeExec();
+    installFakeLock({ held: true });
+    const error = await caught(apply(rulesText(H1), H1));
+    expect(error.status).toBe(503);
+    expect(error.extensions).toEqual({ reason: 'host_busy', holder_pids: [4242] });
+    expect(fake.calls).toEqual([]);
+    expect(live()).toBeNull();
+    expect(callLog.at(-1)).toBe('unlock');
+    expect(await outcomes()).toEqual(['failed:host_busy']);
+  });
+
+  test('a missing lock file is host_lock_missing (503), naming provision apply', async () => {
+    const fake = installFakeExec();
+    installFakeLock({ missing: true });
+    const error = await caught(apply(rulesText(H1), H1));
+    expect(error.status).toBe(503);
+    expect(error.extensions).toEqual({ reason: 'host_lock_missing' });
+    expect(error.message).toContain('provision apply');
+    expect(fake.calls).toEqual([]);
+    expect(live()).toBeNull();
+  });
+});
+
+describe('the production host seams', () => {
+  test('without a stand-in: the layout.ts host paths, root-owned locks, a real never-followed lstat', () => {
+    restoreDeps?.();
+    restoreDeps = null;
+    const deps = rulesDeps();
+    expect(deps.locksDir).toBe(HOST_LOCKS_DIR);
+    expect(deps.nginxMapDir).toBe(HOST_NGINX_MAP_DIR);
+    // .env.test sets no HOST_BASE: the lock owner stays root even under NODE_ENV=test.
+    expect(deps.lockUid).toBe(0);
+    expect(deps.instance).toBe(config.INSTANCE);
+    expect(deps.nginxMapMode).toBe('none');
+    expect(deps.lstat(MEDIA_ROOT)).toMatchObject({ type: 'dir' });
+    expect(deps.lstat(join(MEDIA_ROOT, 'absent'))).toBeNull();
+    expect(rulesDeps()).toBe(deps);
   });
 });
 

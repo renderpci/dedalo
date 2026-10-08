@@ -98,12 +98,123 @@ export function pickConfigtestBinary(server: WebServer, isRealFile?: (path: stri
   return picked;
 }
 
+/**
+ * The binaries `-S`/`-M`/`-t -D DUMP_INCLUDES`/`-v` run against (spec §2.2): Debian's real
+ * `apache2ctl`, and on EL `httpd` itself — EL's `apachectl` is a reduced script that is fine for
+ * `-t` but not relied on for the dumps.
+ */
+export const APACHE_DUMP_CANDIDATES: readonly string[] = Object.freeze(['/usr/sbin/apache2ctl', '/usr/sbin/httpd']);
+
+/** A PHP-FPM master: Debian `php-fpm<v>`, EL AppStream `php-fpm`, Remi SCL `php<NN>` (spec S5). */
+export const FPM_BIN_PATTERN = /^(\/usr\/sbin\/php-fpm(\d+\.\d+)?|\/opt\/remi\/php\d{2}\/root\/usr\/sbin\/php-fpm)$/;
+/** A PHP CLI, after realpath: Debian `php<v>`, EL `php`, Remi `php<NN>`'s (spec S5). */
+export const PHP_CLI_PATTERN = /^(\/usr\/bin\/php(\d+\.\d+)?|\/opt\/remi\/php\d{2}\/root\/usr\/bin\/php)$/;
+
+/**
+ * HOST-WIDE STATE (spec S11): what several instances on one host share. An instance name cannot
+ * start with '_' (INSTANCE_PATTERN), so `_host` never collides with an instance's own directory
+ * under V1_VAR_BASE. The `paths.host_base` override repoints the whole tree (scratch gates only).
+ */
+export const V1_VAR_BASE = '/var/lib/dedalo_publication_host';
+export const HOST_BASE = '/var/lib/dedalo_publication_host/_host';
+export const HOST_LOCKS_DIR = `${HOST_BASE}/locks`;
+export const HOST_NGINX_MAP_DIR = `${HOST_BASE}/nginx_map`;
+export const HOST_NGINX_CONTRIB_DIR = `${HOST_NGINX_MAP_DIR}/contrib`;
+export const HOST_MAP_RENDERER_DIR = `${HOST_BASE}/map_renderer`;
+/** The root oneshot that renders the host-wide nginx map (spec §13.5), a bare unit name. */
+export const HOST_MAP_UNIT = 'dedalo-pubhost-map';
+/** The group every agent unit gets through SupplementaryGroups= (spec S11). Created only by init (D2). */
+export const PUBHOST_GROUP = 'dedalo_pubhost';
+export const DEFAULT_NGINX_CONF_D = '/etc/nginx/conf.d';
+export const NGINX_MAP_INCLUDE_NAME = 'dedalo_media_map.conf';
+export const NGINX_MAP_INCLUDE_PATH = `${DEFAULT_NGINX_CONF_D}/${NGINX_MAP_INCLUDE_NAME}`;
+/** The lock files in HOST_LOCKS_DIR (spec S12, §7): root-created, flocked, never removed. */
+export const HOST_LOCK_FILES = Object.freeze({ provision: 'provision.lock', web: 'web.lock' } as const);
+export type HostLockName = keyof typeof HOST_LOCK_FILES;
+
+/**
+ * The per-site home made root-owned by init (decision B). 0755 as decided; owner question 1 asks
+ * for 0711 (search without listing). One constant: changing it changes init and the guide together.
+ */
+export const HOME_ROOT_MODE = 0o755;
+/** The Linux kernel floor Bun documents for the pinned version (spec S8); moves with `.bun-version`. */
+export const BUN_KERNEL_FLOOR = '5.1';
+/** The lowest PHP the v1 API runs on — provisional, measured by the EL drill (spec S5). */
+export const V1_PHP_FLOOR = '8.1';
+/** The lowest nginx the rendered include and map parse on — provisional, measured by the drills. */
+export const NGINX_FLOOR = '1.14';
+/**
+ * The oldest systemd the rendered units run on (spec S10): LoadCredential= and ProtectProc= are
+ * 247. ONE profile — every supported OS ships more (Debian 12 and EL 9: 252, Ubuntu 24.04: 255,
+ * Debian 13 and EL 10: 257, Ubuntu 26.04: 259); below it `host.systemd` blocks init and plan
+ * refuses.
+ */
+export const SYSTEMD_FLOOR = 247;
+
+/** A site's domain (spec S6). Lower case: it names a home directory and a pool. */
+export const DOMAIN_PATTERN = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+/** A declared PHP version, `<major>.<minor>` (spec S6). */
+export const FPM_VERSION_PATTERN = /^\d+\.\d+$/;
+/** A URL path the web include serves an API under (spec S6). No `..`, no trailing '/' (checked apart). */
+export const API_PATH_PATTERN = /^\/[A-Za-z0-9._/-]+$/;
+export const DEFAULT_API_PATHS = Object.freeze({
+  v1: '/dedalo/publication/server_api/v1',
+  v2: '/dedalo/publication/server_api/v2',
+});
+/** A site home may never be one of these: they hold other sites (spec S6). */
+export const FORBIDDEN_HOMES: readonly string[] = Object.freeze(['/', '/home', '/var/www', '/var/www/html', '/srv']);
+/** v1 runs as its own account, never a web or catch-all one (spec S5, decision A). */
+export const FORBIDDEN_V1_USERS: readonly string[] = Object.freeze(['www-data', 'apache', 'nginx', 'www', 'nobody']);
+
+export type FpmFlavor = 'debian' | 'el' | 'remi';
+export const FPM_FLAVORS: readonly FpmFlavor[] = Object.freeze(['debian', 'el', 'remi']);
+/** Where each flavour keeps its pools (`<v>` = the version, `<NN>` = it without its dot). */
+export const FPM_POOL_DIRS: Readonly<Record<FpmFlavor, string>> = Object.freeze({
+  debian: '/etc/php/<v>/fpm/pool.d',
+  el: '/etc/php-fpm.d',
+  remi: '/etc/opt/remi/php<NN>/php-fpm.d',
+});
+
+export type LayoutKind = 'home' | 'system';
+/** The directory names of the per-site home layout (decision B), and their relocations (S6). */
+export const HOME_LAYOUT_NAMES = Object.freeze({ stateRoot: 'dedalo', agentDir: 'host_agent', bunDir: '.bun' });
+
+/**
+ * THE SITE'S WEB SERVER LOGS (owner decision 1(c), 2026-10-09): OUTSIDE the home, in the
+ * distribution's own log directory, one subdirectory per site — `/var/log/apache2/<domain>`
+ * (Debian, Ubuntu), `/var/log/httpd/<domain>` (EL), `/var/log/nginx/<domain>` (every family).
+ * Ubuntu 26.04's apache2.service is sandboxed (ProtectHome=read-only, ProtectSystem=full,
+ * ReadWritePaths=/var/log/apache2): a log under /home passes `apache2ctl -t` but the unit cannot
+ * start. The distribution's directory is writable by every web server unit, labelled httpd_log_t by
+ * the policy's own `/var/log/(httpd|nginx)(/.*)?` rule on EL (no rule of ours), and root's.
+ * `paths.web_log_base` repoints the base (scratch gates only).
+ */
+export function webLogBase(server: WebServer, flavor: FpmFlavor): string {
+  if (server === 'nginx') return '/var/log/nginx';
+  return flavor === 'debian' ? '/var/log/apache2' : '/var/log/httpd';
+}
+export const HOME_RELOCATED_NAMES = Object.freeze({
+  stateRoot: 'dedalo_publication',
+  agentDir: 'dedalo_host_agent',
+  bunDir: '.dedalo_bun',
+});
+export const SYSTEM_LAYOUT = Object.freeze({
+  stateBase: '/srv/dedalo_publication_host',
+  agentDir: '/opt/dedalo_publication_host/host_agent',
+  bunBin: '/opt/dedalo_publication_host/bun/bin/bun',
+});
+
 export const DEFAULT_PATHS = Object.freeze({
   configBase: '/etc/dedalo_publication_host',
   unitDir: '/etc/systemd/system',
   sudoersDir: '/etc/sudoers.d',
   polkitRulesDir: '/etc/polkit-1/rules.d',
+  /** The per-site web log rotation (render/logrotate.ts): the distribution's own files glob /var/log/<server>/*.log only. */
+  logrotateDir: '/etc/logrotate.d',
   runtimeBase: '/run/dedalo_publication_host',
+  hostBase: HOST_BASE,
+  nginxConfD: DEFAULT_NGINX_CONF_D,
+  v1VarBase: V1_VAR_BASE,
 });
 
 export const AGENT_UNIT_PREFIX = 'dedalo-publication-host-';
@@ -130,10 +241,23 @@ export interface HostDeclaration {
   readonly web: {
     readonly server: WebServer;
     readonly unit: string;
+    /**
+     * nginx only: who defines the host-wide http{} media map (spec §13.6). `conf_d`: the
+     * provisioned include + the root map renderer; `none` (default): the operator's hand map.
+     */
+    readonly nginx_map?: NginxMapMode;
+    /** Every directory of a declared vhost log path (spec §5.9): the agent's `nginx -t` opens them. */
+    readonly log_dirs?: readonly string[];
   };
   /**
-   * The USER the Publication API v1 runs as — the site's PHP-FPM pool user (the v6 practice:
-   * one pool per site, a user per site, the web server's group shared by all of them). It
+   * The website this instance serves under (spec S6). Optional: a declaration without it keeps
+   * its bytes and its meaning; every site renderer applies only when it is present.
+   */
+  readonly site?: DeclaredSite;
+  /**
+   * The USER the Publication API v1 runs as — the user of v1's OWN dedicated PHP-FPM pool
+   * (decision A, spec S5: with `site` the provisioner renders that pool; never the website's
+   * pool, never a web or catch-all account — FORBIDDEN_V1_USERS). It
    * OWNS the v1 configuration (shared/server_config_api.php, mode 0400/0600): the group
    * cannot separate sites that share it, the owner can. The agent never reads that file — it
    * stats and links it — so v1/shared is root:root 0711 and the agent joins no v1 group.
@@ -143,7 +267,13 @@ export interface HostDeclaration {
     readonly user: string;
   };
   readonly state_root: string;
-  readonly media: { readonly mode: MediaMode; readonly root?: string };
+  /**
+   * `selinux_label` (shared mode only): the operator's consent that `provision apply` labels their
+   * shared media directory `httpd_sys_content_t` (the S9 `M(/.*)?` rule + `restorecon -R`). It is
+   * `provision init`'s `selinux.media_access=act` answer, kept where apply and check read it; copy
+   * mode is the agent's own tree and is always labelled. Ignored on a host without SELinux.
+   */
+  readonly media: { readonly mode: MediaMode; readonly root?: string; readonly selinux_label?: true };
   readonly php_bin: string;
   readonly bun_bin: string;
   readonly v2: {
@@ -160,13 +290,36 @@ export interface HostDeclaration {
     readonly unit_dir?: string;
     readonly sudoers_dir?: string;
     readonly polkit_rules_dir?: string;
+    /** HOST_BASE (spec §2.2 scratch-root override; `provision check` prints a set one as a fact). */
+    readonly host_base?: string;
+    /** nginx's conf.d, where NGINX_MAP_INCLUDE_NAME lands. */
+    readonly nginx_conf_d?: string;
+    /** Replaces the FPM flavour's pool directory. */
+    readonly fpm_pool_dir?: string;
+    /** V1_VAR_BASE (`<v1_var_base>/<instance>/v1`). */
+    readonly v1_var_base?: string;
+    /** Replaces webLogBase() (the site's log directory is `<web_log_base>/<domain>`). */
+    readonly web_log_base?: string;
+    /** DEFAULT_PATHS.logrotateDir. */
+    readonly logrotate_dir?: string;
   };
+}
+
+export type NginxMapMode = 'conf_d' | 'none';
+
+export interface DeclaredSite {
+  readonly domain: string;
+  /** Default `/home/<domain>`. */
+  readonly home?: string;
+  /** Default DEFAULT_API_PATHS. */
+  readonly api_paths?: { readonly v1: string; readonly v2: string };
+  readonly fpm: { readonly flavor: FpmFlavor; readonly version: string };
 }
 
 /* ── the modes matrix: a renderer or the plan names a ROW, never an owner or a number ── */
 
-export type ModeOwner = 'root' | 'agent';
-export type ModeGroup = 'root' | 'v2Group' | 'engineGroup';
+export type ModeOwner = 'root' | 'agent' | 'v1';
+export type ModeGroup = 'root' | 'v2Group' | 'engineGroup' | 'pubhost';
 
 export interface ArtifactMode {
   readonly owner: ModeOwner;
@@ -213,6 +366,40 @@ export const MODES = Object.freeze({
   // The audit contract (instance/roots.ts): agent-owned 0600, then append-only (chattr +a — plan.ts/apply.ts).
   auditFile: row(STATE_TREE_OWNERSHIP.auditFile, 'root', 0o600),
   mediaCopy: row('agent', 'root', 0o755),
+  // ── provision init, step 1 (spec §2.2, §5, §7, §13.2) ──
+  /** v2/shared/v2.env: the v2 service reads it through systemd EnvironmentFile=. */
+  v2Env: row('root', 'v2Group', 0o640),
+  /** v1/shared/server_config_api.php: owned by the v1 pool's user (decision A), never group-readable. */
+  v1Config: row('v1', 'root', 0o400),
+  /** `<configBase>/<instance>/web.<server>.conf`, the stamped web include (spec S4). */
+  webInclude: row('root', 'root', 0o644),
+  /** The dedicated v1 pool (spec S5). */
+  fpmPool: row('root', 'root', 0o644),
+  /** `<webLogBase>/<domain>`: the server's master writes it as root (layout.ts webLogBase). */
+  webLogs: row('root', 'root', 0o755),
+  /** `<logrotate_dir>/dedalo_<instance>_web` (render/logrotate.ts). */
+  logrotate: row('root', 'root', 0o644),
+  /** NGINX_MAP_INCLUDE_PATH, host-wide (spec §13.6). */
+  nginxMapInclude: row('root', 'root', 0o644),
+  /** `<v1_var_base>/<instance>/v1`: traverse only. */
+  v1Var: row('root', 'root', 0o711),
+  /** `<v1Var>/tmp` and `<v1Var>/log`: the v1 pool's own. */
+  v1VarWork: row('v1', 'root', 0o700),
+  hostBase: row('root', 'root', 0o755),
+  /** Agents flock web.lock read-only and can create, rename or remove nothing here (spec §7). */
+  hostLocks: row('root', 'pubhost', 0o750),
+  hostProvisionLock: row('root', 'root', 0o600),
+  hostWebLock: row('root', 'pubhost', 0o640),
+  /** The live host map: root-written only (spec §13.5). */
+  hostNginxMap: row('root', 'root', 0o755),
+  /** Sticky + setgid: an agent replaces or removes only its own contribution. */
+  hostNginxContrib: row('root', 'pubhost', 0o3770),
+  hostMapRenderer: row('root', 'root', 0o755),
+  /** `<INIT_BASE>` and `<INIT_BASE>/<instance>` (spec §7). */
+  initState: row('root', 'root', 0o700),
+  journal: row('root', 'root', 0o600),
+  /** `<INIT_BASE>/<instance>/init.lock` (+ its owner record), spec §7. */
+  initLock: row('root', 'root', 0o600),
 });
 
 export type ModeKey = keyof typeof MODES;
@@ -262,6 +449,49 @@ export interface TlsPaths {
   readonly clientCa: string;
 }
 
+/** The derived FPM install the dedicated v1 pool runs in (spec S5 table). */
+export interface FpmLayout {
+  readonly flavor: FpmFlavor;
+  readonly version: string;
+  /** `dedalo_<instance>_v1`. */
+  readonly pool: string;
+  readonly poolFile: string;
+  /** Bare unit name (no `.service`). */
+  readonly unit: string;
+  readonly bin: string;
+  readonly cli: string;
+  /** The pool's unix socket. */
+  readonly listen: string;
+  /** listen.owner / listen.group: the web server's user (derived, never discovered at render time). */
+  readonly webUser: string;
+}
+
+export interface SiteLayout {
+  readonly domain: string;
+  readonly home: string;
+  /**
+   * The site's web server log directory, `<webLogBase()>/<domain>` (root:root, MODES.webLogs):
+   * created by provision apply in the home layout, rotated by render/logrotate.ts. Never under the home.
+   */
+  readonly webLogsDir: string;
+  readonly apiPaths: { readonly v1: string; readonly v2: string };
+  readonly fpm: FpmLayout;
+  /** `<v1_var_base>/<instance>/v1` and its pool-owned `tmp/`, `log/`. */
+  readonly v1Var: { readonly root: string; readonly tmp: string; readonly log: string };
+}
+
+export interface HostPaths {
+  readonly base: string;
+  readonly locksDir: string;
+  readonly provisionLock: string;
+  readonly webLock: string;
+  readonly nginxMapDir: string;
+  readonly nginxContribDir: string;
+  readonly mapRendererDir: string;
+  readonly nginxConfD: string;
+  readonly nginxMapInclude: string;
+}
+
 export interface AgentLayout {
   readonly instance: string;
   readonly declarationPath: string;
@@ -280,12 +510,31 @@ export interface AgentLayout {
      */
     readonly agentSupplementaryGroups: readonly string[];
   };
-  readonly web: { readonly server: WebServer; readonly unit: string; readonly configtestBin: string };
+  readonly web: {
+    readonly server: WebServer;
+    readonly unit: string;
+    readonly configtestBin: string;
+    /** Always 'none' on apache. */
+    readonly nginxMap: NginxMapMode;
+    readonly logDirs: readonly string[];
+  };
+  /** null when the declaration has no `site` block (no site renderer applies). */
+  readonly site: SiteLayout | null;
+  /**
+   * The HOST-WIDE ProtectHome= value every agent unit renders (spec S10): `read-only` when this
+   * declaration or ANY sibling (DeriveHost.anyHomeBound) has a path under a home tree, else `yes`.
+   */
+  readonly protectHome: 'read-only' | 'yes';
+  /** True when this declaration's own paths lie under a home tree (siblings read it for protectHome). */
+  readonly homeBound: boolean;
+  /** Host-wide paths (spec S11, §13.2), from `paths.host_base` / `paths.nginx_conf_d`. */
+  readonly host: HostPaths;
   readonly agentDir: string;
   readonly agentEntry: string;
   readonly bunBin: string;
   readonly phpBin: string;
-  readonly media: { readonly mode: MediaMode; readonly root: string | null };
+  /** `selinuxLabel`: the declaration's `media.selinux_label` (shared mode only; false otherwise). */
+  readonly media: { readonly mode: MediaMode; readonly root: string | null; readonly selinuxLabel: boolean };
   readonly v2: { readonly unit: string; readonly port: number; readonly healthUrl: string };
   readonly releasesRetained: number;
   readonly configBase: string;
@@ -306,6 +555,8 @@ export interface AgentLayout {
   readonly v2ScratchUnitPath: string;
   readonly sudoersPath: string;
   readonly polkitPath: string;
+  /** `<logrotate_dir>/dedalo_<instance>_web`: the rotation of site.webLogsDir (render/logrotate.ts; home layout only). */
+  readonly logrotatePath: string;
   readonly state: {
     readonly root: string;
     readonly marker: string;
@@ -411,13 +662,26 @@ function apiDirs(publicationApi: string, api: ProvisionApi): ApiDirs {
 }
 
 export function ownerName(layout: AgentLayout, owner: ModeOwner): string {
-  return owner === 'root' ? 'root' : layout.identity.agentUser;
+  switch (owner) {
+    case 'root':
+      return 'root';
+    case 'agent':
+      return layout.identity.agentUser;
+    case 'v1':
+      return layout.identity.v1User;
+    default: {
+      const unreachable: never = owner;
+      throw new Error(`layout: unknown mode owner '${String(unreachable)}'`);
+    }
+  }
 }
 
 export function groupName(layout: AgentLayout, group: ModeGroup): string {
   switch (group) {
     case 'root':
       return 'root';
+    case 'pubhost':
+      return PUBHOST_GROUP;
     case 'v2Group':
       return layout.identity.v2Group;
     case 'engineGroup':
@@ -432,12 +696,227 @@ export function groupName(layout: AgentLayout, group: ModeGroup): string {
   }
 }
 
+/* ── site, FPM and layout helpers (spec S5, S6) ───────────────────────────────────── */
+
+/** The FPM pool's listen owner (spec S5): Debian's www-data; on EL the server's own account. */
+export function webUserFor(flavor: FpmFlavor, server: WebServer): string {
+  if (flavor === 'debian') return 'www-data';
+  return server === 'apache' ? 'apache' : 'nginx';
+}
+
+/** The trees systemd's ProtectHome= governs (render/unit_agent.ts reads layout.protectHome). */
+export const HOME_TREES = /^\/(home|root|run\/user)(\/|$)/;
+
+function versionAtLeast(version: string, floor: string): boolean {
+  const [major = 0, minor = 0] = version.split('.').map(Number);
+  const [floorMajor = 0, floorMinor = 0] = floor.split('.').map(Number);
+  return major > floorMajor || (major === floorMajor && minor >= floorMinor);
+}
+
+/** The S5 table, one row per flavour. `poolDir` replaces the flavour's directory (the scratch override). */
+export function fpmLayout(
+  instance: string,
+  flavor: FpmFlavor,
+  version: string,
+  server: WebServer,
+  poolDir?: string,
+): FpmLayout {
+  const nn = version.replace('.', '');
+  const pool = `dedalo_${instance}_v1`;
+  const socket = `dedalo-${instance}-v1.sock`;
+  const dir = poolDir ?? FPM_POOL_DIRS[flavor].replace('<v>', version).replace('<NN>', nn);
+  const rows: Record<FpmFlavor, Omit<FpmLayout, 'flavor' | 'version' | 'pool' | 'poolFile' | 'webUser'>> = {
+    debian: { unit: `php${version}-fpm`, bin: `/usr/sbin/php-fpm${version}`, cli: `/usr/bin/php${version}`, listen: `/run/php/${socket}` },
+    el: { unit: 'php-fpm', bin: '/usr/sbin/php-fpm', cli: '/usr/bin/php', listen: `/run/php-fpm/${socket}` },
+    remi: {
+      unit: `php${nn}-php-fpm`,
+      bin: `/opt/remi/php${nn}/root/usr/sbin/php-fpm`,
+      cli: `/opt/remi/php${nn}/root/usr/bin/php`,
+      listen: `/var/opt/remi/php${nn}/run/php-fpm/${socket}`,
+    },
+  };
+  return Object.freeze({
+    flavor,
+    version,
+    pool,
+    poolFile: join(dir, `${pool}.conf`),
+    ...rows[flavor],
+    webUser: webUserFor(flavor, server),
+  });
+}
+
+/** The paths a layout kind gives (spec S6 table). `home` needs the site's home. */
+export function layoutPaths(
+  kind: LayoutKind,
+  instance: string,
+  home: string | null,
+): { readonly state_root: string; readonly agent_dir: string; readonly bun_bin: string } {
+  if (kind === 'home') {
+    if (home === null) throw new LayoutError('layout', "the 'home' layout needs a site (no domain, no home path)");
+    return Object.freeze({
+      state_root: join(home, HOME_LAYOUT_NAMES.stateRoot),
+      agent_dir: join(home, HOME_LAYOUT_NAMES.agentDir),
+      bun_bin: join(home, HOME_LAYOUT_NAMES.bunDir, 'bin', 'bun'),
+    });
+  }
+  return Object.freeze({
+    state_root: join(SYSTEM_LAYOUT.stateBase, instance),
+    agent_dir: SYSTEM_LAYOUT.agentDir,
+    bun_bin: SYSTEM_LAYOUT.bunBin,
+  });
+}
+
+/** `site.home`, or its default `/home/<domain>`. */
+export function siteHome(site: DeclaredSite): string {
+  return site.home ?? join('/home', site.domain);
+}
+
+/**
+ * Which layout a declaration was built with (spec S6, used on a re-run by draft, compare and
+ * plan): `home` when state_root, agent_dir and bun_bin each equal the home column for the site's
+ * home — or its relocated name (S6 `declaration.layout_dirs`, `declaration.state_root`) — else
+ * `system`. A declaration without `site` is `system`.
+ */
+export function inferLayout(decl: HostDeclaration): LayoutKind {
+  if (decl.site === undefined) return 'system';
+  const home = siteHome(decl.site);
+  const states = [HOME_LAYOUT_NAMES.stateRoot, HOME_RELOCATED_NAMES.stateRoot].map(name => join(home, name));
+  const agents = [HOME_LAYOUT_NAMES.agentDir, HOME_RELOCATED_NAMES.agentDir].map(name => join(home, name));
+  const buns = [HOME_LAYOUT_NAMES.bunDir, HOME_RELOCATED_NAMES.bunDir].map(name => join(home, name, 'bin', 'bun'));
+  return states.includes(decl.state_root) && agents.includes(decl.agent_dir) && buns.includes(decl.bun_bin)
+    ? 'home'
+    : 'system';
+}
+
+/**
+ * THE KEY ORDER of a declaration file — the one body writer's (canonicalDeclaration) and the
+ * schema's (schema.ts declares its zod shapes in this order; tests/provision_schema.test.ts holds
+ * the two equal, recursively). A nested object names its own order; anything else is a leaf.
+ */
+type KeyOrder = { readonly [key: string]: KeyOrder | null };
+export const DECLARATION_KEY_ORDER: KeyOrder = Object.freeze({
+  instance: null,
+  listen: Object.freeze({ kind: null, host: null, port: null }),
+  agent_user: null,
+  engine_group: null,
+  agent_dir: null,
+  web: Object.freeze({ server: null, unit: null, nginx_map: null, log_dirs: null }),
+  site: Object.freeze({
+    domain: null,
+    home: null,
+    api_paths: Object.freeze({ v1: null, v2: null }),
+    fpm: Object.freeze({ flavor: null, version: null }),
+  }),
+  v1: Object.freeze({ user: null }),
+  state_root: null,
+  media: Object.freeze({ mode: null, root: null, selinux_label: null }),
+  php_bin: null,
+  bun_bin: null,
+  v2: Object.freeze({ unit: null, user: null, group: null, port: null, health_url: null }),
+  releases_retained: null,
+  paths: Object.freeze({
+    config_base: null,
+    unit_dir: null,
+    sudoers_dir: null,
+    polkit_rules_dir: null,
+    host_base: null,
+    nginx_conf_d: null,
+    fpm_pool_dir: null,
+    v1_var_base: null,
+    web_log_base: null,
+    logrotate_dir: null,
+  }),
+});
+
+function ordered(value: unknown, order: KeyOrder | null, at: string): unknown {
+  if (order === null || value === null || typeof value !== 'object' || Array.isArray(value)) return value;
+  const source = value as Record<string, unknown>;
+  for (const key of Object.keys(source)) {
+    if (!(key in order)) throw new LayoutError(at === '' ? key : `${at}.${key}`, 'is not a declaration key');
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(order)) {
+    if (source[key] !== undefined) out[key] = ordered(source[key], child, at === '' ? key : `${at}.${key}`);
+  }
+  return out;
+}
+
+/**
+ * THE ONE declaration body writer (spec §2.2): two-space JSON, keys in DECLARATION_KEY_ORDER,
+ * a trailing newline. `write_declaration`, the examples and compare's diff all use it, so a
+ * re-run that changes nothing writes the same bytes. An unknown key throws (never dropped).
+ */
+export function canonicalDeclaration(decl: HostDeclaration): string {
+  return `${JSON.stringify(ordered(decl, DECLARATION_KEY_ORDER, ''), null, 2)}\n`;
+}
+
 /* ── derive ───────────────────────────────────────────────────────────────────────── */
 
-/** Host facts derive() may consult. Only the configtest pick depends on the host. */
+/** Host facts derive() may consult. Only the configtest pick and the host-wide ProtectHome fact depend on the host. */
 export interface DeriveHost {
   /** lstat regular file (never a symlink) — chooses among WEB_CONFIGTEST_CANDIDATES. */
   readonly isRealFile?: (path: string) => boolean;
+  /**
+   * Whether ANY sibling declaration in the config base is home-bound (spec S10): the agent's
+   * configtest runs in its mount namespace, so a hidden /home would test a different config.
+   * The plan and the CLI pass it; without it only this declaration's own paths count.
+   */
+  readonly anyHomeBound?: boolean;
+}
+
+function apiPath(field: string, value: unknown): string {
+  const path = matches(API_PATH_PATTERN, field, value);
+  if (path.split('/').includes('..')) throw new LayoutError(field, `'${path}' must not contain '..'`);
+  if (path.endsWith('/')) throw new LayoutError(field, `'${path}' must not end with '/'`);
+  return path;
+}
+
+function deriveSite(
+  site: DeclaredSite,
+  instance: string,
+  server: WebServer,
+  v1User: string,
+  paths: { readonly fpm_pool_dir?: string; readonly web_log_base?: string },
+  v1VarBase: string,
+): SiteLayout {
+  const domain = matches(DOMAIN_PATTERN, 'site.domain', site.domain);
+  const home = cleanAbsolute('site.home', site.home ?? join('/home', domain));
+  if (FORBIDDEN_HOMES.includes(home)) {
+    throw new LayoutError('site.home', `'${home}' holds other sites; a site home is its own directory (e.g. /home/${domain})`);
+  }
+  const apiPaths = Object.freeze({
+    v1: apiPath('site.api_paths.v1', site.api_paths?.v1 ?? DEFAULT_API_PATHS.v1),
+    v2: apiPath('site.api_paths.v2', site.api_paths?.v2 ?? DEFAULT_API_PATHS.v2),
+  });
+  if (pathsOverlap(apiPaths.v1, apiPaths.v2)) {
+    throw new LayoutError('site.api_paths.v2', `'${apiPaths.v2}' overlaps site.api_paths.v1 '${apiPaths.v1}'`);
+  }
+  const flavor = site.fpm.flavor;
+  if (!FPM_FLAVORS.includes(flavor)) {
+    throw new LayoutError('site.fpm.flavor', `'${String(flavor)}' must be one of ${FPM_FLAVORS.join(', ')}`);
+  }
+  const version = matches(FPM_VERSION_PATTERN, 'site.fpm.version', site.fpm.version);
+  if (!versionAtLeast(version, V1_PHP_FLOOR)) {
+    throw new LayoutError('site.fpm.version', `PHP ${version} is below the v1 floor ${V1_PHP_FLOOR}`);
+  }
+  const poolDir = paths.fpm_pool_dir === undefined ? undefined : cleanAbsolute('paths.fpm_pool_dir', paths.fpm_pool_dir);
+  const fpm = fpmLayout(instance, flavor, version, server, poolDir);
+  if (!FPM_BIN_PATTERN.test(fpm.bin) || !PHP_CLI_PATTERN.test(fpm.cli)) {
+    throw new LayoutError('site.fpm.version', `'${version}' gives no ${flavor} PHP-FPM install path (${fpm.bin})`);
+  }
+  // v1.user is never the web user: every webUserFor() value is in FORBIDDEN_V1_USERS, which
+  // derive() refuses for any declaration (tests/provision_layout.test.ts holds the inclusion).
+  const v1VarRoot = join(v1VarBase, instance, 'v1');
+  const logBase = cleanAbsolute('paths.web_log_base', paths.web_log_base ?? webLogBase(server, flavor));
+  if (logBase === '/') throw new LayoutError('paths.web_log_base', 'must not be /');
+  return Object.freeze({
+    domain,
+    home,
+    webLogsDir: join(logBase, domain),
+    apiPaths,
+    fpm,
+    v1Var: Object.freeze({ root: v1VarRoot, tmp: join(v1VarRoot, 'tmp'), log: join(v1VarRoot, 'log') }),
+  });
 }
 
 export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayout {
@@ -457,12 +936,29 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     }
   }
 
+  if (FORBIDDEN_V1_USERS.includes(v1User)) {
+    throw new LayoutError(
+      'v1.user',
+      `'${v1User}' is a web or catch-all account — v1 runs in its own pool under its own account (e.g. ${instance}_v1)`,
+    );
+  }
+
   const server = decl.web.server;
   if (server !== 'apache' && server !== 'nginx') {
     throw new LayoutError('web.server', `'${String(server)}' must be apache or nginx`);
   }
   const webUnit = unitName('web.unit', decl.web.unit);
   const configtestBin = pickConfigtestBinary(server, host.isRealFile);
+  const nginxMap = decl.web.nginx_map ?? 'none';
+  if (nginxMap !== 'conf_d' && nginxMap !== 'none') {
+    throw new LayoutError('web.nginx_map', `'${String(nginxMap)}' must be conf_d or none`);
+  }
+  if (nginxMap === 'conf_d' && server !== 'nginx') {
+    throw new LayoutError('web.nginx_map', "'conf_d' is the nginx http{} map; an apache host has none");
+  }
+  const logDirs = (decl.web.log_dirs ?? []).map((dir, index) => cleanAbsolute(`web.log_dirs.${index}`, dir));
+  if (new Set(logDirs).size !== logDirs.length) throw new LayoutError('web.log_dirs', 'lists a directory twice');
+  if (logDirs.includes('/')) throw new LayoutError('web.log_dirs', "'/' is not a log directory");
 
   const agentDir = cleanAbsolute('agent_dir', decl.agent_dir);
   const phpBin = cleanAbsolute('php_bin', decl.php_bin);
@@ -478,6 +974,27 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     'paths.polkit_rules_dir',
     paths.polkit_rules_dir ?? DEFAULT_PATHS.polkitRulesDir,
   );
+  const hostBase = cleanAbsolute('paths.host_base', paths.host_base ?? DEFAULT_PATHS.hostBase);
+  const logrotateDir = cleanAbsolute('paths.logrotate_dir', paths.logrotate_dir ?? DEFAULT_PATHS.logrotateDir);
+  const nginxConfD = cleanAbsolute('paths.nginx_conf_d', paths.nginx_conf_d ?? DEFAULT_PATHS.nginxConfD);
+  const v1VarBase = cleanAbsolute('paths.v1_var_base', paths.v1_var_base ?? DEFAULT_PATHS.v1VarBase);
+  for (const [field, path] of [['paths.host_base', hostBase], ['paths.v1_var_base', v1VarBase]] as const) {
+    if (path === '/') throw new LayoutError(field, 'must not be /');
+  }
+  const site = decl.site === undefined ? null : deriveSite(decl.site, instance, server, v1User, paths, v1VarBase);
+  const locksDir = join(hostBase, 'locks');
+  const nginxMapDir = join(hostBase, 'nginx_map');
+  const hostPaths: HostPaths = Object.freeze({
+    base: hostBase,
+    locksDir,
+    provisionLock: join(locksDir, HOST_LOCK_FILES.provision),
+    webLock: join(locksDir, HOST_LOCK_FILES.web),
+    nginxMapDir,
+    nginxContribDir: join(nginxMapDir, 'contrib'),
+    mapRendererDir: join(hostBase, 'map_renderer'),
+    nginxConfD,
+    nginxMapInclude: join(nginxConfD, NGINX_MAP_INCLUDE_NAME),
+  });
 
   let listen: UnixListenLayout | TlsListenLayout;
   let engineGroup: string | null;
@@ -521,6 +1038,11 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     if (decl.media.root === undefined) throw new LayoutError('media.root', `required when media.mode is '${mediaMode}'`);
     mediaRoot = cleanAbsolute('media.root', decl.media.root);
   }
+  const selinuxLabel = decl.media.selinux_label;
+  if (selinuxLabel !== undefined && selinuxLabel !== true) throw new LayoutError('media.selinux_label', 'must be true or absent');
+  if (selinuxLabel === true && mediaMode !== 'shared') {
+    throw new LayoutError('media.selinux_label', `only for media.mode 'shared' (${mediaMode === 'copy' ? 'copy mode is always labelled' : 'there is no media root'})`);
+  }
 
   const v2Unit = unitName('v2.unit', decl.v2.unit);
   if (v2Unit === webUnit) throw new LayoutError('v2.unit', 'must differ from web.unit');
@@ -552,6 +1074,9 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     ['paths.polkit_rules_dir', polkitRulesDir],
   ];
   if (mediaRoot !== null) claims.push(['media.root', mediaRoot]);
+  // Host-wide state and the v1 pool's own directories belong to no declared tree.
+  claims.push(['paths.host_base', hostBase]);
+  if (site !== null) claims.push(['site.v1Var', site.v1Var.root]);
   for (let i = 0; i < claims.length; i += 1) {
     for (let j = i + 1; j < claims.length; j += 1) {
       const [fieldA, pathA] = claims[i] as [string, string];
@@ -639,6 +1164,7 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
   }
 
   const agentUnitName = `${AGENT_UNIT_PREFIX}${instance}`;
+  const homeBound = [stateRoot, agentDir, bunBin, mediaRoot ?? ''].some(path => HOME_TREES.test(path));
   return Object.freeze({
     instance,
     declarationPath: join(configBase, `${instance}.json`),
@@ -649,14 +1175,20 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
       v1User,
       v2User,
       v2Group,
+      // Spec S11 adds PUBHOST_GROUP here; it lands in ONE change with the regenerated examples, the
+      // plan's missing-group refusal and the FakeHost's group (P6/P4), so no gate is red in between.
       agentSupplementaryGroups: Object.freeze([v2Group]),
     }),
-    web: Object.freeze({ server, unit: webUnit, configtestBin }),
+    web: Object.freeze({ server, unit: webUnit, configtestBin, nginxMap, logDirs: Object.freeze(logDirs) }),
+    site,
+    protectHome: homeBound || host.anyHomeBound === true ? 'read-only' : 'yes',
+    homeBound,
+    host: hostPaths,
     agentDir,
     agentEntry: join(agentDir, 'src', 'index.ts'),
     bunBin,
     phpBin,
-    media: Object.freeze({ mode: mediaMode, root: mediaRoot }),
+    media: Object.freeze({ mode: mediaMode, root: mediaRoot, selinuxLabel: selinuxLabel === true }),
     v2: Object.freeze({ unit: v2Unit, port: v2Port, healthUrl: v2HealthUrl }),
     releasesRetained,
     configBase,
@@ -674,6 +1206,7 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     v2ScratchUnitPath: join(unitDir, `${v2Unit}${V2_SCRATCH_TEMPLATE_SUFFIX}.service`),
     sudoersPath: join(sudoersDir, `dedalo_publication_host_${instance}`),
     polkitPath: join(polkitRulesDir, `60-dedalo-publication-host-${instance}.rules`),
+    logrotatePath: join(logrotateDir, `dedalo_${instance}_web`),
     state: Object.freeze({
       root: stateRoot,
       marker: join(stateRoot, INSTANCE_MARKER),

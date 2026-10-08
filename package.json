@@ -59,6 +59,8 @@
 		"test:pubhost:probe": "bun run scripts/publication_host_probe_drill.ts",
 		"test:pubhost:agent": "bun run scripts/publication_host_agent_drill.ts",
 		"test:pubhost:engine": "bun run scripts/publication_host_engine_drill.ts",
+		"test:pubhost:init": "bun run scripts/publication_host_init_drill.ts",
+		"test:pubhost:init:el": "bun run scripts/publication_host_init_drill.ts --family el --in-place",
 		"test:publication": "cd publication/server_api/v2 && bunx tsc --noEmit && bun test",
 		"sitebuilder:install": "cd publication/site_builder && bun install",
 		"start:sitebuilder": "cd publication/site_builder && bun run start",

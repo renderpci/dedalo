@@ -1,0 +1,22 @@
+Included configuration files:
+  (*) /etc/httpd/conf/httpd.conf
+    (61) /etc/httpd/conf.modules.d/00-base.conf
+    (61) /etc/httpd/conf.modules.d/00-brotli.conf
+    (61) /etc/httpd/conf.modules.d/00-dav.conf
+    (61) /etc/httpd/conf.modules.d/00-lua.conf
+    (61) /etc/httpd/conf.modules.d/00-mpm.conf
+    (61) /etc/httpd/conf.modules.d/00-optional.conf
+    (61) /etc/httpd/conf.modules.d/00-proxy.conf
+    (61) /etc/httpd/conf.modules.d/00-ssl.conf
+    (61) /etc/httpd/conf.modules.d/00-systemd.conf
+    (61) /etc/httpd/conf.modules.d/01-cgi.conf
+    (61) /etc/httpd/conf.modules.d/10-h2.conf
+    (61) /etc/httpd/conf.modules.d/10-proxy_h2.conf
+    (61) /etc/httpd/conf.modules.d/20-php82-php.conf
+    (358) /etc/httpd/conf.d/autoindex.conf
+    (358) /etc/httpd/conf.d/php.conf
+    (358) /etc/httpd/conf.d/php82-php.conf
+    (358) /etc/httpd/conf.d/ssl.conf
+    (358) /etc/httpd/conf.d/userdir.conf
+    (358) /etc/httpd/conf.d/welcome.conf
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 172.17.0.2. Set the 'ServerName' directive globally to suppress this message

@@ -12,6 +12,9 @@ import { z } from 'zod';
 import type { AgentLayout, DeriveHost, HostDeclaration } from './layout';
 import {
   ABSOLUTE_PATH_PATTERN,
+  API_PATH_PATTERN,
+  DOMAIN_PATTERN,
+  FPM_VERSION_PATTERN,
   INSTANCE_PATTERN,
   LISTEN_HOST_PATTERN,
   LayoutError,
@@ -21,6 +24,13 @@ import {
   UNIX_NAME_PATTERN,
   derive,
 } from './layout';
+
+/**
+ * canonicalDeclaration, inferLayout and the key order are layout.ts's (zero-dependency, so the
+ * pure init modules use them without zod); re-exported here, where the spec names them.
+ * tests/provision_schema.test.ts holds DECLARATION_KEY_ORDER equal to the shapes below.
+ */
+export { DECLARATION_KEY_ORDER, canonicalDeclaration, inferLayout } from './layout';
 
 const absolutePath = z.string().regex(ABSOLUTE_PATH_PATTERN, 'must be an absolute path of [A-Za-z0-9._/-]');
 const unixName = z.string().regex(UNIX_NAME_PATTERN, `must match ${UNIX_NAME_PATTERN.source}`);
@@ -45,7 +55,25 @@ export const declarationSchema = z.strictObject({
   web: z.strictObject({
     server: z.enum(['apache', 'nginx']),
     unit: unitName,
+    nginx_map: z.enum(['conf_d', 'none']).optional(),
+    log_dirs: z.array(absolutePath).max(32).optional(),
   }),
+  site: z
+    .strictObject({
+      domain: z.string().regex(DOMAIN_PATTERN, 'must be a lower-case DNS name'),
+      home: absolutePath.optional(),
+      api_paths: z
+        .strictObject({
+          v1: z.string().regex(API_PATH_PATTERN, `must match ${API_PATH_PATTERN.source}`),
+          v2: z.string().regex(API_PATH_PATTERN, `must match ${API_PATH_PATTERN.source}`),
+        })
+        .optional(),
+      fpm: z.strictObject({
+        flavor: z.enum(['debian', 'el', 'remi']), // = FPM_FLAVORS (tests/provision_schema.test.ts)
+        version: z.string().regex(FPM_VERSION_PATTERN, `must match ${FPM_VERSION_PATTERN.source}`),
+      }),
+    })
+    .optional(),
   v1: z.strictObject({
     user: unixName,
   }),
@@ -53,6 +81,7 @@ export const declarationSchema = z.strictObject({
   media: z.strictObject({
     mode: z.enum(['shared', 'copy', 'none']),
     root: absolutePath.optional(),
+    selinux_label: z.literal(true).optional(),
   }),
   php_bin: absolutePath,
   bun_bin: absolutePath,
@@ -70,6 +99,12 @@ export const declarationSchema = z.strictObject({
       unit_dir: absolutePath.optional(),
       sudoers_dir: absolutePath.optional(),
       polkit_rules_dir: absolutePath.optional(),
+      host_base: absolutePath.optional(),
+      nginx_conf_d: absolutePath.optional(),
+      fpm_pool_dir: absolutePath.optional(),
+      v1_var_base: absolutePath.optional(),
+      web_log_base: absolutePath.optional(),
+      logrotate_dir: absolutePath.optional(),
     })
     .optional(),
 });

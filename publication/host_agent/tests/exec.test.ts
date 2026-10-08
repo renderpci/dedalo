@@ -12,8 +12,10 @@ import {
   SCRATCH_LINK,
   SUDO,
   SYSTEMCTL,
+  RENDERER_NGINX_BIN,
   WEB_CONFIGTEST_CANDIDATES,
   createExec,
+  rendererExec,
   exec,
   execOverrideAllowed,
   setExecForTests,
@@ -314,6 +316,44 @@ describe('the named commands', () => {
   });
 });
 
+describe('the host-map commands (spec §13.5)', () => {
+  test('the agent set is closed: exactly these six commands', () => {
+    expect(Object.keys(createExec(config, recordingSpawner().spawner)).sort()).toEqual([
+      'phpLint',
+      'startHostMap',
+      'v2Restart',
+      'v2ScratchBoot',
+      'webConfigtest',
+      'webReload',
+    ]);
+  });
+
+  test('startHostMap takes no argument and starts exactly the oneshot', async () => {
+    const { spawner, calls } = recordingSpawner();
+    const x = createExec(config, spawner);
+    expect(x.startHostMap.length).toBe(0);
+    await x.startHostMap();
+    expect(calls.map(c => c.argv)).toEqual([[SYSTEMCTL, 'start', 'dedalo-pubhost-map.service']]);
+    expect(calls[0]?.options.env).toEqual({ PATH: CHILD_PATH, LANG: 'C' });
+  });
+
+  test("the root renderer's set: nginx's configtest, its reload and the active poll — no sudo", async () => {
+    const { spawner, calls } = recordingSpawner();
+    const r = rendererExec(spawner);
+    expect(Object.keys(r).sort()).toEqual(['webActive', 'webConfigtest', 'webReload']);
+    await r.webConfigtest();
+    await r.webReload();
+    expect(await r.webActive()).toBe(true);
+    expect(RENDERER_NGINX_BIN).toBe(WEB_CONFIGTEST_CANDIDATES.nginx[0] as string);
+    expect(calls.map(c => c.argv)).toEqual([
+      ['/usr/sbin/nginx', '-t'],
+      [SYSTEMCTL, 'reload', 'nginx.service'],
+      [SYSTEMCTL, 'is-active', '--quiet', 'nginx.service'],
+    ]);
+    for (const c of calls) expect(c.argv[0]).not.toBe(SUDO);
+  });
+});
+
 describe('the real spawner', () => {
   test('phpLint runs PHP_BIN and returns its code and output; a missing binary is 127', async () => {
     const root = await stateTree('ex_real');
@@ -344,6 +384,7 @@ describe('the test override', () => {
       v2Restart: async () => ({ code: 0, stdout: '', stderr: '' }),
       phpLint: async () => ({ code: 0, stdout: '', stderr: '' }),
       v2ScratchBoot: async () => ({ unit: 'stand-in', stop: async () => {} }),
+      startHostMap: async () => ({ code: 0, stdout: '', stderr: '' }),
     };
     const restore = setExecForTests(standIn);
     expect(exec()).toBe(standIn);

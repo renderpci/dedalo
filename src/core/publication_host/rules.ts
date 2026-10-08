@@ -19,11 +19,18 @@
  * the same hash (rulesRootFor). A `none` host serves no media: asking for rules there is a
  * refusal, not an empty file.
  *
+ * THE HOST-WIDE NGINX MAP (provision init §13.4). An nginx host needs its http{} map loaded
+ * BEFORE the media include (the include uses `$dedalo_auth_key` and the two SVG variables).
+ * On a publication host provisioned with `web.nginx_map: conf_d`, that map is ONE host-wide
+ * file root renders from every instance's contribution; this engine contributes
+ * buildNginxMap() with nginxMapConfigHash() through `rules.map` (expectedNginxMap). A host
+ * whose map the operator places by hand (`managed: false`) gets no push, and that is not drift.
+ *
  * Reads config (getPublicQualities, mediaDir inside the builders); no I/O of its own.
  */
 
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { getPublicQualities } from '../media/protection.ts';
+import { buildNginxMap, getPublicQualities, nginxMapConfigHash } from '../media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
 	buildPublicationHostNginxConf,
@@ -34,6 +41,7 @@ import {
 } from '../media/publication_host_rules.ts';
 import type { AgentStatus } from './agent_client.ts';
 import type { PublicationHostRecord } from './registry.ts';
+import { AGENT_REASON_SENTENCES } from './wire.ts';
 
 export interface ExpectedRules {
 	server: PublicationHostServer;
@@ -133,4 +141,80 @@ export function expectedRulesOutcome(
 		}
 		throw error;
 	}
+}
+
+/** What `rules.map` sends: the engine's http{} map and its hash (protection.ts, never re-derived). */
+export interface ExpectedNginxMap {
+	text: string;
+	hash: string;
+}
+
+/**
+ * The host-wide map this engine contributes to `status`'s host, or null when there is none to
+ * push: an Apache host, a host serving no media (`none`), an agent that predates the host map
+ * (no `rules.map`), or a map the operator places by hand (`managed: false` — not drift).
+ */
+export function expectedNginxMap(status: AgentStatus): ExpectedNginxMap | null {
+	if (status.rules.server !== 'nginx' || status.media.mode === 'none') return null;
+	const map = status.rules.map;
+	if (map === undefined || map === null || map.managed !== true) return null;
+	return { text: buildNginxMap(), hash: nginxMapConfigHash() };
+}
+
+/** The panel's view of one host's map (null: no host-wide map applies to this host). */
+export interface NginxMapPanel {
+	managed: boolean;
+	/** nginxMapConfigHash() when a push applies; null otherwise. */
+	expected: string | null;
+	/** This instance's contribution hash in the LOADED host file (agent-reported, shaped), or null. */
+	applied: string | null;
+	/** The loaded host file's hash (shared), or null. */
+	host_hash: string | null;
+	contributions: number;
+	invalid: number;
+	/** The agent reason root recorded for this instance (a `map_*` reason, else 'malformed'), or null. */
+	refused: string | null;
+	/** expected and applied disagree: counts as drift. */
+	drift: boolean;
+	/** The agent predates the host map (no `rules.map` in its status). */
+	agent_outdated: boolean;
+}
+
+const HEX64 = /^[0-9a-f]{64}$/;
+const shaped = (value: string | null): string | null =>
+	value !== null && HEX64.test(value) ? value : null;
+/**
+ * The agent's closed map-refusal vocabulary: the `map_*` members of the twin-gated agent reason
+ * table. A recorded refusal outside it is served as 'malformed' (E7: agent text is not a fact
+ * until checked), so a refusal is never hidden and never invents a state word.
+ */
+const MAP_REFUSAL_REASONS: ReadonlySet<string> = new Set(
+	Object.keys(AGENT_REASON_SENTENCES).filter((reason) => reason.startsWith('map_')),
+);
+const mapRefusal = (value: string | null): string | null =>
+	value === null ? null : MAP_REFUSAL_REASONS.has(value) ? value : 'malformed';
+
+/** The panel row's map state, from a proved status. Pure apart from the engine's own config. */
+export function nginxMapPanel(status: AgentStatus): NginxMapPanel | null {
+	if (status.rules.server !== 'nginx' || status.media.mode === 'none') return null;
+	const map = status.rules.map;
+	const empty = { applied: null, host_hash: null, contributions: 0, invalid: 0, refused: null };
+	if (map === undefined)
+		return { managed: false, expected: null, ...empty, drift: true, agent_outdated: true };
+	if (map === null || map.managed !== true) {
+		return { managed: false, expected: null, ...empty, drift: false, agent_outdated: false };
+	}
+	const expected = nginxMapConfigHash();
+	const applied = shaped(map.hash);
+	return {
+		managed: true,
+		expected,
+		applied,
+		host_hash: shaped(map.host_hash),
+		contributions: map.contributions,
+		invalid: map.invalid,
+		refused: mapRefusal(map.refused),
+		drift: applied !== expected,
+		agent_outdated: false,
+	};
 }

@@ -238,3 +238,39 @@
   `test/unit/publication_host_media_copy_widget_native.test.ts` (the REAL deps feed the repo
   pin); client: `client/dedalo/test/client/js/test_publication_hosts.js`. No fixture
   interaction.
+
+## Addendum 2026-10-08 — host-wide nginx map (provision init §13.4)
+
+- `get_value` host rows (root AND non-root) gain `nginx_map`. Root:
+  `{managed, expected, applied, host_hash, contributions, invalid, refused, drift,
+  agent_outdated}` (`rules.ts nginxMapPanel`). `null` when no host-wide map applies or no
+  trusted status was obtained: a non-nginx host, media mode `none`, the status call failed
+  (unreachable, unpaired, fingerprint mismatch), or the engine's own computation threw.
+  `managed: false` (map placed by hand) carries `expected/applied/host_hash: null`,
+  `drift: false`. An agent whose status has no `rules.map` reads `agent_outdated: true`,
+  `drift: true`. `applied` / `host_hash` are null unless 64-hex; `refused` is null or one of
+  the agent's closed `map_*` reasons (`wire.ts AGENT_REASON_SENTENCES`), any other recorded
+  value served as the literal `'malformed'` (E7: never agent text verbatim).
+- **Decided (non-root):** a global admin who is not root gets `nginx_map` WITHOUT
+  `host_hash`, `contributions` and `invalid` (keys absent, not null) — those describe the
+  OTHER instances sharing that host, i.e. topology, which the entry keeps below root. The
+  instance's own state (`managed`, `expected`, `applied`, `refused`, `drift`,
+  `agent_outdated`) stays: hashes and a reason word, no address, no secret. The client
+  renders the host-wide rows only when `host_hash` is present.
+- `apply_rules` `data` becomes `{ host, server, hash, dropped, map }`, `map` one of
+  `{state: 'pushed', hash, host_hash, contributions}` | `{state: 'current', hash}` |
+  `{state: 'not_applicable'}` (apache, media `none`, `managed: false`). On nginx the map is
+  pushed (`rules.map`) BEFORE the include, and only when the reported map hash differs; the
+  `msg` gains "Host media map <12 hex> (<n> instance(s))." or "Host media map already
+  current.". New failures on this existing action: an nginx agent whose status lacks
+  `rules.map` → `maintenance.action_refused` before anything is sent; a map hash reported
+  other than the one sent → `maintenance.action_failed` (the include is then never sent).
+- New agent reasons reach the wire through `wire.ts`: `host_busy` → `publication_host.busy`
+  (retryable, reason-before-status); `host_lock_missing` and the `map_*` reasons
+  (`map_unmanaged`, `map_refused`, `map_contribution_foreign`, `map_contribution_newer`,
+  `map_envelope_rebind`, `map_renderer_missing`) → `publication_host.rejected` /
+  `publication_host.failed` by status class, with the engine-authored sentence for
+  `rejected`.
+- TS ground truth: `test/unit/publication_host_widget_native.test.ts`,
+  `test/unit/publication_host_rules_native.test.ts`; client:
+  `client/dedalo/test/client/js/test_publication_hosts.js`. No fixture interaction.

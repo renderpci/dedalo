@@ -1,0 +1,2 @@
+# /etc/sudoers-rs.local — typed: included by sudoers-rs_include (a relative @include).
+@includedir /etc/sudoers.d

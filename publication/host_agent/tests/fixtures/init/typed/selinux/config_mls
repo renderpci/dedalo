@@ -1,0 +1,4 @@
+# This file controls the state of SELinux on the system.
+SELINUX=enforcing
+# SELINUXTYPE= can take one of these three values:
+SELINUXTYPE=mls

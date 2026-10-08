@@ -58,6 +58,13 @@
  * `probe_public` (root) probes one host now; `apply_rules` probes right after a
  * successful apply and answers the verdict as the extension key `probe`.
  *
+ * THE HOST-WIDE NGINX MAP (provision init §13.4). `apply_rules` on an nginx host pushes the
+ * engine's http{} map (`rules.map`) BEFORE the media include — the include uses the map's
+ * variables, so a map failure stops the apply before the include is sent. An agent whose status
+ * has no `rules.map` predates the host map and is refused (update the agent); `managed: false`
+ * (the operator places the map by hand) skips the map. Each row carries `nginx_map`
+ * (rules.ts nginxMapPanel: expected, applied, host hash, contribution count, managed, drift).
+ *
  * Hosts are ADDED only by `scripts/publication_host_pair.ts` on the work host. The panel
  * edits `public_url` / `qualities` / `probe` and removes a host; it never takes an
  * address or a credential.
@@ -73,6 +80,8 @@ import {
 	AGENT_RELEASE_ID,
 	type AgentStatus,
 	type MediaProbe,
+	type RulesMapApplied,
+	type RulesMapInput,
 } from '../../publication_host/agent_client.ts';
 import type {
 	ApiLockstepPanel,
@@ -106,7 +115,12 @@ import {
 	validateProbePath,
 	validateQualities,
 } from '../../publication_host/registry.ts';
-import type { ExpectedRules, ExpectedRulesOutcome } from '../../publication_host/rules.ts';
+import type {
+	ExpectedNginxMap,
+	ExpectedRules,
+	ExpectedRulesOutcome,
+	NginxMapPanel,
+} from '../../publication_host/rules.ts';
 import type { HostRuntime } from '../../publication_host/runtime.ts';
 // BY NAME, never a namespace: publication_host_door_tripwire allows only the door to load
 // the TLS material (readHostTls); a namespace / whole-module import() would count as one.
@@ -128,9 +142,18 @@ type HostFieldPatch = Partial<Pick<PublicationHostRecord, 'public_url' | 'qualit
 /** A served row: Task 6's row, plus the edit-form fields for root, minus the address otherwise. */
 export type ServedHostRow = Omit<HostPanelRow, 'address_label'> & {
 	address_label?: string;
+	/**
+	 * The host-wide nginx map's state (null: none applies, or no status was obtained). A caller
+	 * who is not root gets it WITHOUT the host-wide facts (`host_hash`, `contributions`,
+	 * `invalid`: what the other instances on that host contribute) — no topology below root.
+	 */
+	nginx_map: NginxMapPanel | ReducedNginxMapPanel | null;
 	qualities?: string[] | null;
 	probe?: ProbePaths;
 };
+
+/** The non-root view of the map: this instance's own state only. */
+export type ReducedNginxMapPanel = Omit<NginxMapPanel, 'host_hash' | 'contributions' | 'invalid'>;
 
 /** Everything the widget touches outside itself. One object, so a test can replace all of it. */
 export interface PublicationHostsDeps {
@@ -154,7 +177,13 @@ export interface PublicationHostsDeps {
 		api: ApiName,
 		actor: string,
 	): Promise<{ from: string; to: string }>;
+	/** rules.map: this instance's contribution to the host-wide nginx http{} map. */
+	hostApplyRulesMap(name: string, req: RulesMapInput, actor: string): Promise<RulesMapApplied>;
 	expectedRulesForHost(record: PublicationHostRecord, status: AgentStatus): ExpectedRules;
+	/** The map apply_rules pushes, or null (apache, no media, unmanaged, an outdated agent). */
+	expectedNginxMap(status: AgentStatus): ExpectedNginxMap | null;
+	/** The row's map state (rules.ts), from a status this call obtained. */
+	nginxMapPanel(status: AgentStatus): NginxMapPanel | null;
 	expectedRulesOutcome(record: PublicationHostRecord, status: AgentStatus): ExpectedRulesOutcome;
 	statusOutcomeFromError(error: unknown): StatusOutcome;
 	buildHostPanelRow(input: HostStatusInput): HostPanelRow;
@@ -227,7 +256,10 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 		hostMediaProbe: client.hostMediaProbe,
 		hostApplyRules: client.hostApplyRules,
 		hostRollbackRelease: client.hostRollbackRelease,
+		hostApplyRulesMap: client.hostApplyRulesMap,
 		expectedRulesForHost: rules.expectedRulesForHost,
+		expectedNginxMap: rules.expectedNginxMap,
+		nginxMapPanel: rules.nginxMapPanel,
 		expectedRulesOutcome: rules.expectedRulesOutcome,
 		statusOutcomeFromError: status.statusOutcomeFromError,
 		buildHostPanelRow: status.buildHostPanelRow,
@@ -413,14 +445,38 @@ function readExpected(
 	}
 }
 
+/** The row's map state, only from a status this call obtained. An engine bug reads "not computed". */
+function readMapPanel(
+	record: PublicationHostRecord,
+	status: StatusOutcome,
+	deps: PublicationHostsDeps,
+): NginxMapPanel | null {
+	if (!status.ok) return null;
+	try {
+		return deps.nginxMapPanel(status.status);
+	} catch (error) {
+		console.error(`[publication_hosts] nginx map state failed host=${record.name}`, error);
+		return null;
+	}
+}
+
 function servedRow(
 	row: HostPanelRow,
 	record: PublicationHostRecord,
 	isRoot: boolean,
+	nginxMap: NginxMapPanel | null,
 ): ServedHostRow {
-	if (isRoot) return { ...row, qualities: record.qualities, probe: record.probe };
+	if (isRoot)
+		return { ...row, nginx_map: nginxMap, qualities: record.qualities, probe: record.probe };
 	const { address_label: _topology, ...reduced } = row;
-	return reduced;
+	return { ...reduced, nginx_map: reducedMap(nginxMap) };
+}
+
+/** Drops the host-wide facts (other instances on that host) from a non-root row's map. */
+function reducedMap(map: NginxMapPanel | null): ReducedNginxMapPanel | null {
+	if (map === null) return null;
+	const { host_hash: _host, contributions: _count, invalid: _invalid, ...own } = map;
+	return own;
 }
 
 async function hostRow(
@@ -438,7 +494,10 @@ async function hostRow(
 		engineVersion: deps.engineVersion(),
 		bunPin: deps.bunPin(),
 	});
-	return servedRow(row, record, isRoot);
+	// The row builder is host_status.ts's (never patched here); a pairing it did not prove
+	// contributes no map state either.
+	const nginxMap = row.pairing_proved ? readMapPanel(record, status, deps) : null;
+	return servedRow(row, record, isRoot, nginxMap);
 }
 
 /** The host's last public-URL probe from the panel's ONE runtime read, or never probed. */
@@ -658,13 +717,70 @@ function rulesAppliedMsg(
 	server: RulesServer,
 	hash: string,
 	dropped: string[],
+	map: MapStep,
 ): string {
 	const note = dropped.length === 0 ? '' : ` Not public, left out: ${dropped.join(', ')}.`;
-	return `OK. Media rules applied on '${name}' (${server}, ${hash.slice(0, 12)}).${note}`;
+	const mapNote =
+		map.state === 'pushed'
+			? ` Host media map ${map.host_hash.slice(0, 12)} (${map.contributions} instance${map.contributions === 1 ? '' : 's'}).`
+			: map.state === 'current'
+				? ' Host media map already current.'
+				: '';
+	return `OK. Media rules applied on '${name}' (${server}, ${hash.slice(0, 12)}).${mapNote}${note}`;
+}
+
+/** What the map step did: pushed, already current, or not applicable (apache, unmanaged). */
+type MapStep =
+	| { state: 'pushed'; hash: string; host_hash: string; contributions: number }
+	| { state: 'current'; hash: string }
+	| { state: 'not_applicable' };
+
+/**
+ * The host-wide nginx map BEFORE the include (provision init §13.4). An nginx agent without
+ * `rules.map` predates the host map: refused, nothing sent. `managed: false` skips. A map the
+ * agent already reports loaded is not re-pushed. A failed push throws, so the include (which
+ * needs the map's variables) is never sent after it.
+ */
+async function applyMapStep(
+	deps: PublicationHostsDeps,
+	name: string,
+	status: AgentStatus,
+	actor: string,
+): Promise<MapStep> {
+	if (status.rules.server !== 'nginx') return { state: 'not_applicable' };
+	if (status.rules.map === undefined) {
+		refuseAction(
+			`Error. The agent on '${name}' predates the host-wide nginx media map, so its media rules cannot be applied safely. Update the agent on that host, then apply again.`,
+			{ host: name },
+		);
+	}
+	const expected = deps.expectedNginxMap(status);
+	if (expected === null) return { state: 'not_applicable' };
+	const reported = status.rules.map?.managed === true ? status.rules.map.hash : null;
+	if (reported === expected.hash) return { state: 'current', hash: expected.hash };
+	const applied = await deps.hostApplyRulesMap(
+		name,
+		{ text: expected.text, hash: expected.hash },
+		actor,
+	);
+	if (applied.hash !== expected.hash) {
+		console.warn(`[publication_hosts] map hash mismatch host=${name} reported=${applied.hash}`);
+		failAction(
+			`Error. Host '${name}' reports ${reportedHash(applied.hash)} for the media map, but ${expected.hash} was sent. Check the agent audit log.`,
+			{ coordinates: { host: name } },
+		);
+	}
+	return {
+		state: 'pushed',
+		hash: applied.hash,
+		host_hash: applied.host_hash,
+		contributions: applied.contributions,
+	};
 }
 
 /**
- * apply_rules: status (pairing proved first) → expected rules from THAT status → rules.apply.
+ * apply_rules: status (pairing proved first) → expected rules from THAT status → on nginx the
+ * host-wide map (applyMapStep, which may refuse or stop the apply) → rules.apply.
  * A `none` host (no media) is refused before anything is sent; `shared` and `copy` get the
  * same profile over their media root (rules.ts rulesRootFor). A reported hash other
  * than the one sent is a failure, never an OK.
@@ -682,6 +798,8 @@ const applyRulesAction: BoundAction = async (options, principal, loadDeps) => {
 		);
 	}
 	const rules = renderRules(deps, record, status);
+	const map = await applyMapStep(deps, name, status, actorFor(principal));
+	if (map.state === 'pushed') logMutation('apply_rules_map', name, principal, `hash=${map.hash}`);
 	const request = { server: rules.server, text: rules.text, hash: rules.hash };
 	const applied = await deps.hostApplyRules(name, request, actorFor(principal));
 	if (applied.hash !== rules.hash) {
@@ -697,8 +815,8 @@ const applyRulesAction: BoundAction = async (options, principal, loadDeps) => {
 	// the apply (the rules ARE applied): a probe that cannot run reads `unknown`.
 	const probe = await deps.probeAfterRulesApplied(name);
 	return {
-		data: { host: name, server: rules.server, hash: rules.hash, dropped: rules.dropped },
-		msg: rulesAppliedMsg(name, rules.server, rules.hash, rules.dropped),
+		data: { host: name, server: rules.server, hash: rules.hash, dropped: rules.dropped, map },
+		msg: rulesAppliedMsg(name, rules.server, rules.hash, rules.dropped, map),
 		extend: { probe },
 	};
 };

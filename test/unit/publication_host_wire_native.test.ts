@@ -272,6 +272,45 @@ describe('agent answer → code', () => {
 		['unknown route (404, version skew)', 404, problemText(404), 'publication_host.failed'],
 		['method not allowed (405)', 405, problemText(405), 'publication_host.failed'],
 		['host action failed (503)', 503, problemText(503, 'reload_failed'), 'publication_host.failed'],
+		// the host web lock and the host-wide nginx map (provision init §13.4)
+		['host web lock held (503)', 503, problemText(503, 'host_busy'), 'publication_host.busy'],
+		[
+			'host web lock missing (503)',
+			503,
+			problemText(503, 'host_lock_missing'),
+			'publication_host.failed',
+		],
+		[
+			'map placed by hand (409)',
+			409,
+			problemText(409, 'map_unmanaged'),
+			'publication_host.rejected',
+		],
+		['map grammar (422)', 422, problemText(422, 'map_refused'), 'publication_host.rejected'],
+		[
+			'newer contribution (409)',
+			409,
+			problemText(409, 'map_contribution_newer'),
+			'publication_host.rejected',
+		],
+		[
+			'envelope rebind (409)',
+			409,
+			problemText(409, 'map_envelope_rebind'),
+			'publication_host.rejected',
+		],
+		[
+			'renderer missing (409)',
+			409,
+			problemText(409, 'map_renderer_missing'),
+			'publication_host.rejected',
+		],
+		[
+			'foreign contribution (409)',
+			409,
+			problemText(409, 'map_contribution_foreign'),
+			'publication_host.rejected',
+		],
 		['internal (500), body not JSON', 500, '<html>oops</html>', 'publication_host.failed'],
 	];
 

@@ -1,0 +1,16 @@
+VirtualHost configuration:
+192.0.2.10:8443        other.org (/etc/apache2/sites-enabled/wildcard.conf:1)
+*:443                  is a NameVirtualHost
+         default server www.museum.org (/etc/apache2/sites-enabled/alias_only.conf:1)
+         port 443 namevhost www.museum.org (/etc/apache2/sites-enabled/alias_only.conf:1)
+                 alias museum.org
+         port 443 namevhost museum.org (/etc/apache2/sites-enabled/duplicate_a.conf:1)
+         port 443 namevhost museum.org (/etc/apache2/sites-enabled/duplicate_b.conf:2)
+         port 443 namevhost museum.org (/etc/apache2/sites-enabled/our_reference.conf:1)
+         port 443 namevhost www.museum.org (/etc/apache2/sites-enabled/guide_manual.conf:1)
+                 alias museum.org
+         port 443 namevhost [::1] (/etc/apache2/sites-enabled/ipv6.conf:1)
+                 wild alias *.lan
+ServerRoot: "/etc/apache2"
+User: name="www-data" id=33
+Group: name="www-data" id=33

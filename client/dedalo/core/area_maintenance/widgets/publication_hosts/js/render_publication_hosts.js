@@ -37,6 +37,10 @@ import { render_api_lockstep, render_runtime_invalid } from './render_api_lockst
  *   verdict, beside its `public_gate` check).
  *   `bun` is {expected, reported}: the work system's pinned Bun beside the
  *   host's running Bun (both fact rows); the `bun_version` check judges them.
+ *   `nginx_map` is the host-wide nginx media map (provision init §13.4):
+ *   {managed, expected, applied, host_hash, contributions, invalid, refused,
+ *   drift, agent_outdated} on an nginx host, null otherwise (render_nginx_map);
+ *   a non-root row omits host_hash, contributions and invalid.
  *
  * THE CONTRACT WITH THE SERVER is update_code's: ids and facts, never
  * sentences. Check rows go through the shared check_row with the
@@ -314,6 +318,8 @@ const render_host = function (self, host, is_root, body_response, parent) {
 		rules.reported,
 		true,
 	);
+	// the host-wide nginx media map (nginx hosts only; null otherwise)
+	render_nginx_map(facts, host.nginx_map);
 	// Bun side by side: the work system's pin vs the host's running Bun (the
 	// `bun_version` check below is red when they differ)
 	const bun = host.bun || {};
@@ -336,6 +342,56 @@ const render_host = function (self, host, is_root, body_response, parent) {
 
 	return card;
 }; //end render_host
+
+/**
+ * NGINX_MAP_STATE
+ * The host-wide nginx map's one-word state, from the server's facts (never a
+ * sentence): `agent_outdated` (the agent predates the host map: drift), a
+ * refusal root recorded for this instance (its reason), `unmanaged` (the
+ * operator places the map by hand: not drift), `drift` (expected ≠ applied) or
+ * `ok`. The CSS state follows: drift and refusals are danger, unmanaged is
+ * neutral.
+ * @param {Object} map - row.nginx_map (server: rules.ts nginxMapPanel)
+ * @returns {{text:string, state:string}}
+ */
+export const nginx_map_state = function (map) {
+	if (map.agent_outdated === true) return { text: 'agent_outdated', state: 'blocked' };
+	if (typeof map.refused === 'string' && map.refused !== '') {
+		return { text: map.refused, state: 'blocked' };
+	}
+	if (map.managed !== true) return { text: 'unmanaged', state: 'ok' };
+	return map.drift === true ? { text: 'drift', state: 'blocked' } : { text: 'ok', state: 'ok' };
+}; //end nginx_map_state
+
+/**
+ * RENDER_NGINX_MAP
+ * The host-wide nginx media map's facts (provision init §13.4): its state, and
+ * for a managed map the expected and applied hashes, the shared host hash and
+ * how many instances the host file merges. A host hash other than this
+ * instance's own is "shared with n instances", never drift. Nothing for a host
+ * the map does not apply to (Apache, no media).
+ * @param {HTMLElement} facts
+ * @param {Object|null|undefined} map
+ * @returns {void}
+ */
+const render_nginx_map = function (facts, map) {
+	if (!map || typeof map !== 'object') return;
+	const { text, state } = nginx_map_state(map);
+	const row = fact_row(facts, get_label.publication_hosts_map_state || 'Host media map', text, true);
+	row.classList.add('check_row', `state_${state}`, 'nginx_map_state');
+	if (map.managed !== true) return;
+	fact_row(facts, get_label.publication_hosts_map_expected || 'Expected media map hash', map.expected, true);
+	fact_row(facts, get_label.publication_hosts_map_applied || 'Applied media map hash', map.applied, true);
+	// host-wide facts: absent (not null) on a non-root row, which shows this instance only
+	if (!Object.hasOwn(map, 'host_hash')) return;
+	fact_row(facts, get_label.publication_hosts_map_host_hash || 'Shared host map hash', map.host_hash, true);
+	fact_row(
+		facts,
+		get_label.publication_hosts_map_contributions || 'Instances in the host map',
+		Number.isInteger(map.contributions) ? map.contributions : null,
+		false,
+	);
+}; //end render_nginx_map
 
 /**
  * ACTION_BUTTON

@@ -1,0 +1,4 @@
+# /etc/sudoers-rs — typed: the policy reaches /etc/sudoers.d through an included file.
+Defaults	env_reset
+root	ALL=(ALL:ALL) ALL
+@include sudoers-rs.local

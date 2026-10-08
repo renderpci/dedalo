@@ -1,0 +1,16 @@
+[08-Oct-2026 10:00:00] NOTICE: [global]
+[08-Oct-2026 10:00:00] NOTICE: 	pid = /run/php-fpm/php-fpm.pid
+[08-Oct-2026 10:00:00] NOTICE: [museum_org]
+[08-Oct-2026 10:00:00] NOTICE: 	prefix = undefined
+[08-Oct-2026 10:00:00] NOTICE: 	user = museum
+[08-Oct-2026 10:00:00] NOTICE: 	group = museum
+[08-Oct-2026 10:00:00] NOTICE: 	listen = /run/php-fpm/museum.sock
+[08-Oct-2026 10:00:00] NOTICE: 	chdir = /home/museum.org/httpdocs
+[08-Oct-2026 10:00:00] NOTICE: 	php_admin_value[error_log] = /home/museum.org/logs/php_error.log
+[08-Oct-2026 10:00:00] NOTICE: 	php_admin_value[session.save_path] = /var/lib/php/session
+[08-Oct-2026 10:00:00] NOTICE: [www]
+[08-Oct-2026 10:00:00] NOTICE: 	user = apache
+[08-Oct-2026 10:00:00] NOTICE: 	group = apache
+[08-Oct-2026 10:00:00] NOTICE: 	listen = /run/php-fpm/www.sock
+[08-Oct-2026 10:00:00] NOTICE: 	env[DB_PASSWORD] = not-a-real-secret
+[08-Oct-2026 10:00:00] NOTICE: configuration file /etc/php-fpm.conf test is successful

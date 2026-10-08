@@ -29,6 +29,11 @@ describe('audit', () => {
     expect((await readAudit(auditPath(), 1)).map(e => e.actor)).toEqual(['bo']);
   });
 
+  test('rules.map is an action of the trail (the host-wide nginx map contribution)', async () => {
+    await audit({ actor: 'ana', action: 'rules.map', outcome: 'refused', detail: { result: 'map_unmanaged' } });
+    expect((await readAudit())[0]).toMatchObject({ action: 'rules.map', outcome: 'refused', detail: { result: 'map_unmanaged' } });
+  });
+
   test('a failed write never throws into the request path', async () => {
     const unwritable = join(await freshScratch('auditfail'), 'missing_dir', 'audit.jsonl');
     await audit({ actor: 'ana', action: 'rules.apply', outcome: 'failed' }, unwritable);

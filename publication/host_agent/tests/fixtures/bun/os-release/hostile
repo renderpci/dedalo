@@ -1,0 +1,2 @@
+ID=$(touch /tmp/dd_os_release_was_sourced)
+ID_LIKE=`touch /tmp/dd_os_release_was_sourced`

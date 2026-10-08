@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "proc(5) /proc/cpuinfo: an AVX2 Xeon, a Sandy Bridge Xeon without AVX2 (avx512vl present but no avx2 word), a Neoverse-N1",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "systemctl(1) show -p … and list-units --all --plain --no-legend output as printed by systemd 239-257; systemd 237 is Ubuntu 18.04's (below the floor)",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

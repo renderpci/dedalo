@@ -29,6 +29,22 @@
  * and configtest would fail EROFS. Those two paths are writable in the namespace (`-`: absent
  * is fine); DAC still applies, so only the sudo'd root child can write them.
  *
+ * HOME AND LOG DIRECTORIES (spec S10, §5.9). ProtectHome= is a HOST-WIDE fact (layout.protectHome,
+ * derived with every sibling declaration): the sudo'd configtest runs in THIS namespace, and a
+ * hidden /home would turn a sibling's include under a home into a zero match — configtest would
+ * test another config than the root master loads. On nginx the vhost's log directories are opened
+ * by `nginx -t` too: every declared `web.log_dirs` entry is writable here with systemd's `-`
+ * prefix (absent is fine, never 226/NAMESPACE). The home layout's site logs live in
+ * `/var/log/nginx/<domain>` (layout.ts webLogBase), under NGINX_CONFIGTEST_WRITE_PATHS already.
+ *
+ * HOST-WIDE STATE (spec S11, §13.5). Every agent gets PUBHOST_GROUP (dedalo_pubhost) through
+ * SupplementaryGroups= — it opens the host web lock read-only to flock it (no write path needed),
+ * and on nginx `conf_d` writes its own map contribution in the sticky contrib directory (its only
+ * host-wide write path, `-` prefixed). No existing account is ever modified to join it.
+ *
+ * THE systemd PROFILE (spec S10, ./systemd_floors.ts): every directive form is dated and at most
+ * SYSTEMD_FLOOR (247: LoadCredential= delivers the token); `checkDirectives` throws otherwise.
+ *
  * Apache's `-t` writes nothing while Apache runs. Debian's apache2ctl creates /run/apache2 and
  * /run/lock/apache2 only when they are MISSING (Apache not started since boot, /run is tmpfs);
  * that mkdir fails EROFS here, and no ReadWritePaths= can admit it short of all of /run. Not
@@ -38,7 +54,8 @@
 
 import { dirname, join } from 'node:path';
 import type { AgentLayout } from '../layout';
-import { SERVICE_TOKEN_CREDENTIAL } from '../layout';
+import { PUBHOST_GROUP, SERVICE_TOKEN_CREDENTIAL } from '../layout';
+import { checkDirectives } from './systemd_floors';
 import type { Artifact, RenderFacts, Renderer, UnitGroups } from './types';
 import { artifact } from './types';
 
@@ -73,15 +90,28 @@ export const AGENT_ENV_FILE_VAR = 'DEDALO_HOST_AGENT_ENV_FILE';
  */
 export const RUNTIME_DIRECTORY_PATTERN = /^[a-z][a-z0-9_-]*(\/[a-z0-9][a-z0-9_-]*)*$/;
 
-const HOME_TREES = /^\/(home|root|run\/user)(\/|$)/;
-
 /**
- * layout.identity.agentSupplementaryGroups (the v2 group — layout.ts owns the list),
- * without the one Group= already gives (unix: the engine group).
+ * layout.identity.agentSupplementaryGroups (the v2 group — layout.ts owns the list) plus
+ * PUBHOST_GROUP (spec S11: the host web lock, the map contribution), without the one Group=
+ * already gives (unix: the engine group). plan.ts judges the agent's access with this same list.
  */
 export function agentSupplementaryGroups(layout: AgentLayout): string[] {
   const primary = layout.listen.kind === 'unix' ? layout.identity.engineGroup : null;
-  return layout.identity.agentSupplementaryGroups.filter(group => group !== primary);
+  const groups = [...layout.identity.agentSupplementaryGroups];
+  if (!groups.includes(PUBHOST_GROUP)) groups.push(PUBHOST_GROUP);
+  return groups.filter(group => group !== primary);
+}
+
+/**
+ * The directories `nginx -t` opens for writing inside this namespace beyond the distribution's own
+ * (NGINX_CONFIGTEST_WRITE_PATHS): every declared vhost log directory, `-` prefixed (an absent one
+ * is fine). Empty on apache.
+ */
+export function nginxLogWritePaths(layout: AgentLayout): string[] {
+  if (layout.web.server !== 'nginx') return [];
+  const dirs: string[] = [];
+  for (const dir of layout.web.logDirs) if (!dirs.includes(dir)) dirs.push(dir);
+  return dirs.map(dir => `-${dir}`);
 }
 
 /**
@@ -121,11 +151,6 @@ export const agentUnitRenderer: Renderer = {
       runtimeDirectory = listen.runtimeDirectory;
     }
 
-    // ProtectHome=yes would HIDE a root under /home: read-only keeps it visible, and
-    // ReadWritePaths= still lifts the state root.
-    const homeBound = [layout.state.root, layout.agentDir, layout.bunBin, layout.media.root ?? ''].some(path =>
-      HOME_TREES.test(path),
-    );
     const groups = agentUnitGroups(layout);
 
     const lines: string[] = [
@@ -152,6 +177,7 @@ export const agentUnitRenderer: Renderer = {
     if (groups.supplementary.length > 0) {
       lines.push(
         `# v2/shared is root:<v2 group> 0750: the agent checks v2.env there. v1/shared needs no group (0711).`,
+        `# ${PUBHOST_GROUP}: the host web lock (opened read-only) and the host map contribution.`,
         `SupplementaryGroups=${groups.supplementary.join(' ')}`,
       );
     }
@@ -162,10 +188,12 @@ export const agentUnitRenderer: Renderer = {
       `Environment=NODE_ENV=production`,
       `# src/config.ts PARSES this file itself (no EnvironmentFile=: one parser, one grammar).`,
       `Environment=${AGENT_ENV_FILE_VAR}=${layout.envFile}`,
+    );
+    if (runtimeDirectory !== null) lines.push(`RuntimeDirectory=${runtimeDirectory}`, `RuntimeDirectoryMode=0750`);
+    lines.push(
       `# The bearer: a root-only file -> $CREDENTIALS_DIRECTORY/${SERVICE_TOKEN_CREDENTIAL}. Never in an env file.`,
       `LoadCredential=${SERVICE_TOKEN_CREDENTIAL}:${layout.serviceTokenPath}`,
     );
-    if (runtimeDirectory !== null) lines.push(`RuntimeDirectory=${runtimeDirectory}`, `RuntimeDirectoryMode=0750`);
 
     lines.push(
       ``,
@@ -173,7 +201,8 @@ export const agentUnitRenderer: Renderer = {
       `# None of the directives that imply it may appear in this unit (see the renderer header).`,
       `NoNewPrivileges=no`,
       `ProtectSystem=strict`,
-      `ProtectHome=${homeBound ? 'read-only' : 'yes'}`,
+      `# Host-wide (spec S10): read-only when ANY declaration on this host lives under a home tree.`,
+      `ProtectHome=${layout.protectHome}`,
       `PrivateTmp=yes`,
       `ProtectProc=invisible`,
       `UMask=0027`,
@@ -183,7 +212,10 @@ export const agentUnitRenderer: Renderer = {
     if (layout.media.mode === 'copy' && layout.media.root !== null) lines.push(`ReadWritePaths=${layout.media.root}`);
     if (layout.web.server === 'nginx') {
       lines.push(`# nginx -t (run as root through sudo, inside this namespace) opens these.`);
-      for (const path of NGINX_CONFIGTEST_WRITE_PATHS) lines.push(`ReadWritePaths=${path}`);
+      for (const path of [...NGINX_CONFIGTEST_WRITE_PATHS, ...nginxLogWritePaths(layout)]) lines.push(`ReadWritePaths=${path}`);
+      if (layout.web.nginxMap === 'conf_d') {
+        lines.push(`# Its own host map contribution only (the live map is root's).`, `ReadWritePaths=-${layout.host.nginxContribDir}`);
+      }
     }
     lines.push(
       ``,
@@ -200,12 +232,13 @@ export const agentUnitRenderer: Renderer = {
       ``,
     );
 
+    const body = checkDirectives(lines);
     return [
       artifact(layout, {
         kind: 'unit_agent',
         path: layout.agentUnitPath,
         mode: 'unitFile',
-        body: lines.join('\n'),
+        body: body.join('\n'),
         effects: ['daemon_reload', 'restart_agent'],
         service: { unit: layout.agentUnitName, start: true },
       }),

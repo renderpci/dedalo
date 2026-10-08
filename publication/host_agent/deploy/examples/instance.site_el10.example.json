@@ -1,0 +1,24 @@
+{
+  "instance": "example",
+  "listen": { "kind": "unix" },
+  "agent_user": "dedalo-pubhost",
+  "engine_group": "dedalo",
+  "agent_dir": "/opt/dedalo_publication_host/host_agent",
+  "web": { "server": "apache", "unit": "httpd" },
+  "site": {
+    "domain": "example.org",
+    "fpm": { "flavor": "el", "version": "8.3" }
+  },
+  "v1": { "user": "example_v1" },
+  "state_root": "/srv/dedalo_publication_host/example",
+  "media": { "mode": "shared", "root": "/mnt/dedalo_media" },
+  "php_bin": "/usr/bin/php",
+  "bun_bin": "/opt/dedalo_publication_host/bun/bin/bun",
+  "v2": {
+    "unit": "dedalo-publication-api-v2",
+    "user": "dedalo-api-v2",
+    "group": "dedalo-api-v2",
+    "port": 3100,
+    "health_url": "http://127.0.0.1:3100/health"
+  }
+}

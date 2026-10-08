@@ -18,6 +18,9 @@
  *
  * MemoryDenyWriteExecute= is deliberately ABSENT: Bun's JIT needs W+X pages.
  *
+ * THE systemd PROFILE (spec S10, ./systemd_floors.ts): every directive form is dated and at most
+ * SYSTEMD_FLOOR; `checkDirectives` throws otherwise.
+ *
  * THE SCRATCH TEMPLATE (`v2_scratch_unit`, `<v2.unit>-scratch@.service`): the agent boots a
  * release under test on a scratch port as THIS unit's instance `@<port>` (polkit grants exactly
  * start/stop of `<v2.unit>-scratch@<4-5 digits>.service`), never as its own child — pushed release
@@ -29,6 +32,8 @@
 
 import { join } from 'node:path';
 import type { AgentLayout } from '../layout';
+import { HOME_TREES } from '../layout';
+import { checkDirectives } from './systemd_floors';
 import type { Artifact, RenderFacts, Renderer, UnitGroups } from './types';
 import { artifact } from './types';
 
@@ -38,8 +43,6 @@ export const V2_ENTRY = 'src/index.ts';
 export const V2_ENV_FILE_NAME = 'v2.env';
 export const V2_LOOPBACK_HOST = '127.0.0.1';
 export const ENV_BIN = '/usr/bin/env';
-
-const HOME_TREES = /^\/(home|root|run\/user)(\/|$)/;
 
 export function v2ExecStart(layout: AgentLayout, port: string = String(layout.v2.port)): string {
   return `${ENV_BIN} NODE_ENV=production HOST=${V2_LOOPBACK_HOST} PORT=${port} ${layout.bunBin} run ${V2_ENTRY}`;
@@ -71,6 +74,7 @@ function refuseSharedUser(kind: string, layout: AgentLayout): void {
 
 /** The sandbox both v2 units share (the public-facing code, current or under test). */
 function v2Sandbox(layout: AgentLayout): string[] {
+  // v2's OWN paths (it runs no configtest, so the host-wide agent fact of spec S10 does not apply).
   const homeBound = HOME_TREES.test(layout.state.root) || HOME_TREES.test(layout.bunBin);
   return [
     `NoNewPrivileges=yes`,
@@ -92,6 +96,11 @@ function v2Sandbox(layout: AgentLayout): string[] {
     `UMask=0077`,
     `# No ReadWritePaths=: v2 writes nothing.`,
   ];
+}
+
+/** The unit body: every directive form dated and within SYSTEMD_FLOOR (./systemd_floors.ts). */
+function unitBody(lines: readonly string[]): string {
+  return checkDirectives(lines).join('\n');
 }
 
 export const v2UnitRenderer: Renderer = {
@@ -147,7 +156,7 @@ export const v2UnitRenderer: Renderer = {
         kind: 'unit_v2',
         path: layout.v2UnitPath,
         mode: 'unitFile',
-        body: lines.join('\n'),
+        body: unitBody(lines),
         effects: ['daemon_reload', 'restart_v2'],
         service: { unit: layout.v2.unit, start: false },
       }),
@@ -202,7 +211,7 @@ export const v2ScratchUnitRenderer: Renderer = {
         kind: 'v2_scratch_unit',
         path: layout.v2ScratchUnitPath,
         mode: 'unitFile',
-        body: lines.join('\n'),
+        body: unitBody(lines),
         effects: ['daemon_reload'],
       }),
     ];

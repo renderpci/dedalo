@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "php-fpm -tt (NOTICE lines) and pool files: a site pool whose chdir and error_log lie under the site home, a pool with an env[] secret (never kept), a failed -tt",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

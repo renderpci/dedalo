@@ -58,7 +58,11 @@ import {
 	saveRegistry,
 	updateRegistry,
 } from '../../src/core/publication_host/registry.ts';
-import type { ExpectedRulesOutcome } from '../../src/core/publication_host/rules.ts';
+import {
+	type ExpectedRulesOutcome,
+	expectedNginxMap as realExpectedNginxMap,
+	nginxMapPanel as realNginxMapPanel,
+} from '../../src/core/publication_host/rules.ts';
 import { defaultHostRuntime } from '../../src/core/publication_host/runtime.ts';
 import type { SecretPresenceOutcome } from '../../src/core/publication_host/secrets.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -91,6 +95,7 @@ const ROOT_ROW_KEYS = [
 	'bundle_present',
 	'checks',
 	'name',
+	'nginx_map',
 	'pairing_proved',
 	'probe',
 	'public_probe',
@@ -105,6 +110,7 @@ const ADMIN_ROW_KEYS = [
 	'bundle_present',
 	'checks',
 	'name',
+	'nginx_map',
 	'pairing_proved',
 	'public_probe',
 	'public_url',
@@ -155,6 +161,24 @@ function agentStatus(over: Partial<AgentStatus> = {}): AgentStatus {
 		...over,
 	};
 }
+
+const MAP_HASH = 'e'.repeat(64);
+
+/** An nginx host whose http{} map is the provisioned host-wide include. */
+function nginxStatus(
+	map: AgentStatus['rules']['map'] = MANAGED_MAP,
+	over: Partial<AgentStatus> = {},
+): AgentStatus {
+	return agentStatus({ rules: { server: 'nginx', hash: 'b'.repeat(64), map }, ...over });
+}
+const MANAGED_MAP = {
+	managed: true as const,
+	hash: null,
+	host_hash: null,
+	contributions: 0,
+	invalid: 0,
+	refused: null,
+};
 
 const EXPECTED = {
 	server: 'apache' as const,
@@ -227,6 +251,15 @@ function harness(
 			calls.push(`hostRollbackRelease:${name}:${api}:${actor}`);
 			return { from: '7.0.0_a1b2c3d', to: '7.0.0_9f8e7d6' };
 		},
+		hostApplyRulesMap: async (name, req, actor) => {
+			calls.push(`hostApplyRulesMap:${name}:${req.hash}:${actor}`);
+			return { hash: req.hash, host_hash: req.hash, contributions: 1, reloaded: true };
+		},
+		expectedNginxMap: (status) => {
+			calls.push('expectedNginxMap');
+			return realExpectedNginxMap(status) === null ? null : { text: '# map\n', hash: MAP_HASH };
+		},
+		nginxMapPanel: realNginxMapPanel,
 		expectedRulesForHost: () => {
 			calls.push('expectedRulesForHost');
 			return EXPECTED;
@@ -804,6 +837,7 @@ describe('apply_rules', () => {
 			server: 'apache',
 			hash: 'c'.repeat(64),
 			dropped: ['image/original'],
+			map: { state: 'not_applicable' },
 		});
 		expect(response.msg).toBe(
 			`OK. Media rules applied on 'pub_a' (apache, ${'c'.repeat(12)}). Not public, left out: image/original.`,
@@ -889,6 +923,155 @@ describe('apply_rules', () => {
 			return;
 		}
 		throw new DedaloError('internal.unexpected', { message: 'expected a failure' });
+	});
+});
+
+describe('apply_rules on nginx: the host-wide map first (provision init §13.4)', () => {
+	const NGINX_EXPECTED = { ...EXPECTED, server: 'nginx' as const };
+
+	test('map before include: rules.map, then rules.apply; the map step is reported', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => nginxStatus(),
+			expectedRulesForHost: () => NGINX_EXPECTED,
+		});
+		const response = await run(h, 'apply_rules', { name: 'pub_a' });
+		expect(h.calls).toEqual([
+			'loadRegistry',
+			'expectedNginxMap',
+			`hostApplyRulesMap:pub_a:${MAP_HASH}:dedalo_user:-1`,
+			`hostApplyRules:pub_a:nginx:${'c'.repeat(64)}:dedalo_user:-1`,
+			'probeAfterRulesApplied:pub_a',
+		]);
+		expect((response.data as Record<string, unknown>).map).toEqual({
+			state: 'pushed',
+			hash: MAP_HASH,
+			host_hash: MAP_HASH,
+			contributions: 1,
+		});
+		expect(response.msg).toContain(`Host media map ${'e'.repeat(12)} (1 instance).`);
+	});
+
+	test('a map failure stops the include (the include needs the map variables)', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => nginxStatus(),
+			expectedRulesForHost: () => NGINX_EXPECTED,
+			hostApplyRulesMap: async () => {
+				throw new DedaloError('publication_host.busy');
+			},
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe('publication_host.busy');
+		expect(h.calls.some((c) => c.startsWith('hostApplyRules:'))).toBe(false);
+	});
+
+	test('a map answer naming another hash is a failure; the include is not sent', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => nginxStatus(),
+			expectedRulesForHost: () => NGINX_EXPECTED,
+			hostApplyRulesMap: async () => ({
+				hash: 'f'.repeat(64),
+				host_hash: 'f'.repeat(64),
+				contributions: 1,
+				reloaded: true,
+			}),
+		});
+		expect(await codeOf(run(h, 'apply_rules', { name: 'pub_a' }))).toBe(
+			'maintenance.action_failed',
+		);
+		expect(h.calls.some((c) => c.startsWith('hostApplyRules:'))).toBe(false);
+	});
+
+	test('an agent without rules.map predates the host map: refused, nothing sent', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => agentStatus({ rules: { server: 'nginx', hash: null } }),
+			expectedRulesForHost: () => NGINX_EXPECTED,
+		});
+		const error = await run(h, 'apply_rules', { name: 'pub_a' }).catch(
+			(e: unknown) => e as DedaloError,
+		);
+		expect((error as DedaloError).code).toBe('maintenance.action_refused');
+		expect((error as DedaloError).publicMessage).toContain(
+			'predates the host-wide nginx media map',
+		);
+		expect(h.calls.some((c) => c.startsWith('hostApply'))).toBe(false);
+	});
+
+	test('managed:false skips the map; the include goes as before', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => nginxStatus({ managed: false }),
+			expectedRulesForHost: () => NGINX_EXPECTED,
+		});
+		const response = await run(h, 'apply_rules', { name: 'pub_a' });
+		expect(h.calls.some((c) => c.startsWith('hostApplyRulesMap'))).toBe(false);
+		expect(h.calls.some((c) => c.startsWith('hostApplyRules:pub_a:nginx'))).toBe(true);
+		expect((response.data as Record<string, unknown>).map).toEqual({ state: 'not_applicable' });
+	});
+
+	test('a map the agent already reports loaded is not re-pushed', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () =>
+				nginxStatus({ ...MANAGED_MAP, hash: MAP_HASH, host_hash: MAP_HASH, contributions: 1 }),
+			expectedRulesForHost: () => NGINX_EXPECTED,
+		});
+		const response = await run(h, 'apply_rules', { name: 'pub_a' });
+		expect(h.calls.some((c) => c.startsWith('hostApplyRulesMap'))).toBe(false);
+		expect((response.data as Record<string, unknown>).map).toEqual({
+			state: 'current',
+			hash: MAP_HASH,
+		});
+		expect(response.msg).toContain('Host media map already current.');
+	});
+});
+
+describe('the row carries the host map state', () => {
+	test('nginx managed: expected vs applied, drift; apache: null; an unproved status: null', async () => {
+		const h = harness([record('pub_a'), record('pub_b')], {
+			hostStatus: async (name) => (name === 'pub_a' ? nginxStatus() : agentStatus()),
+		});
+		const [a, b] = rows(await panel(h));
+		expect(a?.nginx_map).toMatchObject({
+			managed: true,
+			applied: null,
+			drift: true,
+			agent_outdated: false,
+		});
+		expect((a?.nginx_map as { expected: string }).expected).toMatch(/^[0-9a-f]{64}$/);
+		expect(b?.nginx_map).toBeNull();
+		const down = harness([record('pub_a')], {
+			hostStatus: async () => {
+				throw new DedaloError('publication_host.unreachable');
+			},
+		});
+		expect(rows(await panel(down))[0]?.nginx_map).toBeNull();
+	});
+
+	test('a non-root admin sees the map state too (no topology in it); an engine fault reads null', async () => {
+		const h = harness([record('pub_a')], {
+			hostStatus: async () => nginxStatus({ managed: false }),
+		});
+		expect(rows(await panel(h, ADMIN))[0]?.nginx_map).toMatchObject({
+			managed: false,
+			drift: false,
+		});
+		// the host-wide facts (other instances' contributions) stay below root
+		const shared = harness([record('pub_a')], {
+			hostStatus: async () =>
+				nginxStatus({ ...MANAGED_MAP, hash: MAP_HASH, host_hash: MAP_HASH, contributions: 3 }),
+		});
+		const adminMap = rows(await panel(shared, ADMIN))[0]?.nginx_map as Record<string, unknown>;
+		expect(adminMap).toMatchObject({ managed: true, applied: MAP_HASH });
+		for (const key of ['host_hash', 'contributions', 'invalid'])
+			expect(Object.hasOwn(adminMap, key)).toBe(false);
+		expect(rows(await panel(shared))[0]?.nginx_map).toMatchObject({
+			host_hash: MAP_HASH,
+			contributions: 3,
+		});
+		const broken = harness([record('pub_a')], {
+			hostStatus: async () => nginxStatus(),
+			nginxMapPanel: () => {
+				throw new Error('engine bug');
+			},
+		});
+		expect(rows(await panel(broken))[0]?.nginx_map).toBeNull();
 	});
 });
 

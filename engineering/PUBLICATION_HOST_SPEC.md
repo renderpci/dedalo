@@ -1,8 +1,9 @@
 # PUBLICATION HOST — a separate publication machine, controlled from the work system
 
-> **Status 2026-10-05: BUILT — phases 1 to 6 (§8).** This file is the definition the code
-> implements; each phase's BUILT line in §8 names its modules and the command that proves
-> it. Media-access details extend `engineering/MEDIA_PROTECTION.md`.
+> **Status 2026-10-08: BUILT — phases 1 to 6 (§8); phase 7, the guided install
+> (`provision init`, §9), in integration.** This file is the definition the code implements;
+> each phase's BUILT line in §8 names its modules and the command that proves it.
+> Media-access details extend `engineering/MEDIA_PROTECTION.md`.
 
 ## 1. Topology and scope
 
@@ -112,7 +113,8 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    rendered into both the sudoers rule and the agent env `WEB_CONFIGTEST_BIN`), and a **polkit** rule allowing `reload` of the
    observed web unit, `restart` of the v2 unit, and `start`/`stop` of the v2 scratch
    template unit `<v2 unit>-scratch@<port>` (port 1024–65535; the `publication/site_builder`
-   precedent). There is no shell and no free argv. The media include the agent installs
+   precedent) — and, on an nginx host whose http{} map is provisioned (§9.7), `start` of
+   `dedalo-pubhost-map.service`, a root oneshot that takes no argument. There is no shell and no free argv. The media include the agent installs
    is checked against a closed directive allowlist
    (`publication/host_agent/src/rules/directives.ts`) before root parses it: no module
    load, no include, no log or piped directive, no path outside MEDIA_ROOT. What remains
@@ -156,9 +158,13 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    **Bun per site.** `bun_bin` is each instance's own Bun, at the work host's `.bun-version`,
    in `/home/<site>/.bun/` and root-owned (it runs the agent and its grants), so sites
    upgrade independently; the panel's `bun_version` check (§2.1) reds on any drift. The
-   binary is installed from the release archive checked against Bun's `SHASUMS256.txt`
-   (optionally its signed `.asc`), never a download piped into a root shell: the check
-   compares a SELF-REPORTED version, so it proves drift, not integrity.
+   binary is installed from the release archive checked against the committed hash table
+   `.bun-sha256`, generated only from Bun's signed `SHASUMS256.txt.asc` (§9.10), never a
+   download piped into a root shell: the panel check compares a SELF-REPORTED version, so it
+   proves drift, not integrity.
+   **The instance lock.** `provision apply` takes `provision init`'s instance lock exclusive
+   and `provision check` shared, BEFORE reading the declaration (§9.6): a hand-run apply can
+   never interleave with init, and a check during either answers exit 5 (busy), not drift.
    **Development dependencies.** `plan` refuses an `agent_dir` whose `node_modules/` holds
    any of the agent package's devDependencies (`plan.ts AGENT_DEV_DEPENDENCIES`, held equal
    to `package.json`), like `.test-tmp/`: the deployment install is `bun run
@@ -305,7 +311,9 @@ release, state outside the code:
   (`reserved_path`).
 - **v1 config is private to its owner.** `server_config_api.php` holds the site's database
   credentials and every site's PHP-FPM pool may share the web server's group, so the
-  declaration names the pool USER (`v1.user`), the file is `<v1.user>` mode 0400/0600, and an
+  declaration names v1's OWN pool user (`v1.user`; never `www-data`, `apache`, `nginx`, `www`,
+  `nobody` — `FORBIDDEN_V1_USERS`; with `site` the provisioner renders that dedicated pool,
+  §9.4), the file is `<v1.user>` mode 0400/0600, and an
   install with the file readable by group or others, or root-owned (the pool is never root), is
   refused (`shared_config_exposed`; `isPrivateV1Config`).
   `v1/shared/` is `root:root 0711`: the agent only stats and links there, joins no v1 group,
@@ -528,6 +536,7 @@ are spelled out one per API (the copy-mode media path travels in the query of
 | `status` | `GET /v1/status` | agent + Bun version, platform, fingerprint, per-API `current`/`previous` release, applied rule hash, media probe, state-root free bytes |
 | `media.probe` | `GET /v1/media/probe` | mount present, read-only, `pub/` readable, marker count |
 | `rules.apply {server, text, hash}` | `POST /v1/rules/apply` | write the include, `configtest`, reload; on a failed configtest restore the previous file, re-run configtest, never reload |
+| `rules.map {text, hash}` | `POST /v1/rules/map` | nginx only (§9.7). Validate the pushed http{} map against the closed map grammar, write THIS instance's contribution (one envelope) into the host-wide sticky `contrib/` store, start the root map renderer (`dedalo-pubhost-map.service`) and answer from its `result.json`: `{hash, host_hash, contributions, reloaded}`. The agent never writes the live map. `map_unmanaged` (409) when the host's `web.nginx_map` is `none`; `server_mismatch` on apache |
 | `release.install {api: v1, release, sha256, bundle}` | `POST /v1/releases/v1` | §3 install of a v1 release; the bundle is the request body |
 | `release.install {api: v2, release, sha256, bundle}` | `POST /v1/releases/v2` | §3 install of a v2 release, auto-rollback on failed health; the bundle is the request body |
 | `release.rollback {api: v1}` | `POST /v1/releases/v1/rollback` | swap v1 `current` back to the previous release |
@@ -620,6 +629,7 @@ one (must answer 404): `src/core/publication_host/probe.ts` (`validateProbePaths
 | 4 | Updater pushes the API bundles after an engine update. **Built:** `src/core/update/publication_manifest.ts` (extract-time manifest), `src/core/publication_host/bundle_writer.ts`, `src/core/publication_host/api_bundles.ts`, `src/core/publication_host/api_reconcile.ts` (confirm hook, `push_apis`, scheduled dry run), `src/core/publication_host/runtime.ts`, `bun run test:pubhost:engine` (`[lockstep]` rows). §3 *Lockstep*. | 2, 3 |
 | 5 | `copy` mode: the media copy target + reconcile. **Built:** agent `media.put` / `media.delete` / `media.mark` / `media.manifest` (§6), `src/diffusion/targets/mediastore/media_copy.ts` (desired set, planner), `src/diffusion/targets/mediastore/media_copy_apply.ts`, `src/diffusion/targets/mediastore/media_copy_worker.ts`, `mediaCopyTargetLockKey` in `src/core/diffusion_bridge/target_lock.ts`, the `pub/` transition seam `src/diffusion/targets/mediastore/pub_transitions.ts`, `bun run test:pubhost:agent` (`[copy]` rows). §5.2. | 2, 3 |
 | 6 | Public-URL probe, on change and scheduled. **Built:** `src/core/publication_host/probe.ts`, `bun run test:pubhost:probe` (`scripts/publication_host_probe_drill.ts`). §7. | 3 |
+| 7 | The guided install, `provision init` (§9): discovery, comparison, confirmed action, the dedicated v1 pool, the web include, SELinux labels, the systemd profile, the locks, B4/B5; and the host-wide nginx map (§9.7). **In integration:** `publication/host_agent/deploy/install.sh`, `publication/host_agent/src/provision/init/` (B4 `verify.ts`, B5 `pair.ts`), `publication/host_agent/src/provision/selinux.ts`, the root map renderer `publication/host_agent/src/rules/host_map_main.ts`; drills `bun run test:pubhost:init` (Debian, local-only) and `bun run test:pubhost:init:el` (EL VMs, local-only, §9.11). | 2, 3 |
 
 Decided per phase, in its own plan: host registry storage (phase 3:
 `<private>/publication_hosts.json` + per-host secret dirs, §2.1), transport (phase 2: mTLS +
@@ -627,3 +637,236 @@ bearer + pairing fingerprint, §2), bundle source and triggers (phase 4: the ins
 under its extract-time manifest; the confirm hook, the panel, a dry-run schedule, §3), copy
 worker placement (phase 5: in-process, not a diffusion runner, §5.2), probe file
 provisioning (phase 6: operator-chosen, engine-validated, §7).
+
+## 9. `provision init` — the guided install (phase 7)
+
+The root-run guided install that does the operator page's steps 0–9
+(`docs/install/publication_host.md`, *Guided install*): it discovers the host, compares it with
+what the declaration needs, prints three lists (*already right*, *will change*, *needs your
+decision*), and acts only on what the operator confirmed. `provision apply` stays the one
+writer of every provisioned file; init orders it, and adds what apply may not do: create
+accounts, make the site home root's, edit the operator's vhost, set SELinux booleans, write the
+two API configuration files, prove the agent (B4) and pair it (B5).
+
+### 9.1 Decisions (final)
+
+- **Accounts.** init creates the missing accounts after confirmation and never modifies an
+  existing one. `provision apply` never creates accounts. **Web server config.** init edits the
+  operator's vhost only on a typed answer, with backup, configtest and rollback. **Bun** is
+  downloaded on the publication host and verified (§9.10). **Pairing** through the work
+  system's own CLI always exists: on one machine (unix listener, exactly one running
+  `dedalo-ts`/`dedalo-ts@<site>` unit) B5 runs it as the engine user, token on stdin only; on
+  two machines (tls), with `--no-pair` or without a work unit it prints the operator page's step
+  6/8 commands — two-machine pairing stays manual. **Database passwords** are typed only on the publication host.
+- **v1 runs in its own dedicated, stamped PHP-FPM pool** per instance (`fpm_pool`, §9.4), as
+  `v1.user`, with its own socket, `open_basedir` and temporary directory
+  (`/var/lib/dedalo_publication_host/<instance>/v1/`); the website's PHP is never edited.
+- **Layout.** The default is the per-site home `/home/<domain>/{dedalo, host_agent, .bun}`;
+  the site's web server logs are OUTSIDE it, in the distribution's log directory per site
+  (`/var/log/{apache2,httpd,nginx}/<domain>/`, `root:root 0755`, created by `apply` and rotated
+  by the stamped `/etc/logrotate.d/dedalo_<instance>_web`: a sandboxed web unit — Ubuntu 26.04's
+  `apache2.service`, `ProtectHome=read-only` — cannot open a log under `/home`), with the home made `root:root` `HOME_ROOT_MODE` (0755) by init as a *will change*
+  item with the exact command; `/srv/dedalo_publication_host/<instance>` +
+  `/opt/dedalo_publication_host/{host_agent,bun}` is the alternative and the automatic fallback
+  when the home cannot be given to root (symlink, non-root ancestry, network or `noexec`
+  filesystem, a web/FPM unit sandbox hiding `/home`).
+- **Supported:** Debian 12/13, Ubuntu 24.04/26.04, RHEL/Rocky/Alma 9 and 10, SELinux enforcing,
+  permissive or disabled (`OS_SUPPORT`, `publication/host_agent/src/provision/init/parse/os.ts`). Not: Ubuntu 22.04
+  (polkit 0.105), RHEL/Rocky/Alma 8 (systemd 239 < the units' 247, kernel 4.18 < Bun's 5.1),
+  CentOS Stream, Oracle Linux, musl — each a blocking `host.os` naming the manual guide. EL 8
+  never reaches it: `deploy/install.sh` `family_of` refuses an EL major below 9 and
+  `refuse_kernel` a kernel below `BUN_KERNEL_FLOOR` before any Bun is fetched (Bun is not
+  run on a kernel it does not support; `tests/init_install_sh.test.ts`). EL 9
+  ships PHP and nginx as `dnf module` streams, EL 10 has none (`OsSupport.dnfModules`: the
+  printed install commands differ); neither ships `mod_php` (only Remi's `php<NN>-php`).
+- **One host-wide nginx map** (§9.7). **Locks** shared with apply and check (§9.6). **The Bun
+  table's signature** is verified when the pin moves (§9.10).
+
+### 9.2 Entry
+
+`publication/host_agent/deploy/install.sh` is the ONLY entry point (first run with `--source`,
+re-runs through `<INIT_BASE>/<instance>/rerun.env`). Root never runs code or config a non-root
+account can write: before Bun starts it stages the closed source manifest
+(`publication/host_agent/src/provision/init/constants.ts` `SOURCE_MANIFEST`) into root-owned
+0700 directories, refusing special files and escaping symlinks, shows the source digest for
+consent (whoever can write the source can become root through init — stated to the operator),
+verifies Bun against `.bun-sha256` before `--version`, and starts Bun with `cd <stage>`,
+`env -i`, `--no-env-file`, `--no-install` and an empty bunfig. Those are the real controls; the
+in-process checks of the init orchestrator are footgun guards against hand starts. The stage is
+one path per instance, so it is cleared only under install.sh's own flock
+(`<INIT_BASE>/<instance>/install.lock`, `INSTALL_LOCK_NAME`), taken non-blocking before the
+clear and held across the exec until init exits: a second install.sh for the instance refuses
+instead of wiping a stage a running init reads (a file of its own, never init's `init.lock`).
+
+### 9.3 Command sets
+
+Every spawn stays in `publication/host_agent/src/exec.ts`. `provisionExec()` is the closed set
+of **24** commands the provisioner may run (read-only probes, the web/FPM configtests, the
+SELinux label commands of apply); none creates an account. Every command of both sets spawns
+with a finite timeout (SIGKILL, exit 124): `COMMAND_TIMEOUT_MS`, `UNIT_JOB_TIMEOUT_MS` for the
+systemd jobs, `RELABEL_TIMEOUT_MS` for `semanage import` / `restorecon` — init runs several of
+them while it holds the host web lock (`tests/provision_exec.test.ts`). `initExec()` is a separate closed
+set of **22** commands for init alone (discovery, the account creators, `a2enmod`/`a2dismod`
+on Debian, `setsebool`, the Bun unpack, and the pairing child `setsid --wait runuser -u <engine
+user> -- <bun> --no-install <checkout>/scripts/publication_host_pair.ts …`, whose token reaches
+stdin only). The two sets are disjoint (`publication/host_agent/tests/init_exec.test.ts`); the
+counts here are held to the code (`publication/host_agent/tests/spec_privileges.test.ts`).
+
+### 9.4 Artifacts and validators
+
+Five artifact kinds join the provisioner's census
+(`publication/host_agent/src/provision/render/types.ts` `ARTIFACT_KINDS`):
+
+| kind | path | validator, effect |
+| --- | --- | --- |
+| `web_include` | `<configBase>/<instance>/web.<server>.conf`, referenced once from the operator's vhost by a stamped `IncludeOptional` (nginx: a zero-match glob `include`) | `web` (post-rename configtest under the host web lock, restore on failure), `reload_web` |
+| `fpm_pool` | the FPM flavour's pool directory, `dedalo_<instance>_v1.conf` | `fpm` (`php-fpm -t`), `reload_fpm` |
+| `nginx_map_include` | `/etc/nginx/conf.d/dedalo_media_map.conf`, host-wide, stamped `_host` | `web`, `reload_web` |
+| `host_map_unit` | `dedalo-pubhost-map.service`, host-wide, stamped `_host` | — |
+| `logrotate` | `/etc/logrotate.d/dedalo_<instance>_web`, home layout only: rotates the site's web log directory `/var/log/<apache2\|httpd\|nginx>/<domain>/` (`plan.ts` creates it `root:root 0755`), which the distributions' own logrotate globs (one level) never reach | — |
+
+`web_include` and `fpm_pool` apply only with the optional declaration block `site`; the two
+host-wide kinds only on nginx with `web.nginx_map: conf_d`. The Apache v1 handler sits inside
+`<If "-f %{REQUEST_FILENAME}">` with the pattern `\.ph(?:ar|p|tml)$` — every name a captured
+distribution handler claims, a stemless `.php` included (EL's `\.(php|phar)$` and Ubuntu 26.04's
+`\.ph(?:ar|p|tml)$` match it) — so it beats EL's
+server-wide `conf.d/php.conf` handler (a `<FilesMatch>`, which merges after `<Directory>`;
+`<If>` merges last) inside the vhost; `mod_php`
+is switched off in the v1 tree. A web or FPM master that dies on the reload after a passing
+configtest (an SELinux denial the configtest cannot see) gets its backup restored, a configtest
+and a restart (`rolled_back{reload}`).
+
+### 9.5 Modes
+
+The new rows of `MODES` (`publication/host_agent/src/provision/layout.ts`; owner:group mode):
+
+| row | owner | group | mode |
+| --- | --- | --- | --- |
+| `v2Env` | root | v2Group | 0640 |
+| `v1Config` | v1 | root | 0400 |
+| `webInclude` | root | root | 0644 |
+| `fpmPool` | root | root | 0644 |
+| `webLogs` | root | root | 0755 |
+| `logrotate` | root | root | 0644 |
+| `nginxMapInclude` | root | root | 0644 |
+| `v1Var` | root | root | 0711 |
+| `v1VarWork` | v1 | root | 0700 |
+| `hostBase` | root | root | 0755 |
+| `hostLocks` | root | pubhost | 0750 |
+| `hostProvisionLock` | root | root | 0600 |
+| `hostWebLock` | root | pubhost | 0640 |
+| `hostNginxMap` | root | root | 0755 |
+| `hostNginxContrib` | root | pubhost | 3770 |
+| `hostMapRenderer` | root | root | 0755 |
+| `initState` | root | root | 0700 |
+| `journal` | root | root | 0600 |
+| `initLock` | root | root | 0600 |
+
+`pubhost` is the group `dedalo_pubhost`: created by init only (or by hand with `groupadd
+--system dedalo_pubhost`; a hand-run `provision apply` without it is refused with that line),
+given to every agent unit through `SupplementaryGroups=`, so no account is ever modified.
+
+### 9.6 Locks and the journal
+
+Every lock is `flock(2)` on a root-created file opened `O_NOFOLLOW`
+(`publication/host_agent/src/provision/flock.ts`; the policy is
+`publication/host_agent/src/provision/lock.ts`): the kernel drops a dead holder's lock, so
+there is no stale-lock logic. Order: (1) the instance lock
+`/var/lib/dedalo_publication_host_init/<instance>/init.lock` — init and apply exclusive, check
+shared; apply waits 5 s then refuses naming the holder, check ends exit **5 (busy)**; (2) the
+host provision lock (apply, around the host-wide items); (3) the host web lock, around every
+configtest+reload of the web server or PHP-FPM, by root and by every agent. The journal
+(`journal.jsonl`, root 0600 beside the lock) records `begin` and a terminal phase per item and
+never holds a secret; `--resume` continues an unfinished run, but correctness never depends on
+it: every run re-discovers and re-compares.
+
+### 9.7 The host-wide nginx media map
+
+nginx's media include uses three variables only an http{} `map` can define, once per host, and
+the map depends on the engine version and its `mediaDir`/image folder. On a host whose
+declaration says `web.nginx_map: conf_d` the engine pushes `buildNginxMap()` as `rules.map`
+(`POST /v1/rules/map`, §6) BEFORE the media include. The agent validates it against the closed
+map grammar (`parseNginxMap`, `publication/host_agent/src/rules/directives.ts`) and writes only
+its OWN contribution (one envelope) into the sticky store
+`/var/lib/dedalo_publication_host/_host/nginx_map/contrib/`; the ROOT oneshot
+`dedalo-pubhost-map.service` (`publication/host_agent/src/rules/host_map_main.ts`, one
+root-owned code copy per host installed by apply, never downgraded) re-validates every
+contribution against the declared agent uids, merges them (`renderHostMap`), and is the only
+writer of the live map nginx loads through the provisioned include. A contribution of a grammar
+the installed renderer does not know refuses the whole render (`map_contribution_newer`).
+Residual (stated): the map is keyed on `$uri` across every server block, so a paired engine of
+one instance can weaken another site's SVG treatment for URIs under its own bound envelope
+prefix. With `web.nginx_map: none` (the default) the agent reports `{managed: false}` and the
+engine skips the map step; the operator places the map by hand.
+
+### 9.8 SELinux
+
+On EL with SELinux enforcing or permissive, `provision apply` registers the instance's file
+contexts and the v2 port label (`http_port_t`) in ONE `semanage import` transaction, relabels
+with `restorecon`, and requires a following `restorecon -n` to report nothing pending — all
+before any configtest or unit restart. The table is
+`publication/host_agent/src/provision/selinux.ts` `selinuxRules`: label only what `httpd_t`
+must reach, as narrowly as the access needs (search-only `-f d` rules on the directories httpd
+traverses, `httpd_sys_content_t` on the v1 tree, `httpd_config_t` on the rules and the host
+map, `httpd_log_t`/`httpd_sys_rw_content_t` for the v1 pool's log and temporary files (the
+site's web logs under `/var/log/{httpd,nginx}/<domain>` are `httpd_log_t` by the policy's own rules),
+`usr_t`/`bin_t` for the agent code and Bun); the only rules on paths the provisioner did not
+create are the exact `-f d` rule on the site home (one inode) and the consented shared media root
+(below). No rule ever gives
+`S/publication_api/v2` or `S/audit` an httpd-readable type. Booleans (`SELINUX_BOOLEANS`) are
+init decisions only, host-wide, never `--yes`, the narrowest first; `httpd_graceful_shutdown`
+is read, never written. A SHARED media root (a directory the provisioner did not create) is
+labelled `httpd_sys_content_t` only on the declaration's consent field `media.selinux_label: true`
+(shared mode only; init writes it on a `selinux.media_access=act` answer; removing it
+unregisters the rule on the next apply), and only on a local or seclabel filesystem — a network
+mount gets the fstab `context=` option or a `httpd_use_*` boolean instead. Never `setenforce`,
+never a policy module.
+
+### 9.9 systemd profile
+
+ONE profile: `SYSTEMD_FLOOR` = 247 (`layout.ts`; `LoadCredential=` delivers the token,
+`ProtectProc=` hides other processes). Every supported OS ships more (Debian 12 and EL 9 252,
+Ubuntu 24.04 255, Debian 13 and EL 10 257, Ubuntu 26.04 259). There is no declaration field: below the floor
+`host.systemd` blocks init and `plan` refuses. Every rendered directive form is dated in
+`publication/host_agent/src/provision/render/systemd_floors.ts`; `checkDirectives` throws on an
+undated form or one newer than the floor, so a renderer can never emit hardening a supported
+host's systemd would silently skip. `ProtectHome=` is a host-wide fact: `read-only` on every agent unit
+when any declaration on the host is home-bound, so the agent's sudo configtest sees the same
+includes the root master loads.
+
+### 9.10 The Bun hash table and its signature
+
+`.bun-sha256` (repo root): `# bun-v<pin>`, `# signed-by: <release-key primary fingerprint>`, one
+`<sha256>  <asset>.zip` line per `BUN_ASSETS` entry. `scripts/ci/bun_pin_hashes.ts` (run by
+whoever bumps `.bun-version`) takes the hashes ONLY from the payload of Bun's clearsigned
+`SHASUMS256.txt.asc`, verified with `gpgv` against the pinned fingerprint
+(`BUN_RELEASE_KEY_FINGERPRINT`); the signed file is committed under `ci/bun/` and CI re-verifies
+it (the CI image carries `gpgv`). install.sh and init check the archive against the table
+before running it. Residual: the signed payload names no version; the download URL and the
+post-verify `bun --version` bind it to the pin.
+
+### 9.11 Verification
+
+Package gates (`publication/host_agent/tests/init_*.test.ts`, `provision_*.test.ts`), the root
+gates (`test/unit/publication_host_init_pair_native.test.ts` — B5 against the real pairing
+command; `test/unit/publication_host_operator_doc.test.ts` — the operator page held to the
+code; `test/unit/publication_host_init_v2_env_native.test.ts` — a rendered `v2.env` boots v2's
+own config), and two drills, both local-only (no hosted runner can give either: CI jobs run
+inside the CI image's container, with no privileged sibling and no SELinux kernel):
+
+- **Debian** (`bun run test:pubhost:init`, `scripts/publication_host_init_drill.ts`): a
+  disposable privileged container with systemd as PID 1, built on the CI image's Debian with
+  apache2, nginx, php-fpm and polkitd; `install.sh` and the CLI as children only. Legs: fresh
+  converge through a local https mirror, an all-right re-run, an injected configtest failure
+  rolled back, `kill -9` mid-item then `--resume`, the second-variant pre-created API files, the
+  nginx host map through a mock engine, the hand-map migration, and a mixed-version map leg.
+- **EL** (`bun run test:pubhost:init:el`, same script, `--family el --in-place`) on a
+  disposable RHEL/Rocky/Alma 9 or 10 VM with SELinux enforcing, refusing any host without
+  `/etc/dedalo_init_drill_host`. It proves the `<If>` handler (a `.php` and a `.phtml` probe
+  answer as `v1.user` under `fpm-fcgi`) under the EL 9 and EL 10 `php.conf` and under Remi's
+  mod_php, the relabelled home's sshd login, the site's logs outside the home, a network media mount with the
+  `context=` option, fapolicyd, an empty AVC search, and
+  `systemd-analyze verify` with no warning naming a rendered unit. Its `--record` writes the EL
+  drill record (`el_drill_record.json` under `engineering/`: inputs digest, hosts, measured
+  types and floors); a root ratchet then turns any change to an EL-relevant
+  input red until the drill runs again.

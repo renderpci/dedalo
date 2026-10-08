@@ -1,0 +1,6 @@
+NAME="Red Hat Enterprise Linux"
+VERSION="8.10 (Ootpa)"
+ID="rhel"
+ID_LIKE="fedora"
+VERSION_ID="8.10"
+PLATFORM_ID="platform:el8"

@@ -173,6 +173,24 @@ export const AGENT_REASON_SENTENCES: Readonly<Record<string, string>> = Object.f
 		'The publication host refused a media file whose record is not marked published there. Nothing was changed.',
 	key_invalid:
 		'The publication host refused a publication marker key outside the media grammar. Nothing was changed.',
+	// the host web lock around every configtest and reload (publication/host_agent/src/rules/apply.ts)
+	host_busy:
+		'Another configuration test or reload is running on the publication host. Try again when it finishes; nothing was changed.',
+	host_lock_missing:
+		"The publication host's shared web-server lock is missing. An operator must run 'provision apply' for this instance on that host; nothing was changed.",
+	// rules.map, the host-wide nginx media map (publication/host_agent/src/rules/map.ts)
+	map_unmanaged:
+		"This publication host's nginx media map is placed by hand, not managed by the publication host. An operator keeps it current on that host; nothing was changed.",
+	map_refused:
+		'The publication host refused the nginx media map: it is not in the shape the host accepts. Nothing was changed.',
+	map_contribution_foreign:
+		"The publication host found this instance's media map contribution owned by another account. An operator must run 'provision apply' for this instance on that host; nothing was changed.",
+	map_contribution_newer:
+		"Another instance on the publication host contributes a newer media map than the host's map renderer understands, so the shared map was left as it is. An operator must run 'provision apply' for that newer instance on the host.",
+	map_envelope_rebind:
+		"The media folders changed since this instance's media map was first accepted on the publication host. The previous map stays in force until an operator runs 'provision apply' for this instance on that host.",
+	map_renderer_missing:
+		"The publication host's media map renderer is not installed, or does not know this instance. An operator must run 'provision apply' for this instance on that host; nothing was changed.",
 });
 
 /**
@@ -213,6 +231,8 @@ const STATUS_CODES: Readonly<Record<number, PublicationHostCode>> = Object.freez
  */
 const REASON_CODES: Readonly<Record<string, PublicationHostCode>> = Object.freeze({
 	busy: 'publication_host.busy',
+	// a configtest or reload of another instance holds the host web lock: retryable, like busy
+	host_busy: 'publication_host.busy',
 	media_mode: 'publication_host.rejected',
 	media_path_refused: 'publication_host.rejected',
 	size_mismatch: 'publication_host.rejected',

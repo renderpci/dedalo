@@ -1,0 +1,10 @@
+LoadState=loaded
+ActiveState=active
+UnitFileState=enabled
+FragmentPath=/usr/lib/systemd/system/php-fpm.service
+DropInPaths=/etc/systemd/system/php-fpm.service.d/cis.conf
+ProtectHome=read-only
+ProtectSystem=full
+InaccessiblePaths=
+ReadOnlyPaths=/var/lib
+TemporaryFileSystem=

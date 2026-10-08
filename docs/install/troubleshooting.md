@@ -468,7 +468,11 @@ configuration one.
 generated **map** file. A `map` cannot live inside `server{}`, so it ships as a
 separate file that must be included at `http{}` scope.
 
-**Fix.** Include both, or neither:
+**Fix.** Include both, or neither (below). On a publication host provisioned with `provision init`, the `http{}` map is pushed by **Apply media rules** into the host-wide include and must not be placed by hand; the manual path below still applies to work hosts and hand-provisioned publication hosts. There, run
+**Apply media rules** in the **Publication hosts** panel, which pushes the map first; on the
+publication host, `provision check <instance>` shows whether the host-wide map include
+(`/etc/nginx/conf.d/dedalo_media_map.conf`) exists. On a work host, or a hand-provisioned
+publication host:
 
 ```nginx
 include /srv/dedalo/media/dedalo_media_protection_map.nginx.conf;   # http{} scope

@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "proc(5) /proc/net/tcp and tcp6: 80, 443 and 3100 (0x0C1C, the default v2 port) listening; an established and a TIME_WAIT row on 3100/8080 that must not count",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

@@ -1,0 +1,5 @@
+{
+  "typed": false,
+  "captured": "docker oraclelinux:10, 2026-10-08 (linux/amd64), packages from the distribution's own repositories (Remi from rpms.remirepo.net)",
+  "limits": "a container: no systemd PID 1 (unit states are not real), no SELinux kernel (getenforce answers Disabled), the kernel and mountinfo are the Docker VM's — those facts come from typed fixtures. Package outputs (-S/-M/-t -D DUMP_INCLUDES/-v, -tt, -T, php.conf, conf.modules.d, semanage on the installed policy store, os-release, systemctl --version, pkaction --version, nsswitch.conf, sudoers) are the distribution's own."
+}

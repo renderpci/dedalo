@@ -1,0 +1,8 @@
+22 1 253:0 / / rw,relatime shared:1 - xfs /dev/mapper/rl-root rw,seclabel,attr2,inode64,logbufs=8,logbsize=32k,noquota
+23 22 0:21 / /proc rw,nosuid,nodev,noexec,relatime shared:12 - proc proc rw
+40 22 0:45 / /home rw,relatime shared:30 - nfs4 nas:/export/home rw,vers=4.1,rsize=1048576,wsize=1048576,hard,proto=tcp,sec=sys,clientaddr=192.0.2.5
+41 22 0:46 / /srv/media ro,relatime shared:31 - nfs4 nas:/export/media ro,vers=4.2,hard,proto=tcp,sec=sys
+42 22 0:47 / /srv/labelled rw,relatime shared:32 - nfs4 nas:/export/labelled rw,seclabel,vers=4.2,hard,proto=tcp
+43 22 0:48 / /srv/web\040media rw,relatime shared:33 - nfs4 nas:/export/web rw,context="system_u:object_r:httpd_sys_content_t:s0",vers=4.1,hard
+44 22 0:49 / /mnt/share rw,relatime shared:34 - cifs //nas/share rw,vers=3.1.1,cache=strict,username=museum,uid=0
+45 22 0:50 / /mnt/sshfs rw,nosuid,nodev,relatime shared:35 - fuse.sshfs museum@nas:/data rw,user_id=0,group_id=0

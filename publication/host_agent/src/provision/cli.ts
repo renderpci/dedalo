@@ -4,6 +4,13 @@
  *   bun run src/provision/cli.ts render <instance> [--declaration <file>]   print the artifacts
  *   bun run src/provision/cli.ts check  <instance> [--declaration <file>]   dry run (root)
  *   bun run src/provision/cli.ts apply  <instance> [--declaration <file>]   converge (root)
+ *   <bun> src/provision/cli.ts init <instance> …   the guided install (init/run.ts), started ONLY
+ *                                                  through deploy/install.sh (spec §1.1)
+ *
+ * THE INSTANCE LOCK (spec S12, Q2): `apply` holds `<INIT_BASE>/<instance>/init.lock` EXCLUSIVE
+ * and `check` SHARED, taken before the declaration is read and held to the end — a hand-run
+ * apply never interleaves with init (which holds it exclusive and passes its handle in as
+ * `lockHeld`), and a check during an apply or init answers EXIT.BUSY (5), never DRIFT/REFUSED.
  *
  * The declaration defaults to /etc/dedalo_publication_host/<instance>.json. `check` and `apply`
  * refuse a declaration (and a sibling declaration) a non-root principal could edit or replace —
@@ -31,15 +38,19 @@
 import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { ProvisionIo } from './apply';
-import { apply, hostIo, observeHost, writeAtomic } from './apply';
+import { apply, hostIo, lockHostProvision, observeHost, writeAtomic } from './apply';
+import { flockIo } from './flock';
 import type { AgentLayout } from './layout';
-import { DEFAULT_PATHS, INSTANCE_PATTERN } from './layout';
+import { DEFAULT_PATHS, INSTANCE_PATTERN, PUBHOST_GROUP } from './layout';
+import type { LockHandle, LockMode } from './lock';
+import { INIT_BASE, LockBusy, LockRefused, acquireInstanceLockSync, describeHolder } from './lock';
+import { runInit } from './init/run';
 import type { Action, EntryType, HostState, PathFacts } from './plan';
-import { PlanRefused, ancestorsBelow, describe, plan, renderAll, trustProblem } from './plan';
+import { PlanRefused, ancestorsBelow, describe, plan, planReport, renderAll, trustProblem } from './plan';
 import { renderFacts, TOKEN_PLACEHOLDER } from './render/engine_fragment';
 import { DeclarationError, parseDeclaration } from './schema';
 import type { Sibling } from './siblings';
-import { siblingRefusals } from './siblings';
+import { anySiblingHomeBound, siblingRefusals } from './siblings';
 import type { TlsIo } from './tls';
 import { ensureTls } from './tls';
 
@@ -59,11 +70,18 @@ export const EXIT = Object.freeze({
   REFUSED: 3,
   /** The work was attempted and failed; the report names the action. */
   FAILED: 4,
+  /**
+   * `check` only: an exclusive holder of the instance lock (init or apply) outlasted the 5 s
+   * shared wait; nothing was checked. A monitor reads it as "unknown", never as an alert (spec S12).
+   */
+  BUSY: 5,
 });
 export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
 
 export const VERBS = ['render', 'check', 'apply'] as const;
 export type Verb = (typeof VERBS)[number];
+/** The guided install: its own argv grammar (init/args.ts), dispatched to init/run.ts runInit. */
+export const INIT_VERB = 'init';
 
 /* ── the secret guard ─────────────────────────────────────────────────────────────── */
 
@@ -100,7 +118,8 @@ export class SecretOutputRefused extends Error {
   }
 }
 
-function guarded(sink: (line: string) => void): (line: string) => void {
+/** Every printed line passes here (init's report and pairing output too, spec §1.2). */
+export function guarded(sink: (line: string) => void): (line: string) => void {
   return (line: string): void => {
     const key = secretShapedAssignment(line);
     if (key !== null) throw new SecretOutputRefused(key);
@@ -122,7 +141,9 @@ export function usageLines(): string[] {
   return [
     'usage: bun run src/provision/cli.ts <render|check|apply> <instance> [--declaration <file>] [--exit-code]',
     `  the declaration defaults to ${DEFAULT_PATHS.configBase}/<instance>.json`,
-    '  exit: 0 ok (check: also when it lists changes) · 1 drift (check --exit-code) · 2 usage · 3 refused · 4 failed',
+    `       <bun> src/provision/cli.ts ${INIT_VERB} <instance> [...]   the guided install — start it with deploy/install.sh`,
+    '  exit: 0 ok (check: also when it lists changes) · 1 drift (check --exit-code) · 2 usage · 3 refused · 4 failed' +
+      ' · 5 busy (check: init or apply holds the instance)',
   ];
 }
 
@@ -150,6 +171,7 @@ export function parseArgs(argv: readonly string[]): ProvisionArgs | { readonly e
   }
   const [verb, instance, ...rest] = positional;
   if (verb === undefined) return { error: 'no verb' };
+  if (verb === INIT_VERB) return { error: `'${INIT_VERB}' has its own command line: init/run.ts runInit (start it with deploy/install.sh)` };
   if (!(VERBS as readonly string[]).includes(verb)) return { error: `unknown verb '${verb}'` };
   if (instance === undefined) return { error: 'no instance' };
   if (!INSTANCE_PATTERN.test(instance)) return { error: `instance '${instance}' must match ${INSTANCE_PATTERN.source}` };
@@ -174,11 +196,22 @@ export interface ProvisionDeps {
   /** lstat regular file, never following a link: picks the web server's configtest binary. */
   isRealFile(path: string): boolean;
   isRoot(): boolean;
-  observeHost(layout: AgentLayout): HostState;
+  /**
+   * The host as plan() judges it. `siblings` (the other declarations, parsed) let the plan write
+   * identities.json and sweep squatted contributions (nginx `conf_d`, spec §5.9); without them
+   * those items are not planned and planReport says so.
+   */
+  observeHost(layout: AgentLayout, siblings?: readonly Sibling[]): HostState;
   io(): ProvisionIo;
   /** A root-only file's text, or null (absent or unreadable): the service token, the TLS material. */
   readRootFile(path: string): string | null;
   now(): Date;
+  /**
+   * The instance lock (spec S12): `ex` for apply, `sh` for check; throws LockBusy after its wait
+   * (5 s) and LockRefused when the lock directories are not root's. Production:
+   * lock.ts acquireInstanceLockSync(instance, mode, {base: INIT_BASE, io: flockIo()}).
+   */
+  lock(instance: string, mode: LockMode, verb: string): LockHandle;
 }
 
 function readOrNull(path: string): string | null {
@@ -235,10 +268,11 @@ export function hostDeps(): ProvisionDeps {
       }
     },
     isRoot: () => process.geteuid?.() === 0,
-    observeHost: layout => observeHost(layout),
+    observeHost: (layout, siblings) => observeHost(layout, undefined, siblings === undefined ? {} : { siblings }),
     io: () => hostIo(),
     readRootFile: readOrNull,
     now: () => new Date(),
+    lock: (instance, mode, verb) => acquireInstanceLockSync(instance, mode, { base: INIT_BASE, io: flockIo(), verb }),
   };
 }
 
@@ -334,9 +368,21 @@ function directoryTrustProblems(
 
 /**
  * Every other declaration in the config base, judged against this one. A sibling that does
- * not parse is a refusal too: isolation that cannot be checked is not assumed.
+ * not parse is a refusal too: isolation that cannot be checked is not assumed. Exported for
+ * init (spec §2.2), which judges its final declaration the same way before writing it.
  */
-function siblingProblems(layout: AgentLayout, source: string, deps: ProvisionDeps, judged: Set<string>): string[] {
+export function siblingProblems(layout: AgentLayout, source: string, deps: ProvisionDeps, judged: Set<string>): string[] {
+  const { problems } = readSiblings(layout, source, deps, judged);
+  return problems;
+}
+
+/** siblingProblems' walk, also returning the siblings it parsed (the host-wide ProtectHome fact needs them). */
+function readSiblings(
+  layout: AgentLayout,
+  source: string,
+  deps: ProvisionDeps,
+  judged: Set<string>,
+): { problems: string[]; siblings: Sibling[] } {
   // Compared canonically: `--declaration ./x.json`, a doubled '/' or a symlinked config base
   // still names this instance's own file, never a sibling.
   const own = new Set([source, join(layout.configBase, `${layout.instance}.json`)].map(path => deps.canonical(path)));
@@ -372,13 +418,18 @@ function siblingProblems(layout: AgentLayout, source: string, deps: ProvisionDep
       );
     }
   }
-  return [...problems, ...siblingRefusals(layout, siblings)];
+  return { problems: [...problems, ...siblingRefusals(layout, siblings)], siblings };
 }
 
 export interface RunOptions {
   readonly deps?: ProvisionDeps;
   readonly out?: (line: string) => void;
   readonly err?: (line: string) => void;
+  /**
+   * The instance lock the CALLER already holds exclusive (init's in-process apply, spec §2.2):
+   * run() then takes none. A handle for another instance is a programming error and throws.
+   */
+  readonly lockHeld?: LockHandle;
 }
 
 function octal(mode: number): string {
@@ -453,6 +504,14 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
     return EXIT.USAGE;
   }
 
+  const held = options.lockHeld;
+  if (held !== undefined && (held.instance !== args.instance || held.mode !== 'ex')) {
+    throw new Error(
+      `provision: lockHeld names ${held.mode === 'ex' ? '' : 'a shared lock on '}instance '${String(held.instance)}', ` +
+        `not an exclusive lock on '${args.instance}'`,
+    );
+  }
+  let lock: LockHandle | null = null;
   try {
     // Resolved ONCE: the path judged below is the path read (a relative --declaration is the cwd's).
     const source = resolve(args.declaration ?? join(DEFAULT_PATHS.configBase, `${args.instance}.json`));
@@ -462,6 +521,21 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       if (!deps.isRoot()) {
         err(`provision: '${args.verb}' reads root-only files and must run as root`);
         return EXIT.REFUSED;
+      }
+      // The instance lock BEFORE the declaration is read, held to the end (spec S12, Q2).
+      if (held === undefined) {
+        try {
+          lock = deps.lock(args.instance, args.verb === 'apply' ? 'ex' : 'sh', args.verb);
+        } catch (error) {
+          if (!(error instanceof LockBusy)) throw error;
+          const holder = describeHolder(error.holder);
+          if (args.verb === 'check') {
+            out(`provision: instance '${args.instance}' is being changed by ${holder}; not checked`);
+            return EXIT.BUSY;
+          }
+          err(`provision: instance '${args.instance}' is locked by ${holder}; wait or check that process`);
+          return EXIT.REFUSED;
+        }
       }
       // Judged BEFORE it is read: root never parses a declaration a non-root principal can steer.
       const untrusted = declarationTrustProblems(source, 'the declaration', path => deps.lstat(path), judged);
@@ -479,114 +553,144 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       err(`provision: '${source}' is not JSON`);
       return EXIT.REFUSED;
     }
-    const { layout } = parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path) });
-    if (layout.instance !== args.instance) {
-      err(`provision: '${source}' declares instance '${layout.instance}', not '${args.instance}'`);
+    const { layout: layoutOf } = parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path) });
+    if (layoutOf.instance !== args.instance) {
+      err(`provision: '${source}' declares instance '${layoutOf.instance}', not '${args.instance}'`);
       return EXIT.REFUSED;
     }
 
-    const facts = renderFacts(layout, path => deps.readRootFile(path));
-
     if (args.verb === 'render') {
-      for (const art of renderAll(layout, facts)) {
+      const renderedFacts = renderFacts(layoutOf, path => deps.readRootFile(path));
+      for (const art of renderAll(layoutOf, renderedFacts)) {
         out(`=== ${art.path} (${art.kind}, ${art.owner}:${art.group} ${octal(art.mode)})`);
         for (const line of art.body.replace(/\n$/, '').split('\n')) out(line);
       }
       return EXIT.OK;
     }
+    const facts = renderFacts(layoutOf, path => deps.readRootFile(path));
 
     // Several instances on one host: what this one may not share with the others (siblings.ts).
-    const isolation = siblingProblems(layout, source, deps, judged);
-    if (isolation.length > 0) throw new PlanRefused(layout.instance, isolation);
+    const { problems: isolation, siblings } = readSiblings(layoutOf, source, deps, judged);
+    if (isolation.length > 0) throw new PlanRefused(layoutOf.instance, isolation);
+    // The host-wide ProtectHome= fact (spec S10): a home-bound sibling makes every agent unit read-only.
+    const layout = anySiblingHomeBound(siblings)
+      ? parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path), anyHomeBound: true }).layout
+      : layoutOf;
 
-    const host = deps.observeHost(layout);
-    const actions = plan(layout, host, facts);
-
-    if (args.verb === 'check') {
-      const tls = ensureTls(layout, tlsIo(deps, null, host), deps.now());
-      const restart = tlsRestart(layout, host, tls.issued, actions.filter(a => !isFilesystemAction(a)));
-      const would = [
-        ...actions.map(action => `would: ${describe(action)}`),
-        ...tls.issued.map(piece => `would: issue the ${piece} certificate (tls)`),
-        ...restart.map(action => `would: ${describe(action)} (the reissued tls material)`),
-      ];
-      if (would.length === 0) {
-        out(`provision: instance '${layout.instance}' matches its declaration`);
-        return EXIT.OK;
-      }
-      for (const line of would) out(line);
-      out(
-        `provision: ${would.length} action(s) would change instance '${layout.instance}' — ` +
-          `run 'apply' to make them`,
-      );
-      return args.exitCode ? EXIT.DRIFT : EXIT.OK;
+    // apply: the HOST PROVISION lock around planning AND writing (spec S12 2), so two instances'
+    // applies never see each other's half-created host-wide directories. Its ids come from a
+    // first look at the host (the lock directory may not exist yet: lockHostProvision creates it).
+    let hostLock: LockHandle | null = null;
+    if (args.verb === 'apply') {
+      const before = deps.observeHost(layout, siblings);
+      hostLock = lockHostProvision(layout, deps.io(), {
+        rootUid: before.users.get('root') ?? 0,
+        rootGid: before.groups.get('root') ?? 0,
+        pubhostGid: before.groups.get(PUBHOST_GROUP) ?? null,
+      });
     }
+    try {
+      const host = deps.observeHost(layout, siblings);
+      const actions = plan(layout, host, facts);
+      // What check and apply report beside the actions (spec §5.9): facts are informational, drift
+      // is what no action of this run can fix (the operator, or provision init, must).
+      const report = planReport(layout, host);
+      for (const line of report.facts) out(`fact: ${line}`);
+      for (const line of report.drift) out(`drift: ${line}`);
 
-    const io = deps.io();
-    let written = 0;
-    const runActions = (list: readonly Action[]): boolean => {
-      if (list.length === 0) return true;
-      const report = apply(list, io);
-      for (const outcome of report.outcomes) {
-        const line = `[${outcome.status}] ${describe(outcome.action)}`;
-        if (outcome.status === 'failed') err(`${line}: ${outcome.detail}`);
-        else out(line);
-      }
-      written += report.written.length;
-      return report.ok;
-    };
-    const failed = (): number => {
-      err(`provision: apply FAILED for instance '${layout.instance}'; later actions were not run`);
-      return EXIT.FAILED;
-    };
-
-    // 1. The filesystem (the token is minted here on a first run).
-    if (!runActions(actions.filter(isFilesystemAction))) return failed();
-
-    // 2. The mTLS material, before any unit starts.
-    const tls = ensureTls(layout, tlsIo(deps, io, host), deps.now());
-    if (tls.applicable) {
-      out(`tls: issued [${tls.issued.join(', ') || 'nothing'}]; CA sha256 ${tls.caFingerprint}`);
-      if (tls.engineBundleChanged) {
-        out(
-          `tls: THE ENGINE BUNDLE CHANGED — carry ${layout.engineBundlePath} to the work host (0600, the engine's ` +
-            `user) and point the engine at it; the engine presents the old client certificate until then`,
-        );
-        if (!tls.issued.includes('ca')) {
+      if (args.verb === 'check') {
+        const tls = ensureTls(layout, tlsIo(deps, null, host), deps.now());
+        const restart = tlsRestart(layout, host, tls.issued, actions.filter(a => !isFilesystemAction(a)));
+        const would = [
+          ...actions.map(action => `would: ${describe(action)}`),
+          ...tls.issued.map(piece => `would: issue the ${piece} certificate (tls)`),
+          ...restart.map(action => `would: ${describe(action)} (the reissued tls material)`),
+        ];
+        if (would.length === 0 && report.drift.length === 0) {
+          out(`provision: instance '${layout.instance}' matches its declaration`);
+          return EXIT.OK;
+        }
+        for (const line of would) out(line);
+        if (would.length > 0) {
           out(
-            `tls: the OLD client certificate STAYS VALID until its notAfter — the agent trusts the CA, not one ` +
-              `leaf. To revoke a leaked bundle, rotate the CA: remove ${layout.tls?.caCert} and ${layout.tls?.caKey}, ` +
-              `then apply again (new CA, new leaves, agent restarted)`,
+            `provision: ${would.length} action(s) would change instance '${layout.instance}' — ` +
+              `run 'apply' to make them`,
           );
         }
+        if (report.drift.length > 0) {
+          out(`provision: ${report.drift.length} drift line(s) on instance '${layout.instance}' that apply cannot fix (see 'drift:' above)`);
+        }
+        return args.exitCode ? EXIT.DRIFT : EXIT.OK;
       }
-    }
 
-    // 3. A token minted in step 1 moves the fingerprint: write what moved.
-    const after = renderFacts(layout, path => deps.readRootFile(path));
-    if (after.fingerprint !== facts.fingerprint) {
-      if (!runActions(plan(layout, deps.observeHost(layout), after).filter(isFilesystemAction))) return failed();
-    }
+      const io = deps.io();
+      let written = 0;
+      const runActions = (list: readonly Action[]): boolean => {
+        if (list.length === 0) return true;
+        const report = apply(list, io);
+        for (const outcome of report.outcomes) {
+          const line = `[${outcome.status}] ${describe(outcome.action)}`;
+          if (outcome.status === 'failed') err(`${line}: ${outcome.detail}`);
+          else out(line);
+        }
+        written += report.written.length;
+        return report.ok;
+      };
+      const failed = (): number => {
+        err(`provision: apply FAILED for instance '${layout.instance}'; later actions were not run`);
+        return EXIT.FAILED;
+      };
 
-    // 4. The service tail of the first plan, plus the agent restart reissued TLS obliges (after
-    //    daemon-reload/enable/start: a restart is the tail's last op).
-    const tail = actions.filter(action => !isFilesystemAction(action));
-    const restart = tlsRestart(layout, host, tls.issued, tail);
-    if (restart.length > 0) out(`tls: the running agent loaded the old material — restarting ${layout.agentUnitName}`);
-    if (!runActions([...tail, ...restart])) return failed();
+      // 1. The filesystem (the token is minted here on a first run).
+      if (!runActions(actions.filter(isFilesystemAction))) return failed();
 
-    if (actions.length === 0 && tls.issued.length === 0 && written === 0) {
-      out(`provision: instance '${layout.instance}' already matches its declaration — nothing written`);
+      // 2. The mTLS material, before any unit starts.
+      const tls = ensureTls(layout, tlsIo(deps, io, host), deps.now());
+      if (tls.applicable) {
+        out(`tls: issued [${tls.issued.join(', ') || 'nothing'}]; CA sha256 ${tls.caFingerprint}`);
+        if (tls.engineBundleChanged) {
+          out(
+            `tls: THE ENGINE BUNDLE CHANGED — carry ${layout.engineBundlePath} to the work host (0600, the engine's ` +
+              `user) and point the engine at it; the engine presents the old client certificate until then`,
+          );
+          if (!tls.issued.includes('ca')) {
+            out(
+              `tls: the OLD client certificate STAYS VALID until its notAfter — the agent trusts the CA, not one ` +
+                `leaf. To revoke a leaked bundle, rotate the CA: remove ${layout.tls?.caCert} and ${layout.tls?.caKey}, ` +
+                `then apply again (new CA, new leaves, agent restarted)`,
+            );
+          }
+        }
+      }
+
+      // 3. A token minted in step 1 moves the fingerprint: write what moved.
+      const after = renderFacts(layout, path => deps.readRootFile(path));
+      if (after.fingerprint !== facts.fingerprint) {
+        if (!runActions(plan(layout, deps.observeHost(layout, siblings), after).filter(isFilesystemAction))) return failed();
+      }
+
+      // 4. The service tail of the first plan, plus the agent restart reissued TLS obliges (after
+      //    daemon-reload/enable/start: a restart is the tail's last op).
+      const tail = actions.filter(action => !isFilesystemAction(action));
+      const restart = tlsRestart(layout, host, tls.issued, tail);
+      if (restart.length > 0) out(`tls: the running agent loaded the old material — restarting ${layout.agentUnitName}`);
+      if (!runActions([...tail, ...restart])) return failed();
+
+      if (actions.length === 0 && tls.issued.length === 0 && written === 0) {
+        out(`provision: instance '${layout.instance}' already matches its declaration — nothing written`);
+        return EXIT.OK;
+      }
+      out(`provision: instance '${layout.instance}' converged (${written} file(s) written)`);
       return EXIT.OK;
+    } finally {
+      hostLock?.release();
     }
-    out(`provision: instance '${layout.instance}' converged (${written} file(s) written)`);
-    return EXIT.OK;
   } catch (error) {
     if (error instanceof SecretOutputRefused) {
       rawErr(error.message);
       return EXIT.REFUSED;
     }
-    const refused = error instanceof DeclarationError || error instanceof PlanRefused;
+    const refused = error instanceof DeclarationError || error instanceof PlanRefused || error instanceof LockRefused || error instanceof LockBusy;
     const message = error instanceof Error ? error.message : String(error);
     try {
       for (const line of (refused ? message : `provision: FAILED: ${message}`).split('\n')) err(line);
@@ -595,9 +699,12 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       return EXIT.REFUSED;
     }
     return refused ? EXIT.REFUSED : EXIT.FAILED;
+  } finally {
+    lock?.release();
   }
 }
 
 if (import.meta.main) {
-  process.exit(run(process.argv.slice(2)));
+  const argv = process.argv.slice(2);
+  process.exit(argv[0] === INIT_VERB ? await runInit(argv.slice(1)) : run(argv));
 }

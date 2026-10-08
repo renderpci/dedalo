@@ -34,6 +34,7 @@ import {
 } from '../../src/core/publication_host/secrets.ts';
 import {
 	AGENT_BASE_PATH,
+	AGENT_PATHS,
 	type AgentRequest,
 	agentRequest,
 	dialAgent,
@@ -640,6 +641,43 @@ describe('the door contract: closed routes, the transport’s own headers', () =
 			expect(state.hits.length).toBe(before);
 		});
 	}
+});
+
+describe('the host-wide nginx map route (provision init §13.4)', () => {
+	test('POST /v1/rules/map is in the closed table and reaches the agent with the bearer and its body', async () => {
+		expect(AGENT_PATHS).toContain('/v1/rules/map');
+		state.mode = 'ok';
+		const body = JSON.stringify({ text: '# map\n', hash: 'a'.repeat(64) });
+		const res = await dialAgent(
+			tlsHost(agent.port),
+			clientTls,
+			{
+				method: 'POST',
+				path: '/v1/rules/map',
+				body,
+				headers: { 'content-type': 'application/json' },
+			},
+			BEARER,
+		);
+		expect(res.status).toBe(200);
+		expect(JSON.parse(res.text)).toEqual({
+			status: 'ok',
+			path: `${AGENT_BASE_PATH}/v1/rules/map`,
+			method: 'POST',
+		});
+		expect(state.authorizations.at(-1)).toBe(`Bearer ${BEARER}`);
+	});
+
+	test('a near-miss of the route is refused before any socket opens', async () => {
+		for (const path of ['/v1/rules/maps', '/v1/rules/map/', '/v1/rules']) {
+			const before = state.hits.length;
+			const error = await rejection(
+				dialAgent(tlsHost(agent.port), clientTls, { method: 'POST', path }, BEARER),
+			);
+			expect(error.code).toBe('internal.unexpected');
+			expect(state.hits.length).toBe(before);
+		}
+	});
 });
 
 describe('the door query: closed per route, each value its grammar, encoded by the door', () => {

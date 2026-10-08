@@ -1,0 +1,2 @@
+Would relabel /home/museum.org from unconfined_u:object_r:user_home_dir_t:s0 to unconfined_u:object_r:home_root_t:s0
+Would relabel /home/museum.org/dedalo/publication_api/v1 from unconfined_u:object_r:user_home_t:s0 to unconfined_u:object_r:httpd_sys_content_t:s0

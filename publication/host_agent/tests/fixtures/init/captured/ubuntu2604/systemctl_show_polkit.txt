@@ -1,0 +1,15 @@
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/usr/lib/systemd/system/polkit.service
+DropInPaths=
+UnitFileState=static
+ExecStart={ path=/usr/lib/polkit-1/polkitd ; argv[]=/usr/lib/polkit-1/polkitd --no-debug --log-level=notice ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Environment=
+WorkingDirectory=
+User=polkitd
+Group=
+ReadOnlyPaths=
+InaccessiblePaths=
+ProtectHome=yes
+ProtectSystem=strict
+TemporaryFileSystem=

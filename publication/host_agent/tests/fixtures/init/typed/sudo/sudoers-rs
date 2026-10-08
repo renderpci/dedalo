@@ -1,0 +1,6 @@
+# /etc/sudoers-rs — an operator's own sudo-rs policy (typed). sudo-rs reads THIS file instead of
+# /etc/sudoers when it exists; it does not include /etc/sudoers.d.
+Defaults	env_reset
+Defaults	secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+root	ALL=(ALL:ALL) ALL
+%sudo	ALL=(ALL:ALL) ALL

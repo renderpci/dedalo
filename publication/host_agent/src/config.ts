@@ -108,6 +108,19 @@ export interface AgentConfig {
   RELEASES_RETAINED: number;
   MAX_BUNDLE_BYTES: number;
   MAX_BUNDLE_ENTRIES: number;
+  /**
+   * The host-wide nginx map (spec §13.4): `conf_d` = this nginx host's http{} map is the
+   * provisioned host-wide include, fed by `rules.map`; `none` (the default) = not managed
+   * here (`rules.map` answers map_unmanaged, status `rules.map.managed: false`). Rendered by
+   * render/env.ts from the declaration's `web.nginx_map`; `conf_d` only with WEB_SERVER=nginx.
+   */
+  NGINX_MAP_MODE: 'conf_d' | 'none';
+  /**
+   * The host-wide state directory (layout.ts HOST_BASE: the locks, the nginx map store).
+   * Absent = HOST_BASE. Rendered only when the declaration overrides `paths.host_base` (a
+   * scratch-root gate or a drill; production declarations never set it).
+   */
+  HOST_BASE?: string;
 }
 
 export interface ConfigSources {
@@ -235,6 +248,8 @@ function envObject(baseDir: string) {
     RELEASES_RETAINED: z.coerce.number().int().min(2).default(3),
     MAX_BUNDLE_BYTES: z.coerce.number().int().min(1).default(268435456),
     MAX_BUNDLE_ENTRIES: z.coerce.number().int().min(1).default(200000),
+    NGINX_MAP_MODE: z.enum(['conf_d', 'none'], { error: 'NGINX_MAP_MODE must be conf_d or none' }).default('none'),
+    HOST_BASE: z.string().refine(isAbsolute, 'HOST_BASE must be an absolute path').optional(),
   });
 }
 
@@ -266,6 +281,10 @@ function envSchema(baseDir: string) {
         `WEB_CONFIGTEST_BIN must be one of ${WEB_CONFIGTEST_CANDIDATES[v.WEB_SERVER].join(', ')} for WEB_SERVER=${v.WEB_SERVER}`,
       );
     }
+    if (v.NGINX_MAP_MODE === 'conf_d' && v.WEB_SERVER !== 'nginx') {
+      issue('NGINX_MAP_MODE', 'NGINX_MAP_MODE=conf_d is the nginx http{} map; it requires WEB_SERVER=nginx');
+    }
+    if (v.HOST_BASE === '/') issue('HOST_BASE', 'HOST_BASE must not be /');
     if (v.MEDIA_MODE === 'none') {
       if (v.MEDIA_ROOT !== undefined) issue('MEDIA_ROOT', 'MEDIA_ROOT is set but MEDIA_MODE=none');
     } else if (v.MEDIA_ROOT === undefined) {

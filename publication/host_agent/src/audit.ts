@@ -26,6 +26,8 @@ import { AUDIT_DIR, AUDIT_FILE_NAME } from './instance/roots';
 
 export type AuditAction =
   | 'rules.apply'
+  /** The host-wide nginx map contribution (src/rules/map.ts, spec §13.5). */
+  | 'rules.map'
   | 'release.install'
   | 'release.rollback'
   | 'release.auto_rollback'

@@ -479,6 +479,35 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   forwarder that accepts only requests pinned to the vetted public address. So the
   private-address refusal is proven in the same run. Same runner requirement as the media
   drill; a missing binary is RED.
+- **Local-only drills of the guided install** (`provision init`,
+  `engineering/PUBLICATION_HOST_SPEC.md` §9.11; both rows of `LOCAL_ONLY_SCRIPTS` in
+  `test/unit/tier_wiring_tripwire.test.ts`, with these reasons):
+  - `bun run test:pubhost:init` (`scripts/publication_host_init_drill.ts`, Debian). It must
+    create accounts, write `/etc`, run systemd, polkit, a real FPM and web-server reload and
+    `kill -9` a root process mid-change, so it runs as root in a disposable PRIVILEGED
+    container with systemd as PID 1, built FROM the locked CI image (its Debian trixie,
+    apache2, nginx, php-fpm) plus `systemd-sysv`, `polkitd`, `sudo`, `e2fsprogs`, `logrotate`
+    and the image's own Bun; it runs a stand-in `dedalo-ts.service` (the one-machine work
+    engine init takes `engine_group` from) and makes `/` a shared mount after boot, as systemd
+    does on a real host (systemd 257's `LoadCredential=` needs it). **Runner requirement:** a machine with a Docker (or compatible) daemon that may
+    start `--privileged` containers with a writable cgroup2 (`--cgroupns=host`), network for
+    the image build. A hosted tier cannot: every tier job already runs INSIDE the CI image as
+    a `container:` with no daemon socket and no privilege, and mounting one would hand a
+    pull request root on the runner. Missing docker or a refused `--privileged` is RED (exit
+    2), never a skip. Run it before landing any change to `deploy/install.sh`, the
+    `provision init` modules, the renderers, `exec.ts`, `lock.ts`/`flock.ts` or the docs'
+    guided-install commands.
+  - `bun run test:pubhost:init:el` (same script, `--family el --in-place`), run as root ON a
+    disposable RHEL/Rocky/Alma 9 or 10 VM with SELinux enforcing, refusing unless
+    `/etc/dedalo_init_drill_host` exists (created by hand on the VM, so the drill can never
+    run on a real install) and `getenforce` prints `Enforcing`. No CI runner has an SELinux
+    kernel, and a container cannot enforce SELinux, so it proves what no hosted tier can.
+    `--record` (after a green run) writes the EL drill record under `engineering/` (inputs
+    digest, hosts, measured types and floors) and `--capture <dir>` the
+    real EL discovery outputs that replace the typed EL fixtures. The record's ratchet — a
+    root gate that recomputes the inputs digest over the EL-relevant sources and is red when
+    it differs — lands with the first record, so from then on every EL-relevant change is
+    red until the EL drill runs again.
 - **Self-hosted** (private mirror's Mac): a duplicate of the hosted tiers. Everything it
   runs is twinned hosted — including the `test/integration/**` MariaDB legs, which ran
   nowhere else until PUB-05 moved them onto the suite's own MariaDB server and into the
@@ -631,7 +660,10 @@ nightly home that can fail and report is red. The ratchet itself (DEC-12) is unc
 One definition for the desk and both hosts: bun at `.bun-version`,
 postgresql-client-18, the media tools (ffmpeg, ImageMagick 7, poppler, ghostscript,
 rsvg), MariaDB, Apache (`apache2` + `apache2-dev` for `apxs`) and nginx (the
-publication-host drills), php-cli (the engine drill lints real v1 releases), chromium, git/zip/jq; the fingerprint (sha256 of `ci/Dockerfile` ++ `.bun-version`) in
+publication-host drills), php-cli (the engine drill lints real v1 releases) and php-fpm (the
+guided install's FPM pool syntax gate, `php-fpm<v> -t`, and the Debian init drill's real
+reload), gpgv (the `.bun-sha256` census row verifies Bun's signed `SHASUMS256.txt.asc`
+against the pinned release key on every run), chromium, git/zip/jq; the fingerprint (sha256 of `ci/Dockerfile` ++ `.bun-version`) in
 `/etc/dedalo-ci-image` and the `org.dedalo.ci.fingerprint` label. `ci-image.yml`
 publishes on a push that moved the definition, weekly with the layer cache OFF (the
 updater for the distro half — a cached rebuild would republish old packages forever) and

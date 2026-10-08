@@ -10,6 +10,11 @@
  *
  * Needs Apache 2.4 + apxs (binary and module dir resolved through `apxs -q`) and nginx.
  * Callers check PATH first and go RED naming what is missing — never a skip.
+ *
+ * `MainConfOptions.modules` loads extra Apache modules (the publication-host web include needs
+ * proxy, proxy_fcgi, proxy_http, rewrite and headers — publication/host_agent/tests/
+ * init_web_syntax.test.ts); a requested module the install lacks THROWS, it is never dropped.
+ * `phpFpmBinary()` finds a PHP-FPM master for the pool syntax leg (`php-fpm -t -y`).
  */
 
 import { existsSync } from 'node:fs';
@@ -59,6 +64,19 @@ export interface MainConfOptions {
 	 * character of the path becomes a one-character class.
 	 */
 	readonly optionalInclude?: boolean;
+	/** Extra Apache modules to load (`proxy_fcgi` → mod_proxy_fcgi.so). Each must exist. */
+	readonly modules?: readonly string[];
+}
+
+/** A PHP-FPM master on PATH or in the usual sbin directories (Debian `php-fpm<v>`, EL/Homebrew `php-fpm`), or null. */
+export function phpFpmBinary(): string | null {
+	const onPath = sh([
+		'sh',
+		'-c',
+		'command -v php-fpm || ls /usr/sbin/php-fpm* /opt/homebrew/sbin/php-fpm /usr/local/sbin/php-fpm 2>/dev/null | head -n 1',
+	]).out.trim();
+	const first = onPath.split('\n')[0] ?? '';
+	return first !== '' && existsSync(first) ? first : null;
 }
 
 export function apacheMainConf(
@@ -71,6 +89,11 @@ export function apacheMainConf(
 	const modules = sh(['apxs', '-q', 'LIBEXECDIR']).out.trim();
 	const names = ['mpm_event', 'unixd', 'authz_core', 'alias', 'mime', 'headers'];
 	if (withRewrite) names.push('rewrite');
+	for (const extra of options.modules ?? []) {
+		if (!existsSync(join(modules, `mod_${extra}.so`)))
+			throw new Error(`Apache module mod_${extra}.so is not installed in ${modules}`);
+		if (!names.includes(extra)) names.push(extra);
+	}
 	const loads = names
 		.filter((n) => existsSync(join(modules, `mod_${n}.so`)))
 		.map((n) => `LoadModule ${n}_module "${join(modules, `mod_${n}.so`)}"`);

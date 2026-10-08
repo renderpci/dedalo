@@ -434,7 +434,9 @@ hand-written ones.
 | Publishes succeed but anonymous access stays 404 | `MEDIA_PATH` is unset, so no markers are maintained | set it, restart, rebuild the index — the widget flags this state |
 | `.publication/` deleted, or the media tree restored from a backup | markers gone | **Rebuild media index**; the auth markers are re-laid at the next login |
 | Unpublished media still reachable | a downstream CDN or proxy holds the copy | purge the record's media paths on unpublish |
-| nginx refuses to start: unknown `$dedalo_auth_key` | the `http{}` map include is missing | add it — never comment the includes out |
+| nginx refuses to start: unknown `$dedalo_auth_key` | the `http{}` map include is missing | add it — never comment the includes out. On a publication host provisioned with `provision init`, the `http{}` map is pushed by **Apply media rules** into the host-wide include and must not be placed by hand; the manual path below still applies to work hosts and hand-provisioned publication hosts. There, run **Apply media rules** in the **Publication hosts** panel; `provision check` on the host shows whether the host-wide map include exists |
+| **Apply media rules** says the media map is *not managed* (`map_unmanaged`) | the publication host's nginx declaration has no `"nginx_map": "conf_d"`, so its map is placed by hand | expected on such a host (the rules are still applied); to let the panel push the map, provision the host with `provision init` |
+| **Apply media rules** refuses the media map: *a newer contribution* (`map_contribution_newer`) | another instance on the same publication host runs a newer Dédalo, and the host's shared map renderer predates its map | run `provision apply` of that newer instance on the host: it upgrades the renderer |
 
 ## Internals
 

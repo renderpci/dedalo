@@ -1,0 +1,1 @@
+restorecon reset /srv/dedalo_publication_host/museum_org context unconfined_u:object_r:var_t:s0->unconfined_u:object_r:usr_t:s0

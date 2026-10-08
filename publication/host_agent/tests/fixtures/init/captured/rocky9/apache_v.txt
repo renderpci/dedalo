@@ -1,0 +1,2 @@
+Server version: Apache/2.4.62 (Rocky Linux)
+Server built:   Aug 13 2026 00:00:00

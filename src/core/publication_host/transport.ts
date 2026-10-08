@@ -77,6 +77,7 @@ export const AGENT_PATHS: readonly string[] = Object.freeze([
 	'/v1/status',
 	'/v1/media/probe',
 	'/v1/rules/apply',
+	'/v1/rules/map',
 	'/v1/releases/v1',
 	'/v1/releases/v2',
 	'/v1/releases/v1/rollback',

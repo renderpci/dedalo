@@ -78,6 +78,19 @@ const stubExec: ProvisionExec = {
     sealed.add(file);
     return ok;
   },
+  // spec §2.4's read-only additions: this unix/apache declaration has no site, no nginx map and no
+  // SELinux (getenforce absent = 127), so observeHost only asks the systemd version.
+  fpmConfigtest: () => ok,
+  apacheIncludes: () => ok,
+  nginxDump: () => ok,
+  selinuxMode: () => ({ code: 127, stdout: '', stderr: 'getenforce: not found' }),
+  semanageLocal: () => ok,
+  semanageImport: () => ok,
+  restorecon: () => ok,
+  getsebool: () => ok,
+  systemdVersion: () => ({ code: 0, stdout: 'systemd 252 (252.33-1)\n', stderr: '' }),
+  semanagePortList: () => ok,
+  selinuxLabel: () => ok,
 };
 const appendOnlyProbe = (path: string): string => (sealed.has(path) ? 'append_only' : 'writable');
 
@@ -138,6 +151,8 @@ beforeAll(() => {
       unit_dir: join(SCRATCH, 'etc/systemd/system'),
       sudoers_dir: join(SCRATCH, 'etc/sudoers.d'),
       polkit_rules_dir: join(SCRATCH, 'etc/polkit-1/rules.d'),
+      // The host-wide base (spec S11) — every plan creates it and its locks: inside the trust root.
+      host_base: join(SCRATCH, 'var/lib/dedalo_publication_host/_host'),
     },
   });
   // The configtest binary is derived (/usr/sbin/...), the one host fact a scratch tree cannot
@@ -438,5 +453,56 @@ describe('root never follows a link planted between plan and apply', () => {
       chmodSync(releases, 0o755);
     }
     expect(plan(layout, observe())).toEqual([]);
+  });
+});
+
+/*
+ * RULE 1'S ONE EXCEPTION (apply.ts pinnedParentOf): the directory doors on a path whose GRANDPARENT
+ * is untrusted and whose parent is root's — the site's web log directory under Ubuntu's rsyslog
+ * /var/log (root:syslog 0775). Modelled with a world-writable grandparent (trustProblem treats a
+ * foreign owner alike; a non-root gate cannot create one).
+ */
+describe('the directory doors pin the parent under an untrusted grandparent', () => {
+  const tree = () => {
+    const grandparent = join(SCRATCH, 'pin', 'var_log');
+    const parent = join(grandparent, 'apache2');
+    rmSync(join(SCRATCH, 'pin'), { recursive: true, force: true });
+    mkdirSync(parent, { recursive: true });
+    chmodSync(join(SCRATCH, 'pin'), 0o755);
+    chmodSync(grandparent, 0o777);
+    chmodSync(parent, 0o750);
+    return { grandparent, parent, site: join(parent, 'museum.example.org') };
+  };
+
+  test('mkdir, chown and chmod land by name in the pinned parent; the working directory is restored', () => {
+    const { site } = tree();
+    const cwd = process.cwd();
+    io().mkdir(site, 0o700);
+    io().chmod(site, 0o755);
+    io().chown(site, uid, process.getgid?.() ?? 0);
+    expect(statSync(site).isDirectory()).toBe(true);
+    expect(statSync(site).mode & 0o777).toBe(0o755);
+    expect(process.cwd()).toBe(cwd);
+  });
+
+  test('a parent swapped for a link, or one others may write, is refused and nothing is created', () => {
+    const { grandparent, parent } = tree();
+    const elsewhere = join(SCRATCH, 'pin', 'elsewhere');
+    mkdirSync(elsewhere);
+    rmSync(parent, { recursive: true });
+    symlinkSync(elsewhere, parent);
+    expect(() => io().mkdir(join(parent, 'museum.example.org'), 0o755)).toThrow('without following a link');
+    expect(readdirSync(elsewhere)).toEqual([]);
+    unlinkSync(parent);
+    mkdirSync(parent);
+    chmodSync(parent, 0o777);
+    expect(() => io().mkdir(join(parent, 'museum.example.org'), 0o755)).toThrow('group- or world-writable');
+    expect(readdirSync(parent)).toEqual([]);
+    // Above the grandparent, rule 1 whole: an untrusted great-grandparent is refused.
+    chmodSync(parent, 0o755);
+    chmodSync(join(SCRATCH, 'pin'), 0o777);
+    expect(() => io().mkdir(join(parent, 'x', 'y'), 0o755)).toThrow('group- or world-writable');
+    chmodSync(join(SCRATCH, 'pin'), 0o755);
+    expect(grandparent).toContain('var_log');
   });
 });

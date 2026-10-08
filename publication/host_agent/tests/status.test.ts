@@ -14,7 +14,8 @@ import { apiLayout, promote } from '../src/releases/store';
 import { AGENT_VERSION, STATUS_APIS, buildStatus, stateRootFreeBytes, type AgentStatus } from '../src/routes/status';
 import { routeRequest } from '../src/router';
 import { instanceFingerprint } from '../src/security/pairing';
-import { resetInstance, roots } from './fixtures/instance';
+import { setRulesDepsForTests } from '../src/rules/apply';
+import { resetInstance, roots, scratchPath } from './fixtures/instance';
 
 const BASE = '/publication/host_agent';
 const AUTH = { authorization: `Bearer ${config.SERVICE_TOKEN}` };
@@ -51,7 +52,8 @@ describe('GET /v1/status', () => {
       v1: { current: null, previous: null },
       v2: { current: null, previous: null },
     });
-    expect(body.rules).toEqual({ server: config.WEB_SERVER, hash: null });
+    // The suite is an Apache host: the host-wide nginx map is not this host's (rules.map null).
+    expect(body.rules).toEqual({ server: config.WEB_SERVER, hash: null, map: null });
     expect(body.media).toEqual(await probeMedia());
     expect(Number.isSafeInteger(body.disk.state_root_free_bytes)).toBe(true);
     expect(body.disk.state_root_free_bytes).toBeGreaterThan(0);
@@ -89,7 +91,39 @@ describe('GET /v1/status', () => {
     );
 
     const body = await getStatus();
-    expect(body.rules).toEqual({ server: config.WEB_SERVER, hash });
+    expect(body.rules).toEqual({ server: config.WEB_SERVER, hash, map: null });
+  });
+
+  test('rules.map reports the host map on an nginx conf_d host, {managed:false} when placed by hand', async () => {
+    const mapDir = scratchPath('status_map', 'nginx_map');
+    const install = (mode: 'conf_d' | 'none') =>
+      setRulesDepsForTests({
+        instance: config.INSTANCE,
+        webServer: 'nginx',
+        nginxMapMode: mode,
+        lockIo: undefined as never,
+        locksDir: '/nonexistent',
+        lockUid: 0,
+        nginxMapDir: mapDir,
+        uid: 0,
+        lstat: () => null,
+      });
+    let undo = install('none');
+    try {
+      expect((await getStatus()).rules.map).toEqual({ managed: false });
+      undo();
+      undo = install('conf_d');
+      expect((await getStatus()).rules.map).toEqual({
+        managed: true,
+        hash: null,
+        host_hash: null,
+        contributions: 0,
+        invalid: 0,
+        refused: null,
+      });
+    } finally {
+      undo();
+    }
   });
 });
 

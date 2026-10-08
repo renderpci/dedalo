@@ -11,7 +11,7 @@
  *     (publicationHostFingerprint(instance, token)) — refused before anything is dialled.
  *  2. LIVE: the unauthenticated GET /health must publish that fingerprint
  *     (publicationHostFingerprintMatches, constant time). Only then is the bearer sent.
- *  3. MUTATIONS (rules.apply, release.install, release.rollback, and copy mode's media.put,
+ *  3. MUTATIONS (rules.apply, rules.map, release.install, release.rollback, and copy mode's media.put,
  *     media.delete, media.mark) prove LIVE on EVERY call:
  *     a re-provisioned agent receives the anonymous /health and nothing else — no bearer,
  *     no actor, no body (Review Focus 1).
@@ -102,6 +102,26 @@ export interface MediaProbe {
 	problems: string[];
 }
 
+/**
+ * The agent's `rules.map` status (PUBLICATION_HOST_SPEC §9.7 / provision init §13.4): the
+ * host-wide nginx http{} map. `null` on an Apache host; `{managed: false}` when the operator
+ * places the map by hand; otherwise this instance's contribution as root's renderer loaded it.
+ */
+export type AgentRulesMap =
+	| null
+	| { managed: false }
+	| {
+			managed: true;
+			/** This instance's contribution hash when it is part of the LOADED host file, else null. */
+			hash: string | null;
+			/** The `# config-hash:` of the loaded host file (shared by every instance), or null. */
+			host_hash: string | null;
+			contributions: number;
+			invalid: number;
+			/** The agent reason root's last render recorded for this instance, or null. */
+			refused: string | null;
+	  };
+
 /** The agent's AgentStatus (GET /v1/status). */
 export interface AgentStatus {
 	agent_version: string;
@@ -109,7 +129,11 @@ export interface AgentStatus {
 	platform: string;
 	instance_fingerprint: string;
 	apis: Record<AgentApi, { current: string | null; previous: string | null }>;
-	rules: { server: string; hash: string | null };
+	/**
+	 * `map` is ABSENT on an agent that predates the host-wide nginx map (the shape check
+	 * accepts that; apply_rules refuses on nginx until the agent is updated).
+	 */
+	rules: { server: string; hash: string | null; map?: AgentRulesMap };
 	media: MediaProbe;
 	disk: { state_root_free_bytes: number };
 }
@@ -127,6 +151,20 @@ export interface RulesApplyInput {
 	server: PublicationHostServer;
 	text: string;
 	hash: string;
+}
+
+/** POST /v1/rules/map: buildNginxMap() and nginxMapConfigHash() (rules.ts expectedNginxMap). */
+export interface RulesMapInput {
+	text: string;
+	hash: string;
+}
+
+/** The agent's answer to rules.map: this contribution is in the host file nginx has loaded. */
+export interface RulesMapApplied {
+	hash: string;
+	host_hash: string;
+	contributions: number;
+	reloaded: true;
 }
 
 /** A release id `<version>_<digest7>` (spec §3); host_status shapes agent-reported ids by it. */
@@ -206,6 +244,13 @@ function assertRulesRequest(name: string, req: RulesApplyInput, actor: string): 
 	if (!SHA256_HEX.test(req.hash))
 		throw refuse(name, 'rules.apply', 'the hash must be 64 lowercase hex');
 	if (req.text.length === 0) throw refuse(name, 'rules.apply', 'the include text is empty');
+}
+
+function assertMapRequest(name: string, req: RulesMapInput, actor: string): void {
+	assertActor(name, 'rules.map', actor);
+	if (!SHA256_HEX.test(req.hash))
+		throw refuse(name, 'rules.map', 'the hash must be 64 lowercase hex');
+	if (req.text.length === 0) throw refuse(name, 'rules.map', 'the map text is empty');
 }
 
 function assertInstallRequest(
@@ -512,8 +557,31 @@ function isApis(value: unknown): boolean {
 	return isRecord(value) && isApiSlot(value.v1) && isApiSlot(value.v2);
 }
 
+function isManagedMap(value: Record<string, unknown>): boolean {
+	return (
+		isNullableString(value.hash) &&
+		isNullableString(value.host_hash) &&
+		Number.isSafeInteger(value.contributions) &&
+		Number.isSafeInteger(value.invalid) &&
+		isNullableString(value.refused)
+	);
+}
+
+/** `rules.map`: absent (an older agent), null (apache), {managed:false}, or the managed shape. */
+export function isRulesMap(value: unknown): value is AgentRulesMap | undefined {
+	if (value === undefined || value === null) return true;
+	if (!isRecord(value)) return false;
+	if (value.managed === false) return true;
+	return value.managed === true && isManagedMap(value);
+}
+
 function isRules(value: unknown): boolean {
-	return isRecord(value) && typeof value.server === 'string' && isNullableString(value.hash);
+	return (
+		isRecord(value) &&
+		typeof value.server === 'string' &&
+		isNullableString(value.hash) &&
+		isRulesMap(value.map)
+	);
 }
 
 function isDisk(value: unknown): boolean {
@@ -552,6 +620,18 @@ function isInstallResult(value: unknown): value is InstallResult {
 
 function isRulesApplied(value: unknown): value is { hash: string; reloaded: true } {
 	return isRecord(value) && typeof value.hash === 'string' && value.reloaded === true;
+}
+
+function isMapApplied(value: unknown): value is RulesMapApplied {
+	return (
+		isRecord(value) &&
+		typeof value.hash === 'string' &&
+		typeof value.host_hash === 'string' &&
+		SHA256_HEX.test(value.host_hash) &&
+		Number.isSafeInteger(value.contributions) &&
+		(value.contributions as number) >= 1 &&
+		value.reloaded === true
+	);
 }
 
 function isSwap(value: unknown): value is { from: string; to: string } {
@@ -597,6 +677,36 @@ export async function hostApplyRules(
 	const applied = expectShape(host, 'rules.apply', answer, isRulesApplied);
 	if (applied.hash !== req.hash) throw unreadable(host, 'rules.apply', answer.status);
 	return { hash: applied.hash, reloaded: true };
+}
+
+/**
+ * rules.map: THIS instance's contribution to the host-wide nginx http{} map (the agent writes
+ * its contribution; root's renderer merges, configtests and reloads). The answer must name the
+ * hash that was sent, or it is unreadable — never an OK.
+ */
+export async function hostApplyRulesMap(
+	name: string,
+	req: RulesMapInput,
+	actor: string,
+): Promise<RulesMapApplied> {
+	assertMapRequest(name, req, actor);
+	const host = requireHost(name);
+	const answer = await mutateCall(
+		host,
+		command('rules.map', 'POST', '/v1/rules/map', {
+			headers: { 'content-type': 'application/json', [AGENT_ACTOR_HEADER]: actor },
+			body: JSON.stringify({ text: req.text, hash: req.hash }),
+			timeoutMs: AGENT_TIMEOUTS_MS.rules,
+		}),
+	);
+	const applied = expectShape(host, 'rules.map', answer, isMapApplied);
+	if (applied.hash !== req.hash) throw unreadable(host, 'rules.map', answer.status);
+	return {
+		hash: applied.hash,
+		host_hash: applied.host_hash,
+		contributions: applied.contributions,
+		reloaded: true,
+	};
 }
 
 export async function hostInstallRelease(

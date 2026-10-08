@@ -1,0 +1,6 @@
+NAME="AlmaLinux"
+VERSION="8.10 (Cerulean Leopard)"
+ID="almalinux"
+ID_LIKE="rhel centos fedora"
+VERSION_ID="8.10"
+PLATFORM_ID="platform:el8"

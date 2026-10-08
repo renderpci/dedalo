@@ -1,0 +1,8 @@
+LoadState=loaded
+ActiveState=active
+FragmentPath=/usr/lib/systemd/system/php-fpm.service
+ProtectHome=no
+ProtectSystem=strict
+InaccessiblePaths=
+ReadOnlyPaths=
+TemporaryFileSystem=/home:ro

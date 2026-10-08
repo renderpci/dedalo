@@ -1,0 +1,5 @@
+{
+  "typed": false,
+  "captured": "docker ubuntu:26.04, 2026-10-09, `apt install sudo-rs` (0.2.13-0ubuntu1.2): the stock server's /usr/bin/sudo",
+  "limits": "realpath.txt is `readlink -f /usr/bin/sudo` (the `sudo` alternative points at /usr/lib/cargo/bin/sudo); sudoers is the package's /etc/sudoers. The package ships no /etc/sudoers-rs (an operator's own sudo-rs policy is typed/sudo)."
+}

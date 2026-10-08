@@ -1,0 +1,5 @@
+22 1 253:0 / / rw,relatime shared:1 - xfs /dev/mapper/rl-root rw,seclabel,attr2,inode64,noquota
+30 22 253:2 / /home rw,nosuid,nodev,noexec,relatime shared:20 - xfs /dev/mapper/rl-home rw,seclabel,attr2,inode64,noquota
+31 22 253:3 / /var rw,nosuid,nodev,noexec,relatime shared:21 - xfs /dev/mapper/rl-var rw,seclabel,attr2,inode64,noquota
+32 31 253:4 / /var/lib/dedalo_publication_host_init rw,relatime shared:22 - xfs /dev/mapper/rl-init rw,seclabel,attr2,inode64,noquota
+33 22 253:5 / /opt rw,nosuid,nodev,relatime shared:23 - xfs /dev/mapper/rl-opt rw,seclabel,attr2,inode64,noquota

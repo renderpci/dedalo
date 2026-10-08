@@ -1,0 +1,6 @@
+unconfined_u:object_r:user_home_dir_t:s0 /home/museum.org
+system_u:object_r:home_root_t:s0 /home
+system_u:object_r:httpd_var_run_t:s0 /var/opt/remi/php82/run/php-fpm
+system_u:object_r:var_t:s0 /var/opt/remi/php84/run/php-fpm
+system_u:object_r:httpd_sys_content_t:s0 /srv/media
+? /mnt/unlabelled

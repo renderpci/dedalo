@@ -1,0 +1,3 @@
+/etc/httpd/conf.d/php82-php.conf
+/etc/httpd/conf.d/php82-php.conf
+/etc/httpd/conf.modules.d/20-php82-php.conf

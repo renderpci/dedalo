@@ -30,8 +30,8 @@ const TOKEN = 'x'.repeat(40);
 
 /** The AgentConfig field names (the plan's fixed interface + LOG_LEVEL) = the env-file keys. */
 const AGENT_CONFIG_FIELDS = [
-  'INSTANCE', 'LISTEN_KIND', 'LOG_LEVEL', 'MAX_BUNDLE_BYTES', 'MAX_BUNDLE_ENTRIES',
-  'MEDIA_MODE', 'MEDIA_ROOT', 'NODE_ENV', 'PHP_BIN', 'RELEASES_RETAINED', 'SERVICE_TOKEN',
+  'HOST_BASE', 'INSTANCE', 'LISTEN_KIND', 'LOG_LEVEL', 'MAX_BUNDLE_BYTES', 'MAX_BUNDLE_ENTRIES',
+  'MEDIA_MODE', 'MEDIA_ROOT', 'NGINX_MAP_MODE', 'NODE_ENV', 'PHP_BIN', 'RELEASES_RETAINED', 'SERVICE_TOKEN',
   'SOCKET_PATH', 'STATE_ROOT', 'TLS_CERT_FILE', 'TLS_CLIENT_CA_FILE', 'TLS_HOST', 'TLS_KEY_FILE',
   'TLS_PORT', 'V2_HEALTH_URL', 'V2_UNIT', 'WEB_CONFIGTEST_BIN', 'WEB_SERVER', 'WEB_UNIT',
 ];
@@ -159,6 +159,34 @@ describe('a valid configuration resolves', () => {
     const resolved = resolveConfig(sources({ credentialsDir: writeCredential('SERVICE_TOKEN', TOKEN) }));
     expect(resolved.NODE_ENV).toBe('production');
     expect(resolved.SERVICE_TOKEN).toBe(TOKEN);
+  });
+});
+
+describe('the host-wide nginx map keys (spec §13.4)', () => {
+  // tlsEnv: these gates resolve without a socket path, so they hold on any checkout depth.
+  test('NGINX_MAP_MODE defaults to none; HOST_BASE is absent by default', () => {
+    writeEnvFile(tlsEnv());
+    const resolved = resolveConfig(sources());
+    expect(resolved.NGINX_MAP_MODE).toBe('none');
+    expect(resolved.HOST_BASE).toBeUndefined();
+  });
+
+  test('conf_d on nginx resolves; an absolute HOST_BASE resolves as given', () => {
+    writeEnvFile(tlsEnv({ NGINX_MAP_MODE: 'conf_d', HOST_BASE: '/srv/scratch/_host' }));
+    const resolved = resolveConfig(sources());
+    expect(resolved.NGINX_MAP_MODE).toBe('conf_d');
+    expect(resolved.HOST_BASE).toBe('/srv/scratch/_host');
+  });
+
+  test('conf_d on apache, an unknown mode, a relative or root HOST_BASE are refused', () => {
+    writeEnvFile(tlsEnv({ NGINX_MAP_MODE: 'conf_d', WEB_SERVER: 'apache', WEB_UNIT: 'apache2', WEB_CONFIGTEST_BIN: '/usr/sbin/apache2ctl' }));
+    expect(refusal()).toContain('NGINX_MAP_MODE=conf_d is the nginx http{} map');
+    writeEnvFile(tlsEnv({ NGINX_MAP_MODE: 'http' }));
+    expect(refusal()).toContain('NGINX_MAP_MODE must be conf_d or none');
+    writeEnvFile(tlsEnv({ HOST_BASE: 'relative/_host' }));
+    expect(refusal()).toContain('HOST_BASE must be an absolute path');
+    writeEnvFile(tlsEnv({ HOST_BASE: '/' }));
+    expect(refusal()).toContain('HOST_BASE must not be /');
   });
 });
 

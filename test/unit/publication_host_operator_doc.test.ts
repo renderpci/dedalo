@@ -6,9 +6,40 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { EXIT } from '../../publication/host_agent/src/provision/cli';
+import {
+	APACHE_MODULES,
+	SELINUX_BOOLEANS,
+	SELINUX_READ_ONLY_BOOLEANS,
+} from '../../publication/host_agent/src/provision/exec_contract';
+import { INIT_FLAGS } from '../../publication/host_agent/src/provision/init/args';
+import { DEFAULTS } from '../../publication/host_agent/src/provision/init/draft';
+import { parseDraft } from '../../publication/host_agent/src/provision/init/draft_schema';
+import { OS_SUPPORT } from '../../publication/host_agent/src/provision/init/parse/os';
 import type { HostDeclaration } from '../../publication/host_agent/src/provision/layout';
-import { derive, LISTEN_HOST_PATTERN } from '../../publication/host_agent/src/provision/layout';
+import {
+	BUN_KERNEL_FLOOR,
+	derive,
+	FORBIDDEN_V1_USERS,
+	fpmLayout,
+	HOME_ROOT_MODE,
+	INSTANCE_PATTERN,
+	LISTEN_HOST_PATTERN,
+	layoutPaths,
+	NGINX_MAP_INCLUDE_PATH,
+	PUBHOST_GROUP,
+	SYSTEMD_FLOOR,
+	V1_PHP_FLOOR,
+	webLogBase,
+} from '../../publication/host_agent/src/provision/layout';
+import { INIT_BASE, LOCK_WAIT_MS } from '../../publication/host_agent/src/provision/lock';
 import { AGENT_TREE_WALK_CAP } from '../../publication/host_agent/src/provision/plan';
+import { fpmPoolBody } from '../../publication/host_agent/src/provision/render/fpm_pool';
+import {
+	apacheWebInclude,
+	PHP_HANDLER_PATTERN,
+} from '../../publication/host_agent/src/provision/render/web_include';
+import { selinuxRules } from '../../publication/host_agent/src/provision/selinux';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const page = readFileSync(join(repoRoot, 'docs/install/publication_host.md'), 'utf8');
@@ -18,6 +49,39 @@ const example = JSON.parse(
 		'utf8',
 	),
 ) as { listen: { host: string; port: number } };
+
+/** The page between two headings (the end heading excluded). */
+function section(start: string, end: string): string {
+	const from = page.indexOf(start);
+	const to = page.indexOf(end, from + 1);
+	if (from < 0 || to < 0) throw new Error(`no section ${start} … ${end}`);
+	return page.slice(from, to);
+}
+
+function stepTwoDeclaration(): HostDeclaration {
+	const block = page.match(/### 2\. Declare the instance[\s\S]*?```json\n([\s\S]*?)\n```/);
+	if (!block?.[1]) throw new Error('step 2 has no json declaration');
+	return JSON.parse(block[1]) as HostDeclaration;
+}
+
+/** The fenced block of `lang` that follows `marker`. */
+function fenceAfter(marker: string, lang: string): string {
+	const at = page.indexOf(marker);
+	if (at < 0) throw new Error(`no ${marker}`);
+	const open = page.indexOf(`\`\`\`${lang}\n`, at);
+	const close = page.indexOf('\n```', open + 4 + lang.length);
+	return page.slice(open + 4 + lang.length, close + 1);
+}
+
+/** Markdown table rows (first cell, every cell) of a section. */
+function rows(text: string): string[][] {
+	return text
+		.split('\n')
+		.filter((line) => line.startsWith('| ') && !line.startsWith('| ---'))
+		.map((line) => line.slice(2, -2).split(' | '));
+}
+
+const GUIDED = section('## Guided install (`provision init`)', '\n## Install\n');
 
 describe('publication host operator page', () => {
 	test('every agent URL names an IPv4 literal the schema accepts (the cert SAN), never a hostname', () => {
@@ -46,9 +110,7 @@ describe('publication host operator page', () => {
 		expect(page.indexOf('### 3. Create the accounts')).toBeGreaterThan(
 			page.indexOf('### 2. Declare the instance'),
 		);
-		const block = page.match(/### 2\. Declare the instance[\s\S]*?```json\n([\s\S]*?)\n```/);
-		if (!block?.[1]) throw new Error('step 2 has no json declaration');
-		const declared = JSON.parse(block[1]) as HostDeclaration;
+		const declared = stepTwoDeclaration();
 		// Same keys as the committed one-machine example (derive() reads, the schema refuses unknown keys).
 		const committed = JSON.parse(
 			readFileSync(
@@ -59,17 +121,23 @@ describe('publication host operator page', () => {
 				'utf8',
 			),
 		) as Record<string, unknown>;
-		expect(Object.keys(declared).sort()).toEqual(Object.keys(committed).sort());
+		// The manual path declares the optional `site` (decision A: apply writes the v1 pool and
+		// the web include); every other key is the committed one-machine example's.
+		expect(Object.keys(declared).sort()).toEqual([...Object.keys(committed), 'site'].sort());
 		const one = derive(declared);
 		const { engine_group: _socketOnly, ...rest } = declared;
 		derive({ ...rest, listen: { kind: 'tls', host: '10.20.0.2', port: 8471 } });
-		// Step 3's commands name exactly the accounts the declaration does.
-		expect(page).toContain(`--user-group ${one.identity.agentUser}`);
-		expect(page).toContain(`groupadd --system ${one.identity.v2Group}`);
-		expect(page).toContain(`-g ${one.identity.v2Group} ${one.identity.v2User}`);
-		expect(page).toMatch(
-			new RegExp(`-g www-data -d /home/\\S+/httpdocs ${one.identity.v1User}\\b`),
-		);
+		// Step 3's commands name exactly the accounts the declaration does, and the host group.
+		const step3 = section('### 3. Create the accounts', '### 4. Provision');
+		expect(step3).toContain(`--user-group ${one.identity.agentUser}`);
+		expect(step3).toContain(`--user-group ${one.identity.v1User}`);
+		expect(step3).toContain(`groupadd --system ${one.identity.v2Group}`);
+		expect(step3).toContain(`-g ${one.identity.v2Group} ${one.identity.v2User}`);
+		expect(step3).toContain(`groupadd --system ${PUBHOST_GROUP}`);
+		// v1 runs its own pool (decision A): never the web server's or a catch-all account.
+		expect(FORBIDDEN_V1_USERS).not.toContain(one.identity.v1User);
+		expect(one.identity.v1User).toBe(DEFAULTS.v1User(one.instance));
+		for (const user of FORBIDDEN_V1_USERS) expect(page).toContain(`\`${user}\``);
 	});
 
 	test('the shared API configuration step exists, with its refusal in troubleshooting', () => {
@@ -140,5 +208,212 @@ describe('publication host operator page', () => {
 		const readme = readFileSync(join(repoRoot, 'publication/host_agent/README.md'), 'utf8');
 		expect(readme).toContain('`AGENT_TREE_WALK_CAP`');
 		expect(readme).not.toMatch(/\d{4,} entries/);
+	});
+});
+
+describe('the guided install (provision init) states what the code does', () => {
+	test('the section exists BEFORE the manual install, with its RHEL subsection', () => {
+		expect(page.indexOf('## Guided install (`provision init`) {#guided-install}')).toBeGreaterThan(
+			0,
+		);
+		expect(page.indexOf('## Guided install')).toBeLessThan(page.indexOf('### 0. Prepare the site'));
+		expect(GUIDED).toContain('### RHEL, Rocky and Alma (9 and 10) {#rhel-rocky-and-alma}');
+		expect(GUIDED).toContain('Whoever can write the source can become root');
+	});
+
+	test('the flag table IS INIT_FLAGS (order and value placeholders); --declaration is said to be refused', () => {
+		const spelled = INIT_FLAGS.map((f) => (f.value === null ? f.flag : `${f.flag} ${f.value}`));
+		const initRows = rows(
+			section('| `provision init` flag | Meaning |', 'Pass them after `--`'),
+		).slice(1);
+		const table = initRows.map((cells) => (cells[0] ?? '').replace(/`/g, ''));
+		expect(table).toEqual(spelled);
+		// The hand-over flags install.sh passes are said to be its own.
+		for (const f of INIT_FLAGS.filter((x) =>
+			['--source', '--source-digest-confirmed', '--bun-archive', '--bun-sums'].includes(x.flag),
+		)) {
+			const row = initRows.find((cells) => (cells[0] ?? '').startsWith(`\`${f.flag} `));
+			expect(row?.[1]).toContain('`install.sh` passes');
+		}
+		expect(GUIDED).toContain('`--declaration` is refused');
+	});
+
+	test('the exit-code table names cli.ts EXIT 0..5, busy for check only', () => {
+		const exit = rows(
+			section('| Exit code | Meaning |\n| --- | --- |\n| 0 | done', '| `provision init` flag'),
+		);
+		expect(exit.slice(1).map((cells) => Number(cells[0]))).toEqual(Object.values(EXIT).sort());
+		expect(exit.find((cells) => cells[0] === String(EXIT.BUSY))?.[1]).toMatch(
+			/^`provision check` only/,
+		);
+	});
+
+	test('the lock waits and the init base the page quotes are lock.ts constants', () => {
+		expect(GUIDED).toContain(`${INIT_BASE}/museum_org/`);
+		const flat = GUIDED.replace(/\s+/g, ' ');
+		expect(flat).toContain(`waits ${LOCK_WAIT_MS.instance / 1000} seconds, then is refused`);
+		expect(flat).toContain(
+			`waits ${LOCK_WAIT_MS.instance / 1000} seconds, then ends with exit ${EXIT.BUSY}`,
+		);
+	});
+
+	test('the draft example is a draft parseDraft accepts; the proposed defaults are draft.ts DEFAULTS', () => {
+		const block = section('### The draft', '### The three lists').match(/```json\n([\s\S]*?)\n```/);
+		if (!block?.[1]) throw new Error('the draft section has no json');
+		const draft = parseDraft(JSON.parse(block[1]), 'the guide');
+		expect(INSTANCE_PATTERN.test(draft.instance)).toBe(true);
+		for (const name of [DEFAULTS.agentUser, DEFAULTS.v1User, DEFAULTS.v2User, DEFAULTS.v2Unit]) {
+			expect(GUIDED).toContain(`\`${name(draft.instance)}\``);
+		}
+		expect(GUIDED).toContain(`on port ${DEFAULTS.v2Port}`);
+	});
+
+	test('the two layouts are layout.ts layoutPaths; the home command uses HOME_ROOT_MODE', () => {
+		const home = layoutPaths('home', 'museum_org', '/home/museum.org');
+		const system = layoutPaths('system', 'museum_org', null);
+		const table = rows(
+			section('| | `home` (the default) | `system` (the alternative) |', 'Root runs the Bun'),
+		);
+		const cell = (label: string, column: 1 | 2) =>
+			table.find((cells) => cells[0] === label)?.[column];
+		expect(cell('state root', 1)).toBe(`\`${home.state_root}\``);
+		expect(cell('agent code', 1)).toBe(`\`${home.agent_dir}\``);
+		expect(cell("the site's Bun", 1)).toBe(`\`${home.bun_bin}\``);
+		// Owner decision 1(c): the site's web logs are OUTSIDE the home (layout.ts webLogBase), never a home path.
+		const logs = cell("the site's web server logs", 1) ?? '';
+		expect(logs.startsWith(`\`${join(webLogBase('apache', 'debian'), 'museum.org')}\``)).toBe(true);
+		expect(logs).toContain(`\`${webLogBase('apache', 'el')}/…\``);
+		expect(logs).toContain(`\`${webLogBase('nginx', 'debian')}/…\``);
+		expect(logs).not.toContain('/home/');
+		expect(cell('state root', 2)).toBe(`\`${system.state_root}\``);
+		expect(cell('agent code', 2)).toBe(`\`${system.agent_dir}\``);
+		expect(cell("the site's Bun", 2)).toBe(`\`${system.bun_bin}\``);
+		const mode = `0${HOME_ROOT_MODE.toString(8)}`;
+		expect(GUIDED).toContain(`chown root:root /home/museum.org && chmod ${mode} /home/museum.org`);
+		expect(GUIDED.replace(/\s+/g, ' ')).toContain(`with \`${mode}\`, every local account`);
+	});
+
+	test('the RHEL FPM table is layout.ts fpmLayout for AppStream and Remi', () => {
+		const table = rows(
+			section(
+				'| | AppStream (`el`, 8.2) | Remi (`remi`, 8.3) |',
+				"EL's `/etc/httpd/conf.d/php.conf`",
+			),
+		);
+		const el = fpmLayout('museum_org', 'el', '8.2', 'apache');
+		const remi = fpmLayout('museum_org', 'remi', '8.3', 'apache');
+		const cell = (label: string, column: 1 | 2) =>
+			table.find((cells) => cells[0] === label)?.[column];
+		expect([cell('pool file', 1), cell('service', 1), cell('socket', 1)]).toEqual(
+			[el.poolFile, el.unit, el.listen].map((v) => `\`${v}\``),
+		);
+		expect([cell('pool file', 2), cell('service', 2), cell('socket', 2)]).toEqual(
+			[remi.poolFile, remi.unit, remi.listen].map((v) => `\`${v}\``),
+		);
+		expect(GUIDED.replace(/\s+/g, ' ')).toContain(`below the v1 floor of ${V1_PHP_FLOOR}`);
+	});
+
+	test('the SELinux table is selinux.ts selinuxRules, row for row (path, -f, type)', () => {
+		const declared = stepTwoDeclaration();
+		const layout = derive({
+			...declared,
+			web: { server: 'nginx', unit: 'nginx', nginx_map: 'conf_d' },
+			media: { mode: 'copy', root: '/srv/dedalo/media' },
+		});
+		const rules = selinuxRules(layout);
+		const table = rows(section('| Path | `-f` | Type | Why |', '`-f d` is the directory alone'))
+			.slice(1)
+			.map((cells) =>
+				cells
+					.slice(0, 3)
+					.map((cell) => cell.replace(/`/g, ''))
+					.join(' '),
+			);
+		expect(table).toEqual(rules.map((rule) => `${rule.path} ${rule.fileType} ${rule.type}`));
+	});
+
+	test('the booleans init may ask for are SELINUX_BOOLEANS minus the read-only one, which is named as read only', () => {
+		const table = rows(
+			section(
+				'| Boolean | When init asks | What it lets httpd do |',
+				'`httpd_graceful_shutdown` is read',
+			),
+		)
+			.slice(1)
+			.flatMap((cells) => [...(cells[0] ?? '').matchAll(/`([a-z_]+)`/g)].map((m) => m[1]));
+		const writable = SELINUX_BOOLEANS.filter((b) => !SELINUX_READ_ONLY_BOOLEANS.includes(b));
+		expect(new Set(table)).toEqual(new Set(writable));
+		for (const b of SELINUX_READ_ONLY_BOOLEANS)
+			expect(GUIDED.replace(/\s+/g, ' ')).toContain(`\`${b}\` is read, never changed`);
+	});
+
+	test('the supported family is OS_SUPPORT (EL 9 and 10, never 8); EL 8 is refused with the systemd and kernel floors', () => {
+		const el = OS_SUPPORT.filter((row) => row.family === 'el').map((row) => row.version);
+		expect(el).toEqual(['9', '10']);
+		const flat = GUIDED.replace(/\s+/g, ' ');
+		expect(flat).toContain(`RHEL, Rocky and Alma ${el.join(' and ')}.`);
+		expect(flat).toContain('**EL 8 is not supported.**');
+		expect(flat).toContain(`the units need systemd ${SYSTEMD_FLOOR}`);
+		expect(flat).toContain(`Bun documents kernel ${BUN_KERNEL_FLOOR} or newer`);
+	});
+});
+
+describe('the manual path follows decision A (the v1 pool) and the host map (Q1)', () => {
+	const layout = derive(stepTwoDeclaration());
+
+	test('step 9 shows the web include EXACTLY as render/web_include.ts writes it for step 2', () => {
+		expect(fenceAfter('**What the include holds**', 'apache')).toBe(
+			`${apacheWebInclude(layout).trimEnd()}\n`,
+		);
+		expect(apacheWebInclude(layout)).toContain(`<FilesMatch "${PHP_HANDLER_PATTERN}">`);
+		expect(apacheWebInclude(layout)).toContain('<If "-f %{REQUEST_FILENAME}">');
+	});
+
+	test('step 9 shows the v1 pool EXACTLY as render/fpm_pool.ts writes it, at its derived path', () => {
+		expect(fenceAfter('**The v1 pool** that `apply` wrote', 'ini')).toBe(
+			`${fpmPoolBody(layout).trimEnd()}\n`,
+		);
+		expect(page).toContain(
+			`**The v1 pool** that \`apply\` wrote, \`${layout.site?.fpm.poolFile}\``,
+		);
+	});
+
+	test('step 9 references the include by its derived path, and enables exactly APACHE_MODULES', () => {
+		const step9 = section("### 9. Map the APIs into the site's virtual host", '### 10. First use');
+		expect(step9).toContain(`IncludeOptional ${layout.instanceDir}/web.apache.conf`);
+		const a2enmod = step9.match(/^a2enmod (.+)$/m)?.[1]?.split(' ') ?? [];
+		expect(new Set(a2enmod)).toEqual(new Set(APACHE_MODULES));
+		expect(step9).toContain(NGINX_MAP_INCLUDE_PATH);
+	});
+
+	test('sentences that became false are gone', () => {
+		expect(page).not.toContain('The provisioner never creates accounts');
+		expect(page).not.toMatch(/kept\. `apply` never reloads the web server\./);
+		expect(page).not.toContain('The one-time `http{}` map\n  include stays manual');
+		expect(page).not.toContain('gpg --verify SHASUMS256.txt.asc SHASUMS256.txt');
+		expect(page).not.toMatch(/runs the site's PHP-FPM pool, and so the v1 API/);
+	});
+});
+
+describe('every page that describes the hand-placed nginx map says when NOT to place it (spec §10)', () => {
+	const flat = (path: string) => readFileSync(join(repoRoot, path), 'utf8').replace(/\s+/g, ' ');
+	test.each([
+		'docs/core/system/media_protection.md',
+		'docs/config/media_protection.md',
+		'docs/install/troubleshooting.md',
+		'docs/install/reverse_proxy.md',
+	])('%s', (path) => {
+		expect(flat(path)).toContain(
+			'On a publication host provisioned with `provision init`, the `http{}` map is pushed by **Apply media rules** into the host-wide include and must not be placed by hand',
+		);
+	});
+
+	test('engineering/MEDIA_PROTECTION.md, with the root renderer in its renderer list', () => {
+		const text = flat('engineering/MEDIA_PROTECTION.md');
+		expect(text).toContain(
+			'on a publication host provisioned with `provision init`, the http{} map is pushed by apply_rules into the host-wide include and must not be placed by hand',
+		);
+		expect(text).toContain('`publication/host_agent/src/rules/host_map_main.ts`');
+		expect(text).toContain(NGINX_MAP_INCLUDE_PATH);
 	});
 });

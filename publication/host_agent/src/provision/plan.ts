@@ -42,20 +42,52 @@
  * install or the suite ran in it — build tools the publication host never needs, refused like
  * `.test-tmp` (the OUTCOME is gated, not the script's spelling).
  *
+ * SITE, SELINUX AND HOST-WIDE STATE (provision init, step 1; spec S4, S5, S9, S11, §5.9). With a
+ * `site`: the web include and the dedicated v1 pool are artifacts with POST-RENAME validators (`web`,
+ * `fpm`: apply.ts installValidatedPostRename, under the host web lock), the v1 pool's own
+ * directories are created, and the tail gains fpm-configtest → fpm-reload. On an SELinux host the
+ * instance's file-context rules and port label are imported in one `semanage import` transaction,
+ * then relabelled (restorecon), both before every configtest op; an operator rule on one of our specs
+ * with another type, or a v2 port the policy types otherwise, is REFUSED (never overridden). Every
+ * declaration ensures the HOST-WIDE directories (HOST_BASE, its locks; on nginx `conf_d` the map and
+ * renderer directories) — each created under a temporary name and renamed, an existing one with other
+ * metadata refused, never chowned — and the two host lock files; on nginx `conf_d` the plan also
+ * rewrites the renderer's identities.json and sweeps contributions no declaration owns. The caller
+ * holds the host provision lock around planning and applying (apply.ts lockHostProvision).
+ *
  * ZERO-DEPENDENCY.
  */
 import { dirname, join } from 'node:path';
 import type { AccountGroups, Credentials } from './access';
 import { EXECUTE, READ, accountCredentials, chmodFix, missingAccess, unitCredentials } from './access';
-import { hasDrifted, parseStamp } from './hash';
-import type { AgentLayout, WebServer } from './layout';
-import { MODES, SERVICE_TOKEN_BYTES, WEB_CONFIGTEST_CANDIDATES, groupName, markerContent, ownerName } from './layout';
+import type { RestoreconTarget } from './exec_contract';
+import { HOST_STAMP_INSTANCE, hasDrifted, parseStamp } from './hash';
+import type { AgentLayout, HostLockName, ModeKey, WebServer } from './layout';
+import {
+  DEFAULT_PATHS,
+  HOST_LOCK_FILES,
+  HOST_MAP_UNIT,
+  MODES,
+  PUBHOST_GROUP,
+  SERVICE_TOKEN_BYTES,
+  SYSTEMD_FLOOR,
+  WEB_CONFIGTEST_CANDIDATES,
+  groupName,
+  markerContent,
+  ownerName,
+  webLogBase,
+} from './layout';
 import { engineFragmentRenderer } from './render/engine_fragment';
 import { envRenderer } from './render/env';
+import { fpmPoolRenderer } from './render/fpm_pool';
+import { logrotateRenderer } from './render/logrotate';
+import { hostMapUnitRenderer } from './render/host_map_unit';
+import { nginxMapIncludeRenderer } from './render/nginx_map_include';
 import { polkitRenderer } from './render/polkit';
 import { sudoersRenderer } from './render/sudoers';
 import { agentUnitGroups, agentUnitRenderer } from './render/unit_agent';
 import { v2ScratchUnitRenderer, v2UnitGroups, v2UnitRenderer } from './render/unit_v2';
+import { webIncludeRenderer } from './render/web_include';
 import type {
   Artifact,
   ArtifactEffect,
@@ -65,8 +97,34 @@ import type {
   RenderFacts,
   Renderer,
   UnitGroups,
+  WriteValidator,
 } from './render/types';
 import { ARTIFACT_KINDS, PENDING_FACTS } from './render/types';
+import { parseHostMapResult } from '../rules/host_map';
+import {
+  IDENTITIES_FILE,
+  MAP_GRAMMAR,
+  MAP_RENDERER_FILES,
+  parseRendererVersion,
+  renderIdentities,
+  renderRendererVersion,
+  rendererInstallDecision,
+} from './host_map_renderer';
+import type { SelinuxRuleFacts } from './selinux';
+import {
+  SELINUX_IMPORT_NAME,
+  SELINUX_STATE_NAME,
+  encodeSelinuxState,
+  fcontextEntry,
+  importLines,
+  isHomeLayout,
+  labelScope,
+  parseSelinuxState,
+  portEntry,
+  restoreconTargets,
+  selinuxPort,
+  selinuxRules,
+} from './selinux';
 
 /* ── the renderer registry ────────────────────────────────────────────────────────── */
 
@@ -79,6 +137,11 @@ export const RENDERERS: readonly Renderer[] = Object.freeze([
   sudoersRenderer,
   polkitRenderer,
   engineFragmentRenderer,
+  webIncludeRenderer,
+  fpmPoolRenderer,
+  nginxMapIncludeRenderer,
+  hostMapUnitRenderer,
+  logrotateRenderer,
 ]);
 
 /** THE CENSUS, both ways: no kind twice, no kind without a renderer. Throws. */
@@ -117,7 +180,8 @@ export function renderAll(
         throw new Error(`render: '${produced.path}' would be written twice (${first}, ${produced.kind})`);
       }
       const parsed = parseStamp(produced.body);
-      if (!parsed || parsed.kind !== produced.kind || parsed.instance !== layout.instance || hasDrifted(produced.body)) {
+      const stampedFor = produced.hostWide ? HOST_STAMP_INSTANCE : layout.instance;
+      if (!parsed || parsed.kind !== produced.kind || parsed.instance !== stampedFor || hasDrifted(produced.body)) {
         throw new Error(`render: the ${produced.kind} artifact for '${produced.path}' is not validly stamped`);
       }
       byPath.set(produced.path, produced.kind);
@@ -162,6 +226,63 @@ export interface HostState {
   readonly accountGroups: ReadonlyMap<string, AccountGroups>;
   /** agent_dir's whole tree as observeHost walked it (each path's lstat facts are in `paths`). */
   readonly agentTree: AgentTree;
+  // ── provision init, step 1 (all optional: a HostState without them is a host without them) ──
+  /** `systemctl --version` (spec S10); absent/null = unknown, the floor is not judged. */
+  readonly systemdVersion?: number | null;
+  /** The SELinux facts (spec S9); absent = no SELinux on this host. */
+  readonly selinux?: SelinuxObserved;
+  /**
+   * The other declarations in the config base and their agent users' uids (identities.json, the
+   * contribution sweep, the port-label lifecycle). ABSENT = not observed: the plan then neither
+   * rewrites identities.json nor sweeps (it would drop every other instance) and says so (planReport).
+   */
+  readonly siblings?: readonly SiblingFacts[];
+  /** The entries of the host map's contrib directory (nginx `conf_d`), lstat only. Absent = not listed. */
+  readonly contributions?: readonly ContributionFacts[];
+  /** With a site: the web server's own dump lists the include (DUMP_INCLUDES / nginx -T). null/absent = unknown. */
+  readonly webReference?: boolean | null;
+  /**
+   * nginx `conf_d` (spec §13.5): the installed renderer copy's VERSION text (null = none installed)
+   * and the digest of THIS agent_dir's renderer closure (null = it could not be read whole).
+   * Absent = not observed: the renderer is then not installed by this plan (planReport says so).
+   */
+  readonly renderer?: { readonly installed: string | null; readonly ownDigest: string | null };
+  /** nginx `conf_d`: the live host map exists, and the root renderer's last `result.json` text (null = none). */
+  readonly hostMap?: { readonly live: boolean; readonly result: string | null };
+}
+
+/** What observeHost learns of SELinux (spec S9, §5.9). */
+export interface SelinuxObserved {
+  readonly mode: 'absent' | 'disabled' | 'permissive' | 'enforcing';
+  /** `/etc/selinux/<SELINUXTYPE>/` exists and semanage is installed (the disabled-with-store branch). */
+  readonly storePresent: boolean;
+  /** `semanage fcontext -l -C`: the local file-context rules. */
+  readonly localFcontext: readonly { readonly spec: string; readonly type: string }[];
+  /** `semanage port -l -C`: the local port labels. */
+  readonly localPorts: readonly { readonly type: string; readonly proto: string; readonly port: number }[];
+  /** `semanage port -l` (policy and local), tcp: port → type. */
+  readonly portTypes: ReadonlyMap<number, string>;
+  /** `restorecon -n -v` over this instance's existing targets: what would be relabelled. */
+  readonly pending: readonly { readonly path: string; readonly from: string; readonly to: string }[];
+  /** `<configBase>/<instance>/selinux.state` (what the last apply registered), null = absent. */
+  readonly state: string | null;
+  /** getsebool of SELINUX_BOOLEANS (read, never written by the provisioner). */
+  readonly booleans: Readonly<Record<string, boolean>>;
+  /** The media root lies on a local or `seclabel` filesystem (a network mount is labelled by its own `context=`). */
+  readonly mediaLabelable: boolean;
+}
+
+export interface SiblingFacts {
+  readonly layout: AgentLayout;
+  /** The sibling's agent user's uid; null = that account does not exist. */
+  readonly agentUid: number | null;
+}
+
+export interface ContributionFacts {
+  /** The file name in the contrib directory. */
+  readonly name: string;
+  readonly type: EntryType;
+  readonly uid: number;
 }
 
 /**
@@ -209,6 +330,36 @@ export function ancestorsBelow(path: string, trustRoot: string): string[] {
     out.unshift(dir);
   }
   return out;
+}
+
+/**
+ * THE ANCESTRY LAW (spec §2.2, exported for init's footgun guards): every directory strictly between
+ * `trustRoot` and `path` must be a real directory (never a link) owned by root and not group- or
+ * world-writable. One refusal line per bad directory; a directory already in `judged` is not judged
+ * twice (several paths share ancestors); a missing ancestor is skipped (its leaf is refused there).
+ */
+export function judgeAncestors(
+  label: string,
+  path: string,
+  trustRoot: string,
+  lstat: (path: string) => PathFacts | null | undefined,
+  rootUid: number,
+  judged: Set<string>,
+): string[] {
+  const refusals: string[] = [];
+  for (const dir of ancestorsBelow(path, trustRoot)) {
+    if (judged.has(dir)) continue;
+    judged.add(dir);
+    const facts = lstat(dir);
+    if (!facts) continue; // a missing ancestor means a missing leaf: refused there
+    if (facts.type !== 'dir') {
+      refusals.push(`'${dir}' (above ${label}) is a ${facts.type}, not a real directory — declare the canonical path`);
+      continue;
+    }
+    const problem = trustProblem(facts, rootUid);
+    if (problem) refusals.push(`'${dir}' (above ${label}) is ${problem}`);
+  }
+  return refusals;
 }
 
 /** null when owned by root (uid 0 or the host's `root` uid) and not group/world-writable. */
@@ -393,7 +544,7 @@ export function engineGroupRefusal(layout: AgentLayout, host: HostState): string
 
 /* ── actions ──────────────────────────────────────────────────────────────────────── */
 
-export type WriteLabel = ArtifactKind | 'marker' | 'credential' | 'audit_log';
+export type WriteLabel = ArtifactKind | 'marker' | 'credential' | 'audit_log' | 'host_identities' | 'host_lock';
 
 export type WriteContent =
   | { readonly source: 'literal'; readonly body: string }
@@ -406,10 +557,39 @@ interface Ownership {
   readonly gid: number;
 }
 
+/**
+ * A file installed with a POST-RENAME validator (web/fpm) keeps its rollback beside it until the
+ * reload that loads it succeeded: the previous bytes at `<path>.dedalo-provision.bak` (a rewrite),
+ * or an empty `<path>.dedalo-provision.created` marker (a create, rolled back by removal). Their
+ * presence on a later run means "reload pending" — the plan reloads (spec §5.9), so a run that died
+ * between the write and the reload never leaves a configuration on disk the server did not load.
+ * Neither suffix ends in `.conf`: no include glob ever matches them.
+ */
+export const VALIDATED_BACKUP_SUFFIX = '.dedalo-provision.bak';
+export const VALIDATED_CREATED_SUFFIX = '.dedalo-provision.created';
+
+/** What a reload restores when the server is not active after it. */
+export interface RestoreEntry {
+  readonly path: string;
+  readonly disposition: 'create' | 'rewrite';
+}
+
+/** The host web lock a validator or a configtest+reload pair is taken under (spec S12 3). */
+export interface HostLockRef {
+  readonly dir: string;
+  readonly uid: number;
+  readonly gid: number;
+}
+
 export interface MkdirAction extends Ownership {
   readonly op: 'mkdir';
   readonly path: string;
   readonly mode: number;
+  /**
+   * HOST-WIDE (spec §5.9): created as this temporary sibling, fchown/fchmod'ed through its
+   * descriptor, then renamed into place — no other process ever sees it with the wrong metadata.
+   */
+  readonly via?: string;
 }
 export interface WriteAction extends Ownership {
   readonly op: 'write';
@@ -419,6 +599,9 @@ export interface WriteAction extends Ownership {
   readonly disposition: 'create' | 'rewrite';
   readonly mode: number;
   readonly validate: ArtifactValidator | null;
+  /** What `validate` runs (null for none); web/fpm also name the host web lock they are taken under. */
+  readonly validator?: WriteValidator | null;
+  readonly lock?: HostLockRef;
 }
 export interface ChownAction extends Ownership {
   readonly op: 'chown';
@@ -436,10 +619,31 @@ export interface WebConfigtestAction {
   readonly op: 'web-configtest';
   readonly server: WebServer;
   readonly bin: string;
+  /** Held from this configtest through the reload that follows it. */
+  readonly lock?: HostLockRef;
 }
 export interface WebReloadAction {
   readonly op: 'web-reload';
   readonly unit: string;
+  /**
+   * The files this run wrote with the `web` validator: restored from their backups when the
+   * server is not active after the reload (an AVC or a bad module kills the master at reload).
+   */
+  readonly restore?: readonly RestoreEntry[];
+  readonly server?: WebServer;
+  readonly bin?: string;
+}
+export interface FpmConfigtestAction {
+  readonly op: 'fpm-configtest';
+  readonly bin: string;
+  readonly lock?: HostLockRef;
+}
+export interface FpmReloadAction {
+  readonly op: 'fpm-reload';
+  readonly unit: string;
+  readonly bin: string;
+  /** The pool files this run wrote: restored when the FPM master is not active after the reload. */
+  readonly restore: readonly RestoreEntry[];
 }
 export interface UnitAction {
   readonly op: 'enable' | 'start' | 'restart';
@@ -450,6 +654,49 @@ export interface AppendOnlyAction {
   readonly op: 'append-only';
   readonly path: string;
 }
+/** The contribution sweep (spec §5.9): renamed to the provisioner temp name, then removed — never followed. */
+export interface RemoveAction {
+  readonly op: 'remove';
+  readonly path: string;
+  readonly why: string;
+}
+/**
+ * Root's host-map renderer copy (spec §13.5): MAP_RENDERER_FILES copied from agent_dir, the
+ * verified bun as `<dir>/bun`, the empty bunfig, then VERSION LAST (the record never names a copy
+ * that is not whole). Each file atomic (temp → fchown/fchmod → rename); unchanged copies are rewritten
+ * byte-identical (the digest decided).
+ */
+export interface RendererInstallAction {
+  readonly op: 'renderer-install';
+  readonly dir: string;
+  readonly sourceDir: string;
+  readonly files: readonly string[];
+  /** The subdirectories the copy needs that are missing (relative, parents first), created root 0755. */
+  readonly subdirs: readonly string[];
+  readonly bun: string;
+  readonly versionBody: string;
+  readonly why: string;
+  readonly uid: number;
+  readonly gid: number;
+}
+/** One `semanage import` transaction, then `selinux.state` (spec S9, §5.9). */
+export interface SelinuxImportAction {
+  readonly op: 'selinux-import';
+  /** `<configBase>/<instance>/selinux.import` — written as its provisioner temp (root 0600), removed after. */
+  readonly file: string;
+  /** Empty when only the registration history moved (rules registered by an earlier run). */
+  readonly lines: readonly string[];
+  readonly statePath: string;
+  readonly stateBody: string;
+  /** root's uid/gid (the import temp and the state file are root's). */
+  readonly uid: number;
+  readonly gid: number;
+}
+/** restorecon over the instance's targets, then the same as a dry run that must find nothing (spec §5.9). */
+export interface SelinuxRestoreconAction {
+  readonly op: 'selinux-restorecon';
+  readonly targets: readonly RestoreconTarget[];
+}
 
 export type Action =
   | MkdirAction
@@ -457,13 +704,30 @@ export type Action =
   | ChownAction
   | ChmodAction
   | AppendOnlyAction
+  | RemoveAction
+  | RendererInstallAction
   | DaemonReloadAction
+  | SelinuxImportAction
+  | SelinuxRestoreconAction
+  | FpmConfigtestAction
+  | FpmReloadAction
   | WebConfigtestAction
   | WebReloadAction
   | UnitAction;
 
-const FS_OPS = new Set<Action['op']>(['mkdir', 'write', 'chown', 'chmod', 'append-only']);
-const TAIL_ORDER: readonly Action['op'][] = ['daemon-reload', 'web-configtest', 'web-reload', 'enable', 'start', 'restart'];
+const FS_OPS = new Set<Action['op']>(['mkdir', 'write', 'chown', 'chmod', 'append-only', 'remove', 'renderer-install']);
+const TAIL_ORDER: readonly Action['op'][] = [
+  'daemon-reload',
+  'selinux-import',
+  'selinux-restorecon',
+  'fpm-configtest',
+  'fpm-reload',
+  'web-configtest',
+  'web-reload',
+  'enable',
+  'start',
+  'restart',
+];
 
 export class PlanRefused extends Error {
   readonly reasons: readonly string[];
@@ -472,6 +736,84 @@ export class PlanRefused extends Error {
     this.name = 'PlanRefused';
     this.reasons = reasons;
   }
+}
+
+/* ── the host-wide and site directories (spec S5, S11, §5.9) ──────────────────────── */
+
+export interface ExtraDir {
+  readonly path: string;
+  readonly modeKey: ModeKey;
+  /** Shared by several instances: created under a temp name and renamed; other metadata is refused, never fixed. */
+  readonly hostWide: boolean;
+}
+
+/** The temporary sibling a host-wide directory is created as (`.<name>.dedalo-provision.tmp`). */
+export function hostDirTemp(path: string): string {
+  const parent = dirname(path);
+  const name = path.slice(parent === '/' ? 1 : parent.length + 1);
+  return join(parent, `.${name}.dedalo-provision.tmp`);
+}
+
+/** The directories the plan ensures beyond layout.directories: host-wide state and the v1 pool's own. */
+export function extraDirectories(layout: AgentLayout): ExtraDir[] {
+  const dirs: ExtraDir[] = [
+    { path: layout.host.base, modeKey: 'hostBase', hostWide: true },
+    { path: layout.host.locksDir, modeKey: 'hostLocks', hostWide: true },
+  ];
+  if (layout.web.server === 'nginx' && layout.web.nginxMap === 'conf_d') {
+    dirs.push(
+      { path: layout.host.nginxMapDir, modeKey: 'hostNginxMap', hostWide: true },
+      { path: layout.host.nginxContribDir, modeKey: 'hostNginxContrib', hostWide: true },
+      { path: layout.host.mapRendererDir, modeKey: 'hostMapRenderer', hostWide: true },
+    );
+  }
+  if (layout.site !== null) {
+    const v1 = layout.site.v1Var;
+    dirs.push(
+      { path: dirname(v1.root), modeKey: 'hostBase', hostWide: false },
+      { path: v1.root, modeKey: 'v1Var', hostWide: false },
+      { path: v1.tmp, modeKey: 'v1VarWork', hostWide: false },
+      { path: v1.log, modeKey: 'v1VarWork', hostWide: false },
+    );
+    // The site's web server logs, outside the home (layout.ts webLogBase): its parent is the web server package's.
+    if (isHomeLayout(layout)) dirs.push({ path: layout.site.webLogsDir, modeKey: 'webLogs', hostWide: false });
+  }
+  return dirs;
+}
+
+/** The two host lock files (spec S12): provision.lock root 0600, web.lock root:dedalo_pubhost 0640. */
+export function hostLockFiles(layout: AgentLayout): { name: HostLockName; path: string; modeKey: ModeKey }[] {
+  return [
+    { name: 'provision', path: join(layout.host.locksDir, HOST_LOCK_FILES.provision), modeKey: 'hostProvisionLock' },
+    { name: 'web', path: join(layout.host.locksDir, HOST_LOCK_FILES.web), modeKey: 'hostWebLock' },
+  ];
+}
+
+
+function mapManaged(layout: AgentLayout): boolean {
+  return layout.web.server === 'nginx' && layout.web.nginxMap === 'conf_d';
+}
+
+
+/** Where the instance's SELinux import temp and registration history live. */
+export function selinuxPaths(layout: AgentLayout): { importFile: string; stateFile: string } {
+  return { importFile: join(layout.instanceDir, SELINUX_IMPORT_NAME), stateFile: join(layout.instanceDir, SELINUX_STATE_NAME) };
+}
+
+/** The S9 rule facts: media eligibility (host), the shared-media consent (declaration), home by boolean (host). */
+export function ruleFacts(layout: AgentLayout, selinux: SelinuxObserved): SelinuxRuleFacts {
+  const state = parseSelinuxState(selinux.state);
+  const recorded = new Set((state?.fcontext ?? []).map(entry => entry.spec));
+  const home = selinuxRules(layout, { mediaLabelable: false, sharedMediaAccepted: false, homeTraverseByBoolean: false }).find(r => r.row === 'H');
+  return {
+    mediaLabelable: selinux.mediaLabelable,
+    // Shared media is an operator path: labelled only with the declaration's consent
+    // (`media.selinux_label`, written by init's `selinux.media_access=act`). Withdrawn, the rule
+    // leaves the table and the recorded registration is removed like any other stale one.
+    sharedMediaAccepted: layout.media.mode === 'shared' && layout.media.selinuxLabel,
+    // The home is made traversable by httpd_enable_homedirs instead, unless our exact rule is already registered.
+    homeTraverseByBoolean: selinux.booleans.httpd_enable_homedirs === true && !(home !== undefined && recorded.has(home.spec)),
+  };
 }
 
 /* ── plan ─────────────────────────────────────────────────────────────────────────── */
@@ -491,6 +833,13 @@ export function plan(
   const { agentUser, v1User, v2User, v2Group, engineGroup } = layout.identity;
   if (!host.groups.has('root')) refusals.push(`group 'root' does not exist — this is not a usable host`);
   if (!host.users.has('root')) refusals.push(`user 'root' does not exist — this is not a usable host`);
+  if (!host.groups.has(PUBHOST_GROUP)) {
+    // Spec S11: created only by init (D2); a hand-provisioned host runs the guide's step.
+    refusals.push(
+      `group '${PUBHOST_GROUP}' (host-wide: every agent unit's SupplementaryGroups=) does not exist — create it: ` +
+        `groupadd --system ${PUBHOST_GROUP}`,
+    );
+  }
   if (!host.groups.has(v2Group)) {
     refusals.push(`group '${v2Group}' (v2.group) does not exist — create it: groupadd --system ${v2Group}`);
   }
@@ -504,40 +853,35 @@ export function plan(
     refusals.push(`user '${agentUser}' (agent_user) does not exist — create it: ${nologin} --user-group ${agentUser}`);
   }
   if (!host.users.has(v1User)) {
+    // Decision A: v1 runs in its OWN dedicated pool under its own account, never the site's pool.
     refusals.push(
-      `user '${v1User}' (v1.user) does not exist — it is the site's PHP-FPM pool user: create it ` +
-        `(${nologin} -g <the web server's group, e.g. www-data> ${v1User}) and set 'user = ${v1User}' in the site's pool file`,
+      `user '${v1User}' (v1.user) does not exist — create it: ${nologin} --user-group ${v1User}; ` +
+        'it runs only the dedicated v1 pool',
     );
   }
   if (!host.users.has(v2User)) {
     refusals.push(`user '${v2User}' (v2.user) does not exist — create it: ${nologin} -g ${v2Group} ${v2User}`);
   }
-
+  // The systemd profile (spec S10): below SYSTEMD_FLOOR the host cannot load the units' hardening.
+  if (host.systemdVersion !== undefined && host.systemdVersion !== null && host.systemdVersion < SYSTEMD_FLOOR) {
+    refusals.push(
+      `systemd ${host.systemdVersion} is older than ${SYSTEMD_FLOOR}, the oldest systemd the units are rendered for — this host is not supported`,
+    );
+  }
   // 2. What the provisioner never creates either, and what root runs or grants: the pinned
   //    code. Real, root-owned, not group/world-writable — leaf and every ancestor.
   const rootUid = host.users.get('root') ?? 0;
   const judged = new Set<string>();
-  const judgeAncestors = (label: string, path: string): void => {
-    for (const dir of ancestorsBelow(path, host.trustRoot)) {
-      if (judged.has(dir)) continue;
-      judged.add(dir);
-      const facts = host.paths.get(dir);
-      if (!facts) continue; // a missing ancestor means a missing leaf: refused there
-      if (facts.type !== 'dir') {
-        refusals.push(`'${dir}' (above ${label}) is a ${facts.type}, not a real directory — declare the canonical path`);
-        continue;
-      }
-      const problem = trustProblem(facts, rootUid);
-      if (problem) refusals.push(`'${dir}' (above ${label}) is ${problem}`);
-    }
-  };
-  const PINNED = [
+  const lstat = (path: string): PathFacts | undefined => host.paths.get(path);
+  const PINNED: (readonly [string, string, 'file' | 'dir', boolean])[] = [
     ['web.configtest_bin', layout.web.configtestBin, 'file', true],
     ['php_bin', layout.phpBin, 'file', true],
     ['bun_bin', layout.bunBin, 'file', true],
     ['agent_dir', layout.agentDir, 'dir', false],
     ['agent entry', layout.agentEntry, 'file', false],
-  ] as const;
+  ];
+  // The FPM master root runs as `<bin> -t` (the fpm validator): pinned code like the configtest binary.
+  if (layout.site !== null) PINNED.push(['site.fpm.bin', layout.site.fpm.bin, 'file', true]);
   for (const [field, path, kind, executable] of PINNED) {
     const facts = host.paths.get(path);
     if (!facts && path === layout.web.configtestBin) {
@@ -590,7 +934,7 @@ export function plan(
           'make it root-owned and not group- or world-writable',
       );
     }
-    judgeAncestors(`${field} '${path}'`, path);
+    refusals.push(...judgeAncestors(`${field} '${path}'`, path, host.trustRoot, lstat, rootUid, judged));
     if (kind === 'dir') judged.add(path);
   }
   if (host.paths.has(agentScratchPath(layout))) {
@@ -615,9 +959,26 @@ export function plan(
   if (refusals.length > 0) throw new PlanRefused(layout.instance, refusals);
 
   // 3. What lies ABOVE the managed trees: a non-root principal there could redirect root's writes.
-  const managedDirs = new Set(layout.directories.map(dir => dir.path));
+  const extra = extraDirectories(layout);
+  const lockFiles = hostLockFiles(layout);
+  const managedDirs = new Set([...layout.directories.map(dir => dir.path), ...extra.map(dir => dir.path)]);
+  const identitiesPath = join(layout.host.mapRendererDir, IDENTITIES_FILE);
+  // Rule 1's one exception (apply.ts pinnedParentOf): a managed DIRECTORY (not host-wide: those
+  // rename into place) whose parent is a root directory closed to others may have an untrusted
+  // grandparent — the directory doors pin the parent. Ubuntu's rsyslog makes /var/log root:syslog
+  // 0775, the grandparent of the site's web log directory.
+  const pinnable = new Map<string, string>();
+  for (const dir of extra) {
+    if (dir.hostWide) continue;
+    const chain = ancestorsBelow(dir.path, host.trustRoot);
+    if (chain.length < 2) continue;
+    const parent = host.paths.get(chain[chain.length - 1] as string);
+    if (parent?.type === 'dir' && trustProblem(parent, rootUid) === null) pinnable.set(dir.path, chain[chain.length - 2] as string);
+  }
   for (const target of [
     ...layout.directories.map(dir => dir.path),
+    ...extra.map(dir => dir.path),
+    ...lockFiles.map(file => file.path),
     layout.state.marker,
     layout.serviceTokenPath,
     layout.state.auditFile,
@@ -625,6 +986,7 @@ export function plan(
   ]) {
     for (const dir of ancestorsBelow(target, host.trustRoot)) {
       if (managedDirs.has(dir) || judged.has(dir)) continue;
+      if (pinnable.get(target) === dir && host.paths.get(dir)?.type === 'dir') continue; // judged per target: another may not pin it
       judged.add(dir);
       const facts = host.paths.get(dir);
       if (!facts) continue; // missing parents are refused where they are needed (below)
@@ -642,6 +1004,7 @@ export function plan(
   const uidOf = (name: string): number => host.users.get(name) as number;
   const gidOf = (name: string): number => host.groups.get(name) as number;
   const ownership = (owner: string, group: string): Ownership => ({ owner, group, uid: uidOf(owner), gid: gidOf(group) });
+  const webLock: HostLockRef = { dir: layout.host.locksDir, uid: rootUid, gid: gidOf(PUBHOST_GROUP) };
 
   const fsActions: Action[] = [];
   const metaActions: Action[] = [];
@@ -649,6 +1012,7 @@ export function plan(
   const created = new Set<string>();
   const effects = new Set<ArtifactEffect>();
   const services: ArtifactService[] = [];
+  const validated = { web: [] as RestoreEntry[], fpm: [] as RestoreEntry[] };
 
   const parentReady = (path: string): boolean => {
     const parent = dirname(path);
@@ -659,18 +1023,38 @@ export function plan(
     if ((facts.mode & 0o7777) !== mode) into.push({ op: 'chmod', path, mode });
   };
 
-  // 4. Directories, parents first (layout sorted them); a drifted directory is fixed in
-  //    place, BEFORE any child of it is created (apply's parent check needs it trusted).
-  for (const dir of layout.directories) {
+  // 4. Directories, parents first; a drifted directory is fixed in place, BEFORE any child of it is
+  //    created (apply's parent check needs it trusted). Host-wide ones are never fixed (refused).
+  //    Missing ancestors of the host base and of the v1 pool's directory are created root 0755.
+  const wanted = new Map<string, ExtraDir>();
+  for (const dir of layout.directories) wanted.set(dir.path, { path: dir.path, modeKey: dir.modeKey, hostWide: false });
+  for (const dir of extra) {
+    if (!wanted.has(dir.path)) wanted.set(dir.path, dir);
+  }
+  for (const root of [layout.host.base, ...(layout.site === null ? [] : [dirname(layout.site.v1Var.root)])]) {
+    for (const dir of ancestorsBelow(root, host.trustRoot)) {
+      if (!host.paths.has(dir) && !wanted.has(dir)) wanted.set(dir, { path: dir, modeKey: 'hostBase', hostWide: true });
+    }
+  }
+  const ordered = [...wanted.values()].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  for (const dir of ordered) {
     const row = MODES[dir.modeKey];
     const own = ownership(ownerName(layout, row.owner), groupName(layout, row.group));
     const facts = host.paths.get(dir.path);
+    if (dir.hostWide && host.paths.has(hostDirTemp(dir.path))) {
+      refusals.push(`'${hostDirTemp(dir.path)}' is left over from an interrupted apply — remove it (rmdir) and re-run`);
+      continue;
+    }
     if (!facts) {
       if (!parentReady(dir.path)) {
-        refusals.push(`parent directory '${dirname(dir.path)}' of '${dir.path}' does not exist`);
+        refusals.push(
+          dir.modeKey === 'webLogs'
+            ? `the web server's log directory '${dirname(dir.path)}' does not exist — is ${layout.web.unit} installed? The site logs into '${dir.path}' (paths.web_log_base)`
+            : `parent directory '${dirname(dir.path)}' of '${dir.path}' does not exist`,
+        );
         continue;
       }
-      fsActions.push({ op: 'mkdir', path: dir.path, mode: row.mode, ...own });
+      fsActions.push({ op: 'mkdir', path: dir.path, mode: row.mode, ...own, ...(dir.hostWide ? { via: hostDirTemp(dir.path) } : {}) });
       created.add(dir.path);
       continue;
     }
@@ -678,7 +1062,46 @@ export function plan(
       refusals.push(`'${dir.path}' must be a directory (${dir.modeKey}) but is a ${facts.type}`);
       continue;
     }
+    if (dir.hostWide) {
+      if (facts.uid !== own.uid || facts.gid !== own.gid || (facts.mode & 0o7777) !== row.mode) {
+        refusals.push(
+          `'${dir.path}' (host-wide, shared by every instance on this host) is uid ${facts.uid} gid ${facts.gid} ` +
+            `mode ${octal(facts.mode & 0o7777)}, not ${own.owner}:${own.group} ${octal(row.mode)} — a host-wide anomaly: ` +
+            'find out who changed it before fixing it by hand (it is never chowned)',
+        );
+      }
+      continue;
+    }
     metadata(fsActions, dir.path, facts, own, row.mode);
+  }
+
+  // 4b. The host lock files, created empty once (spec S12) — never rewritten; other metadata refused.
+  //     Created only while absent, by root under the host provision lock (agents never create one).
+  for (const file of lockFiles) {
+    const row = MODES[file.modeKey];
+    const own = ownership(ownerName(layout, row.owner), groupName(layout, row.group));
+    const facts = host.paths.get(file.path);
+    if (!facts) {
+      if (parentReady(file.path)) {
+        fsActions.push({
+          op: 'write',
+          path: file.path,
+          label: 'host_lock',
+          content: { source: 'literal', body: '' },
+          disposition: 'create',
+          mode: row.mode,
+          validate: null,
+          ...own,
+        });
+      } else refusals.push(`parent directory '${dirname(file.path)}' of '${file.path}' does not exist`);
+      continue;
+    }
+    if (facts.type !== 'file' || facts.uid !== own.uid || facts.gid !== own.gid || (facts.mode & 0o7777) !== row.mode) {
+      refusals.push(
+        `'${file.path}' (the host ${file.name} lock) is not a ${own.owner}:${own.group} ${octal(row.mode)} regular file — ` +
+          'a host-wide anomaly: remove it when no provisioner or agent runs, and re-run',
+      );
+    }
   }
 
   // 5. The state-root marker: ours to create, never to retarget.
@@ -749,6 +1172,7 @@ export function plan(
     const own = ownership(art.owner, art.group);
     const facts = host.paths.get(art.path);
     const write = (disposition: 'create' | 'rewrite'): void => {
+      const validator = validatorFor(layout, art.validate);
       fsActions.push({
         op: 'write',
         path: art.path,
@@ -757,13 +1181,17 @@ export function plan(
         disposition,
         mode: art.mode,
         validate: art.validate,
+        validator,
+        ...(art.validate === 'web' || art.validate === 'fpm' ? { lock: webLock } : {}),
         ...own,
       });
+      if (art.validate === 'web') validated.web.push({ path: art.path, disposition });
+      if (art.validate === 'fpm') validated.fpm.push({ path: art.path, disposition });
       for (const effect of art.effects) effects.add(effect);
     };
     if (!facts) {
       if (parentReady(art.path)) write('create');
-      else refusals.push(`parent directory '${dirname(art.path)}' of '${art.path}' does not exist`);
+      else refusals.push(missingParent(layout, art));
       continue;
     }
     if (facts.type !== 'file') {
@@ -780,8 +1208,10 @@ export function plan(
       refusals.push(`'${art.path}' exists and was not written by this provisioner (no stamp) — move it aside`);
       continue;
     }
-    if (parsed.instance !== layout.instance || parsed.kind !== art.kind) {
-      refusals.push(`'${art.path}' is stamped for '${parsed.instance} ${parsed.kind}', not '${layout.instance} ${art.kind}'`);
+    // A host-wide artifact is stamped `_host` (hash.ts), never with an instance (spec §2.2).
+    const stampedFor = art.hostWide ? HOST_STAMP_INSTANCE : layout.instance;
+    if (parsed.instance !== stampedFor || parsed.kind !== art.kind) {
+      refusals.push(`'${art.path}' is stamped for '${parsed.instance} ${parsed.kind}', not '${stampedFor} ${art.kind}'`);
       continue;
     }
     if (hasDrifted(text)) {
@@ -793,16 +1223,137 @@ export function plan(
       continue;
     }
     metadata(metaActions, art.path, facts, own, art.mode);
+    // Written and validated by an earlier run that never reached its reload: reload it now.
+    if (art.validate === 'web' || art.validate === 'fpm') {
+      const pending: RestoreEntry | null = host.paths.has(`${art.path}${VALIDATED_BACKUP_SUFFIX}`)
+        ? { path: art.path, disposition: 'rewrite' }
+        : host.paths.has(`${art.path}${VALIDATED_CREATED_SUFFIX}`)
+          ? { path: art.path, disposition: 'create' }
+          : null;
+      if (pending !== null) {
+        validated[art.validate].push(pending);
+        for (const effect of art.effects) effects.add(effect);
+      }
+    }
+  }
+
+  // 7b. nginx `conf_d` (spec §13.5): the root renderer's identities.json, and the contribution sweep.
+  const removed: string[] = [];
+  if (mapManaged(layout) && host.siblings !== undefined) {
+    const owners = new Map<string, number>();
+    const ownUid = host.users.get(agentUser);
+    if (ownUid !== undefined) owners.set(layout.instance, ownUid);
+    for (const sibling of host.siblings) {
+      if (mapManaged(sibling.layout) && sibling.agentUid !== null) owners.set(sibling.layout.instance, sibling.agentUid);
+    }
+    const row = MODES.nginxMapInclude; // root:root 0644, a host-wide root file (spec §13.2)
+    const own = ownership(ownerName(layout, row.owner), groupName(layout, row.group));
+    const body = renderIdentities(Object.fromEntries(owners));
+    const facts = host.paths.get(identitiesPath);
+    const content: WriteContent = { source: 'literal', body };
+    if (!facts || (facts.type === 'file' && host.contents.get(identitiesPath) !== body)) {
+      if (!facts && !parentReady(identitiesPath)) {
+        refusals.push(`parent directory '${dirname(identitiesPath)}' of '${identitiesPath}' does not exist`);
+      } else {
+        fsActions.push({
+          op: 'write',
+          path: identitiesPath,
+          label: 'host_identities',
+          content,
+          disposition: facts ? 'rewrite' : 'create',
+          mode: row.mode,
+          validate: null,
+          ...own,
+        });
+      }
+    } else if (facts.type !== 'file') {
+      refusals.push(`'${identitiesPath}' (the host map renderer's identities) is a ${facts.type}, not a file`);
+    } else {
+      metadata(metaActions, identitiesPath, facts, own, row.mode);
+    }
+    for (const entry of host.contributions ?? []) {
+      if (!entry.name.endsWith('.json')) continue; // an agent's in-flight temp, not a contribution
+      const name = entry.name.slice(0, -'.json'.length);
+      const path = join(layout.host.nginxContribDir, entry.name);
+      if (name === '_seed' && entry.type === 'file' && entry.uid === rootUid) continue; // init's seed (§5.10)
+      const owner = owners.get(name);
+      let why: string | null = null;
+      if (entry.type !== 'file') why = `a ${entry.type}, not a contribution file`;
+      else if (owner === undefined) why = `no nginx conf_d declaration names instance '${name}'`;
+      else if (entry.uid !== owner) why = `owned by uid ${entry.uid}, not instance '${name}''s agent (uid ${owner})`;
+      if (why !== null) {
+        fsActions.push({ op: 'remove', path, why });
+        removed.push(path);
+      }
+    }
+  }
+
+  // 7c. nginx `conf_d` (spec §13.5): root's renderer copy, never downgraded (rendererInstallDecision).
+  if (mapManaged(layout) && host.renderer !== undefined) {
+    const own = host.renderer.ownDigest;
+    if (own === null) {
+      refusals.push(
+        `the host map renderer's files could not be read whole from agent_dir '${layout.agentDir}' ` +
+          `(${MAP_RENDERER_FILES.join(', ')}) — reinstall the agent checkout`,
+      );
+    } else {
+      const installed = parseRendererVersion(host.renderer.installed);
+      const decision = rendererInstallDecision(installed, { grammar: MAP_GRAMMAR, digest: own });
+      if (decision.install) {
+        const subdirs = [...new Set(MAP_RENDERER_FILES.flatMap(file => subdirsOf(file)))]
+          .sort()
+          .filter(sub => !host.paths.has(join(layout.host.mapRendererDir, sub)));
+        fsActions.push({
+          op: 'renderer-install',
+          dir: layout.host.mapRendererDir,
+          sourceDir: layout.agentDir,
+          files: [...MAP_RENDERER_FILES],
+          subdirs,
+          bun: layout.bunBin,
+          versionBody: renderRendererVersion({ grammar: MAP_GRAMMAR, digest: own, from: layout.instance }),
+          why: decision.why,
+          uid: rootUid,
+          gid: host.groups.get('root') ?? 0,
+        });
+      }
+    }
+  }
+
+  // 7d. A reload needs a running server: reloading a stopped unit fails after the files moved.
+  for (const [effect, unit, what] of [
+    ['reload_web', layout.web.unit, 'the web server'],
+    ['reload_fpm', layout.site?.fpm.unit ?? '', 'PHP-FPM'],
+  ] as const) {
+    if (effects.has(effect) && host.units.get(unit)?.active === false) {
+      refusals.push(`${what} unit '${unit}' is not running — its reload would fail: systemctl enable --now ${unit}.service, then re-run`);
+    }
+  }
+
+  // 8. SELinux (spec S9): the instance's rules and port label, then the relabel.
+  const selinuxTail: Action[] = [];
+  if (host.selinux !== undefined) {
+    selinuxTail.push(...selinuxActions(layout, host, host.selinux, created, refusals));
   }
 
   if (refusals.length > 0) throw new PlanRefused(layout.instance, refusals);
 
-  // 8. The tail.
-  const tail: Action[] = [];
+  // 9. The tail.
+  const tail: Action[] = [...selinuxTail];
   if (effects.has('daemon_reload')) tail.push({ op: 'daemon-reload' });
+  if (effects.has('reload_fpm') && layout.site !== null) {
+    const { bin, unit } = layout.site.fpm;
+    tail.push({ op: 'fpm-configtest', bin, lock: webLock });
+    tail.push({ op: 'fpm-reload', unit, bin, restore: [...validated.fpm] });
+  }
   if (effects.has('reload_web')) {
-    tail.push({ op: 'web-configtest', server: layout.web.server, bin: layout.web.configtestBin });
-    tail.push({ op: 'web-reload', unit: layout.web.unit });
+    tail.push({ op: 'web-configtest', server: layout.web.server, bin: layout.web.configtestBin, lock: webLock });
+    tail.push({
+      op: 'web-reload',
+      unit: layout.web.unit,
+      restore: [...validated.web],
+      server: layout.web.server,
+      bin: layout.web.configtestBin,
+    });
   }
   const started = new Set<string>();
   for (const service of services) {
@@ -812,6 +1363,11 @@ export function plan(
       tail.push({ op: 'start', unit: service.unit });
       started.add(service.unit);
     }
+  }
+  // The root map renderer drops swept contributions from the live map (it needs its unit: P8's artifact).
+  if (removed.length > 0 && artifacts.some(art => art.kind === 'host_map_unit') && !started.has(HOST_MAP_UNIT)) {
+    tail.push({ op: 'start', unit: HOST_MAP_UNIT });
+    started.add(HOST_MAP_UNIT);
   }
   for (const [effect, unit] of [
     ['restart_agent', layout.agentUnitName],
@@ -826,6 +1382,216 @@ export function plan(
   const actions = [...fsActions, ...metaActions, ...sealActions, ...tail];
   assertPlanIsCoherent(actions, host);
   return actions;
+}
+
+/** `src/rules/x.ts` → ['src', 'src/rules']: the directories a relative file needs, parents first. */
+function subdirsOf(file: string): string[] {
+  const parts = file.split('/').slice(0, -1);
+  return parts.map((_, index) => parts.slice(0, index + 1).join('/'));
+}
+
+/** What a write's validator runs, resolved from the layout (spec §5.9 validator plumbing). */
+function validatorFor(layout: AgentLayout, validate: ArtifactValidator | null): WriteValidator | null {
+  switch (validate) {
+    case null:
+      return null;
+    case 'sudoers':
+      return { kind: 'sudoers' };
+    case 'web':
+      return { kind: 'web', server: layout.web.server, bin: layout.web.configtestBin, unit: layout.web.unit };
+    case 'fpm': {
+      if (layout.site === null) throw new Error('plan: an fpm validator without a site');
+      return { kind: 'fpm', bin: layout.site.fpm.bin, unit: layout.site.fpm.unit };
+    }
+    default: {
+      const unreachable: never = validate;
+      throw new Error(`plan: unknown validator ${String(unreachable)}`);
+    }
+  }
+}
+
+/** A missing parent, said in the operator's terms where the parent is a package's directory. */
+function missingParent(layout: AgentLayout, art: Artifact): string {
+  const parent = dirname(art.path);
+  if (art.kind === 'fpm_pool' && layout.site !== null) {
+    const { flavor, version } = layout.site.fpm;
+    return `the PHP-FPM pool directory '${parent}' does not exist — is PHP-FPM ${version} (${flavor}) installed? (site.fpm)`;
+  }
+  if (art.kind === 'nginx_map_include') return `nginx's conf.d '${parent}' does not exist — is nginx installed? (paths.nginx_conf_d)`;
+  if (art.kind === 'logrotate') return `'${parent}' does not exist — is logrotate installed? The site's web logs (${layout.site?.webLogsDir ?? 'the site log directory'}) are rotated from there (paths.logrotate_dir)`;
+  return `parent directory '${parent}' of '${art.path}' does not exist`;
+}
+
+/**
+ * The SELinux ops (spec S9, §5.9): desired rules vs the local registry. A local rule on one of our
+ * specs with another type, or the v2 port typed otherwise by the policy, is refused; missing ones
+ * are imported (one transaction) with the `-d` lines of rules this instance registered before and
+ * no longer needs (a relocation, a port change) — unless a sibling still needs them; then the
+ * registration history is rewritten and the targets relabelled.
+ */
+function selinuxActions(
+  layout: AgentLayout,
+  host: HostState,
+  selinux: SelinuxObserved,
+  created: ReadonlySet<string>,
+  refusals: string[],
+): Action[] {
+  const scope = labelScope(selinux.mode, selinux.storePresent);
+  if (!scope.register) return [];
+  const rfacts = ruleFacts(layout, selinux);
+  const rules = selinuxRules(layout, rfacts);
+  const port = selinuxPort(layout);
+  const local = new Map<string, string>();
+  for (const entry of selinux.localFcontext) local.set(entry.spec, entry.type);
+  const add = [];
+  for (const r of rules) {
+    const theirs = local.get(r.spec);
+    if (theirs === undefined) add.push(fcontextEntry(r));
+    else if (theirs !== r.type) {
+      refusals.push(
+        `the local SELinux rule '${r.spec}' types it '${theirs}', not '${r.type}' (S9 row ${r.row}) — an operator rule ` +
+          'on one of our specs is never overridden: semanage fcontext -l -C, then remove or correct it',
+      );
+    }
+  }
+  let portNeeded = false;
+  const portType = selinux.portTypes.get(port.port);
+  if (portType === undefined) portNeeded = true;
+  else if (portType !== port.type) {
+    refusals.push(
+      `v2.port ${port.port} is typed '${portType}' by the SELinux policy, not ${port.type} — choose another v2.port ` +
+        '(provision init proposes a free, untyped one): semanage port -l -C',
+    );
+  }
+  // What this instance registered before and no longer needs (spec S9 lifecycle).
+  const previous = parseSelinuxState(selinux.state);
+  const siblingSpecs = new Set<string>();
+  const siblingPorts = new Set<number>();
+  for (const sibling of host.siblings ?? []) {
+    for (const r of selinuxRules(sibling.layout, rfacts)) siblingSpecs.add(r.spec);
+    siblingPorts.add(sibling.layout.v2.port);
+  }
+  const desiredSpecs = new Set(rules.map(r => r.spec));
+  const del = [];
+  for (const entry of previous?.fcontext ?? []) {
+    if (desiredSpecs.has(entry.spec) || siblingSpecs.has(entry.spec)) continue;
+    if (local.get(entry.spec) !== entry.type) continue; // gone already, or now the operator's
+    del.push(fcontextEntry(entry));
+  }
+  const localPorts = new Set(selinux.localPorts.filter(p => p.proto === 'tcp' && p.type === port.type).map(p => p.port));
+  for (const old of previous?.ports ?? []) {
+    if (old === port.port || siblingPorts.has(old) || !localPorts.has(old)) continue;
+    del.push(portEntry(old));
+  }
+  if (portNeeded) add.push(portEntry(port.port));
+
+  const actions: Action[] = [];
+  const { importFile, stateFile } = selinuxPaths(layout);
+  const registeredPorts = [port.port];
+  const stateBody = encodeSelinuxState({
+    v: 1,
+    fcontext: rules.map(r => ({ spec: r.spec, fileType: r.fileType, type: r.type })),
+    ports: registeredPorts,
+  });
+  const lines = refusals.length === 0 ? importLines(add, del) : [];
+  if (lines.length > 0 || selinux.state !== stateBody) {
+    actions.push({ op: 'selinux-import', file: importFile, lines, statePath: stateFile, stateBody, uid: host.users.get('root') ?? 0, gid: host.groups.get('root') ?? 0 });
+  }
+  if (!scope.relabel) return actions;
+  // Relabel what exists (or this run creates); the H directory and the exact rows never recursively.
+  const targets = restoreconTargets(layout, rfacts).filter(t => created.has(t.path) || host.paths.has(t.path));
+  const pending = selinux.pending.length > 0;
+  const fresh = targets.some(t => created.has(t.path));
+  if (targets.length > 0 && (lines.length > 0 || pending || fresh)) actions.push({ op: 'selinux-restorecon', targets });
+  return actions;
+}
+
+/* ── facts and drift for check (spec §5.9) ────────────────────────────────────────── */
+
+export interface PlanReport {
+  /** Informational lines: printed by check and apply, never drift. */
+  readonly facts: readonly string[];
+  /** What check reports as drift although no action can fix it (the operator must). */
+  readonly drift: readonly string[];
+}
+
+/** The scratch overrides of `paths` (spec §2.2): production never sets them; check prints any that is set. */
+function overrides(layout: AgentLayout): string[] {
+  const set: string[] = [];
+  const pairs: [string, string, string][] = [
+    ['paths.host_base', layout.host.base, DEFAULT_PATHS.hostBase],
+    ['paths.nginx_conf_d', layout.host.nginxConfD, DEFAULT_PATHS.nginxConfD],
+  ];
+  pairs.push(['paths.logrotate_dir', dirname(layout.logrotatePath), DEFAULT_PATHS.logrotateDir]);
+  if (layout.site !== null) {
+    pairs.push(['paths.v1_var_base', dirname(dirname(layout.site.v1Var.root)), DEFAULT_PATHS.v1VarBase]);
+    const fpm = layout.site.fpm;
+    pairs.push(['paths.web_log_base', dirname(layout.site.webLogsDir), webLogBase(layout.web.server, fpm.flavor)]);
+  }
+  for (const [field, value, normal] of pairs) if (value !== normal) set.push(`${field} = ${value}`);
+  return set;
+}
+
+export function planReport(layout: AgentLayout, host: HostState): PlanReport {
+  const facts: string[] = [];
+  const drift: string[] = [];
+  facts.push(`ProtectHome=${layout.protectHome} on the agent unit (host-wide: ${layout.protectHome === 'read-only' ? 'a declaration on this host lives under a home tree' : 'no declaration lives under a home tree'})`);
+  for (const line of overrides(layout)) facts.push(`scratch override set: ${line} (production declarations never set it)`);
+  if (mapManaged(layout) && host.hostMap !== undefined) {
+    const result = parseHostMapResult(host.hostMap.result);
+    facts.push(
+      `host map: ${host.hostMap.live ? 'the live map exists' : 'no live map yet (nothing pushed: the variables are undefined)'}` +
+        (result === null ? '; the renderer has not run' : `; last render ${result.outcome}, ${result.contributions.length} contribution(s), ${result.invalid} invalid`),
+    );
+    const installed = parseRendererVersion(host.renderer?.installed ?? null);
+    if (installed !== null) facts.push(`host map renderer: grammar ${installed.grammar}, digest ${installed.digest.slice(0, 12)}, installed by '${installed.from}'`);
+    for (const refusal of result?.refused ?? []) {
+      const line = `the host map renderer refused '${refusal.instance}': ${refusal.reason}`;
+      if (refusal.reason === 'map_contribution_newer') drift.push(`${line} — run 'provision apply' for that newer instance (it upgrades the renderer)`);
+      else facts.push(line);
+    }
+  }
+  if (mapManaged(layout) && host.renderer === undefined) {
+    facts.push('the host map renderer copy was not checked: its install state was not observed');
+  }
+  if (mapManaged(layout) && host.siblings === undefined) {
+    facts.push('identities.json and the contribution sweep were not planned: the sibling declarations were not observed');
+  }
+  if (layout.site !== null) {
+    if (host.webReference === false) {
+      drift.push(`the web server's configuration no longer includes ${join(layout.instanceDir, `web.${layout.web.server}.conf`)} — the vhost reference was removed (provision init restores it)`);
+    } else if (host.webReference === null || host.webReference === undefined) {
+      facts.push('the vhost reference to the web include was not checked (the web server dump was not available)');
+    }
+  }
+  const selinux = host.selinux;
+  if (selinux !== undefined) {
+    const scope = labelScope(selinux.mode, selinux.storePresent);
+    if (selinux.mode === 'disabled' && scope.register) facts.push('SELinux disabled: rules registered for a later enable; nothing relabelled');
+    else if (!scope.register) facts.push(`SELinux ${selinux.mode}: no labels managed`);
+    else {
+      facts.push(`SELinux ${selinux.mode}: labels managed (S9)`);
+      if (selinux.pending.length > 0) {
+        drift.push(`${selinux.pending.length} path(s) carry another label than their rule: ${selinux.pending.slice(0, 3).map(p => `${p.path} (${p.from} → ${p.to})`).join(', ')}`);
+      }
+      const relay = selinux.booleans.httpd_can_network_relay === true || selinux.booleans.httpd_graceful_shutdown === true;
+      const connect = selinux.booleans.httpd_can_network_connect === true;
+      facts.push(
+        `SELinux booleans: httpd_graceful_shutdown=${String(selinux.booleans.httpd_graceful_shutdown ?? false)} ` +
+          `httpd_can_network_relay=${String(selinux.booleans.httpd_can_network_relay ?? false)} ` +
+          `httpd_can_network_connect=${String(connect)}`,
+      );
+      if (!relay && !connect) drift.push('httpd cannot connect to the v2 port: setsebool -P httpd_can_network_relay on (provision init asks)');
+      if (isHomeLayout(layout)) {
+        const rfacts = ruleFacts(layout, selinux);
+        if (rfacts.homeTraverseByBoolean) facts.push('the site home is traversable through httpd_enable_homedirs (no exact rule)');
+      }
+      if (layout.media.root !== null && layout.media.mode === 'shared' && !ruleFacts(layout, selinux).sharedMediaAccepted) {
+        facts.push(`the shared media root ${layout.media.root} is not labelled by the provisioner: the declaration has no media.selinux_label (provision init's selinux.media_access=act writes it)`);
+      }
+    }
+  }
+  return { facts, drift };
 }
 
 /* ── coherence (a programming-error backstop, not a refusal) ──────────────────────── */
@@ -864,8 +1630,21 @@ export function assertPlanIsCoherent(actions: readonly Action[], host: HostState
             throw new Error('plan: the audit log is only ever created empty, never rewritten');
           }
         }
+        if (action.op === 'write' && action.label === 'host_lock') {
+          if (action.disposition !== 'create' || action.content.source !== 'literal' || action.content.body !== '') {
+            throw new Error('plan: a host lock file is only ever created empty, never rewritten');
+          }
+        }
+        if (action.op === 'write' && (action.validate === 'web' || action.validate === 'fpm') && action.lock === undefined) {
+          throw new Error(`plan: '${describe(action)}' is validated by its server's configtest outside the host web lock`);
+        }
         break;
       }
+      case 'renderer-install':
+        if (!madeDirs.has(action.dir) && host.paths.get(action.dir)?.type !== 'dir') {
+          throw new Error(`plan: '${describe(action)}' has no directory to install into`);
+        }
+        break;
       case 'chown':
       case 'chmod':
         if (sealed.has(action.path)) throw new Error(`plan: '${describe(action)}' comes after the file was made append-only`);
@@ -880,6 +1659,13 @@ export function assertPlanIsCoherent(actions: readonly Action[], host: HostState
         const previous = actions[index - 1];
         if (!previous || previous.op !== 'web-configtest') {
           throw new Error('plan: a web-reload must immediately follow a web-configtest');
+        }
+        break;
+      }
+      case 'fpm-reload': {
+        const previous = actions[index - 1];
+        if (!previous || previous.op !== 'fpm-configtest') {
+          throw new Error('plan: an fpm-reload must immediately follow an fpm-configtest');
         }
         break;
       }
@@ -898,6 +1684,16 @@ export function assertPlanIsCoherent(actions: readonly Action[], host: HostState
     );
     if (early !== -1 && early < daemonReload) throw new Error('plan: a unit action precedes daemon-reload');
   }
+  // SELinux (spec §5.9): the relabel follows the import, and both precede every configtest.
+  const importAt = actions.findIndex(action => action.op === 'selinux-import');
+  const relabelAt = actions.findIndex(action => action.op === 'selinux-restorecon');
+  const firstConfigtest = actions.findIndex(action => action.op === 'web-configtest' || action.op === 'fpm-configtest');
+  if (importAt !== -1 && relabelAt !== -1 && relabelAt < importAt) throw new Error('plan: restorecon precedes the SELinux import');
+  if (firstConfigtest !== -1) {
+    for (const at of [importAt, relabelAt]) {
+      if (at !== -1 && at > firstConfigtest) throw new Error('plan: an SELinux op comes after a configtest');
+    }
+  }
 }
 
 /* ── the one voice ────────────────────────────────────────────────────────────────── */
@@ -910,7 +1706,7 @@ function octal(mode: number): string {
 export function describe(action: Action): string {
   switch (action.op) {
     case 'mkdir':
-      return `mkdir ${action.path} (${action.owner}:${action.group} ${octal(action.mode)})`;
+      return `mkdir ${action.path} (${action.owner}:${action.group} ${octal(action.mode)})${action.via ? ' via a temporary name' : ''}`;
     case 'write': {
       const random = action.content.source === 'random' ? ` — ${action.content.bytes} random bytes, never shown` : '';
       return `write ${action.path} [${action.label}] ${action.disposition}${random} (${action.owner}:${action.group} ${octal(action.mode)})`;
@@ -921,8 +1717,22 @@ export function describe(action: Action): string {
       return `chmod ${octal(action.mode)} ${action.path}`;
     case 'append-only':
       return `chattr +a ${action.path} (append-only audit trail)`;
+    case 'remove':
+      return `remove ${action.path} (${action.why})`;
+    case 'renderer-install':
+      return `install the host map renderer into ${action.dir} (${action.why}: ${action.files.length} files + bun from ${action.sourceDir})`;
     case 'daemon-reload':
       return 'systemctl daemon-reload';
+    case 'selinux-import':
+      return action.lines.length > 0
+        ? `semanage import (${action.lines.length} rule line(s)): ${action.lines.join(' ; ')}`
+        : `record the registered SELinux rules in ${action.statePath}`;
+    case 'selinux-restorecon':
+      return `restorecon -v ${action.targets.map(t => `${t.recursive ? '-R ' : ''}${t.path}`).join(' ')}`;
+    case 'fpm-configtest':
+      return `${action.bin} -t (php-fpm configtest)`;
+    case 'fpm-reload':
+      return `systemctl reload ${action.unit}`;
     case 'web-configtest':
       return `${action.bin} -t (${action.server} configtest)`;
     case 'web-reload':

@@ -1,5 +1,6 @@
 /**
- * The env renderer: stamped, root:root 0644, exactly layout.envVars, read back identically
+ * The env renderer: stamped, root:root 0644, exactly agentEnvVars(layout) (layout.envVars plus the
+ * host-wide nginx map keys, spec §13.4), read back identically
  * by the agent's own env-file parser AND resolved by the agent's own config (resolveConfig),
  * every key a Task 1 env-file key, and no credential ever.
  */
@@ -9,8 +10,8 @@ import { join } from 'node:path';
 import { KNOWN_KEYS, resolveConfig } from '../src/config';
 import { parseEnvFile } from '../src/env_file';
 import { hasDrifted, parseStamp } from '../src/provision/hash';
-import { derive } from '../src/provision/layout';
-import { envAssignment, envRenderer, renderEnvBody } from '../src/provision/render/env';
+import { derive, HOST_BASE, type HostDeclaration } from '../src/provision/layout';
+import { agentEnvVars, envAssignment, envRenderer, renderEnvBody } from '../src/provision/render/env';
 import { PENDING_FACTS } from '../src/provision/render/types';
 import { scratchPath } from './fixtures/instance';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
@@ -37,9 +38,10 @@ describe('envRenderer', () => {
       expect(hasDrifted(artifact?.body ?? '')).toBe(false);
     });
 
-    test(`${name}: the agent's env parser reads back exactly layout.envVars`, () => {
+    test(`${name}: the agent's env parser reads back exactly agentEnvVars (= layout.envVars here)`, () => {
       const layout = derive(decl);
-      expect(parseEnvFile(renderEnvBody(layout), layout.envFile)).toEqual({ ...layout.envVars });
+      expect(parseEnvFile(renderEnvBody(layout), layout.envFile)).toEqual({ ...agentEnvVars(layout) });
+      expect(agentEnvVars(layout)).toEqual({ ...layout.envVars });
     });
 
     test(`${name}: every rendered key is one of the config's KNOWN_KEYS (INSTANCE = the AgentConfig field)`, () => {
@@ -92,6 +94,26 @@ describe('envRenderer', () => {
     const body = renderEnvBody(derive(unixDeclaration()));
     expect(body).not.toMatch(/^SERVICE_TOKEN=/m);
     expect(body).toContain('/etc/dedalo_publication_host/test/credentials/SERVICE_TOKEN');
+  });
+});
+
+describe('the host-wide nginx map keys', () => {
+  const nginxConfD = (): HostDeclaration => ({ ...tlsDeclaration(), web: { server: 'nginx', unit: 'nginx', nginx_map: 'conf_d' } });
+
+  test('NGINX_MAP_MODE is rendered only for web.nginx_map conf_d (the config default is none: no byte change otherwise)', () => {
+    const layout = derive(nginxConfD());
+    expect(agentEnvVars(layout).NGINX_MAP_MODE).toBe('conf_d');
+    expect(renderEnvBody(layout)).toContain('NGINX_MAP_MODE="conf_d"');
+    for (const decl of [unixDeclaration(), tlsDeclaration()]) expect(renderEnvBody(derive(decl))).not.toContain('NGINX_MAP_MODE');
+  });
+
+  test('HOST_BASE is rendered only when paths.host_base overrides the default', () => {
+    const plain = derive(nginxConfD());
+    expect(plain.host.base).toBe(HOST_BASE);
+    expect(renderEnvBody(plain)).not.toContain('HOST_BASE');
+    const scratch = derive({ ...nginxConfD(), paths: { host_base: '/srv/scratch/_host' } });
+    expect(agentEnvVars(scratch).HOST_BASE).toBe('/srv/scratch/_host');
+    expect(parseEnvFile(renderEnvBody(scratch), scratch.envFile)).toEqual({ ...agentEnvVars(scratch) });
   });
 });
 

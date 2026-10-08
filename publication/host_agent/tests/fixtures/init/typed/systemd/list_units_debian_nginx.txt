@@ -1,0 +1,5 @@
+● apache2.service    not-found inactive dead    apache2.service
+nginx.service        loaded    active   running A high performance web server and a reverse proxy server
+php8.2-fpm.service   loaded    active   running The PHP 8.2 FastCGI Process Manager
+php8.4-fpm.service   loaded    active   running The PHP 8.4 FastCGI Process Manager
+polkit.service       loaded    inactive dead    Authorization Manager

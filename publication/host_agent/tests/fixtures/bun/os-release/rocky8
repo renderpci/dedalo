@@ -1,0 +1,6 @@
+NAME="Rocky Linux"
+VERSION="8.10 (Green Obsidian)"
+ID="rocky"
+ID_LIKE="rhel centos fedora"
+VERSION_ID="8.10"
+PLATFORM_ID="platform:el8"

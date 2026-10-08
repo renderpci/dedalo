@@ -1,0 +1,5 @@
+apache2.service      loaded    active   running The Apache HTTP Server
+dedalo-ts.service    loaded    active   running Dédalo engine
+nginx.service        not-found inactive dead    nginx.service
+php8.2-fpm.service   loaded    active   running The PHP 8.2 FastCGI Process Manager
+polkit.service       loaded    active   running Authorization Manager

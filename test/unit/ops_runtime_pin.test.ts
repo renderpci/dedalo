@@ -8,18 +8,40 @@
  * since it is deliberately a floor rather than an exact pin). A SIXTH copy, the
  * `.gitlab-ci.yml` CI-image fingerprint pin and the GitHub workflows'
  * `bun-version-file` wiring, is owned by `ci_workflow_tripwire.test.ts` — that
- * is the complete census as of 2026-08-25. Add a copy anywhere else and it must
- * be added here too. This file also asserts the diffusion zip writer
+ * is the complete census as of 2026-08-25. A SEVENTH (2026-10-08, provision init
+ * §1.3): `.bun-sha256`, the publication host's Bun hash table — its pin line, its
+ * signed-by line (= scripts/ci/bun_pin_hashes.ts BUN_RELEASE_KEY_FINGERPRINT) and its
+ * asset lines (= the SIGNED payload of ci/bun/SHASUMS256.txt.asc, re-verified here
+ * with gpgv), plus the kernel floor held with the pin (layout.ts BUN_KERNEL_FLOOR).
+ * Add a copy anywhere else and it must be added here too. This file also asserts the diffusion zip writer
  * carries NO runtime `Bun.zip` probe (a future Bun shipping Bun.zip must not
  * silently change archive bytes). Also pins the deterministic-bytes property
  * of the PKZIP STORE writer itself.
  */
 
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Glob } from 'bun';
+import { BUN_ASSETS } from '../../publication/host_agent/src/provision/exec_contract.ts';
+import { BUN_KERNEL_FLOOR } from '../../publication/host_agent/src/provision/layout.ts';
+import {
+	ASC_PATH,
+	ascShapeProblem,
+	BUN_PIN_KERNEL_FLOOR,
+	BUN_RELEASE_KEY_FINGERPRINT,
+	dearmorPublicKey,
+	GPGV_MISSING,
+	KEY_PATH,
+	payloadAssetLines,
+	primaryFingerprint,
+	showKeysProblem,
+	statusProblem,
+	TABLE_PATH,
+	tableAssetLines,
+	verifiedPayload,
+} from '../../scripts/ci/bun_pin_hashes.ts';
 import { createZip } from '../../src/diffusion/writers/files.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -182,5 +204,120 @@ describe('ambient env may not steer the DB connection (Bun 1.4 PGSSLMODE)', () =
 		expect(catalog).toContain('DB_SSLMODE:');
 		const configSource = readFileSync(join(ROOT, 'src/config/config.ts'), 'utf-8');
 		expect(configSource).toContain("sslMode: readString('DB_SSLMODE')");
+	});
+});
+
+/**
+ * THE BUN HASH TABLE (provision init §1.3, Q3). `.bun-sha256` is what a publication host
+ * verifies the Bun it runs as root against; it must be EXACTLY the signed payload of the
+ * committed `ci/bun/SHASUMS256.txt.asc`, whose signature is re-verified here with gpgv
+ * (the TS-dearmored key, a fresh short homedir, the status rules of §1.3 step 3). gpgv is
+ * in the CI image: missing on Linux is RED; only on Darwin is the signature leg skipped.
+ * Mutation targets (both red): an unsigned hash line appended after the armour, and a hash
+ * line edited inside the signed payload.
+ */
+describe('the Bun hash table is the signed payload (.bun-sha256, Q3)', () => {
+	const pinned = readFileSync(join(ROOT, '.bun-version'), 'utf-8').trim();
+	const table = readFileSync(TABLE_PATH, 'utf-8');
+	const asc = readFileSync(ASC_PATH, 'utf-8');
+	const key = readFileSync(KEY_PATH, 'utf-8');
+	const gpgv = Bun.which('gpgv');
+	const signatureLeg = gpgv !== null || process.platform !== 'darwin';
+
+	test('line 1 is the pin, line 2 the pinned release key, then one line per asset', () => {
+		const lines = table.split('\n');
+		expect(table.endsWith('\n')).toBe(true);
+		expect(lines[0]).toBe(`# bun-v${pinned}`);
+		expect(lines[1]).toBe(`# signed-by: ${BUN_RELEASE_KEY_FINGERPRINT}`);
+		expect(tableAssetLines(table).map((l) => l.split('  ')[1])).toEqual(
+			BUN_ASSETS.map((a) => `${a}.zip`),
+		);
+	});
+
+	test('the committed key is ONE primary key with the pinned fingerprint (computed in TS)', () => {
+		expect(primaryFingerprint(dearmorPublicKey(key))).toBe(BUN_RELEASE_KEY_FINGERPRINT);
+	});
+
+	test('the kernel floor is held with the pin', () => {
+		expect(BUN_PIN_KERNEL_FLOOR.pin).toBe(pinned);
+		expect(BUN_KERNEL_FLOOR).toBe(BUN_PIN_KERNEL_FLOOR.floor);
+	});
+
+	test('the committed .asc is one clearsigned document with nothing outside the armour', () => {
+		expect(ascShapeProblem(asc)).toBeNull();
+		expect(existsSync(join(ROOT, 'ci/bun/SHASUMS256.txt'))).toBe(false);
+	});
+
+	test.skipIf(!signatureLeg)(
+		'gpgv verifies the .asc and the table equals its signed payload (skipped on Darwin without gpgv)',
+		() => {
+			expect(gpgv, `${GPGV_MISSING} — and in the CI image (apt install gpgv)`).not.toBeNull();
+			const payload = verifiedPayload(asc, key, { gpgv: gpgv as string });
+			expect(tableAssetLines(table)).toEqual(payloadAssetLines(payload));
+		},
+	);
+
+	test.skipIf(!signatureLeg)(
+		'mutations: an unsigned line after the armour, an edited payload line, another key — each refused',
+		() => {
+			const tools = { gpgv: gpgv as string };
+			const unsigned = `${asc}${'0'.repeat(64)}  bun-linux-x64.zip\n`;
+			expect(() => verifiedPayload(unsigned, key, tools)).toThrow(/after its signature/);
+			const line = payloadAssetLines(verifiedPayload(asc, key, tools))[2] as string;
+			const edited = asc.replace(
+				line,
+				`${line.slice(0, 63)}${line[63] === '0' ? '1' : '0'}${line.slice(64)}`,
+			);
+			expect(edited).not.toBe(asc);
+			expect(() => verifiedPayload(edited, key, tools)).toThrow(/BADSIG/);
+			expect(() => verifiedPayload(asc, key, tools, 'B'.repeat(40))).toThrow(
+				/release key: the primary key is F3DC[0-9A-F]{36}, the pin is B{40}/,
+			);
+		},
+	);
+
+	test('the status rules (§1.3 step 3)', () => {
+		const F = BUN_RELEASE_KEY_FINGERPRINT;
+		const good = `[GNUPG:] NEWSIG\n[GNUPG:] GOODSIG 8EAB4D40A7B22B59 R\n[GNUPG:] VALIDSIG ${F} 2026-09-05 1 0 4 0 22 10 01 ${F}\n`;
+		expect(statusProblem(good, F)).toBeNull();
+		expect(statusProblem(`${good}[GNUPG:] NEWSIG\n`, F)).toMatch(/2 NEWSIG/);
+		expect(statusProblem(good.replace(/\[GNUPG:\] GOODSIG.*\n/, ''), F)).toMatch(/0 GOODSIG/);
+		expect(statusProblem(good.replace(new RegExp(`${F}\\n$`), `${'C'.repeat(40)}\n`), F)).toMatch(
+			/primary key/,
+		);
+		for (const bad of [
+			'BADSIG',
+			'ERRSIG',
+			'EXPSIG',
+			'EXPKEYSIG',
+			'KEYEXPIRED',
+			'KEYREVOKED',
+			'REVKEYSIG',
+			'NO_PUBKEY',
+		]) {
+			expect(statusProblem(`${good}[GNUPG:] ${bad} x\n`, F)).toBe(`gpgv reported ${bad}`);
+		}
+	});
+
+	test('the armour: an altered body fails its CRC; text outside the armour is refused', () => {
+		const lines = key.split('\n');
+		const body = lines.findIndex((l) => l.startsWith('mDMEY'));
+		const flipped = [...lines];
+		flipped[body] =
+			`${(lines[body] as string).slice(0, 10)}${(lines[body] as string)[10] === 'A' ? 'B' : 'A'}${(lines[body] as string).slice(11)}`;
+		expect(() => dearmorPublicKey(flipped.join('\n'))).toThrow(/CRC-24/);
+		expect(() => dearmorPublicKey(`junk\n${key}`)).toThrow(/outside the armour/);
+		expect(() => dearmorPublicKey(key.replace(/^=.*\n/m, ''))).toThrow(/CRC-24 line/);
+	});
+
+	test('gpg --show-keys: exactly one pub, its fpr directly after', () => {
+		const F = BUN_RELEASE_KEY_FINGERPRINT;
+		const one = `pub:-:255:22:8EAB4D40A7B22B59:1674678294:::-:::scESC:::::ed25519:::0:\nfpr:::::::::${F}:\nsub:-:255:18:36FA:1::::::e:::::cv25519::\nfpr:::::::::8CDF8ECABE81CE3F32AC047236FA8E877B80AB05:\n`;
+		expect(showKeysProblem(one, F)).toBeNull();
+		expect(showKeysProblem(`${one}${one}`, F)).toMatch(/2 pub/);
+		expect(showKeysProblem(one.replace(`fpr:::::::::${F}:\n`, ''), F)).toMatch(
+			/no fpr|primary key/,
+		);
+		expect(showKeysProblem(one, 'D'.repeat(40))).toMatch(/primary key/);
 	});
 });

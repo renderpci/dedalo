@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "nginx -T output grammar (as in captured/*): exact, .x and x.* wildcards, ~ regexes (one PCRE JavaScript cannot compile), default_server, quoting and comments, an upstream fastcgi_pass, our stamped zero-match reference, the guide's media include and API locations, the guide's hand-placed http{} map beside our own map include",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}

@@ -5,7 +5,20 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ProvisionDeps } from '../src/provision/cli';
-import { EXIT, declarationTrustProblems, hostDeps, parseArgs, run, secretShapedAssignment } from '../src/provision/cli';
+import {
+  EXIT,
+  INIT_VERB,
+  declarationTrustProblems,
+  guarded,
+  hostDeps,
+  parseArgs,
+  run,
+  secretShapedAssignment,
+  siblingProblems,
+  usageLines,
+} from '../src/provision/cli';
+import type { LockHandle, LockHolder, LockMode } from '../src/provision/lock';
+import { LockBusy, LockRefused } from '../src/provision/lock';
 import type { HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
 import type { PathFacts } from '../src/provision/plan';
@@ -28,6 +41,12 @@ interface Harness {
   readonly out: string[];
   readonly err: string[];
   readonly reads: string[];
+  /** Every lock taken and released, in order: `take <instance> <mode> <verb>` / `release <instance>`. */
+  readonly locks: string[];
+}
+
+function fakeHandle(instance: string, mode: LockMode, log: string[]): LockHandle {
+  return { path: `/scratch/init/${instance}/init.lock`, mode, instance, release: () => log.push(`release ${instance}`) };
 }
 
 function harness(
@@ -43,8 +62,11 @@ function harness(
     symlinks?: readonly string[];
     /** lstat overrides (null: absent). Otherwise a `.json` is a root 0644 file, anything else a root 0755 directory. */
     facts?: Readonly<Record<string, PathFacts | null>>;
+    /** The instance lock is held by someone else past its wait (LockBusy), or its directory is untrusted (LockRefused). */
+    lock?: { busy: LockHolder } | { refused: string };
   } = {},
 ): Harness {
+  const locks: string[] = [];
   const clock = options.clock ?? { now: new Date('2026-10-03T12:00:00Z') };
   const declaration = options.declaration ?? unixDeclaration();
   const host = new FakeHost(derive(declaration));
@@ -55,7 +77,17 @@ function harness(
     out: [],
     err: [],
     reads,
+    locks,
     deps: {
+      lock: (instance, mode, verb) => {
+        const scripted = options.lock;
+        if (scripted !== undefined && 'busy' in scripted) {
+          throw new LockBusy(`/scratch/init/${instance}/init.lock`, scripted.busy, 'held');
+        }
+        if (scripted !== undefined && 'refused' in scripted) throw new LockRefused(scripted.refused);
+        locks.push(`take ${instance} ${mode} ${verb}`);
+        return fakeHandle(instance, mode, locks);
+      },
       readDeclaration: path => {
         reads.push(path);
         return options.siblings?.[path] ?? text;
@@ -110,6 +142,124 @@ describe('arguments → USAGE (2)', () => {
     });
     expect(parseArgs(['apply', 'test', '--exit-code'])).toEqual({ error: '--exit-code applies to check only' });
     expect(parseArgs(['check', 'test', '--exit-code', '--exit-code'])).toEqual({ error: '--exit-code given twice' });
+  });
+});
+
+describe('the instance lock (spec S12, Q2)', () => {
+  const HOLDER: LockHolder = { pids: [4321], verb: 'init', pid: 4321, since: '2026-10-08T10:00:00.000Z' };
+
+  test('check takes it SHARED, apply EXCLUSIVE, render none; each is released at the end', () => {
+    const check = harness();
+    expect(exec(check, ['check', 'test'])).toBe(EXIT.OK);
+    expect(check.locks).toEqual(['take test sh check', 'release test']);
+    const apply = harness();
+    exec(apply, ['apply', 'test']);
+    expect(apply.locks).toEqual(['take test ex apply', 'release test']);
+    const render = harness();
+    expect(exec(render, ['render', 'test'])).toBe(EXIT.OK);
+    expect(render.locks).toEqual([]);
+  });
+
+  test('check during init or apply: EXIT.BUSY (5) with the holder named, nothing read or checked', () => {
+    const h = harness({ lock: { busy: HOLDER } });
+    expect(exec(h, ['check', 'test'])).toBe(EXIT.BUSY);
+    expect(EXIT.BUSY).toBe(5);
+    expect(h.out).toEqual([
+      "provision: instance 'test' is being changed by init pid 4321 since 2026-10-08T10:00:00.000Z; not checked",
+    ]);
+    expect(h.reads).toEqual([]);
+  });
+
+  test('apply during init: REFUSED (3), nothing read or written', () => {
+    const h = harness({ lock: { busy: HOLDER } });
+    expect(exec(h, ['apply', 'test'])).toBe(EXIT.REFUSED);
+    expect(h.err).toEqual([
+      "provision: instance 'test' is locked by init pid 4321 since 2026-10-08T10:00:00.000Z; wait or check that process",
+    ]);
+    expect(h.reads).toEqual([]);
+    expect(h.host.mutations).toBe(0);
+  });
+
+  test("untrusted lock directories are REFUSED; a non-root caller is refused before any lock", () => {
+    const refused = harness({ lock: { refused: "lock: '/var/lib/dedalo_publication_host_init' is a symlink" } });
+    expect(exec(refused, ['apply', 'test'])).toBe(EXIT.REFUSED);
+    expect(refused.err.join('\n')).toContain('is a symlink');
+    expect(refused.reads).toEqual([]);
+    const user = harness({ root: false });
+    expect(exec(user, ['apply', 'test'])).toBe(EXIT.REFUSED);
+    expect(user.locks).toEqual([]);
+  });
+
+  test("lockHeld (init's in-process apply): no second acquisition; another instance's handle throws", () => {
+    const h = harness();
+    const log: string[] = [];
+    const held = fakeHandle('test', 'ex', log);
+    run(['apply', 'test'], { deps: h.deps, out: line => h.out.push(line), err: line => h.err.push(line), lockHeld: held });
+    expect(h.locks).toEqual([]);
+    expect(log).toEqual([]); // the caller's handle is the caller's to release
+    expect(() => run(['apply', 'test'], { deps: h.deps, lockHeld: fakeHandle('other', 'ex', log) })).toThrow(/instance 'other'/);
+    expect(() => run(['apply', 'test'], { deps: h.deps, lockHeld: fakeHandle('test', 'sh', log) })).toThrow(/shared lock/);
+  });
+
+  test('the lock is released when apply fails too', () => {
+    const h = harness();
+    const failing: ProvisionDeps = {
+      ...h.deps,
+      observeHost: () => {
+        throw new Error('observe exploded');
+      },
+    };
+    expect(run(['apply', 'test'], { deps: failing, out: () => {}, err: () => {} })).toBe(EXIT.FAILED);
+    expect(h.locks).toEqual(['take test ex apply', 'release test']);
+  });
+
+  test('the production lock is lock.ts acquireInstanceLockSync on INIT_BASE (a non-root caller cannot take it)', () => {
+    expect(typeof hostDeps().lock).toBe('function');
+  });
+});
+
+describe('init dispatch (spec §2.3)', () => {
+  test("parseArgs(['init', …]) stays USAGE, naming runInit", () => {
+    expect(INIT_VERB).toBe('init');
+    expect(parseArgs(['init', 'test'])).toEqual({
+      error: "'init' has its own command line: init/run.ts runInit (start it with deploy/install.sh)",
+    });
+    const lines = usageLines();
+    expect(lines.findIndex(line => line.includes('init <instance>'))).toBeLessThan(lines.findIndex(line => line.includes('exit: 0 ok')));
+    expect(lines.at(-1)).toContain('5 busy');
+  });
+
+  test('the entry dispatches `init` to runInit, whose footgun guards refuse a hand start before anything is read', () => {
+    const proc = Bun.spawnSync({
+      cmd: [process.execPath, join(import.meta.dir, '..', 'src', 'provision', 'cli.ts'), 'init', 'test', '--dry-run'],
+      env: { PATH: '/usr/bin:/bin' },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    // A hand start (not env -i, no --no-env-file/--no-install/--config, a non-root cwd): REFUSED by
+    // the guards, which run before the lock, the journal or any input is touched.
+    expect(proc.exitCode).toBe(EXIT.REFUSED);
+    const stderr = proc.stderr.toString();
+    expect(stderr).toContain('provision init: ');
+    expect(stderr).toContain('— start init through deploy/install.sh');
+    expect(stderr).not.toContain('FAILED');
+    const bad = Bun.spawnSync({
+      cmd: [process.execPath, join(import.meta.dir, '..', 'src', 'provision', 'cli.ts'), 'init', 'test', '--declaration', '/x'],
+      env: { PATH: '/usr/bin:/bin' },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    expect(bad.exitCode).toBe(EXIT.USAGE);
+    expect(bad.stderr.toString()).toContain('init writes the declaration; give the draft with --draft');
+  });
+
+  test('guarded and siblingProblems are exported for init (spec §2.2)', () => {
+    const lines: string[] = [];
+    guarded(line => lines.push(line))('plain');
+    expect(lines).toEqual(['plain']);
+    expect(() => guarded(() => {})(`DB_PASSWORD=${HEX32}`)).toThrow(/refusing to print/);
+    const h = harness();
+    expect(siblingProblems(derive(unixDeclaration()), DEFAULT_SOURCE, h.deps, new Set())).toEqual([]);
   });
 });
 
@@ -335,7 +485,8 @@ describe('render / check / apply', () => {
   test('apply → OK (0); then check → OK (0) and a second apply writes nothing', () => {
     const h = harness();
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
-    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (11 file(s) written)");
+    // 11 artifacts and state files, plus the two host lock files (created empty once, spec S12).
+    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (13 file(s) written)");
     const after = h.host.mutations;
     expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);

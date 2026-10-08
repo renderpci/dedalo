@@ -1,0 +1,8 @@
+root:x:0:
+www-data:x:33:museum
+dedalo:x:1001:
+museum:x:1002:
+museum_org_agent:x:998:
+engine_shared:x:1500:dedalo,www-data
+engine_alone:x:1501:dedalo
+engine_empty:x:1502:

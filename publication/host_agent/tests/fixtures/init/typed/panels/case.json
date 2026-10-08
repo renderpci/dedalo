@@ -1,0 +1,5 @@
+{
+  "typed": true,
+  "source": "the PANEL_MARKERS paths (parse/os.ts); presence is lstat-only, so the fixture is the path list in tests/init_parse_os.test.ts",
+  "replace": "the EL drill (spec §9) replaces every typed EL fixture with a capture; a disagreement changes the parser and the spec, never the capture"
+}
