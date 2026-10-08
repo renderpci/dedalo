@@ -184,6 +184,48 @@ export function isBackupArtifactName(name: string): boolean {
 	return name.endsWith('.backup');
 }
 
+/** What follows `<stamp>.<db>.` in a PANEL dump's name (`backupFileName`, forced or throttled). */
+const PANEL_DUMP_TAIL = /^postgresql_-?\d+(_forced)?_dbv[\d-]*\.custom\.backup$/;
+
+/** What follows `<stamp>.<db>.` in a SCHEDULED dump's name (deploy/dedalo-db-backup.sh `--label`). */
+const LABELLED_DUMP_TAIL = /^postgresql_[^/]+\.custom\.backup$/;
+
+/**
+ * The newest SCHEDULED dump of `database` in `backupDir`, or null when every
+ * dump there was made from the panel (or there is none).
+ *
+ * THE ENGINE SCHEDULES NOTHING (DEDALO_BACKUP_TIME_RANGE's catalog entry): a
+ * backup on a schedule is the OS's job — `deploy/dedalo-backup.timer`, the
+ * compose `backup` service, or the operator's own cron — and none of those is
+ * visible from here, nor portably probeable (systemd, launchd, cron, a sidecar
+ * container). What IS visible is their output: deploy/dedalo-db-backup.sh names
+ * its dumps `<stamp>.<db>.postgresql_<label>.custom.backup`, the panel names
+ * them `…postgresql_<user>[_forced]_dbv<v>.custom.backup`. So this answers "has a
+ * scheduler EVER delivered a dump of this database here" — evidence, not
+ * configuration: a timer installed today and not yet fired reads as null, and a
+ * scheduler that died long ago still reads as found (its age is the panel's
+ * staleness line, not this one). Another database's dumps never count: a job
+ * backing up `mht` does not back up this one.
+ */
+export function newestScheduledBackupName(
+	database: string,
+	backupDir: string = getBackupDir(),
+): string | null {
+	const scheduled = statableBackups(backupDir)
+		.map(({ name }) => name)
+		.filter((name) => isScheduledDumpOf(name, database));
+	// Newest BY NAME (the timestamp leads it), as getBackupFiles lists them.
+	return scheduled.length === 0 ? null : scheduled.reduce((a, b) => (b > a ? b : a));
+}
+
+/** `<stamp>.<database>.<labelled tail>` — and the tail is not the panel's. */
+function isScheduledDumpOf(name: string, database: string): boolean {
+	const dot = name.indexOf('.');
+	if (dot < 0 || !name.startsWith(`${database}.`, dot + 1)) return false;
+	const tail = name.slice(dot + database.length + 2);
+	return LABELLED_DUMP_TAIL.test(tail) && !PANEL_DUMP_TAIL.test(tail);
+}
+
 export interface BackupResponse {
 	/** Did the sequence start (or legitimately skip)? An INTERNAL outcome — never a wire body. */
 	ok: boolean;

@@ -15,17 +15,22 @@ import { failAction, type WidgetModule, type WidgetResponse } from './support.ts
  * carried its own copy of the grammar, coverage plan §4.4 D14.)
  */
 async function makeBackupGetValue(): Promise<WidgetResponse> {
-	const { backupFileName, getBackupDir, getCurrentDataVersion } = await import('../backup.ts');
+	const { backupFileName, getBackupDir, getCurrentDataVersion, newestScheduledBackupName } =
+		await import('../backup.ts');
 	const { config } = await import('../../../config/config.ts');
 	const db = config.db as { database?: string };
+	const database = String(db.database ?? 'dedalo');
 	return {
 		data: {
 			dedalo_db_management: true,
 			backup_path: getBackupDir(),
+			// null = no scheduled dump of this database ever landed here: the panel
+			// says backups are manual (WC-2026-10-08-make-backup-scheduled-evidence).
+			last_scheduled_backup: newestScheduledBackupName(database),
 			// The make_psql_backup action below always forces, by user -1.
 			file_name: backupFileName({
 				now: new Date(),
-				database: String(db.database ?? 'dedalo'),
+				database,
 				userId: -1,
 				forced: true,
 				version: await getCurrentDataVersion(),

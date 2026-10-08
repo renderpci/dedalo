@@ -16927,6 +16927,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * Included from area_maintenance.less file.
 * SSE progress + backup-file lists rendered as console blocks.
 */
+.wrapper_widget.make_backup .no_scheduler {
+  margin-bottom: 0.75rem;
+}
 .wrapper_widget.make_backup .button_submit {
   margin-top: 0.75rem;
 }
