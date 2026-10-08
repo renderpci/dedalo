@@ -1160,6 +1160,10 @@ Merged since the last release; these ship with the next one.
 
     The image now creates that directory with the right owner. **Rebuild the image** (`docker compose build`, then `docker compose up -d`, adding `-f docker-compose.simple.yml --env-file .dedalo.env` on the simple stack). An existing `backups` volume is still empty, so it takes the right owner by itself; no manual step is needed. The `backup` service now reports *unhealthy* whenever it cannot write to `/backups`. The simple stack also declares which stores each run must produce, so a store that never ran is reported as a failure, as on the full stack. After updating, check that `/backups/LAST_OK` appears the morning after. See [Docker backups](./install/docker.md#backups-from-a-container).
 
+- **"`./install.sh` runs on macOS again (and wherever Docker's storage lives in a VM)."**
+
+    On macOS, and on Docker Desktop under WSL or with a remote Docker host, `./install.sh` stopped silently right after its banner. Its free-disk check used a Linux-only option. The check is now portable. Where the free space cannot be measured from the host, the check is skipped and the install continues. See [Simple install](./install/quickstart.md).
+
 - **The auction-URL and journal-URL import tools now declare the sections they belong to.**
 
     The two import tools are registered for their own sections only (`numisdata4` for auction URLs; `rsc205` and `rsc3` for journal URLs), so the restriction no longer depends on their server code loading. Run *Register tools* after the update to apply it.

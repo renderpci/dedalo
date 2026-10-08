@@ -394,8 +394,19 @@ ensure_docker "$@"
 # reclaimable AFTERWARDS (`docker builder prune -af`). Add the seed restore on
 # top and 8 GB free is the honest floor — below it the install dies mid-restore
 # with `No space left on device`, which is a confusing way to learn this.
+#
+# PORTABLE, AND NEVER FATAL. This used GNU-only `df -BG --output=avail` inside a
+# `$(…)` under `set -euo pipefail`: wherever that df fails — BSD df on macOS, or a
+# DockerRootDir that lives in a VM and not on this filesystem (Docker Desktop on
+# macOS and on WSL, a remote DOCKER_HOST) — the assignment's failure exited the
+# whole script, silently, right after the banner (exit 64, 2026-07-27 → 2026-10-08).
+# POSIX `df -Pk` + awk, and a probe that cannot answer simply skips the check.
+# Gate: test/unit/install_sh_portability.test.ts.
+docker_free_gib() {
+	{ df -Pk "$1" 2>/dev/null || true; } | awk 'NR == 2 && $4 ~ /^[0-9]+$/ { print int($4 / 1048576) }'
+}
 docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)"
-free_gib="$(df -BG --output=avail "$docker_root" 2>/dev/null | tail -1 | tr -dc '0-9')"
+free_gib="$(docker_free_gib "$docker_root")"
 if [ -n "$free_gib" ] && [ "$free_gib" -lt 8 ]; then
 	warn "Only ${free_gib} GiB free on $docker_root — the install needs about 8 GiB."
 	warn 'Free some space (docker system prune -af) or point Docker at a bigger disk.'
