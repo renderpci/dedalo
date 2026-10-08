@@ -69,6 +69,10 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The tools of a section list are now grouped in one Tools menu.**
+
+    In list mode the header used to show one labelled button per tool (QR, Export, Import, Time machine, Print layout…), and the row wrapped as more tools were registered. **New** and **Delete** stay where they were; every tool now sits in a single **Tools** menu, sorted by name, that can be opened with the mouse or keyboard (arrow keys to move, Enter to open a tool, Esc to close). A tool can keep its own button next to the menu by setting `"pinned_in_list": true` in its `properties`.
+
 - **The audio/video viewer window now fits the media: no size jump on play, no black bars.**
 
     Opening a video from a list used to show the poster at one size and then shrink the player to the stream's size when playback started, pinned to the left with black space around it. The viewer now fills its window: poster and playback share the same box, the popup resizes itself to the media's aspect ratio, and the download button no longer covers the player controls.
@@ -240,6 +244,14 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The error page shows its Raspa background again.**
+
+    When a page could not load (*An unexpected error occurred*, with its `request_id` and a *Home* link), the faded Raspa photo meant to fill the background was hidden behind the page's grey background, so the page looked bare. It now covers the whole window again.
+
+- **Confirm-dialog buttons keep the space between icon and label on a phone.**
+
+    On narrow screens the accept button of a confirmation dialog (e.g. **Continue** when creating or duplicating a record) printed its icon almost touching the label. It now keeps the same gap as on desktop.
+
 - **The CSV import's column mapper shows a real value from the file as each column's *Sample data*, not the column's own name.**
 
     When a CSV file was staged in **Import CSV**, the *Sample data* cell of every row in the columns mapper repeated the column's name (the same text as the *Name* cell), because the preview was taken from the file's header line. It now shows the first non-empty value of that column in the data rows — the second line of the file, or a later line when that cell is empty — so you can check that each column is mapped to the right component before importing. Nothing was imported differently: the preview was the only thing affected.
@@ -247,6 +259,14 @@ Merged since the last release; these ship with the next one.
 - **The CSV importer recognises the common record columns again (created and modified by/date, and the rest of the record information).**
 
     A CSV exported from Dédalo carries the record information every section shares — who created and last modified the record and when, and the other fields of the *Record information* group. On import, those columns came up unchecked and could not be chosen in the column mapper, and the preflight check reported them as "not a component of section", so a re-import could not restore a record's history. They are listed again after the section's own fields, matched automatically by their column name, and imported with the dates and users the file carries (the record's "modified" stamp is not overwritten by the import itself). As before, these columns are offered to global administrators only, can only replace a value (never append to it). Computed fields, which store nothing of their own (the group's inverse references, a thesaurus's children list, indexations, external-service fields), are no longer offered in the column mapper at all; a column map that names one anyway is refused with an explanation. The Activity and Time machine sections, which have no record information, do not list them.
+
+- **The pinned-records chip of a section list tells where the pins come from and disappears when they are cleared.**
+
+    Going back to the list after creating a record showed "1 results pinned by meaning search" although no meaning search was run. The chip now reads **N records pinned** unless a meaning search really pinned the list, and its text stays on one line. Clearing the pins with its ✕ or **Show all** now removes the chip at once instead of leaving it over the unfiltered list.
+
+- **The "Show buttons" label no longer covers the search buttons on a phone.**
+
+    On narrow screens the vertical **Show buttons** label of a section list (and of the thesaurus/ontology toolbar) printed over **Search** and **Show all**. Below phone width only the arrow toggle is shown; its name is still read on hover and by screen readers.
 
 - **The MARC21 and Zotero imports refuse a computed field, and an AI agent can remove one child of a thesaurus term.**
 
@@ -1081,6 +1101,12 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The backup panel now says when backups are manual.**
+
+    Dédalo never makes database backups on its own: a nightly job installed with the operating system does (see [Backups](./management/backup.md)). When no scheduled backup of the database has ever reached the backup directory, the *Make backup* panel in Maintenance now shows *No scheduler, backups are manual.*, with a link to the backup documentation. Before, it showed only the age of the newest backup, which looked like automatic backups that had stopped.
+
+    Wire contract: `WC-2026-10-08-make-backup-scheduled-evidence`.
+
 - **The Publication hosts panel now shows in red a publication server whose Bun differs from the version the work system pins.**
 
     Each host in **Maintenance › Publication hosts** has a new **Bun version** row, with the expected version (this work system's `.bun-version`) and the version the host reports side by side. It is green only when they are exactly equal, red on any difference (for example `1.4.1 != 1.4.2`), and unknown when the host cannot be reached or proved. The install guide now gives each site on a publication server its own Bun, installed by root in `/home/<site>/.bun/` at the pinned version, so each site can be upgraded on its own, and suggests naming each instance after its site's domain (`my-hosts.org` → `my_hosts_org`). See [Publication host agent](./install/publication_host.md#2-declare-the-instance).
@@ -1143,6 +1169,30 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Container installs take their nightly backups again, and the full-stack install no longer stops at "directories".**
+
+    Since 2026-08-30 the `backups` volume of both compose stacks came up owned by root while the engine and the `backup` service run as an unprivileged user. Two things followed. The documented command-line install of the full stack (`docker-compose.yml`) stopped with `install failed: /backups/db`. And the nightly `backup` service wrote nothing at all. Because it could not write its own failure marker either, `docker compose ps` still showed it as *healthy*.
+
+    The image now creates that directory with the right owner. **Rebuild the image** (`docker compose build`, then `docker compose up -d`, adding `-f docker-compose.simple.yml --env-file .dedalo.env` on the simple stack). An existing `backups` volume is still empty, so it takes the right owner by itself; no manual step is needed. The `backup` service now reports *unhealthy* whenever it cannot write to `/backups`. The simple stack also declares which stores each run must produce, so a store that never ran is reported as a failure, as on the full stack. After updating, check that `/backups/LAST_OK` appears the morning after. See [Docker backups](./install/docker.md#backups-from-a-container).
+
+- **"`./install.sh` runs on macOS again (and wherever Docker's storage lives in a VM)."**
+
+    On macOS, and on Docker Desktop under WSL or with a remote Docker host, `./install.sh` stopped silently right after its banner. Its free-disk check used a Linux-only option. The check is now portable. Where the free space cannot be measured from the host, the check is skipped and the install continues. See [Simple install](./install/quickstart.md).
+
+- **When the install wizard refuses your browser, it now names the address it saw — and `./install.sh --wizard` asks who may open it.**
+
+    Until it is finished, the wizard answers only the addresses in `DEDALO_INSTALL_ALLOWED_IPS`. Behind the stack's proxy the engine sees an address few people would guess (Docker Desktop: `192.168.65.1`). `./install.sh --wizard` started the stack without naming anyone, so every wizard install was refused, with no hint of what to allow. The refusal now says *"The installer is not allowed from this address (192.168.65.1)"*, and the engine log names it too. `./install.sh --wizard` asks which addresses may open the wizard; it suggests the private network ranges. See [Simple install](./install/quickstart.md#path-2-browser-wizard).
+
+    Wire contract: `WC-2026-10-08-install-ip-denied-names-address`.
+
+- **The browser install wizard's first screen no longer fails with "An unexpected error occurred" in containers.**
+
+    On a machine with no database yet, such as any container, the wizard's first call tried to read the database for the names of the configured languages and failed. The wizard now names them from the installer's own language list. See [Simple install](./install/quickstart.md#path-2-browser-wizard).
+
+- **The browser install wizard no longer fails at the database step with `function "f_unaccent" already exists`.**
+
+    After *Save config*, the restarted engine ran its schema upgrades on the still-empty database, and the seed restore then collided with them, leaving a half-built database. This affected every browser-wizard install, on every platform. Those upgrades now wait until the install is sealed, as on the command-line installer. *Finish* restarts the engine once more, so the sealed instance starts with all of them applied; the page reloads by itself a few seconds later.
+
 - **"The publication-host pairing command now names a command you can run, and says why it cannot read a copied file."**
 
     When the pairing command refused because of the user running it, its message suggested
@@ -1155,6 +1205,18 @@ Merged since the last release; these ship with the next one.
     `provision apply` writes no longer claims that no release reads its keys: the pairing command
     reads exactly those keys. The next `provision check` lists the fragment as a change, and
     `apply` rewrites it. See [Publication host agent](./install/publication_host.md#pair-it-with-the-work-system).
+
+- **The auction-URL and journal-URL import tools now declare the sections they belong to.**
+
+    The two import tools are registered for their own sections only (`numisdata4` for auction URLs; `rsc205` and `rsc3` for journal URLs), so the restriction no longer depends on their server code loading. Run *Register tools* after the update to apply it.
+
+- **Ontologies re-installed by an ontology update keep their typology and name instead of moving to "Others".**
+
+    After an ontology update, ontologies such as `dd` or `tch` appeared in the profile permissions tree under the **Others** typology with only their bare tld as name (`dd`), although their registry record says otherwise (for `dd`: **Core**, "Dédalo | dd"). An update now keeps the typology and name from the ontology's registry record. To repair an installation already affected, rebuild the ontology's main node from the Ontology tool (the registry records themselves were always correct).
+
+- **A tool whose code fails to load no longer appears in every section.**
+
+    When a tool's server code failed to load (for example a missing dependency), its "only in these sections" rule was skipped and the tool appeared in every section. Such a tool is now hidden, and the server log names the load failure.
 
 - **Code updates no longer refuse over a file an older release shipped and a newer one removed.**
 
@@ -1610,7 +1672,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 101 entries"
+??? note "Wire contract — 103 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1713,6 +1775,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-07-acquisition-tools-ts-only`
     - `WC-2026-10-07-ontology-area-admin-grant`
     - `WC-2026-10-07-update-code-root-entries-stamp`
+    - `WC-2026-10-08-install-ip-denied-names-address`
+    - `WC-2026-10-08-make-backup-scheduled-evidence`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

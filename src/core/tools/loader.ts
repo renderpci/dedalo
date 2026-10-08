@@ -42,6 +42,8 @@ const TOOL_NAME_PATTERN = /^tool_[a-z0-9_]+$/;
 let loadedTools: Map<string, LoadedTool> | null = null;
 /** Names that collided across roots (first-root-wins); reported, not fatal. */
 let collisions: string[] = [];
+/** Names whose server/index.ts exists but failed to import/validate (fail-closed availability). */
+let failedLoads: readonly string[] = [];
 /** In-flight load promise so concurrent callers share one scan. */
 let loadingPromise: Promise<Map<string, LoadedTool>> | null = null;
 
@@ -218,6 +220,7 @@ function prefixesOverlap(a: string, b: string): boolean {
 async function scanRoots(): Promise<Map<string, LoadedTool>> {
 	const registry = new Map<string, LoadedTool>();
 	const collided: string[] = [];
+	const failed: string[] = [];
 	const roots = getRoots();
 
 	for (let rootIndex = 0; rootIndex < roots.length; rootIndex++) {
@@ -262,10 +265,12 @@ async function scanRoots(): Promise<Map<string, LoadedTool>> {
 			} catch (error) {
 				// A broken tool fails ONLY itself (missing dep, bad contract, syntax).
 				console.warn(`[tools] failed to load '${name}': ${(error as Error).message}`);
+				failed.push(name);
 			}
 		}
 	}
 	collisions = collided;
+	failedLoads = failed;
 	return registry;
 }
 
@@ -369,9 +374,20 @@ export function getToolLoadCollisions(): string[] {
 	return [...collisions];
 }
 
+/**
+ * True when `name` has a server/index.ts that failed to load. Its isAvailable
+ * hook cannot run, so callers must treat the tool as UNavailable (fail closed),
+ * never fall through to "always available". Triggers the load if needed.
+ */
+export async function toolModuleFailedToLoad(name: string): Promise<boolean> {
+	await loadToolModules();
+	return failedLoads.includes(name);
+}
+
 /** Drop the registry so the next call rescans (tests / after registration). */
 export function resetLoadedTools(): void {
 	loadedTools = null;
 	loadingPromise = null;
 	collisions = [];
+	failedLoads = [];
 }

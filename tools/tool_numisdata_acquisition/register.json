@@ -8,7 +8,7 @@
 	"affected_models": [
 		"section"
 	],
-	"show_in_component": true,
+	"affected_tipos": ["numisdata4"],
 	"active": true,
 	"properties": {
 		"open_as": "modal"

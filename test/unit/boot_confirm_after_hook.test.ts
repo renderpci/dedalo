@@ -110,7 +110,10 @@ describe('server.ts wiring', () => {
 		expect(call).toBeGreaterThan(-1);
 		// whitespace-insensitive: the formatter wraps this long dynamic import
 		expect(source).toMatch(/import\(\s*'\.\/core\/publication_host\/api_reconcile\.ts'\s*\)/);
-		const guard = source.lastIndexOf('if (!config.installMode && !smokeBoot) {', call);
+		// `databaseBoot` = !installMode && !installInProgress() (2026-10-08: a
+		// mid-wizard boot must not touch the not-yet-seeded database either); its
+		// definition is held by install_mode_boot.test.ts.
+		const guard = source.lastIndexOf('if (databaseBoot && !smokeBoot) {', call);
 		const confirmImport = source.indexOf("import('./core/update/boot_confirm.ts')", guard);
 		expect(guard).toBeGreaterThan(-1);
 		expect(confirmImport).toBeGreaterThan(guard);

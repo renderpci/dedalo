@@ -122,12 +122,16 @@
 			"!**/docs_site",
 
 			// LOCAL-ONLY, GITIGNORED, NEVER ON A CLONE: the local audit workspaces
-			// (audits/ — raw agent JSON, lane scripts) and the mkdocs plugin cache
-			// (.cache/ — vendored third-party bundles). A runner never has them, so
-			// linting them made host-mode `ci:local` red on bytes no CI run can see.
-			// Nothing under either is tracked (git ls-files is empty for both).
+			// (audits/ — raw agent JSON, lane scripts), the mkdocs plugin cache
+			// (.cache/ — vendored third-party bundles) and the developer scratch trees
+			// (dev/ and dev_tools/ at any depth — probes, mock APIs, web labs, editors
+			// such as client/dedalo/dev_tools/). A runner never has them, so linting
+			// them made host-mode `ci:local` (and the browser budget) red on bytes no
+			// CI run can see. Nothing under any is tracked (git ls-files is empty).
 			"!**/audits",
 			"!**/.cache",
+			"!**/dev",
+			"!**/dev_tools",
 
 			// HAND-AUTHORED PROSE — the manual (mkdocs sources, the style guide, the
 			// docs_current_engine_tripwire gate read it), tracked and edited

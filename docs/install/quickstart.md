@@ -109,7 +109,7 @@ When it finishes, open the `https://…` address it prints and log in as **root*
 ./install.sh --wizard
 ```
 
-It asks the **certificate** question above and nothing else, sets HTTPS up, starts everything, and stops. Then you open the `https://…` address it prints and answer the rest in the browser: because nothing is configured yet, the engine serves the **install wizard** instead of a login form. The screens are described in the [installer reference](installer_reference.md#the-browser-wizard).
+It asks the **certificate** question above and **who may reach the wizard** — it suggests the private address ranges, which cover this machine and your local network and nothing on the public internet — sets HTTPS up, starts everything, and stops. Then you open the `https://…` address it prints and answer the rest in the browser: because nothing is configured yet, the engine serves the **install wizard** instead of a login form. The screens are described in the [installer reference](installer_reference.md#the-browser-wizard).
 
 !!! warning "TLS comes first here, and that is not an accident"
     The wizard sends the root password **you are about to choose** across the network. Over plain HTTP anyone on the same switch reads it. So the certificate is set up before the wizard is served, not as a step inside it.
@@ -132,19 +132,20 @@ At **Save config** the engine writes its configuration and restarts itself — t
     Running the compose file directly still works and needs no certificate — plain HTTP, for a quick look on a laptop. This is the one place the `--env-file` flag is deliberately absent: there is no install to lose, and the compose defaults are plain HTTP with a non-`Secure` cookie, which is a working combination.
 
     ```shell
+    export DEDALO_INSTALL_ALLOWED_IPS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16   # who may open the wizard
     docker compose -f docker-compose.simple.yml up -d
     ```
 
     Then `http://localhost/dedalo/core/page/`, with database `dedalo` / user `dedalo` / password `dedalo`. Set `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` in your environment first to change them. Do not use this for real records.
 
 !!! warning "The wizard is reachable without a login until you finish it — so say who you are"
-    A fresh instance has no users, so until you press *Finish* anyone the engine admits can drive the installer. That is why the engine admits almost nobody by default: with `DEDALO_INSTALL_ALLOWED_IPS` unset the wizard answers **the local machine only**, and in a container that means nobody, because the request arrives through nginx and the engine sees your workstation's real address. So the browser wizard needs the address named before it will answer — add it to the `dedalo` service's `environment:` in `docker-compose.simple.yml`:
+    A fresh instance has no users, so until you press *Finish* anyone the engine admits can drive the installer. That is why the engine admits almost nobody by default: with `DEDALO_INSTALL_ALLOWED_IPS` unset the wizard answers **the local machine only**, and in a container that means nobody, because the request arrives through nginx and the engine sees your workstation's real address. So the browser wizard needs the address named before it will answer. `./install.sh --wizard` asks for it (the private ranges by default) and records it in `.dedalo.env`; the no-certificate variant above exports it. To name one machine instead, set it in your environment or in the `dedalo` service's `environment:` in `docker-compose.simple.yml`:
 
     ```yaml
     DEDALO_INSTALL_ALLOWED_IPS: "192.168.1.50"     # the machine you browse from
     ```
 
-    Name the real address of your workstation (a range such as `10.0.0.0/24` also works). `loopback` will **not** work here, for the same reason. `any` admits every address — only behind a firewall, and never left in place after *Finish*. HTTPS stops the password being readable in transit; it does not stop someone else opening the wizard.
+    Name the real address of your workstation (a range such as `10.0.0.0/24` also works). If the wizard refuses you, its message names the address it saw — that is the one to add. `loopback` will **not** work here, for the same reason. `any` admits every address — only behind a firewall, and never left in place after *Finish*. HTTPS stops the password being readable in transit; it does not stop someone else opening the wizard.
 
 ## After the install
 

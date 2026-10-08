@@ -1105,7 +1105,12 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					status: 200,
 					body: ok(
 						{ context: [buildInstallContext()], data: [] },
-						{ requestId: context.requestId, extend: { environment: await buildEnv(null, null) } },
+						// install:true — no database is usable yet (none configured, or
+						// configured and still EMPTY): the environment must not read one.
+						{
+							requestId: context.requestId,
+							extend: { environment: await buildEnv(null, null, { install: true }) },
+						},
 					),
 				};
 			}

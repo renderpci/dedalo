@@ -38,6 +38,7 @@
 * {
 *   "dedalo_db_management" : true,          // false disables the whole UI
 *   "backup_path"          : "/srv/backups",
+*   "last_scheduled_backup": null,                  // newest scheduled dump's name; null = backups are manual
 *   "file_name"            : "2024-04-02_223514.dedalo6_development.postgresql_-1_forced_dbv6-1-4.custom.backup",
 *   "mysql_db"             : [{ "db_name": "publication_db" }]  // null when not configured
 * }
@@ -224,6 +225,36 @@ const get_content_data = async function(self) {
 				parent			: content_data
 			})
 			return content_data
+		}
+
+	// no scheduler
+		// last_scheduled_backup is null when no scheduled dump of this database
+		// ever landed in the backup directory: the engine starts none itself, so
+		// without an OS scheduler every backup here is a click on this button.
+		if (value.last_scheduled_backup===null) {
+			const no_scheduler = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_note state_warning no_scheduler',
+				parent			: content_data
+			})
+			ui.create_dom_element({
+				element_type	: 'strong',
+				text_content	: 'No scheduler, backups are manual.',
+				parent			: no_scheduler
+			})
+			const detail = ui.create_dom_element({
+				element_type	: 'div',
+				text_content	: 'No scheduled backup of this database was found in the backup directory. Dédalo makes none on its own: install a nightly job (deploy/dedalo-backup.timer, or the backup service of the Docker stack). ',
+				parent			: no_scheduler
+			})
+			const docs_link = ui.create_dom_element({
+				element_type	: 'a',
+				href			: 'https://dedalo.dev/docs/v7/management/backup/#automatic-backup',
+				text_content	: 'Database backup documentation',
+				parent			: detail
+			})
+			docs_link.target	= '_blank'
+			docs_link.rel		= 'noopener noreferrer'
 		}
 
 	// info text

@@ -518,7 +518,7 @@ const get_buttons = function(self) {
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
 	// tools buttons
-		ui.add_tools(self, other_buttons_block)
+		ui.add_tools_menu(self, other_buttons_block)
 
 	// show_other_buttons_button
 		const show_other_buttons_label	= get_label.show_buttons || 'Show buttons'

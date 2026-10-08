@@ -5693,6 +5693,9 @@ dd-modal.dd_confirm .footer.content {
 dd-modal.dd_confirm .footer.content > button {
   margin: 0;
 }
+dd-modal.dd_confirm .footer.content > button::before {
+  margin-right: 0.25rem;
+}
 .disabled_component .content_data.component,
 .disabled_component .buttons_container,
 .disabled_component input,
@@ -6157,18 +6160,17 @@ dd-modal.dd_confirm .footer.content > button {
   padding: 4rem;
   line-height: 2.5rem;
 }
+.page_error_container.raspa_error {
+  isolation: isolate;
+}
 .page_error_container.raspa_error:after {
   content: ' ';
   background-image: url('../../themes/default/raspa_404.jpg');
   background-size: cover;
   background-repeat: no-repeat;
-  height: 100%;
-  width: 100%;
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  min-height: 100vh;
-  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   opacity: 0.3;
   z-index: -1;
 }
@@ -10076,7 +10078,11 @@ body:has(.component_av.view_viewer) {
   font-size: 0.85em;
   font-weight: 500;
 }
+.semantic_pinned_chip .chip_label {
+  white-space: nowrap;
+}
 .semantic_pinned_chip .chip_clear {
+  flex-shrink: 0;
   cursor: pointer;
   font-weight: bold;
   transition: color var(--transition-fast);
@@ -16921,6 +16927,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * Included from area_maintenance.less file.
 * SSE progress + backup-file lists rendered as console blocks.
 */
+.wrapper_widget.make_backup .no_scheduler {
+  margin-bottom: 0.75rem;
+}
 .wrapper_widget.make_backup .button_submit {
   margin-top: 0.75rem;
 }
@@ -19693,6 +19702,12 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_ontology > .buttons_container > .show_other_buttons_button:focus {
   outline: none;
 }
+@media screen and (max-width: 600px) {
+  .area_thesaurus > .buttons_container > .show_other_buttons_button:before,
+  .area_ontology > .buttons_container > .show_other_buttons_button:before {
+    display: none;
+  }
+}
 .area_thesaurus > .search_container,
 .area_ontology > .search_container {
   position: relative;
@@ -20200,6 +20215,42 @@ body.inspector_resizing {
   width: 100%;
   padding: 0px;
 }
+.section.list > .buttons_container .tools_menu_button:after {
+  content: '';
+  display: inline-block;
+  margin-left: 0.4rem;
+  border: 0.3rem solid transparent;
+  border-top-color: currentColor;
+  border-bottom-width: 0;
+  vertical-align: middle;
+}
+.section.list > .buttons_container .tools_menu_button.open:after {
+  transform: rotate(180deg);
+}
+.section.list > .buttons_container .tools_menu_panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0.25rem;
+  max-height: 70vh;
+  max-width: calc(100vw - 16px);
+  overflow-y: auto;
+  border: 1px solid var(--border_strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg_elevated);
+  box-shadow: var(--shadow-3);
+}
+.section.list > .buttons_container .tools_menu_panel:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+.section.list > .buttons_container .tools_menu_panel > button {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  margin: 0;
+  border-color: transparent;
+}
 .section.list > .buttons_container > .show_other_buttons_button {
   height: 2.2rem;
   transform: rotate(90deg);
@@ -20219,6 +20270,11 @@ body.inspector_resizing {
 }
 .section.list > .buttons_container > .show_other_buttons_button.up:before {
   display: none;
+}
+@media screen and (max-width: 600px) {
+  .section.list > .buttons_container > .show_other_buttons_button:before {
+    display: none;
+  }
 }
 .section.list > .paginator_container {
   height: 39px;

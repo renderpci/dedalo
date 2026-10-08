@@ -22,10 +22,6 @@
  * LEDGER / divergences (per no-silent-narrowing):
  *  - setRecords LIST mode = full-section scan; PHP filters by the session SQO,
  *    which TS keeps no twin of. Documented divergence.
- *  - createDdOntologyRootNode typology fallback: when typology_id is absent we
- *    default to 15 ('others') directly rather than reading matrix_hierarchy_main
- *    (get_typology_locator_from_tld) — every caller in this workstream passes an
- *    explicit typology_id, so the DB probe is never reached. Ledgered.
  */
 
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
@@ -279,6 +275,21 @@ export interface FileItem {
 }
 
 /**
+ * Typology + name of a root node. Absent → the TLD's registry record (PHP
+ * get_typology_locator_from_tld), never a blind 'others' (15): a caller that
+ * omits them would re-hang a Core TLD under Others with a bare-tld term.
+ */
+async function resolveRootIdentity(
+	fileItem: FileItem,
+): Promise<{ typologyId: number; nameData: NonNullable<FileItem['name_data']> }> {
+	const tld = fileItem.tld;
+	const typologyId = fileItem.typology_id ?? (await getMainTypologyId(tld)) ?? 15; // 15 = 'others'
+	const nameData = fileItem.name_data ??
+		(await getMainNameData(tld)) ?? [{ lang: STRUCTURE_LANG, value: tld }];
+	return { typologyId, nameData };
+}
+
+/**
  * Create/upsert the `<tld>0` root dd_ontology node (PHP
  * create_dd_ontology_ontology_section_node). Model 'section'/dd6, is_main,
  * relations [ontology1, dd1201], properties {main_tld, color:'#2d8894'}, parent =
@@ -286,8 +297,7 @@ export interface FileItem {
  */
 export async function createDdOntologyRootNode(fileItem: FileItem, userId = -1): Promise<string> {
 	const tld = fileItem.tld;
-	const typologyId = fileItem.typology_id ?? 15; // default 'others' (see LEDGER)
-	const nameData = fileItem.name_data ?? [{ lang: STRUCTURE_LANG, value: tld }];
+	const { typologyId, nameData } = await resolveRootIdentity(fileItem);
 
 	let parentGrouperTipo = fileItem.parent_grouper_tipo ?? null;
 	if (parentGrouperTipo === null || parentGrouperTipo === '') {

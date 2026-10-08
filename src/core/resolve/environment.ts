@@ -17,6 +17,7 @@
 import { config } from '../../config/config.ts';
 import { readBool, readString } from '../../config/readers.ts';
 import { sql } from '../db/postgres.ts';
+import { INSTALL_LANG_CATALOG } from '../install/lang_catalog.ts';
 import { getLabels } from '../labels/catalog.ts';
 import { resolveMediaAccessMode } from '../media/protection.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -145,17 +146,37 @@ const APPLICATION_LANGS: { label: string; value: string }[] = Object.entries(
 ).map(([value, label]) => ({ label, value }));
 
 /**
+ * Options for an environment built while NO DATABASE IS USABLE — the install
+ * wizard's boot call (`dd_core_api::start`, install branch).
+ */
+export interface EnvironmentBuildOptions {
+	/**
+	 * The install wizard is being served: either nothing is configured yet
+	 * (INSTALL_MODE — the sentinel DB answers nobody) or `.env` is written but the
+	 * seed is not restored (the DB is reachable and EMPTY). Every DB read here would
+	 * throw, and the wizard's first screen would be a bare 500 — measured
+	 * 2026-10-08 in a container ("An unexpected error occurred", Failed to connect).
+	 * A dev box hid it: its local Postgres answered the sentinel connection.
+	 */
+	install?: boolean;
+}
+
+/**
  * The page_globals object (PHP get_page_globals): auth state from the session,
  * entity/lang/media configuration from the install.
  */
 export async function buildPageGlobals(
 	session: Session | null,
 	principal: Principal | null,
+	options: EnvironmentBuildOptions = {},
 ): Promise<Record<string, unknown>> {
 	const isLogged = session !== null;
 	// Projects default langs: the configured languages resolved through the lang
-	// catalog (lg1 records) in this request's data lang — see below.
-	const projectsDefaultLangs = await getProjectsDefaultLangs();
+	// catalog (lg1 records) in this request's data lang — see below. The wizard
+	// has no lg1 records to read, so it names them from the installer's own
+	// curated catalog instead (installProjectsDefaultLangs).
+	const projectsDefaultLangs =
+		options.install === true ? installProjectsDefaultLangs() : await getProjectsDefaultLangs();
 	const serverState = getServerState();
 
 	return {
@@ -238,15 +259,27 @@ export async function buildPageGlobals(
 				: false,
 		recovery_mode: serverState.recovery_mode,
 		data_version: DEDALO_VERSION_TRIPLE,
-		// Reconnaissance-sensitive engine facts (DB name, exact PG/runtime version,
-		// process memory) — AUTHENTICATED callers only. An unauthenticated get_environment
-		// must not hand out the database name and precise version strings for targeted
-		// CVE selection. Null for the login form (parity with dedalo_version above).
-		dedalo_db_name: isLogged ? config.db.database : null,
-		pg_version: isLogged ? await getPgVersion() : null,
-		php_version: isLogged ? `Bun ${Bun.version}` : null,
-		php_memory: isLogged ? `${Math.round(process.memoryUsage().rss / (1024 * 1024))}M rss` : null,
+		...(await engineFacts(isLogged)),
 		dedalo_root_path: null,
+	};
+}
+
+/**
+ * Reconnaissance-sensitive engine facts (DB name, exact PG/runtime version,
+ * process memory) — AUTHENTICATED callers only. An unauthenticated get_environment
+ * must not hand out the database name and precise version strings for targeted
+ * CVE selection. Null for the login form (parity with dedalo_version above).
+ * Spread in place by buildPageGlobals, so the wire key order is unchanged.
+ */
+async function engineFacts(isLogged: boolean): Promise<Record<string, string | null>> {
+	if (!isLogged) {
+		return { dedalo_db_name: null, pg_version: null, php_version: null, php_memory: null };
+	}
+	return {
+		dedalo_db_name: config.db.database,
+		pg_version: await getPgVersion(),
+		php_version: `Bun ${Bun.version}`,
+		php_memory: `${Math.round(process.memoryUsage().rss / (1024 * 1024))}M rss`,
 	};
 }
 
@@ -399,6 +432,21 @@ async function resolveProjectsDefaultLangs(dataLang: string): Promise<ProjectLan
 	return entries;
 }
 
+/**
+ * The project-language list with NO database: names from the installer's curated
+ * catalog (INSTALL_LANG_CATALOG), the bare alpha-3 code otherwise — the same
+ * fallback resolveProjectsDefaultLangs serves for a code without an lg1 record.
+ * Not cached: it is a pure map over config, and caching it would pin catalog
+ * names over the real lg1 names once the database exists.
+ */
+function installProjectsDefaultLangs(): ProjectLangEntry[] {
+	return config.menu.projectsDefaultLangs.map((langCode) => ({
+		label: INSTALL_LANG_CATALOG[langCode] ?? langCode.replace('lg-', ''),
+		value: langCode,
+		tld2: getAlpha2FromCode(langCode),
+	}));
+}
+
 /** The client's project-language list for THIS request's data lang (cached per lang). */
 async function getProjectsDefaultLangs(): Promise<ProjectLangEntry[]> {
 	const dataLang = currentDataLang();
@@ -413,10 +461,11 @@ async function getProjectsDefaultLangs(): Promise<ProjectLangEntry[]> {
 export async function buildEnvironment(
 	session: Session | null,
 	principal: Principal | null,
+	options: EnvironmentBuildOptions = {},
 ): Promise<Record<string, unknown>> {
 	return {
 		result: {
-			page_globals: await buildPageGlobals(session, principal),
+			page_globals: await buildPageGlobals(session, principal, options),
 			plain_vars: buildPlainVars(session, principal),
 			get_label: await getLabels(currentApplicationLang()),
 		},

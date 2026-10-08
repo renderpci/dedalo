@@ -55,6 +55,8 @@ const EXPECTED_EXCLUSIONS = [
 	// Local-only, gitignored, never on a clone.
 	'!**/audits',
 	'!**/.cache',
+	'!**/dev',
+	'!**/dev_tools',
 	'!**/docs',
 	// Frozen fixture bytes — reformatting one is a wire-contract edit.
 	'!**/test/parity/fixtures/**/*.response.json',

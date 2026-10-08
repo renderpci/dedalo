@@ -1117,7 +1117,15 @@ function runPreAuthGates(actionKey: string, action: unknown, clientIp: string): 
 
 function runInstallGate(clientIp: string): void {
 	if (!installSurfaceReachable()) throw new DedaloError('install.not_reachable');
-	if (!installIpAllowed(clientIp)) throw new DedaloError('install.ip_denied');
+	if (!installIpAllowed(clientIp)) {
+		// The address goes to the caller (details) AND the operator's log
+		// (coordinates, printed by the catch's logError): the boot banner says what
+		// the allowlist IS; only this says what to add to it.
+		throw new DedaloError('install.ip_denied', {
+			details: { client_address: clientIp },
+			coordinates: { client_address: clientIp },
+		});
+	}
 }
 
 function runErrorReportGate(action: unknown, clientIp: string): void {

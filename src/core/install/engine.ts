@@ -133,7 +133,16 @@ export async function runInstallStep(rqo: Rqo, context: ApiRequestContext): Prom
 
 		case 'install_finish': {
 			const { installFinish } = await import('./finish.ts');
-			return stepResult(context, await installFinish());
+			// A refusal THROWS, so the next line means SEALED. This process booted
+			// mid-wizard and therefore skipped every database boot step (migrations,
+			// search stores, schedulers, caches — server.ts `databaseBoot`): restart
+			// it into the sealed instance, after the response flushes. The client's
+			// own countdown (5 s) then reloads into the app. No-op under
+			// DEDALO_INSTALL_NO_RESTART (tests/CLI — the CLI's server boots after).
+			const finished = await installFinish();
+			const { scheduleServerRestart } = await import('./restart.ts');
+			scheduleServerRestart('install sealed');
+			return stepResult(context, finished);
 		}
 
 		default:

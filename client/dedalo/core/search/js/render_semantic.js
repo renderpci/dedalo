@@ -195,7 +195,10 @@ export const build_semantic_quick_input = function(section_self) {
 * sqo carries filter_by_locators (any pin source — semantic, open-in-window…).
 * States:
 *  - sentinel pin (single id -1)      → 'no semantic matches'  + ✕
-*  - N real pins                      → 'N results pinned'     + ✕
+*  - N real pins from a meaning search → 'N results pinned by meaning search' + ✕
+*  - N real pins from any other source → 'N records pinned'    + ✕
+*    (e.g. back to list after creating a record: navigate_to_new_section
+*    pins the new record and the session SQO carries it into the list)
 *  - section_self.semantic_status==='unavailable' → 'semantic unavailable'
 * The ✕ clears pins+order through the search instance's show_all (the one
 * existing "reset navigation" path) and clears the semantic state with it.
@@ -221,11 +224,20 @@ export const build_pinned_chip = function(section_self) {
 		&& pins.length===1
 		&& Number(pins[0]?.section_id)===-1
 
+	// attribute the pins to the meaning search only when it is known to own
+	// them (live pin, or a restored semantic query). Anything else gets the
+	// neutral wording — it is never wrong, the semantic one can be.
+	const semantic		= section_self.filter?.semantic
+	const is_semantic	= semantic?.pinned===true
+		|| (typeof semantic?.q==='string' && semantic.q.trim()!=='')
+
 	const label_text = unavailable
 		? (get_label.semantic_unavailable || 'Semantic search unavailable')
 		: is_sentinel
 			? (get_label.semantic_no_results || 'No records match the meaning search')
-			: `${pins.length} ${get_label.semantic_results_pinned || 'results pinned'}`
+			: is_semantic
+				? `${pins.length} ${get_label.semantic_results_pinned || 'results pinned'}`
+				: `${pins.length} ${get_label.records_pinned || 'records pinned'}`
 
 	ui.create_dom_element({
 		element_type	: 'span',

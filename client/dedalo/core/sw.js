@@ -2,8 +2,6 @@
 /*global*/
 /*eslint no-undef: "error"*/
 
-
-
 /**
  * SW.JS — TOMBSTONE OF A RETIRED SERVICE-WORKER URL
  * The Dédalo service worker lives at core/service_worker.js. This URL is where v6
@@ -34,13 +32,9 @@
  *   retired sw.js registration itself (delete_old_caches) on its next pass.
  */
 
-
-
 // string legacy_cache_name. The v6 fixed cache key. v7 never creates it (its keys
 // are versioned), so its presence is the proof that this browser ran v6 here.
-const legacy_cache_name = 'dedalo_files'
-
-
+const legacy_cache_name = 'dedalo_files';
 
 /**
  * INSTALL EVENT
@@ -48,10 +42,8 @@ const legacy_cache_name = 'dedalo_files'
  * worker serving its cache for as long as one Dédalo tab stays open.
  */
 self.addEventListener('install', (event) => {
-	event.waitUntil(self.skipWaiting())
-})
-
-
+	event.waitUntil(self.skipWaiting());
+});
 
 /**
  * ACTIVATE EVENT
@@ -59,30 +51,30 @@ self.addEventListener('install', (event) => {
  * Never rejects: a failure must not leave this worker stuck half-way.
  */
 self.addEventListener('activate', (event) => {
-	event.waitUntil((async () => {
-		try {
-			// control the open windows, so navigate() below is allowed on them
-			await self.clients.claim()
+	event.waitUntil(
+		(async () => {
+			try {
+				// control the open windows, so navigate() below is allowed on them
+				await self.clients.claim();
 
-			const had_legacy_cache = await caches.delete(legacy_cache_name)
+				const had_legacy_cache = await caches.delete(legacy_cache_name);
 
-			// pages already loaded stay controlled until they unload — harmless, this
-			// worker intercepts nothing — and the registration is gone after that
-			await self.registration.unregister()
+				// pages already loaded stay controlled until they unload — harmless, this
+				// worker intercepts nothing — and the registration is gone after that
+				await self.registration.unregister();
 
-			// Reload only when v6 code may have run in them. A browser that held a v7
-			// worker at this URL already runs the right code: reloading it would
-			// interrupt a user mid-edit for nothing.
-			if (had_legacy_cache) {
-				const windows = await self.clients.matchAll({type: 'window'})
-				await Promise.all(windows.map(client => client.navigate(client.url).catch(() => null)))
+				// Reload only when v6 code may have run in them. A browser that held a v7
+				// worker at this URL already runs the right code: reloading it would
+				// interrupt a user mid-edit for nothing.
+				if (had_legacy_cache) {
+					const windows = await self.clients.matchAll({ type: 'window' });
+					await Promise.all(windows.map((client) => client.navigate(client.url).catch(() => null)));
+				}
+			} catch (error) {
+				console.error(')) sw.js tombstone failed:', error);
 			}
-		} catch (error) {
-			console.error(')) sw.js tombstone failed:', error)
-		}
-	})())
-})
-
-
+		})(),
+	);
+});
 
 // @license-end

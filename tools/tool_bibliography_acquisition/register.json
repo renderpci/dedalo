@@ -8,7 +8,7 @@
 	"affected_models": [
 		"section"
 	],
-	"show_in_component": true,
+	"affected_tipos": ["rsc205", "rsc3"],
 	"active": true,
 	"properties": {
 		"open_as": "modal"

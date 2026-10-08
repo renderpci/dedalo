@@ -2249,61 +2249,193 @@ export const ui = {
 	*/
 	add_tools : function(self, buttons_container) {
 
-		const tools			= self.tools || []
-		const tools_length	= tools.length
-
-		for (let i = 0; i < tools_length; i++) {
-
-			const tool_context = tools[i]
-
-			// avoid self tool inside tool
-			if (self.caller && self.caller.model===tool_context.name) {
-				continue;
-			}
-
-			const tool_button = (self.type==='component')
-				? ui.tool.build_component_tool_button(tool_context, self)
-				: ui.tool.build_section_tool_button(tool_context, self)
-
+		const tools = self.tools || []
+		for (const tool_context of tools) {
+			const tool_button = ui.build_tool_button(self, tool_context)
 			if (tool_button) {
 				buttons_container.appendChild(tool_button)
-
-				// button events. Configured in tool properties. See tool_ontology definition
-					// sample:
-					// "events": [
-					// 	{
-					// 	  "type": "keyup",
-					// 	  "action": "click",
-					// 	  "validate": [
-					// 		{
-					// 		  "key": "ctrlKey",
-					// 		  "value": true
-					// 		},
-					// 		{
-					// 		  "key": "key",
-					// 		  "value": "s"
-					// 		}
-					// 	  ]
-					// 	}
-					// ]
-					if (tool_context.properties?.events) {
-						const tool_events_length = tool_context.properties.events.length
-						for (let i = 0; i < tool_events_length; i++) {
-
-							const tool_event = tool_context.properties.events[i]
-
-							set_tool_event({
-								tool_event	: tool_event,
-								tool_button	: tool_button
-							})
-						}
-					}
 			}
 		}
 
-
 		return tools
 	},//end add_tools
+
+
+
+	/**
+	* BUILD_TOOL_BUTTON
+	* One tool button for `self` (component icon or section labelled button) with
+	* its ontology-defined keyboard shortcuts wired. Shared by add_tools and
+	* add_tools_menu so a tool behaves the same wherever it is placed.
+	* Returns null for a tool that must not render here (self tool inside tool,
+	* show_in_component === false).
+	* Shortcut sample (tool properties, see tool_ontology definition):
+	* 	"events": [{ "type": "keyup", "action": "click",
+	* 		"validate": [{ "key": "ctrlKey", "value": true }, { "key": "key", "value": "s" }] }]
+	*
+	* @param {Object} self - The caller instance (component or section).
+	* @param {Object} tool_context - The tool descriptor from self.tools[].
+	* @returns {HTMLElement|null}
+	*/
+	build_tool_button : function(self, tool_context) {
+
+		// avoid self tool inside tool
+		if (self.caller && self.caller.model===tool_context.name) {
+			return null
+		}
+
+		const tool_button = (self.type==='component')
+			? ui.tool.build_component_tool_button(tool_context, self)
+			: ui.tool.build_section_tool_button(tool_context, self)
+		if (!tool_button) {
+			return null
+		}
+
+		for (const tool_event of tool_context.properties?.events || []) {
+			set_tool_event({
+				tool_event	: tool_event,
+				tool_button	: tool_button
+			})
+		}
+
+		return tool_button
+	},//end build_tool_button
+
+
+
+	/**
+	* ADD_TOOLS_MENU
+	* Section list header placement: instead of one labelled button per tool (a
+	* row that grows with every registered tool and wraps), the tools collapse
+	* into a single 'Tools' trigger opening a native popover menu (top layer,
+	* light-dismiss, Esc, focus return — no hand-rolled outside-click logic).
+	* A tool whose properties.pinned_in_list === true stays a visible button
+	* next to the trigger. A single unpinned tool renders as a plain button
+	* (a one-item menu is a needless click). Menu rows are sorted by label.
+	*
+	* @param {Object} self - The section instance whose tools[] to render.
+	* @param {HTMLElement} buttons_container - The container to append into.
+	* @returns {Array} tools - The original self.tools array (or []).
+	*/
+	add_tools_menu : function(self, buttons_container) {
+
+		const tools		= self.tools || []
+		const pinned	= []
+		const listed	= []
+		for (const tool_context of tools) {
+			const tool_button = ui.build_tool_button(self, tool_context)
+			if (!tool_button) {
+				continue
+			}
+			const target = tool_context.properties?.pinned_in_list===true ? pinned : listed
+			target.push({ label : tool_context.label || tool_context.name, tool_button })
+		}
+
+		for (const item of pinned) {
+			buttons_container.appendChild(item.tool_button)
+		}
+
+		if (listed.length < 2) {
+			for (const item of listed) {
+				buttons_container.appendChild(item.tool_button)
+			}
+			return tools
+		}
+
+		listed.sort((a, b) => String(a.label).localeCompare(String(b.label)))
+
+		// menu panel (popover)
+			const panel = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tools_menu_panel',
+				id				: 'tools_menu_' + (self.id || self.tipo || 'section').replace(/[^a-zA-Z0-9_-]/g, '_')
+			})
+			panel.setAttribute('popover', 'auto')
+			panel.setAttribute('role', 'menu')
+			for (const item of listed) {
+				item.tool_button.setAttribute('role', 'menuitem')
+				panel.appendChild(item.tool_button)
+			}
+			// Dismissal, not activation: any pointer press on a row closes the
+			// menu. Tool buttons open on mousedown and stop its propagation, so
+			// close on the earlier pointerdown, in the CAPTURE phase (the row
+			// still receives its mousedown). The keyboard path closes itself below.
+			panel.addEventListener('pointerdown', () => panel.hidePopover(), true)
+			// Keyboard: section tool buttons open on mousedown only, which Enter /
+			// Space never fire — route them to the same mousedown so a menu row
+			// is operable from the keyboard. Arrow keys move between rows. Handled
+			// keys stop here: page.js binds document-level Enter (open/run the
+			// section search) and Escape (blur) that must not fire inside the menu.
+			panel.addEventListener('keydown', (e) => {
+				const rows = [...panel.querySelectorAll(':scope > button')]
+				const index = rows.indexOf(document.activeElement)
+				if ((e.key==='Enter' || e.key===' ') && index!==-1) {
+					e.preventDefault()
+					e.stopPropagation()
+					panel.hidePopover()
+					rows[index].dispatchEvent(new MouseEvent('mousedown', { bubbles : true }))
+				} else if (e.key==='ArrowDown' || e.key==='ArrowUp') {
+					e.preventDefault()
+					e.stopPropagation()
+					const step = e.key==='ArrowDown' ? 1 : -1
+					rows[(index + step + rows.length) % rows.length]?.focus()
+				} else if (e.key==='Escape') {
+					// the popover closes itself and returns focus to the trigger;
+					// page.js's global Escape would blur it away.
+					e.stopPropagation()
+				}
+			})
+
+		// trigger
+			const tools_label = get_label.tools || 'Tools'
+			const trigger = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning tools_menu_button',
+				inner_html		: tools_label,
+				parent			: buttons_container
+			})
+			trigger.setAttribute('popovertarget', panel.id)
+			trigger.setAttribute('aria-haspopup', 'menu')
+			trigger.setAttribute('aria-expanded', 'false')
+			// Enter/Space activate the trigger natively (popovertarget); keep them
+			// from page.js's document-level Enter (search toggle) as well.
+			trigger.addEventListener('keydown', (e) => {
+				if (e.key==='Enter' || e.key===' ') {
+					e.stopPropagation()
+				}
+			})
+			// the panel is placed in fixed coordinates: close it rather than let it
+			// drift from the trigger when the page scrolls or resizes (scrolling
+			// the panel's own list is not a page scroll).
+			const on_viewport_change = (e) => {
+				if (e.type==='scroll' && panel.contains(e.target)) {
+					return
+				}
+				panel.hidePopover()
+			}
+			panel.addEventListener('toggle', (e) => {
+				const open = e.newState==='open'
+				trigger.setAttribute('aria-expanded', open ? 'true' : 'false')
+				trigger.classList.toggle('open', open)
+				if (open) {
+					// anchor under the trigger, right-aligned, kept on screen
+					const rect	= trigger.getBoundingClientRect()
+					const width	= panel.offsetWidth
+					const left	= Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))
+					panel.style.top		= (rect.bottom + 4) + 'px'
+					panel.style.left	= left + 'px'
+					panel.querySelector('button')?.focus()
+					window.addEventListener('scroll', on_viewport_change, { capture : true, passive : true })
+					window.addEventListener('resize', on_viewport_change)
+				} else {
+					window.removeEventListener('scroll', on_viewport_change, { capture : true })
+					window.removeEventListener('resize', on_viewport_change)
+				}
+			})
+			buttons_container.appendChild(panel)
+
+		return tools
+	},//end add_tools_menu
 
 
 
