@@ -1803,15 +1803,30 @@ export async function startServer() {
 		}
 	}
 
+	// THE DATABASE IS NOT THE INSTALL'S YET while the wizard is mid-flight. After
+	// *Save config* the process restarts OUT of install mode (config.installMode is
+	// false) into a database that is still EMPTY — the seed restore is a later
+	// wizard step. Every boot step below that writes the database ran against it
+	// anyway: migrations and the search-store DDL created the seed's own objects,
+	// and the seed restore then failed ("function f_unaccent already exists"),
+	// leaving a half-built database — every browser-wizard install, on every
+	// platform (measured 2026-10-08). So DB boot work waits for the SEAL, exactly
+	// as on the CLI path (scripts/install.ts restores, seals, and only then does a
+	// server boot); install_finish restarts the process so the sealed instance
+	// boots with all of it (core/install/engine.ts). A boot-time constant: the
+	// state can only move forward by a restart.
+	// Gate: test/unit/install_mode_boot.test.ts.
+	const databaseBoot = !config.installMode && !installInProgress();
+
 	// Ordered TS-owned schema migrations (audit S2-39) — run BEFORE serving so a
 	// request never observes a half-migrated schema. A failure logs loudly and
 	// continues: the lazy CREATE IF NOT EXISTS bootstraps remain the fallback,
 	// and refusing to boot on a transient DB blip would contradict the
-	// fault-tolerant boot posture (S1-15). Skipped entirely in install mode (the
-	// sentinel DB is unreachable and there is nothing to migrate yet) and in a
-	// smoke boot (read-only by construction — running migrations pre-swap would
-	// mutate the shared DB while the old code is live).
-	if (!config.installMode && !smokeBoot) {
+	// fault-tolerant boot posture (S1-15). Skipped entirely in install mode and
+	// mid-wizard (databaseBoot above) and in a smoke boot (read-only by
+	// construction — running migrations pre-swap would mutate the shared DB while
+	// the old code is live).
+	if (databaseBoot && !smokeBoot) {
 		// runBootSchema logs a failed run and continues, then heals the
 		// tm_role column outside any transaction (migrate.ts) — never throws.
 		await runBootSchema();
@@ -1879,10 +1894,10 @@ export async function startServer() {
 	const shutdownStops: (() => void)[] = [];
 
 	// Everything below through the diffusion control plane is DB-dependent —
-	// skipped in install mode (no database yet) and in a smoke boot (schedulers,
-	// watchers, media provisioning: all writers). The block restores on the
-	// post-configuration restart.
-	if (!config.installMode && !smokeBoot) {
+	// skipped in install mode and mid-wizard (databaseBoot: no seeded database
+	// yet) and in a smoke boot (schedulers, watchers, media provisioning: all
+	// writers). The block restores on the post-SEAL restart.
+	if (databaseBoot && !smokeBoot) {
 		// Register the RAG save/delete → index-queue hook (no-op when
 		// DEDALO_RAG_ENABLED is off). Must run before serving so writes are captured.
 		initRagHooks();
@@ -2296,7 +2311,7 @@ export async function startServer() {
 				);
 			}
 		})().catch((error) => console.error('[db stats] boot wipe probe failed:', error));
-	} // end if (!config.installMode)
+	} // end if (databaseBoot && !smokeBoot)
 
 	// Media job pfile reconcile + residue GC (audit S2-15/S3-46): flip stale
 	// 'running' pfiles from previous process lives to 'interrupted' and prune
@@ -2396,14 +2411,14 @@ export async function startServer() {
 	// outlasted the systemd watchdog (rollback / restart loop). Background, never
 	// awaited; every reader is correct without the index. Same skips as the boot
 	// runner (install mode: no DB; smoke boot: read-only by construction).
-	if (!config.installMode && !smokeBoot) void startOnlineMigrations();
+	if (databaseBoot && !smokeBoot) void startOnlineMigrations();
 
 	// CODE-UPDATE BOOT CONFIRMATION (core/update/boot_confirm.ts): once the
 	// listener is up AND the first DB ping is green, flip a pending update
 	// sentinel to 'confirmed' so the supervisor-side rollback stands down.
-	// Skipped in install mode (no DB) and in a smoke boot (the quarantine must
-	// never confirm an update it is merely rehearsing).
-	if (!config.installMode && !smokeBoot) {
+	// Skipped in install mode and mid-wizard (no seeded DB) and in a smoke boot
+	// (the quarantine must never confirm an update it is merely rehearsing).
+	if (databaseBoot && !smokeBoot) {
 		void (async () => {
 			if (await checkDbHealth()) {
 				const { confirmBootedCodeUpdate } = await import('./core/update/boot_confirm.ts');

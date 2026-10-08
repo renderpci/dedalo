@@ -634,10 +634,11 @@ describe('boot wiring', () => {
 		const text = readFileSync(join(import.meta.dir, '..', '..', 'src', 'server.ts'), 'utf8');
 		const at = text.indexOf('startMediaCopy({');
 		expect(at).toBeGreaterThan(0);
-		const guard = text.lastIndexOf('if (!config.installMode && !smokeBoot) {', at);
+		// databaseBoot = !installMode && !installInProgress() (install_mode_boot.test.ts).
+		const guard = text.lastIndexOf('if (databaseBoot && !smokeBoot) {', at);
 		expect(guard).toBeGreaterThan(text.indexOf('const shutdownStops'));
-		expect(text.lastIndexOf('} // end if (!config.installMode)', at)).toBeLessThan(guard);
-		expect(text.indexOf('} // end if (!config.installMode)', at)).toBeGreaterThan(at);
+		expect(text.lastIndexOf('} // end if (databaseBoot && !smokeBoot)', at)).toBeLessThan(guard);
+		expect(text.indexOf('} // end if (databaseBoot && !smokeBoot)', at)).toBeGreaterThan(at);
 		expect(
 			text.lastIndexOf("readString('DEDALO_RECONCILE_SCHEDULER_ENABLED') !== 'false'", at),
 		).toBeGreaterThan(guard);

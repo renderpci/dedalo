@@ -13,6 +13,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const CONFIG_PATH = resolve(import.meta.dir, '../../src/config/config.ts');
@@ -124,5 +125,42 @@ describe('install-mode boot (P0)', () => {
 		const result = probeConfig({ DEDALO_TS_STATE_PATH: NO_SEAL_STATE });
 		expect(result.ok).toBe(true);
 		expect(result.value?.installMode).toBe(false);
+	});
+});
+
+describe('mid-wizard boot never writes the not-yet-seeded database (2026-10-08)', () => {
+	// After *Save config* the server restarts out of install mode into a database
+	// that is still EMPTY. Boot migrations and the search-store DDL then created
+	// the seed's own objects and the seed restore failed ("function f_unaccent
+	// already exists") — every browser-wizard install broke. Booting a real server
+	// against an empty and a seeded database is the install e2e's job; this
+	// ratchet holds the two facts that make the fix: every DB boot block keys on
+	// the mid-wizard predicate, and the SEAL restarts the process so the sealed
+	// instance gets the boot it skipped.
+	const SERVER = readFileSync(resolve(import.meta.dir, '../../src/server.ts'), 'utf8');
+	const ENGINE = readFileSync(resolve(import.meta.dir, '../../src/core/install/engine.ts'), 'utf8');
+
+	test('server.ts gates DB boot work on install mode AND the mid-wizard state', () => {
+		expect(SERVER).toMatch(/const databaseBoot = !config\.installMode && !installInProgress\(\);/);
+		const gated = SERVER.match(/if \(databaseBoot && !smokeBoot\)/g) ?? [];
+		expect(
+			gated.length,
+			'anti-vacuity: the DB boot blocks (migrations, boot block, online migrations, update confirm)',
+		).toBeGreaterThanOrEqual(4);
+		expect(
+			SERVER.includes('if (!config.installMode && !smokeBoot)'),
+			'a boot block keys on install mode ALONE — mid-wizard it runs against the empty, not-yet-seeded database',
+		).toBe(false);
+	});
+
+	test('install_finish schedules the restart into the sealed instance', () => {
+		const finish = ENGINE.slice(ENGINE.indexOf("case 'install_finish':"));
+		expect(finish.length, "engine.ts: no 'install_finish' step").toBeGreaterThan(0);
+		const block = finish.slice(0, finish.indexOf('\n\t\t}'));
+		expect(block).toContain('await installFinish()');
+		expect(block).toContain("scheduleServerRestart('install sealed')");
+		expect(block.indexOf('await installFinish()')).toBeLessThan(
+			block.indexOf('scheduleServerRestart('),
+		);
 	});
 });

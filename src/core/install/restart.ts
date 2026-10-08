@@ -84,14 +84,14 @@ export function scheduleServerRestart(reason: string): RestartOutcome {
 	const handler = gracefulShutdown;
 	if (handler === null) {
 		console.warn(
-			`[install] ${reason} — exiting ${RESTART_EXIT_CODE} for supervised restart into configured mode (no listening server to drain).`,
+			`[install] ${reason} — exiting ${RESTART_EXIT_CODE} for a supervised restart (no listening server to drain).`,
 		);
 		// Delay so the HTTP response flushes before the socket closes.
 		setTimeout(() => process.exit(RESTART_EXIT_CODE), 250);
 		return 'immediate';
 	}
 	console.warn(
-		`[install] ${reason} — draining, then exiting ${RESTART_EXIT_CODE} for supervised restart into configured mode.`,
+		`[install] ${reason} — draining, then exiting ${RESTART_EXIT_CODE} for a supervised restart.`,
 	);
 	// Deferred so THIS request's handler returns before the drain begins —
 	// otherwise the drain waits on the very response that asked for the restart.
