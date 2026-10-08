@@ -3,7 +3,7 @@
 * DEDALO_VERSION
 * Current Dédalo version
 */
-$DEDALO_VERSION = '6.9.6';
+$DEDALO_VERSION = '6.9.7';
 if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 	$DEDALO_VERSION .= '.dev';
 }
