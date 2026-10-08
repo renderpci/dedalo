@@ -135,6 +135,20 @@ strictly by `src/provision/schema.ts`. Two complete, gated examples are
 agent user, the v2 user or a declared group is missing, `check` refuses and prints the
 `useradd` / `groupadd` line to run.
 
+`plan` also refuses what would make a unit fail with `EACCES` later
+(`accessRefusals`, `src/provision/access.ts`): each runner is judged with the credentials
+systemd gives its unit (the agent: `Group=` engine_group on unix, its primary group on tls,
+plus `SupplementaryGroups=`; v2: `v2.group` — `agentUnitGroups`/`v2UnitGroups`, the value the
+unit renderers emit those lines from; v1: its `id -G` groups), on the one mode class
+the kernel consults. The agent needs x above `agent_dir` and r (dirs r+x) over its whole
+tree (lstat walk, symlinks never followed, capped at `AGENT_TREE_WALK_CAP` entries, `plan.ts`: over the cap or an
+unlistable dir refuses); agent and v2 need r+x on `bun_bin`, the agent on `php_bin`; all
+three need x above the state root. Each line prints the narrowest `chmod`. Mode bits only:
+an ACL grant is still refused. On unix, `engineGroupRefusal` refuses an `engine_group` that
+is the primary group of `agent_user`, `v1.user` or `v2.user`, or is `v2.group`; that the
+work system's account is IN the group stays unprovable here (the operator page's step-7
+socket request proves it).
+
 ```bash
 bun run provision render <instance>    # print every artifact; writes nothing, no root needed
 bun run provision check  <instance>    # as root: plan only; exit 0 (1 on drift with --exit-code), 3 when refused

@@ -107,3 +107,16 @@ export interface Renderer {
   /** Pure: same layout + facts, same bytes. */
   render(layout: AgentLayout, facts: RenderFacts): Artifact[];
 }
+
+/**
+ * The groups a rendered unit gives its process: `Group=` (null = no such line, the user's
+ * primary group applies) and `SupplementaryGroups=` (empty = no such line). Each unit
+ * renderer emits its lines FROM this value (render/unit_agent.ts agentUnitGroups,
+ * render/unit_v2.ts v2UnitGroups), and plan.ts judges access with the same value, so the
+ * check and the unit cannot disagree. tests/provision_access.test.ts parses the rendered
+ * lines back and holds them EQUAL to it.
+ */
+export interface UnitGroups {
+  readonly group: string | null;
+  readonly supplementary: readonly string[];
+}

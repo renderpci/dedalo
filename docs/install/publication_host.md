@@ -67,9 +67,18 @@ fragment's comment *the engine's user must be a member of that group* asks for. 
 also gets `museum_org_api` as a supplementary group, so that it can check that `v2.env`
 exists.
 
+`check` (step 4) refuses an `engine_group` that is certainly wrong: the agent's own group,
+`museum_site`'s or `museum_org_api`'s primary group, or the v2 group itself. It cannot prove
+the right one, because the declaration never names the work system's account: step 7's
+request through the socket, made as `dedalo`, is that proof.
+
 **The directories.** The agent runs as `museum_org_agent`, never as root, so it must be able
 to traverse `/home/museum.org` and read `host_agent/` and `.bun/`. It owns none of them,
-because code it could rewrite would run as root at the next `apply`.
+because code it could rewrite would run as root at the next `apply`. `museum_org_api` runs
+the same Bun, and all three service accounts must traverse every directory above the state
+root. `check` (step 4) tests each of these with the groups each service actually runs with,
+and refuses the plan when one is missing, naming the account, the path and the `chmod` that
+fixes it, instead of letting a service fail later with *Permission denied*.
 
 | Path | Owner and mode | Created by | Why |
 | --- | --- | --- | --- |
@@ -229,7 +238,15 @@ chmod 0755 /home/museum.org
 
 Ubuntu creates home directories `0750`. The agent runs as `museum_org_agent` and must
 traverse this one to reach its code and its Bun: `0751` is the minimum, `0755` also lets the
-SFTP chroot and the PHP-FPM pool work as usual.
+SFTP chroot and the PHP-FPM pool work as usual. The v2 and v1 accounts must traverse it too,
+to reach the state root. If it stays `0750`, step 4's `check` refuses the plan with one line
+per account, for example:
+
+```text
+'/home/museum.org' cannot be traversed by museum_org_agent (the agent) — chmod o+x /home/museum.org
+```
+
+The `chmod` it prints is the narrowest fix; the `chmod 0755` above covers it.
 
 If the site user already exists, give it its document root as its home. `usermod` refuses
 to change the home of a user that has running processes (*user museum_site is currently used
@@ -409,9 +426,22 @@ root at the next `apply`. Step 4's `check` therefore requires:
 - no `.test-tmp/` (*a test scratch tree*, left where the agent's suite ran) and no
   development dependency in `node_modules/`.
 
-`check` does not walk the whole tree and does not test that the agent can read it. The
-`chown` and `chmod` above protect the rest. A tree the agent cannot read shows up only when
-its service fails (see *Permission denied* in [Troubleshooting](#troubleshooting)).
+`check` also walks the whole tree, without following symbolic links, and tests that the
+agent, with the groups its service runs with, can traverse every directory above
+`agent_dir`, list and enter every directory in it and read every file. A tree copied
+without the `chmod` above is refused with one line that counts the entries and names up to
+three (more are shown as `…`):
+
+```text
+agent_dir '/home/museum.org/host_agent' holds 2 entries not readable by museum_org_agent (the agent) ('/home/museum.org/host_agent/package.json', '/home/museum.org/host_agent/src/index.ts') — chmod -R u=rwX,go=rX /home/museum.org/host_agent
+```
+
+The fix is the `chmod` it prints, the same one as above. A problem on `agent_dir` itself gets
+its own line (*'/home/museum.org/host_agent' is not readable by …* or *cannot be traversed
+by …*), with the same fix. The walk stops at 20000 entries, and a directory it cannot list
+stops it too. Either way `check` refuses rather than skip the rest: *agent_dir … could not
+be walked whole (…) — whether museum_org_agent (the agent) can read every file of it is
+unproven*. `agent_dir` must hold the agent's code only.
 
 #### The site's Bun {#one-bun-per-site}
 
@@ -469,7 +499,12 @@ checksum form above is the documented one.
 Unlike on the work system, this copy belongs to **root**, not to the site's user: it runs
 the agent, which holds the sudo and polkit grants, so whoever could replace it would inherit
 them. `check` refuses a Bun binary, or a directory above it, that anyone but root owns or can
-write.
+write. It also refuses one that an account running it cannot read and execute, the agent or
+`museum_org_api`, or a directory above it that account cannot traverse. Installed with mode
+`0755` as above it passes. The refusal names the account and the fix, for example
+*bun_bin '/home/museum.org/.bun/bin/bun' is not executable by museum_org_api (v2) — chmod o+x
+/home/museum.org/.bun/bin/bun*. `php_bin` is judged the same way for the agent, which runs it
+to check v1 releases.
 
 The panel's Bun version row compares the version the binary reports with the pin. It shows
 version drift, not integrity: the checksum step above is what checks the bytes. To upgrade
@@ -543,7 +578,7 @@ On **two machines**, the listener is the private address the agent binds, and th
 | `instance` | a name for this publication host: lowercase letters, digits and `_`, starting with a letter, 2 to 32 characters. The file is named after it. Name it after the site's domain, with each `.` and `-` replaced by `_`: `museum.org` becomes `museum_org`, its declaration `/etc/dedalo_publication_host/museum_org.json` and its agent service `dedalo-publication-host-museum_org` (a hyphenated `my-hosts.org` becomes `my_hosts_org`). Shorten a longer domain, and prefix one that starts with a digit |
 | `listen` | `{"kind": "unix"}` on one machine (the socket path is derived). On two machines `{"kind": "tls", "host": …, "port": …}`: the host is the **private IPv4 address** the agent binds, written as a literal such as `10.20.0.2`: no hostname, no wildcard (`0.0.0.0`). It also becomes the server certificate's name, so the work system connects to that address. The provisioner does not check that the address is private: choosing a private interface and firewalling it is yours |
 | `agent_user` | a new account for the agent alone (step 3 creates it), named after the site |
-| `engine_group` | one machine only: the group the work system's **process** runs with, never the agent's. Find it with `systemctl show -p Group --value dedalo-ts` (on a work system with several instances, `dedalo-ts@<site>`); when that prints nothing, the service runs with its user's primary group, `id -gn dedalo`. The agent's service runs with this group (`Group=`), and every member of it can open the agent's socket, so it must hold the work system's user **alone**: never `www-data` or any PHP-FPM pool's group. On a host upgraded from an older install, the work system's user often has `www-data` as its primary group: give it a group of its own first (see the comment in `deploy/dedalo-ts.service`). Check with `getent group <group>`: it must list no members, and its third field is the group id; then `awk -F: '$4 == <group id> {print $1}' /etc/passwd` must print `dedalo` alone. `check` detects none of this, nor an `engine_group` equal to the agent's own group: get it right here |
+| `engine_group` | one machine only: the group the work system's **process** runs with, never the agent's. Find it with `systemctl show -p Group --value dedalo-ts` (on a work system with several instances, `dedalo-ts@<site>`); when that prints nothing, the service runs with its user's primary group, `id -gn dedalo`. The agent's service runs with this group (`Group=`), and every member of it can open the agent's socket, so it must hold the work system's user **alone**: never `www-data` or any PHP-FPM pool's group. On a host upgraded from an older install, the work system's user often has `www-data` as its primary group: give it a group of its own first (see the comment in `deploy/dedalo-ts.service`). Check with `getent group <group>`: it must list no members, and its third field is the group id; then `awk -F: '$4 == <group id> {print $1}' /etc/passwd` must print `dedalo` alone. `check` refuses a group that is certainly wrong: the primary group of `agent_user`, of `v1.user` (so `www-data` in this example) or of `v2.user`, or `v2.group` itself, with `engine_group '<group>' is the agent's own group — it must be the work system's group: id -gn <the account that runs Dédalo>` (or *the v1 user's group*, *the v2 group*, *the v2 user's group*). It cannot tell whether `dedalo` is in the group, or whether another account is: get it right here, and step 7 proves it |
 | `agent_dir` | where you copied the agent's code in step 1: `/home/museum.org/host_agent`. Beside the state root, never inside it: the two may not contain each other |
 | `web` | the web server (`apache` or `nginx`) and its systemd unit (`apache2` on Debian and Ubuntu, `httpd` on RHEL, `nginx`). You do not declare the configuration-test command: the provisioner picks it on the host, `/usr/sbin/apache2ctl` on Debian and Ubuntu (where `apachectl` is only a link to it), `/usr/sbin/apachectl` on RHEL, `/usr/sbin/nginx` for nginx |
 | `v1.user` | the site's PHP-FPM pool user (step 0), which runs the Publication API v1 and alone can read its configuration ([why](#who-owns-and-runs-what)). With Apache's `mod_php` instead, the web server's user (`www-data` on Debian and Ubuntu), on a server with a single site only (see [Several instances on one server](#several-instances-on-one-server)) |
@@ -615,7 +650,8 @@ The other two exist already:
 
 - **`engine_group`** (one machine) is the work system's group (step 2 says how to find it and
   how to check that `dedalo` is alone in it). Never use the agent's group or a group the web
-  server or a pool shares, and never add a user to it. If `check` says it does not exist, the
+  server or a pool shares, and never add a user to it. If `check` says it does not exist, or
+  that it *is the agent's own group* (or another of this instance's accounts' group), the
   declaration names the wrong group.
 
 If any account is missing, step 4's `check` stops and names each one with its field and the
@@ -652,6 +688,19 @@ them by hand. Run `apply`, then `check` again.
 | 2 | the command line is wrong; the usage is printed |
 | 3 | refused: the declaration, the host or the caller (not root). The reasons are printed after *plan refused for instance …* or *declaration … refused:*, or on one *provision: …* line |
 | 4 | the work failed: `apply` stops at the named action and runs no later one. Any verb prints *provision: FAILED: …* on an unexpected error |
+
+**What `check` proves about access.** `check` (and `apply`, which plans first) judges each path a
+service runs from with that service's own user and groups, the way systemd starts it: the
+agent with `Group=` `engine_group` on one machine (its own primary group on two) plus its
+supplementary groups, v2 with `v2.group`, v1 with its user's groups as `id -G` lists them.
+The agent must traverse every directory above `agent_dir` and read its whole tree (step 1);
+the agent and v2 must read and execute `bun_bin`, and the agent `php_bin`; all three must
+traverse every directory above the state root (step 0). Each refusal names the account, the
+path and the narrowest `chmod`, applied to the permission class the kernel checks for that
+account (owner, group or other). Only the mode bits count: an ACL that would grant access is
+not read, so `check` may refuse a path that would work, never accept one that would not. If
+the groups of an account cannot be read, `check` refuses with *the groups of user … could not
+be read (id -G …)*.
 
 **What `apply` starts.** It enables and starts the agent's service,
 `dedalo-publication-host-museum_org`. It enables the v2 service,
@@ -812,7 +861,8 @@ rotation of the certificate authority the old bundle stops working at once.
 **Changes:** nothing.
 
 **One machine.** Ask the socket as the work system's user. That is the only test that proves
-the group access: root always succeeds.
+the group access: root always succeeds, and `check` never knows the work system's account,
+so it can refuse a wrong `engine_group` but never prove that `dedalo` is in the right one.
 
 ```bash
 # work host (the same server), as root (the request runs as dedalo)
@@ -1364,7 +1414,11 @@ The commands below use the example names; `provision` runs as in step 4.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| the agent's service fails with *Changing to the requested working directory failed: Permission denied* (`status=200/CHDIR`), or `status=203/EXEC` | `museum_org_agent` cannot traverse `/home/museum.org`, or cannot read `host_agent/` or `.bun/`. `check` does not detect it | `chmod 0755 /home/museum.org`, `chmod -R u=rwX,go=rX /home/museum.org/host_agent /home/museum.org/.bun`, then `systemctl reset-failed` and `systemctl restart` the service (step 4) |
+| `provision check` says *'/home/museum.org' cannot be traversed by museum_org_agent (the agent)* (or by `museum_org_api` (v2), or `museum_site` (v1)) | the home directory is still Ubuntu's `0750`, or another directory above `agent_dir`, `bun_bin` or the state root lacks the execute bit for that account | run the `chmod` the line prints (for the home directory, `chmod 0755 /home/museum.org`, step 0), then `check` again |
+| `provision check` says *agent_dir … holds N entries not readable by museum_org_agent (the agent)*, or that `agent_dir` itself *is not readable* or *cannot be traversed* | the code was copied without the `chmod` of step 1, so some files or directories are readable by root alone | `chmod -R u=rwX,go=rX /home/museum.org/host_agent`, then `check` again |
+| `provision check` says *agent_dir … could not be walked whole* | `agent_dir` holds more than 20000 entries, or a directory in it that cannot be listed: it is not the agent's code alone | copy the agent's code alone again (step 1), into its own directory |
+| `provision check` says *bun_bin … is not readable*, *not executable* or *not readable and executable by …*, or the same for `php_bin` | the binary's mode does not let the account that runs it read and execute it | run the `chmod` the line prints; the site's Bun is installed `0755` (step 1) |
+| the agent's service fails with *Changing to the requested working directory failed: Permission denied* (`status=200/CHDIR`), or `status=203/EXEC` | something changed a mode after `check` passed, or an ACL denies what the mode bits allow (`check` reads only the mode bits) | run `provision check museum_org`: it names the path and the fix. Then `systemctl reset-failed` and `systemctl restart` the service (step 4) |
 | `provision check` refuses `agent_dir` or `agent entry`, or a directory above them, as not root-owned or writable | the code was copied as a normal user, or a parent directory is group- or world-writable | `chown -R root:root /home/museum.org/host_agent` and `chmod -R u=rwX,go=rX` it, and `chmod go-w` every parent it names (step 1) |
 | `provision check` refuses `bun_bin`, or a directory above it, as not root-owned or writable | Bun was installed by the site's user, or into a home directory that user owns | install the site's Bun as root (step 1, [the site's Bun](#one-bun-per-site)), and give the home directory to root (step 0) |
 | `provision check` refuses `agent_dir`, `php_bin` or `bun_bin` as a symlink | the declaration names a link | declare the path the refusal prints in brackets (the same as `realpath <path>`) |
@@ -1390,6 +1444,8 @@ The commands below use the example names; `provision` runs as in step 4.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `provision check` stops, naming a user or group | the provisioner never creates accounts | run the command it prints for each, in the order printed (step 3), then `check` again. For `engine_group`, correct the declaration instead |
+| `provision check` says *engine_group … is the agent's own group* (or *the v1 user's group*, *the v2 group*, *the v2 user's group*) | the declaration names one of this instance's own groups, not the work system's | declare the group the work system's process runs with (step 2: `systemctl show -p Group --value dedalo-ts`, or `id -gn dedalo`) |
+| `provision check` says *the groups of user … could not be read* | `id -G` did not answer for that account: the user database (for example a directory service) is unreachable | make `id -G <user>` answer on the host, then `check` again |
 
 ### Provision and agent start
 
@@ -1431,7 +1487,7 @@ The commands below use the example names; `provision` runs as in step 4.
 | the pairing command says a file is readable by group or others | the token file, the fragment holding the token, or the bundle copy is not `0600` | `chown dedalo` it, then `chmod 600` it, and run the command again |
 | the pairing command says the token file, the engine bundle or the fragment could not be read (`EACCES`) | the copy is owned by root or another account, so `dedalo` cannot read it | `chown dedalo` the copy and keep it `chmod 600`; never loosen the mode |
 | the pairing command names a fingerprint mismatch | the token or instance you gave is not this host's | read the fragment and the token again from the publication host |
-| the pairing command says "unreachable", on one machine | the command does not say why. The agent may be stopped (then there is no socket). A missing socket and an unsafe one both read as unreachable, and so does a wrong `engine_group` (for example the agent's own group), which `check` does not catch | first `systemctl is-active dedalo-publication-host-museum_org` (step 4 if it is not `active`). Then, as `dedalo` (root can always open it, so only this proves anything), `sudo -u dedalo stat -c '%U:%G %a %n' /run/dedalo_publication_host/museum_org /run/dedalo_publication_host/museum_org/agent.sock` (expect `museum_org_agent:dedalo 750` and a socket `660`), run step 7's `curl`, and compare the fragment's `DEDALO_PUBLICATION_HOST_SOCKET` |
+| the pairing command says "unreachable", on one machine | the command does not say why. The agent may be stopped (then there is no socket). A missing socket and an unsafe one both read as unreachable, and so does a wrong `engine_group`. `check` refuses one of this instance's own groups, but cannot tell whether `dedalo` is in the declared one | first `systemctl is-active dedalo-publication-host-museum_org` (step 4 if it is not `active`). Then, as `dedalo` (root can always open it, so only this proves anything), `sudo -u dedalo stat -c '%U:%G %a %n' /run/dedalo_publication_host/museum_org /run/dedalo_publication_host/museum_org/agent.sock` (expect `museum_org_agent:dedalo 750` and a socket `660`), run step 7's `curl`, and compare the fragment's `DEDALO_PUBLICATION_HOST_SOCKET` |
 | the pairing command says "unreachable", on two machines | the agent is down, the firewall blocks the port, the address changed, or a proxy is in the way | run step 7's `curl` from the work host; check the agent's service, the firewall and `NO_PROXY` |
 
 ### In the panel

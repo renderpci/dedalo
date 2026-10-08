@@ -163,6 +163,21 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    any of the agent package's devDependencies (`plan.ts AGENT_DEV_DEPENDENCIES`, held equal
    to `package.json`), like `.test-tmp/`: the deployment install is `bun run
    hostagent:install` (frozen, production-only).
+   **Access.** Root-only is necessary, not sufficient: the services run as non-root
+   accounts and must still READ what they run. `plan` judges each runner with the
+   credentials its rendered unit gives it (`access.ts` `unitCredentials`; the agent's and
+   v2's `Group=`/`SupplementaryGroups=` are ONE value, `agentUnitGroups`/`v2UnitGroups`, that
+   the renderer emits its lines from and `plan` judges with — `provision_access.test.ts`
+   parses the rendered units back against it; v1
+   its database groups via the pinned `id -g`/`id -G` command), on the single mode class the
+   kernel consults: x above `agent_dir` and r (dirs r+x) over its whole lstat-walked tree
+   (symlinks never followed; over `AGENT_TREE_WALK_CAP` or an unlistable dir refuses, never
+   skips); r+x on `bun_bin` (agent, v2) and `php_bin` (agent); x above the state root (all
+   three). Mode bits only, so an ACL grant is refused: the check errs toward refusal, never
+   toward a unit that dies with `EACCES`. On a unix listener `engineGroupRefusal` refuses an
+   `engine_group` that is a primary group of `agent_user`/`v1.user`/`v2.user` or is
+   `v2.group` (by name). Membership of the work system's account is unknown to the
+   declaration and NOT checked: the operator's socket request as that account is the proof.
 
 Rejected alternatives, for the record: manual operation (drift, no panel visibility,
 unpublish depends on a human); SSH scripts from the engine (a shell credential for a

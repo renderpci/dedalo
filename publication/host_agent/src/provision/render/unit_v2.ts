@@ -29,7 +29,7 @@
 
 import { join } from 'node:path';
 import type { AgentLayout } from '../layout';
-import type { Artifact, RenderFacts, Renderer } from './types';
+import type { Artifact, RenderFacts, Renderer, UnitGroups } from './types';
 import { artifact } from './types';
 
 /** v2's entry point, relative to the release root (publication/server_api/v2/package.json). */
@@ -43,6 +43,20 @@ const HOME_TREES = /^\/(home|root|run\/user)(\/|$)/;
 
 export function v2ExecStart(layout: AgentLayout, port: string = String(layout.v2.port)): string {
   return `${ENV_BIN} NODE_ENV=production HOST=${V2_LOOPBACK_HOST} PORT=${port} ${layout.bunBin} run ${V2_ENTRY}`;
+}
+
+/** Both v2 units' groups (./types.ts UnitGroups): Group=<v2.group>, no SupplementaryGroups=. plan.ts judges v2 with it. */
+export function v2UnitGroups(layout: AgentLayout): UnitGroups {
+  return { group: layout.identity.v2Group, supplementary: [] };
+}
+
+/** The Group=/SupplementaryGroups= lines, from v2UnitGroups — never written by hand. */
+function v2GroupLines(layout: AgentLayout): string[] {
+  const { group, supplementary } = v2UnitGroups(layout);
+  return [
+    ...(group === null ? [] : [`Group=${group}`]),
+    ...(supplementary.length === 0 ? [] : [`SupplementaryGroups=${supplementary.join(' ')}`]),
+  ];
 }
 
 function refuseSharedUser(kind: string, layout: AgentLayout): void {
@@ -106,7 +120,7 @@ export const v2UnitRenderer: Renderer = {
       `[Service]`,
       `Type=simple`,
       `User=${identity.v2User}`,
-      `Group=${identity.v2Group}`,
+      ...v2GroupLines(layout),
       `# The release the agent promoted; a swap + restart (polkit) moves it.`,
       `WorkingDirectory=${current}`,
       `# State outside the code (spec §3), read by systemd as root.`,
@@ -164,7 +178,7 @@ export const v2ScratchUnitRenderer: Renderer = {
       `[Service]`,
       `Type=simple`,
       `User=${identity.v2User}`,
-      `Group=${identity.v2Group}`,
+      ...v2GroupLines(layout),
       `# The release under test (the agent's scratch symlink), never the agent's own uid.`,
       `WorkingDirectory=${scratch}`,
       `EnvironmentFile=${envFile}`,

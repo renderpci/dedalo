@@ -14,6 +14,8 @@ const ZERO_DEP = [
   'layout.ts',
   'hash.ts',
   'plan.ts',
+  // The kernel's access check, judged on observed facts (plan.ts accessRefusals).
+  'access.ts',
   // Several instances on one host: judged on derived layouts only (the CLI parses).
   'siblings.ts',
   // Task 9: render/engine_fragment.ts computes the pairing fact with the agent's import-free recipe.
@@ -44,6 +46,7 @@ test('layout, hash, plan, render/* and security/pairing import only node: builti
   }
   expect(offenders).toEqual([]);
   expect(ZERO_DEP).toContain('render/types.ts');
+  expect(ZERO_DEP).toContain('access.ts');
   expect(ZERO_DEP).toContain('render/env.ts');
   expect(ZERO_DEP).toContain('render/engine_fragment.ts');
 });
