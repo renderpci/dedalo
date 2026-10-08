@@ -156,8 +156,19 @@ ENV DEDALO_PRIVATE_DIR=/private
 # Created here, owned by `bun`, so an EMPTY named volume mounted over them
 # inherits that ownership (Docker copies the image path's ownership into a fresh
 # named volume — it does NOT do this for bind mounts).
-RUN mkdir -p /private /srv/dedalo/media /run/dedalo \
- && chown -R bun:bun /private /srv/dedalo/media /run/dedalo
+#
+# /backups is the `backups` volume of both stacks (the `backup` service writes the
+# nightly dumps there; the full stack's engine reads them and the make_backup
+# widget writes them). It was missing from this line from 2026-08-30 to
+# 2026-10-08, so the volume came up root-owned: the CLI install died at
+# `→ directories` (DEDALO_BACKUP_DIR=/backups/db) and the backup service wrote
+# nothing, ever. The copy-up also applies to an EXISTING volume while it is
+# empty (measured 2026-10-08), and nothing could write to those, so a rebuild
+# heals an existing install with no manual chown.
+# Gate: test/unit/stack_ops_policy_tripwire.test.ts (every writable named
+# volume of an image-built service is listed here).
+RUN mkdir -p /private /srv/dedalo/media /run/dedalo /backups \
+ && chown -R bun:bun /private /srv/dedalo/media /run/dedalo /backups
 
 USER bun
 

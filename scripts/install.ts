@@ -181,13 +181,18 @@ async function main(): Promise<void> {
 	const { checkDirectories } = await import('../src/core/install/directories.ts');
 	step('directories');
 	const dirs = checkDirectories({ create: true });
-	if (!dirs.ok)
+	if (!dirs.ok) {
+		// A bare path list read as a crash (measured 2026-10-08: "install failed:
+		// /backups/db"). Say what is wrong and as whom, so the operator can chown.
+		const who = `uid ${process.getuid?.() ?? '?'}`;
 		fail(
-			dirs.dirs
-				.filter((d) => !d.writable)
-				.map((d) => d.path)
-				.join(', '),
+			`these directories are missing or not writable by this process (${who}): ` +
+				dirs.dirs
+					.filter((d) => !d.writable)
+					.map((d) => `${d.label} ${d.path}${d.exists ? '' : ' (could not be created)'}`)
+					.join(', '),
 		);
+	}
 
 	const { installDbFromSeed } = await import('../src/core/install/db_restore.ts');
 	step('restore database from seed');

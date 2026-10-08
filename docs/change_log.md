@@ -1154,6 +1154,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Container installs take their nightly backups again, and the full-stack install no longer stops at "directories".**
+
+    Since 2026-08-30 the `backups` volume of both compose stacks came up owned by root while the engine and the `backup` service run as an unprivileged user. Two things followed. The documented command-line install of the full stack (`docker-compose.yml`) stopped with `install failed: /backups/db`. And the nightly `backup` service wrote nothing at all. Because it could not write its own failure marker either, `docker compose ps` still showed it as *healthy*.
+
+    The image now creates that directory with the right owner. **Rebuild the image** (`docker compose build`, then `docker compose up -d`, adding `-f docker-compose.simple.yml --env-file .dedalo.env` on the simple stack). An existing `backups` volume is still empty, so it takes the right owner by itself; no manual step is needed. The `backup` service now reports *unhealthy* whenever it cannot write to `/backups`. The simple stack also declares which stores each run must produce, so a store that never ran is reported as a failure, as on the full stack. After updating, check that `/backups/LAST_OK` appears the morning after. See [Docker backups](./install/docker.md#backups-from-a-container).
+
 - **The auction-URL and journal-URL import tools now declare the sections they belong to.**
 
     The two import tools are registered for their own sections only (`numisdata4` for auction URLs; `rsc205` and `rsc3` for journal URLs), so the restriction no longer depends on their server code loading. Run *Register tools* after the update to apply it.
@@ -1620,7 +1626,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 102 entries"
+??? note "Wire contract — 103 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1723,6 +1729,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-07-acquisition-tools-ts-only`
     - `WC-2026-10-07-ontology-area-admin-grant`
     - `WC-2026-10-07-update-code-root-entries-stamp`
+    - `WC-2026-10-08-install-ip-denied-names-address`
     - `WC-2026-10-08-make-backup-scheduled-evidence`
 
 ## 7.0.0-beta.4 — 2026-08-24

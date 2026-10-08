@@ -277,6 +277,70 @@ describe('the shipped stacks keep the rules the engine states', () => {
 		expect(proxies, 'anti-vacuity: no stack proxy mounting media was found').toBeGreaterThan(1);
 	});
 
+	test('every writable named volume of an image-built service is created bun-owned in the image', () => {
+		// BACKUPS (2026-10-08). The `backups` volume was added to both stacks on
+		// 2026-08-30 but never to the Dockerfile's mkdir/chown line, so it came up
+		// root-owned under a `bun` process: the CLI install died at `→ directories`
+		// and the backup service wrote nothing — for five weeks, green. A named
+		// volume inherits the image path's ownership ONLY if the image has that path.
+		const writable = read('Dockerfile').match(
+			/^RUN mkdir -p ([^\n\\]+)\\\n\s*&& chown -R bun:bun ([^\n]+)$/m,
+		);
+		expect(
+			writable,
+			'Dockerfile: no `mkdir -p … && chown -R bun:bun …` writable-trees line',
+		).not.toBeNull();
+		const made = new Set(((writable as RegExpMatchArray)[1] ?? '').trim().split(/\s+/));
+		const owned = new Set(((writable as RegExpMatchArray)[2] ?? '').trim().split(/\s+/));
+		let checked = 0;
+		for (const stack of STACKS) {
+			const source = read(stack);
+			for (const match of source.matchAll(/\n {2}([a-z_]+):\n/g)) {
+				const block = serviceBlock(stack, match[1] as string);
+				if (!block || !/^\s{4}build:\s*\.\s*$/m.test(block)) continue;
+				for (const mount of block.matchAll(/^\s+- ([a-z_]+):(\/[^:\s]*)(:ro)?\s*(#.*)?$/gm)) {
+					if (mount[3]) continue; // read-only: ownership is irrelevant
+					const path = mount[2] as string;
+					checked++;
+					expect(
+						made.has(path) && owned.has(path),
+						`${stack}: service '${match[1]}' mounts the named volume '${mount[1]}' writable at ${path}, ` +
+							'but the Dockerfile does not create it bun-owned — the volume comes up root-owned and every write is EACCES',
+					).toBe(true);
+				}
+			}
+		}
+		expect(
+			checked,
+			'anti-vacuity: no writable named-volume mount of an image-built service was found',
+		).toBeGreaterThan(5);
+	});
+
+	test('a backup service cannot report healthy over an unwritable /backups, and promises its stores', () => {
+		// The failure marker lives IN /backups, so a marker-only probe is blind to
+		// the one failure that stops the marker being written (measured 2026-10-08).
+		let services = 0;
+		for (const stack of STACKS) {
+			const backup = serviceBlock(stack, 'backup');
+			if (!backup?.includes('/backups/BACKUP_FAILED')) continue;
+			services++;
+			const probe = backup.match(/^\s+test: \[[^\n]*\]$/m)?.[0] ?? '';
+			expect(
+				probe,
+				`${stack}: the backup healthcheck does not require /backups to be writable`,
+			).toContain('test -w /backups');
+			expect(
+				probe,
+				`${stack}: the backup healthcheck no longer reads the failure marker`,
+			).toContain('test ! -e /backups/BACKUP_FAILED');
+			expect(
+				backup,
+				`${stack}: the backup loop does not declare DEDALO_BACKUP_EXPECTED_STORES — a store that never ran is invisible`,
+			).toMatch(/export DEDALO_BACKUP_EXPECTED_STORES="[^"]+"/);
+		}
+		expect(services, 'anti-vacuity: no stack backup service was found').toBeGreaterThan(1);
+	});
+
 	test('census floor: the walk really found the shipped stacks', () => {
 		// The floor lives HERE, in a live test, and not only inside the helper:
 		// a floor a helper carries is only asserted where the helper is called.

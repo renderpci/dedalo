@@ -328,7 +328,13 @@ services:
       # UNHEALTHY while the last run left a failure marker. This is the whole
       # notification mechanism a compose host gets: there is no systemd OnFailure=
       # here, so the state has to be visible in `docker compose ps`.
-      test: ["CMD-SHELL", "test ! -e /backups/BACKUP_FAILED"]
+      #
+      # AND unhealthy while /backups is not writable. The marker is written INTO
+      # /backups, so a volume this user cannot write is the one failure the marker
+      # can never report: every store fails, the marker write fails too, and a
+      # marker-only probe stays HEALTHY over a stack that has never taken a backup
+      # (measured 2026-10-08 — the volume came up root-owned for five weeks).
+      test: ["CMD-SHELL", "test -w /backups && test ! -e /backups/BACKUP_FAILED"]
       interval: 300s
       timeout: 5s
       retries: 1
