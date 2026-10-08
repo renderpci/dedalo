@@ -431,7 +431,7 @@ docker compose run --rm \
   bun run scripts/install.ts \
     --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" \
     --db-password "$POSTGRES_PASSWORD" --db-host postgres \
-    --entity mib --entity-label 'My Institution' \
+    --entity myentity --entity-label 'My Institution' \
     --locale es-ES --timezone Europe/Madrid \
     --langs lg-spa,lg-eng --app-lang lg-spa --data-lang lg-spa \
     --hierarchies es,lg \

@@ -808,7 +808,7 @@ describe('remote ASR status seam', () => {
 		avUrl: 'https://dedalo.example.org/dedalo/media/av/404/test94_test3_1.mp3',
 		engine: 'babel_transcriber',
 		userId: 7,
-		entityName: 'mib',
+		entityName: 'myentity',
 		pid: 4321,
 		deleteResult: false,
 	};
@@ -832,7 +832,7 @@ describe('remote ASR status seam', () => {
 		expect(body.get('engine')).toBe('babel_transcriber');
 		expect(body.get('method_name')).toBe('check_status');
 		expect(body.get('user_id')).toBe('7');
-		expect(body.get('entity_name')).toBe('mib');
+		expect(body.get('entity_name')).toBe('myentity');
 		expect(body.get('pid')).toBe('4321');
 		expect(body.get('delete_result')).toBe('false');
 	});
@@ -936,7 +936,7 @@ describe('ASR write-back (process_file port)', () => {
 			avUrl: 'https://x/a.mp3',
 			engine: 'babel_transcriber',
 			userId: 7,
-			entityName: 'mib',
+			entityName: 'myentity',
 			pid: 99,
 			lang: 'lg-spa',
 		},

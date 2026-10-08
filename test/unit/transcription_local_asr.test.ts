@@ -219,7 +219,7 @@ describe('localAsrProvider', () => {
 				audioPath: '/media/av/audio_tr/rsc35_rsc167_506.wav',
 				langTld2: 'es',
 				userId: 7,
-				entityName: 'mib',
+				entityName: 'myentity',
 				readFile: async () => new Blob([new Uint8Array([1, 2, 3])]),
 			});
 
@@ -244,7 +244,7 @@ describe('localAsrProvider', () => {
 			audioUrl: 'https://public.example.org/media/audio.mp4',
 			langTld2: 'es',
 			userId: 7,
-			entityName: 'mib',
+			entityName: 'myentity',
 		});
 
 		expect(result.ok).toBe(false);
@@ -261,7 +261,7 @@ describe('localAsrProvider', () => {
 			audioPath: '/tmp/x.wav',
 			langTld2: 'es',
 			userId: 7,
-			entityName: 'mib',
+			entityName: 'myentity',
 		});
 
 		expect(result.ok).toBe(false);
@@ -276,7 +276,7 @@ describe('localAsrStatusProvider', () => {
 		avUrl: '',
 		engine: 'local_whisper',
 		userId: 7,
-		entityName: 'mib',
+		entityName: 'myentity',
 		pid: 'job-42',
 		deleteResult: true,
 	};

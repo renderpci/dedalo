@@ -310,7 +310,7 @@ unset DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
 Expected output:
 
 ```text
-Dédalo TS install — entity 'mib', db 'dedalo_main'
+Dédalo TS install — entity 'myentity', db 'dedalo_main'
 
 → pre-flight checks
 → database connection
@@ -501,7 +501,7 @@ systemctl enable --now dedalo-backup.timer
 systemctl status dedalo-ts --no-pager      # active (running), NOT activating (auto-restart)
 ls -l /run/dedalo/dedalo_ts.sock           # srwxrwx--- dedalo dedalo
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
-# {"result":"ok","entity":"mib","db":"ok","request_id":"…"}
+# {"result":"ok","entity":"myentity","db":"ok","request_id":"…"}
 ```
 
 If `status` shows `activating (auto-restart)`, read `journalctl -u dedalo-ts -n 50`

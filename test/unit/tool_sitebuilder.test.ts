@@ -132,8 +132,8 @@ beforeAll(async () => {
 							title: 'Conflict',
 							status: 409,
 							detail:
-								"site 'undeclared' is not in instance 'mib's site table " +
-								"('/etc/dedalo_sites/instances/mib/sites.json') … Nothing was written.",
+								"site 'undeclared' is not in instance 'myentity's site table " +
+								"('/etc/dedalo_sites/instances/myentity/sites.json') … Nothing was written.",
 							reason: 'webspace_unavailable',
 						},
 						{ status: 409 },

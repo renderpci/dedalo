@@ -11,7 +11,7 @@
  *
  * Usage (npm script `dedalo:install` — NOT `install`, which is a reserved
  * package-manager lifecycle hook):
- *   bun run scripts/install.ts --db-name dedalo_x --db-user u --entity mib \
+ *   bun run scripts/install.ts --db-name dedalo_x --db-user u --entity myentity \
  *       --root-password '...' [--db-host /tmp] [--db-port 5432] \
  *       [--db-password ...] [--hierarchies es,fr] [--diffusion --mysql-* ...] \
  *       [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] \
