@@ -87,6 +87,46 @@ describe('runInstallStep — per-step session requirement', () => {
 	}
 });
 
+/**
+ * A logged-in wizard context. Only `userId` is read by the arms exercised here;
+ * every case below stops before a database write (a refusal, or an empty list).
+ */
+function sessionContext(): ApiRequestContext {
+	return {
+		...anonContext(),
+		session: { userId: -1 } as unknown as NonNullable<ApiRequestContext['session']>,
+	};
+}
+
+describe('runInstallStep — install_hierarchies takes the PLAN normalization', () => {
+	// The wizard posts its own ticked list AFTER persist_config, so the router —
+	// not persist_config — is where the CLI ≡ wizard thesaurus rule must hold.
+	test('an unvendored tld refuses install.invalid_input BEFORE any import', async () => {
+		let refusal: { code: string; message: string } | null = null;
+		try {
+			await runInstallStep(
+				stepRqo({ action: 'install_hierarchies', hierarchies: ['zzibogus'] }),
+				sessionContext(),
+			);
+		} catch (error) {
+			if (isDedaloError(error)) refusal = { code: error.code, message: error.message };
+		}
+		expect(refusal?.code).toBe('install.invalid_input');
+		expect(refusal?.message).toContain("unknown hierarchy 'zzibogus' (not vendored)");
+	});
+
+	test('a core tld, in any case and repeated, is dropped with the note — nothing is imported', async () => {
+		const r = await runInstallStep(
+			stepRqo({ action: 'install_hierarchies', hierarchies: ['LG', 'lg'] }),
+			sessionContext(),
+		);
+		const body = r.body as unknown as { data: unknown; msg: string; responses: unknown[] };
+		expect(body.data).toBe(true);
+		expect(body.responses).toEqual([]);
+		expect(body.msg).toContain('lg is a core hierarchy (always activated) — dropped from the list');
+	});
+});
+
 describe('runInstallStep — test_db_connection', () => {
 	test('routes to the db probe and stops at the required-field guard', async () => {
 		const r = await runInstallStep(stepRqo({ action: 'test_db_connection' }), anonContext());

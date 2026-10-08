@@ -89,6 +89,15 @@ confirm() {
 	[ "$lowered" = 'y' ] || [ "$lowered" = 'yes' ]
 }
 
+# confirm_yes — the same question with YES as the default (Enter = yes). Only a
+# typed n/no declines. Same lowercase trick, for the same bash 3.2 reason.
+confirm_yes() {
+	local reply='' lowered=''
+	read -rp "$1 [Y/n]: " reply || true
+	lowered="$(printf '%s' "$reply" | tr '[:upper:]' '[:lower:]')"
+	[ "$lowered" != 'n' ] && [ "$lowered" != 'no' ]
+}
+
 random_password() {
 	LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 28 || true
 }
@@ -439,7 +448,8 @@ choose_tls
 WIZARD_ALLOWED_IPS=''
 if [ "$WIZARD_MODE" = 'true' ]; then
 	echo
-	echo 'Wizard mode: the remaining questions are asked in the browser instead.'
+	echo 'Wizard mode: the remaining questions (languages, thesauri, the update server)'
+	echo 'are asked in the browser instead.'
 	echo
 	bold 'Who may open the install wizard?'
 	echo 'Until you press Finish the wizard needs no login, so only the addresses you'
@@ -461,14 +471,33 @@ echo
 
 ask ENTITY        'Short code for your institution (letters/digits, no spaces)' 'dedalo'
 ask ENTITY_LABEL  'Full name, as shown on the login screen'                     "$ENTITY"
-ask LANGS         'Working languages (comma-separated Dédalo codes)'            'lg-eng,lg-spa'
+# "default" passes NO language flag: the installer's own default (English +
+# Spanish, the same set the browser wizard pre-ticks; every other language is
+# optional) applies.
+# One default, in one place — src/core/install/install_plan.ts.
+ask LANGS         'Working languages (comma-separated Dédalo codes, or "default" = lg-eng,lg-spa)' 'default'
 APP_LANG="${LANGS%%,*}"
-ask HIERARCHIES   'Thesauri to install now (comma-separated, or "none")'        'none'
-# `[ … ] && x=''` would return non-zero when the test fails, and `set -e` would
-# exit the script on it. Same reason for the `if` around the flag append below.
-if [ "$HIERARCHIES" = 'none' ]; then HIERARCHIES=''; fi
+# Languages (lg) is a CORE thesaurus: it is activated with the database whatever
+# is answered here, so it is never asked. "default" omits the flag and takes the
+# shared default set (the thesauri hierarchies.json marks install_checked_default
+# — the same boxes the wizard pre-ticks); "none" opts out of the optional ones.
+ask HIERARCHIES   'Optional thesauri to install now (comma-separated codes, "default", or "none") — Languages is always installed' 'default'
 ask LOCALE        'Locale'                                                      'es-ES'
 ask TIMEZONE      'Time zone (stamps every record timestamp)'                   'Europe/Madrid'
+echo
+
+# UPDATE SERVERS. The installer writes ONTOLOGY_SERVERS and CODE_SERVERS into
+# /private/.env — the official Dédalo master by default. Declining writes both as
+# `[]` (air-gapped: no ontology or code updates are offered). It is a variable,
+# not a test at the end of a branch: `confirm_yes` returning non-zero inside a
+# bare `if` is safe under `set -e`.
+USE_UPDATE_SERVERS='true'
+bold 'Updates'
+if ! confirm_yes 'Use the official Dédalo update server (v7.master.dedalo.dev) for ontology updates and release information?'; then
+	USE_UPDATE_SERVERS='false'
+	warn 'Air-gapped: no ontology or code updates will be offered. To enable them later,'
+	warn 'add ONTOLOGY_SERVERS and CODE_SERVERS to /private/.env and restart Dédalo.'
+fi
 echo
 
 bold 'Administrator password'
@@ -587,11 +616,17 @@ install_args=(
 	--db-name dedalo --db-user dedalo --db-password "$DB_PASSWORD" --db-host postgres
 	--entity "$ENTITY" --entity-label "$ENTITY_LABEL"
 	--locale "$LOCALE" --timezone "$TIMEZONE"
-	--langs "$LANGS" --app-lang "$APP_LANG" --data-lang "$APP_LANG"
 	--media-path /srv/dedalo/media
 	--socket /run/dedalo/dedalo_ts.sock
 )
-if [ -n "$HIERARCHIES" ]; then install_args+=(--hierarchies "$HIERARCHIES"); fi
+# "default" means "no flag": the installer's shared default applies. Every
+# append is an `if`, never `[ … ] && x+=…` — a failed test there would be the
+# status `set -e` acts on.
+if [ "$LANGS" != 'default' ]; then
+	install_args+=(--langs "$LANGS" --app-lang "$APP_LANG" --data-lang "$APP_LANG")
+fi
+if [ "$HIERARCHIES" != 'default' ]; then install_args+=(--hierarchies "$HIERARCHIES"); fi
+if [ "$USE_UPDATE_SERVERS" = 'false' ]; then install_args+=(--no-update-servers); fi
 
 # Exported explicitly rather than as a `VAR=x compose …` prefix: `compose` is a
 # shell function, and whether such a prefix reaches the child process is a corner

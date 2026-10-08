@@ -34,10 +34,32 @@ safety gates and the rollback contract.
     never extracted.
 
 It requires a process supervisor (systemd, Docker, pm2, …) so the
-server can restart itself onto the new code: set `DEDALO_SUPERVISED=true`, or
-run under a supervisor that sets `INVOCATION_ID`/`JOURNAL_STREAM`
-(systemd does this for you). Without a detected supervisor the update
-refuses rather than risk a self-exit with nothing to restart it.
+server can restart itself onto the new code, and the supervisor must
+**declare** itself: `DEDALO_SUPERVISED=true` in the environment of the process it
+starts. Without that declaration the update refuses rather than risk a self-exit
+with nothing to restart it. Every launch method Dédalo ships already declares it:
+
+| Launch method | Where `DEDALO_SUPERVISED=true` is declared |
+| --- | --- |
+| systemd (`deploy/dedalo-ts.service`, the multi-instance template) | `Environment=DEDALO_SUPERVISED=true` in the unit |
+| Docker Compose (`docker-compose.yml`, `docker-compose.simple.yml`) | the `dedalo` service's `environment:` |
+| `bun run start:supervised`, `bun run dev`, `bun run dev:server` | the script's own command line |
+| `bun run start` | **nowhere — deliberately**: nothing restarts it, so it is not supervised |
+
+If you run your own unit, stack or pm2 definition, add the declaration to it.
+
+!!! warning "Declared by the launcher only — never in `../private/.env`"
+    The engine reads `DEDALO_SUPERVISED` from the **process environment only**. A
+    value in `../private/.env` is ignored, and the refusal says so: that file is
+    read by every launch method, including the unsupervised `bun run start`, so
+    a `true` there would claim a supervisor for a process that has none — the
+    update would swap the code, exit, and leave the server down. For the same
+    reason the engine no longer infers a supervisor from systemd's
+    `INVOCATION_ID` / `JOURNAL_STREAM`: every process a systemd unit starts
+    inherits them, including the shells in a terminal window of a desktop session
+    that runs under systemd, so a plain `bun run start` typed there looked
+    supervised. Declaring `true` on a process nothing will restart is the one
+    dangerous mistake left.
 
 The update **refuses to start** — it does not merely warn — unless the operator
 is the superuser (`root`), the server is in **maintenance mode**, and a
@@ -128,7 +150,7 @@ running Bun and this tree's pin, and the bytes free where the update stages.
 
 3. Locate the "Update code" control panel.
 
-    Choose the server to obtain the code. By default, the panel shows the official Dédalo server, but you can configure other mirrors or providers via `CODE_SERVERS`, set in `../private/.env` (see the [Configuration Administrator Guide](../../config/administration.md)).
+    Choose the server to obtain the code. The panel lists the servers in `CODE_SERVERS`, in `../private/.env`. The installers write the official Dédalo server there by default; an install made with the air-gapped option has `CODE_SERVERS=[]`, and an empty or absent `CODE_SERVERS` means no code servers at all — nothing to choose, no update offered. Add the official server, a mirror or another provider to the key to change that (see the [Configuration Administrator Guide](../../config/administration.md)).
 
     Press "Check available updates", choose the version you want, and press `Update`. The panel then shows the pipeline's phase track (download → verify → extract → deps → preflight → swap → restart → health) while the update runs; the server restarts itself during the `restart` phase and the panel polls its health endpoint until the new version answers.
 

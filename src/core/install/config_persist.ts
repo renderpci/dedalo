@@ -21,7 +21,7 @@ import { config } from '../../config/config.ts';
 import { parseEnvFile } from '../../config/env.ts';
 import { DedaloError } from '../errors/index.ts';
 import { setServerState } from '../resolve/server_state.ts';
-import { deriveLangConfig } from './lang_catalog.ts';
+import { buildInstallPlan } from './install_plan.ts';
 import { installPrivateDir, SAMPLE_ENV_PATH } from './paths.ts';
 import { connFromConfig, psqlSelect1 } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
@@ -62,18 +62,6 @@ function existingEnvAssignments(): { key: string; line: string }[] {
 	} catch {
 		return [];
 	}
-}
-
-/** The keys an emitted body assigns — i.e. the ones this run OWNS. */
-function assignedKeys(lines: readonly string[]): Set<string> {
-	const keys = new Set<string>();
-	for (const line of lines) {
-		const eq = line.indexOf('=');
-		if (eq > 0 && /^[A-Za-z_][A-Za-z0-9_]*$/.test(line.slice(0, eq))) {
-			keys.add(line.slice(0, eq));
-		}
-	}
-	return keys;
 }
 
 /**
@@ -117,31 +105,8 @@ export interface PersistConfigResult {
  * (test/unit/tier1_install_native.test.ts).
  */
 export async function persistConfig(o: Record<string, unknown>): Promise<PersistConfigResult> {
-	const str = (key: string, dflt = ''): string => {
-		const value = o[key];
-		return value === undefined || value === null ? dflt : String(value);
-	};
-	const diffusion = o.diffusion === true;
-	const mailer = o.mailer === true;
 	const prior = existingEnv();
 	const generated: Record<string, string> = {};
-
-	// LANGUAGES (mandatory once configured — config.ts requires these four keys
-	// whenever INSTALL_MODE is false, so a fresh install MUST write them or the
-	// post-restart boot crash-loops). The picked set drives both the map and the
-	// code list; refuse (no .env write, no restart) on an unusable set so the
-	// wizard surfaces it instead of writing a crashing config.
-	const langs = deriveLangConfig({
-		langs: (o.langs as string[] | string | undefined) ?? undefined,
-		appLangDefault: o.app_lang_default === undefined ? undefined : String(o.app_lang_default),
-		dataLangDefault: o.data_lang_default === undefined ? undefined : String(o.data_lang_default),
-	});
-	if (langs.errors.length > 0) {
-		refuseInstall(
-			'install.invalid_input',
-			`Language selection invalid: ${langs.errors.join('; ')}`,
-		);
-	}
 
 	// Secrets: preserve an existing value, else generate (and surface once).
 	const salt = prior.DEDALO_SALT_STRING ?? generateSecret();
@@ -152,83 +117,34 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 	// runs behind the normal dispatch gates now — so writing a fresh secret here
 	// only left a weak, never-verified token sitting in every install's .env.
 
-	// Build the .env body with PHP key names (the aliases env.ts already resolves).
+	// THE PLAN (install_plan.ts) owns the answers → .env mapping, its defaults and
+	// its section order — the CLI renders the SAME plan, so the two front ends
+	// cannot drift (install_plan_parity_tripwire). An unusable answer set (an
+	// unusable language selection, a missing database name, an unvendored
+	// thesaurus) REFUSES here, before any write: a fresh install MUST write the
+	// four mandatory lang keys or the post-restart boot crash-loops. The prior
+	// values feed the update-server PRESERVE rule (a re-run keeps a non-empty
+	// custom list — mirrors — but an earlier air-gapped `[]` yields to `official`).
+	const plan = buildInstallPlan(o, { salt, priorEnv: prior });
+	if (plan.errors.length > 0) {
+		refuseInstall('install.invalid_input', `Install answers invalid: ${plan.errors.join('; ')}`);
+	}
+
+	// Rendered with PHP key names (the aliases env.ts already resolves). A RAW
+	// entry (the JSON-shaped lang and server-list keys) is written verbatim:
+	// parseEnvFile strips surrounding quotes but does not unescape inner \", so
+	// an envQuote'd JSON value would not round-trip through JSON.parse.
 	const lines: string[] = [
 		'# Dédalo TS server configuration — written by the install wizard (DEC-19).',
 		'# PHP key names are used so an operator migrating from PHP can read them.',
-		'',
-		'# --- Database (PostgreSQL) ---',
-		`DEDALO_DATABASE_CONN=${envQuote(str('db_database'))}`,
-		`DEDALO_USERNAME_CONN=${envQuote(str('db_username'))}`,
-		`DEDALO_PASSWORD_CONN=${envQuote(str('db_password'))}`,
-		`DEDALO_HOSTNAME_CONN=${envQuote(str('db_hostname', 'localhost'))}`,
-		`DEDALO_DB_PORT_CONN=${envQuote(str('db_port', '5432'))}`,
-		`DEDALO_SOCKET_CONN=${envQuote(str('db_socket'))}`,
-		'',
-		'# --- Entity / locale ---',
-		`DEDALO_ENTITY=${envQuote(str('entity'))}`,
-		`DEDALO_ENTITY_LABEL=${envQuote(str('entity_label', str('entity')))}`,
-		`DEDALO_TIMEZONE=${envQuote(str('timezone', 'Europe/Madrid'))}`,
-		`DEDALO_LOCALE=${envQuote(str('locale', 'es-ES'))}`,
-		'',
-		'# --- Languages (mandatory: config.ts refuses boot without them) ---',
-		// The map/array keys are written as RAW compact JSON (NOT via envQuote):
-		// parseEnvFile strips surrounding quotes but does not unescape inner \",
-		// so an envQuote'd JSON value would not round-trip through JSON.parse.
-		`DEDALO_APPLICATION_LANGS=${JSON.stringify(langs.applicationLangs)}`,
-		`DEDALO_PROJECTS_DEFAULT_LANGS=${JSON.stringify(langs.projectsDefaultLangs)}`,
-		`DEDALO_APPLICATION_LANGS_DEFAULT=${envQuote(langs.applicationLangsDefault)}`,
-		`DEDALO_DATA_LANG_DEFAULT=${envQuote(langs.dataLangDefault)}`,
-		`DEDALO_APPLICATION_LANG=${envQuote(langs.applicationLangsDefault)}`,
-		`DEDALO_DATA_LANG=${envQuote(langs.dataLangDefault)}`,
-		`DEDALO_STRUCTURE_LANG=${envQuote(langs.structureLang)}`,
-		'',
-		'# --- Secret (coexistence: written for PHP; TS auth uses Argon2id) ---',
-		`DEDALO_SALT_STRING=${envQuote(salt)}`,
 	];
-
-	// Serving / media (CLI --media-path / --socket / --media-access-mode; the
-	// browser wizard omits them). Written ONLY when provided, so a re-save that
-	// does not carry them PRESERVES a prior value instead of clobbering it — same
-	// never-delete-by-omission contract enforced below. SERVER_UNIX_SOCKET is the
-	// load-bearing one: its default (/tmp/dedalo_ts.sock) mismatches the
-	// /run/dedalo/ path a systemd+reverse-proxy deploy uses.
-	const mediaPath = str('media_path');
-	const unixSocket = str('unix_socket');
-	const mediaAccessMode = str('media_access_mode');
-	if (mediaPath !== '' || unixSocket !== '' || mediaAccessMode !== '') {
-		lines.push('', '# --- Serving / media ---');
-		if (mediaPath !== '') lines.push(`MEDIA_PATH=${envQuote(mediaPath)}`);
-		if (unixSocket !== '') lines.push(`SERVER_UNIX_SOCKET=${envQuote(unixSocket)}`);
-		if (mediaAccessMode !== '') lines.push(`DEDALO_MEDIA_ACCESS_MODE=${envQuote(mediaAccessMode)}`);
+	for (const section of plan.env) {
+		lines.push('', section.comment);
+		for (const item of section.entries) {
+			lines.push(`${item.key}=${item.raw ? item.value : envQuote(item.value)}`);
+		}
 	}
 
-	if (diffusion) {
-		lines.push(
-			'',
-			'# --- Diffusion (native TS engine, MariaDB target) ---',
-			'DEDALO_DIFFUSION_NATIVE=true',
-			`DEDALO_DIFFUSION_DB_HOST=${envQuote(str('mysql_hostname', 'localhost'))}`,
-			`DEDALO_DIFFUSION_DB_PORT=${envQuote(str('mysql_port', '3306'))}`,
-			`DEDALO_DIFFUSION_DB_SOCKET=${envQuote(str('mysql_socket'))}`,
-			`DEDALO_DIFFUSION_DB_USER=${envQuote(str('mysql_username'))}`,
-			`DEDALO_DIFFUSION_DB_PASSWORD=${envQuote(str('mysql_password'))}`,
-			`DEDALO_DIFFUSION_DB_NAME=${envQuote(str('mysql_database'))}`,
-		);
-	}
-	if (mailer) {
-		lines.push(
-			'',
-			'# --- Outbound email (SMTP relay — password recovery) ---',
-			`DEDALO_SMTP_HOST=${envQuote(str('smtp_host'))}`,
-			`DEDALO_SMTP_PORT=${envQuote(str('smtp_port', '587'))}`,
-			`DEDALO_SMTP_SECURE=${envQuote(str('smtp_secure', 'tls'))}`,
-			`DEDALO_SMTP_USER=${envQuote(str('smtp_user'))}`,
-			`DEDALO_SMTP_PASS=${envQuote(str('smtp_pass'))}`,
-			`DEDALO_SMTP_FROM=${envQuote(str('smtp_from'))}`,
-			`DEDALO_SMTP_FROM_NAME=${envQuote(str('smtp_from_name'))}`,
-		);
-	}
 	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the posted form, so
 	// every key the form does not carry used to vanish on save — and the wizard
 	// INVITES a re-save (reload the page and it walks the config steps again from
@@ -244,7 +160,7 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 	// credentials — disabling it is an explicit .env edit (DEDALO_DIFFUSION_NATIVE),
 	// never a side effect of not re-typing the form. Gate:
 	// test/unit/install_persist_config.test.ts ('never deletes a key by omission').
-	const owned = assignedKeys(lines);
+	const owned = new Set(plan.envKeys);
 	const preserved = existingEnvAssignments().filter((entry) => !owned.has(entry.key));
 	if (preserved.length > 0) {
 		lines.push(
@@ -314,8 +230,8 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 
 	setServerState({
 		install_status: 'configured',
-		information: str('information') || undefined,
-		info_key: str('info_key') || undefined,
+		information: plan.answers.information || undefined,
+		info_key: plan.answers.info_key || undefined,
 	});
 
 	return { ok: true, msg: 'Configuration saved. The server will restart.', generated };

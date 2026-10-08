@@ -291,9 +291,10 @@ sudo -u dedalo --preserve-env=DB_PASSWORD,DEDALO_INSTALL_ROOT_PASSWORD \
     --timezone Europe/Madrid \
     --langs lg-eng,lg-spa \
     --app-lang lg-eng \
-    --data-lang lg-eng \
-    --hierarchies es,lg
+    --data-lang lg-eng
 ```
+
+No `--hierarchies` here: the shared default set of optional thesauri (today Spain, `es`) is installed, and the Languages thesaurus (`lg`) is activated with the database on every install — it is not something to select. Pass `--hierarchies none` to skip the optional ones, or a list such as `--hierarchies es,fr`. The installer also writes `ONTOLOGY_SERVERS` and `CODE_SERVERS` naming the official Dédalo update server; add `--no-update-servers` for an air-gapped server that must never be offered an update. Run the same command with `--plan` first to see the keys and steps it would produce, without touching anything — every flag is in the [installer reference](installer_reference.md#command-line-flags).
 
 8.3 Clean up
 
@@ -307,21 +308,21 @@ unset DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
 !!! note "`--media-path`/`--socket` replace the old append step"
     `--media-path` both write-probes the media root during the install AND persists `MEDIA_PATH` to `.env`. `--socket` persists `SERVER_UNIX_SOCKET` as `/run/dedalo/dedalo_ts.sock` — the path systemd and the proxy use; the built-in default `/tmp/dedalo_ts.sock` would **not** match and is the classic cause of a 502. So the serving keys are configured here, not appended in step 9.
 
-Expected output:
+Expected output (abridged — each `→ [<step id>]` line is one step of the install plan; the wording after the id may differ slightly):
 
 ```text
 Dédalo TS install — entity 'mib', db 'dedalo_main'
 
 → pre-flight checks
-→ database connection
-→ write ../private/.env
+→ [test_db_connection] database connection
+→ [persist_config] write ../private/.env
   generated DEDALO_SALT_STRING = ****
-→ directories
-→ restore database from seed
-→ set root password
-→ import hierarchies: es, lg
-→ register tools
-→ seal install
+→ [check_directories] directories
+→ [install_db_from_default_file] restore database from seed (+ activate core hierarchies)
+→ [set_root_pw] set root password
+→ [install_hierarchies] optional hierarchies: es
+→ [register_tools] register tools
+→ [install_finish] seal install
 → verify root login
 
 ✔ install complete — root login verified. Start the server with `bun run start`.
@@ -440,7 +441,7 @@ Reference units ship under `deploy/`:
 
 | Unit | What it does |
 | --- | --- |
-| `dedalo-ts.service` | the server; creates `/run/dedalo` (`RuntimeDirectory`), `Restart=always`, journald capture, SIGTERM drain |
+| `dedalo-ts.service` | the server; creates `/run/dedalo` (`RuntimeDirectory`), `Restart=always`, declares `DEDALO_SUPERVISED=true`, journald capture, SIGTERM drain |
 | `dedalo-ts-watchdog.service` + `.timer` | every 30 s, `curl --fail` on `/health` over the socket; restarts the server on failure |
 | `dedalo-ts-restart.service` | the restart helper the watchdog fires |
 | `dedalo-backup.service` + `.timer` | the nightly backup set |
@@ -483,6 +484,9 @@ systemctl cat dedalo-ts | grep -n DEDALO_USER   # must print NOTHING
 
 !!! danger "Replace every `DEDALO_USER` — an unsubstituted placeholder fails with `status=217/USER`"
     `User=DEDALO_USER` names a user that does not exist, so systemd kills the process **before Bun runs** — the socket never appears and the proxy 502s with nothing wrong in the app. After editing.
+
+!!! warning "The unit declares `DEDALO_SUPERVISED=true` — keep it"
+    The shipped `dedalo-ts.service` carries `Environment=DEDALO_SUPERVISED=true`. That line is how the engine knows systemd will restart it, which the [code update panel](../management/updates/updating_code.md) requires before it swaps in a new release. Keep it when you edit the unit, and add it if your unit predates it. It must be declared **here**, in the unit: a `DEDALO_SUPERVISED` line in `/opt/dedalo/private/.env` is ignored, because that file is also read by an unsupervised `bun run start`. The engine no longer guesses from systemd's own variables either — every shell started inside a systemd-managed desktop session inherits them.
 
 The socket directory and permissions are handled by the shipped `dedalo-ts.service` already: `RuntimeDirectory=dedalo` creates `/run/dedalo` (owned by the service user) on every start, and `UMask=0007` makes the socket group-writable. Nothing to add.
 
@@ -568,8 +572,8 @@ The whole subsystem is defined in `engineering/MEDIA_PROTECTION.md`; the adminis
 !!! warning "A fresh install ships demo data"
     The default install path seeds the canonical **`test3` playground section** — a small set of sample records used by the test suite and by the component documentation. It is harmless, but it is not yours. Delete the `test3` section's records from the section list once you no longer need them, or hide the section from the menu with `DEDALO_ENTITY_MENU_SKIP_TIPOS`.
 
-!!! note "Importing a hierarchy is not the same as activating a thesaurus"
-    `--hierarchies` imports the term and model records and realigns the counters. Making a hierarchy a **browsable thesaurus tree** (registering it in the hierarchy master and provisioning its virtual sections) is a separate post-install step you perform from the thesaurus tools — see [installing new hierarchies](../management/install_new_hierarchies.md). The core install is complete without it, and selecting no hierarchy at all is perfectly valid: the seed already carries the core ontology.
+!!! note "The thesauri you already have"
+    The Languages thesaurus (`lg`) is active on every install — its terms ship in the seed and the database step activates it. The optional thesauri the installer ran (`--hierarchies`, by default `es`) are **imported and activated**: browsable thesaurus trees at the first login. Anything else your collection needs is added later from the thesaurus tools — see [installing new hierarchies](../management/install_new_hierarchies.md). `--hierarchies none` is perfectly valid: the seed already carries the core ontology.
 
 ### 13. Backups
 

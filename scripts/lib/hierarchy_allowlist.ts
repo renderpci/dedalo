@@ -52,8 +52,11 @@
  * (src/core/test_data/synthetic_hierarchy_fixture.ts, ~1,310 rows) — the
  * remaining geo imports (es fr cl cu ad af al dz) drain out of this derivation
  * as their consumer gates migrate onto the synthetic corpus and their
- * comments are scrubbed; `lg` alone is permanent (engine-hardwired languages
- * thesaurus: select_lang's `lg1`, import_csv's pinned id 17344).
+ * comments are scrubbed. `lg` (the engine-hardwired languages thesaurus:
+ * select_lang's `lg1`, import_csv's pinned id 17344) is NOT a candidate since
+ * 2026-10-08: it is a CORE hierarchy, activated against the terms the seed ships
+ * in matrix_langs and never imported (src/core/install/hierarchy_meta.ts), so it
+ * has no vendored file and can never appear in `imports`.
  *
  * CONSUMERS. scripts/test_db_setup.ts installs exactly `imports` (through the
  * installer's own code path, from the same vendored files) and then GENERATES
@@ -73,9 +76,10 @@
  *    empty table). That asymmetry is accepted: over-installing a referenced
  *    hierarchy costs megabytes; under-installing one costs a red gate on
  *    someone else's machine.
- *  - An EMPTY derivation is refused loudly rather than returned: es1 is
- *    provably referenced today, so zero hits means the scan broke, and a
- *    broken scan must never quietly build an empty fixture.
+ *  - An EMPTY derivation is refused loudly rather than returned: the test
+ *    tree provably names vendored hierarchy tipos (tier1_install_native's
+ *    literal `ad1`), so zero hits means the scan broke, and a broken scan must
+ *    never quietly build an empty fixture.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -229,13 +233,13 @@ export function deriveHierarchyAllowlist(
 
 	const imports = [...evidence.keys()].sort();
 	// Anti-vacuity, in the BUILDER itself (the fixture gate does the full
-	// matching): an empty result on a tree that provably names hierarchy tipos
-	// (`lg1` is engine-hardwired in original_lang/import_csv gates and can never
-	// leave) means the scan broke, and a broken scan must not build an empty
-	// fixture.
+	// matching): an empty result on a tree that provably names vendored
+	// hierarchy tipos means the scan broke, and a broken scan must not build an
+	// empty fixture. (`lg1` no longer counts: lg is a CORE hierarchy with no
+	// vendored file — see the header.)
 	if (imports.length === 0) {
 		throw new Error(
-			'hierarchy allowlist: the reference scan found ZERO referenced TLDs, but the test tree provably names hierarchy tipos (lg1 at least — the engine-hardwired languages thesaurus). The scanner is broken; refusing to build an empty hierarchy fixture.',
+			'hierarchy allowlist: the reference scan found ZERO referenced TLDs, but the test tree provably names vendored hierarchy tipos (ad1 at least — tier1_install_native). The scanner is broken; refusing to build an empty hierarchy fixture.',
 		);
 	}
 	// The allowed-records set = imports + the GENERATED synthetic hierarchies.

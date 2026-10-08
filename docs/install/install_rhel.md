@@ -18,9 +18,9 @@ Applies to **RHEL 9+, Rocky Linux 9, AlmaLinux 9 and Fedora**.
 | 3 · media toolchain | `ffmpeg` needs RPM Fusion; the package is `ImageMagick` |
 | 4 · PostgreSQL 18 | the PGDG **RPM** repository, and `dnf -qy module disable postgresql` |
 | 5 · pinned Bun | identical |
-| 6–9 · code, database, installer, `.env` | identical |
-| 10–11 · media gate, proxy | identical, **plus SELinux contexts** |
-| 12 · systemd | identical, **plus SELinux for the socket** |
+| 6–9 · code, database, installer, `.env` | identical — the installer writes the same keys, `ONTOLOGY_SERVERS` and `CODE_SERVERS` (the official update server, or `[]` with `--no-update-servers`) included |
+| 10 · systemd | identical — the unit keeps `Environment=DEDALO_SUPERVISED=true` — **plus SELinux for the socket** |
+| 11 · proxy, media gate | identical, **plus SELinux contexts** |
 | everything else | identical |
 
 ## 1. Service user and directories (step 1)
@@ -148,7 +148,10 @@ restorecon -Rv /run/dedalo
 ```
 
 The *permission* half of that step still applies too: `UMask=0007` in the unit,
-and the web-server user added to the `dedalo` group.
+and the web-server user added to the `dedalo` group. So does the unit's
+`Environment=DEDALO_SUPERVISED=true`, which tells the engine systemd will restart
+it after a code update: it must stay in the unit — a `DEDALO_SUPERVISED` line in
+`/opt/dedalo/private/.env` is ignored.
 
 ### The media tree and the client tree must be readable by the web server
 

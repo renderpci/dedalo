@@ -94,6 +94,13 @@ services:
     environment:
       # Process env wins over /private/.env, so these are the ops overrides.
       DEDALO_PRIVATE_DIR: /private
+      # SUPERVISION IS DECLARED BY THE SUPERVISOR. `restart: unless-stopped` above
+      # is what brings the server back after a planned exit, so the stack says so
+      # here — never in /private/.env, which every launch method reads and the
+      # engine therefore ignores for this key (src/core/update/supervision.ts).
+      # An image install still cannot tree-swap: channel detection refuses that
+      # update on its own, whatever this says.
+      DEDALO_SUPERVISED: "true"
       SERVER_UNIX_SOCKET: /run/dedalo/dedalo_ts.sock
       MEDIA_PATH: /srv/dedalo/media
       # Turn the media gate on. With no mode set, the engine writes no rule files

@@ -136,6 +136,7 @@ import {
 import { writePublicationManifest } from './publication_manifest.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
+import { isSupervised, supervisorRefusalMessage } from './supervision.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
 
 /**
@@ -337,16 +338,6 @@ export interface CodeUpdateSeams {
 
 function sha256Of(filePath: string): string {
 	return createHash('sha256').update(readFileSync(filePath)).digest('hex');
-}
-
-/** Is a process supervisor present (systemd/docker/pm2)? A self-exit only
- * restarts under one — otherwise the live swap would kill the server dead.
- * Exported so the panel's readiness readout asks THIS function rather than
- * re-reading the env itself (a second copy would drift from the refusal). */
-export function isSupervised(): boolean {
-	const explicit = readEnv('DEDALO_SUPERVISED');
-	if (explicit !== undefined) return explicit === 'true';
-	return readEnv('INVOCATION_ID') !== undefined || readEnv('JOURNAL_STREAM') !== undefined;
 }
 
 /** First 4 bytes are the ZIP local-file magic PK\x03\x04. */
@@ -1068,10 +1059,7 @@ function assertReleaseShape({ url, version, declaredSha, channel }: UpdateReques
 export function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSeams): string {
 	const supervised = seams.supervised ?? isSupervised();
 	if (targetRoot === projectRoot && !supervised) {
-		refuseUpdate(
-			'update.refused',
-			'Error. No supervisor detected; the server would not restart onto the new tree. Set DEDALO_SUPERVISED=true.',
-		);
+		refuseUpdate('update.refused', supervisorRefusalMessage());
 	}
 
 	const channel = seams.channel ?? detectDeploymentChannel(targetRoot);

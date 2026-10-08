@@ -105,6 +105,13 @@ services:
       # engine as installer arguments (path 1) or as wizard input (path 2), never
       # as container environment.
       DEDALO_PRIVATE_DIR: /private
+      # SUPERVISION IS DECLARED BY THE SUPERVISOR. `restart: unless-stopped` above
+      # is what brings the server back after a planned exit, so the stack says so
+      # here — never in /private/.env, which every launch method reads and the
+      # engine therefore ignores for this key (src/core/update/supervision.ts).
+      # An image install still cannot tree-swap: channel detection refuses that
+      # update on its own, whatever this says.
+      DEDALO_SUPERVISED: "true"
       SERVER_UNIX_SOCKET: /run/dedalo/dedalo_ts.sock
       MEDIA_PATH: /srv/dedalo/media
       # MEDIA IS SERVED OPENLY HERE, and since 2026-08-24 that is a property of

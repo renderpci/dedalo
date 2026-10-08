@@ -77,7 +77,7 @@
  *
  * The referenced side is read off every `*.sh`, `*.service` and `*.timer` in
  * `deploy/` (listed with readdirSync — never enumerated here). The provided
- * side is parsed out of `config_persist.ts`, imported from `CONFIG_CATALOG` and
+ * side is the install plan's key list (`install_plan.ts`, every option on), imported from `CONFIG_CATALOG` and
  * `RUNTIME_PATH_BOOTSTRAP_KEYS`, and read off the units' own `Environment=`
  * lines. Nothing on either side is typed out by hand.
  *
@@ -88,8 +88,8 @@
  *     the dump restores, or that systemd parses the unit. Nothing here was run
  *     under systemd (this repo is developed on macOS).
  *  2. CONDITIONAL WRITES COUNT AS WRITES. `MEDIA_PATH` and
- *     `SERVER_UNIX_SOCKET` are written by `config_persist.ts` only when the CLI
- *     installer received the flag; the parser cannot see that condition. The
+ *     `SERVER_UNIX_SOCKET` are written by the install plan only when the CLI
+ *     installer received the flag; the all-options plan cannot see that condition. The
  *     tree's only consumer of `MEDIA_PATH` today resolves it itself and refuses
  *     loudly when unset (`deploy/dedalo-tree-backup.sh`), so the gap is covered
  *     by the script, not by this file.
@@ -117,6 +117,7 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
+import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
 import { RUNTIME_PATH_BOOTSTRAP_KEYS } from '../../src/core/install/runtime_paths.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -234,18 +235,28 @@ const EXTERNAL_REFERENCES: readonly Reference[] = SCANS.flatMap((s) =>
 // ── the provided sets ──────────────────────────────────────────────────────
 
 /**
- * Keys the install wizard actually writes into ../private/.env, parsed out of
- * the emitting module. Comment lines are dropped first: its header discusses a
- * literal `KEY=value` while explaining the arbitrary-key-injection guard.
+ * Keys the installers actually write into ../private/.env — an OUTCOME, not a
+ * source spelling: since 2026-10-08 (installer unification A1) every installer
+ * writes the .env from the one plan module, so the set is the plan's own key
+ * list with every optional block switched on (diffusion, mailer, media path,
+ * socket, access mode, update servers).
  */
 function installerWrittenKeys(): ReadonlySet<string> {
-	const src = readFileSync(join(ROOT, 'src/core/install/config_persist.ts'), 'utf8');
-	const keys = new Set<string>();
-	for (const line of src.split('\n')) {
-		if (/^\s*(\*|\/\/|\/\*)/.test(line)) continue;
-		for (const m of line.matchAll(/[`'"]([A-Z][A-Z0-9_]{2,})=/g)) keys.add(m[1] as string);
-	}
-	return keys;
+	const plan = buildInstallPlan(
+		{
+			db_database: 'x',
+			db_username: 'u',
+			entity: 'e',
+			diffusion: true,
+			mailer: true,
+			smtp_host: 'h',
+			media_path: '/m',
+			unix_socket: '/s',
+			media_access_mode: 'publication',
+		},
+		{ salt: 's' },
+	);
+	return new Set(plan.envKeys);
 }
 
 const INSTALLER_WRITTEN = installerWrittenKeys();

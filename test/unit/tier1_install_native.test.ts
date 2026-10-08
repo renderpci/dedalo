@@ -29,7 +29,9 @@ import { readEnv } from '../../src/config/env.ts';
 import { installIpAllowed } from '../../src/core/install/gate.ts';
 import {
 	availableHierarchyTlds,
+	CORE_HIERARCHIES,
 	hierarchyMetaByTld,
+	isCoreHierarchyTld,
 	offeredHierarchies,
 	readHierarchyJson,
 } from '../../src/core/install/hierarchy_meta.ts';
@@ -135,6 +137,22 @@ describe('hierarchy_meta — the vendored descriptor readers (§4.1.9)', () => {
 		for (const entry of offered) expect(available.has(entry.tld)).toBe(true);
 		// And it is a real filter: the vendored set is LARGER than the described set.
 		expect(offered.length).toBeLessThanOrEqual(available.size);
+	});
+
+	test('a CORE hierarchy (lg) is described by the engine, never offered as a choice', () => {
+		// lg is activated by the seed restore against the terms the seed ships in
+		// matrix_langs (A7, 2026-10-08): the activator must describe it, the
+		// wizard/CLI must never offer or import it.
+		expect(CORE_HIERARCHIES.length).toBeGreaterThan(0);
+		expect(isCoreHierarchyTld('  LG ')).toBe(true);
+		expect(isCoreHierarchyTld('af')).toBe(false);
+		const lg = hierarchyMetaByTld('Lg');
+		expect(lg).toEqual({ tld: 'lg', label: 'Languages', typology: 3, active_in_thesaurus: true });
+		const offered = new Set(offeredHierarchies().map((meta) => meta.tld));
+		for (const core of CORE_HIERARCHIES) {
+			expect(offered.has(core.tld)).toBe(false);
+			expect(availableHierarchyTlds().has(core.tld)).toBe(false);
+		}
 	});
 });
 

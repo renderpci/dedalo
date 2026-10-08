@@ -121,12 +121,17 @@ User=ded_%i
 Group=ded_%i
 WorkingDirectory=/home/ded_%i/dedalo
 ExecStart=/home/ded_%i/.bun/bin/bun run src/server.ts
-RuntimeDirectory=dedalo-%i            # creates /run/dedalo-%i, owned by the service user
+# systemd restarts it: lets code updates run
+Environment=DEDALO_SUPERVISED=true
+# creates /run/dedalo-%i, owned by the service user
+RuntimeDirectory=dedalo-%i
 RuntimeDirectoryMode=0750
-UMask=0007                            # socket srwxrwx--- so the proxy group can connect
+# socket srwxrwx--- so the proxy group can connect
+UMask=0007
 Restart=always
 RestartSec=3
-SuccessExitStatus=75                  # the installer's planned-restart exit code
+# the installer's planned-restart exit code
+SuccessExitStatus=75
 TimeoutStopSec=30
 KillSignal=SIGTERM
 StandardOutput=journal
@@ -137,6 +142,12 @@ LimitNOFILE=65536
 [Install]
 WantedBy=multi-user.target
 ```
+
+`Environment=DEDALO_SUPERVISED=true` is what lets an in-app code update run: the
+update swaps the code tree and exits, and only a process manager that restarts the
+server may declare it. It belongs in the unit, never in `.env` — that file is read by
+every launch method, including an unsupervised `bun run start`, so the engine ignores
+it there.
 
 !!! warning "No `EnvironmentFile=`, on purpose"
     The engine reads its own `../private/.env`. Pointing systemd's `EnvironmentFile=`
@@ -160,6 +171,7 @@ value the paths agree on, which in a home-per-domain layout is the domain itself
 # /etc/systemd/system/dedalo-ts@.service — identity removed
 WorkingDirectory=/home/%i/dedalo
 ExecStart=/home/%i/.bun/bin/bun run src/server.ts
+Environment=DEDALO_SUPERVISED=true
 RuntimeDirectory=dedalo-%i
 SyslogIdentifier=dedalo-%i
 ```

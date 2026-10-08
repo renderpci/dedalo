@@ -37,7 +37,7 @@ import { projectRoot } from '../../src/config/env.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { detectDeploymentChannel } from '../../src/core/update/channel.ts';
 import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
-import { backupRootIsInsideTree, isSupervised } from '../../src/core/update/code_update.ts';
+import { backupRootIsInsideTree } from '../../src/core/update/code_update.ts';
 import { INSTALL_STAMP_PATH } from '../../src/core/update/install_stamp.ts';
 import { backupFreshness } from '../../src/core/update/preconditions.ts';
 import {
@@ -49,6 +49,7 @@ import {
 	rootEntriesCheck,
 	type StatusCheck,
 } from '../../src/core/update/status.ts';
+import { isSupervised } from '../../src/core/update/supervision.ts';
 
 const STATES = new Set(['ok', 'warn', 'blocked', 'unknown']);
 

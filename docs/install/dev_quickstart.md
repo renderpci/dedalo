@@ -59,13 +59,15 @@ bun run scripts/install.ts \
   --langs lg-spa,lg-eng --app-lang lg-eng --data-lang lg-spa
 ```
 
-`--db-host /tmp` uses the local unix socket, so no password is needed. On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user$(whoami)` just works.
+`--db-host /tmp` uses the local unix socket, so no password is needed — Homebrew's PostgreSQL puts its socket there (the installer's own default is `localhost`). On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user "$(whoami)"` just works.
+
+With no `--hierarchies`, the shared default set of optional thesauri (today `es`) is installed; `--hierarchies none` makes the install faster. The Languages thesaurus is activated with the database either way. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server; add `--no-update-servers` to leave both empty.
 
 It ends with `✔ install complete — root login verified`.
 
 ## 5. Configure the dev listener
 
-The installer writes only the database, entity, language and secret keys — you add the rest. Two of them are not optional on a laptop:
+The installer writes only the database, entity, language, secret and update-server keys — you add the rest. Two of them are not optional on a laptop:
 
 ```shell
 cat >> ../private/.env <<'ENV'
@@ -99,6 +101,9 @@ bun run dev          # watch mode; `bun run start` for a plain run
 ```
 
 `bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if the install wizard asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../core/ui/css_architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
+
+!!! note "Which scripts are supervised"
+    `bun run dev`, `bun run dev:server` and `bun run start:supervised` restart the server when it asks for a fresh process, so each **declares** `DEDALO_SUPERVISED=true` in its own command line. Plain `bun run start` restarts nothing and deliberately declares nothing: the [code update panel](../management/updates/updating_code.md) refuses to swap code under it rather than leave the server dead. Do not put `DEDALO_SUPERVISED` in `../private/.env` — every launch method reads that file, so the engine ignores the key there.
 
 ```text
 Dédalo TS server listening on unix socket /tmp/dedalo_ts.sock (entity: dev)

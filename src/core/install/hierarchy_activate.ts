@@ -16,6 +16,17 @@
  * — the single writer. The installer used to re-implement that sequence with hard-coded
  * `<tld>1`/1 and `<tld>2`/2 locators, which dangle on any thesaurus whose root is not at
  * those ids (live: `es2` has no records at all).
+ *
+ * CORE HIERARCHIES (A7, 2026-10-08): `activateCoreHierarchies` runs this same door for
+ * every CORE_HIERARCHIES descriptor (today `lg`) — with NO import in front of it. Their
+ * terms ship in the seed, in their own table (21,705 `lg1` rows in matrix_langs), and the
+ * seed's registry record (hierarchy1 for tld `lg`) arrives inactive: hierarchy4 = No,
+ * hierarchy125 = No, no hierarchy59 model root. Measured on the suite DB (rolled back):
+ * one activation applied 'flagged active', 'active in thesaurus: Yes' and 'hierarchy59:
+ * linked the existing root lg2/2', with zero lg rows in matrix_hierarchy, and the
+ * hierarchy then inspected usable (root lg1/1 resolved in matrix_langs). The seed
+ * restore calls it (db_restore.ts), so every surface that restores the seed gets
+ * Languages active.
  */
 
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
@@ -29,7 +40,7 @@ import {
 	RELATION_TYPE_LINK,
 } from '../ontology/ontology_tipos.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
-import type { HierarchyMeta } from './hierarchy_meta.ts';
+import { CORE_HIERARCHIES, type HierarchyMeta } from './hierarchy_meta.ts';
 
 const HIERARCHY_MAIN_TABLE = 'matrix_hierarchy_main';
 
@@ -125,5 +136,32 @@ export async function activateHierarchy(
 	if (!ensured.ok && ensured.errors.length === 0) {
 		outcome.errors.push(ensured.msg);
 	}
+	return outcome;
+}
+
+/** The outcome of activating every core hierarchy (INTERNAL — the seed restore reads it). */
+export interface CoreHierarchiesActivation {
+	ok: boolean;
+	msg: string;
+	errors: string[];
+	/** The core tlds that converged. */
+	activated: string[];
+}
+
+/**
+ * Activate every CORE hierarchy (see the header): activation only, never an import.
+ * Idempotent — a second run converges with nothing applied.
+ */
+export async function activateCoreHierarchies(userId = -1): Promise<CoreHierarchiesActivation> {
+	const outcome: CoreHierarchiesActivation = { ok: true, msg: '', errors: [], activated: [] };
+	for (const meta of CORE_HIERARCHIES) {
+		const activation = await activateHierarchy(meta, userId);
+		if (activation.ok) outcome.activated.push(meta.tld);
+		else outcome.errors.push(...activation.errors.map((error) => `${meta.tld}: ${error}`));
+	}
+	outcome.ok = outcome.errors.length === 0;
+	outcome.msg = outcome.ok
+		? `Core hierarchies active: ${outcome.activated.join(', ')}`
+		: `Core hierarchy activation failed: ${outcome.errors.join('; ')}`;
 	return outcome;
 }

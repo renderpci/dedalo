@@ -434,7 +434,6 @@ docker compose run --rm \
     --entity mib --entity-label 'My Institution' \
     --locale es-ES --timezone Europe/Madrid \
     --langs lg-spa,lg-eng --app-lang lg-spa --data-lang lg-spa \
-    --hierarchies es,lg \
     --media-path /srv/dedalo/media \
     --socket /run/dedalo/dedalo_ts.sock \
     --media-access-mode publication
@@ -454,8 +453,17 @@ What each part is doing:
   `/private/.env`, so the file describes the deployment on its own. The compose
   environment sets the same three at runtime and wins either way — passing them
   keeps the two in agreement.
-- `--hierarchies` both **imports and activates** each thesaurus. Skip it and you
-  can [install hierarchies later](../management/install_new_hierarchies.md).
+- No `--hierarchies`: the shared default set of optional thesauri (today Spain,
+  `es`) is imported and activated. `--hierarchies none` skips it, a list such as
+  `--hierarchies es,fr` replaces it, and you can always
+  [install hierarchies later](../management/install_new_hierarchies.md). The
+  Languages thesaurus (`lg`) is not on that list: it is activated together with
+  the database on every install.
+- The installer writes `ONTOLOGY_SERVERS` and `CODE_SERVERS` naming the official
+  Dédalo update server — where ontology updates and release information come
+  from. Add `--no-update-servers` for an air-gapped instance (both written as
+  `[]`). On this stack a new **code** release still arrives as a new image, as
+  described in [upgrading](#upgrading); that is unchanged.
 
 Every flag is in the [installer reference](installer_reference.md). The run ends
 by verifying an actual root login — if it prints success, the instance is real.
@@ -787,6 +795,17 @@ Process environment wins over `/private/.env`, so the compose file is the right
 place for **operations** keys (pool sizes, timeouts, the access log, the media
 mode) and the installer owns the rest inside the volume. The full key catalogue
 is the [configuration reference](../config/index.md).
+
+!!! note "Both compose stacks declare `DEDALO_SUPERVISED: \"true\"`"
+    `restart: unless-stopped` is what brings the engine back after a planned
+    exit, so the `dedalo` service's `environment:` says so with
+    `DEDALO_SUPERVISED: "true"` — in `docker-compose.yml` and in
+    `docker-compose.simple.yml`. Keep it if you write your own stack. It belongs in
+    the compose file, never in `/private/.env`: the engine reads this key from the
+    process environment only and ignores it in `.env`. On an image install the
+    [code update panel](../management/updates/updating_code.md) still refuses to
+    swap the code tree in place — a new release arrives as a new image, as
+    described in [upgrading](#upgrading).
 
 To read what the installer actually wrote:
 

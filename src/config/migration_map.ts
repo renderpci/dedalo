@@ -607,9 +607,6 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_SUPERVISED',
 	// set by the code updater on its own pre-swap smoke-boot child, never by an operator
 	'DEDALO_SMOKE_BOOT',
-	// systemd facts (read, not configured — they detect supervision)
-	'INVOCATION_ID',
-	'JOURNAL_STREAM',
 	// postgres pool
 	'DB_POOL_MAX',
 	'DB_POOL_ACQUIRE_TIMEOUT_MS',

@@ -1,18 +1,24 @@
 /**
- * install_hierarchies — the wizard's hierarchy step. For each selected TLD: import its
- * vendored `<tld>1.copy.gz` (thesaurus terms) and optional `<tld>2.copy.gz` (models) into
- * matrix_hierarchy, re-consolidate the counter, then ACTIVATE it (./hierarchy_activate.ts).
+ * install_hierarchies — the wizard's hierarchy step. For each selected OPTIONAL TLD: import
+ * its vendored `<tld>1.copy.gz` (thesaurus terms) and optional `<tld>2.copy.gz` (models)
+ * into matrix_hierarchy, re-consolidate the counter, then ACTIVATE it
+ * (./hierarchy_activate.ts).
+ *
+ * A CORE tld (hierarchy_meta.ts CORE_HIERARCHIES — `lg`) is NEVER imported: its terms ship
+ * in the seed, in their own table, and the seed restore already activates it. Asked for
+ * here it is re-activated only (idempotent), and a reset is refused. History: the importer
+ * used to take `lg` too and FORCED its `lg1` rows into matrix_hierarchy — `lg1` is a core
+ * section whose table is matrix_langs, so those 21,705 rows landed where nothing reads
+ * them (measured 2026-10-08: activation alone makes the hierarchy usable with zero lg rows
+ * in matrix_hierarchy). The vendored `lg1.copy.gz` is deleted.
  *
  * The import forces the target table to `matrix_hierarchy` regardless of the file's own
- * section_tipo — avoiding the lg1→matrix_langs mis-route, where `lg1` is ALSO a core
- * section whose own table is matrix_langs, so resolving the table from the tipo would COPY
- * the rows somewhere the activated hierarchy never reads (they would import "successfully"
- * into an empty-looking hierarchy). Uses `\copy … FROM STDIN` through psql (the sanctioned
- * subprocess pattern).
+ * section_tipo, and uses `\copy … FROM STDIN` through psql (the sanctioned subprocess
+ * pattern).
  *
  * Login-gated (the router checks the session): a fresh install reaches this only after the
- * in-wizard root login. Selecting no hierarchies is valid (the seed already carries the
- * core ontology).
+ * in-wizard root login. Selecting no optional hierarchy is valid (the seed already carries
+ * the core ontology, and Languages is already active).
  *
  * IMPORT IS HALF THE JOB. The `.copy.gz` only lands term rows; on their own they are
  * unreachable — `<tld>1` is not a section the engine knows until its ONTOLOGY exists, and
@@ -31,7 +37,7 @@ import { config } from '../../config/config.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { safeTld } from '../ontology/data_io.ts';
 import { activateHierarchy } from './hierarchy_activate.ts';
-import { hierarchyMetaByTld } from './hierarchy_meta.ts';
+import { type HierarchyMeta, hierarchyMetaByTld, isCoreHierarchyTld } from './hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from './paths.ts';
 import { connFromConfig, type DbConnDescriptor, type PsqlRunResult, runPsql } from './pg_exec.ts';
 
@@ -217,6 +223,116 @@ function failedImportMessage(replace: boolean, res: PsqlRunResult): string {
 	return `${step}: ${res.stderr || `psql exited ${res.exitCode}`}`;
 }
 
+/** One tld's line in the batch report: its response + the errors it contributes. */
+interface TldOutcome {
+	response: HierarchyImportResponse;
+	errors: string[];
+}
+
+/** A failed tld: the response says `msg`; the batch errors carry `error` (default: msg). */
+function failedTld(tld: string, msg: string, error: string = msg): TldOutcome {
+	return { response: { tld, ok: false, msg }, errors: [`${tld}: ${error}`] };
+}
+
+/**
+ * A CORE tld asked for by name: activation only (never an import, never a reset).
+ * The engine-owns-target refusal still applies — activation writes through the pool.
+ */
+async function coreHierarchyOutcome(
+	tld: string,
+	replace: boolean,
+	engineOwnsTarget: boolean,
+	userId: number,
+): Promise<TldOutcome> {
+	if (replace)
+		return failedTld(tld, 'core hierarchy — cannot be reset (its terms ship in the seed)');
+	if (!engineOwnsTarget) {
+		return failedTld(
+			tld,
+			`core hierarchy — NOT activated: the engine writes to '${config.db.database}'`,
+		);
+	}
+	const activation = await activateHierarchy(hierarchyMetaByTld(tld) as HierarchyMeta, userId);
+	if (!activation.ok) {
+		return failedTld(tld, `core hierarchy — activation failed: ${activation.errors.join('; ')}`);
+	}
+	const msg = 'core hierarchy — activated (its terms ship in the seed; never imported)';
+	return { response: { tld, ok: true, msg }, errors: [] };
+}
+
+/**
+ * ACTIVATION of a freshly imported tld (installer_hierarchy_manager::activate_hierarchy):
+ * flag the hierarchy active and provision its ontology, so it is usable at the first
+ * login. The descriptor drives it; an unregistered tld has no typology to provision with.
+ */
+async function activateImported(
+	tld: string,
+	replace: boolean,
+	userId: number,
+): Promise<TldOutcome> {
+	const meta = hierarchyMetaByTld(tld);
+	if (meta === null) {
+		return failedTld(
+			tld,
+			'imported, but not registered in hierarchies.json — not activated',
+			'not registered in hierarchies.json; activation skipped',
+		);
+	}
+	const activation = await activateHierarchy(meta, userId);
+	if (!activation.ok) {
+		return {
+			response: {
+				tld,
+				ok: false,
+				msg: `imported, activation failed: ${activation.errors.join('; ')}`,
+			},
+			errors: activation.errors.map((error) => `${tld}: ${error}`),
+		};
+	}
+	const msg = replace ? 'reset and activated' : 'imported and activated';
+	return { response: { tld, ok: true, msg }, errors: [] };
+}
+
+/** An OPTIONAL tld: import (or skip / reset), then activate. */
+async function optionalHierarchyOutcome(
+	connection: DbConnDescriptor,
+	tld: string,
+	replace: boolean,
+	engineOwnsTarget: boolean,
+	userId: number,
+): Promise<TldOutcome> {
+	const imported = await importHierarchyRows(connection, tld, { replace });
+	if (imported.skipped === true) {
+		return { response: { tld, ok: true, msg: imported.msg, skipped: true }, errors: [] };
+	}
+	if (!imported.ok) return failedTld(tld, imported.msg);
+	// The engine's writes land in the CONFIGURED database. When the import target is a
+	// different one, activating would write into the wrong DB — refuse, loudly.
+	if (!engineOwnsTarget) {
+		return failedTld(
+			tld,
+			`imported into '${connection.database}', NOT activated: the engine writes to '${config.db.database}'`,
+			`activation skipped — the import target '${connection.database}' is not the engine's database ('${config.db.database}')`,
+		);
+	}
+	return activateImported(tld, replace, userId);
+}
+
+/** The batch sentence the wizard shows. */
+function batchMessage(
+	tldCount: number,
+	responses: readonly HierarchyImportResponse[],
+	errorCount: number,
+	replace: boolean,
+): string {
+	if (tldCount === 0) return 'No optional hierarchies selected — Languages (lg) is always active';
+	if (errorCount > 0) return `${errorCount} hierarchy(ies) failed`;
+	const imported = responses.filter((r) => r.ok && !r.skipped).length;
+	const skipped = responses.filter((r) => r.skipped).length;
+	const msg = `${replace ? 'Reset' : 'Imported'} ${imported} hierarchy(ies)`;
+	return skipped > 0 ? `${msg}, skipped ${skipped} already installed` : msg;
+}
+
 /**
  * Import + ACTIVATE the selected hierarchies. `conn` defaults to config.db.
  *
@@ -250,77 +366,20 @@ export async function installHierarchies(
 	const engineOwnsTarget = connection.database === config.db.database;
 
 	for (const tld of tlds) {
-		if (!safeTld(tld)) {
-			responses.push({ tld, ok: false, msg: 'invalid tld' });
-			errors.push(`${tld}: invalid tld`);
-			continue;
+		let outcome: TldOutcome;
+		if (!safeTld(tld)) outcome = failedTld(tld, 'invalid tld');
+		else if (isCoreHierarchyTld(tld)) {
+			outcome = await coreHierarchyOutcome(tld, replace, engineOwnsTarget, userId);
+		} else {
+			outcome = await optionalHierarchyOutcome(connection, tld, replace, engineOwnsTarget, userId);
 		}
-
-		const imported = await importHierarchyRows(connection, tld, { replace });
-		if (imported.skipped === true) {
-			responses.push({ tld, ok: true, msg: imported.msg, skipped: true });
-			continue;
-		}
-		if (!imported.ok) {
-			responses.push({ tld, ok: false, msg: imported.msg });
-			errors.push(`${tld}: ${imported.msg}`);
-			continue;
-		}
-
-		// The engine's writes land in the CONFIGURED database. When the import target is a
-		// different one, activating would write into the wrong DB — refuse, loudly.
-		if (!engineOwnsTarget) {
-			responses.push({
-				tld,
-				ok: false,
-				msg: `imported into '${connection.database}', NOT activated: the engine writes to '${config.db.database}'`,
-			});
-			errors.push(
-				`${tld}: activation skipped — the import target '${connection.database}' is not the engine's database ('${config.db.database}')`,
-			);
-			continue;
-		}
-
-		// ACTIVATION (installer_hierarchy_manager::activate_hierarchy): flag the hierarchy
-		// active and provision its ontology, so it is usable at the first login.
-		// The descriptor drives it; an unregistered tld has no typology to provision with.
-		const meta = hierarchyMetaByTld(tld);
-		if (meta === null) {
-			responses.push({
-				tld,
-				ok: false,
-				msg: 'imported, but not registered in hierarchies.json — not activated',
-			});
-			errors.push(`${tld}: not registered in hierarchies.json; activation skipped`);
-			continue;
-		}
-		const activation = await activateHierarchy(meta, userId);
-		if (!activation.ok) {
-			responses.push({
-				tld,
-				ok: false,
-				msg: `imported, activation failed: ${activation.errors.join('; ')}`,
-			});
-			errors.push(...activation.errors.map((error) => `${tld}: ${error}`));
-			continue;
-		}
-		responses.push({
-			tld,
-			ok: true,
-			msg: replace ? 'reset and activated' : 'imported and activated',
-		});
+		responses.push(outcome.response);
+		errors.push(...outcome.errors);
 	}
-
-	const imported = responses.filter((r) => r.ok && !r.skipped).length;
-	const skipped = responses.filter((r) => r.skipped).length;
-	const verb = replace ? 'Reset' : 'Imported';
-	let msg = `${verb} ${imported} hierarchy(ies)`;
-	if (skipped > 0) msg += `, skipped ${skipped} already installed`;
-	if (errors.length > 0) msg = `${errors.length} hierarchy(ies) failed`;
 
 	return {
 		ok: errors.length === 0,
-		msg,
+		msg: batchMessage(tlds.length, responses, errors.length, replace),
 		errors,
 		responses,
 	};

@@ -63,6 +63,27 @@ const NOT_ENV_KEYS = new Set([
 	'IEND',
 ]);
 
+/**
+ * Call sites whose uppercase-snake first argument is a key the engine WRITES, not one it
+ * reads — keyed by `file` + `callee`, never by key, so a READ of the same key elsewhere is
+ * still collected. Same discipline as NOT_ENV_KEYS: each entry carries its reason, and a
+ * read never belongs here.
+ */
+const WRITE_SITES: readonly { file: string; callee: string; reason: string }[] = [
+	{
+		file: 'src/core/install/install_plan.ts',
+		callee: 'entry',
+		// The installers' ONE .env renderer (installer unification A1): `entry(KEY, value)`
+		// builds the lines persistConfig writes. The module is pure — it imports no config
+		// and reads no environment — so none of these literals is a read.
+		reason: 'install plan .env line builder (writes ../private/.env)',
+	},
+];
+
+function isWriteSite(file: string, callee: string): boolean {
+	return WRITE_SITES.some((site) => site.file === file && site.callee === callee);
+}
+
 /** One `someCall('SOME_KEY', …)` occurrence in src/. */
 export interface EnvKeyCallSite {
 	/** The uppercase-snake literal — an env key, unless it is in NOT_ENV_KEYS. */
@@ -114,7 +135,7 @@ export function envKeyCallSites(): readonly EnvKeyCallSite[] {
 
 		for (const match of source.matchAll(KEY_CALL)) {
 			const key = match[2] as string;
-			if (NOT_ENV_KEYS.has(key)) continue;
+			if (NOT_ENV_KEYS.has(key) || isWriteSite(file, match[1] as string)) continue;
 			const offset = match.index;
 			// Binary search would be tidier; a linear walk over a few hundred matches is
 			// not the cost worth optimizing in a test helper.

@@ -407,6 +407,11 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-04 (#125): the onnxruntime alignment gate. DB-free: reads the vendored
 	#     transformers bundle, package.json and bun.lock; compares three version strings.
 	test/unit/onnxruntime_alignment_tripwire.test.ts
+	# --- 2026-10-08 (installer unification A1/A3 + C). DB-free (re-verified with DB_PORT
+	#     closed): the pure plan module, plus persistConfig / the supervision reader /
+	#     package.json scripts under a stub `bun`, each in a child over a mkdtemp private dir.
+	test/unit/install_plan_parity_tripwire.test.ts
+	test/unit/supervision_declaration_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

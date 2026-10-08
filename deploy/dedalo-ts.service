@@ -104,6 +104,12 @@ RestartSec=3
 # this line just keeps the planned exit out of the failure counters (and out of
 # the watchdog's alerting), instead of logging it as a crash.
 SuccessExitStatus=75
+# Supervision is DECLARED here, by the thing that restarts the process — never in
+# ../private/.env, which every launch method reads (an unsupervised `bun run start`
+# included) and the engine therefore ignores for this key. A code update swaps the
+# tree and exits; it refuses unless this line says systemd will bring it back
+# (src/core/update/supervision.ts).
+Environment=DEDALO_SUPERVISED=true
 TimeoutStopSec=30
 KillSignal=SIGTERM
 # Signal the SERVER only, never its children. Diffusion dispatches one runner

@@ -65,7 +65,6 @@ import {
 	codeStagingDir,
 	IGNORED_ROOT_ENTRIES,
 	installedDigestOf,
-	isSupervised,
 	PRESERVE_ROOT_ENTRIES,
 	resolveCodeBackupRoot,
 	STAGING_KEEP_MARKER,
@@ -80,6 +79,7 @@ import {
 } from './install_stamp.ts';
 import { type BackupVerifyOptions, backupFreshnessWithin, PANEL_WAIT_MS } from './preconditions.ts';
 import { type DeleteBlockReason, deletabilityOf, RESTORE_POINT_PREFIX } from './restore_points.ts';
+import { isSupervised } from './supervision.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
 
 // ---------------------------------------------------------------------------

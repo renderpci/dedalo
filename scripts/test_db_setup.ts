@@ -22,13 +22,16 @@
  *      string-search rows). The installed set is `imports` DERIVED from the
  *      test tree by scripts/lib/hierarchy_allowlist.ts (2 TLDs after the
  *      consumer-gate migration onto the step-5c SYNTHETIC hierarchies,
- *      2026-08-25; over-inclusive by design — see that header) — `lg` (the
- *      engine-hardwired languages thesaurus, 21,705 rows) is the permanent
- *      floor, `ad` (10 rows) is held by tier1_install_native's literal
- *      filename. The other vendored files STAY in the repo: a full install
- *      still needs them. Measured 2026-08-25 with this composition
- *      (ad+lg imports + the 1,312 generated synthetic rows):
- *      pg_database_size = 233 MB (244,586,175 bytes), rebuild ~40-45 s;
+ *      2026-08-25; over-inclusive by design — see that header) — `ad`
+ *      (10 rows) is held by tier1_install_native's literal filename. The
+ *      other vendored files STAY in the repo: a full install still needs
+ *      them. Measured 2026-08-25 with the then composition (ad+lg imports +
+ *      the 1,312 generated synthetic rows): pg_database_size = 233 MB
+ *      (244,586,175 bytes), rebuild ~40-45 s. Since 2026-10-08 `lg` (the
+ *      languages thesaurus) is a CORE hierarchy: ACTIVATED against the 21,705
+ *      `lg1` terms the seed ships in matrix_langs, never imported — its
+ *      vendored `lg1.copy.gz` (which forced unread duplicates into
+ *      matrix_hierarchy) is deleted;
  *   3. the registered tools, via the installer's own registerInstallTools();
  *   4. the generic `test` TLD ontology, materialized from
  *      src/core/test_data/test_tld_ontology.json through the engine's doors
@@ -564,6 +567,17 @@ console.log(
 // TLD reddens the fixture rather than failing mysteriously on one machine.
 const allowlist = deriveHierarchyAllowlist(HIERARCHY_DIR);
 const tlds = allowlist.imports;
+// CORE hierarchies first (`lg`): ACTIVATED against the terms the seed already
+// ships in matrix_langs, never imported — the same door the installer's seed
+// restore runs (src/core/install/hierarchy_activate.ts activateCoreHierarchies).
+// This script restores the seed through an explicit connection, which skips
+// that default-config half, so it calls the door itself.
+const { activateCoreHierarchies } = await import('../src/core/install/hierarchy_activate.ts');
+const coreHierarchies = await activateCoreHierarchies();
+if (!coreHierarchies.ok) {
+	throw new Error(`[test-db] ${coreHierarchies.msg}`);
+}
+console.log(`[test-db] ${coreHierarchies.msg} (activation only — no import)`);
 const { installHierarchies } = await import('../src/core/install/hierarchy_import.ts');
 const hierarchies = await installHierarchies(tlds);
 console.log(
@@ -583,8 +597,8 @@ console.log(`[test-db] tools registered (ok: ${tools.ok})`);
 // (~1,300 rows, derived from the SEARCH_LATE_ROW_LOOKUP_OFFSET default at
 // seed time), hierarchy B the second registry pairing (~10 rows). This is the
 // shape every migratable geo-bound gate moves onto; the vendored imports in
-// step 5 drain away as those migrations land (`lg` is the permanent floor —
-// the engine-hardwired languages thesaurus).
+// step 5 drain away as those migrations land (`lg` is not among them: it is a
+// core hierarchy, activated above, never imported).
 const { ensureSyntheticHierarchies } = await import(
 	'../src/core/test_data/synthetic_hierarchy_fixture.ts'
 );

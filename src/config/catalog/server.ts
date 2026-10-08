@@ -8,32 +8,47 @@ import type { CatalogEntry } from '../catalog_types.ts';
 
 export const SERVER_KEYS = {
 	DEDALO_SUPERVISED: {
-		// Tri-state: UNSET is not the same as 'false' (the reader branches on all
-		// three), so type:'string' is right and the 'bool' LABEL was the lie.
+		// Read as the literal string `'true'` from the PROCESS environment only
+		// (src/core/update/supervision.ts); anything else, including unset, is
+		// "not supervised". type:'string' because a 'bool' would imply a default
+		// and a .env reading, and this key has neither.
 		type: 'string',
 		scope: 'operator',
+		// Operator-facing (the manual documents it), but install/sample.env must not
+		// offer a `#DEDALO_SUPERVISED=` line: ../private/.env is the one place it is
+		// ignored, and the installer copies the template there as the key census.
+		processEnvironmentOnly: true,
 		default: undefined,
 		heading: 'Declaring that a process supervisor is present',
-		typeLabel: 'true || false',
-		typeSuffix: '(optional; unset = auto-detect)',
+		typeLabel: 'true',
+		typeSuffix: '(process environment only; unset = not supervised)',
 		doc: `A code update replaces the installation tree and then exits the server process, so that
 it comes back up running the new code. That only works if **something restarts it**. To
-avoid taking the server down for good, the update refuses to run unless it can see a
-supervisor.
+avoid taking the server down for good, the update refuses to run unless the process was
+started with \`DEDALO_SUPERVISED=true\`.
 
-Leave this unset and the engine detects one by itself: a service manager exposes its own
-markers in the environment (see \`INVOCATION_ID\` / \`JOURNAL_STREAM\`). Set it to \`true\`
-when the server is supervised by something the detection does not recognise — a container
-restart policy, a process manager, a shell loop that relaunches on exit — and the update
-would otherwise be refused with *"No supervisor detected"*. Set it to \`false\` to state
-there is none.
+The key is **declared by the process manager that restarts the server**, never written into
+the configuration file. Every shipped runtime definition already carries it: the reference
+systemd unit (\`Environment=DEDALO_SUPERVISED=true\`), the Docker Compose stacks
+(\`environment:\`), and the \`start:supervised\`, \`dev\` and \`dev:server\` scripts, which
+relaunch the server when it asks for a restart. A unit or stack you wrote yourself needs the
+same line.
+
+A value in \`../private/.env\` is **ignored**: that file is read by every launch method,
+including \`bun run start\`, which is deliberately unsupervised — nothing relaunches it. The
+refusal names the ignored line when it finds one. Nor is supervision guessed from the service
+manager's own variables: those are inherited by every process started under it, terminal
+shells included.
 
 Declaring \`true\` on a process that nothing restarts is the one dangerous mistake here:
 the update will swap the code, exit, and the server will stay down until you start it
 by hand.
 
 \`\`\`bash
-DEDALO_SUPERVISED=true
+# systemd unit, [Service] section:   Environment=DEDALO_SUPERVISED=true
+# compose service, environment: map: DEDALO_SUPERVISED: "true"
+# inside a shell loop that relaunches the server when it exits:
+DEDALO_SUPERVISED=true bun run src/server.ts
 \`\`\``,
 	},
 	DEDALO_SMOKE_BOOT: {
@@ -59,32 +74,6 @@ is refused and nothing is swapped.
 
 Setting it by hand on the real server yields a process that serves \`/health\` and nothing
 else — never do it. See \`engineering/PRODUCTION.md\` for the update pipeline.`,
-	},
-	INVOCATION_ID: {
-		type: 'string',
-		scope: 'environment',
-		default: undefined,
-		heading: 'Service invocation id (injected — not an administrator setting)',
-		typeLabel: 'string',
-		doc: `**Not a Dédalo setting, and not something to put in the configuration file.** The system
-service manager injects this variable into every service it starts, with a unique id for
-that run.
-
-Dédalo only *reads* it, as one of the two signals that say "this process is supervised, so
-a restart after a code update will be respawned" — see \`DEDALO_SUPERVISED\`.`,
-	},
-	JOURNAL_STREAM: {
-		type: 'string',
-		scope: 'environment',
-		default: undefined,
-		heading: 'Service journal stream (injected — not an administrator setting)',
-		typeLabel: 'string',
-		doc: `**Not a Dédalo setting, and not something to put in the configuration file.** The system
-service manager injects this variable when the process's output is connected to the system
-journal.
-
-Like \`INVOCATION_ID\`, Dédalo only *reads* it, to detect that the process is supervised and
-that a self-restart after a code update will be respawned (see \`DEDALO_SUPERVISED\`).`,
 	},
 	NODE_TLS_REJECT_UNAUTHORIZED: {
 		type: 'string',

@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 618,
-		"functions": 7912,
-		"functionsOverCap": 681,
-		"filesOverCap": 263
+		"files": 620,
+		"functions": 7984,
+		"functionsOverCap": 679,
+		"filesOverCap": 261
 	},
 	"ledger": [
 		{
@@ -104,6 +104,11 @@
 			"generated": "2026-10-02",
 			"functionsOverCap": 681,
 			"filesOverCap": 263
+		},
+		{
+			"generated": "2026-10-08",
+			"functionsOverCap": 679,
+			"filesOverCap": 261
 		}
 	],
 	"files": {
@@ -197,12 +202,10 @@
 		"src/core/identify/preview.ts": 14,
 		"src/core/identify/profile.ts": 14,
 		"src/core/identify/profile_source.ts": 10,
-		"src/core/install/config_persist.ts": 21,
+		"src/core/install/config_persist.ts": 13,
 		"src/core/install/db_probe_plan.ts": 8,
 		"src/core/install/db_restore.ts": 8,
 		"src/core/install/directories.ts": 12,
-		"src/core/install/engine.ts": 19,
-		"src/core/install/hierarchy_import.ts": 13,
 		"src/core/install/lang_catalog.ts": 9,
 		"src/core/install/mailer_probe.ts": 12,
 		"src/core/install/media_tree.ts": 20,

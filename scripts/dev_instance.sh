@@ -89,6 +89,9 @@ fi
 #   dev            = CSS watcher + supervised, hot-reloading server (full loop).
 #   start:supervised = supervised server only, no LESS watcher (lean 2nd instance;
 #                      the primary's watcher already rebuilds the shared main.css).
+# Both scripts DECLARE DEDALO_SUPERVISED=true themselves (package.json), and exec
+# hands this process's environment down — never set it here (one declaration, not
+# two; supervision_declaration_tripwire.test.ts).
 # ${extra[@]+...} guard: bash 3.2 (macOS default) treats an empty array under
 # `set -u` as unbound and aborts; this expands to nothing when there are no
 # passthrough args, and to the args otherwise.

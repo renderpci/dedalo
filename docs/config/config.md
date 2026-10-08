@@ -2728,26 +2728,35 @@ SESSION_WARNING_SECONDS=300
 
 ### Declaring that a process supervisor is present
 
-DEDALO_SUPERVISED `true || false` (optional; unset = auto-detect)
+DEDALO_SUPERVISED `true` (process environment only; unset = not supervised)
 
 A code update replaces the installation tree and then exits the server process, so that
 it comes back up running the new code. That only works if **something restarts it**. To
-avoid taking the server down for good, the update refuses to run unless it can see a
-supervisor.
+avoid taking the server down for good, the update refuses to run unless the process was
+started with `DEDALO_SUPERVISED=true`.
 
-Leave this unset and the engine detects one by itself: a service manager exposes its own
-markers in the environment (see `INVOCATION_ID` / `JOURNAL_STREAM`). Set it to `true`
-when the server is supervised by something the detection does not recognise — a container
-restart policy, a process manager, a shell loop that relaunches on exit — and the update
-would otherwise be refused with *"No supervisor detected"*. Set it to `false` to state
-there is none.
+The key is **declared by the process manager that restarts the server**, never written into
+the configuration file. Every shipped runtime definition already carries it: the reference
+systemd unit (`Environment=DEDALO_SUPERVISED=true`), the Docker Compose stacks
+(`environment:`), and the `start:supervised`, `dev` and `dev:server` scripts, which
+relaunch the server when it asks for a restart. A unit or stack you wrote yourself needs the
+same line.
+
+A value in `../private/.env` is **ignored**: that file is read by every launch method,
+including `bun run start`, which is deliberately unsupervised — nothing relaunches it. The
+refusal names the ignored line when it finds one. Nor is supervision guessed from the service
+manager's own variables: those are inherited by every process started under it, terminal
+shells included.
 
 Declaring `true` on a process that nothing restarts is the one dangerous mistake here:
 the update will swap the code, exit, and the server will stay down until you start it
 by hand.
 
 ```bash
-DEDALO_SUPERVISED=true
+# systemd unit, [Service] section:   Environment=DEDALO_SUPERVISED=true
+# compose service, environment: map: DEDALO_SUPERVISED: "true"
+# inside a shell loop that relaunches the server when it exits:
+DEDALO_SUPERVISED=true bun run src/server.ts
 ```
 
 *Default: (unset)*
@@ -5561,7 +5570,9 @@ DEDALO_INSTALL_PRIVATE_DIR="/srv/dedalo_private"
 
 CODE_SERVERS `array`
 
-This parameter defines the code servers this install offers releases from. By default the server defines the official Dédalo code server, but you can include other mirror servers by adding entries to the array. Each entry is a JSON object with `name`, `url` and `code`.
+This parameter defines the code servers this install offers releases from. Each entry is a JSON object with `name`, `url` and `code`; add entries to the array to offer mirror servers too.
+
+The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official Dédalo code server entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
 
 `url` is the master's JSON API endpoint — it MUST end in `/dedalo/core/api/v1/json/` (or `/api/v1/json`); any other path answers 404 and the panel reports the server as unreachable. `code` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN `CODE_SERVERS`.
 
@@ -5763,7 +5774,11 @@ This parameter defines the ontology master servers to get the ontology updates. 
 - an external server for local Ontologies (private Ontologies of entities.)
 - local server, the current installation
 
-Each entry is a JSON object with `name`, `url` and `code`. Configuration for the official dedalo.dev server:
+Each entry is a JSON object with `name`, `url` and `code`.
+
+The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official dedalo.dev entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
+
+Configuration for the official dedalo.dev server:
 
 ```bash
 ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]

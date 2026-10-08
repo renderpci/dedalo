@@ -445,13 +445,6 @@
 		"active_in_thesaurus": true
 	},
 	{
-		"tld": "lg",
-		"label": "Languages",
-		"typology": 3,
-		"active_in_thesaurus": true,
-		"install_checked_default": true
-	},
-	{
 		"tld": "li",
 		"label": "Liechtenstein",
 		"typology": 2,

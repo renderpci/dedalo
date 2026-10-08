@@ -18,6 +18,12 @@
  * disk on every request, so a recompiled stylesheet is live on the next browser reload with
  * no server restart at all. The two watchers are genuinely independent.
  *
+ * SUPERVISION IS DECLARED BY THE CALLER, NOT HERE: the package.json `dev` script launches this
+ * file as `DEDALO_SUPERVISED=true bun run scripts/dev.ts`, and the server child below inherits
+ * the process environment (no `env` option on the spawn), so the code updater sees the
+ * declaration this loop backs (src/core/update/supervision.ts). One declaration, no second
+ * copy — gate: supervision_declaration_tripwire.test.ts.
+ *
  * Ctrl-C stops both. The CSS watcher is killed on every exit path, so it cannot outlive the
  * server and leave an orphan holding the LESS tree.
  */

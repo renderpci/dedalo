@@ -131,6 +131,7 @@ import {
 	scannedFileCount,
 } from '../../scripts/lib/tld_census.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { CORE_HIERARCHIES } from '../../src/core/install/hierarchy_meta.ts';
 import { SYNTHETIC_HIERARCHY_TLDS } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 
@@ -289,15 +290,21 @@ describe('generic_tld data side — the classifier is what it claims (positive c
 		expect(hierarchyTldViolations(['test3', GEO_ES], new Set())).toEqual([GEO_ES, 'test3']);
 	});
 
-	test('the derived allowlist is alive and carries its permanent floor', () => {
-		// `lg` is the engine-hardwired languages thesaurus (select_lang's lg1,
-		// import_csv's pinned id 17344) and can NEVER leave the derivation — if it
-		// does, the scan broke. The synthetic `test*` hierarchies are what the
-		// fixture GENERATES (they replaced the volume-bound es import 2026-08-25,
-		// when search_late_row_lookup migrated onto testgeoa1); they ride `tlds`
-		// unconditionally, so their absence also means the module is broken.
+	test('the derived allowlist is alive, carries its synthetic floor, and never imports a CORE hierarchy', () => {
+		// The synthetic `test*` hierarchies are what the fixture GENERATES (they
+		// replaced the volume-bound es import 2026-08-25, when
+		// search_late_row_lookup migrated onto testgeoa1); they ride `tlds`
+		// unconditionally, so their absence means the module is broken.
+		// A CORE hierarchy (`lg`, the engine-hardwired languages thesaurus) is
+		// ACTIVATED by the setup against the terms the seed ships in matrix_langs
+		// and never imported — so it may be neither vendored nor imported here.
 		expect(HIERARCHY_ALLOWLIST.tlds.length).toBeGreaterThan(0);
-		expect(HIERARCHY_ALLOWLIST.tlds).toContain('lg');
+		expect(HIERARCHY_ALLOWLIST.imports.length).toBeGreaterThan(0);
+		expect(CORE_HIERARCHIES.length).toBeGreaterThan(0);
+		for (const core of CORE_HIERARCHIES) {
+			expect(HIERARCHY_ALLOWLIST.imports).not.toContain(core.tld);
+			expect(HIERARCHY_ALLOWLIST.vendored).not.toContain(core.tld);
+		}
 		for (const tld of SYNTHETIC_HIERARCHY_TLDS) {
 			expect(HIERARCHY_ALLOWLIST.tlds).toContain(tld);
 		}

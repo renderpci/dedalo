@@ -63,6 +63,13 @@ process environment   →   ../private/.env   →   the engine's built-in defaul
 Highest wins. The real environment beats the file, so a systemd unit or a one-off
 `DEDALO_DEV_MODE=true bun run dev` overrides `.env` without editing it.
 
+One key skips the file altogether: **`DEDALO_SUPERVISED`** is read from the process
+environment only. It says "a supervisor will restart this process", which is true
+of a launch method, not of an installation — and `.env` is read by every launch
+method, including the unsupervised `bun run start`. So the systemd unit, the
+compose stack or the supervised `bun run` script declares it, and a value in
+`.env` is ignored (see [updating the code](../management/updates/updating_code.md)).
+
 For a number of keys the engine also accepts the **v6 spelling** as a
 fallback, so a migrated `.env` works unchanged (`DEDALO_ENTITY` for `ENTITY`,
 `DEDALO_DATABASE_CONN` for `DB_NAME`, …). The v7 name wins when both are set.
@@ -145,7 +152,10 @@ and quietly does the wrong thing. The fix is always the one line the error names
 ## 8. The install wizard
 
 A fresh machine boots into the wizard, which writes `../private/.env` for you (DB
-connection, entity, languages, diffusion) and then seals the install. After that,
+connection, entity, languages, the update servers — `ONTOLOGY_SERVERS` and
+`CODE_SERVERS`, the official Dédalo master unless you chose the air-gapped
+option — diffusion) and then seals the install. The headless installer writes
+the same keys. After that,
 you edit the `.env` by hand as above.
 
 See [Installing Dédalo](../install/index.md).

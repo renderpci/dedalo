@@ -33,13 +33,20 @@ export const INSTALL_LANG_CATALOG: Readonly<Record<string, string>> = Object.fre
 	'lg-nep': 'नेपाली',
 });
 
-/** All catalog codes in presentation order (the default "all checked" set). */
+/** All catalog codes in presentation order (every language the installer OFFERS). */
 export const INSTALL_LANG_CODES: readonly string[] = Object.freeze(
 	Object.keys(INSTALL_LANG_CATALOG),
 );
 
+/**
+ * THE default working languages (pre-ticked in the wizard, taken by the CLI and
+ * install.sh when no language is given): English + Spanish. Every other catalog
+ * language is OPTIONAL — offered, never on by default.
+ */
+export const INSTALL_DEFAULT_LANG_CODES: readonly string[] = Object.freeze(['lg-eng', 'lg-spa']);
+
 export interface LangConfigInput {
-	/** Working-language codes (array or comma string). Default: the whole catalog. */
+	/** Working-language codes (array or comma string). Default: INSTALL_DEFAULT_LANG_CODES. */
 	langs?: string[] | string;
 	/** Default interface (application) language. Default: first picked code. */
 	appLangDefault?: string;
@@ -80,17 +87,17 @@ function toCodeArray(langs: string[] | string | undefined): string[] {
 /**
  * Derive the full lang config from the operator's picks, validating as it goes.
  * The picked set drives BOTH the map and the code list, so they can never
- * disagree. An empty set defaults to the whole catalog; the interface/data
+ * disagree. An absent set takes INSTALL_DEFAULT_LANG_CODES; the interface/data
  * defaults fall back to the first picked code when absent or out-of-set.
  */
 export function deriveLangConfig(input: LangConfigInput): DerivedLangConfig {
 	const errors: string[] = [];
-	// ABSENT (undefined) → default to the whole catalog so a frontend that never
+	// ABSENT (undefined) → the default working languages, so a frontend that never
 	// collects langs still produces a bootable config. An EXPLICIT empty set
-	// (operator unchecked everything) is an error — never silently ship "all".
+	// (operator unchecked everything) is an error — never silently pick for them.
 	let codes: string[];
 	if (input.langs === undefined) {
-		codes = [...INSTALL_LANG_CODES];
+		codes = [...INSTALL_DEFAULT_LANG_CODES];
 	} else {
 		codes = toCodeArray(input.langs);
 		if (codes.length === 0) errors.push('at least one language must be selected');

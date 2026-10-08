@@ -46,7 +46,8 @@ order is unchanged: install 1.4.2, restart onto it, then apply the update.
 
 Reference units in `deploy/`:
 
-- `dedalo-ts.service` — `Restart=always`, journald log capture, SIGTERM stop.
+- `dedalo-ts.service` — `Restart=always`, `Environment=DEDALO_SUPERVISED=true`,
+  journald log capture, SIGTERM stop.
 - `dedalo-ts-watchdog.service` + `.timer` — every 30 s:
   `curl --fail --unix-socket /tmp/dedalo_ts.sock http://localhost/health`;
   on failure restarts the main unit. (systemd `WatchdogSec` needs `sd_notify`,
@@ -59,6 +60,36 @@ Reference units in `deploy/`:
   failed code update (§12; fired by `OnFailure=` on the main unit and by the
   watchdog when a pending update never confirms). Publishing a release:
   `engineering/RELEASE.md`.
+
+**Supervision is DECLARED, never inferred (2026-10-08).** A code update exits the
+process after the swap and needs something to start it again, so it refuses
+unless the process says a supervisor exists: `DEDALO_SUPERVISED=true`, read from
+the **process environment only** (`src/core/update/supervision.ts`
+`isSupervised`). Every shipped runtime definition declares it — the systemd units
+(`deploy/dedalo-ts.service`, the multi-instance template in
+`docs/install/multi_instance.md`) as `Environment=`, both compose stacks (and the
+QNAP dev stack) in the `dedalo` service's `environment:`, and the `dev` /
+`dev:server` / `start:supervised` package scripts on their own command line
+(`scripts/dev.ts` and `scripts/dev_instance.sh` inherit it by delegation).
+`bun run start` declares nothing: it is unsupervised by design. Two inputs are
+deliberately ignored:
+
+- **`../private/.env`.** That file is read by every launch method, including the
+  plain `start`, so a value there would claim a supervisor for a process that
+  has none. The refusal names the ignored line
+  (`supervisorRefusalMessage`).
+- **systemd's `INVOCATION_ID` / `JOURNAL_STREAM`** (the former auto-detect,
+  removed). They are inherited by every descendant of a unit, including shells
+  in terminal emulators that desktop sessions run as systemd user units, so an
+  unsupervised `bun run start` typed there read as supervised — the update
+  swapped, exited, and the server stayed down. The false positive is the
+  dangerous direction, and with every shipped definition declaring the key,
+  inference bought nothing.
+
+The installer never writes the key (`install_plan.ts` cannot emit it). Gate:
+`test/unit/supervision_declaration_tripwire.test.ts` — it executes the package
+scripts with a recording stub, parses every shipped unit and compose stack, and
+probes `isSupervised` in child processes.
 
 `/health` answers `200 {result:'ok', db:'ok'}` only when **Postgres answers**
 (S3-48); DB down / pool wedged → `503 {db:'down'}` → watchdog restart + a
@@ -1088,8 +1119,13 @@ The supervisor is:
 
 | Where | What restarts it |
 |---|---|
-| Production | `deploy/dedalo-ts.service` — `Restart=always` (+ `SuccessExitStatus=75`, so the planned exit is not booked as a crash). |
-| Dev | `bun run dev` or `bun run start:supervised` — both loop on exit 75 ONLY. |
+| Production | `deploy/dedalo-ts.service` — `Restart=always` (+ `SuccessExitStatus=75`, so the planned exit is not booked as a crash); declares `Environment=DEDALO_SUPERVISED=true`. |
+| Containers | `docker-compose.yml` / `docker-compose.simple.yml` — `restart: unless-stopped`; the `dedalo` service declares `DEDALO_SUPERVISED: "true"`. |
+| Dev | `bun run dev`, `bun run dev:server` or `bun run start:supervised` — loop on exit 75 ONLY, each declaring `DEDALO_SUPERVISED=true` on its command line. |
+
+The declaration (§2) is the code-update contract; the install restart itself only
+needs the exit-75 loop. A `DEDALO_SUPERVISED` line in `../private/.env` is
+ignored, and nothing infers supervision from systemd's own variables.
 
 Exit 75 is a *distinct* code on purpose: a graceful ^C also exits 0, so a
 supervisor keying on 0 could never be stopped, and one keying on "any exit"

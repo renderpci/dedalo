@@ -219,6 +219,12 @@ export function renderSampleEnv(): string {
 				out.push('# example:');
 				for (const line of example) out.push(`#   ${line}`);
 			}
+			// A process-environment-only key gets NO assignable line: this file is the
+			// one place it is ignored (catalog_types.ts processEnvironmentOnly).
+			if (entry.processEnvironmentOnly === true) {
+				out.push(`# (${key} is not read from this file — set it where the process starts.)`);
+				continue;
+			}
 			// A placeholder key ships UNCOMMENTED — the template must literally carry the
 			// value check_config rejects, or "still on the sample value" is unfalsifiable.
 			const prefix = entry.placeholder !== undefined || entry.required === true ? '' : '#';

@@ -86,10 +86,13 @@ Then it asks for:
 | --- | --- | --- |
 | Short code for your institution | an internal identifier, letters and digits | `dedalo` |
 | Full name | shown on the login screen | your institution's name |
-| Working languages | Dédalo language codes, comma-separated | `lg-eng,lg-spa` |
-| Thesauri to install now | controlled vocabularies to load | `none` — you can add them later |
+| Working languages | Dédalo language codes, comma-separated, or `default` | `default` — `lg-eng,lg-spa`, the same pair the browser wizard pre-ticks; the other languages are optional |
+| Optional thesauri to install now | controlled vocabularies to load: codes, `default` or `none` | `default` — today Spain (`es`); you can add others later |
 | Locale, time zone | the time zone stamps every record | your own |
+| Use the official update server | where ontology updates and release information come from (`v7.master.dedalo.dev`) | `Y` (the default). Answer `n` for an air-gapped install: no updates are offered until you add `ONTOLOGY_SERVERS` and `CODE_SERVERS` to `/private/.env` |
 | Password for root | the administrator account | choose a strong one and store it |
+
+The **Languages** thesaurus is not a question: it is part of every installation and is activated together with the database.
 
 Then it builds the image (slow the first time — it is downloading the media toolchain), starts PostgreSQL, installs Dédalo, and starts the server. The database password is generated for you; nobody ever needs to type it.
 
@@ -109,7 +112,7 @@ When it finishes, open the `https://…` address it prints and log in as **root*
 ./install.sh --wizard
 ```
 
-It asks the **certificate** question above and **who may reach the wizard** — it suggests the private address ranges, which cover this machine and your local network and nothing on the public internet — sets HTTPS up, starts everything, and stops. Then you open the `https://…` address it prints and answer the rest in the browser: because nothing is configured yet, the engine serves the **install wizard** instead of a login form. The screens are described in the [installer reference](installer_reference.md#the-browser-wizard).
+It asks the **certificate** question above and **who may reach the wizard** — it suggests the private address ranges, which cover this machine and your local network and nothing on the public internet — sets HTTPS up, starts everything, and stops. Then you open the `https://…` address it prints and answer the rest in the browser (languages, thesauri and the update server included): because nothing is configured yet, the engine serves the **install wizard** instead of a login form. The screens are described in the [installer reference](installer_reference.md#the-browser-wizard).
 
 !!! warning "TLS comes first here, and that is not an accident"
     The wizard sends the root password **you are about to choose** across the network. Over plain HTTP anyone on the same switch reads it. So the certificate is set up before the wizard is served, not as a step inside it.
@@ -151,7 +154,7 @@ At **Save config** the engine writes its configuration and restarts itself — t
 
 1. Create a normal **administrator** user and keep `root` for emergencies.
 2. Add your [users and projects](../management/users_and_permissions.md).
-3. Install the [hierarchies](../management/install_new_hierarchies.md) your collection needs, if you skipped them.
+3. Install the [hierarchies](../management/install_new_hierarchies.md) your collection needs beyond the default set.
 4. **Set up backups** — [backup](../management/backup.md). Three things matter here: the database, the media originals, and the `private` volume (your secrets — without it a restored database is an instance you cannot start). A database dump alone is not a backup.
 5. Know how to **replace the certificate** before you need to — it is one command, and it is the same one the installer used: [rotating TLS material](docker.md#rotating-tls-material). On this stack you can drop the `--compose-file` argument shown there — `docker-compose.simple.yml` is already the script's default.
 

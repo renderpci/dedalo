@@ -16,7 +16,9 @@ export const MAINTENANCE_KEYS = {
 		default: undefined,
 		heading: 'Defining server code provider',
 		typeLabel: 'array',
-		doc: `This parameter defines the code servers this install offers releases from. By default the server defines the official Dédalo code server, but you can include other mirror servers by adding entries to the array. Each entry is a JSON object with \`name\`, \`url\` and \`code\`.
+		doc: `This parameter defines the code servers this install offers releases from. Each entry is a JSON object with \`name\`, \`url\` and \`code\`; add entries to the array to offer mirror servers too.
+
+The installers (the command-line installer, the browser wizard and \`install.sh\`) WRITE the official Dédalo code server entry below, unless the install is declared air-gapped (\`--no-update-servers\`, the unticked update-server box in the wizard, or answering \`n\` in \`install.sh\`), which writes \`[]\`. Unset or \`[]\` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
 
 \`url\` is the master's JSON API endpoint — it MUST end in \`/dedalo/core/api/v1/json/\` (or \`/api/v1/json\`); any other path answers 404 and the panel reports the server as unreachable. \`code\` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN \`CODE_SERVERS\`.
 
@@ -207,7 +209,11 @@ This parameter needs to be included as \`code\` in [ONTOLOGY_SERVERS](#ontology-
 - an external server for local Ontologies (private Ontologies of entities.)
 - local server, the current installation
 
-Each entry is a JSON object with \`name\`, \`url\` and \`code\`. Configuration for the official dedalo.dev server:
+Each entry is a JSON object with \`name\`, \`url\` and \`code\`.
+
+The installers (the command-line installer, the browser wizard and \`install.sh\`) WRITE the official dedalo.dev entry below, unless the install is declared air-gapped (\`--no-update-servers\`, the unticked update-server box in the wizard, or answering \`n\` in \`install.sh\`), which writes \`[]\`. Unset or \`[]\` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
+
+Configuration for the official dedalo.dev server:
 
 \`\`\`bash
 ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]

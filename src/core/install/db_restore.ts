@@ -60,6 +60,57 @@ async function applySeedPredatedMigrations(connection: DbConnDescriptor): Promis
 	}
 }
 
+/**
+ * The default-config half of the restore — everything that writes through the ENGINE'S
+ * pool, which is guaranteed to point at the restored database only when no explicit
+ * connection was given. Answers the step's sentence.
+ */
+async function completeFreshInstall(): Promise<string> {
+	// Fresh installs get the full canonical test3 playground (WC-021 —
+	// single verified source, src/core/test_data/; the dump ships one bare
+	// row).
+	const { resetTestSection } = await import('../test_data/seed.ts');
+	await resetTestSection();
+	// The generic `test` TLD STRUCTURE comes from its one reviewable
+	// source (src/core/test_data/test_tld_ontology.json), materialized
+	// through the engine's own doors: matrix_ontology `<tld>0` records,
+	// then rebuildOntology() derives dd_ontology. The seed ships only the
+	// bootstrap the rebuild needs (the ontology35 registry row), so this
+	// is what actually gives a fresh install its Test area.
+	// allowAnyDatabase: a fresh install's database IS the application's —
+	// the door's test-database guard exists for the suite, not for here,
+	// and this runs on a database this step just restored from the seed.
+	// scope 'core': the hand-authored Test area and its closure — NOT the
+	// 8225 phase-2 clone twins, which exist so the SUITE can replay a frozen
+	// store naming one installation and have no business in a customer's
+	// ontology (405 nodes instead of 8474, measured 2026-08-21).
+	const { materializeTestTldOntology } = await import('../test_data/test_tld_materialize.ts');
+	const testTld = await materializeTestTldOntology({
+		allowAnyDatabase: true,
+		scope: 'core',
+	});
+	// The ENGINE-OWNED ontology (the sections the engine writes — the AI
+	// spend ledger): the same idempotent door boot runs, so a fresh install
+	// is complete before its first boot (ontology/engine_ontology.ts).
+	const { ensureEngineOntology } = await import('../ontology/engine_ontology.ts');
+	const engine = await ensureEngineOntology();
+	// CORE HIERARCHIES (A7): Languages is ACTIVATED against the terms the seed
+	// already ships in matrix_langs — never imported (hierarchy_activate.ts
+	// header carries the measurement). Here, in the restore, so every surface
+	// that restores the seed (CLI, wizard, install.sh) gets it with no step of
+	// its own; a failure fails the restore — an install without its languages
+	// thesaurus is not an install that worked.
+	const { activateCoreHierarchies } = await import('./hierarchy_activate.ts');
+	const core = await activateCoreHierarchies(-1);
+	if (!core.ok) {
+		refuseInstall(
+			'install.step_failed',
+			`Core hierarchy activation failed: ${core.errors.join('; ')}`,
+		);
+	}
+	return `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) + engine ontology (${engine.written} records) + core hierarchies activated (${core.activated.join(', ')}) — OK`;
+}
+
 /** Restore the seed dump into an empty database. `conn` defaults to config.db. */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
@@ -108,41 +159,10 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 			);
 		}
 		await applySeedPredatedMigrations(connection);
-		// Fresh installs get the full canonical test3 playground (WC-021 —
-		// single verified source, src/core/test_data/; the dump ships one bare
-		// row). Default-config path only: seed.ts writes through the pool, which
-		// is guaranteed to point at this DB only when no explicit conn was given.
-		if (conn === undefined) {
-			const { resetTestSection } = await import('../test_data/seed.ts');
-			await resetTestSection();
-			// The generic `test` TLD STRUCTURE comes from its one reviewable
-			// source (src/core/test_data/test_tld_ontology.json), materialized
-			// through the engine's own doors: matrix_ontology `<tld>0` records,
-			// then rebuildOntology() derives dd_ontology. The seed ships only the
-			// bootstrap the rebuild needs (the ontology35 registry row), so this
-			// is what actually gives a fresh install its Test area.
-			// allowAnyDatabase: a fresh install's database IS the application's —
-			// the door's test-database guard exists for the suite, not for here,
-			// and this runs on a database this step just restored from the seed.
-			// scope 'core': the hand-authored Test area and its closure — NOT the
-			// 8225 phase-2 clone twins, which exist so the SUITE can replay a frozen
-			// store naming one installation and have no business in a customer's
-			// ontology (405 nodes instead of 8474, measured 2026-08-21).
-			const { materializeTestTldOntology } = await import('../test_data/test_tld_materialize.ts');
-			const testTld = await materializeTestTldOntology({
-				allowAnyDatabase: true,
-				scope: 'core',
-			});
-			// The ENGINE-OWNED ontology (the sections the engine writes — the AI
-			// spend ledger): the same idempotent door boot runs, so a fresh install
-			// is complete before its first boot (ontology/engine_ontology.ts).
-			const { ensureEngineOntology } = await import('../ontology/engine_ontology.ts');
-			const engine = await ensureEngineOntology();
-			return {
-				ok: true,
-				msg: `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) + engine ontology (${engine.written} records) — OK`,
-			};
-		}
+		// Default-config path only: the playground, the test TLD, the engine
+		// ontology and the core hierarchies write through the pool, which is
+		// guaranteed to point at this DB only when no explicit conn was given.
+		if (conn === undefined) return { ok: true, msg: await completeFreshInstall() };
 		return {
 			ok: true,
 			msg: 'Database installed from seed — OK (test3 playground seed skipped: explicit connection)',

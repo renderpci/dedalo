@@ -70,6 +70,9 @@ Some common and shared TLD's: (list ordered by type and name)
 | Web sites  | Website structure, menus, etc  | Websites (6)  | ww10  | ww |
 | Ubication  | Topographic, to identify the location of objects  | Ubications (9)  | hierarchy20  | ubication |
 
+!!! note "Languages is already there"
+    The Languages hierarchy (`lg`) is active on every installation: its terms ship with the installation database and the installer activates it. There is nothing to create, import or reset for it.
+
 !!! info "TLD's names"
     The first hierarchies created were toponyms, and this hierarchies followed the ISO TLD's Alpha 2 to use as Dédalo ontology TLD. Some of the first common hierarchies follow the ISO Alpha 2 rule, as thematic hierarchy, that use `ts` as TLD, by the time, it became impossible to create new ontologies following the Alpha 2 rule, so, the Alpha2 rule was removed and now Dédalo can use a longs TLD's, but following some rules: For this historical reasons no spaces, especial characters, numbers, points, commas or any other characters outside ASCII characters are valid (as accents á, è, ç, ñ, etc.). To create hierarchies TLD's, only \[a-z\] characters are accepted.
 

@@ -163,6 +163,35 @@ export function privateFileValue(key: string): string | undefined {
 }
 
 /**
+ * One value as the PROCESS environment names it — the process half of readEnv's
+ * chain only (the key, then its PHP-catalog alias), never `../private/.env`.
+ * The mirror of privateFileValue. For a decision that must know what the LAUNCH
+ * declared, not what the shared config file says: `../private/.env` is read by
+ * every launch method alike, so a value there cannot tell a supervised process
+ * from an unsupervised one (src/core/update/supervision.ts). Read live, never
+ * snapshotted.
+ */
+export function processEnvValue(key: string): string | undefined {
+	const direct = process.env[key];
+	if (direct !== undefined) return direct;
+	const alias = PHP_KEY_ALIASES[key];
+	return alias === undefined ? undefined : process.env[alias];
+}
+
+/**
+ * Write entries into the process environment. The installer CLI's pre-config
+ * bootstrap (scripts/install.ts): the frozen config reads its mandatory keys at
+ * import, so the install answers must be in the environment BEFORE the engine
+ * modules load. This is the ONE process.env writer outside this loader — a
+ * caller outside src/config/ goes through it, never through `process.env`.
+ */
+export function seedProcessEnv(values: Readonly<Record<string, string>>): void {
+	for (const [key, value] of Object.entries(values)) {
+		process.env[key] = value;
+	}
+}
+
+/**
  * A merged env MAP with the same precedence readEnv applies (process env wins
  * over ../private/.env). For modules whose API takes an injectable env map
  * (e.g. ai/rag/multimodal_config.ts) — defaulting such a parameter to bare

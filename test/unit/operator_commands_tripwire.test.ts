@@ -73,6 +73,7 @@ import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 // The alias rule ITSELF, not a copy of it: leg H holds the backup scripts' own
 // fallback table equal to the one the engine's readEnv applies.
 import { PHP_KEY_ALIASES } from '../../src/config/env.ts';
+import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -1151,18 +1152,28 @@ describe('the nightly backup unit reads keys that exist and reports the failures
 	}
 
 	/**
-	 * The keys `persistConfig` WRITES into ../private/.env — parsed from the emitted
-	 * lines, never listed here. This is the census the old unit contradicted.
+	 * The keys `persistConfig` WRITES into ../private/.env — the install plan's own
+	 * key list with every optional block on (installer unification A1, 2026-10-08:
+	 * every installer writes the .env from `install_plan.ts`), never listed here.
+	 * This is the census the old unit contradicted.
 	 */
 	function installerWrittenKeys(): Set<string> {
-		const source = read('src/core/install/config_persist.ts');
-		const keys = new Set<string>();
-		for (const m of source.matchAll(/`([A-Z][A-Z0-9_]*)=\$\{/g)) keys.add(m[1] as string);
-		for (const m of source.matchAll(/'([A-Z][A-Z0-9_]*)=[^']*'/g)) keys.add(m[1] as string);
-		expect(
-			keys.size,
-			'config_persist.ts: no written keys parsed — this leg went blind',
-		).toBeGreaterThan(5);
+		const plan = buildInstallPlan(
+			{
+				db_database: 'x',
+				db_username: 'u',
+				entity: 'e',
+				diffusion: true,
+				mailer: true,
+				smtp_host: 'h',
+				media_path: '/m',
+				unix_socket: '/s',
+				media_access_mode: 'publication',
+			},
+			{ salt: 's' },
+		);
+		const keys = new Set(plan.envKeys);
+		expect(keys.size, 'install_plan.ts: no written keys — this leg went blind').toBeGreaterThan(5);
 		return keys;
 	}
 

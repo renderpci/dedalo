@@ -352,6 +352,10 @@ const TRIPWIRES = [
 	'test/unit/publication_host_spec_refs_tripwire.test.ts',
 	// #125 — the vendored transformers.js core and the onnxruntime-web pin are one build (2026-10-04).
 	'test/unit/onnxruntime_alignment_tripwire.test.ts',
+	// Installer unification A1/A3 — CLI and wizard produce one plan and one .env (2026-10-08).
+	'test/unit/install_plan_parity_tripwire.test.ts',
+	// Installer unification C — every runtime definition that restarts the server declares DEDALO_SUPERVISED (2026-10-08).
+	'test/unit/supervision_declaration_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.
     - The publication host provisioner now refuses an instance declaration that anyone other than root could change.
     - Publication host provisioning works with Apache on Debian and Ubuntu.
     - Several publication hosts on one server are checked for isolation.
@@ -1003,6 +1004,18 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.** *(action needed)*
+
+    The command-line installer, the browser wizard and `install.sh` now work from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
+
+    - **Update servers are written by default.** Installs used to leave `ONTOLOGY_SERVERS` and `CODE_SERVERS` out of `/private/.env`, which meant no ontology or code updates were ever offered. The installers now write the official Dédalo server (`v7.master.dedalo.dev`) into both. For an air-gapped installation, answer *no* to the update-server question, or pass `--no-update-servers` to the command-line installer. Both keys are then written as `[]`, and you can add them later. Re-running the installer does not overwrite update servers you already set. An earlier air-gapped `[]` is not kept, though: answering *yes* on a re-run switches the installation back to the official server.
+    - **Languages is always active.** The Languages thesaurus (`lg`) is switched on together with the database on every install. It is no longer a choice and is never imported, because its terms already ship with the installation database.
+    - **Default working languages: English and Spanish.** All three installers default to `lg-eng` and `lg-spa`. The wizard used to pre-tick the whole language list; the other languages are still offered, but they are optional and you tick them yourself.
+    - **One default set of optional thesauri.** All three installers start from the same default: today that is Spain (`es`). The wizard no longer pre-ticks France. The command-line installer used to install no thesaurus by default and now installs this set; use `--hierarchies none` to skip it. A thesaurus that fails to install now stops the install before anything is sealed. Unknown command-line flags (including the old `--yes`) are refused, and the database host defaults to `localhost` instead of `/tmp`.
+    - **Supervision must be declared (action needed).** The code update panel only replaces the code tree when something will restart the server afterwards. It used to guess this from systemd's own variables. Those variables are also inherited by terminal shells in desktop sessions, so an unsupervised `bun run start` could look supervised: the update would install the new code, stop the server and leave it stopped. The guess is gone. Now the code update runs only when the process manager declares `DEDALO_SUPERVISED=true`, and the shipped systemd units, compose stacks and the `dev` / `dev:server` / `start:supervised` scripts all do. **If your systemd unit or compose file was written before this release, add `Environment=DEDALO_SUPERVISED=true` to the unit's `[Service]` section, or `DEDALO_SUPERVISED: "true"` to the `dedalo` service's `environment:`.** Setting it in `/private/.env` has no effect, because every launch method reads that file, including the unsupervised `bun run start` ([updating the code](./management/updates/updating_code.md)).
+
+    Wire contract: `WC-2026-10-08-install-plan-update-servers-core-lg`.
+
 - **"`provision check` now refuses a publication host where a service could not read or run its own code, and an `engine_group` that is one of the instance's own groups."**
 
     Until now, a home directory left at Ubuntu's `0750`, an agent copy that only root could read,
@@ -1672,7 +1685,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 103 entries"
+??? note "Wire contract — 104 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1776,6 +1789,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-07-ontology-area-admin-grant`
     - `WC-2026-10-07-update-code-root-entries-stamp`
     - `WC-2026-10-08-install-ip-denied-names-address`
+    - `WC-2026-10-08-install-plan-update-servers-core-lg`
     - `WC-2026-10-08-make-backup-scheduled-evidence`
 
 ## 7.0.0-beta.4 — 2026-08-24

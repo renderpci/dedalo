@@ -11,10 +11,14 @@ import { afterAll, afterEach, beforeEach, describe, expect, test } from 'bun:tes
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseEnvFile } from '../../src/config/env.ts';
+import { parseEnvFile, seedProcessEnv } from '../../src/config/env.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
+import {
+	OFFICIAL_CODE_SERVER,
+	OFFICIAL_ONTOLOGY_SERVER,
+} from '../../src/core/install/install_plan.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
@@ -326,12 +330,12 @@ describe('persist_config (P2)', () => {
 		expect(parsed.DEDALO_STRUCTURE_LANG).toBe('lg-spa');
 	});
 
-	test('no langs posted → defaults to the whole catalog (still bootable)', async () => {
+	test('no langs posted → defaults to lg-eng + lg-spa (still bootable)', async () => {
 		const result = await persistConfig({ ...BASE_CFG });
 		expect(result.ok).toBe(true);
 		const parsed = parseEnvFile(readFileSync(join(scratch, '.env'), 'utf8'));
 		const map = JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string) as Record<string, string>;
-		expect(Object.keys(map).length).toBe(10);
+		expect(Object.keys(map)).toEqual(['lg-eng', 'lg-spa']);
 		expect(map['lg-eng']).toBe('English');
 	});
 
@@ -351,13 +355,87 @@ describe('persist_config (P2)', () => {
 			);
 			expect(isDedaloError(error)).toBe(true);
 			expect((error as { code: string }).code).toBe('install.invalid_input');
-			expect((error as Error).message).toContain('Language selection invalid');
+			expect((error as Error).message).toContain('Install answers invalid: languages:');
 			// nothing written
 			const { existsSync } = await import('node:fs');
 			expect(existsSync(join(scratch2, '.env'))).toBe(false);
 		} finally {
 			process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch;
 			rmSync(scratch2, { recursive: true, force: true });
+		}
+	});
+
+	/**
+	 * UPDATE SERVERS (installer unification A3, 2026-10-08). No installer used to
+	 * write ONTOLOGY_SERVERS / CODE_SERVERS, so every fresh install's update
+	 * panels answered "No master servers are configured". The official master is
+	 * the default; `[]` (air-gapped) only on an explicit answer; a list the
+	 * operator already has survives a non-air-gapped re-save.
+	 */
+	async function persistInOwnScratch(
+		name: string,
+		answers: Record<string, unknown>,
+		prior?: string,
+	): Promise<{ body: string; parsed: Record<string, string> }> {
+		const own = mkdtempSync(join(tmpdir(), `dedalo_install_p2_${name}_`));
+		seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: own });
+		try {
+			if (prior !== undefined) writeFileSync(join(own, '.env'), prior);
+			const result = await persistConfig(answers);
+			expect(result.ok).toBe(true);
+			const body = readFileSync(join(own, '.env'), 'utf8');
+			return { body, parsed: parseEnvFile(body) };
+		} finally {
+			seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: scratch });
+			rmSync(own, { recursive: true, force: true });
+		}
+	}
+
+	test('update servers: absent answer → the official master for ontology AND code', async () => {
+		const { parsed } = await persistInOwnScratch('servers_default', { ...BASE_CFG });
+		expect(JSON.parse(parsed.ONTOLOGY_SERVERS as string)).toEqual([OFFICIAL_ONTOLOGY_SERVER]);
+		expect(JSON.parse(parsed.CODE_SERVERS as string)).toEqual([OFFICIAL_CODE_SERVER]);
+	});
+
+	test('update servers: update_servers:false (air-gapped) → both [] — even over a prior list', async () => {
+		const prior =
+			'DEDALO_SALT_STRING=deadbeef\nONTOLOGY_SERVERS=[{"name":"m","url":"https://m.example.org/","code":"c"}]\n';
+		const { parsed } = await persistInOwnScratch(
+			'servers_none',
+			{ ...BASE_CFG, update_servers: false },
+			prior,
+		);
+		expect(JSON.parse(parsed.ONTOLOGY_SERVERS as string)).toEqual([]);
+		expect(JSON.parse(parsed.CODE_SERVERS as string)).toEqual([]);
+	});
+
+	test('update servers: a prior custom list survives an official re-save verbatim, once', async () => {
+		const mirror =
+			'CODE_SERVERS=[{"name":"Mirror","url":"https://mirror.example.org/dedalo/core/api/v1/json/","code":"m"}]';
+		const { body, parsed } = await persistInOwnScratch(
+			'servers_mirror',
+			{ ...BASE_CFG, update_servers: true },
+			`DEDALO_SALT_STRING=deadbeef\n${mirror}\n`,
+		);
+		expect(body.split('\n').filter((line) => line.startsWith('CODE_SERVERS='))).toEqual([mirror]);
+		expect(JSON.parse(parsed.ONTOLOGY_SERVERS as string)).toEqual([OFFICIAL_ONTOLOGY_SERVER]);
+	});
+
+	test('update servers: an unknown choice REFUSES — no .env written', async () => {
+		const own = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_servers_bad_'));
+		seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: own });
+		try {
+			const error = await persistConfig({ ...BASE_CFG, update_servers: 'mirror' }).then(
+				() => null,
+				(caught: unknown) => caught,
+			);
+			expect(isDedaloError(error)).toBe(true);
+			expect((error as Error).message).toContain('update_servers must be official|none');
+			const { existsSync } = await import('node:fs');
+			expect(existsSync(join(own, '.env'))).toBe(false);
+		} finally {
+			seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: scratch });
+			rmSync(own, { recursive: true, force: true });
 		}
 	});
 });

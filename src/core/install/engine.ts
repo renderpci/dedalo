@@ -53,101 +53,137 @@ function stepResult(context: ApiRequestContext, outcome: { ok: unknown }): ApiRe
 	return { status: 200, body: ok(value, { requestId: context.requestId, extend }) };
 }
 
+type StepHandler = (options: StepOptions, context: ApiRequestContext) => Promise<ApiResult>;
+
+/** The in-wizard root session, or the refusal (record-writing steps only). */
+function requireSession(context: ApiRequestContext): NonNullable<ApiRequestContext['session']> {
+	if (context.session === null) throw new DedaloError('auth.not_logged');
+	return context.session;
+}
+
+/**
+ * Every step, by its wire action name. The plan's step ids
+ * (install_plan.ts INSTALL_STEP_IDS) are a subset of these keys — gated, so a
+ * plan can never name a step the wizard cannot route. `to_update` and
+ * `verify_active_config` are wizard-only affordances, not plan steps.
+ */
+const STEP_HANDLERS: Readonly<Record<string, StepHandler>> = Object.freeze({
+	to_update: async () => {
+		// The TS installer supports no in-place v5/v6 data migration (the client
+		// only shows the button when db_data_version[0] < 6, which we never
+		// emit). Defensive: refuse rather than pretend.
+		throw new DedaloError('engine.uncovered_scope', {
+			message: 'Update path not supported in the TS installer',
+		});
+	},
+
+	test_db_connection: async (options, context) => {
+		const { testDbConnection } = await import('./db_probe.ts');
+		return stepResult(context, await testDbConnection(options));
+	},
+
+	test_diffusion_connection: async (options, context) => {
+		const { testDiffusionConnection } = await import('./db_probe.ts');
+		return stepResult(context, await testDiffusionConnection(options));
+	},
+
+	test_mailer_connection: async (options, context) => {
+		const { testMailerConnection } = await import('./mailer_probe.ts');
+		return stepResult(context, await testMailerConnection(options));
+	},
+
+	check_directories: async (options, context) => {
+		const { checkDirectories } = await import('./directories.ts');
+		return stepResult(context, checkDirectories({ create: options.create === true }));
+	},
+
+	persist_config: async (options, context) => {
+		const { persistConfig } = await import('./config_persist.ts');
+		// A failure THROWS out of persistConfig, so reaching the next line means
+		// the .env is written: persisting config makes the current (install-mode)
+		// process obsolete — schedule the restart AFTER the response flushes so
+		// it boots with real config. No-op under DEDALO_INSTALL_NO_RESTART
+		// (tests/CLI).
+		const persisted = await persistConfig(options);
+		const { scheduleServerRestart } = await import('./restart.ts');
+		scheduleServerRestart('config persisted');
+		return stepResult(context, persisted);
+	},
+
+	verify_active_config: async (options, context) => {
+		const { verifyActiveConfig } = await import('./config_persist.ts');
+		return stepResult(context, await verifyActiveConfig(options));
+	},
+
+	install_db_from_default_file: async (_options, context) => {
+		const { installDbFromSeed } = await import('./db_restore.ts');
+		return stepResult(context, await installDbFromSeed());
+	},
+
+	set_root_pw: async (options, context) => {
+		const { setRootPassword } = await import('./root_pw.ts');
+		return stepResult(context, await setRootPassword(String(options.password ?? '')));
+	},
+
+	install_hierarchies: async (options, context) => {
+		const session = requireSession(context);
+		const { installHierarchies } = await import('./hierarchy_import.ts');
+		const { normalizeHierarchyChoice } = await import('./install_plan.ts');
+		const { refuseInstall } = await import('./refuse.ts');
+		// The posted list goes through THE PLAN's thesaurus normalization — the one
+		// the CLI's answer took (install_plan_parity_tripwire): a core tld (lg) is
+		// dropped with a note (the seed restore already activated it,
+		// db_restore.ts), an unvendored one refuses BEFORE any write. [] (or no
+		// list) is a valid answer: no optional thesaurus.
+		const choice = normalizeHierarchyChoice(
+			Array.isArray(options.hierarchies) ? options.hierarchies : 'none',
+		);
+		if (choice.errors.length > 0) {
+			refuseInstall(
+				'install.invalid_input',
+				`Install answers invalid: ${choice.errors.join('; ')}`,
+			);
+		}
+		// The in-wizard root session owns the activation writes (registry flags,
+		// the provisioned ontology records) — audited to a real actor, not to -1.
+		const result = await installHierarchies(choice.hierarchies, undefined, session.userId);
+		if (choice.notes.length > 0) result.msg = `${result.msg} (${choice.notes.join('; ')})`;
+		return stepResult(context, result);
+	},
+
+	register_tools: async (_options, context) => {
+		requireSession(context);
+		const { registerInstallTools } = await import('./register_tools.ts');
+		return stepResult(context, await registerInstallTools());
+	},
+
+	install_finish: async (_options, context) => {
+		const { installFinish } = await import('./finish.ts');
+		// A refusal THROWS, so the next line means SEALED. This process booted
+		// mid-wizard and therefore skipped every database boot step (migrations,
+		// search stores, schedulers, caches — server.ts `databaseBoot`): restart
+		// it into the sealed instance, after the response flushes. The client's
+		// own countdown (5 s) then reloads into the app. No-op under
+		// DEDALO_INSTALL_NO_RESTART (tests/CLI — the CLI's server boots after).
+		const finished = await installFinish();
+		const { scheduleServerRestart } = await import('./restart.ts');
+		scheduleServerRestart('install sealed');
+		return stepResult(context, finished);
+	},
+});
+
+/** Every action name the router serves (the wire contract's step vocabulary). */
+export const INSTALL_ROUTER_ACTIONS: readonly string[] = Object.freeze(Object.keys(STEP_HANDLERS));
+
 /** Route one wizard step. */
 export async function runInstallStep(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const options = (rqo.options ?? {}) as StepOptions;
 	const step = options.action ?? '';
-
-	switch (step) {
-		case 'to_update': {
-			// The TS installer supports no in-place v5/v6 data migration (the client
-			// only shows the button when db_data_version[0] < 6, which we never
-			// emit). Defensive: refuse rather than pretend.
-			throw new DedaloError('engine.uncovered_scope', {
-				message: 'Update path not supported in the TS installer',
-			});
-		}
-
-		case 'test_db_connection': {
-			const { testDbConnection } = await import('./db_probe.ts');
-			return stepResult(context, await testDbConnection(options));
-		}
-
-		case 'test_diffusion_connection': {
-			const { testDiffusionConnection } = await import('./db_probe.ts');
-			return stepResult(context, await testDiffusionConnection(options));
-		}
-
-		case 'test_mailer_connection': {
-			const { testMailerConnection } = await import('./mailer_probe.ts');
-			return stepResult(context, await testMailerConnection(options));
-		}
-
-		case 'check_directories': {
-			const { checkDirectories } = await import('./directories.ts');
-			return stepResult(context, checkDirectories({ create: options.create === true }));
-		}
-
-		case 'persist_config': {
-			const { persistConfig } = await import('./config_persist.ts');
-			// A failure THROWS out of persistConfig, so reaching the next line means
-			// the .env is written: persisting config makes the current (install-mode)
-			// process obsolete — schedule the restart AFTER the response flushes so
-			// it boots with real config. No-op under DEDALO_INSTALL_NO_RESTART
-			// (tests/CLI).
-			const persisted = await persistConfig(options);
-			const { scheduleServerRestart } = await import('./restart.ts');
-			scheduleServerRestart('config persisted');
-			return stepResult(context, persisted);
-		}
-
-		case 'verify_active_config': {
-			const { verifyActiveConfig } = await import('./config_persist.ts');
-			return stepResult(context, await verifyActiveConfig(options));
-		}
-
-		case 'install_db_from_default_file': {
-			const { installDbFromSeed } = await import('./db_restore.ts');
-			return stepResult(context, await installDbFromSeed());
-		}
-
-		case 'set_root_pw': {
-			const { setRootPassword } = await import('./root_pw.ts');
-			return stepResult(context, await setRootPassword(String(options.password ?? '')));
-		}
-
-		case 'install_hierarchies': {
-			if (context.session === null) throw new DedaloError('auth.not_logged');
-			const { installHierarchies } = await import('./hierarchy_import.ts');
-			const tlds = Array.isArray(options.hierarchies) ? (options.hierarchies as string[]) : [];
-			// The in-wizard root session owns the activation writes (registry flags,
-			// the provisioned ontology records) — audited to a real actor, not to -1.
-			return stepResult(context, await installHierarchies(tlds, undefined, context.session.userId));
-		}
-
-		case 'register_tools': {
-			if (context.session === null) throw new DedaloError('auth.not_logged');
-			const { registerInstallTools } = await import('./register_tools.ts');
-			return stepResult(context, await registerInstallTools());
-		}
-
-		case 'install_finish': {
-			const { installFinish } = await import('./finish.ts');
-			// A refusal THROWS, so the next line means SEALED. This process booted
-			// mid-wizard and therefore skipped every database boot step (migrations,
-			// search stores, schedulers, caches — server.ts `databaseBoot`): restart
-			// it into the sealed instance, after the response flushes. The client's
-			// own countdown (5 s) then reloads into the app. No-op under
-			// DEDALO_INSTALL_NO_RESTART (tests/CLI — the CLI's server boots after).
-			const finished = await installFinish();
-			const { scheduleServerRestart } = await import('./restart.ts');
-			scheduleServerRestart('install sealed');
-			return stepResult(context, finished);
-		}
-
-		default:
-			throw new DedaloError('install.unknown_step', {
-				message: `Unknown install step '${step}'`,
-			});
+	const handler = Object.hasOwn(STEP_HANDLERS, step) ? STEP_HANDLERS[step] : undefined;
+	if (handler === undefined) {
+		throw new DedaloError('install.unknown_step', {
+			message: `Unknown install step '${step}'`,
+		});
 	}
+	return handler(options, context);
 }

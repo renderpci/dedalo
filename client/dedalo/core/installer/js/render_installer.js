@@ -835,6 +835,10 @@ const get_content_data = function(self) {
 			hierarchies				: properties.hierarchies,
 			default_checked			: properties.install_checked_default,
 			hierarchy_typologies	: properties.hierarchy_typologies,
+			// core hierarchies (lg) are activated with the seed restore — shown, not offered
+			core_hierarchies		: properties.core_hierarchies,
+			// optional thesauri are optional: an empty selection is a valid answer here
+			allow_empty				: true,
 			// On a successful import, reveal the Register tools step.
 			callback		: function() {
 				reveal_section(self.node.content_data.register_tools_block)
@@ -1589,7 +1593,9 @@ const render_entity_block = function(self) {
 	const props			= self.context.properties || {}
 	const available_langs	= props.available_langs || {}
 	const lang_codes		= Object.keys(available_langs)
-	const checked_default	= Array.isArray(props.install_checked_langs) ? props.install_checked_langs : lang_codes
+	// The server owns the default (lang_catalog.ts INSTALL_DEFAULT_LANG_CODES); no
+	// client-side "all languages" fallback — without the hint nothing is pre-ticked.
+	const checked_default	= Array.isArray(props.install_checked_langs) ? props.install_checked_langs : []
 
 	const langs_field = ui.create_dom_element({ element_type:'div', class_name:'installer_field', parent:fragment })
 	ui.create_dom_element({ element_type:'label', class_name:'installer_field_label', inner_html:get_label.working_languages || 'Working languages', parent:langs_field })
@@ -1639,6 +1645,36 @@ const render_entity_block = function(self) {
 	cfg.app_lang_default = props.application_lang_default || (lang_codes[0] || '')
 	cfg.data_lang_default = props.data_lang_default || (lang_codes[0] || '')
 	sync_langs()
+
+	// UPDATE SERVERS (WC-2026-10-08-install-plan-update-servers-core-lg): ticked =
+	// the official master is written to ONTOLOGY_SERVERS + CODE_SERVERS; unticked =
+	// air-gapped (both written as []). The default comes from the server context
+	// (`update_servers.default`); an absent context means checked. Server-supplied
+	// strings (the URL) go through text_content only.
+	const update_servers_props	= props.update_servers || {}
+	const official_servers		= update_servers_props.official || {}
+	const official_url			= (official_servers.ontology && official_servers.ontology.url) || ''
+	cfg.update_servers			= update_servers_props.default !== false
+
+	const updates_field = ui.create_dom_element({ element_type:'div', class_name:'installer_field', parent:fragment })
+	ui.create_dom_element({ element_type:'label', class_name:'installer_field_label', text_content:get_label.installation_updates || 'Updates', parent:updates_field })
+	const updates_row = ui.create_dom_element({ element_type:'label', class_name:'installer_lang_check', parent:updates_field })
+	const updates_checkbox = ui.create_dom_element({ element_type:'input', type:'checkbox', parent:updates_row })
+	updates_checkbox.checked = cfg.update_servers
+	ui.create_dom_element({ element_type:'span', text_content:get_label.installation_update_servers || 'Use the official Dédalo update server', parent:updates_row })
+	if (official_url !== '') {
+		ui.create_dom_element({ element_type:'div', class_name:'installer_field_help', text_content:official_url, parent:updates_field })
+	}
+	const airgapped_warning = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'installer_field_help' + (cfg.update_servers ? ' hide' : ''),
+		text_content	: get_label.installation_update_servers_airgapped || 'Air-gapped: no ontology or code updates will be offered until a server is added to ONTOLOGY_SERVERS / CODE_SERVERS in ../private/.env',
+		parent			: updates_field
+	})
+	updates_checkbox.addEventListener('change', function() {
+		cfg.update_servers = updates_checkbox.checked === true
+		airgapped_warning.classList.toggle('hide', cfg.update_servers)
+	})
 
 	// required field → its input, so validation can flag the exact offending field
 	const required_inputs = { entity:entity_input, information:information_input, info_key:info_key_input }
@@ -1903,7 +1939,8 @@ const render_persist_block = function(self) {
 	save_button.addEventListener('mouseup', async function() {
 		const api_response = await api_call_with_spinner({
 			action		: 'persist_config',
-			body_options: { ...cfg, diffusion: cfg.diffusion===true, mailer: cfg.mailer===true },
+			// update_servers: true = official master, false = air-gapped (absent → official)
+			body_options: { ...cfg, diffusion: cfg.diffusion===true, mailer: cfg.mailer===true, update_servers: cfg.update_servers!==false },
 			status_node	: status,
 			button_node	: save_button,
 			timeout		: 20*1000
@@ -2515,6 +2552,8 @@ const render_login_block = async function(self) {
 * @param {Array}  [options.hierarchy_typologies=[]] - Typology group descriptors ({label, typology})
 * @param {boolean} [options.show_filter=false]     - Render a live name/TLD text filter above the list
 * @param {Object} [options.reset_request]          - Endpoint ({dd_api, action, source}) for a destructive "Reset to seed" button (maintenance widget only)
+* @param {Array}  [options.core_hierarchies=[]]    - Always-installed core hierarchies ({tld, label}); shown as a fixed note, never offered (install wizard)
+* @param {boolean} [options.allow_empty=false]     - When true, an empty selection is confirmed and posted as `hierarchies: []` (install wizard); false keeps the "Select one or more items" refusal (maintenance widget)
 * @returns {DocumentFragment} Fragment with description, optional filter, grouped hierarchy checkboxes, import button, optional reset button, and status div
 */
 export const render_hierarchies_import_block = function(options) {
@@ -2538,6 +2577,12 @@ export const render_hierarchies_import_block = function(options) {
 		// When set (maintenance widget) a danger button re-seeds already-installed ticked
 		// hierarchies; absent (install wizard) → no reset button at all.
 		const reset_request				= options.reset_request || null
+		// Core hierarchies ({tld, label}) the seed restore always activates (lg). Shown as a
+		// fixed note so the operator knows Languages is installed whatever is ticked below.
+		const core_hierarchies			= Array.isArray(options.core_hierarchies) ? options.core_hierarchies : []
+		// Install wizard only: an empty optional selection is a valid answer (confirmed,
+		// then posted as `hierarchies: []`). Default false keeps the maintenance refusal.
+		const allow_empty				= options.allow_empty===true
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
@@ -2562,6 +2607,20 @@ export const render_hierarchies_import_block = function(options) {
 			inner_html		: get_label.import_hierarchies_directory_description || 'Source files directory: ' + hierarchy_files_dir_path,
 			parent			: fragment
 		})
+
+	// core hierarchies note (always installed, not selectable). Server-supplied labels →
+	// text_content only.
+		if (core_hierarchies.length>0) {
+			const core_list = core_hierarchies
+				.map(el => (el.label || el.tld) + ' [' + el.tld + ']')
+				.join(', ')
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'description info core_hierarchies',
+				text_content	: (get_label.core_hierarchies_always || 'Always installed:') + ' ' + core_list,
+				parent			: fragment
+			})
+		}
 
 	// filter bar (opt-in). A live text box that shows/hides list rows by name or TLD;
 	// wired below once the list (and its total) exists. Placed above the container so it
@@ -2750,8 +2809,8 @@ export const render_hierarchies_import_block = function(options) {
 		* FN_IMPORT_HIERARCHIES
 		* Event handler for the "Import hierarchies" button.
 		*
-		* Guards against empty selection (alert) and prompts for confirmation (confirm)
-		* before dispatching the 'install_hierarchies' API action with the collected TLD list.
+		* Guards against empty selection (alert; with allow_empty a confirm instead, then
+		* `hierarchies: []` is posted) and prompts for confirmation (confirm) before dispatching the 'install_hierarchies' API action with the collected TLD list.
 		* On a partial failure the first failing item's message is shown. On full success the
 		* import button is removed, and options.callback is called if provided.
 		*
@@ -2763,14 +2822,19 @@ export const render_hierarchies_import_block = function(options) {
 		*/
 		async function fn_import_hierarchies(){
 
-			// empty selection warning
-				if (hierarchies_to_install.length<1) {
+			// empty selection: refused (maintenance) or confirmed as a valid answer (install wizard,
+			// allow_empty) — the server answers `hierarchies: []` with ok:true.
+				const is_empty = hierarchies_to_install.length<1
+				if (is_empty && !allow_empty) {
 					alert( get_label.select_a_file || 'Select one or more items' );
 					return
 				}
 
 			// confirm action
-				if (!confirm( hierarchies_to_install.length + ' ' + get_label.hierarchies +'. '+ get_label.sure )) {
+				const confirm_text = is_empty
+					? (get_label.no_optional_hierarchies_confirm || 'No optional thesaurus will be installed (you can add them later from Maintenance › Add hierarchy). Continue?')
+					: hierarchies_to_install.length + ' ' + get_label.hierarchies +'. '+ get_label.sure
+				if (!confirm( confirm_text )) {
 					return false
 				}
 

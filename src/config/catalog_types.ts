@@ -56,7 +56,7 @@ export type ConfigType =
 export type ConfigScope =
 	| 'operator' // an administrator sets this
 	| 'secret' // an administrator sets this; the template emits a placeholder, never a value
-	| 'environment' // injected by the platform (INVOCATION_ID, JOURNAL_STREAM)
+	| 'environment' // set in the process environment by the launcher, never .env (DEDALO_SMOKE_BOOT)
 	| 'internal' // an engine guard, not a setting (NODE_TLS_REJECT_UNAUTHORIZED)
 	| 'test_seam'; // a seam the test suite redirects (DEDALO_TS_STATE_PATH)
 
@@ -137,6 +137,15 @@ export interface CatalogEntry {
 		/** An empty value is legitimate anyway (DB_PASSWORD under trust/peer auth). */
 		readonly emptyIsValid?: boolean;
 	};
+
+	/**
+	 * An OPERATOR-FACING key the engine reads from the PROCESS environment only, never
+	 * from ../private/.env (DEDALO_SUPERVISED: declared by the process manager). It is
+	 * documented like any operator key, but the template offers NO assignable
+	 * `#KEY=` line — uncommenting one would set it where it is ignored. Gate:
+	 * supervision_declaration_tripwire (the rendered template carries no such line).
+	 */
+	readonly processEnvironmentOnly?: true;
 
 	/**
 	 * Why a key that is NOT read anywhere in src/ is nonetheless in the catalog (read by

@@ -18,8 +18,10 @@
  * The invariants below are the ones whose violation actually breaks something:
  * a descriptor with no data file cannot be installed, a data file with no
  * descriptor is never offered (hierarchy_activate then falls back to a
- * placeholder typology), an unknown typology number renders an empty panel, and
- * an empty pre-checked set is a wizard that offers nothing.
+ * placeholder typology), an unknown typology number renders an empty panel, an
+ * empty pre-checked set is a wizard that offers nothing, and a CORE hierarchy
+ * (lg — activated by the seed restore, never imported) that came back as a
+ * vendored optional one would duplicate its terms where nothing reads them.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -29,8 +31,6 @@ import { join, resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const SERVER_DIR = join(ROOT, 'install/import/hierarchy');
 const CLIENT_INSTALLER_DIR = join(ROOT, 'client/dedalo/core/installer');
-
-/** PHP install_checked_default — mirrored from src/core/install/context.ts. */
 
 interface HierarchyMeta {
 	tld: string;
@@ -83,31 +83,47 @@ describe('install seed tripwire', () => {
 		expect(unknown).toEqual([]);
 	});
 
-	test('hierarchies_to_install names only tlds that exist', () => {
-		const known = new Set(descriptors.map((d) => d.tld));
-		expect(toInstall.filter((tld) => !known.has(tld))).toEqual([]);
+	test('the ONE optional-thesaurus default is the descriptors flagged install_checked_default — all offered', async () => {
+		// ASK THE ENGINE, do not re-implement it: defaultOptionalHierarchies() is
+		// what BOTH front ends read (the wizard's pre-ticked boxes via context.ts,
+		// the CLI's omitted --hierarchies via install_plan.ts). The gate holds it
+		// equal to the DATA — the descriptors flagged in hierarchies.json — so a
+		// second list (the retired INSTALL_CHECKED_DEFAULT literal) cannot return
+		// unnoticed, and a flagged descriptor without its data file reddens.
+		const { defaultOptionalHierarchies } = await import('../../src/core/install/hierarchy_meta.ts');
+		const flagged = descriptors
+			.filter((d) => (d as { install_checked_default?: boolean }).install_checked_default === true)
+			.map((d) => d.tld);
+		const served = defaultOptionalHierarchies();
+		expect(served.length, 'an empty default set is a wizard that offers nothing').toBeGreaterThan(
+			0,
+		);
+		expect(served).toEqual(flagged);
+		expect(served.filter((tld) => !dataFileTlds.has(tld))).toEqual([]);
 	});
 
-	test('the pre-checked default set is non-empty after the availability filter', async () => {
-		// ASK THE ENGINE, do not re-implement it. This assertion used to filter a
-		// hand-copied duplicate of `INSTALL_CHECKED_DEFAULT` against a re-derived
-		// file list — a statement about the test's own literals, which would stay
-		// green while the installer pre-checked nothing. Both the constant and
-		// `effectiveDefaults()` are exported now, so the gate measures what the
-		// wizard actually serves.
-		// ts/utoponymy are legacy hints that ship no data file: the filter is the
-		// point, but its RESULT must never be empty.
-		const { INSTALL_CHECKED_DEFAULT, effectiveDefaults } = await import(
-			'../../src/core/install/context.ts'
-		);
-		const effective = effectiveDefaults();
-		expect(effective.length).toBeGreaterThan(0);
-		expect(effective).toContain('es');
-		expect(effective).toContain('lg');
-		// and it really is a SUBSET of the declared defaults, filtered by what is
-		// vendored — not some other list that happens to be non-empty.
-		expect(effective.filter((tld) => !INSTALL_CHECKED_DEFAULT.includes(tld))).toEqual([]);
-		expect(effective.filter((tld) => !dataFileTlds.has(tld))).toEqual([]);
+	test('no CORE hierarchy is vendored as an optional one (descriptor or <tld>1.copy.gz)', async () => {
+		// A core tld (lg) is ACTIVATED by the seed restore against the terms the
+		// seed ships in its own table; a descriptor would offer it as a choice and
+		// a data file would let the importer write unread duplicates into
+		// matrix_hierarchy (the defect retired 2026-10-08).
+		const { CORE_HIERARCHIES } = await import('../../src/core/install/hierarchy_meta.ts');
+		expect(CORE_HIERARCHIES.length).toBeGreaterThan(0);
+		const core = CORE_HIERARCHIES.map((meta) => meta.tld);
+		expect(core.filter((tld) => descriptors.some((d) => d.tld === tld))).toEqual([]);
+		expect(core.filter((tld) => dataFileTlds.has(tld))).toEqual([]);
+		expect(core.filter((tld) => existsSync(join(SERVER_DIR, `${tld}1.copy.gz`)))).toEqual([]);
+	});
+
+	test('hierarchies_to_install ⊆ descriptors ∪ CORE, and ⊇ CORE (the seed registry keeps them)', async () => {
+		// hierarchies_to_install lists the registry records the seed builder ships;
+		// a core tld's record (hierarchy1 for lg) must survive or there is nothing
+		// for the seed restore to activate.
+		const { CORE_HIERARCHIES } = await import('../../src/core/install/hierarchy_meta.ts');
+		const core = CORE_HIERARCHIES.map((meta) => meta.tld);
+		const known = new Set([...descriptors.map((d) => d.tld), ...core]);
+		expect(toInstall.filter((tld) => !known.has(tld))).toEqual([]);
+		expect(core.filter((tld) => !toInstall.includes(tld))).toEqual([]);
 	});
 
 	test('the seed dump is vendored', () => {

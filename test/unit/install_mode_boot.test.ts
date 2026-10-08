@@ -154,9 +154,12 @@ describe('mid-wizard boot never writes the not-yet-seeded database (2026-10-08)'
 	});
 
 	test('install_finish schedules the restart into the sealed instance', () => {
-		const finish = ENGINE.slice(ENGINE.indexOf("case 'install_finish':"));
-		expect(finish.length, "engine.ts: no 'install_finish' step").toBeGreaterThan(0);
-		const block = finish.slice(0, finish.indexOf('\n\t\t}'));
+		// engine.ts dispatches through the STEP_HANDLERS map (2026-10-08): the
+		// install_finish handler is a map entry, closed by `\n\t},`.
+		const at = ENGINE.indexOf('\tinstall_finish: async');
+		expect(at, "engine.ts: no 'install_finish' step handler").toBeGreaterThanOrEqual(0);
+		const finish = ENGINE.slice(at);
+		const block = finish.slice(0, finish.indexOf('\n\t},'));
 		expect(block).toContain('await installFinish()');
 		expect(block).toContain("scheduleServerRestart('install sealed')");
 		expect(block.indexOf('await installFinish()')).toBeLessThan(

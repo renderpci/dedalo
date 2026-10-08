@@ -43,6 +43,10 @@ services:
       DEDALO_DEBUG_API_ERRORS: "true"
       # No TLS on this box, so the cookie must not be Secure. See note 4 above.
       SESSION_COOKIE_SECURE: "false"
+      # Explicit, not inherited: this service's supervisor is the dev:server
+      # exit-75 loop below (which declares it too) plus the simple stack's
+      # restart policy. The bind-mounted tree is what a code update swaps.
+      DEDALO_SUPERVISED: "true"
     volumes:
       # THE WHOLE POINT. The checkout on the NAS share is mounted over the
       # application directory, so `git pull` replaces the code the running
