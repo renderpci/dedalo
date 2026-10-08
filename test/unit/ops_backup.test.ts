@@ -225,23 +225,23 @@ describe('initBackupSequence verification (S2-35)', () => {
 		// in-flight part and a retired failure are not dumps at all.
 		const dir = mkdtempSync(join(scratch, 'scheduled_'));
 		const plant = (name: string) => writeFileSync(join(dir, name), 'PGDMP');
-		expect(newestScheduledBackupName('zz', dir)).toBeNull();
-		plant('2026-01-01_000000.zz.postgresql_-1_forced_dbv7-0-0.custom.backup');
-		plant('2026-01-02_03.zz.postgresql_5_dbv7-0-0.custom.backup');
+		expect(newestScheduledBackupName('museum', dir)).toBeNull();
+		plant('2026-01-01_000000.museum.postgresql_-1_forced_dbv7-0-0.custom.backup');
+		plant('2026-01-02_03.museum.postgresql_5_dbv7-0-0.custom.backup');
 		plant('2026-01-03_000000.other.postgresql_timer.custom.backup');
-		plant('2026-01-04_000000.zz_mht.postgresql_timer.custom.backup');
-		plant('2026-01-05_000000.zz.postgresql_timer.custom.backup.part');
-		plant('2026-01-06_000000.zz.postgresql_timer.custom.backup.failed');
-		expect(newestScheduledBackupName('zz', dir)).toBeNull();
+		plant('2026-01-04_000000.museum_mht.postgresql_timer.custom.backup');
+		plant('2026-01-05_000000.museum.postgresql_timer.custom.backup.part');
+		plant('2026-01-06_000000.museum.postgresql_timer.custom.backup.failed');
+		expect(newestScheduledBackupName('museum', dir)).toBeNull();
 		expect(newestScheduledBackupName('other', dir)).toBe(
 			'2026-01-03_000000.other.postgresql_timer.custom.backup',
 		);
-		plant('2026-02-01_000000.zz.postgresql_timer.custom.backup');
-		plant('2026-03-01_000000.zz.postgresql_compose.custom.backup');
-		expect(newestScheduledBackupName('zz', dir)).toBe(
-			'2026-03-01_000000.zz.postgresql_compose.custom.backup',
+		plant('2026-02-01_000000.museum.postgresql_timer.custom.backup');
+		plant('2026-03-01_000000.museum.postgresql_compose.custom.backup');
+		expect(newestScheduledBackupName('museum', dir)).toBe(
+			'2026-03-01_000000.museum.postgresql_compose.custom.backup',
 		);
-		expect(newestScheduledBackupName('zz', join(dir, 'absent'))).toBeNull();
+		expect(newestScheduledBackupName('museum', join(dir, 'absent'))).toBeNull();
 	});
 });
 
