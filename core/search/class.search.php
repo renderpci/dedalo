@@ -1352,12 +1352,26 @@ class search {
 				$sql_filter_by_locators			= $this->build_sql_filter_by_locators();
 				$sql_filter_by_locators_order	= empty($this->search_query_object->order)
 					? $this->build_sql_filter_by_locators_order() // only if empty order
-					: 'ORDER BY ' . $this->build_sql_query_order();
+					: 'ORDER BY ' . $sql_query_order;
 
 				// select
 					$sql_query .= 'SELECT * FROM (';
-					$sql_query .= PHP_EOL . 'SELECT *';
-					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+					if (empty($this->search_query_object->order)) {
+						$sql_query .= PHP_EOL . 'SELECT *';
+						$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+					}else{
+						// ordered case (e.g. session order kept on navigate to a new record).
+						// The outer ORDER BY uses the order column aliases (like 'oh16_order'),
+						// so they and their joins must be resolved inside the sub-select.
+						// DISTINCT ON id (unique in every matrix table, incl. time machine) removes multi-value join duplicates.
+						$alias = $this->main_section_tipo_alias;
+						$sql_query .= PHP_EOL . 'SELECT DISTINCT ON ('.$alias.'.id) '.$alias.'.*';
+						foreach (array_unique((array)$this->order_columns) as $order_column) {
+							$sql_query .= ',' . PHP_EOL . $order_column;
+						}
+						$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+						$sql_query .= $sql_joins;
+					}
 					$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
 					$sql_query .= PHP_EOL . ') main_select';
 				// order

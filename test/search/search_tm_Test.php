@@ -166,4 +166,46 @@ final class search_tm_test extends TestCase {
 
 
 
+	/**
+	* TEST_search_filter_by_locators_order_returns_all_versions
+	* Record history (service_time_machine 'dd_grid' case): filter_by_locators + order by 'id'.
+	* (section_tipo, section_id) is not unique in matrix_time_machine, so every version
+	* must be returned, not only one per record.
+	* @return void
+	*/
+	public function test_search_filter_by_locators_order_returns_all_versions() {
+
+		$this->test_user_login();
+
+		// any record with more than one version
+		$conn	= DBi::_getConnection();
+		$result	= pg_query($conn, 'SELECT section_tipo, section_id, count(*) AS total FROM matrix_time_machine GROUP BY section_tipo, section_id HAVING count(*)>1 LIMIT 1');
+		$row	= pg_fetch_object($result);
+		if (empty($row)) {
+			$this->markTestSkipped('no record with more than one time machine version in this install');
+		}
+
+		$limit	= 10;
+		$sqo	= $this->get_sqo_base();
+			$sqo->section_tipo			= [$row->section_tipo];
+			$sqo->limit					= $limit;
+			$sqo->offset				= 0;
+			$sqo->filter_by_locators	= [(object)[
+				'section_tipo'	=> $row->section_tipo,
+				'section_id'	=> (string)$row->section_id
+			]];
+
+		$search_tm	= search::get_instance($sqo);
+		$result		= $search_tm->search();
+
+		$expected = min((int)$row->total, $limit);
+		$this->assertSame(
+			$expected,
+			count($result->ar_records),
+			'expected all versions of ' . $row->section_tipo . '/' . $row->section_id
+		);
+	}//end test_search_filter_by_locators_order_returns_all_versions
+
+
+
 }//end class search_tm_test
