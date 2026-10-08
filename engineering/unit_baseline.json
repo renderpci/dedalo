@@ -2116,6 +2116,11 @@
 			"skipped": 0,
 			"assertions": 14
 		},
+		"test/unit/install_sh_portability.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 512
+		},
 		"test/unit/install_step_router_native.test.ts": {
 			"tests": 8,
 			"skipped": 1,
