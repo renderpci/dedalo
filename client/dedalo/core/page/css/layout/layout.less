@@ -1553,19 +1553,19 @@
 
 	// only apply to page error, is not generic
 	&.raspa_error {
-		// background Raspa error
+		// own stacking context: without it the z-index:-1 image paints
+		// BEHIND body's opaque background and never shows
+		isolation: isolate;
+
+		// background Raspa error (viewport-pinned)
 		 &:after {
 			content: ' ';
 			background-image: url('../../themes/default/raspa_404.jpg');
 			background-size: cover;
 			background-repeat: no-repeat;
-			height: 100%;
-			width: 100%;
-			position: absolute;
-			left: 0px;
-			top: 0px;
-			min-height: 100vh;
-			overflow: hidden;
+			position: fixed;
+			inset: 0;
+			pointer-events: none;
 			opacity: 0.3;
 			z-index: -1;
 

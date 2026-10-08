@@ -6160,18 +6160,17 @@ dd-modal.dd_confirm .footer.content > button::before {
   padding: 4rem;
   line-height: 2.5rem;
 }
+.page_error_container.raspa_error {
+  isolation: isolate;
+}
 .page_error_container.raspa_error:after {
   content: ' ';
   background-image: url('../../themes/default/raspa_404.jpg');
   background-size: cover;
   background-repeat: no-repeat;
-  height: 100%;
-  width: 100%;
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  min-height: 100vh;
-  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   opacity: 0.3;
   z-index: -1;
 }
