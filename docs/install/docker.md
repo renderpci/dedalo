@@ -496,7 +496,10 @@ environment:
 ```
 
 A value is a comma list of four possible things: `loopback`, a literal address,
-a range such as `10.0.0.0/24`, or `any`.
+a range such as `10.0.0.0/24`, or `any`. If the wizard refuses you anyway, its
+message names the address the engine saw — add that one. Behind the nginx
+container it is rarely the address you would guess (Docker Desktop: `192.168.65.1`;
+a Linux bridge: a gateway such as `172.18.0.1`).
 
 !!! warning "`loopback` will not match behind the proxy"
     The address is resolved from the trusted `X-Forwarded-For` hop — and the
@@ -765,7 +768,7 @@ Container-specific symptoms; everything else is in
 | The wizard appears after a successful install | `/private` is not on a volume, so `.env` was lost | [problem 1](#1-private-has-no-parent-to-live-in) |
 | The wizard never appears — normal login instead | `/private/.env` already exists, so the engine is not in install mode | [B2](#b2-bring-the-stack-up-on-an-empty-private-volume) |
 | Newly uploaded media is a **403**, older media serves | nginx's workers are not in the engine's group | keep the `addgroup` calls in nginx's `command:` — [problem 3](#3-the-engine-writes-the-media-rules-the-proxy-reads-them) |
-| The install surface 403s from your browser | the key is unset (the default is the local machine only), your address is not in `DEDALO_INSTALL_ALLOWED_IPS`, or you named `loopback` behind the proxy | [B1](#b1-name-the-address-you-will-install-from) |
+| The install surface 403s from your browser | the key is unset (the default is the local machine only), your address is not in `DEDALO_INSTALL_ALLOWED_IPS`, or you named `loopback` behind the proxy. The refusal names the address the engine saw — add that one | [B1](#b1-name-the-address-you-will-install-from) |
 | The wizard hangs at *Save config*, engine down | no restart policy — the engine exits there by design | [B4](#b4-survive-the-restart-at-save-config) |
 | Every media file 404s, gate looks healthy | proxy `root` and `MEDIA_PATH` disagree | the root rule at the top of `deploy/nginx.conf` |
 | Uploads fail with **413** | `client_max_body_size` | already 300m in the shipped config — check you did not replace it |

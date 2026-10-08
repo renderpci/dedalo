@@ -316,6 +316,10 @@ sealed the installer runs without a password.
 
 **Fix.** Name the machine you install from — a literal address, a CIDR range, or
 `any` (every address; only behind a firewall, and removed once sealed). The
+refusal itself names the address the engine saw ("not allowed from this address
+(192.168.65.1)"), and so does the engine's log line for it — that is the one to
+add. Behind a container proxy it is rarely the address you would guess: Docker
+Desktop shows `192.168.65.1`, a Linux bridge a gateway such as `172.18.0.1`. The
 engine prints the list in force in its start-up log, next to the `INSTALL MODE`
 line, so you can see what it is actually applying:
 

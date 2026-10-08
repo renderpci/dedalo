@@ -473,6 +473,17 @@ render_installer.prototype.render = async function(options) {
 	// options
 		const render_level = options.render_level || 'full'
 
+	// no context: get_install_context was refused (e.g. install.ip_denied, which
+	// names the address to allow). The API error surface already shows that
+	// refusal; building the wizard on a null context only stacked a TypeError
+	// ("Cannot read properties of null") on top of it (2026-10-08).
+		if (!self.context) {
+			return ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'wrapper installer'
+			})
+		}
+
 	// content_data
 		const content_data = get_content_data(self)
 		if (render_level==='content') {

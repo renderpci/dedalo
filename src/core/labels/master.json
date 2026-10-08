@@ -217,7 +217,7 @@
 	"error_identify_provider_unavailable": "The identification provider is unavailable",
 	"error_identify_rag_disabled": "Semantic search (RAG) is disabled on this server",
 	"error_install_invalid_input": "The installer rejected a submitted value",
-	"error_install_ip_denied": "The installer is not allowed from this address",
+	"error_install_ip_denied": "The installer is not allowed from this address (${client_address}). Add it to DEDALO_INSTALL_ALLOWED_IPS and restart Dédalo.",
 	"error_install_not_reachable": "The installer is not available on an installed system",
 	"error_install_state_conflict": "The install step cannot run in the current state",
 	"error_install_step_failed": "The install step could not be completed",

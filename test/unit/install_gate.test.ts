@@ -109,6 +109,11 @@ describe('install window gate (P1)', () => {
 			anon('192.168.1.9'),
 		);
 		expect(res.status).toBe(403);
+		// The refusal names the address it saw — the one the operator must add
+		// (WC-2026-10-08-install-ip-denied-names-address).
+		const error = res.body.error as { code: string; details?: Record<string, unknown> };
+		expect(error.code).toBe('install.ip_denied');
+		expect(error.details).toEqual({ client_address: '192.168.1.9' });
 	});
 
 	test('IP allowlist: loopback token admits the local address', async () => {

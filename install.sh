@@ -427,9 +427,31 @@ fi
 # fast (a bad domain is discovered now, not after you have typed everything).
 choose_tls
 
+# WHO MAY OPEN THE WIZARD. Until it is sealed, the wizard is reachable without a
+# login, so the engine admits only the local machine unless told otherwise — and
+# behind this stack's nginx that is NOBODY: the engine sees the browser's address
+# as nginx forwards it (Docker Desktop's 192.168.65.1, a bridge gateway such as
+# 172.18.0.1, or the workstation's LAN address). This mode used to start the stack
+# without naming anyone, so every --wizard install answered 403 at the first
+# screen (measured 2026-10-08). The default offered is the private address ranges
+# (RFC 1918): every one of those cases, and nothing on the public internet. Once
+# the wizard is finished the value is inert — the install surface is gone.
+WIZARD_ALLOWED_IPS=''
 if [ "$WIZARD_MODE" = 'true' ]; then
 	echo
 	echo 'Wizard mode: the remaining questions are asked in the browser instead.'
+	echo
+	bold 'Who may open the install wizard?'
+	echo 'Until you press Finish the wizard needs no login, so only the addresses you'
+	echo 'name here may reach it. The default covers this machine and your local network'
+	echo '(the private address ranges) and nothing on the public internet. If the browser'
+	echo 'later says "not allowed from this address (X)", add X here and re-run.'
+	echo
+	ask WIZARD_ALLOWED_IPS 'Allowed addresses (comma-separated: addresses or ranges)' '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'
+	if [ "$WIZARD_ALLOWED_IPS" = 'any' ]; then
+		warn '"any" lets EVERY address drive the installer, including the public internet.'
+		confirm 'Really allow any address?' || fail 'Stopped. Re-run ./install.sh --wizard and name your network.'
+	fi
 fi
 
 echo
@@ -489,6 +511,9 @@ DEDALO_NGINX_CONF=$NGINX_CONF_NAME
 SESSION_COOKIE_SECURE=$COOKIE_SECURE
 COMPOSE_PROFILES=${COMPOSE_PROFILES:-}
 ENV
+if [ -n "$WIZARD_ALLOWED_IPS" ]; then
+	printf '# Who may open the install wizard (inert once it is finished).\nDEDALO_INSTALL_ALLOWED_IPS=%s\n' "$WIZARD_ALLOWED_IPS" >>"$ENV_FILE"
+fi
 umask 022
 echo "Wrote $ENV_FILE (database credentials, readable only by you)."
 
@@ -538,6 +563,11 @@ if [ "$WIZARD_MODE" = 'true' ]; then
 	echo
 	echo '  At "Save config" the engine restarts itself — that is expected. Leave'
 	echo '  the tab open; the wizard resumes on its own.'
+	echo
+	echo "  The wizard answers only: $WIZARD_ALLOWED_IPS"
+	echo '  (DEDALO_INSTALL_ALLOWED_IPS in '"$ENV_FILE"'). A refusal names the address'
+	echo '  it saw — add that one there, then apply it with:'
+	echo "      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d dedalo"
 	echo
 	if [ "$TLS_MODE" = 'local-ca' ]; then
 		warn '  Install the CA file on this computer FIRST, or the browser will refuse'

@@ -1735,6 +1735,12 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'operator',
 		retryable: false,
+		// The address the engine SAW (the trusted X-Forwarded-For hop). Behind a
+		// container proxy that is never what the operator would guess (Docker
+		// Desktop's 192.168.65.1, a bridge gateway), and without it the refusal
+		// was unactionable (WC-2026-10-08-install-ip-denied-names-address).
+		// Telling a caller its own address discloses nothing.
+		details_keys: ['client_address'],
 	},
 
 	// ── maintenance widgets ─────────────────────────────────────────────────
