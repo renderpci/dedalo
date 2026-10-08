@@ -81,6 +81,10 @@ A user home works identically — the structural rules are unchanged: the direct
 **above** the repo must be writable by the service user (the installer creates
 `../private/` there), and the socket, database and media path must be unique.
 
+A separate publication server follows the same one-Bun-per-site convention, with one
+difference: there each site's Bun belongs to root, because it runs the publication host
+agent and its grants. See [Publication host agent](publication_host.md#2-declare-the-instance).
+
 ## 1. One-time host preparation
 
 Do these once for the whole server, not per domain:

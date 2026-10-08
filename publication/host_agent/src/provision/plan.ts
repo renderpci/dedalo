@@ -30,6 +30,12 @@
  * planted by the suite's preload). A provisioned agent_dir is root-owned and not writable by
  * the agent, so refusing a `.test-tmp` here makes that fallback unreachable on a host.
  *
+ * NO DEVELOPMENT DEPENDENCY IN THE AGENT'S CHECKOUT. The deployment install is frozen and
+ * production-only (`bun run hostagent:install` = `bun install --frozen-lockfile --production`):
+ * a `<agent_dir>/node_modules/<devDependency>` means the tree was prepared with the dev
+ * install or the suite ran in it — build tools the publication host never needs, refused like
+ * `.test-tmp` (the OUTCOME is gated, not the script's spelling).
+ *
  * ZERO-DEPENDENCY.
  */
 import { dirname, join } from 'node:path';
@@ -151,6 +157,20 @@ export const TEST_SCRATCH_DIR = '.test-tmp';
 /** Where observeHost looks for a test scratch tree in the agent's checkout. */
 export function agentScratchPath(layout: AgentLayout): string {
   return join(layout.agentDir, TEST_SCRATCH_DIR);
+}
+
+/**
+ * The agent package's devDependencies (publication/host_agent/package.json), sorted. A
+ * literal, not a package.json import, because this module is zero-dependency
+ * (tests/provision_zero_dep.test.ts); tests/provision_plan.test.ts holds it EQUAL to the
+ * package's devDependencies, so adding one there without here is red. None may be installed
+ * in agent_dir.
+ */
+export const AGENT_DEV_DEPENDENCIES: readonly string[] = Object.freeze(['@types/bun', 'typescript']);
+
+/** Where observeHost looks for an installed development dependency in the agent's checkout. */
+export function agentDevDependencyPaths(layout: AgentLayout): string[] {
+  return AGENT_DEV_DEPENDENCIES.map(name => join(layout.agentDir, 'node_modules', name));
 }
 
 /* ── trust ────────────────────────────────────────────────────────────────────────── */
@@ -378,6 +398,15 @@ export function plan(
     refusals.push(
       `agent_dir holds a test scratch tree '${agentScratchPath(layout)}' — the suite ran in this checkout; ` +
         'remove it (it is what lets a hand start fall back to the committed .env.test test mode)',
+    );
+  }
+  const devInstalled = agentDevDependencyPaths(layout).filter(path => host.paths.has(path));
+  if (devInstalled.length > 0) {
+    refusals.push(
+      `agent_dir holds development dependencies (${devInstalled.map(path => `'${path}'`).join(', ')}) — ` +
+        'it was prepared with hostagent:install:dev or the suite ran in it; delete its node_modules/ ' +
+        "(a production install over it keeps the development packages), run 'bun run hostagent:install' " +
+        '(frozen, production-only) and copy that tree',
     );
   }
   if (refusals.length > 0) throw new PlanRefused(layout.instance, refusals);

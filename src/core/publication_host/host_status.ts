@@ -2,7 +2,7 @@
  * PUBLICATION-HOST PANEL STATUS, PURE. Turns what the engine knows about ONE host into
  * the fixed check list and the panel row the `publication_hosts` widget serves:
  * the registry record, which secret files exist, the outcome of `hostStatus`, the
- * expected rule hash (rules.ts) and the engine version. No I/O, no clock, no config:
+ * expected rule hash (rules.ts), the engine version and the work system's Bun pin. No I/O, no clock, no config:
  * the widget gathers, this file decides. Spec: engineering/PUBLICATION_HOST_SPEC.md
  * §2.3 (pairing), §3 (API lockstep), §5 (media modes), §6 (status).
  *
@@ -19,7 +19,7 @@
  * (secretPresenceOutcome), not tokens or PEM; a
  * failed `hostStatus` contributes its error CODE only (statusOutcomeFromError), and the
  * agent's prose (`media.problems`) is never copied into a check or a row. The agent's
- * free strings that DO surface (agent_version, API release ids, the rules hash) cross only
+ * free strings that DO surface (agent_version, bun_version, API release ids, the rules hash) cross only
  * when they match their shape; otherwise the check reads `malformed` and the row null.
  * Even so the client renders every `detail` as text, never HTML.
  *
@@ -50,6 +50,7 @@ export const HOST_CHECK_IDS = Object.freeze([
 	'reachable',
 	'pairing',
 	'agent_version',
+	'bun_version',
 	'media_mode',
 	'media_mount',
 	'media_read_only',
@@ -95,6 +96,13 @@ export interface HostStatusInput {
 	/** DEDALO_VERSION (src/core/update/version.ts), NEVER the tagged DEDALO_ENGINE_VERSION:
 	 * each API release `<version>_<digest7>` must be the engine release's twin (spec §3). */
 	engineVersion: string;
+	/**
+	 * The WORK system's pinned Bun: its `.bun-version`, which the widget reads through
+	 * code_restore.ts `bunPinOf(projectRoot)` (trimmed; null when absent or empty — this
+	 * tree pins none). The host's runtime must be this exact version: the engine and
+	 * the agent share Bun-coupled behaviour (Bun.sql, Bun.serve), so a drift is red.
+	 */
+	bunPin: string | null;
 }
 
 export interface HostPanelRow {
@@ -103,6 +111,8 @@ export interface HostPanelRow {
 	public_url: string | null;
 	checks: HostCheck[];
 	rules: { expected: string | null; reported: string | null };
+	/** Bun side by side: the work system's pin vs the host's running Bun (shaped, else null). */
+	bun: { expected: string | null; reported: string | null };
 	apis: Record<'v1' | 'v2', { current: string | null; previous: string | null }>;
 	token_present: boolean;
 	bundle_present: boolean;
@@ -164,6 +174,8 @@ const MALFORMED = 'malformed';
 /** Bounded semver-like: digits, dots, an optional short pre-release/build tail. */
 const AGENT_VERSION = /^\d{1,6}(\.\d{1,6}){1,3}([-+][0-9A-Za-z.-]{1,32})?$/;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
+/** A Bun.version: `x.y.z` plus an optional bounded tail (`-canary.20+abc1234`). */
+const BUN_VERSION = /^\d{1,6}\.\d{1,6}\.\d{1,6}([-+][0-9A-Za-z.+-]{1,64})?$/;
 
 /** A release id only when it is one (`<version>_<digest7>`); null otherwise. */
 function releaseId(value: string | null): string | null {
@@ -261,6 +273,23 @@ function agentVersionCheck(status: AgentStatus | null): HostCheck {
 			: check('agent_version', 'warn', MALFORMED);
 }
 
+/**
+ * The host's running Bun vs the work system's pin. EXACT equality (the work system's
+ * own boot warns on any drift from its pin — server.ts echoRuntimeVersion): equal → ok,
+ * different → blocked (red) with `<reported> != <pin>`. Unknown when the agent is
+ * unproved/unreachable, reported nothing, or this tree pins no Bun (nothing to compare).
+ */
+function bunVersionCheck(status: AgentStatus | null, pin: string | null): HostCheck {
+	if (status === null) return unavailable('bun_version');
+	const reported = status.bun_version;
+	if (reported === '') return check('bun_version', 'unknown', 'not_reported');
+	if (!BUN_VERSION.test(reported)) return check('bun_version', 'blocked', MALFORMED);
+	if (pin === null) return check('bun_version', 'unknown', 'unpinned');
+	return reported === pin
+		? check('bun_version', 'ok', reported)
+		: check('bun_version', 'blocked', `${reported} != ${pin}`);
+}
+
 /** `shared` and `copy` both serve media (phase 5 built the copy target: the media_copy
  * reconcile keeps a copy host converged); `none` serves none — a warning. */
 function mediaModeCheck(status: AgentStatus | null): HostCheck {
@@ -333,7 +362,7 @@ function apiCheck(api: 'v1' | 'v2', status: AgentStatus | null, engineVersion: s
 }
 
 export function buildHostChecks(input: HostStatusInput): HostCheck[] {
-	const { record, secrets, status, expected, engineVersion } = input;
+	const { record, secrets, status, expected, engineVersion, bunPin } = input;
 	const trusted = trustedStatus(record, status);
 	return [
 		check('registry', 'ok', record.paired_at),
@@ -341,6 +370,7 @@ export function buildHostChecks(input: HostStatusInput): HostCheck[] {
 		reachableCheck(status),
 		pairingCheck(record, status),
 		agentVersionCheck(trusted),
+		bunVersionCheck(trusted, bunPin),
 		mediaModeCheck(trusted),
 		mediaMountCheck(trusted),
 		mediaReadOnlyCheck(trusted),
@@ -369,6 +399,11 @@ function expectedHash(
 	return status !== null && expected?.ok === true ? expected.hash : null;
 }
 
+function reportedBun(status: AgentStatus | null): string | null {
+	const version = status?.bun_version ?? null;
+	return version !== null && BUN_VERSION.test(version) ? version : null;
+}
+
 function reportedHash(status: AgentStatus | null): string | null {
 	const hash = status?.rules.hash ?? null;
 	return hash !== null && SHA256_HEX.test(hash) ? hash : null;
@@ -387,6 +422,7 @@ export function buildHostPanelRow(input: HostStatusInput): HostPanelRow {
 			expected: expectedHash(trusted, input.expected),
 			reported: reportedHash(trusted),
 		},
+		bun: { expected: input.bunPin, reported: reportedBun(trusted) },
 		apis: apiVersions(trusted),
 		token_present: input.secrets.token_present,
 		bundle_present: input.secrets.bundle_present,

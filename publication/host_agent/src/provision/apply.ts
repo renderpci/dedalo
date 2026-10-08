@@ -46,7 +46,7 @@ import { provisionExec } from '../exec';
 import { probeAppendOnly } from '../instance/roots';
 import type { AgentLayout } from './layout';
 import type { Action, EntryType, HostState, PathFacts, UnitFacts, WriteAction } from './plan';
-import { agentScratchPath, ancestorsBelow, describe, RENDERERS, renderAll, trustProblem } from './plan';
+import { agentDevDependencyPaths, agentScratchPath, ancestorsBelow, describe, RENDERERS, renderAll, trustProblem } from './plan';
 import type { Renderer } from './render/types';
 import { PENDING_FACTS } from './render/types';
 
@@ -423,6 +423,7 @@ export function observeHost(
     layout.agentDir,
     layout.agentEntry,
     agentScratchPath(layout),
+    ...agentDevDependencyPaths(layout),
   ];
   const observed = new Set<string>([trustRoot]);
   for (const path of watched) {

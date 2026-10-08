@@ -161,6 +161,8 @@ export interface PublicationHostsDeps {
 	engineQualities(): string[];
 	filterPublicQualities(configured: readonly string[]): string[];
 	engineVersion(): string;
+	/** The work system's pinned Bun (code_restore.ts bunPinOf(projectRoot)); null when unpinned. */
+	bunPin(): string | null;
 	/** THE one runtime read of a get_value (phase 4): a corrupt file → runtime_invalid. */
 	loadPanelRuntime(): Promise<PanelRuntime>;
 	/** The last round's lockstep verdict vs each row — never hashes the tree. */
@@ -209,6 +211,11 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 	const lockstep = await import('../../publication_host/api_reconcile.ts');
 	const { loadPanelRuntime } = await import('../../publication_host/panel_runtime.ts');
 	const { config } = await import('../../../config/config.ts');
+	// This widget reads the pin through code_restore.ts `bunPinOf` (the update panel's
+	// restore-point reader), never its own parse. Other `.bun-version` readers exist
+	// (server.ts boot warning, update/status.ts readLiveBunPin) — no single-reader claim.
+	const { bunPinOf } = await import('../../update/code_restore.ts');
+	const { projectRoot } = await import('../../../config/env.ts');
 	return {
 		registryPath,
 		loadRegistry,
@@ -227,6 +234,7 @@ export async function loadDefaultDeps(): Promise<PublicationHostsDeps> {
 		engineQualities: protection.getPublicQualities,
 		filterPublicQualities: protection.filterPublicQualities,
 		engineVersion: () => DEDALO_VERSION,
+		bunPin: () => bunPinOf(projectRoot),
 		loadPanelRuntime: () => loadPanelRuntime(),
 		buildApiLockstepPanel: lockstep.buildApiLockstepPanel,
 		reconcilePublicationApis: (opts) => lockstep.reconcilePublicationApis(opts),
@@ -428,6 +436,7 @@ async function hostRow(
 		status,
 		expected: readExpected(record, status, deps),
 		engineVersion: deps.engineVersion(),
+		bunPin: deps.bunPin(),
 	});
 	return servedRow(row, record, isRoot);
 }

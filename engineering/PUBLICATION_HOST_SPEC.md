@@ -137,6 +137,32 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    becoming ROOT is not one of those: the engine is trusted with what the web-server and
    v2 users can do, never with root.
    Every `current` swap is recorded `from → to` in the agent's append-only audit log.
+7. **The provisioner's inputs are root's alone.** Root renders the sudoers and polkit rules
+   and the units from the declaration and runs the code it names, so each input must be
+   changeable by root only (uid 0; the user table is never consulted). The code paths
+   (`agent_dir`, its entry point, `php_bin`, `bun_bin`, the configtest binary) are judged in
+   `publication/host_agent/src/provision/plan.ts` (`trustProblem`, `ancestorsBelow`). The
+   declaration is judged in `src/provision/cli.ts` `declarationTrustProblems` on `check` and
+   `apply`, BEFORE it is read: a regular file by lstat (a symlink is refused, never
+   followed), uid 0, `mode & 022 == 0`, and every ancestor up to and including `/` a real
+   directory with the same owner and mode. The sibling declarations the multi-instance
+   isolation check reads are judged the same way before each is read (a sibling a non-root
+   user can edit steers that check), and so are the config base and its ancestors even
+   when it holds no sibling or `--declaration` points elsewhere (whoever can write there can
+   remove a sibling and hide a clash). A failure is a plan refusal (exit 3); `render` is
+   exempt (no root, writes nothing). Residual: the read after the check is a plain read,
+   not an fstat of an `O_NOFOLLOW` descriptor; it is closed only because the checked chain
+   is root-only.
+   **Bun per site.** `bun_bin` is each instance's own Bun, at the work host's `.bun-version`,
+   in `/home/<site>/.bun/` and root-owned (it runs the agent and its grants), so sites
+   upgrade independently; the panel's `bun_version` check (§2.1) reds on any drift. The
+   binary is installed from the release archive checked against Bun's `SHASUMS256.txt`
+   (optionally its signed `.asc`), never a download piped into a root shell: the check
+   compares a SELF-REPORTED version, so it proves drift, not integrity.
+   **Development dependencies.** `plan` refuses an `agent_dir` whose `node_modules/` holds
+   any of the agent package's devDependencies (`plan.ts AGENT_DEV_DEPENDENCIES`, held equal
+   to `package.json`), like `.test-tmp/`: the deployment install is `bun run
+   hostagent:install` (frozen, production-only).
 
 Rejected alternatives, for the record: manual operation (drift, no panel visibility,
 unpublish depends on a human); SSH scripts from the engine (a shell credential for a
@@ -209,8 +235,17 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   `src/core/area_maintenance/widgets/publication_hosts.ts`, wire entry
   `engineering/wire_contract/WC-2026-10-03-publication-hosts-widget.md`). For each host it
   shows the checks `registry`, `secrets`, `reachable`, `pairing`, `agent_version`,
-  `media_mode`, `media_mount`, `media_read_only`, `rules_hash`, `api_v1` and `api_v2`, the
-  expected vs reported rule hash (§5.1), and each API's current/previous release. A
+  `bun_version`, `media_mode`, `media_mount`, `media_read_only`, `rules_hash`, `api_v1` and
+  `api_v2`, the expected vs reported rule hash (§5.1), the expected vs reported Bun version
+  (row field `bun: {expected, reported}`), and each API's current/previous release.
+  `bun_version` (`src/core/publication_host/host_status.ts`) compares the agent's `status`
+  `bun_version` with the work host's pin (repo-root `.bun-version`, read by the update
+  panel's `bunPinOf`): exact equality is `ok`; any difference (patch, minor, a prerelease or
+  build tail) is `blocked`, as is a value not shaped like a Bun version (`malformed`); an
+  unreachable or unproved agent (`status_unavailable`), an empty value (`not_reported`) and
+  an unpinned work host (`unpinned`) are `unknown`. `reported` is null unless the status is
+  trusted and shaped, so agent text never reaches the row. Exact equality because the
+  engine and the agent share Bun-coupled behaviour (`Bun.sql`, `Bun.serve`). A
   failure minted before anything was dialled (the local token-vs-registry pairing check,
   the registry lock's `busy`; coordinate `stage: 'local'`) never reads `ok` on `reachable`
   or `pairing`. The actions `apply_rules`, `probe`, `rollback_api`, `set_host_fields` and `remove_host` are

@@ -9,6 +9,8 @@
  * entry on the agent is the drift).
  */
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { widget } from '../../src/core/area_maintenance/widgets/publication_hosts.ts';
 import { getPublicQualities } from '../../src/core/media/protection.ts';
 import type { HostCheck } from '../../src/core/publication_host/host_status.ts';
@@ -107,5 +109,16 @@ describe('publication_hosts.reconcile_media_copy', () => {
 		};
 		const row = value.data.hosts.find((candidate) => candidate.name === 'zzmw_copy');
 		expect(row?.checks.find((check) => check.id === 'media_copy')).toMatchObject({ state: 'ok' });
+	}, 60_000);
+
+	test('get_value: the REAL deps feed bun_version the repo .bun-version pin (a null/wrong-root reader goes red here)', async () => {
+		await strayCopyHost('zzmw_copy');
+		const pin = readFileSync(join(import.meta.dir, '..', '..', '.bun-version'), 'utf8').trim();
+		expect(pin).toMatch(/^\d+\.\d+\.\d+/); // the repo pins Bun: a floor, never vacuous
+		const value = (await widget.getValue?.({}, ROOT)) as {
+			data: { hosts: { name: string; bun: { expected: string | null } }[] };
+		};
+		const row = value.data.hosts.find((candidate) => candidate.name === 'zzmw_copy');
+		expect(row?.bun.expected).toBe(pin);
 	}, 60_000);
 });

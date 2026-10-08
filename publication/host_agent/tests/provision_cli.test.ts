@@ -5,9 +5,10 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ProvisionDeps } from '../src/provision/cli';
-import { EXIT, hostDeps, parseArgs, run, secretShapedAssignment } from '../src/provision/cli';
+import { EXIT, declarationTrustProblems, hostDeps, parseArgs, run, secretShapedAssignment } from '../src/provision/cli';
 import type { HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
+import type { PathFacts } from '../src/provision/plan';
 import { ENGINE_KEYS, TOKEN_PLACEHOLDER } from '../src/provision/render/engine_fragment';
 import { TLS_VALIDITY } from '../src/provision/tls';
 import { instanceFingerprint } from '../src/security/pairing';
@@ -17,6 +18,9 @@ import { FAKE_TOKEN, FakeHost } from './support/provision_fake_host';
 const DEFAULT_SOURCE = '/etc/dedalo_publication_host/test.json';
 /** Low-entropy and built at runtime: a fixture, never a credential-shaped literal (.gitleaks.toml). */
 const HEX32 = '0123456789abcdef'.repeat(2);
+
+const ROOT_FILE: PathFacts = { type: 'file', uid: 0, gid: 0, mode: 0o644 };
+const ROOT_DIR: PathFacts = { type: 'dir', uid: 0, gid: 0, mode: 0o755 };
 
 interface Harness {
   readonly deps: ProvisionDeps;
@@ -37,6 +41,8 @@ function harness(
     siblings?: Readonly<Record<string, string>>;
     /** Paths in the config base that are symlinks. */
     symlinks?: readonly string[];
+    /** lstat overrides (null: absent). Otherwise a `.json` is a root 0644 file, anything else a root 0755 directory. */
+    facts?: Readonly<Record<string, PathFacts | null>>;
   } = {},
 ): Harness {
   const clock = options.clock ?? { now: new Date('2026-10-03T12:00:00Z') };
@@ -59,7 +65,11 @@ function harness(
           .filter(path => path.startsWith(`${dir}/`) && !path.slice(dir.length + 1).includes('/'))
           .sort(),
       canonical: path => path.replace(/\/+/g, '/'),
-      isSymlink: path => (options.symlinks ?? []).includes(path),
+      lstat: path => {
+        if (options.facts && path in options.facts) return options.facts[path] ?? null;
+        if ((options.symlinks ?? []).includes(path)) return { type: 'symlink', uid: 0, gid: 0, mode: 0o777 };
+        return path.endsWith('.json') ? ROOT_FILE : ROOT_DIR;
+      },
       isRealFile: path => (options.realFiles ?? []).includes(path),
       isRoot: () => options.root ?? true,
       observeHost: () => host.state(),
@@ -85,12 +95,21 @@ describe('arguments → USAGE (2)', () => {
   }
 
   test('parseArgs: default and explicit declaration', () => {
-    expect(parseArgs(['check', 'test'])).toEqual({ verb: 'check', instance: 'test', declaration: null });
+    expect(parseArgs(['check', 'test'])).toEqual({ verb: 'check', instance: 'test', declaration: null, exitCode: false });
     expect(parseArgs(['apply', 'test', '--declaration', '/tmp/d.json'])).toEqual({
       verb: 'apply',
       instance: 'test',
       declaration: '/tmp/d.json',
+      exitCode: false,
     });
+    expect(parseArgs(['check', 'test', '--exit-code'])).toEqual({
+      verb: 'check',
+      instance: 'test',
+      declaration: null,
+      exitCode: true,
+    });
+    expect(parseArgs(['apply', 'test', '--exit-code'])).toEqual({ error: '--exit-code applies to check only' });
+    expect(parseArgs(['check', 'test', '--exit-code', '--exit-code'])).toEqual({ error: '--exit-code given twice' });
   });
 });
 
@@ -139,7 +158,7 @@ describe('declaration → REFUSED (3)', () => {
       v1: { user: 'dedalo-api-v1-other' },
       v2: { unit: 'dedalo-publication-api-v2-other', user: 'dedalo-api-v2-other', group: 'dedalo-api-v2-other', port: 3101, health_url: 'http://127.0.0.1:3101/health' },
     });
-    expect(exec(separated, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(separated, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(separated.err).toEqual([]);
   });
 
@@ -153,9 +172,9 @@ describe('declaration → REFUSED (3)', () => {
     // The instance's own declaration in the config base is never its own sibling — also when
     // named another way (compared canonically).
     const self = harness({ siblings: { [DEFAULT_SOURCE]: JSON.stringify(unixDeclaration()) } });
-    expect(exec(self, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(self, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     const spelled = harness({ siblings: { [DEFAULT_SOURCE]: JSON.stringify(unixDeclaration()) } });
-    expect(exec(spelled, ['check', 'test', '--declaration', '/etc/dedalo_publication_host//test.json'])).toBe(EXIT.DRIFT);
+    expect(exec(spelled, ['check', 'test', '--declaration', '/etc/dedalo_publication_host//test.json', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(spelled.err).toEqual([]);
     // A symlinked sibling is never followed and never skipped: refused, named.
     const linked = harness({
@@ -163,7 +182,101 @@ describe('declaration → REFUSED (3)', () => {
       symlinks: ['/etc/dedalo_publication_host/other.json'],
     });
     expect(exec(linked, ['check', 'test'])).toBe(EXIT.REFUSED);
-    expect(linked.err.join('\n')).toContain("cannot check isolation against '/etc/dedalo_publication_host/other.json' (a symlink");
+    expect(linked.err.join('\n')).toContain(
+      "cannot check isolation against '/etc/dedalo_publication_host/other.json': sibling declaration '/etc/dedalo_publication_host/other.json' is a symlink",
+    );
+  });
+
+  describe('the declaration trust law (check/apply): root acts on it, so only root may be able to edit it', () => {
+    const DIR = '/etc/dedalo_publication_host';
+    const cases: ReadonlyArray<readonly [string, Record<string, PathFacts | null>, string]> = [
+      ['group-writable', { [DEFAULT_SOURCE]: { ...ROOT_FILE, mode: 0o664 } }, `the declaration '${DEFAULT_SOURCE}' is group- or world-writable (mode 0664)`],
+      ['world-writable', { [DEFAULT_SOURCE]: { ...ROOT_FILE, mode: 0o646 } }, `the declaration '${DEFAULT_SOURCE}' is group- or world-writable (mode 0646)`],
+      ['not root-owned', { [DEFAULT_SOURCE]: { ...ROOT_FILE, uid: 1000 } }, `the declaration '${DEFAULT_SOURCE}' is owned by uid 1000, not root`],
+      ['a symlink', { [DEFAULT_SOURCE]: { type: 'symlink', uid: 0, gid: 0, mode: 0o777 } }, `the declaration '${DEFAULT_SOURCE}' is a symlink — a link can be repointed after this check`],
+      ['a directory', { [DEFAULT_SOURCE]: ROOT_DIR }, `the declaration '${DEFAULT_SOURCE}' is a dir, not a regular file`],
+      ['absent', { [DEFAULT_SOURCE]: null }, `the declaration '${DEFAULT_SOURCE}' does not exist or cannot be inspected`],
+      ['parent not root-owned', { [DIR]: { ...ROOT_DIR, uid: 1000 } }, `'${DIR}' (above the declaration '${DEFAULT_SOURCE}') is owned by uid 1000, not root`],
+      ['parent group-writable', { [DIR]: { ...ROOT_DIR, mode: 0o775 } }, `'${DIR}' (above the declaration '${DEFAULT_SOURCE}') is group- or world-writable (mode 0775)`],
+      ['/etc world-writable', { '/etc': { ...ROOT_DIR, mode: 0o777 } }, `'/etc' (above the declaration '${DEFAULT_SOURCE}') is group- or world-writable`],
+      ["'/' itself", { '/': { ...ROOT_DIR, uid: 501 } }, `'/' (above the declaration '${DEFAULT_SOURCE}') is owned by uid 501`],
+      ['parent a symlink', { [DIR]: { type: 'symlink', uid: 0, gid: 0, mode: 0o777 } }, `'${DIR}' (above the declaration '${DEFAULT_SOURCE}') is a symlink, not a real directory`],
+    ];
+    for (const [label, facts, said] of cases) {
+      for (const verb of ['check', 'apply']) {
+        test(`${verb}: ${label} → REFUSED, named, never read, nothing written`, () => {
+          const h = harness({ facts });
+          expect(exec(h, [verb, 'test'])).toBe(EXIT.REFUSED);
+          const printed = h.err.join('\n');
+          expect(printed).toContain(said);
+          expect(h.reads).toEqual([]);
+          expect(h.host.mutations).toBe(0);
+        });
+      }
+    }
+
+    test('the refusal names the fix', () => {
+      const h = harness({ facts: { [DEFAULT_SOURCE]: { ...ROOT_FILE, mode: 0o666, uid: 1000 } } });
+      expect(exec(h, ['apply', 'test'])).toBe(EXIT.REFUSED);
+      expect(h.err.join('\n')).toContain(`chown root:root '${DEFAULT_SOURCE}' && chmod go-w '${DEFAULT_SOURCE}'`);
+      expect(h.err.join('\n')).toContain(`keep declarations in ${DIR}/`);
+    });
+
+    test('accepted when the file and every directory up to / are root-owned and not group/world-writable', () => {
+      const h = harness({ facts: { [DEFAULT_SOURCE]: { ...ROOT_FILE, mode: 0o600 }, [DIR]: { ...ROOT_DIR, mode: 0o700 } } });
+      expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
+      expect(h.err).toEqual([]);
+      expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
+    });
+
+    test('--declaration elsewhere: judged by its own chain (relative paths resolved), and the config base still is', () => {
+      const elsewhere = '/root/drafts/test.json';
+      const bad = harness({ facts: { '/root/drafts': { ...ROOT_DIR, uid: 1000 } } });
+      expect(exec(bad, ['check', 'test', '--declaration', elsewhere])).toBe(EXIT.REFUSED);
+      expect(bad.err.join('\n')).toContain(`'/root/drafts' (above the declaration '${elsewhere}') is owned by uid 1000`);
+      // The config base is judged even with no sibling in it: write access there could REMOVE a sibling.
+      const base = harness({ facts: { [DIR]: { ...ROOT_DIR, mode: 0o777 } } });
+      expect(exec(base, ['check', 'test', '--declaration', elsewhere])).toBe(EXIT.REFUSED);
+      expect(base.err.join('\n')).toContain(`'${DIR}' (above the config base '${DIR}') is group- or world-writable`);
+    });
+
+    test('--declaration relative: resolved against the cwd BEFORE its chain is judged (never a fixed-point walk on ".")', () => {
+      const drafts = join(process.cwd(), 'zz_relative_drafts');
+      const resolved = join(drafts, 'test.json');
+      const bad = harness({ facts: { [drafts]: { ...ROOT_DIR, uid: 1000 } } });
+      expect(exec(bad, ['check', 'test', '--declaration', 'zz_relative_drafts/test.json'])).toBe(EXIT.REFUSED);
+      expect(bad.err.join('\n')).toContain(`'${drafts}' (above the declaration '${resolved}') is owned by uid 1000`);
+      expect(bad.reads).toEqual([]);
+      // A trusted relative chain is accepted (the walk ends at '/', not at '.').
+      const good = harness();
+      expect(exec(good, ['check', 'test', '--declaration', './zz_relative_drafts/test.json', '--exit-code'])).toBe(EXIT.DRIFT);
+      expect(good.err).toEqual([]);
+    });
+
+    test('render is exempt: it needs no root, writes nothing, grants nothing', () => {
+      const h = harness({ root: false, facts: { [DEFAULT_SOURCE]: { ...ROOT_FILE, uid: 1000, mode: 0o666 } } });
+      expect(exec(h, ['render', 'test'])).toBe(EXIT.OK);
+    });
+
+    test('a sibling a non-root principal can edit is refused, named (it steers the isolation check)', () => {
+      const other = `${DIR}/other.json`;
+      const h = harness({
+        siblings: { [other]: JSON.stringify({ ...unixDeclaration(), instance: 'other' }) },
+        facts: { [other]: { ...ROOT_FILE, uid: 1000 } },
+      });
+      expect(exec(h, ['check', 'test'])).toBe(EXIT.REFUSED);
+      expect(h.err.join('\n')).toContain(
+        `cannot check isolation against '${other}': sibling declaration '${other}' is owned by uid 1000, not root`,
+      );
+      expect(h.reads).not.toContain(other); // judged before it is read
+    });
+
+    test('a bad directory is named once across the declaration and its siblings', () => {
+      const lines = declarationTrustProblems(DEFAULT_SOURCE, 'the declaration', path =>
+        path === '/etc' ? { ...ROOT_DIR, mode: 0o777 } : path.endsWith('.json') ? ROOT_FILE : ROOT_DIR,
+      );
+      expect(lines).toHaveLength(1);
+    });
   });
 
   test('check and apply refuse without root; render does not need it', () => {
@@ -205,8 +318,17 @@ describe('render / check / apply', () => {
 
   test('check on a fresh host → DRIFT (1), writes nothing', () => {
     const h = harness();
-    expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(h.out.at(-1)).toMatch(/action\(s\) would change instance 'test'/);
+    expect(h.host.mutations).toBe(0);
+  });
+
+  test('a plain check that lists changes exits 0 (bun run prints "error: … exited" for any non-zero), writes nothing', () => {
+    const h = harness();
+    expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
+    expect(h.out.some(line => line.startsWith('would: '))).toBe(true);
+    expect(h.out.at(-1)).toBe("provision: " + h.out.filter(line => line.startsWith('would: ')).length + " action(s) would change instance 'test' — run 'apply' to make them");
+    expect(h.err).toEqual([]);
     expect(h.host.mutations).toBe(0);
   });
 
@@ -269,6 +391,10 @@ describe('hostDeps (the real world, read-only parts)', () => {
     expect(deps.readDeclaration(join(import.meta.dir, 'fixtures', 'provision_declaration.ts'))).toContain('unixDeclaration');
     expect(deps.readDeclaration('/nonexistent/dedalo_publication_host/test.json')).toBeNull();
     expect(deps.isRoot()).toBe(false);
+    // lstat never follows: the facts of what is there, or null.
+    expect(deps.lstat(import.meta.dir)?.type).toBe('dir');
+    expect(deps.lstat(join(import.meta.dir, 'provision_cli.test.ts'))?.type).toBe('file');
+    expect(deps.lstat('/nonexistent/dedalo_publication_host/test.json')).toBeNull();
     expect(typeof deps.io().mkdir).toBe('function');
   });
 
@@ -291,7 +417,7 @@ describe('apply converges in one run', () => {
   test('tls: check names what it would issue; apply issues before any unit starts; a second apply writes nothing', () => {
     const h = harness({ declaration: tlsDeclaration() });
     const l = derive(tlsDeclaration());
-    expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+    expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
     expect(h.out).toContain('would: issue the ca certificate (tls)');
     expect(h.host.mutations).toBe(0);
 
@@ -329,7 +455,7 @@ describe('apply converges in one run', () => {
       const { h, clock } = converged();
       clock.now = new Date(clock.now.getTime() + (TLS_VALIDITY.leafDays - TLS_VALIDITY.leafRenewDays + 1) * DAY);
       h.out.length = 0;
-      expect(exec(h, ['check', 'test'])).toBe(EXIT.DRIFT);
+      expect(exec(h, ['check', 'test', '--exit-code'])).toBe(EXIT.DRIFT);
       expect(h.out).toContain(`would: systemctl restart ${AGENT} (the reissued tls material)`);
       expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
       expect(restarts(h)).toBe(1);

@@ -216,3 +216,25 @@
   `public_probe.detail`, rendered as text.
 - TS ground truth: `test/unit/publication_host_probe_native.test.ts`,
   `test/unit/publication_host_widget_native.test.ts`. No fixture interaction.
+
+## Addendum 2026-10-07 — `bun_version` check + `bun` row field
+
+- `get_value` host rows (root AND non-root) gain one fixed check `bun_version`, placed in
+  `HOST_CHECK_IDS` right after `agent_version` (order: registry, secrets, reachable, pairing,
+  agent_version, bun_version, media_mode, media_mount, media_read_only, rules_hash, api_v1,
+  api_v2; the decorators `media_copy`, `public_gate` still follow). It compares the trusted
+  agent status's `bun_version` with the WORK system's `.bun-version` pin, by EXACT equality.
+  Closed detail vocabulary: `ok` `<v>` (equal); `blocked` `<reported> != <pin>` (any
+  difference, prerelease tail included) | `malformed` (not shaped like a Bun version,
+  `host_status.ts BUN_VERSION`); `unknown` `not_reported` (empty) | `unpinned` (this tree
+  pins none) | `status_unavailable` (unreachable, unpaired, or a fingerprint mismatch).
+- Row field `bun: {expected: string|null, reported: string|null}` on root and non-root rows.
+  `expected` is the work system's pin (`code_restore.ts bunPinOf(projectRoot)`; null when
+  unpinned) — a non-root global admin sees it, like `agent_version`: a version string, no
+  secret. `reported` is null unless the status is trusted AND the value is shaped (agent
+  text never reaches the row unvalidated).
+- TS ground truth: `test/unit/publication_host_host_status_native.test.ts`,
+  `test/unit/publication_host_widget_native.test.ts`,
+  `test/unit/publication_host_media_copy_widget_native.test.ts` (the REAL deps feed the repo
+  pin); client: `client/dedalo/test/client/js/test_publication_hosts.js`. No fixture
+  interaction.

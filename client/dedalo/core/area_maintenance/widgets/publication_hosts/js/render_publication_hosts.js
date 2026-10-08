@@ -35,6 +35,8 @@ import { render_api_lockstep, render_runtime_invalid } from './render_api_lockst
  *   HostPanelRow carries `qualities` and `probe` (non-secret registry fields)
  *   for the edit form, and `public_probe` (phase 6: the last public-URL probe
  *   verdict, beside its `public_gate` check).
+ *   `bun` is {expected, reported}: the work system's pinned Bun beside the
+ *   host's running Bun (both fact rows); the `bun_version` check judges them.
  *
  * THE CONTRACT WITH THE SERVER is update_code's: ids and facts, never
  * sentences. Check rows go through the shared check_row with the
@@ -312,6 +314,11 @@ const render_host = function (self, host, is_root, body_response, parent) {
 		rules.reported,
 		true,
 	);
+	// Bun side by side: the work system's pin vs the host's running Bun (the
+	// `bun_version` check below is red when they differ)
+	const bun = host.bun || {};
+	fact_row(facts, get_label.publication_hosts_bun_expected || 'Expected Bun', bun.expected, true);
+	fact_row(facts, get_label.publication_hosts_bun_reported || 'Reported Bun', bun.reported, true);
 
 	const checks = Array.isArray(host.checks) ? host.checks : [];
 	for (const check of checks) {

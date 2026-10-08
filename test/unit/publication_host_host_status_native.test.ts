@@ -33,6 +33,8 @@ const KEY_SENTINEL = 'engine-bundle-key-material-sentinel';
 const FINGERPRINT = publicationHostFingerprint('test', TOKEN);
 const OTHER_FINGERPRINT = publicationHostFingerprint('test', `${TOKEN}-rotated`);
 const ENGINE = '9.1.0';
+/** The work system's Bun pin in these fixtures; the healthy agent runs exactly it. */
+const BUN_PIN = '1.4.2';
 const RELEASE = `${ENGINE}_a1b2c3d`;
 const HASH = 'a'.repeat(64);
 
@@ -63,7 +65,7 @@ interface StatusPatch {
 function agentStatus(patch: StatusPatch = {}): AgentStatus {
 	return {
 		agent_version: '0.1.0',
-		bun_version: Bun.version,
+		bun_version: BUN_PIN,
 		platform: 'linux-x64',
 		instance_fingerprint: patch.instance_fingerprint ?? FINGERPRINT,
 		apis: {
@@ -93,6 +95,7 @@ function healthy(patch: Partial<HostStatusInput> = {}): HostStatusInput {
 		status: { ok: true, status: agentStatus() },
 		expected: { ok: true, hash: HASH, dropped: [] },
 		engineVersion: ENGINE,
+		bunPin: BUN_PIN,
 		...patch,
 	};
 }
@@ -114,6 +117,7 @@ function checkOf(input: HostStatusInput, id: HostCheck['id']): Omit<HostCheck, '
 
 const AGENT_DERIVED = [
 	'agent_version',
+	'bun_version',
 	'media_mode',
 	'media_mount',
 	'media_read_only',
@@ -136,6 +140,7 @@ describe('buildHostChecks: a healthy shared host', () => {
 			reachable: { state: 'ok' },
 			pairing: { state: 'ok' },
 			agent_version: { state: 'ok', detail: '0.1.0' },
+			bun_version: { state: 'ok', detail: BUN_PIN },
 			media_mode: { state: 'ok', detail: 'shared' },
 			media_mount: { state: 'ok', detail: '3' },
 			media_read_only: { state: 'ok', detail: 'read_only' },
@@ -164,6 +169,7 @@ describe('pairing and transport (Review Focus 1)', () => {
 		const row = buildHostPanelRow(input);
 		expect(row.pairing_proved).toBe(false);
 		expect(row.rules).toEqual({ expected: null, reported: null });
+		expect(row.bun).toEqual({ expected: BUN_PIN, reported: null });
 	});
 
 	// A failure minted BEFORE any dial (the local token-vs-registry check, the registry lock)
@@ -474,6 +480,7 @@ describe('buildHostPanelRow', () => {
 			public_url: 'https://www.pub.test',
 			checks: buildHostChecks(healthy()),
 			rules: { expected: HASH, reported: HASH },
+			bun: { expected: BUN_PIN, reported: BUN_PIN },
 			apis: { v1: { current: RELEASE, previous: null }, v2: { current: RELEASE, previous: null } },
 			token_present: true,
 			bundle_present: true,
@@ -507,10 +514,13 @@ describe('buildHostPanelRow', () => {
 			rules: { hash: hostile },
 		});
 		status.agent_version = hostile;
+		status.bun_version = hostile;
 		const input = healthy({ status: { ok: true, status } });
 		const row = buildHostPanelRow(input);
 		const checks = byId(row.checks);
 		expect(checks.agent_version).toEqual({ state: 'warn', detail: 'malformed' });
+		expect(checks.bun_version).toEqual({ state: 'blocked', detail: 'malformed' });
+		expect(row.bun.reported).toBeNull();
 		expect(checks.api_v1).toEqual({ state: 'warn', detail: 'malformed' });
 		expect(checks.rules_hash).toEqual({ state: 'blocked', detail: 'malformed' });
 		expect(row.apis.v1).toEqual({ current: null, previous: null });
@@ -525,5 +535,63 @@ describe('buildHostPanelRow', () => {
 			state: 'ok',
 			detail: '0.2.0-rc.1',
 		});
+	});
+});
+
+/** A status body whose agent runs `bunVersion`, trusted (registry fingerprint). */
+function runningBun(bunVersion: string, patch: Partial<HostStatusInput> = {}): HostStatusInput {
+	const status = agentStatus();
+	status.bun_version = bunVersion;
+	return healthy({ status: { ok: true, status }, ...patch });
+}
+
+describe('bun_version: the host Bun against the work system pin', () => {
+	test('equal: ok, the version is the fact, both sides in the row', () => {
+		const input = runningBun(BUN_PIN);
+		expect(checkOf(input, 'bun_version')).toEqual({ state: 'ok', detail: BUN_PIN });
+		expect(buildHostPanelRow(input).bun).toEqual({ expected: BUN_PIN, reported: BUN_PIN });
+	});
+
+	test('differ (patch, minor, prerelease tail): blocked (red), both versions named', () => {
+		for (const reported of ['1.4.1', '1.4.3', '1.5.2', '1.4.2-canary.20+abc1234']) {
+			const input = runningBun(reported);
+			expect(checkOf(input, 'bun_version')).toEqual({
+				state: 'blocked',
+				detail: `${reported} != ${BUN_PIN}`,
+			});
+			expect(buildHostPanelRow(input).bun).toEqual({ expected: BUN_PIN, reported });
+		}
+	});
+
+	test('unreachable: unknown, nothing reported in the row', () => {
+		const input = healthy({
+			status: { ok: false, code: 'publication_host.unreachable' },
+			expected: null,
+		});
+		expect(checkOf(input, 'bun_version')).toEqual({
+			state: 'unknown',
+			detail: 'status_unavailable',
+		});
+		expect(buildHostPanelRow(input).bun).toEqual({ expected: BUN_PIN, reported: null });
+	});
+
+	test('not reported (empty string): unknown, never ok', () => {
+		expect(checkOf(runningBun(''), 'bun_version')).toEqual({
+			state: 'unknown',
+			detail: 'not_reported',
+		});
+	});
+
+	test('this work system pins no Bun: unknown (nothing to compare), the host fact still shown', () => {
+		const input = runningBun('1.4.2', { bunPin: null });
+		expect(checkOf(input, 'bun_version')).toEqual({ state: 'unknown', detail: 'unpinned' });
+		expect(buildHostPanelRow(input).bun).toEqual({ expected: null, reported: '1.4.2' });
+	});
+
+	test('the comparison is exact: a pin that is a prefix of the reported version is a drift', () => {
+		expect(checkOf(runningBun('1.4.20'), 'bun_version')?.state).toBe('blocked');
+		expect(checkOf(runningBun('1.4.2', { bunPin: '1.4.20' }), 'bun_version')?.state).toBe(
+			'blocked',
+		);
 	});
 });

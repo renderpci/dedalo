@@ -105,8 +105,11 @@ bun test              # hermetic: unix socket + loopback mTLS only, no sudo/syst
 bunx tsc --noEmit
 ```
 
-From the repo root: `bun run hostagent:install`, `bun run hostagent:test`,
-`bun run hostagent:start`. The live end-to-end drill is `bun run test:pubhost:agent`. It
+From the repo root: `bun run hostagent:install:dev` (`bun install --frozen-lockfile`,
+with the dev dependencies `hostagent:test` needs), then `bun run hostagent:test` and
+`bun run hostagent:start`. `bun run hostagent:install` is the deployment install
+(`--frozen-lockfile --production`: the committed `bun.lock` exactly, runtime dependencies
+only); a tree prepared with it cannot run `hostagent:test`, by design. The live end-to-end drill is `bun run test:pubhost:agent`. It
 runs real mTLS, a user-mode Apache and nginx, and real v2 releases over the suite MariaDB,
 on the CI instance tier.
 
@@ -118,7 +121,14 @@ file, the sudoers rule, the polkit rule, the mTLS material (private CA, server
 certificate) and the engine bundle.
 
 The declaration is `/etc/dedalo_publication_host/<instance>.json`. `--declaration <file>`
-names another path. Its shape is `HostDeclaration` (`src/provision/layout.ts`), validated
+names another path. `check` and `apply` judge it before reading it
+(`declarationTrustProblems`, `src/provision/cli.ts`): a regular file (lstat, never
+followed), uid 0, mode `& 022 == 0`, and every ancestor up to and including `/` a real
+directory with the same owner and mode, or the plan is refused (exit 3). Root grants from
+it, so whoever could edit or replace it would choose whom the next `apply` grants
+root-reachable permissions. The sibling declarations the isolation check reads, the config
+base and its ancestors are judged the same way, even when `--declaration` points
+elsewhere. `render` is exempt (no root, writes nothing). Its shape is `HostDeclaration` (`src/provision/layout.ts`), validated
 strictly by `src/provision/schema.ts`. Two complete, gated examples are
 `deploy/examples/instance.example.json` (two machines, TLS, nginx) and
 `deploy/examples/instance.single_machine.example.json` (one machine, unix socket, Apache). The provisioner never creates accounts: if the
@@ -148,8 +158,16 @@ Besides the host artifacts, `apply` writes `/etc/dedalo_publication_host/<instan
 expected pairing fingerprint rendered in. It is never appended to the engine's `.env`.
 
 **Install the code without registry egress:** run `bun run hostagent:install` on the
-work host, then copy `publication/host_agent/` (with its `node_modules/`) to the
-publication host.
+work host (frozen, production-only), then copy `publication/host_agent/` (with its
+`node_modules/`) to the publication host. Never copy from a tree where
+`hostagent:install:dev` or `hostagent:test` ran: it carries the dev dependencies and
+`.test-tmp/`.
+
+**Bun, one per site:** `bun_bin` is the site's own Bun at the work system's
+`.bun-version`, installed as root into `/home/<site>/.bun/` (root-owned, since it runs the
+agent and its grants) from the release archive checked against Bun's `SHASUMS256.txt` —
+never a download piped into a root shell. The panel's `bun_version` check reds on any
+difference from the pin (drift, not integrity). The operator page has the commands.
 
 ## Pairing
 

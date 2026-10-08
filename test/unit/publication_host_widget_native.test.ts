@@ -87,6 +87,7 @@ const ACTIONS = [
 const ROOT_ROW_KEYS = [
 	'address_label',
 	'apis',
+	'bun',
 	'bundle_present',
 	'checks',
 	'name',
@@ -100,6 +101,7 @@ const ROOT_ROW_KEYS = [
 ];
 const ADMIN_ROW_KEYS = [
 	'apis',
+	'bun',
 	'bundle_present',
 	'checks',
 	'name',
@@ -242,6 +244,7 @@ function harness(
 		filterPublicQualities: (configured) =>
 			configured.map((q) => q.replace(/^\/+|\/+$/g, '')).filter((q) => !q.endsWith('/original')),
 		engineVersion: () => '7.0.0',
+		bunPin: () => '1.4.2',
 		loadPanelRuntime: async () => ({ runtime: {}, runtime_invalid: null }),
 		buildApiLockstepPanel,
 		reconcilePublicationApis: async () => {
@@ -370,6 +373,7 @@ describe('get_value (panel)', () => {
 			address_label: '10.20.0.5:8443',
 			public_url: 'https://www.museum.test',
 			rules: { expected: 'c'.repeat(64), reported: 'b'.repeat(64) },
+			bun: { expected: '1.4.2', reported: '1.4.2' },
 			apis: {
 				v1: { current: '7.0.0_a1b2c3d', previous: '7.0.0_9f8e7d6' },
 				v2: { current: null, previous: null },
@@ -408,6 +412,7 @@ describe('get_value (panel)', () => {
 		expect(h.rowInputs[0]?.status).toEqual({ ok: true, status: agentStatus() });
 		expect(h.rowInputs[0]?.expected).toEqual(EXPECTED_OUTCOME);
 		expect(h.rowInputs[0]?.engineVersion).toBe('7.0.0');
+		expect(h.rowInputs[0]?.bunPin).toBe('1.4.2');
 		// the Task 1 outcome reaches Task 6 UNCHANGED (refused included)
 		expect(h.rowInputs[0]?.secrets).toEqual(PRESENT);
 	});
