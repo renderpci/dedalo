@@ -39,9 +39,10 @@ describe('engine fragment', () => {
     expect(a.service).toBeNull();
   });
 
-  test('tls: PROPOSED keys, the URL, both placeholders, the fingerprint — never the token', () => {
+  test('tls: the pairing command\'s keys, the URL, both placeholders, the fingerprint — never the token', () => {
     const body = fragment(TLS).body;
-    expect(body).toContain('PROPOSED KEY NAMES (phase 3)');
+    expect(body).toContain("The work system's pairing command reads exactly these keys");
+    expect(body).not.toContain('PROPOSED');
     expect(body).toContain(TLS.engineBundlePath);
     expect(assignments(body)).toEqual({
       [ENGINE_KEYS.instance]: 'test',

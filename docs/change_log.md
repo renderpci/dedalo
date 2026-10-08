@@ -1128,6 +1128,19 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **"The publication-host pairing command now names a command you can run, and says why it cannot read a copied file."**
+
+    When the pairing command refused because of the user running it, its message suggested
+    `sudo -u <engine user> bun run …`. Pasted as is, the shell read `<engine user>` as a file
+    redirection, and with the user filled in, `sudo` could not find a bare `bun`. The message now
+    prints the full command: the checkout to run it from, the user (by its id), and the Bun that
+    ran it, by its full path. A token file or engine bundle copied as root, which the Dédalo user
+    cannot read, used to end in *unexpected failure (Error)*, exit 4. It is now named like the
+    fragment already was, *could not be read (EACCES)*, exit 3. The engine fragment that
+    `provision apply` writes no longer claims that no release reads its keys: the pairing command
+    reads exactly those keys. The next `provision check` lists the fragment as a change, and
+    `apply` rewrites it. See [Publication host agent](./install/publication_host.md#pair-it-with-the-work-system).
+
 - **Code updates no longer refuse over a file an older release shipped and a newer one removed.**
 
     An update from the *Update code* panel refused with "Unknown entries at the code-tree root … `.vscode`" on installs that had taken an older release: the file was shipped by Dédalo itself, then removed from later releases, and the updater could not tell it from a file the administrator had added — nor could it be cleared without shell access. Each update now records the top-level entries of the release it installs, so the next update moves a retired release file into the backup instead of refusing, and the panel's *Code-tree root entries* check reports only files nobody shipped. An install updated before this release still refuses once over such a file: remove it by hand that one time ([what makes an update refuse](./management/updates/updating_code_options.md#what-else-makes-the-update-refuse)).

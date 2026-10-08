@@ -137,13 +137,14 @@ agent user, the v2 user or a declared group is missing, `check` refuses and prin
 
 ```bash
 bun run provision render <instance>    # print every artifact; writes nothing, no root needed
-bun run provision check  <instance>    # as root: plan only; exit 1 on drift, 3 when refused
+bun run provision check  <instance>    # as root: plan only; exit 0 (1 on drift with --exit-code), 3 when refused
 bun run provision apply  <instance>    # as root: converge; writes only what drifted
 ```
 
 The arguments are positional. The same command runs from the repo root as
-`bun run hostagent:provision <verb> <instance>`. Exit codes: 0 ok, 1 drift (`check`),
-2 usage, 3 refused, 4 failed.
+`bun run hostagent:provision <verb> <instance>`. Exit codes: 0 ok (`check` also when it lists changes), 1 drift (`check --exit-code`),
+2 usage, 3 refused, 4 failed. On a host, root has no `bun`: run them with the declared `bun_bin`
+from `agent_dir` (the operator page, step 4).
 
 The order is: schema → layout → pure stamped renderers → plan → dumb apply. Each rendered
 file carries a hash of its body, so a hand edit shows up as a refusal on the next `check`
@@ -198,7 +199,9 @@ difference from the pin (drift, not integrity). The operator page has the comman
    wrong token give the same mismatch.
 
 On the work host, `scripts/publication_host_pair.ts`, run as the user that runs Dédalo
-(`sudo -u <engine user> bun run dedalo:pair-publication-host …`), adds the host from the
+(`cd /opt/dedalo/master_dedalo && sudo -u dedalo /opt/dedalo/.bun/bin/bun run
+dedalo:pair-publication-host …` in the production layout: from the checkout, with the pinned
+Bun named in full, because `sudo` resets `PATH`), adds the host from the
 fragment and this bundle after proving the pairing live. The token comes from the pasted
 fragment line, `--token-file` or `--token-stdin`. The engine's channel, client and panel
 are `src/core/publication_host/` and the `publication_hosts` maintenance widget (spec

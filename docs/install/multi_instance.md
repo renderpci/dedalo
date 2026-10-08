@@ -83,7 +83,7 @@ A user home works identically — the structural rules are unchanged: the direct
 
 A separate publication server follows the same one-Bun-per-site convention, with one
 difference: there each site's Bun belongs to root, because it runs the publication host
-agent and its grants. See [Publication host agent](publication_host.md#2-declare-the-instance).
+agent and its grants. See [Publication host agent](publication_host.md#one-bun-per-site).
 
 ## 1. One-time host preparation
 

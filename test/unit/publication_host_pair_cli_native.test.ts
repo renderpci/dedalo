@@ -239,7 +239,13 @@ describe('fragment grammar and pairing inputs (pure)', () => {
 	test('the CLI runs as the engine user (owner of the private dir): never root, never another user', () => {
 		expect(invocationOwnerProblem(501, 501)).toBeNull();
 		expect(invocationOwnerProblem(501, 0)).toContain('uid 501');
-		expect(invocationOwnerProblem(501, 502)).toContain('sudo -u <engine user>');
+		// the command to copy: sudo to the owner's uid, the RUNNING Bun in full (sudo resets PATH)
+		expect(invocationOwnerProblem(501, 502)).toContain(
+			`sudo -u '#501' ${process.execPath} run dedalo:pair-publication-host`,
+		);
+		expect(invocationOwnerProblem(0, 501)).toContain(
+			`sudo -u <engine user> ${process.execPath} run dedalo:pair-publication-host`,
+		);
 		expect(invocationOwnerProblem(0, 0)).toContain('owned by root');
 		expect(invocationOwnerProblem(0, 501)).toContain('owned by root');
 	});
@@ -944,6 +950,55 @@ describe('live proof before write (child process, scratch private dir, loopback 
 			expect(r.code, r.out).toBe(EXIT.refused);
 			expect(r.out).toContain('could not be read (ENOENT)');
 			expect(r.out).not.toContain(TOKEN);
+		}
+		expect(tlsAgent.requests).toEqual([]);
+		expectNothingWritten();
+	});
+
+	test('a private-mode file the engine user cannot READ (a 0600 copy carried as root) is a named refusal, exit 3', async () => {
+		// stat() passes and the mode is private, but read() answers EACCES: 0200 stands in for
+		// "owned by another account" without needing root in the suite.
+		const tlsFragment = writeFragment(tlsFields());
+		const unreadable = join(work, 'unreadable.copy');
+		writeFileSync(unreadable, TOKEN, { mode: 0o600 });
+		chmodSync(unreadable, 0o200);
+		try {
+			for (const [args, what] of [
+				[
+					[
+						'add',
+						NAME,
+						'--fragment',
+						tlsFragment,
+						'--bundle',
+						bundleFile,
+						'--token-file',
+						unreadable,
+					],
+					'the token file',
+				],
+				[
+					[
+						'add',
+						NAME,
+						'--fragment',
+						tlsFragment,
+						'--bundle',
+						unreadable,
+						'--token-file',
+						tokenFile,
+					],
+					'the engine bundle',
+				],
+			] as const) {
+				const r = await runCli([...args]);
+				expect(r.code, r.out).toBe(EXIT.refused);
+				expect(r.out).toContain(`${what} could not be read (EACCES)`);
+				expect(r.out).not.toContain('unexpected failure');
+				expect(r.out).not.toContain(TOKEN);
+			}
+		} finally {
+			chmodSync(unreadable, 0o600);
 		}
 		expect(tlsAgent.requests).toEqual([]);
 		expectNothingWritten();
