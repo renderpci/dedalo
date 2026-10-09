@@ -18,8 +18,9 @@ Change a value, restart the server, done. There is nothing to edit inside the
 served tree — if you are looking for the four config files of v6, see
 [what changed in v7](whats_changed_v7.md).
 
-A fresh install needs none of this by hand: the [install
-wizard](../install/index.md) writes the file for you.
+A fresh install needs none of this by hand: the installer writes the file for
+you — the command-line installer, the browser wizard or `install.sh`, which all
+write the same keys ([what `.env` gets](../install/installer_reference.md#what-privateenv-does-and-does-not-get)).
 
 ---
 
@@ -47,13 +48,26 @@ wizard](../install/index.md) writes the file for you.
 **Precedence.** The process environment beats the file; the file beats the
 engine's built-in default.
 
-**It is append-only.** Add and change lines; do not delete other people's. A key
-you remove silently falls back to a default.
+**It is append-only.** Three edits are legitimate, and nothing else:
+
+- **Add a line** for a key the file does not have yet.
+- **Change a value on its existing line**, in place — for example adding a
+  domain ontology's code to `ACTIVE_ONTOLOGY_TLDS`, replacing the `[]` of an
+  air-gapped install's `ONTOLOGY_SERVERS`/`CODE_SERVERS`, or new database
+  credentials. Never add a second line for a key that is already there: the
+  file is read top to bottom and the **last** line silently wins.
+- **Rename a retired key** when the boot refuses and names it.
+
+Never delete a line: a key you remove silently falls back to a default. For the
+keys the installer manages, re-running the installer is the alternative to a
+hand edit; it rewrites only those keys and preserves every other line.
 
 **Restart to apply.** Configuration is read once, at boot.
 
-**`../private/sample.env`** documents every key with its default — copy the lines
-you need out of it.
+**`install/sample.env`** in the code tree documents every key with its default —
+copy the lines you need out of it. The installer leaves a copy at
+`../private/sample.env`, but a code update does not refresh that copy, so it lacks
+every key added since the install.
 
 ---
 

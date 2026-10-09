@@ -25,7 +25,12 @@ import {event_manager} from '../../../core/common/js/event_manager.js'
 import {render_servers_list} from '../../../core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js'
 import {update_code} from '../../../core/area_maintenance/widgets/update_code/js/update_code.js'
 import {render_info_modal, render_restore_modal} from '../../../core/area_maintenance/widgets/update_code/js/render_update_code.js'
-import {render_consumer_status, refresh_readiness, backup_waiver_check} from '../../../core/area_maintenance/widgets/update_code/js/render_update_status.js'
+import {
+	render_consumer_status,
+	refresh_readiness,
+	backup_waiver_check,
+	image_update_command
+} from '../../../core/area_maintenance/widgets/update_code/js/render_update_status.js'
 import {
 	UPDATE_PHASES,
 	init_phase_state,
@@ -653,6 +658,198 @@ describe('UPDATE_CODE WIDGET', function() {
 			} finally {
 				wrapper.remove()
 			}
+		})
+	})
+
+
+
+	describe('image channel (a container installation)', function() {
+
+		// consumer.image as the server sends it (core/update/image_channel.ts):
+		// facts and ids only — the words are the client's.
+		const image_block = (host_state, request) => ({
+			source			: {
+				mode		: 'pull',
+				repository	: 'ghcr.io/test/dedalo',
+				official	: { id : 'mirror_x', label : 'Test Mirror', role : 'mirror' }
+			},
+			update_command	: { program : 'deploy/dedalo-image-update.sh', version_flag : '--version' },
+			host_updater	: {
+				state			: host_state,
+				seen_at			: host_state==='absent' ? null : '2026-10-09T11:59:00.000Z',
+				interval_seconds: host_state==='absent' ? null : 60,
+				mode			: host_state==='absent' ? null : 'pull',
+				image			: host_state==='absent' ? null : 'ghcr.io/test/dedalo',
+				pinned			: host_state==='absent' ? null : '9.9.9',
+				verify			: host_state==='absent' ? null : 'cosign',
+				running_digest	: null
+			},
+			request			: request || null,
+			last_outcome	: {
+				schema : 1, request_id : null, from : '9.9.8', to : '9.9.9', mode : 'pull',
+				image : 'ghcr.io/test/dedalo', status : 'rolled_back', detail : 'health_timeout',
+				backup : null, digest : null, started_at : null, finished_at : null,
+				recorded_at : '2026-10-09T10:00:00.000Z'
+			}
+		})
+		const consumer = (image) => ({
+			engine	: { version : '9.9.9', engine_version : '9.9.9', posture : 'release' },
+			ready	: false,
+			checks	: [{ id : 'channel', state : 'blocked', detail : 'image' }, { id : 'superuser', state : 'ok' }],
+			restore_points : [],
+			tree	: {},
+			image	: image
+		})
+		const PENDING = {
+			id : '0b9f1c2e-6d4a-4c1b-9a8e-3f2d1c0b9a8e', tag : '9.9.10', version : '9.9.10', channel : 'master',
+			from_version : '9.9.9', requested_at : '2026-10-09T11:58:00.000Z', requested_by : -1,
+			state : 'requested', claimed_at : null
+		}
+		const build_self = (image) => {
+			const self = new update_code()
+			self.id				= 'test_update_code_image'
+			self.value			= { servers : [], is_a_code_server : false, consumer : consumer(image) }
+			self.caller			= null
+			self.events_tokens	= []
+			return self
+		}
+		const versions_info = {
+			info	: { version : '9.9.10', host : 'code.example.test', entity : 'Test' },
+			files	: [
+				{
+					version	: '9.9.10', url : 'https://code.example.test/9.9.10.zip', date : '2026-10-09',
+					notes	: {
+						date			: '2026-10-08',
+						action_needed	: ['Rename DEDALO_X to DEDALO_Y.'],
+						entries			: [{ type : 'fixed', audience : 'user', title : 'Search is faster.' }]
+					}
+				},
+				{ version : '9.9.9', url : 'https://code.example.test/9.9.9-dev.zip', date : '2026-10-09', channel : 'dev' }
+			]
+		}
+		const open_modal = (self) => {
+			const body_response = ui.create_dom_element({ element_type : 'div', parent : container })
+			return { modal : render_info_modal(self, versions_info, body_response), body_response : body_response }
+		}
+		const close = (opened) => {
+			if (opened.modal && typeof opened.modal.close==='function') {
+				opened.modal.close()
+			}
+			opened.body_response.remove()
+		}
+
+		it('renders the Image updates block and folds the tree-swap readiness without a verdict', function() {
+
+			const wrapper = ui.create_dom_element({ element_type : 'div', parent : container })
+			try {
+				let cancelled = null
+				render_consumer_status(wrapper, consumer(image_block('alive', PENDING)), null, null, {
+					on_cancel : (request) => { cancelled = request }
+				})
+				const block = wrapper.querySelector('.image_updates')
+				assert.ok(block, 'the image block is rendered')
+				assert.include(block.textContent, 'ghcr.io/test/dedalo', 'the repository is stated')
+				assert.include(block.textContent, 'Test Mirror', 'the official registry is named')
+				assert.ok(block.querySelector('.host_updater_alive'), 'the host updater state is shown')
+				assert.ok(block.querySelector('.image_outcome_rolled_back'), 'the last outcome is shown')
+				assert.include(block.textContent, 'health_timeout', 'the outcome detail is the id, as text')
+				// the pending request, with its Cancel
+				const cancel = block.querySelector('.image_request_requested button.button_cancel_image_request')
+				assert.ok(cancel, 'an unclaimed request can be cancelled')
+				cancel.click()
+				assert.strictEqual(cancelled && cancelled.id, PENDING.id)
+				// no "Update blocked" headline over an installation whose path is open
+				assert.isNull(wrapper.querySelector('.status_verdict'), 'no readiness verdict on an image install')
+				const folded = wrapper.querySelector('details.fold_tree_swap_readiness')
+				assert.ok(folded, 'the tree-swap checks are folded under their own title')
+				assert.ok(folded.classList.contains('readiness_block'), 'refresh_readiness can still find it')
+				// …and refresh_readiness re-states the folded variant in place
+				assert.isTrue(refresh_readiness(wrapper, consumer(image_block('alive'))))
+				assert.isNull(wrapper.querySelector('.status_verdict'))
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('a claimed request has no Cancel; an absent host updater says how to run updates', function() {
+
+			const wrapper = ui.create_dom_element({ element_type : 'div', parent : container })
+			try {
+				render_consumer_status(wrapper, consumer(image_block('absent', { ...PENDING, state : 'claimed', claimed_at : '2026-10-09T11:59:00.000Z' })), null, null, { on_cancel : () => {} })
+				assert.isNull(wrapper.querySelector('.button_cancel_image_request'), 'claimed: nothing to cancel')
+				assert.ok(wrapper.querySelector('.host_updater_absent'))
+				assert.ok(wrapper.querySelector('.host_updater_note'), 'the absent state explains the alternative')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('a tree-swap installation renders no image block at all', function() {
+
+			const wrapper = ui.create_dom_element({ element_type : 'div', parent : container })
+			try {
+				const plain = consumer(undefined)
+				delete plain.image
+				render_consumer_status(wrapper, plain)
+				assert.isNull(wrapper.querySelector('.image_updates'))
+				assert.ok(wrapper.querySelector('.status_verdict'), 'the headline verdict stays on a tree-swap install')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('the modal shows the notes, the command for the selected release, and no in-container Update', function() {
+
+			const opened = open_modal(build_self(image_block('stale')))
+			try {
+				const notes = opened.modal.querySelector('.release_notes')
+				assert.ok(notes, 'the published release shows its notes')
+				assert.isTrue(notes.open, 'an action needed opens the notes by itself')
+				assert.include(notes.textContent, 'Rename DEDALO_X to DEDALO_Y.')
+				assert.include(notes.textContent, 'Search is faster.')
+				assert.strictEqual(opened.modal.querySelectorAll('.release_notes').length, 1, 'the dev item carries none')
+
+				const command = opened.modal.querySelector('.image_command')
+				assert.ok(command, 'the host command is shown')
+				assert.strictEqual(command.textContent, './deploy/dedalo-image-update.sh --version 9.9.10')
+				assert.isNull(opened.modal.querySelector('button.success:not(.button_request_image_update)'), 'no in-container Update button')
+				assert.isNull(opened.modal.querySelector('.button_request_image_update'), 'no request button while the host updater is not alive')
+				assert.isNull(opened.modal.querySelector('.waive_backup_row'), 'no backup waiver: the host script takes the backup')
+
+				// selecting the developer item re-states the command with its -dev tag
+				const radios = opened.modal.querySelectorAll('input[type="radio"]')
+				radios[1].checked = true
+				radios[1].dispatchEvent(new Event('change'))
+				assert.strictEqual(command.textContent, './deploy/dedalo-image-update.sh --version 9.9.9-dev')
+			} finally {
+				close(opened)
+			}
+		})
+
+		it('"Request this update" appears only when the host updater is alive and nothing is pending', function() {
+
+			const alive = open_modal(build_self(image_block('alive')))
+			try {
+				assert.ok(alive.modal.querySelector('.button_request_image_update'), 'alive and idle: offered')
+			} finally {
+				close(alive)
+			}
+			const pending = open_modal(build_self(image_block('alive', PENDING)))
+			try {
+				assert.isNull(pending.modal.querySelector('.button_request_image_update'), 'a request is pending: not offered')
+			} finally {
+				close(pending)
+			}
+		})
+
+		it('the command is composed only from a strict X.Y.Z version (it is pasted into a root shell)', function() {
+
+			const image = image_block('alive')
+			assert.strictEqual(image_update_command(image, { version : '9.9.10' }), './deploy/dedalo-image-update.sh --version 9.9.10')
+			assert.strictEqual(image_update_command(image, { version : '9.9.10', channel : 'dev' }), './deploy/dedalo-image-update.sh --version 9.9.10-dev')
+			assert.isNull(image_update_command(image, { version : '9.9.10; rm -rf /' }))
+			assert.isNull(image_update_command(image, { version : '$(id)' }))
+			assert.isNull(image_update_command({}, { version : '9.9.10' }), 'no program fact, no command')
 		})
 	})
 

@@ -497,7 +497,18 @@ function observeWeb(
   const present = WEB_UNITS.filter(entry => loaded(units, entry.unit) !== undefined);
   const candidates = [...new Set(present.map(entry => entry.server))];
   const wanted = draft.web?.server;
-  const server: WebServer | null = wanted !== undefined && candidates.includes(wanted) ? wanted : candidates.length === 1 ? (candidates[0] as WebServer) : null;
+  // Both installed and the draft silent: the one that RUNS is the site's (host.web still asks, with it
+  // as the default). A stopped, disabled unit can stay loaded on a real host (measured: Ubuntu 24.04's
+  // apache2 after `systemctl disable --now`), so "loaded" alone never decides.
+  const running = [...new Set(present.filter(entry => loaded(units, entry.unit)?.active === 'active').map(entry => entry.server))];
+  const server: WebServer | null =
+    wanted !== undefined && candidates.includes(wanted)
+      ? wanted
+      : candidates.length === 1
+        ? (candidates[0] as WebServer)
+        : running.length === 1
+          ? (running[0] as WebServer)
+          : null;
   const empty = {
     candidates: Object.freeze(candidates),
     server,

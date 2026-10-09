@@ -40,8 +40,9 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
 | `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (blocking since 2026-10-02) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract, both update drills, the publication-host media drill on live Apache + nginx, the publication-host agent drill (the suite MariaDB started for it) and the publication-host engine drill (engine ↔ real agent: pair CLI, panel actions, httpd gating)). Both source `scripts/ci/hosted_env.sh` |
-| `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `report` keeps one `ci-nightly` issue open/updated/closed |
+| `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `cosign_pin` (`bun run ci:cosign:pin --check`: `ci/cosign.json` is set and is the latest stable cosign); `report` keeps one `ci-nightly` issue open/updated/closed |
 | `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
+| `.github/workflows/image-release.yml` | push of a stable tag `vX.Y.Z` + dispatch (`dev` from `master`, or `release` of an existing tag) — never PR or schedule | hosted ubuntu-24.04 amd64 + arm64 (native); `publish` bound to the `image-release` environment | the PRODUCT image (`Dockerfile`): `plan` → per-arch `build` from a `git archive` of the release commit + smoke test → `publish` (one index in staging, immutability, cosign keyless sign ONCE, `cosign copy` to every provisioned registry of `engineering/image_registries.json`, same-digest + `cosign verify` check, record) — see *The product image* |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
 | `.github/workflows/codeql.yml` | PR + push master + weekly cron | hosted ubuntu | CodeQL dataflow SAST (javascript-typescript, `build-mode: none`) → Security tab |
 | `.github/workflows/docs.yml` | PR + push master, both narrowed to `docs/**`/`mkdocs.yml` | hosted ubuntu | the mkdocs manual build (not a tier: legs F/G do not bind it) |
@@ -706,6 +707,77 @@ nightly `image_pin` is red: the weekly no-cache rebuild published distro securit
 the lock does not take yet. (Rule 1b asserted `lock == checkout` until review on
 2026-09-26 found it deadlocked the push that publishes a new definition.)
 
+### The product image (`image-release.yml`)
+
+Dédalo publishes ONE signed image — one digest — to every **provisioned** registry of
+`engineering/image_registries.json`: its own registry (gitdedalo, the primary — not
+provisioned yet: its host does not exist) and the mirrors GitHub Container Registry
+(`ghcr.io/dedalia-org/dedalo`) and Docker Hub (`docker.io/dedalia/dedalo`). Operators pull from any of them, from a
+registry of their own, or build locally (`docs/install/docker.md`). The list is the single
+source: the workflow names no registry address; `scripts/ci/image_release.ts` reads the
+list, `deploy/image_registries.sh` (sourced by the host tools) and the manual's table are
+GENERATED from it (`bun run registries:gen` / `registries:check`). An entry that is not
+provisioned names no address (`repository: null` + a reason) and every consumer treats it
+as unavailable. Gate: `image_registries_tripwire`.
+
+- **Tags = the code server's release names.** A stable tag `vX.Y.Z` whose `version.ts`
+  declares X.Y.Z publishes `:X.Y.Z` (like `<v>.zip`) — IMMUTABLE. A dispatch on the `dev`
+  channel from `master` publishes `:X.Y.Z-dev` (like the on-demand `<v>-dev.zip`) —
+  mutable, overwritten by the next dev build. No build per master push, no `latest`,
+  prerelease tags never match. The rules are `code_build_plan.ts`'s, imported by `plan`.
+- **The context is a `git archive`** of the release commit — the code server's mechanism —
+  so `build_info.txt` is expanded exactly as in the release zip. The workflow passes the
+  channel and the sha256 of that tar stream as build args; the Dockerfile's provenance step
+  writes the install stamp, so the image reports `X.Y.Z` (release) or `X.Y.Z.dev` (dev),
+  and a local build with no args stays `.dev`. `smoke` asserts it on the pushed bytes,
+  with bun = `.bun-version`, pg_dump 18, the media tools, uid 1000, a bun-owned
+  `/srv/dedalo/client` and no `deploy/` in the image.
+- **Layer order.** The Dockerfile puts the code LAST (`product_image_tripwire`), so the
+  base image (digest-pinned) is byte-identical across releases and the code layers are
+  the ones that change. A **release** build reads NO registry layer cache: a cache tag in
+  the staging repository is writable by any workflow of the repository holding
+  `packages: write`, and a poisoned cached layer would be signed as the official image.
+  Developer builds use `<staging>:cache-dev-<arch>` (mode=max).
+- **Staging, by digest.** Per-arch builds push to `<staging>:run-<run_id>-<arch>`
+  (`ci.staging_repository` of the list, a GHCR repository reached with the run's own
+  token); each leg's `smoke` hands on the DIGEST it tested (job outputs
+  `digest_amd64` / `digest_arm64`), and `publish` assembles the multi-arch index ONCE
+  there from `<staging>@<digest>` — never from the run tags, which could be moved while
+  `publish` waits for its reviewer → digest D. A missing digest refuses before anything
+  is downloaded or pushed.
+- **The same-digest rule.** For a release, every registry that already holds `:X.Y.Z`
+  must hold the same digest X, which must carry the official signature; X is then copied
+  to the registries that lack it and nothing is rebuilt (a disagreement refuses before
+  anything is signed). Otherwise D is signed ONCE (`cosign sign`, keyless, recorded in
+  Rekor) and `cosign copy` puts image + signature on every target. Every target must then
+  hold the SAME digest and pass the operator's own verify. Order executed by
+  `image_release_native`.
+- **Verify, as an operator does** (identity and issuer: `signing` of the list):
+
+  ```shell
+  cosign verify <repository>@sha256:<digest> \
+    --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+|heads/master)$' \
+    --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+  ```
+
+- **The record.** The job summary (one row per registry: pushed / unchanged / skipped with
+  its reason / failed, verified) and the `image-release` artifact `image-release.json`
+  (`{schema, version, tag, channel, source_sha, archive_sha256, digest, registries}`).
+  The durable record is Rekor plus the registries themselves.
+- **Skips are loud, never silent.** An unprovisioned registry is skipped with its reason; a
+  provisioned one whose secret is empty is skipped with a `::warning::` and a summary row;
+  the others still publish. A run that can publish to no registry fails.
+- **cosign is pinned** (`ci/cosign.json`, updater `bun run ci:cosign:pin`, staleness on the
+  nightly `cosign_pin`). `publish` downloads exactly that release and refuses a binary
+  whose sha256 is not the pin — and refuses to publish at all while the pin is unset.
+- **Provisioning a registry** needs no workflow LOGIC edit: set `repository` +
+  `provisioned: true` in the list, `bun run registries:gen`, add the entry's two secrets
+  (names = its `auth.username_secret` / `auth.password_secret`) to the repository and to
+  the publish job's env (`image_registries_tripwire` leg C is red until both directions
+  match), then dispatch the `release` channel once per existing
+  release tag — that run copies the published digest and never rebuilds.
+- **Developer images** come only from a `dev` dispatch on `master`.
+
 ## Non-negotiables (each is tripwired)
 
 - **Bun pin**: every tier runs the CI image `ci/image.json` locks, whose fingerprint
@@ -723,13 +795,21 @@ the lock does not take yet. (Rule 1b asserted `lock == checkout` until review on
 - **GitLab runs no DB tier.**
 - **Least privilege** (rule 7): every workflow declares a top-level `permissions:`
   block, read-only; a job widens only itself — `dedupe` (`actions: read`), nightly's
-  `report` (`issues: write`), ci-image's publishers (`packages: write`), codeql
+  `report` (`issues: write`), ci-image's publishers (`packages: write`), image-release's `build` (`packages: write`)
+  and `publish` (`packages: write`, `id-token: write` for keyless signing), codeql
   (`security-events: write`). `write-all` and `contents: write` are red;
   `pull_request_target`/`workflow_run` are forbidden.
 - **No expression in a `run:` script** (rule 7d): inputs, `github.event.*`, secrets and
   job/step outputs reach a script through `env:`.
 - **No secret in `.github/workflows/`** (rule 11): a fork PR must find nothing. The
-  runs that need a token use the run's own `github.token`.
+  runs that need a token use the run's own `github.token`. ONE carve-out: the `publish`
+  job of `image-release.yml` may map the registry secrets `engineering/image_registries.json`
+  declares (today Docker Hub's `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` and the
+  unprovisioned gitdedalo entry's `IMAGE_REGISTRY_GITDEDALO_*`; a registry without OIDC push federation cannot be
+  reached otherwise) — only in
+  the job that declares `environment: image-release`, only those names, and only while
+  that workflow has no `pull_request` / `pull_request_target` / `workflow_run` /
+  `schedule` trigger (`secretReferenceFaults`, a planted control per condition).
 - **Pinned actions** (rule 8): every `uses:` is a 40-hex SHA with the version in a
   trailing comment; Dependabot (`github-actions`) proposes bumps. It scans only
   `.github/workflows/` — bump `workflows-selfhosted/` by hand in the same change
@@ -818,6 +898,18 @@ restrict allowed actions to the census — `actions/*`, `github/codeql-action/*`
 secret scanner is a digest-pinned container, not an action. Also enable **secret
 scanning + push protection** and **private vulnerability reporting** (`SECURITY.md`).
 
+**The release secrets** (rule 11 carve-out). The only secrets the executed tier may
+reference are the registry credentials `engineering/image_registries.json` declares, mapped
+by the `publish` job of `image-release.yml`, which is bound to the `image-release`
+environment (deployment policy: tags `v*` and branch `master`; required reviewers). That
+workflow cannot be fired by a pull request, a `workflow_run` or a schedule, so fork code
+never reaches a job that holds them. The reviewers bind only because `v*` tags are
+restricted to the release maintainers by a tag ruleset (activation runbook, step 8):
+the environment line is read from the workflow AT the pushed tag. GHCR uses the run's own `github.token`. The Docker Hub
+credentials (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` — an
+access token, Read & Write) are REPOSITORY secrets, which GitHub would hand to any job
+naming them: the gate is what keeps every reference inside the environment-bound job.
+
 ### Scanners
 
 - **Secret scanning** (`security.yml`, gitleaks): working tree on every PR, full history
@@ -852,6 +944,31 @@ scanning + push protection** and **private vulnerability reporting** (`SECURITY.
    every literal to it (see "The pin").
 7. **GitLab mirror**: the same `.gitlab-ci.yml` hermetic tier on shared runners, in the
    locked image as uid 1001.
+8. **The product image** (`image-release.yml`), owner-only, not observable from the repo:
+   - create the environment **`image-release`** with a deployment policy allowing tags
+     `v*` and the branch `master`, and required reviewers;
+   - **MANDATORY — a tag ruleset on `refs/tags/v*`** (Settings → Rules → Rulesets → New
+     tag ruleset, enforcement *Active*): *Restrict creations*, *Restrict updates* and
+     *Restrict deletions*, with ONLY the release maintainers in the bypass list. Without
+     it the reviewers protect nothing: the signing identity accepts `image-release.yml`
+     at ANY `refs/tags/vX.Y.Z`, and the `environment: image-release` line that summons
+     the reviewers is read from the workflow file AT THAT TAG — any writer who may
+     create a `v*` tag can push one on a commit whose workflow drops that line, and the
+     run signs keyless as the official release with nobody approving. No in-repo gate
+     can check this (a check inside the workflow lives in the very file such a tag
+     replaces), so it is on the periodic owner check with branch protection:
+     `gh api repos/dedalia-org/dedalo/rulesets` must list it, active;
+   - the two secrets of every provisioned registry with `secret` auth — the names are the
+     entry's `auth.username_secret` / `auth.password_secret` in
+     `engineering/image_registries.json` (Docker Hub's `DOCKERHUB_USERNAME` /
+     `DOCKERHUB_TOKEN`, set on dedalia-org/dedalo; GHCR needs
+     none — `github.token`);
+   - run `bun run ci:cosign:pin` (needs the network) and commit `ci/cosign.json` — until
+     then `publish` refuses;
+   - after the first publish, make the GHCR package `ghcr.io/dedalia-org/dedalo`
+     **public** (anonymous pull); the staging package `dedalo-build` may stay private;
+   - when a further registry is stood up, provision it in the list (see *The product
+     image*) and dispatch the `release` channel for every existing tag.
 
 ## Activation runbook — the self-hosted tier (PRIVATE mirror)
 

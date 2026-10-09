@@ -17,11 +17,13 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { deriveReleaseNotes, parseFragment } from '../../scripts/lib/change_log.ts';
 import type { CodeOnlyUpdateDescriptor, UpdateDescriptor } from '../../src/core/update/catalog.ts';
 import {
 	buildCodeUpdateInfo,
 	codeReleasePath,
 	linearUpgradeTargets,
+	readReleaseNotes,
 } from '../../src/core/update/code_manifest.ts';
 
 /** A minimal descriptor: only the target triple drives the linear walk. */
@@ -356,6 +358,121 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 				catalog,
 			}).files,
 		).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// RELEASE NOTES (2026-10-09, WC-2026-10-09-code-manifest-release-notes): a
+// PUBLISHED item carries the notes its release froze in the master's
+// changes/<version>/release.json; a developer item never does; anything
+// missing or malformed leaves the field absent.
+// ---------------------------------------------------------------------------
+describe('release notes on the manifest', () => {
+	const CHANGES = join(ROOT, 'changes');
+	const devZip = join(FILES_DIR, '7', '7.0', '7.0.0-dev.zip');
+	const fragment = (slug: string, front: string) =>
+		parseFragment(`changes/7.0.1/${slug}.md`, `---\n${front}\n---\nBody.\n`);
+	// the notes the release command would freeze, from REAL parsed fragments
+	const NOTES = deriveReleaseNotes([
+		fragment(
+			'rename-key',
+			'title: Rename DEDALO_X to DEDALO_Y.\ntype: changed\naudience: admin\ndate: 2026-10-01\nbreaking: true',
+		),
+		fragment(
+			'faster-search',
+			'title: Search is faster.\ntype: fixed\naudience: user\ndate: 2026-10-02',
+		),
+	]);
+	const snapshot = (version: string, extra: Record<string, unknown>) => {
+		mkdirSync(join(CHANGES, version), { recursive: true });
+		writeFileSync(
+			join(CHANGES, version, 'release.json'),
+			JSON.stringify({
+				version,
+				date: '2026-10-05',
+				from: 'v7.0.0',
+				to: `v${version}`,
+				commits: 3,
+				wire_contract: [],
+				...extra,
+			}),
+		);
+	};
+
+	beforeAll(() => {
+		snapshot('7.0.1', { notes: NOTES });
+		// a snapshot for the DEV item's version too: it must still carry no notes
+		snapshot('7.0.0', { notes: NOTES });
+		writeFileSync(devZip, 'PK-dev');
+	});
+	afterAll(() => {
+		rmSync(CHANGES, { recursive: true, force: true });
+		rmSync(devZip, { force: true });
+	});
+
+	function manifest(changesDir: string | undefined, channel: 'master' | 'dev' = 'master') {
+		return buildCodeUpdateInfo({
+			clientVersion: [7, 0, 0],
+			serverVersion: [7, 0, 1],
+			codeFilesDir: FILES_DIR,
+			publicBaseUrl: 'http://m',
+			info: { ...BASE_INFO },
+			catalog: catalogOf(target(7, 0, 1)),
+			channel,
+			devChannelEnabled: true,
+			changesDir,
+		});
+	}
+
+	test('the derivation under test is not empty (anti-vacuity)', () => {
+		expect(NOTES.action_needed).toEqual(['Rename DEDALO_X to DEDALO_Y.']);
+		expect(NOTES.entries.length).toBe(2);
+	});
+
+	test('a published item carries {date, …notes}, exactly as the release froze them', () => {
+		const item = manifest(CHANGES).files.find((f) => f.version === '7.0.1');
+		expect(item?.notes).toEqual({ date: '2026-10-05', ...NOTES });
+	});
+
+	test('a developer item NEVER carries notes, even with a snapshot for its version', () => {
+		const files = manifest(CHANGES, 'dev').files;
+		const dev = files.find((f) => f.channel === 'dev');
+		expect(dev).toBeDefined();
+		expect('notes' in (dev ?? {})).toBe(false);
+		// …while the published item in the same answer does (positive control)
+		expect(files.find((f) => f.channel === undefined)?.notes).toBeDefined();
+	});
+
+	test('no changesDir, no snapshot, or a snapshot without notes: the field is absent', () => {
+		expect('notes' in (manifest(undefined).files[0] ?? {})).toBe(false);
+		expect('notes' in (manifest(join(ROOT, 'nowhere')).files[0] ?? {})).toBe(false);
+		snapshot('7.0.1', {});
+		try {
+			expect('notes' in (manifest(CHANGES).files[0] ?? {})).toBe(false);
+		} finally {
+			snapshot('7.0.1', { notes: NOTES });
+		}
+	});
+
+	test('a malformed snapshot never throws and never half-serves', () => {
+		const broken: unknown[] = [
+			{ action_needed: 'x', entries: [] },
+			{ action_needed: [], entries: [{ type: 'fixed', audience: 'user' }] },
+			{ action_needed: [1], entries: [] },
+			null,
+		];
+		try {
+			for (const notes of broken) {
+				snapshot('7.0.1', { notes });
+				expect(readReleaseNotes(CHANGES, '7.0.1')).toBeNull();
+			}
+			writeFileSync(join(CHANGES, '7.0.1', 'release.json'), '{');
+			expect(readReleaseNotes(CHANGES, '7.0.1')).toBeNull();
+			// a version that is not a triple is never joined into a path
+			expect(readReleaseNotes(CHANGES, '../7.0.1')).toBeNull();
+		} finally {
+			snapshot('7.0.1', { notes: NOTES });
+		}
 	});
 });
 

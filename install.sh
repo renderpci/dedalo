@@ -4,10 +4,22 @@
 #
 # Operator guide: docs/install/quickstart.md
 #
-# Asks the questions the installer needs, then builds the image, starts
+# Asks the questions the installer needs, then gets the image, starts
 # PostgreSQL, runs the headless installer and brings the stack up. When it
 # finishes, Dédalo is installed and you log in — there is no browser wizard and
 # therefore no unauthenticated install surface at any point.
+#
+# WHERE THE IMAGE COMES FROM is a question, asked right after the TLS one: one
+# of Dédalo's official registries (deploy/image_registries.sh, generated from
+# engineering/image_registries.json — primary first, then the mirrors, each
+# probed for this checkout's version), a registry of your own, or a build here
+# from this checkout (deploy/compose.build.yml). The default is the first
+# official registry that publishes this version, else the local build. The
+# answer is written to .dedalo.env (DEDALO_IMAGE, DEDALO_VERSION pinned,
+# DEDALO_IMAGE_MODE, DEDALO_IMAGE_VERIFY, DEDALO_COMPOSE_FILE), and every later
+# update — deploy/dedalo-image-update.sh, by hand or through the opt-in host
+# updater — takes its image from the same place. The decisions shared with
+# those tools live in deploy/dedalo-image-lib.sh.
 #
 # It drives docker-compose.simple.yml, which trades TLS and media access control
 # away for simplicity. Read that file's header before using this on anything but
@@ -31,6 +43,19 @@ readonly ENV_FILE='.dedalo.env'
 readonly PRIVATE_VOLUME='dedalo_private'
 
 cd "$(dirname "$0")"
+
+# The Docker-host library (the .dedalo.env contract, the version and repository
+# grammars, the registry probe) and the GENERATED official registry list. Loaded
+# before anything else: a checkout missing either cannot choose an image.
+# shellcheck source=deploy/dedalo-image-lib.sh
+. deploy/dedalo-image-lib.sh
+dedalo_registries_load deploy/image_registries.sh || {
+	printf 'deploy/image_registries.sh is missing or inconsistent — this checkout is incomplete.\n' >&2
+	exit 1
+}
+# A DEDALO_IMAGE / DEDALO_VERSION exported in your shell would outvote the file
+# this script writes (compose gives the shell precedence over --env-file).
+dedalo_env_isolate
 
 # --wizard: set TLS up and start the stack, then stop and let the operator answer
 # the install questions in the browser. Same TLS code either way — and TLS has to
@@ -104,6 +129,13 @@ random_password() {
 
 compose() {
 	docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
+}
+
+# compose_build — the same stack plus the build override (deploy/compose.build.yml),
+# through the shared host library: the stack named in $ENV_FILE, and the env file
+# itself, always. Only the "build it here" answer uses it.
+compose_build() {
+	dedalo_compose "$ENV_FILE" build "$@"
 }
 
 # --- Docker bootstrap --------------------------------------------------------
@@ -383,6 +415,146 @@ choose_tls() {
 	done
 }
 
+# --- Image source ------------------------------------------------------------
+# A PUBLISHED image or a LOCAL build. Dédalo publishes the same signed image (one
+# digest) to every official registry; which ones exist is the generated list,
+# never a hostname typed here. A registry of your own is as legitimate a choice,
+# and so is building from this checkout — slower (the build downloads the media
+# toolchain) and the only possibility while no registry publishes this version.
+#
+# Whichever answer, it must end having set: IMAGE_REPOSITORY, IMAGE_VERSION,
+# IMAGE_MODE (pull | build), IMAGE_VERIFY (cosign | none), IMAGE_SOURCE_LABEL —
+# and, for a pull, have pulled it already.
+
+availability_word() {
+	case "$1" in
+		0) echo 'publishes this version' ;;
+		1) echo 'does not publish this version' ;;
+		*) echo 'could not be checked' ;;
+	esac
+}
+
+# verify_official <repository> <version> — cosign over the pulled digest, against
+# the official signing identity. Without cosign the pull is kept, unverified, and
+# that is said aloud.
+verify_official() {
+	local digest=''
+	IMAGE_VERIFY='none'
+	if ! command -v cosign >/dev/null 2>&1; then
+		warn 'cosign is not installed, so the image signature was NOT verified.'
+		warn 'Install cosign (https://docs.sigstore.dev) to have every update checked.'
+		return 0
+	fi
+	digest="$(dedalo_repo_digest "$1" "$2")" || { warn 'The pulled image carries no registry digest.'; return 1; }
+	if ! dedalo_verify_release "$1" "$digest" "$2"; then
+		warn "$1@$digest does NOT carry Dédalo's signature for version $2 — refusing it."
+		return 1
+	fi
+	IMAGE_VERIFY='cosign'
+	echo "  Signature verified: $1@$digest"
+}
+
+# pull_source <repository> <label> — ask the version, pull it, verify an official
+# one. Status 1 sends the operator back to the menu.
+pull_source() {
+	local repository="$1"
+	while true; do
+		ask PULL_VERSION 'Version to pull' "$CHECKOUT_VERSION"
+		if dedalo_version_grammar "$PULL_VERSION"; then break; fi
+		warn 'A version looks like 7.0.1 (or 7.0.1-dev for a developer image).'
+	done
+	bold "Pulling $repository:$PULL_VERSION…"
+	if ! docker pull "$repository:$PULL_VERSION"; then
+		warn "Could not pull $repository:$PULL_VERSION — choose again."
+		return 1
+	fi
+	if dedalo_official_index "$repository" >/dev/null; then
+		verify_official "$repository" "$PULL_VERSION" || return 1
+	else
+		IMAGE_VERIFY='none'
+		warn 'A registry of your own: there is no Dédalo signature to check, so the image is trusted as pulled.'
+	fi
+	if [ "$PULL_VERSION" != "$CHECKOUT_VERSION" ]; then
+		warn "This checkout is $CHECKOUT_VERSION: the compose files and deploy/ come from the checkout,"
+		warn "not from the image — check out v$PULL_VERSION too if that release changed them."
+	fi
+	IMAGE_REPOSITORY="$repository" IMAGE_VERSION="$PULL_VERSION" IMAGE_MODE='pull'
+	IMAGE_SOURCE_LABEL="$2"
+}
+
+custom_source() {
+	while true; do
+		ask CUSTOM_REPOSITORY 'Repository (registry host and path, no tag — e.g. registry.example.org/dedalo)'
+		if dedalo_repository_grammar "$CUSTOM_REPOSITORY"; then break; fi
+		warn 'A repository is lowercase, like registry.example.org/dedalo — no :tag and no @digest.'
+	done
+	pull_source "$CUSTOM_REPOSITORY" 'a registry of your own'
+}
+
+build_source() {
+	IMAGE_REPOSITORY='localhost/dedalo' IMAGE_VERSION="$CHECKOUT_VERSION" IMAGE_MODE='build' IMAGE_VERIFY='none'
+	IMAGE_SOURCE_LABEL='built here from this checkout'
+}
+
+# print_image_menu <code>… — the official registries (with what the probe found),
+# then the two other answers.
+print_image_menu() {
+	local index='' id='' label='' role='' repository='' n=1
+	while IFS="$(printf '\t')" read -r index id label role repository; do
+		[ -n "$index" ] || continue
+		printf '  %d) %s — %s:%s  (official %s; %s)\n' "$n" "$label" "$repository" "$CHECKOUT_VERSION" \
+			"$role" "$(availability_word "${1-2}")"
+		shift || true
+		n=$((n + 1))
+	done <<<"$(dedalo_offered_registries)"
+	echo "  $n) Another registry — type its repository"
+	echo "  $((n + 1))) Build it here from this checkout (slower: downloads the toolchain and builds)"
+}
+
+choose_image_source() {
+	local count='' codes='' default_choice='' choice='' first=''
+	CHECKOUT_VERSION="$(dedalo_checkout_version .)" \
+		|| fail 'Cannot read the version this checkout declares (src/core/update/version.ts).'
+	count="$(dedalo_registry_count)"
+	echo
+	bold 'Where does the Dédalo image come from?'
+	echo "This checkout is Dédalo $CHECKOUT_VERSION. Asking Dédalo's registries whether they publish it…"
+	echo
+	codes="$(dedalo_probe_registries "$CHECKOUT_VERSION" | tr '\n' ' ')"
+	# shellcheck disable=SC2086 # deliberate split: one code per registry
+	first="$(dedalo_default_source $codes)"
+	if [ "$first" = 'build' ]; then default_choice=$((count + 2)); else default_choice=$((first + 1)); fi
+	# shellcheck disable=SC2086
+	print_image_menu $codes
+	echo
+	while true; do
+		read -rp "Choose [$default_choice]: " choice || true
+		choice="${choice:-$default_choice}"
+		case "$choice" in
+			*[!0-9]* | '') warn "Enter a number from 1 to $((count + 2))." ;;
+			*) if pick_image_source "$choice" "$count"; then break; fi ;;
+		esac
+	done
+	echo
+	echo "  Image: $IMAGE_REPOSITORY:$IMAGE_VERSION — $IMAGE_SOURCE_LABEL"
+}
+
+# pick_image_source <choice> <count> — status 1 = ask again.
+pick_image_source() {
+	local index=$(($1 - 1))
+	if [ "$1" -ge 1 ] && [ "$1" -le "$2" ]; then
+		pull_source "${DEDALO_REGISTRY_REPOSITORIES[index]}" \
+			"${DEDALO_REGISTRY_LABELS[index]}, official ${DEDALO_REGISTRY_ROLES[index]}"
+	elif [ "$1" -eq $(($2 + 1)) ]; then
+		custom_source
+	elif [ "$1" -eq $(($2 + 2)) ]; then
+		build_source
+	else
+		warn "Enter a number from 1 to $(($2 + 2))."
+		return 1
+	fi
+}
+
 # --- 1. Pre-flight -----------------------------------------------------------
 
 bold 'Dédalo — guided install'
@@ -435,6 +607,10 @@ fi
 # TLS first: it is the decision with the widest consequences, and mode 1 fails
 # fast (a bad domain is discovered now, not after you have typed everything).
 choose_tls
+
+# The image next: a failed pull is discovered now, and the answer is the first
+# thing the env file records.
+choose_image_source
 
 # WHO MAY OPEN THE WIZARD. Until it is sealed, the wizard is reachable without a
 # login, so the engine admits only the local machine unless told otherwise — and
@@ -560,6 +736,15 @@ POSTGRES_PASSWORD=$DB_PASSWORD
 DEDALO_NGINX_CONF=$NGINX_CONF_NAME
 SESSION_COOKIE_SECURE=$COOKIE_SECURE
 COMPOSE_PROFILES=${COMPOSE_PROFILES:-}
+# Where the Dédalo image comes from — read by compose (the image the dedalo and
+# backup services run: DEDALO_IMAGE:DEDALO_VERSION) and, through
+# deploy/dedalo-image-lib.sh, by deploy/dedalo-image-update.sh and the host image
+# updater. Only the image updater rewrites it, and only DEDALO_VERSION.
+DEDALO_COMPOSE_FILE=$COMPOSE_FILE
+DEDALO_IMAGE=$IMAGE_REPOSITORY
+DEDALO_VERSION=$IMAGE_VERSION
+DEDALO_IMAGE_MODE=$IMAGE_MODE
+DEDALO_IMAGE_VERIFY=$IMAGE_VERIFY
 ENV
 if [ -n "$WIZARD_ALLOWED_IPS" ]; then
 	printf '# Who may open the install wizard (inert once it is finished).\nDEDALO_INSTALL_ALLOWED_IPS=%s\n' "$WIZARD_ALLOWED_IPS" >>"$ENV_FILE"
@@ -572,11 +757,16 @@ echo "Wrote $ENV_FILE (database credentials, readable only by you)."
 # not starting would be a silent failure discovered 90 days later.
 if [ -n "${COMPOSE_PROFILES:-}" ]; then export COMPOSE_PROFILES; fi
 
-# --- 5. Build and install ----------------------------------------------------
+# --- 5. Get the image -------------------------------------------------------
 
 echo
-bold 'Building the image (first run downloads the media toolchain — this is slow)…'
-compose build
+if [ "$IMAGE_MODE" = 'build' ]; then
+	bold "Building the image here as $IMAGE_REPOSITORY:$IMAGE_VERSION (first run downloads the media toolchain — this is slow)…"
+	compose_build build dedalo
+	bold "Image: built here as $IMAGE_REPOSITORY:$IMAGE_VERSION"
+else
+	bold "Image: pulled $IMAGE_REPOSITORY:$IMAGE_VERSION — $IMAGE_SOURCE_LABEL"
+fi
 
 bold 'Starting PostgreSQL…'
 compose up -d postgres
@@ -708,4 +898,9 @@ echo '  emergencies, then set up backups — docs/management/backup.md.'
 echo
 echo "  Logs:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f dedalo"
 echo "  Stop:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE stop"
+echo
+echo '  Update: ./deploy/dedalo-image-update.sh --version <version>   (from this directory;'
+echo '          the Update code panel shows the exact command for each release). It takes a'
+echo "          database backup, gets the image the way this install does ($IMAGE_MODE), and"
+echo '          rolls back on its own if the new version does not come up healthy.'
 echo

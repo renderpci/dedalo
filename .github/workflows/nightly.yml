@@ -108,7 +108,7 @@ jobs:
         run: exit "$RC"
 
   report:
-    needs: [check, image_pin]
+    needs: [check, image_pin, cosign_pin]
     # always(): a red `check` is exactly when the issue matters. A cancelled or
     # skipped `check` reports nothing (handled in the script, not here, so the
     # condition cannot silently drop a red).
@@ -126,6 +126,8 @@ jobs:
           SUMMARY: ${{ needs.check.outputs.summary }}
           PIN_RESULT: ${{ needs.image_pin.result }}
           PIN_MESSAGE: ${{ needs.image_pin.outputs.message }}
+          COSIGN_RESULT: ${{ needs.cosign_pin.result }}
+          COSIGN_MESSAGE: ${{ needs.cosign_pin.outputs.message }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -143,6 +145,11 @@ jobs:
           # problem in this issue, not only a red scheduled run nobody is notified of.
           if [ "${PIN_RESULT:-}" = "failure" ]; then
             SUMMARY="$(jq --arg m "CI image pin is behind: ${PIN_MESSAGE:-read the image_pin job log} — run \`bun run ci:image:pin\` and commit the diff" '.problems = ((.problems // []) + [$m]) | .verdict = "red"' <<<"$SUMMARY")"
+          fi
+          # The cosign pin (cosign_pin job): image-release.yml refuses to publish while it is
+          # unset, and signs with a stale tool while it is behind — either way a problem here.
+          if [ "${COSIGN_RESULT:-}" = "failure" ]; then
+            SUMMARY="$(jq --arg m "cosign pin is unset or behind: ${COSIGN_MESSAGE:-read the cosign_pin job log} — run \`bun run ci:cosign:pin\` and commit the diff" '.problems = ((.problems // []) + [$m]) | .verdict = "red"' <<<"$SUMMARY")"
           fi
           verdict="$(jq -r '.verdict // "red"' <<<"$SUMMARY")"
           problems="$(jq '.problems // [] | length' <<<"$SUMMARY")"
@@ -233,4 +240,32 @@ jobs:
           set -e
           cat "$RUNNER_TEMP/pin.log"
           echo "message=$(grep '^ci:image:pin:' "$RUNNER_TEMP/pin.log" | tail -1 | tr -d '\r')" >> "$GITHUB_OUTPUT"
+          exit "$rc"
+
+  # THE COSIGN PIN'S UPDATER SIGNAL (scripts/ci_cosign_pin.ts, ci/cosign.json). The release
+  # workflow (image-release.yml) downloads exactly the pinned cosign to sign and verify every
+  # published image, and refuses to publish while the pin is unset. Red here means the pin
+  # is unset or a newer stable cosign exists: run `bun run ci:cosign:pin` and commit the diff.
+  # The token only lifts the API's anonymous rate limit; it is the run's own, read-only.
+  cosign_pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      message: ${{ steps.pin.outputs.message }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+      - name: The cosign pin is set and is the latest stable release
+        id: pin
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          bun run ci:cosign:pin --check > "$RUNNER_TEMP/cosign_pin.log" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/cosign_pin.log"
+          echo "message=$(grep '^ci:cosign:pin:' "$RUNNER_TEMP/cosign_pin.log" | tail -1 | tr -d '\r')" >> "$GITHUB_OUTPUT"
           exit "$rc"

@@ -11,6 +11,13 @@
  * Pure wiring: asserted through the widget's own getValue, with the engine call
  * intercepted, so no network is involved. Also pins the split: the consumer panel
  * no longer registers the build action nor answers `code_server`.
+ *
+ *  - the IMAGE-UPDATE REQUEST and its cancel (installer unification D3/D4,
+ *     2026-10-09; core/update/image_update_request.ts): every refusal id, in the
+ *     gate order, against a scratch channel dir; success writes exactly ONE
+ *     request; the walk verdict is assertLinearUpgrade's; a claimed request
+ *     cannot be cancelled. The widget's own door is asked once, on this real
+ *     checkout, for the refusal → `coordinates.reason` mapping.
  */
 
 import { afterAll, describe, expect, mock, test } from 'bun:test';
@@ -51,7 +58,9 @@ describe('update_code is the CONSUMER panel only (serve_code split)', () => {
 	test('no build action, no code_server half', async () => {
 		const { widget } = await widgetModule();
 		expect(Object.keys(widget.apiActions ?? {}).sort()).toEqual([
+			'cancel_image_update_request',
 			'delete_restore_point',
+			'request_image_update',
 			'restore_code',
 			'update_code',
 		]);
@@ -207,6 +216,249 @@ describe('the update_code JOB hands its stop to the pipeline (OPS-1 review, thir
 		} finally {
 			release.resolve();
 			mock.module('../../src/core/update/code_update.ts', () => REAL_CODE_UPDATE);
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// request_image_update / cancel_image_update_request
+// ---------------------------------------------------------------------------
+
+describe('the image-update request (D3/D4): gates, one write, and the walk rule', () => {
+	const NOW = new Date('2026-10-09T12:00:00.000Z');
+	const dirs: string[] = [];
+	afterAll(async () => {
+		const { setServerState } = await import('../../src/core/resolve/server_state.ts');
+		setServerState({ maintenance_mode: false });
+		for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
+	});
+
+	async function modules() {
+		const request = await import('../../src/core/update/image_update_request.ts');
+		const channel = await import('../../src/core/update/image_update_channel.ts');
+		const walk = await import('../../src/core/update/version_walk.ts');
+		const { setServerState } = await import('../../src/core/resolve/server_state.ts');
+		const { SUPERUSER_ID } = await import('../../src/core/security/permissions.ts');
+		const { DEDALO_ENGINE_VERSION } = await import('../../src/core/update/build_stamp.ts');
+		const { readEnv } = await import('../../src/config/env.ts');
+		// the scratch state file the preload points at — never the live server's
+		expect(readEnv('DEDALO_TS_STATE_PATH')).toBeDefined();
+		setServerState({ maintenance_mode: true });
+		return {
+			...request,
+			...channel,
+			...walk,
+			setServerState,
+			superuser: { userId: SUPERUSER_ID } as never,
+			DEDALO_ENGINE_VERSION,
+		};
+	}
+
+	/** A scratch channel dir with a host updater that checked in `secondsAgo`, pinned at `pinned`. */
+	function channelDir(secondsAgo: number | null = 10, pinned = '7.0.0'): string {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_image_request_'));
+		dirs.push(dir);
+		if (secondsAgo !== null) {
+			writeFileSync(
+				join(dir, 'host_updater.json'),
+				JSON.stringify({
+					schema: 1,
+					interval_seconds: 60,
+					mode: 'pull',
+					image: 'ghcr.io/test/dedalo',
+					pinned,
+					verify: 'none',
+					running_digest: null,
+					seen_at: new Date(NOW.getTime() - secondsAgo * 1000).toISOString(),
+				}),
+			);
+		}
+		return dir;
+	}
+
+	const CURRENT = [7, 0, 0] as const;
+	const seams = (dir: string, channel: 'image' | 'tree_swap' = 'image') => ({
+		dir,
+		channel,
+		now: NOW,
+		current: CURRENT,
+	});
+	const requestFiles = (dir: string) =>
+		readdirSync(dir).filter((name) => name === 'request.json' || name === 'inflight.json');
+
+	test('the preconditions throw their own typed errors first (superuser, then maintenance mode)', async () => {
+		const m = await modules();
+		const dir = channelDir();
+		expect(() =>
+			m.requestImageUpdate({ version: '7.0.1' }, { userId: 42 } as never, seams(dir)),
+		).toThrow();
+		m.setServerState({ maintenance_mode: false });
+		try {
+			m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+			throw new Error('expected a refusal');
+		} catch (error) {
+			expect((error as { code?: string }).code).toBe('maintenance.mode_required');
+		}
+		m.setServerState({ maintenance_mode: true });
+		expect(requestFiles(dir)).toEqual([]);
+	});
+
+	test('every refusal id, in gate order, and none of them writes', async () => {
+		const m = await modules();
+		const ask = (options: Record<string, unknown>, dir: string, channel?: 'image' | 'tree_swap') =>
+			m.requestImageUpdate(options, m.superuser, seams(dir, channel));
+		const fresh = channelDir();
+		expect(ask({ version: '7.0.1' }, fresh, 'tree_swap')).toEqual({
+			ok: false,
+			reason: 'not_image_channel',
+		});
+		expect(ask({ version: '7.0.1' }, channelDir(null))).toEqual({
+			ok: false,
+			reason: 'host_updater_not_alive',
+		});
+		expect(ask({ version: '7.0.1' }, channelDir(181))).toEqual({
+			ok: false,
+			reason: 'host_updater_not_alive',
+		});
+		for (const options of [
+			{},
+			{ version: '7.0' },
+			{ version: '7.0.1-dev' },
+			{ version: '7.0.1', channel: 'nightly' },
+			{ version: 701 },
+		]) {
+			expect(ask(options, fresh)).toEqual({ ok: false, reason: 'malformed_version' });
+		}
+		expect(requestFiles(fresh)).toEqual([]);
+	});
+
+	test('the walk verdict is assertLinearUpgrade’s, by id', async () => {
+		const m = await modules();
+		const cases: [Record<string, unknown>, string | null][] = [
+			[{ version: '7.0.1' }, null],
+			[{ version: '7.1.0' }, null],
+			[{ version: '8.0.0' }, null],
+			[{ version: '7.0.0', channel: 'dev' }, null],
+			[{ version: '7.0.0' }, 'downgrade_or_same_version'],
+			[{ version: '6.9.9' }, 'downgrade_or_same_version'],
+			[{ version: '7.0.2' }, 'version_skip'],
+			[{ version: '7.2.0' }, 'version_skip'],
+			[{ version: '9.0.0' }, 'version_skip'],
+		];
+		for (const [options, walk] of cases) {
+			const target = m.requestedTag(options);
+			expect(target).not.toBeNull();
+			// the expectation table agrees with THE rule (positive control on the table)
+			const sentence = m.assertLinearUpgrade(CURRENT, target?.triple ?? [], target?.channel);
+			expect(sentence === null).toBe(walk === null);
+			// an installation already on developer images, so the walk is what decides
+			const result = m.requestImageUpdate(options, m.superuser, seams(channelDir(10, '7.0.0-dev')));
+			if (walk === null) expect(result.ok).toBe(true);
+			else expect(result as unknown).toEqual({ ok: false, reason: 'version_refused', walk });
+		}
+	});
+
+	test('a RELEASE installation never requests a -dev image: dev_channel_not_enabled, nothing written', async () => {
+		// A request is a superuser click (or a compromised engine's write): moving a
+		// release install onto unreleased code is the operator's own act on the host.
+		const m = await modules();
+		const release = channelDir(10, '7.0.0');
+		for (const options of [
+			{ version: '7.0.0', channel: 'dev' },
+			{ version: '7.0.1', channel: 'dev' },
+		])
+			expect(m.requestImageUpdate(options, m.superuser, seams(release))).toEqual({
+				ok: false,
+				reason: 'dev_channel_not_enabled',
+			});
+		expect(requestFiles(release)).toEqual([]);
+		// positive control: the same ask on an installation already on developer images
+		const onDev = channelDir(10, '7.0.0-dev');
+		expect(
+			m.requestImageUpdate({ version: '7.0.1', channel: 'dev' }, m.superuser, seams(onDev)).ok,
+		).toBe(true);
+		// the release channel is unaffected on a release installation
+		expect(m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(release)).ok).toBe(true);
+	});
+
+	test('success writes exactly ONE request; a second ask is refused as pending', async () => {
+		const m = await modules();
+		const dir = channelDir();
+		const result = m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+		if (!result.ok) throw new Error(`refused: ${result.reason}`);
+		expect(requestFiles(dir)).toEqual(['request.json']);
+		expect(result.request).toMatchObject({
+			tag: '7.0.1',
+			version: '7.0.1',
+			channel: 'master',
+			from_version: m.DEDALO_ENGINE_VERSION,
+			requested_at: NOW.toISOString(),
+			requested_by: -1,
+			state: 'requested',
+			claimed_at: null,
+		});
+		expect(m.isUuid4(result.request.id)).toBe(true);
+		expect(m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir))).toEqual({
+			ok: false,
+			reason: 'request_pending',
+		});
+		// a developer image is named with its -dev tag (an installation already on one)
+		const dev = m.requestImageUpdate(
+			{ version: '7.0.0', channel: 'dev' },
+			m.superuser,
+			seams(channelDir(10, '7.0.0-dev')),
+		);
+		expect(dev.ok && dev.request.tag).toBe('7.0.0-dev');
+		// an inflight request blocks a new one too
+		const busy = channelDir();
+		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(busy));
+		expect(m.claimRequest(NOW, busy).kind).toBe('claimed');
+		expect(m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(busy))).toEqual({
+			ok: false,
+			reason: 'request_pending',
+		});
+	});
+
+	test('cancel: removes an unclaimed request; refused once claimed, or when there is none', async () => {
+		const m = await modules();
+		const dir = channelDir();
+		expect(m.cancelImageUpdateRequest(m.superuser, { dir })).toEqual({
+			ok: false,
+			reason: 'no_request',
+		});
+		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+		expect(m.cancelImageUpdateRequest(m.superuser, { dir })).toEqual({ ok: true });
+		expect(requestFiles(dir)).toEqual([]);
+		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+		m.claimRequest(NOW, dir);
+		expect(m.cancelImageUpdateRequest(m.superuser, { dir })).toEqual({
+			ok: false,
+			reason: 'request_claimed',
+		});
+		expect(requestFiles(dir)).toEqual(['inflight.json']);
+		expect(() => m.cancelImageUpdateRequest({ userId: 42 } as never, { dir })).toThrow();
+		// no maintenance-mode demand on a withdrawal
+		m.setServerState({ maintenance_mode: false });
+		const other = channelDir();
+		m.setServerState({ maintenance_mode: true });
+		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(other));
+		m.setServerState({ maintenance_mode: false });
+		expect(m.cancelImageUpdateRequest(m.superuser, { dir: other })).toEqual({ ok: true });
+		m.setServerState({ maintenance_mode: true });
+	});
+
+	test('the widget door maps a refusal to maintenance.action_refused with coordinates.reason', async () => {
+		const m = await modules();
+		// THIS checkout is tree_swap, so the first state gate refuses before
+		// anything reads or writes the private dir
+		const { widget } = await widgetModule();
+		try {
+			await widget.apiActions?.request_image_update?.({ version: '7.0.1' }, m.superuser);
+			throw new Error('expected a refusal');
+		} catch (error) {
+			const typed = error as { code?: string; coordinates?: Record<string, unknown> };
+			expect(typed.code).toBe('maintenance.action_refused');
+			expect(typed.coordinates).toEqual({ reason: 'not_image_channel' });
 		}
 	});
 });

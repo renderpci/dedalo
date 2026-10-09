@@ -245,11 +245,47 @@
 				padding: 0.5rem;
 				border-radius: 3px;
 				display: flex;
+				flex-wrap: wrap;
 				gap: 1rem;
 				margin-bottom: 0.5rem;
 
 				&:active {
 					opacity: 0.7;
+				}
+
+				// the release's notes, under its row (render_release_notes): a
+				// full-width fold, open by itself only when an action is needed
+				.release_notes {
+					flex-basis: 100%;
+					font-size: 0.95rem;
+
+					>.release_notes_summary {
+						cursor: pointer;
+						color: var(--fg_muted);
+					}
+					>.release_action_needed {
+						margin: 0.4rem 0;
+
+						>ul {
+							margin: 0.25rem 0 0 1.2rem;
+						}
+					}
+					>.release_note_entries {
+						margin: 0.4rem 0 0 0;
+						padding-left: 1.2rem;
+
+						>li {
+							display: flex;
+							flex-wrap: wrap;
+							align-items: baseline;
+							gap: 0.4rem;
+							margin-bottom: 0.2rem;
+						}
+						.release_note_audience {
+							color: var(--fg_muted);
+							font-size: 0.9em;
+						}
+					}
 				}
 
 				.version_label {
@@ -310,6 +346,35 @@
 			>.dd_note.waive_backup_note {
 				margin: 0.25rem 0 0 1.6rem;
 				max-width: 60rem;
+			}
+		}
+
+		// a CONTAINER installation's footer (render_image_command_panel): the
+		// host command for the selected release, copyable, and the request
+		// button when the host updater can take it
+		.image_command_panel {
+			text-align: left;
+			max-width: 60rem;
+			margin: 0 auto 1.5rem auto;
+
+			>.image_command_row {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 0.5rem;
+				margin: 0.4rem 0;
+
+				>.image_command {
+					flex: 1 1 20rem;
+					padding: 0.4rem 0.6rem;
+					border-radius: 3px;
+					background: var(--bg_surface_alt);
+					overflow-wrap: anywhere;
+					user-select: all;
+				}
+			}
+			>.dd_note.image_command_note {
+				margin-bottom: 0.75rem;
 			}
 		}
 
@@ -380,6 +445,17 @@
 .dd_update_status() {
 	.update_status {
 		margin-bottom: 1rem;
+
+		// a CONTAINER installation's "Image updates" block (render_image_updates)
+		.image_updates {
+			.dd_v > .image_registry_role,
+			.dd_v > .button_cancel_image_request {
+				margin-left: 0.4rem;
+			}
+			>.dd_note {
+				margin-top: 0.4rem;
+			}
+		}
 
 		.status_block {
 			margin-bottom: 0.75rem;

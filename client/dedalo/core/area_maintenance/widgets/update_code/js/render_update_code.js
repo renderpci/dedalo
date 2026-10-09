@@ -14,7 +14,13 @@
 	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
-	import {render_consumer_status, refresh_readiness, backup_waiver_check} from './render_update_status.js'
+	import {
+		render_consumer_status,
+		refresh_readiness,
+		backup_waiver_check,
+		image_update_command,
+		image_command_tag
+	} from './render_update_status.js'
 	import {
 		UPDATE_PHASES,
 		init_phase_state,
@@ -60,6 +66,15 @@
 * and hands the resulting `{pid, pfile}` to the SAME `track_process` — same phase
 * reducer, same /health ending — under its own resume key. There is exactly one
 * progress machine in this widget, and a restore is one of its jobs.
+*
+* A CONTAINER INSTALLATION (value.consumer.image, 2026-10-09) does not swap its
+* tree — its code is the image, replaced on the Docker host. There the release
+* modal shows, for the selected release, the exact host command
+* (`./deploy/dedalo-image-update.sh --version <tag>`, composed from the server's
+* facts) instead of the Update button, and — when the opt-in host updater is
+* alive and nothing is pending — a "Request this update" button that records a
+* request the host claims; `follow_image_request` then follows it to its
+* recorded outcome. Every installation's modal shows each release's NOTES.
 *
 * Exports:
 *   render_update_code — constructor (prototype-only; no instance state)
@@ -267,7 +282,10 @@ const get_content_data_edit = async function(self) {
 						: (point) => render_restore_modal(self, point, body_response, (consumer.engine || {}).version),
 					// DELETE, on the same terms as Restore: a development checkout
 					// gets neither, because neither may touch its tree.
-					is_development ? null : (point) => delete_restore_point(self, point, body_response)
+					is_development ? null : (point) => delete_restore_point(self, point, body_response),
+					// the image block's Cancel (container installations only; the
+					// block is not rendered at all elsewhere)
+					is_development ? null : { on_cancel : () => cancel_image_request(self, body_response) }
 				)
 			} else {
 				holder.appendChild(build_readout([
@@ -1140,6 +1158,10 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 	// info (what the server actually sends: version/date/entity_id/entity/host)
 		const info = versions_info.info || {}
 
+	// a CONTAINER installation: the release is installed on the Docker host
+	// (the command, or a request to the host updater), never by this engine
+		const image = self.value?.consumer?.image || null
+
 	// header. TEXT only: entity + host are remote data
 		const header = ui.create_dom_element({
 			element_type	: 'div',
@@ -1194,6 +1216,7 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 		// declared BEFORE mount_waive_row: the row inserts itself above the
 		// button, and `let` in the same block would leave it in the TDZ.
 		let button_update = null
+		let image_panel = null
 		let waive_backup_input = null
 		const mount_waive_row = function(check) {
 			if (waive_backup_input!==null) {
@@ -1239,7 +1262,9 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 
 			return waive_backup_input
 		}
-		const backup_check = backup_waiver_check(self.value?.consumer)
+		// the waiver belongs to the in-container update, which an image
+		// installation never runs: its own update script takes the backup
+		const backup_check = image ? null : backup_waiver_check(self.value?.consumer)
 		if (backup_check) {
 			mount_waive_row(backup_check)
 		}
@@ -1288,6 +1313,9 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 				if (button_update) {
 					button_update.disabled = false
 				}
+				if (image_panel) {
+					image_panel.select(current_version)
+				}
 			}
 			input_radio.addEventListener('change', change_handler)
 			input_radio.addEventListener('click', (e) => {
@@ -1311,6 +1339,10 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 			})
 
 			version_label.prepend(input_radio)
+
+			// what the release changes, BEFORE it is chosen (published items only:
+			// the code server's frozen changes/<version>/release.json notes)
+			render_release_notes(file_container, current_version.notes)
 
 			// by default index 0 is pre-selected. The server sorts ASCENDING
 			// (code_manifest.ts linearUpgradeTargets), so index 0 is the NEXT
@@ -1343,6 +1375,13 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 				text_content	: JSON.stringify(versions_info, null, 2),
 				parent			: response
 			})
+
+		}else if (image) {
+
+			// container installation: the host command for the selected release,
+			// and the request button when the host updater can take it
+				image_panel = render_image_command_panel(self, image, footer, response, body_response, () => modal)
+				image_panel.select(files.find(el => el.active===true) || null)
 
 		}else{
 
@@ -1509,6 +1548,410 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 
 	return modal
 }//end render_info_modal
+
+
+
+/**
+* RENDER_RELEASE_NOTES
+* One release's notes under its row in the version modal: the *Action needed*
+* titles first (what the operator must do when updating across it), then every
+* change with its kind. Titles are the change log's own fragment
+* titles, set as TEXT. Nothing is drawn for an item without notes (a developer
+* build, or a release cut before notes existed).
+* @param {HTMLElement} parent - the release row
+* @param {Object|undefined} notes - {date, action_needed:[], entries:[{type, audience, title}]}
+* @returns {HTMLElement|null}
+*/
+export const render_release_notes = function(parent, notes) {
+
+	if (!notes || !Array.isArray(notes.entries)) {
+		return null
+	}
+
+	const block = ui.create_dom_element({
+		element_type	: 'details',
+		class_name		: 'release_notes',
+		parent			: parent
+	})
+	ui.create_dom_element({
+		element_type	: 'summary',
+		class_name		: 'release_notes_summary',
+		text_content	: `${get_label.update_code_release_notes || 'Release notes'} · ${String(notes.date || '')}`,
+		parent			: block
+	})
+
+	const action_needed = Array.isArray(notes.action_needed) ? notes.action_needed : []
+	if (action_needed.length) {
+		block.open = true // an action the operator must take is never folded away
+		const warning = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note state_warning release_action_needed',
+			text_content	: get_label.update_code_action_needed || 'Action needed when you update',
+			parent			: block
+		})
+		const list = ui.create_dom_element({ element_type : 'ul', parent : warning })
+		action_needed.forEach(title => {
+			ui.create_dom_element({ element_type : 'li', text_content : String(title), parent : list })
+		})
+	}
+
+	const entries = ui.create_dom_element({
+		element_type	: 'ul',
+		class_name		: 'release_note_entries',
+		parent			: block
+	})
+	notes.entries.forEach(entry => {
+		const li = ui.create_dom_element({ element_type : 'li', parent : entries })
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'dd_badge release_note_type',
+			text_content	: get_label['update_code_change_' + entry.type] || String(entry.type),
+			parent			: li
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'release_note_title',
+			text_content	: String(entry.title),
+			parent			: li
+		})
+	})
+
+	return block
+}//end render_release_notes
+
+
+
+/**
+* COPY_TEXT
+* Puts `text` on the clipboard and says so on the button. A browser that
+* refuses (an insecure origin, a denied permission) leaves the command on
+* screen to be selected by hand — the button says it could not copy.
+* @param {HTMLElement} button
+* @param {string} text
+* @returns {Promise<void>}
+*/
+const copy_text = async function(button, text) {
+
+	try {
+		await navigator.clipboard.writeText(text)
+		button.textContent = get_label.update_code_copied || 'Copied'
+	} catch (_error) {
+		button.textContent = get_label.update_code_copy_failed || 'Select and copy it by hand'
+	}
+}//end copy_text
+
+
+
+/**
+* RENDER_IMAGE_COMMAND_PANEL
+* The footer of the version modal on a CONTAINER installation.
+*
+* For the selected release it shows the host command, composed from the
+* server's facts only (image_update_command: the program + flag the panel was
+* told, the tag from the manifest item's own `X.Y.Z` — a version outside that
+* grammar shows NO command, since this text is pasted into a root shell), with
+* a Copy button and where to run it.
+*
+* "Request this update" is offered ONLY when the host updater says it is alive
+* and nothing is pending — the same conditions the server refuses on, read from
+* the same panel value; the server still decides.
+*
+* @param {Object} self - update_code widget instance
+* @param {Object} image - value.consumer.image
+* @param {HTMLElement} footer
+* @param {HTMLElement} response - the modal's response surface
+* @param {HTMLElement} body_response - the PANEL response surface
+* @param {Function} get_modal - () => the modal (attached after this runs)
+* @returns {{select: Function}} select(item) re-states the panel for a release
+*/
+const render_image_command_panel = function(self, image, footer, response, body_response, get_modal) {
+
+	const panel = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'image_command_panel',
+		parent			: footer
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_eyebrow',
+		text_content	: get_label.update_code_image_command || 'Update command',
+		parent			: panel
+	})
+	const command_row = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'image_command_row',
+		parent			: panel
+	})
+	const command_node = ui.create_dom_element({
+		element_type	: 'code',
+		class_name		: 'image_command mono',
+		parent			: command_row
+	})
+	const button_copy = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'light button_copy_command',
+		text_content	: get_label.copy || 'Copy',
+		parent			: command_row
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_note image_command_note',
+		text_content	: get_label.update_code_image_command_note || 'Run it on the Docker host, in the stack directory (the one holding .dedalo.env). It takes a database backup, installs the image, and rolls back by itself if the new version does not come up healthy.',
+		parent			: panel
+	})
+
+	const can_request = (image.host_updater || {}).state==='alive' && !image.request
+	const button_request = can_request
+		? ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'success button_request_image_update',
+			text_content	: get_label.update_code_image_request_update || 'Request this update',
+			parent			: panel
+		})
+		: null
+
+	let selected = null
+	button_copy.addEventListener('click', (e) => {
+		e.stopPropagation()
+		if (command_node.textContent) {
+			copy_text(button_copy, command_node.textContent)
+		}
+	})
+	if (button_request) {
+		button_request.addEventListener('click', async (e) => {
+			e.stopPropagation()
+			if (!selected || image_command_tag(selected)===null) {
+				return
+			}
+			button_request.disabled = true
+			const request = await submit_image_request(self, selected, response)
+			if (!request) {
+				button_request.disabled = false
+				return
+			}
+			const modal = get_modal()
+			if (modal && typeof modal.close==='function') {
+				modal.close()
+			}
+			follow_image_request(self, request, body_response)
+		})
+	}
+
+	return {
+		select : (item) => {
+			selected = item
+			const command = item ? image_update_command(image, item) : null
+			command_node.textContent = command || ''
+			button_copy.textContent = get_label.copy || 'Copy'
+			button_copy.disabled = command===null
+			if (button_request) {
+				button_request.disabled = command===null
+			}
+		}
+	}
+}//end render_image_command_panel
+
+
+
+/**
+* IMAGE_REFUSAL_TEXT
+* A request refusal, worded from labels by its `coordinates.reason` id; the
+* server's own sentence when the id has no label yet.
+* @param {Object} error - the envelope's error
+* @returns {string}
+*/
+const image_refusal_text = function(error) {
+
+	const reason = error?.coordinates?.reason
+	const label = reason ? get_label['update_code_image_refused_' + reason] : null
+
+	return label || error_text(error)
+}//end image_refusal_text
+
+
+
+/**
+* SUBMIT_IMAGE_REQUEST
+* Records the request for one release. A refusal is written in the modal's
+* response surface (TEXT), and the modal stays open.
+* @param {Object} self
+* @param {Object} item - the selected manifest item
+* @param {HTMLElement} response
+* @returns {Promise<Object|null>} the recorded request, or null
+*/
+const submit_image_request = async function(self, item, response) {
+
+	response.classList.remove('error')
+	response.textContent = ''
+	const api_response = await self.request_image_update({
+		version	: String(item.version ?? ''),
+		channel	: item.channel==='dev' ? 'dev' : 'master'
+	})
+	if (request_failed(api_response)) {
+		response.textContent = image_refusal_text(api_response.error)
+		response.classList.add('error')
+		return null
+	}
+
+	return response_data(api_response)?.request || null
+}//end submit_image_request
+
+
+
+/**
+* CANCEL_IMAGE_REQUEST
+* Withdraws the pending request (the image block's Cancel), then re-reads the
+* panel. A request the host already claimed is refused by the server, worded
+* by its reason.
+* @param {Object} self
+* @param {HTMLElement} body_response
+* @returns {Promise<void>}
+*/
+const cancel_image_request = async function(self, body_response) {
+
+	body_response.replaceChildren()
+	const api_response = await self.cancel_image_update_request()
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: request_failed(api_response) ? 'dd_note state_danger' : 'dd_note state_ok',
+		text_content	: request_failed(api_response)
+			? image_refusal_text(api_response.error)
+			: (get_label.update_code_image_cancelled || 'The update request was cancelled.'),
+		parent			: body_response
+	})
+	if (typeof self.refresh_consumer==='function') {
+		await self.refresh_consumer()
+	}
+}//end cancel_image_request
+
+
+
+/**
+* IMAGE_FOLLOW_DEADLINE_MS
+* How long the panel follows a request: the host updater's own unit allows an
+* update two hours (TimeoutStartSec), a build-mode update with a large database
+* backup can use much of that. Past it the panel stops following and says so —
+* the outcome is still recorded, and shown, on the next panel read.
+*/
+const IMAGE_FOLLOW_DEADLINE_MS = 2 * 60 * 60 * 1000
+
+
+
+/**
+* FOLLOW_IMAGE_REQUEST
+* Follows a recorded request to its outcome, on the panel surface.
+*
+* Two sources, one at a time. While the engine answers, the panel value says
+* where the request is (`request.state`: requested → claimed) and, once the host
+* recorded it, the outcome (`last_outcome.request_id` === this request). When
+* the engine stops answering — the host is replacing its container — the panel
+* switches to `GET /health`, the same unauthenticated probe the in-place update
+* ends on, until an engine answers again. Which version answers is NOT the
+* verdict (the new one, or the old one after a rollback, both answer): the
+* panel goes back to the panel value for the recorded outcome — the host wrote
+* it, this side only reads it.
+*
+* @param {Object} self
+* @param {Object} request - the recorded request (data.request)
+* @param {HTMLElement} body_response
+* @returns {void}
+*/
+const follow_image_request = function(self, request, body_response) {
+
+	body_response.replaceChildren()
+	const note = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_note state_warning image_follow_note',
+		text_content	: get_label.update_code_image_requested || 'Update requested. The host updater starts it within a minute; this panel follows it.',
+		parent			: body_response
+	})
+	const deadline = Date.now() + IMAGE_FOLLOW_DEADLINE_MS
+
+	const finish = async (outcome) => {
+		if (typeof self.refresh_consumer==='function') {
+			await self.refresh_consumer()
+		}
+		note.className = outcome.status==='green' ? 'dd_note state_ok image_follow_note' : 'dd_note state_danger image_follow_note'
+		note.textContent = `${get_label['update_code_image_outcome_' + outcome.status] || outcome.status}: ${outcome.from || '—'} → ${outcome.to || '—'} (${outcome.detail})`
+		if (outcome.status==='green') {
+			// the browser still holds the OLD modules (same as the in-place update)
+			const reload_button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light',
+				text_content	: get_label.update_code_reload_now || 'Reload now',
+				parent			: note
+			})
+			reload_button.addEventListener('click', (e) => {
+				e.stopPropagation()
+				login.quit()
+			})
+		}
+	}
+
+	const read_panel = async () => {
+		try {
+			const value = await self.get_value()
+			return value?.consumer?.image ? value.consumer.image : null
+		} catch (_error) {
+			return null
+		}
+	}
+
+	const read_health = async () => {
+		try {
+			const health_response = await fetch('/health')
+			return health_response.ok ? ((await health_response.json())?.version ?? null) : null
+		} catch (_error) {
+			return null
+		}
+	}
+
+	let engine_gone = false
+	const tick = async () => {
+		if (Date.now() >= deadline) {
+			note.textContent = get_label.update_code_image_follow_timeout || 'This panel stopped following the update. Reopen it later to see the outcome.'
+			return
+		}
+		if (engine_gone) {
+			const version = await read_health()
+			if (version!==null) {
+				// an engine is back — the new one, or the old one after a rollback;
+				// the recorded outcome says which
+				engine_gone = false
+				note.textContent = get_label.update_code_image_engine_back || 'The engine is back; reading the recorded outcome…'
+			}
+			setTimeout(tick, 3000)
+			return
+		}
+		const image = await read_panel()
+		if (image===null) {
+			engine_gone = true
+			note.textContent = get_label.update_code_image_waiting_engine || 'The engine is being replaced on the Docker host…'
+			setTimeout(tick, 3000)
+			return
+		}
+		const outcome = image.last_outcome
+		if (!image.request && outcome && outcome.request_id===request.id) {
+			finish(outcome)
+			return
+		}
+		if (!image.request || image.request.id!==request.id) {
+			// cancelled (here or by another administrator), or replaced: nothing
+			// of THIS request is left to follow
+			note.textContent = get_label.update_code_image_request_gone || 'The request is no longer pending, and no outcome was recorded for it.'
+			if (typeof self.refresh_consumer==='function') {
+				self.refresh_consumer()
+			}
+			return
+		}
+		if (image.request.state==='claimed') {
+			note.textContent = get_label.update_code_image_request_claimed_note || 'The host updater is installing the update (backup, image, health check)…'
+		}
+		// every panel read re-probes the code servers: a calm pace
+		setTimeout(tick, 10000)
+	}
+	setTimeout(tick, 5000)
+}//end follow_image_request
 
 
 

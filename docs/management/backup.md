@@ -14,6 +14,15 @@ engine's responsibility, not the work server's, so the panel's MySQL file list
 is always empty. Use the manual `mysqldump` steps below for the publishing
 system.
 
+!!! warning "The complete backup set"
+    The work-system database alone is **not** a backup. The complete set is: the
+    matrix database, the vector database (if you enabled semantic search), the
+    **media originals**, `../private/` (the secrets and the state), and every
+    site-builder instance on the host (if you run the
+    [site builder](../tools/using_sitebuilder.md)). The nightly job the engine
+    ships (`deploy/dedalo-backup.service`) covers all five — see
+    [production step 13](../install/production.md#13-backups).
+
 !!! note "Recreating a publication database with work data"
     Publishing system is a copy and is possible recreate it doing a publication in work system. But some times will be necessary a copy because the work system is not ready to publish his data.
 
@@ -240,6 +249,17 @@ You can use Adminer or other database tools to import the file that you previous
 ```shell
 mysql -u publishing_bd_user_name -p -v  mysql_dump_my_publishing_database < mysql_dump_my_publishing_database.sql
 ```
+
+## Backup of site-builder instances
+
+If you run the [site builder](../tools/using_sitebuilder.md), each of its
+instances on the host is part of the backup set: its declaration and secrets,
+its workspaces and each site's webspace. The shipped nightly job copies them as
+its last store (`deploy/dedalo-site-builder-backup.sh`); on a host with no
+instance that step copies nothing. The destination holds root-owned secrets, so
+treat it like the `../private/` copy. A host running several Dédalo instances
+backs the site-builder instances up from **one** instance's job only, since the
+store covers the whole host (see [several instances](../install/multi_instance.md)).
 
 ## Backup a Dédalo config files
 

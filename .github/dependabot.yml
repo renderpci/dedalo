@@ -85,6 +85,21 @@ updates:
       interval: monthly
     open-pull-requests-limit: 3
 
+  # THE PRODUCT IMAGE'S BASE (Dockerfile `FROM oven/bun:<v>-debian@sha256:…`). The digest
+  # pin is exactness — the published Dédalo images are SIGNED, and a signature over a base
+  # that moved under an unchanged tag would vouch for bytes nobody chose — and this entry
+  # is its updater: it proposes digest refreshes of the same tag and tag bumps. A TAG bump
+  # PR is red until .bun-version moves with it (test/unit/ops_runtime_pin.test.ts holds the
+  # Dockerfile tag == .bun-version): that is the lockstep the runtime pin needs, not noise.
+  # Take it by moving .bun-version (and the CI image, which installs .bun-version) in the
+  # same change.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+
   # THE CI IMAGE'S BASE (ci/Dockerfile `FROM debian:trixie-slim@sha256:…`). The digest pin
   # is exactness; this is its updater — the same rule as the SHA-pinned actions above. A
   # merged bump changes the image fingerprint, which republishes ghcr.io/renderpci/dedalo-ci

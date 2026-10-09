@@ -1,4 +1,5 @@
-# Restart helper fired by dedalo-ts-watchdog.service OnFailure (audit S2-38).
+# Restart helper started by deploy/dedalo-ts-watchdog.sh when /health is red and
+# no code update is pending (audit S2-38). The watchdog unit has no OnFailure=.
 
 [Unit]
 Description=Restart the Dedalo TS server after a failed health probe

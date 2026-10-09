@@ -5,7 +5,8 @@
  * the published tree hashed file by file, then its leftover temps;
  * diffusion_target_fence_native: the per-record files a fenced run published), and
  * publication_host_bundle_twin_tripwire (the files the agent's reader extracted from an
- * engine-written bundle into the gate's own mkdtemp dir).
+ * engine-written bundle into the gate's own mkdtemp dir), client_publish_native (the
+ * published-client tree) and install_sh_image_source (the scratch stack dir).
  *
  * NOT a corpus: the CALLER hands its own scratch root, and this module never
  * names a repo tree — registered in census_derivation_tripwire SHARED_LISTERS

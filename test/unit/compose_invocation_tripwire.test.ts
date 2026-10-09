@@ -23,10 +23,22 @@
  *
  * CENSUS: TOTAL over `install.sh` and `docs/install/**` — install.sh is
  * otherwise unlinted and untested, so this is the first gate that reads it.
+ *
+ * THE HOST LIBRARY (installer unification D2, 2026-10-09). The Docker-host tools
+ * (install.sh's build, deploy/dedalo-image-update.sh, the host image updater)
+ * reach compose through ONE function, `dedalo_compose` in
+ * deploy/dedalo-image-lib.sh, whose argv always ends in `--env-file <file>` and
+ * which refuses a missing env file. A call to it is compliant BY CONSTRUCTION —
+ * which is only true if the library really does that, so the library is
+ * EXECUTED here against a stub docker: the argv it hands compose is read back,
+ * and a missing env file must reach no docker at all. The deploy/ half of the
+ * census is DERIVED: every deploy/*.sh that drives compose, directly or through
+ * the library, so a new host script is in the census the day it is written.
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -35,6 +47,9 @@ const SIMPLE_STACK = 'docker-compose.simple.yml';
 
 /** The env file install.sh writes, and the flag that makes compose read it. */
 const ENV_FILE = '.dedalo.env';
+
+/** The Docker-host library every host tool reaches compose through. */
+const HOST_LIB = 'deploy/dedalo-image-lib.sh';
 
 /**
  * Invocations that must NOT carry the env file, each with the reason. The
@@ -54,7 +69,7 @@ const BARE_BY_DESIGN: {
 		// spaces put it inside the "no-certificate variant" admonition, and that
 		// is the whole distinction: the UNINDENTED everyday command with the same
 		// text is the OPS-02 defect. Measured — a substring match excused it.
-		rawLine: '    docker compose -f docker-compose.simple.yml up -d',
+		rawLine: '    docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml up -d',
 		// ...and it must live under THIS heading. Anchoring on text alone let the
 		// excused line be MOVED: a reviewer deleted it from the admonition and
 		// re-added the byte-identical line inside the everyday-commands section,
@@ -62,7 +77,8 @@ const BARE_BY_DESIGN: {
 		underHeading: '??? tip "The no-certificate variant"',
 		reason:
 			'The "no-certificate variant" — a laptop look with no install.sh run, so there is no ' +
-			'.dedalo.env to pass and the plain-HTTP defaults are correct here.',
+			'.dedalo.env to pass and the plain-HTTP defaults are correct here. Without install.sh ' +
+			'there is no image pin, so the bare variant must build locally.',
 	},
 ];
 
@@ -102,12 +118,19 @@ function docsInstallFiles(): string[] {
  * loses its Secure flag on a live TLS site.
  */
 function deployAndScriptFiles(): string[] {
-	return [
-		'deploy/dedalo-image-update.sh',
-		'deploy/dedalo-tls-rotate.sh',
-		'scripts/update_probe.ts',
-	];
+	const deployScripts = readdirSync(join(REPO_ROOT, 'deploy'))
+		.filter((name) => name.endsWith('.sh'))
+		.map((name) => join('deploy', name))
+		.filter((file) => DRIVES_COMPOSE.test(readFileSync(join(REPO_ROOT, file), 'utf8')))
+		.sort();
+	return [...deployScripts, 'scripts/update_probe.ts'];
 }
+
+/** A shell script drives compose directly, or through the host library. */
+const DRIVES_COMPOSE = /docker compose|\bdedalo_compose\b/;
+
+/** A CALL of the library's compose function (not its definition, not `_args`). */
+const LIBRARY_CALL = /(^|[\s;&|({])dedalo_compose\s/;
 
 /**
  * Join backslash-continued lines and `&&`-chains before scanning.
@@ -140,29 +163,76 @@ function logicalLines(source: string): { line: number; text: string; raw: string
 
 /** Every line mentioning the simple stack by name — the stack install.sh writes for. */
 function simpleStackInvocations(file: string): { line: number; text: string; raw: string }[] {
+	return invocationsIn(file, readFileSync(join(REPO_ROOT, file), 'utf8'));
+}
+
+/**
+ * The invocations in `source` (the text of `file`). A deploy/ SHELL script is
+ * judged on EVERY compose command it runs, whatever names the stack — a script
+ * there is a host tool, and `-f "$STACK"` must not escape by spelling — with
+ * full-line comments skipped. Everywhere, a call of the library's
+ * `dedalo_compose` is an invocation (judged by the library gate below).
+ */
+function invocationsIn(
+	file: string,
+	source: string,
+): { line: number; text: string; raw: string }[] {
 	const found: { line: number; text: string; raw: string }[] = [];
-	const source = readFileSync(join(REPO_ROOT, file), 'utf8');
+	const hostScript = file.startsWith('deploy/') && file.endsWith('.sh');
 	for (const entry of logicalLines(source)) {
+		if (hostScript && /^\s*#/.test(entry.raw)) continue;
 		// SEGMENT the line: `… --env-file X stop && docker compose -f … up -d` used
 		// to pass, because `--env-file` appeared SOMEWHERE on it and the bare half
 		// rode the compliant half's flag. Each command is judged on its own.
 		for (const text of entry.text.split(/&&|\|\||;/)) {
-			if (!/docker'?,?\s*'?compose|docker compose/.test(text)) continue;
-			// install.sh and the deploy scripts name the file through a variable; the
-			// docs and the TS probe spell it out.
-			if (
-				!text.includes(SIMPLE_STACK) &&
-				!text.includes('$COMPOSE_FILE') &&
-				!text.includes('COMPOSE_BASE')
-			) {
-				continue;
+			if (isInvocation(text, hostScript)) {
+				found.push({ line: entry.line, text: text.trim(), raw: entry.raw });
 			}
-			// `docker compose version` is a capability probe, not a stack invocation.
-			if (/docker compose version/.test(text)) continue;
-			found.push({ line: entry.line, text: text.trim(), raw: entry.raw });
 		}
 	}
 	return found;
+}
+
+function isInvocation(text: string, hostScript: boolean): boolean {
+	if (LIBRARY_CALL.test(text)) return true;
+	if (!/docker'?,?\s*'?compose|docker compose/.test(text)) return false;
+	// `docker compose version` is a capability probe, not a stack invocation.
+	if (/docker compose version/.test(text)) return false;
+	if (hostScript) return true;
+	// install.sh names the file through a variable; the docs and the TS probe
+	// spell it out.
+	return (
+		text.includes(SIMPLE_STACK) || text.includes('$COMPOSE_FILE') || text.includes('COMPOSE_BASE')
+	);
+}
+
+/**
+ * Is this invocation compliant? The env-file spellings, the deploy scripts'
+ * ENV_FILE_ARGS idiom, the TS probe's argv constant — and the host library: a
+ * `dedalo_compose` call, or the library's own `docker compose
+ * "${compose_argv[@]}"`, whose argv the library gate below EXECUTES.
+ */
+function carriesEnvFile(file: string, text: string): boolean {
+	// The exact file, not any file: `--env-file .env` names the one file
+	// install.sh says must never be used, because the engine's own loader
+	// auto-loads that from the working directory.
+	if (text.includes(`--env-file ${ENV_FILE}`) || text.includes(`'${ENV_FILE}'`)) return true;
+	// install.sh and the deploy scripts pass it through their own variable.
+	// The variable's VALUE is pinned by its own test below, so this is not
+	// a hole: `--env-file .env` — the one file install.sh says must never
+	// be used — still fails, because it matches none of these.
+	// Any quoting: install.sh builds some messages by concatenating a
+	// single-quoted string with a double-quoted expansion, so the flag can
+	// read `--env-file '"$ENV_FILE"'`.
+	if (/--env-file\s+['"]*\$\{?ENV_FILE\}?/.test(text)) return true;
+	// The sanctioned SHELL idiom for "pass it when it exists", used by the
+	// deploy scripts which also serve the full stack (no such file there).
+	if (text.includes('ENV_FILE_ARGS')) return true;
+	// The TS probe passes it as an argv element.
+	if (text.includes('COMPOSE_ENV_FILE')) return true;
+	// The host library: its argv carries the env file, proven by execution below.
+	if (LIBRARY_CALL.test(text)) return true;
+	return file === HOST_LIB && text.includes('"${compose_argv[@]}"');
 }
 
 describe('a TLS install cannot lose its TLS', () => {
@@ -175,27 +245,51 @@ describe('a TLS install cannot lose its TLS', () => {
 		expect(simpleStackInvocations(INSTALL_SH).length).toBeGreaterThan(3);
 	});
 
+	test('the deploy census is derived, and holds every host tool that drives compose', () => {
+		const derived = deployAndScriptFiles();
+		expect(derived.length).toBeGreaterThan(3);
+		for (const file of [
+			HOST_LIB,
+			'deploy/dedalo-image-update.sh',
+			'deploy/dedalo-tls-rotate.sh',
+			'scripts/update_probe.ts',
+		]) {
+			expect(derived, `${file} must be in the derived census`).toContain(file);
+		}
+		// The updater reaches compose ONLY through the library.
+		expect(simpleStackInvocations('deploy/dedalo-image-update.sh').length).toBeGreaterThan(1);
+		expect(
+			readFileSync(join(REPO_ROOT, 'deploy/dedalo-image-update.sh'), 'utf8')
+				.split('\n')
+				.filter((line) => !/^\s*#/.test(line) && /docker compose/.test(line)),
+			'deploy/dedalo-image-update.sh runs `docker compose` itself instead of through dedalo_compose',
+		).toEqual([]);
+	});
+
+	test('positive control: a bare host-script command is caught whatever names the stack', () => {
+		const planted = [
+			'#!/usr/bin/env bash',
+			'# a comment saying docker compose up is not a command',
+			'docker compose -f "$STACK" up -d dedalo',
+			'docker compose -f "$STACK" --env-file "$ENV_FILE" up -d dedalo',
+			'dedalo_compose "$ENV_FILE" plain up -d dedalo',
+			'docker compose version',
+		].join('\n');
+		const found = invocationsIn('deploy/planted.sh', planted);
+		expect(found.map((entry) => entry.line)).toEqual([3, 4, 5]);
+		const bare = found.filter((entry) => !carriesEnvFile('deploy/planted.sh', entry.text));
+		expect(bare.map((entry) => entry.line)).toEqual([3]);
+		// The library's own argv idiom is trusted only IN the library.
+		const idiom = 'docker compose "${compose_argv[@]}" "$@"';
+		expect(carriesEnvFile(HOST_LIB, idiom)).toBe(true);
+		expect(carriesEnvFile('deploy/planted.sh', idiom)).toBe(false);
+	});
+
 	test('every simple-stack invocation carries the env file', () => {
 		const offenders: string[] = [];
 		for (const file of targets) {
 			for (const { line, text, raw } of simpleStackInvocations(file)) {
-				// The exact file, not any file: `--env-file .env` names the one file
-				// install.sh says must never be used, because the engine's own loader
-				// auto-loads that from the working directory.
-				if (text.includes(`--env-file ${ENV_FILE}`) || text.includes(`'${ENV_FILE}'`)) continue;
-				// install.sh and the deploy scripts pass it through their own variable.
-				// The variable's VALUE is pinned by its own test below, so this is not
-				// a hole: `--env-file .env` — the one file install.sh says must never
-				// be used — still fails, because it matches none of these.
-				// Any quoting: install.sh builds some messages by concatenating a
-				// single-quoted string with a double-quoted expansion, so the flag can
-				// read `--env-file '"$ENV_FILE"'`.
-				if (/--env-file\s+['"]*\$\{?ENV_FILE\}?/.test(text)) continue;
-				// The sanctioned SHELL idiom for "pass it when it exists", used by the
-				// deploy scripts which also serve the full stack (no such file there).
-				if (text.includes('ENV_FILE_ARGS')) continue;
-				// The TS probe passes it as an argv element.
-				if (text.includes('COMPOSE_ENV_FILE')) continue;
+				if (carriesEnvFile(file, text)) continue;
 				const excused = BARE_BY_DESIGN.some(
 					(entry) =>
 						entry.file === file &&
@@ -307,5 +401,86 @@ describe('a TLS install cannot lose its TLS', () => {
 			script,
 			'install.sh must not name .env as its compose env file — the engine auto-loads that',
 		).not.toMatch(/readonly ENV_FILE='\.env'/);
+	});
+});
+
+/**
+ * THE LIBRARY IS EXECUTED, not read: `dedalo_compose` is run under the scripts'
+ * own shell options against a stub `docker` that records its argv.
+ */
+describe('the host library always hands compose the env file', () => {
+	function runLibrary(
+		envFile: string | null,
+		variant: string,
+	): {
+		code: number;
+		argv: string[] | null;
+	} {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo-compose-lib-'));
+		try {
+			const bin = join(dir, 'bin');
+			Bun.spawnSync(['mkdir', '-p', bin]);
+			writeFileSync(join(bin, 'docker'), '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$ARGV_OUT"\n');
+			chmodSync(join(bin, 'docker'), 0o755);
+			writeFileSync(join(dir, SIMPLE_STACK), 'services: {}\n');
+			if (envFile !== null) {
+				writeFileSync(
+					join(dir, envFile),
+					`POSTGRES_DB=dedalo\nDEDALO_COMPOSE_FILE=${SIMPLE_STACK}\n`,
+				);
+			}
+			const script = `set -euo pipefail\n. "$1"\ndedalo_compose "$2" "$3" up -d dedalo`;
+			const run = Bun.spawnSync(
+				['bash', '-c', script, 'lib', join(REPO_ROOT, HOST_LIB), envFile ?? ENV_FILE, variant],
+				{ cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, ARGV_OUT: join(dir, 'argv') } },
+			);
+			let argv: string[] | null = null;
+			try {
+				argv = readFileSync(join(dir, 'argv'), 'utf8').split('\n').slice(0, -1);
+			} catch {
+				argv = null;
+			}
+			return { code: run.exitCode ?? -1, argv };
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	}
+
+	test('plain: -f <the stack the env file names> --env-file <that file>, then the command', () => {
+		const { code, argv } = runLibrary(ENV_FILE, 'plain');
+		expect(code).toBe(0);
+		expect(argv).toEqual([
+			'compose',
+			'-f',
+			SIMPLE_STACK,
+			'--env-file',
+			ENV_FILE,
+			'up',
+			'-d',
+			'dedalo',
+		]);
+	});
+
+	test('build: the override joins the stack, the env file still travels', () => {
+		const { code, argv } = runLibrary(ENV_FILE, 'build');
+		expect(code).toBe(0);
+		expect(argv).toEqual([
+			'compose',
+			'-f',
+			SIMPLE_STACK,
+			'-f',
+			'deploy/compose.build.yml',
+			'--env-file',
+			ENV_FILE,
+			'up',
+			'-d',
+			'dedalo',
+		]);
+	});
+
+	test('no env file: refused, and docker is never run', () => {
+		const { code, argv } = runLibrary(null, 'plain');
+		expect(code).not.toBe(0);
+		expect(argv).toBeNull();
 	});
 });

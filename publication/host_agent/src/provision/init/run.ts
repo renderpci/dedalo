@@ -831,8 +831,19 @@ function printReport(sinks: Sinks, items: readonly Item[], answers: ReadonlyMap<
   sinks.out(`provision init: ${countLine(items)}`);
 }
 
-/** Prompts every unanswered decision (interactive only), recomputing after each answer. */
-async function askDecisions(world: InitWorld, inputs: Inputs, computed: Computed, answers: Map<string, string>): Promise<Computed> {
+/**
+ * The draft discovery reads: the operator's, with host.web's answer as its `web.server` when the draft
+ * names none — the web server's facts (its unit, binaries, vhosts, maps) are observed for ONE server,
+ * so the answer must reach discovery, not only the completion.
+ */
+export function observedDraft(draft: Inputs['draft'], answers: ReadonlyMap<string, string>): Inputs['draft'] {
+  const answered = answers.get('host.web');
+  if (draft.web?.server !== undefined || (answered !== 'apache' && answered !== 'nginx')) return draft;
+  return { ...draft, web: { ...draft.web, server: answered } };
+}
+
+/** Prompts every unanswered decision (interactive only), recomputing after each answer (host.web's: observing again). */
+async function askDecisions(world: InitWorld, inputs: Inputs, computed: Computed, answers: Map<string, string>, observe: () => HostFacts): Promise<Computed> {
   const declined = new Set<string>();
   let current = computed;
   for (;;) {
@@ -844,7 +855,8 @@ async function askDecisions(world: InitWorld, inputs: Inputs, computed: Computed
       continue;
     }
     answers.set(next.id, answer);
-    current = compute(world, inputs, current.facts, answers);
+    const reobserve = next.id === 'host.web' && answer !== current.facts.web.server;
+    current = compute(world, inputs, reobserve ? observe() : current.facts, answers);
   }
 }
 
@@ -924,7 +936,7 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
 
     // 4. Discovery and comparison.
     const answers = new Map(args.decide);
-    const observe = () => observeHostWide(inputs.draft, world);
+    const observe = () => observeHostWide(observedDraft(inputs.draft, answers), world);
     let computed = compute(world, inputs, observe(), answers);
     if (args.resume && journal !== null && journal.openUnfinished.length > 0) {
       const layout = computed.completion.layout;
@@ -953,7 +965,7 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
     const interactive = prompter.interactive && !args.dryRun;
     if (interactive) {
       const before = new Map(answers);
-      computed = await askDecisions(world, inputs, computed, answers);
+      computed = await askDecisions(world, inputs, computed, answers, observe);
       if (answers.size !== before.size) {
         sinks.out('provision init: the report with your answers:');
         printReport(sinks, computed.items, answers);

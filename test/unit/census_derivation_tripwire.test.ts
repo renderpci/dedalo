@@ -383,7 +383,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 		'ROOTS: `client` `scripts` `tools` — the three trees whose comments are scanned; the ROOTS constant there is where a cited path may EXIST, not what is walked.',
 	'test/unit/component_teardown_tripwire.test.ts':
 		'ROOTS: `client` `tools` — through `git ls-files`, tracked browser JS only.',
-	'test/unit/compose_invocation_tripwire.test.ts': 'ROOTS: `docs/install`.',
+	'test/unit/compose_invocation_tripwire.test.ts': 'ROOTS: `deploy`; `docs/install`.',
 	'test/unit/config_dead_field_tripwire.test.ts': 'ROOTS: `scripts` `src` `tools`.',
 	'test/unit/config_env_tripwire.test.ts': 'ROOTS: `src` `tools`.',
 	'test/unit/css_build_tripwire.test.ts':

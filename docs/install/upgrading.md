@@ -4,8 +4,9 @@
 
 Upgrading Dédalo is a `git pull`, a dependency install and a restart. Everything
 that has to happen to the database happens **inside the server at boot**. This
-page is about the three things that are not automatic: the runtime pin, retired
-configuration keys, and rollback.
+page is about the things that are not automatic: the runtime pin, the scripts
+and units installed outside the code tree, retired configuration keys, and
+rollback.
 
 ## The model
 
@@ -16,18 +17,25 @@ host, and the ref is your rollback identity.
 ```shell
 sudo -u dedalo git -C /opt/dedalo/master_dedalo fetch --all --tags
 sudo -u dedalo git -C /opt/dedalo/master_dedalo checkout <tag-or-sha>
-sudo -u dedalo /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production
+sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
 systemctl restart dedalo-ts
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 ```
 
-`deploy/deploy.sh` in the repo automates exactly this — fetch, checkout,
-dependencies, restart, health check, and an automatic rollback to the previous
-ref if health comes back red.
+`bun install` has no `-C`: the `bash -c 'cd … && …'` is what makes it run in
+the clone, because `sudo -u` keeps the directory you are standing in.
+
+`deploy/deploy.sh` in the repo is meant to automate this — fetch, checkout,
+dependencies, restart, health check, and a rollback to the previous ref if health
+comes back red. It is **parked**: it has never run against a real host. As it
+stands it runs `git` and `bun` as the SSH login user rather than `dedalo` (so the
+files it creates have the wrong owner), and it needs `--bun /opt/dedalo/.bun/bin/bun`
+for this layout. Use the commands above until it has been proven on a staging
+server.
 
 ## Before you start
 
-Take the [four backups](production.md#13-backups). All of them. The matrix
+Take the [backups of every store](production.md#13-backups). All of them. The matrix
 database alone is not a backup, and an upgrade is precisely when you find that
 out.
 
@@ -43,6 +51,7 @@ code**:
 ```shell
 BUN_VERSION=<the new pin>
 curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v${BUN_VERSION}"
+chown -R dedalo:dedalo /opt/dedalo/.bun   # the installer ran as root; the service user owns the runtime
 /opt/dedalo/.bun/bin/bun --version
 ```
 
@@ -67,14 +76,55 @@ upgrade. There is no unit file to edit.
 
 ```shell
 sudo -u dedalo git -C /opt/dedalo/master_dedalo pull --ff-only
-sudo -u dedalo /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production
+sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
 ```
 
 `--frozen-lockfile` refuses to resolve a dependency tree different from the one
 that was tested. If it errors, the lockfile and `package.json` disagree — fix
 that upstream, do not paper over it by dropping the flag.
 
-## 3. Restart, and let the migrations run
+Then refresh the two scripts the watchdog and rollback units run from outside
+the code tree ([production step 10](production.md#10-run-the-engine-under-systemd)).
+A pull does not update them:
+
+```shell
+install -m 0755 /opt/dedalo/master_dedalo/deploy/dedalo-code-rollback.sh \
+                /opt/dedalo/master_dedalo/deploy/dedalo-ts-watchdog.sh /opt/dedalo/bin/
+```
+
+## 3. Check that the unit declares supervision
+
+The unit in `/etc/systemd/system/` is a copy, and neither a pull nor an in-app
+code update changes it. Units installed before 2026-10-08 lack a line the engine
+now requires: the [code update panel](../management/updates/updating_code.md)
+replaces the code only when the process manager declares that it will restart
+the server, and the engine no longer guesses this from systemd's own variables.
+Without the line every panel update is refused with *No supervisor declared*.
+
+```shell
+systemctl cat dedalo-ts | grep -E 'DEDALO_SUPERVISED|SuccessExitStatus|^Restart='
+```
+
+You should see `Environment=DEDALO_SUPERVISED=true`, `SuccessExitStatus=75` and
+`Restart=always`. If any is missing, add it with a drop-in:
+
+```shell
+systemctl edit dedalo-ts
+```
+
+```ini
+[Service]
+Environment=DEDALO_SUPERVISED=true
+SuccessExitStatus=75
+Restart=always
+```
+
+`systemctl edit` reloads systemd when you save; the restart in the next step
+applies it. Never put `DEDALO_SUPERVISED` in `../private/.env`: that file is read
+by every launch method, the unsupervised `bun run start` included, so the engine
+ignores the key there.
+
+## 4. Restart, and let the migrations run
 
 ```shell
 systemctl restart dedalo-ts
@@ -96,7 +146,7 @@ reinstall over your data.
     **hard boot failure** by design — a visible crash loop beats a silently
     degraded server.
 
-## 4. Retired configuration keys
+## 5. Retired configuration keys
 
 A **retired** key is not an alias. It configures nothing, and leaving it in place
 would silently fall back to the new key's default — the exact silent narrowing
@@ -117,8 +167,13 @@ purpose: a boot that refuses is a five-minute fix, and a boot that quietly
 narrows your active ontologies is a bug report six months later.
 
 !!! note "`../private/.env` is append-only"
-    Add keys; do not rewrite the file. The one thing you *do* edit in place is a
-    retired key's name. Every documented key is listed in `../private/sample.env`.
+    Add a line for a new key, change a value on its existing line, rename a
+    retired key — and nothing else: never a second line for a key already there,
+    never a deleted line (the [configuration reference](../config/index.md) lists
+    the legitimate edits). Every documented key is listed in `install/sample.env` of
+    the code you just pulled, and in the [configuration reference](../config/config.md).
+    `../private/sample.env` is the copy taken at install time, so it lacks every key
+    added since.
 
 !!! warning "No `ACTIVE_ONTOLOGY_TLDS` in your `.env`? Check `utoponymy` and `nexus`"
     When the key is unset, the engine falls back to the core ontologies:
@@ -132,7 +187,7 @@ narrows your active ontologies is a bug report six months later.
     ACTIVE_ONTOLOGY_TLDS=["dd","rsc","ontology","ontologytype","hierarchy","lg","oh","utoponymy","nexus"]
     ```
 
-## 5. One-time data update — `section_id` becomes an integer
+## 6. One-time data update — `section_id` becomes an integer
 
 Installs migrated from v6 **before** the unification step existed store locator
 addresses as strings (`"section_id": "7"`); the engine now writes and serves
@@ -178,7 +233,7 @@ Three deliberate properties of the apply run:
 Installs migrated with the current `close_v6_prepare_v7` package need none of
 this — the same conversion runs inside the migration itself.
 
-## 6. Verify
+## 7. Verify
 
 ```shell
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
@@ -192,7 +247,7 @@ media toolchain or the proxy.
 
 ```shell
 sudo -u dedalo git -C /opt/dedalo/master_dedalo checkout <previous-ref>
-sudo -u dedalo /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production
+sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
 systemctl restart dedalo-ts
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 ```
@@ -208,17 +263,26 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 
 ## Upgrading a container stack
 
+A container installation updates by replacing its **image**; one script does the
+whole update, from the stack directory (the one holding `.dedalo.env`):
+
 ```shell
-git pull
-docker compose build          # rebuilds on the new pinned base image
-docker compose up -d
+git pull                                         # the compose files and deploy/ come from the checkout
+./deploy/dedalo-image-update.sh --version <X.Y.Z>
 ```
 
-Same rules: migrations run at boot, the seed is never re-applied, and the
-`Dockerfile`'s base tag must track `.bun-version`. See [Docker](docker.md).
+It pulls or builds the image as `.dedalo.env` says, takes a verified database
+backup first, re-pins `DEDALO_VERSION`, waits for the health check and rolls
+back on its own if the new version does not come up healthy. A bare
+`docker compose build` no longer updates anything: the stacks run the pinned
+`DEDALO_IMAGE:DEDALO_VERSION` and have no build of their own. Same rules as
+above: migrations run at boot, the seed is never re-applied. See
+[Docker › Upgrading](docker.md#upgrading) and, to go back after a successful
+update, [rolling back by hand](docker.md#rolling-back-by-hand).
 
 ## What this page is *not* about
 
 Updating the **ontology** and updating the **code from a master installation**
-are in-app operations run from the Development Area, not deploy-time steps. They
-have their own documentation under [management](../management/index.md).
+are in-app operations run from the Maintenance area (*System administration ›
+Maintenance*), not deploy-time steps. They have their own documentation under
+[Updates](../management/updates/index.md).

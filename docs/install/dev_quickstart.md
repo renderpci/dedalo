@@ -2,7 +2,7 @@
 
 > See also: [Installation hub](index.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md) · [Production install](production.md)
 
-A working Dédalo on your laptop in about ten minutes. This is a **development** setup: plain HTTP, a TCP listener, no reverse proxy, no supervision. Do not run it this way on a server — for that, see [production](production.md).
+A working Dédalo on your laptop in about ten minutes. This is a **development** setup: plain HTTP, a TCP listener, no reverse proxy, no systemd — `bun run dev` is its own restart loop (it declares `DEDALO_SUPERVISED=true`). Do not run it this way on a server — for that, see [production](production.md).
 
 ## 1. What you need
 
@@ -50,7 +50,6 @@ The installer restores **into** this database and refuses a non-empty one. It ne
 
 ```shell
 DEDALO_INSTALL_ROOT_PASSWORD='dev-root-password' \
-MEDIA_PATH="$HOME/dev/dedalo/media" \
 bun run scripts/install.ts \
   --db-name dedalo_dev \
   --db-user "$(whoami)" \
@@ -59,15 +58,17 @@ bun run scripts/install.ts \
   --langs lg-spa,lg-eng --app-lang lg-eng --data-lang lg-spa
 ```
 
+No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it, and the server would use the default.
+
 `--db-host /tmp` uses the local unix socket, so no password is needed — Homebrew's PostgreSQL puts its socket there (the installer's own default is `localhost`). On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user "$(whoami)"` just works.
 
 With no `--hierarchies`, the shared default set of optional thesauri (today `es`) is installed; `--hierarchies none` makes the install faster. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares as dependencies from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
 
-It ends with `✔ install complete — root login verified`.
+It ends with `✔ install complete — root login verified`, and names the supervised ways to start the server (step 6).
 
 ## 5. Configure the dev listener
 
-The installer writes only the database, entity, language, secret, update-server and active-ontology keys — you add the rest. Two of them are not optional on a laptop:
+The installer writes the database, entity, language, secret, update-server and active-ontology keys (and `MEDIA_PATH`, `SERVER_UNIX_SOCKET`, `DEDALO_MEDIA_ACCESS_MODE` when you pass their flags) — you add the rest. Two of them are not optional on a laptop:
 
 ```shell
 cat >> ../private/.env <<'ENV'
@@ -81,7 +82,7 @@ ENV
 ```
 
 !!! tip "Media works with no configuration"
-    `MEDIA_PATH` **derives** to `<repo>/media` (`config.media.rootPath`), and the engine serves media itself on the dev listener — session-gated — because there is no web server in front of it here. Set `MEDIA_PATH` only to put the media tree somewhere else. In production media is served by the web server from generated rule files, and the engine's fallback is structurally unreachable (the socket never serves media): see [media protection](../config/media_protection.md).
+    Unset, `MEDIA_PATH` **derives** to `../private/media` (`config.media.rootPath`) — outside the code tree, so a code update never carries it away — and the engine serves media itself on the dev listener — session-gated — because there is no web server in front of it here. Set `MEDIA_PATH` only to put the media tree somewhere else. In production media is served by the web server from generated rule files, and the engine's fallback is structurally unreachable (the socket never serves media): see [media protection](../config/media_protection.md).
 
 !!! danger "`SESSION_COOKIE_SECURE` defaults to **true** — you cannot log in until you set it to `false`"
     A `Secure` cookie is dropped by the browser over plain `http://`. The login request succeeds, the server sets the cookie, the browser throws it away, and the next request arrives with no session — so you land back on the login form with no error message worth reading. This is the single most common "my dev install is broken" report, and it is one line of configuration.
@@ -97,7 +98,7 @@ The other keys:
 ## 6. Run it
 
 ```shell
-bun run dev          # watch mode; `bun run start` for a plain run
+bun run dev          # watch mode; `bun run start:supervised` runs it without the watchers
 ```
 
 `bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if the install wizard asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../core/ui/css_architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
@@ -142,10 +143,13 @@ bun run test:client:server   # the suite server, kept alive for browsing (Ctrl-C
 
 | Command | What |
 | --- | --- |
-| `bun run dev` | the server in watch mode **and** the LESS watcher, together |
+| `bun run dev` | the server in watch mode **and** the LESS watcher, together (supervised) |
+| `bun run dev:server` | the server in watch mode only (supervised) |
+| `bun run start:supervised` | the server with no watcher (supervised: restarts on exit `75`) |
+| `scripts/dev_instance.sh` | a second instance beside the first, on its own port and socket (`scripts/dev_instance.sh --help`) |
 | `bun run css:build` | compile the LESS once (needed if you edited a `.less` without `dev` running) |
 | `bun test test/unit/…` | targeted unit gates (the whole suite takes minutes) |
-| `bun run test:client` | the browser client suite against a `DEDALO_DEV_MODE=true` server |
+| `bun run test:client` | the browser client suite; it starts its own server on the suite database (step 7) and stops it |
 | `bunx tsc --noEmit` | type check |
 | `bun run lint` | the linter |
 | `bun run scripts/verify.ts` | the pre-merge gate: typecheck, lint, all tripwires, neighbours |

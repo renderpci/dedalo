@@ -19,17 +19,27 @@
 # Usage:
 #   dedalo-ts-watchdog.sh [--socket /run/dedalo/dedalo_ts.sock]
 #     [--app-dir /opt/dedalo/master_dedalo] [--backup-root <dir>]
+#     [--restart-unit dedalo-ts-restart.service]
+#     [--rollback-unit dedalo-ts-rollback.service]
+#
+# The two unit names default to the single-instance units. A templated
+# multi-instance host (docs/install/multi_instance.md) passes its own,
+# e.g. --restart-unit dedalo-ts-restart@site1.service.
 
 set -euo pipefail
 
 SOCKET="/run/dedalo/dedalo_ts.sock"
 APP_DIR="/opt/dedalo/master_dedalo"
 BACKUP_ROOT=""
+RESTART_UNIT="dedalo-ts-restart.service"
+ROLLBACK_UNIT="dedalo-ts-rollback.service"
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--socket) SOCKET="$2"; shift 2 ;;
 		--app-dir) APP_DIR="$2"; shift 2 ;;
 		--backup-root) BACKUP_ROOT="$2"; shift 2 ;;
+		--restart-unit) RESTART_UNIT="$2"; shift 2 ;;
+		--rollback-unit) ROLLBACK_UNIT="$2"; shift 2 ;;
 		*) echo "ERROR: unknown arg $1" >&2; exit 2 ;;
 	esac
 done
@@ -82,9 +92,9 @@ if [ -f "$SENTINEL" ] \
 	&& grep -q '"status"[[:space:]]*:[[:space:]]*"pending"' "$SENTINEL" \
 	&& grep -q '"rollback_attempted"[[:space:]]*:[[:space:]]*false' "$SENTINEL"; then
 	echo "== watchdog: /health RED with a pending unconfirmed code update — starting rollback" >&2
-	systemctl start dedalo-ts-rollback.service
+	systemctl start "$ROLLBACK_UNIT"
 else
 	echo "== watchdog: /health RED — restarting the server" >&2
-	systemctl start dedalo-ts-restart.service
+	systemctl start "$RESTART_UNIT"
 fi
 exit 1

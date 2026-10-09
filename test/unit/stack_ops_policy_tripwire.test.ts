@@ -49,7 +49,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { shippedComposeStacks } from '../helpers/deploy_artifact_corpus.ts';
+import { productImageServices, shippedComposeStacks } from '../helpers/deploy_artifact_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8');
@@ -293,23 +293,33 @@ describe('the shipped stacks keep the rules the engine states', () => {
 		const made = new Set(((writable as RegExpMatchArray)[1] ?? '').trim().split(/\s+/));
 		const owned = new Set(((writable as RegExpMatchArray)[2] ?? '').trim().split(/\s+/));
 		let checked = 0;
+		// WHICH services run the image is an OUTCOME, not a spelling (installer
+		// unification D2): the stacks stopped building (`build: .`) and name a pinned
+		// `${DEDALO_IMAGE:-localhost/dedalo}:…` instead, which a spelling match would
+		// have silently stopped seeing. The helper interpolates the file as compose does.
+		let services = 0;
 		for (const stack of STACKS) {
-			const source = read(stack);
-			for (const match of source.matchAll(/\n {2}([a-z_]+):\n/g)) {
-				const block = serviceBlock(stack, match[1] as string);
-				if (!block || !/^\s{4}build:\s*\.\s*$/m.test(block)) continue;
+			for (const name of productImageServices(stack)) {
+				const block = serviceBlock(stack, name);
+				if (!block) continue;
+				services++;
 				for (const mount of block.matchAll(/^\s+- ([a-z_]+):(\/[^:\s]*)(:ro)?\s*(#.*)?$/gm)) {
 					if (mount[3]) continue; // read-only: ownership is irrelevant
 					const path = mount[2] as string;
 					checked++;
 					expect(
 						made.has(path) && owned.has(path),
-						`${stack}: service '${match[1]}' mounts the named volume '${mount[1]}' writable at ${path}, ` +
+						`${stack}: service '${name}' mounts the named volume '${mount[1]}' writable at ${path}, ` +
 							'but the Dockerfile does not create it bun-owned — the volume comes up root-owned and every write is EACCES',
 					).toBe(true);
 				}
 			}
 		}
+		// Floor: dedalo + backup in each of the two root stacks.
+		expect(
+			services,
+			'anti-vacuity: the product-image services were not found',
+		).toBeGreaterThanOrEqual(4);
 		expect(
 			checked,
 			'anti-vacuity: no writable named-volume mount of an image-built service was found',

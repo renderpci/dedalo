@@ -625,6 +625,9 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'update_code.update_code': 'code-tree file operations; no data-sized statement',
 	'update_code.restore_code': 'code-tree file operations; no data-sized statement',
 	'update_code.delete_restore_point': 'deletes a restore-point directory; no statement',
+	'update_code.request_image_update':
+		'writes one request file into <private>/image_update (the host updater does the work); no statement',
+	'update_code.cancel_image_update_request': 'removes one request file; no statement',
 	'export_hierarchy.sync_hierarchy_active_status':
 		'one component save per ACTIVE hierarchy row (hierarchy-count-sized, each a request-sized write)',
 	'diffusion_server_control.get_value': 'job-queue status reads (ops-sized tables)',

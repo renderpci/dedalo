@@ -87,12 +87,14 @@ DATA_NOLAN="lg-nolan"
 		default: {
 			'lg-eng': 'English',
 		},
+		defaultDoc:
+			'**required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback',
 		heading: 'Defining application languages',
 		typeLabel: 'object',
 		typeSuffix: '(a JSON map of `lg-*` code → label)',
 		doc: `This parameter defines the languages that Dédalo will use for the data and user interface. Dédalo is a true multi-language application, any text field can be defined as translatable and this configuration define the languages that the installation will use to store and translate text data. When the user select one of those languages Dédalo will change the data showed or the user interface, so it will render all data with this new language.
 
-**Required** — the server refuses to boot without a non-empty value.
+**Required** — the server refuses to boot without a non-empty value. The installer writes it from the working languages picked (\`lg-eng\` and \`lg-spa\` by default).
 
 \`\`\`bash
 DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Euskara","lg-eng":"English","lg-fra":"French"}
@@ -106,9 +108,13 @@ DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Eus
 		type: 'string',
 		scope: 'operator',
 		default: 'lg-eng',
+		defaultDoc:
+			'**required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback',
 		heading: 'Defining default application language',
 		typeLabel: 'string',
 		doc: `Defines the main language will used in the user interface.
+
+**Required** — the server refuses to boot without it. The installer writes it (default: the first working language picked, \`lg-eng\` by default).
 
 Dédalo can be translated to any language, the translations of the interface are done in the ontology. The users can change the Dédalo interface to use it in his language. In Dédalo the user interface and the data language are separated concepts and it is possible have a interface in one language and the data in other. This main language will be used as primary option and as fall back language when the element does not have the translation available.
 
@@ -124,9 +130,13 @@ DEDALO_APPLICATION_LANGS_DEFAULT="lg-eng"
 		type: 'string',
 		scope: 'operator',
 		default: 'lg-eng',
+		defaultDoc:
+			'**required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback',
 		heading: 'Defining default data language',
 		typeLabel: 'string',
 		doc: `Defines the main language will used by Dédalo to manage and process data.
+
+**Required** — the server refuses to boot without it. The installer writes it (default: the first working language picked, \`lg-eng\` by default).
 
 The main language is the mandatory language for the text data in the catalog or inventory. Dédalo is a real multi-language application, it can manage multiple translation of the textual information.
 
@@ -243,9 +253,13 @@ DEDALO_STRUCTURE_LANG="lg-spa"
 		type: 'string_list',
 		scope: 'operator',
 		default: ['lg-eng'],
+		defaultDoc:
+			'**required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback',
 		heading: 'Defining default projects languages',
 		typeLabel: 'array',
 		doc: `This parameter defines the languages that will use for export and publish data.
+
+**Required** — the server refuses to boot without it. The installer writes it, in its legacy spelling \`DEDALO_PROJECTS_DEFAULT_LANGS\`, from the working languages picked (\`lg-eng\`, \`lg-spa\` by default).
 
 This definition control the amount of languages that will be processed to export data or publish data in the publication process.
 

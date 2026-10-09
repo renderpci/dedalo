@@ -372,15 +372,28 @@ export function normalizeInstallAnswers(raw: RawAnswers): {
 const entry = (key: string, value: string, raw = false): EnvEntry => ({ key, value, raw });
 type LangConfig = ReturnType<typeof deriveLangConfig>;
 
+/*
+ * CANONICAL SPELLINGS ONLY (2026-10-09). The plan writes the typed catalog's own
+ * key names (DB_NAME, ENTITY, …), never a PHP_KEY_ALIASES fallback spelling
+ * (DEDALO_DATABASE_CONN, DEDALO_ENTITY, …): the alias exists so a .env carried
+ * over from the PHP engine keeps working, not as a second name to emit. Writing
+ * the alias made a hand-added canonical line silently win over the installer's
+ * own answer. config_persist drops a prior .env's alias line for every key the
+ * plan writes, so a re-run never leaves one value under both names. Gate:
+ * test/unit/install_persist_config.test.ts ('writes canonical key names').
+ *
+ * DEDALO_SOCKET_CONN has no canonical twin: the catalog has no main-database
+ * socket key and the engine reads it nowhere (migration_map: DROPPED).
+ */
 function databaseSection(a: InstallAnswers): EnvSection {
 	return {
 		comment: '# --- Database (PostgreSQL) ---',
 		entries: [
-			entry('DEDALO_DATABASE_CONN', a.db_database),
-			entry('DEDALO_USERNAME_CONN', a.db_username),
-			entry('DEDALO_PASSWORD_CONN', a.db_password),
-			entry('DEDALO_HOSTNAME_CONN', a.db_hostname),
-			entry('DEDALO_DB_PORT_CONN', a.db_port),
+			entry('DB_NAME', a.db_database),
+			entry('DB_USER', a.db_username),
+			entry('DB_PASSWORD', a.db_password),
+			entry('DB_HOST', a.db_hostname),
+			entry('DB_PORT', a.db_port),
 			entry('DEDALO_SOCKET_CONN', a.db_socket),
 		],
 	};
@@ -390,7 +403,7 @@ function entitySection(a: InstallAnswers): EnvSection {
 	return {
 		comment: '# --- Entity / locale ---',
 		entries: [
-			entry('DEDALO_ENTITY', a.entity),
+			entry('ENTITY', a.entity),
 			entry('DEDALO_ENTITY_LABEL', a.entity_label),
 			entry('DEDALO_TIMEZONE', a.timezone),
 			entry('DEDALO_LOCALE', a.locale),
@@ -410,11 +423,11 @@ function langSection(l: LangConfig): EnvSection {
 		comment: '# --- Languages (mandatory: config.ts refuses boot without them) ---',
 		entries: [
 			entry('DEDALO_APPLICATION_LANGS', JSON.stringify(l.applicationLangs), true),
-			entry('DEDALO_PROJECTS_DEFAULT_LANGS', JSON.stringify(l.projectsDefaultLangs), true),
+			entry('PROJECTS_DEFAULT_LANGS', JSON.stringify(l.projectsDefaultLangs), true),
 			entry('DEDALO_APPLICATION_LANGS_DEFAULT', l.applicationLangsDefault),
 			entry('DEDALO_DATA_LANG_DEFAULT', l.dataLangDefault),
-			entry('DEDALO_APPLICATION_LANG', l.applicationLangsDefault),
-			entry('DEDALO_DATA_LANG', l.dataLangDefault),
+			entry('APPLICATION_LANG', l.applicationLangsDefault),
+			entry('DATA_LANG', l.dataLangDefault),
 			entry('DEDALO_STRUCTURE_LANG', l.structureLang),
 		],
 	};
@@ -743,11 +756,11 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 		...(a.media_path === '' ? {} : { MEDIA_PATH: a.media_path }),
 		DEDALO_INSTALL_NO_RESTART: 'true', // the CLI never self-restarts
 		DEDALO_APPLICATION_LANGS: JSON.stringify(l.applicationLangs),
-		DEDALO_PROJECTS_DEFAULT_LANGS: JSON.stringify(l.projectsDefaultLangs),
+		PROJECTS_DEFAULT_LANGS: JSON.stringify(l.projectsDefaultLangs),
 		DEDALO_APPLICATION_LANGS_DEFAULT: l.applicationLangsDefault,
 		DEDALO_DATA_LANG_DEFAULT: l.dataLangDefault,
-		DEDALO_APPLICATION_LANG: l.applicationLangsDefault,
-		DEDALO_DATA_LANG: l.dataLangDefault,
+		APPLICATION_LANG: l.applicationLangsDefault,
+		DATA_LANG: l.dataLangDefault,
 		DEDALO_STRUCTURE_LANG: l.structureLang,
 	};
 }

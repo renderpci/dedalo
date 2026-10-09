@@ -26,6 +26,9 @@
 *        restore point left behind by an earlier update is moved back into place.
 *        Same background-job contract (`pid` + `pfile`), same phase frames, so the
 *        render layer follows it through exactly the same tracker.
+*      - `request_image_update` / `cancel_image_update_request` — on a CONTAINER
+*        installation, record (or withdraw) a request the opt-in host updater
+*        claims; the engine never touches docker.
 *
 * The DOM layer (modal, file-selection radio list, phase-track progress,
 * error display, build-from-git buttons) is handled entirely by
@@ -406,6 +409,87 @@ update_code.prototype.delete_restore_point = async function ( options ) {
 
 	return api_response
 }//end delete_restore_point
+
+
+
+/**
+* REQUEST_IMAGE_UPDATE
+* On a CONTAINER installation (value.consumer.image present), records a request
+* for the opt-in HOST UPDATER to install one release's image. The engine never
+* updates its own image — it has no docker access, by design — so the answer
+* is the recorded request, not a job: the host updater claims it within a
+* minute and runs deploy/dedalo-image-update.sh (backup, pull or build, health
+* check, rollback) from the operator's own `.dedalo.env`. The request names a
+* version and nothing else.
+*
+* No `prevent_lock`: a request is one small file write, not a long job, and the
+* widget_request door needs no lock exemption for it.
+*
+* @param {Object} options
+* @param {string} options.version - the release's 'X.Y.Z' exactly as the code
+*   server's manifest listed it
+* @param {string} [options.channel] - 'dev' for a developer item (the manifest
+*   item's own `channel`), anything else is the release channel
+* @returns {Promise<Object>} api_response — `data.request` (the recorded request)
+*   on success; `error` with `coordinates.reason` on a refusal
+*/
+update_code.prototype.request_image_update = async function ( options ) {
+
+	const api_response = await data_manager.request({
+		body		: {
+			dd_api		: 'dd_area_maintenance_api',
+			action		: 'widget_request',
+			source		: {
+				type	: 'widget',
+				model	: 'update_code',
+				action	: 'request_image_update'
+			},
+			options	: {
+				version	: options.version,
+				channel	: options.channel==='dev' ? 'dev' : 'master'
+			}
+		},
+		retries : 1, // one try only: a request is not idempotent
+		timeout : 60 * 1000
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) request_image_update update_code api_response:', api_response);
+	}
+
+	return api_response
+}//end request_image_update
+
+
+
+/**
+* CANCEL_IMAGE_UPDATE_REQUEST
+* Withdraws the pending image-update request, while the host updater has not
+* claimed it yet. A claimed request is already running on the Docker host and
+* the server refuses (`coordinates.reason: 'request_claimed'`).
+* @returns {Promise<Object>} api_response — `data.cancelled` on success
+*/
+update_code.prototype.cancel_image_update_request = async function () {
+
+	const api_response = await data_manager.request({
+		body		: {
+			dd_api		: 'dd_area_maintenance_api',
+			action		: 'widget_request',
+			source		: {
+				type	: 'widget',
+				model	: 'update_code',
+				action	: 'cancel_image_update_request'
+			},
+			options	: {}
+		},
+		retries : 1,
+		timeout : 60 * 1000
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) cancel_image_update_request update_code api_response:', api_response);
+	}
+
+	return api_response
+}//end cancel_image_update_request
 
 
 

@@ -1,13 +1,14 @@
-/home/museum\.org                                  directory          system_u:object_r:home_root_t:s0
-/home/museum\.org/dedalo                           directory          system_u:object_r:usr_t:s0
-/home/museum\.org/dedalo/publication_api           directory          system_u:object_r:usr_t:s0
-/home/museum\.org/dedalo/publication_api/v1(/.*)?  all files          system_u:object_r:httpd_sys_content_t:s0
-/home/museum\.org/dedalo/rules(/.*)?               all files          system_u:object_r:httpd_config_t:s0
-/home/museum\.org/host_agent(/.*)?                 all files          system_u:object_r:usr_t:s0
-/home/museum\.org/\.bun/bin(/.*)?                  all files          system_u:object_r:usr_t:s0
-/home/museum\.org/\.bun/bin/bun                    regular file       system_u:object_r:bin_t:s0
-/home/museum\.org/logs(/.*)?                       all files          system_u:object_r:httpd_log_t:s0
-/var/lib/dedalo_publication_host/museum_org/v1/tmp(/.*)? all files          system_u:object_r:httpd_sys_rw_content_t:s0
+/home/museum\.org                                  directory          system_u:object_r:home_root_t:s0 
+/home/museum\.org/dedalo                           directory          system_u:object_r:usr_t:s0 
+/home/museum\.org/dedalo/publication_api           directory          system_u:object_r:usr_t:s0 
+/home/museum\.org/dedalo/publication_api/v1(/.*)?  all files          system_u:object_r:httpd_sys_content_t:s0 
+/home/museum\.org/dedalo/publication_api/v2(/.*)?  all files          system_u:object_r:data_home_t:s0 
+/home/museum\.org/dedalo/rules(/.*)?               all files          system_u:object_r:httpd_config_t:s0 
+/home/museum\.org/host_agent(/.*)?                 all files          system_u:object_r:usr_t:s0 
+/home/museum\.org/\.bun/bin(/.*)?                  all files          system_u:object_r:usr_t:s0 
+/home/museum\.org/\.bun/bin/bun                    regular file       system_u:object_r:bin_t:s0 
+/var/lib/dedalo_publication_host/museum_org/v1/tmp(/.*)? all files          system_u:object_r:httpd_sys_rw_content_t:s0 
+/var/lib/dedalo_publication_host/museum_org/v1/log(/.*)? all files          system_u:object_r:httpd_log_t:s0 
 
 /var/opt/remi/php82 = /var
 /etc/opt/remi/php82 = /etc

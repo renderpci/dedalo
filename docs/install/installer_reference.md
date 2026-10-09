@@ -138,8 +138,10 @@ affordances (the wizard has its *Verify* screen and in-wizard login instead).
 4. **`persist_config`** — writes `../private/.env`; see the next section. Any
    previous `.env` is renamed to `.env.bak.<timestamp>`.
 5. **`check_directories`** — creates and write-probes the private directory, the
-   session store, the backups directory, and the media root (only if `MEDIA_PATH`
-   is set). Writability is proven by writing and deleting a probe file, not by
+   session store, the backups directory, and the media root: `--media-path` when
+   given, otherwise the default `<private dir>/media` (a legacy in-tree
+   `<repo>/media` that already holds files is kept instead). It then provisions
+   the media tree under that root. Writability is proven by writing and deleting a probe file, not by
    reading permission bits — a network mount can lie about the bits.
 6. **`stage_ontologies`** — fetches (update server) or copies (built-in `oh`,
    `--ontology-source`) every chosen domain ontology file, dependencies first,
@@ -366,13 +368,16 @@ database, then run the installer again.
 
 ## What `../private/.env` does — and does not — get
 
-**The installer writes the file from scratch.** It contains exactly this:
+**The installer rewrites the keys it owns** and keeps every other key already in
+the file: those are carried over verbatim, in a section headed *Preserved from the
+previous .env*. The previous file is kept as `.env.bak.<timestamp>`. The keys it
+owns are these:
 
 | Section | Keys |
 | --- | --- |
-| Database | `DEDALO_DATABASE_CONN`, `DEDALO_USERNAME_CONN`, `DEDALO_PASSWORD_CONN`, `DEDALO_HOSTNAME_CONN`, `DEDALO_DB_PORT_CONN`, `DEDALO_SOCKET_CONN` |
-| Entity / locale | `DEDALO_ENTITY`, `DEDALO_ENTITY_LABEL`, `DEDALO_TIMEZONE`, `DEDALO_LOCALE` |
-| Languages | `DEDALO_APPLICATION_LANGS`, `DEDALO_PROJECTS_DEFAULT_LANGS`, `DEDALO_APPLICATION_LANGS_DEFAULT`, `DEDALO_DATA_LANG_DEFAULT`, `DEDALO_APPLICATION_LANG`, `DEDALO_DATA_LANG`, `DEDALO_STRUCTURE_LANG` |
+| Database | `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DEDALO_SOCKET_CONN` |
+| Entity / locale | `ENTITY`, `DEDALO_ENTITY_LABEL`, `DEDALO_TIMEZONE`, `DEDALO_LOCALE` |
+| Languages | `DEDALO_APPLICATION_LANGS`, `PROJECTS_DEFAULT_LANGS`, `DEDALO_APPLICATION_LANGS_DEFAULT`, `DEDALO_DATA_LANG_DEFAULT`, `APPLICATION_LANG`, `DATA_LANG`, `DEDALO_STRUCTURE_LANG` |
 | Secret | one generated secret, printed once |
 | Update servers | `ONTOLOGY_SERVERS`, `CODE_SERVERS` — the official master by default, `[]` with `--no-update-servers` |
 | Ontologies | `ACTIVE_ONTOLOGY_TLDS` — the core, the chosen domain ontologies and their declared dependencies, in install order; rewritten on every run |
@@ -393,7 +398,10 @@ CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://v7.master.de
 the [code update panel](../management/updates/updating_code.md) looks for releases.
 `--no-update-servers` (answering *no* to the update-server question in the
 wizard or in `install.sh`) writes both as `[]` — an air-gapped install that is never
-offered an update. Add the keys to `.env` later to change your mind.
+offered an update. To change your mind later, replace the `[]` values of
+`ONTOLOGY_SERVERS` and `CODE_SERVERS` in `.env` (or re-run the installer answering
+*yes*), then restart the server: the list, and the browser's `connect-src` that lets
+the update panels reach a master, are built at boot.
 
 A **re-run** that keeps the official default does not overwrite a key whose
 value in `.env` is a non-empty list — mirrors you added survive. A key holding
@@ -414,11 +422,14 @@ air-gapped option always writes `[]`.
     `DEDALO_MEDIA_ACCESS_MODE` **are** written — pass `--media-path`, `--socket` and
     `--media-access-mode`.)
 
-    And the corollary that costs people an afternoon: **anything you hand-add to
-    `.env` *before* running the installer is lost**, because the first, from-scratch
-    write renames that file to `.env.bak.<timestamp>`. Configure *after*, never
-    before. A *re-run* is different — it preserves every key it does not manage, so
-    your appended tuning survives a later re-install.
+    A key you add by hand survives the installer, before or after, as long as the
+    installer does not own it: it is carried into the *Preserved* section. Every key
+    is written in the configuration reference's own spelling (`DB_NAME`, `ENTITY`,
+    …). The older fallback spellings the engine still accepts from a `.env` carried
+    over from v6 or from an earlier installer (`DEDALO_DATABASE_CONN`,
+    `DEDALO_ENTITY`, …) count as the same key: a re-run drops them and writes the
+    value once, under the current name. `DEDALO_SOCKET_CONN` is still written, but
+    the engine does not read it — it connects through `DB_HOST`/`DB_PORT`.
 
 The file is written through a two-phase commit (staged, then renamed into place)
 at mode `0600`, inside a `0700` private directory.
@@ -480,12 +491,18 @@ appended to `../private/.env` at any later time.
 
     - in production, that is `Restart=always` in the systemd unit;
     - in a container, `restart: unless-stopped`;
-    - on a laptop with neither, run the server under a restart loop, or (better)
-      just use the CLI, which needs no restart at all:
+    - on a laptop with neither, start it with `bun run start:supervised` (or
+      `bun run dev` while developing), or (better) just use the CLI, which needs
+      no restart at all:
 
       ```shell
-      while true; do bun run src/server.ts; done
+      bun run start:supervised
       ```
+
+      Both declare `DEDALO_SUPERVISED=true` and restart the server only when it
+      exits with code `75`, the planned restart; a crash still stops it, so you
+      see it. Plain `bun run start` restarts nothing and is unsupervised, so the
+      [code update panel](../management/updates/updating_code.md) refuses under it.
 
     The wizard survives the restart: the page stays open, the **Verify** button
     retries, and even a full reload resumes the wizard rather than dropping to

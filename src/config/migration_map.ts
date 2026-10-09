@@ -538,7 +538,7 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_6_SOURCE_VERSION_URL',
 			'DEDALO_6_SOURCE_VERSION_LOCAL_DIR',
 		],
-		'previous-major code-server pointer: v7 serves ONE major (the live keys are DEDALO_CODE_FILES_DIR / DEDALO_CODE_SERVER_GIT_DIR / DEDALO_SOURCE_VERSION_LOCAL_DIR)',
+		'previous-major code-server pointer: v7 serves ONE major (the live keys are DEDALO_CODE_FILES_DIR / DEDALO_CODE_SERVER_GIT_DIR; DEDALO_SOURCE_VERSION_LOCAL_DIR is declared but not honoured)',
 	),
 
 	// PHP's pg_pconnect switch. v7 never opens a connection per request: Bun.sql
@@ -607,6 +607,10 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_SUPERVISED',
 	// set by the code updater on its own pre-swap smoke-boot child, never by an operator
 	'DEDALO_SMOKE_BOOT',
+	// declared by the container stacks, never by an operator (installer unification D2)
+	'DEDALO_CLIENT_PUBLISH_DIR',
+	'DEDALO_CONTAINER_IMAGE',
+	'DEDALO_CONTAINER_IMAGE_MODE',
 	// postgres pool
 	'DB_POOL_MAX',
 	'DB_POOL_ACQUIRE_TIMEOUT_MS',

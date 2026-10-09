@@ -1,0 +1,257 @@
+# IMAGE RELEASE — build, sign and publish the official Dédalo image (the product
+# `Dockerfile`) to every PROVISIONED registry of engineering/image_registries.json.
+#
+# WHAT IT IS FOR. Dédalo publishes ONE signed image, with ONE digest, to its own registry
+# (gitdedalo, the primary) and to mirrors (GitHub Container Registry, Docker Hub).
+# Operators pull from whichever they choose — or from a registry of their own, or build
+# locally (docs/install/docker.md). The registry list is the single source: this file
+# names no registry address; the targets come from `plan` and `publish`
+# (scripts/ci/image_release.ts), which read the list. An unprovisioned entry is skipped
+# with its reason; a provisioned one whose secrets are missing is skipped LOUDLY.
+#
+# A RELEASE HERE IS A RELEASE OF THE CODE SERVER (engineering/RELEASE.md): the stable tag
+# vX.Y.Z whose version.ts declares X.Y.Z → `:X.Y.Z` (immutable: a published release is
+# never rebuilt or overwritten; a later run copies the existing digest to a registry that
+# lacks it). The developer channel is the tip of `master`, built on DISPATCH ONLY →
+# `:X.Y.Z-dev` (mutable, like the code server's on-demand `<v>-dev.zip`). Never `latest`.
+# Prerelease tags (v7.0.0-beta.N) do not match the trigger and are refused by `plan`.
+#
+# HOW. `plan` resolves the release (code_build_plan.ts's own rules). `build` runs per arch
+# on NATIVE runners (amd64 / arm64, no QEMU — the ci-image.yml precedent): the context is
+# a `git archive` of the release commit (the code server's mechanism, so build_info.txt is
+# expanded and the image reports its commit), the Dockerfile's provenance step stamps the
+# channel and the archive's sha256, and the pushed bytes are SMOKE-TESTED before anything
+# else sees them; each leg hands on the DIGEST it smoke-tested (job outputs digest_<arch>).
+# A RELEASE build reads no registry cache (a cache tag is writable by any workflow holding
+# packages: write, so a poisoned layer would be signed as official); developer builds use
+# `<staging>:cache-dev-<arch>`. `publish` assembles the multi-arch index once in the
+# staging repository FROM THOSE DIGESTS (never from a staging tag, which could move while
+# the job waits for its reviewer), enforces immutability, signs ONCE (cosign keyless,
+# Rekor), copies image + signature to every target, and checks every target holds the
+# SAME digest and passes the operator's own `cosign verify`. It records the result in the
+# job summary and an `image-release` artifact.
+#
+# TRIGGERS. push of a stable tag; workflow_dispatch (channel dev | release; release
+# publishes an EXISTING tag — e.g. to fill a newly provisioned mirror). NO pull_request,
+# pull_request_target, workflow_run or schedule: publishing needs `packages: write`,
+# `id-token: write` and the registry secrets, which fork or scheduled code must never
+# reach (ci_workflow_tripwire rule 11's carve-out holds exactly this).
+#
+# PERMISSIONS. Read-only at the top; `build` widens to packages: write (the staging
+# push); `publish` to packages: write + id-token: write (keyless signing).
+#
+# THE `image-release` ENVIRONMENT (owner setup, engineering/CI.md activation runbook):
+# deployment policy {tags v*, branch master} and required reviewers. It binds only
+# together with the MANDATORY tag ruleset restricting `v*` to the release maintainers:
+# this file is read AT the pushed tag, so whoever may create a v* tag could drop the
+# `environment:` line below and be signed as the official release with no reviewer. The job bound to it
+# is the ONE place a secret may be referenced in .github/workflows/: the publish job maps
+# the registry secrets the list declares (each entry's username_secret / password_secret —
+# Docker Hub: DOCKERHUB_USERNAME / DOCKERHUB_TOKEN) into env keys of the same names —
+# every one present in the list, nowhere else (rule 11 carve-out). GHCR uses the run's
+# own github.token.
+#
+# PROVISIONING A REGISTRY needs no edit here: set its repository + provisioned:true in
+# engineering/image_registries.json, `bun run registries:gen`, add its two secrets to the
+# environment, then dispatch the release channel once per existing tag.
+#
+# Every expression reaches a script through `env:` (rule 7d); every action is SHA-pinned
+# (rule 8) and reused from the workflows already in this repository.
+name: image-release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "dev = an X.Y.Z-dev image of master (run from master); release = re-publish an EXISTING release tag (copies its digest to registries that lack it)"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - release
+      tag:
+        description: "release channel only: the existing release tag, vX.Y.Z"
+        required: false
+        default: ""
+
+# Least privilege (rule 7): read-only by default; each job widens only itself.
+permissions:
+  contents: read
+
+# One publication per target tag at a time: a tag push and a release dispatch of the same
+# tag share a group, as do all developer builds. Never cancel — a half-published release
+# is worse than a queued one.
+concurrency:
+  group: image-release-${{ inputs.channel == 'dev' && 'dev' || (github.event_name == 'push' && github.ref_name || inputs.tag) }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      channel: ${{ steps.plan.outputs.channel }}
+      source_sha: ${{ steps.plan.outputs.source_sha }}
+      staging: ${{ steps.plan.outputs.staging }}
+      expected_engine_version: ${{ steps.plan.outputs.expected_engine_version }}
+      archive_sha256: ${{ steps.plan.outputs.archive_sha256 }}
+      created: ${{ steps.plan.outputs.created }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the release tags, for a release dispatch
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+      - name: Resolve the release this run publishes (or refuse)
+        id: plan
+        env:
+          INPUT_CHANNEL: ${{ inputs.channel }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          bun run scripts/ci/image_release.ts plan
+
+  build:
+    needs: plan
+    name: build (${{ matrix.arch }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    # One output per arch, each set only by its own leg (the smoke step, after it passed):
+    # publish assembles exactly these digests.
+    outputs:
+      digest_amd64: ${{ steps.smoke.outputs.digest_amd64 }}
+      digest_arm64: ${{ steps.smoke.outputs.digest_arm64 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.plan.outputs.source_sha }}
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+
+      # The SAME archive the plan hashed: a different digest here would give the two
+      # arches different provenance, so the context step refuses it.
+      - name: Build context (git archive of the release commit)
+        id: context
+        env:
+          SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+          EXPECTED_ARCHIVE_SHA256: ${{ needs.plan.outputs.archive_sha256 }}
+        run: |
+          bun run scripts/ci/image_release.ts context
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to ghcr.io (the staging repository)
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push to staging
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ steps.context.outputs.context }}
+          file: ${{ steps.context.outputs.context }}/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          build-args: |
+            DEDALO_RELEASE_CHANNEL=${{ needs.plan.outputs.channel }}
+            DEDALO_RELEASE_ARCHIVE_SHA256=${{ needs.plan.outputs.archive_sha256 }}
+          labels: |
+            org.opencontainers.image.title=Dédalo
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.plan.outputs.source_sha }}
+            org.opencontainers.image.version=${{ needs.plan.outputs.tag }}
+            org.opencontainers.image.created=${{ needs.plan.outputs.created }}
+          provenance: mode=max
+          sbom: true
+          push: true
+          pull: true
+          tags: ${{ needs.plan.outputs.staging }}:run-${{ github.run_id }}-${{ matrix.arch }}
+          # The layer cache is for DEVELOPER builds only. A release reads nothing a
+          # non-release ref could have written: a cache tag in the staging repository is
+          # writable by any workflow holding packages: write, and a poisoned layer would be
+          # signed as the official image. Releases still share the pinned base image's
+          # layers (the Dockerfile puts the code last).
+          cache-from: ${{ needs.plan.outputs.channel == 'dev' && format('type=registry,ref={0}:cache-dev-{1}', needs.plan.outputs.staging, matrix.arch) || '' }}
+          cache-to: ${{ needs.plan.outputs.channel == 'dev' && format('type=registry,ref={0}:cache-dev-{1},mode=max', needs.plan.outputs.staging, matrix.arch) || '' }}
+
+      # The exact bytes just pushed, by digest — never a tag that could have moved. On
+      # success it hands the digest on as digest_<arch>.
+      - name: Smoke test the pushed image
+        id: smoke
+        env:
+          IMAGE: ${{ needs.plan.outputs.staging }}@${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+          EXPECTED_ENGINE_VERSION: ${{ needs.plan.outputs.expected_engine_version }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
+          ARCHIVE_SHA256: ${{ needs.plan.outputs.archive_sha256 }}
+        run: |
+          bun run scripts/ci/image_release.ts smoke
+
+  publish:
+    needs: [plan, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: image-release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The ONLY secret references in .github/workflows/ (rule 11 carve-out): exactly the
+      # names engineering/image_registries.json declares, in this environment-bound job.
+      # An empty one skips its registry loudly; it never fails the others.
+      - name: Index, immutability, sign, copy, verify, record
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
+          STAGING: ${{ needs.plan.outputs.staging }}
+          SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+          ARCHIVE_SHA256: ${{ needs.plan.outputs.archive_sha256 }}
+          RUN_ID: ${{ github.run_id }}
+          DIGEST_AMD64: ${{ needs.build.outputs.digest_amd64 }}
+          DIGEST_ARM64: ${{ needs.build.outputs.digest_arm64 }}
+          GHCR_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
+          IMAGE_REGISTRY_GITDEDALO_USERNAME: ${{ secrets.IMAGE_REGISTRY_GITDEDALO_USERNAME }}
+          IMAGE_REGISTRY_GITDEDALO_PASSWORD: ${{ secrets.IMAGE_REGISTRY_GITDEDALO_PASSWORD }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          bun run scripts/ci/image_release.ts publish
+
+      - name: Keep the publication record
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-release
+          path: ${{ runner.temp }}/image-release.json
+          if-no-files-found: warn

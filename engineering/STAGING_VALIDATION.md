@@ -303,10 +303,29 @@ is a FAIL.
 ▢ On a containerized staging stack (`docker-compose.simple.yml`), run the
 same code update from the panel.
 ✅ The pipeline REFUSES the tree swap (the tree lives in the image; a swap
-would be discarded on recreation) and points at the image channel; update the
-stack with `deploy/dedalo-image-update.sh --mode build --ref <tag>` and watch
-the compose healthcheck go healthy — then force a red build and watch it
-re-pin the previous image and report the failure honestly.
+would be discarded on recreation) and the panel shows the image block instead:
+the image source, and for the selected release the exact host command. From
+the stack directory run `./deploy/dedalo-image-update.sh --version <next tag>
+--outcome-file /tmp/outcome.json` and watch it take the `pre-image-update`
+backup, anchor `rollback-<stamp>`, pull or build per `.dedalo.env`, re-pin
+`DEDALO_VERSION` and go healthy (outcome `green/healthy`, exit 0).
+**Rollback drill:** repeat with an image that cannot come up healthy (a build
+from a ref whose server entrypoint exits at boot, or a short
+`--health-timeout`) and watch it re-tag the anchor as the old version, re-pin
+`DEDALO_VERSION` to it in `.dedalo.env` (every other line byte-identical),
+bring it back healthy and report `rolled_back` with the backup path, exit 1 —
+a "green" report or a `.dedalo.env` still naming the new version is a FAIL.
+
+**I5b. Host updater (opt-in) acts on a panel request.**
+▢ `sudo ./deploy/dedalo-image-updater.sh install-units` on the staging host;
+wait for the panel to show the host updater *running*; press **Request this
+update** on the next release.
+✅ Within about a minute the request shows *running on the Docker host*, the
+update runs exactly as in I5 (backup included), the panel follows the restart
+and shows the outcome *updated*; `journalctl -u dedalo-image-updater` shows one
+claimed request and the update script's verdict. Kill the host mid-update
+(reboot) and confirm the next pass records the request as *interrupted*
+instead of re-running it.
 
 ## Sign-off
 

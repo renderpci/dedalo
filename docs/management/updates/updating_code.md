@@ -46,7 +46,23 @@ with nothing to restart it. Every launch method Dédalo ships already declares i
 | `bun run start:supervised`, `bun run dev`, `bun run dev:server` | the script's own command line |
 | `bun run start` | **nowhere — deliberately**: nothing restarts it, so it is not supervised |
 
-If you run your own unit, stack or pm2 definition, add the declaration to it.
+If you run your own unit, stack or pm2 definition, add the declaration to it,
+**and make sure it restarts the process when it exits with code `75`**: after the
+swap the update exits with that code, and the new tree only runs if something
+starts it. On systemd that is `Restart=always`, as in `deploy/dedalo-ts.service`.
+`SuccessExitStatus=75` only keeps the planned exit out of the failure count: under
+`Restart=on-failure` it would *prevent* the restart, and the server would stay down
+after the update.
+
+!!! warning "An installed unit is a copy — one installed before 2026-10-08 lacks the line"
+    The table describes the files in the code tree. The unit in
+    `/etc/systemd/system/` is a copy taken at install time, and no code update
+    (panel or `git pull`) refreshes it. A unit installed before this release has no
+    `Environment=DEDALO_SUPERVISED=true`, and since the engine stopped guessing from
+    systemd's variables, its next panel update is refused. Add the line with a
+    drop-in (`systemctl edit dedalo-ts`, then `[Service]` and
+    `Environment=DEDALO_SUPERVISED=true`), then restart. The steps are in
+    [Upgrading](../../install/upgrading.md#3-check-that-the-unit-declares-supervision).
 
 !!! warning "Declared by the launcher only — never in `../private/.env`"
     The engine reads `DEDALO_SUPERVISED` from the **process environment only**. A
@@ -75,6 +91,47 @@ containerised (image) deployment, a Bun version mismatch, a failed dependency
 install or pre-flight boot of the new tree; see
 [How a code update works](updating_code_options.md#what-else-makes-the-update-refuse).
 
+### Installations that run from a container image
+
+On a Docker installation the code is part of the **image**, not a tree on disk,
+so the panel does not replace it in place: a tree swap inside a container would
+be discarded the next time the container is recreated. The panel recognises
+such an installation and changes what it offers:
+
+- **Image updates** — where this installation's image comes from (pulled from a
+  registry, and whether that is an official registry, an official mirror or your
+  own; or built on the Docker host from its checkout), the pinned version, the
+  signature check, and the state of the optional host updater.
+- **Check available updates** lists the releases the code server offers, each
+  with its release notes, exactly as on any other installation. For the release
+  you select it shows the **Update command** to run **on the Docker host**, in
+  the stack directory (the one holding `.dedalo.env`):
+
+    ```shell
+    ./deploy/dedalo-image-update.sh --version 7.0.2
+    ```
+
+    The script reads `.dedalo.env` to know where the image comes from: it pulls
+    the new image — verifying its signature first when
+    `DEDALO_IMAGE_VERIFY=cosign` — or checks out the release and builds it. It
+    takes a database backup before switching, re-pins `DEDALO_VERSION`, waits for
+    the engine to report healthy, and rolls back to the previous image on its own
+    when it does not.
+- **Request this update** appears instead when the **host updater** is installed
+  on the Docker host (`sudo ./deploy/dedalo-image-updater.sh install-units`; it
+  is off by default). Pressing it records the request; the host updater picks it
+  up within a minute, runs the same script, and the panel then shows the outcome
+  (*updated*, *rolled back*, …). The request needs the superuser and maintenance
+  mode, like any code update, and it can only name a release on the normal
+  upgrade path. Everything else — which registry, pull or build, the backup — is
+  decided on the host from its own `.dedalo.env`. The engine is never given
+  control of Docker.
+
+The in-place readiness checks are still listed, folded: they describe the
+tree-swap update, which this installation does not use. The host side is
+described in [Running Dédalo in containers](../../install/docker.md#upgrading)
+and [the host updater](../../install/docker.md#the-host-updater-optional).
+
 ### What the panel tells you before you start
 
 Opening the panel shows the installation's own status, so the answer to "can
@@ -86,7 +143,7 @@ run:
   tree and the backup root.
 - **Update readiness** — one line per condition the update actually refuses
   on, each marked *ok*, *warning* or *blocked*, with the reason: supervisor
-  detected, deployment channel, maintenance mode, superuser identity, recent
+  declared (`DEDALO_SUPERVISED=true` in the process environment), deployment channel, maintenance mode, superuser identity, recent
   database backup, backup root outside the code tree, runtime data outside the
   code tree, the archive tools, the Bun version pin, a leftover staging
   directory, and the free disk space where the update stages. The panel is
@@ -130,11 +187,14 @@ running Bun and this tree's pin, and the bytes free where the update stages.
 
     ```bash
     # the version the release pins is shown in the panel's readiness list
-    curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.4.2
+    curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/dedalo/.bun bash -s bun-v1.4.2
+    chown -R dedalo:dedalo /opt/dedalo/.bun   # run as root above; hand the runtime back to the service user
     ```
 
-    Then point the service at that binary (`ExecStart`, see the production
-    guide), restart, and confirm the boot line reads
+    The unit's `ExecStart` already points at `/opt/dedalo/.bun/bin/bun`, so
+    installing into that location *is* the runtime upgrade; there is no unit to
+    edit (see [Upgrading](../../install/upgrading.md#1-has-the-runtime-pin-moved)).
+    Restart, and confirm the boot line reads
     `starting on Bun 1.4.2 (pinned: 1.4.2)` with no mismatch warning.
 
 1. Close access to the work system.
@@ -150,7 +210,7 @@ running Bun and this tree's pin, and the bytes free where the update stages.
 
 3. Locate the "Update code" control panel.
 
-    Choose the server to obtain the code. The panel lists the servers in `CODE_SERVERS`, in `../private/.env`. The installers write the official Dédalo server there by default; an install made with the air-gapped option has `CODE_SERVERS=[]`, and an empty or absent `CODE_SERVERS` means no code servers at all — nothing to choose, no update offered. Add the official server, a mirror or another provider to the key to change that (see the [Configuration Administrator Guide](../../config/administration.md)).
+    Choose the server to obtain the code. The panel lists the servers in `CODE_SERVERS`, in `../private/.env`. The installers write the official Dédalo server there by default; an install made with the air-gapped option has `CODE_SERVERS=[]`, and an empty or absent `CODE_SERVERS` means no code servers at all — nothing to choose, no update offered. To change that, edit the value on the existing `CODE_SERVERS` line — replace the `[]`, or add the official server, a mirror or another provider inside the list (see the [Configuration Administrator Guide](../../config/administration.md)) — then **restart the server**: the list, and the browser's `connect-src` that lets the panel reach a code server, are built at boot. The same applies when you switch an air-gapped install (`CODE_SERVERS=[]`) back to the official server.
 
     Press "Check available updates", choose the version you want, and press `Update`. The panel then shows the pipeline's phase track (download → verify → extract → deps → preflight → swap → restart → health) while the update runs; the server restarts itself during the `restart` phase and the panel polls its health endpoint until the new version answers.
 
@@ -163,7 +223,7 @@ running Bun and this tree's pin, and the bytes free where the update stages.
 
 4. Check for new settings.
 
-    Some code updates add or change configuration settings; the "Check config" control panel flags these. Settings live in `../private/.env` — compare it against `../private/sample.env` and add any new key(s). See the [Configuration Administrator Guide](../../config/administration.md).
+    Some code updates add or change configuration settings. Settings live in `../private/.env`: compare it against `install/sample.env` of the **new** code tree, or the [settings reference](../../config/config.md), and add any new key(s). `../private/sample.env` is the copy the installer took at install time, so it lacks every key added since. A retired key stops the server at boot and names its replacement. See the [Configuration Administrator Guide](../../config/administration.md).
 
 5. Follow the update instructions and update data.
 
@@ -461,14 +521,17 @@ so the storage directory does not have to sit in the web root, and should not.
 
 ## Updating manually
 
-For most installs, the simplest and most predictable update is manual:
+For most installs, the simplest and most predictable update is manual. On the
+[production layout](../../install/production.md) it reads:
 
 ```bash
-git pull
-bun install --frozen-lockfile
-# restart the server (however your process supervisor does it), e.g.:
-systemctl restart dedalo
+sudo -u dedalo git -C /opt/dedalo/master_dedalo pull --ff-only
+sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+systemctl restart dedalo-ts
 ```
+
+The full procedure — the runtime pin, the scripts installed outside the tree, the
+supervision check, retired keys and rollback — is [Upgrading](../../install/upgrading.md).
 
 Boot migrations (`install/db/migrations/`) run automatically at startup — there
 is nothing extra to run for schema changes to `dedalo_ts_*` tables. Your
@@ -479,11 +542,12 @@ The Bun runtime itself is pinned per install (`.bun-version`); a code update
 does not upgrade it. Upgrading Bun is a deliberate, separately-tested change.
 
 1. Close access to the work system (maintenance mode, as above).
-2. `git pull` (or check out the release tag you want) and
-   `bun install --frozen-lockfile`.
+2. Pull (or check out the release tag you want) and install the dependencies,
+   as the service user, as above.
 3. Restart the server process.
-4. Check for new settings: compare `../private/.env` against the shipped
-   `../private/sample.env` and add any new key(s). See the
+4. Check for new settings: compare `../private/.env` against `install/sample.env`
+   of the code you just pulled (`../private/sample.env` is the install-time copy)
+   and add any new key(s). See the
    [Configuration Administrator Guide](../../config/administration.md).
 5. Follow any update instructions and [update data](updating_data.md) if the
    release requires it.

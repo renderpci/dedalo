@@ -257,7 +257,7 @@ the session in the handler.
 
 `config.ts` requires four language keys whenever the server is configured
 (`INSTALL_MODE=false`): `DEDALO_APPLICATION_LANGS` (code→label map),
-`DEDALO_PROJECTS_DEFAULT_LANGS` (code array), `DEDALO_APPLICATION_LANGS_DEFAULT`,
+`PROJECTS_DEFAULT_LANGS` (code array), `DEDALO_APPLICATION_LANGS_DEFAULT`,
 `DEDALO_DATA_LANG_DEFAULT` (owner rule: a missing/malformed value must refuse
 boot). The installer therefore MUST write them, or the post-`persist_config`
 restart crash-loops.
@@ -273,7 +273,7 @@ restart crash-loops.
   the map/array as **RAW compact `JSON.stringify`** (NOT `envQuote`):
   `parseEnvFile` strips surrounding quotes but does not unescape inner `\"`, so
   an `envQuote`'d JSON value would not round-trip through `JSON.parse`. Scalars
-  (`*_DEFAULT`, `DEDALO_APPLICATION_LANG`, `DEDALO_DATA_LANG`,
+  (`*_DEFAULT`, `APPLICATION_LANG`, `DATA_LANG`,
   `DEDALO_STRUCTURE_LANG`) use `envQuote`.
 - The **CLI** (`scripts/install.ts`) presets the lang env vars from the plan's
   `deriveLangConfig` result (`cliBootEnv`) BEFORE importing config (with ENTITY/DB
@@ -289,7 +289,10 @@ restart crash-loops.
 - **Key spellings.** `env.ts` reads each config key by its canonical name and
   accepts a documented legacy `DEDALO_*` spelling as a fallback, so an
   administrator can carry an existing `.env` over unchanged; the canonical name
-  always wins when both are set. `DEDALO_SALT_STRING` is generated (or preserved)
+  always wins when both are set. The install plan writes only canonical names,
+  and `config_persist.ts` drops a prior `.env`'s legacy line for every key the
+  plan writes, so a re-run never leaves one value under two names.
+  `DEDALO_SALT_STRING` is generated (or preserved)
   on write for continuity, but nothing in the server reads it — it is not a
   password salt and never was (see `src/core/security/password_hash.ts`).
 - `DEDALO_PRIVATE_DIR` relocates the whole private tree — both `env.ts` (read)

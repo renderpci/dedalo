@@ -103,7 +103,12 @@ record for is left out of the field, and the import's message names it.
 
 ### On the client side
 
-A client needs one key — the master it may pull from:
+A client needs one key — the master it may pull from. **The installer already
+writes the official master here**, unless the install was air-gapped
+(`--no-update-servers`, the unticked update-server box in the wizard, or *no* in
+`install.sh`), which writes `[]`. To use another master or a mirror, or to
+switch an air-gapped install on, change the value on that existing line — replace
+the `[]`, or add the entry inside the list — then restart. An entry looks like this:
 
 ```bash
 ONTOLOGY_SERVERS=[{"name":"Dédalo Ontology server","url":"https://myserverdomain.org/dedalo/core/api/v1/json/","code":"xx-myspecialcode-xxx"}]
@@ -175,6 +180,31 @@ Dédalo will erase all definitions of the specified tlds and import the new defi
 
 The import pipeline (`update_ontology` widget, `src/core/ontology/ontology_update.ts`) stages and validates every downloaded file before making any destructive change, takes a per-table recovery snapshot before importing each tld, and auto-restores that snapshot if the import fails partway through — an import either fully succeeds or fully rolls back, tld by tld. A schema-changes snapshot of the update is written under `../private/backups/ontology/changes/`.
 
-### Doing the update process manually
+### Updating without a network (air-gapped installs)
 
-The ontology is saved tld by tld; you can update it by copying the files located [here](https://github.com/renderpci/dedalo/tree/master/install/import/ontology).
+Copying ontology files onto the server imports nothing by itself: every import
+goes through this panel. An installation that can reach no master (an
+air-gapped install has `ONTOLOGY_SERVERS=[]`) imports from its own disk through
+the panel's **Local files** source:
+
+1. Get the files from a master's export: for each tld a `<tld>.copy.gz`, plus
+   the `ontology.json` that describes them (and `matrix_dd.copy.gz` for the
+   private lists). They come in a version directory, `<major.minor>/`, for
+   example `7.0/`.
+2. Put that directory under the server's ontology I/O directory,
+   [`ONTOLOGY_DATA_IO_DIR`](../../config/config.md#ontology-inputoutput-exportimport-or-download-directory)
+   — by default `../private/import/ontology/` once that directory exists, and
+   until then the in-tree `install/import/ontology/`. Prefer the private one: a
+   code update moves the whole code tree aside, files you added included.
+3. Set [`IS_AN_ONTOLOGY_SERVER=true`](../../config/config.md#is-an-ontology-master-server)
+   in `../private/.env` and restart. That is what adds *Local files* to the
+   panel. It also makes this installation serve the files in that directory
+   to anyone who can reach it; set it back to `false` and restart after the
+   import if you do not mean to serve.
+4. In the panel, pick **Local files**, put the tlds in the line, and update.
+
+The files themselves are copied from that directory on disk; nothing is
+downloaded. Only the file list (the manifest) is fetched over the network: your
+browser asks this installation's own public address for it, so the server must
+know that address ([`DEDALO_HOST`](../../config/config.md#defining-host)); with
+it unset, only a browser on the server itself gets the list.

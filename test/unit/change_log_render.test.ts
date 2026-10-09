@@ -151,7 +151,10 @@ describe('parseRelease', () => {
 		['a bad date', { ...valid, date: 'yesterday' }, /date/],
 		['a negative commit count', { ...valid, commits: -1 }, /commits/],
 		['a malformed wc id', { ...valid, wire_contract: ['WC-9'] }, /wire_contract/],
-		['an unknown key', { ...valid, notes: 'x' }, /unknown key 'notes'/],
+		// `notes` became a known key (the frozen release notes, WC-2026-10-09-code-manifest-release-notes):
+		// a malformed value is refused by shape, and the unknown-key leg plants a key nobody declares.
+		['malformed notes', { ...valid, notes: 'x' }, /notes must be/],
+		['an unknown key', { ...valid, remarks: 'x' }, /unknown key 'remarks'/],
 	];
 	for (const [what, value, message] of refusals) {
 		test(`refuses ${what}`, () => {

@@ -12,8 +12,9 @@
   outside the web root.
 - There is **one source of truth for defaults**: the engine itself
   (`src/config/config.ts`). A key you do not set takes its built-in default.
-- **`../private/sample.env`** documents every key with its default. Copy the lines
-  you want; do not copy the whole file.
+- **`install/sample.env`** in the code tree documents every key with its default.
+  Copy the lines you want; do not copy the whole file. (`../private/sample.env` is
+  the installer's copy of it, as it was at install time.)
 - You change a setting by editing `../private/.env` and **restarting the server**.
 
 ```
@@ -43,8 +44,8 @@ flowchart TB
 
 | File | Who writes it | What it is |
 |---|---|---|
-| `../private/.env` | **you** (and the install wizard) | every setting and secret for this install |
-| `../private/sample.env` | shipped | the documented catalogue of every key; a reference, not read by the engine |
+| `../private/.env` | **you** (and the installer: command line, wizard or `install.sh`) | every setting and secret for this install |
+| `../private/sample.env` | the installer (a copy of `install/sample.env`) | the documented catalogue of every key **at install time**; a reference, not read by the engine. A code update does not refresh it: the current catalogue is `install/sample.env` in the code tree |
 | `../private/ts_state.json` | **the app** | runtime state — maintenance mode, install status, area overrides. Not config; do not hand-edit |
 
 !!! warning "`.env` is append-only"
@@ -99,7 +100,7 @@ ACTIVE_ONTOLOGY_TLDS=dd,rsc,ontology,ontologytype,hierarchy,lg,oh
 
 ## 4. How to change a setting
 
-1. Find it in the [settings reference](config.md) or `../private/sample.env`.
+1. Find it in the [settings reference](config.md) or `install/sample.env`.
 2. Add or edit the line in `../private/.env`.
 3. Restart the server.
 4. Check it took: **maintenance → check config**, which shows the live values.

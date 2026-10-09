@@ -5,9 +5,17 @@
 #   Path 1 — guided install (it asks you the questions):
 #       ./install.sh
 #
-#   Path 2 — browser wizard (it asks you nothing here):
-#       docker compose -f docker-compose.simple.yml up -d
+#   Path 2 — browser wizard (it asks you nothing here). Without install.sh
+#   nothing records where the image comes from, so build it here from the
+#   checkout with the override (slow the first time):
+#       docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml up -d
 #       …then open http://localhost/dedalo/core/page/ and fill the wizard.
+#
+# THE IMAGE. install.sh asks where it comes from — one of Dédalo's registries, a
+# registry of your own, or a local build — and records the answer in .dedalo.env:
+# DEDALO_IMAGE, DEDALO_VERSION (pinned), DEDALO_IMAGE_MODE (pull | build),
+# DEDALO_IMAGE_VERIFY and DEDALO_COMPOSE_FILE. Every later update
+# (deploy/dedalo-image-update.sh) comes from the same place.
 #
 # WHAT THIS TRADES AWAY, on purpose, to fit in one command:
 #   * no TLS — plain HTTP, so SESSION_COOKIE_SECURE must be false (a browser
@@ -57,7 +65,16 @@ services:
 
   # --- The engine ------------------------------------------------------------
   dedalo:
-    build: .
+    # THE IMAGE IS NAMED AND PINNED, never built implicitly (installer unification
+    # D2). DEDALO_IMAGE (a repository, no tag) and DEDALO_VERSION (the release tag)
+    # come from .dedalo.env, which install.sh writes from the operator's answer:
+    # one of Dédalo's registries (engineering/image_registries.json), a registry of
+    # your own, or a local build. Building here is the override
+    # `-f deploy/compose.build.yml`, which tags the build with this same name.
+    # The default `localhost/dedalo:local` names the registry host `localhost`, so
+    # a bare `docker compose up` can never pull a look-alike image from a public
+    # registry: without a local build it fails loudly instead.
+    image: ${DEDALO_IMAGE:-localhost/dedalo}:${DEDALO_VERSION:-local}
     # The container equivalent of systemd's Restart=always — and what makes the
     # wizard's "Save config" step work at all: the process exits after writing
     # .env so that it can be restarted into the real configuration.
@@ -112,6 +129,19 @@ services:
       # An image install still cannot tree-swap: channel detection refuses that
       # update on its own, whatever this says.
       DEDALO_SUPERVISED: "true"
+      # WHERE THIS ENGINE'S IMAGE CAME FROM, as the operator chose it in .dedalo.env.
+      # The code-update panel shows the source and the host command from it
+      # (src/core/update/image_source.ts). Process environment only — never
+      # /private/.env, which outlives the image. Not DEDALO_IMAGE_*: that prefix is
+      # the media-image configuration family.
+      DEDALO_CONTAINER_IMAGE: ${DEDALO_IMAGE:-localhost/dedalo}
+      DEDALO_CONTAINER_IMAGE_MODE: ${DEDALO_IMAGE_MODE:-build}
+      # THE ENGINE PUBLISHES ITS OWN CLIENT. At every start it mirrors the client
+      # tree of THIS image into the `client` volume and switches it atomically
+      # (src/core/install/client_publish.ts); nginx serves it from there. A host
+      # bind of ./client served the CHECKOUT's client against a pulled engine of
+      # another version, and the wire contract between the two is exact.
+      DEDALO_CLIENT_PUBLISH_DIR: /srv/dedalo/client
       SERVER_UNIX_SOCKET: /run/dedalo/dedalo_ts.sock
       MEDIA_PATH: /srv/dedalo/media
       # MEDIA IS SERVED OPENLY HERE, and since 2026-08-24 that is a property of
@@ -173,6 +203,7 @@ services:
       - private:/private          # .env, sessions, ts_state.json, backups — SECRETS
       - media:/srv/dedalo/media   # written by the engine, READ by the proxy
       - socket:/run/dedalo        # the unix socket, shared with the proxy
+      - client:/srv/dedalo/client # the published client, READ by the proxy
     healthcheck:
       # THE 503 GETS A CONSUMER (P2-33 / OPS-09).
       #
@@ -226,7 +257,9 @@ services:
       # `docker compose -f docker-compose.simple.yml up -d` working exactly as
       # before — plain HTTP, no certificate needed.
       - ./deploy/${DEDALO_NGINX_CONF:-nginx.simple.conf}:/etc/nginx/conf.d/default.conf:ro
-      - ./client:/opt/dedalo/master_dedalo/client:ro
+      # The client the ENGINE published (never the checkout's): the alias in the
+      # proxy configuration points into this mount.
+      - client:/opt/dedalo/master_dedalo/client:ro
       - media:/srv/dedalo/media:ro
       - socket:/run/dedalo
       # Let's Encrypt material, shared with the certbot service.
@@ -296,7 +329,9 @@ services:
   # and removes when every store succeeds. That file, and /backups/LAST_OK, are the
   # two things to look at.
   backup:
-    build: .
+    # The SAME image as the engine — one pinned name, one version (see the dedalo
+    # service); the build override builds it once, for both.
+    image: ${DEDALO_IMAGE:-localhost/dedalo}:${DEDALO_VERSION:-local}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -379,5 +414,6 @@ volumes:
   media:        # the originals are the source of truth — back this up
   socket:
   backups:      # the nightly copies — SEE THE backup SERVICE: copy this OFF this host
+  client:       # DERIVED — the engine republishes it on every start; never back it up
   letsencrypt:  # issued certificates + the ACME account key
   certbot_www:  # the challenge webroot, shared with nginx

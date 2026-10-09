@@ -342,7 +342,7 @@ If the result is wrong, nothing is destroyed: the previous file is at `.env.bak.
     The full v6 → v7 settings map, key by key, is [what changed in v7](../config/whats_changed_v7.md).
 
 !!! warning "Retired keys refuse the boot"
-    A v6 `.env` carried over may still name a key v7 has retired. The server names the key and the file and refuses to start until you rename the line — the full list is in [upgrading](upgrading.md#4-retired-configuration-keys).
+    A v6 `.env` carried over may still name a key v7 has retired. The server names the key and the file and refuses to start until you rename the line — the full list is in [upgrading](upgrading.md#5-retired-configuration-keys).
 
 ## 6. Phase D — first v7 boot
 

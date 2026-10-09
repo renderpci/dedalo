@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.
     - Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.
     - New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.
     - "A publication host can now be installed with one guided command, `provision init`, on Debian, Ubuntu 24.04 and 26.04, and RHEL, Rocky or Alma 9 and 10 with SELinux; the Publication API v1 runs in a FastCGI pool of its own."
@@ -1157,6 +1158,35 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.** *(action needed)*
+
+    Until now every Docker installation built its own image from the checkout. Dédalo now publishes the engine image, signed, to its own registry and to mirrors — GitHub Container Registry and Docker Hub — and you choose where your installation takes it from ([where the image comes from](./install/docker.md#choose-where-the-image-comes-from)):
+
+    - **One of Dédalo's registries.** The [registry table](./install/docker.md#dedalos-registries) says which ones publish today; the registry Dédalo runs itself is the primary, the other two are mirrors of the same images. A registry that is not yet available is never offered. Images are published per release, so until the first stable release is published, the installer builds locally.
+    - **A registry of your own**, holding copies of the published images ([how to mirror them](./install/docker.md#a-registry-of-your-own)).
+    - **A local build** from the checkout, with `-f deploy/compose.build.yml` ([a local build](./install/docker.md#a-local-build)).
+
+    `./install.sh` asks the question, offers the registries that publish your checkout's version first, and builds locally when none does. With `cosign` installed it checks the image's signature ([checking the signature](./install/docker.md#checking-the-signature)). The answer is written to `.dedalo.env` as five keys — `DEDALO_COMPOSE_FILE`, `DEDALO_IMAGE`, `DEDALO_VERSION`, `DEDALO_IMAGE_MODE`, `DEDALO_IMAGE_VERIFY` ([the keys](./install/docker.md#the-dedaloenv-keys)) — and every later update takes the image from the same place. The compose files no longer build: they run `DEDALO_IMAGE:DEDALO_VERSION`. Updating is now one command, `./deploy/dedalo-image-update.sh --version <version>`, which takes a database backup, gets the image, re-pins `DEDALO_VERSION` and rolls back on its own if the new version does not come up healthy within the health timeout (15 minutes by default, so long boot migrations are waited for) ([upgrading](./install/docker.md#upgrading)); with signature checking on, it also refuses a signed image that is not the version it asked for. Going back after an update that succeeded is a short manual procedure ([rolling back by hand](./install/docker.md#rolling-back-by-hand)). Its old `--mode`, `--image` and `--tag` flags are gone.
+
+    **Action for an existing Docker installation.** Add these lines to `.dedalo.env` (on the full stack, create the file with your three `POSTGRES_*` values as well), with the version your checkout declares:
+
+    ```shell
+    DEDALO_COMPOSE_FILE=docker-compose.simple.yml
+    DEDALO_IMAGE=localhost/dedalo
+    DEDALO_VERSION=7.0.1
+    DEDALO_IMAGE_MODE=build
+    DEDALO_IMAGE_VERIFY=none
+    ```
+
+    Then build once under the new name and recreate the stack:
+
+    ```shell
+    docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml --env-file .dedalo.env build dedalo
+    docker compose -f docker-compose.simple.yml --env-file .dedalo.env up -d
+    ```
+
+    (on the full stack, `docker-compose.yml` instead of `docker-compose.simple.yml`, in the file and in the commands). The first update of such an installation needs `--skip-version-check`. See [an installation from before the image pin](./install/docker.md#an-installation-from-before-the-image-pin).
+
 - **A publication host on another machine installs from one kit file built on the work host.**
 
     Installing a publication host on a second machine no longer means copying five entries of the work checkout by hand. On the work host, `bun run hostagent:pack -- --draft <draft.json>` builds one archive — the agent's code with its production dependencies (installed for the kit, without the tests), the draft and the installer, with a list of every file's checksum — and prints its sha256. The same checkout and draft always give the same file. The kit carries no password and no token: those are typed or created on the publication host. There, `sh install.sh <instance> --kit <file> --kit-sha256 <sha256>` refuses a kit whose sha256 is not the one the work host printed, then refuses an altered, extra or missing file before any of its code runs. A draft the guided install would refuse is refused when the kit is built. Installing from a checkout (`--source`) is unchanged. See [the kit](./install/publication_host.md#the-kit).
@@ -1188,6 +1218,20 @@ Merged since the last release; these ship with the next one.
     The Publication API v1 is legacy: it is needed only by websites built for Dédalo v6. A publication host's declaration without a `v1` block now installs a v2-only site, the recommended shape for a new site: no v1 account, no v1 configuration file and no v1 runtime on the host, and the guided install (`provision init`) neither looks for nor asks about any of them. The draft chooses with `"apis": "v2_only"` or `"v1_and_v2"`, or by the presence of its own `v1` block, and a v2-only site names its distribution family in `site.os_family`. The work system never pushes a v1 release to such a host, and its **Publication hosts** panel shows the v1 row as *Not served*, which is not a fault. Existing hosts that declare v1 are unchanged. See [the publication host install](./install/publication_host.md).
 
     Wire contract: `WC-2026-10-09-publication-host-v2-only-site`.
+
+- **On Docker installations, the Update code panel now shows how to install each release, and can hand the update to an optional host updater.**
+
+    On a Docker installation the code lives inside the image, so the panel cannot replace it in place. Until now it only said *Update blocked*. It now shows an **Image updates** block: where this installation's image comes from (pulled from a registry, and whether that registry is one of Dédalo's, or built on the host), and, for the release you select, the exact command to run on the Docker host, `./deploy/dedalo-image-update.sh --version <version>`. The in-container readiness checks are still listed, folded, because they describe the in-place update this installation does not use.
+
+    You can also install the optional **host updater** on the Docker host (`sudo ./deploy/dedalo-image-updater.sh install-units`). It is off by default. With it installed, the panel offers **Request this update**: the host updater picks the request up within about a minute, runs the same command with its backup, health check and rollback, and the panel shows the outcome. A request needs the superuser and maintenance mode, and can only name a release on the normal upgrade path. The registry, pull or build, and the signature check are decided on the host, from `.dedalo.env`. The engine is never given control of Docker. See [the host updater](./install/docker.md#the-host-updater-optional).
+
+    Wire contract: `WC-2026-10-09-update-code-image-channel`.
+
+- **The Update code panel shows each release's notes before you install it.**
+
+    When you check for available updates, each published release now lists what it changes: its *Action needed* items and one line per change, the same ones this change log publishes for that release. You can read what an update will do before you choose it, on every installation. Developer builds and releases cut before this change have no notes. See [updating the code](./management/updates/updating_code.md).
+
+    Wire contract: `WC-2026-10-09-code-manifest-release-notes`.
 
 - **The backup panel now says when backups are manual.**
 
@@ -1310,6 +1354,21 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
 
 #### Fixed
+
+- **On Docker, the browser client now always matches the engine that is running.**
+
+    The proxy used to serve the browser client straight from the checkout on the host, while the engine ran from its image. When the two came from different versions — a checkout at one release behind an image of another — the client and the engine no longer understood each other, and pages broke in ways that looked like engine bugs. Now the engine publishes the client of its own image into a `client` volume each time it starts, and the proxy serves it from there. An update or a rollback therefore moves the client together with the engine. No action is needed: the new compose files declare the volume. If you keep your own compose file, give the `dedalo` service `DEDALO_CLIENT_PUBLISH_DIR: /srv/dedalo/client` with the `client` volume mounted there, and mount the same volume read-only in `nginx` instead of `./client` ([the files](./install/docker.md#the-files-and-where-they-live)).
+
+- **The installation guides now install the watchdog and rollback scripts, tell existing servers how to declare supervision, and give RHEL a complete systemd unit.**
+
+    The non-Docker installation and update pages were brought in line with the installer and the shipped units.
+
+    - **Watchdog and rollback scripts.** The shipped watchdog and rollback units run two scripts from `/opt/dedalo/bin/`, outside the code tree. No page said to install them, so a server set up from the manual alone had a watchdog failing with `status=203/EXEC` every 30 seconds and no automatic rollback of a failed code update. [Production step 10](./install/production.md#10-run-the-engine-under-systemd) now installs them, and [Upgrading](./install/upgrading.md) refreshes them after each update.
+    - **Existing servers and supervision.** [Upgrading](./install/upgrading.md#3-check-that-the-unit-declares-supervision) has a new step that checks the installed unit for `Environment=DEDALO_SUPERVISED=true`, `SuccessExitStatus=75` and `Restart=always`, and adds what is missing with a drop-in. [Troubleshooting](./install/troubleshooting.md#updating) explains the *No supervisor declared* refusal. The installer's last line now names the supervised ways to start the server instead of `bun run start`, which cannot take code updates.
+    - **RHEL.** [RHEL-based systems](./install/install_rhel.md) gives a complete `dedalo-ts.service` ordered after `postgresql-18.service`. The shipped unit names `postgresql.service`, which does not exist there. The page also runs the installer the same way as the production guide, and keeps `DEDALO_PG_BIN_PATH` in `.env`.
+    - **Several instances.** The [multi-instance](./install/multi_instance.md) template unit now carries `KillMode=process`, the wider start limit, the rollback hook and the watchdog. The watchdog script takes `--restart-unit` / `--rollback-unit`, so a templated instance can point it at its own units. Each site is installed with `--socket`, `--media-path` and `--media-access-mode` instead of appending keys by hand.
+    - **Corrections.** The backup set is five stores (site-builder instances included). Without `--media-path` the media root defaults to `../private/media`. The installer keeps every `.env` key it does not own, including keys added before the install. An air-gapped installation can update its ontology from local files ([updating the ontology](./management/updates/updating_ontology.md#updating-without-a-network-air-gapped-installs)). `STRUCTURE_FROM_SERVER` and `DEDALO_SOURCE_VERSION_LOCAL_DIR` are documented as having no effect. The four language keys are documented as required, with no default. The configuration pages point at `install/sample.env` in the code tree for the current list of keys: `../private/sample.env` is the installer's copy and a code update does not refresh it. The [developer quickstart](./install/dev_quickstart.md) lists the supervised start scripts and the second-instance script.
+    - **Key names in `.env`.** The installer now writes every key under the name the [configuration reference](./config/config.md) uses (`DB_NAME`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `ENTITY`, `PROJECTS_DEFAULT_LANGS`, `APPLICATION_LANG`, `DATA_LANG`) instead of the older fallback spellings (`DEDALO_DATABASE_CONN`, `DEDALO_ENTITY`, …). Before, a `DB_HOST` you added by hand silently won over the answer you had just given the installer. A re-run over an existing `.env` replaces the old spelling with the new one, so no value is left under two names. The engine and the backup scripts still accept the old spellings, so an existing `.env` keeps working unchanged.
 
 - **"The guided publication-host install now runs on RHEL 9 with SELinux enforcing and fapolicyd: the polkit rules directory, the SELinux tools and fapolicyd's trust are judged as EL ships them."**
 
@@ -1802,6 +1861,10 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **Each release is published as a signed multi-architecture image, with the same digest on every Dédalo registry.**
+
+    A release tag `vX.Y.Z` now also produces the engine image `X.Y.Z`, for `linux/amd64` and `linux/arm64`. It is built once from the same `git archive` as the code server's release zip, signed keylessly with Sigstore by the release workflow, and copied with its signature to every registry that `engineering/image_registries.json` lists as provisioned. Each copy is checked to carry the same digest. A published release tag is never rebuilt or overwritten. Developer images (`X.Y.Z-dev`) are built only on demand, from master. There is no `latest` tag. To check that an image is genuine, verify it against the release workflow's identity, as shown in [checking the signature](./install/docker.md#checking-the-signature). A registry that is not provisioned, or whose credentials are missing, is skipped by name, never silently.
+
 - **Tool authors can read other sites through `harvestFetch`, a harvesting door that obeys robots.txt and paces its requests.**
 
     A tool that imports from another institution's site (an auction catalogue, a journal's
@@ -1860,7 +1923,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 108 entries"
+??? note "Wire contract — 110 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1966,10 +2029,12 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-08-install-ip-denied-names-address`
     - `WC-2026-10-08-install-plan-update-servers-core-lg`
     - `WC-2026-10-08-make-backup-scheduled-evidence`
+    - `WC-2026-10-09-code-manifest-release-notes`
     - `WC-2026-10-09-install-domain-ontologies`
     - `WC-2026-10-09-ontology-manifest-dependencies`
     - `WC-2026-10-09-publication-host-panel-setup`
     - `WC-2026-10-09-publication-host-v2-only-site`
+    - `WC-2026-10-09-update-code-image-channel`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

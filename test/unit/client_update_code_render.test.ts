@@ -979,3 +979,116 @@ describe('update_code restore-point delete', () => {
 		expect(css_src).toContain('button_delete_point');
 	});
 });
+
+// ---------------------------------------------------------------------------
+// The IMAGE CHANNEL (installer unification D3, 2026-10-09;
+// WC-2026-10-09-update-code-image-channel). The decisions (which block, which
+// button, which command) are driven in the browser suite
+// (client/dedalo/test/client/js/test_update_code.js, "image channel"); these
+// are the source-shape laws a browser run cannot see.
+// ---------------------------------------------------------------------------
+describe('update_code image channel: source shape', () => {
+	const widget_src = readFileSync(
+		join(import.meta.dir, '../../src/core/area_maintenance/widgets/update_code.ts'),
+		'utf8',
+	);
+
+	/** The body of `update_code.prototype.<name> = async function … }//end <name>`. */
+	function model_function(name: string): string {
+		const start = model_src.indexOf(`update_code.prototype.${name} = `);
+		const end = model_src.indexOf(`}//end ${name}`, start);
+		expect(start, `${name} exists`).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		return model_src.slice(start, end);
+	}
+
+	test('the two new requests exist, reach their widget actions, and send no prevent_lock', () => {
+		for (const [name, action] of [
+			['request_image_update', 'request_image_update'],
+			['cancel_image_update_request', 'cancel_image_update_request'],
+		] as const) {
+			const body = model_function(name);
+			expect(body).toContain(`action\t: '${action}'`);
+			expect(body.includes('prevent_lock'), `${name} must not send prevent_lock`).toBe(false);
+			// single-shot: a request is not idempotent (client_idempotency_tripwire)
+			expect(body).toContain('retries : 1');
+		}
+		// the server side registers exactly these two names
+		expect(widget_src).toContain('request_image_update: gated(');
+		expect(widget_src).toContain('cancel_image_update_request: gated(');
+	});
+
+	test('no blocking dialogs in the status module either', () => {
+		expect(/\balert\s*\(/.test(status_src)).toBe(false);
+		expect(/(^|[^.\w])confirm\s*\(/m.test(status_src)).toBe(false);
+	});
+
+	test('the host command is composed from the server’s facts, never a client literal', () => {
+		// the program and the flag come from consumer.image.update_command …
+		expect(status_src).toContain('command.program');
+		expect(status_src).toContain('command.version_flag');
+		// … so no client file spells the program name itself
+		for (const [name, src] of [
+			['render_update_code.js', render_src],
+			['render_update_status.js', status_src],
+		] as const) {
+			expect(src.includes("'deploy/dedalo-image-update.sh"), `${name} hard-codes the program`).toBe(
+				false,
+			);
+		}
+		// the tag is the STRICT X.Y.Z grammar (it is pasted into a root shell)
+		expect(status_src).toContain('/^[0-9]{1,6}\\.[0-9]{1,6}\\.[0-9]{1,6}$/.test(version)');
+	});
+
+	test('"Request this update" is offered only when the host updater is alive and nothing is pending', () => {
+		expect(render_src).toContain(
+			"const can_request = (image.host_updater || {}).state==='alive' && !image.request",
+		);
+	});
+
+	test('the follow-up switches to /health while the engine is gone, and the outcome is the verdict', () => {
+		const start = render_src.indexOf('const follow_image_request = function');
+		const body = render_src.slice(start, render_src.indexOf('}//end follow_image_request', start));
+		expect(start).toBeGreaterThan(-1);
+		expect(body).toContain("fetch('/health')");
+		expect(body).toContain('outcome.request_id===request.id');
+		expect(body).toContain('IMAGE_FOLLOW_DEADLINE_MS');
+	});
+
+	test('every label the image block and the notes use is defined in the master catalog', () => {
+		const static_keys = new Set<string>();
+		for (const src of [render_src, status_src]) {
+			for (const match of src.matchAll(/get_label\.(update_code_[a-z0-9_]+)/g)) {
+				static_keys.add(match[1] as string);
+			}
+		}
+		const image_keys = [...static_keys].filter(
+			(key) =>
+				key.startsWith('update_code_image_') ||
+				key.startsWith('update_code_host_updater') ||
+				key.startsWith('update_code_release_notes') ||
+				key === 'update_code_action_needed' ||
+				key === 'update_code_tree_swap_readiness',
+		);
+		// anti-vacuity: the block really reads labels
+		expect(image_keys.length).toBeGreaterThanOrEqual(30);
+		expect(image_keys.filter((key) => master_labels[key] === undefined)).toEqual([]);
+		// the runtime-built families: change types, and every refusal id the
+		// widget can put in coordinates.reason
+		const types = ['security', 'removed', 'deprecated', 'changed', 'added', 'fixed'];
+		expect(
+			types.filter((type) => master_labels[`update_code_change_${type}`] === undefined),
+		).toEqual([]);
+		const refusal_block = widget_src.slice(
+			widget_src.indexOf('const IMAGE_REQUEST_REFUSALS'),
+			widget_src.indexOf('});', widget_src.indexOf('const IMAGE_REQUEST_REFUSALS')),
+		);
+		const reasons = [...refusal_block.matchAll(/^\t([a-z_]+):/gm)].map((match) => match[1]);
+		expect(reasons.length).toBe(8); // incl. dev_channel_not_enabled
+		expect(
+			reasons.filter(
+				(reason) => master_labels[`update_code_image_refused_${reason}`] === undefined,
+			),
+		).toEqual([]);
+	});
+});

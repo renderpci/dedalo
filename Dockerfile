@@ -5,13 +5,28 @@
 # The runtime is PINNED (.bun-version / package.json engines.bun). Keep this tag
 # and that pin in lockstep — the engine is coupled to version-specific runtime
 # behaviour, and a silent drift is a data-corruption class, not a performance
-# regression.
+# regression (gate: test/unit/ops_runtime_pin.test.ts).
+#
+# THE BASE IS PINNED BY DIGEST TOO (2026-10-09). A tag is a pointer its publisher
+# can move; the digest is the bytes this file was written against, and the
+# published Dédalo images (.github/workflows/image-release.yml) are signed — a
+# signature over an image whose base quietly changed under the same tag would vouch
+# for bytes nobody chose. The tag stays for the reader and for Dependabot (the
+# `docker` entry for "/" in .github/dependabot.yml proposes digest AND tag bumps);
+# a tag-bump PR stays red until .bun-version moves with it — the lockstep above.
+#
+# LAYER ORDER IS A CONTRACT: OS + toolchain → system policy and markers →
+# dependencies → the CODE, LAST. Successive releases then SHARE every big layer
+# (the ~1 GB apt toolchain, node_modules) until the base digest, the apt line or
+# the lockfile changes, so an operator pulling a patch release downloads the code
+# layer, not the toolchain again. Only the provenance stamp (one small file) and
+# image metadata follow the code. Gate: test/unit/product_image_tripwire.test.ts.
 #
 # THREE STAGES, one lineage — see "Build targets" at the foot of this file:
 #   runtime     the image, production dependencies only
 #   dev         runtime + the devDependencies (client test harness, less, linters)
 #   production  the DEFAULT target; a bare alias of `runtime`
-FROM oven/bun:1.4.2-debian AS runtime
+FROM oven/bun:1.4.2-debian@sha256:4f6e31d1a54d6a3dd312daef655fc998101b5043d52e12592ac293ef04b9bc73 AS runtime
 
 # --- OS packages -------------------------------------------------------------
 # The image MUST ship a `psql` that is NOT OLDER than the PostgreSQL server it
@@ -60,7 +75,88 @@ RUN apt-get update \
       git unzip gzip file rsync \
  && rm -rf /var/lib/apt/lists/*
 
+# --- ImageMagick policy, system-wide (audit MEDIA-01 / MEDIA-02) -------------
+# The engine already points its OWN ImageMagick spawns at the shipped policy via
+# MAGICK_CONFIGURE_PATH (core/media/engine/binaries.ts), and splices the
+# DEDALO_MAGICK_LIMIT_* `-limit` argv into each of them. Neither reaches an
+# ImageMagick process this engine did not build: a delegate child, a maintenance
+# `convert` in a shell, anything a future script adds. Installing the SAME FILE at
+# the system config path makes the coder denials and the resource ceiling the
+# container-wide law instead of a property of one caller.
+#
+# Debian ships ImageMagick 6, whose config path is /etc/ImageMagick-6; the v7 path
+# is written too, so an image built on a base that has moved on keeps the policy.
+# This REPLACES Debian's own policy.xml deliberately: the shipped file is the
+# considered version of the trade-off — the PS/EPS/XPS/MSL/MVG/URL coders are
+# denied, so is the Ghostscript delegate (the engine spawns gs itself), and the
+# resource ceiling applies container-wide. Gate:
+# test/unit/magick_policy_tripwire.test.ts.
+#
+# THE DIRECTORY IS CREATED, NEVER TESTED FOR. An `if [ -d "$d" ]` guard made the
+# whole system-wide half a SILENT NO-OP on any base image whose ImageMagick config
+# path moved — the build stayed green, the gate (which reads this file's text)
+# stayed green, and the container ran under the distribution's permissive policy.
+# An unconditional install of a config file that only ImageMagick reads costs an
+# empty directory at worst.
+#
+# A SINGLE-FILE COPY, ahead of the code: the policy is system configuration, so it
+# belongs with the toolchain layers and must not force them to rebuild when any
+# other source file changes. The tmp copy is removed in the same RUN.
+COPY src/core/media/engine/imagemagick-policy/policy.xml /tmp/dedalo-magick-policy.xml
+RUN set -eu; \
+    for d in /etc/ImageMagick-6 /etc/ImageMagick-7; do \
+      install -d "$d"; \
+      cp /tmp/dedalo-magick-policy.xml "$d/policy.xml"; \
+    done; \
+    rm -f /tmp/dedalo-magick-policy.xml
+
+# --- The image-channel marker (src/core/update/channel.ts) --------------------
+# The code tree (copied below, last) is BAKED into this image: a code-update tree swap would
+# land in the container's writable layer and be discarded on the next
+# recreation, so the updater must refuse and point at deploy/dedalo-image-update.sh.
+# "Running in a container" does not say that (the CI toolchain image runs the
+# update drills against trees it owns), so THIS build states it positively.
+# Outside the tree on purpose: nothing that exports or bind-mounts a tree can
+# carry it. A checkout bind-mounted over /opt/dedalo still reads `tree_swap`
+# (channel.ts's mount check). Path = IMAGE_TREE_MARKER_PATH; gate:
+# test/unit/update_channel_native.test.ts.
+RUN install -d /etc/dedalo \
+ && printf '%s\n' /opt/dedalo/master_dedalo > /etc/dedalo/image_tree
+
+# --- Writable trees ----------------------------------------------------------
+# THE CONTAINER PROBLEM: `../private/` is a SIBLING of the repo, and in an image
+# there is no writable parent to create it in. DEDALO_PRIVATE_DIR relocates the
+# whole private tree — .env, the session store, the state file, the backups — and
+# BOTH the configuration read side and the installer write side honour it.
+# Mount a named volume here or the secrets die with the container.
+ENV DEDALO_PRIVATE_DIR=/private
+
+# Created here, owned by `bun`, so an EMPTY named volume mounted over them
+# inherits that ownership (Docker copies the image path's ownership into a fresh
+# named volume — it does NOT do this for bind mounts).
+#
+# /backups is the `backups` volume of both stacks (the `backup` service writes the
+# nightly dumps there; the full stack's engine reads them and the make_backup
+# widget writes them). It was missing from this line from 2026-08-30 to
+# 2026-10-08, so the volume came up root-owned: the CLI install died at
+# `→ directories` (DEDALO_BACKUP_DIR=/backups/db) and the backup service wrote
+# nothing, ever. The copy-up also applies to an EXISTING volume while it is
+# empty (measured 2026-10-08), and nothing could write to those, so a rebuild
+# heals an existing install with no manual chown.
+# Gate: test/unit/stack_ops_policy_tripwire.test.ts (every writable named
+# volume of an image-built service is listed here).
+#
+# /srv/dedalo/client is the `client` volume of both stacks: the engine PUBLISHES its
+# own client tree there at boot (src/core/install/client_publish.ts) and nginx
+# serves it read-only, so the browser always runs the client of the engine it
+# talks to — a pulled image never serves against a host checkout's older client.
+RUN mkdir -p /private /srv/dedalo/media /srv/dedalo/client /run/dedalo /backups \
+ && chown -R bun:bun /private /srv/dedalo/media /srv/dedalo/client /run/dedalo /backups
+
 # --- Application -------------------------------------------------------------
+# Everything above is the same for every release built on this base; everything
+# from here on is the release. Dependencies first, the code last (header: LAYER
+# ORDER IS A CONTRACT).
 WORKDIR /opt/dedalo/master_dedalo
 
 # Dependencies first, so a source change does not re-resolve the whole tree.
@@ -103,72 +199,36 @@ COPY vendor ./vendor
 COPY .bun-sha256 .bun-version .dockerignore .gitattributes .gitignore .gitleaks.toml AGENTS.md Dockerfile License.md README.md SECURITY.md biome.jsonc bun.lock bunfig.toml cliff.toml docker-compose.simple.yml docker-compose.yml install.sh mkdocs.yml package.json tsconfig.json ./
 # <<< BUILD-CONTEXT ALLOWLIST <<<
 
-# --- ImageMagick policy, system-wide (audit MEDIA-01 / MEDIA-02) -------------
-# The engine already points its OWN ImageMagick spawns at the shipped policy via
-# MAGICK_CONFIGURE_PATH (core/media/engine/binaries.ts), and splices the
-# DEDALO_MAGICK_LIMIT_* `-limit` argv into each of them. Neither reaches an
-# ImageMagick process this engine did not build: a delegate child, a maintenance
-# `convert` in a shell, anything a future script adds. Installing the SAME FILE at
-# the system config path makes the coder denials and the resource ceiling the
-# container-wide law instead of a property of one caller.
+# --- Release provenance (src/core/update/install_stamp.ts) ------------------
+# A release image is built by .github/workflows/image-release.yml from a
+# `git archive` of the release commit — the SAME mechanism as the code server's
+# `<v>.zip`, so `build_info.txt` arrives expanded (export-subst) exactly as in the
+# archive. This file NEVER writes build_info.txt: that would forge the commit
+# provenance build_stamp.ts reads (test/unit/build_stamp_native.test.ts holds the
+# committed placeholder).
 #
-# Debian ships ImageMagick 6, whose config path is /etc/ImageMagick-6; the v7 path
-# is written too, so an image built on a base that has moved on keeps the policy.
-# This REPLACES Debian's own policy.xml deliberately: the shipped file is the
-# considered version of the trade-off — the PS/EPS/XPS/MSL/MVG/URL coders are
-# denied, so is the Ghostscript delegate (the engine spawns gs itself), and the
-# resource ceiling applies container-wide. Gate:
-# test/unit/magick_policy_tripwire.test.ts.
-#
-# THE DIRECTORY IS CREATED, NEVER TESTED FOR. An `if [ -d "$d" ]` guard made the
-# whole system-wide half a SILENT NO-OP on any base image whose ImageMagick config
-# path moved — the build stayed green, the gate (which reads this file's text)
-# stayed green, and the container ran under the distribution's permissive policy.
-# An unconditional install of a config file that only ImageMagick reads costs an
-# empty directory at worst.
+# What the archive cannot say is WHICH CHANNEL it is: a developer build of master is
+# a git archive too, and would otherwise report a bare release version. So the
+# workflow passes the channel and the sha256 of the archive it built from, and this
+# step writes the install stamp a tree-swap install writes for the same purpose:
+#   both empty      no-op — a local build (a checkout, unexpanded build_info.txt)
+#                   stays honestly `.dev`;
+#   channel master  the release posture (bare X.Y.Z);
+#   channel dev     `.dev` on an expanded build (X.Y.Z.dev);
+#   anything else   (one set without the other, another channel, a digest that is
+#                   not 64 lowercase hex) FAILS the build — a half-stated provenance
+#                   is a lie in an image somebody will sign.
+# Root-owned and read-only to the engine; the last layer that writes the tree.
+ARG DEDALO_RELEASE_CHANNEL=""
+ARG DEDALO_RELEASE_ARCHIVE_SHA256=""
 RUN set -eu; \
-    for d in /etc/ImageMagick-6 /etc/ImageMagick-7; do \
-      install -d "$d"; \
-      cp src/core/media/engine/imagemagick-policy/policy.xml "$d/policy.xml"; \
-    done
-
-# --- The image-channel marker (src/core/update/channel.ts) --------------------
-# The code tree above is BAKED into this image: a code-update tree swap would
-# land in the container's writable layer and be discarded on the next
-# recreation, so the updater must refuse and point at deploy/dedalo-image-update.sh.
-# "Running in a container" does not say that (the CI toolchain image runs the
-# update drills against trees it owns), so THIS build states it positively.
-# Outside the tree on purpose: nothing that exports or bind-mounts a tree can
-# carry it. A checkout bind-mounted over /opt/dedalo still reads `tree_swap`
-# (channel.ts's mount check). Path = IMAGE_TREE_MARKER_PATH; gate:
-# test/unit/update_channel_native.test.ts.
-RUN install -d /etc/dedalo \
- && printf '%s\n' /opt/dedalo/master_dedalo > /etc/dedalo/image_tree
-
-# --- Writable trees ----------------------------------------------------------
-# THE CONTAINER PROBLEM: `../private/` is a SIBLING of the repo, and in an image
-# there is no writable parent to create it in. DEDALO_PRIVATE_DIR relocates the
-# whole private tree — .env, the session store, the state file, the backups — and
-# BOTH the configuration read side and the installer write side honour it.
-# Mount a named volume here or the secrets die with the container.
-ENV DEDALO_PRIVATE_DIR=/private
-
-# Created here, owned by `bun`, so an EMPTY named volume mounted over them
-# inherits that ownership (Docker copies the image path's ownership into a fresh
-# named volume — it does NOT do this for bind mounts).
-#
-# /backups is the `backups` volume of both stacks (the `backup` service writes the
-# nightly dumps there; the full stack's engine reads them and the make_backup
-# widget writes them). It was missing from this line from 2026-08-30 to
-# 2026-10-08, so the volume came up root-owned: the CLI install died at
-# `→ directories` (DEDALO_BACKUP_DIR=/backups/db) and the backup service wrote
-# nothing, ever. The copy-up also applies to an EXISTING volume while it is
-# empty (measured 2026-10-08), and nothing could write to those, so a rebuild
-# heals an existing install with no manual chown.
-# Gate: test/unit/stack_ops_policy_tripwire.test.ts (every writable named
-# volume of an image-built service is listed here).
-RUN mkdir -p /private /srv/dedalo/media /run/dedalo /backups \
- && chown -R bun:bun /private /srv/dedalo/media /run/dedalo /backups
+    channel="${DEDALO_RELEASE_CHANNEL:-}"; digest="${DEDALO_RELEASE_ARCHIVE_SHA256:-}"; \
+    if [ -z "$channel" ] && [ -z "$digest" ]; then echo "provenance: none (a local build reports .dev)"; exit 0; fi; \
+    case "$channel" in master|dev) ;; *) echo "DEDALO_RELEASE_CHANNEL must be master or dev, set together with DEDALO_RELEASE_ARCHIVE_SHA256 (got channel '$channel')" >&2; exit 1 ;; esac; \
+    case "$digest" in *[!0-9a-f]*|'') echo "DEDALO_RELEASE_ARCHIVE_SHA256 must be 64 lowercase hex, set together with DEDALO_RELEASE_CHANNEL" >&2; exit 1 ;; esac; \
+    if [ "${#digest}" -ne 64 ]; then echo "DEDALO_RELEASE_ARCHIVE_SHA256 must be 64 lowercase hex (got ${#digest} characters)" >&2; exit 1; fi; \
+    printf '{"digest":"%s","channel":"%s"}\n' "$digest" "$channel" > src/core/update/install_stamp.json; \
+    echo "provenance: channel $channel, archive sha256 $digest"
 
 USER bun
 

@@ -772,4 +772,65 @@ describe('install restart supervisor contract', () => {
 			rmSync(f.root, { recursive: true, force: true });
 		}
 	});
+
+	// --- the WATCHDOG's remedy, driven: which unit it starts -----------------
+	// A templated multi-instance host (docs/install/multi_instance.md) runs ONE
+	// out-of-tree script for every instance and names each instance's own
+	// restart/rollback units. Defaults must stay the single-instance units.
+
+	const WATCHDOG_SH = new URL('../../deploy/dedalo-ts-watchdog.sh', import.meta.url).pathname;
+
+	function runWatchdog(
+		f: Fixture,
+		healthGreen: boolean,
+		extraArgs: string[] = [],
+	): { exitCode: number | null; calls: string } {
+		writeFileSync(join(f.binDir, 'curl'), `#!/usr/bin/env bash\nexit ${healthGreen ? 0 : 22}\n`);
+		chmodSync(join(f.binDir, 'curl'), 0o755);
+		rmSync(f.systemctlLog, { force: true });
+		const proc = Bun.spawnSync(
+			['bash', WATCHDOG_SH, '--app-dir', f.appDir, '--backup-root', f.backupRoot, ...extraArgs],
+			{ env: { PATH: `${f.binDir}:${Bun.env.PATH ?? ''}` }, stdout: 'pipe', stderr: 'pipe' },
+		);
+		const calls = existsSync(f.systemctlLog) ? readFileSync(f.systemctlLog, 'utf8') : '';
+		return { exitCode: proc.exitCode, calls };
+	}
+
+	test('watchdog drill: green → nothing; red → restart unit; red + pending update → rollback unit (default and named units)', () => {
+		const f = makeFixture();
+		try {
+			plantTree(f.appDir, 'live-tree');
+			const named = [
+				'--restart-unit',
+				'dedalo-ts-restart@site1.service',
+				'--rollback-unit',
+				'dedalo-ts-rollback@site1.service',
+			];
+
+			const green = runWatchdog(f, true, named);
+			expect(green.exitCode).toBe(0);
+			expect(green.calls).toBe('');
+
+			// Red, no sentinel: a restart, of the unit the flags name.
+			expect(runWatchdog(f, false).calls).toBe('systemctl start dedalo-ts-restart.service\n');
+			const redNamed = runWatchdog(f, false, named);
+			expect(redNamed.exitCode).toBe(1);
+			expect(redNamed.calls).toBe('systemctl start dedalo-ts-restart@site1.service\n');
+
+			// Red with a pending, unattempted update: the rollback, never a restart.
+			writePendingSentinel(f);
+			expect(runWatchdog(f, false).calls).toBe('systemctl start dedalo-ts-rollback.service\n');
+			expect(runWatchdog(f, false, named).calls).toBe(
+				'systemctl start dedalo-ts-rollback@site1.service\n',
+			);
+
+			// Already attempted: back to a restart.
+			writePendingSentinel(f, { rollback_attempted: true });
+			expect(runWatchdog(f, false, named).calls).toBe(
+				'systemctl start dedalo-ts-restart@site1.service\n',
+			);
+		} finally {
+			rmSync(f.root, { recursive: true, force: true });
+		}
+	});
 });

@@ -201,6 +201,34 @@ function appendEnvLine(key: string, value: string, why: string): void {
 	console.log(`[probe] ${path}: appended ${key}=${value} (${why})`);
 }
 
+/**
+ * Why the museum's .dedalo.env cannot name its image, or null when it can. The
+ * message carries the exact lines to append (a LOCAL build, pinned at the version
+ * the museum reports: what this probe's museum has always been) and the one
+ * command that produces that image.
+ */
+function museumImageSourceProblem(museumVersion: string): string | null {
+	let text = '';
+	try {
+		text = readFileSync(join(projectRoot, COMPOSE_ENV_FILE), 'utf8');
+	} catch {
+		// A missing file is the same answer: nothing names the image.
+	}
+	if (/^DEDALO_IMAGE=\S+/m.test(text) && /^DEDALO_VERSION=\S+/m.test(text)) return null;
+	return [
+		`${COMPOSE_ENV_FILE} does not name the museum's image (DEDALO_IMAGE / DEDALO_VERSION are missing).`,
+		'The compose stacks no longer build from the checkout; they run the pinned image those lines name.',
+		`Append to ${join(projectRoot, COMPOSE_ENV_FILE)}:`,
+		'  DEDALO_COMPOSE_FILE=docker-compose.simple.yml',
+		'  DEDALO_IMAGE=localhost/dedalo',
+		`  DEDALO_VERSION=${museumVersion}`,
+		'  DEDALO_IMAGE_MODE=build',
+		'  DEDALO_IMAGE_VERIFY=none',
+		'then build that image once:',
+		`  docker compose -f ${COMPOSE_BASE} -f deploy/compose.build.yml --env-file ${COMPOSE_ENV_FILE} build dedalo`,
+	].join('\n');
+}
+
 // ---------------------------------------------------------------------------
 // Wire helpers (the museum side speaks the same envelope as everything else)
 // ---------------------------------------------------------------------------
@@ -412,6 +440,14 @@ async function main(): Promise<void> {
 			`UPDATE_CATALOG has no '${rungKey}' descriptor, so the master can never ADVERTISE ${RELEASE_VERSION} (buildCodeUpdateInfo walks the catalog) — the museum's panel would just show nothing. Add the descriptor to src/core/update/catalog.ts, or reset the museum tree to a version whose next rung IS catalogued.`,
 		);
 	}
+
+	// --- the museum's image source (installer unification D2) ----------------
+	// The stacks no longer build: they RUN ${DEDALO_IMAGE}:${DEDALO_VERSION} from
+	// .dedalo.env. A museum installed before that has no such lines, so recreating
+	// it below would look for the default localhost/dedalo:local, which does not
+	// exist — refuse BEFORE anything is touched, and say exactly what to add.
+	const imageSourceProblem = museumImageSourceProblem(museumVersion);
+	must(imageSourceProblem === null, imageSourceProblem ?? '');
 
 	// --- the consumer's runtime facts --------------------------------------
 	const consumerBun = await dockerExec(
@@ -732,21 +768,13 @@ services:
       CODE_SERVERS: '${JSON.stringify([
 				{ name: 'Local dev master', url: `${origin}/dedalo/core/api/v1/json/`, code: sharedCode },
 			])}'
-  nginx:
-    volumes:
-      # nginx serves the client tree IN PLACE, from
-      # /opt/dedalo/master_dedalo/client (deploy/nginx.simple.conf alias). The
-      # base stack binds THE MASTER'S OWN client/ there, which in this probe is
-      # the developer's working tree — so the museum's browser was loading the
-      # MASTER's uncommitted client against the museum's old server. A real
-      # museum's client ships INSIDE its own tree and is replaced BY the swap.
-      # Mount the museum tree here too, so the client the operator drives is the
-      # one being updated, and the new client goes live with the new server.
-      # Compose MERGES volume lists, so the base stack's more-specific
-      # ./client:/opt/dedalo/master_dedalo/client bind would still shadow the
-      # mount above — re-declare that exact TARGET against the museum's tree.
-      - ${join(PROBE_DIR, 'opt')}:/opt/dedalo
-      - ${join(PROBE_DIR, 'opt', 'master_dedalo', 'client')}:/opt/dedalo/master_dedalo/client:ro
+  # NO nginx override. nginx serves the client from the stack's \`client\` volume,
+  # which the ENGINE fills at every start with the client of the tree it booted
+  # (src/core/install/client_publish.ts). With the museum tree bind-mounted above,
+  # the engine republishes THAT tree's client — and after the swap's restart, the
+  # new one — so the browser always drives the client of the server being updated.
+  # (The old re-mount of the museum's client into nginx existed only because the
+  # base stack bound the MASTER's ./client there; it no longer does.)
 `,
 	);
 	console.log(`[probe] wrote ${overridePath}`);

@@ -37,7 +37,7 @@ cd dedalo/master_dedalo
 Two things about the machine itself:
 
 - **Ports 80 and 443 must be free.** A web server already running here is the one thing that will stop you. Port 80 stays in use even with HTTPS: it redirects to `https://`, and it is how Let's Encrypt proves you still control the domain at each renewal.
-- **About 8 GB of free disk.** Measured on a clean Ubuntu 26.04 box: the engine image is ~2.5 GB (the media toolchain and the PostgreSQL client dominate it), `postgres:18` is ~0.7 GB, `nginx:alpine` ~0.1 GB, and the build parks a further ~3 GB of cache that you can only reclaim **after** it finishes, with `docker builder prune -af`. Below that floor the install dies part-way through the database restore with `No space left on device`. `install.sh` checks this for you.
+- **About 8 GB of free disk.** Measured on a clean Ubuntu 26.04 box: the engine image is ~2.5 GB (the media toolchain and the PostgreSQL client dominate it), `postgres:18` is ~0.7 GB, `nginx:alpine` ~0.1 GB, and, if you build the image here instead of pulling the published one, the build parks a further ~3 GB of cache that you can only reclaim **after** it finishes, with `docker builder prune -af`. Below that floor the install dies part-way through the database restore with `No space left on device`. `install.sh` checks this for you.
 
 !!! note "`docker info` fails with *permission denied*"
     Your user is not in the `docker` group — standard Docker setup, not a Dédalo step. [Path 1](#path-1-guided-terminal) offers to do this for you and then re-enters itself so the new group applies immediately. By hand it needs a fresh login:
@@ -84,18 +84,19 @@ Then it asks for:
 
 | Question | What it means | If unsure |
 | --- | --- | --- |
+| Where the Dédalo image comes from | a published image from one of Dédalo's registries, a registry of your own, or a local build from this checkout | the first official registry that publishes this version; a local build when none does (slower: it downloads the toolchain and builds) |
 | Short code for your institution | an internal identifier, letters and digits | `dedalo` |
 | Full name | shown on the login screen | your institution's name |
 | Working languages | Dédalo language codes, comma-separated, or `default` | `default` — `lg-eng,lg-spa`, the same pair the browser wizard pre-ticks; the other languages are optional |
 | Optional thesauri to install now | controlled vocabularies to load: codes, `default` or `none` | `default` — today Spain (`es`); you can add others later |
 | Locale, time zone | the time zone stamps every record | your own |
-| Use the official update server | where ontology updates and release information come from (`v7.master.dedalo.dev`) | `Y` (the default). Answer `n` for an air-gapped install: no updates are offered until you add `ONTOLOGY_SERVERS` and `CODE_SERVERS` to `/private/.env` |
+| Use the official update server | where ontology updates and release information come from (`v7.master.dedalo.dev`) | `Y` (the default). Answer `n` for an air-gapped install: the installer writes `ONTOLOGY_SERVERS=[]` and `CODE_SERVERS=[]` to `/private/.env`, and no updates are offered until you replace those `[]` values with a server list and restart the server |
 | Domain ontologies to install | the heritage domains you catalogue: ontology codes, comma-separated, or `default` | `default` — Oral history (`oh`), built in, installs without a network. `tch` (Tangible cultural heritage) is the general inventory model for objects and collections; it and any other code the update server offers are downloaded, with the ontologies they depend on. Air-gapped, only `oh` is possible |
 | Password for root | the administrator account | choose a strong one and store it |
 
 The **Languages** thesaurus is not a question: it is part of every installation and is activated together with the database. Neither are the **core ontologies** (`dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy`, `lg`): they come with the database. An installation receives no demo or test data. See [Domain ontologies](installer_reference.md#domain-ontologies) for what the ontology answer installs.
 
-Then it builds the image (slow the first time — it is downloading the media toolchain), starts PostgreSQL, installs Dédalo, and starts the server. The database password is generated for you; nobody ever needs to type it.
+Then it gets the image — it pulls the published one, or builds it here when that is your answer (slow the first time: the build downloads the media toolchain) — starts PostgreSQL, installs Dédalo, and starts the server. Your answer is recorded in `.dedalo.env` (`DEDALO_IMAGE`, `DEDALO_VERSION`, `DEDALO_IMAGE_MODE`), and every later update comes from the same place. The database password is generated for you; nobody ever needs to type it.
 
 When it finishes, open the `https://…` address it prints and log in as **root** with the password you chose. There was never a moment when an unauthenticated visitor could have reached the installer.
 
@@ -133,11 +134,11 @@ You never need that password again after the wizard: the database port is not pu
 At **Save config** the engine writes its configuration and restarts itself — that is deliberate, configuration is read once at boot. Leave the tab open: the **Verify** button retries, and even a reload resumes the wizard. Work through to **Finish**, which is refused unless the root account really exists.
 
 ??? tip "The no-certificate variant"
-    Running the compose file directly still works and needs no certificate — plain HTTP, for a quick look on a laptop. This is the one place the `--env-file` flag is deliberately absent: there is no install to lose, and the compose defaults are plain HTTP with a non-`Secure` cookie, which is a working combination.
+    Running the compose files directly still works and needs no certificate — plain HTTP, for a quick look on a laptop. Without `install.sh` nothing records where the image comes from, so this variant builds it here from the checkout (`deploy/compose.build.yml`); the first run is slow. This is the one place the `--env-file` flag is deliberately absent: there is no install to lose, and the compose defaults are plain HTTP with a non-`Secure` cookie, which is a working combination.
 
     ```shell
     export DEDALO_INSTALL_ALLOWED_IPS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16   # who may open the wizard
-    docker compose -f docker-compose.simple.yml up -d
+    docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml up -d
     ```
 
     Then `http://localhost/dedalo/core/page/`, with database `dedalo` / user `dedalo` / password `dedalo`. Set `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` in your environment first to change them. Do not use this for real records.
@@ -170,7 +171,7 @@ docker compose -f docker-compose.simple.yml --env-file .dedalo.env stop        #
 docker compose -f docker-compose.simple.yml --env-file .dedalo.env up -d       # start again
 ```
 
-To back up, and to update to a newer Dédalo, the container procedures are the same as the full stack's: [backups](docker.md#backups-from-a-container) and [upgrading](docker.md#upgrading) — substituting `-f docker-compose.simple.yml --env-file .dedalo.env` in each command.
+To update to a newer Dédalo, run `./deploy/dedalo-image-update.sh --version <version>` from this directory: it takes a database backup, gets the new image from where your install takes it (pull or build), and rolls back on its own if the new version does not come up healthy. The **Update code** panel shows the exact command for each release ([upgrading](docker.md#upgrading)). Backups follow the full stack's procedure — [backups](docker.md#backups-from-a-container) — substituting `-f docker-compose.simple.yml --env-file .dedalo.env` in each command.
 
 ## What exactly is missing, and how to add it later
 

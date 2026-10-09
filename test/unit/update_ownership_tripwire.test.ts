@@ -146,6 +146,8 @@ const EXPECTED_GATED: Readonly<Record<string, { stub: boolean }>> = {
 	'serve_code.build_version_from_git_master': { stub: false }, // phase 4 — LANDED (moved from update_code 2026-09-28)
 	'update_code.restore_code': { stub: false }, // phase 4 — the swap in reverse
 	'update_code.delete_restore_point': { stub: false }, // phase 4 — retention's guarded manual delete
+	'update_code.request_image_update': { stub: false }, // D3/D4 2026-10-09 — records a request the opt-in HOST updater claims; the engine never touches docker
+	'update_code.cancel_image_update_request': { stub: false }, // D3/D4 2026-10-09 — withdraws an UNCLAIMED request
 	'move_tld.move_tld': { stub: false }, // phase 5 — LANDED
 	'move_locator.move_locator': { stub: false }, // phase 5 — LANDED
 	'move_to_portal.move_to_portal': { stub: false }, // phase 5 — LANDED

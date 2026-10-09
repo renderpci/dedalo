@@ -423,6 +423,22 @@ HERMETIC_TRIPWIRES=(
 	#     + the offline archive of the vendored export (system tar into a mkdtemp dir;
 	#     DB_HOST=127.0.0.1 DB_PORT=59999: 4 pass / 0 fail).
 	test/unit/install_ontology_archive.test.ts
+	# --- 2026-10-09 (installer unification D1–D4). DB-free (re-verified with DB_HOST=127.0.0.1
+	#     DB_PORT=59999: 239 pass / 0 fail): the registry list and its generated copies, the
+	#     Dockerfile parsed and its provenance RUN executed in scratch dirs, the release
+	#     publisher and the host shell tools driven with stub docker/git/cosign/systemctl on
+	#     PATH, the stacks parsed with compose interpolation, the client publisher and the
+	#     channel CLI on mkdtemp dirs. No network, no daemon, no database.
+	test/unit/image_registries_tripwire.test.ts
+	test/unit/product_image_tripwire.test.ts
+	test/unit/image_release_native.test.ts
+	test/unit/image_source_tripwire.test.ts
+	test/unit/client_publish_native.test.ts
+	test/unit/install_sh_image_source.test.ts
+	test/unit/image_update_script_native.test.ts
+	test/unit/image_update_channel_native.test.ts
+	test/unit/image_updater_host_native.test.ts
+	test/unit/image_registries_docs_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

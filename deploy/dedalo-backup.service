@@ -11,10 +11,11 @@
 # WHAT WAS WRONG WITH THIS FILE BEFORE (P0-13 — every claim measured):
 #
 #   1. IT READ KEYS THE INSTALLER NEVER WRITES. $DB_PASSWORD/$DB_HOST/$DB_USER/
-#      $DB_NAME/$MEDIA_PATH are the TS-native spellings; the wizard writes the
+#      $DB_NAME/$MEDIA_PATH are the TS-native spellings; the wizard then wrote the
 #      PHP-catalog ones (DEDALO_PASSWORD_CONN, DEDALO_HOSTNAME_CONN,
-#      DEDALO_USERNAME_CONN, DEDALO_DATABASE_CONN — src/core/install/config_persist.ts),
-#      and MEDIA_PATH it writes only when the CLI installer was given --media-path.
+#      DEDALO_USERNAME_CONN, DEDALO_DATABASE_CONN), and MEDIA_PATH only when the CLI
+#      installer was given --media-path. (Since 2026-10-09 the installer writes the
+#      TS-native names; an older or PHP-era .env still holds only the alias.)
 #      On a wizard-installed host those expanded to EMPTY STRINGS: a dump attempted
 #      as the wrong role against the wrong host, into a file named after nothing.
 #      The connection is now passed as the NAMES OF THE KEYS to read, and
@@ -96,7 +97,7 @@ UMask=0077
 # 1. Matrix DB — custom format with blobs, read back with pg_restore before it is
 #    allowed to be named `*.backup`. --dir-key follows DEDALO_BACKUP_DIR when the
 #    operator moved the dumps, because that is the directory the panel lists and the
-#    updater's freshness gate scans. NO --socket-key here on purpose: the wizard
+#    updater's freshness gate scans. NO --socket-key here on purpose: the installer
 #    writes DEDALO_SOCKET_CONN but the TS engine reads it NOWHERE (config.ts builds
 #    the pool from DB_HOST/DB_PORT; src/config/migration_map.ts classifies the key
 #    as read by nothing), and a backup that connects by a route the engine does not

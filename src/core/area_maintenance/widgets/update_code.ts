@@ -10,6 +10,10 @@
  * tree, and restarts (core/update/code_update.ts, WC-024).
  * restore_code EXECUTE: ownership-gated; open puts a RESTORE POINT back on the
  * tree — the same swap, run in reverse (core/update/code_restore.ts).
+ * request_image_update / cancel_image_update_request (2026-10-09): on a
+ * container installation, record (or withdraw) a request the opt-in HOST
+ * updater claims — the engine never touches docker
+ * (core/update/image_update_request.ts, WC-2026-10-09-update-code-image-channel).
  */
 
 import { config } from '../../../config/config.ts';
@@ -18,9 +22,39 @@ import {
 	engineDenied,
 	fromEnvelope,
 	gated,
+	refuseAction,
 	type WidgetModule,
 	type WidgetResponse,
 } from './support.ts';
+
+/**
+ * The operator sentence of each request refusal. The CLIENT words them from
+ * labels keyed by `coordinates.reason` (update_code_image_refused_<reason>);
+ * this sentence is the error envelope's own public message, for the log and
+ * any surface that does not know the id.
+ */
+const IMAGE_REQUEST_REFUSALS: Readonly<Record<string, string>> = Object.freeze({
+	not_image_channel:
+		'Error. This installation does not run from a container image; update it with the code update.',
+	host_updater_not_alive:
+		'Error. The host updater is not running on the Docker host; run the update command there instead.',
+	request_pending: 'Error. An image update is already requested or running.',
+	malformed_version: 'Error. Invalid release version.',
+	dev_channel_not_enabled:
+		'Error. This installation runs a release; moving it onto developer images is done on the Docker host.',
+	version_refused: 'Error. That release is not on the upgrade path from the running version.',
+	request_claimed:
+		'Error. The host updater has already started this update; it can no longer be cancelled.',
+	no_request: 'Error. There is no pending image update request.',
+});
+
+/** Refuse with the reason id in the coordinates (and the walk verdict, when there is one). */
+function refuseImageRequest(reason: string, walk?: string): never {
+	refuseAction(IMAGE_REQUEST_REFUSALS[reason] ?? `Error. ${reason}`, {
+		reason,
+		...(walk === undefined ? {} : { walk }),
+	});
+}
 
 /**
  * update_code panel.
@@ -183,6 +217,33 @@ async function restoreCodeOwned(
 	};
 }
 
+/**
+ * The OPEN image-update REQUEST: records a request the host updater claims
+ * (core/update/image_update_request.ts — the gates and why each one). The
+ * preconditions' own typed errors propagate; every other refusal carries its
+ * id in `coordinates.reason`.
+ */
+async function requestImageUpdateOwned(
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	const { requestImageUpdate } = await import('../../update/image_update_request.ts');
+	const result = requestImageUpdate(options, principal);
+	if (!result.ok) refuseImageRequest(result.reason, result.walk);
+	return { data: { request: result.request } };
+}
+
+/** The OPEN withdrawal of an UNCLAIMED image-update request (superuser only). */
+async function cancelImageUpdateRequestOwned(
+	_options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	const { cancelImageUpdateRequest } = await import('../../update/image_update_request.ts');
+	const result = cancelImageUpdateRequest(principal);
+	if (!result.ok) refuseImageRequest(result.reason);
+	return { data: { cancelled: true } };
+}
+
 export const widget: WidgetModule = {
 	spec: {
 		id: 'update_code',
@@ -205,6 +266,22 @@ export const widget: WidgetModule = {
 			'update_code.delete_restore_point',
 			engineDenied('update_code.delete_restore_point', 'it DELETES a code backup copy'),
 			deleteRestorePointOwned,
+		),
+		request_image_update: gated(
+			'update_code.request_image_update',
+			engineDenied(
+				'update_code.request_image_update',
+				'it asks the Docker host to REPLACE the image',
+			),
+			requestImageUpdateOwned,
+		),
+		cancel_image_update_request: gated(
+			'update_code.cancel_image_update_request',
+			engineDenied(
+				'update_code.cancel_image_update_request',
+				'it withdraws a pending image update request',
+			),
+			cancelImageUpdateRequestOwned,
 		),
 	},
 	getValue: updateCodeGetValue,

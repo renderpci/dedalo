@@ -25,6 +25,13 @@
  * the literal name and nothing else. That gap is what the two rules below
  * separate.
  *
+ * 2026-10-09: the installer now writes the CANONICAL spellings (DB_NAME, …).
+ * That does not make `$DB_HOST` safe in a unit: a `.env` written by an earlier
+ * installer, or carried over from PHP, still holds only the alias spelling. So
+ * R1 counts NO alias-bearing name (either side of PHP_KEY_ALIASES) as provided —
+ * a unit that needs one passes the key NAME to dedalo-db-backup.sh, which
+ * resolves both spellings with the engine's precedence.
+ *
  * NO GATE HELD THIS CONTRACT before P0-13, and none read `deploy/` as a TREE.
  * The nearest neighbour, `test/unit/operator_commands_tripwire.test.ts`, reads
  * exactly two of the eighteen files by name (leg E: the backup unit's store
@@ -117,6 +124,7 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
+import { PHP_KEY_ALIASES } from '../../src/config/env.ts';
 import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
 import { RUNTIME_PATH_BOOTSTRAP_KEYS } from '../../src/core/install/runtime_paths.ts';
 
@@ -148,10 +156,6 @@ const EXTERNAL_VARIABLES: ReadonlyMap<string, string> = new Map([
 	[
 		'DEDALO_BACKUP_MAILTO',
 		'Deliberately NOT a .env key: ../private/.env is append-only/documented-keys-only, and the failure alarm must still work when the engine cannot start. Set with `systemctl edit` on dedalo-backup-alert@.service, whose commented Environment= line documents it. Read as `${…:-}`, so unset simply means the optional local-mail channel is off',
-	],
-	[
-		'DEDALO_IMAGE_UPDATE_MODE',
-		"The env spelling of dedalo-image-update.sh's own `--mode` flag (pull|build) for the docker stacks. It configures that helper script, not the engine, so it has no catalog entry; read as `${…:-}` and overridden by the flag",
 	],
 ]);
 
@@ -264,9 +268,16 @@ const UNIT_PROVIDED = new Set(SCANS.flatMap((s) => [...s.provides]));
 const CATALOG_KEYS = new Set(Object.keys(CONFIG_CATALOG));
 const BOOTSTRAP_KEYS = new Set(RUNTIME_PATH_BOOTSTRAP_KEYS);
 
+/**
+ * Names with two spellings (PHP_KEY_ALIASES, either side). A real host's .env
+ * may carry EITHER one — the current installer writes the canonical name, an
+ * earlier installer or a PHP-era .env the alias — so neither is "definitely set".
+ */
+const ALIAS_BEARING = new Set([...Object.keys(PHP_KEY_ALIASES), ...Object.values(PHP_KEY_ALIASES)]);
+
 /** R1's providers: something on a real host definitely sets the name. */
 function providedOnHost(name: string): boolean {
-	return INSTALLER_WRITTEN.has(name) || UNIT_PROVIDED.has(name);
+	return (INSTALLER_WRITTEN.has(name) && !ALIAS_BEARING.has(name)) || UNIT_PROVIDED.has(name);
 }
 /** R2's providers: the above, plus names an operator is DOCUMENTED to set. */
 function documented(name: string): boolean {
@@ -462,7 +473,9 @@ describe('deploy_env_contract_tripwire', () => {
 
 	test('C. R1 positive control — the historical ExecStart is caught, the fixed one is not', () => {
 		// The line deploy/dedalo-backup.service shipped before P0-13. Every one of
-		// these five names expanded to the empty string on a wizard-installed host.
+		// these five names expanded to the empty string on a wizard-installed host
+		// of the time — and still does on any .env carrying only the alias
+		// spelling, which is why an alias-bearing name is never "provided".
 		const broken = scan(
 			[
 				'[Service]',
@@ -473,18 +486,27 @@ describe('deploy_env_contract_tripwire', () => {
 			'broken.service',
 			true,
 		);
-		expect(unguardedUnprovided(broken)).toEqual(['DB_HOST', 'DB_NAME', 'DB_PORT', 'DB_USER']);
-		// MEDIA_PATH is NOT in that list, and the reason is honest limit 2: the
-		// installer writes it when the CLI carried --media-path, so this gate
-		// cannot call it absent. The refusal for that one lives in the script.
+		expect(unguardedUnprovided(broken)).toEqual([
+			'DB_HOST',
+			'DB_NAME',
+			'DB_PORT',
+			'DB_USER',
+			'MEDIA_PATH',
+		]);
+		// The installer DOES write these canonical names now — the rule still
+		// refuses them, because a host's .env may hold only DEDALO_MEDIA_PATH /
+		// DEDALO_*_CONN. Writing the canonical name is not proof of presence.
 		expect(INSTALLER_WRITTEN.has('MEDIA_PATH')).toBe(true);
+		expect(INSTALLER_WRITTEN.has('DB_HOST')).toBe(true);
 
-		// The same connection written in the spellings the wizard really emits is
-		// accepted — otherwise the rule would just be "no variables at all".
+		// The fixed form: the key NAMES go to the resolver as argv (both spellings
+		// resolved in shell), and a single-spelling installer-written variable is
+		// still accepted — otherwise the rule would just be "no variables at all".
 		const fixed = scan(
 			[
 				'[Service]',
-				'ExecStart=/usr/bin/pg_dump -h $DEDALO_HOSTNAME_CONN -U $DEDALO_USERNAME_CONN -d $DEDALO_DATABASE_CONN',
+				'ExecStart=/opt/dedalo/deploy/dedalo-db-backup.sh --db-key DB_NAME --host-key DB_HOST --user-key DB_USER',
+				'ExecStartPost=/usr/bin/test -S $SERVER_UNIX_SOCKET',
 			].join('\n'),
 			'fixed.service',
 			true,
@@ -520,10 +542,15 @@ describe('deploy_env_contract_tripwire', () => {
 		// silently — but a parser that returns everything would not. Pin both the
 		// floor and a key each source MUST and MUST NOT carry.
 		expect(INSTALLER_WRITTEN.size).toBeGreaterThanOrEqual(30);
-		expect(INSTALLER_WRITTEN.has('DEDALO_PASSWORD_CONN')).toBe(true);
-		// The heart of the defect: the wizard writes the PHP spelling and NOT the
-		// TS-native one, and PHP_KEY_ALIASES does not exist inside systemd.
-		expect(INSTALLER_WRITTEN.has('DB_PASSWORD')).toBe(false);
+		// The installer writes the canonical spelling and never the alias one; and
+		// because PHP_KEY_ALIASES does not exist inside systemd, both spellings stay
+		// alias-bearing (never "provided" to a raw `$VAR` read).
+		expect(INSTALLER_WRITTEN.has('DB_PASSWORD')).toBe(true);
+		expect(INSTALLER_WRITTEN.has('DEDALO_PASSWORD_CONN')).toBe(false);
+		expect(ALIAS_BEARING.has('DB_PASSWORD')).toBe(true);
+		expect(ALIAS_BEARING.has('DEDALO_PASSWORD_CONN')).toBe(true);
+		expect(INSTALLER_WRITTEN.has('SERVER_UNIX_SOCKET')).toBe(true);
+		expect(ALIAS_BEARING.has('SERVER_UNIX_SOCKET')).toBe(false);
 		expect(CATALOG_KEYS.has('DB_PASSWORD')).toBe(true);
 		expect(CATALOG_KEYS.size).toBeGreaterThanOrEqual(100);
 		expect(BOOTSTRAP_KEYS.has('DEDALO_PRIVATE_DIR')).toBe(true);

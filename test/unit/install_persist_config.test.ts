@@ -2,8 +2,8 @@
  * P2 gate — persist_config + check_directories (DEC-19).
  *
  * DEDALO_INSTALL_PRIVATE_DIR redirects the installer's writes to a scratch dir
- * so the live ../private/.env is never touched. Asserts: the .env carries PHP
- * key names, is chmod 600, backs up an existing file on overwrite, `generated`
+ * so the live ../private/.env is never touched. Asserts: the .env carries the
+ * catalog's canonical key names (never a PHP_KEY_ALIASES spelling), is chmod 600, backs up an existing file on overwrite, `generated`
  * carries only NEW secrets, and the state flips to 'configured'.
  */
 
@@ -11,7 +11,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, test } from 'bun:tes
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseEnvFile, seedProcessEnv } from '../../src/config/env.ts';
+import { PHP_KEY_ALIASES, parseEnvFile, seedProcessEnv } from '../../src/config/env.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
@@ -49,18 +49,24 @@ const BASE_CFG = {
 };
 
 describe('persist_config (P2)', () => {
-	test('writes .env with PHP key names, 0600, and generates the salt', async () => {
+	test('writes canonical key names, 0600, and generates the salt', async () => {
 		const result = await persistConfig({ ...BASE_CFG });
 		expect(result.ok).toBe(true);
 		expect(result.generated.DEDALO_SALT_STRING).toMatch(/^[0-9a-f]{64}$/);
 
 		const envPath = join(scratch, '.env');
 		const parsed = parseEnvFile(readFileSync(envPath, 'utf8'));
-		expect(parsed.DEDALO_DATABASE_CONN).toBe('dedalo_test_db');
-		expect(parsed.DEDALO_USERNAME_CONN).toBe('tester');
-		expect(parsed.DEDALO_PASSWORD_CONN).toBe('secret pass');
-		expect(parsed.DEDALO_ENTITY).toBe('testent');
+		expect(parsed.DB_NAME).toBe('dedalo_test_db');
+		expect(parsed.DB_USER).toBe('tester');
+		expect(parsed.DB_PASSWORD).toBe('secret pass');
+		expect(parsed.DB_HOST).toBe('localhost');
+		expect(parsed.DB_PORT).toBe('5432');
+		expect(parsed.ENTITY).toBe('testent');
 		expect(parsed.DEDALO_ENTITY_LABEL).toBe('Test Entity');
+		// No fallback spelling of any written key: the alias is for a .env carried
+		// over from PHP, never a second name the installer emits.
+		const aliasSpellings = new Set(Object.values(PHP_KEY_ALIASES));
+		expect(Object.keys(parsed).filter((key) => aliasSpellings.has(key))).toEqual([]);
 		expect(parsed.DEDALO_SALT_STRING).toBe(result.generated.DEDALO_SALT_STRING);
 
 		// 0600 perms (owner-only).
@@ -85,6 +91,46 @@ describe('persist_config (P2)', () => {
 		// A timestamped backup of the prior file exists.
 		const { readdirSync } = await import('node:fs');
 		expect(readdirSync(scratch).some((n) => n.startsWith('.env.bak.'))).toBe(true);
+	});
+
+	test('a re-run over a .env in the legacy alias spelling drops the legacy line (one value, one name)', async () => {
+		const envPath = join(scratch, '.env');
+		writeFileSync(
+			envPath,
+			[
+				'DEDALO_DATABASE_CONN=old_db',
+				'DEDALO_HOSTNAME_CONN=old_host',
+				'DEDALO_USERNAME_CONN=old_user',
+				'DEDALO_PASSWORD_CONN=old_pw',
+				'DEDALO_DB_PORT_CONN=5433',
+				'DEDALO_ENTITY=old_entity',
+				'DEDALO_PROJECTS_DEFAULT_LANGS=["lg-cat"]',
+				'DEDALO_APPLICATION_LANG=lg-cat',
+				'DEDALO_DATA_LANG=lg-cat',
+				'DEDALO_SALT_STRING=deadbeef',
+				'OPERATOR_KEPT=1',
+				'',
+			].join('\n'),
+		);
+		const result = await persistConfig({ ...BASE_CFG });
+		expect(result.ok).toBe(true);
+		const body = readFileSync(envPath, 'utf8');
+		const parsed = parseEnvFile(body);
+		// The canonical spelling carries the run's answer...
+		expect(parsed.DB_NAME).toBe('dedalo_test_db');
+		expect(parsed.DB_HOST).toBe('localhost');
+		expect(parsed.ENTITY).toBe('testent');
+		// ...and NO legacy alias line survives as a stale second copy.
+		const aliasSpellings = new Set(Object.values(PHP_KEY_ALIASES));
+		expect(Object.keys(parsed).filter((key) => aliasSpellings.has(key))).toEqual([]);
+		// Every canonical key the run owns is assigned exactly once.
+		for (const key of ['DB_NAME', 'DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_PORT', 'ENTITY']) {
+			const assignments = body.split('\n').filter((line) => line.startsWith(`${key}=`)).length;
+			expect(assignments, `${key} must be assigned exactly once`).toBe(1);
+		}
+		// Keys the run does not own are still carried over verbatim.
+		expect(parsed.OPERATOR_KEPT).toBe('1');
+		expect(parsed.DEDALO_SALT_STRING).toBe('deadbeef');
 	});
 
 	test('diffusion enabled → diffusion keys + internal token written', async () => {
@@ -214,11 +260,11 @@ describe('persist_config (P2)', () => {
 
 		// ...while the keys the form DOES own are still updated from the form,
 		// exactly once (a preserved copy must not shadow the new value).
-		expect(parsed.DEDALO_ENTITY).toBe('testent');
-		expect(parsed.DEDALO_DATABASE_CONN).toBe('dedalo_test_db');
+		expect(parsed.ENTITY).toBe('testent');
+		expect(parsed.DB_NAME).toBe('dedalo_test_db');
 		expect(parsed.DEDALO_SALT_STRING).toBe('deadbeef'); // preserved, not regenerated
 		const body = readFileSync(envPath, 'utf8');
-		for (const key of ['DEDALO_ENTITY', 'DEDALO_SALT_STRING', 'DEDALO_DIFFUSION_DB_USER']) {
+		for (const key of ['ENTITY', 'DEDALO_SALT_STRING', 'DEDALO_DIFFUSION_DB_USER']) {
 			const assignments = body
 				.split('\n')
 				.filter((line) => line.trim().startsWith(`${key}=`)).length;
@@ -318,16 +364,13 @@ describe('persist_config (P2)', () => {
 			'lg-eng': 'English',
 			'lg-spa': 'Castellano',
 		});
-		expect(JSON.parse(parsed.DEDALO_PROJECTS_DEFAULT_LANGS as string)).toEqual([
-			'lg-eng',
-			'lg-spa',
-		]);
+		expect(JSON.parse(parsed.PROJECTS_DEFAULT_LANGS as string)).toEqual(['lg-eng', 'lg-spa']);
 
 		// The scalar mandatory keys + the coherent APPLICATION_LANG/DATA_LANG mirror.
 		expect(parsed.DEDALO_APPLICATION_LANGS_DEFAULT).toBe('lg-eng');
 		expect(parsed.DEDALO_DATA_LANG_DEFAULT).toBe('lg-spa');
-		expect(parsed.DEDALO_APPLICATION_LANG).toBe('lg-eng');
-		expect(parsed.DEDALO_DATA_LANG).toBe('lg-spa');
+		expect(parsed.APPLICATION_LANG).toBe('lg-eng');
+		expect(parsed.DATA_LANG).toBe('lg-spa');
 		expect(parsed.DEDALO_STRUCTURE_LANG).toBe('lg-spa');
 	});
 

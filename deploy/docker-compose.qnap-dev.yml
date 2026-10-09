@@ -1,11 +1,14 @@
 # Dédalo v7 — DEV overlay for the QNAP test instance (TVS-h1688X, QuTS hero).
 #
 # WHAT IT IS: docker-compose.simple.yml turned into a DEVELOPMENT box, where the
-# deploy step is `git pull` and nothing else. It changes exactly five things:
+# deploy step is `git pull` and nothing else. It changes exactly six things:
 #
 #   0. it builds the Dockerfile's `dev` target — the production image with the
 #      devDependencies put back, so the browser test harness (mocha, chai) and
-#      the LESS compiler exist here;
+#      the LESS compiler exist here — and names it `localhost/dedalo:dev` for
+#      the engine, the backup and git alike, so it never clobbers the stack's
+#      production tag (the root stacks only ever RUN a pinned image; building is
+#      an override, and this overlay is one);
 #   1. the engine runs from a BIND-MOUNTED checkout, not from the image layer,
 #      so pulled code is live code (the image's `COPY . .` is shadowed);
 #   2. the command becomes `bun run dev:server` — `bun --watch` plus the exit-75
@@ -14,7 +17,10 @@
 #      80, 443 and 8080 for its own admin UI;
 #   4. dev-facing config: verbose API errors, non-Secure session cookie (there is
 #      no TLS here — a browser silently discards a Secure cookie over http:// and
-#      every login would appear to succeed and then do nothing).
+#      every login would appear to succeed and then do nothing);
+#   5. the proxy serves the LIVE checkout's client/, not the copy the engine
+#      publishes into the `client` volume at start: a dev box serves edits as
+#      they land, without an engine restart.
 #
 # ALWAYS USED AS AN OVERLAY, never alone, and with the SIMPLE file FIRST (that
 # is what sets the project directory that `./` below resolves against):
@@ -32,8 +38,10 @@ services:
     # Build the Dockerfile's `dev` target: the production image plus the
     # devDependencies. mocha and chai are registered client libs (devOnly), so
     # without them /dedalo/test/client/ 404s every harness script as a JSON
-    # error envelope. `context` must be repeated — a `build` key with only
-    # `target` is not a valid override of the simple stack's `build: .`.
+    # error envelope. The simple stack does not build at all (it runs a pinned
+    # image), so this `build` is the whole definition — `context` included —
+    # and `image` names what it produces: the dev tag, never the production one.
+    image: localhost/dedalo:dev
     build:
       context: .
       target: dev
@@ -90,6 +98,18 @@ services:
       # Station's Compose, that command shows 80/443 still present.
       !override
       - "8100:80"
+    volumes:
+      # THE LIVE CLIENT, re-mounted over the stack's `client` volume (compose
+      # merges volume lists BY TARGET, so this entry replaces that one). The
+      # volume holds the copy the engine published at its last start; a dev box
+      # serves the checkout's client/ as it is edited and pulled.
+      - ./client:/opt/dedalo/master_dedalo/client:ro
+
+  # The nightly backup runs the SAME image as the engine — here the dev tag the
+  # engine's build above produces (the simple stack's default name would be a
+  # production tag this overlay never builds).
+  backup:
+    image: localhost/dedalo:dev
 
   # --- git, in a container ---------------------------------------------------
   # QuTS hero ships no git, and nothing needs to be installed on the NAS for it:
@@ -109,6 +129,7 @@ services:
   #     docker run --rm -v /share/Container/dedalo:/w -w /w \
   #       alpine/git clone <remote> master_dedalo
   git:
+    image: localhost/dedalo:dev
     build:
       context: .
       target: dev

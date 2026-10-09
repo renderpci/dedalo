@@ -14,7 +14,7 @@ All three EXECUTE actions run for real against this install's own tree and datab
 
 ## How do I know when new versions are released?
 
-The latest Dédalo version is [here](https://github.com/renderpci/dedalo/releases). It contains all the latest fixes and improvements.
+The latest Dédalo version is [here](https://github.com/dedalia-org/dedalo/releases). It contains all the latest fixes and improvements.
 
 In the list you can view the changelog for the highlights of each release.
 
@@ -24,7 +24,7 @@ In the list you can view the changelog for the highlights of each release.
 
 Dédalo has service dependencies such as PostgreSQL, the Bun runtime and FFmpeg. By default, recent Dédalo versions are compatible with the current stable version of each dependency and its previous version. The Bun runtime itself is pinned per install (`.bun-version`); upgrading it is a deliberate, separately-tested change, not something a code update does for you.
 
-It is highly recommended to keep server services on the latest stable versions. You can check the version compatibility in our [readme file](https://github.com/renderpci/dedalo/blob/master/Readme.md#4-dependencies).
+It is highly recommended to keep server services on the latest stable versions. You can check the version compatibility in our [readme file](https://github.com/dedalia-org/dedalo/blob/master/Readme.md#4-dependencies).
 
 ### Dédalo tasks
 

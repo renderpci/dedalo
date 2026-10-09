@@ -368,6 +368,18 @@ const TRIPWIRES = [
 	'test/unit/install_ontology_choice.test.ts',
 	// Installer unification A6 — the offline archive of a REAL export resolves; limits count files, not headers (2026-10-09).
 	'test/unit/install_ontology_archive.test.ts',
+	// Installer unification D1–D4 — official images on every provisioned registry, pinned stacks,
+	// the engine-published client, the image updater, its request channel and the host updater (2026-10-09).
+	'test/unit/image_registries_tripwire.test.ts',
+	'test/unit/product_image_tripwire.test.ts',
+	'test/unit/image_release_native.test.ts',
+	'test/unit/image_source_tripwire.test.ts',
+	'test/unit/client_publish_native.test.ts',
+	'test/unit/install_sh_image_source.test.ts',
+	'test/unit/image_update_script_native.test.ts',
+	'test/unit/image_update_channel_native.test.ts',
+	'test/unit/image_updater_host_native.test.ts',
+	'test/unit/image_registries_docs_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

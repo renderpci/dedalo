@@ -67,6 +67,23 @@ date, the tag range, the commit count (git is read here, once) and the wire-cont
 ids no earlier release claimed. From then on the page is a pure function of this
 directory, which is what lets the gate re-render it without git.
 
+It also freezes the release's **notes** into `release.json` — the *Action needed*
+titles and one `{type, audience, title}` per fragment, in the page's order:
+
+```json
+"notes": {
+	"action_needed": ["…the title of each `breaking: true` fragment…"],
+	"entries": [{ "type": "fixed", "audience": "user", "title": "…" }]
+}
+```
+
+A code server hands these to every installation's **Update code** panel with the
+release it advertises, so the operator reads what a version changes before installing
+it. They are derived, never written by hand: the gate holds every snapshot's notes
+equal to its fragments' titles, so **a fragment's title is what an operator reads in
+the panel** — write it as a sentence that stands alone. Snapshots cut before
+2026-10-09 carry no notes, and the panel shows none for them.
+
 ## History
 
 Before 2026-09-26 the page was hand-written. Its entries were migrated into fragments,

@@ -21,6 +21,11 @@
 * (section / fact_row / check_row / verdict / release_facts / channel_label) so both panels speak one
 * layout vocabulary.
 *
+* On a CONTAINER installation (`consumer.image`, 2026-10-09) it also renders the
+* "Image updates" block — the image source, the opt-in host updater, the pending
+* request and the last outcome — and folds the tree-swap readiness, which that
+* installation does not use, under its own title.
+*
 * THE CONTRACT WITH THE SERVER: the server sends check IDS and FACTS, never
 * sentences. Every word here comes from the label catalog, keyed by check id
 * (`update_code_check_<id>`), so a check the server adds tomorrow renders with
@@ -536,6 +541,16 @@ export const verdict = function(parent, ready, ok_label, bad_label, waived_label
 */
 const render_readiness = function(parent, consumer) {
 
+	// A CONTAINER INSTALLATION does not use the tree swap at all: its code is
+	// the image, replaced on the Docker host (the "Image updates" block). Its
+	// readiness list is still true — and the `channel` line in it still says
+	// `blocked` — but headlining "Update blocked" over an installation whose
+	// update path is open is the dead end this block replaced. So the checks
+	// fold under their own title, with no verdict.
+	if (consumer.image) {
+		return render_folded_readiness(parent, consumer)
+	}
+
 	const block = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'status_block readiness_block',
@@ -588,6 +603,33 @@ const render_readiness = function(parent, consumer) {
 
 	return block
 }//end render_readiness
+
+
+
+/**
+* RENDER_FOLDED_READINESS
+* The tree-swap readiness on a CONTAINER installation: every check, folded
+* under a title that says what they are about, with the per-state counts on
+* the summary and no headline verdict. Marked `.readiness_block` so
+* refresh_readiness re-states it like the headline variant.
+* @param {HTMLElement} parent
+* @param {Object} consumer
+* @returns {HTMLElement}
+*/
+const render_folded_readiness = function(parent, consumer) {
+
+	const checks = consumer.checks || []
+	const fold = fold_section(
+		parent,
+		'tree_swap_readiness',
+		get_label.update_code_tree_swap_readiness || 'In-place code update (not used by this installation)'
+	)
+	fold.block.classList.add('readiness_block')
+	check_counts(fold.summary, checks)
+	checks.forEach(check => { check_row(fold.body, check) })
+
+	return fold.block
+}//end render_folded_readiness
 
 
 
@@ -656,6 +698,293 @@ const same_day = function(a, b) {
 
 
 /**
+* IMAGE_COMMAND_TAG
+* The image tag a manifest release item installs: its version, plus `-dev` for
+* a developer item — the code server's own release names (`<v>.zip` ↔ `:<v>`,
+* `<v>-dev.zip` ↔ `:<v>-dev`).
+*
+* The version is REMOTE data that ends up in a command the operator pastes into
+* a root shell on the Docker host, so it is composed only from the exact
+* `X.Y.Z` grammar the manifest promises; anything else answers null and no
+* command is shown. Never a sanitised guess: a version that is not a version is
+* not something to run.
+* @param {Object} item - manifest item {version, channel?}
+* @returns {string|null}
+*/
+export const image_command_tag = function(item) {
+
+	const version = String((item && item.version) ?? '')
+	if (!/^[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}$/.test(version)) {
+		return null
+	}
+
+	return item.channel==='dev' ? version + '-dev' : version
+}//end image_command_tag
+
+
+
+/**
+* IMAGE_UPDATE_COMMAND
+* The host command for one release, composed from the server's facts:
+* `consumer.image.update_command` names the program and its version flag
+* (core/update/image_channel.ts), the manifest item names the tag.
+* @param {Object} image - consumer.image
+* @param {Object} item - manifest item
+* @returns {string|null} './deploy/dedalo-image-update.sh --version 7.0.1', or null
+*/
+export const image_update_command = function(image, item) {
+
+	const command	= (image && image.update_command) || {}
+	const tag		= image_command_tag(item)
+	if (tag===null || typeof command.program!=='string' || typeof command.version_flag!=='string') {
+		return null
+	}
+
+	return `./${command.program} ${command.version_flag} ${tag}`
+}//end image_update_command
+
+
+
+/**
+* HOST_UPDATER_CHIP / OUTCOME_CHIP
+* The two state vocabularies of the image block, mapped onto the shared pill
+* scale: an alive host updater is `ok`, a stale one needs attention (`warn`),
+* an absent one is information (`unknown`, muted) — it is opt-in. An outcome
+* that updated is `ok`, a rollback that held is `warn`, anything else is red.
+*/
+const HOST_UPDATER_STATES = { alive : 'ok', stale : 'warn', absent : 'unknown' }
+const OUTCOME_STATES = { green : 'ok', rolled_back : 'warn' }
+
+const labelled_chip = function(state, text) {
+	const chip = state_chip(state)
+	chip.textContent = text
+	return chip
+}
+
+
+
+/**
+* RENDER_IMAGE_UPDATES
+* The "Image updates" block of a CONTAINER installation: where its image comes
+* from (pulled from a registry — which one, official or not — or built on the
+* Docker host), the opt-in host updater's state, the pending request with its
+* Cancel, and the last image update's outcome.
+*
+* Facts are TEXT (repository names, versions, timestamps come from the server
+* and from the operator's own configuration); every word is a label.
+*
+* @param {HTMLElement} parent
+* @param {Object} image - consumer.image (core/update/image_channel.ts ImageChannelBlock)
+* @param {Object} [actions] - {on_cancel: (request) => void}
+* @returns {HTMLElement}
+*/
+export const render_image_updates = function(parent, image, actions) {
+
+	const block = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'status_block image_updates',
+		parent			: parent
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_eyebrow',
+		text_content	: get_label.update_code_image_updates || 'Image updates',
+		parent			: block
+	})
+	const readout = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_readout',
+		parent			: block
+	})
+
+	render_image_source(readout, block, image.source || {})
+	render_host_updater(readout, block, image.host_updater || {})
+	if (image.request) {
+		render_image_request(readout, image.request, actions)
+	}
+	if (image.last_outcome) {
+		render_image_outcome(readout, image.last_outcome)
+	}
+
+	return block
+}//end render_image_updates
+
+
+
+/**
+* RENDER_IMAGE_SOURCE
+* Where the image comes from: the mode, the repository and whether it is one
+* of Dédalo's official registries (and which), or the operator's own.
+*/
+const render_image_source = function(readout, block, source) {
+
+	const mode_words = {
+		pull	: get_label.update_code_image_mode_pull || 'Pulled from a registry',
+		build	: get_label.update_code_image_mode_build || 'Built on the Docker host from its checkout'
+	}
+	fact_row(
+		readout,
+		get_label.update_code_image_source || 'Image source',
+		mode_words[source.mode] || (get_label.update_code_image_mode_undeclared || 'Not declared by the stack')
+	)
+
+	const repository_row = fact_row(readout, get_label.update_code_image_repository || 'Repository', source.repository, true)
+	if (source.repository) {
+		const value = repository_row.querySelector('.dd_v')
+		const official = source.official || null
+		const role_words = {
+			primary	: get_label.update_code_image_official_primary || 'official registry',
+			mirror	: get_label.update_code_image_official_mirror || 'official mirror'
+		}
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: official ? 'dd_badge pill_ok image_registry_role' : 'dd_badge image_registry_role',
+			text_content	: official
+				? (role_words[official.role] || String(official.role))
+				: (get_label.update_code_image_custom || 'your own registry'),
+			parent			: value
+		})
+		if (official && official.label) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'check_detail image_registry_label',
+				text_content	: String(official.label),
+				parent			: value
+			})
+		}
+	}
+
+	// building is a different trade-off, said where the choice is visible
+	if (source.mode==='build') {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note image_build_note',
+			text_content	: get_label.update_code_image_build_note || 'Each update builds the new image on the Docker host: slower than pulling, and it needs the checkout\'s git remote and the package mirrors to be reachable from there.',
+			parent			: block
+		})
+	}
+}//end render_image_source
+
+
+
+/**
+* RENDER_HOST_UPDATER
+* The opt-in host updater: alive (requests can be made from this panel),
+* stale (installed but not heard from), or absent (updates are run by hand on
+* the Docker host — the command is in each release's row of the update list).
+*/
+const render_host_updater = function(readout, block, host) {
+
+	const state = host.state || 'absent'
+	const state_words = {
+		alive	: get_label.update_code_host_updater_alive || 'running',
+		stale	: get_label.update_code_host_updater_stale || 'not heard from recently',
+		absent	: get_label.update_code_host_updater_absent || 'not installed'
+	}
+	const row = fact_row(readout, get_label.update_code_host_updater || 'Host updater', '')
+	const value = row.querySelector('.dd_v')
+	value.textContent = ''
+	row.classList.add('host_updater_row', 'host_updater_' + state)
+	value.appendChild(labelled_chip(HOST_UPDATER_STATES[state] || 'unknown', state_words[state] || String(state)))
+	if (host.seen_at) {
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'check_detail',
+			text_content	: `${get_label.update_code_host_updater_seen || 'last seen'} ${format_stamp(Date.parse(host.seen_at))}`,
+			parent			: value
+		})
+	}
+	if (state==='alive') {
+		fact_row(readout, get_label.update_code_image_pinned || 'Pinned version', host.pinned, true)
+		fact_row(readout, get_label.update_code_image_verify || 'Signature check', host.verify, true)
+		return
+	}
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_note host_updater_note',
+		text_content	: state==='stale'
+			? (get_label.update_code_host_updater_note_stale || 'The host updater has not checked in for a while: requests made here would wait. Check its timer on the Docker host (systemctl status dedalo-image-updater.timer), or run the update command there.')
+			: (get_label.update_code_host_updater_note_absent || 'Updates are run on the Docker host: choose a release under "Check available updates" to see its command. To request updates from this panel instead, install the host updater there (sudo ./deploy/dedalo-image-updater.sh install-units).'),
+		parent			: block
+	})
+}//end render_host_updater
+
+
+
+/**
+* RENDER_IMAGE_REQUEST
+* The request this panel recorded: waiting for the host updater, or claimed
+* and running there. Only an unclaimed request can be cancelled.
+*/
+const render_image_request = function(readout, request, actions) {
+
+	const state_words = {
+		requested	: get_label.update_code_image_request_requested || 'waiting for the host updater',
+		claimed		: get_label.update_code_image_request_claimed || 'running on the Docker host'
+	}
+	const row = fact_row(readout, get_label.update_code_image_request || 'Requested update', request.tag, true)
+	row.classList.add('image_request_row', 'image_request_' + request.state)
+	const value = row.querySelector('.dd_v')
+	value.appendChild(labelled_chip('warn', state_words[request.state] || String(request.state)))
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'check_detail',
+		text_content	: format_stamp(Date.parse(request.claimed_at || request.requested_at)),
+		parent			: value
+	})
+	if (request.state!=='requested' || !actions || typeof actions.on_cancel!=='function') {
+		return
+	}
+	const button_cancel = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'light button_cancel_image_request',
+		text_content	: get_label.cancel || 'Cancel',
+		parent			: value
+	})
+	button_cancel.addEventListener('click', (e) => {
+		e.stopPropagation()
+		actions.on_cancel(request)
+	})
+}//end render_image_request
+
+
+
+/**
+* RENDER_IMAGE_OUTCOME
+* The last image update, as the host recorded it: the verdict chip, the
+* version walk, and the machine detail (an id — `healthy`, `health_timeout`…).
+*/
+const render_image_outcome = function(readout, outcome) {
+
+	const status_words = {
+		green			: get_label.update_code_image_outcome_green || 'updated',
+		rolled_back		: get_label.update_code_image_outcome_rolled_back || 'rolled back',
+		rollback_failed	: get_label.update_code_image_outcome_rollback_failed || 'rollback failed',
+		refused			: get_label.update_code_image_outcome_refused || 'refused',
+		failed			: get_label.update_code_image_outcome_failed || 'failed'
+	}
+	const row = fact_row(readout, get_label.update_code_image_last_outcome || 'Last image update', '')
+	row.classList.add('image_outcome_row', 'image_outcome_' + outcome.status)
+	const value = row.querySelector('.dd_v')
+	value.textContent = ''
+	value.appendChild(labelled_chip(OUTCOME_STATES[outcome.status] || 'blocked', status_words[outcome.status] || String(outcome.status)))
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'check_detail mono',
+		text_content	: `${outcome.from || '—'} → ${outcome.to || '—'} · ${outcome.detail}`,
+		parent			: value
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'check_detail',
+		text_content	: format_stamp(Date.parse(outcome.recorded_at)),
+		parent			: value
+	})
+}//end render_image_outcome
+
+
+
+/**
 * RENDER_CONSUMER_STATUS
 * The half every installation has: what is running, whether it can take an
 * update, what happened last time, and what it could roll back to.
@@ -665,9 +994,12 @@ const same_day = function(a, b) {
 *   point's Restore button. Omitted on any surface that cannot start a job (the
 *   browser suite renders this module standalone), and then no button is drawn at
 *   all: an inert control on a destructive action is worse than none.
+* @param {Function} [on_delete] - (point) => void, the restore point's Delete
+* @param {Object} [image_actions] - {on_cancel} for the image-updates block
+*   (render_image_updates); omitted ⇒ no Cancel button is drawn
 * @returns {HTMLElement|null}
 */
-export const render_consumer_status = function(parent, consumer, on_restore, on_delete) {
+export const render_consumer_status = function(parent, consumer, on_restore, on_delete, image_actions) {
 
 	if (!consumer) return null
 
@@ -710,6 +1042,11 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 		const tree = consumer.tree || {}
 		fact_row(installation, get_label.update_code_tree_root || 'Code tree', tree.root, true)
 		fact_row(installation, get_label.update_code_backup_root || 'Backup root', tree.backup_root, true)
+
+	// image updates — a CONTAINER installation only (value.consumer.image)
+		if (consumer.image) {
+			render_image_updates(wrapper, consumer.image, image_actions)
+		}
 
 	// readiness
 		render_readiness(wrapper, consumer)

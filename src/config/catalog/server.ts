@@ -75,6 +75,54 @@ is refused and nothing is swapped.
 Setting it by hand on the real server yields a process that serves \`/health\` and nothing
 else — never do it. See \`engineering/PRODUCTION.md\` for the update pipeline.`,
 	},
+	DEDALO_CLIENT_PUBLISH_DIR: {
+		// Read from the PROCESS environment only (src/core/install/client_publish.ts):
+		// it names a mount of the container the launcher built, which a value in
+		// ../private/.env — a file that outlives every container — cannot know.
+		type: 'string',
+		scope: 'environment',
+		default: undefined,
+		heading: 'Directory the engine publishes its own client into',
+		typeLabel: 'absolute path',
+		typeSuffix: '(set by the container stack; unset = publish nothing)',
+		doc: `Set by the container stacks, never by hand. At every start the engine copies the
+client files of the code it is running into this directory and switches \`<dir>/dedalo\` to
+the new copy in one step; the reverse proxy serves the client from there. The proxy therefore
+always serves the client that belongs to the running engine — never the one from a checkout of
+another version, which the engine would not understand.
+
+Unset (every installation that is not a container): nothing is published, and the proxy serves
+the client from the installation tree as before. Never set in a pre-swap boot check.`,
+	},
+	DEDALO_CONTAINER_IMAGE: {
+		// Read from the PROCESS environment only (src/core/update/image_source.ts):
+		// the container stack declares the image it runs. Not DEDALO_IMAGE_*: that
+		// prefix is the media-image configuration family.
+		type: 'string',
+		scope: 'environment',
+		default: undefined,
+		heading: 'Image repository this container runs',
+		typeLabel: 'repository',
+		typeSuffix: '(set by the container stack from .dedalo.env)',
+		doc: `Set by the container stacks from the \`DEDALO_IMAGE\` line of \`.dedalo.env\`, never by
+hand: the image repository (no tag) this engine runs — one of Dédalo's registries, a registry
+of the operator's own, or \`localhost/dedalo\` for an image built on the Docker host. The
+code-update panel shows it, and whether it is an official registry, next to the command that
+updates the installation. A value that is not a repository reference is ignored.`,
+	},
+	DEDALO_CONTAINER_IMAGE_MODE: {
+		// Read from the PROCESS environment only (src/core/update/image_source.ts).
+		type: 'string',
+		scope: 'environment',
+		default: undefined,
+		heading: 'How this container gets its image',
+		typeLabel: 'pull | build',
+		typeSuffix: '(set by the container stack from .dedalo.env)',
+		doc: `Set by the container stacks from the \`DEDALO_IMAGE_MODE\` line of \`.dedalo.env\`, never
+by hand: \`pull\` when updates pull a published image, \`build\` when the Docker host builds it
+from its checkout. The code-update panel uses it to describe how an update will be fetched. Any
+other value is ignored.`,
+	},
 	NODE_TLS_REJECT_UNAUTHORIZED: {
 		type: 'string',
 		scope: 'internal',

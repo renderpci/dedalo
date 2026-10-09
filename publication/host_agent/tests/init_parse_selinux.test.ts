@@ -59,14 +59,18 @@ describe('mode and config', () => {
 });
 
 describe('local rules and ports', () => {
-  test('fcontext -l -C: none; ours (with -f d, -f f and `all files`); Remi equivalences (captured)', () => {
+  test('fcontext -l -C: none; ours (with -f d, -f f and `all files`, the trailing space every real line ends with); Remi equivalences (captured)', () => {
     expect(parseSemanageFcontextLocal(fixture('typed/selinux/fcontext_local_none.txt'))).toEqual({ rules: [], equivalences: [] });
     const ours = parseSemanageFcontextLocal(fixture('typed/selinux/fcontext_local_ours.txt'));
     expect(ours.rules[0]).toEqual({ spec: '/home/museum\\.org', fileType: 'd', type: 'home_root_t' });
     expect(ours.rules.find(rule => rule.spec.endsWith('/bun'))).toEqual({ spec: '/home/museum\\.org/\\.bun/bin/bun', fileType: 'f', type: 'bin_t' });
-    expect(ours.rules.filter(rule => rule.fileType === 'a').length).toBe(6);
-    // A spec longer than semanage's 50-column field is followed by ONE space (`%-50s %-18s %s`).
-    expect(ours.rules.at(-1)).toEqual({ spec: '/var/lib/dedalo_publication_host/museum_org/v1/tmp(/.*)?', fileType: 'a', type: 'httpd_sys_rw_content_t' });
+    expect(ours.rules.filter(rule => rule.fileType === 'a').length).toBe(7);
+    // The v2 tree is data_home_t (row S/publication_api/v2); the site logs live outside the home (no home logs rule).
+    expect(ours.rules).toContainEqual({ spec: '/home/museum\\.org/dedalo/publication_api/v2(/.*)?', fileType: 'a', type: 'data_home_t' });
+    expect(ours.rules.some(rule => rule.spec.startsWith('/home/') && rule.type === 'httpd_log_t')).toBe(false);
+    // A spec longer than semanage's 50-column field is followed by ONE space (`%-50s %-18s %s `).
+    expect(ours.rules.at(-2)).toEqual({ spec: '/var/lib/dedalo_publication_host/museum_org/v1/tmp(/.*)?', fileType: 'a', type: 'httpd_sys_rw_content_t' });
+    expect(ours.rules.at(-1)).toEqual({ spec: '/var/lib/dedalo_publication_host/museum_org/v1/log(/.*)?', fileType: 'a', type: 'httpd_log_t' });
     expect(ours.equivalences).toEqual([
       { path: '/var/opt/remi/php82', target: '/var' },
       { path: '/etc/opt/remi/php82', target: '/etc' },
@@ -109,6 +113,13 @@ describe('local rules and ports', () => {
     });
   }
 
+  test('the full list puts a type\'s LOCAL ports first, newest first (captured EL 10 with ours): each still maps to its type', () => {
+    const line = 'http_port_t                    tcp      3104, 3103, 3102, 3101, 3100, 80, 81, 443, 488, 8008, 8009, 8443, 9000\n';
+    const types = tcpPortTypes(parseSemanagePorts(line));
+    expect([...types.keys()]).toEqual([3104, 3103, 3102, 3101, 3100, 80, 81, 443, 488, 8008, 8009, 8443, 9000]);
+    expect([...types.values()].every(type => type === 'http_port_t')).toBe(true);
+  });
+
   test('ranges are kept by parseSemanagePorts and left out of the exact map', () => {
     const rows = parseSemanagePorts('unreserved_port_t              tcp      61000-65535, 1024-32767\nhttp_port_t   tcp   80, 443\n');
     expect(rows).toContainEqual({ type: 'unreserved_port_t', proto: 'tcp', from: 1024, to: 32767 });
@@ -116,8 +127,10 @@ describe('local rules and ports', () => {
     expect(tcpPortTypes(parseSemanagePorts('http_port_t   udp   80\n')).size).toBe(0);
   });
 
-  test('local ports: ours is a single port; an empty list (captured) is empty; a local range throws', () => {
-    expect(singlePorts(parseSemanagePorts(fixture('typed/selinux/port_local_ours.txt')))).toEqual([{ type: 'http_port_t', proto: 'tcp', port: 3100 }]);
+  test('local ports: ours are single ports (five instances 3100-3104, comma-listed as -C prints them); an empty list (captured) is empty; a local range throws', () => {
+    expect(singlePorts(parseSemanagePorts(fixture('typed/selinux/port_local_ours.txt')))).toEqual(
+      [3100, 3101, 3102, 3103, 3104].map(port => ({ type: 'http_port_t', proto: 'tcp', port })),
+    );
     expect(singlePorts(parseSemanagePorts(fixture('captured/rocky9/semanage_port_l_C.txt')))).toEqual([]);
     expect(() => singlePorts(parseSemanagePorts('http_port_t tcp 3100-3101\n'))).toThrow('is a range');
   });

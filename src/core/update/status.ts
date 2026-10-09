@@ -42,7 +42,7 @@ import { isLoopbackHost } from '../security/ssrf_guard.ts';
 import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.ts';
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
-import { detectDeploymentChannel } from './channel.ts';
+import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import {
 	DEV_REF,
 	newestPublishableTag,
@@ -71,6 +71,11 @@ import {
 	stagingHoldsParkedTree,
 } from './code_update.ts';
 import { availableBytesAt } from './disk_space.ts';
+import {
+	type ImageChannelBlock,
+	type ImageChannelSeams,
+	imageChannelBlock,
+} from './image_channel.ts';
 import {
 	INSTALLED_CHANNEL,
 	INSTALLED_DIGEST,
@@ -225,6 +230,13 @@ export interface ConsumerStatus {
 		 * shipped are subtracted: what remains is operator-added. */
 		unaccounted_root_entries: string[];
 	};
+	/**
+	 * Where this installation's IMAGE comes from and how it is updated — present
+	 * ONLY on the `image` deployment channel (the `channel` check's own
+	 * predicate), absent otherwise, so the tree-swap wire is byte-unchanged
+	 * (WC-2026-10-09-update-code-image-channel; core/update/image_channel.ts).
+	 */
+	image?: ImageChannelBlock;
 }
 
 /** The supervisor gate (code_update.ts assertSwapPreconditions, first refusal). */
@@ -236,12 +248,29 @@ function supervisorCheck(): StatusCheck {
 	);
 }
 
+/** The deployment channel (channel.ts), or the test seam's. ONE predicate for the check and the block. */
+function deploymentChannelOf(seams: ConsumerStatusSeams): DeploymentChannel {
+	return seams.channel ?? detectDeploymentChannel(projectRoot);
+}
+
 /** The deployment channel (channel.ts): `image` cannot tree-swap at all. */
-function channelCheck(): StatusCheck {
+function channelCheck(seams: ConsumerStatusSeams): StatusCheck {
 	return probe('channel', () => {
-		const channel = detectDeploymentChannel(projectRoot);
+		const channel = deploymentChannelOf(seams);
 		return check('channel', channel === 'image' ? 'blocked' : 'ok', channel);
 	});
+}
+
+/**
+ * `consumer.image` — only on the image channel. The block never throws by
+ * design; the guard is the panel's own law (a probe never takes it down).
+ */
+function imageBlockFor(seams: ConsumerStatusSeams): { image?: ImageChannelBlock } {
+	try {
+		return deploymentChannelOf(seams) === 'image' ? { image: imageChannelBlock(seams.image) } : {};
+	} catch {
+		return {};
+	}
 }
 
 /** Maintenance mode + superuser (preconditions.ts, both hard). */
@@ -541,6 +570,10 @@ export interface ConsumerStatusSeams {
 	backupVerify?: BackupVerifyOptions;
 	/** The bounded wait before `backup_fresh` answers `verifying` (default PANEL_WAIT_MS). */
 	waitMs?: number;
+	/** The deployment channel, instead of probing this filesystem (channel.ts). */
+	channel?: DeploymentChannel;
+	/** The image block's own seams (image_channel.ts). */
+	image?: ImageChannelSeams;
 }
 
 /** The consumer half of the panel: readiness + provenance + rollback state. */
@@ -553,7 +586,7 @@ export async function consumerStatus(
 	const rootEntries = rootEntriesCheck();
 	const checks: StatusCheck[] = [
 		supervisorCheck(),
-		channelCheck(),
+		channelCheck(seams),
 		...operatorChecks(principal),
 		await backupFreshnessCheck(principal, seams),
 		backupLocationCheck(backupRoot),
@@ -589,6 +622,7 @@ export async function consumerStatus(
 			staging_leftover: existsSync(join(backupRoot, '.code_staging')),
 			unaccounted_root_entries: rootEntries.entries,
 		},
+		...imageBlockFor(seams),
 	};
 }
 

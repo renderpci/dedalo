@@ -202,7 +202,7 @@
 		"src/core/identify/preview.ts": 14,
 		"src/core/identify/profile.ts": 14,
 		"src/core/identify/profile_source.ts": 10,
-		"src/core/install/config_persist.ts": 13,
+		"src/core/install/config_persist.ts": 10,
 		"src/core/install/db_probe_plan.ts": 8,
 		"src/core/install/db_restore.ts": 8,
 		"src/core/install/directories.ts": 12,

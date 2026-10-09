@@ -3,7 +3,9 @@
  * api/dispatch.ts; dispatch keeps registry assembly + gates + envelope).
  */
 
+import { join } from 'node:path';
 import { config } from '../../../config/config.ts';
+import { projectRoot } from '../../../config/env.ts';
 import { readString } from '../../../config/readers.ts';
 import { DedaloError, ok } from '../../errors/index.ts';
 import { publicOrigin, publicOriginIsLocal } from '../../resolve/public_origin.ts';
@@ -921,6 +923,9 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			// release channel, and it only matters on a master that opted in.
 			channel: options.channel === 'dev' ? 'dev' : 'master',
 			devChannelEnabled: config.update.devChannelEnabled,
+			// the master's own frozen release notes (changes/<version>/release.json,
+			// WC-2026-10-09-code-manifest-release-notes)
+			changesDir: join(projectRoot, 'changes'),
 			info: {
 				date: new Date().toISOString(),
 				entity_id: config.identity.entityId,

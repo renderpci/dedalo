@@ -203,10 +203,10 @@ chown -R dedalo:dedalo /opt/dedalo/.bun
 
 ### 6. Get the code
 
-You can obtain the code from offical repositories:
+You can obtain the code from official repositories:
 
-- https://gitlab.com/renderpci/dedalo.git
-- https://github.com/renderpci/dedalo.git
+- https://gitlab.com/dedalia/dedalo.git
+- https://github.com/dedalia-org/dedalo.git
 
 Use one of them to clone the repository:
 
@@ -294,7 +294,7 @@ sudo -u dedalo --preserve-env=DB_PASSWORD,DEDALO_INSTALL_ROOT_PASSWORD \
     --data-lang lg-eng
 ```
 
-No `--hierarchies` here: the shared default set of optional thesauri (today Spain, `es`) is installed, and the Languages thesaurus (`lg`) is activated with the database on every install — it is not something to select. No `--ontologies` either: the default domain ontology, Oral history (`oh`), is installed from the copy built into the release. Name the domains your institution catalogues instead — for example `--ontologies oh,tch` (`tch`, Tangible cultural heritage, is the general inventory model for objects and collections) — and the installer downloads them from the update server, with the ontologies they declare as dependencies, before it touches the database; `bun run scripts/install.ts --list-ontologies` shows what the server offers. See [Domain ontologies](installer_reference.md#domain-ontologies). Pass `--hierarchies none` to skip the optional ones, or a list such as `--hierarchies es,fr`. The installer also writes `ONTOLOGY_SERVERS` and `CODE_SERVERS` naming the official Dédalo update server; add `--no-update-servers` for an air-gapped server that must never be offered an update. Run the same command with `--plan` first to see the keys and steps it would produce, without touching anything — every flag is in the [installer reference](installer_reference.md#command-line-flags).
+No `--hierarchies` here: the shared default set of optional thesauri (today Spain, `es`) is installed, and the Languages thesaurus (`lg`) is activated with the database on every install — it is not something to select. No `--ontologies` either: the default domain ontology, Oral history (`oh`), is installed from the copy built into the release. Name the domains your institution catalogues instead — for example `--ontologies oh,tch` (`tch`, Tangible cultural heritage, is the general inventory model for objects and collections) — and the installer downloads them from the update server, with the ontologies they declare as dependencies, before it touches the database; `bun run scripts/install.ts --list-ontologies` shows what the server offers. An air-gapped install (`--no-update-servers`) installs only `oh`, unless `--ontology-source <dir|tar.gz>` provides the other domains from an ontology server's export. See [Domain ontologies](installer_reference.md#domain-ontologies). Pass `--hierarchies none` to skip the optional ones, or a list such as `--hierarchies es,fr`. The installer also writes `ONTOLOGY_SERVERS` and `CODE_SERVERS` naming the official Dédalo update server; add `--no-update-servers` for an air-gapped server that must never be offered an update. Run the same command with `--plan` first to see the keys and steps it would produce, without touching anything — every flag is in the [installer reference](installer_reference.md#command-line-flags).
 
 8.3 Clean up
 
@@ -311,24 +311,26 @@ unset DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
 Expected output (abridged — each `→ [<step id>]` line is one step of the install plan; the wording after the id may differ slightly):
 
 ```text
-Dédalo TS install — entity 'myentity', db 'dedalo_main'
+Dédalo TS install — entity 'institution', db 'dedalo_main'
 
 → pre-flight checks
 → [test_db_connection] database connection
 → [persist_config] write ../private/.env
   generated DEDALO_SALT_STRING = ****
 → [check_directories] directories
+→ [stage_ontologies] ontology files: oh (fetched + verified before the database is touched)
 → [install_db_from_default_file] restore database from seed (+ activate core hierarchies)
+→ [install_ontologies] domain ontologies: oh
 → [set_root_pw] set root password
 → [install_hierarchies] optional hierarchies: es
 → [register_tools] register tools
 → [install_finish] seal install
 → verify root login
 
-✔ install complete — root login verified. Start the server with `bun run start`.
+✔ install complete — root login verified. Start the server under its supervisor (systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with `bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.
 ```
 
-The installer suggests `bun run start`, but on this server you run the engine **under systemd** (step 10) — do not start it by hand. Step 9 is optional; you can go straight to step 10.
+On this server the supervisor is systemd (step 10) — do not start the engine by hand. Step 9 is optional; you can go straight to step 10.
 
 The full flag list, what each step does, and what the seed contains are in the **[installer reference](installer_reference.md)**.
 
@@ -340,7 +342,7 @@ Three facts set the procedure:
 
 1. **Save config exits the process.** Configuration is read once, at boot, so the wizard writes `.env` and then quits (exit `75`) for a supervisor to restart it. Here that supervisor is the systemd unit — so **step 10 moves ahead of the install**.
 2. **Without `.env` the engine listens on `/tmp/dedalo_ts.sock`**, the built-in default — not the `/run/dedalo/dedalo_ts.sock` the unit and the proxy expect. So the wizard is not reachable through the proxy anyway; browse it over an SSH tunnel instead, which also keeps the pre-auth surface off the network entirely.
-3. **The wizard has no field for the serving keys.** `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE` are CLI-only flags, so a wizard `.env` simply **omits all three**. Their defaults are wrong for this layout — media would resolve to `/opt/dedalo/master_dedalo/media` and the access gate would be off — so you append them by hand at the end.
+3. **The wizard has no field for the serving keys.** `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE` are CLI-only flags, so a wizard `.env` simply **omits all three**. Their defaults do not match this layout — media would resolve to `/opt/dedalo/private/media` instead of `/srv/dedalo/media`, and the socket would be `/tmp/dedalo_ts.sock` — so you append all three by hand at the end (the access mode's default is already `publication`; writing it out states the choice).
 
 8.4.1 Install the systemd unit now (all of step 10, brought forward), then add an install-time drop-in:
 
@@ -398,7 +400,7 @@ Then close the tunnel, **skip step 10** (the unit is already installed and runni
 The installer wrote `../private/.env` — the database, entity, languages, the generated secret, the update servers, `ACTIVE_ONTOLOGY_TLDS` (the core ontologies plus the domain ontologies it installed), and (from step 8's flags) `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE`. **The instance is fully configured to boot.** Everything below is *optional*: production tuning, and a hardening checklist that only restates the safe defaults. Change nothing and the install is still correct — skip to step 10.
 
 !!! danger "`.env` is append-only, documented keys only"
-    Add keys; never rewrite the file by hand. A re-run of the installer preserves every key it does not manage, but a key you delete is gone. Each key is documented in `../private/sample.env` and the [configuration reference](../config/index.md).
+    Add a line for a new key, or change a value on its existing line (for example `ACTIVE_ONTOLOGY_TLDS` when you add a domain ontology later, step 12) — never a second line for a key that is already there, and never delete one. The [configuration reference](../config/index.md) lists the legitimate edits. A re-run of the installer rewrites only the keys it manages and preserves every other key, but a key you delete is gone. Each key is documented in `../private/sample.env` and the [configuration reference](../config/index.md).
 
 **Production tuning** — worth setting on a busy instance; each has a working default, so include only the lines you actually want to change:
 
@@ -439,17 +441,25 @@ Reference units ship under `deploy/`:
 | Unit | What it does |
 | --- | --- |
 | `dedalo-ts.service` | the server; creates `/run/dedalo` (`RuntimeDirectory`), `Restart=always`, declares `DEDALO_SUPERVISED=true`, journald capture, SIGTERM drain |
-| `dedalo-ts-watchdog.service` + `.timer` | every 30 s, `curl --fail` on `/health` over the socket; restarts the server on failure |
+| `dedalo-ts-watchdog.service` + `.timer` | every 30 s, `curl --fail` on `/health` over the socket; on failure it restarts the server, or rolls back a code update that has not been confirmed yet |
 | `dedalo-ts-restart.service` | the restart helper the watchdog fires |
+| `dedalo-ts-rollback.service` | rolls a failed code update back to the previous tree; fired by the watchdog, and by `dedalo-ts.service` (`OnFailure=`) when the new tree never boots. Does nothing when no update is pending |
 | `dedalo-backup.service` + `.timer` | the nightly backup set |
 
-**1 — Copy the units:**
+**1 — Install the two scripts the units run, and copy the units:**
+
+The watchdog and the rollback unit do not run scripts from the clone. They run copies in `/opt/dedalo/bin/`, outside the code tree, because a code update moves the whole tree aside and the rollback has to work exactly when the tree is missing.
 
 ```shell
+install -d /opt/dedalo/bin
+install -m 0755 /opt/dedalo/master_dedalo/deploy/dedalo-code-rollback.sh \
+                /opt/dedalo/master_dedalo/deploy/dedalo-ts-watchdog.sh /opt/dedalo/bin/
 cp /opt/dedalo/master_dedalo/deploy/dedalo-ts*.service \
    /opt/dedalo/master_dedalo/deploy/dedalo-ts*.timer \
    /opt/dedalo/master_dedalo/deploy/dedalo-backup.* /etc/systemd/system/
 ```
+
+Skip the `install` lines and the watchdog fails with `status=203/EXEC` every 30 seconds, and no failed code update is ever rolled back. A code update does not refresh `/opt/dedalo/bin/`: run the `install -m 0755` line again after each one (see [Upgrading](upgrading.md)).
 
 **2 — Substitute the placeholders.** The units ship with ALL-CAPS placeholders you **must** replace before starting anything:
 
@@ -460,13 +470,14 @@ cp /opt/dedalo/master_dedalo/deploy/dedalo-ts*.service \
 | `WorkingDirectory` | `/opt/dedalo/master_dedalo` |
 | `ExecStart` bun path | `/opt/dedalo/.bun/bin/bun` |
 | backup `EnvironmentFile` | `/opt/dedalo/private/.env` |
-| backup paths | `/opt/dedalo/private/backups/…`, `/srv/dedalo/media` |
+| backup paths | `/opt/dedalo/private/backups/…`, `/opt/dedalo/backups/…` (the media source is read from `MEDIA_PATH` in `.env`) |
 
 Edit each file in place, or use `systemctl edit --full <unit>` after copying.
 
 ```shell
 systemctl edit --full dedalo-ts.service
 systemctl edit --full dedalo-ts-restart.service
+systemctl edit --full dedalo-ts-rollback.service
 systemctl edit --full dedalo-ts-watchdog.service
 systemctl edit --full dedalo-ts-watchdog.timer
 systemctl edit --full dedalo-backup.service
@@ -502,7 +513,7 @@ systemctl enable --now dedalo-backup.timer
 systemctl status dedalo-ts --no-pager      # active (running), NOT activating (auto-restart)
 ls -l /run/dedalo/dedalo_ts.sock           # srwxrwx--- dedalo dedalo
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
-# {"result":"ok","entity":"myentity","db":"ok","request_id":"…"}
+# {"result":"ok","entity":"institution","db":"ok","request_id":"…"}
 ```
 
 If `status` shows `activating (auto-restart)`, read `journalctl -u dedalo-ts -n 50`
@@ -567,21 +578,28 @@ The whole subsystem is defined in `engineering/MEDIA_PROTECTION.md`; the adminis
 4. Create your **users and projects** — see [users and permissions](../management/users_and_permissions.md).
 
 !!! note "Your ontologies"
-    The installation carries the core ontologies and the domain ontologies you chose at step 8 (Oral history, `oh`, by default) — no demo or test data. To add a domain later (for example `tch`), add its code to `ACTIVE_ONTOLOGY_TLDS` in `../private/.env` and import it from *Maintenance › Update ontology*; see [Updating ontology](../management/updates/updating_ontology.md).
+    The installation carries the core ontologies and the domain ontologies you chose at step 8 (Oral history, `oh`, by default) — no demo or test data. To add a domain later (for example `tch`):
+
+    1. In *Maintenance › Update ontology*, put its code **and the codes of the ontologies it requires** in the list and import them. The panel imports exactly the codes in the list and adds no dependencies itself. *Fetch list* shows what the master declares, and so does `bun run scripts/install.ts --list-ontologies`.
+    2. Add the same codes to `ACTIVE_ONTOLOGY_TLDS` in `../private/.env`, so that every later update refreshes them. Change its existing line rather than adding a second one (see step 9): the installer wrote it as a JSON list, so add the codes inside that list.
+    3. Restart the server (`systemctl restart dedalo-ts`). Configuration is read once, at boot, so until the restart the panel still offers the old list.
+
+    See [Updating ontology](../management/updates/updating_ontology.md#which-tlds-are-updated).
 
 !!! note "The thesauri you already have"
     The Languages thesaurus (`lg`) is active on every install — its terms ship in the seed and the database step activates it. The optional thesauri the installer ran (`--hierarchies`, by default `es`) are **imported and activated**: browsable thesaurus trees at the first login. Anything else your collection needs is added later from the thesaurus tools — see [installing new hierarchies](../management/install_new_hierarchies.md). `--hierarchies none` is perfectly valid: the seed already carries the core ontology.
 
 ### 13. Backups
 
-**The backup set is four stores.** The matrix database alone is *not* a backup:
+**The backup set is five stores.** The matrix database alone is *not* a backup:
 
 1. **The matrix PostgreSQL database** — the schema and every record.
 2. **The RAG vector database**, if you enabled RAG — a separate database, a separate dump.
 3. **The media originals** (`MEDIA_PATH`) — the `original` quality is the source of truth every derivative is rebuilt from. Derivatives need no backup.
 4. **`../private/`** — the `.env` secrets, the session store, `ts_state.json`.
+5. **Every site-builder instance** on the host, if you run the [site builder](../tools/using_sitebuilder.md) — its declaration and secrets, its workspaces and each site's webspace. On a host that has none, this store is an empty step.
 
-`deploy/dedalo-backup.service` + `.timer` is the reference nightly job covering all four. The canonical rules — retention, what is *derived* data and therefore not worth dumping, and the restore drill — are in `engineering/PRODUCTION.md` §6 and in [backup](../management/backup.md). Do not duplicate them into your own runbook; link to them.
+`deploy/dedalo-backup.service` + `.timer` is the reference nightly job covering all five. The canonical rules — retention, what is *derived* data and therefore not worth dumping, and the restore drill — are in `engineering/PRODUCTION.md` §6 and in [backup](../management/backup.md). Do not duplicate them into your own runbook; link to them.
 
 !!! warning "A backup that has never been restored is a hypothesis"
     Restore-test into a scratch database at least quarterly.

@@ -229,6 +229,26 @@ server {
 `TRUSTED_PROXY_HOPS` (default 1) must equal the number of proxies appending
 X-Forwarded-For, or the login throttle keys on the wrong address.
 
+**Where the client tree comes from.** On bare metal the `alias` above points at
+the checkout's `client/dedalo/` — the tree the engine itself runs from, so client
+and engine are one version by construction. The container stacks cannot do that:
+the engine's tree lives inside its IMAGE, and a host bind of `./client` served the
+CHECKOUT's client in front of a pulled engine of another version (a checkout at
+A behind an image of B — and the client/engine wire is exact, so that is broken
+pages, not a cosmetic skew). So in both shipped stacks the ENGINE PUBLISHES ITS
+OWN CLIENT: with `DEDALO_CLIENT_PUBLISH_DIR` set (process env only; the stacks set
+`/srv/dedalo/client`), every start mirrors the image's `client/` into
+`<dir>/releases/<content id>/dedalo` (regular files and dirs only — a symlink is
+never published, nginx would follow it; dirs 0750, files 0640, read by nginx
+through gid 1000 like media), switches the relative symlink `<dir>/dedalo`
+atomically, and prunes older releases; an unchanged id copies nothing
+(`src/core/install/client_publish.ts`, gate `client_publish_native`). nginx mounts
+the `client` volume read-only at the alias root, so `deploy/nginx*.conf` are the
+same files bare metal uses. Every new engine container republishes BEFORE it
+serves, so an image update or rollback moves the client with it. The volume is
+derived — never back it up. The QNAP dev overlay deliberately re-mounts the live
+`./client` instead: a development box serves live edits.
+
 ### 3.1 Media access control (the proxy enforces what the engine generates)
 
 Full definition: **`engineering/MEDIA_PROTECTION.md`**. The operator-facing contract:
@@ -1359,7 +1379,7 @@ script's own body: move the failed tree aside, move the backup back, start.
 | Channel | Layout | Update | Rollback |
 |---|---|---|---|
 | `tree_swap` | the repo is a checkout on a host (systemd or supervised loop) — or ANY tree without the product-image marker (the CI toolchain container), or a checkout bind-mounted into the product image | quarantine → rename swap (above) | sentinel + `dedalo-code-rollback.sh` |
-| `image` | the code tree is BAKED into the product image (`Dockerfile` copies the build-context allowlist, §13, and writes the positive marker `/etc/dedalo/image_tree`), and the tree is not on a mount; only `/private`/media/socket are volumes | the swap is REFUSED — a tree swap would land in the container's writable layer and be discarded on the next recreation. Use `deploy/dedalo-image-update.sh` (pull a new tag, or rebuild from a ref) | re-pin the previous image tag + `up -d` — atomic and complete, dependencies included |
+| `image` | the code tree is BAKED into the product image (`Dockerfile` copies the build-context allowlist, §13, and writes the positive marker `/etc/dedalo/image_tree`), and the tree is not on a mount; only `/private`/media/socket/client are volumes | the swap is REFUSED — a tree swap would land in the container's writable layer and be discarded on the next recreation. The host replaces the image: `deploy/dedalo-image-update.sh --version <tag>` (pull or build, per `.dedalo.env`), by hand or through the opt-in host updater — §12.1. The panel shows that command per release (`consumer.image`, WC-2026-10-09-update-code-image-channel) instead of a dead-end refusal | automatic: the script re-tags the anchored `rollback-<stamp>` image as the old version, re-pins `DEDALO_VERSION` + `up -d` — atomic and complete, dependencies included |
 
 Detection (`src/core/update/channel.ts`, gate `test/unit/update_channel_native.test.ts`)
 asks WHERE THE TREE CAME FROM, never "am I in a container": the product
@@ -1387,6 +1407,132 @@ it finds runtime data in the tree, naming the key to set). Per-key recipe:
   backups) — both default outside the tree already; never point them into it.
 - `DEDALO_PRIVATE_DIR` — the private tree is a SIBLING by default; only ever
   relocate it further out (containers use `/private`), never inward.
+
+### 12.1 Image updates on a Docker host
+
+Operator manual: `docs/install/docker.md` (*Choose where the image comes from*,
+*Upgrading*, *The host updater*). Publishing side: the release workflow
+`.github/workflows/image-release.yml` pushes ONE signed multi-arch digest per
+release tag to every PROVISIONED registry of `engineering/image_registries.json`
+(`engineering/CI.md`).
+
+**The `.dedalo.env` contract** (host side only — compose substitution and the host
+tools; never the engine's `/private/.env`). Besides the database credentials and
+the TLS keys `install.sh` writes:
+
+| Key | Value |
+|---|---|
+| `DEDALO_COMPOSE_FILE` | `docker-compose.simple.yml` or `docker-compose.yml` |
+| `DEDALO_IMAGE` | the repository, no tag (`localhost/dedalo` for a local build) |
+| `DEDALO_VERSION` | the PINNED tag: `X.Y.Z`, or `X.Y.Z-dev` for a developer image |
+| `DEDALO_IMAGE_MODE` | `pull` \| `build` |
+| `DEDALO_IMAGE_VERIFY` | `cosign` \| `none` |
+
+Writer: `install.sh` (the full stack: the `docs/install/docker.md` recipe).
+Readers: compose (`image: ${DEDALO_IMAGE:-localhost/dedalo}:${DEDALO_VERSION:-local}`
+on `dedalo` AND `backup`; the default resolves to registry host `localhost`, so a
+compose run without the env file can never pull a public name — it fails loudly)
+and `deploy/dedalo-image-lib.sh`, which PARSES the file (never sources it: the
+host updater runs it as root-equivalent). Re-pinner: `deploy/dedalo-image-update.sh`,
+`DEDALO_VERSION` only, by an atomic rewrite that keeps every other line
+byte-identical. No root stack has `build:`; building is the override
+`-f deploy/compose.build.yml`. The engine sees its source as
+`DEDALO_CONTAINER_IMAGE` / `DEDALO_CONTAINER_IMAGE_MODE` (process env, declared by
+the stacks from the same keys) — the panel labels it official primary, official
+mirror or custom.
+
+**The updater** (`deploy/dedalo-image-update.sh --version <tag>`, from the stack
+dir; gate `image_update_script_native`), each step refusing before the next
+changes anything: mkdir lock → `.dedalo.env` complete (else the exact lines to
+add are printed — the adoption path of a pre-pin install) → grammar + numeric
+downgrade floor (equal only for `-dev`) → the RUNNING engine's walk verdict
+(`scripts/ops/image_update_channel.ts check-target`: exit 0 ok, 3 refused + reason
+id, anything else = unavailable, refused unless `--skip-version-check`) → a
+verified `pg_dump` through the `backup` service (`--label pre-image-update`;
+`--no-backup` is the operator's typed waiver) → the running image anchored as
+`<DEDALO_IMAGE>:rollback-<UTC stamp>` → pull (+ when `DEDALO_IMAGE_VERIFY=cosign`:
+`cosign verify` of the RepoDigest against the generated signing identity AND the
+signed image's `org.opencontainers.image.version` label equal to the tag pulled —
+`dedalo_verify_release`; a signature alone proves only that SOME official run built
+the bytes, so a mirror re-pointing `:<newer>` at an older signed release would
+otherwise walk the install backwards past the version floor)
+or build (checkout `v<X.Y.Z>`, or the single remote's master / `--ref` for
+`-dev`; the checked-out `version.ts` must declare the target) → re-pin → `up -d
+dedalo backup` (never postgres or nginx) → the compose healthcheck: green on the
+first `healthy`; `starting` AND `unhealthy` wait up to `--health-timeout`, default
+900 s (boot migrations run BEFORE the socket binds, so `/health` is red through
+them and Docker reports `unhealthy` ≈2 min in — start_period 30 s + 3 × 30 s —
+a state it leaves on the first green probe); red is the deadline (detail
+`unhealthy` when the last probe answered red, `health_timeout` when it never
+answered) or a RESTART of the engine process (`RestartCount` > 0: it exited — a
+crash, never a slow boot; detail `unhealthy`) → green prunes all but the newest
+rollback tag; red re-tags the anchor as the old version, re-pins it, restores the
+previous checkout in build mode, `up -d --no-build` and waits again. Exit 0 only
+on green. `--outcome-file` receives ONE JSON object:
+
+```json
+{"schema":1,"request_id":"<uuid>|null","from":"X.Y.Z","to":"X.Y.Z","mode":"pull|build",
+ "image":"<repository>","status":"green|rolled_back|rollback_failed|refused|failed",
+ "detail":"healthy|health_timeout|unhealthy|pull_failed|verify_failed|build_failed|backup_failed|version_refused|downgrade_refused|not_running|env_incomplete|locked|interrupted|malformed_request",
+ "backup":"/backups/db/…|null","digest":"sha256:…|null","started_at":"<ISO>","finished_at":"<ISO>"}
+```
+
+`refused` changed nothing; `failed` tried and left the running stack as it was.
+
+**The request channel** (`<private dir>/image_update/`, `/private/image_update` in
+the stacks; the engine owns it — dir 0750, files 0640, user bun;
+`src/core/update/image_update_channel.ts`): `host_updater.json` (the host's
+heartbeat, `seen_at` stamped by the engine), `request.json` (written by the
+panel's `request_image_update`, EXCLUSIVELY — tmp + link), `inflight.json` (the
+claimed request + `claimed_at`; the claim is a rename, so claim and cancel cannot
+both win), `last_outcome.json` (the outcome above + `recorded_at`). Every file is
+untrusted on read: closed-shape validators, and a malformed file reads as absent.
+The host updater is `alive` while `now − seen_at ≤ max(3 × interval, 180 s)`. The
+host never reads these files; it talks to the engine's CLI,
+`scripts/ops/image_update_channel.ts <verb> [--dir D]` (verbs `check-target`,
+`heartbeat`, `claim`, `orphan`, `outcome`, `status`; leaf imports only — never
+`config.ts`, so it answers in install mode too), through `docker compose exec`
+(or `run --rm --no-deps` to record an outcome whatever state the engine is in),
+and accepts back only a UUID and a tag grammar. Gate: `image_update_channel_native`.
+
+**Why a file and not a section.** Sections hold cataloguing data. This is a
+one-shot instruction between two processes of ONE deployment — the same kind of
+thing as the tree-swap sentinel and `ts_state.json`. A section would force the
+host to hold database credentials and know ontology tipos (or the engine to proxy
+for it anyway), and a database restore would RESURRECT a stale request, which
+could then install an image nobody asked for today.
+
+**The host unit** (`deploy/dedalo-image-updater.sh`; OPT-IN, off unless installed;
+gate `image_updater_host_native`). `sudo ./deploy/dedalo-image-updater.sh
+install-units` writes `/etc/systemd/system/dedalo-image-updater.{service,timer}`
+with the stack path substituted (a path with whitespace, quotes or other
+specials is refused) — oneshot, `User=` the checkout's owner (must reach docker;
+git run as root refuses a checkout another account owns, and would leave
+root-owned files in it), `TimeoutStartSec=2h`, `NoNewPrivileges`, `PrivateTmp`;
+timer `OnBootSec=2min`, `OnUnitInactiveSec=60s` — and enables the timer.
+`uninstall-units` reverses it; `print-units` renders without installing; hosts
+without systemd run the same pass from cron. No unit file ships in `deploy/`: a
+generated unit carries the right path with nothing to hand-edit. One pass: lock →
+`.dedalo.env` complete → engine running → heartbeat (an image without the CLI is
+a logged no-op) → an orphaned `inflight.json` recorded as `failed/interrupted` →
+claim → the HOST's own floors (UUID, tag grammar, no downgrade against the pinned
+`DEDALO_VERSION`, equal only for `-dev`, and NO `-dev` tag while the pinned version
+is a release — `version_refused`; the engine mirrors it as `dev_channel_not_enabled`
+from the heartbeat's `pinned`) → `./deploy/dedalo-image-update.sh
+--version <tag> --request-id <id> --outcome-file <tmp>` — never `--no-backup`,
+`--skip-version-check` or `--ref` → the outcome recorded through `run`, then
+`exec`, then the journal. A pass that reached a decision exits 0.
+
+**Threat model.** A compromised engine or superuser CAN ask for a newer tag (or, on
+an installation ALREADY on developer images, the same `-dev` tag) of the repository
+the OPERATOR configured. It can never move a release installation onto developer
+images: in build mode a `-dev` target builds the remote's master tip, and the host
+updater then runs host scripts from that unreleased tree with docker access — the
+move onto the developer channel is the operator's own manual run. That request still
+walks the engine's linear rule, the host's floors, a mandatory backup and an
+automatic rollback; with `DEDALO_IMAGE_VERIFY=cosign` only a Dédalo-signed image
+installs. It CANNOT choose the repository, the mode, a flag, a ref, or anything
+else that is executed. The engine never gets `docker.sock`.
 
 ## 13. The container build context: secrets, and rotating a key that already shipped
 
@@ -1507,7 +1653,7 @@ CONTAINS `deploy/certs/dedalo-local-ca.key`. That is the private key of an
 authority you were told to install into the Trusted Root store of every
 computer that uses Dédalo: whoever holds it can mint a browser-trusted
 certificate for ANY hostname, for every one of those workstations. It travels
-wherever the image travels — a registry (`dedalo-image-update.sh --mode pull`),
+wherever the image travels — a registry an installation pulls from (§12.1),
 a `docker save` tarball, a copy handed to a supplier, or one more member of the
 host's `docker` group than you expected. Assume it is compromised; it cannot be
 un-distributed.
@@ -1542,7 +1688,8 @@ In this order:
    ```
 
 5. **Delete the old images and tarballs** you can still reach: registry tags,
-   `docker save` files, the rollback tag `dedalo-image-update.sh` left behind,
+   `docker save` files, the `<image>:rollback-<stamp>` tag `dedalo-image-update.sh`
+   keeps (the newest one survives a green update),
    and any build cache on machines that built it (`docker builder prune -af`).
    You cannot delete the copies you already handed out — which is why step 2 is
    the one that actually ends the exposure.

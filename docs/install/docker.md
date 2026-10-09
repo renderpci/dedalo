@@ -16,9 +16,11 @@ the [bare-metal guide](production.md) builds — engine on a unix socket,
 PostgreSQL behind it, a proxy in front — with four container-specific problems
 solved.
 
-This page is the whole procedure: what the files are, how to check your Docker,
-the install itself — by [CLI](#path-a-install-with-the-one-shot-cli) or by
-[browser wizard](#path-b-install-with-the-browser-wizard) — and how to verify it.
+This page is the whole procedure: what the files are, [where the image comes
+from](#choose-where-the-image-comes-from), how to check your Docker, the install
+itself — by [CLI](#path-a-install-with-the-one-shot-cli) or by [browser
+wizard](#path-b-install-with-the-browser-wizard) — how to verify it, and how to
+[update it](#upgrading).
 Read [the four problems](#the-four-container-problems) first if you plan to
 change anything in the compose file: they are where every container deployment of
 Dédalo goes wrong.
@@ -30,17 +32,25 @@ the directory that holds `docker-compose.yml`** — the `master_dedalo` checkout
 
 | Path | What it is | Do you edit it? |
 | --- | --- | --- |
-| `Dockerfile` | the engine image: pinned Bun, `psql` 18, the media toolchain | only to change the runtime pin |
-| `docker-compose.yml` | the stack: services, volumes, ops environment | **yes** — it is your deployment's configuration |
+| `Dockerfile` | the engine image: pinned Bun, `psql` 18, the media toolchain. Dédalo publishes it built and signed ([where the image comes from](#choose-where-the-image-comes-from)); you build from it only if you choose to | only to change the runtime pin |
+| `docker-compose.yml` | the stack: services, volumes, ops environment. It names the engine image as `${DEDALO_IMAGE}:${DEDALO_VERSION}` and never builds it | **yes** — it is your deployment's configuration |
+| `deploy/compose.build.yml` | the build override: add `-f deploy/compose.build.yml` to build the image here, from this checkout, instead of pulling it | no |
+| `.dedalo.env` | the stack's own environment, read by compose (`--env-file .dedalo.env`) and by the host tools: the database credentials and [where the image comes from](#the-dedaloenv-keys). **You write it** in [step 2](#step-2-choose-the-database-credentials) and [step 5](#step-5-get-the-image) (on the simple stack `./install.sh` writes it). Never committed, never inside the image | **yes** — once; afterwards only the image updater changes it, and only `DEDALO_VERSION` |
+| `deploy/dedalo-image-update.sh` | the code update of a container install: backup, new image, health check, automatic rollback — [upgrading](#upgrading) | no — you run it |
+| `deploy/dedalo-image-updater.sh` | the optional host updater, which runs the update the code-update panel requested — [the host updater](#the-host-updater-optional) | no — you install it, if you want it |
 | `.dockerignore` | the build-context policy: the whole root is denied, only the tracked entries the image needs are let back in, and secret-shaped names are denied at every depth. **Generated** — `bun run context:gen` | no |
 | `deploy/nginx.conf` | the reference proxy config, bind-mounted into the `nginx` container | **yes** — domain, certificate paths, the two `include` lines |
 | `deploy/certs/` | your TLS certificate and key. **Does not exist in a fresh clone — `deploy/dedalo-tls-rotate.sh` creates it.** Never committed, and never inside the image: `deploy/` is excluded from the build context, and nothing in a container reads it | **yes** |
 | `.bun-version` | the runtime pin. The `Dockerfile` base tag must match it | no |
 | `scripts/install.ts` | the headless installer, run **once**, inside the container | no |
-| `client/` | the browser client, bind-mounted read-only into `nginx` | no |
+| `client/` | the browser client's source. The image carries its own copy, and the engine **publishes** that copy into the `client` volume every time it starts; `nginx` serves it from there, never from your checkout | no |
 
-There is no build step and no dependency-fetch step for the client: a clone is
-self-contained, and the engine runs TypeScript directly.
+There is no build step and no dependency-fetch step for the client: the engine
+runs TypeScript directly, and the client it publishes is the one of the image it
+runs. That is the point of publishing it: the browser client and the engine speak
+an exact protocol, so a client from a different version — a checkout at one
+release behind an image of the next — breaks pages in ways that look like engine
+bugs. With the client in the image, they always change together.
 
 ### Two places: your host and the containers
 
@@ -49,19 +59,19 @@ most common way a first install goes wrong.
 
 | Where | Paths | How you reach them |
 | --- | --- | --- |
-| **The host** — your checkout | `docker-compose.yml`, `deploy/nginx.conf`, `deploy/certs/` | an ordinary editor, from the checkout directory (`cd …/master_dedalo`) |
-| **Inside the containers** — Docker volumes | `/srv/dedalo/media`, `/private`, `/backups`, `/run/dedalo` | `docker compose exec <service> …` only |
+| **The host** — your checkout | `docker-compose.yml`, `.dedalo.env`, `deploy/nginx.conf`, `deploy/certs/` | an ordinary editor, from the checkout directory (`cd …/master_dedalo`) |
+| **Inside the containers** — Docker volumes | `/srv/dedalo/media`, `/private`, `/backups`, `/run/dedalo`, `/srv/dedalo/client` | `docker compose --env-file .dedalo.env exec <service> …` only |
 
 - `/srv/dedalo/` **does not exist on the host**, and it should not. When
   `deploy/nginx.conf` says `include /srv/dedalo/media/…`, that is a path *inside
   the nginx container*. You only edit the line on the host; nginx resolves it in
   the container.
 - To look inside a volume, go through a container:
-  `docker compose exec nginx ls -l /srv/dedalo/media/`. The raw volume data sits
+  `docker compose --env-file .dedalo.env exec nginx ls -l /srv/dedalo/media/`. The raw volume data sits
   under `/var/lib/docker/volumes/dedalo_media/_data/` (root only) — never edit
   it there.
 - **Every `nginx` command goes through the container**:
-  `docker compose exec nginx nginx -t`. A plain `nginx -t` tests the *host's*
+  `docker compose --env-file .dedalo.env exec nginx nginx -t`. A plain `nginx -t` tests the *host's*
   nginx, if it has one — a different server with a different configuration.
   `open() "/run/nginx.pid" failed (13: Permission denied)` is the tell: you are
   talking to the host's nginx.
@@ -73,8 +83,9 @@ most common way a first install goes wrong.
 | Service | Image | Role |
 | --- | --- | --- |
 | `postgres` | `postgres:18` | the system of record |
-| `dedalo` | built from `Dockerfile` (`oven/bun:<pinned>-debian`) | the engine |
-| `nginx` | `nginx:alpine` | TCP, TLS, client statics, **the media gate** |
+| `dedalo` | `${DEDALO_IMAGE}:${DEDALO_VERSION}` — a published image, or one built here from `Dockerfile` (`oven/bun:<pinned>-debian`) | the engine; publishes its client into the `client` volume at every start |
+| `backup` | the same image as `dedalo` | the scheduled backups ([backups](#backups-from-a-container)) |
+| `nginx` | `nginx:alpine` | TCP, TLS, client statics (from the `client` volume), **the media gate** |
 | `mariadb` | `mariadb:11` — profile `diffusion` | the publication target |
 | `pgvector` | `pgvector/pgvector:pg18` — profile `rag` | the vector store |
 
@@ -82,8 +93,8 @@ The two optional services are behind compose profiles, so they do **not** start
 unless you ask for them:
 
 ```shell
-docker compose --profile diffusion up -d      # MariaDB publication target
-docker compose --profile rag up -d            # pgvector store
+docker compose --env-file .dedalo.env --profile diffusion up -d      # MariaDB publication target
+docker compose --env-file .dedalo.env --profile rag up -d            # pgvector store
 ```
 
 The image is **not** a thin Bun image. It must also carry:
@@ -95,8 +106,131 @@ The image is **not** a thin Bun image. It must also carry:
 - **the media toolchain** (`ffmpeg`, ImageMagick, poppler, `ocrmypdf`) — without
   it, uploads produce no derivatives and no thumbnails.
 
-Both are why the build is slow and the image is large. That is the correct
+Both are why the image is large and a local build is slow. That is the correct
 trade: an image without them installs, then fails at the first upload.
+
+## Choose where the image comes from
+
+Dédalo publishes the engine image — built once per release, signed, and identical
+byte for byte wherever it is published — to its own registry and to two public
+mirrors. You choose where your installation takes it from, and that choice is
+recorded in `.dedalo.env`: every later update comes from the same place.
+
+| Your choice | What happens | Good for |
+| --- | --- | --- |
+| **One of Dédalo's registries** (below) | the stack **pulls** the published image; with `cosign` on the host, its signature is checked first | almost every installation — no build on your server |
+| **A registry of your own** | you mirror the published image into it; the stack pulls from there | an institution that keeps every image it runs in its own registry |
+| **A local build** | the stack builds the image here, from this checkout, with `-f deploy/compose.build.yml` | development, an air-gapped host, a modified image — and any version no registry publishes |
+
+### Dédalo's registries
+
+The list is kept in the repository (`engineering/image_registries.json`) and this
+table is generated from it. The **primary** registry is the one Dédalo runs
+itself; the **mirrors** carry the same images on public infrastructure. *Not yet
+available* means Dédalo does not publish there yet: no address is given, and
+neither `./install.sh` nor the update tools offer it.
+
+<!-- BEGIN GENERATED — engineering/image_registries.json · regenerate: bun run registries:gen -->
+| Registry | Repository | Role | Status |
+|---|---|---|---|
+| Dédalo registry (gitdedalo) | — | primary | not yet available — The OCI registry on the gitdedalo host has not been stood up yet (it needs TLS, authenticated push and anonymous pull); until then this entry names no address. |
+| GitHub Container Registry | `ghcr.io/dedalia-org/dedalo` | mirror | available |
+| Docker Hub | `docker.io/dedalia/dedalo` | mirror | available |
+<!-- END GENERATED -->
+
+A registry being available does not mean every version is on it: images are
+published per **release**. The tags follow the code server's release names:
+
+| Tag | What it is |
+| --- | --- |
+| `X.Y.Z` (for example `7.0.1`) | a release. Immutable: once published, a release tag always names the same image |
+| `X.Y.Z-dev` | a developer image of unreleased work, built on demand. It is rebuilt in place — never use it in production |
+
+There is no `latest` tag, on purpose: an installation always names the version it
+runs. `./install.sh` checks which registries publish your checkout's version and
+offers those first; when none does, it builds locally.
+
+### Checking the signature
+
+Every published image is signed by Dédalo's release workflow with
+[Sigstore](https://www.sigstore.dev/) keyless signing: there is no key to
+distribute, and the signature records which workflow, in which repository, built
+the image. With [`cosign`](https://docs.sigstore.dev/cosign/system_config/installation/)
+installed on the host, check an image before you run it:
+
+```shell
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+|heads/master)$' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  <repository>:<version>
+```
+
+`<repository>` is one from the table above. Set `DEDALO_IMAGE_VERIFY=cosign` in
+`.dedalo.env` and the update script runs exactly this check on every image it
+pulls, and refuses one that fails it. It also checks that the signed image says it
+**is** the version you asked for (its `org.opencontainers.image.version` label):
+a signature alone only proves Dédalo built the image, not which release it is,
+and a registry that served an older signed release under a newer tag would
+otherwise move your installation backwards; `./install.sh` sets it for you when you
+choose one of Dédalo's registries and `cosign` is installed.
+
+### A registry of your own
+
+Copy the published image into your registry **keeping its digest** — a copy that
+re-packs the image is no longer the image Dédalo signed. Either of these copies a
+release as it is, for both architectures:
+
+```shell
+# image only
+docker buildx imagetools create --tag registry.example.org/heritage/dedalo:7.0.1 \
+  <repository>:7.0.1
+
+# image AND its signature (the signature check above then works on your copy)
+cosign copy <repository>:7.0.1 registry.example.org/heritage/dedalo:7.0.1
+```
+
+Then answer `./install.sh`'s question with *Another registry* and type
+`registry.example.org/heritage/dedalo`, or write it as `DEDALO_IMAGE` yourself.
+Verification is then yours to decide: keep `DEDALO_IMAGE_VERIFY=cosign` only if
+you copied the signature too, otherwise set it to `none`. Mirror each new release
+before you update to it.
+
+### A local build
+
+Building here needs no registry at all — it needs this checkout and the network
+to fetch the base image, the system packages and the JavaScript dependencies.
+The first build is slow (the media toolchain is a large download) and parks
+several gigabytes of build cache (`docker builder prune -af` reclaims it once the
+build is done). Updates rebuild from the release's git tag, so the checkout must
+keep its git remote.
+
+```shell
+docker compose -f docker-compose.yml -f deploy/compose.build.yml --env-file .dedalo.env build dedalo
+```
+
+The override adds the build to the `dedalo` service only; the `backup` service
+runs the same image. Everyday commands (`up`, `logs`, `stop`) do not need the
+override — the built image is already on this host.
+
+### The `.dedalo.env` keys
+
+Both stacks read the same five keys. `./install.sh` writes them on the simple
+stack; on this page you write them in [step 5](#step-5-get-the-image).
+
+| Key | Value | Example |
+| --- | --- | --- |
+| `DEDALO_COMPOSE_FILE` | the stack file in this directory | `docker-compose.yml` (this page) or `docker-compose.simple.yml` |
+| `DEDALO_IMAGE` | the repository, **without** a tag | a repository from the table above, yours, or `localhost/dedalo` for a local build |
+| `DEDALO_VERSION` | the version this installation runs — the image tag | `7.0.1`, or `7.0.1-dev` |
+| `DEDALO_IMAGE_MODE` | `pull` (a registry) or `build` (a local build) | `pull` |
+| `DEDALO_IMAGE_VERIFY` | `cosign` (check Dédalo's signature on every pull) or `none` | `cosign` |
+
+`DEDALO_VERSION` is a **pin**: the stack runs exactly that version until the
+[image updater](#upgrading) moves it, and nothing else rewrites the file. The one
+time you edit it by hand is [a rollback after a green update](#rolling-back-by-hand). A
+compose command without `--env-file .dedalo.env` falls back to
+`localhost/dedalo:local` — an image that does not exist — and fails loudly rather
+than run something you did not choose.
 
 ## Before you start
 
@@ -118,10 +252,12 @@ docker run --rm hello-world      # end-to-end smoke test: pull + run
   the Docker daemon* means the service is stopped (`systemctl start docker`) or
   your user is not in the `docker` group.
 - **Run `docker` without `sudo`.** `sudo` starts the command with a clean
-  environment, so the variables you export in [step
-  2](#step-2-choose-the-database-credentials) never reach compose, and every
-  command fails with *required variable POSTGRES_PASSWORD is missing a value*.
-  Join the `docker` group once instead:
+  environment and as another user: the variables you export in [step
+  2](#step-2-choose-the-database-credentials) do not reach it, and whatever it
+  writes in the checkout (`.dedalo.env`, the checkout a local build moves) ends up
+  owned by root.
+  The [host updater](#the-host-updater-optional) also runs as the checkout's owner,
+  through the `docker` group. Join the group once instead:
 
     ```shell
     sudo usermod -aG docker "$USER"
@@ -130,10 +266,9 @@ docker run --rm hello-world      # end-to-end smoke test: pull + run
     ```
 
     Membership of `docker` is root-equivalent — exactly what `sudo docker`
-    already was. If you must keep `sudo`, pass the variables through on **every**
-    command: `sudo --preserve-env=POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD docker compose …`.
+    already was.
 - **Docker Desktop (macOS/Windows):** the checkout must be inside a shared path,
-  or the bind mounts of `deploy/nginx.conf` and `client/` arrive empty. Fine for
+  or the bind mounts of `deploy/nginx.conf` and `deploy/certs/` arrive empty. Fine for
   evaluation; for production use Linux — see the note in the
   [installation hub](index.md).
 
@@ -172,7 +307,7 @@ hostname -I                             # this machine's address — note it for
 
         `!override` needs Compose 2.24.4 or newer; without it the ports are
         *added* to the shipped ones and the bind still fails. Confirm with
-        `docker compose config nginx | grep -A8 ports`. Then browse to
+        `docker compose --env-file .dedalo.env config nginx | grep -A8 ports`. Then browse to
         `https://<address>:8443/dedalo/` directly: the plain-HTTP port only
         redirects to `https://<address>/`, which drops the port. For a
         production machine that must keep its own web server, put Dédalo behind
@@ -307,27 +442,37 @@ ls docker-compose.yml Dockerfile deploy/nginx.conf     # you are in the right pl
 ### Step 2 — Choose the database credentials
 
 The `postgres` service reads three variables. `POSTGRES_PASSWORD` has no default
-and compose **refuses to start without it** — that is deliberate.
+and compose **refuses to start without it** — that is deliberate. Choose them,
+export them for this session (the installer in step 7 is given them), and write
+them into `.dedalo.env`, the stack's own environment file:
 
 ```shell
 export POSTGRES_DB=dedalo_main
 export POSTGRES_USER=dedalo_user
 export POSTGRES_PASSWORD='a-long-random-password'
+( umask 077 && printf 'POSTGRES_DB=%s\nPOSTGRES_USER=%s\nPOSTGRES_PASSWORD=%s\n' \
+    "$POSTGRES_DB" "$POSTGRES_USER" "$POSTGRES_PASSWORD" > .dedalo.env )
 ```
 
-An `export` lives only in **this** shell. A new terminal, an SSH reconnect or
-`sudo` (see [Check your Docker](#check-your-docker)) starts without them, and
-compose then refuses with *required variable POSTGRES_PASSWORD is missing a
-value*. Check before every session with `echo "$POSTGRES_PASSWORD"`.
-`POSTGRES_DB` and `POSTGRES_USER` are the dangerous pair: they have defaults,
-so when they go missing nothing fails — you silently get a database with a
-different name and owner from the ones the installer was told.
+Use letters, digits, `-` and `_` in the password: compose expands a `$` inside
+this file. The file is readable only by you — it holds the database password.
 
-!!! warning "Do not create a `.env` at the repo root"
-    Compose would read it for variable substitution — but so would the engine's
-    own configuration loader, from the container's working directory. Export the
-    variables in your shell, or keep them in a file elsewhere and pass
-    `docker compose --env-file <somewhere-else> …` to **every** command below.
+**Every compose command from here on carries `--env-file .dedalo.env`.** That is
+what makes the credentials and the image choice of step 5 reach compose in every
+session — an `export` lives only in **this** shell, and a new terminal, an SSH
+reconnect or `sudo` (see [Check your Docker](#check-your-docker)) starts without
+it. The same file is what the [image updater](#upgrading) reads, so an update run
+from another session — or by the [host updater](#the-host-updater-optional) —
+uses the same database and the same image source. `POSTGRES_DB` and
+`POSTGRES_USER` are the dangerous pair: they have defaults, so when they go
+missing nothing fails — you silently get a database with a different name and
+owner from the ones the installer was told.
+
+!!! warning "`.dedalo.env`, never `.env`"
+    Do not name the file `.env`, and do not create a `.env` at the repo root at
+    all. Compose would read it on its own — but so would the engine's own
+    configuration loader, from the container's working directory. `.dedalo.env`
+    is read only when a command names it.
 
 ### Step 3 — Set your domain and the ops keys
 
@@ -385,24 +530,64 @@ For a public domain, bind-mount your certbot tree instead — [TLS](#tls) below.
     checkout is a different matter: it can travel. If one already has,
     [rotate it](#rotating-tls-material).
 
-### Step 5 — Build the image
+### Step 5 — Get the image
+
+Decide [where the image comes from](#choose-where-the-image-comes-from), record
+it in `.dedalo.env`, and get it. The version is the one this checkout declares;
+the host library prints it:
 
 ```shell
-docker compose build
+bash -c '. deploy/dedalo-image-lib.sh && dedalo_checkout_version .'    # e.g. 7.0.1
+```
+
+In the blocks below, replace `<repository>` and `<version>` with the values
+themselves **before** you run them; the five keys are explained in [the
+`.dedalo.env` keys](#the-dedaloenv-keys).
+
+**Pull a published image** — the repository from [Dédalo's
+registries](#dedalos-registries) (or [your own](#a-registry-of-your-own)), at that
+version:
+
+```shell
+cat >> .dedalo.env <<'ENV'
+DEDALO_COMPOSE_FILE=docker-compose.yml
+DEDALO_IMAGE=<repository>
+DEDALO_VERSION=<version>
+DEDALO_IMAGE_MODE=pull
+DEDALO_IMAGE_VERIFY=cosign
+ENV
+docker compose --env-file .dedalo.env pull dedalo backup
+```
+
+Then [check its signature](#checking-the-signature) — or write
+`DEDALO_IMAGE_VERIFY=none` if you will not install `cosign`. *manifest unknown*
+means that registry does not publish that version: pick another registry, or
+build.
+
+**Or build it here** from this checkout:
+
+```shell
+cat >> .dedalo.env <<'ENV'
+DEDALO_COMPOSE_FILE=docker-compose.yml
+DEDALO_IMAGE=localhost/dedalo
+DEDALO_VERSION=<version>
+DEDALO_IMAGE_MODE=build
+DEDALO_IMAGE_VERIFY=none
+ENV
+docker compose -f docker-compose.yml -f deploy/compose.build.yml --env-file .dedalo.env build dedalo
 ```
 
 Slow the first time: the media toolchain and the PostgreSQL client are a large
 apt transaction. Re-builds after a source change reuse the dependency layer.
 
-The Dockerfile is multi-stage and this command builds `production` — the
-default, production dependencies only. There is one other target, `dev`, which
-is that same image with the devDependencies put back (the browser test harness
-and the LESS compiler); it exists for a development box and is not part of any
-install path. `docker compose build` takes no `--target` flag: the target comes
-from the compose file (a dev overlay sets it), or from a plain
-`docker build --target dev .`. That overlay also sets `DEDALO_DEV_MODE=true`, and
-the test harness needs BOTH — the serving guard refuses a dev-only library
-outside dev mode however present its files are.
+The Dockerfile is multi-stage and both paths give you `production` — production
+dependencies only. There is one other target, `dev`, which is that same image
+with the devDependencies put back (the browser test harness and the LESS
+compiler); it exists for a development box and is not part of any install path.
+It is never published, and the build override does not select it: a dev overlay
+sets it, or a plain `docker build --target dev .`. That overlay also sets
+`DEDALO_DEV_MODE=true`, and the test harness needs BOTH — the serving guard
+refuses a dev-only library outside dev mode however present its files are.
 
 ??? tip "Check the runtime pin if the build behaves oddly"
     ```shell
@@ -410,12 +595,13 @@ outside dev mode however present its files are.
     grep '^FROM' Dockerfile
     ```
     The two must agree. The engine also warns loudly at boot when they do not.
+    A published image always carries a matching pair.
 
 ### Step 6 — Start the database alone
 
 ```shell
-docker compose up -d postgres
-docker compose ps          # wait for postgres → healthy
+docker compose --env-file .dedalo.env up -d postgres
+docker compose --env-file .dedalo.env ps          # wait for postgres → healthy
 ```
 
 This creates an **empty database owned by the role**, which is exactly the
@@ -426,7 +612,7 @@ lets the seed create its extensions.
 ### Step 7 — Run the installer, once
 
 ```shell
-docker compose run --rm \
+docker compose --env-file .dedalo.env run --rm \
   -e DEDALO_INSTALL_ROOT_PASSWORD='the-root-password' dedalo \
   bun run scripts/install.ts \
     --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" \
@@ -488,29 +674,29 @@ do next:**
 !!! danger "Past the seed restore, this step is not repeatable"
     The seed restore refuses a non-empty database. If the install fails at or
     after it, do not re-run it against the same volumes: destroy them
-    (`docker compose down -v` — **this deletes the data**) and start from step 6.
+    (`docker compose --env-file .dedalo.env down -v` — **this deletes the data**) and start from step 6.
 
 !!! note "`install failed` at `→ directories`, naming `/backups/db`"
     The `backups` volume is owned by root, so the installer (user `bun`) cannot
     write to it. Images built before 2026-10-08 created that volume root-owned.
-    Rebuild from a current checkout (`docker compose build`) and run step 7
+    Get a current image ([step 5](#step-5-get-the-image)) and run step 7
     again: Docker gives an empty volume the ownership of the image's directory,
-    so the rebuild heals it. Without a rebuild, one command does the same:
-    `docker compose run --rm --no-deps --user root dedalo chown -R bun:bun /backups`.
+    so a current image heals it. Without one, one command does the same:
+    `docker compose --env-file .dedalo.env run --rm --no-deps --user root dedalo chown -R bun:bun /backups`.
 
 ### Step 8 — Start the whole stack
 
 ```shell
-docker compose up -d
-docker compose ps
+docker compose --env-file .dedalo.env up -d
+docker compose --env-file .dedalo.env ps
 ```
 
 `postgres` and `dedalo` should report *healthy*. `nginx` has no healthcheck —
-check it with `docker compose logs nginx`, and read its **PORTS** column: it
+check it with `docker compose --env-file .dedalo.env logs nginx`, and read its **PORTS** column: it
 must show `0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp` (or your override's
 ports). An **empty** PORTS column means nothing is published and no browser can
 reach the stack — usually a broken `docker-compose.override.yml`. Fix it, then
-`docker compose up -d --force-recreate nginx`.
+`docker compose --env-file .dedalo.env up -d --force-recreate nginx`.
 
 **The engine's healthcheck also acts.** It is not a bare `curl` but
 `scripts/ops/container_watchdog.sh`, which probes `/health` over the socket,
@@ -527,7 +713,7 @@ not the 30 seconds of the systemd deployment.
 ### Step 9 — Confirm the engine answers
 
 ```shell
-docker compose exec dedalo curl --fail --unix-socket /run/dedalo/dedalo_ts.sock \
+docker compose --env-file .dedalo.env exec dedalo curl --fail --unix-socket /run/dedalo/dedalo_ts.sock \
   http://localhost/health                       # {"result":"ok","db":"ok"}
 curl -k -I https://localhost/dedalo/core/page/  # 200 through the proxy
 ```
@@ -567,7 +753,7 @@ it.
 **1. Check that the engine wrote the rule files** on its first boot:
 
 ```shell
-docker compose exec dedalo ls -l /srv/dedalo/media/dedalo_media_protection.nginx.conf \
+docker compose --env-file .dedalo.env exec dedalo ls -l /srv/dedalo/media/dedalo_media_protection.nginx.conf \
                                 /srv/dedalo/media/dedalo_media_protection_map.nginx.conf
 ```
 
@@ -603,8 +789,8 @@ grep -n 'include /srv/dedalo/media' deploy/nginx.conf
 **3. Recreate the proxy** — recreate, not `reload`:
 
 ```shell
-docker compose up -d --force-recreate nginx
-docker compose exec nginx nginx -t
+docker compose --env-file .dedalo.env up -d --force-recreate nginx
+docker compose --env-file .dedalo.env exec nginx nginx -t
 ```
 
 !!! warning "Why `reload` is not enough after editing `deploy/nginx.conf`"
@@ -618,7 +804,7 @@ docker compose exec nginx nginx -t
 **4. Confirm the running nginx has the gate:**
 
 ```shell
-docker compose exec nginx nginx -T 2>/dev/null \
+docker compose --env-file .dedalo.env exec nginx nginx -T 2>/dev/null \
   | grep -n -E 'dedalo_media_protection|location .*/dedalo/media'
 ```
 
@@ -638,11 +824,11 @@ for a request it refuses. Check them in this order:
    image thumbnails) are produced afterwards by a background job. Compare:
 
     ```shell
-    docker compose exec nginx ls -l /srv/dedalo/media/av/original/ /srv/dedalo/media/av/404/
+    docker compose --env-file .dedalo.env exec nginx ls -l /srv/dedalo/media/av/original/ /srv/dedalo/media/av/404/
     ```
 
     The original present and the derivative missing is a transcoding problem —
-    read `docker compose logs dedalo`, not the proxy.
+    read `docker compose --env-file .dedalo.env logs dedalo`, not the proxy.
 3. **The browser has no media cookie.** Access is granted by the
    `dedalo_media_auth` cookie, set at **login**, matching a file in
    `/srv/dedalo/media/.publication/auth/`. A session opened before the gate was
@@ -664,7 +850,7 @@ A **403** is a different problem: nginx's workers are not in the engine's group
 ## Path B — install with the browser wizard
 
 Same engine, driven from a browser. It replaces Path A's steps 6–7 only:
-**steps 1–5 are identical** (source, credentials, domain, TLS, build), and once
+**steps 1–5 are identical** (source, credentials, domain, TLS, image), and once
 the wizard says *Finish* you rejoin Path A at [step
 10](#step-10-turn-the-media-gate-on).
 
@@ -686,7 +872,8 @@ nobody at all — nginx forwards your browser's real address, which is never the
 loopback of the engine's namespace — so Path B does not work until you say who
 you are. Set it in the `dedalo` service's `environment:` **before** the stack
 ever comes up (the shipped compose file already passes the variable through, so
-exporting it is enough):
+exporting it — or adding `DEDALO_INSTALL_ALLOWED_IPS=…` to `.dedalo.env` — is
+enough):
 
 ```yaml
 environment:
@@ -717,8 +904,8 @@ Install mode is not a flag; it is the **absence of `/private/.env`**. So this
 only works on a first run, or after you have destroyed the volume.
 
 ```shell
-docker compose up -d
-docker compose logs dedalo | grep 'INSTALL MODE'
+docker compose --env-file .dedalo.env up -d
+docker compose --env-file .dedalo.env logs dedalo | grep 'INSTALL MODE'
 ```
 
 You want to see the engine announce it:
@@ -730,7 +917,7 @@ Serving the install wizard at /dedalo/core/page/.
 
 No such line means `.env` already exists and you are looking at a normal boot —
 the wizard will not appear. Check with
-`docker compose exec dedalo cat /private/.env`.
+`docker compose --env-file .dedalo.env exec dedalo cat /private/.env`.
 
 In install mode the engine skips every database-dependent boot step, so
 `postgres` starting healthy is all the database needs to do at this point.
@@ -763,7 +950,7 @@ compose equivalent of systemd's `Restart=always`, and it restarts on the planned
 exit code the same way it restarts on a crash.
 
 ```shell
-docker compose logs -f dedalo      # watch it exit and come straight back
+docker compose --env-file .dedalo.env logs -f dedalo      # watch it exit and come straight back
 ```
 
 Leave the browser tab open. The wizard survives the restart: the **Verify**
@@ -774,7 +961,7 @@ dropping to a login form. The state that makes this work is `install_status` in
 !!! danger "A container that does not come back was never supervised"
     If you removed `restart: unless-stopped`, the engine exits at *Save config*
     and stays down — the install hangs there with `.env` written and nothing
-    serving. Restore the policy and `docker compose up -d`; the wizard resumes.
+    serving. Restore the policy and `docker compose --env-file .dedalo.env up -d`; the wizard resumes.
 
 ### B5 — Finish, and confirm the surface is sealed
 
@@ -787,7 +974,7 @@ Once sealed, the whole install surface answers `404` permanently, and
 `any`, drop it now rather than later).
 
 ```shell
-docker compose exec dedalo cat /private/ts_state.json   # install_status: "sealed"
+docker compose --env-file .dedalo.env exec dedalo cat /private/ts_state.json   # install_status: "sealed"
 ```
 
 ### B6 — Rejoin Path A
@@ -811,14 +998,21 @@ is the [configuration reference](../config/index.md).
     `docker-compose.simple.yml`. Keep it if you write your own stack. It belongs in
     the compose file, never in `/private/.env`: the engine reads this key from the
     process environment only and ignores it in `.env`. On an image install the
-    [code update panel](../management/updates/updating_code.md) still refuses to
-    swap the code tree in place — a new release arrives as a new image, as
-    described in [upgrading](#upgrading).
+    [code update panel](../management/updates/updating_code.md) does not swap the
+    code tree in place — a new release arrives as a new image. The panel shows
+    which, and the command that installs it, as described in
+    [upgrading](#upgrading).
+
+The `dedalo` service also declares where its image came from
+(`DEDALO_CONTAINER_IMAGE`, `DEDALO_CONTAINER_IMAGE_MODE`, mirrored from
+`.dedalo.env`) and where it publishes its client (`DEDALO_CLIENT_PUBLISH_DIR`).
+Keep all three: the panel reads the first two, and without the third nginx serves
+an empty `client` volume.
 
 To read what the installer actually wrote:
 
 ```shell
-docker compose exec dedalo cat /private/.env
+docker compose --env-file .dedalo.env exec dedalo cat /private/.env
 ```
 
 ## TLS
@@ -830,7 +1024,7 @@ docker compose exec dedalo cat /private/.env
 - **Real deployment:** bind-mount your certbot tree instead, and change the
   `server_name` and the certificate paths in `deploy/nginx.conf`. Renewal
   happens on the host; reload the proxy afterwards
-  (`docker compose exec nginx nginx -s reload`).
+  (`docker compose --env-file .dedalo.env exec nginx nginx -s reload`).
 - **Local trial:** the local authority from [step 4](#step-4-provide-a-tls-certificate).
 
 TLS is not optional even locally: `SESSION_COOKIE_SECURE` defaults to `true`, so
@@ -854,7 +1048,7 @@ deploy/dedalo-tls-rotate.sh --mode existing \
 
 Pass `--compose-file docker-compose.yml` on this page's full stack (the script
 defaults to the simple stack) so it can reload the proxy for you; it tells you
-when it could not, and `docker compose exec nginx nginx -s reload` finishes the
+when it could not, and `docker compose --env-file .dedalo.env exec nginx nginx -s reload` finishes the
 job. **The full stack's proxy does not reload itself**, so until you reload it,
 it keeps serving the old certificate.
 
@@ -896,18 +1090,18 @@ What the script does, and why each part matters:
 ## Day-to-day operation
 
 ```shell
-docker compose logs -f dedalo        # follow the engine
-docker compose restart dedalo        # after an ops env change
-docker compose exec dedalo bash      # a shell in the engine container
-docker compose stop                  # stop, keep the data
-docker compose down                  # remove containers, KEEP the volumes
-docker compose down -v               # remove the volumes too — DESTROYS the instance
+docker compose --env-file .dedalo.env logs -f dedalo        # follow the engine
+docker compose --env-file .dedalo.env restart dedalo        # after an ops env change
+docker compose --env-file .dedalo.env exec dedalo bash      # a shell in the engine container
+docker compose --env-file .dedalo.env stop                  # stop, keep the data
+docker compose --env-file .dedalo.env down                  # remove containers, KEEP the volumes
+docker compose --env-file .dedalo.env down -v               # remove the volumes too — DESTROYS the instance
 ```
 
-A configuration change in `docker-compose.yml` needs `docker compose up -d`
+A configuration change in `docker-compose.yml` needs `docker compose --env-file .dedalo.env up -d`
 (recreate), not `restart` — `restart` reuses the existing container and its
 old environment. An edit of `deploy/nginx.conf` needs
-`docker compose up -d --force-recreate nginx`: a `reload` can keep serving the
+`docker compose --env-file .dedalo.env up -d --force-recreate nginx`: a `reload` can keep serving the
 old file (see [step 10](#step-10-turn-the-media-gate-on)).
 
 ## Backups from a container
@@ -918,7 +1112,7 @@ by `name:` in the compose file) — confirm with `docker volume ls`.
 
 ```shell
 # 1. The matrix database.
-docker compose exec -T postgres \
+docker compose --env-file .dedalo.env exec -T postgres \
   pg_dump -F c -b -U "$POSTGRES_USER" "$POSTGRES_DB" > backup_$(date +%F).custom
 
 # 2. The RAG vector database (profile `rag`), if enabled — same shape.
@@ -939,30 +1133,195 @@ docker run --rm -v dedalo_private:/private -v "$PWD:/out" alpine \
 
 ## Upgrading
 
+A container installation updates by replacing its **image** — the code lives
+inside it, so there is no tree to swap. One script does the whole update, from
+the stack directory (the one holding `.dedalo.env`):
+
 ```shell
-git pull
-docker compose build
-docker compose up -d
+./deploy/dedalo-image-update.sh --version 7.0.2
 ```
 
-- **Boot migrations run automatically** when the engine starts. There is no
-  separate migrate step.
-- **The seed is never re-applied.** The restore refuses a non-empty database, and
-  after the first install the database is not empty. An upgrade cannot clobber
-  your data by re-running the installer.
-- **Check the runtime pin.** The `Dockerfile`'s base tag and the repo's
-  `.bun-version` must agree; the engine warns loudly at boot when they do not.
+The version is a release the code server lists — the
+[code update panel](../management/updates/updating_code.md) shows them, with their
+release notes and this exact command — or a `X.Y.Z-dev` developer image. What the
+script does, in order, each step refusing before the next one changes anything:
 
-The full upgrade procedure, including rollback, is in [upgrading](upgrading.md).
+1. **Reads `.dedalo.env`** to know where the image comes from — the repository,
+   pull or build, whether to check the signature. If the file does not say, it
+   prints the exact lines to add and stops (see [an installation from before the
+   image pin](#an-installation-from-before-the-image-pin)).
+2. **Checks the version**: it must move forward from the pinned `DEDALO_VERSION`
+   (the same version only for a `-dev` image), and the running engine must agree
+   it is the next step on the upgrade path — the rule the panel applies on any
+   other installation.
+3. **Takes a database backup** through the stack's `backup` service and checks it
+   is readable (`/backups/db/<time>.<database>.postgresql_pre-image-update.custom.backup`). There is no update without it;
+   `--no-backup` waives it, and is never the default.
+4. **Keeps the running image** under a `rollback-<time>` tag.
+5. **Gets the new image**: `pull` mode pulls `<DEDALO_IMAGE>:<version>` and, with
+   `DEDALO_IMAGE_VERIFY=cosign`, refuses it unless Dédalo's signature checks out;
+   `build` mode checks out the release tag `v<version>` in this checkout and builds
+   it with `deploy/compose.build.yml`.
+6. **Re-pins `DEDALO_VERSION`** in `.dedalo.env` — the only line it changes.
+7. **Recreates `dedalo` and `backup`** — never `postgres` or `nginx` — and waits for
+   the engine's healthcheck, up to 15 minutes (`--health-timeout`), since boot
+   migrations on a large database take time. While they run, `docker compose ps`
+   may already show the engine as *unhealthy* (Docker gives up waiting after about
+   two minutes); the script keeps waiting until the engine answers or the 15
+   minutes are over. It stops waiting early only if the engine process crashes and
+   restarts.
+8. **Healthy**: done, and only the newest rollback tag is kept. **Not healthy**:
+   it puts the previous image back under its old version, re-pins it, brings it
+   up and waits again, and says *rolled back* — or, if even that is not healthy,
+   *rollback failed* with the path of the backup it took.
+
+It exits `0` only when the new version is up and healthy.
+
+- **Boot migrations run automatically** when the engine starts. There is no
+  separate migrate step. A rollback across a release that added a migration may
+  need the database backup the script took.
+- **The seed is never re-applied.** The restore refuses a non-empty database, and
+  after the first install the database is not empty. An update cannot clobber
+  your data by re-running the installer.
+- **The client follows the image.** The new engine publishes its own client into
+  the `client` volume before it serves, so the browser never gets a client from
+  another version. Reload open pages after an update.
+- **Host-side files come from your checkout, not from the image**: `deploy/`, the
+  compose files, the proxy configuration. When a release's notes say they
+  changed, `git pull` the checkout as well (in `pull` mode the script does not
+  touch it).
+- **One update at a time**: a second run while one is in progress refuses.
+
+The full upgrade procedure, including what to read before a major version, is in
+[upgrading](upgrading.md).
+
+### Rolling back by hand
+
+The script rolls back on its own only while the update is running. If a problem
+shows up later — the update went green, and a day after you find a regression —
+go back by hand. The script itself refuses to move to an older version, so this is
+the one time you edit `DEDALO_VERSION` yourself:
+
+1. **Make sure the old image is on this host.** `docker image ls <DEDALO_IMAGE>`
+   lists it as `<DEDALO_IMAGE>:<previous version>`. If that tag is gone, the last
+   update kept the image it replaced as `rollback-<time>`: put the version back on
+   it with `docker tag <DEDALO_IMAGE>:rollback-<time> <DEDALO_IMAGE>:<previous version>`.
+   In `pull` mode you can also just pull `<DEDALO_IMAGE>:<previous version>` again.
+2. **Re-pin it**: set `DEDALO_VERSION=<previous version>` in `.dedalo.env`.
+3. **In `build` mode, return the checkout** to where it was before the update
+   (the script left it detached at `v<new version>`): `git checkout master` (or
+   your branch), so the next update starts from a normal checkout.
+4. **Restore the database only if the newer release migrated it** in a way the
+   older one cannot read (its release notes say so) — and before the older
+   engine starts on it. Stop the engine
+   (`docker compose --env-file .dedalo.env stop dedalo`), then restore the dump
+   the update took, `/backups/db/<time>.<database>.postgresql_pre-image-update.custom.backup`
+   in the `backups` volume, with the engine's restore door as described in
+   [restore a backup](../management/backup.md#restore-a-backup-for-the-work-system).
+   Everything recorded since that update is lost with it.
+5. **Recreate the engine** — and only it and the backup service:
+
+    ```shell
+    docker compose --env-file .dedalo.env up -d --no-build dedalo backup
+    ```
+
+### An installation from before the image pin
+
+Stacks from before 2026-10 built their image with a bare `docker compose build`
+and have no image keys in `.dedalo.env` (the full stack may have no `.dedalo.env`
+at all). The current compose files no longer build on their own, so such an
+installation needs the keys once — the script refuses with these exact lines
+until they are there. For an installation that built its image here, add:
+
+```shell
+DEDALO_COMPOSE_FILE=docker-compose.yml
+DEDALO_IMAGE=localhost/dedalo
+DEDALO_VERSION=7.0.1
+DEDALO_IMAGE_MODE=build
+DEDALO_IMAGE_VERIFY=none
+```
+
+`DEDALO_COMPOSE_FILE` is `docker-compose.simple.yml` on the simple stack, and
+`DEDALO_VERSION` is the version this checkout declares (the script prints it).
+(On the full stack, also the three `POSTGRES_*` lines of [step
+2](#step-2-choose-the-database-credentials).) Then build once under the new name
+and recreate the engine:
+
+```shell
+docker compose -f docker-compose.yml -f deploy/compose.build.yml --env-file .dedalo.env build dedalo
+docker compose --env-file .dedalo.env up -d
+```
+
+From then on, `./deploy/dedalo-image-update.sh` updates it. The first update from
+an image built before the update channel existed needs
+`--skip-version-check`: that image cannot answer the version question yet. To
+move to a published image instead, set `DEDALO_IMAGE` to a registry from
+[the table](#dedalos-registries) and `DEDALO_IMAGE_MODE=pull` before that update.
+
+### The host updater (optional)
+
+With the host updater installed, the *Update code* panel offers **Request this
+update** instead of only showing the command: an administrator chooses the
+release in the browser, and the host runs the same script within about a minute.
+It is **off by default**, and the update works the same without it.
+
+```shell
+sudo ./deploy/dedalo-image-updater.sh install-units
+```
+
+That writes `/etc/systemd/system/dedalo-image-updater.service` and `.timer` with
+this stack's path in them, and starts the timer: one pass a minute, run as the
+owner of the checkout (who must be in the `docker` group; `--user` names another
+account). `print-units` shows the two files without installing anything. The
+stack path must be plain — no spaces or quotes.
+
+Each pass tells the engine it is alive (the panel shows *Host updater: running*),
+then looks for a request. When it finds one, it re-checks it on the host — a
+version tag, never a downgrade from the pinned version — and runs
+`./deploy/dedalo-image-update.sh --version <version>` with its backup, health
+check and rollback. The outcome appears in the panel (*updated*, *rolled back*,
+…). A pass that finds nothing to do does nothing.
+
+What it may and may not do:
+
+- **The panel only asks for a version.** The repository, pull or build, signature
+  checking and every flag come from `.dedalo.env` and the script — the engine
+  cannot choose them, and it is never given access to Docker. A request still
+  needs the superuser, maintenance mode and the normal upgrade path.
+- **Never onto developer images from a release.** A request for an `X.Y.Z-dev`
+  image is accepted only when the installation already runs one. Moving a
+  release installation onto unreleased code is something you do on the host
+  yourself, once: `./deploy/dedalo-image-update.sh --version X.Y.Z-dev`.
+- **Never without a backup.** The host updater never waives the backup or the
+  version check.
+- **An interrupted update is reported, not repeated.** If the host restarts in
+  the middle, the next pass records the request as *interrupted*; request it
+  again from the panel once you have looked at why.
+
+On a host without systemd (a NAS, for instance), run the pass from the
+checkout owner's crontab instead:
+
+```shell
+* * * * * cd /path/to/master_dedalo && ./deploy/dedalo-image-updater.sh >>/path/to/dedalo-image-updater.log 2>&1
+```
+
+To turn it off:
+
+```shell
+sudo ./deploy/dedalo-image-updater.sh uninstall-units
+```
+
+The panel then shows the host updater as *not heard from recently* and goes back
+to showing the command.
 
 ## Verify
 
 ```shell
-docker compose ps                       # every service healthy
-docker compose exec dedalo curl --fail --unix-socket /run/dedalo/dedalo_ts.sock \
+docker compose --env-file .dedalo.env ps                       # every service healthy
+docker compose --env-file .dedalo.env exec dedalo curl --fail --unix-socket /run/dedalo/dedalo_ts.sock \
   http://localhost/health               # {"result":"ok","db":"ok"}
 curl -k -I https://localhost/dedalo/core/page/
-docker compose logs -f dedalo
+docker compose --env-file .dedalo.env logs -f dedalo
 ```
 
 ## When it does not work
@@ -972,12 +1331,17 @@ Container-specific symptoms; everything else is in
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `required variable POSTGRES_PASSWORD is missing a value` | the variable is not exported in this shell — or you ran `sudo docker …`, which drops it | [step 2](#step-2-choose-the-database-credentials), [check your Docker](#check-your-docker) |
+| `required variable POSTGRES_PASSWORD is missing a value` | the command has no `--env-file .dedalo.env`, or `.dedalo.env` lacks the credentials | [step 2](#step-2-choose-the-database-credentials) |
+| `pull access denied for localhost/dedalo`, or *No such image: localhost/dedalo* | the installation builds its image here (`DEDALO_IMAGE_MODE=build`) and that version was never built on this host — or the command has no `--env-file .dedalo.env` and fell back to the defaults | build it — [a local build](#a-local-build) — or add the flag |
+| `manifest unknown` (or *not found*) pulling a Dédalo image | that registry does not publish that version — no release image yet, a typo, or a `-dev` tag nobody built | pick a version from the panel's list, another registry, or [build it here](#a-local-build) |
+| `dedalo-image-update.sh` refuses: `.dedalo.env does not say where this installation's image comes from` | an installation from before the image pin | [add the keys once](#an-installation-from-before-the-image-pin) |
+| The panel shows the host updater as *not heard from recently* | its timer stopped, Docker or the host is down, or it was uninstalled | `systemctl status dedalo-image-updater.timer` and `journalctl -u dedalo-image-updater` — [the host updater](#the-host-updater-optional) |
+| Pages break in odd ways right after an update | a browser tab still holds the previous client | reload the page; the engine republishes the client of its own image at every start |
 | `failed to bind host port 0.0.0.0:80/tcp: address already in use` | a web server on the host already holds port 80 or 443 | [check the host](#check-the-host) |
 | `install failed` at `→ directories`, naming `/backups/db` | the `backups` volume is root-owned (images built before 2026-10-08) | [step 7](#step-7-run-the-installer-once) |
 | The browser cannot connect at all; `docker compose ps` shows an **empty** PORTS column for `nginx` | nothing is published — usually a broken `docker-compose.override.yml` | [step 8](#step-8-start-the-whole-stack) |
 | The browser cannot connect, PORTS look right | the wrong address (`192.168.65.x` is Docker Desktop's internal network), or a NAT VM without port forwarding | [step 9](#step-9-confirm-the-engine-answers) |
-| `nginx -t`: `open() "/run/nginx.pid" failed (13: Permission denied)` | you ran the **host's** nginx, not the container's | `docker compose exec nginx nginx -t` — [two places](#two-places-your-host-and-the-containers) |
+| `nginx -t`: `open() "/run/nginx.pid" failed (13: Permission denied)` | you ran the **host's** nginx, not the container's | `docker compose --env-file .dedalo.env exec nginx nginx -t` — [two places](#two-places-your-host-and-the-containers) |
 | Uploads work but every media file is a **404** | the gate is not on: the `include` lines are still commented — in the file, or only in the running container after a `reload` | [step 10](#step-10-turn-the-media-gate-on), then [step 11](#step-11-prove-media-is-actually-served) |
 | Every request is a **502** | the proxy cannot write to the socket | the socket volume must be shared, and the engine must grant the socket `0666` itself — [problem 2](#2-the-socket-is-invisible-across-containers) |
 | `nginx` restarts forever | missing certificate, or one `include` uncommented without the other | [step 4](#step-4-provide-a-tls-certificate), [step 10](#step-10-turn-the-media-gate-on) |

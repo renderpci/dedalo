@@ -38,6 +38,11 @@ import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { detectDeploymentChannel } from '../../src/core/update/channel.ts';
 import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
 import { backupRootIsInsideTree } from '../../src/core/update/code_update.ts';
+import {
+	type ImageRegistryList,
+	loadImageRegistries,
+	provisionedRegistries,
+} from '../../src/core/update/image_registries.ts';
 import { INSTALL_STAMP_PATH } from '../../src/core/update/install_stamp.ts';
 import { backupFreshness } from '../../src/core/update/preconditions.ts';
 import {
@@ -566,5 +571,295 @@ describe('archive symlink names', () => {
 			);
 			expect(tracked.exitCode, `${name} is not a tracked path`).toBe(0);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// consumer.image — the image-channel block (installer unification D3,
+// 2026-10-09; WC-2026-10-09-update-code-image-channel)
+// ---------------------------------------------------------------------------
+
+describe('consumer.image: present ONLY on the image channel, and it never throws', () => {
+	const NOW = new Date('2026-10-09T12:00:00.000Z');
+	const ago = (seconds: number) => new Date(NOW.getTime() - seconds * 1000).toISOString();
+	const channelDirs: string[] = [];
+	afterAll(() => {
+		for (const dir of channelDirs) rmSync(dir, { recursive: true, force: true });
+	});
+
+	/** A scratch channel dir holding the given files (raw strings are written verbatim). */
+	function channelDir(files: Record<string, unknown> = {}): string {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_status_image_channel_'));
+		channelDirs.push(dir);
+		for (const [name, body] of Object.entries(files)) {
+			writeFileSync(join(dir, name), typeof body === 'string' ? body : JSON.stringify(body));
+		}
+		return dir;
+	}
+
+	const getter =
+		(image: string | undefined, mode: string | undefined) =>
+		(key: 'DEDALO_CONTAINER_IMAGE' | 'DEDALO_CONTAINER_IMAGE_MODE') =>
+			key === 'DEDALO_CONTAINER_IMAGE' ? image : mode;
+
+	const beat = (secondsAgo: number, interval = 60) => ({
+		schema: 1,
+		interval_seconds: interval,
+		mode: 'pull',
+		image: 'ghcr.io/dedalia-org/dedalo',
+		pinned: '7.0.0',
+		verify: 'cosign',
+		running_digest: null,
+		seen_at: ago(secondsAgo),
+	});
+
+	const REQUEST = {
+		schema: 1,
+		id: '0b9f1c2e-6d4a-4c1b-9a8e-3f2d1c0b9a8e',
+		tag: '7.0.1',
+		version: '7.0.1',
+		channel: 'master',
+		from_version: '7.0.0',
+		requested_at: ago(30),
+		requested_by: -1,
+	};
+
+	const OUTCOME = {
+		schema: 1,
+		request_id: REQUEST.id,
+		from: '7.0.0',
+		to: '7.0.1',
+		mode: 'pull',
+		image: 'ghcr.io/dedalia-org/dedalo',
+		status: 'rolled_back',
+		detail: 'health_timeout',
+		backup: '/backups/db/x.custom.backup',
+		digest: null,
+		started_at: '2026-10-09T11:00:00Z',
+		finished_at: '2026-10-09T11:20:00Z',
+		recorded_at: '2026-10-09T11:20:01.000Z',
+	};
+
+	function imagePanel(dir: string, image = 'ghcr.io/dedalia-org/dedalo', mode = 'pull') {
+		return consumerStatus(superuser, {
+			backupDir: PANEL_BACKUP_DIR,
+			waitMs: 60_000,
+			channel: 'image',
+			image: { sourceGetter: getter(image, mode), dir, now: NOW },
+		});
+	}
+
+	test('tree_swap (the seam, and this real checkout): no `image` key at all', async () => {
+		const seamed = await consumerStatus(superuser, {
+			backupDir: PANEL_BACKUP_DIR,
+			waitMs: 60_000,
+			channel: 'tree_swap',
+			image: { dir: channelDir({ 'host_updater.json': beat(5) }), now: NOW },
+		});
+		expect('image' in seamed).toBe(false);
+		// the real filesystem of a dev checkout is tree_swap too (positive control
+		// that the default path asks channel.ts, not the seam)
+		expect(detectDeploymentChannel(projectRoot)).toBe('tree_swap');
+		expect('image' in (await panel(superuser))).toBe(false);
+	});
+
+	test('image: the block is present, and `checks` / `ready` are the tree-swap truth unchanged', async () => {
+		const status = await imagePanel(channelDir());
+		expect(status.image).toBeDefined();
+		const channel = byId(status.checks, 'channel');
+		expect(channel).toEqual({ id: 'channel', state: 'blocked', detail: 'image' });
+		expect(status.ready).toBe(false);
+		expect(status.image?.update_command).toEqual({
+			program: 'deploy/dedalo-image-update.sh',
+			version_flag: '--version',
+		});
+		// the command names a program that exists in this tree
+		expect(existsSync(join(projectRoot, status.image?.update_command.program ?? ''))).toBe(true);
+	});
+
+	test('source: every provisioned official entry of the REAL list is named as itself', async () => {
+		const provisioned = provisionedRegistries(loadImageRegistries());
+		// anti-vacuity: the list publishes somewhere (GHCR is provisioned from day one)
+		expect(provisioned.length).toBeGreaterThan(0);
+		const dir = channelDir();
+		for (const entry of provisioned) {
+			const source = (await imagePanel(dir, entry.repository as string)).image?.source;
+			expect(source).toEqual({
+				mode: 'pull',
+				repository: entry.repository,
+				official: { id: entry.id, label: entry.label, role: entry.role },
+			});
+		}
+	});
+
+	test('source: primary vs mirror vs custom, a build, and an invalid declaration', async () => {
+		const dir = channelDir();
+		const list = (): ImageRegistryList => ({
+			schema: 1,
+			signing: { issuer: 'https://issuer.example', identity_regexp: '^x$' },
+			ci: { staging_repository: 'ghcr.io/test/dedalo-build' },
+			registries: [
+				{
+					id: 'ours',
+					label: 'Ours',
+					role: 'primary',
+					repository: 'registry.test.example/dedalo/dedalo',
+					provisioned: true,
+					reason: null,
+					auth: { kind: 'github_token' },
+				},
+				{
+					id: 'mirror',
+					label: 'Mirror',
+					role: 'mirror',
+					repository: 'ghcr.io/test/dedalo',
+					provisioned: true,
+					reason: null,
+					auth: { kind: 'github_token' },
+				},
+				{
+					id: 'later',
+					label: 'Later',
+					role: 'mirror',
+					repository: null,
+					provisioned: false,
+					reason: 'not yet',
+					auth: { kind: 'github_token' },
+				},
+			],
+		});
+		const seamed = async (image: string) =>
+			(
+				await consumerStatus(superuser, {
+					backupDir: PANEL_BACKUP_DIR,
+					waitMs: 60_000,
+					channel: 'image',
+					image: { sourceGetter: getter(image, 'pull'), registries: list, dir, now: NOW },
+				})
+			).image?.source.official;
+		expect(await seamed('registry.test.example/dedalo/dedalo')).toEqual({
+			id: 'ours',
+			label: 'Ours',
+			role: 'primary',
+		});
+		expect(await seamed('GHCR.IO/test/dedalo')).toBeNull(); // not a valid (lowercase) reference
+		expect(await seamed('ghcr.io/test/dedalo')).toEqual({
+			id: 'mirror',
+			label: 'Mirror',
+			role: 'mirror',
+		});
+		expect(await seamed('ghcr.io/test/other')).toBeNull();
+		const custom = (await imagePanel(dir, 'registry.example.org/museum/dedalo')).image?.source;
+		expect(custom?.official).toBeNull();
+		expect(custom?.repository).toBe('registry.example.org/museum/dedalo');
+		const build = (await imagePanel(dir, 'localhost/dedalo', 'build')).image?.source;
+		expect(build).toEqual({ mode: 'build', repository: 'localhost/dedalo', official: null });
+		const invalid = (await imagePanel(dir, 'ghcr.io/dedalia-org/dedalo:7.0.1', 'sideload')).image
+			?.source;
+		expect(invalid).toEqual({ mode: null, repository: null, official: null });
+	});
+
+	test('an unreadable registry list degrades `official` to null, never a throw', async () => {
+		const status = await consumerStatus(superuser, {
+			backupDir: PANEL_BACKUP_DIR,
+			waitMs: 60_000,
+			channel: 'image',
+			image: {
+				sourceGetter: getter('ghcr.io/dedalia-org/dedalo', 'pull'),
+				registries: () => {
+					throw new Error('broken list');
+				},
+				dir: channelDir(),
+				now: NOW,
+			},
+		});
+		expect(status.image?.source.official).toBeNull();
+		expect(status.image?.source.repository).toBe('ghcr.io/dedalia-org/dedalo');
+	});
+
+	test('host updater: absent, alive and stale at the max(3 × interval, 180 s) threshold', async () => {
+		const state = async (files: Record<string, unknown>) =>
+			(await imagePanel(channelDir(files))).image?.host_updater.state;
+		expect(await state({})).toBe('absent');
+		// interval 60 → the 180 s floor rules
+		expect(await state({ 'host_updater.json': beat(180) })).toBe('alive');
+		expect(await state({ 'host_updater.json': beat(181) })).toBe('stale');
+		// interval 120 → 3 × 120 = 360 s
+		expect(await state({ 'host_updater.json': beat(360, 120) })).toBe('alive');
+		expect(await state({ 'host_updater.json': beat(361, 120) })).toBe('stale');
+		const alive = (await imagePanel(channelDir({ 'host_updater.json': beat(10) }))).image
+			?.host_updater;
+		expect(alive).toEqual({
+			state: 'alive',
+			seen_at: ago(10),
+			interval_seconds: 60,
+			mode: 'pull',
+			image: 'ghcr.io/dedalia-org/dedalo',
+			pinned: '7.0.0',
+			verify: 'cosign',
+			running_digest: null,
+		});
+	});
+
+	test('request, inflight and outcome are reflected (the claimed one wins)', async () => {
+		const requested = (await imagePanel(channelDir({ 'request.json': REQUEST }))).image;
+		const { schema: _schema, ...wire } = REQUEST;
+		expect(requested?.request as unknown).toEqual({
+			...wire,
+			state: 'requested',
+			claimed_at: null,
+		});
+
+		const claimedAt = ago(5);
+		const claimed = (
+			await imagePanel(channelDir({ 'inflight.json': { ...REQUEST, claimed_at: claimedAt } }))
+		).image;
+		expect(claimed?.request as unknown).toEqual({
+			...wire,
+			state: 'claimed',
+			claimed_at: claimedAt,
+		});
+
+		const done = (await imagePanel(channelDir({ 'last_outcome.json': OUTCOME }))).image;
+		expect(done?.request).toBeNull();
+		expect(done?.last_outcome as unknown).toEqual(OUTCOME);
+	});
+
+	test('malformed channel files never throw: each reads as absent', async () => {
+		for (const garbage of ['{', '[]', '"x"', JSON.stringify({ ...REQUEST, tag: '9.9.9' })]) {
+			const status = await imagePanel(
+				channelDir({
+					'host_updater.json': garbage,
+					'request.json': garbage,
+					'inflight.json': garbage,
+					'last_outcome.json': garbage,
+				}),
+			);
+			expect(status.image?.host_updater.state).toBe('absent');
+			expect(status.image?.request).toBeNull();
+			expect(status.image?.last_outcome).toBeNull();
+		}
+		// an extra key is a malformed file too (closed shapes)
+		const extra = await imagePanel(
+			channelDir({
+				'last_outcome.json': { ...OUTCOME, note: 'x' },
+				'host_updater.json': { ...beat(1), x: 1 },
+			}),
+		);
+		expect(extra.image?.last_outcome).toBeNull();
+		expect(extra.image?.host_updater.state).toBe('absent');
+	});
+
+	test('every machine id the block can send has its label (the client words them)', () => {
+		const ids = [
+			...['alive', 'stale', 'absent'].map((state) => `update_code_host_updater_${state}`),
+			...['requested', 'claimed'].map((state) => `update_code_image_request_${state}`),
+			...['green', 'rolled_back', 'rollback_failed', 'refused', 'failed'].map(
+				(status) => `update_code_image_outcome_${status}`,
+			),
+			...['pull', 'build'].map((mode) => `update_code_image_mode_${mode}`),
+			...['primary', 'mirror'].map((role) => `update_code_image_official_${role}`),
+		];
+		expect(ids.filter((key) => labels[key] === undefined)).toEqual([]);
 	});
 });

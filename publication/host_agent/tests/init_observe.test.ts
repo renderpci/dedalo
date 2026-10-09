@@ -304,9 +304,9 @@ describe('observeHostWide — EL 9, SELinux enforcing, httpd, AppStream + Remi',
     expect(selinux.booleans.httpd_graceful_shutdown).toBe(true);
     expect(selinux.booleans.httpd_enable_homedirs).toBe(false);
     expect('httpd_use_fusefs' in selinux.booleans).toBe(false);
-    expect(selinux.localFcontext).toHaveLength(10);
+    expect(selinux.localFcontext).toHaveLength(11);
     expect(selinux.localFcontext[0]).toMatchObject({ spec: '/home/museum\\.org', type: 'home_root_t' });
-    expect(selinux.localPorts).toEqual([{ type: 'http_port_t', proto: 'tcp', port: 3100 }]);
+    expect(selinux.localPorts).toEqual([3100, 3101, 3102, 3103, 3104].map(port => ({ type: 'http_port_t', proto: 'tcp', port })));
     expect(selinux.portTypes.get(8443)).toBe('http_port_t');
     expect(selinux.portTypes.get(3306)).toBe('mysqld_port_t');
     expect(selinux.labels.get('/home/museum.org')).toBe('user_home_dir_t');
@@ -404,7 +404,7 @@ describe('observeHostWide — SELinux branches and loud failures', () => {
     host.handlers.selinuxMode = () => r('Disabled\n');
     const facts = observeHostWide(EL_DRAFT, ports(host));
     expect(facts.selinux.mode).toBe('disabled');
-    expect(facts.selinux.localFcontext).toHaveLength(10);
+    expect(facts.selinux.localFcontext).toHaveLength(11);
     expect(facts.selinux.booleans).toEqual({});
     expect(facts.selinux.labels.size).toBe(0);
     expect(facts.fpm[1]?.socketDirLabel).toBeNull();

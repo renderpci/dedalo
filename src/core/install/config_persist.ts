@@ -1,8 +1,8 @@
 /**
  * persist_config + verify_active_config (PHP installer_setup_manager /
- * installer_config_persistor). Writes ../private/.env with PHP key names (the
- * env.ts PHP_KEY_ALIASES resolve them, and project convention is to write the
- * PHP names) via an atomic two-phase commit, records the install state, and
+ * installer_config_persistor). Writes ../private/.env with the catalog's
+ * canonical key names (DB_NAME, ENTITY, … — never a PHP_KEY_ALIASES fallback
+ * spelling; install_plan.ts) via an atomic two-phase commit, records the install state, and
  * generates the secrets. verify_active_config confirms the RESTARTED process
  * came up with the new config.
  */
@@ -18,6 +18,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
+import { PHP_KEY_ALIASES } from '../../config/env.ts';
 import { DedaloError } from '../errors/index.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import { buildInstallPlan } from './install_plan.ts';
@@ -132,6 +133,34 @@ export interface PersistConfigResult {
 	warnings: string[];
 }
 
+type InstallPlan = ReturnType<typeof buildInstallPlan>;
+
+/** The plan's .env sections as lines: a header, then each section's comment and entries. */
+function renderPlanEnvLines(plan: InstallPlan): string[] {
+	const lines: string[] = [
+		'# Dédalo TS server configuration — written by the install wizard (DEC-19).',
+	];
+	for (const section of plan.env) {
+		lines.push('', section.comment, ...section.entries.map(renderEnvEntry));
+	}
+	return lines;
+}
+
+/** One `KEY=value` line: a RAW entry verbatim, every other value quoted. */
+function renderEnvEntry(item: InstallPlan['env'][number]['entries'][number]): string {
+	return `${item.key}=${item.raw ? item.value : envQuote(item.value)}`;
+}
+
+/** The keys this run owns: the plan's canonical keys plus their PHP_KEY_ALIASES spellings. */
+function ownedEnvKeys(planKeys: readonly string[]): Set<string> {
+	const owned = new Set(planKeys);
+	for (const key of planKeys) {
+		const alias = PHP_KEY_ALIASES[key];
+		if (alias !== undefined) owned.add(alias);
+	}
+	return owned;
+}
+
 /** Write ../private/.env + state from the posted wizard config. */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
@@ -177,20 +206,11 @@ export async function persistConfig(
 		refuseInstall('install.invalid_input', `Install answers invalid: ${plan.errors.join('; ')}`);
 	}
 
-	// Rendered with PHP key names (the aliases env.ts already resolves). A RAW
+	// Rendered with the plan's canonical key names. A RAW
 	// entry (the JSON-shaped lang and server-list keys) is written verbatim:
 	// parseEnvFile strips surrounding quotes but does not unescape inner \", so
 	// an envQuote'd JSON value would not round-trip through JSON.parse.
-	const lines: string[] = [
-		'# Dédalo TS server configuration — written by the install wizard (DEC-19).',
-		'# PHP key names are used so an operator migrating from PHP can read them.',
-	];
-	for (const section of plan.env) {
-		lines.push('', section.comment);
-		for (const item of section.entries) {
-			lines.push(`${item.key}=${item.raw ? item.value : envQuote(item.value)}`);
-		}
-	}
+	const lines = renderPlanEnvLines(plan);
 
 	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the posted form, so
 	// every key the form does not carry used to vanish on save — and the wizard
@@ -207,7 +227,14 @@ export async function persistConfig(
 	// credentials — disabling it is an explicit .env edit (DEDALO_DIFFUSION_NATIVE),
 	// never a side effect of not re-typing the form. Gate:
 	// test/unit/install_persist_config.test.ts ('never deletes a key by omission').
-	const owned = new Set(plan.envKeys);
+	//
+	// ONE VALUE, ONE NAME. The plan writes canonical spellings (DB_NAME, ENTITY, …);
+	// a .env written by an earlier installer, or carried over from PHP, holds the
+	// same value under the PHP_KEY_ALIASES fallback spelling (DEDALO_DATABASE_CONN,
+	// DEDALO_ENTITY, …). The run owns that spelling too: carrying it over would
+	// leave a stale second copy that readEnv merely happens to rank lower. Gate:
+	// test/unit/install_persist_config.test.ts ('drops the legacy alias line').
+	const owned = ownedEnvKeys(plan.envKeys);
 	const preserved = existingEnvAssignments().filter((entry) => !owned.has(entry.key));
 	if (preserved.length > 0) {
 		lines.push(

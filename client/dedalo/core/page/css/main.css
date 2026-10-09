@@ -17667,6 +17667,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.serve_code > .content_data .update_status {
   margin-bottom: 1rem;
 }
+.wrapper_widget.serve_code > .content_data .update_status .image_updates .dd_v > .image_registry_role,
+.wrapper_widget.serve_code > .content_data .update_status .image_updates .dd_v > .button_cancel_image_request {
+  margin-left: 0.4rem;
+}
+.wrapper_widget.serve_code > .content_data .update_status .image_updates > .dd_note {
+  margin-top: 0.4rem;
+}
 .wrapper_widget.serve_code > .content_data .update_status .status_block {
   margin-bottom: 0.75rem;
 }
@@ -18779,6 +18786,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.update_code > .content_data .update_status {
   margin-bottom: 1rem;
 }
+.wrapper_widget.update_code > .content_data .update_status .image_updates .dd_v > .image_registry_role,
+.wrapper_widget.update_code > .content_data .update_status .image_updates .dd_v > .button_cancel_image_request {
+  margin-left: 0.4rem;
+}
+.wrapper_widget.update_code > .content_data .update_status .image_updates > .dd_note {
+  margin-top: 0.4rem;
+}
 .wrapper_widget.update_code > .content_data .update_status .status_block {
   margin-bottom: 0.75rem;
 }
@@ -18999,11 +19013,41 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   padding: 0.5rem;
   border-radius: 3px;
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 0.5rem;
 }
 .widget_update_code_modal .body .files_container .file_container:active {
   opacity: 0.7;
+}
+.widget_update_code_modal .body .files_container .file_container .release_notes {
+  flex-basis: 100%;
+  font-size: 0.95rem;
+}
+.widget_update_code_modal .body .files_container .file_container .release_notes > .release_notes_summary {
+  cursor: pointer;
+  color: var(--fg_muted);
+}
+.widget_update_code_modal .body .files_container .file_container .release_notes > .release_action_needed {
+  margin: 0.4rem 0;
+}
+.widget_update_code_modal .body .files_container .file_container .release_notes > .release_action_needed > ul {
+  margin: 0.25rem 0 0 1.2rem;
+}
+.widget_update_code_modal .body .files_container .file_container .release_notes > .release_note_entries {
+  margin: 0.4rem 0 0 0;
+  padding-left: 1.2rem;
+}
+.widget_update_code_modal .body .files_container .file_container .release_notes > .release_note_entries > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+}
+.widget_update_code_modal .body .files_container .file_container .release_notes > .release_note_entries .release_note_audience {
+  color: var(--fg_muted);
+  font-size: 0.9em;
 }
 .widget_update_code_modal .body .files_container .file_container .version_label {
   cursor: pointer;
@@ -19048,6 +19092,29 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .widget_update_code_modal .footer .waive_backup_row > .dd_note.waive_backup_note {
   margin: 0.25rem 0 0 1.6rem;
   max-width: 60rem;
+}
+.widget_update_code_modal .footer .image_command_panel {
+  text-align: left;
+  max-width: 60rem;
+  margin: 0 auto 1.5rem auto;
+}
+.widget_update_code_modal .footer .image_command_panel > .image_command_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+.widget_update_code_modal .footer .image_command_panel > .image_command_row > .image_command {
+  flex: 1 1 20rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 3px;
+  background: var(--bg_surface_alt);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.widget_update_code_modal .footer .image_command_panel > .dd_note.image_command_note {
+  margin-bottom: 0.75rem;
 }
 .widget_update_code_modal .footer .confirm_downgrade_row {
   text-align: left;
@@ -19367,6 +19434,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 */
 .wrapper_widget.publication_hosts .update_status {
   margin-bottom: 1rem;
+}
+.wrapper_widget.publication_hosts .update_status .image_updates .dd_v > .image_registry_role,
+.wrapper_widget.publication_hosts .update_status .image_updates .dd_v > .button_cancel_image_request {
+  margin-left: 0.4rem;
+}
+.wrapper_widget.publication_hosts .update_status .image_updates > .dd_note {
+  margin-top: 0.4rem;
 }
 .wrapper_widget.publication_hosts .update_status .status_block {
   margin-bottom: 0.75rem;

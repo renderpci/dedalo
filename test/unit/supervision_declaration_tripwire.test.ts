@@ -51,7 +51,11 @@ import { join, relative } from 'node:path';
 import { envSnapshot, parseEnvFile, projectRoot } from '../../src/config/env.ts';
 import { RESTART_EXIT_CODE } from '../../src/core/install/restart.ts';
 import {
+	type ComposeServiceShape,
 	DEPLOY_DIR,
+	isProductImageService,
+	parseComposeFile,
+	shippedComposeStacks,
 	systemdUnitNames,
 	trackedComposeFiles,
 } from '../helpers/deploy_artifact_corpus.ts';
@@ -289,14 +293,9 @@ describe('systemd units declare supervision', () => {
 // 3. compose stacks — parsed, not grepped.
 // ---------------------------------------------------------------------------
 
-interface ComposeService {
-	build?: unknown;
-	command?: string | string[];
-	entrypoint?: string | string[];
-	environment?: Record<string, unknown> | string[];
-}
+type ComposeService = ComposeServiceShape;
 
-/** Does the Dockerfile's final CMD run the server? (the image an entrypoint-less `build` service runs) */
+/** Does the Dockerfile's final CMD run the server? (the image an entrypoint-less product-image service runs) */
 function dockerfileCmdRunsServer(): boolean {
 	const cmds = readFileSync(join(projectRoot, 'Dockerfile'), 'utf8')
 		.split('\n')
@@ -319,11 +318,34 @@ function isEngineService(service: ComposeService): boolean {
 	) {
 		return true;
 	}
-	return service.build !== undefined &&
+	// The PRODUCT IMAGE with its own CMD — by outcome (installer unification D2):
+	// the stacks name a pinned `${DEDALO_IMAGE:-localhost/dedalo}:…` and no longer
+	// `build: .`, so the old `build !== undefined` test would have found no engine.
+	return isProductImageService(service) &&
 		service.command === undefined &&
 		service.entrypoint === undefined
 		? dockerfileCmdRunsServer()
 		: false;
+}
+
+/**
+ * An OVERLAY's service as compose runs it. A file under deploy/ is always layered
+ * over a root stack (`-f docker-compose.simple.yml -f deploy/…`), so a service it
+ * only re-tags (`backup: image: …`) keeps the base's entrypoint: judged alone it
+ * would look like an entrypoint-less engine. Merged over the root stack that
+ * defines the same service — key by key, environment maps merged like compose.
+ */
+function asRun(file: string, name: string, service: ComposeService): ComposeService {
+	if (!file.startsWith('deploy/')) return service;
+	const base = shippedComposeStacks()
+		.map((stack) => parseComposeFile(stack).services?.[name])
+		.find((candidate) => candidate !== undefined);
+	if (base === undefined) return service;
+	const environment =
+		!Array.isArray(base.environment) && !Array.isArray(service.environment)
+			? { ...(base.environment ?? {}), ...(service.environment ?? {}) }
+			: (service.environment ?? base.environment);
+	return { ...base, ...service, environment };
 }
 
 function declaredValue(service: ComposeService): unknown {
@@ -341,10 +363,10 @@ describe('compose stacks declare supervision', () => {
 		const engines: string[] = [];
 		const undeclared: string[] = [];
 		for (const file of files) {
-			const parsed = Bun.YAML.parse(readFileSync(join(projectRoot, file), 'utf8')) as {
-				services?: Record<string, ComposeService>;
-			};
-			for (const [name, service] of Object.entries(parsed.services ?? {})) {
+			// Interpolated as compose does (no operator env: the shipped defaults).
+			const parsed = parseComposeFile(file);
+			for (const [name, declared] of Object.entries(parsed.services ?? {})) {
+				const service = asRun(file, name, declared);
 				if (!isEngineService(service)) continue;
 				engines.push(`${file}:${name}`);
 				if (declaredValue(service) !== 'true') undeclared.push(`${file}:${name}`);
@@ -471,7 +493,7 @@ console.log(JSON.stringify({ ok: result.ok }));`,
 		expect(child.exitCode, child.stderr.toString()).toBe(0);
 		expect(JSON.parse(child.stdout.toString().trim())).toEqual({ ok: true });
 		const written = readFileSync(join(dir, '.env'), 'utf8');
-		expect(parseEnvFile(written).DEDALO_DATABASE_CONN).toBe('dedalo_zz_supervision'); // it really wrote
+		expect(parseEnvFile(written).DB_NAME).toBe('dedalo_zz_supervision'); // it really wrote
 		expect(Object.keys(parseEnvFile(written)).filter((key) => key.includes('SUPERVIS'))).toEqual(
 			[],
 		);

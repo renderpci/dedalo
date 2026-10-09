@@ -1,0 +1,34 @@
+# Dédalo v7 — BUILD OVERRIDE: build the product image here, from this checkout.
+#
+# The root stacks (docker-compose.yml, docker-compose.simple.yml) never build:
+# their `dedalo` and `backup` services RUN the image named
+# ${DEDALO_IMAGE:-localhost/dedalo}:${DEDALO_VERSION:-local}. This file adds the
+# build to `dedalo` only, so compose tags the result with that same name and
+# `backup` runs the same local tag. Default Dockerfile target: `production`.
+#
+#   docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml \
+#     --env-file .dedalo.env build dedalo
+#
+# (or `-f docker-compose.yml` for the full stack). Everyday `up -d`, `logs` and
+# `stop` do not need this file: once built, the image is local.
+#
+# WHO NEEDS IT: developers, air-gapped hosts, and every installation whose
+# .dedalo.env says DEDALO_IMAGE_MODE=build — which is every installation until
+# Dédalo publishes a release to a registry it can pull from.
+#
+# WHY IT IS NOT IN THE BASE FILES. With `build:` and `image:` on one service,
+# compose builds whenever the image is missing: a failed or mistyped pull would
+# silently fall back to building the checkout and tagging the result with an
+# OFFICIAL image name. Building is therefore something an operator asks for.
+#
+# PATHS RESOLVE AGAINST THE FIRST -f FILE — the stack at the repo root — so
+# `context: .` below is the project root, not deploy/. It lives in deploy/
+# because deploy/ is already outside the image's build context (the Dockerfile's
+# COPY allowlist), so adding it causes no context:gen churn.
+#
+# Gate: test/unit/image_source_tripwire.test.ts.
+
+services:
+  dedalo:
+    build:
+      context: .

@@ -27,6 +27,7 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 | A big export dies after about a minute | [Serving](#serving) |
 | Uploads fail with `413` | [Serving](#serving) |
 | The maintenance widget says the engine is down, but the socket probe is green | [Serving](#serving) |
+| A code update is refused: `No supervisor declared` | [Updating](#updating) |
 | Nobody can log in, and there is no error | [Using it](#using-it) |
 | Media `404`s | [Media](#media) |
 | Media is served to everyone | [Media](#media) |
@@ -92,8 +93,8 @@ boots into install mode; with **some** of them set, it is misconfigured and says
 so. This is deliberate — a half-configured server must not quietly fall back to
 install mode against a real database.
 
-**Fix.** Set all four (they are written by the installer, under their
-`DEDALO_*_CONN` spellings), or none.
+**Fix.** Set all four (the installer writes them under exactly these names), or
+none.
 
 ### The server serves the install wizard instead of the application
 
@@ -168,7 +169,7 @@ has to carry them itself.
 
 ```dotenv
 DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-eng":"English"}
-DEDALO_PROJECTS_DEFAULT_LANGS=["lg-spa","lg-eng"]
+PROJECTS_DEFAULT_LANGS=["lg-spa","lg-eng"]
 DEDALO_APPLICATION_LANGS_DEFAULT=lg-spa
 DEDALO_DATA_LANG_DEFAULT=lg-spa
 ```
@@ -289,7 +290,7 @@ could not set up the process. The code says which step:
 | `217/USER` | the user does not resolve | `User=` misspelled, or the account was never created |
 | *group credentials* | the group does not resolve | see the entry above |
 | `200/CHDIR` | cannot enter `WorkingDirectory` | wrong path, or the service user cannot traverse into it |
-| `203/EXEC` | cannot execute `ExecStart` | the pinned runtime is not at that path — it is installed per install, so it is easy to point at another install's copy |
+| `203/EXEC` | cannot execute `ExecStart` | the pinned runtime is not at that path — it is installed per install, so it is easy to point at another install's copy. On `dedalo-ts-watchdog` or `dedalo-ts-rollback`: the scripts were never installed into `/opt/dedalo/bin/` ([production step 10](production.md#10-run-the-engine-under-systemd)) |
 
 Reproduce the same conditions by hand before editing the unit again:
 
@@ -367,7 +368,8 @@ ls -l /run/dedalo/dedalo_ts.sock # → srwxrwx--- dedalo dedalo
 ```
 
 Also confirm the paths agree: `SERVER_UNIX_SOCKET` in `.env`, the `upstream` in
-the proxy configuration, and the watchdog unit's `--unix-socket`.
+the proxy configuration, and the `--socket` argument in the `ExecStart` of
+`dedalo-ts-watchdog.service` (and of `dedalo-ts-rollback.service`).
 
 ### Apache: `AH01144: No protocol handler was valid for the URL … (scheme 'http')`
 
@@ -590,6 +592,49 @@ the domain:
 ```shell
 curl --fail https://dedalo.example.org/health
 ```
+
+## Updating
+
+### `Error. No supervisor declared; the server would not restart onto the new tree.`
+
+The [code update panel](../management/updates/updating_code.md) refuses, and its
+readiness check shows the supervisor check as blocked on `DEDALO_SUPERVISED`.
+
+**Cause.** A code update replaces the code tree and then exits, so it runs only
+when the process manager declares that it will start the server again:
+`DEDALO_SUPERVISED=true` in the **process** environment. Three ways to miss it:
+
+- The systemd unit was installed before 2026-10-08 and lacks the line. The
+  engine used to guess supervision from systemd's own variables; it no longer
+  does. The installed unit is a copy, and no update changes it.
+- The key was put in `../private/.env`. The message then adds
+  *DEDALO_SUPERVISED in ../private/.env is IGNORED*: every launch method reads
+  that file, including the unsupervised `bun run start`.
+- The server was started with `bun run start`, which is unsupervised by design.
+
+**Fix.** On systemd, add the declaration with a drop-in, then restart:
+
+```shell
+systemctl edit dedalo-ts
+```
+
+```ini
+[Service]
+Environment=DEDALO_SUPERVISED=true
+SuccessExitStatus=75
+Restart=always
+```
+
+```shell
+systemctl restart dedalo-ts
+systemctl show dedalo-ts -p Environment     # must list DEDALO_SUPERVISED=true
+```
+
+`Restart=always` matters as much as the declaration: after the swap the server
+exits with code `75`, and only a unit that restarts on that exit comes back.
+A `DEDALO_SUPERVISED` line in `.env` does nothing, whatever its value. Without
+systemd, start the server with `bun run start:supervised` (or `bun run dev` on a
+development machine), which declares the key and restarts on exit `75`.
 
 ## Using it
 

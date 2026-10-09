@@ -361,7 +361,9 @@ async function main(installPlan: InstallPlan): Promise<void> {
 
 	cleanupCatalog();
 	console.log(
-		'\n✔ install complete — root login verified. Start the server with `bun run start`.\n',
+		'\n✔ install complete — root login verified. Start the server under its supervisor ' +
+			'(systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with ' +
+			'`bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.\n',
 	);
 	process.exit(0);
 }

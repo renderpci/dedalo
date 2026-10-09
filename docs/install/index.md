@@ -56,8 +56,8 @@ Dédalo computes its data shape at read time from the ontology rather than stori
 
 Storage is the number you must actually think about. A project of a few thousand records with images, PDFs and audiovisual material will hold **orders of magnitude more media than data** — plan for the collection you expect in five years, not the one you are importing this month.
 
-!!! warning "Back up four things, not one"
-    The matrix database alone is **not** a backup. The complete set is: the matrix database, the vector database (if you enabled semantic search), the **media originals**, and `../private/` (the secrets and the state). Losing the last one means a restored database you cannot start. See [backup](../management/backup.md).
+!!! warning "Back up every store, not one"
+    The matrix database alone is **not** a backup. The complete set is: the matrix database, the vector database (if you enabled semantic search), the **media originals**, `../private/` (the secrets and the state), and every site-builder instance (if you run the site builder). Losing `../private/` means a restored database you cannot start. See [backup](../management/backup.md).
 
 !!! note "macOS and Windows"
     Fine for development and evaluation — see [dev quickstart](dev_quickstart.md). Not recommended for production.
@@ -88,7 +88,7 @@ And the supporting pages, whichever path you take:
 - **[Publication host agent](publication_host.md)** — optional: serve the public website and the Publication APIs from a separate server (or a separate hostname on this one), controlled from the work system through a paired agent with no root access.
 - **[Installer reference](installer_reference.md)** — every flag, every step, what the seed contains, and exactly which keys land in `.env`.
 - **[Troubleshooting](troubleshooting.md)** — symptom → cause → fix.
-- **[Upgrading](upgrading.md)** — the runtime pin, boot migrations, retired keys, rollback.
+- **[Upgrading](upgrading.md)** — the runtime pin, the scripts outside the code tree, the supervision check, boot migrations, retired keys, rollback.
 - **[Migrating a v6 install to v7](migrating_from_v6.md)** — the whole operator path: transform the data on v6, move the database and the media, and what to do when the data is wrong.
 - **[H.264 streaming module](install_h264_module.md)** — serve audiovisual fragments by time range.
 
@@ -96,6 +96,6 @@ And the supporting pages, whichever path you take:
 
 1. Log in as `root`, create an **admin user**, and keep `root` for emergencies.
 2. Create your [users and projects](../management/users_and_permissions.md).
-3. Import and activate the [hierarchies](../management/install_new_hierarchies.md) your collection needs — importing one is not the same as activating its thesaurus.
+3. Install the [hierarchies](../management/install_new_hierarchies.md) your collection needs beyond the default set — installing one activates it, and Languages is always active.
 4. Set up [backups](../management/backup.md), and restore-test them.
-5. Read the [configuration reference](../config/index.md): the installer writes only the database, entity and language keys — everything else is yours.
+5. Read the [configuration reference](../config/index.md): the installer writes the database, entity and language keys, the generated secret, the update servers, `ACTIVE_ONTOLOGY_TLDS`, and the serving, diffusion and email keys you gave it ([the full list](installer_reference.md#what-privateenv-does-and-does-not-get)) — the operational tuning is yours.

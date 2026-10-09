@@ -56,6 +56,17 @@
  *      becomes the expected condition and trains the regeneration reflex the
  *      ratchets exist to starve — and it was never load-bearing: rule 4's parser
  *      takes only the first column, and scripts/verify.ts has no allowlist.
+ *  11. NO SECRET IN THE EXECUTED TIER — ONE CARVE-OUT (2026-08-25; carve-out
+ *      2026-10-09) — no `${{ secrets.X }}` in .github/workflows/, EXCEPT the publish
+ *      job of image-release.yml: the reference must sit in the job that declares
+ *      `environment: image-release` (owner-protected: deployment policy + reviewers),
+ *      X must be a name engineering/image_registries.json declares
+ *      (`declaredSecretNames`, never a list kept here), and that workflow may have no
+ *      pull_request / pull_request_target / workflow_run / schedule trigger. Docker
+ *      Hub has no OIDC push federation and a self-hosted registry needs a robot
+ *      token, so a mirror is impossible without a secret — the carve-out is exactly
+ *      that wide and is judged by `secretReferenceFaults`, with a planted control
+ *      for each way out of it.
  *  13. HOSTED TIERS NEED NO PRIVATE ENV (2026-08-25; generalized 2026-09-02 to
  *      every script an executing workflow runs, following `source` lines) —
  *      scripts/ci/db_tier.sh may contain NO command that requires ../private/.env. Its own header states
@@ -136,6 +147,10 @@ import {
 } from '../../scripts/lib/ci_image.ts';
 import { findStatusProse } from '../../scripts/lib/status_prose.ts';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
+import {
+	declaredSecretNames,
+	loadImageRegistries,
+} from '../../src/core/update/image_registries.ts';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
@@ -850,6 +865,61 @@ function triggerNames(src: string): string[] {
 	return names;
 }
 
+/** The ONE workflow that may reference a secret, and the environment that must guard it (rule 11). */
+const SECRET_WORKFLOW = 'image-release.yml';
+const SECRET_ENVIRONMENT = 'image-release';
+/** Triggers that hand fork or unattended code to a job — none may fire the secret-holding workflow. */
+const SECRET_FORBIDDEN_TRIGGERS = [
+	'pull_request',
+	'pull_request_target',
+	'workflow_run',
+	'schedule',
+];
+
+/** Every secret EXPRESSION in a text: its name, or `?` when the expression is not a plain name. */
+function secretReferences(src: string): string[] {
+	return [...src.matchAll(/\$\{\{([\s\S]*?)\}\}/g)]
+		.filter((m) => /\bsecrets\b/.test(m[1] as string))
+		.map((m) => (m[1] as string).match(/^\s*secrets\.([A-Za-z0-9_]+)\s*$/)?.[1] ?? '?');
+}
+
+/** Does a job block declare the protected environment (scalar or `name:` mapping form)? */
+function declaresSecretEnvironment(block: string): boolean {
+	return (
+		new RegExp(`^ {4}environment:\\s*${SECRET_ENVIRONMENT}\\s*$`, 'm').test(block) ||
+		new RegExp(`^ {4}environment:\\s*\\n {6}name:\\s*${SECRET_ENVIRONMENT}\\s*$`, 'm').test(block)
+	);
+}
+
+/**
+ * Rule 11's judge, PURE: the faults of one workflow file's secret references. Outside
+ * SECRET_WORKFLOW every reference is a fault; inside it, a reference outside the
+ * environment-bound job, a name the registry list does not declare, and a forbidden
+ * trigger on the file are faults.
+ */
+function secretReferenceFaults(file: string, src: string, declared: readonly string[]): string[] {
+	if (file !== SECRET_WORKFLOW)
+		return secretReferences(src).map((name) => `${file}: references secret '${name}'`);
+	const faults = SECRET_FORBIDDEN_TRIGGERS.filter((trigger) =>
+		triggerNames(src).includes(trigger),
+	).map((trigger) => `${file}: holds secrets AND is triggered by \`${trigger}\``);
+	const header = src.slice(0, Math.max(0, src.search(/^jobs:/m)));
+	for (const name of secretReferences(header))
+		faults.push(`${file}: secret '${name}' outside any job`);
+	for (const [id, block] of jobBlocks(src)) {
+		const names = secretReferences(block);
+		if (names.length > 0 && !declaresSecretEnvironment(block))
+			faults.push(
+				`${file} job '${id}': references ${names.join(', ')} without \`environment: ${SECRET_ENVIRONMENT}\``,
+			);
+		for (const name of names.filter((n) => !declared.includes(n)))
+			faults.push(
+				`${file} job '${id}': secret '${name}' is not declared by engineering/image_registries.json`,
+			);
+	}
+	return faults;
+}
+
 /**
  * Rule 17's judge, PURE over the two texts it binds, so the controls can hand it
  * mutated copies of the real files and watch each fault appear.
@@ -1475,17 +1545,68 @@ describe('CI workflow tripwire', () => {
 	// .github/workflows-selfhosted/, which GitHub does not execute and where the
 	// private mirror supplies the values.
 	//
+	// THE ONE CARVE-OUT (2026-10-09): the publish job of image-release.yml pushes the
+	// official image to registries that cannot be reached with the run's own token
+	// (Docker Hub has no OIDC push federation; the gitdedalo registry needs a robot
+	// token). Legal only inside the job declaring `environment: image-release`, only
+	// for names engineering/image_registries.json declares, and only while that
+	// workflow has no pull_request / pull_request_target / workflow_run / schedule
+	// trigger — each condition has a planted control below.
+	//
 	// Matched as the EXPRESSION, not a bare substring, so these files stay free to
 	// DISCUSS the posture in their headers — the same courtesy rule 5 extends to
 	// the phrase "self-hosted".
-	test('no .github/workflows/ file references a secret (public repo, fork PRs)', () => {
-		const offenders = workflowFiles
-			.map((file) => join('.github', 'workflows', file))
-			.filter((rel) => /\$\{\{\s*secrets\./.test(read(rel)));
+	test('no .github/workflows/ file references a secret, except the environment-bound release publish (rule 11)', () => {
+		const declared = declaredSecretNames(loadImageRegistries());
+		// Anti-vacuity: the allowlist is read from the list, and the carve-out is in use.
+		expect(declared.length).toBeGreaterThanOrEqual(2);
+		const release = read(join('.github', 'workflows', SECRET_WORKFLOW));
+		expect(secretReferences(release).length).toBeGreaterThanOrEqual(2);
+		const offenders = workflowFiles.flatMap((file) =>
+			secretReferenceFaults(file, read(join('.github', 'workflows', file)), declared),
+		);
 		expect(
 			offenders,
-			'A secret reference in the EXECUTED tier of a public repo is a standing invitation: one trigger change and fork-PR code runs with it populated. A test tier needs none — hardcode the throwaway service password, and put anything genuinely secret in .github/workflows-selfhosted/ for the private mirror:',
+			'A secret reference in the EXECUTED tier of a public repo is a standing invitation: one trigger change and fork-PR code runs with it populated. A test tier needs none — hardcode the throwaway service password, and put anything genuinely secret in .github/workflows-selfhosted/ for the private mirror. The ONE exception is the environment-bound publish job of image-release.yml, for the names engineering/image_registries.json declares:',
 		).toEqual([]);
+
+		// Controls — each way out of the carve-out must be seen.
+		const name = declared[0] as string;
+		const planted = (from: string | RegExp, to: string): string[] => {
+			const mutated = release.replace(from, to);
+			expect(mutated === release, `control did not apply: ${String(from)}`).toBe(false);
+			return secretReferenceFaults(SECRET_WORKFLOW, mutated, declared);
+		};
+		// (a) a declared secret in ANOTHER workflow
+		expect(
+			secretReferenceFaults(
+				'ci.yml',
+				`jobs:\n  x:\n    environment: ${SECRET_ENVIRONMENT}\n    env:\n      A: \${{ secrets.${name} }}\n`,
+				declared,
+			),
+		).toHaveLength(1);
+		// (b) in ANOTHER job of the release workflow (the plan job holds no environment)
+		expect(
+			planted(/^( {10}INPUT_CHANNEL: .*)$/m, `$1\n          LEAK: \${{ secrets.${name} }}`).join(),
+		).toContain("job 'plan'");
+		// (c) an UNDECLARED name in the right job
+		expect(
+			planted(/^( {10}RUN_ID: .*)$/m, '$1\n          OTHER: ${{ secrets.NPM_TOKEN }}').join(),
+		).toContain("'NPM_TOKEN' is not declared");
+		// (d) a forbidden trigger added to the release workflow
+		expect(
+			planted(/^ {2}workflow_dispatch:$/m, '  pull_request:\n  workflow_dispatch:').join(),
+		).toContain('`pull_request`');
+		expect(
+			planted(
+				/^ {2}workflow_dispatch:$/m,
+				'  schedule:\n    - cron: "1 1 * * *"\n  workflow_dispatch:',
+			).join(),
+		).toContain('`schedule`');
+		// (e) the environment removed from the publish job
+		expect(planted(/^ {4}environment: image-release\n/m, '').join()).toContain("job 'publish'");
+		// (f) a non-plain secret expression is still a reference
+		expect(secretReferences("a: ${{ secrets[format('{0}', x)] }}")).toEqual(['?']);
 	});
 
 	// Rule 12 (2026-08-25) — container images are DIGEST-pinned. Rule 8 above

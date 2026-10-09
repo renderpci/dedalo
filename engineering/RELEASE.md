@@ -88,6 +88,43 @@ minor within the major, no skipping).
     that changed with a stale build stamp (or vice versa) means the swap did
     not land — investigate before calling the release done.
 
+12. **The container image is published by the tag push.** Pushing `v7.0.1` (step 3)
+    triggers `.github/workflows/image-release.yml`, which builds the product image from
+    a `git archive` of the tagged commit — the same bytes as `7.0.1.zip` — for amd64 and
+    arm64, signs it ONCE (cosign keyless) and copies the SAME digest to every provisioned
+    registry of `engineering/image_registries.json` as `:7.0.1` (today
+    `ghcr.io/dedalia-org/dedalo` and `docker.io/dedalia/dedalo`; the gitdedalo registry is
+    skipped, not provisioned). The `publish` job waits for a reviewer of the
+    `image-release` environment. Prerequisites: `ci/cosign.json` is pinned
+    (`bun run ci:cosign:pin`), otherwise the run refuses to publish anything; and the
+    `v*` tag ruleset exists (engineering/CI.md, activation runbook step 8) — only a
+    release maintainer can push the tag, which is what makes the reviewer binding.
+
+13. **Check the publication.** The run's summary lists every registry (pushed /
+    unchanged / skipped with its reason) and the digest; the `image-release` artifact is
+    the same record as JSON. A skipped provisioned registry (`missing_secret: …`) is a
+    red flag: add its secrets and dispatch the `release` channel for this tag. Then
+    verify ONE target as an operator would:
+
+    ```
+    cosign verify ghcr.io/dedalia-org/dedalo@<digest> \
+      --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+|heads/master)$' \
+      --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+    ```
+
+    A published release tag is IMMUTABLE: a re-run (or a release dispatch) never rebuilds
+    it — it copies the digest that already exists, after checking its signature, and
+    refuses when two registries disagree.
+
+**Developer images** (`:<v>-dev`, the twin of `<v>-dev.zip`) come only from a manual
+dispatch of `image-release.yml` on branch `master` with channel `dev`; each dispatch
+overwrites the previous dev image of that version.
+
+**A newly provisioned mirror** (e.g. the gitdedalo registry once its host exists) gets the
+existing releases by a `release`-channel dispatch per tag (input `tag: vX.Y.Z`): it copies
+the already-published, already-signed digest and never rebuilds. Provisioning itself is a
+list edit (`engineering/CI.md`, *The product image*).
+
 Note: `deploy/deploy.sh` is a PARKED git-based deploy that has never run
 against a real host — it is not a step of this runbook.
 

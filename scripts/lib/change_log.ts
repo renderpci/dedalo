@@ -13,12 +13,23 @@
  *                                      in the commit that makes the change
  *   changes/<version>/<slug>.md        the fragments a release shipped
  *   changes/<version>/release.json     that release's snapshot: date, tag range,
- *                                      commit count, the wire-contract ids it adopted
+ *                                      commit count, the wire-contract ids it adopted,
+ *                                      and its NOTES (2026-10-09, below)
  *
  * The page is a PURE FUNCTION of those files plus the wire-contract ledger's ids
  * (`engineering/wire_contract/`) — no git, no clock — so change_log_tripwire can
  * re-render it hermetically and demand byte identity. Git is read exactly once per
  * release, by `bun run changelog release`, and its answer is frozen in release.json.
+ *
+ * RELEASE NOTES (2026-10-09). A code server advertises each published release to
+ * every installation's update panel, and the operator choosing a version should read
+ * what it changes before installing it. The engine must not parse markdown fragments
+ * at runtime (and an installed tree carries no changes/ of LATER releases anyway), so
+ * `release` freezes a machine-read digest into release.json — `notes`: the *Action
+ * needed* titles and one {type, audience, title} per fragment, in the page's order —
+ * and the master's manifest reads that JSON (src/core/update/code_manifest.ts).
+ * `deriveReleaseNotes` is the ONE derivation; change_log_tripwire holds every
+ * snapshot's notes equal to it.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -74,6 +85,21 @@ export interface Release {
 	commits: number;
 	/** Wire-contract ids adopted in this release (the ledger entries no earlier release claimed). */
 	wire_contract: string[];
+	/** The machine-read notes the update panel shows; absent on snapshots cut before 2026-10-09. */
+	notes?: ReleaseNotes;
+}
+
+/** One fragment, as the update panel lists it. */
+export interface ReleaseNoteEntry {
+	type: ChangeType;
+	audience: Audience;
+	title: string;
+}
+
+/** A release's notes: what needs action when updating, then every change, in the page's order. */
+export interface ReleaseNotes {
+	action_needed: string[];
+	entries: ReleaseNoteEntry[];
 }
 
 export interface ChangeSet {
@@ -185,7 +211,47 @@ export function parseFragment(file: string, text: string): Fragment {
 	};
 }
 
-const RELEASE_KEYS = ['version', 'date', 'from', 'to', 'commits', 'wire_contract'] as const;
+const RELEASE_KEYS = [
+	'version',
+	'date',
+	'from',
+	'to',
+	'commits',
+	'wire_contract',
+	'notes',
+] as const;
+const NOTES_KEYS = ['action_needed', 'entries'] as const;
+const ENTRY_KEYS = ['type', 'audience', 'title'] as const;
+
+function closedKeys(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	const own = Object.keys(value);
+	return own.length === keys.length && keys.every((key) => own.includes(key));
+}
+
+function nonEmptyText(value: unknown): value is string {
+	return typeof value === 'string' && value.trim() !== '';
+}
+
+function isNoteEntry(value: unknown): value is ReleaseNoteEntry {
+	return (
+		closedKeys(value, ENTRY_KEYS) &&
+		(TYPES as readonly unknown[]).includes(value.type) &&
+		(AUDIENCES as readonly unknown[]).includes(value.audience) &&
+		nonEmptyText(value.title)
+	);
+}
+
+/** The closed `notes` shape: {action_needed: string[], entries: [{type, audience, title}]}. */
+export function parseReleaseNotes(file: string, value: unknown): ReleaseNotes {
+	if (!closedKeys(value, NOTES_KEYS)) fail(file, 'notes must be {action_needed, entries} exactly');
+	const { action_needed, entries } = value;
+	if (!Array.isArray(action_needed) || !action_needed.every(nonEmptyText))
+		fail(file, 'notes.action_needed must be an array of titles');
+	if (!Array.isArray(entries) || !entries.every(isNoteEntry))
+		fail(file, 'notes.entries must be an array of {type, audience, title}');
+	return { action_needed, entries };
+}
 
 export function parseRelease(file: string, text: string): Release {
 	let raw: unknown;
@@ -218,7 +284,16 @@ export function parseRelease(file: string, text: string): Release {
 	) {
 		fail(file, 'wire_contract must be an array of ledger ids');
 	}
-	return { version, date, from, to, commits, wire_contract: wire_contract as string[] };
+	const release: Release = {
+		version,
+		date,
+		from,
+		to,
+		commits,
+		wire_contract: wire_contract as string[],
+	};
+	if ('notes' in obj) release.notes = parseReleaseNotes(file, obj.notes);
+	return release;
 }
 
 /** Release order: numeric major.minor.patch, and a prerelease sorts before its release. */
@@ -267,6 +342,30 @@ function indent(body: string): string {
 function byNewest(a: Fragment, b: Fragment): number {
 	if (a.date !== b.date) return a.date < b.date ? 1 : -1;
 	return a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0;
+}
+
+/**
+ * A release's notes from its fragments — the ONE derivation, in the order the page
+ * renders them: the breaking titles newest first (the *Action needed* box), then one
+ * entry per fragment by audience, then type, then newest first.
+ */
+export function deriveReleaseNotes(fragments: readonly Fragment[]): ReleaseNotes {
+	const entries: ReleaseNoteEntry[] = [];
+	for (const audience of AUDIENCES) {
+		for (const type of TYPES) {
+			const group = fragments
+				.filter((f) => f.audience === audience && f.type === type)
+				.sort(byNewest);
+			for (const f of group) entries.push({ type, audience, title: f.title });
+		}
+	}
+	return {
+		action_needed: fragments
+			.filter((f) => f.breaking)
+			.sort(byNewest)
+			.map((f) => f.title),
+		entries,
+	};
 }
 
 function renderFragments(fragments: Fragment[]): string[] {

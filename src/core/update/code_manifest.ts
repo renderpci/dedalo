@@ -7,6 +7,15 @@
  * upgrade path from the caller's version and (b) actually exist on disk. The
  * TS UPDATE_CATALOG is EMPTY for 7.x, so a stock 7.0.0 master advertises no
  * releases — correct: there is no next version to build yet.
+ *
+ * RELEASE NOTES (2026-10-09, WC-2026-10-09-code-manifest-release-notes). A
+ * PUBLISHED item carries `notes` when the master's own
+ * `changes/<version>/release.json` froze them at the release cut
+ * (`bun run changelog release`, scripts/lib/change_log.ts deriveReleaseNotes):
+ * the operator reads what a release changes before choosing it. The engine
+ * reads that JSON only — never the markdown fragments — and any failure (no
+ * snapshot, a beta snapshot without notes, a malformed file) leaves the field
+ * absent. Developer items never carry notes: a branch build has no release.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -37,6 +46,22 @@ export interface CodeReleaseItem {
 	 * same-version install is the one it was offered.
 	 */
 	channel?: 'dev';
+	/** The release's notes (published items only; absent when the master froze none). */
+	notes?: CodeReleaseNotes;
+}
+
+/** One change of a release, as the update panel lists it. */
+export interface CodeReleaseNoteEntry {
+	type: string;
+	audience: string;
+	title: string;
+}
+
+/** `changes/<version>/release.json` `notes`, plus the release's date. */
+export interface CodeReleaseNotes {
+	date: string;
+	action_needed: string[];
+	entries: CodeReleaseNoteEntry[];
 }
 
 export interface CodeUpdateInfo {
@@ -132,6 +157,8 @@ export interface CodeUpdateInfoOptions {
 	channel?: 'master' | 'dev';
 	/** Whether THIS master publishes developer builds (DEDALO_CODE_SERVER_DEV_CHANNEL). */
 	devChannelEnabled?: boolean;
+	/** The master's `changes/` dir — where each release's frozen notes live. Absent ⇒ no notes. */
+	changesDir?: string;
 }
 
 /**
@@ -158,7 +185,54 @@ function manifestFiles(
 		options.channel === 'dev' && options.devChannelEnabled === true
 			? devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets)
 			: [];
-	return [...dev, ...masterItemsFor(options.codeFilesDir, options.publicBaseUrl, targets)];
+	const published = masterItemsFor(options.codeFilesDir, options.publicBaseUrl, targets);
+	return [...dev, ...published.map((item) => withReleaseNotes(item, options.changesDir))];
+}
+
+/** A published item with its frozen notes, when the master has them. */
+function withReleaseNotes(item: CodeReleaseItem, changesDir: string | undefined): CodeReleaseItem {
+	const notes = changesDir === undefined ? null : readReleaseNotes(changesDir, item.version);
+	return notes === null ? item : { ...item, notes };
+}
+
+function isText(value: unknown): value is string {
+	return typeof value === 'string' && value !== '';
+}
+
+function isNoteEntry(value: unknown): value is CodeReleaseNoteEntry {
+	if (typeof value !== 'object' || value === null) return false;
+	const entry = value as Record<string, unknown>;
+	return isText(entry.type) && isText(entry.audience) && isText(entry.title);
+}
+
+function isListOf<T>(value: unknown, item: (entry: unknown) => entry is T): value is T[] {
+	return Array.isArray(value) && value.every(item);
+}
+
+/** `{action_needed: string[], entries: [{type, audience, title}]}`, or null. */
+function notesShape(notes: unknown): Omit<CodeReleaseNotes, 'date'> | null {
+	if (typeof notes !== 'object' || notes === null) return null;
+	const { action_needed, entries } = notes as Record<string, unknown>;
+	if (!isListOf(action_needed, isText) || !isListOf(entries, isNoteEntry)) return null;
+	return {
+		action_needed: [...action_needed],
+		entries: entries.map(({ type, audience, title }) => ({ type, audience, title })),
+	};
+}
+
+/**
+ * The notes `changes/<version>/release.json` froze, with its date — or null
+ * (no snapshot, no notes in it, anything malformed). Never throws.
+ */
+export function readReleaseNotes(changesDir: string, version: string): CodeReleaseNotes | null {
+	if (!/^\d+\.\d+\.\d+$/.test(version)) return null;
+	try {
+		const snapshot = JSON.parse(readFileSync(join(changesDir, version, 'release.json'), 'utf8'));
+		const notes = notesShape(snapshot?.notes);
+		return notes === null || !isText(snapshot.date) ? null : { date: snapshot.date, ...notes };
+	} catch {
+		return null;
+	}
 }
 
 /** The published (`master`-channel) rungs that actually exist on disk. */

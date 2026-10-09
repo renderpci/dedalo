@@ -18,7 +18,7 @@ export const MAINTENANCE_KEYS = {
 		typeLabel: 'array',
 		doc: `This parameter defines the code servers this install offers releases from. Each entry is a JSON object with \`name\`, \`url\` and \`code\`; add entries to the array to offer mirror servers too.
 
-The installers (the command-line installer, the browser wizard and \`install.sh\`) WRITE the official Dédalo code server entry below, unless the install is declared air-gapped (\`--no-update-servers\`, the unticked update-server box in the wizard, or answering \`n\` in \`install.sh\`), which writes \`[]\`. Unset or \`[]\` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
+The installers (the command-line installer, the browser wizard and \`install.sh\`) WRITE the official Dédalo code server entry below, unless the install is declared air-gapped (\`--no-update-servers\`, the unticked update-server box in the wizard, or answering \`n\` in \`install.sh\`), which writes \`[]\`. Unset or \`[]\` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a \`[]\` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry. The list is read at boot, and so is the browser's \`connect-src\` that lets the update panel reach a master: restart the server after changing it.
 
 \`url\` is the master's JSON API endpoint — it MUST end in \`/dedalo/core/api/v1/json/\` (or \`/api/v1/json\`); any other path answers 404 and the panel reports the server as unreachable. \`code\` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN \`CODE_SERVERS\`.
 
@@ -102,7 +102,7 @@ DEDALO_CODE_SERVER_DEV_CHANNEL=true
 		default: undefined,
 		heading: 'Defining source versions local directory to save the new code',
 		typeLabel: 'string',
-		doc: `This parameter defines the path to the local directory to save the new code downloaded from the master server repository.
+		doc: `**Not honoured by the engine.** A code update downloads and stages the new release in \`.code_staging\` under the code-backup root (\`<DEDALO_BACKUP_PATH>/.code_staging\`), whatever this key says. Setting it has no effect on staging; it is a retirement candidate.
 
 \`\`\`bash
 DEDALO_SOURCE_VERSION_LOCAL_DIR="/tmp/my_museum"
@@ -211,7 +211,9 @@ This parameter needs to be included as \`code\` in [ONTOLOGY_SERVERS](#ontology-
 
 Each entry is a JSON object with \`name\`, \`url\` and \`code\`.
 
-The installers (the command-line installer, the browser wizard and \`install.sh\`) WRITE the official dedalo.dev entry below, unless the install is declared air-gapped (\`--no-update-servers\`, the unticked update-server box in the wizard, or answering \`n\` in \`install.sh\`), which writes \`[]\`. Unset or \`[]\` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
+The installers (the command-line installer, the browser wizard and \`install.sh\`) WRITE the official dedalo.dev entry below, unless the install is declared air-gapped (\`--no-update-servers\`, the unticked update-server box in the wizard, or answering \`n\` in \`install.sh\`), which writes \`[]\`. Unset or \`[]\` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a \`[]\` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry.
+
+The list also has an install-time role: its FIRST entry (a preserved custom list, otherwise the official server) is where the installer fetches every domain ontology other than the built-in \`oh\`, and whose catalog decides which ontologies can be chosen, unless \`--ontology-source\` names a local export. With \`[]\` and no \`--ontology-source\`, only \`oh\` can be installed.
 
 Configuration for the official dedalo.dev server:
 
@@ -243,7 +245,7 @@ entries to this list. Every Dédalo server can provide its own ontologies.`,
 		heading: 'Sync ontology from master server',
 		typeLabel: 'true || false',
 		typeSuffix: '(optional; unset = not configured)',
-		doc: `This parameter defines if the installation will be updated his ontology using the master server versions.
+		doc: `**Not honoured by the engine.** The key is still parsed, but nothing reads the value: it has no effect on ontology updates, which are run from the *Update ontology* panel against the masters in [ONTOLOGY_SERVERS](#ontology-servers). A v6 \`.env\` that carries it keeps booting; the line can be removed. It is a retirement candidate.
 
 \`\`\`bash
 STRUCTURE_FROM_SERVER=true

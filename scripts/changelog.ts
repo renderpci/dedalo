@@ -9,7 +9,8 @@
  *                                            scaffold changes/unreleased/<slug>.md
  *   bun run changelog release <version> [--from <tag>] [--date yyyy-mm-dd] [--allow-empty]
  *                                            move unreleased/ into changes/<version>/, freeze
- *                                            release.json (git is read HERE, once), re-render
+ *                                            release.json (git is read HERE, once; the notes
+ *                                            the update panel shows are derived HERE), re-render
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -18,6 +19,7 @@ import {
 	AUDIENCES,
 	CHANGE_LOG_PAGE,
 	compareVersions,
+	deriveReleaseNotes,
 	loadChangeSet,
 	parseRelease,
 	type Release,
@@ -134,6 +136,10 @@ function release(args: string[]): void {
 		to,
 		commits,
 		wire_contract: unreleasedWireContract(set, wireContractIds(ROOT)),
+		// the machine-read notes every installation's update panel shows for this
+		// release (code_manifest.ts reads them; change_log_tripwire holds them equal
+		// to this derivation)
+		notes: deriveReleaseNotes(set.unreleased),
 	};
 	const json = `${JSON.stringify(record, null, '\t')}\n`;
 	parseRelease(`changes/${version}/release.json`, json); // refuse a bad --date before moving anything

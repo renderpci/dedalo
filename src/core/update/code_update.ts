@@ -137,7 +137,12 @@ import { writePublicationManifest } from './publication_manifest.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { isSupervised, supervisorRefusalMessage } from './supervision.ts';
-import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
+import { DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
+import { assertLinearUpgrade } from './version_walk.ts';
+
+// The walk rule moved to its leaf (version_walk.ts, 2026-10-09); re-exported so
+// every existing caller keeps importing it from here.
+export { assertLinearUpgrade };
 
 /**
  * A code-update SHAPE refusal (the archive's contents, the swap's filesystem).
@@ -500,65 +505,6 @@ export async function extractArchive(zipPath: string, destDir: string): Promise<
 		}
 	}
 	return codeRoot;
-}
-
-/**
- * Strict linear upgrade guard (Opus §1.3) — a backstop against a malicious or
- * buggy code server offering a skip. Returns null when the target is a legal
- * next rung, else the reason.
- *
- * THE DEV CHANNEL (2026-08-24) relaxes exactly ONE clause: `target === current`
- * becomes legal, because a branch build carries no version bump — that is the
- * whole point of testing unreleased `v7` code on a remote install. It relaxes
- * an ORDERING guard, not an AUTHENTICITY one: the origin allowlist, the
- * no-redirect rule and the sha256-vs-sidecar check are untouched, so the worst
- * a forged `channel` buys is installing a same-version archive the configured
- * master really published. Downgrades and rung skips stay refused on both
- * channels, and an OMITTED channel never relaxes anything.
- */
-export function assertLinearUpgrade(
-	current: readonly number[],
-	target: readonly number[],
-	channel: InstallChannel = 'master',
-): string | null {
-	const order = compareVersionArrays(target, current);
-	if (order === 0 && channel === 'dev') return null;
-	if (order !== 1) return 'refusing a downgrade or same-version install';
-	return versionSkipReason(current, target);
-}
-
-/**
- * The skip rules over a KNOWN-ascending pair (assertLinearUpgrade gates order
- * first) — the swap path's ONLY version gate, so it must be exact.
- *
- * The PATCH AXIS WAS NEVER CONSTRAINED: `cPatch` was not even destructured, so
- * `assertLinearUpgrade([7,0,0], [7,0,99999])` returned null and 7.0.0 → 7.0.3
- * installed in one hop, skipping every intervening rung's migrations. Nothing
- * else caught it — the sha is CLIENT-SUPPLIED and matches the genuinely
- * published sidecar of the skipped-to release, so a consumer pointed at a
- * master with several archives on disk could jump the queue.
- *
- * Now it asks ONE question, the same notion of "next rung" the manifest builds
- * from (code_manifest.ts upgradeRung): major+1.0.0, minor+1.0, or patch+1.
- */
-function versionSkipReason(current: readonly number[], target: readonly number[]): string | null {
-	const [cMajor = 0, cMinor = 0, cPatch = 0] = current;
-	const [tMajor = 0, tMinor = 0, tPatch = 0] = target;
-	if (isNextRung([cMajor, cMinor, cPatch], [tMajor, tMinor, tPatch])) return null;
-	if (tMajor > cMajor) return 'major version skip is not allowed';
-	if (tMinor <= cMinor) return 'patch version skip is not allowed';
-	return tPatch !== 0 ? 'a minor/major bump must land on .0' : 'minor version skip is not allowed';
-}
-
-/** Is `target` the ONE rung above `current`: major+1.0.0, minor+1.0, or patch+1? */
-function isNextRung(
-	[cMajor, cMinor, cPatch]: readonly [number, number, number],
-	[tMajor, tMinor, tPatch]: readonly [number, number, number],
-): boolean {
-	if (tMajor === cMajor + 1) return tMinor === 0 && tPatch === 0;
-	if (tMajor !== cMajor) return false;
-	if (tMinor === cMinor + 1) return tPatch === 0;
-	return tMinor === cMinor && tPatch === cPatch + 1;
 }
 
 /**

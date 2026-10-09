@@ -145,8 +145,16 @@ Dédalo ships around 150 standardized hierarchies — the ISO country toponymies
 the common thematic ones — as vendored dump files in `install/import/hierarchy/`.
 You do not create these by hand:
 
-- **During the install**, the wizard's hierarchy step offers them as a checkbox
-  list and imports the ones you tick.
+- **During the install**, every installer asks: the browser wizard's
+  *Hierarchies* step as a checkbox list, the command-line installer as
+  `--hierarchies <codes>|default|none`
+  ([command-line flags](../install/installer_reference.md#command-line-flags)),
+  and `install.sh` as its *Optional thesauri* question. All three start from the
+  same default set, the entries of `hierarchies.json` flagged
+  `install_checked_default` (today only `es`), which the wizard pre-ticks and the
+  command line installs when it gets no answer. `none` is a valid answer. The
+  Languages thesaurus (`lg`) is not a choice: it is active on every install, and
+  naming it is dropped with a note.
 - **Afterwards**, Maintenance → **Install hierarchies** (`add_hierarchy`) offers
   the same list, minus the ones already installed, and imports on demand.
 
@@ -172,6 +180,15 @@ The two halves meet in **one directory**: `install/import/hierarchy/`, inside th
 engine's own tree. Export writes there; import reads from there. There is no path
 to configure — the destination is derived from the engine's location, so a file
 exported on a machine is immediately offered by that machine's own import panel.
+
+!!! warning "Nothing you put in `install/import/hierarchy/` survives a code update"
+    The directory is part of the code tree. A [code update](updates/updating_code.md)
+    from the panel moves the whole tree aside, files you added and your edits to
+    `hierarchies.json` included, and the new release brings its own
+    `hierarchies.json`. A `git pull` stops on the edited `hierarchies.json` as a
+    conflict. Import the hierarchies you carried over **before** updating the
+    code, or copy the files and the descriptor entries in again afterwards. The
+    exports you need to keep belong in your own archive, not in this directory.
 
 !!! note "Coming from v6"
     v6 had an `EXPORT_HIERARCHY_PATH` constant for this destination. It is gone,

@@ -6,10 +6,10 @@
 #
 # 1. THE UNIT NAMED KEYS THE INSTALLER DOES NOT WRITE. It read $DB_PASSWORD,
 #    $DB_HOST, $DB_USER, $DB_NAME. Those are the TS-native spellings; the install
-#    wizard writes the PHP-catalog ones — DEDALO_PASSWORD_CONN, DEDALO_HOSTNAME_CONN,
-#    DEDALO_USERNAME_CONN, DEDALO_DATABASE_CONN (src/core/install/config_persist.ts,
-#    which says so: "PHP key names are used so an operator migrating from PHP can
-#    read them"). Both spellings are legitimate — src/config/env.ts resolves the PHP
+#    wizard then wrote the PHP-catalog ones — DEDALO_PASSWORD_CONN, DEDALO_HOSTNAME_CONN,
+#    DEDALO_USERNAME_CONN, DEDALO_DATABASE_CONN. (Since 2026-10-09 the installer
+#    writes the TS-native names, but a .env written before that, or carried over
+#    from PHP, still holds only the alias.) Both spellings are legitimate — src/config/env.ts resolves the PHP
 #    name as a FALLBACK for the TS-native one — so this script resolves each key
 #    exactly the way the engine's readEnv does: the TS-native name first, then its
 #    PHP alias. On the wizard's own .env the old unit expanded four empty strings and
@@ -167,7 +167,7 @@ USER=$(resolve_key "$USER_KEY")
 SOCKET=$(resolve_key "$SOCKET_KEY")
 # A socket directory outranks host/port, which is the precedence the engine applies
 # WHERE IT HONOURS ONE — src/ai/rag/vector_store.ts, for DEDALO_RAG_DB_SOCKET_CONN
-# (store 2). The MATRIX connection has no such key in the TS engine: the wizard
+# (store 2). The MATRIX connection has no such key in the TS engine: the installer
 # writes DEDALO_SOCKET_CONN but nothing reads it, so store 1 passes no --socket-key
 # and connects exactly the way the engine does. pg_dump takes a directory in -h
 # exactly as libpq does.

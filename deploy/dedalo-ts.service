@@ -99,8 +99,10 @@ UMask=0007
 Restart=always
 RestartSec=3
 # Exit 75 (RESTART_EXIT_CODE, src/core/install/restart.ts) is a PLANNED restart:
-# the installer persisted a new ../private/.env and the frozen-at-import config
-# can only be reloaded by a fresh process. Restart=always already brings it back;
+# the installer persisted a new ../private/.env (the frozen-at-import config can
+# only be reloaded by a fresh process), or a code update / code restore swapped
+# the tree and needs the new code booted. Restart=always is what brings it back
+# (under Restart=on-failure this line would PREVENT that restart);
 # this line just keeps the planned exit out of the failure counters (and out of
 # the watchdog's alerting), instead of logging it as a crash.
 SuccessExitStatus=75

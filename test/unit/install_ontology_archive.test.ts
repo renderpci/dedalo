@@ -23,7 +23,7 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { isDedaloError } from '../../src/core/errors/index.ts';
@@ -32,11 +32,11 @@ import {
 	MAX_ARCHIVE_FILES,
 } from '../../src/core/install/ontology_archive.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
+import { buildOntologyUpdateInfo } from '../../src/core/ontology/data_io_import.ts';
 import { DEDALO_VERSION_MAJOR_MINOR } from '../../src/core/update/version.ts';
 
 const EXPORT_ROOT = resolve(import.meta.dir, '../../install/import/ontology');
 const VERSION_DIR = join(EXPORT_ROOT, DEDALO_VERSION_MAJOR_MINOR);
-const WANTED_RE = /^(?:ontology\.json|[a-z_]{2,}\.copy\.gz)$/;
 /** The old single cap (every header counted) this archive must now pass. */
 const OLD_HEADER_CAP = 256;
 
@@ -108,9 +108,14 @@ describe('an archive of a real ontology export version directory', () => {
 	const archive = archiveOfExport();
 
 	test('every wanted top-level file is extracted, nothing else', async () => {
-		const wanted = readdirSync(VERSION_DIR)
-			.filter((name) => WANTED_RE.test(name))
-			.sort();
+		// The WANTED set is the engine's own reading of the plain directory — the
+		// manifest a master serves for it (buildOntologyUpdateInfo: ontology.json +
+		// one entry per top-level `<tld>.copy.gz`) — so the archive must extract
+		// exactly what the directory form offers, through no walk of this gate's own.
+		const manifest = buildOntologyUpdateInfo(VERSION_DIR, 'file:///export').data;
+		expect(manifest.info).not.toBeNull();
+		const wanted = ['ontology.json', ...manifest.files.map((file) => `${file.tld}.copy.gz`)].sort();
+		expect(wanted.length).toBeGreaterThan(100); // a realistic export, not a stub
 		expect(wanted).toContain('ontology.json');
 		expect(wanted).toContain('oh.copy.gz');
 		const extracted = await extractOntologyArchive(archive, join(scratch('extract'), 'source'));

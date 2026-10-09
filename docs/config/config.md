@@ -12,12 +12,16 @@ root, with nothing to edit inside the served tree. After changing a value,
 # ../private/.env
 ENTITY=my_museum
 DEDALO_TIMEZONE=Europe/Madrid
-ACTIVE_ONTOLOGY_TLDS=dd,rsc,oh
+ACTIVE_ONTOLOGY_TLDS=["dd","rsc","ontology","ontologytype","hierarchy","lg","oh"]
 ```
 
 Lists and maps are **JSON** (simple lists also accept a comma list); booleans are
-`true`/`false`; a key you leave out takes the default shown here. `../private/sample.env`
-carries the same catalogue in copy-paste form.
+`true`/`false`; a key you leave out takes the default shown here — except the
+**required** keys (the database, the entity and the four language keys), which have
+no usable default: the installer writes them, and a configured server refuses to
+boot without them. `install/sample.env` in the code tree carries the same catalogue
+in copy-paste form; `../private/sample.env` is the copy the installer took, so it
+lacks every key added since your install.
 
 !!! note "Coming from v6?"
     The settings below are the v7 names. Several were renamed, a few changed shape,
@@ -253,7 +257,7 @@ DEDALO_APPLICATION_LANGS `object` (a JSON map of `lg-*` code → label)
 
 This parameter defines the languages that Dédalo will use for the data and user interface. Dédalo is a true multi-language application, any text field can be defined as translatable and this configuration define the languages that the installation will use to store and translate text data. When the user select one of those languages Dédalo will change the data showed or the user interface, so it will render all data with this new language.
 
-**Required** — the server refuses to boot without a non-empty value.
+**Required** — the server refuses to boot without a non-empty value. The installer writes it from the working languages picked (`lg-eng` and `lg-spa` by default).
 
 ```bash
 DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Euskara","lg-eng":"English","lg-fra":"French"}
@@ -261,7 +265,7 @@ DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Eus
 
 > See the Dédalo structure lang for see the languages definitions.
 
-*Default: {"lg-eng":"English"}*
+*Default: **required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback*
 
 ---
 
@@ -271,6 +275,8 @@ DEDALO_APPLICATION_LANGS_DEFAULT `string`
 
 Defines the main language will used in the user interface.
 
+**Required** — the server refuses to boot without it. The installer writes it (default: the first working language picked, `lg-eng` by default).
+
 Dédalo can be translated to any language, the translations of the interface are done in the ontology. The users can change the Dédalo interface to use it in his language. In Dédalo the user interface and the data language are separated concepts and it is possible have a interface in one language and the data in other. This main language will be used as primary option and as fall back language when the element does not have the translation available.
 
 ```bash
@@ -279,7 +285,7 @@ DEDALO_APPLICATION_LANGS_DEFAULT="lg-eng"
 
 > See the Dédalo structure lang for see the languages definitions.
 
-*Default: lg-eng*
+*Default: **required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback*
 
 ---
 
@@ -289,6 +295,8 @@ DEDALO_DATA_LANG_DEFAULT `string`
 
 Defines the main language will used by Dédalo to manage and process data.
 
+**Required** — the server refuses to boot without it. The installer writes it (default: the first working language picked, `lg-eng` by default).
+
 The main language is the mandatory language for the text data in the catalog or inventory. Dédalo is a real multi-language application, it can manage multiple translation of the textual information.
 
 In a multi-language situation, when you require some translated information but it is not present (because it is not done), Dédalo will need to use the main language to do a fall back process to main language to show the data. If the main language data is not present, Dédalo will use any other language to show those data.
@@ -297,7 +305,7 @@ In a multi-language situation, when you require some translated information but 
 DEDALO_DATA_LANG_DEFAULT="lg-spa"
 ```
 
-*Default: lg-eng*
+*Default: **required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback*
 
 ---
 
@@ -411,6 +419,8 @@ PROJECTS_DEFAULT_LANGS `array`
 
 This parameter defines the languages that will use for export and publish data.
 
+**Required** — the server refuses to boot without it. The installer writes it, in its legacy spelling `DEDALO_PROJECTS_DEFAULT_LANGS`, from the working languages picked (`lg-eng`, `lg-spa` by default).
+
 This definition control the amount of languages that will be processed to export data or publish data in the publication process.
 
 When Dédalo export data or publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in those processes.
@@ -421,7 +431,7 @@ PROJECTS_DEFAULT_LANGS=[ "lg-spa", "lg-cat", "lg-eng"]
 
 > The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
 
-*Default: ["lg-eng"]*
+*Default: **required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback*
 
 ---
 
@@ -467,7 +477,7 @@ Besides, every installation chooses the **domain** ontologies it uses in its inv
 | **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
 | **nexus** | Nexus, a standalone module with its own sections. |
 
-The installer WRITES this key on every install: the core, then the domain ontologies chosen, then the ontologies they declare as dependencies. An EXAMPLE for an oral-history + intangible-heritage installation — not the default:
+The installer WRITES this key on every install: the core, then the chosen domain ontologies together with their declared dependencies, in install order (each dependency before the ontology that needs it). An EXAMPLE for an oral-history + intangible-heritage installation — not the default:
 
 ```bash
 ACTIVE_ONTOLOGY_TLDS=[ "dd", "rsc", "ontology", "ontologytype", "hierarchy", "lg", "oh", "ich" ]
@@ -5575,7 +5585,7 @@ CODE_SERVERS `array`
 
 This parameter defines the code servers this install offers releases from. Each entry is a JSON object with `name`, `url` and `code`; add entries to the array to offer mirror servers too.
 
-The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official Dédalo code server entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
+The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official Dédalo code server entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a `[]` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry. The list is read at boot, and so is the browser's `connect-src` that lets the update panel reach a master: restart the server after changing it.
 
 `url` is the master's JSON API endpoint — it MUST end in `/dedalo/core/api/v1/json/` (or `/api/v1/json`); any other path answers 404 and the panel reports the server as unreachable. `code` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN `CODE_SERVERS`.
 
@@ -5669,7 +5679,7 @@ DEDALO_CODE_SERVER_DEV_CHANNEL=true
 
 DEDALO_SOURCE_VERSION_LOCAL_DIR `string`
 
-This parameter defines the path to the local directory to save the new code downloaded from the master server repository.
+**Not honoured by the engine.** A code update downloads and stages the new release in `.code_staging` under the code-backup root (`<DEDALO_BACKUP_PATH>/.code_staging`), whatever this key says. Setting it has no effect on staging; it is a retirement candidate.
 
 ```bash
 DEDALO_SOURCE_VERSION_LOCAL_DIR="/tmp/my_museum"
@@ -5779,7 +5789,9 @@ This parameter defines the ontology master servers to get the ontology updates. 
 
 Each entry is a JSON object with `name`, `url` and `code`.
 
-The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official dedalo.dev entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a list already in the file untouched (mirrors you added survive).
+The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official dedalo.dev entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a `[]` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry.
+
+The list also has an install-time role: its FIRST entry (a preserved custom list, otherwise the official server) is where the installer fetches every domain ontology other than the built-in `oh`, and whose catalog decides which ontologies can be chosen, unless `--ontology-source` names a local export. With `[]` and no `--ontology-source`, only `oh` can be installed.
 
 Configuration for the official dedalo.dev server:
 
@@ -5810,7 +5822,7 @@ entries to this list. Every Dédalo server can provide its own ontologies.
 
 STRUCTURE_FROM_SERVER `true || false` (optional; unset = not configured)
 
-This parameter defines if the installation will be updated his ontology using the master server versions.
+**Not honoured by the engine.** The key is still parsed, but nothing reads the value: it has no effect on ontology updates, which are run from the *Update ontology* panel against the masters in [ONTOLOGY_SERVERS](#ontology-servers). A v6 `.env` that carries it keeps booting; the line can be removed. It is a retirement candidate.
 
 ```bash
 STRUCTURE_FROM_SERVER=true

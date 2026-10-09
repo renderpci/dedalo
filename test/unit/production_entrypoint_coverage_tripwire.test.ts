@@ -275,6 +275,10 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	// docs/development/vendored_library_versions.md from package.json + the
 	// client_libs registry — repository files only, like `changelog`.
 	'libs',
+	// `registries:gen` / `registries:check` (2026-10-09, installer unification D1) render
+	// deploy/image_registries.sh and the docs/install/docker.md table from
+	// engineering/image_registries.json — repository files only, like `libs`.
+	'registries',
 	'probe',
 	'publication',
 	'sitebuilder',

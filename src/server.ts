@@ -46,6 +46,7 @@ import { MIN_GZIP_BYTES, SECURITY_HEADERS, staticAssetResponse } from './core/ap
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
 import { mediaTypeOf } from './core/concepts/media.ts';
+import { CLIENT_ROOT, publishClientAtBoot } from './core/install/client_publish.ts';
 import { provisionMediaTreeAtBoot } from './core/install/media_tree.ts';
 import { resolveStagedPath, STAGED_URL_PREFIX } from './core/media/ingest/staged_files.ts';
 import {
@@ -92,8 +93,6 @@ import { ensureCodeFilesDirAtBoot } from './core/update/code_files_dir.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
 import { INSTALLED_DIGEST } from './core/update/install_stamp.ts';
 
-/** Absolute root of the copied client tree (see scripts/sync_client.sh). */
-const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
 /**
  * CLIENT_ROOT canonicalised once. The symlink-escape check in serveClientAsset
  * compares canonical paths, so the BASE must be canonical too — otherwise a
@@ -2328,6 +2327,14 @@ export async function startServer() {
 				}
 			})
 			.catch((error) => console.error('[media jobs] boot reconcile failed:', error));
+
+	// THE CLIENT THE PROXY SERVES IS THIS ENGINE'S (installer unification D2). In a
+	// container stack nginx serves the client from a volume this step fills with the
+	// client of the code now booting, before the socket binds — so the first request
+	// the proxy forwards already meets a client of the same version. EVERY boot mode
+	// (the install wizard is client too); a no-op outside containers (key unset) and
+	// in a smoke boot. Never fatal: it logs and the API still serves.
+	publishClientAtBoot({ smokeBoot });
 
 	const socketPath = config.server.unixSocketPath;
 	// A previous unclean shutdown leaves the socket file behind; Bun cannot

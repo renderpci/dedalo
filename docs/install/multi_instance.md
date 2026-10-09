@@ -114,6 +114,13 @@ needed.
 Description=Dedalo TS server (Bun) — %i
 After=network.target postgresql.service
 Wants=postgresql.service
+# this instance's health watchdog comes with it
+Wants=dedalo-ts-watchdog@%i.timer
+# 5 starts per 5 min: planned restarts (installer, code update) never exhaust it
+StartLimitIntervalSec=300
+StartLimitBurst=5
+# start limit exhausted = a new code tree that never boots: roll it back
+OnFailure=dedalo-ts-rollback@%i.service
 
 [Service]
 Type=simple
@@ -130,10 +137,12 @@ RuntimeDirectoryMode=0750
 UMask=0007
 Restart=always
 RestartSec=3
-# the installer's planned-restart exit code
+# a planned restart (installer, code update or restore): not a failure
 SuccessExitStatus=75
 TimeoutStopSec=30
 KillSignal=SIGTERM
+# signal the server only: diffusion runners finish their job across a restart
+KillMode=process
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=dedalo-%i
@@ -141,7 +150,15 @@ LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
+Also=dedalo-ts-watchdog@%i.timer
 ```
+
+Every line mirrors the single-instance `deploy/dedalo-ts.service`, whose comments
+give the full reason for each. Three are easy to drop and costly to lose:
+`KillMode=process` (without it a restart kills every diffusion runner mid-publication),
+the widened start limit (systemd's default of 5 starts in 10 s can leave the unit
+`failed` after a burst of planned restarts), and `OnFailure=` (the only thing that
+rolls back a code update whose new tree never boots).
 
 `Environment=DEDALO_SUPERVISED=true` is what lets an in-app code update run: the
 update swaps the code tree and exits, and only a process manager that restarts the
@@ -213,13 +230,17 @@ no `@`, no `%i`, no drop-in — every value spelled out, `User=` included. That 
 two files duplicating some thirty identical lines. At two domains either shape is
 defensible; the template earns its indirection from the third onward.
 
-Template the remaining reference units the same way (`%i` throughout):
+Template the remaining reference units the same way (`%i` throughout). The
+watchdog and rollback units run the two scripts installed once for the whole host
+in `/opt/dedalo/bin/` ([production step 10](production.md#10-run-the-engine-under-systemd));
+every instance passes its own paths and unit names to them:
 
 | Template unit | Derived from | Key change |
 | --- | --- | --- |
-| `dedalo-ts-watchdog@.service` + `.timer` | `deploy/dedalo-ts-watchdog.*` | health-check `--unix-socket /run/dedalo-%i/dedalo_ts.sock`; `OnFailure=dedalo-ts-restart@%i.service` |
+| `dedalo-ts-watchdog@.service` + `.timer` | `deploy/dedalo-ts-watchdog.*` | `ExecStart=/opt/dedalo/bin/dedalo-ts-watchdog.sh --socket /run/dedalo-%i/dedalo_ts.sock --app-dir /home/ded_%i/dedalo --restart-unit dedalo-ts-restart@%i.service --rollback-unit dedalo-ts-rollback@%i.service`; `Requisite=`/`After=dedalo-ts@%i.service`. No `OnFailure=`: the script starts the remedy itself, and an `OnFailure=` restart would race the rollback |
 | `dedalo-ts-restart@.service` | `deploy/dedalo-ts-restart.service` | `ExecStart=/usr/bin/systemctl restart dedalo-ts@%i.service` |
-| `dedalo-backup@.service` + `.timer` | `deploy/dedalo-backup.*` | `User=ded_%i`, `EnvironmentFile=/home/ded_%i/private/.env`; it dumps `$DB_NAME` and rsyncs `$MEDIA_PATH` + `/home/ded_%i/private/` |
+| `dedalo-ts-rollback@.service` | `deploy/dedalo-ts-rollback.service` | `ExecStart=/opt/dedalo/bin/dedalo-code-rollback.sh --app-dir /home/ded_%i/dedalo --service dedalo-ts@%i --socket /run/dedalo-%i/dedalo_ts.sock` |
+| `dedalo-backup@.service` + `.timer` | `deploy/dedalo-backup.*` | `User=ded_%i`, `EnvironmentFile=/home/ded_%i/private/.env`, `DEDALO_BACKUP_STATE_DIR`, and **every path in every `ExecStart`**: the scripts' location (`/home/ded_%i/dedalo/deploy/…`), each `--dir`, `--dest` and `--source` (`/home/ded_%i/private/…`, `/home/ded_%i/backups/…`). The database and media keys are read from that `.env` by name, so they need no change. Keep the site-builder store in one instance's unit only, or in none, since it covers the whole host. In every unit that drops it, remove `site_builder` from `Environment=DEDALO_BACKUP_EXPECTED_STORES` (or the run reports it MISSING and fails) and move `--last` to the last `ExecStart` that remains (or nothing reports the run's verdict) |
 
 ## 3. Provision a domain
 
@@ -253,24 +274,44 @@ CREATE DATABASE dedalo_${SITE} WITH ENCODING='UTF8' OWNER=dedalo_${SITE};
 SQL
 ```
 
-Run the CLI installer as the service user — with this instance's domain
-ontologies, e.g. `--ontologies oh,ich` (the installer writes
-`ACTIVE_ONTOLOGY_TLDS` from that answer) — then append the production block to
-this instance's `.env` (see [Production install](production.md) steps 8–9), with
-the **unique** values:
-
-```dotenv
-SERVER_UNIX_SOCKET=/run/dedalo-site1/dedalo_ts.sock
-MEDIA_PATH=/srv/dedalo/site1/media
-DEDALO_MEDIA_ACCESS_MODE=publication
-```
-
-Then enable the three timers/services for this instance:
+Run the CLI installer as the service user, from this instance's clone, with the
+**unique** values as flags ([Production install](production.md#8-run-the-installer)
+step 8 explains each one). `--socket`, `--media-path` and `--media-access-mode` are
+written to this instance's `.env`, and `--media-path` is also the directory the
+installer write-probes, so nothing is appended afterwards. `--ontologies` names this
+instance's domain ontologies; the installer writes `ACTIVE_ONTOLOGY_TLDS` from it:
 
 ```shell
-systemctl enable --now dedalo-ts@site1 \
-                       dedalo-ts-watchdog@site1.timer \
-                       dedalo-backup@site1.timer
+read -rsp 'Database password: '  DB_PASSWORD;                  echo
+read -rsp 'New root password:  '  DEDALO_INSTALL_ROOT_PASSWORD; echo
+export DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
+
+cd /home/ded_$SITE/dedalo
+sudo -u ded_$SITE --preserve-env=DB_PASSWORD,DEDALO_INSTALL_ROOT_PASSWORD \
+  /home/ded_$SITE/.bun/bin/bun run scripts/install.ts \
+    --db-name dedalo_$SITE \
+    --db-user dedalo_$SITE \
+    --db-password "$DB_PASSWORD" \
+    --db-host localhost \
+    --db-port 5432 \
+    --socket /run/dedalo-$SITE/dedalo_ts.sock \
+    --media-path /srv/dedalo/$SITE/media \
+    --media-access-mode publication \
+    --ontologies oh,ich \
+    --entity $SITE \
+    --langs lg-eng,lg-spa \
+    --app-lang lg-eng \
+    --data-lang lg-eng
+
+unset DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
+```
+
+Then enable the services and timers for this instance:
+
+```shell
+systemctl enable --now dedalo-ts@$SITE \
+                       dedalo-ts-watchdog@$SITE.timer \
+                       dedalo-backup@$SITE.timer
 ```
 
 ## Reverse proxy: one virtual host per domain
@@ -447,6 +488,9 @@ being in every group is expected:
 usermod -aG ded_site1 www-data     # nginx on RHEL: usermod -aG ded_site1 nginx
 systemctl reload apache2           # or: systemctl reload nginx
 ```
+
+A reload is enough: the root master process spawns fresh workers, and each worker
+takes the proxy user's groups as it starts, the new membership included.
 
 Issue a certificate per domain: `certbot --apache -d site1.example.org` (or
 `--nginx`; or one certificate with `-d` repeated).

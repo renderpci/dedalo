@@ -6,8 +6,23 @@
 # ⚠ PARKED (2026-07-09): no staging/production server exists yet. This script
 # is wired and reviewed but has never run against a real host — exercise it
 # on the first staging box together with engineering/STAGING_VALIDATION.md
-# before trusting it for production. Invoked by .github/workflows/deploy.yml
-# once the DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist; equally runnable by hand.
+# before trusting it for production. Invoked by
+# .github/workflows-selfhosted/deploy.yml once the DEPLOY_HOST/DEPLOY_SSH_KEY
+# secrets exist; equally runnable by hand.
+#
+# ⚠ KNOWN GAPS AGAINST THE DOCUMENTED LAYOUT (docs/install/production.md), to
+# close when it is first exercised — until then pass --bun and mind the user:
+#   - --bun defaults to $HOME/.bun/bin/bun OF THE SSH LOGIN USER. The canonical
+#     pinned runtime is /opt/dedalo/.bun/bin/bun: pass `--bun` explicitly (the
+#     workflow above does not yet).
+#   - git and bun run AS THE SSH LOGIN USER, not as the service user. The
+#     production service user `dedalo` has a nologin shell and cannot be that
+#     login, so files the checkout and `bun install` create end up owned by the
+#     wrong user. The remote steps need `sudo -u dedalo` (and the login user a
+#     sudoers entry for it plus `systemctl restart <service>`), or a login whose
+#     identity is the service user's.
+#   - it updates the code only: the out-of-tree copies in /opt/dedalo/bin/
+#     (dedalo-code-rollback.sh, dedalo-ts-watchdog.sh) are not refreshed.
 #
 # Model (engineering/PRODUCTION.md):
 #   - the repo IS the artifact: deploy = fetch + checkout <ref> on the host
