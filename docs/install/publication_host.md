@@ -172,7 +172,7 @@ directories. The provisioner grants it exactly two things:
 | Grant | Allows | Why |
 | --- | --- | --- |
 | a sudo rule | the web server's configuration test (`apache2ctl -t`, `apachectl -t` or `nginx -t`), nothing else | the test must read TLS keys only root can read |
-| a polkit rule | reloading the web server's unit, restarting the Publication API v2 unit, starting and stopping a scratch copy of the v2 unit on a high local port; on nginx with the shared media map (step 9), starting `dedalo-pubhost-map`, the root service that renders that map | applying rules, testing and switching v2 releases need them |
+| a polkit rule | reloading the web server's unit, restarting the Publication API v2 unit, starting and stopping a scratch copy of the v2 unit on a high local port; on nginx with the shared media map (step 9), starting `dedalo-pubhost-map`, the root service that renders that map; on a host with fapolicyd, starting `dedalo-pubhost-trust-<instance>`, the root service that refreshes this instance's fapolicyd trust | applying rules, testing and switching v2 releases need them |
 
 Neither grant lets the work system reach root through the agent:
 
@@ -630,6 +630,7 @@ installed, the rules are registered and nothing is relabelled. What gets which t
 | `/home/museum.org/dedalo` | `d` | `usr_t` | passed through only |
 | `/home/museum.org/dedalo/publication_api` | `d` | `usr_t` | passed through only |
 | `/home/museum.org/dedalo/publication_api/v1` | `a` | `httpd_sys_content_t` | v1 only: httpd serves it, the v1 pool reads it |
+| `/home/museum.org/dedalo/publication_api/v2` | `a` | `data_home_t` | home layout: systemd must read `v2.env` and the release links to start v2, which it may not under the home's own `user_home_t`; httpd still may not read it |
 | `/home/museum.org/dedalo/rules` | `a` | `httpd_config_t` | the media rules, included by the web server |
 | `/home/museum.org/host_agent` | `a` | `usr_t` | the agent's code (no secret) |
 | `/home/museum.org/.bun/bin` | `a` | `usr_t` | the site's Bun directory |
@@ -680,27 +681,72 @@ ausearch -m AVC,USER_AVC -ts recent
 mount `/home` and `/var` so) excludes the home layout; under `/opt` it stops init, naming the
 mount. With `fapolicyd` active (its default rules, measured on RHEL 9.8), an untrusted Bun may
 not read the TypeScript it runs — fapolicyd types most `.ts` and `.js` files as a language — and
-an unprivileged account may not run it at all, whatever its label. Trust is two steps, each
-printed for you:
+an unprivileged account may not run it at all, whatever its label. The guided install handles
+it in two steps:
 
-1. `install.sh` stops before it hands over, naming the one Bun it runs (the staged one on a first
-   install, the installed one on a re-run). Run its lines, then `install.sh` again.
-2. init then stops at `host.fapolicyd` until you trust the site's Bun **and the agent's code**
-   (the agent runs that Bun as its own account over its own files), plus the map renderer's Bun
-   on an nginx host. Run the lines, then answer `manual`:
+1. `install.sh` stops before it hands over if fapolicyd denies the one Bun it runs (the staged
+   one on a first install, the installed one on a re-run): root must read the installer's code
+   before any of the publication host's services exists. It prints the line that trusts that
+   Bun; run it, then `install.sh` again.
+2. From there the trust is **automatic**. On a host where fapolicyd is installed (running or
+   not), `provision apply` writes one trust file per instance,
+   `/etc/fapolicyd/trust.d/dedalo_<instance>`, and asks fapolicyd to load it before any of the
+   instance's services starts. It also installs the root service
+   `dedalo-pubhost-trust-<instance>`, which rewrites that file; the agent may start it and nothing
+   else, with no argument. It does so after every release install (before the new release is
+   tested) and before every rollback.
+
+The trust file lists, one `path size sha256` line each, every regular file of:
+
+- the site's Bun (`bun_bin`) and the agent's code (`agent_dir`);
+- the map renderer's Bun on an nginx host with the shared media map;
+- the current and the previous release of each Publication API the instance serves, under its
+  state root.
+
+Nothing else can get in: the list is worked out from the instance's declaration, not from
+anything the agent sends. Links are never followed and never trusted, and what cannot be checked
+is never trusted:
+
+- if the Bun or the agent's code cannot be checked (a link in its place, a file that cannot be
+  read, a path with a space), or the file on disk is not one the provisioner wrote, nothing is
+  updated and the previous file stays;
+- a release that cannot be checked (a hard-linked file, a path with a space, a `current` link
+  that names no release) is left out and named. The agent then refuses to run it
+  (`trust_failed`), and `provision check` reports it as drift.
+
+The service records each run in `/etc/dedalo_publication_host/<instance>/fapolicyd_trust.json`,
+and the agent's status reports it.
+
+init's three fapolicyd items only check that this can work:
+
+- `host.fapolicyd` stops init when fapolicyd's `trust` setting lacks the `file` source (it would
+  never read `trust.d`), or when `/etc/fapolicyd/fapolicyd.conf` cannot be read.
+- `host.fapolicyd_integrity` warns when `integrity` is `none` (fapolicyd's default) or `size`. A
+  trusted file that is changed later and keeps its path (or its size) would still run. With
+  `integrity = sha256`, fapolicyd hashes a trusted file when it is opened and refuses it after any
+  change.
+- `host.fapolicyd_mounts` warns when `allow_filesystem_mark` is `0` (fapolicyd's default).
+  fapolicyd then watches mounts, not filesystems, and never sees what a service with its own
+  mount namespace opens. The agent, v2 and the trust service all have one, so they run
+  unchecked, trusted or not (measured, RHEL 9.8). With `allow_filesystem_mark = 1` fapolicyd
+  checks them; what containers and overlay mounts open on the host is then checked too.
+
+Both warnings print the commands; they change fapolicyd for every program on the host, so the
+choice is yours:
 
 ```bash
-# publication host, as root
-fapolicyd-cli --file add /home/museum.org/.bun/bin/bun --trust-file dedalo || fapolicyd-cli --file update /home/museum.org/.bun/bin/bun --trust-file dedalo
-fapolicyd-cli --file add /home/museum.org/host_agent/ --trust-file dedalo || fapolicyd-cli --file update /home/museum.org/host_agent/ --trust-file dedalo
-fapolicyd-cli --file add /var/lib/dedalo_publication_host/_host/map_renderer/bun --trust-file dedalo || fapolicyd-cli --file update /var/lib/dedalo_publication_host/_host/map_renderer/bun --trust-file dedalo
-fapolicyd-cli --update
+# publication host, as root (recommended)
+grep -qE '^[[:space:]]*integrity[[:space:]]*=' /etc/fapolicyd/fapolicyd.conf && sed -i -E 's/^[[:space:]]*integrity[[:space:]]*=.*/integrity = sha256/' /etc/fapolicyd/fapolicyd.conf || echo 'integrity = sha256' >> /etc/fapolicyd/fapolicyd.conf
+grep -qE '^[[:space:]]*allow_filesystem_mark[[:space:]]*=' /etc/fapolicyd/fapolicyd.conf && sed -i -E 's/^[[:space:]]*allow_filesystem_mark[[:space:]]*=.*/allow_filesystem_mark = 1/' /etc/fapolicyd/fapolicyd.conf || echo 'allow_filesystem_mark = 1' >> /etc/fapolicyd/fapolicyd.conf
+systemctl try-restart fapolicyd
 ```
 
-Run them again after every code update: fapolicyd trusts a file by its recorded size and hash, and
-`--file update` records the new ones. The v1 API (PHP-FPM, a trusted program) answers under
-fapolicyd without a line of its own (measured, RHEL 9.8). The v2 releases the agent installs later
-are not covered by these lines, and v2 under fapolicyd has not been measured yet.
+fapolicyd only checks programs and the files it types as a language (most `.ts` and `.js`
+files); a file it types as plain text is never checked at all, trusted or not (measured, RHEL
+9.8). The v1 API (PHP-FPM, a trusted program) answers under fapolicyd without anything of its own
+(measured, RHEL 9.8). A trust file named `dedalo`, left by the hand-run lines of an earlier
+version of this guide, is no longer needed: remove it, then run `fapolicyd-cli --update`.
+Uninstall fapolicyd, and the next `provision apply` removes the service and the trust file.
 
 **EL 8 is not supported.** It ships systemd 239 and kernel 4.18: the units need systemd 247
 (`LoadCredential=` delivers the agent's token, `ProtectProc=` hides other processes), and Bun
@@ -1856,6 +1902,7 @@ The provisioner names these after the instance, so two instances never share the
 | the agent's service | `dedalo-publication-host-<instance>` |
 | the local socket (one machine) | `/run/dedalo_publication_host/<instance>/` |
 | the sudo rule and the polkit rule | one file each, named after the instance |
+| the fapolicyd trust (fapolicyd hosts) | `/etc/fapolicyd/trust.d/dedalo_<instance>`, refreshed by `dedalo-pubhost-trust-<instance>` |
 | the v1 API's PHP-FPM pool, its socket and its `/var/lib/dedalo_publication_host/<instance>/v1/` | `dedalo_<instance>_v1`, `dedalo-<instance>-v1.sock` |
 | the site's web include | `/etc/dedalo_publication_host/<instance>/web.<server>.conf` |
 | the site's log rotation (home layout) | `/etc/logrotate.d/dedalo_<instance>_web`, for `/var/log/<server>/<domain>/` |
@@ -2195,6 +2242,7 @@ The commands below use the example names; `provision` runs as in step 4.
 | `install.sh` says to run it as root, or names a missing command | not root, or a tool it needs is not installed | run it with `sudo`; install what the printed `apt install` / `dnf install` line names |
 | `install.sh` says *run install.sh from an unconfined root shell* | SELinux: the root shell runs in a confined domain (`id -Z` shows `sysadm_t` or `staff_t`) | log in as root in `unconfined_t` (the default for root on RHEL), then run it again |
 | `install.sh` says the stage is on a `noexec` filesystem, or that fapolicyd denies Bun | `/var/lib` is mounted `noexec`, or fapolicyd does not trust the downloaded Bun | `findmnt -T /var/lib/dedalo_publication_host_init` shows the mount; trust the binary with `fapolicyd-cli` ([RHEL](#rhel-rocky-and-alma)) or remount |
+| a release install or rollback is refused with `trust_failed` | fapolicyd host: the trust service could not trust the release before it ran | `systemctl status dedalo-pubhost-trust-<instance>` and `/etc/dedalo_publication_host/<instance>/fapolicyd_trust.json` name the reason; the previous release still serves |
 | init refuses with *start init through deploy/install.sh* | it was started by hand, with an environment, a working directory or flags `install.sh` never uses | start it through `install.sh`, never with `bun …/cli.ts init` |
 | init refuses: an unfinished run | the journal shows a change that began and did not end (a power cut, `kill`) | run it again with `-- --resume` |
 | init refuses, naming open decisions | `--yes` never answers a decision | answer each with `-- --decide <item-id>=<option>`, or run it on a terminal |

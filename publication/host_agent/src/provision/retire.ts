@@ -36,6 +36,7 @@ import { hasDrifted, parseStamp } from './hash';
 import type { AgentLayout } from './layout';
 import { MODES } from './layout';
 import { PUBLICATION_API_DIR } from '../instance/roots';
+import { TRUST_KIND } from './fapolicyd_trust';
 import type { Artifact, ArtifactKind } from './render/types';
 
 export const RECORD_NAME = 'provisioned.json';
@@ -44,11 +45,22 @@ export { RETIRED_SUFFIX };
 /** The rollback of a retired FPM pool (plan.ts VALIDATED_BACKUP_SUFFIX, respelled: no runtime cycle). */
 const BACKUP_SUFFIX = '.dedalo-provision.bak';
 
-/** The kinds a plan may retire, and the validator their removal goes through. Closed. */
-export const RETIRABLE_KINDS: Readonly<Partial<Record<ArtifactKind, 'fpm' | null>>> = Object.freeze({
+/**
+ * What a record may name: a rendered kind, or the fapolicyd trust file — written by the trust
+ * program, not rendered, but stamped by it with TRUST_KIND, so the same guard judges it.
+ */
+export type RetirableKind = ArtifactKind | typeof TRUST_KIND;
+
+/**
+ * The kinds a plan may retire, and the validator their removal goes through. Closed. The trust
+ * unit and its trust file go when fapolicyd is uninstalled (layout.trust becomes null).
+ */
+export const RETIRABLE_KINDS: Readonly<Partial<Record<RetirableKind, 'fpm' | null>>> = Object.freeze({
   fpm_pool: 'fpm',
   logrotate: null,
   logrotate_v1: null,
+  trust_unit: null,
+  [TRUST_KIND]: null,
 });
 
 /** The trees a plan may retire. Closed. */
@@ -56,7 +68,7 @@ export const TREE_KINDS = ['v1_api', 'v1_var'] as const;
 export type TreeKind = (typeof TREE_KINDS)[number];
 
 export interface RecordedArtifact {
-  readonly kind: ArtifactKind;
+  readonly kind: RetirableKind;
   readonly path: string;
   /** fpm_pool only: the FPM install that loads it (its reload after the removal). */
   readonly fpm?: { readonly unit: string; readonly bin: string };
@@ -91,9 +103,11 @@ export function treeMode(kind: TreeKind): (typeof MODES)['apiRoot'] {
 /** What this layout provisions that a later declaration may retire. */
 export function currentRecord(layout: AgentLayout, artifacts: readonly Artifact[]): ProvisionRecord {
   const fpm = layout.site?.v1?.fpm ?? null;
-  const recorded = artifacts
+  const recorded: RecordedArtifact[] = artifacts
     .filter(art => art.kind in RETIRABLE_KINDS)
     .map(art => (art.kind === 'fpm_pool' && fpm !== null ? { kind: art.kind, path: art.path, fpm: { unit: fpm.unit, bin: fpm.bin } } : { kind: art.kind, path: art.path }));
+  // The trust file is the trust program's (not rendered): recorded beside its unit.
+  if (layout.trust !== null) recorded.push({ kind: TRUST_KIND, path: layout.trust.file });
   const trees: RecordedTree[] = [];
   for (const kind of TREE_KINDS) {
     const path = treePath(layout, kind);
@@ -113,7 +127,7 @@ function parseArtifact(raw: unknown): RecordedArtifact | null {
   const entry = raw as Record<string, unknown> | null;
   if (entry === null || typeof entry !== 'object' || typeof entry.kind !== 'string' || !(entry.kind in RETIRABLE_KINDS)) return null;
   if (!CLEAN_PATH(entry.path)) return null;
-  if (entry.kind !== 'fpm_pool') return entry.fpm === undefined ? { kind: entry.kind as ArtifactKind, path: entry.path } : null;
+  if (entry.kind !== 'fpm_pool') return entry.fpm === undefined ? { kind: entry.kind as RetirableKind, path: entry.path } : null;
   const fpm = entry.fpm as Record<string, unknown> | undefined;
   if (fpm === undefined || typeof fpm.unit !== 'string' || !/^[A-Za-z0-9@._-]{1,128}$/.test(fpm.unit) || !CLEAN_PATH(fpm.bin)) return null;
   return { kind: 'fpm_pool', path: entry.path, fpm: { unit: fpm.unit, bin: fpm.bin } };

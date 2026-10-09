@@ -1,10 +1,10 @@
 /**
- * THE ONLY SPAWNER. Every child process the agent starts is one of the six named
+ * THE ONLY SPAWNER. Every child process the agent starts is one of the seven named
  * commands below; no exported function takes a free argv. tests/exec.test.ts fails when
- * any other file under src/ spawns. Three more closed sets follow, none reached by a route:
- * rendererExec() (the root host-map oneshot, spec §13.5), and the root-run provisioner's
- * provisionExec() and initExec() (src/provision/; contracts in src/provision/exec_contract.ts):
- * same law, their own fixed root PATH.
+ * any other file under src/ spawns. Four more closed sets follow, none reached by a route:
+ * rendererExec() (the root host-map oneshot, spec §13.5), trustExec() (the root fapolicyd trust
+ * oneshot), and the root-run provisioner's provisionExec() and initExec() (src/provision/;
+ * contracts in src/provision/exec_contract.ts): same law, their own fixed root PATH.
  *
  * - ABSOLUTE BINARIES, NEVER A PATH LOOKUP: sudo, systemctl and the configtest binary are
  *   the constants below; PHP_BIN is absolute by config law. The sudoers rule
@@ -45,6 +45,7 @@ import type {
   ProvisionExec,
   RestoreconTarget,
   SemanageKind,
+  TrustExec,
 } from './provision/exec_contract';
 import {
   APACHE_MODULES,
@@ -61,9 +62,12 @@ import {
 import {
   ABSOLUTE_PATH_PATTERN,
   APACHE_DUMP_CANDIDATES,
+  FAPOLICYD_CLI,
+  FAPOLICYD_UNIT,
   FPM_BIN_PATTERN,
   HOST_MAP_UNIT,
   PHP_CLI_PATTERN,
+  TRUST_UNIT_PREFIX,
   UNIT_NAME_PATTERN,
   UNIX_NAME_PATTERN,
   V2_SCRATCH_TEMPLATE_SUFFIX,
@@ -72,7 +76,7 @@ import {
 } from './provision/layout';
 
 /** The contracts are src/provision/exec_contract.ts's (zero-dependency); re-exported for the existing importers. */
-export type { ExecResult, InitExec, PairInvocation, ProvisionExec, RestoreconTarget, SemanageKind };
+export type { ExecResult, InitExec, PairInvocation, ProvisionExec, RestoreconTarget, SemanageKind, TrustExec };
 
 /** A started scratch unit. stop() is idempotent; a failed stop throws (a release must not keep serving unseen). */
 export interface ScratchProcess {
@@ -91,6 +95,12 @@ export interface Exec {
    * renders the host-wide nginx map from every contribution; polkit grants exactly this pair.
    */
   startHostMap(): Promise<ExecResult>;
+  /**
+   * `systemctl start dedalo-pubhost-trust-<instance>.service` — no argument (fapolicyd hosts only,
+   * cfg.TRUST_UNIT): the root oneshot rewrites this instance's fapolicyd trust file from the
+   * declaration; polkit grants exactly this pair. Refused when the host has no trust unit.
+   */
+  startTrust(): Promise<ExecResult>;
 }
 
 export const SUDO = '/usr/bin/sudo';
@@ -158,7 +168,7 @@ function realOrRefuse(path: string, what: string): string {
   }
 }
 
-/** The five named commands, bound to one configuration and one spawner. */
+/** The seven named commands, bound to one configuration and one spawner. */
 export function createExec(cfg: AgentConfig, spawner: Spawner = bunSpawner): Exec {
   const env = (): Record<string, string> => ({ PATH: CHILD_PATH, LANG: 'C' });
   return {
@@ -171,6 +181,13 @@ export function createExec(cfg: AgentConfig, spawner: Spawner = bunSpawner): Exe
     },
     webReload: () => spawner.run([SYSTEMCTL, 'reload', cfg.WEB_UNIT], { env: env() }),
     startHostMap: () => spawner.run([SYSTEMCTL, 'start', `${HOST_MAP_UNIT}.service`], { env: env() }),
+    startTrust: () => {
+      // config.ts already holds the name to the one form; rechecked at the one spawn site.
+      if (cfg.TRUST_UNIT !== `${TRUST_UNIT_PREFIX}${cfg.INSTANCE}`) {
+        throw new Error(`exec: this host has no trust unit for '${cfg.INSTANCE}' (TRUST_UNIT ${cfg.TRUST_UNIT === undefined ? 'unset' : 'is not its name'})`);
+      }
+      return spawner.run([SYSTEMCTL, 'start', `${cfg.TRUST_UNIT}.service`], { env: env() });
+    },
     v2Restart: () => spawner.run([SYSTEMCTL, 'restart', cfg.V2_UNIT], { env: env() }),
     phpLint: async file => {
       const stateRoot = realOrRefuse(cfg.STATE_ROOT, 'STATE_ROOT');
@@ -297,6 +314,29 @@ export function rendererExec(spawner: Spawner = bunSpawner): RendererExec {
     webActive: async () => (await spawner.run([SYSTEMCTL, 'is-active', '--quiet', RENDERER_NGINX_UNIT], { env: env() })).code === 0,
     webRestart: () => spawner.run([SYSTEMCTL, 'restart', RENDERER_NGINX_UNIT], { env: env() }),
     sleep: (ms: number) => Bun.sleep(ms),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// THE TRUST PROGRAM'S CLOSED SET (src/provision/fapolicyd_trust.ts, owner decision 2026-10-09).
+// Root only — the oneshot `dedalo-pubhost-trust-<instance>.service` and `provision apply`'s
+// `fapolicyd-update` op: fapolicyd's state, its database update, its dump. Three fixed argv, no
+// argument from anyone; the dump is read whole (scanned for one line, never shown).
+// ─────────────────────────────────────────────────────────────────────────────────────
+
+/** fapolicyd's own CLI and unit (layout.ts: the CLI's presence is the provisioner's "installed" fact). */
+export { FAPOLICYD_CLI, FAPOLICYD_UNIT };
+/** One fapolicyd command's bound (`--update` and `--dump-db` answer in well under a second; a wedged daemon must not hang root). */
+export const TRUST_COMMAND_TIMEOUT_MS = 60_000;
+
+export function trustExec(spawner: SyncSpawner = provisionSpawner): TrustExec {
+  const env = { PATH: PROVISION_PATH, LC_ALL: 'C' };
+  const options = { env, timeoutMs: TRUST_COMMAND_TIMEOUT_MS };
+  return Object.freeze({
+    fapolicydActive: () => spawner.run([SYSTEMCTL, 'is-active', '--quiet', FAPOLICYD_UNIT], options).code === 0,
+    fapolicydUpdate: () => spawner.run([FAPOLICYD_CLI, '--update'], options),
+    fapolicydDump: () => spawner.run([FAPOLICYD_CLI, '--dump-db'], options),
+    sleep: (ms: number) => Bun.sleepSync(ms),
   });
 }
 

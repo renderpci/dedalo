@@ -34,6 +34,8 @@ import type { AgentLayout, WebServer } from '../layout';
 import {
   APACHE_DUMP_CANDIDATES,
   DEFAULT_PATHS,
+  FAPOLICYD_CLI,
+  FAPOLICYD_CONF,
   HOST_BASE,
   NGINX_MAP_INCLUDE_NAME,
   PUBHOST_GROUP,
@@ -69,6 +71,7 @@ import {
 } from './parse/apache';
 import { nssFilesOnly, parseGroup, parseNsswitch, parsePasswd, sssdHasDomains } from './parse/accounts';
 import { parseCpu } from './parse/cpu';
+import { parseFapolicydConf } from './parse/fapolicyd';
 import type { FpmDumpPool } from './parse/fpm';
 import { POOL_PATH_KEYS, fpmFlavors, isPhpCliPath, minorOf, parseFpmTT, parsePhpVersion, parsePoolSections } from './parse/fpm';
 import { isNetworkFs, mountOf, parseMountinfo } from './parse/mounts';
@@ -306,7 +309,7 @@ export function observeHostWide(draft: ObserveDraft, ports: ObservePorts): HostF
     os,
     panel,
     kernel,
-    fapolicyd: Object.freeze({ active: parseUnitShow(exec.unitShow('fapolicyd').stdout).get('ActiveState') === 'active' }),
+    fapolicyd: observeFapolicyd(ports),
     selinux,
     mounts: Object.freeze(mounts),
     systemd: parseSystemdVersion(exec.systemdVersion().stdout),
@@ -692,6 +695,20 @@ function foreignMapFacts(ports: ObservePorts, maps: readonly MapDef[]): ForeignM
     byFile.set(map.file, { fileSha: file.sha, standalone, parseProblem });
   }
   return maps.map(map => Object.freeze({ ...map, ...(byFile.get(map.file) as object) }) as ForeignMapFacts);
+}
+
+/* ── fapolicyd ────────────────────────────────────────────────────────────────────── */
+
+/** Its unit's state, the provisioner's "installed" fact (the CLI is a real file) and its two config keys. */
+function observeFapolicyd(ports: ObservePorts): HostFacts['fapolicyd'] {
+  const { io, exec, fs } = ports;
+  const installed = isFile(fs, FAPOLICYD_CLI);
+  const text = installed ? io.readRootFile(FAPOLICYD_CONF) : null;
+  return Object.freeze({
+    active: parseUnitShow(exec.unitShow('fapolicyd').stdout).get('ActiveState') === 'active',
+    installed,
+    conf: text === null ? null : parseFapolicydConf(text),
+  });
 }
 
 /* ── PHP-FPM ─────────────────────────────────────────────────────────────────────── */

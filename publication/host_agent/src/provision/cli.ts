@@ -41,7 +41,7 @@ import type { ProvisionIo } from './apply';
 import { apply, hostIo, lockHostProvision, observeHost, writeAtomic } from './apply';
 import { flockIo } from './flock';
 import type { AgentLayout } from './layout';
-import { DEFAULT_PATHS, INSTANCE_PATTERN, PUBHOST_GROUP } from './layout';
+import { DEFAULT_PATHS, FAPOLICYD_CLI, INSTANCE_PATTERN, PUBHOST_GROUP } from './layout';
 import type { LockHandle, LockMode } from './lock';
 import { INIT_BASE, LockBusy, LockRefused, acquireInstanceLockSync, describeHolder } from './lock';
 import { runInit } from './init/run';
@@ -553,7 +553,9 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
       err(`provision: '${source}' is not JSON`);
       return EXIT.REFUSED;
     }
-    const { layout: layoutOf } = parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path) });
+    // fapolicyd's presence is a host fact of the layout (the trust unit, its trust file, the grant).
+    const fapolicyd = deps.isRealFile(FAPOLICYD_CLI);
+    const { layout: layoutOf } = parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path), fapolicyd });
     if (layoutOf.instance !== args.instance) {
       err(`provision: '${source}' declares instance '${layoutOf.instance}', not '${args.instance}'`);
       return EXIT.REFUSED;
@@ -574,7 +576,7 @@ export function run(argv: readonly string[], options: RunOptions = {}): number {
     if (isolation.length > 0) throw new PlanRefused(layoutOf.instance, isolation);
     // The host-wide ProtectHome= fact (spec S10): a home-bound sibling makes every agent unit read-only.
     const layout = anySiblingHomeBound(siblings)
-      ? parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path), anyHomeBound: true }).layout
+      ? parseDeclaration(raw, source, { isRealFile: path => deps.isRealFile(path), anyHomeBound: true, fapolicyd }).layout
       : layoutOf;
 
     // apply: the HOST PROVISION lock around planning AND writing (spec S12 2), so two instances'

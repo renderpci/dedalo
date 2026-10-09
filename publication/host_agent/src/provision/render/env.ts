@@ -8,7 +8,8 @@
  * two host-wide keys of the nginx media map (spec §13.4) — NGINX_MAP_MODE only when the
  * declaration's `web.nginx_map` is `conf_d`, HOST_BASE only when `paths.host_base` overrides
  * the default (the config's own defaults are `none` and layout.ts HOST_BASE, so a declaration
- * that sets neither keeps its bytes) — one `KEY="value"` per line, sorted. The quoting is the subset systemd and src/env_file.ts parseEnvFile read
+ * that sets neither keeps its bytes), and on a fapolicyd host TRUST_UNIT + TRUST_RESULT_FILE
+ * (layout.trust: the root trust oneshot the agent starts after a release change) — one `KEY="value"` per line, sorted. The quoting is the subset systemd and src/env_file.ts parseEnvFile read
  * identically; a value with a control character, `$` or a backtick is refused, not escaped.
  * Mirrors publication/site_builder/src/provision/render/env.ts (assignment()).
  *
@@ -45,6 +46,11 @@ export function agentEnvVars(layout: AgentLayout): Readonly<Record<string, strin
   const vars: Record<string, string> = { ...layout.envVars };
   if (layout.web.nginxMap === 'conf_d') vars.NGINX_MAP_MODE = 'conf_d';
   if (layout.host.base !== HOST_BASE) vars.HOST_BASE = layout.host.base;
+  // fapolicyd hosts only: the trust unit the agent starts after a release change, and its record.
+  if (layout.trust !== null) {
+    vars.TRUST_UNIT = layout.trust.unit;
+    vars.TRUST_RESULT_FILE = layout.trust.result;
+  }
   return Object.freeze(vars);
 }
 

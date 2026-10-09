@@ -29,6 +29,10 @@ import type { AgentLayout, HostDeclaration } from '../layout';
 import {
   BUN_KERNEL_FLOOR,
   DEFAULT_PATHS,
+  FAPOLICYD_CONF,
+  FAPOLICYD_TRUST_DIR,
+  TRUST_UNIT_PREFIX,
+  trustFileName,
   HOME_RELOCATED_NAMES,
   HOME_ROOT_MODE,
   MODES,
@@ -58,6 +62,7 @@ import { pairItem, pairPlan } from './pair';
 import { REFERENCE_MARKER } from './web_edit';
 import { soleMemberProblem } from './parse/accounts';
 import { unsupportedReason } from './parse/os';
+import { STRICT_INTEGRITY } from './parse/fapolicyd';
 import { POLKIT_DBUS_SERVICE, POLKIT_JS_FLOOR, POLKIT_UNIT } from './parse/polkit';
 import type {
   Action,
@@ -102,6 +107,8 @@ export const ITEM_IDS = Object.freeze([
   'host.kernel',
   'host.noexec',
   'host.fapolicyd',
+  'host.fapolicyd_integrity',
+  'host.fapolicyd_mounts',
   'host.unit_sandbox',
   'host.remi_label',
   'host.fpm_cli',
@@ -180,15 +187,6 @@ export function unknownAnswers(items: readonly Item[], answers: ReadonlyMap<stri
     }
   }
   return problems;
-}
-
-/**
- * One fapolicyd trust line for a file or a directory tree (a trailing `/`): `--file add` refuses a
- * path already in the trust file (exit 9, measured fapolicyd 1.4.5) and `--file update` refreshes it,
- * so the line is right on a first run and on every later one.
- */
-export function fapolicydTrust(path: string): string {
-  return `fapolicyd-cli --file add ${path} --trust-file dedalo || fapolicyd-cli --file update ${path} --trust-file dedalo`;
 }
 
 /* ── builders ─────────────────────────────────────────────────────────────────────── */
@@ -274,6 +272,87 @@ function describeAction(action: Action): string {
  * until web_edit exports the whole line — open issue to P6). Shown only: act computes the bytes.
  */
 const referenceComment = (instance: string) => `# ${REFERENCE_MARKER(instance)} — managed by \`provision init\`; delete both lines to detach`;
+
+/* ── fapolicyd ───────────────────────────────────────────────────────────────────── */
+
+/** `<key> = <value>` in fapolicyd.conf: a line that sets the key is replaced, else one is added. */
+function fapolicydSet(key: string, value: string): string {
+  return `grep -qE '^[[:space:]]*${key}[[:space:]]*=' ${FAPOLICYD_CONF} && sed -i -E 's/^[[:space:]]*${key}[[:space:]]*=.*/${key} = ${value}/' ${FAPOLICYD_CONF} || echo '${key} = ${value}' >> ${FAPOLICYD_CONF}`;
+}
+
+/** `integrity = sha256`, then the restart that reads it. */
+export const FAPOLICYD_INTEGRITY_COMMANDS: readonly string[] = Object.freeze([fapolicydSet('integrity', 'sha256'), 'systemctl try-restart fapolicyd']);
+/** `allow_filesystem_mark = 1`, then the restart that reads it. */
+export const FAPOLICYD_MOUNTS_COMMANDS: readonly string[] = Object.freeze([fapolicydSet('allow_filesystem_mark', '1'), 'systemctl try-restart fapolicyd']);
+
+function fapolicydItems(facts: HostFacts, layout: AgentLayout | null, decl: HostDeclaration | null): ComparedItem[] {
+  const fapolicyd = facts.fapolicyd;
+  if (!fapolicyd.installed) return [right('host.fapolicyd', 'host', 'fapolicyd', ['fapolicyd is not installed'])];
+  const instance = layout?.instance ?? decl?.instance ?? '<instance>';
+  const unit = `${TRUST_UNIT_PREFIX}${instance}.service`;
+  const file = join(FAPOLICYD_TRUST_DIR, trustFileName(instance));
+  const conf = fapolicyd.conf;
+  if (conf === null) {
+    return [
+      blocked('host.fapolicyd', 'host', 'fapolicyd', [`fapolicyd is installed but ${FAPOLICYD_CONF} could not be read: whether it reads ${FAPOLICYD_TRUST_DIR} cannot be judged`], [`fapolicyd-cli --check-config`], { hostWide: true }),
+    ];
+  }
+  const out: ComparedItem[] = [];
+  if (!conf.trust.includes('file')) {
+    out.push(
+      blocked(
+        'host.fapolicyd',
+        'host',
+        'fapolicyd',
+        [`fapolicyd's trust = ${conf.trust.join(',') || '(empty)'} has no 'file' backend: it never reads ${FAPOLICYD_TRUST_DIR}, so the agent and its releases would stay untrusted — add it, then answer manual`],
+        [`sed -i -E 's/^([[:space:]]*trust[[:space:]]*=[[:space:]]*)(.*)$/\\1\\2,file/' ${FAPOLICYD_CONF}`, 'systemctl try-restart fapolicyd'],
+        { hostWide: true },
+      ),
+    );
+  } else {
+    out.push(
+      right('host.fapolicyd', 'host', 'fapolicyd', [
+        `fapolicyd is installed (${fapolicyd.active ? 'running' : 'not running'}; trust = ${conf.trust.join(',')})`,
+        `trust is automatic: provision apply writes ${file} (bun_bin, agent_dir and each served API's current and previous release) and renders ${unit}, the one unit the agent may start — after every release install or rollback; nothing to run by hand`,
+      ]),
+    );
+  }
+  if (conf.filesystemMark) {
+    out.push(right('host.fapolicyd_mounts', 'host', 'fapolicyd and the services', ['allow_filesystem_mark = 1: fapolicyd checks what the sandboxed services open too']));
+  } else {
+    out.push(
+      item('host.fapolicyd_mounts', 'host', 'decision', 'fapolicyd and the services', {
+        facts: [
+          "allow_filesystem_mark = 0 (fapolicyd's default): it marks mounts, so it never sees what a service with its own mount namespace opens — the agent, v2 and the trust service (ProtectSystem=, ProtectHome=, PrivateTmp=) run unchecked, trusted or not (measured, RHEL 9.8)",
+          'allow_filesystem_mark = 1 makes fapolicyd check them (recommended; host-wide: what containers and overlayfs mounts open is checked too)',
+        ],
+        commands: [...FAPOLICYD_MOUNTS_COMMANDS],
+        options: [MANUAL, SKIP],
+        defaultOption: 'manual',
+        optional: true,
+        hostWide: true,
+      }),
+    );
+  }
+  if (STRICT_INTEGRITY.includes(conf.integrity)) {
+    out.push(right('host.fapolicyd_integrity', 'host', 'fapolicyd integrity', [`integrity = ${conf.integrity}: a trusted file changed after it was trusted is denied`]));
+  } else {
+    out.push(
+      item('host.fapolicyd_integrity', 'host', 'decision', 'fapolicyd integrity', {
+        facts: [
+          `integrity = ${conf.integrity}: fapolicyd re-checks a trusted file by ${conf.integrity === 'size' ? 'its size only' : 'its path only'} — a release or agent file changed AFTER it was trusted would still run`,
+          'integrity = sha256 makes fapolicyd hash a trusted file when it is opened and deny it on any change (recommended; a host-wide setting — every trusted program pays the first hash)',
+        ],
+        commands: [...FAPOLICYD_INTEGRITY_COMMANDS],
+        options: [MANUAL, SKIP],
+        defaultOption: 'manual',
+        optional: true,
+        hostWide: true,
+      }),
+    );
+  }
+  return out;
+}
 
 /* ── compare ──────────────────────────────────────────────────────────────────────── */
 
@@ -539,26 +618,10 @@ function hostItems(env: Env): ComparedItem[] {
   // host.noexec
   out.push(noexecItem(env));
 
-  // host.fapolicyd
-  if (facts.fapolicyd.active) {
-    const bun = layout?.bunBin ?? decl?.bun_bin ?? '<bun_bin>';
-    const agentDir = layout?.agentDir ?? decl?.agent_dir ?? '<agent_dir>';
-    const commands = [fapolicydTrust(bun), fapolicydTrust(`${agentDir}/`)];
-    if (layout?.web.nginxMap === 'conf_d') commands.push(fapolicydTrust(join(layout.host.mapRendererDir, 'bun')));
-    commands.push('fapolicyd-cli --update');
-    out.push(
-      blocked(
-        'host.fapolicyd',
-        'host',
-        'fapolicyd',
-        [
-          'fapolicyd is running: to an unprivileged account it denies an untrusted program AND untrusted sources it types as a language (libmagic calls most .ts/.js files text/x-java) whatever their label — the agent runs its Bun as its own account over its own tree (measured, RHEL 9.8 default rules); init never edits its trust — run these (again after every code change: `update` refreshes the recorded hashes), then answer manual (B4 proves it)',
-        ],
-        commands,
-        { hostWide: true },
-      ),
-    );
-  } else out.push(right('host.fapolicyd', 'host', 'fapolicyd', ['fapolicyd is not running']));
+  // host.fapolicyd, host.fapolicyd_integrity (owner decision 2026-10-09): the trust is AUTOMATIC —
+  // provision apply writes the instance's trust file and renders the root oneshot its agent starts
+  // after every release change; init only judges whether fapolicyd will read the file.
+  out.push(...fapolicydItems(facts, layout, decl));
 
   // host.unit_sandbox
   out.push(unitSandboxItem(env));

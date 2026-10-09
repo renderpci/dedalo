@@ -81,6 +81,10 @@ export const REASON_CODES = Object.freeze([
   // release.install / release.rollback of an API this host does not serve (a v2-only host: no
   // PHP_BIN, src/config.ts servedApis): 422 ReleaseRefusedError, the body never read.
   'api_not_served',
+  // A fapolicyd host: the root trust oneshot (src/provision/fapolicyd_trust_main.ts) did not
+  // trust the release before it would run (install: before the scratch boot; rollback: before
+  // the swap). 422 ReleaseRefusedError; the previous release still serves.
+  'trust_failed',
 ] as const);
 
 export type ReasonCode = (typeof REASON_CODES)[number];
@@ -214,6 +218,8 @@ export const RELEASE_REFUSAL_REASONS = Object.freeze([
   'store_refused',
   /** The API is not served here: a v1 release (or rollback) on a v2-only host (no PHP_BIN). */
   'api_not_served',
+  /** fapolicyd: the trust oneshot did not trust the release before it ran; `trust` carries its record. */
+  'trust_failed',
 ] as const satisfies readonly ReasonCode[]);
 
 export type ReleaseRefusalReason = (typeof RELEASE_REFUSAL_REASONS)[number];

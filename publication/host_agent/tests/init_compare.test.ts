@@ -129,6 +129,9 @@ interface Expect {
   readonly absent?: true;
 }
 
+/** fapolicyd installed and running, reading trust.d, integrity = sha256. */
+const FAPOLICYD: HostFacts['fapolicyd'] = { active: true, installed: true, conf: { trust: ['rpmdb', 'file'], integrity: 'sha256', filesystemMark: true } };
+
 /** EL 10: the EL 9 facts on the EL 10 row (no dnf modules; AppStream PHP 8.3). */
 function el10Host(): HostFacts {
   const el = elHost();
@@ -206,12 +209,21 @@ const ROWS: readonly (readonly [string, () => Scn, string, Expect])[] = [
   ['noexec INIT_BASE', () => ({ facts: { ...debianHost(), mounts: [...debianHost().mounts, { mountPoint: '/var', fsType: 'ext4', readOnly: false, noexec: true, seclabel: false, context: null }] } }), 'host.noexec', { blocking: true, fact: /INIT_BASE/ }],
   ['noexec home under home layout: a layout reason, not this item', () => ({ draft: draft({ layout: 'home' }), facts: { ...debianHost(), mounts: [...debianHost().mounts, { mountPoint: '/home', fsType: 'ext4', readOnly: false, noexec: true, seclabel: false, context: null }] } }), 'host.noexec', { list: 'right' }],
   ['noexec home → layout system/manual', () => ({ facts: { ...debianHost(), mounts: [...debianHost().mounts, { mountPoint: '/home', fsType: 'ext4', readOnly: false, noexec: true, seclabel: false, context: null }] } }), 'declaration.layout', { list: 'decision', blocking: true, options: ['system', 'manual'] }],
-  // host.fapolicyd
-  ['fapolicyd active', () => ({ facts: { ...elHost(), fapolicyd: { active: true } } }), 'host.fapolicyd', { list: 'decision', blocking: true, hostWide: true, options: ['manual'], command: /^fapolicyd-cli --file add \/home\/example\.org\/\.bun\/bin\/bun --trust-file dedalo \|\| fapolicyd-cli --file update \/home\/example\.org\/\.bun\/bin\/bun --trust-file dedalo$/ }],
-  // The agent's sources: fapolicyd denies untrusted language files (libmagic: text/x-java) to the agent's account (measured, RHEL 9.8).
-  ['fapolicyd trusts the agent tree too', () => ({ facts: { ...elHost(), fapolicyd: { active: true } } }), 'host.fapolicyd', { command: /^fapolicyd-cli --file add \/home\/example\.org\/host_agent\/ --trust-file dedalo \|\| fapolicyd-cli --file update \/home\/example\.org\/host_agent\/ --trust-file dedalo$/ }],
-  ['fapolicyd nginx conf_d trusts the renderer too', () => ({ facts: { ...nginx(), fapolicyd: { active: true } } }), 'host.fapolicyd', { command: /map_renderer\/bun/ }],
-  ['fapolicyd inactive', () => ({}), 'host.fapolicyd', { list: 'right' }],
+  // host.fapolicyd, host.fapolicyd_integrity (owner decision 2026-10-09): the trust is AUTOMATIC
+  // (provision apply writes the instance's trust file; the agent starts its trust oneshot) — init
+  // only judges whether fapolicyd reads trust.d and how it re-checks a trusted file.
+  ['fapolicyd not installed', () => ({}), 'host.fapolicyd', { list: 'right', fact: /fapolicyd is not installed/ }],
+  ['fapolicyd not installed: no integrity item', () => ({}), 'host.fapolicyd_integrity', { absent: true }],
+  ['fapolicyd installed: automatic, no command', () => ({ facts: { ...elHost(), fapolicyd: FAPOLICYD } }), 'host.fapolicyd', { list: 'right', fact: /trust is automatic: provision apply writes \/etc\/fapolicyd\/trust\.d\/dedalo_demo .*dedalo-pubhost-trust-demo\.service/ }],
+  ['fapolicyd installed but stopped: still automatic', () => ({ facts: { ...elHost(), fapolicyd: { ...FAPOLICYD, active: false } } }), 'host.fapolicyd', { list: 'right', fact: /not running/ }],
+  ['fapolicyd without the file backend: blocking, host-wide', () => ({ facts: { ...elHost(), fapolicyd: { ...FAPOLICYD, conf: { trust: ['rpmdb'], integrity: 'sha256', filesystemMark: true } } } }), 'host.fapolicyd', { list: 'decision', blocking: true, hostWide: true, options: ['manual'], fact: /no 'file' backend/, command: /,file\/' \/etc\/fapolicyd\/fapolicyd\.conf$/ }],
+  ['fapolicyd.conf unreadable: blocking', () => ({ facts: { ...elHost(), fapolicyd: { ...FAPOLICYD, conf: null } } }), 'host.fapolicyd', { list: 'decision', blocking: true, fact: /could not be read/ }],
+  ['integrity sha256: right', () => ({ facts: { ...elHost(), fapolicyd: FAPOLICYD } }), 'host.fapolicyd_integrity', { list: 'right', fact: /integrity = sha256/ }],
+  ['integrity none: an optional host-wide warning recommending sha256', () => ({ facts: { ...elHost(), fapolicyd: { ...FAPOLICYD, conf: { trust: ['rpmdb', 'file'], integrity: 'none', filesystemMark: true } } } }), 'host.fapolicyd_integrity', { list: 'decision', blocking: false, optional: true, hostWide: true, options: ['manual', 'skip'], defaultOption: 'manual', fact: /its path only — a release or agent file changed AFTER it was trusted would still run/, command: /integrity = sha256/ }],
+  ['allow_filesystem_mark = 1: right', () => ({ facts: { ...elHost(), fapolicyd: FAPOLICYD } }), 'host.fapolicyd_mounts', { list: 'right', fact: /checks what the sandboxed services open/ }],
+  ['allow_filesystem_mark = 0 (the default): an optional host-wide warning — the units run unchecked', () => ({ facts: { ...elHost(), fapolicyd: { ...FAPOLICYD, conf: { trust: ['rpmdb', 'file'], integrity: 'sha256', filesystemMark: false } } } }), 'host.fapolicyd_mounts', { list: 'decision', blocking: false, optional: true, hostWide: true, options: ['manual', 'skip'], fact: /run unchecked, trusted or not/, command: /allow_filesystem_mark = 1/ }],
+  ['fapolicyd not installed: no mounts item', () => ({}), 'host.fapolicyd_mounts', { absent: true }],
+  ['integrity size: the same warning', () => ({ facts: { ...elHost(), fapolicyd: { ...FAPOLICYD, conf: { trust: ['rpmdb', 'file'], integrity: 'size', filesystemMark: true } } } }), 'host.fapolicyd_integrity', { list: 'decision', fact: /its size only/ }],
   // host.unit_sandbox
   ['web unit hides the system state root', () => ({ draft: draft({ layout: 'system' }), facts: { ...debianHost(), web: { ...debianHost().web, unitSandbox: { ...SANDBOX, inaccessible: ['/srv'] } } } }), 'host.unit_sandbox', { blocking: true, fact: /apache2: InaccessiblePaths=\/srv/, command: /systemctl edit apache2/ }],
   ['fpm unit read-only on v1Var', () => ({ facts: { ...debianHost(), fpm: [debianFpm('8.2', { unitSandbox: { ...SANDBOX, readOnly: ['/var/lib'] } })] } }), 'host.unit_sandbox', { blocking: true, fact: /php8\.2-fpm: ReadOnlyPaths=\/var\/lib/ }],

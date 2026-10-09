@@ -140,6 +140,9 @@ function installFakeExec(script: { configtest?: number[]; reload?: number[]; con
   const reload = [...(script.reload ?? [])];
   const state: FakeExec = { calls: [], seenAtConfigtest: [] };
   const fake: Exec = {
+    async startTrust(): Promise<ExecResult> {
+      throw new Error('rules.apply never starts the trust unit');
+    },
     async webConfigtest(): Promise<ExecResult> {
       state.calls.push('configtest');
       callLog.push('configtest');

@@ -379,7 +379,8 @@ function makeWorld(options: WorldOptions = {}): World {
       : null;
   const listDeclarations = (dir: string) => (readDir(dir) ?? []).filter(name => name.endsWith('.json')).map(name => join(dir, name));
   const observeHost = (l: AgentLayout): HostState => ({
-    ...host.state(),
+    // stateFor: plus the fapolicyd trust observation on a fapolicyd layout (the real derivation, on the fake tree).
+    ...host.stateFor(l),
     systemdVersion: host.systemd,
     selinux: selinuxObserved(host, l),
     webReference:
@@ -1088,16 +1089,47 @@ describe('case 18: hardened hosts', () => {
     expect(hostMutations(w)).toEqual([]);
   });
 
-  test('fapolicyd running: host.fapolicyd blocks until answered; manual resolves it', async () => {
-    const w = makeWorld();
+  /** fapolicyd installed (its CLI a real file), running, reading trust.d, with `integrity`. */
+  function withFapolicyd(w: World, integrity: string): void {
     w.host.fapolicydActive = true;
-    expect(await init(w, firstRun(w, DRAFT, ['--yes']))).toBe(EXIT.REFUSED);
-    expect(w.err[0]).toContain('host.fapolicyd');
-    expect(hostMutations(w)).toEqual([]);
-    useOperator(w, { 'host.fapolicyd': 'manual' });
-    w.out.length = 0;
+    w.host.fapolicydDaemon.active = true;
+    w.host.seedFile('/usr/sbin/fapolicyd-cli', '', 0o755);
+    w.host.seedFile('/etc/fapolicyd/fapolicyd.conf', `permissive = 0\ntrust = rpmdb,file\nintegrity = ${integrity}\nallow_filesystem_mark = 1\n`);
+    w.host.seedDir('/etc/fapolicyd/trust.d');
+  }
+
+  test('fapolicyd installed and running: host.fapolicyd is RIGHT (nothing by hand) — the converge trusts bun_bin and the agent tree, renders the trust unit and its one grant, and updates fapolicyd BEFORE the agent starts', async () => {
+    const w = makeWorld();
+    withFapolicyd(w, 'sha256');
+    useOperator(w);
     expect(await init(w, firstRun(w))).toBe(EXIT.OK);
-    expect(w.out.join('\n')).toContain('fapolicyd-cli --update');
+    expect(listOf(w, 'host.fapolicyd')).toBe(1);
+    expect(listOf(w, 'host.fapolicyd_integrity')).toBe(1);
+    expect(listOf(w, 'host.fapolicyd_mounts')).toBe(1);
+    expect(reportOf(w, 'host.fapolicyd').join('\n')).toContain('trust is automatic');
+    const layout = derive(expectedDeclaration(w.profile), { fapolicyd: true });
+    const trust = w.host.body('/etc/fapolicyd/trust.d/dedalo_test') ?? '';
+    const trusted = trust.split('\n').filter(line => line.startsWith('/')).map(line => line.split(' ')[0]);
+    expect(trusted).toContain(layout.bunBin);
+    expect(trusted).toContain(layout.agentEntry);
+    expect(trusted.every(path => path === layout.bunBin || path.startsWith(`${layout.agentDir}/`))).toBe(true);
+    expect(w.host.body('/etc/systemd/system/dedalo-pubhost-trust-test.service')).toContain('Type=oneshot');
+    expect(w.host.body(layout.polkitPath)).toContain('unit === "dedalo-pubhost-trust-test.service" && verb === "start"');
+    const update = w.host.calls.indexOf('fapolicyd-cli --update');
+    expect(update).toBeGreaterThan(-1);
+    const start = w.host.calls.findIndex(call => call.startsWith(`start ${layout.agentUnitName}`) || call.startsWith(`restart ${layout.agentUnitName}`));
+    expect(start).toBeGreaterThan(update);
+    expect(w.host.calls).toContain('fapolicyd-cli --dump-db');
+  });
+
+  test("fapolicyd's integrity = none: an optional host-wide warning recommending sha256 — the converge still completes", async () => {
+    const w = makeWorld();
+    withFapolicyd(w, 'none');
+    useOperator(w);
+    expect(await init(w, firstRun(w))).toBe(EXIT.OK);
+    expect(listOf(w, 'host.fapolicyd_integrity')).toBe(3);
+    expect(reportOf(w, 'host.fapolicyd_integrity').join('\n')).toContain('integrity = sha256');
+    expect(w.host.body('/etc/fapolicyd/trust.d/dedalo_test')).toBeDefined();
   });
 
   test('a web unit with ProtectHome=yes: only the system layout', async () => {

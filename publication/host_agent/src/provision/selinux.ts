@@ -7,7 +7,9 @@
  * Everything else keeps a type httpd cannot read — under the home layout the policy's
  * `user_home_t`, under the system layout the path's default (`var_t` under /srv) — so the secrets
  * (`v2/shared/v2.env`, `audit/`, the v2 releases and staging) are never covered by a rule with an
- * httpd-readable type (HTTPD_READABLE_TYPES; tests/provision_selinux.test.ts holds it). The v1
+ * httpd-readable type (HTTPD_READABLE_TYPES; tests/provision_selinux.test.ts holds it). The v2 tree
+ * under the home layout is `data_home_t` (row S/publication_api/v2): systemd must read its env file
+ * and its links, which it may not under `user_home_t` (measured, RHEL 9.8). The v1
  * configuration under `S/publication_api/v1/shared` IS httpd-readable by MAC (the v1 pool runs
  * httpd_t and must read it); it is protected by DAC (`v1:root 0400`) and by the dedicated pool
  * user (decision A).
@@ -43,6 +45,7 @@ export const SELINUX_TYPES = Object.freeze([
   'httpd_sys_rw_content_t',
   'httpd_log_t',
   'httpd_config_t',
+  'data_home_t',
 ] as const);
 export type SelinuxType = (typeof SELINUX_TYPES)[number];
 
@@ -181,6 +184,12 @@ export function selinuxRules(layout: AgentLayout, facts: SelinuxRuleFacts = DEFA
   );
   // The v1 tree the web server serves (and the v1 pool runs): none on a v2-only instance.
   if (layout.v1 !== null) rules.push(rule('S/publication_api/v1', layout.v1.dirs.root, 'a', 'httpd_sys_content_t', true));
+  // The v2 tree under the HOME layout (measured RHEL 9.8): its default `user_home_t` is one systemd
+  // (init_t) may not read — neither `shared/v2.env` (the units' EnvironmentFile=) nor the agent's
+  // `current`/`scratch` links (WorkingDirectory=, AssertPathIsDirectory=), so no v2 unit could
+  // start. `data_home_t` is one init_t reads and httpd_t reads only under `httpd_read_user_content`,
+  // exactly like `user_home_t`; what the agent creates in it (the links, the releases) inherits it.
+  if (home !== null) rules.push(rule('S/publication_api/v2', layout.state.apis.v2.root, 'a', 'data_home_t', true));
   rules.push(
     rule('S/rules', layout.state.rules, 'a', 'httpd_config_t', true),
     rule('A', layout.agentDir, 'a', 'usr_t', true),
@@ -332,14 +341,18 @@ export function labelScope(
 /**
  * THE EL DRILL'S INPUTS (spec §9.11): the agent-package files (package-relative) whose behaviour only
  * an SELinux-enforcing EL VM can prove — the S9 label table, the renderers EL runs (pool, include,
- * units, their dated directives, the nginx map pieces), the parsers of EL discovery, install.sh. The
+ * units, their dated directives, the nginx map pieces), the parsers of EL discovery, install.sh, and
+ * the fapolicyd trust set, its oneshot and its parser (owner decision 2026-10-09). The
  * drill's `--record` digests them into engineering/el_drill_record.json; the root ratchet
  * (test/unit/publication_host_el_drill_record.test.ts) recomputes the digest and is red when any of
  * them changed after the last recorded drill. Sorted; every entry exists (tests/provision_selinux).
  */
 export const EL_DRILL_INPUTS: readonly string[] = Object.freeze([
   'deploy/install.sh',
+  'src/provision/fapolicyd_trust.ts',
+  'src/provision/fapolicyd_trust_main.ts',
   'src/provision/init/parse/apache.ts',
+  'src/provision/init/parse/fapolicyd.ts',
   'src/provision/init/parse/fpm.ts',
   'src/provision/init/parse/mounts.ts',
   'src/provision/init/parse/os.ts',
@@ -348,6 +361,7 @@ export const EL_DRILL_INPUTS: readonly string[] = Object.freeze([
   'src/provision/render/host_map_unit.ts',
   'src/provision/render/nginx_map_include.ts',
   'src/provision/render/systemd_floors.ts',
+  'src/provision/render/trust_unit.ts',
   'src/provision/render/unit_agent.ts',
   'src/provision/render/unit_v2.ts',
   'src/provision/render/web_include.ts',

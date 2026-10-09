@@ -760,6 +760,8 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
     const configtestBin = facts.web.configtestBin;
     layout = derive(declaration, {
       anyHomeBound: declared?.hostShared.anyHomeBound ?? false,
+      // fapolicyd's presence, as cli.ts derives it (the CLI is a real file): the trust unit and its grant.
+      fapolicyd: facts.fapolicyd.installed,
       ...(configtestBin === null ? {} : { isRealFile: (path: string) => path === configtestBin }),
     });
   } catch (error) {

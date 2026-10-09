@@ -16,6 +16,10 @@ import {
   WEB_CONFIGTEST_CANDIDATES,
   createExec,
   rendererExec,
+  trustExec,
+  FAPOLICYD_CLI,
+  PROVISION_PATH,
+  TRUST_COMMAND_TIMEOUT_MS,
   exec,
   execOverrideAllowed,
   setExecForTests,
@@ -317,10 +321,11 @@ describe('the named commands', () => {
 });
 
 describe('the host-map commands (spec §13.5)', () => {
-  test('the agent set is closed: exactly these six commands', () => {
+  test('the agent set is closed: exactly these seven commands', () => {
     expect(Object.keys(createExec(config, recordingSpawner().spawner)).sort()).toEqual([
       'phpLint',
       'startHostMap',
+      'startTrust',
       'v2Restart',
       'v2ScratchBoot',
       'webConfigtest',
@@ -359,6 +364,51 @@ describe('the host-map commands (spec §13.5)', () => {
   });
 });
 
+describe('the fapolicyd trust commands (owner decision 2026-10-09)', () => {
+  test('startTrust takes no argument and starts exactly THIS instance\'s trust oneshot', async () => {
+    const { spawner, calls } = recordingSpawner();
+    const x = createExec({ ...config, TRUST_UNIT: `dedalo-pubhost-trust-${config.INSTANCE}` }, spawner);
+    expect(x.startTrust.length).toBe(0);
+    await x.startTrust();
+    expect(calls.map(c => c.argv)).toEqual([[SYSTEMCTL, 'start', `dedalo-pubhost-trust-${config.INSTANCE}.service`]]);
+    expect(calls[0]?.options.env).toEqual({ PATH: CHILD_PATH, LANG: 'C' });
+  });
+
+  test('startTrust refuses a host without a trust unit, and any other unit name, spawning nothing', () => {
+    const { spawner, calls } = recordingSpawner();
+    expect(() => createExec({ ...config, TRUST_UNIT: undefined }, spawner).startTrust()).toThrow('has no trust unit');
+    expect(() => createExec({ ...config, TRUST_UNIT: 'nginx' }, spawner).startTrust()).toThrow('is not its name');
+    expect(() => createExec({ ...config, TRUST_UNIT: 'dedalo-pubhost-trust-other' }, spawner).startTrust()).toThrow('is not its name');
+    expect(calls).toEqual([]);
+  });
+
+  test("the root oneshot's set: is-active, --update, --dump-db — fixed argv, fixed root PATH, bounded", () => {
+    const calls: { argv: readonly string[]; env: Readonly<Record<string, string>>; timeoutMs?: number }[] = [];
+    const t = trustExec({
+      run(argv, options) {
+        calls.push({ argv, env: options.env, ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }) });
+        return { code: 0, stdout: '', stderr: '' };
+      },
+    });
+    expect(Object.keys(t).sort()).toEqual(['fapolicydActive', 'fapolicydDump', 'fapolicydUpdate', 'sleep']);
+    expect(t.fapolicydActive()).toBe(true);
+    t.fapolicydUpdate();
+    t.fapolicydDump();
+    t.sleep(1);
+    expect(FAPOLICYD_CLI).toBe('/usr/sbin/fapolicyd-cli');
+    expect(calls.map(c => c.argv)).toEqual([
+      [SYSTEMCTL, 'is-active', '--quiet', 'fapolicyd.service'],
+      [FAPOLICYD_CLI, '--update'],
+      [FAPOLICYD_CLI, '--dump-db'],
+    ]);
+    for (const c of calls) {
+      expect(c.env).toEqual({ PATH: PROVISION_PATH, LC_ALL: 'C' });
+      expect(c.timeoutMs).toBe(TRUST_COMMAND_TIMEOUT_MS);
+    }
+    expect([t.fapolicydActive, t.fapolicydUpdate, t.fapolicydDump].map(fn => fn.length)).toEqual([0, 0, 0]);
+  });
+});
+
 describe('the real spawner', () => {
   test('phpLint runs PHP_BIN and returns its code and output; a missing binary is 127', async () => {
     const root = await stateTree('ex_real');
@@ -390,6 +440,7 @@ describe('the test override', () => {
       phpLint: async () => ({ code: 0, stdout: '', stderr: '' }),
       v2ScratchBoot: async () => ({ unit: 'stand-in', stop: async () => {} }),
       startHostMap: async () => ({ code: 0, stdout: '', stderr: '' }),
+      startTrust: async () => ({ code: 0, stdout: '', stderr: '' }),
     };
     const restore = setExecForTests(standIn);
     expect(exec()).toBe(standIn);

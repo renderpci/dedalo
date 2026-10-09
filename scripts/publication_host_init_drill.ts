@@ -1602,7 +1602,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'fapolicyd',
 		family: 'el',
 		required: true,
-		what: "fapolicyd started on the converged host (`dnf install fapolicyd` beforehand; the leg starts it, and stops it after): the instance's Bun is DENIED to its own accounts (the control); install.sh refuses the untrusted Bun (root may run it, not let it read its TypeScript) with the line that trusts it; init's host.fapolicyd then prints the lines for the Bun AND the agent's tree, run as printed they make it runnable by the agent and v2 accounts, the re-run with `--decide host.fapolicyd=manual` converges and the restarted agent answers /health; whether systemd starts the untrusted agent anyway is measured",
+		what: "fapolicyd started (integrity = sha256, allow_filesystem_mark = 1) on the converged host (`dnf install fapolicyd` beforehand; the leg starts it, and stops it after): the provisioner already trusted the instance while fapolicyd was installed but stopped (its stamped trust.d file names bun_bin and the agent's tree; its trust oneshot and polkit grant are rendered); a copy of that Bun at an untrusted path is DENIED to the agent (the control) while bun_bin runs for the agent and v2 accounts; with the trust file moved aside the restarted agent stays down and install.sh's pre-hand-over gate refuses the Bun; init's re-run reports host.fapolicyd, host.fapolicyd_integrity and host.fapolicyd_mounts right and converges; then two minimal v2 releases (their entry a %languages type, text/x-java) are PUSHED through the agent (its trust oneshot trusts each before the scratch boot), v2 answers its /health on each, a rollback answers too; an untrusted copy of the entry is denied to the v2 account, and the trusted entry with one byte changed in place is denied to it (in a namespaced unit and directly) until the byte is put back, when v2 answers again",
 		async run(ctx) {
 			check(
 				(await ctx.runner.sh('rpm -q fapolicyd')).code === 0,
@@ -1610,103 +1610,167 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			);
 			const unit = await instanceUnits(INSTANCE);
 			const home = `/home/${DOMAIN}`;
-			const runsAs = async (user: string): Promise<boolean> =>
-				(await ctx.runner.sh(`runuser -u ${user} -- ${q(unit.bunBin)} --version`)).code === 0;
-			// `active` comes before the daemon enforces (it still loads its trust database): wait until a
-			// fresh copy of a system binary at an untrusted path is denied to an unprivileged account.
-			const probe = '/usr/local/libexec/dd_fapolicyd_probe';
+			const trustFile = `/etc/fapolicyd/trust.d/dedalo_${INSTANCE}`;
+			const trustUnit = `dedalo-pubhost-trust-${INSTANCE}.service`;
+			const socket = `/run/dedalo_publication_host/${INSTANCE}/agent.sock`;
+			const conf = '/etc/fapolicyd/fapolicyd.conf';
+			const runsAs = async (user: string, bin: string): Promise<boolean> =>
+				(await ctx.runner.sh(`runuser -u ${user} -- ${q(bin)} --version`)).code === 0;
+			const untilRuns = (user: string, bin: string, ok: boolean, what: string) =>
+				must(
+					ctx,
+					`for i in $(seq 1 120); do runuser -u ${user} -- ${q(bin)} --version >/dev/null 2>&1; r=$?; [ ${ok ? '$r -eq 0' : '$r -ne 0'} ] && exit 0; sleep 0.5; done; exit 1`,
+					what,
+					90_000,
+				);
+			// 1. Converged while fapolicyd was installed but stopped: the trust is already provisioned.
+			const trusted = await must(ctx, `cat ${trustFile}`, `the provisioned trust file ${trustFile}`);
+			check(
+				trusted.startsWith(`# dedalo-provision: ${INSTANCE} fapolicyd_trust `),
+				`${trustFile} does not carry our stamp:\n${trusted.slice(0, 300)}`,
+			);
+			const lines = trusted.split('\n').filter((line) => line.startsWith('/'));
+			check(
+				lines.some((line) => line.startsWith(`${unit.bunBin} `)) &&
+					lines.some((line) => line.startsWith(`${unit.agentDir}/src/index.ts `)),
+				`${trustFile} does not trust bun_bin and the agent's tree (${lines.length} lines)`,
+			);
+			await must(ctx, `systemctl cat ${trustUnit} >/dev/null`, `the rendered ${trustUnit}`);
 			await must(
 				ctx,
-				`install -D -m 0755 /usr/bin/true ${probe} && systemctl enable --now fapolicyd && for i in $(seq 1 240); do runuser -u nobody -- ${probe} 2>/dev/null || exit 0; sleep 0.5; done; echo 'fapolicyd never denied the untrusted probe'; exit 1`,
-				'start fapolicyd (enforcing)',
-				180_000,
+				`grep -q '"${trustUnit}" && verb === "start"' /etc/polkit-1/rules.d/60-dedalo-publication-host-${INSTANCE}.rules`,
+				'the polkit start grant of the trust unit',
 			);
+			const original = await must(ctx, `cat ${conf}`, 'read fapolicyd.conf');
+			// Written BEFORE fapolicyd starts: the drill's own Bun is not trusted, so a child of it could not read its TypeScript after.
+			const r1 = await miniV2Release(ctx, 'r1');
+			const r2 = await miniV2Release(ctx, 'r2');
+			const probe = '/usr/local/libexec/dd_fapolicyd_probe';
+			const copy = '/usr/local/libexec/dd_untrusted_bun';
 			try {
-				// The control: the instance's Bun is untrusted, so its own accounts may not run it (else the leg proves nothing).
-				check(
-					!(await runsAs(`${INSTANCE}_agent`)),
-					`${unit.bunBin} runs as ${INSTANCE}_agent under fapolicyd WITHOUT the trust lines: already trusted, the leg proves nothing`,
+				// 2. integrity = sha256 and allow_filesystem_mark = 1 (init's two recommendations: without the
+				//    mark fapolicyd never sees what a sandboxed unit opens — measured), then start fapolicyd and
+				//    wait until it enforces (`active` comes before the daemon has loaded its trust database).
+				await must(
+					ctx,
+					`sed -i -E 's/^[[:space:]]*integrity[[:space:]]*=.*/integrity = sha256/; s/^[[:space:]]*allow_filesystem_mark[[:space:]]*=.*/allow_filesystem_mark = 1/' ${conf} && grep -q '^integrity = sha256' ${conf} && grep -q '^allow_filesystem_mark = 1' ${conf}`,
+					'set integrity = sha256 and allow_filesystem_mark = 1',
 				);
-				// Measured, not judged: systemd starting the untrusted Bun as the agent user anyway.
+				await must(
+					ctx,
+					`install -D -m 0755 /usr/bin/true ${probe} && systemctl enable --now fapolicyd && for i in $(seq 1 240); do runuser -u nobody -- ${probe} 2>/dev/null || exit 0; sleep 0.5; done; echo 'fapolicyd never denied the untrusted probe'; exit 1`,
+					'start fapolicyd (enforcing)',
+					180_000,
+				);
+				// 3. The control: the same Bun at a path nobody trusted is denied to the agent; bun_bin is not.
+				await must(ctx, `install -m 0755 ${q(unit.bunBin)} ${copy}`, 'an untrusted copy of the Bun');
+				check(
+					!(await runsAs(`${INSTANCE}_agent`, copy)),
+					`an untrusted copy of ${unit.bunBin} runs as ${INSTANCE}_agent: fapolicyd does not enforce, the leg proves nothing`,
+				);
+				await untilRuns(`${INSTANCE}_agent`, unit.bunBin, true, `the provisioned trust makes ${unit.bunBin} runnable by ${INSTANCE}_agent`);
+				check(await runsAs(`${INSTANCE}_v2`, unit.bunBin), `the provisioned trust does not make ${unit.bunBin} runnable by ${INSTANCE}_v2`);
+				// 4. Without its trust file the instance's units do not run: the agent restarted then stays down
+				//    (the trust file, not luck, is what lets the sandboxed agent run) — and install.sh's
+				//    pre-hand-over gate (before any unit exists root must read the code) refuses the installed
+				//    Bun with the line that trusts it.
+				await must(ctx, `mv ${trustFile} /root/dd_trust.aside && fapolicyd-cli --update`, 'move the trust aside');
+				await untilRuns(`${INSTANCE}_agent`, unit.bunBin, false, `${unit.bunBin} is denied without its trust`);
 				await ctx.runner.sh(`systemctl restart ${unit.agent}`, { timeoutMs: 60_000 });
-				ctx.facts.fapolicyd_systemd_starts_untrusted =
-					(
-						await ctx.runner.sh(
-							`sleep 2; curl -fsS --max-time 5 --unix-socket /run/dedalo_publication_host/${INSTANCE}/agent.sock http://localhost/publication/host_agent/health`,
-						)
-					).code === 0;
-				// Root may EXECUTE the untrusted Bun, but that Bun may not READ the TypeScript it runs:
-				// install.sh probes it and refuses with the line that trusts that Bun.
-				const gated = await ctx.runner.sh(
-					`${rerunSh(INSTANCE, home, '-- --dry-run --no-pair')} </dev/null`,
+				const down = await ctx.runner.sh(
+					`for i in $(seq 1 10); do curl -fsS --max-time 2 --unix-socket ${socket} http://localhost/publication/host_agent/health >/dev/null 2>&1 && exit 1; sleep 0.5; done; exit 0`,
+					{ timeoutMs: 60_000 },
 				);
-				const gateLines = gated.err
-					.split('\n')
-					.map((line) => line.trim())
-					.filter((line) => line.startsWith('fapolicyd-cli '));
+				check(down.code === 0, `the agent answers /health without its trust file: fapolicyd does not check the sandboxed unit (allow_filesystem_mark?)`);
+				const gated = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --dry-run --no-pair')} </dev/null`);
 				check(
-					gated.code === 3 &&
-						gated.err.includes(`fapolicyd denies ${unit.bunBin} the code it runs`) &&
-						gateLines.at(-1) === 'fapolicyd-cli --update',
-					`install.sh did not refuse the untrusted Bun with its trust line: exit ${gated.code}\n${gated.out.slice(-1500)}${gated.err.slice(-1500)}`,
+					gated.code === 3 && gated.err.includes(`fapolicyd denies ${unit.bunBin} the code it runs`),
+					`install.sh did not refuse the untrusted Bun: exit ${gated.code}\n${gated.out.slice(-1500)}${gated.err.slice(-1500)}`,
 				);
-				for (const line of gateLines) await must(ctx, line, `install.sh's line '${line}'`, 120_000);
-				let report = '';
-				for (let i = 0; i < 60 && !report.includes('[host.fapolicyd]'); i += 1) {
-					report = (
-						await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --dry-run --no-pair')} </dev/null`)
-					).out;
-					if (!report.includes('[host.fapolicyd]')) await Bun.sleep(500);
-				}
-				const printed = fapolicydCommands(report);
-				check(
-					printed.some((line) => line.includes(` ${unit.bunBin} `)) &&
-						printed.at(-1) === 'fapolicyd-cli --update',
-					`init printed no host.fapolicyd trust lines naming ${unit.bunBin}:\n${report.slice(-3000)}`,
-				);
-				check(
-					printed.some((line) => line.includes(` ${unit.agentDir}/ `)),
-					`init's host.fapolicyd lines do not trust the agent's own tree:\n${printed.join('\n')}`,
-				);
-				for (const line of printed) await must(ctx, line, `the printed line '${line}'`, 120_000);
-				// fapolicyd-cli --update returns before the daemon reloaded its trust database.
+				await must(ctx, `mv /root/dd_trust.aside ${trustFile} && fapolicyd-cli --update`, 'restore the trust');
+				await untilRuns(`${INSTANCE}_agent`, unit.bunBin, true, `${unit.bunBin} runs again with its trust`);
+				// 5. The agent under fapolicyd, and init's re-run: both items right, nothing to run by hand.
+				await must(ctx, `systemctl reset-failed ${unit.agent}; systemctl restart ${unit.agent}`, 'restart the agent under fapolicyd', 120_000);
 				await must(
 					ctx,
-					`for i in $(seq 1 60); do runuser -u ${INSTANCE}_agent -- ${q(unit.bunBin)} --version >/dev/null 2>&1 && exit 0; sleep 0.5; done; exit 1`,
-					`the printed lines make ${unit.bunBin} runnable by ${INSTANCE}_agent`,
-				);
-				check(
-					await runsAs(`${INSTANCE}_v2`),
-					`the printed lines do not make ${unit.bunBin} runnable by ${INSTANCE}_v2`,
-				);
-				const done = await ctx.runner.sh(
-					`${rerunSh(INSTANCE, home, '-- --yes --no-pair --decide host.fapolicyd=manual')} </dev/null`,
-					{ timeoutMs: 600_000 },
-				);
-				check(
-					done.code === 0,
-					`the re-run with host.fapolicyd=manual exited ${done.code}\n${done.out.slice(-3000)}${done.err}`,
-				);
-				await must(
-					ctx,
-					`systemctl restart ${unit.agent}`,
-					'restart the agent under fapolicyd',
-					120_000,
-				);
-				await must(
-					ctx,
-					`for i in $(seq 1 60); do curl -fsS --max-time 5 --unix-socket /run/dedalo_publication_host/${INSTANCE}/agent.sock http://localhost/publication/host_agent/health >/dev/null 2>&1 && exit 0; sleep 0.5; done; exit 1`,
+					`for i in $(seq 1 60); do curl -fsS --max-time 5 --unix-socket ${socket} http://localhost/publication/host_agent/health >/dev/null 2>&1 && exit 0; sleep 0.5; done; exit 1`,
 					'the agent answers under fapolicyd',
 				);
 				await healthOverSocket(ctx, INSTANCE);
+				const rerun = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`, { timeoutMs: 600_000 });
+				check(rerun.code === 0, `the re-run under fapolicyd exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`);
+				const report = rerun.out;
+				check(report.includes('trust is automatic: provision apply writes'), `init's host.fapolicyd does not say the trust is automatic:\n${report.slice(-3000)}`);
+				check(report.includes('integrity = sha256: a trusted file changed after it was trusted is denied'), `host.fapolicyd_integrity is not right under integrity = sha256:\n${report.slice(-3000)}`);
+				check(report.includes('allow_filesystem_mark = 1: fapolicyd checks what the sandboxed services open too'), `host.fapolicyd_mounts is not right under allow_filesystem_mark = 1:\n${report.slice(-3000)}`);
+				// 6. Two v2 releases PUSHED through the agent, then a rollback: each trusted before it ran.
+				const healthUrl = (await must(ctx, `sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${INSTANCE}/agent.env`, 'V2_HEALTH_URL')).trim();
+				check(/^http:\/\/127\.0\.0\.1:\d+\//.test(healthUrl), `V2_HEALTH_URL is '${healthUrl}'`);
+				const v2Answers = async (marker: string): Promise<void> => {
+					await must(
+						ctx,
+						`for i in $(seq 1 60); do curl -fsS --max-time 5 ${q(healthUrl)} 2>/dev/null | grep -q '"release":"${marker}"' && exit 0; sleep 0.5; done; curl -sS --max-time 5 ${q(healthUrl)}; journalctl -u ${unit.v2Unit} -n 5 --no-pager 2>/dev/null; exit 1`,
+						`v2 answers its /health as ${marker}`,
+					);
+				};
+				const posted1 = await agentPost(ctx, socket, INSTANCE, '/publication/host_agent/v1/releases/v2', r1);
+				check(posted1.status === 200, `release.install ${r1.id} answered ${posted1.status}: ${posted1.body}`);
+				await v2Answers('r1');
+				const record = JSON.parse(await must(ctx, `cat /etc/dedalo_publication_host/${INSTANCE}/fapolicyd_trust.json`, 'the trust record')) as { outcome: string; releases: string[] };
+				check(['applied', 'unchanged'].includes(record.outcome) && record.releases.includes(`v2:${r1.id}`), `the trust record after ${r1.id}: ${JSON.stringify(record)}`);
+				check((await must(ctx, `cat ${trustFile}`, 'the trust file')).includes(`/publication_api/v2/releases/${r1.id}/src/index.ts `), `${trustFile} does not trust ${r1.id}`);
+				const posted2 = await agentPost(ctx, socket, INSTANCE, '/publication/host_agent/v1/releases/v2', r2);
+				check(posted2.status === 200, `release.install ${r2.id} answered ${posted2.status}: ${posted2.body}`);
+				await v2Answers('r2');
+				const rolled = await agentPost(ctx, socket, INSTANCE, '/publication/host_agent/v1/releases/v2/rollback', null);
+				check(rolled.status === 200 && rolled.body.includes(`"to":"${r1.id}"`), `release.rollback answered ${rolled.status}: ${rolled.body}`);
+				await v2Answers('r1');
+				// 7. What fapolicyd gates: the release entry is a %languages type, and the same type outside the
+				//    trust set is DENIED to the v2 account — so v2 ran above only because the oneshot trusted it.
+				const entry = `${unit.stateRoot}/publication_api/v2/releases/${r1.id}/src/index.ts`;
+				const ftype = (await must(ctx, `fapolicyd-cli --ftype ${q(entry)}`, 'the release entry\'s file type')).trim();
+				check(/^(text\/x-java|application\/javascript|text\/javascript)$/.test(ftype), `the release entry is typed '${ftype}', not one of fapolicyd's %languages: the leg would prove nothing`);
+				const control = '/var/tmp/dd_fapolicyd_control';
+				const ran = await ctx.runner.sh(
+					`rm -rf ${control} && install -d -m 0755 ${control} && install -m 0644 ${q(entry)} ${control}/index.ts && cd /var/tmp && timeout 5 runuser -u ${INSTANCE}_v2 -- env PORT=0 ${q(unit.bunBin)} ${control}/index.ts; r=$?; rm -rf ${control}; exit $r`,
+					{ timeoutMs: 30_000 },
+				);
+				check(ran.code !== 0 && ran.code !== 124, `an untrusted copy of the release entry ran as ${INSTANCE}_v2 (exit ${ran.code}): fapolicyd does not gate the v2 account`);
+				// 8. integrity = sha256: one byte of the trusted entry changed IN PLACE (same size, same inode,
+				//    still valid TypeScript) is denied to the v2 account — in a namespaced transient unit, as
+				//    v2's own units run, and directly — until the byte is put back. v2 itself is stopped
+				//    first: a start fapolicyd denies makes Bun fall back to `bun run`, whose node shim links in
+				//    the unit's PrivateTmp systemd may not unlink (an AVC per denied start, measured).
+				const flip = (from: string, to: string) =>
+					`off=$(grep -bo "pad = '${from}" ${q(entry)} | head -n1 | cut -d: -f1) && [ -n "$off" ] && printf '${to}' | dd of=${q(entry)} bs=1 seek=$((off + 7)) conv=notrunc 2>/dev/null && grep -q "pad = '${to}${from.slice(1)}'" ${q(entry)}`;
+				await must(ctx, `systemctl stop ${unit.v2Unit}`, 'stop v2 before the change');
+				await must(ctx, flip('aaaaaaaa', 'b'), 'change one byte of the trusted release entry in place');
+				const asV2 = (how: string) =>
+					how === 'unit'
+						? `rm -rf /tmp/bun-node-*; systemd-run --wait -q -p User=${INSTANCE}_v2 -p ProtectHome=read-only -p ProtectSystem=strict -p WorkingDirectory=/var/tmp -p RuntimeMaxSec=5 /usr/bin/env PORT=0 ${q(unit.bunBin)} ${q(entry)}; r=$?; rm -rf /tmp/bun-node-*; exit $r`
+						: `cd /var/tmp && timeout 5 runuser -u ${INSTANCE}_v2 -- env PORT=0 ${q(unit.bunBin)} ${q(entry)}; r=$?; rm -rf /tmp/bun-node-*; exit $r`;
+				const inUnit = await ctx.runner.sh(asV2('unit'), { timeoutMs: 60_000 });
+				const direct = await ctx.runner.sh(asV2('direct'), { timeoutMs: 30_000 });
+				ctx.facts.fapolicyd_changed_entry = { unit: inUnit.code, direct: direct.code };
+				// A server that is ALLOWED keeps running: the transient unit then ends at RuntimeMaxSec (non-zero too),
+				// so the unit's verdict is its journal's EPERM; runuser's is a fast non-zero exit (124 = it ran).
+				check(direct.code !== 0 && direct.code !== 124, `the changed entry ran as ${INSTANCE}_v2 (exit ${direct.code}): integrity = sha256 did not deny it`);
+				check(
+					(await ctx.runner.sh(`journalctl --since '-30 s' --no-pager | grep -F 'EPERM reading "${entry}"' | grep -q .`)).code === 0,
+					`no EPERM for the changed entry in the namespaced unit's journal (exit ${inUnit.code}): fapolicyd did not deny it there`,
+				);
+				await must(ctx, flip('baaaaaaa', 'a'), 'put the byte back in place');
+				await must(ctx, `systemctl reset-failed ${unit.v2Unit}; systemctl start ${unit.v2Unit}`, 'start v2 on the restored entry', 60_000);
+				await v2Answers('r1');
 				ctx.facts.fapolicyd = true;
 			} finally {
-				// The legs after this one judge SELinux, not fapolicyd: leave the host as it was found.
+				// The legs after this one judge SELinux, not fapolicyd: leave the host as it was found —
+				// v2 stopped too (no release ran before this leg; a v2 that answers lets httpd reuse a pooled
+				// backend connection and hides booleans-measured's proxy denial).
+				await ctx.runner.sh(`systemctl stop ${unit.v2Unit}`, { timeoutMs: 60_000 });
 				await ctx.runner.sh(
-					`rm -f ${probe}; systemctl disable --now fapolicyd; systemctl restart ${unit.agent}`,
-					{
-						timeoutMs: 120_000,
-					},
+					`[ -e /root/dd_trust.aside ] && mv /root/dd_trust.aside ${trustFile}; rm -f ${probe} ${copy}; cat > ${conf} <<'DD_CONF_EOF'\n${original.replace(/\n$/, '')}\nDD_CONF_EOF\nsystemctl disable --now fapolicyd; systemctl reset-failed ${unit.agent} ${unit.v2Unit}; systemctl restart ${unit.agent}`,
+					{ timeoutMs: 120_000 },
 				);
 			}
 		},
@@ -1837,30 +1901,102 @@ async function s9Rules(
 /** One instance's agent unit, Bun and agent tree, from its declaration through the agent package in a CHILD. */
 async function instanceUnits(
 	instance: string,
-): Promise<{ agent: string; bunBin: string; agentDir: string }> {
+): Promise<{ agent: string; bunBin: string; agentDir: string; v2Unit: string; stateRoot: string }> {
 	const probe = [
 		`const { parseDeclaration } = await import(${JSON.stringify(join(AGENT_DIR, 'src/provision/schema.ts'))});`,
 		`const path = '/etc/dedalo_publication_host/${instance}.json';`,
 		'const { layout } = parseDeclaration(JSON.parse(await Bun.file(path).text()), path);',
-		'console.log(JSON.stringify({ agent: layout.agentUnitName, bunBin: layout.bunBin, agentDir: layout.agentDir }));',
+		'console.log(JSON.stringify({ agent: layout.agentUnitName, bunBin: layout.bunBin, agentDir: layout.agentDir, v2Unit: layout.v2.unit, stateRoot: layout.state.root }));',
 	].join('\n');
 	const done = await spawnText([process.execPath, '-e', probe], { cwd: AGENT_DIR });
 	if (done.code !== 0) throw new LegFailure(`reading ${instance}'s declaration: ${done.err}`);
-	return JSON.parse(done.out) as { agent: string; bunBin: string; agentDir: string };
+	return JSON.parse(done.out) as { agent: string; bunBin: string; agentDir: string; v2Unit: string; stateRoot: string };
 }
 
-/** The `$ ` command lines a report prints under its `[host.fapolicyd]` item. */
-export function fapolicydCommands(report: string): string[] {
-	const lines = report.split('\n');
-	const start = lines.findIndex((line) => /^\s*\[host\.fapolicyd\]/.test(line));
-	if (start === -1) return [];
-	const out: string[] = [];
-	for (const line of lines.slice(start + 1)) {
-		if (/^\s*\[[a-z0-9_.-]+\]/.test(line) || /^\S/.test(line)) break;
-		const m = line.match(/^\s+\$ (fapolicyd-cli .+)$/);
-		if (m) out.push((m[1] as string).trim());
-	}
-	return out;
+/** One minimal Publication API v2 release the agent accepts (a bundle written in a file on the target). */
+interface MiniRelease {
+	readonly id: string;
+	readonly sha256: string;
+	readonly file: string;
+}
+
+/**
+ * A v2 release the agent ACCEPTS, minimal: `node_modules/` (the agent's D6 check), a package.json
+ * and `src/index.ts` — a Bun server on v2's own HOST/PORT whose `/health` answers 200 with the
+ * `marker` (also in a DRILL_RELEASE file, so two releases differ in more than their entry); the
+ * entry is a %languages type for fapolicyd (text/x-java). Written by THE engine bundle writer in a CHILD (the drill imports
+ * no engine module), into the scratch directory the target sees; its id is `<version>_<digest7>` (D9).
+ */
+async function miniV2Release(ctx: Ctx, marker: string): Promise<MiniRelease> {
+	const file = join(ctx.scratch, `mini_v2_${marker}.tar.gz`);
+	// An `import` and an exported class: libmagic types it text/x-java, one of fapolicyd's %languages
+	// (measured: a one-line script is text/plain, which fapolicyd never gates — the leg would prove
+	// nothing). `pad` is the byte the tamper step changes and restores in place.
+	const server = [
+		"import { serve } from 'bun';",
+		'',
+		'export class Release {',
+		`\tstatic readonly marker = '${marker}';`,
+		"\tstatic readonly pad = 'aaaaaaaa';",
+		'}',
+		'',
+		'serve({',
+		"\thostname: process.env.HOST ?? '127.0.0.1',",
+		'\tport: Number(process.env.PORT),',
+		"\tfetch: (req) => (new URL(req.url).pathname.endsWith('/health') ? Response.json({ status: 'ok', release: Release.marker, pad: Release.pad }) : new Response('not found', { status: 404 })),",
+		'});',
+		'',
+	].join('\n');
+	const entries = [
+		{ path: 'DRILL_RELEASE', type: 'file', mode: 0o644, text: `${marker}\n` },
+		{ path: 'node_modules', type: 'dir', mode: 0o755 },
+		{ path: 'package.json', type: 'file', mode: 0o644, text: '{"name":"dedalo-publication-api-v2","version":"2.1.0","type":"module"}\n' },
+		{ path: 'src', type: 'dir', mode: 0o755 },
+		{ path: 'src/index.ts', type: 'file', mode: 0o644, text: server },
+	];
+	const probe = [
+		`const { compareBundlePaths, writeBundle } = await import(${JSON.stringify(join(REPO_ROOT, 'src/core/publication_host/bundle_writer.ts'))});`,
+		`const raw = ${JSON.stringify(entries)};`,
+		'const entries = raw.map((e) => (e.type === "file" ? { path: e.path, type: e.type, mode: e.mode, data: new TextEncoder().encode(e.text) } : { path: e.path, type: e.type, mode: e.mode })).sort((a, b) => compareBundlePaths(a.path, b.path));',
+		'const out = await writeBundle((async function* () { yield* entries; })());',
+		'const bytes = new Uint8Array(await new Response(out.stream).arrayBuffer());',
+		`await Bun.write(${JSON.stringify(file)}, bytes);`,
+		"console.log(new Bun.CryptoHasher('sha256').update(bytes).digest('hex'));",
+	].join('\n');
+	const done = await spawnText([process.execPath, '-e', probe], { cwd: REPO_ROOT });
+	if (done.code !== 0) throw new LegFailure(`writing the minimal v2 release: ${done.err}`);
+	const sha256 = done.out.trim();
+	check(/^[0-9a-f]{64}$/.test(sha256), `the bundle writer printed '${sha256}'`);
+	return { id: `2.1.0_${sha256.slice(0, 7)}`, sha256, file };
+}
+
+/** POST to the agent over its unix socket as the engine would (bearer from the root-only credential). */
+async function agentPost(
+	ctx: Ctx,
+	socket: string,
+	instance: string,
+	path: string,
+	release: MiniRelease | null,
+): Promise<{ status: number; body: string }> {
+	const token = `/etc/dedalo_publication_host/${instance}/credentials/SERVICE_TOKEN`;
+	const headers = [
+		'-H "Authorization: Bearer $(cat ' + token + ')"',
+		"-H 'X-Dedalo-Actor: init_drill'",
+		...(release === null
+			? []
+			: [
+					"-H 'Content-Type: application/gzip'",
+					`-H 'X-Release-Id: ${release.id}'`,
+					`-H 'X-Bundle-Sha256: ${release.sha256}'`,
+					`--data-binary @${q(release.file)}`,
+				]),
+	].join(' ');
+	const done = await ctx.runner.sh(
+		`curl -sS --max-time 240 -o /root/dd_agent_answer -w '%{http_code}' --unix-socket ${q(socket)} -X POST ${headers} http://localhost${path}; echo; cat /root/dd_agent_answer; rm -f /root/dd_agent_answer`,
+		{ timeoutMs: 300_000 },
+	);
+	const [status = '0', ...rest] = done.out.split('\n');
+	return { status: Number(status.trim()), body: rest.join('\n').trim() };
 }
 
 /** buildNginxMap() and its hash, from the ENGINE in a child (the drill imports no engine module). */

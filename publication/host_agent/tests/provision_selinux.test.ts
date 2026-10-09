@@ -78,7 +78,11 @@ describe('the closed sets', () => {
       'httpd_sys_rw_content_t',
       'httpd_log_t',
       'httpd_config_t',
+      'data_home_t',
     ]);
+    // data_home_t (the v2 tree under the home layout) is NOT httpd-readable by default (measured
+    // RHEL 9.8 sesearch: httpd_t reads it only under httpd_read_user_content, like user_home_t).
+    expect(HTTPD_READABLE_TYPES).not.toContain('data_home_t');
     expect([...HTTPD_READABLE_TYPES]).toEqual(['usr_t', 'httpd_sys_content_t', 'httpd_config_t', 'etc_t']);
     expect(HOME_TRAVERSE_TYPE).toBe('home_root_t');
     expect(SELINUX_TYPES).toContain(HOME_TRAVERSE_TYPE);
@@ -94,6 +98,8 @@ describe('the S9 table', () => {
       ['S', 'd', 'usr_t', '/home/museum\\.example\\.org/dedalo'],
       ['S/publication_api', 'd', 'usr_t', '/home/museum\\.example\\.org/dedalo/publication_api'],
       ['S/publication_api/v1', 'a', 'httpd_sys_content_t', '/home/museum\\.example\\.org/dedalo/publication_api/v1(/.*)?'],
+      // systemd (init_t) must read v2.env and the agent's current/scratch links: not under user_home_t.
+      ['S/publication_api/v2', 'a', 'data_home_t', '/home/museum\\.example\\.org/dedalo/publication_api/v2(/.*)?'],
       ['S/rules', 'a', 'httpd_config_t', '/home/museum\\.example\\.org/dedalo/rules(/.*)?'],
       ['A', 'a', 'usr_t', '/home/museum\\.example\\.org/host_agent(/.*)?'],
       ['dirname(B)', 'a', 'usr_t', '/home/museum\\.example\\.org/\\.bun/bin(/.*)?'],

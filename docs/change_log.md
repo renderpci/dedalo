@@ -1024,6 +1024,25 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-09-ontology-manifest-dependencies`, `WC-2026-10-09-install-domain-ontologies`, `WC-2026-10-01-unit-test-widget-dev-gate`.
 
+- **"On a publication host with fapolicyd, the trust of the agent, its Bun and every Publication API release it installs is now kept by the host itself: no trust lines to run by hand, and a rollback is trusted too."**
+
+    Before, the guided install stopped at `host.fapolicyd` until you ran printed `fapolicyd-cli`
+    lines for the site's Bun and the agent's code, again after every code update, and the API
+    releases the agent installed later were not covered at all. Now, wherever fapolicyd is installed,
+    `provision apply` writes one trust file per instance (`/etc/fapolicyd/trust.d/dedalo_<instance>`)
+    and installs a root service, `dedalo-pubhost-trust-<instance>`, that the agent starts after every
+    release install and before every rollback. The service works out what to trust from the
+    instance's declaration (the Bun, the agent's code, the current and the previous release of each
+    API it serves); the agent cannot name a file. A release it cannot verify is refused with
+    `trust_failed` and the previous release keeps serving. Two new init items warn about fapolicyd's
+    own settings and print the lines that change them: `host.fapolicyd_integrity` when `integrity`
+    would let a file changed after it was trusted still run (`integrity = sha256`), and
+    `host.fapolicyd_mounts` when `allow_filesystem_mark = 0`, fapolicyd's default, under which it
+    never sees what the agent and the API services open at all. `install.sh` still stops, with the one
+    line to run, when fapolicyd denies the Bun it starts. A `dedalo` trust file left by the old hand-run
+    lines is no longer needed. See
+    [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
+
 - **The guided publication-host install now proposes the v1 database connection it finds on the host.**
 
     `provision init` asks how the v1 Publication API reaches MariaDB: through its unix socket or over TCP. Until now the proposed answer was always the socket, even on a host without a local MariaDB. Init now looks for a local MariaDB socket (`/run/mysqld/mysqld.sock` on Debian and Ubuntu, `/var/lib/mysql/mysql.sock` on RHEL, Rocky and Alma). It proposes that socket when one exists, and otherwise TCP to `127.0.0.1:3306`, saying whether anything listens there. The question is still yours to answer. For TCP the proposed host is `127.0.0.1`, never `localhost`, because v1's database driver reads `localhost` as "use the socket" whatever the port. See [Publication host agent](./install/publication_host.md#the-three-lists).
@@ -1304,6 +1323,18 @@ Merged since the last release; these ship with the next one.
     `host.fapolicyd` prints the lines for the site's Bun **and the agent's code** (re-runnable: an
     existing entry is updated). See
     [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
+
+- **"On RHEL, Rocky and Alma with SELinux, the Publication API v2 of a site installed in its home now starts: systemd may read its settings and its release links."**
+
+    The first API v2 release pushed in the EL install drill never started. Under the home layout the
+    v2 directory kept the home's own SELinux type, which systemd may not read, so neither the v2
+    settings file (`v2.env`) nor the links to the current release and to the release being tested
+    could be followed: every install was refused (`scratch_start_failed`). `provision apply` now
+    labels `<home>/dedalo/publication_api/v2` `data_home_t`, a type systemd reads and the web server
+    still may not. The v2 services also start their entry with `bun src/index.ts` instead of
+    `bun run src/index.ts`, which left links in the service's private `/tmp` that systemd could not
+    remove at every stop (an SELinux denial each time). Run `provision apply` (or init) again on such
+    a site. See [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
 
 - **On an nginx publication host, a media map that stops nginx at its reload is now rolled back and nginx restarted, and the panel counts a map that is not loaded as a red check.**
 

@@ -100,6 +100,9 @@ function install(options: { server?: 'apache' | 'nginx'; mode?: 'conf_d' | 'none
     },
   };
   const exec: Exec = {
+    startTrust: async () => {
+      throw new Error('rules.map never starts the trust unit');
+    },
     webConfigtest: async () => {
       throw new Error('rules.map never runs the agent configtest');
     },

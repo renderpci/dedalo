@@ -114,7 +114,10 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    observed web unit, `restart` of the v2 unit, and `start`/`stop` of the v2 scratch
    template unit `<v2 unit>-scratch@<port>` (port 1024–65535; the `publication/site_builder`
    precedent) — and, on an nginx host whose http{} map is provisioned (§9.7), `start` of
-   `dedalo-pubhost-map.service`, a root oneshot that takes no argument. There is no shell and no free argv. The media include the agent installs
+   `dedalo-pubhost-map.service`, a root oneshot that takes no argument — and, on a host where
+   fapolicyd is installed (§9.11), `start` of `dedalo-pubhost-trust-<instance>.service`, the
+   instance's root trust oneshot, which takes no argument from the agent and derives what it
+   trusts from the declaration. There is no shell and no free argv. The media include the agent installs
    is checked against a closed directive allowlist
    (`publication/host_agent/src/rules/directives.ts`) before root parses it: no module
    load, no include, no log or piped directive, no path outside MEDIA_ROOT. What remains
@@ -758,11 +761,15 @@ set of **22** commands for init alone (discovery, the account creators, `a2enmod
 on Debian, `setsebool`, the Bun unpack, and the pairing child `setsid --wait runuser -u <engine
 user> -- <bun> --no-install <checkout>/scripts/publication_host_pair.ts …`, whose token reaches
 stdin only). The two sets are disjoint (`publication/host_agent/tests/init_exec.test.ts`); the
-counts here are held to the code (`publication/host_agent/tests/spec_privileges.test.ts`).
+counts here are held to the code (`publication/host_agent/tests/spec_privileges.test.ts`). The
+fapolicyd trust oneshot (§9.11) has its own closed set, `trustExec()`: `systemctl is-active --quiet
+fapolicyd.service`, `fapolicyd-cli --update` and `fapolicyd-cli --dump-db`, fixed argv, root PATH,
+`TRUST_COMMAND_TIMEOUT_MS` (`publication/host_agent/tests/exec.test.ts`); `provision apply`'s
+`fapolicyd-update` op uses the same set.
 
 ### 9.4 Artifacts and validators
 
-Six artifact kinds join the provisioner's census
+Seven artifact kinds join the provisioner's census
 (`publication/host_agent/src/provision/render/types.ts` `ARTIFACT_KINDS`):
 
 | kind | path | validator, effect |
@@ -772,6 +779,7 @@ Six artifact kinds join the provisioner's census
 | `nginx_map_include` | `/etc/nginx/conf.d/dedalo_media_map.conf`, host-wide, stamped `_host` | `web`, `reload_web` |
 | `host_map_unit` | `dedalo-pubhost-map.service`, host-wide, stamped `_host` | — |
 | `logrotate` | `/etc/logrotate.d/dedalo_<instance>_web`, home layout only: rotates the site's web log directory `/var/log/<apache2\|httpd\|nginx>/<domain>/` (`plan.ts` creates it `root:root 0755`), which the distributions' own logrotate globs (one level) never reach | — |
+| `trust_unit` | `<unit_dir>/dedalo-pubhost-trust-<instance>.service`, only where fapolicyd is installed (`layout.trust`): the root oneshot of §9.11 | `daemon_reload` |
 | `logrotate_v1` | `/etc/logrotate.d/dedalo_<instance>_v1`, every site in either layout: rotates the v1 pool's own error log `<v1_var_base>/<instance>/v1/log/*.log` as the v1 user (`su <v1> root`: the directory is that account's, `v1VarWork`), the new file `0600 <v1>:root`; no reopen (PHP opens its `error_log` for every message) | — |
 
 `web_include` and `fpm_pool` apply only with the optional declaration block `site`; the two
@@ -888,7 +896,14 @@ must reach, as narrowly as the access needs (search-only `-f d` rules on the dir
 traverses, `httpd_sys_content_t` on the v1 tree, `httpd_config_t` on the rules and the host
 map, `httpd_log_t`/`httpd_sys_rw_content_t` for the v1 pool's log and temporary files (the
 site's web logs under `/var/log/{httpd,nginx}/<domain>` are `httpd_log_t` by the policy's own rules),
-`usr_t`/`bin_t` for the agent code and Bun); the only rules on paths the provisioner did not
+`usr_t`/`bin_t` for the agent code and Bun; under the HOME layout `data_home_t` on the v2 tree —
+systemd (`init_t`) may read neither the units' `EnvironmentFile=` `v2.env` nor the agent's
+`current`/`scratch` links under the home's `user_home_t`, so no v2 unit could start (measured,
+RHEL 9.8: AVC `init_t` read on `user_home_t` `lnk_file`/`file`, found by the EL drill's first v2
+push; `httpd_t` reads `data_home_t` only under `httpd_read_user_content`, like `user_home_t`;
+what the agent creates there inherits it). The SYSTEM layout's v2 tree keeps the path's default
+(`var_t` under /srv), which `init_t` may not read either (sesearch, RHEL 9.8): its type is
+undecided and no drill leg pushes v2 on it); the only rules on paths the provisioner did not
 create are the exact `-f d` rule on the site home (one inode) and the consented shared media root
 (below). No rule ever gives
 `S/publication_api/v2` or `S/audit` an httpd-readable type. Booleans (`SELINUX_BOOLEANS`) are
@@ -954,9 +969,68 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   **fapolicyd** (default rules, measured RHEL 9.8): root may execute an untrusted Bun, but that
   Bun may not read the TypeScript it runs (libmagic types it `text/x-java`, a language type), and
   an unprivileged account may not run it at all. `install.sh` probes the read before the
-  hand-over (`fapolicyd_gate`) and refuses with the line that trusts its Bun; init's
-  `host.fapolicyd` prints the lines for the site's Bun, the agent's tree and (nginx `conf_d`) the
-  renderer's Bun, each `add || update` so a re-run refreshes the recorded hashes.
+  hand-over (`fapolicyd_gate`) and refuses with the line that trusts its Bun — root must read the
+  installer's code before any unit exists. From there the trust is AUTOMATIC (owner decision
+  2026-10-09). Where fapolicyd is INSTALLED (`FAPOLICYD_CLI` a real file — `derive()`'s
+  `DeriveHost.fapolicyd`, passed by `cli.ts` and init's draft; running or not) the layout carries
+  `trust`: the root oneshot `dedalo-pubhost-trust-<instance>.service` (`render/trust_unit.ts`:
+  `Type=oneshot`, `User=root`, empty environment, ExecStart naming the instance and its
+  declaration, `ProtectSystem=full` with the trust directory and the instance's config directory
+  writable), the one polkit pair that lets the agent start it, the env keys `TRUST_UNIT` and
+  `TRUST_RESULT_FILE`, and ONE trust file `/etc/fapolicyd/trust.d/dedalo_<instance>`.
+  **The set is derived, never named** (`src/provision/fapolicyd_trust.ts` `deriveTrust`): every
+  regular file of `bun_bin`, `agent_dir`, the nginx `conf_d` renderer's Bun, and, for each SERVED
+  API, the release `current` names and the store's `previous` (the newest other release by mtime,
+  `releases/store.ts`) — right after a commit that is the release under test. Walked by name,
+  lstat only: a link is never followed and never trusted (v1's D8 links are counted, skipped).
+  What cannot be verified is never trusted, at two scopes: the CODE (`bun_bin`, `agent_dir`, the
+  renderer's Bun, the state root — a link in place of a root, an unreadable or unlistable entry, a
+  path a trust line cannot carry, a FIFO, more than `TRUST_ENTRY_CAP` files) refuses the WHOLE set
+  (fail closed, the previous file kept); ONE RELEASE (a `current` that is not `releases/<id>`, a
+  release that is not a real directory, a hard-linked file, any of the above inside it) is left
+  OUT and named (`refused`; `provision check` reports it as drift, the record carries it) — the
+  code and the other releases stay trusted (measured: the drill's v1 handler probe plants a
+  `current` naming a non-release, and a whole-set refusal there stopped `provision apply` for
+  the whole instance). The file is our stamp (kind
+  `fapolicyd_trust`), comments, and fapolicyd's `<path> <size> <sha256>` lines in path order; a
+  file without our valid stamp for THIS instance is never rewritten or removed. **Two writers,
+  one rendering** (`renderTrustFile`): `provision apply` — `observeHost` derives, the plan writes
+  on drift (`write`, label `fapolicyd_trust`, root 0644) and, with the daemon running, the tail op
+  `fapolicyd-update` BEFORE every start and restart; and the oneshot
+  (`src/provision/fapolicyd_trust_main.ts`) under the host provision lock, which writes
+  atomically and records its run in `<config_base>/<instance>/fapolicyd_trust.json`.
+  `fapolicyd-cli --update` returns before the daemon reloaded (measured: ~0.3 s), so both wait
+  until `--dump-db` lists the last line the new file added (`commitTrust`). **The agent passes
+  nothing** (`src/releases/trust.ts`): it starts the oneshot after a release's commit and BEFORE
+  its scratch boot (the release is then `previous`), before re-promoting a reused release (stamped
+  newest first, `store.ts markNewest`), before a rollback's swap (the target is `previous`), and
+  once more after each swap (recorded in the audit, never fatal); a failed start, a record that
+  is not `applied`/`unchanged`/`inactive`, or one that does not list THAT release among the trusted
+  refuses `trust_failed` with the previous release serving.
+  `GET /v1/status` carries `trust: {unit, record}` (null without fapolicyd). fapolicyd uninstalled,
+  the unit and the trust file are RETIRED (`retire.ts`, both kinds in `RETIRABLE_KINDS`, the trust
+  file recorded beside its unit); a declaration removed by hand makes the oneshot remove its own
+  file (`retired`). init's `host.fapolicyd` is right with the automatic trust, a blocking
+  host-wide decision when fapolicyd's `trust` lacks `file` (trust.d unread) or its config is
+  unreadable; `host.fapolicyd_integrity` is an optional host-wide decision when `integrity` is
+  `none` or `size` (a file changed after it was trusted would still run), printing the commands
+  that set `integrity = sha256`; `host.fapolicyd_mounts` the same when `allow_filesystem_mark` is
+  `0` (fapolicyd's default: it marks MOUNTS, so it never sees what a process in its own mount
+  namespace opens — every unit here has one (ProtectSystem=, ProtectHome=, PrivateTmp=), and
+  measured on RHEL 9.8 an untrusted agent and a changed release both started; `1` marks the
+  filesystems). The EL drill's fapolicyd leg proves it with fapolicyd enforcing,
+  `integrity = sha256` and `allow_filesystem_mark = 1` — with the trust file moved aside the
+  restarted agent stays down — two minimal v2 releases pushed through the agent start and answer
+  `/health`, a rollback answers, and a release file changed in place after it was trusted is
+  denied (measured on RHEL 9.8: the same inode, one byte changed — fapolicyd refuses it, and
+  accepts it again once the byte is back). fapolicyd gates programs and `%languages` files only:
+  a file libmagic types `text/plain` is never gated, trusted or not (measured), so the drill's
+  release entry is written to type `text/x-java` and the leg asserts it. A start fapolicyd denies
+  makes Bun fall back to `bun run`, whose `/tmp/bun-node-<build>` links systemd may not unlink
+  from the unit's PrivateTmp (one AVC per denied start, measured); the v2 units run
+  `bun src/index.ts` (a plain `bun run <file>` made those links at EVERY start, so every v2 stop
+  cost an AVC), and the leg proves the changed entry's denial with v2 stopped, in a namespaced
+  transient unit (its journal's `EPERM`) and directly.
 
 ### 9.12 The sealed pairing package (two machines)
 

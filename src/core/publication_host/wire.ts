@@ -160,6 +160,8 @@ export const AGENT_REASON_SENTENCES: Readonly<Record<string, string>> = Object.f
 	no_current_release: 'There is no current release on the publication host for that API.',
 	store_refused:
 		"The publication host's release store is not in a state it can change safely. An operator must inspect it on that host.",
+	trust_failed:
+		"The publication host's application allowlist (fapolicyd) did not admit the release, so it never ran. An operator must inspect the trust record on that host; the previous release still serves.",
 	scratch_start_failed:
 		'The publication host could not start the new release on the side for its health check. An operator must inspect the service manager on that host; the previous release still serves.',
 	scratch_stop_failed:

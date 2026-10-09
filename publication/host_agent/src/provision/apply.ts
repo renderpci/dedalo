@@ -61,9 +61,11 @@ import {
 } from 'node:fs';
 import type { Stats } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { ExecResult, ProvisionExec } from '../exec';
-import { provisionExec } from '../exec';
+import type { ExecResult, ProvisionExec, TrustExec } from '../exec';
+import { provisionExec, trustExec } from '../exec';
 import { probeAppendOnly } from '../instance/roots';
+import type { TrustIo } from './fapolicyd_trust';
+import { commitTrust, deriveTrust, realTrustIo, trustRootsOf } from './fapolicyd_trust';
 import { flockIo } from './flock';
 import { MAP_RENDERER_BUN, MAP_RENDERER_BUNFIG, MAP_RENDERER_FILES, MAP_RENDERER_VERSION_FILE, rendererDigest } from './host_map_renderer';
 import { parseGetenforce, parseGetsebool, parseRestoreconDryRun, parseSelinuxConfig, parseSemanageFcontextLocal, parseSemanagePorts, singlePorts, tcpPortTypes } from './init/parse/selinux';
@@ -170,6 +172,11 @@ export interface ProvisionIo {
    * renderer install FAILS naming it.
    */
   installFile?(src: string, dst: string, mode: number, uid: number, gid: number): void;
+  /**
+   * fapolicyd's closed set (src/exec.ts trustExec): the `fapolicyd-update` op's update and its wait.
+   * Absent = that op FAILS naming it (the trust file was written; the daemon was not told).
+   */
+  readonly trustExec?: TrustExec;
 }
 
 export interface ActionOutcome {
@@ -530,6 +537,12 @@ function run(action: Action, io: ProvisionIo, written: string[]): void {
     case 'selinux-restorecon':
       relabel(io, action.targets);
       return;
+    case 'fapolicyd-update': {
+      if (io.trustExec === undefined) throw new Error(`apply: this io has no fapolicyd door — '${action.path}' was written but fapolicyd was not told`);
+      const outcome = commitTrust(io.trustExec, action.pending);
+      if (outcome.kind === 'failed') throw new Error(`${outcome.why}; '${action.path}' is written — re-run, or fapolicyd-cli --update by hand`);
+      return;
+    }
     case 'fpm-configtest':
       checked(`${action.bin} -t`, io.exec.fpmConfigtest(action.bin));
       return;
@@ -671,6 +684,10 @@ export interface HostDoorOptions {
   readonly lockIo?: LockIo;
   /** GATES ONLY: runs inside withPinnedDir between the pin and the operation (the substitute-after-pin race). */
   readonly onPinned?: (dir: string) => void;
+  /** observeHost's reads of the fapolicyd trust set (default: fapolicyd_trust.ts realTrustIo()). */
+  readonly trustIo?: TrustIo;
+  /** hostIo's fapolicyd door (default: src/exec.ts trustExec()). */
+  readonly trustExec?: TrustExec;
 }
 
 function errno(error: unknown): string {
@@ -899,6 +916,7 @@ export function hostIo(exec: ProvisionExec = provisionExec(), options: HostDoorO
     },
     exec,
     lockIo: options.lockIo ?? flockIo(),
+    trustExec: options.trustExec ?? trustExec(),
     sleepSync(ms: number): void {
       Bun.sleepSync(ms);
     },
@@ -1147,6 +1165,8 @@ export function observeHost(
     ...agentDevDependencyPaths(layout),
   ];
   if (layout.site?.v1 != null) watched.push(layout.site.v1.fpm.bin);
+  // fapolicyd (layout.trust): the instance's trust file, judged and read like an artifact.
+  if (layout.trust !== null) watched.push(layout.trust.file);
   // The provision record (retire.ts) and everything it names: what a retirement judges and removes.
   const record = recordPath(layout);
   const recordFacts = facts(record, true);
@@ -1167,7 +1187,14 @@ export function observeHost(
   }
   const agentTree = walkAgentTree(layout.agentDir, options.agentTreeCap ?? AGENT_TREE_WALK_CAP, paths);
   // The marker and our artifacts only: never the credential, never the audit log.
-  const readable = [layout.state.marker, ...artifactPaths, record, ...recorded.files, ...(mapManaged ? [identitiesPath, versionPath] : [])];
+  const readable = [
+    layout.state.marker,
+    ...artifactPaths,
+    record,
+    ...recorded.files,
+    ...(mapManaged ? [identitiesPath, versionPath] : []),
+    ...(layout.trust === null ? [] : [layout.trust.file]),
+  ];
   for (const path of readable) {
     if (paths.get(path)?.type === 'file') contents.set(path, readOrNull(path));
   }
@@ -1232,6 +1259,11 @@ export function observeHost(
   }
   const isFile = (path: string): boolean => facts(path, true)?.type === 'file';
   const webReference = layout.site === null ? null : observeWebReference(layout, exec, isFile);
+  // fapolicyd: the trust set as the trust oneshot would derive it now (read only), and the daemon's state.
+  const trust: HostState['trust'] =
+    layout.trust === null
+      ? undefined
+      : { derivation: deriveTrust(trustRootsOf(layout), options.trustIo ?? realTrustIo()), daemonActive: exec.unitState('fapolicyd').active };
   return {
     trustRoot,
     appendOnly,
@@ -1248,6 +1280,7 @@ export function observeHost(
     ...(contributions === undefined ? {} : { contributions }),
     ...(renderer === undefined ? {} : { renderer }),
     ...(hostMap === undefined ? {} : { hostMap }),
+    ...(trust === undefined ? {} : { trust }),
     webReference,
   };
 }

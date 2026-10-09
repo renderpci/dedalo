@@ -11,6 +11,7 @@
  *   → else, through the store: createStaging → extractBundle(bundleLimits(),
  *         reservedBundlePaths(api)) → sha compare → v1: php -l every .php, link shared/ config
  *         (D8) | v2: node_modules present (D6) → commitStaging into releases/<id>
+ *         → fapolicyd hosts: the root trust oneshot trusts it (releases/trust.ts requireTrust)
  *         → v2: scratch boot FROM releases/<id> (the only dir exec.ts accepts, and the only
  *           tree the v2 user can read) on a free loopback port, health within a bound
  *         → write .bundle_sha256 LAST (a release with its record passed every check);
@@ -33,6 +34,7 @@ import { type AuditOutcome, audit } from '../audit';
 import { config, hostServedApis } from '../config';
 import { ApiError, ConflictError, ReleaseRefusedError, ValidationError } from '../errors';
 import { exec } from '../exec';
+import { requireTrust, triggerTrust, trustDetail, trustUnit } from './trust';
 import {
   apiLayout,
   BUNDLE_SHA_FILE,
@@ -41,6 +43,7 @@ import {
   createStaging,
   currentRelease,
   listReleases,
+  markNewest,
   previousRelease,
   promote,
   pruneReleases,
@@ -202,6 +205,11 @@ async function installLocked(req: InstallRequest): Promise<InstallResult> {
       });
       return { api, from: releaseId, to: releaseId, reused: true, health: 'ok' };
     }
+    // fapolicyd: a retained release is trusted only as the store's `previous` — make it that, then prove it.
+    if (trustUnit() !== null) {
+      await markNewest(api, releaseId);
+      await requireTrust(api, releaseId, `the re-promotion of ${api} release ${releaseId}`);
+    }
   } else {
     await stageRelease(req);
     fresh = true;
@@ -211,11 +219,13 @@ async function installLocked(req: InstallRequest): Promise<InstallResult> {
   if (api === 'v2') await restartOrRestore(swap.from, swap.to, fresh, req.actor);
 
   const pruned = await pruneQuietly(api);
+  // The final state, recorded (never fatal: the release was trusted before it ran).
+  const trust = trustDetail(await triggerTrust());
   await audit({
     actor: req.actor,
     action: 'release.install',
     outcome: 'ok',
-    detail: { api, from: swap.from, to: swap.to, reused: !fresh, sha256: req.sha256, pruned, swept },
+    detail: { api, from: swap.from, to: swap.to, reused: !fresh, sha256: req.sha256, pruned, swept, ...(trust === null ? {} : { trust }) },
   });
   return { api, from: swap.from, to: swap.to, reused: !fresh, health: 'ok' };
 }
@@ -334,6 +344,8 @@ async function stageRelease(req: InstallRequest): Promise<void> {
 
   const releaseDir = join(apiLayout(api).releases, releaseId);
   try {
+    // fapolicyd: committed, the release is the store's `previous` — trusted BEFORE it ever runs.
+    await requireTrust(api, releaseId, `${api} release ${releaseId}`);
     if (api === 'v2') await scratchHealth(releaseDir, releaseId);
     await writeFile(join(releaseDir, BUNDLE_SHA_FILE), `${req.sha256}\n`, { mode: 0o444 });
   } catch (error) {
@@ -541,9 +553,12 @@ export async function rollbackRelease(api: ApiName, actor: string): Promise<{ fr
         `${api} release ${to} carries no ${BUNDLE_SHA_FILE} record, so it never passed the install checks; it is not a rollback target`,
       );
     }
+    // fapolicyd: the target is the store's `previous`, so the set it is trusted in is proved BEFORE the swap.
+    await requireTrust(api, to, `the rollback of ${api} to ${to}`);
     await promote(api, to);
     if (api === 'v2') await restartOrRestore(from, to, false, actor);
-    await audit({ actor, action: 'release.rollback', outcome: 'ok', detail: { api, from, to } });
+    const trust = trustDetail(await triggerTrust());
+    await audit({ actor, action: 'release.rollback', outcome: 'ok', detail: { api, from, to, ...(trust === null ? {} : { trust }) } });
     return { from, to };
   } catch (raw) {
     const error = fromStore(raw);

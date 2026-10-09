@@ -314,6 +314,19 @@ export async function promote(api: ApiName, releaseId: string): Promise<{ from: 
   });
 }
 
+/**
+ * Stamps an EXISTING `releases/<id>` newest, so it is the store's `previous` (previousRelease)
+ * until a promote moves `current` — what a fapolicyd host's trust oneshot trusts before a reused
+ * release is re-promoted (releases/trust.ts).
+ */
+export async function markNewest(api: ApiName, releaseId: string): Promise<void> {
+  assertReleaseId(releaseId);
+  return withApiLock(api, async () => {
+    if (releaseDirState(api, releaseId) === 'absent') throw new ReleaseStoreError('unknown_release', releaseId);
+    await stampNewest(api, releaseId);
+  });
+}
+
 /** Removes all but the `keep` newest releases; never the current or the previous one. */
 export async function pruneReleases(api: ApiName, keep: number): Promise<string[]> {
   if (!Number.isInteger(keep) || keep < 2) throw new ReleaseStoreError('keep_too_small', String(keep));

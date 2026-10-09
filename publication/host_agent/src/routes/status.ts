@@ -3,7 +3,7 @@
  * runtime versions, the pairing fingerprint, which APIs the host serves (`served_apis`: v2
  * always, v1 only with PHP_BIN), each API's current/previous release (from the release store), the hash stamp of the LIVE media include (from rules/apply.ts), the
  * host-wide nginx map's state for this instance (rules/map.ts hostMapStatus), the media
- * probe, and free disk under the state root.
+ * probe, free disk under the state root, and (fapolicyd hosts) the trust oneshot's last record.
  *
  * Everything is read at request time — no cached copy that can disagree with the disk.
  * Read-only, takes no input, no audit line (nothing changed). The instance NAME is not in
@@ -19,6 +19,8 @@ import { currentRelease, previousRelease } from '../releases/store';
 import type { ApiName } from '../releases/ustar';
 import { appliedRulesHash } from '../rules/apply';
 import { hostMapStatus, type RulesMapStatus } from '../rules/map';
+import type { TrustResult } from '../provision/fapolicyd_trust';
+import { readTrustRecord, trustUnit } from '../releases/trust';
 import { instanceFingerprint } from '../security/pairing';
 import { json } from '../util/response';
 
@@ -37,6 +39,11 @@ export interface AgentStatus {
   rules: { server: string; hash: string | null; map: RulesMapStatus };
   media: MediaProbe;
   disk: { state_root_free_bytes: number };
+  /**
+   * fapolicyd (owner decision 2026-10-09): null on a host without it (no TRUST_UNIT); else the
+   * trust oneshot's last record (`record: null` = it never ran or left none readable).
+   */
+  trust: { unit: string; record: TrustResult | null } | null;
 }
 
 export const AGENT_VERSION: string = packageJson.version;
@@ -70,6 +77,10 @@ export async function buildStatus(): Promise<AgentStatus> {
     rules: { server: config.WEB_SERVER, hash: appliedRulesHash(), map: hostMapStatus() },
     media,
     disk: { state_root_free_bytes: freeBytes },
+    trust: (() => {
+      const unit = trustUnit();
+      return unit === null ? null : { unit, record: readTrustRecord() };
+    })(),
   };
 }
 

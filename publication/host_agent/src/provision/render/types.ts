@@ -30,6 +30,8 @@ export const ARTIFACT_KINDS = [
   'logrotate',
   // the v1 pool's own error log (<v1_var_base>/<instance>/v1/log), every site
   'logrotate_v1',
+  // owner decision 2026-10-09: root's fapolicyd trust oneshot (fapolicyd hosts only)
+  'trust_unit',
 ] as const;
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 

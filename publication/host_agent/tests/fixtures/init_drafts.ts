@@ -157,7 +157,7 @@ export function debianHost(): HostFacts {
     },
     panel: null,
     kernel: { release: '6.1.0-25-amd64', meetsFloor: true},
-    fapolicyd: { active: false },
+    fapolicyd: { active: false, installed: false, conf: null },
     selinux: {
       mode: 'absent',
       policy: null,

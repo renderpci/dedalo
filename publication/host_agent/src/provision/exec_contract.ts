@@ -88,6 +88,23 @@ export const PAIR_NAME_PATTERN = /^(?!pairing_)[a-z][a-z0-9_]{1,31}$/;
 /** The name a RETIRED tree is renamed to before `removeTree` (retire.ts): the only argument that door admits. */
 export const RETIRED_SUFFIX = '.dedalo-provision.retired';
 
+/**
+ * THE TRUST PROGRAM'S CLOSED SET (src/provision/fapolicyd_trust.ts commitTrust): fapolicyd's
+ * state, its database update and its dump — three fixed argv (src/exec.ts trustExec), no
+ * argument from anyone. Used by root only: the oneshot `dedalo-pubhost-trust-<instance>.service`
+ * and `provision apply`'s `fapolicyd-update` op.
+ */
+export interface TrustExec {
+  /** `systemctl is-active --quiet fapolicyd.service` = 0. */
+  fapolicydActive(): boolean;
+  /** `fapolicyd-cli --update`. */
+  fapolicydUpdate(): ExecResult;
+  /** `fapolicyd-cli --dump-db` (the whole database, uncapped: it is scanned, never shown). */
+  fapolicydDump(): ExecResult;
+  /** The wait between two dumps (no spawn). */
+  sleep(ms: number): void;
+}
+
 /** The provisioner's closed set (25 commands, spec §2.4; the 25th is retire.ts's). Synchronous: `provision` is a sync CLI. */
 export interface ProvisionExec {
   userId(name: string): number | null; //               ['id','-u',name]

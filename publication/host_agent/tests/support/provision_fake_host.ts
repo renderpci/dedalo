@@ -19,7 +19,9 @@
  */
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
-import type { ExecResult, InitExec, PairInvocation, ProvisionExec, RestoreconTarget, SemanageKind } from '../../src/provision/exec_contract';
+import type { ExecResult, InitExec, PairInvocation, ProvisionExec, RestoreconTarget, SemanageKind, TrustExec } from '../../src/provision/exec_contract';
+import type { TrustIo } from '../../src/provision/fapolicyd_trust';
+import { deriveTrust, trustLinesOf, trustRootsOf } from '../../src/provision/fapolicyd_trust';
 import { SELINUX_BOOLEANS } from '../../src/provision/exec_contract';
 import type { ProvisionIo } from '../../src/provision/apply';
 import { TEMP_SUFFIX } from '../../src/provision/apply';
@@ -402,6 +404,57 @@ export class FakeHost implements ProvisionIo {
 
   randomToken(_bytes: number): string {
     return FAKE_TOKEN;
+  }
+
+  /* ── fapolicyd (owner decision 2026-10-09) ── */
+
+  /** The daemon trustExec talks to: running or not, and the trust lines it loaded at its last update. */
+  readonly fapolicydDaemon = { active: true, loaded: new Set<string>() };
+
+  /** ProvisionIo.trustExec: `--update` loads every trust.d file of this tree at once (the real one lags; the wait covers it). */
+  get trustExec(): TrustExec {
+    return {
+      fapolicydActive: () => this.fapolicydDaemon.active,
+      fapolicydUpdate: () => {
+        const result = this.command('fapolicyd-cli --update');
+        if (result.code === 0) {
+          this.fapolicydDaemon.loaded = new Set(
+            [...this.entries].filter(([path, entry]) => entry.type === 'file' && dirname(path) === '/etc/fapolicyd/trust.d').flatMap(([, entry]) => trustLinesOf(entry.body)),
+          );
+        }
+        return result;
+      },
+      fapolicydDump: () => this.command('fapolicyd-cli --dump-db', [...this.fapolicydDaemon.loaded].map(line => `filedb ${line}\n`).join('')),
+      sleep: ms => this.lockIo.sleepSync(ms),
+    };
+  }
+
+  /** deriveTrust's reads over this virtual tree (the bodies are the bytes; mtimes are insertion order). */
+  trustIo(): TrustIo {
+    const order = [...this.entries.keys()];
+    return {
+      lstat: path => {
+        const entry = this.entries.get(path);
+        if (entry === undefined) return null;
+        return { type: entry.type, size: Buffer.byteLength(entry.body), nlink: 1, uid: entry.uid, mode: entry.mode, mtimeMs: order.indexOf(path) };
+      },
+      readDir: path =>
+        this.entries.get(path)?.type === 'dir'
+          ? [...this.entries.keys()].filter(p => p !== path && dirname(p) === path).map(p => p.slice(path === '/' ? 1 : path.length + 1))
+          : null,
+      readLink: path => this.entries.get(path)?.link ?? null,
+      hashFile: path => {
+        const entry = this.entries.get(path);
+        return entry?.type === 'file' ? { size: Buffer.byteLength(entry.body), sha256: sha256(entry.body) } : null;
+      },
+    };
+  }
+
+  /** state() as observeHost reports it for `layout` — with the fapolicyd trust observation on a fapolicyd layout. */
+  stateFor(layout: AgentLayout): HostState {
+    const base = this.state();
+    if (layout.trust === null) return base;
+    return { ...base, trust: { derivation: deriveTrust(trustRootsOf(layout), this.trustIo()), daemonActive: this.fapolicydDaemon.active } };
   }
 
   /** The HostState observeHost would report for this virtual host (trust walk from '/'). */

@@ -108,6 +108,13 @@ export interface FakeHostState {
   scratchBoots: string[];
   restarts: number;
   live: string | null;
+  /**
+   * fapolicyd hosts (releases/trust.ts, with setTrustSeamForTests): what each `startTrust` saw —
+   * `current` and the releases on disk at that moment — and the handler that answers it (default:
+   * none installed = a call is a test failure). The handler plays the root oneshot.
+   */
+  trustCalls: { current: string | null; scratchBoots: number; restarts: number }[];
+  onTrust: (() => Promise<ExecResult>) | null;
 }
 
 export interface FakeReleaseHost {
@@ -128,6 +135,8 @@ export function fakeReleaseHost(): FakeReleaseHost {
     scratchBoots: [],
     restarts: 0,
     live: null,
+    trustCalls: [],
+    onTrust: null,
   };
   const liveServer = Bun.serve({
     hostname: '127.0.0.1',
@@ -145,6 +154,11 @@ export function fakeReleaseHost(): FakeReleaseHost {
     },
     startHostMap: async () => {
       throw new Error('release tests never start the host map renderer');
+    },
+    startTrust: async () => {
+      state.trustCalls.push({ current: currentRelease('v2'), scratchBoots: state.scratchBoots.length, restarts: state.restarts });
+      if (state.onTrust === null) throw new Error('this release test has no trust unit (no fapolicyd host)');
+      return state.onTrust();
     },
     v2Restart: async () => {
       state.restarts++;
@@ -192,6 +206,8 @@ export function fakeReleaseHost(): FakeReleaseHost {
       state.scratchBoots.length = 0;
       state.restarts = 0;
       state.live = null;
+      state.trustCalls.length = 0;
+      state.onTrust = null;
     },
     close() {
       liveServer.stop(true);

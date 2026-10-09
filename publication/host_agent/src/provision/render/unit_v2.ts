@@ -44,8 +44,14 @@ export const V2_ENV_FILE_NAME = 'v2.env';
 export const V2_LOOPBACK_HOST = '127.0.0.1';
 export const ENV_BIN = '/usr/bin/env';
 
+/**
+ * `<bun> <entry>`, never `<bun> run <entry>`: `bun run` writes its node shim links into the unit's
+ * PrivateTmp (`/tmp/bun-node-<build>/{node,bun}`), and systemd (init_t) may not unlink `tmp_t` links
+ * when it removes that directory at the stop — one AVC per stop (measured, RHEL 9.8, the EL drill's
+ * first v2 push). A file entry needs no shim.
+ */
 export function v2ExecStart(layout: AgentLayout, port: string = String(layout.v2.port)): string {
-  return `${ENV_BIN} NODE_ENV=production HOST=${V2_LOOPBACK_HOST} PORT=${port} ${layout.bunBin} run ${V2_ENTRY}`;
+  return `${ENV_BIN} NODE_ENV=production HOST=${V2_LOOPBACK_HOST} PORT=${port} ${layout.bunBin} ${V2_ENTRY}`;
 }
 
 /** Both v2 units' groups (./types.ts UnitGroups): Group=<v2.group>, no SupplementaryGroups=. plan.ts judges v2 with it. */

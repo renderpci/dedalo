@@ -180,7 +180,16 @@ export interface HostFacts {
   readonly panel: string | null;
   /** /proc/sys/kernel/osrelease vs BUN_KERNEL_FLOOR (spec S8). */
   readonly kernel: { readonly release: string; readonly meetsFloor: boolean };
-  readonly fapolicyd: { readonly active: boolean };
+  /**
+   * fapolicyd: `installed` = its CLI is a real file (layout.ts FAPOLICYD_CLI — the provisioner's
+   * fact, so the trust unit renders exactly where init judged); `conf` = fapolicyd.conf's `trust`
+   * backends and `integrity` mode (parse/fapolicyd.ts), null when it could not be read.
+   */
+  readonly fapolicyd: {
+    readonly active: boolean;
+    readonly installed: boolean;
+    readonly conf: { readonly trust: readonly string[]; readonly integrity: string; readonly filesystemMark: boolean } | null;
+  };
   readonly selinux: {
     readonly mode: SelinuxMode;
     /** SELINUXTYPE. */

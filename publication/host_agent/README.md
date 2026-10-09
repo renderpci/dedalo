@@ -53,7 +53,7 @@ provisioner:
 | Grant | Allows | Why it cannot be narrower |
 |---|---|---|
 | sudoers | `<configtest> -t`, exactly that argv: `apache2ctl` (Debian/Ubuntu) or `apachectl` (RHEL), or `nginx`; the provisioner picks the real file present from a closed list | a configtest must read root-only TLS keys |
-| polkit | `reload` of `WEB_UNIT`, `restart` of `V2_UNIT`, `start`/`stop` of the `<V2_UNIT>-scratch@<port>` template; on nginx with a provisioned map (`NGINX_MAP_MODE=conf_d`), `start` of `dedalo-pubhost-map.service` | the same unit-scoped rule the site builder uses |
+| polkit | `reload` of `WEB_UNIT`, `restart` of `V2_UNIT`, `start`/`stop` of the `<V2_UNIT>-scratch@<port>` template; on nginx with a provisioned map (`NGINX_MAP_MODE=conf_d`), `start` of `dedalo-pubhost-map.service`; on a fapolicyd host (`TRUST_UNIT`), `start` of `dedalo-pubhost-trust-<instance>.service`, root's trust oneshot (no argument: it derives the trust set from the declaration, `src/provision/fapolicyd_trust.ts`) | the same unit-scoped rule the site builder uses |
 
 Every child process goes through `src/exec.ts`, a closed set of named commands
 (`webConfigtest`, `webReload`, `v2Restart`, `phpLint`, `v2ScratchBoot`, `startHostMap`; the

@@ -123,6 +123,25 @@ export const HOST_NGINX_CONTRIB_DIR = `${HOST_NGINX_MAP_DIR}/contrib`;
 export const HOST_MAP_RENDERER_DIR = `${HOST_BASE}/map_renderer`;
 /** The root oneshot that renders the host-wide nginx map (spec §13.5), a bare unit name. */
 export const HOST_MAP_UNIT = 'dedalo-pubhost-map';
+/**
+ * FAPOLICYD (owner decision 2026-10-09, spec §9.11). On a host where fapolicyd is INSTALLED (its
+ * CLI is a real file: derive()'s DeriveHost.fapolicyd, the one host probe) each instance gets ONE
+ * trust file, `<FAPOLICYD_TRUST_DIR>/dedalo_<instance>`, root-written by the trust program
+ * (fapolicyd_trust.ts: derived from the declaration, never from an argument), and the root oneshot
+ * `dedalo-pubhost-trust-<instance>.service` that rewrites it (render/trust_unit.ts) — the one unit
+ * the agent may `start` after a release install or rollback (render/polkit.ts). Its result record
+ * is `<config_base>/<instance>/fapolicyd_trust.json` (root 0644: the agent reads it for status).
+ */
+export const FAPOLICYD_CLI = '/usr/sbin/fapolicyd-cli';
+export const FAPOLICYD_CONF = '/etc/fapolicyd/fapolicyd.conf';
+export const FAPOLICYD_TRUST_DIR = '/etc/fapolicyd/trust.d';
+export const FAPOLICYD_UNIT = 'fapolicyd.service';
+export const TRUST_UNIT_PREFIX = 'dedalo-pubhost-trust-';
+export const TRUST_RESULT_NAME = 'fapolicyd_trust.json';
+/** The trust file's name in FAPOLICYD_TRUST_DIR (never `dedalo`: the name of the old hand-run lines' file). */
+export function trustFileName(instance: string): string {
+  return `dedalo_${instance}`;
+}
 /** The group every agent unit gets through SupplementaryGroups= (spec S11). Created only by init (D2). */
 export const PUBHOST_GROUP = 'dedalo_pubhost';
 export const DEFAULT_NGINX_CONF_D = '/etc/nginx/conf.d';
@@ -537,6 +556,17 @@ export interface HostPaths {
   readonly nginxMapInclude: string;
 }
 
+/** What an instance on a fapolicyd host owns of it (layout.ts FAPOLICYD_*). */
+export interface TrustLayout {
+  /** `dedalo-pubhost-trust-<instance>` (bare). */
+  readonly unit: string;
+  readonly unitPath: string;
+  /** `<FAPOLICYD_TRUST_DIR>/dedalo_<instance>`. */
+  readonly file: string;
+  /** `<config_base>/<instance>/fapolicyd_trust.json`. */
+  readonly result: string;
+}
+
 export interface AgentLayout {
   readonly instance: string;
   readonly declarationPath: string;
@@ -614,6 +644,11 @@ export interface AgentLayout {
     /** The agent's append-only trail: created empty, agent-owned, never rewritten. */
     readonly auditFile: string;
   };
+  /**
+   * fapolicyd is installed on this host (DeriveHost.fapolicyd): the trust unit, its trust file and
+   * its result record. null = no fapolicyd: nothing of it is rendered (and a recorded one is retired).
+   */
+  readonly trust: TrustLayout | null;
   /** Every directory the plan ensures, sorted so a parent precedes its children. */
   readonly directories: readonly DirSpec[];
   /** The agent's env file (src/config.ts's env-file keys only), rendered by render/env.ts. */
@@ -906,7 +941,7 @@ export function canonicalDeclaration(decl: HostDeclaration): string {
 
 /* ── derive ───────────────────────────────────────────────────────────────────────── */
 
-/** Host facts derive() may consult. Only the configtest pick and the host-wide ProtectHome fact depend on the host. */
+/** Host facts derive() may consult. Only the configtest pick, the host-wide ProtectHome fact and fapolicyd's presence depend on the host. */
 export interface DeriveHost {
   /** lstat regular file (never a symlink) — chooses among WEB_CONFIGTEST_CANDIDATES. */
   readonly isRealFile?: (path: string) => boolean;
@@ -916,6 +951,11 @@ export interface DeriveHost {
    * The plan and the CLI pass it; without it only this declaration's own paths count.
    */
   readonly anyHomeBound?: boolean;
+  /**
+   * fapolicyd is INSTALLED (FAPOLICYD_CLI is a real file; active or not): the instance gets its
+   * trust unit and trust file (AgentLayout.trust). The CLI and init pass it; absent = no fapolicyd.
+   */
+  readonly fapolicyd?: boolean;
 }
 
 function apiPath(field: string, value: unknown): string {
@@ -1331,5 +1371,14 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     }),
     directories: Object.freeze(directories.map(d => Object.freeze(d))),
     envVars: Object.freeze(envVars),
+    trust:
+      host.fapolicyd === true
+        ? Object.freeze({
+            unit: `${TRUST_UNIT_PREFIX}${instance}`,
+            unitPath: join(unitDir, `${TRUST_UNIT_PREFIX}${instance}.service`),
+            file: join(FAPOLICYD_TRUST_DIR, trustFileName(instance)),
+            result: join(instanceDir, TRUST_RESULT_NAME),
+          })
+        : null,
   });
 }

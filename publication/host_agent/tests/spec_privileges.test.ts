@@ -19,9 +19,9 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { initExec, provisionExec } from '../src/exec';
+import { initExec, provisionExec, trustExec } from '../src/exec';
 import { EXIT } from '../src/provision/cli';
-import { HOST_MAP_UNIT, MODES, PUBHOST_GROUP } from '../src/provision/layout';
+import { HOST_MAP_UNIT, MODES, PUBHOST_GROUP, TRUST_UNIT_PREFIX } from '../src/provision/layout';
 import { INIT_BASE, LOCK_WAIT_MS } from '../src/provision/lock';
 import { ARTIFACT_KINDS, ARTIFACT_VALIDATORS } from '../src/provision/render/types';
 
@@ -92,7 +92,8 @@ describe('spec §9 (provision init) states what the code is', () => {
   test('§9.4: every artifact kind and validator the table names is in the census', () => {
     const table = specSubsection(4);
     const kinds = [...table.matchAll(/^\| `([a-z0-9_]+)` \|/gm)].map(m => m[1]);
-    expect(kinds).toEqual(['web_include', 'fpm_pool', 'nginx_map_include', 'host_map_unit', 'logrotate', 'logrotate_v1']);
+    expect(kinds).toEqual(['web_include', 'fpm_pool', 'nginx_map_include', 'host_map_unit', 'logrotate', 'trust_unit', 'logrotate_v1']);
+    expect(table).toContain(`${['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][kinds.length - 1]} artifact kinds join`);
     for (const kind of kinds) expect(ARTIFACT_KINDS as readonly string[]).toContain(kind as string);
     for (const validator of ['web', 'fpm']) expect(ARTIFACT_VALIDATORS as readonly string[]).toContain(validator);
   });
@@ -117,6 +118,13 @@ describe('spec §9 (provision init) states what the code is', () => {
 
   test('item 5 names the one polkit pair the host map adds, by its unit', () => {
     expect(specItem(5).replace(/\s+/g, ' ')).toContain(`\`start\` of \`${HOST_MAP_UNIT}.service\``);
+  });
+
+  test('item 5 names the one polkit pair fapolicyd adds; §9.3 names the trust set and its three commands', () => {
+    expect(specItem(5).replace(/\s+/g, ' ')).toContain(`\`start\` of \`${TRUST_UNIT_PREFIX}<instance>.service\``);
+    const text = specSubsection(3).replace(/\s+/g, ' ');
+    expect(Object.keys(trustExec()).filter(key => key !== 'sleep')).toHaveLength(3);
+    for (const command of ['`systemctl is-active --quiet fapolicyd.service`', '`fapolicyd-cli --update`', '`fapolicyd-cli --dump-db`']) expect(text).toContain(command);
   });
 });
 

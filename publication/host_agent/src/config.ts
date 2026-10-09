@@ -55,7 +55,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
 import { parseEnvFile } from './env_file';
 import { INSTANCE_MARKER } from './instance/roots';
-import { WEB_CONFIGTEST_CANDIDATES, isConfigtestBinary } from './provision/layout';
+import { TRUST_UNIT_PREFIX, WEB_CONFIGTEST_CANDIDATES, isConfigtestBinary } from './provision/layout';
 
 const PACKAGE_DIR = resolve(import.meta.dir, '..');
 
@@ -126,6 +126,14 @@ export interface AgentConfig {
    * scratch-root gate or a drill; production declarations never set it).
    */
   HOST_BASE?: string;
+  /**
+   * fapolicyd hosts only (render/env.ts, from the layout's `trust`): the root oneshot
+   * `dedalo-pubhost-trust-<INSTANCE>` the agent starts after a release install or rollback, and
+   * the record it leaves (`<config_base>/<instance>/fapolicyd_trust.json`). Both or neither;
+   * absent = no fapolicyd on this host, nothing is started.
+   */
+  TRUST_UNIT?: string;
+  TRUST_RESULT_FILE?: string;
 }
 
 export interface ConfigSources {
@@ -286,6 +294,8 @@ function envObject(baseDir: string) {
     MAX_BUNDLE_ENTRIES: z.coerce.number().int().min(1).default(200000),
     NGINX_MAP_MODE: z.enum(['conf_d', 'none'], { error: 'NGINX_MAP_MODE must be conf_d or none' }).default('none'),
     HOST_BASE: z.string().refine(isAbsolute, 'HOST_BASE must be an absolute path').optional(),
+    TRUST_UNIT: unit('TRUST_UNIT').optional(),
+    TRUST_RESULT_FILE: z.string().refine(isAbsolute, 'TRUST_RESULT_FILE must be an absolute path').optional(),
   });
 }
 
@@ -321,6 +331,12 @@ function envSchema(baseDir: string) {
       issue('NGINX_MAP_MODE', 'NGINX_MAP_MODE=conf_d is the nginx http{} map; it requires WEB_SERVER=nginx');
     }
     if (v.HOST_BASE === '/') issue('HOST_BASE', 'HOST_BASE must not be /');
+    if ((v.TRUST_UNIT === undefined) !== (v.TRUST_RESULT_FILE === undefined)) {
+      issue(v.TRUST_UNIT === undefined ? 'TRUST_UNIT' : 'TRUST_RESULT_FILE', 'TRUST_UNIT and TRUST_RESULT_FILE are set together (a fapolicyd host) or not at all');
+    }
+    if (v.TRUST_UNIT !== undefined && v.TRUST_UNIT !== `${TRUST_UNIT_PREFIX}${v.INSTANCE}`) {
+      issue('TRUST_UNIT', `TRUST_UNIT must be ${TRUST_UNIT_PREFIX}<INSTANCE>, the instance's own trust unit`);
+    }
     if (v.MEDIA_MODE === 'none') {
       if (v.MEDIA_ROOT !== undefined) issue('MEDIA_ROOT', 'MEDIA_ROOT is set but MEDIA_MODE=none');
     } else if (v.MEDIA_ROOT === undefined) {

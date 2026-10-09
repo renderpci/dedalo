@@ -150,7 +150,7 @@ describe('v2 unit', () => {
 
   test('loopback + port are set by env(1) in ExecStart — EnvironmentFile= would beat any Environment=', () => {
     const d = directives(v2Unit(UNIX).body);
-    expect(d).toContain(`ExecStart=${ENV_BIN} NODE_ENV=production HOST=127.0.0.1 PORT=3100 /usr/local/bin/bun run src/index.ts`);
+    expect(d).toContain(`ExecStart=${ENV_BIN} NODE_ENV=production HOST=127.0.0.1 PORT=3100 /usr/local/bin/bun src/index.ts`);
     expect(d).toContain(`AssertFileIsExecutable=${ENV_BIN}`);
     expect(d.filter(line => line.startsWith('Environment='))).toEqual([]);
   });
@@ -201,7 +201,9 @@ describe('v2 scratch template unit (the scratch boot runs as v2, never as the ag
 
   test('the port is the instance (%i) and loopback is forced by env(1), not Environment=', () => {
     const d = directives(scratch(UNIX).body);
-    expect(d).toContain(`ExecStart=${ENV_BIN} NODE_ENV=production HOST=127.0.0.1 PORT=%i /usr/local/bin/bun run src/index.ts`);
+    expect(d).toContain(`ExecStart=${ENV_BIN} NODE_ENV=production HOST=127.0.0.1 PORT=%i /usr/local/bin/bun src/index.ts`);
+    // Never `bun run`: its node shim links in PrivateTmp cost an AVC at every stop (systemd may not unlink tmp_t links).
+    expect(d).not.toContain(' run src/index.ts');
     expect(d.filter(line => line.startsWith('Environment='))).toEqual([]);
   });
 

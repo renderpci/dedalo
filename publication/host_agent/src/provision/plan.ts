@@ -77,6 +77,8 @@ import {
   ownerName,
   webLogBase,
 } from './layout';
+import type { TrustDerivation } from './fapolicyd_trust';
+import { TRUST_FILE_MODE, pendingEntry, renderTrustFile, trustFileProblem } from './fapolicyd_trust';
 import { engineFragmentRenderer } from './render/engine_fragment';
 import { envRenderer } from './render/env';
 import { fpmPoolRenderer } from './render/fpm_pool';
@@ -85,6 +87,7 @@ import { hostMapUnitRenderer } from './render/host_map_unit';
 import { nginxMapIncludeRenderer } from './render/nginx_map_include';
 import { polkitRenderer } from './render/polkit';
 import { sudoersRenderer } from './render/sudoers';
+import { trustUnitRenderer } from './render/trust_unit';
 import { agentUnitGroups, agentUnitRenderer } from './render/unit_agent';
 import { v2ScratchUnitRenderer, v2UnitGroups, v2UnitRenderer } from './render/unit_v2';
 import { webIncludeRenderer } from './render/web_include';
@@ -155,6 +158,7 @@ export const RENDERERS: readonly Renderer[] = Object.freeze([
   hostMapUnitRenderer,
   logrotateRenderer,
   v1LogrotateRenderer,
+  trustUnitRenderer,
 ]);
 
 /** THE CENSUS, both ways: no kind twice, no kind without a renderer. Throws. */
@@ -265,6 +269,12 @@ export interface HostState {
   readonly renderer?: { readonly installed: string | null; readonly ownDigest: string | null };
   /** nginx `conf_d`: the live host map exists, and the root renderer's last `result.json` text (null = none). */
   readonly hostMap?: { readonly live: boolean; readonly result: string | null };
+  /**
+   * fapolicyd hosts (layout.trust): the trust set derived NOW (fapolicyd_trust.ts deriveTrust, read
+   * only) and whether the daemon runs. The trust file's own lstat facts and text are in `paths` /
+   * `contents`. Absent on a fapolicyd layout = not observed: the plan refuses (it cannot judge).
+   */
+  readonly trust?: { readonly derivation: TrustDerivation; readonly daemonActive: boolean };
 }
 
 /** What observeHost learns of SELinux (spec S9, §5.9). */
@@ -578,7 +588,7 @@ export function engineGroupRefusal(layout: AgentLayout, host: HostState): string
 
 /* ── actions ──────────────────────────────────────────────────────────────────────── */
 
-export type WriteLabel = ArtifactKind | 'marker' | 'credential' | 'audit_log' | 'host_identities' | 'host_lock';
+export type WriteLabel = ArtifactKind | 'marker' | 'credential' | 'audit_log' | 'host_identities' | 'host_lock' | 'fapolicyd_trust';
 
 export type WriteContent =
   | { readonly source: 'literal'; readonly body: string }
@@ -783,6 +793,17 @@ export interface SelinuxImportAction {
   readonly uid: number;
   readonly gid: number;
 }
+/**
+ * fapolicyd's database after this run wrote the instance's trust file (fapolicyd_trust.ts
+ * commitTrust): `fapolicyd-cli --update`, then wait until `--dump-db` lists `pending` (the last line
+ * the new file added; null = it only removed lines). In the tail BEFORE every start and restart: the
+ * agent and v2 run code only the new file trusts.
+ */
+export interface FapolicydUpdateAction {
+  readonly op: 'fapolicyd-update';
+  readonly path: string;
+  readonly pending: string | null;
+}
 /** restorecon over the instance's targets, then the same as a dry run that must find nothing (spec §5.9). */
 export interface SelinuxRestoreconAction {
   readonly op: 'selinux-restorecon';
@@ -800,6 +821,7 @@ export type Action =
   | DaemonReloadAction
   | SelinuxImportAction
   | SelinuxRestoreconAction
+  | FapolicydUpdateAction
   | FpmConfigtestAction
   | FpmReloadAction
   | WebConfigtestAction
@@ -813,6 +835,7 @@ const TAIL_ORDER: readonly Action['op'][] = [
   'daemon-reload',
   'selinux-import',
   'selinux-restorecon',
+  'fapolicyd-update',
   'fpm-configtest',
   'fpm-reload',
   'web-configtest',
@@ -1113,6 +1136,7 @@ export function plan(
     layout.serviceTokenPath,
     layout.state.auditFile,
     ...artifacts.map(art => art.path),
+    ...(layout.trust === null ? [] : [layout.trust.file]),
   ]) {
     for (const dir of ancestorsBelow(target, host.trustRoot)) {
       if (managedDirs.has(dir) || judged.has(dir)) continue;
@@ -1451,6 +1475,39 @@ export function plan(
     }
   }
 
+  // 7f. fapolicyd (owner decision 2026-10-09): the instance's trust file, written on drift with the
+  //     bytes the trust oneshot renders (fapolicyd_trust.ts), never over a file that is not ours.
+  let trustUpdate: FapolicydUpdateAction | null = null;
+  if (layout.trust !== null) {
+    const path = layout.trust.file;
+    const observed = host.trust;
+    if (observed === undefined) {
+      refusals.push(`fapolicyd is installed but the trust set of '${layout.instance}' was not observed — nothing can be judged`);
+    } else if (observed.derivation.kind === 'refused') {
+      refusals.push(...observed.derivation.reasons.map(reason => `fapolicyd trust: ${reason} — nothing is trusted until it is fixed`));
+    } else {
+      const body = renderTrustFile(layout.instance, observed.derivation);
+      const own = ownership('root', 'root');
+      const facts = host.paths.get(path);
+      const text = host.contents.get(path) ?? null;
+      const write = (disposition: 'create' | 'rewrite'): void => {
+        fsActions.push({ op: 'write', path, label: 'fapolicyd_trust', content: { source: 'literal', body }, disposition, mode: TRUST_FILE_MODE, validate: null, ...own });
+        if (observed.daemonActive) trustUpdate = { op: 'fapolicyd-update', path, pending: pendingEntry(disposition === 'create' ? null : text, body) };
+      };
+      if (!facts) {
+        if (parentReady(path)) write('create');
+        else refusals.push(`fapolicyd's trust directory '${dirname(path)}' does not exist — is fapolicyd installed whole?`);
+      } else if (facts.type !== 'file') {
+        refusals.push(`'${path}' (the fapolicyd trust of '${layout.instance}') is a ${facts.type}, not a file`);
+      } else {
+        const problem = trustFileProblem(layout.instance, path, text);
+        if (problem !== null) refusals.push(problem);
+        else if (text !== body) write('rewrite');
+        else metadata(metaActions, path, facts, own, TRUST_FILE_MODE);
+      }
+    }
+  }
+
   // 7e. What an earlier apply provisioned and the declaration no longer needs (retire.ts).
   const retirement = planRetirement(layout, host, artifacts, { rootUid, rootGid: host.groups.get('root') ?? 0, webLock });
   refusals.push(...retirement.refusals);
@@ -1481,7 +1538,7 @@ export function plan(
   if (refusals.length > 0) throw new PlanRefused(layout.instance, refusals);
 
   // 9. The tail.
-  const tail: Action[] = [...selinuxTail];
+  const tail: Action[] = [...selinuxTail, ...(trustUpdate === null ? [] : [trustUpdate])];
   if (effects.has('daemon_reload')) tail.push({ op: 'daemon-reload' });
   if (effects.has('reload_fpm') && layout.site?.v1 != null) {
     const { bin, unit } = layout.site.v1.fpm;
@@ -1848,6 +1905,12 @@ export function planReport(layout: AgentLayout, host: HostState): PlanReport {
   if (mapManaged(layout) && host.siblings === undefined) {
     facts.push('identities.json and the contribution sweep were not planned: the sibling declarations were not observed');
   }
+  // fapolicyd: a release the trust set left out is not trusted — every one is named (it never runs).
+  if (layout.trust !== null && host.trust?.derivation.kind === 'ok') {
+    const derived = host.trust.derivation;
+    facts.push(`fapolicyd: ${derived.entries.length} file(s) trusted in ${layout.trust.file} (${derived.releases.join(', ') || 'no release yet'})`);
+    for (const reason of derived.refused) drift.push(`fapolicyd trust: ${reason}`);
+  }
   if (layout.site !== null) {
     if (host.webReference === false) {
       drift.push(`the web server's configuration no longer includes ${join(layout.instanceDir, `web.${layout.web.server}.conf`)} — the vhost reference was removed (provision init restores it)`);
@@ -2024,6 +2087,8 @@ export function describe(action: Action): string {
         : `record the registered SELinux rules in ${action.statePath}`;
     case 'selinux-restorecon':
       return `restorecon -v ${action.targets.map(t => `${t.recursive ? '-R ' : ''}${t.path}`).join(' ')}`;
+    case 'fapolicyd-update':
+      return `fapolicyd-cli --update (${action.path}), then wait until the daemon lists ${action.pending === null ? 'it' : `'${action.pending.split(' ')[0]}'`}`;
     case 'fpm-configtest':
       return `${action.bin} -t (php-fpm configtest)`;
     case 'fpm-reload':
