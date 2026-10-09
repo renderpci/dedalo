@@ -30,6 +30,8 @@ import {
 import { parseStamp, stamp } from '../src/provision/hash';
 import type { AgentLayout, HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
+import { polkitRenderer } from '../src/provision/render/polkit';
+import { PENDING_FACTS } from '../src/provision/render/types';
 import { FAPOLICYD_DEFAULTS, STRICT_INTEGRITY, parseFapolicydConf } from '../src/provision/init/parse/fapolicyd';
 import { RELEASE_ID } from '../src/releases/store';
 import { scratchPath } from './fixtures/instance';
@@ -106,11 +108,12 @@ const refusal = (layout: AgentLayout = layoutOf()): string => {
 beforeEach(seed);
 
 describe('the trust set is derived, never named', () => {
-  test('bun_bin, every regular file of agent_dir, current + previous of each served API — nothing else', () => {
+  test('bun_bin, every regular file of agent_dir, the polkit rule, current + previous of each served API — nothing else', () => {
     const derived = paths();
     expect(derived.entries.map(entry => entry.path)).toEqual(
       [
         BUN,
+        layoutOf().polkitPath,
         join(AGENT, 'node_modules', 'zod', 'index.js'),
         join(AGENT, 'package.json'),
         join(AGENT, 'src', 'index.ts'),
@@ -145,11 +148,22 @@ describe('the trust set is derived, never named', () => {
     expect(paths().releases.at(-1)).toBe('v2:2.0.1_1111111');
   });
 
-  test('nothing installed yet: bun_bin and agent_dir only', () => {
+  test('nothing installed yet: bun_bin, agent_dir and the polkit rule only', () => {
     rmSync(API, { recursive: true, force: true });
     const derived = paths();
     expect(derived.releases).toEqual([]);
-    expect(derived.entries.every(row => row.path === BUN || row.path.startsWith(`${AGENT}/`))).toBe(true);
+    const polkit = layoutOf().polkitPath;
+    expect(derived.entries.every(row => row.path === BUN || row.path === polkit || row.path.startsWith(`${AGENT}/`))).toBe(true);
+  });
+
+  test('the polkit rule is trusted by the bytes the provisioner RENDERS, never read from disk (measured, RHEL 10.2: with allow_filesystem_mark = 1 polkitd could not load an untrusted rules file and every reload asked for authentication)', () => {
+    const layout = layoutOf();
+    const [rendered] = polkitRenderer.render(layout, PENDING_FACTS);
+    const entry = paths(layout).entries.find(row => row.path === layout.polkitPath);
+    // The file does not exist here (a first apply derives before it writes): still trusted, by content.
+    expect(entry).toEqual({ path: layout.polkitPath, size: Buffer.byteLength(rendered?.body ?? ''), sha256: sha(rendered?.body ?? '') });
+    // And it names exactly this instance's grant.
+    expect(rendered?.body).toContain(`subject.user !== ${JSON.stringify(layout.identity.agentUser)}`);
   });
 
   test('a v2-only instance trusts no v1 tree, even one left on disk', () => {

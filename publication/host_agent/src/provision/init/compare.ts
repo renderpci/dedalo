@@ -81,6 +81,16 @@ import type {
 import { ITEM_ID_PATTERN } from './types';
 import { MARIADB_SOCKET_CANDIDATES, MARIADB_TCP_HOST, MARIADB_TCP_PORT } from './constants';
 
+/**
+ * What allow_filesystem_mark = 1 does to polkit (measured, RHEL 10.2 two-machine drill, 2026-10-09):
+ * polkit.service is sandboxed, so fapolicyd starts checking polkitd, which reads its rules files as
+ * language files (application/javascript). fapolicyd-filter.conf leaves /usr/share out of the rpm
+ * trust, so at polkit's next reload the distribution's own rules stop loading — host-wide. The
+ * agent's own rule is in the instance's trust file (fapolicyd_trust.ts), so the agent keeps its grant.
+ */
+const FAPOLICYD_POLKIT_FACT =
+  "with allow_filesystem_mark = 1 fapolicyd also checks the sandboxed polkit.service: polkitd reads its rules as language files, and the distribution's own rules (/usr/share/polkit-1/rules.d, left out of the rpm trust by fapolicyd-filter.conf) stop loading at polkit's next reload, host-wide (measured, RHEL 10.2: journalctl -u polkit shows 'Error loading script'); this instance's own polkit rule is in its trust file, so the agent keeps its grant";
+
 /* ── the item catalog ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -318,13 +328,14 @@ function fapolicydItems(facts: HostFacts, layout: AgentLayout | null, decl: Host
     );
   }
   if (conf.filesystemMark) {
-    out.push(right('host.fapolicyd_mounts', 'host', 'fapolicyd and the services', ['allow_filesystem_mark = 1: fapolicyd checks what the sandboxed services open too']));
+    out.push(right('host.fapolicyd_mounts', 'host', 'fapolicyd and the services', ['allow_filesystem_mark = 1: fapolicyd checks what the sandboxed services open too', FAPOLICYD_POLKIT_FACT]));
   } else {
     out.push(
       item('host.fapolicyd_mounts', 'host', 'decision', 'fapolicyd and the services', {
         facts: [
           "allow_filesystem_mark = 0 (fapolicyd's default): it marks mounts, so it never sees what a service with its own mount namespace opens — the agent, v2 and the trust service (ProtectSystem=, ProtectHome=, PrivateTmp=) run unchecked, trusted or not (measured, RHEL 9.8)",
           'allow_filesystem_mark = 1 makes fapolicyd check them (recommended; host-wide: what containers and overlayfs mounts open is checked too)',
+          FAPOLICYD_POLKIT_FACT,
         ],
         commands: [...FAPOLICYD_MOUNTS_COMMANDS],
         options: [MANUAL, SKIP],
@@ -1403,14 +1414,24 @@ function applyItems(env: Env, earlier: readonly ComparedItem[]): ComparedItem[] 
     }
   } else {
     actions = plan;
+    // fapolicyd: the trust file lists every file of the agent's code and its Bun by sha256, so new
+    // code or a new Bun is drift the plan computed NOW cannot see — apply must run after them, or the
+    // restart runs code fapolicyd does not trust (measured, RHEL 10.2 two-machine drill, 2026-10-09:
+    // an upgrade from a kit with nothing else to change restarted into "EPERM reading …/src/index.ts").
+    const retrust =
+      layout.trust !== null && earlier.some(row => (row.id === 'code.install' || row.id === 'bun.install') && row.list === 'change');
     out.push(
-      actions.length === 0 && pendingFacts.length === 0
+      actions.length === 0 && pendingFacts.length === 0 && !retrust
         ? right('provision.apply', 'provision', 'provisioned files', ['provision apply has nothing to do'])
-        : item('provision.apply', 'provision', 'change', `provision apply: ${plural(actions.length, 'step')}`, {
-            facts: [...actions.map(describeAction), ...pendingFacts],
+        : item('provision.apply', 'provision', 'change', actions.length === 0 ? 'provision apply (after the steps above)' : `provision apply: ${plural(actions.length, 'step')}`, {
+            facts: [
+              ...actions.map(describeAction),
+              ...pendingFacts,
+              ...(retrust ? [`fapolicyd: ${layout.trust?.file} is rewritten for the code and Bun this run installs, before the agent restarts`] : []),
+            ],
             commands: [command],
             action: { kind: 'provision_apply', instance },
-            after,
+            after: retrust ? [...after, 'code.install', 'bun.install'] : after,
           }),
     );
   }

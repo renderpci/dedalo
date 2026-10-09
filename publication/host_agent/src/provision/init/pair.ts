@@ -446,7 +446,7 @@ export function twoMachineInstructions(layout: AgentLayout, pairName: string, en
 export function packageInstructions(path: string, pairName: string): string[] {
   return [
     `# carry ${path} to the work host over a channel you trust (it is encrypted; the passphrase never travels with it)`,
-    '# on the work host, as root: chown <engine user> <the copy> && chmod 600 <the copy>',
+    '# on the work host, as root: put the copy in a directory the engine user owns (install -d -o <engine user> -m 0700 <dir>; never root\'s home, which it cannot pass), then chown <engine user> <the copy> && chmod 600 <the copy>',
     '# then, as root or an administrator (the command runs as the engine user and asks for the passphrase):',
     `cd <work checkout> && sudo -u <engine user> <the work system's pinned bun> run ${PAIR_SCRIPT_NAME} add ${pairName} --package <the copy>`,
     `# then delete both copies: rm ${path} here, the copy on the work host`,

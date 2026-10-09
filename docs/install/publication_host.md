@@ -155,7 +155,17 @@ flowchart LR
   not a PEM file of the right type, or the key is accessible to others, the agent refuses
   to start rather than serve unverified. Put the port on a private interface, firewalled
   to the work host's address. A WireGuard tunnel underneath is recommended as an extra
-  layer.
+  layer. Neither init nor `provision` opens a port: on RHEL, Rocky and Alma, firewalld
+  blocks the agent's port until you allow it, and pairing then answers *unreachable*.
+  Allow the work host's address only (here `10.20.0.1`, and the agent's port `8471`):
+
+    ```bash
+    # publication host, as root (firewalld)
+    firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=10.20.0.1/32 port port=8471 protocol=tcp accept'
+    firewall-cmd --reload
+    # or, with ufw (Debian, Ubuntu):
+    ufw allow from 10.20.0.1 to any port 8471 proto tcp
+    ```
 - **One machine: a local socket.** The agent listens on a unix socket that only the
   work system's group can open. Nothing listens on the network.
 - **Never plain, unencrypted TCP.** The agent has exactly two ways to listen, the two above.
@@ -515,9 +525,15 @@ one nginx serves.
 
     ```bash
     # work host, as root or an administrator; the command runs as dedalo
-    chown dedalo /root/museum_org.pairing && chmod 600 /root/museum_org.pairing
-    cd /opt/dedalo/master_dedalo && sudo -u dedalo /opt/dedalo/.bun/bin/bun run dedalo:pair-publication-host add museum_org --package /root/museum_org.pairing
+    install -d -o dedalo -g dedalo -m 0700 /opt/dedalo/pairing
+    # … carry museum_org.pairing into /opt/dedalo/pairing/, then:
+    chown dedalo /opt/dedalo/pairing/museum_org.pairing && chmod 600 /opt/dedalo/pairing/museum_org.pairing
+    cd /opt/dedalo/master_dedalo && sudo -u dedalo /opt/dedalo/.bun/bin/bun run dedalo:pair-publication-host add museum_org --package /opt/dedalo/pairing/museum_org.pairing
     ```
+
+    The command runs as `dedalo`, so the copy must be in a directory that user can pass: not in
+    root's home (`/root` is `0550` on RHEL, Rocky and Alma, `0700` on Debian and Ubuntu), where it
+    answers *could not be read (EACCES)* however the file itself is owned.
 
     The command asks for the passphrase without echo (or reads one line with
     `--passphrase-stdin`), then runs the same checks and the same live proof as the manual
@@ -694,7 +710,10 @@ it in two steps:
 1. `install.sh` stops before it hands over if fapolicyd denies the one Bun it runs (the staged
    one on a first install, the installed one on a re-run): root must read the installer's code
    before any of the publication host's services exists. It prints the line that trusts that
-   Bun; run it, then `install.sh` again.
+   Bun, in the instance's own file `/etc/fapolicyd/trust.d/dedalo_init_<instance>`; run it, then
+   `install.sh` again. Once init converged, the staged Bun is gone and the installed one is in
+   the instance's trust file (step 2): remove `dedalo_init_<instance>` and run
+   `fapolicyd-cli --update` (`install.sh` prints that line too).
 2. From there the trust is **automatic**. On a host where fapolicyd is installed (running or
    not), `provision apply` writes one trust file per instance,
    `/etc/fapolicyd/trust.d/dedalo_<instance>`, and asks fapolicyd to load it before any of the
@@ -752,7 +771,27 @@ fapolicyd only checks programs and the files it types as a language (most `.ts` 
 files); a file it types as plain text is never checked at all, trusted or not (measured, RHEL
 9.8). The v1 API (PHP-FPM, a trusted program) answers under fapolicyd without anything of its own
 (measured, RHEL 9.8). A trust file named `dedalo`, left by the hand-run lines of an earlier
-version of this guide, is no longer needed: remove it, then run `fapolicyd-cli --update`.
+version of this guide or by an earlier `install.sh`, is no longer needed: remove it, then run
+`fapolicyd-cli --update`.
+
+The instance's trust file also lists its polkit rule (`/etc/polkit-1/rules.d/60-dedalo-publication-host-<instance>.rules`),
+by the bytes `apply` writes. polkitd reads its rules as JavaScript, a language fapolicyd checks,
+and with `allow_filesystem_mark = 1` fapolicyd also checks the sandboxed `polkit.service`: an
+untrusted rules file then fails to load, and every reload the agent asks for answers
+*Interactive authentication required*. The distribution's own rules (`/usr/share/polkit-1/rules.d/`, and
+`/etc/polkit-1/rules.d/49-polkit-pkla-compat.rules`) are not in fapolicyd's rpm trust, so with
+that setting they stop loading too, at polkit's next reload, for every program on the host
+(measured, RHEL 10.2: `journalctl -u polkit` shows *Error loading script* for each). That is a
+host-wide consequence of the setting, not of Dédalo: weigh it before you set
+`allow_filesystem_mark = 1`, and trust the rules your host relies on:
+
+```bash
+# publication host, as root
+fapolicyd-cli --file add /usr/share/polkit-1/rules.d/ --trust-file polkit_rules
+fapolicyd-cli --file add /etc/polkit-1/rules.d/49-polkit-pkla-compat.rules --trust-file polkit_rules
+fapolicyd-cli --update && systemctl restart polkit
+journalctl -u polkit -n 20 --no-pager    # no "Error loading script" line
+```
 Uninstall fapolicyd, and the next `provision apply` removes the service and the trust file.
 
 **EL 8 is not supported.** It ships systemd 239 and kernel 4.18: the units need systemd 247
@@ -1465,7 +1504,19 @@ install -o museum_org_v1 -m 0400 \
   /home/museum.org/dedalo/publication_api/v1/shared/server_config_api.php
 ```
 
-Then edit it as root with the site's read-only MariaDB credentials. An editor that saves by
+Then edit it as root with the site's read-only MariaDB credentials, and change its `API_ROOT`
+line. The sample derives it from its own location, which is right only inside a release; this
+copy lives in `shared/` and is linked into every release, so it must name the release of the
+script that runs (the guided install writes this line for you):
+
+```php
+define('API_ROOT', dirname(get_included_files()[0], 2));
+```
+
+With the sample's line every request fails, and still answers `200`: the API's files are looked
+for in `publication_api/v1/common/`, and the error log says *Class "manager" not found*.
+
+An editor that saves by
 replacing the file gives it back to root: the `stat` below shows it, and the fix is the same
 `chown museum_org_v1` and `chmod 0400`. Installing a v1 release is refused with
 `shared_config_exposed` while the file is readable by its group or by others, or still owned

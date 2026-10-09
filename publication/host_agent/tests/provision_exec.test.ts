@@ -229,6 +229,21 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
     expect(UNIT_JOB_TIMEOUT_MS).toBeLessThan(RELABEL_TIMEOUT_MS);
   });
 
+  test('start and restart clear a failed unit\'s start-limit first (reset-failed), and answer with the start\'s own result', () => {
+    // Measured on RHEL 10.2 (two-machine drill, 2026-10-09): an agent that crash-looped into
+    // start-limit-hit refused apply's start ("Start request repeated too quickly") after the cause was fixed.
+    const { spawner, calls } = recording(argv => (argv[1] === 'reset-failed' ? { code: 1, stdout: '', stderr: 'not loaded' } : { code: 0, stdout: '', stderr: '' }));
+    const x = provisionExec(spawner, probeOf({}));
+    expect(x.startUnit('dedalo-publication-host-museum_org').code).toBe(0);
+    expect(x.restartUnit('dedalo-publication-host-museum_org').code).toBe(0);
+    expect(calls.map(c => c.argv.join(' '))).toEqual([
+      'systemctl reset-failed dedalo-publication-host-museum_org.service',
+      'systemctl start dedalo-publication-host-museum_org.service',
+      'systemctl reset-failed dedalo-publication-host-museum_org.service',
+      'systemctl restart dedalo-publication-host-museum_org.service',
+    ]);
+  });
+
   test('restorecon: one call per recursive value, -n only on a dry run, results joined', () => {
     const { spawner, calls } = recording(argv =>
       argv.includes('-R') ? { code: 1, stdout: 'deep\n', stderr: 'e' } : { code: 0, stdout: 'flat\n', stderr: '' },

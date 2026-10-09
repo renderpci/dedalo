@@ -212,6 +212,19 @@ function readFailure(error: unknown): string {
 	return typeof code === 'string' && /^E[A-Z]+$/.test(code) ? code : 'not a readable regular file';
 }
 
+/**
+ * EACCES is nearly always WHERE the copy was put, not its own mode (that one is named on its
+ * own): this command runs as the engine user, which must pass every directory above the file.
+ * root's home is closed to other accounts (0550 on RHEL, 0700 on Debian and Ubuntu), so a copy
+ * carried to /root and chowned as the guide once said still answered a bare EACCES (measured,
+ * RHEL 10.2 two-machine drill, 2026-10-09). Generic on purpose: the path is never echoed.
+ */
+function accessHint(error: unknown): string {
+	return (error as NodeJS.ErrnoException | null)?.code === 'EACCES'
+		? " The engine user must open it AND pass every directory above it (root's home is closed to other accounts): carry the copy into a directory the engine user owns (install -d -o <engine user> -m 0700 <dir>), chown <engine user> it and chmod 600 it."
+		: '';
+}
+
 /** A credential at rest: a regular file, not group/other-readable. Its CONTENT never reaches a message. */
 function assertPrivateMode(path: string, what: string): void {
 	let mode: number;
@@ -220,7 +233,7 @@ function assertPrivateMode(path: string, what: string): void {
 		if (!st.isFile()) throw new Error('not a regular file');
 		mode = st.mode & 0o777;
 	} catch (error) {
-		throw new PairRefusal(`${what} could not be read (${readFailure(error)}).`);
+		throw new PairRefusal(`${what} could not be read (${readFailure(error)}).${accessHint(error)}`);
 	}
 	if ((mode & 0o077) !== 0) {
 		throw new PairRefusal(
@@ -236,7 +249,7 @@ function readPrivateFile(path: string, what: string): string {
 	try {
 		return readFileSync(path, 'utf8');
 	} catch (error) {
-		throw new PairRefusal(`${what} could not be read (${readFailure(error)}).`);
+		throw new PairRefusal(`${what} could not be read (${readFailure(error)}).${accessHint(error)}`);
 	}
 }
 
@@ -252,7 +265,7 @@ function readPackageBytes(path: string): Uint8Array {
 		return new Uint8Array(readFileSync(path));
 	} catch (error) {
 		if (error instanceof PairRefusal) throw error;
-		throw new PairRefusal(`the pairing package could not be read (${readFailure(error)}).`);
+		throw new PairRefusal(`the pairing package could not be read (${readFailure(error)}).${accessHint(error)}`);
 	}
 }
 
@@ -262,7 +275,7 @@ function readFragmentFields(path: string): FragmentFields {
 	try {
 		text = readFileSync(path, 'utf8');
 	} catch (error) {
-		throw new PairRefusal(`the fragment could not be read (${readFailure(error)}).`);
+		throw new PairRefusal(`the fragment could not be read (${readFailure(error)}).${accessHint(error)}`);
 	}
 	const fields = parseFragment(text);
 	if (fields.token !== null) assertPrivateMode(path, 'the fragment (it carries the token)');

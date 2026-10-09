@@ -329,7 +329,9 @@ release, state outside the code:
   refused (`shared_config_exposed`; `isPrivateV1Config`).
   `v1/shared/` is `root:root 0711`: the agent only stats and links there, joins no v1 group,
   never reads the file. Agent, v1 and v2 are three distinct non-root users (derive).
-- **Install** = stream into staging with the stamp verified → (v1) `php -l` lint →
+- **Install** = stream into staging with the stamp verified → commit into `releases/<id>` →
+  (fapolicyd) the trust oneshot → (v1) `php -l` lint of the COMMITTED tree (on staging, fapolicyd
+  with `allow_filesystem_mark = 1` denied php the untrusted files: measured, RHEL 10.2, 2026-10-09) →
   (v2) boot the release on a scratch port and probe its health → atomic `current` swap
   (temporary symlink + `rename`) → (v2) restart the unit, then health. A failure before
   the swap leaves the old release serving. A failed post-restart health swaps `current`
@@ -998,7 +1000,11 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   writable), the one polkit pair that lets the agent start it, the env keys `TRUST_UNIT` and
   `TRUST_RESULT_FILE`, and ONE trust file `/etc/fapolicyd/trust.d/dedalo_<instance>`.
   **The set is derived, never named** (`src/provision/fapolicyd_trust.ts` `deriveTrust`): every
-  regular file of `bun_bin`, `agent_dir`, the nginx `conf_d` renderer's Bun, and, for each SERVED
+  regular file of `bun_bin`, `agent_dir`, the nginx `conf_d` renderer's Bun, the instance's polkit
+  rule BY ITS RENDERED BYTES (polkitd reads it as JavaScript; with `allow_filesystem_mark = 1`
+  fapolicyd checks the sandboxed `polkit.service`, and an untrusted rule failed to load: every
+  reload the agent asked for answered "Interactive authentication required" — measured, RHEL 10.2,
+  2026-10-09), and, for each SERVED
   API, the release `current` names and the store's `previous` (the newest other release by mtime,
   `releases/store.ts`) — right after a commit that is the release under test. Walked by name,
   lstat only: a link is never followed and never trusted (v1's D8 links are counted, skipped).
@@ -1015,7 +1021,12 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   file without our valid stamp for THIS instance is never rewritten or removed. **Two writers,
   one rendering** (`renderTrustFile`): `provision apply` — `observeHost` derives, the plan writes
   on drift (`write`, label `fapolicyd_trust`, root 0644) and, with the daemon running, the tail op
-  `fapolicyd-update` BEFORE every start and restart; and the oneshot
+  `fapolicyd-update` BEFORE every start and restart, then `restart polkit` (it has no reload, and it
+  loaded the rules file the moment the fs phase wrote it, before the update listed it: a failed load
+  heals on every trust update that lists the rule); init runs `provision apply` after every
+  `code.install` or `bun.install` on such a host even when the plan computed before them is empty
+  (the new code is drift only after it lands: measured, an upgrade restarted into "EPERM reading
+  …/src/index.ts"); and the oneshot
   (`src/provision/fapolicyd_trust_main.ts`) under the host provision lock, which writes
   atomically and records its run in `<config_base>/<instance>/fapolicyd_trust.json`.
   `fapolicyd-cli --update` returns before the daemon reloaded (measured: ~0.3 s), so both wait

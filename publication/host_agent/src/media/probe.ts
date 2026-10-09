@@ -13,7 +13,8 @@
  *   is unlinked at once; a failed unlink is itself a problem naming the path, so a probe
  *   never leaves a file silently. Any other errno ⇒ null, explained.
  * - pub_readable / pub_markers: `.publication/pub/` (engineering/MEDIA_PROTECTION.md: one
- *   flat file per published record) can be listed, and how many regular files it holds.
+ *   flat file per published record) can be listed, and how many regular files it holds. In copy
+ *   mode an ABSENT pub/ is zero markers (the agent creates it with the first one), never a problem.
  *
  * Expectation by mode: `shared` (§5.1) must be read-only — a writable export lets the
  * publication host rewrite the work host's media; `copy` (§5.2) must be writable — the agent
@@ -155,9 +156,17 @@ export async function probeMediaTarget(target: ProbeTarget, fs: ProbeFs): Promis
     pub_markers = await fs.countFiles(pubDir);
     pub_readable = true;
   } catch (error) {
-    problems.push(
-      `${pubDir} cannot be listed (${errorCode(error)}): the generated rules answer 404 for every media file`,
-    );
+    if (target.mode === 'copy' && errorCode(error) === 'ENOENT') {
+      // Copy mode: the agent is pub/'s only writer and creates it with the first marker (copy.ts).
+      // Absent = nothing published yet: zero markers, and a 404 for every file is the right answer
+      // (measured, RHEL 10.2 drill: a freshly paired copy host's first probe reported it as a problem).
+      pub_readable = true;
+      pub_markers = 0;
+    } else {
+      problems.push(
+        `${pubDir} cannot be listed (${errorCode(error)}): the generated rules answer 404 for every media file`,
+      );
+    }
   }
 
   return { mode: target.mode, root, present: true, read_only, pub_readable, pub_markers, problems };

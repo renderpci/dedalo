@@ -26,6 +26,27 @@ import type { ApiName } from './ustar';
 export interface TrustReport {
   readonly code: number;
   readonly record: TrustResult | null;
+  /** The first line `systemctl start` printed (its refusal, when the unit never ran); '' when silent. */
+  readonly output?: string;
+}
+
+/**
+ * What `systemctl start` said, for the refusal: its first non-empty line, capped. polkit's refusal
+ * ("Interactive authentication required") means the unit NEVER ran — the trust record on disk is an
+ * older run's — and its cause is the agent's grant, not fapolicyd: named so (measured, RHEL 10.2
+ * two-machine drill, 2026-10-09: the bare "exited 1 (no record: no reason recorded)" pointed nowhere).
+ */
+export function startOutput(stdout: string, stderr: string): string {
+  const line = `${stderr}\n${stdout}`.split('\n').map(row => row.trim()).find(row => row !== '') ?? '';
+  return line.length > 300 ? `${line.slice(0, 300)}…` : line;
+}
+
+function startHint(output: string): string {
+  if (output === '') return '';
+  const polkit = /interactive authentication required/i.test(output)
+    ? " — polkit refused the agent's grant to start it (is its rules file loaded? journalctl -u polkit; on a fapolicyd host, `provision apply` restarts polkit once the rule is trusted)"
+    : '';
+  return `; systemctl: ${output}${polkit}`;
 }
 
 const OK = new Set(['applied', 'unchanged', 'inactive']);
@@ -66,7 +87,7 @@ export function readTrustRecord(): TrustResult | null {
 export async function triggerTrust(): Promise<TrustReport | null> {
   if (trustUnit() === null) return null;
   const started = await exec().startTrust();
-  return { code: started.code, record: readTrustRecord() };
+  return { code: started.code, record: readTrustRecord(), output: startOutput(started.stdout, started.stderr) };
 }
 
 /**
@@ -83,7 +104,7 @@ export async function requireTrust(api: ApiName, releaseId: string, what: string
   const reasons = [...missing, ...(record?.reasons ?? [])].join('; ') || 'no reason recorded';
   throw new ReleaseRefusedError(
     'trust_failed',
-    `fapolicyd: ${trustUnit()}.service exited ${report.code} (${record?.outcome ?? 'no record'}: ${reasons}), so ${what} was refused before it ran; the previous release still serves`,
+    `fapolicyd: ${trustUnit()}.service exited ${report.code} (${record?.outcome ?? 'no record'}: ${reasons}${report.code === 0 ? '' : startHint(report.output ?? '')}), so ${what} was refused before it ran; the previous release still serves`,
     { trust: record },
   );
 }

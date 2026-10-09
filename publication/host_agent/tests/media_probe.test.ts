@@ -223,6 +223,33 @@ describe('probeMediaTarget — pub/', () => {
       `${join(ROOT, PUB_DIR)} cannot be listed (ENOENT): the generated rules answer 404 for every media file`,
     ]);
   });
+
+  test('copy mode, nothing copied yet: no pub/ is zero markers, not a problem (the agent creates it with the first marker)', async () => {
+    // Measured on RHEL 10.2 (two-machine drill, 2026-10-09): a freshly paired copy host's first
+    // "Probe media" answered "found 1 problem(s)" for the absent pub/, which only the first copy creates.
+    const { fs } = fakeFs({
+      countFiles: async () => {
+        throw errno('ENOENT');
+      },
+    });
+    const probe = await probeMediaTarget({ mode: 'copy', root: ROOT }, fs);
+    expect(probe.pub_readable).toBe(true);
+    expect(probe.pub_markers).toBe(0);
+    expect(probe.problems).toEqual([]);
+  });
+
+  test('copy mode: any other errno on pub/ is still a problem', async () => {
+    const { fs } = fakeFs({
+      countFiles: async () => {
+        throw errno('EACCES');
+      },
+    });
+    const probe = await probeMediaTarget({ mode: 'copy', root: ROOT }, fs);
+    expect(probe.pub_readable).toBe(false);
+    expect(probe.problems).toEqual([
+      `${join(ROOT, PUB_DIR)} cannot be listed (EACCES): the generated rules answer 404 for every media file`,
+    ]);
+  });
 });
 
 describe('nodeProbeFs — the real filesystem', () => {

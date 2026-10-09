@@ -555,9 +555,34 @@ function resolve(items: readonly ComparedItem[], answers: ReadonlyMap<string, st
  * REQUIRED one. An optional open item (pairing printed for later, a log suggestion) holds nothing up.
  */
 function independent(acts: readonly Item[], open: readonly Item[], items: readonly Item[]): Item[] {
-  const blocked = new Set(open.filter(row => !row.optional).map(row => row.id));
-  for (const item of items) if (item.after.some(id => blocked.has(id))) blocked.add(item.id);
+  const blocked = waitingFor(open.filter(row => !row.optional), items);
   return acts.filter(item => !blocked.has(item.id));
+}
+
+/** The ids of `prerequisites` and of every item that (transitively) runs after one of them. */
+function waitingFor(prerequisites: readonly Item[], items: readonly Item[]): Set<string> {
+  const blocked = new Set(prerequisites.map(row => row.id));
+  for (const item of items) if (item.after.some(id => blocked.has(id))) blocked.add(item.id);
+  return blocked;
+}
+
+/**
+ * The acts held back by a BLOCKING item answered `manual` (a refusal whose only answer is to fix
+ * it by hand): this run does not do that item, so nothing that runs after it may run either. A
+ * non-blocking `manual` (restart the siblings yourself, edit the vhost yourself) holds nothing up (measured, RHEL 10.2: provision apply refused — a copy media
+ * root whose parent did not exist — answered `manual`, and api_config.v2_env then ran into the state
+ * root apply had not created: ENOENT, exit 4, "a change failed" instead of "do this first").
+ */
+function heldBackByManual(acts: readonly Item[], manual: readonly Item[], items: readonly Item[]): Item[] {
+  const required = manual.filter(row => row.blocking && !row.optional);
+  if (required.length === 0) return [];
+  const waiting = waitingFor(required, items);
+  return acts.filter(item => waiting.has(item.id));
+}
+
+/** The `manual` items `item` (transitively) waits for, by id. */
+function manualPrerequisites(item: Item, manual: readonly Item[], items: readonly Item[]): string[] {
+  return manual.filter(row => row.blocking && !row.optional && waitingFor([row], items).has(item.id)).map(row => row.id);
 }
 
 /* ── the secrets (spec §5.8) ─────────────────────────────────────────────────────── */
@@ -988,7 +1013,9 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
         ...blockingOpen.flatMap(item => item.commands.map(command => `  $ ${command}`)),
       );
     }
-    let runnable = independent(resolution.acts, resolution.open, computed.items);
+    // A blocking item answered `manual` holds back what runs after it, exactly as an open decision does.
+    const heldBack = heldBackByManual(resolution.acts, resolution.manual, computed.items);
+    let runnable = independent(resolution.acts, resolution.open, computed.items).filter(item => !heldBack.includes(item));
     if (interactive && runnable.length > 0) {
       const confirmed = await prompter.confirm(`Apply these ${runnable.length} changes?`);
       if (!confirmed) throw refuse('provision init: declined by the operator; nothing was done');
@@ -1034,6 +1061,7 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
     }
     const stillOpen = [...resolution.open, ...secretOpen];
     runnable = independent(runnable.filter(item => !secretOpen.some(open => open.id === item.id)), stillOpen, computed.items);
+    const notReached = secretOpen.length === 0 ? heldBack : heldBack.filter(item => !secretOpen.some(open => open.id === item.id));
 
     // 6-7. Act, B4, B5.
     const layout = computed.completion.layout;
@@ -1053,6 +1081,7 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
       ...report.stillToDo.map(line => `$ ${line}`),
       ...resolution.manual.flatMap(item => [`[${item.id}] ${item.title}`, ...item.commands.map(command => `  $ ${command}`)]),
       ...stillOpen.map(item => `[${item.id}] ${item.title} (${item.optional ? 'optional' : 'needs your decision'})`),
+      ...notReached.map(item => `[${item.id}] ${item.title} (not done: it runs after ${manualPrerequisites(item, resolution.manual, computed.items).join(', ')})`),
     ];
     if (still.length > 0) {
       sinks.out('still to do:');
@@ -1062,6 +1091,15 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
     const requiredOpen = stillOpen.filter(item => !item.optional);
     if (requiredOpen.length > 0) {
       sinks.err(`provision init: REFUSED — still open: ${requiredOpen.map(item => item.id).join(', ')}`);
+      return EXIT.REFUSED;
+    }
+    const requiredNotReached = notReached.filter(item => !item.optional);
+    if (requiredNotReached.length > 0) {
+      const first = [...new Set(requiredNotReached.flatMap(item => manualPrerequisites(item, resolution.manual, computed.items)))];
+      sinks.err(
+        `provision init: REFUSED — not done: ${requiredNotReached.map(item => item.id).join(', ')}; ` +
+          `they run after ${first.join(', ')}, answered manual: do it (the commands are above), then run init again`,
+      );
       return EXIT.REFUSED;
     }
     if (journal !== null) cleanupAfterSuccess({ initDir, io: world.io, lstat: path => world.fs.lstat(path) });

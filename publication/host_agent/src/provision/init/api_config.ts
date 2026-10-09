@@ -40,6 +40,18 @@ export const V1_DEFINE_KEYS = Object.freeze([
 ] as const);
 export const V1_DB_VARIABLE = '$DEFAULT_DDBB';
 export const V1_KEYS: readonly string[] = Object.freeze([...V1_DEFINE_KEYS, V1_DB_VARIABLE]);
+/**
+ * The sample's `define('API_ROOT', dirname(__FILE__, 2));` assumes the config sits in the release's
+ * own `config_api/`. On a publication host it lives in `v1/shared/` and is LINKED into every release
+ * (D8), and PHP's __FILE__ is the resolved path: API_ROOT became `<state>/publication_api/v1`, every
+ * include of `common/` failed and v1 answered "Class manager not found" with HTTP 200 (measured, RHEL
+ * 10.2 two-machine drill, 2026-10-09). The entry script (json/index.php, subtitles/index.php: one
+ * level below the release root) names the release that runs.
+ */
+export const V1_API_ROOT_LINE =
+  "define('API_ROOT', dirname(get_included_files()[0], 2)); // the release of the entry script: this file lives in shared/, linked into every release";
+const V1_API_ROOT_PATTERN = /^(\s*)define\(\s*'API_ROOT'\s*,.*\);.*$/;
+
 /** Lines the v1 render must leave exactly as the template has them. */
 export const V1_UNTOUCHED = Object.freeze(['$db_name', 'MYSQL_DEDALO_DATABASE_CONN'] as const);
 
@@ -235,7 +247,8 @@ export function v1Literals(values: V1Values): Readonly<Record<string, string>> {
 }
 
 /**
- * server_config_api.php from the sample: `define('KEY', <literal>);` for each set key (the
+ * server_config_api.php from the sample: API_ROOT from the entry script (V1_API_ROOT_LINE),
+ * `define('KEY', <literal>);` for each set key (the
  * socket for the socket transport, the port for TCP — the other stays the sample's `null`),
  * `$DEFAULT_DDBB = '<db>';`. Every other line kept; `$db_name` and MYSQL_DEDALO_DATABASE_CONN
  * untouched. Every define key must match exactly one line even when its value is not set, so a
@@ -252,6 +265,8 @@ export function renderV1Config(template: string, values: V1Values): string {
     const indent = (pattern.exec(lines[index] as string) as RegExpExecArray)[1] as string;
     lines[index] = `${indent}define('${key}', ${literal});`;
   }
+  const rootIndex = oneLine(lines, V1_API_ROOT_PATTERN, 'API_ROOT', 'v1 sample (sample.server_config_api.php)');
+  lines[rootIndex] = `${(V1_API_ROOT_PATTERN.exec(lines[rootIndex] as string) as RegExpExecArray)[1] as string}${V1_API_ROOT_LINE}`;
   const dbPattern = /^(\s*)\$DEFAULT_DDBB\s*=.*;\s*$/;
   const dbIndex = oneLine(lines, dbPattern, V1_DB_VARIABLE, 'v1 sample (sample.server_config_api.php)');
   const indent = (dbPattern.exec(lines[dbIndex] as string) as RegExpExecArray)[1] as string;

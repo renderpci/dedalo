@@ -398,6 +398,8 @@ export function judgeAncestors(
  * already lets the immediate parent of a renamed-into-place file be another principal's).
  */
 export const POLKIT_DAEMON_USER = 'polkitd';
+/** polkit's unit, Debian and EL alike: restarted after a fapolicyd trust update that lists a new rules file. */
+export const POLKIT_UNIT = 'polkit';
 
 /** Whether `facts` is the polkit rules directory as the polkit package ships it (POLKIT_DAEMON_USER). */
 export function polkitDirTrusted(facts: PathFacts | undefined, polkitdUid: number | undefined): boolean {
@@ -1478,6 +1480,8 @@ export function plan(
   // 7f. fapolicyd (owner decision 2026-10-09): the instance's trust file, written on drift with the
   //     bytes the trust oneshot renders (fapolicyd_trust.ts), never over a file that is not ours.
   let trustUpdate: FapolicydUpdateAction | null = null;
+  // Whether this run's trust update lists the polkit rule (see 9).
+  let polkitTrusted = false;
   if (layout.trust !== null) {
     const path = layout.trust.file;
     const observed = host.trust;
@@ -1491,6 +1495,7 @@ export function plan(
       const facts = host.paths.get(path);
       const text = host.contents.get(path) ?? null;
       const write = (disposition: 'create' | 'rewrite'): void => {
+        polkitTrusted = observed.derivation.kind === 'ok' && observed.derivation.entries.some(entry => entry.path === layout.polkitPath);
         fsActions.push({ op: 'write', path, label: 'fapolicyd_trust', content: { source: 'literal', body }, disposition, mode: TRUST_FILE_MODE, validate: null, ...own });
         if (observed.daemonActive) trustUpdate = { op: 'fapolicyd-update', path, pending: pendingEntry(disposition === 'create' ? null : text, body) };
       };
@@ -1539,6 +1544,16 @@ export function plan(
 
   // 9. The tail.
   const tail: Action[] = [...selinuxTail, ...(trustUpdate === null ? [] : [trustUpdate])];
+  // fapolicyd: polkitd (re)loads a rules file the moment it is written — here BEFORE the trust update
+  // lists it, so with allow_filesystem_mark = 1 its load was denied and the agent's grant missing
+  // until polkit happened to reload again (measured, RHEL 10.2 two-machine drill, 2026-10-09: every
+  // reload the agent asked for answered "Interactive authentication required"). polkit.service has no
+  // reload: it is restarted after every trust update that lists the rule (it keeps no state but its
+  // rules), so a load that failed earlier — the rule written before its trust, or by a provisioner that
+  // did not trust it — heals on the next apply that touches the trust (a code or Bun upgrade, a new rule).
+  if (trustUpdate !== null && polkitTrusted) {
+    tail.push({ op: 'restart', unit: POLKIT_UNIT });
+  }
   if (effects.has('daemon_reload')) tail.push({ op: 'daemon-reload' });
   if (effects.has('reload_fpm') && layout.site?.v1 != null) {
     const { bin, unit } = layout.site.v1.fpm;

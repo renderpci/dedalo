@@ -10,7 +10,7 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { apply } from '../src/provision/apply';
-import { renderTrustFile, trustLinesOf } from '../src/provision/fapolicyd_trust';
+import { TRUST_KIND, renderTrustFile, trustLinesOf } from '../src/provision/fapolicyd_trust';
 import { stamp } from '../src/provision/hash';
 import type { AgentLayout } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
@@ -109,7 +109,7 @@ describe('provision apply writes the trust file, then tells the daemon before an
     const h = host(layout);
     const actions = converge(layout, h);
     const body = h.body(TRUST_FILE) ?? '';
-    expect(trustLinesOf(body).map(line => line.split(' ')[0])).toEqual([layout.bunBin, join(layout.agentDir, 'package.json'), layout.agentEntry].sort());
+    expect(trustLinesOf(body).map(line => line.split(' ')[0])).toEqual([layout.bunBin, join(layout.agentDir, 'package.json'), layout.agentEntry, layout.polkitPath].sort());
     const derived = h.stateFor(layout).trust?.derivation;
     expect(derived?.kind === 'ok' && body === renderTrustFile('test', derived)).toBe(true);
     const ops = actions.map(action => action.op);
@@ -124,13 +124,50 @@ describe('provision apply writes the trust file, then tells the daemon before an
     expect(plan(layout, h.stateFor(layout))).toEqual([]);
   });
 
+  test('the polkit rule written in this run: polkit is restarted AFTER the trust update (it loaded the file before fapolicyd listed it); not when the rule is unchanged', () => {
+    // Measured on RHEL 10.2 (two-machine drill, 2026-10-09): polkitd loaded the new rules file at
+    // once, fapolicyd (allow_filesystem_mark = 1) denied it, and the agent's every reload asked for
+    // authentication until polkit happened to reload.
+    const layout = withFapolicyd();
+    const h = host(layout);
+    const actions = converge(layout, h);
+    const ops = actions.map(action => (action.op === 'restart' ? `restart ${action.unit}` : action.op));
+    const update = ops.indexOf('fapolicyd-update');
+    const restart = ops.indexOf('restart polkit');
+    expect(actions.some(action => action.op === 'write' && action.path === layout.polkitPath)).toBe(true);
+    expect(restart).toBeGreaterThan(update);
+    expect(update).toBeGreaterThan(-1);
+    expect(h.calls).toContain('restart polkit');
+    // A later trust update (new agent code) restarts it again, after the update: a load that failed
+    // earlier heals; a run that does not touch the trust leaves polkit alone.
+    h.seedFile(join(layout.agentDir, 'src', 'zz.ts'), 'new');
+    const again = plan(layout, h.stateFor(layout)).map(action => (action.op === 'restart' ? `restart ${action.unit}` : action.op));
+    expect(again.indexOf('restart polkit')).toBeGreaterThan(again.indexOf('fapolicyd-update'));
+    converge(layout, h);
+    expect(plan(layout, h.stateFor(layout)).some(action => action.op === 'restart' && action.unit === 'polkit')).toBe(false);
+  });
+
+  test('an earlier provisioner\'s trust file without the polkit rule (the rule already on disk): the rewrite adds it and restarts polkit once', () => {
+    const layout = withFapolicyd();
+    const h = host(layout);
+    converge(layout, h);
+    // The trust file an earlier provisioner wrote: every line but the polkit rule's (stamped as ours).
+    const lines = trustLinesOf(h.body(TRUST_FILE) ?? null).filter(line => !line.startsWith(`${layout.polkitPath} `));
+    h.seedFile(TRUST_FILE, stamp(TRUST_KIND, 'test', `# an earlier provisioner\n${lines.join('\n')}\n`), 0o644);
+    const actions = plan(layout, h.stateFor(layout));
+    expect(actions.some(action => action.op === 'write' && action.path === layout.polkitPath)).toBe(false);
+    const ops = actions.map(action => (action.op === 'restart' ? `restart ${action.unit}` : action.op));
+    expect(ops).toContain('fapolicyd-update');
+    expect(ops.indexOf('restart polkit')).toBeGreaterThan(ops.indexOf('fapolicyd-update'));
+  });
+
   test('a changed agent file rewrites it (and waits for the line it added); an unchanged tree writes nothing', () => {
     const layout = withFapolicyd();
     const h = host(layout);
     converge(layout, h);
     h.seedFile(join(layout.agentDir, 'src', 'zz.ts'), 'new');
     const actions = plan(layout, h.stateFor(layout));
-    expect(actions.map(action => action.op)).toEqual(['write', 'fapolicyd-update']);
+    expect(actions.map(action => (action.op === 'restart' ? `restart ${action.unit}` : action.op))).toEqual(['write', 'fapolicyd-update', 'restart polkit']);
     const update = actions[1] as Extract<Action, { op: 'fapolicyd-update' }>;
     expect(update.pending?.startsWith(`${join(layout.agentDir, 'src', 'zz.ts')} 3 `)).toBe(true);
   });
@@ -143,7 +180,7 @@ describe('provision apply writes the trust file, then tells the daemon before an
     const state = h.stateFor(layout);
     const report = planReport(layout, state);
     expect(report.drift).toEqual([`fapolicyd trust: v2: '${layout.state.apis.v2.current}' points at 'releases/0.0.0_drill00', not releases/<id> — no v2 release is trusted`]);
-    expect(report.facts.some(line => line.startsWith('fapolicyd: 3 file(s) trusted in /etc/fapolicyd/trust.d/dedalo_test (no release yet)'))).toBe(true);
+    expect(report.facts.some(line => line.startsWith('fapolicyd: 4 file(s) trusted in /etc/fapolicyd/trust.d/dedalo_test (no release yet)'))).toBe(true);
     converge(layout, h);
     expect(h.body(TRUST_FILE)).not.toContain('0.0.0_drill00');
   });

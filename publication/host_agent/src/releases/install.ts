@@ -9,9 +9,10 @@
  *   → releases/<id> exists?  verify its recorded .bundle_sha256 = X-Bundle-Sha256, body unread,
  *                            then only promote (D9)
  *   → else, through the store: createStaging → extractBundle(bundleLimits(),
- *         reservedBundlePaths(api)) → sha compare → v1: php -l every .php, link shared/ config
- *         (D8) | v2: node_modules present (D6) → commitStaging into releases/<id>
+ *         reservedBundlePaths(api)) → sha compare → v1: link shared/ config (D8) | v2:
+ *         node_modules present (D6) → commitStaging into releases/<id>
  *         → fapolicyd hosts: the root trust oneshot trusts it (releases/trust.ts requireTrust)
+ *         → v1: php -l every .php OF releases/<id> (trusted: fapolicyd lets php open it)
  *         → v2: scratch boot FROM releases/<id> (the only dir exec.ts accepts, and the only
  *           tree the v2 user can read) on a free loopback port, health within a bound
  *         → write .bundle_sha256 LAST (a release with its record passed every check);
@@ -346,6 +347,10 @@ async function stageRelease(req: InstallRequest): Promise<void> {
   try {
     // fapolicyd: committed, the release is the store's `previous` — trusted BEFORE it ever runs.
     await requireTrust(api, releaseId, `${api} release ${releaseId}`);
+    // v1: php -l reads the COMMITTED, trusted tree. On the staging copy fapolicyd denied php the
+    // untrusted .php files (a language type) once allow_filesystem_mark = 1 checks the agent's
+    // sandbox (measured, RHEL 10.2 two-machine drill, 2026-10-09: "Could not open input file").
+    if (api === 'v1') await lintAll(releaseDir, await phpFiles(releaseDir));
     if (api === 'v2') await scratchHealth(releaseDir, releaseId);
     await writeFile(join(releaseDir, BUNDLE_SHA_FILE), `${req.sha256}\n`, { mode: 0o444 });
   } catch (error) {
@@ -356,8 +361,8 @@ async function stageRelease(req: InstallRequest): Promise<void> {
 
 // ── v1: php -l + shared links ────────────────────────────────────────────────
 
+/** The shared config links and the headers check, in staging. The lint runs after the commit (stageRelease). */
 async function prepareV1(stageDir: string, reserved: readonly string[]): Promise<void> {
-  await lintAll(stageDir, await phpFiles(stageDir));
   const shared = apiLayout('v1').shared;
   // The links ARE the reserved config_api/ files: one rule (store.ts reservedBundlePaths).
   for (const path of reserved) {

@@ -20,6 +20,7 @@ Merged since the last release; these ship with the next one.
     - The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).
     - Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.
     - Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.
+    - "The Publication API v1 on a publication host answers again: its configuration names the release that runs."
     - New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.
     - "A publication host can now be installed with one guided command, `provision init`, on Debian, Ubuntu 24.04 and 26.04, and RHEL, Rocky or Alma 9 and 10 with SELinux; the Publication API v1 runs in a FastCGI pool of its own."
     - The publication host provisioner now refuses an instance declaration that anyone other than root could change.
@@ -1049,6 +1050,14 @@ Merged since the last release; these ship with the next one.
 
     `provision init` asks how the v1 Publication API reaches MariaDB: through its unix socket or over TCP. Until now the proposed answer was always the socket, even on a host without a local MariaDB. Init now looks for a local MariaDB socket (`/run/mysqld/mysqld.sock` on Debian and Ubuntu, `/var/lib/mysql/mysql.sock` on RHEL, Rocky and Alma). It proposes that socket when one exists, and otherwise TCP to `127.0.0.1:3306`, saying whether anything listens there. The question is still yours to answer. For TCP the proposed host is `127.0.0.1`, never `localhost`, because v1's database driver reads `localhost` as "use the socket" whatever the port. See [Publication host agent](./install/publication_host.md#the-three-lists).
 
+- **"`install.sh` now asks you to trust its Bun in the instance's own fapolicyd file, and says when to remove it."**
+
+    On a first install with fapolicyd running, `install.sh` stops until the Bun it starts is trusted.
+    The line it printed wrote a shared `dedalo` trust file, which the guide elsewhere tells you to
+    remove, and kept a stale entry for every instance installed that way. It now writes
+    `/etc/fapolicyd/trust.d/dedalo_init_<instance>`, and prints the line that removes it once init
+    converged; the installed Bun is then trusted by the instance's own trust file.
+
 - **New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.** *(action needed)*
 
     The command-line installer, the browser wizard and `install.sh` now work from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
@@ -1375,6 +1384,13 @@ Merged since the last release; these ship with the next one.
     - **Corrections.** The backup set is five stores (site-builder instances included). Without `--media-path` the media root defaults to `../private/media`. The installer keeps every `.env` key it does not own, including keys added before the install. An air-gapped installation can update its ontology from local files ([updating the ontology](./management/updates/updating_ontology.md#updating-without-a-network-air-gapped-installs)). `STRUCTURE_FROM_SERVER` and `DEDALO_SOURCE_VERSION_LOCAL_DIR` are documented as having no effect. The four language keys are documented as required, with no default. The configuration pages point at `install/sample.env` in the code tree for the current list of keys: `../private/sample.env` is the installer's copy and a code update does not refresh it. The [developer quickstart](./install/dev_quickstart.md) lists the supervised start scripts and the second-instance script.
     - **Key names in `.env`.** The installer now writes every key under the name the [configuration reference](./config/config.md) uses (`DB_NAME`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `ENTITY`, `PROJECTS_DEFAULT_LANGS`, `APPLICATION_LANG`, `DATA_LANG`) instead of the older fallback spellings (`DEDALO_DATABASE_CONN`, `DEDALO_ENTITY`, …). Before, a `DB_HOST` you added by hand silently won over the answer you had just given the installer. A re-run over an existing `.env` replaces the old spelling with the new one, so no value is left under two names. The engine and the backup scripts still accept the old spellings, so an existing `.env` keeps working unchanged.
 
+- **"**Probe media** on a new copy-mode publication host no longer reports a problem before anything is published."**
+
+    On a copy host, the marker directory `.publication/pub/` is created by the agent with the first
+    published record. Until then the probe reported it as missing, so the first probe after pairing
+    said *found 1 problem(s)*. An absent marker directory is now zero published records on a copy
+    host; on a shared host it is still a problem.
+
 - **"The guided publication-host install now runs on RHEL 9 with SELinux enforcing and fapolicyd: the polkit rules directory, the SELinux tools and fapolicyd's trust are judged as EL ships them."**
 
     The first run of the EL install drill on a real RHEL 9.8 machine (SELinux enforcing) found three
@@ -1412,6 +1428,18 @@ Merged since the last release; these ship with the next one.
     install has now been tested on RHEL 10.2 with SELinux enforcing, as well as RHEL 9.8. See
     [Publication host agent](./install/publication_host.md).
 
+- **"On a publication host with fapolicyd's `allow_filesystem_mark = 1`, the agent keeps its right to reload the web server and start its services."**
+
+    With `allow_filesystem_mark = 1`, the setting the guided install recommends, fapolicyd also checks
+    the sandboxed polkit service, and polkit could no longer load the agent's rule: **Apply media
+    rules** failed with *reload_failed* and every API push with *trust_failed*, while the agent logged
+    *Interactive authentication required*. The instance's trust file now lists the agent's polkit rule,
+    and `provision apply` restarts polkit after each trust update, so a rule that failed to load
+    earlier is loaded again. The same setting stops the distribution's own polkit rules from loading,
+    for every program on the host: [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma)
+    shows how to check for it and the lines that trust those rules. A failed start of the trust service
+    now says that polkit refused it, instead of a bare *exited 1*.
+
 - **On an nginx publication host, a media map that stops nginx at its reload is now rolled back and nginx restarted, and the panel counts a map that is not loaded as a red check.**
 
     The root service that renders the shared nginx media map (`dedalo-pubhost-map`) tests every new map before nginx reloads it. On SELinux hosts nginx can still stop on the reload itself, after a test that passed. Until now the service then only reported the failure and left nginx down, with every site on that server. It now watches nginx for five seconds after the reload. If nginx is down, the service puts back the map nginx had loaded (or removes a first one), tests it, restarts nginx and checks that it runs. The push is reported as failed and the panel keeps showing the map that is actually loaded. In **Maintenance › Publication hosts** the map's state is now a check of its own, **Host media map**. It is red when the host's agent is too old for the shared map, when the host refused this work system's map, or when this work system's map is not the one nginx serves. It is green when that map is loaded or when the map is placed by hand. Before, a map that was not loaded was painted red, but it was not counted with the other checks. See [Publication host agent](./install/publication_host.md#nginx-one-media-map-for-the-host).
@@ -1422,9 +1450,54 @@ Merged since the last release; these ship with the next one.
 
     On a machine with both Apache and nginx installed, where only one of them runs, the guided install (`install.sh`, `provision init`) proposed Apache whatever ran and then found no site to attach to, so the install stopped asking for a manual step. It now proposes the web server that is running, and when you choose the other one, it looks at that server's sites before going on. Measured on Ubuntu 24.04, which keeps a stopped, disabled Apache listed. See [the publication host install guide](./install/publication_host.md).
 
+- **"When `provision apply` is refused and you answer `manual`, the guided install no longer goes on with the steps that need it."**
+
+    Answering `manual` to a refused `provision.apply` (for example a copy media root whose parent
+    directory does not exist) let init run the steps that depend on it, which then failed (the API
+    configuration with *ENOENT*, exit 4, "a change failed"). Those steps are now left out, listed under
+    *still to do* with what they wait for, and init ends with exit 3 naming them: fix the refusal, then
+    run init again.
+
+- **"Pairing from the sealed package: the guide puts the copy where the Dédalo user can read it, and an unreadable copy says why."**
+
+    The guide told you to carry the `.pairing` file to `/root/`, which the Dédalo user cannot pass
+    (`0550` on RHEL, Rocky and Alma, `0700` on Debian and Ubuntu), so the pairing command answered
+    *could not be read (EACCES)*. The guide now uses `/opt/dedalo/pairing/`, and the command's refusal
+    for an unreadable file says that every directory above it must be passable too. The guide also
+    shows the firewall rule that lets only the work host reach the agent's port, on firewalld and ufw:
+    [Publication host agent](./install/publication_host.md#pairing).
+
+- **"Upgrading a publication host's agent from a new kit no longer leaves the agent stopped on a host with fapolicyd."**
+
+    When the new agent code was the only change, the guided install restarted the agent before
+    fapolicyd trusted the new files, and the agent stopped with *EPERM reading …/src/index.ts*. On a
+    host with fapolicyd, a run that installs new agent code or a new Bun now always runs `provision
+    apply` first, which trusts them, and only then restarts the agent. `provision apply` also clears a
+    service that stopped after too many failed starts, so a run that fixed the cause brings it back
+    instead of failing with *Start request repeated too quickly*.
+
+- **"The Publication API v1 on a publication host answers again: its configuration names the release that runs."** *(action needed)*
+
+    The v1 configuration lives in `publication_api/v1/shared/` and is linked into every release, but
+    the sample it is made from found the API's files from its own location. On a publication host every
+    v1 request therefore failed while answering `200`, and the v1 error log said *Class "manager" not
+    found*. The guided install now writes the `API_ROOT` line that names the release of the script
+    that runs. **Action needed** on a publication host already serving v1: in
+    the v1 API configuration file in `publication_api/v1/shared/` (the one step 5 of the install guide
+    creates), replace the `API_ROOT` line with
+    `define('API_ROOT', dirname(get_included_files()[0], 2));`, keeping the file's owner and mode
+    (see [Create the API configuration files](./install/publication_host.md#5-create-the-api-configuration-files)).
+
 - **The Publication API v1 error log on a publication host is now rotated.**
 
     Each site's v1 API writes its errors to `/var/lib/dedalo_publication_host/<instance>/v1/log/error.log`. Until now nothing rotated that file, so it grew until the disk was full. `provision apply` now writes `/etc/logrotate.d/dedalo_<instance>_v1` for every site, in either layout. The file rotates daily and keeps 14 compressed copies. The rotation runs as the v1 user, because that account owns the directory and root never renames files in a directory another account can change. Run `provision apply` (or `provision init`) once for each site to get it. See [Publication host agent](./install/publication_host.md#lay-out-each-site-in-its-home-directory).
+
+- **"Publication API v1 releases install on a publication host with fapolicyd's `allow_filesystem_mark = 1`."**
+
+    The agent checks the syntax of every v1 file before a release goes live. It did so on a copy
+    fapolicyd did not trust yet, so with `allow_filesystem_mark = 1` every v1 release was refused
+    (*Could not open input file*). The check now reads the release in its final place, after fapolicyd
+    trusts it; a release that fails it is removed and the previous one keeps serving.
 
 - **Container installs take their nightly backups again, and the full-stack install no longer stops at "directories".**
 

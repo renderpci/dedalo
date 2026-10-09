@@ -35,6 +35,7 @@ const V1_SAMPLE = `${INIT_DIR}/kept/sample.server_config_api.php`;
 const V2_TEMPLATE = ['DEPLOYMENT_MODE=apache', 'DB_SOCKET=', 'DB_HOST=localhost', 'DB_PORT=3306', 'DB_USER=readonly_user', 'DB_PASSWORD=secret', 'DB_NAMES=dedalo_web', 'DB_POOL_MAX=10', ''].join('\n');
 const V1_TEMPLATE = [
   '<?php',
+  "\tdefine('API_ROOT', dirname(__FILE__, 2));",
   "\tdefine('API_ENTITY', 'my_organization');",
   "\t$DEFAULT_DDBB\t\t= 'web_XXXXXXXXX';",
   "\tdefine('API_WEB_USER_CODE', 'XXXXXXXXXXXXXXXXXXXXXXXXXXX');",

@@ -30,6 +30,7 @@ import {
 	mkdtempSync,
 	readdirSync,
 	readFileSync,
+	renameSync,
 	rmSync,
 	statSync,
 	symlinkSync,
@@ -1130,6 +1131,28 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		);
 		expect(shape.code, shape.out).toBe(EXIT.refused);
 		expect(shape.out).not.toContain('hunter2');
+		expect(tlsAgent.requests).toEqual([]);
+		expectNothingWritten();
+	});
+
+	test('--package in a directory the engine user cannot pass (stock /root: 0550 on RHEL, 0700 on Debian): EACCES, and the refusal says where a copy must live', async () => {
+		// Measured on RHEL 10.2 (two-machine drill, 2026-10-09): the guide's `--package
+		// /root/<name>.pairing`, chowned to the engine user as it said, answered a bare EACCES.
+		const closed = join(work, 'closed_home');
+		mkdirSync(closed, { mode: 0o700 });
+		const inside = join(closed, 'pkg.pairing');
+		renameSync(writePackage(), inside);
+		chmodSync(closed, 0o000);
+		try {
+			const r = await runCli(['add', NAME, '--package', inside, '--passphrase-stdin'], `${PASS}\n`);
+			expect(r.code, r.out).toBe(EXIT.refused);
+			expect(r.out).toContain('the pairing package could not be read (EACCES)');
+			expect(r.out).toContain('every directory above it');
+			expect(r.out).not.toContain(inside);
+			expectNoPassphrase(r.out);
+		} finally {
+			chmodSync(closed, 0o700);
+		}
 		expect(tlsAgent.requests).toEqual([]);
 		expectNothingWritten();
 	});

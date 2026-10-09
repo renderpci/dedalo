@@ -844,6 +844,39 @@ describe('case 9: an aborted prompt writes nothing for that item', () => {
   });
 });
 
+describe('case 9b: a refused provision apply answered `manual` stops what depends on it', () => {
+  // Measured on RHEL 10.2 (two-machine drill, 2026-10-09): a copy-mode media root whose parent
+  // did not exist refused apply; `manual` was the only answer, and init then ran
+  // api_config.v2_env anyway — it died on the missing state root (ENOENT), exit 4, the operator
+  // told "a change failed" instead of "do this first".
+  test('the dependents are not run, no journal entry, REFUSED naming them; the refusal reason is printed', async () => {
+    const missing = '/srv/no_such_parent/media';
+    const declaration = { ...expectedV2Only(PROFILES.el), media: { mode: 'copy' as const, root: missing } };
+    const w = makeWorld({ os: 'el', declaration });
+    w.host.entries.delete(missing);
+    w.host.entries.delete(dirname(missing));
+    const { apis: _apis, ...v2Draft } = DRAFT;
+    useOperator(w);
+    // The first run: the steps before apply run, apply is recomputed after them and refuses (by design).
+    expect(await init(w, firstRun(w, { ...v2Draft, media: { mode: 'copy', root: missing } }))).toBe(EXIT.REFUSED);
+    expect(w.err.join('\n')).toContain(`parent directory '${dirname(missing)}' of '${missing}' does not exist`);
+    // The re-run (install.sh --kit again): apply is now a blocking refusal whose only answer is `manual`.
+    w.out.length = 0;
+    w.err.length = 0;
+    sourceMode(w);
+    w.prompter = scriptedPrompter(operator(w, { 'provision.apply': 'manual' }));
+    const code = await init(w, firstRun(w, { ...v2Draft, media: { mode: 'copy', root: missing } }));
+    expect(reportOf(w, 'provision.apply').join('\n')).toContain(`parent directory '${dirname(missing)}' of '${missing}' does not exist`);
+    expect(w.err.filter(line => line.includes('[failed]'))).toEqual([]);
+    expect(code).toBe(EXIT.REFUSED);
+    expect(w.host.lstat(join(w.layout.state.apis.v2.shared, 'v2.env'))).toBeNull();
+    expect(journalText(w)).not.toContain('api_config.v2_env');
+    const refusal = w.err.at(-1) ?? '';
+    expect(refusal).toContain('api_config.v2_env');
+    expect(refusal).toContain('provision.apply');
+  });
+});
+
 describe('case 10: a typed password never leaves the file it is written to', () => {
   test('not in out, err, the journal, any argv or any child environment', async () => {
     const w = makeWorld();
@@ -1181,7 +1214,8 @@ describe('case 18: hardened hosts', () => {
     const trusted = trust.split('\n').filter(line => line.startsWith('/')).map(line => line.split(' ')[0]);
     expect(trusted).toContain(layout.bunBin);
     expect(trusted).toContain(layout.agentEntry);
-    expect(trusted.every(path => path === layout.bunBin || path.startsWith(`${layout.agentDir}/`))).toBe(true);
+    expect(trusted).toContain(layout.polkitPath);
+    expect(trusted.every(path => path === layout.bunBin || path === layout.polkitPath || path.startsWith(`${layout.agentDir}/`))).toBe(true);
     expect(w.host.body('/etc/systemd/system/dedalo-pubhost-trust-test.service')).toContain('Type=oneshot');
     expect(w.host.body(layout.polkitPath)).toContain('unit === "dedalo-pubhost-trust-test.service" && verb === "start"');
     const update = w.host.calls.indexOf('fapolicyd-cli --update');
@@ -1189,6 +1223,31 @@ describe('case 18: hardened hosts', () => {
     const start = w.host.calls.findIndex(call => call.startsWith(`start ${layout.agentUnitName}`) || call.startsWith(`restart ${layout.agentUnitName}`));
     expect(start).toBeGreaterThan(update);
     expect(w.host.calls).toContain('fapolicyd-cli --dump-db');
+  });
+
+  test('new agent code on a fapolicyd host: provision apply rewrites the trust with the NEW code before the agent restarts (measured, RHEL 10.2: "EPERM reading …/src/index.ts", the agent never came back)', async () => {
+    const w = makeWorld();
+    withFapolicyd(w, 'sha256');
+    useOperator(w);
+    expect(await init(w, firstRun(w))).toBe(EXIT.OK);
+    const layout = derive(expectedDeclaration(w.profile), { fapolicyd: true });
+    // install.sh --kit with the next release: the same draft, one agent file changed, nothing else drifts.
+    w.out.length = 0;
+    w.err.length = 0;
+    sourceMode(w);
+    w.host.seedFile(`${SOURCE}/publication/host_agent/src/index.ts`, 'export const next = 2;\n');
+    w.host.calls.length = 0;
+    useOperator(w);
+    expect(await init(w, firstRun(w))).toBe(EXIT.OK);
+    expect(listOf(w, 'code.install')).toBe(2);
+    expect(listOf(w, 'provision.apply')).toBe(2);
+    const entry = `${layout.agentDir}/src/index.ts`;
+    const line = (w.host.body('/etc/fapolicyd/trust.d/dedalo_test') ?? '').split('\n').find(row => row.startsWith(`${entry} `)) ?? '';
+    expect(line).toBe(`${entry} ${'export const next = 2;\n'.length} ${sha('export const next = 2;\n')}`);
+    const update = w.host.calls.indexOf('fapolicyd-cli --update');
+    const restart = w.host.calls.findIndex(call => call.startsWith(`restart ${layout.agentUnitName}`));
+    expect(update).toBeGreaterThan(-1);
+    expect(restart).toBeGreaterThan(update);
   });
 
   test("fapolicyd's integrity = none: an optional host-wide warning recommending sha256 — the converge still completes", async () => {

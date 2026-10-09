@@ -17,6 +17,7 @@ import {
   ApiConfigRefused,
   checkValue,
   renderV1Config,
+  V1_API_ROOT_LINE,
   renderV2Env,
   V1_KEYS,
   V2_KEYS,
@@ -133,12 +134,24 @@ describe('server_config_api.php', () => {
         "define('MYSQL_DEDALO_USERNAME_CONN', 'web_ro');",
         `define('MYSQL_DEDALO_PASSWORD_CONN', '${PASSWORD}');`,
         "define('MYSQL_DEDALO_SOCKET_CONN', '/run/mysqld/mysqld.sock');",
+        V1_API_ROOT_LINE,
       ].sort(),
     );
     expect(rendered).toContain("define('MYSQL_DEDALO_DB_PORT_CONN'\t, null);");
     expect(rendered).toContain("define('MYSQL_DEDALO_DATABASE_CONN'\t, $db_name);");
     expect(rendered).toContain('$db_name = !empty($db_name)');
     expect(V1_KEYS).toContain('$DEFAULT_DDBB');
+  });
+
+  test('API_ROOT is the release that runs, never the shared/ directory the config lives in (D8 links it into every release)', () => {
+    // Measured on RHEL 10.2 (two-machine drill, 2026-10-09): the sample's dirname(__FILE__, 2)
+    // resolved through the D8 link to <state>/publication_api/v1, every include of common/
+    // failed and v1 answered "Class manager not found" with HTTP 200.
+    expect(V1_TEMPLATE).toMatch(/^\s*define\('API_ROOT', dirname\(__FILE__, 2\)\);\s*$/m);
+    const rendered = renderV1Config(V1_TEMPLATE, v1);
+    expect(rendered).not.toContain("define('API_ROOT', dirname(__FILE__, 2));");
+    expect(rendered.split('\n').filter(line => line.includes("define('API_ROOT'"))).toEqual([`\t${V1_API_ROOT_LINE}`]);
+    expect(() => renderV1Config(V1_TEMPLATE.replace(/^.*define\('API_ROOT'.*$/m, ''), v1)).toThrow('API_ROOT: the v1 sample');
   });
 
   test('tcp transport sets the port as a number and leaves the socket null', () => {

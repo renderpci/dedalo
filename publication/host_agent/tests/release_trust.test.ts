@@ -26,7 +26,7 @@ import { readTrustRecord, setTrustSeamForTests, triggerTrust, trustUnit } from '
 import { buildStatus } from '../src/routes/status';
 import type { ApiName } from '../src/releases/ustar';
 import { resetInstance, scratchPath } from './fixtures/instance';
-import { FAST_TIMING, V2_TREE, fakeReleaseHost, makeBundle, prepareReleaseRoots, sha256Hex } from './fixtures/release_host';
+import { FAST_TIMING, V1_TREE, V2_TREE, fakeReleaseHost, makeBundle, prepareReleaseRoots, sha256Hex } from './fixtures/release_host';
 import { streamOf } from './fixtures/ustar_writer';
 
 const A = '7.0.3_aaaaaaa';
@@ -49,6 +49,7 @@ function roots(): TrustRoots {
     bunBin: join(DIR, 'bun'),
     agentDir: join(DIR, 'agent'),
     rendererBun: null,
+    rendered: [],
     apis: (['v1', 'v2'] as const).map(api => ({ api, root: apiLayout(api).root, releases: apiLayout(api).releases, current: apiLayout(api).current })),
   };
 }
@@ -158,6 +159,23 @@ describe('install: the new release is trusted BEFORE it runs', () => {
     expect(currentRelease('v2')).toBe(A);
   });
 
+  test('polkit refused the start (the unit never ran): the refusal says so, not just "exited 1"', async () => {
+    // Measured on RHEL 10.2 (two-machine drill, 2026-10-09): the agent's polkit rule was not loaded
+    // and the refusal read "exited 1 (no record: no reason recorded)", pointing nowhere.
+    await install('v2', A);
+    host.state.onTrust = async () => ({
+      code: 1,
+      stdout: '',
+      stderr: `Failed to start ${UNIT}.service: Interactive authentication required.\nSee system logs and 'systemctl status ${UNIT}.service' for details.\n`,
+    });
+    const error = await refusal(install('v2', B));
+    expect(error.extensions?.reason).toBe('trust_failed');
+    expect(error.message).toContain(`systemctl: Failed to start ${UNIT}.service: Interactive authentication required.`);
+    expect(error.message).toContain("polkit refused the agent's grant");
+    expect(error.message).not.toContain('See system logs');
+    expect(currentRelease('v2')).toBe(A);
+  });
+
   test('exit 0 without a readable record is no proof: refused', async () => {
     await install('v2', A);
     host.state.onTrust = async () => {
@@ -177,6 +195,37 @@ describe('install: the new release is trusted BEFORE it runs', () => {
     expect(result.reused).toBe(true);
     expect(host.state.trustCalls[0]?.current).toBe(C);
     expect(seen[0]).toEqual([`v2:${C}`, `v2:${A}`]);
+  });
+});
+
+describe('v1: php -l runs on the COMMITTED release, after the trust oneshot', () => {
+  // Measured on RHEL 10.2 (two-machine drill, 2026-10-09, fapolicyd allow_filesystem_mark = 1):
+  // `php -l` on the STAGING copy was denied by fapolicyd (an untrusted .php is a language file
+  // php may not open), so every v1 release was refused php_lint_failed ("Could not open input file").
+  test('no file is linted before the trust start; every lint reads releases/<id>, never staging', async () => {
+    const lintsAtTrust: number[] = [];
+    host.state.onTrust = async () => {
+      lintsAtTrust.push(host.state.lints.length);
+      return oneshot();
+    };
+    const bytes = makeBundle({ ...V1_TREE, 'json/marker.php': `<?php // ${A}` });
+    await installRelease({ api: 'v1', releaseId: A, sha256: sha256Hex(bytes), actor: 'tester', body: streamOf(bytes) });
+    expect(lintsAtTrust[0]).toBe(0);
+    expect(host.state.lints.length).toBeGreaterThan(0);
+    const committed = join(apiLayout('v1').releases, A);
+    for (const file of host.state.lints) expect(file.startsWith(`${committed}/`)).toBe(true);
+    expect(currentRelease('v1')).toBe(A);
+  });
+
+  test('a lint failure after the trust start removes the committed release; current is unchanged', async () => {
+    const good = makeBundle({ ...V1_TREE, 'json/marker.php': `<?php // ${A}` });
+    await installRelease({ api: 'v1', releaseId: A, sha256: sha256Hex(good), actor: 'tester', body: streamOf(good) });
+    const bad = makeBundle({ ...V1_TREE, 'json/broken.php': '<?php SYNTAX_ERROR' });
+    const error = await refusal(installRelease({ api: 'v1', releaseId: B, sha256: sha256Hex(bad), actor: 'tester', body: streamOf(bad) }));
+    expect(error.extensions?.reason).toBe('php_lint_failed');
+    expect(error.message).toContain('php -l rejected json/broken.php');
+    expect(currentRelease('v1')).toBe(A);
+    expect((await readdir(apiLayout('v1').releases)).sort()).toEqual([A]);
   });
 });
 

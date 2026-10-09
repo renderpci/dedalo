@@ -332,19 +332,25 @@ fapolicyd_active() {
   command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet fapolicyd 2>/dev/null
 }
 
-# fapolicyd_gate <bun> <entry> <bunfig>: under fapolicyd's default rules root may EXECUTE an
+# fapolicyd_gate <bun> <entry> <bunfig> <instance>: under fapolicyd's default rules root may EXECUTE an
 # untrusted Bun (a trusted root subject may do anything), but that Bun may not READ the TypeScript
 # it runs: libmagic types it text/x-java, a language type an untrusted subject may not open
 # (measured, RHEL 9.8, fapolicyd 1.4.5: "EPERM reading …/cli.ts"). Probed by reading the entry;
-# refused with the lines that trust that one Bun (root then reads every file it needs).
+# refused with the lines that trust that one Bun (root then reads every file it needs). The trust
+# file is the instance's own init file, `dedalo_init_<instance>`: the stage is removed once init
+# converged, so the line says to remove that file then (a shared `dedalo` file kept stale entries
+# of every instance's stage, and the guide tells to remove a `dedalo` file — measured, RHEL 10.2
+# two-machine drill, 2026-10-09). provision apply trusts the installed Bun in dedalo_<instance>.
 fapolicyd_gate() {
   fapolicyd_active || return 0
   # shellcheck disable=SC2086 # BUN_HANDOVER_FLAGS is a constant list of flags
   env -i PATH=$HANDOVER_PATH HOME=/root LC_ALL=C "$1" $BUN_HANDOVER_FLAGS --config="$3" \
     -e "require('node:fs').readFileSync('$2')" >/dev/null 2>&1 && return 0
   die "fapolicyd denies $1 the code it runs ($2): trust that Bun, then run install.sh again:
-  fapolicyd-cli --file add $1 --trust-file dedalo || fapolicyd-cli --file update $1 --trust-file dedalo
-  fapolicyd-cli --update"
+  fapolicyd-cli --file add $1 --trust-file dedalo_init_$4 || fapolicyd-cli --file update $1 --trust-file dedalo_init_$4
+  fapolicyd-cli --update
+once init converged (the stage is removed, the installed Bun is trusted by dedalo_$4):
+  rm /etc/fapolicyd/trust.d/dedalo_init_$4 && fapolicyd-cli --update"
 }
 
 # root_dir <path>: when present, a root:root real directory not writable by group/other; else made 0700.
@@ -613,7 +619,7 @@ main() {
   [ -z "$DRAFT" ] || set -- --draft "$STAGE/draft.json" "$@"
 
   cd "$STAGE" || die "cannot enter $STAGE"
-  fapolicyd_gate "$BUNX" "$ENTRY" "$STAGE/$EMPTY_BUNFIG_NAME"
+  fapolicyd_gate "$BUNX" "$ENTRY" "$STAGE/$EMPTY_BUNFIG_NAME" "$INSTANCE"
   # --config=<file> ONLY: measured on bun 1.4.2, `-c <file>` takes <file> as the ENTRY (nothing
   # of ours runs) and `-c=<file>` still loads $cwd/bunfig.toml (a preload there runs) — only the
   # long form replaces the cwd bunfig. tests/init_install_sh.test.ts pins this spelling.

@@ -461,7 +461,7 @@ describe('install.sh fapolicyd_gate', () => {
     writeFileSync(bun, `#!/bin/sh\necho "$@" > ${marker}\nexit ${readable ? 0 : 1}\n`);
     chmodSync(bun, 0o755);
     rmSync(marker, { force: true });
-    const run = spawnSync('sh', ['-c', 'script=$0; set -- --lib "$@"; . "$script"; shift; fapolicyd_gate "$@"', INSTALL_SH, bun, '/opt/x/src/provision/cli.ts', '/opt/x/empty.bunfig.toml'], {
+    const run = spawnSync('sh', ['-c', 'script=$0; set -- --lib "$@"; . "$script"; shift; fapolicyd_gate "$@"', INSTALL_SH, bun, '/opt/x/src/provision/cli.ts', '/opt/x/empty.bunfig.toml', 'museum_org'], {
       encoding: 'utf8',
       env: { PATH: `${shims}:/usr/bin:/bin:/usr/sbin:/sbin`, LC_ALL: 'C' },
     });
@@ -482,11 +482,13 @@ describe('install.sh fapolicyd_gate', () => {
     const got = gate(true, false);
     expect(got.code).toBe(3);
     expect(got.err).toContain(`fapolicyd denies ${bun} the code it runs`);
-    expect(got.err).toContain(`fapolicyd-cli --file add ${bun} --trust-file dedalo || fapolicyd-cli --file update ${bun} --trust-file dedalo`);
+    // the instance's own init trust file (never a shared `dedalo` one), and when to remove it
+    expect(got.err).toContain(`fapolicyd-cli --file add ${bun} --trust-file dedalo_init_museum_org || fapolicyd-cli --file update ${bun} --trust-file dedalo_init_museum_org`);
     expect(got.err).toContain('fapolicyd-cli --update');
+    expect(got.err).toContain('rm /etc/fapolicyd/trust.d/dedalo_init_museum_org && fapolicyd-cli --update');
   });
 
   test('main calls it right before the hand-over', () => {
-    expect(TEXT).toMatch(/cd "\$STAGE" \|\| die "cannot enter \$STAGE"\n {2}fapolicyd_gate "\$BUNX" "\$ENTRY" "\$STAGE\/\$EMPTY_BUNFIG_NAME"\n/);
+    expect(TEXT).toMatch(/cd "\$STAGE" \|\| die "cannot enter \$STAGE"\n {2}fapolicyd_gate "\$BUNX" "\$ENTRY" "\$STAGE\/\$EMPTY_BUNFIG_NAME" "\$INSTANCE"\n/);
   });
 });

@@ -542,8 +542,21 @@ export function provisionExec(spawner: SyncSpawner = provisionSpawner, probe: Ex
     },
     daemonReload: () => run(['systemctl', 'daemon-reload'], UNIT_JOB_TIMEOUT_MS),
     enableUnit: (unit: string) => run(['systemctl', 'enable', provisionUnit(unit)]),
-    startUnit: (unit: string) => run(['systemctl', 'start', provisionUnit(unit)], UNIT_JOB_TIMEOUT_MS),
-    restartUnit: (unit: string) => run(['systemctl', 'restart', provisionUnit(unit)], UNIT_JOB_TIMEOUT_MS),
+    // start/restart clear a FAILED unit's start-limit first: a unit that crash-looped into
+    // "start-limit-hit" refuses every start until reset-failed ("Start request repeated too quickly"),
+    // so the run that FIXED the cause could not bring it back (measured, RHEL 10.2 two-machine drill,
+    // 2026-10-09: the agent's EPERM loop, then apply's start exited 1). reset-failed on a healthy unit
+    // changes nothing; its own result is not the step's.
+    startUnit: (unit: string) => {
+      const name = provisionUnit(unit);
+      run(['systemctl', 'reset-failed', name]);
+      return run(['systemctl', 'start', name], UNIT_JOB_TIMEOUT_MS);
+    },
+    restartUnit: (unit: string) => {
+      const name = provisionUnit(unit);
+      run(['systemctl', 'reset-failed', name]);
+      return run(['systemctl', 'restart', name], UNIT_JOB_TIMEOUT_MS);
+    },
     reloadUnit: (unit: string) => run(['systemctl', 'reload', provisionUnit(unit)], UNIT_JOB_TIMEOUT_MS),
     webConfigtest(bin: string, server: 'apache' | 'nginx'): ExecResult {
       if (!isConfigtestBinary(server, bin)) {
