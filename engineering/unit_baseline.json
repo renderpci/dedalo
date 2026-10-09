@@ -581,6 +581,11 @@
 			"skipped": 0,
 			"assertions": 6
 		},
+		"test/unit/client_publish_native.test.ts": {
+			"tests": 10,
+			"skipped": 0,
+			"assertions": 48
+		},
 		"test/unit/client_read_stream_release_tripwire.test.ts": {
 			"tests": 7,
 			"skipped": 0,
@@ -1961,6 +1966,41 @@
 			"skipped": 0,
 			"assertions": 7
 		},
+		"test/unit/image_registries_docs_tripwire.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 26
+		},
+		"test/unit/image_registries_tripwire.test.ts": {
+			"tests": 49,
+			"skipped": 0,
+			"assertions": 110
+		},
+		"test/unit/image_release_native.test.ts": {
+			"tests": 22,
+			"skipped": 0,
+			"assertions": 110
+		},
+		"test/unit/image_source_tripwire.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 135
+		},
+		"test/unit/image_update_channel_native.test.ts": {
+			"tests": 47,
+			"skipped": 0,
+			"assertions": 135
+		},
+		"test/unit/image_update_script_native.test.ts": {
+			"tests": 29,
+			"skipped": 0,
+			"assertions": 321
+		},
+		"test/unit/image_updater_host_native.test.ts": {
+			"tests": 30,
+			"skipped": 0,
+			"assertions": 173
+		},
 		"test/unit/import_conform.test.ts": {
 			"tests": 45,
 			"skipped": 0,
@@ -2101,6 +2141,21 @@
 			"skipped": 0,
 			"assertions": 23
 		},
+		"test/unit/install_ontology_archive.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 14
+		},
+		"test/unit/install_ontology_choice.test.ts": {
+			"tests": 15,
+			"skipped": 0,
+			"assertions": 65
+		},
+		"test/unit/install_ontology_door_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 94
+		},
 		"test/unit/install_persist_config.test.ts": {
 			"tests": 17,
 			"skipped": 0,
@@ -2125,6 +2180,11 @@
 			"tests": 9,
 			"skipped": 0,
 			"assertions": 17
+		},
+		"test/unit/install_sh_image_source.test.ts": {
+			"tests": 28,
+			"skipped": 0,
+			"assertions": 248
 		},
 		"test/unit/install_sh_portability.test.ts": {
 			"tests": 8,
@@ -2841,6 +2901,11 @@
 			"skipped": 0,
 			"assertions": 5
 		},
+		"test/unit/ontology_dependencies_native.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 18
+		},
 		"test/unit/ontology_ingest.test.ts": {
 			"tests": 20,
 			"skipped": 0,
@@ -2850,6 +2915,11 @@
 			"tests": 4,
 			"skipped": 0,
 			"assertions": 16
+		},
+		"test/unit/ontology_manifest_native.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 39
 		},
 		"test/unit/ontology_overwrite_native.test.ts": {
 			"tests": 14,
@@ -2875,6 +2945,11 @@
 			"tests": 15,
 			"skipped": 0,
 			"assertions": 82
+		},
+		"test/unit/ontology_references_native.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 63
 		},
 		"test/unit/ontology_root_node_typology_native.test.ts": {
 			"tests": 1,
@@ -3130,6 +3205,11 @@
 			"tests": 5,
 			"skipped": 0,
 			"assertions": 26
+		},
+		"test/unit/product_image_tripwire.test.ts": {
+			"tests": 18,
+			"skipped": 0,
+			"assertions": 54
 		},
 		"test/unit/production_entrypoint_coverage_tripwire.test.ts": {
 			"tests": 5,
@@ -5300,6 +5380,11 @@
 			"tests": 44,
 			"skipped": 0,
 			"assertions": 163
+		},
+		"test/unit/vendored_ontology_closure_tripwire.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 12
 		},
 		"test/unit/verify_selector_selftest.test.ts": {
 			"tests": 7,
