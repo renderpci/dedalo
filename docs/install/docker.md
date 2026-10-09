@@ -433,7 +433,7 @@ docker compose run --rm \
     --db-password "$POSTGRES_PASSWORD" --db-host postgres \
     --entity myentity --entity-label 'My Institution' \
     --locale es-ES --timezone Europe/Madrid \
-    --langs lg-spa,lg-eng --app-lang lg-spa --data-lang lg-spa \
+    --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng \
     --media-path /srv/dedalo/media \
     --socket /run/dedalo/dedalo_ts.sock \
     --media-access-mode publication

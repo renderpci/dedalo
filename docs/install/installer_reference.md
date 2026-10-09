@@ -59,7 +59,7 @@ bun run scripts/install.ts \
   --db-name dedalo_main --db-user dedalo_user --entity myentity \
   [--db-password '…'] [--db-host localhost] [--db-port 5432] [--db-socket /var/run/postgresql] \
   [--entity-label 'My Institution'] [--locale es-ES] [--timezone Europe/Madrid] \
-  [--langs lg-spa,lg-eng] [--app-lang lg-spa] [--data-lang lg-spa] \
+  [--langs lg-eng,lg-spa] [--app-lang lg-eng] [--data-lang lg-eng] \
   [--hierarchies default|none|es,fr] \
   [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] [--media-access-mode publication] \
   [--diffusion --mysql-name web_dedalo --mysql-user d --mysql-password '…'] \
