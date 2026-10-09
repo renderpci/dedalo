@@ -707,10 +707,10 @@ describe('observeHostWide — Debian 12 nginx, the guide\'s hand map', () => {
     expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(both)).web).toMatchObject({ candidates: ['apache', 'nginx'], server: null, unit: null });
   });
 
-  test('both installed, only nginx running (Ubuntu 24.04 keeps a stopped, disabled apache2 loaded — measured): nginx is observed', () => {
+  test.each(['ubuntu2404_drill_vm', 'ubuntu2604_drill_vm'])('both installed, only nginx running (%s keeps a stopped, disabled apache2 loaded — measured): nginx is observed', vm => {
     const both = debianNginxHost();
     put(both, '/usr/sbin/apache2ctl', null, FILE(0, 0o755));
-    both.handlers.listCandidateUnits = () => r(fixture('captured/ubuntu2404_drill_vm/list_units_debian.txt'));
+    both.handlers.listCandidateUnits = () => r(fixture(`captured/${vm}/list_units_debian.txt`));
     const web = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(both)).web;
     expect(web).toMatchObject({ candidates: ['apache', 'nginx'], server: 'nginx', unit: 'nginx' });
     expect(web.configtestBin).toBe('/usr/sbin/nginx');

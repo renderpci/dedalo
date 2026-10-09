@@ -1,0 +1,3 @@
+root:root 755 /etc/polkit-1
+root:polkitd 750 /etc/polkit-1/rules.d
+root:root 755 /usr/share/polkit-1/rules.d

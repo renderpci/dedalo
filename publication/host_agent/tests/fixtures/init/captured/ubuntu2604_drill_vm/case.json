@@ -1,0 +1,5 @@
+{
+  "typed": false,
+  "captured": "the in-place Debian init drill VM, Ubuntu 26.04.1 LTS aarch64 (kernel 7.0, systemd 259 PID 1, polkit 127, sudo-rs 0.2.13 as /usr/bin/sudo, AppArmor enabled), 2026-10-09, after a green drill (scripts/publication_host_init_drill.ts --family debian --in-place --capture): real unit states, the packages' own unit sandboxes, what AppArmor confines",
+  "limits": "captured after the nginx legs: nginx serving, apache2 stopped and disabled yet still listed loaded; the package outputs (-S, -M, -T, -tt, -v) and sudoers/realpath are captured/ubuntu2604's and captured/ubuntu2604_sudo_rs's (containers), which this VM's agree with; installing apache2, nginx and php8.5-fpm added no AppArmor profile (/etc/apparmor.d unchanged)"
+}

@@ -1474,6 +1474,76 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			);
 		},
 	},
+	{
+		name: 'agent-root-grant',
+		family: 'both',
+		required: true,
+		what: "the agent's ONE root grant through the host's real sudo (sudo-rs where /usr/bin/sudo is it): `visudo -c` accepts the rendered rules; as each agent user `sudo -n <WEB_CONFIGTEST_BIN> -t` runs and any other argv is refused; a rules.apply over the running nginx instance's socket runs that configtest FROM THE AGENT'S OWN UNIT (its sandbox) and the polkit reload, and the host's auth log names the agent's configtest",
+		async run(ctx) {
+			const flavor = (await ctx.runner.sh('readlink -f /usr/bin/sudo')).out.trim();
+			ctx.facts.sudo_realpath = flavor;
+			await must(ctx, 'visudo -c', 'visudo -c over the whole policy, the rendered grants included');
+			for (const instance of [INSTANCE, NGINX_INSTANCE]) {
+				const env = await must(
+					ctx,
+					`cat /etc/dedalo_publication_host/${instance}/agent.env`,
+					`${instance}: agent.env`,
+				);
+				const bin = env.match(/^WEB_CONFIGTEST_BIN="?([^"\n]+)"?$/m)?.[1];
+				check(bin !== undefined, `${instance}: agent.env names no WEB_CONFIGTEST_BIN`);
+				const user = `${instance}_agent`;
+				const allowed = await ctx.runner.sh(
+					`runuser -u ${user} -- /usr/bin/sudo -n ${q(bin as string)} -t`,
+				);
+				check(
+					allowed.code === 0,
+					`${instance}: as ${user}, sudo -n ${bin} -t exited ${allowed.code} (${flavor}):\n${allowed.out}${allowed.err}`,
+				);
+				// A command WITH arguments matches only those arguments: another argv is no grant.
+				for (const other of [`${bin} -T`, `${bin}`, '/usr/bin/id']) {
+					const refused = await ctx.runner.sh(`runuser -u ${user} -- /usr/bin/sudo -n ${other}`);
+					check(
+						refused.code !== 0,
+						`${instance}: as ${user}, sudo -n ${other} was ALLOWED (${flavor})`,
+					);
+				}
+			}
+			// THE AGENT'S OWN PATH (src/exec.ts webConfigtest): its unit's sandbox decides whether a
+			// setuid sudo may run at all. A stamped comment-only include passes the directive allowlist
+			// with no media root; the drill's own push, never an engine's.
+			const since = (await must(ctx, "date '+%Y-%m-%d %H:%M:%S'", 'date')).trim();
+			const hash = createHash('sha256').update('init_drill agent-root-grant').digest('hex');
+			const body = JSON.stringify({ server: 'nginx', hash, text: `# config-hash: ${hash}\n` });
+			const done = await ctx.runner.sh(
+				`curl -s -o /tmp/dd_rules -w '%{http_code}' --unix-socket /run/dedalo_publication_host/${NGINX_INSTANCE}/agent.sock ` +
+					`-H "Authorization: Bearer $(cat /etc/dedalo_publication_host/${NGINX_INSTANCE}/credentials/SERVICE_TOKEN)" ` +
+					`-H 'Content-Type: application/json' -H 'X-Dedalo-Actor: init_drill' --data-binary @- http://localhost/publication/host_agent/v1/rules/apply; echo; cat /tmp/dd_rules; rm -f /tmp/dd_rules`,
+				{ stdin: body },
+			);
+			const [status = '0', ...rest] = done.out.split('\n');
+			check(status.trim() === '200', `rules.apply answered ${status}: ${rest.join('\n')}`);
+			const answer = JSON.parse(rest.join('\n')) as { hash?: string; reloaded?: boolean };
+			check(
+				answer.hash === hash && answer.reloaded === true,
+				`rules.apply answer ${rest.join('\n')}`,
+			);
+			const auth = await must(
+				ctx,
+				`journalctl --no-pager --since ${q(since)} 2>&1; cat /var/log/secure /var/log/auth.log 2>/dev/null; true`,
+				'the auth log since the push',
+			);
+			check(
+				// The agent's unit runs in its home's host_agent/ (a runuser above runs elsewhere).
+				new RegExp(
+					`${NGINX_INSTANCE}_agent : .*PWD=/home/${NGINX_DOMAIN.replace(/\./g, '\\.')}/host_agent ; .*COMMAND=/usr/sbin/nginx -t`,
+				).test(auth),
+				`no sudo line names ${NGINX_INSTANCE}_agent running /usr/sbin/nginx -t since ${since}: the configtest did not go through sudo`,
+			);
+			console.log(
+				`${TAG}      sudo: ${flavor}; the agent's configtest ran through it from its unit`,
+			);
+		},
+	},
 	// ── EL only ──
 	{
 		name: 'selinux-labels',

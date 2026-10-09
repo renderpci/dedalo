@@ -228,4 +228,18 @@ describe('the drill around the record: in place on Debian, and what a capture na
 		expect(names(['--family', 'debian'])).not.toContain('no-apparmor-denial');
 		expect(names(['--family', 'el', '--in-place'])).not.toContain('no-apparmor-denial');
 	});
+
+	test("the agent's root grant runs in every world, required: no drill passes without the agent's own sudo door", () => {
+		const legs = (argv: string[]) =>
+			legsFor(parseDrillArgs(argv) as Exclude<ReturnType<typeof parseDrillArgs>, { error: string }>);
+		for (const argv of [['--family', 'debian'], ['--family', 'debian', '--in-place'], ['--family', 'el', '--in-place']]) {
+			const all = legs(argv);
+			const grant = all.find((l) => l.name === 'agent-root-grant');
+			expect(grant?.required).toBe(true);
+			// After the nginx legs: the push targets the running nginx instance.
+			expect(all.findIndex((l) => l.name === 'agent-root-grant')).toBeGreaterThan(
+				all.findIndex((l) => l.name === 'nginx-host-map'),
+			);
+		}
+	});
 });

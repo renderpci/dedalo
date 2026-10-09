@@ -1,0 +1,15 @@
+LoadState=loaded
+ActiveState=active
+FragmentPath=/usr/lib/systemd/system/nginx.service
+DropInPaths=
+UnitFileState=enabled
+ExecStart={ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Environment=
+WorkingDirectory=
+User=
+Group=
+ReadOnlyPaths=
+InaccessiblePaths=
+ProtectHome=no
+ProtectSystem=no
+TemporaryFileSystem=

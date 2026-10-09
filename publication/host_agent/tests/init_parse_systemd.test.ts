@@ -79,6 +79,12 @@ describe('sandboxHides (host.unit_sandbox, S6)', () => {
     expect(sandboxHides(apache, '/home/museum.org/logs', true)).toEqual(['ProtectHome=read-only makes /home/museum.org/logs read-only']);
     const fpm = unitSandbox(parseUnitShow(fixture('captured/ubuntu2604/systemctl_show_php8.5-fpm.txt')));
     expect(fpm).toEqual({ protectHome: 'no', protectSystem: 'no', inaccessible: [], readOnly: [], tmpfs: [] });
+    // The drill VM (systemd 259 PID 1 on a real kernel, the packages' own units) measured the same sandboxes.
+    const vm = (name: string) => unitSandbox(parseUnitShow(fixture(`captured/ubuntu2604_drill_vm/${name}`)));
+    expect(vm('show_web_default.txt')).toEqual(apache);
+    expect(vm('show_fpm.txt')).toEqual(fpm);
+    expect(vm('show_nginx.txt')).toEqual(fpm);
+    expect(vm('show_polkit.txt')).toMatchObject({ protectHome: 'yes', protectSystem: 'strict' });
   });
 
   test('ProtectHome=yes|tmpfs hides a home path, not a /srv one', () => {

@@ -127,7 +127,8 @@ describe('one run', () => {
       join(R, 'state', 'publication_api', 'v2', 'releases', '2.0.1_1111111', 'src', 'index.ts'),
       // the instance's polkit rule, by its rendered bytes (fapolicyd_trust.ts: polkitd reads it as a language file)
       '/etc/polkit-1/rules.d/60-dedalo-publication-host-test.rules',
-    ]);
+      // The file is in byte order of the path: where the checkout lives decides where /etc sorts.
+    ].sort());
     expect(w.calls).toEqual(['lock', 'update', 'dump', 'unlock']);
     expect(record()).toMatchObject({ outcome: 'applied', entries: 4, releases: ['v2:2.0.1_1111111'], reasons: [] });
     // Atomic: no temp is left beside it.
