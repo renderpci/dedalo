@@ -114,6 +114,111 @@ async function getSimpleSchemaOfSections(): Promise<Record<string, string[]>> {
 	return schema;
 }
 
+/** What importOntologyPackage did; `fatal` names the step that must be rolled back. */
+export interface OntologyPackageImport {
+	messages: string[];
+	errors: string[];
+	/** null = imported; 'import' = the COPY failed; 'normalize' = ONT-TLD failed. */
+	fatal: 'import' | 'normalize' | null;
+}
+
+/**
+ * ONE staged ontology package into matrix_ontology — the per-file body of the
+ * update (and of the install seed compiler, install/seed_build.ts, which applies
+ * the vendored release packages through this same door so a fresh install's
+ * ontology is exactly what an updated client holds). PHP order: registry record
+ * + dd_ontology root node BEFORE the row import (they are not covered by the
+ * update's snapshots — the caller reports them as provisioned). Never rolls back
+ * itself: a non-null `fatal` is the caller's cue to restore.
+ */
+export async function importOntologyPackage(
+	file: StagedFile,
+	userId: number,
+	conn: DbConnDescriptor,
+	options: {
+		provision?: boolean;
+		/** Called once the registry record + root node exist (before the row import). */
+		onProvisioned?: () => void;
+	} = {},
+): Promise<OntologyPackageImport> {
+	const outcome: OntologyPackageImport = { messages: [], errors: [], fatal: null };
+	// `provision: false` — the rows only: the registry record and root node need
+	// an ontology that can resolve its own sections (ontology35's matrix table is
+	// read from dd_ontology), which an EMPTY database does not have yet. The seed
+	// compiler bootstraps with a rows-only pass + derive, then runs this door in
+	// full on top, exactly as a client update does.
+	if (options.provision !== false) {
+		// absent typology (null) → both read the registry / default themselves
+		const fileItem = {
+			tld: file.tld,
+			section_tipo: file.sectionTipo,
+			typology_id: file.typologyId,
+			name_data: file.nameData,
+		} as Parameters<typeof addMainSection>[0];
+		await addMainSection(fileItem, userId);
+		await createDdOntologyRootNode(fileItem, userId);
+		options.onProvisioned?.();
+	}
+	const imported = await importFromCopyFile({
+		sectionTipo: file.sectionTipo,
+		filePath: file.stagedPath,
+		matrixTable: 'matrix_ontology',
+		conn,
+	});
+	outcome.messages.push(imported.msg);
+	if (imported.ok !== true) {
+		outcome.errors.push(...imported.errors);
+		outcome.fatal = 'import';
+		return outcome;
+	}
+	// ONT-TLD: the staged file carries whatever ontology7 it was EXPORTED
+	// with, while sectionTipo comes from the target tld — a tld renamed
+	// upstream would otherwise land a whole ontology in the OLD namespace.
+	// See data_io_import.normalizeOntologyTld. (The restore path is
+	// deliberately NOT normalized: a rollback restores, it does not fix.)
+	const rewritten = await normalizeOntologyTld(file.sectionTipo, conn);
+	if (rewritten === null) {
+		// FATAL and ROLLED BACK by the caller, exactly like a failed import.
+		// Continuing would run the dd_ontology re-derive over rows that still
+		// declare the export's tld — projecting the whole ontology into the OLD
+		// namespace and finishing `ok: true`.
+		outcome.errors.push(`ontology7 normalization failed for ${file.sectionTipo}`);
+		outcome.fatal = 'normalize';
+		return outcome;
+	}
+	if (rewritten > 0) {
+		outcome.messages.push(`${file.sectionTipo}: rewrote ontology7 on ${rewritten} row(s)`);
+	}
+	if (!(await consolidateSectionCounter(file.sectionTipo, 'matrix_ontology', conn))) {
+		outcome.errors.push(`counter consolidation failed for ${file.sectionTipo}`);
+	}
+	return outcome;
+}
+
+/**
+ * The dd_ontology re-derive of every imported package that projects nodes
+ * (not matrix_dd, not override records). wholeSection: this IS the deliberate
+ * full-TLD re-derive after an ontology-file import — not a request-driven batch
+ * (WC-043).
+ */
+export async function deriveOntologyPackages(
+	staged: readonly StagedFile[],
+	userId: number,
+): Promise<{ messages: string[]; errors: string[] }> {
+	const result = { messages: [] as string[], errors: [] as string[] };
+	for (const file of staged) {
+		if (!derivesNodes(file)) continue;
+		const rebuilt = await setRecordsInDdOntology({
+			sectionTipo: file.sectionTipo,
+			wholeSection: true,
+			userId,
+		});
+		result.messages.push(rebuilt.msg);
+		if (rebuilt.ok !== true) result.errors.push(...rebuilt.errors);
+	}
+	return result;
+}
+
 /** Client options (PHP $options): the selected server + the built file list. */
 export const updateOntologyOptionsSchema = z.object({
 	server: z.object({ name: z.string(), url: z.string().url(), code: z.string() }),
@@ -584,36 +689,37 @@ async function failImport(
 	return false;
 }
 
-/** Phase C for one file; false when it failed (and the replaced slices were restored). */
+/**
+ * Phase C for one file; false when it failed (and the replaced slices were
+ * restored). An ontology package goes through importOntologyPackage — the ONE
+ * per-package body (registry record + root node, scoped DELETE+COPY, ONT-TLD
+ * normalization, counter consolidation) the seed compiler applies too.
+ */
 async function importStagedFile(
 	file: StagedFile,
 	ctx: StagedImportContext,
 	result: StagedImportResult,
 ): Promise<boolean> {
 	if (file.tld === 'matrix_dd') return importStagedPrivateLists(file, ctx, result);
-	// PHP order: registry record + root node BEFORE the row import.
-	// absent typology (null) → both read the registry / default themselves
-	const fileItem = {
-		tld: file.tld,
-		section_tipo: file.sectionTipo,
-		typology_id: file.typologyId,
-		name_data: file.nameData,
-	} as Parameters<typeof addMainSection>[0];
-	await addMainSection(fileItem, ctx.userId);
-	await createDdOntologyRootNode(fileItem, ctx.userId);
-	result.provisioned.push(file.tld);
-	const imported = await importFromCopyFile({
-		sectionTipo: file.sectionTipo,
-		filePath: file.stagedPath,
-		matrixTable: 'matrix_ontology',
-		conn: ctx.conn,
+	// D7: a TLD is `provisioned` the moment its registry record + root node
+	// exist — BEFORE the row import, so a failure in the import still names it.
+	const outcome = await importOntologyPackage(file, ctx.userId, ctx.conn, {
+		onProvisioned: () => result.provisioned.push(file.tld),
 	});
-	result.messages.push(imported.msg);
-	if (imported.ok !== true) {
-		result.errors.push(...imported.errors);
-		return failImport(file, ctx, result, null);
+	result.messages.push(...outcome.messages);
+	result.errors.push(...outcome.errors);
+	if (outcome.fatal !== null) {
+		return failImport(
+			file,
+			ctx,
+			result,
+			outcome.fatal === 'normalize'
+				? 'Error. ONT-TLD normalization failed — previous state restored'
+				: null,
+		);
 	}
-	return finishStagedOntology(file, ctx, result);
+	result.mutated.push(file);
+	return true;
 }
 
 /** matrix_dd: whole-table private lists. */
@@ -632,42 +738,6 @@ async function importStagedPrivateLists(
 	if (imported.ok !== true) {
 		result.errors.push(...imported.errors);
 		return failImport(file, ctx, result, null);
-	}
-	result.mutated.push(file);
-	return true;
-}
-
-/** ONT-TLD normalization + counter consolidation of an imported ontology slice. */
-async function finishStagedOntology(
-	file: StagedFile,
-	ctx: StagedImportContext,
-	result: StagedImportResult,
-): Promise<boolean> {
-	// ONT-TLD: the staged file carries whatever ontology7 it was EXPORTED
-	// with, while sectionTipo comes from the target tld — a tld renamed
-	// upstream would otherwise land a whole ontology in the OLD namespace.
-	// See data_io_import.normalizeOntologyTld. (The restore path below is
-	// deliberately NOT normalized: a rollback restores, it does not fix.)
-	const rewritten = await normalizeOntologyTld(file.sectionTipo, ctx.conn);
-	if (rewritten === null) {
-		// FATAL and ROLLED BACK, exactly like a failed import above. Continuing
-		// would run the dd_ontology re-derive below over rows that still
-		// declare the export's tld — projecting the whole ontology into the OLD
-		// namespace and finishing `ok: true`. A warning here was the worst
-		// of both: the damage done, and the panel reporting success.
-		result.errors.push(`ontology7 normalization failed for ${file.sectionTipo}`);
-		return failImport(
-			file,
-			ctx,
-			result,
-			'Error. ONT-TLD normalization failed — previous state restored',
-		);
-	}
-	if (rewritten > 0) {
-		result.messages.push(`${file.sectionTipo}: rewrote ontology7 on ${rewritten} row(s)`);
-	}
-	if (!(await consolidateSectionCounter(file.sectionTipo, 'matrix_ontology', ctx.conn))) {
-		result.errors.push(`counter consolidation failed for ${file.sectionTipo}`);
 	}
 	result.mutated.push(file);
 	return true;
@@ -704,24 +774,15 @@ function dependencyNote(tld: string, missing: string[] | null): string | null {
 	return `${tld}: declared dependencies without a registry record here were not recorded: ${missing.join(', ')}`;
 }
 
-/** dd_ontology flat-index rebuild per imported TLD, in staged order (matrix_dd and overrides skipped). */
+/** dd_ontology flat-index rebuild per imported TLD, in staged order (deriveOntologyPackages). */
 async function deriveStagedNodes(
 	staged: readonly StagedFile[],
 	userId: number,
 	result: StagedImportResult,
 ): Promise<void> {
-	for (const file of staged) {
-		if (!derivesNodes(file)) continue;
-		// wholeSection: this IS the deliberate full-TLD re-derive after an
-		// ontology-file import — not a request-driven batch (WC-043).
-		const rebuilt = await setRecordsInDdOntology({
-			sectionTipo: file.sectionTipo,
-			wholeSection: true,
-			userId,
-		});
-		result.messages.push(rebuilt.msg);
-		if (rebuilt.ok !== true) result.errors.push(...rebuilt.errors);
-	}
+	const derived = await deriveOntologyPackages(staged, userId);
+	result.messages.push(...derived.messages);
+	result.errors.push(...derived.errors);
 }
 
 /**

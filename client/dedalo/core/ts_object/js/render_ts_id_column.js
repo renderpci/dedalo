@@ -206,29 +206,27 @@ export const render_id_column = function(self) {
 								return false
 							}
 
-						// Update self children data
-							self.children_data = children_data
+						// update children state
+						// Syncs children_data AND has_descriptor_children (instance + self.data),
+						// re-renders the children and refreshes the term line so the expand
+						// arrow appears on a former leaf node. Setting children_data alone left
+						// the arrow hidden (and a later content refresh rebuilt it from stale data).
+							const updated = await self.update_children_state({
+								children_data	: children_data,
+								render			: true,
+								refresh_content	: true,
+								show_children	: true
+							})
 
-						// refresh children container
-						// clean_children_container:true wipes the existing child nodes before
-						// re-rendering so stale rows do not persist alongside new ones.
-							self.render_children({
-								clean_children_container : true,
-								children_data : children_data
-							})
-							.then(function(result){
-								// result could be an array of children_container nodes or bool false
-								// Open editor in new window
-								// Only open the record editor when render_children succeeded;
-								// if it returned false the DOM is in an unknown state.
-								if (result) {
-									// edit call
-									self.open_record(
-										new_section_id, // section_id
-										section_tipo // section_tipo
-									);
-								}
-							})
+						// Open editor in new window
+						// Only open the record editor when the update succeeded;
+						// otherwise the DOM is in an unknown state.
+							if (updated) {
+								self.open_record(
+									new_section_id, // section_id
+									section_tipo // section_tipo
+								);
+							}
 					}
 					a11y.make_activable(link_add, {
 						on_activate	: add_click_handler,

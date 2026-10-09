@@ -76,6 +76,8 @@ function insertSites(): InsertSite[] {
  * reason a reader can check against the code.
  */
 const NOT_AN_ENGINE_STORE: Readonly<Record<string, string>> = {
+	'src/core/install/seed_build.ts':
+		'The install seed COMPILER: its INSERTs (the scratch marker, the canonical records, the data-version row) land only in a scratch database it CREATED and MARKED (`dedalo_seed_build_<pid>`), which is dumped and dropped — never an installation store.',
 	'src/diffusion/targets/mariadb/sql_generator.ts':
 		'GENERATES SQL text for a foreign public MariaDB tier; it inserts into nothing here. The tier is derived and rebuildable by re-publishing (DIFFUSION_SPEC).',
 	'src/core/test_data/test_database_marker.ts':

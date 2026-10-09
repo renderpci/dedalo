@@ -618,7 +618,8 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'update_ontology.export_to_translate': 'engine_denied: runs no statement',
 	'update_ontology.rebuild_lang_files': 'engine_denied: runs no statement',
 	'register_tools.register_tools': 'one dd1324 row per tool on disk (tools-sized, not data-sized)',
-	'build_database_version.build_install_version': 'engine_denied: runs no statement',
+	'build_database_version.build_install_version':
+		'spawns pg_dump/psql child processes against a scratch database it creates; the pool runs no statement',
 	'build_database_version.build_matrix_hierarchy_main_sql': 'engine_denied: runs no statement',
 	'update_data_version.update_data_version':
 		'the engine enters withUnboundedStatements itself (a detached job inherits no door scope — gated above)',

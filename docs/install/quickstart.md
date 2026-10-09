@@ -31,7 +31,7 @@ Then get the code, and stay in that directory:
 
 ```shell
 git clone <your-dedalo-remote> dedalo
-cd dedalo/master_dedalo
+cd dedalo
 ```
 
 Two things about the machine itself:
@@ -87,7 +87,7 @@ Then it asks for:
 | Where the Dédalo image comes from | a published image from one of Dédalo's registries, a registry of your own, or a local build from this checkout | the first official registry that publishes this version; a local build when none does (slower: it downloads the toolchain and builds) |
 | Short code for your institution | an internal identifier, letters and digits | `dedalo` |
 | Full name | shown on the login screen | your institution's name |
-| Working languages | Dédalo language codes, comma-separated, or `default` | `default` — `lg-eng,lg-spa`, the same pair the browser wizard pre-ticks; the other languages are optional |
+| Languages (interface and data) | Dédalo language codes, comma-separated, or `default` | `default` — `lg-eng,lg-spa`, the same pair the browser wizard pre-ticks; the other languages are optional |
 | Optional thesauri to install now | controlled vocabularies to load: codes, `default` or `none` | `default` — today Spain (`es`); you can add others later |
 | Locale, time zone | the time zone stamps every record | your own |
 | Use the official update server | where ontology updates and release information come from (`v7.master.dedalo.dev`) | `Y` (the default). Answer `n` for an air-gapped install: the installer writes `ONTOLOGY_SERVERS=[]` and `CODE_SERVERS=[]` to `/private/.env`, and no updates are offered until you replace those `[]` values with a server list and restart the server |

@@ -86,6 +86,7 @@ DATA_NOLAN="lg-nolan"
 		scope: 'operator',
 		default: {
 			'lg-eng': 'English',
+			'lg-spa': 'Castellano',
 		},
 		defaultDoc:
 			'**required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback',
@@ -252,7 +253,7 @@ DEDALO_STRUCTURE_LANG="lg-spa"
 		installSentinel: ['lg-eng'],
 		type: 'string_list',
 		scope: 'operator',
-		default: ['lg-eng'],
+		default: ['lg-eng', 'lg-spa'],
 		defaultDoc:
 			'**required, no default** — the installer writes it (working languages: default `lg-eng`, `lg-spa`; interface and data default: the first one picked); the value shown in sample.env is the install-mode stand-in, never a fallback',
 		heading: 'Defining default projects languages',

@@ -58,9 +58,13 @@ export interface RecoveryFileResponse {
 /**
  * Stream a byte source through in-process gzip into `path`, honouring
  * backpressure (a multi-hundred-MB dump must not buffer in memory), and
- * resolve only once the file sink has closed.
+ * resolve only once the file sink has closed. Shared with the install seed
+ * builder (install/seed_build.ts) — the other pg_dump this engine compresses.
  */
-async function gzipStreamToFile(source: AsyncIterable<Uint8Array>, path: string): Promise<void> {
+export async function gzipStreamToFile(
+	source: AsyncIterable<Uint8Array>,
+	path: string,
+): Promise<void> {
 	const gzip = createGzip();
 	const sink = createWriteStream(path);
 	gzip.pipe(sink);

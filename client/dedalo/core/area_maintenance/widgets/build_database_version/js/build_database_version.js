@@ -17,9 +17,10 @@
 * Area-maintenance widget that exposes three server-side database operations to
 * privileged Dédalo administrators:
 *
-*   1. build_install_version — clones the live database to a clean install image
-*      (target DB + compressed .pgsql.gz file), delegating to the PHP
-*      `install::build_install_version` routine.
+*   1. build_install_version — compiles the install seed
+*      (install/db/dedalo_install.pgsql.gz) from the repository's own sources,
+*      verifies it with a fresh install, and writes it with its manifest
+*      (server: core/install/seed_build.ts). No database is read.
 *
 *   2. build_recovery_version_file — exports the live `dd_ontology` table to the
 *      recovery SQL file `dd_ontology_recovery.sql` kept under /install/db/.
@@ -139,24 +140,22 @@ build_database_version.prototype.build = async function (autoload = false) {
 
 /**
 * BUILD_INSTALL_VERSION
-* Triggers the server-side routine that:
-*   1. Clones the live database (DEDALO_DATABASE_CONN) to a clean install copy
-*      (install::$db_install_name).
-*   2. Strips user/runtime data from the copy.
-*   3. Exports the result to the compressed file /install/db/<db_name>.pgsql.gz.
+* Triggers the server-side seed compiler, which:
+*   1. Compiles the install database in a scratch database from the repository
+*      sources (schema + migrations, the ontology release packages, the seed
+*      data files, the canonical records).
+*   2. Verifies the result by a real fresh install in a second scratch database.
+*   3. Writes install/db/dedalo_install.pgsql.gz and its manifest.
 *
 * The operation is long-running; the timeout is raised to 1 hour and retries are
-* reduced to 1 to avoid duplicating an expensive clone on transient network hiccups.
+* reduced to 1 so a transient network hiccup never starts a second compile.
 *
 * The request dispatches to:
-*   dd_area_maintenance_api → widget_request → build_database_version::build_install_version
-*   → install::build_install_version (PHP)
+*   dd_area_maintenance_api → widget_request → build_database_version.build_install_version
+*   → core/install/seed_build.ts buildInstallVersion
 *
-* `prevent_lock: true` ensures the operation does not acquire a record-write lock,
-* which is unnecessary for a read/clone task.
-*
-* `background_running: false` keeps the operation synchronous from the PHP side
-* (the JS side already awaits the full response without polling).
+* `prevent_lock: true`: the compile writes no application record.
+* `background_running: false`: synchronous; the response carries the step readout.
 *
 * @returns {Promise<Object>} API response object with result/errors/msg fields.
 */

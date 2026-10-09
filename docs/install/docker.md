@@ -435,7 +435,7 @@ Start to finish. Steps 1–11 are the install; step 12 is the first login.
 
 ```shell
 git clone <your-dedalo-remote> dedalo
-cd dedalo/master_dedalo
+cd dedalo
 ls docker-compose.yml Dockerfile deploy/nginx.conf     # you are in the right place
 ```
 
@@ -619,7 +619,7 @@ docker compose --env-file .dedalo.env run --rm \
     --db-password "$POSTGRES_PASSWORD" --db-host postgres \
     --entity myentity --entity-label 'My Institution' \
     --locale es-ES --timezone Europe/Madrid \
-    --langs lg-spa,lg-eng --app-lang lg-spa --data-lang lg-spa \
+    --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng \
     --media-path /srv/dedalo/media \
     --socket /run/dedalo/dedalo_ts.sock \
     --media-access-mode publication
@@ -639,6 +639,11 @@ What each part is doing:
   `/private/.env`, so the file describes the deployment on its own. The compose
   environment sets the same three at runtime and wins either way — passing them
   keeps the two in agreement.
+- `--langs` is the installation's languages — the interface languages users
+  can switch to **and** the tabs every translatable field gets — and
+  `--app-lang` and `--data-lang` must be among them. The values shown are the
+  defaults (English + Spanish, English for both), so the three flags can be
+  left out.
 - No `--hierarchies`: the shared default set of optional thesauri (today Spain,
   `es`) is imported and activated. `--hierarchies none` skips it, a list such as
   `--hierarchies es,fr` replaces it, and you can always
@@ -874,6 +879,23 @@ you are. Set it in the `dedalo` service's `environment:` **before** the stack
 ever comes up (the shipped compose file already passes the variable through, so
 exporting it — or adding `DEDALO_INSTALL_ALLOWED_IPS=…` to `.dedalo.env` — is
 enough):
+
+In the same shell you will run `docker compose up -d` from (B2), replacing
+`203.0.113.10` with the address **you** will browse from:
+
+```shell
+export DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10
+```
+
+Check that compose picked it up before going on:
+
+```shell
+docker compose config | grep DEDALO_INSTALL_ALLOWED_IPS
+```
+
+The export lives only in that shell: a new terminal needs it again. To set it
+permanently instead, edit the `dedalo` service's `environment:` in the compose
+file:
 
 ```yaml
 environment:

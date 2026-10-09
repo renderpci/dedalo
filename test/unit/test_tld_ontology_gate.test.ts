@@ -27,7 +27,7 @@
  *
  * The old (a) — "the JSON equals the `test` TLD inside the install seed" — is
  * GONE on purpose: the seed is no longer a source, and the core-only seed
- * (scripts/build_install_seed.ts) carries no `test` row at all. The old
+ * (compiled by src/core/install/seed_build.ts) carries no `test` row at all. The old
  * install/suite SPLIT (an install received the hand-authored half) is gone with
  * it: the suite materializes the whole file, nothing else materializes any.
  */

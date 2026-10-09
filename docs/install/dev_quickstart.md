@@ -55,7 +55,7 @@ bun run scripts/install.ts \
   --db-user "$(whoami)" \
   --db-host /tmp \
   --entity dev \
-  --langs lg-spa,lg-eng --app-lang lg-eng --data-lang lg-spa
+  --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng
 ```
 
 No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it, and the server would use the default.

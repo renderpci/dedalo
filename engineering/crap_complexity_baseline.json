@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 642,
-		"functions": 8618,
-		"functionsOverCap": 677,
-		"filesOverCap": 260
+		"files": 645,
+		"functions": 8721,
+		"functionsOverCap": 676,
+		"filesOverCap": 259
 	},
 	"ledger": [
 		{
@@ -114,6 +114,11 @@
 			"generated": "2026-10-09",
 			"functionsOverCap": 677,
 			"filesOverCap": 260
+		},
+		{
+			"generated": "2026-10-09",
+			"functionsOverCap": 676,
+			"filesOverCap": 259
 		}
 	],
 	"files": {
@@ -211,7 +216,6 @@
 		"src/core/install/db_probe_plan.ts": 8,
 		"src/core/install/db_restore.ts": 8,
 		"src/core/install/directories.ts": 12,
-		"src/core/install/lang_catalog.ts": 9,
 		"src/core/install/mailer_probe.ts": 12,
 		"src/core/install/media_tree.ts": 20,
 		"src/core/install/root_pw.ts": 8,
@@ -255,7 +259,7 @@
 		"src/core/ontology/data_io.ts": 14,
 		"src/core/ontology/data_io_import.ts": 18,
 		"src/core/ontology/hierarchy_provision.ts": 20,
-		"src/core/ontology/hierarchy_state.ts": 25,
+		"src/core/ontology/hierarchy_state.ts": 22,
 		"src/core/ontology/labels.ts": 11,
 		"src/core/ontology/ontology_delete.ts": 9,
 		"src/core/ontology/ontology_state.ts": 15,

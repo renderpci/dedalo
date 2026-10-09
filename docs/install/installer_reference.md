@@ -60,7 +60,7 @@ bun run scripts/install.ts \
   --db-name dedalo_main --db-user dedalo_user --entity myentity \
   [--db-password '…'] [--db-host localhost] [--db-port 5432] [--db-socket /var/run/postgresql] \
   [--entity-label 'My Institution'] [--locale es-ES] [--timezone Europe/Madrid] \
-  [--langs lg-spa,lg-eng] [--app-lang lg-spa] [--data-lang lg-spa] \
+  [--langs lg-eng,lg-spa] [--app-lang lg-eng] [--data-lang lg-eng] \
   [--hierarchies default|none|es,fr] \
   [--ontologies default|oh,tch] [--ontology-source <dir|archive>] \
   [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] [--media-access-mode publication] \
@@ -87,7 +87,7 @@ meaning.)
 | `--entity-label` | no | the entity name | shown on the login form |
 | `--locale` | no | `es-ES` | |
 | `--timezone` | no | `Europe/Madrid` | every database timestamp is stamped in it |
-| `--langs` | no | `lg-eng,lg-spa` (the other catalogue languages are optional) | comma list, e.g. `lg-spa,lg-eng` |
+| `--langs` | no | `lg-eng,lg-spa` (the other catalogue languages are optional) | the installation's languages — interface **and** data — comma list, e.g. `lg-eng,lg-spa` |
 | `--app-lang` | no | first of `--langs` | the default interface language |
 | `--data-lang` | no | first of `--langs` | the default data language |
 | `--hierarchies` | no | `default` | the **optional** thesauri: `default` (the shared default set — today `es`), `none`, or a comma list of vendored codes, e.g. `es,fr`. Languages (`lg`) is a **core** thesaurus, activated with the database on every install: naming it here is dropped with a note. An unknown (not vendored) code is refused |
@@ -216,15 +216,18 @@ The restore is all-or-nothing: the seed is fed to `psql` with
 success to clean up after.
 
 ??? note "How the seed is built"
-    The seed is a generated file. `bun run seed:build`
-    (`scripts/build_install_seed.ts`) restores the current seed into a scratch
-    database it creates and drops, deletes every non-core row in one transaction,
-    and dumps it again in plain SQL with the derived indexes' data excluded. Next
-    to the seed it writes `install/db/dedalo_install.build.json`: the source and
-    output checksums, the `pg_dump` version and options, the rows removed and
-    the row count of every table. A gate (`install_seed_drift_tripwire`) holds
-    the committed seed to that file and to the core-only rule, so a hand-edited
-    seed fails the build. [Install internals](../development/ts_install_internals.md#the-install-seed)
+    The seed is a generated file, compiled from files in the repository only —
+    never from an installation's database. `bun run seed:build` (the same
+    compiler as Maintenance → *Build database version* → *Build install
+    version*) applies the schema and its migrations, the CORE ontology release
+    packages, the languages and hierarchy registry files and the default
+    accounts into a scratch database, proves the result by installing it into a
+    second scratch database, and only then replaces the seed. Next to the seed
+    it writes `install/db/dedalo_install.manifest.json`: the seed's checksums,
+    the row count of every table and a checksum of every source file. A gate
+    (`install_seed_manifest_tripwire`) holds the committed seed to that file, so
+    a hand-edited seed, or a source changed without a recompile, fails the
+    build. [Install internals](../development/ts_install_internals.md#the-install-seed)
     has the details.
 
 ## Domain ontologies
@@ -453,7 +456,7 @@ Steps: **Diagnostics → Database → Entity → Ontologies → *(optional)* Dif
 Directories → Install database → Root password → log in → Hierarchies → Tools →
 Finish**.
 
-The **Entity** step also collects the working languages (a checkbox list with
+The **Entity** step also collects the languages (a checkbox list with
 English and Spanish pre-checked; the others are optional) plus the default
 interface and data language. Before *Save config*
 the wizard also asks whether to use the official update server (yes by default;

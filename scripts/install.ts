@@ -19,7 +19,7 @@
  *       --root-password '...' [--db-host localhost] [--db-port 5432] [--db-socket ...] \
  *       [--db-password ...] [--entity-label ...] [--information ...] [--info-key ...] \
  *       [--timezone Europe/Madrid] [--locale es-ES] \
- *       [--langs lg-spa,lg-eng] [--app-lang lg-spa] [--data-lang lg-spa] \
+ *       [--langs lg-eng,lg-spa] [--app-lang lg-eng] [--data-lang lg-eng] \
  *       [--hierarchies es,fr | default | none] \
  *       [--ontologies oh,tch | default] [--ontology-source <dir|archive>] \
  *       [--diffusion --mysql-host ... --mysql-port ... --mysql-socket ... \

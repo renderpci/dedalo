@@ -1,10 +1,13 @@
 /**
  * Unit gate — the install language catalog + derivation (DEC-19 lang config).
- * Pure, no DB. Covers: default (lg-eng + lg-spa) when absent, refuse on empty/invalid,
- * default interface/data membership, and the derived map/array shapes.
+ * Pure, no DB. Covers: the catalog = the UI-label catalog files, default (lg-eng +
+ * lg-spa) when absent, refuse on empty/invalid, default interface/data
+ * membership, and the derived map/array shapes.
  */
 
 import { describe, expect, test } from 'bun:test';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import {
 	deriveLangConfig,
 	INSTALL_DEFAULT_LANG_CODES,
@@ -12,8 +15,20 @@ import {
 	INSTALL_LANG_CODES,
 } from '../../src/core/install/lang_catalog.ts';
 
+const LABEL_CATALOG_DIR = join(import.meta.dir, '../../src/core/labels/catalog');
+
 describe('install lang catalog', () => {
-	test('absent langs → the default working languages (lg-eng, lg-spa), no errors', () => {
+	test('the install catalog is EXACTLY the shipped UI-label catalogs (every translated lang is offered)', () => {
+		const shipped = readdirSync(LABEL_CATALOG_DIR)
+			.filter((name) => /^lg-[a-z0-9_]+\.json$/.test(name))
+			.map((name) => name.slice(0, -'.json'.length))
+			.sort();
+		expect(shipped.length).toBeGreaterThan(0);
+		expect([...INSTALL_LANG_CODES].sort()).toEqual(shipped);
+		for (const code of INSTALL_LANG_CODES) expect(INSTALL_LANG_CATALOG[code]).toBeTruthy();
+	});
+
+	test('absent langs → the default languages (lg-eng, lg-spa), no errors', () => {
 		const r = deriveLangConfig({});
 		expect(r.errors).toEqual([]);
 		// The default is English + Spanish, literally — every other catalog language
@@ -65,7 +80,12 @@ describe('install lang catalog', () => {
 		expect(r.errors.some((e) => e.includes('english'))).toBe(true);
 	});
 
-	test('a default language not in the picked set → error', () => {
+	test('a default DATA language not in the picked set → error', () => {
+		const r = deriveLangConfig({ langs: ['lg-eng'], dataLangDefault: 'lg-spa' });
+		expect(r.errors.some((e) => e.includes('lg-spa'))).toBe(true);
+	});
+
+	test('a default INTERFACE language not in the picked set → error', () => {
 		const r = deriveLangConfig({ langs: ['lg-eng'], appLangDefault: 'lg-spa' });
 		expect(r.errors.some((e) => e.includes('lg-spa'))).toBe(true);
 	});

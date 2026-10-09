@@ -381,6 +381,9 @@ describe('persist_config (P2)', () => {
 		const map = JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string) as Record<string, string>;
 		expect(Object.keys(map)).toEqual(['lg-eng', 'lg-spa']);
 		expect(map['lg-eng']).toBe('English');
+		expect(JSON.parse(parsed.PROJECTS_DEFAULT_LANGS as string)).toEqual(['lg-eng', 'lg-spa']);
+		expect(parsed.DEDALO_APPLICATION_LANGS_DEFAULT).toBe('lg-eng');
+		expect(parsed.DEDALO_DATA_LANG_DEFAULT).toBe('lg-eng');
 	});
 
 	test('REFUSES an unusable lang selection — no .env written', async () => {

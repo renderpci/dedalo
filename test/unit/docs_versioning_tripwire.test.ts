@@ -63,6 +63,13 @@
  *     is dead code whatever the source order — all three such URLs 301'd to
  *     /docs/v7/… and 404'd in production until this was found.
  *
+ *  8. EVERY PAGE THE READER SEES IS ONE MATOMO VIEW. `navigation.instant` swaps
+ *     in-site pages by XHR, so docs/additional_javascript.js runs once per visit;
+ *     a bare `trackPageView` counted only the landing page and every page reached
+ *     through the nav was missing from the statistics. The script must track from
+ *     Material's `document$` (emits on load AND after each swap). Checked by
+ *     RUNNING it against a fake `document$`, not by reading it.
+ *
  * The manifest is EMPTY until the first publish, and that is a real state, not
  * a stub: no v7 URL is public yet, so no v7 rename can break anything yet.
  * Assertion 4 states that emptiness rather than passing silently; the
@@ -344,6 +351,73 @@ describe('docs versioning: the published layout stays coherent', () => {
 
 		// Anti-vacuity: prove the plugin list was actually parsed.
 		expect(enabled).toContain('search');
+	});
+
+	test('analytics counts one page view per instant navigation, not per full load', () => {
+		const features = mkdocsYml.match(/^\s+features:\s*\n((?:\s+- .*\n)+)/m)?.[1] ?? '';
+		expect(
+			features,
+			'the `features:` list in mkdocs.yml was not found — has the block moved?',
+		).toContain('navigation.');
+
+		const view = (withDocument$: boolean) => {
+			const src = readFileSync(join(DOCS_DIR, 'additional_javascript.js'), 'utf8');
+			const subscribers: Array<() => void> = [];
+			const location = { href: '' };
+			const doc = {
+				title: '',
+				createElement: () => ({}),
+				getElementsByTagName: () => [{ parentNode: { insertBefore: () => {} } }],
+			};
+			const win: { location: typeof location; _paq?: unknown[][] } = { location };
+			const document$ = withDocument$
+				? { subscribe: (fn: () => void) => subscribers.push(fn) }
+				: undefined;
+			new Function('window', 'document', 'document$', src)(win, doc, document$);
+			const paq = () => win._paq ?? [];
+			const navigate = (url: string, title: string) => {
+				location.href = url;
+				doc.title = title;
+				for (const fn of subscribers) fn();
+			};
+			const views = () => paq().filter((c) => c[0] === 'trackPageView').length;
+			return { paq, navigate, views };
+		};
+
+		// Without Material's bundle: the classic single view.
+		expect(view(false).views(), 'no document$ ⇒ exactly one trackPageView').toBe(1);
+
+		const t = view(true);
+		// Nothing tracked before document$ fires: the landing view is its FIRST
+		// emission, so an extra eager trackPageView would double-count it.
+		expect(t.views(), 'trackPageView ran before document$ emitted (double count)').toBe(0);
+
+		const A = 'https://dedalo.dev/docs/v7/';
+		const B = 'https://dedalo.dev/docs/v7/install/';
+		t.navigate(A, 'Home');
+		t.navigate(B, 'Install');
+		t.navigate(B, 'Install'); // same page re-emitted: not a new view
+		expect(
+			t.views(),
+			'an instant navigation did not produce its own page view — internal doc pages ' +
+				'are invisible to Matomo. Track inside document$.subscribe.',
+		).toBe(2);
+
+		const calls = t.paq();
+		// Last index of a _paq command (Array#findLast* is ES2023, beyond the project's lib).
+		const lastIndexOf = (list: unknown[][], command: string): number => {
+			for (let at = list.length - 1; at >= 0; at--) if (list[at]?.[0] === command) return at;
+			return -1;
+		};
+		const second = lastIndexOf(calls, 'trackPageView');
+		const before = calls.slice(0, second);
+		const lastArg = (command: string): unknown => before[lastIndexOf(before, command)]?.[1];
+		expect(lastArg('setCustomUrl')).toBe(B);
+		expect(lastArg('setDocumentTitle')).toBe('Install');
+		expect(lastArg('setReferrerUrl')).toBe(A);
+		// The landing view keeps the browser's own document.referrer.
+		const first = calls.findIndex((c) => c[0] === 'trackPageView');
+		expect(calls.slice(0, first).some((c) => c[0] === 'setReferrerUrl')).toBe(false);
 	});
 
 	test('the routing file states the v6-only exceptions in mod_rewrite, above the catch-all', () => {

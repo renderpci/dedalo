@@ -6,7 +6,7 @@
 # accident — pasted into a doc, committed in a fixture, left in a debug script.
 #
 # EXTEND THE DEFAULT RULES, NEVER REPLACE THEM: `[extend] useDefault = true` keeps the
-# ~170 upstream provider rules. Only the two verified false positives below are allowed
+# ~170 upstream provider rules. Only verified false positives are allowed
 # through, each scoped as tightly as the finding (a path OR a literal), because a broad
 # allowlist is how a secret scanner ends up scanning nothing.
 
@@ -63,3 +63,33 @@ regexes = [
   '''api_model"\s*:\s*"[A-Za-z0-9._-]+"''',
   '''legacy_unmigrated=\d+''',
 ]
+
+# ---------------------------------------------------------------------------
+# VERIFIED FALSE POSITIVES IN THE TREE (triaged 2026-10-09, the publication-host push).
+# Each block is ONE finding: its FILE *and* its literal (condition = "AND"), so the same
+# value anywhere else — or anything else in that file — is still scanned.
+# ---------------------------------------------------------------------------
+[[allowlists]]
+description = "Bun's release-signing key FINGERPRINT — a public identifier (the key itself is public), pinned so the CI image verifies the Bun download."
+condition = "AND"
+paths = ['''(^|/)scripts/ci/bun_pin_hashes\.ts$''']
+regexes = ['''^F3DCC08A8572C0749B3E18888EAB4D40A7B22B59$''']
+
+[[allowlists]]
+description = "Test fixture: a made-up SECRET the init report test feeds in to prove it is REDACTED from the report."
+condition = "AND"
+paths = ['''(^|/)publication/host_agent/tests/init_report\.test\.ts$''']
+regexes = ['''^Zq7pX2kN9wLm4vRt$''']
+
+[[allowlists]]
+description = "Test fixture: a made-up publication DB password the v2 .env renderer test writes and reads back."
+condition = "AND"
+paths = ['''(^|/)test/unit/publication_host_init_v2_env_native\.test\.ts$''']
+regexes = ['''^abcdefgh12345678$''']
+
+[[allowlists]]
+description = "Test fixture: a planted PEM HEADER string (no key material) the kit packer must REFUSE to ship."
+condition = "AND"
+regexTarget = "match"
+paths = ['''(^|/)test/unit/publication_host_kit_pack\.test\.ts$''']
+regexes = ['''-----BEGIN PRIVATE KEY-----';''']

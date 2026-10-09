@@ -23,47 +23,35 @@
  * (lg — activated by the seed restore, never imported) that came back as a
  * vendored optional one would duplicate its terms where nothing reads them.
  *
- * THE SEED DUMP ITSELF (installer unification A2, 2026-10-09). The seed is
- * CORE-ONLY, built by ONE script (scripts/build_install_seed.ts, `bun run
- * seed:build`) and described by a provenance sidecar. Measured here from the
- * committed bytes, with the SAME readers the builder refused on
- * (scripts/lib/install_seed.ts seedCensus + seedCoreViolations — never a second
- * parser):
- *  - the sidecar describes THESE bytes (sha256, COPY row counts, core list,
- *    dump options incl. both derived-store exclusions) and names a builder that
- *    exists — a hand-edited or hand-appended seed reddens here;
- *  - the dump is core-only: dd_ontology TLDs = matrix_ontology sections =
- *    registry TLDs = CORE (exactly); main_dd ⊆ CORE ∪ {localontology};
- *    matrix_dd ⊆ CORE; no matrix_test row (test3 is the suite's); the derived
- *    stores created and EMPTY (the installer refills them);
- *  - the catalog default of ACTIVE_ONTOLOGY_TLDS = CORE_ONTOLOGY_TLDS (same
- *    order) = the seed's dd_ontology TLD set — the config may not import core,
- *    so this equality is what keeps the two literals one list;
+ * THE SEED DUMP ITSELF (installer unification A2, 2026-10-09; reconciled with
+ * the seed COMPILER the same day). The seed is CORE-ONLY and COMPILED from repo
+ * sources (src/core/install/seed_build.ts, `bun run seed:build`); WHO wrote it
+ * and FROM WHAT is install_seed_manifest_tripwire's, WHAT a restore holds is
+ * install_seed_contract_native's. This gate keeps the two equalities neither
+ * of those measures, read hermetically from the committed bytes:
+ *  - ONE core list: the compiler's SEED_ONTOLOGY_TLDS IS CORE_ONTOLOGY_TLDS,
+ *    the catalog default of ACTIVE_ONTOLOGY_TLDS = CORE_ONTOLOGY_TLDS (same
+ *    order — config may not import core, so this equality keeps the two
+ *    literals one list), and the dump's dd_ontology TLDs = matrix_ontology
+ *    sections = CORE exactly (no domain TLD — `oh` is an install answer — and
+ *    no `test` TLD, no matrix_test row: those are the suite's);
  *  - the core's structural DEPENDENCY-class references to tipos the seed does
  *    not hold (src/core/ontology/ontology_references.ts, diffusion model set
  *    derived from the seed's own model rows) equal
  *    engineering/install_seed_contract.json EXACTLY, every reason non-empty.
  *    Graft and diffusion references are soft by rule and never listed.
- * Anti-vacuity: floors on rows/references, and planted offenders (a domain TLD
- * row, a test3 row, a dangling dependency) must each be reported.
+ * Anti-vacuity: floors on rows/references, and a planted dangling dependency
+ * must be reported.
  */
 
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import {
-	SEED_BUILD_SIDECAR_PATH,
-	SEED_DERIVED_STORE_TABLES,
-	SEED_DUMP_OPTIONS,
-	SEED_PATH,
-	type SeedBuildSidecar,
-	seedCensus,
-	seedCoreViolations,
-	seedOntologyRows,
-} from '../../scripts/lib/install_seed.ts';
 import { DEFAULTS_KEYS } from '../../src/config/catalog/defaults.ts';
+import { copyBlockRecords, copyBlocks } from '../../src/core/db/copy_text.ts';
+import { SEED_DUMP_PATH } from '../../src/core/install/paths.ts';
+import { SEED_ONTOLOGY_TLDS } from '../../src/core/install/seed_sources.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import {
 	danglingDependencies,
@@ -185,7 +173,7 @@ describe('install seed tripwire', () => {
 });
 
 // ---------------------------------------------------------------------------
-// The seed DUMP: core-only, reproducible, described by its sidecar.
+// The seed DUMP: core-only, one core list, the pinned dangling references.
 // ---------------------------------------------------------------------------
 
 interface ContractEntry {
@@ -195,17 +183,40 @@ interface ContractEntry {
 	reason: string;
 }
 
-const seedBytes = readFileSync(join(ROOT, SEED_PATH));
-const seedText = gunzipSync(seedBytes).toString('utf8');
-const census = seedCensus(seedText);
-const sidecar = JSON.parse(
-	readFileSync(join(ROOT, SEED_BUILD_SIDECAR_PATH), 'utf8'),
-) as SeedBuildSidecar;
+interface SeedOntologyRow {
+	tipo: string;
+	tld: string | null;
+	parent: string | null;
+	model_tipo: string | null;
+	relations: { tipo?: unknown }[] | null;
+	is_model: boolean;
+}
+
+const seedBlocks = copyBlocks(gunzipSync(readFileSync(SEED_DUMP_PATH)).toString('utf8'));
+const blockRecords = (table: string) => {
+	const block = seedBlocks.find((candidate) => candidate.table === table);
+	return block === undefined ? [] : copyBlockRecords(block);
+};
+const distinct = (values: (string | null | undefined)[]) =>
+	[...new Set(values.map((value) => value ?? ''))].sort();
+const parseRelations = (raw: string | null | undefined): { tipo?: unknown }[] | null => {
+	if (raw === null || raw === undefined || raw === '') return null;
+	const parsed = JSON.parse(raw) as unknown;
+	return Array.isArray(parsed) ? (parsed as { tipo?: unknown }[]) : null;
+};
+
+const ontologyRows: SeedOntologyRow[] = blockRecords('dd_ontology').map((row) => ({
+	tipo: row.tipo ?? '',
+	tld: row.tld ?? null,
+	parent: row.parent ?? null,
+	model_tipo: row.model_tipo ?? null,
+	relations: parseRelations(row.relations),
+	is_model: row.is_model === 't',
+}));
 const contract = JSON.parse(
 	readFileSync(join(ROOT, 'engineering/install_seed_contract.json'), 'utf8'),
 ) as { known_dangling_dependencies: ContractEntry[] };
 
-const ontologyRows = seedOntologyRows(seedText);
 const presentTipos = new Set(ontologyRows.map((row) => row.tipo));
 const seedDiffusionModels = diffusionModelSet(ontologyRows.filter((row) => row.is_model));
 const coreSet = new Set(CORE_ONTOLOGY_TLDS);
@@ -221,67 +232,29 @@ function danglingKeys(rows: typeof ontologyRows, present: ReadonlySet<string>): 
 	return dangling.map((ref) => `${ref.from} ${ref.field} ${ref.to}`).sort();
 }
 
-describe('install seed dump — core-only, reproducible', () => {
+describe('install seed dump — core-only, one core list', () => {
 	test('the readers see a real seed (a zero-length pass is not a pass)', () => {
 		expect(ontologyRows.length).toBeGreaterThan(3000);
 		expect(referencesOfRows(ontologyRows).length).toBeGreaterThan(5000);
 		// The diffusion model grouper and its descendants are in the core.
 		expect(seedDiffusionModels.size).toBeGreaterThan(10);
-		expect(Object.keys(census.tables).length).toBeGreaterThan(20);
-		expect(census.tables.matrix_langs ?? 0).toBeGreaterThan(1000);
+		expect(seedBlocks.length).toBeGreaterThan(20);
+		expect(blockRecords('matrix_langs').length).toBeGreaterThan(1000);
 	});
 
-	test('the sidecar describes THESE bytes, built by a script that exists', () => {
-		expect(sidecar.seed_sha256).toBe(createHash('sha256').update(seedBytes).digest('hex'));
-		expect(existsSync(join(ROOT, sidecar.script))).toBe(true);
-		expect(sidecar.core_tlds).toEqual([...CORE_ONTOLOGY_TLDS]);
-		expect(sidecar.tables).toEqual(census.tables);
-		expect(sidecar.dump_options).toEqual([...SEED_DUMP_OPTIONS]);
-		for (const table of SEED_DERIVED_STORE_TABLES) {
-			expect(sidecar.dump_options).toContain(`--exclude-table-data=public.${table}`);
-		}
-		expect(sidecar.source.sha256).toMatch(/^[0-9a-f]{64}$/);
-		expect(sidecar.pg_dump).toMatch(/^pg_dump \(PostgreSQL\) \d+/);
-	});
-
-	test("the dump is core-only (the builder's own refusal list is empty)", () => {
-		expect(seedCoreViolations(census, CORE_ONTOLOGY_TLDS)).toEqual([]);
-		// Spelled out, so a reader of a red run sees the measured sets.
-		expect(census.ddOntologyTlds).toEqual([...CORE_ONTOLOGY_TLDS].sort());
-		expect(census.matrixOntologySections).toEqual(
+	test('the dump is core-only: dd_ontology TLDs = matrix_ontology sections = CORE; no test3 row', () => {
+		expect(distinct(ontologyRows.map((row) => row.tld))).toEqual([...CORE_ONTOLOGY_TLDS].sort());
+		expect(distinct(blockRecords('matrix_ontology').map((row) => row.section_tipo))).toEqual(
 			CORE_ONTOLOGY_TLDS.map((tld) => `${tld}0`).sort(),
 		);
-		expect(census.registryTlds).toEqual([...CORE_ONTOLOGY_TLDS].sort());
-		expect(census.tables.matrix_test).toBe(0);
-		for (const table of SEED_DERIVED_STORE_TABLES) {
-			expect(census.createdTables).toContain(table);
-			expect(census.tables[table] ?? 0).toBe(0);
-		}
+		expect(blockRecords('matrix_test')).toEqual([]);
 	});
 
-	test('the refusal list is not vacuous: planted offenders are each reported', () => {
-		const planted = {
-			...census,
-			ddOntologyTlds: [...census.ddOntologyTlds, 'zzseedplant'].sort(),
-			mainDdTlds: [...census.mainDdTlds, 'zzseedplant'].sort(),
-			matrixDdTlds: [...census.matrixDdTlds, 'zzseedplant'].sort(),
-			tables: { ...census.tables, matrix_test: 1, [SEED_DERIVED_STORE_TABLES[0] as string]: 5 },
-		};
-		const violations = seedCoreViolations(planted, CORE_ONTOLOGY_TLDS);
-		expect(violations.some((line) => line.startsWith('dd_ontology TLDs'))).toBe(true);
-		expect(violations.some((line) => line.startsWith('main_dd TLDs'))).toBe(true);
-		expect(violations.some((line) => line.startsWith('matrix_dd TLDs'))).toBe(true);
-		expect(violations.some((line) => line.startsWith('matrix_test'))).toBe(true);
-		expect(violations.some((line) => line.startsWith(SEED_DERIVED_STORE_TABLES[0] as string))).toBe(
-			true,
-		);
-	});
-
-	test('catalog default of ACTIVE_ONTOLOGY_TLDS = CORE_ONTOLOGY_TLDS (same order) = the seed TLD set', () => {
+	test('ONE core list: compiler TLDs = CORE_ONTOLOGY_TLDS = catalog ACTIVE_ONTOLOGY_TLDS default (same order)', () => {
+		expect(SEED_ONTOLOGY_TLDS).toEqual(CORE_ONTOLOGY_TLDS);
 		expect<string[]>([...DEFAULTS_KEYS.ACTIVE_ONTOLOGY_TLDS.default]).toEqual([
 			...CORE_ONTOLOGY_TLDS,
 		]);
-		expect([...CORE_ONTOLOGY_TLDS].sort()).toEqual(census.ddOntologyTlds);
 	});
 
 	test("the core's dangling DEPENDENCY references = engineering/install_seed_contract.json, exactly", () => {

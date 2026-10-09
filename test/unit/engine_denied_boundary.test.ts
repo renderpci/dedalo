@@ -62,10 +62,15 @@ const ROOT = { userId: -1, isGlobalAdmin: true };
 // (HIERARCHY_IMPORT_DIR), the very directory add_hierarchy already imports from.
 // PHP took it from an EXPORT_HIERARCHY_PATH constant that was never carried over;
 // see config/migration_map.ts for the retired-constant record.
+//
+// 2026-10-09: build_database_version.build_install_version LEFT this boundary with
+// its port. "It writes install/ SQL dumps into the PHP tree" stopped being true at
+// the cutover: the dump it writes is THIS engine's vendored seed
+// (install/paths.ts SEED_DUMP_PATH, restored by installDbFromSeed). Native builder:
+// core/install/seed_build.ts, gated by seed_build_native.test.ts.
 const DENIED: [string, string][] = [
 	['update_ontology', 'export_to_translate'],
 	['update_ontology', 'rebuild_lang_files'],
-	['build_database_version', 'build_install_version'],
 	['build_database_version', 'build_matrix_hierarchy_main_sql'],
 ];
 

@@ -2,7 +2,7 @@
  * install_db_from_default_file (PHP installer_database_manager). Restores the
  * vendored seed dump into an EMPTY database: schema (30+ tables), extensions,
  * functions, indexes, the CORE ontologies (`CORE_ONTOLOGY_TLDS` — nothing else:
- * the seed is core-only, built by scripts/build_install_seed.ts), the languages
+ * the seed is core-only, compiled from repo sources by seed_build.ts), the languages
  * thesaurus terms, root user (empty pw), and the default project/profiles. Then,
  * on the default connection, it completes the install's base: the derived search
  * stores (the seed ships them empty), the engine-owned ontology and the core
@@ -25,7 +25,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { CORE_ONTOLOGY_TLDS } from '../ontology/core_tlds.ts';
-import { SEED_DUMP_PATH, SEED_PREDATED_MIGRATION_PATHS } from './paths.ts';
+import { SEED_DUMP_PATH } from './paths.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
@@ -47,30 +47,6 @@ async function targetIsEmpty(conn: DbConnDescriptor): Promise<boolean> {
 }
 
 /**
- * Apply the migrations the seed predates (paths.ts SEED_PREDATED_MIGRATION_PATHS),
- * each in ONE transaction (`-1`: its `SET LOCAL lock_timeout` binds, and a
- * failure leaves nothing half-applied). Install mode skips the boot runner, and
- * the installer's own writes must find the schema the engine reads.
- */
-async function applySeedPredatedMigrations(connection: DbConnDescriptor): Promise<void> {
-	for (const path of SEED_PREDATED_MIGRATION_PATHS) {
-		const applied = await runPsql(connection, [
-			'-v',
-			'ON_ERROR_STOP=1',
-			'--quiet',
-			'-1',
-			'-f',
-			path,
-		]);
-		if (applied.exitCode !== 0) {
-			refuseInstall(
-				'install.step_failed',
-				`Migration ${path} failed after the seed restore: ${applied.stderr || 'psql nonzero exit'}`,
-			);
-		}
-	}
-}
-
 /** One returned (never thrown) store error as text. */
 function errorText(error: unknown): string {
 	if (typeof error === 'string') return error;
@@ -83,7 +59,7 @@ function errorText(error: unknown): string {
  * connection was given. Answers the step's sentence.
  *
  * ORDER IS LOAD-BEARING. The seed ships the derived search stores EMPTY
- * (scripts/build_install_seed.ts excludes their data), and the relation-index
+ * (seed_build.ts SEED_EMPTY_STORES), and the relation-index
  * reader THROWS `search.index_unavailable` on an empty store while relation data
  * exists (search_store.ts requireRelationIndex) — so the stores are filled
  * FIRST, through the engine's own door (the one a booting server runs), before
@@ -130,7 +106,11 @@ async function completeFreshInstall(): Promise<string> {
  * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
  * (test/unit/tier1_install_native.test.ts).
  */
-export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRestoreResult> {
+export async function installDbFromSeed(
+	conn?: DbConnDescriptor,
+	/** The dump to restore — the vendored seed; a freshly BUILT one in its gate (seed_build_native). */
+	seedPath: string = SEED_DUMP_PATH,
+): Promise<DbRestoreResult> {
 	const connection = conn ?? connFromConfig();
 
 	// Empty-DB gate: never restore over an existing install.
@@ -146,11 +126,11 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 	}
 
 	// Decompress the seed to a temp .sql and restore with `psql -f` — far more
-	// robust than streaming ~50 MB through stdin (backpressure/EPIPE). The temp
+	// robust than streaming ~14 MB through stdin (backpressure/EPIPE). The temp
 	// file is always removed.
 	const tmpSql = join(tmpdir(), `dedalo_seed_${process.pid}_${Date.now()}.sql`);
 	try {
-		writeFileSync(tmpSql, gunzipSync(readFileSync(SEED_DUMP_PATH)));
+		writeFileSync(tmpSql, gunzipSync(readFileSync(seedPath)));
 	} catch (error) {
 		rmSync(tmpSql, { force: true });
 		refuseInstall(
@@ -167,7 +147,6 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 				`Restore failed: ${restore.stderr || 'psql nonzero exit'}`,
 			);
 		}
-		await applySeedPredatedMigrations(connection);
 		// Default-config path only: the search stores, the engine ontology and
 		// the core hierarchies go through the pool, which is guaranteed to point
 		// at this DB only when no explicit conn was given.

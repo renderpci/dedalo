@@ -15,10 +15,11 @@
 import { isValidLang } from '../concepts/ontology.ts';
 
 /**
- * The curated, labelled language catalog offered by the wizard (the config.ts
- * default applicationLangs map / sample.env). A labelled dropdown needs display
- * names, and the full 639-code matrix_langs dump has none; exotic codes are
- * added by hand post-install. Insertion order is the presentation order.
+ * The labelled language catalog the installer offers — EXACTLY the languages the
+ * UI-label subsystem ships a translation for (src/core/labels/catalog/lg-*.json;
+ * gate: test/unit/install_lang_catalog.test.ts). A labelled dropdown needs
+ * display names (endonyms), and the full 639-code matrix_langs dump has none.
+ * Insertion order is the presentation order.
  */
 export const INSTALL_LANG_CATALOG: Readonly<Record<string, string>> = Object.freeze({
 	'lg-eng': 'English',
@@ -31,6 +32,14 @@ export const INSTALL_LANG_CATALOG: Readonly<Record<string, string>> = Object.fre
 	'lg-ita': 'Italiano',
 	'lg-ell': 'Ελληνικά',
 	'lg-nep': 'नेपाली',
+	'lg-ara': 'العربية',
+	'lg-ben': 'বাংলা',
+	'lg-chi': '中文',
+	'lg-hin': 'हिन्दी',
+	'lg-jpn': '日本語',
+	'lg-kor': '한국어',
+	'lg-rus': 'Русский',
+	'lg-urd': 'اردو',
 });
 
 /** All catalog codes in presentation order (every language the installer OFFERS). */
@@ -39,9 +48,10 @@ export const INSTALL_LANG_CODES: readonly string[] = Object.freeze(
 );
 
 /**
- * THE default working languages (pre-ticked in the wizard, taken by the CLI and
- * install.sh when no language is given): English + Spanish. Every other catalog
- * language is OPTIONAL — offered, never on by default.
+ * THE default languages — interface AND working (data) — pre-ticked in the
+ * wizard, taken by the CLI and install.sh when no language is given: English +
+ * Spanish. Every other catalog language is OPTIONAL — offered, never on by
+ * default.
  */
 export const INSTALL_DEFAULT_LANG_CODES: readonly string[] = Object.freeze(['lg-eng', 'lg-spa']);
 
@@ -84,11 +94,27 @@ function toCodeArray(langs: string[] | string | undefined): string[] {
 	return out;
 }
 
+/** Keep the codes that are well-formed AND catalog members; push an error per rejected code. */
+function validCatalogCodes(codes: readonly string[], errors: string[]): string[] {
+	const valid: string[] = [];
+	for (const code of codes) {
+		if (!isValidLang(code)) {
+			errors.push(`invalid language code '${code}'`);
+		} else if (INSTALL_LANG_CATALOG[code] === undefined) {
+			errors.push(`unsupported language '${code}' (not in the install catalog)`);
+		} else {
+			valid.push(code);
+		}
+	}
+	return valid;
+}
+
 /**
  * Derive the full lang config from the operator's picks, validating as it goes.
  * The picked set drives BOTH the map and the code list, so they can never
  * disagree. An absent set takes INSTALL_DEFAULT_LANG_CODES; the interface/data
- * defaults fall back to the first picked code when absent or out-of-set.
+ * defaults fall back to the first picked code when absent (and refuse when
+ * out-of-set).
  */
 export function deriveLangConfig(input: LangConfigInput): DerivedLangConfig {
 	const errors: string[] = [];
@@ -103,17 +129,7 @@ export function deriveLangConfig(input: LangConfigInput): DerivedLangConfig {
 		if (codes.length === 0) errors.push('at least one language must be selected');
 	}
 
-	// Validate every code: well-formed AND a known catalog member.
-	const valid: string[] = [];
-	for (const code of codes) {
-		if (!isValidLang(code)) {
-			errors.push(`invalid language code '${code}'`);
-		} else if (INSTALL_LANG_CATALOG[code] === undefined) {
-			errors.push(`unsupported language '${code}' (not in the install catalog)`);
-		} else {
-			valid.push(code);
-		}
-	}
+	const valid = validCatalogCodes(codes, errors);
 
 	const applicationLangs: Record<string, string> = {};
 	for (const code of valid) applicationLangs[code] = INSTALL_LANG_CATALOG[code] as string;

@@ -122,3 +122,8 @@ dev_tools/
 install/import/ontology/*
 !install/import/ontology/7.0/
 install/import/ontology/*/recovery/
+
+# The install seed compiler's in-flight files (src/core/install/seed_build.ts):
+# the dump and its manifest are written as `.part` and renamed only on success,
+# so a crashed compile can leave one behind — never a source, never committed.
+install/db/*.part

@@ -193,7 +193,7 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | widget | category | registered actions |
 | --- | --- | --- |
 | `make_backup` | data | `make_psql_backup`, `get_dedalo_backup_files` |
-| `build_database_version` | data | `build_recovery_version_file`, `restore_dd_ontology_recovery_from_file` |
+| `build_database_version` | data | `build_install_version` — compile the install seed (`install/db/dedalo_install.pgsql.gz` + its manifest) from the repository's own sources and verify it with a fresh install; reads no database (same as `bun run seed:build`, see [the seed](../../development/ts_install_internals.md#seed)) · `build_recovery_version_file`, `restore_dd_ontology_recovery_from_file` |
 | `update_data_version` | data | `update_data_version` |
 | `export_hierarchy` | data | `sync_hierarchy_active_status`, `export_hierarchy` — the dump lands in the engine's own `install/import/hierarchy`, the directory `add_hierarchy` imports from; see [moving a hierarchy between installations](../../management/install_new_hierarchies.md#moving-a-hierarchy-between-installations) |
 | `add_hierarchy` | data | `install_hierarchies`, `reset_hierarchies` — import + activate the selected TLDs; `reset` is the destructive re-import |

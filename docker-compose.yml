@@ -21,7 +21,7 @@
 #        bun run scripts/install.ts \
 #          --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" \
 #          --db-password "$POSTGRES_PASSWORD" --db-host postgres \
-#          --entity myentity --langs lg-spa,lg-eng
+#          --entity myentity --langs lg-eng,lg-spa
 #      (the three POSTGRES_* values exported in this shell too, for the arguments)
 #   5. docker compose --env-file .dedalo.env up -d
 #

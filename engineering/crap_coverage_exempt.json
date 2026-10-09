@@ -39,9 +39,15 @@
 		},
 		{
 			"file": "src/core/area_maintenance/widgets/build_database_version.ts",
+			"symbol": "buildInstallOwned",
+			"class": "unrunnable-destructive",
+			"reason": "A single-expression delegation to core/install/seed_build.ts with its DEFAULTS: executing it OVERWRITES this checkout's vendored install seed (install/db/dedalo_install.pgsql.gz) and its manifest. The compiler is gated through its outFile seam in seed_build_native.test.ts (compiled from the repo sources into a temp file, restored into a scratch database and held to the content contract)."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/build_database_version.ts",
 			"symbol": "buildDatabaseVersionGetValue",
 			"class": "vacuous-projection",
-			"reason": "A three-field panel projection of the configured database names and the dump directory: an assertion would read the same env the function reads and pin this machine's install."
+			"reason": "A three-field panel projection of the compiler's own path constants (sources, scratch-name pattern, seed path): an assertion would restate the constants it reads."
 		},
 		{
 			"file": "src/core/area_maintenance/widgets/check_config.ts",

@@ -250,6 +250,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Thesaurus: adding a child to a term now shows its expand arrow at once.**
+
+    Adding a child to a term that had none opened the new record in its edit window, but
+    the parent term kept looking like a leaf (no expand arrow) until the page was reloaded.
+    The parent now shows the arrow and its open children as soon as the child is created.
+
 - **The error page shows its Raspa background again.**
 
     When a page could not load (*An unexpected error occurred*, with its `request_id` and a *Home* link), the faded Raspa photo meant to fill the background was hidden behind the page's grey background, so the page looked bare. It now covers the whole window again.
@@ -1403,6 +1409,19 @@ Merged since the last release; these ship with the next one.
     - **Several instances.** The [multi-instance](./install/multi_instance.md) template unit now carries `KillMode=process`, the wider start limit, the rollback hook and the watchdog. The watchdog script takes `--restart-unit` / `--rollback-unit`, so a templated instance can point it at its own units. Each site is installed with `--socket`, `--media-path` and `--media-access-mode` instead of appending keys by hand.
     - **Corrections.** The backup set is five stores (site-builder instances included). Without `--media-path` the media root defaults to `../private/media`. The installer keeps every `.env` key it does not own, including keys added before the install. An air-gapped installation can update its ontology from local files ([updating the ontology](./management/updates/updating_ontology.md#updating-without-a-network-air-gapped-installs)). `STRUCTURE_FROM_SERVER` and `DEDALO_SOURCE_VERSION_LOCAL_DIR` are documented as having no effect. The four language keys are documented as required, with no default. The configuration pages point at `install/sample.env` in the code tree for the current list of keys: `../private/sample.env` is the installer's copy and a code update does not refresh it. The [developer quickstart](./install/dev_quickstart.md) lists the supervised start scripts and the second-instance script.
     - **Key names in `.env`.** The installer now writes every key under the name the [configuration reference](./config/config.md) uses (`DB_NAME`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `ENTITY`, `PROJECTS_DEFAULT_LANGS`, `APPLICATION_LANG`, `DATA_LANG`) instead of the older fallback spellings (`DEDALO_DATABASE_CONN`, `DEDALO_ENTITY`, …). Before, a `DB_HOST` you added by hand silently won over the answer you had just given the installer. A re-run over an existing `.env` replaces the old spelling with the new one, so no value is left under two names. The engine and the backup scripts still accept the old spellings, so an existing `.env` keeps working unchanged.
+
+- **The install database is compiled from the repository and proven by a fresh install before it ships.**
+
+    Maintenance → *Build database version* → *Build install version* refused with "not
+    runnable on this engine", pointing at a maintenance dashboard that no longer exists. It
+    now compiles `install/db/dedalo_install.pgsql.gz` — the database every fresh install
+    starts from — from files in the repository only (the schema and its migrations, the
+    core ontology release packages, the languages and hierarchy registry files, the default
+    accounts), never from an installation's database, so it cannot carry one
+    installation's data or mistakes into every new install. Before the file is replaced
+    the result installs itself in a scratch database and is checked; the same command is
+    `bun run seed:build`. The seed ships with a manifest that records what it was built
+    from. See [the seed](./development/ts_install_internals.md#the-install-seed).
 
 - **"**Probe media** on a new copy-mode publication host no longer reports a problem before anything is published."**
 

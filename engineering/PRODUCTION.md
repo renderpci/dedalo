@@ -1109,7 +1109,11 @@ is an operator's decision, with the dry report in view.
   RESOLVED). A fresh, empty PostgreSQL database is provisioned by restoring the
   vendored seed dump `install/db/dedalo_install.pgsql.gz` (full schema +
   extensions + populated core `dd_ontology` + root user + default
-  project/profiles), then setting the Argon2id root password. Two frontends
+  project/profiles), then setting the Argon2id root password. The seed is
+  COMPILED from repo sources only (`bun run seed:build`,
+  `src/core/install/seed_build.ts`; never from an installation's database),
+  verified by a fresh install before it is written, and committed with its
+  manifest (`install_seed_manifest_tripwire`). Two frontends
   drive one engine: the browser wizard (auto-served when unconfigured) and the
   headless CLI `bun run scripts/install.ts` (npm `dedalo:install`). See
   **`docs/install/ts_native_install.md`** for the operator guide. PHP is no longer required to

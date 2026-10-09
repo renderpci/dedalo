@@ -33,7 +33,7 @@
 ## Ontology
 
 - [x] TODO-023: Overwrite ontology nodes (with local ontology definitions, e.g. localontlogy0) (see https://github.com/dedalia-org/dedalo/blob/v7_php_frozen/docs/core/ontology/ontology_class.md). Ensure that this functionality is implemented in v7 TS. Note that the overwrite occurs when parsing the ontology (creating dd_ontology resolved records), and will not be recalculated until a new parse. (2026-10-01: implemented in `src/core/ontology/parser.ts` — link = ontology42 only; tld/translatable/order/is_model canonical-only; term merged per lang; properties per top-level key, `null` removes; override records never parsed as nodes. WC-2026-10-01-ontology-overwrite-scoped; gate test/unit/ontology_overwrite_native.test.ts; admin guide docs/core/ontology/local_ontology_overrides.md.)
-- [ ] TODO-024: Ontology: Default lang will be english. Review the entire workflow to ensure it works correctly, especially publication (current definition is only in spanish).
+- [ ] TODO-024: Ontology: Default lang will be english. Review the entire workflow to ensure it works correctly, especially publication (current definition is only in spanish). See plan /plans/elegant-weaving-barto.md
 - [x] TODO-025: Non root users can't access to the Ontology tree. Check why. (2026-10-01 diagnosis: DELIBERATE, not a bug — engineering/AREA_SPEC.md §9 made area_ontology (dd5) superuser-only, read AND menu, by user direction 2026-07-03. Gates: src/core/area/read.ts dispatchAreaRead (`principal.userId !== SUPERUSER_ID` → perm.denied, global admins included) + src/core/api/handlers/menu.ts (dd5 filtered for non-superusers). PHP had no hard gate: ordinary ACL + global-admin bypass, dd774 self-keyed profile could open it. Decide the rule: (a) global admin + root (`isGlobalAdmin`), or (b) PHP rule (global admin OR profile granted dd5 via getAuthorizedAreaTipos). Same change: AREA_SPEC §9 row, the differential pinning the divergence, a WC entry.)
 - [x] TODO-026: Ontology menu access currently is only for root user. It should be for global admins with specific permissions (in the same way another sections have). This allows to give access to ontology menu to other users than root, and permissions for specific fields. (2026-10-07: rule (c), closes TODO-025 too — dd5 opens, read AND menu, for root OR a global admin whose profile grants dd5 (level ≥ 1); ONE predicate `canAccessOntologyArea` (src/core/security/permissions.ts) behind src/core/area/read.ts and src/core/api/handlers/menu.ts. Inside, no admin bypass: an ontology hierarchy is served iff read on its TLD section (inactive/rootless still kept); sections/fields answer the ordinary ACL. Root payload unchanged. AREA_SPEC §9 row + docs/core/areas/area_ontology.md updated. WC-2026-10-07-ontology-area-admin-grant; gate test/unit/ontology_area_access_native.test.ts.)
 
@@ -46,10 +46,11 @@
 - [ ] TODO-030: mdcat DB (dedalo7_mdcat) lacks migration 0009 (`f_regex_literal` / `f_like_literal`): every text search fails there. Apply the migration before using it as a perf/validation DB (schema change — needs authorisation).
 - [ ] TODO-031: area_maintenance widget 'unit_test' make sense in production mode?
 - [ ] TODO-032: Verify this bug: in copy mode, the agent creates folders and markers that its own service settings make unreadable to nginx (0750/0640). Every published file then answers 404 on a real host.
+- [ ] TODO-033: Create a data seed for testing and learning purposes. Numismatic, TCH and Oral History collections. Include metadata, images, and transcripts.
 
 ## Messaging
 
-- [ ] TODO-033: Messages system for users communication (see Agora https://agora.dedalo.dev/d/364-proposal-to-include-a-message-thread).
+- [ ] TODO-034: Messages system for users communication (see Agora https://agora.dedalo.dev/d/364-proposal-to-include-a-message-thread).
 
 ## Components & Sections
 

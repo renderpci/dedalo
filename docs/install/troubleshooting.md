@@ -182,10 +182,10 @@ has to carry them itself.
 **Fix.** Ensure all four keys are present:
 
 ```dotenv
-DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-eng":"English"}
-PROJECTS_DEFAULT_LANGS=["lg-spa","lg-eng"]
-DEDALO_APPLICATION_LANGS_DEFAULT=lg-spa
-DEDALO_DATA_LANG_DEFAULT=lg-spa
+DEDALO_APPLICATION_LANGS={"lg-eng":"English","lg-spa":"Castellano"}
+PROJECTS_DEFAULT_LANGS=["lg-eng","lg-spa"]
+DEDALO_APPLICATION_LANGS_DEFAULT=lg-eng
+DEDALO_DATA_LANG_DEFAULT=lg-eng
 ```
 
 ### `FATAL: another server instance is already listening on … — refusing to steal its socket`
