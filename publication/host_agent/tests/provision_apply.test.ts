@@ -13,6 +13,7 @@ import type { AgentLayout, HostDeclaration } from '../src/provision/layout';
 import { PUBHOST_GROUP, derive } from '../src/provision/layout';
 import type { Action, HostLockRef, RendererInstallAction, WriteAction } from '../src/provision/plan';
 import { PlanRefused, RENDERERS, plan } from '../src/provision/plan';
+import { recordPath } from '../src/provision/retire';
 import { unixDeclaration } from './fixtures/provision_declaration';
 import { FAKE_TOKEN, FakeHost, FakeInitHost } from './support/provision_fake_host';
 
@@ -38,12 +39,16 @@ describe('apply on a fresh host', () => {
       l.v2ScratchUnitPath,
       l.v2UnitPath,
       l.agentUnitPath,
+      // LAST: the provision record (retire.ts) — the v1 tree this declaration provisions.
+      recordPath(l),
     ]);
     expect(host.body(l.serviceTokenPath)).toBe(FAKE_TOKEN);
     expect(host.entries.get(l.serviceTokenPath)).toMatchObject({ uid: 0, gid: 0, mode: 0o600 });
     expect(host.entries.get(l.state.auditFile)).toMatchObject({ type: 'file', uid: 990, gid: 0, mode: 0o600, body: '' });
     expect([...host.appendOnlyPaths]).toEqual([l.state.auditFile]);
-    expect(host.calls.filter(call => /^(mkdir|writeTemp|chown|chmod|rename|appendOnly) /.test(call)).at(-1)).toBe(
+    // The seal is the last filesystem phase mutation; only the tail's provision record follows it.
+    const record = recordPath(l);
+    expect(host.calls.filter(call => /^(mkdir|writeTemp|chown|chmod|rename|appendOnly) /.test(call) && !call.includes(record)).at(-1)).toBe(
       `appendOnly ${l.state.auditFile}`,
     );
     expect(host.entries.get(l.state.root)).toMatchObject({ type: 'dir', uid: 0, mode: 0o755 });
@@ -601,6 +606,7 @@ describe('observeHost + hostIo on a real scratch tree (spec S9-S11, §5.9 facts)
       systemdVersion: () => record('systemctl --version', 'systemd 252 (252.33-1~deb12u1)\n+PAM +AUDIT\n'),
       semanagePortList: () => record('semanage port -l', 'http_port_t    tcp    80, 443, 3100\nmysqld_port_t    tcp    1186, 3306, 63132-63164\n'),
       selinuxLabel: () => ok(),
+      removeTree: () => ok(),
     };
   }
 

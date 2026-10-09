@@ -172,7 +172,8 @@ describe('plan on a fresh host', () => {
   });
 
   test('the tail: daemon-reload, enable both units, start only the agent (v2 has no release yet)', () => {
-    expect(actions.filter(a => !['mkdir', 'write', 'append-only'].includes(a.op))).toEqual([
+    // (the provision record, LAST, is retire's: tests/provision_retire.test.ts)
+    expect(actions.filter(a => !['mkdir', 'write', 'append-only', 'provision-record'].includes(a.op))).toEqual([
       { op: 'daemon-reload' },
       { op: 'enable', unit: 'dedalo-publication-api-v2' },
       { op: 'enable', unit: 'dedalo-publication-host-test' },
@@ -494,7 +495,7 @@ describe('the tail, through a renderer with effects', () => {
         }),
       ],
     };
-    const tail = plan(l, new FakeHost(l).state(), PENDING_FACTS, [probe]).filter(a => !['mkdir', 'write', 'append-only'].includes(a.op));
+    const tail = plan(l, new FakeHost(l).state(), PENDING_FACTS, [probe]).filter(a => !['mkdir', 'write', 'append-only', 'provision-record'].includes(a.op));
     expect(tail).toEqual([
       { op: 'daemon-reload' },
       { op: 'web-configtest', server: 'apache', bin: '/usr/sbin/apache2ctl', lock: { dir: l.host.locksDir, uid: 0, gid: 989 } },
@@ -685,7 +686,7 @@ describe('a site (spec S4, S5): pool, web include, v1 directories, validators, t
 
   test('the tail: daemon-reload → fpm-configtest → fpm-reload → web-configtest → web-reload → units, each reload restoring its files', () => {
     const tail = actions.filter(a => !['mkdir', 'write', 'chown', 'chmod', 'append-only', 'remove'].includes(a.op)).map(a => a.op);
-    expect(tail).toEqual(['daemon-reload', 'fpm-configtest', 'fpm-reload', 'web-configtest', 'web-reload', 'enable', 'enable', 'start']);
+    expect(tail).toEqual(['daemon-reload', 'fpm-configtest', 'fpm-reload', 'web-configtest', 'web-reload', 'enable', 'enable', 'start', 'provision-record']);
     expect(actions.find(a => a.op === 'fpm-reload')).toEqual({
       op: 'fpm-reload',
       unit: 'php8.2-fpm',

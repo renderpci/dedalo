@@ -422,6 +422,8 @@ export const MODES = Object.freeze({
   journal: row('root', 'root', 0o600),
   /** `<INIT_BASE>/<instance>/init.lock` (+ its owner record), spec §7. */
   initLock: row('root', 'root', 0o600),
+  /** `<config_base>/<instance>/provisioned.json`: what apply provisioned that a later declaration may retire (retire.ts). */
+  provisionRecord: row('root', 'root', 0o644),
 });
 
 export type ModeKey = keyof typeof MODES;

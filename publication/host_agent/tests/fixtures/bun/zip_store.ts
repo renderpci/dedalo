@@ -1,14 +1,19 @@
 /**
- * TEST-ONLY zip STORE writer — builds the fake Bun release archives the P5 gates verify
- * (tests/init_install_sh.test.ts, tests/init_bun_install.test.ts), in-test, so no binary
- * fixture lives on disk and each test can make exactly the archive it needs. Entries carry
- * Unix mode bits (version-made-by 3) so `unzip` restores the executable bit of `<asset>/bun`.
+ * TEST-ONLY builder of the fake Bun release archives the P5 gates verify
+ * (tests/init_install_sh.test.ts, tests/init_bun_install.test.ts, tests/init_bun_asset.test.ts),
+ * in-test, so no binary fixture lives on disk and each test makes exactly the archive it needs.
+ * The archive is written by the REAL Info-ZIP `zip` (no encoder of our own): entries are files in
+ * a scratch tree carrying their Unix modes, so `unzip` restores the executable bit of
+ * `<asset>/bun` exactly as it does for a real Bun release. `zip` is a declared tool of the suite
+ * (ci/Dockerfile installs it); a host without it fails loudly here, never silently.
  *
  * fakeBun(version) is a POSIX sh script standing in for the Bun binary: it answers
  * `--version` with `version` (or exits with `exitCode`), so the trampoline's post-verify
  * `--version` runs on macOS and Linux alike.
  */
-import { crc32 } from 'node:zlib';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 
 export interface ZipEntry {
   readonly name: string;
@@ -17,66 +22,34 @@ export interface ZipEntry {
   readonly mode?: number;
 }
 
-const enc = new TextEncoder();
+/** A fixed mtime, so the same entries always give the same archive bytes. */
+const FIXED_TIME = new Date('2020-01-01T00:00:00Z');
 
 export function zipStore(entries: readonly ZipEntry[]): Uint8Array {
-  const locals: Uint8Array[] = [];
-  const centrals: Uint8Array[] = [];
-  let offset = 0;
-  for (const entry of entries) {
-    const name = enc.encode(entry.name);
-    const data = typeof entry.data === 'string' ? enc.encode(entry.data) : entry.data;
-    const crc = crc32(data) >>> 0;
-    const local = new Uint8Array(30 + name.length + data.length);
-    const lv = new DataView(local.buffer);
-    lv.setUint32(0, 0x04034b50, true);
-    lv.setUint16(4, 10, true); // version needed
-    lv.setUint16(6, 0, true); // flags
-    lv.setUint16(8, 0, true); // STORE
-    lv.setUint16(10, 0, true); // time
-    lv.setUint16(12, 0x21, true); // date 1980-01-01
-    lv.setUint32(14, crc, true);
-    lv.setUint32(18, data.length, true);
-    lv.setUint32(22, data.length, true);
-    lv.setUint16(26, name.length, true);
-    lv.setUint16(28, 0, true);
-    local.set(name, 30);
-    local.set(data, 30 + name.length);
-    const central = new Uint8Array(46 + name.length);
-    const cv = new DataView(central.buffer);
-    cv.setUint32(0, 0x02014b50, true);
-    cv.setUint16(4, (3 << 8) | 20, true); // made by Unix
-    cv.setUint16(6, 10, true);
-    cv.setUint16(8, 0, true);
-    cv.setUint16(10, 0, true);
-    cv.setUint16(12, 0, true);
-    cv.setUint16(14, 0x21, true);
-    cv.setUint32(16, crc, true);
-    cv.setUint32(20, data.length, true);
-    cv.setUint32(24, data.length, true);
-    cv.setUint16(28, name.length, true);
-    cv.setUint32(38, ((0o100000 | (entry.mode ?? 0o755)) << 16) >>> 0, true); // external attrs
-    cv.setUint32(42, offset, true);
-    central.set(name, 46);
-    locals.push(local);
-    centrals.push(central);
-    offset += local.length;
+  const zipBin = Bun.which('zip');
+  if (zipBin === null) throw new Error('zip_store: the `zip` tool (Info-ZIP) is required by this suite and is not installed');
+  const scratch = mkdtempSync(join(tmpdir(), 'dedalo-fake-bun-zip-'));
+  try {
+    for (const entry of entries) {
+      const path = join(scratch, 'tree', entry.name);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, entry.data);
+      chmodSync(path, entry.mode ?? 0o755);
+      utimesSync(path, FIXED_TIME, FIXED_TIME);
+    }
+    const out = join(scratch, 'out.zip');
+    // -X: no extra attributes (uid/gid, extended timestamps) beyond the Unix mode; -0: STORE.
+    const run = Bun.spawnSync(['zip', '-X', '-0', '-q', out, ...entries.map(e => e.name)], {
+      cwd: join(scratch, 'tree'),
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: { PATH: dirname(zipBin), LC_ALL: 'C' },
+    });
+    if (run.exitCode !== 0) throw new Error(`zip_store: zip exited ${run.exitCode}: ${run.stderr.toString().trim()}`);
+    return new Uint8Array(readFileSync(out));
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
   }
-  const centralSize = centrals.reduce((n, c) => n + c.length, 0);
-  const end = new Uint8Array(22);
-  const ev = new DataView(end.buffer);
-  ev.setUint32(0, 0x06054b50, true);
-  ev.setUint16(8, entries.length, true);
-  ev.setUint16(10, entries.length, true);
-  ev.setUint32(12, centralSize, true);
-  ev.setUint32(16, offset, true);
-  const out = new Uint8Array(offset + centralSize + 22);
-  let at = 0;
-  for (const part of [...locals, ...centrals, end]) {
-    out.set(part, at);
-    at += part.length;
-  }
-  return out;
 }
 
 /** A stand-in Bun: `bun --version` prints `version` and exits `exitCode`. */

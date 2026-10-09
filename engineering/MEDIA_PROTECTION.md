@@ -389,5 +389,12 @@ Rule A). Engine proof: `bun run test:media:pubhost` (the §9 matrix for this pro
 Apache and nginx, in a HOSTILE harness — mount under the document root, an operator
 static-asset regex location before the nginx include — plus: a work cookie is refused, a
 permissive work `.htaccess` is ignored, and Apache without mod_rewrite refuses the config).
+The agent and engine drills (`bun run test:pubhost:agent`, `bun run test:pubhost:engine`) hold the
+MEDIA-03 headers on the PROVISIONED path too, on Apache and nginx: the include the agent applied
+(and, on nginx, the host map the root renderer installed from `rules.map`) serves the published
+record's envelope SVG with no `Content-Disposition` and `SVG_ENVELOPE_CSP`, and its uploaded SVG
+`attachment` with `SVG_QUARANTINE_CSP` (`scripts/lib/publication_host_agent_drill_kit.ts`
+`svgTreatmentProblem`, its paths pinned to the selection rule by
+`test/unit/publication_host_agent_drill_kit.test.ts`).
 Hostile-cookie rows are N/A: this profile reads no cookie. Exports, NFS/SMB attribute caching and
 the mount layout: `engineering/PUBLICATION_HOST_SPEC.md` §5.1.

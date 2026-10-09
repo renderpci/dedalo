@@ -56,7 +56,7 @@ KIT_SOURCE_DIR=source
 KIT_PATH_RE='^[A-Za-z0-9._@+-]+(/[A-Za-z0-9._@+-]+)*$'
 KIT_DOT_SEGMENT_RE='(^|/)\.\.?(/|$)'
 KIT_MAX_ENTRIES=20000
-HANDOVER_FLAGS='--draft --source --source-digest-confirmed --bun-archive --bun-sums'
+HANDOVER_FLAGS='--draft --source --source-digest-confirmed --bun-archive --bun-sums --kit-file --kit-digest-confirmed'
 BUN_HANDOVER_FLAGS='--no-env-file --no-install'
 EMPTY_BUNFIG_NAME=empty.bunfig.toml
 STAGE_DIR_NAME=stage
@@ -377,7 +377,7 @@ main() {
   INSTANCE=$1
   shift
   printf '%s\n' "$INSTANCE" | grep -Eq "$INSTANCE_RE" || die "instance '$INSTANCE' must match $INSTANCE_RE"
-  SOURCE='' DRAFT='' OFFLINE='' OFFLINE_SUMS='' MIRROR='' DIGEST_GIVEN='' KIT='' KIT_SHA_GIVEN=''
+  SOURCE='' DRAFT='' OFFLINE='' OFFLINE_SUMS='' MIRROR='' DIGEST_GIVEN='' KIT='' KIT_SHA_GIVEN='' KIT_FILE=''
   while [ $# -gt 0 ]; do
     case "$1" in
       --source) [ $# -ge 2 ] || usage; SOURCE=$2; shift 2 ;;
@@ -472,6 +472,10 @@ main() {
 
   if [ -n "$KIT" ]; then
     if [ -L "$KIT" ] || [ ! -f "$KIT" ]; then die "--kit $KIT must be a regular file (not a symlink)"; fi
+    # The kit as the operator named it, absolute (init runs from the stage): once the install
+    # converged init offers to remove THIS file — and only while it still hashes to KIT_SHA.
+    KIT_FILE=$(cd "$(dirname "$KIT")" && pwd -P)/$(basename "$KIT") || die "cannot resolve $KIT"
+    printf '%s\n' "$KIT_FILE" | grep -Eq "$SAFE_PATH_RE" || die "--kit $KIT resolves to a path init cannot take ($KIT_FILE)"
     # The hash is taken of root's OWN copy: what is verified is what is read.
     _kitcopy=$STAGE/kit.tar.gz
     cp "$KIT" "$_kitcopy" || die "cannot copy $KIT"
@@ -575,6 +579,7 @@ main() {
     verify_bun "$ZIP" "$SUMS" "$ASSET" "$PIN" "$STAGE/source/.bun-sha256" "$STAGE/bun"
     BUNX=$STAGE/bun/bun
     ENTRY=$STAGE/source/$ENTRY_REL
+    [ -z "$KIT" ] || set -- --kit-file "$KIT_FILE" --kit-digest-confirmed "$KIT_SHA" "$@"
     [ "$SUMS" = - ] || set -- --bun-sums "$SUMS" "$@"
     set -- --source "$STAGE/source" --source-digest-confirmed "$DIGEST" --bun-archive "$ZIP" "$@"
   else

@@ -100,6 +100,12 @@ import {
 	publicationHostMediaUrl,
 } from '../src/core/media/publication_host_rules.ts';
 import {
+	MEDIA_NOSNIFF,
+	SVG_ENVELOPE_CSP,
+	SVG_QUARANTINE_CSP,
+	SVG_QUARANTINE_DISPOSITION,
+} from '../src/core/media/svg_safety.ts';
+import {
 	publicationHostFingerprint,
 	publicationHostFingerprintMatches,
 } from '../src/core/publication_host/pairing.ts';
@@ -155,6 +161,7 @@ import {
 	setupScene,
 	spawnAgent,
 	startMapCall,
+	svgTreatmentProblems,
 	tail,
 	teardown,
 	UNPUBLISHED,
@@ -180,6 +187,14 @@ import { writeEngineBundle } from './lib/publication_host_engine_drill_kit.ts';
 import { declareScratchPublicationHostsDir } from './lib/publication_host_scratch.ts';
 
 export { missingBinaries };
+
+/** The MEDIA-03 header contract the SVG rows hold the web server to (svg_safety.ts). */
+const SVG_CONTRACT = {
+	envelopeCsp: SVG_ENVELOPE_CSP,
+	quarantineCsp: SVG_QUARANTINE_CSP,
+	quarantineDisposition: SVG_QUARANTINE_DISPOSITION,
+	nosniff: MEDIA_NOSNIFF,
+};
 
 const book = createRowBook();
 const { row } = book;
@@ -462,6 +477,13 @@ async function rulesRows(scene: Scene): Promise<void> {
 				await eventually(() => media(UNPUBLISHED), 404),
 				(await agentStatus(scene)).rules?.hash !== hash && 'status rules.hash',
 			]);
+		},
+	);
+	await row(
+		`${s} MEDIA-03 through ${scene.server}: the envelope SVG inline (no Content-Disposition, the envelope CSP), the uploaded SVG \`attachment\` + the quarantine CSP`,
+		async () => {
+			const found = await svgTreatmentProblems(scene, publicationHostMediaUrl(), SVG_CONTRACT);
+			return found.length === 0 ? null : found.join('; ');
 		},
 	);
 	await row(

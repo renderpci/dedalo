@@ -55,9 +55,23 @@ import {
 	releaseIdFor,
 	renderHostMapDriver,
 	renderStandIns,
+	SVG_DRILL_FILES,
+	SVG_DRILL_QUALITIES,
+	svgTreatmentProblem,
 	writeStandIns,
 } from '../../scripts/lib/publication_host_agent_drill_kit.ts';
-import { buildNginxMap } from '../../src/core/media/protection.ts';
+import { config } from '../../src/config/config.ts';
+import { buildNginxMap, filterPublicQualities } from '../../src/core/media/protection.ts';
+import { normalizePublicationHostInput } from '../../src/core/media/publication_host_rules.ts';
+import {
+	imageEnvelopePcre,
+	isImageEnvelopeSvg,
+	MEDIA_NOSNIFF,
+	SVG_ENVELOPE_CSP,
+	SVG_QUARANTINE_CSP,
+	SVG_QUARANTINE_DISPOSITION,
+	svgQuarantinePcre,
+} from '../../src/core/media/svg_safety.ts';
 
 const REPO = join(import.meta.dir, '..', '..');
 const scratch = mkdtempSync(join(tmpdir(), 'dd_pubhost_agent_kit_'));
@@ -410,6 +424,88 @@ describe('drill kit — the host-wide map (B1: the drills push the map, root ren
 		});
 		expect(again.exitCode).toBe(0);
 		expect(readFileSync(nginxLog, 'utf8').split('\n').filter(Boolean).length).toBe(2);
+	});
+});
+
+describe('drill kit — the SVG treatment rows (MEDIA-03 through the publication host)', () => {
+	const contract = {
+		envelopeCsp: SVG_ENVELOPE_CSP,
+		quarantineCsp: SVG_QUARANTINE_CSP,
+		quarantineDisposition: SVG_QUARANTINE_DISPOSITION,
+		nosniff: MEDIA_NOSNIFF,
+	};
+	const url = (rel: string) => `/dedalo/${config.mediaDir}/${rel}`;
+	const served = (extra: Record<string, string>) =>
+		new Headers({ 'X-Content-Type-Options': MEDIA_NOSNIFF, ...extra });
+
+	test('each planted file IS the population it names (the engine selection rule, both dialects)', () => {
+		const envelope = new RegExp(imageEnvelopePcre());
+		const quarantine = new RegExp(svgQuarantinePcre());
+		expect(isImageEnvelopeSvg(SVG_DRILL_FILES.envelope.split('/'))).toBe(true);
+		expect(envelope.test(url(SVG_DRILL_FILES.envelope))).toBe(true);
+		expect(isImageEnvelopeSvg(SVG_DRILL_FILES.uploaded.split('/'))).toBe(false);
+		expect(envelope.test(url(SVG_DRILL_FILES.uploaded))).toBe(false);
+		expect(quarantine.test(url(SVG_DRILL_FILES.uploaded))).toBe(true);
+	});
+
+	test('their qualities are public (survive the filter and the host input), and each file sits in one', () => {
+		expect(filterPublicQualities(SVG_DRILL_QUALITIES)).toEqual([...SVG_DRILL_QUALITIES]);
+		const host = normalizePublicationHostInput({ root: '/m', qualities: SVG_DRILL_QUALITIES });
+		expect(host.dropped).toEqual([]);
+		for (const rel of Object.values(SVG_DRILL_FILES))
+			expect(SVG_DRILL_QUALITIES.some((q) => rel.startsWith(`${q}/`))).toBe(true);
+	});
+
+	test('the envelope: inline (absent or empty disposition) with the envelope CSP passes; anything else names what is wrong', () => {
+		const good = served({ 'Content-Security-Policy': SVG_ENVELOPE_CSP });
+		expect(svgTreatmentProblem('envelope', 200, good, contract)).toBeNull();
+		expect(
+			svgTreatmentProblem(
+				'envelope',
+				200,
+				served({ 'Content-Security-Policy': SVG_ENVELOPE_CSP, 'Content-Disposition': '' }),
+				contract,
+			),
+		).toBeNull();
+		const attachment = served({
+			'Content-Security-Policy': SVG_ENVELOPE_CSP,
+			'Content-Disposition': 'attachment',
+		});
+		expect(svgTreatmentProblem('envelope', 200, attachment, contract)).toContain(
+			'a Content-Disposition',
+		);
+		const quarantined = served({ 'Content-Security-Policy': SVG_QUARANTINE_CSP });
+		expect(svgTreatmentProblem('envelope', 200, quarantined, contract)).toContain(
+			'not the envelope CSP',
+		);
+		expect(svgTreatmentProblem('envelope', 404, good, contract)).toContain('status 404');
+		const bare = new Headers({ 'Content-Security-Policy': SVG_ENVELOPE_CSP });
+		expect(svgTreatmentProblem('envelope', 200, bare, contract)).toContain('no nosniff');
+	});
+
+	test('the uploaded svg: exactly `attachment` + the quarantine CSP passes; inline, absent or the envelope CSP fails', () => {
+		const good = served({
+			'Content-Security-Policy': SVG_QUARANTINE_CSP,
+			'Content-Disposition': SVG_QUARANTINE_DISPOSITION,
+		});
+		expect(svgTreatmentProblem('uploaded', 200, good, contract)).toBeNull();
+		for (const disposition of [undefined, '', 'inline']) {
+			const headers = served({
+				'Content-Security-Policy': SVG_QUARANTINE_CSP,
+				...(disposition === undefined ? {} : { 'Content-Disposition': disposition }),
+			});
+			expect(svgTreatmentProblem('uploaded', 200, headers, contract)).toContain(
+				'not Content-Disposition attachment',
+			);
+		}
+		const envelopeCsp = served({
+			'Content-Security-Policy': SVG_ENVELOPE_CSP,
+			'Content-Disposition': SVG_QUARANTINE_DISPOSITION,
+		});
+		expect(svgTreatmentProblem('uploaded', 200, envelopeCsp, contract)).toContain(
+			'not the quarantine CSP',
+		);
+		expect(svgTreatmentProblem('uploaded', 403, good, contract)).toContain('status 403');
 	});
 });
 

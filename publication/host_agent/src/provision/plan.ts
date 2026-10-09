@@ -110,6 +110,18 @@ import {
   renderRendererVersion,
   rendererInstallDecision,
 } from './host_map_renderer';
+import type { RecordedArtifact, RecordedTree } from './retire';
+import {
+  RETIRABLE_KINDS,
+  RETIRED_SUFFIX,
+  currentRecord,
+  encodeRecord,
+  parseRecord,
+  recordPath,
+  retiredFileProblem,
+  retiredOf,
+  retiredTreeProblem,
+} from './retire';
 import type { SelinuxRuleFacts } from './selinux';
 import {
   SELINUX_IMPORT_NAME,
@@ -574,10 +586,14 @@ interface Ownership {
 export const VALIDATED_BACKUP_SUFFIX = '.dedalo-provision.bak';
 export const VALIDATED_CREATED_SUFFIX = '.dedalo-provision.created';
 
-/** What a reload restores when the server is not active after it. */
+/**
+ * What a reload restores when the server is not active after it. `retire`: a retired FPM pool
+ * (retire.ts) waits at `<path>.dedalo-provision.bak` until the reload succeeded — restored by
+ * renaming it back, dropped after a good reload.
+ */
 export interface RestoreEntry {
   readonly path: string;
-  readonly disposition: 'create' | 'rewrite';
+  readonly disposition: 'create' | 'rewrite' | 'retire';
 }
 
 /** The host web lock a validator or a configtest+reload pair is taken under (spec S12 3). */
@@ -684,11 +700,40 @@ export interface AppendOnlyAction {
   readonly op: 'append-only';
   readonly path: string;
 }
-/** The contribution sweep (spec §5.9): renamed to the provisioner temp name, then removed — never followed. */
+/**
+ * The contribution sweep (spec §5.9) and a RETIRED artifact (retire.ts): renamed to the
+ * provisioner temp name, then removed — never followed. With `validator` (a retired FPM pool):
+ * under the host web lock, renamed to `<path>.dedalo-provision.bak`, then the FPM configtest —
+ * restored when it fails; the backup stays for the reload (`keepRollback`) or goes at once.
+ */
 export interface RemoveAction {
   readonly op: 'remove';
   readonly path: string;
   readonly why: string;
+  readonly validator?: { readonly kind: 'fpm'; readonly bin: string; readonly unit: string };
+  readonly lock?: HostLockRef;
+  readonly keepRollback?: boolean;
+}
+/**
+ * A RETIRED TREE (retire.ts), in the tail after the agent restarted: renamed to
+ * `<path>.dedalo-provision.retired` (`resume`: that temp is left over, the rename is done),
+ * chowned root:root and chmodded 0700 through the entry door, then `rm -rf --one-file-system`.
+ */
+export interface RemoveTreeAction {
+  readonly op: 'remove-tree';
+  readonly path: string;
+  readonly temp: string;
+  readonly resume: boolean;
+  readonly uid: number;
+  readonly gid: number;
+}
+/** The provision record (retire.ts), LAST: a run that failed earlier keeps the previous one. */
+export interface ProvisionRecordAction {
+  readonly op: 'provision-record';
+  readonly path: string;
+  readonly body: string;
+  readonly uid: number;
+  readonly gid: number;
 }
 /**
  * Root's host-map renderer copy (spec §13.5): MAP_RENDERER_FILES copied from agent_dir, the
@@ -743,7 +788,9 @@ export type Action =
   | FpmReloadAction
   | WebConfigtestAction
   | WebReloadAction
-  | UnitAction;
+  | UnitAction
+  | RemoveTreeAction
+  | ProvisionRecordAction;
 
 const FS_OPS = new Set<Action['op']>(['mkdir', 'write', 'chown', 'chmod', 'append-only', 'remove', 'renderer-install']);
 const TAIL_ORDER: readonly Action['op'][] = [
@@ -757,6 +804,8 @@ const TAIL_ORDER: readonly Action['op'][] = [
   'enable',
   'start',
   'restart',
+  'remove-tree',
+  'provision-record',
 ];
 
 export class PlanRefused extends Error {
@@ -1384,6 +1433,17 @@ export function plan(
     }
   }
 
+  // 7e. What an earlier apply provisioned and the declaration no longer needs (retire.ts).
+  const retirement = planRetirement(layout, host, artifacts, { rootUid, rootGid: host.groups.get('root') ?? 0, webLock });
+  refusals.push(...retirement.refusals);
+  fsActions.push(...retirement.fs);
+  const ownFpmUnit = layout.site?.v1?.fpm.unit ?? null;
+  for (const pending of retirement.fpm) {
+    if (pending.unit !== ownFpmUnit) continue;
+    validated.fpm.push(...pending.restore);
+    effects.add('reload_fpm');
+  }
+
   // 7d. A reload needs a running server: reloading a stopped unit fails after the files moved.
   for (const [effect, unit, what] of [
     ['reload_web', layout.web.unit, 'the web server'],
@@ -1409,6 +1469,12 @@ export function plan(
     const { bin, unit } = layout.site.v1.fpm;
     tail.push({ op: 'fpm-configtest', bin, lock: webLock });
     tail.push({ op: 'fpm-reload', unit, bin, restore: [...validated.fpm] });
+  }
+  // A retired pool's FPM install that is not this declaration's own (a v2-only one has none).
+  for (const pending of retirement.fpm) {
+    if (pending.unit === ownFpmUnit) continue;
+    tail.push({ op: 'fpm-configtest', bin: pending.bin, lock: webLock });
+    tail.push({ op: 'fpm-reload', unit: pending.unit, bin: pending.bin, restore: [...pending.restore] });
   }
   if (effects.has('reload_web')) {
     tail.push({ op: 'web-configtest', server: layout.web.server, bin: layout.web.configtestBin, lock: webLock });
@@ -1442,11 +1508,151 @@ export function plan(
       tail.push({ op: 'restart', unit });
     }
   }
-  tail.sort((a, b) => TAIL_ORDER.indexOf(a.op) - TAIL_ORDER.indexOf(b.op));
+  // LAST: the retired trees (the agent restarted on its new env file above), then the record.
+  tail.push(...retirement.tail);
+  // A reload ranks with its configtest, and the sort is stable: each pair stays a pair.
+  const rank = (op: Action['op']): number =>
+    TAIL_ORDER.indexOf(op === 'fpm-reload' ? 'fpm-configtest' : op === 'web-reload' ? 'web-configtest' : op);
+  tail.sort((a, b) => rank(a.op) - rank(b.op));
 
   const actions = [...fsActions, ...metaActions, ...sealActions, ...tail];
   assertPlanIsCoherent(actions, host);
   return actions;
+}
+
+/* ── retired artifacts (retire.ts) ───────────────────────────────────────────────── */
+
+interface RetirementContext {
+  readonly rootUid: number;
+  readonly rootGid: number;
+  readonly webLock: HostLockRef;
+}
+/** A retired pool's FPM install: reloaded after the removal (only while it runs). */
+interface RetiredFpm {
+  readonly unit: string;
+  readonly bin: string;
+  readonly restore: RestoreEntry[];
+}
+interface Retirement {
+  readonly refusals: string[];
+  readonly fs: Action[];
+  readonly fpm: RetiredFpm[];
+  readonly tail: Action[];
+}
+
+/** The record as observeHost read it: undefined = absent, null = present but unreadable. */
+function recordText(host: HostState, path: string): string | null | undefined {
+  if (!host.paths.has(path)) return undefined;
+  return host.contents.get(path) ?? null;
+}
+
+/**
+ * What the record names and the render no longer produces, removed under retire.ts's guards; and
+ * the record rewritten LAST when it moved. An absent record and an empty one are the same: an
+ * instance that provisions nothing retirable never gets the file.
+ */
+export function planRetirement(layout: AgentLayout, host: HostState, artifacts: readonly Artifact[], ctx: RetirementContext): Retirement {
+  const out: Retirement = { refusals: [], fs: [], fpm: [], tail: [] };
+  const path = recordPath(layout);
+  const text = recordText(host, path);
+  const previous = parseRecord(text);
+  if (previous === null) {
+    out.refusals.push(`'${path}' (the provision record) is not one provision apply wrote — it lists what may be retired: restore it, or move it aside and re-run (nothing earlier is then retired)`);
+    return out;
+  }
+  const current = currentRecord(layout, artifacts);
+  const retired = retiredOf(previous, current);
+  for (const entry of retired.artifacts) retireFile(layout, host, entry, ctx, out);
+  for (const tree of retired.trees) retireTree(layout, host, tree, ctx, out);
+  const body = encodeRecord(current);
+  const empty = current.artifacts.length === 0 && current.trees.length === 0;
+  if (text !== body && !(text === undefined && empty)) {
+    out.tail.push({ op: 'provision-record', path, body, uid: ctx.rootUid, gid: ctx.rootGid });
+  }
+  return out;
+}
+
+function addRetiredFpm(out: Retirement, fpm: { readonly unit: string; readonly bin: string }, entry: RestoreEntry): void {
+  const found = out.fpm.find(pending => pending.unit === fpm.unit);
+  if (found) found.restore.push(entry);
+  else out.fpm.push({ unit: fpm.unit, bin: fpm.bin, restore: [entry] });
+}
+
+/** The FPM master root runs as `<bin> -t`: pinned code, judged like site.fpm.bin. */
+function retiredFpmBinProblem(host: HostState, bin: string, rootUid: number): string | null {
+  const facts = host.paths.get(bin);
+  const label = `the retired pool's FPM binary '${bin}'`;
+  if (facts?.type !== 'file' || (facts.mode & 0o111) === 0) return `${label} is not an executable file on this host — its pool cannot be retired with a configtest`;
+  const problem = trustProblem(facts, rootUid);
+  if (problem) return `${label} is ${problem} — make it root-owned and not group- or world-writable`;
+  const above = judgeAncestors(label, bin, host.trustRoot, p => host.paths.get(p), rootUid, new Set());
+  return above.length > 0 ? above.join('; ') : null;
+}
+
+function retireFile(layout: AgentLayout, host: HostState, entry: RecordedArtifact, ctx: RetirementContext, out: Retirement): void {
+  const fpm = RETIRABLE_KINDS[entry.kind] === 'fpm' ? entry.fpm : undefined;
+  const backup = `${entry.path}${VALIDATED_BACKUP_SUFFIX}`;
+  const facts = host.paths.get(entry.path);
+  const backupFacts = host.paths.get(backup);
+  if (facts === undefined) {
+    if (fpm !== undefined && backupFacts !== undefined) retirePending(layout, host, entry, fpm, backupFacts, out);
+    return;
+  }
+  const problem = retiredFileProblem(layout.instance, entry, facts, host.contents.get(entry.path));
+  if (problem !== null) {
+    out.refusals.push(problem);
+    return;
+  }
+  const why = `retired: the declaration no longer provisions this ${entry.kind}`;
+  if (fpm === undefined) {
+    out.fs.push({ op: 'remove', path: entry.path, why });
+    return;
+  }
+  const binProblem = backupFacts !== undefined ? `'${backup}' is left over beside the retired pool — remove it by hand and re-run` : retiredFpmBinProblem(host, fpm.bin, ctx.rootUid);
+  if (binProblem !== null) {
+    out.refusals.push(binProblem);
+    return;
+  }
+  const active = host.units.get(fpm.unit)?.active === true;
+  out.fs.push({ op: 'remove', path: entry.path, why, validator: { kind: 'fpm', bin: fpm.bin, unit: fpm.unit }, lock: ctx.webLock, keepRollback: active });
+  if (active) addRetiredFpm(out, fpm, { path: entry.path, disposition: 'retire' });
+}
+
+/** An earlier run retired the pool and never reached its reload: reload now (running) or drop the rollback. */
+function retirePending(
+  layout: AgentLayout,
+  host: HostState,
+  entry: RecordedArtifact,
+  fpm: { readonly unit: string; readonly bin: string },
+  backupFacts: PathFacts,
+  out: Retirement,
+): void {
+  const backup = `${entry.path}${VALIDATED_BACKUP_SUFFIX}`;
+  const problem = retiredFileProblem(layout.instance, { ...entry, path: backup }, backupFacts, host.contents.get(backup));
+  if (problem !== null) out.refusals.push(problem);
+  else if (host.units.get(fpm.unit)?.active === true) addRetiredFpm(out, fpm, { path: entry.path, disposition: 'retire' });
+  else out.fs.push({ op: 'remove', path: backup, why: `the rollback of a retired ${entry.kind} (its FPM install is not running)` });
+}
+
+function retireTree(layout: AgentLayout, host: HostState, tree: RecordedTree, ctx: RetirementContext, out: Retirement): void {
+  const temp = `${tree.path}${RETIRED_SUFFIX}`;
+  const parent = host.paths.get(dirname(tree.path));
+  const parentTrusted = parent?.type === 'dir' && trustProblem(parent, ctx.rootUid) === null;
+  const tempFacts = host.paths.get(temp);
+  const facts = host.paths.get(tree.path);
+  const removal = { op: 'remove-tree' as const, path: tree.path, temp, uid: ctx.rootUid, gid: ctx.rootGid };
+  if (tempFacts !== undefined) {
+    if (facts !== undefined) out.refusals.push(`'${temp}' is left over beside the retired '${tree.path}' — inspect both and remove the temp by hand`);
+    else if (tempFacts.type !== 'dir' || !parentTrusted) out.refusals.push(`'${temp}' (an interrupted tree removal) is not a directory under a trusted parent — remove it by hand`);
+    else out.tail.push({ ...removal, resume: true });
+    return;
+  }
+  if (facts === undefined) return;
+  const owner =
+    tree.kind === 'v1_api' ? { uid: host.users.get(layout.identity.agentUser) ?? -1, gid: ctx.rootGid } : { uid: ctx.rootUid, gid: ctx.rootGid };
+  const problem = retiredTreeProblem(layout, tree, facts, owner, parentTrusted);
+  if (problem !== null) out.refusals.push(problem);
+  else out.tail.push({ ...removal, resume: false });
 }
 
 /** `src/rules/x.ts` → ['src', 'src/rules']: the directories a relative file needs, parents first. */
@@ -1785,7 +1991,11 @@ export function describe(action: Action): string {
     case 'append-only':
       return `chattr +a ${action.path} (append-only audit trail)`;
     case 'remove':
-      return `remove ${action.path} (${action.why})`;
+      return `remove ${action.path} (${action.why})${action.validator ? ` — then ${action.validator.bin} -t; restored if it fails` : ''}`;
+    case 'remove-tree':
+      return `remove ${action.resume ? `the rest of ${action.temp}` : `${action.path} (retired; via ${action.temp}, root 0700, rm -rf --one-file-system)`}`;
+    case 'provision-record':
+      return `record what is provisioned in ${action.path}`;
     case 'renderer-install':
       return `install the host map renderer into ${action.dir} (${action.why}: ${action.files.length} files + bun from ${action.sourceDir})`;
     case 'daemon-reload':

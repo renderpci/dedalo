@@ -259,6 +259,12 @@ against the `MANIFEST`: an altered, extra or missing file, or a symbolic link, s
 any of the kit's code runs. The kit's draft is the draft (`--kit` and `--draft` together are
 refused). Re-runs need no kit.
 
+Once the install converged, init offers to remove the kit you gave `install.sh`: on a terminal
+it asks (the default is no); without one, `-- --yes` removes it. It removes only that file, and
+only while it still has the sha256 `install.sh` verified — a file you replaced since, or a link,
+is left in place and named. The kit holds no secret, so keeping it (to install another host) is
+safe; the work host can always build it again.
+
 A later run (to repair drift, or after an upgrade of the source) needs neither: it runs the
 Bun and the agent code the first run installed.
 
@@ -410,6 +416,8 @@ another machine is `tcp` with its host and port typed in.
 | `--source-digest-confirmed <sha256>` | the digest you confirmed (`install.sh` passes it) |
 | `--bun-archive <zip>` | the verified Bun archive (`install.sh` passes it) |
 | `--bun-sums <file>` | Bun's `SHASUMS256.txt`, a cross-check (`install.sh` passes it) |
+| `--kit-file <file>` | the kit you gave `install.sh --kit` (`install.sh` passes it): once the install converged, init offers to remove it |
+| `--kit-digest-confirmed <sha256>` | the kit's sha256 `install.sh` verified (`install.sh` passes it): only a file that still has it is removed |
 | `--yes` | apply every *will change* item without asking. It never answers a decision, never edits a file of yours, never sets an SELinux boolean and never types a secret |
 | `--decide <item-id>=<option>` | answer one decision, for example `--decide declaration.layout=system`. Repeat it for each |
 | `--resume` | continue a run that stopped halfway (the journal shows it); without it such a run is refused |
@@ -516,6 +524,15 @@ one nginx serves.
     copies of the package. A lost passphrase cannot be recovered:
     `--decide pair.package=again` makes init write a new package. The manual path
     (`--fragment`, `--bundle`, `--token-file`) stays.
+
+    The package seals the agent's token and the engine's TLS key, so the copy on the
+    publication host is not kept once it is used. When the agent has recorded a command from
+    the work host after the package was written (its audit trail: the first one is the rules
+    the work system applies after pairing), every later init run and `--dry-run` reports the
+    package as **stale** and offers to remove it (`remove` is the default on a terminal;
+    without one, `--decide pair.package=remove`). You may remove it earlier with the same
+    `--decide`. Init removes only the file it wrote (root `0600`, in the package format); the
+    journal records it, and a later run reports the package as gone.
 
 ### What init keeps, and what a hand-run `provision` sees
 
@@ -1106,6 +1123,20 @@ the v1 API adds; for a new site, use the v2-only declaration that follows it:
 Without a `v1` block, every v1-only key is refused by name: `php_bin`, `site.fpm`,
 `site.api_paths.v1`, `paths.fpm_pool_dir` and `paths.v1_var_base`. With it, `php_bin` is
 required, and `site.fpm` too when there is a `site`.
+
+**Dropping v1 from an existing instance.** Remove the three v1 keys from its declaration and run
+`provision check museum_org`, then `provision apply museum_org` (or init again). `apply` keeps a
+record of what it provisioned that a later declaration may stop needing,
+`/etc/dedalo_publication_host/museum_org/provisioned.json`, and removes what the new declaration
+no longer has: the v1 PHP-FPM pool (through the FPM configtest — a pool that was the FPM
+install's only one is put back, and `apply` stops — then an FPM reload), the v1 log rotation,
+the v1 API tree under the state root (its releases and its configuration, with the database
+credentials) and the v1 pool's own directory. `check` shows each one first as `would: remove …`.
+It removes only files that still carry its own stamp for this instance, and only trees exactly
+as it left them: a hand-edited, unstamped or foreign file, or a tree with another owner or mode,
+stops the run and is named, so you can move it aside. The SELinux rules for v1 are deleted with
+the rest. The v1 account stays (`apply` never removes an account): delete it yourself once
+nothing runs as it. A pool that moves (another PHP version) is retired the same way.
 
 Write it as root, then make sure root alone can change it:
 
@@ -2221,6 +2252,7 @@ The commands below use the example names; `provision` runs as in step 4.
 | the agent does not start, naming the client certificate authority, the certificate or the key | the file is missing, unreadable, not a PEM file of the right type, or the key is accessible to others | run `provision apply museum_org` again; never disable client verification |
 | `provision check` says a file "exists and was not written by this provisioner (no stamp) — move it aside", or "is stamped for …" | a file is already at a path the provisioner owns: for example `v2.unit` names an existing service, or an older sudo or polkit file sits there | choose another name in the declaration, or move the file aside |
 | `provision check` refuses a file "edited by hand" | a generated file no longer matches its own hash | move it aside or restore it; change the declaration instead and run `apply` again |
+| `provision check` says a retired file or tree "is not removed" | the declaration dropped something (the v1 pool, its log rotation, a v1 tree) and what is on disk is no longer what `apply` left: edited, unstamped, another instance's, or another owner or mode | inspect it; move it aside (or remove it yourself) and run `apply` again |
 
 ### API configuration
 

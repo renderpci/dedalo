@@ -17,6 +17,9 @@
  *     the host-wide map, `systemctl start dedalo-pubhost-map.service` runs
  *   - renderHostMapDriver: the drill's stand-in for that root oneshot — the agent's OWN renderer
  *     (publication/host_agent/src/rules/host_map_main.ts runHostMap) over the scene's paths and user-mode nginx.
+ *   - SVG_DRILL_FILES / svgTreatmentProblem: the MEDIA-03 rows (provision init §13.8) — the
+ *     envelope SVG inline with the envelope CSP, the uploaded SVG `attachment`; the header
+ *     contract is passed in (svg_safety.ts reads the engine config at import).
  *   - EXEC_SEAM_DIR / EXEC_SEAM_MARKER / execSeamProblem: the CI image's seam (ci/Dockerfile,
  *     "exec seam"): a dispatcher at each of exec.ts's absolute binaries that runs the stand-in
  *     the drill writes into EXEC_SEAM_DIR.
@@ -146,6 +149,66 @@ export function renderEnvFile(values: Readonly<Record<string, string | number>>)
  * (which refuses outside a provisioned host); the kit gate pins the two equal.
  */
 export const AGENT_ACTOR_HEADER = 'X-Dedalo-Actor';
+
+// ── the SVG treatment (MEDIA-03 through the publication host) ─────────────────
+
+/**
+ * The two SVG populations the drills plant under the scene's media root, one published
+ * record (`test3_1`) each, so Rule B serves both and the HEADERS are what tells them apart:
+ *   - the server-generated image envelope (`<image folder>/…/svg/<bucket>/x.svg`): inline,
+ *     the envelope CSP, NO Content-Disposition (an `attachment` blanks the edit view);
+ *   - an uploaded vector (`svg/<quality>/x.svg`, component_svg): `attachment` + the
+ *     quarantine CSP.
+ * Their qualities (`image/svg`, `svg/web`) must be public on the host, or Rule B 404s them
+ * and the rows measure nothing. The kit gate pins that each path IS the population it names
+ * (the engine's own selection rule), so a moved path cannot turn a row vacuous.
+ */
+export const SVG_DRILL_FILES = {
+	envelope: 'image/svg/0/test94_test3_1.svg',
+	uploaded: 'svg/web/test94_test3_1.svg',
+} as const;
+export const SVG_DRILL_QUALITIES: readonly string[] = ['image/svg', 'svg/web'];
+export type SvgPopulation = keyof typeof SVG_DRILL_FILES;
+
+/**
+ * The header contract, PASSED IN by the caller (src/core/media/svg_safety.ts's constants):
+ * that module reads the engine config at import, which this kit never does (its header).
+ */
+export interface SvgHeaderContract {
+	readonly envelopeCsp: string;
+	readonly quarantineCsp: string;
+	readonly quarantineDisposition: string;
+	readonly nosniff: string;
+}
+
+/**
+ * What is wrong with one served SVG's response, or null. A 200 is required first: a 404
+ * carries no media headers, and a row that accepted it would pass with the file unserved.
+ * nginx drops an `add_header` whose value is empty and Apache `unset`s it, so the envelope's
+ * "empty Content-Disposition" is ABSENT or empty on the wire, never `inline` or `attachment`.
+ */
+export function svgTreatmentProblem(
+	population: SvgPopulation,
+	status: number,
+	headers: Headers,
+	contract: SvgHeaderContract,
+): string | null {
+	if (status !== 200) return `${population} svg: status ${status}, expected 200`;
+	const disposition = headers.get('content-disposition');
+	const csp = headers.get('content-security-policy');
+	const found = `disposition ${JSON.stringify(disposition)}, csp ${JSON.stringify(csp)}`;
+	const wrong: string[] = [];
+	if (headers.get('x-content-type-options') !== contract.nosniff) wrong.push('no nosniff');
+	if (population === 'envelope') {
+		if (disposition !== null && disposition.trim() !== '') wrong.push('a Content-Disposition');
+		if (csp !== contract.envelopeCsp) wrong.push('not the envelope CSP');
+	} else {
+		if (disposition?.trim() !== contract.quarantineDisposition)
+			wrong.push(`not Content-Disposition ${contract.quarantineDisposition}`);
+		if (csp !== contract.quarantineCsp) wrong.push('not the quarantine CSP');
+	}
+	return wrong.length === 0 ? null : `${population} svg: ${wrong.join(', ')} (${found})`;
+}
 
 // ── the exec seam ────────────────────────────────────────────────────────────
 

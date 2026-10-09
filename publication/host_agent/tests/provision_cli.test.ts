@@ -485,8 +485,8 @@ describe('render / check / apply', () => {
   test('apply → OK (0); then check → OK (0) and a second apply writes nothing', () => {
     const h = harness();
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);
-    // 11 artifacts and state files, plus the two host lock files (created empty once, spec S12).
-    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (13 file(s) written)");
+    // 11 artifacts and state files, the two host lock files (created empty once, spec S12) and the provision record.
+    expect(h.out.at(-1)).toBe("provision: instance 'test' converged (14 file(s) written)");
     const after = h.host.mutations;
     expect(exec(h, ['check', 'test'])).toBe(EXIT.OK);
     expect(exec(h, ['apply', 'test'])).toBe(EXIT.OK);

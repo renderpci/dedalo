@@ -14,7 +14,7 @@ import {
   WEB_CONFIGTEST_CANDIDATES,
   provisionExec,
 } from '../src/exec';
-import { SELINUX_BOOLEANS } from '../src/provision/exec_contract';
+import { RETIRED_SUFFIX, SELINUX_BOOLEANS } from '../src/provision/exec_contract';
 import { WEB_CONFIGTEST_CANDIDATES as LAYOUT_CONFIGTEST_CANDIDATES } from '../src/provision/layout';
 
 const PACKAGE_ROOT = join(import.meta.dir, '..');
@@ -79,7 +79,7 @@ describe('provisionExec', () => {
   });
 });
 
-test('the closed set: exactly these 24 named commands, nothing else (spec §2.4)', () => {
+test('the closed set: exactly these 25 named commands, nothing else (spec §2.4; the 25th is retire.ts\'s removeTree)', () => {
   expect(Object.keys(provisionExec()).sort()).toEqual([
     'apacheIncludes',
     'appendOnly',
@@ -90,6 +90,7 @@ test('the closed set: exactly these 24 named commands, nothing else (spec §2.4)
     'groupId',
     'nginxDump',
     'reloadUnit',
+    'removeTree',
     'restartUnit',
     'restorecon',
     'selinuxLabel',
@@ -128,6 +129,8 @@ function probeOf(table: Record<string, Facts>, real: Record<string, string> = {}
 
 const ROOT_FILE: Facts = { type: 'file', uid: 0, mode: 0o755 };
 const IMPORT = `/etc/dedalo_publication_host/test/${SELINUX_IMPORT_TEMP_NAME}`;
+const RETIRED = `/var/lib/dedalo_publication_host/test/publication_api/v1${RETIRED_SUFFIX}`;
+const ROOT_0700_DIR: Facts = { type: 'dir', uid: 0, mode: 0o700 };
 
 describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', () => {
   test('each command spawns exactly its argv, with the fixed root PATH and no stdin', () => {
@@ -138,6 +141,7 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
         '/usr/sbin/php-fpm8.2': ROOT_FILE,
         '/opt/remi/php84/root/usr/sbin/php-fpm': ROOT_FILE,
         [IMPORT]: { type: 'file', uid: 0, mode: 0o600 },
+        [RETIRED]: ROOT_0700_DIR,
       }),
     );
     x.fpmConfigtest('/usr/sbin/php-fpm8.2');
@@ -153,6 +157,7 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
     x.systemdVersion();
     x.semanagePortList();
     x.selinuxLabel(['/home/example.org', '/home']);
+    x.removeTree(RETIRED);
     expect(calls.map(c => c.argv)).toEqual([
       ['/usr/sbin/php-fpm8.2', '-t'],
       ['/opt/remi/php84/root/usr/sbin/php-fpm', '-t'],
@@ -167,6 +172,7 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
       ['systemctl', '--version'],
       ['semanage', 'port', '-l', '-n'],
       ['stat', '-c', '%C %n', '--', '/home/example.org', '/home'],
+      ['rm', '-rf', '--one-file-system', '--', RETIRED],
     ]);
     for (const c of calls) {
       expect(c.options.env).toEqual({ PATH: PROVISION_PATH, LC_ALL: 'C' });
@@ -178,7 +184,7 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
     const { spawner, calls } = recording(argv => ({ code: 0, stdout: argv[0] === 'getent' ? 'g:x:5:\n' : '1\n', stderr: '' }));
     const x = provisionExec(
       spawner,
-      probeOf({ '/usr/sbin/php-fpm8.2': ROOT_FILE, [IMPORT]: { type: 'file', uid: 0, mode: 0o600 } }),
+      probeOf({ '/usr/sbin/php-fpm8.2': ROOT_FILE, [IMPORT]: { type: 'file', uid: 0, mode: 0o600 }, [RETIRED]: ROOT_0700_DIR }),
     );
     const invoke: Record<keyof typeof x, () => unknown> = {
       userId: () => x.userId('dedalo'),
@@ -205,11 +211,12 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
       systemdVersion: () => x.systemdVersion(),
       semanagePortList: () => x.semanagePortList(),
       selinuxLabel: () => x.selinuxLabel(['/srv']),
+      removeTree: () => x.removeTree(RETIRED),
     };
     const expected = (argv: readonly string[]): number =>
       argv[0] === 'systemctl' && ['start', 'restart', 'reload', 'daemon-reload'].includes(argv[1] as string)
         ? UNIT_JOB_TIMEOUT_MS
-        : argv[0] === 'restorecon' || (argv[0] === 'semanage' && argv[1] === 'import')
+        : argv[0] === 'restorecon' || argv[0] === 'rm' || (argv[0] === 'semanage' && argv[1] === 'import')
           ? RELABEL_TIMEOUT_MS
           : COMMAND_TIMEOUT_MS;
     for (const [name, call] of Object.entries(invoke)) {
@@ -275,6 +282,12 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
     expect(() => x.selinuxLabel([])).toThrow(/1-32 paths/);
     expect(() => x.selinuxLabel(Array.from({ length: 33 }, (_, i) => `/srv/${i}`))).toThrow(/1-32 paths/);
     expect(() => x.selinuxLabel(['-Z'])).toThrow(/clean absolute path/);
+    // removeTree: only a root 0700 `*.dedalo-provision.retired` directory, never another name.
+    expect(() => x.removeTree('/var/lib/dedalo_publication_host/test/publication_api/v1')).toThrow(/removes only/);
+    expect(() => x.removeTree(`/${RETIRED_SUFFIX}`)).toThrow(/removes only/);
+    expect(() => x.removeTree(`/srv/../etc${RETIRED_SUFFIX}`)).toThrow(/clean absolute path/);
+    expect(() => x.removeTree(`relative${RETIRED_SUFFIX}`)).toThrow(/clean absolute path/);
+    expect(() => x.removeTree(RETIRED)).toThrow(/root-owned 0700 directory/);
     expect(calls).toEqual([]);
   });
 });

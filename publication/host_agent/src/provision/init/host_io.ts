@@ -413,6 +413,22 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
         return null;
       }
     },
+    removeOperatorFile(path: string, expected: string): void {
+      // No parent-trust rule here, deliberately: the file is the operator's, wherever they put it
+      // (/tmp included), and an unlink removes a NAME — never a link's target, never another
+      // name's data. What is proved is that the name still holds the bytes the operator confirmed.
+      const inode = openNoFollow(path, FS.O_RDONLY, (fd, stats) => {
+        regularFile(path, stats);
+        const got = sha256(readAll(fd, stats.size, path, BINARY_READ_CAP_BYTES));
+        if (got !== expected) throw new Error(`init io: refusing to remove '${path}': its sha256 is ${got}, not the ${expected} confirmed — it is not the file you gave`);
+        return { dev: stats.dev, ino: stats.ino };
+      });
+      const now = lstatSync(path);
+      if (!now.isFile() || now.dev !== inode.dev || now.ino !== inode.ino) {
+        throw new Error(`init io: refusing to remove '${path}': it was replaced while it was checked`);
+      }
+      unlinkSync(path);
+    },
     readProcFile(path: string): string | null {
       if (!procPathAllowed(path)) throw new Error(`init io: refusing to read '${path}': not on the /proc allowlist`);
       try {

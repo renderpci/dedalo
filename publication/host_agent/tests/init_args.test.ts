@@ -41,6 +41,8 @@ describe('parseInitArgs', () => {
       sourceDigestConfirmed: null,
       bunArchive: null,
       bunSums: null,
+      kitFile: null,
+      kitDigestConfirmed: null,
       yes: false,
       decide: new Map(),
       resume: false,
@@ -117,8 +119,19 @@ describe('parseInitArgs', () => {
       if (flag.flag === '--source-digest-confirmed') argv.push('--source', '/s');
       if (flag.flag === '--bun-sums') argv.push('--bun-archive', '/b.zip');
       if (flag.flag === '--source-digest-confirmed') argv.splice(2, 1, SHA);
+      if (flag.flag === '--kit-file') argv.push('--kit-digest-confirmed', SHA);
+      if (flag.flag === '--kit-digest-confirmed') argv.splice(2, 1, SHA, '--kit-file', '/k.tar.gz');
       expect(parseInitArgs(argv)).not.toHaveProperty('error');
     }
+  });
+
+  test('--kit-file and --kit-digest-confirmed: together, a clean absolute path and a sha256', () => {
+    expect(ok(['test', '--kit-file', '/root/kit.tar.gz', '--kit-digest-confirmed', SHA])).toMatchObject({ kitFile: '/root/kit.tar.gz', kitDigestConfirmed: SHA });
+    expect(error(['test', '--kit-file', '/root/kit.tar.gz'])).toBe('--kit-file and --kit-digest-confirmed go together');
+    expect(error(['test', '--kit-digest-confirmed', SHA])).toBe('--kit-file and --kit-digest-confirmed go together');
+    expect(error(['test', '--kit-file', 'kit.tar.gz', '--kit-digest-confirmed', SHA])).toBe('--kit-file needs a clean absolute path');
+    expect(error(['test', '--kit-file', '/a/../k', '--kit-digest-confirmed', SHA])).toBe('--kit-file needs a clean absolute path');
+    expect(error(['test', '--kit-file', '/k', '--kit-digest-confirmed', 'abc'])).toBe('--kit-digest-confirmed needs a sha256 (64 hex)');
   });
 
   test('the usage names every flag', () => {

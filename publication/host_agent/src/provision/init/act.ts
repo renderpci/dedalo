@@ -41,6 +41,8 @@ import type { V1Values, V2Values } from './api_config';
 import { ApiConfigRefused, renderV1Config, renderV2Env, verifyV2RoundTrip } from './api_config';
 import { KEPT_DIR_NAME, RERUN_ENV_NAME, STAGE_DIR_NAME } from './constants';
 import { ensureDir, initTempPath, INIT_TEMP_SUFFIX } from './host_io';
+import { PAIRING_PACKAGE_MODE } from './pair';
+import { packageHeaderProblem } from '../pairing_package';
 import type { Journal } from './journal';
 import { JournalFormatError } from './journal_format';
 import type { TreeReader, TreeWriter } from './tree_copy';
@@ -674,6 +676,8 @@ function beginDetail(ctx: ActContext, action: InitAction): Record<string, unknow
       return { name: action.invocation.name };
     case 'pair_package':
       return { name: action.name, path: action.path };
+    case 'pair_package_remove':
+      return { path: action.path, temps: [initTempPath(action.path)] };
     default: {
       const unreachable: never = action;
       throw new StepError(`unknown action ${JSON.stringify(unreachable)}`);
@@ -840,11 +844,35 @@ function step(ctx: ActContext, item: Item, action: InitAction, state: RunState):
       return fromPort(ctx.ports.pair(action.invocation), 'pairing (B5)');
     case 'pair_package':
       return fromPort(ctx.ports.pairPackage(action), 'the sealed pairing package (B5)');
+    case 'pair_package_remove':
+      return removePairingPackage(ctx, action);
     default: {
       const unreachable: never = action;
       throw new StepError(`unknown action ${JSON.stringify(unreachable)}`);
     }
   }
+}
+
+/**
+ * The sealed package, once the work host paired: removed only while it is still the file init
+ * wrote — a regular root 0600 file in the pairing format (its magic and parameters; the
+ * passphrase is gone, so nothing more can be read). Anything else is left in place, by name.
+ * Renamed to init's temp name, then removed (the temp is what --resume finishes).
+ */
+function removePairingPackage(ctx: ActContext, action: Extract<InitAction, { kind: 'pair_package_remove' }>): StepDone {
+  if (ctx.lstat(action.path) === null) return { outcome: 'noop', detail: { path: action.path } };
+  const file = ctx.io.readOperatorFile(action.path);
+  const problem = file.uid !== rootIds(ctx).uid || file.mode !== PAIRING_PACKAGE_MODE ? 'it is not root 0600' : packageHeaderProblem(file.bytes);
+  if (problem !== null) {
+    throw new StepError(`'${action.path}' is not the sealed package init wrote (${problem}): it was left in place — remove it by hand if it is yours`, {
+      refused: true,
+      detail: { path: action.path },
+    });
+  }
+  const temp = initTempPath(action.path);
+  ctx.io.rename(action.path, temp);
+  ctx.io.removeInitTemp(temp);
+  return { outcome: 'done', detail: { path: action.path } };
 }
 
 function commitTrees(ctx: ActContext, state: RunState): void {

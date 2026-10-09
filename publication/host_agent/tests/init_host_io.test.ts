@@ -16,6 +16,7 @@
  */
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { chmodSync, linkSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, statSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { ProvisionExec } from '../src/provision/exec_contract';
 import { flockIo } from '../src/provision/flock';
@@ -310,6 +311,25 @@ describe('the other doors', () => {
     expect(io.readRootFile(join(dir, 'absent'))).toBeNull();
     symlinkSync(join(dir, 'sudoers'), join(dir, 'link'));
     expect(io.readRootFile(join(dir, 'link'))).toBeNull();
+  });
+
+  test('removeOperatorFile: only the file that still hashes to the confirmed sha256; a link or another file stays (any parent: the kit may sit in a world-writable /tmp)', () => {
+    const dir = nested('kit');
+    chmodSync(dir, 0o1777);
+    const kit = join(dir, 'museum.kit.tar.gz');
+    const bytes = 'kit bytes';
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    writeFileSync(kit, bytes);
+    writeFileSync(join(dir, 'victim'), bytes);
+    symlinkSync(join(dir, 'victim'), join(dir, 'link.tar.gz'));
+    expect(() => io.removeOperatorFile(join(dir, 'link.tar.gz'), digest)).toThrow('it is a symbolic link');
+    expect(readFileSync(join(dir, 'victim'), 'utf8')).toBe(bytes);
+    expect(() => io.removeOperatorFile(kit, 'f'.repeat(64))).toThrow(`its sha256 is ${digest}, not the ${'f'.repeat(64)} confirmed`);
+    expect(statSync(kit).isFile()).toBe(true);
+    expect(() => io.removeOperatorFile(join(dir, 'absent'), digest)).toThrow('cannot open it (ENOENT)');
+    io.removeOperatorFile(kit, digest);
+    expect(() => lstatSync(kit)).toThrow();
+    expect(readFileSync(join(dir, 'victim'), 'utf8')).toBe(bytes);
   });
 
   test('ensureDir creates once with the mode; an existing non-directory is refused', () => {

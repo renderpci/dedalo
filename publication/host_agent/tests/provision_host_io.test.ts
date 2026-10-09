@@ -15,6 +15,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
   chmodSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   readdirSync,
@@ -27,7 +28,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { ProvisionExec } from '../src/exec';
 import { bootPreflight } from '../src/instance/roots';
 import { apply, hostIo, observeHost } from '../src/provision/apply';
@@ -37,6 +38,7 @@ import { INSTANCE_MARKER, WEB_CONFIGTEST_CANDIDATES, derive } from '../src/provi
 import type { Action, PinExpectation } from '../src/provision/plan';
 import { RENDERERS, plan as planWith } from '../src/provision/plan';
 import type { Renderer } from '../src/provision/render/types';
+import { recordPath } from '../src/provision/retire';
 import { PENDING_FACTS } from '../src/provision/render/types';
 import { sudoersRenderer } from '../src/provision/render/sudoers';
 import { unixDeclaration } from './fixtures/provision_declaration';
@@ -91,6 +93,15 @@ const stubExec: ProvisionExec = {
   systemdVersion: () => ({ code: 0, stdout: 'systemd 252 (252.33-1)\n', stderr: '' }),
   semanagePortList: () => ok,
   selinuxLabel: () => ok,
+  // The real door's checks (exec.ts removeTree), then the removal itself: BSD rm has no --one-file-system.
+  removeTree: path => {
+    const stats = lstatSync(path);
+    if (!stats.isDirectory() || stats.uid !== uid || (stats.mode & 0o7777) !== 0o700 || !path.endsWith('.dedalo-provision.retired')) {
+      return { code: 1, stdout: '', stderr: `refused ${path}` };
+    }
+    rmSync(path, { recursive: true });
+    return ok;
+  },
 };
 const appendOnlyProbe = (path: string): string => (sealed.has(path) ? 'append_only' : 'writable');
 
@@ -561,5 +572,47 @@ describe('the directory doors pin the parent under an untrusted grandparent', ()
     expect(lstatSync(moved).ino).toBe(pin.ino as number);
     // The next door call re-pins from scratch: the substitute is not the inode observed.
     expect(() => raced.chmod(site, 0o755, pin)).toThrow('replaced after it was observed');
+  });
+});
+
+describe('retire.ts on a real tree: v1 dropped from the declaration', () => {
+  test('the v1 tree goes (its contents, a planted link NOT followed); the record moves; a second plan is empty', () => {
+    // The instance converged above with v1 (the first describe). Its agent and pool leave things in it.
+    const api = layout.v1?.dirs.root as string;
+    expect(statSync(api).isDirectory()).toBe(true);
+    const outside = join(SCRATCH, 'srv', 'outside_sentinel');
+    writeFileSync(outside, 'keep me\n');
+    mkdirSync(join(api, 'releases', 'r1'), { recursive: true });
+    writeFileSync(join(api, 'releases', 'r1', 'index.php'), '<?php');
+    symlinkSync(outside, join(api, 'releases', 'r1', 'link_out'));
+    symlinkSync(join(SCRATCH, 'srv'), join(api, 'releases', 'dir_link_out'));
+    const { v1: _v1, php_bin: _php, ...rest } = unixDeclaration();
+    const derived = derive({
+      ...rest,
+      agent_dir: layout.agentDir,
+      state_root: layout.state.root,
+      media: { mode: 'copy', root: join(SCRATCH, 'srv/media') },
+      bun_bin: layout.bunBin,
+      paths: {
+        config_base: layout.configBase,
+        unit_dir: dirname(layout.agentUnitPath),
+        sudoers_dir: dirname(layout.sudoersPath),
+        polkit_rules_dir: dirname(layout.polkitPath),
+        host_base: layout.host.base,
+      },
+    });
+    const v2Only: AgentLayout = { ...derived, web: { ...derived.web, configtestBin: layout.web.configtestBin } };
+    const look = () => observeHost(v2Only, stubExec, { trustRoot: SCRATCH, appendOnlyProbe, renderers: SCRATCH_RENDERERS });
+    const actions = plan(v2Only, look());
+    expect(actions.filter(a => a.op === 'remove-tree').map(a => (a as { path: string }).path)).toEqual([api]);
+    const report = apply(actions, io());
+    expect(report.failure).toBeNull();
+    expect(existsSync(api)).toBe(false);
+    expect(existsSync(`${api}.dedalo-provision.retired`)).toBe(false);
+    expect(readFileSync(outside, 'utf8')).toBe('keep me\n');
+    expect(statSync(join(SCRATCH, 'srv', 'pub')).isDirectory()).toBe(true);
+    expect(existsSync(v2Only.state.apis.v2.root)).toBe(true);
+    expect(JSON.parse(readFileSync(recordPath(v2Only), 'utf8'))).toEqual({ v: 1, artifacts: [], trees: [] });
+    expect(plan(v2Only, look())).toEqual([]);
   });
 });

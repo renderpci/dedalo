@@ -24,6 +24,8 @@ export const INIT_FLAGS: readonly InitFlag[] = Object.freeze([
   { flag: '--source-digest-confirmed', value: '<sha256>', repeatable: false, help: 'the source digest the operator confirmed' },
   { flag: '--bun-archive', value: '<zip>', repeatable: false, help: 'the verified Bun archive (install.sh passes it)' },
   { flag: '--bun-sums', value: '<file>', repeatable: false, help: "Bun's SHASUMS256.txt, a cross-check (optional)" },
+  { flag: '--kit-file', value: '<file>', repeatable: false, help: 'the kit install.sh was given (install.sh passes it): offered for removal once the install converged' },
+  { flag: '--kit-digest-confirmed', value: '<sha256>', repeatable: false, help: "the kit's verified sha256 (install.sh passes it); needs --kit-file" },
   { flag: '--yes', value: null, repeatable: false, help: "apply every 'will change' item; never resolves a decision" },
   { flag: '--decide', value: '<item-id>=<option>', repeatable: true, help: 'answer one decision (repeatable)' },
   { flag: '--resume', value: null, repeatable: false, help: 'continue a run the journal shows unfinished' },
@@ -84,7 +86,7 @@ export function parseInitArgs(argv: readonly string[]): InitArgs | { readonly er
   if (instance === undefined) return { error: 'no instance' };
   if (!INSTANCE_PATTERN.test(instance)) return { error: `instance '${instance}' must match ${INSTANCE_PATTERN.source}` };
   if (rest.length > 0) return { error: `unexpected argument '${rest[0]}'` };
-  for (const flag of ['--draft', '--source', '--bun-archive', '--bun-sums']) {
+  for (const flag of ['--draft', '--source', '--bun-archive', '--bun-sums', '--kit-file']) {
     const value = values.get(flag);
     const problem = value === undefined ? null : pathValue(flag, value);
     if (problem !== null) return { error: problem };
@@ -93,6 +95,10 @@ export function parseInitArgs(argv: readonly string[]): InitArgs | { readonly er
   const confirmed = values.get('--source-digest-confirmed') ?? null;
   if ((source === null) !== (confirmed === null)) return { error: '--source and --source-digest-confirmed go together' };
   if (confirmed !== null && !SHA256_PATTERN.test(confirmed)) return { error: '--source-digest-confirmed needs a sha256 (64 hex)' };
+  const kitFile = values.get('--kit-file') ?? null;
+  const kitDigest = values.get('--kit-digest-confirmed') ?? null;
+  if ((kitFile === null) !== (kitDigest === null)) return { error: '--kit-file and --kit-digest-confirmed go together' };
+  if (kitDigest !== null && !SHA256_PATTERN.test(kitDigest)) return { error: '--kit-digest-confirmed needs a sha256 (64 hex)' };
   const bunArchive = values.get('--bun-archive') ?? null;
   const bunSums = values.get('--bun-sums') ?? null;
   if (bunSums !== null && bunArchive === null) return { error: '--bun-sums needs --bun-archive' };
@@ -109,6 +115,8 @@ export function parseInitArgs(argv: readonly string[]): InitArgs | { readonly er
     sourceDigestConfirmed: confirmed,
     bunArchive,
     bunSums,
+    kitFile,
+    kitDigestConfirmed: kitDigest,
     yes: booleans.has('--yes'),
     decide,
     resume: booleans.has('--resume'),

@@ -74,9 +74,9 @@ const EXEMPTIONS: Readonly<Record<string, Exemption>> = {
 	},
 	'publication/host_agent/tests/fixtures/bun/zip_store.ts': {
 		reason:
-			'TEST-ONLY fixture of the ISOLATED publication-host agent package (whose code imports nothing from the engine — it runs on the publication host, where no engine is installed): it builds the fake Bun release archives the trampoline/installBun gates feed to the REAL `unzip`, and those entries need Unix mode bits (version-made-by 3, external attributes) so `<asset>/bun` extracts executable — which src/core/files/zip.ts deliberately never writes (its external attributes are zero). Never user data, never shipped as a product archive',
-		// scoped: STORE records only — deflate, Bun.zip, a spawned zip or a ZIP library here is red
-		signals: ['zip record signature (u32)'],
+			'TEST-ONLY fixture of the ISOLATED publication-host agent package (whose code imports nothing from the engine — it runs on the publication host, where no engine is installed): it builds the fake Bun release archives the trampoline/installBun gates feed to the REAL `unzip`, by spawning the REAL Info-ZIP `zip` over a scratch tree whose files carry their Unix modes — so `<asset>/bun` extracts executable, as from a real release — with NO encoder of its own. Never user data, never shipped as a product archive; product ZIP output stays src/core/files/zip.ts alone',
+		// scoped: the spawned system zip only — PK records, deflate, Bun.zip or a ZIP library here is red
+		signals: ['spawned zip'],
 	},
 };
 

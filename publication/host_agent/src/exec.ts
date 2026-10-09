@@ -53,6 +53,7 @@ import {
   NOLOGIN_SHELLS,
   PAIR_NAME_PATTERN,
   PAIR_TIMEOUT_MS,
+  RETIRED_SUFFIX,
   SELINUX_BOOLEANS,
   SELINUX_READ_ONLY_BOOLEANS,
   UNIT_SHOW_PROPERTIES,
@@ -548,6 +549,18 @@ export function provisionExec(spawner: SyncSpawner = provisionSpawner, probe: Ex
     systemdVersion: () => run(['systemctl', '--version']),
     semanagePortList: () => run(['semanage', 'port', '-l', '-n']),
     selinuxLabel: (paths: readonly string[]) => run(['stat', '-c', '%C %n', '--', ...labelPaths('selinuxLabel', paths, 32)]),
+    removeTree(path: string): ExecResult {
+      provisionAbsolute('retired tree', path);
+      if (!basename(path).endsWith(RETIRED_SUFFIX) || basename(path) === RETIRED_SUFFIX || dirname(path) === '/') {
+        throw new Error(`exec: removeTree removes only a '<name>${RETIRED_SUFFIX}' directory, not '${path}'`);
+      }
+      const facts = probe.lstat(path);
+      if (facts?.type !== 'dir' || facts.uid !== 0 || facts.mode !== 0o700) {
+        throw new Error(`exec: the retired tree '${path}' must be a root-owned 0700 directory (it is made one first)`);
+      }
+      // GNU rm walks descriptor-relative and never follows a link; --one-file-system stops at a mount.
+      return run(['rm', '-rf', '--one-file-system', '--', path], RELABEL_TIMEOUT_MS);
+    },
   });
 }
 

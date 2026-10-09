@@ -351,6 +351,9 @@ export interface InitArgs {
   readonly sourceDigestConfirmed: string | null;
   readonly bunArchive: string | null;
   readonly bunSums: string | null;
+  /** `--kit-file` / `--kit-digest-confirmed` (install.sh's hand-over): the kit file the operator gave it, and its verified sha256. */
+  readonly kitFile: string | null;
+  readonly kitDigestConfirmed: string | null;
   readonly yes: boolean;
   /** `--decide <item-id>=<option>`, in command-line order (an id at most once). */
   readonly decide: ReadonlyMap<string, string>;
@@ -484,7 +487,9 @@ export type InitAction =
   | { readonly kind: 'verify_agent' }
   | { readonly kind: 'pair'; readonly invocation: Omit<PairInvocation, 'token'> }
   /** B5 on two machines: seal the fragment, the token and the engine bundle into `path` (root 0600). */
-  | { readonly kind: 'pair_package'; readonly name: string; readonly path: string };
+  | { readonly kind: 'pair_package'; readonly name: string; readonly path: string }
+  /** The sealed package, no longer needed once the work host paired: removed only when it is still init's (root 0600, the format's magic). */
+  | { readonly kind: 'pair_package_remove'; readonly path: string };
 
 export type InitActionKind = InitAction['kind'];
 
@@ -548,6 +553,12 @@ export interface InitIo extends ProvisionIo {
   readOperatorFile(path: string, capBytes?: number): OperatorFile;
   /** A root-only file's text, or null (absent or unreadable). */
   readRootFile(path: string): string | null;
+  /**
+   * Removes the operator's file at `path` only when it is still the one confirmed: a regular file
+   * (never a link) whose bytes hash to `sha256`, unlinked by name after the descriptor read proved
+   * it the same inode. Throws, naming why, and removes nothing otherwise.
+   */
+  removeOperatorFile(path: string, sha256: string): void;
   /** /proc/self/*, /proc/net/*, /proc/sys/kernel/{random/boot_id,osrelease}, /proc/locks only. */
   readProcFile(path: string): string | null;
 }

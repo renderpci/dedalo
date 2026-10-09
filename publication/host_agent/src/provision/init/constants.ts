@@ -55,6 +55,8 @@ export const INIT_FLAGS_HANDOVER: readonly string[] = Object.freeze([
   '--source-digest-confirmed',
   '--bun-archive',
   '--bun-sums',
+  '--kit-file',
+  '--kit-digest-confirmed',
 ]);
 
 /** The Bun runtime flags of the hand-over (`<bun> --no-env-file --no-install --config=<empty bunfig>`); run.ts re-checks them in /proc/self/cmdline. */
