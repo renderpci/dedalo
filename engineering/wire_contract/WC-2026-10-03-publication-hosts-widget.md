@@ -274,3 +274,21 @@
 - TS ground truth: `test/unit/publication_host_widget_native.test.ts`,
   `test/unit/publication_host_rules_native.test.ts`; client:
   `client/dedalo/test/client/js/test_publication_hosts.js`. No fixture interaction.
+
+## Addendum 2026-10-09 — the map's state is a CHECK (`nginx_map`)
+
+- A row whose `nginx_map` is non-null (root AND non-root) gains ONE check
+  `{id: 'nginx_map', state, detail}` (`host_status.ts nginxMapCheck` / `withNginxMapCheck`,
+  a `DECORATOR_CHECK_IDS` member appended right after the fixed list, before `media_copy` /
+  `public_gate`): `blocked agent_outdated` | `blocked <refused reason>` (the shaped `map_*`
+  reason or `malformed`) | `ok unmanaged` | `blocked none` (nothing of ours loaded) |
+  `blocked drift` | `ok <expected hash, 12 hex>`. A row with `nginx_map: null` carries no
+  such check. Before, `drift` was painted red by the client but counted nowhere a check is.
+- The client no longer derives the state (`nginx_map_state` removed): the check renders
+  through `check_row(…, 'publication_hosts')` with the new label
+  `publication_hosts_check_nginx_map`; `publication_hosts_map_state` (its only reader was
+  the removed row) is removed from `master.json` and every catalog. The `nginx_map` object
+  and its fact rows are unchanged.
+- TS ground truth: `test/unit/publication_host_host_status_native.test.ts`,
+  `test/unit/publication_host_widget_native.test.ts`; client:
+  `client/dedalo/test/client/js/test_publication_hosts.js`. No fixture interaction.

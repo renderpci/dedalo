@@ -122,15 +122,16 @@ import { execSeamProblem, issueTlsMaterial } from './lib/publication_host_agent_
 import {
 	AGENT_DIR,
 	agentStatus,
+	applyCalls,
 	buildBundles,
 	callsSince,
-	configtestCall,
 	createRowBook,
 	disarmSeam,
 	eventually,
 	INSTANCE,
 	inClosedSet,
 	type Listen,
+	liveHostMap,
 	logLines,
 	missingBinaries,
 	PUBLISHED,
@@ -140,7 +141,6 @@ import {
 	REPO,
 	type RowBook,
 	releaseDir,
-	reloadCall,
 	restartAgent,
 	restartCall,
 	type Scene,
@@ -231,6 +231,8 @@ interface Ctx {
 	readonly root: Auth;
 	readonly admin: Auth;
 	readonly rules: RulesModule;
+	/** The engine's buildNginxMap(): what nginx's host map must be once apply_rules pushed it. */
+	readonly nginxMap: string;
 	readonly bundlePath: string;
 	readonly secrets: Secret[];
 }
@@ -632,6 +634,13 @@ async function panelRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 					`rules.expected ${host.rules.expected}`,
 				host.rules.reported !== null && `rules.reported ${host.rules.reported}`,
 				checkState(host, 'rules_hash') === 'ok' && 'rules_hash ok with nothing applied',
+				// nginx serves the host-wide map (B3: its state is a check): nothing loaded yet is red.
+				scene.server === 'nginx' &&
+					checkState(host, 'nginx_map') !== 'blocked' &&
+					`check nginx_map ${checkState(host, 'nginx_map')}, expected blocked before any push`,
+				scene.server === 'apache' &&
+					checkState(host, 'nginx_map') !== null &&
+					'an nginx_map check on an apache host',
 			]);
 		},
 	);
@@ -671,7 +680,7 @@ async function rulesRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 		},
 	);
 	await ctx.book.row(
-		`${s} apply_rules (root) → configtest then reload; published 200, unpublished 404 through ${scene.server}; reported = expected`,
+		`${s} apply_rules (root) → ${scene.server === 'nginx' ? 'the host map pushed (rules.map), then ' : ''}configtest then reload; published 200, unpublished 404 through ${scene.server}; reported = expected`,
 		async () => {
 			const since = logLines(scene).length;
 			const want = expectedHash(ctx, scene);
@@ -681,7 +690,7 @@ async function rulesRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 			return problems([
 				(a.env.data as { hash?: unknown } | undefined)?.hash !== want &&
 					`answer ${a.text.slice(0, 200)}`,
-				callsSince(scene, since, [configtestCall(scene.server), reloadCall(scene.server)]),
+				callsSince(scene, since, applyCalls(scene.server, true)),
 				await eventually(() => mediaStatus(ctx, scene, PUBLISHED), 200),
 				await eventually(() => mediaStatus(ctx, scene, UNPUBLISHED), 404),
 				!(includeBytes(scene) ?? '').includes(`# config-hash: ${want}`) &&
@@ -689,6 +698,12 @@ async function rulesRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 				host.rules.reported !== want && `rules.reported ${host.rules.reported}`,
 				checkState(host, 'rules_hash') !== 'ok' &&
 					`check rules_hash ${checkState(host, 'rules_hash')}`,
+				scene.server === 'nginx' &&
+					checkState(host, 'nginx_map') !== 'ok' &&
+					`check nginx_map ${checkState(host, 'nginx_map')}`,
+				scene.server === 'nginx' &&
+					liveHostMap(scene) !== ctx.nginxMap &&
+					"the live host map is not the engine's map (one contribution renders byte-equal)",
 			]);
 		},
 	);
@@ -1507,11 +1522,9 @@ async function pass(
 	name: string,
 	first: boolean,
 	earlier: readonly string[],
-	nginxMap: string,
 ): Promise<void> {
 	const scene = await setupScene(server, shared, {
 		listen: LISTEN_OF[server],
-		nginxMap,
 		// The first pass pushes a REAL v1 release ([lockstep]): php lints for real there.
 		...(first ? { phpLint: Bun.which('php') as string } : {}),
 	});
@@ -1651,6 +1664,7 @@ async function run(
 		root: await login(origin, 'root', SUITE_LOGIN_PASSWORD),
 		admin: { cookie: `dedalo_ts_session=${adminToken}`, csrf: adminCsrf },
 		rules,
+		nginxMap: buildNginxMap(),
 		bundlePath,
 		secrets: bundleKeySecrets(readFileSync(bundlePath, 'utf8')),
 	};
@@ -1660,7 +1674,7 @@ async function run(
 		const earlier = [...names];
 		names.push(name);
 		try {
-			await pass(ctx, server, shared, name, index === 0, earlier, buildNginxMap());
+			await pass(ctx, server, shared, name, index === 0, earlier);
 		} catch (error) {
 			book.fail(`[${server}] the pass could not run`, error);
 		}

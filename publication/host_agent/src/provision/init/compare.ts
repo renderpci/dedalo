@@ -74,6 +74,7 @@ import type {
   Vhost,
 } from './types';
 import { ITEM_ID_PATTERN } from './types';
+import { MARIADB_SOCKET_CANDIDATES, MARIADB_TCP_HOST, MARIADB_TCP_PORT } from './constants';
 
 /* ── the item catalog ─────────────────────────────────────────────────────────────── */
 
@@ -399,9 +400,17 @@ function hostItems(env: Env): ComparedItem[] {
   if (!facts.sudo.present) out.push(blocked('host.sudo', 'host', 'sudo', ['sudo is not installed: the agent runs its configtest through one sudoers rule'], [install('sudo')]));
   else if (!facts.sudo.includedir) {
     out.push(
-      blocked('host.sudo', 'host', 'sudo', [`${facts.sudo.policyFile} (the policy ${facts.sudo.flavor} reads) does not include ${sudoersDir}`], [`visudo -f ${facts.sudo.policyFile}   # add the line: @includedir ${sudoersDir}`]),
+      blocked(
+        'host.sudo',
+        'host',
+        'sudo',
+        [`${facts.sudo.policyFile} (the policy ${facts.sudo.flavor} reads) does not include ${sudoersDir}`, ...facts.sudo.skipped.map(line => `not followed: ${line}`)],
+        [`visudo -f ${facts.sudo.policyFile}   # add the line: @includedir ${sudoersDir}`],
+      ),
     );
-  } else out.push(right('host.sudo', 'host', 'sudo', [`${facts.sudo.flavor} reads ${sudoersDir} (through ${facts.sudo.policyFile})`]));
+  } else {
+    out.push(right('host.sudo', 'host', 'sudo', [`${facts.sudo.flavor} reads ${sudoersDir} (through ${facts.sudo.policyFile})`, ...facts.sudo.skipped.map(line => `not followed: ${line}`)]));
+  }
 
   // host.web (several servers is a completion decision)
   const webDecision = env.completion.decisions.find(row => row.id === 'host.web');
@@ -1027,17 +1036,28 @@ function selinuxItems(env: Env): ComparedItem[] {
     }
   }
 
-  // api_config.v1_db_transport: asked before the secrets, and before selinux.db_connect
-  const transport = env.answers.get('api_config.v1_db_transport') === 'tcp' ? 'tcp' : 'socket';
+  // api_config.v1_db_transport: asked before the secrets, and before selinux.db_connect. The
+  // default follows discovery (facts.mariadb): the local socket when one exists, else TCP
+  // 127.0.0.1:3306 — still a decision either way (--yes never settles it).
+  const transport = v1Transport(env);
   if (decl !== null && !v1Right) {
+    const found = facts.mariadb.socket;
     out.push(
       item('api_config.v1_db_transport', 'api_config', 'decision', 'how v1 reaches MariaDB', {
-        facts: ['socket: the MariaDB unix socket (/run/mysqld/mysqld.sock or /var/lib/mysql/mysql.sock); tcp: host and port'],
+        facts: [
+          found !== null
+            ? `a local MariaDB socket: ${found}`
+            : `no local MariaDB socket (looked at ${MARIADB_SOCKET_CANDIDATES.join(', ')}); the default is TCP ${MARIADB_TCP_HOST}:${MARIADB_TCP_PORT}`,
+          ...(found === null
+            ? [facts.mariadb.tcp3306 ? `TCP ${MARIADB_TCP_PORT} is listening on this host` : `nothing listens on TCP ${MARIADB_TCP_PORT} here: if MariaDB is on another host, choose tcp and type its host and port`]
+            : []),
+          'socket: the MariaDB unix socket; tcp: host and port (never `localhost`: the v1 PHP driver reads it as the socket)',
+        ],
         options: [
           { id: 'socket', label: 'the unix socket', resolves: 'act' },
           { id: 'tcp', label: 'TCP (host and port)', resolves: 'act' },
         ],
-        defaultOption: 'socket',
+        defaultOption: found !== null ? 'socket' : 'tcp',
       }),
     );
   }
@@ -1310,6 +1330,13 @@ function unitOf(path: string): string {
 }
 
 /* ── 11. api_config.* (secrets) ───────────────────────────────────────────────────── */
+/** The v1 transport: the operator's answer, else discovery's default (a local socket, else TCP). */
+function v1Transport(env: Env): 'socket' | 'tcp' {
+  const answered = env.answers.get('api_config.v1_db_transport');
+  if (answered === 'socket' || answered === 'tcp') return answered;
+  return env.facts.mariadb.socket !== null ? 'socket' : 'tcp';
+}
+
 
 function apiConfigItems(env: Env): ComparedItem[] {
   const { decl, layout, declared, ctx, facts } = env;
@@ -1333,7 +1360,7 @@ function apiConfigItems(env: Env): ComparedItem[] {
       mode: MODES.v2Env.mode,
       owner: `root:${layout.identity.v2Group}`,
       sample: template('.env.example', 'publication/server_api/v2/.env.example'),
-      action: (sample: string, path: string): InitAction => ({ kind: 'v2_env', sample, path, deploymentMode: layout.web.server }),
+      action: (sample: string, path: string): InitAction => ({ kind: 'v2_env', sample, path, deploymentMode: layout.web.server, socket: facts.mariadb.socket }),
     },
     {
       id: 'api_config.v1_config',
@@ -1350,7 +1377,8 @@ function apiConfigItems(env: Env): ComparedItem[] {
         sample,
         path,
         owner: layout.identity.v1User,
-        transport: env.answers.get('api_config.v1_db_transport') === 'tcp' ? 'tcp' : 'socket',
+        transport: v1Transport(env),
+        socket: facts.mariadb.socket,
       }),
     },
   ];

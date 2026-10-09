@@ -714,7 +714,7 @@ counts here are held to the code (`publication/host_agent/tests/spec_privileges.
 
 ### 9.4 Artifacts and validators
 
-Five artifact kinds join the provisioner's census
+Six artifact kinds join the provisioner's census
 (`publication/host_agent/src/provision/render/types.ts` `ARTIFACT_KINDS`):
 
 | kind | path | validator, effect |
@@ -724,6 +724,7 @@ Five artifact kinds join the provisioner's census
 | `nginx_map_include` | `/etc/nginx/conf.d/dedalo_media_map.conf`, host-wide, stamped `_host` | `web`, `reload_web` |
 | `host_map_unit` | `dedalo-pubhost-map.service`, host-wide, stamped `_host` | — |
 | `logrotate` | `/etc/logrotate.d/dedalo_<instance>_web`, home layout only: rotates the site's web log directory `/var/log/<apache2\|httpd\|nginx>/<domain>/` (`plan.ts` creates it `root:root 0755`), which the distributions' own logrotate globs (one level) never reach | — |
+| `logrotate_v1` | `/etc/logrotate.d/dedalo_<instance>_v1`, every site in either layout: rotates the v1 pool's own error log `<v1_var_base>/<instance>/v1/log/*.log` as the v1 user (`su <v1> root`: the directory is that account's, `v1VarWork`), the new file `0600 <v1>:root`; no reopen (PHP opens its `error_log` for every message) | — |
 
 `web_include` and `fpm_pool` apply only with the optional declaration block `site`; the two
 host-wide kinds only on nginx with `web.nginx_map: conf_d`. The Apache v1 handler sits inside
@@ -747,7 +748,7 @@ The new rows of `MODES` (`publication/host_agent/src/provision/layout.ts`; owner
 | `webInclude` | root | root | 0644 |
 | `fpmPool` | root | root | 0644 |
 | `webLogs` | root | root | 0755 |
-| `logrotate` | root | root | 0644 |
+| `logrotate` (both logrotate kinds) | root | root | 0644 |
 | `nginxMapInclude` | root | root | 0644 |
 | `v1Var` | root | root | 0711 |
 | `v1VarWork` | v1 | root | 0700 |
@@ -765,6 +766,21 @@ The new rows of `MODES` (`publication/host_agent/src/provision/layout.ts`; owner
 `pubhost` is the group `dedalo_pubhost`: created by init only (or by hand with `groupadd
 --system dedalo_pubhost`; a hand-run `provision apply` without it is refused with that line),
 given to every agent unit through `SupplementaryGroups=`, so no account is ever modified.
+
+**Root writes only through trusted ancestors, and one pinned parent.** Every provisioner and
+init write re-checks its ancestry at the moment of the write (`apply.ts` `hostIo`, `init/host_io.ts`):
+every directory between the trust root and the target is a real directory and all but the
+immediate parent are root's and closed to group/other writes. ONE exception, for an untrusted
+GRANDPARENT under a root parent — the site log directory under Ubuntu's rsyslog `/var/log`
+(`root:syslog 0775`), init's API files in the agent's `publication_api/<api>/shared/`: the parent
+is PINNED (`pinnedParentOf` / `withPinnedDir`: opened `O_DIRECTORY|O_NOFOLLOW`, the working
+directory moved into that inode, the entry used by name), and it must be the parent the caller
+EXPECTS (`PinExpectation`): the exact owner, group and mode of its `MODES` row (`v1Shared`
+`root:root 0711`, `v2Shared` `root:<v2 group> 0750`), or the facts `observeHost` saw — owner,
+group, mode, device and inode, carried in the plan's action — for `/var/log/<server>`; and on the
+same device as its own parent, so a filesystem mounted over the name is refused. A directory
+substituted after the pin receives nothing (the write lands in the pinned inode). Gates:
+`tests/provision_host_io.test.ts`, `tests/init_host_io.test.ts`, `tests/provision_plan.test.ts`.
 
 ### 9.6 Locks and the journal
 
@@ -793,7 +809,17 @@ its OWN contribution (one envelope) into the sticky store
 root-owned code copy per host installed by apply, never downgraded) re-validates every
 contribution against the declared agent uids, merges them (`renderHostMap`), and is the only
 writer of the live map nginx loads through the provisioned include. A contribution of a grammar
-the installed renderer does not know refuses the whole render (`map_contribution_newer`).
+the installed renderer does not know refuses the whole render (`map_contribution_newer`). The
+renderer's spawns are a closed set (`src/exec.ts` `rendererExec`: `nginx -t`, `systemctl reload
+nginx.service`, `systemctl is-active nginx.service`, `systemctl restart nginx.service`). After a
+reload that returned 0 the unit is watched for the provisioner's window (`txn.ts`
+`RELOAD_ACTIVE_POLL`, 20 × 250 ms); found down (an AVC or a bad module kills the master at the
+reload, after a configtest that passed as unconfined root), the map is ROLLED BACK: the last
+loaded file restored (or a first one removed), configtest, `restart`, confirmed active, outcome
+`reload_failed` with the PREVIOUS contributions recorded as loaded; the rendered bindings and the
+seed's sweep are not committed. The panel row carries the map as `nginx_map` AND as the check
+`nginx_map` (`host_status.ts` `nginxMapCheck`: red for `agent_outdated`, a recorded refusal,
+`none`, `drift`; ok for this instance's hash loaded or `unmanaged`).
 Residual (stated): the map is keyed on `$uri` across every server block, so a paired engine of
 one instance can weaken another site's SVG treatment for URIs under its own bound envelope
 prefix. With `web.nginx_map: none` (the default) the agent reports `{managed: false}` and the

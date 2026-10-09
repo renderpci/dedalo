@@ -337,19 +337,24 @@ describe('the host-map commands (spec §13.5)', () => {
     expect(calls[0]?.options.env).toEqual({ PATH: CHILD_PATH, LANG: 'C' });
   });
 
-  test("the root renderer's set: nginx's configtest, its reload and the active poll — no sudo", async () => {
+  test("the root renderer's set: nginx's configtest, its reload, the active poll and the roll back's restart — no sudo", async () => {
     const { spawner, calls } = recordingSpawner();
     const r = rendererExec(spawner);
-    expect(Object.keys(r).sort()).toEqual(['webActive', 'webConfigtest', 'webReload']);
+    expect(Object.keys(r).sort()).toEqual(['sleep', 'webActive', 'webConfigtest', 'webReload', 'webRestart']);
     await r.webConfigtest();
     await r.webReload();
     expect(await r.webActive()).toBe(true);
+    await r.webRestart();
+    await r.sleep(1);
     expect(RENDERER_NGINX_BIN).toBe(WEB_CONFIGTEST_CANDIDATES.nginx[0] as string);
     expect(calls.map(c => c.argv)).toEqual([
       ['/usr/sbin/nginx', '-t'],
       [SYSTEMCTL, 'reload', 'nginx.service'],
       [SYSTEMCTL, 'is-active', '--quiet', 'nginx.service'],
+      [SYSTEMCTL, 'restart', 'nginx.service'],
     ]);
+    // Every argv is fixed: no method takes an argument that reaches a spawn.
+    expect([r.webConfigtest, r.webReload, r.webActive, r.webRestart].map(fn => fn.length)).toEqual([0, 0, 0, 0]);
     for (const c of calls) expect(c.argv[0]).not.toBe(SUDO);
   });
 });

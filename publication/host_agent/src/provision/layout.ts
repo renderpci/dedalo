@@ -377,7 +377,7 @@ export const MODES = Object.freeze({
   fpmPool: row('root', 'root', 0o644),
   /** `<webLogBase>/<domain>`: the server's master writes it as root (layout.ts webLogBase). */
   webLogs: row('root', 'root', 0o755),
-  /** `<logrotate_dir>/dedalo_<instance>_web` (render/logrotate.ts). */
+  /** `<logrotate_dir>/dedalo_<instance>_web` and `…_v1` (render/logrotate.ts). */
   logrotate: row('root', 'root', 0o644),
   /** NGINX_MAP_INCLUDE_PATH, host-wide (spec §13.6). */
   nginxMapInclude: row('root', 'root', 0o644),
@@ -557,6 +557,8 @@ export interface AgentLayout {
   readonly polkitPath: string;
   /** `<logrotate_dir>/dedalo_<instance>_web`: the rotation of site.webLogsDir (render/logrotate.ts; home layout only). */
   readonly logrotatePath: string;
+  /** `<logrotate_dir>/dedalo_<instance>_v1`: the rotation of site.v1Var.log, the v1 pool's own log (render/logrotate.ts; every site). */
+  readonly v1LogrotatePath: string;
   readonly state: {
     readonly root: string;
     readonly marker: string;
@@ -1207,6 +1209,7 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     sudoersPath: join(sudoersDir, `dedalo_publication_host_${instance}`),
     polkitPath: join(polkitRulesDir, `60-dedalo-publication-host-${instance}.rules`),
     logrotatePath: join(logrotateDir, `dedalo_${instance}_web`),
+    v1LogrotatePath: join(logrotateDir, `dedalo_${instance}_v1`),
     state: Object.freeze({
       root: stateRoot,
       marker: join(stateRoot, INSTANCE_MARKER),

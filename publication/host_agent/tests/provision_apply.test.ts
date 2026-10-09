@@ -634,6 +634,7 @@ describe('observeHost + hostIo on a real scratch tree (spec S9-S11, §5.9 facts)
         nginx_conf_d: join(root, 'conf.d'),
         v1_var_base: join(root, 'var'),
         fpm_pool_dir: join(root, 'pool.d'),
+        logrotate_dir: join(root, 'logrotate.d'),
       },
     });
     // The configtest and FPM binaries are derived host paths: the two facts a scratch tree cannot own.

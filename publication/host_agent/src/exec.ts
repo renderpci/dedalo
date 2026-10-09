@@ -268,7 +268,9 @@ export function exec(): Exec {
 // ─────────────────────────────────────────────────────────────────────────────────────
 // THE ROOT MAP RENDERER'S CLOSED SET (src/rules/host_map_main.ts, spec §13.5). The oneshot
 // `dedalo-pubhost-map.service` runs as root with no argument and no environment: its only
-// spawns are nginx's own configtest, its reload and the active poll after it. No sudo (it is root).
+// spawns are nginx's own configtest, its reload, the active poll after it and — only when that
+// poll finds nginx down after a reload that returned 0 — the restart after the roll back
+// (src/rules/txn.ts). No sudo (it is root).
 // ─────────────────────────────────────────────────────────────────────────────────────
 
 /** nginx's configtest binary (WEB_CONFIGTEST_CANDIDATES.nginx, the one entry) and its unit on Debian and EL alike. */
@@ -279,6 +281,9 @@ export interface RendererExec {
   webConfigtest(): Promise<ExecResult>; // [RENDERER_NGINX_BIN,'-t']
   webReload(): Promise<ExecResult>; //     [SYSTEMCTL,'reload','nginx.service']
   webActive(): Promise<boolean>; //        [SYSTEMCTL,'is-active','--quiet','nginx.service']
+  webRestart(): Promise<ExecResult>; //    [SYSTEMCTL,'restart','nginx.service']
+  /** The active poll's wait (no spawn). */
+  sleep(ms: number): Promise<void>;
 }
 
 export function rendererExec(spawner: Spawner = bunSpawner): RendererExec {
@@ -287,6 +292,8 @@ export function rendererExec(spawner: Spawner = bunSpawner): RendererExec {
     webConfigtest: () => spawner.run([RENDERER_NGINX_BIN, '-t'], { env: env() }),
     webReload: () => spawner.run([SYSTEMCTL, 'reload', RENDERER_NGINX_UNIT], { env: env() }),
     webActive: async () => (await spawner.run([SYSTEMCTL, 'is-active', '--quiet', RENDERER_NGINX_UNIT], { env: env() })).code === 0,
+    webRestart: () => spawner.run([SYSTEMCTL, 'restart', RENDERER_NGINX_UNIT], { env: env() }),
+    sleep: (ms: number) => Bun.sleep(ms),
   });
 }
 

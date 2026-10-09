@@ -17,7 +17,8 @@
  *
  * WHAT EACH COMMAND DRIVES:
  *   pair       secrets → registry entry → the live pairing proof (proveHostPairing);
- *   rules      the phase-1 profile rendered over the agent's reported (COPY) root, applied;
+ *   rules      the phase-1 profile rendered over the agent's reported (COPY) root, applied (nginx:
+ *              the engine's host-wide map pushed first, as apply_rules does);
  *   plan       planCopy (writes only the sha cache);
  *   reconcile  MEDIA_COPY_RECONCILE.run({apply: true}) — the correctness path (M3);
  *   publish    the work marker (applyTableState): no worker runs, so the copy is left to
@@ -95,14 +96,25 @@ async function pair(specFile: string): Promise<{ name: string; paired: boolean }
 	return { name: COPY_DRILL_HOST, paired: true };
 }
 
-/** The phase-1 profile over the agent's reported root (its COPY root), applied. */
+/**
+ * The phase-1 profile over the agent's reported root (its COPY root), applied — on nginx with
+ * the host-wide map AFTER the engine's map is pushed (`rules.map`), the order apply_rules keeps
+ * (publication_hosts.ts): the include uses the map's variables.
+ */
 async function rules(): Promise<RulesView> {
 	const host = await requireHost();
-	const { hostApplyRules, hostStatus } = await import(
+	const { hostApplyRules, hostApplyRulesMap, hostStatus } = await import(
 		'../../src/core/publication_host/agent_client.ts'
 	);
-	const { expectedRulesForHost } = await import('../../src/core/publication_host/rules.ts');
+	const { expectedNginxMap, expectedRulesForHost } = await import(
+		'../../src/core/publication_host/rules.ts'
+	);
 	const status = await hostStatus(host.name);
+	const map = expectedNginxMap(status);
+	const loaded = status.rules.map?.managed === true ? status.rules.map.hash : null;
+	if (map !== null && loaded !== map.hash) {
+		await hostApplyRulesMap(host.name, { text: map.text, hash: map.hash }, COPY_DRILL_ACTOR);
+	}
 	const expected = expectedRulesForHost(host, status);
 	const applied = await hostApplyRules(
 		host.name,

@@ -13,7 +13,10 @@
  *     (publication/host_agent/src/exec.ts SUDO, SYSTEMCTL; the configtest binary is
  *     layout.ts pickConfigtestBinary, the one
  *     definition), never respelled here. `php` lints for real under the v1 API root when
- *     asked (phase 4: the engine drill's lockstep rows push real v1 releases).
+ *     asked (phase 4: the engine drill's lockstep rows push real v1 releases). On nginx with
+ *     the host-wide map, `systemctl start dedalo-pubhost-map.service` runs
+ *   - renderHostMapDriver: the drill's stand-in for that root oneshot — the agent's OWN renderer
+ *     (src/rules/host_map_main.ts runHostMap) over the scene's paths and user-mode nginx.
  *   - EXEC_SEAM_DIR / EXEC_SEAM_MARKER / execSeamProblem: the CI image's seam (ci/Dockerfile,
  *     "exec seam"): a dispatcher at each of exec.ts's absolute binaries that runs the stand-in
  *     the drill writes into EXEC_SEAM_DIR.
@@ -46,7 +49,10 @@ import {
 	SYSTEMCTL,
 	V2_SCRATCH_TEMPLATE_SUFFIX,
 } from '../../publication/host_agent/src/exec.ts';
-import { pickConfigtestBinary } from '../../publication/host_agent/src/provision/layout.ts';
+import {
+	HOST_MAP_UNIT,
+	pickConfigtestBinary,
+} from '../../publication/host_agent/src/provision/layout.ts';
 import { compareBundlePaths, writeBundle } from '../../src/core/publication_host/bundle_writer.ts';
 
 // ── the bundle ───────────────────────────────────────────────────────────────
@@ -218,6 +224,13 @@ export interface StandInInput {
 	readonly phpLint?: { readonly binary: string; readonly root: string };
 	/** Every invocation is appended here, one line: `<binary> <argv>`. */
 	readonly log: string;
+	/**
+	 * nginx with the HOST-WIDE map (`NGINX_MAP_MODE=conf_d`): the driver renderHostMapDriver
+	 * wrote. `systemctl start <HOST_MAP_UNIT>.service` (the agent's one map spawn, no argument)
+	 * then runs it with this Bun — what the root oneshot runs on a host. Absent: that argv is
+	 * refused like any other.
+	 */
+	readonly hostMapDriver?: string;
 }
 
 export interface StandIns {
@@ -261,11 +274,21 @@ export function renderStandIns(input: StandInInput): StandIns {
 		...refuse(SUDO),
 	].join('\n');
 	const pid = q(input.v2PidFile);
+	const hostMap =
+		input.hostMapDriver === undefined
+			? []
+			: [
+					`\t${q(`start ${HOST_MAP_UNIT}.service`)})`,
+					// systemd starts the oneshot with an EMPTY environment (render/host_map_unit.ts
+					// Environment=): nothing of the agent's reaches the renderer here either.
+					`\t\texec env -i PATH="$PATH" ${q(input.bun)} --no-env-file ${q(input.hostMapDriver)} ;;`,
+				];
 	const systemctl = [
 		...header(SYSTEMCTL),
 		'case "$*" in',
 		`\t${q(`reload ${input.webUnit}`)})`,
 		`\t\t${reload} ;;`,
+		...hostMap,
 		`\t${q(`restart ${input.v2Unit}`)})`,
 		`\t\tif [ -f ${pid} ]; then`,
 		`\t\t\told="$(cat ${pid})"`,
@@ -321,6 +344,80 @@ export function renderStandIns(input: StandInInput): StandIns {
 					...refuse('php'),
 				].join('\n');
 	return { sudo, systemctl, php };
+}
+
+// ── the host-wide nginx map's root renderer, as the drill runs it ────────────
+
+export interface HostMapDriverInput {
+	/** publication/host_agent: the driver imports the REAL renderer (src/rules/host_map_main.ts) from here. */
+	readonly agentDir: string;
+	/** `<HOST_BASE>/nginx_map`, `<HOST_BASE>/locks`, `<HOST_BASE>/map_renderer/identities.json`. */
+	readonly mapDir: string;
+	readonly locksDir: string;
+	readonly identitiesPath: string;
+	/** The user-mode nginx the scene runs: its binary, error log, prefix dir, main conf and pid file. */
+	readonly nginx: {
+		readonly binary: string;
+		readonly errorLog: string;
+		readonly dir: string;
+		readonly main: string;
+		readonly pid: string;
+	};
+}
+
+/**
+ * The drill's stand-in for the root oneshot `dedalo-pubhost-map.service`: a Bun entry that runs
+ * the agent's OWN renderer (`runHostMap` + `hostMapIo` + `exitCodeOf` of src/rules/host_map_main.ts,
+ * unmodified — contributions lstat-judged against identities.json, rendered, re-parsed, installed
+ * through the shared transaction, result.json written) with the scene's paths. Two drill seams,
+ * both named: the host web lock is the scene's (its owner is the drill's uid, not root's — the
+ * renderer asks uid 0), and the transaction's exec runs the scene's user-mode nginx (`-t`, `-s
+ * reload`, the master's pid alive) instead of rendererExec's `/usr/sbin/nginx` + `systemctl`.
+ */
+export function renderHostMapDriver(input: HostMapDriverInput): string {
+	const j = (value: unknown) => JSON.stringify(value);
+	const ngx = input.nginx;
+	const base = [ngx.binary, '-e', ngx.errorLog];
+	const tail = ['-p', ngx.dir, '-c', ngx.main];
+	return [
+		'// DRILL STAND-IN for the root oneshot dedalo-pubhost-map.service — rendered by scripts/lib/publication_host_agent_drill_kit.ts.',
+		`import { existsSync, readFileSync } from 'node:fs';`,
+		`import { exitCodeOf, hostMapIo, runHostMap } from ${j(`${input.agentDir}/src/rules/host_map_main.ts`)};`,
+		`import { flockIo } from ${j(`${input.agentDir}/src/provision/flock.ts`)};`,
+		'const uid = process.getuid?.() ?? 0;',
+		'const real = flockIo();',
+		"// The scene's web.lock is the drill uid's: the renderer's uid-0 expectation is pointed at it.",
+		'const lockIo = { ...real, openLockFile: (path, spec) => real.openLockFile(path, { ...spec, uid }) };',
+		'const run = async (argv) => {',
+		"\tconst p = Bun.spawnSync(argv, { stdout: 'pipe', stderr: 'pipe' });",
+		'\treturn { code: p.exitCode ?? -1, stdout: p.stdout.toString(), stderr: p.stderr.toString() };',
+		'};',
+		'const exec = {',
+		`\twebConfigtest: () => run(${j([...base, '-t', ...tail])}),`,
+		`\twebReload: () => run(${j([...base, '-s', 'reload', ...tail])}),`,
+		'\twebActive: async () => {',
+		`\t\tif (!existsSync(${j(ngx.pid)})) return false;`,
+		'\t\ttry {',
+		`\t\t\tprocess.kill(Number(readFileSync(${j(ngx.pid)}, 'utf8').trim()), 0);`,
+		'\t\t\treturn true;',
+		'\t\t} catch {',
+		'\t\t\treturn false;',
+		'\t\t}',
+		'\t},',
+		'};',
+		'const result = await runHostMap({',
+		`\tmapDir: ${j(input.mapDir)},`,
+		`\tlocksDir: ${j(input.locksDir)},`,
+		`\tidentitiesPath: ${j(input.identitiesPath)},`,
+		'\tlockIo,',
+		'\texec,',
+		'\tio: hostMapIo(),',
+		'\tnow: () => new Date(),',
+		'\tlog: (line) => console.error(line),',
+		'});',
+		'process.exit(exitCodeOf(result));',
+		'',
+	].join('\n');
 }
 
 /** Write the given stand-ins as `<dir>/<name>`, 0755 (the dir is created 0700 when absent). */

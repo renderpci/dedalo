@@ -17,7 +17,9 @@
  *      level below such a directory: instance/roots.ts STATE_TREE_OWNERSHIP). ONE exception, for
  *      the directory doors (mkdir, chown, chmod): an untrusted GRANDPARENT under a root parent,
  *      which is then pinned by descriptor and inode and the entry used by name (pinnedParentOf —
- *      the site's web log directory under Ubuntu's root:syslog 0775 /var/log);
+ *      the site's web log directory under Ubuntu's root:syslog 0775 /var/log). The pinned parent
+ *      must be the one the action EXPECTS (PinExpectation: owner, group, mode and the observed
+ *      dev + ino) and on its own parent's device (withPinnedDir);
  *   2. operates on a FILE DESCRIPTOR opened O_NOFOLLOW (O_DIRECTORY for directories,
  *      O_NONBLOCK against FIFOs): fstat confirms a directory or a single-link regular file
  *      (a hard link to another file is refused), then fchown/fchmod on that fd;
@@ -73,6 +75,7 @@ import type { LockHandle, LockIo } from './lock';
 import { acquireHostLockSync } from './lock';
 import type { AccountGroups } from './access';
 import type {
+  PinExpectation,
   Action,
   AgentTree,
   ContributionFacts,
@@ -108,6 +111,7 @@ import type { Renderer } from './render/types';
 import { PENDING_FACTS } from './render/types';
 import { IDENTITIES_FILE } from './host_map_renderer';
 import { HOST_MAP_FILE, HOST_MAP_RESULT_FILE } from '../rules/host_map';
+import { RELOAD_ACTIVE_POLL } from '../rules/txn';
 import { SELINUX_BOOLEANS, isHomeLayout, restoreconTargets } from './selinux';
 import { webReferencePresent } from './web_reference';
 import { webIncludePath } from './render/web_include';
@@ -125,17 +129,22 @@ export const BACKUP_SUFFIX = VALIDATED_BACKUP_SUFFIX;
 export const CREATED_SUFFIX = VALIDATED_CREATED_SUFFIX;
 
 /** How long a reloaded unit must stay active (spec §5.9): polled every `intervalMs`, `count` times. */
-export const RELOAD_POLL = Object.freeze({ intervalMs: 250, count: 20 });
+/** The post-reload active poll: ONE window for the provisioner and the shared web-config transaction (../rules/txn.ts). */
+export const RELOAD_POLL = RELOAD_ACTIVE_POLL;
 
 export interface ProvisionIo {
-  /** One level; the plan guarantees the parent. Mode is re-asserted by chmod (umask). */
-  mkdir(path: string, mode: number): void;
+  /**
+   * One level; the plan guarantees the parent. Mode is re-asserted by chmod (umask). `pin`, on the
+   * three directory doors: what the parent must be when only the grandparent is untrusted
+   * (withPinnedDir); hostIo refuses such a path without one.
+   */
+  mkdir(path: string, mode: number, pin?: PinExpectation): void;
   /** Writes `${path}${TEMP_SUFFIX}` exclusively (a stale temp is removed first); returns it. */
   writeTemp(path: string, body: string, mode: number): string;
   /** The entry itself, never a link target. */
-  chown(path: string, uid: number, gid: number): void;
+  chown(path: string, uid: number, gid: number, pin?: PinExpectation): void;
   /** The entry itself, never a link target. */
-  chmod(path: string, mode: number): void;
+  chmod(path: string, mode: number, pin?: PinExpectation): void;
   rename(from: string, to: string): void;
   removeTemp(path: string): void;
   /** Sets the append-only attribute on the file itself (the audit trail), never a link target. */
@@ -389,9 +398,9 @@ function run(action: Action, io: ProvisionIo, written: string[]): void {
         io.rename(action.via, action.path);
         return;
       }
-      io.mkdir(action.path, action.mode);
-      io.chown(action.path, action.uid, action.gid);
-      io.chmod(action.path, action.mode);
+      io.mkdir(action.path, action.mode, action.pin);
+      io.chown(action.path, action.uid, action.gid, action.pin);
+      io.chmod(action.path, action.mode, action.pin);
       return;
     case 'write': {
       const body = action.content.source === 'literal' ? action.content.body : io.randomToken(action.content.bytes);
@@ -419,10 +428,10 @@ function run(action: Action, io: ProvisionIo, written: string[]): void {
       return;
     }
     case 'chown':
-      io.chown(action.path, action.uid, action.gid);
+      io.chown(action.path, action.uid, action.gid, action.pin);
       return;
     case 'chmod':
-      io.chmod(action.path, action.mode);
+      io.chmod(action.path, action.mode, action.pin);
       return;
     case 'append-only':
       io.appendOnly(action.path);
@@ -613,6 +622,8 @@ export interface HostDoorOptions {
   readonly readText?: (path: string) => string | null;
   /** hostIo's flock door (default: ./flock.ts flockIo()). */
   readonly lockIo?: LockIo;
+  /** GATES ONLY: runs inside withPinnedDir between the pin and the operation (the substitute-after-pin race). */
+  readonly onPinned?: (dir: string) => void;
 }
 
 function errno(error: unknown): string {
@@ -687,8 +698,29 @@ export function pinnedParentOf(path: string, trustRoot: string, rootUid: number,
   return chain[chain.length - 1] as string;
 }
 
-/** Runs `fn` with the working directory pinned to `dir` (see pinnedParentOf); the previous one is restored. */
-export function withPinnedDir<T>(dir: string, rootUid: number, fn: () => T, who = 'apply'): T {
+export type { PinExpectation };
+
+/** One line naming what `stats` differs in from `expect`, or null when it is that directory. */
+export function pinMismatch(stats: { uid: number; gid: number; mode: number; dev?: number; ino?: number }, expect: PinExpectation): string | null {
+  const mode = stats.mode & 0o7777;
+  if (stats.uid !== expect.uid || stats.gid !== expect.gid || mode !== expect.mode) {
+    return `uid ${stats.uid} gid ${stats.gid} mode ${mode.toString(8).padStart(4, '0')}, not the expected uid ${expect.uid} gid ${expect.gid} mode ${expect.mode.toString(8).padStart(4, '0')}`;
+  }
+  if (expect.dev !== undefined && stats.dev !== expect.dev) return `on device ${stats.dev}, not the observed ${expect.dev}`;
+  if (expect.ino !== undefined && stats.ino !== expect.ino) return `inode ${stats.ino}, not the observed ${expect.ino} — it was replaced after it was observed`;
+  return null;
+}
+
+/**
+ * Runs `fn` with the working directory pinned to `expect.parent` (see pinnedParentOf); the previous
+ * one is restored. The directory must be the one EXPECTED (PinExpectation), and on the same device
+ * as its own parent — a mount over the name (FUSE needs only an owned mountpoint: the agent could
+ * rename the root directory away, make its own, mount a filesystem that reports root:root over it)
+ * is a different device from the grandparent it sits in. `onPinned` (gates only) runs between the
+ * pin and `fn`: the substitute-after-pin race is driven through it.
+ */
+export function withPinnedDir<T>(expect: PinExpectation, rootUid: number, fn: () => T, who = 'apply', onPinned?: (dir: string) => void): T {
+  const dir = expect.parent;
   let fd: number;
   try {
     fd = openSync(dir, FS.O_RDONLY | FS.O_DIRECTORY | FS.O_NOFOLLOW | FS.O_NONBLOCK);
@@ -701,10 +733,19 @@ export function withPinnedDir<T>(dir: string, rootUid: number, fn: () => T, who 
     const pinned = fstatSync(fd);
     const problem = pinned.isDirectory() ? trustProblem({ uid: pinned.uid, mode: pinned.mode & 0o7777 }, rootUid) : 'not a directory';
     if (problem) throw new Error(`${who}: refusing to write in '${dir}': it is ${problem} (its parent is untrusted, so only a root directory closed to others may be written in)`);
+    const mismatch = pinMismatch(pinned, expect);
+    if (mismatch) throw new Error(`${who}: refusing to write in '${dir}': it is ${mismatch} (its parent is untrusted, so only the directory expected may be written in)`);
     process.chdir(dir);
     moved = true;
     const here = statSync('.');
     if (here.dev !== pinned.dev || here.ino !== pinned.ino) throw new Error(`${who}: refusing to write in '${dir}': it was replaced while it was being opened`);
+    const up = statSync('..');
+    if (up.dev !== pinned.dev) {
+      throw new Error(`${who}: refusing to write in '${dir}': it is on device ${pinned.dev}, its parent on ${up.dev} — something is mounted over the name`);
+    }
+    const named = lstatSync(dirname(dir));
+    if (named.dev !== up.dev || named.ino !== up.ino) throw new Error(`${who}: refusing to write in '${dir}': it is no longer in '${dirname(dir)}'`);
+    onPinned?.(dir);
     return fn();
   } finally {
     if (moved) process.chdir(before);
@@ -745,18 +786,24 @@ export function hostIo(exec: ProvisionExec = provisionExec(), options: HostDoorO
   const self = typeof process.geteuid === 'function' ? process.geteuid() : -1;
   const safeParent = (path: string): void => assertSafeParent(path, trustRoot, rootUid);
   /** The directory doors: rule 1, or the pinned parent when only the grandparent is untrusted (pinnedParentOf). */
-  const dirDoor = (path: string, fn: (entry: string) => void): void => {
+  const dirDoor = (path: string, pin: PinExpectation | undefined, fn: (entry: string) => void): void => {
     const pinned = pinnedParentOf(path, trustRoot, rootUid);
     if (pinned === null) {
       safeParent(path);
       fn(path);
       return;
     }
-    withPinnedDir(pinned, rootUid, () => fn(basename(path)));
+    if (pin === undefined || pin.parent !== pinned) {
+      throw new Error(
+        `apply: refusing '${path}': its grandparent is untrusted, so its parent '${pinned}' is pinned — ` +
+          (pin === undefined ? 'and the plan stated no expectation for it' : `but the plan's expectation names '${pin.parent}'`),
+      );
+    }
+    withPinnedDir(pin, rootUid, () => fn(basename(path)), 'apply', options.onPinned);
   };
   return Object.freeze({
-    mkdir(path: string, mode: number): void {
-      dirDoor(path, entry => {
+    mkdir(path: string, mode: number, pin?: PinExpectation): void {
+      dirDoor(path, pin, entry => {
         mkdirSync(entry, { mode });
         onDescriptor(entry, FS.O_DIRECTORY, (_fd, stats) => {
           if (stats.uid !== self) {
@@ -778,11 +825,11 @@ export function hostIo(exec: ProvisionExec = provisionExec(), options: HostDoorO
       }
       return temp;
     },
-    chown(path: string, uid: number, gid: number): void {
-      dirDoor(path, entry => onDescriptor(entry, 0, fd => fchownSync(fd, uid, gid)));
+    chown(path: string, uid: number, gid: number, pin?: PinExpectation): void {
+      dirDoor(path, pin, entry => onDescriptor(entry, 0, fd => fchownSync(fd, uid, gid)));
     },
-    chmod(path: string, mode: number): void {
-      dirDoor(path, entry => onDescriptor(entry, 0, fd => fchmodSync(fd, mode)));
+    chmod(path: string, mode: number, pin?: PinExpectation): void {
+      dirDoor(path, pin, entry => onDescriptor(entry, 0, fd => fchmodSync(fd, mode)));
     },
     rename(from: string, to: string): void {
       safeParent(to);
@@ -848,7 +895,7 @@ function entryType(stats: Stats): EntryType {
 function facts(path: string, bare = false): PathFacts | null {
   try {
     const stats = lstatSync(path);
-    const found: PathFacts = { type: entryType(stats), uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777 };
+    const found: PathFacts = { type: entryType(stats), uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777, dev: stats.dev, ino: stats.ino };
     if (!stats.isSymbolicLink() || bare) return found;
     try {
       return { ...found, target: realpathSync(path) };

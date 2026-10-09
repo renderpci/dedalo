@@ -63,7 +63,8 @@
  * variables, so a map failure stops the apply before the include is sent. An agent whose status
  * has no `rules.map` predates the host map and is refused (update the agent); `managed: false`
  * (the operator places the map by hand) skips the map. Each row carries `nginx_map`
- * (rules.ts nginxMapPanel: expected, applied, host hash, contribution count, managed, drift).
+ * (rules.ts nginxMapPanel: expected, applied, host hash, contribution count, managed, drift)
+ * and, when it is non-null, the `nginx_map` CHECK (host_status.ts withNginxMapCheck).
  *
  * Hosts are ADDED only by `scripts/publication_host_pair.ts` on the work host. The panel
  * edits `public_url` / `qualities` / `probe` and removes a host; it never takes an
@@ -94,6 +95,7 @@ import {
 	type HostStatusInput,
 	registryInvalidCheck,
 	type StatusOutcome,
+	withNginxMapCheck,
 } from '../../publication_host/host_status.ts';
 import { withMediaCopyCheck } from '../../publication_host/media_copy_status.ts';
 import type { PanelRuntime } from '../../publication_host/panel_runtime.ts';
@@ -495,9 +497,10 @@ async function hostRow(
 		bunPin: deps.bunPin(),
 	});
 	// The row builder is host_status.ts's (never patched here); a pairing it did not prove
-	// contributes no map state either.
+	// contributes no map state either. The map's state is a CHECK (host_status.ts
+	// withNginxMapCheck), so a map not loaded is counted like every other red line.
 	const nginxMap = row.pairing_proved ? readMapPanel(record, status, deps) : null;
-	return servedRow(row, record, isRoot, nginxMap);
+	return servedRow(withNginxMapCheck(row, nginxMap), record, isRoot, nginxMap);
 }
 
 /** The host's last public-URL probe from the panel's ONE runtime read, or never probed. */

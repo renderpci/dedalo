@@ -27,7 +27,7 @@ import type { AgentLayout, HostDeclaration } from '../../src/provision/layout';
 import { canonicalDeclaration } from '../../src/provision/layout';
 import type { AccountGroups } from '../../src/provision/access';
 import type { DirFacts, LockFileSpec, LockIo, LockMode } from '../../src/provision/lock';
-import type { HostState, PathFacts, UnitFacts } from '../../src/provision/plan';
+import type { HostState, PathFacts, PinExpectation, UnitFacts } from '../../src/provision/plan';
 import { AGENT_TREE_WALK_CAP } from '../../src/provision/plan';
 import { INIT_TEMP_SUFFIX, procPathAllowed } from '../../src/provision/init/host_io';
 import type { InitIo, MountRow, OperatorFile, SelinuxMode } from '../../src/provision/init/types';
@@ -38,6 +38,9 @@ interface Entry {
   gid: number;
   mode: number;
   body: string;
+  /** Device and inode, when a gate sets them (observeHost reports both; the pinned door's expectation carries them). */
+  dev?: number;
+  ino?: number;
   /** A symlink's resolved path (observeHost's realpath); absent = dangling. */
   target?: string;
   /** A symlink's stored (relative) target text. */
@@ -64,6 +67,8 @@ export interface FakeFcontext {
 export class FakeHost implements ProvisionIo {
   readonly entries = new Map<string, Entry>();
   readonly calls: string[] = [];
+  /** The pinned-parent expectation each door call carried (`<door> <path>` → pin). */
+  readonly pins = new Map<string, PinExpectation>();
   readonly users = new Map<string, number>([
     ['root', 0],
     ['dedalo-pubhost', 990],
@@ -314,7 +319,8 @@ export class FakeHost implements ProvisionIo {
     if (parent !== undefined && !this.labels.has(path)) this.labels.set(path, parent);
   }
 
-  mkdir(path: string, mode: number): void {
+  mkdir(path: string, mode: number, pin?: PinExpectation): void {
+    if (pin !== undefined) this.pins.set(`mkdir ${path}`, pin);
     this.calls.push(`mkdir ${path}`);
     if (!this.parentIsDir(path)) throw new Error(`ENOENT: no parent for ${path}`);
     if (this.entries.has(path)) throw new Error(`EEXIST: ${path}`);
@@ -331,7 +337,8 @@ export class FakeHost implements ProvisionIo {
     return temp;
   }
 
-  chown(path: string, uid: number, gid: number): void {
+  chown(path: string, uid: number, gid: number, pin?: PinExpectation): void {
+    if (pin !== undefined) this.pins.set(`chown ${path}`, pin);
     this.calls.push(`chown ${path}`);
     const entry = this.entries.get(path);
     if (!entry) throw new Error(`ENOENT: ${path}`);
@@ -341,7 +348,8 @@ export class FakeHost implements ProvisionIo {
     entry.gid = gid;
   }
 
-  chmod(path: string, mode: number): void {
+  chmod(path: string, mode: number, pin?: PinExpectation): void {
+    if (pin !== undefined) this.pins.set(`chmod ${path}`, pin);
     this.calls.push(`chmod ${path}`);
     const entry = this.entries.get(path);
     if (!entry) throw new Error(`ENOENT: ${path}`);
@@ -388,6 +396,8 @@ export class FakeHost implements ProvisionIo {
         uid: entry.uid,
         gid: entry.gid,
         mode: entry.mode,
+        ...(entry.dev === undefined ? {} : { dev: entry.dev }),
+        ...(entry.ino === undefined ? {} : { ino: entry.ino }),
         ...(entry.target === undefined ? {} : { target: entry.target }),
       });
       if (entry.type === 'file') contents.set(path, entry.body);
@@ -789,7 +799,8 @@ export class FakeInitHost extends FakeHost implements InitIo {
     return [...this.entries.keys()].filter(p => p === path || p.startsWith(`${path}/`));
   }
 
-  writeBytesAtomic(path: string, bytes: Uint8Array, mode: number, uid: number, gid: number): void {
+  writeBytesAtomic(path: string, bytes: Uint8Array, mode: number, uid: number, gid: number, pin?: PinExpectation): void {
+    if (pin !== undefined) this.pins.set(`writeBytesAtomic ${path}`, pin);
     this.calls.push(`writeBytesAtomic ${path}`);
     if (this.failOn === `writeBytesAtomic ${path}`) throw new Error(`EIO: simulated failure writing ${path}`);
     if (!this.parentIsDir(path)) throw new Error(`ENOENT: no parent for ${path}`);

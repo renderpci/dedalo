@@ -28,6 +28,8 @@ export const ARTIFACT_KINDS = [
   'host_map_unit',
   // owner decision 1(c): the site's web logs live in the distribution's log dir, per site
   'logrotate',
+  // the v1 pool's own error log (<v1_var_base>/<instance>/v1/log), every site
+  'logrotate_v1',
 ] as const;
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 

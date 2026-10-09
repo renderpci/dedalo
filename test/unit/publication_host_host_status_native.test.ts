@@ -14,13 +14,16 @@ import type { AgentStatus, MediaProbe } from '../../src/core/publication_host/ag
 import {
 	buildHostChecks,
 	buildHostPanelRow,
+	DECORATOR_CHECK_IDS,
 	HOST_CHECK_IDS,
 	type HostCheck,
 	type HostStatusInput,
+	nginxMapCheck,
 	PAIRING_ON_FAILURE,
 	REACHABLE_ON_FAILURE,
 	registryInvalidCheck,
 	statusOutcomeFromError,
+	withNginxMapCheck,
 } from '../../src/core/publication_host/host_status.ts';
 import { publicationHostFingerprint } from '../../src/core/publication_host/pairing.ts';
 import type { PublicationHostRecord } from '../../src/core/publication_host/registry.ts';
@@ -593,5 +596,64 @@ describe('bun_version: the host Bun against the work system pin', () => {
 		expect(checkOf(runningBun('1.4.2', { bunPin: '1.4.20' }), 'bun_version')?.state).toBe(
 			'blocked',
 		);
+	});
+});
+
+describe('nginx_map: the host-wide map state is a check (B3)', () => {
+	const H = 'e'.repeat(64);
+	const managed = {
+		managed: true,
+		expected: H,
+		applied: H,
+		host_hash: H,
+		contributions: 1,
+		invalid: 0,
+		refused: null,
+		drift: false,
+		agent_outdated: false,
+	};
+
+	test('every state the panel showed maps to one check, red where it was red', () => {
+		expect(DECORATOR_CHECK_IDS).toContain('nginx_map');
+		expect(nginxMapCheck(managed)).toEqual({
+			id: 'nginx_map',
+			state: 'ok',
+			detail: H.slice(0, 12),
+		});
+		expect(nginxMapCheck({ ...managed, applied: 'f'.repeat(64), drift: true })).toEqual({
+			id: 'nginx_map',
+			state: 'blocked',
+			detail: 'drift',
+		});
+		expect(nginxMapCheck({ ...managed, applied: null, drift: true })).toEqual({
+			id: 'nginx_map',
+			state: 'blocked',
+			detail: 'none',
+		});
+		expect(nginxMapCheck({ ...managed, refused: 'map_envelope_rebind' })).toEqual({
+			id: 'nginx_map',
+			state: 'blocked',
+			detail: 'map_envelope_rebind',
+		});
+		expect(nginxMapCheck({ ...managed, managed: false, expected: null, applied: null })).toEqual({
+			id: 'nginx_map',
+			state: 'ok',
+			detail: 'unmanaged',
+		});
+		expect(
+			nginxMapCheck({ ...managed, managed: false, agent_outdated: true, drift: true }),
+		).toEqual({ id: 'nginx_map', state: 'blocked', detail: 'agent_outdated' });
+	});
+
+	test('withNginxMapCheck appends ONE check (a previous one replaced); a null map leaves none', () => {
+		const row = { checks: [{ id: 'registry', state: 'ok' } as HostCheck] };
+		const once = withNginxMapCheck(row, managed);
+		expect(once.checks.map((c) => c.id)).toEqual(['registry', 'nginx_map']);
+		expect(
+			withNginxMapCheck(once, { ...managed, drift: true }).checks.filter(
+				(c) => c.id === 'nginx_map',
+			),
+		).toEqual([{ id: 'nginx_map', state: 'blocked', detail: 'drift' }]);
+		expect(withNginxMapCheck(once, null).checks.map((c) => c.id)).toEqual(['registry']);
 	});
 });

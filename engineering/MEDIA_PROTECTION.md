@@ -379,6 +379,9 @@ rendered from the same templates by `src/core/media/publication_host_rules.ts`:
   `/etc/nginx/conf.d/dedalo_media_map.conf`
   (`publication/host_agent/src/provision/render/nginx_map_include.ts`). With every instance on
   one engine version and one `mediaDir`, the host file is byte-identical to `buildNginxMap()`.
+  nginx found down after a reload of a new map that passed `-t` (an AVC at the reload) puts
+  the last LOADED map back, re-tests it and restarts nginx (`src/rules/txn.ts`, the renderer's
+  closed `rendererExec`): the media variables never stay undefined on the host.
 
 Render (work hosts and hand-provisioned publication hosts): `bun run media:publication-host-rules --root <mount> [--server apache|nginx|nginx-map]`.
 Lockstep: `media_protection_tripwire.test.ts` (same filename verdicts, host-root markers, no

@@ -102,6 +102,7 @@ fixes it, instead of letting a service fail later with *Permission denied*.
 | `…/dedalo/publication_api/v2/shared/` | `root:museum_org_api 0750` | `apply` | `v2.env` is readable by the v2 group only |
 | `/var/log/apache2/museum.org/` | `root:root 0755` | `apply` (home layout) | the site's web server logs, **outside the home**: the web server opens them as root. RHEL: `/var/log/httpd/museum.org/`; nginx: `/var/log/nginx/museum.org/` |
 | `/etc/logrotate.d/dedalo_museum_org_web` | `root:root 0644` | `apply` (home layout) | rotates that directory: the distribution's own logrotate files reach only `/var/log/apache2/*.log`, one level |
+| `/etc/logrotate.d/dedalo_museum_org_v1` | `root:root 0644` | `apply` (every site) | rotates the v1 pool's own error log in `/var/lib/dedalo_publication_host/museum_org/v1/log/`, as `museum_org_v1` (the directory is that account's) |
 | `/home/museum.org/logs/php/` | `museum_site 0700`, in a `root:root 0711` `logs/` | you (step 0), optional | the website's own PHP error log, if you keep it in the home: its own pool writes it. Nothing of Dédalo's logs here |
 | `/run/dedalo_publication_host/museum_org/` | `museum_org_agent:dedalo 0750`, `agent.sock` `0660` | systemd and the agent, at start | one machine: only the work system can connect |
 
@@ -316,6 +317,14 @@ printable ASCII characters with no space, `'`, `\` or `$` (Bun's environment-fil
 `$` even inside quotes, so v2 would read another value); a refused one is named, never echoed,
 and its file stays under *still to do*.
 
+How v1 reaches MariaDB is a decision of its own (`api_config.v1_db_transport`: `socket` or
+`tcp`). Its default is what init found: the local MariaDB socket when one exists
+(`/run/mysqld/mysqld.sock` on Debian and Ubuntu, `/var/lib/mysql/mysql.sock` on RHEL, Rocky and
+Alma), else TCP to `127.0.0.1:3306`, and the item says whether anything listens on 3306. The
+prompts that follow offer the same defaults. For TCP the host is `127.0.0.1`, never `localhost`:
+v1's PHP database driver reads `localhost` as "use the socket", whatever the port. A database on
+another machine is `tcp` with its host and port typed in.
+
 | Exit code | Meaning |
 | --- | --- |
 | 0 | done: everything is right, the agent answers its health check, and it is paired or the pairing commands were printed. Optional items may remain under *still to do* |
@@ -400,6 +409,13 @@ not inside `http{}`, init prints the one `include` line to add to `nginx.conf` (
 file) and writes `"nginx_map": "none"`. After adding the line, set `"nginx_map": "conf_d"` under
 `web` in `/etc/dedalo_publication_host/museum_org.json` and re-run: a re-run keeps what the
 declaration says. Apache needs no map.
+
+The root service renders the map from every instance's part, tests it with `nginx -t` and
+reloads nginx. If nginx stops on that reload although the test passed (on SELinux, a denial
+the test cannot see), the service puts back the map nginx had loaded, tests it again and
+restarts nginx; the panel then reports the push as failed and keeps showing the map that is
+really loaded. The panel's **Host media map** check is red until this instance's map is the
+one nginx serves.
 
 ### Pairing
 
@@ -592,8 +608,8 @@ the step here.
       prints the version.
     - A filesystem for the state root that supports the append-only attribute (ext4, xfs):
       `apply` runs `chattr +a` (the `e2fsprogs` package) on the agent's audit log.
-    - `logrotate`: in the home layout `apply` writes the rotation of the site's web log
-      directory to `/etc/logrotate.d/`.
+    - `logrotate`: `apply` writes the rotation of the v1 pool's error log and, in the home
+      layout, of the site's web log directory to `/etc/logrotate.d/`.
     - A read-only MariaDB user for each site's Publication APIs.
     - For step 10, a work system installed through the code updater. A work system cloned
       from git can provision and pair a publication host, but it cannot push API releases
@@ -709,7 +725,11 @@ distribution's own `logrotate` files only reach the files directly in `/var/log/
 `httpd/`, `nginx/`), never a directory below. On SELinux the directory is `httpd_log_t` by the
 policy's own rules. The v2 API and the agent log to the systemd journal (`journalctl -u <unit>`);
 the agent's audit trail is in `dedalo/audit/`; the v1 API's PHP errors go to
-`/var/lib/dedalo_publication_host/museum_org/v1/log/`.
+`/var/lib/dedalo_publication_host/museum_org/v1/log/error.log`, rotated daily by
+`/etc/logrotate.d/dedalo_museum_org_v1` (14 kept). That rotation runs as `museum_org_v1`
+(`su museum_org_v1 root`): the directory is that account's, and root never renames files in a
+directory another account can change. PHP opens its error log again for each message, so no
+reload follows.
 
 The website's own PHP pool keeps its error log where you had it. If that is in the home, give it a
 directory the pool owns, never one the web server writes: a user who can replace a file root opens
@@ -1080,7 +1100,8 @@ exact command, in the order to run them.
 rules, the token, the certificates (two machines), the engine fragment; with `site`, the v1
 API's own PHP-FPM pool and its directory under `/var/lib/dedalo_publication_host/`, the
 site's web include and, in the home layout, the site's log directory
-(`/var/log/apache2/museum.org/`, step 0) with its `/etc/logrotate.d/dedalo_museum_org_web`; on nginx with `"nginx_map": "conf_d"`, the host-wide media map include;
+(`/var/log/apache2/museum.org/`, step 0) with its `/etc/logrotate.d/dedalo_museum_org_web`, and the v1 log's
+`/etc/logrotate.d/dedalo_museum_org_v1`; on nginx with `"nginx_map": "conf_d"`, the host-wide media map include;
 on an SELinux host, the file contexts and the v2 port label
 ([RHEL, Rocky and Alma](#rhel-rocky-and-alma)).
 
@@ -1644,6 +1665,7 @@ The provisioner names these after the instance, so two instances never share the
 | the v1 API's PHP-FPM pool, its socket and its `/var/lib/dedalo_publication_host/<instance>/v1/` | `dedalo_<instance>_v1`, `dedalo-<instance>-v1.sock` |
 | the site's web include | `/etc/dedalo_publication_host/<instance>/web.<server>.conf` |
 | the site's log rotation (home layout) | `/etc/logrotate.d/dedalo_<instance>_web`, for `/var/log/<server>/<domain>/` |
+| the v1 pool's log rotation | `/etc/logrotate.d/dedalo_<instance>_v1`, for `/var/lib/dedalo_publication_host/<instance>/v1/log/` |
 
 You choose the rest, and each instance needs its own:
 
@@ -1952,6 +1974,7 @@ The commands below use the example names; `provision` runs as in step 4.
 | `install.sh` says *another install.sh (or its init) is running for this instance* | a second `install.sh` was started while the first is still at its prompt or inside init | wait for the first one to finish; the lock disappears with its process |
 | `host.polkit` says polkit *is masked*, or that *the system bus cannot start it* | polkit is D-Bus-activated (an idle host runs no `polkitd`, and that is fine); here nothing can start it: the unit is masked, or the package's activation file `/usr/share/dbus-1/system-services/org.freedesktop.PolicyKit1.service` is missing or names another unit | `systemctl unmask polkit.service`; or reinstall the package (`apt reinstall polkitd` / `dnf reinstall polkit`), then run init again |
 | `host.sudo` says *`/etc/sudoers-rs` (the policy sudo-rs reads) does not include /etc/sudoers.d* | the installed `sudo` is sudo-rs (Ubuntu 26.04's default), and an `/etc/sudoers-rs` exists: sudo-rs then reads that file, never `/etc/sudoers` | `visudo -f /etc/sudoers-rs` and add `@includedir /etc/sudoers.d`, or delete `/etc/sudoers-rs` if it is not yours |
+| `host.sudo` lists a file as *not followed* | a file the policy includes is not owned by root, or others can write it (sudo itself does not read such a file), or its name holds `%h` (the host name, which init does not expand) | `chown root:root` and `chmod 0440` the file, or move the `@includedir /etc/sudoers.d` line into the policy file itself (`visudo -f` it) |
 | `host.chattr` stops init | `chattr` (the `e2fsprogs` package) is missing, which minimal images leave out; `apply` makes the audit trail append-only with it | `apt install e2fsprogs` / `dnf install e2fsprogs` |
 | `web.logs` asks to move the logs, or blocks naming `ProtectHome=` | the virtual host logs under the home; with a sandboxed web server unit (Ubuntu 26.04's `apache2.service`) it cannot even start that way | point `ErrorLog`/`CustomLog` (nginx: `error_log`/`access_log`) at `/var/log/apache2/museum.org/` (RHEL `/var/log/httpd/…`, nginx `/var/log/nginx/…`), test, reload, run init again |
 | `apply` refuses: *the web server's log directory … does not exist*, or *… is logrotate installed?* | the web server package (its `/var/log/<server>/`) or `logrotate` (its `/etc/logrotate.d/`) is not installed | install it, then run init (or `apply`) again |
@@ -2065,6 +2088,9 @@ The commands below use the example names; `provision` runs as in step 4.
 | the media map is refused: *a newer contribution* (`map_contribution_newer`) | another instance on the same host runs a newer Dédalo, and the host's map renderer is older than its map | run `provision apply` of that newer instance on the host: it upgrades the shared renderer |
 | the media map is refused: *rebind* (`map_envelope_rebind`) | this work system's media folder changed since the host first accepted its map | run `provision apply` of this instance on the host, then apply the rules again |
 | the media map is refused: *renderer missing* (`map_renderer_missing`) | the host's map service is not installed | run `provision apply` of this instance on the host |
+| **Host media map** is red with `none` or `drift` | nothing of this work system's map is loaded on that nginx host (`none`: never pushed, or the last push was rolled back), or another version of it is (`drift`) | **Apply media rules** pushes it. If it stays red, read `journalctl -u dedalo-pubhost-map` on the host |
+| **Host media map** is red with `agent_outdated` | that host's agent predates the host-wide map | update the agent's code on the host and `provision apply` |
+| the media map push fails and nginx was restarted | nginx stopped on the reload of the new map although its test passed; the service put the loaded map back and restarted nginx | read `journalctl -u dedalo-pubhost-map` and, on SELinux, `ausearch -m AVC,USER_AVC -ts recent` on the host |
 
 ### API releases and push
 

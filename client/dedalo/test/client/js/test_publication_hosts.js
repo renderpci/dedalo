@@ -25,10 +25,10 @@
  *    "invalid, repair it"; any other failed read shows its own error;
  *  - a non-root row (address withheld by the server) shows no Address fact;
  *  - the host-wide nginx media map (provision init §13.4): a managed row shows
- *    its state, expected/applied/shared hashes and the instance count (drift is
- *    red, a shared host hash with our map loaded is ok), an unmanaged row only
- *    `unmanaged`, an outdated agent and a root refusal are red, and an Apache
- *    row (nginx_map null) shows none of it;
+ *    expected/applied/shared hashes and the instance count; its STATE is the
+ *    server's `nginx_map` check rendered like every check (drift red, ok green,
+ *    `unmanaged` ok) — the client derives none of it; an Apache row
+ *    (nginx_map null, no check) shows none of it;
  *  - the edit form is prefilled from the row's qualities/probe; set_host_fields
  *    sends null for a blank field (= engine default);
  *  - media_control's line asks the dashboard to open publication_hosts, and the
@@ -48,10 +48,7 @@ import { OPEN_WIDGET_EVENT } from '../../../core/area_maintenance/js/maintenance
 import { build_map_view } from '../../../core/area_maintenance/js/render_area_maintenance.js';
 import { media_control } from '../../../core/area_maintenance/widgets/media_control/js/media_control.js';
 import { publication_hosts } from '../../../core/area_maintenance/widgets/publication_hosts/js/publication_hosts.js';
-import {
-	nginx_map_state,
-	read_host_fields,
-} from '../../../core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js';
+import { read_host_fields } from '../../../core/area_maintenance/widgets/publication_hosts/js/render_publication_hosts.js';
 import { check_row } from '../../../core/area_maintenance/widgets/update_code/js/render_update_status.js';
 import { ApiError, CLIENT_ERROR } from '../../../core/common/js/api_error.js';
 import { data_manager } from '../../../core/common/js/data_manager.js';
@@ -378,7 +375,7 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			assert.include(row.textContent, '1.4.1 != 1.4.2', 'both versions named');
 		});
 
-		it('nginx map: a managed row shows state, hashes and the instance count; drift is red', async function () {
+		it('nginx map: a managed row shows hashes and the instance count; its state is the server check (drift red)', async function () {
 			const H = 'e'.repeat(64);
 			const S = 'f'.repeat(64);
 			const managed = {
@@ -392,22 +389,32 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 				drift: false,
 				agent_outdated: false,
 			};
-			const content = await mount(build_widget(ok_value([build_host({ nginx_map: managed })])));
+			const with_check = (check) => [...build_host().checks, check];
+			const content = await mount(
+				build_widget(ok_value([build_host({ nginx_map: managed, checks: with_check({ id: 'nginx_map', state: 'ok', detail: H.slice(0, 12) }) })])),
+			);
 			const card = content.querySelector('.publication_host[data-name="www"]');
 			const facts = [...card.querySelectorAll('.dd_row')].map((row) => row.textContent);
 			const L = labels();
-			assert.include(facts, (L.publication_hosts_map_state || 'Host media map') + 'ok', 'state ok: our map is loaded, the host hash is shared');
+			const map_label = L.publication_hosts_check_nginx_map || 'nginx_map';
 			assert.include(facts, (L.publication_hosts_map_expected || 'Expected media map hash') + H);
 			assert.include(facts, (L.publication_hosts_map_applied || 'Applied media map hash') + H);
 			assert.include(facts, (L.publication_hosts_map_host_hash || 'Shared host map hash') + S);
 			assert.include(facts, (L.publication_hosts_map_contributions || 'Instances in the host map') + '2');
-			assert.ok(card.querySelector('.nginx_map_state.state_ok'), 'shared, not drift');
+			const ok_row = [...card.querySelectorAll('.check_row')].find((row) => row.querySelector('.dd_k')?.textContent === map_label);
+			assert.ok(ok_row, 'the map state is a check row, labelled by its id');
+			assert.ok(ok_row.classList.contains('state_ok'), 'shared, not drift');
 
 			const drift = { ...managed, applied: null, drift: true };
-			const drifted = await mount(build_widget(ok_value([build_host({ name: 'drift', nginx_map: drift })])));
-			const row = drifted.querySelector('.publication_host[data-name="drift"] .nginx_map_state');
-			assert.ok(row.classList.contains('state_blocked'), 'drift is red');
-			assert.include(row.textContent, 'drift');
+			const drifted = await mount(
+				build_widget(ok_value([build_host({ name: 'drift', nginx_map: drift, checks: with_check({ id: 'nginx_map', state: 'blocked', detail: 'none' }) })])),
+			);
+			const row = [...drifted.querySelectorAll('.publication_host[data-name="drift"] .check_row')].find(
+				(r) => r.querySelector('.dd_k')?.textContent === map_label,
+			);
+			assert.ok(row.classList.contains('state_blocked'), 'not loaded is red');
+			assert.ok(row.querySelector('.dd_badge.pill_danger'), 'red: the kit danger pill');
+			assert.include(row.textContent, 'none');
 
 			// a non-root row: the server omits the host-wide facts, so no host-wide rows render
 			const { host_hash: _h, contributions: _c, invalid: _i, ...own } = managed;
@@ -424,28 +431,33 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			);
 		});
 
-		it('nginx map: unmanaged shows only its state; apache (null) shows nothing; refusals and an outdated agent are red', async function () {
+		it('nginx map: unmanaged shows only its check; apache (null) shows nothing', async function () {
 			const unmanaged = { managed: false, expected: null, applied: null, host_hash: null, contributions: 0, invalid: 0, refused: null, drift: false, agent_outdated: false };
 			const content = await mount(
-				build_widget(ok_value([build_host({ name: 'hand', nginx_map: unmanaged }), build_host({ name: 'apache', nginx_map: null })])),
+				build_widget(
+					ok_value([
+						build_host({ name: 'hand', nginx_map: unmanaged, checks: [...build_host().checks, { id: 'nginx_map', state: 'ok', detail: 'unmanaged' }] }),
+						build_host({ name: 'apache', nginx_map: null }),
+					]),
+				),
 			);
+			const map_label = labels().publication_hosts_check_nginx_map || 'nginx_map';
 			const hand = content.querySelector('.publication_host[data-name="hand"]');
-			assert.include(hand.querySelector('.nginx_map_state').textContent, 'unmanaged');
-			assert.strictEqual(hand.querySelectorAll('.dd_row').length > 0, true);
+			const check = [...hand.querySelectorAll('.check_row')].find((row) => row.querySelector('.dd_k')?.textContent === map_label);
+			assert.include(check.textContent, 'unmanaged');
+			assert.ok(check.classList.contains('state_ok'), 'a hand-placed map is not drift');
 			const handFacts = [...hand.querySelectorAll('.dd_row')].map((row) => row.textContent);
 			assert.notOk(
 				handFacts.some((text) => text.startsWith(labels().publication_hosts_map_expected || 'Expected media map hash')),
 				'no hash rows for a hand-placed map',
 			);
 			const apache = content.querySelector('.publication_host[data-name="apache"]');
-			assert.isNull(apache.querySelector('.nginx_map_state'), 'no map rows on an apache host');
-
-			assert.deepEqual(nginx_map_state({ ...unmanaged, agent_outdated: true }), { text: 'agent_outdated', state: 'blocked' });
-			assert.deepEqual(nginx_map_state({ ...unmanaged, managed: true, refused: 'map_envelope_rebind' }), {
-				text: 'map_envelope_rebind',
-				state: 'blocked',
-			});
-			assert.deepEqual(nginx_map_state(unmanaged), { text: 'unmanaged', state: 'ok' });
+			const apacheLabels = [...apache.querySelectorAll('.dd_k')].map((k) => k.textContent);
+			assert.notInclude(apacheLabels, map_label, 'no map check on an apache host');
+			assert.notOk(
+				apacheLabels.some((text) => text === (labels().publication_hosts_map_expected || 'Expected media map hash')),
+				'no map rows on an apache host',
+			);
 		});
 
 		it('nginx map: server strings render as TEXT', async function () {

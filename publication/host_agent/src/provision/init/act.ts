@@ -36,7 +36,7 @@ import { NOLOGIN_SHELLS, SELINUX_READ_ONLY_BOOLEANS } from '../exec_contract';
 import type { AgentLayout, HostDeclaration, WebServer } from '../layout';
 import { ABSOLUTE_PATH_PATTERN, canonicalDeclaration, HOME_ROOT_MODE, MODES } from '../layout';
 import type { LockHandle } from '../lock';
-import type { PathFacts } from '../plan';
+import type { PathFacts, PinExpectation } from '../plan';
 import type { V1Values, V2Values } from './api_config';
 import { ApiConfigRefused, renderV1Config, renderV2Env, verifyV2RoundTrip } from './api_config';
 import { KEPT_DIR_NAME, RERUN_ENV_NAME, STAGE_DIR_NAME } from './constants';
@@ -281,7 +281,13 @@ function pathMeta(ctx: ActContext, item: Item, action: Extract<InitAction, { kin
   const facts = ctx.lstat(action.path);
   if (facts === null) throw new StepError(`'${action.path}' does not exist`);
   if (facts.type === 'symlink') throw new StepError(`'${action.path}' is a symbolic link — never given to root`, { refused: true });
-  if (facts.type !== 'dir') throw new StepError(`'${action.path}' is a ${facts.type}, not a directory`, { refused: true });
+  // The API config files (compare.ts api_config.*: a file in the state tree's `shared/`) are the one
+  // file this step fixes, and only through the pinned parent (sharedPin); every other target is a directory.
+  const pin = sharedPin(ctx, action.path);
+  const fileAllowed = item.id.startsWith('api_config.') && pin !== undefined;
+  if (facts.type !== 'dir' && !(fileAllowed && facts.type === 'file')) {
+    throw new StepError(`'${action.path}' is a ${facts.type}, not a directory`, { refused: true });
+  }
   const parent = dirname(action.path);
   const parentFacts = ctx.lstat(parent);
   if (parentFacts?.type !== 'dir' || (parentFacts.uid !== 0 && parentFacts.uid !== rootIds(ctx).uid) || (parentFacts.mode & 0o002) !== 0) {
@@ -293,9 +299,26 @@ function pathMeta(ctx: ActContext, item: Item, action: Extract<InitAction, { kin
   if (facts.uid === action.uid && facts.gid === action.gid && facts.mode === action.mode) {
     return { outcome: 'noop', detail: { path: action.path, previous } };
   }
-  ctx.io.chown(action.path, action.uid, action.gid);
-  ctx.io.chmod(action.path, action.mode);
+  ctx.io.chown(action.path, action.uid, action.gid, pin);
+  ctx.io.chmod(action.path, action.mode, pin);
   return { outcome: 'done', detail: { path: action.path, uid: action.uid, gid: action.gid, mode: action.mode, previous } };
+}
+
+/**
+ * What the state tree's `shared/` must be when init writes in it (security review S3-1): its
+ * grandparent `publication_api/<api>/` is the agent's, so the door pins `shared/` and refuses any
+ * directory but this one — the MODES row exactly (v1Shared root:root, v2Shared root:<v2 group>).
+ * Undefined for a path whose parent is not one of the two (or while the v2 group has no id).
+ */
+export function sharedPin(ctx: Pick<ActContext, 'layout' | 'exec' | 'root'>, path: string): PinExpectation | undefined {
+  const parent = dirname(path);
+  const { uid, gid: rootGid } = ctx.root ?? { uid: 0, gid: 0 };
+  if (parent === ctx.layout.state.apis.v1.shared) return { parent, uid, gid: rootGid, mode: MODES.v1Shared.mode };
+  if (parent !== ctx.layout.state.apis.v2.shared) return undefined;
+  const gid = ctx.exec.groupId(ctx.layout.identity.v2Group);
+  // No group, no expectation: a door that must pin the parent then refuses, naming it.
+  if (gid === null) return undefined;
+  return { parent, uid, gid, mode: MODES.v2Shared.mode };
 }
 
 function mkdirStep(ctx: ActContext, action: Extract<InitAction, { kind: 'mkdir' }>): StepDone {
@@ -511,7 +534,7 @@ function apiConfig(ctx: ActContext, action: Extract<InitAction, { kind: 'v2_env'
     throw error;
   }
   const mode = action.kind === 'v2_env' ? MODES.v2Env.mode : MODES.v1Config.mode;
-  ctx.io.writeBytesAtomic(action.path, bytes, mode, uid, gid);
+  ctx.io.writeBytesAtomic(action.path, bytes, mode, uid, gid, sharedPin(ctx, action.path));
   return { outcome: 'done', detail: secretMeta(ctx, action.path) };
 }
 
@@ -932,7 +955,7 @@ function strings(detail: Readonly<Record<string, unknown>>, key: string): string
 function removeTemps(ctx: ActContext, temps: readonly string[]): void {
   for (const temp of temps) {
     if (ctx.lstat(temp) === null) continue;
-    if (temp.endsWith(INIT_TEMP_SUFFIX)) ctx.io.removeInitTemp(temp);
+    if (temp.endsWith(INIT_TEMP_SUFFIX)) ctx.io.removeInitTemp(temp, sharedPin(ctx, temp));
     else if (temp.endsWith('.dedalo-provision.tmp')) ctx.io.removeTemp(temp);
   }
 }

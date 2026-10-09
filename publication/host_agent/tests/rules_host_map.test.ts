@@ -86,7 +86,8 @@ const ENGINE_MAP_H1 = [
 let log: string[] = [];
 let uids = new Map<string, number>();
 let lockScript: { held?: boolean; missing?: boolean } = {};
-let execScript: { configtest?: number[]; reload?: number[]; active?: boolean[] } = {};
+/** `restart` present: the exec is renderer-shaped (rendererExec's webRestart + sleep) and records 'restart'. */
+let execScript: { configtest?: number[]; reload?: number[]; active?: boolean[]; restart?: number[] } = {};
 
 function fakeLock(): LockIo {
   let clock = 0;
@@ -124,6 +125,7 @@ function deps(): HostMapDeps {
   const configtest = [...(execScript.configtest ?? [])];
   const reload = [...(execScript.reload ?? [])];
   const active = [...(execScript.active ?? [])];
+  const restart = [...(execScript.restart ?? [])];
   return {
     mapDir: MAP_DIR,
     locksDir: LOCKS,
@@ -142,6 +144,14 @@ function deps(): HostMapDeps {
         log.push('active');
         return active.shift() ?? true;
       },
+      ...(execScript.restart === undefined
+        ? {}
+        : {
+            async webRestart(): Promise<ExecResult> {
+              log.push('restart');
+              return { code: restart.shift() ?? 0, stdout: '', stderr: '' };
+            },
+          }),
     },
     io: {
       ...real,
@@ -400,6 +410,37 @@ describe('the transaction under the web lock', () => {
     plant('alpha', contribution('alpha'), UID.alpha);
     execScript = { active: [false] };
     expect(await runHostMap(deps())).toMatchObject({ outcome: 'reload_failed', host_hash: null });
+  });
+
+  test('B2: nginx down after a reload that returned 0 → the LOADED map restored, configtest, restart; bindings and seed untouched', async () => {
+    plant('alpha', contribution('alpha'), UID.alpha);
+    const first = await runHostMap(deps());
+    expect(first.outcome).toBe('applied');
+    const seed = plant('_seed', contribution('_seed'), 0);
+    plant('beta', contribution('beta', ENV_B, H2), UID.beta);
+    log = [];
+    execScript = { active: [false], restart: [] };
+    const result = await runHostMap(deps());
+    expect(result).toMatchObject({ outcome: 'reload_failed', host_hash: H1 });
+    // What nginx serves again is the map it had loaded; the result names what is loaded.
+    expect(live()).toBe(ENGINE_MAP_H1);
+    expect(existsSync(PENDING)).toBe(false);
+    expect(result.contributions.map(c => c.instance)).toEqual(['alpha']);
+    expect(log).toEqual([...lockedRun, 'configtest', 'reload', 'active', 'configtest', 'restart', 'active', 'unlock']);
+    // The rendered map never reached nginx: beta is not bound, the seed is not swept.
+    expect(JSON.parse(readFileSync(BINDINGS, 'utf8'))).toEqual({ alpha: ENV_A });
+    expect(existsSync(seed)).toBe(true);
+    expect(exitCodeOf(result)).toBe(1);
+  });
+
+  test('B2: a restart that fails leaves the marker and host_hash null (nothing is known to be loaded)', async () => {
+    plant('alpha', contribution('alpha'), UID.alpha);
+    await runHostMap(deps());
+    plant('beta', contribution('beta', ENV_B, H2), UID.beta);
+    execScript = { active: [false], restart: [1] };
+    expect(await runHostMap(deps())).toMatchObject({ outcome: 'reload_failed', host_hash: null });
+    expect(existsSync(PENDING)).toBe(true);
+    expect(live()).toBe(ENGINE_MAP_H1);
   });
 
   test('a held lock is host_busy, a missing lock file lock_missing: nothing rendered, result recorded', async () => {

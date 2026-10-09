@@ -58,7 +58,7 @@ import { initUsageLines, parseInitArgs } from './args';
 import { BunInstallFailed, BunInstallRefused, installBun } from './bun_install';
 import type { ComparedItem } from './compare';
 import { compare, isKnownItemId, unknownAnswers } from './compare';
-import { BUN_CONFIG_FLAG_PREFIX, BUN_HANDOVER_FLAGS, EMPTY_BUNFIG_NAME, KEPT_DIR_NAME } from './constants';
+import { BUN_CONFIG_FLAG_PREFIX, BUN_HANDOVER_FLAGS, EMPTY_BUNFIG_NAME, KEPT_DIR_NAME, MARIADB_SOCKET_CANDIDATES, MARIADB_TCP_HOST, MARIADB_TCP_PORT } from './constants';
 import type { DraftCompletion, DraftDeclaration } from './draft';
 import { completeDraft } from './draft';
 import { DraftError, parseDraft } from './draft_schema';
@@ -520,16 +520,19 @@ export const SECRET_PROMPTS = Object.freeze({
   }),
 });
 
-const DEFAULT_DB_SOCKET = '/run/mysqld/mysqld.sock';
-
-async function typeV2(world: InitWorld): Promise<Omit<V2Values, 'deploymentMode'> | null> {
+/**
+ * The prompts' defaults follow discovery (the action's `socket`: facts.mariadb): the local socket
+ * when one exists, else TCP 127.0.0.1:3306 — never `localhost` for TCP (v1's PHP driver reads
+ * `localhost` as "use the socket", whatever the port).
+ */
+async function typeV2(world: InitWorld, found: string | null): Promise<Omit<V2Values, 'deploymentMode'> | null> {
   const p = SECRET_PROMPTS.v2;
   const ask = world.prompter;
-  const host = await ask.visible(p.host, 'localhost');
+  const host = await ask.visible(p.host, found !== null ? 'localhost' : MARIADB_TCP_HOST);
   if (host === null) return null;
-  const port = await ask.visible(p.port, '3306');
+  const port = await ask.visible(p.port, String(MARIADB_TCP_PORT));
   if (port === null) return null;
-  const socket = await ask.visible(p.socket, DEFAULT_DB_SOCKET);
+  const socket = await ask.visible(p.socket, found ?? '');
   if (socket === null) return null;
   const user = await ask.visible(p.user, null);
   if (user === null) return null;
@@ -547,14 +550,14 @@ async function typeV2(world: InitWorld): Promise<Omit<V2Values, 'deploymentMode'
   };
 }
 
-async function typeV1(world: InitWorld, transport: 'socket' | 'tcp'): Promise<Omit<V1Values, 'transport'> | null> {
+async function typeV1(world: InitWorld, transport: 'socket' | 'tcp', found: string | null): Promise<Omit<V1Values, 'transport'> | null> {
   const p = SECRET_PROMPTS.v1;
   const ask = world.prompter;
-  const host = await ask.visible(p.host, 'localhost');
+  const host = await ask.visible(p.host, transport === 'tcp' ? MARIADB_TCP_HOST : 'localhost');
   if (host === null) return null;
-  const socket = transport === 'socket' ? await ask.visible(p.socket, DEFAULT_DB_SOCKET) : null;
+  const socket = transport === 'socket' ? await ask.visible(p.socket, found ?? MARIADB_SOCKET_CANDIDATES[0] ?? null) : null;
   if (transport === 'socket' && socket === null) return null;
-  const port = transport === 'tcp' ? await ask.visible(p.port, '3306') : null;
+  const port = transport === 'tcp' ? await ask.visible(p.port, String(MARIADB_TCP_PORT)) : null;
   if (transport === 'tcp' && port === null) return null;
   const user = await ask.visible(p.user, null);
   if (user === null) return null;
@@ -893,7 +896,12 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
     const secrets: { v2?: V2Values; v1?: V1Values } = {};
     const secretOpen: Item[] = [];
     for (const item of runnable.filter(row => row.secret !== undefined)) {
-      const typed = interactive ? (item.secret === 'v2_env' ? await typeV2(world) : await typeV1(world, item.action?.kind === 'v1_config' ? item.action.transport : 'socket')) : null;
+      const action = item.action;
+      const typed = !interactive
+        ? null
+        : item.secret === 'v2_env'
+          ? await typeV2(world, action?.kind === 'v2_env' ? action.socket : null)
+          : await typeV1(world, action?.kind === 'v1_config' ? action.transport : 'tcp', action?.kind === 'v1_config' ? action.socket : null);
       if (typed === null) {
         secretOpen.push(Object.freeze({ ...item, list: 'decision', title: `${item.title}: create it on a terminal or by hand (guide §5)` }) as Item);
         continue;

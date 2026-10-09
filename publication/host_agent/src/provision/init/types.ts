@@ -14,7 +14,7 @@ import type { ProvisionIo } from '../apply';
 import type { ExecResult, InitExec, PairInvocation, ProvisionExec } from '../exec_contract';
 import type { FpmFlavor, LayoutKind, WebServer } from '../layout';
 import type { LockIo, LockState } from '../lock';
-import type { Action, HostState, PathFacts, PlanRefused, UnitFacts } from '../plan';
+import type { Action, HostState, PathFacts, PinExpectation, PlanRefused, UnitFacts } from '../plan';
 import type { Sibling } from '../siblings';
 import type { PolkitState } from './parse/polkit';
 import type { SudoFlavor } from './parse/sudoers';
@@ -209,7 +209,14 @@ export interface HostFacts {
    * `flavor` from realpath(/usr/bin/sudo); `policyFile` the file that sudo reads (sudo-rs:
    * /etc/sudoers-rs when it exists); `includedir`: it, or a file it includes, includes the sudoers dir.
    */
-  readonly sudo: { readonly present: boolean; readonly includedir: boolean; readonly flavor: SudoFlavor; readonly policyFile: string };
+  readonly sudo: {
+    readonly present: boolean;
+    readonly includedir: boolean;
+    readonly flavor: SudoFlavor;
+    readonly policyFile: string;
+    /** Included files the walk did not follow (`<path>: <why>`): not root's / writable by others, or naming `%h` (parse/sudoers.ts). */
+    readonly skipped: readonly string[];
+  };
   readonly cpu: { readonly arch: 'x64' | 'aarch64' | 'other'; readonly avx2: boolean; readonly musl: boolean };
   /** `unzip` (bun.install extracts with it); `chattr` (e2fsprogs: provision apply makes the audit trail append-only with it). */
   readonly tools: { readonly unzip: boolean; readonly chattr: boolean };
@@ -245,6 +252,11 @@ export interface HostFacts {
   readonly fpm: readonly FpmInstall[];
   /** Listening TCP ports (/proc/net/tcp{,6}). */
   readonly ports: readonly number[];
+  /**
+   * A LOCAL MariaDB (spec §5.8, the v1 transport): the first MARIADB_SOCKET_CANDIDATES path that is
+   * a socket (lstat: not a file, directory or link), or null; and whether anything listens on TCP 3306.
+   */
+  readonly mariadb: { readonly socket: string | null; readonly tcp3306: boolean };
   readonly work: readonly WorkUnit[];
 }
 
@@ -444,13 +456,15 @@ export type InitAction =
   | { readonly kind: 'write_declaration'; readonly body: string }
   | { readonly kind: 'provision_apply'; readonly instance: string }
   | { readonly kind: 'unit_restart'; readonly units: readonly string[] }
-  | { readonly kind: 'v2_env'; readonly sample: string; readonly path: string; readonly deploymentMode: WebServer | 'standalone' }
+  /** `socket`: the local MariaDB socket discovery found (facts.mariadb), the typed prompt's default; null = TCP by default. Never a secret. */
+  | { readonly kind: 'v2_env'; readonly sample: string; readonly path: string; readonly deploymentMode: WebServer | 'standalone'; readonly socket: string | null }
   | {
       readonly kind: 'v1_config';
       readonly sample: string;
       readonly path: string;
       readonly owner: string;
       readonly transport: 'socket' | 'tcp';
+      readonly socket: string | null;
     }
   | { readonly kind: 'apache_modules'; readonly mods: readonly string[] }
   /** act computes `after` with web_edit.ts, re-read under the TOCTOU check (beforeSha). */
@@ -506,12 +520,16 @@ export interface OperatorFile {
 
 /** The provisioner's doors plus init's own, on the same O_NOFOLLOW + assertSafeParent rules. */
 export interface InitIo extends ProvisionIo {
-  /** Temp `<dir>/.<base>.dedalo-init.tmp` (O_EXCL|O_NOFOLLOW), fsync, chown/chmod, rename. */
-  writeBytesAtomic(path: string, bytes: Uint8Array, mode: number, uid: number, gid: number): void;
+  /**
+   * Temp `<dir>/.<base>.dedalo-init.tmp` (O_EXCL|O_NOFOLLOW), fsync, chown/chmod, rename. `pin`: what
+   * the parent must be when only the grandparent is untrusted (the state tree's `shared/`; apply.ts
+   * withPinnedDir) — such a path is refused without it.
+   */
+  writeBytesAtomic(path: string, bytes: Uint8Array, mode: number, uid: number, gid: number, pin?: PinExpectation): void;
   /** `<dir>/<name>` created O_EXCL|O_NOFOLLOW with `mode`; returns its path. */
   writeTempNamed(dir: string, name: string, bytes: Uint8Array, mode: number): string;
-  /** Removes a `*.dedalo-init.tmp` file only. */
-  removeInitTemp(path: string): void;
+  /** Removes a `*.dedalo-init.tmp` file only (`pin`: as writeBytesAtomic's, for a temp beside a pinned write). */
+  removeInitTemp(path: string, pin?: PinExpectation): void;
   /** Removes a tree that lies under `mustBeUnder`, never following a link. */
   removeTree(path: string, mustBeUnder: string): void;
   renameDir(from: string, to: string): void;

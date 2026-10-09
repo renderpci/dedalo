@@ -950,7 +950,22 @@ describe("the site's web logs, outside the home (owner decision 1(c))", () => {
     expect(JSON.stringify(rotate?.content)).toContain('/var/log/apache2/museum.example.org/*.log {');
     const system = siteHost(siteDecl({ agent_dir: '/opt/dedalo_publication_host/host_agent', state_root: '/srv/dedalo_publication_host/test', bun_bin: '/opt/dedalo_publication_host/bun/bin/bun' }));
     const none = plan(system.l, stateOf(system.host, system.l));
-    expect(none.some(a => 'path' in a && (a.path.startsWith('/var/log/') || a.path.startsWith('/etc/logrotate.d/')))).toBe(false);
+    expect(none.some(a => 'path' in a && (a.path.startsWith('/var/log/') || a.path === '/etc/logrotate.d/dedalo_test_web'))).toBe(false);
+  });
+
+  test("B5: the v1 pool's own log is rotated in EITHER layout, as the v1 user (su), the new file the pool user's", () => {
+    for (const decl of [siteDecl(), siteDecl({ agent_dir: '/opt/dedalo_publication_host/host_agent', state_root: '/srv/dedalo_publication_host/test', bun_bin: '/opt/dedalo_publication_host/bun/bin/bun' })]) {
+      const { l, host } = siteHost(decl);
+      const rotate = plan(l, stateOf(host, l)).find(a => a.op === 'write' && a.path === '/etc/logrotate.d/dedalo_test_v1') as WriteAction | undefined;
+      expect(rotate).toMatchObject({ mode: 0o644, uid: 0, gid: 0, validate: null });
+      const body = JSON.stringify(rotate?.content);
+      expect(body).toContain(`${l.site?.v1Var.log}/*.log {`);
+      expect(body).toContain(`\\tsu ${l.identity.v1User} root`);
+      expect(body).toContain(`\\tcreate 0600 ${l.identity.v1User} root`);
+    }
+    // No site, no pool: nothing to rotate.
+    const bare = derive(unixDeclaration());
+    expect(RENDERERS.find(r => r.kind === 'logrotate_v1')?.appliesTo?.(bare)).toBe(false);
   });
 
   test("Ubuntu's rsyslog /var/log (root:syslog 0775) above a root parent is no refusal — the parent is pinned; with an untrusted parent it is", () => {
@@ -960,6 +975,36 @@ describe("the site's web logs, outside the home (owner decision 1(c))", () => {
     expect(plan(l, stateOf(host, l))).toContainEqual(expect.objectContaining({ op: 'mkdir', path: '/var/log/apache2/museum.example.org' }));
     (host.entries.get('/var/log/apache2') as { mode: number }).mode = 0o775;
     expect(refusals(l, host).join('\n')).toContain("'/var/log' (above the managed '/var/log/apache2/museum.example.org') is group- or world-writable");
+  });
+
+  test('S3-1: the pinned parent rides the actions as OBSERVED (owner, group, mode, dev, ino); a mount over it is refused', () => {
+    const { l, host } = siteHost(siteDecl());
+    const varLog = host.entries.get('/var/log') as { mode: number; gid: number; dev?: number; ino?: number };
+    varLog.mode = 0o775;
+    varLog.gid = 104;
+    varLog.dev = 7;
+    const apache = host.entries.get('/var/log/apache2') as { uid: number; gid: number; mode: number; dev?: number; ino?: number };
+    apache.dev = 7;
+    apache.ino = 4242;
+    const actions = plan(l, stateOf(host, l));
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        op: 'mkdir',
+        path: '/var/log/apache2/museum.example.org',
+        pin: { parent: '/var/log/apache2', uid: apache.uid, gid: apache.gid, mode: apache.mode, dev: 7, ino: 4242 },
+      }),
+    );
+    // Rule 1 holds (trusted /var/log): nothing is pinned, nothing carries an expectation.
+    varLog.mode = 0o755;
+    expect(plan(l, stateOf(host, l)).some(a => 'pin' in a)).toBe(false);
+    // A drifted site log directory is fixed through the same pin.
+    varLog.mode = 0o775;
+    host.seedDir('/var/log/apache2/museum.example.org');
+    (host.entries.get('/var/log/apache2/museum.example.org') as { mode: number }).mode = 0o700;
+    expect(plan(l, stateOf(host, l))).toContainEqual(expect.objectContaining({ op: 'chmod', path: '/var/log/apache2/museum.example.org', pin: expect.objectContaining({ ino: 4242 }) }));
+    // Another device than its untrusted parent: something is mounted over the name.
+    apache.dev = 8;
+    expect(refusals(l, host).join('\n')).toContain("'/var/log/apache2' is a mount point (device 8, its parent '/var/log' on 7)");
   });
 });
 

@@ -593,8 +593,8 @@ describe('API config (§5.8)', () => {
     w.host.users.set('test_v1', 3002);
     return w;
   }
-  const v2 = (): Item => item({ kind: 'v2_env', sample: V2_SAMPLE, path: v2Path, deploymentMode: 'nginx' }, 'change', 'api_config.v2_env');
-  const v1 = (transport: 'socket' | 'tcp' = 'socket'): Item => item({ kind: 'v1_config', sample: V1_SAMPLE, path: v1Path, owner: 'test_v1', transport }, 'change', 'api_config.v1_config');
+  const v2 = (): Item => item({ kind: 'v2_env', sample: V2_SAMPLE, path: v2Path, deploymentMode: 'nginx', socket: '/run/mysqld/mysqld.sock' }, 'change', 'api_config.v2_env');
+  const v1 = (transport: 'socket' | 'tcp' = 'socket'): Item => item({ kind: 'v1_config', sample: V1_SAMPLE, path: v1Path, owner: 'test_v1', transport, socket: '/run/mysqld/mysqld.sock' }, 'change', 'api_config.v1_config');
 
   test('rendered from the template, written with the MODES rows; the action’s deployment mode wins', () => {
     const w = apiWorld();
@@ -604,6 +604,26 @@ describe('API config (§5.8)', () => {
     expect(w.host.body(v2Path)).toContain("DEPLOYMENT_MODE='nginx'");
     expect(w.host.body(v2Path)).toContain(`DB_PASSWORD='${PASSWORD}'`);
     expect(w.host.body(v1Path)).toContain(`define('API_WEB_USER_CODE', '${CODE}');`);
+  });
+
+  test('S3-1: each write states the shared/ directory it expects — the MODES row (v2Shared root:<v2 group> 0750, v1Shared root:root 0711)', () => {
+    const w = apiWorld();
+    expect(executeItems([v2(), v1()], w.ctx).exit).toBe(0);
+    expect(w.host.pins.get(`writeBytesAtomic ${v2Path}`)).toEqual({ parent: `${HOME}/dedalo/publication_api/v2/shared`, uid: 0, gid: 3001, mode: 0o750 });
+    expect(w.host.pins.get(`writeBytesAtomic ${v1Path}`)).toEqual({ parent: `${HOME}/dedalo/publication_api/v1/shared`, uid: 0, gid: 0, mode: 0o711 });
+  });
+
+  test('S3-1: a drifted API config file is fixed through the same pin (the one FILE path_meta takes); any other file is refused', () => {
+    const w = apiWorld();
+    w.host.seedFile(v2Path, 'OPERATOR=1\n', 0o644, 0, 0);
+    const fix = item({ kind: 'path_meta', path: v2Path, uid: 0, gid: 3001, mode: 0o640 }, 'change', 'api_config.v2_env');
+    expect(executeItems([fix], w.ctx).exit).toBe(0);
+    expect(w.host.lstat(v2Path)).toEqual({ type: 'file', uid: 0, gid: 3001, mode: 0o640 });
+    expect(w.host.pins.get(`chmod ${v2Path}`)).toEqual({ parent: `${HOME}/dedalo/publication_api/v2/shared`, uid: 0, gid: 3001, mode: 0o750 });
+    const other = apiWorld();
+    other.host.seedFile(`${HOME}/dedalo/x.txt`, 'x', 0o644, 0, 0);
+    const wrong = item({ kind: 'path_meta', path: `${HOME}/dedalo/x.txt`, uid: 0, gid: 0, mode: 0o600 }, 'change', 'api_config.v2_env');
+    expect(executeItems([wrong], other.ctx).outcomes[0]?.detail).toContain('not a directory');
   });
 
   test('MUTATION: the password and the user code never reach the journal, the calls or a digest', () => {

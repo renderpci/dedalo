@@ -1073,6 +1073,44 @@ describe('the row carries the host map state', () => {
 		});
 		expect(rows(await panel(broken))[0]?.nginx_map).toBeNull();
 	});
+
+	test('B3: the map state is a CHECK on the row (counted like every red line), absent when the map does not apply', async () => {
+		const mapCheck = (row: Record<string, unknown> | undefined) =>
+			(row?.checks as { id: string; state: string; detail?: string }[]).filter(
+				(c) => c.id === 'nginx_map',
+			);
+		const h = harness([record('pub_a'), record('pub_b')], {
+			hostStatus: async (name) => (name === 'pub_a' ? nginxStatus() : agentStatus()),
+		});
+		const [a, b] = rows(await panel(h));
+		expect(mapCheck(a)).toEqual([{ id: 'nginx_map', state: 'blocked', detail: 'none' }]);
+		expect(mapCheck(b)).toEqual([]);
+		// the fixed list stays first, the decorator right after it (before media_copy / public_gate)
+		const ids = (a?.checks as { id: string }[]).map((c) => c.id);
+		expect(ids.indexOf('nginx_map')).toBe(ids.indexOf('api_v2') + 1);
+		// the engine's own expected hash, loaded: ok (non-root too)
+		const expected = (a?.nginx_map as { expected: string }).expected;
+		const loaded = harness([record('pub_a')], {
+			hostStatus: async () =>
+				nginxStatus({ ...MANAGED_MAP, hash: expected, host_hash: MAP_HASH, contributions: 2 }),
+		});
+		expect(mapCheck(rows(await panel(loaded, ADMIN))[0])).toEqual([
+			{ id: 'nginx_map', state: 'ok', detail: expected.slice(0, 12) },
+		]);
+		const drifted = harness([record('pub_a')], {
+			hostStatus: async () =>
+				nginxStatus({ ...MANAGED_MAP, hash: MAP_HASH, host_hash: MAP_HASH, contributions: 1 }),
+		});
+		expect(mapCheck(rows(await panel(drifted))[0])).toEqual([
+			{ id: 'nginx_map', state: 'blocked', detail: 'drift' },
+		]);
+		const hand = harness([record('pub_a')], {
+			hostStatus: async () => nginxStatus({ managed: false }),
+		});
+		expect(mapCheck(rows(await panel(hand))[0])).toEqual([
+			{ id: 'nginx_map', state: 'ok', detail: 'unmanaged' },
+		]);
+	});
 });
 
 describe('probe and rollback_api', () => {

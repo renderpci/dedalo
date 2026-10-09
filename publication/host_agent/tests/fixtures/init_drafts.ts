@@ -173,7 +173,7 @@ export function debianHost(): HostFacts {
     mounts: [{ mountPoint: '/', fsType: 'ext4', readOnly: false, noexec: false, seclabel: false, context: null }],
     systemd: 252,
     polkit: { version: 122, state: 'running' },
-    sudo: { present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers' },
+    sudo: { present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: [] },
     cpu: { arch: 'x64', avx2: true, musl: false },
     tools: { unzip: true, chattr: true },
     nss: { passwdFilesOnly: true, groupFilesOnly: true, sssDomains: false },
@@ -214,6 +214,7 @@ export function debianHost(): HostFacts {
     },
     fpm: [debianFpm()],
     ports: [22, 80, 443, 3306],
+    mariadb: { socket: '/run/mysqld/mysqld.sock', tcp3306: true },
     work: [workUnit()],
   };
 }

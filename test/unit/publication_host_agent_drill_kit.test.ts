@@ -35,8 +35,16 @@ import {
 	SYSTEMCTL,
 	V2_SCRATCH_TEMPLATE_SUFFIX,
 } from '../../publication/host_agent/src/exec.ts';
-import { pickConfigtestBinary } from '../../publication/host_agent/src/provision/layout.ts';
+import {
+	HOST_MAP_UNIT,
+	pickConfigtestBinary,
+} from '../../publication/host_agent/src/provision/layout.ts';
 import { extractBundle } from '../../publication/host_agent/src/releases/ustar.ts';
+import {
+	contributionOf,
+	isMapRefusal,
+	parseNginxMap,
+} from '../../publication/host_agent/src/rules/directives.ts';
 import {
 	AGENT_ACTOR_HEADER,
 	bundleBytes,
@@ -45,9 +53,11 @@ import {
 	EXEC_SEAM_MARKER,
 	execSeamProblem,
 	releaseIdFor,
+	renderHostMapDriver,
 	renderStandIns,
 	writeStandIns,
 } from '../../scripts/lib/publication_host_agent_drill_kit.ts';
+import { buildNginxMap } from '../../src/core/media/protection.ts';
 
 const REPO = join(import.meta.dir, '..', '..');
 const scratch = mkdtempSync(join(tmpdir(), 'dd_pubhost_agent_kit_'));
@@ -288,6 +298,118 @@ describe('drill kit — the php lint stand-in (phase 4: real v1 pushes)', () => 
 			'php -l',
 			`php -l ${inside} extra`,
 		]);
+	});
+});
+
+describe('drill kit — the host-wide map (B1: the drills push the map, root renders it)', () => {
+	const dir = join(scratch, 'host_map');
+	const hostBase = join(dir, '_host');
+	const mapDir = join(hostBase, 'nginx_map');
+	const log = join(dir, 'calls.log');
+	const nginxLog = join(dir, 'nginx_calls.log');
+
+	test('systemctl start <HOST_MAP_UNIT>.service runs the driver, with an empty environment; refused without one', () => {
+		mkdirSync(dir, { recursive: true });
+		const base = {
+			server: 'nginx' as const,
+			webBinary: '/bin/echo',
+			webMain: '/drill/main.nginx.conf',
+			webDir: '/drill',
+			webErrorLog: '/drill/error.log',
+			webUnit: 'nginx',
+			v2Unit: 'dedalo-publication-api-v2',
+			v2Current: join(dir, 'no_current'),
+			v2Scratch: join(dir, 'no_scratch'),
+			v2EnvFile: join(dir, 'v2.env'),
+			v2PidFile: join(dir, 'v2.pid'),
+			v2Output: join(dir, 'v2.log'),
+			bun: process.execPath,
+			log,
+		};
+		const driver = join(dir, 'driver_env.ts');
+		writeFileSync(
+			driver,
+			"console.log(JSON.stringify(Object.keys(process.env).filter(k => k !== 'PATH').sort()));\n",
+		);
+		writeStandIns(join(dir, 'bin'), renderStandIns({ ...base, hostMapDriver: driver }));
+		const start = Bun.spawnSync(
+			[join(dir, 'bin', 'systemctl'), 'start', `${HOST_MAP_UNIT}.service`],
+			{
+				stdout: 'pipe',
+				env: { PATH: process.env.PATH ?? '/usr/bin:/bin', LEAKED_SECRET: 'x' },
+			},
+		);
+		expect(start.exitCode).toBe(0);
+		expect(start.stdout.toString()).not.toContain('LEAKED_SECRET');
+		writeStandIns(join(dir, 'bin_none'), renderStandIns(base));
+		expect(
+			Bun.spawnSync([join(dir, 'bin_none', 'systemctl'), 'start', `${HOST_MAP_UNIT}.service`])
+				.exitCode,
+		).toBe(64);
+		expect(readFileSync(log, 'utf8').split('\n').filter(Boolean)).toEqual([
+			`${SYSTEMCTL} start ${HOST_MAP_UNIT}.service`,
+			`${SYSTEMCTL} start ${HOST_MAP_UNIT}.service`,
+		]);
+	});
+
+	test("the driver runs the agent's OWN renderer: an owned contribution is rendered byte-equal, configtested, reloaded; result.json says applied", () => {
+		mkdirSync(join(mapDir, 'contrib'), { recursive: true });
+		mkdirSync(join(hostBase, 'locks'), { recursive: true });
+		writeFileSync(join(hostBase, 'locks', 'web.lock'), '', { mode: 0o640 });
+		chmodSync(join(hostBase, 'locks', 'web.lock'), 0o640);
+		const identities = join(hostBase, 'identities.json');
+		writeFileSync(identities, JSON.stringify({ pubdrill: process.getuid?.() ?? 0 }));
+		const engineMap = buildNginxMap();
+		const parsed = parseNginxMap(engineMap);
+		if (isMapRefusal(parsed)) throw new Error(`the engine map is refused: ${parsed.why}`);
+		const contribution = contributionOf(parsed, 'pubdrill');
+		if (typeof contribution === 'string') throw new Error(contribution);
+		writeFileSync(join(mapDir, 'contrib', 'pubdrill.json'), JSON.stringify(contribution));
+		// A recording nginx: every argv logged, exit 0; its "master" is this test process.
+		const nginx = join(dir, 'nginx');
+		writeFileSync(nginx, `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> '${nginxLog}'\nexit 0\n`);
+		chmodSync(nginx, 0o755);
+		const pid = join(dir, 'nginx.pid');
+		writeFileSync(pid, `${process.pid}\n`);
+		const driver = join(dir, 'driver.ts');
+		writeFileSync(
+			driver,
+			renderHostMapDriver({
+				agentDir: join(REPO, 'publication', 'host_agent'),
+				mapDir,
+				locksDir: join(hostBase, 'locks'),
+				identitiesPath: identities,
+				nginx: {
+					binary: nginx,
+					errorLog: join(dir, 'error.log'),
+					dir,
+					main: join(dir, 'main.conf'),
+					pid,
+				},
+			}),
+		);
+		const run = Bun.spawnSync([process.execPath, '--no-env-file', driver], {
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(run.stderr.toString()).toContain('applied');
+		expect(run.exitCode).toBe(0);
+		expect(readFileSync(join(mapDir, 'dedalo_media_map.nginx.conf'), 'utf8')).toBe(engineMap);
+		expect(JSON.parse(readFileSync(join(mapDir, 'result.json'), 'utf8'))).toMatchObject({
+			outcome: 'applied',
+			host_hash: parsed.hash,
+		});
+		expect(readFileSync(nginxLog, 'utf8').split('\n').filter(Boolean)).toEqual([
+			`-e ${join(dir, 'error.log')} -t -p ${dir} -c ${join(dir, 'main.conf')}`,
+			`-e ${join(dir, 'error.log')} -s reload -p ${dir} -c ${join(dir, 'main.conf')}`,
+		]);
+		// The same contribution again: unchanged — no configtest, no reload.
+		const again = Bun.spawnSync([process.execPath, '--no-env-file', driver], {
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(again.exitCode).toBe(0);
+		expect(readFileSync(nginxLog, 'utf8').split('\n').filter(Boolean).length).toBe(2);
 	});
 });
 

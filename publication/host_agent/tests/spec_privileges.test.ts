@@ -91,8 +91,8 @@ describe('spec §9 (provision init) states what the code is', () => {
 
   test('§9.4: every artifact kind and validator the table names is in the census', () => {
     const table = specSubsection(4);
-    const kinds = [...table.matchAll(/^\| `([a-z_]+)` \|/gm)].map(m => m[1]);
-    expect(kinds).toEqual(['web_include', 'fpm_pool', 'nginx_map_include', 'host_map_unit', 'logrotate']);
+    const kinds = [...table.matchAll(/^\| `([a-z0-9_]+)` \|/gm)].map(m => m[1]);
+    expect(kinds).toEqual(['web_include', 'fpm_pool', 'nginx_map_include', 'host_map_unit', 'logrotate', 'logrotate_v1']);
     for (const kind of kinds) expect(ARTIFACT_KINDS as readonly string[]).toContain(kind as string);
     for (const validator of ['web', 'fpm']) expect(ARTIFACT_VALIDATORS as readonly string[]).toContain(validator);
   });

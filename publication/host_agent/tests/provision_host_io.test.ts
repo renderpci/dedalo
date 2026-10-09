@@ -34,7 +34,7 @@ import { apply, hostIo, observeHost } from '../src/provision/apply';
 import { parseStamp } from '../src/provision/hash';
 import type { AgentLayout } from '../src/provision/layout';
 import { INSTANCE_MARKER, WEB_CONFIGTEST_CANDIDATES, derive } from '../src/provision/layout';
-import type { Action } from '../src/provision/plan';
+import type { Action, PinExpectation } from '../src/provision/plan';
 import { RENDERERS, plan as planWith } from '../src/provision/plan';
 import type { Renderer } from '../src/provision/render/types';
 import { PENDING_FACTS } from '../src/provision/render/types';
@@ -460,7 +460,10 @@ describe('root never follows a link planted between plan and apply', () => {
  * RULE 1'S ONE EXCEPTION (apply.ts pinnedParentOf): the directory doors on a path whose GRANDPARENT
  * is untrusted and whose parent is root's — the site's web log directory under Ubuntu's rsyslog
  * /var/log (root:syslog 0775). Modelled with a world-writable grandparent (trustProblem treats a
- * foreign owner alike; a non-root gate cannot create one).
+ * foreign owner alike; a non-root gate cannot create one). The parent must be the one EXPECTED
+ * (review S3-1: owner, group, mode and the observed dev + ino the plan carries), and a substitute
+ * made after the pin never receives the operation (S3-2). No platform guard: runs wherever the
+ * suite runs (darwin locally, Linux in CI's hermetic tier).
  */
 describe('the directory doors pin the parent under an untrusted grandparent', () => {
   const tree = () => {
@@ -473,13 +476,19 @@ describe('the directory doors pin the parent under an untrusted grandparent', ()
     chmodSync(parent, 0o750);
     return { grandparent, parent, site: join(parent, 'museum.example.org') };
   };
+  /** What observeHost saw of `dir`, as plan() carries it into the action. */
+  const observed = (dir: string): PinExpectation => {
+    const stats = lstatSync(dir);
+    return { parent: dir, uid: stats.uid, gid: stats.gid, mode: stats.mode & 0o7777, dev: stats.dev, ino: stats.ino };
+  };
 
   test('mkdir, chown and chmod land by name in the pinned parent; the working directory is restored', () => {
-    const { site } = tree();
+    const { parent, site } = tree();
+    const pin = observed(parent);
     const cwd = process.cwd();
-    io().mkdir(site, 0o700);
-    io().chmod(site, 0o755);
-    io().chown(site, uid, process.getgid?.() ?? 0);
+    io().mkdir(site, 0o700, pin);
+    io().chmod(site, 0o755, pin);
+    io().chown(site, uid, process.getgid?.() ?? 0, pin);
     expect(statSync(site).isDirectory()).toBe(true);
     expect(statSync(site).mode & 0o777).toBe(0o755);
     expect(process.cwd()).toBe(cwd);
@@ -487,16 +496,17 @@ describe('the directory doors pin the parent under an untrusted grandparent', ()
 
   test('a parent swapped for a link, or one others may write, is refused and nothing is created', () => {
     const { grandparent, parent } = tree();
+    const pin = observed(parent);
     const elsewhere = join(SCRATCH, 'pin', 'elsewhere');
     mkdirSync(elsewhere);
     rmSync(parent, { recursive: true });
     symlinkSync(elsewhere, parent);
-    expect(() => io().mkdir(join(parent, 'museum.example.org'), 0o755)).toThrow('without following a link');
+    expect(() => io().mkdir(join(parent, 'museum.example.org'), 0o755, pin)).toThrow('without following a link');
     expect(readdirSync(elsewhere)).toEqual([]);
     unlinkSync(parent);
     mkdirSync(parent);
     chmodSync(parent, 0o777);
-    expect(() => io().mkdir(join(parent, 'museum.example.org'), 0o755)).toThrow('group- or world-writable');
+    expect(() => io().mkdir(join(parent, 'museum.example.org'), 0o755, observed(parent))).toThrow('group- or world-writable');
     expect(readdirSync(parent)).toEqual([]);
     // Above the grandparent, rule 1 whole: an untrusted great-grandparent is refused.
     chmodSync(parent, 0o755);
@@ -504,5 +514,48 @@ describe('the directory doors pin the parent under an untrusted grandparent', ()
     expect(() => io().mkdir(join(parent, 'x', 'y'), 0o755)).toThrow('group- or world-writable');
     chmodSync(join(SCRATCH, 'pin'), 0o755);
     expect(grandparent).toContain('var_log');
+  });
+
+  test('S3-1: a root directory closed to others is not enough — it must be the one expected', () => {
+    const { parent, site } = tree();
+    const pin = observed(parent);
+    // No expectation at all, or one naming another directory: refused before anything is opened.
+    expect(() => io().mkdir(site, 0o755)).toThrow('stated no expectation');
+    expect(() => io().mkdir(site, 0o755, { ...pin, parent: join(SCRATCH, 'pin') })).toThrow("expectation names");
+    // Another mode, another group: what a substitute root directory would differ in.
+    expect(() => io().mkdir(site, 0o755, { ...pin, mode: 0o755 })).toThrow('not the expected');
+    expect(() => io().mkdir(site, 0o755, { ...pin, gid: pin.gid + 1 })).toThrow('not the expected');
+    // Same owner, group and mode, but not the inode observed: a look-alike made after the plan.
+    rmSync(parent, { recursive: true });
+    mkdirSync(parent);
+    chmodSync(parent, 0o750);
+    expect(() => io().mkdir(site, 0o755, pin)).toThrow('replaced after it was observed');
+    expect(readdirSync(parent)).toEqual([]);
+    expect(() => io().mkdir(site, 0o755, { ...pin, ino: undefined, dev: (pin.dev ?? 0) + 1 })).toThrow('not the observed');
+    // The MODES-row form (no observed identity) holds on owner, group and mode alone.
+    const { dev: _dev, ino: _ino, ...row } = observed(parent);
+    io().mkdir(site, 0o755, row);
+    expect(statSync(site).isDirectory()).toBe(true);
+  });
+
+  test('S3-2: a substitute put in place AFTER the pin receives nothing — the operation lands in the pinned inode', () => {
+    const { parent, site } = tree();
+    const pin = observed(parent);
+    const moved = `${parent}.moved`;
+    const raced = hostIo(stubExec, {
+      trustRoot: SCRATCH,
+      onPinned: dir => {
+        // The attacker's move inside the window: the pinned directory renamed away, a substitute made.
+        renameSync(dir, moved);
+        mkdirSync(dir);
+        chmodSync(dir, 0o750);
+      },
+    });
+    raced.mkdir(site, 0o700, pin);
+    expect(readdirSync(parent)).toEqual([]);
+    expect(readdirSync(moved)).toEqual(['museum.example.org']);
+    expect(lstatSync(moved).ino).toBe(pin.ino as number);
+    // The next door call re-pins from scratch: the substitute is not the inode observed.
+    expect(() => raced.chmod(site, 0o755, pin)).toThrow('replaced after it was observed');
   });
 });

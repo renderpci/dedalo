@@ -14,14 +14,17 @@
  *      grammar refuses the whole render and leaves the live file; the bindings pin envelopes;
  *   4. render (renderHostMap), re-parse the result with root's own grammar, and install it
  *      through the shared transaction (./txn.ts): equal bytes and no marker = `unchanged`, no
- *      configtest; otherwise configtest, reload, active poll;
+ *      configtest; otherwise configtest, reload, active poll (nginx down → restore the loaded
+ *      map, configtest, restart, confirm: outcome reload_failed, previous contributions kept);
  *   5. write `result.json` (and `bindings.json` when a binding was added; the seed is removed
  *      once a real contribution was rendered), release the lock. Exit 0 = applied / unchanged
  *      / empty; anything else exits 1 (the agent still reads the fresh result).
  *
  * NO CONFIG, NO ZOD, NO PASSWD LOOKUP: everything it trusts is root-written (identities.json,
  * its own records) or re-validated (every contribution). Its only spawns are rendererExec's
- * (src/exec.ts): `nginx -t`, `systemctl reload nginx.service`, `systemctl is-active`. Every
+ * (src/exec.ts): `nginx -t`, `systemctl reload nginx.service`, `systemctl is-active`, and
+ * `systemctl restart nginx.service` only to bring nginx back on the restored map when the active
+ * poll found it down after a reload that returned 0 (txn.ts, spec §5.9). Every
  * path is a parameter of runHostMap (production: the layout.ts constants), so the gate
  * (tests/rules_host_map.test.ts) runs it on scratch directories with an injected lstat.
  *
@@ -175,6 +178,16 @@ async function renderLocked(deps: HostMapDeps): Promise<HostMapResult> {
   if (outcome.result === 'configtest_failed') {
     deps.log(`[host-map] nginx configtest refused the map (exit ${outcome.configtest.code}); ${outcome.restored}:\n${txnOutput(outcome.configtest)}`);
     return writeResult(deps, 'configtest_failed', { ...common, host_hash: loadedHash(deps) });
+  }
+  if (outcome.result === 'reload_failed' && outcome.rollback !== undefined) {
+    // nginx died at the reload and the map was ROLLED BACK (txn.ts): the rendered file is not on
+    // disk, so neither its bindings nor the seed's sweep hold; the loaded contributions are the previous ones.
+    const back = outcome.rollback;
+    deps.log(
+      `[host-map] nginx was down after a reload that returned 0; ${back.restored}, configtest exit ${back.configtest.code}, ` +
+        `restart ${back.restart === null ? 'not attempted' : `exit ${back.restart.code}`}, active ${String(back.active)}:\n${txnOutput(back.restart ?? back.configtest)}`,
+    );
+    return writeResult(deps, 'reload_failed', { refused: plan.refused, invalid: plan.invalid, host_hash: back.active ? loadedHash(deps) : null });
   }
   // From here the rendered file is on disk: its bindings hold, and the seed has done its job.
   if (plan.bindingsChanged) deps.io.writeAtomic(bindingsPath, canonicalRecord(plan.bindings), HOST_MAP_FILE_MODE);

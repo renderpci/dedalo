@@ -411,7 +411,13 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   publication-host AGENT (`publication/host_agent`) booted for real over mTLS
   (openssl-issued private CA; no client cert, a rogue-CA client cert and a wrong server CA
   are refused; a missing client CA refuses to BOOT, and so does `NODE_ENV=production` on
-  the drill's unprovisioned tree — the audit preflight), `rules.apply` of the engine's
+  the drill's unprovisioned tree — the audit preflight), on nginx the HOST-WIDE map
+  (`NGINX_MAP_MODE=conf_d`, never a hand-written map: the main conf includes the provisioned
+  zero-match glob of `<HOST_BASE>/nginx_map/`) pushed through `rules.map` — the agent's
+  contribution, then `systemctl start dedalo-pubhost-map.service`, which the stand-in answers
+  with the agent's OWN root renderer (`host_map_main.ts` `runHostMap`, the kit's
+  `renderHostMapDriver`: the scene's lock and user-mode nginx are its two named seams) — the
+  live map byte-equal to `buildNginxMap()`, a re-push unchanged; then `rules.apply` of the engine's
   render into the same user-mode Apache and nginx (published 200 / unpublished 404 through
   the server; an include the allowlist passes but configtest fails restores the previous
   one and never reloads), and REAL Publication API v2 releases (built from
@@ -448,6 +454,9 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   secrets), and the `publication_hosts` widget over the wire: `apply_rules` into user-mode
   Apache (paired over mTLS) and nginx (paired over the unix socket) with published 200 /
   unpublished 404 through the server, `probe`, `rollback_api` of real v2 releases, and
+  on nginx the engine's own map push first (`apply_rules`: `systemctl start
+  dedalo-pubhost-map.service`, then configtest + reload; the row's `nginx_map` check red before,
+  ok after, the live host map byte-equal to `buildNginxMap()`), and
   the refusals (a non-root global admin: `perm.denied` on every action; a re-provisioned
   agent: `pairing_mismatch` until the CLI re-pairs; a frozen or dead agent: typed
   `timeout|unreachable` with the registry untouched; a corrupt registry:

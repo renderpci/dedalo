@@ -35,7 +35,7 @@ import type { StatusCheck } from '../update/status.ts';
 import { AGENT_RELEASE_ID, type AgentStatus, type MediaProbe } from './agent_client.ts';
 import { publicationHostFingerprintMatches } from './pairing.ts';
 import type { PublicationHostRecord, RegistryError } from './registry.ts';
-import type { ExpectedRulesOutcome } from './rules.ts';
+import type { ExpectedRulesOutcome, NginxMapPanel } from './rules.ts';
 import type { HostRuntime } from './runtime.ts';
 import type { SecretPresenceOutcome } from './secrets.ts';
 import { AGENT_ANSWER_CODES, LOCAL_STAGE } from './wire.ts';
@@ -62,11 +62,18 @@ export const HOST_CHECK_IDS = Object.freeze([
 export type HostCheckId = (typeof HOST_CHECK_IDS)[number];
 
 /**
- * Checks a widget DECORATOR appends after the fixed list, from the runtime file — never
- * part of buildHostChecks: `media_copy` (media_copy_status.ts withMediaCopyCheck, phase 5,
- * not on every row) and `public_gate` (attachProbe below, phase 6, on every row).
+ * Checks a widget DECORATOR appends after the fixed list — never part of buildHostChecks:
+ * `nginx_map` (withNginxMapCheck below, on a row whose proved status names an nginx host
+ * serving media: the map's expected hash is the engine's config, which this pure file never
+ * reads — the widget computes the panel with rules.ts nginxMapPanel and hands it here),
+ * `media_copy` (media_copy_status.ts withMediaCopyCheck, phase 5, not on every row) and
+ * `public_gate` (attachProbe below, phase 6, on every row) — the last two from the runtime file.
  */
-export const DECORATOR_CHECK_IDS = Object.freeze(['media_copy', 'public_gate'] as const);
+export const DECORATOR_CHECK_IDS = Object.freeze([
+	'nginx_map',
+	'media_copy',
+	'public_gate',
+] as const);
 
 export type DecoratorCheckId = (typeof DECORATOR_CHECK_IDS)[number];
 
@@ -428,6 +435,45 @@ export function buildHostPanelRow(input: HostStatusInput): HostPanelRow {
 		bundle_present: input.secrets.bundle_present,
 		pairing_proved: checks.some((entry) => entry.id === 'pairing' && entry.state === 'ok'),
 	};
+}
+
+// ── the host-wide nginx media map (provision init §13.4) ────────────────────
+
+export const NGINX_MAP_CHECK_ID = 'nginx_map';
+
+/**
+ * The map panel (rules.ts nginxMapPanel) as a check, so a host whose map is not loaded is
+ * counted like any red line, never only painted red. Same vocabulary as `rules_hash`:
+ *  - the agent predates the host map → blocked `agent_outdated`;
+ *  - root recorded a refusal for this instance → blocked, the reason (already shaped by
+ *    nginxMapPanel: a `map_*` agent reason, else `malformed`);
+ *  - a hand-placed map (`managed: false`) → ok `unmanaged` (the operator owns it: not drift);
+ *  - nothing of ours loaded → blocked `none`; another hash loaded → blocked `drift`;
+ *  - ours loaded → ok, the hash's first 12 characters.
+ */
+export function nginxMapCheck(map: NginxMapPanel): HostCheck {
+	if (map.agent_outdated)
+		return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: 'agent_outdated' };
+	if (map.refused !== null)
+		return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: map.refused };
+	if (!map.managed) return { id: NGINX_MAP_CHECK_ID, state: 'ok', detail: 'unmanaged' };
+	if (map.applied === null) return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: 'none' };
+	if (map.drift || map.expected === null)
+		return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: 'drift' };
+	return { id: NGINX_MAP_CHECK_ID, state: 'ok', detail: map.expected.slice(0, 12) };
+}
+
+/**
+ * The row plus ONE nginx_map check (a previous one replaced) when the map applies (`map`
+ * non-null: an nginx host serving media whose pairing was proved); the row as it is otherwise.
+ * Pure. Appended right after the fixed list, before the runtime decorators.
+ */
+export function withNginxMapCheck<R extends Pick<HostPanelRow, 'checks'>>(
+	row: R,
+	map: NginxMapPanel | null,
+): R {
+	const checks = row.checks.filter((entry) => entry.id !== NGINX_MAP_CHECK_ID);
+	return map === null ? { ...row, checks } : { ...row, checks: [...checks, nginxMapCheck(map)] };
 }
 
 // ── phase 6: the public-URL probe (probe.ts) ────────────────────────────────

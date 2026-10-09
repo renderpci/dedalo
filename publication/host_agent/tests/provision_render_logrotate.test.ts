@@ -8,7 +8,7 @@ import { describe, expect, test } from 'bun:test';
 import { parseStamp } from '../src/provision/hash';
 import type { HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
-import { logrotateBody, logrotateRenderer } from '../src/provision/render/logrotate';
+import { logrotateBody, logrotateRenderer, v1LogrotateBody, v1LogrotateRenderer } from '../src/provision/render/logrotate';
 import { PENDING_FACTS } from '../src/provision/render/types';
 import { unixDeclaration } from './fixtures/provision_declaration';
 
@@ -71,5 +71,36 @@ describe('the stanza', () => {
   test('a value outside its grammar renders nothing', () => {
     expect(() => logrotateBody({ ...DEBIAN, web: { ...DEBIAN.web, unit: 'apache2; rm -rf /' } })).toThrow('render(logrotate): web.unit');
     expect(() => logrotateBody(derive(unixDeclaration()))).toThrow('no site');
+  });
+});
+
+describe("B5: the v1 pool's own log (logrotate_v1)", () => {
+  const SYSTEM = derive({ ...unixDeclaration(), site: { domain: 'museum.example.org', fpm: { flavor: 'debian', version: '8.4' } } });
+
+  test('stamped root 0644 at /etc/logrotate.d/dedalo_<instance>_v1, every site in either layout; no site: nothing', () => {
+    const [a] = v1LogrotateRenderer.render(DEBIAN, PENDING_FACTS);
+    expect([a?.kind, a?.path, a?.owner, a?.group, a?.mode]).toEqual(['logrotate_v1', '/etc/logrotate.d/dedalo_test_v1', 'root', 'root', 0o644]);
+    expect(a?.effects).toEqual([]);
+    expect(a?.validate).toBeNull();
+    expect(parseStamp(a?.body ?? '')).toMatchObject({ kind: 'logrotate_v1', instance: 'test' });
+    expect(v1LogrotateRenderer.appliesTo?.(DEBIAN)).toBe(true);
+    expect(v1LogrotateRenderer.appliesTo?.(SYSTEM)).toBe(true);
+    expect(v1LogrotateRenderer.appliesTo?.(derive(unixDeclaration()))).toBe(false);
+  });
+
+  test('the pool error_log directory, as the v1 user (su: root never renames in a directory another account owns), the new file the pool user 0600; no reopen', () => {
+    const lines = v1LogrotateBody(SYSTEM).split('\n');
+    const user = SYSTEM.identity.v1User;
+    expect(lines).toContain(`${SYSTEM.site?.v1Var.log}/*.log {`);
+    expect(lines).toContain(`\tsu ${user} root`);
+    expect(lines).toContain(`\tcreate 0600 ${user} root`);
+    for (const directive of ['daily', 'missingok', 'rotate 14', 'compress', 'delaycompress', 'notifempty']) expect(lines).toContain(`\t${directive}`);
+    // PHP opens its error_log anew for every message: nothing to signal.
+    expect(lines.some(line => line.includes('postrotate'))).toBe(false);
+  });
+
+  test('a value outside its grammar renders nothing', () => {
+    expect(() => v1LogrotateBody({ ...SYSTEM, identity: { ...SYSTEM.identity, v1User: 'root; x' } })).toThrow('render(logrotate): v1.user');
+    expect(() => v1LogrotateBody(derive(unixDeclaration()))).toThrow('no site');
   });
 });

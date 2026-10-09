@@ -692,6 +692,10 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Root's writes under a directory another account controls now land only in the exact directory expected.**
+
+    Two places that `provision apply` and `provision init` write to sit under a directory that root does not fully control. The first is a site's web log directory: on Ubuntu, `/var/log` is writable by the `syslog` group. The second is the API configuration files in the state tree's `shared/` directories, whose parent belongs to the agent. These writes were already pinned to the parent directory, so that a rename cannot redirect them. Any root-owned directory closed to others was accepted as that parent, though. Now the parent must be exactly the directory expected. For `shared/` that means its exact owner, group and mode. For the web server's log directory it means the owner, group, mode and identity that `provision check` observed. The parent must also be on the same filesystem as its own parent, so a filesystem mounted over the name is refused. A directory swapped in after the write began receives nothing. Init's sudo check now also reads included policy files the way sudo does. A file that is not owned by root, or that other accounts can write, is not followed, and neither is an include whose name contains `%h`. Each one is listed in the `host.sudo` item. An API configuration file with the wrong owner or mode is now fixed in place, where before the fix was refused.
+
 - **The publication host provisioner now refuses an instance declaration that anyone other than root could change.** *(action needed)*
 
     `provision check` and `provision apply` build the agent's sudo and polkit rules and its services from the instance declaration, so whoever could edit or replace that file could choose which account the next `apply` grants them to. Both commands now refuse, before reading it, a declaration that is not a regular file owned by root and writable by no one else, or that sits under a directory that is not owned by root or is writable by others. The other declarations in `/etc/dedalo_publication_host/`, which the check between instances reads, and that directory itself follow the same rule. **Action needed:** before the next `check` or `apply`, run `chown root:root` and `chmod go-w` on each declaration and keep it in `/etc/dedalo_publication_host/`. `provision render` is unchanged and still works on a draft anywhere. See [Publication host agent](./install/publication_host.md#4-provision).
@@ -1005,6 +1009,10 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The guided publication-host install now proposes the v1 database connection it finds on the host.**
+
+    `provision init` asks how the v1 Publication API reaches MariaDB: through its unix socket or over TCP. Until now the proposed answer was always the socket, even on a host without a local MariaDB. Init now looks for a local MariaDB socket (`/run/mysqld/mysqld.sock` on Debian and Ubuntu, `/var/lib/mysql/mysql.sock` on RHEL, Rocky and Alma). It proposes that socket when one exists, and otherwise TCP to `127.0.0.1:3306`, saying whether anything listens there. The question is still yours to answer. For TCP the proposed host is `127.0.0.1`, never `localhost`, because v1's database driver reads `localhost` as "use the socket" whatever the port. See [Publication host agent](./install/publication_host.md#the-three-lists).
+
 - **New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.** *(action needed)*
 
     The command-line installer, the browser wizard and `install.sh` now work from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
@@ -1236,6 +1244,16 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
 
 #### Fixed
+
+- **On an nginx publication host, a media map that stops nginx at its reload is now rolled back and nginx restarted, and the panel counts a map that is not loaded as a red check.**
+
+    The root service that renders the shared nginx media map (`dedalo-pubhost-map`) tests every new map before nginx reloads it. On SELinux hosts nginx can still stop on the reload itself, after a test that passed. Until now the service then only reported the failure and left nginx down, with every site on that server. It now watches nginx for five seconds after the reload. If nginx is down, the service puts back the map nginx had loaded (or removes a first one), tests it, restarts nginx and checks that it runs. The push is reported as failed and the panel keeps showing the map that is actually loaded. In **Maintenance › Publication hosts** the map's state is now a check of its own, **Host media map**. It is red when the host's agent is too old for the shared map, when the host refused this work system's map, or when this work system's map is not the one nginx serves. It is green when that map is loaded or when the map is placed by hand. Before, a map that was not loaded was painted red, but it was not counted with the other checks. See [Publication host agent](./install/publication_host.md#nginx-one-media-map-for-the-host).
+
+    Wire contract: `WC-2026-10-03-publication-hosts-widget`.
+
+- **The Publication API v1 error log on a publication host is now rotated.**
+
+    Each site's v1 API writes its errors to `/var/lib/dedalo_publication_host/<instance>/v1/log/error.log`. Until now nothing rotated that file, so it grew until the disk was full. `provision apply` now writes `/etc/logrotate.d/dedalo_<instance>_v1` for every site, in either layout. The file rotates daily and keeps 14 compressed copies. The rotation runs as the v1 user, because that account owns the directory and root never renames files in a directory another account can change. Run `provision apply` (or `provision init`) once for each site to get it. See [Publication host agent](./install/publication_host.md#lay-out-each-site-in-its-home-directory).
 
 - **Container installs take their nightly backups again, and the full-stack install no longer stops at "directories".**
 

@@ -15,12 +15,13 @@
  *   - readProcFile serves only the /proc allowlist.
  */
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
-import { chmodSync, linkSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, statSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
+import { chmodSync, linkSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, statSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ProvisionExec } from '../src/provision/exec_contract';
 import { flockIo } from '../src/provision/flock';
 import { INIT_TEMP_SUFFIX, READ_CAP_BYTES, initHostIo, initTempPath, lstatFacts, PROC_ALLOWLIST, procPathAllowed, ensureDir } from '../src/provision/init/host_io';
 import type { InitIo } from '../src/provision/init/types';
+import type { PinExpectation } from '../src/provision/plan';
 import { BINARY_READ_CAP_BYTES } from '../src/provision/init/types';
 import { freshScratch } from './fixtures/instance';
 
@@ -121,13 +122,18 @@ describe('the ancestry is judged at the moment of every write', () => {
    * The state tree's API files: `publication_api/<api>/` is the agent's, `shared/` in it root's.
    * Modelled with a world-writable grandparent (a non-root gate cannot create a foreign-owned one;
    * trustProblem treats both alike). Without the pinned write, rule 1 refused the drill's v2.env.
+   * The caller states the MODES row `shared/` must match (review S3-1); a substitute made after
+   * the pin receives nothing (S3-2). No platform guard: CI's hermetic tier runs it on Linux.
    */
+  // The group a new directory gets is the platform's (BSD: the parent's; Linux: ours): read it back.
+  const sharedRow = (dir: string): PinExpectation => ({ parent: dir, uid: UID, gid: lstatFacts(dir)?.gid ?? GID, mode: 0o750 });
+
   test('an untrusted GRANDPARENT: the write is pinned to the root parent (O_NOFOLLOW + inode), and lands', () => {
     const shared = nested('publication_api', 'v2', 'shared');
     chmodSync(join(root, 'publication_api', 'v2'), 0o777);
     chmodSync(shared, 0o750);
     const cwd = process.cwd();
-    io.writeBytesAtomic(join(shared, 'v2.env'), new TextEncoder().encode('DB=x\n'), 0o640, UID, GID);
+    io.writeBytesAtomic(join(shared, 'v2.env'), new TextEncoder().encode('DB=x\n'), 0o640, UID, GID, sharedRow(shared));
     expect(readFileSync(join(shared, 'v2.env'), 'utf8')).toBe('DB=x\n');
     expect(statSync(join(shared, 'v2.env')).mode & 0o777).toBe(0o640);
     expect(lstatFacts(initTempPath(join(shared, 'v2.env')))).toBeNull();
@@ -139,13 +145,67 @@ describe('the ancestry is judged at the moment of every write', () => {
     chmodSync(v2, 0o777);
     const elsewhere = nested('elsewhere');
     symlinkSync(elsewhere, join(v2, 'shared'));
-    expect(() => io.writeBytesAtomic(join(v2, 'shared', 'v2.env'), new Uint8Array([1]), 0o640, UID, GID)).toThrow('without following a link');
+    expect(() => io.writeBytesAtomic(join(v2, 'shared', 'v2.env'), new Uint8Array([1]), 0o640, UID, GID, sharedRow(join(v2, 'shared')))).toThrow('without following a link');
     expect(readdirSync(elsewhere)).toEqual([]);
     const loose = nested('publication_api', 'v2', 'loose');
     chmodSync(loose, 0o777);
-    expect(() => io.writeBytesAtomic(join(loose, 'v2.env'), new Uint8Array([1]), 0o640, UID, GID)).toThrow('group- or world-writable');
+    expect(() => io.writeBytesAtomic(join(loose, 'v2.env'), new Uint8Array([1]), 0o640, UID, GID, { ...sharedRow(loose), mode: 0o777 })).toThrow('group- or world-writable');
     expect(readdirSync(loose)).toEqual([]);
     expect(process.cwd()).not.toBe(loose);
+  });
+
+  test('S3-1: the pinned parent must be the MODES row the caller expects — any other root directory is refused', () => {
+    const v2 = nested('publication_api', 'v2');
+    chmodSync(v2, 0o777);
+    const shared = nested('publication_api', 'v2', 'shared');
+    chmodSync(shared, 0o755); // root's, closed to others — but not v2Shared's 0750
+    const file = join(shared, 'v2.env');
+    expect(() => io.writeBytesAtomic(file, new Uint8Array([1]), 0o640, UID, GID)).toThrow('stated no expectation');
+    expect(() => io.writeBytesAtomic(file, new Uint8Array([1]), 0o640, UID, GID, sharedRow(v2))).toThrow('expectation names');
+    expect(() => io.writeBytesAtomic(file, new Uint8Array([1]), 0o640, UID, GID, sharedRow(shared))).toThrow('not the expected uid');
+    expect(() => io.writeBytesAtomic(file, new Uint8Array([1]), 0o640, UID, GID, { ...sharedRow(shared), mode: 0o755, gid: (lstatFacts(shared)?.gid ?? GID) + 1 })).toThrow('not the expected uid');
+    expect(readdirSync(shared)).toEqual([]);
+    chmodSync(shared, 0o750);
+    io.writeBytesAtomic(file, new Uint8Array([1]), 0o640, UID, GID, sharedRow(shared));
+    expect(readdirSync(shared)).toEqual(['v2.env']);
+  });
+
+  test('S3-2: a substitute put in place AFTER the pin receives nothing — the write lands in the pinned inode', () => {
+    const v2 = nested('publication_api', 'v2');
+    chmodSync(v2, 0o777);
+    const shared = nested('publication_api', 'v2', 'shared');
+    chmodSync(shared, 0o750);
+    const inode = lstatSync(shared).ino;
+    const moved = join(v2, 'shared.moved');
+    const raced = initHostIo(exec, {
+      trustRoot: root,
+      rootUid: UID,
+      onPinned: dir => {
+        renameSync(dir, moved);
+        mkdirSync(dir);
+        chmodSync(dir, 0o750);
+      },
+    });
+    raced.writeBytesAtomic(join(shared, 'v2.env'), new TextEncoder().encode('DB=x\n'), 0o640, UID, GID, sharedRow(shared));
+    expect(readdirSync(shared)).toEqual([]);
+    expect(readdirSync(moved)).toEqual(['v2.env']);
+    expect(readFileSync(join(moved, 'v2.env'), 'utf8')).toBe('DB=x\n');
+    expect(lstatSync(moved).ino).toBe(inode);
+  });
+
+  test('the temp of a pinned write (an interrupted v2.env, --resume) is removed through the same pin, never without it', () => {
+    const v2 = nested('publication_api', 'v2');
+    chmodSync(v2, 0o777);
+    const shared = nested('publication_api', 'v2', 'shared');
+    chmodSync(shared, 0o750);
+    const temp = initTempPath(join(shared, 'v2.env'));
+    writeFileSync(temp, 'x');
+    expect(() => io.removeInitTemp(temp)).toThrow('no matching expectation');
+    expect(() => io.removeInitTemp(temp, { ...sharedRow(shared), mode: 0o755 })).toThrow('not the expected');
+    expect(lstatFacts(temp)).not.toBeNull();
+    io.removeInitTemp(temp, sharedRow(shared));
+    expect(lstatFacts(temp)).toBeNull();
+    io.removeInitTemp(temp, sharedRow(shared)); // absent: nothing to do
   });
 
   test('a path that is not clean is refused before any lstat', () => {

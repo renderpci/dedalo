@@ -271,7 +271,7 @@ describe('observeHostWide — EL 9, SELinux enforcing, httpd, AppStream + Remi',
     expect(facts.panel).toBeNull();
     expect(facts.systemd).toBe(252);
     expect(facts.polkit).toEqual({ version: 117, state: 'running' });
-    expect(facts.sudo).toEqual({ present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers' });
+    expect(facts.sudo).toEqual({ present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: [] });
     expect(facts.cpu).toEqual({ arch: 'x64', avx2: true, musl: false });
     expect(facts.tools).toEqual({ unzip: true, chattr: true });
     expect(facts.ports).toEqual([22, 80, 443, 3100]);
@@ -609,6 +609,23 @@ function debianNginxHost(): FakeHost {
   } satisfies Handlers);
   return host;
 }
+
+describe('observeHostWide — a local MariaDB (B4: the v1 transport default)', () => {
+  const SOCKET: PathFacts = { type: 'other', uid: 0, gid: 0, mode: 0o777 };
+  test('the first candidate that is a socket; a file there is not one; none → null; TCP 3306 from /proc/net/tcp', () => {
+    const none = observeHostWide({ instance: 'museum_org' }, ports(debianApacheHost())).mariadb;
+    expect(none.socket).toBeNull();
+    const debian = debianApacheHost();
+    put(debian, '/run/mysqld/mysqld.sock', null, SOCKET);
+    expect(observeHostWide({ instance: 'museum_org' }, ports(debian)).mariadb.socket).toBe('/run/mysqld/mysqld.sock');
+    const el = debianApacheHost();
+    put(el, '/run/mysqld/mysqld.sock', null, FILE());
+    put(el, '/var/lib/mysql/mysql.sock', null, SOCKET);
+    expect(observeHostWide({ instance: 'museum_org' }, ports(el)).mariadb.socket).toBe('/var/lib/mysql/mysql.sock');
+    const facts = observeHostWide({ instance: 'museum_org' }, ports(debianApacheHost()));
+    expect(facts.mariadb.tcp3306).toBe(facts.ports.includes(3306));
+  });
+});
 
 describe('observeHostWide — Debian 12 nginx, the guide\'s hand map', () => {
   const host = debianNginxHost();
@@ -955,20 +972,32 @@ describe('observeHostWide — D-Bus-activated polkit (captured, systemd PID 1) a
   };
 
   test('sudo-rs without /etc/sudoers-rs reads /etc/sudoers (the stock Ubuntu 26.04 server)', () => {
-    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs(null))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers' });
+    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs(null))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers', skipped: [] });
   });
 
   test('sudo-rs with /etc/sudoers-rs reads THAT file: no include there → not policy, although /etc/sudoers includes sudoers.d', () => {
-    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs('sudoers-rs'))).sudo).toEqual({ present: true, includedir: false, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs' });
+    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs('sudoers-rs'))).sudo).toEqual({ present: true, includedir: false, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] });
   });
 
   test('sudo-rs with /etc/sudoers-rs reaching sudoers.d through a relative @include: policy', () => {
-    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs('sudoers-rs_include'))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs' });
+    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs('sudoers-rs_include'))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] });
+  });
+
+  test("S3-3: an included file sudo would not read (writable by others) is not followed, and host.sudo names it", () => {
+    const host = sudoRs('sudoers-rs_include');
+    put(host, '/etc/sudoers-rs.local', fixture('typed/sudo/sudoers-rs.local'), FILE(0, 0o666));
+    expect(observeHostWide({ instance: 'museum_org' }, ports(host)).sudo).toEqual({
+      present: true,
+      includedir: false,
+      flavor: 'sudo-rs',
+      policyFile: '/etc/sudoers-rs',
+      skipped: ['/etc/sudoers-rs.local: mode 0666 is group- or world-writable — sudo does not read it'],
+    });
   });
 
   test('classic sudo ignores an /etc/sudoers-rs', () => {
     const host = debianApacheHost();
     put(host, '/etc/sudoers-rs', fixture('typed/sudo/sudoers-rs'), FILE(0, 0o440));
-    expect(observeHostWide({ instance: 'museum_org' }, ports(host)).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers' });
+    expect(observeHostWide({ instance: 'museum_org' }, ports(host)).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: [] });
   });
 });

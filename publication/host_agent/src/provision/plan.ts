@@ -80,7 +80,7 @@ import {
 import { engineFragmentRenderer } from './render/engine_fragment';
 import { envRenderer } from './render/env';
 import { fpmPoolRenderer } from './render/fpm_pool';
-import { logrotateRenderer } from './render/logrotate';
+import { logrotateRenderer, v1LogrotateRenderer } from './render/logrotate';
 import { hostMapUnitRenderer } from './render/host_map_unit';
 import { nginxMapIncludeRenderer } from './render/nginx_map_include';
 import { polkitRenderer } from './render/polkit';
@@ -142,6 +142,7 @@ export const RENDERERS: readonly Renderer[] = Object.freeze([
   nginxMapIncludeRenderer,
   hostMapUnitRenderer,
   logrotateRenderer,
+  v1LogrotateRenderer,
 ]);
 
 /** THE CENSUS, both ways: no kind twice, no kind without a renderer. Throws. */
@@ -201,6 +202,9 @@ export interface PathFacts {
   readonly gid: number;
   /** Permission bits only (`& 0o7777`). */
   readonly mode: number;
+  /** Device and inode (observeHost's lstat): carried into a pinned door's expectation (PinExpectation). */
+  readonly dev?: number;
+  readonly ino?: number;
   /** A symlink's fully resolved path (realpath), when it resolves: the refusal names what to declare. */
   readonly target?: string;
 }
@@ -581,6 +585,26 @@ export interface HostLockRef {
   readonly gid: number;
 }
 
+/**
+ * WHAT THE PINNED PARENT MUST BE (security review S3-1). "A root directory closed to others" is not
+ * enough: any such directory an attacker could substitute (the agent's own `publication_api/<api>/`
+ * may hold one root left behind, a package's spare root:root 0755 directory) would pass. The caller
+ * states the parent it EXPECTS — exact owner, group and mode (the MODES row for the state tree's
+ * `shared/`; the observed facts for `/var/log/<server>`) and, when the plan observed it, the
+ * directory's identity (observeHost's dev + ino, carried in the action) — and anything else is refused.
+ */
+export interface PinExpectation {
+  /** The directory pinned: the entry's parent. A door refuses a pin whose parent is another. */
+  readonly parent: string;
+  readonly uid: number;
+  readonly gid: number;
+  /** Permission bits (`& 0o7777`). */
+  readonly mode: number;
+  /** The identity observed (observeHost lstat), when the plan observed the directory. */
+  readonly dev?: number;
+  readonly ino?: number;
+}
+
 export interface MkdirAction extends Ownership {
   readonly op: 'mkdir';
   readonly path: string;
@@ -590,6 +614,8 @@ export interface MkdirAction extends Ownership {
    * descriptor, then renamed into place — no other process ever sees it with the wrong metadata.
    */
   readonly via?: string;
+  /** The parent pinned (rule 1's one exception, apply.ts pinnedParentOf) and what it must be. */
+  readonly pin?: PinExpectation;
 }
 export interface WriteAction extends Ownership {
   readonly op: 'write';
@@ -606,11 +632,13 @@ export interface WriteAction extends Ownership {
 export interface ChownAction extends Ownership {
   readonly op: 'chown';
   readonly path: string;
+  readonly pin?: PinExpectation;
 }
 export interface ChmodAction {
   readonly op: 'chmod';
   readonly path: string;
   readonly mode: number;
+  readonly pin?: PinExpectation;
 }
 export interface DaemonReloadAction {
   readonly op: 'daemon-reload';
@@ -967,14 +995,44 @@ export function plan(
   // rename into place) whose parent is a root directory closed to others may have an untrusted
   // grandparent — the directory doors pin the parent. Ubuntu's rsyslog makes /var/log root:syslog
   // 0775, the grandparent of the site's web log directory.
+  // The pinned parent must be the directory OBSERVED (apply.ts withPinnedDir, review S3-1): its
+  // owner, group, mode, device and inode ride the actions (pinOf), and it must sit on its parent's
+  // device — a mount over the name is not the directory the plan judged.
   const pinnable = new Map<string, string>();
   for (const dir of extra) {
     if (dir.hostWide) continue;
     const chain = ancestorsBelow(dir.path, host.trustRoot);
     if (chain.length < 2) continue;
-    const parent = host.paths.get(chain[chain.length - 1] as string);
-    if (parent?.type === 'dir' && trustProblem(parent, rootUid) === null) pinnable.set(dir.path, chain[chain.length - 2] as string);
+    const parentPath = chain[chain.length - 1] as string;
+    const grandparentPath = chain[chain.length - 2] as string;
+    const parent = host.paths.get(parentPath);
+    if (parent?.type !== 'dir' || trustProblem(parent, rootUid) !== null) continue;
+    const grandparent = host.paths.get(grandparentPath);
+    if (grandparent?.type !== 'dir' || trustProblem(grandparent, rootUid) === null) continue; // rule 1 holds: nothing to pin
+    if (parent.dev !== undefined && grandparent.dev !== undefined && parent.dev !== grandparent.dev) {
+      refusals.push(
+        `'${parentPath}' is a mount point (device ${parent.dev}, its parent '${grandparentPath}' on ${grandparent.dev}) under an untrusted ` +
+          `directory — the pinned write into it (for '${dir.path}') needs it on its parent's device`,
+      );
+      continue;
+    }
+    pinnable.set(dir.path, grandparentPath);
   }
+  const pinOf = (path: string): { pin: PinExpectation } | Record<string, never> => {
+    if (!pinnable.has(path)) return {};
+    const parent = dirname(path);
+    const facts = host.paths.get(parent) as PathFacts;
+    return {
+      pin: {
+        parent,
+        uid: facts.uid,
+        gid: facts.gid,
+        mode: facts.mode & 0o7777,
+        ...(facts.dev !== undefined ? { dev: facts.dev } : {}),
+        ...(facts.ino !== undefined ? { ino: facts.ino } : {}),
+      },
+    };
+  };
   for (const target of [
     ...layout.directories.map(dir => dir.path),
     ...extra.map(dir => dir.path),
@@ -1019,8 +1077,8 @@ export function plan(
     return created.has(parent) || host.paths.get(parent)?.type === 'dir';
   };
   const metadata = (into: Action[], path: string, facts: PathFacts, own: Ownership, mode: number): void => {
-    if (facts.uid !== own.uid || facts.gid !== own.gid) into.push({ op: 'chown', path, ...own });
-    if ((facts.mode & 0o7777) !== mode) into.push({ op: 'chmod', path, mode });
+    if (facts.uid !== own.uid || facts.gid !== own.gid) into.push({ op: 'chown', path, ...own, ...pinOf(path) });
+    if ((facts.mode & 0o7777) !== mode) into.push({ op: 'chmod', path, mode, ...pinOf(path) });
   };
 
   // 4. Directories, parents first; a drifted directory is fixed in place, BEFORE any child of it is
@@ -1054,7 +1112,7 @@ export function plan(
         );
         continue;
       }
-      fsActions.push({ op: 'mkdir', path: dir.path, mode: row.mode, ...own, ...(dir.hostWide ? { via: hostDirTemp(dir.path) } : {}) });
+      fsActions.push({ op: 'mkdir', path: dir.path, mode: row.mode, ...own, ...(dir.hostWide ? { via: hostDirTemp(dir.path) } : {}), ...pinOf(dir.path) });
       created.add(dir.path);
       continue;
     }
@@ -1419,6 +1477,7 @@ function missingParent(layout: AgentLayout, art: Artifact): string {
   }
   if (art.kind === 'nginx_map_include') return `nginx's conf.d '${parent}' does not exist — is nginx installed? (paths.nginx_conf_d)`;
   if (art.kind === 'logrotate') return `'${parent}' does not exist — is logrotate installed? The site's web logs (${layout.site?.webLogsDir ?? 'the site log directory'}) are rotated from there (paths.logrotate_dir)`;
+  if (art.kind === 'logrotate_v1') return `'${parent}' does not exist — is logrotate installed? The v1 API's own log (${layout.site?.v1Var.log ?? 'the v1 log directory'}) is rotated from there (paths.logrotate_dir)`;
   return `parent directory '${parent}' of '${art.path}' does not exist`;
 }
 

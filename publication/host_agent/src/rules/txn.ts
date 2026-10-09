@@ -18,8 +18,15 @@
  *
  * RELOAD FAILURE KEEPS THE NEW FILE: it passed configtest, so the disk holds the desired
  * state; the marker stays, so "applied" (loaded) reads null until a later run reloads.
- * The same holds when the caller's active poll says the server is down after a reload that
- * returned 0 (the EL AVC case): the outcome is `reload_failed` with `active: false`.
+ *
+ * THE SERVER DOWN AFTER A RELOAD THAT RETURNED 0 (the EL AVC case: `-t` passes as unconfined
+ * root, the reload re-reads the config inside httpd_t and the master dies — every site with it).
+ * The active poll watches the unit for RELOAD_ACTIVE_POLL when the caller can sleep (`sleep`),
+ * once otherwise. Down → `reload_failed` with `active: false`; without `webRestart` (the agent: it
+ * has no restart grant) the new file and the marker stay, as for a failed reload. With it (root's
+ * renderer) the file is ROLLED BACK as the provisioner does it (spec §5.9): restore the last loaded
+ * file (or remove a new one), configtest, restart, confirm active — `rollback` reports each step.
+ * The marker is cleared only when the server is confirmed up again on the restored file.
  *
  * IDEMPOTENT: live bytes identical to the request AND no marker → `unchanged`, no write, no
  * configtest, no reload.
@@ -48,12 +55,23 @@ export function txnPaths(dir: string, live: string): TxnPaths {
   return { dir, live, next: `${live}.new`, prev: `${live}.prev`, restore: `${live}.restore`, pending: `${live}.reload-pending` };
 }
 
+/**
+ * How long the server is watched after a reload that returned 0: the provisioner's own window
+ * (src/provision/apply.ts RELOAD_POLL is this constant). A master killed by the reload dies a
+ * moment AFTER `systemctl reload` returns (nginx's ExecReload only signals it).
+ */
+export const RELOAD_ACTIVE_POLL = Object.freeze({ intervalMs: 250, count: 20 });
+
 /** The web server's own commands (the agent's Exec, or root's rendererExec). */
 export interface TxnExec {
   webConfigtest(): Promise<ExecResult>;
   webReload(): Promise<ExecResult>;
   /** After a reload that returned 0: is the server still up? Absent = not polled. */
   webActive?(): Promise<boolean>;
+  /** Present: the active poll lasts RELOAD_ACTIVE_POLL (this is its wait); absent: one check. */
+  sleep?(ms: number): Promise<void>;
+  /** Present: a server down after the reload is rolled back and restarted (see the header). */
+  webRestart?(): Promise<ExecResult>;
 }
 
 export interface TxnOptions {
@@ -80,7 +98,18 @@ export type TxnOutcome =
       readonly reload: ExecResult;
       /** false: the reload returned 0 but the active poll found the server down. */
       readonly active: boolean | null;
+      /** The roll back of a server found down (only with `webRestart`). */
+      readonly rollback?: TxnRollback;
     };
+
+/** restore → configtest → restart → confirm active; `restart` is null when the restored file failed configtest (never started on it). */
+export interface TxnRollback {
+  readonly restored: 'previous' | 'removed';
+  readonly configtest: ExecResult;
+  readonly restart: ExecResult | null;
+  /** The server is up again on the restored file (the marker was cleared). */
+  readonly active: boolean;
+}
 
 /** Write + fsync a file at exactly `mode` (a pre-existing file is replaced; the umask is overridden). */
 export async function writeDurable(path: string, data: Uint8Array, mode: number): Promise<void> {
@@ -129,13 +158,23 @@ export async function step(run: () => Promise<ExecResult>): Promise<ExecResult> 
   }
 }
 
-async function activeAfterReload(exec: TxnExec): Promise<boolean | null> {
-  if (exec.webActive === undefined) return null;
+async function isActive(exec: TxnExec): Promise<boolean> {
   try {
-    return await exec.webActive();
+    return (await exec.webActive?.()) === true;
   } catch {
     return false;
   }
+}
+
+/** The active poll (see the header): false at the first inactive answer. */
+async function activeAfterReload(exec: TxnExec): Promise<boolean | null> {
+  if (exec.webActive === undefined) return null;
+  if (exec.sleep === undefined) return isActive(exec);
+  for (let attempt = 0; attempt < RELOAD_ACTIVE_POLL.count; attempt += 1) {
+    if (!(await isActive(exec))) return false;
+    await exec.sleep(RELOAD_ACTIVE_POLL.intervalMs);
+  }
+  return isActive(exec);
 }
 
 /** Put the last loaded file back (atomically), or remove the file when there was none. */
@@ -148,6 +187,17 @@ async function restore(paths: TxnPaths, hadPrevious: boolean, mode: number): Pro
   }
   await rm(paths.live, { force: true });
   return 'removed';
+}
+
+/** The server died at the reload: put the loaded file back, configtest, restart, confirm (see the header). */
+async function rollBack(paths: TxnPaths, hadPrevious: boolean, exec: TxnExec, restart: () => Promise<ExecResult>, mode: number): Promise<TxnRollback> {
+  const restored = await restore(paths, hadPrevious, mode);
+  const configtest = await step(() => exec.webConfigtest());
+  if (configtest.code !== 0) return { restored, configtest, restart: null, active: false };
+  const restarted = await step(restart);
+  const active = restarted.code === 0 && (exec.webActive === undefined || (await isActive(exec)));
+  if (active) await rm(paths.pending, { force: true });
+  return { restored, configtest, restart: restarted, active };
 }
 
 /** Install `bytes` as `paths.live` (see the header). Throws only on a filesystem fault. */
@@ -183,6 +233,10 @@ export async function runTxn(paths: TxnPaths, bytes: Uint8Array, exec: TxnExec, 
 
   const reload = await step(() => exec.webReload());
   const active = reload.code === 0 ? await activeAfterReload(exec) : null;
+  if (active === false && exec.webRestart !== undefined) {
+    const restart = exec.webRestart.bind(exec);
+    return { result: 'reload_failed', configtest, reload, active, rollback: await rollBack(paths, hadPrevious, exec, restart, options.fileMode) };
+  }
   if (reload.code !== 0 || active === false) return { result: 'reload_failed', configtest, reload, active };
 
   await rm(paths.pending, { force: true });

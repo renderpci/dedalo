@@ -161,11 +161,13 @@ const ROWS: readonly (readonly [string, () => Scn, string, Expect])[] = [
   ['polkit not activatable', () => ({ facts: { ...debianHost(), polkit: { version: 122, state: 'not_activatable' } } }), 'host.polkit', { blocking: true, fact: /system bus cannot start it/, command: /^apt reinstall polkitd$/ }],
   ['polkit right', () => ({}), 'host.polkit', { list: 'right' }],
   // host.sudo
-  ['sudo absent', () => ({ facts: { ...debianHost(), sudo: { present: false, includedir: false, flavor: 'sudo', policyFile: '/etc/sudoers' } } }), 'host.sudo', { blocking: true, command: /install sudo/ }],
-  ['sudo no includedir', () => ({ facts: { ...debianHost(), sudo: { present: true, includedir: false, flavor: 'sudo', policyFile: '/etc/sudoers' } } }), 'host.sudo', { blocking: true, command: /includedir/ }],
+  ['sudo absent', () => ({ facts: { ...debianHost(), sudo: { present: false, includedir: false, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: [] } } }), 'host.sudo', { blocking: true, command: /install sudo/ }],
+  ['sudo no includedir', () => ({ facts: { ...debianHost(), sudo: { present: true, includedir: false, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: [] } } }), 'host.sudo', { blocking: true, command: /includedir/ }],
   // sudo-rs with its own policy file: the fix names THAT file (editing /etc/sudoers would change nothing).
-  ['sudo-rs no includedir', () => ({ facts: { ...debianHost(), sudo: { present: true, includedir: false, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs' } } }), 'host.sudo', { blocking: true, fact: /^\/etc\/sudoers-rs \(the policy sudo-rs reads\)/, command: /^visudo -f \/etc\/sudoers-rs/ }],
-  ['sudo-rs right', () => ({ facts: { ...debianHost(), sudo: { present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs' } } }), 'host.sudo', { list: 'right', fact: /sudo-rs reads \/etc\/sudoers\.d \(through \/etc\/sudoers-rs\)/ }],
+  ['sudo-rs no includedir', () => ({ facts: { ...debianHost(), sudo: { present: true, includedir: false, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] } } }), 'host.sudo', { blocking: true, fact: /^\/etc\/sudoers-rs \(the policy sudo-rs reads\)/, command: /^visudo -f \/etc\/sudoers-rs/ }],
+  ['sudo-rs right', () => ({ facts: { ...debianHost(), sudo: { present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] } } }), 'host.sudo', { list: 'right', fact: /sudo-rs reads \/etc\/sudoers\.d \(through \/etc\/sudoers-rs\)/ }],
+  // S3-3: what the include walk did not follow is named in the item.
+  ['sudo skipped include', () => ({ facts: { ...debianHost(), sudo: { present: true, includedir: false, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: ['/etc/sudoers.local: mode 0666 is group- or world-writable — sudo does not read it'] } } }), 'host.sudo', { blocking: true, fact: /not followed: \/etc\/sudoers\.local: mode 0666/ }],
   ['sudo right', () => ({}), 'host.sudo', { list: 'right' }],
   // host.web
   ['web none', () => ({ facts: { ...debianHost(), web: { ...debianHost().web, candidates: [] } } }), 'host.web', { blocking: true }],
@@ -312,6 +314,11 @@ const ROWS: readonly (readonly [string, () => Scn, string, Expect])[] = [
   ['proxy connect booleans off', () => ({ facts: withSelinux(elHost(), { booleans: booleans({ httpd_graceful_shutdown: false }) }) }), 'selinux.proxy_connect', { list: 'decision', hostWide: true, options: ['act', 'connect', 'manual'], action: 'sebool' }],
   ['proxy connect right (connect)', () => ({ facts: withSelinux(elHost(), { booleans: booleans({ httpd_graceful_shutdown: false, httpd_can_network_connect: true }) }) }), 'selinux.proxy_connect', { list: 'right' }],
   ['db transport asked', () => ({}), 'api_config.v1_db_transport', { list: 'decision', options: ['socket', 'tcp'], defaultOption: 'socket' }],
+  // B4: no local socket → TCP 127.0.0.1:3306 is the default, still a decision; the default drives what follows.
+  ['db transport no socket', () => ({ facts: { ...debianHost(), mariadb: { socket: null, tcp3306: false } } }), 'api_config.v1_db_transport', { list: 'decision', defaultOption: 'tcp', fact: /no local MariaDB socket .*default is TCP 127\.0\.0\.1:3306[\s\S]*nothing listens on TCP 3306/ }],
+  ['db transport socket named', () => ({}), 'api_config.v1_db_transport', { fact: /a local MariaDB socket: \/run\/mysqld\/mysqld\.sock/ }],
+  ['db connect by the tcp default', () => ({ facts: { ...elHost(), mariadb: { socket: null, tcp3306: true } } }), 'selinux.db_connect', { list: 'decision', hostWide: true, action: 'sebool' }],
+  ['db connect not asked with a socket default', () => ({ facts: elHost() }), 'selinux.db_connect', { absent: true }],
   ['db transport not asked once v1 exists', () => converged(), 'api_config.v1_db_transport', { absent: true }],
   ['db connect over tcp', () => ({ facts: elHost(), answers: { 'api_config.v1_db_transport': 'tcp' } }), 'selinux.db_connect', { list: 'decision', hostWide: true, action: 'sebool', after: ['api_config.v1_db_transport'] }],
   ['db connect right', () => ({ facts: withSelinux(elHost(), { booleans: booleans({ httpd_can_network_connect_db: true }) }), answers: { 'api_config.v1_db_transport': 'tcp' } }), 'selinux.db_connect', { list: 'right' }],

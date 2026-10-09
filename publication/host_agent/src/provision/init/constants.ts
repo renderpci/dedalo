@@ -78,3 +78,14 @@ export const INSTALL_LOCK_NAME = 'install.lock';
 export const RERUN_ENV_NAME = 'rerun.env';
 /** Root copies of the source's templates kept for re-runs without --source (spec §1.2). */
 export const KEPT_DIR_NAME = 'kept';
+
+/**
+ * Where a local MariaDB listens on a unix socket (spec §5.8, the v1 transport), in the order
+ * discovery looks: Debian/Ubuntu's mariadb-server (`/run/mysqld/mysqld.sock`; `/var/run` is a
+ * link to `/run` there) and the EL family's (`/var/lib/mysql/mysql.sock`). The first that is a
+ * socket is the default; none → TCP 127.0.0.1:3306 is the default, still a decision.
+ */
+export const MARIADB_SOCKET_CANDIDATES: readonly string[] = Object.freeze(['/run/mysqld/mysqld.sock', '/var/lib/mysql/mysql.sock']);
+/** The TCP default when no local socket exists: the loopback address, never `localhost` (PHP's mysqli reads `localhost` as "use the socket"). */
+export const MARIADB_TCP_HOST = '127.0.0.1';
+export const MARIADB_TCP_PORT = 3306;

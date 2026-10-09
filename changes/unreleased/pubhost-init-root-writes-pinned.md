@@ -1,0 +1,7 @@
+---
+title: Root's writes under a directory another account controls now land only in the exact directory expected.
+type: security
+audience: admin
+date: 2026-10-09
+---
+Two places that `provision apply` and `provision init` write to sit under a directory that root does not fully control. The first is a site's web log directory: on Ubuntu, `/var/log` is writable by the `syslog` group. The second is the API configuration files in the state tree's `shared/` directories, whose parent belongs to the agent. These writes were already pinned to the parent directory, so that a rename cannot redirect them. Any root-owned directory closed to others was accepted as that parent, though. Now the parent must be exactly the directory expected. For `shared/` that means its exact owner, group and mode. For the web server's log directory it means the owner, group, mode and identity that `provision check` observed. The parent must also be on the same filesystem as its own parent, so a filesystem mounted over the name is refused. A directory swapped in after the write began receives nothing. Init's sudo check now also reads included policy files the way sudo does. A file that is not owned by root, or that other accounts can write, is not followed, and neither is an include whose name contains `%h`. Each one is listed in the `host.sudo` item. An API configuration file with the wrong owner or mode is now fixed in place, where before the fix was refused.

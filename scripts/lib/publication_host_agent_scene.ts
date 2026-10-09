@@ -16,7 +16,14 @@
  * engine module: the engine drill repoints its own process to the suite database BEFORE any
  * engine import freezes `config` (src/core/db/postgres.ts reads config.db at import), and a
  * static config import here would freeze it to the application database first. What needs
- * the engine (the nginx map) or a test helper (the MariaDB credentials) is passed in.
+ * a test helper (the MariaDB credentials) is passed in.
+ *
+ * NGINX SERVES THE HOST-WIDE MAP (provision init §13.5), never a hand-written one: the main
+ * conf includes the provisioned zero-match glob of `<HOST_BASE>/nginx_map/<live map>` (what
+ * render/nginx_map_include.ts writes into conf.d), the agent runs `NGINX_MAP_MODE=conf_d`, and
+ * `systemctl start dedalo-pubhost-map.service` reaches the agent's OWN root renderer through
+ * the kit's renderHostMapDriver. Until something pushes `rules.map`, nothing defines the media
+ * variables — so the include cannot load before the map, exactly as on a host.
  *
  * TWO LISTENERS (spec §2.2 / §1.1): `tls` (mTLS on 127.0.0.1, the drill's private CA) or
  * `unix` (a socket in the scene dir). The env-file selector and the instance key are the
@@ -43,7 +50,15 @@ import {
 	SYSTEMCTL,
 	V2_SCRATCH_TEMPLATE_SUFFIX,
 } from '../../publication/host_agent/src/exec.ts';
-import { pickConfigtestBinary } from '../../publication/host_agent/src/provision/layout.ts';
+import {
+	HOST_MAP_UNIT,
+	MODES,
+	pickConfigtestBinary,
+} from '../../publication/host_agent/src/provision/layout.ts';
+import {
+	HOST_MAP_LIVE_NAME,
+	zeroMatchGlob,
+} from '../../publication/host_agent/src/provision/render/nginx_map_include.ts';
 import {
 	AGENT_ACTOR_HEADER,
 	type BundleSourceEntry,
@@ -52,6 +67,7 @@ import {
 	EXEC_SEAM_DIR,
 	releaseIdFor,
 	renderEnvFile,
+	renderHostMapDriver,
 	renderStandIns,
 	sha256Hex,
 	type TlsMaterial,
@@ -137,8 +153,6 @@ export interface Shared {
 
 export interface SceneOptions {
 	readonly listen: Listen;
-	/** buildNginxMap() — passed in so this module never imports config. */
-	readonly nginxMap: string;
 	/**
 	 * The REAL php binary: the stand-in then lints `.php` files under the v1 API root
 	 * (v1RootOf) with it — the engine drill's lockstep rows push real v1 releases. Absent:
@@ -288,6 +302,14 @@ export const configtestBin = (server: Server) => pickConfigtestBinary(server);
 export const configtestCall = (server: Server) => `${SUDO} -n ${configtestBin(server)} -t`;
 export const reloadCall = (server: Server) => `${SYSTEMCTL} reload ${WEB_UNIT[server]}`;
 export const restartCall = `${SYSTEMCTL} restart ${V2_UNIT}`;
+/** rules.map's one spawn (exec.ts startHostMap): the root oneshot, no argument. nginx only. */
+export const startMapCall = `${SYSTEMCTL} start ${HOST_MAP_UNIT}.service`;
+/** What one push of the include costs on `server`: nginx pushes the host map first when it is not loaded. */
+export const applyCalls = (server: Server, mapPushed: boolean): string[] => [
+	...(server === 'nginx' && mapPushed ? [startMapCall] : []),
+	configtestCall(server),
+	reloadCall(server),
+];
 const reEscape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** `systemctl start|stop <V2_UNIT>-scratch@<port>.service` — the polkit rule's 4-5 digit port. */
 export const scratchCall = (verb: 'start' | 'stop') =>
@@ -329,6 +351,7 @@ export function inClosedSet(
 	{ releases = true, phpLintRoot }: { releases?: boolean; phpLintRoot?: string } = {},
 ): boolean {
 	if (line === configtestCall(scene.server) || line === reloadCall(scene.server)) return true;
+	if (scene.server === 'nginx' && line === startMapCall) return true;
 	return (
 		releases &&
 		(line === restartCall ||
@@ -422,6 +445,8 @@ export function writeAgentEnv(
 			MAX_BUNDLE_BYTES,
 			MAX_BUNDLE_ENTRIES,
 			HOST_BASE: scene.hostBase,
+			// nginx serves the host-wide map (this module's header): the agent contributes to it.
+			...(scene.server === 'nginx' ? { NGINX_MAP_MODE: 'conf_d' } : {}),
 			...overrides,
 		}),
 		{ mode: 0o640 },
@@ -523,6 +548,32 @@ function plantHostLocks(hostBase: string): void {
 	chmodSync(lock, 0o640);
 }
 
+/**
+ * The host-wide map's store as `provision apply` lays it out (MODES hostNginxMap /
+ * hostNginxContrib), owned by the drill's uid, and identities.json naming this instance's
+ * agent (the drill's uid too): the renderer keeps a contribution only from that uid.
+ */
+function plantHostMap(hostBase: string): { mapDir: string; identities: string } {
+	const mapDir = join(hostBase, 'nginx_map');
+	const contrib = join(mapDir, 'contrib');
+	mkdirSync(contrib, { recursive: true });
+	chmodSync(mapDir, MODES.hostNginxMap.mode);
+	chmodSync(contrib, MODES.hostNginxContrib.mode);
+	const rendererDir = join(hostBase, 'map_renderer');
+	mkdirSync(rendererDir, { recursive: true, mode: 0o755 });
+	const identities = join(rendererDir, 'identities.json');
+	writeFileSync(identities, `${JSON.stringify({ [INSTANCE]: process.getuid?.() ?? 0 })}\n`, {
+		mode: 0o644,
+	});
+	return { mapDir, identities };
+}
+
+/** The live host map the renderer installed, or null. */
+export function liveHostMap(scene: Scene): string | null {
+	const path = join(scene.hostBase, 'nginx_map', HOST_MAP_LIVE_NAME);
+	return existsSync(path) ? readFileSync(path, 'utf8') : null;
+}
+
 /** Remove the drill's stand-ins from the seam: the dispatchers fail closed again. */
 export function disarmSeam(): void {
 	for (const name of ['sudo', 'systemctl']) rmSync(join(EXEC_SEAM_DIR, name), { force: true });
@@ -592,6 +643,20 @@ export async function setupScene(
 	const webBinary = server === 'apache' ? apacheBinary() : (Bun.which('nginx') as string);
 	const main = join(dir, `main.${server}.conf`);
 	const errorLog = join(dir, 'nginx_error.log');
+	const hostMap = server === 'nginx' ? plantHostMap(scene.hostBase) : null;
+	const hostMapDriver = join(dir, 'host_map_driver.ts');
+	if (hostMap !== null) {
+		writeFileSync(
+			hostMapDriver,
+			renderHostMapDriver({
+				agentDir: AGENT_DIR,
+				mapDir: hostMap.mapDir,
+				locksDir: join(scene.hostBase, 'locks'),
+				identitiesPath: hostMap.identities,
+				nginx: { binary: webBinary, errorLog, dir, main, pid: join(dir, 'nginx.pid') },
+			}),
+		);
+	}
 	const { sudo, systemctl, php } = renderStandIns({
 		server,
 		webBinary,
@@ -609,6 +674,7 @@ export async function setupScene(
 		...(options.phpLint === undefined
 			? {}
 			: { phpLint: { binary: options.phpLint, root: v1RootOf(scene.state) } }),
+		...(hostMap === null ? {} : { hostMapDriver }),
 		log: scene.log,
 	});
 	// sudo + systemctl AT the agent's absolute binaries (the image's dispatchers run these);
@@ -628,11 +694,11 @@ export async function setupScene(
 			stderr: 'pipe',
 		});
 	} else {
-		const map = join(dir, 'map.nginx.conf');
-		writeFileSync(map, options.nginxMap);
+		// The provisioned include's glob (render/nginx_map_include.ts): zero match until a push.
+		const mapGlob = zeroMatchGlob(join((hostMap as { mapDir: string }).mapDir, HOST_MAP_LIVE_NAME));
 		writeFileSync(
 			main,
-			nginxMainConf(dir, scene.webPort, scene.include, map, { optionalInclude: true }),
+			nginxMainConf(dir, scene.webPort, scene.include, mapGlob, { optionalInclude: true }),
 		);
 		const t = sh([webBinary, '-e', errorLog, '-t', '-p', dir, '-c', main]);
 		if (t.code !== 0) throw new Error(`nginx -t failed before any include:\n${t.out}`);

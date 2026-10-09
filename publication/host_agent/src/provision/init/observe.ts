@@ -99,6 +99,7 @@ import type { ListedUnit } from './parse/systemd';
 import { parseEnvironmentProp, parseExecStart, parseSystemdVersion, parseUnitList, parseUnitShow, unitSandbox } from './parse/systemd';
 import type { TreeReader } from './tree_copy';
 import { treeDigest } from './tree_copy';
+import { MARIADB_SOCKET_CANDIDATES, MARIADB_TCP_PORT } from './constants';
 import type {
   DeclaredFacts,
   ExecResult,
@@ -255,7 +256,19 @@ export function observeHostWide(draft: ObserveDraft, ports: ObservePorts): HostF
   const sudoersDir = draft.paths?.sudoers_dir ?? DEFAULT_PATHS.sudoersDir;
   const flavor = sudoFlavor(fs.realpath(SUDO_BIN));
   const policyFile = sudoPolicyFile(flavor, path => fs.lstat(path)?.type === 'file');
-  const policy = policyIncludesDir(policyFile, path => io.readRootFile(path), sudoersDir);
+  // Each file read through one O_NOFOLLOW descriptor with its owner and mode (sudo's own file rule: parse/sudoers.ts).
+  const policy = policyIncludesDir(
+    policyFile,
+    path => {
+      try {
+        const file = io.readOperatorFile(path);
+        return { text: new TextDecoder().decode(file.bytes), uid: file.uid, gid: file.gid, mode: file.mode };
+      } catch {
+        return null;
+      }
+    },
+    sudoersDir,
+  );
   // polkit: D-Bus-activated, so "not running" is an idle host's normal state (parse/polkit.ts).
   const polkitVersion = exec.polkitVersion();
   const polkitListed = units.some(unit => unit.unit === 'polkit.service' && unit.active === 'active');
@@ -263,6 +276,8 @@ export function observeHostWide(draft: ObserveDraft, ports: ObservePorts): HostF
     polkitVersion.code !== 0
       ? 'not_activatable'
       : polkitState(polkitListed, polkitListed ? new Map<string, string>() : parseUnitShow(exec.unitShow('polkit').stdout), polkitListed ? null : io.readRootFile(POLKIT_DBUS_SERVICE));
+
+  const listening = parseProcNetTcp(`${io.readProcFile('/proc/net/tcp') ?? ''}\n${io.readProcFile('/proc/net/tcp6') ?? ''}`);
 
   return Object.freeze({
     os,
@@ -281,6 +296,7 @@ export function observeHostWide(draft: ObserveDraft, ports: ObservePorts): HostF
       includedir: policy.includes && fs.lstat(sudoersDir)?.type === 'dir',
       flavor,
       policyFile,
+      skipped: Object.freeze(policy.skipped.map(skip => `${skip.path}: ${skip.reason}`)),
     }),
     cpu: parseCpu(
       must(exec.unameMachine(), 'uname -m').stdout,
@@ -293,7 +309,12 @@ export function observeHostWide(draft: ObserveDraft, ports: ObservePorts): HostF
     shells: Object.freeze((io.readRootFile('/etc/shells') ?? '').split('\n').map(line => line.trim()).filter(line => line.startsWith('/'))),
     web,
     fpm: Object.freeze(fpmLabelled),
-    ports: Object.freeze(parseProcNetTcp(`${io.readProcFile('/proc/net/tcp') ?? ''}\n${io.readProcFile('/proc/net/tcp6') ?? ''}`)),
+    ports: Object.freeze(listening),
+    mariadb: Object.freeze({
+      // A socket is what lstat reports as none of file, directory or link (PathFacts 'other').
+      socket: MARIADB_SOCKET_CANDIDATES.find(path => fs.lstat(path)?.type === 'other') ?? null,
+      tcp3306: listening.includes(MARIADB_TCP_PORT),
+    }),
     work: Object.freeze(observeWork(draft, ports, units, accounts.users, accounts.groups)),
   });
 }
@@ -763,7 +784,8 @@ export function declaredWritePaths(layout: AgentLayout): string[] {
   ];
   if (layout.web.server === 'nginx') paths.push(dirname(layout.host.nginxMapInclude));
   if (layout.site !== null) {
-    paths.push(layout.site.home, dirname(layout.site.fpm.poolFile), dirname(layout.site.v1Var.root));
+    // …and the v1 pool's own log rotation, every site (render/logrotate.ts v1LogrotateRenderer).
+    paths.push(layout.site.home, dirname(layout.site.fpm.poolFile), dirname(layout.site.v1Var.root), dirname(layout.v1LogrotatePath));
     // The home layout's web logs and their rotation (layout.ts webLogBase, render/logrotate.ts).
     if (isHomeLayout(layout)) paths.push(layout.site.webLogsDir, dirname(layout.logrotatePath));
   }

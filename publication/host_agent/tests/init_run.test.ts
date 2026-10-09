@@ -592,6 +592,21 @@ function instanceLockOpens(w: World): number {
 
 /* ── 2-4. dry run, no TTY, --yes ─────────────────────────────────────────────────── */
 
+describe('B4: the v1 transport defaults follow discovery', () => {
+  test('TCP: the typed host defaults to 127.0.0.1 (never localhost: the PHP driver reads it as the socket), the port to 3306', async () => {
+    const w = makeWorld({ os: 'debian' });
+    useOperator(w, { 'api_config.v1_db_transport': 'tcp' });
+    expect(await init(w, firstRun(w))).toBe(EXIT.OK);
+    const v1 = w.host.body(join(w.layout.state.apis.v1.shared, 'server_config_api.php')) ?? '';
+    expect(v1).toContain("define('MYSQL_DEDALO_HOSTNAME_CONN', '127.0.0.1');");
+    expect(v1).toContain("define('MYSQL_DEDALO_DB_PORT_CONN', 3306);");
+    // v2 too: no local socket on this fake host, so its socket default is empty (TCP) and its host the loopback.
+    const v2 = w.host.body(join(w.layout.state.apis.v2.shared, 'v2.env')) ?? '';
+    expect(v2).toContain("DB_HOST='127.0.0.1'");
+    expect(v2).toMatch(/DB_SOCKET=(''|)\n/);
+  });
+});
+
 describe('case 2: --dry-run', () => {
   test('exit 1, zero mutations, no lock, no journal', async () => {
     const w = makeWorld();

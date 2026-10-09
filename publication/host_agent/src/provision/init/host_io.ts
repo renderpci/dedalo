@@ -6,7 +6,8 @@
  *      between the trust root and the target is a real directory (lstat, not a link) and — all
  *      but the immediate parent — root-owned and not group/world-writable. writeBytesAtomic's one
  *      exception: an untrusted grandparent under a root parent, which is then pinned (apply.ts
- *      pinnedParentOf / withPinnedDir — the API files in the agent's `publication_api/<api>/shared/`);
+ *      pinnedParentOf / withPinnedDir — the API files in the agent's `publication_api/<api>/shared/`,
+ *      whose MODES row the caller states as the pin's expectation: act.ts sharedPin);
  *   2. root never follows a link it did not create: every open is O_NOFOLLOW (O_NONBLOCK
  *      against FIFOs), the descriptor is fstat'ed (a regular single-link file, or a directory),
  *      and ownership/mode are set on that descriptor. Temps are O_CREAT|O_EXCL|O_NOFOLLOW.
@@ -44,7 +45,7 @@ import type { Stats } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { ProvisionExec } from '../exec_contract';
 import { hostIo, pinnedParentOf, withPinnedDir } from '../apply';
-import type { PathFacts } from '../plan';
+import type { PathFacts, PinExpectation } from '../plan';
 import { ancestorsBelow, trustProblem } from '../plan';
 import type { InitIo, OperatorFile } from './types';
 import { BINARY_READ_CAP_BYTES } from './types';
@@ -83,6 +84,8 @@ export interface InitHostIoOptions {
   readonly rootUid?: number;
   /** Where readProcFile reads an allowlisted path from (production: the path itself). A gate maps it into a scratch tree. */
   readonly procRoot?: string;
+  /** GATES ONLY: runs inside withPinnedDir between the pin and the write (the substitute-after-pin race). */
+  readonly onPinned?: (dir: string) => void;
 }
 
 function errno(error: unknown): string {
@@ -179,7 +182,7 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
   const rootUid = options.rootUid ?? exec.userId('root') ?? 0;
   const procRoot = options.procRoot ?? '';
   // hostIo judges with exec.userId('root'): hand it the same uid, so both door sets agree.
-  const base = hostIo({ ...exec, userId: name => (name === 'root' ? rootUid : exec.userId(name)) }, { trustRoot });
+  const base = hostIo({ ...exec, userId: name => (name === 'root' ? rootUid : exec.userId(name)) }, { trustRoot, ...(options.onPinned ? { onPinned: options.onPinned } : {}) });
 
   const safeParent = (path: string): void => {
     cleanAbsolute(path, 'path');
@@ -206,7 +209,9 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
    * state tree's `publication_api/<api>/` is the AGENT's and `shared/` in it root's, so the API files
    * init writes there (`v2/shared/v2.env`, `v1/shared/server_config_api.php`) have an untrusted
    * grandparent — rule 1 alone refused them (measured: the Debian drill's api_config.v2_env). The
-   * write is pinned to the root parent and done by name relative to it.
+   * write is pinned to the root parent and done by name relative to it — and only when the caller
+   * states what that parent must be (`pin`: the MODES row of `shared/`, review S3-1); without one,
+   * or naming another directory, the write is refused.
    */
   const pinnedParent = (path: string): string | null => {
     cleanAbsolute(path, 'path');
@@ -271,11 +276,17 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
 
   return Object.freeze({
     ...base,
-    writeBytesAtomic(path: string, bytes: Uint8Array, mode: number, uid: number, gid: number): void {
+    writeBytesAtomic(path: string, bytes: Uint8Array, mode: number, uid: number, gid: number, pin?: PinExpectation): void {
       const pinned = pinnedParent(path);
       if (pinned !== null) {
+        if (pin === undefined || pin.parent !== pinned) {
+          throw new Error(
+            `init io: refusing '${path}': its grandparent is untrusted, so its parent '${pinned}' is pinned — ` +
+              (pin === undefined ? 'and the caller stated no expectation for it' : `but the caller's expectation names '${pin.parent}'`),
+          );
+        }
         // By name, relative to the pinned working directory (apply.ts withPinnedDir).
-        withPinnedDir(pinned, rootUid, () => {
+        withPinnedDir(pin, rootUid, () => {
           const name = basename(path);
           const temp = basename(initTempPath(path));
           clearStale(temp);
@@ -290,7 +301,7 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
             throw error;
           }
           fsyncDir('.');
-        }, 'init io');
+        }, 'init io', options.onPinned);
         return;
       }
       safeParent(path);
@@ -317,8 +328,23 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
       createExclusive(path, bytes, mode);
       return path;
     },
-    removeInitTemp(path: string): void {
+    removeInitTemp(path: string, pin?: PinExpectation): void {
       if (!basename(path).endsWith(INIT_TEMP_SUFFIX)) throw new Error(`init io: refusing to remove '${path}' — not an init temp file`);
+      const pinned = pinnedParent(path);
+      if (pinned !== null) {
+        // The temp of a pinned write (an interrupted v2.env / v1 config, --resume): the same pin.
+        if (pin === undefined || pin.parent !== pinned) {
+          throw new Error(`init io: refusing to remove '${path}': its parent '${pinned}' is pinned and the caller stated no matching expectation`);
+        }
+        withPinnedDir(pin, rootUid, () => {
+          const name = basename(path);
+          const found = lstatFacts(name);
+          if (found === null) return;
+          if (found.type === 'dir') throw new Error(`init io: refusing to remove '${path}': it is a directory`);
+          unlinkSync(name);
+        }, 'init io', options.onPinned);
+        return;
+      }
       safeParent(path);
       const found = lstatFacts(path);
       if (found === null) return;

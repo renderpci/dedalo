@@ -91,7 +91,7 @@ import { dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { SUDO, SYSTEMCTL } from '../publication/host_agent/src/exec.ts';
 import { envSnapshot } from '../src/config/env.ts';
-import { buildNginxMap } from '../src/core/media/protection.ts';
+import { buildNginxMap, nginxMapConfigHash } from '../src/core/media/protection.ts';
 import {
 	buildPublicationHostApacheConf,
 	buildPublicationHostNginxConf,
@@ -123,6 +123,7 @@ import {
 	AGENT_DIR,
 	agentFetch,
 	agentStatus,
+	applyCalls,
 	BASE,
 	type Bundle,
 	buildBundles,
@@ -133,6 +134,7 @@ import {
 	eventually,
 	INSTANCE,
 	inClosedSet,
+	liveHostMap,
 	logLines,
 	MAX_BUNDLE_BYTES,
 	MAX_BUNDLE_ENTRIES,
@@ -152,6 +154,7 @@ import {
 	scratchCalls,
 	setupScene,
 	spawnAgent,
+	startMapCall,
 	tail,
 	teardown,
 	UNPUBLISHED,
@@ -311,6 +314,90 @@ async function transportRows(scene: Scene): Promise<void> {
 				st.media?.pub_markers !== 1 && `media.pub_markers ${st.media?.pub_markers}`,
 				st.rules?.hash !== null && `rules.hash ${st.rules?.hash}`,
 				st.apis?.v2?.current !== null && `apis.v2.current ${st.apis?.v2?.current}`,
+			]);
+		},
+	);
+}
+
+/**
+ * THE HOST-WIDE MAP (nginx, provision init §13.5): the ENGINE's buildNginxMap() pushed through
+ * POST /v1/rules/map → the agent's contribution → `systemctl start dedalo-pubhost-map.service` →
+ * the agent's OWN root renderer (the scene's driver) installs the live host map and reloads
+ * nginx. Before the push nothing defines the media variables; the include can only follow it.
+ */
+async function mapRows(scene: Scene): Promise<void> {
+	const s = `[${scene.server}][map]`;
+	const text = buildNginxMap();
+	const hash = nginxMapConfigHash();
+	const push = (body: Record<string, string>) =>
+		agentFetch(scene, `${BASE}/v1/rules/map`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', [WIRE.actorHeader]: ACTOR },
+			body: JSON.stringify(body),
+		});
+	const mapOf = async () =>
+		((await agentStatus(scene)).rules as { map?: Record<string, unknown> | null } | undefined)?.map;
+	await row(
+		`${s} before any push: managed, nothing loaded (status rules.map), no live host map`,
+		async () => {
+			const map = await mapOf();
+			return problems([
+				map?.managed !== true && `rules.map ${JSON.stringify(map)}`,
+				map?.hash !== null && `rules.map.hash ${String(map?.hash)}`,
+				liveHostMap(scene) !== null && 'a live host map exists before any push',
+			]);
+		},
+	);
+	await row(
+		`${s} a hash that is not the text's stamp → 4xx, no contribution, nothing started`,
+		async () => {
+			const since = logLines(scene).length;
+			const res = await push({ text, hash: 'f'.repeat(64) });
+			return problems([
+				(res.status < 400 || res.status >= 500) && `status ${res.status}`,
+				existsSync(join(scene.hostBase, 'nginx_map', 'contrib', `${INSTANCE}.json`)) &&
+					'a contribution was written',
+				callsSince(scene, since, []),
+			]);
+		},
+	);
+	await row(
+		`${s} push → 200: the root renderer installed the host map byte-equal to the engine's, nginx reloaded; status rules.map.hash = hash`,
+		async () => {
+			const since = logLines(scene).length;
+			const res = await push({ text, hash });
+			const body = await res.text();
+			if (res.status !== 200) return `status ${res.status}: ${body}`;
+			const answer = JSON.parse(body) as {
+				hash?: unknown;
+				host_hash?: unknown;
+				contributions?: unknown;
+				reloaded?: unknown;
+			};
+			const map = await mapOf();
+			return problems([
+				(answer.hash !== hash ||
+					answer.host_hash !== hash ||
+					answer.contributions !== 1 ||
+					answer.reloaded !== true) &&
+					`answer ${body}`,
+				callsSince(scene, since, [startMapCall]),
+				liveHostMap(scene) !== text &&
+					'the live host map is not the engine map (one contribution renders byte-equal)',
+				(map?.hash !== hash || map?.host_hash !== hash) && `rules.map ${JSON.stringify(map)}`,
+			]);
+		},
+	);
+	await row(
+		`${s} the same push again → 200, unchanged: the renderer neither configtests nor reloads`,
+		async () => {
+			const before = liveHostMap(scene);
+			const since = logLines(scene).length;
+			const res = await push({ text, hash });
+			return problems([
+				res.status !== 200 && `status ${res.status}`,
+				callsSince(scene, since, [startMapCall]),
+				liveHostMap(scene) !== before && 'the live host map changed',
 			]);
 		},
 	);
@@ -509,12 +596,13 @@ async function execRow(scene: Scene): Promise<void> {
 }
 
 async function pass(server: Server, shared: Shared, first: boolean): Promise<void> {
-	const scene = await setupScene(server, shared, { listen: 'tls', nginxMap: buildNginxMap() });
+	const scene = await setupScene(server, shared, { listen: 'tls' });
 	try {
 		if (first) await refusalRows(scene);
 		scene.agent = spawnAgent(scene, writeAgentEnv(scene, 'agent.env'), 'agent.log');
 		await waitAgent(scene);
 		await transportRows(scene);
+		if (server === 'nginx') await mapRows(scene);
 		await rulesRows(scene);
 		if (first) await releaseRows(scene);
 		await execRow(scene);
@@ -782,7 +870,7 @@ async function copySetupRows(copy: CopyScene): Promise<void> {
 		},
 	);
 	await row(
-		`${s} rules over the COPY root (engine render → configtest + reload); nothing served before a copy`,
+		`${s} rules over the COPY root (engine render${scene.server === 'nginx' ? ' → the host map pushed first' : ''} → configtest + reload); nothing served before a copy`,
 		async () => {
 			const since = logLines(scene).length;
 			const applied = await engine<RulesView>(copy, 'rules');
@@ -795,7 +883,7 @@ async function copySetupRows(copy: CopyScene): Promise<void> {
 					`the agent reported media root ${applied.root}, not its copy root ${scene.media}`,
 				!include.includes(`# config-hash: ${applied.expected_hash}`) &&
 					'the live include does not carry the expected hash',
-				callsSince(scene, since, [configtestCall(scene.server), reloadCall(scene.server)]),
+				callsSince(scene, since, applyCalls(scene.server, true)),
 				...(await gateIs(scene, COPY_PUBLISHED, 404)),
 			]);
 		},
@@ -1001,11 +1089,7 @@ async function copyAgentDownRows(copy: CopyScene): Promise<void> {
 }
 
 async function copyPass(server: Server, shared: Shared): Promise<void> {
-	const scene = await setupScene(server, shared, {
-		listen: 'tls',
-		nginxMap: buildNginxMap(),
-		media: 'copy',
-	});
+	const scene = await setupScene(server, shared, { listen: 'tls', media: 'copy' });
 	try {
 		const copy = prepareCopy(scene);
 		scene.agent = spawnAgent(scene, copy.agentEnv, 'agent.log');

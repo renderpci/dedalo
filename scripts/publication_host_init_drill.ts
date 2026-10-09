@@ -260,10 +260,11 @@ const PROMPT_RULES: PromptRule[] = [
 			/(v[12] database user|v2 database names \(comma list\)|v1 database name|v1 API entity): $/,
 		answer: (m) => DRILL_VISIBLE[m[1] as string] ?? null,
 	},
-	// A visible value with its default in brackets: type the default.
+	// A visible value with its default in brackets: type the default. An EMPTY default (`[]`, the v2
+	// socket prompt on a host without a local MariaDB socket: TCP) is answered with Enter.
 	{
 		name: 'visible value (default)',
-		pattern: /\[([^\]\n]{1,200})\]:\s*$/,
+		pattern: /\[([^\]\n]{0,200})\]:\s*$/,
 		answer: (m) => m[1] ?? null,
 	},
 ];
