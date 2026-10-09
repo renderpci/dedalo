@@ -992,7 +992,14 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   `/var/log/apache2/<domain>` and the read-only home serve, reload and configtest cleanly — the
   same sandbox the container capture holds. Installing apache2, nginx and php8.5-fpm adds no
   AppArmor profile; of what runs only chronyd and rsyslogd are enforced, none of the layout's
-  processes is confined, no `DENIED` line.
+  processes is confined, no `DENIED` line. The TWO-MACHINE path (no drill script: a docs-built
+  work system made its own dev-channel code server, a release-built panel kit, `install.sh --kit`,
+  CLI and panel pairing, token-rotation teardown, first use on v2-only and v1+v2) is green there
+  too, 2026-10-09, with no fix: ufw's docs rule, sudo-rs on both sides, the agent's configtest
+  grant from its unit during concurrent `rules.apply` on two instances under request load (no
+  failed request across the reload), v1 on PHP 8.5 (clean under `error_reporting=-1` on the
+  exercised paths), no fapolicyd item rendered. With `mariadb-server` installed, `mariadbd` IS
+  enforced (Ubuntu ships its profile), and v1/v2 over its unix socket raise no `DENIED` line.
 - **EL** (`bun run test:pubhost:init:el`, same script, `--family el --in-place`) on a
   disposable RHEL/Rocky/Alma 9 or 10 VM with SELinux enforcing, refusing any host without
   `/etc/dedalo_init_drill_host`. It proves the `<If>` handler (a `.php` and a `.phtml` probe
