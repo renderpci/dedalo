@@ -37,6 +37,7 @@ import {
 	SELINUX_CONTROL_DIR,
 	SELINUX_CONTROL_FILE,
 	SELINUX_CONTROL_URL,
+	controlNamed,
 	selinuxControlConf,
 	selinuxControlVerdict,
 } from '../../scripts/publication_host_init_drill.ts';
@@ -251,6 +252,11 @@ describe('system-layout-v2: the httpd control measures SELinux alone', () => {
 
 	test('passes only when the label alone made the difference', () => {
 		expect(selinuxControlVerdict(good)).toBeNull();
+		// measured RHEL 9.8: the stat is denied first, and that record names the path, not the name
+		const getattr = `type=AVC msg=audit(1791571731.029:10818): avc:  denied  { getattr } for  pid=225710 comm="httpd" path="${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}" dev="dm-0" ino=100666481 scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:${type}:s0 tclass=file permissive=0`;
+		expect(selinuxControlVerdict({ ...good, avc: getattr })).toBeNull();
+		expect(controlNamed(getattr) && controlNamed(avc)).toBe(true);
+		expect(controlNamed(avc.replace(SELINUX_CONTROL_FILE, 'other.txt'))).toBe(false);
 	});
 
 	test('a baseline that is not 200 with its bytes is a broken control, never a pass (measured: AH01630 403 under a home DocumentRoot)', () => {

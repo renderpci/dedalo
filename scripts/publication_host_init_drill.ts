@@ -574,6 +574,14 @@ export function selinuxControlConf(): string {
 }
 
 /**
+ * An AVC line about the control file: `name="<file>"` (an open/read) or `path="<dir>/<file>"` (a
+ * getattr — measured, RHEL 9.8: httpd's stat is denied first, and that record names the path).
+ */
+export function controlNamed(line: string): boolean {
+	return line.includes(`name="${SELINUX_CONTROL_FILE}"`) || line.includes(`path="${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}"`);
+}
+
+/**
  * The control's verdict, or null when it measured SELinux alone: the SAME file, the same grant, answered
  * 200 with its bytes as httpd_sys_content_t (else the control proves nothing), then 403 once it carries
  * the module's type, with an AVC denial of httpd_t on that type naming the file, and Apache's error log
@@ -599,7 +607,7 @@ export function selinuxControlVerdict(observed: {
 		.some(
 			(line) =>
 				/denied/.test(line) &&
-				line.includes(`name="${SELINUX_CONTROL_FILE}"`) &&
+				controlNamed(line) &&
 				line.includes(':httpd_t:') &&
 				line.includes(`:${type}:`),
 		);
@@ -2076,7 +2084,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				.split('\n')
 				.filter(
 					(line) =>
-						/avc:/.test(line) && !/name_connect/.test(line) && !line.includes(`name="${SELINUX_CONTROL_FILE}"`),
+						/avc:/.test(line) && !/name_connect/.test(line) && !controlNamed(line),
 				);
 			check(lines.length === 0, `AVC denials during the drill:\n${lines.slice(0, 20).join('\n')}`);
 		},
