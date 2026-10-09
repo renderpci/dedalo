@@ -257,7 +257,8 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 	{
 		id: 'source_version_local_dir',
 		envKey: 'DEDALO_SOURCE_VERSION_LOCAL_DIR',
-		consumer: 'none — retirement candidate: code updates stage in <DEDALO_BACKUP_PATH>/.code_staging (src/core/update/code_update.ts)',
+		consumer:
+			'none — retirement candidate: code updates stage in <DEDALO_BACKUP_PATH>/.code_staging (src/core/update/code_update.ts)',
 		resolve: () => optional('DEDALO_SOURCE_VERSION_LOCAL_DIR'),
 	},
 	{
