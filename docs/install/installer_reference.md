@@ -108,7 +108,7 @@ meaning.)
     the database:
 
     ```shell
-    bun run scripts/install.ts --plan --db-name dedalo_main --db-user dedalo_user --entity mib --hierarchies none
+    bun run scripts/install.ts --plan --db-name dedalo_main --db-user dedalo_user --entity myentity --hierarchies none
     ```
 
 !!! warning "Languages are mandatory, and the defaults must be members of the set"
