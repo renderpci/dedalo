@@ -85,7 +85,7 @@ if (!oracle) {
 	}
 }
 
-// The engine's ONE transport rule (DB_SOCKET wins) — src/config/pg_transport.ts.
+// The ONE engine transport rule (DB_SOCKET wins) — src/config/pg_transport.ts.
 const transport = resolvePgTransport({ host: readEnv("DB_HOST") ?? "", port: readEnv("DB_PORT") ?? "", socket: readEnv("DB_SOCKET") });
 if (transport.kind === "socket") {
 	const sock = transport.socketPath;
