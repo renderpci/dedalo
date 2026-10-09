@@ -232,6 +232,18 @@ describe('the system layout: written, installed before the import that names its
     expect(imp.lines).toContain(`fcontext -a -f a -t ${V2_TREE_TYPE} '${l.state.apis.v2.root.replace(/\./g, '\\.')}(/.*)?'`);
   });
 
+  test("a fresh system host: the state root's missing parent (/srv/dedalo_publication_host) is created root 0755, under a temporary name", () => {
+    const l = derive(systemDecl());
+    const host = hostFor(l);
+    const base = dirname(l.state.root);
+    host.entries.delete(base);
+    const mk = plan(l, stateOf(host, l, [])).find(a => a.op === 'mkdir' && a.path === base);
+    expect(mk).toMatchObject({ owner: 'root', group: 'root', mode: 0o755 });
+    expect((mk as { via?: string }).via).toBeDefined();
+    expect(apply(plan(l, stateOf(host, l, [])), host).failure).toBeNull();
+    expect(host.entries.get(base)).toMatchObject({ type: 'dir', uid: 0, mode: 0o755 });
+  });
+
   test('apply converges: the store holds our source, the v2 tree is typed by it (httpd-unreadable), a second plan is empty', () => {
     const { l, host } = converged();
     expect(host.modules).toEqual([{ name: SELINUX_MODULE_NAME, priority: 400, lang: 'cil', disabled: false, source: renderSelinuxModule() }]);

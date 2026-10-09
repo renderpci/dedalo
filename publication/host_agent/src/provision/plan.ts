@@ -80,6 +80,7 @@ import {
   markerContent,
   ownerName,
   webLogBase,
+  SYSTEM_LAYOUT,
 } from './layout';
 import type { TrustDerivation } from './fapolicyd_trust';
 import { TRUST_FILE_MODE, pendingEntry, renderTrustFile, trustFileProblem } from './fapolicyd_trust';
@@ -1223,13 +1224,17 @@ export function plan(
 
   // 4. Directories, parents first; a drifted directory is fixed in place, BEFORE any child of it is
   //    created (apply's parent check needs it trusted). Host-wide ones are never fixed (refused).
-  //    Missing ancestors of the host base and of the v1 pool's directory are created root 0755.
+  //    Missing ancestors of the host base, of the system layout's own state base
+  //    (SYSTEM_LAYOUT.stateBase, /srv/dedalo_publication_host, shared by its instances — measured: the EL
+  //    drill's first system-layout install was refused for it; any OTHER state root's missing parent
+  //    stays a refusal, a typo is never created) and of the v1 pool's directory are created root 0755.
   const wanted = new Map<string, ExtraDir>();
   for (const dir of layout.directories) wanted.set(dir.path, { path: dir.path, modeKey: dir.modeKey, hostWide: false });
   for (const dir of extra) {
     if (!wanted.has(dir.path)) wanted.set(dir.path, dir);
   }
-  for (const root of [layout.host.base, ...(layout.site?.v1 == null ? [] : [dirname(layout.site.v1.var.root)])]) {
+  const systemState = dirname(layout.state.root) === SYSTEM_LAYOUT.stateBase ? [layout.state.root] : [];
+  for (const root of [layout.host.base, ...systemState, ...(layout.site?.v1 == null ? [] : [dirname(layout.site.v1.var.root)])]) {
     for (const dir of ancestorsBelow(root, host.trustRoot)) {
       if (!host.paths.has(dir) && !wanted.has(dir)) wanted.set(dir, { path: dir, modeKey: 'hostBase', hostWide: true });
     }

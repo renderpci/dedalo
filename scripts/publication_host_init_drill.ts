@@ -1803,6 +1803,10 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		required: true,
 		what: `a v2-only site in the SYSTEM layout (/srv + /opt): init lists selinux.v2_policy and apply installs the policy module ${SELINUX_MODULE} (CIL at priority 400, extracted byte for byte equal to its stamped source) BEFORE the rule naming ${V2_TREE_TYPE}; the v2 tree (v2.env included) is ${V2_TREE_TYPE}; sesearch: init_t may read it, httpd_t may not; a minimal v2 release PUSHED through the agent starts and answers /health; no AVC since the leg started; the control: one world-readable file in the web root answers 200 as httpd_sys_content_t and is DENIED to httpd (an AVC naming ${V2_TREE_TYPE}) once it carries ${V2_TREE_TYPE}; a re-run reports selinux.v2_policy right`,
 		async run(ctx) {
+			check(
+				(await ctx.runner.sh('command -v sesearch')).code === 0,
+				'sesearch is not installed on this VM (dnf install setools-console): the leg reads the loaded policy with it',
+			);
 			const since = (await must(ctx, 'sleep 1.1; date +%T', 'the leg start')).trim();
 			await makeSite(ctx, SYSTEM_DOMAIN, 'apache');
 			const draft = draftFor(SYSTEM_INSTANCE, SYSTEM_DOMAIN, { apis: undefined, layout: 'system' });
