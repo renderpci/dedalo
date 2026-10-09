@@ -193,6 +193,8 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		'WRITES NO DATA — it creates the suite MEDIA root and plants its `.dedalo_test_media` marker. It is the filesystem twin of this file and holds no database connection at all (importing config.ts there would freeze the connection before the preload repoints it); its own guard is test/unit/test_media_root_tripwire.test.ts.',
 	'test/helpers/media_scratch_root.ts':
 		"WRITES NO DATA — it plants the `.dedalo_test_media` marker in a gate's scratch directory so the media doors will write there. Filesystem only, no database.",
+	'test/helpers/seed_contract.ts':
+		"WRITES NO SUITE DATA — `restoreSeedRaw` restores an install seed into a scratch database the CALLING gate created moments before (`dedalo_seedcheck_<pid>` / `dedalo_seedcommitted_<pid>`, swept and FORCE-dropped by that gate), via a plain-SQL temp file in tmpdir it removes; it never connects to the suite database. The suite database cannot be its target: a restore refuses a non-empty database (the seed's CREATE TABLEs collide).",
 	'test/helpers/child_driver.ts':
 		"WRITES NO DATA — its one write is a throwaway TS driver file in its own mkdtemp scratch dir (removed on cleanup), run in a CHILD bun process that inherits this run's environment: the preload-repointed suite DB and marked media root. It holds no database connection itself; every driver it runs writes only through test-data doors that call assertTestDatabase (PERF-11/OPS-6 gates).",
 	'test/helpers/isolated_gate.ts':

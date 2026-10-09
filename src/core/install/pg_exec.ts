@@ -65,8 +65,12 @@ export function assertSafeConnField(name: string, value: string): void {
 	}
 }
 
-/** host/port/user flags (password rides PGPASSWORD, never argv). */
-function connArgs(conn: DbConnDescriptor): string[] {
+/**
+ * host/port/user flags (password rides PGPASSWORD, never argv). Exported for
+ * the pg client spawns that cannot go through runPsql (a streamed pg_dump):
+ * one argv law for every pg client this engine starts.
+ */
+export function connArgs(conn: DbConnDescriptor): string[] {
 	const args: string[] = [];
 	const host = conn.socket && conn.socket !== '' ? conn.socket : conn.host;
 	if (host) {
@@ -79,6 +83,14 @@ function connArgs(conn: DbConnDescriptor): string[] {
 		args.push('-U', String(conn.user));
 	}
 	return args;
+}
+
+/** The child environment of a pg client: the engine's env + PGPASSWORD (never argv). */
+export function pgClientEnv(conn: DbConnDescriptor): Record<string, string> {
+	return {
+		...(envSnapshot() as Record<string, string>),
+		...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
+	};
 }
 
 export interface PsqlRunResult {
@@ -108,10 +120,7 @@ export async function runPsql(
 			stdin: options.stdin !== undefined ? 'pipe' : 'ignore',
 			stdout: 'pipe',
 			stderr: 'pipe',
-			env: {
-				...(envSnapshot() as Record<string, string>),
-				...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
-			},
+			env: pgClientEnv(conn),
 		},
 	);
 	if (options.stdin !== undefined && child.stdin) {

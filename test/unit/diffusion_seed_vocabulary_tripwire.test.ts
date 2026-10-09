@@ -293,16 +293,19 @@ describe('diffusion seed vocabulary — install/db/dedalo_install.pgsql.gz + mig
 			dump,
 			new Set(['dd_ontology', 'dd_ontology_recovery', 'matrix_ontology']),
 		);
-		expect(blocks.map((block) => block.table).sort()).toEqual([
-			'dd_ontology',
-			'dd_ontology_recovery',
-			'matrix_ontology',
-		]);
+		// dd_ontology_recovery is a TRANSIENT slice the seed builder ships EMPTY
+		// (install/seed_build.ts, 2026-10-09) — or not at all, when the source had
+		// dropped it. A copy that ships rows is judged like the other two; the two
+		// ontology tables always ship, with their floor.
+		const tables = blocks.map((block) => block.table);
+		expect(tables).toContain('dd_ontology');
+		expect(tables).toContain('matrix_ontology');
 		const mapping = migrationMapping(migrationSql);
 		const faults: string[] = [];
 		let retiredValues = 0;
 		let typedBlocks = 0;
 		for (const block of blocks) {
+			if (block.table === 'dd_ontology_recovery' && block.rows.length === 0) continue;
 			expect(block.rows.length, `census floor: ${block.table} rows in the seed`).toBeGreaterThan(
 				100,
 			);

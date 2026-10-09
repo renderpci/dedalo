@@ -1049,3 +1049,31 @@ export async function deleteDdOntologyRowsReturning(
 	await clearOntologyDerivedCaches();
 	return rows.map((row) => ({ ...row, id: Number(row.id) }));
 }
+
+// --- SQL for a database the pool is NOT bound to (the install seed compiler) --
+
+/**
+ * The install seed compiler (install/seed_build.ts) reads dd_ontology in its
+ * SCRATCH database over psql — the cached accessors read the installation's.
+ * The SQL text lives here, the dd_ontology repository home (T3).
+ */
+export const DD_ONTOLOGY_TLDS_SQL = 'SELECT DISTINCT tld FROM dd_ontology ORDER BY 1';
+
+/**
+ * The parser scaffold the seed compiler derives over (seed_sources.ts
+ * SEED_SCAFFOLD_PATH): the `ontology` TLD's own nodes and the model nodes of
+ * the shipped TLDs, in tipo order, as a `\copy (…)` query.
+ */
+export function ddOntologyScaffoldQuery(
+	columns: readonly string[],
+	tlds: readonly string[],
+): string {
+	for (const name of [...columns, ...tlds]) {
+		if (!/^[a-z_]+$/.test(name)) {
+			throw new DedaloError('internal.invariant', {
+				message: `ddOntologyScaffoldQuery: refusing identifier '${name}'`,
+			});
+		}
+	}
+	return `(SELECT ${columns.join(', ')} FROM dd_ontology WHERE tld IN (${tlds.map((tld) => `'${tld}'`).join(',')}) AND (tld = 'ontology' OR is_model) ORDER BY tipo)`;
+}

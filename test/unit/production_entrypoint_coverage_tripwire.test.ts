@@ -251,6 +251,10 @@ interface Entrypoint {
 
 /** Closed classification of package.json script KEY prefixes. */
 const TOOLING_SCRIPT_PREFIXES = new Set([
+	// `seed:build` (2026-10-09) compiles THIS REPOSITORY's vendored install seed
+	// from its sources (src/core/install/seed_build.ts) — a build artefact a
+	// developer commits, like `changelog`; it touches no installation's data.
+	'seed',
 	'test',
 	'ci',
 	'lint',

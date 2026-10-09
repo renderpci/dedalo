@@ -1283,6 +1283,19 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The install database is compiled from the repository and proven by a fresh install before it ships.**
+
+    Maintenance → *Build database version* → *Build install version* refused with "not
+    runnable on this engine", pointing at a maintenance dashboard that no longer exists. It
+    now compiles `install/db/dedalo_install.pgsql.gz` — the database every fresh install
+    starts from — from files in the repository only (the schema and its migrations, the
+    ontology release packages, the languages and hierarchy registry files, the default
+    accounts), never from an installation's database, so it cannot carry one
+    installation's data or mistakes into every new install. Before the file is replaced
+    the result installs itself in a scratch database and is checked; the same command is
+    `bun run seed:build`. The seed ships with a manifest that records what it was built
+    from. See [the seed](./development/ts_install_internals.md#seed).
+
 - **On an nginx publication host, a media map that stops nginx at its reload is now rolled back and nginx restarted, and the panel counts a map that is not loaded as a red check.**
 
     The root service that renders the shared nginx media map (`dedalo-pubhost-map`) tests every new map before nginx reloads it. On SELinux hosts nginx can still stop on the reload itself, after a test that passed. Until now the service then only reported the failure and left nginx down, with every site on that server. It now watches nginx for five seconds after the reload. If nginx is down, the service puts back the map nginx had loaded (or removes a first one), tests it, restarts nginx and checks that it runs. The push is reported as failed and the panel keeps showing the map that is actually loaded. In **Maintenance › Publication hosts** the map's state is now a check of its own, **Host media map**. It is red when the host's agent is too old for the shared map, when the host refused this work system's map, or when this work system's map is not the one nginx serves. It is green when that map is loaded or when the map is placed by hand. Before, a map that was not loaded was painted red, but it was not counted with the other checks. See [Publication host agent](./install/publication_host.md#nginx-one-media-map-for-the-host).

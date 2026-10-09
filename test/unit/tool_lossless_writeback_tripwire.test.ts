@@ -1628,6 +1628,12 @@ else {
 				'the schema-migration runner for TS-owned tables; its only shared-row writes are seed corrections held by migration_shared_row_tripwire — an install-lane write, never a tool write-back.',
 		},
 		{
+			id: 'online-migration-grammar',
+			matches: (target) => target === 'install/db/online_migration.ts',
+			reason:
+				'the PURE grammar of an online migration (its header: no DB import, nothing that writes a row); the install seed compiler reads only isOnlineMigration() to choose whether a migration file runs in one transaction.',
+		},
+		{
 			id: 'json-data',
 			matches: (target) => target.endsWith('.json'),
 			reason:
@@ -3920,6 +3926,7 @@ else {
 			expect(OUT_OF_CORPUS_TARGETS.map((entry) => entry.id)).toEqual([
 				'suite',
 				'migration-runner',
+				'online-migration-grammar',
 				'json-data',
 				'tool-client-js',
 				'tools-js-leaf',

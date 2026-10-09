@@ -204,9 +204,48 @@ project and Admin/User profiles, and the Languages terms in `matrix_langs`.
 Optional hierarchy import files are vendored under `install/import/hierarchy/`
 (`<tld>1`/`<tld>2` `.copy.gz` files + three metadata JSONs).
 
+The seed is **compiled, never hand-edited and never built from a database**:
+`bun run seed:build` (the same compiler as Maintenance → *Build database version* →
+`build_install_version`, `src/core/install/seed_build.ts`) builds it from files in
+this repository only, so the same checkout produces the same seed on any machine.
+Its sources:
+
+| Part of the seed | Source |
+|---|---|
+| Schema (tables, functions, triggers, indexes, extensions) | `install/db/seed/schema.sql` plus every file in `install/db/migrations/` |
+| Core ontology (`dd`, `rsc`, `hierarchy`, `ontology`, `ontologytype`, `lg`, `oh`) and private lists | the ontology release `install/import/ontology/<major.minor>/` — the packages every ontology update downloads — applied through the update's own per-package door |
+| Languages terms (`matrix_langs`) | `install/db/seed/matrix_langs.copy.gz` |
+| Hierarchy registry (`matrix_hierarchy_main`, every hierarchy inactive) | `install/db/seed/matrix_hierarchy_main.copy.gz` |
+| Root user (no password), General project, Admin/User profiles, one bare `test3` row | `SEED_RECORDS` in `src/core/install/seed_sources.ts` |
+| Data version | generated: the engine's version |
+
+Everything else ships empty. The `test` TLD's nodes are not in the seed: the restore
+materializes them from `src/core/test_data/test_tld_ontology.json`; only its registry
+row ships. `install/db/seed/dd_ontology_scaffold.copy.gz` is the parser's scaffold:
+deriving `dd_ontology` reads the ontology's own definitions, so the compiler starts
+from it, derives to a fixpoint and requires every TLD to come out in sync — none of
+the scaffold reaches the seed.
+
+The compile runs in scratch databases it creates and marks (`dedalo_seed_build_<pid>`,
+`dedalo_seed_verify_<pid>`, dropped afterwards), one compile per cluster (an advisory
+lock). Before the file is replaced, the result **installs itself**: it is restored into
+the second scratch database through the installer's own restore — playground, test
+TLD, engine ontology, Languages activation — the boot migrations run over it, and the
+ontology, Languages and root password are checked. A registry record the activation
+would refuse, an active hierarchy, an ontology row of another TLD or an undeclared
+extension refuses the compile. The database user needs `CREATEDB`.
+
+The seed is committed with `install/db/dedalo_install.manifest.json`: the seed's
+digest, its row counts, and a digest of every source file. Changing what an install
+is born with is a change to a source, then `bun run seed:build`, then commit the seed
+and the manifest together — a source changed without a recompile is reported STALE.
+To ship a newer ontology, export the release packages from the ontology master first.
+
 ## Gates
 
-`test/unit/install_*.test.ts`: install-mode boot (subprocess config import), the
+`test/unit/install_*.test.ts` and `seed_build_native`: the seed compiler and its
+content contract (`install_seed_contract_native` holds the committed seed to it, and
+`install_seed_manifest_tripwire` to its manifest and sources), install-mode boot (subprocess config import), the
 pre-auth gate + reload-resume + verify-await regressions, the `.env` write
 contract, the seed restore + Argon2id root pw + login (real scratch DB), the
 hierarchy import, the seed drift tripwire, and the full CLI **e2e ending in a

@@ -25,8 +25,9 @@
  *      no test record ever lands in an install's table).
  *
  * The old (a) — "the JSON equals the `test` TLD inside the install seed" — is
- * GONE on purpose: the seed is no longer a source, and
- * `scripts/strip_test_tld_from_seed.ts` removes its copy of these rows.
+ * GONE on purpose: the seed is no longer a source — it is compiled without
+ * these rows (src/core/install/seed_build.ts; only the bootstrap registry row
+ * ships).
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';

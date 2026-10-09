@@ -293,6 +293,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/config_declaration_tripwire.test.ts
 	test/unit/engine_install_tld_tripwire.test.ts
 	test/unit/install_seed_drift_tripwire.test.ts
+	test/unit/install_seed_manifest_tripwire.test.ts
 	test/unit/media_alternate_versions_tripwire.test.ts
 	test/unit/mock_isolation_tripwire.test.ts
 	# --- 2026-08-29: the engine↔site-builder pairing proof. DB-free by construction: a

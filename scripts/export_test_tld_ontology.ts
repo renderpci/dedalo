@@ -4,10 +4,9 @@
  * SOURCE OF RECORD and the database is derived from it
  * (`src/core/test_data/test_tld_materialize.ts`), so this exporter must NEVER be
  * run again as a matter of routine — it would overwrite the source with
- * whatever the seed still holds, and once
- * `scripts/strip_test_tld_from_seed.ts` has been applied the seed holds NOTHING
- * (it would write an empty node list). Kept only as the historical derivation
- * and for its COPY-block reader, which the strip script's twin uses.
+ * whatever the seed still holds, and the seed is now COMPILED without these
+ * rows (src/core/install/seed_build.ts) — it would write an empty node list.
+ * Kept only as the historical derivation.
  *
  * Export the generic `test` TLD ontology FROM THE INSTALL SEED to reviewable JSON.
  *

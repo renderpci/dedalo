@@ -524,9 +524,19 @@ const T2_PSQL_WRITE_CHANNEL: Readonly<Record<string, { writes: number; reason: s
 		reason: '`-f` restore of a dd_ontology recovery dump (plain SQL the engine itself wrote).',
 	},
 	'src/core/install/db_restore.ts': {
-		writes: 2,
+		writes: 1,
 		reason:
-			'`-f` restore of the vendored install seed (install/db/dedalo_install.pgsql.gz), then `-1 -f` of each shipped migration the seed PREDATES (paths.ts SEED_PREDATED_MIGRATION_PATHS — install mode skips the boot runner).',
+			'`-f` restore of the vendored install seed (install/db/dedalo_install.pgsql.gz). The seed is COMPILED with every migration applied (install/seed_build.ts; install_seed_manifest_tripwire goes STALE on a new one), so no migration is applied after the restore.',
+	},
+	'src/core/install/seed_build.ts': {
+		writes: 9,
+		reason:
+			'install SEED COMPILER: every statement targets a scratch database it CREATED and MARKED (`dedalo_seed_build_<pid>` / `dedalo_seed_verify_<pid>`, dedalo_seed_build_marker; dropped by the oid captured at CREATE) — no installation database is read or written. Shapes: the `-1 -f` of schema.sql and of each migration file, the `\\copy` loads of the repo-owned sources (scaffold, langs, registry), the one-transaction data and order scripts (`-f -`: TRUNCATE of what does not ship, canonical records as `$seed$`-dollar-quoted JSON.stringify output — psql never interpolates inside a quoted literal — and a server-side jsonb_build_object data-version row from validated literals; CLUSTER + store rebuilds), the marker INSERT.',
+	},
+	'scripts/seed_bootstrap_extract.ts': {
+		writes: 3,
+		reason:
+			'ONE-TIME seed-source extraction (kept as provenance): restores the seed from GIT (`HEAD:install/db/…`) into a scratch database it creates and marks, applies the migration files, drops orphan sequences, cuts + deactivates the hierarchy registry (server-side jsonb_build_object), then exports the sources. Never touches an installation database.',
 	},
 	'scripts/test_db_setup.ts': {
 		writes: 1,

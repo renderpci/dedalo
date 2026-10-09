@@ -142,7 +142,7 @@ export interface EnsureResult {
 
 /* ------------------------------------------------------------------ reads */
 
-interface RegistryRow {
+export interface RegistryRow {
 	relation: Record<string, Record<string, unknown>[]> | null;
 	string: Record<string, { value?: unknown }[]> | null;
 }
@@ -651,6 +651,52 @@ async function ensureTargetSectionDefaults(sectionId: number, tld: string): Prom
 	return applied;
 }
 
+/** A typology locator (hierarchy9) naming a positive integer record. */
+function hasTypology(row: RegistryRow): boolean {
+	const typologyLocator = locator(row, HIERARCHY_TYPOLOGY);
+	const typology = typologyLocator ? Math.trunc(Number(typologyLocator.section_id)) : 0;
+	return Number.isInteger(typology) && typology >= 1;
+}
+
+/**
+ * WHY ensureHierarchy REFUSES a registry record — null when it can provision it.
+ * Pure, and the ONE statement of the rule: ensureHierarchy decides with it, and
+ * so does the install seed builder (install/seed_build.ts) over the registry it
+ * is about to ship, so a seed whose records cannot be activated is refused at
+ * BUILD time, not at the first install (measured 2026-10-09: 110 records with
+ * hierarchy109 'hiearachy20' — lg among them — made every fresh install fail).
+ *
+ * hierarchy109 is the operator's choice of real section ("Real section tipo" in
+ * the tool form); a thesaurus hierarchy uses hierarchy20, but a hierarchy built
+ * on another section is legitimate, and rewriting it to the thesaurus template
+ * would quietly change what the hierarchy IS. Unset is defaulted by the caller;
+ * a value naming no section is an operator error we REFUSE to paper over.
+ *
+ * `sourceModel`: the model of the tipo hierarchy109 names (null when unset or
+ * unknown) — resolved by the caller against ITS database.
+ */
+export function provisionBlocker(row: RegistryRow, sourceModel: string | null): string | null {
+	if (safeTld(literal(row, HIERARCHY_TLD).trim().toLowerCase()) === null) {
+		return 'the hierarchy has no valid TLD (hierarchy6) — cannot provision';
+	}
+	if (!hasTypology(row)) return 'the hierarchy has no typology (hierarchy9) — cannot provision';
+	const source = literal(row, HIERARCHY_SOURCE_REAL_SECTION);
+	if (source !== '' && sourceModel !== 'section') {
+		return `the source section '${source}' (hierarchy109) is not a section — fix "Real section tipo" first`;
+	}
+	return null;
+}
+
+/**
+ * The inputs provisionBlocker reads, for EVERY registry record, from a database
+ * the engine pool is NOT bound to (the seed builder's scratch, over psql): one
+ * json array of {section_id, string, relation, source_model}.
+ */
+export const REGISTRY_PROVISION_INPUTS_SQL = `SELECT COALESCE(json_agg(json_build_object(
+	'section_id', h.section_id, 'string', h.string, 'relation', h.relation,
+	'source_model', (SELECT o.model FROM dd_ontology o WHERE o.tipo = h.string->'${HIERARCHY_SOURCE_REAL_SECTION}'->0->>'value' LIMIT 1)
+) ORDER BY h.section_id), '[]'::json) FROM "${HIERARCHY_MAIN_TABLE}" h WHERE h.section_tipo = '${HIERARCHY_SECTION}'`;
+
 /**
  * Converge ONE hierarchy to the invariant. THE only writer. Idempotent: the second run
  * reports `applied: []`. Safe on a live hierarchy — it never deletes anything.
@@ -673,31 +719,22 @@ export async function ensureHierarchy(
 	let row = await readRegistry(sectionId);
 	if (row === null) return fail(`hierarchy record ${HIERARCHY_SECTION}/${sectionId} not found`);
 
-	const tld = safeTld(literal(row, HIERARCHY_TLD).trim().toLowerCase());
-	if (tld === null) return fail('the hierarchy has no valid TLD (hierarchy6) — cannot provision');
-
-	const typologyLocator = locator(row, HIERARCHY_TYPOLOGY);
-	const typology = typologyLocator ? Math.trunc(Number(typologyLocator.section_id)) : 0;
-	if (!Number.isInteger(typology) || typology < 1) {
-		return fail('the hierarchy has no typology (hierarchy9) — cannot provision');
-	}
+	const currentSource = literal(row, HIERARCHY_SOURCE_REAL_SECTION);
+	const blocker = provisionBlocker(
+		row,
+		currentSource === '' ? null : await getModelByTipo(currentSource),
+	);
+	if (blocker !== null) return fail(blocker);
+	const tld = safeTld(literal(row, HIERARCHY_TLD).trim().toLowerCase()) as string;
 
 	// 1. the template the virtual sections clone. MUST precede provisioning.
-	// DEFAULT it when unset — never OVERWRITE it. hierarchy109 is the operator's choice of
-	// real section ("Real section tipo" in the tool form); a thesaurus hierarchy uses
-	// hierarchy20, but a hierarchy built on another section is legitimate, and rewriting it
-	// to the thesaurus template would quietly change what the hierarchy IS. A source that
-	// names a non-existent section is an operator error we REFUSE to paper over.
-	const currentSource = literal(row, HIERARCHY_SOURCE_REAL_SECTION);
+	// DEFAULT it when unset — never OVERWRITE it (provisionBlocker refuses a set
+	// value that names no section).
 	if (currentSource === '') {
 		await write(sectionId, 'string', HIERARCHY_SOURCE_REAL_SECTION, [
 			{ id: 1, lang: 'lg-nolan', value: THESAURUS_SECTION },
 		]);
 		applied.push(`source section set to ${THESAURUS_SECTION}`);
-	} else if ((await getModelByTipo(currentSource)) !== 'section') {
-		return fail(
-			`the source section '${currentSource}' (hierarchy109) is not a section — fix "Real section tipo" first`,
-		);
 	}
 
 	// 2. the flags. A FULL active locator, or the portals cannot see the hierarchy.

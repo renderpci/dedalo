@@ -14,7 +14,7 @@ import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { SEED_DUMP_PATH, SEED_PREDATED_MIGRATION_PATHS } from './paths.ts';
+import { SEED_DUMP_PATH } from './paths.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
@@ -33,31 +33,6 @@ async function targetIsEmpty(conn: DbConnDescriptor): Promise<boolean> {
 	}
 	// to_regclass returns the relation name when it exists, empty/NULL otherwise.
 	return probe.stdout.trim() === '';
-}
-
-/**
- * Apply the migrations the seed predates (paths.ts SEED_PREDATED_MIGRATION_PATHS),
- * each in ONE transaction (`-1`: its `SET LOCAL lock_timeout` binds, and a
- * failure leaves nothing half-applied). Install mode skips the boot runner, and
- * the installer's own writes must find the schema the engine reads.
- */
-async function applySeedPredatedMigrations(connection: DbConnDescriptor): Promise<void> {
-	for (const path of SEED_PREDATED_MIGRATION_PATHS) {
-		const applied = await runPsql(connection, [
-			'-v',
-			'ON_ERROR_STOP=1',
-			'--quiet',
-			'-1',
-			'-f',
-			path,
-		]);
-		if (applied.exitCode !== 0) {
-			refuseInstall(
-				'install.step_failed',
-				`Migration ${path} failed after the seed restore: ${applied.stderr || 'psql nonzero exit'}`,
-			);
-		}
-	}
 }
 
 /**
@@ -116,7 +91,11 @@ async function completeFreshInstall(): Promise<string> {
  * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
  * (test/unit/tier1_install_native.test.ts).
  */
-export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRestoreResult> {
+export async function installDbFromSeed(
+	conn?: DbConnDescriptor,
+	/** The dump to restore — the vendored seed; a freshly BUILT one in its gate (seed_build_native). */
+	seedPath: string = SEED_DUMP_PATH,
+): Promise<DbRestoreResult> {
 	const connection = conn ?? connFromConfig();
 
 	// Empty-DB gate: never restore over an existing install.
@@ -136,7 +115,7 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 	// file is always removed.
 	const tmpSql = join(tmpdir(), `dedalo_seed_${process.pid}_${Date.now()}.sql`);
 	try {
-		writeFileSync(tmpSql, gunzipSync(readFileSync(SEED_DUMP_PATH)));
+		writeFileSync(tmpSql, gunzipSync(readFileSync(seedPath)));
 	} catch (error) {
 		rmSync(tmpSql, { force: true });
 		refuseInstall(
@@ -153,7 +132,6 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 				`Restore failed: ${restore.stderr || 'psql nonzero exit'}`,
 			);
 		}
-		await applySeedPredatedMigrations(connection);
 		// Default-config path only: the playground, the test TLD, the engine
 		// ontology and the core hierarchies write through the pool, which is
 		// guaranteed to point at this DB only when no explicit conn was given.

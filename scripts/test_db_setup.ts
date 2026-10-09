@@ -517,10 +517,9 @@ console.log(
 // 3. The generic `test` TLD ontology, from its ONE source
 // (src/core/test_data/test_tld_ontology.json) through the engine's own doors:
 // matrix_ontology `test0` records, then rebuildOntology('test') derives
-// dd_ontology. The seed still carries its own copy of those rows today; this
-// OVERWRITES them from the reviewable JSON, so the suite database matches the
-// file a human reviews. Once scripts/strip_test_tld_from_seed.ts is applied the
-// seed carries only the bootstrap rows and this step is the sole source.
+// dd_ontology. The seed is compiled WITHOUT those rows (src/core/install/
+// seed_build.ts — only the bootstrap registry row ships), so this step is their
+// sole source, and the suite database matches the file a human reviews.
 const { materializeTestTldOntology } = await import(
 	'../src/core/test_data/test_tld_materialize.ts'
 );
