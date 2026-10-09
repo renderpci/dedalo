@@ -312,6 +312,13 @@ export const REGISTRY: readonly RatchetEntry[] = [
 			'a CEILING for an ops sweep over an INSTALLATION’s relation data (scripts/observer_reconcile.ts --budget), not a measure of this tree; raised only with a --json census proving every drop genuine',
 	},
 	{
+		id: 'el_drill_record',
+		artifacts: ['engineering/el_drill_record.json'],
+		tier: 'manual',
+		reason:
+			'MEASURED only by the EL init drill on a disposable SELinux-enforcing RHEL/Rocky/Alma VM (`bun run test:pubhost:init:el --record`, after a green run): no CI runner has an EL kernel, so there is nothing to regenerate here. test/unit/publication_host_el_drill_record.test.ts judges it (the inputs digest of EL_DRILL_INPUTS, the hosts, the legs)',
+	},
+	{
 		id: 'release_root_entries',
 		artifacts: ['engineering/release_root_entries.json'],
 		tier: 'manual',

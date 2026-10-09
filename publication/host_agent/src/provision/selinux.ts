@@ -328,3 +328,28 @@ export function labelScope(
   if (mode === 'disabled' && storePresent) return { register: true, relabel: false };
   return { register: false, relabel: false };
 }
+
+/**
+ * THE EL DRILL'S INPUTS (spec §9.11): the agent-package files (package-relative) whose behaviour only
+ * an SELinux-enforcing EL VM can prove — the S9 label table, the renderers EL runs (pool, include,
+ * units, their dated directives, the nginx map pieces), the parsers of EL discovery, install.sh. The
+ * drill's `--record` digests them into engineering/el_drill_record.json; the root ratchet
+ * (test/unit/publication_host_el_drill_record.test.ts) recomputes the digest and is red when any of
+ * them changed after the last recorded drill. Sorted; every entry exists (tests/provision_selinux).
+ */
+export const EL_DRILL_INPUTS: readonly string[] = Object.freeze([
+  'deploy/install.sh',
+  'src/provision/init/parse/apache.ts',
+  'src/provision/init/parse/fpm.ts',
+  'src/provision/init/parse/mounts.ts',
+  'src/provision/init/parse/os.ts',
+  'src/provision/init/parse/selinux.ts',
+  'src/provision/render/fpm_pool.ts',
+  'src/provision/render/host_map_unit.ts',
+  'src/provision/render/nginx_map_include.ts',
+  'src/provision/render/systemd_floors.ts',
+  'src/provision/render/unit_agent.ts',
+  'src/provision/render/unit_v2.ts',
+  'src/provision/render/web_include.ts',
+  'src/provision/selinux.ts',
+]);

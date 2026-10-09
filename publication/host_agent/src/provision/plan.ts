@@ -378,6 +378,22 @@ export function judgeAncestors(
   return refusals;
 }
 
+/**
+ * The polkit daemon's account. EL's polkit package ships its rules directory OWNED by it
+ * (`/etc/polkit-1/rules.d` polkitd:root 0700, measured RHEL 9.8 polkit-0.117): the daemon that
+ * EVALUATES a rules file already decides every grant, so its owning the directory the file sits in
+ * gives it nothing it lacks. That one directory — the immediate parent of the instance's polkit rules
+ * file, judged for that file only — may be the daemon's, never group- or world-writable
+ * (polkitDirTrusted); every other ancestor of every target stays root's (apply.ts assertSafeParent
+ * already lets the immediate parent of a renamed-into-place file be another principal's).
+ */
+export const POLKIT_DAEMON_USER = 'polkitd';
+
+/** Whether `facts` is the polkit rules directory as the polkit package ships it (POLKIT_DAEMON_USER). */
+export function polkitDirTrusted(facts: PathFacts | undefined, polkitdUid: number | undefined): boolean {
+  return facts?.type === 'dir' && polkitdUid !== undefined && facts.uid === polkitdUid && (facts.mode & 0o022) === 0;
+}
+
 /** null when owned by root (uid 0 or the host's `root` uid) and not group/world-writable. */
 export function trustProblem(facts: { readonly uid: number; readonly mode: number }, rootUid: number): string | null {
   if (facts.uid !== 0 && facts.uid !== rootUid) return `owned by uid ${facts.uid}, not root`;
@@ -1100,6 +1116,8 @@ export function plan(
   ]) {
     for (const dir of ancestorsBelow(target, host.trustRoot)) {
       if (managedDirs.has(dir) || judged.has(dir)) continue;
+      // Not marked judged: another target under the same directory is judged by rule 1 as usual.
+      if (target === layout.polkitPath && dir === dirname(target) && polkitDirTrusted(host.paths.get(dir), host.users.get(POLKIT_DAEMON_USER))) continue;
       if (pinnable.get(target) === dir && host.paths.get(dir)?.type === 'dir') continue; // judged per target: another may not pin it
       judged.add(dir);
       const facts = host.paths.get(dir);

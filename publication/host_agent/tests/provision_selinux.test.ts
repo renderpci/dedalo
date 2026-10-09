@@ -6,10 +6,13 @@
  * branch; the Remi socket directory is never in the table.
  */
 import { describe, expect, test } from 'bun:test';
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
 import type { HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
 import {
   DEFAULT_RULE_FACTS,
+  EL_DRILL_INPUTS,
   HOME_TRAVERSE_TYPE,
   HTTPD_READABLE_TYPES,
   IMPORT_LINE_PATTERN,
@@ -292,5 +295,17 @@ describe('system trees are never relabelled', () => {
     for (const path of ['/usr/local/bin', '/etc', '/var/lib', '/opt']) {
       expect(() => importLines([{ kind: 'fcontext', fileType: 'a', type: 'usr_t', spec: `${path}(/.*)?` }])).toThrow(/refusing a rule/);
     }
+  });
+});
+
+describe('EL_DRILL_INPUTS (the EL drill record ratchet input list)', () => {
+  test('sorted, unique, package-relative, every entry an existing file, this module and install.sh in', () => {
+    expect([...EL_DRILL_INPUTS]).toEqual([...new Set(EL_DRILL_INPUTS)].sort());
+    for (const path of EL_DRILL_INPUTS) {
+      expect(path.startsWith('/') || path.includes('..')).toBe(false);
+      expect(statSync(join(import.meta.dir, '..', path)).isFile()).toBe(true);
+    }
+    expect(EL_DRILL_INPUTS).toContain('src/provision/selinux.ts');
+    expect(EL_DRILL_INPUTS).toContain('deploy/install.sh');
   });
 });

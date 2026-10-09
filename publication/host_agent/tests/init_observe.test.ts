@@ -153,7 +153,10 @@ function elHost(release: 'rocky9' | 'rocky10' = 'rocky9'): FakeHost {
   put(host, '/etc/os-release', c('os-release'));
   put(host, '/etc/selinux/config', c('selinux_config'));
   host.entries.set('/etc/selinux/targeted', DIR());
-  for (const tool of ['/usr/sbin/semanage', '/usr/sbin/restorecon', '/usr/sbin/getsebool']) put(host, tool, null, FILE(0, 0o755));
+  for (const tool of ['/usr/sbin/semanage', '/usr/sbin/setfiles', '/usr/sbin/getsebool']) put(host, tool, null, FILE(0, 0o755));
+  // policycoreutils ships restorecon as a link to setfiles (measured, RHEL 9.8: `restorecon -> setfiles`).
+  host.entries.set('/usr/sbin/restorecon', { type: 'symlink', uid: 0, gid: 0, mode: 0o777 });
+  host.links.set('/usr/sbin/restorecon', '/usr/sbin/setfiles');
   put(host, '/etc/sudoers', c('sudoers'), FILE(0, 0o440));
   host.entries.set('/etc/sudoers.d', DIR(0, 0o750));
   put(host, '/proc/cpuinfo', fixture('typed/cpu/cpuinfo_x86_avx2.txt'));
@@ -277,6 +280,14 @@ describe('observeHostWide — EL 9, SELinux enforcing, httpd, AppStream + Remi',
     expect(facts.ports).toEqual([22, 80, 443, 3100]);
     expect(facts.fapolicyd.active).toBe(true);
     expect(facts.mounts.find(row => row.mountPoint === '/home')?.noexec).toBe(true);
+  });
+
+  test('SELinux tools: restorecon is a link to setfiles (EL); a dangling link is a missing tool', () => {
+    expect(facts.selinux.tools.restorecon).toBe(true);
+    const dangling = elHost();
+    dangling.links.delete('/usr/sbin/restorecon');
+    dangling.entries.delete('/usr/sbin/setfiles');
+    expect(observeHostWide(EL_DRAFT, ports(dangling)).selinux.tools).toEqual({ semanage: true, restorecon: false, getsebool: true });
   });
 
   test('NSS: authselect sss files systemd with sssd domain-less is files-only', () => {

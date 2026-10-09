@@ -182,6 +182,15 @@ export function unknownAnswers(items: readonly Item[], answers: ReadonlyMap<stri
   return problems;
 }
 
+/**
+ * One fapolicyd trust line for a file or a directory tree (a trailing `/`): `--file add` refuses a
+ * path already in the trust file (exit 9, measured fapolicyd 1.4.5) and `--file update` refreshes it,
+ * so the line is right on a first run and on every later one.
+ */
+export function fapolicydTrust(path: string): string {
+  return `fapolicyd-cli --file add ${path} --trust-file dedalo || fapolicyd-cli --file update ${path} --trust-file dedalo`;
+}
+
 /* ── builders ─────────────────────────────────────────────────────────────────────── */
 
 const MANUAL: ItemOption = Object.freeze({ id: 'manual', label: 'I will do it by hand (the commands are printed)', resolves: 'manual' });
@@ -533,11 +542,21 @@ function hostItems(env: Env): ComparedItem[] {
   // host.fapolicyd
   if (facts.fapolicyd.active) {
     const bun = layout?.bunBin ?? decl?.bun_bin ?? '<bun_bin>';
-    const commands = [`fapolicyd-cli --file add ${bun} --trust-file dedalo`];
-    if (layout?.web.nginxMap === 'conf_d') commands.push(`fapolicyd-cli --file add ${join(layout.host.mapRendererDir, 'bun')} --trust-file dedalo`);
+    const agentDir = layout?.agentDir ?? decl?.agent_dir ?? '<agent_dir>';
+    const commands = [fapolicydTrust(bun), fapolicydTrust(`${agentDir}/`)];
+    if (layout?.web.nginxMap === 'conf_d') commands.push(fapolicydTrust(join(layout.host.mapRendererDir, 'bun')));
     commands.push('fapolicyd-cli --update');
     out.push(
-      blocked('host.fapolicyd', 'host', 'fapolicyd', ['fapolicyd is running: it denies an untrusted binary whatever its label; init never edits its trust — run these, then answer manual (B4 proves it)'], commands, { hostWide: true }),
+      blocked(
+        'host.fapolicyd',
+        'host',
+        'fapolicyd',
+        [
+          'fapolicyd is running: to an unprivileged account it denies an untrusted program AND untrusted sources it types as a language (libmagic calls most .ts/.js files text/x-java) whatever their label — the agent runs its Bun as its own account over its own tree (measured, RHEL 9.8 default rules); init never edits its trust — run these (again after every code change: `update` refreshes the recorded hashes), then answer manual (B4 proves it)',
+        ],
+        commands,
+        { hostWide: true },
+      ),
     );
   } else out.push(right('host.fapolicyd', 'host', 'fapolicyd', ['fapolicyd is not running']));
 

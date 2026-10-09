@@ -93,6 +93,7 @@ import type {
 } from './plan';
 import {
   AGENT_TREE_WALK_CAP,
+  POLKIT_DAEMON_USER,
   PlanRefused,
   VALIDATED_BACKUP_SUFFIX,
   VALIDATED_CREATED_SUFFIX,
@@ -1173,7 +1174,8 @@ export function observeHost(
   const users = new Map<string, number>();
   // No v1 account on a v2-only instance.
   const accounts = [layout.identity.agentUser, ...(layout.v1 === null ? [] : [layout.v1.user]), layout.identity.v2User];
-  for (const name of ['root', ...accounts]) {
+  // The polkit daemon's account: the owner of EL's polkit rules directory (plan.ts POLKIT_DAEMON_USER).
+  for (const name of ['root', ...accounts, POLKIT_DAEMON_USER]) {
     const id = exec.userId(name);
     if (id !== null) users.set(name, id);
   }

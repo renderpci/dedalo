@@ -827,7 +827,11 @@ EXPECTS (`PinExpectation`): the exact owner, group and mode of its `MODES` row (
 `root:root 0711`, `v2Shared` `root:<v2 group> 0750`), or the facts `observeHost` saw — owner,
 group, mode, device and inode, carried in the plan's action — for `/var/log/<server>`; and on the
 same device as its own parent, so a filesystem mounted over the name is refused. A directory
-substituted after the pin receives nothing (the write lands in the pinned inode). Gates:
+substituted after the pin receives nothing (the write lands in the pinned inode). The plan judges
+the polkit rules file's immediate parent like every other ancestor but for ONE owner: EL's polkit
+package ships `/etc/polkit-1/rules.d` as `polkitd:root 0700` (measured, RHEL 9.8), and the daemon
+that evaluates the file already decides every grant, so that directory — for that file only — may
+be `POLKIT_DAEMON_USER`'s, never group- or world-writable (`plan.ts` `polkitDirTrusted`). Gates:
 `tests/provision_host_io.test.ts`, `tests/init_host_io.test.ts`, `tests/provision_plan.test.ts`.
 
 ### 9.6 Locks and the journal
@@ -942,8 +946,17 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   `context=` option, fapolicyd, an empty AVC search, and
   `systemd-analyze verify` with no warning naming a rendered unit. Its `--record` writes the EL
   drill record (`el_drill_record.json` under `engineering/`: inputs digest, hosts, measured
-  types and floors); a root ratchet then turns any change to an EL-relevant
-  input red until the drill runs again.
+  types and floors); the root ratchet `test/unit/publication_host_el_drill_record.test.ts`
+  then turns any change to an EL-relevant input (`EL_DRILL_INPUTS`, `src/provision/selinux.ts`)
+  red until the drill runs again, and names each supported major not yet recorded
+  (`PENDING_EL_HOSTS`, shrink-only). `--capture <dir>` keeps the raw discovery outputs (the argv
+  init's exec door runs) for the typed EL fixtures. First record: RHEL 9.8, 2026-10-09.
+  **fapolicyd** (default rules, measured RHEL 9.8): root may execute an untrusted Bun, but that
+  Bun may not read the TypeScript it runs (libmagic types it `text/x-java`, a language type), and
+  an unprivileged account may not run it at all. `install.sh` probes the read before the
+  hand-over (`fapolicyd_gate`) and refuses with the line that trusts its Bun; init's
+  `host.fapolicyd` prints the lines for the site's Bun, the agent's tree and (nginx `conf_d`) the
+  renderer's Bun, each `add || update` so a re-run refreshes the recorded hashes.
 
 ### 9.12 The sealed pairing package (two machines)
 

@@ -327,6 +327,26 @@ verify_bun() {
   [ "$_said" = "$_pin" ] || _fail "bun --version says '$_said', the pin is $_pin"
 }
 
+# fapolicyd_active: fapolicyd enforces on this host (its unit is active).
+fapolicyd_active() {
+  command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet fapolicyd 2>/dev/null
+}
+
+# fapolicyd_gate <bun> <entry> <bunfig>: under fapolicyd's default rules root may EXECUTE an
+# untrusted Bun (a trusted root subject may do anything), but that Bun may not READ the TypeScript
+# it runs: libmagic types it text/x-java, a language type an untrusted subject may not open
+# (measured, RHEL 9.8, fapolicyd 1.4.5: "EPERM reading …/cli.ts"). Probed by reading the entry;
+# refused with the lines that trust that one Bun (root then reads every file it needs).
+fapolicyd_gate() {
+  fapolicyd_active || return 0
+  # shellcheck disable=SC2086 # BUN_HANDOVER_FLAGS is a constant list of flags
+  env -i PATH=$HANDOVER_PATH HOME=/root LC_ALL=C "$1" $BUN_HANDOVER_FLAGS --config="$3" \
+    -e "require('node:fs').readFileSync('$2')" >/dev/null 2>&1 && return 0
+  die "fapolicyd denies $1 the code it runs ($2): trust that Bun, then run install.sh again:
+  fapolicyd-cli --file add $1 --trust-file dedalo || fapolicyd-cli --file update $1 --trust-file dedalo
+  fapolicyd-cli --update"
+}
+
 # root_dir <path>: when present, a root:root real directory not writable by group/other; else made 0700.
 root_dir() {
   if [ -e "$1" ] || [ -L "$1" ]; then
@@ -593,6 +613,7 @@ main() {
   [ -z "$DRAFT" ] || set -- --draft "$STAGE/draft.json" "$@"
 
   cd "$STAGE" || die "cannot enter $STAGE"
+  fapolicyd_gate "$BUNX" "$ENTRY" "$STAGE/$EMPTY_BUNFIG_NAME"
   # --config=<file> ONLY: measured on bun 1.4.2, `-c <file>` takes <file> as the ENTRY (nothing
   # of ours runs) and `-c=<file>` still loads $cwd/bunfig.toml (a preload there runs) — only the
   # long form replaces the cwd bunfig. tests/init_install_sh.test.ts pins this spelling.

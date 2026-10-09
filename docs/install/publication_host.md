@@ -678,15 +678,29 @@ ausearch -m AVC,USER_AVC -ts recent
 
 **Hardened hosts.** A filesystem mounted `noexec` under the home (CIS and STIG profiles often
 mount `/home` and `/var` so) excludes the home layout; under `/opt` it stops init, naming the
-mount. With `fapolicyd` active, systemd cannot start an untrusted Bun whatever its label: init
-stops until you trust the two binaries, and prints the lines:
+mount. With `fapolicyd` active (its default rules, measured on RHEL 9.8), an untrusted Bun may
+not read the TypeScript it runs — fapolicyd types most `.ts` and `.js` files as a language — and
+an unprivileged account may not run it at all, whatever its label. Trust is two steps, each
+printed for you:
+
+1. `install.sh` stops before it hands over, naming the one Bun it runs (the staged one on a first
+   install, the installed one on a re-run). Run its lines, then `install.sh` again.
+2. init then stops at `host.fapolicyd` until you trust the site's Bun **and the agent's code**
+   (the agent runs that Bun as its own account over its own files), plus the map renderer's Bun
+   on an nginx host. Run the lines, then answer `manual`:
 
 ```bash
 # publication host, as root
-fapolicyd-cli --file add /home/museum.org/.bun/bin/bun --trust-file dedalo
-fapolicyd-cli --file add /var/lib/dedalo_publication_host/_host/map_renderer/bun --trust-file dedalo
+fapolicyd-cli --file add /home/museum.org/.bun/bin/bun --trust-file dedalo || fapolicyd-cli --file update /home/museum.org/.bun/bin/bun --trust-file dedalo
+fapolicyd-cli --file add /home/museum.org/host_agent/ --trust-file dedalo || fapolicyd-cli --file update /home/museum.org/host_agent/ --trust-file dedalo
+fapolicyd-cli --file add /var/lib/dedalo_publication_host/_host/map_renderer/bun --trust-file dedalo || fapolicyd-cli --file update /var/lib/dedalo_publication_host/_host/map_renderer/bun --trust-file dedalo
 fapolicyd-cli --update
 ```
+
+Run them again after every code update: fapolicyd trusts a file by its recorded size and hash, and
+`--file update` records the new ones. The v1 API (PHP-FPM, a trusted program) answers under
+fapolicyd without a line of its own (measured, RHEL 9.8). The v2 releases the agent installs later
+are not covered by these lines, and v2 under fapolicyd has not been measured yet.
 
 **EL 8 is not supported.** It ships systemd 239 and kernel 4.18: the units need systemd 247
 (`LoadCredential=` delivers the agent's token, `ProtectProc=` hides other processes), and Bun

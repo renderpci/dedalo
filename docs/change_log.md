@@ -1292,6 +1292,19 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **"The guided publication-host install now runs on RHEL 9 with SELinux enforcing and fapolicyd: the polkit rules directory, the SELinux tools and fapolicyd's trust are judged as EL ships them."**
+
+    The first run of the EL install drill on a real RHEL 9.8 machine (SELinux enforcing) found three
+    things the guided install got wrong there. `provision apply` refused every instance because EL's
+    polkit package owns `/etc/polkit-1/rules.d` by the polkit daemon's account: that directory, as
+    the package ships it, is now accepted (any other owner is still refused). init reported the SELinux
+    tools missing because `/usr/sbin/restorecon` is a link to `setfiles` on EL: a link to a program
+    now counts. With fapolicyd active, an untrusted Bun may not even read the code it runs:
+    `install.sh` now stops before the hand-over with the one line that trusts its Bun, and init's
+    `host.fapolicyd` prints the lines for the site's Bun **and the agent's code** (re-runnable: an
+    existing entry is updated). See
+    [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
+
 - **On an nginx publication host, a media map that stops nginx at its reload is now rolled back and nginx restarted, and the panel counts a map that is not loaded as a red check.**
 
     The root service that renders the shared nginx media map (`dedalo-pubhost-map`) tests every new map before nginx reloads it. On SELinux hosts nginx can still stop on the reload itself, after a test that passed. Until now the service then only reported the failure and left nginx down, with every site on that server. It now watches nginx for five seconds after the reload. If nginx is down, the service puts back the map nginx had loaded (or removes a first one), tests it, restarts nginx and checks that it runs. The push is reported as failed and the panel keeps showing the map that is actually loaded. In **Maintenance › Publication hosts** the map's state is now a check of its own, **Host media map**. It is red when the host's agent is too old for the shared map, when the host refused this work system's map, or when this work system's map is not the one nginx serves. It is green when that map is loaded or when the map is placed by hand. Before, a map that was not loaded was painted red, but it was not counted with the other checks. See [Publication host agent](./install/publication_host.md#nginx-one-media-map-for-the-host).

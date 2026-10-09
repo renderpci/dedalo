@@ -526,7 +526,11 @@ export const DOMAIN = 'museum.test';
 export const SECOND_INSTANCE = 'drill_second';
 export const SECOND_DOMAIN = 'second.test';
 export const NGINX_INSTANCE = 'drill_nginx';
-export const NGINX_DOMAIN = 'nginx.test';
+/**
+ * Its site user is the domain's first label (makeSite): never `nginx`, the account EL's nginx package
+ * creates (an existing user is reused, and its home is not the site's).
+ */
+export const NGINX_DOMAIN = 'ngxsite.test';
 /** The v2-only site (no v1 block in its draft): the recommended shape for a new site, no PHP anywhere. */
 export const V2_ONLY_INSTANCE = 'drill_v2only';
 export const V2_ONLY_DOMAIN = 'v2only.test';
@@ -736,6 +740,8 @@ async function makeSite(ctx: Ctx, domain: string, server: 'apache' | 'nginx'): P
 		ctx,
 		[
 			`id ${user} >/dev/null 2>&1 || useradd --create-home --home-dir ${home} --shell /bin/sh ${user}`,
+			// A reused account must be the site's (a package account of that name is not).
+			`test "$(getent passwd ${user} | cut -d: -f6)" = ${home}`,
 			// The widening home.root must report: 0700 is what useradd gives on Debian 13 and EL (and
 			// adduser on Debian 12, whose useradd gives 0755; Ubuntu's gives 0750) — measured.
 			`chmod 0700 ${home}`,
@@ -1493,7 +1499,12 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		what: "a probe .php and a probe .phtml under the v1 release answer v1.user and fpm-fcgi through httpd: the include's <If> handler beats conf.d/php.conf's (this VM's EL major) — and under mod_php when it is loaded",
 		async run(ctx) {
 			const root = `/home/${DOMAIN}/dedalo/publication_api/v1`;
-			const probe = "<?php echo get_current_user() . '|' . php_sapi_name();";
+			// The PROCESS's user: get_current_user()/getmyuid() name the script file's OWNER (root here),
+			// posix_geteuid() needs php-process (not installed by default on EL) and open_basedir hides
+			// /proc — so the probe creates a file in the pool's own sys_temp_dir and reports its owner.
+			const probe =
+				"<?php $f = tempnam(sys_get_temp_dir(), 'dd'); $u = fileowner($f); unlink($f); echo $u . '|' . php_sapi_name();";
+			const v1Uid = (await must(ctx, `id -u ${INSTANCE}_v1`, 'the v1 uid')).trim();
 			await must(
 				ctx,
 				`systemctl disable --now nginx; systemctl enable --now httpd`,
@@ -1507,7 +1518,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			for (const file of ['probe.php', 'probe.phtml']) {
 				const got = await webCheck(ctx, DOMAIN, `/dedalo/publication/server_api/v1/${file}`);
 				check(
-					got.status === 200 && got.body.trim() === `${INSTANCE}_v1|fpm-fcgi`,
+					got.status === 200 && got.body.trim() === `${v1Uid}|fpm-fcgi`,
 					`${file} answered ${got.status} '${got.body.trim()}'`,
 				);
 			}
@@ -1591,20 +1602,113 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'fapolicyd',
 		family: 'el',
 		required: true,
-		what: 'with fapolicyd active, the printed trust lines make the agent start, and v2 /health answers',
+		what: "fapolicyd started on the converged host (`dnf install fapolicyd` beforehand; the leg starts it, and stops it after): the instance's Bun is DENIED to its own accounts (the control); install.sh refuses the untrusted Bun (root may run it, not let it read its TypeScript) with the line that trusts it; init's host.fapolicyd then prints the lines for the Bun AND the agent's tree, run as printed they make it runnable by the agent and v2 accounts, the re-run with `--decide host.fapolicyd=manual` converges and the restarted agent answers /health; whether systemd starts the untrusted agent anyway is measured",
 		async run(ctx) {
-			const active = (await ctx.runner.sh('systemctl is-active fapolicyd')).out.trim() === 'active';
-			ctx.facts.fapolicyd = active;
 			check(
-				active,
-				'fapolicyd is not active on this VM (run this leg on the fapolicyd VM, or --skip fapolicyd)',
+				(await ctx.runner.sh('rpm -q fapolicyd')).code === 0,
+				'fapolicyd is not installed on this VM (dnf install fapolicyd; the leg starts and stops it itself)',
 			);
+			const unit = await instanceUnits(INSTANCE);
+			const home = `/home/${DOMAIN}`;
+			const runsAs = async (user: string): Promise<boolean> =>
+				(await ctx.runner.sh(`runuser -u ${user} -- ${q(unit.bunBin)} --version`)).code === 0;
+			// `active` comes before the daemon enforces (it still loads its trust database): wait until a
+			// fresh copy of a system binary at an untrusted path is denied to an unprivileged account.
+			const probe = '/usr/local/libexec/dd_fapolicyd_probe';
 			await must(
 				ctx,
-				`systemctl restart dedalo-publication-host-${INSTANCE}`,
-				'restart the agent under fapolicyd',
+				`install -D -m 0755 /usr/bin/true ${probe} && systemctl enable --now fapolicyd && for i in $(seq 1 240); do runuser -u nobody -- ${probe} 2>/dev/null || exit 0; sleep 0.5; done; echo 'fapolicyd never denied the untrusted probe'; exit 1`,
+				'start fapolicyd (enforcing)',
+				180_000,
 			);
-			await healthOverSocket(ctx, INSTANCE);
+			try {
+				// The control: the instance's Bun is untrusted, so its own accounts may not run it (else the leg proves nothing).
+				check(
+					!(await runsAs(`${INSTANCE}_agent`)),
+					`${unit.bunBin} runs as ${INSTANCE}_agent under fapolicyd WITHOUT the trust lines: already trusted, the leg proves nothing`,
+				);
+				// Measured, not judged: systemd starting the untrusted Bun as the agent user anyway.
+				await ctx.runner.sh(`systemctl restart ${unit.agent}`, { timeoutMs: 60_000 });
+				ctx.facts.fapolicyd_systemd_starts_untrusted =
+					(
+						await ctx.runner.sh(
+							`sleep 2; curl -fsS --max-time 5 --unix-socket /run/dedalo_publication_host/${INSTANCE}/agent.sock http://localhost/publication/host_agent/health`,
+						)
+					).code === 0;
+				// Root may EXECUTE the untrusted Bun, but that Bun may not READ the TypeScript it runs:
+				// install.sh probes it and refuses with the line that trusts that Bun.
+				const gated = await ctx.runner.sh(
+					`${rerunSh(INSTANCE, home, '-- --dry-run --no-pair')} </dev/null`,
+				);
+				const gateLines = gated.err
+					.split('\n')
+					.map((line) => line.trim())
+					.filter((line) => line.startsWith('fapolicyd-cli '));
+				check(
+					gated.code === 3 &&
+						gated.err.includes(`fapolicyd denies ${unit.bunBin} the code it runs`) &&
+						gateLines.at(-1) === 'fapolicyd-cli --update',
+					`install.sh did not refuse the untrusted Bun with its trust line: exit ${gated.code}\n${gated.out.slice(-1500)}${gated.err.slice(-1500)}`,
+				);
+				for (const line of gateLines) await must(ctx, line, `install.sh's line '${line}'`, 120_000);
+				let report = '';
+				for (let i = 0; i < 60 && !report.includes('[host.fapolicyd]'); i += 1) {
+					report = (
+						await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --dry-run --no-pair')} </dev/null`)
+					).out;
+					if (!report.includes('[host.fapolicyd]')) await Bun.sleep(500);
+				}
+				const printed = fapolicydCommands(report);
+				check(
+					printed.some((line) => line.includes(` ${unit.bunBin} `)) &&
+						printed.at(-1) === 'fapolicyd-cli --update',
+					`init printed no host.fapolicyd trust lines naming ${unit.bunBin}:\n${report.slice(-3000)}`,
+				);
+				check(
+					printed.some((line) => line.includes(` ${unit.agentDir}/ `)),
+					`init's host.fapolicyd lines do not trust the agent's own tree:\n${printed.join('\n')}`,
+				);
+				for (const line of printed) await must(ctx, line, `the printed line '${line}'`, 120_000);
+				// fapolicyd-cli --update returns before the daemon reloaded its trust database.
+				await must(
+					ctx,
+					`for i in $(seq 1 60); do runuser -u ${INSTANCE}_agent -- ${q(unit.bunBin)} --version >/dev/null 2>&1 && exit 0; sleep 0.5; done; exit 1`,
+					`the printed lines make ${unit.bunBin} runnable by ${INSTANCE}_agent`,
+				);
+				check(
+					await runsAs(`${INSTANCE}_v2`),
+					`the printed lines do not make ${unit.bunBin} runnable by ${INSTANCE}_v2`,
+				);
+				const done = await ctx.runner.sh(
+					`${rerunSh(INSTANCE, home, '-- --yes --no-pair --decide host.fapolicyd=manual')} </dev/null`,
+					{ timeoutMs: 600_000 },
+				);
+				check(
+					done.code === 0,
+					`the re-run with host.fapolicyd=manual exited ${done.code}\n${done.out.slice(-3000)}${done.err}`,
+				);
+				await must(
+					ctx,
+					`systemctl restart ${unit.agent}`,
+					'restart the agent under fapolicyd',
+					120_000,
+				);
+				await must(
+					ctx,
+					`for i in $(seq 1 60); do curl -fsS --max-time 5 --unix-socket /run/dedalo_publication_host/${INSTANCE}/agent.sock http://localhost/publication/host_agent/health >/dev/null 2>&1 && exit 0; sleep 0.5; done; exit 1`,
+					'the agent answers under fapolicyd',
+				);
+				await healthOverSocket(ctx, INSTANCE);
+				ctx.facts.fapolicyd = true;
+			} finally {
+				// The legs after this one judge SELinux, not fapolicyd: leave the host as it was found.
+				await ctx.runner.sh(
+					`rm -f ${probe}; systemctl disable --now fapolicyd; systemctl restart ${unit.agent}`,
+					{
+						timeoutMs: 120_000,
+					},
+				);
+			}
 		},
 	},
 	{
@@ -1654,24 +1758,46 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'booleans-measured',
 		family: 'el',
 		required: true,
-		what: "the booleans the default install rests on, measured by turning each off: httpd_can_network_relay (the v2 proxy: off → an AVC and a 5xx) and httpd_enable_homedirs (with the home's -f d rule: off → the site still answers); restored after",
+		what: "the booleans the default install rests on, measured ON then OFF, each probe's AVCs counted from its own start: httpd_can_network_relay (the v2 proxy: off → an AVC, on → none) and httpd_enable_homedirs (the v1 probe under the home through the H rule: on → 200 without an AVC, off → still 200); restored after",
 		async run(ctx) {
 			const measured: Record<string, { needed_for: string; denied_without: boolean }> = {};
+			/** One probe: its status and the AVC denials logged from its own start (whole seconds: a pause first). */
+			const probeOnce = async (path: string): Promise<{ status: number; avcs: number }> => {
+				const since = (await must(ctx, 'sleep 1.1; date +%T', 'the probe start')).trim();
+				const got = await webCheck(ctx, DOMAIN, path);
+				const avc = await ctx.runner.sh(
+					`sleep 1; ausearch -m AVC -ts ${since} 2>/dev/null | grep -c 'denied' || true`,
+				);
+				return { status: got.status, avcs: Number(avc.out.trim()) };
+			};
+			// The v1 probe is v1-handler-probe's (a .php under the home's v1 release).
 			for (const [name, needed, probe] of [
 				['httpd_can_network_relay', 'the v2 proxy', '/dedalo/publication/server_api/v2/'],
-				['httpd_enable_homedirs', 'home traversal (the H rule replaces it)', '/'],
+				[
+					'httpd_enable_homedirs',
+					'home traversal (the H rule replaces it)',
+					'/dedalo/publication/server_api/v1/probe.php',
+				],
 			] as const) {
 				const before = (await must(ctx, `getsebool ${name}`, 'getsebool')).trim().endsWith('on');
-				await must(ctx, `setsebool ${name} off`, `${name} off`);
-				const got = await webCheck(ctx, DOMAIN, probe);
-				const avc = await ctx.runner.sh(
-					`ausearch -m AVC -ts recent 2>/dev/null | grep -c 'denied' || true`,
-				);
-				measured[name] = {
-					needed_for: needed,
-					denied_without: (got.status === 0 || got.status >= 400) && Number(avc.out.trim()) > 0,
-				};
-				await must(ctx, `setsebool ${name} ${before ? 'on' : 'off'}`, `${name} restored`);
+				try {
+					await must(ctx, `setsebool ${name} on`, `${name} on`);
+					const on = await probeOnce(probe);
+					check(on.avcs === 0, `${name} on: ${probe} still logged ${on.avcs} AVC denial(s)`);
+					if (name === 'httpd_enable_homedirs')
+						check(
+							on.status === 200,
+							`${name} on: the v1 probe answered ${on.status} (run v1-handler-probe first)`,
+						);
+					await must(ctx, `setsebool ${name} off`, `${name} off`);
+					const off = await probeOnce(probe);
+					measured[name] = {
+						needed_for: needed,
+						denied_without: off.avcs > 0 || off.status !== on.status,
+					};
+				} finally {
+					await ctx.runner.sh(`setsebool ${name} ${before ? 'on' : 'off'}`);
+				}
 			}
 			ctx.facts.booleans = measured;
 		},
@@ -1697,15 +1823,44 @@ async function s9Rules(
 ): Promise<{ spec: string; type: string; path: string; recursive: boolean }[]> {
 	const probe = [
 		`const { parseDeclaration } = await import(${JSON.stringify(join(AGENT_DIR, 'src/provision/schema.ts'))});`,
-		`const { derive } = await import(${JSON.stringify(join(AGENT_DIR, 'src/provision/layout.ts'))});`,
 		`const { selinuxRules } = await import(${JSON.stringify(join(AGENT_DIR, 'src/provision/selinux.ts'))});`,
-		`const text = await Bun.file('/etc/dedalo_publication_host/${instance}.json').text();`,
-		`const decl = parseDeclaration(JSON.parse(text), '${instance}');`,
-		'console.log(JSON.stringify(selinuxRules(derive(decl))));',
+		`const path = '/etc/dedalo_publication_host/${instance}.json';`,
+		// parseDeclaration returns { declaration, layout } (the layout derived from it).
+		'const { layout } = parseDeclaration(JSON.parse(await Bun.file(path).text()), path);',
+		'console.log(JSON.stringify(selinuxRules(layout)));',
 	].join('\n');
 	const done = await spawnText([process.execPath, '-e', probe], { cwd: AGENT_DIR });
 	if (done.code !== 0) throw new LegFailure(`computing the S9 rules: ${done.err}`);
 	return JSON.parse(done.out) as { spec: string; type: string; path: string; recursive: boolean }[];
+}
+
+/** One instance's agent unit, Bun and agent tree, from its declaration through the agent package in a CHILD. */
+async function instanceUnits(
+	instance: string,
+): Promise<{ agent: string; bunBin: string; agentDir: string }> {
+	const probe = [
+		`const { parseDeclaration } = await import(${JSON.stringify(join(AGENT_DIR, 'src/provision/schema.ts'))});`,
+		`const path = '/etc/dedalo_publication_host/${instance}.json';`,
+		'const { layout } = parseDeclaration(JSON.parse(await Bun.file(path).text()), path);',
+		'console.log(JSON.stringify({ agent: layout.agentUnitName, bunBin: layout.bunBin, agentDir: layout.agentDir }));',
+	].join('\n');
+	const done = await spawnText([process.execPath, '-e', probe], { cwd: AGENT_DIR });
+	if (done.code !== 0) throw new LegFailure(`reading ${instance}'s declaration: ${done.err}`);
+	return JSON.parse(done.out) as { agent: string; bunBin: string; agentDir: string };
+}
+
+/** The `$ ` command lines a report prints under its `[host.fapolicyd]` item. */
+export function fapolicydCommands(report: string): string[] {
+	const lines = report.split('\n');
+	const start = lines.findIndex((line) => /^\s*\[host\.fapolicyd\]/.test(line));
+	if (start === -1) return [];
+	const out: string[] = [];
+	for (const line of lines.slice(start + 1)) {
+		if (/^\s*\[[a-z0-9_.-]+\]/.test(line) || /^\S/.test(line)) break;
+		const m = line.match(/^\s+\$ (fapolicyd-cli .+)$/);
+		if (m) out.push((m[1] as string).trim());
+	}
+	return out;
 }
 
 /** buildNginxMap() and its hash, from the ENGINE in a child (the drill imports no engine module). */
@@ -1733,6 +1888,109 @@ async function pushMap(
 	);
 	const [status = '0', ...rest] = done.out.split('\n');
 	return { status: Number(status), body: rest.join('\n') };
+}
+
+/* ── --capture: the raw discovery outputs (the typed EL fixtures' replacements) ──────── */
+
+/** The constants discovery runs its commands with, from the agent package in a CHILD (exec_contract.ts). */
+async function discoveryConstants(): Promise<{
+	units: string[];
+	props: string[];
+	booleans: string[];
+}> {
+	const probe = `const m = await import(${JSON.stringify(join(AGENT_DIR, 'src/provision/exec_contract.ts'))}); console.log(JSON.stringify({ units: m.CANDIDATE_UNIT_PATTERNS, props: m.UNIT_SHOW_PROPERTIES, booleans: m.SELINUX_BOOLEANS }));`;
+	const done = await spawnText([process.execPath, '-e', probe], { cwd: AGENT_DIR });
+	if (done.code !== 0) throw new Error(`exec_contract.ts constants: ${done.err}`);
+	return JSON.parse(done.out) as { units: string[]; props: string[]; booleans: string[] };
+}
+
+/**
+ * One captured file per discovery read, named after the typed fixture it replaces (typed/<topic>/…)
+ * or the captured case's file name (captured/<case>/…): the argv init's exec door runs
+ * (src/exec.ts initExec/provisionExec), the files it reads. A non-zero exit and any stderr are kept
+ * beside the command's stdout (`<file>.exit`, `<file>.stderr`).
+ */
+export function captureCommands(c: {
+	readonly units: readonly string[];
+	readonly props: readonly string[];
+	readonly booleans: readonly string[];
+}): readonly (readonly [string, string])[] {
+	const show = (unit: string) =>
+		`systemctl show ${unit}.service ${c.props.map((p) => `-p ${p}`).join(' ')}`;
+	const home = `/home/${DOMAIN}`;
+	return [
+		['os-release', 'cat /etc/os-release'],
+		['kernel_osrelease', 'cat /proc/sys/kernel/osrelease'],
+		['cpuinfo.txt', 'cat /proc/cpuinfo'],
+		['mountinfo.txt', 'cat /proc/self/mountinfo'],
+		['proc_net_tcp.txt', 'cat /proc/net/tcp'],
+		['proc_net_tcp6.txt', 'cat /proc/net/tcp6'],
+		['attr_current', 'cat /proc/self/attr/current'],
+		['getenforce.txt', 'getenforce'],
+		['selinux_config', 'cat /etc/selinux/config'],
+		['getsebool.txt', c.booleans.map((b) => `getsebool ${b}`).join('; ')],
+		['semanage_fcontext_l_C.txt', 'semanage fcontext -l -C -n'],
+		['semanage_port_l_C.txt', 'semanage port -l -C -n'],
+		['semanage_port_l.txt', 'semanage port -l -n'],
+		[
+			'stat_labels.txt',
+			`stat -c '%C %n' -- /home ${home} ${home}/dedalo ${home}/dedalo/publication_api ${home}/dedalo/publication_api/v1 ${home}/host_agent ${home}/.bun/bin/bun /var/log/httpd/${DOMAIN} /run/php-fpm /mnt/dd_media`,
+		],
+		['restorecon_n.txt', `restorecon -R -n -v -- ${home}/dedalo; restorecon -n -v -- ${home}`],
+		['systemctl_version.txt', 'systemctl --version'],
+		[
+			'list_units_el9.txt',
+			`systemctl list-units --all --plain --no-legend --no-pager ${c.units.join(' ')}`,
+		],
+		['show_web_default.txt', show('httpd')],
+		['show_nginx.txt', show('nginx')],
+		['show_fpm.txt', show('php-fpm')],
+		['show_dedalo_ts.txt', show('dedalo-ts')],
+		['show_polkit.txt', show('polkit')],
+		['show_fapolicyd.txt', show('fapolicyd')],
+		['pkaction_version.txt', 'pkaction --version'],
+		['apache_S.txt', '/usr/sbin/httpd -S'],
+		['apache_M.txt', '/usr/sbin/httpd -M'],
+		['apache_includes.txt', '/usr/sbin/httpd -t -D DUMP_INCLUDES'],
+		['apache_v.txt', '/usr/sbin/httpd -v'],
+		['php.conf', 'cat /etc/httpd/conf.d/php.conf'],
+		['nginx_T.txt', 'nginx -T'],
+		['nginx_v.txt', 'nginx -v'],
+		['fpm_tt.txt', '/usr/sbin/php-fpm -tt'],
+		['php_version.txt', "php -n -r 'echo PHP_VERSION;'"],
+		['ls_php_fpm_d.txt', 'ls -1 /etc/php-fpm.d'],
+		['getent_passwd.txt', 'getent passwd'],
+		['getent_group.txt', 'getent group'],
+		['nsswitch.conf', 'cat /etc/nsswitch.conf'],
+		['shells', 'cat /etc/shells'],
+		['sudoers', 'cat /etc/sudoers'],
+		[
+			'polkit_rules_d.txt',
+			"stat -c '%U:%G %a %n' /etc/polkit-1 /etc/polkit-1/rules.d /usr/share/polkit-1/rules.d",
+		],
+		[
+			'selinux_tools.txt',
+			'ls -l /usr/sbin/semanage /usr/sbin/restorecon /usr/sbin/getsebool /usr/sbin/setfiles',
+		],
+	];
+}
+
+async function captureDiscovery(ctx: Ctx, dir: string): Promise<number> {
+	const commands = captureCommands(await discoveryConstants());
+	for (const [file, command] of commands) {
+		const done = await ctx.runner.sh(command, { timeoutMs: 120_000 });
+		writeFileSync(join(dir, file), done.out);
+		if (done.code !== 0) writeFileSync(join(dir, `${file}.exit`), `${done.code}\n`);
+		if (done.err.trim() !== '') writeFileSync(join(dir, `${file}.stderr`), done.err);
+	}
+	const release = (await ctx.runner.sh('. /etc/os-release; echo "$ID $VERSION_ID"')).out.trim();
+	const caseJson = {
+		typed: false,
+		captured: `the EL init drill on ${release} (SELinux enforcing), ${new Date().toISOString()}, after the legs: a real VM (systemd PID 1, an SELinux kernel) with the drill's instances installed`,
+		limits: "one VM and the drill's own sites; the NFS media mount is the network-media leg's",
+	};
+	writeFileSync(join(dir, 'case.json'), `${JSON.stringify(caseJson, null, 2)}\n`);
+	return commands.length;
 }
 
 /* ── the two worlds ────────────────────────────────────────────────────────────────── */
@@ -1868,6 +2126,9 @@ async function startWorkUnit(runner: Runner): Promise<void> {
 	if (done.code !== 0) throw new Error(`the stand-in work engine unit: ${done.err}${done.out}`);
 }
 
+/** The mirror's command line as a `pkill -f` pattern ([o]: never the `sh -c` that runs the pkill). */
+const MIRROR_PROCESS = '[o]penssl s_server -quiet -accept 8443';
+
 /** A local https mirror (openssl s_server -WWW) serving the verified Bun archive; its CA trusted by the target. */
 async function startMirror(runner: Runner, scratch: string): Promise<string> {
 	const arch = (await runner.sh('uname -m')).out.trim();
@@ -1898,6 +2159,9 @@ async function startMirror(runner: Runner, scratch: string): Promise<string> {
 		(await runner.sh('test -d /etc/pki/ca-trust/source/anchors')).code === 0
 			? 'cp /var/tmp/dd_mirror_ca.pem /etc/pki/ca-trust/source/anchors/dd_mirror.pem && update-ca-trust'
 			: 'cp /var/tmp/dd_mirror_ca.pem /usr/local/share/ca-certificates/dd_mirror.crt && update-ca-certificates >/dev/null';
+	// A mirror an earlier in-place run left would answer with the OLD certificate: stop it first — in a
+	// shell of its own (the script below names the s_server command line, pkill -f would match it).
+	await runner.sh(`pkill -f ${q(MIRROR_PROCESS)} || true`);
 	const started = await runner.sh(
 		[
 			'cd /var/tmp',
@@ -1950,7 +2214,11 @@ async function elWorld(
 	if (args.capture !== null) mkdirSync(args.capture, { recursive: true });
 	await startWorkUnit(runner);
 	const mirror = await startMirror(runner, scratch);
-	return { runner, source: '/opt/dedalo/master_dedalo', mirror, stop: async () => undefined };
+	// In place, nothing else ends the mirror: a re-run on the same VM starts its own.
+	const stop = async (): Promise<void> => {
+		await runner.sh(`pkill -f ${q(MIRROR_PROCESS)} || true`);
+	};
+	return { runner, source: '/opt/dedalo/master_dedalo', mirror, stop };
 }
 
 /* ── main ──────────────────────────────────────────────────────────────────────────── */
@@ -2061,6 +2329,10 @@ export async function main(argv: readonly string[]): Promise<number> {
 				failed.push(leg.name);
 				console.log(`${TAG} RED  ${leg.name}: ${(error as Error).message}`);
 			}
+		}
+		if (args.capture !== null) {
+			const files = await captureDiscovery(ctx, args.capture);
+			console.log(`${TAG} captured ${files} discovery outputs into ${args.capture}`);
 		}
 		if (failed.length === 0 && args.record) await writeRecord(ctx, passed, skipped);
 	} finally {

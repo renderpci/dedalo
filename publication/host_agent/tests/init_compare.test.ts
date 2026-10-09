@@ -207,7 +207,9 @@ const ROWS: readonly (readonly [string, () => Scn, string, Expect])[] = [
   ['noexec home under home layout: a layout reason, not this item', () => ({ draft: draft({ layout: 'home' }), facts: { ...debianHost(), mounts: [...debianHost().mounts, { mountPoint: '/home', fsType: 'ext4', readOnly: false, noexec: true, seclabel: false, context: null }] } }), 'host.noexec', { list: 'right' }],
   ['noexec home → layout system/manual', () => ({ facts: { ...debianHost(), mounts: [...debianHost().mounts, { mountPoint: '/home', fsType: 'ext4', readOnly: false, noexec: true, seclabel: false, context: null }] } }), 'declaration.layout', { list: 'decision', blocking: true, options: ['system', 'manual'] }],
   // host.fapolicyd
-  ['fapolicyd active', () => ({ facts: { ...elHost(), fapolicyd: { active: true } } }), 'host.fapolicyd', { list: 'decision', blocking: true, hostWide: true, options: ['manual'], command: /fapolicyd-cli --file add \/home\/example\.org\/\.bun\/bin\/bun --trust-file dedalo/ }],
+  ['fapolicyd active', () => ({ facts: { ...elHost(), fapolicyd: { active: true } } }), 'host.fapolicyd', { list: 'decision', blocking: true, hostWide: true, options: ['manual'], command: /^fapolicyd-cli --file add \/home\/example\.org\/\.bun\/bin\/bun --trust-file dedalo \|\| fapolicyd-cli --file update \/home\/example\.org\/\.bun\/bin\/bun --trust-file dedalo$/ }],
+  // The agent's sources: fapolicyd denies untrusted language files (libmagic: text/x-java) to the agent's account (measured, RHEL 9.8).
+  ['fapolicyd trusts the agent tree too', () => ({ facts: { ...elHost(), fapolicyd: { active: true } } }), 'host.fapolicyd', { command: /^fapolicyd-cli --file add \/home\/example\.org\/host_agent\/ --trust-file dedalo \|\| fapolicyd-cli --file update \/home\/example\.org\/host_agent\/ --trust-file dedalo$/ }],
   ['fapolicyd nginx conf_d trusts the renderer too', () => ({ facts: { ...nginx(), fapolicyd: { active: true } } }), 'host.fapolicyd', { command: /map_renderer\/bun/ }],
   ['fapolicyd inactive', () => ({}), 'host.fapolicyd', { list: 'right' }],
   // host.unit_sandbox

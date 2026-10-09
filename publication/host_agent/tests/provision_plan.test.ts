@@ -25,6 +25,7 @@ import { MAP_GRAMMAR, MAP_RENDERER_FILES } from '../src/provision/host_map_rende
 import { restoreconTargets, selinuxRules } from '../src/provision/selinux';
 import {
   AGENT_DEV_DEPENDENCIES,
+  POLKIT_DAEMON_USER,
   PlanRefused,
   RENDERERS,
   TEST_SCRATCH_DIR,
@@ -390,6 +391,30 @@ describe('plan refusals', () => {
     expect(refusals(l, host).join('\n')).toContain(
       `'/srv' (above the managed '${l.state.root}') is owned by uid 990, not root`,
     );
+  });
+
+  // EL's polkit package ships /etc/polkit-1/rules.d polkitd:root 0700 (measured, RHEL 9.8 polkit-0.117).
+  test("the polkit rules directory owned by the polkit daemon's account is the package's shape: no refusal", () => {
+    const l = layout();
+    const host = new FakeHost(l);
+    host.users.set(POLKIT_DAEMON_USER, 998);
+    Object.assign(entry(host, dirname(l.polkitPath)), { uid: 998, mode: 0o700 });
+    expect(() => plan(l, host.state())).not.toThrow();
+  });
+
+  test('…but owned by another account, or writable by its group, it is refused', () => {
+    const l = layout();
+    const other = new FakeHost(l);
+    other.users.set(POLKIT_DAEMON_USER, 997);
+    Object.assign(entry(other, dirname(l.polkitPath)), { uid: 998, mode: 0o700 });
+    expect(refusals(l, other).join('\n')).toContain(`'${dirname(l.polkitPath)}' (above the managed '${l.polkitPath}') is owned by uid 998, not root`);
+    const writable = new FakeHost(l);
+    writable.users.set(POLKIT_DAEMON_USER, 998);
+    Object.assign(entry(writable, dirname(l.polkitPath)), { uid: 998, mode: 0o770 });
+    expect(refusals(l, writable).join('\n')).toContain(`'${dirname(l.polkitPath)}' (above the managed '${l.polkitPath}') is owned by uid 998, not root`);
+    const noDaemon = new FakeHost(l);
+    Object.assign(entry(noDaemon, dirname(l.polkitPath)), { uid: 998, mode: 0o700 });
+    expect(refusals(l, noDaemon).join('\n')).toContain('is owned by uid 998, not root');
   });
 
   test('a managed path of the wrong type is refused', () => {

@@ -213,6 +213,19 @@ function isFile(fs: ObserveFs, path: string): boolean {
   return fs.lstat(path)?.type === 'file';
 }
 
+/**
+ * A tool the exec contract runs BY NAME (PROVISION_PATH): present when its path is a regular file OR
+ * a link resolving to one — EL's policycoreutils ships /usr/sbin/restorecon as a link to setfiles
+ * (measured, RHEL 9.8). Presence only: no trust is judged (nothing is pinned to this path).
+ */
+function isTool(fs: ObserveFs, path: string): boolean {
+  const found = fs.lstat(path);
+  if (found?.type === 'file') return true;
+  if (found?.type !== 'symlink') return false;
+  const target = fs.realpath(path);
+  return target !== null && fs.lstat(target)?.type === 'file';
+}
+
 /** A pool's effective values when pass 1 kept them (FpmDumpPool, stored as FpmPool in the facts); else none. */
 function poolValues(pool: unknown): Readonly<Record<string, string>> {
   return typeof pool === 'object' && pool !== null && 'values' in pool ? (pool as FpmDumpPool).values : {};
@@ -366,9 +379,9 @@ function observeSelinux(draft: ObserveDraft, ports: ObservePorts, fpm: readonly 
   const policy = config.type;
   const storePresent = policy !== null && fs.lstat(join('/etc/selinux', policy))?.type === 'dir';
   const tools = Object.freeze({
-    semanage: isFile(fs, SELINUX_TOOLS.semanage),
-    restorecon: isFile(fs, SELINUX_TOOLS.restorecon),
-    getsebool: isFile(fs, SELINUX_TOOLS.getsebool),
+    semanage: isTool(fs, SELINUX_TOOLS.semanage),
+    restorecon: isTool(fs, SELINUX_TOOLS.restorecon),
+    getsebool: isTool(fs, SELINUX_TOOLS.getsebool),
   });
   const contextText = mode === 'absent' ? null : io.readProcFile('/proc/self/attr/current');
   const rootContext = contextText === null ? null : (parseSelinuxContext(contextText) === null ? null : contextText.replace(/[\0\n\r]+$/g, '').trim());

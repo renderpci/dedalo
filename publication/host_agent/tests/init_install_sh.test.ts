@@ -438,3 +438,55 @@ describe('install.sh main', () => {
     expect(run.stderr).toContain('run as root');
   });
 });
+
+/**
+ * fapolicyd (measured, RHEL 9.8, fapolicyd 1.4.5 default rules): root may execute the untrusted Bun,
+ * but that Bun may not read the TypeScript it runs ("EPERM reading …/cli.ts"). install.sh probes the
+ * read before the hand-over and refuses with the line that trusts that Bun — never an EPERM trace.
+ */
+describe('install.sh fapolicyd_gate', () => {
+  const dir = join(realpathSync(tmpdir()), `dd_install_sh_fapolicyd_${process.pid}`);
+  const shims = join(dir, 'bin');
+  const bun = join(dir, 'bun');
+  const marker = join(dir, 'ran');
+  beforeAll(() => {
+    mkdirSync(shims, { recursive: true });
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  /** fapolicyd active or not (a `systemctl` shim), the Bun's read allowed or denied (a fake Bun). */
+  function gate(active: boolean, readable: boolean): { code: number; err: string; ran: boolean } {
+    writeFileSync(join(shims, 'systemctl'), `#!/bin/sh\n[ "$*" = 'is-active --quiet fapolicyd' ] && exit ${active ? 0 : 3}\nexit 1\n`);
+    chmodSync(join(shims, 'systemctl'), 0o755);
+    writeFileSync(bun, `#!/bin/sh\necho "$@" > ${marker}\nexit ${readable ? 0 : 1}\n`);
+    chmodSync(bun, 0o755);
+    rmSync(marker, { force: true });
+    const run = spawnSync('sh', ['-c', 'script=$0; set -- --lib "$@"; . "$script"; shift; fapolicyd_gate "$@"', INSTALL_SH, bun, '/opt/x/src/provision/cli.ts', '/opt/x/empty.bunfig.toml'], {
+      encoding: 'utf8',
+      env: { PATH: `${shims}:/usr/bin:/bin:/usr/sbin:/sbin`, LC_ALL: 'C' },
+    });
+    return { code: run.status ?? -1, err: run.stderr, ran: existsSync(marker) };
+  }
+
+  test('fapolicyd inactive: nothing is probed', () => {
+    expect(gate(false, false)).toEqual({ code: 0, err: '', ran: false });
+  });
+
+  test('active and the read allowed: through, the probe ran with the hand-over flags and the empty bunfig', () => {
+    const got = gate(true, true);
+    expect(got.code).toBe(0);
+    expect(readFileSync(marker, 'utf8')).toContain(`${BUN_HANDOVER_FLAGS.join(' ')} --config=/opt/x/empty.bunfig.toml -e require('node:fs').readFileSync('/opt/x/src/provision/cli.ts')`);
+  });
+
+  test('active and the read denied: exit 3 with the line that trusts that Bun', () => {
+    const got = gate(true, false);
+    expect(got.code).toBe(3);
+    expect(got.err).toContain(`fapolicyd denies ${bun} the code it runs`);
+    expect(got.err).toContain(`fapolicyd-cli --file add ${bun} --trust-file dedalo || fapolicyd-cli --file update ${bun} --trust-file dedalo`);
+    expect(got.err).toContain('fapolicyd-cli --update');
+  });
+
+  test('main calls it right before the hand-over', () => {
+    expect(TEXT).toMatch(/cd "\$STAGE" \|\| die "cannot enter \$STAGE"\n {2}fapolicyd_gate "\$BUNX" "\$ENTRY" "\$STAGE\/\$EMPTY_BUNFIG_NAME"\n/);
+  });
+});

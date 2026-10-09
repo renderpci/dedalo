@@ -259,7 +259,8 @@ function makeWorld(options: WorldOptions = {}): World {
     host.seedDir('/run/php-fpm');
     host.seedFile('/etc/selinux/config', 'SELINUX=enforcing\nSELINUXTYPE=targeted\n');
     host.seedDir('/etc/selinux/targeted');
-    for (const tool of ['/usr/sbin/semanage', '/usr/sbin/restorecon', '/usr/sbin/getsebool']) host.seedFile(tool, '', 0o755);
+    for (const tool of ['/usr/sbin/semanage', '/usr/sbin/setfiles', '/usr/sbin/getsebool']) host.seedFile(tool, '', 0o755);
+    host.seedLink('/usr/sbin/restorecon', 'setfiles', '/usr/sbin/setfiles'); // policycoreutils' shape (measured, RHEL 9.8)
     host.seedFile('/sys/fs/selinux/enforce', '1');
     host.labels.set(HOME, 'user_home_dir_t');
     host.labels.set('/home', 'home_root_t');
