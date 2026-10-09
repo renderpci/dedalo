@@ -45,7 +45,13 @@
 import type { DedaloError } from '../errors/index.ts';
 import type { PublicationHostServer } from '../media/publication_host_rules.ts';
 import { publicationHostFingerprint, publicationHostFingerprintMatches } from './pairing.ts';
-import { getHost, HOST_NAME, type PublicationHostRecord, RegistryError } from './registry.ts';
+import {
+	getHost,
+	HOST_NAME,
+	type PublicationHostRecord,
+	RESERVED_HOST_PREFIX,
+	RegistryError,
+} from './registry.ts';
 import { readHostToken, SecretError } from './secrets.ts';
 import {
 	AGENT_QUERY_GRAMMAR,
@@ -357,9 +363,13 @@ function requireToken(host: PublicationHostRecord): string {
 /** `local`: refused before anything was dialled (stage coordinate LOCAL_STAGE). */
 function pairingRefused(host: PublicationHostRecord, why: string, local = false): DedaloError {
 	provenPairings.delete(host.name);
+	// A pairing's own live proof runs under a throwaway staging name (pair_flow.ts): there is no
+	// registered host to `replace`, so the line says what to do with the artifacts instead.
+	const repair = host.name.startsWith(RESERVED_HOST_PREFIX)
+		? "This was the proof of a NEW pairing (nothing was registered): carry the agent's current artifacts (or a new sealed package) and pair again."
+		: `Re-pair the host from the agent artifacts, as the user that runs Dédalo (never root): ${REPAIR_COMMAND} replace ${host.name} …`;
 	console.error(
-		`[publication_host] PAIRING REFUSED for host '${host.name}': ${why}. Nothing carrying the bearer was sent on this proof. ` +
-			`Re-pair the host from the agent artifacts, as the user that runs Dédalo (never root): ${REPAIR_COMMAND} replace ${host.name} …`,
+		`[publication_host] PAIRING REFUSED for host '${host.name}': ${why}. Nothing carrying the bearer was sent on this proof. ${repair}`,
 	);
 	return hostError('publication_host.pairing_mismatch', host.name, {
 		message: `publication host '${host.name}' did not prove the pairing: ${why}`,

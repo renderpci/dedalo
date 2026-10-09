@@ -392,6 +392,10 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// panel push of the same release share one `bun install`. Deleted the moment the
 	// build settles (`.finally`); a restart clears it.
 	'core/publication_host/api_bundles.ts:buildsInFlight',
+	// Panel kit builds in flight (kit_build.ts), keyed backupRoot + release + draft name —
+	// never request identity — so a double click shares one install. Deleted the moment the
+	// build settles (`.finally`); a restart clears it.
+	'core/publication_host/kit_build.ts:kitBuildsInFlight',
 	// Publication-host READ proofs (phase 3, E6): host NAME → the registry fingerprint +
 	// address its unauthenticated /health proved. A fact about a fixed registry entry —
 	// no user, session or language. Success only; deleted on any transport failure, a

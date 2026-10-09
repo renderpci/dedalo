@@ -1409,6 +1409,54 @@ export const ERROR_REGISTRY = {
 		retryable: true,
 	},
 
+	// ── publication host setup (the panel's "New publication host": drafts, kit, package) ──
+	// engineering/PUBLICATION_HOST_SPEC.md §9.14. Not the publication_host.* family: nothing here
+	// is an agent answer (that family's codes are what a dialled agent call can end in). Every
+	// sentence is ENGINE-authored (the widget's), so the three refusals are public; the field list
+	// and the closed reasons ride `details` so the client names the input or the cause.
+	'publication_host_setup.draft_invalid': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_publication_host_setup_draft_invalid',
+		message: 'The publication host draft was refused',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['fields'],
+	},
+	/** The drafts file is corrupt or hand-edited: never read as "no drafts" (the registry's rule). */
+	'publication_host_setup.drafts_invalid': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_setup_drafts_invalid',
+		message: 'The publication host drafts file is unreadable or invalid',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	/** The kit could not be built from this release (kit_build.ts KitBuildReason). */
+	'publication_host_setup.kit_refused': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_publication_host_setup_kit_refused',
+		message: 'The publication host kit could not be built',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['reason'],
+	},
+	/** An uploaded pairing package was refused before anything was stored (pair_flow.ts reasons + the package's). */
+	'publication_host_setup.pairing_refused': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_publication_host_setup_pairing_refused',
+		message: 'The publication host pairing was refused',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['reason'],
+	},
+
 	// ── mailer ──────────────────────────────────────────────────────────────
 	'mailer.not_configured': {
 		category: 'unavailable',

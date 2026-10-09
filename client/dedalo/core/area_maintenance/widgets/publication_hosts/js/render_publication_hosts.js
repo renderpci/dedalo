@@ -15,6 +15,7 @@ import { check_row, fact_row, section } from '../../update_code/js/render_update
 import { has_media_copy } from './media_copy_view.js';
 import { probe_facts } from './probe_view.js';
 import { render_api_lockstep, render_runtime_invalid } from './render_api_lockstep.js';
+import { render_new_host } from './render_new_host.js';
 
 /**
  * RENDER_PUBLICATION_HOSTS
@@ -31,6 +32,8 @@ import { render_api_lockstep, render_runtime_invalid } from './render_api_lockst
  *     hosts            : Array<HostPanelRow> | null,  // null whenever state !== 'ok'
  *     runtime_invalid  : string | null,   // phase 4: the runtime results file is unreadable
  *     api_lockstep     : {engine_release, refused, checked_at, rows} // phase 4 (render_api_lockstep.js)
+ *     drafts_state     : 'ok' | 'drafts_invalid'   // root only: "New publication host"
+ *     drafts           : Array<DraftRow> | null      // (render_new_host.js)
  *   }
  *   HostPanelRow carries `qualities` and `probe` (non-secret registry fields)
  *   for the edit form, and `public_probe` (phase 6: the last public-URL probe
@@ -173,6 +176,11 @@ const get_content_data = function (self) {
 				on_push: (button) => push_apis(self, value.api_lockstep, button, body_response),
 			}),
 		);
+	}
+
+	// "New publication host" (root only: the server sends drafts to root alone)
+	if (is_root && typeof value.drafts_state === 'string') {
+		content_data.appendChild(render_new_host(self, value, body_response));
 	}
 
 	content_data.appendChild(body_response);

@@ -292,3 +292,17 @@
 - TS ground truth: `test/unit/publication_host_host_status_native.test.ts`,
   `test/unit/publication_host_widget_native.test.ts`; client:
   `client/dedalo/test/client/js/test_publication_hosts.js`. No fixture interaction.
+
+## Addendum 2026-10-09 — "New publication host" (drafts, kit, sealed-package pairing)
+
+- Root's `get_value` gains `drafts_state` + `drafts`, and the widget gains six root-only actions
+  (`propose_draft`, `save_draft`, `remove_draft`, `build_kit`, `download_kit`,
+  `pair_package`) and four `publication_host_setup.*` codes — recorded in full in
+  `engineering/wire_contract/WC-2026-10-09-publication-host-panel-setup.md`.
+- "Hosts are added only on the command line" now reads: hosts are added only by the pairing
+  path (`src/core/publication_host/pair_flow.ts`) — the CLI, or a sealed package that completes
+  a draft this panel created, its address taken from inside the package and proved live. The
+  panel still takes no typed address and no loose credential.
+- TS ground truth: `test/unit/publication_host_setup_native.test.ts`,
+  `test/unit/publication_host_widget_native.test.ts`; client:
+  `client/dedalo/test/client/js/test_publication_host_setup.js`. No fixture interaction.

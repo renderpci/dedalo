@@ -352,7 +352,8 @@ describe('pairOneMachine (spec §6 B5 steps 4-5)', () => {
   });
 
   test('the two slot sentences match the pairing CLI verbatim', async () => {
-    const cli = await Bun.file(`${import.meta.dir}/../../../scripts/publication_host_pair.ts`).text();
+    // the CLI's pairing path lives in the engine's pair_flow.ts (the CLI and the panel share it)
+    const cli = await Bun.file(`${import.meta.dir}/../../../src/core/publication_host/pair_flow.ts`).text();
     expect(cli).toContain('is already registered. Use \\`replace\\` to re-pair it.');
     expect(ALREADY_REGISTERED.test("a publication host named 'x' is already registered. Use `replace` to re-pair it.")).toBe(true);
     expect(cli).toContain("this agent is already registered as '${twin.name}'");

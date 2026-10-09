@@ -1653,10 +1653,12 @@ else {
 					target === 'publication/host_agent/src/provision/layout.ts' ||
 					target === 'publication/host_agent/src/provision/pairing_package.ts' ||
 					target === 'publication/host_agent/src/provision/exec_contract.ts' ||
-					target === 'publication/host_agent/src/provision/render/nginx_map_include.ts') &&
+					target === 'publication/host_agent/src/provision/render/nginx_map_include.ts' ||
+					target === 'publication/host_agent/src/provision/siblings.ts' ||
+					target === 'publication/host_agent/src/provision/init/draft.ts') &&
 				agentPackageClosure(target).escapes.length === 0,
 			reason:
-				"the publication agent package — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential). Exactly six files: exec.ts, imported only by the agent live drill for its argv/seam constants; and provision/render/engine_fragment.ts, the engine-fragment renderer (pure: its imports stay inside the agent package — security/pairing, provision/layout, render/types), imported only by the engine drill and its kit for ENGINE_KEYS/agentUrl and the two placeholders, to render the fragment an operator pastes; and provision/layout.ts, the host-layout derivation (its imports stay inside the agent package — node:path, instance/roots), imported only by the agent drill and its scene for pickConfigtestBinary, so the drill picks the configtest binary the provisioner itself would; and provision/pairing_package.ts, the sealed pairing package's ONE codec (node:crypto only), imported only by scripts/publication_host_pair.ts to open a package provision init sealed (and by its gate), so the format is written and read by one implementation; and provision/exec_contract.ts, the provisioner's closed-command and Bun-asset table, imported only by scripts/ci/bun_pin_hashes.ts for BUN_ASSETS, so the developer-side pin updater hashes exactly the assets install.sh and init download; and provision/render/nginx_map_include.ts, the renderer of the provisioned host-map include glob, imported only by the agent drill's scene so nginx includes exactly the glob the provisioner writes. None can reach the matrix, so no tool write-back lies behind them. The 'stays inside' claim is CHECKED, not assumed: each is admitted only while its transitive import closure (agentPackageClosure: static, re-export, dynamic and require, read by Bun's parser) stays under publication/host_agent/src/ and names no bare package but node:/bun builtins and the agent's own package.json dependencies.",
+				"the publication agent package — a SEPARATE deployable (its own package; imports nothing from the engine, holds no matrix credential). Exactly eight files: exec.ts, imported only by the agent live drill for its argv/seam constants; and provision/render/engine_fragment.ts, the engine-fragment renderer (pure: its imports stay inside the agent package — security/pairing, provision/layout, render/types), imported only by the engine drill and its kit for ENGINE_KEYS/agentUrl and the two placeholders, to render the fragment an operator pastes; and provision/layout.ts, the host-layout derivation (its imports stay inside the agent package — node:path, instance/roots), imported only by the agent drill and its scene for pickConfigtestBinary, so the drill picks the configtest binary the provisioner itself would; and provision/pairing_package.ts, the sealed pairing package's ONE codec (node:crypto only), imported only by scripts/publication_host_pair.ts to open a package provision init sealed (and by its gate), so the format is written and read by one implementation; and provision/exec_contract.ts, the provisioner's closed-command and Bun-asset table, imported only by scripts/ci/bun_pin_hashes.ts for BUN_ASSETS, so the developer-side pin updater hashes exactly the assets install.sh and init download; and provision/render/nginx_map_include.ts, the renderer of the provisioned host-map include glob, imported only by the agent drill's scene so nginx includes exactly the glob the provisioner writes; and provision/siblings.ts (the multi-instance rules, judged on derived layouts) and provision/init/draft.ts (the draft format, init's DEFAULTS and draftServesV1), imported by src/core/publication_host/drafts.ts and kit_build.ts so the maintenance panel judges a publication-host draft with the agent's OWN zero-dependency rules (owner decision D1: one rule set). None can reach the matrix, so no tool write-back lies behind them. The 'stays inside' claim is CHECKED, not assumed: each is admitted only while its transitive import closure (agentPackageClosure: static, re-export, dynamic and require, read by Bun's parser) stays under publication/host_agent/src/ and names no bare package but node:/bun builtins and the agent's own package.json dependencies.",
 		},
 		{
 			id: 'client-js-leaf',
@@ -3924,7 +3926,7 @@ else {
 				'host-agent-package',
 				'client-js-leaf',
 			]);
-			// the agent class admits exactly the six modules the drills, the pin updater and the pairing CLI read from
+			// the agent class admits exactly the eight modules the drills, the pin updater, the pairing CLI and the panel's draft judgement read from
 			expect(admittedBy('publication/host_agent/src/exec.ts')).toEqual(['host-agent-package']);
 			expect(admittedBy('publication/host_agent/src/provision/render/engine_fragment.ts')).toEqual([
 				'host-agent-package',
@@ -3941,12 +3943,40 @@ else {
 			expect(
 				admittedBy('publication/host_agent/src/provision/render/nginx_map_include.ts'),
 			).toEqual(['host-agent-package']);
+			// the panel's draft judgement (drafts.ts): the multi-instance rules and the draft format
+			expect(admittedBy('publication/host_agent/src/provision/siblings.ts')).toEqual([
+				'host-agent-package',
+			]);
+			expect(admittedBy('publication/host_agent/src/provision/init/draft.ts')).toEqual([
+				'host-agent-package',
+			]);
+			// a module NEXT to them is not admitted by proximity (the list is exact)
+			expect(admittedBy('publication/host_agent/src/provision/init/draft_schema.ts')).toEqual([]);
 			for (const entry of [
 				'publication/host_agent/src/provision/exec_contract.ts',
 				'publication/host_agent/src/provision/render/nginx_map_include.ts',
 			]) {
 				expect(agentPackageClosure(entry).escapes, entry).toEqual([]);
 			}
+			// siblings.ts: one in-package edge (layout.ts); draft.ts: a deep closure (pair, parse/*,
+			// selinux, the pairing package) — followed, and still inside the agent package
+			const siblingsClosure = agentPackageClosure(
+				'publication/host_agent/src/provision/siblings.ts',
+			);
+			expect(siblingsClosure.escapes).toEqual([]);
+			expect(siblingsClosure.files).toContain('publication/host_agent/src/provision/layout.ts');
+			const draftClosure = agentPackageClosure(
+				'publication/host_agent/src/provision/init/draft.ts',
+			);
+			expect(draftClosure.escapes).toEqual([]);
+			expect(draftClosure.files).toContain('publication/host_agent/src/provision/init/pair.ts');
+			expect(draftClosure.files).toContain(
+				'publication/host_agent/src/provision/pairing_package.ts',
+			);
+			// zod-free by closure: the engine's in-process judgement loads no agent dependency
+			expect(
+				draftClosure.files.some((f) => f.endsWith('/schema.ts') || f.endsWith('draft_schema.ts')),
+			).toBe(false);
 			// pairing_package.ts has NO in-package edge: node:crypto only (its closure is itself)
 			const packageClosure = agentPackageClosure(
 				'publication/host_agent/src/provision/pairing_package.ts',

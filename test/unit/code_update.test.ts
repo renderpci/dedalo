@@ -1914,6 +1914,10 @@ describe('the publication manifest is written at extract (publication host L1)',
 				version: 1,
 				digest: sha,
 				files: {
+					// the kit census (publication_manifest.ts KIT_PIN_FILES): the landed pin file
+					'.bun-version': createHash('sha256')
+						.update(readFileSync(join(targetRoot, '.bun-version')))
+						.digest('hex'),
 					'publication/server_api/v1/json/index.php': createHash('sha256')
 						.update(v1Index)
 						.digest('hex'),

@@ -682,6 +682,19 @@ const REQUEST_BOUNDED: Readonly<Record<string, string>> = {
 	'publication_hosts.probe_public':
 		'two bounded GETs through the public door (10 s deadline, 1 KiB cap each) + one runtime-file write; no database statement',
 	'error_reports.get_reports': 'one LIMITed page + one count of the error-report table',
+	// "New publication host" (publication_host_setup.ts): drafts, the kit, the sealed package.
+	'publication_hosts.propose_draft':
+		'reads the registry and the drafts file (both bounded private-file reads) and /etc/group; no database statement, no dial',
+	'publication_hosts.save_draft':
+		'the drafts file read + one locked atomic write (bounded, 1 MiB cap); the judgement is pure (derive + siblings); no database statement except one activity row',
+	'publication_hosts.remove_draft':
+		'the drafts file read + one locked atomic write + two unlinks of the cached kit; no database statement except one activity row',
+	'publication_hosts.build_kit':
+		"the cached kit, or one build: the verified tree re-hashed, one frozen bun install of the agent's production deps (the API bundles' installer, 10 min timeout) and one child parseDraft (60 s); the REQUEST waits at most pushAnswerWithinMs and answers running beyond it (like push_apis); no database statement",
+	'publication_hosts.download_kit':
+		'one re-hashed read of the cached kit, capped at 64 MiB; no database statement',
+	'publication_hosts.pair_package':
+		'one scrypt (off the event loop) over a package capped at 1 MiB, then the pairing: one unauthenticated /health proof over mTLS (no bearer is ever sent) and one locked registry write; no database statement except one activity row',
 };
 
 describe('only DECLARED actions are maintenance', () => {

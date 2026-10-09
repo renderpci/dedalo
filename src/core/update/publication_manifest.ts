@@ -1,6 +1,8 @@
 /**
  * THE PUBLICATION MANIFEST (publication host phase 4, decision L1) — a per-file
- * sha256 census of `publication/server_api/**`, written by the code updater into
+ * sha256 census of `publication/server_api/**` and of the publication-host kit's
+ * source (`publication/host_agent/**` + `.bun-version` + `.bun-sha256`, the
+ * panel's kit — PUBLICATION_AGENT_ROOT below), written by the code updater into
  * the QUARANTINE at the extract phase, beside the install stamp
  * (install_stamp.ts), BEFORE the smoke boot — so the tree that is validated is
  * byte-for-byte the tree that lands, manifest included.
@@ -31,8 +33,8 @@
  * ONE TOLERANCE RULE FOR BOTH SIDES. A path in PUBLICATION_TREE_TOLERATED is
  * never manifested, never drift, and never shipped (the bundle builder packs
  * exactly `manifestFilesFor`). The list mirrors the ignore files that apply to
- * this tree (publication/server_api/v2/.gitignore, the root .gitignore's
- * Publication API block, the updater's IGNORED_ROOT_ENTRIES) and a test binds
+ * this tree (publication/server_api/v2/.gitignore, publication/host_agent/.gitignore,
+ * the root .gitignore's Publication API block, the updater's IGNORED_ROOT_ENTRIES) and a test binds
  * it to them: `server_config_api.php` and `.env` are operator secrets that must
  * never leave the work host; `node_modules` is rebuilt engine-side (L3).
  *
@@ -61,6 +63,16 @@ export const PUBLICATION_MANIFEST_PATH = 'src/core/update/publication_manifest.j
 /** The tree the manifest covers, relative to the repo root. */
 export const PUBLICATION_API_ROOT = 'publication/server_api';
 
+/**
+ * THE PUBLICATION-HOST KIT'S SOURCE (engineering/PUBLICATION_HOST_SPEC.md §9.12): the agent's
+ * package and the two Bun pin files install.sh reads. Censused beside the APIs so the panel's
+ * kit (core/publication_host/kit_build.ts) ships what the updater verified — the same carry
+ * across the restart the API bundles rely on. A manifest written by an updater that predates
+ * this census has no kit entries, which the kit builder refuses (it never ships unverified).
+ */
+export const PUBLICATION_AGENT_ROOT = 'publication/host_agent';
+export const KIT_PIN_FILES: readonly string[] = Object.freeze(['.bun-version', '.bun-sha256']);
+
 export type PublicationApi = 'v1' | 'v2';
 
 export interface PublicationManifest {
@@ -82,7 +94,7 @@ export const PUBLICATION_TREE_TOLERATED: Readonly<{
 	suffixes: readonly string[];
 }> = Object.freeze({
 	names: Object.freeze(['.DS_Store', 'Thumbs.db', 'desktop.ini', 'server_config_api.php', '.env']),
-	dirs: Object.freeze(['node_modules', 'coverage', 'dist', '.cache']),
+	dirs: Object.freeze(['node_modules', 'coverage', 'dist', '.cache', '.test-tmp']),
 	suffixes: Object.freeze(['.tsbuildinfo', '.log']),
 });
 
@@ -111,7 +123,10 @@ function isSafeSegment(segment: string): boolean {
 }
 
 function isManifestKey(key: string): boolean {
-	return key.startsWith(`${PUBLICATION_API_ROOT}/`) && key.split('/').every(isSafeSegment);
+	if (KIT_PIN_FILES.includes(key)) return true;
+	const covered =
+		key.startsWith(`${PUBLICATION_API_ROOT}/`) || key.startsWith(`${PUBLICATION_AGENT_ROOT}/`);
+	return covered && key.split('/').every(isSafeSegment);
 }
 
 function hasManifestEntries(files: Record<string, unknown>): files is Record<string, string> {
@@ -172,6 +187,18 @@ async function listPublicationTree(treeRoot: string, rel: string): Promise<TreeL
 	return listing;
 }
 
+/** The kit's pin files at the tree root: present regular files, or irregular entries (refused). */
+async function listPinFiles(treeRoot: string): Promise<TreeListing> {
+	const listing: TreeListing = { files: [], irregular: [] };
+	const present = new Map((await listDir(treeRoot)).map((dirent) => [dirent.name, dirent]));
+	for (const name of KIT_PIN_FILES) {
+		const dirent = present.get(name);
+		if (dirent === undefined) continue;
+		(dirent.isFile() ? listing.files : listing.irregular).push(name);
+	}
+	return listing;
+}
+
 async function sha256File(path: string): Promise<string> {
 	const hash = createHash('sha256');
 	for await (const chunk of Bun.file(path).stream()) hash.update(chunk);
@@ -213,7 +240,13 @@ export async function writePublicationManifest(treeRoot: string, digest: string)
 			'Error. The publication manifest needs the verified archive digest — nothing was swapped',
 		);
 	}
-	const listing = await listPublicationTree(treeRoot, PUBLICATION_API_ROOT);
+	const apis = await listPublicationTree(treeRoot, PUBLICATION_API_ROOT);
+	const agent = await listPublicationTree(treeRoot, PUBLICATION_AGENT_ROOT);
+	const pins = await listPinFiles(treeRoot);
+	const listing: TreeListing = {
+		files: [...apis.files, ...agent.files, ...pins.files].sort(),
+		irregular: [...apis.irregular, ...agent.irregular, ...pins.irregular].sort(),
+	};
 	if (listing.irregular.length > 0) {
 		refuseUpdate(
 			'update.refused',
@@ -256,6 +289,13 @@ export async function readPublicationManifest(
 	} catch {
 		return null;
 	}
+}
+
+/** The manifested files of the kit's source (the agent package + the pin files), sorted. */
+export function manifestKitFiles(manifest: PublicationManifest): string[] {
+	return Object.keys(manifest.files)
+		.filter((key) => key.startsWith(`${PUBLICATION_AGENT_ROOT}/`) || KIT_PIN_FILES.includes(key))
+		.sort();
 }
 
 /** The manifested files of ONE API, sorted — exactly what a bundle may carry. */
@@ -344,5 +384,40 @@ export async function verifyPublicationTree(
 		return { ok: false, reason: 'digest_mismatch', drift: [] };
 	}
 	const drift = await treeDrift(treeRoot, api, manifest);
+	return drift.length === 0 ? { ok: true } : { ok: false, reason: 'drift', drift };
+}
+
+/**
+ * The kit's source (the agent package + the pin files) against the manifest, for the release
+ * the caller names: like verifyPublicationTree, and `drift` when the manifest holds no agent
+ * entry at all (written by an updater that predates the kit census) — never "nothing to check".
+ */
+export async function verifyKitSourceTree(
+	treeRoot: string,
+	expectedDigest?: string,
+): Promise<PublicationTreeVerdict> {
+	const manifest = await readPublicationManifest(treeRoot);
+	if (manifest === null) return { ok: false, reason: 'missing_manifest', drift: [] };
+	if (!(await digestAgrees(treeRoot, manifest, expectedDigest))) {
+		return { ok: false, reason: 'digest_mismatch', drift: [] };
+	}
+	const expected = manifestKitFiles(manifest);
+	const agentExpected = expected.filter((key) => key.startsWith(`${PUBLICATION_AGENT_ROOT}/`));
+	if (agentExpected.length === 0) {
+		return {
+			ok: false,
+			reason: 'drift',
+			drift: [`${PUBLICATION_AGENT_ROOT}/ (no files in the manifest)`],
+		};
+	}
+	const agent = await listPublicationTree(treeRoot, PUBLICATION_AGENT_ROOT);
+	const pins = await listPinFiles(treeRoot);
+	const present = [...agent.files, ...pins.files];
+	const unexpected = present.filter((key) => !Object.hasOwn(manifest.files, key));
+	const drift = [
+		...[...agent.irregular, ...pins.irregular].map((key) => `${key} (not a regular file)`),
+		...unexpected.map((key) => `${key} (not in the manifest)`),
+		...(await changedFiles(treeRoot, expected, new Set(present), manifest.files)),
+	].sort();
 	return drift.length === 0 ? { ok: true } : { ok: false, reason: 'drift', drift };
 }

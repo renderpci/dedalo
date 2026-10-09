@@ -85,6 +85,13 @@ const ACTIONS = [
 	'push_apis', // phase 4 (publication_host_push_apis_widget.test.ts gates its behaviour)
 	'reconcile_media_copy', // phase 5 (publication_host_media_copy_widget_native.test.ts too)
 	'probe_public', // phase 6 (publication_host_probe_native.test.ts gates it against the real stores)
+	// "New publication host" (publication_host_setup_native.test.ts gates their behaviour)
+	'propose_draft',
+	'save_draft',
+	'remove_draft',
+	'build_kit',
+	'download_kit',
+	'pair_package',
 ] as const;
 
 /** The served row keys, pinned: root gets the edit-form fields, a non-root admin no topology. */
@@ -355,7 +362,7 @@ describe('registration', () => {
 		expect(ids[ids.indexOf('site_builder_status') + 1]).toBe('publication_hosts');
 	});
 
-	test('spec, lazy get_value, exactly the seven actions, none unbounded, none ownership-marked', () => {
+	test('spec, lazy get_value, exactly the listed actions, none unbounded, none ownership-marked', () => {
 		expect(widget.spec).toEqual({
 			id: 'publication_hosts',
 			category: 'publication',
@@ -686,7 +693,9 @@ describe('root-only actions', () => {
 	});
 
 	test('an invalid host name is refused before any module load', async () => {
-		for (const action of ACTIONS) {
+		// propose_draft takes no name; save_draft names a bad one as a draft field
+		// (publication_host_setup_native.test.ts)
+		for (const action of ACTIONS.filter((a) => a !== 'propose_draft' && a !== 'save_draft')) {
 			const h = harness([record('pub_a')]);
 			// push_apis names its hosts as a list (`hosts`), every other action one `name`
 			const bad = action === 'push_apis' ? { hosts: ['../etc'] } : { name: '../etc' };

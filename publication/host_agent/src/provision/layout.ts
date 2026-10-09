@@ -622,10 +622,13 @@ export interface AgentLayout {
 
 export class LayoutError extends Error {
   readonly field: string;
+  /** The refusal sentence alone (without `layout: <field>:`): what a form shows beside the field. */
+  readonly reason: string;
   constructor(field: string, message: string) {
     super(`layout: ${field}: ${message}`);
     this.name = 'LayoutError';
     this.field = field;
+    this.reason = message;
   }
 }
 

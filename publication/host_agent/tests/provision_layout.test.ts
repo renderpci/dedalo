@@ -293,6 +293,13 @@ describe('derive — refusals name the field', () => {
   });
 });
 
+test('LayoutError carries its field and the bare sentence (`reason`): the engine panel shows it beside the field', () => {
+  const error = new LayoutError('v2.port', "'x' must be an integer port 1-65535");
+  expect(error.field).toBe('v2.port');
+  expect(error.reason).toBe("'x' must be an integer port 1-65535");
+  expect(error.message).toBe("layout: v2.port: 'x' must be an integer port 1-65535");
+});
+
 test('pathsOverlap', () => {
   expect(pathsOverlap('/a', '/a/b')).toBe(true);
   expect(pathsOverlap('/a/b', '/a')).toBe(true);

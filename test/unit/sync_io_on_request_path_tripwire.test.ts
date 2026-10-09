@@ -90,7 +90,19 @@ const ENGINE_CORPUS = writePathSourceFiles();
  * I/O). Written as an exact expected set, so a closure that wandered anywhere
  * else is a failure and not a wider census.
  */
-const REACHABLE_OUTSIDE_CORPUS = ['install/db/migrate.ts', 'install/db/online_migration.ts'];
+const REACHABLE_OUTSIDE_CORPUS = [
+	'install/db/migrate.ts',
+	'install/db/online_migration.ts',
+	// The publication agent's zero-dependency provisioning modules the engine judges a
+	// publication-host draft with (owner decision D1: one rule set) and opens a sealed pairing
+	// package with — reached from the publication_hosts widget's setup actions. Pure (derive,
+	// siblings, DEFAULTS) or node:crypto only; their closure is checked by
+	// tool_lossless_writeback_tripwire's host-agent-package class.
+	'publication/host_agent/src/provision/init/draft.ts',
+	'publication/host_agent/src/provision/layout.ts',
+	'publication/host_agent/src/provision/pairing_package.ts',
+	'publication/host_agent/src/provision/siblings.ts',
+];
 
 /**
  * The forbidden class: a synchronous call whose cost scales with a file's bytes

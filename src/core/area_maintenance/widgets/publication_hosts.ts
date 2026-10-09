@@ -66,9 +66,13 @@
  * (rules.ts nginxMapPanel: expected, applied, host hash, contribution count, managed, drift)
  * and, when it is non-null, the `nginx_map` CHECK (host_status.ts withNginxMapCheck).
  *
- * Hosts are ADDED only by `scripts/publication_host_pair.ts` on the work host. The panel
- * edits `public_url` / `qualities` / `probe` and removes a host; it never takes an
- * address or a credential.
+ * Hosts are ADDED by the pairing path (core/publication_host/pair_flow.ts): the CLI
+ * `scripts/publication_host_pair.ts` on the work host, or — two machines — the panel's
+ * `pair_package` (publication_host_setup.ts: root only, a sealed package that must complete a
+ * draft this panel created, its address taken from inside the package and proved live). The
+ * panel otherwise edits `public_url` / `qualities` / `probe` and removes a host; it never
+ * takes a typed address or a loose credential. `get_value` adds root's drafts
+ * (`drafts_state`, `drafts`).
  *
  * TESTABILITY: the widget is built by `createPublicationHostsWidget(loadDeps)`. Production
  * passes `loadDefaultDeps` (the real modules, dynamically imported like media_control's);
@@ -134,6 +138,12 @@ import {
 import { registryError } from '../../publication_host/wire.ts';
 import type { ReconcileReport } from '../../reconcile/registry.ts';
 import { type Principal, SUPERUSER_ID } from '../../security/permissions.ts';
+import {
+	createSetupActions,
+	draftRows,
+	loadDefaultSetupDeps,
+	type SetupDepsLoader,
+} from './publication_host_setup.ts';
 import { failAction, refuseAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 type ApiName = 'v1' | 'v2';
@@ -511,9 +521,17 @@ function rowProbe(panelRuntime: PanelRuntime, name: string): GateProbe {
 export async function publicationHostsValue(
 	deps: PublicationHostsDeps,
 	principal: Principal,
+	loadSetup?: SetupDepsLoader,
 ): Promise<WidgetResponse> {
 	const isRoot = principal.userId === SUPERUSER_ID;
 	const read = readRegistry(deps);
+	// ROOT ONLY: the drafts of "New publication host" (publication_host_setup.ts). Another admin's
+	// payload carries no `drafts` key at all (a draft names a future host's address and accounts).
+	const setup =
+		isRoot && loadSetup !== undefined
+			? await draftRows(await loadSetup(), read.ok ? read.file : null)
+			: null;
+	const draftsPart = setup === null ? {} : { drafts_state: setup.state, drafts: setup.drafts };
 	// ONE runtime read for the whole panel (panel_runtime.ts): a corrupt file is a red
 	// `runtime_invalid`, never a 500. Fixed decorator order for phases 5/6:
 	// rows → withMediaCopyCheck → attachProbe, each taking panelRuntime.runtime; then
@@ -524,6 +542,7 @@ export async function publicationHostsValue(
 		engine_qualities: deps.engineQualities(),
 		is_root: isRoot,
 		runtime_invalid: panelRuntime.runtime_invalid,
+		...draftsPart,
 	};
 	if (!read.ok) {
 		return {
@@ -1154,7 +1173,10 @@ function runtimeNote(report: ApiReconcileReport): string {
 	return ` The result could not be recorded (${report.runtime_error}): the panel cannot show it until the runtime file is fixed or deleted (deleting it is safe).`;
 }
 
-export function createPublicationHostsWidget(loadDeps: DepsLoader): WidgetModule {
+export function createPublicationHostsWidget(
+	loadDeps: DepsLoader,
+	loadSetupDeps: SetupDepsLoader = loadDefaultSetupDeps,
+): WidgetModule {
 	const bind =
 		(action: BoundAction) =>
 		(options: Record<string, unknown>, principal: Principal): Promise<WidgetResponse> =>
@@ -1174,8 +1196,11 @@ export function createPublicationHostsWidget(loadDeps: DepsLoader): WidgetModule
 			push_apis: bind(pushApisAction),
 			reconcile_media_copy: bind(reconcileMediaCopyAction),
 			probe_public: bind(probePublicAction),
+			// "New publication host" (root only): drafts, the kit, the sealed-package pairing
+			...createSetupActions(loadSetupDeps),
 		},
-		getValue: async (_options, principal) => publicationHostsValue(await loadDeps(), principal),
+		getValue: async (_options, principal) =>
+			publicationHostsValue(await loadDeps(), principal, loadSetupDeps),
 	};
 }
 

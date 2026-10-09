@@ -39,7 +39,6 @@
  * Exit: 0 written · 2 usage · 3 refused · 4 failed.
  */
 
-import { createHash } from 'node:crypto';
 import {
 	chmodSync,
 	existsSync,
@@ -55,41 +54,48 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
-	type BundleWriterEntry,
-	compareBundlePaths,
-	writeBundle,
-} from '../src/core/publication_host/bundle_writer.ts';
+	AGENT_REL,
+	buildKit,
+	type DraftVerdict,
+	draftJudgeProgram,
+	draftVerdictFrom,
+	excludedFromKit,
+	INSTALL_SH_REL,
+	KIT_AGENT_EXCLUDES,
+	KIT_DEPS_INSTALL_ARGS,
+	type KitConstants,
+	type KitFile,
+	kitConstants,
+	kitEntries,
+	kitFileName,
+	kitManifest,
+	kitProblems,
+	PackRefused,
+} from '../src/core/publication_host/kit.ts';
+
+// The kit's FORMAT is src/core/publication_host/kit.ts (the panel's kit_build.ts shares it);
+// re-exported for the gate.
+export {
+	buildKit,
+	type DraftVerdict,
+	excludedFromKit,
+	KIT_AGENT_EXCLUDES,
+	KIT_DEPS_INSTALL_ARGS,
+	type KitConstants,
+	type KitFile,
+	kitConstants,
+	kitEntries,
+	kitManifest,
+	kitProblems,
+	PackRefused,
+};
 
 export const EXIT = Object.freeze({ ok: 0, usage: 2, refused: 3, failed: 4 } as const);
 export const REPO_ROOT = resolve(import.meta.dir, '..');
-export const AGENT_REL = 'publication/host_agent';
-const INSTALL_SH_REL = `${AGENT_REL}/deploy/install.sh`;
+export { AGENT_REL };
+
 const TAG = '[hostagent:pack]';
 
-/**
- * Tracked agent files that are TEST material or documentation fixtures, never production: the
- * suite, its committed test env, and the rendered example trees (placeholder agent.env /
- * fragments a reader would mistake for an install's). Relative to publication/host_agent.
- */
-export const KIT_AGENT_EXCLUDES: readonly string[] = Object.freeze([
-	'tests/',
-	'.env.test',
-	'deploy/examples/',
-]);
-
-/**
- * The production install of the scratch copy — the release bundles' own argv
- * (api_bundles.ts V2_DEPS_INSTALL_ARGS, held equal by the gate): frozen, production, hoisted, and
- * NO lifecycle scripts (a dependency's install script never runs on the work host).
- */
-export const KIT_DEPS_INSTALL_ARGS: readonly string[] = Object.freeze([
-	'install',
-	'--frozen-lockfile',
-	'--production',
-	'--linker',
-	'hoisted',
-	'--ignore-scripts',
-]);
 /** The only ambient keys the install child sees: PATH, the cache (offline-capable), the proxies. */
 const INSTALL_ENV_PASSTHROUGH: readonly string[] = Object.freeze([
 	'PATH',
@@ -104,159 +110,7 @@ const INSTALL_ENV_PASSTHROUGH: readonly string[] = Object.freeze([
 	'no_proxy',
 ]);
 
-/** A file never carried, by name: credentials, keys, env files other than the shipped examples. */
-const SECRET_NAME =
-	/(^|\/)(\.env(\.(?!example$)[^/]*)?|[^/]*\.(pem|key|p12|pfx|jks)|id_(rsa|ecdsa|ed25519)[^/]*|SERVICE_TOKEN|credentials)$/;
-/** A PEM private key WITH a body (a code constant naming the armour line has none). */
-const PRIVATE_KEY_BLOCK =
-	/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----\s*[A-Za-z0-9+/=\s]{64,}-----END [A-Z0-9 ]*PRIVATE KEY-----/;
-
-export class PackRefused extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'PackRefused';
-	}
-}
-
-/* ── the verifier's constants (install.sh) ─────────────────────────────────────────── */
-
-export interface KitConstants {
-	readonly formatLine: string;
-	readonly manifestName: string;
-	readonly draftName: string;
-	readonly installName: string;
-	readonly sourceDir: string;
-	readonly pathPattern: RegExp;
-	readonly dotSegmentPattern: RegExp;
-	readonly maxEntries: number;
-	/** SOURCE_MANIFEST: `<path>:<file|tree>`. */
-	readonly sourceManifest: readonly { readonly path: string; readonly kind: 'file' | 'tree' }[];
-	readonly sourceOptional: readonly string[];
-}
-
-function shValue(text: string, name: string): string {
-	const match = new RegExp(`^${name}=(?:'([^']*)'|(\\S+))$`, 'm').exec(text);
-	if (match === null) throw new Error(`${INSTALL_SH_REL} has no ${name}= line`);
-	return match[1] ?? match[2] ?? '';
-}
-
-export function kitConstants(installSh: string): KitConstants {
-	const sourceManifest = shValue(installSh, 'SOURCE_MANIFEST')
-		.split(' ')
-		.map((entry) => {
-			const [path = '', kind = ''] = entry.split(':');
-			if (kind !== 'file' && kind !== 'tree') throw new Error(`SOURCE_MANIFEST entry '${entry}'`);
-			return Object.freeze({ path, kind: kind as 'file' | 'tree' });
-		});
-	return Object.freeze({
-		formatLine: shValue(installSh, 'KIT_FORMAT_LINE'),
-		manifestName: shValue(installSh, 'KIT_MANIFEST_NAME'),
-		draftName: shValue(installSh, 'KIT_DRAFT_NAME'),
-		installName: shValue(installSh, 'KIT_INSTALL_NAME'),
-		sourceDir: shValue(installSh, 'KIT_SOURCE_DIR'),
-		pathPattern: new RegExp(shValue(installSh, 'KIT_PATH_RE')),
-		dotSegmentPattern: new RegExp(shValue(installSh, 'KIT_DOT_SEGMENT_RE')),
-		maxEntries: Number(shValue(installSh, 'KIT_MAX_ENTRIES')),
-		sourceManifest: Object.freeze(sourceManifest),
-		sourceOptional: Object.freeze(shValue(installSh, 'SOURCE_OPTIONAL').split(' ').filter(Boolean)),
-	});
-}
-
-/* ── the kit's files (pure) ────────────────────────────────────────────────────────── */
-
-export interface KitFile {
-	/** Kit-relative (`source/…`, `draft.json`, `install.sh`); never the MANIFEST. */
-	readonly path: string;
-	readonly bytes: Uint8Array;
-	readonly executable: boolean;
-}
-
 const byPath = (a: string, b: string): number => Buffer.compare(Buffer.from(a), Buffer.from(b));
-const sha256 = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
-
-/** Every reason this file set is not a kit install.sh would accept, or would carry a secret. */
-export function kitProblems(files: readonly KitFile[], constants: KitConstants): string[] {
-	const problems: string[] = [];
-	const seen = new Set<string>();
-	for (const file of files) {
-		if (!constants.pathPattern.test(file.path) || constants.dotSegmentPattern.test(file.path)) {
-			problems.push(
-				`'${file.path}' is outside the kit path grammar (${constants.pathPattern.source})`,
-			);
-		}
-		if (file.path === constants.manifestName)
-			problems.push(`'${file.path}' is the MANIFEST's own name`);
-		if (seen.has(file.path)) problems.push(`'${file.path}' is listed twice`);
-		seen.add(file.path);
-		if (SECRET_NAME.test(file.path))
-			problems.push(`'${file.path}' is named like a credential: a kit never carries a secret`);
-		else if (PRIVATE_KEY_BLOCK.test(Buffer.from(file.bytes).toString('latin1'))) {
-			problems.push(`'${file.path}' holds a PEM private key: a kit never carries a secret`);
-		}
-	}
-	for (const need of [constants.draftName, constants.installName]) {
-		if (!seen.has(need)) problems.push(`the kit has no ${need}`);
-	}
-	// + the MANIFEST, + one directory per ancestor: still a cap install.sh's listing check applies
-	if (files.length + 1 > constants.maxEntries)
-		problems.push(
-			`the kit holds ${files.length + 1} files (install.sh refuses more than ${constants.maxEntries} entries)`,
-		);
-	return problems;
-}
-
-/** The MANIFEST: the format line, then `<sha256>  <path>` per file in byte order of the path. */
-export function kitManifest(files: readonly KitFile[], constants: KitConstants): string {
-	const lines = [...files]
-		.sort((a, b) => byPath(a.path, b.path))
-		.map((file) => `${sha256(file.bytes)}  ${file.path}`);
-	return `${constants.formatLine}\n${lines.join('\n')}\n`;
-}
-
-/** The archive's entries in tree order: the MANIFEST, every file, and each ancestor directory once. */
-export function kitEntries(
-	files: readonly KitFile[],
-	constants: KitConstants,
-): BundleWriterEntry[] {
-	const manifest = new TextEncoder().encode(kitManifest(files, constants));
-	const entries = new Map<string, BundleWriterEntry>();
-	entries.set(constants.manifestName, {
-		path: constants.manifestName,
-		type: 'file',
-		mode: 0o644,
-		data: manifest,
-	});
-	for (const file of files) {
-		const parts = file.path.split('/');
-		for (let i = 1; i < parts.length; i += 1) {
-			const dir = parts.slice(0, i).join('/');
-			if (!entries.has(dir)) entries.set(dir, { path: dir, type: 'dir', mode: 0o755 });
-		}
-		entries.set(file.path, {
-			path: file.path,
-			type: 'file',
-			mode: file.executable ? 0o755 : 0o644,
-			data: file.bytes,
-		});
-	}
-	return [...entries.values()].sort((a, b) => compareBundlePaths(a.path, b.path));
-}
-
-/** The kit's bytes and sha256. Refuses (PackRefused) a file set kitProblems names anything in. */
-export async function buildKit(
-	files: readonly KitFile[],
-	constants: KitConstants,
-): Promise<{ bytes: Uint8Array; sha256: string }> {
-	const problems = kitProblems(files, constants);
-	if (problems.length > 0) throw new PackRefused(problems.join('\n'));
-	const entries = kitEntries(files, constants);
-	async function* source(): AsyncGenerator<BundleWriterEntry> {
-		yield* entries;
-	}
-	const { stream, sha256: digest } = await writeBundle(source());
-	const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-	return { bytes, sha256: await digest };
-}
 
 /* ── collecting them from this checkout (I/O) ──────────────────────────────────────── */
 
@@ -313,11 +167,6 @@ export function trackedFiles(repo: string, paths: readonly string[]): Map<string
 	return out;
 }
 
-/** Is a tracked agent path test material (KIT_AGENT_EXCLUDES)? `rel` is relative to the agent dir. */
-export function excludedFromKit(rel: string): boolean {
-	return KIT_AGENT_EXCLUDES.some((ex) => (ex.endsWith('/') ? rel.startsWith(ex) : rel === ex));
-}
-
 function readTracked(repo: string, rel: string): Uint8Array {
 	const full = join(repo, rel);
 	let st: ReturnType<typeof lstatSync>;
@@ -363,43 +212,17 @@ export function walkFiles(
 	return out;
 }
 
-export interface DraftVerdict {
-	readonly instance: string;
-	readonly servesV1: boolean;
-}
-
 /**
  * The agent's OWN parseDraft (draft_schema.ts) and draftServesV1 (draft.ts), in a child Bun inside
  * the scratch copy — the code and the zod that go into the kit judge the draft, and this script
- * imports no agent module.
+ * imports no agent module (kit.ts draftJudgeProgram, shared with the panel).
  */
 export function judgeDraft(scratchAgent: string, draftPath: string): DraftVerdict {
-	const probe = [
-		`const { parseDraft } = await import(${JSON.stringify(join(scratchAgent, 'src/provision/init/draft_schema.ts'))});`,
-		`const { draftServesV1 } = await import(${JSON.stringify(join(scratchAgent, 'src/provision/init/draft.ts'))});`,
-		'let raw;',
-		`try { raw = JSON.parse(await Bun.file(${JSON.stringify(draftPath)}).text()); } catch { console.log(JSON.stringify({ ok: false, message: 'the draft is not JSON' })); process.exit(0); }`,
-		"try { const d = parseDraft(raw, 'the draft'); console.log(JSON.stringify({ ok: true, instance: d.instance, servesV1: draftServesV1(d) })); }",
-		'catch (e) { console.log(JSON.stringify({ ok: false, message: String(e && e.message ? e.message : e) })); }',
-	].join('\n');
-	const done = run([process.execPath, '--no-install', '-e', probe], scratchAgent);
-	const line = done.out.trim().split('\n').at(-1) ?? '';
-	let verdict: { ok: boolean; instance?: string; servesV1?: boolean; message?: string };
-	try {
-		verdict = JSON.parse(line);
-	} catch {
-		throw new Error(
-			`judging the draft with the agent's parseDraft failed (exit ${done.code}): ${done.err.trim().split('\n').slice(-3).join(' ')}`,
-		);
-	}
-	if (!verdict.ok)
-		throw new PackRefused(
-			`the draft is refused by the agent's own validation:\n${verdict.message ?? ''}`,
-		);
-	const instance = verdict.instance ?? '';
-	if (!/^[a-z][a-z0-9_]{1,31}$/.test(instance))
-		throw new PackRefused(`the draft's instance '${instance}' is not an instance name`);
-	return { instance, servesV1: verdict.servesV1 === true };
+	const done = run(
+		[process.execPath, '--no-install', '-e', draftJudgeProgram(scratchAgent, draftPath)],
+		scratchAgent,
+	);
+	return draftVerdictFrom(done.out, done.code, done.err);
 }
 
 export interface CollectOptions {
@@ -561,7 +384,7 @@ export async function runPack(
 		const constants = kitConstants(readFileSync(join(repo, INSTALL_SH_REL), 'utf8'));
 		const collected = collectKit({ repo, draftPath, scratch, ...seams }, constants);
 		const kit = await buildKit(collected.files, constants);
-		const out = resolve(args.out ?? `dedalo_publication_host_kit_${collected.instance}.tar.gz`);
+		const out = resolve(args.out ?? kitFileName(collected.instance));
 		const tmp = join(dirname(out), `.${basename(out)}.${process.pid}.tmp`);
 		writeFileSync(tmp, kit.bytes);
 		chmodSync(tmp, 0o644);

@@ -305,6 +305,33 @@ data_manager.request = async function(options) {
 * the request is in flight; they are cleared on settle in `request` itself.
 * @type {Map<string, Promise<Object>>}
 */
+/**
+* DEBUG_REDACTED_OPTION_KEYS
+* Request option keys whose VALUE never reaches the SHOW_DEBUG request line: a
+* one-time passphrase and the sealed pairing package (publication_hosts
+* pair_package), a password. The request itself is unchanged.
+*/
+export const DEBUG_REDACTED_OPTION_KEYS = Object.freeze(['passphrase', 'package_base64', 'password'])
+
+/**
+* DEBUG_REDACTED
+* A shallow copy of the request options for the debug line, with
+* body.options' secret keys replaced by a marker.
+* @param {Object} merged_options
+* @return {Object}
+*/
+export const debug_redacted = function(merged_options) {
+	const options = merged_options?.body?.options
+	if (!options || typeof options!=='object') {
+		return merged_options
+	}
+	const redacted = { ...options }
+	for (const key of DEBUG_REDACTED_OPTION_KEYS) {
+		if (Object.hasOwn(redacted, key)) redacted[key] = '[redacted]'
+	}
+	return { ...merged_options, body: { ...merged_options.body, options: redacted } }
+}//end debug_redacted
+
 const in_flight_requests = new Map()
 
 
@@ -524,7 +551,7 @@ const execute_request = async function(options) {
 	if(SHOW_DEBUG) {
 		const action		= body?.action || 'load';
 		const source_model	= body?.source?.model || ''
-		console.warn(`> data_manager request ${method}:`, action.toUpperCase(), source_model, merged_options);
+		console.warn(`> data_manager request ${method}:`, action.toUpperCase(), source_model, debug_redacted(merged_options));
 	}
 
 	// recovery mode. Auto add if environment recovery_mode is true

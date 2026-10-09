@@ -218,7 +218,7 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   reports only their presence. They are not in `.env` because that file is append-only and
   frozen at boot (a rotated token would need a restart), and its fixed key names cannot
   express N hosts.
-- **Adding a host is an operator ceremony on the work host, never a form.**
+- **Adding a host is an operator ceremony on the work host, never a typed address.**
   `scripts/publication_host_pair.ts` runs as the user that runs Dédalo, the owner of
   `<private>` (`sudo -u <engine user> …`). It refuses any other uid, root included,
   because root-owned 0600 secrets would be unreadable by the engine. It reads the agent's
@@ -232,7 +232,12 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
   the proof does it write the secrets under the host's name and the registry record, under
   one registry lock. `--dry-run` keeps nothing and sweeps nothing. An address typed into a web form would be an SSRF and
   credential-exfiltration surface. The panel edits only `public_url`, `qualities` and the
-  probe paths, and it can remove a host.
+  probe paths, and it can remove a host. ONE exception, still without a typed address: the
+  panel's `pair_package` (§9.14) pairs a two-machine host from the sealed package, whose
+  address must equal the listener of a draft the panel itself created and is proved live. The
+  pairing itself is ONE implementation, `src/core/publication_host/pair_flow.ts` `pairWith`
+  (fragment grammar, address policy, token, bundle rule, fingerprint, slot, live proof, the
+  locked commit), which the CLI and the panel both call.
 - **One door.** `src/core/publication_host/transport.ts` is the only engine code that
   dials an agent. It is the fourth outbound door (`engineering/OUTBOUND_SPEC.md` §2.1):
   exact address, mTLS or unix, bounded, redirects refused.
@@ -668,7 +673,7 @@ one (must answer 404): `src/core/publication_host/probe.ts` (`validateProbePaths
 | 4 | Updater pushes the API bundles after an engine update. **Built:** `src/core/update/publication_manifest.ts` (extract-time manifest), `src/core/publication_host/bundle_writer.ts`, `src/core/publication_host/api_bundles.ts`, `src/core/publication_host/api_reconcile.ts` (confirm hook, `push_apis`, scheduled dry run), `src/core/publication_host/runtime.ts`, `bun run test:pubhost:engine` (`[lockstep]` rows). §3 *Lockstep*. | 2, 3 |
 | 5 | `copy` mode: the media copy target + reconcile. **Built:** agent `media.put` / `media.delete` / `media.mark` / `media.manifest` (§6), `src/diffusion/targets/mediastore/media_copy.ts` (desired set, planner), `src/diffusion/targets/mediastore/media_copy_apply.ts`, `src/diffusion/targets/mediastore/media_copy_worker.ts`, `mediaCopyTargetLockKey` in `src/core/diffusion_bridge/target_lock.ts`, the `pub/` transition seam `src/diffusion/targets/mediastore/pub_transitions.ts`, `bun run test:pubhost:agent` (`[copy]` rows). §5.2. | 2, 3 |
 | 6 | Public-URL probe, on change and scheduled. **Built:** `src/core/publication_host/probe.ts`, `bun run test:pubhost:probe` (`scripts/publication_host_probe_drill.ts`). §7. | 3 |
-| 7 | The guided install, `provision init` (§9): discovery, comparison, confirmed action, the dedicated v1 pool, the web include, SELinux labels, the systemd profile, the locks, B4/B5; and the host-wide nginx map (§9.7). **In integration:** `publication/host_agent/deploy/install.sh`, `publication/host_agent/src/provision/init/` (B4 `verify.ts`, B5 `pair.ts`), `publication/host_agent/src/provision/selinux.ts`, the root map renderer `publication/host_agent/src/rules/host_map_main.ts`; drills `bun run test:pubhost:init` (Debian, local-only) and `bun run test:pubhost:init:el` (EL VMs, local-only, §9.11). | 2, 3 |
+| 7 | The guided install, `provision init` (§9): discovery, comparison, confirmed action, the dedicated v1 pool, the web include, SELinux labels, the systemd profile, the locks, B4/B5; and the host-wide nginx map (§9.7). **In integration:** `publication/host_agent/deploy/install.sh`, `publication/host_agent/src/provision/init/` (B4 `verify.ts`, B5 `pair.ts`), `publication/host_agent/src/provision/selinux.ts`, the root map renderer `publication/host_agent/src/rules/host_map_main.ts`; drills `bun run test:pubhost:init` (Debian, local-only) and `bun run test:pubhost:init:el` (EL VMs, local-only, §9.11); the panel's New publication host (§9.14: `src/core/publication_host/drafts.ts`, `src/core/publication_host/kit_build.ts`, `src/core/publication_host/pair_flow.ts`). | 2, 3 |
 
 Decided per phase, in its own plan: host registry storage (phase 3:
 `<private>/publication_hosts.json` + per-host secret dirs, §2.1), transport (phase 2: mTLS +
@@ -956,12 +961,14 @@ echo, or one line on `--passphrase-stdin`). The package is opened in memory and 
 take EXACTLY the loose-file path — fragment grammar, address policy, token resolution, the
 bundle rule (none on a socket, required on mTLS, never a second one named by the fragment),
 the fingerprint check, the registry slot, the live proof, the locked commit
-(`scripts/publication_host_pair.ts` `pairWith`). `--package` excludes `--fragment`, `--bundle`,
+(`src/core/publication_host/pair_flow.ts` `pairWith`, which the panel's upload calls too,
+§9.14). `--package` excludes `--fragment`, `--bundle`,
 `--token-file` and `--token-stdin`. The decrypted secrets reach disk only through the existing
 staging and commit.
 
 **Format v1** — ONE implementation, `publication/host_agent/src/provision/pairing_package.ts`
-(node:crypto only; written by init, imported by the pairing CLI):
+(node:crypto only; written by init, imported by the pairing CLI and — `openPairingPackageAsync`,
+the KDF off the event loop, the same checks — by the panel's upload):
 
 | offset | bytes | field |
 | --- | --- | --- |
@@ -1034,3 +1041,86 @@ READS them from install.sh. Gates: that file; `test/unit/publication_host_kit_pa
 system tar and accepted by install.sh's own functions, one altered byte refused); the init
 drill's `kit-install` leg (the real packer, a real production install, an altered kit refused
 by its sha256, the install from the kit, no tests or dev dependencies installed).
+
+### 9.14 The panel: "New publication host" (steps 4–5)
+
+Root's Maintenance → Publication hosts carries a **New publication host** section
+(`src/core/area_maintenance/widgets/publication_host_setup.ts`, the actions of the
+`publication_hosts` widget; client `client/dedalo/core/area_maintenance/widgets/publication_hosts/js/render_new_host.js`;
+wire entry `engineering/wire_contract/WC-2026-10-09-publication-host-panel-setup.md`). Every
+action is ROOT-ONLY and refuses anyone else before any module loads. The CLI paths (`bun run
+hostagent:pack`, `dedalo:pair-publication-host`) stay (D5).
+
+**The draft** (`src/core/publication_host/drafts.ts`). The form makes a `provision init` draft
+restricted to what the panel asks: `instance`, `layout` (`home` = `/home/<domain>`, the default;
+`system` = `/opt` + `/srv`), `apis` (`v2_only`, the default, or `v1_and_v2` with `v1.user`),
+`listen` (one machine = `unix` + `engine_group`; two machines = `tls` at a private IPv4 and a
+port), `agent_user`, `web.server`, `site.domain`, `media` (mode + root) and `v2` (unit, user,
+port). Everything discovery fills (the web unit, the PHP-FPM install, the OS family, the vhost,
+nginx's map mode) is left to init. `propose_draft` starts the form from the domain: the
+instance by the convention (`.` and `-` → `_`), init's own account and unit proposals
+(`init/draft.ts` `DEFAULTS`), the next free v2 port among the drafts on that machine (from
+3100), the next free TLS port on that address (from 8471) among the drafts and paired hosts
+there, the work system's own group (one machine) and its media root (one machine, shared).
+
+**One rule set (D1).** `save_draft` reads the draft field by field (every shape issue at once),
+then judges it with the agent's OWN zero-dependency modules, in-process: `layout.ts` `derive()`
+on a stand-in declaration (the draft, init's proposals, and neutral values for what only
+discovery knows — a v1-floor PHP-FPM, a Debian-family web unit; never written into the draft)
+and `siblings.ts` `siblingRefusals()` against the drafts on the same machine (both sockets =
+the work system's; both TLS at one IPv4). The registry's hosts on that machine are judged on
+what the registry knows of them: their instance and their listener. A refusal is
+`publication_host_setup.draft_invalid` with `details.fields` (the form's fields, declaration
+paths) and one sentence per field (derive's `LayoutError.reason`). The registry name (`name`)
+must be free in the registry and among the drafts. Honest limit: a value discovery fills is
+judged by init on the publication host, not here; init may also change a proposed field (the
+draft is a proposal). The agent modules the engine imports are admitted by
+`tool_lossless_writeback_tripwire`'s `host-agent-package` class only while their import
+closure stays inside the agent package (zod-free by closure).
+
+**The store.** `<private>/publication_host_drafts.json` (0600, the atomic JSON kernel the
+registry uses: bounded reads, temp → fsync → rename, flock) — NOT the registry: a draft dials
+nothing and holds no credential. A corrupt or widened file is `drafts_state:
+'drafts_invalid'` on the panel and `publication_host_setup.drafts_invalid` on every action,
+never "no drafts". A draft's state is DERIVED: `paired` while the registry holds a host with
+its instance (on TLS, at its address), `awaiting` otherwise. `remove_draft` drops a draft and
+its cached kit; a paired host stays paired.
+
+**The kit** (`src/core/publication_host/kit_build.ts`; the format is
+`src/core/publication_host/kit.ts`, shared with the CLI packer). `build_kit` builds the §9.13
+kit for a saved draft from the INSTALLED release: its source is the publication manifest's
+kit census (`src/core/update/publication_manifest.ts` writes `publication/host_agent/**`,
+`.bun-version` and `.bun-sha256` beside the API files at extract time), re-proved before the
+build (`verifyKitSourceTree`) and re-hashed file by file as it is read. A dev checkout (no
+verified release), a manifest an older updater wrote (no kit census) or a drifted file is
+`publication_host_setup.kit_refused` with its `reason`, naming `bun run hostagent:pack`. The
+agent's production dependencies are installed exactly as the API bundles' v2 dependencies are
+(`installV2DepsReal`: the pinned Bun, frozen, production, hoisted, no scripts, the minimal
+environment, the shared install cache under the code-backup build root) — the same egress,
+no new door (`engineering/OUTBOUND_SPEC.md` §5). The draft is then judged by the agent's own
+zod `parseDraft` in a child Bun inside the kit's copy, as the CLI packer does. Cache:
+`<backup>/.pubapi_build/<release>/kits/<name>.tar.gz` + sidecar (written last; a hit needs
+the release, the digest and the draft bytes AND a re-hash); builds of one name share one
+promise. The answer is bounded like `push_apis`: a first build still running answers
+`running`. `download_kit` returns the cached kit's bytes (base64, re-hashed at read, at most
+64 MiB) with its sha256, which the panel shows for the operator to compare on the publication
+host (`--kit-sha256`).
+
+**The sealed-package pairing (two machines).** `pair_package {name, package_base64,
+passphrase}`: the draft must exist, be awaiting, and listen on TLS (a one-machine draft pairs
+itself during init); the package (at most 1 MiB) is opened IN MEMORY
+(`openPairingPackageAsync`), its bytes zeroed afterwards; then `pairWith` as `add <name>` with
+the panel's binding check — the fragment's instance must be the draft's (`draft_mismatch`) and
+the agent address INSIDE the package must equal the draft's listener (`address_mismatch`),
+both before the token is read and before anything is dialled — then the token ⇒ fingerprint
+check, the registry slot, the live `/health` proof over mTLS (no bearer;
+`publication_host.pairing_mismatch` when the agent publishes another fingerprint), and the
+commit under the registry lock. Refusals are `publication_host_setup.pairing_refused` with a
+closed `details.reason`. Audited: one activity row (WHAT `NEW` on the maintenance area: the
+host, the instance, the address — never a secret). The passphrase and the package are never
+logged, echoed or stored; JS strings cannot be zeroed, so the passphrase and the decrypted
+token and bundle strings are dropped with the request (honest limit). Gates:
+`test/unit/publication_host_setup_native.test.ts` (drafts, multi-instance, the store, the kit
+build and its refusals, the upload's refusals and the secret scan),
+`test/unit/publication_host_widget_native.test.ts` (the action set, root only),
+`client/dedalo/test/client/js/test_publication_host_setup.js` (the view).

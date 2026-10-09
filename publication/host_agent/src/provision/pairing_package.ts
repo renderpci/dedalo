@@ -40,7 +40,7 @@
  * script imports this file (test/unit/tool_lossless_writeback_tripwire.test.ts admits it by its
  * checked import closure), so the format is written and read by ONE implementation.
  */
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, scrypt, scryptSync } from 'node:crypto';
 
 export const PACKAGE_MAGIC = 'DDPHPAIR';
 export const PACKAGE_VERSION = 1;
@@ -121,8 +121,17 @@ function header(salt: Uint8Array, nonce: Uint8Array): Uint8Array {
   return out;
 }
 
+const SCRYPT_OPTIONS = Object.freeze({ N: 2 ** SCRYPT_LOG2N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM });
+
 function deriveKey(canonical: string, salt: Uint8Array): Buffer {
-  return scryptSync(canonical, salt, 32, { N: 2 ** SCRYPT_LOG2N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM });
+  return scryptSync(canonical, salt, 32, SCRYPT_OPTIONS);
+}
+
+/** The same key, off the event loop (libuv's pool): a server process must not stall ~0.5 s on the KDF. */
+function deriveKeyAsync(canonical: string, salt: Uint8Array): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(canonical, salt, 32, SCRYPT_OPTIONS, (error, key) => (error ? reject(error) : resolve(key)));
+  });
 }
 
 function checkParts(parts: Record<string, unknown>): PairingParts {
@@ -168,25 +177,40 @@ export function packageHeaderProblem(bytes: Uint8Array): PackageRefusalReason | 
   return null;
 }
 
-/** Opens a package in memory. Throws PairingPackageRefused; never returns a partial result. */
-export function openPairingPackage(bytes: Uint8Array, passphrase: string): PairingParts {
+/** The header split of a package whose header passed packageHeaderProblem. */
+function parts(bytes: Uint8Array): { head: Uint8Array; salt: Uint8Array; nonce: Uint8Array; body: Uint8Array; tag: Uint8Array } {
+  const head = bytes.subarray(0, HEADER_BYTES);
+  return {
+    head,
+    salt: head.subarray(PACKAGE_MAGIC.length + 5, PACKAGE_MAGIC.length + 5 + SALT_BYTES),
+    nonce: head.subarray(PACKAGE_MAGIC.length + 5 + SALT_BYTES, HEADER_BYTES),
+    body: bytes.subarray(HEADER_BYTES, bytes.length - TAG_BYTES),
+    tag: bytes.subarray(bytes.length - TAG_BYTES),
+  };
+}
+
+/** Every check that runs BEFORE the KDF: the header, then the passphrase shape. Returns the canonical passphrase. */
+function precheck(bytes: Uint8Array, passphrase: string): string {
   const problem = packageHeaderProblem(bytes);
   if (problem !== null) throw new PairingPackageRefused(problem);
   const canonical = normalizePassphrase(passphrase);
   if (canonical === null) throw new PairingPackageRefused('passphrase_shape');
-  const head = bytes.subarray(0, HEADER_BYTES);
-  const salt = head.subarray(PACKAGE_MAGIC.length + 5, PACKAGE_MAGIC.length + 5 + SALT_BYTES);
-  const nonce = head.subarray(PACKAGE_MAGIC.length + 5 + SALT_BYTES, HEADER_BYTES);
-  const body = bytes.subarray(HEADER_BYTES, bytes.length - TAG_BYTES);
-  const tag = bytes.subarray(bytes.length - TAG_BYTES);
+  return canonical;
+}
+
+/** GCM open + the exact-parts check, with the derived key. The plaintext and the key are zeroed. */
+function decrypt(bytes: Uint8Array, key: Buffer): PairingParts {
+  const { head, nonce, body, tag } = parts(bytes);
   let plaintext: Buffer;
   try {
-    const decipher = createDecipheriv('aes-256-gcm', deriveKey(canonical, salt), nonce, { authTagLength: TAG_BYTES });
+    const decipher = createDecipheriv('aes-256-gcm', key, nonce, { authTagLength: TAG_BYTES });
     decipher.setAAD(head);
     decipher.setAuthTag(tag);
     plaintext = Buffer.concat([decipher.update(body), decipher.final()]);
   } catch {
     throw new PairingPackageRefused('auth');
+  } finally {
+    key.fill(0);
   }
   let parsed: unknown;
   try {
@@ -198,4 +222,20 @@ export function openPairingPackage(bytes: Uint8Array, passphrase: string): Pairi
   }
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new PairingPackageRefused('parts');
   return checkParts(parsed as Record<string, unknown>);
+}
+
+/** Opens a package in memory. Throws PairingPackageRefused; never returns a partial result. */
+export function openPairingPackage(bytes: Uint8Array, passphrase: string): PairingParts {
+  const canonical = precheck(bytes, passphrase);
+  return decrypt(bytes, deriveKey(canonical, parts(bytes).salt));
+}
+
+/**
+ * openPairingPackage with the KDF off the event loop — the SAME checks in the same order (header
+ * and passphrase shape before the KDF; one `auth` refusal for a wrong passphrase or an altered
+ * body). The engine's maintenance panel opens an uploaded package with it.
+ */
+export async function openPairingPackageAsync(bytes: Uint8Array, passphrase: string): Promise<PairingParts> {
+  const canonical = precheck(bytes, passphrase);
+  return decrypt(bytes, await deriveKeyAsync(canonical, parts(bytes).salt));
 }

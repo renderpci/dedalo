@@ -19463,7 +19463,8 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   align-items: baseline;
   gap: 0.5rem;
 }
-.wrapper_widget.publication_hosts .publication_host {
+.wrapper_widget.publication_hosts .publication_host,
+.wrapper_widget.publication_hosts .publication_host_draft {
   border: 1px solid var(--border_default);
   border-radius: 8px;
   overflow: hidden;
@@ -19471,7 +19472,8 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   padding: 0.75rem 0.9rem;
   margin-bottom: 0;
 }
-.wrapper_widget.publication_hosts .publication_host .dd_readout {
+.wrapper_widget.publication_hosts .publication_host .dd_readout,
+.wrapper_widget.publication_hosts .publication_host_draft .dd_readout {
   grid-template-columns: minmax(min-content, 14rem) 1fr;
 }
 .wrapper_widget.publication_hosts .host_actions {
@@ -19525,9 +19527,25 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   font-size: 0.9em;
   color: var(--fg_muted);
 }
-.wrapper_widget.publication_hosts .host_field > input {
+.wrapper_widget.publication_hosts .host_field > input,
+.wrapper_widget.publication_hosts .host_field > select {
   width: 100%;
   min-width: 0;
+}
+.wrapper_widget.publication_hosts .host_field > .field_error {
+  border-color: var(--danger, #c0392b);
+  outline: 1px solid var(--danger, #c0392b);
+}
+.wrapper_widget.publication_hosts .host_field[hidden] {
+  display: none;
+}
+.wrapper_widget.publication_hosts .new_publication_host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.wrapper_widget.publication_hosts .new_publication_host > .new_host_title {
+  margin: 0.5rem 0 0;
 }
 .wrapper_widget.publication_hosts .api_lockstep {
   border: 1px solid var(--border_default);

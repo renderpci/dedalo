@@ -21,9 +21,12 @@
  *     ALL root-only on the server; the server dials the agent through its one
  *     door (src/core/publication_host/transport.ts), never the browser.
  *
- * Hosts are ADDED only on the command line (scripts/publication_host_pair.ts):
- * an address typed into a web form is an SSRF and credential surface, so this
- * panel can edit a host's public fields and remove it, never create one.
+ * Hosts are ADDED by the pairing path: the command line
+ * (scripts/publication_host_pair.ts), or — two machines — root's "New
+ * publication host" section (render_new_host.js): a sealed package that must
+ * complete a draft this panel created. No form takes an agent address (an
+ * address typed into a web form is an SSRF and credential surface): the
+ * address comes from inside the package and is proved live by the server.
  *
  * Prototype chain: publication_hosts ← widget_common (lifecycle)
  *                  ← area_maintenance (get_value) ← render_publication_hosts (view)
@@ -50,6 +53,13 @@ export const PUBLICATION_HOST_ACTIONS = Object.freeze([
 	'push_apis',
 	'reconcile_media_copy',
 	'probe_public',
+	// "New publication host" (render_new_host.js; server: publication_host_setup.ts)
+	'propose_draft',
+	'save_draft',
+	'remove_draft',
+	'build_kit',
+	'download_kit',
+	'pair_package',
 ]);
 
 /**
@@ -153,6 +163,25 @@ publication_hosts.prototype.widget_request = async function (action, options) {
 publication_hosts.prototype.confirm_action = function (message) {
 	return window.confirm(message);
 }; //end confirm_action
+
+/**
+ * SAVE_FILE
+ * Hands a Blob to the browser as a download named `file_name` (the kit). A
+ * method so the browser suite observes it without a real download.
+ * @param {Blob} blob
+ * @param {string} file_name
+ * @returns {void}
+ */
+publication_hosts.prototype.save_file = function (blob, file_name) {
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = file_name;
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+}; //end save_file
 
 /**
  * RELOAD

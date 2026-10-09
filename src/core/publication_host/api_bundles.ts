@@ -637,6 +637,21 @@ async function walkDeps(depsDir: string): Promise<PlannedEntry[]> {
 	return walk.out;
 }
 
+/**
+ * The FILES of an installed `node_modules` under `depsDir` (paths relative to it, in walk order),
+ * each with a read-time re-check (a link swapped in after the walk is refused). The same walk and
+ * the same refusals as the v2 bundle (deps_symlink, not_regular_file, deps_install_failed), for
+ * the publication-host kit (kit_build.ts), which installs the agent's dependencies this same way.
+ */
+export async function dependencyFiles(
+	depsDir: string,
+): Promise<{ path: string; load: () => Promise<{ data: Uint8Array; mode: number }> }[]> {
+	const entries = await walkDeps(depsDir);
+	return entries.flatMap((entry) =>
+		entry.type === 'file' ? [{ path: entry.path, load: entry.load }] : [],
+	);
+}
+
 /** What one walk of node_modules found: the entries to pack, and every path it must refuse. */
 interface DepsWalk {
 	out: PlannedEntry[];

@@ -1131,6 +1131,12 @@ Merged since the last release; these ship with the next one.
 
     At the end of a guided install on a publication host reached over TLS, `provision init` now writes one encrypted pairing package — the engine fragment, the agent's token and the engine's TLS bundle — readable by root only, and shows its one-time passphrase once on the terminal (it is stored nowhere, and without a terminal no package is written). On the work host, `dedalo:pair-publication-host add <name> --package <file>` asks for the passphrase without echo (or reads it with `--passphrase-stdin`), opens the package in memory and runs the same checks and the same live proof as before. A wrong passphrase or an altered file is refused before anything is contacted. Delete both copies of the package afterwards; `--decide pair.package=again` writes a new one. Pairing with the three loose files is unchanged, and a host on the same machine still pairs directly. See [Pairing](./install/publication_host.md#pairing).
 
+- **A new publication host can be drafted, kitted and paired from the Publication hosts panel.**
+
+    As the Dédalo root user, **Maintenance → Publication hosts → New publication host** now makes the draft for a new publication host: type the site's domain, choose one machine or two, and the panel proposes the instance, the accounts, the service and free ports, which you can change before saving. The draft is checked with the publication agent's own rules and against the other instances on the same machine, and a refusal names the field. For two machines the panel builds the install kit from the release the code updater verified, shows its sha256 and lets you download it; then, once the publication host is installed, you upload its sealed pairing package and type the passphrase there. The package must belong to that draft — its instance and the agent address inside it — and the agent must prove it live before anything is stored; the passphrase and the package are never kept. The command-line paths are unchanged. See [New publication host](./install/publication_host.md#new-publication-host).
+
+    Wire contract: `WC-2026-10-09-publication-host-panel-setup`.
+
 - **A publication host can now serve the Publication API v2 only, without the Publication API v1.**
 
     The Publication API v1 is legacy: it is needed only by websites built for Dédalo v6. A publication host's declaration without a `v1` block now installs a v2-only site, the recommended shape for a new site: no v1 account, no v1 configuration file and no v1 runtime on the host, and the guided install (`provision init`) neither looks for nor asks about any of them. The draft chooses with `"apis": "v2_only"` or `"v1_and_v2"`, or by the presence of its own `v1` block, and a v2-only site names its distribution family in `site.os_family`. The work system never pushes a v1 release to such a host, and its **Publication hosts** panel shows the v1 row as *Not served*, which is not a fault. Existing hosts that declare v1 are unchanged. See [the publication host install](./install/publication_host.md).
@@ -1772,7 +1778,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 105 entries"
+??? note "Wire contract — 106 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1878,6 +1884,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-08-install-ip-denied-names-address`
     - `WC-2026-10-08-install-plan-update-servers-core-lg`
     - `WC-2026-10-08-make-backup-scheduled-evidence`
+    - `WC-2026-10-09-publication-host-panel-setup`
     - `WC-2026-10-09-publication-host-v2-only-site`
 
 ## 7.0.0-beta.4 — 2026-08-24

@@ -237,8 +237,9 @@ token is created there.
 bun run hostagent:pack -- --draft /root/museum_org.draft.json
 ```
 
-The command checks the draft with the agent's own rules (a draft init would refuse is refused
-here), writes `dedalo_publication_host_kit_museum_org.tar.gz` (`--out <file>` names another
+(Or build it in the panel: [New publication host](#new-publication-host) → **Build kit**, then
+**Download kit**; the panel shows the kit's sha256.) The command checks the draft with the
+agent's own rules (a draft init would refuse is refused here), writes `dedalo_publication_host_kit_museum_org.tar.gz` (`--out <file>` names another
 path) and prints its sha256. The same checkout and draft always give the same file, so the same
 sha256. The v1 sample is in the kit only when the draft serves v1.
 
@@ -509,7 +510,10 @@ one nginx serves.
 
     The command asks for the passphrase without echo (or reads one line with
     `--passphrase-stdin`), then runs the same checks and the same live proof as the manual
-    path. Then delete both copies of the package. A lost passphrase cannot be recovered:
+    path. Or, as the Dédalo root user, upload the package and type its passphrase in the panel
+    ([New publication host](#new-publication-host) → **Pair from the sealed package**): the same
+    checks and live proof, for a package that completes a draft made there. Then delete both
+    copies of the package. A lost passphrase cannot be recovered:
     `--decide pair.package=again` makes init write a new package. The manual path
     (`--fragment`, `--bundle`, `--token-file`) stays.
 
@@ -674,6 +678,11 @@ downloads Bun, and `provision apply` refuses its systemd. Upgrade the host to RH
 Alma 9 or 10.
 
 ## Install
+
+**Or use the panel.** As the Dédalo root user, **Maintenance → Publication hosts → New
+publication host** makes the draft, builds the kit and, on two machines, pairs the host from
+its sealed package: see [New publication host](#new-publication-host). The command-line paths
+below stay, every step of them.
 
 This is the manual install: every step by hand. The [guided install](#guided-install) does the
 same steps for you after you confirm them; when one of its items needs your hands, it names
@@ -1476,8 +1485,12 @@ in its private directory.
 Pairing records the host in the work system once, from files the provisioner wrote. You run
 the pairing command as the user that runs Dédalo, the owner of its private directory. The
 command refuses any other user, root included, because the work system could not read
-credentials stored by root. The panel deliberately has no form for pairing: an address typed
-into a web page would be a way to make the work system send its credentials somewhere else.
+credentials stored by root. The panel deliberately has no form that takes an agent address:
+an address typed into a web page would be a way to make the work system send its credentials
+somewhere else. On two machines the panel can pair from the sealed package instead
+([New publication host](#new-publication-host)): the address comes from inside the package, it
+must be the one the draft made in the panel declares, and the agent proves it before anything is
+stored.
 
 The host's name in the work system is yours to choose: lowercase letters, digits and `_`,
 starting with a letter, 2 to 32 characters. It is the work system's label for the host,
@@ -1971,6 +1984,43 @@ without the hosts' network addresses.
 When a row is red, [Troubleshooting › In the panel](#in-the-panel) names the cause and the
 fix.
 
+### New publication host
+
+Below the hosts, the Dédalo **root** user (and no one else) sees **New publication host**: the
+drafts this work system keeps for hosts not yet paired, and a form to make one. The
+command-line paths (`bun run hostagent:pack`, `dedalo:pair-publication-host`) do the same
+things and stay.
+
+1. **Create a draft.** Type the site's domain, choose one machine (the publication host is
+   this server) or two (type the publication host's private IPv4 address), and which APIs it
+   serves (v2 only, the default, or v1 and v2), then **Propose**. The panel proposes the
+   instance (the domain with `.` and `-` as `_`: `museum.org` → `museum_org`), the layout
+   (`/home/<domain>`, or `/opt` and `/srv`), the agent, v1 and v2 accounts, the v2 service and
+   its local port (the next one free among this work system's drafts on that machine), on two
+   machines the agent's port, and on one machine the work system's own group and media
+   directory. Change any field, then **Save draft**. The draft is checked with the agent's own
+   rules, and against the other instances on the same machine (accounts, ports, service names,
+   directories); a refusal names the field. Fields that only the publication host can know (the
+   web server unit, the PHP-FPM install, the site's virtual host) are left to `provision init`,
+   which shows each value before it changes anything. A draft holds no password and no token:
+   the database passwords are typed on the publication host.
+2. **Build kit**, then **Download kit** (two machines; on one machine you can use the work
+   system's checkout as the source instead). The panel builds the [kit](#the-kit) from the
+   release the code updater installed and verified: a work system cloned from git cannot build
+   one here (use `bun run hostagent:pack`). The first build installs the agent's dependencies
+   and can take a minute. The panel shows the kit's **sha256**: carry the kit to the publication
+   host and run `sha256sum`, `tar -xzf … install.sh` and `sh install.sh <instance> --kit <file>
+   --kit-sha256 <sha256>` as [above](#the-kit).
+3. **Pair.** One machine: `provision init` pairs the host itself; the draft then reads *Paired
+   as* `<name>`. Two machines: init writes the sealed package and shows its passphrase once.
+   Under the draft, **Pair from the sealed package**: choose the `.pairing` file, type the
+   passphrase, **Pair**. The package must be this draft's: its instance and the agent address
+   inside it must be the draft's, or nothing is dialled. Then the agent must prove the package's
+   fingerprint over mTLS before anything is stored. The passphrase and the package are never
+   kept. Delete the package on the publication host afterwards.
+
+**Remove draft** forgets a draft (and its kit); a host already paired stays paired.
+
 ## Publication API releases
 
 Each API keeps its releases side by side, with its configuration outside them:
@@ -2226,6 +2276,11 @@ The commands below use the example names; `provision` runs as in step 4.
 | the media map is refused: *renderer missing* (`map_renderer_missing`) | the host's map service is not installed | run `provision apply` of this instance on the host |
 | **Host media map** is red with `none` or `drift` | nothing of this work system's map is loaded on that nginx host (`none`: never pushed, or the last push was rolled back), or another version of it is (`drift`) | **Apply media rules** pushes it. If it stays red, read `journalctl -u dedalo-pubhost-map` on the host |
 | **Host media map** is red with `agent_outdated` | that host's agent predates the host-wide map | update the agent's code on the host and `provision apply` |
+| **New publication host**: the drafts file is invalid | `publication_host_drafts.json` in the work system's private directory is unreadable, edited by hand, or not a regular file of mode `0600` owned by the Dédalo user | restore it, or `chmod 600` and `chown` it to the Dédalo user, or delete it (drafts are proposals: a paired host does not depend on its draft) |
+| **Build kit** refused: *no verified release*, *missing manifest* or *drift* | the work system runs from a git checkout, or from a release installed by an updater older than the kit check, or the agent's files were edited after the update | build the kit on the checkout with `bun run hostagent:pack`, or update the engine (the next update records the agent's files); never edit the installed tree |
+| **Build kit** refused: *the agent's dependencies could not be installed* | the work host cannot reach the package registry (a proxy, a firewall), or the release's lockfile does not match | the same cause as a failed API push; see [API releases and push](#api-releases-and-push) |
+| **Pair** refused: *the passphrase is wrong, or the package was altered* | a mistyped passphrase, or a package damaged in transit (the two cannot be told apart) | type it again; a lost passphrase cannot be recovered: run `provision init` on the publication host with `--decide pair.package=again` |
+| **Pair** refused: *the package is not this draft's* or *its address is not the draft's* | the package was written for another instance, or the agent listens on another address or port than the draft declares | upload the package of this draft's instance, or remove the draft and create it with the address the agent really listens on; nothing was dialled |
 | the media map push fails and nginx was restarted | nginx stopped on the reload of the new map although its test passed; the service put the loaded map back and restarted nginx | read `journalctl -u dedalo-pubhost-map` and, on SELinux, `ausearch -m AVC,USER_AVC -ts recent` on the host |
 
 ### API releases and push

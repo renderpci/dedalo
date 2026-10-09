@@ -12,6 +12,7 @@ import {
   newPassphrase,
   normalizePassphrase,
   openPairingPackage,
+  openPairingPackageAsync,
   PACKAGE_MAGIC,
   PairingPackageRefused,
   PASSPHRASE_ALPHABET,
@@ -60,6 +61,25 @@ function sealRaw(plaintext: string, passphrase: string): Uint8Array {
 }
 
 describe('the sealed pairing package', () => {
+  test('openPairingPackageAsync: the same parts and the SAME refusals as the sync reader (KDF off the event loop)', async () => {
+    expect(await openPairingPackageAsync(SEALED, PASS)).toEqual(openPairingPackage(SEALED, PASS));
+    const refusal = async (bytes: Uint8Array, pass: string): Promise<string> => {
+      try {
+        await openPairingPackageAsync(bytes, pass);
+      } catch (error) {
+        if (error instanceof PairingPackageRefused) return error.reason;
+        throw error;
+      }
+      return 'opened';
+    };
+    expect(await refusal(SEALED, newPassphrase())).toBe('auth');
+    const tampered = new Uint8Array(SEALED);
+    tampered[HEADER_BYTES + 1] ^= 1;
+    expect(await refusal(tampered, PASS)).toBe('auth');
+    expect(await refusal(SEALED, 'short')).toBe('passphrase_shape');
+    expect(await refusal(SEALED.subarray(0, 4), PASS)).toBe('truncated');
+  });
+
   test('round trip: the three parts come back, the passphrase in any spacing/case', () => {
     expect(openPairingPackage(SEALED, PASS)).toEqual(PARTS);
     expect(openPairingPackage(SEALED, ` ${PASS.toLowerCase().replace(/-/g, ' ')} `)).toEqual(PARTS);

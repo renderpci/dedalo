@@ -119,6 +119,18 @@ const ENGINE_NATIVE: Record<string, string> = {
 		'root-only door onto the registered media_copy reconcile (core/reconcile): copies/unmarks/deletes published public-quality media on ONE copy-mode publication host through the copy worker lane and the paired agent channel (phase 5) — no PHP-tree surface',
 	'publication_hosts.probe_public':
 		'TS-native publication-host public-URL probe (phase 6): two bounded GETs through the public door (fetchGuardedText) + the runtime observation file — root-only, writes no gate, media or registry',
+	'publication_hosts.propose_draft':
+		'TS-native "New publication host" form proposal: reads the publication-host registry + drafts file — root-only, writes nothing, no PHP-tree surface',
+	'publication_hosts.save_draft':
+		"TS-native publication-host draft store (<private>/publication_host_drafts.json, judged by the agent package's own rules) — root-only, no PHP-tree surface",
+	'publication_hosts.remove_draft':
+		'TS-native publication-host draft store + its cached kit — root-only, no PHP-tree surface',
+	'publication_hosts.build_kit':
+		'TS-native publication-host kit from the verified installed tree (publication manifest kit census) into the code-backup build cache — root-only, no PHP-tree surface',
+	'publication_hosts.download_kit':
+		'TS-native: serves the cached publication-host kit, re-hashed — root-only, no PHP-tree surface',
+	'publication_hosts.pair_package':
+		"TS-native pairing (core/publication_host/pair_flow.ts, the CLI's own path) from a sealed package that must complete a saved draft — root-only, no PHP-tree surface",
 };
 
 /**

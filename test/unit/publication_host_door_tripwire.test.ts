@@ -689,8 +689,9 @@ describe('the operator is told how pairing and the panel really work', () => {
 	});
 
 	test('the live proof stages a transient 0600 copy, swept after an hour (never "writes nothing")', async () => {
-		const cli = await docsGateRead('scripts/publication_host_pair.ts');
-		expect(cli).toContain('const STAGING_STALE_MS = 60 * 60 * 1000;');
+		// the pairing path (CLI and panel alike) lives in pair_flow.ts since the panel pairs too
+		const flow = await docsGateRead('src/core/publication_host/pair_flow.ts');
+		expect(flow).toContain('const STAGING_STALE_MS = 60 * 60 * 1000;');
 		const spec = await docsGateRead('engineering/PUBLICATION_HOST_SPEC.md');
 		const ceremony = /\n- \*\*Adding a host[\s\S]*?(?=\n- \*\*)/.exec(spec)?.[0] ?? '';
 		const pair = docsGateSection(
