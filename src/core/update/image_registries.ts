@@ -26,8 +26,8 @@
  * test/unit/image_registries_tripwire.test.ts.
  */
 
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import BUNDLED_IMAGE_REGISTRIES from '../../../engineering/image_registries.json';
 import { projectRoot } from '../../config/env.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 
@@ -338,17 +338,35 @@ export function validateImageRegistries(raw: unknown): string[] {
 	];
 }
 
-/** Load and validate the list; throws `internal.invariant` naming every violated rule. */
-export function loadImageRegistries(path: string = IMAGE_REGISTRIES_PATH): ImageRegistryList {
-	const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
+/**
+ * Validate a parsed list; throws `internal.invariant` naming every violated rule.
+ * `origin` names where the bytes came from (the message's prefix). The ONE
+ * validation door: the bundled list and a caller-read file (a script's
+ * IMAGE_REGISTRIES_FILE, a gate's scratch copy) both pass through it.
+ */
+export function parseImageRegistries(
+	raw: unknown,
+	origin: string = IMAGE_REGISTRIES_PATH,
+): ImageRegistryList {
 	const problems = validateImageRegistries(raw);
 	// The list ships WITH the code (it is a repo contract, not operator input): a
 	// violation is an engine invariant, typed, with every broken rule in the message.
 	if (problems.length > 0)
 		throw new DedaloError('internal.invariant', {
-			message: `${path}: invalid image registry list —\n  ${problems.join('\n  ')}`,
+			message: `${origin}: invalid image registry list —\n  ${problems.join('\n  ')}`,
 		});
 	return raw as ImageRegistryList;
+}
+
+/**
+ * The list THIS tree ships, validated. A static JSON import, bundled at module
+ * load — never a runtime file read on the served path (the engine reaches this
+ * from the update panel; sync_io_on_request_path_tripwire). A script that must
+ * read another file reads it itself and hands the parsed value to
+ * parseImageRegistries.
+ */
+export function loadImageRegistries(): ImageRegistryList {
+	return parseImageRegistries(BUNDLED_IMAGE_REGISTRIES as unknown);
 }
 
 /** The PROVISIONED entries, primary first, then the mirrors in list order. */

@@ -271,9 +271,9 @@ function request(tag: string, id: string = crypto.randomUUID()): ImageUpdateRequ
 	};
 }
 
-function placeRequest(stack: Stack, tag: string): ImageUpdateRequest {
+async function placeRequest(stack: Stack, tag: string): Promise<ImageUpdateRequest> {
 	const pending = request(tag);
-	expect(writeRequest(pending, stack.channel)).toEqual({ ok: true });
+	expect(await writeRequest(pending, stack.channel)).toEqual({ ok: true });
 	return pending;
 }
 
@@ -294,11 +294,11 @@ const EXEC_OUTCOME = /^compose exec -T dedalo bun scripts\/ops\/image_update_cha
 // ---------------------------------------------------------------------------
 
 describe('a pass with nothing requested', () => {
-	test('beats the heartbeat the panel reads as ALIVE, with the pinned source — and updates nothing', () => {
+	test('beats the heartbeat the panel reads as ALIVE, with the pinned source — and updates nothing', async () => {
 		const stack = makeStack({ state: { repo_digest: '' } });
 		const result = runUpdater(stack);
 		expect(result.code).toBe(0);
-		const host = readHostUpdaterState(new Date(), stack.channel);
+		const host = await readHostUpdaterState(new Date(), stack.channel);
 		expect(host.state).toBe('alive');
 		expect(host).toMatchObject({
 			interval_seconds: 60,
@@ -313,13 +313,13 @@ describe('a pass with nothing requested', () => {
 		expect(at(result.calls, HEARTBEAT)).toBeGreaterThan(-1);
 		expect(at(result.calls, CLAIM)).toBeGreaterThan(at(result.calls, HEARTBEAT));
 		expect(existsSync(join(stack.state, 'update_argv'))).toBe(false);
-		expect(readChannelStatus(new Date(), stack.channel).last_outcome).toBeNull();
+		expect((await readChannelStatus(new Date(), stack.channel)).last_outcome).toBeNull();
 	});
 
-	test('a build-mode install reports no running digest (a local build has none)', () => {
+	test('a build-mode install reports no running digest (a local build has none)', async () => {
 		const stack = makeStack({ mode: 'build' });
 		expect(runUpdater(stack).code).toBe(0);
-		const host = readHostUpdaterState(new Date(), stack.channel);
+		const host = await readHostUpdaterState(new Date(), stack.channel);
 		expect(host.state).toBe('alive');
 		expect(host.mode).toBe('build');
 		expect(host.running_digest).toBeNull();
@@ -327,9 +327,9 @@ describe('a pass with nothing requested', () => {
 });
 
 describe('a requested update', () => {
-	test('is claimed, run with EXACTLY the three flags from the stack dir, and its outcome recorded', () => {
+	test('is claimed, run with EXACTLY the three flags from the stack dir, and its outcome recorded', async () => {
 		const stack = makeStack();
-		const pending = placeRequest(stack, '7.0.1');
+		const pending = await placeRequest(stack, '7.0.1');
 		const result = runUpdater(stack);
 		expect(result.code).toBe(0);
 		const argv = readFileSync(join(stack.state, 'update_argv'), 'utf8').trim().split(' ');
@@ -339,7 +339,7 @@ describe('a requested update', () => {
 		for (const flag of ARGV_FLAGS_NEVER) expect(argv).not.toContain(flag);
 		expect(readFileSync(join(stack.state, 'update_cwd'), 'utf8').trim()).toBe(stack.dir);
 		// the outcome reached the engine untouched, and the request is done
-		const status = readChannelStatus(new Date(), stack.channel);
+		const status = await readChannelStatus(new Date(), stack.channel);
 		expect(status.request).toBeNull();
 		expect(existsSync(join(stack.channel, INFLIGHT_FILE))).toBe(false);
 		expect(existsSync(join(stack.channel, REQUEST_FILE))).toBe(false);
@@ -359,24 +359,24 @@ describe('a requested update', () => {
 		expect(result.calls.filter((call) => HEARTBEAT.test(call))).toHaveLength(2);
 	});
 
-	test('a failed update is recorded as the update script reported it, and the pass still exits 0', () => {
+	test('a failed update is recorded as the update script reported it, and the pass still exits 0', async () => {
 		const stack = makeStack({
 			state: { update_status: 'rolled_back', update_detail: 'unhealthy' },
 		});
-		const pending = placeRequest(stack, '7.0.1');
+		const pending = await placeRequest(stack, '7.0.1');
 		expect(runUpdater(stack).code).toBe(0);
-		expect(readChannelStatus(new Date(), stack.channel).last_outcome).toMatchObject({
+		expect((await readChannelStatus(new Date(), stack.channel)).last_outcome).toMatchObject({
 			request_id: pending.id,
 			status: 'rolled_back',
 			detail: 'unhealthy',
 		});
 	});
 
-	test('an update script that dies without an outcome is recorded as failed / interrupted', () => {
+	test('an update script that dies without an outcome is recorded as failed / interrupted', async () => {
 		const stack = makeStack({ state: { update_silent: '' } });
-		const pending = placeRequest(stack, '7.0.1');
+		const pending = await placeRequest(stack, '7.0.1');
 		expect(runUpdater(stack).code).toBe(0);
-		const status = readChannelStatus(new Date(), stack.channel);
+		const status = await readChannelStatus(new Date(), stack.channel);
 		expect(status.last_outcome).toMatchObject({
 			request_id: pending.id,
 			from: '7.0.0',
@@ -387,19 +387,21 @@ describe('a requested update', () => {
 		expect(status.request).toBeNull();
 	});
 
-	test('when the one-off container cannot record, the running engine does', () => {
+	test('when the one-off container cannot record, the running engine does', async () => {
 		const stack = makeStack({ state: { run_fail: '' } });
-		const pending = placeRequest(stack, '7.0.1');
+		const pending = await placeRequest(stack, '7.0.1');
 		const result = runUpdater(stack);
 		expect(result.code).toBe(0);
 		expect(at(result.calls, RUN_OUTCOME)).toBeGreaterThan(-1);
 		expect(at(result.calls, EXEC_OUTCOME)).toBeGreaterThan(at(result.calls, RUN_OUTCOME));
-		expect(readChannelStatus(new Date(), stack.channel).last_outcome?.request_id).toBe(pending.id);
+		expect((await readChannelStatus(new Date(), stack.channel)).last_outcome?.request_id).toBe(
+			pending.id,
+		);
 	});
 
-	test('the same version is installed again only as a -dev image (positive control of the floor)', () => {
+	test('the same version is installed again only as a -dev image (positive control of the floor)', async () => {
 		const stack = makeStack({ pinned: '7.0.0-dev' });
-		placeRequest(stack, '7.0.0-dev');
+		await placeRequest(stack, '7.0.0-dev');
 		expect(runUpdater(stack).code).toBe(0);
 		expect(readFileSync(join(stack.state, 'update_argv'), 'utf8')).toStartWith(
 			'--version 7.0.0-dev ',
@@ -438,12 +440,12 @@ describe('the host floors hold whatever the engine says', () => {
 		},
 	];
 	for (const entry of cases) {
-		test(`${entry.name} (${entry.tag} over a pinned ${entry.pinned}) is refused, recorded, never run`, () => {
+		test(`${entry.name} (${entry.tag} over a pinned ${entry.pinned}) is refused, recorded, never run`, async () => {
 			const stack = makeStack({ pinned: entry.pinned });
-			const pending = placeRequest(stack, entry.tag);
+			const pending = await placeRequest(stack, entry.tag);
 			expect(runUpdater(stack).code).toBe(0);
 			expect(existsSync(join(stack.state, 'update_argv'))).toBe(false);
-			const status = readChannelStatus(new Date(), stack.channel);
+			const status = await readChannelStatus(new Date(), stack.channel);
 			expect(status.last_outcome).toMatchObject({
 				request_id: pending.id,
 				from: entry.pinned,
@@ -455,14 +457,14 @@ describe('the host floors hold whatever the engine says', () => {
 		});
 	}
 
-	test('a tag that is not a version (a compromised engine answering claim) is refused and recorded', () => {
+	test('a tag that is not a version (a compromised engine answering claim) is refused and recorded', async () => {
 		const id = crypto.randomUUID();
 		for (const tag of ['latest', '7.0.1;id', '7.0.1 --no-backup', 'v7.0.1']) {
 			const stack = makeStack({ state: { claim_out: `${id} ${tag}\n` } });
 			const result = runUpdater(stack);
 			expect(result.code).toBe(0);
 			expect(existsSync(join(stack.state, 'update_argv'))).toBe(false);
-			expect(readChannelStatus(new Date(), stack.channel).last_outcome).toMatchObject({
+			expect((await readChannelStatus(new Date(), stack.channel)).last_outcome).toMatchObject({
 				request_id: id,
 				to: '',
 				status: 'refused',
@@ -471,26 +473,26 @@ describe('the host floors hold whatever the engine says', () => {
 		}
 	});
 
-	test('a request id that is not a UUID is an internal error: nothing runs, nothing is recorded', () => {
+	test('a request id that is not a UUID is an internal error: nothing runs, nothing is recorded', async () => {
 		const stack = makeStack({ state: { claim_out: 'not-a-uuid 7.0.1\n' } });
 		const result = runUpdater(stack);
 		expect(result.code).not.toBe(0);
 		expect(result.stderr).toContain('not a UUID');
 		expect(existsSync(join(stack.state, 'update_argv'))).toBe(false);
-		expect(readChannelStatus(new Date(), stack.channel).last_outcome).toBeNull();
+		expect((await readChannelStatus(new Date(), stack.channel)).last_outcome).toBeNull();
 	});
 });
 
 describe('a request a previous pass never finished', () => {
-	test('is recorded as failed / interrupted, cleared, and not re-run', () => {
+	test('is recorded as failed / interrupted, cleared, and not re-run', async () => {
 		const stack = makeStack();
 		const orphan = { ...request('7.0.1'), claimed_at: '2026-10-09T09:01:00.000Z' };
-		writeChannelFile(stack.channel, INFLIGHT_FILE, orphan);
-		expect(readChannelStatus(new Date(), stack.channel).request?.state).toBe('claimed');
+		await writeChannelFile(stack.channel, INFLIGHT_FILE, orphan);
+		expect((await readChannelStatus(new Date(), stack.channel)).request?.state).toBe('claimed');
 		const result = runUpdater(stack);
 		expect(result.code).toBe(0);
 		expect(result.stderr).toContain('never finished');
-		const status = readChannelStatus(new Date(), stack.channel);
+		const status = await readChannelStatus(new Date(), stack.channel);
 		expect(status.request).toBeNull();
 		expect(status.last_outcome).toMatchObject({
 			request_id: orphan.id,
@@ -503,9 +505,9 @@ describe('a request a previous pass never finished', () => {
 });
 
 describe('passes that do nothing, and say so', () => {
-	test('a held lock: another pass is running — no docker call at all', () => {
+	test('a held lock: another pass is running — no docker call at all', async () => {
 		const stack = makeStack();
-		placeRequest(stack, '7.0.1');
+		await placeRequest(stack, '7.0.1');
 		const lock = join(stack.dir, '.dedalo-image-updater.lock');
 		mkdirSync(lock);
 		writeFileSync(join(lock, 'pid'), `${process.pid}\n`);
@@ -513,7 +515,7 @@ describe('passes that do nothing, and say so', () => {
 		expect(result.code).toBe(0);
 		expect(result.stderr).toContain('already running');
 		expect(result.calls).toEqual([]);
-		expect(readChannelStatus(new Date(), stack.channel).request?.state).toBe('requested');
+		expect((await readChannelStatus(new Date(), stack.channel)).request?.state).toBe('requested');
 		// the lock of a DEAD holder is taken over (positive control), and released
 		writeFileSync(join(lock, 'pid'), '999999\n');
 		const taken = runUpdater(stack);
@@ -522,9 +524,9 @@ describe('passes that do nothing, and say so', () => {
 		expect(existsSync(lock)).toBe(false);
 	});
 
-	test('an image older than the channel (no CLI) is a logged no-op', () => {
+	test('an image older than the channel (no CLI) is a logged no-op', async () => {
 		const stack = makeStack({ state: { no_cli: '' } });
-		placeRequest(stack, '7.0.1');
+		await placeRequest(stack, '7.0.1');
 		const result = runUpdater(stack);
 		expect(result.code).toBe(0);
 		expect(result.stderr).toContain('older than its update channel');
@@ -533,16 +535,16 @@ describe('passes that do nothing, and say so', () => {
 		expect(existsSync(join(stack.state, 'update_argv'))).toBe(false);
 	});
 
-	test('the engine not running: no heartbeat, no claim', () => {
+	test('the engine not running: no heartbeat, no claim', async () => {
 		const stack = makeStack();
 		rmSync(join(stack.state, 'running'));
-		placeRequest(stack, '7.0.1');
+		await placeRequest(stack, '7.0.1');
 		const result = runUpdater(stack);
 		expect(result.code).toBe(0);
 		expect(result.stderr).toContain('not running');
 		expect(at(result.calls, /^compose ps /)).toBeGreaterThan(-1);
 		expect(at(result.calls, HEARTBEAT)).toBe(-1);
-		expect(readHostUpdaterState(new Date(), stack.channel).state).toBe('absent');
+		expect((await readHostUpdaterState(new Date(), stack.channel)).state).toBe('absent');
 	});
 
 	test('an incomplete .dedalo.env (a pre-image-pin install): no docker call at all', () => {

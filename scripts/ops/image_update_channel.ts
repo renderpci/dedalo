@@ -102,35 +102,35 @@ async function readJson(io: CliIo): Promise<unknown> {
 }
 
 async function heartbeat(invocation: Invocation, io: CliIo): Promise<number> {
-	if (recordHeartbeat(await readJson(io), io.now(), invocation.dir)) return EXIT_OK;
+	if (await recordHeartbeat(await readJson(io), io.now(), invocation.dir)) return EXIT_OK;
 	io.err('heartbeat: invalid heartbeat on stdin');
 	return EXIT_USAGE;
 }
 
 async function outcome(invocation: Invocation, io: CliIo): Promise<number> {
-	if (recordOutcome(await readJson(io), io.now(), invocation.dir)) return EXIT_OK;
+	if (await recordOutcome(await readJson(io), io.now(), invocation.dir)) return EXIT_OK;
 	io.err('outcome: invalid outcome on stdin');
 	return EXIT_USAGE;
 }
 
-function claim(invocation: Invocation, io: CliIo): number {
-	const result = claimRequest(io.now(), invocation.dir);
+async function claim(invocation: Invocation, io: CliIo): Promise<number> {
+	const result = await claimRequest(io.now(), invocation.dir);
 	if (result.kind === 'claimed') io.out(`${result.inflight.id} ${result.inflight.tag}`);
 	if (result.kind === 'malformed')
 		io.err('claim: the pending request was malformed — recorded as refused');
 	return EXIT_OK;
 }
 
-function orphan(invocation: Invocation, io: CliIo): number {
-	const result = orphanInflight(io.now(), invocation.dir);
+async function orphan(invocation: Invocation, io: CliIo): Promise<number> {
+	const result = await orphanInflight(io.now(), invocation.dir);
 	if (result.kind === 'orphan') io.out(`${result.inflight.id} ${result.inflight.tag}`);
 	if (result.kind === 'malformed')
 		io.err('orphan: the request in flight was malformed — recorded as interrupted');
 	return EXIT_OK;
 }
 
-function status(invocation: Invocation, io: CliIo): number {
-	io.out(JSON.stringify(readChannelStatus(io.now(), invocation.dir)));
+async function status(invocation: Invocation, io: CliIo): Promise<number> {
+	io.out(JSON.stringify(await readChannelStatus(io.now(), invocation.dir)));
 	return EXIT_OK;
 }
 

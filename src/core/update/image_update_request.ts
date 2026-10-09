@@ -87,22 +87,25 @@ export function requestedTag(options: Record<string, unknown>): ImageTag | null 
 }
 
 /** Gates 2-4: the state of this installation, before the target is looked at. */
-function stateRefusal(seams: ImageRequestSeams, dir: string): ImageRequestRefusal | null {
+async function stateRefusal(
+	seams: ImageRequestSeams,
+	dir: string,
+): Promise<ImageRequestRefusal | null> {
 	if ((seams.channel ?? detectDeploymentChannel(projectRoot)) !== 'image')
 		return 'not_image_channel';
-	if (readHostUpdaterState(seams.now ?? new Date(), dir).state !== 'alive')
+	if ((await readHostUpdaterState(seams.now ?? new Date(), dir)).state !== 'alive')
 		return 'host_updater_not_alive';
 	return requestOutstanding(dir) ? 'request_pending' : null;
 }
 
 /** Gate 5: a -dev target needs an installation that already runs a -dev image. */
-function devChannelRefusal(
+async function devChannelRefusal(
 	target: ImageTag,
 	seams: ImageRequestSeams,
 	dir: string,
-): ImageRequestRefusal | null {
+): Promise<ImageRequestRefusal | null> {
 	if (target.channel !== 'dev') return null;
-	const pinned = readHostUpdaterState(seams.now ?? new Date(), dir).pinned;
+	const pinned = (await readHostUpdaterState(seams.now ?? new Date(), dir)).pinned;
 	return parseImageTag(pinned)?.channel === 'dev' ? null : 'dev_channel_not_enabled';
 }
 
@@ -125,14 +128,15 @@ function requestRecord(target: ImageTag, principal: Principal, now: Date): Image
  * built here from validated parts, so its own validation failing is an engine
  * defect, never an operator's refusal.
  */
-function writeTarget(
+async function writeTarget(
 	target: ImageTag,
 	principal: Principal,
 	now: Date,
 	dir: string,
-): ImageRequestResult {
-	const written = writeRequest(requestRecord(target, principal, now), dir);
-	if (written.ok) return { ok: true, request: readPendingRequest(dir) as PendingRequestView };
+): Promise<ImageRequestResult> {
+	const written = await writeRequest(requestRecord(target, principal, now), dir);
+	if (written.ok)
+		return { ok: true, request: (await readPendingRequest(dir)) as PendingRequestView };
 	if (written.reason === 'request_pending') return { ok: false, reason: 'request_pending' };
 	throw new DedaloError('internal.invariant', {
 		message: `image update request for ${target.tag} failed its own validation (from ${DEDALO_ENGINE_VERSION})`,
@@ -141,15 +145,15 @@ function writeTarget(
 }
 
 /** Gate 6 and the write. */
-function recordTarget(
+async function recordTarget(
 	target: ImageTag,
 	principal: Principal,
 	seams: ImageRequestSeams,
 	dir: string,
-): ImageRequestResult {
+): Promise<ImageRequestResult> {
 	const walk = walkRefusalOf(seams.current ?? DEDALO_VERSION_TRIPLE, target.triple, target.channel);
 	if (walk !== null) return { ok: false, reason: 'version_refused', walk };
-	const result = writeTarget(target, principal, seams.now ?? new Date(), dir);
+	const result = await writeTarget(target, principal, seams.now ?? new Date(), dir);
 	// the request is an instruction to replace the running code: who asked is
 	// logged loudly, like the backup waiver (code_update.ts)
 	if (result.ok)
@@ -164,18 +168,18 @@ function recordTarget(
  * (perm.superuser_required / maintenance.mode_required); every other refusal
  * is a returned id.
  */
-export function requestImageUpdate(
+export async function requestImageUpdate(
 	options: Record<string, unknown>,
 	principal: Principal,
 	seams: ImageRequestSeams = {},
-): ImageRequestResult {
+): Promise<ImageRequestResult> {
 	checkUpdatePreconditions(principal);
 	const dir = imageUpdateDir(seams.dir);
-	const refusal = stateRefusal(seams, dir);
+	const refusal = await stateRefusal(seams, dir);
 	if (refusal !== null) return { ok: false, reason: refusal };
 	const target = requestedTag(options);
 	if (target === null) return { ok: false, reason: 'malformed_version' };
-	const devRefusal = devChannelRefusal(target, seams, dir);
+	const devRefusal = await devChannelRefusal(target, seams, dir);
 	if (devRefusal !== null) return { ok: false, reason: devRefusal };
 	return recordTarget(target, principal, seams, dir);
 }

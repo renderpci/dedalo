@@ -289,12 +289,12 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 	test('the preconditions throw their own typed errors first (superuser, then maintenance mode)', async () => {
 		const m = await modules();
 		const dir = channelDir();
-		expect(() =>
+		await expect(
 			m.requestImageUpdate({ version: '7.0.1' }, { userId: 42 } as never, seams(dir)),
-		).toThrow();
+		).rejects.toThrow();
 		m.setServerState({ maintenance_mode: false });
 		try {
-			m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+			await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
 			throw new Error('expected a refusal');
 		} catch (error) {
 			expect((error as { code?: string }).code).toBe('maintenance.mode_required');
@@ -308,15 +308,15 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 		const ask = (options: Record<string, unknown>, dir: string, channel?: 'image' | 'tree_swap') =>
 			m.requestImageUpdate(options, m.superuser, seams(dir, channel));
 		const fresh = channelDir();
-		expect(ask({ version: '7.0.1' }, fresh, 'tree_swap')).toEqual({
+		expect(await ask({ version: '7.0.1' }, fresh, 'tree_swap')).toEqual({
 			ok: false,
 			reason: 'not_image_channel',
 		});
-		expect(ask({ version: '7.0.1' }, channelDir(null))).toEqual({
+		expect(await ask({ version: '7.0.1' }, channelDir(null))).toEqual({
 			ok: false,
 			reason: 'host_updater_not_alive',
 		});
-		expect(ask({ version: '7.0.1' }, channelDir(181))).toEqual({
+		expect(await ask({ version: '7.0.1' }, channelDir(181))).toEqual({
 			ok: false,
 			reason: 'host_updater_not_alive',
 		});
@@ -327,7 +327,7 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 			{ version: '7.0.1', channel: 'nightly' },
 			{ version: 701 },
 		]) {
-			expect(ask(options, fresh)).toEqual({ ok: false, reason: 'malformed_version' });
+			expect(await ask(options, fresh)).toEqual({ ok: false, reason: 'malformed_version' });
 		}
 		expect(requestFiles(fresh)).toEqual([]);
 	});
@@ -352,7 +352,11 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 			const sentence = m.assertLinearUpgrade(CURRENT, target?.triple ?? [], target?.channel);
 			expect(sentence === null).toBe(walk === null);
 			// an installation already on developer images, so the walk is what decides
-			const result = m.requestImageUpdate(options, m.superuser, seams(channelDir(10, '7.0.0-dev')));
+			const result = await m.requestImageUpdate(
+				options,
+				m.superuser,
+				seams(channelDir(10, '7.0.0-dev')),
+			);
 			if (walk === null) expect(result.ok).toBe(true);
 			else expect(result as unknown).toEqual({ ok: false, reason: 'version_refused', walk });
 		}
@@ -367,7 +371,7 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 			{ version: '7.0.0', channel: 'dev' },
 			{ version: '7.0.1', channel: 'dev' },
 		])
-			expect(m.requestImageUpdate(options, m.superuser, seams(release))).toEqual({
+			expect(await m.requestImageUpdate(options, m.superuser, seams(release))).toEqual({
 				ok: false,
 				reason: 'dev_channel_not_enabled',
 			});
@@ -375,16 +379,19 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 		// positive control: the same ask on an installation already on developer images
 		const onDev = channelDir(10, '7.0.0-dev');
 		expect(
-			m.requestImageUpdate({ version: '7.0.1', channel: 'dev' }, m.superuser, seams(onDev)).ok,
+			(await m.requestImageUpdate({ version: '7.0.1', channel: 'dev' }, m.superuser, seams(onDev)))
+				.ok,
 		).toBe(true);
 		// the release channel is unaffected on a release installation
-		expect(m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(release)).ok).toBe(true);
+		expect((await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(release))).ok).toBe(
+			true,
+		);
 	});
 
 	test('success writes exactly ONE request; a second ask is refused as pending', async () => {
 		const m = await modules();
 		const dir = channelDir();
-		const result = m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+		const result = await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
 		if (!result.ok) throw new Error(`refused: ${result.reason}`);
 		expect(requestFiles(dir)).toEqual(['request.json']);
 		expect(result.request).toMatchObject({
@@ -398,12 +405,12 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 			claimed_at: null,
 		});
 		expect(m.isUuid4(result.request.id)).toBe(true);
-		expect(m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir))).toEqual({
+		expect(await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir))).toEqual({
 			ok: false,
 			reason: 'request_pending',
 		});
 		// a developer image is named with its -dev tag (an installation already on one)
-		const dev = m.requestImageUpdate(
+		const dev = await m.requestImageUpdate(
 			{ version: '7.0.0', channel: 'dev' },
 			m.superuser,
 			seams(channelDir(10, '7.0.0-dev')),
@@ -411,9 +418,9 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 		expect(dev.ok && dev.request.tag).toBe('7.0.0-dev');
 		// an inflight request blocks a new one too
 		const busy = channelDir();
-		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(busy));
-		expect(m.claimRequest(NOW, busy).kind).toBe('claimed');
-		expect(m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(busy))).toEqual({
+		await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(busy));
+		expect((await m.claimRequest(NOW, busy)).kind).toBe('claimed');
+		expect(await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(busy))).toEqual({
 			ok: false,
 			reason: 'request_pending',
 		});
@@ -426,11 +433,11 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 			ok: false,
 			reason: 'no_request',
 		});
-		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+		await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
 		expect(m.cancelImageUpdateRequest(m.superuser, { dir })).toEqual({ ok: true });
 		expect(requestFiles(dir)).toEqual([]);
-		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
-		m.claimRequest(NOW, dir);
+		await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(dir));
+		await m.claimRequest(NOW, dir);
 		expect(m.cancelImageUpdateRequest(m.superuser, { dir })).toEqual({
 			ok: false,
 			reason: 'request_claimed',
@@ -441,7 +448,7 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 		m.setServerState({ maintenance_mode: false });
 		const other = channelDir();
 		m.setServerState({ maintenance_mode: true });
-		m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(other));
+		await m.requestImageUpdate({ version: '7.0.1' }, m.superuser, seams(other));
 		m.setServerState({ maintenance_mode: false });
 		expect(m.cancelImageUpdateRequest(m.superuser, { dir: other })).toEqual({ ok: true });
 		m.setServerState({ maintenance_mode: true });

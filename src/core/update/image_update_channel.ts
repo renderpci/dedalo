@@ -40,16 +40,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import {
-	chmodSync,
-	existsSync,
-	linkSync,
-	mkdirSync,
-	readFileSync,
-	renameSync,
-	unlinkSync,
-	writeFileSync,
-} from 'node:fs';
+import { chmodSync, existsSync, linkSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { isRepositoryReference } from './image_registries.ts';
@@ -289,22 +281,26 @@ export function ensureChannelDir(dir: string): void {
 }
 
 /** A sibling temp file holding `value` (0640), ready to be renamed or linked in. */
-function writeTemp(dir: string, name: string, value: unknown): string {
+async function writeTemp(dir: string, name: string, value: unknown): Promise<string> {
 	ensureChannelDir(dir);
 	const temp = join(dir, `.${name}.${randomUUID()}.tmp`);
-	writeFileSync(temp, `${JSON.stringify(value, null, '\t')}\n`, { mode: IMAGE_UPDATE_FILE_MODE });
+	await writeFile(temp, `${JSON.stringify(value, null, '\t')}\n`, { mode: IMAGE_UPDATE_FILE_MODE });
 	chmodSync(temp, IMAGE_UPDATE_FILE_MODE);
 	return temp;
 }
 
 /** Replace `name` atomically: a reader sees the old file or the new one, never half. */
-export function writeChannelFile(dir: string, name: string, value: unknown): void {
-	renameSync(writeTemp(dir, name, value), join(dir, name));
+export async function writeChannelFile(dir: string, name: string, value: unknown): Promise<void> {
+	renameSync(await writeTemp(dir, name, value), join(dir, name));
 }
 
 /** Create `name` only if it does not exist (link is atomic and refuses EEXIST). */
-function writeChannelFileExclusive(dir: string, name: string, value: unknown): boolean {
-	const temp = writeTemp(dir, name, value);
+async function writeChannelFileExclusive(
+	dir: string,
+	name: string,
+	value: unknown,
+): Promise<boolean> {
+	const temp = await writeTemp(dir, name, value);
 	try {
 		linkSync(temp, join(dir, name));
 		return true;
@@ -322,19 +318,23 @@ export type FileRead =
 	| { state: 'malformed' }
 	| { state: 'ok'; value: unknown };
 
-export function readChannelFile(dir: string, name: string): FileRead {
+export async function readChannelFile(dir: string, name: string): Promise<FileRead> {
 	const path = join(dir, name);
 	if (!existsSync(path)) return { state: 'absent' };
 	try {
-		return { state: 'ok', value: JSON.parse(readFileSync(path, 'utf8')) };
+		return { state: 'ok', value: JSON.parse(await readFile(path, 'utf8')) };
 	} catch {
 		return { state: 'malformed' };
 	}
 }
 
 /** The file's value when it passes `valid`, else null — the never-throw read. */
-function readValid<T>(dir: string, name: string, valid: (raw: unknown) => raw is T): T | null {
-	const read = readChannelFile(dir, name);
+async function readValid<T>(
+	dir: string,
+	name: string,
+	valid: (raw: unknown) => raw is T,
+): Promise<T | null> {
+	const read = await readChannelFile(dir, name);
 	return read.state === 'ok' && valid(read.value) ? read.value : null;
 }
 
@@ -384,17 +384,24 @@ export function heartbeatIsAlive(beat: StoredHeartbeat, now: Date): boolean {
 	return now.getTime() - Date.parse(beat.seen_at) <= window;
 }
 
-export function readHostUpdaterState(now: Date, dir: string = imageUpdateDir()): HostUpdaterView {
-	const beat = readValid(dir, HEARTBEAT_FILE, validStoredHeartbeat);
+export async function readHostUpdaterState(
+	now: Date,
+	dir: string = imageUpdateDir(),
+): Promise<HostUpdaterView> {
+	const beat = await readValid(dir, HEARTBEAT_FILE, validStoredHeartbeat);
 	if (beat === null) return { ...NO_HOST_UPDATER };
 	const { schema: _schema, ...fields } = beat;
 	return { ...fields, state: heartbeatIsAlive(beat, now) ? 'alive' : 'stale' };
 }
 
 /** Store a heartbeat from the host (validated; seen_at is OURS, never the host's). */
-export function recordHeartbeat(raw: unknown, now: Date, dir: string = imageUpdateDir()): boolean {
+export async function recordHeartbeat(
+	raw: unknown,
+	now: Date,
+	dir: string = imageUpdateDir(),
+): Promise<boolean> {
 	if (!validHeartbeat(raw)) return false;
-	writeChannelFile(dir, HEARTBEAT_FILE, { ...raw, seen_at: now.toISOString() });
+	await writeChannelFile(dir, HEARTBEAT_FILE, { ...raw, seen_at: now.toISOString() });
 	return true;
 }
 
@@ -414,13 +421,15 @@ export function requestOutstanding(dir: string = imageUpdateDir()): boolean {
 }
 
 /** The claimed request first (it is what is running), else the pending one, else null. */
-export function readPendingRequest(dir: string = imageUpdateDir()): PendingRequestView | null {
-	const inflight = readValid(dir, INFLIGHT_FILE, validInflight);
+export async function readPendingRequest(
+	dir: string = imageUpdateDir(),
+): Promise<PendingRequestView | null> {
+	const inflight = await readValid(dir, INFLIGHT_FILE, validInflight);
 	if (inflight !== null) {
 		const { schema: _schema, ...fields } = inflight;
 		return { ...fields, state: 'claimed' };
 	}
-	const request = readValid(dir, REQUEST_FILE, validRequest);
+	const request = await readValid(dir, REQUEST_FILE, validRequest);
 	if (request === null) return null;
 	const { schema: _schema, ...fields } = request;
 	return { ...fields, state: 'requested', claimed_at: null };
@@ -431,13 +440,13 @@ export type WriteRequestResult =
 	| { ok: false; reason: 'request_pending' | 'invalid' };
 
 /** Record a request — refused while another is pending or in flight. */
-export function writeRequest(
+export async function writeRequest(
 	request: ImageUpdateRequest,
 	dir: string = imageUpdateDir(),
-): WriteRequestResult {
+): Promise<WriteRequestResult> {
 	if (!validRequest(request)) return { ok: false, reason: 'invalid' };
 	if (existsSync(join(dir, INFLIGHT_FILE))) return { ok: false, reason: 'request_pending' };
-	return writeChannelFileExclusive(dir, REQUEST_FILE, request)
+	return (await writeChannelFileExclusive(dir, REQUEST_FILE, request))
 		? { ok: true }
 		: { ok: false, reason: 'request_pending' };
 }
@@ -485,26 +494,33 @@ function malformedRequestOutcome(now: Date): ImageUpdateOutcome {
  * (request.json → inflight.json), so it and a concurrent cancel cannot both
  * win; the claimed copy is then re-written with `claimed_at`.
  */
-export function claimRequest(now: Date, dir: string = imageUpdateDir()): ClaimResult {
+export async function claimRequest(
+	now: Date,
+	dir: string = imageUpdateDir(),
+): Promise<ClaimResult> {
 	if (existsSync(join(dir, INFLIGHT_FILE))) return { kind: 'busy' };
-	const read = readChannelFile(dir, REQUEST_FILE);
+	const read = await readChannelFile(dir, REQUEST_FILE);
 	if (read.state === 'absent') return { kind: 'none' };
 	if (read.state === 'malformed' || !validRequest(read.value)) {
 		removeChannelFile(dir, REQUEST_FILE);
-		recordOutcome(malformedRequestOutcome(now), now, dir);
+		await recordOutcome(malformedRequestOutcome(now), now, dir);
 		return { kind: 'malformed' };
 	}
 	return claimValidRequest(read.value, now, dir);
 }
 
-function claimValidRequest(request: ImageUpdateRequest, now: Date, dir: string): ClaimResult {
+async function claimValidRequest(
+	request: ImageUpdateRequest,
+	now: Date,
+	dir: string,
+): Promise<ClaimResult> {
 	try {
 		renameSync(join(dir, REQUEST_FILE), join(dir, INFLIGHT_FILE));
 	} catch {
 		return { kind: 'none' }; // cancelled between the read and the rename
 	}
 	const inflight: ImageUpdateInflight = { ...request, claimed_at: now.toISOString() };
-	writeChannelFile(dir, INFLIGHT_FILE, inflight);
+	await writeChannelFile(dir, INFLIGHT_FILE, inflight);
 	return { kind: 'claimed', inflight };
 }
 
@@ -518,13 +534,16 @@ export type OrphanResult =
  * records it as failed/interrupted through `outcome`. An inflight that cannot
  * be read is answered here, with a request id of null, and cleared.
  */
-export function orphanInflight(now: Date, dir: string = imageUpdateDir()): OrphanResult {
-	const read = readChannelFile(dir, INFLIGHT_FILE);
+export async function orphanInflight(
+	now: Date,
+	dir: string = imageUpdateDir(),
+): Promise<OrphanResult> {
+	const read = await readChannelFile(dir, INFLIGHT_FILE);
 	if (read.state === 'absent') return { kind: 'none' };
 	if (read.state === 'ok' && validInflight(read.value))
 		return { kind: 'orphan', inflight: read.value };
 	removeChannelFile(dir, INFLIGHT_FILE);
-	recordOutcome(
+	await recordOutcome(
 		{ ...malformedRequestOutcome(now), status: 'failed', detail: 'interrupted' },
 		now,
 		dir,
@@ -536,16 +555,22 @@ export function orphanInflight(now: Date, dir: string = imageUpdateDir()): Orpha
  * Record an outcome (validated; recorded_at is OURS). When it answers the
  * request in flight, that request is done and its file goes.
  */
-export function recordOutcome(raw: unknown, now: Date, dir: string = imageUpdateDir()): boolean {
+export async function recordOutcome(
+	raw: unknown,
+	now: Date,
+	dir: string = imageUpdateDir(),
+): Promise<boolean> {
 	if (!validOutcome(raw)) return false;
-	writeChannelFile(dir, OUTCOME_FILE, { ...raw, recorded_at: now.toISOString() });
-	const inflight = readValid(dir, INFLIGHT_FILE, validInflight);
+	await writeChannelFile(dir, OUTCOME_FILE, { ...raw, recorded_at: now.toISOString() });
+	const inflight = await readValid(dir, INFLIGHT_FILE, validInflight);
 	if (inflight !== null && raw.request_id === inflight.id) removeChannelFile(dir, INFLIGHT_FILE);
 	return true;
 }
 
 /** The last recorded outcome, or null. */
-export function readLastOutcome(dir: string = imageUpdateDir()): StoredOutcome | null {
+export async function readLastOutcome(
+	dir: string = imageUpdateDir(),
+): Promise<StoredOutcome | null> {
 	return readValid(dir, OUTCOME_FILE, validStoredOutcome);
 }
 
@@ -556,10 +581,14 @@ export interface ChannelStatus {
 	last_outcome: StoredOutcome | null;
 }
 
-export function readChannelStatus(now: Date, dir: string = imageUpdateDir()): ChannelStatus {
-	return {
-		host_updater: readHostUpdaterState(now, dir),
-		request: readPendingRequest(dir),
-		last_outcome: readLastOutcome(dir),
-	};
+export async function readChannelStatus(
+	now: Date,
+	dir: string = imageUpdateDir(),
+): Promise<ChannelStatus> {
+	const [hostUpdater, request, lastOutcome] = await Promise.all([
+		readHostUpdaterState(now, dir),
+		readPendingRequest(dir),
+		readLastOutcome(dir),
+	]);
+	return { host_updater: hostUpdater, request, last_outcome: lastOutcome };
 }

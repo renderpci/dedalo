@@ -228,7 +228,7 @@ async function requestImageUpdateOwned(
 	principal: Principal,
 ): Promise<WidgetResponse> {
 	const { requestImageUpdate } = await import('../../update/image_update_request.ts');
-	const result = requestImageUpdate(options, principal);
+	const result = await requestImageUpdate(options, principal);
 	if (!result.ok) refuseImageRequest(result.reason, result.walk);
 	return { data: { request: result.request } };
 }

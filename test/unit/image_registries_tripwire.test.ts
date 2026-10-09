@@ -47,6 +47,7 @@ import {
 	loadImageRegistries,
 	matchOfficialRegistry,
 	normalizeRepository,
+	parseImageRegistries,
 	provisionedRegistries,
 	validateImageRegistries,
 } from '../../src/core/update/image_registries.ts';
@@ -277,7 +278,9 @@ describe('A. the official registry list validates, and every rule bites', () => 
 				path,
 				JSON.stringify(mutated((raw) => (raw.registries[0].repository = 'x.example/y'))),
 			);
-			expect(() => loadImageRegistries(path)).toThrow('names NO address');
+			expect(() => parseImageRegistries(JSON.parse(readFileSync(path, 'utf8')), path)).toThrow(
+				'names NO address',
+			);
 			expect(validateImageRegistries('not an object')).toEqual([
 				'the registry list must be a JSON object',
 			]);

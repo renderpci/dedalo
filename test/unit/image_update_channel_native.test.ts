@@ -208,7 +208,7 @@ describe('check-target: the verdict IS the walk rule', () => {
 });
 
 describe('heartbeat', () => {
-	test('a valid heartbeat is stored with the CLI’s own seen_at, dir 0750 and file 0640', () => {
+	test('a valid heartbeat is stored with the CLI’s own seen_at, dir 0750 and file 0640', async () => {
 		const dir = scratchDir();
 		const before = Date.now();
 		const run = cli(['heartbeat', '--dir', dir], JSON.stringify(HEARTBEAT));
@@ -218,7 +218,7 @@ describe('heartbeat', () => {
 		expect(Date.parse(stored.seen_at as string)).toBeGreaterThanOrEqual(before - 1000);
 		expect(modeOf(dir)).toBe(0o750);
 		expect(modeOf(join(dir, 'host_updater.json'))).toBe(0o640);
-		expect(readChannelStatus(new Date(), dir).host_updater.state).toBe('alive');
+		expect((await readChannelStatus(new Date(), dir)).host_updater.state).toBe('alive');
 	});
 
 	test('a host-supplied seen_at is refused (the instant is the engine’s)', () => {
@@ -262,10 +262,10 @@ describe('claim / orphan / outcome', () => {
 		expect(cli(['orphan', '--dir', dir])).toEqual({ code: 0, out: '', err: '' });
 	});
 
-	test('claim moves the request in flight and prints `<id> <tag>`; a second claim prints nothing', () => {
+	test('claim moves the request in flight and prints `<id> <tag>`; a second claim prints nothing', async () => {
 		const dir = scratchDir();
 		const pending = request(`${MAJOR}.${MINOR}.${PATCH + 1}`);
-		expect(writeRequest(pending, dir)).toEqual({ ok: true });
+		expect(await writeRequest(pending, dir)).toEqual({ ok: true });
 		expect(modeOf(join(dir, 'request.json'))).toBe(0o640);
 
 		const run = cli(['claim', '--dir', dir]);
@@ -281,17 +281,17 @@ describe('claim / orphan / outcome', () => {
 		expect(cli(['orphan', '--dir', dir]).out).toBe(`${pending.id} ${pending.tag}`);
 	});
 
-	test('a developer request is claimed with its -dev tag', () => {
+	test('a developer request is claimed with its -dev tag', async () => {
 		const dir = scratchDir();
 		const pending = request(`${MAJOR}.${MINOR}.${PATCH}-dev`);
-		expect(writeRequest(pending, dir)).toEqual({ ok: true });
+		expect(await writeRequest(pending, dir)).toEqual({ ok: true });
 		expect(cli(['claim', '--dir', dir]).out).toBe(`${pending.id} ${MAJOR}.${MINOR}.${PATCH}-dev`);
 	});
 
-	test('a malformed request is never claimed: it becomes a refused / malformed_request outcome', () => {
+	test('a malformed request is never claimed: it becomes a refused / malformed_request outcome', async () => {
 		const dir = scratchDir();
 		cli(['status', '--dir', dir]); // creates nothing
-		writeRequest(request(`${MAJOR}.${MINOR}.${PATCH + 1}`), dir);
+		await writeRequest(request(`${MAJOR}.${MINOR}.${PATCH + 1}`), dir);
 		// tamper: a tag that does not name the version it claims
 		const path = join(dir, 'request.json');
 		writeFileSync(path, JSON.stringify({ ...readJson(path), tag: '9.9.9' }));
@@ -306,10 +306,10 @@ describe('claim / orphan / outcome', () => {
 		expect(recorded.request_id).toBeNull();
 	});
 
-	test('an outcome answering the request in flight is recorded and clears it', () => {
+	test('an outcome answering the request in flight is recorded and clears it', async () => {
 		const dir = scratchDir();
 		const pending = request(`${MAJOR}.${MINOR}.${PATCH + 1}`);
-		writeRequest(pending, dir);
+		await writeRequest(pending, dir);
 		cli(['claim', '--dir', dir]);
 		const result = outcome(pending.id);
 		const run = cli(['outcome', '--dir', dir], JSON.stringify(result));
@@ -318,13 +318,13 @@ describe('claim / orphan / outcome', () => {
 		expect({ ...recorded, recorded_at: undefined }).toEqual({ ...result, recorded_at: undefined });
 		expect(modeOf(join(dir, 'last_outcome.json'))).toBe(0o640);
 		expect(existsSync(join(dir, 'inflight.json'))).toBe(false);
-		expect(readChannelStatus(new Date(), dir).request).toBeNull();
+		expect((await readChannelStatus(new Date(), dir)).request).toBeNull();
 	});
 
-	test('an outcome for ANOTHER request is recorded but leaves the one in flight alone', () => {
+	test('an outcome for ANOTHER request is recorded but leaves the one in flight alone', async () => {
 		const dir = scratchDir();
 		const pending = request(`${MAJOR}.${MINOR}.${PATCH + 1}`);
-		writeRequest(pending, dir);
+		await writeRequest(pending, dir);
 		cli(['claim', '--dir', dir]);
 		expect(cli(['outcome', '--dir', dir], JSON.stringify(outcome(uuid()))).code).toBe(0);
 		expect(existsSync(join(dir, 'inflight.json'))).toBe(true);
@@ -362,11 +362,11 @@ describe('claim / orphan / outcome', () => {
 		});
 	}
 
-	test('status prints the channel as JSON (the verb the operator can read by hand)', () => {
+	test('status prints the channel as JSON (the verb the operator can read by hand)', async () => {
 		const dir = scratchDir();
 		cli(['heartbeat', '--dir', dir], JSON.stringify(HEARTBEAT));
 		const pending = request(`${MAJOR}.${MINOR}.${PATCH + 1}`);
-		writeRequest(pending, dir);
+		await writeRequest(pending, dir);
 		const status = JSON.parse(cli(['status', '--dir', dir]).out);
 		expect(status.host_updater.state).toBe('alive');
 		expect(status.request.id).toBe(pending.id);

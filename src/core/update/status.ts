@@ -265,9 +265,11 @@ function channelCheck(seams: ConsumerStatusSeams): StatusCheck {
  * `consumer.image` — only on the image channel. The block never throws by
  * design; the guard is the panel's own law (a probe never takes it down).
  */
-function imageBlockFor(seams: ConsumerStatusSeams): { image?: ImageChannelBlock } {
+async function imageBlockFor(seams: ConsumerStatusSeams): Promise<{ image?: ImageChannelBlock }> {
 	try {
-		return deploymentChannelOf(seams) === 'image' ? { image: imageChannelBlock(seams.image) } : {};
+		return deploymentChannelOf(seams) === 'image'
+			? { image: await imageChannelBlock(seams.image) }
+			: {};
 	} catch {
 		return {};
 	}
@@ -622,7 +624,7 @@ export async function consumerStatus(
 			staging_leftover: existsSync(join(backupRoot, '.code_staging')),
 			unaccounted_root_entries: rootEntries.entries,
 		},
-		...imageBlockFor(seams),
+		...(await imageBlockFor(seams)),
 	};
 }
 

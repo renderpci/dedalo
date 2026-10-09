@@ -81,9 +81,9 @@ function officialOf(
 }
 
 /** The block, assembled from the three sources; each degrades on its own. */
-export function imageChannelBlock(seams: ImageChannelSeams = {}): ImageChannelBlock {
+export async function imageChannelBlock(seams: ImageChannelSeams = {}): Promise<ImageChannelBlock> {
 	const source = declaredImageSource(seams.sourceGetter);
-	const channel = readChannelStatus(seams.now ?? new Date(), imageUpdateDir(seams.dir));
+	const channel = await readChannelStatus(seams.now ?? new Date(), imageUpdateDir(seams.dir));
 	return {
 		source: {
 			mode: source.mode,

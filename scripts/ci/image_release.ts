@@ -59,6 +59,7 @@ import {
 	type ImageRegistry,
 	type ImageRegistryList,
 	loadImageRegistries,
+	parseImageRegistries,
 } from '../../src/core/update/image_registries.ts';
 import { cosignDownloadUrl, isPinSet, readCosignPin } from '../ci_cosign_pin.ts';
 
@@ -711,8 +712,18 @@ function publishPlan(env: Env): PublishContext['plan'] {
 	};
 }
 
+/**
+ * The registry list a verb works on: the tree's own, or IMAGE_REGISTRIES_FILE
+ * (a gate's scratch copy) read here and validated through the same door.
+ */
+function registriesOf(env: Env): ImageRegistryList {
+	const file = env.IMAGE_REGISTRIES_FILE;
+	if (file === undefined || file === '') return loadImageRegistries();
+	return parseImageRegistries(JSON.parse(readFileSync(file, 'utf8')), file);
+}
+
 function publish(env: Env, run: Runner): number {
-	const list = loadImageRegistries(env.IMAGE_REGISTRIES_FILE || undefined);
+	const list = registriesOf(env);
 	const plan = publishPlan(env);
 	if (plan.staging !== list.ci.staging_repository)
 		throw new Refusal(
@@ -787,7 +798,7 @@ export function planFactsOf(env: Env): PlanFacts {
 
 function planVerb(env: Env, run: Runner): number {
 	const cwd = process.cwd();
-	const list = loadImageRegistries(env.IMAGE_REGISTRIES_FILE || undefined);
+	const list = registriesOf(env);
 	const plan = resolvePlan(planFactsOf(env), gitLookups(run, cwd), list.ci.staging_repository);
 	const tmp = requireEnv(env, ['RUNNER_TEMP']).RUNNER_TEMP as string;
 	const archive = archiveTree(run, cwd, plan.source_sha, join(tmp, 'plan-source.tar'));
