@@ -1,5 +1,5 @@
 {
-  "inputs_digest": "fedffe5233891e722bb659c5da38733931e416b379afc203828b8e26da49c590",
+  "inputs_digest": "2c050ba742e2482ee4bd6ffafdc4382b37f1d983f39161ddad6407e4ce8615d9",
   "hosts": [
     {
       "os": "el10",
@@ -7,8 +7,8 @@
       "version": "10.2",
       "kernel": "6.12.0-211.7.3.el10_2.aarch64",
       "selinux": "enforcing",
-      "sha": "e507776cb44801103a80ff5ecfae689f2e7e4d92",
-      "at": "2026-10-09T15:18:00.431Z",
+      "sha": "94520850f68c349fe12a65043b908fb744a627fc",
+      "at": "2026-10-09T19:50:54.837Z",
       "measured": {
         "booleans": {
           "httpd_can_network_relay": {
@@ -24,17 +24,20 @@
           "systemd 257 (257-23.el10_2.1-g2c252d4)": []
         },
         "home_traverse_type": "home_root_t",
-        "system_default_readable": null,
+        "home_v2_type": "dedalo_publication_v2_t",
+        "system_default_readable": false,
         "v1_php_floor": "8.3",
         "nginx_floor": null
       },
       "legs": [
+        "agent-root-grant",
         "booleans-measured",
         "configtest-rollback",
         "fapolicyd",
         "fresh-converge",
         "hand-map-migration",
         "home-login-and-logs",
+        "home-v2-migration",
         "kill-resume",
         "kit-install",
         "mixed-version-map",
@@ -44,6 +47,7 @@
         "precreated-api-files",
         "rerun-all-right",
         "selinux-labels",
+        "system-layout-v2",
         "systemd-analyze",
         "v1-handler-probe",
         "v2-only-site"
@@ -56,8 +60,8 @@
       "version": "9.8",
       "kernel": "5.14.0-687.5.3.el9_8.aarch64",
       "selinux": "enforcing",
-      "sha": "7d14c57b08b83b6ca5c7cec93b8d2bcdf9eddee8",
-      "at": "2026-10-09T14:45:58.384Z",
+      "sha": "94520850f68c349fe12a65043b908fb744a627fc",
+      "at": "2026-10-09T19:36:12.733Z",
       "measured": {
         "booleans": {
           "httpd_can_network_relay": {
@@ -73,17 +77,20 @@
           "systemd 252 (252-67.el9_8.2)": []
         },
         "home_traverse_type": "home_root_t",
-        "system_default_readable": null,
+        "home_v2_type": "dedalo_publication_v2_t",
+        "system_default_readable": false,
         "v1_php_floor": "8.1",
         "nginx_floor": null
       },
       "legs": [
+        "agent-root-grant",
         "booleans-measured",
         "configtest-rollback",
         "fapolicyd",
         "fresh-converge",
         "hand-map-migration",
         "home-login-and-logs",
+        "home-v2-migration",
         "kill-resume",
         "kit-install",
         "mixed-version-map",
@@ -93,6 +100,7 @@
         "precreated-api-files",
         "rerun-all-right",
         "selinux-labels",
+        "system-layout-v2",
         "systemd-analyze",
         "v1-handler-probe",
         "v2-only-site"
