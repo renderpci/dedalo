@@ -1586,10 +1586,12 @@ const render_entity_block = function(self) {
 	create_field({ parent:fragment, cfg, name:'timezone', label:get_label.timezone || 'Timezone', value:'Europe/Madrid', placeholder:'Europe/Madrid' })
 	create_field({ parent:fragment, cfg, name:'locale', label:get_label.locale || 'Locale', value:'es-ES', placeholder:'es-ES' })
 
-	// LANGUAGES (mandatory): the checked set drives DEDALO_APPLICATION_LANGS +
-	// PROJECTS_DEFAULT_LANGS; the two dropdowns pick the default interface/data
-	// language from the checked set. Without these the configured server refuses
-	// to boot, so at least one language is required (validated on Continue).
+	// LANGUAGES (mandatory): the checked set drives PROJECTS_DEFAULT_LANGS (the
+	// working/data languages); DEDALO_APPLICATION_LANGS is always the whole
+	// catalog (lang_catalog.ts), so the interface dropdown offers every catalog
+	// language and the data dropdown only the checked ones. Without these the
+	// configured server refuses to boot, so at least one language is required
+	// (validated on Continue).
 	const props			= self.context.properties || {}
 	const available_langs	= props.available_langs || {}
 	const lang_codes		= Object.keys(available_langs)
@@ -1610,7 +1612,7 @@ const render_entity_block = function(self) {
 		lang_checkboxes[code] = cb
 		ui.create_dom_element({ element_type:'span', text_content:(available_langs[code] || code)+' ('+code+')', parent:row })
 	})
-	ui.create_dom_element({ element_type:'div', class_name:'installer_field_help', inner_html:'Languages this installation manages. At least one is required.', parent:langs_field })
+	ui.create_dom_element({ element_type:'div', class_name:'installer_field_help', inner_html:'Languages the data is catalogued in. At least one is required. The interface can always be switched to any translated language.', parent:langs_field })
 
 	const app_lang_field = ui.create_dom_element({ element_type:'div', class_name:'installer_field', parent:fragment })
 	ui.create_dom_element({ element_type:'label', class_name:'installer_field_label', inner_html:get_label.default_interface_language || 'Default interface language', parent:app_lang_field })
@@ -1621,23 +1623,22 @@ const render_entity_block = function(self) {
 	const data_lang_select = ui.create_dom_element({ element_type:'select', class_name:'installer_field_input', parent:data_lang_field })
 
 	const checked_lang_codes = function(){ return lang_codes.filter(code => lang_checkboxes[code].checked) }
-	// Rebuild a select's options from the checked langs, preserving the prior
-	// choice when still valid (else the first checked lang). Returns the value set.
-	const refresh_lang_select = function(select, prev){
-		const codes = checked_lang_codes()
+	// Rebuild a select's options from `codes`, preserving the prior choice when
+	// still valid (else the first checked lang). Returns the value set.
+	const refresh_lang_select = function(select, prev, codes){
 		select.innerHTML = ''
 		codes.forEach(function(code){
 			const opt = ui.create_dom_element({ element_type:'option', text_content:(available_langs[code] || code)+' ('+code+')', parent:select })
 			opt.value = code
 		})
-		const want = (codes.indexOf(prev) !== -1) ? prev : (codes[0] || '')
+		const want = (codes.indexOf(prev) !== -1) ? prev : (checked_lang_codes()[0] || codes[0] || '')
 		select.value = want
 		return want
 	}
 	function sync_langs(){
 		cfg.langs = checked_lang_codes()
-		cfg.app_lang_default = refresh_lang_select(app_lang_select, cfg.app_lang_default)
-		cfg.data_lang_default = refresh_lang_select(data_lang_select, cfg.data_lang_default)
+		cfg.app_lang_default = refresh_lang_select(app_lang_select, cfg.app_lang_default, lang_codes)
+		cfg.data_lang_default = refresh_lang_select(data_lang_select, cfg.data_lang_default, cfg.langs)
 	}
 	app_lang_select.addEventListener('change', function(){ cfg.app_lang_default = app_lang_select.value })
 	data_lang_select.addEventListener('change', function(){ cfg.data_lang_default = data_lang_select.value })
@@ -1707,15 +1708,16 @@ const render_entity_block = function(self) {
 			status.textContent = (get_label.entity_invalid || 'Entity name must start with a letter and contain only letters, numbers and underscores (no spaces). Try: ') + suggestion
 			return
 		}
-		// LANGUAGES: at least one working language, and the two defaults must be
-		// among the selected set (a missing lang set makes the configured server
-		// refuse to boot — persist_config enforces the same server-side).
+		// LANGUAGES: at least one working language; the data default must be among
+		// the selected set, the interface default among the catalog (a missing lang
+		// set makes the configured server refuse to boot — persist_config enforces
+		// the same server-side).
 		if (!Array.isArray(cfg.langs) || cfg.langs.length===0) {
 			status.classList.remove('ok'); status.classList.add('error')
 			status.textContent = get_label.languages_required || 'Select at least one working language'
 			return
 		}
-		if (cfg.langs.indexOf(cfg.app_lang_default)===-1 || cfg.langs.indexOf(cfg.data_lang_default)===-1) {
+		if (lang_codes.indexOf(cfg.app_lang_default)===-1 || cfg.langs.indexOf(cfg.data_lang_default)===-1) {
 			status.classList.remove('ok'); status.classList.add('error')
 			status.textContent = get_label.language_default_invalid || 'The default interface and data languages must be among the selected languages'
 			return

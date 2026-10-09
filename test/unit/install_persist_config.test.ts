@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { parseEnvFile, seedProcessEnv } from '../../src/config/env.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
+import { INSTALL_LANG_CATALOG } from '../../src/core/install/lang_catalog.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
 import {
 	OFFICIAL_CODE_SERVER,
@@ -301,7 +302,8 @@ describe('persist_config (P2)', () => {
 	});
 
 	test('writes the four MANDATORY lang keys; JSON keys round-trip through parseEnvFile', async () => {
-		// The picked set drives both the map and the code list.
+		// The picked set drives the working-lang list; the interface map is the
+		// whole install catalog.
 		const result = await persistConfig({
 			...BASE_CFG,
 			langs: ['lg-eng', 'lg-spa'],
@@ -313,10 +315,7 @@ describe('persist_config (P2)', () => {
 
 		// The two JSON-shaped keys must parse back EXACTLY (the raw-write contract:
 		// envQuote'd JSON would break here because parseEnvFile does not unescape).
-		expect(JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string)).toEqual({
-			'lg-eng': 'English',
-			'lg-spa': 'Castellano',
-		});
+		expect(JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string)).toEqual({ ...INSTALL_LANG_CATALOG });
 		expect(JSON.parse(parsed.DEDALO_PROJECTS_DEFAULT_LANGS as string)).toEqual([
 			'lg-eng',
 			'lg-spa',
@@ -335,20 +334,22 @@ describe('persist_config (P2)', () => {
 		expect(result.ok).toBe(true);
 		const parsed = parseEnvFile(readFileSync(join(scratch, '.env'), 'utf8'));
 		const map = JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string) as Record<string, string>;
-		expect(Object.keys(map)).toEqual(['lg-eng', 'lg-spa']);
+		expect(Object.keys(map)).toEqual(Object.keys(INSTALL_LANG_CATALOG));
 		expect(map['lg-eng']).toBe('English');
+		expect(JSON.parse(parsed.DEDALO_PROJECTS_DEFAULT_LANGS as string)).toEqual(['lg-eng', 'lg-spa']);
+		expect(parsed.DEDALO_DATA_LANG_DEFAULT).toBe('lg-eng');
 	});
 
 	test('REFUSES an unusable lang selection — no .env written', async () => {
 		const scratch2 = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_langfail_'));
 		process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch2;
 		try {
-			// default ∉ the selected set → refuse. P1 sweep: a refusal is a THROWN
+			// data default ∉ the selected set → refuse. P1 sweep: a refusal is a THROWN
 			// registered code, never a `result:false` body.
 			const error = await persistConfig({
 				...BASE_CFG,
 				langs: ['lg-eng'],
-				app_lang_default: 'lg-spa',
+				data_lang_default: 'lg-spa',
 			}).then(
 				() => null,
 				(caught: unknown) => caught,
