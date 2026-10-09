@@ -509,6 +509,10 @@ export const SEED_CHILD_CONFIG: Readonly<Record<string, string>> = Object.freeze
 	DEDALO_DATA_LANG_DEFAULT: 'lg-eng',
 	PROJECTS_DEFAULT_LANGS: '["lg-eng"]',
 	DEDALO_TIMEZONE: 'UTC',
+	// The PROCESS clock zone too: some stamps read the host's local time, not
+	// DEDALO_TIMEZONE (measured: the dd199 created-date component came out 16:08
+	// on a Europe/Madrid desk and 14:08 in the UTC CI image — one seed, two contents).
+	TZ: 'UTC',
 });
 
 /** The process-level variables a child needs to RUN (bun, psql) — nothing of Dédalo's. */
