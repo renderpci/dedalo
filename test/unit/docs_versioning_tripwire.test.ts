@@ -404,11 +404,17 @@ describe('docs versioning: the published layout stays coherent', () => {
 		).toBe(2);
 
 		const calls = t.paq();
-		const second = calls.findLastIndex((c) => c[0] === 'trackPageView');
+		// Last index of a _paq command (Array#findLast* is ES2023, beyond the project's lib).
+		const lastIndexOf = (list: unknown[][], command: string): number => {
+			for (let at = list.length - 1; at >= 0; at--) if (list[at]?.[0] === command) return at;
+			return -1;
+		};
+		const second = lastIndexOf(calls, 'trackPageView');
 		const before = calls.slice(0, second);
-		expect(before.findLast((c) => c[0] === 'setCustomUrl')?.[1]).toBe(B);
-		expect(before.findLast((c) => c[0] === 'setDocumentTitle')?.[1]).toBe('Install');
-		expect(before.findLast((c) => c[0] === 'setReferrerUrl')?.[1]).toBe(A);
+		const lastArg = (command: string): unknown => before[lastIndexOf(before, command)]?.[1];
+		expect(lastArg('setCustomUrl')).toBe(B);
+		expect(lastArg('setDocumentTitle')).toBe('Install');
+		expect(lastArg('setReferrerUrl')).toBe(A);
 		// The landing view keeps the browser's own document.referrer.
 		const first = calls.findIndex((c) => c[0] === 'trackPageView');
 		expect(calls.slice(0, first).some((c) => c[0] === 'setReferrerUrl')).toBe(false);
