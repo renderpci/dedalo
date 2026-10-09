@@ -1778,7 +1778,11 @@ function tailItems(env: Env, earlier: readonly ComparedItem[]): ComparedItem[] {
   const chosen = env.completion.workUnit?.unit;
   const plan = pairPlan(layout, facts, ctx.args, chosen === undefined ? {} : { chosenUnit: chosen });
   out.push(Object.freeze({ ...pairItem(plan, layout) }) as ComparedItem);
-  const others = [...earlier, ...out].map(row => row.id);
+  // keep_ref runs last, after every item a converged run needs — never after an OPTIONAL one: an
+  // optional decision answered `skip` (web.logs's default, a stale pairing package kept) drops what
+  // runs after it, and keep_ref is required, so the default answer refused the whole run (measured,
+  // Ubuntu 24.04.5 two-machine drill, 2026-10-09: the stock vhost logs into ${APACHE_LOG_DIR}).
+  const others = [...earlier, ...out].filter(row => !row.optional).map(row => row.id);
   if (ctx.source === null) out.push(right('init.keep_ref', 'init', 'templates for re-runs', ['no source given: the kept templates stay'], { after: others }));
   else {
     out.push(

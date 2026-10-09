@@ -89,7 +89,9 @@ daemon on the publication host (`publication/host_agent/`, its own package, its 
    `test/unit/publication_host_pairing_tripwire.test.ts` twins that with
    `publication/host_agent/src/security/pairing.ts`. The prefix is this protocol's own,
    not the site builder's `dedalo-site-instance:`: a proof for one protocol is never valid
-   for the other. A wrong instance and a wrong token produce the same mismatch. The three
+   for the other. A wrong instance and a wrong token produce the same mismatch. Rotating
+   the token (remove `credentials/SERVICE_TOKEN`, `provision apply`) mints a new one and
+   restarts a running agent, which reads it once, at start (`LoadCredential=`). The three
    layers do three jobs. The certificate proves the caller is the paired engine's
    machine. The bearer proves it holds this host's secret. The fingerprint proves both
    sides mean the SAME host, so a mis-pasted env file names the mismatch instead of

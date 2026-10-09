@@ -615,6 +615,40 @@ describe('case 1b: a v2-only draft converges with no PHP anywhere; a second run 
   }
 });
 
+describe("case 1c: an optional decision answered with its default `skip` holds nothing back", () => {
+  // Measured on Ubuntu 24.04.5 (two-machine drill, 2026-10-09): the stock vhost logs into
+  // ${APACHE_LOG_DIR}/<site>-error.log, so web.logs is an optional decision whose default is
+  // `skip`; init.keep_ref ran `after` every earlier item, so the default answer dropped it and
+  // init refused: "skipping leaves required items undone: init.keep_ref" (exit 3).
+  const LOGGED =
+    '<VirtualHost *:443>\n  ServerName example.org\n  DocumentRoot /home/example.org/public_html\n  SSLEngine on\n' +
+    '  ErrorLog /var/log/apache2/example.org-error.log\n  CustomLog /var/log/apache2/example.org-access.log combined\n</VirtualHost>\n';
+  test('a terminal operator typing the default: converges, the templates are kept', async () => {
+    const w = makeWorld();
+    w.host.seedFile(w.profile.vhost, LOGGED);
+    useOperator(w, { 'web.logs': 'skip' });
+    const code = await init(w, firstRun(w));
+    expect(w.err.filter(line => !line.includes('apply:'))).toEqual([]);
+    expect(code).toBe(EXIT.OK);
+    expect(listOf(w, 'web.logs')).toBe(3);
+    expect(w.host.body(`${INIT}/test/rerun.env`)).toBe(`BUN=${w.layout.bunBin}\nAGENT=${w.layout.agentDir}\n`);
+    // The vhost's own log lines were left as they are.
+    expect(w.host.body(w.profile.vhost)).toContain('ErrorLog /var/log/apache2/example.org-error.log');
+  });
+  test('--yes --decide web.logs=skip (no terminal) converges too', async () => {
+    const w = makeWorld();
+    w.host.seedFile(w.profile.vhost, LOGGED);
+    w.prompter = scriptedPrompter({ interactive: false });
+    const code = await init(w, firstRun(w, DRAFT, ['--yes', '--decide', `${vhostId(w)}=act`, '--decide', 'api_config.v1_db_transport=socket', '--decide', 'web.logs=skip']));
+    expect(w.err.join('\n')).not.toContain('skipping leaves required items undone');
+    // Without a terminal the typed secrets stay open: exit 3 names them (keep_ref waits for them, as it should).
+    expect(code).toBe(EXIT.REFUSED);
+    expect(w.err.at(-1) ?? '').toContain('api_config.v2_env');
+    // Everything before them ran: the vhost include is in, the logs left as they are.
+    expect(w.host.body(w.profile.vhost)).toContain(`IncludeOptional ${w.layout.instanceDir}/web.apache.conf`);
+  });
+});
+
 /** A converged host (case 1's first run), the operator's answers given. */
 async function converged(os: FakeOs = 'debian', choices: Record<string, string> = {}): Promise<World> {
   const w = makeWorld({ os });

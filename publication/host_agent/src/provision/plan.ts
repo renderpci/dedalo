@@ -1306,6 +1306,11 @@ export function plan(
       if (parentReady(path)) {
         fsActions.push({ op: 'write', path, label, content, disposition: 'create', mode: row.mode, validate: null, ...own });
         if (seal) sealActions.push({ op: 'append-only', path });
+        // A minted token is read by the agent once, at start (LoadCredential=): a RUNNING agent keeps
+        // the old one and publishes the old fingerprint, so the rotation restarts it (the tail restarts
+        // only an active unit it did not just start). Measured, Ubuntu 24.04.5 two-machine drill,
+        // 2026-10-09: without it a guided re-install after SERVICE_TOKEN was removed failed verify.agent.
+        if (label === 'credential') effects.add('restart_agent');
       } else {
         refusals.push(`parent directory '${dirname(path)}' of '${path}' does not exist`);
       }

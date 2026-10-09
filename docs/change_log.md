@@ -1458,6 +1458,14 @@ Merged since the last release; these ship with the next one.
     *still to do* with what they wait for, and init ends with exit 3 naming them: fix the refusal, then
     run init again.
 
+- **"The guided install no longer refuses when you keep the default answer of an optional question."**
+
+    Answering `skip` to an optional question (the default for *move the vhost logs*, asked whenever the
+    site's virtual host logs into the distribution's log directory, as Ubuntu's stock virtual host does;
+    or keeping a stale pairing package) made init stop with exit 3, *skipping leaves required items
+    undone: init.keep_ref*, before it changed anything. An optional question now holds nothing back: init
+    installs the host and leaves only that item as it is.
+
 - **"Pairing from the sealed package: the guide puts the copy where the Dédalo user can read it, and an unreadable copy says why."**
 
     The guide told you to carry the `.pairing` file to `/root/`, which the Dédalo user cannot pass
@@ -1466,6 +1474,14 @@ Merged since the last release; these ship with the next one.
     for an unreadable file says that every directory above it must be passable too. The guide also
     shows the firewall rule that lets only the work host reach the agent's port, on firewalld and ufw:
     [Publication host agent](./install/publication_host.md#pairing).
+
+- **"Rotating a publication host's token now restarts its agent."**
+
+    After you remove `credentials/SERVICE_TOKEN`, `provision apply` (and a re-run of `install.sh`) mints a
+    new token and now restarts the running agent, which reads its token only when it starts. Before, the
+    agent kept the old token: the guided install failed its own health check (*publishes another pairing
+    fingerprint*, exit 4) and pairing again answered *pairing_mismatch* until the agent was restarted by
+    hand. The manual restart step is gone from *Rotating the token*.
 
 - **"Upgrading a publication host's agent from a new kit no longer leaves the agent stopped on a host with fapolicyd."**
 

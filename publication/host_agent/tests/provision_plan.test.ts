@@ -225,6 +225,22 @@ describe('plan on a converged host', () => {
     expect(actions[1]).toEqual({ op: 'restart', unit: 'dedalo-publication-host-test' });
   });
 
+  test('a minted token (rotation: SERVICE_TOKEN removed) restarts the RUNNING agent — it reads the token once, at start', () => {
+    // Measured on Ubuntu 24.04.5 (two-machine drill, 2026-10-09): the guided re-install after the
+    // token was removed minted a new one but left the agent on the old one; init's verify.agent then
+    // saw another fingerprint and failed (exit 4) — nothing else in that run restarted it.
+    const l = layout();
+    const host = converged(l);
+    host.entries.delete(l.serviceTokenPath);
+    host.units.set(l.agentUnitName, { enabled: true, active: true });
+    const actions = plan(l, host.state());
+    expect(actions.find(a => a.op === 'write' && a.path === l.serviceTokenPath)).toMatchObject({ label: 'credential', disposition: 'create' });
+    expect(actions.at(-1)).toEqual({ op: 'restart', unit: 'dedalo-publication-host-test' });
+    // A stopped agent is started by its own tail, never restarted twice.
+    host.units.set(l.agentUnitName, { enabled: true, active: false });
+    expect(plan(l, host.state()).filter(a => a.op === 'restart')).toEqual([]);
+  });
+
   test('an audit log that lost its attribute gets it back (after its metadata is fixed)', () => {
     const l = layout();
     const host = converged(l);

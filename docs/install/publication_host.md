@@ -2067,12 +2067,11 @@ code 1 means something is to do; it prints `would: issue the … certificate (tl
 ### Rotating the token
 
 1. Remove `/etc/dedalo_publication_host/museum_org/credentials/SERVICE_TOKEN`.
-2. Run `provision apply museum_org`: it mints a new token and rewrites the fragment with the
-   new fingerprint.
-3. Restart the agent: `systemctl restart dedalo-publication-host-museum_org`. `apply` does
-   not, and the running agent keeps the old token and fingerprint, so `replace` would fail
-   with *pairing_mismatch*.
-4. Run `replace` (step 8) with the new token and fragment.
+2. Run `provision apply museum_org`: it mints a new token, rewrites the fragment with the
+   new fingerprint and restarts the running agent, which reads its token only when it starts.
+   The guided install does the same: a re-run of `install.sh` after step 1 rotates the token
+   (add `-- --decide pair.package=again` on two machines for a new sealed package).
+3. Run `replace` (step 8) with the new token and fragment.
 
 ### Revoking a leaked engine bundle
 
