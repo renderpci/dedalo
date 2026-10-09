@@ -1,54 +1,103 @@
 {
   "inputs_digest": "fedffe5233891e722bb659c5da38733931e416b379afc203828b8e26da49c590",
-  "sha": "7d14c57b08b83b6ca5c7cec93b8d2bcdf9eddee8",
-  "at": "2026-10-09T14:45:58.384Z",
   "hosts": [
+    {
+      "os": "el10",
+      "id": "rhel",
+      "version": "10.2",
+      "kernel": "6.12.0-211.7.3.el10_2.aarch64",
+      "selinux": "enforcing",
+      "sha": "e507776cb44801103a80ff5ecfae689f2e7e4d92",
+      "at": "2026-10-09T15:18:00.431Z",
+      "measured": {
+        "booleans": {
+          "httpd_can_network_relay": {
+            "needed_for": "the v2 proxy",
+            "denied_without": true
+          },
+          "httpd_enable_homedirs": {
+            "needed_for": "home traversal (the H rule replaces it)",
+            "denied_without": false
+          }
+        },
+        "supported_directives": {
+          "systemd 257 (257-23.el10_2.1-g2c252d4)": []
+        },
+        "home_traverse_type": "home_root_t",
+        "system_default_readable": null,
+        "v1_php_floor": "8.3",
+        "nginx_floor": null
+      },
+      "legs": [
+        "booleans-measured",
+        "configtest-rollback",
+        "fapolicyd",
+        "fresh-converge",
+        "hand-map-migration",
+        "home-login-and-logs",
+        "kill-resume",
+        "kit-install",
+        "mixed-version-map",
+        "network-media",
+        "nginx-host-map",
+        "no-avc",
+        "precreated-api-files",
+        "rerun-all-right",
+        "selinux-labels",
+        "systemd-analyze",
+        "v1-handler-probe",
+        "v2-only-site"
+      ],
+      "skipped": []
+    },
     {
       "os": "el9",
       "id": "rhel",
       "version": "9.8",
       "kernel": "5.14.0-687.5.3.el9_8.aarch64",
-      "selinux": "enforcing"
-    }
-  ],
-  "measured": {
-    "booleans": {
-      "httpd_can_network_relay": {
-        "needed_for": "the v2 proxy",
-        "denied_without": true
+      "selinux": "enforcing",
+      "sha": "7d14c57b08b83b6ca5c7cec93b8d2bcdf9eddee8",
+      "at": "2026-10-09T14:45:58.384Z",
+      "measured": {
+        "booleans": {
+          "httpd_can_network_relay": {
+            "needed_for": "the v2 proxy",
+            "denied_without": true
+          },
+          "httpd_enable_homedirs": {
+            "needed_for": "home traversal (the H rule replaces it)",
+            "denied_without": false
+          }
+        },
+        "supported_directives": {
+          "systemd 252 (252-67.el9_8.2)": []
+        },
+        "home_traverse_type": "home_root_t",
+        "system_default_readable": null,
+        "v1_php_floor": "8.1",
+        "nginx_floor": null
       },
-      "httpd_enable_homedirs": {
-        "needed_for": "home traversal (the H rule replaces it)",
-        "denied_without": false
-      }
-    },
-    "supported_directives": {
-      "systemd 252 (252-67.el9_8.2)": []
-    },
-    "home_traverse_type": "home_root_t",
-    "system_default_readable": null,
-    "v1_php_floor": "8.1",
-    "nginx_floor": null
-  },
-  "legs": [
-    "booleans-measured",
-    "configtest-rollback",
-    "fapolicyd",
-    "fresh-converge",
-    "hand-map-migration",
-    "home-login-and-logs",
-    "kill-resume",
-    "kit-install",
-    "mixed-version-map",
-    "network-media",
-    "nginx-host-map",
-    "no-avc",
-    "precreated-api-files",
-    "rerun-all-right",
-    "selinux-labels",
-    "systemd-analyze",
-    "v1-handler-probe",
-    "v2-only-site"
-  ],
-  "skipped": []
+      "legs": [
+        "booleans-measured",
+        "configtest-rollback",
+        "fapolicyd",
+        "fresh-converge",
+        "hand-map-migration",
+        "home-login-and-logs",
+        "kill-resume",
+        "kit-install",
+        "mixed-version-map",
+        "network-media",
+        "nginx-host-map",
+        "no-avc",
+        "precreated-api-files",
+        "rerun-all-right",
+        "selinux-labels",
+        "systemd-analyze",
+        "v1-handler-probe",
+        "v2-only-site"
+      ],
+      "skipped": []
+    }
+  ]
 }

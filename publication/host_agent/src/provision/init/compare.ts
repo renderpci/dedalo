@@ -561,17 +561,27 @@ function hostItems(env: Env): ComparedItem[] {
         ),
       );
     } else if (declaredFpm !== undefined && env.fpm === null && declaredFpm.flavor === 'el' && env.appStreamPhp !== null && declaredFpm.version !== env.appStreamPhp) {
-      // EL 10: no module streams, so `dnf install php-fpm` can only ever give the AppStream version
-      const nn = declaredFpm.version.replace('.', '');
+      // EL 10: no module streams. AppStream's `php-fpm` is its default PHP; another version is an
+      // ALTERNATIVE package `php<v>-fpm` (measured RHEL 10.2: php8.4-fpm) installing the same paths
+      // (/usr/sbin/php-fpm, php-fpm.service, /etc/php-fpm.d) — flavor 'el' — and conflicting with
+      // the default one: one system PHP, so over an installed el PHP it needs --allowerasing.
+      const v = declaredFpm.version;
+      const nn = v.replace('.', '');
+      const installedEl = facts.fpm.filter(row => row.flavor === 'el');
       out.push(
         blocked(
           'host.fpm_install',
           'host',
           'PHP-FPM',
-          [`the declared el PHP ${declaredFpm.version} is not installed, and this release's AppStream ships PHP ${env.appStreamPhp} only (no module streams): no dnf command installs it as flavor 'el'`, ...belowFact],
           [
-            `dnf install php${nn}-php-fpm php${nn}-php-cli   # Remi, then declare site.fpm {"flavor": "remi", "version": "${declaredFpm.version}"}`,
-            `dnf install php-fpm php-cli   # or AppStream, then declare site.fpm {"flavor": "el", "version": "${env.appStreamPhp}"}`,
+            `the declared el PHP ${v} is not installed. AppStream's php-fpm is PHP ${env.appStreamPhp}; another AppStream PHP is its alternative package php${v}-fpm (the same paths, flavor 'el'), where this release ships it — \`dnf list 'php*-fpm'\` shows which`,
+            ...installedEl.map(row => `php${v}-fpm replaces the installed el PHP ${row.version} (${row.unit}): one system PHP, every pool in /etc/php-fpm.d then runs PHP ${v}`),
+            ...belowFact,
+          ],
+          [
+            `dnf install ${installedEl.length > 0 ? '--allowerasing ' : ''}php${v}-fpm php${v}-cli   # AppStream's alternative package, where this release ships it`,
+            `dnf install php${nn}-php-fpm php${nn}-php-cli   # or Remi, then declare site.fpm {"flavor": "remi", "version": "${v}"}`,
+            `dnf install php-fpm php-cli   # or the default AppStream PHP, then declare site.fpm {"flavor": "el", "version": "${env.appStreamPhp}"}`,
           ],
         ),
       );

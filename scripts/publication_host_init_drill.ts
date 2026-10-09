@@ -431,31 +431,40 @@ export async function fetchVerifiedBun(
 
 /* ── the EL drill record (the ratchet's input) ─────────────────────────────────────── */
 
+/** What one host's run measured (spec §9.11): the facts are the host's, never another major's. */
+export interface ElMeasured {
+	readonly booleans: Readonly<
+		Record<string, { readonly needed_for: string; readonly denied_without: boolean }>
+	>;
+	readonly supported_directives: Readonly<Record<string, readonly string[]>>;
+	readonly home_traverse_type: string | null;
+	readonly system_default_readable: boolean | null;
+	readonly v1_php_floor: string | null;
+	readonly nginx_floor: string | null;
+}
+
+/**
+ * One EL VM's recorded run. Each host carries its OWN run — the commit it ran on, when, what it
+ * measured, which legs passed — so recording EL 10 never rewrites what EL 9 measured (its PHP,
+ * its systemd's directives) nor claims EL 9 ran on EL 10's commit.
+ */
 export interface ElHost {
 	readonly os: 'el9' | 'el10';
 	readonly id: string;
 	readonly version: string;
 	readonly kernel: string;
 	readonly selinux: 'enforcing';
-}
-
-export interface ElDrillRecord {
-	readonly inputs_digest: string;
 	readonly sha: string;
 	readonly at: string;
-	readonly hosts: readonly ElHost[];
-	readonly measured: {
-		readonly booleans: Readonly<
-			Record<string, { readonly needed_for: string; readonly denied_without: boolean }>
-		>;
-		readonly supported_directives: Readonly<Record<string, readonly string[]>>;
-		readonly home_traverse_type: string | null;
-		readonly system_default_readable: boolean | null;
-		readonly v1_php_floor: string | null;
-		readonly nginx_floor: string | null;
-	};
+	readonly measured: ElMeasured;
 	readonly legs: readonly string[];
 	readonly skipped: readonly string[];
+}
+
+/** The record: ONE inputs digest every host was measured against, one entry per EL major. */
+export interface ElDrillRecord {
+	readonly inputs_digest: string;
+	readonly hosts: readonly ElHost[];
 }
 
 /**
@@ -491,31 +500,18 @@ export async function elDrillInputs(): Promise<string[]> {
 }
 
 /**
- * One VM's run into the record. Same inputs digest: the host is added or replaced and the
- * measurements of this run win for this host's OS. Another digest: a fresh record — an EL
- * input changed, so every host must be measured again.
+ * One VM's run into the record. Same inputs digest: the run's host is added, or replaces the
+ * entry of its own EL major — every other host's entry is kept byte for byte. Another digest: a
+ * fresh record holding only this run — an EL input changed, so every host must be measured again.
  */
 export function mergeRecord(existing: ElDrillRecord | null, run: ElDrillRecord): ElDrillRecord {
 	if (existing === null || existing.inputs_digest !== run.inputs_digest) return run;
-	const host = run.hosts[0];
-	const hosts = [...existing.hosts.filter((h) => h.os !== host?.os), ...run.hosts].sort((a, b) =>
-		a.os.localeCompare(b.os),
-	);
+	const ran = new Set(run.hosts.map((h) => h.os));
 	return {
-		...run,
-		hosts,
-		measured: {
-			...run.measured,
-			booleans: { ...existing.measured.booleans, ...run.measured.booleans },
-			supported_directives: {
-				...existing.measured.supported_directives,
-				...run.measured.supported_directives,
-			},
-		},
-		legs: [...new Set([...existing.legs, ...run.legs])].sort(),
-		skipped: [
-			...new Set([...existing.skipped.filter((s) => !run.legs.includes(s)), ...run.skipped]),
-		].sort(),
+		inputs_digest: run.inputs_digest,
+		hosts: [...existing.hosts.filter((h) => !ran.has(h.os)), ...run.hosts].sort((a, b) =>
+			a.os.localeCompare(b.os),
+		),
 	};
 }
 
@@ -2379,20 +2375,28 @@ async function writeRecord(ctx: Ctx, passed: string[], skipped: string[]): Promi
 	const kernel = (await ctx.runner.sh('uname -r')).out.trim();
 	const run: ElDrillRecord = {
 		inputs_digest: elDrillInputsDigest(AGENT_DIR, inputs),
-		sha,
-		at: new Date().toISOString(),
-		hosts: [{ os, id: release[0] ?? '', version: release[1] ?? '', kernel, selinux: 'enforcing' }],
-		measured: {
-			booleans: (ctx.facts.booleans as ElDrillRecord['measured']['booleans']) ?? {},
-			supported_directives:
-				(ctx.facts.supported_directives as ElDrillRecord['measured']['supported_directives']) ?? {},
-			home_traverse_type: (ctx.facts.home_traverse_type as string | null) ?? null,
-			system_default_readable: null,
-			v1_php_floor: (ctx.facts.v1_php_floor as string | null) ?? null,
-			nginx_floor: null,
-		},
-		legs: passed.sort(),
-		skipped: skipped.sort(),
+		hosts: [
+			{
+				os,
+				id: release[0] ?? '',
+				version: release[1] ?? '',
+				kernel,
+				selinux: 'enforcing',
+				sha,
+				at: new Date().toISOString(),
+				measured: {
+					booleans: (ctx.facts.booleans as ElMeasured['booleans']) ?? {},
+					supported_directives:
+						(ctx.facts.supported_directives as ElMeasured['supported_directives']) ?? {},
+					home_traverse_type: (ctx.facts.home_traverse_type as string | null) ?? null,
+					system_default_readable: null,
+					v1_php_floor: (ctx.facts.v1_php_floor as string | null) ?? null,
+					nginx_floor: null,
+				},
+				legs: passed.sort(),
+				skipped: skipped.sort(),
+			},
+		],
 	};
 	if (skipped.some((name) => required.includes(name))) {
 		throw new Error(

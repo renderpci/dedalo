@@ -12,9 +12,11 @@
  *   - HOSTS: every recorded host was SELinux enforcing; each supported EL major (9, 10) is
  *     recorded, or named in PENDING_EL_HOSTS with its reason. A pending major that the record
  *     now names is a stale row (red): delete it.
- *   - LEGS: the recorded run passed every REQUIRED EL-family leg (legsFor) and skipped none.
- *   - MEASURED: the facts the spec says the drill measures are present (the two booleans, the
- *     home's traverse type, the v1 PHP floor, a systemd version's supported directives).
+ *   - LEGS: EACH host's recorded run passed every REQUIRED EL-family leg (legsFor), skipped none.
+ *   - MEASURED: EACH host carries the facts the spec says the drill measures (the two booleans,
+ *     the home's traverse type, the v1 PHP floor, its systemd's supported directives) — its own:
+ *     a host is one run on one VM (its sha, its time), and recording one major never rewrites
+ *     another's (mergeRecord, judged here on synthetic records).
  *
  * HERMETIC: one file read, one `bun -e` child for the input list, the digest over tracked files.
  */
@@ -24,9 +26,11 @@ import {
 	AGENT_DIR,
 	EL_DRILL_RECORD,
 	type ElDrillRecord,
+	type ElHost,
 	elDrillInputs,
 	elDrillInputsDigest,
 	legsFor,
+	mergeRecord,
 	parseDrillArgs,
 } from '../../scripts/publication_host_init_drill.ts';
 
@@ -37,9 +41,7 @@ const SUPPORTED_EL = ['el9', 'el10'] as const;
  * A supported major the record does not name YET — each with why. Shrink-only: the day the drill
  * records that major, its row reddens and is deleted.
  */
-const PENDING_EL_HOSTS: Readonly<Record<string, string>> = {
-	el10: 'no EL 10 drill VM yet: the first EL drill (2026-10-09) ran on RHEL 9.8 only. Run `bun run test:pubhost:init:el --record` on a disposable SELinux-enforcing RHEL/Rocky/Alma 10 VM (same inputs digest: the host is merged into the record)',
-};
+const PENDING_EL_HOSTS: Readonly<Record<string, string>> = {};
 
 const record = (): ElDrillRecord => {
 	expect(existsSync(EL_DRILL_RECORD), `${EL_DRILL_RECORD} is missing`).toBe(true);
@@ -87,7 +89,7 @@ describe('the EL drill record holds the tree', () => {
 			expect(SUPPORTED_EL as readonly string[]).toContain(os);
 	});
 
-	test('LEGS: every required EL-family leg passed, none skipped', () => {
+	test('LEGS: every host passed every required EL-family leg, none skipped', () => {
 		const args = parseDrillArgs(['--family', 'el', '--in-place']);
 		if ('error' in args) throw new Error(args.error);
 		const required = legsFor(args)
@@ -95,20 +97,83 @@ describe('the EL drill record holds the tree', () => {
 			.map((leg) => leg.name);
 		expect(required).toContain('selinux-labels');
 		expect(required).toContain('fapolicyd');
-		const { legs, skipped } = record();
-		expect(skipped).toEqual([]);
-		expect(required.filter((name) => !legs.includes(name))).toEqual([]);
+		for (const host of record().hosts) {
+			expect(host.skipped, `${host.os} skipped legs`).toEqual([]);
+			expect(
+				required.filter((name) => !host.legs.includes(name)),
+				`${host.os} did not pass`,
+			).toEqual([]);
+		}
 	});
 
-	test('MEASURED: the booleans, the home traverse type, the v1 PHP floor, the supported directives', () => {
-		const { measured, sha } = record();
-		expect(sha).toMatch(/^[0-9a-f]{40}$/);
-		expect(Object.keys(measured.booleans).sort()).toEqual([
-			'httpd_can_network_relay',
-			'httpd_enable_homedirs',
-		]);
-		expect(measured.home_traverse_type).toBe('home_root_t');
-		expect(measured.v1_php_floor).toMatch(/^\d+\.\d+$/);
-		expect(Object.keys(measured.supported_directives).length).toBeGreaterThan(0);
+	test('MEASURED: per host, the booleans, the home traverse type, the v1 PHP floor, the supported directives', () => {
+		for (const host of record().hosts) {
+			const { measured, sha, at } = host;
+			expect(sha, `${host.os} sha`).toMatch(/^[0-9a-f]{40}$/);
+			expect(Number.isNaN(Date.parse(at)), `${host.os} at`).toBe(false);
+			expect(Object.keys(measured.booleans).sort()).toEqual([
+				'httpd_can_network_relay',
+				'httpd_enable_homedirs',
+			]);
+			expect(measured.home_traverse_type, `${host.os} home traverse type`).toBe('home_root_t');
+			expect(measured.v1_php_floor, `${host.os} v1 PHP floor`).toMatch(/^\d+\.\d+$/);
+			expect(Object.keys(measured.supported_directives).length).toBeGreaterThan(0);
+		}
+		const majors = record().hosts.map((host) => host.os);
+		expect(new Set(majors).size, 'one entry per EL major').toBe(majors.length);
+	});
+});
+
+/** A synthetic host entry (mergeRecord is pure: no VM, no file). */
+const host = (os: ElHost['os'], sha: string, php: string): ElHost => ({
+	os,
+	id: 'rhel',
+	version: os === 'el9' ? '9.8' : '10.2',
+	kernel: os === 'el9' ? '5.14.0-1.el9_8.aarch64' : '6.12.0-1.el10_2.aarch64',
+	selinux: 'enforcing',
+	sha: sha.repeat(40),
+	at: '2026-10-09T00:00:00.000Z',
+	measured: {
+		booleans: {},
+		supported_directives: { [os]: [] },
+		home_traverse_type: 'home_root_t',
+		system_default_readable: null,
+		v1_php_floor: php,
+		nginx_floor: null,
+	},
+	legs: ['fresh-converge'],
+	skipped: [],
+});
+
+describe('mergeRecord: one major recorded never rewrites another', () => {
+	const el9 = host('el9', 'a', '8.1');
+	const el10 = host('el10', 'b', '8.3');
+
+	test('same digest: the new major is added, the other entry kept byte for byte', () => {
+		const merged = mergeRecord(
+			{ inputs_digest: 'd', hosts: [el9] },
+			{ inputs_digest: 'd', hosts: [el10] },
+		);
+		expect(merged.hosts.map((h) => h.os)).toEqual(['el10', 'el9']);
+		expect(merged.hosts.find((h) => h.os === 'el9')).toEqual(el9);
+		expect(merged.hosts.find((h) => h.os === 'el10')).toEqual(el10);
+	});
+
+	test('same digest, same major: the run replaces that entry only', () => {
+		const again = host('el10', 'c', '8.3');
+		const merged = mergeRecord(
+			{ inputs_digest: 'd', hosts: [el9, el10] },
+			{ inputs_digest: 'd', hosts: [again] },
+		);
+		expect(merged.hosts.find((h) => h.os === 'el10')?.sha).toBe('c'.repeat(40));
+		expect(merged.hosts.find((h) => h.os === 'el9')).toEqual(el9);
+	});
+
+	test('another digest: a fresh record — every host must be measured again', () => {
+		const merged = mergeRecord(
+			{ inputs_digest: 'old', hosts: [el9] },
+			{ inputs_digest: 'new', hosts: [el10] },
+		);
+		expect(merged).toEqual({ inputs_digest: 'new', hosts: [el10] });
 	});
 });

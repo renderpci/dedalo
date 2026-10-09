@@ -727,7 +727,10 @@ two API configuration files, prove the agent (B4) and pair it (B5).
   `refuse_kernel` a kernel below `BUN_KERNEL_FLOOR` before any Bun is fetched (Bun is not
   run on a kernel it does not support; `tests/init_install_sh.test.ts`). EL 9
   ships PHP and nginx as `dnf module` streams, EL 10 has none (`OsSupport.dnfModules`: the
-  printed install commands differ); neither ships `mod_php` (only Remi's `php<NN>-php`).
+  printed install commands differ): its `php-fpm` is `OsSupport.appStreamPhp` (8.3), and another
+  AppStream PHP is an alternative package `php<v>-fpm` with the same paths (flavour `el`; measured
+  RHEL 10.2: `php8.4-fpm`, conflicting with `php-fpm < 8.4`, so over an installed el PHP
+  `host.fpm_install` prints `--allowerasing` and says it replaces it); neither ships `mod_php` (only Remi's `php<NN>-php`).
 - **One host-wide nginx map** (§9.7). **Locks** shared with apply and check (§9.6). **The Bun
   table's signature** is verified when the pin moves (§9.10).
 
@@ -960,12 +963,13 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   mod_php, the relabelled home's sshd login, the site's logs outside the home, a network media mount with the
   `context=` option, fapolicyd, an empty AVC search, and
   `systemd-analyze verify` with no warning naming a rendered unit. Its `--record` writes the EL
-  drill record (`el_drill_record.json` under `engineering/`: inputs digest, hosts, measured
-  types and floors); the root ratchet `test/unit/publication_host_el_drill_record.test.ts`
+  drill record (`el_drill_record.json` under `engineering/`: ONE inputs digest, one entry per EL
+  major, each its own run — commit, time, legs, measured types and floors — so recording one
+  major never rewrites another's measurements); the root ratchet `test/unit/publication_host_el_drill_record.test.ts`
   then turns any change to an EL-relevant input (`EL_DRILL_INPUTS`, `src/provision/selinux.ts`)
   red until the drill runs again, and names each supported major not yet recorded
   (`PENDING_EL_HOSTS`, shrink-only). `--capture <dir>` keeps the raw discovery outputs (the argv
-  init's exec door runs) for the typed EL fixtures. First record: RHEL 9.8, 2026-10-09.
+  init's exec door runs) for the typed EL fixtures. Recorded: RHEL 9.8 and RHEL 10.2 (aarch64, enforcing), 2026-10-09.
   **fapolicyd** (default rules, measured RHEL 9.8): root may execute an untrusted Bun, but that
   Bun may not read the TypeScript it runs (libmagic types it `text/x-java`, a language type), and
   an unprivileged account may not run it at all. `install.sh` probes the read before the

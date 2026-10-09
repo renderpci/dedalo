@@ -600,8 +600,12 @@ mod_ssl`); it never edits those files. nginx's user is `nginx`.
 **PHP-FPM (v1 only).** The v1 API runs in its own pool; a v2-only instance needs no PHP. EL's AppStream ships one PHP version per host.
 EL 9 defaults to 8.0, below the v1 floor of 8.1, and offers newer ones as module streams:
 `dnf module reset php && dnf module enable php:8.2 && dnf install php-fpm php-cli`. EL 10 has no
-module streams and ships 8.3: `dnf install php-fpm php-cli`. Remi's `php<NN>` collections
-install side by side on both. The pool's files, by flavour:
+module streams: its `php-fpm` is 8.3 (`dnf install php-fpm php-cli`), and a newer AppStream PHP
+is an alternative package of the same flavour, where the release ships one (RHEL 10.2:
+`dnf install php8.4-fpm php8.4-cli`; `dnf list 'php*-fpm'` shows which). It installs the same
+files, so it replaces an installed 8.3 (`dnf install --allowerasing …`) and every pool in
+`/etc/php-fpm.d` then runs the new version. Remi's `php<NN>` collections install side by side
+on both. The pool's files, by flavour:
 
 | | AppStream (`el`, 8.2) | Remi (`remi`, 8.3) |
 | --- | --- | --- |
