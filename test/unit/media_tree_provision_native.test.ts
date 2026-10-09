@@ -941,6 +941,18 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 		kind: 'not_media',
 		reason: '../private config dir — holds .env (DB password, salt); owner-only by design',
 	},
+	'src/core/install/ontology_install.ts': {
+		modes: ['0o700', '0o700'],
+		kind: 'not_media',
+		reason:
+			'the installer ontology staging + unpack dirs under <private>/install/ontology_staging — verified domain-ontology files awaiting import; engine-only, owner-only by design',
+	},
+	'src/core/install/ontology_archive.ts': {
+		modes: ['0o700', '0o700'],
+		kind: 'not_media',
+		reason:
+			'the extraction + work dirs of a local ontology archive the installer reads (staging, outside the media root); engine-only, owner-only by design',
+	},
 	'src/core/security/session_store.ts': {
 		modes: ['0o700'],
 		kind: 'not_media',
