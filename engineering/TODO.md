@@ -46,10 +46,11 @@
 - [ ] TODO-030: mdcat DB (dedalo7_mdcat) lacks migration 0009 (`f_regex_literal` / `f_like_literal`): every text search fails there. Apply the migration before using it as a perf/validation DB (schema change — needs authorisation).
 - [ ] TODO-031: area_maintenance widget 'unit_test' make sense in production mode?
 - [ ] TODO-032: Verify this bug: in copy mode, the agent creates folders and markers that its own service settings make unreadable to nginx (0750/0640). Every published file then answers 404 on a real host.
+- [ ] TODO-033: Create a data seed for testing and learning purposes. Numismatic, TCH and Oral History collections. Include metadata, images, and transcripts.
 
 ## Messaging
 
-- [ ] TODO-033: Messages system for users communication (see Agora https://agora.dedalo.dev/d/364-proposal-to-include-a-message-thread).
+- [ ] TODO-034: Messages system for users communication (see Agora https://agora.dedalo.dev/d/364-proposal-to-include-a-message-thread).
 
 ## Components & Sections
 
