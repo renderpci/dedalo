@@ -580,7 +580,10 @@ export function selinuxControlConf(): string {
  * getattr — measured, RHEL 9.8: httpd's stat is denied first, and that record names the path).
  */
 export function controlNamed(line: string): boolean {
-	return line.includes(`name="${SELINUX_CONTROL_FILE}"`) || line.includes(`path="${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}"`);
+	return (
+		line.includes(`name="${SELINUX_CONTROL_FILE}"`) ||
+		line.includes(`path="${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}"`)
+	);
 }
 
 /**
@@ -601,7 +604,11 @@ export function selinuxControlVerdict(observed: {
 		return `the control file as httpd_sys_content_t answered ${baseline.status}: the control proves nothing`;
 	}
 	if (refused.status !== 403) return `httpd read a ${type} file: ${refused.status}`;
-	if (errorLog.split('\n').some((line) => /AH01630|AH01797/.test(line) && line.includes(SELINUX_CONTROL_FILE))) {
+	if (
+		errorLog
+			.split('\n')
+			.some((line) => /AH01630|AH01797/.test(line) && line.includes(SELINUX_CONTROL_FILE))
+	) {
 		return `the 403 for the ${type} control is Apache's authorization, not SELinux:\n${errorLog.slice(-1000)}`;
 	}
 	const denied = avc
@@ -613,7 +620,9 @@ export function selinuxControlVerdict(observed: {
 				line.includes(':httpd_t:') &&
 				line.includes(`:${type}:`),
 		);
-	return denied ? null : `no AVC denial of httpd_t on ${type} for the control:\n${avc.slice(-2000)}`;
+	return denied
+		? null
+		: `no AVC denial of httpd_t on ${type} for the control:\n${avc.slice(-2000)}`;
 }
 
 interface Ctx {
@@ -1628,12 +1637,28 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			const local = await must(ctx, 'semanage fcontext -l -C', 'semanage fcontext -l -C');
 			const rules = await s9Rules(INSTANCE);
 			// One v2 type on every layout (owner decision 2026-10-09): the home layout's v2 tree too.
-			const v2Rule = rules.find((rule) => rule.path === `/home/${DOMAIN}/dedalo/publication_api/v2`);
-			check(v2Rule?.type === V2_TREE_TYPE && v2Rule.recursive, `the home layout's v2 rule is ${JSON.stringify(v2Rule)}, not ${V2_TREE_TYPE}`);
-			const listed = await must(ctx, `semodule --list-modules=full | awk '$2 == "${SELINUX_MODULE}"'`, 'semodule --list-modules=full');
-			check(/^400 dedalo_publication_host\s+cil\s*$/.test(listed.trim()), `the home-layout install did not install the module: '${listed.trim()}'`);
+			const v2Rule = rules.find(
+				(rule) => rule.path === `/home/${DOMAIN}/dedalo/publication_api/v2`,
+			);
+			check(
+				v2Rule?.type === V2_TREE_TYPE && v2Rule.recursive,
+				`the home layout's v2 rule is ${JSON.stringify(v2Rule)}, not ${V2_TREE_TYPE}`,
+			);
+			const listed = await must(
+				ctx,
+				`semodule --list-modules=full | awk '$2 == "${SELINUX_MODULE}"'`,
+				'semodule --list-modules=full',
+			);
+			check(
+				/^400 dedalo_publication_host\s+cil\s*$/.test(listed.trim()),
+				`the home-layout install did not install the module: '${listed.trim()}'`,
+			);
 			const v2Home = `/home/${DOMAIN}/dedalo/publication_api/v2`;
-			const v2Labels = await must(ctx, `stat -c '%C %n' ${q(v2Home)} ${q(`${v2Home}/shared`)} ${q(`${v2Home}/shared/v2.env`)}`, 'the home v2 tree labels');
+			const v2Labels = await must(
+				ctx,
+				`stat -c '%C %n' ${q(v2Home)} ${q(`${v2Home}/shared`)} ${q(`${v2Home}/shared/v2.env`)}`,
+				'the home v2 tree labels',
+			);
 			for (const line of v2Labels.trim().split('\n'))
 				check(line.split(':')[2] === V2_TREE_TYPE, `not ${V2_TREE_TYPE}: ${line}`);
 			ctx.facts.home_v2_type = v2Labels.trim().split('\n')[0]?.split(':')[2] ?? null;
@@ -1791,7 +1816,11 @@ export const LEGS: readonly Leg[] = Object.freeze([
 					90_000,
 				);
 			// 1. Converged while fapolicyd was installed but stopped: the trust is already provisioned.
-			const trusted = await must(ctx, `cat ${trustFile}`, `the provisioned trust file ${trustFile}`);
+			const trusted = await must(
+				ctx,
+				`cat ${trustFile}`,
+				`the provisioned trust file ${trustFile}`,
+			);
 			check(
 				trusted.startsWith(`# dedalo-provision: ${INSTANCE} fapolicyd_trust `),
 				`${trustFile} does not carry our stamp:\n${trusted.slice(0, 300)}`,
@@ -1830,48 +1859,114 @@ export const LEGS: readonly Leg[] = Object.freeze([
 					180_000,
 				);
 				// 3. The control: the same Bun at a path nobody trusted is denied to the agent; bun_bin is not.
-				await must(ctx, `install -m 0755 ${q(unit.bunBin)} ${copy}`, 'an untrusted copy of the Bun');
+				await must(
+					ctx,
+					`install -m 0755 ${q(unit.bunBin)} ${copy}`,
+					'an untrusted copy of the Bun',
+				);
 				check(
 					!(await runsAs(`${INSTANCE}_agent`, copy)),
 					`an untrusted copy of ${unit.bunBin} runs as ${INSTANCE}_agent: fapolicyd does not enforce, the leg proves nothing`,
 				);
-				await untilRuns(`${INSTANCE}_agent`, unit.bunBin, true, `the provisioned trust makes ${unit.bunBin} runnable by ${INSTANCE}_agent`);
-				check(await runsAs(`${INSTANCE}_v2`, unit.bunBin), `the provisioned trust does not make ${unit.bunBin} runnable by ${INSTANCE}_v2`);
+				await untilRuns(
+					`${INSTANCE}_agent`,
+					unit.bunBin,
+					true,
+					`the provisioned trust makes ${unit.bunBin} runnable by ${INSTANCE}_agent`,
+				);
+				check(
+					await runsAs(`${INSTANCE}_v2`, unit.bunBin),
+					`the provisioned trust does not make ${unit.bunBin} runnable by ${INSTANCE}_v2`,
+				);
 				// 4. Without its trust file the instance's units do not run: the agent restarted then stays down
 				//    (the trust file, not luck, is what lets the sandboxed agent run) — and install.sh's
 				//    pre-hand-over gate (before any unit exists root must read the code) refuses the installed
 				//    Bun with the line that trusts it.
-				await must(ctx, `mv ${trustFile} /root/dd_trust.aside && fapolicyd-cli --update`, 'move the trust aside');
-				await untilRuns(`${INSTANCE}_agent`, unit.bunBin, false, `${unit.bunBin} is denied without its trust`);
+				await must(
+					ctx,
+					`mv ${trustFile} /root/dd_trust.aside && fapolicyd-cli --update`,
+					'move the trust aside',
+				);
+				await untilRuns(
+					`${INSTANCE}_agent`,
+					unit.bunBin,
+					false,
+					`${unit.bunBin} is denied without its trust`,
+				);
 				await ctx.runner.sh(`systemctl restart ${unit.agent}`, { timeoutMs: 60_000 });
 				const down = await ctx.runner.sh(
 					`for i in $(seq 1 10); do curl -fsS --max-time 2 --unix-socket ${socket} http://localhost/publication/host_agent/health >/dev/null 2>&1 && exit 1; sleep 0.5; done; exit 0`,
 					{ timeoutMs: 60_000 },
 				);
-				check(down.code === 0, `the agent answers /health without its trust file: fapolicyd does not check the sandboxed unit (allow_filesystem_mark?)`);
-				const gated = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --dry-run --no-pair')} </dev/null`);
 				check(
-					gated.code === 3 && gated.err.includes(`fapolicyd denies ${unit.bunBin} the code it runs`),
+					down.code === 0,
+					`the agent answers /health without its trust file: fapolicyd does not check the sandboxed unit (allow_filesystem_mark?)`,
+				);
+				const gated = await ctx.runner.sh(
+					`${rerunSh(INSTANCE, home, '-- --dry-run --no-pair')} </dev/null`,
+				);
+				check(
+					gated.code === 3 &&
+						gated.err.includes(`fapolicyd denies ${unit.bunBin} the code it runs`),
 					`install.sh did not refuse the untrusted Bun: exit ${gated.code}\n${gated.out.slice(-1500)}${gated.err.slice(-1500)}`,
 				);
-				await must(ctx, `mv /root/dd_trust.aside ${trustFile} && fapolicyd-cli --update`, 'restore the trust');
-				await untilRuns(`${INSTANCE}_agent`, unit.bunBin, true, `${unit.bunBin} runs again with its trust`);
+				await must(
+					ctx,
+					`mv /root/dd_trust.aside ${trustFile} && fapolicyd-cli --update`,
+					'restore the trust',
+				);
+				await untilRuns(
+					`${INSTANCE}_agent`,
+					unit.bunBin,
+					true,
+					`${unit.bunBin} runs again with its trust`,
+				);
 				// 5. The agent under fapolicyd, and init's re-run: both items right, nothing to run by hand.
-				await must(ctx, `systemctl reset-failed ${unit.agent}; systemctl restart ${unit.agent}`, 'restart the agent under fapolicyd', 120_000);
+				await must(
+					ctx,
+					`systemctl reset-failed ${unit.agent}; systemctl restart ${unit.agent}`,
+					'restart the agent under fapolicyd',
+					120_000,
+				);
 				await must(
 					ctx,
 					`for i in $(seq 1 60); do curl -fsS --max-time 5 --unix-socket ${socket} http://localhost/publication/host_agent/health >/dev/null 2>&1 && exit 0; sleep 0.5; done; exit 1`,
 					'the agent answers under fapolicyd',
 				);
 				await healthOverSocket(ctx, INSTANCE);
-				const rerun = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`, { timeoutMs: 600_000 });
-				check(rerun.code === 0, `the re-run under fapolicyd exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`);
+				const rerun = await ctx.runner.sh(
+					`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`,
+					{ timeoutMs: 600_000 },
+				);
+				check(
+					rerun.code === 0,
+					`the re-run under fapolicyd exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`,
+				);
 				const report = rerun.out;
-				check(report.includes('trust is automatic: provision apply writes'), `init's host.fapolicyd does not say the trust is automatic:\n${report.slice(-3000)}`);
-				check(report.includes('integrity = sha256: a trusted file changed after it was trusted is denied'), `host.fapolicyd_integrity is not right under integrity = sha256:\n${report.slice(-3000)}`);
-				check(report.includes('allow_filesystem_mark = 1: fapolicyd checks what the sandboxed services open too'), `host.fapolicyd_mounts is not right under allow_filesystem_mark = 1:\n${report.slice(-3000)}`);
+				check(
+					report.includes('trust is automatic: provision apply writes'),
+					`init's host.fapolicyd does not say the trust is automatic:\n${report.slice(-3000)}`,
+				);
+				check(
+					report.includes(
+						'integrity = sha256: a trusted file changed after it was trusted is denied',
+					),
+					`host.fapolicyd_integrity is not right under integrity = sha256:\n${report.slice(-3000)}`,
+				);
+				check(
+					report.includes(
+						'allow_filesystem_mark = 1: fapolicyd checks what the sandboxed services open too',
+					),
+					`host.fapolicyd_mounts is not right under allow_filesystem_mark = 1:\n${report.slice(-3000)}`,
+				);
 				// 6. Two v2 releases PUSHED through the agent, then a rollback: each trusted before it ran.
-				const healthUrl = (await must(ctx, `sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${INSTANCE}/agent.env`, 'V2_HEALTH_URL')).trim();
+				const healthUrl = (
+					await must(
+						ctx,
+						`sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${INSTANCE}/agent.env`,
+						'V2_HEALTH_URL',
+					)
+				).trim();
 				check(/^http:\/\/127\.0\.0\.1:\d+\//.test(healthUrl), `V2_HEALTH_URL is '${healthUrl}'`);
 				const v2Answers = async (marker: string): Promise<void> => {
 					await must(
@@ -1880,29 +1975,79 @@ export const LEGS: readonly Leg[] = Object.freeze([
 						`v2 answers its /health as ${marker}`,
 					);
 				};
-				const posted1 = await agentPost(ctx, socket, INSTANCE, '/publication/host_agent/v1/releases/v2', r1);
-				check(posted1.status === 200, `release.install ${r1.id} answered ${posted1.status}: ${posted1.body}`);
+				const posted1 = await agentPost(
+					ctx,
+					socket,
+					INSTANCE,
+					'/publication/host_agent/v1/releases/v2',
+					r1,
+				);
+				check(
+					posted1.status === 200,
+					`release.install ${r1.id} answered ${posted1.status}: ${posted1.body}`,
+				);
 				await v2Answers('r1');
-				const record = JSON.parse(await must(ctx, `cat /etc/dedalo_publication_host/${INSTANCE}/fapolicyd_trust.json`, 'the trust record')) as { outcome: string; releases: string[] };
-				check(['applied', 'unchanged'].includes(record.outcome) && record.releases.includes(`v2:${r1.id}`), `the trust record after ${r1.id}: ${JSON.stringify(record)}`);
-				check((await must(ctx, `cat ${trustFile}`, 'the trust file')).includes(`/publication_api/v2/releases/${r1.id}/src/index.ts `), `${trustFile} does not trust ${r1.id}`);
-				const posted2 = await agentPost(ctx, socket, INSTANCE, '/publication/host_agent/v1/releases/v2', r2);
-				check(posted2.status === 200, `release.install ${r2.id} answered ${posted2.status}: ${posted2.body}`);
+				const record = JSON.parse(
+					await must(
+						ctx,
+						`cat /etc/dedalo_publication_host/${INSTANCE}/fapolicyd_trust.json`,
+						'the trust record',
+					),
+				) as { outcome: string; releases: string[] };
+				check(
+					['applied', 'unchanged'].includes(record.outcome) &&
+						record.releases.includes(`v2:${r1.id}`),
+					`the trust record after ${r1.id}: ${JSON.stringify(record)}`,
+				);
+				check(
+					(await must(ctx, `cat ${trustFile}`, 'the trust file')).includes(
+						`/publication_api/v2/releases/${r1.id}/src/index.ts `,
+					),
+					`${trustFile} does not trust ${r1.id}`,
+				);
+				const posted2 = await agentPost(
+					ctx,
+					socket,
+					INSTANCE,
+					'/publication/host_agent/v1/releases/v2',
+					r2,
+				);
+				check(
+					posted2.status === 200,
+					`release.install ${r2.id} answered ${posted2.status}: ${posted2.body}`,
+				);
 				await v2Answers('r2');
-				const rolled = await agentPost(ctx, socket, INSTANCE, '/publication/host_agent/v1/releases/v2/rollback', null);
-				check(rolled.status === 200 && rolled.body.includes(`"to":"${r1.id}"`), `release.rollback answered ${rolled.status}: ${rolled.body}`);
+				const rolled = await agentPost(
+					ctx,
+					socket,
+					INSTANCE,
+					'/publication/host_agent/v1/releases/v2/rollback',
+					null,
+				);
+				check(
+					rolled.status === 200 && rolled.body.includes(`"to":"${r1.id}"`),
+					`release.rollback answered ${rolled.status}: ${rolled.body}`,
+				);
 				await v2Answers('r1');
 				// 7. What fapolicyd gates: the release entry is a %languages type, and the same type outside the
 				//    trust set is DENIED to the v2 account — so v2 ran above only because the oneshot trusted it.
 				const entry = `${unit.stateRoot}/publication_api/v2/releases/${r1.id}/src/index.ts`;
-				const ftype = (await must(ctx, `fapolicyd-cli --ftype ${q(entry)}`, 'the release entry\'s file type')).trim();
-				check(/^(text\/x-java|application\/javascript|text\/javascript)$/.test(ftype), `the release entry is typed '${ftype}', not one of fapolicyd's %languages: the leg would prove nothing`);
+				const ftype = (
+					await must(ctx, `fapolicyd-cli --ftype ${q(entry)}`, "the release entry's file type")
+				).trim();
+				check(
+					/^(text\/x-java|application\/javascript|text\/javascript)$/.test(ftype),
+					`the release entry is typed '${ftype}', not one of fapolicyd's %languages: the leg would prove nothing`,
+				);
 				const control = '/var/tmp/dd_fapolicyd_control';
 				const ran = await ctx.runner.sh(
 					`rm -rf ${control} && install -d -m 0755 ${control} && install -m 0644 ${q(entry)} ${control}/index.ts && cd /var/tmp && timeout 5 runuser -u ${INSTANCE}_v2 -- env PORT=0 ${q(unit.bunBin)} ${control}/index.ts; r=$?; rm -rf ${control}; exit $r`,
 					{ timeoutMs: 30_000 },
 				);
-				check(ran.code !== 0 && ran.code !== 124, `an untrusted copy of the release entry ran as ${INSTANCE}_v2 (exit ${ran.code}): fapolicyd does not gate the v2 account`);
+				check(
+					ran.code !== 0 && ran.code !== 124,
+					`an untrusted copy of the release entry ran as ${INSTANCE}_v2 (exit ${ran.code}): fapolicyd does not gate the v2 account`,
+				);
 				// 8. integrity = sha256: one byte of the trusted entry changed IN PLACE (same size, same inode,
 				//    still valid TypeScript) is denied to the v2 account — in a namespaced transient unit, as
 				//    v2's own units run, and directly — until the byte is put back. v2 itself is stopped
@@ -1911,7 +2056,11 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				const flip = (from: string, to: string) =>
 					`off=$(grep -bo "pad = '${from}" ${q(entry)} | head -n1 | cut -d: -f1) && [ -n "$off" ] && printf '${to}' | dd of=${q(entry)} bs=1 seek=$((off + 7)) conv=notrunc 2>/dev/null && grep -q "pad = '${to}${from.slice(1)}'" ${q(entry)}`;
 				await must(ctx, `systemctl stop ${unit.v2Unit}`, 'stop v2 before the change');
-				await must(ctx, flip('aaaaaaaa', 'b'), 'change one byte of the trusted release entry in place');
+				await must(
+					ctx,
+					flip('aaaaaaaa', 'b'),
+					'change one byte of the trusted release entry in place',
+				);
 				const asV2 = (how: string) =>
 					how === 'unit'
 						? `rm -rf /tmp/bun-node-*; systemd-run --wait -q -p User=${INSTANCE}_v2 -p ProtectHome=read-only -p ProtectSystem=strict -p WorkingDirectory=/var/tmp -p RuntimeMaxSec=5 /usr/bin/env PORT=0 ${q(unit.bunBin)} ${q(entry)}; r=$?; rm -rf /tmp/bun-node-*; exit $r`
@@ -1921,13 +2070,25 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				ctx.facts.fapolicyd_changed_entry = { unit: inUnit.code, direct: direct.code };
 				// A server that is ALLOWED keeps running: the transient unit then ends at RuntimeMaxSec (non-zero too),
 				// so the unit's verdict is its journal's EPERM; runuser's is a fast non-zero exit (124 = it ran).
-				check(direct.code !== 0 && direct.code !== 124, `the changed entry ran as ${INSTANCE}_v2 (exit ${direct.code}): integrity = sha256 did not deny it`);
 				check(
-					(await ctx.runner.sh(`journalctl --since '-30 s' --no-pager | grep -F 'EPERM reading "${entry}"' | grep -q .`)).code === 0,
+					direct.code !== 0 && direct.code !== 124,
+					`the changed entry ran as ${INSTANCE}_v2 (exit ${direct.code}): integrity = sha256 did not deny it`,
+				);
+				check(
+					(
+						await ctx.runner.sh(
+							`journalctl --since '-30 s' --no-pager | grep -F 'EPERM reading "${entry}"' | grep -q .`,
+						)
+					).code === 0,
 					`no EPERM for the changed entry in the namespaced unit's journal (exit ${inUnit.code}): fapolicyd did not deny it there`,
 				);
 				await must(ctx, flip('baaaaaaa', 'a'), 'put the byte back in place');
-				await must(ctx, `systemctl reset-failed ${unit.v2Unit}; systemctl start ${unit.v2Unit}`, 'start v2 on the restored entry', 60_000);
+				await must(
+					ctx,
+					`systemctl reset-failed ${unit.v2Unit}; systemctl start ${unit.v2Unit}`,
+					'start v2 on the restored entry',
+					60_000,
+				);
 				await v2Answers('r1');
 				ctx.facts.fapolicyd = true;
 			} finally {
@@ -1955,13 +2116,22 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			const stateFile = `/etc/dedalo_publication_host/${INSTANCE}/selinux.state`;
 			const paths = [v2, `${v2}/shared`, `${v2}/shared/v2.env`, `${v2}/current`];
 			const typesOf = async (): Promise<string[]> =>
-				(await must(ctx, `stat -c '%C' ${paths.map(q).join(' ')}`, 'the v2 tree labels')).trim().split('\n').map((line) => line.split(':')[2] ?? '');
+				(await must(ctx, `stat -c '%C' ${paths.map(q).join(' ')}`, 'the v2 tree labels'))
+					.trim()
+					.split('\n')
+					.map((line) => line.split(':')[2] ?? '');
 			check(
 				(await ctx.runner.sh(`test -L ${q(`${v2}/current`)}`)).code === 0,
 				`${v2}/current is not a link: the leg runs after fapolicyd, which leaves r1 current`,
 			);
 			const since = (await must(ctx, 'sleep 1.1; date +%T', 'the leg start')).trim();
-			const healthUrl = (await must(ctx, `sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${INSTANCE}/agent.env`, 'V2_HEALTH_URL')).trim();
+			const healthUrl = (
+				await must(
+					ctx,
+					`sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${INSTANCE}/agent.env`,
+					'V2_HEALTH_URL',
+				)
+			).trim();
 			check(/^http:\/\/127\.0\.0\.1:\d+\//.test(healthUrl), `V2_HEALTH_URL is '${healthUrl}'`);
 			try {
 				// 1. The legacy footprint: rule, history and labels as the code before 2026-10-09 left them.
@@ -1972,28 +2142,74 @@ export const LEGS: readonly Leg[] = Object.freeze([
 					'the legacy data_home_t footprint',
 				);
 				const legacy = await typesOf();
-				check(legacy.every((type) => type === 'data_home_t'), `the legacy footprint is not data_home_t: ${legacy.join(', ')}`);
+				check(
+					legacy.every((type) => type === 'data_home_t'),
+					`the legacy footprint is not data_home_t: ${legacy.join(', ')}`,
+				);
 				// 2. init's re-run re-types it (one import: -d data_home_t, -a the module's type) and relabels.
-				const rerun = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`, { timeoutMs: 600_000 });
-				check(rerun.code === 0, `the migration re-run exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`);
-				const rule = (await must(ctx, `semanage fcontext -l -C | grep -F -- ${q(`${spec} `)}`, 'the v2 rule')).trim();
-				check(rule.includes(`:${V2_TREE_TYPE}:`) && !rule.includes('data_home_t'), `the v2 rule after the re-run: '${rule}'`);
+				const rerun = await ctx.runner.sh(
+					`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`,
+					{ timeoutMs: 600_000 },
+				);
+				check(
+					rerun.code === 0,
+					`the migration re-run exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`,
+				);
+				const rule = (
+					await must(ctx, `semanage fcontext -l -C | grep -F -- ${q(`${spec} `)}`, 'the v2 rule')
+				).trim();
+				check(
+					rule.includes(`:${V2_TREE_TYPE}:`) && !rule.includes('data_home_t'),
+					`the v2 rule after the re-run: '${rule}'`,
+				);
 				const after = await typesOf();
-				check(after.every((type) => type === V2_TREE_TYPE), `the v2 tree after the re-run: ${after.join(', ')}`);
-				const entry = (await must(ctx, `stat -c '%C' ${q(`${v2}/current/src/index.ts`)}`, 'the release entry label')).trim();
+				check(
+					after.every((type) => type === V2_TREE_TYPE),
+					`the v2 tree after the re-run: ${after.join(', ')}`,
+				);
+				const entry = (
+					await must(
+						ctx,
+						`stat -c '%C' ${q(`${v2}/current/src/index.ts`)}`,
+						'the release entry label',
+					)
+				).trim();
 				check(entry.split(':')[2] === V2_TREE_TYPE, `the current release is ${entry}`);
-				const pending = await must(ctx, `restorecon -n -v -R ${q(v2)} 2>&1`, 'restorecon -n on the v2 tree');
+				const pending = await must(
+					ctx,
+					`restorecon -n -v -R ${q(v2)} 2>&1`,
+					'restorecon -n on the v2 tree',
+				);
 				check(pending.trim() === '', `restorecon would still relabel the v2 tree:\n${pending}`);
 				const history = await must(ctx, `cat ${stateFile}`, 'selinux.state');
-				check(!history.includes('data_home_t') && history.includes(`"${V2_TREE_TYPE}"`), `selinux.state after the re-run:\n${history}`);
+				check(
+					!history.includes('data_home_t') && history.includes(`"${V2_TREE_TYPE}"`),
+					`selinux.state after the re-run:\n${history}`,
+				);
 				// 3. Idempotent: a second re-run changes nothing.
 				const before = (await journalRecords(ctx, INSTANCE)).length;
-				const again = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`, { timeoutMs: 600_000 });
-				check(again.code === 0, `the second re-run exited ${again.code}\n${again.out.slice(-3000)}${again.err}`);
-				const changed = (await journalRecords(ctx, INSTANCE)).slice(before).filter((p) => p.phase === 'done');
-				check(changed.length === 0, `the second re-run changed ${changed.map((p) => p.item).join(', ')}`);
+				const again = await ctx.runner.sh(
+					`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`,
+					{ timeoutMs: 600_000 },
+				);
+				check(
+					again.code === 0,
+					`the second re-run exited ${again.code}\n${again.out.slice(-3000)}${again.err}`,
+				);
+				const changed = (await journalRecords(ctx, INSTANCE))
+					.slice(before)
+					.filter((p) => p.phase === 'done');
+				check(
+					changed.length === 0,
+					`the second re-run changed ${changed.map((p) => p.item).join(', ')}`,
+				);
 				// 4. v2 restarts on the re-typed tree (systemd reads v2.env and the links) and answers.
-				await must(ctx, `systemctl reset-failed ${unit.v2Unit}; systemctl restart ${unit.v2Unit}`, 'restart v2', 60_000);
+				await must(
+					ctx,
+					`systemctl reset-failed ${unit.v2Unit}; systemctl restart ${unit.v2Unit}`,
+					'restart v2',
+					60_000,
+				);
 				await must(
 					ctx,
 					`for i in $(seq 1 60); do curl -fsS --max-time 5 ${q(healthUrl)} 2>/dev/null | grep -q '"release":"r1"' && exit 0; sleep 0.5; done; curl -sS --max-time 5 ${q(healthUrl)}; journalctl -u ${unit.v2Unit} -n 10 --no-pager 2>/dev/null; exit 1`,
@@ -2001,7 +2217,10 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				);
 				const avc = await ctx.runner.sh(`sleep 1; ausearch -m AVC,USER_AVC -ts ${since} 2>&1`);
 				const denied = avc.out.split('\n').filter((line) => /avc:/.test(line));
-				check(denied.length === 0, `AVC denials during the migration:\n${denied.slice(0, 20).join('\n')}`);
+				check(
+					denied.length === 0,
+					`AVC denials during the migration:\n${denied.slice(0, 20).join('\n')}`,
+				);
 				ctx.facts.home_v2_migration = { from: 'data_home_t', to: V2_TREE_TYPE };
 			} finally {
 				// As fapolicyd leaves it: v2 stopped (booleans-measured must not reuse a pooled backend).
@@ -2033,9 +2252,20 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				`${SYSTEM_INSTANCE} is not in the system layout: state ${unit.stateRoot}, agent ${unit.agentDir}`,
 			);
 			// 1. The module: ours, CIL at 400, the store holds exactly the stamped source.
-			const listed = await must(ctx, `semodule --list-modules=full | awk '$2 == "${SELINUX_MODULE}"'`, 'semodule --list-modules=full');
-			check(/^400 dedalo_publication_host\s+cil\s*$/.test(listed.trim()), `the module rows: '${listed.trim()}'`);
-			const source = await must(ctx, `stat -c '%U:%G %a' ${SELINUX_MODULE_SOURCE} && head -n1 ${SELINUX_MODULE_SOURCE}`, 'the module source');
+			const listed = await must(
+				ctx,
+				`semodule --list-modules=full | awk '$2 == "${SELINUX_MODULE}"'`,
+				'semodule --list-modules=full',
+			);
+			check(
+				/^400 dedalo_publication_host\s+cil\s*$/.test(listed.trim()),
+				`the module rows: '${listed.trim()}'`,
+			);
+			const source = await must(
+				ctx,
+				`stat -c '%U:%G %a' ${SELINUX_MODULE_SOURCE} && head -n1 ${SELINUX_MODULE_SOURCE}`,
+				'the module source',
+			);
 			check(
 				/^root:root 644\n; dedalo-provision: _host selinux_module [0-9a-f]{64}\n$/.test(source),
 				`the module source is not root:root 0644 with our stamp:\n${source}`,
@@ -2047,46 +2277,108 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			);
 			// 2. The v2 tree carries the module's type (the env file systemd reads included).
 			const v2 = `${unit.stateRoot}/publication_api/v2`;
-			const labels = await must(ctx, `stat -c '%C %n' ${q(v2)} ${q(`${v2}/shared`)} ${q(`${v2}/shared/v2.env`)}`, 'the v2 tree labels');
+			const labels = await must(
+				ctx,
+				`stat -c '%C %n' ${q(v2)} ${q(`${v2}/shared`)} ${q(`${v2}/shared/v2.env`)}`,
+				'the v2 tree labels',
+			);
 			for (const line of labels.trim().split('\n'))
 				check(line.split(':')[2] === V2_TREE_TYPE, `not ${V2_TREE_TYPE}: ${line}`);
-			const pending = await must(ctx, `restorecon -n -v -R ${q(v2)} 2>&1`, 'restorecon -n on the v2 tree');
+			const pending = await must(
+				ctx,
+				`restorecon -n -v -R ${q(v2)} 2>&1`,
+				'restorecon -n on the v2 tree',
+			);
 			check(pending.trim() === '', `restorecon would still relabel the v2 tree:\n${pending}`);
 			// 3. The policy: systemd may read it, httpd may not (sesearch -A answers no rule for httpd_t).
 			// Why the module exists: the system layout's default type under /srv (var_t) is not readable to systemd.
-			const defaultType = (await must(ctx, `matchpathcon -n ${q(`${v2}.dd_default_probe`)}`, 'the default type under /srv')).trim().split(':')[2] ?? '';
-			check(defaultType !== '' && defaultType !== V2_TREE_TYPE, `the default type beside the v2 tree is '${defaultType}'`);
-			const defaultRead = await must(ctx, `sesearch -A -s init_t -t ${defaultType} -c file -p read`, `sesearch init_t ${defaultType}`);
+			const defaultType =
+				(
+					await must(
+						ctx,
+						`matchpathcon -n ${q(`${v2}.dd_default_probe`)}`,
+						'the default type under /srv',
+					)
+				)
+					.trim()
+					.split(':')[2] ?? '';
+			check(
+				defaultType !== '' && defaultType !== V2_TREE_TYPE,
+				`the default type beside the v2 tree is '${defaultType}'`,
+			);
+			const defaultRead = await must(
+				ctx,
+				`sesearch -A -s init_t -t ${defaultType} -c file -p read`,
+				`sesearch init_t ${defaultType}`,
+			);
 			ctx.facts.system_default_readable = defaultRead.trim() !== '';
-			const initRead = await must(ctx, `sesearch -A -s init_t -t ${V2_TREE_TYPE} -c file -p read`, 'sesearch init_t');
-			check(initRead.includes(`allow init_t ${V2_TREE_TYPE}:file`), `init_t may not read ${V2_TREE_TYPE}:\n${initRead}`);
+			const initRead = await must(
+				ctx,
+				`sesearch -A -s init_t -t ${V2_TREE_TYPE} -c file -p read`,
+				'sesearch init_t',
+			);
+			check(
+				initRead.includes(`allow init_t ${V2_TREE_TYPE}:file`),
+				`init_t may not read ${V2_TREE_TYPE}:\n${initRead}`,
+			);
 			for (const cls of ['file', 'lnk_file'])
 				check(
-					(await must(ctx, `sesearch -A -s httpd_t -t ${V2_TREE_TYPE} -c ${cls} -p read`, `sesearch httpd_t ${cls}`)).trim() === '',
+					(
+						await must(
+							ctx,
+							`sesearch -A -s httpd_t -t ${V2_TREE_TYPE} -c ${cls} -p read`,
+							`sesearch httpd_t ${cls}`,
+						)
+					).trim() === '',
 					`a rule lets httpd_t read ${V2_TREE_TYPE} ${cls}`,
 				);
 			// 4. A v2 release pushed through the agent starts (systemd reads v2.env and the links) and answers.
 			const socket = `/run/dedalo_publication_host/${SYSTEM_INSTANCE}/agent.sock`;
 			await healthOverSocket(ctx, SYSTEM_INSTANCE);
 			const healthUrl = (
-				await must(ctx, `sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${SYSTEM_INSTANCE}/agent.env`, 'V2_HEALTH_URL')
+				await must(
+					ctx,
+					`sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${SYSTEM_INSTANCE}/agent.env`,
+					'V2_HEALTH_URL',
+				)
 			).trim();
 			check(/^http:\/\/127\.0\.0\.1:\d+\//.test(healthUrl), `V2_HEALTH_URL is '${healthUrl}'`);
 			const release = await miniV2Release(ctx, 'sys1');
 			try {
-				const posted = await agentPost(ctx, socket, SYSTEM_INSTANCE, '/publication/host_agent/v1/releases/v2', release);
-				check(posted.status === 200, `release.install ${release.id} answered ${posted.status}: ${posted.body}`);
+				const posted = await agentPost(
+					ctx,
+					socket,
+					SYSTEM_INSTANCE,
+					'/publication/host_agent/v1/releases/v2',
+					release,
+				);
+				check(
+					posted.status === 200,
+					`release.install ${release.id} answered ${posted.status}: ${posted.body}`,
+				);
 				await must(
 					ctx,
 					`for i in $(seq 1 60); do curl -fsS --max-time 5 ${q(healthUrl)} 2>/dev/null | grep -q '"release":"sys1"' && exit 0; sleep 0.5; done; curl -sS --max-time 5 ${q(healthUrl)}; journalctl -u ${unit.v2Unit} -n 10 --no-pager 2>/dev/null; exit 1`,
 					'v2 answers its /health in the system layout',
 				);
-				const current = (await must(ctx, `stat -c '%C' ${q(`${v2}/releases/${release.id}/src/index.ts`)}`, 'the release label')).trim();
-				check(current.split(':')[2] === V2_TREE_TYPE, `the pushed release is ${current}, not ${V2_TREE_TYPE} (it must inherit the tree's type)`);
+				const current = (
+					await must(
+						ctx,
+						`stat -c '%C' ${q(`${v2}/releases/${release.id}/src/index.ts`)}`,
+						'the release label',
+					)
+				).trim();
+				check(
+					current.split(':')[2] === V2_TREE_TYPE,
+					`the pushed release is ${current}, not ${V2_TREE_TYPE} (it must inherit the tree's type)`,
+				);
 				// 5. No denial since the leg started (the control below is the one on purpose).
 				const avc = await ctx.runner.sh(`sleep 1; ausearch -m AVC,USER_AVC -ts ${since} 2>&1`);
 				const denied = avc.out.split('\n').filter((line) => /avc:/.test(line));
-				check(denied.length === 0, `AVC denials during the system-layout install and push:\n${denied.slice(0, 20).join('\n')}`);
+				check(
+					denied.length === 0,
+					`AVC denials during the system-layout install and push:\n${denied.slice(0, 20).join('\n')}`,
+				);
 			} finally {
 				// Leave the host as the next legs expect it: no v2 of this instance answering.
 				await ctx.runner.sh(`systemctl stop ${unit.v2Unit}`, { timeoutMs: 60_000 });
@@ -2111,19 +2403,47 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				};
 				const baseline = await fetch();
 				const from = (await must(ctx, 'sleep 1.1; date +%T', 'the control start')).trim();
-				const logFrom = Number((await must(ctx, `wc -l < ${errorLog} 2>/dev/null || echo 0`, 'error_log size')).trim()) || 0;
+				const logFrom =
+					Number(
+						(await must(ctx, `wc -l < ${errorLog} 2>/dev/null || echo 0`, 'error_log size')).trim(),
+					) || 0;
 				await must(ctx, `chcon -t ${V2_TREE_TYPE} ${control}`, `label the control ${V2_TREE_TYPE}`);
 				const refused = await fetch();
-				const avc = await must(ctx, `sleep 1; ausearch -m AVC -ts ${from} 2>/dev/null || true`, 'the control AVC');
-				const log = await must(ctx, `tail -n +${logFrom + 1} ${errorLog} 2>/dev/null || true`, 'the httpd error log');
-				const verdict = selinuxControlVerdict({ baseline, refused, avc, errorLog: log, type: V2_TREE_TYPE });
-				check(verdict === null, `${verdict}\n(httpd error log since the control:\n${log.slice(-1500)})`);
+				const avc = await must(
+					ctx,
+					`sleep 1; ausearch -m AVC -ts ${from} 2>/dev/null || true`,
+					'the control AVC',
+				);
+				const log = await must(
+					ctx,
+					`tail -n +${logFrom + 1} ${errorLog} 2>/dev/null || true`,
+					'the httpd error log',
+				);
+				const verdict = selinuxControlVerdict({
+					baseline,
+					refused,
+					avc,
+					errorLog: log,
+					type: V2_TREE_TYPE,
+				});
+				check(
+					verdict === null,
+					`${verdict}\n(httpd error log since the control:\n${log.slice(-1500)})`,
+				);
 			} finally {
-				await ctx.runner.sh(`rm -rf ${SELINUX_CONTROL_DIR} ${SELINUX_CONTROL_CONF} && apachectl -t >/dev/null 2>&1 && systemctl reload httpd`);
+				await ctx.runner.sh(
+					`rm -rf ${SELINUX_CONTROL_DIR} ${SELINUX_CONTROL_CONF} && apachectl -t >/dev/null 2>&1 && systemctl reload httpd`,
+				);
 			}
 			// 7. A re-run with nothing to change: the policy item is right.
-			const rerun = await ctx.runner.sh(`sh ${q(`${unit.agentDir}/deploy/install.sh`)} ${SYSTEM_INSTANCE} -- --yes --no-pair </dev/null`, { timeoutMs: 600_000 });
-			check(rerun.code === 0, `the system-layout re-run exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`);
+			const rerun = await ctx.runner.sh(
+				`sh ${q(`${unit.agentDir}/deploy/install.sh`)} ${SYSTEM_INSTANCE} -- --yes --no-pair </dev/null`,
+				{ timeoutMs: 600_000 },
+			);
+			check(
+				rerun.code === 0,
+				`the system-layout re-run exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`,
+			);
 			check(
 				rerun.out.includes(`the policy module ${SELINUX_MODULE} is installed and current`),
 				`the re-run does not report selinux.v2_policy right:\n${rerun.out.slice(-3000)}`,
@@ -2231,10 +2551,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.startedAt} 2>&1`);
 			const lines = out.out
 				.split('\n')
-				.filter(
-					(line) =>
-						/avc:/.test(line) && !/name_connect/.test(line) && !controlNamed(line),
-				);
+				.filter((line) => /avc:/.test(line) && !/name_connect/.test(line) && !controlNamed(line));
 			check(lines.length === 0, `AVC denials during the drill:\n${lines.slice(0, 20).join('\n')}`);
 		},
 	},
@@ -2309,7 +2626,13 @@ async function instanceUnits(
 	].join('\n');
 	const done = await spawnText([process.execPath, '-e', probe], { cwd: AGENT_DIR });
 	if (done.code !== 0) throw new LegFailure(`reading ${instance}'s declaration: ${done.err}`);
-	return JSON.parse(done.out) as { agent: string; bunBin: string; agentDir: string; v2Unit: string; stateRoot: string };
+	return JSON.parse(done.out) as {
+		agent: string;
+		bunBin: string;
+		agentDir: string;
+		v2Unit: string;
+		stateRoot: string;
+	};
 }
 
 /** One minimal Publication API v2 release the agent accepts (a bundle written in a file on the target). */
@@ -2349,7 +2672,12 @@ async function miniV2Release(ctx: Ctx, marker: string): Promise<MiniRelease> {
 	const entries = [
 		{ path: 'DRILL_RELEASE', type: 'file', mode: 0o644, text: `${marker}\n` },
 		{ path: 'node_modules', type: 'dir', mode: 0o755 },
-		{ path: 'package.json', type: 'file', mode: 0o644, text: '{"name":"dedalo-publication-api-v2","version":"2.1.0","type":"module"}\n' },
+		{
+			path: 'package.json',
+			type: 'file',
+			mode: 0o644,
+			text: '{"name":"dedalo-publication-api-v2","version":"2.1.0","type":"module"}\n',
+		},
 		{ path: 'src', type: 'dir', mode: 0o755 },
 		{ path: 'src/index.ts', type: 'file', mode: 0o644, text: server },
 	];
@@ -2564,7 +2892,8 @@ async function captureDiscovery(ctx: Ctx, dir: string): Promise<number> {
 			? {
 					typed: false,
 					captured: `the EL init drill on ${release} (SELinux enforcing), ${new Date().toISOString()}, after the legs: a real VM (systemd PID 1, an SELinux kernel) with the drill's instances installed`,
-					limits: "one VM and the drill's own sites; the NFS media mount is the network-media leg's",
+					limits:
+						"one VM and the drill's own sites; the NFS media mount is the network-media leg's",
 				}
 			: {
 					typed: false,
@@ -2905,7 +3234,7 @@ async function writeRecord(ctx: Ctx, passed: string[], skipped: string[]): Promi
 	const existing = existsSync(EL_DRILL_RECORD)
 		? (JSON.parse(readFileSync(EL_DRILL_RECORD, 'utf8')) as ElDrillRecord)
 		: null;
-	writeFileSync(EL_DRILL_RECORD, `${JSON.stringify(mergeRecord(existing, run), null, 2)}\n`);
+	writeFileSync(EL_DRILL_RECORD, `${JSON.stringify(mergeRecord(existing, run), null, '\t')}\n`);
 	console.log(
 		`${TAG} recorded ${relative(REPO_ROOT, EL_DRILL_RECORD)} (${os}, inputs ${run.inputs_digest.slice(0, 12)})`,
 	);

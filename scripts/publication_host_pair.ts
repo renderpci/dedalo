@@ -265,7 +265,9 @@ function readPackageBytes(path: string): Uint8Array {
 		return new Uint8Array(readFileSync(path));
 	} catch (error) {
 		if (error instanceof PairRefusal) throw error;
-		throw new PairRefusal(`the pairing package could not be read (${readFailure(error)}).${accessHint(error)}`);
+		throw new PairRefusal(
+			`the pairing package could not be read (${readFailure(error)}).${accessHint(error)}`,
+		);
 	}
 }
 
@@ -275,7 +277,9 @@ function readFragmentFields(path: string): FragmentFields {
 	try {
 		text = readFileSync(path, 'utf8');
 	} catch (error) {
-		throw new PairRefusal(`the fragment could not be read (${readFailure(error)}).${accessHint(error)}`);
+		throw new PairRefusal(
+			`the fragment could not be read (${readFailure(error)}).${accessHint(error)}`,
+		);
 	}
 	const fields = parseFragment(text);
 	if (fields.token !== null) assertPrivateMode(path, 'the fragment (it carries the token)');

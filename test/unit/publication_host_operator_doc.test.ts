@@ -41,7 +41,10 @@ import {
 	PHP_HANDLER_PATTERN,
 } from '../../publication/host_agent/src/provision/render/web_include';
 import { selinuxRules } from '../../publication/host_agent/src/provision/selinux';
-import { V2_TREE_TYPE, selinuxModulePath } from '../../publication/host_agent/src/provision/selinux_module';
+import {
+	selinuxModulePath,
+	V2_TREE_TYPE,
+} from '../../publication/host_agent/src/provision/selinux_module';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const page = readFileSync(join(repoRoot, 'docs/install/publication_host.md'), 'utf8');
@@ -349,7 +352,10 @@ describe('the guided install (provision init) states what the code does', () => 
 		});
 		const v2 = selinuxRules(system).find((rule) => rule.row === 'S/publication_api/v2');
 		expect(v2?.type).toBe(V2_TREE_TYPE);
-		const moduleRow = GUIDED.split('\n').find((line) => line.startsWith(`| \`${V2_TREE_TYPE}\`, the rule \`-f ${v2?.fileType}\` on the v2 tree (`)) ?? '';
+		const moduleRow =
+			GUIDED.split('\n').find((line) =>
+				line.startsWith(`| \`${V2_TREE_TYPE}\`, the rule \`-f ${v2?.fileType}\` on the v2 tree (`),
+			) ?? '';
 		expect(moduleRow).toContain(`\`${homeV2?.path}\``);
 		expect(moduleRow).toContain(`\`${v2?.path}\``);
 		expect(GUIDED).toContain(`\`${selinuxModulePath(system)}\``);

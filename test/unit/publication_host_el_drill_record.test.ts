@@ -25,6 +25,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import {
 	AGENT_DIR,
 	captureCommands,
+	controlNamed,
 	debianInPlaceRefusal,
 	EL_DRILL_RECORD,
 	type ElDrillRecord,
@@ -37,7 +38,6 @@ import {
 	SELINUX_CONTROL_DIR,
 	SELINUX_CONTROL_FILE,
 	SELINUX_CONTROL_URL,
-	controlNamed,
 	selinuxControlConf,
 	selinuxControlVerdict,
 } from '../../scripts/publication_host_init_drill.ts';
@@ -216,7 +216,9 @@ describe('the drill around the record: in place on Debian, and what a capture na
 		expect(byFile.get('ls_pool_d.txt')).toBe('ls -1 /etc/php/8.3/fpm/pool.d');
 		expect(byFile.has('aa_status.txt')).toBe(true);
 		expect(
-			commands.some(([, command]) => /semanage|getenforce|restorecon|\/usr\/sbin\/httpd/.test(command)),
+			commands.some(([, command]) =>
+				/semanage|getenforce|restorecon|\/usr\/sbin\/httpd/.test(command),
+			),
 		).toBe(false);
 		// One file per name: a capture never overwrites itself.
 		expect(new Set(commands.map(([file]) => file)).size).toBe(commands.length);
@@ -244,8 +246,14 @@ describe('the drill around the record: in place on Debian, and what a capture na
 
 	test("the agent's root grant runs in every world, required: no drill passes without the agent's own sudo door", () => {
 		const legs = (argv: string[]) =>
-			legsFor(parseDrillArgs(argv) as Exclude<ReturnType<typeof parseDrillArgs>, { error: string }>);
-		for (const argv of [['--family', 'debian'], ['--family', 'debian', '--in-place'], ['--family', 'el', '--in-place']]) {
+			legsFor(
+				parseDrillArgs(argv) as Exclude<ReturnType<typeof parseDrillArgs>, { error: string }>,
+			);
+		for (const argv of [
+			['--family', 'debian'],
+			['--family', 'debian', '--in-place'],
+			['--family', 'el', '--in-place'],
+		]) {
 			const all = legs(argv);
 			const grant = all.find((l) => l.name === 'agent-root-grant');
 			expect(grant?.required).toBe(true);
@@ -260,7 +268,13 @@ describe('the drill around the record: in place on Debian, and what a capture na
 describe('system-layout-v2: the httpd control measures SELinux alone', () => {
 	const type = 'dedalo_publication_v2_t';
 	const avc = `type=AVC msg=audit(1.1:2): avc:  denied  { read } for  pid=1 comm="httpd" name="${SELINUX_CONTROL_FILE}" dev="dm-0" ino=3 scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:${type}:s0 tclass=file permissive=0`;
-	const good = { baseline: { status: 200, body: 'dd-control\n' }, refused: { status: 403 }, avc, errorLog: '', type };
+	const good = {
+		baseline: { status: 200, body: 'dd-control\n' },
+		refused: { status: 403 },
+		avc,
+		errorLog: '',
+		type,
+	};
 
 	test('the control grants its own directory (EL denies every directory httpd.conf does not name)', () => {
 		const conf = selinuxControlConf();
@@ -278,8 +292,12 @@ describe('system-layout-v2: the httpd control measures SELinux alone', () => {
 	});
 
 	test('a baseline that is not 200 with its bytes is a broken control, never a pass (measured: AH01630 403 under a home DocumentRoot)', () => {
-		expect(selinuxControlVerdict({ ...good, baseline: { status: 403, body: '' } })).toMatch(/proves nothing/);
-		expect(selinuxControlVerdict({ ...good, baseline: { status: 200, body: 'other' } })).toMatch(/proves nothing/);
+		expect(selinuxControlVerdict({ ...good, baseline: { status: 403, body: '' } })).toMatch(
+			/proves nothing/,
+		);
+		expect(selinuxControlVerdict({ ...good, baseline: { status: 200, body: 'other' } })).toMatch(
+			/proves nothing/,
+		);
 	});
 
 	test("a 403 that is Apache's authorization, a read that succeeds, or no AVC for the type: red", () => {
@@ -287,7 +305,11 @@ describe('system-layout-v2: the httpd control measures SELinux alone', () => {
 		expect(selinuxControlVerdict({ ...good, errorLog: authz })).toMatch(/Apache's authorization/);
 		expect(selinuxControlVerdict({ ...good, refused: { status: 200 } })).toMatch(/httpd read/);
 		expect(selinuxControlVerdict({ ...good, avc: '' })).toMatch(/no AVC denial/);
-		expect(selinuxControlVerdict({ ...good, avc: avc.replace(':httpd_t:', ':init_t:') })).toMatch(/no AVC denial/);
-		expect(selinuxControlVerdict({ ...good, avc: avc.replace(`:${type}:`, ':var_t:') })).toMatch(/no AVC denial/);
+		expect(selinuxControlVerdict({ ...good, avc: avc.replace(':httpd_t:', ':init_t:') })).toMatch(
+			/no AVC denial/,
+		);
+		expect(selinuxControlVerdict({ ...good, avc: avc.replace(`:${type}:`, ':var_t:') })).toMatch(
+			/no AVC denial/,
+		);
 	});
 });
