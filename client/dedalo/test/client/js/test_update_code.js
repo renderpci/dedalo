@@ -788,8 +788,8 @@ describe('UPDATE_CODE WIDGET', function() {
 
 			const wrapper = ui.create_dom_element({ element_type : 'div', parent : container })
 			try {
-				const plain = consumer(undefined)
-				delete plain.image
+				// a tree-swap status carries NO image key at all (not image: undefined)
+				const { image: _image, ...plain } = consumer(undefined)
 				render_consumer_status(wrapper, plain)
 				assert.isNull(wrapper.querySelector('.image_updates'))
 				assert.ok(wrapper.querySelector('.status_verdict'), 'the headline verdict stays on a tree-swap install')
