@@ -563,6 +563,12 @@ function dynamicBindings(
 	};
 	const handled: { start: number; end: number }[] = [];
 	const inHandled = (at: number) => handled.some((span) => at >= span.start && at < span.end);
+	/**
+	 * A match that OPENS inside a string or template-literal text (blanked on the
+	 * structure view, present on `code`) is text, not code: an import spelled inside a
+	 * shell script embedded in a template is no edge and no out-of-corpus site.
+	 */
+	const inLiteral = (at: number) => structure[at] === ' ' && code[at] !== ' ';
 	const claim = (start: number, end: number, blank = true) => {
 		handled.push({ start, end });
 		if (blank) result.blank.push({ start, end });
@@ -586,6 +592,7 @@ function dynamicBindings(
 	for (const match of code.matchAll(
 		/(?:const|let|var)\s*\[([^\]]*?)\]\s*=\s*await\s+Promise\.all\(\s*\[([^\]]*)\]\s*\)/g,
 	)) {
+		if (inLiteral(match.index)) continue;
 		const specs = [
 			...(match[2] as string).matchAll(new RegExp(`import\\(\\s*${SPEC}\\s*\\)`, 'g')),
 		];
@@ -613,7 +620,7 @@ function dynamicBindings(
 			'g',
 		),
 	)) {
-		if (inHandled(match.index)) continue;
+		if (inLiteral(match.index) || inHandled(match.index)) continue;
 		const target = resolveLiteral(match[2] as string, match.index);
 		if (target !== null) {
 			for (const [local, imported] of destructureList(match[1] as string)) {
@@ -629,7 +636,7 @@ function dynamicBindings(
 			'g',
 		),
 	)) {
-		if (inHandled(match.index)) continue;
+		if (inLiteral(match.index) || inHandled(match.index)) continue;
 		const target = resolveLiteral(match[2] as string, match.index);
 		if (target !== null) bind(match.index, match[1] as string, { ns: target });
 		claim(match.index, match.index + match[0].length);
@@ -638,7 +645,7 @@ function dynamicBindings(
 	for (const match of code.matchAll(
 		new RegExp(String.raw`import\(\s*${SPEC}\s*\)\s*\.then\(\s*\(\s*\{([^}]*)\}\s*\)\s*=>`, 'g'),
 	)) {
-		if (inHandled(match.index)) continue;
+		if (inLiteral(match.index) || inHandled(match.index)) continue;
 		const target = resolveLiteral(match[1] as string, match.index);
 		if (target !== null) {
 			for (const [local, imported] of destructureList(match[2] as string)) {
@@ -654,7 +661,7 @@ function dynamicBindings(
 			'g',
 		),
 	)) {
-		if (inHandled(match.index)) continue;
+		if (inLiteral(match.index) || inHandled(match.index)) continue;
 		const target = resolveLiteral(match[1] as string, match.index);
 		if (target !== null) {
 			result.direct.push({
@@ -675,7 +682,7 @@ function dynamicBindings(
 	for (const match of code.matchAll(
 		new RegExp(String.raw`await\s+import\(\s*${SPEC}\s*\)\s*;`, 'g'),
 	)) {
-		if (inHandled(match.index)) continue;
+		if (inLiteral(match.index) || inHandled(match.index)) continue;
 		if (!/(?:^|[;{}])\s*$/.test(structure.slice(0, match.index))) continue;
 		// a side-effect load of an OUT-OF-CORPUS module still runs its top level: reported
 		resolveLiteral(match[1] as string, match.index);
@@ -687,7 +694,7 @@ function dynamicBindings(
 	// `import('x').Name` that is not awaited (a runtime import expression is a
 	// Promise; only .then/.catch are real).
 	for (const match of structure.matchAll(/(?<![\w$.])import\(/g)) {
-		if (inHandled(match.index)) continue;
+		if (inLiteral(match.index) || inHandled(match.index)) continue;
 		const before = structure.slice(0, match.index);
 		const after = code.slice(match.index);
 		if (/typeof\s*$/.test(before)) continue;
@@ -1142,10 +1149,10 @@ export const SANCTIONED_DERIVED_WRITERS: Readonly<Record<string, string>> = {
 		'the hierarchy single writer naming a root term record — see #write.',
 	'src/core/ontology/hierarchy_provision.ts#provisionVirtualSections':
 		'hierarchy PROVISIONING of the `<tld>0` descriptor / model twin records at fixed ids.',
-	'src/core/ontology/ontology_write.ts#addMainSection':
-		'ONTOLOGY definition rows (dd_ontology main node records in matrix_ontology).',
+	'src/core/ontology/ontology_write.ts#writeOntologyMainKey':
+		'ONTOLOGY registry rows (matrix_ontology_main): the one per-key writer behind addMainSection and writeDeclaredDependencies — definitions, unstamped as in PHP.',
 	'src/core/ontology/ontology_write.ts#createParentGrouper':
-		'ontology definition rows — see #addMainSection.',
+		'ontology definition rows — see #writeOntologyMainKey.',
 };
 
 /**

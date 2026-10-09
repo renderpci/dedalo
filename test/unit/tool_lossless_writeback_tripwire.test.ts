@@ -668,9 +668,9 @@ else {
 		metadataTwin:
 			'the `data`-column METADATA twin is written by section/record/record_metadata.ts#setRecordMetadata (updateMatrixRecord) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): system bookkeeping MERGED into the column (created_date / created_by_user_id only; label and diffusion_info kept), mirrored from the dd199/dd200 audit value — no component value changes, so no stamp, no history, no index.',
 		hierarchy:
-			'the HIERARCHY INVARIANT single writer (ontology/hierarchy_state.ts#write, #nameRootTerm), the `<tld>0` provisioning (hierarchy_provision.ts#provisionVirtualSections) and the ontology definition writers (ontology_write.ts#addMainSection, #createParentGrouper) write past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): registry, descriptor and definition rows derived from the hierarchy record, with unstamped saves as in PHP — no Time Machine row, no obligation hook.',
+			'the HIERARCHY INVARIANT single writer (ontology/hierarchy_state.ts#write, #nameRootTerm), the `<tld>0` provisioning (hierarchy_provision.ts#provisionVirtualSections) and the ontology definition writers (ontology_write.ts#writeOntologyMainKey, #createParentGrouper) write past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): registry, descriptor and definition rows derived from the hierarchy record, with unstamped saves as in PHP — no Time Machine row, no obligation hook.',
 		ontology:
-			'ontology DEFINITION rows — the main node and parent-grouper records in matrix_ontology (ontology/ontology_write.ts#addMainSection, #createParentGrouper) — are written past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): system definitions re-derived from the ontology records by the write driver, which has its own gates; unstamped as in PHP, and no curated value is transformed.',
+			'ontology DEFINITION rows — the main node and parent-grouper records in matrix_ontology (ontology/ontology_write.ts#writeOntologyMainKey, #createParentGrouper) — are written past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): system definitions re-derived from the ontology records by the write driver, which has its own gates; unstamped as in PHP, and no curated value is transformed.',
 	} as const;
 
 	const CENSUS: Record<string, CensusRow> = {
@@ -3115,6 +3115,29 @@ else {
 				{
 					site: "tools/zz_j/server/index.ts:2: '../../../src/zz_ctl/missing.ts'",
 					target: 'src/zz_ctl/missing.ts',
+				},
+			]);
+		});
+
+		test('an import spelled inside a string or template text is no edge and no out-of-corpus site; a substitution still is code', () => {
+			const { closure, cells } = injected({
+				[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+				'src/zz_ctl/engine.ts': ENGINE,
+				'tools/zz_k/server/index.ts': [
+					'export const SCRIPT = `bun -e \'const b = await import("./gone.ts"); const { y } = await import("./gone2.ts");\'`;',
+					'export const LINE = \'await import("./gone3.ts");\';',
+					'export async function act(): Promise<string> {',
+					"\tconst { zzWrite } = await import('../../../src/zz_ctl/engine.ts');",
+					'\tawait zzWrite();',
+					"\treturn `${(await import('./gone4.ts')).x}`;",
+					'}',
+				].join('\n'),
+			});
+			expect(cells).toEqual({ 'tools/zz_k/server/index.ts :: act': { zzWrite: 1 } });
+			expect(closure.outOfCorpusImports('tools/zz_k/server/index.ts')).toEqual([
+				{
+					site: "tools/zz_k/server/index.ts:6: './gone4.ts'",
+					target: 'tools/zz_k/server/gone4.ts',
 				},
 			]);
 		});
