@@ -99,6 +99,7 @@ describe('the EL drill record holds the tree', () => {
 			.map((leg) => leg.name);
 		expect(required).toContain('selinux-labels');
 		expect(required).toContain('fapolicyd');
+		expect(required).toContain('system-layout-v2');
 		for (const host of record().hosts) {
 			expect(host.skipped, `${host.os} skipped legs`).toEqual([]);
 			expect(
@@ -118,6 +119,8 @@ describe('the EL drill record holds the tree', () => {
 				'httpd_enable_homedirs',
 			]);
 			expect(measured.home_traverse_type, `${host.os} home traverse type`).toBe('home_root_t');
+			// The system layout's default type under /srv is not readable to systemd: why the policy module exists.
+			expect(measured.system_default_readable, `${host.os} system default readable`).toBe(false);
 			expect(measured.v1_php_floor, `${host.os} v1 PHP floor`).toMatch(/^\d+\.\d+$/);
 			expect(Object.keys(measured.supported_directives).length).toBeGreaterThan(0);
 		}

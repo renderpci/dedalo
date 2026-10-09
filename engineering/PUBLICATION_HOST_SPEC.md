@@ -1009,7 +1009,12 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   `/etc/dedalo_init_drill_host`. It proves the `<If>` handler (a `.php` and a `.phtml` probe
   answer as `v1.user` under `fpm-fcgi`) under the EL 9 and EL 10 `php.conf` and under Remi's
   mod_php, the relabelled home's sshd login, the site's logs outside the home, a network media mount with the
-  `context=` option, fapolicyd, an empty AVC search, and
+  `context=` option, fapolicyd, a SYSTEM-layout v2-only site (`system-layout-v2`: the policy module of
+  §9.8 installed and extracted equal to its source, the v2 tree `dedalo_publication_v2_t`, a pushed
+  release started by systemd and answering, sesearch granting `init_t` and not `httpd_t`, and the
+  control — one world-readable file served as `httpd_sys_content_t`, denied to httpd once it carries
+  `dedalo_publication_v2_t`; it also records `system_default_readable`, whether `init_t` may read
+  the default type under /srv), an empty AVC search (that control's one denial aside), and
   `systemd-analyze verify` with no warning naming a rendered unit. Its `--record` writes the EL
   drill record (`el_drill_record.json` under `engineering/`: ONE inputs digest, one entry per EL
   major, each its own run — commit, time, legs, measured types and floors — so recording one
