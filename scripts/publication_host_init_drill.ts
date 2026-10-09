@@ -1591,7 +1591,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 					);
 				}
 			}
-			// THE AGENT'S OWN PATH (src/exec.ts webConfigtest): its unit's sandbox decides whether a
+			// THE AGENT'S OWN PATH (publication/host_agent/src/exec.ts webConfigtest): its unit's sandbox decides whether a
 			// setuid sudo may run at all. A stamped comment-only include passes the directive allowlist
 			// with no media root; the drill's own push, never an engine's.
 			const since = (await must(ctx, "date '+%Y-%m-%d %H:%M:%S'", 'date')).trim();
@@ -2775,7 +2775,7 @@ export type CaptureHost =
 /**
  * One captured file per discovery read, named after the typed fixture it replaces (typed/<topic>/…)
  * or the captured case's file name (captured/<case>/…): the argv init's exec door runs
- * (src/exec.ts initExec/provisionExec), the files it reads. A non-zero exit and any stderr are kept
+ * (publication/host_agent/src/exec.ts initExec/provisionExec), the files it reads. A non-zero exit and any stderr are kept
  * beside the command's stdout (`<file>.exit`, `<file>.stderr`).
  */
 export function captureCommands(
