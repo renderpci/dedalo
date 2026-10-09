@@ -300,7 +300,7 @@ Start to finish. Steps 1–11 are the install; step 12 is the first login.
 
 ```shell
 git clone <your-dedalo-remote> dedalo
-cd dedalo/master_dedalo
+cd dedalo
 ls docker-compose.yml Dockerfile deploy/nginx.conf     # you are in the right place
 ```
 

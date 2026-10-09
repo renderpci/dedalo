@@ -31,7 +31,7 @@ Then get the code, and stay in that directory:
 
 ```shell
 git clone <your-dedalo-remote> dedalo
-cd dedalo/master_dedalo
+cd dedalo
 ```
 
 Two things about the machine itself:
