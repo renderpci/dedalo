@@ -1,12 +1,13 @@
 /**
- * THE SELINUX POLICY MODULE (spec §9.8, owner decision 2026-10-09): the system layout's v2 tree is
+ * THE SELINUX POLICY MODULE (spec §9.8, owner decisions 2026-10-09): the v2 tree of EVERY layout is
  * typed `dedalo_publication_v2_t`, the one type of the provisioner's own CIL module. Held here: the
  * renderer (what the module grants, and to whom), the identity guard (ours / older / foreign), the
  * `semodule --list-modules=full` grammar, and the plan/apply lifecycle on the FakeHost's policy store
  * — written and installed BEFORE the import that names the type (the fake store refuses that import
  * otherwise, as libsemanage does), before the relabel and every unit start; upgraded in place;
  * refused when foreign; removed AFTER the import that unregistered its last rule, only when no
- * declaration on the host needs it.
+ * declaration on the host needs it; and the migration of a home-layout install an earlier
+ * provisioner typed `data_home_t` (re-typed in place, idempotently).
  */
 import { describe, expect, test } from 'bun:test';
 import { dirname } from 'node:path';
@@ -15,9 +16,9 @@ import { HOST_STAMP_INSTANCE, hasDrifted, parseStamp, stamp } from '../src/provi
 import { parseSemoduleList } from '../src/provision/init/parse/selinux';
 import type { AgentLayout, HostDeclaration } from '../src/provision/layout';
 import { derive } from '../src/provision/layout';
-import type { Action, HostState, SelinuxImportAction, SelinuxModuleInstallAction, SelinuxObserved, SiblingFacts, WriteAction } from '../src/provision/plan';
-import { PlanRefused, assertPlanIsCoherent, plan, planReport, selinuxPaths } from '../src/provision/plan';
-import { HTTPD_READABLE_TYPES, restoreconTargets, selinuxRules } from '../src/provision/selinux';
+import type { Action, HostState, SelinuxImportAction, SelinuxModuleInstallAction, SelinuxModulePlan, SelinuxObserved, SiblingFacts, WriteAction } from '../src/provision/plan';
+import { PlanRefused, assertPlanIsCoherent, plan, planReport, selinuxModulePlan, selinuxPaths } from '../src/provision/plan';
+import { HTTPD_READABLE_TYPES, encodeSelinuxState, parseSelinuxState, restoreconTargets } from '../src/provision/selinux';
 import {
   NO_MODULE,
   SELINUX_MODULE_FILE,
@@ -206,12 +207,13 @@ const ops = (actions: readonly Action[]): string[] => actions.map(action => acti
 function converged(decl: HostDeclaration = systemDecl()): { l: AgentLayout; host: Host } {
   const l = derive(decl);
   const host = hostFor(l);
+  if (l.state.root.startsWith('/home/')) seedHome(host);
   const report = apply(plan(l, stateOf(host, l, [])), host);
   expect(report.failure).toBeNull();
   return { l, host };
 }
 
-describe('the system layout: written, installed before the import that names its type, the tree labelled', () => {
+describe('every layout: written, installed before the import that names its type, the tree labelled', () => {
   test('a fresh plan: the stamped source (root 0644), then semodule -i BEFORE the import, the relabel and every unit op', () => {
     const l = derive(systemDecl());
     const host = hostFor(l);
@@ -272,13 +274,21 @@ describe('the system layout: written, installed before the import that names its
     expect(report.failure?.detail).toMatch(/is not the rendered source/);
   });
 
-  test('the home layout needs no module: nothing written, nothing installed', () => {
+  test('the home layout installs it too (one v2 type on every layout): written, installed before the import, the tree typed by it', () => {
     const l = derive(homeDecl());
     const host = hostFor(l);
+    seedHome(host);
     const actions = plan(l, stateOf(host, l, []));
-    expect(actions.some(a => a.op === 'selinux-module-install' || a.op === 'selinux-module-remove')).toBe(false);
-    expect(actions.some(a => a.op === 'write' && a.label === 'selinux_module')).toBe(false);
-    expect(selinuxRules(l).some(r => r.type === V2_TREE_TYPE)).toBe(false);
+    const list = ops(actions);
+    expect(actions.some(a => a.op === 'write' && a.label === 'selinux_module')).toBe(true);
+    expect(list.indexOf('selinux-module-install')).toBeGreaterThanOrEqual(0);
+    expect(list.indexOf('selinux-module-install')).toBeLessThan(list.indexOf('selinux-import'));
+    const imp = actions.find(a => a.op === 'selinux-import') as SelinuxImportAction;
+    expect(imp.lines).toContain(`fcontext -a -f a -t ${V2_TREE_TYPE} '${l.state.apis.v2.root.replace(/\./g, '\\.')}(/.*)?'`);
+    expect(imp.lines.some(line => line.includes('data_home_t'))).toBe(false);
+    expect(apply(actions, host).failure).toBeNull();
+    for (const path of [l.state.apis.v2.root, l.state.apis.v2.shared]) expect(host.labels.get(path), path).toBe(V2_TREE_TYPE);
+    expect(plan(l, stateOf(host, l, []))).toEqual([]);
   });
 
   test('SELinux disabled with the store: written and installed (rules registered for a later enable), nothing relabelled', () => {
@@ -332,54 +342,107 @@ function seedHome(host: Host): void {
   host.seedFile('/home/museum.example.org/.bun/bin/bun', '', 0o755);
 }
 
-describe('retirement: removed AFTER the import that unregistered its rules, only when no declaration needs it', () => {
-  const sibling = (decl: HostDeclaration): SiblingFacts => ({ layout: derive({ ...decl, instance: 'other', agent_user: 'other_agent' } as HostDeclaration), agentUid: 2001 });
+/**
+ * The home layout as an earlier provisioner left it (before 2026-10-09): the v2 rule ours with
+ * `data_home_t` (recorded in selinux.state), the tree labelled so, and no module on the host.
+ */
+function legacyHome(): { l: AgentLayout; host: Host; spec: string } {
+  const { l, host } = converged(homeDecl());
+  const spec = `${l.state.apis.v2.root.replace(/\./g, '\\.')}(/.*)?`;
+  const rule = host.fcontext.find(r => r.spec === spec);
+  expect(rule?.type).toBe(V2_TREE_TYPE);
+  if (rule !== undefined) rule.type = 'data_home_t';
+  for (const [path, type] of host.labels) if (type === V2_TREE_TYPE) host.labels.set(path, 'data_home_t');
+  const { stateFile } = selinuxPaths(l);
+  const state = parseSelinuxState(host.body(stateFile) ?? null);
+  expect(state).not.toBeNull();
+  host.seedFile(stateFile, encodeSelinuxState({ v: 1, fcontext: (state?.fcontext ?? []).map(r => (r.spec === spec ? { ...r, type: 'data_home_t' } : r)), ports: state?.ports ?? [] }), 0o644);
+  host.modules.length = 0;
+  host.entries.delete(selinuxModulePath(l));
+  return { l, host, spec };
+}
 
-  test('relocated to the home layout, no sibling needing it: -d of the v2 rule, then semodule -r and the source removed', () => {
-    const { host } = converged();
-    const home = derive(homeDecl());
-    seedHome(host);
-    const actions = plan(home, stateOf(host, home, []));
+describe('migration: a home-layout install typed data_home_t is re-typed in place, idempotently', () => {
+  test('module installed, then ONE import: -d of our recorded data_home_t rule, -a of the module type; the tree relabelled; a second plan is empty', () => {
+    const { l, host, spec } = legacyHome();
+    expect(host.labels.get(l.state.apis.v2.shared)).toBe('data_home_t');
+    const actions = plan(l, stateOf(host, l, []));
     const list = ops(actions);
-    expect(list).toContain('selinux-module-remove');
-    expect(list.indexOf('selinux-import')).toBeLessThan(list.indexOf('selinux-module-remove'));
+    expect(list.indexOf('selinux-module-install')).toBeGreaterThanOrEqual(0);
+    expect(list.indexOf('selinux-module-install')).toBeLessThan(list.indexOf('selinux-import'));
+    expect(list.indexOf('selinux-import')).toBeLessThan(list.indexOf('selinux-restorecon'));
     const imp = actions.find(a => a.op === 'selinux-import') as SelinuxImportAction;
-    expect(imp.lines.some(line => line.startsWith(`fcontext -d -f a -t ${V2_TREE_TYPE} `))).toBe(true);
-    expect(actions.find(a => a.op === 'selinux-module-remove')).toEqual({ op: 'selinux-module-remove', file: selinuxModulePath(home) });
+    expect(imp.lines).toEqual([`fcontext -d -f a -t data_home_t '${spec}'`, `fcontext -a -f a -t ${V2_TREE_TYPE} '${spec}'`]);
+    const restorecon = actions.find(a => a.op === 'selinux-restorecon') as { readonly targets: readonly { readonly path: string; readonly recursive: boolean }[] };
+    expect(restorecon.targets).toContainEqual({ path: l.state.apis.v2.root, recursive: true });
     expect(apply(actions, host).failure).toBeNull();
-    expect(host.modules).toEqual([]);
-    expect(host.entries.has(selinuxModulePath(home))).toBe(false);
-    expect(host.fcontext.some(rule => rule.type === V2_TREE_TYPE)).toBe(false);
-    expect(ops(plan(home, stateOf(host, home, []))).filter(op => op.startsWith('selinux-module'))).toEqual([]);
+    expect(host.fcontext.filter(r => r.spec === spec)).toEqual([{ spec, ftype: 'a', type: V2_TREE_TYPE }]);
+    for (const path of [l.state.apis.v2.root, l.state.apis.v2.shared]) expect(host.labels.get(path), path).toBe(V2_TREE_TYPE);
+    expect([...host.labels.values()]).not.toContain('data_home_t');
+    expect(parseSelinuxState(host.body(selinuxPaths(l).stateFile) ?? null)?.fcontext.find(r => r.spec === spec)?.type).toBe(V2_TREE_TYPE);
+    expect(plan(l, stateOf(host, l, []))).toEqual([]);
   });
 
-  test('a sibling in the system layout still needs it: kept; siblings not observed: kept, and the report says why', () => {
-    const { host } = converged();
-    const home = derive(homeDecl());
-    seedHome(host);
-    const kept = plan(home, stateOf(host, home, [sibling(systemDecl({ state_root: '/srv/dedalo_publication_host/other' }))]));
-    expect(ops(kept)).not.toContain('selinux-module-remove');
-    const unobserved = stateOf(host, home);
-    expect(ops(plan(home, unobserved))).not.toContain('selinux-module-remove');
-    expect(planReport(home, unobserved).facts).toContain(`SELinux policy module ${SELINUX_MODULE_NAME} left installed: the sibling declarations were not observed (one may need it)`);
+  test('a data_home_t rule on our spec that our selinux.state does NOT record is the operator\'s: refused, never re-typed', () => {
+    const { l, host } = legacyHome();
+    const { stateFile } = selinuxPaths(l);
+    const legacy = host.body(stateFile) ?? '';
+    // no history at all
+    host.entries.delete(stateFile);
+    expect(refusalsOf(l, stateOf(host, l, []))).toMatch(/types it 'data_home_t', not 'dedalo_publication_v2_t' .* never overridden/);
+    // our history recorded ANOTHER type there: someone re-typed our rule since — theirs now
+    host.seedFile(stateFile, legacy.replace('"data_home_t"', `"${V2_TREE_TYPE}"`), 0o644);
+    expect(refusalsOf(l, stateOf(host, l, []))).toMatch(/types it 'data_home_t', not 'dedalo_publication_v2_t' .* never overridden/);
+  });
+});
+
+describe('retirement: removed AFTER the import that unregistered its rules, only when no declaration needs it', () => {
+  // Every layout needs the module now (moduleNeeded): plan() never retires it while a declaration
+  // exists. The retirement half is held through selinuxModulePlan with needed = false.
+  const sibling = (decl: HostDeclaration): SiblingFacts => ({ layout: derive({ ...decl, instance: 'other', agent_user: 'other_agent' } as HostDeclaration), agentUid: 2001 });
+  const retire = (l: AgentLayout, state: HostState): { result: SelinuxModulePlan; refusals: string[] } => {
+    const refusals: string[] = [];
+    const result = selinuxModulePlan(l, state, state.selinux as SelinuxObserved, refusals, false);
+    return { result, refusals };
+  };
+
+  test('no declaration needs it (siblings observed, none needing): semodule -r of ours, its source with it', () => {
+    const { l, host } = converged();
+    const { result, refusals } = retire(l, stateOf(host, l, []));
+    expect(refusals).toEqual([]);
+    expect(result.tail).toEqual([{ op: 'selinux-module-remove', file: selinuxModulePath(l) }]);
+  });
+
+  test('a sibling still needs it: kept; siblings not observed: kept, and the report says nothing is removed', () => {
+    const { l, host } = converged();
+    expect(retire(l, stateOf(host, l, [sibling(homeDecl())])).result.tail).toEqual([]);
+    expect(retire(l, stateOf(host, l)).result.tail).toEqual([]);
   });
 
   test('a foreign module of our name is never removed; a hand-edited leftover source is refused, never removed', () => {
-    const home = derive(homeDecl());
-    const host = hostFor(home);
+    const l = derive(systemDecl());
+    const host = hostFor(l);
     host.modules.push({ name: SELINUX_MODULE_NAME, priority: 400, lang: 'cil', disabled: false, source: '(type x_t)\n' });
-    expect(ops(plan(home, stateOf(host, home, []))).filter(op => op.startsWith('selinux-module'))).toEqual([]);
-    host.seedFile(selinuxModulePath(home), `${renderSelinuxModule()}; mine\n`);
-    expect(refusalsOf(home, stateOf(host, home, []))).toMatch(/edited by hand .* it is not removed/);
+    expect(retire(l, stateOf(host, l, [])).result.tail).toEqual([]);
+    host.seedFile(selinuxModulePath(l), `${renderSelinuxModule()}; mine\n`);
+    expect(retire(l, stateOf(host, l, [])).refusals.join('\n')).toMatch(/edited by hand .* it is not removed/);
   });
 
   test('our leftover source with no module installed is removed through the remove door', () => {
-    const home = derive(homeDecl());
-    const host = hostFor(home);
-    host.seedFile(selinuxModulePath(home), renderSelinuxModule());
-    const actions = plan(home, stateOf(host, home, []));
-    expect(actions.find(a => a.op === 'remove' && a.path === selinuxModulePath(home))).toBeDefined();
-    expect(ops(actions)).not.toContain('selinux-module-remove');
+    const l = derive(systemDecl());
+    const host = hostFor(l);
+    host.seedFile(selinuxModulePath(l), renderSelinuxModule());
+    const { result } = retire(l, stateOf(host, l, []));
+    expect(result.removeSource).toBe(selinuxModulePath(l));
+    expect(result.tail).toEqual([]);
+  });
+
+  test('from plan(): never retired while a declaration exists — home and system layouts both keep it', () => {
+    for (const decl of [homeDecl(), systemDecl()]) {
+      const { l, host } = converged(decl);
+      expect(ops(plan(l, stateOf(host, l, []))).filter(op => op.startsWith('selinux-module'))).toEqual([]);
+      expect(host.moduleInstalled()).toBe(true);
+    }
   });
 
   test('semodule refuses a removal while a rule names the type: the fake store holds that law too', () => {

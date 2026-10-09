@@ -314,6 +314,11 @@ export class FakeHost implements ProvisionIo {
         if (op === 'd') {
           if (index >= 0) this.fcontext.splice(index, 1);
         } else if (index < 0) this.fcontext.push({ spec, ftype, type });
+        // semanage: "File context for <spec> already defined, modifying instead" (measured RHEL 9.8).
+        else {
+          const rule = this.fcontext[index];
+          if (rule !== undefined) rule.type = type;
+        }
         continue;
       }
       const p = /^port -([ad]) -t ([a-z0-9_]+) -p tcp (\d+)$/.exec(line);

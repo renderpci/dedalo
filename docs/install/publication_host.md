@@ -456,7 +456,7 @@ directory, as in the [manual install](#lay-out-each-site-in-its-home-directory):
 | agent code | `/home/museum.org/host_agent` | `/opt/dedalo_publication_host/host_agent` |
 | the site's Bun | `/home/museum.org/.bun/bin/bun` | `/opt/dedalo_publication_host/bun/bin/bun` |
 | the site's web server logs | `/var/log/apache2/museum.org` (RHEL `/var/log/httpd/…`, nginx `/var/log/nginx/…`): never in the home | where your virtual host puts them |
-| the v2 API's SELinux type (RHEL, Rocky, Alma) | `data_home_t` | `dedalo_publication_v2_t`, from the publication host's own policy module ([below](#rhel-rocky-and-alma)) |
+| the v2 API's SELinux type (RHEL, Rocky, Alma) | `dedalo_publication_v2_t`, from the publication host's own policy module ([below](#rhel-rocky-and-alma)) | the same |
 
 Root runs the Bun and the agent code from beneath the home, so the home must belong to root.
 init makes it so, as a *will change* item (`--yes` applies it):
@@ -573,7 +573,7 @@ one nginx serves.
 ### What init never does
 
 - install packages, start `setenforce`, install any SELinux policy module other than the
-  publication host's own one (`dedalo_publication_host`, system layout only:
+  publication host's own one (`dedalo_publication_host`:
   [below](#rhel-rocky-and-alma)), or change `nginx.conf` or `/etc/httpd/conf.modules.d/`
   (it prints the line to add);
 - edit an existing PHP-FPM pool (the v1 API gets [its own](#9-map-the-apis-into-the-sites-virtual-host)),
@@ -656,7 +656,7 @@ installed, the rules are registered and nothing is relabelled. What gets which t
 | `/home/museum.org/dedalo` | `d` | `usr_t` | passed through only |
 | `/home/museum.org/dedalo/publication_api` | `d` | `usr_t` | passed through only |
 | `/home/museum.org/dedalo/publication_api/v1` | `a` | `httpd_sys_content_t` | v1 only: httpd serves it, the v1 pool reads it |
-| `/home/museum.org/dedalo/publication_api/v2` | `a` | `data_home_t` | home layout: systemd must read `v2.env` and the release links to start v2, which it may not under the home's own `user_home_t`; httpd still may not read it |
+| `/home/museum.org/dedalo/publication_api/v2` | `a` | `dedalo_publication_v2_t` | systemd must read `v2.env` and the release links to start v2, which it may not under the home's own `user_home_t`; httpd may not read it under any boolean. The type comes from the publication host's own policy module (below) |
 | `/home/museum.org/dedalo/rules` | `a` | `httpd_config_t` | the media rules, included by the web server |
 | `/home/museum.org/host_agent` | `a` | `usr_t` | the agent's code (no secret) |
 | `/home/museum.org/.bun/bin` | `a` | `usr_t` | the site's Bun directory |
@@ -677,19 +677,24 @@ owner and mode instead (`museum_org_v1`, `0400`). The v2 port gets `http_port_t`
 proxy to it; a port the policy already gives another type (3306, 8080) is refused, and init
 proposes another.
 
-**The SELinux policy module** (system layout only). No type of the
-distribution's policy fits the v2 tree outside a home: systemd must read it to start v2, httpd
-must not, and `/srv`'s own `var_t` is not readable to systemd. So `provision apply` writes the publication host's own policy module,
+**The SELinux policy module** (both layouts). No type of the distribution's policy fits the v2
+tree: systemd must read it to start v2 and httpd must not, and neither the home's own
+`user_home_t` nor `/srv`'s `var_t` is readable to systemd. So `provision apply` writes the
+publication host's own policy module,
 `/var/lib/dedalo_publication_host/_host/dedalo_publication_host.cil` (CIL source, root `0644`,
-stamped on its first line like every file the provisioner writes, one for all the
-system-layout instances on the host), and installs it with `semodule -X 400 -i` before it
-registers the rule that names its type. It defines one file type and grants one thing:
+stamped on its first line like every file the provisioner writes, one for all the instances on
+the host), and installs it with `semodule -X 400 -i` before it registers the rule that names its
+type. It defines one file type and grants one thing:
 
 | Type | Who may read it | Who may not |
 | --- | --- | --- |
-| `dedalo_publication_v2_t`, the rule `-f a` on `/srv/dedalo_publication_host/museum_org/publication_api/v2` (the v2 tree: releases, `shared/v2.env`, the `current` and `scratch` links), where the home layout has `data_home_t` | systemd (`init_t`): the units' `EnvironmentFile=` and `WorkingDirectory=`; the v2 service and the agent, which run as `unconfined_service_t` | httpd, nginx and PHP-FPM (`httpd_t`): no rule gives them anything on it; they reach v2 over its port |
+| `dedalo_publication_v2_t`, the rule `-f a` on the v2 tree (`/home/museum.org/dedalo/publication_api/v2`, or `/srv/dedalo_publication_host/museum_org/publication_api/v2` in the system layout: releases, `shared/v2.env`, the `current` and `scratch` links) | systemd (`init_t`): the units' `EnvironmentFile=` and `WorkingDirectory=`; the v2 service and the agent, which run as `unconfined_service_t` | httpd, nginx and PHP-FPM (`httpd_t`): no rule gives them anything on it; they reach v2 over its port |
 
-init lists it as `selinux.v2_policy`, a *will change* item. `provision apply` replaces an older
+init lists it as `selinux.v2_policy`, a *will change* item. A site installed in its home before
+this module existed has its v2 tree typed `data_home_t`: the next `provision apply` (or init)
+installs the module and re-types that rule of its own in place, then relabels the tree, with no
+step of yours; an operator rule on the same path is never touched (it is refused, as any rule of
+yours on one of the provisioner's paths). `provision apply` replaces an older
 version of it in place and removes it (`semodule -X 400 -r`, after unregistering the last rule
 that names its type) when no instance on the host needs it any more. A module of the same name
 that it did not install (another priority or language, disabled, or not its stamped source) is
@@ -718,7 +723,7 @@ To see what init registered, and why a request is denied:
 # publication host, as root
 semanage fcontext -l -C            # the local file-context rules
 semanage port -l -C                # the local port labels
-semodule --list-modules=full | grep dedalo_publication_host   # system layout: the policy module
+semodule --list-modules=full | grep dedalo_publication_host   # the policy module
 restorecon -n -v -R /home/museum.org/dedalo   # prints nothing when the labels are right
 ausearch -m AVC,USER_AVC -ts recent
 ```

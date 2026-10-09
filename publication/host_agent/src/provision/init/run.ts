@@ -48,7 +48,7 @@ import type { HostState } from '../plan';
 import { judgeAncestors, trustProblem } from '../plan';
 import { FINGERPRINT_PENDING } from '../render/engine_fragment';
 import { DeclarationError, parseDeclaration } from '../schema';
-import { SELINUX_TYPES, escapeSpec } from '../selinux';
+import { REMOVABLE_SELINUX_TYPES, escapeSpec } from '../selinux';
 import type { Sibling } from '../siblings';
 import type { ActContext, ActPorts, ActReport, PortResult } from './act';
 import { cleanupAfterSuccess, executeItems, resumeOpen } from './act';
@@ -810,7 +810,7 @@ function actContext(a: ActWorld): ActContext {
     webLock: () => acquireHostLockSync('web', { dir: layout.host.locksDir, io: world.lock, uid: world.root.uid, gid: pubhostGid(world), create: true }),
     selinux: {
       mode: facts.selinux.mode,
-      types: SELINUX_TYPES,
+      types: REMOVABLE_SELINUX_TYPES,
       agentRuleRegistered: facts.selinux.localFcontext.some(rule => rule.spec === agentSpec),
     },
     family: facts.os.family === 'el' ? 'el' : 'debian',

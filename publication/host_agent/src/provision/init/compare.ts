@@ -43,7 +43,7 @@ import {
   canonicalDeclaration,
 } from '../layout';
 import { INIT_BASE } from '../lock';
-import { HOME_TRAVERSE_TYPE, HTTPD_READABLE_TYPES, escapeSpec, moduleNeeded } from '../selinux';
+import { HOME_TRAVERSE_TYPE, HTTPD_READABLE_TYPES, escapeSpec, isHomeLayout, moduleNeeded } from '../selinux';
 import { FOREIGN_MODULE_HINT, SELINUX_MODULE_NAME, SELINUX_MODULE_PRIORITY, V2_TREE_TYPE, installedModule, selinuxModulePath } from '../selinux_module';
 import { unifiedDiff, lineEditDiff } from './diff';
 import type { DraftCompletion, DraftDecision } from './draft';
@@ -1220,15 +1220,15 @@ function selinuxItems(env: Env): ComparedItem[] {
       if (media.mode === 'shared' || network) out.push(mediaAccessItem(env, media.root, mount, network));
     }
 
-    // selinux.v2_policy (the system layout: the v2 tree is typed by the provisioner's own module)
+    // selinux.v2_policy (every layout: the v2 tree is typed by the provisioner's own module)
     if (moduleNeeded(layout)) out.push(v2PolicyItem(env, layout));
   }
   return out;
 }
 
 /**
- * selinux.v2_policy (spec §9.8): the v2 tree outside a home keeps the path's default type (`var_t`
- * under /srv), which systemd may not read — no v2 unit could start. provision apply writes and
+ * selinux.v2_policy (spec §9.8): the v2 tree keeps the path's default type (`user_home_t` in a home,
+ * `var_t` under /srv), which systemd may not read — no v2 unit could start. provision apply writes and
  * installs the provisioner's policy module (selinux_module.ts) and labels the tree with its type;
  * this item states it (no action of its own: provision.apply does it), right once the module of
  * this provisioner is installed and current, blocked by a module of that name that is not ours.
@@ -1245,12 +1245,13 @@ function v2PolicyItem(env: Env, layout: AgentLayout): ComparedItem {
     return right('selinux.v2_policy', 'selinux', title, [`the policy module ${SELINUX_MODULE_NAME} is installed and current: ${v2} is ${V2_TREE_TYPE}, which systemd reads and httpd may not`]);
   }
   const path = selinuxModulePath(layout);
+  const fallback = isHomeLayout(layout) ? "the home's own type (user_home_t)" : "the path's default type (var_t under /srv)";
   return item('selinux.v2_policy', 'selinux', 'change', title, {
     facts: [
-      `${v2} would keep the path's default type (var_t under /srv), which systemd may not read: no v2 unit could start`,
-      `provision apply writes ${path} (CIL, stamped; one module for every system-layout instance on this host) and installs it: it defines the one file type ${V2_TREE_TYPE}, which systemd (init_t) may read and httpd may not; the v2 service and the agent run unconfined_service_t`,
+      `${v2} would keep ${fallback}, which systemd may not read: no v2 unit could start`,
+      `provision apply writes ${path} (CIL, stamped; one module for every instance on this host) and installs it: it defines the one file type ${V2_TREE_TYPE}, which systemd (init_t) may read and httpd may not; the v2 service and the agent run unconfined_service_t`,
       ...(installed.kind === 'ours' ? ['an older version of the module is installed: provision apply replaces it in place'] : []),
-      'it changes nothing for any other site: the type is only ever given to the v2 trees of this host\'s system-layout instances',
+      'it changes nothing for any other site: the type is only ever given to the v2 trees of this host\'s instances',
       'provision apply removes the module when no instance on this host needs it any more; a module of that name that is not ours is refused, never replaced',
     ],
     commands: [`semodule -X ${SELINUX_MODULE_PRIORITY} -i ${path}`, `semanage fcontext -a -f a -t ${V2_TREE_TYPE} '${escapeSpec(v2)}(/.*)?'`, `restorecon -R -v ${v2}`],

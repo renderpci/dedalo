@@ -16,6 +16,8 @@ import {
   HOME_TRAVERSE_TYPE,
   HTTPD_READABLE_TYPES,
   IMPORT_LINE_PATTERN,
+  REMOVABLE_SELINUX_TYPES,
+  RETIRED_SELINUX_TYPES,
   SELINUX_BOOLEANS,
   SELINUX_TYPES,
   encodeSelinuxState,
@@ -80,15 +82,16 @@ describe('the closed sets', () => {
       'httpd_sys_rw_content_t',
       'httpd_log_t',
       'httpd_config_t',
-      'data_home_t',
       'dedalo_publication_v2_t',
     ]);
-    // The module's type (the system layout's v2 tree) is ours and is given to httpd by no rule at all.
+    // The module's type (the v2 tree, every layout) is ours and is given to httpd by no rule at all.
     expect(SELINUX_TYPES).toContain(V2_TREE_TYPE);
     expect(HTTPD_READABLE_TYPES).not.toContain(V2_TREE_TYPE);
-    // data_home_t (the v2 tree under the home layout) is NOT httpd-readable by default (measured
-    // RHEL 9.8 sesearch: httpd_t reads it only under httpd_read_user_content, like user_home_t).
-    expect(HTTPD_READABLE_TYPES).not.toContain('data_home_t');
+    // data_home_t (the home layout's v2 tree until 2026-10-09) is RETIRED: never registered again,
+    // admitted only in a -d line (the re-type of our recorded rule).
+    expect([...RETIRED_SELINUX_TYPES]).toEqual(['data_home_t']);
+    expect(SELINUX_TYPES).not.toContain('data_home_t');
+    expect([...REMOVABLE_SELINUX_TYPES]).toEqual([...SELINUX_TYPES, 'data_home_t']);
     expect([...HTTPD_READABLE_TYPES]).toEqual(['usr_t', 'httpd_sys_content_t', 'httpd_config_t', 'etc_t']);
     expect(HOME_TRAVERSE_TYPE).toBe('home_root_t');
     expect(SELINUX_TYPES).toContain(HOME_TRAVERSE_TYPE);
@@ -105,7 +108,7 @@ describe('the S9 table', () => {
       ['S/publication_api', 'd', 'usr_t', '/home/museum\\.example\\.org/dedalo/publication_api'],
       ['S/publication_api/v1', 'a', 'httpd_sys_content_t', '/home/museum\\.example\\.org/dedalo/publication_api/v1(/.*)?'],
       // systemd (init_t) must read v2.env and the agent's current/scratch links: not under user_home_t.
-      ['S/publication_api/v2', 'a', 'data_home_t', '/home/museum\\.example\\.org/dedalo/publication_api/v2(/.*)?'],
+      ['S/publication_api/v2', 'a', 'dedalo_publication_v2_t', '/home/museum\\.example\\.org/dedalo/publication_api/v2(/.*)?'],
       ['S/rules', 'a', 'httpd_config_t', '/home/museum\\.example\\.org/dedalo/rules(/.*)?'],
       ['A', 'a', 'usr_t', '/home/museum\\.example\\.org/host_agent(/.*)?'],
       ['dirname(B)', 'a', 'usr_t', '/home/museum\\.example\\.org/\\.bun/bin(/.*)?'],
@@ -121,18 +124,15 @@ describe('the S9 table', () => {
     expect(rows).toEqual(['S', 'S/publication_api', 'S/publication_api/v1', 'S/publication_api/v2', 'S/rules', 'A', 'dirname(B)', 'B', 'V/tmp', 'V/log']);
   });
 
-  test('the v2 tree: data_home_t under the home layout, the module type under any other, always the whole subtree', () => {
+  test('the v2 tree: the module type under EVERY layout (one v2 type), always the whole subtree; every layout needs the module', () => {
     const v2 = (decl: HostDeclaration) => selinuxRules(derive(decl)).find(r => r.row === 'S/publication_api/v2');
-    const home = v2(homeDecl());
-    expect([home?.type, home?.fileType, home?.recursive]).toEqual(['data_home_t', 'a', true]);
-    for (const decl of [systemDecl(), systemDecl('remi'), { ...unixDeclaration() }]) {
+    for (const decl of [homeDecl(), homeDecl('remi'), systemDecl(), systemDecl('remi'), { ...unixDeclaration() }]) {
       const layout = derive(decl);
       const rule = v2(decl);
       expect([rule?.type, rule?.fileType, rule?.recursive, rule?.path]).toEqual([V2_TREE_TYPE, 'a', true, layout.state.apis.v2.root]);
       expect(moduleNeeded(layout)).toBe(true);
     }
-    expect(moduleNeeded(derive(homeDecl()))).toBe(false);
-    expect(moduleNeeded(derive(homeDecl('remi')))).toBe(false);
+    expect(isHomeLayout(derive(homeDecl('remi')))).toBe(true);
   });
 
   test('no site: no V rows; every flavour gives the same table (the FPM socket directory is never ours)', () => {
@@ -282,6 +282,9 @@ describe('the import grammar (spec §5.9)', () => {
     expect(() => importLines([{ kind: 'port', type: 'ssh_port_t', port: 3100 }])).toThrow(/refusing/);
     expect(() => importLines([{ kind: 'fcontext', fileType: 'd', type: 'usr_t', spec: '/srv/x(/.*)?' }])).toThrow(/exact/);
     expect(() => importLines([], [{ kind: 'fcontext', fileType: 'a', type: 'etc_t', spec: '/srv/x(/.*)?' }])).toThrow(/refusing/);
+    // A retired type: admitted in a -d line only, never registered again.
+    expect(importLines([], [{ kind: 'fcontext', fileType: 'a', type: 'data_home_t', spec: '/srv/x(/.*)?' }])).toEqual(["fcontext -d -f a -t data_home_t '/srv/x(/.*)?'"]);
+    expect(() => importLines([{ kind: 'fcontext', fileType: 'a', type: 'data_home_t', spec: '/srv/x(/.*)?' }])).toThrow(/refusing/);
     expect(() => importLines([{ kind: 'fcontext', fileType: 'a', type: 'usr_t', spec: '/home(/.*)?' }])).toThrow(/refusing a rule on '\/home'/);
     expect(() => importLines([{ kind: 'fcontext', fileType: 'a', type: 'usr_t', spec: '/srv/x(/.*)?\nport -a -t http_port_t -p tcp 1' }])).toThrow(/refusing/);
     expect(importLines([portEntry(65535)])).toEqual(['port -a -t http_port_t -p tcp 65535']);

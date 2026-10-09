@@ -337,7 +337,10 @@ describe('the guided install (provision init) states what the code does', () => 
 					.join(' '),
 			);
 		expect(table).toEqual(rules.map((rule) => `${rule.path} ${rule.fileType} ${rule.type}`));
-		// The system layout's v2 row (the policy module's type) is named in the module's own table.
+		// One v2 type on every layout: the module's own table names its type, its rule, and the v2
+		// tree of BOTH layouts (the home one is the table above's own row).
+		const homeV2 = rules.find((rule) => rule.row === 'S/publication_api/v2');
+		expect(homeV2?.type).toBe(V2_TREE_TYPE);
 		const system = derive({
 			...declared,
 			state_root: `${SYSTEM_LAYOUT.stateBase}/${declared.instance}`,
@@ -346,7 +349,9 @@ describe('the guided install (provision init) states what the code does', () => 
 		});
 		const v2 = selinuxRules(system).find((rule) => rule.row === 'S/publication_api/v2');
 		expect(v2?.type).toBe(V2_TREE_TYPE);
-		expect(GUIDED).toContain(`| \`${V2_TREE_TYPE}\`, the rule \`-f ${v2?.fileType}\` on \`${v2?.path}\``);
+		const moduleRow = GUIDED.split('\n').find((line) => line.startsWith(`| \`${V2_TREE_TYPE}\`, the rule \`-f ${v2?.fileType}\` on the v2 tree (`)) ?? '';
+		expect(moduleRow).toContain(`\`${homeV2?.path}\``);
+		expect(moduleRow).toContain(`\`${v2?.path}\``);
 		expect(GUIDED).toContain(`\`${selinuxModulePath(system)}\``);
 	});
 

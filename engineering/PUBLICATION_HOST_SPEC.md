@@ -906,14 +906,27 @@ must reach, as narrowly as the access needs (search-only `-f d` rules on the dir
 traverses, `httpd_sys_content_t` on the v1 tree, `httpd_config_t` on the rules and the host
 map, `httpd_log_t`/`httpd_sys_rw_content_t` for the v1 pool's log and temporary files (the
 site's web logs under `/var/log/{httpd,nginx}/<domain>` are `httpd_log_t` by the policy's own rules),
-`usr_t`/`bin_t` for the agent code and Bun; under the HOME layout `data_home_t` on the v2 tree —
+`usr_t`/`bin_t` for the agent code and Bun; and on the v2 tree, under EVERY layout,
+`dedalo_publication_v2_t` (below; owner decision 2026-10-09: one v2 type on every EL layout) —
 systemd (`init_t`) may read neither the units' `EnvironmentFile=` `v2.env` nor the agent's
-`current`/`scratch` links under the home's `user_home_t`, so no v2 unit could start (measured,
-RHEL 9.8: AVC `init_t` read on `user_home_t` `lnk_file`/`file`, found by the EL drill's first v2
-push; `httpd_t` reads `data_home_t` only under `httpd_read_user_content`, like `user_home_t`;
-what the agent creates there inherits it), and under the SYSTEM layout `dedalo_publication_v2_t`
-(below) — the path's default there, `var_t` under /srv, is no more readable to `init_t`
-(sesearch, RHEL 9.8)); the only rules on paths the provisioner did not
+`current`/`scratch` links under the home's `user_home_t` (measured, RHEL 9.8: AVC `init_t` read on
+`user_home_t` `lnk_file`/`file`, found by the EL drill's first v2 push) nor under /srv's `var_t`
+(sesearch, RHEL 9.8), so no v2 unit could start; what the agent creates there inherits the type).
+The home layout's tree was first typed `data_home_t` — the one policy type, before the module,
+that `init_t` reads (as a `gnome_home_type`, with write) and `httpd_t` reads only under
+`httpd_read_user_content` (a `user_home_type`). The module's type keeps every constraint that
+drove it and narrows both: `init_t` read-only, `httpd_t` nothing under any boolean, `fapolicyd_t`
+reads it like any `file_type`, the v2 service and the agent are unconfined. Under /home the local
+rule beats the policy's generic home-directory entries (a longer stem; matchpathcon, restorecon
+and `semodule -B` keep it — measured RHEL 9.8), the home itself and its ancestors keep their
+types (`home_root_t` by row H, `user_home_t` below it, both searchable by `init_t` through
+`file_type:dir`), and the site user's login is untouched (the EL drill's `home-login-and-logs`).
+An install `data_home_t` still types is re-typed IN PLACE by the next apply: a local rule on one of
+our specs whose type is the one this instance's own `selinux.state` recorded there is ours, so the
+import carries `-d` of the old type then `-a` of the new (one transaction, measured RHEL 9.8) and
+the relabel follows; any other rule of another type on our spec stays the operator's, refused.
+`data_home_t` is RETIRED (`selinux.ts` `RETIRED_SELINUX_TYPES`): admitted in a `-d` line only,
+never registered again. The only rules on paths the provisioner did not
 create are the exact `-f d` rule on the site home (one inode) and the consented shared media root
 (below). No rule ever gives
 `S/publication_api/v2` or `S/audit` an httpd-readable type. Booleans (`SELINUX_BOOLEANS`) are
@@ -924,8 +937,8 @@ labelled `httpd_sys_content_t` only on the declaration's consent field `media.se
 unregisters the rule on the next apply), and only on a local or seclabel filesystem — a network
 mount gets the fstab `context=` option or a `httpd_use_*` boolean instead. Never `setenforce`.
 
-**The provisioner's policy module** (owner decision 2026-10-09). No policy type fits a v2 tree
-outside a home (systemd must read it, httpd must not), so the provisioner ships ONE module,
+**The provisioner's policy module** (owner decisions 2026-10-09). No policy type fits a v2 tree
+(systemd must read it, httpd must not), so the provisioner ships ONE module,
 `dedalo_publication_host` (`publication/host_agent/src/provision/selinux_module.ts`), as CIL —
 no compiler: libsemanage builds CIL on EL 9 and 10 (measured `semodule -i` of a `.cil`, RHEL 9.8
 and 10.2). It defines ONE file type, `dedalo_publication_v2_t` (the reference policy's
@@ -936,8 +949,8 @@ Nothing else: no rule for `httpd_t` (it reaches v2 over the port; the policy's o
 file_type:dir { getattr open search }` lets it traverse, never read a file — the EL drill's
 control), no domain (the v2 service and the agent run `unconfined_service_t`: `init_t` executing
 `bin_t` transitions there, and it is a `files_unconfined_type`), no boolean. It is needed exactly
-when the layout's S9 table names its type (`selinux.ts` `moduleNeeded`: every layout but the home
-one) and is host-wide: one source, `<host_base>/dedalo_publication_host.cil` (root `0644`,
+when the layout's S9 table names its type (`selinux.ts` `moduleNeeded`: every layout) and is
+host-wide: one source, `<host_base>/dedalo_publication_host.cil` (root `0644`,
 stamped `; dedalo-provision: _host selinux_module <sha>`), shared by every instance that needs it.
 `provision apply` writes the source when it differs and runs `semodule -X 400 -i` when the
 installed module is absent or an older one of ours — BEFORE the `semanage import` that names the
@@ -949,7 +962,10 @@ our stamped, unedited sources — is refused, never replaced; so is a source fil
 When neither this layout nor any sibling declaration needs it (siblings observed), ours is
 removed with `semodule -X 400 -r` AFTER the import whose `-d` lines unregistered our last rule
 naming the type (semodule refuses a removal while one does, measured), and its source with it;
-unobserved siblings decide nothing (`provision check` says so). init states it as
+unobserved siblings decide nothing (`provision check` says so). Since every layout needs it, a plan
+for a declared instance never retires it: the retirement half (`plan.ts` `selinuxModulePlan`,
+`needed` false) is the law for a host with no declaration needing it, which no door reaches yet
+(no instance-removal command exists). init states it as
 `selinux.v2_policy` (a *will change* item without an action of its own: `provision.apply` does
 it; right once ours is installed and current, blocked by a foreign one).
 
@@ -1035,7 +1051,10 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   disposable RHEL/Rocky/Alma 9 or 10 VM with SELinux enforcing, refusing any host without
   `/etc/dedalo_init_drill_host`. It proves the `<If>` handler (a `.php` and a `.phtml` probe
   answer as `v1.user` under `fpm-fcgi`) under the EL 9 and EL 10 `php.conf` and under Remi's
-  mod_php, the relabelled home's sshd login, the site's logs outside the home, a network media mount with the
+  mod_php, the relabelled home's sshd login, the site's logs outside the home, the home layout's v2
+  tree `dedalo_publication_v2_t` (recorded as `home_v2_type`), the migration of a home-layout
+  install typed `data_home_t` (`home-v2-migration`: re-typed by init's re-run, tree relabelled, a
+  second re-run changes nothing, v2 restarts and answers, no AVC), a network media mount with the
   `context=` option, fapolicyd, a SYSTEM-layout v2-only site (`system-layout-v2`: the policy module of
   §9.8 installed and extracted equal to its source, the v2 tree `dedalo_publication_v2_t`, a pushed
   release started by systemd and answering, sesearch granting `init_t` and not `httpd_t`, and the

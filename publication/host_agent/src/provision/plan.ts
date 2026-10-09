@@ -49,7 +49,7 @@
  * instance's file-context rules and port label are imported in one `semanage import` transaction,
  * then relabelled (restorecon), both before every configtest op; an operator rule on one of our specs
  * with another type, or a v2 port the policy types otherwise, is REFUSED (never overridden). A layout
- * whose labels need the provisioner's own policy module (the system layout's v2 tree:
+ * whose labels need the provisioner's own policy module (the v2 tree, every layout since 2026-10-09:
  * selinux_module.ts) gets its stamped source written and `semodule -i`'d BEFORE the import that names
  * its type; when no declaration on the host needs it any more, it is removed AFTER the import that
  * unregistered its last rule — a module of that name that is not ours is refused, never replaced. Every
@@ -1847,7 +1847,7 @@ function missingParent(layout: AgentLayout, art: Artifact): string {
 }
 
 /** What the plan does with the provisioner's SELinux policy module (selinux_module.ts). */
-interface SelinuxModulePlan {
+export interface SelinuxModulePlan {
   /** Write the stamped source: create, rewrite (our older or other renderer's bytes), or nothing. */
   readonly write: 'create' | 'rewrite' | null;
   /** The source is ours and current: only its metadata is held. */
@@ -1866,8 +1866,19 @@ interface SelinuxModulePlan {
  * language, disabled, unstamped, edited), or a source file that is not ours, is REFUSED. NOT NEEDED by
  * this layout nor by any sibling on the host: ours is removed after the import (with its source file,
  * under the same guard); unobserved siblings decide nothing (planReport says so).
+ *
+ * `needed` is moduleNeeded(layout), which every layout's S9 table now satisfies (the v2 tree is
+ * V2_TREE_TYPE everywhere): from plan() the module is never retired while a declaration exists.
+ * The retirement half stays the law for a host none of whose declarations needs it (exported with
+ * `needed` so its guards are held by tests/provision_selinux_module.test.ts).
  */
-function selinuxModulePlan(layout: AgentLayout, host: HostState, selinux: SelinuxObserved, refusals: string[]): SelinuxModulePlan {
+export function selinuxModulePlan(
+  layout: AgentLayout,
+  host: HostState,
+  selinux: SelinuxObserved,
+  refusals: string[],
+  needed: boolean = moduleNeeded(layout),
+): SelinuxModulePlan {
   const body = renderSelinuxModule();
   const none: SelinuxModulePlan = { write: null, keep: null, body, tail: [] };
   if (!labelScope(selinux.mode, selinux.storePresent).register) return none;
@@ -1876,7 +1887,7 @@ function selinuxModulePlan(layout: AgentLayout, host: HostState, selinux: Selinu
   const text = host.contents.get(path) ?? null;
   const what = `'${path}' (the SELinux policy module source)`;
   const installed = installedModule(selinux.module);
-  if (moduleNeeded(layout)) {
+  if (needed) {
     if (installed.kind === 'foreign') {
       refusals.push(`${installed.reason} — the labels of '${layout.instance}' need its type ${V2_TREE_TYPE}, and a module that is not ours is never replaced: ${FOREIGN_MODULE_HINT}`);
     }
@@ -1911,7 +1922,9 @@ function selinuxModulePlan(layout: AgentLayout, host: HostState, selinux: Selinu
 
 /**
  * The SELinux ops (spec S9, §5.9): desired rules vs the local registry. A local rule on one of our
- * specs with another type, or the v2 port typed otherwise by the policy, is refused; missing ones
+ * specs with another type, or the v2 port typed otherwise by the policy, is refused — unless that
+ * type is the one this instance's own `selinux.state` recorded for the spec (ours, from an earlier
+ * table: re-typed with a `-d`/`-a` pair in the same import, then relabelled); missing ones
  * are imported (one transaction) with the `-d` lines of rules this instance registered before and
  * no longer needs (a relocation, a port change) — unless a sibling still needs them; then the
  * registration history is rewritten and the targets relabelled.
@@ -1930,11 +1943,22 @@ function selinuxActions(
   const port = selinuxPort(layout);
   const local = new Map<string, string>();
   for (const entry of selinux.localFcontext) local.set(entry.spec, entry.type);
+  // What this instance registered before (spec S9 lifecycle): a local rule on one of our specs whose
+  // type is the one OUR last apply recorded there is ours — re-typed in place when the table now
+  // gives that spec another type (the home layout's v2 tree: data_home_t → V2_TREE_TYPE, 2026-10-09).
+  const previous = parseSelinuxState(selinux.state);
+  const recorded = new Map<string, string>();
+  for (const entry of previous?.fcontext ?? []) recorded.set(entry.spec, entry.type);
   const add = [];
+  const retype = [];
   for (const r of rules) {
     const theirs = local.get(r.spec);
     if (theirs === undefined) add.push(fcontextEntry(r));
-    else if (theirs !== r.type) {
+    else if (theirs !== r.type && recorded.get(r.spec) === theirs) {
+      // `-d` of the old rule, then `-a` of the new, in the ONE import transaction (measured RHEL 9.8).
+      retype.push(fcontextEntry({ fileType: r.fileType, type: theirs, spec: r.spec }));
+      add.push(fcontextEntry(r));
+    } else if (theirs !== r.type) {
       refusals.push(
         `the local SELinux rule '${r.spec}' types it '${theirs}', not '${r.type}' (S9 row ${r.row}) — an operator rule ` +
           'on one of our specs is never overridden: semanage fcontext -l -C, then remove or correct it',
@@ -1951,7 +1975,6 @@ function selinuxActions(
     );
   }
   // What this instance registered before and no longer needs (spec S9 lifecycle).
-  const previous = parseSelinuxState(selinux.state);
   const siblingSpecs = new Set<string>();
   const siblingPorts = new Set<number>();
   for (const sibling of host.siblings ?? []) {
@@ -1959,7 +1982,7 @@ function selinuxActions(
     siblingPorts.add(sibling.layout.v2.port);
   }
   const desiredSpecs = new Set(rules.map(r => r.spec));
-  const del = [];
+  const del = [...retype];
   for (const entry of previous?.fcontext ?? []) {
     if (desiredSpecs.has(entry.spec) || siblingSpecs.has(entry.spec)) continue;
     if (local.get(entry.spec) !== entry.type) continue; // gone already, or now the operator's

@@ -65,8 +65,8 @@ describe('local rules and ports', () => {
     expect(ours.rules[0]).toEqual({ spec: '/home/museum\\.org', fileType: 'd', type: 'home_root_t' });
     expect(ours.rules.find(rule => rule.spec.endsWith('/bun'))).toEqual({ spec: '/home/museum\\.org/\\.bun/bin/bun', fileType: 'f', type: 'bin_t' });
     expect(ours.rules.filter(rule => rule.fileType === 'a').length).toBe(7);
-    // The v2 tree is data_home_t (row S/publication_api/v2); the site logs live outside the home (no home logs rule).
-    expect(ours.rules).toContainEqual({ spec: '/home/museum\\.org/dedalo/publication_api/v2(/.*)?', fileType: 'a', type: 'data_home_t' });
+    // The v2 tree is the module's type (row S/publication_api/v2); the site logs live outside the home (no home logs rule).
+    expect(ours.rules).toContainEqual({ spec: '/home/museum\\.org/dedalo/publication_api/v2(/.*)?', fileType: 'a', type: 'dedalo_publication_v2_t' });
     expect(ours.rules.some(rule => rule.spec.startsWith('/home/') && rule.type === 'httpd_log_t')).toBe(false);
     // A spec longer than semanage's 50-column field is followed by ONE space (`%-50s %-18s %s `).
     expect(ours.rules.at(-2)).toEqual({ spec: '/var/lib/dedalo_publication_host/museum_org/v1/tmp(/.*)?', fileType: 'a', type: 'httpd_sys_rw_content_t' });
