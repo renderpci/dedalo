@@ -1,0 +1,15 @@
+LoadState=loaded
+ActiveState=active
+FragmentPath=/usr/lib/systemd/system/php8.5-fpm.service
+DropInPaths=
+UnitFileState=enabled
+ExecStart={ path=/usr/sbin/php-fpm8.5 ; argv[]=/usr/sbin/php-fpm8.5 --nodaemonize --fpm-config /etc/php/8.5/fpm/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Environment=
+WorkingDirectory=
+User=
+Group=
+ReadOnlyPaths=
+InaccessiblePaths=
+ProtectHome=no
+ProtectSystem=no
+TemporaryFileSystem=

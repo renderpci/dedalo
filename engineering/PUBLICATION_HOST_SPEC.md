@@ -957,7 +957,13 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   apache2, nginx, php-fpm and polkitd; `install.sh` and the CLI as children only. Legs: fresh
   converge through a local https mirror, an all-right re-run, an injected configtest failure
   rolled back, `kill -9` mid-item then `--resume`, the second-variant pre-created API files, the
-  nginx host map through a mock engine, the hand-map migration, and a mixed-version map leg.
+  nginx host map through a mock engine, the hand-map migration, a mixed-version map leg, and
+  `agent-root-grant` (both families): the agent's ONE root grant through the host's own sudo —
+  `visudo -c` over the policy with the rendered grants, each agent user's `sudo -n
+  <WEB_CONFIGTEST_BIN> -t` runs and any other argv is refused, and a `rules.apply` over the
+  running nginx instance's socket runs that configtest FROM THE AGENT'S UNIT (its sandbox) plus
+  the polkit reload, proved by the auth log's line for the agent's working directory. Before it
+  no leg reached `src/exec.ts webConfigtest`: the host map is rendered by root, not by an agent.
   `--in-place` runs the same legs AS ROOT ON a disposable Debian or Ubuntu VM instead (same
   `/etc/dedalo_init_drill_host` refusal as EL): systemd PID 1 from boot, a real `/`, and a
   kernel that ENFORCES AppArmor, which the container never does; its in-place-only leg
@@ -972,7 +978,19 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   RUNS, and a `host.web` answer for the other one is observed again (`run.ts observedDraft`);
   `fs.protected_regular=2` (Ubuntu's default) refuses even root an `O_CREAT` open of an agent's
   existing contribution in the sticky `contrib/` — the agent's own write is a temp file renamed
-  over it (`rules/map.ts`), and root only reads and unlinks there.
+  over it (`rules/map.ts`), and root only reads and unlinks there. Green on Ubuntu 26.04.1
+  (aarch64, kernel 7.0, systemd 259, polkit 127, PHP 8.5), 2026-10-09, 12/12 legs, first run
+  of the 11 with no fix. Measured there: `/usr/bin/sudo` and `/usr/sbin/visudo` are sudo-rs
+  0.2.13 (`/usr/lib/cargo/bin/`; no `/etc/sudoers-rs`); sudo-rs's `visudo -cf` and `visudo -c`
+  accept the rendered `Cmnd_Alias` + `NOPASSWD:` rule, check every `@includedir` file, and refuse a
+  broken or duplicate one; the grant admits exactly `<bin> -t` from the agent's unit
+  (`NoNewPrivileges=no`). `apache2.service` is sandboxed (`ProtectHome=read-only`,
+  `ProtectSystem=full`, `InaccessiblePaths=/boot /root -/etc/sudoers -/etc/sudoers.d …`,
+  `PrivateTmp=yes`, `Type=notify`, `ReadWritePaths=/var/log/apache2 …`): the sites' logs in
+  `/var/log/apache2/<domain>` and the read-only home serve, reload and configtest cleanly — the
+  same sandbox the container capture holds. Installing apache2, nginx and php8.5-fpm adds no
+  AppArmor profile; of what runs only chronyd and rsyslogd are enforced, none of the layout's
+  processes is confined, no `DENIED` line.
 - **EL** (`bun run test:pubhost:init:el`, same script, `--family el --in-place`) on a
   disposable RHEL/Rocky/Alma 9 or 10 VM with SELinux enforcing, refusing any host without
   `/etc/dedalo_init_drill_host`. It proves the `<If>` handler (a `.php` and a `.phtml` probe
