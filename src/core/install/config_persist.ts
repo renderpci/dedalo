@@ -175,7 +175,7 @@ export async function persistConfig(
 	o: Record<string, unknown>,
 	options: { ontologyCatalog?: OntologyCatalog } = {},
 ): Promise<PersistConfigResult> {
-	const prior = readPriorEnv();
+	const prior = await readPriorEnv();
 	const generated: Record<string, string> = {};
 
 	// Secrets: preserve an existing value, else generate (and surface once).

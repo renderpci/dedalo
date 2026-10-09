@@ -30,7 +30,8 @@
  */
 
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { config } from '../../config/config.ts';
@@ -115,8 +116,10 @@ export interface InstallOntologiesResult {
 	warnings: string[];
 }
 
-function sha256Of(path: string): string {
-	return createHash('sha256').update(readFileSync(path)).digest('hex');
+/** sha256 + size of one staged file — async: the installer is a served route (one event loop). */
+async function digestOf(path: string): Promise<{ sha256: string; bytes: number }> {
+	const bytes = await readFile(path);
+	return { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.byteLength };
 }
 
 // ── stage ────────────────────────────────────────────────────────────────────
@@ -178,18 +181,14 @@ async function stageFile(
 	const name = `${tld}.copy.gz`;
 	const target = join(versionDir, name);
 	if (origin === 'server') await downloadStaged(name, file, source, versionDir);
-	else copyLocal(file, target, name);
+	else await copyLocal(file, target, name);
 	await verifyStaged(target, name);
-	return {
-		file: join(DEDALO_VERSION_MAJOR_MINOR, name),
-		sha256: sha256Of(target),
-		bytes: readFileSync(target).byteLength,
-	};
+	return { file: join(DEDALO_VERSION_MAJOR_MINOR, name), ...(await digestOf(target)) };
 }
 
-function copyLocal(file: string, target: string, name: string): void {
+async function copyLocal(file: string, target: string, name: string): Promise<void> {
 	try {
-		copyFileSync(file, target);
+		await copyFile(file, target);
 	} catch (error) {
 		refuseInstall(
 			'install.step_failed',
@@ -248,7 +247,7 @@ export async function stageOntologies(
 		matrix_dd: await stageMatrixDd(request, versionDir),
 		warnings: stagedWarnings(request),
 	};
-	writeFileSync(join(stagingDir, STAGED_MANIFEST), JSON.stringify(manifest, null, '\t'), {
+	await writeFile(join(stagingDir, STAGED_MANIFEST), JSON.stringify(manifest, null, '\t'), {
 		mode: 0o600,
 	});
 	return {
@@ -271,7 +270,7 @@ function stagedWarnings(request: OntologyInstallRequest): string[] {
 
 // ── install ──────────────────────────────────────────────────────────────────
 
-function readStagedManifest(stagingDir: string): StagedManifest {
+async function readStagedManifest(stagingDir: string): Promise<StagedManifest> {
 	const path = join(stagingDir, STAGED_MANIFEST);
 	if (!existsSync(path)) {
 		refuseInstall(
@@ -279,15 +278,15 @@ function readStagedManifest(stagingDir: string): StagedManifest {
 			'No staged ontology files — run stage_ontologies first',
 		);
 	}
-	return JSON.parse(readFileSync(path, 'utf8')) as StagedManifest;
+	return JSON.parse(await readFile(path, 'utf8')) as StagedManifest;
 }
 
 /** Every staged file must still be byte-identical to what stage_ontologies verified. */
-function assertStagedIntact(stagingDir: string, manifest: StagedManifest): void {
+async function assertStagedIntact(stagingDir: string, manifest: StagedManifest): Promise<void> {
 	const records = [...(manifest.matrix_dd === null ? [] : [manifest.matrix_dd]), ...manifest.items];
 	for (const record of records) {
 		const path = join(stagingDir, record.file);
-		if (!existsSync(path) || sha256Of(path) !== record.sha256) {
+		if (!existsSync(path) || (await digestOf(path)).sha256 !== record.sha256) {
 			refuseInstall(
 				'install.state_conflict',
 				`The staged file ${record.file} changed since it was verified — run stage_ontologies again`,
@@ -403,8 +402,8 @@ export async function installOntologies(
 ): Promise<InstallOntologiesResult> {
 	const stagingDir = options.stagingDir ?? installOntologyStagingDir();
 	const userId = options.userId ?? -1;
-	const manifest = readStagedManifest(stagingDir);
-	assertStagedIntact(stagingDir, manifest);
+	const manifest = await readStagedManifest(stagingDir);
+	await assertStagedIntact(stagingDir, manifest);
 	const staged = await unpackStaged(stagingDir, manifest);
 	await importUnderLatch(staged, {
 		conn: options.conn ?? connFromConfig(),

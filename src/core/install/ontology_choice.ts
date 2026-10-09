@@ -29,7 +29,8 @@
  * Gate: test/unit/install_ontology_choice.test.ts (+ the plan parity tripwire).
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { CORE_ONTOLOGY_TLDS, isCoreOntologyTld } from '../ontology/core_tlds.ts';
@@ -141,16 +142,39 @@ interface VendoredInfoEntry {
 	typology_name?: unknown;
 }
 
-/** The vendored ontology.json `active_ontologies` entry of `tld` (undefined when absent). */
-function vendoredInfoEntry(tld: string): VendoredInfoEntry | undefined {
+/**
+ * The vendored ontology.json `active_ontologies`, by TLD (the FIRST entry of a TLD
+ * wins). Empty when the file is absent or unreadable — every entry then falls back
+ * to its TLD as its name.
+ */
+async function readVendoredInfo(): Promise<ReadonlyMap<string, VendoredInfoEntry>> {
+	const byTld = new Map<string, VendoredInfoEntry>();
 	try {
-		const info = JSON.parse(readFileSync(join(VENDORED_ONTOLOGY_DIR, 'ontology.json'), 'utf8')) as {
+		const info = JSON.parse(
+			await readFile(join(VENDORED_ONTOLOGY_DIR, 'ontology.json'), 'utf8'),
+		) as {
 			active_ontologies?: VendoredInfoEntry[];
 		};
-		return (info.active_ontologies ?? []).find((entry) => entry.tld === tld);
+		for (const entry of info.active_ontologies ?? []) {
+			if (typeof entry.tld === 'string' && !byTld.has(entry.tld)) byTld.set(entry.tld, entry);
+		}
 	} catch {
-		return undefined;
+		// absent or malformed: names fall back to the TLD (vendoredEntry)
 	}
+	return byTld;
+}
+
+/**
+ * Read ONCE, at module load, asynchronously: the file is release content (~120 KB,
+ * replaced only WITH the tree, and a code update restarts the process), and the
+ * wizard's catalog routes are served from the one event loop — a synchronous
+ * read per entry per call stalled every request (sync_io_on_request_path_tripwire).
+ */
+const VENDORED_INFO: ReadonlyMap<string, VendoredInfoEntry> = await readVendoredInfo();
+
+/** The vendored ontology.json `active_ontologies` entry of `tld` (undefined when absent). */
+function vendoredInfoEntry(tld: string): VendoredInfoEntry | undefined {
+	return VENDORED_INFO.get(tld);
 }
 
 function typologyIdOf(value: unknown): number | string | null {

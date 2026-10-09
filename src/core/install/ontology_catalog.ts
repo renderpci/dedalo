@@ -226,7 +226,7 @@ export async function ontologyCatalogProbe(
 ): Promise<OntologyCatalogProbeResult> {
 	if (!updateServers)
 		return offlineProbe(true, 'Air-gapped: only the built-in ontologies are offered');
-	const prior = readPriorEnv();
+	const prior = await readPriorEnv();
 	const answers = { update_servers: 'official', ontology_source: '' } as const;
 	const source = ontologySourceFor(answers, prior);
 	try {

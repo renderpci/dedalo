@@ -92,7 +92,7 @@ function fail(msg: string): never {
 }
 
 const invocation = answersFromCliArgs(Bun.argv.slice(2));
-const priorEnv = readPriorEnv();
+const priorEnv = await readPriorEnv();
 
 /**
  * Resolve the source catalog of `answers` (it imports the engine, so call it only

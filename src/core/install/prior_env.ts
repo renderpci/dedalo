@@ -10,17 +10,21 @@
  * before it seeds the environment config.ts freezes.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseEnvFile } from '../../config/env.ts';
 import { installPrivateDir } from './paths.ts';
 
-/** The existing .env's values; {} when it is absent or unreadable. */
-export function readPriorEnv(): Record<string, string> {
+/**
+ * The existing .env's values; {} when it is absent or unreadable. Async: the
+ * wizard's routes call it, and Bun serves every request from one event loop.
+ */
+export async function readPriorEnv(): Promise<Record<string, string>> {
 	const path = join(installPrivateDir(), '.env');
 	if (!existsSync(path)) return {};
 	try {
-		return parseEnvFile(readFileSync(path, 'utf8'));
+		return parseEnvFile(await readFile(path, 'utf8'));
 	} catch {
 		return {};
 	}
