@@ -573,10 +573,8 @@ const tlds = allowlist.imports;
 // This script restores the seed through an explicit connection, which skips
 // that default-config half, so it calls the door itself.
 const { activateCoreHierarchies } = await import('../src/core/install/hierarchy_activate.ts');
+// A failure THROWS (install.step_failed, naming each failed tld) — fatal here too.
 const coreHierarchies = await activateCoreHierarchies();
-if (!coreHierarchies.ok) {
-	throw new Error(`[test-db] ${coreHierarchies.msg}`);
-}
 console.log(`[test-db] ${coreHierarchies.msg} (activation only — no import)`);
 const { installHierarchies } = await import('../src/core/install/hierarchy_import.ts');
 const hierarchies = await installHierarchies(tlds);

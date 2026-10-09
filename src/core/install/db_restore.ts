@@ -99,15 +99,10 @@ async function completeFreshInstall(): Promise<string> {
 	// header carries the measurement). Here, in the restore, so every surface
 	// that restores the seed (CLI, wizard, install.sh) gets it with no step of
 	// its own; a failure fails the restore — an install without its languages
-	// thesaurus is not an install that worked.
+	// thesaurus is not an install that worked (the door itself refuses
+	// `install.step_failed`, naming each failed tld).
 	const { activateCoreHierarchies } = await import('./hierarchy_activate.ts');
 	const core = await activateCoreHierarchies(-1);
-	if (!core.ok) {
-		refuseInstall(
-			'install.step_failed',
-			`Core hierarchy activation failed: ${core.errors.join('; ')}`,
-		);
-	}
 	return `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) + engine ontology (${engine.written} records) + core hierarchies activated (${core.activated.join(', ')}) — OK`;
 }
 

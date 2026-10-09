@@ -28,7 +28,7 @@
  * seed files live in a mkdtemp dir.
  */
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -151,6 +151,26 @@ describe('importHierarchyRows: one tld = one atomic unit', () => {
 		writeSeed(seedTerms, seedModels);
 		const result = await importHierarchyRows(conn, TLD, { importDir });
 		expect(result).toMatchObject({ ok: true, skipped: true });
+		expect(await rows()).toEqual(OPERATOR_STATE);
+	});
+
+	test('(e) a seed that is not gzip is refused with a DELIBERATE sentence — never the raw zlib/fs text (SEC-17), nothing written', async () => {
+		writeFileSync(join(importDir, `${TLD}1.copy.gz`), Buffer.from('plain text, not gzip'));
+		rmSync(join(importDir, `${TLD}2.copy.gz`), { force: true });
+		const errorLog = spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			const result = await importHierarchyRows(conn, TLD, { replace: true, importDir });
+			expect(result.ok).toBe(false);
+			expect(result.msg).toBe(
+				`decompress failed (${TLD}1.copy.gz): the file could not be read as a gzip archive — see the server log`,
+			);
+			// The raw exception text goes to the LOG, not the report.
+			expect(result.msg).not.toContain(importDir);
+			expect(result.msg).not.toContain('header');
+			expect(errorLog).toHaveBeenCalledTimes(1);
+		} finally {
+			errorLog.mockRestore();
+		}
 		expect(await rows()).toEqual(OPERATOR_STATE);
 	});
 });

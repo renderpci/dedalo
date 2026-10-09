@@ -20,6 +20,9 @@
  *   - installHierarchies(['lg']) is activation-only and says so; a reset
  *     (replace) is refused;
  *   - a second activation applies nothing (idempotent);
+ *   - a failed activation is a REFUSAL — `install.step_failed` (public), the
+ *     sentence naming the tld and its finding — never an `{ok:false}` outcome
+ *     (engineering/ERRORS_SPEC.md §4);
  *   - after the rollback the record is byte-identical to its pre-test state.
  *
  * Suite database only: assertTestDatabase before the first write.
@@ -27,6 +30,8 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import { toErrorBody } from '../../src/core/errors/convert.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import {
 	activateCoreHierarchies,
 	activateHierarchy,
@@ -39,6 +44,7 @@ import {
 	HIERARCHY_ACTIVE,
 	HIERARCHY_GENERAL_TERM,
 	HIERARCHY_GENERAL_TERM_MODEL,
+	HIERARCHY_SOURCE_REAL_SECTION,
 	HIERARCHY_TLD,
 } from '../../src/core/ontology/ontology_tipos.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
@@ -160,10 +166,9 @@ describe.if(DB_READY)(
 				expect(lgRowsBefore).toBeGreaterThanOrEqual(0);
 
 				// The door the seed restore runs.
+				// Success is the return value; a failure THROWS (see the refusal test).
 				const core = await activateCoreHierarchies(-1);
-				expect(core.errors).toEqual([]);
-				expect(core.ok).toBe(true);
-				expect(core.activated).toEqual(['lg']);
+				expect(core).toEqual({ activated: ['lg'], msg: 'Core hierarchies active: lg' });
 
 				const state = await inspectHierarchy(id);
 				expect(
@@ -181,6 +186,7 @@ describe.if(DB_READY)(
 				// The wizard / CLI step asked for lg by name: activation only.
 				const step = await installHierarchies(['lg'], undefined, -1);
 				expect(step.ok).toBe(true);
+				expect(step.errors).toEqual([]);
 				expect(step.responses).toHaveLength(1);
 				expect(step.responses[0]?.msg).toContain('never imported');
 				expect(await lgRowsInMatrixHierarchy()).toBe(lgRowsBefore);
@@ -189,6 +195,10 @@ describe.if(DB_READY)(
 				const reset = await installHierarchies(['lg'], undefined, -1, { replace: true });
 				expect(reset.ok).toBe(false);
 				expect(reset.responses[0]?.msg).toContain('cannot be reset');
+				// The batch errors[] tags each finding with its tld in ONE place.
+				expect(reset.errors).toEqual([
+					'lg: core hierarchy — cannot be reset (its terms ship in the seed)',
+				]);
 				expect(await lgRowsInMatrixHierarchy()).toBe(lgRowsBefore);
 
 				// Idempotent: a converged hierarchy needs nothing applied.
@@ -203,6 +213,46 @@ describe.if(DB_READY)(
 			});
 
 			expect(reachedEnd, 'the transaction body ran to its end').toBe(true);
+			expect(await registryBytes(id)).toBe(before);
+		});
+
+		test('a failed core activation REFUSES install.step_failed (public sentence naming the tld), rolled back byte-identical', async () => {
+			await assertTestDatabase('install_core_hierarchy_native');
+			const id = (await lgRegistryId()) as number;
+			expect(id).not.toBeNull();
+			const before = await registryBytes(id);
+
+			let refusal: unknown = null;
+			await withTransaction(async () => {
+				// An operator error ensureHierarchy refuses to paper over: the source
+				// section (hierarchy109) names a COMPONENT, not a section. Raw UPDATE —
+				// the transaction rolls it back.
+				await sql.unsafe(
+					`UPDATE "${REGISTRY_TABLE}"
+					    SET string = coalesce(string, '{}'::jsonb)
+					                 || jsonb_build_object('${HIERARCHY_SOURCE_REAL_SECTION}', $3::text::jsonb)
+					  WHERE section_tipo = $1 AND section_id = $2`,
+					[
+						HIERARCHY_SECTION,
+						id,
+						JSON.stringify([{ id: 1, lang: 'lg-nolan', value: HIERARCHY_TLD }]),
+					],
+				);
+				refusal = await activateCoreHierarchies(-1).then(
+					() => null,
+					(error: unknown) => error,
+				);
+				throw new RollbackSentinel('roll back the refusal probe');
+			}).catch((error: unknown) => {
+				if (!(error instanceof RollbackSentinel)) throw error;
+			});
+
+			expect(refusal, 'a failed activation throws').toBeInstanceOf(DedaloError);
+			const body = toErrorBody(refusal as DedaloError);
+			expect(body.code).toBe('install.step_failed');
+			expect(body.message).toBe(
+				`Core hierarchy activation failed: lg: the source section '${HIERARCHY_TLD}' (hierarchy109) is not a section — fix "Real section tipo" first`,
+			);
 			expect(await registryBytes(id)).toBe(before);
 		});
 	},

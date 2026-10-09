@@ -127,7 +127,12 @@ function readSeedFile(
 	try {
 		return { text: gunzipSync(readFileSync(path)) };
 	} catch (error) {
-		return { problem: `decompress failed (${fileName}): ${(error as Error).message}` };
+		// The raw zlib/fs text names absolute paths (SEC-17): it goes to the server log;
+		// the report carries a deliberate sentence naming the file.
+		console.error(`[install:hierarchy_import] read/decompress failed: ${fileName}`, error);
+		return {
+			problem: `decompress failed (${fileName}): the file could not be read as a gzip archive — see the server log`,
+		};
 	}
 }
 
@@ -223,15 +228,19 @@ function failedImportMessage(replace: boolean, res: PsqlRunResult): string {
 	return `${step}: ${res.stderr || `psql exited ${res.exitCode}`}`;
 }
 
-/** One tld's line in the batch report: its response + the errors it contributes. */
+/**
+ * One tld's line in the batch report: its response + the findings it contributes to the
+ * batch `errors[]`. Findings are UNPREFIXED sentences — the batch loop tags each with its
+ * tld in ONE place (installHierarchies), so no outcome builds a wire list by hand.
+ */
 interface TldOutcome {
 	response: HierarchyImportResponse;
-	errors: string[];
+	findings: readonly string[];
 }
 
-/** A failed tld: the response says `msg`; the batch errors carry `error` (default: msg). */
-function failedTld(tld: string, msg: string, error: string = msg): TldOutcome {
-	return { response: { tld, ok: false, msg }, errors: [`${tld}: ${error}`] };
+/** A failed tld: the response says `msg`; the batch gets `findings` (default: the msg). */
+function failedTld(tld: string, msg: string, findings: readonly string[] = [msg]): TldOutcome {
+	return { response: { tld, ok: false, msg }, findings };
 }
 
 /**
@@ -257,7 +266,7 @@ async function coreHierarchyOutcome(
 		return failedTld(tld, `core hierarchy — activation failed: ${activation.errors.join('; ')}`);
 	}
 	const msg = 'core hierarchy — activated (its terms ship in the seed; never imported)';
-	return { response: { tld, ok: true, msg }, errors: [] };
+	return { response: { tld, ok: true, msg }, findings: [] };
 }
 
 /**
@@ -272,25 +281,20 @@ async function activateImported(
 ): Promise<TldOutcome> {
 	const meta = hierarchyMetaByTld(tld);
 	if (meta === null) {
-		return failedTld(
-			tld,
-			'imported, but not registered in hierarchies.json — not activated',
+		return failedTld(tld, 'imported, but not registered in hierarchies.json — not activated', [
 			'not registered in hierarchies.json; activation skipped',
-		);
+		]);
 	}
 	const activation = await activateHierarchy(meta, userId);
 	if (!activation.ok) {
-		return {
-			response: {
-				tld,
-				ok: false,
-				msg: `imported, activation failed: ${activation.errors.join('; ')}`,
-			},
-			errors: activation.errors.map((error) => `${tld}: ${error}`),
-		};
+		return failedTld(
+			tld,
+			`imported, activation failed: ${activation.errors.join('; ')}`,
+			activation.errors,
+		);
 	}
 	const msg = replace ? 'reset and activated' : 'imported and activated';
-	return { response: { tld, ok: true, msg }, errors: [] };
+	return { response: { tld, ok: true, msg }, findings: [] };
 }
 
 /** An OPTIONAL tld: import (or skip / reset), then activate. */
@@ -303,7 +307,7 @@ async function optionalHierarchyOutcome(
 ): Promise<TldOutcome> {
 	const imported = await importHierarchyRows(connection, tld, { replace });
 	if (imported.skipped === true) {
-		return { response: { tld, ok: true, msg: imported.msg, skipped: true }, errors: [] };
+		return { response: { tld, ok: true, msg: imported.msg, skipped: true }, findings: [] };
 	}
 	if (!imported.ok) return failedTld(tld, imported.msg);
 	// The engine's writes land in the CONFIGURED database. When the import target is a
@@ -312,7 +316,9 @@ async function optionalHierarchyOutcome(
 		return failedTld(
 			tld,
 			`imported into '${connection.database}', NOT activated: the engine writes to '${config.db.database}'`,
-			`activation skipped — the import target '${connection.database}' is not the engine's database ('${config.db.database}')`,
+			[
+				`activation skipped — the import target '${connection.database}' is not the engine's database ('${config.db.database}')`,
+			],
 		);
 	}
 	return activateImported(tld, replace, userId);
@@ -374,7 +380,7 @@ export async function installHierarchies(
 			outcome = await optionalHierarchyOutcome(connection, tld, replace, engineOwnsTarget, userId);
 		}
 		responses.push(outcome.response);
-		errors.push(...outcome.errors);
+		errors.push(...outcome.findings.map((error) => `${tld}: ${error}`));
 	}
 
 	return {

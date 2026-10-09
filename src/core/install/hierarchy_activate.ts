@@ -41,6 +41,7 @@ import {
 } from '../ontology/ontology_tipos.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import { CORE_HIERARCHIES, type HierarchyMeta } from './hierarchy_meta.ts';
+import { refuseInstall } from './refuse.ts';
 
 const HIERARCHY_MAIN_TABLE = 'matrix_hierarchy_main';
 
@@ -139,29 +140,34 @@ export async function activateHierarchy(
 	return outcome;
 }
 
-/** The outcome of activating every core hierarchy (INTERNAL — the seed restore reads it). */
+/** What activating every core hierarchy did (the seed restore and the suite setup read it). */
 export interface CoreHierarchiesActivation {
-	ok: boolean;
-	msg: string;
-	errors: string[];
-	/** The core tlds that converged. */
+	/** The core tlds that converged — every one of them: a failure THROWS. */
 	activated: string[];
+	/** The one-line report a CLI prints. */
+	msg: string;
 }
 
 /**
  * Activate every CORE hierarchy (see the header): activation only, never an import.
  * Idempotent — a second run converges with nothing applied.
+ *
+ * A failure is a REFUSAL, not an outcome: `install.step_failed` (public — the wizard
+ * and the CLI show the sentence), naming each failed tld with its activation findings.
+ * Every caller treats it as fatal (an install without its languages thesaurus is not an
+ * install that worked), so there is no `{ok:false}` shape to forward by hand — the
+ * converter builds the body (engineering/ERRORS_SPEC.md §4).
  */
 export async function activateCoreHierarchies(userId = -1): Promise<CoreHierarchiesActivation> {
-	const outcome: CoreHierarchiesActivation = { ok: true, msg: '', errors: [], activated: [] };
+	const activated: string[] = [];
+	const failed: string[] = [];
 	for (const meta of CORE_HIERARCHIES) {
 		const activation = await activateHierarchy(meta, userId);
-		if (activation.ok) outcome.activated.push(meta.tld);
-		else outcome.errors.push(...activation.errors.map((error) => `${meta.tld}: ${error}`));
+		if (activation.ok) activated.push(meta.tld);
+		else failed.push(`${meta.tld}: ${activation.errors.join('; ')}`);
 	}
-	outcome.ok = outcome.errors.length === 0;
-	outcome.msg = outcome.ok
-		? `Core hierarchies active: ${outcome.activated.join(', ')}`
-		: `Core hierarchy activation failed: ${outcome.errors.join('; ')}`;
-	return outcome;
+	if (failed.length > 0) {
+		refuseInstall('install.step_failed', `Core hierarchy activation failed: ${failed.join('; ')}`);
+	}
+	return { activated, msg: `Core hierarchies active: ${activated.join(', ')}` };
 }
