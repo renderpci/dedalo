@@ -48,7 +48,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { legacyAwareDefaultDir } from '../../config/catalog/media.ts';
-import { privateDir, projectRoot, readEnv } from '../../config/env.ts';
+import { privateDir, processEnvValue, projectRoot, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { deriveProcessesDir } from '../media/processes_dir.ts';
 import { registryPath } from '../publication_host/registry.ts';
@@ -262,6 +262,17 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 		resolve: () => optional('DEDALO_SOURCE_VERSION_LOCAL_DIR'),
 	},
 	{
+		id: 'client_publish_dir',
+		envKey: 'DEDALO_CLIENT_PUBLISH_DIR',
+		consumer: 'src/core/install/client_publish.ts:publishClientAtBoot',
+		// THE SAME READ the publisher makes: the PROCESS env only (a container mount the
+		// private .env cannot know); unset = nothing published (every non-container install).
+		resolve: () => {
+			const value = (processEnvValue('DEDALO_CLIENT_PUBLISH_DIR') ?? '').trim();
+			return value === '' ? null : value;
+		},
+	},
+	{
 		id: 'publication_hosts_registry',
 		envKey: null,
 		consumer: 'src/core/publication_host/registry.ts:registryPath',
@@ -330,6 +341,10 @@ export const RUNTIME_PATH_SCAN_EXEMPTIONS: Readonly<Record<string, string>> = Ob
 	'src/server.ts': 'reads the shipped .bun-version pin — release content, not runtime data',
 	'src/core/update/code_update.ts':
 		'the updater: it operates ON the code tree by design and consults this census before any swap',
+	'src/core/install/client_publish.ts':
+		'CLIENT_ROOT is the SHIPPED client tree (release content, replaced WITH the tree): it is served from there and copied OUT of it; the publisher writes only under DEDALO_CLIENT_PUBLISH_DIR (census entry client_publish_dir), never into the tree',
+	'src/core/update/code_manifest.ts':
+		"RELEASE_NOTES_DIR is the master's shipped changes/ tree (changes/<version>/release.json, frozen at the release cut — release content, read-only); the manifest writes nothing",
 	'src/core/update/status.ts':
 		'the readiness PANEL: read-only introspection of the live tree (the shipped .bun-version pin, the unaccounted root entries) — it writes nothing and asks this census itself for the swap blockers',
 	'src/core/area_maintenance/widgets/system_info.ts':

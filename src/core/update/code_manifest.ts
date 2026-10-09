@@ -20,6 +20,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
+import { projectRoot } from '../../config/env.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { compareVersionArrays } from './version.ts';
 
@@ -56,6 +57,12 @@ export interface CodeReleaseNoteEntry {
 	audience: string;
 	title: string;
 }
+
+/**
+ * The master's own frozen release notes: `changes/<version>/release.json` in the
+ * SHIPPED tree (release content — read-only, replaced with the tree).
+ */
+export const RELEASE_NOTES_DIR: string = join(projectRoot, 'changes');
 
 /** `changes/<version>/release.json` `notes`, plus the release's date. */
 export interface CodeReleaseNotes {
