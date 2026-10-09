@@ -12,5 +12,5 @@ compiler needed). It defines one type, `dedalo_publication_v2_t`, which systemd 
 web server may not, and labels the v2 tree with it before any service starts. The guided
 install lists it as `selinux.v2_policy`. A module of that name that the provisioner did not
 install is refused, never replaced, and the module is removed when no instance on the host
-needs it any more. A first system-layout install also creates the shared directory `/srv/dedalo_publication_host` (it was refused when that directory did not exist). The home layout is unchanged. See
+needs it any more. A first system-layout install also creates the shared directory `/srv/dedalo_publication_host` (it was refused when that directory did not exist). See
 [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).

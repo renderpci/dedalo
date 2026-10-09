@@ -9,9 +9,11 @@
  * (`v2/shared/v2.env`, `audit/`, the v2 releases and staging) are never covered by a rule with an
  * httpd-readable type (HTTPD_READABLE_TYPES; tests/provision_selinux.test.ts holds it). The v2 tree
  * (row S/publication_api/v2) is one systemd must read — its env file and its links — which it may
- * not under `user_home_t` (measured, RHEL 9.8) nor under `var_t` (sesearch, RHEL 9.8): the home
- * layout gives it `data_home_t`, the system layout `dedalo_publication_v2_t`, the one type of the
- * provisioner's own policy module (./selinux_module.ts: init_t reads it, httpd_t is given nothing). The v1
+ * not under `user_home_t` (measured, RHEL 9.8) nor under `var_t` (sesearch, RHEL 9.8): EVERY layout
+ * gives it `dedalo_publication_v2_t`, the one type of the provisioner's own policy module
+ * (./selinux_module.ts: init_t reads it, httpd_t is given nothing; owner decision 2026-10-09 — one v2
+ * type on every EL layout). An earlier provisioner typed the home layout's tree `data_home_t`
+ * (RETIRED_SELINUX_TYPES): a plan re-types that rule of ours in place. The v1
  * configuration under `S/publication_api/v1/shared` IS httpd-readable by MAC (the v1 pool runs
  * httpd_t and must read it); it is protected by DAC (`v1:root 0400`) and by the dedicated pool
  * user (decision A).
@@ -49,11 +51,19 @@ export const SELINUX_TYPES = Object.freeze([
   'httpd_sys_rw_content_t',
   'httpd_log_t',
   'httpd_config_t',
-  'data_home_t',
-  // The provisioner's own policy module (./selinux_module.ts): the system layout's v2 tree.
+  // The provisioner's own policy module (./selinux_module.ts): the v2 tree, every layout.
   V2_TREE_TYPE,
 ] as const);
 export type SelinuxType = (typeof SELINUX_TYPES)[number];
+
+/**
+ * Types an EARLIER provisioner registered and this one never registers again: they may appear only in
+ * a `-d` import line, which unregisters (or re-types) a rule of ours a previous apply recorded in
+ * `selinux.state`. `data_home_t`: the home layout's v2 tree until 2026-10-09 (now V2_TREE_TYPE).
+ */
+export const RETIRED_SELINUX_TYPES = Object.freeze(['data_home_t'] as const);
+/** Every type a `-d` import line may name: ours, and the retired ones. */
+export const REMOVABLE_SELINUX_TYPES: readonly string[] = Object.freeze([...SELINUX_TYPES, ...RETIRED_SELINUX_TYPES]);
 
 /** Types `httpd_t` can read (spec S9). No rule covering a secret subtree may use one. */
 export const HTTPD_READABLE_TYPES: readonly string[] = Object.freeze([
@@ -190,14 +200,15 @@ export function selinuxRules(layout: AgentLayout, facts: SelinuxRuleFacts = DEFA
   );
   // The v1 tree the web server serves (and the v1 pool runs): none on a v2-only instance.
   if (layout.v1 !== null) rules.push(rule('S/publication_api/v1', layout.v1.dirs.root, 'a', 'httpd_sys_content_t', true));
-  // The v2 tree under the HOME layout (measured RHEL 9.8): its default `user_home_t` is one systemd
-  // (init_t) may not read — neither `shared/v2.env` (the units' EnvironmentFile=) nor the agent's
-  // `current`/`scratch` links (WorkingDirectory=, AssertPathIsDirectory=), so no v2 unit could
-  // start. `data_home_t` is one init_t reads and httpd_t reads only under `httpd_read_user_content`,
-  // exactly like `user_home_t`; what the agent creates in it (the links, the releases) inherits it.
-  // Under the SYSTEM layout the default is `var_t` (/srv), unreadable to init_t too: the type is the
-  // provisioner's own module's (moduleNeeded), which init_t reads and httpd_t may not read at all.
-  rules.push(rule('S/publication_api/v2', layout.state.apis.v2.root, 'a', home !== null ? 'data_home_t' : V2_TREE_TYPE, true));
+  // The v2 tree, EVERY layout: its default type is one systemd (init_t) may not read — `user_home_t`
+  // under the home layout (measured RHEL 9.8: AVC init_t read on lnk_file/file), `var_t` under /srv
+  // (sesearch) — neither `shared/v2.env` (the units' EnvironmentFile=) nor the agent's
+  // `current`/`scratch` links (WorkingDirectory=, AssertPathIsDirectory=), so no v2 unit could start.
+  // The type is the provisioner's own module's (moduleNeeded): init_t reads it (read-only), httpd_t
+  // may not read it under any boolean; what the agent creates in it (links, releases) inherits it.
+  // Under /home the local rule beats the policy's generic home-directory entries (a longer stem:
+  // matchpathcon and restorecon, measured RHEL 9.8, also after `semodule -B`).
+  rules.push(rule('S/publication_api/v2', layout.state.apis.v2.root, 'a', V2_TREE_TYPE, true));
   rules.push(
     rule('S/rules', layout.state.rules, 'a', 'httpd_config_t', true),
     rule('A', layout.agentDir, 'a', 'usr_t', true),
@@ -229,9 +240,9 @@ export function selinuxRules(layout: AgentLayout, facts: SelinuxRuleFacts = DEFA
 }
 
 /**
- * This layout's labels need the provisioner's SELinux policy module (./selinux_module.ts): every
- * layout that is not the home one (its v2 tree is typed V2_TREE_TYPE). Host-wide: the module stays
- * while any instance on the host needs it.
+ * This layout's labels need the provisioner's SELinux policy module (./selinux_module.ts): its S9
+ * table names V2_TREE_TYPE — every layout (the v2 tree; owner decision 2026-10-09). Host-wide: the
+ * module stays while any instance on the host needs it.
  */
 export function moduleNeeded(layout: AgentLayout): boolean {
   return selinuxRules(layout).some(r => r.type === V2_TREE_TYPE);
@@ -268,9 +279,15 @@ const TYPE_ALTERNATION = SELINUX_TYPES.join('|');
 const SPEC_BODY = String.raw`/(?:[A-Za-z0-9_/-]|\\\.)*(?:\(/\.\*\)\?)?`;
 const PORT_NUMBER = String.raw`(?:6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3})`;
 
-/** Every line an import file may hold (spec §5.9). The renderer re-checks each line against it. */
+const REMOVABLE_ALTERNATION = REMOVABLE_SELINUX_TYPES.join('|');
+
+/**
+ * Every line an import file may hold (spec §5.9). The renderer re-checks each line against it. An
+ * `-a` names one of SELINUX_TYPES; a `-d` may also name a RETIRED type (a rule an earlier
+ * provisioner registered, unregistered or re-typed).
+ */
 export const IMPORT_LINE_PATTERN = new RegExp(
-  `^(?:fcontext -[ad] -f [adf] -t (?:${TYPE_ALTERNATION}) '${SPEC_BODY}'|port -[ad] -t ${V2_PORT_TYPE} -p tcp ${PORT_NUMBER})$`,
+  `^(?:fcontext -a -f [adf] -t (?:${TYPE_ALTERNATION}) '${SPEC_BODY}'|fcontext -d -f [adf] -t (?:${REMOVABLE_ALTERNATION}) '${SPEC_BODY}'|port -[ad] -t ${V2_PORT_TYPE} -p tcp ${PORT_NUMBER})$`,
 );
 
 function line(op: 'a' | 'd', entry: ImportEntry): string {

@@ -1,12 +1,15 @@
 /**
  * THE PUBLICATION HOST'S SELINUX POLICY MODULE (spec §9.8, owner decision 2026-10-09) — pure.
  *
- * WHY. Under the SYSTEM layout the Publication API v2 tree (`<state>/publication_api/v2`, under
- * /srv) keeps the path's default `var_t`, which systemd (`init_t`) may not read (sesearch, RHEL 9.8):
- * neither the v2 units' `EnvironmentFile=` (`shared/v2.env`) nor the `current`/`scratch` links of
- * `WorkingDirectory=` / `AssertPathIsDirectory=` — no v2 unit can start. The home layout's answer
- * (`data_home_t`) is a home type; no policy type fits a system tree that systemd must read and
- * httpd must not. So the provisioner ships ONE small module defining ONE file type:
+ * WHY. The Publication API v2 tree (`<state>/publication_api/v2`) keeps its path's default type —
+ * `var_t` under /srv (system layout), `user_home_t` in a home (home layout) — and systemd (`init_t`)
+ * may read neither (sesearch / AVC, RHEL 9.8): neither the v2 units' `EnvironmentFile=`
+ * (`shared/v2.env`) nor the `current`/`scratch` links of `WorkingDirectory=` /
+ * `AssertPathIsDirectory=` — no v2 unit can start. No policy type fits a tree systemd must read and
+ * httpd must not: the home layout once used `data_home_t`, which init_t reads only as a
+ * `gnome_home_type` (read AND write) and httpd_t reads under `httpd_read_user_content` (a
+ * `user_home_type`). So the provisioner ships ONE small module defining ONE file type, used by EVERY
+ * layout (owner decision 2026-10-09):
  *
  *   dedalo_publication_v2_t — the whole v2 tree (releases, staging, shared/v2.env, the links).
  *     init_t: search/read its directories, read its files and links (the unit start).
@@ -24,7 +27,7 @@
  * names a CIL module after its file, so the file name IS the module name.
  *
  * OURS OR NOT. The file is stamped `; dedalo-provision: _host selinux_module <sha>` (hash.ts, host-wide:
- * one module per host, shared by every system-layout instance). The INSTALLED module is judged by
+ * one module per host, shared by every instance). The INSTALLED module is judged by
  * what `semodule -E` extracts (a CIL module extracts byte-for-byte as installed — measured, RHEL 9.8):
  * a module of our name that is not CIL at priority 400, or whose text is not one of our stamped,
  * unedited bodies, is FOREIGN — refused, never replaced, never removed.
@@ -46,7 +49,7 @@ export { SELINUX_MODULE_FILE, SELINUX_MODULE_NAME, SELINUX_MODULE_PRIORITY };
 export const SELINUX_MODULE_KIND = 'selinux_module';
 /** root:root 0644: policy source, not a secret; only root installs it. */
 export const SELINUX_MODULE_FILE_MODE = 0o644;
-/** The module's one type: the system layout's Publication API v2 tree (selinux.ts row S/publication_api/v2). */
+/** The module's one type: the Publication API v2 tree of every layout (selinux.ts row S/publication_api/v2). */
 export const V2_TREE_TYPE = 'dedalo_publication_v2_t';
 /** CIL's comment prefix (the stamp's). */
 const CIL_COMMENT = ';';
@@ -64,7 +67,7 @@ export function selinuxModuleBody(): string {
     '; Written by provision apply and installed with semodule -X 400 -i; never edit it (a hand edit is',
     '; refused, never installed). Removed by provision apply when no instance on this host needs it.',
     ';',
-    `; ${t}: the Publication API v2 tree of a system-layout instance (releases, staging, shared/v2.env,`,
+    `; ${t}: the Publication API v2 tree of every instance (releases, staging, shared/v2.env,`,
     ';   the current/scratch links). systemd reads it to start the v2 units; httpd is given nothing.',
     `(type ${t})`,
     `(roletype object_r ${t})`,

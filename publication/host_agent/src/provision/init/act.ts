@@ -152,7 +152,7 @@ export interface ActContext {
   readonly webLock: () => LockHandle;
   readonly selinux: {
     readonly mode: SelinuxMode;
-    /** selinux.ts SELINUX_TYPES (P6): the closed type set an import line may name. */
+    /** selinux.ts REMOVABLE_SELINUX_TYPES (P6): the closed type set a `-d` import line may name (ours and the retired). */
     readonly types: readonly string[];
     /** The `A(/.*)?` rule is already registered (a re-run): restorecon the new agent tree after the swap. */
     readonly agentRuleRegistered: boolean;

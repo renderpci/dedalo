@@ -446,6 +446,8 @@ export interface ElMeasured {
 	>;
 	readonly supported_directives: Readonly<Record<string, readonly string[]>>;
 	readonly home_traverse_type: string | null;
+	/** The home layout's v2 tree type, measured (stat): one v2 type on every layout (2026-10-09). */
+	readonly home_v2_type: string | null;
 	readonly system_default_readable: boolean | null;
 	readonly v1_php_floor: string | null;
 	readonly nginx_floor: string | null;
@@ -1621,10 +1623,20 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'selinux-labels',
 		family: 'el',
 		required: true,
-		what: 'every S9 rule registered (semanage fcontext -l -C), the v2 port typed http_port_t, restorecon -n -v empty on every target',
+		what: `every S9 rule registered (semanage fcontext -l -C), the v2 port typed http_port_t, restorecon -n -v empty on every target; the HOME layout's v2 tree (v2.env included) is ${V2_TREE_TYPE}, the policy module ${SELINUX_MODULE} installed (one v2 type on every layout)`,
 		async run(ctx) {
 			const local = await must(ctx, 'semanage fcontext -l -C', 'semanage fcontext -l -C');
 			const rules = await s9Rules(INSTANCE);
+			// One v2 type on every layout (owner decision 2026-10-09): the home layout's v2 tree too.
+			const v2Rule = rules.find((rule) => rule.path === `/home/${DOMAIN}/dedalo/publication_api/v2`);
+			check(v2Rule?.type === V2_TREE_TYPE && v2Rule.recursive, `the home layout's v2 rule is ${JSON.stringify(v2Rule)}, not ${V2_TREE_TYPE}`);
+			const listed = await must(ctx, `semodule --list-modules=full | awk '$2 == "${SELINUX_MODULE}"'`, 'semodule --list-modules=full');
+			check(/^400 dedalo_publication_host\s+cil\s*$/.test(listed.trim()), `the home-layout install did not install the module: '${listed.trim()}'`);
+			const v2Home = `/home/${DOMAIN}/dedalo/publication_api/v2`;
+			const v2Labels = await must(ctx, `stat -c '%C %n' ${q(v2Home)} ${q(`${v2Home}/shared`)} ${q(`${v2Home}/shared/v2.env`)}`, 'the home v2 tree labels');
+			for (const line of v2Labels.trim().split('\n'))
+				check(line.split(':')[2] === V2_TREE_TYPE, `not ${V2_TREE_TYPE}: ${line}`);
+			ctx.facts.home_v2_type = v2Labels.trim().split('\n')[0]?.split(':')[2] ?? null;
 			for (const rule of rules)
 				check(
 					local.includes(rule.spec) && local.includes(rule.type),
@@ -1931,10 +1943,77 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		},
 	},
 	{
+		name: 'home-v2-migration',
+		family: 'el',
+		required: true,
+		what: `a home-layout install an earlier provisioner typed data_home_t (its v2 rule and selinux.state record data_home_t, the tree relabelled so — the footprint the code before 2026-10-09 left) is RE-TYPED by init's re-run: the rule is ${V2_TREE_TYPE}, the whole tree (v2.env, the current link, the pushed release) relabelled, restorecon -n empty, selinux.state records the new type, a second re-run changes nothing, v2 restarts and answers its /health; no AVC since the leg started`,
+		async run(ctx) {
+			const unit = await instanceUnits(INSTANCE);
+			const home = `/home/${DOMAIN}`;
+			const v2 = `${unit.stateRoot}/publication_api/v2`;
+			const spec = `${v2.replace(/\./g, '\\.')}(/.*)?`;
+			const stateFile = `/etc/dedalo_publication_host/${INSTANCE}/selinux.state`;
+			const paths = [v2, `${v2}/shared`, `${v2}/shared/v2.env`, `${v2}/current`];
+			const typesOf = async (): Promise<string[]> =>
+				(await must(ctx, `stat -c '%C' ${paths.map(q).join(' ')}`, 'the v2 tree labels')).trim().split('\n').map((line) => line.split(':')[2] ?? '');
+			check(
+				(await ctx.runner.sh(`test -L ${q(`${v2}/current`)}`)).code === 0,
+				`${v2}/current is not a link: the leg runs after fapolicyd, which leaves r1 current`,
+			);
+			const since = (await must(ctx, 'sleep 1.1; date +%T', 'the leg start')).trim();
+			const healthUrl = (await must(ctx, `sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${INSTANCE}/agent.env`, 'V2_HEALTH_URL')).trim();
+			check(/^http:\/\/127\.0\.0\.1:\d+\//.test(healthUrl), `V2_HEALTH_URL is '${healthUrl}'`);
+			try {
+				// 1. The legacy footprint: rule, history and labels as the code before 2026-10-09 left them.
+				await must(ctx, `systemctl stop ${unit.v2Unit}`, 'stop v2');
+				await must(
+					ctx,
+					`semanage fcontext -m -t data_home_t ${q(spec)} && grep -q '"${V2_TREE_TYPE}"' ${stateFile} && sed -i 's/"${V2_TREE_TYPE}"/"data_home_t"/' ${stateFile} && restorecon -R ${q(v2)}`,
+					'the legacy data_home_t footprint',
+				);
+				const legacy = await typesOf();
+				check(legacy.every((type) => type === 'data_home_t'), `the legacy footprint is not data_home_t: ${legacy.join(', ')}`);
+				// 2. init's re-run re-types it (one import: -d data_home_t, -a the module's type) and relabels.
+				const rerun = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`, { timeoutMs: 600_000 });
+				check(rerun.code === 0, `the migration re-run exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`);
+				const rule = (await must(ctx, `semanage fcontext -l -C | grep -F -- ${q(`${spec} `)}`, 'the v2 rule')).trim();
+				check(rule.includes(`:${V2_TREE_TYPE}:`) && !rule.includes('data_home_t'), `the v2 rule after the re-run: '${rule}'`);
+				const after = await typesOf();
+				check(after.every((type) => type === V2_TREE_TYPE), `the v2 tree after the re-run: ${after.join(', ')}`);
+				const entry = (await must(ctx, `stat -c '%C' ${q(`${v2}/current/src/index.ts`)}`, 'the release entry label')).trim();
+				check(entry.split(':')[2] === V2_TREE_TYPE, `the current release is ${entry}`);
+				const pending = await must(ctx, `restorecon -n -v -R ${q(v2)} 2>&1`, 'restorecon -n on the v2 tree');
+				check(pending.trim() === '', `restorecon would still relabel the v2 tree:\n${pending}`);
+				const history = await must(ctx, `cat ${stateFile}`, 'selinux.state');
+				check(!history.includes('data_home_t') && history.includes(`"${V2_TREE_TYPE}"`), `selinux.state after the re-run:\n${history}`);
+				// 3. Idempotent: a second re-run changes nothing.
+				const before = (await journalRecords(ctx, INSTANCE)).length;
+				const again = await ctx.runner.sh(`${rerunSh(INSTANCE, home, '-- --yes --no-pair')} </dev/null`, { timeoutMs: 600_000 });
+				check(again.code === 0, `the second re-run exited ${again.code}\n${again.out.slice(-3000)}${again.err}`);
+				const changed = (await journalRecords(ctx, INSTANCE)).slice(before).filter((p) => p.phase === 'done');
+				check(changed.length === 0, `the second re-run changed ${changed.map((p) => p.item).join(', ')}`);
+				// 4. v2 restarts on the re-typed tree (systemd reads v2.env and the links) and answers.
+				await must(ctx, `systemctl reset-failed ${unit.v2Unit}; systemctl restart ${unit.v2Unit}`, 'restart v2', 60_000);
+				await must(
+					ctx,
+					`for i in $(seq 1 60); do curl -fsS --max-time 5 ${q(healthUrl)} 2>/dev/null | grep -q '"release":"r1"' && exit 0; sleep 0.5; done; curl -sS --max-time 5 ${q(healthUrl)}; journalctl -u ${unit.v2Unit} -n 10 --no-pager 2>/dev/null; exit 1`,
+					'v2 answers its /health on the re-typed tree',
+				);
+				const avc = await ctx.runner.sh(`sleep 1; ausearch -m AVC,USER_AVC -ts ${since} 2>&1`);
+				const denied = avc.out.split('\n').filter((line) => /avc:/.test(line));
+				check(denied.length === 0, `AVC denials during the migration:\n${denied.slice(0, 20).join('\n')}`);
+				ctx.facts.home_v2_migration = { from: 'data_home_t', to: V2_TREE_TYPE };
+			} finally {
+				// As fapolicyd leaves it: v2 stopped (booleans-measured must not reuse a pooled backend).
+				await ctx.runner.sh(`systemctl stop ${unit.v2Unit}`, { timeoutMs: 60_000 });
+			}
+		},
+	},
+	{
 		name: 'system-layout-v2',
 		family: 'el',
 		required: true,
-		what: `a v2-only site in the SYSTEM layout (/srv + /opt): init lists selinux.v2_policy and apply installs the policy module ${SELINUX_MODULE} (CIL at priority 400, extracted byte for byte equal to its stamped source) BEFORE the rule naming ${V2_TREE_TYPE}; the v2 tree (v2.env included) is ${V2_TREE_TYPE}; sesearch: init_t may read it, httpd_t may not; a minimal v2 release PUSHED through the agent starts and answers /health; no AVC since the leg started; the control: one world-readable file in the web root answers 200 as httpd_sys_content_t and is DENIED to httpd (an AVC naming ${V2_TREE_TYPE}) once it carries ${V2_TREE_TYPE}; a re-run reports selinux.v2_policy right`,
+		what: `a v2-only site in the SYSTEM layout (/srv + /opt): init lists selinux.v2_policy and the policy module ${SELINUX_MODULE} (host-wide: the first home-layout install already installed it) is ours, CIL at priority 400, extracted byte for byte equal to its stamped source; the v2 tree (v2.env included) is ${V2_TREE_TYPE}; sesearch: init_t may read it, httpd_t may not; a minimal v2 release PUSHED through the agent starts and answers /health; no AVC since the leg started; the control: one world-readable file in the web root answers 200 as httpd_sys_content_t and is DENIED to httpd (an AVC naming ${V2_TREE_TYPE}) once it carries ${V2_TREE_TYPE}; a re-run reports selinux.v2_policy right`,
 		async run(ctx) {
 			check(
 				(await ctx.runner.sh('command -v sesearch')).code === 0,
@@ -2808,6 +2887,7 @@ async function writeRecord(ctx: Ctx, passed: string[], skipped: string[]): Promi
 					supported_directives:
 						(ctx.facts.supported_directives as ElMeasured['supported_directives']) ?? {},
 					home_traverse_type: (ctx.facts.home_traverse_type as string | null) ?? null,
+					home_v2_type: (ctx.facts.home_v2_type as string | null) ?? null,
 					system_default_readable: (ctx.facts.system_default_readable as boolean | null) ?? null,
 					v1_php_floor: (ctx.facts.v1_php_floor as string | null) ?? null,
 					nginx_floor: null,

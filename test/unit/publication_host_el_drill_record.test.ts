@@ -14,7 +14,7 @@
  *     now names is a stale row (red): delete it.
  *   - LEGS: EACH host's recorded run passed every REQUIRED EL-family leg (legsFor), skipped none.
  *   - MEASURED: EACH host carries the facts the spec says the drill measures (the two booleans,
- *     the home's traverse type, the v1 PHP floor, its systemd's supported directives) — its own:
+ *     the home's traverse type, the home layout's v2 tree type, the v1 PHP floor, its systemd's supported directives) — its own:
  *     a host is one run on one VM (its sha, its time), and recording one major never rewrites
  *     another's (mergeRecord, judged here on synthetic records).
  *
@@ -106,6 +106,7 @@ describe('the EL drill record holds the tree', () => {
 		expect(required).toContain('selinux-labels');
 		expect(required).toContain('fapolicyd');
 		expect(required).toContain('system-layout-v2');
+		expect(required).toContain('home-v2-migration');
 		for (const host of record().hosts) {
 			expect(host.skipped, `${host.os} skipped legs`).toEqual([]);
 			expect(
@@ -115,7 +116,7 @@ describe('the EL drill record holds the tree', () => {
 		}
 	});
 
-	test('MEASURED: per host, the booleans, the home traverse type, the v1 PHP floor, the supported directives', () => {
+	test('MEASURED: per host, the booleans, the home traverse type, the home v2 type, the v1 PHP floor, the supported directives', () => {
 		for (const host of record().hosts) {
 			const { measured, sha, at } = host;
 			expect(sha, `${host.os} sha`).toMatch(/^[0-9a-f]{40}$/);
@@ -125,6 +126,8 @@ describe('the EL drill record holds the tree', () => {
 				'httpd_enable_homedirs',
 			]);
 			expect(measured.home_traverse_type, `${host.os} home traverse type`).toBe('home_root_t');
+			// One v2 type on every layout (owner decision 2026-10-09): the home layout's v2 tree, measured.
+			expect(measured.home_v2_type, `${host.os} home v2 type`).toBe('dedalo_publication_v2_t');
 			// The system layout's default type under /srv is not readable to systemd: why the policy module exists.
 			expect(measured.system_default_readable, `${host.os} system default readable`).toBe(false);
 			expect(measured.v1_php_floor, `${host.os} v1 PHP floor`).toMatch(/^\d+\.\d+$/);
@@ -148,6 +151,7 @@ const host = (os: ElHost['os'], sha: string, php: string): ElHost => ({
 		booleans: {},
 		supported_directives: { [os]: [] },
 		home_traverse_type: 'home_root_t',
+		home_v2_type: 'dedalo_publication_v2_t',
 		system_default_readable: null,
 		v1_php_floor: php,
 		nginx_floor: null,
