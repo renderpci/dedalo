@@ -10,6 +10,10 @@
  *                                   PID 1, on the CI image's Debian trixie base (its digest is
  *                                   read from ci/Dockerfile), with apache2, nginx, php-fpm and
  *                                   polkitd. Needs a Docker daemon that may start --privileged.
+ *   … --in-place (Debian)           Debian: run AS ROOT ON a disposable Debian/Ubuntu VM (systemd at
+ *                                   boot, AppArmor enforcing on a real kernel; the container never
+ *                                   enforces it). Same marker refusal as EL; the in-place-only legs
+ *                                   (no-apparmor-denial) join the plan.
  *   bun run test:pubhost:init:el    EL: `--family el --in-place`, run AS ROOT ON a disposable
  *                                   RHEL/Rocky/Alma 9 or 10 VM with SELinux enforcing. Refuses unless
  *                                   /etc/dedalo_init_drill_host exists and getenforce says
@@ -23,9 +27,11 @@
  *
  * Flags:
  *   --family debian|el     default debian
- *   --in-place             run on THIS host (EL: required; Debian: a disposable VM instead of docker)
+ *   --in-place             run on THIS host (EL: required; Debian: a disposable Debian/Ubuntu VM
+ *                          instead of docker — the only Debian run under a real AppArmor kernel;
+ *                          same marker refusal as EL)
  *   --record               EL, after a green run: write the EL drill record (engineering/)
- *   --capture <dir>        EL: keep the raw discovery outputs (the typed EL fixtures' replacements)
+ *   --capture <dir>        in place: keep the raw discovery outputs (the typed fixtures' replacements)
  *   --media-nfs <src>      EL: the NFS export the network-media leg mounts (`host:/export`)
  *   --skip <leg>           skip one leg BY NAME (repeatable); the record lists every skipped leg,
  *                          and a record with a skipped required leg is refused
@@ -109,6 +115,8 @@ export function parseDrillArgs(argv: readonly string[]): DrillArgs | { readonly 
 	}
 	if (family === 'el' && !inPlace)
 		return { error: 'the EL drill runs ON the VM: --family el --in-place' };
+	if (capture !== null && !inPlace)
+		return { error: "--capture keeps a real host's discovery outputs: --in-place only" };
 	if (record && family !== 'el')
 		return { error: '--record writes the EL drill record: --family el only' };
 	return { family, inPlace, record, capture, mediaNfs, skip, keep, plan };
@@ -551,6 +559,8 @@ interface Leg {
 	readonly family: 'both' | 'debian' | 'el';
 	/** A record that skipped it is refused (spec §9: the measurement the ratchet rests on). */
 	readonly required: boolean;
+	/** Only a real host can answer it (a container shares its daemon's kernel): run in place only. */
+	readonly inPlaceOnly?: true;
 	readonly what: string;
 	run(ctx: Ctx): Promise<void>;
 }
@@ -1440,7 +1450,10 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			});
 			await must(
 				ctx,
-				`cp -p ${own} /root/dd_contrib.bak && printf '%s' ${q(contrib)} > ${own} && chown ${NGINX_INSTANCE}_agent:dedalo_pubhost ${own} && chmod 0640 ${own}`,
+				// Written beside it and renamed over it, as the agent writes its own (rules/map.ts): root may not
+				// open the agent's existing file O_CREAT in the sticky, group-writable contrib/ where
+				// fs.protected_regular is on (Ubuntu's default 2, measured on 24.04 — EACCES even for root).
+				`cp -p ${own} /root/dd_contrib.bak && printf '%s' ${q(contrib)} > ${own}.dd && chown ${NGINX_INSTANCE}_agent:dedalo_pubhost ${own}.dd && chmod 0640 ${own}.dd && mv -f ${own}.dd ${own}`,
 				'plant a newer contribution',
 			);
 			await ctx.runner.sh('systemctl start dedalo-pubhost-map.service');
@@ -1454,7 +1467,11 @@ export const LEGS: readonly Leg[] = Object.freeze([
 					before,
 				'the live map changed under a refused render',
 			);
-			await must(ctx, `cp -p /root/dd_contrib.bak ${own}`, 'put the real contribution back');
+			await must(
+				ctx,
+				`cp -p /root/dd_contrib.bak ${own}.dd && mv -f ${own}.dd ${own}`,
+				'put the real contribution back',
+			);
 		},
 	},
 	// ── EL only ──
@@ -1875,6 +1892,46 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			check(lines.length === 0, `AVC denials during the drill:\n${lines.slice(0, 20).join('\n')}`);
 		},
 	},
+	// ── Debian, in place only ──
+	{
+		name: 'no-apparmor-denial',
+		family: 'debian',
+		required: true,
+		inPlaceOnly: true,
+		what: 'AppArmor enabled on the VM\'s kernel; the journal (and audit log) since the drill started holds no apparmor="DENIED" line; which of the processes the layout runs (web servers, FPM, polkitd, the agents, v2) are confined is measured',
+		async run(ctx) {
+			check(
+				(await ctx.runner.sh('cat /sys/module/apparmor/parameters/enabled')).out.trim() === 'Y',
+				'AppArmor is not enabled on this kernel: the leg would prove nothing',
+			);
+			const log = await must(
+				ctx,
+				// The kernel's (mediation of files, sockets, capabilities) and dbus's (USER_AVC) denials both
+				// reach the journal; with auditd installed the kernel's go to its log instead.
+				`journalctl --no-pager -o short-iso --since ${q(ctx.startedAt)} 2>&1; if command -v ausearch >/dev/null; then ausearch -m AVC,USER_AVC -ts ${ctx.startedAt} 2>/dev/null; fi; true`,
+				'the journal since the start',
+			);
+			// Not vacuous: the drill's own reloads and restarts are in that window.
+			check(
+				/dedalo-publication-host-/.test(log),
+				`the journal since ${ctx.startedAt} names no unit of ours: the window read nothing`,
+			);
+			const denied = log.split('\n').filter((line) => /apparmor="DENIED"/.test(line));
+			check(
+				denied.length === 0,
+				`AppArmor denials during the drill:\n${denied.slice(0, 20).join('\n')}`,
+			);
+			const confined = await must(
+				ctx,
+				"ps -eo label=,comm= | awk '$1 != \"unconfined\" {print}' | grep -E 'apache2|nginx|php-fpm|polkitd|bun|sudo' || true",
+				'the confined processes',
+			);
+			ctx.facts.apparmor_confined = confined.trim().split('\n').filter(Boolean);
+			console.log(
+				`${TAG}      apparmor: ${(ctx.facts.apparmor_confined as string[]).length === 0 ? "none of the layout's processes is confined" : (ctx.facts.apparmor_confined as string[]).join('; ')}`,
+			);
+		},
+	},
 ]);
 
 /** The S9 rules of an instance's final declaration, from the agent package in a CHILD. */
@@ -2036,21 +2093,29 @@ async function discoveryConstants(): Promise<{
 	return JSON.parse(done.out) as { units: string[]; props: string[]; booleans: string[] };
 }
 
+/** The host a capture reads: an EL major (its unit-list file is named after it), or a Debian family host and its PHP. */
+export type CaptureHost =
+	| { readonly family: 'el'; readonly major: string }
+	| { readonly family: 'debian'; readonly php: string | null };
+
 /**
  * One captured file per discovery read, named after the typed fixture it replaces (typed/<topic>/…)
  * or the captured case's file name (captured/<case>/…): the argv init's exec door runs
  * (src/exec.ts initExec/provisionExec), the files it reads. A non-zero exit and any stderr are kept
  * beside the command's stdout (`<file>.exit`, `<file>.stderr`).
  */
-export function captureCommands(c: {
-	readonly units: readonly string[];
-	readonly props: readonly string[];
-	readonly booleans: readonly string[];
-}): readonly (readonly [string, string])[] {
+export function captureCommands(
+	c: {
+		readonly units: readonly string[];
+		readonly props: readonly string[];
+		readonly booleans: readonly string[];
+	},
+	host: CaptureHost,
+): readonly (readonly [string, string])[] {
 	const show = (unit: string) =>
 		`systemctl show ${unit}.service ${c.props.map((p) => `-p ${p}`).join(' ')}`;
 	const home = `/home/${DOMAIN}`;
-	return [
+	const common: (readonly [string, string])[] = [
 		['os-release', 'cat /etc/os-release'],
 		['kernel_osrelease', 'cat /proc/sys/kernel/osrelease'],
 		['cpuinfo.txt', 'cat /proc/cpuinfo'],
@@ -2058,6 +2123,51 @@ export function captureCommands(c: {
 		['proc_net_tcp.txt', 'cat /proc/net/tcp'],
 		['proc_net_tcp6.txt', 'cat /proc/net/tcp6'],
 		['attr_current', 'cat /proc/self/attr/current'],
+		['systemctl_version.txt', 'systemctl --version'],
+		[
+			`list_units_${host.family === 'el' ? `el${host.major}` : 'debian'}.txt`,
+			`systemctl list-units --all --plain --no-legend --no-pager ${c.units.join(' ')}`,
+		],
+		['show_dedalo_ts.txt', show('dedalo-ts')],
+		['show_nginx.txt', show('nginx')],
+		['pkaction_version.txt', 'pkaction --version'],
+		['nginx_T.txt', 'nginx -T'],
+		['nginx_v.txt', 'nginx -v'],
+		['php_version.txt', "php -n -r 'echo PHP_VERSION;'"],
+		['getent_passwd.txt', 'getent passwd'],
+		['getent_group.txt', 'getent group'],
+		['nsswitch.conf', 'cat /etc/nsswitch.conf'],
+		['shells', 'cat /etc/shells'],
+		['sudoers', 'cat /etc/sudoers'],
+		[
+			'polkit_rules_d.txt',
+			"stat -c '%U:%G %a %n' /etc/polkit-1 /etc/polkit-1/rules.d /usr/share/polkit-1/rules.d",
+		],
+	];
+	if (host.family === 'debian') {
+		const php = host.php ?? 'none';
+		return [
+			...common,
+			['show_web_default.txt', show('apache2')],
+			['show_fpm.txt', show(`php${php}-fpm`)],
+			['show_polkit.txt', show('polkit')],
+			['apache_S.txt', 'apache2ctl -S'],
+			['apache_M.txt', 'apache2ctl -M'],
+			['apache_includes.txt', 'apache2ctl -t -D DUMP_INCLUDES'],
+			['apache_v.txt', 'apache2ctl -v'],
+			['apache_php_fpm.conf', `cat /etc/apache2/conf-available/php${php}-fpm.conf`],
+			['fpm_tt.txt', `/usr/sbin/php-fpm${php} -tt`],
+			['ls_etc_php.txt', 'ls -1 /etc/php'],
+			['ls_pool_d.txt', `ls -1 /etc/php/${php}/fpm/pool.d`],
+			// AppArmor (no typed fixture yet: what this host confines, its userns restriction).
+			['apparmor_enabled', 'cat /sys/module/apparmor/parameters/enabled'],
+			['aa_status.txt', 'aa-status'],
+			['apparmor_restrict_userns', 'cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns'],
+			['ps_labels.txt', 'ps -eo label=,user=,comm='],
+		];
+	}
+	return [
+		...common,
 		['getenforce.txt', 'getenforce'],
 		['selinux_config', 'cat /etc/selinux/config'],
 		['getsebool.txt', c.booleans.map((b) => `getsebool ${b}`).join('; ')],
@@ -2069,37 +2179,17 @@ export function captureCommands(c: {
 			`stat -c '%C %n' -- /home ${home} ${home}/dedalo ${home}/dedalo/publication_api ${home}/dedalo/publication_api/v1 ${home}/host_agent ${home}/.bun/bin/bun /var/log/httpd/${DOMAIN} /run/php-fpm /mnt/dd_media`,
 		],
 		['restorecon_n.txt', `restorecon -R -n -v -- ${home}/dedalo; restorecon -n -v -- ${home}`],
-		['systemctl_version.txt', 'systemctl --version'],
-		[
-			'list_units_el9.txt',
-			`systemctl list-units --all --plain --no-legend --no-pager ${c.units.join(' ')}`,
-		],
 		['show_web_default.txt', show('httpd')],
-		['show_nginx.txt', show('nginx')],
 		['show_fpm.txt', show('php-fpm')],
-		['show_dedalo_ts.txt', show('dedalo-ts')],
 		['show_polkit.txt', show('polkit')],
 		['show_fapolicyd.txt', show('fapolicyd')],
-		['pkaction_version.txt', 'pkaction --version'],
 		['apache_S.txt', '/usr/sbin/httpd -S'],
 		['apache_M.txt', '/usr/sbin/httpd -M'],
 		['apache_includes.txt', '/usr/sbin/httpd -t -D DUMP_INCLUDES'],
 		['apache_v.txt', '/usr/sbin/httpd -v'],
 		['php.conf', 'cat /etc/httpd/conf.d/php.conf'],
-		['nginx_T.txt', 'nginx -T'],
-		['nginx_v.txt', 'nginx -v'],
 		['fpm_tt.txt', '/usr/sbin/php-fpm -tt'],
-		['php_version.txt', "php -n -r 'echo PHP_VERSION;'"],
 		['ls_php_fpm_d.txt', 'ls -1 /etc/php-fpm.d'],
-		['getent_passwd.txt', 'getent passwd'],
-		['getent_group.txt', 'getent group'],
-		['nsswitch.conf', 'cat /etc/nsswitch.conf'],
-		['shells', 'cat /etc/shells'],
-		['sudoers', 'cat /etc/sudoers'],
-		[
-			'polkit_rules_d.txt',
-			"stat -c '%U:%G %a %n' /etc/polkit-1 /etc/polkit-1/rules.d /usr/share/polkit-1/rules.d",
-		],
 		[
 			'selinux_tools.txt',
 			'ls -l /usr/sbin/semanage /usr/sbin/restorecon /usr/sbin/getsebool /usr/sbin/setfiles',
@@ -2108,19 +2198,34 @@ export function captureCommands(c: {
 }
 
 async function captureDiscovery(ctx: Ctx, dir: string): Promise<number> {
-	const commands = captureCommands(await discoveryConstants());
+	const release = (await ctx.runner.sh('. /etc/os-release; echo "$ID $VERSION_ID"')).out.trim();
+	const host: CaptureHost =
+		ctx.args.family === 'el'
+			? { family: 'el', major: release.split(' ')[1]?.split('.')[0] ?? '' }
+			: {
+					family: 'debian',
+					php: (await ctx.runner.sh('ls -1 /etc/php | sort -V | tail -n1')).out.trim() || null,
+				};
+	const commands = captureCommands(await discoveryConstants(), host);
 	for (const [file, command] of commands) {
 		const done = await ctx.runner.sh(command, { timeoutMs: 120_000 });
 		writeFileSync(join(dir, file), done.out);
 		if (done.code !== 0) writeFileSync(join(dir, `${file}.exit`), `${done.code}\n`);
 		if (done.err.trim() !== '') writeFileSync(join(dir, `${file}.stderr`), done.err);
 	}
-	const release = (await ctx.runner.sh('. /etc/os-release; echo "$ID $VERSION_ID"')).out.trim();
-	const caseJson = {
-		typed: false,
-		captured: `the EL init drill on ${release} (SELinux enforcing), ${new Date().toISOString()}, after the legs: a real VM (systemd PID 1, an SELinux kernel) with the drill's instances installed`,
-		limits: "one VM and the drill's own sites; the NFS media mount is the network-media leg's",
-	};
+	const caseJson =
+		ctx.args.family === 'el'
+			? {
+					typed: false,
+					captured: `the EL init drill on ${release} (SELinux enforcing), ${new Date().toISOString()}, after the legs: a real VM (systemd PID 1, an SELinux kernel) with the drill's instances installed`,
+					limits: "one VM and the drill's own sites; the NFS media mount is the network-media leg's",
+				}
+			: {
+					typed: false,
+					captured: `the in-place Debian init drill on ${release} (AppArmor enabled), ${new Date().toISOString()}, after the legs: a real VM (systemd PID 1, an AppArmor kernel) with the drill's instances installed`,
+					limits:
+						"one VM and the drill's own sites; captured after the nginx legs: nginx serving, apache2 stopped and disabled (still listed loaded)",
+				};
 	writeFileSync(join(dir, 'case.json'), `${JSON.stringify(caseJson, null, 2)}\n`);
 	return commands.length;
 }
@@ -2314,27 +2419,28 @@ async function startMirror(runner: Runner, scratch: string): Promise<string> {
 
 class CannotRun extends Error {}
 
-async function elWorld(
+/**
+ * THE IN-PLACE WORLD — the drill runs AS ROOT ON a disposable VM (EL: always; Debian: `--in-place`,
+ * a real Debian/Ubuntu VM instead of the container — the only Debian run with a real kernel's
+ * AppArmor, systemd PID 1 at boot and a real `/`). Refuses unless DRILL_HOST_MARKER exists (created
+ * by hand on the VM, so the drill can never run on a real install) and `hostCheck` accepts the host.
+ */
+async function inPlaceWorld(
 	args: DrillArgs,
 	scratch: string,
+	hostCheck: (runner: Runner, release: string) => Promise<void>,
 ): Promise<{ runner: Runner; source: string; mirror: string; stop: () => Promise<void> }> {
-	if (process.platform !== 'linux') throw new CannotRun('the EL drill runs ON the EL VM');
-	if (process.getuid?.() !== 0) throw new CannotRun('run the EL drill as root on the drill VM');
+	const family = args.family === 'el' ? 'EL' : 'Debian';
+	if (process.platform !== 'linux')
+		throw new CannotRun(`the in-place ${family} drill runs ON the VM`);
+	if (process.getuid?.() !== 0)
+		throw new CannotRun(`run the in-place ${family} drill as root on the drill VM`);
 	if (!existsSync(DRILL_HOST_MARKER))
 		throw new CannotRun(
 			`${DRILL_HOST_MARKER} does not exist: this is not a drill VM (create it by hand on a disposable VM only)`,
 		);
 	const runner = localRunner();
-	const mode = (await runner.sh('getenforce')).out.trim();
-	if (mode !== 'Enforcing')
-		throw new CannotRun(`getenforce says '${mode}': the EL drill needs SELinux enforcing`);
-	const release = readFileSync('/etc/os-release', 'utf8');
-	if (
-		!/^ID="?(rhel|rocky|almalinux)"?$/m.test(release) ||
-		!/^VERSION_ID="?(9|10)(\.\d+)?"?$/m.test(release)
-	) {
-		throw new CannotRun('the EL drill needs RHEL, Rocky or Alma 9 or 10');
-	}
+	await hostCheck(runner, readFileSync('/etc/os-release', 'utf8'));
 	const local = await stageSource(scratch);
 	await runner.sh(
 		'useradd --create-home --shell /bin/sh dedalo 2>/dev/null; install -d -o dedalo -m 0755 /opt/dedalo',
@@ -2353,10 +2459,56 @@ async function elWorld(
 	return { runner, source: '/opt/dedalo/master_dedalo', mirror, stop };
 }
 
+function elWorld(
+	args: DrillArgs,
+	scratch: string,
+): Promise<{ runner: Runner; source: string; mirror: string; stop: () => Promise<void> }> {
+	return inPlaceWorld(args, scratch, async (runner, release) => {
+		const mode = (await runner.sh('getenforce')).out.trim();
+		if (mode !== 'Enforcing')
+			throw new CannotRun(`getenforce says '${mode}': the EL drill needs SELinux enforcing`);
+		if (
+			!/^ID="?(rhel|rocky|almalinux)"?$/m.test(release) ||
+			!/^VERSION_ID="?(9|10)(\.\d+)?"?$/m.test(release)
+		) {
+			throw new CannotRun('the EL drill needs RHEL, Rocky or Alma 9 or 10');
+		}
+	});
+}
+
+/** A Debian-family VM: Debian or Ubuntu by its os-release, the packages the container image carries. */
+export function debianInPlaceRefusal(release: string): string | null {
+	if (!/^ID="?(debian|ubuntu)"?$/m.test(release))
+		return 'the in-place Debian drill needs a Debian or Ubuntu VM (os-release ID debian|ubuntu)';
+	return null;
+}
+
+function debianInPlaceWorld(
+	args: DrillArgs,
+	scratch: string,
+): Promise<{ runner: Runner; source: string; mirror: string; stop: () => Promise<void> }> {
+	return inPlaceWorld(args, scratch, async (runner, release) => {
+		const refusal = debianInPlaceRefusal(release);
+		if (refusal !== null) throw new CannotRun(refusal);
+		const missing = await runner.sh(
+			'for b in apache2ctl nginx pkaction sudo script logrotate rsync curl unzip openssl chattr; do command -v $b >/dev/null || echo $b; done; ' +
+				'ls /usr/sbin/php-fpm* >/dev/null 2>&1 || echo php-fpm',
+		);
+		const absent = missing.out.trim();
+		if (absent !== '')
+			throw new CannotRun(
+				`the drill VM lacks ${absent.split('\n').join(', ')} (apt-get install apache2 nginx php-fpm php-cli polkitd sudo logrotate e2fsprogs rsync curl unzip openssl)`,
+			);
+	});
+}
+
 /* ── main ──────────────────────────────────────────────────────────────────────────── */
 
 export function legsFor(args: DrillArgs): Leg[] {
-	return LEGS.filter((leg) => leg.family === 'both' || leg.family === args.family);
+	return LEGS.filter(
+		(leg) =>
+			(leg.family === 'both' || leg.family === args.family) && (args.inPlace || !leg.inPlaceOnly),
+	);
 }
 
 async function writeRecord(ctx: Ctx, passed: string[], skipped: string[]): Promise<void> {
@@ -2434,7 +2586,11 @@ export async function main(argv: readonly string[]): Promise<number> {
 	try {
 		try {
 			world =
-				args.family === 'el' ? await elWorld(args, scratch) : await debianWorld(args, scratch);
+				args.family === 'el'
+					? await elWorld(args, scratch)
+					: args.inPlace
+						? await debianInPlaceWorld(args, scratch)
+						: await debianWorld(args, scratch);
 		} catch (error) {
 			if (error instanceof CannotRun) {
 				console.error(`${TAG} RED — cannot run here: ${error.message}`);

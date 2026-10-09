@@ -956,6 +956,21 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   converge through a local https mirror, an all-right re-run, an injected configtest failure
   rolled back, `kill -9` mid-item then `--resume`, the second-variant pre-created API files, the
   nginx host map through a mock engine, the hand-map migration, and a mixed-version map leg.
+  `--in-place` runs the same legs AS ROOT ON a disposable Debian or Ubuntu VM instead (same
+  `/etc/dedalo_init_drill_host` refusal as EL): systemd PID 1 from boot, a real `/`, and a
+  kernel that ENFORCES AppArmor, which the container never does; its in-place-only leg
+  `no-apparmor-denial` finds no `apparmor="DENIED"` line in the journal (or audit log) since the
+  start and records which of the layout's processes are confined. `--capture` keeps that host's
+  discovery outputs too. Green on Ubuntu 24.04.5 (aarch64, kernel 6.8, systemd 255, polkit 124),
+  2026-10-09, 11/11 legs. Measured there: no profile confines apache2, nginx, php-fpm, polkitd,
+  sudo or Bun (24.04 ships none; only rsyslogd of what runs is enforced), so the layout needs no
+  `/etc/apparmor.d/local/` override; `kernel.apparmor_restrict_unprivileged_userns=1` touches
+  nothing (systemd, as PID 1, builds every unit's namespaces); a stopped, disabled `apache2` stays
+  listed `loaded inactive` beside a running nginx — observe proposes and reads the server that
+  RUNS, and a `host.web` answer for the other one is observed again (`run.ts observedDraft`);
+  `fs.protected_regular=2` (Ubuntu's default) refuses even root an `O_CREAT` open of an agent's
+  existing contribution in the sticky `contrib/` — the agent's own write is a temp file renamed
+  over it (`rules/map.ts`), and root only reads and unlinks there.
 - **EL** (`bun run test:pubhost:init:el`, same script, `--family el --in-place`) on a
   disposable RHEL/Rocky/Alma 9 or 10 VM with SELinux enforcing, refusing any host without
   `/etc/dedalo_init_drill_host`. It proves the `<If>` handler (a `.php` and a `.phtml` probe

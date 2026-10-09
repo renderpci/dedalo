@@ -677,6 +677,8 @@ export class FakeInitHost extends FakeHost implements InitIo {
   /** `systemctl show <unit>` properties per bare unit name. */
   readonly unitProps = new Map<string, Record<string, string>>();
   readonly candidateUnits: string[] = [];
+  /** Candidate units listed `loaded inactive dead` (a stopped unit systemd keeps loaded); every other one is listed running. */
+  readonly listedInactive = new Set<string>();
   readonly shells = new Map<string, string>();
   /** Debian: enabled Apache modules (a2enmod/a2dismod mutate it). */
   readonly apacheMods = new Set<string>(['ssl', 'proxy', 'proxy_http', 'headers']);
@@ -756,7 +758,7 @@ export class FakeInitHost extends FakeHost implements InitIo {
         const props = this.unitProps.get(unitName) ?? { LoadState: 'not-found' };
         return this.command(`systemctl show ${unitName}`, Object.entries(props).map(([k, v]) => `${k}=${v}\n`).join(''));
       },
-      listCandidateUnits: () => this.command('systemctl list-units', this.candidateUnits.map(unit => `${unit} loaded active running ${unit}\n`).join('')),
+      listCandidateUnits: () => this.command('systemctl list-units', this.candidateUnits.map(unit => `${unit} loaded ${this.listedInactive.has(unit) ? 'inactive dead' : 'active running'} ${unit}\n`).join('')),
       polkitVersion: () => {
         if (this.polkit === null) {
           this.calls.push('pkaction --version');

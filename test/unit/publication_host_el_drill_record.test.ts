@@ -24,6 +24,8 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import {
 	AGENT_DIR,
+	captureCommands,
+	debianInPlaceRefusal,
 	EL_DRILL_RECORD,
 	type ElDrillRecord,
 	type ElHost,
@@ -175,5 +177,55 @@ describe('mergeRecord: one major recorded never rewrites another', () => {
 			{ inputs_digest: 'new', hosts: [el10] },
 		);
 		expect(merged).toEqual({ inputs_digest: 'new', hosts: [el10] });
+	});
+});
+
+describe('the drill around the record: in place on Debian, and what a capture names', () => {
+	const constants = {
+		units: ['apache2', 'httpd', 'nginx'],
+		props: ['LoadState'],
+		booleans: ['httpd_can_network_relay'],
+	};
+	const files = (host: Parameters<typeof captureCommands>[1]) =>
+		captureCommands(constants, host).map(([file]) => file);
+
+	test("an EL capture names its unit list after the host's EL major (never el9 on an EL 10 VM)", () => {
+		expect(files({ family: 'el', major: '10' })).toContain('list_units_el10.txt');
+		expect(files({ family: 'el', major: '10' })).not.toContain('list_units_el9.txt');
+		expect(files({ family: 'el', major: '9' })).toContain('list_units_el9.txt');
+	});
+
+	test('a Debian capture reads apache2ctl, php-fpm<v> and AppArmor — no SELinux tool', () => {
+		const commands = captureCommands(constants, { family: 'debian', php: '8.3' });
+		const byFile = new Map(commands.map(([file, command]) => [file, command]));
+		expect(byFile.get('apache_S.txt')).toBe('apache2ctl -S');
+		expect(byFile.get('fpm_tt.txt')).toBe('/usr/sbin/php-fpm8.3 -tt');
+		expect(byFile.get('ls_pool_d.txt')).toBe('ls -1 /etc/php/8.3/fpm/pool.d');
+		expect(byFile.has('aa_status.txt')).toBe(true);
+		expect(
+			commands.some(([, command]) => /semanage|getenforce|restorecon|\/usr\/sbin\/httpd/.test(command)),
+		).toBe(false);
+		// One file per name: a capture never overwrites itself.
+		expect(new Set(commands.map(([file]) => file)).size).toBe(commands.length);
+	});
+
+	test('--capture is in place only; a Debian in-place run accepts Debian and Ubuntu only', () => {
+		expect(parseDrillArgs(['--capture', '/root/c'])).toEqual({
+			error: "--capture keeps a real host's discovery outputs: --in-place only",
+		});
+		expect('error' in parseDrillArgs(['--in-place', '--capture', '/root/c'])).toBe(false);
+		expect(debianInPlaceRefusal('ID=ubuntu\nVERSION_ID="24.04"\n')).toBeNull();
+		expect(debianInPlaceRefusal('ID=debian\nVERSION_ID="13"\n')).toBeNull();
+		expect(debianInPlaceRefusal('ID="rocky"\nVERSION_ID="9.8"\n')).toContain('Debian or Ubuntu');
+	});
+
+	test("the AppArmor leg runs in place only: the container shares its daemon's kernel", () => {
+		const names = (argv: string[]) =>
+			legsFor(
+				parseDrillArgs(argv) as Exclude<ReturnType<typeof parseDrillArgs>, { error: string }>,
+			).map((l) => l.name);
+		expect(names(['--family', 'debian', '--in-place'])).toContain('no-apparmor-denial');
+		expect(names(['--family', 'debian'])).not.toContain('no-apparmor-denial');
+		expect(names(['--family', 'el', '--in-place'])).not.toContain('no-apparmor-denial');
 	});
 });

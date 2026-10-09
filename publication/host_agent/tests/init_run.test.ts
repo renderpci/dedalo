@@ -989,6 +989,38 @@ describe('case 15: EL with SELinux enforcing', () => {
   });
 });
 
+describe('case 15b: EL 10 as the RHEL 10.2 drill VM measured it (captured/rhel10_drill_vm)', () => {
+  const props = (name: string) =>
+    Object.fromEntries(
+      fixture(`captured/rhel10_drill_vm/${name}`)
+        .split('\n')
+        .filter(line => line.includes('='))
+        .map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]),
+    );
+
+  test('httpd ProtectHome=read-only + ProtectSystem=yes, polkit.service sandboxed, rules.d root:polkitd 0750: the home layout converges', async () => {
+    const w = makeWorld({ os: 'el', el10: true });
+    const httpd = props('show_web_default.txt');
+    expect(httpd).toMatchObject({ ProtectHome: 'read-only', ProtectSystem: 'yes', DropInPaths: '/etc/systemd/system/httpd.service.d/php-fpm.conf' });
+    w.host.unitProps.set('httpd', httpd);
+    const polkit = props('show_polkit.txt');
+    expect(polkit).toMatchObject({ User: 'polkitd', ProtectHome: 'yes', ProtectSystem: 'strict', UnitFileState: 'static' });
+    w.host.unitProps.set('polkit', polkit);
+    // The package's rules directory (measured: `root:polkitd 750 /etc/polkit-1/rules.d`).
+    const rulesD = fixture('captured/rhel10_drill_vm/polkit_rules_d.txt').split('\n').find(line => line.endsWith(' /etc/polkit-1/rules.d'));
+    expect(rulesD).toBe('root:polkitd 750 /etc/polkit-1/rules.d');
+    w.host.users.set('polkitd', 994);
+    w.host.groups.set('polkitd', 994);
+    Object.assign(w.host.entries.get(dirname(w.layout.polkitPath)) as object, { uid: 0, gid: 994, mode: 0o750 });
+    useOperator(w);
+    expect(await init(w, firstRun(w))).toBe(EXIT.OK);
+    expect(listOf(w, 'host.unit_sandbox')).toBe(1);
+    expect(reportOf(w, 'host.unit_sandbox').join('\n')).toContain('no unit sandbox hides the declared paths');
+    expect(listOf(w, 'host.polkit')).toBe(1);
+    expect(w.host.body(w.layout.polkitPath)).toBeDefined();
+  });
+});
+
 /* ── 16. the locks ───────────────────────────────────────────────────────────────── */
 
 describe('case 16: the instance lock', () => {
@@ -1066,6 +1098,43 @@ describe("case 17: an nginx host with the guide's hand map and loaded media incl
     expect(w.host.body(live(w))).toBeUndefined();
     expect(w.host.body(join(w.layout.host.nginxContribDir, '_seed.json'))).toBeUndefined();
     expect(w.err.join('\n')).toContain(mapId);
+  });
+});
+
+describe('case 17b: apache2 and nginx both installed (measured: Ubuntu 24.04 keeps a stopped, disabled apache2 loaded)', () => {
+  /** The nginx host with apache2 installed beside it: listed loaded, running or not. */
+  function bothWorld(apacheRunning: boolean): World {
+    const w = makeWorld({ nginx: true });
+    w.host.candidateUnits.push('apache2.service');
+    if (!apacheRunning) w.host.listedInactive.add('apache2.service');
+    w.host.seedFile('/usr/sbin/apache2ctl', '', 0o755);
+    w.host.seedDir('/etc/nginx/conf.d');
+    return w;
+  }
+  const declared = (w: World) => JSON.parse(w.host.body(`/etc/dedalo_publication_host/test.json`) ?? '{}') as { web?: { server?: string; unit?: string } };
+
+  test('the one that runs is proposed and observed: host.web defaults to nginx, its vhost is found, the run converges on nginx', async () => {
+    const w = bothWorld(false);
+    // The operator types the default, as the pty does (an unanswered decision stays open: REFUSED).
+    useOperator(w, { 'host.web': 'nginx' });
+    expect(await init(w, firstRun(w))).toBe(EXIT.OK);
+    expect(w.out.join('\n')).toMatch(/both apache and nginx are installed/);
+    expect(w.out).toContain('      nginx: nginx (default)');
+    expect(declared(w).web).toMatchObject({ server: 'nginx', unit: 'nginx' });
+  });
+
+  test('both running: the answer to host.web is OBSERVED again (its vhost, its binaries), not only declared', async () => {
+    const w = bothWorld(true);
+    useOperator(w, { 'host.web': 'nginx' });
+    expect(await init(w, firstRun(w))).toBe(EXIT.OK);
+    expect(declared(w).web).toMatchObject({ server: 'nginx', unit: 'nginx' });
+  });
+
+  test('--decide host.web=nginx without a terminal observes nginx from the start', async () => {
+    const w = bothWorld(true);
+    w.prompter = scriptedPrompter({ interactive: false });
+    expect(await init(w, [...firstRun(w), '--yes', '--decide', 'host.web=nginx', '--decide', `${vhostId(w)}=act`])).not.toBe(EXIT.USAGE);
+    expect(reportOf(w, vhostId(w)).length).toBeGreaterThan(0);
   });
 });
 

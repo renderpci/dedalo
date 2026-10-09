@@ -1,0 +1,5 @@
+{
+  "typed": false,
+  "captured": "the EL init drill VM, RHEL 10.2 (SELinux enforcing, systemd 257 PID 1, polkit 125), 2026-10-09, after a green drill: real unit states and the packages' own unit sandboxes",
+  "limits": "the unit sandboxes, the polkit rules directory and the versions only; every other EL 10 output is captured/rhel10's (a container) or the drill's own --capture"
+}

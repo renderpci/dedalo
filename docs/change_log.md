@@ -1395,15 +1395,16 @@ Merged since the last release; these ship with the next one.
     remove at every stop (an SELinux denial each time). Run `provision apply` (or init) again on such
     a site. See [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
 
-- **"The guided install of a publication host now gives a working command for a newer AppStream PHP on RHEL, Rocky and Alma 10."**
+- **"The guided install of a publication host now gives a working command for the newer AppStream runtime of the v1 API on RHEL, Rocky and Alma 10."**
 
-    On EL 10 the guided install said that no `dnf` command installs a PHP version other than 8.3 as
-    the system PHP, and offered Remi only. RHEL 10.2 ships PHP 8.4 in AppStream as an alternative
-    package, `php8.4-fpm`, with the same files as `php-fpm`. When the declared PHP is not installed,
-    `host.fpm_install` now prints `dnf install php8.4-fpm php8.4-cli`. When an older system PHP is
-    already installed, the command has `--allowerasing`, and the item says that every pool in
-    `/etc/php-fpm.d` then runs the new version. Remi and the default 8.3 are still offered. The
-    guided install has now been tested on RHEL 10.2 with SELinux enforcing, as well as RHEL 9.8. See
+    On EL 10 the guided install said that no `dnf` command installs a version of the v1 API's
+    runtime other than 8.3 as the system one, and offered Remi only. RHEL 10.2 ships 8.4 in AppStream
+    as alternative packages with the same files as the default ones. When the declared version is not
+    installed, `host.fpm_install` now prints the `dnf install` line for those 8.4 packages (the
+    FastCGI server and the command-line interpreter). When an older system version is already
+    installed, the command has `--allowerasing`, and the item says that every pool of the system
+    FastCGI server then runs the new version. Remi and the default 8.3 are still offered. The guided
+    install has now been tested on RHEL 10.2 with SELinux enforcing, as well as RHEL 9.8. See
     [Publication host agent](./install/publication_host.md).
 
 - **On an nginx publication host, a media map that stops nginx at its reload is now rolled back and nginx restarted, and the panel counts a map that is not loaded as a red check.**
@@ -1411,6 +1412,10 @@ Merged since the last release; these ship with the next one.
     The root service that renders the shared nginx media map (`dedalo-pubhost-map`) tests every new map before nginx reloads it. On SELinux hosts nginx can still stop on the reload itself, after a test that passed. Until now the service then only reported the failure and left nginx down, with every site on that server. It now watches nginx for five seconds after the reload. If nginx is down, the service puts back the map nginx had loaded (or removes a first one), tests it, restarts nginx and checks that it runs. The push is reported as failed and the panel keeps showing the map that is actually loaded. In **Maintenance › Publication hosts** the map's state is now a check of its own, **Host media map**. It is red when the host's agent is too old for the shared map, when the host refused this work system's map, or when this work system's map is not the one nginx serves. It is green when that map is loaded or when the map is placed by hand. Before, a map that was not loaded was painted red, but it was not counted with the other checks. See [Publication host agent](./install/publication_host.md#nginx-one-media-map-for-the-host).
 
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
+
+- **The publication host's guided install now configures the running web server when both Apache and nginx are installed.**
+
+    On a machine with both Apache and nginx installed, where only one of them runs, the guided install (`install.sh`, `provision init`) proposed Apache whatever ran and then found no site to attach to, so the install stopped asking for a manual step. It now proposes the web server that is running, and when you choose the other one, it looks at that server's sites before going on. Measured on Ubuntu 24.04, which keeps a stopped, disabled Apache listed. See [the publication host install guide](./install/publication_host.md).
 
 - **The Publication API v1 error log on a publication host is now rotated.**
 

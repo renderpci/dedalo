@@ -1,0 +1,15 @@
+ExecStart={ path=/usr/sbin/httpd ; argv[]=/usr/sbin/httpd $OPTIONS -DFOREGROUND ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Environment=LANG=C
+WorkingDirectory=
+User=
+Group=
+ReadOnlyPaths=
+InaccessiblePaths=
+ProtectHome=read-only
+ProtectSystem=yes
+TemporaryFileSystem=
+LoadState=loaded
+ActiveState=active
+FragmentPath=/usr/lib/systemd/system/httpd.service
+DropInPaths=/etc/systemd/system/httpd.service.d/php-fpm.conf
+UnitFileState=enabled

@@ -1,0 +1,5 @@
+{
+  "typed": false,
+  "captured": "the in-place Debian init drill VM, Ubuntu 24.04.5 LTS aarch64 (kernel 6.8, systemd 255 PID 1, polkit 124, AppArmor enabled), 2026-10-09, after a green drill (scripts/publication_host_init_drill.ts --family debian --in-place --capture): real unit states, the packages' own unit sandboxes, what AppArmor confines",
+  "limits": "captured after the nginx legs: nginx serving, apache2 stopped and disabled yet still listed loaded; the package outputs (-S, -M, -T, -tt) are captured/ubuntu2404's (a container), which this VM's agree with"
+}

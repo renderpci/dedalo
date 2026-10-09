@@ -311,7 +311,10 @@ init reads the host before it proposes anything, and writes nothing while it loo
   `sudo`, `/etc/sudoers-rs` when it exists), `chattr`, the CPU (for the Bun archive), and how
   accounts are resolved (`/etc/nsswitch.conf`);
 - **the web server**: Apache or nginx, its unit and version, its modules, the TLS virtual host
-  that serves the draft's domain, and on nginx whether `conf.d` is included inside `http{}`;
+  that serves the draft's domain, and on nginx whether `conf.d` is included inside `http{}`.
+  With both installed and the draft naming neither, init asks which one serves the site
+  (`host.web`), proposing the one that runs, and reads the server you choose (a stopped Apache
+  can stay listed beside a running nginx: Ubuntu 24.04 keeps a disabled `apache2` loaded);
 - **PHP-FPM** (v1 only): every install, its version and CLI, and the pool the vhost's handler
   names. For a v2-only draft init looks for no PHP at all: it runs no PHP binary and reads no
   PHP configuration;

@@ -23,14 +23,15 @@ import { caseDirs, caseJson, fixture } from './fixtures/init/load';
 const os = (name: string) => parseOsRelease(fixture(`captured/${name}/os-release`));
 
 describe('the fixture tree', () => {
-  test('every case directory says whether it is typed, and a capture names its source', () => {
+  test('every case directory says whether it is typed, and a capture names its source (docker or the drill VM)', () => {
     const dirs = caseDirs();
     expect(dirs.length).toBeGreaterThan(20);
     for (const dir of dirs) {
       const meta = caseJson(dir);
       expect(typeof meta.typed).toBe('boolean');
       expect(meta.typed).toBe(dir.startsWith('typed/'));
-      if (!meta.typed) expect(meta.captured).toContain('docker');
+      // A container capture, or a real VM's (the init drill run in place).
+      if (!meta.typed) expect(meta.captured).toMatch(/\bdocker\b|\bdrill\b/);
     }
   });
 });

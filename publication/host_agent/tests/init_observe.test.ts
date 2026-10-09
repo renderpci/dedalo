@@ -29,6 +29,7 @@ import {
 import type { TreeReader } from '../src/provision/init/tree_copy';
 import { treeDigest } from '../src/provision/init/tree_copy';
 import type { ExecResult, HostFacts } from '../src/provision/init/types';
+import { sandboxHides } from '../src/provision/init/parse/systemd';
 import { fixture } from './fixtures/init/load';
 
 type AnyExec = ProvisionExec & InitExec;
@@ -260,6 +261,27 @@ describe('observeHostWide — EL 10 (captured Rocky 10): the same world, the EL 
     expect(facts.web).toMatchObject({ server: 'apache', unit: 'httpd', version: '2.4.63', runUser: 'apache' });
     expect(facts.fpm.map(install => `${install.flavor}:${install.version}`)).toEqual(['el:8.3', 'remi:8.2', 'remi:8.4']);
     expect(facts.nss).toMatchObject({ passwdFilesOnly: true, groupFilesOnly: true });
+  });
+});
+
+describe('observeHostWide — EL 10 unit sandboxes as the RHEL 10.2 drill VM measured them (captured/rhel10_drill_vm)', () => {
+  const host = elHost('rocky10');
+  const base = host.handlers.unitShow as (unit: string) => ReturnType<typeof r>;
+  host.handlers.unitShow = (unit: string) =>
+    unit === 'httpd'
+      ? r(fixture('captured/rhel10_drill_vm/show_web_default.txt'))
+      : unit === 'polkit'
+        ? r(fixture('captured/rhel10_drill_vm/show_polkit.txt'))
+        : base(unit);
+  const facts = observeHostWide(EL_DRAFT, ports(host));
+
+  test('httpd: ProtectHome=read-only, ProtectSystem=yes (read, so the home layout stays offered: sandboxHides with write=false)', () => {
+    expect(facts.web.unitSandbox).toMatchObject({ protectHome: 'read-only', protectSystem: 'yes', inaccessible: [], readOnly: [], tmpfs: [] });
+    expect(sandboxHides(facts.web.unitSandbox as NonNullable<typeof facts.web.unitSandbox>, '/home/museum.org/dedalo')).toEqual([]);
+  });
+
+  test('polkit.service sandboxed (ProtectSystem=strict, User=polkitd) is still the running polkit 125', () => {
+    expect(facts.polkit).toEqual({ version: 125, state: 'running' });
   });
 });
 
@@ -683,6 +705,18 @@ describe('observeHostWide — Debian 12 nginx, the guide\'s hand map', () => {
     both.handlers.listCandidateUnits = () => r(show('list_units_both.txt'));
     expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org', web: { server: 'nginx' } }, ports(both)).web).toMatchObject({ candidates: ['apache', 'nginx'], server: 'nginx' });
     expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(both)).web).toMatchObject({ candidates: ['apache', 'nginx'], server: null, unit: null });
+  });
+
+  test('both installed, only nginx running (Ubuntu 24.04 keeps a stopped, disabled apache2 loaded — measured): nginx is observed', () => {
+    const both = debianNginxHost();
+    put(both, '/usr/sbin/apache2ctl', null, FILE(0, 0o755));
+    both.handlers.listCandidateUnits = () => r(fixture('captured/ubuntu2404_drill_vm/list_units_debian.txt'));
+    const web = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(both)).web;
+    expect(web).toMatchObject({ candidates: ['apache', 'nginx'], server: 'nginx', unit: 'nginx' });
+    expect(web.configtestBin).toBe('/usr/sbin/nginx');
+    expect(web.confDInHttp).toBe(true);
+    // The draft still wins over the running one.
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org', web: { server: 'apache' } }, ports(both)).web).toMatchObject({ server: 'apache' });
   });
 
   test('read-only', () => assertReadOnly(host));

@@ -1,0 +1,5 @@
+apache2.service    loaded inactive dead    The Apache HTTP Server
+dedalo-ts.service  loaded active   running Dédalo work engine (init drill stand-in: discovery only, never paired)
+nginx.service      loaded active   running A high performance web server and a reverse proxy server
+php8.3-fpm.service loaded active   running The PHP 8.3 FastCGI Process Manager
+polkit.service     loaded active   running Authorization Manager
