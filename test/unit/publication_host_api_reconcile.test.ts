@@ -49,6 +49,8 @@ interface HarnessOptions {
 	bundleFails?: Partial<Record<ApiName, Error>>;
 	bundleRelease?: string;
 	recordFails?: Error;
+	/** Hosts whose status names served_apis ['v2'] (a v2-only site). */
+	v2Only?: string[];
 }
 
 function harness(options: HarnessOptions) {
@@ -70,7 +72,8 @@ function harness(options: HarnessOptions) {
 			const answer = options.hosts[name];
 			if (answer === undefined) throw new Error(`test: no host ${name}`);
 			if (answer instanceof Error) throw answer;
-			return answer;
+			const served: ApiName[] = options.v2Only?.includes(name) ? ['v2'] : ['v1', 'v2'];
+			return { apis: answer, served };
 		},
 		bundle: async (api) => {
 			calls.bundle.push(api);
@@ -250,6 +253,34 @@ describe('reconcilePublicationApis — apply', () => {
 		expect(h.recorded.get('b:v1')).toEqual({ state: 'ok', release: REL, error: null, at: NOW });
 		expect(report.runtime_error).toBeUndefined();
 		expect(apiReportToReconcile(report)).toMatchObject({ drift: 4, applied: 4 });
+	});
+
+	test('a v2-only host (served_apis [v2]): v1 is not_served — no v1 bundle built, nothing sent or recorded, not drift', async () => {
+		const h = harness({ hosts: { site: held(OLD) }, v2Only: ['site'] });
+		const report = await reconcilePublicationApis({ apply: true, actor: ACTOR }, h.deps);
+		expect(h.calls.install).toEqual([`site:v2:install:${REL}:${ACTOR}`]);
+		expect(h.calls.bundle).toEqual(['v2']);
+		expect(report.hosts).toEqual([
+			{
+				name: 'site',
+				v2: { action: 'install', result: 'ok' },
+				v1: { action: 'none', result: 'not_served' },
+			},
+		]);
+		expect(h.recorded.has('site:v1')).toBe(false);
+		expect(h.recorded.get('site:v2')).toEqual({ state: 'ok', release: REL, error: null, at: NOW });
+		expect(apiReportToReconcile(report)).toMatchObject({ drift: 1, applied: 1 });
+	});
+
+	test('a mixed round builds the v1 bundle only for the host that serves v1', async () => {
+		const h = harness({ hosts: { site: held(OLD), both: held(OLD) }, v2Only: ['site'] });
+		await reconcilePublicationApis({ apply: true, actor: ACTOR }, h.deps);
+		expect(h.calls.install).toEqual([
+			`site:v2:install:${REL}:${ACTOR}`,
+			`both:v2:install:${REL}:${ACTOR}`,
+			`both:v1:install:${REL}:${ACTOR}`,
+		]);
+		expect(h.calls.bundle).toEqual(['v2', 'v1']);
 	});
 
 	test('L6: a failed v2 does not stop v1, and each is recorded on its own', async () => {
@@ -477,6 +508,14 @@ describe('PUBLICATION_APIS_RECONCILE — the interval DRY check (L5)', () => {
 		expect(h.calls.target).toBe(0);
 	});
 
+	test("the dry run never counts a v2-only host's v1 as drift", async () => {
+		const h = harness({ hosts: { site: held(REL, null) }, v2Only: ['site'] });
+		const report = await runPublicationApisDefinition({ apply: false }, h.deps);
+		expect(report.drift).toBe(0);
+		const behind = harness({ hosts: { site: held(OLD) }, v2Only: ['site'] });
+		expect((await runPublicationApisDefinition({ apply: false }, behind.deps)).drift).toBe(1);
+	});
+
 	test('the dry run is scoped by host name and counts drift per host×API', async () => {
 		const h = harness({ hosts: { a: held(REL), b: held(OLD) } });
 		const report = await runPublicationApisDefinition({ apply: false, scope: ['b'] }, h.deps);
@@ -569,9 +608,24 @@ describe('apiLockstepPanel — engine release vs each host (panel rows, no hashi
 		const panel = apiLockstepPanel(
 			{ target: { releaseId: REL, refused: null }, at: NOW },
 			[
-				{ name: 'www', reachable: true, apis: { v2: { current: REL }, v1: { current: OLD } } },
-				{ name: 'mirror', reachable: true, apis: { v2: { current: OLD }, v1: { current: OLD } } },
-				{ name: 'down', reachable: false, apis: { v2: { current: null }, v1: { current: null } } },
+				{
+					name: 'www',
+					reachable: true,
+					apis: { v2: { current: REL }, v1: { current: OLD } },
+					served: ['v1', 'v2'],
+				},
+				{
+					name: 'mirror',
+					reachable: true,
+					apis: { v2: { current: OLD }, v1: { current: OLD } },
+					served: ['v1', 'v2'],
+				},
+				{
+					name: 'down',
+					reachable: false,
+					apis: { v2: { current: null }, v1: { current: null } },
+					served: null,
+				},
 			],
 			{ www: runtimeWith({ v1: failedPush }) },
 		);
@@ -590,10 +644,60 @@ describe('apiLockstepPanel — engine release vs each host (panel rows, no hashi
 		expect(panel.rows[4]?.host_current).toBeNull();
 	});
 
+	test('a reached v2-only host: its v1 row is not_served (neutral) even after a failed push; v2 still compared', () => {
+		const panel = apiLockstepPanel(
+			{ target: { releaseId: REL, refused: null }, at: NOW },
+			[
+				{
+					name: 'site',
+					reachable: true,
+					apis: { v2: { current: OLD }, v1: { current: null } },
+					served: ['v2'],
+				},
+				{
+					name: 'gone',
+					reachable: false,
+					apis: { v2: { current: null }, v1: { current: null } },
+					served: null,
+				},
+			],
+			{ site: runtimeWith({ v1: failedPush }) },
+		);
+		expect(panel.rows.map((row) => `${row.host}:${row.api}:${row.state}`)).toEqual([
+			'site:v2:mismatch',
+			'site:v1:not_served',
+			'gone:v2:unknown',
+			'gone:v1:unknown',
+		]);
+		expect(panel.rows[1]?.host_current).toBeNull();
+	});
+
+	test("buildApiLockstepPanel carries each row's served_apis", () => {
+		const panel = buildApiLockstepPanel(
+			[
+				{
+					name: 'site',
+					pairing_proved: true,
+					apis: { v1: { current: null, previous: null }, v2: { current: null, previous: null } },
+					served_apis: ['v2'],
+				},
+			],
+			{},
+		);
+		expect(panel.rows.find((row) => row.api === 'v1')?.state).toBe('not_served');
+	});
+
 	test('a refused tree makes every row unknown (or failed), never ok', () => {
 		const panel = apiLockstepPanel(
 			{ target: { releaseId: null, refused: 'no_verified_release' }, at: NOW },
-			[{ name: 'www', reachable: true, apis: { v2: { current: OLD }, v1: { current: OLD } } }],
+			[
+				{
+					name: 'www',
+					reachable: true,
+					apis: { v2: { current: OLD }, v1: { current: OLD } },
+					served: ['v1', 'v2'],
+				},
+			],
 			{},
 		);
 		expect(panel.refused).toBe('no_verified_release');
@@ -603,7 +707,14 @@ describe('apiLockstepPanel — engine release vs each host (panel rows, no hashi
 	test('no round since boot → not verified yet: no release, no refusal, no time, rows unknown', () => {
 		const panel = apiLockstepPanel(
 			null,
-			[{ name: 'www', reachable: true, apis: { v2: { current: REL }, v1: { current: REL } } }],
+			[
+				{
+					name: 'www',
+					reachable: true,
+					apis: { v2: { current: REL }, v1: { current: REL } },
+					served: ['v1', 'v2'],
+				},
+			],
 			{},
 		);
 		expect(panel).toMatchObject({ engine_release: null, refused: null, checked_at: null });

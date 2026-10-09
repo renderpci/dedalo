@@ -6,9 +6,10 @@
  * parseDeclaration. deploy/examples/rendered/<variant>/<host path> is byte-equal to a fresh
  * renderAll of it with a fixed fake token's facts. The set is closed in both directions, and
  * deploy/examples/rendered.index lists each artifact's mode and owner (a checkout cannot carry
- * them). TLS material is issued at apply time and never rendered. The four `site` examples (spec
+ * them). TLS material is issued at apply time and never rendered. The four v1 `site` examples (spec
  * §9: Apache home layout, nginx `conf_d`, EL 9 + Remi + SELinux, EL 10 AppStream PHP 8.3, system
- * layout) each pin the derived FPM web user (decision A: listen.owner is derived, never discovered).
+ * layout) each pin the derived FPM web user (decision A: listen.owner is derived, never discovered);
+ * the v2-only site (no v1 block — the recommended shape for a new site) has none: no PHP anywhere.
  * To change one: change the
  * renderer or the declaration, then
  *     UPDATE_EXAMPLES=1 bun test ./tests/provision_examples.test.ts
@@ -39,6 +40,8 @@ const VARIANTS = Object.freeze({
   'site-nginx-home': 'instance.site_nginx.example.json',
   'site-el9-selinux': 'instance.site_el9_selinux.example.json',
   'site-el10': 'instance.site_el10.example.json',
+  // The recommended shape for a new site: no v1 block, so no PHP anywhere.
+  'site-v2-only': 'instance.site_v2_only.example.json',
 });
 type Variant = keyof typeof VARIANTS;
 
@@ -134,7 +137,7 @@ describe('committed rendered examples', () => {
   test('each site example pins its derived FPM web user; the old ones have no site', () => {
     for (const variant of Object.keys(VARIANTS) as Variant[]) {
       const layout = layoutOf(variant);
-      expect(layout.site?.fpm.webUser).toBe(WEB_USERS[variant]);
+      expect(layout.site?.v1?.fpm.webUser).toBe(WEB_USERS[variant]);
     }
   });
 
@@ -152,6 +155,19 @@ describe('committed rendered examples', () => {
       expect(RENDERS.find(r => r.variant === variant)?.artifacts.find(a => a.kind === 'unit_agent')?.body).toContain('\nLoadCredential=');
       expect(RENDERS.find(r => r.variant === variant)?.artifacts.find(a => a.kind === 'sudoers')?.body).toContain('/usr/sbin/apachectl');
     }
+    // v2-only: the web include (the v2 proxy only) and the web log rotation; no pool, no v1 rotation,
+    // no v1 Alias, no PHP handler, no PHP_BIN — and no v1 tree in the agent's state.
+    const v2Only = RENDERS.find(r => r.variant === 'site-v2-only')?.artifacts ?? [];
+    expect(v2Only.map(a => a.kind)).toContain('web_include');
+    expect(v2Only.map(a => a.kind)).toContain('logrotate');
+    expect(v2Only.map(a => a.kind)).not.toContain('fpm_pool');
+    expect(v2Only.map(a => a.kind)).not.toContain('logrotate_v1');
+    const include = v2Only.find(a => a.kind === 'web_include')?.body ?? '';
+    expect(include).toContain('ProxyPass        http://127.0.0.1:3100/');
+    expect(include).not.toMatch(/^Alias |SetHandler|FilesMatch|fcgi|php|server_api\/v1/m);
+    expect(v2Only.find(a => a.kind === 'env')?.body).not.toContain('PHP_BIN');
+    for (const a of v2Only) expect(a.body).not.toContain('publication_api/v1');
+    expect(layoutOf('site-v2-only').servedApis).toEqual(['v2']);
     // EL 10 AppStream: the pool lives in /etc/php-fpm.d and listens in /run/php-fpm (fpmLayout 'el').
     expect(RENDERS.find(r => r.variant === 'site-el10')?.artifacts.find(a => a.kind === 'fpm_pool')?.path).toBe('/etc/php-fpm.d/dedalo_example_v1.conf');
   });

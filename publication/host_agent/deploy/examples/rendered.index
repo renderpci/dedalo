@@ -71,3 +71,14 @@
 0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
 0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
 0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service
+
+[site-v2-only]  instance.site_v2_only.example.json
+0644  root:root     env                /etc/dedalo_publication_host/example/agent.env
+0644  root:root     engine_fragment    /etc/dedalo_publication_host/example/engine.env.fragment
+0644  root:root     web_include        /etc/dedalo_publication_host/example/web.apache.conf
+0644  root:root     logrotate          /etc/logrotate.d/dedalo_example_web
+0644  root:root     polkit             /etc/polkit-1/rules.d/60-dedalo-publication-host-example.rules
+0440  root:root     sudoers            /etc/sudoers.d/dedalo_publication_host_example
+0644  root:root     v2_scratch_unit    /etc/systemd/system/dedalo-publication-api-v2-scratch@.service
+0644  root:root     unit_v2            /etc/systemd/system/dedalo-publication-api-v2.service
+0644  root:root     unit_agent         /etc/systemd/system/dedalo-publication-host-example.service

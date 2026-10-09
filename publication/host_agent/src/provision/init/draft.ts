@@ -30,6 +30,7 @@ import type {
   HostDeclaration,
   LayoutKind,
   NginxMapMode,
+  OsFamily,
   WebServer,
 } from '../layout';
 import {
@@ -56,10 +57,22 @@ export { isNetworkFs, mountOf, sandboxHides, unitOptionId };
 
 /* ── the draft ───────────────────────────────────────────────────────────────────────── */
 
-/** The declaration with every discoverable field optional, plus the draft-only `layout` (S1). */
+/**
+ * The draft-only API choice (draft_schema.ts header): `v2_only` (recommended for a new site: no
+ * PHP anywhere) or `v1_and_v2` (the legacy Publication API v1 too, for a v6-era website).
+ */
+export type DraftApis = 'v2_only' | 'v1_and_v2';
+
+/** Does this draft serve v1? `apis` when given, else the draft's own `v1` block (a declaration's rule). */
+export function draftServesV1(draft: Pick<DraftDeclaration, 'apis' | 'v1'>): boolean {
+  return draft.apis === undefined ? draft.v1 !== undefined : draft.apis === 'v1_and_v2';
+}
+
+/** The declaration with every discoverable field optional, plus the draft-only `layout` and `apis` (S1). */
 export interface DraftDeclaration {
   readonly instance: string;
   readonly layout?: LayoutKind;
+  readonly apis?: DraftApis;
   readonly listen?: DeclaredListen;
   readonly agent_user?: string;
   readonly engine_group?: string;
@@ -73,7 +86,8 @@ export interface DraftDeclaration {
   readonly site?: {
     readonly domain: string;
     readonly home?: string;
-    readonly api_paths?: { readonly v1: string; readonly v2: string };
+    readonly os_family?: OsFamily;
+    readonly api_paths?: { readonly v1?: string; readonly v2: string };
     readonly fpm?: { readonly flavor: FpmFlavor; readonly version: string };
   };
   readonly v1?: { readonly user?: string };
@@ -165,6 +179,8 @@ export interface DraftCompletion {
   readonly siteDomain: string | null;
   /** The answers this completion applied (compare reads option-dependent output from them). */
   readonly answers: ReadonlyMap<string, string>;
+  /** Does the instance serve the Publication API v1 (draftServesV1)? False: v2-only, no PHP item. */
+  readonly servesV1: boolean;
 }
 
 export interface CompleteOptions {
@@ -390,6 +406,8 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
     if (value !== undefined) sources.set(field, source);
     return value;
   };
+  // v2-only (no v1 block, or apis 'v2_only'): no PHP is looked for, proposed or declared.
+  const servesV1 = draftServesV1(draft);
 
   /* web server */
   let server: WebServer | undefined = draft.web?.server;
@@ -439,8 +457,10 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
     const choice = chooseVhost(site.domain, facts, answers.get('declaration.vhost'));
     vhost = choice.vhost;
     if (choice.decision !== null) decisions.push(choice.decision);
-    const candidates = fpmCandidates(facts);
-    if (site.fpm !== undefined) {
+    const candidates = servesV1 ? fpmCandidates(facts) : [];
+    if (!servesV1) {
+      // A v2-only site: no FPM install is chosen (a declared site.fpm is derive's to refuse, by name).
+    } else if (site.fpm !== undefined) {
       siteFpm = { ...site.fpm };
       fpm = facts.fpm.find(install => install.flavor === site.fpm?.flavor && install.version === site.fpm.version) ?? null;
     } else if (candidates.length === 0) {
@@ -539,8 +559,8 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
 
   let v1User = draft.v1?.user;
   const v1Proposal = DEFAULTS.v1User(instance);
-  const v1Bad = v1User !== undefined && (FORBIDDEN_V1_USERS.includes(v1User) || v1User === facts.web.runUser);
-  if (v1User === undefined || v1Bad) {
+  const v1Bad = servesV1 && v1User !== undefined && (FORBIDDEN_V1_USERS.includes(v1User) || v1User === facts.web.runUser);
+  if (servesV1 && (v1User === undefined || v1Bad)) {
     const proposalOk = UNIX_NAME_PATTERN.test(v1Proposal);
     if (v1Bad) {
       decisions.push({
@@ -672,14 +692,21 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
       : fill('web.nginx_map', draft.web?.nginx_map, facts.web.confDInHttp === true ? 'conf_d' : 'none', facts.web.confDInHttp === true ? 'nginx -T: conf.d is included inside http{}' : 'nginx -T: conf.d is not included inside http{}');
   const dirs = server === 'nginx' ? logDirs(vhost) : [];
   const logDirsValue = fill('web.log_dirs', draft.web?.log_dirs, dirs.length > 0 ? dirs : undefined, `the log paths of ${vhost?.realpath ?? 'the vhost'}`);
-  const phpBin = fill(
-    'php_bin',
-    draft.php_bin,
-    siteFpm !== undefined && server !== undefined
-      ? fpmLayout(instance, siteFpm.flavor, siteFpm.version, server).cli
-      : (fpmCandidates(facts).find(install => install.cli !== null)?.cli ?? DEFAULTS.phpBin),
-    siteFpm !== undefined ? "the site's PHP-FPM install (S5)" : 'the installed PHP CLI',
-  ) as string;
+  const phpBin = !servesV1
+    ? draft.php_bin
+    : (fill(
+        'php_bin',
+        draft.php_bin,
+        siteFpm !== undefined && server !== undefined
+          ? fpmLayout(instance, siteFpm.flavor, siteFpm.version, server).cli
+          : (fpmCandidates(facts).find(install => install.cli !== null)?.cli ?? DEFAULTS.phpBin),
+        siteFpm !== undefined ? "the site's PHP-FPM install (S5)" : 'the installed PHP CLI',
+      ) as string);
+  // The family a v2-only site's logs follow (layout.ts OsFamily): no FPM flavour to derive it from.
+  const osFamily: OsFamily | undefined =
+    site === undefined || servesV1
+      ? site?.os_family
+      : fill('site.os_family', site.os_family, webFlavor, `the host's ${webFlavor} family (host.os)`);
 
   /* assemble */
   const layoutDecision = (finalKind: LayoutKind | null): void => {
@@ -687,9 +714,9 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
     const decision = layoutDecisionFor({ home, instance, reasons: homeReasons, kind: finalKind, kindSource });
     if (decision !== null) decisions.push(decision);
   };
-  if (unfilled.length > 0 || server === undefined || webUnit === undefined || agentUser === undefined || v1User === undefined || v2User === undefined || v2Group === undefined) {
+  if (unfilled.length > 0 || server === undefined || webUnit === undefined || agentUser === undefined || (servesV1 && v1User === undefined) || v2User === undefined || v2Group === undefined) {
     layoutDecision(kindSource === 'paths' ? null : kind);
-    return freeze({ declaration: null, layout: null, layoutError: null, kind: null, kindSource, sources, decisions, unfilled, homeReasons, vhost, fpm, workUnit, existing, siteDomain: site?.domain ?? null, answers });
+    return freeze({ declaration: null, layout: null, layoutError: null, kind: null, kindSource, sources, decisions, unfilled, homeReasons, vhost, fpm, workUnit, existing, siteDomain: site?.domain ?? null, answers, servesV1 });
   }
   const web: HostDeclaration['web'] = {
     server,
@@ -704,20 +731,22 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
     ...(engineGroup === undefined ? {} : { engine_group: engineGroup }),
     agent_dir: agentDir,
     web,
-    ...(site === undefined || siteFpm === undefined
+    ...(site === undefined || (servesV1 && siteFpm === undefined)
       ? {}
       : {
           site: {
             domain: site.domain,
             ...(site.home === undefined ? {} : { home: site.home }),
+            ...(osFamily === undefined ? {} : { os_family: osFamily }),
             ...(site.api_paths === undefined ? {} : { api_paths: site.api_paths }),
-            fpm: siteFpm,
+            // v2-only: a draft's site.fpm is kept so derive() refuses it by name (never dropped).
+            ...(siteFpm !== undefined ? { fpm: siteFpm } : site.fpm !== undefined ? { fpm: site.fpm } : {}),
           },
         }),
-    v1: { user: v1User },
+    ...(servesV1 && v1User !== undefined ? { v1: { user: v1User } } : {}),
     state_root: stateRoot,
     media: mediaWithConsent(draft.media, existing, answers),
-    php_bin: phpBin,
+    ...(phpBin === undefined ? {} : { php_bin: phpBin }),
     bun_bin: bunBin,
     v2: { ...v2, user: v2User, group: v2Group },
     ...(draft.releases_retained === undefined ? {} : { releases_retained: draft.releases_retained }),
@@ -755,6 +784,7 @@ export function completeDraft(draft: DraftDeclaration, facts: HostFacts, options
     existing,
     siteDomain: site?.domain ?? null,
     answers,
+    servesV1,
   });
 }
 

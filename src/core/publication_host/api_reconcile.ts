@@ -25,7 +25,10 @@
  * PER HOST: v2 first, then v1, each on its own (L6) — one API's failure is recorded
  * (runtime.ts `apis[api]`) and shown red; it never hides the other's result. A host
  * already holding the target as its `previous` release gets `promote_existing`: the
- * agent re-points `current` without reading a body (phase-2 D9).
+ * agent re-points `current` without reading a body (phase-2 D9). An API the host does not
+ * SERVE (its status `served_apis`: a v2-only site has no Publication API v1) is
+ * `not_served`: no bundle is built for it, nothing is sent or recorded, it is never drift,
+ * and the panel shows it neutral (WC-2026-10-09-publication-host-v2-only-site).
  *
  * Failures are recorded by CODE, never agent prose: a DedaloError's code;
  * `bundle_refused:<reason>` (api_bundles.ts ApiBundleError, its paths named in the
@@ -87,9 +90,13 @@ export const RECONCILE_ACTOR = 'system:reconcile';
 /** How many paths a refusal or a detail names before it summarises the rest. */
 const MAX_NAMED_PATHS = 10;
 
+/**
+ * `not_served`: the host is a v2-only site (its status `served_apis` lacks the api) — nothing
+ * is built, sent or recorded for it, and it is never drift.
+ */
 export type ApiAction = {
 	action: 'none' | 'install' | 'promote_existing';
-	result: 'ok' | 'failed' | 'dry_run' | 'skipped';
+	result: 'ok' | 'failed' | 'dry_run' | 'skipped' | 'not_served';
 	error?: string;
 	/** The paths a bundle refusal named (engine-generated, never agent prose). */
 	detail?: string;
@@ -121,6 +128,13 @@ export interface HeldRelease {
 }
 export type AgentApiReleases = Record<ApiName, HeldRelease>;
 
+/** What a round reads from one agent's status: the releases it holds and the APIs it serves. */
+export interface AgentApiView {
+	apis: AgentApiReleases;
+	/** GET /v1/status `served_apis`: ['v1','v2'], or ['v2'] on a v2-only site. */
+	served: readonly ApiName[];
+}
+
 export type ApiRuntimeEntry = HostRuntime['apis'][ApiName];
 
 type PushMode = 'install' | 'promote_existing';
@@ -129,7 +143,7 @@ type PushMode = 'install' | 'promote_existing';
 export interface ApiReconcileDeps {
 	target(): Promise<TargetRelease>;
 	hostNames(): string[];
-	agentApis(name: string): Promise<AgentApiReleases>;
+	agentApis(name: string): Promise<AgentApiView>;
 	bundle(api: ApiName): Promise<ApiBundle>;
 	install(
 		name: string,
@@ -207,7 +221,10 @@ export function defaultApiReconcileDeps(): ApiReconcileDeps {
 				verify: (api) => verifyPublicationTree(projectRoot, api, INSTALLED_DIGEST ?? undefined),
 			}),
 		hostNames: registeredHostNames,
-		agentApis: async (name) => (await hostStatus(name)).apis,
+		agentApis: async (name) => {
+			const status = await hostStatus(name);
+			return { apis: status.apis, served: status.served_apis };
+		},
 		bundle: (api) => buildApiBundle(api),
 		install: async (name, api, bundle, mode, actor) => {
 			await hostInstallRelease(
@@ -338,16 +355,23 @@ async function reconcileHost(
 		const refused: ApiAction = { action: 'none', result: 'skipped', error: target.refused };
 		return await uniformRow(name, ctx, refused, 'pending');
 	}
-	let apis: AgentApiReleases;
+	let view: AgentApiView;
 	try {
-		apis = await ctx.deps.agentApis(name);
+		view = await ctx.deps.agentApis(name);
 	} catch (error) {
 		return await uniformRow(name, ctx, failedAction('none', error), 'unknown');
 	}
-	const v2 = await reconcileApi(name, 'v2', target.releaseId, apis.v2, ctx);
-	const v1 = await reconcileApi(name, 'v1', target.releaseId, apis.v1, ctx);
-	return { name, v1, v2 };
+	const row: Record<ApiName, ApiAction> = { v1: NOT_SERVED_ACTION, v2: NOT_SERVED_ACTION };
+	for (const api of API_PUSH_ORDER) {
+		// A v2-only site serves no v1: no bundle is built for it, nothing sent, nothing recorded.
+		row[api] = view.served.includes(api)
+			? await reconcileApi(name, api, target.releaseId, view.apis[api], ctx)
+			: { ...NOT_SERVED_ACTION };
+	}
+	return { name, v1: row.v1, v2: row.v2 };
 }
+
+const NOT_SERVED_ACTION: ApiAction = Object.freeze({ action: 'none', result: 'not_served' });
 
 /** The same verdict for both APIs (a refused round, an unreachable host). */
 async function uniformRow(
@@ -458,7 +482,9 @@ function errorDetail(error: unknown): string | null {
 
 /** Registry shape: drift = host×API not proven in step; applied = pushes that landed. */
 export function apiReportToReconcile(report: ApiReconcileReport): ReconcileReport {
-	const actions = report.hosts.flatMap((host) => [host.v2, host.v1]);
+	const actions = report.hosts
+		.flatMap((host) => [host.v2, host.v1])
+		.filter((a) => a.result !== 'not_served');
 	return {
 		drift: actions.filter((a) => !(a.action === 'none' && a.result === 'ok')).length,
 		applied: actions.filter((a) => a.action !== 'none' && a.result === 'ok').length,
@@ -547,9 +573,12 @@ export interface LockstepHostInput {
 	name: string;
 	reachable: boolean;
 	apis: Record<ApiName, { current: string | null }>;
+	/** The proved status's `served_apis`; null when the host was not reached (unknown). */
+	served: readonly ApiName[] | null;
 }
 
-export type LockstepState = 'ok' | 'mismatch' | 'failed' | 'unknown';
+/** `not_served`: a v2-only site's v1 — neutral, never drift or failure. */
+export type LockstepState = 'ok' | 'mismatch' | 'failed' | 'unknown' | 'not_served';
 
 export interface ApiLockstepRow {
 	host: string;
@@ -592,6 +621,16 @@ function lockstepRow(
 	runtime: HostRuntime | null,
 ): ApiLockstepRow {
 	const lastPush = runtime === null ? null : runtime.apis[api];
+	if (host.reachable && host.served !== null && !host.served.includes(api)) {
+		return {
+			host: host.name,
+			api,
+			engine: release,
+			host_current: null,
+			last_push: lastPush,
+			state: 'not_served',
+		};
+	}
 	const current = host.reachable ? host.apis[api].current : undefined;
 	return {
 		host: host.name,
@@ -619,12 +658,17 @@ function lockstepState(
  * already read (panel_runtime.ts). Hashes nothing: it shows the last round's verdict.
  */
 export function buildApiLockstepPanel(
-	rows: readonly Pick<HostPanelRow, 'name' | 'pairing_proved' | 'apis'>[],
+	rows: readonly Pick<HostPanelRow, 'name' | 'pairing_proved' | 'apis' | 'served_apis'>[],
 	runtime: Readonly<Record<string, HostRuntime>>,
 ): ApiLockstepPanel {
 	return apiLockstepPanel(
 		lastVerdict,
-		rows.map((row) => ({ name: row.name, reachable: row.pairing_proved, apis: row.apis })),
+		rows.map((row) => ({
+			name: row.name,
+			reachable: row.pairing_proved,
+			apis: row.apis,
+			served: row.served_apis,
+		})),
 		runtime,
 	);
 }

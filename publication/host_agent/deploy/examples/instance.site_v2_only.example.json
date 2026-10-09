@@ -1,0 +1,22 @@
+{
+  "instance": "example",
+  "listen": { "kind": "unix" },
+  "agent_user": "dedalo-pubhost",
+  "engine_group": "dedalo",
+  "agent_dir": "/home/example.org/host_agent",
+  "web": { "server": "apache", "unit": "apache2" },
+  "site": {
+    "domain": "example.org",
+    "os_family": "debian"
+  },
+  "state_root": "/home/example.org/dedalo",
+  "media": { "mode": "shared", "root": "/mnt/dedalo_media" },
+  "bun_bin": "/home/example.org/.bun/bin/bun",
+  "v2": {
+    "unit": "dedalo-publication-api-v2",
+    "user": "dedalo-api-v2",
+    "group": "dedalo-api-v2",
+    "port": 3100,
+    "health_url": "http://127.0.0.1:3100/health"
+  }
+}

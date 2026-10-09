@@ -2,7 +2,9 @@
  * THE WEB INCLUDE (spec S4) — `<configBase>/<instance>/web.<server>.conf`, the one file the
  * operator's vhost references (init's stamped `IncludeOptional`, nginx: a zero-match glob include),
  * so a removed instance never breaks the web server. It maps the instance into the site: the
- * agent's media rules, the v1 API (its own FPM pool, decision A) and the v2 API (loopback proxy).
+ * agent's media rules, the v1 API (its own FPM pool, decision A — only when the declaration has the
+ * v1 block: a v2-only instance's include carries no Alias and no PHP handler) and the v2 API
+ * (loopback proxy).
  * Effect `reload_web`, validator `web`: apply.ts renames it into place under the host web lock,
  * runs the server's configtest, restores the previous bytes on failure, and reloads only after a
  * passing configtest (with the post-reload active poll).
@@ -69,15 +71,66 @@ function values(layout: AgentLayout) {
   if (!Number.isInteger(v2Port) || v2Port < 1 || v2Port > 65535) {
     throw new Error(`render(web_include): v2.port '${v2Port}' is not a port. Nothing was rendered.`);
   }
+  if ((site.v1 === null) !== (layout.v1 === null)) {
+    throw new Error('render(web_include): the site and the instance disagree about v1. Nothing was rendered.');
+  }
+  // null on a v2-only instance: the include then carries the v2 proxy only — no Alias, no handler.
+  const v1 =
+    site.v1 === null || layout.v1 === null
+      ? null
+      : {
+          root: checked('the v1 root', ABSOLUTE_PATH_PATTERN, layout.v1.dirs.root),
+          current: checked('the v1 current link', ABSOLUTE_PATH_PATTERN, layout.v1.dirs.current),
+          path: checked('site.api_paths.v1', API_PATH_PATTERN, site.v1.apiPath),
+          listen: checked('site.fpm.listen', ABSOLUTE_PATH_PATTERN, site.v1.fpm.listen),
+        };
   return {
     rules: checked('the rules directory', ABSOLUTE_PATH_PATTERN, layout.state.rules),
-    v1Root: checked('the v1 root', ABSOLUTE_PATH_PATTERN, layout.state.apis.v1.root),
-    v1Current: checked('the v1 current link', ABSOLUTE_PATH_PATTERN, layout.state.apis.v1.current),
-    v1Path: checked('site.api_paths.v1', API_PATH_PATTERN, site.apiPaths.v1),
-    v2Path: checked('site.api_paths.v2', API_PATH_PATTERN, site.apiPaths.v2),
-    listen: checked('site.fpm.listen', ABSOLUTE_PATH_PATTERN, site.fpm.listen),
+    v1,
+    v2Path: checked('site.api_paths.v2', API_PATH_PATTERN, site.v2ApiPath),
     v2Port,
   };
+}
+
+function apacheV1(v1: { root: string; current: string; path: string; listen: string }): string[] {
+  return [
+    '# Publication API v1, in its OWN PHP-FPM pool (never the site\'s).',
+    `Alias ${v1.path} ${v1.current}`,
+    `<Directory ${v1.root}>`,
+    '    Options FollowSymLinks',
+    '    AllowOverride None',
+    '    Require all granted',
+    '    # mod_php (Debian, EL prefork) never runs a v1 file as the web user.',
+    '    <IfModule php_module>',
+    '        php_admin_flag engine off',
+    '    </IfModule>',
+    '    <IfModule php7_module>',
+    '        php_admin_flag engine off',
+    '    </IfModule>',
+    "    # Inside <If>: <If> merges after the server-wide FilesMatch section of EL's php.conf, so ours wins here.",
+    `    <FilesMatch "${PHP_HANDLER_PATTERN}">`,
+    '        <If "-f %{REQUEST_FILENAME}">',
+    `            SetHandler "proxy:unix:${v1.listen}|fcgi://localhost"`,
+    '        </If>',
+    '    </FilesMatch>',
+    '</Directory>',
+    '',
+  ];
+}
+
+function nginxV1(v1: { current: string; path: string; listen: string }): string[] {
+  return [
+    "# Publication API v1, in its OWN PHP-FPM pool (never the site's). ^~: no regex location of the site takes it.",
+    `location ^~ ${v1.path}/ {`,
+    `    alias ${v1.current}/;`,
+    `    location ~ ${PHP_HANDLER_PATTERN} {`,
+    '        include fastcgi_params;',
+    '        fastcgi_param SCRIPT_FILENAME $request_filename;',
+    `        fastcgi_pass unix:${v1.listen};`,
+    '    }',
+    '}',
+    '',
+  ];
 }
 
 const HEADER = (layout: AgentLayout, comment: string): string[] => [
@@ -93,27 +146,7 @@ export function apacheWebInclude(layout: AgentLayout): string {
     "# The agent's media rules: before any other /dedalo alias. Absent until the first push.",
     `IncludeOptional ${v.rules}/${MEDIA_RULES_FILE_PREFIX}.apache.conf`,
     '',
-    '# Publication API v1, in its OWN PHP-FPM pool (never the site\'s).',
-    `Alias ${v.v1Path} ${v.v1Current}`,
-    `<Directory ${v.v1Root}>`,
-    '    Options FollowSymLinks',
-    '    AllowOverride None',
-    '    Require all granted',
-    '    # mod_php (Debian, EL prefork) never runs a v1 file as the web user.',
-    '    <IfModule php_module>',
-    '        php_admin_flag engine off',
-    '    </IfModule>',
-    '    <IfModule php7_module>',
-    '        php_admin_flag engine off',
-    '    </IfModule>',
-    "    # Inside <If>: <If> merges after the server-wide FilesMatch section of EL's php.conf, so ours wins here.",
-    `    <FilesMatch "${PHP_HANDLER_PATTERN}">`,
-    '        <If "-f %{REQUEST_FILENAME}">',
-    `            SetHandler "proxy:unix:${v.listen}|fcgi://localhost"`,
-    '        </If>',
-    '    </FilesMatch>',
-    '</Directory>',
-    '',
+    ...(v.v1 === null ? [] : apacheV1(v.v1)),
     `# Publication API v2, on 127.0.0.1:${v.v2Port}.`,
     `<Location ${v.v2Path}/>`,
     `    ProxyPass        http://127.0.0.1:${v.v2Port}/`,
@@ -131,16 +164,7 @@ export function nginxWebInclude(layout: AgentLayout): string {
     "# The agent's media rules (a zero-match glob until the first push: nginx has no optional include).",
     `include ${zeroMatchGlob(`${v.rules}/${MEDIA_RULES_FILE_PREFIX}.nginx.conf`)};`,
     '',
-    "# Publication API v1, in its OWN PHP-FPM pool (never the site's). ^~: no regex location of the site takes it.",
-    `location ^~ ${v.v1Path}/ {`,
-    `    alias ${v.v1Current}/;`,
-    `    location ~ ${PHP_HANDLER_PATTERN} {`,
-    '        include fastcgi_params;',
-    '        fastcgi_param SCRIPT_FILENAME $request_filename;',
-    `        fastcgi_pass unix:${v.listen};`,
-    '    }',
-    '}',
-    '',
+    ...(v.v1 === null ? [] : nginxV1(v.v1)),
     `# Publication API v2, on 127.0.0.1:${v.v2Port}.`,
     `location ${v.v2Path}/ {`,
     `    proxy_pass http://127.0.0.1:${v.v2Port}/;`,

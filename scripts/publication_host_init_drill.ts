@@ -521,6 +521,9 @@ export const SECOND_INSTANCE = 'drill_second';
 export const SECOND_DOMAIN = 'second.test';
 export const NGINX_INSTANCE = 'drill_nginx';
 export const NGINX_DOMAIN = 'nginx.test';
+/** The v2-only site (no v1 block in its draft): the recommended shape for a new site, no PHP anywhere. */
+export const V2_ONLY_INSTANCE = 'drill_v2only';
+export const V2_ONLY_DOMAIN = 'v2only.test';
 
 interface Ctx {
 	readonly args: DrillArgs;
@@ -560,8 +563,13 @@ const installSh = (ctx: Ctx, instance: string, flags: string): string =>
 const rerunSh = (instance: string, home: string, flags: string): string =>
 	`sh ${q(`${home}/host_agent/deploy/install.sh`)} ${instance} ${flags}`;
 
+/**
+ * The drill's draft. The legs judge the v1+v2 shape (the v1 pool, the v1 config typed on the pty),
+ * so `apis: 'v1_and_v2'` is said; `{ apis: undefined }` drops it — a draft without the v1 block is
+ * a v2-only site.
+ */
 function draftFor(instance: string, domain: string, extra: Record<string, unknown> = {}): string {
-	return `${JSON.stringify({ instance, layout: 'home', site: { domain }, media: { mode: 'none' }, ...extra }, null, 2)}\n`;
+	return `${JSON.stringify({ instance, layout: 'home', apis: 'v1_and_v2', site: { domain }, media: { mode: 'none' }, ...extra }, null, 2)}\n`;
 }
 
 async function putRootFile(ctx: Ctx, path: string, body: string, mode = '0600'): Promise<void> {
@@ -735,8 +743,9 @@ async function guidedInstall(
 	instance: string,
 	domain: string,
 	extraFlags = '',
+	draft: string = draftFor(instance, domain),
 ): Promise<string> {
-	await putRootFile(ctx, `/root/${instance}.draft.json`, draftFor(instance, domain));
+	await putRootFile(ctx, `/root/${instance}.draft.json`, draft);
 	const digest = await sourceDigest(ctx);
 	const run = await drivePty(
 		ctx.runner,
@@ -1011,6 +1020,100 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			);
 			await healthOverSocket(ctx, SECOND_INSTANCE);
 			await healthOverSocket(ctx, INSTANCE);
+		},
+	},
+	{
+		name: 'v2-only-site',
+		family: 'both',
+		required: true,
+		what: 'a draft without the v1 block: no PHP discovered, asked or provisioned (no v1 account, pool, tree, handler, PHP_BIN); the agent serves v2 only (status served_apis) and refuses a v1 release api_not_served',
+		async run(ctx) {
+			await makeSite(ctx, V2_ONLY_DOMAIN, 'apache');
+			const transcript = await guidedInstall(
+				ctx,
+				V2_ONLY_INSTANCE,
+				V2_ONLY_DOMAIN,
+				'',
+				draftFor(V2_ONLY_INSTANCE, V2_ONLY_DOMAIN, { apis: undefined }),
+			);
+			for (const item of [
+				'host.fpm_install',
+				'host.fpm_cli',
+				'declaration.v1_user',
+				'account.v1_user',
+				'api_config.v1_config',
+				'api_config.v1_db_transport',
+			])
+				check(!transcript.includes(`[${item}]`), `a v2-only run printed the PHP item ${item}`);
+			check(
+				transcript.includes('v2 only: no PHP anywhere'),
+				'declaration.apis did not say v2 only',
+			);
+			const home = `/home/${V2_ONLY_DOMAIN}`;
+			const conf = `/etc/dedalo_publication_host/${V2_ONLY_INSTANCE}`;
+			check(
+				(await ctx.runner.sh(`getent passwd ${V2_ONLY_INSTANCE}_v1`)).code !== 0,
+				'a v1 account was created for a v2-only site',
+			);
+			await must(ctx, `getent passwd ${V2_ONLY_INSTANCE}_v2`, 'the v2 account');
+			check(
+				(await ctx.runner.sh(`test -e ${home}/dedalo/publication_api/v1`)).code !== 0,
+				'a v1 tree exists on a v2-only site',
+			);
+			check(
+				(
+					await ctx.runner.sh(
+						`ls /etc/php*/*/fpm/pool.d/dedalo_${V2_ONLY_INSTANCE}_v1.conf /etc/php-fpm.d/dedalo_${V2_ONLY_INSTANCE}_v1.conf /etc/opt/remi/php*/php-fpm.d/dedalo_${V2_ONLY_INSTANCE}_v1.conf /etc/logrotate.d/dedalo_${V2_ONLY_INSTANCE}_v1 /var/lib/dedalo_publication_host/${V2_ONLY_INSTANCE} 2>/dev/null | grep -q .`,
+					)
+				).code !== 0,
+				'a v1 pool, v1 log rotation or v1 pool directory exists on a v2-only site',
+			);
+			const declared = await must(
+				ctx,
+				`cat /etc/dedalo_publication_host/${V2_ONLY_INSTANCE}.json`,
+				'the declaration',
+			);
+			check(
+				!/"v1"|php_bin|"fpm"/.test(declared) && declared.includes('"os_family"'),
+				`the declaration is not v2-only:\n${declared}`,
+			);
+			check(
+				!(await must(ctx, `cat ${conf}/agent.env`, 'agent.env')).includes('PHP_BIN'),
+				'agent.env carries PHP_BIN',
+			);
+			const include = await must(ctx, `cat ${conf}/web.apache.conf`, 'the web include');
+			check(
+				!/^Alias |SetHandler|fcgi/m.test(include) && include.includes('ProxyPass'),
+				`the web include is not v2-only:\n${include}`,
+			);
+			await must(
+				ctx,
+				`stat -c '%U:%G %a' ${home}/dedalo/publication_api/v2/shared/v2.env`,
+				'v2.env',
+			);
+			await healthOverSocket(ctx, V2_ONLY_INSTANCE);
+			const curl = (path: string, extra = '') =>
+				`curl -s -o /tmp/dd_v2only -w '%{http_code}' --unix-socket /run/dedalo_publication_host/${V2_ONLY_INSTANCE}/agent.sock ` +
+				`-H "Authorization: Bearer $(cat ${conf}/credentials/SERVICE_TOKEN)" ${extra} http://localhost/publication/host_agent${path}; echo; cat /tmp/dd_v2only`;
+			const status = (await must(ctx, curl('/v1/status'), 'GET /v1/status')).split('\n');
+			check(
+				status[0] === '200' && /"served_apis":\["v2"\]/.test(status.slice(1).join('\n')),
+				`status: ${status.join(' ')}`,
+			);
+			const refused = (
+				await must(
+					ctx,
+					curl(
+						'/v1/releases/v1',
+						`-X POST -H 'Content-Type: application/gzip' -H 'X-Dedalo-Actor: init_drill' -H 'X-Release-Id: 7.0.0_aaaaaaa' -H 'X-Bundle-Sha256: ${'a'.repeat(64)}' --data-binary x`,
+					),
+					'POST /v1/releases/v1',
+				)
+			).split('\n');
+			check(
+				refused[0] === '422' && refused.slice(1).join('\n').includes('"reason":"api_not_served"'),
+				`a v1 install answered ${refused.join(' ')}`,
+			);
 		},
 	},
 	{

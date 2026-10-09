@@ -114,7 +114,7 @@ describe('Apache', () => {
   });
 
   test('the same text serves Debian and EL: only the socket path differs', () => {
-    const swap = (text: string, from: AgentLayout) => text.split(from.site?.fpm.listen ?? '?').join('<SOCKET>');
+    const swap = (text: string, from: AgentLayout) => text.split(from.site?.v1?.fpm.listen ?? '?').join('<SOCKET>');
     expect(swap(apacheWebInclude(EL), EL)).toBe(swap(body, DEBIAN));
     expect(swap(apacheWebInclude(REMI), REMI)).toBe(swap(body, DEBIAN));
     expect(apacheWebInclude(EL)).toContain('proxy:unix:/run/php-fpm/dedalo-test-v1.sock|fcgi://localhost');
@@ -160,8 +160,10 @@ describe('grammar re-check (every interpolated value)', () => {
   test('a newline or a `..` in a path never reaches the include', () => {
     const bad = (patch: (l: AgentLayout) => AgentLayout) => () => apacheWebInclude(patch(DEBIAN));
     const site = DEBIAN.site!;
-    expect(bad(l => ({ ...l, site: { ...site, apiPaths: { v1: '/x\nAlias / /', v2: '/v2' } } }))).toThrow(/site.api_paths.v1/);
-    expect(bad(l => ({ ...l, site: { ...site, fpm: { ...site.fpm, listen: '/run/../x.sock' } } }))).toThrow(/site.fpm.listen/);
+    const v1 = site.v1!;
+    expect(bad(l => ({ ...l, site: { ...site, v1: { ...v1, apiPath: '/x\nAlias / /' } } }))).toThrow(/site.api_paths.v1/);
+    expect(bad(l => ({ ...l, site: { ...site, v2ApiPath: '/x\nAlias / /' } }))).toThrow(/site.api_paths.v2/);
+    expect(bad(l => ({ ...l, site: { ...site, v1: { ...v1, fpm: { ...v1.fpm, listen: '/run/../x.sock' } } } }))).toThrow(/site.fpm.listen/);
     expect(bad(l => ({ ...l, state: { ...l.state, rules: '/srv/x y' } }))).toThrow(/rules directory/);
     expect(bad(l => ({ ...l, v2: { ...l.v2, port: 0 } }))).toThrow(/not a port/);
   });

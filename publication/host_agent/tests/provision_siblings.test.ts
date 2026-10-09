@@ -100,14 +100,14 @@ describe('siblingRefusals', () => {
   test('one pool user for two sites (or mod_php) is refused: it owns, and reads, both v1 configurations', () => {
     const own = unixDeclaration();
     expect(judge(own, separated(own, { v1: own.v1 }))).toEqual([
-      `v1.user '${own.v1.user}' is that instance's v1.user — also used by instance 'other' (/etc/dedalo_publication_host/other.json); run each site's v1 API in its own PHP-FPM pool, under its own user, and declare that user as v1.user`,
+      `v1.user '${own.v1!.user}' is that instance's v1.user — also used by instance 'other' (/etc/dedalo_publication_host/other.json); run each site's v1 API in its own PHP-FPM pool, under its own user, and declare that user as v1.user`,
     ]);
   });
 
   test('our v1 user as their agent user is refused', () => {
     const own = unixDeclaration();
-    expect(judge(own, separated(own, { agent_user: own.v1.user })).join('\n')).toContain(
-      `v1.user '${own.v1.user}' is that instance's agent_user`,
+    expect(judge(own, separated(own, { agent_user: own.v1!.user })).join('\n')).toContain(
+      `v1.user '${own.v1!.user}' is that instance's agent_user`,
     );
   });
 
@@ -142,7 +142,7 @@ describe('the site block across instances (spec S6)', () => {
     const shared = { paths: { fpm_pool_dir: '/scratch/pool.d', v1_var_base: '/scratch/var' } };
     const a = derive({ ...own, ...shared });
     const b = derive({ ...separated(own, { site: siteOf('b.example.org') }), ...shared });
-    const forged = { ...b, site: b.site === null ? null : { ...b.site, v1Var: a.site?.v1Var ?? b.site.v1Var, fpm: a.site?.fpm ?? b.site.fpm } };
+    const forged = { ...b, site: b.site === null ? null : { ...b.site, v1: a.site?.v1 ?? b.site.v1 } };
     const refusals = siblingRefusals(a, [{ source: '/etc/dedalo_publication_host/other.json', layout: forged }]);
     expect(refusals.some(line => line.includes("the v1 pool directory '/scratch/var/test/v1'"))).toBe(true);
     expect(refusals.some(line => line.includes("the v1 pool socket '/run/php/dedalo-test-v1.sock'"))).toBe(true);

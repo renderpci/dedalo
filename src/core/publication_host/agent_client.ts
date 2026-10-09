@@ -130,6 +130,14 @@ export interface AgentStatus {
 	instance_fingerprint: string;
 	apis: Record<AgentApi, { current: string | null; previous: string | null }>;
 	/**
+	 * The APIs this host SERVES, in report order: `['v1', 'v2']`, or `['v2']` on a v2-only site
+	 * (the declaration has no `v1` block, so the host runs no Publication API v1 at all). An
+	 * unserved api's `apis` slot is `{current: null, previous: null}`; the agent refuses its
+	 * releases (`api_not_served`). Required: no compat with an agent that predates it
+	 * (WC-2026-10-09-publication-host-v2-only-site).
+	 */
+	served_apis: readonly AgentApi[];
+	/**
 	 * `map` is ABSENT on an agent that predates the host-wide nginx map (the shape check
 	 * accepts that; apply_rules refuses on nginx until the agent is updated).
 	 */
@@ -557,6 +565,22 @@ function isApis(value: unknown): boolean {
 	return isRecord(value) && isApiSlot(value.v1) && isApiSlot(value.v2);
 }
 
+/** The two shapes a host can serve, in report order (AgentStatus.served_apis). */
+const SERVED_API_SHAPES: readonly (readonly AgentApi[])[] = Object.freeze([
+	Object.freeze(['v1', 'v2'] as const),
+	Object.freeze(['v2'] as const),
+]);
+
+/** `served_apis`: exactly `['v1','v2']` or `['v2']` — v2 is always served, order fixed. */
+export function isServedApis(value: unknown): value is readonly AgentApi[] {
+	return (
+		Array.isArray(value) &&
+		SERVED_API_SHAPES.some(
+			(shape) => shape.length === value.length && shape.every((api, i) => value[i] === api),
+		)
+	);
+}
+
 function isManagedMap(value: Record<string, unknown>): boolean {
 	return (
 		isNullableString(value.hash) &&
@@ -599,7 +623,11 @@ function isStatusIdentity(value: Record<string, unknown>): boolean {
 
 function isStatusState(value: Record<string, unknown>): boolean {
 	return (
-		isApis(value.apis) && isRules(value.rules) && isMediaProbe(value.media) && isDisk(value.disk)
+		isApis(value.apis) &&
+		isServedApis(value.served_apis) &&
+		isRules(value.rules) &&
+		isMediaProbe(value.media) &&
+		isDisk(value.disk)
 	);
 }
 

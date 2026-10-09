@@ -113,6 +113,7 @@ export const ITEM_IDS = Object.freeze([
   'host.selinux_tools',
   'host.root_context',
   'declaration.fields',
+  'declaration.apis',
   'declaration.layout',
   'declaration.fpm',
   'declaration.vhost',
@@ -287,6 +288,12 @@ interface Env {
   readonly homeReasons: readonly string[];
   readonly fpm: FpmInstall | null;
   readonly vhost: Vhost | null;
+  /**
+   * The instance serves the Publication API v1 (completion.servesV1). False = v2-only: no PHP item
+   * at all — no FPM, PHP CLI or PHP-handler fact, no v1 account, no v1 database transport, no v1
+   * configuration.
+   */
+  readonly v1: boolean;
 }
 
 /**
@@ -324,6 +331,7 @@ export function compare(
     homeReasons: reasons,
     fpm: completion.fpm,
     vhost: completion.vhost,
+    v1: completion.servesV1,
   };
   const items: ComparedItem[] = [
     ...hostItems(env),
@@ -422,8 +430,8 @@ function hostItems(env: Env): ComparedItem[] {
   const server = layout?.web.server ?? decl?.web.server ?? facts.web.server;
   const hasSite = env.completion.siteDomain !== null;
 
-  // host.php_mode (apache + site)
-  if (server === 'apache' && hasSite) {
+  // host.php_mode (apache + site + v1)
+  if (server === 'apache' && hasSite && env.v1) {
     const phpFacts: string[] = [];
     if (facts.web.phpModuleOnly) {
       phpFacts.push(
@@ -442,8 +450,8 @@ function hostItems(env: Env): ComparedItem[] {
     out.push(right('host.php_mode', 'host', 'how PHP runs in the web server', phpFacts));
   }
 
-  // host.fpm_install (site)
-  if (hasSite) {
+  // host.fpm_install (site + v1)
+  if (hasSite && env.v1) {
     const candidates = fpmCandidates(facts);
     const below = facts.fpm.filter(row => !candidates.includes(row));
     const belowFact = below.map(row => `${row.flavor} PHP ${row.version} (${row.unit}) is below the v1 floor ${V1_PHP_FLOOR}: not a candidate`);
@@ -535,8 +543,8 @@ function hostItems(env: Env): ComparedItem[] {
   // host.unit_sandbox
   out.push(unitSandboxItem(env));
 
-  // host.remi_label (Remi chosen, SELinux enabled)
-  if (env.fpm?.flavor === 'remi' && env.selinuxOn) {
+  // host.remi_label (v1, Remi chosen, SELinux enabled)
+  if (env.v1 && env.fpm?.flavor === 'remi' && env.selinuxOn) {
     const nn = env.fpm.version.replace('.', '');
     if (env.fpm.socketDirLabel === 'httpd_var_run_t') {
       out.push(right('host.remi_label', 'host', "Remi's PHP-FPM socket directory label", [`${env.fpm.socketDir} is httpd_var_run_t`]));
@@ -553,8 +561,8 @@ function hostItems(env: Env): ComparedItem[] {
     }
   }
 
-  // host.fpm_cli
-  if (env.fpm !== null) {
+  // host.fpm_cli (v1)
+  if (env.v1 && env.fpm !== null) {
     out.push(
       env.fpm.cli === null
         ? blocked('host.fpm_cli', 'host', 'PHP CLI', [`${env.fpm.flavor} PHP ${env.fpm.version} has no CLI`], [fpmCliCommand(env.fpm.flavor, env.fpm.version)])
@@ -665,7 +673,7 @@ function noexecItem(env: Env): ComparedItem {
 
 function unitSandboxItem(env: Env): ComparedItem {
   const { facts, layout } = env;
-  const title = 'web server and PHP-FPM unit sandboxes';
+  const title = env.v1 ? 'web server and PHP-FPM unit sandboxes' : 'web server unit sandbox';
   if (layout === null) return right('host.unit_sandbox', 'host', title, ['checked once the declaration is complete']);
   const problems: string[] = [];
   const units: string[] = [];
@@ -681,10 +689,10 @@ function unitSandboxItem(env: Env): ComparedItem {
     }
   };
   check(facts.web.unit, facts.web.unitSandbox, [[layout.state.root, false]]);
-  if (layout.site !== null && env.fpm !== null) {
+  if (layout.site?.v1 != null && env.fpm !== null) {
     check(env.fpm.unit, env.fpm.unitSandbox, [
       [layout.state.root, false],
-      [layout.site.v1Var.root, true],
+      [layout.site.v1.var.root, true],
     ]);
   }
   if (problems.length === 0) return right('host.unit_sandbox', 'host', title, ['no unit sandbox hides the declared paths']);
@@ -710,6 +718,18 @@ function declarationItems(env: Env): ComparedItem[] {
       : right('declaration.fields', 'declaration', 'the declaration fields init fills', lines.length > 0 ? lines : ['the draft names every field']),
   );
 
+  // declaration.apis: which Publication APIs the instance serves (the draft's `apis`, else its v1 block)
+  out.push(
+    right(
+      'declaration.apis',
+      'declaration',
+      'the Publication APIs this instance serves',
+      env.v1
+        ? ['v1 and v2: the Publication API v1 (legacy, v6-era websites) runs in its own PHP-FPM pool; v2 behind the web server']
+        : ['v2 only: no PHP anywhere (no PHP-FPM pool, no v1 tree, no v1 configuration) — the recommended shape for a new site'],
+    ),
+  );
+
   // declaration.layout
   const site = decl?.site;
   if (site === undefined || decl === null) {
@@ -730,8 +750,10 @@ function declarationItems(env: Env): ComparedItem[] {
     if (row !== undefined) out.push(fromDecision(row));
     else if (fact !== null) out.push(right(id, 'declaration', title, [fact]));
   };
-  if (site !== undefined) {
+  if (site !== undefined && env.v1) {
     echo('declaration.fpm', 'PHP-FPM install', env.fpm === null ? null : `${env.fpm.flavor} PHP ${env.fpm.version} (${env.fpm.unit})`);
+  }
+  if (site !== undefined) {
     echo('declaration.vhost', 'vhost', env.vhost === null ? null : `${env.vhost.realpath}:${env.vhost.line} port ${env.vhost.port}`);
   }
   if (decl?.listen.kind !== 'tls') {
@@ -764,7 +786,7 @@ function declarationItems(env: Env): ComparedItem[] {
   // declaration.v1_user
   const v1 = decision('declaration.v1_user');
   if (v1 !== undefined) out.push(fromDecision(v1));
-  else if (decl !== null) out.push(right('declaration.v1_user', 'declaration', 'the v1 account', [`v1 runs as ${decl.v1.user}, in its own PHP-FPM pool (decision A)`]));
+  else if (decl?.v1 !== undefined) out.push(right('declaration.v1_user', 'declaration', 'the v1 account', [`v1 runs as ${decl.v1.user}, in its own PHP-FPM pool (decision A)`]));
 
   // declaration.state_root
   if (decl !== null && declared !== null) {
@@ -835,7 +857,8 @@ function accountItems(env: Env): ComparedItem[] {
   const groups = facts.accounts.groups;
   const groupNamed = (name: string) => groups.find(row => row.name === name);
   const shell = facts.os.support?.nologinShells[0] ?? NOLOGIN_SHELLS[0];
-  const { agentUser, v1User, v2User, v2Group, engineGroup } = layout.identity;
+  const { agentUser, v2User, v2Group, engineGroup } = layout.identity;
+  const v1User = layout.v1?.user ?? null;
 
   // account.pubhost_group (S11)
   const pubhost = groupNamed(PUBHOST_GROUP);
@@ -876,15 +899,18 @@ function accountItems(env: Env): ComparedItem[] {
   out.push(
     accountItem('account.agent_user', agentUser, agentUser, { kind: 'user_add_own', name: agentUser }, `useradd --system --no-create-home --shell ${shell} --user-group ${agentUser}`, []),
     accountItem('account.v2_user', v2User, v2Group, { kind: 'user_add_in', name: v2User, group: v2Group }, `useradd --system --no-create-home --shell ${shell} -g ${v2Group} ${v2User}`, ['account.v2_group']),
-    accountItem('account.v1_user', v1User, v1User, { kind: 'user_add_own', name: v1User }, `useradd --system --no-create-home --shell ${shell} --user-group ${v1User}`, []),
   );
+  // No v1 account on a v2-only instance.
+  if (v1User !== null) {
+    out.push(accountItem('account.v1_user', v1User, v1User, { kind: 'user_add_own', name: v1User }, `useradd --system --no-create-home --shell ${shell} --user-group ${v1User}`, []));
+  }
 
   // account.engine_group (unix listener; never acted on)
   if (engineGroup !== null) {
     const filesOnly = facts.nss.passwdFilesOnly && facts.nss.groupFilesOnly;
     const workUser = env.completion.workUnit?.user ?? null;
     const checks = [`getent group ${engineGroup}`, ...(workUser === null ? ['id -nG <the account that runs Dédalo>'] : [`id -nG ${workUser}`])];
-    const ours = [agentUser, v1User, v2User];
+    const ours = [agentUser, ...(v1User === null ? [] : [v1User]), v2User];
     const group = groupNamed(engineGroup);
     const problems: string[] = [];
     if (group === undefined) problems.push(`group '${engineGroup}' does not exist: init never creates the engine group; name the group the work system runs with`);
@@ -1040,7 +1066,7 @@ function selinuxItems(env: Env): ComparedItem[] {
   // default follows discovery (facts.mariadb): the local socket when one exists, else TCP
   // 127.0.0.1:3306 — still a decision either way (--yes never settles it).
   const transport = v1Transport(env);
-  if (decl !== null && !v1Right) {
+  if (decl !== null && env.v1 && !v1Right) {
     const found = facts.mariadb.socket;
     out.push(
       item('api_config.v1_db_transport', 'api_config', 'decision', 'how v1 reaches MariaDB', {
@@ -1064,7 +1090,7 @@ function selinuxItems(env: Env): ComparedItem[] {
 
   if (env.selinuxOn && layout !== null) {
     // selinux.db_connect (v1 over TCP)
-    if (transport === 'tcp' && !v1Right) {
+    if (env.v1 && transport === 'tcp' && !v1Right) {
       out.push(
         on('httpd_can_network_connect_db')
           ? right('selinux.db_connect', 'selinux', 'v1 may reach MariaDB over TCP', ['httpd_can_network_connect_db is on'])
@@ -1349,39 +1375,42 @@ function apiConfigItems(env: Env): ComparedItem[] {
   };
   const uidOf = (name: string) => facts.accounts.users.find(row => row.name === name)?.uid ?? null;
   const gidOf = (name: string) => facts.accounts.groups.find(row => row.name === name)?.gid ?? null;
-  const rows = [
-    {
-      id: 'api_config.v2_env',
-      secret: 'v2_env' as const,
-      path: join(layout.state.apis.v2.shared, 'v2.env'),
-      meta: declared?.apiConfig.v2 ?? null,
-      uid: 0 as number | null,
-      gid: gidOf(layout.identity.v2Group),
-      mode: MODES.v2Env.mode,
-      owner: `root:${layout.identity.v2Group}`,
-      sample: template('.env.example', 'publication/server_api/v2/.env.example'),
-      action: (sample: string, path: string): InitAction => ({ kind: 'v2_env', sample, path, deploymentMode: layout.web.server, socket: facts.mariadb.socket }),
-    },
-    {
+  const v2Row = {
+    id: 'api_config.v2_env',
+    secret: 'v2_env' as 'v2_env' | 'v1_config',
+    path: join(layout.state.apis.v2.shared, 'v2.env'),
+    meta: declared?.apiConfig.v2 ?? null,
+    uid: 0 as number | null,
+    gid: gidOf(layout.identity.v2Group),
+    mode: MODES.v2Env.mode,
+    owner: `root:${layout.identity.v2Group}`,
+    sample: template('.env.example', 'publication/server_api/v2/.env.example'),
+    action: (sample: string, path: string): InitAction => ({ kind: 'v2_env', sample, path, deploymentMode: layout.web.server, socket: facts.mariadb.socket }),
+  };
+  const rows = [v2Row];
+  // The v1 configuration: only for an instance that serves v1 (a v2-only one has no v1 tree).
+  const v1 = layout.v1;
+  if (v1 !== null) {
+    rows.push({
       id: 'api_config.v1_config',
-      secret: 'v1_config' as const,
-      path: join(layout.state.apis.v1.shared, 'server_config_api.php'),
+      secret: 'v1_config',
+      path: join(v1.dirs.shared, 'server_config_api.php'),
       meta: declared?.apiConfig.v1 ?? null,
-      uid: uidOf(layout.identity.v1User),
-      gid: 0 as number | null,
+      uid: uidOf(v1.user),
+      gid: 0,
       mode: MODES.v1Config.mode,
-      owner: `${layout.identity.v1User}:root`,
+      owner: `${v1.user}:root`,
       sample: template('sample.server_config_api.php', 'publication/server_api/v1/config_api/sample.server_config_api.php'),
       action: (sample: string, path: string): InitAction => ({
         kind: 'v1_config',
         sample,
         path,
-        owner: layout.identity.v1User,
+        owner: v1.user,
         transport: v1Transport(env),
         socket: facts.mariadb.socket,
       }),
-    },
-  ];
+    });
+  }
   for (const row of rows) {
     const title = `the ${row.secret === 'v2_env' ? 'v2' : 'v1'} database configuration`;
     const after = row.secret === 'v1_config' ? ['provision.apply', 'api_config.v1_db_transport'] : ['provision.apply'];
@@ -1440,8 +1469,10 @@ function webItems(env: Env): ComparedItem[] {
   // web.modules (apache)
   if (server === 'apache') {
     const present = new Set(facts.web.modules.map(name => name.replace(/_module$/, '').replace(/^mod_/, '')));
-    const missing = APACHE_MODULES.filter(name => !present.has(name));
-    if (missing.length === 0) out.push(right('web.modules', 'web', 'Apache modules', [`${APACHE_MODULES.join(', ')} are loaded`]));
+    // proxy_fcgi is the v1 handler's (the web include's SetHandler proxy:unix:…): a v2-only instance needs none.
+    const wanted = APACHE_MODULES.filter(name => env.v1 || name !== 'proxy_fcgi');
+    const missing = wanted.filter(name => !present.has(name));
+    if (missing.length === 0) out.push(right('web.modules', 'web', 'Apache modules', [`${wanted.join(', ')} are loaded`]));
     else if (facts.web.flavor !== 'el') {
       out.push(
         item('web.modules', 'web', 'change', `enable ${missing.join(', ')}`, {
@@ -1631,14 +1662,15 @@ function tailItems(env: Env, earlier: readonly ComparedItem[]): ComparedItem[] {
   else {
     out.push(
       item('init.keep_ref', 'init', 'change', 'keep the templates for re-runs', {
-        facts: ['root copies of .bun-version, .bun-sha256 and the two API samples, and rerun.env'],
+        facts: [`root copies of .bun-version, .bun-sha256 and ${env.v1 ? 'the two API samples' : "the v2 API's sample"}, and rerun.env`],
         action: {
           kind: 'keep_ref',
           files: [
             join(ctx.source.dir, '.bun-version'),
             join(ctx.source.dir, '.bun-sha256'),
             join(ctx.source.dir, 'publication/server_api/v2/.env.example'),
-            join(ctx.source.dir, 'publication/server_api/v1/config_api/sample.server_config_api.php'),
+            // The v1 sample only for an instance that serves v1 (a v2-only one keeps no PHP template).
+            ...(env.v1 ? [join(ctx.source.dir, 'publication/server_api/v1/config_api/sample.server_config_api.php')] : []),
           ],
         },
         after: others,

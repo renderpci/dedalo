@@ -52,6 +52,8 @@ import { anySiblingHomeBound } from '../siblings';
 import { webIncludePath, webReferenceInclude } from '../web_reference';
 import { MAP_BLOCKS, SEED_CONTRIBUTION, contributionOf, isMapRefusal, parseNginxMap } from '../../rules/directives';
 import type { ForeignMapFacts } from './compare';
+import type { DraftApis } from './draft';
+import { draftServesV1 } from './draft';
 import { handMapLines } from './web_txn';
 import { lstatFacts } from './host_io';
 import {
@@ -172,6 +174,12 @@ export function hostObserveFs(): ObserveFs {
  */
 export interface ObserveDraft {
   readonly instance: string;
+  /**
+   * Whether PHP is looked for at all (draft.ts draftServesV1): a v2-only draft (`apis: 'v2_only'`,
+   * or no `v1` block) runs no PHP discovery — no FPM install, no PHP binary, no php.conf handler.
+   */
+  readonly apis?: DraftApis;
+  readonly v1?: object;
   readonly site?: { readonly domain?: string; readonly home?: string };
   readonly web?: { readonly server?: WebServer };
   readonly media?: { readonly root?: string };
@@ -245,8 +253,10 @@ export function observeHostWide(draft: ObserveDraft, ports: ObservePorts): HostF
   const mounts = parseMountinfo(io.readProcFile('/proc/self/mountinfo') ?? '');
   const accounts = observeAccounts(ports);
 
-  const web = observeWeb(draft, ports, units, os.family);
-  const fpm = observeFpm(ports, units);
+  const servesV1 = draftServesV1(draft);
+  const web = observeWeb(draft, ports, units, os.family, servesV1);
+  // No PHP discovery for a v2-only draft: no PHP binary runs (php -v, php-fpm -tt).
+  const fpm = servesV1 ? observeFpm(ports, units) : [];
   const selinux = observeSelinux(draft, ports, fpm);
   const fpmLabelled = fpm.map(install =>
     Object.freeze({ ...install, socketDirLabel: selinux.labels.get(install.socketDir) ?? null }),
@@ -460,7 +470,13 @@ function judgeAncestorsLocal(
   return refusals;
 }
 
-function observeWeb(draft: ObserveDraft, ports: ObservePorts, units: readonly ListedUnit[], family: HostFacts['os']['family']): HostFacts['web'] {
+function observeWeb(
+  draft: ObserveDraft,
+  ports: ObservePorts,
+  units: readonly ListedUnit[],
+  family: HostFacts['os']['family'],
+  servesV1: boolean,
+): HostFacts['web'] {
   const { exec, fs } = ports;
   const present = WEB_UNITS.filter(entry => loaded(units, entry.unit) !== undefined);
   const candidates = [...new Set(present.map(entry => entry.server))];
@@ -517,7 +533,8 @@ function observeWeb(draft: ObserveDraft, ports: ObservePorts, units: readonly Li
         .map(path => ({ file: path, text: decode(ports.io.readOperatorFile(path).bytes) }));
       modulesD = parseModulesD(files);
       const phpConf = '/etc/httpd/conf.d/php.conf';
-      if (isFile(fs, phpConf)) {
+      // The server-wide PHP handler matters only to the v1 tree's own handler: v2-only reads no php.conf.
+      if (servesV1 && isFile(fs, phpConf)) {
         const handler = parsePhpConf(decode(ports.io.readOperatorFile(phpConf).bytes), phpConf);
         if (handler !== null && handler.ifModules.every(condition => ifModuleActive(condition, modules))) {
           globalPhpHandler = Object.freeze({ file: handler.file, pattern: handler.pattern, insideIf: handler.insideIf });
@@ -569,7 +586,8 @@ function observeWeb(draft: ObserveDraft, ports: ObservePorts, units: readonly Li
       modules: Object.freeze(modules),
       modulesD: Object.freeze(modulesD),
       phpModule,
-      phpModuleOnly: flavor === 'el' && phpModule && globalPhpHandler === null,
+      // v2-only: no php.conf was read, so "mod_php with no FPM handler" is not claimed.
+      phpModuleOnly: servesV1 && flavor === 'el' && phpModule && globalPhpHandler === null,
       globalPhpHandler,
       vhosts: Object.freeze(vhosts),
     });
@@ -784,8 +802,11 @@ export function declaredWritePaths(layout: AgentLayout): string[] {
   ];
   if (layout.web.server === 'nginx') paths.push(dirname(layout.host.nginxMapInclude));
   if (layout.site !== null) {
-    // …and the v1 pool's own log rotation, every site (render/logrotate.ts v1LogrotateRenderer).
-    paths.push(layout.site.home, dirname(layout.site.fpm.poolFile), dirname(layout.site.v1Var.root), dirname(layout.v1LogrotatePath));
+    paths.push(layout.site.home);
+    // …and the v1 pool's own paths and log rotation, every site with v1 (render/logrotate.ts v1LogrotateRenderer).
+    if (layout.site.v1 !== null && layout.v1 !== null) {
+      paths.push(dirname(layout.site.v1.fpm.poolFile), dirname(layout.site.v1.var.root), dirname(layout.v1.logrotatePath));
+    }
     // The home layout's web logs and their rotation (layout.ts webLogBase, render/logrotate.ts).
     if (isHomeLayout(layout)) paths.push(layout.site.webLogsDir, dirname(layout.logrotatePath));
   }
@@ -947,7 +968,6 @@ export function observeDeclared(layout: AgentLayout, facts: HostFacts, ports: De
   }
 
   const v2Shared = layout.state.apis.v2.shared;
-  const v1Shared = layout.state.apis.v1.shared;
   const renderer = parseRendererVersion(io.readRootFile(join(layout.host.mapRendererDir, MAP_RENDERER_VERSION_FILE)));
 
   let hostState: HostState | null = null;
@@ -980,7 +1000,8 @@ export function observeDeclared(layout: AgentLayout, facts: HostFacts, ports: De
     }),
     apiConfig: Object.freeze({
       v2: secretMeta(fs, join(v2Shared, 'v2.env')),
-      v1: secretMeta(fs, join(v1Shared, 'server_config_api.php')),
+      // No v1 tree on a v2-only instance: nothing to look at.
+      v1: layout.v1 === null ? null : secretMeta(fs, join(layout.v1.dirs.shared, 'server_config_api.php')),
     }),
     hostState,
     plan: planned,

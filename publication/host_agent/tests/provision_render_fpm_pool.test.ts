@@ -98,10 +98,11 @@ describe('INI injection (grammar mutations)', () => {
   const site = DEBIAN.site!;
   const bad = (patch: (l: AgentLayout) => AgentLayout) => () => fpmPoolBody(patch(DEBIAN));
   test('a newline, a `]` or a `..` in any interpolated value is refused', () => {
-    expect(bad(l => ({ ...l, identity: { ...l.identity, v1User: 'v1\nuser = root' } }))).toThrow(/v1.user/);
-    expect(bad(l => ({ ...l, site: { ...site, fpm: { ...site.fpm, pool: 'dedalo_test_v1]\n[www' } } }))).toThrow(/pool name/);
-    expect(bad(l => ({ ...l, site: { ...site, v1Var: { ...site.v1Var, tmp: '/var/../etc' } } }))).toThrow(/tmp directory/);
-    expect(bad(l => ({ ...l, site: { ...site, fpm: { ...site.fpm, webUser: 'www-data]' } } }))).toThrow(/webUser/);
+    const v1 = site.v1!;
+    expect(bad(l => ({ ...l, v1: { ...l.v1!, user: 'v1\nuser = root' } }))).toThrow(/v1.user/);
+    expect(bad(l => ({ ...l, site: { ...site, v1: { ...v1, fpm: { ...v1.fpm, pool: 'dedalo_test_v1]\n[www' } } } }))).toThrow(/pool name/);
+    expect(bad(l => ({ ...l, site: { ...site, v1: { ...v1, var: { ...v1.var, tmp: '/var/../etc' } } } }))).toThrow(/tmp directory/);
+    expect(bad(l => ({ ...l, site: { ...site, v1: { ...v1, fpm: { ...v1.fpm, webUser: 'www-data]' } } } }))).toThrow(/webUser/);
     expect(() => derive({ ...unixDeclaration(), site: { domain: 'museum\n.example.org', fpm: { flavor: 'debian', version: '8.2' } } })).toThrow(
       LayoutError,
     );

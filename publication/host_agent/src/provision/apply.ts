@@ -1092,14 +1092,14 @@ export function observeHost(
     ...artifactPaths,
     ...validatedMarkers,
     layout.web.configtestBin,
-    layout.phpBin,
+    ...(layout.v1 === null ? [] : [layout.v1.phpBin]),
     layout.bunBin,
     layout.agentDir,
     layout.agentEntry,
     agentScratchPath(layout),
     ...agentDevDependencyPaths(layout),
   ];
-  if (layout.site !== null) watched.push(layout.site.fpm.bin);
+  if (layout.site?.v1 != null) watched.push(layout.site.v1.fpm.bin);
   // Relabel targets the plan does not create (spec S9): a shared media root, R/bun.
   if (layout.media.root !== null) watched.push(layout.media.root);
   const mapManaged = layout.web.server === 'nginx' && layout.web.nginxMap === 'conf_d';
@@ -1120,12 +1120,14 @@ export function observeHost(
     if (paths.get(path)?.type === 'file') contents.set(path, readOrNull(path));
   }
   const users = new Map<string, number>();
-  for (const name of ['root', layout.identity.agentUser, layout.identity.v1User, layout.identity.v2User]) {
+  // No v1 account on a v2-only instance.
+  const accounts = [layout.identity.agentUser, ...(layout.v1 === null ? [] : [layout.v1.user]), layout.identity.v2User];
+  for (const name of ['root', ...accounts]) {
     const id = exec.userId(name);
     if (id !== null) users.set(name, id);
   }
   const accountGroups = new Map<string, AccountGroups>();
-  for (const name of [layout.identity.agentUser, layout.identity.v1User, layout.identity.v2User]) {
+  for (const name of accounts) {
     const found = users.has(name) ? exec.userGroups(name) : null;
     if (found) accountGroups.set(name, Object.freeze({ primary: found.primary, all: Object.freeze([...found.all]) }));
   }
@@ -1138,7 +1140,8 @@ export function observeHost(
   }
   const units = new Map<string, UnitFacts>();
   const unitNames = [layout.agentUnitName, layout.v2.unit];
-  if (layout.site !== null) unitNames.push(layout.web.unit, layout.site.fpm.unit);
+  if (layout.site !== null) unitNames.push(layout.web.unit);
+  if (layout.site?.v1 != null) unitNames.push(layout.site.v1.fpm.unit);
   for (const unit of unitNames) units.set(unit, exec.unitState(unit));
   // The audit trail's attribute: probed (an O_NOFOLLOW write-open, never a write), never read.
   const appendOnly = new Set<string>();

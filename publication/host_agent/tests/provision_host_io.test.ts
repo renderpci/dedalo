@@ -175,7 +175,7 @@ describe('hostIo + observeHost on a real tree', () => {
     symlinkSync(real, link);
     symlinkSync(join(SCRATCH, 'bin/absent'), dangling);
     try {
-      const state = observeHost({ ...layout, phpBin: link, bunBin: dangling }, stubExec, {
+      const state = observeHost({ ...layout, v1: { ...layout.v1!, phpBin: link }, bunBin: dangling }, stubExec, {
         trustRoot: SCRATCH,
         appendOnlyProbe,
         renderers: SCRATCH_RENDERERS,
@@ -203,7 +203,7 @@ describe('hostIo + observeHost on a real tree', () => {
     expect(statSync(layout.credentialsDir).mode & 0o7777).toBe(0o700);
     expect(statSync(layout.serviceTokenPath).mode & 0o7777).toBe(0o600);
     expect(statSync(layout.envFile).mode & 0o7777).toBe(0o644);
-    expect(statSync(layout.state.apis.v1.shared).mode & 0o7777).toBe(0o711);
+    expect(statSync(layout.v1!.dirs.shared).mode & 0o7777).toBe(0o711);
     expect(statSync(layout.state.audit).mode & 0o7777).toBe(0o755);
     expect(statSync(layout.state.auditFile).mode & 0o7777).toBe(0o600);
     expect([...sealed]).toEqual([layout.state.auditFile]);
@@ -386,7 +386,7 @@ describe('hostIo + observeHost on a real tree', () => {
 
 describe('root never follows a link planted between plan and apply', () => {
   test('at the leaf: a symlink in place of releases/ — refused, the target keeps its mode', () => {
-    const releases = layout.state.apis.v1.releases;
+    const releases = layout.v1!.dirs.releases;
     chmodSync(releases, 0o700);
     const actions = plan(layout, observe());
     expect(actions).toEqual([{ op: 'chmod', path: releases, mode: 0o755 }]);
@@ -434,8 +434,8 @@ describe('root never follows a link planted between plan and apply', () => {
   });
 
   test('at the parent: a symlink in place of publication_api/v1 — refused before anything is opened', () => {
-    const apiRoot = layout.state.apis.v1.root;
-    const releases = layout.state.apis.v1.releases;
+    const apiRoot = layout.v1!.dirs.root;
+    const releases = layout.v1!.dirs.releases;
     chmodSync(releases, 0o700);
     const actions = plan(layout, observe());
     expect(actions).toEqual([{ op: 'chmod', path: releases, mode: 0o755 }]);

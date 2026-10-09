@@ -121,6 +121,8 @@ export interface HostPanelRow {
 	/** Bun side by side: the work system's pin vs the host's running Bun (shaped, else null). */
 	bun: { expected: string | null; reported: string | null };
 	apis: Record<'v1' | 'v2', { current: string | null; previous: string | null }>;
+	/** The proved status's `served_apis` (['v1','v2'] or ['v2']); null when no status was proved. */
+	served_apis: ('v1' | 'v2')[] | null;
 	token_present: boolean;
 	bundle_present: boolean;
 	pairing_proved: boolean;
@@ -356,10 +358,16 @@ function rulesHashCheck(
 	return compareRuleHashes(status.rules.hash, expected);
 }
 
+/** The detail of an api check (and the lockstep state) for an API the host does not serve. */
+export const NOT_SERVED = 'not_served';
+
 /** Lockstep (spec §3): release id `<version>_<digest7>`, version = DEDALO_VERSION. */
 function apiCheck(api: 'v1' | 'v2', status: AgentStatus | null, engineVersion: string): HostCheck {
 	const id = `api_${api}` as const;
 	if (status === null) return unavailable(id);
+	// A v2-only site runs no Publication API v1 at all: a neutral fact, never drift
+	// (same vocabulary as rules_hash's not_applicable).
+	if (!status.served_apis.includes(api)) return check(id, 'ok', NOT_SERVED);
 	const { current } = status.apis[api];
 	if (current === null) return check(id, 'warn', 'none');
 	if (releaseId(current) === null) return check(id, 'warn', MALFORMED);
@@ -431,6 +439,7 @@ export function buildHostPanelRow(input: HostStatusInput): HostPanelRow {
 		},
 		bun: { expected: input.bunPin, reported: reportedBun(trusted) },
 		apis: apiVersions(trusted),
+		served_apis: trusted === null ? null : [...trusted.served_apis],
 		token_present: input.secrets.token_present,
 		bundle_present: input.secrets.bundle_present,
 		pairing_proved: checks.some((entry) => entry.id === 'pairing' && entry.state === 'ok'),

@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import type { HostDeclaration } from '../src/provision/layout';
-import { FPM_FLAVORS, canonicalDeclaration as layoutCanonical } from '../src/provision/layout';
+import { FPM_FLAVORS, OS_FAMILIES, canonicalDeclaration as layoutCanonical } from '../src/provision/layout';
 import {
   DECLARATION_KEY_ORDER,
   DeclarationError,
@@ -91,7 +91,7 @@ function site(overrides: Partial<HostDeclaration> = {}): HostDeclaration {
 describe('provision init fields (spec S6, S10, §2.2, §13.6)', () => {
   test('a site declaration parses; every old declaration still does (its bytes and meaning unchanged)', () => {
     const { layout } = parseDeclaration(site(), 'x');
-    expect(layout.site?.fpm.unit).toBe('php84-php-fpm');
+    expect(layout.site?.v1?.fpm.unit).toBe('php84-php-fpm');
     expect(parseDeclaration(unixDeclaration(), 'x').layout.site).toBeNull();
   });
 
@@ -127,7 +127,8 @@ describe('provision init fields (spec S6, S10, §2.2, §13.6)', () => {
   test('the schema enums are the layout constants', () => {
     const shape = declarationSchema.shape;
     const siteShape = shape.site.unwrap().shape;
-    expect(siteShape.fpm.shape.flavor.options).toEqual([...FPM_FLAVORS]);
+    expect(siteShape.fpm.unwrap().shape.flavor.options).toEqual([...FPM_FLAVORS]);
+    expect(siteShape.os_family.unwrap().options).toEqual([...OS_FAMILIES]);
     expect('systemd_floor' in shape).toBe(false);
   });
 

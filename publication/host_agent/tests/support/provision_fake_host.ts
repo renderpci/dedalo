@@ -138,7 +138,7 @@ export class FakeHost implements ProvisionIo {
       dirname(layout.polkitPath),
       dirname(layout.agentEntry),
       dirname(layout.web.configtestBin),
-      dirname(layout.phpBin),
+      ...(layout.v1 === null ? [] : [dirname(layout.v1.phpBin)]),
       dirname(layout.bunBin),
       // the packages' own directories: logrotate's, and the web server's log directory (layout.ts webLogBase)
       dirname(layout.logrotatePath),
@@ -146,7 +146,7 @@ export class FakeHost implements ProvisionIo {
     ]) {
       this.seedDir(path);
     }
-    for (const bin of [layout.web.configtestBin, layout.phpBin, layout.bunBin]) {
+    for (const bin of [layout.web.configtestBin, ...(layout.v1 === null ? [] : [layout.v1.phpBin]), layout.bunBin]) {
       this.entries.set(bin, { type: 'file', uid: 0, gid: 0, mode: 0o755, body: '' });
     }
     this.entries.set(layout.agentEntry, { type: 'file', uid: 0, gid: 0, mode: 0o644, body: '' });

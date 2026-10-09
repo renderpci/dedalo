@@ -243,7 +243,7 @@ function elHost(release: 'rocky9' | 'rocky10' = 'rocky9'): FakeHost {
   return host;
 }
 
-const EL_DRAFT = { instance: 'museum_org', site: { domain: 'museum.org' }, web: { server: 'apache' as const } };
+const EL_DRAFT = { apis: 'v1_and_v2' as const, instance: 'museum_org', site: { domain: 'museum.org' }, web: { server: 'apache' as const } };
 
 describe('observeHostWide — EL 10 (captured Rocky 10): the same world, the EL 10 row', () => {
   const facts = observeHostWide(EL_DRAFT, ports(elHost('rocky10')));
@@ -456,7 +456,7 @@ describe('observeHostWide — SELinux branches and loud failures', () => {
 
   test('no draft domain: no vhost is read; no web server at all: empty web facts and no dump', () => {
     const host = elHost();
-    const facts = observeHostWide({ instance: 'museum_org' }, ports(host));
+    const facts = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(host));
     expect(facts.web.vhosts).toEqual([]);
     expect(host.calls.some(call => call.name === 'apacheVhosts')).toBe(true);
     const bare = elHost();
@@ -539,7 +539,7 @@ function debianApacheHost(): FakeHost {
 
 describe('observeHostWide — Debian 12 Apache, no SELinux', () => {
   const host = debianApacheHost();
-  const facts = observeHostWide({ instance: 'museum_org', site: { domain: 'museum.org' } }, ports(host));
+  const facts = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org', site: { domain: 'museum.org' } }, ports(host));
 
   test('OS, polkit 122, @includedir sudo, no AVX2, no SELinux, no fapolicyd', () => {
     expect(facts.os).toMatchObject({ id: 'debian', family: 'debian', supported: true });
@@ -613,23 +613,23 @@ function debianNginxHost(): FakeHost {
 describe('observeHostWide — a local MariaDB (B4: the v1 transport default)', () => {
   const SOCKET: PathFacts = { type: 'other', uid: 0, gid: 0, mode: 0o777 };
   test('the first candidate that is a socket; a file there is not one; none → null; TCP 3306 from /proc/net/tcp', () => {
-    const none = observeHostWide({ instance: 'museum_org' }, ports(debianApacheHost())).mariadb;
+    const none = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(debianApacheHost())).mariadb;
     expect(none.socket).toBeNull();
     const debian = debianApacheHost();
     put(debian, '/run/mysqld/mysqld.sock', null, SOCKET);
-    expect(observeHostWide({ instance: 'museum_org' }, ports(debian)).mariadb.socket).toBe('/run/mysqld/mysqld.sock');
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(debian)).mariadb.socket).toBe('/run/mysqld/mysqld.sock');
     const el = debianApacheHost();
     put(el, '/run/mysqld/mysqld.sock', null, FILE());
     put(el, '/var/lib/mysql/mysql.sock', null, SOCKET);
-    expect(observeHostWide({ instance: 'museum_org' }, ports(el)).mariadb.socket).toBe('/var/lib/mysql/mysql.sock');
-    const facts = observeHostWide({ instance: 'museum_org' }, ports(debianApacheHost()));
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(el)).mariadb.socket).toBe('/var/lib/mysql/mysql.sock');
+    const facts = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(debianApacheHost()));
     expect(facts.mariadb.tcp3306).toBe(facts.ports.includes(3306));
   });
 });
 
 describe('observeHostWide — Debian 12 nginx, the guide\'s hand map', () => {
   const host = debianNginxHost();
-  const facts = observeHostWide({ instance: 'museum_org', site: { domain: 'museum.org' } }, ports(host));
+  const facts = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org', site: { domain: 'museum.org' } }, ports(host));
 
   test('nginx facts: version, run user, conf.d in http{}, the hand map as foreign, our map include excluded', () => {
     expect(facts.web).toMatchObject({ server: 'nginx', unit: 'nginx', flavor: 'debian', configtestBin: '/usr/sbin/nginx', dumpBin: '/usr/sbin/nginx', version: '1.22.1', runUser: 'nginx', runGroup: 'nginx', confDInHttp: true });
@@ -663,15 +663,15 @@ describe('observeHostWide — Debian 12 nginx, the guide\'s hand map', () => {
     const own = debianNginxHost();
     own.handlers.nginxDump = () =>
       r(fixture('typed/nginx/nginx_T_typed.txt').replace('/etc/nginx/conf.d/dedalo_hand_map.conf', '/var/lib/dedalo_publication_host/_host/nginx_map/dedalo_media_map.nginx.conf'));
-    expect(observeHostWide({ instance: 'museum_org' }, ports(own)).web.foreignMaps).toEqual([]);
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(own)).web.foreignMaps).toEqual([]);
   });
 
   test('both servers installed: the draft picks; without one, no server is chosen', () => {
     const both = debianNginxHost();
     put(both, '/usr/sbin/apache2ctl', null, FILE(0, 0o755));
     both.handlers.listCandidateUnits = () => r(show('list_units_both.txt'));
-    expect(observeHostWide({ instance: 'museum_org', web: { server: 'nginx' } }, ports(both)).web).toMatchObject({ candidates: ['apache', 'nginx'], server: 'nginx' });
-    expect(observeHostWide({ instance: 'museum_org' }, ports(both)).web).toMatchObject({ candidates: ['apache', 'nginx'], server: null, unit: null });
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org', web: { server: 'nginx' } }, ports(both)).web).toMatchObject({ candidates: ['apache', 'nginx'], server: 'nginx' });
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(both)).web).toMatchObject({ candidates: ['apache', 'nginx'], server: null, unit: null });
   });
 
   test('read-only', () => assertReadOnly(host));
@@ -891,7 +891,7 @@ describe('observeDeclared — branches', () => {
   test('a system layout: no home facts; no agent dir → no digest; a secret path that is a symlink is not a file', () => {
     const { host, declared } = declaredHost();
     const { layout } = parseDeclaration(JSON.parse(JSON.stringify(SYSTEM_SIBLING)), '/etc/dedalo_publication_host/other_org.json');
-    host.entries.set(`${layout.state.apis.v1.shared}/server_config_api.php`, { type: 'symlink', uid: 1000, gid: 1000, mode: 0o777 });
+    host.entries.set(`${layout.v1!.dirs.shared}/server_config_api.php`, { type: 'symlink', uid: 1000, gid: 1000, mode: 0o777 });
     const result = observeDeclared(layout, observeHostWide(EL_DRAFT, ports(host)), declared);
     expect(result.home).toMatchObject({ facts: null, traversable: null, topEntries: [], worldReadableCount: 0 });
     expect(result.agentTreeDigest).toBeNull();
@@ -948,7 +948,7 @@ describe('observeHostWide — D-Bus-activated polkit (captured, systemd PID 1) a
       host.handlers.listCandidateUnits = () => r(listed().stdout.split('\n').filter(line => !line.startsWith('polkit.service')).join('\n'));
       host.handlers.unitShow = (unit: string) => (unit === 'polkit' ? r(fixture(`captured/${release}/systemctl_show_polkit.txt`)) : shown(unit));
       put(host, '/usr/share/dbus-1/system-services/org.freedesktop.PolicyKit1.service', fixture(`captured/${release}/dbus_polkit.service`));
-      const facts = observeHostWide({ instance: 'museum_org' }, ports(host));
+      const facts = observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(host));
       expect(facts.polkit).toEqual({ version: 122, state: 'activatable' });
       expect(host.calls.filter(call => call.name === 'unitShow').map(call => call.args[0])).toContain('polkit');
     });
@@ -956,7 +956,7 @@ describe('observeHostWide — D-Bus-activated polkit (captured, systemd PID 1) a
 
   test('listed active: running, and systemctl show is not asked', () => {
     const host = debianApacheHost(); // list_units_debian_apache lists polkit.service active
-    expect(observeHostWide({ instance: 'museum_org' }, ports(host)).polkit.state).toBe('running');
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(host)).polkit.state).toBe('running');
     expect(host.calls.some(call => call.name === 'unitShow' && call.args[0] === 'polkit')).toBe(false);
   });
 
@@ -972,21 +972,21 @@ describe('observeHostWide — D-Bus-activated polkit (captured, systemd PID 1) a
   };
 
   test('sudo-rs without /etc/sudoers-rs reads /etc/sudoers (the stock Ubuntu 26.04 server)', () => {
-    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs(null))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers', skipped: [] });
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(sudoRs(null))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers', skipped: [] });
   });
 
   test('sudo-rs with /etc/sudoers-rs reads THAT file: no include there → not policy, although /etc/sudoers includes sudoers.d', () => {
-    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs('sudoers-rs'))).sudo).toEqual({ present: true, includedir: false, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] });
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(sudoRs('sudoers-rs'))).sudo).toEqual({ present: true, includedir: false, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] });
   });
 
   test('sudo-rs with /etc/sudoers-rs reaching sudoers.d through a relative @include: policy', () => {
-    expect(observeHostWide({ instance: 'museum_org' }, ports(sudoRs('sudoers-rs_include'))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] });
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(sudoRs('sudoers-rs_include'))).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo-rs', policyFile: '/etc/sudoers-rs', skipped: [] });
   });
 
   test("S3-3: an included file sudo would not read (writable by others) is not followed, and host.sudo names it", () => {
     const host = sudoRs('sudoers-rs_include');
     put(host, '/etc/sudoers-rs.local', fixture('typed/sudo/sudoers-rs.local'), FILE(0, 0o666));
-    expect(observeHostWide({ instance: 'museum_org' }, ports(host)).sudo).toEqual({
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(host)).sudo).toEqual({
       present: true,
       includedir: false,
       flavor: 'sudo-rs',
@@ -998,6 +998,30 @@ describe('observeHostWide — D-Bus-activated polkit (captured, systemd PID 1) a
   test('classic sudo ignores an /etc/sudoers-rs', () => {
     const host = debianApacheHost();
     put(host, '/etc/sudoers-rs', fixture('typed/sudo/sudoers-rs'), FILE(0, 0o440));
-    expect(observeHostWide({ instance: 'museum_org' }, ports(host)).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: [] });
+    expect(observeHostWide({ apis: 'v1_and_v2', instance: 'museum_org' }, ports(host)).sudo).toEqual({ present: true, includedir: true, flavor: 'sudo', policyFile: '/etc/sudoers', skipped: [] });
+  });
+});
+
+describe('observeHostWide — a v2-only draft runs no PHP discovery', () => {
+  test('no FPM install, no PHP binary run (php -v, php-fpm -tt), no php.conf read; the rest observed as before', () => {
+    const host = elHost('rocky9');
+    const base = ports(host);
+    const operatorReads: string[] = [];
+    const recording: ObservePorts = {
+      ...base,
+      io: { ...base.io, readOperatorFile: path => (operatorReads.push(path), base.io.readOperatorFile(path)) },
+    };
+    const { apis: _apis, ...v2Only } = EL_DRAFT;
+    const facts = observeHostWide(v2Only, recording);
+    expect(facts.fpm).toEqual([]);
+    expect(host.calls.some(call => call.name === 'fpmDump' || call.name === 'phpVersion')).toBe(false);
+    expect(operatorReads).not.toContain('/etc/httpd/conf.d/php.conf');
+    expect(facts.web.globalPhpHandler).toBeNull();
+    expect(facts.web.phpModuleOnly).toBe(false);
+    expect(facts.web).toMatchObject({ server: 'apache', unit: 'httpd', runUser: 'apache' });
+    // The contrast: the same host with v1 discovers the installs.
+    const withV1 = elHost('rocky9');
+    expect(observeHostWide(EL_DRAFT, ports(withV1)).fpm.length).toBeGreaterThan(0);
+    expect(withV1.calls.some(call => call.name === 'fpmDump')).toBe(true);
   });
 });

@@ -147,6 +147,8 @@ export const AGENT_REASON_SENTENCES: Readonly<Record<string, string>> = Object.f
 		"The publication host is missing the publication API's shared configuration. An operator must create it on that host; the previous release still serves.",
 	shared_config_exposed:
 		"The publication API's shared configuration on the publication host is readable by other accounts, so the host refused the release. An operator must restrict it to its owner on that host; the previous release still serves.",
+	api_not_served:
+		'This publication host does not serve the Publication API v1 (it is a v2-only site), so it refused the v1 release. Nothing was changed.',
 	php_lint_failed:
 		'A PHP file in the release failed the syntax check on the publication host. The previous release still serves.',
 	node_modules_missing:

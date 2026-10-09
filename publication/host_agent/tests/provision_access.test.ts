@@ -377,9 +377,9 @@ describe('rule 1: the way down, and the pinned runtimes', () => {
 
   test('php_bin is judged for the agent (the v1 syntax check), never for v2', () => {
     const { l, host } = site();
-    entry(host, l.phpBin).mode = 0o700;
+    entry(host, l.v1!.phpBin).mode = 0o700;
     expect(refusals(l, host)).toEqual([
-      `php_bin '${l.phpBin}' is not readable and executable by dedalo-pubhost (the agent) — chmod o+rx ${l.phpBin}`,
+      `php_bin '${l.v1!.phpBin}' is not readable and executable by dedalo-pubhost (the agent) — chmod o+rx ${l.v1!.phpBin}`,
     ]);
   });
 

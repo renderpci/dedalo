@@ -86,7 +86,7 @@ function apacheVhost(layout: AgentLayout, port: number, before: string | null, a
   const include = webIncludePath(layout);
   writeFileSync(include, apacheWebInclude(layout));
   const vhost = insertApacheReference(`<VirtualHost 127.0.0.1:${port}>\n    ServerName museum.example.org\n</VirtualHost>\n`, layout.instance, include);
-  const site = join(SCRATCH, `site_${layout.site?.fpm.flavor}_${before ? 'after' : after ? 'before' : 'alone'}.conf`);
+  const site = join(SCRATCH, `site_${layout.site?.v1?.fpm.flavor}_${before ? 'after' : after ? 'before' : 'alone'}.conf`);
   writeFileSync(site, [before ? `Include "${before}"` : '', vhost, after ? `Include "${after}"` : ''].join('\n'));
   return site;
 }

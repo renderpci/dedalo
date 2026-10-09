@@ -313,7 +313,7 @@ function pathMeta(ctx: ActContext, item: Item, action: Extract<InitAction, { kin
 export function sharedPin(ctx: Pick<ActContext, 'layout' | 'exec' | 'root'>, path: string): PinExpectation | undefined {
   const parent = dirname(path);
   const { uid, gid: rootGid } = ctx.root ?? { uid: 0, gid: 0 };
-  if (parent === ctx.layout.state.apis.v1.shared) return { parent, uid, gid: rootGid, mode: MODES.v1Shared.mode };
+  if (ctx.layout.v1 !== null && parent === ctx.layout.v1.dirs.shared) return { parent, uid, gid: rootGid, mode: MODES.v1Shared.mode };
   if (parent !== ctx.layout.state.apis.v2.shared) return undefined;
   const gid = ctx.exec.groupId(ctx.layout.identity.v2Group);
   // No group, no expectation: a door that must pin the parent then refuses, naming it.

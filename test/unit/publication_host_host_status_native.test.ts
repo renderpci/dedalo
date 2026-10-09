@@ -63,6 +63,7 @@ interface StatusPatch {
 	rules?: Partial<AgentStatus['rules']>;
 	apis?: Partial<AgentStatus['apis']>;
 	instance_fingerprint?: string;
+	served_apis?: AgentStatus['served_apis'];
 }
 
 function agentStatus(patch: StatusPatch = {}): AgentStatus {
@@ -76,6 +77,7 @@ function agentStatus(patch: StatusPatch = {}): AgentStatus {
 			v2: { current: RELEASE, previous: null },
 			...patch.apis,
 		},
+		served_apis: patch.served_apis ?? ['v1', 'v2'],
 		rules: { server: 'apache', hash: HASH, ...patch.rules },
 		media: {
 			mode: 'shared',
@@ -422,6 +424,23 @@ describe('rules_hash', () => {
 });
 
 describe('API lockstep (spec §3)', () => {
+	test('a v2-only site (served_apis [v2]): api_v1 is ok not_served — neutral, never warn — and v2 is still checked', () => {
+		const input = withStatus({
+			served_apis: ['v2'],
+			apis: { v1: { current: null, previous: null } },
+		});
+		expect(checkOf(input, 'api_v1')).toEqual({ state: 'ok', detail: 'not_served' });
+		expect(checkOf(input, 'api_v2')).toEqual({ state: 'ok', detail: RELEASE });
+		expect(buildHostPanelRow(input).served_apis).toEqual(['v2']);
+	});
+
+	test('served_apis is null on a row whose status was not proved', () => {
+		expect(
+			buildHostPanelRow(healthy({ status: { ok: false, code: 'publication_host.unreachable' } }))
+				.served_apis,
+		).toBeNull();
+	});
+
 	test('no release installed warns', () => {
 		expect(
 			checkOf(withStatus({ apis: { v1: { current: null, previous: null } } }), 'api_v1'),
@@ -485,6 +504,7 @@ describe('buildHostPanelRow', () => {
 			rules: { expected: HASH, reported: HASH },
 			bun: { expected: BUN_PIN, reported: BUN_PIN },
 			apis: { v1: { current: RELEASE, previous: null }, v2: { current: RELEASE, previous: null } },
+			served_apis: ['v1', 'v2'],
 			token_present: true,
 			bundle_present: true,
 			pairing_proved: true,

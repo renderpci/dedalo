@@ -205,6 +205,25 @@ describe('publication_hosts.push_apis', () => {
 		);
 	});
 
+	test('a v2-only host (v1 not_served) is a landed push, never a failure', async () => {
+		const h = harness({
+			report: {
+				release: REL,
+				refused: null,
+				hosts: [
+					{
+						name: 'www',
+						v1: { action: 'none', result: 'not_served' },
+						v2: { action: 'install', result: 'ok' },
+					},
+				],
+			},
+		});
+		const response = await h.push({});
+		expect(response.data).toBe(true);
+		expect(response.msg).not.toContain('v1');
+	});
+
 	test('an unrecorded runtime is said, without turning a landed push into a failure', async () => {
 		const h = harness({ report: { ...okReport, runtime_error: 'runtime_invalid' } });
 		const response = await h.push({});

@@ -62,28 +62,37 @@ export const declarationSchema = z.strictObject({
     .strictObject({
       domain: z.string().regex(DOMAIN_PATTERN, 'must be a lower-case DNS name'),
       home: absolutePath.optional(),
+      os_family: z.enum(['debian', 'el']).optional(), // = OS_FAMILIES (tests/provision_schema.test.ts)
       api_paths: z
         .strictObject({
-          v1: z.string().regex(API_PATH_PATTERN, `must match ${API_PATH_PATTERN.source}`),
+          // v1 only with the v1 block (derive refuses it otherwise, by name).
+          v1: z.string().regex(API_PATH_PATTERN, `must match ${API_PATH_PATTERN.source}`).optional(),
           v2: z.string().regex(API_PATH_PATTERN, `must match ${API_PATH_PATTERN.source}`),
         })
         .optional(),
-      fpm: z.strictObject({
-        flavor: z.enum(['debian', 'el', 'remi']), // = FPM_FLAVORS (tests/provision_schema.test.ts)
-        version: z.string().regex(FPM_VERSION_PATTERN, `must match ${FPM_VERSION_PATTERN.source}`),
-      }),
+      // Required with the v1 block, refused without it (derive: one named refusal each way).
+      fpm: z
+        .strictObject({
+          flavor: z.enum(['debian', 'el', 'remi']), // = FPM_FLAVORS (tests/provision_schema.test.ts)
+          version: z.string().regex(FPM_VERSION_PATTERN, `must match ${FPM_VERSION_PATTERN.source}`),
+        })
+        .optional(),
     })
     .optional(),
-  v1: z.strictObject({
-    user: unixName,
-  }),
+  // OPTIONAL: absent = a v2-only instance, no PHP anywhere (layout.ts HostDeclaration.v1).
+  v1: z
+    .strictObject({
+      user: unixName,
+    })
+    .optional(),
   state_root: absolutePath,
   media: z.strictObject({
     mode: z.enum(['shared', 'copy', 'none']),
     root: absolutePath.optional(),
     selinux_label: z.literal(true).optional(),
   }),
-  php_bin: absolutePath,
+  // Only with v1 (and then required) — derive() names the field either way.
+  php_bin: absolutePath.optional(),
   bun_bin: absolutePath,
   v2: z.strictObject({
     unit: unitName,

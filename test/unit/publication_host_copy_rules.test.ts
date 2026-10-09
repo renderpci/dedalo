@@ -47,6 +47,7 @@ function status(
 		platform: 'test',
 		instance_fingerprint: '0'.repeat(64),
 		apis: { v1: { current: null, previous: null }, v2: { current: null, previous: null } },
+		served_apis: ['v1', 'v2'],
 		rules: { server, hash: null },
 		media: {
 			mode,

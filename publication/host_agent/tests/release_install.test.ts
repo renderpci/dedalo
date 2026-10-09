@@ -6,12 +6,12 @@
  * release and the unit restarted on it.
  */
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, lstatSync } from 'node:fs';
 import { chmod, mkdir, readdir, readFile, readlink, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readAudit } from '../src/audit';
-import { config } from '../src/config';
+import { config, hostServedApis, servedApis, setV2OnlyForTests } from '../src/config';
 import { type ApiError, ValidationError } from '../src/errors';
 import { createExec, setExecForTests } from '../src/exec';
 import {
@@ -389,5 +389,51 @@ describe('retention', () => {
     const kept = await releaseIds('v1');
     expect(kept.length).toBe(config.RELEASES_RETAINED);
     expect(kept).toContain(currentRelease('v1') as string);
+  });
+});
+
+describe('a v2-only host (no PHP_BIN: the declaration has no v1 block)', () => {
+  let restoreServed: (() => void) | null = null;
+  beforeEach(() => {
+    restoreServed = setV2OnlyForTests(true);
+  });
+  afterEach(() => restoreServed?.());
+
+  test('servedApis: v2 always, v1 exactly when PHP_BIN is set', () => {
+    expect(servedApis({})).toEqual(['v2']);
+    expect(servedApis({ PHP_BIN: '/usr/bin/php' })).toEqual(['v1', 'v2']);
+    expect(hostServedApis()).toEqual(['v2']);
+    const back = setV2OnlyForTests(false);
+    expect(hostServedApis()).toEqual(['v1', 'v2']);
+    back();
+  });
+
+  test('a v1 install is refused api_not_served before the body is read: nothing staged, linted or promoted; audited', async () => {
+    const r = await refusal(install('v1', A, V1_TREE));
+    expect(r.status).toBe(422);
+    expect(r.reason).toBe('api_not_served');
+    expect(host.state.lints).toEqual([]);
+    expect(await releaseIds('v1')).toEqual([]);
+    expect(await stagingEntries('v1')).toEqual([]);
+    expect(currentRelease('v1')).toBeNull();
+    const last = (await readAudit()).at(-1);
+    expect(last).toMatchObject({ action: 'release.install', outcome: 'refused', detail: { api: 'v1', reason: 'api_not_served' } });
+  });
+
+  test('a v1 rollback is refused api_not_served, even with releases on disk', async () => {
+    const served = setV2OnlyForTests(false);
+    await install('v1', A, V1_TREE);
+    await install('v1', B, V1_TREE);
+    served();
+    const r = await refusal(rollbackRelease('v1', 'tester'));
+    expect(r.status).toBe(422);
+    expect(r.reason).toBe('api_not_served');
+    expect(currentRelease('v1')).toBe(B);
+  });
+
+  test('v2 is served as before', async () => {
+    host.state.scratchHealthy.add(A);
+    host.state.liveHealthy.add(A);
+    expect((await install('v2', A, V2_TREE)).to).toBe(A);
   });
 });

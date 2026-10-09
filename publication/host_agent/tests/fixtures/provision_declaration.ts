@@ -37,3 +37,19 @@ export function tlsDeclaration(): HostDeclaration {
     web: { server: 'nginx', unit: 'nginx' },
   };
 }
+
+/**
+ * A v2-only site (no `v1` block, so no php_bin and no site.fpm): the recommended shape for a new
+ * site — no PHP anywhere. The home layout of example.org, Debian.
+ */
+export function v2OnlySiteDeclaration(overrides: Partial<HostDeclaration> = {}): HostDeclaration {
+  const { v1: _v1, php_bin: _php, ...rest } = unixDeclaration();
+  return {
+    ...rest,
+    agent_dir: '/home/example.org/host_agent',
+    state_root: '/home/example.org/dedalo',
+    bun_bin: '/home/example.org/.bun/bin/bun',
+    site: { domain: 'example.org', os_family: 'debian' },
+    ...overrides,
+  };
+}

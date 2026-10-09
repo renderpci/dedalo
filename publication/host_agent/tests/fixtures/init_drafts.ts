@@ -300,7 +300,19 @@ export function elHost(): HostFacts {
   };
 }
 
+/** The v1+v2 draft most suites judge (the PHP items); v2Draft() is the v2-only one (no PHP anywhere). */
 export function draft(overrides: Partial<DraftDeclaration> = {}): DraftDeclaration {
+  return {
+    instance: INSTANCE,
+    apis: 'v1_and_v2',
+    site: { domain: DOMAIN },
+    media: { mode: 'shared', root: '/mnt/dedalo_media' },
+    ...overrides,
+  };
+}
+
+/** The v2-only draft: no `v1` block and no `apis` — exactly a v2-only declaration's shape. */
+export function v2Draft(overrides: Partial<DraftDeclaration> = {}): DraftDeclaration {
   return {
     instance: INSTANCE,
     site: { domain: DOMAIN },

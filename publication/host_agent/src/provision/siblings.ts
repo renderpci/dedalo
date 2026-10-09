@@ -31,11 +31,11 @@ const overlap = pathsOverlap;
 
 /** The users that run code for an instance. Disjoint across instances. */
 function principals(layout: AgentLayout): ReadonlyMap<string, string> {
-  return new Map([
-    [layout.identity.agentUser, 'agent_user'],
-    [layout.identity.v1User, 'v1.user'],
-    [layout.identity.v2User, 'v2.user'],
-  ]);
+  const users = new Map([[layout.identity.agentUser, 'agent_user']]);
+  // A v2-only instance has no v1 principal.
+  if (layout.v1 !== null) users.set(layout.v1.user, 'v1.user');
+  users.set(layout.identity.v2User, 'v2.user');
+  return users;
 }
 
 /** The groups that read an instance's API configuration (its credentials). Disjoint across instances. */
@@ -114,14 +114,19 @@ export function siblingRefusals(own: AgentLayout, siblings: readonly Sibling[]):
       if (own.site.domain === other.site.domain) {
         clash(`site.domain '${own.site.domain}'`, 'one instance serves one site; declare the site once');
       }
-      if (own.site.v1Var.root === other.site.v1Var.root) {
-        clash(`the v1 pool directory '${own.site.v1Var.root}'`, 'give each instance its own paths.v1_var_base');
-      }
-      if (own.site.fpm.listen === other.site.fpm.listen) {
-        clash(`the v1 pool socket '${own.site.fpm.listen}'`, 'each instance runs its own pool on its own socket');
-      }
-      if (own.site.fpm.poolFile === other.site.fpm.poolFile) {
-        clash(`the v1 pool file '${own.site.fpm.poolFile}'`, 'each instance renders its own pool file');
+      const ownV1 = own.site.v1;
+      const otherV1 = other.site.v1;
+      // The v1 pool's own paths: only between two instances that both serve v1.
+      if (ownV1 !== null && otherV1 !== null) {
+        if (ownV1.var.root === otherV1.var.root) {
+          clash(`the v1 pool directory '${ownV1.var.root}'`, 'give each instance its own paths.v1_var_base');
+        }
+        if (ownV1.fpm.listen === otherV1.fpm.listen) {
+          clash(`the v1 pool socket '${ownV1.fpm.listen}'`, 'each instance runs its own pool on its own socket');
+        }
+        if (ownV1.fpm.poolFile === otherV1.fpm.poolFile) {
+          clash(`the v1 pool file '${ownV1.fpm.poolFile}'`, 'each instance renders its own pool file');
+        }
       }
     }
     if (own.listen.kind === 'tls' && other.listen.kind === 'tls') {

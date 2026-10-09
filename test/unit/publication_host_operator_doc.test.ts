@@ -13,7 +13,7 @@ import {
 	SELINUX_READ_ONLY_BOOLEANS,
 } from '../../publication/host_agent/src/provision/exec_contract';
 import { INIT_FLAGS } from '../../publication/host_agent/src/provision/init/args';
-import { DEFAULTS } from '../../publication/host_agent/src/provision/init/draft';
+import { DEFAULTS, draftServesV1 } from '../../publication/host_agent/src/provision/init/draft';
 import { parseDraft } from '../../publication/host_agent/src/provision/init/draft_schema';
 import { OS_SUPPORT } from '../../publication/host_agent/src/provision/init/parse/os';
 import type { HostDeclaration } from '../../publication/host_agent/src/provision/layout';
@@ -130,13 +130,13 @@ describe('publication host operator page', () => {
 		// Step 3's commands name exactly the accounts the declaration does, and the host group.
 		const step3 = section('### 3. Create the accounts', '### 4. Provision');
 		expect(step3).toContain(`--user-group ${one.identity.agentUser}`);
-		expect(step3).toContain(`--user-group ${one.identity.v1User}`);
+		expect(step3).toContain(`--user-group ${one.v1?.user}`);
 		expect(step3).toContain(`groupadd --system ${one.identity.v2Group}`);
 		expect(step3).toContain(`-g ${one.identity.v2Group} ${one.identity.v2User}`);
 		expect(step3).toContain(`groupadd --system ${PUBHOST_GROUP}`);
 		// v1 runs its own pool (decision A): never the web server's or a catch-all account.
-		expect(FORBIDDEN_V1_USERS).not.toContain(one.identity.v1User);
-		expect(one.identity.v1User).toBe(DEFAULTS.v1User(one.instance));
+		expect(FORBIDDEN_V1_USERS).not.toContain(one.v1?.user);
+		expect(one.v1?.user).toBe(DEFAULTS.v1User(one.instance));
 		for (const user of FORBIDDEN_V1_USERS) expect(page).toContain(`\`${user}\``);
 	});
 
@@ -262,6 +262,11 @@ describe('the guided install (provision init) states what the code does', () => 
 		if (!block?.[1]) throw new Error('the draft section has no json');
 		const draft = parseDraft(JSON.parse(block[1]), 'the guide');
 		expect(INSTANCE_PATTERN.test(draft.instance)).toBe(true);
+		// The first draft is the recommended v2-only one; the second asks for v1 too.
+		const drafts = [
+			...section('### The draft', '### The three lists').matchAll(/```json\n([\s\S]*?)\n```/g),
+		].map((m) => parseDraft(JSON.parse(m[1] ?? ''), 'the guide'));
+		expect(drafts.map((d) => draftServesV1(d))).toEqual([false, true]);
 		for (const name of [DEFAULTS.agentUser, DEFAULTS.v1User, DEFAULTS.v2User, DEFAULTS.v2Unit]) {
 			expect(GUIDED).toContain(`\`${name(draft.instance)}\``);
 		}
@@ -374,7 +379,7 @@ describe('the manual path follows decision A (the v1 pool) and the host map (Q1)
 			`${fpmPoolBody(layout).trimEnd()}\n`,
 		);
 		expect(page).toContain(
-			`**The v1 pool** that \`apply\` wrote, \`${layout.site?.fpm.poolFile}\``,
+			`**The v1 pool** that \`apply\` wrote, \`${layout.site?.v1?.fpm.poolFile}\``,
 		);
 	});
 
@@ -384,6 +389,22 @@ describe('the manual path follows decision A (the v1 pool) and the host map (Q1)
 		const a2enmod = step9.match(/^a2enmod (.+)$/m)?.[1]?.split(' ') ?? [];
 		expect(new Set(a2enmod)).toEqual(new Set(APACHE_MODULES));
 		expect(step9).toContain(NGINX_MAP_INCLUDE_PATH);
+	});
+
+	test('the v2-only declaration (the recommended shape) derives with no v1, and its include is EXACTLY the v2 proxy', () => {
+		const v2Only = JSON.parse(fenceAfter('**A v2-only declaration**', 'json')) as HostDeclaration;
+		const { v1: _v1, php_bin: _php, site, ...rest } = stepTwoDeclaration();
+		const { site: v2Site, ...v2Rest } = v2Only;
+		// The same declaration as step 2, minus the three v1 keys, plus site.os_family.
+		expect(v2Rest).toEqual(rest);
+		expect(v2Site).toEqual({ domain: site?.domain ?? '(no site)', os_family: 'debian' });
+		const derived = derive(v2Only);
+		expect(derived.v1).toBeNull();
+		expect(derived.servedApis).toEqual(['v2']);
+		expect(fenceAfter('**On a v2-only site the include holds**', 'apache')).toBe(
+			`${apacheWebInclude(derived).trimEnd()}\n`,
+		);
+		expect(apacheWebInclude(derived)).not.toContain('SetHandler');
 	});
 
 	test('sentences that became false are gone', () => {

@@ -198,7 +198,7 @@ export interface PublicationHostsDeps {
 	loadPanelRuntime(): Promise<PanelRuntime>;
 	/** The last round's lockstep verdict vs each row — never hashes the tree. */
 	buildApiLockstepPanel(
-		rows: readonly Pick<HostPanelRow, 'name' | 'pairing_proved' | 'apis'>[],
+		rows: readonly Pick<HostPanelRow, 'name' | 'pairing_proved' | 'apis' | 'served_apis'>[],
 		runtime: Readonly<Record<string, HostRuntime>>,
 	): ApiLockstepPanel;
 	/** THE Publication API reconciler (push_apis runs it as an apply round). */

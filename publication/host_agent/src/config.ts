@@ -102,7 +102,12 @@ export interface AgentConfig {
   WEB_CONFIGTEST_BIN: string;
   MEDIA_MODE: 'shared' | 'copy' | 'none';
   MEDIA_ROOT?: string;
-  PHP_BIN: string;
+  /**
+   * The PHP CLI that lints a v1 release (`php -l`). ABSENT = this host serves the Publication API
+   * v2 only (a declaration without a `v1` block, layout.ts): no PHP anywhere, and a v1 release or
+   * rollback is refused `api_not_served` (src/releases/install.ts). servedApis() is the one reader.
+   */
+  PHP_BIN?: string;
   V2_UNIT: string;
   V2_HEALTH_URL: string;
   RELEASES_RETAINED: number;
@@ -130,6 +135,37 @@ export interface ConfigSources {
   readonly ambient: Readonly<Record<string, string | undefined>>;
   /** `$CREDENTIALS_DIRECTORY`, or null when the process has none. */
   readonly credentialsDir: string | null;
+}
+
+/**
+ * THE APIs THIS HOST SERVES, in ['v1', 'v2'] order — v2 always; v1 exactly when PHP_BIN is set
+ * (the provisioner renders it only for a declaration with the v1 block). GET /v1/status reports it
+ * (`served_apis`); release.install / release.rollback refuse an unserved API.
+ */
+export function servedApis(cfg: Pick<AgentConfig, 'PHP_BIN'>): readonly ('v1' | 'v2')[] {
+  return cfg.PHP_BIN === undefined ? Object.freeze(['v2'] as const) : Object.freeze(['v1', 'v2'] as const);
+}
+
+/** The suite's v2-only switch (setV2OnlyForTests): null = this process's own configuration decides. */
+let v2OnlyOverride: boolean | null = null;
+
+/** THIS agent's served APIs: servedApis(config) — the one reader release.install and GET /v1/status use. */
+export function hostServedApis(): readonly ('v1' | 'v2')[] {
+  if (v2OnlyOverride === true) return servedApis({});
+  return servedApis(config);
+}
+
+/**
+ * Test seam: serve as a v2-only host (as if PHP_BIN were absent) without a second env file. Refused
+ * outside NODE_ENV=test; returns the restore.
+ */
+export function setV2OnlyForTests(v2Only: boolean): () => void {
+  if (config.NODE_ENV !== 'test') throw new Error('setV2OnlyForTests is refused outside NODE_ENV=test');
+  const previous = v2OnlyOverride;
+  v2OnlyOverride = v2Only;
+  return () => {
+    v2OnlyOverride = previous;
+  };
 }
 
 export class ConfigError extends Error {
@@ -240,7 +276,7 @@ function envObject(baseDir: string) {
     WEB_CONFIGTEST_BIN: z.string(),
     MEDIA_MODE: z.enum(['shared', 'copy', 'none']),
     MEDIA_ROOT: path.optional(),
-    PHP_BIN: bin('PHP_BIN'),
+    PHP_BIN: bin('PHP_BIN').optional(),
     V2_UNIT: unit('V2_UNIT'),
     V2_HEALTH_URL: z
       .string()

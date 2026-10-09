@@ -383,10 +383,10 @@ export function trustProblem(facts: { readonly uid: number; readonly mode: numbe
  * process gets (./access.ts), on lstat facts:
  *   - the agent: x on every directory above agent_dir; r+x on every directory and r on every
  *     file of agent_dir's tree (walked whole — symlinks in it are entries, not followed);
- *     r+x on bun_bin and php_bin (it runs the v1 syntax check) and x above each;
+ *     r+x on bun_bin and php_bin (it runs the v1 syntax check — v1 only) and x above each;
  *   - v2 (its unit and the scratch template): r+x on bun_bin, x above it;
  *   - x above state_root for the agent, v2 and v1 (the site's PHP-FPM pool reads the v1
- *     releases and config through it). state_root's own tree is the provisioner's (MODES):
+ *     releases and config through it; no v1 account on a v2-only instance). state_root's own tree is the provisioner's (MODES):
  *     not re-judged here.
  */
 
@@ -400,7 +400,8 @@ interface Runner {
 
 /** The agent's, v2's and v1's credentials, from the units this provisioner renders (render/unit_*.ts). */
 function runners(layout: AgentLayout, host: HostState, refusals: string[]): { agent: Runner | null; v2: Runner | null; v1: Runner | null } {
-  const { agentUser, v1User, v2User } = layout.identity;
+  const { agentUser, v2User } = layout.identity;
+  const v1User = layout.v1?.user ?? null;
   const database = (user: string, field: string): AccountGroups | null => {
     if (!host.users.has(user)) return null; // refused where accounts are checked
     const found = host.accountGroups.get(user);
@@ -430,8 +431,8 @@ function runners(layout: AgentLayout, host: HostState, refusals: string[]): { ag
   if (v2Cred) v2 = { name: v2User, role: 'v2', cred: v2Cred };
 
   let v1: Runner | null = null;
-  const v1Db = database(v1User, 'v1.user');
-  if (v1Db) v1 = { name: v1User, role: 'v1', cred: accountCredentials(host.users.get(v1User) as number, v1Db) };
+  const v1Db = v1User === null ? null : database(v1User, 'v1.user');
+  if (v1Db && v1User !== null) v1 = { name: v1User, role: 'v1', cred: accountCredentials(host.users.get(v1User) as number, v1Db) };
   return { agent, v2, v1 };
 }
 
@@ -516,7 +517,7 @@ export function accessRefusals(layout: AgentLayout, host: HostState): string[] {
   // The pinned runtimes, for whoever runs them.
   runs(agent, 'bun_bin', layout.bunBin);
   runs(v2, 'bun_bin', layout.bunBin);
-  runs(agent, 'php_bin', layout.phpBin);
+  if (layout.v1 !== null) runs(agent, 'php_bin', layout.v1.phpBin);
   // The way down to the state root (its own tree is MODES').
   for (const runner of [agent, v2, v1]) traverse(runner, layout.state.root);
   return refusals;
@@ -531,14 +532,15 @@ export function accessRefusals(layout: AgentLayout, host: HostState): string[] {
  * the install guide's step-7 request through the socket is that proof.
  */
 export function engineGroupRefusal(layout: AgentLayout, host: HostState): string | null {
-  const { agentUser, v1User, v2User, v2Group, engineGroup } = layout.identity;
+  const { agentUser, v2User, v2Group, engineGroup } = layout.identity;
+  const v1User = layout.v1?.user ?? null;
   if (layout.listen.kind !== 'unix' || engineGroup === null) return null;
   const gid = host.groups.get(engineGroup);
   if (gid === undefined) return null; // refused where groups are checked
   const primaryOf = (user: string): number | undefined => host.accountGroups.get(user)?.primary;
   let is: string | null = null;
   if (primaryOf(agentUser) === gid) is = "the agent's own group";
-  else if (primaryOf(v1User) === gid) is = "the v1 user's group";
+  else if (v1User !== null && primaryOf(v1User) === gid) is = "the v1 user's group";
   // By NAME: the declaration names both; the account primaries can only be compared by gid.
   else if (engineGroup === v2Group) is = 'the v2 group';
   else if (primaryOf(v2User) === gid) is = "the v2 user's group";
@@ -796,13 +798,16 @@ export function extraDirectories(layout: AgentLayout): ExtraDir[] {
     );
   }
   if (layout.site !== null) {
-    const v1 = layout.site.v1Var;
-    dirs.push(
-      { path: dirname(v1.root), modeKey: 'hostBase', hostWide: false },
-      { path: v1.root, modeKey: 'v1Var', hostWide: false },
-      { path: v1.tmp, modeKey: 'v1VarWork', hostWide: false },
-      { path: v1.log, modeKey: 'v1VarWork', hostWide: false },
-    );
+    // The v1 pool's own directories: none on a v2-only instance.
+    if (layout.site.v1 !== null) {
+      const v1 = layout.site.v1.var;
+      dirs.push(
+        { path: dirname(v1.root), modeKey: 'hostBase', hostWide: false },
+        { path: v1.root, modeKey: 'v1Var', hostWide: false },
+        { path: v1.tmp, modeKey: 'v1VarWork', hostWide: false },
+        { path: v1.log, modeKey: 'v1VarWork', hostWide: false },
+      );
+    }
     // The site's web server logs, outside the home (layout.ts webLogBase): its parent is the web server package's.
     if (isHomeLayout(layout)) dirs.push({ path: layout.site.webLogsDir, modeKey: 'webLogs', hostWide: false });
   }
@@ -858,7 +863,8 @@ export function plan(
   // 1. What the provisioner never creates: accounts. Each refusal names the declaration field
   //    and the exact command, in the order they must run (a group before the user joining it).
   const nologin = 'useradd --system --no-create-home --shell /usr/sbin/nologin';
-  const { agentUser, v1User, v2User, v2Group, engineGroup } = layout.identity;
+  const { agentUser, v2User, v2Group, engineGroup } = layout.identity;
+  const v1User = layout.v1?.user ?? null;
   if (!host.groups.has('root')) refusals.push(`group 'root' does not exist — this is not a usable host`);
   if (!host.users.has('root')) refusals.push(`user 'root' does not exist — this is not a usable host`);
   if (!host.groups.has(PUBHOST_GROUP)) {
@@ -880,7 +886,8 @@ export function plan(
   if (!host.users.has(agentUser)) {
     refusals.push(`user '${agentUser}' (agent_user) does not exist — create it: ${nologin} --user-group ${agentUser}`);
   }
-  if (!host.users.has(v1User)) {
+  // No v1 account on a v2-only instance (the declaration has no v1 block).
+  if (v1User !== null && !host.users.has(v1User)) {
     // Decision A: v1 runs in its OWN dedicated pool under its own account, never the site's pool.
     refusals.push(
       `user '${v1User}' (v1.user) does not exist — create it: ${nologin} --user-group ${v1User}; ` +
@@ -903,13 +910,13 @@ export function plan(
   const lstat = (path: string): PathFacts | undefined => host.paths.get(path);
   const PINNED: (readonly [string, string, 'file' | 'dir', boolean])[] = [
     ['web.configtest_bin', layout.web.configtestBin, 'file', true],
-    ['php_bin', layout.phpBin, 'file', true],
+    ...(layout.v1 === null ? [] : [['php_bin', layout.v1.phpBin, 'file', true] as const]),
     ['bun_bin', layout.bunBin, 'file', true],
     ['agent_dir', layout.agentDir, 'dir', false],
     ['agent entry', layout.agentEntry, 'file', false],
   ];
   // The FPM master root runs as `<bin> -t` (the fpm validator): pinned code like the configtest binary.
-  if (layout.site !== null) PINNED.push(['site.fpm.bin', layout.site.fpm.bin, 'file', true]);
+  if (layout.site?.v1 != null) PINNED.push(['site.fpm.bin', layout.site.v1.fpm.bin, 'file', true]);
   for (const [field, path, kind, executable] of PINNED) {
     const facts = host.paths.get(path);
     if (!facts && path === layout.web.configtestBin) {
@@ -1089,7 +1096,7 @@ export function plan(
   for (const dir of extra) {
     if (!wanted.has(dir.path)) wanted.set(dir.path, dir);
   }
-  for (const root of [layout.host.base, ...(layout.site === null ? [] : [dirname(layout.site.v1Var.root)])]) {
+  for (const root of [layout.host.base, ...(layout.site?.v1 == null ? [] : [dirname(layout.site.v1.var.root)])]) {
     for (const dir of ancestorsBelow(root, host.trustRoot)) {
       if (!host.paths.has(dir) && !wanted.has(dir)) wanted.set(dir, { path: dir, modeKey: 'hostBase', hostWide: true });
     }
@@ -1380,7 +1387,7 @@ export function plan(
   // 7d. A reload needs a running server: reloading a stopped unit fails after the files moved.
   for (const [effect, unit, what] of [
     ['reload_web', layout.web.unit, 'the web server'],
-    ['reload_fpm', layout.site?.fpm.unit ?? '', 'PHP-FPM'],
+    ['reload_fpm', layout.site?.v1?.fpm.unit ?? '', 'PHP-FPM'],
   ] as const) {
     if (effects.has(effect) && host.units.get(unit)?.active === false) {
       refusals.push(`${what} unit '${unit}' is not running — its reload would fail: systemctl enable --now ${unit}.service, then re-run`);
@@ -1398,8 +1405,8 @@ export function plan(
   // 9. The tail.
   const tail: Action[] = [...selinuxTail];
   if (effects.has('daemon_reload')) tail.push({ op: 'daemon-reload' });
-  if (effects.has('reload_fpm') && layout.site !== null) {
-    const { bin, unit } = layout.site.fpm;
+  if (effects.has('reload_fpm') && layout.site?.v1 != null) {
+    const { bin, unit } = layout.site.v1.fpm;
     tail.push({ op: 'fpm-configtest', bin, lock: webLock });
     tail.push({ op: 'fpm-reload', unit, bin, restore: [...validated.fpm] });
   }
@@ -1458,8 +1465,8 @@ function validatorFor(layout: AgentLayout, validate: ArtifactValidator | null): 
     case 'web':
       return { kind: 'web', server: layout.web.server, bin: layout.web.configtestBin, unit: layout.web.unit };
     case 'fpm': {
-      if (layout.site === null) throw new Error('plan: an fpm validator without a site');
-      return { kind: 'fpm', bin: layout.site.fpm.bin, unit: layout.site.fpm.unit };
+      if (layout.site?.v1 == null) throw new Error('plan: an fpm validator without a v1 site');
+      return { kind: 'fpm', bin: layout.site.v1.fpm.bin, unit: layout.site.v1.fpm.unit };
     }
     default: {
       const unreachable: never = validate;
@@ -1471,13 +1478,13 @@ function validatorFor(layout: AgentLayout, validate: ArtifactValidator | null): 
 /** A missing parent, said in the operator's terms where the parent is a package's directory. */
 function missingParent(layout: AgentLayout, art: Artifact): string {
   const parent = dirname(art.path);
-  if (art.kind === 'fpm_pool' && layout.site !== null) {
-    const { flavor, version } = layout.site.fpm;
+  if (art.kind === 'fpm_pool' && layout.site?.v1 != null) {
+    const { flavor, version } = layout.site.v1.fpm;
     return `the PHP-FPM pool directory '${parent}' does not exist — is PHP-FPM ${version} (${flavor}) installed? (site.fpm)`;
   }
   if (art.kind === 'nginx_map_include') return `nginx's conf.d '${parent}' does not exist — is nginx installed? (paths.nginx_conf_d)`;
   if (art.kind === 'logrotate') return `'${parent}' does not exist — is logrotate installed? The site's web logs (${layout.site?.webLogsDir ?? 'the site log directory'}) are rotated from there (paths.logrotate_dir)`;
-  if (art.kind === 'logrotate_v1') return `'${parent}' does not exist — is logrotate installed? The v1 API's own log (${layout.site?.v1Var.log ?? 'the v1 log directory'}) is rotated from there (paths.logrotate_dir)`;
+  if (art.kind === 'logrotate_v1') return `'${parent}' does not exist — is logrotate installed? The v1 API's own log (${layout.site?.v1?.var.log ?? 'the v1 log directory'}) is rotated from there (paths.logrotate_dir)`;
   return `parent directory '${parent}' of '${art.path}' does not exist`;
 }
 
@@ -1583,9 +1590,10 @@ function overrides(layout: AgentLayout): string[] {
   ];
   pairs.push(['paths.logrotate_dir', dirname(layout.logrotatePath), DEFAULT_PATHS.logrotateDir]);
   if (layout.site !== null) {
-    pairs.push(['paths.v1_var_base', dirname(dirname(layout.site.v1Var.root)), DEFAULT_PATHS.v1VarBase]);
-    const fpm = layout.site.fpm;
-    pairs.push(['paths.web_log_base', dirname(layout.site.webLogsDir), webLogBase(layout.web.server, fpm.flavor)]);
+    if (layout.site.v1 !== null) {
+      pairs.push(['paths.v1_var_base', dirname(dirname(layout.site.v1.var.root)), DEFAULT_PATHS.v1VarBase]);
+    }
+    pairs.push(['paths.web_log_base', dirname(layout.site.webLogsDir), webLogBase(layout.web.server, layout.site.family)]);
   }
   for (const [field, value, normal] of pairs) if (value !== normal) set.push(`${field} = ${value}`);
   return set;

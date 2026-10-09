@@ -277,6 +277,9 @@ then be enough to drive the host. With mTLS it is useless without the engine's c
 
 ## 3. Publication API deployment
 
+> **Addendum 2026-10-09 — the Publication API v1 is OPTIONAL** (§3.1). Read it first: the
+> v1 tree below exists only on an instance that declares v1.
+
 Each API is its own deployable on the publication host, code from the engine's verified
 release, state outside the code:
 
@@ -365,6 +368,42 @@ release, state outside the code:
     `src/core/publication_host/runtime.ts`) and shown red on failure. A partial success is
     visible, never hidden. The panel shows the engine release beside each host's two API
     releases and flags a mismatch.
+
+### 3.1 v1 optional, v2-only sites (2026-10-09)
+
+The Publication API v1 is legacy (websites built for v6) and will be removed. It is
+OPTIONAL now so that its removal later is a DELETION, never a redesign: every v1 branch is
+already guarded by one fact, and deleting v1 deletes those branches.
+
+- **The declaration rule.** v1 is the `v1` block. A declaration WITHOUT it is a v2-only
+  instance with no PHP anywhere: no PHP-FPM pool, no PHP runtime, no v1 account, no v1
+  tree under the state root, no v1 web handler, no v1 log rotation. The v1-only keys —
+  `php_bin`, `site.fpm`, `site.api_paths.v1`, `paths.fpm_pool_dir`, `paths.v1_var_base` —
+  are refused by name without it; with it, `php_bin` is required (and `site.fpm` with a
+  site). A v2-only site declares `site.os_family` (`debian` | `el`, which places the site's
+  web logs and their log group); beside `site.fpm` it is optional and must agree with the
+  flavour (`remi` is `el`). `derive()` carries `layout.v1 = null`, `site.v1 = null` and
+  `servedApis = ['v2']`; every consumer (renderers, plan, apply, SELinux table, access law,
+  siblings, init) branches on those nulls.
+- **The agent.** `PHP_BIN` is rendered only for a v1 instance; its absence IS "v2-only"
+  (`src/config.ts` `servedApis`). The agent then refuses a v1 install or rollback before
+  reading the body: 422 release-refused, closed reason `api_not_served`.
+- **The wire** (`engineering/wire_contract/WC-2026-10-09-publication-host-v2-only-site.md`):
+  `GET /v1/status` carries a required `served_apis` (`["v1","v2"]` or `["v2"]`); `apis`
+  keeps both keys, an unserved one `{current: null, previous: null}`.
+- **The engine.** The reconciler builds and pushes no v1 bundle to a host whose status does
+  not serve v1 (`result: 'not_served'`, never drift, never a failed push); the panel's v1
+  row on such a host is *Not served*, a neutral state.
+- **`provision init`.** The draft-only key `apis` (`v2_only` | `v1_and_v2`) chooses; absent,
+  the draft's own `v1` block decides exactly as in a declaration (no block = v2-only).
+  `v2_only` beside a v1 key is refused by name. A v2-only run discovers no PHP (no FPM
+  install, no PHP binary run, no `php.conf` read) and emits no PHP item (`host.php_mode`,
+  `host.fpm_install`, `host.fpm_cli`, `host.remi_label`, `declaration.fpm`,
+  `declaration.v1_user`, `account.v1_user`, `api_config.v1_db_transport`,
+  `selinux.db_connect`, `api_config.v1_config`); `declaration.apis` states the choice, and
+  `web.modules` does not require `proxy_fcgi`. v2-only is the recommended shape for a new
+  site; the committed example is
+  `publication/host_agent/deploy/examples/instance.site_v2_only.example.json`.
 
 ## 4. Media URL
 

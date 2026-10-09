@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import packageJson from '../package.json';
-import { config } from '../src/config';
+import { config, setV2OnlyForTests } from '../src/config';
 import { probeMedia } from '../src/media/probe';
 import { apiLayout, promote } from '../src/releases/store';
 import { AGENT_VERSION, STATUS_APIS, buildStatus, stateRootFreeBytes, type AgentStatus } from '../src/routes/status';
@@ -74,6 +74,46 @@ describe('GET /v1/status', () => {
     const body = await getStatus();
     expect(body.apis.v2).toEqual({ current: '7.0.2_bbbbbbb', previous: '7.0.1_aaaaaaa' });
     expect(body.apis.v1).toEqual({ current: null, previous: null });
+  });
+
+  test('served_apis: v1 and v2 with PHP_BIN; v2 only without — the v1 slot then empty, never read from disk', async () => {
+    expect((await getStatus()).served_apis).toEqual(['v1', 'v2']);
+    // A v1 release on disk is not reported by a host that does not serve v1.
+    await plantRelease('v1', '7.0.1_aaaaaaa');
+    await promote('v1', '7.0.1_aaaaaaa');
+    expect((await getStatus()).apis.v1.current).toBe('7.0.1_aaaaaaa');
+    const restore = setV2OnlyForTests(true);
+    try {
+      const body = await getStatus();
+      expect(body.served_apis).toEqual(['v2']);
+      expect(body.apis.v1).toEqual({ current: null, previous: null });
+      expect(Object.keys(body.apis).sort()).toEqual(['v1', 'v2']);
+    } finally {
+      restore();
+    }
+  });
+
+  test('a v1 install over HTTP on a v2-only host: 422 release-refused, reason api_not_served', async () => {
+    const restore = setV2OnlyForTests(true);
+    try {
+      const res = await routeRequest(
+        new Request(`http://localhost${BASE}/v1/releases/v1`, {
+          method: 'POST',
+          headers: {
+            ...AUTH,
+            'content-type': 'application/gzip',
+            'x-dedalo-actor': 'tester',
+            'x-release-id': '7.0.1_aaaaaaa',
+            'x-bundle-sha256': 'a'.repeat(64),
+          },
+          body: new Uint8Array([1, 2, 3]),
+        }),
+      );
+      expect(res.status).toBe(422);
+      expect(await res.json()).toMatchObject({ type: expect.stringContaining('release-refused'), reason: 'api_not_served' });
+    } finally {
+      restore();
+    }
   });
 
   test('rules.hash is the config-hash stamp of the live include', async () => {

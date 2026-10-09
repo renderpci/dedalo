@@ -178,7 +178,10 @@ export function selinuxRules(layout: AgentLayout, facts: SelinuxRuleFacts = DEFA
   rules.push(
     rule('S', S, 'd', 'usr_t', false),
     rule('S/publication_api', layout.state.publicationApi, 'd', 'usr_t', false),
-    rule('S/publication_api/v1', layout.state.apis.v1.root, 'a', 'httpd_sys_content_t', true),
+  );
+  // The v1 tree the web server serves (and the v1 pool runs): none on a v2-only instance.
+  if (layout.v1 !== null) rules.push(rule('S/publication_api/v1', layout.v1.dirs.root, 'a', 'httpd_sys_content_t', true));
+  rules.push(
     rule('S/rules', layout.state.rules, 'a', 'httpd_config_t', true),
     rule('A', layout.agentDir, 'a', 'usr_t', true),
   );
@@ -187,10 +190,10 @@ export function selinuxRules(layout: AgentLayout, facts: SelinuxRuleFacts = DEFA
   rules.push(rule('B', layout.bunBin, 'f', 'bin_t', false));
   // No rule for the site's web logs: they live in /var/log/<server>/<domain> (layout.ts webLogBase),
   // which the policy's own `/var/log/(httpd|nginx)(/.*)?` rule already types httpd_log_t.
-  if (layout.site !== null) {
+  if (layout.site?.v1 != null) {
     rules.push(
-      rule('V/tmp', layout.site.v1Var.tmp, 'a', 'httpd_sys_rw_content_t', true),
-      rule('V/log', layout.site.v1Var.log, 'a', 'httpd_log_t', true),
+      rule('V/tmp', layout.site.v1.var.tmp, 'a', 'httpd_sys_rw_content_t', true),
+      rule('V/log', layout.site.v1.var.log, 'a', 'httpd_log_t', true),
     );
   }
   if (layout.media.root !== null && facts.mediaLabelable) {

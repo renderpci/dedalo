@@ -6,12 +6,12 @@
  */
 import { describe, expect, test } from 'bun:test';
 import type { DraftCompletion, DraftDeclaration } from '../src/provision/init/draft';
-import { DEFAULTS, LAYOUTS, completeDraft, fpmOptionId, homeCannotBeRoot, layoutDecisionFor, versionAtLeast, vhostSha8 } from '../src/provision/init/draft';
-import { DraftError, draftSchema, parseDraft } from '../src/provision/init/draft_schema';
+import { DEFAULTS, LAYOUTS, completeDraft, draftServesV1, fpmOptionId, homeCannotBeRoot, layoutDecisionFor, versionAtLeast, vhostSha8 } from '../src/provision/init/draft';
+import { DRAFT_APIS, DraftError, draftSchema, parseDraft } from '../src/provision/init/draft_schema';
 import type { HostFacts } from '../src/provision/init/types';
 import { DECLARATION_KEY_ORDER, canonicalDeclaration, parseDeclaration } from '../src/provision/schema';
 import { unixDeclaration } from './fixtures/provision_declaration';
-import { DOMAIN, HOME, INSTANCE, appStreamFpm, debianFpm, debianHost, declaredFresh, draft, elHost, remiFpm, vhost, workUnit } from './fixtures/init_drafts';
+import { DOMAIN, HOME, INSTANCE, appStreamFpm, debianFpm, debianHost, declaredFresh, draft, elHost, remiFpm, v2Draft, vhost, workUnit } from './fixtures/init_drafts';
 
 function valid(completion: DraftCompletion) {
   expect(completion.unfilled).toEqual([]);
@@ -51,11 +51,12 @@ describe('parseDraft (draft_schema.ts)', () => {
     expect(() => parseDraft({ ...draft(), site: { domain: DOMAIN, fpm: { flavor: 'suse', version: '8.2' } } }, 'd')).toThrow(DraftError);
   });
 
-  test("every draft key but 'layout' is a declaration key (built from schema.ts, never restated)", () => {
-    const keys = Object.keys(draftSchema.shape).filter(key => key !== 'layout');
+  test("every draft key but 'layout' and 'apis' is a declaration key (built from schema.ts, never restated)", () => {
+    const keys = Object.keys(draftSchema.shape).filter(key => key !== 'layout' && key !== 'apis');
     expect(keys.sort()).toEqual(Object.keys(DECLARATION_KEY_ORDER).sort());
     expect(LAYOUTS).toEqual(['home', 'system']);
     expect(draftSchema.shape.layout.unwrap().options).toEqual([...LAYOUTS]);
+    expect(draftSchema.shape.apis.unwrap().options).toEqual([...DRAFT_APIS]);
   });
 });
 
@@ -197,11 +198,11 @@ describe('completeDraft: fields', () => {
     const completion = completeDraft(draft(), debianHost());
     const { declaration, layout } = valid(completion);
     expect(declaration.site?.fpm).toEqual({ flavor: 'debian', version: '8.2' });
-    expect(layout.site?.fpm.listen).toBe(`/run/php/dedalo-${INSTANCE}-v1.sock`);
-    expect(layout.site?.fpm.webUser).toBe('www-data');
+    expect(layout.site?.v1?.fpm.listen).toBe(`/run/php/dedalo-${INSTANCE}-v1.sock`);
+    expect(layout.site?.v1?.fpm.webUser).toBe('www-data');
     expect(declaration.php_bin).toBe('/usr/bin/php8.2');
     expect(declaration.agent_user).toBe(DEFAULTS.agentUser(INSTANCE));
-    expect(declaration.v1.user).toBe(`${INSTANCE}_v1`);
+    expect(declaration.v1?.user).toBe(`${INSTANCE}_v1`);
     expect(declaration.v2).toEqual({ unit: DEFAULTS.v2Unit(INSTANCE), user: `${INSTANCE}_v2`, group: `${INSTANCE}_v2`, port: 3100, health_url: 'http://127.0.0.1:3100/health' });
     expect(declaration.engine_group).toBe('dedalo');
     expect(declaration.listen).toEqual({ kind: 'unix' });
@@ -217,8 +218,8 @@ describe('completeDraft: fields', () => {
   test('EL: AppStream 8.0 is below V1_PHP_FLOOR, so Remi 8.4 is the only candidate; the web user is apache', () => {
     const { declaration, layout } = valid(completeDraft(draft(), elHost()));
     expect(declaration.site?.fpm).toEqual({ flavor: 'remi', version: '8.4' });
-    expect(layout.site?.fpm.unit).toBe('php84-php-fpm');
-    expect(layout.site?.fpm.webUser).toBe('apache');
+    expect(layout.site?.v1?.fpm.unit).toBe('php84-php-fpm');
+    expect(layout.site?.v1?.fpm.webUser).toBe('apache');
   });
 
   test('several FPM installs: a decision; the vhost handler wins, then Remi, AppStream, Debian; answers choose', () => {
@@ -245,7 +246,7 @@ describe('completeDraft: fields', () => {
   test('a draft naming its FPM keeps it, matched against the installs (or none)', () => {
     const completion = completeDraft(draft({ site: { domain: DOMAIN, fpm: { flavor: 'debian', version: '8.4' } } }), debianHost());
     expect(completion.fpm).toBeNull();
-    expect(valid(completion).declaration.site?.fpm.version).toBe('8.4');
+    expect(valid(completion).declaration.site?.fpm?.version).toBe('8.4');
   });
 
   test('vhosts: several exact ones (80 + 443) propose the TLS one; alias-only, crowded or none are blocking', () => {
@@ -298,7 +299,7 @@ describe('completeDraft: fields', () => {
     expect(row?.blocking).toBe(true);
     expect(row?.options.map(option => option.id)).toEqual(['act', 'manual']);
     expect(open.layoutError).toMatch(/v1\.user/);
-    expect(valid(completeDraft(bad, debianHost(), { answers: answers({ 'declaration.v1_user': 'act' }) })).declaration.v1.user).toBe(`${INSTANCE}_v1`);
+    expect(valid(completeDraft(bad, debianHost(), { answers: answers({ 'declaration.v1_user': 'act' }) })).declaration.v1?.user).toBe(`${INSTANCE}_v1`);
     // The web server's own run user is refused even when it is not on the fixed list.
     const own = completeDraft(draft({ v1: { user: 'www' } }), { ...debianHost(), web: { ...debianHost().web, runUser: 'www' } });
     expect(decision(own, 'declaration.v1_user')?.blocking).toBe(true);
@@ -359,5 +360,59 @@ describe('completeDraft: fields', () => {
     expect(versionAtLeast('1.20.1', '1.14')).toBe(true);
     expect(versionAtLeast('1.12.2', '1.14')).toBe(false);
     expect(versionAtLeast('x', '1')).toBe(false);
+  });
+});
+
+describe('the APIs a draft serves (draft-only `apis`, else its own v1 block)', () => {
+  test('draftServesV1: apis wins; absent, the v1 block decides — a declaration is a valid draft', () => {
+    expect(draftServesV1({})).toBe(false);
+    expect(draftServesV1({ v1: {} })).toBe(true);
+    expect(draftServesV1({ apis: 'v1_and_v2' })).toBe(true);
+    expect(draftServesV1({ apis: 'v2_only' })).toBe(false);
+  });
+
+  test('a v2-only draft completes with no v1, no php_bin, no site.fpm — and the host family as site.os_family', () => {
+    const debian = completeDraft(v2Draft(), debianHost());
+    const declaration = debian.declaration as NonNullable<DraftCompletion['declaration']>;
+    expect(debian.layoutError).toBeNull();
+    expect(debian.servesV1).toBe(false);
+    expect(declaration.v1).toBeUndefined();
+    expect(declaration.php_bin).toBeUndefined();
+    expect(declaration.site).toEqual({ domain: DOMAIN, os_family: 'debian' });
+    expect(debian.sources.get('site.os_family')).toContain('debian');
+    expect(debian.decisions.map(row => row.id)).not.toContain('declaration.fpm');
+    expect(debian.decisions.map(row => row.id)).not.toContain('declaration.v1_user');
+    expect(debian.fpm).toBeNull();
+    expect(debian.layout?.servedApis).toEqual(['v2']);
+    // EL, several FPM installs and none below the floor: still no PHP choice at all.
+    const el = completeDraft(v2Draft(), { ...elHost(), fpm: [remiFpm('8.2'), remiFpm('8.4')] });
+    expect(el.declaration?.site).toEqual({ domain: DOMAIN, os_family: 'el' });
+    expect(el.decisions.map(row => row.id)).not.toContain('declaration.fpm');
+    // No FPM installed at all is no unfilled field for a v2-only site.
+    expect(completeDraft(v2Draft(), { ...debianHost(), fpm: [] }).unfilled).toEqual([]);
+    // The round trip: the completed declaration is itself a v2-only draft.
+    expect(canonicalDeclaration(completeDraft(declaration, debianHost()).declaration as never)).toBe(canonicalDeclaration(declaration));
+  });
+
+  test("apis 'v1_and_v2' without a v1 block proposes the v1 account; a v1-only key in a v2-only draft is refused by name", () => {
+    const v1 = completeDraft(v2Draft({ apis: 'v1_and_v2' }), debianHost());
+    expect(v1.declaration?.v1).toEqual({ user: `${INSTANCE}_v1` });
+    expect(v1.declaration?.site?.fpm).toEqual({ flavor: 'debian', version: '8.2' });
+    const refused = (raw: unknown): string[] => {
+      try {
+        parseDraft(raw, 'd');
+      } catch (error) {
+        return (error as DraftError).issues.map(issue => issue.path);
+      }
+      return [];
+    };
+    expect(refused({ ...v2Draft({ apis: 'v2_only' }), v1: { user: 'x_v1' } })).toEqual(['v1']);
+    expect(refused({ ...v2Draft({ apis: 'v2_only' }), php_bin: '/usr/bin/php' })).toEqual(['php_bin']);
+    expect(refused({ ...v2Draft({ apis: 'v2_only' }), site: { domain: DOMAIN, fpm: { flavor: 'debian', version: '8.2' } } })).toEqual(['site.fpm']);
+    expect(refused({ ...v2Draft({ apis: 'v2_only' }), site: { domain: DOMAIN, api_paths: { v1: '/a', v2: '/b' } } })).toEqual(['site.api_paths.v1']);
+    expect(refused({ ...v2Draft({ apis: 'v1_and_v2' }), php_bin: '/usr/bin/php' })).toEqual([]);
+    expect(refused({ ...v2Draft(), apis: 'both' })).toEqual(['apis']);
+    // Without `apis`, a stray php_bin is the derive refusal (named), never silently dropped.
+    expect(completeDraft(v2Draft({ php_bin: '/usr/bin/php' }), debianHost()).layoutError).toMatch(/^php_bin: /);
   });
 });

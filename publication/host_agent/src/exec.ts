@@ -177,6 +177,8 @@ export function createExec(cfg: AgentConfig, spawner: Spawner = bunSpawner): Exe
       if (!real.startsWith(stateRoot + sep)) {
         throw new ValidationError(`phpLint refuses '${file}': it is not under STATE_ROOT.`);
       }
+      // A v2-only host has no PHP: install.ts refuses a v1 release before any lint (api_not_served).
+      if (cfg.PHP_BIN === undefined) throw new Error('exec: phpLint on a host without PHP_BIN (it serves v2 only)');
       return spawner.run([cfg.PHP_BIN, '-l', real], { env: env() });
     },
     v2ScratchBoot: async (releaseDir, port) => {

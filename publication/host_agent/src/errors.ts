@@ -78,6 +78,9 @@ export const REASON_CODES = Object.freeze([
   'map_contribution_newer',
   'map_envelope_rebind',
   'map_renderer_missing',
+  // release.install / release.rollback of an API this host does not serve (a v2-only host: no
+  // PHP_BIN, src/config.ts servedApis): 422 ReleaseRefusedError, the body never read.
+  'api_not_served',
 ] as const);
 
 export type ReasonCode = (typeof REASON_CODES)[number];
@@ -209,6 +212,8 @@ export const RELEASE_REFUSAL_REASONS = Object.freeze([
   'no_current_release',
   /** The release store refused (a corrupt `current`, a non-directory release path); `store_reason` names it. */
   'store_refused',
+  /** The API is not served here: a v1 release (or rollback) on a v2-only host (no PHP_BIN). */
+  'api_not_served',
 ] as const satisfies readonly ReasonCode[]);
 
 export type ReleaseRefusalReason = (typeof RELEASE_REFUSAL_REASONS)[number];

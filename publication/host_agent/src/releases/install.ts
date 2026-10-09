@@ -30,7 +30,7 @@ import { existsSync, lstatSync } from 'node:fs';
 import { readdir, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { type AuditOutcome, audit } from '../audit';
-import { config } from '../config';
+import { config, hostServedApis } from '../config';
 import { ApiError, ConflictError, ReleaseRefusedError, ValidationError } from '../errors';
 import { exec } from '../exec';
 import {
@@ -156,9 +156,22 @@ function assertApi(api: string): asserts api is ApiName {
   if (api !== 'v1' && api !== 'v2') throw new ValidationError('api must be v1 or v2');
 }
 
+/**
+ * A v2-only host (no PHP_BIN: the declaration has no v1 block) serves no v1 — no tree, no pool, no
+ * PHP to lint with. Refused before the body is read and before anything is touched.
+ */
+function assertServed(api: ApiName, verb: 'install' | 'rollback'): void {
+  if (hostServedApis().includes(api)) return;
+  throw new ReleaseRefusedError(
+    'api_not_served',
+    `this host does not serve the Publication API ${api} (it is provisioned for ${hostServedApis().join(', ')} only), so the ${verb} was refused; nothing was changed`,
+  );
+}
+
 async function installLocked(req: InstallRequest): Promise<InstallResult> {
   const { api, releaseId } = req;
   try {
+    assertServed(api, 'install');
     sharedPreflight(api);
   } catch (error) {
     await discard(req.body);
@@ -512,6 +525,7 @@ export async function rollbackRelease(api: ApiName, actor: string): Promise<{ fr
   assertApi(api);
   const release = claim(api, 'rollback');
   try {
+    assertServed(api, 'rollback');
     await sweepInterrupted(api);
     const from = currentRelease(api);
     if (from === null) {

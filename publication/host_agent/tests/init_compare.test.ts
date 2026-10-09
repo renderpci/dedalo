@@ -33,6 +33,7 @@ import {
   elHost,
   remiFpm,
   stagedSource,
+  v2Draft,
   vhost,
   withInstanceAccounts,
   workUnit,
@@ -424,6 +425,24 @@ const ROWS: readonly (readonly [string, () => Scn, string, Expect])[] = [
   ['pair engine', () => converged(), 'pair.engine', { list: 'change', action: 'pair' }],
   ['keep ref', () => ({}), 'init.keep_ref', { list: 'change', action: 'keep_ref' }],
   ['keep ref no source', () => ({ ctx: { source: null } }), 'init.keep_ref', { list: 'right' }],
+  // v2-only (no v1 block in the draft, or apis 'v2_only'): no PHP item at all.
+  ['apis v1+v2', () => ({}), 'declaration.apis', { list: 'right', fact: /^v1 and v2: the Publication API v1 \(legacy/ }],
+  ['apis v2 only', () => ({ draft: v2Draft() }), 'declaration.apis', { list: 'right', fact: /^v2 only: no PHP anywhere/ }],
+  ['apis v2 only, said by apis', () => ({ draft: v2Draft({ apis: 'v2_only' }) }), 'declaration.apis', { list: 'right', fact: /^v2 only/ }],
+  ['v2 only: no php mode', () => ({ draft: v2Draft() }), 'host.php_mode', { absent: true }],
+  ['v2 only: no fpm install, even with none installed', () => ({ facts: { ...debianHost(), fpm: [] }, draft: v2Draft() }), 'host.fpm_install', { absent: true }],
+  ['v2 only: no fpm cli', () => ({ draft: v2Draft() }), 'host.fpm_cli', { absent: true }],
+  ['v2 only: no remi label', () => ({ facts: elHost(), draft: v2Draft() }), 'host.remi_label', { absent: true }],
+  ['v2 only: no fpm decision with several installs', () => ({ facts: { ...elHost(), fpm: [remiFpm('8.2'), remiFpm('8.4')] }, draft: v2Draft() }), 'declaration.fpm', { absent: true }],
+  ['v2 only: no v1 account decision', () => ({ draft: v2Draft() }), 'declaration.v1_user', { absent: true }],
+  ['v2 only: no v1 account', () => ({ draft: v2Draft() }), 'account.v1_user', { absent: true }],
+  ['v2 only: no v1 db transport', () => ({ facts: { ...elHost(), mariadb: { socket: null, tcp3306: true } }, draft: v2Draft() }), 'api_config.v1_db_transport', { absent: true }],
+  ['v2 only: no v1 db connect boolean', () => ({ facts: { ...elHost(), mariadb: { socket: null, tcp3306: true } }, draft: v2Draft() }), 'selinux.db_connect', { absent: true }],
+  ['v2 only: no v1 config', () => ({ draft: v2Draft() }), 'api_config.v1_config', { absent: true }],
+  ['v2 only: the v2 env stays', () => ({ draft: v2Draft() }), 'api_config.v2_env', { list: 'change', action: 'v2_env' }],
+  ['v2 only: proxy_fcgi is not needed', () => ({ facts: { ...debianHost(), web: { ...debianHost().web, modules: ['ssl_module', 'proxy_module', 'proxy_http_module', 'headers_module', 'rewrite_module'] } }, draft: v2Draft() }), 'web.modules', { list: 'right', fact: /^ssl, proxy, proxy_http, headers, rewrite are loaded$/ }],
+  ['v1: proxy_fcgi is needed', () => ({ facts: { ...debianHost(), web: { ...debianHost().web, modules: ['ssl_module', 'proxy_module', 'proxy_http_module', 'headers_module', 'rewrite_module'] } } }), 'web.modules', { list: 'change', command: /^a2enmod -q proxy_fcgi$/ }],
+  ['v2 only: keeps no v1 sample', () => ({ draft: v2Draft() }), 'init.keep_ref', { list: 'change', fact: /the v2 API's sample/ }],
 ];
 
 function sha8(text: string): string {

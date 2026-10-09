@@ -43,6 +43,7 @@ function agentStatus(server: string, media: Partial<MediaProbe> = {}): AgentStat
 		platform: 'linux-x64',
 		instance_fingerprint: 'f'.repeat(64),
 		apis: { v1: { current: null, previous: null }, v2: { current: null, previous: null } },
+		served_apis: ['v1', 'v2'],
 		rules: { server, hash: null },
 		media: {
 			mode: 'shared',

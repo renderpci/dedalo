@@ -90,8 +90,8 @@ describe("B5: the v1 pool's own log (logrotate_v1)", () => {
 
   test('the pool error_log directory, as the v1 user (su: root never renames in a directory another account owns), the new file the pool user 0600; no reopen', () => {
     const lines = v1LogrotateBody(SYSTEM).split('\n');
-    const user = SYSTEM.identity.v1User;
-    expect(lines).toContain(`${SYSTEM.site?.v1Var.log}/*.log {`);
+    const user = SYSTEM.v1!.user;
+    expect(lines).toContain(`${SYSTEM.site?.v1?.var.log}/*.log {`);
     expect(lines).toContain(`\tsu ${user} root`);
     expect(lines).toContain(`\tcreate 0600 ${user} root`);
     for (const directive of ['daily', 'missingok', 'rotate 14', 'compress', 'delaycompress', 'notifempty']) expect(lines).toContain(`\t${directive}`);
@@ -100,7 +100,7 @@ describe("B5: the v1 pool's own log (logrotate_v1)", () => {
   });
 
   test('a value outside its grammar renders nothing', () => {
-    expect(() => v1LogrotateBody({ ...SYSTEM, identity: { ...SYSTEM.identity, v1User: 'root; x' } })).toThrow('render(logrotate): v1.user');
+    expect(() => v1LogrotateBody({ ...SYSTEM, v1: { ...SYSTEM.v1!, user: 'root; x' } })).toThrow('render(logrotate): v1.user');
     expect(() => v1LogrotateBody(derive(unixDeclaration()))).toThrow('no site');
   });
 });

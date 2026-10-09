@@ -102,6 +102,7 @@ const ROOT_ROW_KEYS = [
 	'public_url',
 	'qualities',
 	'rules',
+	'served_apis',
 	'token_present',
 ];
 const ADMIN_ROW_KEYS = [
@@ -115,6 +116,7 @@ const ADMIN_ROW_KEYS = [
 	'public_probe',
 	'public_url',
 	'rules',
+	'served_apis',
 	'token_present',
 ];
 
@@ -155,6 +157,7 @@ function agentStatus(over: Partial<AgentStatus> = {}): AgentStatus {
 			v1: { current: '7.0.0_a1b2c3d', previous: '7.0.0_9f8e7d6' },
 			v2: { current: null, previous: null },
 		},
+		served_apis: ['v1', 'v2'],
 		rules: { server: 'apache', hash: 'b'.repeat(64) },
 		media: mediaProbe(),
 		disk: { state_root_free_bytes: 1_000_000 },

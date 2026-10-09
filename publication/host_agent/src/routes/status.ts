@@ -1,7 +1,7 @@
 /**
  * GET /v1/status — what this publication host IS right now (spec §6 `status`): agent and
- * runtime versions, the pairing fingerprint, each API's current/previous release (from the
- * release store), the hash stamp of the LIVE media include (from rules/apply.ts), the
+ * runtime versions, the pairing fingerprint, which APIs the host serves (`served_apis`: v2
+ * always, v1 only with PHP_BIN), each API's current/previous release (from the release store), the hash stamp of the LIVE media include (from rules/apply.ts), the
  * host-wide nginx map's state for this instance (rules/map.ts hostMapStatus), the media
  * probe, and free disk under the state root.
  *
@@ -13,7 +13,7 @@
 
 import { statfs } from 'node:fs/promises';
 import packageJson from '../../package.json';
-import { config } from '../config';
+import { config, hostServedApis } from '../config';
 import { probeMedia, type MediaProbe } from '../media/probe';
 import { currentRelease, previousRelease } from '../releases/store';
 import type { ApiName } from '../releases/ustar';
@@ -27,6 +27,11 @@ export interface AgentStatus {
   bun_version: string;
   platform: string;
   instance_fingerprint: string;
+  /**
+   * The APIs this host serves (src/config.ts servedApis): ['v1', 'v2'], or ['v2'] on a v2-only
+   * host. `apis` keeps both keys; an unserved API's slot is {current: null, previous: null}.
+   */
+  served_apis: readonly ApiName[];
   apis: Record<ApiName, { current: string | null; previous: string | null }>;
   /** `map`: the host-wide nginx map (spec §13.4) — null on apache, `{managed: false}` when placed by hand. */
   rules: { server: string; hash: string | null; map: RulesMapStatus };
@@ -46,9 +51,13 @@ export async function stateRootFreeBytes(root: string = config.STATE_ROOT): Prom
 }
 
 export async function buildStatus(): Promise<AgentStatus> {
+  const served = hostServedApis();
   const apis = {} as AgentStatus['apis'];
   for (const api of STATUS_APIS) {
-    apis[api] = { current: currentRelease(api), previous: previousRelease(api) };
+    // An unserved API has no tree here: its slot is empty, never read from disk.
+    apis[api] = served.includes(api)
+      ? { current: currentRelease(api), previous: previousRelease(api) }
+      : { current: null, previous: null };
   }
   const [media, freeBytes] = await Promise.all([probeMedia(), stateRootFreeBytes()]);
   return {
@@ -56,6 +65,7 @@ export async function buildStatus(): Promise<AgentStatus> {
     bun_version: Bun.version,
     platform: `${process.platform}-${process.arch}`,
     instance_fingerprint: instanceFingerprint(config.INSTANCE, config.SERVICE_TOKEN),
+    served_apis: [...served],
     apis,
     rules: { server: config.WEB_SERVER, hash: appliedRulesHash(), map: hostMapStatus() },
     media,

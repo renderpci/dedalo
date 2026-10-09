@@ -1123,6 +1123,12 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **A publication host can now serve the Publication API v2 only, without the Publication API v1.**
+
+    The Publication API v1 is legacy: it is needed only by websites built for Dédalo v6. A publication host's declaration without a `v1` block now installs a v2-only site, the recommended shape for a new site: no v1 account, no v1 configuration file and no v1 runtime on the host, and the guided install (`provision init`) neither looks for nor asks about any of them. The draft chooses with `"apis": "v2_only"` or `"v1_and_v2"`, or by the presence of its own `v1` block, and a v2-only site names its distribution family in `site.os_family`. The work system never pushes a v1 release to such a host, and its **Publication hosts** panel shows the v1 row as *Not served*, which is not a fault. Existing hosts that declare v1 are unchanged. See [the publication host install](./install/publication_host.md).
+
+    Wire contract: `WC-2026-10-09-publication-host-v2-only-site`.
+
 - **The backup panel now says when backups are manual.**
 
     Dédalo never makes database backups on its own: a nightly job installed with the operating system does (see [Backups](./management/backup.md)). When no scheduled backup of the database has ever reached the backup directory, the *Make backup* panel in Maintenance now shows *No scheduler, backups are manual.*, with a link to the backup documentation. Before, it showed only the age of the newest backup, which looked like automatic backups that had stopped.
@@ -1758,7 +1764,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 104 entries"
+??? note "Wire contract — 105 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1864,6 +1870,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-08-install-ip-denied-names-address`
     - `WC-2026-10-08-install-plan-update-servers-core-lg`
     - `WC-2026-10-08-make-backup-scheduled-evidence`
+    - `WC-2026-10-09-publication-host-v2-only-site`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

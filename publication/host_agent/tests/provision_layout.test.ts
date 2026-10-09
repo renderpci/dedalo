@@ -182,9 +182,9 @@ describe('derive — unix instance', () => {
     const paths = layout.directories.map(dir => dir.path);
     expect(paths).toEqual([...paths].sort());
     for (const dir of layout.directories) expect(MODES[dir.modeKey]).toBeDefined();
-    expect(paths).not.toContain(layout.state.apis.v1.current);
+    expect(paths).not.toContain(layout.v1!.dirs.current);
     expect(paths).not.toContain('/mnt/dedalo_media');
-    expect(layout.directories.find(dir => dir.path === layout.state.apis.v1.shared)?.modeKey).toBe('v1Shared');
+    expect(layout.directories.find(dir => dir.path === layout.v1!.dirs.shared)?.modeKey).toBe('v1Shared');
     expect(layout.directories.find(dir => dir.path === layout.state.root)?.modeKey).toBe('stateRoot');
   });
 
@@ -212,7 +212,7 @@ describe('derive — unix instance', () => {
     expect(ownerName(layout, 'agent')).toBe('dedalo-pubhost');
     expect(groupName(layout, 'v2Group')).toBe('dedalo-api-v2');
     expect(groupName(layout, 'engineGroup')).toBe('dedalo');
-    expect(layout.identity.v1User).toBe('dedalo-api-v1');
+    expect(layout.v1!.user).toBe('dedalo-api-v1');
     // No web/v1 group: the agent never reads the v1 configuration (v1/shared is root:root 0711).
     expect(layout.identity.agentSupplementaryGroups).toEqual(['dedalo-api-v2']);
     expect(MODES.v1Shared).toEqual({ owner: 'root', group: 'root', mode: 0o711 });
@@ -221,7 +221,7 @@ describe('derive — unix instance', () => {
   test('agent, v1 and v2 are three distinct users, none of them root', () => {
     const d = unixDeclaration();
     expect(() => derive({ ...d, v1: { user: d.agent_user } })).toThrow(/v1\.user: must differ from agent_user/);
-    expect(() => derive({ ...d, v2: { ...d.v2, user: d.v1.user } })).toThrow(/v2\.user: must differ from v1\.user/);
+    expect(() => derive({ ...d, v2: { ...d.v2, user: d.v1!.user } })).toThrow(/v2\.user: must differ from v1\.user/);
     expect(() => derive({ ...d, v2: { ...d.v2, user: d.agent_user } })).toThrow(/v2\.user: must differ from agent_user/);
     expect(() => derive({ ...d, v1: { user: 'root' } })).toThrow(/v1\.user: must not be root/);
   });
@@ -428,7 +428,7 @@ describe('derive — the site block (spec S5, S6)', () => {
         site: { domain: 'example.org', fpm: { flavor, version: '8.4' } },
       }),
     );
-    expect(layout.site?.fpm).toEqual({ flavor, version: '8.4', ...expected });
+    expect(layout.site?.v1?.fpm).toEqual({ flavor, version: '8.4', ...expected });
   });
 
   test('the derived site: home, the web logs OUTSIDE it, api paths, v1Var, protectHome', () => {
@@ -436,12 +436,16 @@ describe('derive — the site block (spec S5, S6)', () => {
     expect(layout.site).toMatchObject({
       domain: 'example.org',
       home: '/home/example.org',
+      family: 'debian',
       webLogsDir: '/var/log/apache2/example.org',
-      apiPaths: { v1: '/dedalo/publication/server_api/v1', v2: '/dedalo/publication/server_api/v2' },
-      v1Var: {
-        root: '/var/lib/dedalo_publication_host/test/v1',
-        tmp: '/var/lib/dedalo_publication_host/test/v1/tmp',
-        log: '/var/lib/dedalo_publication_host/test/v1/log',
+      v2ApiPath: '/dedalo/publication/server_api/v2',
+      v1: {
+        apiPath: '/dedalo/publication/server_api/v1',
+        var: {
+          root: '/var/lib/dedalo_publication_host/test/v1',
+          tmp: '/var/lib/dedalo_publication_host/test/v1/tmp',
+          log: '/var/lib/dedalo_publication_host/test/v1/log',
+        },
       },
     });
     expect(layout.homeBound).toBe(true);
@@ -478,8 +482,8 @@ describe('derive — the site block (spec S5, S6)', () => {
     );
     expect(layout.host.webLock).toBe('/scratch/_host/locks/web.lock');
     expect(layout.host.nginxMapInclude).toBe('/scratch/conf.d/dedalo_media_map.conf');
-    expect(layout.site?.fpm.poolFile).toBe('/scratch/pool.d/dedalo_test_v1.conf');
-    expect(layout.site?.v1Var.root).toBe('/scratch/var/test/v1');
+    expect(layout.site?.v1?.fpm.poolFile).toBe('/scratch/pool.d/dedalo_test_v1.conf');
+    expect(layout.site?.v1?.var.root).toBe('/scratch/var/test/v1');
   });
 
   test('declared site home and api paths; nginx conf_d; log dirs', () => {
@@ -495,7 +499,8 @@ describe('derive — the site block (spec S5, S6)', () => {
       }),
     );
     expect(layout.site?.home).toBe('/srv/sites/example.org');
-    expect(layout.site?.apiPaths).toEqual({ v1: '/api/v1', v2: '/api/v2' });
+    expect(layout.site?.v1?.apiPath).toBe('/api/v1');
+    expect(layout.site?.v2ApiPath).toBe('/api/v2');
     expect(layout.web.nginxMap).toBe('conf_d');
     expect(layout.web.logDirs).toEqual(['/var/log/nginx/example']);
   });

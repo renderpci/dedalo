@@ -134,6 +134,7 @@ function statusBody(state: State) {
 		platform: 'linux',
 		instance_fingerprint: FINGERPRINT,
 		apis: { v1: { current: null, previous: null }, v2: { current: null, previous: null } },
+		served_apis: ['v1', 'v2'],
 		rules: { server: 'apache', hash: null },
 		media: mediaBody(state),
 		disk: { state_root_free_bytes: 1_000_000_000 },

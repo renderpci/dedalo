@@ -176,7 +176,7 @@ export const agentUnitRenderer: Renderer = {
     }
     if (groups.supplementary.length > 0) {
       lines.push(
-        `# v2/shared is root:<v2 group> 0750: the agent checks v2.env there. v1/shared needs no group (0711).`,
+        `# v2/shared is root:<v2 group> 0750: the agent checks v2.env there.${layout.v1 === null ? '' : ' v1/shared needs no group (0711).'}`,
         `# ${PUBHOST_GROUP}: the host web lock (opened read-only) and the host map contribution.`,
         `SupplementaryGroups=${groups.supplementary.join(' ')}`,
       );

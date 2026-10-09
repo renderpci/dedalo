@@ -47,7 +47,7 @@ describe('apply on a fresh host', () => {
       `appendOnly ${l.state.auditFile}`,
     );
     expect(host.entries.get(l.state.root)).toMatchObject({ type: 'dir', uid: 0, mode: 0o755 });
-    expect(host.entries.get(l.state.apis.v1.releases)).toMatchObject({ type: 'dir', uid: 990, mode: 0o755 });
+    expect(host.entries.get(l.v1!.dirs.releases)).toMatchObject({ type: 'dir', uid: 990, mode: 0o755 });
     expect([...host.entries.keys()].some(path => path.endsWith(TEMP_SUFFIX))).toBe(false);
   });
 
@@ -263,12 +263,12 @@ const SITE: HostDeclaration = {
 };
 const S = derive(SITE);
 const LOCK: HostLockRef = { dir: S.host.locksDir, uid: 0, gid: 989 };
-const POOL = S.site!.fpm.poolFile;
+const POOL = S.site!.v1!.fpm.poolFile;
 const INCLUDE = `${S.instanceDir}/web.apache.conf`;
 
 function siteHost(layout: AgentLayout = S): SiteHost {
   const host = new SiteHost(layout);
-  host.seedFile(layout.site!.fpm.bin, '', 0o755);
+  host.seedFile(layout.site!.v1!.fpm.bin, '', 0o755);
   host.seedDir(POOL.slice(0, POOL.lastIndexOf('/')));
   host.seedDir(layout.instanceDir);
   host.units.set('php8.2-fpm', { enabled: true, active: true });
@@ -288,7 +288,7 @@ function validated(kind: 'web' | 'fpm', path: string, disposition: 'create' | 'r
     gid: 0,
     mode: 0o644,
     validate: kind,
-    validator: kind === 'web' ? { kind: 'web', server: 'apache', bin: '/usr/sbin/apache2ctl', unit: 'apache2' } : { kind: 'fpm', bin: S.site!.fpm.bin, unit: 'php8.2-fpm' },
+    validator: kind === 'web' ? { kind: 'web', server: 'apache', bin: '/usr/sbin/apache2ctl', unit: 'apache2' } : { kind: 'fpm', bin: S.site!.v1!.fpm.bin, unit: 'php8.2-fpm' },
     lock: LOCK,
   };
 }
@@ -300,7 +300,7 @@ describe('the post-rename validated install (web/fpm, spec §5.9)', () => {
     expect(report.failure).toBeNull();
     expect(host.body(POOL)).toBe('POOL\n');
     expect(host.entries.has(`${POOL}${CREATED_SUFFIX}`)).toBe(true);
-    expect(host.calls).toContain(`fpm-configtest ${S.site!.fpm.bin}`);
+    expect(host.calls).toContain(`fpm-configtest ${S.site!.v1!.fpm.bin}`);
     expect(host.lockIo.calls).toContain(`open ${S.host.locksDir}/web.lock`);
     expect(host.lockIo.heldBySelf(`${S.host.locksDir}/web.lock`)).toBeNull();
   });
@@ -348,8 +348,8 @@ describe('reload + the active poll (spec §5.9; the EL AVC case)', () => {
           { op: 'web-reload', unit: 'apache2', restore, server: 'apache', bin: '/usr/sbin/apache2ctl' },
         ]
       : [
-          { op: 'fpm-configtest', bin: S.site!.fpm.bin, lock: LOCK },
-          { op: 'fpm-reload', unit: 'php8.2-fpm', bin: S.site!.fpm.bin, restore },
+          { op: 'fpm-configtest', bin: S.site!.v1!.fpm.bin, lock: LOCK },
+          { op: 'fpm-reload', unit: 'php8.2-fpm', bin: S.site!.v1!.fpm.bin, restore },
         ];
 
   test('active through the poll: done, the rollback dropped, the lock held from configtest to reload then released', () => {
@@ -386,7 +386,7 @@ describe('reload + the active poll (spec §5.9; the EL AVC case)', () => {
       expect(report.failure?.detail).toContain('active again');
       expect(host.body(path)).toBe('OLD\n');
       expect(host.calls).toContain(`restart ${unit}`);
-      expect(host.calls.filter(call => call === (kind === 'web' ? 'configtest apache' : `fpm-configtest ${S.site!.fpm.bin}`)).length).toBeGreaterThanOrEqual(3);
+      expect(host.calls.filter(call => call === (kind === 'web' ? 'configtest apache' : `fpm-configtest ${S.site!.v1!.fpm.bin}`)).length).toBeGreaterThanOrEqual(3);
       expect(host.lockIo.heldBySelf(`${S.host.locksDir}/web.lock`)).toBeNull();
     });
   }
@@ -642,7 +642,7 @@ describe('observeHost + hostIo on a real scratch tree (spec S9-S11, §5.9 facts)
     layout = {
       ...derived,
       web: { ...derived.web, configtestBin: join(root, 'bin/nginx') },
-      site: { ...site, fpm: { ...site.fpm, bin: join(root, 'bin/php-fpm8.2') } },
+      site: { ...site, v1: { ...site.v1!, fpm: { ...site.v1!.fpm, bin: join(root, 'bin/php-fpm8.2') } } },
     };
   });
 

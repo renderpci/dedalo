@@ -444,6 +444,7 @@ function writeDraft(w: World, draft: DraftDeclaration): string {
 const DRAFT: DraftDeclaration = {
   instance: 'test',
   layout: 'home',
+  apis: 'v1_and_v2',
   engine_group: 'dedalo',
   site: { domain: 'example.org' },
   media: { mode: 'copy', root: '/srv/dedalo_media' },
@@ -549,7 +550,7 @@ describe('case 1: a fresh host converges; a second run is all right with zero mu
       expect(w.host.lstat(`${w.layout.agentDir}/src/index.ts`)?.type).toBe('file');
       expect(w.host.body(w.layout.declarationPath)).toBe(canonicalDeclaration(expectedDeclaration(w.profile)));
       expect(w.host.lstat(join(w.layout.state.apis.v2.shared, 'v2.env'))).toMatchObject({ uid: 0, mode: 0o640 });
-      expect(w.host.lstat(join(w.layout.state.apis.v1.shared, 'server_config_api.php'))).toMatchObject({ mode: 0o400 });
+      expect(w.host.lstat(join(w.layout.v1!.dirs.shared, 'server_config_api.php'))).toMatchObject({ mode: 0o400 });
       expect(w.host.body(w.profile.vhost)).toContain(`IncludeOptional ${w.layout.instanceDir}/web.apache.conf`);
       expect(w.host.body(`${INIT}/test/rerun.env`)).toBe(`BUN=${w.layout.bunBin}\nAGENT=${w.layout.agentDir}\n`);
       expect(w.host.lstat(STAGE)).toBeNull(); // removed on success
@@ -567,6 +568,46 @@ describe('case 1: a fresh host converges; a second run is all right with zero mu
       expect(w.out.find(line => line.startsWith('2. will change'))).toBe('2. will change (0)');
       expect(hostMutations(w).slice(before)).toEqual([]);
       expect(w.out.at(-1)).toBe("provision init: instance 'test' is right; nothing was changed");
+    });
+  }
+});
+
+/* ── 1b. a v2-only site (no v1 block): no PHP anywhere ──────────────────────────────── */
+
+/** The v2-only declaration the v2-only draft completes to: no v1, no php_bin, no site.fpm. */
+function expectedV2Only(profile: Profile): HostDeclaration {
+  const { v1: _v1, php_bin: _php, ...rest } = expectedDeclaration(profile);
+  return { ...rest, site: { domain: 'example.org', os_family: profile.os === 'el' ? 'el' : 'debian' } };
+}
+
+describe('case 1b: a v2-only draft converges with no PHP anywhere; a second run is all right', () => {
+  for (const os of ['debian', 'el'] as const) {
+    test(os, async () => {
+      const w = makeWorld({ os, declaration: expectedV2Only(PROFILES[os]) });
+      useOperator(w);
+      const { apis: _apis, ...v2Draft } = DRAFT;
+      expect(await init(w, firstRun(w, v2Draft))).toBe(EXIT.OK);
+      expect(w.host.body(w.layout.declarationPath)).toBe(canonicalDeclaration(expectedV2Only(w.profile)));
+      expect(w.host.users.has('test_v1')).toBe(false);
+      expect(w.host.lstat(join(w.layout.state.apis.v2.shared, 'v2.env'))).toMatchObject({ uid: 0, mode: 0o640 });
+      expect(w.host.lstat(`${w.layout.state.publicationApi}/v1`)).toBeNull();
+      expect(w.host.lstat(`${w.profile.fpm.poolDir}/dedalo_test_v1.conf`)).toBeNull();
+      expect(w.host.lstat('/var/lib/dedalo_publication_host/test')).toBeNull();
+      expect(w.host.lstat('/etc/logrotate.d/dedalo_test_v1')).toBeNull();
+      expect(w.host.body(`${w.layout.instanceDir}/web.apache.conf`)).not.toMatch(/^Alias |SetHandler|fcgi/m);
+      expect(w.host.body(w.layout.envFile)).not.toContain('PHP_BIN');
+      // No PHP binary ran, no PHP item was printed, no v1 secret was asked.
+      expect(w.host.calls.some(call => /php/i.test(call))).toBe(false);
+      for (const id of ['host.php_mode', 'host.fpm_install', 'host.fpm_cli', 'declaration.fpm', 'declaration.v1_user', 'account.v1_user', 'api_config.v1_db_transport', 'api_config.v1_config']) {
+        expect(listOf(w, id)).toBeNull();
+      }
+      expect(reportOf(w, 'declaration.apis').join('\n')).toContain('v2 only: no PHP anywhere');
+      const before = hostMutations(w).length;
+      w.out.length = 0;
+      rerunMode(w);
+      w.prompter = scriptedPrompter({ interactive: false });
+      expect(await init(w, ['test', '--yes'])).toBe(EXIT.OK);
+      expect(hostMutations(w).slice(before)).toEqual([]);
     });
   }
 });
@@ -597,7 +638,7 @@ describe('B4: the v1 transport defaults follow discovery', () => {
     const w = makeWorld({ os: 'debian' });
     useOperator(w, { 'api_config.v1_db_transport': 'tcp' });
     expect(await init(w, firstRun(w))).toBe(EXIT.OK);
-    const v1 = w.host.body(join(w.layout.state.apis.v1.shared, 'server_config_api.php')) ?? '';
+    const v1 = w.host.body(join(w.layout.v1!.dirs.shared, 'server_config_api.php')) ?? '';
     expect(v1).toContain("define('MYSQL_DEDALO_HOSTNAME_CONN', '127.0.0.1');");
     expect(v1).toContain("define('MYSQL_DEDALO_DB_PORT_CONN', 3306);");
     // v2 too: no local socket on this fake host, so its socket default is empty (TCP) and its host the loopback.
@@ -695,7 +736,7 @@ describe('case 6: a master that dies at the reload is restored and restarted', (
     w.host.reloadKills.add('php8.4-fpm'); // apply reloads through the host's own exec
     expect(await init(w, firstRun(w))).toBe(EXIT.FAILED);
     expect(w.host.calls).toContain('restart php8.4-fpm');
-    expect(w.host.lstat(w.layout.site?.fpm.poolFile ?? '')).toBeNull();
+    expect(w.host.lstat(w.layout.site?.v1?.fpm.poolFile ?? '')).toBeNull();
     expect(w.host.units.get('php8.4-fpm')?.active).toBe(true);
     expect(w.err.join('\n')).toContain('rolled_back');
   });

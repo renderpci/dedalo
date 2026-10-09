@@ -135,7 +135,7 @@ describe('plan on a fresh host', () => {
     expect(mkdirs.find(a => a.path === l.state.audit)).toMatchObject({ owner: 'root', uid: 0, mode: 0o755 });
     expect(mkdirs.find(a => a.path === l.state.rules)).toMatchObject({ owner: 'dedalo-pubhost', uid: 990, mode: 0o755 });
     expect(mkdirs.find(a => a.path === l.state.apis.v2.staging)).toMatchObject({ owner: 'dedalo-pubhost', uid: 990, mode: 0o700 });
-    expect(mkdirs.find(a => a.path === l.state.apis.v1.shared)).toMatchObject({ group: 'root', gid: 0, mode: 0o711 });
+    expect(mkdirs.find(a => a.path === l.v1!.dirs.shared)).toMatchObject({ group: 'root', gid: 0, mode: 0o711 });
   });
 
   test('writes the marker, mints the token, creates the audit log, then every artifact — in that order', () => {
@@ -206,10 +206,10 @@ describe('plan on a converged host', () => {
   test("a drifted parent's chown precedes the creation of its missing child", () => {
     const l = layout();
     const host = converged(l);
-    entry(host, l.state.apis.v1.root).uid = 0;
-    host.entries.delete(l.state.apis.v1.staging);
+    entry(host, l.v1!.dirs.root).uid = 0;
+    host.entries.delete(l.v1!.dirs.staging);
     const ops = plan(l, host.state()).map(a => `${a.op} ${'path' in a ? a.path : ''}`);
-    expect(ops.indexOf(`chown ${l.state.apis.v1.root}`)).toBeLessThan(ops.indexOf(`mkdir ${l.state.apis.v1.staging}`));
+    expect(ops.indexOf(`chown ${l.v1!.dirs.root}`)).toBeLessThan(ops.indexOf(`mkdir ${l.v1!.dirs.staging}`));
   });
 
   test('a renderer change (valid stamp, other bytes) → rewrite, and restart when the agent runs', () => {
@@ -317,7 +317,7 @@ describe('plan refusals', () => {
     host.users.delete('dedalo-api-v2');
     host.groups.delete('dedalo-api-v2');
     host.groups.delete('dedalo');
-    host.entries.delete(l.phpBin);
+    host.entries.delete(l.v1!.phpBin);
     host.entries.delete(l.agentEntry);
     const reasons = refusals(l, host);
     // Accounts first, in the order the commands must run: the v2 group before the v2 user joining it.
@@ -336,11 +336,11 @@ describe('plan refusals', () => {
   test('a symlinked php_bin / bun_bin / agent_dir is refused, naming the resolved path to declare', () => {
     const l = layout();
     const host = new FakeHost(l);
-    Object.assign(entry(host, l.phpBin), { type: 'symlink', mode: 0o777, target: '/usr/bin/php8.3' });
+    Object.assign(entry(host, l.v1!.phpBin), { type: 'symlink', mode: 0o777, target: '/usr/bin/php8.3' });
     Object.assign(entry(host, l.bunBin), { type: 'symlink', mode: 0o777 });
     Object.assign(entry(host, l.agentDir), { type: 'symlink', mode: 0o777, target: '/opt/real/host_agent' });
     expect(refusals(l, host)).toEqual([
-      `php_bin '${l.phpBin}' is a symlink — declare the real path ('/usr/bin/php8.3') (a link can be repointed after this check)`,
+      `php_bin '${l.v1!.phpBin}' is a symlink — declare the real path ('/usr/bin/php8.3') (a link can be repointed after this check)`,
       `bun_bin '${l.bunBin}' is a symlink — declare the real path (it does not resolve) (a link can be repointed after this check)`,
       `agent_dir '${l.agentDir}' is a symlink — declare the real path ('/opt/real/host_agent') (a link can be repointed after this check)`,
       // …and the entry beneath it is refused through its ancestry, independently.
@@ -530,10 +530,10 @@ class SiteHost extends FakeInitHost {
 function siteHost(decl: HostDeclaration, options: { os?: 'debian' | 'el'; selinux?: 'absent' | 'disabled' | 'permissive' | 'enforcing' } = {}) {
   const l = derive(decl);
   const host = new SiteHost(l, { os: options.os ?? 'debian', selinux: options.selinux ?? 'absent' });
-  if (l.site !== null) {
-    host.seedFile(l.site.fpm.bin, '', 0o755);
-    host.seedDir(dirname(l.site.fpm.poolFile));
-    host.units.set(l.site.fpm.unit, { enabled: true, active: true });
+  if (l.site?.v1 != null) {
+    host.seedFile(l.site.v1!.fpm.bin, '', 0o755);
+    host.seedDir(dirname(l.site.v1!.fpm.poolFile));
+    host.units.set(l.site.v1!.fpm.unit, { enabled: true, active: true });
   }
   host.seedDir('/var/lib');
   return { l, host };
@@ -697,13 +697,13 @@ describe('a site (spec S4, S5): pool, web include, v1 directories, validators, t
 
   test('the FPM master binary is pinned code (root runs `-t` on it)', () => {
     const { l: l2, host: h2 } = siteHost(siteDecl());
-    entry(h2, l2.site!.fpm.bin).uid = 990;
+    entry(h2, l2.site!.v1!.fpm.bin).uid = 990;
     expect(refusalsOf(l2, h2.state()).join('\n')).toContain("site.fpm.bin '/usr/sbin/php-fpm8.2' is owned by uid 990, not root");
   });
 
   test('a missing pool directory names the FPM install', () => {
     const { l: l2, host: h2 } = siteHost(siteDecl());
-    h2.entries.delete(dirname(l2.site!.fpm.poolFile));
+    h2.entries.delete(dirname(l2.site!.v1!.fpm.poolFile));
     expect(refusalsOf(l2, h2.state()).join('\n')).toContain("is PHP-FPM 8.2 (debian) installed?");
   });
 
@@ -718,7 +718,7 @@ describe('a site (spec S4, S5): pool, web include, v1 directories, validators, t
     const report = apply(plan(l2, h2.state()), h2);
     expect(report.failure).toBeNull();
     expect(plan(l2, h2.state())).toEqual([]);
-    const pool = entry(h2, l2.site!.fpm.poolFile);
+    const pool = entry(h2, l2.site!.v1!.fpm.poolFile);
     pool.body = pool.body.replace('pm.max_children = 5', 'pm.max_children = 50');
     expect(refusalsOf(l2, h2.state()).join('\n')).toContain('(fpm_pool) was edited by hand');
   });
@@ -726,10 +726,10 @@ describe('a site (spec S4, S5): pool, web include, v1 directories, validators, t
   test('a rollback left beside a validated file means "reload pending": the next plan reloads it', () => {
     const { l: l2, host: h2 } = siteHost(siteDecl());
     apply(plan(l2, h2.state()), h2);
-    h2.seedFile(`${l2.site!.fpm.poolFile}.dedalo-provision.created`, '', 0o600);
+    h2.seedFile(`${l2.site!.v1!.fpm.poolFile}.dedalo-provision.created`, '', 0o600);
     const again = plan(l2, h2.state());
     expect(again.map(a => a.op)).toEqual(['fpm-configtest', 'fpm-reload']);
-    expect(again[1]).toMatchObject({ restore: [{ path: l2.site!.fpm.poolFile, disposition: 'create' }] });
+    expect(again[1]).toMatchObject({ restore: [{ path: l2.site!.v1!.fpm.poolFile, disposition: 'create' }] });
   });
 
   test('assertPlanIsCoherent: a validated write outside the web lock is a bug', () => {
@@ -959,9 +959,9 @@ describe("the site's web logs, outside the home (owner decision 1(c))", () => {
       const rotate = plan(l, stateOf(host, l)).find(a => a.op === 'write' && a.path === '/etc/logrotate.d/dedalo_test_v1') as WriteAction | undefined;
       expect(rotate).toMatchObject({ mode: 0o644, uid: 0, gid: 0, validate: null });
       const body = JSON.stringify(rotate?.content);
-      expect(body).toContain(`${l.site?.v1Var.log}/*.log {`);
-      expect(body).toContain(`\\tsu ${l.identity.v1User} root`);
-      expect(body).toContain(`\\tcreate 0600 ${l.identity.v1User} root`);
+      expect(body).toContain(`${l.site?.v1?.var.log}/*.log {`);
+      expect(body).toContain(`\\tsu ${l.v1!.user} root`);
+      expect(body).toContain(`\\tcreate 0600 ${l.v1!.user} root`);
     }
     // No site, no pool: nothing to rotate.
     const bare = derive(unixDeclaration());

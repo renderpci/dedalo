@@ -68,6 +68,7 @@ import {
 	mockFingerprint,
 	mockNginxStatus,
 	mockProblem,
+	mockStatus,
 	startMockAgent,
 } from '../helpers/publication_host_mock_agent.ts';
 
@@ -538,6 +539,32 @@ describe('the §6 commands over the door', () => {
 				status: 200,
 				body: mockNginxStatus(fp, bad as Record<string, unknown>),
 			});
+			const error = await expectCode(hostStatus('museum_pub'), 'publication_host.failed');
+			expect(error.details).toEqual({ reason: 'unreadable_body' });
+		}
+		mock.reset();
+	});
+
+	test('status.served_apis is REQUIRED: [v1,v2] and [v2] are read; anything else is unreadable', async () => {
+		const fp = mockFingerprint(INSTANCE, TOKEN_A);
+		for (const served of [['v1', 'v2'], ['v2']]) {
+			mock.reply('GET', '/v1/status', {
+				status: 200,
+				body: { ...mockStatus(fp), served_apis: served },
+			});
+			expect((await hostStatus('museum_pub')).served_apis).toEqual(served as never);
+		}
+		const { served_apis: _dropped, ...missing } = mockStatus(fp);
+		for (const body of [
+			missing,
+			...[[], ['v1'], ['v2', 'v1'], ['v2', 'v2'], ['v1', 'v2', 'v3'], 'v2', null, [2]].map(
+				(served) => ({
+					...mockStatus(fp),
+					served_apis: served,
+				}),
+			),
+		]) {
+			mock.reply('GET', '/v1/status', { status: 200, body });
 			const error = await expectCode(hostStatus('museum_pub'), 'publication_host.failed');
 			expect(error.details).toEqual({ reason: 'unreadable_body' });
 		}

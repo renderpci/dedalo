@@ -189,9 +189,21 @@ export const HOME_LAYOUT_NAMES = Object.freeze({ stateRoot: 'dedalo', agentDir: 
  * the policy's own `/var/log/(httpd|nginx)(/.*)?` rule on EL (no rule of ours), and root's.
  * `paths.web_log_base` repoints the base (scratch gates only).
  */
-export function webLogBase(server: WebServer, flavor: FpmFlavor): string {
+export function webLogBase(server: WebServer, family: OsFamily): string {
   if (server === 'nginx') return '/var/log/nginx';
-  return flavor === 'debian' ? '/var/log/apache2' : '/var/log/httpd';
+  return family === 'debian' ? '/var/log/apache2' : '/var/log/httpd';
+}
+
+/**
+ * THE SITE'S DISTRIBUTION FAMILY (spec S6): what the site's web logs and their rotation depend on
+ * (webLogBase, render/logrotate.ts's log group). A v1 site gets it from its FPM flavour (Remi is
+ * an EL repository); a v2-only site — no PHP anywhere — declares it (`site.os_family`). Declared
+ * beside an FPM flavour, the two must agree.
+ */
+export type OsFamily = 'debian' | 'el';
+export const OS_FAMILIES: readonly OsFamily[] = Object.freeze(['debian', 'el']);
+export function familyOfFlavor(flavor: FpmFlavor): OsFamily {
+  return flavor === 'debian' ? 'debian' : 'el';
 }
 export const HOME_RELOCATED_NAMES = Object.freeze({
   stateRoot: 'dedalo_publication',
@@ -255,7 +267,13 @@ export interface HostDeclaration {
    */
   readonly site?: DeclaredSite;
   /**
-   * The USER the Publication API v1 runs as — the user of v1's OWN dedicated PHP-FPM pool
+   * THE PUBLICATION API v1 — OPTIONAL (legacy: v6-era websites). A declaration WITHOUT it is a
+   * v2-only instance with no PHP anywhere: no php_bin, no site.fpm, no v1 pool, no v1 tree, no v1
+   * web handler, no v1 log rotation; the agent refuses a v1 release (no PHP_BIN). The v1-only keys
+   * (php_bin, site.fpm, site.api_paths.v1, paths.fpm_pool_dir, paths.v1_var_base) are refused
+   * without it, by name, and php_bin (+ site.fpm with a site) is required with it.
+   *
+   * `user`: the USER the Publication API v1 runs as — the user of v1's OWN dedicated PHP-FPM pool
    * (decision A, spec S5: with `site` the provisioner renders that pool; never the website's
    * pool, never a web or catch-all account — FORBIDDEN_V1_USERS). It
    * OWNS the v1 configuration (shared/server_config_api.php, mode 0400/0600): the group
@@ -263,7 +281,7 @@ export interface HostDeclaration {
    * stats and links it — so v1/shared is root:root 0711 and the agent joins no v1 group.
    * releases/install.ts refuses a configuration readable by group or others.
    */
-  readonly v1: {
+  readonly v1?: {
     readonly user: string;
   };
   readonly state_root: string;
@@ -274,7 +292,8 @@ export interface HostDeclaration {
    * mode is the agent's own tree and is always labelled. Ignored on a host without SELinux.
    */
   readonly media: { readonly mode: MediaMode; readonly root?: string; readonly selinux_label?: true };
-  readonly php_bin: string;
+  /** The PHP CLI the agent lints a v1 release with. Only with `v1` (and then required). */
+  readonly php_bin?: string;
   readonly bun_bin: string;
   readonly v2: {
     readonly unit: string;
@@ -311,9 +330,12 @@ export interface DeclaredSite {
   readonly domain: string;
   /** Default `/home/<domain>`. */
   readonly home?: string;
-  /** Default DEFAULT_API_PATHS. */
-  readonly api_paths?: { readonly v1: string; readonly v2: string };
-  readonly fpm: { readonly flavor: FpmFlavor; readonly version: string };
+  /** Required for a v2-only site (no FPM flavour to derive it from); else it must agree with site.fpm.flavor. */
+  readonly os_family?: OsFamily;
+  /** Default DEFAULT_API_PATHS. `v1` only with the v1 block. */
+  readonly api_paths?: { readonly v1?: string; readonly v2: string };
+  /** The FPM install the dedicated v1 pool runs in. Required with `v1`, refused without it. */
+  readonly fpm?: { readonly flavor: FpmFlavor; readonly version: string };
 }
 
 /* ── the modes matrix: a renderer or the plan names a ROW, never an owner or a number ── */
@@ -466,18 +488,39 @@ export interface FpmLayout {
   readonly webUser: string;
 }
 
+/** The v1 half of a site: present exactly when the declaration has `v1` (spec S5). */
+export interface SiteV1Layout {
+  readonly apiPath: string;
+  readonly fpm: FpmLayout;
+  /** `<v1_var_base>/<instance>/v1` and its pool-owned `tmp/`, `log/`. */
+  readonly var: { readonly root: string; readonly tmp: string; readonly log: string };
+}
+
 export interface SiteLayout {
   readonly domain: string;
   readonly home: string;
+  /** site.os_family, or the FPM flavour's family (familyOfFlavor). */
+  readonly family: OsFamily;
   /**
    * The site's web server log directory, `<webLogBase()>/<domain>` (root:root, MODES.webLogs):
    * created by provision apply in the home layout, rotated by render/logrotate.ts. Never under the home.
    */
   readonly webLogsDir: string;
-  readonly apiPaths: { readonly v1: string; readonly v2: string };
-  readonly fpm: FpmLayout;
-  /** `<v1_var_base>/<instance>/v1` and its pool-owned `tmp/`, `log/`. */
-  readonly v1Var: { readonly root: string; readonly tmp: string; readonly log: string };
+  readonly v2ApiPath: string;
+  /** null on a v2-only instance. */
+  readonly v1: SiteV1Layout | null;
+}
+
+/** THE PUBLICATION API v1 of this instance — null on a v2-only one (no PHP anywhere). */
+export interface V1Layout {
+  /** HostDeclaration.v1.user: owns the v1 configuration and runs the v1 pool. */
+  readonly user: string;
+  /** HostDeclaration.php_bin: the agent's PHP_BIN (`php -l` of a v1 release). */
+  readonly phpBin: string;
+  /** `<publication_api>/v1`. */
+  readonly dirs: ApiDirs;
+  /** `<logrotate_dir>/dedalo_<instance>_v1`: the rotation of site.v1.var.log (render/logrotate.ts; every site). */
+  readonly logrotatePath: string;
 }
 
 export interface HostPaths {
@@ -499,8 +542,6 @@ export interface AgentLayout {
   readonly identity: {
     readonly agentUser: string;
     readonly engineGroup: string | null;
-    /** The user the v1 API runs as (HostDeclaration.v1.user): owns the v1 configuration. */
-    readonly v1User: string;
     readonly v2User: string;
     readonly v2Group: string;
     /**
@@ -532,7 +573,10 @@ export interface AgentLayout {
   readonly agentDir: string;
   readonly agentEntry: string;
   readonly bunBin: string;
-  readonly phpBin: string;
+  /** null on a v2-only instance (the declaration has no `v1`). */
+  readonly v1: V1Layout | null;
+  /** The APIs this instance serves, in ['v1', 'v2'] order: ['v2'] on a v2-only instance. */
+  readonly servedApis: readonly ProvisionApi[];
   /** `selinuxLabel`: the declaration's `media.selinux_label` (shared mode only; false otherwise). */
   readonly media: { readonly mode: MediaMode; readonly root: string | null; readonly selinuxLabel: boolean };
   readonly v2: { readonly unit: string; readonly port: number; readonly healthUrl: string };
@@ -557,13 +601,12 @@ export interface AgentLayout {
   readonly polkitPath: string;
   /** `<logrotate_dir>/dedalo_<instance>_web`: the rotation of site.webLogsDir (render/logrotate.ts; home layout only). */
   readonly logrotatePath: string;
-  /** `<logrotate_dir>/dedalo_<instance>_v1`: the rotation of site.v1Var.log, the v1 pool's own log (render/logrotate.ts; every site). */
-  readonly v1LogrotatePath: string;
   readonly state: {
     readonly root: string;
     readonly marker: string;
     readonly publicationApi: string;
-    readonly apis: Readonly<Record<ProvisionApi, ApiDirs>>;
+    /** v2 only: the v1 tree is layout.v1.dirs (absent on a v2-only instance). */
+    readonly apis: { readonly v2: ApiDirs };
     readonly rules: string;
     readonly audit: string;
     /** The agent's append-only trail: created empty, agent-owned, never rewritten. */
@@ -670,7 +713,10 @@ export function ownerName(layout: AgentLayout, owner: ModeOwner): string {
     case 'agent':
       return layout.identity.agentUser;
     case 'v1':
-      return layout.identity.v1User;
+      if (layout.v1 === null) {
+        throw new LayoutError('v1', 'a v2-only instance has no v1 user; no artifact may name that row');
+      }
+      return layout.v1.user;
     default: {
       const unreachable: never = owner;
       throw new Error(`layout: unknown mode owner '${String(unreachable)}'`);
@@ -806,6 +852,7 @@ export const DECLARATION_KEY_ORDER: KeyOrder = Object.freeze({
   site: Object.freeze({
     domain: null,
     home: null,
+    os_family: null,
     api_paths: Object.freeze({ v1: null, v2: null }),
     fpm: Object.freeze({ flavor: null, version: null }),
   }),
@@ -877,7 +924,7 @@ function deriveSite(
   site: DeclaredSite,
   instance: string,
   server: WebServer,
-  v1User: string,
+  v1Declared: boolean,
   paths: { readonly fpm_pool_dir?: string; readonly web_log_base?: string },
   v1VarBase: string,
 ): SiteLayout {
@@ -886,51 +933,88 @@ function deriveSite(
   if (FORBIDDEN_HOMES.includes(home)) {
     throw new LayoutError('site.home', `'${home}' holds other sites; a site home is its own directory (e.g. /home/${domain})`);
   }
-  const apiPaths = Object.freeze({
-    v1: apiPath('site.api_paths.v1', site.api_paths?.v1 ?? DEFAULT_API_PATHS.v1),
-    v2: apiPath('site.api_paths.v2', site.api_paths?.v2 ?? DEFAULT_API_PATHS.v2),
-  });
-  if (pathsOverlap(apiPaths.v1, apiPaths.v2)) {
-    throw new LayoutError('site.api_paths.v2', `'${apiPaths.v2}' overlaps site.api_paths.v1 '${apiPaths.v1}'`);
+  const v2ApiPath = apiPath('site.api_paths.v2', site.api_paths?.v2 ?? DEFAULT_API_PATHS.v2);
+  const declaredFamily = site.os_family;
+  if (declaredFamily !== undefined && !OS_FAMILIES.includes(declaredFamily)) {
+    throw new LayoutError('site.os_family', `'${String(declaredFamily)}' must be one of ${OS_FAMILIES.join(', ')}`);
   }
-  const flavor = site.fpm.flavor;
-  if (!FPM_FLAVORS.includes(flavor)) {
-    throw new LayoutError('site.fpm.flavor', `'${String(flavor)}' must be one of ${FPM_FLAVORS.join(', ')}`);
+  let v1: SiteV1Layout | null = null;
+  let family: OsFamily;
+  if (!v1Declared) {
+    // A v2-only site: no PHP anywhere — every v1-only key is refused by name, never ignored.
+    if (site.fpm !== undefined) throw new LayoutError('site.fpm', V1_ONLY('the FPM install of the v1 pool'));
+    if (site.api_paths?.v1 !== undefined) throw new LayoutError('site.api_paths.v1', V1_ONLY('the v1 URL path'));
+    if (paths.fpm_pool_dir !== undefined) throw new LayoutError('paths.fpm_pool_dir', V1_ONLY('the v1 pool directory'));
+    if (declaredFamily === undefined) {
+      throw new LayoutError(
+        'site.os_family',
+        "required for a v2-only site (no site.fpm to derive it from): 'debian' (Debian, Ubuntu) or 'el' (RHEL, Rocky, Alma) — it places the site's web logs",
+      );
+    }
+    family = declaredFamily;
+  } else {
+    if (site.fpm === undefined) {
+      throw new LayoutError('site.fpm', 'required with the v1 block: the FPM install the dedicated v1 pool runs in (spec S5)');
+    }
+    const v1Path = apiPath('site.api_paths.v1', site.api_paths?.v1 ?? DEFAULT_API_PATHS.v1);
+    if (pathsOverlap(v1Path, v2ApiPath)) {
+      throw new LayoutError('site.api_paths.v2', `'${v2ApiPath}' overlaps site.api_paths.v1 '${v1Path}'`);
+    }
+    const flavor = site.fpm.flavor;
+    if (!FPM_FLAVORS.includes(flavor)) {
+      throw new LayoutError('site.fpm.flavor', `'${String(flavor)}' must be one of ${FPM_FLAVORS.join(', ')}`);
+    }
+    const version = matches(FPM_VERSION_PATTERN, 'site.fpm.version', site.fpm.version);
+    if (!versionAtLeast(version, V1_PHP_FLOOR)) {
+      throw new LayoutError('site.fpm.version', `PHP ${version} is below the v1 floor ${V1_PHP_FLOOR}`);
+    }
+    family = familyOfFlavor(flavor);
+    if (declaredFamily !== undefined && declaredFamily !== family) {
+      throw new LayoutError('site.os_family', `'${declaredFamily}' disagrees with site.fpm.flavor '${flavor}' (a ${family} install)`);
+    }
+    const poolDir = paths.fpm_pool_dir === undefined ? undefined : cleanAbsolute('paths.fpm_pool_dir', paths.fpm_pool_dir);
+    const fpm = fpmLayout(instance, flavor, version, server, poolDir);
+    if (!FPM_BIN_PATTERN.test(fpm.bin) || !PHP_CLI_PATTERN.test(fpm.cli)) {
+      throw new LayoutError('site.fpm.version', `'${version}' gives no ${flavor} PHP-FPM install path (${fpm.bin})`);
+    }
+    // v1.user is never the web user: every webUserFor() value is in FORBIDDEN_V1_USERS, which
+    // derive() refuses for any declaration (tests/provision_layout.test.ts holds the inclusion).
+    const v1VarRoot = join(v1VarBase, instance, 'v1');
+    v1 = Object.freeze({
+      apiPath: v1Path,
+      fpm,
+      var: Object.freeze({ root: v1VarRoot, tmp: join(v1VarRoot, 'tmp'), log: join(v1VarRoot, 'log') }),
+    });
   }
-  const version = matches(FPM_VERSION_PATTERN, 'site.fpm.version', site.fpm.version);
-  if (!versionAtLeast(version, V1_PHP_FLOOR)) {
-    throw new LayoutError('site.fpm.version', `PHP ${version} is below the v1 floor ${V1_PHP_FLOOR}`);
-  }
-  const poolDir = paths.fpm_pool_dir === undefined ? undefined : cleanAbsolute('paths.fpm_pool_dir', paths.fpm_pool_dir);
-  const fpm = fpmLayout(instance, flavor, version, server, poolDir);
-  if (!FPM_BIN_PATTERN.test(fpm.bin) || !PHP_CLI_PATTERN.test(fpm.cli)) {
-    throw new LayoutError('site.fpm.version', `'${version}' gives no ${flavor} PHP-FPM install path (${fpm.bin})`);
-  }
-  // v1.user is never the web user: every webUserFor() value is in FORBIDDEN_V1_USERS, which
-  // derive() refuses for any declaration (tests/provision_layout.test.ts holds the inclusion).
-  const v1VarRoot = join(v1VarBase, instance, 'v1');
-  const logBase = cleanAbsolute('paths.web_log_base', paths.web_log_base ?? webLogBase(server, flavor));
+  const logBase = cleanAbsolute('paths.web_log_base', paths.web_log_base ?? webLogBase(server, family));
   if (logBase === '/') throw new LayoutError('paths.web_log_base', 'must not be /');
   return Object.freeze({
     domain,
     home,
+    family,
     webLogsDir: join(logBase, domain),
-    apiPaths,
-    fpm,
-    v1Var: Object.freeze({ root: v1VarRoot, tmp: join(v1VarRoot, 'tmp'), log: join(v1VarRoot, 'log') }),
+    v2ApiPath,
+    v1,
   });
 }
+
+/** The refusal of a v1-only key in a declaration without the v1 block. */
+const V1_ONLY = (what: string): string =>
+  `${what} is a Publication API v1 key, and the declaration has no v1 block (a v2-only instance has no PHP anywhere): remove it, or declare v1`;
 
 export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayout {
   const instance = matches(INSTANCE_PATTERN, 'instance', decl.instance);
   const agentUser = matches(UNIX_NAME_PATTERN, 'agent_user', decl.agent_user);
-  const v1User = matches(UNIX_NAME_PATTERN, 'v1.user', decl.v1.user);
+  const v1User = decl.v1 === undefined ? null : matches(UNIX_NAME_PATTERN, 'v1.user', decl.v1.user);
   const v2User = matches(UNIX_NAME_PATTERN, 'v2.user', decl.v2.user);
   const v2Group = matches(UNIX_NAME_PATTERN, 'v2.group', decl.v2.group);
-  // Three principals, three users: the agent holds the sudo/polkit grants, the TLS key and the
-  // token; v1 (the site's pool) and v2 run code the work system pushed. One shared user would
-  // hand the pushed code what the agent holds (spec §2.5), and root would hand it everything.
-  const principals: [string, string][] = [['agent_user', agentUser], ['v1.user', v1User], ['v2.user', v2User]];
+  // Three principals, three users (two on a v2-only instance): the agent holds the sudo/polkit
+  // grants, the TLS key and the token; v1 (the site's pool) and v2 run code the work system pushed.
+  // One shared user would hand the pushed code what the agent holds (spec §2.5), and root would
+  // hand it everything.
+  const principals: [string, string][] = [['agent_user', agentUser]];
+  if (v1User !== null) principals.push(['v1.user', v1User]);
+  principals.push(['v2.user', v2User]);
   for (const [index, [field, user]] of principals.entries()) {
     if (user === 'root') throw new LayoutError(field, 'must not be root');
     for (const [otherField, other] of principals.slice(index + 1)) {
@@ -938,7 +1022,7 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     }
   }
 
-  if (FORBIDDEN_V1_USERS.includes(v1User)) {
+  if (v1User !== null && FORBIDDEN_V1_USERS.includes(v1User)) {
     throw new LayoutError(
       'v1.user',
       `'${v1User}' is a web or catch-all account — v1 runs in its own pool under its own account (e.g. ${instance}_v1)`,
@@ -963,7 +1047,15 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
   if (logDirs.includes('/')) throw new LayoutError('web.log_dirs', "'/' is not a log directory");
 
   const agentDir = cleanAbsolute('agent_dir', decl.agent_dir);
-  const phpBin = cleanAbsolute('php_bin', decl.php_bin);
+  let phpBin: string | null = null;
+  if (decl.v1 === undefined) {
+    if (decl.php_bin !== undefined) throw new LayoutError('php_bin', V1_ONLY('the PHP CLI that lints a v1 release'));
+  } else {
+    if (decl.php_bin === undefined) {
+      throw new LayoutError('php_bin', 'required with the v1 block: the PHP CLI the agent lints a v1 release with (php -l)');
+    }
+    phpBin = cleanAbsolute('php_bin', decl.php_bin);
+  }
   const bunBin = cleanAbsolute('bun_bin', decl.bun_bin);
   const stateRoot = cleanAbsolute('state_root', decl.state_root);
   if (stateRoot === '/') throw new LayoutError('state_root', 'must not be /');
@@ -979,11 +1071,15 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
   const hostBase = cleanAbsolute('paths.host_base', paths.host_base ?? DEFAULT_PATHS.hostBase);
   const logrotateDir = cleanAbsolute('paths.logrotate_dir', paths.logrotate_dir ?? DEFAULT_PATHS.logrotateDir);
   const nginxConfD = cleanAbsolute('paths.nginx_conf_d', paths.nginx_conf_d ?? DEFAULT_PATHS.nginxConfD);
+  if (decl.v1 === undefined && paths.v1_var_base !== undefined) {
+    throw new LayoutError('paths.v1_var_base', V1_ONLY('the v1 pool directory base'));
+  }
   const v1VarBase = cleanAbsolute('paths.v1_var_base', paths.v1_var_base ?? DEFAULT_PATHS.v1VarBase);
   for (const [field, path] of [['paths.host_base', hostBase], ['paths.v1_var_base', v1VarBase]] as const) {
     if (path === '/') throw new LayoutError(field, 'must not be /');
   }
-  const site = decl.site === undefined ? null : deriveSite(decl.site, instance, server, v1User, paths, v1VarBase);
+  const site =
+    decl.site === undefined ? null : deriveSite(decl.site, instance, server, decl.v1 !== undefined, paths, v1VarBase);
   const locksDir = join(hostBase, 'locks');
   const nginxMapDir = join(hostBase, 'nginx_map');
   const hostPaths: HostPaths = Object.freeze({
@@ -1078,7 +1174,7 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
   if (mediaRoot !== null) claims.push(['media.root', mediaRoot]);
   // Host-wide state and the v1 pool's own directories belong to no declared tree.
   claims.push(['paths.host_base', hostBase]);
-  if (site !== null) claims.push(['site.v1Var', site.v1Var.root]);
+  if (site?.v1 != null) claims.push(['site.v1Var', site.v1.var.root]);
   for (let i = 0; i < claims.length; i += 1) {
     for (let j = i + 1; j < claims.length; j += 1) {
       const [fieldA, pathA] = claims[i] as [string, string];
@@ -1106,7 +1202,8 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
       : null;
 
   const publicationApi = join(stateRoot, PUBLICATION_API_DIR);
-  const apis = Object.freeze({ v1: apiDirs(publicationApi, 'v1'), v2: apiDirs(publicationApi, 'v2') });
+  const v1Dirs = v1User === null ? null : apiDirs(publicationApi, 'v1');
+  const apis = Object.freeze({ v2: apiDirs(publicationApi, 'v2') });
   const rules = join(stateRoot, RULES_DIR);
   const audit = join(stateRoot, AUDIT_DIR);
 
@@ -1121,13 +1218,13 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     { path: audit, modeKey: 'audit' },
   ];
   if (tls !== null) directories.push({ path: tls.dir, modeKey: 'tlsDir' });
-  for (const api of ['v1', 'v2'] as const) {
-    const dirs = apis[api];
+  for (const [dirs, sharedKey] of [[v1Dirs, 'v1Shared'], [apis.v2, 'v2Shared']] as const) {
+    if (dirs === null) continue;
     directories.push(
       { path: dirs.root, modeKey: 'apiRoot' },
       { path: dirs.releases, modeKey: 'releases' },
       { path: dirs.staging, modeKey: 'staging' },
-      { path: dirs.shared, modeKey: api === 'v1' ? 'v1Shared' : 'v2Shared' },
+      { path: dirs.shared, modeKey: sharedKey },
     );
   }
   if (mediaMode === 'copy' && mediaRoot !== null) directories.push({ path: mediaRoot, modeKey: 'mediaCopy' });
@@ -1144,7 +1241,6 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     WEB_UNIT: webUnit,
     WEB_CONFIGTEST_BIN: configtestBin,
     MEDIA_MODE: mediaMode,
-    PHP_BIN: phpBin,
     V2_UNIT: v2Unit,
     V2_HEALTH_URL: v2HealthUrl,
     RELEASES_RETAINED: String(releasesRetained),
@@ -1159,6 +1255,8 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     envVars.TLS_CLIENT_CA_FILE = tls.clientCa;
   }
   if (mediaRoot !== null) envVars.MEDIA_ROOT = mediaRoot;
+  // No PHP_BIN on a v2-only instance: the agent then serves v2 only and refuses a v1 release.
+  if (phpBin !== null) envVars.PHP_BIN = phpBin;
   for (const key of Object.keys(envVars)) {
     if (!ENV_KEY_PATTERN.test(key) || SECRET_LOOKING_KEY.test(key)) {
       throw new Error(`layout: env key '${key}' is not a non-credential AgentConfig key`);
@@ -1174,7 +1272,6 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     identity: Object.freeze({
       agentUser,
       engineGroup,
-      v1User,
       v2User,
       v2Group,
       // Spec S11 adds PUBHOST_GROUP here; it lands in ONE change with the regenerated examples, the
@@ -1189,7 +1286,16 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     agentDir,
     agentEntry: join(agentDir, 'src', 'index.ts'),
     bunBin,
-    phpBin,
+    v1:
+      v1User === null || phpBin === null || v1Dirs === null
+        ? null
+        : Object.freeze({
+            user: v1User,
+            phpBin,
+            dirs: v1Dirs,
+            logrotatePath: join(logrotateDir, `dedalo_${instance}_v1`),
+          }),
+    servedApis: Object.freeze(v1User === null ? (['v2'] as const) : (['v1', 'v2'] as const)),
     media: Object.freeze({ mode: mediaMode, root: mediaRoot, selinuxLabel: selinuxLabel === true }),
     v2: Object.freeze({ unit: v2Unit, port: v2Port, healthUrl: v2HealthUrl }),
     releasesRetained,
@@ -1209,7 +1315,6 @@ export function derive(decl: HostDeclaration, host: DeriveHost = {}): AgentLayou
     sudoersPath: join(sudoersDir, `dedalo_publication_host_${instance}`),
     polkitPath: join(polkitRulesDir, `60-dedalo-publication-host-${instance}.rules`),
     logrotatePath: join(logrotateDir, `dedalo_${instance}_web`),
-    v1LogrotatePath: join(logrotateDir, `dedalo_${instance}_v1`),
     state: Object.freeze({
       root: stateRoot,
       marker: join(stateRoot, INSTANCE_MARKER),

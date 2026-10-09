@@ -25,12 +25,15 @@ const STATE_CHIP = Object.freeze({
 	mismatch: 'state_warning',
 	unknown: 'state_warning',
 	failed: 'state_danger',
+	// a v2-only site serves no Publication API v1: a plain badge, never a warning or red
+	not_served: '',
 });
 const STATE_TEXT = Object.freeze({
 	ok: 'In step',
 	mismatch: 'Behind the engine',
 	unknown: 'Unknown',
 	failed: 'Push failed',
+	not_served: 'Not served',
 });
 
 /**
@@ -126,7 +129,7 @@ const render_rows = function (rows, parent) {
 		});
 		ui.create_dom_element({
 			element_type: 'span',
-			class_name: `dd_badge ${STATE_CHIP[row.state] || 'state_warning'}`,
+			class_name: `dd_badge ${STATE_CHIP[row.state] ?? 'state_warning'}`.trim(),
 			text_content: STATE_TEXT[row.state] || String(row.state),
 			parent: state_cell,
 		});

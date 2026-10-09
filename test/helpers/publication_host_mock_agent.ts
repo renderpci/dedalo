@@ -109,6 +109,7 @@ export function mockStatus(fingerprint: string): Record<string, unknown> {
 			v1: { current: '7.0.2_aaaaaaa', previous: null },
 			v2: { current: '7.0.2_aaaaaaa', previous: '7.0.1_bbbbbbb' },
 		},
+		served_apis: ['v1', 'v2'],
 		rules: { server: 'apache', hash: null, map: null },
 		media: { ...MOCK_PROBE, problems: [] },
 		disk: { state_root_free_bytes: 1_073_741_824 },
