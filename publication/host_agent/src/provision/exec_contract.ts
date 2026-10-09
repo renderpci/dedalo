@@ -52,6 +52,15 @@ export const SELINUX_READ_ONLY_BOOLEANS: readonly SelinuxBoolean[] = Object.free
 export const APACHE_MODULES = Object.freeze(['ssl', 'proxy', 'proxy_http', 'proxy_fcgi', 'headers', 'rewrite'] as const);
 export type ApacheModule = (typeof APACHE_MODULES)[number];
 
+/**
+ * The SELinux policy module's name, file name and priority (selinux_module.ts re-exports them): here
+ * because the exec door validates against them and must not import the renderer (the root map
+ * renderer's closure includes src/exec.ts).
+ */
+export const SELINUX_MODULE_NAME = 'dedalo_publication_host';
+export const SELINUX_MODULE_FILE = `${SELINUX_MODULE_NAME}.cil`;
+export const SELINUX_MODULE_PRIORITY = 400;
+
 /** `semanage <kind> -l -C -n`: the local customisations of one kind. */
 export type SemanageKind = 'fcontext' | 'port';
 
@@ -105,7 +114,10 @@ export interface TrustExec {
   sleep(ms: number): void;
 }
 
-/** The provisioner's closed set (25 commands, spec §2.4; the 25th is retire.ts's). Synchronous: `provision` is a sync CLI. */
+/**
+ * The provisioner's closed set (29 commands, spec §2.4; the 25th is retire.ts's, 26-29 the SELinux
+ * policy module's, selinux_module.ts). Synchronous: `provision` is a sync CLI.
+ */
 export interface ProvisionExec {
   userId(name: string): number | null; //               ['id','-u',name]
   groupId(name: string): number | null; //              ['getent','group',name]
@@ -137,6 +149,16 @@ export interface ProvisionExec {
   selinuxLabel(paths: readonly string[]): ExecResult; // ['stat','-c','%C %n','--',…] — 1-32 clean absolute paths
   /** A RETIRED tree (retire.ts): only a root-owned 0700 directory named `*.dedalo-provision.retired`. */
   removeTree(path: string): ExecResult; //               ['rm','-rf','--one-file-system','--',path]
+  // ── 26-29: the SELinux policy module (selinux_module.ts, spec §9.8) — no argument but the one file ──
+  semoduleList(): ExecResult; //                         ['semodule','--list-modules=full']
+  /**
+   * `semodule -X 400 -E dedalo_publication_host`, run in a fresh root 0700 directory the door creates
+   * (and removes): the extracted source's text, null when nothing was extracted.
+   */
+  semoduleExtract(): { readonly result: ExecResult; readonly text: string | null };
+  /** The module source (selinux_module.ts selinuxModulePath): a root-owned regular file named `dedalo_publication_host.cil`, not group/other-writable. */
+  semoduleInstall(file: string): ExecResult; //          ['semodule','-X','400','-i',file]
+  semoduleRemove(): ExecResult; //                       ['semodule','-X','400','-r','dedalo_publication_host']
 }
 
 /** `provision init`'s closed set (22 commands, spec §2.4). Synchronous, timeout COMMAND_TIMEOUT_MS. */

@@ -25,6 +25,7 @@ import {
   importLines,
   isHomeLayout,
   labelScope,
+  moduleNeeded,
   parseSelinuxState,
   portEntry,
   restoreconTargets,
@@ -34,6 +35,7 @@ import {
 import { SELINUX_BOOLEANS as EXEC_BOOLEANS } from '../src/provision/exec_contract';
 import type { SelinuxObserved } from '../src/provision/plan';
 import { ruleFacts } from '../src/provision/plan';
+import { NO_MODULE, V2_TREE_TYPE } from '../src/provision/selinux_module';
 import { unixDeclaration } from './fixtures/provision_declaration';
 
 const HOME = '/home/museum.example.org';
@@ -79,7 +81,11 @@ describe('the closed sets', () => {
       'httpd_log_t',
       'httpd_config_t',
       'data_home_t',
+      'dedalo_publication_v2_t',
     ]);
+    // The module's type (the system layout's v2 tree) is ours and is given to httpd by no rule at all.
+    expect(SELINUX_TYPES).toContain(V2_TREE_TYPE);
+    expect(HTTPD_READABLE_TYPES).not.toContain(V2_TREE_TYPE);
     // data_home_t (the v2 tree under the home layout) is NOT httpd-readable by default (measured
     // RHEL 9.8 sesearch: httpd_t reads it only under httpd_read_user_content, like user_home_t).
     expect(HTTPD_READABLE_TYPES).not.toContain('data_home_t');
@@ -112,11 +118,25 @@ describe('the S9 table', () => {
   test('system layout: no H, no H/logs; the rest identical in shape', () => {
     const rows = rowsOf(systemDecl()).map(r => r[0]);
     expect(isHomeLayout(derive(systemDecl()))).toBe(false);
-    expect(rows).toEqual(['S', 'S/publication_api', 'S/publication_api/v1', 'S/rules', 'A', 'dirname(B)', 'B', 'V/tmp', 'V/log']);
+    expect(rows).toEqual(['S', 'S/publication_api', 'S/publication_api/v1', 'S/publication_api/v2', 'S/rules', 'A', 'dirname(B)', 'B', 'V/tmp', 'V/log']);
+  });
+
+  test('the v2 tree: data_home_t under the home layout, the module type under any other, always the whole subtree', () => {
+    const v2 = (decl: HostDeclaration) => selinuxRules(derive(decl)).find(r => r.row === 'S/publication_api/v2');
+    const home = v2(homeDecl());
+    expect([home?.type, home?.fileType, home?.recursive]).toEqual(['data_home_t', 'a', true]);
+    for (const decl of [systemDecl(), systemDecl('remi'), { ...unixDeclaration() }]) {
+      const layout = derive(decl);
+      const rule = v2(decl);
+      expect([rule?.type, rule?.fileType, rule?.recursive, rule?.path]).toEqual([V2_TREE_TYPE, 'a', true, layout.state.apis.v2.root]);
+      expect(moduleNeeded(layout)).toBe(true);
+    }
+    expect(moduleNeeded(derive(homeDecl()))).toBe(false);
+    expect(moduleNeeded(derive(homeDecl('remi')))).toBe(false);
   });
 
   test('no site: no V rows; every flavour gives the same table (the FPM socket directory is never ours)', () => {
-    expect(rowsOf({ ...unixDeclaration() }).map(r => r[0])).toEqual(['S', 'S/publication_api', 'S/publication_api/v1', 'S/rules', 'A', 'B']);
+    expect(rowsOf({ ...unixDeclaration() }).map(r => r[0])).toEqual(['S', 'S/publication_api', 'S/publication_api/v1', 'S/publication_api/v2', 'S/rules', 'A', 'B']);
     expect(rowsOf(systemDecl('remi'))).toEqual(rowsOf(systemDecl('el')));
     expect(rowsOf(homeDecl('remi'))).toEqual(rowsOf(homeDecl('debian')));
     for (const flavor of ['debian', 'el', 'remi'] as const) {
@@ -176,6 +196,7 @@ describe('the S9 table', () => {
       state,
       booleans: {},
       mediaLabelable: true,
+      module: NO_MODULE,
     });
     const recorded = encodeSelinuxState({ v: 1, fcontext: [{ spec: '/mnt/dedalo_media(/.*)?', fileType: 'a', type: 'httpd_sys_content_t' }], ports: [] });
     const consented = derive(systemDecl('el', { media: { mode: 'shared', root: '/mnt/dedalo_media', selinux_label: true } }));

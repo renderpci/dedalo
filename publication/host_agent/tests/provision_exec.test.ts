@@ -2,7 +2,9 @@
  * provisionExec(): importable without the agent's environment, and every argument is
  * validated BEFORE anything spawns. The configtest binary is layout.ts's one definition.
  */
-import { describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ExecProbe, ExecResult, SyncSpawnOptions, SyncSpawner } from '../src/exec';
 import {
@@ -10,12 +12,19 @@ import {
   PROVISION_PATH,
   RELABEL_TIMEOUT_MS,
   SELINUX_IMPORT_TEMP_NAME,
+  SEMODULE_EXTRACT_PREFIX,
+  hostProbe,
   UNIT_JOB_TIMEOUT_MS,
   WEB_CONFIGTEST_CANDIDATES,
   provisionExec,
 } from '../src/exec';
 import { RETIRED_SUFFIX, SELINUX_BOOLEANS } from '../src/provision/exec_contract';
 import { WEB_CONFIGTEST_CANDIDATES as LAYOUT_CONFIGTEST_CANDIDATES } from '../src/provision/layout';
+import { SELINUX_MODULE_FILE } from '../src/provision/selinux_module';
+
+/** semoduleExtract's base for this suite (production: /run). */
+const extractBase = mkdtempSync(join(tmpdir(), 'dd_semodule_base.'));
+afterAll(() => rmSync(extractBase, { recursive: true, force: true }));
 
 const PACKAGE_ROOT = join(import.meta.dir, '..');
 
@@ -79,7 +88,7 @@ describe('provisionExec', () => {
   });
 });
 
-test('the closed set: exactly these 25 named commands, nothing else (spec §2.4; the 25th is retire.ts\'s removeTree)', () => {
+test('the closed set: exactly these 29 named commands, nothing else (spec §2.4; the 25th is retire.ts\'s removeTree, 26-29 the SELinux policy module\'s)', () => {
   expect(Object.keys(provisionExec()).sort()).toEqual([
     'apacheIncludes',
     'appendOnly',
@@ -98,6 +107,10 @@ test('the closed set: exactly these 25 named commands, nothing else (spec §2.4;
     'semanageImport',
     'semanageLocal',
     'semanagePortList',
+    'semoduleExtract',
+    'semoduleInstall',
+    'semoduleList',
+    'semoduleRemove',
     'startUnit',
     'systemdVersion',
     'unitState',
@@ -131,6 +144,7 @@ const ROOT_FILE: Facts = { type: 'file', uid: 0, mode: 0o755 };
 const IMPORT = `/etc/dedalo_publication_host/test/${SELINUX_IMPORT_TEMP_NAME}`;
 const RETIRED = `/var/lib/dedalo_publication_host/test/publication_api/v1${RETIRED_SUFFIX}`;
 const ROOT_0700_DIR: Facts = { type: 'dir', uid: 0, mode: 0o700 };
+const MODULE = `/var/lib/dedalo_publication_host/_host/${SELINUX_MODULE_FILE}`;
 
 describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', () => {
   test('each command spawns exactly its argv, with the fixed root PATH and no stdin', () => {
@@ -142,6 +156,7 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
         '/opt/remi/php84/root/usr/sbin/php-fpm': ROOT_FILE,
         [IMPORT]: { type: 'file', uid: 0, mode: 0o600 },
         [RETIRED]: ROOT_0700_DIR,
+        [MODULE]: { type: 'file', uid: 0, mode: 0o644 },
       }),
     );
     x.fpmConfigtest('/usr/sbin/php-fpm8.2');
@@ -158,6 +173,9 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
     x.semanagePortList();
     x.selinuxLabel(['/home/example.org', '/home']);
     x.removeTree(RETIRED);
+    x.semoduleList();
+    x.semoduleInstall(MODULE);
+    x.semoduleRemove();
     expect(calls.map(c => c.argv)).toEqual([
       ['/usr/sbin/php-fpm8.2', '-t'],
       ['/opt/remi/php84/root/usr/sbin/php-fpm', '-t'],
@@ -173,6 +191,9 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
       ['semanage', 'port', '-l', '-n'],
       ['stat', '-c', '%C %n', '--', '/home/example.org', '/home'],
       ['rm', '-rf', '--one-file-system', '--', RETIRED],
+      ['semodule', '--list-modules=full'],
+      ['semodule', '-X', '400', '-i', MODULE],
+      ['semodule', '-X', '400', '-r', 'dedalo_publication_host'],
     ]);
     for (const c of calls) {
       expect(c.options.env).toEqual({ PATH: PROVISION_PATH, LC_ALL: 'C' });
@@ -184,7 +205,8 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
     const { spawner, calls } = recording(argv => ({ code: 0, stdout: argv[0] === 'getent' ? 'g:x:5:\n' : '1\n', stderr: '' }));
     const x = provisionExec(
       spawner,
-      probeOf({ '/usr/sbin/php-fpm8.2': ROOT_FILE, [IMPORT]: { type: 'file', uid: 0, mode: 0o600 }, [RETIRED]: ROOT_0700_DIR }),
+      probeOf({ '/usr/sbin/php-fpm8.2': ROOT_FILE, [IMPORT]: { type: 'file', uid: 0, mode: 0o600 }, [RETIRED]: ROOT_0700_DIR, [MODULE]: { type: 'file', uid: 0, mode: 0o644 } }),
+      extractBase,
     );
     const invoke: Record<keyof typeof x, () => unknown> = {
       userId: () => x.userId('dedalo'),
@@ -212,11 +234,15 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
       semanagePortList: () => x.semanagePortList(),
       selinuxLabel: () => x.selinuxLabel(['/srv']),
       removeTree: () => x.removeTree(RETIRED),
+      semoduleList: () => x.semoduleList(),
+      semoduleExtract: () => x.semoduleExtract(),
+      semoduleInstall: () => x.semoduleInstall(MODULE),
+      semoduleRemove: () => x.semoduleRemove(),
     };
     const expected = (argv: readonly string[]): number =>
       argv[0] === 'systemctl' && ['start', 'restart', 'reload', 'daemon-reload'].includes(argv[1] as string)
         ? UNIT_JOB_TIMEOUT_MS
-        : argv[0] === 'restorecon' || argv[0] === 'rm' || (argv[0] === 'semanage' && argv[1] === 'import')
+        : argv[0] === 'restorecon' || argv[0] === 'rm' || (argv[0] === 'semanage' && argv[1] === 'import') || (argv[0] === 'semodule' && argv[1] === '-X')
           ? RELABEL_TIMEOUT_MS
           : COMMAND_TIMEOUT_MS;
     for (const [name, call] of Object.entries(invoke)) {
@@ -303,7 +329,64 @@ describe('provisionExec 14-24 (spec §2.4): argv through the injected spawner', 
     expect(() => x.removeTree(`/srv/../etc${RETIRED_SUFFIX}`)).toThrow(/clean absolute path/);
     expect(() => x.removeTree(`relative${RETIRED_SUFFIX}`)).toThrow(/clean absolute path/);
     expect(() => x.removeTree(RETIRED)).toThrow(/root-owned 0700 directory/);
+    // semoduleInstall: only the module source's one name, a root-owned regular file nobody else may write.
+    expect(() => x.semoduleInstall('/var/lib/dedalo_publication_host/_host/other.cil')).toThrow(/must be named dedalo_publication_host\.cil/);
+    expect(() => x.semoduleInstall(`relative/${SELINUX_MODULE_FILE}`)).toThrow(/clean absolute path/);
+    expect(() => x.semoduleInstall(`/srv/../etc/${SELINUX_MODULE_FILE}`)).toThrow(/clean absolute path/);
+    expect(() => x.semoduleInstall(MODULE)).toThrow(/root-owned regular file/);
+    for (const facts of [
+      { type: 'symlink', uid: 0, mode: 0o644 },
+      { type: 'file', uid: 1000, mode: 0o644 },
+      { type: 'file', uid: 0, mode: 0o664 },
+      { type: 'file', uid: 0, mode: 0o646 },
+    ] as const) {
+      expect(() => provisionExec(spawner, probeOf({ [MODULE]: facts })).semoduleInstall(MODULE), JSON.stringify(facts)).toThrow(/root-owned regular file/);
+    }
     expect(calls).toEqual([]);
+  });
+});
+
+describe('semoduleExtract (selinux_module.ts): -E in a fresh 0700 directory the door makes and removes', () => {
+  test('runs `semodule -X 400 -E <name>` with that directory as its cwd, reads the one file, removes the directory', () => {
+    let seen: string | null = null;
+    const spawner: SyncSpawner = {
+      run(argv, options) {
+        seen = options.cwd ?? null;
+        expect(argv).toEqual(['semodule', '-X', '400', '-E', 'dedalo_publication_host']);
+        expect(options.timeoutMs).toBe(RELABEL_TIMEOUT_MS);
+        const dir = options.cwd as string;
+        expect(statSync(dir).mode & 0o7777).toBe(0o700);
+        expect(readdirSync(dir)).toEqual([]);
+        writeFileSync(join(dir, SELINUX_MODULE_FILE), '; extracted\n');
+        return { code: 0, stdout: '', stderr: 'Extracting at highest existing priority' };
+      },
+    };
+    const x = provisionExec(spawner, hostProbe, extractBase);
+    const out = x.semoduleExtract();
+    expect(out.text).toBe('; extracted\n');
+    expect(seen).not.toBeNull();
+    expect((seen as unknown as string).startsWith(join(extractBase, SEMODULE_EXTRACT_PREFIX))).toBe(true);
+    expect(existsSync(seen as unknown as string)).toBe(false);
+  });
+
+  test('a failed extraction, or a link or no file where the source should be, reads as null; the directory is gone either way', () => {
+    const dirs: string[] = [];
+    const answer = (write: (dir: string) => void, code = 0): SyncSpawner => ({
+      run(_argv, options) {
+        dirs.push(options.cwd as string);
+        write(options.cwd as string);
+        return { code, stdout: '', stderr: '' };
+      },
+    });
+    expect(provisionExec(answer(() => {}), hostProbe, extractBase).semoduleExtract().text).toBeNull();
+    expect(provisionExec(answer(dir => writeFileSync(join(dir, SELINUX_MODULE_FILE), 'x'), 1), hostProbe, extractBase).semoduleExtract()).toEqual({
+      result: { code: 1, stdout: '', stderr: '' },
+      text: null,
+    });
+    const target = join(extractBase, 'elsewhere.cil');
+    writeFileSync(target, 'not the extraction');
+    expect(provisionExec(answer(dir => symlinkSync(target, join(dir, SELINUX_MODULE_FILE))), hostProbe, extractBase).semoduleExtract().text).toBeNull();
+    for (const dir of dirs) expect(existsSync(dir)).toBe(false);
   });
 });
 

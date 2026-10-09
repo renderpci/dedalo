@@ -356,6 +356,7 @@ describe('SELinux: the v1 rows leave with v1 (the registration lifecycle)', () =
       state,
       booleans: Object.fromEntries(host.booleans),
       mediaLabelable: true,
+      module: host.moduleObserved(),
     };
   }
   const stateOf = (host: Host, l: AgentLayout): HostState => ({ ...host.state(), selinux: selinuxOf(host, l, host.body(selinuxPaths(l).stateFile) ?? null) });

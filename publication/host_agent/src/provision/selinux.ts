@@ -8,8 +8,10 @@
  * `user_home_t`, under the system layout the path's default (`var_t` under /srv) — so the secrets
  * (`v2/shared/v2.env`, `audit/`, the v2 releases and staging) are never covered by a rule with an
  * httpd-readable type (HTTPD_READABLE_TYPES; tests/provision_selinux.test.ts holds it). The v2 tree
- * under the home layout is `data_home_t` (row S/publication_api/v2): systemd must read its env file
- * and its links, which it may not under `user_home_t` (measured, RHEL 9.8). The v1
+ * (row S/publication_api/v2) is one systemd must read — its env file and its links — which it may
+ * not under `user_home_t` (measured, RHEL 9.8) nor under `var_t` (sesearch, RHEL 9.8): the home
+ * layout gives it `data_home_t`, the system layout `dedalo_publication_v2_t`, the one type of the
+ * provisioner's own policy module (./selinux_module.ts: init_t reads it, httpd_t is given nothing). The v1
  * configuration under `S/publication_api/v1/shared` IS httpd-readable by MAC (the v1 pool runs
  * httpd_t and must read it); it is protected by DAC (`v1:root 0400`) and by the dedicated pool
  * user (decision A).
@@ -25,13 +27,15 @@
  * Booleans are init's host-wide decisions only (SELINUX_BOOLEANS, defined in ./exec_contract
  * where the exec validators need it, re-exported here); this module never sets one.
  *
- * ZERO-DEPENDENCY (tests/provision_zero_dep.test.ts): node: builtins, ./layout, ./exec_contract.
+ * ZERO-DEPENDENCY (tests/provision_zero_dep.test.ts): node: builtins, ./layout, ./exec_contract,
+ * ./selinux_module.
  */
 import { dirname, join } from 'node:path';
 import type { RestoreconTarget } from './exec_contract';
 import { SELINUX_BOOLEANS, SELINUX_READ_ONLY_BOOLEANS } from './exec_contract';
 import type { AgentLayout } from './layout';
 import { ABSOLUTE_PATH_PATTERN } from './layout';
+import { V2_TREE_TYPE } from './selinux_module';
 
 export { SELINUX_BOOLEANS, SELINUX_READ_ONLY_BOOLEANS };
 export type { RestoreconTarget };
@@ -46,6 +50,8 @@ export const SELINUX_TYPES = Object.freeze([
   'httpd_log_t',
   'httpd_config_t',
   'data_home_t',
+  // The provisioner's own policy module (./selinux_module.ts): the system layout's v2 tree.
+  V2_TREE_TYPE,
 ] as const);
 export type SelinuxType = (typeof SELINUX_TYPES)[number];
 
@@ -189,7 +195,9 @@ export function selinuxRules(layout: AgentLayout, facts: SelinuxRuleFacts = DEFA
   // `current`/`scratch` links (WorkingDirectory=, AssertPathIsDirectory=), so no v2 unit could
   // start. `data_home_t` is one init_t reads and httpd_t reads only under `httpd_read_user_content`,
   // exactly like `user_home_t`; what the agent creates in it (the links, the releases) inherits it.
-  if (home !== null) rules.push(rule('S/publication_api/v2', layout.state.apis.v2.root, 'a', 'data_home_t', true));
+  // Under the SYSTEM layout the default is `var_t` (/srv), unreadable to init_t too: the type is the
+  // provisioner's own module's (moduleNeeded), which init_t reads and httpd_t may not read at all.
+  rules.push(rule('S/publication_api/v2', layout.state.apis.v2.root, 'a', home !== null ? 'data_home_t' : V2_TREE_TYPE, true));
   rules.push(
     rule('S/rules', layout.state.rules, 'a', 'httpd_config_t', true),
     rule('A', layout.agentDir, 'a', 'usr_t', true),
@@ -218,6 +226,15 @@ export function selinuxRules(layout: AgentLayout, facts: SelinuxRuleFacts = DEFA
     );
   }
   return rules;
+}
+
+/**
+ * This layout's labels need the provisioner's SELinux policy module (./selinux_module.ts): every
+ * layout that is not the home one (its v2 tree is typed V2_TREE_TYPE). Host-wide: the module stays
+ * while any instance on the host needs it.
+ */
+export function moduleNeeded(layout: AgentLayout): boolean {
+  return selinuxRules(layout).some(r => r.type === V2_TREE_TYPE);
 }
 
 /** The v2 port label (spec S9): v2 is always declared and httpd proxies to it. */
@@ -366,4 +383,5 @@ export const EL_DRILL_INPUTS: readonly string[] = Object.freeze([
   'src/provision/render/unit_v2.ts',
   'src/provision/render/web_include.ts',
   'src/provision/selinux.ts',
+  'src/provision/selinux_module.ts',
 ]);

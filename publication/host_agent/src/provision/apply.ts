@@ -38,7 +38,9 @@
  * active, `rolled_back{reload}` — for the web server and FPM alike.
  *
  * SELINUX (spec S9, §5.9): one `semanage import` from a root 0600 provisioner temp, then the
- * registration history; restorecon, then the same as a dry run that must find nothing pending.
+ * registration history; restorecon, then the same as a dry run that must find nothing pending. The
+ * policy module (selinux_module.ts): `semodule -X 400 -i` of the stamped source, then extracted again
+ * and held equal to it; its removal `semodule -X 400 -r`, then its source through the remove door.
  */
 import { randomBytes } from 'node:crypto';
 import {
@@ -68,7 +70,7 @@ import type { TrustIo } from './fapolicyd_trust';
 import { commitTrust, deriveTrust, realTrustIo, trustRootsOf } from './fapolicyd_trust';
 import { flockIo } from './flock';
 import { MAP_RENDERER_BUN, MAP_RENDERER_BUNFIG, MAP_RENDERER_FILES, MAP_RENDERER_VERSION_FILE, rendererDigest } from './host_map_renderer';
-import { parseGetenforce, parseGetsebool, parseRestoreconDryRun, parseSelinuxConfig, parseSemanageFcontextLocal, parseSemanagePorts, singlePorts, tcpPortTypes } from './init/parse/selinux';
+import { parseGetenforce, parseGetsebool, parseRestoreconDryRun, parseSelinuxConfig, parseSemanageFcontextLocal, parseSemanagePorts, parseSemoduleList, singlePorts, tcpPortTypes } from './init/parse/selinux';
 import { isNetworkFs, mountOf, parseMountinfo } from './init/parse/mounts';
 import { parseSystemdVersion } from './init/parse/systemd';
 import type { AgentLayout } from './layout';
@@ -118,6 +120,8 @@ import { IDENTITIES_FILE } from './host_map_renderer';
 import { HOST_MAP_FILE, HOST_MAP_RESULT_FILE } from '../rules/host_map';
 import { RELOAD_ACTIVE_POLL } from '../rules/txn';
 import { SELINUX_BOOLEANS, isHomeLayout, restoreconTargets } from './selinux';
+import type { SelinuxModuleObserved } from './selinux_module';
+import { NO_MODULE, SELINUX_MODULE_NAME, SELINUX_MODULE_PRIORITY, selinuxModulePath } from './selinux_module';
 import { webReferencePresent } from './web_reference';
 import { webIncludePath } from './render/web_include';
 import { parseRecord, recordPath, recordWatch } from './retire';
@@ -534,6 +538,20 @@ function run(action: Action, io: ProvisionIo, written: string[]): void {
       written.push(action.statePath);
       return;
     }
+    case 'selinux-module-install': {
+      checked(`semodule -i ${action.file}`, io.exec.semoduleInstall(action.file));
+      // What the policy store now holds is what was rendered, byte for byte.
+      const extracted = io.exec.semoduleExtract();
+      checked(`semodule -E ${SELINUX_MODULE_NAME}`, extracted.result);
+      if (extracted.text !== action.body) {
+        throw new Error(`semodule -i ${action.file} exited 0, but the installed module '${SELINUX_MODULE_NAME}' is not the rendered source (semodule -X ${SELINUX_MODULE_PRIORITY} -E ${SELINUX_MODULE_NAME})`);
+      }
+      return;
+    }
+    case 'selinux-module-remove':
+      checked(`semodule -r ${SELINUX_MODULE_NAME}`, io.exec.semoduleRemove());
+      if (action.file !== null) removeThroughTemp(io, action.file);
+      return;
     case 'selinux-restorecon':
       relabel(io, action.targets);
       return;
@@ -1040,6 +1058,7 @@ function observeSelinux(
     state: null,
     booleans: {},
     mediaLabelable: true,
+    module: NO_MODULE,
   };
   if (mode === 'absent') return empty;
   const config = parseSelinuxConfig(readText(join(SELINUX_CONFIG_DIR, 'config')) ?? '');
@@ -1065,6 +1084,7 @@ function observeSelinux(
     mediaLabelable = mount === null || !isNetworkFs(mount.fsType) || mount.seclabel;
   }
   const state = readText(selinuxPaths(layout).stateFile);
+  const module = observeModule(exec, listed);
   const base: SelinuxObserved = {
     mode,
     storePresent,
@@ -1075,6 +1095,7 @@ function observeSelinux(
     state,
     booleans,
     mediaLabelable,
+    module,
   };
   if (mode === 'disabled') return base;
   const targets = restoreconTargets(layout, ruleFacts(layout, base)).filter(target => exists(target.path));
@@ -1084,6 +1105,22 @@ function observeSelinux(
     pending.push(...parseRestoreconDryRun(listed(dry, 'restorecon -n')));
   }
   return { ...base, pending };
+}
+
+/** The provisioner's policy module as the store holds it: every row of its name, and what -E extracts at 400. */
+function observeModule(exec: ProvisionExec, listed: (result: ExecResult, what: string) => string): SelinuxModuleObserved {
+  const rows = parseSemoduleList(listed(exec.semoduleList(), 'semodule --list-modules=full')).filter(row => row.name === SELINUX_MODULE_NAME);
+  if (rows.length === 0) return NO_MODULE;
+  let source: string | null = null;
+  if (rows.some(row => row.priority === SELINUX_MODULE_PRIORITY)) {
+    const extracted = exec.semoduleExtract();
+    listed(extracted.result, `semodule -E ${SELINUX_MODULE_NAME}`); // a failed extraction throws, never reads as "absent"
+    source = extracted.text;
+  }
+  return Object.freeze({
+    listed: Object.freeze(rows.map(row => Object.freeze({ priority: row.priority, lang: row.lang, disabled: row.disabled }))),
+    source,
+  });
 }
 
 /** The web server's own account of what it loads (spec §5.9 check): true/false, null when the dump failed. */
@@ -1167,6 +1204,9 @@ export function observeHost(
   if (layout.site?.v1 != null) watched.push(layout.site.v1.fpm.bin);
   // fapolicyd (layout.trust): the instance's trust file, judged and read like an artifact.
   if (layout.trust !== null) watched.push(layout.trust.file);
+  // The SELinux policy module's source (selinux_module.ts): judged and read like an artifact.
+  const moduleSource = selinuxModulePath(layout);
+  watched.push(moduleSource);
   // The provision record (retire.ts) and everything it names: what a retirement judges and removes.
   const record = recordPath(layout);
   const recordFacts = facts(record, true);
@@ -1194,6 +1234,7 @@ export function observeHost(
     ...recorded.files,
     ...(mapManaged ? [identitiesPath, versionPath] : []),
     ...(layout.trust === null ? [] : [layout.trust.file]),
+    moduleSource,
   ];
   for (const path of readable) {
     if (paths.get(path)?.type === 'file') contents.set(path, readOrNull(path));

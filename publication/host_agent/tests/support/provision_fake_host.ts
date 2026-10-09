@@ -9,7 +9,7 @@
  *
  * `FakeInitHost` (spec §9 FakeHost, `provision init`) extends it into the whole world init
  * acts on: InitIo (every door, on the same virtual tree), the closed InitExec set beside the
- * 24-command ProvisionExec, a Debian or an EL OS row, SELinux (mode, booleans, local fcontext
+ * 29-command ProvisionExec, a Debian or an EL OS row, SELinux (mode, booleans, local fcontext
  * and port rules, port types, labels — `restorecon -n` is COMPUTED from the rules and labels),
  * mount rows (noexec, seclabel, context=), unit sandbox values (`systemctl show`), the kernel
  * release, fapolicyd, configtest results keyed by FILE CONTENT (a breaker string anywhere in
@@ -23,6 +23,8 @@ import type { ExecResult, InitExec, PairInvocation, ProvisionExec, RestoreconTar
 import type { TrustIo } from '../../src/provision/fapolicyd_trust';
 import { deriveTrust, trustLinesOf, trustRootsOf } from '../../src/provision/fapolicyd_trust';
 import { SELINUX_BOOLEANS } from '../../src/provision/exec_contract';
+import type { SelinuxModuleObserved } from '../../src/provision/selinux_module';
+import { SELINUX_MODULE_NAME, V2_TREE_TYPE } from '../../src/provision/selinux_module';
 import type { ProvisionIo } from '../../src/provision/apply';
 import { TEMP_SUFFIX } from '../../src/provision/apply';
 import type { AgentLayout, HostDeclaration } from '../../src/provision/layout';
@@ -57,6 +59,15 @@ const OK: ExecResult = Object.freeze({ code: 0, stdout: '', stderr: '' });
 
 function sha256(data: Uint8Array | string): string {
   return createHash('sha256').update(data).digest('hex');
+}
+
+/** One installed policy module as the fake store holds it (`semodule --list-modules=full`, `-E`). */
+export interface FakeModule {
+  name: string;
+  priority: number;
+  lang: string;
+  disabled: boolean;
+  source: string;
 }
 
 /** One local fcontext rule as the fake SELinux store holds it. */
@@ -120,6 +131,11 @@ export class FakeHost implements ProvisionIo {
     [3306, 'mysqld_port_t'],
     [8080, 'http_cache_port_t'],
   ]);
+  /**
+   * The policy store's modules. Like libsemanage: a rule naming the module's type is refused by
+   * `semanage import` while the module is absent, and `semodule -r` is refused while a rule names it.
+   */
+  readonly modules: FakeModule[] = [];
   /** path → SELinux type (`stat -c %C`). An unlabelled path is '?'. */
   readonly labels = new Map<string, string>();
   readonly exec: ProvisionExec;
@@ -227,7 +243,38 @@ export class FakeHost implements ProvisionIo {
         ),
       semanageImport: file => {
         const result = this.command(`semanage import ${file}`);
-        if (result.code === 0) this.importRules(this.entries.get(file)?.body ?? '');
+        if (result.code !== 0) return result;
+        const body = this.entries.get(file)?.body ?? '';
+        if (body.includes(`-t ${V2_TREE_TYPE} `) && !this.moduleInstalled()) {
+          return { code: 1, stdout: '', stderr: `libsepol.context_from_record: type ${V2_TREE_TYPE} is not defined` };
+        }
+        this.importRules(body);
+        return result;
+      },
+      semoduleList: () =>
+        this.command('semodule --list-modules=full', this.modules.map(m => `${m.priority} ${m.name.padEnd(17)} ${m.lang.padEnd(11)}${m.disabled ? ' disabled' : ''}\n`).join('')),
+      semoduleExtract: () => {
+        const result = this.command(`semodule -E ${SELINUX_MODULE_NAME}`);
+        const found = this.modules.find(m => m.name === SELINUX_MODULE_NAME && m.priority === 400);
+        return { result, text: result.code === 0 && found !== undefined ? found.source : null };
+      },
+      semoduleInstall: file => {
+        const result = this.command(`semodule -i ${file}`);
+        if (result.code !== 0) return result;
+        const index = this.modules.findIndex(m => m.name === SELINUX_MODULE_NAME && m.priority === 400);
+        const row = { name: SELINUX_MODULE_NAME, priority: 400, lang: 'cil', disabled: false, source: this.entries.get(file)?.body ?? '' };
+        if (index >= 0) this.modules[index] = row;
+        else this.modules.push(row);
+        return result;
+      },
+      semoduleRemove: () => {
+        const result = this.command(`semodule -r ${SELINUX_MODULE_NAME}`);
+        if (result.code !== 0) return result;
+        if (this.fcontext.some(rule => rule.type === V2_TREE_TYPE)) {
+          return { code: 1, stdout: '', stderr: `libsemanage.validate_handler: invalid context system_u:object_r:${V2_TREE_TYPE}:s0` };
+        }
+        const index = this.modules.findIndex(m => m.name === SELINUX_MODULE_NAME && m.priority === 400);
+        if (index >= 0) this.modules.splice(index, 1);
         return result;
       },
       restorecon: (targets, dryRun) => this.restorecon(targets, dryRun),
@@ -275,6 +322,20 @@ export class FakeHost implements ProvisionIo {
         else this.localPorts.set(Number(p[3]), p[2] as string);
       }
     }
+  }
+
+  /** What apply.ts observeSelinux reports of the store (observeModule). */
+  moduleObserved(): SelinuxModuleObserved {
+    const rows = this.modules.filter(m => m.name === SELINUX_MODULE_NAME);
+    return {
+      listed: rows.map(m => ({ priority: m.priority, lang: m.lang, disabled: m.disabled })),
+      source: rows.find(m => m.priority === 400)?.source ?? null,
+    };
+  }
+
+  /** Our module is in the store at priority 400 (its type is defined). */
+  moduleInstalled(): boolean {
+    return this.modules.some(m => m.name === SELINUX_MODULE_NAME && m.priority === 400 && !m.disabled);
   }
 
   /** The type the local rules give `path` (the last matching rule wins), or null. */

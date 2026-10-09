@@ -210,6 +210,7 @@ function selinuxObserved(host: FakeInitHost, layout: AgentLayout): SelinuxObserv
     state: host.readRootFile(join(layout.instanceDir, 'selinux.state')),
     booleans: Object.fromEntries(host.booleans),
     mediaLabelable: true,
+    module: host.moduleObserved(),
   };
   if (host.selinuxMode !== 'enforcing' && host.selinuxMode !== 'permissive') return base;
   const targets = restoreconTargets(layout, ruleFacts(layout, base)).filter(target => host.lstat(target.path) !== null);

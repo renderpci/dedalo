@@ -755,12 +755,15 @@ instead of wiping a stage a running init reads (a file of its own, never init's 
 ### 9.3 Command sets
 
 Every spawn stays in `publication/host_agent/src/exec.ts`. `provisionExec()` is the closed set
-of **25** commands the provisioner may run (read-only probes, the web/FPM configtests, the
-SELinux label commands of apply, and `rm -rf --one-file-system` of a RETIRED tree — only a
-root-owned 0700 directory named `*.dedalo-provision.retired`, §9.15); none creates an account.
+of **29** commands the provisioner may run (read-only probes, the web/FPM configtests, the
+SELinux label commands of apply, `rm -rf --one-file-system` of a RETIRED tree — only a
+root-owned 0700 directory named `*.dedalo-provision.retired`, §9.15 — and the four commands of
+the provisioner's own SELinux policy module, §9.8: `semodule --list-modules=full`, `semodule -X
+400 -E dedalo_publication_host` in a fresh root 0700 directory, `semodule -X 400 -i` of its one
+root-owned source file, `semodule -X 400 -r dedalo_publication_host`); none creates an account.
 Every command of both sets spawns with a finite timeout (SIGKILL, exit 124): `COMMAND_TIMEOUT_MS`,
 `UNIT_JOB_TIMEOUT_MS` for the systemd jobs, `RELABEL_TIMEOUT_MS` for `semanage import` /
-`restorecon` / the tree removal — init runs several of
+`restorecon` / `semodule -E|-i|-r` / the tree removal — init runs several of
 them while it holds the host web lock (`tests/provision_exec.test.ts`). `initExec()` is a separate closed
 set of **22** commands for init alone (discovery, the account creators, `a2enmod`/`a2dismod`
 on Debian, `setsebool`, the Bun unpack, and the pairing child `setsid --wait runuser -u <engine

@@ -93,6 +93,10 @@ const stubExec: ProvisionExec = {
   systemdVersion: () => ({ code: 0, stdout: 'systemd 252 (252.33-1)\n', stderr: '' }),
   semanagePortList: () => ok,
   selinuxLabel: () => ok,
+  semoduleList: () => ok,
+  semoduleExtract: () => ({ result: ok, text: null }),
+  semoduleInstall: () => ok,
+  semoduleRemove: () => ok,
   // The real door's checks (exec.ts removeTree), then the removal itself: BSD rm has no --one-file-system.
   removeTree: path => {
     const stats = lstatSync(path);

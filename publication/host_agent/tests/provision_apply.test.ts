@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import type { ProvisionExec } from '../src/provision/exec_contract';
 import { MAP_RENDERER_FILES, rendererDigest } from '../src/provision/host_map_renderer';
 import { BACKUP_SUFFIX, CREATED_SUFFIX, RELOAD_POLL, TEMP_SUFFIX, apply, hostIo, lockHostProvision, observeHost } from '../src/provision/apply';
+import { NO_MODULE, SELINUX_MODULE_FILE, SELINUX_MODULE_NAME } from '../src/provision/selinux_module';
 import type { ProvisionIo } from '../src/provision/apply';
 import type { AgentLayout, HostDeclaration } from '../src/provision/layout';
 import { PUBHOST_GROUP, derive } from '../src/provision/layout';
@@ -607,6 +608,10 @@ describe('observeHost + hostIo on a real scratch tree (spec S9-S11, §5.9 facts)
       semanagePortList: () => record('semanage port -l', 'http_port_t    tcp    80, 443, 3100\nmysqld_port_t    tcp    1186, 3306, 63132-63164\n'),
       selinuxLabel: () => ok(),
       removeTree: () => ok(),
+      semoduleList: () => record('semodule --list-modules=full', '400 permissive_rhcd_t cil\n'),
+      semoduleExtract: () => ({ result: ok(), text: null }),
+      semoduleInstall: () => ok(),
+      semoduleRemove: () => ok(),
     };
   }
 
@@ -688,6 +693,41 @@ describe('observeHost + hostIo on a real scratch tree (spec S9-S11, §5.9 facts)
     // the relabel targets the plan does not create are observed: the home's logs, the media root
     expect(state.paths.has(join(root, 'srv/media'))).toBe(true);
     expect(state.groups.has(PUBHOST_GROUP)).toBe(true);
+  });
+
+  test('the SELinux policy module: every row of its name, -E only when one is at 400, its source file read like an artifact', () => {
+    const include = `${layout.instanceDir}/web.nginx.conf`;
+    const readText = (path: string) => (path === '/etc/selinux/config' ? 'SELINUX=enforcing\nSELINUXTYPE=targeted\n' : null);
+    const options = { trustRoot: root, renderers, appendOnlyProbe: () => 'writable' as const, readText };
+    const source = `${layout.host.base}/${SELINUX_MODULE_FILE}`;
+    writeFileSync(source, '; the module source\n');
+    let extracted = 0;
+    const listing = (text: string) => ({
+      ...stub(include),
+      semoduleList: () => ok(text),
+      semoduleExtract: () => {
+        extracted += 1;
+        return { result: ok(), text: '; extracted\n' };
+      },
+    });
+    const both = observeHost(layout, listing(`400 permissive_rhcd_t cil\n400 ${SELINUX_MODULE_NAME} cil\n100 ${SELINUX_MODULE_NAME} pp disabled\n`), options);
+    expect(both.selinux?.module).toEqual({
+      listed: [
+        { priority: 400, lang: 'cil', disabled: false },
+        { priority: 100, lang: 'pp', disabled: true },
+      ],
+      source: '; extracted\n',
+    });
+    expect(extracted).toBe(1);
+    expect(both.contents.get(source)).toBe('; the module source\n');
+    const elsewhere = observeHost(layout, listing(`200 ${SELINUX_MODULE_NAME} cil\n`), options);
+    expect(elsewhere.selinux?.module).toEqual({ listed: [{ priority: 200, lang: 'cil', disabled: false }], source: null });
+    expect(extracted).toBe(1);
+    expect(observeHost(layout, listing('400 permissive_rhcd_t cil\n'), options).selinux?.module).toEqual(NO_MODULE);
+    // A failed extraction is never "absent": observeHost throws.
+    const failing = { ...listing(`400 ${SELINUX_MODULE_NAME} cil\n`), semoduleExtract: () => ({ result: { code: 1, stdout: '', stderr: 'boom' }, text: null }) };
+    expect(() => observeHost(layout, failing, options)).toThrow(/semodule -E dedalo_publication_host exited 1/);
+    rmSync(source);
   });
 
   test('no SELinux userland: absent, nothing else asked; an agent_dir missing a renderer file: no digest', () => {

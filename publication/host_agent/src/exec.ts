@@ -33,7 +33,7 @@
  *   A root-run tool on a host with no agent env file can import the names below.
  */
 
-import { existsSync, lstatSync, realpathSync, renameSync, rmSync, statSync, symlinkSync } from 'node:fs';
+import { existsSync, lstatSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync } from 'node:fs';
 import { basename, dirname, join, sep } from 'node:path';
 import type { AgentConfig } from './config';
 import { ConflictError, HostActionFailedError, ValidationError } from './errors';
@@ -56,6 +56,9 @@ import {
   PAIR_TIMEOUT_MS,
   RETIRED_SUFFIX,
   SELINUX_BOOLEANS,
+  SELINUX_MODULE_FILE,
+  SELINUX_MODULE_NAME,
+  SELINUX_MODULE_PRIORITY,
   SELINUX_READ_ONLY_BOOLEANS,
   UNIT_SHOW_PROPERTIES,
 } from './provision/exec_contract';
@@ -346,7 +349,7 @@ export function trustExec(spawner: SyncSpawner = provisionSpawner): TrustExec {
 // validated before anything spawns (a failure throws `exec: …` and spawns nothing), no free
 // argv. They never read the agent's config (tests/provision_exec.test.ts imports this module
 // with an empty env). The contracts are src/provision/exec_contract.ts's:
-//   - provisionExec(): `provision check|apply` (24 commands);
+//   - provisionExec(): `provision check|apply` (29 commands);
 //   - initExec():      `provision init` only (22 commands) — the account creators, a2enmod,
 //                      setsebool and the pairing child exist ONLY there.
 // ─────────────────────────────────────────────────────────────────────────────────────
@@ -508,9 +511,22 @@ export const UNIT_JOB_TIMEOUT_MS = 200_000;
  */
 export const RELABEL_TIMEOUT_MS = 30 * 60_000;
 
-export function provisionExec(spawner: SyncSpawner = provisionSpawner, probe: ExecProbe = hostProbe): ProvisionExec {
-  const run = (argv: readonly string[], timeoutMs: number = COMMAND_TIMEOUT_MS): ExecResult =>
-    spawner.run(argv, { env: { PATH: PROVISION_PATH, LC_ALL: 'C' }, timeoutMs });
+/**
+ * Where `semoduleExtract` makes its one-use directory (`semodule -E` writes into its working
+ * directory only): root's tmpfs, 0755 root, never another account's. A gate passes its own.
+ */
+export const SEMODULE_EXTRACT_BASE = '/run';
+/** The extraction directory's prefix (mkdtemp adds six random characters; created 0700). */
+export const SEMODULE_EXTRACT_PREFIX = 'dedalo_semodule_extract.';
+
+export function provisionExec(
+  spawner: SyncSpawner = provisionSpawner,
+  probe: ExecProbe = hostProbe,
+  extractBase: string = SEMODULE_EXTRACT_BASE,
+): ProvisionExec {
+  const run = (argv: readonly string[], timeoutMs: number = COMMAND_TIMEOUT_MS, cwd?: string): ExecResult =>
+    spawner.run(argv, { env: { PATH: PROVISION_PATH, LC_ALL: 'C' }, timeoutMs, ...(cwd === undefined ? {} : { cwd }) });
+  const priority = String(SELINUX_MODULE_PRIORITY);
   return Object.freeze({
     userId(name: string): number | null {
       const result = run(['id', '-u', provisionName(name)]);
@@ -614,6 +630,36 @@ export function provisionExec(spawner: SyncSpawner = provisionSpawner, probe: Ex
       // GNU rm walks descriptor-relative and never follows a link; --one-file-system stops at a mount.
       return run(['rm', '-rf', '--one-file-system', '--', path], RELABEL_TIMEOUT_MS);
     },
+    semoduleList: () => run(['semodule', '--list-modules=full']),
+    semoduleExtract(): { result: ExecResult; text: string | null } {
+      provisionAbsolute('semodule extract base', extractBase);
+      const dir = mkdtempSync(join(extractBase, SEMODULE_EXTRACT_PREFIX));
+      try {
+        const result = run(['semodule', '-X', priority, '-E', SELINUX_MODULE_NAME], RELABEL_TIMEOUT_MS, dir);
+        let text: string | null = null;
+        if (result.code === 0) {
+          // What semodule wrote, never followed: a regular file of the one name in our own 0700 directory.
+          const file = join(dir, SELINUX_MODULE_FILE);
+          const facts = probe.lstat(file);
+          if (facts?.type === 'file') text = readFileSync(file, 'utf8');
+        }
+        return { result, text };
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    semoduleInstall(file: string): ExecResult {
+      provisionAbsolute('semodule module file', file);
+      if (basename(file) !== SELINUX_MODULE_FILE) {
+        throw new Error(`exec: the SELinux module file must be named ${SELINUX_MODULE_FILE}, not '${basename(file)}'`);
+      }
+      const facts = probe.lstat(file);
+      if (facts?.type !== 'file' || facts.uid !== 0 || (facts.mode & 0o022) !== 0) {
+        throw new Error(`exec: the SELinux module file '${file}' must be a root-owned regular file, not group/other-writable`);
+      }
+      return run(['semodule', '-X', priority, '-i', file], RELABEL_TIMEOUT_MS);
+    },
+    semoduleRemove: () => run(['semodule', '-X', priority, '-r', SELINUX_MODULE_NAME], RELABEL_TIMEOUT_MS),
   });
 }
 
