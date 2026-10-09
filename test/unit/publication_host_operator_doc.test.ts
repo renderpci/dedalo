@@ -28,6 +28,7 @@ import {
 	layoutPaths,
 	NGINX_MAP_INCLUDE_PATH,
 	PUBHOST_GROUP,
+	SYSTEM_LAYOUT,
 	SYSTEMD_FLOOR,
 	V1_PHP_FLOOR,
 	webLogBase,
@@ -40,6 +41,7 @@ import {
 	PHP_HANDLER_PATTERN,
 } from '../../publication/host_agent/src/provision/render/web_include';
 import { selinuxRules } from '../../publication/host_agent/src/provision/selinux';
+import { V2_TREE_TYPE, selinuxModulePath } from '../../publication/host_agent/src/provision/selinux_module';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const page = readFileSync(join(repoRoot, 'docs/install/publication_host.md'), 'utf8');
@@ -335,6 +337,17 @@ describe('the guided install (provision init) states what the code does', () => 
 					.join(' '),
 			);
 		expect(table).toEqual(rules.map((rule) => `${rule.path} ${rule.fileType} ${rule.type}`));
+		// The system layout's v2 row (the policy module's type) is named in the module's own table.
+		const system = derive({
+			...declared,
+			state_root: `${SYSTEM_LAYOUT.stateBase}/${declared.instance}`,
+			agent_dir: SYSTEM_LAYOUT.agentDir,
+			bun_bin: SYSTEM_LAYOUT.bunBin,
+		});
+		const v2 = selinuxRules(system).find((rule) => rule.row === 'S/publication_api/v2');
+		expect(v2?.type).toBe(V2_TREE_TYPE);
+		expect(GUIDED).toContain(`| \`${V2_TREE_TYPE}\`, the rule \`-f ${v2?.fileType}\` on \`${v2?.path}\``);
+		expect(GUIDED).toContain(`\`${selinuxModulePath(system)}\``);
 	});
 
 	test('the booleans init may ask for are SELINUX_BOOLEANS minus the read-only one, which is named as read only', () => {
