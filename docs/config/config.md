@@ -261,7 +261,7 @@ DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Eus
 
 > See the Dédalo structure lang for see the languages definitions.
 
-*Default: {"lg-eng":"English"}*
+*Default: {"lg-eng":"English","lg-spa":"Castellano"}*
 
 ---
 
@@ -421,7 +421,7 @@ PROJECTS_DEFAULT_LANGS=[ "lg-spa", "lg-cat", "lg-eng"]
 
 > The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
 
-*Default: ["lg-eng"]*
+*Default: ["lg-eng","lg-spa"]*
 
 ---
 

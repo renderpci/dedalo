@@ -86,6 +86,7 @@ DATA_NOLAN="lg-nolan"
 		scope: 'operator',
 		default: {
 			'lg-eng': 'English',
+			'lg-spa': 'Castellano',
 		},
 		heading: 'Defining application languages',
 		typeLabel: 'object',
@@ -242,7 +243,7 @@ DEDALO_STRUCTURE_LANG="lg-spa"
 		installSentinel: ['lg-eng'],
 		type: 'string_list',
 		scope: 'operator',
-		default: ['lg-eng'],
+		default: ['lg-eng', 'lg-spa'],
 		heading: 'Defining default projects languages',
 		typeLabel: 'array',
 		doc: `This parameter defines the languages that will use for export and publish data.

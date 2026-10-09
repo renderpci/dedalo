@@ -85,8 +85,8 @@ meaning.)
 | `--entity-label` | no | the entity name | shown on the login form |
 | `--locale` | no | `es-ES` | |
 | `--timezone` | no | `Europe/Madrid` | every database timestamp is stamped in it |
-| `--langs` | no | `lg-eng,lg-spa` (the other catalogue languages are optional) | the **working (data) languages**, comma list, e.g. `lg-spa,lg-eng`. The interface languages are not chosen: every language the interface is translated into is enabled, so users can switch to any of them at any time |
-| `--app-lang` | no | first of `--langs` | the default interface language — any catalogue language, picked in `--langs` or not |
+| `--langs` | no | `lg-eng,lg-spa` (the other catalogue languages are optional) | the installation's languages — interface **and** data — comma list, e.g. `lg-eng,lg-spa` |
+| `--app-lang` | no | first of `--langs` | the default interface language |
 | `--data-lang` | no | first of `--langs` | the default data language |
 | `--hierarchies` | no | `default` | the **optional** thesauri: `default` (the shared default set — today `es`), `none`, or a comma list of vendored codes, e.g. `es,fr`. Languages (`lg`) is a **core** thesaurus, activated with the database on every install: naming it here is dropped with a note. An unknown (not vendored) code is refused |
 | `--media-path` | no | *(unset)* | the media root; write-probed during install **and persisted** to `.env` as `MEDIA_PATH` (replaces the old `MEDIA_PATH=…` env prefix) |
@@ -113,8 +113,8 @@ meaning.)
 
 !!! warning "Languages are mandatory, and the defaults must be members of the set"
     The server refuses to boot without its language configuration. The CLI
-    derives it up front and **refuses the install** if `--data-lang` is not one
-    of `--langs`, or `--app-lang` is not a catalogue language — better a clear refusal than an `.env`
+    derives it up front and **refuses the install** if `--app-lang` or
+    `--data-lang` is not one of `--langs` — better a clear refusal than an `.env`
     that crash-loops the server on the very next boot.
 
 ## What the installer does, in order
@@ -267,11 +267,9 @@ Steps: **Diagnostics → Database → Entity → *(optional)* Diffusion →
 Directories → Install database → Root password → log in → Hierarchies → Tools →
 Finish**.
 
-The **Entity** step also collects the working languages (a checkbox list with
+The **Entity** step also collects the languages (a checkbox list with
 English and Spanish pre-checked; the others are optional) plus the default
-interface and data language. The interface dropdown offers every translated
-language — all of them stay switchable after the install — while the data
-dropdown offers only the checked working languages. Before *Save config*
+interface and data language. Before *Save config*
 the wizard also asks whether to use the official update server (yes by default;
 no is the air-gapped install described above).
 

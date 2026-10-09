@@ -1009,10 +1009,6 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
-- **New installations enable every translated interface language.**
-
-    The installer (wizard and `scripts/install.ts`) used to enable as interface languages only the working languages ticked at install time, so switching the interface to, for example, Catalan or Nepali later meant editing `DEDALO_APPLICATION_LANGS` by hand. A new installation now enables every language the interface is translated into (18 today), and any of them can be the default interface language. The working (data) languages are still a choice — English and Spanish by default, with English as the default data language. Existing installations are not changed. See the [installer reference](./install/installer_reference.md).
-
 - **The guided publication-host install now proposes the v1 database connection it finds on the host.**
 
     `provision init` asks how the v1 Publication API reaches MariaDB: through its unix socket or over TCP. Until now the proposed answer was always the socket, even on a host without a local MariaDB. Init now looks for a local MariaDB socket (`/run/mysqld/mysqld.sock` on Debian and Ubuntu, `/var/lib/mysql/mysql.sock` on RHEL, Rocky and Alma). It proposes that socket when one exists, and otherwise TCP to `127.0.0.1:3306`, saying whether anything listens there. The question is still yours to answer. For TCP the proposed host is `127.0.0.1`, never `localhost`, because v1's database driver reads `localhost` as "use the socket" whatever the port. See [Publication host agent](./install/publication_host.md#the-three-lists).

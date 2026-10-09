@@ -475,7 +475,7 @@ ask ENTITY_LABEL  'Full name, as shown on the login screen'                     
 # Spanish, the same set the browser wizard pre-ticks; every other language is
 # optional) applies.
 # One default, in one place — src/core/install/install_plan.ts.
-ask LANGS         'Working languages (comma-separated Dédalo codes, or "default" = lg-eng,lg-spa)' 'default'
+ask LANGS         'Languages, interface and data (comma-separated Dédalo codes, or "default" = lg-eng,lg-spa)' 'default'
 APP_LANG="${LANGS%%,*}"
 # Languages (lg) is a CORE thesaurus: it is activated with the database whatever
 # is answered here, so it is never asked. "default" omits the flag and takes the

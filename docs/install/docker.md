@@ -453,11 +453,11 @@ What each part is doing:
   `/private/.env`, so the file describes the deployment on its own. The compose
   environment sets the same three at runtime and wins either way — passing them
   keeps the two in agreement.
-- `--langs` is the **working (data) languages** — the tabs every translatable
-  field gets — and `--data-lang` must be one of them. The interface languages
-  are not chosen: every language the interface is translated into is enabled,
-  and `--app-lang` may be any of them. The values shown are the defaults
-  (English + Spanish, English for both), so the three flags can be left out.
+- `--langs` is the installation's languages — the interface languages users
+  can switch to **and** the tabs every translatable field gets — and
+  `--app-lang` and `--data-lang` must be among them. The values shown are the
+  defaults (English + Spanish, English for both), so the three flags can be
+  left out.
 - No `--hierarchies`: the shared default set of optional thesauri (today Spain,
   `es`) is imported and activated. `--hierarchies none` skips it, a list such as
   `--hierarchies es,fr` replaces it, and you can always

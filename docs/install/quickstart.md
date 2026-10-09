@@ -86,7 +86,7 @@ Then it asks for:
 | --- | --- | --- |
 | Short code for your institution | an internal identifier, letters and digits | `dedalo` |
 | Full name | shown on the login screen | your institution's name |
-| Working languages | Dédalo language codes, comma-separated, or `default` | `default` — `lg-eng,lg-spa`, the same pair the browser wizard pre-ticks; the other languages are optional |
+| Languages (interface and data) | Dédalo language codes, comma-separated, or `default` | `default` — `lg-eng,lg-spa`, the same pair the browser wizard pre-ticks; the other languages are optional |
 | Optional thesauri to install now | controlled vocabularies to load: codes, `default` or `none` | `default` — today Spain (`es`); you can add others later |
 | Locale, time zone | the time zone stamps every record | your own |
 | Use the official update server | where ontology updates and release information come from (`v7.master.dedalo.dev`) | `Y` (the default). Answer `n` for an air-gapped install: no updates are offered until you add `ONTOLOGY_SERVERS` and `CODE_SERVERS` to `/private/.env` |

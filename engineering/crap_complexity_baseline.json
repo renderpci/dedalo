@@ -5,9 +5,9 @@
 	"root": "src/core",
 	"summary": {
 		"files": 625,
-		"functions": 8246,
-		"functionsOverCap": 679,
-		"filesOverCap": 261
+		"functions": 8245,
+		"functionsOverCap": 678,
+		"filesOverCap": 260
 	},
 	"ledger": [
 		{
@@ -109,6 +109,11 @@
 			"generated": "2026-10-08",
 			"functionsOverCap": 679,
 			"filesOverCap": 261
+		},
+		{
+			"generated": "2026-10-09",
+			"functionsOverCap": 678,
+			"filesOverCap": 260
 		}
 	],
 	"files": {
@@ -206,7 +211,6 @@
 		"src/core/install/db_probe_plan.ts": 8,
 		"src/core/install/db_restore.ts": 8,
 		"src/core/install/directories.ts": 12,
-		"src/core/install/lang_catalog.ts": 8,
 		"src/core/install/mailer_probe.ts": 12,
 		"src/core/install/media_tree.ts": 20,
 		"src/core/install/root_pw.ts": 8,

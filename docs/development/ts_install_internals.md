@@ -155,11 +155,6 @@ restart crash-loops.
   `deriveLangConfig` result (`cliBootEnv`) BEFORE importing config (with ENTITY/DB
   set, config would otherwise throw at import) — `deriveLangConfig` is pure
   precisely so it can run first. Flags: `--langs`, `--app-lang`, `--data-lang`.
-- `DEDALO_APPLICATION_LANGS` is ALWAYS the whole `INSTALL_LANG_CATALOG` (= every
-  shipped `src/core/labels/catalog/lg-*.json`, gated in
-  `test/unit/install_lang_catalog.test.ts`); the picked set only drives
-  `DEDALO_PROJECTS_DEFAULT_LANGS`. The interface default may be any catalog
-  code, the data default must be picked.
 - The wizard collects them on the Entity step (`render_installer.js`), seeded
   from `context.ts` `available_langs`/`install_checked_langs` (pre-ticked =
   `INSTALL_DEFAULT_LANG_CODES`); ≥1 enforced both
